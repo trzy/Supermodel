@@ -23,6 +23,10 @@
  *
  * Multi-byte data written is assumed to be little endian and is therefore
  * reversed because the PowerPC operates in big endian mode in the Model 3.
+ *
+ * NOTE: scsi_run() is often called with an argument of 100. This is
+ * actually incorrect. It should run until an interrupt condition. A count of
+ * 100 is used as a runaway counter to prevent lock-ups.
  */
 
 #include "model3.h"
@@ -96,6 +100,43 @@ UINT8 scsi_read_8(UINT32 addr)
 }
 
 /*
+ * UINT32 scsi_read_32(UINT32 addr);
+ *
+ * Reads from the SCSI register space.
+ *
+ * Parameters:
+ *      addr = Register address (only lower 8 bits matter.)
+ *
+ * Returns:
+ *      Returns data from the register read.
+ */
+
+UINT32 scsi_read_32(UINT32 addr)
+{
+    UINT32  reg;
+
+    addr &= 0xFF;
+    if (addr > 0x5F)
+        error("%08X: SCSI invalid read from %02X", ppc_get_reg(PPC_REG_PC), addr);
+
+    reg = REG32(addr);
+
+    switch (addr)
+    {
+    case 0x14:  
+        error("%08X: SCSI 32-bit read from reg %02X -- don't know what to do", ppc_get_reg(PPC_REG_PC), addr);
+        break;
+    default:
+        // NOTE: some registers might have to be handled to clear certain
+        // bits
+        break;
+    }
+
+    return reg;
+}
+
+
+/*
  * void scsi_write_8(UINT32 addr, UINT8 data);
  *
  * Writes a byte to the SCSI register space.
@@ -118,6 +159,57 @@ void scsi_write_8(UINT32 addr, UINT8 data)
     switch (addr)
     {
     case 0x3B:  // DCNTL: DMA Control
+
+        /*
+         *   7      6      5      4      3      2      1      0
+         * +------+------+------+------+------+------+------+------+
+         * | CLSE | PFF  | PFEN | SSM  | IRQM | STD  | IRQD | COM  |
+         * +------+------+------+------+------+------+------+------+
+         *
+         * CLSE     Cache Line Size Enable
+         *
+         * PFF      Prefetch Flush
+         *
+         * PFEN     Prefetch Enable
+         *
+         * SSM      Single Step Mode
+         *
+         *          Setting this bit causes the SCSI to stop after executing
+         *          each SCRIPTS instruction and generate a single step
+         *          interrupt. To restart the SCSI after the interrupt has
+         *          been generated, read ISTAT and DSTAT to recognize and
+         *          clear the interrupt, then set STD bit in this register
+         *          to resume execution.
+         *
+         * IRQM     IRQ Mode
+         *
+         * STD      Start DMA Operation
+         *
+         *          The SCSI fetches an instruction and executes it when this
+         *          bit is set. It is required when the SCSI is in one of the
+         *          following modes:
+         *
+         *              - Manual start mode: Bit 0 in the DMODE register is
+         *                set.
+         *              - Single step mode: Bit 4 in the DCNTL register is
+         *                set.
+         *
+         *          When in manual mode, setting this bit starts instruction
+         *          execution -- it remains set until an interrupt occurs. In
+         *          single step mode, it restarts execution after an
+         *          interrupt.
+         *
+         * IRQD     IRQ Disable
+         *
+         * COM      LSI53C700 Family Compatibility
+         */
+
+        /*
+         * I'm not sure how to properly handle single stepping. I've observed
+         * that the SCSI is usually in manual mode, so I simply check for
+         * single stepping in scsi_run().
+         */
+
         if ((REG8(0x38) & 0x01) == 0x01)    // MAN=1, start SCRIPTS on STD=1
         {
             scripts_exec = data & 0x04;

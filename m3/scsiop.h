@@ -129,6 +129,7 @@ INSTRUCTION(int_and_intfly)
 
 INSTRUCTION(invalid)
 {    
+//    message(0, "INVALID SCSI INSTRUCTION @ %08X", REG32(0x2c));
     return 1;
 }
 
@@ -144,8 +145,12 @@ INSTRUCTION(invalid)
 
 void scsi_run(INT num)
 {
+    LOG("model3.log", "SCSI exec %08X\n", REG32(0x2c));
     if (!scripts_exec)
         return;
+
+    if ((REG8(0x3B) & 0x10))    // single step mode
+        num = 1;
 
     while (num-- && scripts_exec)
     {
@@ -156,6 +161,15 @@ void scsi_run(INT num)
 
         if ((*op_table[REG32(0x24) >> 24])())
             error("SCSI: invalid instruction @ %08X", save_addr);
+    }
+
+    scripts_exec = 0;
+
+    if ((REG8(0x3B) & 0x10))    // single step mode, trigger interrupt
+    {        
+        REG8(0x0c) |= 0x08;     // SSI=1
+        REG8(0x14) |= 0x01;     // DIP=1
+        ppc_set_irq_line(1);    // what about Model 3 IRQ status?
     }
 }
 

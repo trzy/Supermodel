@@ -30,6 +30,7 @@
  */
 
 extern UINT8    scsi_read_8(UINT32);
+extern UINT32   scsi_read_32(UINT32);
 
 extern void     scsi_write_8(UINT32, UINT8);
 extern void     scsi_write_16(UINT32, UINT16);
