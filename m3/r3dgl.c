@@ -955,6 +955,7 @@ static void draw_model_le(UINT8 *buf)
 /* Scene Drawing                                                  */
 /******************************************************************/
 
+static UINT32   current_matrix; // number of current matrix to use
 static UINT8    *matrix_base;   // pointer to base of matrix table
 
 /*
@@ -1162,13 +1163,20 @@ static void draw_block(UINT8 *block)
          */
 
         matrix = GETWORDLE(&block[3*4]);
-        if ((matrix & 0x20000000))
+        if ((matrix & 0x20000000) && (matrix & 0x3FF))
         {
+            current_matrix = matrix & 0x03FF;
             get_matrix(m, (matrix & 0x03FF)*12);
             glPushMatrix();
-			if((matrix & 0x03FF) != 0)		// safeguard for Scud Race
-            	glMultMatrixf(m);
+            if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
+                glMultMatrixf(m);
         }
+        else
+//        {
+            glPushMatrix();
+            glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
+//        }
+        ++current_matrix;
 
         /*
          * Draw a model or process a list. If the address is of the form
@@ -1229,7 +1237,7 @@ static void draw_block(UINT8 *block)
          * Pop the matrix if we pushed one
          */
 
-        if ((matrix & 0x20000000))
+//        if ((matrix & 0x20000000))
             glPopMatrix();
 
         /*
@@ -1253,7 +1261,7 @@ static void draw_block(UINT8 *block)
 
 static void draw_scene(void)
 {
-    UINT32  i, j;
+    UINT32  i, j, next;
     BOOL    stop;
 
     /*
@@ -1382,14 +1390,14 @@ static void draw_scene(void)
         set_matrix_base(GETWORDLE(&culling_ram_8e[i + 0x16*4]));
 
         j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
-        j = (j & 0xffff) * 4;
+        j = (j & 0xFFFF) * 4;
         if (j == 0) // culling RAM probably hasn't been set up yet
             break;
 
-        i = GETWORDLE(&culling_ram_8e[i + 4]);  // get address of next block
-        if (i == 0x01000000)                    // 01000000 == STOP
+        next = GETWORDLE(&culling_ram_8e[i + 4]);   // get address of next block
+        if (next == 0x01000000)                     // 01000000 == STOP
             stop = TRUE;
-        i = (i & 0xffff) * 4;
+        i = (next & 0xFFFF) * 4;
 
 		switch((GETWORDLE(&culling_ram_8e[i + 8]) >> 24) & 0xFE)
 		{
@@ -1400,7 +1408,7 @@ static void draw_scene(void)
 
 		case 0x04:	// list
 			R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", j);
-			draw_list(&culling_ram_8e[j]);
+//            draw_list(&culling_ram_8e[j]);
 			break;
 
 		default:
@@ -1618,8 +1626,14 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
 /*
  * void r3dgl_update_frame(void);
  *
- * Renders the frame. Z-buffering is assumed to be disabled prior to this
- * function call.
+ * Renders the frame.
+ *
+ * Assumes the following on entry:
+ *      - Z-buffering is disabled
+ *      - 2D texturing is enabled
+ *      - Alpha blending is disabled
+ *
+ * The entry state is restored on exit.
  */
 
 //TODO: Cannot be resized yet, hardcoded for 496x384
@@ -1639,12 +1653,6 @@ void r3dgl_update_frame(void)
     glClear(GL_DEPTH_BUFFER_BIT);
 
     /*
-     * Enable texture mapping
-     */
-
-    glEnable(GL_TEXTURE_2D);
-
-    /*
      * Set up a perspective view and then set the matrix mode to modelview.
      * Each Z coordinate is multiplied by 1 to flip the coordinate system
      * (Model 3 uses a left-hand system, OpenGL is right-handed.)
@@ -1662,13 +1670,18 @@ void r3dgl_update_frame(void)
      * Draw the scene
      */
 
+//    glPolygonMode(GL_FRONT, GL_LINE);
+//    glPolygonMode(GL_BACK, GL_LINE);
+//    glDisable(GL_TEXTURE_2D);
     draw_scene();
+//    glPolygonMode(GL_FRONT, GL_FILL);
+//    glPolygonMode(GL_BACK, GL_FILL);
+//    glEnable(GL_TEXTURE_2D);
 
     /*
      * Disable anything we enabled here
      */
 
-    glDisable(GL_TEXTURE_2D);
     glDisable(GL_DEPTH_TEST);
 }
 
