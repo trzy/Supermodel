@@ -47,68 +47,6 @@
 
 #include "model3.h"
 
-static int OutBMP(int f, unsigned txres, unsigned tyres, unsigned char *texture)
-{
-    FILE        *fp;
-    int    i, j;
-    unsigned    pixel;
-    unsigned char   r, g, b;
-    char    filename[32];
-
-    sprintf(filename, "%d.bmp", f);
-
-    if ((fp = fopen(filename,"wb")) == NULL)
-        return 1;
-
-	/*
-     * Write the BMP file header
-     */
-
-	fwrite("BM", sizeof(char), 2, fp);
-    i = 14 + 40 + txres*tyres*3;    // size = 14 + 40 + x*y*bpp
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    fwrite("\0\0\0\0", sizeof(unsigned char), 4, fp);
-    i = 40 + 14;                // image offset
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    i = 40;
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    i = txres;                        // image width in pixels
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    i = tyres;                        // image height in pixels
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    fwrite("\1\0", sizeof(unsigned char), 2, fp);
-    i = 24;                         // bits per pixel
-    fwrite(&i, sizeof(unsigned short), 1, fp);
-    fwrite("\0\0\0\0\0\0\0\0", sizeof(unsigned char), 8, fp);
-    fwrite("\0\0\0\0\0\0\0\0", sizeof(unsigned char), 8, fp);
-    i = 0;                          // 0 colors in palette (there is none!)
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    fwrite("\0\0\0\0", sizeof(unsigned char), 4, fp);
-
-    /*
-     * Write the image data bottom-up
-     */
-
-    for (i = (tyres - 1) * txres * 4; (int) i >= 0; i -= txres * 4)
-    {
-        for (j = 0; j < txres * 4; j += 4)
-        {
-            r = texture[i + j + 0];
-            g = texture[i + j + 1];
-            b = texture[i + j + 2];
-            fwrite(&b, sizeof(unsigned char), 1, fp);
-            fwrite(&g, sizeof(unsigned char), 1, fp);
-            fwrite(&r, sizeof(unsigned char), 1, fp);
-        }      
-    }
-
-    printf("wrote %s\n", filename);
-
-
-    fclose(fp);
-    return 0;
-}
-
 /******************************************************************/
 /* Macros                                                         */
 /******************************************************************/
@@ -995,6 +933,8 @@ static void draw_model_le(UINT8 *buf)
 /* Scene Drawing                                                  */
 /******************************************************************/
 
+static UINT8    *matrix_base;   // pointer to base of matrix table
+
 /*
  * get_float():
  *
@@ -1045,28 +985,43 @@ static UINT8 *translate_r3d_address(UINT32 addr)
 }
 
 /*
+ * set_matrix_base():
+ *
+ * Sets the base matrix table address.
+ */
+
+static void set_matrix_base(UINT32 addr)
+{
+    matrix_base = translate_r3d_address(addr);
+}
+
+/*
  * get_matrix():
  *
  * Fetches a matrix from 8E culling RAM and converts it to OpenGL form.
  */
 
 #define CMINDEX(y, x)	(x*4+y)
-static void get_matrix(GLfloat *dest, UINT32 src)
+static void get_matrix(GLfloat *dest, UINT32 matrix_addr)
 {
-    dest[CMINDEX(0, 0)] = get_float(&culling_ram_8e[src + 3*4]);
-    dest[CMINDEX(0, 1)] = get_float(&culling_ram_8e[src + 4*4]);
-    dest[CMINDEX(0, 2)] = get_float(&culling_ram_8e[src + 5*4]);
-    dest[CMINDEX(0, 3)] = get_float(&culling_ram_8e[src + 0*4]);
+    UINT8   *src;
 
-    dest[CMINDEX(1, 0)] = get_float(&culling_ram_8e[src + 6*4]);
-    dest[CMINDEX(1, 1)] = get_float(&culling_ram_8e[src + 7*4]);
-    dest[CMINDEX(1, 2)] = get_float(&culling_ram_8e[src + 8*4]);
-    dest[CMINDEX(1, 3)] = get_float(&culling_ram_8e[src + 1*4]);
+    src = &matrix_base[matrix_addr*4];
 
-    dest[CMINDEX(2, 0)] = get_float(&culling_ram_8e[src + 9*4]);
-    dest[CMINDEX(2, 1)] = get_float(&culling_ram_8e[src + 10*4]);
-    dest[CMINDEX(2, 2)] = get_float(&culling_ram_8e[src + 11*4]);
-    dest[CMINDEX(2, 3)] = get_float(&culling_ram_8e[src + 2*4]);
+    dest[CMINDEX(0, 0)] = get_float(&src[3*4]);
+    dest[CMINDEX(0, 1)] = get_float(&src[4*4]);
+    dest[CMINDEX(0, 2)] = get_float(&src[5*4]);
+    dest[CMINDEX(0, 3)] = get_float(&src[0*4]);
+
+    dest[CMINDEX(1, 0)] = get_float(&src[6*4]);
+    dest[CMINDEX(1, 1)] = get_float(&src[7*4]);
+    dest[CMINDEX(1, 2)] = get_float(&src[8*4]);
+    dest[CMINDEX(1, 3)] = get_float(&src[1*4]);
+
+    dest[CMINDEX(2, 0)] = get_float(&src[9*4]);
+    dest[CMINDEX(2, 1)] = get_float(&src[10*4]);
+    dest[CMINDEX(2, 2)] = get_float(&src[11*4]);
+    dest[CMINDEX(2, 3)] = get_float(&src[2*4]);
 
     dest[CMINDEX(3, 0)] = 0.0;
     dest[CMINDEX(3, 1)] = 0.0;
@@ -1120,7 +1075,8 @@ static void draw_block(UINT8 *block)
     matrix = GETWORDLE(&block[3*4]);
     if ((matrix & 0x20000000))
     {
-        get_matrix(m, 0x2000*4 + (matrix & 0xFFFF)*12*4);
+        get_matrix(m, (matrix & 0xFFFF)*12);
+//        get_matrix(m, &culling_ram_8e[0x2000*4 + (matrix & 0xFFFF)*12*4]);
         glPushMatrix();
         glMultMatrixf(m);
     }
@@ -1137,13 +1093,18 @@ static void draw_block(UINT8 *block)
         if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
         draw_list(translate_r3d_address(addr & 0x01FFFFFF));
         break;
-    case 0x00:  // draw model
+    case 0x00:  // draw model or another 10-word block
         if (addr != 0)  // safeguard: in case memory has not been uploaded yet
         {
-            if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-                draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
-            else                                    // some Real3D region...
-                draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+            if ((addr & 0x01000000))                // VROM or poly RAM (draw model)
+            {
+                if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+                    draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
+                else                                    // polygon RAM
+                    draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+            }
+            else                                    // some Real3D region (another 10-word block)
+                draw_block(translate_r3d_address(addr & 0x01FFFFFF));
         }
         break;
     default:
@@ -1167,29 +1128,43 @@ static void draw_block(UINT8 *block)
 
 static void draw_scene(void)
 {
-    UINT32 index = 0;
-	UINT32 next, link;
-	UINT n = 0;
+    UINT32  i, j;
+    BOOL    stop;
 
-	do
-	{
-		next = GETWORDLE(&culling_ram_8e[index + 1 * 4]);
-		link = GETWORDLE(&culling_ram_8e[index + 2 * 4]);
+    /*
+     * Draw each major node
+     */
 
-		//scene_matrix = GETWORDLE(&culling_ram_8e[index + 22 * 4]);
-		//scene_fp_param = GETWORDLE(&culling_ram_8e[index + 23 * 4]);
+    i = 0;
+    stop = 0;
 
-		n++;
+    do
+    {
+//        /*
+        // DEBUG
+        message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
+        i,
+        GETWORDLE(&culling_ram_8e[i + 0]),
+        GETWORDLE(&culling_ram_8e[i + 4]),
+        GETWORDLE(&culling_ram_8e[i + 8])
+        );
+//        */
 
-		if(n == 1 && (next & 0x0000FFFF) == 0)
-			break;
+        set_matrix_base(GETWORDLE(&culling_ram_8e[i + 0x16*4]));
+        j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
+        j = (j & 0xffff) * 4;
+        if (j == 0) // culling RAM probably hasn't been set up yet
+            break;
 
-		if(link & 0x800000 && !(link & 0xFF000000))
-			draw_block(&culling_ram_8e[(link & 0x3FFFF) * 4]);
+        i = GETWORDLE(&culling_ram_8e[i + 4]);  // get address of next block
+        if (i == 0x01000000)                    // 01000000 == STOP
+            stop = TRUE;
+        i = (i & 0xffff) * 4;
 
-		index = (next & 0x3FFFF) * 4;
-
-	} while(next & 0x800000);
+//        draw_list(translate_r3d_address(GETWORDLE(&culling_ram_8e[j + 7*4]) & 0x01FFFFFF));
+        draw_block(&culling_ram_8e[j]);
+    }
+    while (!stop);
 }
 
 /******************************************************************/
@@ -1210,8 +1185,8 @@ static const INT	decode[64] =
 
 static void draw_texture_tile_8(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
 {
-    UINT    xi, yi, pixel_offs, lum8;
-    GLbyte  r, g, b;
+    UINT    xi, yi, pixel_offs;
+    UINT8   lum8;
 
 	for (yi = 0; yi < 8; yi++)
 	{
@@ -1231,7 +1206,7 @@ static void draw_texture_tile_8(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 0] = lum8;
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 1] = lum8;
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 2] = lum8;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = 0xFF;
+            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = (UINT8) 0xFF;
         }
     }
 }

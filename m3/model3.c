@@ -46,6 +46,8 @@ CONFIG m3_config;
  * Model 3 Memory Regions
  */
 
+static UINT8    _FE180000[0x20000];
+
 static UINT8    *ram = NULL;            // PowerPC RAM
 static UINT8    *bram = NULL;           // backup RAM
 static UINT8    *sram = NULL;           // sound RAM
@@ -311,9 +313,11 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         {
         case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
             return bridge_read_config_data_32(a);
+
         case 0xFE1A0000:    // ? Virtual On 2 -- important to return 0
+            return 0;       // see my message on 13May ("VROM Port?")
         case 0xFE1A001C:   
-            return 0;
+            return 0xFFFFFFFF;
         }
 
         break;
@@ -521,7 +525,12 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
                  (a >= 0xFE140000 && a <= 0xFE14003F))  // ? Virtual On 2
             return;
         else if (a >= 0xFE180000 && a <= 0xFE19FFFF)    // ?
+        {
+            a -= 0xFE180000;
+            _FE180000[a/4*2] = d >> 24;
+            _FE180000[a/4*2 + 1] = (d >> 16) & 0xFF;
             return;
+        }
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
         {
             tilegen_vram_write_32(a, d);
@@ -1498,6 +1507,7 @@ void m3_shutdown(void)
     save_file("8e000000", culling_ram_8e, 1*1024*1024);
     save_file("8c000000", culling_ram_8c, 2*1024*1024);
     save_file("98000000", polygon_ram, 2*1024*1024);
+    save_file("fe180000", _FE180000, 0x20000);
 
     SAFE_FREE(ram);
 	SAFE_FREE(vram);

@@ -54,7 +54,7 @@ static UINT32	vrom_texture_header;
 
 /*
  * void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
- *               UINT8 *polygon_ram_ptr);
+ *               UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr);
  *
  * Initializes the Real3D graphics emulation.
  *
@@ -62,6 +62,7 @@ static UINT32	vrom_texture_header;
  *      culling_ram_8e_ptr = Pointer to 0x8E000000 culling RAM.
  *      culling_ram_8c_ptr = Pointer to 0x8C000000 culling RAM.
  *      polygon_ram_ptr    = Pointer to polygon RAM.
+ *      vrom_ptr           = Pointer to VROM.
  */
 
 void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
