@@ -21,6 +21,12 @@
  *
  * Real3D Model 3 graphics system emulation. The 3D hardware in Model 3 is
  * supposedly based on the Pro-1000.
+ *
+ * To-Do List:
+ * -----------
+ * - In VS2_98, in the attract mode, when the camera zooms in on the score
+ *   board for South Africa vs. Nigeria, the "Nigeria" text texture is
+ *   garbage.
  */
 
 /*
@@ -469,10 +475,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
 
     switch (a)
     {
-    case 0x88000000:    // 0xDEADDEAD
-//        controls_update();
-//        osd_renderer_update_frame();
-//        LOG("model3.log", "DEADDEAD\n");
+    case 0x88000000:    // trigger?
+
+        message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
 
 		// Upload the texture if available
 		if( texture_size != 0 ) {
@@ -483,8 +488,6 @@ void r3d_write_32(UINT32 a, UINT32 d)
 			texture_header = 0;
 			texture_start_pos = 8;
 		}
-
-        message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
         return;
     case 0x90000000:    // VROM texture address
         vrom_texture_address = BSWAP32(d);
