@@ -203,7 +203,10 @@ INLINE void ppc_test_irq(void)
                 ppc.irq_state = 0;
 
 			ppc_update_pc();
-
+			
+#ifdef RECORD_BB_STATS			
+			bb_in_exception = 1;
+#endif			
 		}else
 		if(ppc.dec_expired){
 
@@ -220,6 +223,10 @@ INLINE void ppc_test_irq(void)
 			ppc.dec_expired = 0;
 
 			ppc_update_pc();
+			
+#ifdef RECORD_BB_STATS			
+			bb_in_exception = 1;
+#endif						
 		}
 	}
 }

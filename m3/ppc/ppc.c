@@ -1,3 +1,6 @@
+//#define WATCH_PC    0x101cd8
+//#define BREAK_PC    0x8ac34
+
 // TODO: build a jump table
 /*
  * ppc.c
@@ -11,7 +14,7 @@
 #define LOG(...)
 #endif
 
-//#define RECORD_BB_STATS
+#define RECORD_BB_STATS
 
 /******************************************************************/
 /* Private Variables                                              */
@@ -30,6 +33,8 @@ static void ppc_update_pc(void);
 /******************************************************************/
 
 #ifdef RECORD_BB_STATS
+
+#include "analys.h"
 
 typedef struct BB
 {
@@ -63,6 +68,7 @@ static BB		bb_list_head;
 static BB		bb_list_tail;
 static BB		* cur_bb;
 static UINT		bb_num;
+static BOOL		bb_in_exception;	// exceptions cause problems, we disable BB logging inside them
 
 static BB * bb_search(UINT32 addr)
 {
@@ -112,10 +118,36 @@ static BB * bb_add(UINT32 addr)
 	return new_bb;
 }
 
+/*
+ * bb_record():
+ *
+ * Records a basic block in the list (unless it's already there.) This should be called at the 
+ * last instruction of the current BB before the next BB. 
+ *
+ * NOTE: Any code encountered while the PPC is processing exceptions is ignored.
+ *
+ * Parameters:
+ *		addr      = Address of (branch) instruction which will terminate current block.
+ *		target    = Address of the new BB to record (which the current BB branches to.)
+ *		is_direct = Whether the branch terminating the current BB is a direct branch.
+ *		is_uncond = Whether it's an unconditional branch.
+ *		cc        = Condition from branch instruction.
+ *		cc_true   = Whether condition evaluated true or not. This is used to determine which edge
+ *		            (0 or 1) to use for a conditional BB. 
+ */
+
 static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true)
 {
 	BB * bb;
 
+	/*
+	 * Exceptions cause serious problems because they mess up the cur_bb and cannot be handled
+	 * nicely, so we choose not to do any logging while they're being processed.
+	 */
+	 
+	if (bb_in_exception)
+		return;
+		
 	// end of the current block -- record type and edge profiling
 	// info.
 
@@ -159,6 +191,8 @@ static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond
 
 static void bb_stat_init(void)
 {
+	bb_in_exception = 0;
+	
 	bb_list_head.next = &bb_list_tail;
 	bb_list_head.prev = NULL;
 	bb_list_head.addr = 0x00000000;
@@ -174,6 +208,79 @@ static void bb_stat_init(void)
 	LOG_INIT("bb.log");
 }
 
+/*
+ * bb_analyze_regusage():
+ *
+ * Iterates through every instruction in a BB to compute register usage
+ * information. The information is printed out.
+ */
+
+static void bb_analyze_regusage(BB *bb)
+{
+	PPC_REGUSAGE	written, read, total;	
+	UINT			num_written, num_read, num_total;
+	UINT32			addr, end_addr;
+	INT				i;
+	
+	/*
+	 * Initialize data structures
+	 */
+	 
+	memset(&written, 0, sizeof(PPC_REGUSAGE));
+	memset(&read, 0, sizeof(PPC_REGUSAGE));
+	
+	/*
+	 * Analyze each instruction in the BB
+	 */
+	 
+	addr = bb->addr;						// start here
+	end_addr = addr + bb->inst_count * 4;	// end before here	
+	while (addr != end_addr)
+	{		
+		ppc_analyze_regusage(&written, &read, ppc.read_32(addr));
+		addr += 4;	// next instruction
+	}
+	
+	ppc_add_regusage_data(&total, &written, &read);	// total register accesses
+	
+	/*
+	 * Count number of different registers used
+	 */
+	 
+	num_written = ppc_get_num_regs_used(&written);
+	num_read = ppc_get_num_regs_used(&read);
+	num_total = ppc_get_num_regs_used(&total);	// NOTE: NOT the same as num_written + num_read, provides unique # of regs used
+	
+	LOG("bb.log", "  Register Usage: %d registers accessed (Written=%d, Read=%d)\n", num_total, num_written, num_read);
+	
+	/*
+	 * Print the registers used and how many times they were accessed
+	 */
+	 
+	for (i = 0; i < 32; i++)
+	{
+		if (total.r[i] != 0)
+			LOG("bb.log", "\tR%d: %d accesses (%d writes, %d reads)\n", i, total.r[i], written.r[i], read.r[i]);
+	}
+	
+	for (i = 0; i < 32; i++)
+	{
+		if (total.f[i] != 0)
+			LOG("bb.log", "\tF%d: %d accesses (%d writes, %d reads)\n", i, total.f[i], written.f[i], read.f[i]);
+	}
+	
+	if (total.lr != 0)	LOG("bb.log", "\tLR: %d accesses (%d writes, %d reads)\n", total.lr, written.lr, read.lr);
+	if (total.ctr != 0)	LOG("bb.log", "\tCTR: %d accesses (%d writes, %d reads)\n", total.ctr, written.ctr, read.ctr);	
+	if (total.cr != 0)	LOG("bb.log", "\tCR: %d accesses (%d writes, %d reads)\n", total.cr, written.cr, read.cr);
+	if (total.xer != 0)	LOG("bb.log", "\tXER: %d accesses (%d writes, %d reads)\n", total.xer, written.xer, read.xer);
+	if (total.msr != 0)	LOG("bb.log", "\tMSR: %d accesses (%d writes, %d reads)\n", total.msr, written.msr, read.msr);
+	if (total.fpscr != 0)	LOG("bb.log", "\tFPSCR: %d accesses (%d writes, %d reads)\n", total.fpscr, written.fpscr, read.fpscr);
+	if (total.tbu != 0)	LOG("bb.log", "\tTBU: %d accesses (%d writes, %d reads)\n", total.tbu, written.tbu, read.tbu);
+	if (total.tbl != 0)	LOG("bb.log", "\tTBL: %d accesses (%d writes, %d reads)\n", total.tbl, written.tbl, read.tbl);
+	if (total.dec != 0)	LOG("bb.log", "\tDEC: %d accesses (%d writes, %d reads)\n", total.dec, written.dec, read.dec);
+	LOG("bb.log", "\n");
+}
+
 static const char * cond_name[] =
 {
 	"--ctr != 0 && cc == 0",	"--ctr == 0 && cc == 0",
@@ -186,6 +293,12 @@ static const char * cond_name[] =
 	"always",					"always",
 };
 
+/*
+ * bb_stat_shutdown():
+ *
+ * Traverses the BB list and prints out information for each one. 
+ */
+ 
 static void bb_stat_shutdown(void)
 {
 	BB		* bb = bb_list_head.next;
@@ -207,7 +320,7 @@ static void bb_stat_shutdown(void)
 			LOG("bb.log",
 				"  cond = [%s]\n"
 				"   false  -> %08X, executed %u times (%f%%)\n"
-				"   true   -> %08X, executed %u times (%f%%)\n\n",
+				"   true   -> %08X, executed %u times (%f%%)\n",
 				cond_name[((bb->type >> 2) & 31) >> 1],
 				bb->edge[0].target, bb->edge[0].exec_count,
 				(bb->edge[0].exec_count * 100.0f) / (float)bb->exec_count,
@@ -218,9 +331,11 @@ static void bb_stat_shutdown(void)
 		}
 		else					// unconditional
 		{
-			LOG("bb.log", "  target -> %08X\n\n", bb->edge[0].target);
+			LOG("bb.log", "  target -> %08X\n", bb->edge[0].target);
 			uncond_branch_num++;
 		}
+		
+		bb_analyze_regusage(bb);	// print out register usage information
 
 		tot_bb_size += bb->inst_count * 4;
 
@@ -3116,6 +3231,10 @@ static void ppc_rfi(u32 op)
 	ppc_set_msr(ppc.spr[SPR_SRR1]);
 
 	ppc_update_pc();
+	
+#ifdef RECORD_BB_STATS			
+	bb_in_exception = 0;
+#endif				
 }
 
 static void ppc_rfci(u32 op)
@@ -3128,6 +3247,10 @@ static void ppc_rfci(u32 op)
 	ppc_set_msr(ppc.spr[SPR_SRR3]);
 
 	ppc_update_pc();
+
+#ifdef RECORD_BB_STATS			
+	bb_in_exception = 0;
+#endif				
 }
 
 static void ppc_sc(u32 op)
@@ -3210,8 +3333,10 @@ u32 ppc_run(u32 count)
         if (ppc.pc == WATCH_PC)
             log_regs();
 #endif
-//        if (ppc.pc == 0x11A668)
-//            error("Reached desired PC.");
+#ifdef BREAK_PC
+        if (ppc.pc == BREAK_PC)
+            error("Reached desired PC.");
+#endif
 
 		op = BSWAP32(*ppc._pc);
 
