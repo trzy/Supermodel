@@ -999,6 +999,12 @@ INT I_Fsubx(UINT32 op)
 
 	F(t).fd = F(a).fd - F(b).fd;
 
+	printf(	"$$$ %08X%08X - %08X%08X\n",
+			(UINT32)(F(a).id >> 32),
+			(UINT32)(F(a).id),
+			(UINT32)(F(b).id >> 32),
+			(UINT32)(F(b).id));
+
     set_fprf(F(t).fd);
 	SET_FCR1();
 

@@ -80,6 +80,15 @@ typedef enum
 #define X86_8_TO_32		1
 #define X86_16_TO_32	2
 
+/*
+ * FP Rounding Modes
+ */
+
+#define X86_ROUNDM_NEAR	0
+#define X86_ROUNDM_DOWN	1
+#define X86_ROUNDM_UP	2
+#define X86_ROUNDM_CHOP	3
+
 /*******************************************************************************
  Instructions
 *******************************************************************************/
@@ -138,17 +147,20 @@ extern X86_EMITTER( CmpMemAbsToImm_32 )(UINT addr, UINT imm);
 extern X86_EMITTER( CmpMemRegRelToImm_8 )(UINT addr, UINT offs, UINT imm);
 extern X86_EMITTER( CmpMemRegRelToImm_16 )(UINT addr, UINT offs, UINT imm);
 extern X86_EMITTER( CmpMemRegRelToImm_32 )(UINT addr, UINT offs, UINT imm);
-extern X86_EMITTER( FldMem_32 )(UINT32 addr);
-extern X86_EMITTER( FldMem_64 )(UINT32 addr);
-extern X86_EMITTER( FldMem_80 )(UINT32 addr);
+extern X86_EMITTER( FldMemAbs_32 )(UINT32 addr);
+extern X86_EMITTER( FldMemAbs_64 )(UINT32 addr);
+extern X86_EMITTER( FldMemAbs_80 )(UINT32 addr);
 extern X86_EMITTER( FldST )(UINT sti);
-extern X86_EMITTER( FstMem_32 )(UINT32 addr);
-extern X86_EMITTER( FstMem_64 )(UINT32 addr);
+extern X86_EMITTER( FstMemAbs_32 )(UINT32 addr);
+extern X86_EMITTER( FstMemAbs_64 )(UINT32 addr);
 extern X86_EMITTER( FstST )(UINT sti);
-extern X86_EMITTER( FstpMem_32 )(UINT32 addr);
-extern X86_EMITTER( FstpMem_64 )(UINT32 addr);
-extern X86_EMITTER( FstpMem_80 )(UINT32 addr);
+extern X86_EMITTER( FstpMemAbs_32 )(UINT32 addr);
+extern X86_EMITTER( FstpMemAbs_64 )(UINT32 addr);
+extern X86_EMITTER( FstpMemAbs_80 )(UINT32 addr);
 extern X86_EMITTER( FstpST )(UINT sti);
+extern X86_EMITTER( Fsubp )(void);
+extern X86_EMITTER( Fmulp )(void);
+extern X86_EMITTER( Fdivp )(void);
 extern X86_EMITTER( JccRel8 )(UINT cc, UINT addr);
 extern X86_EMITTER( JccRel32 )(UINT cc, UINT addr);
 extern X86_EMITTER( MovRegToReg_8 )(UINT reg2, UINT reg1);
@@ -175,6 +187,12 @@ extern X86_EMITTER( MovRegToMemRegRel_32 )(UINT reg, UINT addr, UINT disp);
 extern X86_EMITTER( MovMemRegRelToReg_8 )(UINT reg, UINT addr, UINT disp);
 extern X86_EMITTER( MovMemRegRelToReg_16 )(UINT reg, UINT addr, UINT disp);
 extern X86_EMITTER( MovMemRegRelToReg_32 )(UINT reg, UINT addr, UINT disp);
+extern X86_EMITTER( MovsxRegToReg_8To16 )(UINT, UINT);
+extern X86_EMITTER( MovsxRegToReg_8To32 )(UINT, UINT);
+extern X86_EMITTER( MovsxRegToReg_16To32 )(UINT, UINT);
+extern X86_EMITTER( MovsxMemAbsToReg_8To16 )(UINT, UINT);
+extern X86_EMITTER( MovsxMemAbsToReg_8To32 )(UINT, UINT);
+extern X86_EMITTER( MovsxMemAbsToReg_16To32 )(UINT, UINT);
 extern X86_EMITTER( MulMemAbs_8 )(UINT addr);
 extern X86_EMITTER( MulMemAbs_16 )(UINT addr);
 extern X86_EMITTER( MulMemAbs_32 )(UINT addr);

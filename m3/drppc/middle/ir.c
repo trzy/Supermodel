@@ -150,6 +150,21 @@ static UINT32 DoReverse8In32 (UINT32 val)
 			((val << 24) & 0xFF000000);
 }
 
+static UINT32 DoExts8To16 (UINT32 val)
+{
+	return val | ((val & 0x80) ? 0xFF00 : 0);
+}
+
+static UINT32 DoExts8To32 (UINT32 val)
+{
+	return val | ((val & 0x80) ? 0xFFFFFF00 : 0);
+}
+
+static UINT32 DoExts16To32 (UINT32 val)
+{
+	return val | ((val & 0x8000) ? 0xFFFF0000 : 0);
+}
+
 static UINT32 DoCompare (IR_CONDITION cond, UINT32 op1, UINT32 op2)
 {
 	UINT32 flag;
@@ -569,6 +584,86 @@ static void IR_EncodeALU_D_S_I
 }
 
 /*
+ * IR_EncodeBrev
+ *
+ * Encodes a byte reverse operation.
+ */
+
+static void IR_EncodeBrev (UINT dest, UINT src, IR_SIZE size)
+{
+	if (IsConstant(src))
+	{
+		UINT32	res;
+
+		src = GetConstant(src);
+
+		if (size == IR_REV_8_IN_16)
+			res = DoReverse8In16(src);
+		else
+			res = DoReverse8In32(src);
+
+		IR_EncodeLoadi(dest, res);
+	}
+	else
+	{
+		IR * ir = NewInst();
+
+		IR_OPERATION(ir)		= IR_BREV;
+		IR_SIZE(ir)				= size;
+		IR_OPERAND_DEST(ir)		= dest;
+		IR_OPERAND_SRC1(ir)		= src;
+
+		SetUpDFlowVectors(ir);
+
+		ResetConstant(dest);
+	}
+}
+
+/*
+ * IR_EncodeExts
+ *
+ * Encodes a sign-extend operation.
+ */
+
+static void IR_EncodeExts (UINT dest, UINT src, IR_SIZE size)
+{
+	if (IsConstant(src))
+	{
+		UINT32	res = 0xDEADBEEF;
+
+		src = GetConstant(src);
+
+		switch (size)
+		{
+		case IR_EXT_8_TO_16:
+			res = DoExts8To16(src);
+			break;
+		case IR_EXT_8_TO_32:
+			res = DoExts8To32(src);
+			break;
+		case IR_EXT_16_TO_32:
+			res = DoExts16To32(src);
+			break;
+		}
+
+		IR_EncodeLoadi(dest, res);
+	}
+	else
+	{
+		IR * ir = NewInst();
+
+		IR_OPERATION(ir)		= IR_EXTS;
+		IR_SIZE(ir)				= size;
+		IR_OPERAND_DEST(ir)		= dest;
+		IR_OPERAND_SRC1(ir)		= src;
+
+		SetUpDFlowVectors(ir);
+
+		ResetConstant(dest);
+	}
+}
+
+/*
  * IR_EncodeLoad
  *
  * Encodes a load operation.
@@ -642,7 +737,7 @@ static void IR_EncodeStore (IR_SIZE size, UINT src, UINT base, UINT32 offs)
 		IR_OPERAND_SRC1(ir)	= base;
 	}
 
-	// NOTE: not constant propagation support for 64-bit data.
+	// NOTE: no constant propagation support for 64-bit data.
 
 	if (IsConstant(src) && size != IR_INT64)
 	{
@@ -862,39 +957,48 @@ void IR_EncodeShri (UINT dest, UINT src, UINT32 sa)
 }
 
 /*
- * void IR_EncodeBrev (UINT dest, UINT src, IR_SIZE size);
+ * void IR_EncodeBrev8In16 (UINT dest, UINT src);
  */
 
-void IR_EncodeBrev (UINT dest, UINT src, IR_SIZE size)
+void IR_EncodeBrev8In16 (UINT dest, UINT src)
 {
-	ASSERT(size == IR_REV_8_IN_16 || size == IR_REV_8_IN_32);
+	IR_EncodeBrev(dest, src, IR_REV_8_IN_16);
+}
 
-	if (IsConstant(src))
-	{
-		UINT32	res;
+/*
+ * void IR_EncodeBrev8In32 (UINT dest, UINT src);
+ */
 
-		src = GetConstant(src);
+void IR_EncodeBrev8In32 (UINT dest, UINT src)
+{
+	IR_EncodeBrev(dest, src, IR_REV_8_IN_32);
+}
 
-		if (size == IR_REV_8_IN_16)
-			res = DoReverse8In16(src);
-		else
-			res = DoReverse8In32(src);
+/*
+ * void IR_EncodeExts8To16 (UINT dest, UINT src);
+ */
 
-		IR_EncodeLoadi(dest, res);
-	}
-	else
-	{
-		IR * ir = NewInst();
+void IR_EncodeExts8To16 (UINT dest, UINT src)
+{
+	IR_EncodeExts(dest, src, IR_EXT_8_TO_16);
+}
 
-		IR_OPERATION(ir)		= IR_BREV;
-		IR_SIZE(ir)				= size;
-		IR_OPERAND_DEST(ir)		= dest;
-		IR_OPERAND_SRC1(ir)		= src;
+/*
+ * void IR_EncodeExts8To32 (UINT dest, UINT src);
+ */
 
-		SetUpDFlowVectors(ir);
+void IR_EncodeExts8To32 (UINT dest, UINT src)
+{
+	IR_EncodeExts(dest, src, IR_EXT_8_TO_32);
+}
 
-		ResetConstant(dest);
-	}
+/*
+ * void IR_EncodeExts16To32 (UINT dest, UINT src);
+ */
+
+void IR_EncodeExts16To32 (UINT dest, UINT src)
+{
+	IR_EncodeExts(dest, src, IR_EXT_16_TO_32);
 }
 
 /*
@@ -979,31 +1083,6 @@ void IR_EncodeCmpi (IR_CONDITION cond, UINT dest, UINT src, UINT32 imm)
 		IR_OPERAND_SRC1(ir)		= src;
 		IR_OPERAND_SRC2(ir)		= imm;
 		IR_CONSTANT(ir)			= 2;
-
-		SetUpDFlowVectors(ir);
-
-		ResetConstant(dest);
-	}
-}
-
-/*
- * void IR_EncodeConvert (IR_SIZE size, UINT dest, UINT src);
- */
-
-void IR_EncodeConvert (IR_SIZE size, UINT dest, UINT src)
-{
-	if (IsConstant(src))
-	{
-		ASSERT(0);
-	}
-	else
-	{
-		IR * ir = NewInst();
-
-		IR_OPERATION(ir)		= IR_CONVERT;
-		IR_SIZE(ir)				= size;
-		IR_OPERAND_DEST(ir)		= dest;
-		IR_OPERAND_SRC1(ir)		= src;
 
 		SetUpDFlowVectors(ir);
 
@@ -1235,6 +1314,70 @@ void IR_EncodeSync (UINT cycles)
 		IR_CONSTANT(ir)			= 3;
 		IR_MUST_EMIT(ir)		= TRUE;
 	}
+}
+
+/*
+ * void IR_EncodeConvert (IR_SIZE size, UINT dest, UINT src);
+ */
+
+void IR_EncodeConvert (IR_SIZE size, UINT dest, UINT src)
+{
+	IR * ir = NewInst();
+
+	ASSERT(!IsConstant(src));	// No constant support for FP instructions.
+
+	IR_OPERATION(ir)		= IR_CONVERT;
+	IR_SIZE(ir)				= size;
+	IR_OPERAND_DEST(ir)		= dest;
+	IR_OPERAND_SRC1(ir)		= src;
+
+	SetUpDFlowVectors(ir);
+
+	ResetConstant(dest);
+}
+
+static void EncodeFPArith_2Op (IR_OP op, UINT dest, UINT src1, UINT src2)
+{
+	IR * ir = NewInst();
+
+	ASSERT(!IsConstant(src1));	// No constant support for FP instructions.
+	ASSERT(!IsConstant(src2));	// No constant support for FP instructions.
+
+	IR_OPERATION(ir)		= op;
+	IR_OPERAND_DEST(ir)		= dest;
+	IR_OPERAND_SRC1(ir)		= src1;
+	IR_OPERAND_SRC2(ir)		= src2;
+
+	SetUpDFlowVectors(ir);
+
+	ResetConstant(dest);
+}
+
+/*
+ * void IR_EncodeFSub (UINT dest, UINT src1, UINT src2);
+ */
+
+void IR_EncodeFSub (UINT dest, UINT src1, UINT src2)
+{
+	EncodeFPArith_2Op(IR_FSUB, dest, src1, src2);
+}
+
+/*
+ * void IR_EncodeFMul (UINT dest, UINT src1, UINT src2);
+ */
+
+void IR_EncodeFMul (UINT dest, UINT src1, UINT src2)
+{
+	EncodeFPArith_2Op(IR_FMUL, dest, src1, src2);
+}
+
+/*
+ * void IR_EncodeFDiv (UINT dest, UINT src1, UINT src2);
+ */
+
+void IR_EncodeFDiv (UINT dest, UINT src1, UINT src2)
+{
+	EncodeFPArith_2Op(IR_FDIV, dest, src1, src2);
 }
 
 /*******************************************************************************

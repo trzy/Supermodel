@@ -327,7 +327,14 @@ INT D_Subfzex(UINT32 op)
 
 INT D_Andx(UINT32 op)
 {
-	ASSERT(0);
+	UINT	ra = RA;
+	UINT	rb = RB;
+	UINT	rt = RT;
+
+	IR_EncodeAnd(ID_R(ra), ID_R(rt), ID_R(rb));
+
+	ENCODE_SET_CR0(ra);
+
 	return DRPPC_OKAY;
 }
 

@@ -2079,6 +2079,135 @@ X86_EMITTER( MovMemRegRelToReg_32 )(UINT reg, UINT addr, UINT disp)
 	X86OpRegToMemRegRel(32, 0x8A, reg, addr, disp);
 }
 
+/*** Movsx ********************************************************************/
+
+X86_EMITTER( MovsxRegToReg_8To16 )(UINT reg1, UINT reg2)
+{
+	Emit8(PREFIX_DATA_SIZE);
+	Emit8(0x0F);
+	Emit8(0xBE);
+	Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
+}
+
+X86_EMITTER( MovsxRegToReg_8To32 )(UINT reg1, UINT reg2)
+{
+	Emit8(0x0F);
+	Emit8(0xBE);
+	Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
+}
+
+X86_EMITTER( MovsxRegToReg_16To32 )(UINT reg1, UINT reg2)
+{
+	Emit8(0x0F);
+	Emit8(0xBF);
+	Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
+}
+
+X86_EMITTER( MovsxMemAbsToReg_8To16 )(UINT reg, UINT addr)
+{
+	Emit8(0x0F);
+	Emit8(0xBE);
+	Emit8(MODRM(0, reg, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( MovsxMemAbsToReg_8To32 )(UINT reg, UINT addr)
+{
+	Emit8(PREFIX_DATA_SIZE);
+	Emit8(0x0F);
+	Emit8(0xBF);
+	Emit8(MODRM(0, reg, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( MovsxMemAbsToReg_16To32 )(UINT reg, UINT addr)
+{
+	Emit8(0x0F);
+	Emit8(0xBF);
+	Emit8(MODRM(0, reg, 5));
+	Emit32(addr);
+}
+/*
+X86_EMITTER( MovsxMemRegRelToReg_8To16 )(UINT reg, UINT addr)
+{
+	Emit8(0x0F);
+	Emit8(0xBE);
+	Emit8(MODRM(0, reg, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( MovsxMemRegRelToReg_8To32 )(UINT reg, UINT addr)
+{
+	Emit8(PREFIX_DATA_SIZE);
+	Emit8(0x0F);
+	Emit8(0xBF);
+	Emit8(MODRM(0, reg, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( MovsxMemRegRelToReg_16To32 )(UINT reg, UINT addr)
+{
+	Emit8(0x0F);
+	Emit8(0xBF);
+	Emit8(MODRM(0, reg, 5));
+	Emit32(addr);
+}
+*/
+/*** Movzx ********************************************************************/
+
+X86_EMITTER( MovzxReg1ToReg2 )(UINT size, UINT reg1, UINT reg2)
+{
+	switch(size)
+	{
+	case X86_8_TO_16:
+		Emit8(PREFIX_DATA_SIZE);
+		Emit8(0x0F);
+		Emit8(0xB6);
+		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
+		break;
+	case X86_8_TO_32:
+		Emit8(0x0F);
+		Emit8(0xB6);
+		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
+		break;
+	case X86_16_TO_32:
+		Emit8(0x0F);
+		Emit8(0xB7);
+		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
+		break;
+	default:
+		ASSERT(0);
+	}
+}
+
+X86_EMITTER( MovzxMemAbsToReg )(UINT size, UINT reg, UINT addr)
+{
+	switch(size)
+	{
+	case X86_8_TO_16:
+		Emit8(0x0F);
+		Emit8(0xB6);
+		Emit8(MODRM(0, reg, 5));
+		Emit32(addr);
+		break;
+	case X86_8_TO_32:
+		Emit8(PREFIX_DATA_SIZE);
+		Emit8(0x0F);
+		Emit8(0xB7);
+		Emit8(MODRM(0, reg, 5));
+		Emit32(addr);
+		break;
+	case X86_16_TO_32:
+		Emit8(0x0F);
+		Emit8(0xB7);
+		Emit8(MODRM(0, reg, 5));
+		Emit32(addr);
+		break;
+	default:
+		ASSERT(0);
+	}
+}
+
 /*** Call *********************************************************************/
 
 X86_EMITTER( CallDirect )(UINT addr)
@@ -2146,85 +2275,6 @@ X86_EMITTER( XorImmToMemRegRel_32 )(UINT addr, UINT disp, UINT imm)
 	X86OpImmToMemRegRel(32, 6, addr, disp, imm);
 }
 
-/*** Fld **********************************************************************/
-
-X86_EMITTER( FldMem_32 )(UINT32 addr)
-{
-	Emit8(0xD9);
-	Emit8(MODRM(0, 0, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FldMem_64 )(UINT32 addr)
-{
-	Emit8(0xDD);
-	Emit8(MODRM(0, 0, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FldMem_80 )(UINT32 addr)
-{
-	Emit8(0xDB);
-	Emit8(MODRM(0, 0, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FldST )(UINT sti)
-{
-	Emit8(0xD9);
-	Emit8(0xC0 + (sti & 7));
-}
-
-/*** Fst[p] ********************************************************************/
-
-X86_EMITTER( FstMem_32 )(UINT32 addr)
-{
-	Emit8(0xD9);
-	Emit8(MODRM(0, 2, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FstMem_64 )(UINT32 addr)
-{
-	Emit8(0xDD);
-	Emit8(MODRM(0, 2, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FstST )(UINT sti)
-{
-	Emit8(0xDD);
-	Emit8(0xD0 + (sti & 7));
-}
-
-X86_EMITTER( FstpMem_32 )(UINT32 addr)
-{
-	Emit8(0xD9);
-	Emit8(MODRM(0, 3, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FstpMem_64 )(UINT32 addr)
-{
-	Emit8(0xDD);
-	Emit8(MODRM(0, 3, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FstpMem_80 )(UINT32 addr)
-{
-	Emit8(0xDB);
-	Emit8(MODRM(0, 3, 5));
-	Emit32(addr);
-}
-
-X86_EMITTER( FstpST )(UINT sti)
-{
-	Emit8(0xDD);
-	Emit8(0xD8 + (sti & 7));
-}
-
-/******************************************************************************/
 
 /*
 
@@ -2827,112 +2877,6 @@ X86_EMITTER( MovImmToMemReg )(UINT size, UINT addr, UINT imm)
 	}
 }
 
-X86_EMITTER( MovsxReg1ToReg2 )(UINT size, UINT reg1, UINT reg2)
-{
-	switch(size)
-	{
-	case X86_8_TO_16:
-		Emit8(PREFIX_DATA_SIZE);
-		Emit8(0x0F);
-		Emit8(0xBE);
-		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
-		break;
-	case X86_8_TO_32:
-		Emit8(0x0F);
-		Emit8(0xBE);
-		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
-		break;
-	case X86_16_TO_32:
-		Emit8(0x0F);
-		Emit8(0xBF);
-		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
-		break;
-	default:
-		ASSERT(0);
-	}
-}
-
-X86_EMITTER( MovsxMemAbsToReg )(UINT size, UINT reg, UINT addr)
-{
-	switch(size)
-	{
-	case X86_8_TO_16:
-		Emit8(0x0F);
-		Emit8(0xBE);
-		Emit8(MODRM(0, reg, 5));
-		Emit32(addr);
-		break;
-	case X86_8_TO_32:
-		Emit8(PREFIX_DATA_SIZE);
-		Emit8(0x0F);
-		Emit8(0xBF);
-		Emit8(MODRM(0, reg, 5));
-		Emit32(addr);
-		break;
-	case X86_16_TO_32:
-		Emit8(0x0F);
-		Emit8(0xBF);
-		Emit8(MODRM(0, reg, 5));
-		Emit32(addr);
-		break;
-	default:
-		ASSERT(0);
-	}
-}
-
-X86_EMITTER( MovzxReg1ToReg2 )(UINT size, UINT reg1, UINT reg2)
-{
-	switch(size)
-	{
-	case X86_8_TO_16:
-		Emit8(PREFIX_DATA_SIZE);
-		Emit8(0x0F);
-		Emit8(0xB6);
-		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
-		break;
-	case X86_8_TO_32:
-		Emit8(0x0F);
-		Emit8(0xB6);
-		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
-		break;
-	case X86_16_TO_32:
-		Emit8(0x0F);
-		Emit8(0xB7);
-		Emit8(0xC0 | ((reg2 & 7) << 3) | (reg1 & 7));
-		break;
-	default:
-		ASSERT(0);
-	}
-}
-
-X86_EMITTER( MovzxMemAbsToReg )(UINT size, UINT reg, UINT addr)
-{
-	switch(size)
-	{
-	case X86_8_TO_16:
-		Emit8(0x0F);
-		Emit8(0xB6);
-		Emit8(MODRM(0, reg, 5));
-		Emit32(addr);
-		break;
-	case X86_8_TO_32:
-		Emit8(PREFIX_DATA_SIZE);
-		Emit8(0x0F);
-		Emit8(0xB7);
-		Emit8(MODRM(0, reg, 5));
-		Emit32(addr);
-		break;
-	case X86_16_TO_32:
-		Emit8(0x0F);
-		Emit8(0xB7);
-		Emit8(MODRM(0, reg, 5));
-		Emit32(addr);
-		break;
-	default:
-		ASSERT(0);
-	}
-}
-
 X86_EMITTER( MulReg )(UINT size, UINT reg)
 {
 	X86OpReg(size, 0xE0,reg);
@@ -3522,3 +3466,112 @@ X86_EMITTER( XorMemSibRelToReg )(UINT size, UINT reg, UINT sib, UINT disp)
 }
 
 */
+
+
+/*******************************************************************************
+ FPU Opcodes
+
+ What it says.
+*******************************************************************************/
+
+/*** Fld **********************************************************************/
+
+X86_EMITTER( FldMemAbs_32 )(UINT32 addr)
+{
+	Emit8(0xD9);
+	Emit8(MODRM(0, 0, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FldMemAbs_64 )(UINT32 addr)
+{
+	Emit8(0xDD);
+	Emit8(MODRM(0, 0, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FldMemAbs_80 )(UINT32 addr)
+{
+	Emit8(0xDB);
+	Emit8(MODRM(0, 0, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FldST )(UINT sti)
+{
+	Emit8(0xD9);
+	Emit8(0xC0 + (sti & 7));
+}
+
+/*** Fst[p] ********************************************************************/
+
+X86_EMITTER( FstMemAbs_32 )(UINT32 addr)
+{
+	Emit8(0xD9);
+	Emit8(MODRM(0, 2, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FstMemAbs_64 )(UINT32 addr)
+{
+	Emit8(0xDD);
+	Emit8(MODRM(0, 2, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FstST )(UINT sti)
+{
+	Emit8(0xDD);
+	Emit8(0xD0 + (sti & 7));
+}
+
+X86_EMITTER( FstpMemAbs_32 )(UINT32 addr)
+{
+	Emit8(0xD9);
+	Emit8(MODRM(0, 3, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FstpMemAbs_64 )(UINT32 addr)
+{
+	Emit8(0xDD);
+	Emit8(MODRM(0, 3, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FstpMemAbs_80 )(UINT32 addr)
+{
+	Emit8(0xDB);
+	Emit8(MODRM(0, 3, 5));
+	Emit32(addr);
+}
+
+X86_EMITTER( FstpST )(UINT sti)
+{
+	Emit8(0xDD);
+	Emit8(0xD8 + (sti & 7));
+}
+
+/*** Fdiv[p] ******************************************************************/
+
+X86_EMITTER( Fdivp )(void)
+{
+	Emit8(0xDE);
+	Emit8(0xF9);
+}
+
+/*** Fmul[p] ******************************************************************/
+
+X86_EMITTER( Fmulp )(void)
+{
+	Emit8(0xDE);
+	Emit8(0xC9);
+}
+
+/*** Fsub[p] ******************************************************************/
+
+X86_EMITTER( Fsubp )(void)
+{
+	Emit8(0xDE);
+	Emit8(0xE9);	
+}

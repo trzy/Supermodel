@@ -98,14 +98,27 @@ INT D_Lbzu(UINT32 op)
 
 INT D_Lhau(UINT32 op)
 {
-	ASSERT(0);
-	return DRPPC_ERROR;
+	UINT32	ea = SIMM;
+	UINT	ra = RA;
+	UINT	rt = RT;
+
+	IR_EncodeAddi(ID_R(ra), ID_R(ra), ea);
+	IR_EncodeLoad16(ID_R(rt), ID_R(ra), 0);
+	IR_EncodeExts16To32(ID_R(rt), ID_R(rt));
+
+	return DRPPC_OKAY;
 }
 
 INT D_Lhzu(UINT32 op)
 {
-	ASSERT(0);
-	return DRPPC_ERROR;
+	UINT32	ea = SIMM;
+	UINT	ra = RA;
+	UINT	rt = RT;
+
+	IR_EncodeAddi(ID_R(ra), ID_R(ra), ea);
+	IR_EncodeLoad16(ID_R(rt), ID_R(ra), 0);
+
+	return DRPPC_OKAY;
 }
 
 INT D_Lwzu(UINT32 op)
@@ -231,14 +244,14 @@ INT D_Lwbrx(UINT32 op)
 	if (ra == 0)
 	{
 		IR_EncodeLoad32(ID_TEMP(1), ID_R(rb), 0);
-		IR_EncodeBrev(ID_R(rt), ID_TEMP(1), IR_REV_8_IN_32);
+		IR_EncodeBrev8In32(ID_R(rt), ID_TEMP(1));
 	}
 	else
 	{
 		IR_EncodeMove(ID_TEMP(0), ID_R(rb));
 		IR_EncodeAdd(ID_TEMP(0), ID_TEMP(0), ID_R(ra));
 		IR_EncodeLoad32(ID_TEMP(1), ID_TEMP(0), 0);
-		IR_EncodeBrev(ID_R(rt), ID_TEMP(1), IR_REV_8_IN_32);
+		IR_EncodeBrev8In32(ID_R(rt), ID_TEMP(1));
 	}
 
 	return DRPPC_OKAY;
@@ -316,22 +329,12 @@ INT D_Stbux(UINT32 op)
 	ASSERT(0); return DRPPC_ERROR;
 }
 
-INT D_Stbx(UINT32 op)
-{
-	ASSERT(0); return DRPPC_ERROR;
-}
-
 INT D_Sthu(UINT32 op)
 {
 	ASSERT(0); return DRPPC_ERROR;
 }
 
 INT D_Sthux(UINT32 op)
-{
-	ASSERT(0); return DRPPC_ERROR;
-}
-
-INT D_Sthx(UINT32 op)
 {
 	ASSERT(0); return DRPPC_ERROR;
 }
@@ -352,7 +355,7 @@ INT D_Sthbrx (UINT32 op)
 	UINT	ra = RA;
 	UINT	rt = RT;
 
-	IR_EncodeBrev(ID_TEMP(0), ID_R(rt), IR_REV_8_IN_16);
+	IR_EncodeBrev8In16(ID_TEMP(0), ID_R(rt));
 
 	if (ra != 0)
 	{
@@ -371,7 +374,7 @@ INT D_Stwbrx (UINT32 op)
 	UINT	ra = RA;
 	UINT	rt = RT;
 
-	IR_EncodeBrev(ID_TEMP(0), ID_R(rt), IR_REV_8_IN_32);
+	IR_EncodeBrev8In32(ID_TEMP(0), ID_R(rt));
 
 	if (ra != 0)
 	{
@@ -416,10 +419,57 @@ INT D_Stwux (UINT32 op)
 	return DRPPC_ERROR;
 }
 
+
+
+INT D_Stbx(UINT32 op)
+{
+	UINT	rb = RB;
+	UINT	ra = RA;
+	UINT	rt = RT;
+
+	if (ra != 0)
+	{
+		IR_EncodeAdd(ID_TEMP(0), ID_R(ra), ID_R(rb));
+		IR_EncodeStore8(ID_R(rt), ID_TEMP(0), 0);
+	}
+	else
+		IR_EncodeStore8(ID_R(rt), ID_R(rb), 0);
+
+	return DRPPC_OKAY;
+}
+
+INT D_Sthx(UINT32 op)
+{
+	UINT	rb = RB;
+	UINT	ra = RA;
+	UINT	rt = RT;
+
+	if (ra != 0)
+	{
+		IR_EncodeAdd(ID_TEMP(0), ID_R(ra), ID_R(rb));
+		IR_EncodeStore16(ID_R(rt), ID_TEMP(0), 0);
+	}
+	else
+		IR_EncodeStore16(ID_R(rt), ID_R(rb), 0);
+
+	return DRPPC_OKAY;
+}
+
 INT D_Stwx (UINT32 op)
 {
-	ASSERT(0);
-	return DRPPC_ERROR;
+	UINT	rb = RB;
+	UINT	ra = RA;
+	UINT	rt = RT;
+
+	if (ra != 0)
+	{
+		IR_EncodeAdd(ID_TEMP(0), ID_R(ra), ID_R(rb));
+		IR_EncodeStore16(ID_R(rt), ID_TEMP(0), 0);
+	}
+	else
+		IR_EncodeStore32(ID_R(rt), ID_R(rb), 0);
+
+	return DRPPC_OKAY;
 }
 
 /*******************************************************************************

@@ -59,10 +59,9 @@ typedef enum
 	IR_ROR,			// Dest = rotate right Src1 by Src2|Const
 
 	IR_BREV,		// Dest = byte reverse Src1				(Modifier: size)
+	IR_EXTS,		// Dest = sign-extended Src1			(Modifier: size)
 
 	IR_CMP,			// Dest = compare Src1 with Src2|Const	(Modifier: condition)
-
-	IR_CVTSTOD,		// Dest = convert single to double Src1
 
 	/*
 	 * Data Moves
@@ -91,6 +90,10 @@ typedef enum
 	 */
 
 	IR_CONVERT,		// convert from one FP mode to another (Modifier: size)
+
+	IR_FSUB,		// Dest = Src2 - Src1
+	IR_FMUL,		// Dest = Src1 * Src2
+	IR_FDIV,		// Dest = Src1 / Src2
 
 	NUM_IR_OPS,
 
@@ -287,12 +290,15 @@ extern void IR_EncodeShli(UINT, UINT, UINT32);
 // Shr
 extern void IR_EncodeShri(UINT, UINT, UINT32);
 // Brev
-extern void IR_EncodeBrev(UINT, UINT, IR_SIZE);
+extern void IR_EncodeBrev8In16(UINT, UINT);
+extern void IR_EncodeBrev8In32(UINT, UINT);
+// Exts
+extern void IR_EncodeExts8To16(UINT, UINT);
+extern void IR_EncodeExts8To32(UINT, UINT);
+extern void IR_EncodeExts16To32(UINT, UINT);
 // Cmp
 extern void IR_EncodeCmp(IR_CONDITION, UINT, UINT, UINT);
 extern void IR_EncodeCmpi(IR_CONDITION, UINT, UINT, UINT32);
-// Convert
-extern void IR_EncodeConvert(IR_SIZE, UINT, UINT);
 // Load
 extern void IR_EncodeLoad8(UINT, UINT, UINT32);
 extern void IR_EncodeLoad16(UINT, UINT, UINT32);
@@ -313,5 +319,13 @@ extern void IR_EncodeBranch(UINT);
 extern void IR_EncodeBCond(UINT, UINT, UINT);
 // Syncronize
 extern void IR_EncodeSync(UINT);
+// Convert
+extern void IR_EncodeConvert(IR_SIZE, UINT, UINT);
+// FSub
+extern void IR_EncodeFSub(UINT, UINT, UINT);
+// FMul
+extern void IR_EncodeFMul(UINT, UINT, UINT);
+// FDiv
+extern void IR_EncodeFDiv(UINT, UINT, UINT);
 
 #endif // INCLUDED_IR_H

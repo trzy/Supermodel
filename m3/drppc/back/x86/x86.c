@@ -81,12 +81,6 @@ static void (* generic_write_table[4])(UINT32, UINT32) =
 };
 
 /*******************************************************************************
- Low Level X86 Emitters
-*******************************************************************************/
-
-#include "emit.h"
-
-/*******************************************************************************
  Profiling
 *******************************************************************************/
 
@@ -1137,36 +1131,42 @@ static void GenerateLoad_Unknown
 
 		/*
 		 * push		eax
+		 *
 		 * push		addr
 		 * mov		eax, esp
 		 * add		[eax], offs+4
 		 * call		Handler
 		 * mov		dest.lo, eax
 		 * add		esp, 4
+		 *
 		 * push		addr
 		 * mov		eax, esp
 		 * add		[eax], offs+0
 		 * call		Handler
 		 * mov		dest.hi, eax
 		 * add		esp, 4
+		 *
 		 * pop		eax
 		 */
 
 		ASSERT(!IsCached(dest));
 
 		_PushReg_32(EAX);
+
 		PushReg_32(addr);
 		_MovRegToReg_32(EAX, ESP);
 		_AddImmToMemReg_32(EAX, offs+4);
 		_CallDirect((UINT32)Handler);
-		MovRegToMem_32(EAX, destp+0);
+		_MovRegToMemAbs_32(EAX, destp+0);
 		_AddImmToReg_32(ESP, 4);
+
 		PushReg_32(addr);
 		_MovRegToReg_32(EAX, ESP);
 		_AddImmToMemReg_32(EAX, offs+0);
 		_CallDirect((UINT32)Handler);
-		MovRegToMem_32(EAX, destp+4);
+		_MovRegToMemAbs_32(EAX, destp+4);
 		_AddImmToReg_32(ESP, 4);
+
 		_PopReg_32(EAX);
 	}
 }
@@ -1580,6 +1580,62 @@ static INT GenerateBrev (IR * ir)
 }
 
 /*
+ * INT GenerateExts (IR * ir);
+ */
+
+static INT GenerateExts (IR * ir)
+{
+	UINT	dest = IR_OPERAND_DEST(ir);
+	UINT	src  = IR_OPERAND_SRC1(ir);
+
+	if (dest == src)
+	{
+		if (IsCached(src))
+		{
+			ASSERT(0);
+		}
+		else
+		{
+			switch (IR_SIZE(ir))
+			{
+			case IR_EXT_8_TO_16:
+				ASSERT(0);
+				break;
+			case IR_EXT_8_TO_32:
+				ASSERT(0);
+				break;
+			case IR_EXT_16_TO_32:
+				{
+				/*
+				 * push		eax
+				 * movsx	eax, [src]
+				 * mov		[dest], eax
+				 * pop		eax
+				 */
+
+				void * srcp = GetRegContextPtr(src);
+				void * destp = GetRegContextPtr(dest);
+
+				// TODO: use EBP-relative addressing!
+
+				SaveReg_32(EAX);
+				_MovsxMemAbsToReg_16To32(EAX, (UINT32)srcp);
+				_MovRegToMemAbs_32(EAX, (UINT32)destp);
+				RestoreReg_32(EAX);
+				}
+				break;
+			}
+		}
+	}
+	else
+	{
+		ASSERT(0);
+	}
+
+	return DRPPC_OKAY;
+}
+
+/*
  * INT GenerateCmp (IR * ir);
  */
 
@@ -1700,59 +1756,6 @@ static INT GenerateRol (IR * ir)
 static INT GenerateRor (IR * ir)
 {
 	GENERATE_SHIFT_ROT( Ror );
-
-	return DRPPC_OKAY;
-}
-
-/*
- * INT GenerateConvert (IR * ir);
- */
-
-static const char cvtstod_string[] = "*** cvt.s.d: 0x%08X -> %d\n";
-static const char cvtdtos_string[] = "*** cvt.d.s: %d -> 0x%08X\n";
-
-static INT GenerateConvert (IR * ir)
-{
-	UINT	dest = IR_OPERAND_DEST(ir);
-	UINT	src  = IR_OPERAND_SRC1(ir);
-	UINT	size = IR_SIZE(ir);
-
-	switch (CombineIsCached2(dest, src) | (size << 2))
-	{
-	case (IR_S_TO_D << 2) | 0:
-		_FldMem_32((UINT32)GetRegContextPtr(src));		// fld	dword [src]
-		_FstpMem_64((UINT32)GetRegContextPtr(dest));	// fstp	qword [dest]
-
-		// DEBUG
-		/*
-		_PushMemAbs_32((UINT32)GetRegContextPtr(src));
-		_PushMemAbs_32((UINT32)GetRegContextPtr(dest) + 4);
-		_PushMemAbs_32((UINT32)GetRegContextPtr(dest) + 0);
-		_PushImm_32((UINT32)cvtstod_string);
-		_CallDirect(printf);
-		_AddImmToReg_32(ESP, 16);
-		*/
-
-		break;
-	case (IR_D_TO_S << 2) | 0:
-		_FldMem_64((UINT32)GetRegContextPtr(src));		// fld	qword [src]
-		_FstpMem_32((UINT32)GetRegContextPtr(dest));	// fstp	dword [dest]
-
-		// DEBUG
-		/*
-		_PushMemAbs_32((UINT32)GetRegContextPtr(src) + 4);
-		_PushMemAbs_32((UINT32)GetRegContextPtr(src) + 0);
-		_PushMemAbs_32((UINT32)GetRegContextPtr(dest));
-		_PushImm_32((UINT32)cvtdtos_string);
-		_CallDirect(printf);
-		_AddImmToReg_32(ESP, 16);
-		*/
-
-		break;
-	default:
-		Print("ERROR: size = %i\n", size);
-		ASSERT(0);
-	}
 
 	return DRPPC_OKAY;
 }
@@ -1986,6 +1989,91 @@ static INT GenerateSync (IR * ir)
 	return DRPPC_OKAY;
 }
 
+/*
+ * INT GenerateConvert (IR * ir);
+ */
+
+static INT GenerateConvert (IR * ir)
+{
+	UINT	dest = IR_OPERAND_DEST(ir);
+	UINT	src  = IR_OPERAND_SRC1(ir);
+	UINT	size = IR_SIZE(ir);
+
+	switch (CombineIsCached2(dest, src) | (size << 2))
+	{
+	case (IR_S_TO_D << 2) | 0:
+		_FldMemAbs_32((UINT32)GetRegContextPtr(src));	// fld	dword [src]
+		_FstpMemAbs_64((UINT32)GetRegContextPtr(dest));	// fstp	qword [dest]
+		break;
+	case (IR_D_TO_S << 2) | 0:
+		_FldMemAbs_64((UINT32)GetRegContextPtr(src));	// fld	qword [src]
+		_FstpMemAbs_32((UINT32)GetRegContextPtr(dest));	// fstp	dword [dest]
+		break;
+	default:
+		Print("ERROR: size = %i\n", size);
+		ASSERT(0);
+	}
+
+	return DRPPC_OKAY;
+}
+
+static INT GenerateFSub (IR * ir)
+{
+	UINT	dest = IR_OPERAND_DEST(ir);
+	UINT	src1 = IR_OPERAND_SRC1(ir);
+	UINT	src2 = IR_OPERAND_SRC2(ir);
+
+	ASSERT(!IsCached(dest));
+	ASSERT(!IsCached(src1));
+	ASSERT(!IsCached(src2));
+	ASSERT(!IR_CONSTANT(ir));
+
+	_FldMemAbs_64((UINT32)GetRegContextPtr(src2));
+	_FldMemAbs_64((UINT32)GetRegContextPtr(src1));
+	_Fsubp();
+	_FstpMemAbs_64((UINT32)GetRegContextPtr(dest));
+
+	return DRPPC_OKAY;
+}
+
+static INT GenerateFMul (IR * ir)
+{
+	UINT	dest = IR_OPERAND_DEST(ir);
+	UINT	src1 = IR_OPERAND_SRC1(ir);
+	UINT	src2 = IR_OPERAND_SRC2(ir);
+
+	ASSERT(!IsCached(dest));
+	ASSERT(!IsCached(src1));
+	ASSERT(!IsCached(src2));
+	ASSERT(!IR_CONSTANT(ir));
+
+	_FldMemAbs_64((UINT32)GetRegContextPtr(src2));
+	_FldMemAbs_64((UINT32)GetRegContextPtr(src1));
+	_Fmulp();
+	_FstpMemAbs_64((UINT32)GetRegContextPtr(dest));
+
+	return DRPPC_OKAY;
+}
+
+static INT GenerateFDiv (IR * ir)
+{
+	UINT	dest = IR_OPERAND_DEST(ir);
+	UINT	src1 = IR_OPERAND_SRC1(ir);
+	UINT	src2 = IR_OPERAND_SRC2(ir);
+
+	ASSERT(!IsCached(dest));
+	ASSERT(!IsCached(src1));
+	ASSERT(!IsCached(src2));
+	ASSERT(!IR_CONSTANT(ir));
+
+	_FldMemAbs_64((UINT32)GetRegContextPtr(src2));
+	_FldMemAbs_64((UINT32)GetRegContextPtr(src1));
+	_Fdivp();
+	_FstpMemAbs_64((UINT32)GetRegContextPtr(dest));
+
+	return DRPPC_OKAY;
+}
+
 /*******************************************************************************
  Interface
 
@@ -2081,6 +2169,7 @@ INT Target_Init
 	GenerateOp[IR_ROL]		= GenerateRol;
 	GenerateOp[IR_ROR]		= GenerateRor;
 	GenerateOp[IR_BREV]		= GenerateBrev;
+	GenerateOp[IR_EXTS]		= GenerateExts;
 	GenerateOp[IR_CMP]		= GenerateCmp;
 	GenerateOp[IR_LOAD]		= GenerateLoad;
 	GenerateOp[IR_STORE]	= GenerateStore;
@@ -2091,6 +2180,8 @@ INT Target_Init
 	GenerateOp[IR_BCOND]	= GenerateBCond;
 	GenerateOp[IR_SYNC]		= GenerateSync;
 	GenerateOp[IR_CONVERT]	= GenerateConvert;
+	GenerateOp[IR_FSUB]		= GenerateFSub;
+	GenerateOp[IR_FMUL]		= GenerateFMul;
 
 	return DRPPC_OKAY;
 }
@@ -2149,7 +2240,7 @@ INT Target_GenerateBB (DRPPC_BB * bb, IR * ir)
 	do
 	{
 #if PRINT_X86_DISASM
-		printf(" * X86: Generating: "); IR_PrintOp(ir);
+		printf("\n// "); IR_PrintOp(ir);
 		temp = GetEmitPtr();
 #endif
 
@@ -2195,17 +2286,15 @@ INT Target_RunBB (DRPPC_BB * bb)
 	static INT		bb_count = 0;
 	static UINT64	old_tsc, new_tsc;
 
+	ASSERT(bb);
+	ASSERT(bb->ptr);
+
 #if PRINT_X86_BB_EXECUTION
 	printf("\n * X86: Executing BB @0x%08X, Count = %d.\n", (UINT32)Block, ++bb_count);
+	fflush(stdout);
 #endif
 
-	ASSERT(bb != NULL);
-
 	Block = (void (*)(void))bb->ptr;
-
-	ASSERT(Block != NULL);
-
-	fflush(stdout);
 
 #ifdef DRPPC_PROFILE
 	// Start profiling for BB
@@ -2220,9 +2309,6 @@ INT Target_RunBB (DRPPC_BB * bb)
 	new_tsc = ReadTSC();
 	ASSERT((new_tsc - old_tsc) < 0x7FFFFFFF);
 	bb->native_exec_time = (UINT32)(new_tsc - old_tsc);
-
-//	printf("======= BB %u took %u cycles ======\n", bb_count, bb->native_exec_time);
-
 #endif
 
 #if PRINT_X86_BB_EXECUTION

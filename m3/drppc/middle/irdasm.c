@@ -110,14 +110,14 @@ static void BranchOp (IR * ir)
 	}
 	else
 	{
-		printf("if ("); PrintReg(IR_OPERAND_SRC1(ir)); printf(") ");
+		printf("IF ["); PrintReg(IR_OPERAND_SRC1(ir)); printf("] ");
 		if (IR_TARGET_CONST(ir))
 			printf("@0x%08X", IR_OPERAND_SRC2(ir));
 		else
 		{
 			printf("@"); PrintReg(IR_OPERAND_SRC2(ir));
 		}
-		printf(" else ");
+		printf(" ELSE ");
 		if (IR_NEXT_CONST(ir))
 			printf("@0x%08X", IR_OPERAND_SRC3(ir));
 		else
@@ -170,7 +170,25 @@ void IR_PrintOp (IR * ir)
 	case IR_SHR:	printf("shr     "); ShiftRotOp(ir); break;
 	case IR_ROL:	printf("rol     "); ShiftRotOp(ir); break;
 	case IR_ROR:	printf("ror     "); ShiftRotOp(ir); break;
-	case IR_BREV:	printf("brev    "); TwoOp(ir); break;
+	case IR_BREV:	printf("brev");
+					switch (IR_SIZE(ir))
+					{
+					case IR_REV_8_IN_16:	printf("8-16 "); break;
+					case IR_REV_8_IN_32:	printf("8-32 "); break;
+					default:				printf("%u   ", IR_SIZE(ir)); break;
+					}
+					TwoOp(ir);
+					break;
+	case IR_EXTS:	printf("exts");
+					switch (IR_SIZE(ir))
+					{
+					case IR_EXT_8_TO_16:	printf("8-16 "); break;
+					case IR_EXT_8_TO_32:	printf("8-32 "); break;
+					case IR_EXT_16_TO_32:	printf("16-32 "); break;
+					default:				printf("%u   ", IR_SIZE(ir)); break;
+					}
+					TwoOp(ir);
+					break;
 	case IR_CMP:	printf("cmp");
 					switch (IR_CONDITION(ir))
 					{
@@ -188,15 +206,6 @@ void IR_PrintOp (IR * ir)
 					}
 					ThreeOp(ir);
 					break;
-	case IR_CONVERT:printf("cvt.");
-					switch (IR_SIZE(ir))
-					{
-					case IR_S_TO_D:	printf("s.d "); break;
-					case IR_D_TO_S: printf("d.s "); break;
-					default: printf("%u   ", IR_SIZE(ir)); break;
-					}
-					TwoOp(ir);
-					break;
 	case IR_LOAD:	printf("load");
 					switch (IR_SIZE(ir))
 					{
@@ -213,7 +222,7 @@ void IR_PrintOp (IR * ir)
 					case IR_INT8:	printf("8  "); break;
 					case IR_INT16:	printf("16 "); break;
 					case IR_INT32:	printf("32 "); break;
-					case IR_INT64:	printf("64  "); break;
+					case IR_INT64:	printf("64 "); break;
 					}
 					StoreOp(ir);
 					break;
@@ -248,6 +257,18 @@ void IR_PrintOp (IR * ir)
 	case IR_BRANCH:	printf("branch  ");	BranchOp(ir); break;
 	case IR_BCOND:	printf("branch  ");	BranchOp(ir); break;
 	case IR_SYNC:	printf("sync    "); break;
+	case IR_CONVERT:printf("cvt.");
+					switch (IR_SIZE(ir))
+					{
+					case IR_S_TO_D:	printf("s.d "); break;
+					case IR_D_TO_S: printf("d.s "); break;
+					default: printf("%u   ", IR_SIZE(ir)); break;
+					}
+					TwoOp(ir);
+					break;
+	case IR_FSUB:	printf("fsub    "); ThreeOp(ir); break;
+	case IR_FMUL:	printf("fmul    "); ThreeOp(ir); break;
+	case IR_FDIV:	printf("fdiv    "); ThreeOp(ir); break;
 	default:		printf("[%.2u]    ", IR_OPERATION(ir)); break;
 	}
 

@@ -1185,10 +1185,6 @@ int main(int argc, char **argv)
 	if (InitDynarec())
 		exit(1);
 
-	// PATCH a very annoying loop in Scud Race
-
-	*(UINT32 *)&crom[0x00712734] = 0x00000060;
-
 	/*
 	 * Reset both contexts.
 	 */
@@ -1228,7 +1224,7 @@ int main(int argc, char **argv)
 #if 1
 		// 966828	= Dec IRQ
 		// 1023364	= Lfs,Stfs
-		if (bb_num == 1023364)
+		if (bb_num == 1030717)
 		{
 			bb_num = bb_num;
 		}
