@@ -23,11 +23,11 @@
  *
  * Memory Regions:
  *
- *      All memory regions are allocated and freed in this file. However,
- *      RAM and backup RAM are the only RAM regions directly accessed here.
- *      Everything else is passed to its respective subsystem. This localizes
- *      all memory allocation to this single file and enforces separation
- *      between the different modules.
+ *      All Model 3 memory regions are allocated and freed in this file.
+ *      However, RAM and backup RAM are the only RAM regions directly accessed
+ *      here. Everything else is passed to its respective subsystem. This
+ *      localizes all memory allocation to this single file and enforces
+ *      separation between the different modules.
  *
  * VF3 SCSI Note:
  *
@@ -471,12 +471,6 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
     if (a <= 0x007FFFFF)
     {
-        if (a == 0x100438)
-//        if (a == (0xE0010 + 3*4))
-        {            
-            LOG("model3.log", "%08X = %08X at PC=%08X, LR=%08X, R10=%08X\n", a, BSWAP32(d), PPC_PC, PPC_LR, ppc_get_reg(PPC_REG_R10));
-        }
-
         *(UINT32 *) &ram[a] = BSWAP32(d);
         return;
     }
@@ -540,7 +534,7 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
                  (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC
 		{
-			rtc_write(a, d >> 24);
+            rtc_write(a, (UINT8) (d >> 24));
 			return;
 		}
         else if (a >= 0xFE180000 && a <= 0xFE19FFFF)    // ?
@@ -1435,6 +1429,7 @@ BOOL m3_load_rom(CHAR * id)
     if (!stricmp(id, "VF3"))
     {
 
+#if 0
         *(UINT32 *)&crom[0x710000 + 0x1C48] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x1C20] = BSWAP32(0x60000000);
 
@@ -1443,6 +1438,7 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *)&crom[0x710000 + 0x3E54] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x25B0] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x25D0] = BSWAP32(0x60000000);
+#endif
 #if 0
         *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
 
