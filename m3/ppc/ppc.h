@@ -272,6 +272,8 @@ typedef enum {
 
 ////////////////////////////////////////////////////////////////
 
+extern char * m3_stat_string(u32 stat);
+
 #define RD		((op >> 21) & 0x1F)
 #define RS		((op >> 21) & 0x1F)
 #define RT		((op >> 21) & 0x1F)
@@ -431,10 +433,10 @@ typedef enum {
 
 extern int		ppc_icount;
 
-extern int      ppc_init(PPC_TYPE);
+extern int      ppc_init(void * x);
 extern int      ppc_reset(void);
 extern void		ppc_exit(void);
-extern void		ppc_run(u32);
+extern u32		ppc_run(u32);
 extern int		ppc_get_context(ppc_t *);
 extern int		ppc_set_context(ppc_t *);
 extern u32		ppc_get_reg(PPC_REG);

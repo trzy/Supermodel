@@ -21,8 +21,6 @@
 
 #include "ppc.h"
 
-extern void _log(char *, char *, ...);
-
 ////////////////////////////////////////////////////////////////
 // Context
 
@@ -59,29 +57,11 @@ static u32 ppc_field_xlat[256];
 #define BITMASK_0(n)		((u32)(((u64)1 << (n + 1)) - 1))
 #define BITMASK(n,m)		(BITMASK(n) & ~BITMASK(m))
 
-/* */
-
-#define ADD_C(a,b)			((u32)(b) >= (u32)(~a))
-#define SUB_C(a,b)			((u32)(b) > (u32)(a))
-#define ADD_V(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) < 0)
-#define SUB_V(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) < 0)
-
-/* */
-
-#define _SET_ADD_C(a,b)		{ XER &= ~XER_CA; if(ADD_C(a,b)){ XER |= XER_CA; } }
-#define _SET_SUB_C(a,b)		{ XER &= ~XER_CA; if(SUB_C(a,b)){ XER |= XER_CA; } }
-#define _SET_ADD_V(r,a,b)	{ XER &= ~XER_OV; if(ADD_V(r,a,b)){ XER |= (XER_SO | XER_OV); } }
-#define _SET_SUB_V(r,a,b)	{ XER &= ~XER_OV; if(SUB_V(r,a,b)){ XER |= (XER_SO | XER_OV); } }
-
 /* SET_XXX_Y : */
 
 #define SET_ADD_C(a,b)		if(op & _OE){ _SET_ADD_C(a,b); }
-#define SET_ADD_V(r,a,b)	if(op & _OE){ _SET_ADD_V(r,a,b); }
-#define SET_ADD_VC(r,a,b)	if(op & _OE){ _SET_ADD_V(r,a,b); _SET_ADD_C(a,b); }
 
 #define SET_SUB_C(a,b)		if(op & _OE){ _SET_SUB_C(a,b); }
-#define SET_SUB_V(r,a,b)	if(op & _OE){ _SET_SUB_V(r,a,b); }
-#define SET_SUB_VC(r,a,b)	if(op & _OE){ _SET_SUB_V(r,a,b); _SET_SUB_C(a,b); }
 
 /* CMPS, CMPU : signed and unsigned integer comparisons */
 
@@ -136,8 +116,6 @@ static const char * spu_id[16] = {
 
 static INLINE void spu_wb(u32 a, u8 d){
 
-	_log("konami.log", "%08X : wb %08X (SPU %s) = %02X\n", CIA, a, spu_id[a&15], d);
-
 	switch(a & 15){
 
 	case 0: ppc.spu.spls &= ~(d & 0xF6); return;
@@ -147,8 +125,7 @@ static INLINE void spu_wb(u32 a, u8 d){
 	case 6: ppc.spu.spctl = d; return;
 
 	case 7:
-		_log("konami.log", "SPU/SPRC : %08X : wb %08X = %02X (");
-		ppc.spu.sprc = d;
+	ppc.spu.sprc = d;
 		return;
 
 	case 8: ppc.spu.sptc = d; return;
@@ -161,8 +138,6 @@ static INLINE void spu_wb(u32 a, u8 d){
 }
 
 static INLINE u8 spu_rb(u32 a){
-
-	_log("konami.log", "%08X : rb %08X (SPU %s)\n", CIA, a, spu_id[a&15]);
 
 	switch(a & 15){
 
@@ -202,9 +177,6 @@ static void ppc_dma(u32 ch){
 	switch((DMA_CR(ch) >> 26) & 3){
 
 	case 0: // 1 byte
-
-		_log("konami.log", "%08X : DMA%u %08X -> %08X * %08X (1-byte)\n",
-		CIA, ch, DMA_SA(ch), DMA_DA(ch), DMA_CT(ch));
 
 		// internal transfer (prolly *SPU*)
 
@@ -456,8 +428,6 @@ static void ppc_6xx_set_spr(u32 n, u32 d){
 	switch(n){
 
 	case SPR_DEC:
-		if(d != 0)
-			_log("error.log", " #### DECREMENTER set to %08X (%i)\n", d, d);
 
 		if((d & 0x80000000) && !(ppc.spr[SPR_DEC] & 0x80000000)){
 
@@ -570,8 +540,6 @@ void ppc_6xx_set_msr(u32 d){
 		ppc.tgpr[1] = temp[1];
 		ppc.tgpr[2] = temp[2];
 		ppc.tgpr[3] = temp[3];
-
-		_log("error.log", "TGPR0-3 <-> GPR0-3\n");
 	}
 
 	ppc.msr = d;
@@ -673,35 +641,28 @@ static void ppc_null(u32 op){
 ////////////////////////////////////////////////////////////////
 // Arithmetical
 
+// Carry
+
+#define ADD_C(r,a,b)		((u32)(r) < (u32)(a))
+#define SUB_C(r,a,b)		(!((u32)(a) < (u32)(b)))
+
+// Overflow 
+
+#define ADD_V(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
+#define SUB_V(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
+
+#define SET_ADD_V(r,a,b)	if(op & _OE){ if(ADD_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
+#define SET_SUB_V(r,a,b)	if(op & _OE){ if(SUB_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
+
 static void ppc_addx(u32 op){
 
 	u32 b = RB;
 	u32 a = RA;
 	u32 t = RT;
 
-	//R(t) = R(a) + R(b);
+	R(t) = R(a) + R(b);
 
-	//SET_ADD_V(R(t), R(a), R(b));
-	u32 ra = R(a);
-	u32 rb = R(b);
-	u32 rd = 0;
-	u8 o_flag = 0;
-
-	__asm {
-		mov eax,[ra]
-		mov edx,[rb]
-		add eax,edx
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(t) = rd;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
-
-
+	SET_ADD_V(R(t), R(a), R(b));
 	SET_ICR0(R(t));
 }
 
@@ -711,248 +672,118 @@ static void ppc_addcx(u32 op){
 	u32 a = RA;
 	u32 t = RT;
 
-	//R(t) = R(a) + R(b);
+	R(t) = R(a) + R(b);
 
-	//_SET_ADD_C(R(a), R(b));
-	//SET_ADD_V(R(t), R(a), R(b));
-
-	u32 ra = R(a);
-	u32 rb = R(b);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[rb]
-		add eax,edx
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(t) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
+	if(R(t) < R(a))
 		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
+	else
+		XER &= ~XER_CA;
 
+	SET_ADD_V(R(t), R(a), R(b));
 	SET_ICR0(R(t));
 }
 
 static void ppc_addex(u32 op){
 
-	u32 c = (XER >> 29) & 1;
 	u32 b = RB;
 	u32 a = RA;
 	u32 t = RT;
-	u64 r;
+	u32 c = (XER >> 29) & 1;
 
-	/*r = (u64)R(a) + (u64)R(b) + (u64)c;
-	R(t) = (u32)r;
+	R(t) = R(a) + (R(b) + c);
 
-	XER &= ~XER_CA;
-	if(r & ((u64)1 << 32))
+	if(R(t) < R(a))
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 
-	if(op & _OE){
-		XER &= ~XER_OV;
-		if(ADD_V(r,a,b) || ADD_V(r,a+b,c))
-			XER |= (XER_SO | XER_OV);
-	}
-
-	SET_ADD_V(R(t), R(a), R(b));*/
-	u32 ra = R(a);
-	u32 rb = R(b);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[rb]
-		add eax,edx
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(t) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
-		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
-
+	SET_ADD_V(R(t), R(a), R(b));
 	SET_ICR0(R(t));
 }
 
 static void ppc_addi(u32 op){
 
-	s32 i = SIMM;
+	u32 i = SIMM;
 	u32 a = RA;
-	u32 d = RD;
+	u32 d = RT;
 
-	if(a)
-		i += (s32)R(a);
+	if(a) i += R(a);
 
-	R(d) = (u32)i;
+	R(d) = i;
 }
 
 static void ppc_addic(u32 op){
 
 	u32 i = SIMM;
 	u32 a = RA;
-	u32 d = RD;
+	u32 t = RT;
 
-	//R(d) = R(a) + i;
+	R(t) = R(a) + i;
 
-	//_SET_ADD_C(R(a), i);
-	
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[i]
-		add eax,edx
-		setc [c_flag]
-		mov [rd],eax
-	}
-	R(d) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
+	if(R(t) < R(a))
 		XER |= XER_CA;
-
+	else
+		XER &= ~XER_CA;
 }
 
 static void ppc_addic_(u32 op){
 
 	u32 i = SIMM;
 	u32 a = RA;
-	u32 d = RD;
+	u32 t = RT;
 
-	//R(d) = R(a) + i;
+	R(t) = R(a) + i;
 
-	//_SET_ADD_C(R(a), i);
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[i]
-		add eax,edx
-		setc [c_flag]
-		mov [rd],eax
-	}
-	R(d) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
+	if(R(t) < R(a))
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 
-	_SET_ICR0(R(d));
+	_SET_ICR0(R(t));
 }
 
 static void ppc_addis(u32 op){
 
-	s32 i = (op << 16);
+	u32 i = (op << 16);
 	u32 a = RA;
-	u32 d = RD;
+	u32 t = RT;
 
-	if(a)
-		i += (s32)R(a);
+	if(a) i += R(a);
 
-	R(d) = (u32)i;
+	R(t) = i;
 }
 
 static void ppc_addmex(u32 op){
 
 	u32 a = RA;
-	u32 d = RD;
+	u32 d = RT;
 	u32 c = (XER >> 29) & 1;
-	u32 x;
 
-	/*R(d) = R(a) + c - 1;
+	R(d) = R(a) + (c - 1);
 
-	x = (R(a) == 0 && c == 0);
-
-	XER &= ~XER_CA;
-	if(x)
+	if(R(d) < R(a))
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 
-	if(op & _OE){
-		XER &= ~XER_OV;
-		if(x) XER |= (XER_OV | XER_SO);
-	}*/
-	
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov ecx,[c]
-		add eax,ecx
-		sub eax,1
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(d) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
-		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
-
+	SET_ADD_V(R(d), R(a), (c - 1));
 	SET_ICR0(R(d));
 }
 
 static void ppc_addzex(u32 op){
 
 	u32 a = RA;
-	u32 d = RD;
+	u32 d = RT;
 	u32 c = (XER >> 29) & 1;
 
-	/*R(d) = R(a) + c;
+	R(d) = R(a) + c;
 
-	XER &= ~XER_CA;
-	if(R(d) == 0 && c)
+	if(R(d) < R(a))
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 
-	if(op & _OE){
-		XER &= ~XER_OV;
-		if((R(a) == 0x7FFFFFFF || R(a) == 0xFFFFFFFF) && c)
-			XER |= (XER_OV | XER_SO);
-	}*/
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov ecx,[c]
-		add eax,ecx
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(d) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
-		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
-
+	SET_ADD_V(R(d), R(a), c);
 	SET_ICR0(R(d));
 }
 
@@ -960,31 +791,11 @@ static void ppc_subfx(u32 op){
 
 	u32 b = RB;
 	u32 a = RA;
-	u32 d = RD;
+	u32 d = RT;
 
-	//R(d) = R(b) - R(a);
+	R(d) = R(b) - R(a);
 
-	//SET_SUB_V(R(d), R(b), R(a));
-
-	u32 ra = R(a);
-	u32 rb = R(b);
-	u32 rd = 0;
-	u8 o_flag = 0;
-
-	__asm {
-		mov eax,[ra]
-		mov edx,[rb]
-		sub edx,eax
-		setc [o_flag]
-		mov [rd],edx
-	}
-	R(d) = rd;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
-
+	SET_SUB_V(R(d), R(b), R(a));
 	SET_ICR0(R(d));
 }
 
@@ -992,145 +803,74 @@ static void ppc_subfcx(u32 op){
 
 	u32 b = RB;
 	u32 a = RA;
-	u32 d = RD;
+	u32 t = RT;
 
-	//R(d) = R(a) - R(b);
-	u8 c_flag;
-	u8 o_flag;
-	u32 ra = R(a);
-	u32 rb = R(b);
-	u32 rd = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[rb]
-		sub edx,eax
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],edx
-	}
-	XER &= ~XER_CA;
-	if(c_flag)
+	R(t) = R(b) - R(a);
+
+	if(SUB_C(R(t), R(b), R(a)))
 		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO); 
-	}
-	R(d) = rd;
+	else
+		XER &= ~XER_CA;
 
-
-	//_SET_SUB_C(R(b), R(a));
-	//SET_SUB_V(R(d), R(b), R(a));
-	SET_ICR0(R(d));
+	SET_SUB_V(R(t), R(b), R(a));
+	SET_ICR0(R(t));
 }
 
 static void ppc_subfex(u32 op){
 
+	// fixme
+
 	u32 b = RB;
 	u32 a = RA;
-	u32 d = RD;
-	u64 r;
+	u32 t = RT;
+	u32 c = (XER >> 29) & 1;
 
-	//r = R(b) + ~R(a) + ((XER >> 29) & 1);
+//	R(t) = R(b) + ~R(a) + c; // R(b) - R(a) + (c - 1)
+	R(t) = R(b) - (R(a) + (c ^ 1));
 
-	//XER &= ~XER_CA;
-	//if(r & ((u64)1 << 32))
-	//	XER |= XER_CA;
-
-	u32 ra = R(a);
-	u32 rb = R(b);
-	u32 rd = 0;
-	u32 c = (XER >> 29) & 0x1;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[rb]
-		mov ecx,[c]
-		sub edx,eax
-		sub edx,ecx
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],edx
-	}
-	R(d) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
+	if(SUB_C(R(t), R(b), (R(a) + (c - 1))))
 		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
-	}
+	else
+		XER &= ~XER_CA;
 
-	//SET_SUB_V(R(d), R(b), R(a));
-	SET_ICR0(R(d));
+	SET_SUB_V(R(t), R(b), (R(a) + (c - 1)));
+	SET_ICR0(R(t));
 }
 
 static void ppc_subfic(u32 op){
 
 	u32 i = SIMM;
 	u32 a = RA;
-	u32 d = RD;
+	u32 t = RT;
 
-	//R(d) = i - R(a);
+	R(t) = i - R(a);
 
-	//_SET_SUB_C(i, R(a));
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov edx,[i]
-		sub edx,eax
-		setc [c_flag]
-		mov [rd],edx
-	}
-	R(d) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
+	if(SUB_C(R(t), i, R(a)))
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 }
 
 static void ppc_subfmex(u32 op){
+
+	// fixme
 
 	u32 a = RA;
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
 
-	/*R(t) = ~R(a) + c - 1;
+	R(t) = ~R(a) + c - 1;
 
-	XER &= ~XER_CA;
 	if(R(t) == 0 && c == 0)
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 
 	if(op & _OE){
-		XER &= ~XER_OV;
-		if((R(t) == 0x7FFFFFFF || R(t) == 0xFFFFFFFF) && c == 0)
+		if(c == 0 && (R(t) == 0x7FFFFFFF || R(t) == 0xFFFFFFFF))
 			XER |= (XER_OV | XER_SO);
-	}*/
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov ecx,[c]
-		not eax
-		add eax,ecx
-		sub eax,1
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(t) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
-		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
+		else
+			XER &= ~XER_OV;
 	}
 
 	SET_ICR0(R(t));
@@ -1138,46 +878,32 @@ static void ppc_subfmex(u32 op){
 
 static void ppc_subfzex(u32 op){
 
+	// fixme
+
 	u32 a = RA;
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
 
-	/*R(t) = ~R(a) + c;
+	R(t) = ~R(a) + c;
 
-	XER &= ~XER_CA;
 	if(R(t) == 0 && c)
 		XER |= XER_CA;
+	else
+		XER &= ~XER_CA;
 
 	if(op & _OE){
-		XER &= ~XER_OV;
-		if((R(t) == 0x80000000 || R(t) == 0) && c)
+		if(c != 0 && (R(t) == 0 || R(t) == 0x80000000))
 			XER |= (XER_OV | XER_SO);
-	}*/
-
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 c_flag = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		mov ecx,[c]
-		not eax
-		add eax,ecx
-		setc [c_flag]
-		setc [o_flag]
-		mov [rd],eax
-	}
-	R(t) = rd;
-	XER &= ~XER_CA;
-	if(c_flag)
-		XER |= XER_CA;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
+		else
+			XER &= ~XER_OV;
 	}
 
 	SET_ICR0(R(t));
+}
+
+char * ppc_stat_string(u32 x)
+{
+	return(NULL);
 }
 
 static void ppc_negx(u32 op){
@@ -1185,28 +911,13 @@ static void ppc_negx(u32 op){
 	u32 a = RA;
 	u32 t = RT;
 
-	/*R(t) = -R(a);
+	R(t) = -R(a);
 
 	if(op & _OE){
-		XER &= ~XER_OV;
-		if(R(a) == 0x80000000)
+		if(R(t) == 0x80000000)
 			XER |= (XER_SO | XER_OV);
-	}*/
-	u32 ra = R(a);
-	u32 rd = 0;
-	u8 o_flag = 0;
-	__asm {
-		mov eax,[ra]
-		xor edx,edx
-		sub edx,eax
-		setc [o_flag]
-		mov [rd],edx
-	}
-	R(t) = rd;
-	if(op & _OE) {
-		XER &= ~XER_OV;
-		if(o_flag)
-			XER |= (XER_OV | XER_SO);
+		else
+			XER &= ~XER_OV;
 	}
 
 	SET_ICR0(R(t));
@@ -2562,8 +2273,6 @@ static void ppc_rfi(u32 op){
 	ppc.msr = ppc.spr[SPR_SRR1];
 
 	// recalc ppc.test_irq
-
-//    _log("error.log", "#### IRQ HANDLER ENDED [pc=%08X msr=%08X] ####\n", ppc.nia, ppc.msr);
 }
 
 static void ppc_rfci(u32 op){
@@ -3498,8 +3207,6 @@ void ppc_machine_check(void){
 
 		ppc.nia = (ppc.msr & 0x40) ? 0xFFF00200 : 0x00000200;
 		ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
-
-		_log("error.log", "#### MACHINE CHECK [pc=%08X msr=%08X] ####\n", ppc.nia, ppc.msr);
 	}
 
 	/* enter checkstop condition */
@@ -3528,8 +3235,6 @@ void ppc_6xx_test_irq(void){
             else
 				ppc.irq_state = 0;
 
-//            _log("error.log", "#### IRQ ACCEPTED [pc=%08X msr=%08X] ####\n", ppc.nia, ppc.msr);
-
 		}else
 		if(ppc.dec_expired){
 
@@ -3544,8 +3249,6 @@ void ppc_6xx_test_irq(void){
 			/* clear pending decrementer exception */
 
 			ppc.dec_expired = 0;
-
-            _log("error.log", "#### DEC ACCEPTED [pc=%08X msr=%08X] ####\n", ppc.nia, ppc.msr);
 		}
 	}
 }
@@ -3562,7 +3265,12 @@ void ppc_set_irq_callback(u32 (* callback)(void)){
 
 ////////////////////////////////////////////////////////////////
 
-void ppc_run(u32 count){
+char * m3_stat_string(u32 stat){
+
+	return(NULL);
+}
+
+u32 ppc_run(u32 count){
 
 	ppc.count = count;
 
@@ -3573,13 +3281,6 @@ void ppc_run(u32 count){
 		// fetch and execute
 
 		ppc.ir = ppc.fetch(ppc.cia);
-
-		//#ifdef PPC_USE_TRACE_CALLBACK
-
-		if(ppc.trace != NULL)
-			ppc.trace(ppc.cia, ppc.ir);
-
-		//#endif
 
 		ppc_inst[(ppc.ir >> 26) & 0x3f](ppc.ir);
 
@@ -3610,6 +3311,8 @@ void ppc_run(u32 count){
 		ppc.nia += 4;
 
 	}
+
+	return(0);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -3895,13 +3598,15 @@ int ppc_reset(void){
 
 ////////////////////////////////////////////////////////////////
 
-int ppc_init(PPC_TYPE type){
+int ppc_init(void * x){
 
 	int i;
 
+	x = NULL;
+
 	// setup cpu type
 
-	ppc.type = type;
+	ppc.type = PPC_TYPE_6XX;
 
 	// install internal memory handlers
 
