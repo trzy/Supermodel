@@ -1331,7 +1331,6 @@ BOOL m3_load_rom(CHAR * id)
 		}
 	}
 
-    memset(crom, 0xFF, 72*1024*1024);
 	crom0 = &crom[0x00800000];
 	crom1 = &crom[0x01800000];
 	crom2 = &crom[0x02800000];
@@ -1429,7 +1428,6 @@ BOOL m3_load_rom(CHAR * id)
     if (!stricmp(id, "VF3"))
     {
 
-#if 0
         *(UINT32 *)&crom[0x710000 + 0x1C48] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x1C20] = BSWAP32(0x60000000);
 
@@ -1438,7 +1436,6 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *)&crom[0x710000 + 0x3E54] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x25B0] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x25D0] = BSWAP32(0x60000000);
-#endif
 #if 0
         *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
 
@@ -1465,7 +1462,7 @@ BOOL m3_load_rom(CHAR * id)
 
 		*(UINT32 *)&crom[0x7374F4] = BSWAP32((14 << 26) | (4 << 21) | (4 << 16) | 4);
 	}
-    else if(!stricmp(id, "SCUD") || !stricmp(id, "SCUDE"))
+    else if(!stricmp(id, "SCUD"))
 	{
         *(UINT32 *)&crom[0x799DE8] = BSWAP32(0x00050208);   // debug menu
 		/* directly from Ville's patch */
@@ -1481,6 +1478,18 @@ BOOL m3_load_rom(CHAR * id)
 		*(UINT8  *)&crom[0x787B30] = 0x00;
 //        *(UINT32 *)&crom[0x741A20] = 0x00000060;    // Speed hack (causes bad textures!!)
 	}
+    else if (!stricmp(id, "SCUDE"))
+    {
+		*(UINT32 *)&crom[0x700194] = 0x00000060;	// Timebase Skip
+        *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
+		*(UINT32 *)&crom[0x71AEBC] = 0x00000060;	// Loop Skip
+		*(UINT32 *)&crom[0x712268] = 0x00000060;
+		*(UINT32 *)&crom[0x71277C] = 0x00000060;
+        *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ...
+
+        *(UINT8  *)&crom[0x787B56] = 0x00;          // Link ID: 00 = single, 01 = master, 02 = slave
+        *(UINT8  *)&crom[0x787B50] = 0x01;          // country (1=USA)
+    }
     else if (!stricmp(id, "VON2"))
     {
         /*
