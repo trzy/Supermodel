@@ -226,12 +226,38 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
              *
              * Up,Down,Left,Right = 26,28,25,27
              * Num 1,Num 3        = 23,22
+             * Q,W,E,R,T,Y,U,I    = 51,57,45,52,54,59,55,49
              * A,S,D,F,G,H        = 41,53,44,46,47,48
              * Z,X,C,V,B          = 5A,58,43,56,42
              */
 
             default:
                 printf("KEY = %02X\n", wParam);
+                break;
+
+            case 0x51:  // Q
+                controls.game_controls[0] &= ~0x80;
+                break;
+            case 0x57:  // W
+                controls.game_controls[0] &= ~0x40;
+                break;
+            case 0x45:  // E
+                controls.game_controls[0] &= ~0x20;
+                break;
+            case 0x52:  // R
+                controls.game_controls[0] &= ~0x10;
+                break;
+            case 0x54:  // T
+                controls.game_controls[1] &= ~0x80;
+                break;
+            case 0x59:  // Y
+                controls.game_controls[1] &= ~0x40;
+                break;
+            case 0x55:  // U
+                controls.game_controls[1] &= ~0x20;
+                break;
+            case 0x49:  // I
+                controls.game_controls[1] &= ~0x10;
                 break;
 
             case 0x41:  // A -- for VON2, jump
@@ -327,6 +353,31 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
         case WM_KEYUP:
             switch (wParam)
             {
+            case 0x51:  // Q
+                controls.game_controls[0] |= 0x80;
+                break;
+            case 0x57:  // W
+                controls.game_controls[0] |= 0x40;
+                break;
+            case 0x45:  // E
+                controls.game_controls[0] |= 0x20;
+                break;
+            case 0x52:  // R
+                controls.game_controls[0] |= 0x10;
+                break;
+            case 0x54:  // T
+                controls.game_controls[1] |= 0x80;
+                break;
+            case 0x59:  // Y
+                controls.game_controls[1] |= 0x40;
+                break;
+            case 0x55:  // U
+                controls.game_controls[1] |= 0x20;
+                break;
+            case 0x49:  // I
+                controls.game_controls[1] |= 0x10;
+                break;
+
             case 0x41:  // A -- for VON2, jump
                 controls.game_controls[0] |= 0x80;
                 controls.game_controls[1] |= 0x40;
