@@ -235,17 +235,91 @@ typedef struct
  Interface
 *******************************************************************************/
 
+/*
+ * extern INT PowerPC_Init(DRPPC_CFG *, UINT32, UINT (*)(void));
+ *
+ * Initializes drppc. Only needs to be called once per program session and must
+ * be called before anything else.
+ */
+ 
 extern INT		PowerPC_Init(DRPPC_CFG *, UINT32, UINT (*)(void));
-extern INT		PowerPC_Reset(void);
-extern void		PowerPC_Shutdown(void);
-extern INT		PowerPC_Run(INT, INT *);
-extern void		PowerPC_AddCycles(INT);
-extern void		PowerPC_ResetCycles(void);
-extern INT		PowerPC_GetCyclesLeft(void);
-extern void		PowerPC_SetIRQLine(UINT);
-extern INT		PowerPC_GetContext(PPC_CONTEXT *);
-extern INT		PowerPC_SetContext(PPC_CONTEXT *);
 
+/*
+ * extern void PowerPC_Shutdown(void);
+ *
+ * Shuts down drppc and frees all resources occupied by it.
+ */
+ 
+extern void		PowerPC_Shutdown(void);
+
+/*
+ * extern INT PowerPC_Reset(void);
+ *
+ * Resets the PowerPC.
+ */
+ 
+extern INT		PowerPC_Reset(void);
+
+/*
+ * extern INT PowerPC_Run(INT, INT *);
+ *
+ * Runs the PowerPC for a specified number of cycles.
+ */
+ 
+extern INT		PowerPC_Run(INT, INT *);
+
+/*
+ * extern void PowerPC_AddCycles(INT);
+ *
+ * Adds cycles to the timeslice being run.
+ */
+ 
+extern void		PowerPC_AddCycles(INT);
+
+/*
+ * extern void PowerPC_ResetCycles(void);
+ *
+ * Sets the current timeslice to 0 cycles remaining so drppc exits early.
+ */
+ 
+extern void		PowerPC_ResetCycles(void);
+
+/*
+ * extern INT PowerPC_GetCyclesLeft(void);
+ *
+ * Returns the number of cycles left in the timeslice.
+ */
+
+extern INT		PowerPC_GetCyclesLeft(void);
+
+/*
+ * extern void PowerPC_SetIRQLine(UINT);
+ *
+ * Used to raise or lower the IRQ line (to trigger or clear an IRQ.)
+ */
+
+extern void		PowerPC_SetIRQLine(UINT);
+
+/*
+ * extern void PowerPC_GetContext(PPC_CONTEXT *);
+ *
+ * Copies the current PowerPC context to the location specified.
+ */
+ 
+extern void		PowerPC_GetContext(PPC_CONTEXT *);
+
+/*
+ * extern void PowerPC_SetContext(PPC_CONTEXT *);
+ *
+ * Copies the context passed to the internal PowerPC context.
+ */
+ 
+extern void		PowerPC_SetContext(PPC_CONTEXT *);
+
+/*
+ * Additional functions that aren't guaranteed to be in the final version yet
+ */
+ 
 extern INT		PowerPC_LoadState(FILE *);
 extern INT		PowerPC_SaveState(FILE *);
 extern UINT32	PowerPC_GetReg(UINT);

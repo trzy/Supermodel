@@ -238,7 +238,7 @@ static INT SetupBBLookupHandlers (DRPPC_CFG * cfg)
 static INT Decode (UINT32, DRPPC_BB *);
 
 /*
- * UINT32 Fetch* (void);
+ * Fetch*():
  *
  * These are the possible instruction fetch handlers. The correct handler is
  * installed in Fetch whenever the cur_fetch_region is changed (see
@@ -266,7 +266,7 @@ static UINT32 FetchDirectReverse (void)
 }
 
 /*
- * INT UpdateFetchPtr (void);
+ * UpdateFetchPtr():
  *
  * Update the current fetch pointer. First, check if the new PC still lies in
  * the old PC's fetch region. If it doesn't, retrieve the new fetch region.
@@ -336,7 +336,7 @@ static INT UpdateFetchPtr (void)
  * probably be changed in the future.
  */
 
-INT UpdatePC (void)
+void INT UpdatePC (void)
 {
 	DRPPC_BB	* bb;
 	BOOL		hit_untraslated_bb = FALSE;
@@ -448,7 +448,7 @@ void WriteTimebaseHi (UINT32 data)
 }
 
 /*
- * void UpdateTimers (INT cycles);
+ * UpdateTimers ():
  *
  * Function to step the timebase register by the specified amount of cycles.
  * It handles timebase overflow, too, althought overflow is very unlikely to
@@ -466,7 +466,7 @@ void WriteTimebaseHi (UINT32 data)
  * overflow, we clear everything except the fractionary bits.
  */
 
-void UpdateTimers (INT cycles)
+static void UpdateTimers (INT cycles)
 {
 	ppc.timebase += cycles;
 
@@ -493,7 +493,7 @@ void UpdateTimers (INT cycles)
 *******************************************************************************/
 
 /*
- * INT Interpret (INT count, INT * err);
+ * Interpret ():
  *
  * Run the interpreter for count cycles. It returns the remaining cycles at
  * end of execution. Actually, it will try to run in native mode (i.e. through
@@ -543,7 +543,7 @@ static INT Interpret (INT count, INT * err)
 *******************************************************************************/
 
 /*
- * INT Decode (UINT32 pc, DRPPC_BB * bb);
+ * Decode():
  *
  * The purpose of this function is to, well, decode PowerPC instructions into a
  * more malleable intermediate representation (IR.) The translation is then
@@ -627,27 +627,19 @@ static INT Decode (UINT32 pc, DRPPC_BB * bb)
  * be undefined.
  *
  * Parameters:
- *
- *	- DRPPC_CFG	* cfg
- *
- *	  The configuration structure. The user must fill in the various fields
- *	  before sending it in to this function.
- *
- *	- UINT32 pvr
- *
- *	  The value you wish to be used as Processor Version Register. It's a
- *	  PowerPC-model specific value. It does vary from submodel to submodel, too.
- *
- *	- UINT (* IRQCallback)(void)
- *
- *	  This callback function is called whenever an external IRQ is accepted.
- *	  It must return the new IRQ line state (usually you'll want to return 0).
+ *		cfg         = The configuration structure. The user must fill in the 
+ *                    various fields before sending it in to this function.
+ *		pvr         = The value you wish to be used as Processor Version 
+ *					  Register. It's a PowerPC-model specific value. It does
+ *					  vary from submodel to submodel, too.
+ *		IRQCallback = This callback function is called whenever an external IRQ
+ *                    is accepted. It must return the new IRQ line state 
+ *                    (usually you'll want to return 0).
  *
  * Returns:
- *
- *	DRPPC_OKAY if no error occurred.
- *	DRPPC_INVALID_CONFIG if some cfg field holds an invalid value.
- *	DRPPC_OUT_OF_MEMORY if memory allocation failed.
+ *		DRPPC_OKAY if no error occurred.
+ *		DRPPC_INVALID_CONFIG if some cfg field holds an invalid value.
+ *		DRPPC_OUT_OF_MEMORY if memory allocation failed.
  */
 
 INT PowerPC_Init (DRPPC_CFG * cfg, UINT32 pvr, UINT (* IRQCallback)(void))
@@ -685,17 +677,13 @@ INT PowerPC_Init (DRPPC_CFG * cfg, UINT32 pvr, UINT (* IRQCallback)(void))
 /*
  * INT PowerPC_Reset (void);
  *
- * It resets the current context and all the other emulation components. It does
- * the same (somewhat) as if the emulated CPU was reset.
- *
- * Parameters:
- *
- *	None.
- *
+ * It resets the current context and all the other emulation components. It 
+ * does the same (somewhat) as if the emulated CPU was reset.
+ * 
  * Returns:
- *
- *	DRPPC_OKAY if no error occurred.
- *	DRPPC_ERROR if MMap_Setup failed (because of invalid fetch/read/write ptrs).
+ *  	DRPPC_OKAY if no error occurred.
+ *		DRPPC_ERROR if MMap_Setup failed (because of invalid fetch/read/write 
+ *		ptrs).
  */
 
 INT PowerPC_Reset (void)
@@ -734,15 +722,7 @@ INT PowerPC_Reset (void)
  * void PowerPC_Shutdown (void);
  *
  * Call this routine when you're done with drppc. It will simply free all of the
- * allocated structures. You can feed this one to atexit, if you wish.
- *
- * Parameters:
- *
- *	None.
- *
- * Returns:
- *
- *	Nothing.
+ * allocated structures. You can feed this one to atexit, if you wish. 
  */
 
 void PowerPC_Shutdown (void)
@@ -762,28 +742,25 @@ void PowerPC_Shutdown (void)
  * This routine runs the emulated context for the specified amount of cycles.
  *
  * Parameters:
- *
- *	- INT cycles
- *
- *	  The amount of cycles to run for.
- *
- *	- INT * err
- *
- *	  A non-NULL pointer to an integer to hold the return error code.
+ *		cycles = The amount of cycles to run for.
+ *		err    = A non-NULL pointer to an integer to hold the return error 
+ *               code.
  *
  * Returns:
+ *		The number of effective cycles the CPU has been emulated for, minus the
+ *		specified amoung of cycles. The emulator isn't cycle-perfect, so it 
+ *		will probably run a few cycles *more* than specified; so, the returned
+ *		value will very likely be positive.
  *
- *	The number of effective cycles the CPU has been emulated for, minus the
- *	specified amoung of cycles. The emulator isn't cycle-perfect, so it will
- *	probably run a few cycles *more* than specified; so, the returned value
- *	will very likely be positive.
+ * Notes:
+ *		err will eventually assume one of the following error codes:
  *
- *	err will eventually assume one of the following error codes:
- *
- *	DRPPC_OKAY when no error happened -- or we didn't notice it ;)
- *	DRPPC_BAD_PC when the code branches to an invalid location.
- *	DRPPC_ERROR when a generic error happens (self-generated, miracolous errors.
- *	You won't see many of these. ;) In case, take a look at UpdateFetchPtr.)
+ *		DRPPC_OKAY when no error happened -- or we didn't notice it ;)
+ *		DRPPC_BAD_PC when the code branches to an invalid location.
+ *		DRPPC_ERROR when a generic error happens (self-generated, miraculous
+ *		errors.
+ *		You won't see many of these. ;) In case, take a look at 
+ *		UpdateFetchPtr.)
  */
 
 INT PowerPC_Run (INT cycles, INT * err)
@@ -798,14 +775,7 @@ INT PowerPC_Run (INT cycles, INT * err)
  * to run.
  *
  * Parameters:
- *
- *	- INT cycles
- *
- *	The amount of cycles to add.
- *
- * Returns:
- *
- *	Nothing.
+ *		cycles = The amount of cycles to add. 
  */
 
 void PowerPC_AddCycles (INT cycles)
@@ -818,15 +788,7 @@ void PowerPC_AddCycles (INT cycles)
  * void PowerPC_ResetCycles (void);
  *
  * It resets the number of remaining cycles: as an effect, PowerPC_Run will
- * (almost) immediately return.
- *
- * Parameters:
- *
- *	None.
- *
- * Returns:
- *
- *	Nothing.
+ * (almost) immediately return. 
  */
 
 void PowerPC_ResetCycles (void)
@@ -837,15 +799,10 @@ void PowerPC_ResetCycles (void)
 /*
  * INT PowerPC_GetCyclesLeft (void);
  *
- * It returns the number of cycles still left.
- *
- * Parameters:
- *
- *	None.
+ * It returns the number of cycles still left. 
  *
  * Returns:
- *
- *	The number of cycles left.
+ *		The number of cycles left.
  */
 
 INT PowerPC_GetCyclesLeft (void)
@@ -860,14 +817,7 @@ INT PowerPC_GetCyclesLeft (void)
  * mainly used to trigger hardware interrupts; rarely to clear the line.
  *
  * Parameters:
- *
- *	- UINT state
- *
- *	  The new IRQ line state. 0 means off, 1 means on.
- *
- * Returns:
- *
- *	Nothing.
+ *		state = The new IRQ line state. 0 means off, 1 means on. 
  */
 
 void PowerPC_SetIRQLine (UINT state)
@@ -883,15 +833,8 @@ void PowerPC_SetIRQLine (UINT state)
  * that only processors of the *same* PowerPC model can be emulated together.)
  *
  * Parameters:
- *
- *	- PPC_CONTEXT * ctx
- *
- *	  The context to write from (on Set) or to read to (on Get). It shall be
- *	  a non-NULL pointer to a valid PPC_CONTEXT struct.
- *
- * Returns:
- *
- *	The size of the context structure in bytes, or -1 on error.
+ *		ctx = The context to write from (on Set) or to read to (on Get). It
+ *			  shall be a non-NULL pointer to a valid PPC_CONTEXT struct.
  *
  * Notes:
  *
@@ -901,27 +844,21 @@ void PowerPC_SetIRQLine (UINT state)
  *	merely the ones you saved in the file, otherwise you'll end up crashing the
  *  emulator (as the old pointers won't point to valid memory anymore.)
  */
+ 
 
-INT PowerPC_GetContext (PPC_CONTEXT * ctx)
+void PowerPC_GetContext (PPC_CONTEXT * ctx)
 {
-	if (ctx == NULL)
-		return -1;
-
-	memcpy((void *)ctx, (void *)&ppc, sizeof(PPC_CONTEXT));
-
-	return sizeof(PPC_CONTEXT);
+	if (ctx != NULL)		
+		memcpy((void *)ctx, (void *)&ppc, sizeof(PPC_CONTEXT));
 }
 
-INT PowerPC_SetContext (PPC_CONTEXT * ctx)
+void PowerPC_SetContext (PPC_CONTEXT * ctx)
 {
-	if (ctx == NULL)
-		return -1;
-
-	memcpy((void *)&ppc, (void *)ctx, sizeof(PPC_CONTEXT));
-
-	MMap_Setup (&ctx->mmap); // Update the memory map system.
-
-	return sizeof(PPC_CONTEXT);
+	if (ctx != NULL)
+	{		
+		memcpy((void *)&ppc, (void *)ctx, sizeof(PPC_CONTEXT));
+		MMap_Setup (&ctx->mmap); // Update the memory map system.
+	}	
 }
 
 /*******************************************************************************
