@@ -228,6 +228,8 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 
 void osd_renderer_shutdown(void)
 {
+    r3dgl_shutdown();
+
 	/*
 	 * If there is a rendering context, release it
 	 */
