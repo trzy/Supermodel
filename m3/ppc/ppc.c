@@ -1,3 +1,4 @@
+#include "model3.h"
 ///////////////////////////////////////////////////////////////
 // Portable PowerPC Emulator
 
@@ -78,6 +79,14 @@ static u32 ppc_field_xlat[256];
 #define _SET_FCR1()			{ CR(1) = (ppc.fpscr >> 28) & 15; }
 #define SET_FCR1()			if(op & _RC){ _SET_FCR1(); }
 
+/* SET_VXSNAN() : sets VXSNAN and updates FX */
+
+#define SET_VXSNAN(a, b)    if (is_snan_f64(a) || is_snan_f64(b)) ppc.fpscr |= 0x80000000
+
+/* SET_VXSNAN_1() : sets VXSNAN and updates FX (for use with 1 number only) */
+
+#define SET_VXSNAN_1(c)     if (is_snan_f64(c)) ppc.fpscr |= 0x80000000
+
 /* */
 
 #define CHECK_SUPERVISOR()	\
@@ -114,7 +123,7 @@ static const char * spu_id[16] = {
 	"-",		"-",		"-",		"-",
 };
 
-static INLINE void spu_wb(u32 a, u8 d){
+INLINE void spu_wb(u32 a, u8 d){
 
 	switch(a & 15){
 
@@ -137,7 +146,7 @@ static INLINE void spu_wb(u32 a, u8 d){
 	exit(1);
 }
 
-static INLINE u8 spu_rb(u32 a){
+INLINE u8 spu_rb(u32 a){
 
 	switch(a & 15){
 
@@ -2198,7 +2207,7 @@ static void ppc_mcrf(u32 op){	CR(RD>>2) = CR(RA>>2); }
 ////////////////////////////////////////////////////////////////
 // Branch
 
-static INLINE u32 CHECK_BI(u32 bi){
+INLINE u32 CHECK_BI(u32 bi){
 
 	switch(bi & 3){
 	case 0:		return((CR(bi >> 2) & _LT) != 0);
@@ -2337,7 +2346,9 @@ static void ppc_mtcrf(u32 op){
 }
 
 static void ppc_mfmsr(u32 op){	R(RD) = ppc.get_msr(); }
-static void ppc_mtmsr(u32 op){	ppc.set_msr(R(RD)); }
+static void ppc_mtmsr(u32 op){	ppc.set_msr(R(RD));
+                                LOG("model3.log", "FE0-1=%d%d\n", !!(R(RD) & 0x800), !!(R(RD) & 0x100));
+                                                        }
 
 static void ppc_mfspr(u32 op){	R(RD) = ppc.get_spr(_SPRF); }
 static void ppc_mtspr(u32 op){	ppc.set_spr(_SPRF, R(RD)); }
@@ -2663,7 +2674,6 @@ static void set_fprf(f64 f)
     ppc.fpscr |= (fprf << 12);
 }
 
-
 ////////////////////////////////////////////////////////////////
 
 static void ppc_fabsx(u32 op){
@@ -2686,6 +2696,8 @@ static void ppc_faddx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+
 	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd + (f64)ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
@@ -2700,7 +2712,9 @@ static void ppc_faddsx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd + (f64)ppc.fpr[b].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+
+    ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd + (f64)ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2710,7 +2724,7 @@ static void ppc_fcmpo(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc_null(op);
+    ppc_null(op);
 }
 
 static void ppc_fcmpu(u32 op){
@@ -2722,7 +2736,9 @@ static void ppc_fcmpu(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	if(is_nan_f64(ppc.fpr[a].fd) ||
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+
+    if(is_nan_f64(ppc.fpr[a].fd) ||
 	   is_nan_f64(ppc.fpr[b].fd)){
 
 		c = 1; /* OX */
@@ -2759,7 +2775,9 @@ static void ppc_fctiwx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	if(ppc.fpr[b].fd > (f64)((s32)0x7FFFFFFF)){
+    SET_VXSNAN_1(ppc.fpr[b].fd);
+
+    if(ppc.fpr[b].fd > (f64)((s32)0x7FFFFFFF)){
 
 		ppc.fpr[t].iw = 0x7FFFFFFF;
 
@@ -2804,7 +2822,9 @@ static void ppc_fctiwzx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	if(ppc.fpr[b].fd > (f64)((s32)0x7FFFFFFF)){
+    SET_VXSNAN_1(ppc.fpr[b].fd);
+
+    if(ppc.fpr[b].fd > (f64)((s32)0x7FFFFFFF)){
 
 		ppc.fpr[t].iw = 0x7FFFFFFF;
 
@@ -2843,7 +2863,9 @@ static void ppc_fdivx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd / (f64)ppc.fpr[b].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+
+    ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd / (f64)ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2857,7 +2879,9 @@ static void ppc_fdivsx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd / (f64)ppc.fpr[b].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+
+    ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd / (f64)ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2871,6 +2895,9 @@ static void ppc_fmaddx(u32 op){
 	u32 t = RT;
 
 	CHECK_FPU_AVAILABLE();
+
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
 
 	ppc.fpr[t].fd = (f64)((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd);
 
@@ -2887,7 +2914,10 @@ static void ppc_fmaddsx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f32)((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f32)((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2914,7 +2944,10 @@ static void ppc_fmsubx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f64)((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f64)((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2929,7 +2962,10 @@ static void ppc_fmsubsx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f32)((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f32)((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2944,7 +2980,10 @@ static void ppc_fnmaddx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f64)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd));
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f64)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd));
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2959,7 +2998,10 @@ static void ppc_fnmaddsx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f32)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd));
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f32)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd));
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2974,7 +3016,10 @@ static void ppc_fnmsubx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f64)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd));
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f64)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd));
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -2989,7 +3034,10 @@ static void ppc_fnmsubsx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f32)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd));
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+    SET_VXSNAN_1(ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f32)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd));
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -3003,7 +3051,9 @@ static void ppc_fmulx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
-	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd * (f64)ppc.fpr[c].fd);
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[c].fd);
+
+    ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd * (f64)ppc.fpr[c].fd);
 
     set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
@@ -3016,6 +3066,8 @@ static void ppc_fmulsx(u32 op){
 	u32 t = RT;
 
 	CHECK_FPU_AVAILABLE();
+
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[c].fd);
 
 	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd * (f64)ppc.fpr[c].fd);
 
@@ -3054,6 +3106,8 @@ static void ppc_fresx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
+    SET_VXSNAN_1(ppc.fpr[b].fd);
+
 	ppc.fpr[t].fd = 1.0 / ppc.fpr[b].fd; /* ??? */
 
     set_fprf(ppc.fpr[t].fd);
@@ -3067,6 +3121,8 @@ static void ppc_frspx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
+    SET_VXSNAN_1(ppc.fpr[b].fd);
+
 	ppc.fpr[t].fd = (f32)ppc.fpr[b].fd;
 
     set_fprf(ppc.fpr[t].fd);
@@ -3079,6 +3135,8 @@ static void ppc_frsqrtex(u32 op){
 	u32 t = RT;
 
 	CHECK_FPU_AVAILABLE();
+
+    SET_VXSNAN_1(ppc.fpr[b].fd);
 
 	ppc.fpr[t].fd = 1.0 / sqrt(ppc.fpr[b].fd); /* ??? */
 
@@ -3107,6 +3165,8 @@ static void ppc_fsqrtx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
+    SET_VXSNAN_1(ppc.fpr[b].fd);
+
 	ppc.fpr[t].fd = (f64)(sqrt(ppc.fpr[b].fd));
 
     set_fprf(ppc.fpr[t].fd);
@@ -3119,6 +3179,8 @@ static void ppc_fsqrtsx(u32 op){
 	u32 t = RT;
 
 	CHECK_FPU_AVAILABLE();
+
+    SET_VXSNAN_1(ppc.fpr[b].fd);
 
 	ppc.fpr[t].fd = (f32)(sqrt(ppc.fpr[b].fd));
 
@@ -3134,6 +3196,8 @@ static void ppc_fsubx(u32 op){
 
 	CHECK_FPU_AVAILABLE();
 
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
+
 	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd - (f64)ppc.fpr[b].fd);
 
     set_fprf(ppc.fpr[t].fd);
@@ -3147,6 +3211,8 @@ static void ppc_fsubsx(u32 op){
 	u32 t = RT;
 
 	CHECK_FPU_AVAILABLE();
+
+    SET_VXSNAN(ppc.fpr[a].fd, ppc.fpr[b].fd);
 
 	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd - (f64)ppc.fpr[b].fd);
 
@@ -3164,6 +3230,9 @@ static void ppc_mcrfs(u32 op){
 
     f = ppc.fpscr >> ((7 - crfS) * 4);  // get crfS field from FPSCR
     f &= 0xF;
+
+//    LOG("model3.log", "MCRFS field %d\n", crfS);
+//    message(0, "MCRFS field %d", crfS);
 
     switch (crfS)   // determine which exception bits to clear in FPSCR
     {
@@ -3436,12 +3505,13 @@ u32 ppc_run(u32 count){
 
 		ppc.count--;
 
-        if (ppc.cia == 0x4C274)
-//        if (ppc.cia == 0x4c1b8) // VF3
+#if 0
+        if (ppc.cia == 0x3C7C)  // VF3
         {
             printf("BREAKPOINT!\n");
             exit(0);
         }
+#endif
 
         // fetch and execute
 
@@ -3465,10 +3535,11 @@ u32 ppc_run(u32 count){
 			if(ppc.tb >> 56)
 				ppc.tb = 0;
 
-			ppc.spr[SPR_DEC]--;
-			if(ppc.spr[SPR_DEC] == 0xFFFFFFFF)
-				ppc.dec_expired = 1;
+            ppc.spr[SPR_DEC]--;
+            if(ppc.spr[SPR_DEC] == 0xFFFFFFFF)
+                ppc.dec_expired = 1;
 		}
+
 
 		// go to next instructions
 
