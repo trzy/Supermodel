@@ -1,3 +1,5 @@
+
+//#define WIREFRAME
 // TODO: measure stats in VROM models (size of changing models, size of chunks, etc.)
 // TODO: eventually use VBOs for model cache (update glext.h to OpenGL 1.5)
 // TODO: cache dlists for per-model state changes
@@ -45,8 +47,10 @@
 // debug
 //#define ANALYZE_VROM_MODELS
 
-#define USE_MODEL_CACHE				// controls VROM model cache
+//#define USE_MODEL_CACHE             // controls VROM model cache
 #define CACHE_POLYS_AS_QUADS		// QUADS should be a little faster
+
+#define ENABLE_LIGHTING
 
 /******************************************************************/
 /* Private Data                                                   */
@@ -175,32 +179,6 @@ PFNGLGETBUFFERPOINTERVARBPROC		glGetBufferPointervARB = NULL;
 
 #endif
 
-/******************************************************************/
-/* Macros                                                         */
-/******************************************************************/
-
-/*
- * Polygon Header Data Extraction
- *
- * The parameter is a 7-element array of 32-bit words (the 7-word header.)
- */
-
-#define IS_QUAD(h)                  (h[0] & 0x40)
-#define IS_UV_16(h)                 (h[1] & 0x40)
-#define IS_TEXTURE_ENABLED(h)       (h[6] & 0x04000000)
-#define IS_TEXTURE_TRANSPARENT(h)   (h[6] & 0x80000000)
-#define IS_LIGHTING_DISABLED(h)     (h[6] & 0x10000)
-#define GET_LINK_DATA(h)            (h[0] & 0x0F)
-#define COLOR_RED(h)                ((h[4] >> 24) & 0xFF)
-#define COLOR_GREEN(h)              ((h[4] >> 16) & 0xFF)
-#define COLOR_BLUE(h)               ((h[4] >> 8) & 0xFF)
-#define GET_TEXTURE_X(h)            ((((h[4] & 0x1F) << 1) | ((h[5] & 0x80) >> 7)) * 32)
-#define GET_TEXTURE_Y(h)            (((h[5] & 0x1F) | ((h[4] & 0x40) >> 1)) * 32)
-#define GET_TEXTURE_WIDTH(h)        (32 << ((h[3] >> 3) & 7))
-#define GET_TEXTURE_HEIGHT(h)       (32 << ((h[3] >> 0) & 7))
-#define GET_TEXTURE_FORMAT(h)       ((h[6] >> 7) & 7)
-#define GET_TEXTURE_REPEAT(h)       (h[2] & 3)
- 
 /******************************************************************/
 /* Texture Management                                             */
 /******************************************************************/
@@ -482,6 +460,31 @@ static void bind_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 /******************************************************************/
 
 #define get_word(a)		(*a)
+
+/*
+ * Useful Polygon Header Macros
+ *
+ * The parameter is a 7-element array of 32-bit words (the 7-word header.)
+ */
+
+#define STOP_BIT(h)                 (h[1] & 0x04)
+#define IS_QUAD(h)                  (h[0] & 0x40)
+#define GET_LINK_DATA(h)            (h[0] & 0x0F)
+#define IS_UV_16(h)                 (h[1] & 0x40)
+#define IS_TEXTURE_ENABLED(h)       (h[6] & 0x04000000)
+#define IS_TEXTURE_TRANSPARENT(h)   (h[6] & 0x80000000)
+#define IS_LIGHTING_DISABLED(h)     (h[6] & 0x10000)
+#define IS_OPAQUE(h)                (h[6] & 0x00800000)
+#define COLOR_RED(h)                ((h[4] >> 24) & 0xFF)
+#define COLOR_GREEN(h)              ((h[4] >> 16) & 0xFF)
+#define COLOR_BLUE(h)               ((h[4] >> 8) & 0xFF)
+#define GET_TEXTURE_X(h)            ((((h[4] & 0x1F) << 1) | ((h[5] & 0x80) >> 7)) * 32)
+#define GET_TEXTURE_Y(h)            (((h[5] & 0x1F) | ((h[4] & 0x40) >> 1)) * 32)
+#define GET_TEXTURE_WIDTH(h)        (32 << ((h[3] >> 3) & 7))
+#define GET_TEXTURE_HEIGHT(h)       (32 << ((h[3] >> 0) & 7))
+#define GET_TEXTURE_FORMAT(h)       ((h[6] >> 7) & 7)
+#define GET_TEXTURE_REPEAT(h)       (h[2] & 3)
+#define GET_TRANSLUCENCY(h)         ((h[6] >> 18) & 0x1F)
 
 /*
  * convert_vertex_to_float():
@@ -838,7 +841,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
     INT     i, j, num_verts;
     GLfloat u_coord, v_coord, nx, ny, nz, color[4];
 
-#if WIREFRAME
+#ifdef WIREFRAME
     glPolygonMode(GL_FRONT, GL_LINE);
     glPolygonMode(GL_BACK, GL_LINE);
     glDisable(GL_TEXTURE_2D);
@@ -909,19 +912,29 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         }
 
         /*
-         * Set color and material properties
+         * Set color and material properties.
+         *
+         * Something is hosed here. The Model 3 works differently. Setting
+         * the ambient and diffuse material properties to all 1.0 fixes VON2
+         * but causes issues in Scud Race (shadows turn white.)
          */
 
         color[0] = (GLfloat) COLOR_RED(header) / 255.0f;
         color[1] = (GLfloat) COLOR_GREEN(header) / 255.0f;
         color[2] = (GLfloat) COLOR_BLUE(header) / 255.0f;
-        color[3] = 1.0f;    // TODO: if translucent polygon, modify this
-        glColor4fv(color);
+        if (IS_OPAQUE(header))
+            color[3] = 1.0f;    // TODO: if translucent polygon, modify this
+        else
+            color[3] = GET_TRANSLUCENCY(header) / 31.0f;
+
+        glColor4fv(color); 
         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, color);
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color);
 
+#ifdef ENABLE_LIGHTING
         if (IS_LIGHTING_DISABLED(header))
             glDisable(GL_LIGHTING);
+#endif
 
         /*
          * Draw it (and save the vertices to prev_v[])
@@ -929,8 +942,6 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
 
         if (IS_TEXTURE_ENABLED(header))
         {
-			UINT h5 = (header[5] >> 8) & 0x7FFFFF;
-
 			texture_width   = GET_TEXTURE_WIDTH(header);
 			texture_height  = GET_TEXTURE_HEIGHT(header);
 
@@ -942,12 +953,6 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
                 glEnable(GL_ALPHA_TEST);
                 glAlphaFunc(GL_GREATER, 0.95f);
             }
-
-			// signed 12.12 xp?
-			if(header[5] & 0x80000000)
-				glTexEnvf(GL_TEXTURE_FILTER_CONTROL_EXT, GL_TEXTURE_LOD_BIAS_EXT, h5 / 8192.0f); // + (blur)
-			else
-				glTexEnvf(GL_TEXTURE_FILTER_CONTROL_EXT, GL_TEXTURE_LOD_BIAS_EXT, -(h5 / 8192.0f)); // - (sharpen)
         }
         else
             glDisable(GL_TEXTURE_2D);
@@ -975,10 +980,12 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         else
             glEnable(GL_TEXTURE_2D);
 
+#ifdef ENABLE_LIGHTING
         if (IS_LIGHTING_DISABLED(header))
             glEnable(GL_LIGHTING);
+#endif
     }
-    while (!(header[1] & 4));   // continue until stop bit is hit
+    while (!STOP_BIT(header));  // continue until stop bit is hit
 }
 
 /******************************************************************/
@@ -988,8 +995,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
 /*
  * void osd_renderer_set_light(INT light_num, LIGHT *light);
  *
- * Sets a light. Remember that for sun light, the Model 3 vector points
- * towards the light not from it.
+ * Sets a light. 
  *
  * Parameters:
  *      light_num = Which light number. 
@@ -1003,9 +1009,9 @@ void osd_renderer_set_light(INT light_num, LIGHT *light)
     switch (light->type)
     {
     case LIGHT_PARALLEL:
-        v[0] = -light->u;
-        v[1] = -light->v;
-        v[2] = -light->w;
+        v[0] = light->u;
+        v[1] = light->v;
+        v[2] = light->w;
         v[3] = 0.0f;    // this is a directional light
         glLightfv(GL_LIGHT0 + light_num, GL_POSITION, v);
 
@@ -1071,6 +1077,7 @@ void osd_renderer_set_viewport(const VIEWPORT *vp)
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glScalef(1.0, -1.0, -1.0);  // Model 3 default coordinate system (for lighting)
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -1254,8 +1261,10 @@ void osd_renderer_draw_layer(UINT layer_num)
 			temp[1] = -coff[1];
 			temp[2] = -coff[2];
 		}
-		else
-			error("osd_renderer_draw_layer: non-uniform color offset\n");
+#if 0
+        else
+            error("osd_renderer_draw_layer: non-uniform color offset\n");
+#endif
 
 		// setup color combiner operation
 		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
@@ -1308,8 +1317,10 @@ void osd_renderer_draw_layer(UINT layer_num)
      * Re-enable lighting
      */
 
+#ifdef ENABLE_LIGHTING
     glEnable(GL_LIGHTING);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+#endif
 }
 
 /*
@@ -1468,8 +1479,10 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
      * Disable default ambient lighting and enable lighting
      */
     
+#ifdef ENABLE_LIGHTING
     glEnable(GL_LIGHTING);
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
+#endif
 
     /*
      * Enable 2D texture mapping, GL_MODULATE is for the 3D scene, layer
