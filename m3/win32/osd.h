@@ -48,7 +48,13 @@
 /* OSD Definitions                                                */
 /******************************************************************/
 
+#ifdef _MSC_VER
+#define INLINE static _inline
+#endif
+
+#ifdef __GCC__
 #define INLINE static __inline__
+#endif
 
 /******************************************************************/
 /* OSD Data Structures                                            */
