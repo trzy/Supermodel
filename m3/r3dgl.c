@@ -1065,59 +1065,88 @@ static void draw_list(UINT8 *list)
 static void draw_block(UINT8 *block)
 {
     GLfloat m[4*4];
-    UINT32  matrix, addr;
+    UINT32  matrix, addr, next_ptr;
 
     /*
-     * Multiply by the specified matrix. If bit 0x20000000 is not set, I
-     * presume that no matrix is to be used.
+     * Blocks may apparently be chained together in a linked list. We're not
+     * yet certain if these link pointers may reference lists or models, but
+     * for now, we're assuming they cannot.
      */
 
-    matrix = GETWORDLE(&block[3*4]);
-    if ((matrix & 0x20000000))
+    while (1)
     {
-        get_matrix(m, (matrix & 0xFFFF)*12);
-//        get_matrix(m, &culling_ram_8e[0x2000*4 + (matrix & 0xFFFF)*12*4]);
-        glPushMatrix();
-        glMultMatrixf(m);
-    }
+        /*
+         * Scud Race has weird nodes which are preceeded with pointers. I
+         * check the header for bit 0x01000000 to determine if it's a block or
+         * a pointer to a block. This is just a hack, really.
+         */
 
-    /*
-     * Draw a model or process a list. If the address is of the form 04XXXXXX,
-     * then the address points to a list, otherwise it points to a model.
-     */
+        if (GETWORDLE(&block[0*4]) & 0x01000000)
+            block = translate_r3d_address(GETWORDLE(&block[0*4]) & 0x00FFFFFF);
 
-    addr = GETWORDLE(&block[7*4]);
-    switch ((addr >> 24) & 0xFE)
-    {
-    case 0x04:  // list
-        if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
-        draw_list(translate_r3d_address(addr & 0x01FFFFFF));
-        break;
-    case 0x00:  // draw model or another 10-word block
-        if (addr != 0)  // safeguard: in case memory has not been uploaded yet
+        /*
+         * Multiply by the specified matrix. If bit 0x20000000 is not set, I
+         * presume that no matrix is to be used.
+         */
+
+        matrix = GETWORDLE(&block[3*4]);
+        if ((matrix & 0x20000000))
         {
-            if ((addr & 0x01000000))                // VROM or poly RAM (draw model)
-            {
-                if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-                    draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
-                else                                    // polygon RAM
-                    draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
-            }
-            else                                    // some Real3D region (another 10-word block)
-                draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+            get_matrix(m, (matrix & 0xFFFF)*12);
+            glPushMatrix();
+            glMultMatrixf(m);
         }
-        break;
-    default:
-        error("Unable to handle Real3D address: %08X\n", addr);
-        break;
+
+        /*
+         * Draw a model or process a list. If the address is of the form
+         * 04XXXXXX, then the address points to a list, otherwise it points to
+         * a model.
+         */
+
+        addr = GETWORDLE(&block[7*4]);
+        switch ((addr >> 24) & 0xFE)
+        {
+        case 0x04:  // list
+            if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
+            draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+            break;
+        case 0x00:  // draw model or another 10-word block
+            if (addr != 0)  // safeguard: in case memory has not been uploaded yet
+            {
+                if ((addr & 0x01000000))                // VROM or poly RAM (draw model)
+                {
+                    if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+                        draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
+                    else                                    // polygon RAM
+                        draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+                }
+                else                                    // some Real3D region (another 10-word block)
+                    draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+            }
+            break;
+        default:
+            error("Unable to handle Real3D address: %08X\n", addr);
+            break;
+        }
+
+        /*
+         * Pop the matrix if we pushed one
+         */
+
+        if ((matrix & 0x20000000))
+            glPopMatrix();
+
+        /*
+         * Advance to next block in list
+         */
+
+        next_ptr = GETWORDLE(&block[8*4]);
+        if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
+            break;
+
+//        message(0, "next_ptr = %08X", next_ptr);
+        block = translate_r3d_address(next_ptr);
     }
-
-    /*
-     * Pop the matrix if we pushed one
-     */
-
-    if ((matrix & 0x20000000))
-        glPopMatrix();
 }
 
 /*
