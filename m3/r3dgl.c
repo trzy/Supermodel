@@ -1071,7 +1071,7 @@ static void draw_list(UINT8 *list)
     {
         addr = GETWORDLE(list);
 
-        if (addr == 0)  // safeguard: in case memory has not been uploaded yet
+        if (addr == 0 || addr == 0x800800)  // safeguard: in case memory has not been uploaded yet
             break;
 
         draw_block(translate_r3d_address(addr & 0x01FFFFFF));
@@ -1158,7 +1158,7 @@ static void draw_scene(void)
     stop = 0;
     do
     {
-		/*
+//        /*
 		// DEBUG
 		message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
 		i,
@@ -1166,17 +1166,17 @@ static void draw_scene(void)
 		GETWORDLE(&culling_ram_8e[i + 4]),
 		GETWORDLE(&culling_ram_8e[i + 8])
 		);
-		*/
+//        */
+
+        j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
+		j = (j & 0xffff) * 4;
+        if (j == 0) // culling RAM probably hasn't been set up yet
+            break;
 
         i = GETWORDLE(&culling_ram_8e[i + 4]);  // get address of next block
         if (i == 0x01000000)                    // 01000000 == STOP
 			stop = TRUE;
-		i = (i & 0xffff) * 4;
-        if (i == 0) // culling RAM probably hasn't been set up yet
-            break;
-
-        j = GETWORDLE(&culling_ram_8e[i + 8]); // get address of 10-word block
-		j = (j & 0xffff) * 4;
+    	i = (i & 0xffff) * 4;
 
         draw_block(&culling_ram_8e[j]);
     }
@@ -1312,14 +1312,6 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
 	else
         return;
 
-	/*
-    if (!little_endian)
-    {
-        OutBMP(f, tiles_x * 8, tiles_y * 8, texture_buffer);
-        ++f;
-    }
-	*/
-
     /*
      * Get a texture ID for this texture and set its properties, then upload
      * it
@@ -1427,4 +1419,3 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     vrom = vrom_ptr;
 }
 
-#endif

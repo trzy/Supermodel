@@ -241,21 +241,28 @@ void r3d_write_32(UINT32 a, UINT32 d)
     switch (a)
     {
     case 0x88000000:    // 0xDEADDEAD
+        message(0, "88000000 = %08X", BSWAP32(d));
         return;
     case 0x90000000:    // VROM texture address
         vrom_texture_address = BSWAP32(d);
         message(0, "VROM texture address = %08X", BSWAP32(d));
         return;
-    case 0x90000004:
+    case 0x90000004:    
         vrom_texture_header = BSWAP32(d);
+        message(0, "VROM texture header = %08X", BSWAP32(d));
         return;
     case 0x90000008:
         osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        message(0, "VROM texture length = %08X", BSWAP32(d));
         return;
     case 0x9C000000:    // ?
+        message(0, "9C000000 = %08X", BSWAP32(d));
+        return;
     case 0x9C000004:    // ?
+        message(0, "9C000004 = %08X", BSWAP32(d));
+        return;
     case 0x9C000008:    // ?
-		message(0, "Real3D write: %08X = %08X\n", a, d);
+        message(0, "9C000008 = %08X", BSWAP32(d));
         return;
     }
 
