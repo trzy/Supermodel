@@ -286,8 +286,8 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
      * texture sheet selection bit as an additional bit to the Y coordinate.
      */
 
-    size_x = (header >> 14) & 3;
-    size_y = (header >> 17) & 3;
+    size_x = (header >> 14) & 7;
+    size_y = (header >> 17) & 7;
     size_x = (32 << size_x);    // width in pixels
     size_y = (32 << size_y);    // height
 
