@@ -1,4 +1,3 @@
-//TODO: in simplified(), CTR is ignored!!!!!
 /*
  * Sega Model 3 Emulator
  * Copyright (C) 2003 Bart Trzynadlowski, Ville Linde, Stefano Teso
