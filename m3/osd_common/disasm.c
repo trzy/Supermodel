@@ -1,3 +1,4 @@
+//TODO: in simplified(), CTR is ignored!!!!!
 /*
  * Sega Model 3 Emulator
  * Copyright (C) 2003 Bart Trzynadlowski, Ville Linde, Stefano Teso
@@ -638,7 +639,7 @@ static BOOL Check(UINT32 op, FLAGS flags)
 
 static BOOL Simplified(UINT32 op, UINT32 vpc, CHAR *signed16, CHAR *mnem, CHAR *oprs)
 {
-    UINT32  value, disp;
+    UINT32  value;
 
     value = G_SIMM(op); // value is fully sign-extended SIMM field
     if (value & 0x8000)
@@ -738,32 +739,70 @@ static BOOL Simplified(UINT32 op, UINT32 vpc, CHAR *signed16, CHAR *mnem, CHAR *
     }
     else if ((op & ~(M_BO|M_BI|M_BD|M_AA|M_LK)) == D_OP(16))
     {
+    	UINT32	disp, target_addr;
+    	INT		cr_field, crbit_num;    
+        
+        /*
+         * Calculate which CR field (0-7), which CR bit within the field,
+         * and the target address
+         */
+        
+        cr_field = G_BI(op) / 4;
+        crbit_num = G_BI(op) & 3;
+        
         disp = G_BD(op) * 4;
         if (disp & 0x00008000)
             disp |= 0xffff0000;
-
-        switch (G_BO(op))
+		target_addr = disp + ((op & M_AA) ? 0 : vpc);            
+        
+        /*
+         * Determine the branch type and print a simplified mnemonic for it         
+         */
+         
+        switch (G_BO(op) >> 1)
         {
-        case 0x04:  // branch if condition is false
-        case 0x05:
-        case 0x06:
-        case 0x07:
-            strcat(mnem, "bf");
-            break;
-        case 0x0c:
-        case 0x0d:
-        case 0x0e:
-        case 0x0f:
-            strcat(mnem, "bt");
-            break;
-        default:
-            return 0;
-        }
-
+        case 0x0:		// 0000y	decrement the CTR, then branch if decremented CTR != 0 and condition is FALSE
+        	strcat(mnem, "bf");
+        	sprintf(oprs, "cr%d[%s],--ctr!=0,0x%08X", cr_field, crbit[crbit_num], target_addr);
+        	break;
+        case 0x1:		// 0001y	decrement the CTR, then branch if decremented CTR == 0 and the condition is FALSE
+        	strcat(mnem, "bf");
+			sprintf(oprs, "cr%d[%s],--ctr==0,0x%08X", cr_field, crbit[crbit_num], target_addr);
+        	break;
+        case 0x2:		// 001zy	branch if the condition is FALSE
+        case 0x3:
+        	strcat(mnem, "bf");
+			sprintf(oprs, "cr%d[%s],0x%08X", cr_field, crbit[crbit_num], target_addr);
+        	break;
+        case 0x4:		// 0100y	decrement the CTR, then branch if decremented CTR != 0 and condition is TRUE
+        	strcat(mnem, "bt");
+			sprintf(oprs, "cr%d[%s],--ctr!=0,0x%08X", cr_field, crbit[crbit_num], target_addr);
+        	break;
+        case 0x5:		// 0101y	decrement the CTR, then branch if decremented CTR == 0 and condition is TRUE
+        	strcat(mnem, "bt");
+			sprintf(oprs, "cr%d[%s],--ctr==0,0x%08X", cr_field, crbit[crbit_num], target_addr);
+        	break;
+        case 0x6:		// 011zy	branch if the condition is TRUE
+        case 0x7:
+        	strcat(mnem, "bt");
+			sprintf(oprs, "cr%d[%s],0x%08X", cr_field, crbit[crbit_num], target_addr);
+        	break;
+        case 0x8:		// 1z00y	decrement the CTR, then branch if decremented CTR != 0
+        case 0xC:
+        	strcat(mnem, "b");
+			sprintf(oprs, "--ctr!=0,0x%08X", target_addr);        	
+			break;
+        case 0x9:		// 1z01y	decrement the CTR, then branch if decremented CTR == 0
+        case 0xD:
+        	strcat(mnem, "b");
+			sprintf(oprs, "--ctr==0,0x%08X", target_addr);        	
+			break;
+        default:		// 1z1zz -- 0xA,B,E,F: branch always (not handled as a simplified mnemonic)
+        	return 0;        	
+    	}
+    
         if (op & M_LK)  strcat(mnem, "l");
         if (op & M_AA)  strcat(mnem, "a");
-
-        sprintf(oprs, "cr%d[%s],0x%08X", G_BI(op) / 4, crbit[G_BI(op) & 3], disp + ((op & M_AA) ? 0 : vpc));
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_OE|M_RC)) == (D_OP(31)|D_XO(40)))
     {
