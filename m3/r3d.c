@@ -49,6 +49,9 @@ static UINT8    texture_buffer_ram[1*1024*1024];
 static UINT32	vrom_texture_address;
 static UINT32	vrom_texture_header;
 
+static UINT32	texture_size = 0;
+static UINT32	texture_header = 0;
+
 /******************************************************************/
 /* Interface                                                      */
 /******************************************************************/
@@ -383,27 +386,18 @@ void r3d_write_32(UINT32 a, UINT32 d)
         d = BSWAP32(d);
         *(UINT32 *) &texture_buffer_ram[a & 0xFFFFF] = d;
 
-        if (a == 0x94000004)    // get size and calculate last word written
-        {
-            size_x = (d >> 14) & 3;
-            size_y = (d >> 17) & 3;
-            size_x = 32 << size_x;
-            size_y = 32 << size_y;
-
-			if(!(d & 0x00800000))	// 8-bit texture
-				last_addr = (0x94000008 + size_x * size_y - 1) & ~3;
-			else					// 16-bit texture
-                last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;
-
-            message(0, "texture transfer started: %dx%d, %08X (%08X)", size_x, size_y, d, last_addr);
-            LOG("model3.log", "texture transfer started: %dx%d, %08X (%08X)\n", size_x, size_y, d, last_addr);
-        }
-        else if (a == last_addr)    // last word written
-        {
-            upload_texture(*(UINT32 *) &texture_buffer_ram[4], *(UINT32 *) &texture_buffer_ram[0], &texture_buffer_ram[8], 1);
-            message(0, "texture upload complete");
-            LOG("model3.log", "texture upload complete\n");
-        }
+		if (a == 0x94000000) {
+			if( texture_size == 0 ) {
+				texture_size = d;
+				return;
+			}
+		}
+		if (a == 0x94000004) {
+			if( texture_header == 0 ) {
+				texture_header = d;
+				return;
+			}
+		}
 
         return;
     }
@@ -414,6 +408,16 @@ void r3d_write_32(UINT32 a, UINT32 d)
 //        controls_update();
 //        osd_renderer_update_frame();
 //        LOG("model3.log", "DEADDEAD\n");
+
+		// Upload the texture if available
+		if( texture_size != 0 ) {
+			message(0, "texture transfer: %08X, %08X", texture_size, texture_header );
+			upload_texture( texture_header, texture_size, &texture_buffer_ram[8], 1);
+
+			texture_size = 0;
+			texture_header = 0;
+		}
+
         message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
         return;
     case 0x90000000:    // VROM texture address
