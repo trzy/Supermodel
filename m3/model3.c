@@ -1008,8 +1008,6 @@ void m3_reset(void)
 	scsi_reset();
 	dma_reset();
 
-    osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
-
 	tilegen_reset();
 	r3d_reset();
 //    scsp_reset();
@@ -1448,6 +1446,7 @@ void m3_init(void)
 
     bridge_init(pci_command_callback);
     scsi_init(m3_ppc_read_8, m3_ppc_read_16, m3_ppc_read_32, m3_ppc_write_8, m3_ppc_write_16, m3_ppc_write_32);
+	osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
 	dma_init();
     tilegen_init(vram);
     r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram);
