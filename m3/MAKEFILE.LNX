@@ -14,7 +14,7 @@ LD = gcc
 AS = nasm
 AR = ar
 
-CFLAGS = -w -I./ -I./linux/ -DLINUX=1 -D__GCC__=1 `sdl-config --cflags`  
+CFLAGS = -w -I./ -I./linux/ -I./osd_common/ -DLINUX=1 -D__GCC__=1 `sdl-config --cflags`  
 AFLAGS = -f elf
 
 LIBS = 
@@ -42,7 +42,7 @@ OBJ=	$(OBJ_DIR)/bridge.o \
 	$(OBJ_DIR)/lin_main.o
 
 
-OBJ_REND = $(OBJ_DIR)/ogl_render.o $(OBJ_DIR)/r3dgl.o
+OBJ_REND = $(OBJ_DIR)/lin_gl.o $(OBJ_DIR)/glrender.o
 
 #
 # Rules
@@ -61,6 +61,9 @@ $(OBJ_DIR)/%.o: %.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 $(OBJ_DIR)/%.o: linux/%.c
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: osd_common/%.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 $(OBJ_DIR)/%.o: ppc/%.c ppc/%.h
