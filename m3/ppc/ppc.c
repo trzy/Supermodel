@@ -1,32 +1,31 @@
+// TODO: build a jump table
 /*
  * ppc.c
  *
  * PowerPC Emulator.
  */
 
-// TODO: build a jump table
-
 #include "model3.h"
-
-/*
- * Private Variables
- */
-
-static PPC_CONTEXT	ppc;
-static u32			pvr;    // default value initialized by ppc_init()
 
 #ifndef LOG
 #define LOG(...)
 #endif
 
-static UINT32	ppc_field_xlat[256];
-static void		(* ppc_jump_table[131072])(UINT32 op);
+/******************************************************************/
+/* Private Variables                                              */
+/******************************************************************/
+
+static UINT32		ppc_field_xlat[256];
+
+static void			(* ppc_jump_table[131072])(UINT32 op);
+
+static PPC_CONTEXT	ppc;
 
 static void ppc_update_pc(void);
 
-/*
- * Shorthand Mnemonics
- */
+/******************************************************************/
+/* Shorthand Mnemonics                                            */
+/******************************************************************/
 
 #define SPR_XER			1		/* Fixed Point Exception Register				Read / Write */
 #define SPR_LR			8		/* Link Register								Read / Write */
@@ -177,6 +176,8 @@ static void ppc_update_pc(void);
 #define F(n)	ppc.fpr[n]
 #define CR(n)	ppc.cr[n]
 #define CRFD	ppc.cr[_CRFD]
+#define SPR(n)	ppc.spr[n]
+#define DCR(n)	ppc.dcr[n]
 
 #define _LT		8
 #define _GT		4
@@ -1772,7 +1773,7 @@ static void ppc_mtcrf(u32 op){
 static void ppc_mfmsr(u32 op){	R(RD) = ppc_get_msr(); }
 static void ppc_mtmsr(u32 op){  ppc_set_msr(R(RD)); }
 
-static void ppc_mfspr(u32 op){	R(RD) = ppc_get_spr(_SPRF); }
+static void ppc_mfspr(u32 op){	R(RD) = ppc_get_spr(_SPRF); if(_SPRF == SPR_PVR) message(0, " ####### PVR=%08X ######## ", SPR(SPR_PVR)); }
 static void ppc_mtspr(u32 op){	ppc_set_spr(_SPRF, R(RD)); }
 
 #if (PPC_MODEL == PPC_MODEL_4XX)
@@ -2784,7 +2785,7 @@ static void ppc_update_pc(void)
 
 	if(ppc.cur_fetch.start <= ppc.pc && ppc.pc <= ppc.cur_fetch.end)
 	{
-		ppc._pc = (UINT32)ppc.cur_fetch.ptr + (UINT32)(ppc.pc - ppc.cur_fetch.start);
+		ppc._pc = (UINT32 *)((UINT32)ppc.cur_fetch.ptr + (UINT32)(ppc.pc - ppc.cur_fetch.start));
 		return;
 	}
 
@@ -2796,13 +2797,7 @@ static void ppc_update_pc(void)
 			ppc.cur_fetch.end = ppc.fetch[i].end;
 			ppc.cur_fetch.ptr = ppc.fetch[i].ptr;
 
-			ppc._pc = (UINT32)ppc.cur_fetch.ptr + (UINT32)(ppc.pc - ppc.cur_fetch.start);
-
-			/*
-			message(0, "region = [%08X,%08X],%08X --> pc = %08X,%08X -- %08X",
-				ppc.cur_fetch.start, ppc.cur_fetch.end, ppc.cur_fetch.ptr,
-				ppc.pc, ppc._pc, (ppc.pc - ppc.cur_fetch.start));
-			*/
+			ppc._pc = (UINT32 *)((UINT32)ppc.cur_fetch.ptr + (UINT32)(ppc.pc - ppc.cur_fetch.start));
 
 			return;
 		}
@@ -3120,30 +3115,34 @@ u32 ppc_get_reg(int r){
 	}
 }
 
-void ppc_set_reg(int r, u32 d){
-  switch(r) {
-  case PPC_REG_PC:
-	ppc.pc = d;
-	break;
-  case PPC_REG_XER:
-	ppc.spr[SPR_XER] = d;
-	break;
-  case PPC_REG_LR:
-	ppc.spr[SPR_LR] = d;
-	break;
-  case PPC_REG_CR:
-	CR(0) = (d >> 28) & 15;
-	CR(1) = (d >> 24) & 15;
-	CR(2) = (d >> 20) & 15;
-	CR(3) = (d >> 16) & 15;
-	CR(4) = (d >> 12) & 15;
-	CR(5) = (d >>  8) & 15;
-	CR(6) = (d >>  4) & 15;
-	CR(7) = (d >>  0) & 15;
-	break;
-  default:
-	printf("FIXME: ppc_set_reg(%d, %08x)\n", r, d);
-	abort();
+void ppc_set_reg(int r, u32 d)
+{
+	switch(r) {
+	case PPC_REG_PC:
+		ppc.pc = d;
+		break;
+	case PPC_REG_XER:
+		ppc.spr[SPR_XER] = d;
+		break;
+	case PPC_REG_LR:
+		ppc.spr[SPR_LR] = d;
+		break;
+	case PPC_REG_CR:
+		CR(0) = (d >> 28) & 15;
+		CR(1) = (d >> 24) & 15;
+		CR(2) = (d >> 20) & 15;
+		CR(3) = (d >> 16) & 15;
+		CR(4) = (d >> 12) & 15;
+		CR(5) = (d >>  8) & 15;
+		CR(6) = (d >>  4) & 15;
+		CR(7) = (d >>  0) & 15;
+		break;
+	case PPC_REG_PVR:
+		SPR(SPR_PVR) = d;
+		break;
+	default:
+		printf("XXX: ppc_set_reg(%d, %08x, %08x)\n", r, d, PPC_REG_PVR);
+		abort();
   }
 }
 
@@ -3169,7 +3168,7 @@ int ppc_set_context(PPC_CONTEXT * src)
 
 int ppc_reset(void)
 {
-	int i;
+	UINT i, pvr;
 
 	if(ppc.fetch == NULL)
 		error("ppc_reset() called without a previous call to ppc_set_fetch()!\n");
@@ -3177,8 +3176,12 @@ int ppc_reset(void)
 	for(i = 0; i < 32; i++)
 		ppc.gpr[i] = 0;
 
+	pvr = SPR(SPR_PVR);
+
 	for(i = 0; i < 1024; i++)
 		ppc.spr[i] = 0;
+
+	SPR(SPR_PVR) = pvr;
 
 	for(i = 0; i < 8; i++)
 		ppc.cr[i] = 0;
@@ -3192,7 +3195,7 @@ int ppc_reset(void)
 	ppc.msr	= 0;
 
 //	ppc.spr[SPR_PVR] = 0x00200011;	// 403GA
-	ppc.spr[SPR_PVR] = 0x00201400;	// Konami Custom ?
+//	ppc.spr[SPR_PVR] = 0x00201400;	// Konami Custom ?
 	ppc.spr[SPR_DBSR] = 0x00000300;	// 0x100, 0x200
 
 	for(i = 0; i < 256; i++)
@@ -3227,8 +3230,8 @@ int ppc_reset(void)
 	ppc.msr = 0x40;
 	ppc.fpscr = 0;
 
-    ppc.spr[SPR_PVR] = pvr;
-//    ppc.spr[SPR_PVR] = 0x00060104;      // 603e, Stretch, 1.4 - checked against by VS2V991
+//    ppc.spr[SPR_PVR] = pvr;
+//    ppc.spr[SPR_PVR] = 0x00060104;
 	ppc.spr[SPR_DEC] = 0xFFFFFFFF;
 
 	ppc.pc = 0xFFF00100;
@@ -3278,18 +3281,11 @@ void ppc_set_write_16_handler(void * handler){	ppc.write_16 = (void (*)(u32,u32)
 void ppc_set_write_32_handler(void * handler){	ppc.write_32 = (void (*)(u32,u32))handler; }
 void ppc_set_write_64_handler(void * handler){	ppc.write_64 = (void (*)(u32,u64))handler; }
 
-void ppc_set_pvr(u32 version)
+int ppc_init(void)
 {
-    pvr = version;
-}
+	UINT i;
 
-int ppc_init(void * x){
-
-	int i;
-
-    pvr = 0x00060104;   // default to this version of the PPC603e
-
-	x = NULL;
+    SPR(SPR_PVR) = 0x00060104;   // default to this version of the PPC603e
 
 	// cleanup extended opcodes handlers
 
@@ -3485,8 +3481,8 @@ int ppc_init(void * x){
 
 	// create ppc_field_xlat
 
-	for(i = 0; i <= 0xFF; i++){
-
+	for(i = 0; i <= 0xFF; i++)
+	{
 		ppc_field_xlat[i] =
 			((i & 0x80) ? 0xF0000000 : 0) |
 			((i & 0x40) ? 0x0F000000 : 0) |

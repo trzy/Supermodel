@@ -1,3 +1,12 @@
+// TODO: measure stats in VROM models (size of changing models, size of chunks, etc.)
+// TODO: eventually use VBOs for model cache (update glext.h to OpenGL 1.5)
+// TODO: cache dlists for per-model state changes
+// TODO: align model cache structures to 4 bytes (use stride param) and profile
+// TODO: move all config (i.e. USE_MODEL_CACHE, etc.) to makefile
+// TODO: add specular lighting
+// TODO: add light emission
+// TODO: glFlush() ?
+
 /*
  * Sega Model 3 Emulator
  * Copyright (C) 2003 Bart Trzynadlowski, Ville Linde, Stefano Teso
@@ -21,8 +30,6 @@
  *
  * OpenGL renderer backend. All OS-independent GL code is located here.
  * osd_renderer_blit() is the only function not defined here.
- *
- * TODO: glFlush() ?
  */
 
 #include "model3.h"
@@ -30,6 +37,16 @@
 #include <GL/glu.h>
 #include <GL/glext.h>   // this one can be obtained freely from SGI
 
+
+/******************************************************************/
+/* Configuration                                                  */
+/******************************************************************/
+
+// debug
+//#define ANALYZE_VROM_MODELS
+
+#define USE_MODEL_CACHE				// controls VROM model cache
+#define CACHE_POLYS_AS_QUADS		// QUADS should be a little faster
 
 /******************************************************************/
 /* Private Data                                                   */
@@ -81,8 +98,8 @@ static UINT     mip_scale[7] = { 1, 2, 4, 8, 16, 32, 64 };
  * Each layer is a 512x512 RGBA texture.
  */
 
-static GLubyte  layer[4][512][512][4];  // 4MB of RAM, ouch!
-static GLuint   layer_texture[4];       // IDs for the 4 layer textures
+static GLubyte  * layer[4];
+static GLuint   layer_texture[4];	// IDs for the 4 layer textures
 
 /*
  * Resolution and Ratios
@@ -102,6 +119,61 @@ static float    xres_ratio, yres_ratio;
  */
 
 static float    vertex_divisor, texcoord_divisor;
+
+typedef struct
+{
+	GLfloat x, y, z;    // vertices
+	GLfloat nx, ny, nz; // normals
+	GLfloat	r, g, b, a;	// colors
+	UINT32  uv;         // texture coordinates
+	GLfloat u, v;
+
+} VERTEX;
+
+/*
+ * Model Cache
+ */
+
+#ifdef USE_MODEL_CACHE
+
+typedef struct { GLfloat _0, _1; } VEC2;
+typedef struct { GLfloat _0, _1, _2; } VEC3;
+typedef struct { GLfloat _0, _1, _2, _3; } VEC4;
+
+typedef struct
+{
+	UINT	ref_count;	// number of references
+	UINT32	addr;		// original address
+	UINT	vbo_id;		// vertex buffer object ID
+	UINT	index;		// index in the vertex array
+	UINT	num_verts;	// number of vertices
+
+} HASH_ENTRY;
+
+#define MODEL_CACHE_SIZE	(256*1024)	// ~150K seems to be enough
+#define HASH_SIZE			(2048*1024)	// must be a power of two
+#define HASH_FUNC(addr)		((addr >> 2) & (HASH_SIZE - 1))
+
+static HASH_ENTRY * model_cache;
+static UINT	cur_model_index;
+
+static VEC3	* model_vertex_array;
+static VEC3	* model_normal_array;
+static VEC4	* model_color_array;
+static VEC2	* model_texcoord_array;
+
+PFNGLBINDBUFFERARBPROC				glBindBufferARB = NULL;
+PFNGLDELETEBUFFERSARBPROC			glDeleteBuffersARB = NULL;
+PFNGLGENBUFFERSARBPROC				glGenBuffersARB = NULL;
+PFNGLISBUFFERARBPROC				glIsBufferARB = NULL;
+PFNGLBUFFERDATAARBPROC				glBufferDataARB = NULL;
+PFNGLBUFFERSUBDATAARBPROC			glBufferSubDataARB = NULL;
+PFNGLMAPBUFFERARBPROC				glMapBufferARB = NULL;
+PFNGLUNMAPBUFFERARBPROC				glUnmapBufferARB = NULL;
+PFNGLGETBUFFERPARAMETERIVARBPROC	glGetBufferParameterivARB = NULL;
+PFNGLGETBUFFERPOINTERVARBPROC		glGetBufferPointervARB = NULL;
+
+#endif
 
 /******************************************************************/
 /* Macros                                                         */
@@ -406,8 +478,10 @@ static void bind_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 }
 
 /******************************************************************/
-/* Model Drawing                                                  */
+/* Model Caching and Drawing                                      */
 /******************************************************************/
+
+#define get_word(a)		(*a)
 
 /*
  * convert_vertex_to_float():
@@ -432,26 +506,317 @@ static float convert_texcoord_to_float(UINT32 num)
 }
 
 /*
- * get_word_little():
- *
- * Fetches a 32-bit word in little-endian format.
- */
+ * Model Cache
+ */ 
 
-static UINT32 get_word_little(UINT32 *a)
+#ifdef USE_MODEL_CACHE
+
+static BOOL init_model_cache(void)
 {
-    return *a;
+	UINT i;
+
+	// get pointer to VBO interface
+
+	if(glBindBufferARB == NULL)
+	{
+		glBindBufferARB = (PFNGLBINDBUFFERARBPROC)
+			osd_gl_get_proc_address("glBindBufferARB");
+		glDeleteBuffersARB = (PFNGLDELETEBUFFERSARBPROC)
+			osd_gl_get_proc_address("glDeleteBuffersARB");
+		glGenBuffersARB = (PFNGLGENBUFFERSARBPROC)
+			osd_gl_get_proc_address("glGenBuffersARB");
+		glIsBufferARB = (PFNGLISBUFFERARBPROC)
+			osd_gl_get_proc_address("glIsBufferARB");
+		glBufferDataARB = (PFNGLBUFFERDATAARBPROC)
+			osd_gl_get_proc_address("glBufferDataARB");
+		glBufferSubDataARB = (PFNGLBUFFERSUBDATAARBPROC)
+			osd_gl_get_proc_address("glBufferSubDataARB");
+		glMapBufferARB = (PFNGLMAPBUFFERARBPROC)
+			osd_gl_get_proc_address("glMapBufferARB");
+		glUnmapBufferARB = (PFNGLUNMAPBUFFERARBPROC)
+			osd_gl_get_proc_address("glUnmapBufferARB");
+		glGetBufferParameterivARB = (PFNGLGETBUFFERPARAMETERIVARBPROC)
+			osd_gl_get_proc_address("glGetBufferParameterivARB");
+		glGetBufferPointervARB = (PFNGLGETBUFFERPOINTERVARBPROC)
+			osd_gl_get_proc_address("glGetBufferPointervARB");
+	}
+
+	// free any resident VBO
+
+	/*
+	for(i = 0; i < HASH_SIZE; i++);
+		if(glIsBufferARB(model_cache[i].vbo_id));
+			glDeleteBuffersARB(1, &model_cache[i].vbo_id);
+	*/
+
+	// free unfreed buffers
+
+	SAFE_FREE(model_cache);
+	SAFE_FREE(model_vertex_array);
+	SAFE_FREE(model_normal_array);
+	SAFE_FREE(model_color_array);
+	SAFE_FREE(model_texcoord_array);
+
+	// alloc buffers
+
+	model_cache = (HASH_ENTRY *)malloc(HASH_SIZE * sizeof(HASH_ENTRY));
+	model_vertex_array = (VEC3 *)malloc(MODEL_CACHE_SIZE * sizeof(VEC3));
+	model_normal_array = (VEC3 *)malloc(MODEL_CACHE_SIZE * sizeof(VEC3));
+	model_color_array = (VEC4 *)malloc(MODEL_CACHE_SIZE * sizeof(VEC4));
+	model_texcoord_array = (VEC2 *)malloc(MODEL_CACHE_SIZE * sizeof(VEC2));
+
+	// check buffer consistency
+
+	if(	(model_cache == NULL) ||
+		(model_vertex_array == NULL) ||
+		(model_normal_array == NULL) ||
+		(model_color_array == NULL) ||
+		(model_texcoord_array == NULL) )
+		return FALSE;
+
+	// reset the model cache
+
+	cur_model_index = 0;
+
+	// setup the hash table
+
+	for(i = 0; i < HASH_SIZE; i++)
+	{
+		model_cache[i].ref_count = 0;
+		model_cache[i].addr = 0;
+		model_cache[i].vbo_id = (UINT)-1;
+		model_cache[i].index = 0;
+		model_cache[i].num_verts = 0;
+	}
+
+	return TRUE;
 }
 
-/*
- * get_word_big():
- *
- * Fetches a 32-bit word in big-endian format.
- */
-
-static UINT32 get_word_big(UINT32 *a)
+INLINE void cache_vertex(UINT index, VERTEX * src)
 {
-    return BSWAP32(*a);
+	model_vertex_array[index]._0 = src->x;
+	model_vertex_array[index]._1 = src->y;
+	model_vertex_array[index]._2 = src->z;
+
+	model_normal_array[index]._0 = src->nx;
+	model_normal_array[index]._1 = src->ny;
+	model_normal_array[index]._2 = src->nz;
+
+	model_color_array[index]._0 = src->r;
+	model_color_array[index]._1 = src->g;
+	model_color_array[index]._2 = src->b;
+	model_color_array[index]._3 = src->a;
+
+	model_texcoord_array[index]._0 = src->u;
+	model_texcoord_array[index]._1 = src->v;
 }
+
+UINT model_addr = 0;
+
+static BOOL cache_model(UINT32 *m, HASH_ENTRY *h)
+{
+	VERTEX	v[4], prev_v[4];
+    UINT	link_data, i, j, num_verts, index;
+    GLfloat	texture_width = 1.0f, texture_height = 1.0f,
+			nx, ny, nz, color[4];
+	BOOL	end;
+
+	UINT	has_tex = 0, old_tex_fmt = 0, old_tex_x = 0, old_tex_y = 0;
+	GLfloat	old_tex_w = 0, old_tex_h = 0;
+
+    if (*m == 0)
+        return TRUE;
+
+	if(cur_model_index >= MODEL_CACHE_SIZE)
+		return FALSE;
+
+	index = 0;	// number of cached vertices, actually
+
+	h->index = cur_model_index;
+	h->ref_count ++;
+
+	#ifdef ANALYZE_VROM_MODELS
+	message(0, "============================================================");
+	#endif
+
+    do
+    {
+		// setup polygon info
+
+        num_verts = (m[0] & 0x40) ? 4 : 3;
+        link_data = m[0] & 0xF;
+
+		end = m[1] & 4;
+
+        nx = (GLfloat) (((INT32) m[0]) >> 8) / 4194304.0f;
+        ny = (GLfloat) (((INT32) m[2]) >> 8) / 4194304.0f;
+        nz = (GLfloat) (((INT32) m[3]) >> 8) / 4194304.0f;
+
+        color[0] = (GLfloat) COLOR_RED(m) / 255.0f;
+        color[1] = (GLfloat) COLOR_GREEN(m) / 255.0f;
+        color[2] = (GLfloat) COLOR_BLUE(m) / 255.0f;
+        color[3] = 1.0f;
+
+		#ifdef ANALYZE_VROM_MODELS
+
+		if((IS_TEXTURE_ENABLED(m) ? 1 : 0) != has_tex)
+			message(0, "model at %08X: has_tex %u --> %u", model_addr, has_tex, IS_TEXTURE_ENABLED(m) ? 1 : 0);
+		has_tex = IS_TEXTURE_ENABLED(m) ? 1 : 0;
+
+		if(IS_TEXTURE_ENABLED(m))
+		{
+			UINT texture_format, texture_x, texture_y;
+
+			texture_width   = (GLfloat) GET_TEXTURE_WIDTH(m);
+			texture_height  = (GLfloat) GET_TEXTURE_HEIGHT(m);
+			texture_format	= GET_TEXTURE_FORMAT(m);
+
+			texture_x		= GET_TEXTURE_X(m);
+			texture_y		= GET_TEXTURE_Y(m);
+			//IS_TEXTURE_TRANSPARENT(m);
+			//GET_TEXTURE_REPEAT(m);
+
+			if(old_tex_fmt != texture_format)
+				message(0, "model at %08X: tex_fmt %u --> %u", model_addr, old_tex_fmt, texture_format);
+			if(old_tex_x != texture_x)
+				message(0, "model at %08X: tex_x %u --> %u", model_addr, old_tex_x, texture_x);
+			if(old_tex_y != texture_y)
+				message(0, "model at %08X: tex_y %u --> %u", model_addr, old_tex_y, texture_y);
+			if(old_tex_w != texture_width)
+				message(0, "model at %08X: tex_w %f --> %f", model_addr, old_tex_w, texture_width);
+			if(old_tex_h != texture_height)
+				message(0, "model at %08X: tex_h %f --> %f", model_addr, old_tex_h, texture_height);
+
+			old_tex_fmt = texture_format;
+			old_tex_x = texture_x;
+			old_tex_y = texture_y;
+			old_tex_w = texture_width;
+			old_tex_h = texture_height;
+		}
+
+		#endif
+
+		// select texture coordinate format
+
+        if (IS_UV_16(m))
+            texcoord_divisor = 1.0f;    // 16.0
+        else
+            texcoord_divisor = 8.0f;    // 13.3
+
+		m += 7;
+
+		// fetch all previous vertices that we need
+
+        i = 0;
+        for(j = 0; j < 4; j++)
+        {
+            if ((link_data & 1))
+                v[i++] = prev_v[j];
+            link_data >>= 1;
+        }
+
+		// fetch remaining vertices
+
+        for( ; i < num_verts; i++)
+        {
+            v[i].x = convert_vertex_to_float(*m++);
+            v[i].y = convert_vertex_to_float(*m++);
+            v[i].z = convert_vertex_to_float(*m++);
+            v[i].nx = nx;
+            v[i].ny = ny;
+            v[i].nz = nz;
+			v[i].r = color[0];
+			v[i].g = color[1];
+			v[i].b = color[2];
+			v[i].a = color[3];
+			v[i].u = convert_texcoord_to_float((*m >> 16) / texture_width);
+            v[i].v = convert_texcoord_to_float((*m & 0xFFFF) / texture_height);
+
+			m++;
+        }
+
+		// save back old vertices
+
+        for(i = 0; i < num_verts; i++)
+            prev_v[i] = v[i];
+
+		// cache all the vertices
+
+		cache_vertex(cur_model_index + index++, &v[0]);
+		cache_vertex(cur_model_index + index++, &v[1]);
+		cache_vertex(cur_model_index + index++, &v[2]);
+
+#ifdef CACHE_POLYS_AS_QUADS
+
+		if(num_verts == 3)
+			cache_vertex(cur_model_index + index++, &v[2]);
+		else
+			cache_vertex(cur_model_index + index++, &v[3]);
+#else
+		if(num_verts == 4)
+		{
+			cache_vertex(cur_model_index + index++, &v[0]);
+			cache_vertex(cur_model_index + index++, &v[2]);
+			cache_vertex(cur_model_index + index++, &v[3]);
+		}
+#endif
+    }
+    while(!end);
+
+	h->num_verts = index;
+	cur_model_index += index;
+
+	return TRUE;
+}
+
+static BOOL draw_cached_model(UINT addr, UINT32 * m)
+{
+	HASH_ENTRY * h = &model_cache[HASH_FUNC(addr)];
+
+	model_addr = addr;
+
+	if(h->ref_count == 0)		// never referenced before, cache it
+	{
+		if(!cache_model(m, h))
+		{
+			error("draw_cached_model(): model cache overrun!\n");
+			return FALSE;
+		}
+		h->addr = addr;
+	}
+	else						// already cached
+	{
+		if(h->addr != addr)		// same hash entry for different models
+		{
+			error("draw_cached_model(): hash table hit! (%08X)\n", addr);
+			return FALSE;
+		}
+	}
+
+	glDisable(GL_TEXTURE_2D);
+
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
+//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+#ifdef CACHE_POLYS_AS_QUADS
+	glDrawArrays(GL_QUADS, h->index, h->num_verts);
+#else
+	glDrawArrays(GL_TRIANGLES, h->index, h->num_verts);
+#endif
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+//	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	glEnable(GL_TEXTURE_2D);
+
+	return TRUE;
+}
+
+#endif // USE_MODEL_CACHE
 
 /*
  * void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian);
@@ -467,15 +832,9 @@ static UINT32 get_word_big(UINT32 *a)
 
 void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
 {
-    struct
-    {
-        GLfloat x, y, z;    // vertices
-        GLfloat nx, ny, nz; // normals
-        UINT32  uv;         // texture coordinates
-    }       v[4], prev_v[4];
-    UINT32  (*get_word)(UINT32 *);
+	VERTEX	v[4], prev_v[4];
     UINT32  header[7];
-    UINT    link_data, texture_width, texture_height;
+    UINT    link_data, texture_width = 1.0f, texture_height = 1.0f;
     INT     i, j, num_verts;
     GLfloat u_coord, v_coord, nx, ny, nz, color[4];
 
@@ -485,13 +844,26 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
     glDisable(GL_TEXTURE_2D);
     glColor3ub(0xFF, 0xFF, 0xFF);
 #endif
-    if (little_endian)  // set appropriate read handler
-        get_word = get_word_little;
-    else
-        get_word = get_word_big;
 
     if (get_word(mdl) == 0)
         return;
+
+	/*
+	 * Draw VROM (static) models
+	 */
+
+#ifdef USE_MODEL_CACHE
+	if(!little_endian)
+	{
+		if(draw_cached_model(addr, mdl))
+			return;
+		// if draw_cached_model() failed, draw the uncached model
+	}
+#endif
+
+	/*
+	 * Draw RAM (dynamic) models
+	 */
 
     do
     {
@@ -551,17 +923,17 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         if (IS_LIGHTING_DISABLED(header))
             glDisable(GL_LIGHTING);
 
-        // TODO: specular
-
         /*
          * Draw it (and save the vertices to prev_v[])
          */
 
-        texture_width   = GET_TEXTURE_WIDTH(header);
-        texture_height  = GET_TEXTURE_HEIGHT(header);
-
         if (IS_TEXTURE_ENABLED(header))
         {
+			UINT h5 = (header[5] >> 8) & 0x7FFFFF;
+
+			texture_width   = GET_TEXTURE_WIDTH(header);
+			texture_height  = GET_TEXTURE_HEIGHT(header);
+
             bind_texture(GET_TEXTURE_X(header), GET_TEXTURE_Y(header),
                          texture_width, texture_height,
                          GET_TEXTURE_FORMAT(header), GET_TEXTURE_REPEAT(header));
@@ -569,7 +941,13 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             {
                 glEnable(GL_ALPHA_TEST);
                 glAlphaFunc(GL_GREATER, 0.95f);
-            }                
+            }
+
+			// signed 12.12 xp?
+			if(header[5] & 0x80000000)
+				glTexEnvf(GL_TEXTURE_FILTER_CONTROL_EXT, GL_TEXTURE_LOD_BIAS_EXT, h5 / 8192.0f); // + (blur)
+			else
+				glTexEnvf(GL_TEXTURE_FILTER_CONTROL_EXT, GL_TEXTURE_LOD_BIAS_EXT, -(h5 / 8192.0f)); // - (sharpen)
         }
         else
             glDisable(GL_TEXTURE_2D);
@@ -580,6 +958,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             texcoord_divisor = 8.0f;    // 13.3
 
         glBegin((num_verts == 4) ? GL_QUADS : GL_TRIANGLES);
+
         for (i = 0; i < num_verts; i++)
         {
             prev_v[i] = v[i];
@@ -950,7 +1329,7 @@ void osd_renderer_draw_layer(UINT layer_num)
 void osd_renderer_get_layer_buffer(UINT layer_num, UINT8 **buffer, UINT *pitch)
 {
     *pitch = 512;   // currently all layer textures are 512x512
-    *buffer = (UINT8 *) &layer[layer_num][0][0][0];
+    *buffer = (UINT8 *) layer[layer_num];
 }
 
 /*
@@ -967,7 +1346,7 @@ void osd_renderer_get_layer_buffer(UINT layer_num, UINT8 **buffer, UINT *pitch)
 void osd_renderer_free_layer_buffer(UINT layer_num)
 {
     glBindTexture(GL_TEXTURE_2D, layer_texture[layer_num]);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, &layer[layer_num][0][0][0]);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, layer[layer_num]);
 }
 
 /******************************************************************/
@@ -1104,6 +1483,12 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
      * Create the 2D layer textures
      */
 
+	for(i = 0; i < 4; i++)
+	{
+		SAFE_FREE(layer[i]);
+		layer[i] = (GLubyte *) malloc(512*512*4);
+	}
+
     glGenTextures(4, layer_texture);
 
     for (i = 0; i < 4; i++) // set up properties for each texture
@@ -1115,7 +1500,7 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, &layer[i][0][0][0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, layer[i]);
     }
 
     /*
@@ -1132,6 +1517,22 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
         vertex_divisor = 32768.0f;  // 17.15-format vertices
     else
         vertex_divisor = 524288.0f; // 13.19
+
+	/*
+	 * Setup model cache
+	 */
+
+#ifdef USE_MODEL_CACHE
+
+	if(!init_model_cache())
+		error("init_model_cache failed!\n");
+
+	glVertexPointer(3, GL_FLOAT, 0, model_vertex_array);
+	glNormalPointer(GL_FLOAT, 0, model_normal_array);
+	glColorPointer(4, GL_FLOAT, 0, model_color_array);
+	glTexCoordPointer(2, GL_FLOAT, 0, model_texcoord_array);
+
+#endif
 }
 
 /*

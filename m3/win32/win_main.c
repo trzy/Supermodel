@@ -167,6 +167,8 @@ int main(int argc, char *argv[])
 	memset(&msg, 0, sizeof(MSG));
     while (quit == FALSE)
     {
+		QueryPerformanceCounter((LARGE_INTEGER *)&time_start);
+
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT)
@@ -177,8 +179,6 @@ int main(int argc, char *argv[])
 				DispatchMessage(&msg);
 			}
 		}
-
-		QueryPerformanceCounter((LARGE_INTEGER *)&time_start);
 
         printf("frame %d, PC = %08X, ", frame++, ppc_get_reg(PPC_REG_PC));
         op = ppc_read_word(ppc_get_reg(PPC_REG_PC));

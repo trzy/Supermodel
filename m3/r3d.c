@@ -497,7 +497,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
         message(0, "VROM texture header = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
     case 0x90000008:
-        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0xFFFFFF) * 4], 0);
+        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0xFFFFFF) * 4], 1);
         LOG("model3.log", "VROM1 SIZE = %08X\n", BSWAP32(d));
         message(0, "VROM texture length = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
@@ -512,7 +512,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
         message(0, "900000010 = %08X", BSWAP32(d));
         return;
     case 0x90000014:    // ?
-        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0xFFFFFF) * 4], 0);
+        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0xFFFFFF) * 4], 1);
         LOG("model3.log", "VROM2 SIZE = %08X\n", BSWAP32(d));
         message(0, "900000014 = %08X", BSWAP32(d));
         return;

@@ -31,6 +31,7 @@
 /******************************************************************/
 
 extern BOOL osd_gl_check_extension(CHAR *);
+extern void * osd_gl_get_proc_address(const CHAR *);
 extern void osd_gl_set_mode(UINT, UINT);
 extern void osd_gl_unset_mode(void);
 

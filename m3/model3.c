@@ -1518,6 +1518,14 @@ static void byteswap(UINT8 *buf, UINT size)
     }
 }
 
+static void byteswap32(UINT8 *buf, UINT size)
+{
+	UINT	i;
+
+	for(i = 0; i < size; i += 4)
+		*(UINT32 *)&buf[i] = BSWAP32(*(UINT32 *)&buf[i]);
+}
+
 /*
  * Load a batch of files, (word)interleaving as needed.
  */
@@ -1732,10 +1740,12 @@ BOOL m3_load_rom(CHAR * id)
 		byteswap(crom2, romset->crom2[0].size * 4);
 		byteswap(crom3, romset->crom3[0].size * 4);
 		byteswap(vrom, romset->vrom[0].size * 16);
-		/* SROMs? DSB ROMs? i don't remember :p */
+		byteswap32(vrom, romset->vrom[0].size * 16);
 
-	} else {
-
+		// TODO: swap SROM and DSB ROMs
+	}
+	else
+	{
 		fclose(file);
 
 		/* load from ZIP */
@@ -2082,7 +2092,7 @@ void m3_init(void)
 
     /* setup the PPC */
 
-    if(ppc_init(0) != PPC_OKAY)
+    if(ppc_init() != PPC_OKAY)
 		error("ppc_init failed.");
 
 	m3_ppc_fetch[0].start = 0;
@@ -2100,9 +2110,9 @@ void m3_init(void)
 	ppc_set_fetch(m3_ppc_fetch);
 
     if (m3_config.step >= 0x20)
-        ppc_set_pvr(0x00070100); 
+		ppc_set_reg(PPC_REG_PVR, 0x00070100);
     else
-        ppc_set_pvr(0x00060104);
+		ppc_set_reg(PPC_REG_PVR, 0x00060104);
 
     ppc_set_irq_callback(m3_ppc_irq_callback);
 
@@ -2124,6 +2134,8 @@ void m3_init(void)
     default:                                    // assume Step 1.0...
     case 0x10:  ppc_freq = 66000000; break;     // Step 1.0 PPC @ 66MHz
     }
+
+	//ppc_freq = 20000000;
 
 	/* setup the 68K */
 

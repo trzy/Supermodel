@@ -110,6 +110,10 @@ void win_gl_init(UINT xres, UINT yres)
         osd_error("Your OpenGL implementation does not support mirrored texture repeating!");
     if (osd_gl_check_extension("GL_ARB_texture_env_combine"))
         osd_error("Your OpenGL implementation does not support texture combiner operations!");
+	if (osd_gl_check_extension("GL_EXT_texture_lod_bias"))
+		osd_error("Your OpenGL implementation does not support texture LOD bias selection!");
+	if (osd_gl_check_extension("GL_ARB_vertex_buffer_object"))
+		osd_error("Your OpenGL implementation does not support vertex buffer objects!");
 
     /*
      * Initialize GL engine
@@ -156,4 +160,22 @@ void win_gl_shutdown(void)
 void osd_renderer_blit(void)
 {
     SwapBuffers(hdc);
+}
+
+/*
+ * void * osd_gl_get_proc_address(const char *);
+ *
+ * Calls wglGetProcAddress.
+ */
+
+void * osd_gl_get_proc_address(const CHAR * id)
+{
+	void * ptr = wglGetProcAddress(id);
+
+	if (ptr == NULL)
+		error("GL proc %s not found!\n", id);
+	else
+		message(0, "found GL proc %s!", id);
+
+	return ptr;
 }

@@ -144,6 +144,9 @@ static UINT8 get_register(int reg)
 		case 15:
 			return 0;
 			break;
+		default:
+			error("ERROR: invalid RTC access reg%X\n", reg);
+			return 0;
 	}
 }
 
