@@ -1448,8 +1448,8 @@ void m3_run_frame(void)
      */
 
     LOG("model3.log", "-- ACTIVE SCAN\n");
-//    m3_add_irq(m3_irq_enable & 0x0C);
-    m3_add_irq(m3_irq_enable & 0x0D);
+    m3_add_irq(m3_irq_enable & 0x0C);
+//    m3_add_irq(m3_irq_enable & 0x0D);
     ppc_set_irq_line(1);
 
 	PROFILE_SECT_ENTRY("ppc");
@@ -2067,6 +2067,8 @@ BOOL m3_load_rom(CHAR * id)
 
 void m3_shutdown(void)
 {
+	ppc_shutdown();	// this is done first so we can still analyze memory
+	
 	/* save NVRAMs */
 
 	m3_save_eeprom();
@@ -2088,8 +2090,8 @@ void m3_shutdown(void)
 	dma_shutdown();
 	scsi_shutdown();
 
-	ppc_shutdown();
-
+	//ppc_shutdown();
+	
 	/* free any allocated buffer */
 
     save_file("ram", ram, 8*1024*1024, 0);
