@@ -148,6 +148,9 @@ typedef struct ppc_t {
 	u32		(* read_16)(u32);
 	u32		(* read_32)(u32);
 	u64		(* read_64)(u32);
+#ifdef KHEPERIX_TEST
+	u32		(* read_op)(u32);
+#endif
 	void	(* write_8)(u32, u32);
 	void	(* write_16)(u32, u32);
 	void	(* write_32)(u32, u32);
@@ -248,12 +251,15 @@ enum
 
 extern int      ppc_init(void * x);
 
-extern void     ppc_set_pvr(UINT32);
+extern void     ppc_set_pvr(u32);
 extern void		ppc_set_irq_callback(u32 (*)(void));
 extern void     ppc_set_read_8_handler(void *);
 extern void     ppc_set_read_16_handler(void *);
 extern void     ppc_set_read_32_handler(void *);
 extern void     ppc_set_read_64_handler(void *);
+#ifdef KHEPERIX_TEST
+extern void     ppc_set_read_op_handler(void *);
+#endif
 extern void     ppc_set_write_8_handler(void *);
 extern void     ppc_set_write_16_handler(void *);
 extern void     ppc_set_write_32_handler(void *);

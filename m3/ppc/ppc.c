@@ -4,7 +4,6 @@
  * PowerPC Emulator.
  */
 
-#include "ppc.h"
 #include "model3.h"
 
 /*
@@ -12,7 +11,11 @@
  */
 
 static ppc_t    ppc;
-static UINT32   pvr;    // default value initialized by ppc_init()
+static u32      pvr;    // default value initialized by ppc_init()
+
+#ifndef LOG
+#define LOG(...)
+#endif
 
 static u32 ppc_field_xlat[256];
 
@@ -212,7 +215,7 @@ static u32 ppc_field_xlat[256];
 
 #define BIT(n)				((u32)0x80000000 >> n)
 
-#define BITMASK_0(n)		((u32)(((u64)1 << (n + 1)) - 1))
+#define BITMASK_0(n)		((u32)((((u64)1 << n)) - 1))
 
 #define ADD_C(r,a,b)		((u32)(r) < (u32)(a))
 #define SUB_C(r,a,b)        (!((u32)(a) < (u32)(b)))
@@ -683,7 +686,11 @@ INLINE u32 ppc_get_spr(u32 n)
 
 INLINE u32 ppc_fetch(u32 a)
 {
-	return(ppc.read_32(a));
+#ifdef KHEPERIX_TEST
+	return(ppc.read_op(a));
+#else
+    return ppc.read_32(a);
+#endif
 }
 
 INLINE u32 ppc_read_8(u32 a)
@@ -1102,14 +1109,18 @@ static void ppc_mullwx(u32 op){
 	u32 b = RB;
 	u32 a = RA;
 	u32 d = RD;
+	u32 h;
 	s64 r;
 
 	r = (s64)(s32)R(a) * (s64)(s32)R(b);
 	R(d) = (u32)r;
 
+	h = (r >> 32) & 0xFFFFFFFF;
+
 	if(op & _OVE){
 		XER &= ~XER_OV;
-		if((u64)r > 0xFFFFFFFF)
+		//if( h != 0 && h != 0xFFFFFFFF )
+		if( r != (s64)(s32)(r & 0xFFFFFFFF) )
 			XER |= (XER_OV | XER_SO);
 	}
 
@@ -1122,14 +1133,20 @@ static void ppc_divwx(u32 op){
 	u32 a = RA;
 	u32 d = RD;
 
-	if((R(b) == 0) ||
-	   (R(b) == 0xFFFFFFFF && R(a) == 0x80000000))
+	if(R(b) == 0 && (R(a) < 0x80000000))
 	{
 		R(d) = 0;
 
 		if(op & _OVE) XER |= (XER_SO | XER_OV);
+		SET_ICR0(R(d));
+	}
+	else if( R(b) == 0 ||
+		(R(b) == 0xFFFFFFFF && R(a) == 0x80000000))
+	{
+		R(d) = 0xFFFFFFFF;
 
-		if(op & _RC) CR(0) = 0x0F;
+		if(op & _OVE) XER |= (XER_SO | XER_OV);
+		SET_ICR0(R(d));
 	}
 	else
 	{
@@ -1153,7 +1170,7 @@ static void ppc_divwux(u32 op){
 
 		if(op & _OVE) XER |= (XER_SO | XER_OV);
 
-		if(op & _RC) CR(0) = 0x0F;
+		SET_ICR0(R(d));
 	}
 	else
 	{
@@ -2352,9 +2369,7 @@ static void ppc_mtcrf(u32 op){
 }
 
 static void ppc_mfmsr(u32 op){	R(RD) = ppc_get_msr(); }
-static void ppc_mtmsr(u32 op){	ppc_set_msr(R(RD));
-                                LOG("model3.log", "FE0-1=%d%d\n", !!(R(RD) & 0x800), !!(R(RD) & 0x100));
-                                                        }
+static void ppc_mtmsr(u32 op){  ppc_set_msr(R(RD)); }
 
 static void ppc_mfspr(u32 op){	R(RD) = ppc_get_spr(_SPRF); }
 static void ppc_mtspr(u32 op){	ppc_set_spr(_SPRF, R(RD)); }
@@ -3384,7 +3399,7 @@ u32 ppc_run(u32 count){
 
 	while(ppc.count > 0){
 
-		ppc.count--;
+    	ppc.count--;
 
     	op = ppc_fetch(ppc.cia);
 
@@ -3541,10 +3556,30 @@ u32 ppc_get_reg(int r){
 }
 
 void ppc_set_reg(int r, u32 d){
-
-	if(r == PPC_REG_PC){
-		ppc.nia = d;
-	}
+  switch(r) {
+  case PPC_REG_PC:
+	ppc.cia = d;
+	break;
+  case PPC_REG_XER:
+	ppc.spr[SPR_XER] = d;
+	break;
+  case PPC_REG_LR:
+	ppc.spr[SPR_LR] = d;
+	break;
+  case PPC_REG_CR:
+	CR(0) = (d >> 28) & 15;
+	CR(1) = (d >> 24) & 15;
+	CR(2) = (d >> 20) & 15;
+	CR(3) = (d >> 16) & 15;
+	CR(4) = (d >> 12) & 15;
+	CR(5) = (d >>  8) & 15;
+	CR(6) = (d >>  4) & 15;
+	CR(7) = (d >>  0) & 15;
+	break;
+  default:
+	printf("FIXME: ppc_set_reg(%d, %08x)\n", r, d);
+	abort();
+  }
 }
 
 int ppc_get_context(ppc_t * dst){
@@ -3661,12 +3696,16 @@ void ppc_set_read_16_handler(void * handler){	ppc.read_16 = (u32 (*)(u32))handle
 void ppc_set_read_32_handler(void * handler){	ppc.read_32 = (u32 (*)(u32))handler; }
 void ppc_set_read_64_handler(void * handler){	ppc.read_64 = (u64 (*)(u32))handler; }
 
+#ifdef KHEPERIX_TEST
+void ppc_set_read_op_handler(void * handler){	ppc.read_op = (u32 (*)(u32))handler; }
+#endif
+
 void ppc_set_write_8_handler(void * handler){	ppc.write_8 = (void (*)(u32,u32))handler; }
 void ppc_set_write_16_handler(void * handler){	ppc.write_16 = (void (*)(u32,u32))handler; }
 void ppc_set_write_32_handler(void * handler){	ppc.write_32 = (void (*)(u32,u32))handler; }
 void ppc_set_write_64_handler(void * handler){	ppc.write_64 = (void (*)(u32,u64))handler; }
 
-void ppc_set_pvr(UINT32 version)
+void ppc_set_pvr(u32 version)
 {
     pvr = version;
 }
