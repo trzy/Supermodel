@@ -44,29 +44,35 @@ static HDC          hdc = 0;            // GDI device context
 extern HWND         main_window;        // window handle
 static HINSTANCE    hinstance;          // application instance
 
+/*
+ * is_extension_supported():
+ *
+ * Returns true if the OpenGL extension is supported.
+ */
 
-static void draw_rect(INT i, UINT x, UINT y, UINT w, UINT h, GLubyte r, GLubyte g, GLubyte b)
+static BOOL is_extension_supported(CHAR *extname)
 {
-    UINT    xi, yi;
+    CHAR    *p, *end;
+    INT     extname_len, n;
 
-    for (yi = y; yi < (y + h); yi++)
+    p = (CHAR *) glGetString(GL_EXTENSIONS);
+    if (p == 0)
+        return 0;
+    extname_len = strlen(extname);
+    end = p + strlen(p);
+
+    while (p < end)
     {
-        for (xi = x; xi < (x + w); xi++)
+        n = strcspn(p, " ");
+        if (extname_len == n)
         {
-            layer[i][yi][xi][0] = r;
-            layer[i][yi][xi][1] = g;
-            layer[i][yi][xi][2] = b;
-            layer[i][yi][xi][3] = 0xff; // opaque
+            if (strncmp(extname, p, n) == 0)
+                return 1;
         }
+        p += (n + 1);
     }
-}
 
-static void generate_textures(void)
-{
-    draw_rect(0, 0, 10, 496, 10, 0xf8, 0x00, 0x00);
-    draw_rect(1, 10, 0, 10, 384, 0x00, 0xff, 0x00);
-    draw_rect(2, 0, 30, 496, 10, 0x00, 0x00, 0xff);
-    draw_rect(3, 30, 0, 10, 384, 0xff, 0xff, 0x00);
+    return 0;
 }
 
 /*
@@ -81,29 +87,17 @@ static void init_gl(void)
 {
     INT i;
 
-    generate_textures();
-
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
 	glShadeModel(GL_SMOOTH);
-	
-    glClearColor(0.0, 0.0, 0.0, 0.0);   // background color
-	
+    glClearColor(0.0, 0.0, 0.0, 0.0);   // background color	
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);  // nicer perspective view
 
     /*
-     * Enable Z-buffering
+     * Check extensions
      */
 
-//    glClearDepth(1.0);
-//    glEnable(GL_DEPTH_TEST);
-//    glDepthFunc(GL_LEQUAL);
-
-    /*
-     * Enable 2D texturing
-     */
-
-//    glEnable(GL_TEXTURE_2D);
+    if (!is_extension_supported("GL_ARB_texture_mirrored_repeat"))
+        osd_error("Your OpenGL implementation does not support mirrored texture repeating!");
 
     /*
      * Create the 2D layer textures
