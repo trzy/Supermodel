@@ -27,6 +27,7 @@
  * - In VS2_98, in the attract mode, when the camera zooms in on the score
  *   board for South Africa vs. Nigeria, the "Nigeria" text texture is
  *   garbage.
+ * - RAM texture uploading is too weird to be true.
  */
 
 /*
@@ -52,10 +53,10 @@ static UINT8	*vrom;
 
 static UINT8    texture_buffer_ram[1*1024*1024];
 
-static UINT32	vrom_texture_address;
-static UINT32	vrom_texture_header;
+static UINT32   vrom_texture_address;
+static UINT32   vrom_texture_header;
 
-static UINT32	texture_size = 0;
+static UINT32   texture_last_addr = 0;
 static UINT32	texture_header = 0;
 
 /******************************************************************/
@@ -278,7 +279,7 @@ static const int mipmap_ypos[11] =
 static const int mipmap_size[9] =
 { 2, 4, 8, 16, 32, 64, 128, 256, 512 };
 
-static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little_endian)
+static void upload_texture(UINT32 header, UINT8 *src, BOOL little_endian)
 {    
 	UINT    size_x, size_y, xpos, ypos, bit_depth, mip_ypos, page;
 	int mipmap_num = 0;
@@ -308,7 +309,7 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
 	else
 		bit_depth = 1;		// 8-bit texture
 
-    LOG("texture.log", "%08X %08X %d,%d\t%dx%d\n", header, length, xpos, ypos, size_x, size_y);
+    LOG("texture.log", "%08X %d,%d\t%dx%d\n", header, xpos, ypos, size_x, size_y);
 
     /*
      * Render the texture into the texture buffer
@@ -377,6 +378,9 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
 /* Access                                                         */
 /******************************************************************/
 
+static BOOL     trigger = 0;
+static UINT64   trigger_time;
+
 /*
  * UINT32 r3d_read_32(UINT32 a);
  *
@@ -397,7 +401,12 @@ UINT32 r3d_read_32(UINT32 a)
 
     switch (a)
     {
-    case 0x84000000:    // loop around 0x1174EC in Lost World expects bit
+    /*
+     * In Lost World, routine at 0x1174E0 reads all the 0x840000XX status
+     * registers and at 0x117A30, bit 0x02000000 is checked for.
+     */
+
+    case 0x84000000:
         return (_84000000 ^= 0xFFFFFFFF);
     case 0x84000004:    // unknown
     case 0x84000008:
@@ -455,19 +464,51 @@ void r3d_write_32(UINT32 a, UINT32 d)
         d = BSWAP32(d);
         *(UINT32 *) &texture_buffer_ram[a & 0xFFFFF] = d;
 
-		if (a == 0x94000000) {
-			if( texture_size == 0 ) {
-				texture_size = d;
-				return;
-			} else {
-				texture_start_pos = 0;
-			}
-		}
-		if (a == 0x94000004) {
-			if( texture_header == 0 ) {
-				texture_header = d;
-				return;
-			}
+        /*
+         * Texture Uploading:
+         *
+         * The first word indicates the last offset that a texture data word
+         * will be written to. When this address is written, the texture
+         * upload is triggered. If, however, the texture turns out to be
+         * smaller than was specified (as has been observed in Sega Rally 2),
+         * a write to 0x88000000 will trigger the upload. Sega Rally 2 also
+         * immediately overwrites the first 2 header words with texture data
+         * so those values have to be remembered (in fact, this may be the
+         * criteria used to determine whether 0x88000000 should trigger an
+         * upload: If the header words are overwritten. This isn't quite how
+         * the code currently works, though.)
+         *
+         * Be on the lookout for bugs caused by this new method. I'm sure it's
+         * not perfect.
+         */
+        
+        if (a == 0x94000000)
+        {
+            if (texture_last_addr == 0) // waiting for size word?
+            {
+                texture_last_addr = ((d >> 1) & ~3) + 0x94000000;
+                return;
+            }
+            else                        // overwritten, texture data at pos 0
+                texture_start_pos = 0;
+        }
+        else if (a == 0x94000004)
+        {
+            if (texture_header == 0)    // waiting for header word?
+            {
+                texture_header = d;
+                return;
+            }
+        }
+
+        if (a == texture_last_addr)     // if last offset reached, upload
+        {
+			message(0, "texture transfer: %08X, %08X", texture_size, texture_header );
+            upload_texture(texture_header, &texture_buffer_ram[texture_start_pos], 1);
+
+            texture_last_addr = 0;      // reset these vars for next upload
+			texture_header = 0;
+			texture_start_pos = 8;
 		}
 
         return;
@@ -479,12 +520,17 @@ void r3d_write_32(UINT32 a, UINT32 d)
 
         message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
 
-		// Upload the texture if available
-		if( texture_size != 0 ) {
-			message(0, "texture transfer: %08X, %08X", texture_size, texture_header );
-			upload_texture( texture_header, texture_size, &texture_buffer_ram[texture_start_pos], 1);
+        /*
+         * If the game didn't write all the way to texture_last_addr, upload
+         * forcefully
+         */
 
-			texture_size = 0;
+        if (texture_last_addr != 0 )
+        {
+			message(0, "texture transfer: %08X, %08X", texture_size, texture_header );
+            upload_texture(texture_header, &texture_buffer_ram[texture_start_pos], 1);
+
+            texture_last_addr = 0;  // reset these vars for next upload
 			texture_header = 0;
 			texture_start_pos = 8;
 		}
@@ -521,14 +567,17 @@ void r3d_write_32(UINT32 a, UINT32 d)
         return;
     case 0x9C000000:    // ?
         message(0, "9C000000 = %08X", BSWAP32(d));
+        LOG("model3.log", "%08X = %08X\n", a, d);
 		_9C000000 = BSWAP32(d);
         return;
     case 0x9C000004:    // ?
         message(0, "9C000004 = %08X", BSWAP32(d));
+        LOG("model3.log", "%08X = %08X\n", a, d);
 		_9C000004 = BSWAP32(d);
         return;
     case 0x9C000008:    // ?
         message(0, "9C000008 = %08X", BSWAP32(d));
+        LOG("model3.log", "%08X = %08X\n", a, d);
 		_9C000008 = BSWAP32(d);
         return;
     }
@@ -788,10 +837,13 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
 
         ir &= 0x3fffffffffff;
         current_instruction = ir;
+
+#if 0
         {
             UINT8   *i = (UINT8 *) &ir;
-//            LOG("tap.log", "current instruction set: %02X%02X%02X%02X%02X%02X\n", i[5], i[4], i[3], i[2], i[1], i[0]);
+            LOG("tap.log", "current instruction set: %02X%02X%02X%02X%02X%02X\n", i[5], i[4], i[3], i[2], i[1], i[0]);
         }
+#endif
 
         break;
 
