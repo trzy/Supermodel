@@ -224,27 +224,59 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
              * NOTE: VK_ macros are not defined for most keys, it seems, so
              * I hardcoded these:
              *
-             * A,S,D,F,G,H = 41,53,44,46,47,48
-             * Z,X,C,V,B   = 5A,58,43,56,42
+             * Up,Down,Left,Right = 26,28,25,27
+             * Num 1,Num 3        = 23,22
+             * A,S,D,F,G,H        = 41,53,44,46,47,48
+             * Z,X,C,V,B          = 5A,58,43,56,42
              */
 
-            case 0x41:  // A
+            default:
+                printf("KEY = %02X\n", wParam);
+                break;
+
+            case 0x41:  // A -- for VON2, jump
+                controls.game_controls[0] &= ~0x80;
+                controls.game_controls[1] &= ~0x40;
+                break;
+            case 0x53:  // S -- for VON2, crouch ?? (joysticks inward)
+                controls.game_controls[0] &= ~0x40;
+                controls.game_controls[1] &= ~0x80;
+                break;
+            case 0x5A:  // Z -- for VON2, shot trigger 1
                 controls.game_controls[0] &= ~0x01;
                 break;
-            case 0x53:  // S
+            case 0x58:  // X -- for VON2, shot trigger 2
+                controls.game_controls[1] &= ~0x01;
+                break;
+            case 0x43:  // C -- for VON2, turbo 1
                 controls.game_controls[0] &= ~0x02;
                 break;
-            case 0x44:  // D
-                controls.game_controls[0] &= ~0x04;
+            case 0x56:  // V -- for VON2, turbo 2
+                controls.game_controls[1] &= ~0x02;
                 break;
-            case 0x46:  // F
-                controls.game_controls[0] &= ~0x08;
+            case 0x26:  // Up arrow -- for VON2, move forward
+                controls.game_controls[0] &= ~0x20;
+                controls.game_controls[1] &= ~0x20;
                 break;
-            case 0x47:  // G
+            case 0x28:  // Down arrow -- for VON2, move backward
+                controls.game_controls[0] &= ~0x10;
+                controls.game_controls[1] &= ~0x10;
+                break;
+            case 0x25:  // Left arrow -- for VON2, turn left
+                controls.game_controls[0] &= ~0x10;
+                controls.game_controls[1] &= ~0x20;
+                break;
+            case 0x27:  // Right arrow -- for VON2, turn right
+                controls.game_controls[0] &= ~0x20;
+                controls.game_controls[1] &= ~0x10;
+                break;
+            case 0x23:  // Numpad 1 -- for VON2, strafe left
                 controls.game_controls[0] &= ~0x80;
+                controls.game_controls[1] &= ~0x80;
                 break;
-            case 0x48:  // H
+            case 0x22:  // Numpad 3 -- for VON2, strafe right
                 controls.game_controls[0] &= ~0x40;
+                controls.game_controls[1] &= ~0x40;
                 break;
             case VK_F12:
                 m3_config.layer_enable ^= 1;
@@ -295,24 +327,51 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
         case WM_KEYUP:
             switch (wParam)
             {
-            case 0x41:  // A
+            case 0x41:  // A -- for VON2, jump
+                controls.game_controls[0] |= 0x80;
+                controls.game_controls[1] |= 0x40;
+                break;
+            case 0x53:  // S -- for VON2, crouch
+                controls.game_controls[0] |= 0x40;
+                controls.game_controls[1] |= 0x80;
+                break;
+            case 0x5A:  // Z -- for VON2, shot trigger 1
                 controls.game_controls[0] |= 0x01;
                 break;
-            case 0x53:  // S
+            case 0x58:  // X -- for VON2, shot trigger 2
+                controls.game_controls[1] |= 0x01;
+                break;
+            case 0x43:  // C -- for VON2, turbo 1
                 controls.game_controls[0] |= 0x02;
                 break;
-            case 0x44:  // D
-                controls.game_controls[0] |= 0x04;
+            case 0x56:  // V -- for VON2, turbo 2
+                controls.game_controls[1] |= 0x02;
                 break;
-            case 0x46:  // F
-                controls.game_controls[0] |= 0x08;
+            case 0x26:  // Up arrow -- for VON2, move forward
+                controls.game_controls[0] |= 0x20;
+                controls.game_controls[1] |= 0x20;
                 break;
-            case 0x47:  // G
+            case 0x28:  // Down arrow -- for VON2, move backward
+                controls.game_controls[0] |= 0x10;
+                controls.game_controls[1] |= 0x10;
+                break;
+            case 0x25:  // Left arrow -- for VON2, turn left
+                controls.game_controls[0] |= 0x10;
+                controls.game_controls[1] |= 0x20;
+                break;
+            case 0x27:  // Right arrow -- for VON2, turn right
+                controls.game_controls[0] |= 0x20;
+                controls.game_controls[1] |= 0x10;
+                break;
+            case 0x23:  // Numpad 1 -- for VON2, strafe left
                 controls.game_controls[0] |= 0x80;
+                controls.game_controls[1] |= 0x80;
                 break;
-            case 0x48:  // H
+            case 0x22:  // Numpad 3 -- for VON2, strafe right
                 controls.game_controls[0] |= 0x40;
+                controls.game_controls[1] |= 0x40;
                 break;
+
             case VK_F1:
                 controls.system_controls[0] |= 0x04;
                 controls.system_controls[1] |= 0x04;
