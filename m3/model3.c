@@ -66,6 +66,9 @@ CONFIG m3_config;
  */
 
 static UINT8    _FE180000[0x20000];
+static UINT     security_addr = 0;
+static UINT8    security_xor[32];
+static BOOL     security_do_xor = 0;
 
 static UINT8    *ram = NULL;            // PowerPC RAM
 static UINT8    *bram = NULL;           // backup RAM
@@ -504,6 +507,8 @@ static UINT16 m3_ppc_read_16(UINT32 a)
 
         switch (a)
         {
+        case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA (Sega Bass Fishing)
+        
         case 0xFEE00CFC:    // MPC105/106 CONFIG_DATA
 		case 0xFEE00CFE:
             return bridge_read_config_data_16(a);
@@ -517,8 +522,6 @@ static UINT16 m3_ppc_read_16(UINT32 a)
 
 static UINT32 m3_ppc_read_32(UINT32 a)
 {
-//    if (a == 0x1eedbc)
-//        message(0, "%08X read at %08X", a, PPC_PC);
 	PROFILE_MEM_ACCESS(read, 32);
 
     /*
@@ -599,6 +602,21 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         case 0xFE1A0000:    // ? Virtual On 2 -- important to return 0
             return 0;       // see my message on 13May ("VROM Port?")
         case 0xFE1A001C:   
+#if 0
+            if (security_do_xor)
+            {
+                UINT    i, j;
+                security_do_xor = 0;
+                for (i = 0; i < 0x20000; i += 32)
+                {
+                    for (j = 0; j < 32; j++)
+                        _FE180000[i+j] &= 0x0F;
+//                        _FE180000[i + j] ^= ~security_xor[j];
+                }
+            }
+#endif
+//            return (_FE180000[security_addr += 2] << 16);
+//            LOG("model3.log", "security read %08X\n", a);
             return 0xFFFFFFFF;
         }
 
@@ -865,8 +883,16 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         else if (a >= 0xFE180000 && a <= 0xFE19FFFF)    // ?
         {
             a -= 0xFE180000;
+            if ((a/4*2) <= 32 )
+            {
+                security_xor[a/4*2+0] = d >> 24;
+                security_xor[a/4*2+1] = (d >> 16) & 0xFF;
+                security_do_xor = 1;
+            }
+
             _FE180000[a/4*2] = d >> 24;
             _FE180000[a/4*2 + 1] = (d >> 16) & 0xFF;
+//            LOG("model3.log", "security %08X = %04X\n", a, d >> 16);
             return;
         }
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
@@ -909,9 +935,16 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             bridge_write_config_data_32(a, d);
             return;
         case 0xFE1A0000:    // ? Virtual On 2
-        case 0xFE1A0010:   
+            return;
+        case 0xFE1A0010:
+            security_addr = 0;
+            LOG("model3.log", "security offset = %08X\n", d);            
+            return;
         case 0xFE1A0014:
+            LOG("model3.log", "security reset  = %08X\n", d);
+            return;
         case 0xFE1A0018:
+            LOG("model3.log", "security key    = %08X\n", d);
             return;
         }
 
@@ -1410,7 +1443,7 @@ void m3_run_frame(void)
      * Enter VBlank and update the graphics
      */
 
-	rtc_step_frame();
+    rtc_step_frame();
     render_frame();
     controls_update();
 
@@ -1421,8 +1454,6 @@ void m3_run_frame(void)
     LOG("model3.log", "-- VBL\n");
 
     m3_add_irq(m3_irq_enable & 0x42);
-//    m3_add_irq(m3_irq_enable);
-//    m3_add_irq(m3_irq_enable & 0x02);
     ppc_set_irq_line(1);
 
 	PROFILE_SECT_ENTRY("ppc");
@@ -1469,13 +1500,7 @@ void m3_reset(void)
 
     if(ppc_reset() != PPC_OKAY)
         error("ppc_reset failed");
-
-	if( !stricmp(m3_config.game_id,"VS2") )
-		bridge_reset(2);
-	else if( !stricmp(m3_config.game_id, "VS2_98") )
-		bridge_reset(2);
-	else
-    bridge_reset(m3_config.step < 0x20 ? 1 : 2);
+    bridge_reset(m3_config.bridge);
     eeprom_reset();
 	scsi_reset();
 	dma_reset();
@@ -1521,6 +1546,7 @@ typedef struct
 	char	manuf[32];
     UINT	date;
     INT		step;
+    INT     bridge;
     FLAGS	flags;
 	INT		num_patches;
 	PATCH	patch[64];
@@ -1573,7 +1599,6 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 {
 	BOOL found, end;
 	int romsets = 0;
-	int num_params;
 	char* arg, *param;
 
 	if( cfgparser_set_file(file) != 0 ) {
@@ -1637,6 +1662,18 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 			sscanf( step, "%f", &s );
 			romset->step = ((int)(s) << 4) | (int)((s - floor(s)) * 10);
 		}
+        else if(stricmp(arg, "BRIDGE") == 0) {
+            char *bridge = cfgparser_get_rhs();
+            if (stricmp(bridge, "MPC105"))
+                romset->bridge = 1;
+            else if (stricmp(bridge, "MPC106"))
+                romset->bridge = 2;
+            else
+            {
+                romset->bridge = 0;
+                message(0, "WARNING: unknown bridge controller type (%s), using default");
+            }
+        }
 		else if( stricmp(arg, "PATCH") == 0 ) {
 			cfgparser_get_rhs_number( &romset->patch[romset->num_patches].address, 0 );
             cfgparser_get_rhs_number( &romset->patch[romset->num_patches].data, 1 );
@@ -1653,7 +1690,7 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 			/* TODO: Handle this */
 		}
 		else if( strncmp(arg, "IC", 2) == 0 ) {
-			char* icnum, *name, *size, *crc;
+            char* icnum, *name;
 			int ic_number = 0;
 
 			/* get ic number */
@@ -1678,6 +1715,16 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 	}
 
 	cfgparser_unset_file();
+
+    /*
+     * Set some defaults if not specified.
+     *
+     * NOTE: More things need to be checked for here.
+     */
+
+    if (romset->bridge == 0)
+        romset->bridge = (romset->step < 0x20) ? 1 : 2;
+
 	return TRUE;
 }
 
@@ -1693,7 +1740,6 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 
 static INT load_romfile(UINT8 * buff, ROMFILE * list, UINT32 itlv)
 {
-	CHAR string[256], temp[256];
 	UINT i, j;
 
 	/* check if it's an unused ROMFILE, if so skip it */
@@ -1713,7 +1759,8 @@ static INT load_romfile(UINT8 * buff, ROMFILE * list, UINT32 itlv)
 
 	for(i = 0; i < itlv; i++)
 	{
-		int size;
+        FILE * file;
+        UINT   size;
 		UINT8* temp_buffer;
 		UINT32 crc;
 
@@ -1780,7 +1827,7 @@ void m3_unload_rom(void)
  * Load a ROM set.
  *
  * Parameters:
- *      id = Name of ROM set (see rom_list.h.)
+ *      id = Name of ROM set.
  *
  * Returns:
  *      M3_OKAY  = Success.
@@ -1793,9 +1840,8 @@ BOOL m3_load_rom(CHAR * id)
     ROMSET  romset;
 	ROMFILE list_crom[4], list_crom0[4], list_crom1[4], list_crom2[4], list_crom3[4];
 	ROMFILE list_vrom[16], list_srom[3], list_dsbrom[5];
-    FILE    * file;
     UINT8   * crom0 = NULL, * crom1 = NULL, * crom2 = NULL, * crom3 = NULL;
-    UINT    i, size;
+    INT     i;
 
 	if(id[0] == '\0')
 		error("No ROM selected");
@@ -1873,34 +1919,34 @@ BOOL m3_load_rom(CHAR * id)
 		set_directory("roms/%s", romset.id);
 	}
 	
-	if( list_crom[0].size && load_romfile(&crom[8*1024*1024 - (list_crom[0].size * 4)], &list_crom, ITLV_4) )
+    if( list_crom[0].size && load_romfile(&crom[8*1024*1024 - (list_crom[0].size * 4)], list_crom, ITLV_4) )
 		error("Can't load CROM");
 
-	if( list_crom0[0].size && load_romfile(crom0, &list_crom0, ITLV_4) )
+    if( list_crom0[0].size && load_romfile(crom0, list_crom0, ITLV_4) )
 		error("Can't load CROM0");
 
-	if( list_crom1[0].size && load_romfile(crom1, &list_crom1, ITLV_4) )
+    if( list_crom1[0].size && load_romfile(crom1, list_crom1, ITLV_4) )
 		error("Can't load CROM1");
 
-	if( list_crom2[0].size && load_romfile(crom2, &list_crom2, ITLV_4) )
+    if( list_crom2[0].size && load_romfile(crom2, list_crom2, ITLV_4) )
 		error("Can't load CROM2");
 
-	if( list_crom3[0].size && load_romfile(crom3, &list_crom3, ITLV_4) )
+    if( list_crom3[0].size && load_romfile(crom3, list_crom3, ITLV_4) )
 		error("Can't load CROM3");
 
-	if( list_vrom[0].size && load_romfile(vrom, &list_vrom, ITLV_16) )
+    if( list_vrom[0].size && load_romfile(vrom, list_vrom, ITLV_16) )
 		error("Can't load VROM");
 
-	if( list_srom[0].size && load_romfile(srom, &list_srom, NO_ITLV) )
+    if( list_srom[0].size && load_romfile(srom, list_srom, NO_ITLV) )
 		error("Can't load SROM Program");
 
-	if( list_srom[1].size && load_romfile(&srom[list_srom[0].size], &list_srom[1], ITLV_2) )
+    if( list_srom[1].size && load_romfile(&srom[list_srom[0].size], &list_srom[1], ITLV_2) )
 		error("Can't load SROM Samples");
 
-	if( list_dsbrom[0].size && load_romfile(drom, &list_dsbrom, NO_ITLV) )
+    if( list_dsbrom[0].size && load_romfile(drom, list_dsbrom, NO_ITLV) )
 		error("Can't load DSB ROM Program");
 
-	if( list_dsbrom[1].size && load_romfile(&drom[list_dsbrom[0].size], &list_dsbrom[1], ITLV_4) )
+    if( list_dsbrom[1].size && load_romfile(&drom[list_dsbrom[0].size], &list_dsbrom[1], ITLV_4) )
 		error("Can't load DSB ROM Samples");
 
 	/* byteswap buffers */
@@ -1915,6 +1961,10 @@ BOOL m3_load_rom(CHAR * id)
     /* set stepping */
 
     m3_config.step = romset.step;
+
+    /* set bridge controller */
+
+    m3_config.bridge = romset.bridge;
 
     /* set game flags */
 
@@ -1948,7 +1998,7 @@ BOOL m3_load_rom(CHAR * id)
      * Debug ROM dump
      */
 
-//    save_file("crom.bin", &crom[0x800000 - romset->crom[0].size * 4], romset->crom[0].size * 4, 0);
+//    save_file("crom.bin", &crom[0x800000 - romset.crom[0].size * 4], romset.crom[0].size * 4, 0);
 //    save_file("crom.bin", crom, 8*1024*1024, 0);
 //    save_file("vrom.bin", vrom, 64*1024*1024, 0);
 //    save_file("crom0.bin", crom0, 16*1024*1024, 0);
@@ -1967,7 +2017,7 @@ BOOL m3_load_rom(CHAR * id)
             crom[romset.patch[i].address] = BSWAP32(romset.patch[i].data);
             break;
         case 16:
-            *(UINT16*) &crom[romset.patch[i].address] = BSWAP16(romset.patch[i].data);
+            *(UINT16*) &crom[romset.patch[i].address] = BSWAP16((UINT16) romset.patch[i].data);
             break;
         case 32:
             *(UINT32*) &crom[romset.patch[i].address] = BSWAP32(romset.patch[i].data);

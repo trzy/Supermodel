@@ -142,6 +142,7 @@ typedef struct
 
     CHAR    game_id[8+1];   // game ID string (max 8 chars + null terminator)
     INT     step;           // hardware step (0x15 = Step 1.5, etc.)
+    INT     bridge;         // type of PCIBMC (1=MPC105, 2=MPC106)
     FLAGS   flags;          // game info flags
 
 } CONFIG;
