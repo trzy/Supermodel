@@ -36,10 +36,17 @@
  *
  * TODO List:
  *
+ *      - von2_rev5_4g has what appears to be a spinning cursor effect when
+ *      booting but sometimes the characters look invalid. Need to take a
+ *      closer look...
+ *
  *      - Investigate backup RAM. Sega Rally 2 seems to want 256KB when R3D
  *      read commands are emulated with the DMA. This is emulated by making
  *      the Step 2.X backup RAM region (starting at 0xFE0C0000) 256KB in size
  *      but it is still kept as 128KB for Step 1.X.
+ *
+ *      - Do more error checking when parsing games.ini (num_patches > 64,
+ *      etc.)
  */
 
 #include "model3.h"
@@ -510,6 +517,8 @@ static UINT16 m3_ppc_read_16(UINT32 a)
 
 static UINT32 m3_ppc_read_32(UINT32 a)
 {
+//    if (a == 0x1eedbc)
+//        message(0, "%08X read at %08X", a, PPC_PC);
 	PROFILE_MEM_ACCESS(read, 32);
 
     /*
@@ -1499,8 +1508,9 @@ typedef struct
 } ROMFILE;
 
 typedef struct {
-	UINT32 address;
-	UINT32 opcode;
+    UINT32  address;
+    UINT32  data;
+    INT     size;   // 8, 16, or 32
 } PATCH;
 
 typedef struct
@@ -1629,7 +1639,14 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 		}
 		else if( stricmp(arg, "PATCH") == 0 ) {
 			cfgparser_get_rhs_number( &romset->patch[romset->num_patches].address, 0 );
-			cfgparser_get_rhs_number( &romset->patch[romset->num_patches].opcode, 1 );
+            cfgparser_get_rhs_number( &romset->patch[romset->num_patches].data, 1 );
+            romset->patch[romset->num_patches].size = 32;
+			romset->num_patches++;
+		}
+        else if( stricmp(arg, "PATCH8") == 0 ) {
+			cfgparser_get_rhs_number( &romset->patch[romset->num_patches].address, 0 );
+            cfgparser_get_rhs_number( &romset->patch[romset->num_patches].data, 1 );
+            romset->patch[romset->num_patches].size = 8;
 			romset->num_patches++;
 		}
 		else if( stricmp(arg, "CONTROLLER") == 0 ) {
@@ -1941,9 +1958,27 @@ BOOL m3_load_rom(CHAR * id)
 //    save_file("crom1.bin", crom1, 16*1024*1024, 0);
 //    save_file("crom2.bin", crom2, 16*1024*1024, 0);
 
-	/* Apply the patches */
-	for( i=0; i < romset.num_patches; i++ ) {
-		*(UINT32*)&crom[romset.patch[i].address] = BSWAP32(romset.patch[i].opcode);
+	/*
+     * Apply the patches
+     */
+
+	for( i=0; i < romset.num_patches; i++ )
+    {
+        switch (romset.patch[i].size)
+        {
+        case 8:
+            crom[romset.patch[i].address] = BSWAP32(romset.patch[i].data);
+            break;
+        case 16:
+            *(UINT16*) &crom[romset.patch[i].address] = BSWAP16(romset.patch[i].data);
+            break;
+        case 32:
+            *(UINT32*) &crom[romset.patch[i].address] = BSWAP32(romset.patch[i].data);
+            break;
+        default:
+            message(0, "internal error, line %d of %s: invalid patch size (%d)\n", __LINE__, __FILE__, romset.patch[i].size);
+            break;
+        }
 	}
 
 	return(MODEL3_OKAY);
