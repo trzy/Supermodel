@@ -24,7 +24,6 @@
 #include "model3.h"
 
 static OSD_CONTROLS controls;
-extern BOOL DisassemblePowerPC(UINT32, UINT32, CHAR *, CHAR *, BOOL);
 
 static CHAR app_title[]     = "Model 3 Emulator";
 static CHAR class_name[]	= "MODEL3";
@@ -116,6 +115,7 @@ int main(int argc, char *argv[])
 
 	m3_init();
 	m3_reset();
+    osd_renderer_set_mode(0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT);
 
 	// Now that everything works, we can show the window
 
