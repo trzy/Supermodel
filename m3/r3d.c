@@ -151,6 +151,8 @@ UINT32 r3d_read_32(UINT32 a)
 {
     static UINT32   _84000000 = 0;
 
+	message(0, "%08X (%08X): Real3D read32 to %08X", PPC_PC, PPC_LR, a);
+
     switch (a)
     {
     case 0x84000000:    // loop around 0x1174EC in Lost World expects bit
@@ -180,6 +182,8 @@ UINT32 r3d_read_32(UINT32 a)
  *      d = Data to write.
  */
 
+UINT32 _9C000000, _9C000004, _9C000008;
+
 void r3d_write_32(UINT32 a, UINT32 d)
 {
     static UINT32   last_addr;
@@ -195,19 +199,11 @@ void r3d_write_32(UINT32 a, UINT32 d)
         *(UINT32 *) &culling_ram_8c[a & 0x1FFFFF] = BSWAP32(d);
         return;
     }
-	else if (a >= 0x8C100000 && a <= 0x8C1FFFFF)	// culling RAM (Scud Race)
-	{
-		/*
-		 * probabily this is a mirror of 0x8C000000 - 0x8C0FFFFF,
-		 * as the other is never used when this one is.
-		 * i'm leaving everything as is, though, so that you can study them separately.
-		 */
-
-        *(UINT32 *) &culling_ram_8c[a & 0x1FFFFF] = BSWAP32(d);
-        return;
-	}
     else if (a >= 0x98000000 && a <= 0x981FFFFF)    // polygon RAM
     {
+		if(a >= 0x98001000 && a < 0x98002000)
+			message(1, "color table: %08X = %08X", a, BSWAP32(d));
+
         *(UINT32 *) &polygon_ram[a & 0x1FFFFF] = BSWAP32(d);
         return;
     }
@@ -223,12 +219,12 @@ void r3d_write_32(UINT32 a, UINT32 d)
             size_x = 32 << size_x;
             size_y = 32 << size_y;
 
-			if(!(d & 0x00800000))
-				last_addr = (0x94000008 + size_x * size_y - 1) & ~3;		// 8-bit texture
-			else
-				last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;	// 16-bit texture
+			if(!(d & 0x00800000))	// 8-bit texture
+				last_addr = (0x94000008 + size_x * size_y - 1) & ~3;
+			else					// 16-bit texture
+				last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;
 
-            message(0, "texture transfer started: %dx%d, %08X", size_x, size_y, d);
+            message(0, "texture transfer started: %dx%d, %08X (%08X)", size_x, size_y, d, last_addr);
         }
         else if (a == last_addr)    // last word written
         {
@@ -242,7 +238,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
     switch (a)
     {
     case 0x88000000:    // 0xDEADDEAD
-        message(0, "88000000 = %08X", BSWAP32(d));
+        message(0, "%08X: 88000000 = %08X", PPC_PC, BSWAP32(d));
         return;
     case 0x90000000:    // VROM texture address
         vrom_texture_address = BSWAP32(d);
@@ -270,12 +266,15 @@ void r3d_write_32(UINT32 a, UINT32 d)
         return;
     case 0x9C000000:    // ?
         message(0, "9C000000 = %08X", BSWAP32(d));
+		_9C000000 = BSWAP32(d);
         return;
     case 0x9C000004:    // ?
         message(0, "9C000004 = %08X", BSWAP32(d));
+		_9C000004 = BSWAP32(d);
         return;
     case 0x9C000008:    // ?
         message(0, "9C000008 = %08X", BSWAP32(d));
+		_9C000008 = BSWAP32(d);
         return;
     }
 
@@ -475,13 +474,51 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
     case 3:     // Capture-DR
 
         if (current_instruction == 0x0c631f8c7ffe)
-        {           
-            insert_id(0x116C7057, 1 + 0 * 32);
-            insert_id(0x216C3057, 1 + 1 * 32);
-            insert_id(0x116C4057, 1 + 2 * 32);
-            insert_id(0x216C5057, 1 + 3 * 32);
-            insert_id(0x116C6057, 1 + 4 * 32 + 1);
-            insert_id(0x116C6057, 1 + 5 * 32 + 1);
+        {
+			/*
+			 * Read ASIC IDs.
+			 *
+			 * The ID Sequence is:
+			 *  - Jupiter
+			 *  - Mercury
+			 *  - Venus
+			 *  - Earth
+			 *  - Mars
+			 *  - Mars (again)
+			 *
+			 * Note that different Model 3 steps have different chip
+			 * revisions, hence the different IDs returned below.
+			 */
+
+			if(m3_config.step == 0x10)
+			{
+            	insert_id(0x116C7057, 1 + 0 * 32);
+				insert_id(0x216C3057, 1 + 1 * 32);
+				insert_id(0x116C4057, 1 + 2 * 32);
+				insert_id(0x216C5057, 1 + 3 * 32);
+				insert_id(0x116C6057, 1 + 4 * 32 + 1);
+				insert_id(0x116C6057, 1 + 5 * 32 + 1);
+			}
+			else if(m3_config.step == 0x15)
+			{
+				insert_id(0x316C7057, 1 + 0 * 32);
+				insert_id(0x316C3057, 1 + 1 * 32);
+				insert_id(0x216C4057, 1 + 2 * 32);		// Lost World may to use 0x016C4057
+				insert_id(0x316C5057, 1 + 3 * 32);
+				insert_id(0x216C6057, 1 + 4 * 32 + 1);
+				insert_id(0x016C6057, 1 + 5 * 32 + 1);
+			}
+			else if(m3_config.step >= 0x20)
+			{
+				// not working
+
+				insert_id(0x416C7057, 1 + 0 * 32);
+				insert_id(0x416C3057, 1 + 1 * 32);
+				insert_id(0x316C4057, 1 + 2 * 32);
+				insert_id(0x416C5057, 1 + 3 * 32);
+				insert_id(0x316C6057, 1 + 4 * 32 + 1);
+				insert_id(0x316C6057, 1 + 5 * 32 + 1);
+			}
         }
 
         break;
@@ -524,7 +561,6 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
             UINT8   *i = (UINT8 *) &ir;
 //            LOG("model3.log", "current instruction set: %02X%02X%02X%02X%02X%02X\n", i[5], i[4], i[3], i[2], i[1], i[0]);
         }
-
 
         break;
 
