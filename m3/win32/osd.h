@@ -91,7 +91,7 @@ extern void osd_error();
 /* Renderer                                                       */
 /******************************************************************/
 
-extern void osd_renderer_init(UINT8 *, UINT8 *, UINT8 *);
+extern void osd_renderer_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *);
 extern void osd_renderer_shutdown(void);
 extern void osd_renderer_reset(void);
 extern void osd_renderer_update_frame(void);
