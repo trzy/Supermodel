@@ -2553,8 +2553,7 @@ INLINE int is_qnan_f64(f64 x){
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
 		((*(u64 *)&(x) & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-//        ((*(u64 *)&(x) & 0x0008000000000000) == DOUBLE_ZERO)
-        ((*(u64 *)&(x) & 0x008000000000000) == 0x008000000000000)
+        ((*(u64 *)&(x) & 0x000800000000000) == 0x000800000000000)
     );
 }
 
@@ -2562,10 +2561,39 @@ INLINE int is_snan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((*(u64 *)&(x) & 0x0008000000000000) != DOUBLE_ZERO)
-
-        && ((*(u64 *)&(x) & 0x0008000000000000) == DOUBLE_ZERO)
+        ((*(u64 *)&(x) & DOUBLE_FRAC) != DOUBLE_ZERO) &&
+        ((*(u64 *)&(x) & 0x0008000000000000) == DOUBLE_ZERO)
 	);
+}
+
+INLINE int is_infinity_f64(f64 x)
+{
+    return (
+        ((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
+        ((*(u64 *)&(x) & DOUBLE_FRAC) == DOUBLE_ZERO)
+    );
+}
+
+INLINE int is_normalized_f64(f64 x)
+{
+    u64 exp;
+
+    exp = ((*(u64 *) &(x)) & DOUBLE_EXP) >> 52;
+
+    return (exp >= 1) && (exp <= 2046);
+}
+
+INLINE int is_denormalized_f64(f64 x)
+{
+    return (
+        ((*(u64 *)&(x) & DOUBLE_EXP) == 0) &&
+        ((*(u64 *)&(x) & DOUBLE_FRAC) != DOUBLE_ZERO)
+    );
+}
+
+INLINE int sign_f64(f64 x)
+{
+    return (*(u64 *)&(x) & DOUBLE_SIGN);
 }
 
 INLINE s32 round_f64_to_s32(f64 v){
@@ -2594,6 +2622,48 @@ INLINE s32 floor_f64_to_s32(f64 v){
 	return((s32)floor(v));
 }
 
+static void set_fprf(f64 f)
+{
+    u32 fprf;
+
+    // see page 3-30, 3-31
+
+    if (is_qnan_f64(f))
+        fprf = 0x11;
+    else if (is_infinity_f64(f))
+    {
+        if (sign_f64(f))    // -INF
+            fprf = 0x09;
+        else                // +INF
+            fprf = 0x05;
+    }
+    else if (is_normalized_f64(f))
+    {
+        if (sign_f64(f))    // -Normalized
+            fprf = 0x08;
+        else                // +Normalized
+            fprf = 0x04;
+    }
+    else if (is_denormalized_f64(f))
+    {
+        if (sign_f64(f))    // -Denormalized
+            fprf = 0x18;
+        else                // +Denormalized
+            fprf = 0x14;
+    }
+    else    // Zero
+    {
+        if (sign_f64(f))    // -Zero
+            fprf = 0x12;
+        else                // +Zero
+            fprf = 0x02;
+    }
+
+    ppc.fpscr &= ~0x0001F000;
+    ppc.fpscr |= (fprf << 12);
+}
+
+
 ////////////////////////////////////////////////////////////////
 
 static void ppc_fabsx(u32 op){
@@ -2618,6 +2688,7 @@ static void ppc_faddx(u32 op){
 
 	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd + (f64)ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2631,6 +2702,7 @@ static void ppc_faddsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd + (f64)ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2773,6 +2845,7 @@ static void ppc_fdivx(u32 op){
 
 	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd / (f64)ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2786,6 +2859,7 @@ static void ppc_fdivsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd / (f64)ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2800,6 +2874,7 @@ static void ppc_fmaddx(u32 op){
 
 	ppc.fpr[t].fd = (f64)((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2814,6 +2889,7 @@ static void ppc_fmaddsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2840,6 +2916,7 @@ static void ppc_fmsubx(u32 op){
 
 	ppc.fpr[t].fd = (f64)((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2854,6 +2931,7 @@ static void ppc_fmsubsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2868,6 +2946,7 @@ static void ppc_fnmaddx(u32 op){
 
 	ppc.fpr[t].fd = (f64)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd));
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2882,6 +2961,7 @@ static void ppc_fnmaddsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) + ppc.fpr[b].fd));
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2896,6 +2976,7 @@ static void ppc_fnmsubx(u32 op){
 
 	ppc.fpr[t].fd = (f64)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd));
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2910,6 +2991,7 @@ static void ppc_fnmsubsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)(-((ppc.fpr[a].fd * ppc.fpr[c].fd) - ppc.fpr[b].fd));
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2923,6 +3005,7 @@ static void ppc_fmulx(u32 op){
 
 	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd * (f64)ppc.fpr[c].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2936,6 +3019,7 @@ static void ppc_fmulsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd * (f64)ppc.fpr[c].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2972,6 +3056,7 @@ static void ppc_fresx(u32 op){
 
 	ppc.fpr[t].fd = 1.0 / ppc.fpr[b].fd; /* ??? */
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2984,6 +3069,7 @@ static void ppc_frspx(u32 op){
 
 	ppc.fpr[t].fd = (f32)ppc.fpr[b].fd;
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -2996,6 +3082,7 @@ static void ppc_frsqrtex(u32 op){
 
 	ppc.fpr[t].fd = 1.0 / sqrt(ppc.fpr[b].fd); /* ??? */
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -3022,6 +3109,7 @@ static void ppc_fsqrtx(u32 op){
 
 	ppc.fpr[t].fd = (f64)(sqrt(ppc.fpr[b].fd));
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -3034,6 +3122,7 @@ static void ppc_fsqrtsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)(sqrt(ppc.fpr[b].fd));
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -3047,6 +3136,7 @@ static void ppc_fsubx(u32 op){
 
 	ppc.fpr[t].fd = (f64)((f64)ppc.fpr[a].fd - (f64)ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -3060,6 +3150,7 @@ static void ppc_fsubsx(u32 op){
 
 	ppc.fpr[t].fd = (f32)((f64)ppc.fpr[a].fd - (f64)ppc.fpr[b].fd);
 
+    set_fprf(ppc.fpr[t].fd);
 	SET_FCR1();
 }
 
@@ -3067,18 +3158,57 @@ static void ppc_fsubsx(u32 op){
 // Floating-Point Status / Control
 
 static void ppc_mcrfs(u32 op){
+    u32 crfS, f;
 
-	//ppc_null(op);
+    crfS = _CRFA;
+
+    f = ppc.fpscr >> ((7 - crfS) * 4);  // get crfS field from FPSCR
+    f &= 0xF;
+
+    switch (crfS)   // determine which exception bits to clear in FPSCR
+    {
+    case 0: // FX, OX
+        ppc.fpscr &= ~0x90000000;
+        break;
+    case 1: // UX, ZX, XX, VXSNAN
+        ppc.fpscr &= ~0x0F000000;
+        break;
+    case 2: // VXISI, VXIDI, VXZDZ, VXIMZ
+        ppc.fpscr &= ~0x00F00000;
+        break;
+    case 3: // VXVC
+        ppc.fpscr &= ~0x00080000;
+        break;
+    case 5: // VXSOFT, VXSQRT, VXCVI
+        ppc.fpscr &= ~0x00000E00;
+        break;
+    default:
+        break;
+    }
+
+    CR(_CRFD) = f;
 }
 
 static void ppc_mtfsb0x(u32 op){
+    u32 crbD;
 
-	//ppc_null(op);
+    crbD = (op >> 21) & 0x1F;
+
+    if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
+        ppc.fpscr &= ~(1 << (31 - crbD));
+
+    SET_FCR1();
 }
 
 static void ppc_mtfsb1x(u32 op){
+    u32 crbD;
 
-	//ppc_null(op);
+    crbD = (op >> 21) & 0x1F;
+
+    if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
+        ppc.fpscr |= (1 << (31 - crbD));
+
+    SET_FCR1();
 }
 
 static void ppc_mffsx(u32 op){
@@ -3106,8 +3236,30 @@ static void ppc_mtfsfx(u32 op){
 }
 
 static void ppc_mtfsfix(u32 op){
+    u32 crfD = _CRFD;
+    u32 imm = (op >> 12) & 0xF;
 
-	//ppc_null(op);
+    /*
+     * According to the manual:
+     *
+     * If bits 0 and 3 of FPSCR are to be modified, they take the immediate
+     * value specified. Bits 1 and 2 (FEX and VX) are set according to the
+     * "usual rule" and not from IMM[1-2].
+     *
+     * The "usual rule" is not emulated, so these bits simply aren't modified
+     * at all here.
+     */
+
+    crfD = (7 - crfD) * 4;  // calculate LSB position of field
+
+    if (crfD == 28)         // field containing FEX and VX is special...
+    {                       // bits 1 and 2 of FPSCR must not be altered
+        ppc.fpscr &= 0x9FFFFFFF;
+        ppc.fpscr |= (imm & 0x9FFFFFFF);
+    }
+
+    ppc.fpscr &= ~(0xF << crfD);    // clear field
+    ppc.fpscr |= (imm << crfD);     // insert new data
 }
 
 ////////////////////////////////////////////////////////////////
@@ -3284,7 +3436,14 @@ u32 ppc_run(u32 count){
 
 		ppc.count--;
 
-		// fetch and execute
+        if (ppc.cia == 0x4C274)
+//        if (ppc.cia == 0x4c1b8) // VF3
+        {
+            printf("BREAKPOINT!\n");
+            exit(0);
+        }
+
+        // fetch and execute
 
 		ppc.ir = ppc.fetch(ppc.cia);
 
