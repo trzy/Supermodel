@@ -36,6 +36,7 @@
 #ifdef RENDERER_D3D
 #include <d3d9.h>
 #include <d3dx9.h>
+#include <dxerr9.h>
 #else // RENDERER_GL
 #include <gl\gl.h>
 #include <gl\glu.h>
@@ -120,6 +121,8 @@ extern void osd_renderer_upload_texture(UINT32, UINT32, UINT8 *, BOOL);
 /******************************************************************/
 
 extern OSD_CONTROLS * osd_input_update_controls(void);
+extern void osd_input_init(void);
+extern void osd_input_shutdown(void);
 
 #endif  // INCLUDED_OSD_H
 
