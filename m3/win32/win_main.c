@@ -153,6 +153,7 @@ static void load_config(void)
 	m3_config.triple_buffer = FALSE;
 	strcpy(m3_config.rom_path, "roms");
 	strcpy(m3_config.rom_list, "games.ini");
+	strcpy(m3_config.backup_path, "backup");
 
 	if( cfgparser_set_file(CONFIG_FILE) != 0 ) {
 		printf("Config file %s was not found ! Using default config instead.\n", CONFIG_FILE);
@@ -219,6 +220,11 @@ static void load_config(void)
 			param = cfgparser_get_rhs();
 
 			strcpy( m3_config.rom_list, param );
+		}
+		else if( stricmp(arg, "backup_path") == 0 ) {
+			param = cfgparser_get_rhs();
+
+			strcpy( m3_config.backup_path, param );
 		}
 		else {
 			printf("%s: Unknown argument %s at line %d\n", CONFIG_FILE, arg, cfgparser_get_line_number() );

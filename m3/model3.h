@@ -134,6 +134,7 @@ typedef struct
     FLAGS   layer_enable;
 	CHAR	rom_path[512];
 	CHAR	rom_list[512];
+	CHAR	backup_path[512];
 
     /*
      * Game Configuration

@@ -1265,9 +1265,10 @@ static void save_file(char * path, UINT8 * src, INT size, BOOL byte_reversed)
 
 void m3_load_eeprom(void)
 {
+	char string[512];
 	INT i;
 
-	BUILD_EEPROM_PATH
+	sprintf( string, "%s/%s.epr", m3_config.backup_path, m3_config.game_id );
 
     if((i = eeprom_load(string)) != MODEL3_OKAY)
 	{
@@ -1277,9 +1278,10 @@ void m3_load_eeprom(void)
 
 void m3_save_eeprom(void)
 {
+	char string[512];
 	INT i;
 
-	BUILD_EEPROM_PATH
+	sprintf( string, "%s/%s.epr", m3_config.backup_path, m3_config.game_id );
 
     if((i = eeprom_save(string)) != MODEL3_OKAY)
 	{
@@ -1289,7 +1291,9 @@ void m3_save_eeprom(void)
 
 void m3_load_bram(void)
 {
-	BUILD_BRAM_PATH
+	char string[512];
+
+	sprintf( string, "%s/%s.brm", m3_config.backup_path, m3_config.game_id );
 
     if(load_file(string, bram, 256*1024))
 	{
@@ -1301,7 +1305,8 @@ void m3_load_bram(void)
 
 void m3_save_bram(void)
 {
-	BUILD_BRAM_PATH
+	char string[512];
+	sprintf( string, "%s/%s.brm", m3_config.backup_path, m3_config.game_id );
 
     save_file(string, bram, 256*1024, 0);
 }
