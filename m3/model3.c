@@ -304,15 +304,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
                  (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
             return m3_sys_read_32(a);
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
-                 (a >= 0xFE140000 && a <= 0xFE14003F))  // ?
-        {           
-            static UINT32   x = 0xFFFFFFFF;
-            message(0, "%08X: unknown read32, %08X", PPC_PC, a);
-            LOG("model3.log", "%08X: unknown read32, %08X\n", PPC_PC, a);            
-//            return 0xFFFFFFFF;
-//            return (x ^= 0xFFFFFFFF);
-            return 0;
-        }
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC
+            return (rtc_read(a) << 24);
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
             return tilegen_vram_read_32(a);
         else if (a >= 0xF1180000 && a <= 0xF11800FF)    // tile generator regs
@@ -545,12 +538,11 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             return;
         }
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
-                 (a >= 0xFE140000 && a <= 0xFE14003F))  // ? Virtual On 2
-        {
-            message(0, "%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
-            LOG("model3.log", "%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
-            return;
-        }
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC
+		{
+			rtc_write(a, d >> 24);
+			return;
+		}
         else if (a >= 0xFE180000 && a <= 0xFE19FFFF)    // ?
         {
             a -= 0xFE180000;
@@ -606,26 +598,6 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
         break;
     }
-
-	/*
-
-	// temporarily removed as the buggy instruction has been patched.
-	// not sure if there's any problem though, so the code is commented
-	// out and left here.
-
-    switch (a)  // there is a bug in Lost World's code that causes invalid
-    {           // writes to this area (ADD R4,R4,R4 instead of ADD R4,R4,4)
-    case 0xF76DE0:
-    case 0x1EEDBC0:
-    case 0x3DDB780:
-    case 0x7BB6F00:
-    case 0xF76DE00:
-    case 0x1EEDBC00:
-    case 0xF10F874:
-        return;
-    }
-
-	*/
 
 //	save_file("trace.bin", &ram[(PPC_PC&0x7FFFFF)-16], sizeof(UINT32)*32);
 
@@ -1103,7 +1075,7 @@ void m3_run_frame(void)
      * Generate interrupts for this frame and run the VBlank
      */
 
-    m3_add_irq(m3_irq_enable);
+    m3_add_irq(2/*m3_irq_enable*/);
     ppc_set_irq_line(1);
     ppc_run(100000);   
 //    m3_remove_irq(0x60);

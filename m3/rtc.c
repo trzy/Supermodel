@@ -44,37 +44,13 @@ void rtc_shutdown(void)
 void rtc_reset(void)
 {
 	rtc_step = 0;
+
 	memset(rtc_reg, 0, 0x10);
-	/* setup the RTC from time */
 }
 
 void rtc_step_frame(void)
 {
-#if 0
-	do
-	{
 
-	rtc_step++;
-	if(rtc_step != 60)
-		break;
-
-	rtc_step = 0;
-	rtc_sec++;
-	if(rtc_sec != 60)
-		break;
-
-	rtc_sec = 0;
-	rtc_min++;
-	if(rtc_min != 60)
-		break;
-
-	rtc_min = 0;
-
-	/* ... */
-
-	}
-	while(0);
-#endif
 }
 
 /*
@@ -109,12 +85,10 @@ void rtc_load_state(FILE *fp)
 /* Access                                                         */
 /******************************************************************/
 
-/* these two handlers read and write 4-bit data on byte boundaries. */
-/* data size (if swapped) and address (word-aligned) must be */
-/* adjusted by the main memory handlers. */
-
 UINT8 rtc_read(UINT32 a)
 {
+	message(0, "RTC: read %08X", a);
+
 	a &= 0xF;
 
 	return(rtc_reg[a]);
@@ -122,8 +96,9 @@ UINT8 rtc_read(UINT32 a)
 
 void rtc_write(UINT32 a, UINT8 d)
 {
+	message(0, "RTC: write %08X = %X", a, d);
+
 	a &= 0xF;
 
 	rtc_reg[a] = d;
 }
-
