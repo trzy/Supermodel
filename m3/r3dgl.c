@@ -51,14 +51,12 @@
 /* Macros                                                         */
 /******************************************************************/
 
-#define TEST_BIT        0
-
 #define R3D_LOG
 //#define R3D_LOG           LOG
 #define LOG_MODEL       0
 
 #define WIREFRAME       0
-#define LIGHTING        0
+#define LIGHTING        1
 #define FOGGING			1
 
 #ifndef PI
@@ -150,8 +148,10 @@ typedef struct
  * Draws a complete model.
  */
 
+UINT r3d_test_model = 0;
 UINT r3d_test_bit = 0;
 UINT r3d_test_word = 0;
+UINT r3d_test_bit_default = 0;
 
 static void draw_model(UINT8 *buf, UINT little_endian)
 {
@@ -159,7 +159,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 	R3D_VTX	v[4], prev_v[4];
     UINT    i, stop, tex_enable, poly_opaque, poly_trans;
     UINT    tex_w, tex_h, tex_fmt, tex_rep_mode, u_base, v_base;    
-    GLfloat u_coord, v_coord, n[3];
+    GLfloat u_coord, v_coord, n[3], color[4];
 
     if (buf == NULL)
         return;
@@ -196,37 +196,43 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 		);
 		#endif
 
-		#if TEST_BIT
+		if(r3d_test_model)
+		{
+			really_draw = r3d_test_bit_default;
+			if(GETWORD(&buf[r3d_test_word*4]) & (1 << r3d_test_bit))
+				really_draw = r3d_test_bit_default ^ 1;
+		}
+
+		/*
 		really_draw = 0;
-        if(GETWORD(&buf[r3d_test_word*4]) & (1 << r3d_test_bit))
+		if((GETWORD(&buf[3*4]) & 0xC0) != 0xC0)
 			really_draw = 1;
-		#endif
+		*/
 
 		// temp
-//        if((GETWORD(&buf[6*4]) & 0x04000000) == 0 &&
-//            GETWORD(&buf[5*4]) & 0xFFBFFF00)
-//            error("Unknown word 5 = %08X on untextured poly\n", GETWORD(&buf[5*4]));
+		/*
+		0x0C800000 in VON2, attract mode, cavern level
+		if((GETWORD(&buf[6*4]) & 0x04000000) == 0 &&
+			GETWORD(&buf[5*4]) & ~(0x00400000|0x00100000))
+			error("Unknown word 5 = %08X on untextured poly\n", GETWORD(&buf[5*4]));
+		*/
 
 		// temp
-//        if(GETWORD(&buf[0*4]) & 0x80 && !(GETWORD(&buf[0*4]) & 0xFC000000))
-//            error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
-//        if(!(GETWORD(&buf[0*4]) & 0x80) && GETWORD(&buf[0*4]) & 0xFC000000)
-//            error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
+		if(!(GETWORD(&buf[0*4]) & 0x80) && GETWORD(&buf[0*4]) & 0xEC000000)
+			error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
 
 		/*
 		 * Retrieves the normal
 		 */
 
-        n[0] = (GLfloat) (((INT32)GETWORD(&buf[1*4])) >> 8) / 4194304.0f;
-        n[1] = (GLfloat) (((INT32)GETWORD(&buf[2*4])) >> 8) / 4194304.0f;
-        n[2] = (GLfloat) (((INT32)GETWORD(&buf[3*4])) >> 8) / 4194304.0f;
-
-		//glNormal3f(n[0], n[1], n[2]);
+		n[0] = (GLfloat) (((INT32)GETWORD(&buf[1*4])) >> 8) / 4194304.0f;
+		n[1] = (GLfloat) (((INT32)GETWORD(&buf[2*4])) >> 8) / 4194304.0f;
+		n[2] = (GLfloat) (((INT32)GETWORD(&buf[3*4])) >> 8) / 4194304.0f;
 
         /*
          * Select a texture
          */
-        
+
         if (GETWORD(&buf[1*4]) & 0x40)
             texcoord_divisor = 1.0f;    // 16.0 format
         else
@@ -264,24 +270,26 @@ static void draw_model(UINT8 *buf, UINT little_endian)
             glAlphaFunc(GL_GREATER, 0.95f);
         }
 
+		color[0] = (GLfloat) ((GETWORD(&buf[4*4]) >> 24) & 0xFF) / 255.0f;
+		color[1] = (GLfloat) ((GETWORD(&buf[4*4]) >> 16) & 0xFF) / 255.0f;
+		color[2] = (GLfloat) ((GETWORD(&buf[4*4]) >>  8) & 0xFF) / 255.0f;
+
 		if(poly_opaque)
-		{
-        	glColor4ub(
-                (GLbyte) ((GETWORD(&buf[4*4]) >> 24) & 0xFF),
-                (GLbyte) ((GETWORD(&buf[4*4]) >> 16) & 0xFF),
-                (GLbyte) ((GETWORD(&buf[4*4]) >>  8) & 0xFF),
-                0xFF
-			);
-		}
+			color[3] = 1.0f;
 		else
-		{
-        	glColor4ub(
-                (GLbyte) ((GETWORD(&buf[4*4]) >> 24) & 0xFF),
-                (GLbyte) ((GETWORD(&buf[4*4]) >> 16) & 0xFF),
-                (GLbyte) ((GETWORD(&buf[4*4]) >>  8) & 0xFF),
-                (GLbyte) ((((GETWORD(&buf[6*4]) >> 18) - 1) & 0x1F) * 8)
-			);
-		}
+			color[3] = (GLfloat) ((((GETWORD(&buf[6*4]) >> 18) - 1) & 0x1F) * 8) / 255.0f;
+
+		glColor4fv(color);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, color);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color);
+
+		#if 0
+		// temp
+		if (GETWORD(&buf[0*4]) & 0x80)
+			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, (UINT)(UINT8)((GETWORD(&buf[0*4]) >> 26) << 2));
+		else
+			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 0);
+		#endif
 
         if (GETWORD(&buf[0*4]) & 0x40)  // quad
         {
@@ -689,9 +697,6 @@ static void draw_model(UINT8 *buf, UINT little_endian)
             for (i = 0; i < 3; i++) // save all of these vertices
                 prev_v[i] = v[i];
 
-            if (!tex_enable)
-                glDisable(GL_TEXTURE_2D);
-
             make_texture(u_base, v_base, tex_w, tex_h, tex_fmt, tex_rep_mode);
 
 			if(really_draw)
@@ -929,7 +934,7 @@ static void set_viewport_and_perspective(UINT8 *scene_buf)
         rs = get_float(&scene_buf[0x10*4]);
         ts = get_float(&scene_buf[0x0E*4]);
         bs = get_float(&scene_buf[0x12*4]);
-        n = 0.1
+        n = 0.1;
         f = 10000000.0;
 
         glFrustum(-(ls * n), rs * n, -(bs * n), ts * n, n, f);
@@ -942,9 +947,6 @@ static void set_viewport_and_perspective(UINT8 *scene_buf)
  * draw_list():
  *
  * Processes a list. Each list element references a 10-word block.
- *
- * On Step 2.0, the endianness of each list element is different from other
- * data. 
  */
 
 static void draw_list(UINT8 *list)
@@ -981,16 +983,25 @@ static void draw_pointer_list(UINT8 *buf)
 {
 	if(GETWORDLE(&buf[0*4]) & 0x00800000)	// a model in VROM
 	{
-		R3D_LOG("model3.log", " ## pointer list: draw model at %08X\n", GETWORDLE(&buf[0*4]));
+		R3D_LOG("model3.log",
+				" ## pointer list: draw model at %08X,%08X,%08X,%08X\n",
+				GETWORDLE(&buf[0*4]),
+				GETWORDLE(&buf[1*4]),
+				GETWORDLE(&buf[2*4]),
+				GETWORDLE(&buf[3*4])
+		);
 //		draw_model(&vrom[(GETWORDLE(&buf[0*4]) & 0x00FFFFFF) * 4], 0);	// crashes Scud Race in-game
 	}
 	else
 	{
-		R3D_LOG("model3.log", " ## pointer list: draw block at %08X\n", GETWORDLE(&buf[0*4]));
+		R3D_LOG("model3.log",
+				" ## pointer list: draw block at %08X,%08X,%08X,%08X\n",
+				GETWORDLE(&buf[0*4]),
+				GETWORDLE(&buf[1*4]),
+				GETWORDLE(&buf[2*4]),
+				GETWORDLE(&buf[3*4])
+		);
 		draw_block(translate_r3d_address(GETWORDLE(&buf[0*4]) & 0x00FFFFFF));
-//		draw_block(translate_r3d_address(GETWORDLE(&buf[1*4]) & 0x00FFFFFF));
-//		draw_block(translate_r3d_address(GETWORDLE(&buf[2*4]) & 0x00FFFFFF));
-//		draw_block(translate_r3d_address(GETWORDLE(&buf[3*4]) & 0x00FFFFFF));
 	}
 }
 
@@ -1020,7 +1031,6 @@ static void draw_block(UINT8 *block)
 			 * Model 3 Step 1.0 block tables are only 8-word long:
 			 * they lack scaling and texture selection words.
 			 */
-
 
 			R3D_LOG("model3.log",
 					"#\n"
@@ -1154,6 +1164,11 @@ static void draw_block(UINT8 *block)
 					GETWORDLE(&block[8 * 4]),
 					GETWORDLE(&block[9 * 4])
 			);
+
+			// temp
+			if((GETWORDLE(&block[3*4]) & 0x000FF000) == 0 &&
+				GETWORDLE(&block[0*4]) & 0x00000008)
+				error("Unknown word 3 = %08X\n", GETWORDLE(&block[3*4]));
 
 	        /*
 	         * Multiply by the specified matrix -- apparently, if the number is 0,
@@ -1462,6 +1477,7 @@ static void draw_viewport(UINT pri)
             fog_color[3] = 1.0f;
 
             glFogi(GL_FOG_MODE, GL_EXP2);
+			//glFogi(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
             glFogf(GL_FOG_DENSITY, get_float(&buf[0x23 * 4]));
             glFogf(GL_FOG_START, (GLfloat)(GETWORDLE(&buf[0x25 * 4]) & 0xFF) / 256.0f);
             glFogf(GL_FOG_END, 10000.0f);
@@ -1589,16 +1605,16 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 	case 3:	// 16-bit, ARGB4444
 
-	    for (yi = 0; yi < h; yi++)
-	    {
-	        for (xi = 0; xi < w; xi++)
-	        {
-                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
-                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 12) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  8) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  4) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >>  0) & 0xF) << 4;
-	        }
+		for (yi = 0; yi < h; yi++)
+		{
+			for (xi = 0; xi < w; xi++)
+			{
+       			rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
+				texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 12) & 0xF) << 4;
+				texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  8) & 0xF) << 4;
+				texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  4) & 0xF) << 4;
+				texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >>  0) & 0xF) << 4;
+			}
 		}
 		break;
 	}
@@ -1683,8 +1699,8 @@ void r3dgl_update_frame(void)
 	 * located in 3D RAM and how they're selected.
 	 */
 
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, full);		// full material ambient reflection
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, full);		// full material diffuse reflection
+	//glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, full);		// full material ambient reflection
+	//glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, full);		// full material diffuse reflection
 
 	#endif
 
@@ -1696,7 +1712,7 @@ void r3dgl_update_frame(void)
 
     glClearDepth(1.0);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+    glDepthFunc(GL_LESS);
 
     /*
      * Draw the complete scene consisting of 4 viewports.

@@ -190,14 +190,23 @@ void osd_error(CHAR * string)
 }
 
 // temp
+extern UINT r3d_test_model;
 extern UINT r3d_test_bit;
+extern UINT r3d_test_word;
+extern UINT r3d_test_bit_default;
 static void show_test_bit(void)
 {
 	char string[256];
-	sprintf(string, "Test bit = %i, Test mask = %08X\n", r3d_test_bit, 1 << r3d_test_bit);
+	sprintf(string,
+			"Test bit = %i, Test mask = %08X\n"
+			"Default val = %i  0 = Draw the polys where the bit is 1\n"
+			"                  1 = Draw the polys where the bit is 0\n",
+			r3d_test_bit,
+			1 << r3d_test_bit,
+			r3d_test_bit_default
+	);
 	MessageBox(NULL, string, "Model 3", 0);
 }
-extern UINT r3d_test_word;
 static void show_test_word(void)
 {
 	char string[256];
@@ -222,14 +231,11 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
                 break;
 
 			// temp
-			case 'O':
-				r3d_test_bit++;
-				r3d_test_bit &= 31;
-				show_test_bit();
+			case 'M':
+				r3d_test_model ^= 1;
 				break;
-			case 'P':
-				r3d_test_bit--;
-				r3d_test_bit &= 31;
+			case 'L':
+				r3d_test_bit_default ^= 1;
 				show_test_bit();
 				break;
             case 'I':
@@ -242,17 +248,27 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
                 r3d_test_word %= 7;
                 show_test_word();
                 break;
+			case 'O':
+				r3d_test_bit++;
+				r3d_test_bit &= 31;
+				show_test_bit();
+				break;
+			case 'P':
+				r3d_test_bit--;
+				r3d_test_bit &= 31;
+				show_test_bit();
+				break;
 
-            case 0x30:
+            case '7':
                 m3_config.layer_enable ^= 1;
                 break;
-            case 0x39:
+            case '8':
                 m3_config.layer_enable ^= 2;
                 break;
-            case 0x38:
+            case '9':
                 m3_config.layer_enable ^= 4;
                 break;
-            case 0x37:
+            case '0':
                 m3_config.layer_enable ^= 8;
                 break;
             case 0x36:
