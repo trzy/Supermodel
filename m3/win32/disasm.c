@@ -215,6 +215,8 @@ typedef struct
     FLAGS   flags;  // flags
 } IDESCR;
 
+#if 0
+
 /*
  * Instruction Table
  *
@@ -710,10 +712,8 @@ static BOOL Simplified(UINT32 op, UINT32 vpc, CHAR *signed16, CHAR *mnem, CHAR *
     {
         value = Mask(G_MB(op), G_ME(op));
         strcat(mnem, "rlwimi"); // rlwimi[.] rA,rT,SH,MB,ME -> rlwimi[.] rA,rT,SH,MASK
+        if (op & M_RC) strcat(mnem, ".");
         sprintf(oprs, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
-	
-        if (op & M_RC)
-            strcat(mnem, ".");
     }
     else if ((op & ~(M_RT|M_RA|M_SH|M_MB|M_ME|M_RC)) == D_OP(21))
     {
@@ -721,25 +721,22 @@ static BOOL Simplified(UINT32 op, UINT32 vpc, CHAR *signed16, CHAR *mnem, CHAR *
         if (G_SH(op) == 0)      // rlwinm[.] rA,rT,0,MB,ME -> and[.] rA,rT,MASK
         {
             strcat(mnem, "and");
+        	if (op & M_RC) strcat(mnem, ".");
             sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), value);
         }
         else                    // rlwinm[.] rA,rT,SH,MASK
         {
             strcat(mnem, "rlwinm");
+        	if (op & M_RC) strcat(mnem, ".");
             sprintf(oprs, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
         }
-
-        if (op & M_RC)
-            strcat(mnem, ".");
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_MB|M_ME|M_RC)) == D_OP(23))
     {
         value = Mask(G_MB(op), G_ME(op));
         strcat(mnem, "rlwnm");  // rlwnm[.] rA,rT,SH,MB,ME -> rlwnm[.] rA,rT,SH,MASK
+        if (op & M_RC) strcat(mnem, ".");
         sprintf(oprs, "r%d,r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_RB(op), value);
-	
-        if (op & M_RC)
-            strcat(mnem, ".");
     }
     else if ((op & ~(M_BO|M_BI|M_BD|M_AA|M_LK)) == D_OP(16))
     {
@@ -773,20 +770,16 @@ static BOOL Simplified(UINT32 op, UINT32 vpc, CHAR *signed16, CHAR *mnem, CHAR *
     else if ((op & ~(M_RT|M_RA|M_RB|M_OE|M_RC)) == (D_OP(31)|D_XO(40)))
     {
         strcat(mnem, "sub");
+        if (op & M_OE) strcat(mnem, "o");
+        if (op & M_RC) strcat(mnem, ".");
         sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
-        if (op & M_OE)
-            strcat(mnem, "o");
-        if (op & M_RC)
-            strcat(mnem, ".");
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_OE|M_RC)) == (D_OP(31)|D_XO(8)))
     {
         strcat(mnem, "subc");
-        sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
-        if (op & M_OE)
-            strcat(mnem, "o");
-        if (op & M_RC)
-            strcat(mnem, ".");
+        if (op & M_OE) strcat(mnem, "o");
+        if (op & M_RC) strcat(mnem, ".");
+		sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
     }
     else
         return 0;   // no match
@@ -1260,5 +1253,7 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#endif
 
 #endif
