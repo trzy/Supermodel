@@ -3387,6 +3387,19 @@ static void (* ppc_inst[64])(u32 op) =
 	ppc_null,	ppc_null,	ppc_null,	ppc_null,		// 3c ~ 3f
 };
 
+#ifdef WATCH_PC
+static void log_regs(void)
+{
+    LOG("model3.log", "R0 =0x%08X R7 =0x%08X R14=0x%08X R21=0x%08X R28=0x%08X\n", ppc_get_reg(PPC_REG_R0), ppc_get_reg(PPC_REG_R7), ppc_get_reg(PPC_REG_R14), ppc_get_reg(PPC_REG_R21), ppc_get_reg(PPC_REG_R28));
+    LOG("model3.log", "R1 =0x%08X R8 =0x%08X R15=0x%08X R22=0x%08X R29=0x%08X\n", ppc_get_reg(PPC_REG_R1), ppc_get_reg(PPC_REG_R8), ppc_get_reg(PPC_REG_R15), ppc_get_reg(PPC_REG_R22), ppc_get_reg(PPC_REG_R29));
+    LOG("model3.log", "R2 =0x%08X R9 =0x%08X R16=0x%08X R23=0x%08X R30=0x%08X\n", ppc_get_reg(PPC_REG_R2), ppc_get_reg(PPC_REG_R9), ppc_get_reg(PPC_REG_R16), ppc_get_reg(PPC_REG_R23), ppc_get_reg(PPC_REG_R30));
+    LOG("model3.log", "R3 =0x%08X R10=0x%08X R17=0x%08X R24=0x%08X R31=0x%08X\n", ppc_get_reg(PPC_REG_R3), ppc_get_reg(PPC_REG_R10), ppc_get_reg(PPC_REG_R17), ppc_get_reg(PPC_REG_R24), ppc_get_reg(PPC_REG_R31));
+    LOG("model3.log", "R4 =0x%08X R11=0x%08X R18=0x%08X R25=0x%08X LR =0x%08X\n", ppc_get_reg(PPC_REG_R4), ppc_get_reg(PPC_REG_R11), ppc_get_reg(PPC_REG_R18), ppc_get_reg(PPC_REG_R25), ppc_get_reg(PPC_REG_LR)); 
+    LOG("model3.log", "R5 =0x%08X R12=0x%08X R19=0x%08X R26=0x%08X           \n", ppc_get_reg(PPC_REG_R5), ppc_get_reg(PPC_REG_R12), ppc_get_reg(PPC_REG_R19), ppc_get_reg(PPC_REG_R26));
+    LOG("model3.log", "R6 =0x%08X R13=0x%08X R20=0x%08X R27=0x%08X           \n", ppc_get_reg(PPC_REG_R6), ppc_get_reg(PPC_REG_R13), ppc_get_reg(PPC_REG_R20), ppc_get_reg(PPC_REG_R27));
+}
+#endif
+
 /*
  * Interface
  */
@@ -3401,6 +3414,10 @@ u32 ppc_run(u32 count){
 
     	ppc.count--;
 
+#ifdef WATCH_PC
+        if (ppc.cia == WATCH_PC)
+            log_regs();
+#endif
     	op = ppc_fetch(ppc.cia);
 
 		ppc_inst[(op >> 26) & 0x3F](op);
