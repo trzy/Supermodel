@@ -55,6 +55,26 @@ typedef struct
     double  up, down, left, right;  // FOV angles from center
 } VIEWPORT;
 
+/*
+ * LIGHT
+ */
+
+enum {
+	LIGHT_PARALLEL,
+	LIGHT_POSITIONAL,
+	LIGHT_SPOT
+};
+	
+typedef struct
+{
+	UINT type;
+	float u,v,w;		// Direction vector
+	float x,y,z;		// Position for point light
+	float diffuse_intensity;
+	float ambient_intensity;
+	UINT32 color;
+} LIGHT;
+
 /******************************************************************/
 /* Functions                                                      */
 /******************************************************************/

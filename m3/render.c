@@ -134,8 +134,8 @@ static void draw_model(UINT32 addr)
     addr &= 0x00FFFFFF;     // only lower 24 bits matter
     if (addr > 0x00100000)  // VROM 
         osd_renderer_draw_model((UINT32 *) &vrom[(addr & 0x00FFFFFF) * 4], addr, 0);
-//    else                    // polygon RAM (may actually be 4MB)
-//        osd_renderer_draw_model((UINT32 *) &polygon_ram[(addr & 0x0007FFFF) * 4], addr, 1);
+    else                    // polygon RAM (may actually be 4MB)
+        osd_renderer_draw_model((UINT32 *) &polygon_ram[(addr & 0x0007FFFF) * 4], addr, 1);
 }
 
 /******************************************************************/
@@ -234,9 +234,9 @@ static void draw_list(UINT32 *list)
 static void draw_pointer_list(UINT32* list)
 {
 	draw_model( list[0] );
-//    draw_model( list[1] );
-//    draw_model( list[2] );
-//    draw_model( list[3] );
+    draw_model( list[1] );
+    draw_model( list[2] );
+    draw_model( list[3] );
 }
 
 /*
@@ -343,6 +343,17 @@ static void get_viewport_data(VIEWPORT *vp, UINT32 *node)
     vp->down    = CONVERT_TO_DEGREES(vp->down);
 }
 
+static void get_light_data(LIGHT* l, UINT32* node)
+{
+	memset( l, 0, sizeof(LIGHT) );
+	l->u = -GET_FLOAT(&node[5]);
+	l->v = GET_FLOAT(&node[6]);
+	l->w = GET_FLOAT(&node[4]);
+	l->diffuse_intensity = GET_FLOAT(&node[7]);
+	l->ambient_intensity = (UINT8)((node[0x24] >> 8) & 0xFF) / 256.0f;
+	l->color = 0xFFFFFFFF;
+}
+
 /*
  * draw_viewport():
  *
@@ -354,6 +365,7 @@ static void draw_viewport(UINT pri, UINT32 addr)
 {
     MATRIX      m;
     VIEWPORT    vp;
+	LIGHT		sun;
     UINT32      *node;
     UINT32      next_addr, ptr;
 
@@ -385,6 +397,10 @@ static void draw_viewport(UINT pri, UINT32 addr)
         get_matrix(m, coord_matrix, 0);
         osd_renderer_set_coordinate_system(m);
 
+		get_light_data(&sun, node);
+		sun.type = LIGHT_PARALLEL;
+		osd_renderer_set_light( 0, &sun );
+
         /*
          * Process a block or list. So far, no other possibilities have been
          * seen here...
@@ -397,9 +413,9 @@ static void draw_viewport(UINT pri, UINT32 addr)
         case 0x00:  // block
             draw_block(translate_scene_graph_address(node[2]));
             break;
-        case 0x04:  // list
-            draw_list(translate_scene_graph_address(node[2]));
-            break;
+        //case 0x04:  // list
+        //    draw_list(translate_scene_graph_address(node[2]));
+        //    break;
         default:    // unknown
             break;
         }
