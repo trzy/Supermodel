@@ -60,8 +60,8 @@
 #define LOG_MODEL       0
 
 #define WIREFRAME       0
-#define LIGHTING        1
-#define FOGGING			1
+#define LIGHTING        0
+#define FOGGING         0
 
 #ifndef PI
 #define PI          3.14159265
@@ -116,10 +116,11 @@ static float    xres_ratio, yres_ratio;
  *
  * The smallest Model 3 textures are 32x32 and the total VRAM texture sheet
  * is 2048x2048. Dividings this by 32 gives us 64x64. Each element contains an
- * OpenGL ID for a texture.
+ * OpenGL ID for a texture. Because of 4bpp textures, 4 entries per texture
+ * must be maintained.
  */
 
-static GLint    texture_grid[64*64];        // 0 indicates unused
+static GLint    texture_grid[64*64*4];      // 0 indicates unused
 static GLbyte   texture_buffer[512*512*4];  // for 1 texture
 
 /*
@@ -1022,7 +1023,7 @@ static void draw_list(UINT8 *list)
     {
         addr = GETWORDLE(list_ptr);
 
-		R3D_LOG("model3.log", " ## list: draw block at %08X\n\n", addr);
+        R3D_LOG("model3.log", " ## list: draw block at %08X\n\n", addr);
 
         if ((addr & 0x03000000) == 0x03000000)  // VON2
             addr &= ~0x03000000;
@@ -1294,7 +1295,7 @@ static void draw_block(UINT8 *block)
 		        case 0x04:  // list
 					R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
 		            if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
-		            draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+                    draw_list(translate_r3d_address(addr & 0x01FFFFFF));
 		            break;
 		        default:
 		            error("Unable to handle Real3D address: %08X\n", addr);
@@ -1312,8 +1313,8 @@ static void draw_block(UINT8 *block)
 	         * Advance to next block in list
 	         */
 
-	        next_ptr = GETWORDLE(&block[8*4]);
-	        if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
+            next_ptr = GETWORDLE(&block[8*4]);
+            if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
 	            break;
 
 	        block = translate_r3d_address(next_ptr);
@@ -1344,6 +1345,9 @@ static void draw_viewport(UINT pri, UINT32 addr)
         return;
     if (next_addr != 0x01000000)        // still more nodes to go...
         draw_viewport(pri, next_addr);
+
+//    if (addr != 0x8000e8)
+//        return;
 
     /*
      * Draw this node if the priority is okay
@@ -1584,7 +1588,7 @@ static void draw_viewport(UINT pri, UINT32 addr)
 
 static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_mode)
 {
-    UINT    xi, yi;
+    UINT    xi, yi, plane;
     GLint   tex_id;
     UINT16  rgb16;
     UINT8   gray8;
@@ -1592,7 +1596,25 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
     if (w > 512 || h > 512)
         return;
 
-    tex_id = texture_grid[(y / 32) * 64 + (x / 32)];
+    // NOTE: is this plane assignment sufficient?
+    switch (format) // determine which plane for 4bpp textures
+    {
+    case 1:
+        plane = 3;
+        break;
+    case 2:
+        plane = 2;
+        break;
+    case 3:
+        plane = 1;
+        break;
+    
+    default:        // all other texture types will be stored as plane 0
+        plane = 0;
+        break;
+    }
+
+    tex_id = texture_grid[(y / 32) * (64*4) + (x / 32) + plane];
     if (tex_id != 0)    // already exists, bind and exit
     {
         glBindTexture(GL_TEXTURE_2D, tex_id);
@@ -1606,17 +1628,47 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
      *
      *      0 = 16-bit A1RGB5
      *      1 = 4-bit grayscale, field 0x000F
-     *      2 = ?
-     *      3 = ?
-     *      4 = ?
+     *      2 = 4-bit grayscale, field 0x00F0
+     *      3 = 4-bit grayscale, field 0x0F00
+     *      4 = 8-bit A4L4
      *      5 = 8-bit grayscale
-     *      6 = 4-bit grayscale, field 0x00F0 or 0xF000 -- not sure yet
+     *      6 = 4-bit grayscale, field 0xF000 (?)
      *      7 = RGBA4
      */
 
     switch (format)
 	{
-//    case 2: // mono 4-bit
+    case 6: // 4-bit grayscale
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 12) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 12) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 12) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = 0xFF;
+	        }
+	    }
+
+		break;
+
+    case 3: // 4-bit grayscale
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 8) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 8) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 8) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = 0xFF;
+	        }
+	    }
+
+		break;
+
+    case 2: // 4-bit grayscale
 	    for (yi = 0; yi < h; yi++)
 	    {
 	        for (xi = 0; xi < w; xi++)
@@ -1631,22 +1683,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 		break;
 
-    case 6: // mono 4-bit
-	    for (yi = 0; yi < h; yi++)
-	    {
-	        for (xi = 0; xi < w; xi++)
-	        {
-                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
-                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 4) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 4) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 4) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 3] = 0xFF;
-	        }
-	    }
-
-		break;
-
-    case 1: // mono 4-bit
+    case 1: // 4-bit grayscale
 	    for (yi = 0; yi < h; yi++)
 	    {
 	        for (xi = 0; xi < w; xi++)
@@ -1661,7 +1698,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 		break;
 
-    case 0: // 16-bit, ARGB1555
+    case 0: // 16-bit, A1RGB5
 
 	    for (yi = 0; yi < h; yi++)
 	    {
@@ -1677,15 +1714,31 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 		break;
 
-//    case 2:  // 8-bit, L8
-//    case 4:
-    case 5:
+    case 4: // 8-bit, A4L4
 
 	    for (yi = 0; yi < h; yi++)
 	    {
 	        for (xi = 0; xi < w; xi++)
 	        {
-                gray8 = texture_ram[(y + yi) * 2048 + (x + xi)];
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi / 2)) * 2];
+                gray8 = (rgb16 >> (!(xi & 1) * 8)) & 0xFF;
+                texture_buffer[((yi * w) + xi) * 4 + 0] = (gray8 & 0x0F) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = (gray8 & 0x0F) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = (gray8 & 0x0F) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = (gray8 & 0xF0);
+	        }
+	    }
+
+		break;
+
+    case 5: // 8-bit grayscale
+
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi / 2)) * 2];
+                gray8 = (rgb16 >> (!(xi & 1) * 8)) & 0xFF;
                 texture_buffer[((yi * w) + xi) * 4 + 0] = gray8;
                 texture_buffer[((yi * w) + xi) * 4 + 1] = gray8;
                 texture_buffer[((yi * w) + xi) * 4 + 2] = gray8;
@@ -1695,8 +1748,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 		break;
 
-//    case 3: // 16-bit, ARGB4444
-    case 7:
+    case 7: // 16-bit, RGBA4
 
 		for (yi = 0; yi < h; yi++)
 		{
@@ -1736,7 +1788,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
 
-    texture_grid[(y / 32) * 64 + (x / 32)] = tex_id;    // mark texture as used
+    texture_grid[(y / 32) * (64*4) + (x / 32) + plane] = tex_id;    // mark texture as used
 }
 
 /*
@@ -1764,8 +1816,8 @@ void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h)
 
     for (yi = 0; yi < h; yi++)
     {
-        glDeleteTextures(w, &texture_grid[(yi + y) * 64 + x]);
-        memset((UINT8 *) &texture_grid[(yi + y) * 64 + x], 0, w * sizeof(GLint));
+        glDeleteTextures(w, &texture_grid[(yi + y) * (64*4) + x]);
+        memset((UINT8 *) &texture_grid[(yi + y) * (64*4) + x], 0, w * sizeof(GLint));
     }
 }
 
@@ -1830,6 +1882,17 @@ static void do_3d(void)
     glDisable(GL_TEXTURE_2D);
 	#endif
 
+#if 0
+    glClear(GL_DEPTH_BUFFER_BIT);
+    draw_viewport(0, 0x00800244);
+    draw_viewport(0, 0x008000E8);
+    draw_viewport(0, 0x00800122);
+    draw_viewport(0, 0x0080015C);
+    draw_viewport(0, 0x0080020A);
+    draw_viewport(0, 0x008001D0);
+    draw_viewport(0, 0x00800196);
+#endif
+//#if 0
     glClear(GL_DEPTH_BUFFER_BIT);
     draw_viewport(0, 0x00800000);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -1838,6 +1901,7 @@ static void do_3d(void)
     draw_viewport(2, 0x00800000);
     glClear(GL_DEPTH_BUFFER_BIT);
     draw_viewport(3, 0x00800000);
+//#endif
 
 	#if WIREFRAME
     glPolygonMode(GL_FRONT, GL_FILL);
@@ -2124,7 +2188,7 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     texture_ram = texture_ram_ptr;
     vrom = vrom_ptr;
 
-    memset(texture_grid, 0, 64 * 64 * sizeof(GLint));   // clear texture IDs
+    memset(texture_grid, 0, 64 * 64 * 4 * sizeof(GLint));   // clear texture IDs
 
     if (m3_config.step == 0x10)
         vertex_divisor = 32768.0f;  // 17.15-format vertices
