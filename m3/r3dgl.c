@@ -113,45 +113,28 @@ static void make_texture(UINT, UINT, UINT, UINT, UINT, UINT);
 /* Model Drawing                                                  */
 /******************************************************************/
 
+static float    vertex_divisor, texcoord_divisor;
+
 /*
- * convert_fixed_to_float():
+ * convert_vertex_to_float():
  *
- * Converts from fixed-point format to float. Accepts a signed INT32.
+ * Converts from a fixed-point vertex to a float. Accepts a signed INT32.
  */
 
-static float convert_fixed_to_float(INT32 num)
+static float convert_vertex_to_float(INT32 num)
 {
-    float   result;
-
-	if(m3_config.step == 0x10)
-	{
-        result = (float) (num >> 15);                   // 17-bit integer
-		result += (float) (num & 0x7FFF) / 32768.0f;	// 15-bit fraction
-        
-	}
-	else
-	{
-		result = (float) (num >> 19);                   // 13-bit integer
-		result += (float) (num & 0x7FFFF) / 524288.0f;  // 19-bit fraction
-	}
-
-    return result;
+    return (float) num / vertex_divisor;
 }
 
 /*
  * convert_texcoord_to_float():
  *
- * Converts a 13.3 fixed-point texture coordinate to a floating point number.
+ * Converts a texture coordinate into a floating point number.
  */
 
 static float convert_texcoord_to_float(UINT32 num)
 {
-    float   result;
-
-    result = (float) (num >> 3);
-    result += (float) (num & 7) / 8.0f;
-
-    return result;
+    return (float) num / texcoord_divisor;
 }
 
 typedef struct
@@ -174,7 +157,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 {
     UINT32  (* GETWORD)(UINT8 *buf);
 	R3D_VTX	v[4], prev_v[4];
-    UINT    i, stop, tex_enable, poly_opaque;
+    UINT    i, stop, tex_enable, poly_opaque, poly_trans;
     UINT    tex_w, tex_h, tex_fmt, tex_rep_mode, u_base, v_base;    
     GLfloat u_coord, v_coord, n[3];
 
@@ -244,6 +227,11 @@ static void draw_model(UINT8 *buf, UINT little_endian)
          * Select a texture
          */
         
+        if (GETWORD(&buf[1*4]) & 0x40)
+            texcoord_divisor = 1.0f;    // 16.0 format
+        else
+            texcoord_divisor = 8.0f;    // 13.3 format
+
 		tex_fmt = (GETWORD(&buf[6*4]) >> 8) & 3;
         tex_rep_mode = GETWORD(&buf[2*4]) & 3;
 
@@ -260,8 +248,21 @@ static void draw_model(UINT8 *buf, UINT little_endian)
          */
 
         tex_enable = GETWORD(&buf[6*4]) & 0x04000000;	// texture enable flag
+        poly_trans = GETWORD(&buf[6*4]) & 0x80000000;   // transparency bit processing
 		poly_opaque = GETWORD(&buf[6*4]) & 0x00800000;	// polygon opaque
         stop = GETWORD(&buf[1*4]) & 4; 					// last poly?
+
+//        if (!poly_opaque && poly_trans) // translucent AND transparency????
+//            error("poly_opaque=0 and poly_trans=1");
+
+        if (!tex_enable)
+            glDisable(GL_TEXTURE_2D);
+
+        if (poly_trans)
+        {
+            glEnable(GL_ALPHA_TEST);
+            glAlphaFunc(GL_GREATER, 0.95f);
+        }
 
 		if(poly_opaque)
 		{
@@ -295,9 +296,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 for (i = 0; i < 4; i++)
                 {
-                    v[i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[i].nx = n[0];
 					v[i].ny = n[1];
 					v[i].nz = n[2];
@@ -313,9 +314,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[0];
                 for (i = 0; i < 3; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -331,9 +332,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[1];
                 for (i = 0; i < 3; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -349,9 +350,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[2];
                 for (i = 0; i < 3; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -367,9 +368,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[3];
                 for (i = 0; i < 3; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -386,9 +387,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[1] = prev_v[1];
                 for (i = 0; i < 2; i++)
                 {
-                    v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[2 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[2 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[2 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[2 + i].nx = n[0];
 					v[2 + i].ny = n[1];
 					v[2 + i].nz = n[2];
@@ -405,9 +406,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[1] = prev_v[2];
                 for (i = 0; i < 2; i++)
                 {
-                    v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[2 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[2 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[2 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[2 + i].nx = n[0];
 					v[2 + i].ny = n[1];
 					v[2 + i].nz = n[2];
@@ -424,9 +425,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[1] = prev_v[2];
                 for (i = 0; i < 2; i++)
                 {
-                    v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[2 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[2 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[2 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[2 + i].nx = n[0];
 					v[2 + i].ny = n[1];
 					v[2 + i].nz = n[2];
@@ -443,9 +444,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[1] = prev_v[3];
                 for (i = 0; i < 2; i++)
                 {
-                    v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[2 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[2 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[2 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[2 + i].nx = n[0];
 					v[2 + i].ny = n[1];
 					v[2 + i].nz = n[2];
@@ -462,9 +463,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[1] = prev_v[3];
                 for (i = 0; i < 2; i++)
                 {
-                    v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[2 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[2 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[2 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[2 + i].nx = n[0];
 					v[2 + i].ny = n[1];
 					v[2 + i].nz = n[2];
@@ -482,12 +483,6 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
             for (i = 0; i < 4; i++) // save all of these vertices
                 prev_v[i] = v[i];
-
-            if (!tex_enable)
-                glDisable(GL_TEXTURE_2D);
-
-//			glEnable(GL_BLEND);
-//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
             make_texture(u_base, v_base, tex_w, tex_h, tex_fmt, tex_rep_mode);
 
@@ -507,11 +502,6 @@ static void draw_model(UINT8 *buf, UINT little_endian)
             glEnd();
 
 			} // really_draw
-
-//			glDisable(GL_BLEND);
-
-            if (!tex_enable)
-                glEnable(GL_TEXTURE_2D);
         }
         else                // triangle
         {
@@ -526,9 +516,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 for (i = 0; i < 3; i++)
                 {
-                    v[i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[i].nx = n[0];
 					v[i].ny = n[1];
 					v[i].nz = n[2];
@@ -544,9 +534,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[0];
                 for (i = 0; i < 2; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -562,9 +552,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[1];
                 for (i = 0; i < 2; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -580,9 +570,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[2];
                 for (i = 0; i < 2; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -598,9 +588,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[0] = prev_v[3];
                 for (i = 0; i < 2; i++)
                 {
-                    v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
-                    v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
-                    v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+                    v[1 + i].x = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
+                    v[1 + i].y = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
+                    v[1 + i].z = convert_vertex_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
 					v[1 + i].nx = n[0];
 					v[1 + i].ny = n[1];
 					v[1 + i].nz = n[2];
@@ -615,9 +605,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 v[0] = prev_v[0];
                 v[1] = prev_v[1];
-                v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
-                v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
-                v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+                v[2].x = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
+                v[2].y = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
+                v[2].z = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
 				v[2].nx = n[0];
 				v[2].ny = n[1];
 				v[2].nz = n[2];
@@ -631,9 +621,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 v[0] = prev_v[0];
                 v[1] = prev_v[2];
-                v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
-                v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
-                v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+                v[2].x = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
+                v[2].y = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
+                v[2].z = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
 				v[2].nx = n[0];
 				v[2].ny = n[1];
 				v[2].nz = n[2];
@@ -647,9 +637,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 v[0] = prev_v[1];
                 v[1] = prev_v[2];
-                v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
-                v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
-                v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+                v[2].x = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
+                v[2].y = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
+                v[2].z = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
 				v[2].nx = n[0];
 				v[2].ny = n[1];
 				v[2].nz = n[2];
@@ -663,9 +653,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 v[0] = prev_v[0];
                 v[1] = prev_v[3];
-                v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
-                v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
-                v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+                v[2].x = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
+                v[2].y = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
+                v[2].z = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
 				v[2].nx = n[0];
 				v[2].ny = n[1];
 				v[2].nz = n[2];
@@ -679,9 +669,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
                 v[0] = prev_v[2];
                 v[1] = prev_v[3];
-                v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
-                v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
-                v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+                v[2].x = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
+                v[2].y = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
+                v[2].z = convert_vertex_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
 				v[2].nx = n[0];
 				v[2].ny = n[1];
 				v[2].nz = n[2];
@@ -702,9 +692,6 @@ static void draw_model(UINT8 *buf, UINT little_endian)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
-//			glEnable(GL_BLEND);
-//			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
             make_texture(u_base, v_base, tex_w, tex_h, tex_fmt, tex_rep_mode);
 
 			if(really_draw)
@@ -723,12 +710,13 @@ static void draw_model(UINT8 *buf, UINT little_endian)
             glEnd();
 
 			} // really_draw
-
-//			glDisable(GL_BLEND);
-
-            if (!tex_enable)
-                glEnable(GL_TEXTURE_2D);
         }
+
+        if (poly_trans)
+            glDisable(GL_ALPHA_TEST);
+
+        if (!tex_enable)
+            glEnable(GL_TEXTURE_2D);
     }
     while (!stop);
 }
@@ -926,7 +914,8 @@ static void set_viewport_and_perspective(UINT8 *scene_buf)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-    gluPerspective(RAD2DEG(fov_y), (GLfloat) w / (GLfloat) h, 0.1, 100000.0);
+//    gluPerspective(RAD2DEG(fov_y), (GLfloat) w / (GLfloat) h, 0.1, 100000.0);
+    gluPerspective(RAD2DEG(fov_y), (GLfloat) w / (GLfloat) h, 0.1, 10000000.0);
 
 #if 0
     {
@@ -1127,14 +1116,14 @@ static void draw_block(UINT8 *block)
              * Advance to next block in list
              */
 
-#if 0
+//#if 0
             next_ptr = GETWORDLE(&block[6*4]);
             if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
                 break;
 
             block = translate_r3d_address(next_ptr);
-#endif
-            break;
+//#endif
+//            break;
         }
         else	// step 1.5+
         {
@@ -1282,8 +1271,6 @@ static void draw_viewport(UINT pri)
 
     current_addr = 0;
     stop = 0;
-
-    LOG_INIT("model3.log");
 
     do
     {
@@ -1585,9 +1572,20 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 		break;
 
-	case 1:	// 16-bit, ARGB1555 ?
+    case 1: // 4-bit? make bright green to draw attention to it
 
-        LOG("model3.log", "tex type 1 @ %d,%d\t%dx%d\n", x, y, w, h);
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                texture_buffer[((yi * w) + xi) * 4 + 0] = 0x00;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = 0xFF;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = 0x00;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = (UINT8) 0xFF;
+	        }
+	    }
+
+		break;
 
 	case 3:	// 16-bit, ARGB4444
 
@@ -1690,6 +1688,8 @@ void r3dgl_update_frame(void)
 
 	#endif
 
+//    if (m3_config.step ==0x10)return;
+
     /*
      * Enable Z-buffering
      */
@@ -1756,6 +1756,11 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     vrom = vrom_ptr;
 
     memset(texture_grid, 0, 64 * 64 * sizeof(GLint));
+
+    if (m3_config.step == 0x10)
+        vertex_divisor = 32768.0f;  // 17.15-format vertices
+    else
+        vertex_divisor = 524288.0f; // 13.19
 }
 
 /*
