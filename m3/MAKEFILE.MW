@@ -1,0 +1,83 @@
+#
+# Makefile for MinGW 2.0.0.3
+# Requires GCC 3.2, Nasm 0.98, DirectX 9 or OpenGL 1.2, zLib 1.1.3
+#
+# REND = ogl    # specifies OpenGL renderer (default)
+# REND = d3d    # specifies D3D9 renderer
+#
+
+ifeq ($(REND),)
+REND = ogl
+endif
+
+#
+# Options
+#
+
+EXE = m3.exe
+
+CC = gcc
+LD = gcc
+AS = nasm
+AR = ar
+
+CFLAGS = -I./ -I./win32/ -std=gnu99 -g -O2 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -Wall -Wno-unused -Wno-format
+AFLAGS = -f coff
+
+LIBS = -lmingw32 -ldxguid -ldinput8 -luser32 -lgdi32 -ladvapi32 # -lz
+
+ifeq ($(REND),d3d)
+LIBS_REND = -ld3dx9 -ld3d9
+FLAGS_REND = -DRENDERER_D3D
+else
+LIBS_REND = -lopengl32 -lglu32
+FLAGS_REND = -DRENDERER_OGL
+endif
+
+#
+# Objects
+#
+
+OBJ_DIR = obj
+OBJ = $(OBJ_DIR)/win_input.o \
+	$(OBJ_DIR)/win_main.o \
+	$(OBJ_DIR)/bridge.o \
+	$(OBJ_DIR)/controls.o \
+	$(OBJ_DIR)/dma.o \
+	$(OBJ_DIR)/dsb1.o \
+	$(OBJ_DIR)/eeprom.o \
+	$(OBJ_DIR)/r3d.o \
+	$(OBJ_DIR)/rtc.o \
+	$(OBJ_DIR)/scsi.o \
+	$(OBJ_DIR)/tilegen.o \
+	$(OBJ_DIR)/model3.o \
+	$(OBJ_DIR)/ppc.o \
+	$(OBJ_DIR)/ppcdis.o
+
+ifeq ($(REND),d3d)
+OBJ_REND = $(OBJ_DIR)/dx_render.o
+else
+OBJ_REND = $(OBJ_DIR)/ogl_render.o
+endif
+
+#
+# Rules
+#
+
+all:	$(OBJ) $(OBJ_REND)
+	$(CC) $(CFLAGS) $(FLAGS_REND) $(OBJ) $(OBJ_REND) -o $(EXE) $(LIBS) $(LIBS_REND)
+
+clean:
+	del obj\*.*
+
+$(OBJ_DIR)/%.o: %.c %.h
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: %.c
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: win32/%.c
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: ppc/%.c ppc/%.h
+	$(CC) $< $(CFLAGS) -c -o $@

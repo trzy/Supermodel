@@ -1,0 +1,1418 @@
+/*
+ * Sega Model 3 Emulator
+ * Copyright (C) 2003 Bart Trzynadlowski, Ville Linde, Stefano Teso
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License Version 2 as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program (license.txt); if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/*
+ * model3.c
+ *
+ * Model 3 system emulation.
+ *
+ * Memory Regions:
+ *
+ *      All memory regions are allocated and freed in this file. However,
+ *      RAM and backup RAM are the only RAM regions directly accessed here.
+ *      Everything else is passed to its respective subsystem. This localizes
+ *      all memory allocation to this single file and enforces separation
+ *      between the different modules.
+ */
+
+#include "model3.h"
+
+/******************************************************************/
+/* Global Configuration Structure                                 */
+/******************************************************************/
+
+CONFIG m3_config;
+
+/******************************************************************/
+/* Internal Variables                                             */
+/******************************************************************/
+
+/*
+ * Model 3 Memory Regions
+ */
+
+static UINT8    * ram = NULL;           // PowerPC RAM
+static UINT8    * bram = NULL;          // backup RAM
+static UINT8    * sram = NULL;          // sound RAM
+static UINT8    * vram = NULL;          // tile generator VRAM (scroll RAM)
+static UINT8    * culling_ram = NULL;   // Real3D culling RAM
+static UINT8    * polygon_ram = NULL;   // Real3D polygon RAM
+static UINT8    * _8C000000 = NULL;     // Real3D ? RAM
+static UINT8    * crom = NULL;          // CROM (all CROM memory is allocated here)
+static UINT8    * crom_bank;            // points to current 8MB CROM bank
+static UINT8    * vrom = NULL;          // video ROM
+static UINT8    * srom = NULL;          // sound ROM
+static UINT8    * drom = NULL;          // DSB1 ROM
+
+/*
+ * Other
+ */
+
+static UINT ppc_freq;   		// PowerPC clock speed
+
+/*
+ * Function Prototypes (for forward references)
+ */
+
+static UINT8    m3_sys_read_8(UINT32);
+static UINT32   m3_sys_read_32(UINT32);
+static void     m3_sys_write_8(UINT32, UINT8);
+static void     m3_sys_write_32(UINT32, UINT32);
+static UINT8    m3_midi_read(UINT32);
+static void     m3_midi_write(UINT32, UINT8);
+
+/******************************************************************/
+/* Output                                                         */
+/******************************************************************/
+
+void message(UINT flags, char * fmt, ...)
+{
+	/* a simple _message_ to the user. */
+	/* must be used for unharmful warnings too. */
+	/* do not pause the emulator to prompt the user! */
+	/* using a cyclic buffer to output a few lines of */
+	/* timed messages to the screen would be best. */
+
+	/* integrable in the renderer. */
+
+	/* flags are provided for future expansion (i.e. for */
+	/* different text colors/priorities) */
+
+	va_list vl;
+    char string[512];
+
+	va_start(vl, fmt);
+    vsprintf(string, fmt, vl);
+	va_end(vl);
+
+    puts(string);
+    
+//	osd_message(flags, string);
+}
+
+void error(char * fmt, ...)
+{
+	/* you can bypass this calling directly osd_error, but i */
+	/* prefer it this way. :) */
+
+	char string[256] = "";
+	va_list vl;
+
+	va_start(vl, fmt);
+	vsprintf(string, fmt, vl);
+	va_end(vl);
+
+	osd_error(string);
+}
+
+void _log(char * path, char * fmt, ...)
+{
+	/* logs to a file. */
+
+	/* NOTE: "log" conflicts with math.h, so i'm using _log instead. */
+	/* it doesn't make much difference since we're gonna log stuff */
+	/* with the LOG macro. */
+
+    return;
+
+	if(m3_config.log_enabled)
+	{
+		char string[256];
+		va_list vl;
+		FILE * file;
+
+		file = fopen(path, "ab");
+		if(file != NULL)
+		{
+			va_start(vl, fmt);
+			vsprintf(string, fmt, vl);
+			va_end(vl);
+			fprintf(file, string);
+			fclose(file);
+		}
+	}
+}
+
+void _log_init(char * path)
+{
+	/* resets a file contents. */
+	/* since i'm opening the log file with fopen(path, "ab") every */
+	/* time (not to lost the file in the case of a crash), it's */
+	/* necessary to reset it on startup. */
+
+	FILE * file;
+
+	file = fopen(path, "wb");
+	if(file != NULL)
+		fclose(file);
+}
+
+/******************************************************************/
+/* PPC Access                                                     */
+/******************************************************************/
+
+static UINT32   _C0000000;  // latched value
+
+#define PPC_PC  ppc_get_reg(PPC_REG_PC)
+
+/*
+static ppc_region_t m3_ppc_mmap[] =
+{
+{ 0x00000000, 0x007FFFFF, PPC_DIRECT,	ram,		NULL,	NULL,   NULL,   NULL,   NULL,   NULL,   NULL },
+{ 0x84000000, 0x84000023, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0x88000000, 0x88000003, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0x8C000000, 0x8CFFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0x8E000000, 0x8EFFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0x94000000, 0x94FFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0x98000000, 0x98FFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0xF1000000, 0xF117FFFF, PPC_DIRECT,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0xF1180000, 0xF11800FF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0xFF000000, 0xFF7FFFFF, PPC_DIRECT,	crom_bank,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+{ 0xFF800000, 0xFFFFFFFF, PPC_DIRECT,	crom,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
+};
+
+// NOTE:
+// Other areas must be configured per-model and per-game.
+// The PCIBMC could edit the PPC memory map (with functions
+// i'll add to the core) directly when the PCI devices
+// are configured (i.e. when they're initialized).
+
+*/
+
+static UINT8 m3_ppc_read_8(UINT32 a)
+{
+    /*
+     * RAM and ROM tested for first for speed
+     */
+
+    if (a <= 0x007FFFFF)
+        return ram[a];
+    else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
+        return crom_bank[a - 0xFF000000];
+    else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
+        return crom[a - 0xFF800000];
+
+    switch (a >> 28)
+    {
+    case 0xC:
+
+        if (a >= 0xC1000000 && a <= 0xC10000FF)         // 53C810 SCSI
+            return scsi_read_8(a);
+
+        break;
+
+    case 0xF:
+
+        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+            return controls_read(a);
+        else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
+                 (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
+            return m3_sys_read_8(a);
+
+        break;
+    }
+
+
+    error("%08X: unknown read8, %08X\n", PPC_PC, a);
+    return 0xFF;
+}
+
+static UINT16 m3_ppc_read_16(UINT32 a)
+{
+    /*
+     * RAM and ROM tested for first for speed
+     */
+
+    if (a <= 0x007FFFFF)
+        return BSWAP16(*(UINT16 *) &ram[a]);
+    else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
+        return BSWAP16(*(UINT16 *) &crom_bank[a - 0xFF000000]);
+    else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
+        return BSWAP16(*(UINT16 *) &crom[a - 0xFF800000]);
+
+    error("%08X: unknown read16, %08X\n", PPC_PC, a);
+    return 0xFFFF;
+}
+
+static UINT32 m3_ppc_read_32(UINT32 a)
+{
+    /*
+     * RAM and ROM tested for first for speed
+     */
+
+    if (a <= 0x007FFFFF)
+        return BSWAP32(*(UINT32 *) &ram[a]);
+    else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
+        return BSWAP32(*(UINT32 *) &crom_bank[a - 0xFF000000]);
+    else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
+        return BSWAP32(*(UINT32 *) &crom[a - 0xFF800000]);
+
+    switch (a >> 28)
+    {
+    case 0x8:
+
+        return r3d_read_32(a);
+
+    case 0xC:
+
+        switch (a)
+        {
+        case 0xC0000000:
+            //return _C0000000;
+            return 0;
+        }
+
+        break;
+
+    case 0xF:
+
+        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        {
+            return (controls_read(a + 0) << 24) |
+                   (controls_read(a + 1) << 16) |
+                   (controls_read(a + 2) << 8)  |
+                   (controls_read(a + 3) << 0);
+        }
+        else if (a >= 0xF0080000 && a <= 0xF00800FF)    // MIDI?
+            return 0xFFFFFFFF;
+        else if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
+                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
+            return BSWAP32(*(UINT32 *) &bram[a & 0x1FFFF]);
+        else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
+                 (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
+            return m3_sys_read_32(a);
+        else if (a >= 0xF0140000 && a <= 0xF014003F)    // ?
+            return 0xFFFFFFFF;
+        else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
+            return tilegen_vram_read_32(a);
+        else if (a >= 0xF1180000 && a <= 0xF11800FF)    // tile generator regs
+            return tilegen_read_32(a);
+
+        switch (a)
+        {
+        case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
+            return bridge_read_config_data_32(a);
+        }
+
+        break;
+    }
+
+    error("%08X: unknown read32, %08X\n", PPC_PC, a);
+    return 0xFFFFFFFF;
+}
+
+static UINT64 m3_ppc_read_64(UINT32 a)
+{
+    UINT64  d;
+
+    d = m3_ppc_read_32(a + 0);
+    d <<= 32;
+    d |= m3_ppc_read_32(a + 4);
+
+    return d;
+}
+
+static void m3_ppc_write_8(UINT32 a, UINT8 d)
+{
+    /*
+     * RAM tested for first for speed
+     */
+
+    if (a <= 0x007FFFFF)
+    {
+        ram[a] = d;
+        return;
+    }
+
+    switch (a >> 28)
+    {
+    case 0xC:
+
+        switch (a)
+        {
+        case 0xC0010180:    // ? Lost World, PC = 0x11B510
+            return;
+        }
+
+        break;
+
+    case 0xF:
+
+        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        {
+            controls_write(a, d);
+            return;
+        }
+        else if (a >= 0xF0080000 && a <= 0xF00800FF)    // MIDI?
+        {
+            m3_midi_write(a, d);
+            return;
+        }
+        else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
+                 (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
+        {
+            m3_sys_write_8(a, d);
+            return;
+        }
+        else if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)    // MPC105 regs
+        {
+            bridge_write_8(a, d);
+            return;
+        }
+
+        switch (a)
+        {
+        }
+
+        break;
+    }
+
+    error("%08X: unknown write8, %08X = %02X\n", PPC_PC, a, d);
+}
+
+static void m3_ppc_write_16(UINT32 a, UINT16 d)
+{
+    /*
+     * RAM tested for first for speed
+     */
+
+    if (a <= 0x007FFFFF)
+    {
+        *(UINT16 *) &ram[a] = BSWAP16(d);
+        return;
+    }
+
+    switch (a >> 28)
+    {
+    case 0xF:
+
+        if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF) // MPC105 regs
+        {
+            bridge_write_16(a, d);
+            return;
+        }
+
+        break;
+    }
+
+    error("%08X: unknown write16, %08X = %04X\n", PPC_PC, a, d);
+}
+
+static void m3_ppc_write_32(UINT32 a, UINT32 d)
+{
+    /*
+     * RAM tested for first for speed
+     */
+
+    if (a <= 0x007FFFFF)
+    {
+        *(UINT32 *) &ram[a] = BSWAP32(d);
+        return;
+    }
+
+    switch (a >> 28)
+    {
+    case 0x8:
+    case 0x9:
+
+        if (a >= 0x8C000000 && a <= 0x8C1FFFFF)
+        {
+            *(UINT32 *) &_8C000000[a & 0x1FFFFF] = BSWAP32(d);
+            return;
+        }
+
+        r3d_write_32(a, d);     // Real3D memory regions
+        return;
+
+    case 0xC:
+
+        if (a >= 0xC1000000 && a <= 0xC10000FF)         // 53C810 SCSI
+        {
+            scsi_write_32(a, d);
+            return;
+        }
+
+        switch (a)
+        {
+        case 0xC0000000:    // latched value
+            _C0000000 = d;
+            return;
+        }
+
+        break;
+
+    case 0xF:
+
+        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        {
+            controls_write(a + 0, (UINT8) (d >> 24));
+            controls_write(a + 1, (UINT8) (d >> 16));
+            controls_write(a + 2, (UINT8) (d >> 8));
+            controls_write(a + 3, (UINT8) (d >> 0));
+            return;
+        }
+        else if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
+                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
+        {
+            *(UINT32 *) &bram[a & 0x1FFFF] = BSWAP32(d);
+            return;
+        }
+        else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
+                 (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
+        {
+            m3_sys_write_32(a, d);
+            return;
+        }
+        else if (a >= 0xF0140000 && a <= 0xF014003F)    // ?
+            return;
+        else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
+        {
+            tilegen_vram_write_32(a, d);
+            return;
+        }
+        else if (a >= 0xF1180000 && a <= 0xF11800FF)    // tile generator regs
+        {
+            tilegen_write_32(a, d);
+            return;
+        }
+        else if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)    // MPC105 regs
+        {
+            bridge_write_32(a, d);
+            return;
+        }
+
+        switch (a)
+        {
+        case 0xF0800CF8:    // MPC105/106 CONFIG_ADDR
+            bridge_write_config_addr_32(a, d);
+            return;
+        case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
+            bridge_write_config_data_32(a, d);
+            return;
+
+        }
+
+        break;
+    }
+
+    switch (a)  // there is a bug in Lost World's code that causes invalid
+    {           // writes to this area (ADD R4,R4,R4 instead of ADD R4,R4,4)
+    case 0xF76DE0:
+    case 0x1EEDBC0:
+    case 0x3DDB780:
+    case 0x7BB6F00:
+    case 0xF76DE00:
+    case 0x1EEDBC00:
+    case 0xF10F874:
+        return;
+    }
+
+    error("%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
+}
+
+static void m3_ppc_write_64(UINT32 a, UINT64 d)
+{
+    m3_ppc_write_32(a + 0, (UINT32) (d >> 32));
+    m3_ppc_write_32(a + 4, (UINT32) d);
+}
+
+/******************************************************************/
+/* System Control (0xFx100000 - 0xFx10003F)                       */
+/******************************************************************/
+
+/*
+
+  0xF0100000				8-bit		-W    Unknown
+  0xF0100004				8-bit		-W    Unknown
+  0xF0100008				8-bit		RW    CROM Banking (lower 3 bits select CROM bank that appears at 0xFF000000)
+  0xF010000C				8-bit		-W    Real3D TAP Write (0x80 = *TRST, 0x40 = TCK, 0x20 = TDI, 0x04 = TMS)
+  0xF0100010				8-bit		R-    Real3D TAP Read (0x20 = TDO)
+  0xF0100014                8-bit       RW    IRQ Enable (IRQ clear, read to acknowledge, as well?)
+  0xF0100018				8-bit		R-    IRQ Pending
+  0xF010001C                8-bit       RW    Unknown (IRQ related, perhaps)
+  0xF010003C				8-bit		-W    Unknown (0xAD,0xAF)
+
+ +----------------------------------------------------+
+ | PowerPC Interrupt Sources                          |
+ +----------------------------------------------------+
+ | IRQ0 (0x01)        Tile Generator (VBlank-Out?)    |
+ | IRQ1 (0x02)        Tile Generator (VBlank-In)      |
+ | IRQ2 (0x04)        Tile Generator                  |
+ | IRQ3 (0x08)        Tile Generator                  |
+ | IRQ4 (0x10)        Network Board                   |
+ | IRQ5 (0x20)        Unused ?                        |
+ | IRQ6 (0x40)        Unused ?                        |
+ | IRQ7 (0x80)        Sound Request                   |
+ +----------------------------------------------------+
+*/
+
+static UINT8    m3_irq_state = 0;   // 0xF0100018
+static UINT8    m3_irq_enable = 0;    // 0xF0100014
+static UINT8    crom_bank_reg;
+
+/*
+ * void m3_add_irq(UINT8 mask);
+ *
+ * Raises an IRQ (sets its status bit.)
+ *
+ * Parameters:
+ *      mask = Mask corresponding to upper 8 bits of IRQ status register.
+ */
+
+void m3_add_irq(UINT8 mask)
+{
+	m3_irq_state |= mask;
+}
+
+/*
+ * void m3_remove_irq(UINT8 mask);
+ *
+ * Removes an IRQ (lowers its status bit.)
+ *
+ * Parameters:
+ *      mask = Mask corresponding to upper 8 bits of IRQ status register.
+ */
+
+void m3_remove_irq(UINT8 mask)
+{
+	m3_irq_state &= ~mask;
+}
+
+static UINT32 m3_ppc_irq_callback(void)
+{
+	return(0); /* no other IRQs in the queue */
+}
+
+/*
+ * m3_set_crom_bank():
+ *
+ * Sets the CROM bank register and maps the requested 8MB CROM bank in.
+ * Note that all CROMs are stored in the same 72MB buffer which is why 8MB is
+ * added (to skip over CROM0-3.)
+ */
+
+static void m3_set_crom_bank(UINT8 d)
+{
+    crom_bank_reg = d;
+    crom_bank = &crom[0x800000 + ((~d) & 7) * 0x800000];
+}
+
+static UINT8 m3_sys_read_8(UINT32 a)
+{
+	switch(a & 0xFF)
+	{    
+    case 0x08:  // CROM bank
+        return crom_bank_reg;
+    case 0x1C:  // ?
+        return 0xFF;
+	}
+
+    message(0, "%08X: unknown sys read8, %08X", PPC_PC, a);
+//    return(0);
+    return 0xFF;
+}
+
+static UINT32 m3_sys_read_32(UINT32 a)
+{
+	switch(a & 0xFF)
+	{
+    case 0x10:  // JTAG TAP
+        return 0xFFFFFFFF;
+    case 0x14:  // IRQ enable
+        return (m3_irq_enable << 24);
+    case 0x18:  // IRQ status
+        return (m3_irq_state << 24);
+	}
+
+    message(0, "%08X: unknown sys read32, %08X", PPC_PC, a);
+//    return(0);
+    return 0xFFFFFFFF;
+}
+
+static void m3_sys_write_8(UINT32 a, UINT8 d)
+{
+	switch(a & 0xFF)
+	{
+    case 0x08:  // CROM bank
+        m3_set_crom_bank(d);
+        return;
+    case 0x14:  // IRQ enable
+        m3_irq_enable = d;
+        message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
+        return;
+    case 0x1C:  // ?
+        return;
+	}
+
+    message(0, "%08X: unknown sys write8, %08X = %02X", PPC_PC, a, d);
+}
+
+static void m3_sys_write_32(UINT32 a, UINT32 d)
+{
+	switch(a & 0xFF)
+	{
+    case 0x0C:  // JTAG TAP
+    case 0x1C:  // JTAG TAP
+        return;
+
+    case 0x14:  // IRQ mask
+        m3_irq_enable = (d >> 24);
+        message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
+        return;
+	}
+
+    message(0, "%08X: unknown sys write8, %08X = %08X", PPC_PC, a, d);
+}
+
+static UINT8 m3_midi_read(UINT32 a)
+{
+	/* 0xFx0800xx */
+
+	return(0);
+}
+
+static void m3_midi_write(UINT32 a, UINT8 d)
+{
+	/* 0xFx0800xx */
+
+    message(0, "%08X: MIDI write, %08X = %02X", PPC_PC, a, d);
+}
+
+/******************************************************************/
+/* PCI Command Callback                                           */
+/******************************************************************/
+
+static UINT32 pci_command_callback(UINT32 cmd)
+{
+    switch (cmd)
+    {
+    case 0x80006800:    // reg 0 of PCI config header
+        if (m3_config.step <= 0x15)
+            return 0x16C311DB;  // 0x11DB = PCI vendor ID (Sega), 0x16C3 = device ID
+        else
+            return 0x178611DB;
+    }
+
+    message(0, "%08X: PCI command issued: %08X", PPC_PC, cmd);
+    return 0;
+}
+
+/******************************************************************/
+/* Load/Save Stuff                                                */
+/******************************************************************/
+
+/*
+ * Load a file to a buffer.
+ */
+
+static INT load_file(char * path, UINT8 * dest, INT size){
+
+    FILE * fp;
+	INT i;
+
+	if(path == NULL || dest == NULL)
+		return(-1);
+
+    if((fp = fopen(path, "rb")) == NULL)
+		return(-1);
+
+    fseek(fp, 0, SEEK_END);
+    i = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+	if(i <= 0)
+		return(-1);
+
+    if(fread(dest, 1, size, fp) != (size_t)i)   // file size mismatch
+		return(-1);
+
+	return(i);
+}
+
+/*
+ * Save a buffer to a file.
+ */
+
+static void save_file(char * path, UINT8 * src, INT size)
+{
+
+    FILE * fp;
+
+    fp = fopen(path, "wb");
+    if(fp != NULL)
+	{
+        fwrite(src, 1, size, fp);
+        fclose(fp);
+        message(0, "Wrote %s", path);
+	}
+    else
+        message(0, "Failed to write %s", path);
+}
+
+//TODO: Fix these macros. I removed the path and hacked them up just enough
+// to where they will compile. ---Bart
+
+/* ugh ... remove this and use two vars */
+#define BUILD_EEPROM_PATH \
+			char string[256]; \
+            string[0] = '\0'; \
+            /*strcpy(string, path);*/ \
+            strcat(string, "BACKUP/"); \
+            strcat(string, m3_config.game_id); \
+			strcat(string, ".EPR");
+
+#define BUILD_BRAM_PATH \
+			char string[256]; \
+            string[0] = '\0'; \
+            /*strcpy(string, path );*/ \
+            strcat(string, "BACKUP/"); \
+            strcat(string, m3_config.game_id); \
+			strcat(string, ".BRM");
+
+void m3_load_eeprom(void)
+{
+	BUILD_EEPROM_PATH
+
+	eeprom_reset();
+	eeprom_load(string);
+}
+
+void m3_save_eeprom(void)
+{
+	BUILD_EEPROM_PATH
+
+	eeprom_save(string);
+}
+
+void m3_load_bram(void)
+{
+	BUILD_BRAM_PATH
+
+    if(load_file(string, bram, 128*1024)){
+		message(0, "Can't load Backup RAM from file, creating a new file.");
+		memset(bram, 0xFF, 128*1024);
+        save_file(string, bram, 128*1024);
+	}
+}
+
+void m3_save_bram(void)
+{
+	BUILD_BRAM_PATH
+
+	save_file(string, bram, 128*1024);
+}
+
+/*
+ * BOOL m3_save_state(CHAR *file);
+ *
+ * Saves a state.
+ *
+ * Parameters:
+ *      file = Name of save state file to generate.
+ *
+ * Returns:
+ *      MODEL3_OKAY  = Success.
+ *      MODEL3_ERROR = Unable to open the save state file.
+ */
+
+BOOL m3_save_state(CHAR *file)
+{
+    FILE    *fp;
+
+    if ((fp = fopen(file, "wb")) == NULL)
+    {
+        error("Unable to save state to %s", file);
+        return MODEL3_ERROR;
+    }
+   
+    /*
+     * Write out the main data: PowerPC RAM, backup RAM, and system control
+     * registers
+     */
+
+    fwrite(ram, sizeof(UINT8), 8*1024*1024, fp);
+    fwrite(bram, sizeof(UINT8), 128*1024, fp);
+    fwrite(&m3_irq_state, sizeof(UINT8), 1, fp);
+    fwrite(&m3_irq_enable, sizeof(UINT8), 1, fp);
+    fwrite(&crom_bank_reg, sizeof(UINT8), 1, fp);
+
+    /*
+     * Save the rest of the system state
+     */
+
+    ppc_save_state(fp);
+    bridge_save_state(fp);
+    controls_save_state(fp);
+    dma_save_state(fp);
+    dsb1_save_state(fp);
+    eeprom_save_state(fp);
+    r3d_save_state(fp);
+    rtc_save_state(fp);
+    scsi_save_state(fp);
+    tilegen_save_state(fp);
+//    scsp_save_state(fp);
+
+    fclose(fp);
+    return MODEL3_OKAY;
+}
+
+/*
+ * void m3_load_state(CHAR *file);
+ *
+ * Loads a state.
+ *
+ * Parameters:
+ *      file = Name of save state file to load.
+ *
+ * Returns:
+ *      MODEL3_OKAY  = Success.
+ *      MODEL3_ERROR = Unable to open the save state file.
+ */
+
+BOOL m3_load_state(CHAR *file)
+{
+    FILE    *fp;
+
+    if ((fp = fopen(file, "rb")) == NULL)
+    {
+        error("Unable to load state from %s", file);
+        return MODEL3_ERROR;
+    }
+
+    /*
+     * Load main data: PowerPC RAM, backup RAM, and system control registers
+     */
+
+    fread(ram, sizeof(UINT8), 8*1024*1024, fp);
+    fread(bram, sizeof(UINT8), 128*1024, fp);
+    fread(&m3_irq_state, sizeof(UINT8), 1, fp);
+    fread(&m3_irq_enable, sizeof(UINT8), 1, fp);
+    fread(&crom_bank_reg, sizeof(UINT8), 1, fp);
+    m3_set_crom_bank(crom_bank_reg);
+
+    /*
+     * Load the rest of the system state
+     */
+
+    ppc_load_state(fp);
+    bridge_load_state(fp);
+    controls_load_state(fp);
+    dma_load_state(fp);
+    dsb1_load_state(fp);
+    eeprom_load_state(fp);
+    r3d_load_state(fp);
+    rtc_load_state(fp);
+    scsi_load_state(fp);
+    tilegen_load_state(fp);
+//    scsp_load_state(fp);
+
+    fclose(fp);
+    return MODEL3_OKAY;
+}
+
+/******************************************************************/
+/* Machine Execution Loop                                         */
+/******************************************************************/
+
+void m3_run_frame(void)
+{
+    /*
+     * Run the PowerPC and 68K
+     */
+
+    ppc_run(ppc_freq / 60);
+    //m68k_run(11289600);
+
+    /*
+     * Enter VBlank and update the graphics
+     */
+
+	rtc_step_frame();
+	tilegen_update();
+    //r3d_update();
+    osd_renderer_update_frame();
+    controls_update();
+
+    /*
+     * Generate interrupts for this frame and run the VBlank
+     */
+
+    m3_add_irq(m3_irq_enable);
+    ppc_set_irq_line(1);
+    ppc_run(100000);
+//    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
+}
+
+void m3_reset(void)
+{
+	/* the ROM must be already loaded at this point. */
+	/* it must _always_ be called when you load a ROM. */
+
+	/* init log file */
+
+	LOG_INIT("model3.log");
+	LOG("model3.log", "XMODEL "VERSION", built on "__DATE__" "__TIME__".\n\n");
+
+	/* reset all the buffers */
+
+    memset(ram, 0, 8*1024*1024);
+    memset(vram, 0, 1*1024*1024+2*65536);
+	memset(sram, 0, 1*1024*1024);
+	memset(bram, 0, 128*1024);
+
+	/* reset all the modules */
+
+    if(ppc_reset() != PPC_OKAY)
+        error("ppc_reset failed");
+
+    bridge_reset(m3_config.step < 0x20 ? 1 : 2);
+	scsi_reset();
+	dma_reset();
+
+    osd_renderer_init(culling_ram, polygon_ram, vrom);
+
+	tilegen_reset();
+	r3d_reset();
+//    scsp_reset();
+//    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
+    controls_reset(m3_config.flags & (GAME_OWN_STEERING_WHEEL | GAME_OWN_GUN));
+
+    m3_remove_irq(0xFF);
+    m3_set_crom_bank(0xFF);
+
+	/* load NVRAMs */
+
+	m3_load_eeprom();
+	m3_load_bram();
+}
+
+/******************************************************************/
+/* File (and ROM) Management                                      */
+/******************************************************************/
+
+typedef struct
+{
+    UINT8	name[20];
+    UINT	size;
+    UINT32	crc32;
+
+} ROMFILE;
+
+typedef struct
+{
+	char	id[20];
+	char	superset_id[20];
+	char	title[48];
+	char	manuf[16];
+    UINT	year;
+    INT		step;
+    FLAGS	flags;
+
+	ROMFILE	crom[4];
+	ROMFILE	crom0[4];
+	ROMFILE	crom1[4];
+	ROMFILE	crom2[4];
+	ROMFILE	crom3[4];
+	ROMFILE	vrom[16];
+	ROMFILE	srom[3];
+	ROMFILE	dsb_rom[5];
+
+} ROMSET;
+
+static ROMSET m3_rom_list[] =
+{
+#include "ROM_LIST.H"
+};
+
+/*
+ * Byteswap a buffer.
+ */
+
+static void byteswap(UINT8 *buf, UINT size)
+{
+    UINT    i;
+    UINT8   tmp;
+
+    for (i = 0; i < size; i += 2)
+    {
+        tmp = buf[i];
+        buf[i] = buf[i + 1];
+        buf[i + 1] = tmp;
+    }
+}
+
+/*
+ * Load a batch of files, (word)interleaving as needed.
+ */
+
+#define NO_ITLV	1
+#define ITLV_2	2
+#define ITLV_4	4
+#define ITLV_16	16
+
+static INT load_romfile(UINT8 * buff, char * dir, ROMFILE * list, UINT32 itlv)
+{
+	CHAR string[256], temp[256];
+	UINT i, j;
+
+	/* build the ROMSET path */
+
+//    strcpy(string, m3_path);
+    strcpy(string, "roms/");
+    strcat(string, m3_config.game_id);
+	strcat(string, "/");
+
+	/* check if it's an unused ROMFILE, if so skip it */
+
+	if(list[0].size == 0)
+		return(MODEL3_OKAY);
+
+	/* check interleave size for validity */
+
+	if(	itlv != NO_ITLV &&
+		itlv != ITLV_2 &&
+		itlv != ITLV_4 &&
+		itlv != ITLV_16 )
+		return(MODEL3_ERROR);
+
+	/* load all the needed files linearly */
+
+	for(i = 0; i < itlv; i++)
+	{
+		FILE * file;
+
+		/* all the files must be the same size */
+
+		if(list[i].size != list[0].size)
+			return(MODEL3_ERROR);
+
+		/* build the file path */
+
+		strcpy(temp, string);
+		strcat(temp, list[i].name);
+
+		printf("loading \"%s\"\n", temp); // temp
+
+		if((file = fopen(temp, "rb")) == NULL)
+			return(MODEL3_ERROR);
+
+		/* load interleaved (16-bit at once) */
+
+        for (j = 0; j < list[0].size; j += 2)
+        {
+            buff[i*2+j*itlv+0] = fgetc(file);
+            buff[i*2+j*itlv+1] = fgetc(file);
+        }
+
+		fclose(file);
+	}
+
+	/* eveyrthing went right */
+
+	return(MODEL3_OKAY);
+}
+
+/*
+ * void m3_unload_rom(void);
+ *
+ * Unload any previously loaded ROM.
+ */
+
+void m3_unload_rom(void)
+{
+	SAFE_FREE(crom);
+	SAFE_FREE(vrom);
+	SAFE_FREE(srom);
+}
+
+/*
+ * BOOL m3_load_rom(CHAR *id);
+ *
+ * Load a ROM set.
+ *
+ * Parameters:
+ *      id = Name of ROM set (see rom_list.h.)
+ *
+ * Returns:
+ *      M3_OKAY  = Success.
+ *      M3_ERROR = Unable to load the ROMs.
+ */
+
+BOOL m3_load_rom(CHAR * id)
+{
+    CHAR    string[256] = "";
+    ROMSET  * romset = NULL;
+    FILE    * file;
+    UINT8   * crom0 = NULL, * crom1 = NULL, * crom2 = NULL, * crom3 = NULL;
+    UINT    i, size;
+
+	if(id[0] == '\0')
+		error("No ROM selected");
+
+	/* unload any previous ROM */
+
+    m3_unload_rom();
+
+	/* look for the ROM ID in the ROM list */
+
+	size = sizeof(m3_rom_list) / sizeof(m3_rom_list[0]);
+
+	for(i = 0; i < size; i++)
+	{
+        if(!stricmp(m3_rom_list[i].id, id))
+		{
+			romset = &m3_rom_list[i];
+			break;
+		}
+	}
+
+	if(romset == NULL)
+		return(MODEL3_ERROR);
+
+	/* load the mother ROMSET if needed */
+
+	if(romset->superset_id[0] != '\0')
+        m3_load_rom(romset->superset_id);
+
+	/* allocate as much memory as needed, if not already allocated by mother */
+
+	if(crom == NULL)
+	{
+		crom = (UINT8 *)malloc(72*1024*1024);
+		vrom = (UINT8 *)malloc(32*1024*1024);
+        srom = (UINT8 *)malloc(romset->srom[0].size + romset->srom[1].size + romset->srom[2].size);
+		drom = (UINT8 *)malloc(romset->dsb_rom[0].size +
+							   romset->dsb_rom[1].size + romset->dsb_rom[2].size +
+							   romset->dsb_rom[3].size + romset->dsb_rom[4].size);
+	}
+
+	crom0 = &crom[0x00800000];
+	crom1 = &crom[0x01800000];
+	crom2 = &crom[0x02800000];
+	crom3 = &crom[0x03800000];
+
+	/* load ROM files into memory */
+
+//    strcpy(string, m3_path);
+    strcpy(string, id);
+    strcat(string, ".zip");
+	file = fopen(string, "rb");
+
+	if(file == NULL)
+	{
+		/* load from directory */
+
+        if(romset->crom[0].size && load_romfile(&crom[8*1024*1024 - (romset->crom[0].size * 4)], id, romset->crom, ITLV_4))
+			error("Can't load CROM.");
+
+		if(romset->crom0[0].size && load_romfile(crom0, id, romset->crom0, ITLV_4))
+			error("Can't load CROM0.");
+
+		if(romset->crom1[0].size && load_romfile(crom1, id, romset->crom1, ITLV_4))
+			error("Can't load CROM1.");
+
+		if(romset->crom2[0].size && load_romfile(crom2, id, romset->crom2, ITLV_4))
+			error("Can't load CROM2.");
+
+		if(romset->crom3[0].size && load_romfile(crom3, id, romset->crom3, ITLV_4))
+			error("Can't load CROM3.");
+
+		if(romset->vrom[0].size && load_romfile(vrom, id, romset->vrom, ITLV_16))
+			error("Can't load VROM.");
+
+		if(romset->srom[0].size && load_romfile(srom, id, romset->srom, NO_ITLV))
+			error("Can't load SROM Program.");
+
+		if(romset->srom[1].size && load_romfile(&srom[romset->srom[0].size], id, &romset->srom[1], ITLV_2))
+			error("Can't load SROM Samples.");
+
+		if(romset->dsb_rom[0].size && load_romfile(drom, id, romset->dsb_rom, NO_ITLV))
+			error("Can't load DSB ROM Program.");
+
+		if(romset->dsb_rom[1].size && load_romfile(&drom[romset->dsb_rom[0].size], id, &romset->dsb_rom[1], ITLV_4))
+			error("Can't load DSB ROM Samples.");
+
+		/* byteswap buffers */
+
+        byteswap(&crom[8*1024*1024 - (romset->crom[0].size * 4)], romset->crom[0].size * 4);
+        byteswap(crom0, romset->crom0[0].size * 4);
+        byteswap(crom1, romset->crom1[0].size * 4);
+		byteswap(crom2, romset->crom2[0].size * 4);
+		byteswap(crom3, romset->crom3[0].size * 4);
+		byteswap(vrom, romset->vrom[0].size * 16);
+
+		/* SROMs? DSB ROMs? i don't remember :p */
+
+	} else {
+
+		fclose(file);
+
+		/* load from ZIP */
+	}
+
+    /* set stepping */
+
+    m3_config.step = romset->step;
+
+    /* set game flags */
+
+    if(romset->flags & GAME_OWN_STEERING_WHEEL)
+        m3_config.flags |= GAME_OWN_STEERING_WHEEL;
+    if(romset->flags & GAME_OWN_GUN)
+        m3_config.flags |= GAME_OWN_GUN;
+    if(romset->dsb_rom[0].name[0] != '\0')
+        m3_config.flags |= GAME_OWN_DSB1;
+
+    /* mirror CROM0 to CROM if needed */
+
+	if((romset->crom[0].size * 4) < 8*1024*1024)
+        memcpy(crom, crom0, 8*1024*1024 - romset->crom[0].size*4);
+
+	/*
+	 * Perhaps mirroring must occur between the CROMx
+	 * and the CROMx space, if CROMx is < 16MB?
+	 */
+
+	/* if we're here, everything went fine! */
+
+    message(0, "ROM loaded succesfully!");
+
+    /*
+
+	save_file("crom.bin", crom, 8*1024*1024);
+    save_file("crom0.bin", crom0, romset->crom0[0].size * 4);
+    save_file("crom1.bin", crom1, romset->crom1[0].size * 4);
+    save_file("crom2.bin", crom2, romset->crom2[0].size * 4);
+    save_file("crom3.bin", crom3, romset->crom3[0].size * 4);
+
+    */
+
+	return(MODEL3_OKAY);
+}
+
+/******************************************************************/
+/* Machine Interface                                              */
+/******************************************************************/
+
+void m3_shutdown(void)
+{
+	/* save NVRAMs */
+
+	m3_save_eeprom();
+	m3_save_bram();
+
+	/* detach any loaded ROM */
+
+    m3_unload_rom();
+
+	/* shutdown all the modules */
+
+    controls_shutdown();
+//    scsp_shutdown();
+//    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
+	r3d_shutdown();
+	tilegen_shutdown();
+	dma_shutdown();
+	scsi_shutdown();
+//    pcibmc_shutdown();
+
+	/* free any allocated buffer */
+
+    save_file("ram", ram, 8*1024*1024);
+    save_file("8e000000", culling_ram, 2*1024*1024);
+    save_file("98000000", polygon_ram, 1*1024*1024);
+    save_file("8c000000", _8C000000, 2*1024*1024);
+    SAFE_FREE(ram);
+	SAFE_FREE(vram);
+	SAFE_FREE(sram);
+	SAFE_FREE(bram);
+    SAFE_FREE(culling_ram);
+    SAFE_FREE(polygon_ram);
+
+	/* dump any other buffer for debug? */
+}
+
+void m3_init(void)
+{
+	/* setup m3_config (which is already partially done in parse_command_line) */
+
+	m3_config.log_enabled = 1;
+
+	/* load the ROM -- if specified on command line */
+
+    if(m3_config.game_id[0] != '\0')
+        m3_load_rom(m3_config.game_id);
+
+	/* allocate additional space */
+
+    ram = (UINT8 *) malloc(8*1024*1024);
+    vram = (UINT8 *) malloc(2*1024*1024);
+    sram = (UINT8 *) malloc(1*1024*1024);
+    bram = (UINT8 *) malloc(128*1024);
+    culling_ram = (UINT8 *) malloc(2*1024*1024);
+    polygon_ram = (UINT8 *) malloc(1*1024*1024);
+    _8C000000 = (UINT8 *) malloc(2*1024*1024);
+
+	/* attach m3_shutdown to atexit */
+
+	atexit(m3_shutdown);
+
+    /* setup the PPC */
+
+    if(ppc_init(PPC_TYPE_6XX) != PPC_OKAY)
+		error("ppc_init failed.");
+
+    ppc_set_reg(PPC_REG_PVR, 0x00060104);
+
+    ppc_set_irq_callback(m3_ppc_irq_callback);
+
+    ppc_set_read_8_handler((void *)m3_ppc_read_8);
+    ppc_set_read_16_handler((void *)m3_ppc_read_16);
+    ppc_set_read_32_handler((void *)m3_ppc_read_32);
+    ppc_set_read_64_handler((void *)m3_ppc_read_64);
+
+    ppc_set_write_8_handler((void *)m3_ppc_write_8);
+    ppc_set_write_16_handler((void *)m3_ppc_write_16);
+    ppc_set_write_32_handler((void *)m3_ppc_write_32);
+    ppc_set_write_64_handler((void *)m3_ppc_write_64);
+
+    switch (m3_config.step) // set frequency
+    {
+    case 0x15:  ppc_freq = 100000000; break;    // Step 1.5 PPC @ 100MHz
+    case 0x20:  ppc_freq = 166000000; break;    // Step 2.0 PPC @ 166MHz
+    case 0x21:  ppc_freq = 166000000; break;    // Step 2.1 PPC @ 166MHz
+    default:                                    // assume Step 1.0...
+    case 0x10:  ppc_freq = 66000000; break;     // Step 1.0 PPC @ 66MHz
+    }
+
+	/* setup the 68K */
+
+	/* A68K INIT! */
+
+	/* setup remaining peripherals -- renderer and sound output is */
+	/* already setup at this point. */
+
+    bridge_init(pci_command_callback);
+    scsi_init(m3_ppc_read_8, m3_ppc_read_16, m3_ppc_read_32, m3_ppc_write_8, m3_ppc_write_16, m3_ppc_write_32);
+	dma_init();
+    tilegen_init(vram);
+    r3d_init(culling_ram, polygon_ram);
+//    scsp_init();
+//    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
+    controls_init();
+}
