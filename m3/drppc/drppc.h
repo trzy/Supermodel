@@ -41,7 +41,6 @@ typedef enum
 	// Non-error conditions used internally (defined here for coherency)
 
 	DRPPC_TERMINATOR,			// Used during decode when a branch is hit
-	DRPPC_TIMESLICE_ENDED,		// Used by the native code
 
 } DRPPC_ERRNUM;
 
@@ -74,8 +73,8 @@ typedef struct drppc_region
 	UINT32	start, end;
 	UINT8	* ptr;
 	void	* handler;
-	BOOL	volatile_ptr;
-	BOOL	big_endian;
+	BOOL	volatile_ptr;	/* no meaning if handler */
+	BOOL	big_endian;		/* no meaning if handler */
 
 } DRPPC_REGION;
 
@@ -84,24 +83,25 @@ typedef struct drppc_region
  *
  * NOTE: only minimal typecasting is explicitized. This way, type conversion
  * errors will be more consistent in user code.
+ *
+ * NOTE: the DRPPC_REGION_PLACEHOLDER is specifically thought as an 'empty'
+ * region to be used together with the DRPPC_SET_REGION_* macros below.
  */
 
-#define DRPPC_REGION_BUF_BE(start, end, buf, is_volatile) \
-			{ start, end, (UINT8 *)(buf), NULL, is_volatile, TRUE }
+#define DRPPC_REGION_BUF_BE(start, end, buf, vol) \
+			{ start, end, (UINT8 *)(buf), NULL, vol, TRUE }
 
-#define DRPPC_REGION_BUF_LE(start, end, buf, is_volatile) \
-			{ start, end, (UINT8 *)(buf), NULL, is_volatile, FALSE }
+#define DRPPC_REGION_BUF_LE(start, end, buf, flags) \
+			{ start, end, (UINT8 *)(buf), NULL, vol, FALSE }
 
-#define DRPPC_REGION_HANDLER(start, end, handler, is_volatile) \
-			{ start, end, NULL, (void *)(handler), is_volatile, FALSE }
+#define DRPPC_REGION_HANDLER(start, end, handler) \
+			{ start, end, NULL, (void *)(handler), FALSE, FALSE }
 
 #define DRPPC_REGION_END \
-			{ 0, 0, NULL, NULL, TRUE, FALSE }
+			{ 0, 0, NULL, NULL, FALSE, FALSE }
 
-// This is specifically thought as an 'empty' region to be used with the
-// macros below.
 #define DRPPC_REGION_PLACEHOLDER \
-			{ 0xDEADBEEF, 0xFEEDBEE5, NULL, NULL, FALSE, FALSE }
+			{ 0xFFFFFFFF, 0xFFFFFFFF, NULL, NULL, FALSE, FALSE }
 
 /*
  * The following macros are used to edit REGION variables on-the-fly.
@@ -110,34 +110,34 @@ typedef struct drppc_region
  * errors will be more consistent in user code.
  */
 
-#define DRPPC_SET_REGION_BUF_BE(r, _start, _end, buf, is_volatile)	\
-		{															\
-			r.start			= _start;								\
-			r.end			= _end;									\
-			r.ptr			= (UINT8 *)buf;							\
-			r.handler		= NULL;									\
-			r.volatile_ptr	= is_volatile;							\
-			r.big_endian	= TRUE;									\
+#define DRPPC_SET_REGION_BUF_BE(r, _start, _end, _buf, _vol)	\
+		{														\
+			r.start			= _start;							\
+			r.end			= _end;								\
+			r.ptr			= (UINT8 *)_buf;					\
+			r.handler		= NULL;								\
+			r.volatile_ptr	= _vol;								\
+			r.big_endian	= TRUE;								\
 		}
 
-#define DRPPC_SET_REGION_BUF_LE(r, _start, _end, buf, is_volatile)	\
-		{															\
-			r.start			= _start;								\
-			r.end			= _end;									\
-			r.ptr			= (UINT8 *)buf;							\
-			r.handler		= NULL;									\
-			r.volatile_ptr	= is_volatile;							\
-			r.big_endian	= FALSE;								\
+#define DRPPC_SET_REGION_BUF_LE(r, _start, _end, _buf, _vol)	\
+		{														\
+			r.start			= _start;							\
+			r.end			= _end;								\
+			r.ptr			= (UINT8 *)_buf;					\
+			r.handler		= NULL;								\
+			r.volatile_ptr	= _vol;								\
+			r.big_endian	= FALSE;							\
 		}
 
-#define DRPPC_SET_REGION_HANDLER(r, _start, _end, h, is_volatile)	\
-		{															\
-			r.start			= _start;								\
-			r.end			= _end;									\
-			r.ptr			= NULL;									\
-			r.handler		= (void *)h;							\
-			r.volatile_ptr	= is_volatile;							\
-			r.big_endian	= FALSE; /* Ignored */					\
+#define DRPPC_SET_REGION_HANDLER(r, _start, _end, _h)	\
+		{												\
+			r.start			= _start;					\
+			r.end			= _end;						\
+			r.ptr			= NULL;						\
+			r.handler		= (void *)_h;				\
+			r.volatile_ptr	= FALSE;					\
+			r.big_endian	= FALSE;					\
 		}
 
 /*
@@ -178,13 +178,11 @@ typedef struct drppc_bb
 	UINT	count;		// Execution Count
 	UINT8	* ptr;		// Native BB Pointer
 
-#ifdef DRPPC_PROFILE
-	UINT	osize;		// Size of interpreted (original) BB
-	UINT	otime;		// Exec time of interpreted (orifinal) BB
+	INT		interp_size;
+	INT		native_size;
 
-	UINT	nsize;		// Size of recompiled (native) BB
-	UINT	ntime;		// Exec time of recompiled (native) BB
-#endif
+	INT		interp_exec_time;
+	INT		native_exec_time;
 
 } DRPPC_BB;
 
@@ -201,6 +199,8 @@ typedef struct drppc_bb
 
 typedef struct drppc_cfg
 {
+	BOOL		interpret_only;
+
 	// Custom Handlers
 
 	void *		(* Alloc)(UINT);
@@ -209,10 +209,11 @@ typedef struct drppc_cfg
 
 	// Optional BB Lookup Handlers
 
-	INT			(* SetupBBLookup)(struct drppc_cfg *);
+	INT			(* SetupBBLookup)(struct drppc_cfg *, void **);
 	void		(* CleanBBLookup)(void);
 	DRPPC_BB *	(* LookupBB)(UINT32, INT *);
 	void		(* InvalidateBBLookup)(void);
+	void		(* SetBBLookupInfo)(void *);
 
 	// Core Configuration
 
@@ -238,7 +239,7 @@ typedef struct drppc_cfg
 
 } DRPPC_CFG;
 
-// Move this in source.h!!!
+// Move this in source*h!!!
 #define DRPPC_ZERO_THRESHOLD	1	// The exact threshold needed to bypass the
 									// profiling stage.
 
@@ -246,6 +247,6 @@ typedef struct drppc_cfg
  Interface
 *******************************************************************************/
 
-#include "source.h"
+#include SOURCE_CPU_HEADER
 
 #endif // INCLUDED_DRPPC_H

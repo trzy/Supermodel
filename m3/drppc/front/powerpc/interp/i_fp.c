@@ -4,8 +4,8 @@
  * Floating-Point instruction handlers.
  */
 
-#include "source.h"
-#include "internal.h"
+#include "../powerpc.h"
+#include "../internal.h"
 
 /*******************************************************************************
  Load/Store Floating-Point
@@ -380,7 +380,7 @@ INT I_Fcmpo(UINT32 op)
 	else
 		c = 2;	// VX
 
-	CR(t) = c;
+	SET_CR(t, c);
 
 	FPSCR &= ~0x0001F000;
 	FPSCR |= (c << 12);
@@ -424,7 +424,7 @@ INT I_Fcmpu(UINT32 op)
 	else
 		c = 2;	// VX
 
-	CR(t) = c;
+	SET_CR(t, c);
 
 	FPSCR &= ~0x0001F000;
 	FPSCR |= (c << 12);
@@ -987,8 +987,8 @@ INT I_Fsqrtsx(UINT32 op)
 	return 1;
 }
 
-INT I_Fsubx(UINT32 op){
-
+INT I_Fsubx(UINT32 op)
+{
 	UINT32 b = RB;
 	UINT32 a = RA;
 	UINT32 t = RT;

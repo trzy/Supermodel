@@ -31,7 +31,7 @@
 #ifdef STANDALONE
 #include <stdlib.h>
 #endif
-#include "disasm.h"
+#include "ppcdasm.h"
 
 #define DISASM_VERSION  "1.1"
 

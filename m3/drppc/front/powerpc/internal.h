@@ -12,7 +12,7 @@
 
 #include "drppc.h"
 #include "toplevel.h"
-#include "source.h"
+#include "powerpc.h"
 
 /*******************************************************************************
  Global Variables and Routines
@@ -47,11 +47,16 @@ extern void		Write64(UINT32, UINT64);
 extern void		CheckIRQs();
 
 extern INT		UpdatePC(void);
+extern INT		UpdateFetchPtr(UINT32);
 extern void		UpdateTimers(INT);
 extern UINT32	ReadTimebaseLo(void);
 extern UINT32	ReadTimebaseHi(void);
 extern void		WriteTimebaseLo(UINT32);
 extern void		WriteTimebaseHi(UINT32);
+
+extern INT		GetDecodeCycles (void);
+extern void		ResetDecodeCycles (void);
+extern void		AddDecodeCycles (INT);
 
 /*******************************************************************************
  Register Definitions
@@ -239,8 +244,15 @@ extern void		WriteTimebaseHi(UINT32);
 #define _OP		((op >> 26) & 0x3F)
 #define _XO		((op >> 1) & 0x3FF)
 
-#define _CRFD	((op >> 23) & 7)
-#define _CRFA	((op >> 18) & 7)
+#define CRFT	((op >> 23) & 7)
+#define CRFA	((op >> 18) & 7)
+
+#define _BBM	((op >> 11) & 3)
+#define _BBN	((op >> 13) & 7)
+#define _BAM	((op >> 16) & 3)
+#define _BAN	((op >> 18) & 7)
+#define _BDM	((op >> 21) & 3)
+#define _BDN	((op >> 23) & 7)
 
 #define _OVE	0x00000400
 #define _AA		0x00000002
@@ -248,33 +260,18 @@ extern void		WriteTimebaseHi(UINT32);
 #define _LK		0x00000001
 
 #define _SH		((op >> 11) & 31)
-#define _MB		((op >> 6) & 31)
-#define _ME		((op >> 1) & 31)
-#define _MB_ME	((op >> 1) & 1023)
+#define _MB		((op >>  6) & 31)
+#define _ME		((op >>  1) & 31)
+#define _MB_ME	((op >>  1) & 1023)
 #define _BO		((op >> 21) & 0x1F)
 #define _BI		((op >> 16) & 0x1F)
-#define _BD		((op >> 2) & 0x3FFF)
+#define _BD		((op >>  2) & 0x3FFF)
 
 #define _SPRF	(((op >> 6) & 0x3E0) | ((op >> 16) & 0x1F))
 #define _DCRF	(((op >> 6) & 0x3E0) | ((op >> 16) & 0x1F))
 
 #define _FXM	((op >> 12) & 0xFF)
 #define _FM		((op >> 17) & 0xFF)
-
-/*******************************************************************************
- Register Fields
-
- Heavily used constants.
-*******************************************************************************/
-
-#define CR_LT	8
-#define CR_GT	4
-#define CR_EQ	2
-#define CR_SO	1
-
-#define XER_SO	0x80000000
-#define XER_OV	0x40000000
-#define XER_CA	0x20000000
 
 /*******************************************************************************
  Context Shortcuts
@@ -284,8 +281,8 @@ extern void		WriteTimebaseHi(UINT32);
 
 #define R(n)		ppc.r[n]
 #define F(n)		ppc.f[n]
-#define F_PS(n)		ppc.f_is_ps[n]
-#define CR(n)		ppc.cr[n]
+#define F_PS(n)		ppc.is_ps[n]
+//#define CR(n)		ppc.cr[n]
 #define SR(n)		ppc.sr[n]
 #define SPR(n)		ppc.spr[n]
 #define DCR(n)		ppc.dcr[n]
@@ -293,11 +290,26 @@ extern void		WriteTimebaseHi(UINT32);
 #define PC			ppc.pc
 #define MSR			ppc.msr
 #define FPSCR		ppc.fpscr
-#define CRFD		CR(_CRFD)
+//#define CRFD		CR(_CRFD)
 #define DEC			SPR(SPR_DEC)
-#define XER			SPR(SPR_XER)
+//#define XER			SPR(SPR_XER)
 #define LR			SPR(SPR_LR)
 #define CTR			SPR(SPR_CTR)
+
+/*******************************************************************************
+ Decoder Shortcuts
+
+ Uhm ...
+*******************************************************************************/
+
+#define ID_R(r_reg)			(DFLOW_INTEGER_BASE + (r_reg))
+#define ID_F(f_reg)			(DFLOW_FP_BASE + (f_reg))
+#define ID_TEMP(temp_reg)	(DFLOW_TEMP_BASE + (temp_reg))
+
+#define ID_CR_LT(n)			(DFLOW_BIT_CR0_LT + (n * 4))
+#define ID_CR_GT(n)			(DFLOW_BIT_CR0_GT + (n * 4))
+#define ID_CR_EQ(n)			(DFLOW_BIT_CR0_EQ + (n * 4))
+#define ID_CR_SO(n)			(DFLOW_BIT_CR0_SO + (n * 4))
 
 /*******************************************************************************
  Macros
@@ -305,43 +317,109 @@ extern void		WriteTimebaseHi(UINT32);
  Generic helpers.
 *******************************************************************************/
 
+extern UINT GET_CR_LT (UINT n);
+extern UINT GET_CR_GT (UINT n);
+extern UINT GET_CR_EQ (UINT n);
+extern UINT GET_CR_SO (UINT n);
+extern void SET_CR_LT (UINT n);
+extern void SET_CR_GT (UINT n);
+extern void SET_CR_EQ (UINT n);
+extern void SET_CR_SO (UINT n);
+extern void CLEAR_CR_LT (UINT n);
+extern void CLEAR_CR_GT (UINT n);
+extern void CLEAR_CR_EQ (UINT n);
+extern void CLEAR_CR_SO (UINT n);
+extern UINT GET_CR (UINT n);
+extern void SET_CR (UINT n, UINT32 v);
+extern void RESET_CR (UINT n);
+extern UINT GET_XER_SO (void);
+extern UINT GET_XER_OV (void);
+extern UINT GET_XER_CA (void);
+extern void SET_XER_SO (void);
+extern void SET_XER_OV (void);
+extern void SET_XER_CA (void);
+extern void CLEAR_XER_SO (void);
+extern void CLEAR_XER_OV (void);
+extern void CLEAR_XER_CA (void);
+extern UINT GET_XER (void);
+extern void SET_XER (UINT32 v);
+extern void RESET_XER (void);
+extern void CMPS (UINT t, INT32 a, INT32 b);
+extern void CMPU (UINT t, UINT32 a, UINT32 b);
+
+/*
+ * Bit definitions
+ */
+
 #define BIT(n)				((UINT32)0x80000000 >> (n))
 #define BITMASK_0(n)		((UINT32)((((UINT64)1 << (n))) - 1))
+
+/*
+ * Carry and Overflow
+ */
 
 #define ADD_C(r,a,b)		((UINT32)(r) < (UINT32)(a))
 #define SUB_C(r,a,b)        (!((UINT32)(a) < (UINT32)(b)))
 
-#define SET_ADD_C(r,a,b)	if (ADD_C(r,a,b)) { XER |= XER_CA; } else { XER &= ~XER_CA; }
-#define SET_SUB_C(r,a,b)	if (SUB_C(r,a,b)) { XER |= XER_CA; } else { XER &= ~XER_CA; }
-
 #define ADD_V(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 #define SUB_V(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 
-#define SET_ADD_V(r,a,b)	if(op & _OVE) { if(ADD_V(r,a,b)) { XER |= XER_SO | XER_OV; } else { XER &= ~XER_OV; } }
-#define SET_SUB_V(r,a,b)	if(op & _OVE) { if(SUB_V(r,a,b)) { XER |= XER_SO | XER_OV; } else { XER &= ~XER_OV; } }
+#define SET_ADD_C(r,a,b)			\
+			if (ADD_C(r,a,b))		\
+			{						\
+				SET_XER_CA();		\
+			}						\
+			else					\
+			{						\
+				CLEAR_XER_CA();		\
+			}
 
-#define _SET_ICR0(r)		{ CR(0) = CMPS(r,0); if (XER & XER_SO) CR(0) |= CR_SO; }
-#define SET_ICR0(r)			if (op & _RC){ _SET_ICR0(r); }
+#define SET_SUB_C(r,a,b)			\
+			if (SUB_C(r,a,b))		\
+			{						\
+				SET_XER_CA();		\
+			}						\
+			else					\
+			{						\
+				CLEAR_XER_CA();		\
+			}
 
-static UINT CMPS(INT32 a, INT32 b)
-{
-	if(a < b)
-		return CR_LT;
-	else if(a > b)
-		return CR_GT;
-	else
-		return CR_EQ;
-}
+#define SET_ADD_V(r,a,b)			\
+			if(op & _OVE)			\
+			{						\
+				if(ADD_V(r,a,b))	\
+				{					\
+					SET_XER_SO();	\
+					SET_XER_OV();	\
+				}					\
+				else				\
+				{					\
+					CLEAR_XER_OV();	\
+				}					\
+			}
 
-static UINT CMPU(UINT32 a, UINT32 b)
-{
-	if(a < b)
-		return CR_LT;
-	else if(a > b)
-		return CR_GT;
-	else
-		return CR_EQ;
-}
+#define SET_SUB_V(r,a,b)			\
+			if(op & _OVE)			\
+			{						\
+				if(SUB_V(r,a,b))	\
+				{					\
+					SET_XER_SO();	\
+					SET_XER_OV();	\
+				}					\
+				else				\
+				{					\
+					CLEAR_XER_OV();	\
+				}					\
+			}
+
+#define _SET_ICR0(r)	\
+			CMPS(0, r, 0);
+
+#define SET_ICR0(r)					\
+			if (op & _RC)			\
+			{						\
+				_SET_ICR0(r);		\
+			}
 
 /*******************************************************************************
  Floating-Point Code
@@ -397,167 +475,54 @@ static UINT CMPU(UINT32 a, UINT32 b)
  * Double (64-bit floating-point) fields.
  */
 
-#define DOUBLE_SIGN		0x8000000000000000LL
-#define DOUBLE_EXP		0x7FF0000000000000LL
-#define DOUBLE_FRAC		0x000FFFFFFFFFFFFFLL
-#define DOUBLE_QUIET	0x0008000000000000LL
+#define DOUBLE_SIGN		((UINT64)0x8000000000000000)
+#define DOUBLE_EXP		((UINT64)0x7FF0000000000000)
+#define DOUBLE_FRAC		((UINT64)0x000FFFFFFFFFFFFF)
+#define DOUBLE_QUIET	((UINT64)0x0008000000000000)
 
 /*
  * FP value checks.
  */
 
-#define INLINE static
-
-INLINE BOOL is_nan_f32(FLOAT32 x)
-{
-	return	((*(UINT32 *)&x & SINGLE_EXP) == SINGLE_EXP) && 
-			((*(UINT32 *)&x & SINGLE_FRAC) != 0);
-}
-
-INLINE BOOL is_qnan_f32(FLOAT32 x)
-{
-	return	is_nan_f32(x) && ((*(UINT32 *)&x & SINGLE_QUIET) != 0);
-}
-
-INLINE BOOL is_snan_f32(FLOAT32 x)
-{
-	return	is_nan_f32(x) && ((*(UINT32 *)&x & SINGLE_QUIET) == 0);
-}
-
-INLINE BOOL is_infinity_f32(FLOAT32 x)
-{
-	return	((*(UINT32 *)&x & SINGLE_EXP) == SINGLE_EXP) &&
-			((*(UINT32 *)&x & SINGLE_FRAC) == 0);
-}
-
-INLINE BOOL is_denormal_f32(FLOAT32 x)
-{
-	return	((*(UINT32 *)&x & SINGLE_EXP) == 0) &&
-			((*(UINT32 *)&x & SINGLE_FRAC) != 0);
-}
-
-INLINE BOOL is_nan_f64(FLOAT64 x)
-{
-	return	((*(UINT64 *)&x & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((*(UINT64 *)&x & DOUBLE_FRAC) != 0);
-}
-
-INLINE BOOL is_qnan_f64(FLOAT64 x)
-{
-	return	is_nan_f64(x) && ((*(UINT64 *)&x & DOUBLE_QUIET) != 0);
-}
-
-INLINE BOOL is_snan_f64(FLOAT64 x)
-{
-	return	is_nan_f64(x) && ((*(UINT64 *)&x & DOUBLE_QUIET) == 0);
-}
-
-INLINE BOOL is_infinity_f64(FLOAT64 x)
-{
-    return	((*(UINT64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((*(UINT64 *)&(x) & DOUBLE_FRAC) == 0);
-}
-
-INLINE BOOL is_normalized_f64(FLOAT64 x)
-{
-    UINT64 exp;
-
-    exp = ((*(UINT64 *) &(x)) & DOUBLE_EXP) >> 52;
-
-    return (exp >= 1) && (exp <= 2046);
-}
-
-INLINE BOOL is_denormalized_f64(FLOAT64 x)
-{
-	return	((*(UINT64 *)&x & DOUBLE_EXP) == 0) &&
-			((*(UINT64 *)&x & DOUBLE_FRAC) != 0);
-}
-
-INLINE BOOL sign_f64(FLOAT64 x)
-{
-    return ((*(UINT64 *)&(x) & DOUBLE_SIGN) != 0);
-}
-
-/*
- * FP conversion routines.
- */
-
-INLINE INT32 round_f64_to_s32(FLOAT64 v)
-{
-	if(v >= 0)
-		return((INT32)(v + 0.5));
-	else
-		return(-(INT32)(-v + 0.5));
-}
-
-INLINE INT32 trunc_f64_to_s32(FLOAT64 v)
-{
-	if(v >= 0)
-		return((INT32)v);
-	else
-		return(-((INT32)(-v)));
-}
-
-INLINE INT32 ceil_f64_to_s32(FLOAT64 v)
-{
-	return((INT32)ceil(v));
-}
-
-INLINE INT32 floor_f64_to_s32(FLOAT64 v)
-{
-	return((INT32)floor(v));
-}
+extern BOOL is_nan_f32(FLOAT32 x);
+extern BOOL is_qnan_f32(FLOAT32 x);
+extern BOOL is_snan_f32(FLOAT32 x);
+extern BOOL is_infinity_f32(FLOAT32 x);
+extern BOOL is_denormal_f32(FLOAT32 x);
+extern BOOL is_nan_f64(FLOAT64 x);
+extern BOOL is_qnan_f64(FLOAT64 x);
+extern BOOL is_snan_f64(FLOAT64 x);
+extern BOOL is_infinity_f64(FLOAT64 x);
+extern BOOL is_normalized_f64(FLOAT64 x);
+extern BOOL is_denormalized_f64(FLOAT64 x);
+extern BOOL sign_f64(FLOAT64 x);
+extern INT32 round_f64_to_s32(FLOAT64 v);
+extern INT32 trunc_f64_to_s32(FLOAT64 v);
+extern INT32 ceil_f64_to_s32(FLOAT64 v);
+extern INT32 floor_f64_to_s32(FLOAT64 v);
 
 /*
  * Flag computations.
  */
 
-#define _SET_FCR1()			{ CR(1) = (FPSCR >> 28); }
-#define SET_FCR1()			if (op & _RC) { _SET_FCR1(); }
+#define _SET_FCR1()													\
+			{														\
+				CLEAR_CR_LT(1); if (FPSCR & BIT(0)) SET_CR_LT(1);	\
+				CLEAR_CR_GT(1); if (FPSCR & BIT(1)) SET_CR_GT(1);	\
+				CLEAR_CR_EQ(1); if (FPSCR & BIT(2)) SET_CR_EQ(1);	\
+				CLEAR_CR_SO(1); if (FPSCR & BIT(3)) SET_CR_SO(1);	\
+			}
+
+#define SET_FCR1()						\
+			if (op & _RC)				\
+			{							\
+				_SET_FCR1();			\
+			}
 
 #define SET_VXSNAN(a, b)	if (is_snan_f64(a) || is_snan_f64(b)){	FPSCR |= FPSCR_FX; }
 #define SET_VXSNAN_1(c)		if (is_snan_f64(c)){					FPSCR |= FPSCR_FX; }
 
-INLINE void set_fprf(FLOAT64 f)
-{
-    UINT32 fprf;
-
-    // see page 3-30, 3-31
-
-    if (is_qnan_f64(f))
-        fprf = 0x11;
-    else if (is_infinity_f64(f))
-    {
-        if (sign_f64(f))    // -INF
-            fprf = 0x09;
-        else                // +INF
-            fprf = 0x05;
-    }
-    else if (is_normalized_f64(f))
-    {
-        if (sign_f64(f))    // -Normalized
-            fprf = 0x08;
-        else                // +Normalized
-            fprf = 0x04;
-    }
-    else if (is_denormalized_f64(f))
-    {
-        if (sign_f64(f))    // -Denormalized
-            fprf = 0x18;
-        else                // +Denormalized
-            fprf = 0x14;
-    }
-    else    // Zero
-    {
-        if (sign_f64(f))    // -Zero
-            fprf = 0x12;
-        else                // +Zero
-            fprf = 0x02;
-    }
-
-    FPSCR &= ~0x0001F000;
-    FPSCR |= (fprf << 12);
-}
+extern void set_fprf(FLOAT64 f);
 
 #endif // PPC_MODEL == PPC_MODEL_6XX || PPC_MODEL == PPC_MODEL_GEKKO
 

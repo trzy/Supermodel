@@ -15,14 +15,12 @@
  Global Variables
 *******************************************************************************/
 
-void *	(* Alloc)(UINT);
+void	* (* Alloc)(UINT);
 void	(* Free)(void *);
 void	(* Print)(CHAR *, ...);
 
 /*******************************************************************************
- Basic Services
-
- That stands memory allocation, output, etc.
+ Interface
 *******************************************************************************/
 
 INT SetupBasicServices (DRPPC_CFG * cfg)
@@ -34,37 +32,4 @@ INT SetupBasicServices (DRPPC_CFG * cfg)
 		return DRPPC_INVALID_CONFIG;
 
 	return DRPPC_OKAY;
-}
-
-/*******************************************************************************
- Code Caches
-
- Native code and intermediate code caches management.
-*******************************************************************************/
-
-INT AllocCache (CODE_CACHE * cache, UINT size, UINT guard)
-{
-	cache->base = (UINT8 *)Alloc(size);
-	cache->end = cache->base + size;
-	cache->ptr = cache->base;
-	cache->warning = cache->end - guard;
-
-	if (cache->base == NULL)
-		return DRPPC_OUT_OF_MEMORY;
-
-	return DRPPC_OKAY;
-}
-
-void FreeCache (CODE_CACHE * cache)
-{
-	if (cache->base)
-	{
-		Free(cache->base);
-		cache->base = NULL;
-	}
-}
-
-void ResetCache (CODE_CACHE * cache)
-{
-	cache->ptr = cache->base;
 }

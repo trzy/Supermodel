@@ -4,30 +4,24 @@
  * Special instruction handlers
  */
 
-#include "source.h"
-#include "internal.h"
+#include "../powerpc.h"
+#include "../internal.h"
 
 /*******************************************************************************
  Helper Macros
 *******************************************************************************/
-
-#define _BBM	((op >> 11) & 3)
-#define _BBN	((op >> 13) & 7)
-#define _BAM	((op >> 16) & 3)
-#define _BAN	((op >> 18) & 7)
-#define _BDM	((op >> 21) & 3)
-#define _BDN	((op >> 23) & 7)
 
 #define CROPD(op)										\
 		{												\
 		UINT32 bm = _BBM, bn = _BBN;					\
 		UINT32 am = _BAM, an = _BAN;					\
 		UINT32 dm = _BDM, dn = _BDN;					\
-		UINT32 i, j;									\
-		i = (CR(an) >> (3 - am)) & 1;					\
-		j = (CR(bn) >> (3 - bm)) & 1;					\
-		CR(dn) &= ~(8 >> dm);							\
-		CR(dn) |= (i op j) << (3 - dm);					\
+		UINT32 i, j, k;									\
+		i = (GET_CR(an) >> (3 - am)) & 1;				\
+		j = (GET_CR(bn) >> (3 - bm)) & 1;				\
+		k = GET_CR(dn) & ~(8 >> dm);					\
+		k |= (i op j) << (3 - dm);						\
+		SET_CR(dn, k);									\
 		}
 
 #define CROPN(op)										\
@@ -35,11 +29,12 @@
 		UINT32 bm = _BBM, bn = _BBN;					\
 		UINT32 am = _BAM, an = _BAN;					\
 		UINT32 dm = _BDM, dn = _BDN;					\
-		UINT32 i, j;									\
-		i = (CR(an) >> (3 - am)) & 1;					\
-		j = (CR(bn) >> (3 - bm)) & 1;					\
-		CR(dn) &= ~(8 >> dm);							\
-		CR(dn) |= (~(i op j) << (3 - dm)) & (8 >> dm);	\
+		UINT32 i, j, k;									\
+		i = (GET_CR(an) >> (3 - am)) & 1;				\
+		j = (GET_CR(bn) >> (3 - bm)) & 1;				\
+		k = GET_CR(dn) & ~(8 >> dm);					\
+		k |= (~(i op j) << (3 - dm)) & (8 >> dm);		\
+		SET_CR(dn, k);									\
 		}
 
 /*******************************************************************************
@@ -96,7 +91,7 @@ INT I_Creqv(UINT32 op)
 
 INT I_Mcrf(UINT32 op)
 {
-	CR(RT>>2) = CR(RA>>2);
+	SET_CR(RT>>2, GET_CR(RA>>2));
 	return 1;
 }
 
@@ -108,31 +103,31 @@ INT I_Mcrxr(UINT32 op)
 
 INT I_Mfcr(UINT32 op)
 {
-	R(RT) =
-		((UINT32)CR(0) << 28) |
-		((UINT32)CR(1) << 24) |
-		((UINT32)CR(2) << 20) |
-		((UINT32)CR(3) << 16) |
-		((UINT32)CR(4) << 12) |
-		((UINT32)CR(5) <<  8) |
-		((UINT32)CR(6) <<  4) |
-		((UINT32)CR(7) <<  0);
+	R(RT) = GET_CR(0) << 28 |
+			GET_CR(1) << 24 |
+			GET_CR(2) << 20 |
+			GET_CR(3) << 16 |
+			GET_CR(4) << 12 |
+			GET_CR(5) << 8 |
+			GET_CR(6) << 4 |
+			GET_CR(7) << 0;
+
 	return 1;
 }
 
 INT I_Mtcrf(UINT32 op)
 {
 	UINT32 f = _FXM;
-	UINT32 d = RT;
+	UINT32 t = RT;
 
-	if(f & 0x80) CR(0) = (R(d) >> 28) & 15;
-	if(f & 0x40) CR(1) = (R(d) >> 24) & 15;
-	if(f & 0x20) CR(2) = (R(d) >> 20) & 15;
-	if(f & 0x10) CR(3) = (R(d) >> 16) & 15;
-	if(f & 0x08) CR(4) = (R(d) >> 12) & 15;
-	if(f & 0x04) CR(5) = (R(d) >>  8) & 15;
-	if(f & 0x02) CR(6) = (R(d) >>  4) & 15;
-	if(f & 0x01) CR(7) = (R(d) >>  0) & 15;
+	if(f & 0x80) SET_CR(0, (R(t) >> 28) & 15);
+	if(f & 0x40) SET_CR(1, (R(t) >> 24) & 15);
+	if(f & 0x20) SET_CR(2, (R(t) >> 20) & 15);
+	if(f & 0x10) SET_CR(3, (R(t) >> 16) & 15);
+	if(f & 0x08) SET_CR(4, (R(t) >> 12) & 15);
+	if(f & 0x04) SET_CR(5, (R(t) >>  8) & 15);
+	if(f & 0x02) SET_CR(6, (R(t) >>  4) & 15);
+	if(f & 0x01) SET_CR(7, (R(t) >>  0) & 15);
 
 	return 1;
 }
@@ -204,7 +199,7 @@ INT I_Mfsr(UINT32 op)
 	UINT32 sr = (op >> 16) & 15;
 	UINT32 t = RT;
 
-	R(t) = ppc.sr[sr];
+	R(t) = SR(sr);
 
 	return 1;
 }
@@ -214,7 +209,7 @@ INT I_Mfsrin(UINT32 op)
 	UINT32 b = RB;
 	UINT32 t = RT;
 
-	R(t) = ppc.sr[R(b) >> 28];
+	R(t) = SR(R(b) >> 28);
 
 	return 1;
 }
@@ -224,7 +219,7 @@ INT I_Mtsr(UINT32 op)
 	UINT32 sr = (op >> 16) & 15;
 	UINT32 t = RT;
 
-	ppc.sr[sr] = R(t);
+	SR(sr) = R(t);
 
 	return 1;
 }
@@ -234,7 +229,7 @@ INT I_Mtsrin(UINT32 op)
 	UINT32 b = RB;
 	UINT32 t = RT;
 
-	ppc.sr[R(b) >> 28] = R(t);
+	SR(R(b) >> 28) = R(t);
 
 	return 1;
 }
@@ -243,16 +238,14 @@ INT I_Mtsrin(UINT32 op)
 
 INT I_Wrtee(UINT32 op)
 {
-	ppc.msr &= ~0x00008000;
-	ppc.msr |= R(RT) & 0x00008000;
+	SetMSR((GetMSR() & ~0x00008000) | (R(RT) & 0x00008000));
 
 	return 1;
 }
 
 INT I_Wrteei(UINT32 op)
 {
-	ppc.msr &= ~0x00008000;
-	ppc.msr |= op & 0x00008000;
+	SetMSR((GetMSR() & ~0x00008000) | (op & 0x00008000));
 
 	return 1;
 }
@@ -380,7 +373,7 @@ INT I_Mcrfs(UINT32 op)
 {
     UINT32 crfS, f;
 
-    crfS = _CRFA;
+    crfS = CRFA;
 
     f = FPSCR >> ((7 - crfS) * 4);  // get crfS field from FPSCR
     f &= 0xF;
@@ -406,7 +399,7 @@ INT I_Mcrfs(UINT32 op)
         break;
     }
 
-    CR(_CRFD) = f;
+    SET_CR(CRFT, f);
 
 	return 1;
 }
@@ -476,7 +469,7 @@ INT I_Mtfsfx(UINT32 op)
 
 INT I_Mtfsfix(UINT32 op)
 {
-    UINT32 crfD = _CRFD;
+    UINT32 crfD = CRFT;
     UINT32 imm = (op >> 12) & 0xF;
 
     /*

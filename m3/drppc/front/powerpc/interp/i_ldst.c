@@ -4,8 +4,8 @@
  * Load/Store instruction handlers.
  */
 
-#include "source.h"
-#include "internal.h"
+#include "../powerpc.h"
+#include "../internal.h"
 
 /*******************************************************************************
  Load/Store Byte, HalfWord and Word
@@ -219,7 +219,7 @@ INT I_Stb(UINT32 op)
 
 	if (a) ea += R(a);
 
-	Write8(ea, R(t));
+	Write8(ea, (UINT8)R(t));
 
 	return 1;
 }
@@ -232,7 +232,7 @@ INT I_Sth(UINT32 op)
 
 	if (a) ea += R(a);
 
-	Write16(ea, R(t));
+	Write16(ea, (UINT16)R(t));
 
 	return 1;
 }
@@ -257,7 +257,7 @@ INT I_Stbu(UINT32 op)
 	UINT32 t = RT;
 
 	ea += R(a);
-	Write8(ea, R(t));
+	Write8(ea, (UINT8)R(t));
 	R(a) = ea;
 
 	return 1;
@@ -270,7 +270,7 @@ INT I_Sthu(UINT32 op)
 	UINT32 t = RT;
 
 	ea += R(a);
-	Write16(ea, R(t));
+	Write16(ea, (UINT16)R(t));
 	R(a) = ea;
 
 	return 1;
@@ -297,7 +297,7 @@ INT I_Stbx(UINT32 op)
 
 	if (a) ea += R(a);
 
-	Write8(ea, R(t));
+	Write8(ea, (UINT8)R(t));
 
 	return 1;
 }
@@ -310,7 +310,7 @@ INT I_Sthx(UINT32 op)
 
 	if (a) ea += R(a);
 
-	Write16(ea, R(t));
+	Write16(ea, (UINT16)R(t));
 
 	return 1;
 }
@@ -335,7 +335,7 @@ INT I_Stbux(UINT32 op)
 	UINT32 t = RT;
 
 	ea += R(a);
-	Write8(ea, R(t));
+	Write8(ea, (UINT8)R(t));
 	R(a) = ea;
 
 	return 1;
@@ -348,7 +348,7 @@ INT I_Sthux(UINT32 op)
 	UINT32 t = RT;
 
 	ea += R(a);
-	Write16(ea, R(t));
+	Write16(ea, (UINT16)R(t));
 	R(a) = ea;
 
 	return 1;
@@ -373,34 +373,28 @@ INT I_Stwux(UINT32 op)
 
 INT I_Lhbrx(UINT32 op)
 {
-	UINT32 ea = R(RB);
-	UINT32 a = RA;
-	UINT32 d = RT;
-	UINT32 t;
+	UINT	ea = R(RB);
+	UINT	a = RA;
+	UINT	t = RT;
 
-	if (a) ea += R(a);
+	if (a)
+		ea += R(a);
 
-	t = Read16(ea);
-	R(d) =	((t >> 8) & 0x00FF) |
-			((t << 8) & 0xFF00);
+	R(t) = Byteswap16(Read16(ea));
 
 	return 1;
 }
 
 INT I_Lwbrx(UINT32 op)
 {
-	UINT32 ea = R(RB);
-	UINT32 a = RA;
-	UINT32 d = RT;
-	UINT32 t;
+	UINT	ea = R(RB);
+	UINT	a = RA;
+	UINT	t = RT;
 
-	if (a) ea += R(a);
+	if (a)
+		ea += R(a);
 
-	t = Read32(ea);
-	R(d) =	((t >> 24) & 0x000000FF) |
-			((t >>  8) & 0x0000FF00) |
-			((t <<  8) & 0x00FF0000) |
-			((t << 24) & 0xFF000000);
+	R(t) = Byteswap32(Read32(ea));
 
 	return 1;
 }
@@ -409,12 +403,12 @@ INT I_Sthbrx(UINT32 op)
 {
 	UINT32 ea = R(RB);
 	UINT32 a = RA;
-	UINT32 d = RT;
+	UINT32 t = RT;
 
-	if (a) ea += R(a);
+	if (a)
+		ea += R(a);
 
-	Write16(ea, ((R(d) >> 8) & 0x00FF) |
-				 ((R(d) << 8) & 0xFF00));
+	Write16(ea, Byteswap16((UINT16)R(t)));
 
 	return 1;
 }
@@ -423,14 +417,12 @@ INT I_Stwbrx(UINT32 op)
 {
 	UINT32 ea = R(RB);
 	UINT32 a = RA;
-	UINT32 d = RT;
+	UINT32 t = RT;
 
-	if (a) ea += R(a);
+	if (a)
+		ea += R(a);
 
-	Write32(ea, ((R(d) >> 24) & 0x000000FF) |
-				 ((R(d) >>  8) & 0x0000FF00) |
-				 ((R(d) <<  8) & 0x00FF0000) |
-				 ((R(d) << 24) & 0xFF000000));
+	Write32(ea, Byteswap32(R(t)));
 
 	return 1;
 }
@@ -459,7 +451,7 @@ INT I_Lmw(UINT32 op)
 		t++;
 	}
 
-	return 2 + (32 - RT);
+	return 1; // 2 + (32 - RT);
 }
 
 INT I_Stmw(UINT32 op)
@@ -477,7 +469,7 @@ INT I_Stmw(UINT32 op)
 		t++;
 	}
 
-	return 1 + (32 - RT);
+	return 1; // 1 + (32 - RT);
 }
 
 /*******************************************************************************
@@ -527,7 +519,7 @@ INT I_Lwarx(UINT32 op)
 	R(t) = Read32(ea);
 	ppc.reserved_bit = ea;
 
-	return 10;
+	return 1; // 10;
 }
 
 INT I_Stwcx_(UINT32 op)
@@ -538,17 +530,15 @@ INT I_Stwcx_(UINT32 op)
 
 	if (a) ea += R(a);
 
-	if (ea != ppc.reserved_bit)
+	if (ea == ppc.reserved_bit)
 	{
-		// Not reserved anymore
-		CR(0) = (XER & XER_SO) ? 1 : 0; // SO
-	}
-	else
-	{
-		// Reserved
+		// Still reserved
 		Write32(ea, R(t));
-		CR(0) = 0x2 | (XER & XER_SO) ? 1 : 0; // EQ | SO
+		SET_CR_EQ(0);
 	}
+
+	if (GET_XER_SO())
+		SET_CR_SO(0);
 
 	ppc.reserved_bit = 0xFFFFFFFF;
 

@@ -20,9 +20,12 @@
 
 #ifdef DRPPC_DEBUG
 #define ASSERT(x) \
-		if (!(x)){ printf("%s, %i: assert failed.\n", __FILE__, __LINE__); exit(1); }
+		if (!(x)){ Print("%s, %i: assert failed.\n", __FILE__, __LINE__); exit(1); }
+#define ASSERTEX(x,y) \
+		if (!(x)){ Print("%s, %i: assert failed.\n", __FILE__, __LINE__); exit(1); y }
 #else
 #define ASSERT(x)
+#define ASSERTEX(x,y)
 #endif
 
 /*
@@ -33,47 +36,94 @@
 		{											\
 			INT ret;								\
 			if (DRPPC_OKAY != (ret = func_call))	\
+			{										\
+				printf("try failed at %s, line %u\n", __FILE__, __LINE__);	\
 				return ret;							\
+			}										\
 		}
 
 /*
- * Auxiliary macros for memory access.
+ * Auxiliary routines for memory access. These aren't converted to macros to
+ * retain some kind of type checking. Also, the older versions of the memory
+ * access functions weren't working correnctly for unaligned addresses.
  */
 
-#ifdef _MSC_VER	// Stefano: VC keeps complaining about illegal conversion to UINT16
-#pragma warning (disable : 4244)
-#endif
-
-static UINT16 BSWAP16 (UINT16 val)
+static UINT16 Byteswap16 (UINT16 val)
 {
 	return ((val >> 8) & 0x00FF) | ((val << 8) & 0xFF00);
 }
 
-static UINT32 BSWAP32 (UINT32 val)
+static UINT32 Byteswap32 (UINT32 val)
 {
 	return (((val >> 24) & 0x000000FF) | ((val >>  8) & 0x0000FF00) |
 			((val <<  8) & 0x00FF0000) | ((val << 24) & 0xFF000000));
 }
 
-#ifdef _MSC_VER
-//#pragma pop (warning : C4244)
-#endif
+static UINT8 _Read8 (void * ptr, UINT32 offs)
+{
+	UINT8 * buf = (UINT8 *)ptr;
 
-#define READ_8(ptr, offs)				(((UINT8 *)(ptr))[offs])
-#define READ_16(ptr, offs)				(((UINT16 *)(ptr))[(offs)/2])
-#define READ_32(ptr, offs)				(((UINT32 *)(ptr))[(offs)/4])
+	return buf[offs];
+}
 
-#define WRITE_8(ptr, offs, data)		(((UINT8 *)(ptr))[offs] = (UINT8)(data))
-#define WRITE_16(ptr, offs, data)		(((UINT16 *)(ptr))[(offs)/2] = (UINT16)(data))
-#define WRITE_32(ptr, offs, data)		(((UINT32 *)(ptr))[(offs)/4] = (UINT32)(data))
+static UINT16 _Read16 (void * ptr, UINT32 offs)
+{
+	UINT8 * buf = (UINT8 *)ptr;
 
-#define READ_8_SWAP(ptr, offs)			READ_8(ptr, offs)
-#define READ_16_SWAP(ptr, offs)			BSWAP16(READ_16(ptr, offs))
-#define READ_32_SWAP(ptr, offs)			BSWAP32(READ_32(ptr, offs))
+	return *(UINT16 *)&buf[offs];
+}
 
-#define WRITE_8_SWAP(ptr, offs, data)	WRITE_8(ptr, offs, data)
-#define WRITE_16_SWAP(ptr, offs, data)	WRITE_16(ptr, offs, BSWAP16(data))
-#define WRITE_32_SWAP(ptr, offs, data)	WRITE_32(ptr, offs, BSWAP32(data))
+static UINT32 _Read32 (void * ptr, UINT32 offs)
+{
+	UINT8 * buf = (UINT8 *)ptr;
+
+	return *(UINT32 *)&buf[offs];
+}
+
+static void _Write8 (void * ptr, UINT32 offs, UINT8 data)
+{
+	((UINT8 *)ptr)[offs] = data;
+}
+
+static void _Write16 (void * ptr, UINT32 offs, UINT16 data)
+{
+	*(UINT16 *)&(((UINT8 *)ptr)[offs]) = data;
+}
+
+static void _Write32 (void * ptr, UINT32 offs, UINT32 data)
+{
+	*(UINT32 *)&(((UINT8 *)ptr)[offs]) = data;
+}
+
+static UINT8 _Read8Swap (void * ptr, UINT32 offs)
+{
+	return _Read8(ptr, offs);
+}
+
+static UINT16 _Read16Swap (void * ptr, UINT32 offs)
+{
+	return Byteswap16(_Read16(ptr, offs));
+}
+
+static UINT32 _Read32Swap (void * ptr, UINT32 offs)
+{
+	return Byteswap32(_Read32(ptr, offs));
+}
+
+static void _Write8Swap (void * ptr, UINT32 offs, UINT8 data)
+{
+	_Write8(ptr, offs, data);
+}
+
+static void _Write16Swap (void * ptr, UINT32 offs, UINT16 data)
+{
+	_Write16(ptr, offs, Byteswap16(data));
+}
+
+static void _Write32Swap (void * ptr, UINT32 offs, UINT32 data)
+{
+	_Write32(ptr, offs, Byteswap32(data));
+}
 
 /*
  * Memory Access Macros
@@ -82,7 +132,7 @@ static UINT32 BSWAP32 (UINT32 val)
  * big endian (BE) formats. They take the form READ/WRITE_SIZE_FORMAT, and two
  * or three, in case of write access, arguments:
  *
- *	- ptr is a pointer to the buffer to access, and
+ *	- ptr is a pointer to the buffer to access,
  *
  *	- offs is the byte-granular offset of the data within the buffer,
  *
@@ -91,58 +141,57 @@ static UINT32 BSWAP32 (UINT32 val)
  * TARGET_ENDIANESS is usually read from back/$(TARGET_CPU)/target.h.
  */
 
-#if TARGET_ENDIANESS == BIG_ENDIAN
+#if 0	//#if TARGET_ENDIANESS == BIG_ENDIAN
 
-#define READ_8_BE(ptr, offs)			READ_8(ptr, offs)
-#define READ_16_BE(ptr, offs)			READ_16(ptr, offs)
-#define READ_32_BE(ptr, offs)			READ_32(ptr, offs)
+#define READ_8_BE(ptr, offs)			_Read8(ptr, offs)
+#define READ_16_BE(ptr, offs)			_Read16(ptr, offs)
+#define READ_32_BE(ptr, offs)			_Read32(ptr, offs)
 
-#define WRITE_8_BE(ptr, offs, data)		WRITE_8(ptr, offs, data)
-#define WRITE_16_BE(ptr, offs, data)	WRITE_16(ptr, offs, data)
-#define WRITE_32_BE(ptr, offs, data)	WRITE_32(ptr, offs, data)
+#define WRITE_8_BE(ptr, offs, data)		_Write8(ptr, offs, data)
+#define WRITE_16_BE(ptr, offs, data)	_Write16(ptr, offs, data)
+#define WRITE_32_BE(ptr, offs, data)	_Write32(ptr, offs, data)
 
-#define READ_8_LE(ptr, offs)			READ_8_SWAP(ptr, offs)
-#define READ_16_LE(ptr, offs)			READ_16_SWAP(ptr, offs)
-#define READ_32_LE(ptr, offs)			READ_32_SWAP(ptr, offs)
+#define READ_8_LE(ptr, offs)			_Read8Swap(ptr, offs)
+#define READ_16_LE(ptr, offs)			_Read16Swap(ptr, offs)
+#define READ_32_LE(ptr, offs)			_Read32Swap(ptr, offs)
 
-#define WRITE_8_LE(ptr, offs, data)		WRITE_8_SWAP(ptr, offs, data)
-#define WRITE_16_LE(ptr, offs, data)	WRITE_16_SWAP(ptr, offs, data)
-#define WRITE_32_LE(ptr, offs, data)	WRITE_32_SWAP(ptr, offs, data)
-
-#elif TARGET_ENDIANESS == LITTLE_ENDIAN
-
-#define READ_8_LE(ptr, offs)			READ_8(ptr, offs)
-#define READ_16_LE(ptr, offs)			READ_16(ptr, offs)
-#define READ_32_LE(ptr, offs)			READ_32(ptr, offs)
-
-#define WRITE_8_LE(ptr, offs, data)		WRITE_8(ptr, offs, data)
-#define WRITE_16_LE(ptr, offs, data)	WRITE_16(ptr, offs, data)
-#define WRITE_32_LE(ptr, offs, data)	WRITE_32(ptr, offs, data)
-
-#define READ_8_BE(ptr, offs)			READ_8_SWAP(ptr, offs)
-#define READ_16_BE(ptr, offs)			READ_16_SWAP(ptr, offs)
-#define READ_32_BE(ptr, offs)			READ_32_SWAP(ptr, offs)
-
-#define WRITE_8_BE(ptr, offs, data)		WRITE_8_SWAP(ptr, offs, data)
-#define WRITE_16_BE(ptr, offs, data)	WRITE_16_SWAP(ptr, offs, data)
-#define WRITE_32_BE(ptr, offs, data)	WRITE_32_SWAP(ptr, offs, data)
+#define WRITE_8_LE(ptr, offs, data)		_Write8Swap(ptr, offs, data)
+#define WRITE_16_LE(ptr, offs, data)	_Write16Swap(ptr, offs, data)
+#define WRITE_32_LE(ptr, offs, data)	_Write32Swap(ptr, offs, data)
 
 #else
-#define TARGET_ENDIANESS is either undefined or holds an invalid value!
+
+#define READ_8_LE(ptr, offs)			_Read8(ptr, offs)
+#define READ_16_LE(ptr, offs)			_Read16(ptr, offs)
+#define READ_32_LE(ptr, offs)			_Read32(ptr, offs)
+
+#define WRITE_8_LE(ptr, offs, data)		_Write8(ptr, offs, data)
+#define WRITE_16_LE(ptr, offs, data)	_Write16(ptr, offs, data)
+#define WRITE_32_LE(ptr, offs, data)	_Write32(ptr, offs, data)
+
+#define READ_8_BE(ptr, offs)			_Read8Swap(ptr, offs)
+#define READ_16_BE(ptr, offs)			_Read16Swap(ptr, offs)
+#define READ_32_BE(ptr, offs)			_Read32Swap(ptr, offs)
+
+#define WRITE_8_BE(ptr, offs, data)		_Write8Swap(ptr, offs, data)
+#define WRITE_16_BE(ptr, offs, data)	_Write16Swap(ptr, offs, data)
+#define WRITE_32_BE(ptr, offs, data)	_Write32Swap(ptr, offs, data)
+
 #endif
 
 /*******************************************************************************
- Custom Types
+ Custom Data Types
 *******************************************************************************/
+
+/*
+ * Register descriptor (arrays of these are called context descriptors.)
+ */
 
 typedef struct
 {
-	UINT8	* base;
-	UINT8	* ptr;
-	UINT8	* warning;
-	UINT8	* end;
+	void	* ptr;
 
-} CODE_CACHE;
+} REG_DESC;
 
 /*******************************************************************************
  Generic Stuff
@@ -153,8 +202,5 @@ extern void		(* Free)(void *);
 extern void		(* Print)(CHAR *, ...);
 
 extern INT		SetupBasicServices(DRPPC_CFG *);
-extern INT		AllocCache(CODE_CACHE *, UINT, UINT);
-extern void		FreeCache(CODE_CACHE *);
-extern void		ResetCache(CODE_CACHE *);
 
 #endif // INCLUDED_TOPLEVEL_H

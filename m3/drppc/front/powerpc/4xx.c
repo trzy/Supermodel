@@ -6,7 +6,7 @@
 
 #include "drppc.h"
 #include "toplevel.h"
-#include "source.h"
+#include "powerpc.h"
 #include "internal.h"
 
 #include "mmap.h"

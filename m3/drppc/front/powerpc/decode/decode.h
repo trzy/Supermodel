@@ -1,5 +1,5 @@
 /*
- * front/powerpc/decode.h
+ * front/powerpc/decode/decode.h
  *
  * PowerPC decoder interface.
  */

@@ -4,16 +4,26 @@
  * Branch instructions handlers.
  */
 
-#include "source.h"
-#include "internal.h"
+#include "../powerpc.h"
+#include "../internal.h"
 
 /*******************************************************************************
- Utils
-
- Useful functions to perform condition checks.
+ Local Routines
 *******************************************************************************/
 
-#define CHECK_BI(bi)		((CR(bi >> 2) & (8 >> (bi & 3))) != 0)
+static BOOL CHECK_BI(UINT bi)
+{
+	UINT t = bi >> 2;
+	UINT b = bi & 3;
+
+	switch (b)
+	{
+	case 0:  return GET_CR_LT(t) != 0;
+	case 1:  return GET_CR_GT(t) != 0;
+	case 2:  return GET_CR_EQ(t) != 0;
+	default: return GET_CR_SO(t) != 0;
+	}
+}
 
 static UINT32 ppc_bo_0000(UINT32 bi){ return(--CTR != 0 && CHECK_BI(bi) == 0); }
 static UINT32 ppc_bo_0001(UINT32 bi){ return(--CTR == 0 && CHECK_BI(bi) == 0); }

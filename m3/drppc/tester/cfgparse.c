@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "drppc.h"
+#include "cfgparse.h"
 
 /******************************************************************/
 /* Configuration                                                  */

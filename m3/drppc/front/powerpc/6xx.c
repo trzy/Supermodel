@@ -13,7 +13,7 @@
 
 #include "drppc.h"
 #include "toplevel.h"
-#include "source.h"
+#include "powerpc.h"
 #include "internal.h"
 
 #include "mmap.h"
@@ -85,6 +85,12 @@ void SetSPR (UINT num, UINT32 data)
 {
 	switch (num)
 	{
+	case SPR_XER:
+		ppc.xer.so = (data >> 31) & 1;
+		ppc.xer.ov = (data >> 30) & 1;
+		ppc.xer.ca = (data >> 29) & 1;
+		ppc.xer.count = data & 0x7F;
+		break;
 	case SPR_DEC:
 		if ((data & 0x80000000) && !(SPR(SPR_DEC) & 0x80000000))
 			Print("%08X: DEC intentionally triggers IRQ\n", PC);
@@ -117,6 +123,18 @@ UINT32 GetSPR (UINT num)
 {
 	switch (num)
 	{
+	case SPR_XER:
+		{
+			UINT32 xer = 0;
+			if (ppc.xer.so)
+				xer |= BIT(0);
+			if (ppc.xer.ov)
+				xer |= BIT(1);
+			if (ppc.xer.ca)
+				xer |= BIT(2);
+			xer |= ppc.xer.count & 0x7F;
+			return xer;
+		}
 	case SPR_TBL_R:
 		return ReadTimebaseLo();
 	case SPR_TBU_R:
@@ -187,6 +205,7 @@ void Write64 (UINT32 addr, UINT64 data)
 
 void CheckIRQs (void)
 {
+/*
 	if (MSR & 0x8000)					// Interrupts enabled
 	{
 		if (ppc.irq_state)				// External IRQ
@@ -203,7 +222,7 @@ void CheckIRQs (void)
 
 			ppc.irq_state = ppc.IRQCallback();
 
-			UpdatePC();
+			UpdateFetchPtr(PC);
 		}
 		else if (ppc.dec_expired)		// Decrementer exception
 		{
@@ -219,9 +238,10 @@ void CheckIRQs (void)
 
 			ppc.dec_expired = FALSE;
 
-			UpdatePC();
+			UpdateFetchPtr(PC);
 		}
 	}
+*/
 }
 
 #endif // PPC_MODEL_6XX or PPC_MODEL_GEKKO

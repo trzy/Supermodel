@@ -4,8 +4,8 @@
  * *Very* primitive Paired Single emulation.
  */
 
-#include "source.h"
-#include "internal.h"
+#include "../powerpc.h"
+#include "../internal.h"
 
 #if PPC_MODEL == PPC_MODEL_GEKKO
 
@@ -13,7 +13,7 @@
  Helper Functions
 *******************************************************************************/
 
-INLINE FLOAT32 ppc_load_dequantize(UINT lt, INT ls, UINT32 ea)
+FLOAT32 ppc_load_dequantize(UINT lt, INT ls, UINT32 ea)
 {
 	if (lt == GQR_TYPE_F32)
 	{
@@ -41,7 +41,7 @@ INLINE FLOAT32 ppc_load_dequantize(UINT lt, INT ls, UINT32 ea)
 	return 0.0f;
 }
 
-INLINE INT I_store_quantize(FLOAT32 ps, UINT stt, INT sts, UINT32 ea)
+INT I_store_quantize(FLOAT32 ps, UINT stt, INT sts, UINT32 ea)
 {
 	if (stt == GQR_TYPE_F32)
 		ppc_write_32(ea, *((UINT32 *)&ps));
@@ -189,7 +189,7 @@ INT I_Ps_cmpo0(UINT32 op)
 	else
 		c = 2;
 
-	CR(t) = c;
+	DECOMPOSE_CR(t, c);
 
 	FPSCR &= ~0x0001F000;
 	FPSCR |= (c << 12);
