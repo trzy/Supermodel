@@ -22,11 +22,8 @@
 
 #include "model3.h"
 
-#define XRES    (496*1.5)
-#define YRES    (384*1.5)
-
-extern BOOL DisassemblePowerPC(UINT32, UINT32, CHAR *, CHAR *, BOOL);
-
+#define XRES    (496)
+#define YRES    (384)
 
 static CHAR app_title[]     = "Model 3 Emulator";
 static CHAR class_name[]	= "MODEL3";
