@@ -1863,9 +1863,10 @@ BOOL m3_load_rom(CHAR * id)
     m3_unload_rom();
 
 	memset( &romset, 0, sizeof(ROMSET) );
-	if( !load_romlist(id, "games.ini", &romset) )
+	if( !load_romlist(id, m3_config.rom_list, &romset) )
 		return FALSE;
 
+	strcpy( m3_config.game_name, &romset.title );
 	message(0, "Loading \"%s\"\n", romset.title);
 
 	/* set rom lists for rom loading */
@@ -1926,9 +1927,9 @@ BOOL m3_load_rom(CHAR * id)
 	/* load ROM files into memory */
 
 	/* first try to find a zip file */
-	if( !set_directory_zip("roms/%s.zip", romset.id) ) {
+	if( !set_directory_zip("%s/%s.zip", m3_config.rom_path, romset.id) ) {
 		/* if that fails, use a normal directory */
-		set_directory("roms/%s", romset.id);
+		set_directory("%s/%s", m3_config.rom_path, romset.id);
 	}
 	
     if( list_crom[0].size && load_romfile(&crom[8*1024*1024 - (list_crom[0].size * 4)], list_crom, ITLV_4) )
@@ -1991,6 +1992,15 @@ BOOL m3_load_rom(CHAR * id)
 
 	if((list_crom[0].size * 4) < 8*1024*1024)
         memcpy(crom, crom0, 8*1024*1024 - list_crom[0].size*4);
+
+	if((list_crom0[0].size * 4) <= 8*1024*1024)
+		memcpy(&crom0[0x800000], crom0, 0x800000);
+	if((list_crom1[0].size * 4) <= 8*1024*1024)
+		memcpy(&crom1[0x800000], crom1, 0x800000);
+	if((list_crom2[0].size * 4) <= 8*1024*1024)
+		memcpy(&crom2[0x800000], crom2, 0x800000);
+	if((list_crom3[0].size * 4) <= 8*1024*1024)
+		memcpy(&crom3[0x800000], crom3, 0x800000);
 
 	/*
 	 * Perhaps mirroring must occur between the CROMx

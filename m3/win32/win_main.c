@@ -30,8 +30,10 @@
 #define XRES    (496)
 #define YRES    (384)
 
-static CHAR app_title[]     = "Model 3 Emulator";
+static CHAR app_title[]     = "Supermodel";
 static CHAR class_name[]	= "MODEL3";
+
+static CHAR CONFIG_FILE[]	= "config.ini";
 
 HWND main_window;
 
@@ -107,6 +109,130 @@ static void win_destroy(void)
 }
 
 
+/* Helper function for load_config
+   Checks if the string is either "0", "no" or "false" */
+static BOOL is_param_false(char *param)
+{
+	if( stricmp(param, "0") == 0 ||
+		stricmp(param, "no") == 0 ||
+		stricmp(param, "false") == 0 )
+	{
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+/* Helper function for load_config
+   Checks if the string is either "1", "yes" or "true" */
+static BOOL is_param_true(char *param)
+{
+	if( stricmp(param, "1") == 0 ||
+		stricmp(param, "yes") == 0 ||
+		stricmp(param, "true") == 0 )
+	{
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+/* Loads config to m3_config. If the file is not found, use a hard-coded
+   default config.
+   */
+
+static void load_config(void)
+{
+	char *arg, *param;
+
+	/* Set default config */
+	m3_config.width = 496;
+	m3_config.height = 384;
+	m3_config.fullscreen = FALSE;
+	m3_config.stretch = FALSE;
+	m3_config.triple_buffer = FALSE;
+	strcpy(m3_config.rom_path, "roms");
+	strcpy(m3_config.rom_list, "games.ini");
+
+	if( cfgparser_set_file(CONFIG_FILE) != 0 ) {
+		printf("Config file %s was not found ! Using default config instead.\n", CONFIG_FILE);
+		return;
+	}
+
+	while( cfgparser_step() == 0 )
+	{
+		arg = cfgparser_get_lhs();
+		if( arg == NULL )
+			break;
+
+		if( stricmp(arg, "width") == 0 ) {
+			cfgparser_get_rhs_number( &m3_config.width, 0 );
+		}
+		else if( stricmp(arg, "height") == 0 ) {
+			cfgparser_get_rhs_number( &m3_config.height, 0 );
+		}
+		else if( stricmp(arg, "fullscreen") == 0 ) {
+			param = cfgparser_get_rhs();
+
+			if( is_param_false(param) ) {
+				m3_config.fullscreen = FALSE;
+			}
+			else if( is_param_true(param) ) {
+				m3_config.fullscreen = TRUE;
+			}
+			else {
+				error("%s: Unknown parameter %s for value 'fullscreen'\n", CONFIG_FILE, param);
+			}
+		}
+		else if( stricmp(arg, "triple_buffer") == 0 ) {
+			param = cfgparser_get_rhs();
+
+			if( is_param_false(param) ) {
+				m3_config.triple_buffer = FALSE;
+			}
+			else if( is_param_true(param) ) {
+				m3_config.triple_buffer = TRUE;
+			}
+			else {
+				error("%s: Unknown parameter %s for value 'triple_buffer'\n", CONFIG_FILE, param);
+			}
+		}
+		else if( stricmp(arg, "stretch") == 0 ) {
+			param = cfgparser_get_rhs();
+
+			if( is_param_false(param) ) {
+				m3_config.stretch = FALSE;
+			}
+			else if( is_param_true(param) ) {
+				m3_config.stretch = TRUE;
+			}
+			else {
+				error("%s: Unknown parameter %s for value 'stretch'\n", CONFIG_FILE, param);
+			}
+		}
+		else if( stricmp(arg, "rom_path") == 0 ) {
+			param = cfgparser_get_rhs();
+
+			strcpy( m3_config.rom_path, param );
+		}
+		else if( stricmp(arg, "rom_list") == 0 ) {
+			param = cfgparser_get_rhs();
+
+			strcpy( m3_config.rom_list, param );
+		}
+		else {
+			printf("%s: Unknown argument %s at line %d\n", CONFIG_FILE, arg, cfgparser_get_line_number() );
+		}
+	}
+	if( !cfgparser_eof() ) {
+		error("%s: Parse error at line %d.", CONFIG_FILE, cfgparser_get_line_number() );
+		return FALSE;
+	}
+
+	cfgparser_unset_file();
+}
+
+
 int main(int argc, char *argv[])
 {
     CHAR    mnem[16], oprs[48], prof[1024];
@@ -125,6 +251,7 @@ int main(int argc, char *argv[])
 
 	// Load config
 
+	load_config();
     m3_config.layer_enable = 0xF;
 
 	// Parse command-line
@@ -202,7 +329,7 @@ int main(int argc, char *argv[])
 		{
 			char title[256];
 
-			sprintf(title, "%s - FPS: %f", app_title, 1.0f / ((float)(time_end - time_start) / freq));
+			sprintf(title, "%s: %s - FPS: %f", app_title, m3_config.game_name, 1.0f / ((float)(time_end - time_start) / freq));
 			SetWindowText(main_window, title);
 		}
 
@@ -229,7 +356,14 @@ void osd_warning()
 
 void osd_error(CHAR * string)
 {
+	int i;
 	printf("ERROR: %s\n",string);
+	for (i = 0; i < 32; i += 4)
+        printf("R%d=%08X\tR%d=%08X\tR%d=%08X\tR%d=%08X\n",
+        i + 0, ppc_get_reg(PPC_REG_R0 + i + 0),
+        i + 1, ppc_get_reg(PPC_REG_R0 + i + 1),
+        i + 2, ppc_get_reg(PPC_REG_R0 + i + 2),
+        i + 3, ppc_get_reg(PPC_REG_R0 + i + 3));
 
 	exit(0);
 
