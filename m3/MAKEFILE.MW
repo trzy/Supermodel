@@ -21,7 +21,7 @@ LD = gcc
 AS = nasm
 AR = ar
 
-CFLAGS = -I./ -I./win32/ -std=gnu99 -g -O2 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -Wall -Wno-unused -Wno-format
+CFLAGS = -I./ -I./win32/ -std=gnu99 -s -O3 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -Wall -Wno-unused -Wno-format
 AFLAGS = -f coff
 
 LIBS = -lmingw32 -ldxguid -ldinput8 -luser32 -lgdi32 -ladvapi32 # -lz
@@ -47,12 +47,13 @@ OBJ = $(OBJ_DIR)/win_input.o \
 	$(OBJ_DIR)/dsb1.o \
 	$(OBJ_DIR)/eeprom.o \
 	$(OBJ_DIR)/r3d.o \
+	$(OBJ_DIR)/r3dgl.o \
 	$(OBJ_DIR)/rtc.o \
 	$(OBJ_DIR)/scsi.o \
 	$(OBJ_DIR)/tilegen.o \
 	$(OBJ_DIR)/model3.o \
 	$(OBJ_DIR)/ppc.o \
-	$(OBJ_DIR)/ppcdis.o
+	$(OBJ_DIR)/disasm.o
 
 ifeq ($(REND),d3d)
 OBJ_REND = $(OBJ_DIR)/dx_render.o
@@ -68,9 +69,9 @@ all:	$(OBJ) $(OBJ_REND)
 	$(CC) $(CFLAGS) $(FLAGS_REND) $(OBJ) $(OBJ_REND) -o $(EXE) $(LIBS) $(LIBS_REND)
 
 clean:
-	del obj\*.*
+	del obj\*.o
 
-$(OBJ_DIR)/%.o: %.c %.h
+$(OBJ_DIR)/%.o: %.c %.h rom_list.h
 	$(CC) $< $(CFLAGS) -c -o $@
 
 $(OBJ_DIR)/%.o: %.c

@@ -255,7 +255,7 @@ void dma_write_32(UINT32 a, UINT32 d)
          */
 
         if (d == 0x20000000)
-            *(UINT32 *) &dma_regs[0x14] = 0x16C311DB;
+            *(UINT32 *) &dma_regs[0x14] = 0x16C311DB; // PCI Vendor and Device ID
         else if (d == 0x80000000)
         {
             static UINT32   result = 0x02000000;

@@ -46,8 +46,11 @@
  */
 
 #include "model3.h"
-#include <gl/gl.h>
-#include <gl/glu.h>
+
+#ifndef RENDERER_OGL
+
+//#include <gl/gl.h>
+//#include <gl/glu.h>
 
 static int OutBMP(int f, unsigned txres, unsigned tyres, unsigned char *texture)
 {
@@ -1410,3 +1413,5 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     polygon_ram = polygon_ram_ptr;
     vrom = vrom_ptr;
 }
+
+#endif

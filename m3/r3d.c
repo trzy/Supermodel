@@ -93,7 +93,7 @@ void r3d_shutdown(void)
 void r3d_reset(void)
 {
     memset(culling_ram_8e, 0, 1*1024*1024);
-    memset(culling_ram_8c, 0, 1*1024*1024);
+    memset(culling_ram_8c, 0, 2*1024*1024);
     memset(polygon_ram, 0, 2*1024*1024);
 	tap_reset();
 }
@@ -110,7 +110,7 @@ void r3d_reset(void)
 void r3d_save_state(FILE *fp)
 {
     fwrite(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
-    fwrite(culling_ram_8c, sizeof(UINT8), 1*1024*1024, fp);
+    fwrite(culling_ram_8c, sizeof(UINT8), 2*1024*1024, fp);
     fwrite(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
 }
 
@@ -126,7 +126,7 @@ void r3d_save_state(FILE *fp)
 void r3d_load_state(FILE *fp)
 {
     fread(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
-    fread(culling_ram_8c, sizeof(UINT8), 1*1024*1024, fp);
+    fread(culling_ram_8c, sizeof(UINT8), 2*1024*1024, fp);
     fread(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
 }
 
@@ -194,6 +194,17 @@ void r3d_write_32(UINT32 a, UINT32 d)
         *(UINT32 *) &culling_ram_8c[a & 0xFFFFF] = BSWAP32(d);
         return;
     }
+	else if (a >= 0x8C100000 && a <= 0x8C1FFFFF)	// culling RAM (Scud Race)
+	{
+		/*
+		 * probabily this is a mirror of 0x8C000000 - 0x8C0FFFFF,
+		 * as the other is never used when this one is.
+		 * i'm leaving everything as is, though, so that you can study them separately.
+		 */
+
+        *(UINT32 *) &culling_ram_8c[a & 0x1FFFFF] = BSWAP32(d);
+        return;
+	}
     else if (a >= 0x98000000 && a <= 0x981FFFFF)    // polygon RAM
     {
         *(UINT32 *) &polygon_ram[a & 0x1FFFFF] = BSWAP32(d);
@@ -239,6 +250,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
     case 0x9C000000:    // ?
     case 0x9C000004:    // ?
     case 0x9C000008:    // ?
+		message(0, "Real3D write: %08X = %08X\n", a, d);
         return;
     }
 
@@ -248,8 +260,6 @@ void r3d_write_32(UINT32 a, UINT32 d)
 /******************************************************************/
 /* Real3D TAP Port                                                */
 /******************************************************************/
-
-/* Stefano: Bart, take a look at this code; i'm not sure if it's all right */
 
 typedef enum
 {
@@ -267,8 +277,8 @@ typedef enum
 
 static const char * tap_state_name[] =
 {
-	"Test Logic Reset",
-	"Run Test Idle",
+	"Test Logic/Reset",
+	"Run Test/Idle",
 	"Select DR Scan",	"Select IR Scan",
 	"Capture DR",		"Capture IR",
 	"Shift DR",			"Shift IR",
@@ -278,147 +288,88 @@ static const char * tap_state_name[] =
 	"Update DR",		"Update IR",
 };
 
-static UINT32 tap_state;
-static UINT32 tap_tdo;
+/*
+ * Private Variables.
+ */
 
-static UINT32 tap_ireg_shift = 0;
+static UINT tap_next_state[][2] =
+{
+//    TMS=0                 TMS=1
+	{ TAP_RUN_TEST_IDLE,	TAP_TEST_LOGIC_RESET },	// Test Logic/Reset
+	{ TAP_RUN_TEST_IDLE,	TAP_SELECT_DR_SCAN },	// Run Test/Idle
+	{ TAP_CAPTURE_DR,		TAP_SELECT_IR_SCAN },	// Select DR Scan
+	{ TAP_CAPTURE_IR,		TAP_TEST_LOGIC_RESET },	// Select IR Scan
+	{ TAP_SHIFT_DR,			TAP_EXIT1_DR },			// Capture DR
+	{ TAP_SHIFT_IR,			TAP_EXIT1_IR },			// Capture IR
+	{ TAP_SHIFT_DR,			TAP_EXIT1_DR },			// Shift DR
+	{ TAP_SHIFT_IR,			TAP_EXIT1_IR },			// Shift IR
+	{ TAP_PAUSE_DR,			TAP_UPDATE_DR },		// Exit1 DR
+	{ TAP_PAUSE_IR,			TAP_UPDATE_IR },		// Exit1 IR
+	{ TAP_PAUSE_DR,			TAP_EXIT2_DR },			// Pause DR
+	{ TAP_PAUSE_IR,			TAP_EXIT2_IR },			// Pause IR
+	{ TAP_UPDATE_DR,		TAP_SHIFT_DR },			// Exit2 DR
+	{ TAP_UPDATE_IR,		TAP_SHIFT_IR },			// Exit2 IR
+	{ TAP_RUN_TEST_IDLE,	TAP_SELECT_DR_SCAN },	// Update DR
+	{ TAP_RUN_TEST_IDLE,	TAP_SELECT_IR_SCAN },	// Update IR
+};
+
+static UINT tap_state;
+static UINT tap_tdo;
+
+static UINT tap_ireg_shift = 0;
 static UINT32 tap_ireg[4];			/* 128 bits available (96 used) */
+static UINT32 tap_inst[4];
 
-static UINT32 tap_dreg_shift = 0;
+static UINT tap_dreg_shift = 0;
 static UINT32 tap_dreg[385];		/* 1540 bits available (1537 used) */
 
-void tap_write(UINT32 tck, UINT32 tms, UINT32 tdi, UINT32 trst)
-{
-	/* currently doesn't return data from the DREG */
+/*
+ * void tap_write(UINT tck, UINT tms, UINT tdi, UINT trst);
+ *
+ * JTAP TAP write port handler.
+ */
 
+void tap_write(UINT tck, UINT tms, UINT tdi, UINT trst)
+{
 	if(tck)
 	{
+		if(!trst)
+			tap_state = TAP_TEST_LOGIC_RESET;
+		else
+			tap_state = tap_next_state[tap_state][tms];
+
 		tap_tdo = 0;
 
-		if(!trst)
+		switch(tap_state)
 		{
-			tap_state = TAP_TEST_LOGIC_RESET;
-		}
-		else
-		{
-			switch(tap_state)
-			{
+		case TAP_CAPTURE_DR:
+			break;
 
-			case TAP_TEST_LOGIC_RESET:
-				if(!tms) tap_state = TAP_RUN_TEST_IDLE;
-				break;
+		case TAP_SHIFT_DR:
+			break;
 
-			case TAP_RUN_TEST_IDLE:
-				if(tms)	tap_state = TAP_SELECT_DR_SCAN;
-				break;
+		case TAP_UPDATE_DR:
+			break;
 
-			case TAP_SELECT_DR_SCAN:
-				if(tms)	tap_state = TAP_SELECT_IR_SCAN;
-				else	tap_state = TAP_CAPTURE_DR;
-				break;
+		case TAP_CAPTURE_IR:
+			break;
 
-			case TAP_SELECT_IR_SCAN:
-				if(tms)	tap_state = TAP_TEST_LOGIC_RESET;
-				else	tap_state = TAP_CAPTURE_IR;
-				break;
+		case TAP_SHIFT_IR:
+			break;
 
-			case TAP_CAPTURE_DR:
-				if(tms)	tap_state = TAP_EXIT1_DR;
-				else	tap_state = TAP_SHIFT_DR;
-				break;
-
-			case TAP_CAPTURE_IR:
-				if(tms)	tap_state = TAP_EXIT1_IR;
-				else	tap_state = TAP_SHIFT_IR;
-				break;
-
-			case TAP_SHIFT_DR:
-				if(tms)	tap_state = TAP_EXIT1_DR;
-
-				tap_tdo = 0;//(tap_ireg[(tap_ireg_shift >> 5) & 3] >> (tap_ireg_shift & 31)) & 1;
-
-				tap_dreg[tap_dreg_shift >> 5] &= ~(1 << (tap_dreg_shift & 31));
-				tap_dreg[tap_dreg_shift >> 5] |= (tdi & 1) << (tap_dreg_shift & 31);
-
-				tap_dreg_shift++;
-
-				break;
-
-			case TAP_SHIFT_IR:
-				if(tms) tap_state = TAP_EXIT1_IR;
-
-				tap_tdo = (tap_ireg[tap_ireg_shift >> 5] >> (tap_ireg_shift & 31)) & 1;
-
-				tap_ireg[tap_ireg_shift >> 5] &= ~(1 << (tap_ireg_shift & 31));
-				tap_ireg[tap_ireg_shift >> 5] |= (tdi & 1) << (tap_ireg_shift & 31);
-
-				tap_ireg_shift++;
-
-				break;
-
-			case TAP_EXIT1_DR:
-				if(tms)	tap_state = TAP_UPDATE_DR;
-				else	tap_state = TAP_PAUSE_DR;
-
-				/*
-				{
-				u32 i, nw;
-
-				nw = (tap_dreg_shift + 31) / 32;
-				for(i = nw-1; (s32)i >= 0; i--)
-					printf(" DREG[%2i] = %08X (%03i)\n", i, tap_dreg[i], tap_dreg_shift);
-				}
-				*/
-
-				tap_dreg_shift = 0;
-
-				break;
-
-			case TAP_EXIT1_IR:
-				if(tms)	tap_state = TAP_UPDATE_IR;
-				else	tap_state = TAP_PAUSE_IR;
-
-				/*
-				printf(" IREG = %08X %08X %08X %08X (%i)\n", tap_ireg[3], tap_ireg[2], tap_ireg[1], tap_ireg[0], tap_ireg_shift);
-				*/
-
-				tap_ireg_shift = 0;
-
-				break;
-
-			case TAP_PAUSE_DR:
-				if(tms)	tap_state = TAP_EXIT2_DR;
-				break;
-
-			case TAP_PAUSE_IR:
-				if(tms)	tap_state = TAP_EXIT2_IR;
-				break;
-
-			case TAP_EXIT2_DR:
-				if(tms)	tap_state = TAP_UPDATE_DR;
-				else	tap_state = TAP_SHIFT_DR;
-				break;
-
-			case TAP_EXIT2_IR:
-				if(tms) tap_state = TAP_UPDATE_IR;
-				else	tap_state = TAP_SHIFT_IR;
-				break;
-
-			case TAP_UPDATE_DR:
-				if(tms)	tap_state = TAP_SELECT_DR_SCAN;
-				else	tap_state = TAP_RUN_TEST_IDLE;
-				break;
-
-			case TAP_UPDATE_IR:
-				if(tms)	tap_state = TAP_SELECT_DR_SCAN;
-				else	tap_state = TAP_RUN_TEST_IDLE;
-				break;
-			}
+		case TAP_UPDATE_IR:
+			break;
 		}
 	}
 }
 
-UINT32 tap_read(void){
+/*
+ * UINT32 tap_read(void);
+ *
+ * JTAG TAP read port handler.
+ */
+
+UINT tap_read(void){
 
 	return(tap_tdo);
 }
@@ -430,7 +381,6 @@ void tap_reset(void){
 	tap_ireg_shift = 0;
 	tap_dreg_shift = 0;
 
-	memset(tap_ireg, 0, sizeof(UINT32)*4);
+	memset(tap_ireg, 0, sizeof(UINT32)*2);
 	memset(tap_dreg, 0, sizeof(UINT32)*385);
 }
-

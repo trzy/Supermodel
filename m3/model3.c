@@ -75,6 +75,8 @@ static void     m3_sys_write_8(UINT32, UINT8);
 static void     m3_sys_write_32(UINT32, UINT32);
 static UINT8    m3_midi_read(UINT32);
 static void     m3_midi_write(UINT32, UINT8);
+static void		save_file(char *, UINT8 *, INT);
+static INT		load_file(char *, UINT8 *, INT);
 
 /******************************************************************/
 /* Output                                                         */
@@ -228,6 +230,9 @@ static UINT8 m3_ppc_read_8(UINT32 a)
             return m3_sys_read_8(a);
         else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
             return bridge_read_config_data_8(a);
+		else if(a >= 0xF9000000 && a <= 0xF90000FF)		// 53C810 SCSI
+            return scsi_read_8(a);
+
 
         break;
     }
@@ -399,6 +404,11 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
             bridge_write_config_data_8(a, d);
             return;
         }
+        else if (a >= 0xF9000000 && a <= 0xF90000FF)	// 53C810 SCSI
+        {
+            scsi_write_8(a, d);
+            return;
+        }
 
         switch (a)
         {
@@ -433,6 +443,13 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
         }
         else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
         {
+            bridge_write_config_data_16(a, d);
+            return;
+        }
+
+        switch (a)
+        {
+        case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
             bridge_write_config_data_16(a, d);
             return;
         }
@@ -481,6 +498,8 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         case 0xC0000000:    // latched value
             _C0000000 = d;
             return;
+		case 0xC0010180:	// Network ? Scud Race at 0xB2A4
+			return;
         }
 
         break;
@@ -536,6 +555,11 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             bridge_write_config_data_32(a, d);
             return;
         }
+        else if (a >= 0xF9000000 && a <= 0xF90000FF)	// 53C810 SCSI
+        {
+            scsi_write_32(a, d);
+            return;
+        }
 
         switch (a)
         {
@@ -552,6 +576,12 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         break;
     }
 
+	/*
+
+	// temporarily removed as the buggy instruction has been patched.
+	// not sure if there's any problem though, so the code is commented
+	// out and left here.
+
     switch (a)  // there is a bug in Lost World's code that causes invalid
     {           // writes to this area (ADD R4,R4,R4 instead of ADD R4,R4,4)
     case 0xF76DE0:
@@ -563,6 +593,10 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
     case 0xF10F874:
         return;
     }
+
+	*/
+
+//	save_file("trace.bin", &ram[(PPC_PC&0x7FFFFF)-16], sizeof(UINT32)*32);
 
     error("%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
 }
@@ -660,12 +694,17 @@ static UINT8 m3_sys_read_8(UINT32 a)
 	{    
     case 0x08:  // CROM bank
         return crom_bank_reg;
+    case 0x10:  // JTAG TAP
+        return ((tap_read() & 1) << 5);
+    case 0x14:  // IRQ enable
+        return m3_irq_enable;
+    case 0x18:  // IRQ status
+        return m3_irq_state;
     case 0x1C:  // ?
         return 0xFF;
 	}
 
     message(0, "%08X: unknown sys read8, %08X", PPC_PC, a);
-//    return(0);
     return 0xFF;
 }
 
@@ -674,7 +713,7 @@ static UINT32 m3_sys_read_32(UINT32 a)
 	switch(a & 0xFF)
 	{
     case 0x10:  // JTAG TAP
-        return 0xFFFFFFFF;
+        return ((tap_read() & 1) << (5+24));
     case 0x14:  // IRQ enable
         return (m3_irq_enable << 24);
     case 0x18:  // IRQ status
@@ -682,7 +721,6 @@ static UINT32 m3_sys_read_32(UINT32 a)
 	}
 
     message(0, "%08X: unknown sys read32, %08X", PPC_PC, a);
-//    return(0);
     return 0xFFFFFFFF;
 }
 
@@ -690,15 +728,29 @@ static void m3_sys_write_8(UINT32 a, UINT8 d)
 {
 	switch(a & 0xFF)
 	{
+	case 0x00:	// ?
+		return;
+	case 0x04:	// ?
+		return;
     case 0x08:  // CROM bank
         m3_set_crom_bank(d);
         return;
+	case 0x0C:	// JTAG TAP
+		tap_write(
+			(d >> 6) & 1,
+			(d >> 2) & 1,
+			(d >> 5) & 1,
+			(d >> 7) & 1
+		);
+		return;
     case 0x14:  // IRQ enable
         m3_irq_enable = d;
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
     case 0x1C:  // ?
         return;
+	case 0x3C:	// ?
+		return;
 	}
 
     message(0, "%08X: unknown sys write8, %08X = %02X", PPC_PC, a, d);
@@ -709,16 +761,22 @@ static void m3_sys_write_32(UINT32 a, UINT32 d)
 	switch(a & 0xFF)
 	{
     case 0x0C:  // JTAG TAP
-    case 0x1C:  // JTAG TAP
+		tap_write(
+			(d >> (6+24)) & 1,
+			(d >> (2+24)) & 1,
+			(d >> (5+24)) & 1,
+			(d >> (7+24)) & 1
+		);
         return;
-
     case 0x14:  // IRQ mask
         m3_irq_enable = (d >> 24);
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
+    case 0x1C:  // ?
+		return;
 	}
 
-    message(0, "%08X: unknown sys write8, %08X = %08X", PPC_PC, a, d);
+    message(0, "%08X: unknown sys write32, %08X = %08X", PPC_PC, a, d);
 }
 
 static UINT8 m3_midi_read(UINT32 a)
@@ -1114,7 +1172,7 @@ static INT load_romfile(UINT8 * buff, char * dir, ROMFILE * list, UINT32 itlv)
 
 //    strcpy(string, m3_path);
     strcpy(string, "roms/");
-    strcat(string, m3_config.game_id);
+    strcat(string, dir);
 	strcat(string, "/");
 
 	/* check if it's an unused ROMFILE, if so skip it */
@@ -1224,10 +1282,13 @@ BOOL m3_load_rom(CHAR * id)
 	if(romset == NULL)
 		return(MODEL3_ERROR);
 
+	message(0, "Loading \"%s\"\n", romset->title);
+
 	/* load the mother ROMSET if needed */
 
 	if(romset->superset_id[0] != '\0')
-        m3_load_rom(romset->superset_id);
+        if(m3_load_rom(romset->superset_id) != MODEL3_OKAY)
+			return(MODEL3_ERROR);
 
 	/* allocate as much memory as needed, if not already allocated by mother */
 
@@ -1239,6 +1300,16 @@ BOOL m3_load_rom(CHAR * id)
 		drom = (UINT8 *)malloc(romset->dsb_rom[0].size +
 							   romset->dsb_rom[1].size + romset->dsb_rom[2].size +
 							   romset->dsb_rom[3].size + romset->dsb_rom[4].size);
+
+		if((crom == NULL) || (vrom == NULL) || (srom == NULL) || (drom == NULL))
+		{
+			SAFE_FREE(crom);
+			SAFE_FREE(vrom);
+			SAFE_FREE(srom);
+			SAFE_FREE(drom);
+
+			return(MODEL3_ERROR);
+		}
 	}
 
 	crom0 = &crom[0x00800000];
@@ -1258,34 +1329,34 @@ BOOL m3_load_rom(CHAR * id)
 		/* load from directory */
 
         if(romset->crom[0].size && load_romfile(&crom[8*1024*1024 - (romset->crom[0].size * 4)], id, romset->crom, ITLV_4))
-			error("Can't load CROM.");
+			error("Can't load CROM");
 
 		if(romset->crom0[0].size && load_romfile(crom0, id, romset->crom0, ITLV_4))
-			error("Can't load CROM0.");
+			error("Can't load CROM0");
 
 		if(romset->crom1[0].size && load_romfile(crom1, id, romset->crom1, ITLV_4))
-			error("Can't load CROM1.");
+			error("Can't load CROM1");
 
 		if(romset->crom2[0].size && load_romfile(crom2, id, romset->crom2, ITLV_4))
-			error("Can't load CROM2.");
+			error("Can't load CROM2");
 
 		if(romset->crom3[0].size && load_romfile(crom3, id, romset->crom3, ITLV_4))
-			error("Can't load CROM3.");
+			error("Can't load CROM3");
 
 		if(romset->vrom[0].size && load_romfile(vrom, id, romset->vrom, ITLV_16))
-			error("Can't load VROM.");
+			error("Can't load VROM");
 
 		if(romset->srom[0].size && load_romfile(srom, id, romset->srom, NO_ITLV))
-			error("Can't load SROM Program.");
+			error("Can't load SROM Program");
 
 		if(romset->srom[1].size && load_romfile(&srom[romset->srom[0].size], id, &romset->srom[1], ITLV_2))
-			error("Can't load SROM Samples.");
+			error("Can't load SROM Samples");
 
 		if(romset->dsb_rom[0].size && load_romfile(drom, id, romset->dsb_rom, NO_ITLV))
-			error("Can't load DSB ROM Program.");
+			error("Can't load DSB ROM Program");
 
 		if(romset->dsb_rom[1].size && load_romfile(&drom[romset->dsb_rom[0].size], id, &romset->dsb_rom[1], ITLV_4))
-			error("Can't load DSB ROM Samples.");
+			error("Can't load DSB ROM Samples");
 
 		/* byteswap buffers */
 
@@ -1332,7 +1403,7 @@ BOOL m3_load_rom(CHAR * id)
 
     message(0, "ROM loaded succesfully!");
 
-    /*
+	/*
 
 	save_file("crom.bin", crom, 8*1024*1024);
     save_file("crom0.bin", crom0, romset->crom0[0].size * 4);
@@ -1340,13 +1411,38 @@ BOOL m3_load_rom(CHAR * id)
     save_file("crom2.bin", crom2, romset->crom2[0].size * 4);
     save_file("crom3.bin", crom3, romset->crom3[0].size * 4);
 
-    */
+	*/
 
     /*
      * Patches
      */
 
-    if (!stricmp(id, "VON2"))
+	if(!stricmp(id, "LOST"))
+	{
+		/*
+		 * this patch fixes the weird "add r4,r4,r4" with a "addi r4,r4,4".
+		 * there's another weird add instruction just before this one, but
+		 * it seems like it's never used.
+		 */
+
+		*(UINT32 *)&crom[0x7374F4] = BSWAP32((14 << 26) | (4 << 21) | (4 << 16) | 4);
+	}
+	else if(!stricmp(id, "SCUD"))
+	{
+		/* directly from Ville's patch */
+
+		*(UINT32 *)&crom[0x700194] = 0x00000060;	// Timebase Skip
+		*(UINT32 *)&crom[0x712734] = 0x00000060;	// Speedup
+		*(UINT32 *)&crom[0x717EC8] = 0x2000804E;
+		*(UINT32 *)&crom[0x71AEBC] = 0x00000060;	// Loop Skip
+		*(UINT32 *)&crom[0x712268] = 0x00000060;
+		*(UINT32 *)&crom[0x71277C] = 0x00000060;
+		*(UINT32 *)&crom[0x74072C] = 0x00000060;	// ...
+		*(UINT8  *)&crom[0x787B36] = 0x00;			// Link ID: 00 = single, 01 = master, 02 = slave
+		*(UINT8  *)&crom[0x787B30] = 0x00;
+		*(UINT32 *)&crom[0x741A20] = 0x00000060;	// Speed hack
+	}
+    else if (!stricmp(id, "VON2"))
     {
         /*
          * Patch an annoyingly long delay loop to: xor r3,r3,r3; nop
@@ -1403,9 +1499,11 @@ void m3_shutdown(void)
 	/* free any allocated buffer */
 
     save_file("ram", ram, 8*1024*1024);
+	save_file("vram", vram, 1*1024*1024+2*65536);
     save_file("8e000000", culling_ram_8e, 1*1024*1024);
-    save_file("8c000000", culling_ram_8c, 1*1024*1024);
+    save_file("8c000000", culling_ram_8c, 2*1024*1024);
     save_file("98000000", polygon_ram, 2*1024*1024);
+
     SAFE_FREE(ram);
 	SAFE_FREE(vram);
 	SAFE_FREE(sram);
@@ -1426,7 +1524,8 @@ void m3_init(void)
 	/* load the ROM -- if specified on command line */
 
     if(m3_config.game_id[0] != '\0')
-        m3_load_rom(m3_config.game_id);
+        if(m3_load_rom(m3_config.game_id) != MODEL3_OKAY)
+			error("Can't load ROM %s\n", m3_config.game_id);
 
 	/* allocate additional space */
 
@@ -1435,7 +1534,7 @@ void m3_init(void)
     sram = (UINT8 *) malloc(1*1024*1024);
     bram = (UINT8 *) malloc(128*1024);
     culling_ram_8e = (UINT8 *) malloc(1*1024*1024);
-    culling_ram_8c = (UINT8 *) malloc(1*1024*1024);
+    culling_ram_8c = (UINT8 *) malloc(2*1024*1024);
     polygon_ram = (UINT8 *) malloc(2*1024*1024);
 
 	/* attach m3_shutdown to atexit */
@@ -1444,7 +1543,7 @@ void m3_init(void)
 
     /* setup the PPC */
 
-    if(ppc_init(PPC_TYPE_6XX) != PPC_OKAY)
+    if(ppc_init(NULL) != PPC_OKAY)
 		error("ppc_init failed.");
 
     ppc_set_reg(PPC_REG_PVR, 0x00060104);
