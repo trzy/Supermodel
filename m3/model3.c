@@ -60,6 +60,7 @@ static UINT8    *vram = NULL;           // tile generator VRAM (scroll RAM)
 static UINT8    *culling_ram_8e = NULL; // Real3D culling RAM
 static UINT8    *culling_ram_8c = NULL; // Real3D culling RAM
 static UINT8    *polygon_ram = NULL;    // Real3D polygon RAM
+static UINT8    *texture_ram = NULL;    // Real3D texture RAM
 static UINT8    *crom = NULL;           // CROM (all CROM memory is allocated here)
 static UINT8    *crom_bank;             // points to current 8MB CROM bank
 static UINT8    *vrom = NULL;           // video ROM
@@ -1479,6 +1480,8 @@ BOOL m3_load_rom(CHAR * id)
 		*(UINT8  *)&crom[0x787B36] = 0x00;			// Link ID: 00 = single, 01 = master, 02 = slave
 		*(UINT8  *)&crom[0x787B30] = 0x00;
 //        *(UINT32 *)&crom[0x741A20] = 0x00000060;    // Speed hack (causes bad textures!!)
+
+	*(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);	// allows game to start
 	}
     else if (!stricmp(id, "SCUDE"))
     {
@@ -1491,6 +1494,8 @@ BOOL m3_load_rom(CHAR * id)
 
         *(UINT8  *)&crom[0x787B56] = 0x00;          // Link ID: 00 = single, 01 = master, 02 = slave
         *(UINT8  *)&crom[0x787B50] = 0x01;          // country (1=USA)
+
+	*(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);
     }
     else if (!stricmp(id, "VON2"))
     {
@@ -1565,8 +1570,7 @@ void m3_shutdown(void)
     SAFE_FREE(culling_ram_8e);
     SAFE_FREE(culling_ram_8c);
     SAFE_FREE(polygon_ram);
-
-	/* dump any other buffer for debug? */
+    SAFE_FREE(texture_ram);
 }
 
 void m3_init(void)
@@ -1581,7 +1585,7 @@ void m3_init(void)
         if(m3_load_rom(m3_config.game_id) != MODEL3_OKAY)
 			error("Can't load ROM %s\n", m3_config.game_id);
 
-	/* allocate additional space */
+    /* allocate memory */
 
     ram = (UINT8 *) malloc(8*1024*1024);
     vram = (UINT8 *) malloc(2*1024*1024);
@@ -1590,6 +1594,23 @@ void m3_init(void)
     culling_ram_8e = (UINT8 *) malloc(1*1024*1024);
     culling_ram_8c = (UINT8 *) malloc(2*1024*1024);
     polygon_ram = (UINT8 *) malloc(2*1024*1024);
+    texture_ram = (UINT8 *) malloc(2048*2048*2);
+
+    if ((ram == NULL) || (vram == NULL) || (sram == NULL) || (bram == NULL) ||
+        (culling_ram_8e == NULL) || (culling_ram_8c == NULL) || (polygon_ram == NULL) ||
+        (texture_ram == NULL))
+    {
+        SAFE_FREE(ram);
+        SAFE_FREE(vram);
+        SAFE_FREE(sram);
+        SAFE_FREE(bram);
+        SAFE_FREE(culling_ram_8e);
+        SAFE_FREE(culling_ram_8c);
+        SAFE_FREE(polygon_ram);
+        SAFE_FREE(texture_ram);
+
+        error("Out of memory!");
+    }
 
 	/* attach m3_shutdown to atexit */
 
@@ -1632,10 +1653,10 @@ void m3_init(void)
 
     bridge_init(pci_command_callback);
     scsi_init(m3_ppc_read_8, m3_ppc_read_16, m3_ppc_read_32, m3_ppc_write_8, m3_ppc_write_16, m3_ppc_write_32);
-	osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
+    osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
     dma_init(m3_ppc_read_32, m3_ppc_write_32);
     tilegen_init(vram);
-    r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
+    r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
 //    scsp_init();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
     controls_init();
