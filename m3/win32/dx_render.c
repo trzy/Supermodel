@@ -27,11 +27,10 @@
 
 #include "dx_render.h"
 
-//#define ENABLE_LIGHTING
-//#define WIREFRAME
-#define ENABLE_ALPHA_BLENDING
-#define DRAW_STATS
-//#define ENABLE_MODEL_CACHING
+#define WIREFRAME				0
+#define ENABLE_ALPHA_BLENDING	1
+#define DRAW_STATS				1
+#define ENABLE_MODEL_CACHING	0
 
 typedef struct {
 	float x, y, z;
@@ -42,6 +41,11 @@ typedef struct {
 } VERTEX;
 
 typedef struct {
+	float x,y,z,w;
+	float u,v;
+} VERTEX2D;
+
+typedef struct {
 	D3DXVECTOR4 direction;
 	D3DXVECTOR4 diffuse;
 	D3DXVECTOR4 ambient;
@@ -50,21 +54,23 @@ typedef struct {
 static char num_bits[16] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
 #define D3DFVF_VERTEX (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0))
+#define D3DFVF_VERTEX2D (D3DFVF_XYZRHW | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0))
 
 static LPDIRECT3D9			d3d;
 static LPDIRECT3DDEVICE9	device;
 static LPDIRECT3DTEXTURE9	layer_data[4];
 static LPD3DXSPRITE			sprite;
 static LPD3DXFONT			font;
-static LPD3DXMATRIXSTACK	stack;
+static LPD3DXMATRIXSTACK	matrix_stack;
 static LPDIRECT3DVERTEXSHADER9 vertex_shader;
 
 static LIGHT2				light;
 
 static LPDIRECT3DVERTEXBUFFER9	vertex_buffer;
+static LPDIRECT3DVERTEXBUFFER9	vertex_buffer_2d;
 
 static LPDIRECT3DTEXTURE9	texture[4096];
-static short texture_table[64*64];
+static short texture_table[64*64*4];
 static int tris = 0;
 
 static D3DMATRIX coordinate_system;
@@ -97,7 +103,7 @@ typedef struct {
 	int length;
 } HASHTABLE;
 
-#define HASH_TABLE_SIZE 1048576
+#define HASH_TABLE_SIZE 2097152
 static HASHTABLE model_hash_table[HASH_TABLE_SIZE];
 static int cached_vertices = 0;
 
@@ -113,11 +119,14 @@ static void init_model_cache(void)
 static HASHTABLE* cache_model(UINT32* mem,UINT32 address)
 {
 	VERTEX* vb;
+	VERTEX vert[4];
+	VERTEX prev_vertex[4];
 	int hash_index;
 	int index, end, vertex;
 	float fixed_point_scale;
 
 	address >>= 2;
+	address &= 0x3FFFFF;
 	hash_index = address % (HASH_TABLE_SIZE - 1);
 	if( model_hash_table[hash_index].refcount > 0 ) {
 		if( address == model_hash_table[hash_index].address ) {
@@ -141,17 +150,17 @@ static HASHTABLE* cache_model(UINT32* mem,UINT32 address)
 	model_hash_table[hash_index].address = address;
 	model_hash_table[hash_index].vertex_index = cached_vertices;
 
-	IDirect3DVertexBuffer9_Lock( vertex_buffer, cached_vertices * sizeof(VERTEX), 1000 * sizeof(VERTEX), (void**)&vb, D3DLOCK_DISCARD );
+	IDirect3DVertexBuffer9_Lock( vertex_buffer, cached_vertices * sizeof(VERTEX), 4000 * sizeof(VERTEX), (void**)&vb, D3DLOCK_DISCARD );
 
 	do {
 		UINT32 header[7];
 		UINT32 entry[16];
-		D3DCOLOR color;
-		int transparency;
+		D3DCOLOR color, specular;
+		int transparency, luminance;
 		int i, num_vertices, num_old_vertices;
 		int v2, v;
 		int texture_x, texture_y, tex_num, depth, tex_width, tex_height;
-		float nx, ny, nz;
+		float nx, ny, nz, uv_scale;
 
 		for( i=0; i<7; i++) {
 			header[i] = BSWAP32(mem[index]);
@@ -161,6 +170,18 @@ static HASHTABLE* cache_model(UINT32* mem,UINT32 address)
 		// Check if this is the last polygon
 		if(header[1] & 0x4)
 			end = 1;
+
+		uv_scale = (header[1] & 0x40) ? 1.0f : 8.0f;
+
+		if(header[6] & 0x800000) {
+			color = 0xFF000000 | (header[4] >> 8);
+		} else {
+			color = (transparency << 24) | (header[4] >> 8);
+		}
+		if(header[6] & 0x10000)
+			luminance = 0xFF;
+
+		specular = (luminance << 24);
 
 		// Polygon normal
 		// Assuming 2.22 fixed-point. Is this correct ?
@@ -177,6 +198,20 @@ static HASHTABLE* cache_model(UINT32* mem,UINT32 address)
 		// How many vertices are reused
 		num_old_vertices = num_bits[header[0] & 0xF];
 
+		// Load reused vertices
+		v2 = 0;
+		for( v=0; v<4; v++) {
+			if( header[0] & (1 << v) ) {
+				memcpy( &vert[v2], &prev_vertex[v], sizeof(VERTEX) );
+				vert[v2].nx = nx;
+				vert[v2].ny = ny;
+				vert[v2].nz = nz;
+				vert[v2].color = color;
+				vert[v2].specular = specular;
+				v2++;
+			}
+		}
+
 		// Load vertex data
 		for( i=0; i<(num_vertices - num_old_vertices) * 4; i++) {
 			entry[i] = BSWAP32(mem[index]);
@@ -185,25 +220,43 @@ static HASHTABLE* cache_model(UINT32* mem,UINT32 address)
 
 		// Load new vertices
 		for( v=0; v < (num_vertices - num_old_vertices); v++) {
-			int ix, iy, iz;
+			int ix, iy, iz, xsize, ysize;
+			UINT16 tx,ty;
 			int v_index = v * 4;
 
 			ix = entry[v_index];
 			iy = entry[v_index + 1];
 			iz = entry[v_index + 2];
-			vb[vertex].x = (float)(ix) / fixed_point_scale;
-			vb[vertex].y = (float)(iy) / fixed_point_scale;
-			vb[vertex].z = (float)(iz) / fixed_point_scale;
-			vb[vertex].u = 0.0f;
-			vb[vertex].v = 0.0f;
-			vb[vertex].nx = 0.0f;
-			vb[vertex].ny = 0.0f;
-			vb[vertex].nz = 0.0f;
-			vb[vertex].color = 0xFFFFFFFF;
+			vert[v2].x = (float)(ix) / fixed_point_scale;
+			vert[v2].y = (float)(iy) / fixed_point_scale;
+			vert[v2].z = (float)(iz) / fixed_point_scale;
+			tx = (INT16)((entry[v_index + 3] >> 16) & 0xFFFF);
+			ty = (INT16)(entry[v_index + 3] & 0xFFFF);
+			xsize = 32 << ((header[3] >> 3) & 0x7);
+			ysize = 32 << (header[3] & 0x7);
+			vert[v2].u = ((float)(tx) / uv_scale) / (float)xsize;
+			vert[v2].v = ((float)(ty) / uv_scale) / (float)ysize;
+			vert[v2].nx = nx;
+			vert[v2].ny = ny;
+			vert[v2].nz = nz;
+			vert[v2].color = color;
+			vert[v2].specular = specular;
 
-			vertex++;
-			cached_vertices++;
+			v2++;
 		}
+
+		memcpy( &vb[vertex + 0], &vert[0], sizeof(VERTEX) * 3 );
+		vertex += 3;
+		cached_vertices += 3;
+		if( num_vertices != 3 ) {
+			memcpy( &vb[vertex + 0], &vert[0], sizeof(VERTEX) );
+			memcpy( &vb[vertex + 1], &vert[2], sizeof(VERTEX) );
+			memcpy( &vb[vertex + 2], &vert[3], sizeof(VERTEX) );
+			vertex += 3;
+			cached_vertices += 3;
+		}
+
+		memcpy( prev_vertex, vert, sizeof(VERTEX) * 4 );
 	} while(end == 0);
 
 	model_hash_table[hash_index].length = cached_vertices - model_hash_table[hash_index].vertex_index;
@@ -253,11 +306,6 @@ BOOL d3d_init(HWND hWnd)
 	hr = IDirect3D9_GetDeviceCaps( d3d, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps );
 	if( FAILED(hr) ) {
 		error("Direct3D error: IDirect3D9_GetDeviceCaps failed.");
-		return FALSE;
-	}
-
-	if(caps.VertexShaderVersion < D3DVS_VERSION(1,1)) {
-		error("Direct3D error: Vertex Shader 1.1 not supported.");
 		return FALSE;
 	}
 
@@ -321,7 +369,12 @@ BOOL d3d_init(HWND hWnd)
 	}
 
 	if( caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT ) {
-		flags |= D3DCREATE_HARDWARE_VERTEXPROCESSING;
+
+		if(caps.VertexShaderVersion < D3DVS_VERSION(1,1))
+			flags |= D3DCREATE_SOFTWARE_VERTEXPROCESSING;
+		else
+			flags |= D3DCREATE_HARDWARE_VERTEXPROCESSING;
+
 	} else {
 		flags |= D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 	}
@@ -393,16 +446,44 @@ BOOL d3d_init(HWND hWnd)
 
 	QueryPerformanceFrequency((LARGE_INTEGER*)&counter_frequency);
 
-	D3DXCreateMatrixStack(0, &stack);
+	D3DXCreateMatrixStack(0, &matrix_stack);
 	d3d_matrix_stack_init();
 
-#ifdef ENABLE_MODEL_CACHING
+#if ENABLE_MODEL_CACHING 1
 	init_model_cache();
-	hr = IDirect3DDevice9_CreateVertexBuffer( device, 300000 * sizeof(VERTEX), 
+	hr = IDirect3DDevice9_CreateVertexBuffer( device, 1000000 * sizeof(VERTEX), 
 		0, D3DFVF_VERTEX, D3DPOOL_MANAGED, &vertex_buffer, NULL );
 	if( FAILED(hr) ) {
 		error("Direct3D error: IDirect3DDevice9_CreateVertexBuffer failed.");
 		return FALSE;
+	}
+
+	// Create vertex buffer for 2D
+	{
+		VERTEX2D v2d[6];
+		VOID* v2d_buffer;
+		hr = IDirect3DDevice9_CreateVertexBuffer( device, 6 * sizeof(VERTEX2D),
+			0, D3DFVF_VERTEX2D, D3DPOOL_MANAGED, &vertex_buffer_2d, NULL );
+		if( FAILED(hr) ) {
+			error("Direct3D error: IDirect3DDevice9_CreateVertexBuffer failed.");
+			return FALSE;
+		}
+		v2d[0].x = 0.0f;	v2d[0].y = 0.0f;	v2d[0].z = 0.0f;	v2d[0].w = 1.0f;
+		v2d[0].u = 0.0f;	v2d[0].v = 0.0f;
+		v2d[1].x = 495.0f;	v2d[1].y = 0.0f;	v2d[1].z = 0.0f;	v2d[1].w = 1.0f;
+		v2d[1].u = 1.0f;	v2d[1].v = 0.0f;
+		v2d[2].x = 495.0f;	v2d[2].y = 383.0f;	v2d[2].z = 0.0f;	v2d[2].w = 1.0f;
+		v2d[2].u = 1.0f;	v2d[2].v = 1.0f;
+		v2d[3].x = 0.0f;	v2d[3].y = 0.0f;	v2d[3].z = 0.0f;	v2d[3].w = 1.0f;
+		v2d[3].u = 0.0f;	v2d[3].v = 0.0f;
+		v2d[4].x = 495.0f;	v2d[4].y = 383.0f;	v2d[4].z = 0.0f;	v2d[4].w = 1.0f;
+		v2d[4].u = 1.0f;	v2d[4].v = 1.0f;
+		v2d[5].x = 0.0f;	v2d[5].y = 383.0f;	v2d[5].z = 0.0f;	v2d[5].w = 1.0f;
+		v2d[5].u = 0.0f;	v2d[5].v = 1.0f;
+
+		IDirect3DVertexBuffer9_Lock( vertex_buffer_2d, 0, 0, &v2d_buffer, 0 );
+		memcpy( v2d_buffer, v2d, sizeof(VERTEX2D) * 6 );
+		IDirect3DVertexBuffer9_Unlock( vertex_buffer_2d );
 	}
 #endif
 
@@ -506,13 +587,18 @@ void osd_renderer_set_viewport(const VIEWPORT* vp)
 	viewport.Y		= vp->y;
 	viewport.Width	= vp->width;
 	viewport.Height	= vp->height;
-	viewport.MinZ	= 1.0f;
-	viewport.MaxZ	= 1000.0f;
+	viewport.MinZ	= 0.1f;
+	viewport.MaxZ	= 100000.0f;
 
 	IDirect3DDevice9_SetViewport( device, &viewport );
 
-	D3DXMatrixPerspectiveFovLH( &projection, fov, aspect_ratio, 1.0f, 1000.0f );
+	D3DXMatrixPerspectiveFovLH( &projection, fov, aspect_ratio, 0.1f, 100000.0f );
 	IDirect3DDevice9_SetTransform( device, D3DTS_PROJECTION, &projection );
+}
+
+void osd_renderer_set_color_offset( BOOL is_enabled, FLOAT32 r, FLOAT32 g, FLOAT32 b )
+{
+
 }
 
 /******************************************************************/
@@ -573,6 +659,14 @@ void osd_renderer_set_light( int light_num, LIGHT* param )
 	}
 }
 
+void osd_renderer_set_fog( float fog_density, UINT32 fog_color )
+{
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGTABLEMODE, D3DFOG_EXP );
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGDENSITY, *(DWORD*)&fog_density );
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGCOLOR, fog_color);
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGENABLE, TRUE );
+}
+
 void osd_renderer_begin(void)
 {
 	float mipmap_bias;
@@ -580,13 +674,13 @@ void osd_renderer_begin(void)
 
 	IDirect3DDevice9_SetRenderState( device, D3DRS_LIGHTING, FALSE );
 
-#ifdef ENABLE_ALPHA_BLENDING
+#if ENABLE_ALPHA_BLENDING 1
 	IDirect3DDevice9_SetRenderState( device, D3DRS_ALPHABLENDENABLE, TRUE );
 	IDirect3DDevice9_SetRenderState( device, D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
 	IDirect3DDevice9_SetRenderState( device, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 #endif
 
-#ifdef ENABLE_MODEL_CACHING
+#if ENABLE_MODEL_CACHING 1
 	IDirect3DDevice9_SetStreamSource( device, 0, vertex_buffer, 0, sizeof(VERTEX) );
 #endif
 	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX );
@@ -597,7 +691,7 @@ void osd_renderer_begin(void)
 
 	IDirect3DDevice9_BeginScene( device );
 
-#ifdef WIREFRAME
+#if WIREFRAME 1
 	IDirect3DDevice9_SetRenderState( device, D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG2 );
 #endif
@@ -645,7 +739,7 @@ void osd_renderer_blit(void)
 	fps = 1.0 / ((double)(counter_end - counter_start) / (double)counter_frequency);
 	counter_start = counter_end;
 
-#ifdef DRAW_STATS
+#if DRAW_STATS 1
 	sprintf(string,"FPS: %3.3f",fps);
 	draw_text( 4, 1, string, RGB_GREEN, TRUE );
 	sprintf(string,"Tris: %d",tris);
@@ -713,7 +807,36 @@ void osd_renderer_draw_layer(UINT layer_num)
 	osd_renderer_set_viewport( &v );
 
 	layer_num &= 0x3;
+#if ENABLE_MODEL_CACHING 1
+#if WIREFRAME 1
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FILLMODE, D3DFILL_SOLID );
+#endif
+	IDirect3DDevice9_SetStreamSource( device, 0, vertex_buffer_2d, 0, sizeof(VERTEX2D) );
+	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX2D );
+
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1 );
+	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MAGFILTER, D3DTEXF_POINT );
+	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
+
+	IDirect3DDevice9_SetTexture( device, 0, layer_data[layer_num] );
+	IDirect3DDevice9_DrawPrimitive( device, D3DPT_TRIANGLELIST, 0, 2 );
+
+	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX );
+
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
+	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
+
+	IDirect3DDevice9_SetTexture( device, 0, NULL );
+	IDirect3DDevice9_SetStreamSource( device, 0, vertex_buffer, 0, sizeof(VERTEX) );
+#if WIREFRAME 1
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+#endif
+#else
 	sprite->lpVtbl->Draw( sprite, layer_data[layer_num], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF );
+#endif
 }
 
 static void draw_uncached_model(UINT32* mem, UINT32 address, BOOL little_endian)
@@ -741,7 +864,7 @@ static void draw_uncached_model(UINT32* mem, UINT32 address, BOOL little_endian)
 		UINT32 entry[16];
 		D3DCOLOR color, specular;
 		int transparency;
-		int luminance = 0;
+		int luminance = 0, spec;
 		int i, num_vertices, num_old_vertices;
 		int v2, v;
 		int texture_x, texture_y, tex_num, depth, tex_width, tex_height;
@@ -775,9 +898,11 @@ static void draw_uncached_model(UINT32* mem, UINT32 address, BOOL little_endian)
 			color = (transparency << 24) | (header[4] >> 8);
 		}
 		if(header[6] & 0x10000)
-			luminance = (((header[6] >> 11) & 0x1F) << 3);
+			luminance = 0xFF;
+			//luminance = (((header[6] >> 11) & 0x1F) << 3);
 
-		specular = (luminance << 24);
+		spec = (header[0] >> 26) & 0x3F;
+		specular = (luminance << 24) | spec << 16;
 
 		// Polygon normal
 		// Assuming 2.22 fixed-point. Is this correct ?
@@ -859,7 +984,7 @@ static void draw_uncached_model(UINT32* mem, UINT32 address, BOOL little_endian)
 		page = (header[4] & 0x40) ? 1 : 0;
 		texture_x = ((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 0x1);
 		texture_y = (header[5] & 0x1F) | (page ? 0x20 : 0);
-		depth = header[6];
+		depth = (header[6] >> 7) & 0x7;
 		tex_width	= 32 << ((header[3] >> 3) & 0x7);
 		tex_height	= 32 << (header[3] & 0x7);
 
@@ -926,12 +1051,12 @@ void osd_renderer_draw_model(UINT32 *mem, UINT32 address, BOOL little_endian)
 	D3DXMatrixTranspose( &world_view_proj, &world_view_proj );
 	IDirect3DDevice9_SetVertexShaderConstantF( device, 0, (float*)&world_view_proj, 4 );
 
-#ifdef ENABLE_MODEL_CACHING
+#if ENABLE_MODEL_CACHING 1
 	if(little_endian)
 		return;
 
 	h = cache_model(mem, address);
-	IDirect3DDevice9_DrawPrimitive( device, D3DPT_POINTLIST, h->vertex_index, h->length );
+	IDirect3DDevice9_DrawPrimitive( device, D3DPT_TRIANGLELIST, h->vertex_index, h->length / 3 );
 #else
 	draw_uncached_model(mem, address, little_endian);
 #endif
@@ -1103,7 +1228,7 @@ static const int mipmap_y[12] =
 static const int mipmap_size[7] = { 1, 2, 4, 8, 16, 32, 64 };
 
 static int cache_texture(int texture_x, int texture_y, int tex_width, 
-						 int tex_height, int depth)
+						 int tex_height, int texture_depth)
 {
 	D3DFORMAT format;
 	int i,j,x,y;
@@ -1113,7 +1238,7 @@ static int cache_texture(int texture_x, int texture_y, int tex_width,
 	UINT pitch;
 	UINT pitch8;
 	void* src;
-	int texture_depth, plane, width, height;
+	int plane, width, height;
 	int mipmap_num, size, mip_y;
 	int page = (texture_y & 0x400) ? 1 : 0;
 	mip_y = texture_y & 0x3FF;
@@ -1147,7 +1272,6 @@ static int cache_texture(int texture_x, int texture_y, int tex_width,
 	if(texture_num == -1)
 		error("DirectX: No available textures !");
 
-	texture_depth = (depth >> 7) & 0x7;
 	switch(texture_depth)
 	{
 		case 0: format = D3DFMT_A1R5G5B5;break;	// 16-bit A1R5G5B5
@@ -1211,14 +1335,16 @@ static int cache_texture(int texture_x, int texture_y, int tex_width,
 //    Matrix Stack    //
 ////////////////////////
 
+static int stack_ptr = 0;
+
 static void d3d_matrix_stack_init(void)
 {
-	stack->lpVtbl->LoadIdentity(stack);
+	matrix_stack->lpVtbl->LoadIdentity(matrix_stack);
 }
 
 static D3DXMATRIX d3d_matrix_stack_get_top(void)
 {
-	D3DXMATRIX *m = stack->lpVtbl->GetTop(stack);
+	D3DXMATRIX *m = matrix_stack->lpVtbl->GetTop(matrix_stack);
 	return *m;
 }
 
@@ -1231,7 +1357,8 @@ static D3DXMATRIX d3d_matrix_stack_get_top(void)
 
 void osd_renderer_push_matrix(void)
 {
-	stack->lpVtbl->Push(stack);
+	stack_ptr++;
+	matrix_stack->lpVtbl->Push(matrix_stack);
 }
 
 /*
@@ -1242,7 +1369,9 @@ void osd_renderer_push_matrix(void)
 
 void osd_renderer_pop_matrix(void)
 {
-	stack->lpVtbl->Pop(stack);
+	stack_ptr--;
+	if( stack_ptr >= 0)
+		matrix_stack->lpVtbl->Pop(matrix_stack);
 }
 
 /*
@@ -1257,7 +1386,7 @@ void osd_renderer_pop_matrix(void)
 void osd_renderer_multiply_matrix( MATRIX m )
 {
 	D3DMATRIX x = matrix_to_d3d( m );
-	stack->lpVtbl->MultMatrixLocal(stack, &x );
+	matrix_stack->lpVtbl->MultMatrixLocal(matrix_stack, &x );
 }
 
 /*
@@ -1279,5 +1408,5 @@ void osd_renderer_translate_matrix( float x, float y, float z )
 	t._21 = 0.0f; t._22 = 1.0f; t._23 = 0.0f; t._24 = 0.0f;
 	t._31 = 0.0f; t._32 = 0.0f; t._33 = 1.0f; t._34 = 0.0f;
 	t._41 = x;	  t._42 = y;    t._43 = z;    t._44 = 1.0f;
-	stack->lpVtbl->MultMatrixLocal(stack,&t);
+	matrix_stack->lpVtbl->MultMatrixLocal(matrix_stack,&t);
 }
