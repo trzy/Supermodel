@@ -1,5 +1,3 @@
-//TODO: Look at BB @ 0xC10 in VON2. Should be 1 instruction
-
 //#define WATCH_PC    0x101cd8
 //#define BREAK_PC    0x8ac34
 
@@ -76,11 +74,26 @@ static BB * bb_search(UINT32 addr)
 {
 	BB * bb = bb_list_head.next;
 
-	while(bb->addr < addr)
+	while (bb != NULL)
+	{
+		if (bb->addr == addr)
+		{
+			/*
+			 * Move the BB we found to the front of the list
+			 */
+			 
+			bb->next->prev = bb->prev;
+			bb->prev->next = bb->next;
+			
+			bb->next = bb_list_head.next;
+			bb->prev = bb_list_head.next->prev;
+			
+			bb->next->prev = bb;
+			bb->prev->next = bb;	// this will automatically link the head to us			
+			return bb;
+		}			
 		bb = bb->next;
-
-	if(bb->addr == addr)
-		return bb;
+	}
 
 	return NULL;
 }
@@ -93,10 +106,7 @@ static BB * bb_add(UINT32 addr)
 	if(new_bb == NULL)
 		error("bb_add() failed\n");
 
-	// link the block in the list
-
-	while(bb->addr < addr)
-		bb = bb->next;
+	// link the block at the beginning of the list
 
 	new_bb->prev = bb->prev;
 	new_bb->next = bb;
@@ -3650,6 +3660,10 @@ int ppc_reset(void)
 
 	ppc_update_pc();
 	
+#ifdef RECORD_BB_STATS
+	bb_stat_reset();	
+	cur_bb = bb_add(PC);
+#endif	
     return PPC_OKAY;
 }
 
@@ -3959,6 +3973,6 @@ void ppc_load_state(FILE *fp)
 	
 #ifdef 	RECORD_BB_STATS
 	bb_stat_reset();
-	bb_add(PC);
+	cur_bb = bb_add(PC);
 #endif	
 }
