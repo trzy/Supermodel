@@ -619,52 +619,54 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
     {
     case 3:     // Capture-DR
 
-        if (current_instruction == 0x0C631F8C7FFE)
+        /*
+         * Read ASIC IDs.
+         *
+         * The ID Sequence is:
+         *  - Jupiter
+         *  - Mercury
+         *  - Venus
+         *  - Earth
+         *  - Mars
+         *  - Mars (again)
+         *
+         * Note that different Model 3 steps have different chip
+         * revisions, hence the different IDs returned below.
+         *
+         * On Step 1.5 and 1.0, instruction 0x0C631F8C7FFE is used to retrieve
+         * the ID codes but Step 2.0 is a little weirder. It seems to use this
+         * and either the state of the TAP after reset or other instructions
+         * to read the IDs as well. This can be emulated in one of 2 ways:
+         * Ignore the instruction and always load up the data or load the
+         * data on TAP reset and when the instruction is issued.
+         */
+
+        if (m3_config.step == 0x10)
         {
-			/*
-			 * Read ASIC IDs.
-			 *
-			 * The ID Sequence is:
-			 *  - Jupiter
-			 *  - Mercury
-			 *  - Venus
-			 *  - Earth
-			 *  - Mars
-			 *  - Mars (again)
-			 *
-			 * Note that different Model 3 steps have different chip
-			 * revisions, hence the different IDs returned below.
-			 */
-
-			if(m3_config.step == 0x10)
-			{
-            	insert_id(0x116C7057, 1 + 0 * 32);
-				insert_id(0x216C3057, 1 + 1 * 32);
-				insert_id(0x116C4057, 1 + 2 * 32);
-				insert_id(0x216C5057, 1 + 3 * 32);
-				insert_id(0x116C6057, 1 + 4 * 32 + 1);
-				insert_id(0x116C6057, 1 + 5 * 32 + 1);
-			}
-			else if(m3_config.step == 0x15)
-			{
-				insert_id(0x316C7057, 1 + 0 * 32);
-				insert_id(0x316C3057, 1 + 1 * 32);
-				insert_id(0x216C4057, 1 + 2 * 32);		// Lost World may to use 0x016C4057
-				insert_id(0x316C5057, 1 + 3 * 32);
-				insert_id(0x216C6057, 1 + 4 * 32 + 1);
-                insert_id(0x216C6057, 1 + 5 * 32 + 1);
-			}
-			else if(m3_config.step >= 0x20)
-			{
-				// not working
-
-//                insert_id(0x416C7057, 1 + 0 * 32);
-//                insert_id(0x416C3057, 1 + 1 * 32);
-//                insert_id(0x316C4057, 1 + 2 * 32);
-//                insert_id(0x416C5057, 1 + 3 * 32);
-//                insert_id(0x316C6057, 1 + 4 * 32 + 1);
-//                insert_id(0x316C6057, 1 + 5 * 32 + 1);
-			}
+            insert_id(0x116C7057, 1 + 0 * 32);
+            insert_id(0x216C3057, 1 + 1 * 32);
+            insert_id(0x116C4057, 1 + 2 * 32);
+            insert_id(0x216C5057, 1 + 3 * 32);
+            insert_id(0x116C6057, 1 + 4 * 32 + 1);
+            insert_id(0x116C6057, 1 + 5 * 32 + 1);
+        }
+        else if (m3_config.step == 0x15)
+        {
+            insert_id(0x316C7057, 1 + 0 * 32);
+            insert_id(0x316C3057, 1 + 1 * 32);
+            insert_id(0x216C4057, 1 + 2 * 32);      // Lost World may to use 0x016C4057
+            insert_id(0x316C5057, 1 + 3 * 32);
+            insert_id(0x216C6057, 1 + 4 * 32 + 1);
+            insert_id(0x216C6057, 1 + 5 * 32 + 1);
+        }
+        else if (m3_config.step >= 0x20)
+        {
+            insert_id(0x416C7057, 1 + 0 * 32);
+            insert_id(0x416C3057, 1 + 1 * 32);
+            insert_id(0x316C4057, 1 + 2 * 32);
+            insert_id(0x416C5057, 1 + 3 * 32);
+            insert_id(0x316C6057, 1 + 4 * 32 + 1);
+            insert_id(0x316C6057, 1 + 5 * 32 + 1);
         }
 
         break;
