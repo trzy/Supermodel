@@ -33,8 +33,13 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#ifdef RENDERER_D3D
 #include <d3d9.h>
 #include <d3dx9.h>
+#else // RENDERER_GL
+#include <gl\gl.h>
+#include <gl\glu.h>
+#endif 
 #include <dinput.h>
 
 #include "osd_types.h"  // provides fundamental data types
@@ -43,7 +48,7 @@
 /* OSD Definitions                                                */
 /******************************************************************/
 
-#define INLINE static _inline
+#define INLINE static __inline__
 
 /******************************************************************/
 /* OSD Data Structures                                            */

@@ -31,7 +31,7 @@
 #ifdef STANDALONE
 #include <stdlib.h>
 #endif
-#include "osd_types.h"
+#include "osd.h"
 
 #define VERSION "1.0"
 
@@ -214,6 +214,8 @@ typedef struct
     INT     format; // operand format
     FLAGS   flags;  // flags
 } IDESCR;
+
+#if 0
 
 /*
  * Instruction Table
@@ -1260,5 +1262,7 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#endif
 
 #endif

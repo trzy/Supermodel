@@ -25,8 +25,11 @@
 #ifndef INCLUDED_OSD_TYPES_H
 #define INCLUDED_OSD_TYPES_H
 
-typedef int                 BOOL;       // 0 (false) or non-zero (true)
 typedef unsigned int        FLAGS;      // for storage of bit flags
+
+#ifdef __GCC__
+
+typedef int                 BOOL;       // 0 (false) or non-zero (true)
 
 typedef signed int          INT;        // optimal signed integer
 typedef unsigned int        UINT;       // optimal unsigned integer 
@@ -46,6 +49,8 @@ typedef unsigned __int64    UINT64;
 #else           // assume a C99-compliant compiler
 typedef signed long long	INT64;
 typedef unsigned long long	UINT64;
+#endif
+
 #endif
 
 typedef float               FLOAT32;    // single precision (32-bit)

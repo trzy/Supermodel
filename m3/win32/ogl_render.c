@@ -23,9 +23,6 @@
  */
 
 #include "model3.h"
-#include <gl\gl.h>
-#include <gl\glu.h>
-#include <gl\glaux.h>
 
 #define BPP 16
 
