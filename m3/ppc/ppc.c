@@ -11,7 +11,7 @@
 #define LOG(...)
 #endif
 
-#define RECORD_BB_STATS
+//#define RECORD_BB_STATS
 
 /******************************************************************/
 /* Private Variables                                              */
@@ -3207,9 +3207,11 @@ u32 ppc_run(u32 count)
     	ppc.count--;
 
 #ifdef WATCH_PC
-        if (ppc.cia == WATCH_PC)
+        if (ppc.pc == WATCH_PC)
             log_regs();
 #endif
+//        if (ppc.pc == 0x11A668)
+//            error("Reached desired PC.");
 
 		op = BSWAP32(*ppc._pc);
 
@@ -3244,6 +3246,11 @@ void ppc_set_r(int n, u32 d){ ppc.gpr[n] = d; }
 
 f64 ppc_get_f(int n){ return(ppc.fpr[n].fd); }
 void ppc_set_f(int n, f64 d){ ppc.fpr[n].fd = d; }
+
+u64 ppc_get_timebase(void)
+{
+    return ppc.tb;
+}
 
 u32 ppc_get_reg(int r){
 

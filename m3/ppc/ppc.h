@@ -287,6 +287,7 @@ extern int      ppc_reset(void);
 extern u32		ppc_run(u32);
 extern void		ppc_set_irq_line(u32);
 
+extern u64      ppc_get_timebase(void);
 extern u32		ppc_get_reg(int);
 extern void		ppc_set_reg(int, u32);
 
