@@ -47,140 +47,6 @@
 
 #include "model3.h"
 
-/**
- TMP
- **/
-
-static int              txres=2048, tyres=2048;
-static unsigned char    texture_555[2048*2048*4];
-static unsigned char    texture_444[2048*2048*4];
-
-static int OutBMP(char *filename, unsigned char *texture)
-{
-    FILE        *fp;
-    int    i, j;
-    unsigned char   r, g, b;
-
-    if ((fp = fopen(filename,"wb")) == NULL)
-        return 1;
-
-	/*
-     * Write the BMP file header
-     */
-
-	fwrite("BM", sizeof(char), 2, fp);
-    i = 14 + 40 + txres*tyres*3;    // size = 14 + 40 + x*y*bpp
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    fwrite("\0\0\0\0", sizeof(unsigned char), 4, fp);
-    i = 40 + 14;                // image offset
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    i = 40;
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    i = txres;                        // image width in pixels
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    i = tyres;                        // image height in pixels
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    fwrite("\1\0", sizeof(unsigned char), 2, fp);
-    i = 24;                         // bits per pixel
-    fwrite(&i, sizeof(unsigned short), 1, fp);
-    fwrite("\0\0\0\0\0\0\0\0", sizeof(unsigned char), 8, fp);
-    fwrite("\0\0\0\0\0\0\0\0", sizeof(unsigned char), 8, fp);
-    i = 0;                          // 0 colors in palette (there is none!)
-    fwrite(&i, sizeof(unsigned), 1, fp);
-    fwrite("\0\0\0\0", sizeof(unsigned char), 4, fp);
-
-    /*
-     * Write the image data bottom-up
-     */
-
-    for (i = (tyres - 1) * txres * 4; (int) i >= 0; i -= txres * 4)
-    {
-        for (j = 0; j < txres * 4; j += 4)
-        {
-            r = texture[i + j + 0];
-            g = texture[i + j + 1];
-            b = texture[i + j + 2];
-            fwrite(&b, sizeof(unsigned char), 1, fp);
-            fwrite(&g, sizeof(unsigned char), 1, fp);
-            fwrite(&r, sizeof(unsigned char), 1, fp);
-        }      
-    }
-
-    printf("wrote %s\n", filename);
-
-
-    fclose(fp);
-    return 0;
-}
-
-static void DrawTextureTile(unsigned x, unsigned y, unsigned char *buf, BOOL little_endian)
-{
-	static const int	decode[64] = 
-						{
-							 0, 1, 4, 5, 8, 9,12,13,
-							 2, 3, 6, 7,10,11,14,15,
-							16,17,20,21,24,25,28,29,
-							18,19,22,23,26,27,30,31,
-							32,33,36,37,40,41,44,45,
-							34,35,38,39,42,43,46,47,
-							48,49,52,53,56,57,60,61,
-							50,51,54,55,58,59,62,63
-						};
-    unsigned        xi, yi, pixel_offs, rgb16;
-    unsigned char   r, g, b, r4, g4, b4;
-    int             i = 0;
-
-	for (yi = 0; yi < 8; yi++)
-	{
-		for (xi = 0; xi < 8; xi++)
-		{
-            pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
-            rgb16 = *(UINT16 *) &buf[pixel_offs];
-
-            if (little_endian)
-            {
-                pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
-                rgb16 = *(UINT16 *) &buf[pixel_offs];
-            }
-            else
-            {
-                pixel_offs = decode[yi * 8 + xi] * 2;
-                rgb16 = (buf[pixel_offs + 0] << 8) | buf[pixel_offs + 1];
-            }
-
-			b = (rgb16 & 0x1f) << 3;
-			g = ((rgb16 >> 5) & 0x1f) << 3;
-			r = ((rgb16 >> 10) & 0x1f) << 3;
-            b4 = (rgb16 & 0xf) << 4;
-            g4 = ((rgb16 >> 4) & 0xf) << 4;
-            r4 = ((rgb16 >> 12) & 0xf) << 4;
-
-            texture_555[((y + yi) * txres + (x + xi)) * 4 + 0] = r;
-            texture_555[((y + yi) * txres + (x + xi)) * 4 + 1] = g;
-            texture_555[((y + yi) * txres + (x + xi)) * 4 + 2] = b;
-
-            texture_444[((y + yi) * txres + (x + xi)) * 4 + 0] = r4;
-            texture_444[((y + yi) * txres + (x + xi)) * 4 + 1] = g4;
-            texture_444[((y + yi) * txres + (x + xi)) * 4 + 2] = b4;
-		}
-	}
-}
-
-
-static void DrawTexture(unsigned x, unsigned y, unsigned w, unsigned h, unsigned char *buf, BOOL little_endian)
-{
-    unsigned int    xi, yi;
-
-	for (yi = 0; yi < h * 8; yi += 8)
-	{
-		for (xi = 0; xi < w * 8; xi += 8)
-		{
-            DrawTextureTile(x + xi, y + yi, buf, little_endian);
-			buf += 8 * 8 * 2;	// each texture is 8x8 and 16-bit color
-		}
-	}
-}
-
 /******************************************************************/
 /* Macros                                                         */
 /******************************************************************/
@@ -188,7 +54,7 @@ static void DrawTexture(unsigned x, unsigned y, unsigned w, unsigned h, unsigned
 #define R3D_LOG
 //#define R3D_LOG		LOG
 
-#define WIREFRAME		0
+#define WIREFRAME       0
 
 static UINT32 GETWORDLE(UINT8 *a)
 {
@@ -212,6 +78,7 @@ static UINT32 GETWORDBE(UINT8 *a)
 static UINT8    *culling_ram_8e;    // pointer to Real3D culling RAM
 static UINT8    *culling_ram_8c;    // pointer to Real3D culling RAM
 static UINT8    *polygon_ram;       // pointer to Real3D polygon RAM
+static UINT8    *texture_ram;       // pointer to Real3D texture RAM
 static UINT8    *vrom;              // pointer to VROM
 
 /*
@@ -219,16 +86,11 @@ static UINT8    *vrom;              // pointer to VROM
  *
  * The smallest Model 3 textures are 32x32 and the total VRAM texture sheet
  * is 2048x2048. Dividing this by 32 gives us 64x64. Each element contains an
- * OpenGL ID for a texture. Larger textures take up multiple spaces in the
- * grid.
- *
- * The color words in the complete 2048x2048 texture sheet are stored
- * undecoded (same as the way they were uploaded by the game.)
+ * OpenGL ID for a texture.
  */
 
 static GLint    texture_grid[64*64];        // 0 indicates unused
 static GLbyte   texture_buffer[512*512*4];  // for 1 texture
-static UINT16   *texture_sheet;             // complete 2048x2048 texture
 
 /*
  * Function Prototypes (for forward references)
@@ -867,6 +729,29 @@ static void get_matrix(GLfloat *dest, UINT32 matrix_addr)
 }
 
 /*
+ * set_viewport():
+ *
+ * Sets the viewport for the current scene descriptor.
+ */
+
+static void set_viewport(UINT32 scene_addr)
+{
+    UINT    x, y, w, h;
+
+    x = (GETWORDLE(&culling_ram_8e[scene_addr + 0x1A*4]) & 0xFFFF);
+    y = GETWORDLE(&culling_ram_8e[scene_addr + 0x1A*4]) >> 16;
+    w = GETWORDLE(&culling_ram_8e[scene_addr + 0x14*4]) & 0xFFFF;
+    h = GETWORDLE(&culling_ram_8e[scene_addr + 0x14*4]) >> 16;
+
+    x >>= 4;    // position is 12.4
+    y >>= 4;
+    w >>= 2;
+    h >>= 2;    // size is 14.2
+
+    glViewport(x, 384 - (y + h), w, h);
+}
+
+/*
  * draw_list():
  *
  * Processes a list. Each list element references a 10-word block.
@@ -976,13 +861,11 @@ static void draw_block(UINT8 *block)
         if (m3_config.step == 0x10)
         {
             glPushMatrix();
-            matrix = GETWORDLE(&block[1*4]);
-            if ((matrix & 0x20000000)) // && (matrix & 0x3FF))
+            matrix = (GETWORDLE(&block[1*4]) & 0x3FF) * 12;
+            if (matrix != 0)
             {
-                current_matrix = matrix & 0x03FF;
-                get_matrix(m, (matrix & 0x03FF)*12);
-                if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
-                    glMultMatrixf(m);
+                get_matrix(m, matrix);
+                glMultMatrixf(m);
             }
             glTranslatef(get_float(&block[2*4]), get_float(&block[3*4]), get_float(&block[4*4]));
 
@@ -1036,11 +919,10 @@ static void draw_block(UINT8 *block)
             }
 
             /*
-             * Pop the matrix if we pushed one
+             * Pop the matrix
              */
 
-    //        if ((matrix & 0x20000000))
-                glPopMatrix();
+            glPopMatrix();
     
             /*
              * Advance to next block in list
@@ -1056,21 +938,18 @@ static void draw_block(UINT8 *block)
         else
         {
         /*
-         * Multiply by the specified matrix. If bit 0x20000000 is not set, I
-         * presume that no matrix is to be used.
+         * Multiply by the specified matrix -- apparently, if the number is 0,
+         * it should not be used
          */
 
         glPushMatrix();
-        matrix = GETWORDLE(&block[3*4]);
-        if ((matrix & 0x20000000))// && (matrix & 0x3FF))
+        matrix = (GETWORDLE(&block[3*4]) & 0x3FF) * 12;
+        if (matrix != 0)
         {
-            current_matrix = matrix & 0x03FF;
-            get_matrix(m, (matrix & 0x03FF)*12);
-            if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
-                glMultMatrixf(m);
+            get_matrix(m, matrix);
+            glMultMatrixf(m);
         }
         glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
-        ++current_matrix;
 
         /*
          * Draw a model or process a list. If the address is of the form
@@ -1128,11 +1007,10 @@ static void draw_block(UINT8 *block)
 		}
 
         /*
-         * Pop the matrix if we pushed one
+         * Pop the matrix
          */
 
-//        if ((matrix & 0x20000000))
-            glPopMatrix();
+        glPopMatrix();
 
         /*
          * Advance to next block in list
@@ -1283,7 +1161,8 @@ static void draw_scene(void)
 		);
 
         set_matrix_base(GETWORDLE(&culling_ram_8e[i + 0x16*4]));
-		init_coord_system();
+        init_coord_system();
+        set_viewport(i);
 
         j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
         j = (j & 0xFFFF) * 4;
@@ -1315,88 +1194,8 @@ static void draw_scene(void)
 }
 
 /******************************************************************/
-/* Texture Drawing                                                */
+/* Texture Management                                             */
 /******************************************************************/
-
-static const INT	decode[64] =
-{
-	 0, 1, 4, 5, 8, 9,12,13,
-	 2, 3, 6, 7,10,11,14,15,
-	16,17,20,21,24,25,28,29,
-	18,19,22,23,26,27,30,31,
-	32,33,36,37,40,41,44,45,
-	34,35,38,39,42,43,46,47,
-	48,49,52,53,56,57,60,61,
-	50,51,54,55,58,59,62,63
-};
-
-/*
- * store_texture_tile_16():
- *
- * Writes a single 8x8 texture tile into the appropriate part of the texture
- * sheet.
- */
-
-static void store_texture_tile_16(UINT x, UINT y, UINT8 *src, BOOL little_endian)
-{
-    UINT    xi, yi, pixel_offs;
-    UINT16  rgb16;
-
-	for (yi = 0; yi < 8; yi++)
-	{
-		for (xi = 0; xi < 8; xi++)
-		{
-            /*
-             * Grab the pixel offset from the decode[] array and fetch the
-             * pixel word
-             */
-
-            if (little_endian)
-            {
-                /*
-                 * XOR with 1 in little endian mode -- every word contains 2
-                 * 16-bit pixels, thus they are swapped
-                 */
-
-                pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
-                rgb16 = *(UINT16 *) &src[pixel_offs];
-            }
-            else
-            {
-                pixel_offs = decode[yi * 8 + xi] * 2;
-                rgb16 = (src[pixel_offs + 0] << 8) | src[pixel_offs + 1];
-            }
-
-			/*
-             * Store within the texture sheet
-             */
-
-            texture_sheet[(y + yi) * 2048 + (x + xi)] = rgb16;
-        }
-    }
-}
-
-/*
- * store_texture_16():
- *
- * Writes a 16-bit texture into the texture sheet. The pixel words are not
- * decoded, but they are all converted to a common endianness and stored as
- * complete UINT16s.
- */
-
-static void store_texture_16(UINT x, UINT y, UINT w, UINT h, UINT8 *src, BOOL little_endian)
-{
-    UINT    xi, yi;
-
-    for (yi = 0; yi < h; yi += 8)
-	{
-        for (xi = 0; xi < w; xi += 8)
-		{
-            store_texture_tile_16(x + xi, y + yi, src, little_endian);
-            src += 8 * 8 * 2;   // each texture tile is 8x8 and 16-bit color
-		}
-	}
-}
 
 /*
  * make_texture():
@@ -1413,6 +1212,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
     UINT    xi, yi;
     GLint   tex_id;
     UINT16  rgb16;
+    UINT8   gray8;
 
     tex_id = texture_grid[(y / 32) * 64 + (x / 32)];
     if (tex_id != 0)    // already exists, bind and exit
@@ -1429,7 +1229,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 	    {
 	        for (xi = 0; xi < w; xi++)
 	        {
-	            rgb16 = texture_sheet[(y + yi) * 2048 + (x + xi)];
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
 	            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 10) & 0x1F) << 3;
 	            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 5) & 0x1F) << 3;
 	            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 0) & 0x1F) << 3;
@@ -1439,13 +1239,25 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 
 		break;
 
-	case 1:	// 16-bit, ARGB1555 ?
-
-		break;
-
 	case 2:  // 8-bit, L8
 
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                gray8 = texture_ram[(y + yi) * 2048 + (x + xi)];
+                texture_buffer[((yi * w) + xi) * 4 + 0] = gray8;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = gray8;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = gray8;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = (UINT8) 0xFF;
+	        }
+	    }
+
 		break;
+
+	case 1:	// 16-bit, ARGB1555 ?
+
+        LOG("model3.log", "tex type 1 @ %d,%d\t%dx%d\n", x, y, w, h);
 
 	case 3:	// 16-bit, ARGB4444
 
@@ -1453,7 +1265,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 	    {
 	        for (xi = 0; xi < w; xi++)
 	        {
-	            rgb16 = texture_sheet[(y + yi) * 2048 + (x + xi)];
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
 	            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >>  8) & 0xF) << 3;
 	            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  4) & 0xF) << 3;
 	            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  0) & 0xF) << 3;
@@ -1475,70 +1287,36 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 }
 
 /*
- * void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
- *                           BOOL little_endian);
+ * void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h);
  *
- * Converts the specified Model 3 texture into OpenGL format and uploads it
- * for use.
+ * Frees all textures in the region described and marks those positions as
+ * unused.
  *
  * Parameters:
- *      header        = Header word with size and position info.
- *      length        = Header word containing length information.
- *      src           = Pointer to texture data (no header words.)
- *      little_endian = Set to 1 if little endian, otherwise big endian.
+ *      x = X position within the 2048x2048 texture sheet of the area in
+ *          pixel coordinates.
+ *      y = Y position.
+ *      w = Width in pixels.
+ *      h = Height in pixels.
+ *
+ * NOTE: I will be moving r3dgl and OS-independent portions of win32/ogl_render.c
+ * into a common OSD subdirectory now that there is a Linux port which uses
+ * OpenGL. That's why there's an osd_ function here ;) ---Bart
  */
 
-//TODO: overwritten textures are removed, but this is probably causing
-//fragmentation. 
-//TODO: some textures are 8-bit, this is not handled yet.
+void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h)
+{
+    UINT    yi;
 
-//TODO: the texture grid code must be cleaned up. what happens if a partial
-//texture is overwritten? can 0 be guaranteed NOT to be a texture ID? etc.
+    x /= 32;
+    y /= 32;
+    w /= 32;
+    h /= 32;
 
-void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
-                          BOOL little_endian)
-{    
-    UINT    size_x, size_y, xpos, ypos, xi, yi;
-
-    /*
-     * Model 3 texture RAM appears as 2 2048x1024 textures. When textures are
-     * uploaded, their size and position within a sheet is given. I treat the
-     * texture sheet selection bit as an additional bit to the Y coordinate.
-     */
-
-    size_x = (header >> 14) & 3;
-    size_y = (header >> 17) & 3;
-    size_x = (32 << size_x);    // width in pixels
-    size_y = (32 << size_y);    // height
-
-    ypos = (((header >> 7) & 0x1F) | ((header >> 15) & 0x20)) * 32;
-    xpos = ((header >> 0) & 0x3F) * 32;
-
-    LOG("texture.log", "%08X %08X %d,%d\t%dx%d\n", header, length, xpos, ypos, size_x, size_y);
-
-    /*
-     * Render the texture into the texture buffer
-     */
-
-    if ((header & 0x0F000000) == 0x02000000)
-		return;
-
-    if (header & 0x00800000)    // 16-bit texture
-    {        
-        store_texture_16(xpos, ypos, size_x, size_y, src, little_endian);
-        DrawTexture(xpos, ypos, size_x / 8, size_y / 8, src, little_endian);
-    }
-
-    /*
-     * Mark the appropriate parts of the texture grid as clear so that they
-     * will be recached
-     */
-    
-    for (yi = 0; yi < size_y / 32; yi++)
+    for (yi = 0; yi < h; yi++)
     {
-        glDeleteTextures(size_x / 32, &texture_grid[(yi + ypos / 32) * 64 + xpos / 32]);
-        for (xi = 0; xi < size_x / 32; xi++)
-            texture_grid[(yi + ypos / 32) * 64 + (xi + xpos / 32)] = 0;
+        glDeleteTextures(w, &texture_grid[(yi + y) * 64 + x]);
+        memset((UINT8 *) &texture_grid[(yi + y) * 64 + x], 0, w * sizeof(GLint));
     }
 }
 
@@ -1615,7 +1393,8 @@ void r3dgl_update_frame(void)
 
 /*
  * void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
- *                 UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr);
+ *                 UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
+ *                 UINT8 *vrom_ptr);
  *
  * Initializes the engine by passing pointers to Real3D memory regions. Also
  * allocates memory for textures.
@@ -1624,23 +1403,21 @@ void r3dgl_update_frame(void)
  *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
  *      culling_ram_8c_ptr = Pointer to Real3D culling RAM at 0x8C000000.
  *      polygon_ram_ptr    = Pointer to Real3D polygon RAM.
+ *      texture_ram_ptr    = Pointer to Real3D texture RAM.
  *      vrom_ptr           = Pointer to VROM.
  */
 
 void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
-                UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr)
+                UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
+                UINT8 *vrom_ptr)
 {
     culling_ram_8e = culling_ram_8e_ptr;
     culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
+    texture_ram = texture_ram_ptr;
     vrom = vrom_ptr;
 
-    if ((texture_sheet = (UINT16 *) malloc(2048 * 2048 * 2)) == NULL)
-        osd_error("Not enough memory for local 2048x2048 texture sheet!");
-
     memset(texture_grid, 0, 64 * 64 * sizeof(GLint));
-
-    LOG_INIT("texture.log");
 }
 
 /*
@@ -1651,8 +1428,4 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 
 void r3dgl_shutdown(void)
 {
-//    OutBMP("texture.bmp", texture_555);
-//    OutBMP("texture4.bmp", texture_444);
-
-    SAFE_FREE(texture_sheet);
 }
