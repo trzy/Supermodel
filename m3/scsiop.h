@@ -70,7 +70,7 @@ INSTRUCTION(move_memory)
     FETCH(TEMP);
     dest = TEMP;
 
-    message(0, "%08X: SCSI move memory: %08X->%08X, %X", ppc_get_reg(PPC_REG_PC), source, dest, num_bytes);
+    message(0, "%08X (%08X): SCSI move memory: %08X->%08X, %X", ppc_get_reg(PPC_REG_PC), ppc_get_reg(PPC_REG_LR), source, dest, num_bytes);
 
     /*
      * Perform a 32-bit copy if possible and if necessary, finish off with a
@@ -119,7 +119,13 @@ INSTRUCTION(int_and_intfly)
     REG8(0x14) |= 0x01;     // DIP=1
     scripts_exec = 0;       // halt execution
 
-    //TODO: trigger main CPU interrupt
+    /*
+     * NOTE: I haven't seen any games rely on this, so if you observe SCSI
+     * problems, remove this to see if it helps.
+     */
+
+    REG8(0x14) |= 0x01;     // DIP=1
+    ppc_set_irq_line(1);
     return 0;
 }
 

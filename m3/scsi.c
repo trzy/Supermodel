@@ -115,6 +115,8 @@ UINT32 scsi_read_32(UINT32 addr)
 {
     UINT32  reg;
 
+//    error("SCSI 32-bit read from %08X", addr);
+
     addr &= 0xFF;
     if (addr > 0x5F)
         error("%08X: SCSI invalid read from %02X", ppc_get_reg(PPC_REG_PC), addr);
@@ -205,12 +207,12 @@ void scsi_write_8(UINT32 addr, UINT8 data)
          */
 
         /*
-         * I'm not sure how to properly handle single stepping. I've observed
-         * that the SCSI is usually in manual mode, so I simply check for
-         * single stepping in scsi_run().
+         * Single-stepping is checked for in scsi_run() (the number of
+         * instructions to execute will be reduced to 1 there.)
          */
 
-        if ((REG8(0x38) & 0x01) == 0x01)    // MAN=1, start SCRIPTS on STD=1
+        if ((REG8(0x38) & 0x01) ||          // MAN=1, start SCRIPTS on STD=1
+            (REG8(0x3B) & 0x10))            // single step, resume execution
         {
             scripts_exec = data & 0x04;
             scsi_run(100);
