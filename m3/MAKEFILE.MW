@@ -36,7 +36,7 @@ C_GFLAGS = -s #-Q #-g -pg
 CFLAGS = $(C_WFLAGS) $(C_DFLAGS) $(C_IFLAGS) $(C_OFLAGS) $(C_GFLAGS) -std=gnu99
 AFLAGS = -f coff
 
-LIBS = -lmingw32 -ldxguid -ldinput8 -luser32 -lgdi32 -ladvapi32 # -lz
+LIBS = -lmingw32 -ldxguid -ldinput8 -luser32 -lgdi32 -ladvapi32 -lz
 
 ifeq ($(REND),d3d)
 LIBS_REND = -ld3dx9 -ld3d9
@@ -45,6 +45,8 @@ else
 LIBS_REND = -lopengl32 -lglu32
 FLAGS_REND = -DRENDERER_OGL
 endif
+
+COMPILE = $(CC) $< $(CFLAGS) -c -o $@
 
 #
 # Objects
@@ -65,6 +67,9 @@ OBJ = $(OBJ_DIR)/win_input.o \
 	$(OBJ_DIR)/scsi.o \
 	$(OBJ_DIR)/model3.o \
 	$(OBJ_DIR)/ppc.o \
+	$(OBJ_DIR)/cfgparse.o \
+	$(OBJ_DIR)/file.o \
+	$(OBJ_DIR)/unzip.o \
 	$(OBJ_DIR)/disasm.o
 
 #
@@ -78,19 +83,25 @@ clean:
 	del obj\*.o
 
 $(OBJ_DIR)/%.o: %.c %.h rom_list.h
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(COMPILE)
 
 $(OBJ_DIR)/scsi.o: scsi.c scsi.h scsiop.h
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(COMPILE)
 
 $(OBJ_DIR)/%.o: %.c
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(COMPILE)
 
 $(OBJ_DIR)/%.o: osd_common/%.c
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(COMPILE)
 
 $(OBJ_DIR)/%.o: win32/%.c
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(COMPILE)
 
 $(OBJ_DIR)/%.o: ppc/%.c ppc/%.h ppc/ppc_4xx.h ppc/ppc_6xx.h
-	$(CC) $< $(CFLAGS) -c -o $@
+	$(COMPILE)
+
+$(OBJ_DIR)/%.o: %.c %.h rom_list.h
+	$(COMPILE)
+
+$(OBJ_DIR)/%.o: unzip/%.c unzip/%.h
+	$(COMPILE)

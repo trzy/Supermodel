@@ -1713,7 +1713,6 @@ static INT load_romfile(UINT8 * buff, ROMFILE * list, UINT32 itlv)
 
 	for(i = 0; i < itlv; i++)
 	{
-		FILE * file;
 		int size;
 		UINT8* temp_buffer;
 		UINT32 crc;
@@ -1756,8 +1755,6 @@ static INT load_romfile(UINT8 * buff, ROMFILE * list, UINT32 itlv)
         }
 
 		SAFE_FREE(temp_buffer);
-
-		fclose(file);
 	}
 
 	/* everything went right */
