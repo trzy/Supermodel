@@ -341,7 +341,7 @@ static void bind_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
     case 64:    num_mips = 4; break;
     case 128:   num_mips = 5; break;
     case 256:   num_mips = 6; break;
-    case 512:   num_mips = 7; break;
+    defaul:		num_mips = 7; break;
     }
 
     /*
@@ -515,7 +515,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         i = 0;
         for (j = 0; j < 4; j++) // fetch all previous vertices that we need
         {
-            if ((link_data & 1))            
+            if ((link_data & 1))
                 v[i++] = prev_v[j];
             link_data >>= 1;
         }
@@ -790,6 +790,22 @@ void osd_renderer_clear(BOOL fbuf, BOOL zbuf)
 /* Tile Layer Interface                                           */
 /******************************************************************/
 
+static BOOL		coff_enabled = FALSE;
+static GLfloat	coff[3];
+
+void osd_renderer_set_color_offset(BOOL is_enabled,
+								   FLOAT32 r,
+								   FLOAT32 g,
+								   FLOAT32 b)
+{
+	if((coff_enabled = is_enabled) != FALSE)
+	{
+		coff[0] = r;
+		coff[1] = g;
+		coff[2] = b;
+	}
+}
+
 /*
  * void osd_renderer_draw_layer(UINT layer_num);
  *
@@ -800,13 +816,69 @@ void osd_renderer_clear(BOOL fbuf, BOOL zbuf)
  */
 
 void osd_renderer_draw_layer(UINT layer_num)
-{    
+{
+	GLfloat	temp[3];	// combiner color
+
     /*
      * Disable lighting and set the replace texture mode
      */
 
     glDisable(GL_LIGHTING);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+	if(!coff_enabled)	// no color offset
+	{
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	}
+	else
+	{
+		/*
+		 * The color combiner operations is set as follows.
+		 *
+		 * final_color = texture_color ± primary_color
+		 * final_alpha = texture_alpha
+		 *
+		 * OpenGL's color combiner doesn't allow specification of individual
+		 * color component operations (to my knowledge) -- Stefano.
+		 */
+
+		// setup color combiner
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+
+		if(coff[0] > 0.0f && coff[1] > 0.0f && coff[2] > 0.0f)
+		{
+			// set combiner mode to ADD
+			glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_ADD);
+			temp[0] = coff[0];
+			temp[1] = coff[1];
+			temp[2] = coff[2];
+		}
+		else if(coff[0] < 0.0f && coff[1] < 0.0f && coff[2] < 0.0f)
+		{
+			// set combiner mode to SUB
+			glTexEnvf(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_SUBTRACT);
+			temp[0] = -coff[0];
+			temp[1] = -coff[1];
+			temp[2] = -coff[2];
+		}
+		else
+			error("osd_renderer_draw_layer: non-uniform color offset\n");
+
+		// setup color combiner operation
+		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PRIMARY_COLOR_ARB);
+		glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0f);
+
+		// setup alpha combiner operation
+		glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_REPLACE);
+		glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);
+		glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);
+		glTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0f);
+
+		// setup primary fragment color
+		glColor3fv(temp);
+	}
 
     /*
      * Set orthogonal projection and disable Z-buffering and lighting

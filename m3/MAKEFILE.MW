@@ -59,6 +59,7 @@ OBJ = $(OBJ_DIR)/win_input.o \
 	$(OBJ_DIR)/eeprom.o \
 	$(OBJ_DIR)/r3d.o \
 	$(OBJ_DIR)/tilegen.o \
+	$(OBJ_DIR)/render.o \
 	$(OBJ_DIR)/dma.o \
 	$(OBJ_DIR)/rtc.o \
 	$(OBJ_DIR)/scsi.o \

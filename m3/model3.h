@@ -80,13 +80,13 @@
 #define PPC_PC  ppc_get_reg(PPC_REG_PC)
 #define PPC_LR  ppc_get_reg(PPC_REG_LR)
 
-INLINE UINT16 BSWAP16(UINT16 d)
+static UINT16 BSWAP16(UINT16 d)
 {
 	return(((d >> 8) & 0x00FF) |
 		   ((d << 8) & 0xFF00));
 }
 
-INLINE UINT32 BSWAP32(UINT32 d)
+static UINT32 BSWAP32(UINT32 d)
 {
 	return(((d >> 24) & 0x000000FF) |
 		   ((d >>  8) & 0x0000FF00) |

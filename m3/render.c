@@ -445,6 +445,33 @@ static void do_3d(void)
 }
 
 /*
+ * void set_color_offset(UINT32 reg);
+ *
+ * Sets color offset to the value specified by reg, and updates the
+ * renderer status.
+ */
+
+static void set_color_offset(UINT32 reg)
+{
+	FLOAT32 r, g, b;
+
+	/*
+	 * Color offset is specified as a triplet of signed 8-bit values, one
+	 * for each color component. 0 is the default value, it doesn't modify
+	 * the output color. It's equal to disabling the color offset (though
+	 * some bit in the tilegen ports could be used for this).
+	 * 0x80 (-128) is the minimum value, and corresponds to complete black.
+	 * 0x7F (+127) is the maximum value, and corresponds to complete white.
+	 */
+
+	r = (FLOAT32)((INT32)((INT8)(((INT32)reg >>  8) & 0xFF))) / 128.0f;
+	g = (FLOAT32)((INT32)((INT8)(((INT32)reg >> 16) & 0xFF))) / 128.0f;
+	b = (FLOAT32)((INT32)((INT8)(((INT32)reg >> 24) & 0xFF))) / 128.0f;
+
+	osd_renderer_set_color_offset(r != 0.0f && g != 0.0f && b != 0.0f, r, g, b);
+}
+
+/*
  * void render_frame(void);
  *
  * Draws the entire frame (all 3D and 2D graphics) and blits it.
@@ -457,10 +484,14 @@ void render_frame(void)
     osd_renderer_begin();
     osd_renderer_clear(1, 1);   // clear both the frame and Z-buffer
 
+	set_color_offset(tilegen_read_32(0x44));
+
     osd_renderer_draw_layer(3);
     osd_renderer_draw_layer(2);
 
     do_3d();
+
+	set_color_offset(tilegen_read_32(0x40));
 
     osd_renderer_draw_layer(1);
     osd_renderer_draw_layer(0);

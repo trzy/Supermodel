@@ -91,6 +91,7 @@ extern void osd_renderer_set_light(INT, LIGHT *);
 extern void osd_renderer_set_viewport(const VIEWPORT *);
 extern void osd_renderer_set_coordinate_system(const MATRIX);
 extern void osd_renderer_clear(BOOL, BOOL);
+extern void osd_renderer_set_color_offset(BOOL, FLOAT32, FLOAT32, FLOAT32);
 extern void osd_renderer_draw_layer(UINT);
 extern void osd_renderer_get_layer_buffer(UINT, UINT8 **, UINT *);
 extern void osd_renderer_free_layer_buffer(UINT);
