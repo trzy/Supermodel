@@ -27,13 +27,18 @@ static LPDIRECTINPUTDEVICE8		keyboard;
 static LPDIRECTINPUTDEVICE8		mouse;
 
 static CHAR keyboard_buffer[256];
+static DIMOUSESTATE mouse_state;
 
 extern HWND main_window;
 
-void input_init(void)
+static OSD_CONTROLS controls;
+
+void osd_input_init(void)
 {
 	HINSTANCE hinstance;
 	HRESULT hr;
+
+	atexit(osd_input_shutdown);
 
 	hinstance = GetModuleHandle(NULL);
 	hr = DirectInput8Create( hinstance, DIRECTINPUT_VERSION, &IID_IDirectInput8,
@@ -41,6 +46,7 @@ void input_init(void)
 	if(FAILED(hr))
 		error("DirectInput8Create failed.");
 
+	// Create keyboard device
 	hr = IDirectInput8_CreateDevice( dinput, &GUID_SysKeyboard, &keyboard, NULL );
 	if(FAILED(hr))
 		error("IDirectInput8_CreateDevice failed.");
@@ -55,9 +61,22 @@ void input_init(void)
 
 	if(keyboard)
 		IDirectInputDevice8_Acquire( keyboard );
+
+	// Create mouse device
+	hr = IDirectInput8_CreateDevice( dinput, &GUID_SysMouse, &mouse, NULL );
+	if(FAILED(hr))
+		error("IDirectInput8_CreateDevice failed.");
+
+	hr = IDirectInputDevice8_SetDataFormat( mouse, &c_dfDIMouse );
+	if(FAILED(hr))
+		error("IDirectInputDevice8_SetDataFormat failed.");
+
+	hr = IDirectInputDevice8_SetCooperativeLevel( mouse, main_window, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE );
+	if(FAILED(hr))
+		error("IDirectInputDevice8_SetCooperativeLevel failed.");
 }
 
-void input_shutdown(void)
+void osd_input_shutdown(void)
 {
 	if(dinput) {
 		if(keyboard) {
@@ -65,25 +84,29 @@ void input_shutdown(void)
 			IDirectInputDevice8_Release( keyboard );
 			keyboard = NULL;
 		}
+		if(mouse) {
+			IDirectInputDevice8_Unacquire( mouse );
+			IDirectInputDevice8_Release( mouse );
+			mouse = NULL;
+		}
 		IDirectInput8_Release( dinput );
 		dinput = NULL;
 	}
 }
 
-void input_reset(void)
-{
-
-}
-
-void input_update(void)
+static void input_update(void)
 {
 	/* updates the input buffer */
 	if(dinput) {
+		// Get keyboard state
 		IDirectInputDevice8_GetDeviceState( keyboard, sizeof(keyboard_buffer), &keyboard_buffer );
+		// Get mouse state
+		IDirectInputDevice8_Acquire( mouse );
+		IDirectInputDevice8_GetDeviceState( mouse, sizeof(mouse_state), &mouse_state );
 	}
 }
 
-BOOL keyboard_get_key(UINT8 key)
+static BOOL keyboard_get_key(UINT8 key)
 {
 	if(keyboard_buffer[key] & 0x80)
 		return TRUE;
@@ -91,16 +114,77 @@ BOOL keyboard_get_key(UINT8 key)
 		return FALSE;
 }
 
-BOOL input_get_key(UINT8 key)
+static BOOL mouse_get_button(UINT8 button)
 {
-	/* returns TRUE if the key is pressed, else FALSE */
-	/* NOTE: this approach only works if we're handling */
-	/* the keyboard alone. If we will be using the mouse */
-	/* and eventually a joypad, we'll need another method, */
-	/* more flexible, to allow the user the maximum choice. */
-
-	/* we'll need a convention for key names to be constant */
-	/* on all platforms. */
-	return keyboard_get_key(key);
+	if(mouse_state.rgbButtons[button] & 0x80)
+		return TRUE;
+	else
+		return FALSE;
 }
 
+static void mouse_get_position(INT32* xposition, INT32* yposition)
+{
+	POINT mouse_pos;
+
+	GetCursorPos( &mouse_pos );
+	ScreenToClient( main_window, &mouse_pos );
+
+	*xposition = mouse_pos.x + (400 - (MODEL3_SCREEN_WIDTH / 2));
+	*yposition = mouse_pos.y + (272 - (MODEL3_SCREEN_HEIGHT / 2));
+}
+
+OSD_CONTROLS* osd_input_update_controls(void)
+{
+	INT32 mouse_x, mouse_y;
+	input_update();
+
+	controls.game_controls[0] = 0xFF;
+	controls.game_controls[1] = 0xFF;
+	controls.system_controls[0] = 0xFF;
+	controls.system_controls[1] = 0xFF;
+
+	// Lightgun
+	if(mouse_get_button(0))
+		controls.game_controls[0] &= ~0x01;
+
+	if(mouse_get_button(1))
+		controls.gun_acquired[0] = TRUE;
+	else
+		controls.gun_acquired[0] = FALSE;
+
+	mouse_get_position(&mouse_x, &mouse_y);
+	controls.gun_x[0] = mouse_x;
+	controls.gun_y[0] = mouse_y;
+
+	// Game controls
+	if(keyboard_get_key(DIK_A))
+		controls.game_controls[0] &= ~0x01;
+	if(keyboard_get_key(DIK_S))
+		controls.game_controls[0] &= ~0x02;
+	if(keyboard_get_key(DIK_D))
+		controls.game_controls[0] &= ~0x04;
+	if(keyboard_get_key(DIK_F))
+		controls.game_controls[0] &= ~0x08;
+	if(keyboard_get_key(DIK_G))
+		controls.game_controls[0] &= ~0x80;
+	if(keyboard_get_key(DIK_H))
+		controls.game_controls[0] &= ~0x40;
+
+	// System controls
+	if(keyboard_get_key(DIK_F1)) {	// Test button
+		controls.system_controls[0] &= ~0x04;
+		controls.system_controls[1] &= ~0x04;
+	}
+	if(keyboard_get_key(DIK_F2)) {	// Service button
+		controls.system_controls[0] &= ~0x08;
+		controls.system_controls[1] &= ~0x80;
+	}
+	if(keyboard_get_key(DIK_F3)) {	// Start button
+		controls.system_controls[0] &= ~0x10;
+	}
+	if(keyboard_get_key(DIK_F4)) {	// Coin #1
+		controls.system_controls[0] &= ~0x01;
+	}
+
+	return &controls;
+}
