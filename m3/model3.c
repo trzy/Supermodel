@@ -305,7 +305,14 @@ static UINT32 m3_ppc_read_32(UINT32 a)
             return m3_sys_read_32(a);
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
                  (a >= 0xFE140000 && a <= 0xFE14003F))  // ?
-            return 0xFFFFFFFF;
+        {           
+            static UINT32   x = 0xFFFFFFFF;
+            message(0, "%08X: unknown read32, %08X", PPC_PC, a);
+            LOG("model3.log", "%08X: unknown read32, %08X\n", PPC_PC, a);            
+//            return 0xFFFFFFFF;
+//            return (x ^= 0xFFFFFFFF);
+            return 0;
+        }
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
             return tilegen_vram_read_32(a);
         else if (a >= 0xF1180000 && a <= 0xF11800FF)    // tile generator regs
@@ -471,6 +478,12 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
     if (a <= 0x007FFFFF)
     {
+        if (a == 0x100438)
+//        if (a == (0xE0010 + 3*4))
+        {            
+            LOG("model3.log", "%08X = %08X at PC=%08X, LR=%08X, R10=%08X\n", a, BSWAP32(d), PPC_PC, PPC_LR, ppc_get_reg(PPC_REG_R10));
+        }
+
         *(UINT32 *) &ram[a] = BSWAP32(d);
         return;
     }
@@ -533,7 +546,11 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         }
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
                  (a >= 0xFE140000 && a <= 0xFE14003F))  // ? Virtual On 2
+        {
+            message(0, "%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
+            LOG("model3.log", "%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
             return;
+        }
         else if (a >= 0xFE180000 && a <= 0xFE19FFFF)    // ?
         {
             a -= 0xFE180000;
@@ -700,6 +717,8 @@ static void m3_set_crom_bank(UINT8 d)
 {
     crom_bank_reg = d;
     crom_bank = &crom[0x800000 + ((~d) & 7) * 0x800000];
+
+    LOG("model3.log", "CROM bank = %02X\n", d);
 }
 
 static UINT8 m3_sys_read_8(UINT32 a)
@@ -1087,8 +1106,8 @@ void m3_run_frame(void)
     m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
     ppc_run(100000);   
-    m3_remove_irq(0x60);
-//    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
+//    m3_remove_irq(0x60);
+    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
 
 }
 
@@ -1266,7 +1285,7 @@ static INT load_romfile(UINT8 * buff, char * dir, ROMFILE * list, UINT32 itlv)
  */
 
 void m3_unload_rom(void)
-{
+{    
 	SAFE_FREE(crom);
 	SAFE_FREE(vrom);
 	SAFE_FREE(srom);
@@ -1437,25 +1456,36 @@ BOOL m3_load_rom(CHAR * id)
 
     message(0, "ROM loaded succesfully!");
 
-	/*
-
-	save_file("crom.bin", crom, 8*1024*1024);
-    save_file("crom0.bin", crom0, romset->crom0[0].size * 4);
-    save_file("crom1.bin", crom1, romset->crom1[0].size * 4);
-    save_file("crom2.bin", crom2, romset->crom2[0].size * 4);
-    save_file("crom3.bin", crom3, romset->crom3[0].size * 4);
-
-	*/
-
     /*
      * Patches
      */
 
     if (!stricmp(id, "VF3"))
     {
+
+        *(UINT32 *)&crom[0x710000 + 0x1C48] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x1C20] = BSWAP32(0x60000000);
+
+        *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x3C7C] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x3E54] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x25B0] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x25D0] = BSWAP32(0x60000000);
+#if 0
         *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
 
-        *(UINT32 *)&crom[0x710000 + 0x4C1B8] = BSWAP32(0x4804C15E); // BA 0x4C158
+        *(UINT32 *)&crom[0x710000 + 0x8050] = BSWAP32(0x60000000);  // related to RTC test
+        *(UINT32 *)&crom[0x710000 + 0x4C788] = BSWAP32(0x4E800020);
+
+        *(UINT32 *)&crom[0x710000 + 0x4C0BC] = BSWAP32(0x60000000); // related to battery test
+        *(UINT32 *)&crom[0x710000 + 0x4C0C0] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x4C0C4] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x4C0C8] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x4C0CC] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x4C0D0] = BSWAP32(0x60000000);
+
+        *(UINT32 *)&crom[0x710000 + 0x1E94C] = BSWAP32(0x4E800020); //???
+#endif
     }
     else if(!stricmp(id, "LOST"))
 	{
@@ -1467,21 +1497,21 @@ BOOL m3_load_rom(CHAR * id)
 
 		*(UINT32 *)&crom[0x7374F4] = BSWAP32((14 << 26) | (4 << 21) | (4 << 16) | 4);
 	}
-	else if(!stricmp(id, "SCUD"))
+    else if(!stricmp(id, "SCUD") || !stricmp(id, "SCUDE"))
 	{
         *(UINT32 *)&crom[0x799DE8] = BSWAP32(0x00050208);   // debug menu
 		/* directly from Ville's patch */
 
 		*(UINT32 *)&crom[0x700194] = 0x00000060;	// Timebase Skip
-		*(UINT32 *)&crom[0x712734] = 0x00000060;	// Speedup
+        *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
 //        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
 		*(UINT32 *)&crom[0x71AEBC] = 0x00000060;	// Loop Skip
 		*(UINT32 *)&crom[0x712268] = 0x00000060;
 		*(UINT32 *)&crom[0x71277C] = 0x00000060;
-		*(UINT32 *)&crom[0x74072C] = 0x00000060;	// ...
+        *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ...
 		*(UINT8  *)&crom[0x787B36] = 0x00;			// Link ID: 00 = single, 01 = master, 02 = slave
 		*(UINT8  *)&crom[0x787B30] = 0x00;
-		*(UINT32 *)&crom[0x741A20] = 0x00000060;	// Speed hack
+//        *(UINT32 *)&crom[0x741A20] = 0x00000060;    // Speed hack (causes bad textures!!)
 	}
     else if (!stricmp(id, "VON2"))
     {
@@ -1501,10 +1531,12 @@ BOOL m3_load_rom(CHAR * id)
          */
 
         *(UINT32 *) &crom[0x189168] = 0x00000060;
+
         *(UINT32 *) &crom[0x1890AC] = 0x00000060;
         *(UINT32 *) &crom[0x1890B8] = 0x00000060;
+
         *(UINT32 *) &crom[0x1888A8] = 0x00000060;
-//        *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
+        *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
         *(UINT32 *) &crom[0x1891C8] = 0x00000060;   // (required)
     }
 
