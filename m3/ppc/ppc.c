@@ -214,7 +214,7 @@ static u32 ppc_field_xlat[256];
 #define BITMASK_0(n)		((u32)(((u64)1 << (n + 1)) - 1))
 
 #define ADD_C(r,a,b)		((u32)(r) < (u32)(a))
-#define SUB_C(r,a,b)		(!((u32)(a) < (u32)(b)))
+#define SUB_C(r,a,b)        (!((u32)(a) < (u32)(b)))
 
 #define SET_ADD_C(r,a,b)	if(ADD_C(r,a,b)){ XER |= XER_CA; }else{ XER &= ~XER_CA; }
 #define SET_SUB_C(r,a,b)	if(SUB_C(r,a,b)){ XER |= XER_CA; }else{ XER &= ~XER_CA; }
