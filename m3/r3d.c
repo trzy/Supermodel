@@ -109,7 +109,7 @@ void r3d_shutdown(void)
 void r3d_reset(void)
 {
     memset(culling_ram_8e, 0, 1*1024*1024);
-    memset(culling_ram_8c, 0, 2*1024*1024);
+    memset(culling_ram_8c, 0, 4*1024*1024);
     memset(polygon_ram, 0, 2*1024*1024);
     memset(texture_ram, 0, 2048*2048*2);
 	tap_reset();
@@ -127,7 +127,7 @@ void r3d_reset(void)
 void r3d_save_state(FILE *fp)
 {
     fwrite(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
-    fwrite(culling_ram_8c, sizeof(UINT8), 2*1024*1024, fp);
+    fwrite(culling_ram_8c, sizeof(UINT8), 4*1024*1024, fp);
     fwrite(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
     fwrite(texture_ram, sizeof(UINT8), 2048*2048*2, fp);
 }
@@ -144,7 +144,7 @@ void r3d_save_state(FILE *fp)
 void r3d_load_state(FILE *fp)
 {
     fread(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
-    fread(culling_ram_8c, sizeof(UINT8), 2*1024*1024, fp);
+    fread(culling_ram_8c, sizeof(UINT8), 4*1024*1024, fp);
     fread(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
     fread(texture_ram, sizeof(UINT8), 2048*2048*2, fp);
 
@@ -446,9 +446,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
         *(UINT32 *) &culling_ram_8e[a & 0xFFFFF] = BSWAP32(d);
         return;
     }
-    else if (a >= 0x8C000000 && a <= 0x8C1FFFFF)    // culling RAM
+    else if (a >= 0x8C000000 && a <= 0x8C3FFFFF)    // culling RAM
     {
-        *(UINT32 *) &culling_ram_8c[a & 0x1FFFFF] = BSWAP32(d);
+        *(UINT32 *) &culling_ram_8c[a & 0x3FFFFF] = BSWAP32(d);
         return;
     }
     else if (a >= 0x98000000 && a <= 0x981FFFFF)    // polygon RAM

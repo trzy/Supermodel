@@ -475,6 +475,12 @@ static UINT8 m3_ppc_read_8(UINT32 a)
             return scsi_read_8(a);
 
 
+        switch (a)
+        {
+        case 0xF118000C:    // TODO: 8-bit tilegen access is unimplemented
+            return 0xFF;
+        }
+
         break;
     }
 
@@ -599,6 +605,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
             return bridge_read_config_data_32(a);
 
+        case 0xFE180000:    // ? SWT
+            return 0;
         case 0xFE1A0000:    // ? Virtual On 2 -- important to return 0
             return 0;       // see my message on 13May ("VROM Port?")
         case 0xFE1A001C:   
@@ -728,7 +736,10 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
         switch (a)
         {
         case 0xFE000004:    // Sega Rally 2
+        case 0xF118000C:    // Harley Davidson (tilegen 8-bit)
+
             return;
+        
         }
 
         break;
@@ -1074,10 +1085,10 @@ static void m3_sys_write_8(UINT32 a, UINT8 d)
         return;
 	case 0x0C:	// JTAG TAP
 		tap_write(
-			(d >> 6) & 1,
-			(d >> 2) & 1,
-			(d >> 5) & 1,
-			(d >> 7) & 1
+			(d >> 6) & 1,	// TCK
+			(d >> 2) & 1,	// TMS
+			(d >> 5) & 1,	// TDI
+			(d >> 7) & 1	// TRST
 		);
 		return;
     case 0x14:  // IRQ enable
@@ -1158,7 +1169,7 @@ static UINT32 pci_command_callback(UINT32 cmd)
         break;
     }
 
-    LOG("model3.log", "%08X: PCI command issued: %08X\n", PPC_PC, cmd);
+    LOG("model3.log", "%08X (%08X): PCI command issued: %08X\n", PPC_PC, PPC_LR, cmd);
     message(0, "%08X: PCI command issued: %08X", PPC_PC, cmd);
     return 0;
 }
@@ -1429,7 +1440,8 @@ void m3_run_frame(void)
      */
 
     LOG("model3.log", "-- ACTIVE SCAN\n");
-    m3_add_irq(m3_irq_enable & 0x0C);
+//    m3_add_irq(m3_irq_enable & 0x0C);
+    m3_add_irq(m3_irq_enable & 0x0D);
     ppc_set_irq_line(1);
 
 	PROFILE_SECT_ENTRY("ppc");
@@ -2065,7 +2077,7 @@ void m3_shutdown(void)
     save_file("ram", ram, 8*1024*1024, 0);
     save_file("vram", vram, 1*1024*1024+2*65536, 0);
     save_file("8e000000", culling_ram_8e, 1*1024*1024, 0);
-    save_file("8c000000", culling_ram_8c, 2*1024*1024, 0);
+    save_file("8c000000", culling_ram_8c, 4*1024*1024, 0);
     save_file("98000000", polygon_ram, 2*1024*1024, 0);
     save_file("fe180000", _FE180000, 0x20000, 0);
     save_file("texture.bin", texture_ram, 2048*2048*2, 0);
@@ -2152,7 +2164,7 @@ void m3_init(void)
     sram = (UINT8 *) malloc(1*1024*1024);
     bram = (UINT8 *) malloc(256*1024);
     culling_ram_8e = (UINT8 *) malloc(1*1024*1024);
-    culling_ram_8c = (UINT8 *) malloc(2*1024*1024);
+    culling_ram_8c = (UINT8 *) malloc(4*1024*1024);
     polygon_ram = (UINT8 *) malloc(2*1024*1024);
     texture_ram = (UINT8 *) malloc(2048*2048*2);
 
@@ -2221,7 +2233,7 @@ void m3_init(void)
     case 0x10:  ppc_freq = 66000000; break;     // Step 1.0 PPC @ 66MHz
     }
 
-	//ppc_freq = 20000000;
+    ppc_freq = 20000000;
 
 	/* setup the 68K */
 
