@@ -89,6 +89,9 @@ static BOOL     controls_bank_select;
 static UINT8    gun_data[16];
 static INT      gun_data_ptr;   // which address within gun_data[]
 
+
+static UINT8	steering_data[8];
+static INT		steering_control = 0;	// Currently used register
 /*
  * Handler for Analogue Controls
  */
@@ -181,6 +184,16 @@ void controls_update(void)
     gun_data[7] = (gun_x >> 8) & 7;
 
     gun_data[8] = (!!c->gun_acquired[0]) | ((!!c->gun_acquired[1]) << 1);
+
+	// Steering Wheel controls
+	// Register 0: Steering wheel, 0x80 is center
+	// Register 1: Acceleration, 0x00 - 0xFF
+	// Register 2: Brake, 0x00 - 0xFF
+	// Registers 3 - 7 are either unused or unknown
+
+	steering_data[0] = (c->steering + 0x80) & 0xFF;
+	steering_data[1] = c->acceleration & 0xFF;
+	steering_data[2] = c->brake & 0xFF;
 }
 
 /*
@@ -231,6 +244,11 @@ UINT8 controls_read(UINT32 a)
     case 0x4:
         controls_reg_bank[1] ^= 0x20; // fake EEPROM
         return controls_reg_bank[controls_bank_select];
+	case 0x3C:
+		// I don't know if the register to be read can be selected.
+		steering_control++;
+
+		return steering_data[(steering_control - 1) & 0x7];
     }
 
 //    message(0, "CTRL %02X READ", a);

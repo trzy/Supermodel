@@ -241,5 +241,47 @@ OSD_CONTROLS* osd_input_update_controls(void)
 		controls.system_controls[0] &= ~0x01;
 	}
 
+	// Steering Wheel
+	if(keyboard_get_key(DIK_LEFT))
+		controls.steering -= 32;
+	if(keyboard_get_key(DIK_RIGHT))
+		controls.steering += 32;
+
+	if(controls.steering > 0) {
+		controls.steering -= 16;
+		if(controls.steering < 0)
+			controls.steering = 0;
+	} else {
+		controls.steering += 16;
+		if(controls.steering > 0)
+			controls.steering = 0;
+	}
+
+	if(controls.steering < -128)
+		controls.steering = -128;
+	if(controls.steering > 127)
+		controls.steering = 127;
+
+	if(keyboard_get_key(DIK_UP))
+		controls.acceleration += 32;
+	else
+		controls.acceleration -= 16;
+
+	if(controls.acceleration < 0)
+		controls.acceleration = 0;
+	if(controls.acceleration > 0xFF)
+		controls.acceleration = 0xFF;
+
+	if(keyboard_get_key(DIK_DOWN))
+		controls.brake += 32;
+	else
+		controls.brake -= 16;
+
+	if(controls.brake < 0)
+		controls.brake = 0;
+	if(controls.brake > 0xFF)
+		controls.brake = 0xFF;
+
+
 	return &controls;
 }

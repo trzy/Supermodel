@@ -89,6 +89,11 @@ typedef struct
     UINT    gun_x[2], gun_y[2]; // gun positions for players 1 (0) and 2 (1)
     BOOL    gun_acquired[2];    // gun acquired status for players 1 and 2
                                 // 0 = acquired, 1 = lost
+
+	// Steering Wheel controls
+	INT		steering;
+	INT		acceleration;
+	INT		brake;
 } OSD_CONTROLS;
 
 /******************************************************************/
