@@ -22,8 +22,10 @@ endif
 
 EXE = drppc.exe
 
+LFLAGS = -lz
+
 CFLAGS = -DDRPPC_DEBUG -DDRPPC_PROFILE -Wall -Wno-unused -pedantic \
-         -I./ -I./middle -I./front/$(SOURCE_CPU) -I./back/$(TARGET_CPU) -std=gnu99
+         -I./ -I./tester -I./middle -I./front/$(SOURCE_CPU) -I./back/$(TARGET_CPU) -std=gnu99
 
 AFLAGS = -f coff -b
 
@@ -46,13 +48,13 @@ endif
 
 ################################################################################
 
-OBJ =	obj/test.o obj/toplevel.o obj/mmap.o obj/bb_lookup.o obj/ir.o \
+OBJ =	obj/test.o obj/cfgparse.o obj/file.o obj/unzip.o obj/toplevel.o obj/mmap.o obj/bb_lookup.o obj/ir.o \
 		$(SOURCE_OBJ) $(TARGET_OBJ)
 
 ################################################################################
 
 all:	$(OBJ)
-		$(CC) $(CFLAGS) $(OBJ) -o $(EXE)
+		$(CC) $(CFLAGS) $(OBJ) -o $(EXE) $(LFLAGS)
 
 clean:
 		del obj\*.o
@@ -61,6 +63,12 @@ obj/%.o:	%.c %.h
 	$(COMPILE)
 
 obj/%.o:	%.c
+	$(COMPILE)
+
+obj/%.o:	tester/%.c tester/%.h
+	$(COMPILE)
+
+obj/%.o:	tester/%.c
 	$(COMPILE)
 
 obj/%.o:	middle/%.c middle/%.h

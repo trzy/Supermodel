@@ -14,6 +14,8 @@ typedef signed int          INT;
 typedef unsigned char       UCHAR;
 typedef char                CHAR;
 
+typedef unsigned int		FLAGS;
+
 #ifdef __GNUC__
 typedef unsigned long long  UINT64;
 typedef signed long long    INT64;
