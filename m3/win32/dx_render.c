@@ -21,6 +21,9 @@
 /******************************************************************/
 
 #include "MODEL3.H"
+#include <d3d9.h>
+#include <d3dx9.h>
+#include <dxerr9.h>
 
 //#define ENABLE_LIGHTING
 //#define WIREFRAME

@@ -21,6 +21,7 @@
 /******************************************************************/
 
 #include "MODEL3.H"
+#include <dinput.h>
 
 static LPDIRECTINPUT8			dinput;
 static LPDIRECTINPUTDEVICE8		keyboard;

@@ -38,6 +38,7 @@
 /* Includes                                                       */
 /******************************************************************/
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -45,7 +46,7 @@
 #include <conio.h>
 //#include "zlib.h"
 
-#include "win32/osd.h"
+#include "osd_common.h"
 
 #include "ppc/ppc.h"
 

@@ -17,34 +17,21 @@
  */
 
 /*
- * osd.h
+ * win32/osd.h
  *
- * OS-dependent stuff. This header is visible to all modules of the emulator
- * and covers the GUI, renderer, sound, input, as well as OS-specific
- * definitions and typedefs required by the emulator.
+ * Win32 OSD header: Defines everything an OSD header needs to provide and
+ * includes some Win32-specific files.
  */
 
-#ifndef INCLUDED_OSD_H
-#define INCLUDED_OSD_H
+#ifndef INCLUDED_WIN32_OSD_H
+#define INCLUDED_WIN32_OSD_H
 
 /******************************************************************/
-/* OSD Includes                                                   */
+/* Win32-Specific Includes                                        */
 /******************************************************************/
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#ifdef RENDERER_D3D
-#include <d3d9.h>
-#include <d3dx9.h>
-#include <dxerr9.h>
-#else // RENDERER_GL
-#include <gl\gl.h>
-#include <gl\glu.h>
-#include <gl\glext.h>
-#endif 
-#include <dinput.h>
-
-#include "osd_types.h"  // provides fundamental data types
 
 /******************************************************************/
 /* OSD Definitions                                                */
@@ -59,77 +46,39 @@
 #endif
 
 /******************************************************************/
-/* OSD Data Structures                                            */
+/* OSD Fundamental Data Types                                     */
 /******************************************************************/
 
-/*
- * OSD_CONTROLS Structure
- *
- * Holds the current state of the controls. Filled by the input code and used
- * by the control emulation code.
- */
+typedef unsigned int        FLAGS;      // for storage of bit flags
 
-typedef struct
-{
-    /*
-     * Common to all games
-     */
+#ifdef __GCC__
 
-    UINT8   system_controls[2]; // maps directly to Fx040004 banks 0 and 1
-    UINT8   game_controls[2];   // map directly to Fx040008 and Fx04000C
+typedef int                 BOOL;       // 0 (false) or non-zero (true)
 
-    /*
-     * For games with guns
-     *
-     * The gun positions are reported in screen coordinates. The emulator will
-     * make the appropriate adjustments. Gun coordinates should range from
-     * (0,0), the upper-left corner, to (495,383), the lower-right corner.
-     */
+typedef signed int          INT;        // optimal signed integer
+typedef unsigned int        UINT;       // optimal unsigned integer 
+typedef signed char         CHAR;       // signed character (for text)
+typedef unsigned char       UCHAR;      // unsigned character
 
-    UINT    gun_x[2], gun_y[2]; // gun positions for players 1 (0) and 2 (1)
-    BOOL    gun_acquired[2];    // gun acquired status for players 1 and 2
-                                // 0 = acquired, 1 = lost
+typedef signed char         INT8;
+typedef unsigned char		UINT8;
+typedef signed short		INT16;
+typedef unsigned short		UINT16;
+typedef signed int			INT32;
+typedef unsigned int		UINT32;
 
-	// Steering Wheel controls
-	INT		steering;
-	INT		acceleration;
-	INT		brake;
-} OSD_CONTROLS;
+#ifdef _MSC_VER // Microsoft VisualC++ (for versions 6.0 or older, non-C99)
+typedef signed __int64      INT64;
+typedef unsigned __int64    UINT64;
+#else           // assume a C99-compliant compiler
+typedef signed long long	INT64;
+typedef unsigned long long	UINT64;
+#endif
 
-/******************************************************************/
-/* OSD GUI                                                        */
-/******************************************************************/
+#endif
 
-extern void osd_main(void);
+typedef float               FLOAT32;    // single precision (32-bit)
+typedef double              FLOAT64;    // double precision (64-bit)
 
-extern void osd_message();
-extern void osd_error();
-
-/******************************************************************/
-/* Renderer                                                       */
-/******************************************************************/
-
-extern void osd_renderer_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *, UINT8 *);
-extern void osd_renderer_shutdown(void);
-extern void osd_renderer_set_mode(BOOL, UINT, UINT);
-extern void osd_renderer_unset_mode(void);
-extern void osd_renderer_update_frame(void);
-extern UINT osd_renderer_get_layer_depth(void);
-extern void osd_renderer_get_layer_buffer(UINT, UINT8 **, UINT *);
-extern void osd_renderer_free_layer_buffer(UINT);
-extern void osd_renderer_remove_textures(UINT, UINT, UINT, UINT);
-
-/******************************************************************/
-/* Sound Output                                                   */
-/******************************************************************/
-
-/******************************************************************/
-/* Input                                                           */
-/******************************************************************/
-
-extern OSD_CONTROLS * osd_input_update_controls(void);
-extern void osd_input_init(void);
-extern void osd_input_shutdown(void);
-
-#endif  // INCLUDED_OSD_H
+#endif  // INCLUDED_WIN32_OSD_H
 
