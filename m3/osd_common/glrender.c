@@ -47,9 +47,9 @@
 
 #include "model3.h"
 #include "osd_gl.h"
-#include <gl/gl.h>
-#include <gl/glu.h>
-#include <gl/glext.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glext.h>   // this one can be obtained freely from SGI
 
 /******************************************************************/
 /* Macros (and Inlines)                                           */
@@ -60,7 +60,7 @@
 #define LOG_MODEL       0
 
 #define WIREFRAME       0
-#define LIGHTING        0
+#define LIGHTING        1
 #define FOGGING			1
 
 #ifndef PI
@@ -179,8 +179,8 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 {
     UINT32  (* GETWORD)(UINT8 *buf);
 	R3D_VTX	v[4], prev_v[4];
-    UINT    i, stop, tex_enable, poly_opaque, poly_trans;
-    UINT    tex_w, tex_h, tex_fmt, tex_rep_mode, u_base, v_base;    
+    UINT    i, stop, tex_enable, poly_opaque, poly_trans, light_enable;
+    UINT    tex_w, tex_h, tex_fmt, tex_rep_mode, u_base, v_base;
     GLfloat u_coord, v_coord, n[3], color[4];
 
     if (buf == NULL)
@@ -279,6 +279,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
         tex_enable = GETWORD(&buf[6*4]) & 0x04000000;	// texture enable flag
         poly_trans = GETWORD(&buf[6*4]) & 0x80000000;   // transparency bit processing
 		poly_opaque = GETWORD(&buf[6*4]) & 0x00800000;	// polygon opaque
+        light_enable = GETWORD(&buf[6*4]) & 0x00010000; // lighting (0 = on)
         stop = GETWORD(&buf[1*4]) & 4; 					// last poly?
 
 //        if (!poly_opaque && poly_trans) // translucent AND transparency????
@@ -286,6 +287,17 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
         if (!tex_enable)
             glDisable(GL_TEXTURE_2D);
+
+#if LIGHTING
+        if (light_enable)
+            glDisable(GL_LIGHTING);
+#endif
+
+        if (tex_fmt == 7)   // RGBA4
+        {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        }
 
         if (poly_trans)
         {
@@ -740,8 +752,16 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 			} // really_draw
         }
 
+        if (tex_fmt == 7)
+            glDisable(GL_BLEND);
+
         if (poly_trans)
             glDisable(GL_ALPHA_TEST);
+
+#if LIGHTING
+        if (light_enable)
+            glEnable(GL_LIGHTING);
+#endif
 
         if (!tex_enable)
             glEnable(GL_TEXTURE_2D);
@@ -976,25 +996,40 @@ static void set_viewport_and_perspective(UINT8 *scene_buf)
 
 static void draw_list(UINT8 *list)
 {
+    UINT8   *list_ptr;
     UINT32  addr;
+    
+    list_ptr = list;
 
-    do
+    /*
+     * Go to end of list
+     */
+
+    while (1)
     {
-        addr = GETWORDLE(list);
+        addr = GETWORDLE(list_ptr);
+        if ((addr & 0x02000000))            // last pointer in list
+            break;
+        if (addr == 0 || addr == 0x800800)  // safeguard in case memory hasn't been set up
+        {
+            list_ptr -= 4;
+            break;
+        }
+        list_ptr += 4;
+    }
+
+    while (list_ptr >= list)
+    {
+        addr = GETWORDLE(list_ptr);
 
 		R3D_LOG("model3.log", " ## list: draw block at %08X\n\n", addr);
 
-        if (addr == 0 || addr == 0x800800)  // safeguard: in case memory has not been uploaded yet
-            break;
-//        if (addr == 0x03000000) // VON2 (what does this mean???)
-//            break;
-        if ((addr & 0x03000000) == 0x03000000)
+        if ((addr & 0x03000000) == 0x03000000)  // VON2
             addr &= ~0x03000000;
 
         draw_block(translate_r3d_address(addr & 0x01FFFFFF));
-        list += 4;  // next element
+        list_ptr -= 4;  // next element
     }
-    while (!(addr & 0x02000000));
 }
 
 /*
@@ -1293,29 +1328,29 @@ static void draw_block(UINT8 *block)
  * is traversed starting at 0. The Z buffer is cleared each time.
  */
 
-static void draw_viewport(UINT pri)
+static void draw_viewport(UINT pri, UINT32 addr)
 {
 	UINT8	*buf;
-    UINT32  current_addr, ptr;
-    BOOL    stop;
+    UINT32  next_addr, ptr;
+
+    buf = translate_r3d_address(addr);
 
     /*
-     * Clear Z buffer
+     * Recurse until the last node is reached
      */
-
-    glClear(GL_DEPTH_BUFFER_BIT);
+    
+    next_addr = GETWORDLE(&buf[1*4]);   // get address of next block
+    if (next_addr == 0)                 // culling RAM probably hasn't been set up yet
+        return;
+    if (next_addr != 0x01000000)        // still more nodes to go...
+        draw_viewport(pri, next_addr);
 
     /*
-     * Draw each major node
+     * Draw this node if the priority is okay
      */
 
-    current_addr = 0;
-    stop = 0;
-
-    do
+    if (pri == ((GETWORDLE(&buf[0x00*4]) >> 3) & 3))
     {
-        buf = (UINT8 *)&culling_ram_8e[current_addr];
-
         /*
          * Get the pointer and check if it's valid
          */
@@ -1323,226 +1358,213 @@ static void draw_viewport(UINT pri)
         ptr = GETWORDLE(&buf[2*4]); // get address of 10-word block
         ptr = (ptr & 0xFFFF) * 4;
         if (ptr == 0)   // culling RAM probably hasn't been set up yet
-            break;
+            return;
 
+        message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
+                addr,
+                GETWORDLE(&buf[0*4]),
+                GETWORDLE(&buf[1*4]),
+                GETWORDLE(&buf[2*4])
+        );
+
+        R3D_LOG("model3.log",
+                "#\n"
+                "# scene at %08X\n"
+                "#\n"
+                "\n"
+                "00: %08X\n"
+                "01: %08X\n"
+                "02: %08X\n"
+                "03: %3.5f\n"
+                "04: %3.5f\n"
+                "05: %3.5f\n"
+                "06: %3.5f\n"
+                "07: %3.5f\n"
+                "08: %3.5f\n"
+                "09: %3.5f\n"
+                "0A: %3.5f\n"
+                "0B: %3.5f\n"
+                "0C: %3.5f\n"
+                "0D: %3.5f\n"
+                "0E: %3.5f\n"
+                "0F: %3.5f\n"
+                "10: %3.5f\n"
+                "11: %3.5f\n"
+                "12: %3.5f\n"
+                "13: %3.5f\n"
+                "14: %08X\n"
+                "15: %08X\n"
+                "16: %08X\n"
+                "17: %08X\n"
+                "18: %08X\n"
+                "19: %08X\n"
+                "1A: %08X\n"
+                "1B: %08X\n"
+                "1C: %08X\n"
+                "1D: %08X\n"
+                "1E: %08X\n"
+                "1F: %3.5f\n"
+                "20: %3.5f\n"
+                "21: %3.5f\n"
+                "22: %08X\n"
+                "23: %08X\n"
+                "24: %08X\n"
+                "25: %08X\n"
+                "\n",
+                addr,
+                GETWORDLE(&buf[0x00 * 4]),
+                GETWORDLE(&buf[0x01 * 4]),
+                GETWORDLE(&buf[0x02 * 4]),
+                get_float(&buf[0x03 * 4]),
+                get_float(&buf[0x04 * 4]),
+                get_float(&buf[0x05 * 4]),
+                get_float(&buf[0x06 * 4]),
+                get_float(&buf[0x07 * 4]),
+                get_float(&buf[0x08 * 4]),
+                get_float(&buf[0x09 * 4]),
+                get_float(&buf[0x0A * 4]),
+                get_float(&buf[0x0B * 4]),
+                get_float(&buf[0x0C * 4]),
+                get_float(&buf[0x0D * 4]),
+                get_float(&buf[0x0E * 4]),
+                get_float(&buf[0x0F * 4]),
+                get_float(&buf[0x10 * 4]),
+                get_float(&buf[0x11 * 4]),
+                get_float(&buf[0x12 * 4]),
+                get_float(&buf[0x13 * 4]),
+                GETWORDLE(&buf[0x14 * 4]),
+                GETWORDLE(&buf[0x15 * 4]),
+                GETWORDLE(&buf[0x16 * 4]),
+                GETWORDLE(&buf[0x17 * 4]),
+                GETWORDLE(&buf[0x18 * 4]),
+                GETWORDLE(&buf[0x19 * 4]),
+                GETWORDLE(&buf[0x1A * 4]),
+                GETWORDLE(&buf[0x1B * 4]),
+                GETWORDLE(&buf[0x1C * 4]),
+                GETWORDLE(&buf[0x1D * 4]),
+                GETWORDLE(&buf[0x1E * 4]),
+                get_float(&buf[0x1F * 4]),
+                get_float(&buf[0x20 * 4]),
+                get_float(&buf[0x21 * 4]),
+                GETWORDLE(&buf[0x22 * 4]),
+                GETWORDLE(&buf[0x23 * 4]),
+                GETWORDLE(&buf[0x24 * 4]),
+                GETWORDLE(&buf[0x25 * 4])
+        );
+
+        set_viewport_and_perspective(buf);
+        set_matrix_base(GETWORDLE(&buf[0x16*4]));
+        init_coord_system();
+
+        #if LIGHTING
+        {
         /*
-         * Check the viewport priority and if it matches, draw it
+         * Until material lighting properties aren't emulated
+         * properly, light will never look decent on flat polys.
+         * Moreover, we still lack emulation of shading selection
+         * (Real3D docs enumerate flat, fixed, gouraud and
+         * specular shading, selectable per polygon).
+         *
+         * Note that lighting has plain bad problems with untextured
+         * polys.
          */
 
-        if (pri == ((GETWORDLE(&buf[0x00*4]) >> 3) & 3))
+        GLfloat vect[4];
+        GLfloat temp[4];
+
+        /*
+         * Directional light
+         */
+
+        vect[0] = -get_float(&buf[0x05 * 4]);
+        vect[1] = -get_float(&buf[0x06 * 4]);
+        vect[2] = get_float(&buf[0x04 * 4]);
+        vect[3] = 0.0f;
+
+        temp[0] = \
+        temp[1] = \
+        temp[2] = get_float(&buf[0x07 * 4]);
+        temp[3] = 1.0f;
+
+        glLightfv(GL_LIGHT0, GL_POSITION, vect);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, temp);
+
+        /*
+         * Positional light
+         */
+
+        /* This kind of lights uses a X and Y position,
+         * a X and Y size, a start point and an extent.
+         * It seems to describe a lighting volume
+         * (considering the start and extent values as
+         * Z coords). Currently unemulated.
+         */
+
+        /*
+         * Ambient light
+         */
+
+        temp[0] = \
+        temp[1] = \
+        temp[2] = (GLfloat)((GETWORDLE(&buf[0x24 * 4]) >> 8) & 0xFF) / 256.0f;
+        temp[3] = 1.0f;
+
+        glLightfv(GL_LIGHT0, GL_AMBIENT, temp);
+
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+
+        }
+        #endif
+
+        #if FOGGING
         {
-            message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
-            current_addr,
-            GETWORDLE(&buf[0*4]),
-            GETWORDLE(&buf[1*4]),
-            GETWORDLE(&buf[2*4])
-            );
+        /*
+         * Very primitive fog implementation.
+         */
 
-            R3D_LOG("model3.log",
-                    "#\n"
-                    "# scene at %08X\n"
-                    "#\n"
-                    "\n"
-                    "00: %08X\n"
-                    "01: %08X\n"
-                    "02: %08X\n"
-                    "03: %3.5f\n"
-                    "04: %3.5f\n"
-                    "05: %3.5f\n"
-                    "06: %3.5f\n"
-                    "07: %3.5f\n"
-                    "08: %3.5f\n"
-                    "09: %3.5f\n"
-                    "0A: %3.5f\n"
-                    "0B: %3.5f\n"
-                    "0C: %3.5f\n"
-                    "0D: %3.5f\n"
-                    "0E: %3.5f\n"
-                    "0F: %3.5f\n"
-                    "10: %3.5f\n"
-                    "11: %3.5f\n"
-                    "12: %3.5f\n"
-                    "13: %3.5f\n"
-                    "14: %08X\n"
-                    "15: %08X\n"
-                    "16: %08X\n"
-                    "17: %08X\n"
-                    "18: %08X\n"
-                    "19: %08X\n"
-                    "1A: %08X\n"
-                    "1B: %08X\n"
-                    "1C: %08X\n"
-                    "1D: %08X\n"
-                    "1E: %08X\n"
-                    "1F: %3.5f\n"
-                    "20: %3.5f\n"
-                    "21: %3.5f\n"
-                    "22: %08X\n"
-                    "23: %08X\n"
-                    "24: %08X\n"
-                    "25: %08X\n"
-                    "\n",
-                    current_addr,
-                    GETWORDLE(&buf[0x00 * 4]),
-                    GETWORDLE(&buf[0x01 * 4]),
-                    GETWORDLE(&buf[0x02 * 4]),
-                    get_float(&buf[0x03 * 4]),
-                    get_float(&buf[0x04 * 4]),
-                    get_float(&buf[0x05 * 4]),
-                    get_float(&buf[0x06 * 4]),
-                    get_float(&buf[0x07 * 4]),
-                    get_float(&buf[0x08 * 4]),
-                    get_float(&buf[0x09 * 4]),
-                     get_float(&buf[0x0A * 4]),
-                    get_float(&buf[0x0B * 4]),
-                    get_float(&buf[0x0C * 4]),
-                    get_float(&buf[0x0D * 4]),
-                    get_float(&buf[0x0E * 4]),
-                    get_float(&buf[0x0F * 4]),
-                    get_float(&buf[0x10 * 4]),
-                    get_float(&buf[0x11 * 4]),
-                    get_float(&buf[0x12 * 4]),
-                    get_float(&buf[0x13 * 4]),
-                    GETWORDLE(&buf[0x14 * 4]),
-                    GETWORDLE(&buf[0x15 * 4]),
-                    GETWORDLE(&buf[0x16 * 4]),
-                    GETWORDLE(&buf[0x17 * 4]),
-                    GETWORDLE(&buf[0x18 * 4]),
-                    GETWORDLE(&buf[0x19 * 4]),
-                    GETWORDLE(&buf[0x1A * 4]),
-                    GETWORDLE(&buf[0x1B * 4]),
-                    GETWORDLE(&buf[0x1C * 4]),
-                    GETWORDLE(&buf[0x1D * 4]),
-                    GETWORDLE(&buf[0x1E * 4]),
-                    get_float(&buf[0x1F * 4]),
-                    get_float(&buf[0x20 * 4]),
-                    get_float(&buf[0x21 * 4]),
-                    GETWORDLE(&buf[0x22 * 4]),
-                    GETWORDLE(&buf[0x23 * 4]),
-                    GETWORDLE(&buf[0x24 * 4]),
-                    GETWORDLE(&buf[0x25 * 4])
-            );
+        GLfloat fog_color[4];
 
-            set_viewport_and_perspective(buf);
-            set_matrix_base(GETWORDLE(&buf[0x16*4]));
-            init_coord_system();
+        fog_color[0] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >> 16) & 0xFF) / 256.0f;
+        fog_color[1] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  8) & 0xFF) / 256.0f;
+        fog_color[2] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  0) & 0xFF) / 256.0f;
+        fog_color[3] = 1.0f;
 
-            #if LIGHTING
-            {
-            /*
-             * Until material lighting properties aren't emulated
-             * properly, light will never look decent on flat polys.
-             * Moreover, we still lack emulation of shading selection
-             * (Real3D docs enumerate flat, fixed, gouraud and
-             * specular shading, selectable per polygon).
-             *
-             * Note that lighting has plain bad problems with untextured
-             * polys.
-             */
+        glFogi(GL_FOG_MODE, GL_EXP2);
+        //glFogi(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
+        glFogf(GL_FOG_DENSITY, get_float(&buf[0x23 * 4]));
+        glFogf(GL_FOG_START, (GLfloat)(GETWORDLE(&buf[0x25 * 4]) & 0xFF) / 256.0f);
+        glFogf(GL_FOG_END, 10000.0f);
+        glFogfv(GL_FOG_COLOR, fog_color);
 
-            GLfloat vect[4];
-            GLfloat temp[4];
+        glEnable(GL_FOG);
+        }
+        #endif
 
-            /*
-             * Directional light
-             */
+        switch((GETWORDLE(&buf[2*4]) >> 24) & 0xFE)
+        {
+        case 0x00:  // block
+            R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", ptr);
+            draw_block(&culling_ram_8e[ptr]);
+            break;
 
-            vect[0] = -get_float(&buf[0x05 * 4]);
-            vect[1] = -get_float(&buf[0x06 * 4]);
-            vect[2] = get_float(&buf[0x04 * 4]);
-            vect[3] = 0.0f;
+        case 0x04:  // list
+            R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", ptr);
+        //        draw_list(&culling_ram_8e[ptr]);
+            break;
 
-            temp[0] = \
-            temp[1] = \
-            temp[2] = get_float(&buf[0x07 * 4]);
-            temp[3] = 1.0f;
-
-            glLightfv(GL_LIGHT0, GL_POSITION, vect);
-            glLightfv(GL_LIGHT0, GL_DIFFUSE, temp);
-
-            /*
-             * Positional light
-             */
-
-            /* This kind of lights uses a X and Y position,
-             * a X and Y size, a start point and an extent.
-             * It seems to describe a lighting volume
-             * (considering the start and extent values as
-             * Z coords). Currently unemulated.
-             */
-
-            /*
-             * Ambient light
-             */
-
-            temp[0] = \
-            temp[1] = \
-            temp[2] = (GLfloat)((GETWORDLE(&buf[0x24 * 4]) >> 8) & 0xFF) / 256.0f;
-            temp[3] = 1.0f;
-
-            glLightfv(GL_LIGHT0, GL_AMBIENT, temp);
-
-            glEnable(GL_LIGHTING);
-            glEnable(GL_LIGHT0);
-
-            }
-            #endif
-
-            #if FOGGING
-            {
-            /*
-             * Very primitive fog implementation.
-             */
-
-            GLfloat fog_color[4];
-
-            fog_color[0] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >> 16) & 0xFF) / 256.0f;
-            fog_color[1] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  8) & 0xFF) / 256.0f;
-            fog_color[2] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  0) & 0xFF) / 256.0f;
-            fog_color[3] = 1.0f;
-
-            glFogi(GL_FOG_MODE, GL_EXP2);
-			//glFogi(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
-            glFogf(GL_FOG_DENSITY, get_float(&buf[0x23 * 4]));
-            glFogf(GL_FOG_START, (GLfloat)(GETWORDLE(&buf[0x25 * 4]) & 0xFF) / 256.0f);
-            glFogf(GL_FOG_END, 10000.0f);
-            glFogfv(GL_FOG_COLOR, fog_color);
-
-            glEnable(GL_FOG);
-            }
-            #endif
-
-            switch((GETWORDLE(&buf[2*4]) >> 24) & 0xFE)
-            {
-            case 0x00:  // block
-                R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", ptr);
-                draw_block(&culling_ram_8e[ptr]);
-                break;
-
-            case 0x04:  // list
-                R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", ptr);
-    //            draw_list(&culling_ram_8e[ptr]);
-                break;
-
-            default:
-                error("Unknown scene descriptor link %08X\n", GETWORDLE(&buf[2*4]));
-            }
-
-            #if FOGGING
-            glDisable(GL_FOG);
-            #endif
-
-            #if LIGHTING
-            glDisable(GL_LIGHTING);
-            #endif
+        default:
+            error("Unknown scene descriptor link %08X\n", GETWORDLE(&buf[2*4]));
         }
 
-        current_addr = GETWORDLE(&buf[4]);  // get address of next descriptor
-        if (current_addr == 0x01000000)     // 01000000 == STOP
-            stop = TRUE;
-        current_addr = (current_addr & 0xFFFF) * 4;
+        #if FOGGING
+        glDisable(GL_FOG);
+        #endif
+
+        #if LIGHTING
+        glDisable(GL_LIGHTING);
+        #endif
     }
-    while (!stop);
 }
 
 /******************************************************************/
@@ -1594,6 +1616,21 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
     switch (format)
 	{
+//    case 2: // mono 4-bit
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 4) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 4) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 4) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = 0xFF;
+	        }
+	    }
+
+		break;
+
     case 6: // mono 4-bit
 	    for (yi = 0; yi < h; yi++)
 	    {
@@ -1793,10 +1830,14 @@ static void do_3d(void)
     glDisable(GL_TEXTURE_2D);
 	#endif
 
-    draw_viewport(0);
-    draw_viewport(1);
-    draw_viewport(2);
-    draw_viewport(3);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    draw_viewport(0, 0x00800000);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    draw_viewport(1, 0x00800000);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    draw_viewport(2, 0x00800000);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    draw_viewport(3, 0x00800000);
 
 	#if WIREFRAME
     glPolygonMode(GL_FRONT, GL_FILL);
@@ -1857,7 +1898,6 @@ static void render_layer(INT layer, GLfloat z)
 void osd_renderer_update_frame(void)
 {
     INT     i;
-    GLfloat z;
 
     /*
      * Clear the depth and color buffers and use the texture replace mode

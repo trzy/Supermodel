@@ -26,7 +26,7 @@
 #define INCLUDED_OSD_COMMON_OSD_GL_H
 
 /******************************************************************/
-/* OSD OpenGL Functions                                            */
+/* OSD OpenGL Functions                                           */
 /******************************************************************/
 
 extern void osd_gl_swap_buffers(void);
