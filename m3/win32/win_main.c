@@ -22,7 +22,7 @@
 
 #include "model3.h"
 #ifdef RENDERER_D3D
-    // ...
+#include "dx_render.h"
 #else   // RENDERER_GL
 #include "win_gl.h"
 #endif
@@ -88,12 +88,6 @@ static BOOL win_create_window(UINT xres, UINT yres)
 	if(!main_window)
 		return FALSE;
 
-#ifdef RENDERER_D3D
-    // ...
-#else   // RENDERER_GL
-    win_gl_init(XRES, YRES);
-#endif
-
 	return TRUE;
 }
 
@@ -104,7 +98,7 @@ static BOOL win_create_window(UINT xres, UINT yres)
 static void win_destroy(void)
 {
 #ifdef RENDERER_D3D
-    // ...
+	d3d_shutdown();
 #else   // RENDERER_GL
     win_gl_shutdown();
 #endif
@@ -147,6 +141,12 @@ int main(int argc, char *argv[])
 		printf("win_create_window failed.");
 		return 0;
 	}
+
+#ifdef RENDERER_D3D
+    d3d_init(main_window);
+#else   // RENDERER_GL
+    win_gl_init(XRES, YRES);
+#endif
 
     m3_init();
 	m3_reset();
