@@ -248,6 +248,7 @@ enum
 
 extern int      ppc_init(void * x);
 
+extern void     ppc_set_pvr(UINT32);
 extern void		ppc_set_irq_callback(u32 (*)(void));
 extern void     ppc_set_read_8_handler(void *);
 extern void     ppc_set_read_16_handler(void *);

@@ -11,7 +11,8 @@
  * Private Variables
  */
 
-static ppc_t ppc;
+static ppc_t    ppc;
+static UINT32   pvr;    // default value initialized by ppc_init()
 
 static u32 ppc_field_xlat[256];
 
@@ -746,7 +747,7 @@ INLINE void ppc_test_irq(void)
 			if(ppc.irq_callback != NULL)
 				ppc.irq_state = ppc.irq_callback();
             else
-				ppc.irq_state = 0;
+                ppc.irq_state = 0;
 
 		}else
 		if(ppc.dec_expired){
@@ -3628,7 +3629,8 @@ int ppc_reset(void){
 	ppc.msr = 0x40;
 	ppc.fpscr = 0;
 
-	ppc.spr[SPR_PVR] = 0x00060104;		// 603e, Stretch, 1.4 - checked against by VS2V991
+    ppc.spr[SPR_PVR] = pvr;
+//    ppc.spr[SPR_PVR] = 0x00060104;      // 603e, Stretch, 1.4 - checked against by VS2V991
 	ppc.spr[SPR_DEC] = 0xFFFFFFFF;
 
 	ppc.cia = 0xFFF00100;
@@ -3664,9 +3666,16 @@ void ppc_set_write_16_handler(void * handler){	ppc.write_16 = (void (*)(u32,u32)
 void ppc_set_write_32_handler(void * handler){	ppc.write_32 = (void (*)(u32,u32))handler; }
 void ppc_set_write_64_handler(void * handler){	ppc.write_64 = (void (*)(u32,u64))handler; }
 
+void ppc_set_pvr(UINT32 version)
+{
+    pvr = version;
+}
+
 int ppc_init(void * x){
 
 	int i;
+
+    pvr = 0x00060104;   // default to this version of the PPC603e
 
 	x = NULL;
 
