@@ -30,8 +30,9 @@ typedef struct bb
 	
 	struct
 	{
-		UINT32	target;
-		UINT	exec_count;
+		UINT32		target;
+		UINT		exec_count;
+		struct bb	*target_bb;
 	} edge[2];					// 0 is false edge, 1 is true
 	
 	PPC_REGUSAGE	used, written, read;	// registers used, number of times each is written, number of times each is read

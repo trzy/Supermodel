@@ -4,6 +4,9 @@
  * Utility functions common to all the BB tool programs.
  *
  * NOTE: Log file format is described in ppc/ppc.c. 
+ *
+ * NOTE: If the conditional is "always", an adjustment is made
+ * to make the branch unconditional.
  */
  
 #include <stdio.h>
@@ -11,7 +14,15 @@
 #include "types.h"
 #include "bbtools.h"
 
+/******************************************************************/
+/* Private Variables                                              */
+/******************************************************************/
+
 static UINT	num_bbs;
+
+/******************************************************************/
+/* Register Usage                                                 */
+/******************************************************************/
 
 /*
  * UINT GetNumberOfRegistersUsed(PPC_REGUSAGE *ru);
@@ -49,6 +60,13 @@ UINT GetNumberOfRegistersUsed(PPC_REGUSAGE *ru)
 	return num;
 }
 
+/******************************************************************/
+/* Basic Block Loading/Unloading                                  */
+/*																  */
+/* Code to load basic blocks from the log file into a list of BBs */
+/* and a complete control flow graph for the entire program.	  */
+/******************************************************************/
+
 /*
  * UINT GetNumberOfBBs(void);
  *
@@ -61,6 +79,59 @@ UINT GetNumberOfBBs(void)
 	return num_bbs;
 }
  
+/*
+ * BuildCFG():
+ *
+ * Links the edges of the BBs together into a control flow graph.
+ */
+
+static void BuildCFG(BB *first_bb)
+{
+	BB	*i, *j;
+	
+	/*
+	 * Outer loop moves through all the BBs in order
+	 */
+	 
+	for (i = first_bb; i != NULL; i = i->next)
+	{
+		/*
+		 * Inner loop searches for BBs that link to the outer loop BB
+		 */
+		 
+		for (j = first_bb; j != NULL; j = j->next)
+		{
+			/*
+			 * Four types of branches to handle:
+			 *
+			 * 1. Unconditional, direct. Edge 0.
+			 * 2. Unconditional, indirect. No edges.
+			 * 3. Conditional, direct: Edges 0 and 1. 
+			 * 4. Conditional, indirect: Edge 0 (false) is known.
+			 */
+			 
+			if (j->is_conditional)	// conditional
+			{
+				if (j->edge[0].target == i->addr)	// always known even for indirect branches
+					j->edge[0].target_bb = i;
+				if (!j->is_indirect)
+				{
+					if (j->edge[1].target == i->addr)
+						j->edge[1].target_bb = i;
+				}
+			}
+			else					// unconditional
+			{
+				if (!j->is_indirect)
+				{
+					if (j->edge[0].target == i->addr)
+						j->edge[0].target_bb = i;
+				}				
+			}
+		}
+	}
+}		
+
 /*
  * SetRegUsage():
  *
@@ -199,6 +270,8 @@ BB *LoadBBs(const CHAR *fname)
 		}
 		
 		bb->next = NULL;
+		bb->edge[0].target_bb = NULL;
+		bb->edge[1].target_bb = NULL;
 		
 		fscanf(fp, "%X", &bb->addr);
 		fscanf(fp, "%u", &bb->inst_count);
@@ -215,6 +288,17 @@ BB *LoadBBs(const CHAR *fname)
 			fscanf(fp, "%u", &(bb->edge[1].exec_count));
 			fscanf(fp, "%X", &(bb->edge[0].target));	
 			fscanf(fp, "%u", &(bb->edge[0].exec_count));
+			
+			/*
+			 * If the condition is "always", we adjust the branch so that
+			 * it appears to be unconditional
+			 */
+			 
+			if ((bb->condition & 0x14) == 0x14)
+			{
+				bb->is_conditional = 0;
+				bb->edge[0] = bb->edge[1];	// move the true edge to edge 0 (unconditional)
+			}							 
 		}
 		else		
 			fscanf(fp, "%X", &(bb->edge[0].target));
@@ -223,6 +307,8 @@ BB *LoadBBs(const CHAR *fname)
 	}
 			
 	fclose(fp);
+		
+	BuildCFG(bb_head.next);
 	return bb_head.next;
 }
 
