@@ -111,8 +111,9 @@ int main(int argc, char *argv[])
 {
     CHAR    mnem[16], oprs[48], prof[1024];
     MSG     msg;
-    BOOL    quit = FALSE;
+    BOOL    quit = FALSE, do_fps;
     FILE    *fp;
+	INT64	freq, time_start, time_end;
     UINT    i, frame = 0, op;
 
 	if(argc < 2) {
@@ -158,6 +159,11 @@ int main(int argc, char *argv[])
     SetFocus(main_window);
 	UpdateWindow(main_window);
 
+	if(QueryPerformanceFrequency((LARGE_INTEGER *)&freq))
+		do_fps = TRUE;
+	else
+		do_fps = FALSE;
+
 	memset(&msg, 0, sizeof(MSG));
     while (quit == FALSE)
     {
@@ -171,6 +177,8 @@ int main(int argc, char *argv[])
 				DispatchMessage(&msg);
 			}
 		}
+
+		QueryPerformanceCounter((LARGE_INTEGER *)&time_start);
 
         printf("frame %d, PC = %08X, ", frame++, ppc_get_reg(PPC_REG_PC));
         op = ppc_read_word(ppc_get_reg(PPC_REG_PC));
@@ -187,6 +195,16 @@ int main(int argc, char *argv[])
         m3_run_frame();
 
 		// gather profiler stats
+
+		QueryPerformanceCounter((LARGE_INTEGER *)&time_end);
+
+		if(do_fps)
+		{
+			char title[256];
+
+			sprintf(title, "%s - FPS: %f", app_title, 1.0f / ((float)(time_end - time_start) / freq));
+			SetWindowText(main_window, title);
+		}
 
 #ifdef _PROFILE_
         profile_print(prof);
