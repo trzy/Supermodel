@@ -1,6 +1,3 @@
-//TODO: investigate blocks which point to other blocks
-//bits 0x3000 of word 3 may have something to do with either the second ptr
-//or the ptr list index
 /*
  * Sega Model 3 Emulator
  * Copyright (C) 2003 Bart Trzynadlowski, Ville Linde, Stefano Teso
@@ -233,16 +230,21 @@ static void draw_list(UINT32 *list)
 
 static void draw_pointer_list(UINT32* list)
 {
+    /*
+     * NOTE: Bits 0x3000 of word 3 are probably the index into this table.
+     */
+
 	draw_model( list[0] );
-    draw_model( list[1] );
-    draw_model( list[2] );
-    draw_model( list[3] );
+//    draw_model( list[1] );
+//    draw_model( list[2] );
+//    draw_model( list[3] );
 }
 
 /*
  * draw_block():
  *
- * Traverses a 10- (or 8-) word block. The blocks have this format:
+ * Traverses a 10- (or 8-) word block (culling node.) The blocks have this
+ * format:
  *
  *  0: ID code (upper 22 bits) and control bits 
  *  1: Scaling? Not present in Step 1.0
@@ -313,6 +315,10 @@ static void draw_block(UINT32 *block)
 
     osd_renderer_pop_matrix();
 
+    /*
+     * NOTE: This second pointer needs to be investigated further.
+     */
+
 	addr = block[8 - offset];
 	if (addr != 0x01000000 && addr != 0x00800800 && addr != 0)  // valid?
 		draw_block(translate_scene_graph_address(addr));
@@ -343,12 +349,19 @@ static void get_viewport_data(VIEWPORT *vp, UINT32 *node)
     vp->down    = CONVERT_TO_DEGREES(vp->down);
 }
 
+/*
+ * get_light_data():
+ *
+ * Sets up a LIGHT structure based on ambient sun light. The sun vector points
+ * towards the light from (apparently) the origin of the coordinate system.
+ */
+
 static void get_light_data(LIGHT* l, UINT32* node)
 {
 	memset( l, 0, sizeof(LIGHT) );
-	l->u = -GET_FLOAT(&node[5]);
-	l->v = GET_FLOAT(&node[6]);
-	l->w = GET_FLOAT(&node[4]);
+    l->u = -GET_FLOAT(&node[5]);    // it seems X needs to be inverted
+    l->v = GET_FLOAT(&node[6]);
+    l->w = GET_FLOAT(&node[4]);
 	l->diffuse_intensity = GET_FLOAT(&node[7]);
 	l->ambient_intensity = (UINT8)((node[0x24] >> 8) & 0xFF) / 256.0f;
 	l->color = 0xFFFFFFFF;
@@ -388,18 +401,28 @@ static void draw_viewport(UINT pri, UINT32 addr)
     if (pri == ((node[0] >> 3) & 3))
     {
         /*
-         * Set up viewport, matrix table base, and coordinate system
+         * Set up viewport and matrix table base
          */
 
         get_viewport_data(&vp, node);
         osd_renderer_set_viewport(&vp);
         matrix_base = (float *) translate_scene_graph_address(node[0x16]);
-        get_matrix(m, coord_matrix, 0);
-        osd_renderer_set_coordinate_system(m);
+
+        /*
+         * Lighting -- seems to work nice if applied before coordinate system
+         * selection but I haven't done a thorough check.
+         */
 
 		get_light_data(&sun, node);
 		sun.type = LIGHT_PARALLEL;
 		osd_renderer_set_light( 0, &sun );
+
+        /*
+         * Set coordinate system (matrix 0)
+         */
+
+        get_matrix(m, coord_matrix, 0);
+        osd_renderer_set_coordinate_system(m);
 
         /*
          * Process a block or list. So far, no other possibilities have been
