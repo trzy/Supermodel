@@ -1,3 +1,5 @@
+//TODO: Look at BB @ 0xC10 in VON2. Should be 1 instruction
+
 //#define WATCH_PC    0x101cd8
 //#define BREAK_PC    0x8ac34
 
@@ -139,7 +141,7 @@ static BB * bb_add(UINT32 addr)
 static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true)
 {
 	BB * bb;
-
+	
 	/*
 	 * Exceptions cause serious problems because they mess up the cur_bb and cannot be handled
 	 * nicely, so we choose not to do any logging while they're being processed.
@@ -206,6 +208,29 @@ static void bb_stat_init(void)
 	bb_num = 0;
 
 	LOG_INIT("bb.log");
+}
+
+/*
+ * bb_stat_reset():
+ *
+ * This is required when loading states so we don't end up with erroneous
+ * blocks that appear to be thousands of instructions long. The list must
+ * be cleared and reset.
+ */
+ 
+static void bb_stat_reset(void)
+{
+	BB	*bb, *bb_next;
+	
+	bb = bb_list_head.next;
+	while (bb != NULL)
+	{
+		bb_next = bb->next;
+		free(bb);
+		bb = bb_next;
+	}
+	
+	bb_stat_init();
 }
 
 /*
@@ -3624,7 +3649,7 @@ int ppc_reset(void)
 	ppc.cur_fetch.ptr = NULL;
 
 	ppc_update_pc();
-
+	
     return PPC_OKAY;
 }
 
@@ -3878,7 +3903,7 @@ int ppc_init(void)
 	ppc.fetch = NULL;
 
 #ifdef RECORD_BB_STATS
-	bb_stat_init();
+	bb_stat_init();	
 #endif
 
     return PPC_OKAY;
@@ -3931,4 +3956,9 @@ void ppc_load_state(FILE *fp)
 	ppc.cur_fetch.ptr = NULL;
 
 	ppc_update_pc();
+	
+#ifdef 	RECORD_BB_STATS
+	bb_stat_reset();
+	bb_add(PC);
+#endif	
 }
