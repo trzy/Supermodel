@@ -304,26 +304,44 @@ void osd_renderer_update_frame(void)
      */
 
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-    glEnable(GL_TEXTURE_2D);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     /*
-     * Render 4 layers back to front with the scene in the middle
+     * Render 2 back layers
      */
 
-    for (i = 0; i < 4; i++)
+    for (i = 2; i < 4; i++)
     {
         glBindTexture(GL_TEXTURE_2D, layer_texture[i]);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, &layer[i][0][0][0]);
     }
 
+    glEnable(GL_TEXTURE_2D);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     set_ortho();
     glEnable(GL_BLEND); // enable blending, an alpha of 0xFF is opaque, 0 is transparent
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     render_layer(3, -1.00);
     render_layer(2, -0.75);
     glDisable(GL_BLEND);
-    r3dgl_update_frame();    
+
+	/*
+	 * Render Real3D scene
+	 */
+
+    r3dgl_update_frame();
+
+	/*
+	 * Render 2 front layers
+	 */
+
+    for (i = 0; i < 2; i++)
+    {
+        glBindTexture(GL_TEXTURE_2D, layer_texture[i]);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, &layer[i][0][0][0]);
+    }
+
+    glEnable(GL_TEXTURE_2D);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     set_ortho();
     glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

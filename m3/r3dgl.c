@@ -51,10 +51,15 @@
 /* Macros                                                         */
 /******************************************************************/
 
+#define TEST_BIT		0
+
 #define R3D_LOG
-//#define R3D_LOG		LOG
+//#define R3D_LOG			LOG
+#define LOG_MODEL		1
 
 #define WIREFRAME       0
+#define LIGHTING		1
+#define FOGGING			1
 
 static UINT32 GETWORDLE(UINT8 *a)
 {
@@ -106,19 +111,24 @@ static void make_texture(UINT, UINT, UINT, UINT, UINT);
 /*
  * convert_fixed_to_float():
  *
- * Converts from 13.19 fixed-point format to float. Accepts a signed INT32.
+ * Converts from fixed-point format to float. Accepts a signed INT32.
  */
 
 static float convert_fixed_to_float(INT32 num)
 {
     float   result;
 
-#if 0
-    result = (float) (num >> 15);
-    result += (float) (num & 0x7FFF) / ((float) 0x8000);
-#endif
-    result = (float) (num >> 19);                   // 13-bit integer
-    result += (float) (num & 0x7FFFF) / 524288.0f;  // 19-bit fraction
+	if(m3_config.step == 0x10)
+	{
+		result = (float) (num >> 15);                   // 17-bit integer
+		result += (float) (num & 0x7FFF) / 32768.0f;	// 15-bit fraction
+	}
+	else
+	{
+		result = (float) (num >> 19);                   // 13-bit integer
+		result += (float) (num & 0x7FFFF) / 524288.0f;  // 19-bit fraction
+	}
+
     return result;
 }
 
@@ -141,6 +151,7 @@ static float convert_texcoord_to_float(UINT32 num)
 typedef struct
 {
 	GLfloat	x, y, z;
+	GLfloat nx, ny, nz;
 	UINT	uv;
 } R3D_VTX;
 
@@ -150,13 +161,15 @@ typedef struct
  * Draws a complete model.
  */
 
+UINT r3d_test_bit = 0;
+
 static void draw_model(UINT8 *buf, UINT little_endian)
 {
     UINT32  (* GETWORD)(UINT8 *buf);
 	R3D_VTX	v[4], prev_v[4];
     UINT    i, stop, tex_enable, poly_opaque;
 	UINT	tex_w, tex_h, tex_fmt, u_base, v_base;
-    GLfloat u_coord, v_coord;
+    GLfloat u_coord, v_coord, n[3];
 
     if (buf == NULL)
         return;
@@ -171,6 +184,55 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
     do
     {
+		UINT really_draw = 1;
+
+		#if LOG_MODEL
+		R3D_LOG("model3.log",
+				"# model\n"
+				" 00: %08X\n"
+				" 01: %08X\n"
+				" 02: %08X\n"
+				" 03: %08X\n"
+				" 04: %08X\n"
+				" 05: %08X\n"
+				" 06: %08X\n\n",
+				GETWORD(&buf[0*4]),
+				GETWORD(&buf[1*4]),
+				GETWORD(&buf[2*4]),
+				GETWORD(&buf[3*4]),
+				GETWORD(&buf[4*4]),
+				GETWORD(&buf[5*4]),
+				GETWORD(&buf[6*4])
+		);
+		#endif
+
+		#if TEST_BIT
+		really_draw = 0;
+		if(GETWORD(&buf[1*4]) & (1 << r3d_test_bit))
+			really_draw = 1;
+		#endif
+
+		// temp
+		if((GETWORD(&buf[6*4]) & 0x04000000) == 0 &&
+			GETWORD(&buf[5*4]) & 0xFFBFFF00)
+			error("Unknown word 5 = %08X on untextured poly\n", GETWORD(&buf[5*4]));
+
+		// temp
+		if(GETWORD(&buf[0*4]) & 0x80 && !(GETWORD(&buf[0*4]) & 0xFC000000))
+			error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
+		if(!(GETWORD(&buf[0*4]) & 0x80) && GETWORD(&buf[0*4]) & 0xFC000000)
+			error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
+
+		/*
+		 * Retrieves the normal
+		 */
+
+		n[0] = (GLfloat) (((INT32)GETWORDBE(&buf[1*4])) >> 8) / 4194304.0f;
+		n[1] = (GLfloat) (((INT32)GETWORDBE(&buf[2*4])) >> 8) / 4194304.0f;
+		n[2] = (GLfloat) (((INT32)GETWORDBE(&buf[3*4])) >> 8) / 4194304.0f;
+
+		//glNormal3f(n[0], n[1], n[2]);
+
         /*
          * Select a texture
          */
@@ -199,7 +261,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 (GLbyte) ((GETWORD(&buf[4*4]) >> 24) & 0xFF),
                 (GLbyte) ((GETWORD(&buf[4*4]) >> 16) & 0xFF),
                 (GLbyte) ((GETWORD(&buf[4*4]) >>  8) & 0xFF),
-                0x7F
+                0xFF
 			);
 		}
 		else
@@ -208,7 +270,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 (GLbyte) ((GETWORD(&buf[4*4]) >> 24) & 0xFF),
                 (GLbyte) ((GETWORD(&buf[4*4]) >> 16) & 0xFF),
                 (GLbyte) ((GETWORD(&buf[4*4]) >>  8) & 0xFF),
-                (GLbyte) (((GETWORD(&buf[6*4]) >> 18) & 0x1F) * 8)
+                (GLbyte) ((((GETWORD(&buf[6*4]) >> 18) - 1) & 0x1F) * 8)
 			);
 		}
 
@@ -223,6 +285,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[i].nx = n[0];
+					v[i].ny = n[1];
+					v[i].nz = n[2];
                     v[i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -238,6 +303,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -253,6 +321,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -268,6 +339,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -283,6 +357,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -299,6 +376,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[2 + i].nx = n[0];
+					v[2 + i].ny = n[1];
+					v[2 + i].nz = n[2];
                     v[2 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -315,6 +395,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[2 + i].nx = n[0];
+					v[2 + i].ny = n[1];
+					v[2 + i].nz = n[2];
                     v[2 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -331,6 +414,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[2 + i].nx = n[0];
+					v[2 + i].ny = n[1];
+					v[2 + i].nz = n[2];
                     v[2 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -347,6 +433,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[2 + i].nx = n[0];
+					v[2 + i].ny = n[1];
+					v[2 + i].nz = n[2];
                     v[2 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -363,6 +452,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[2 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[2 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[2 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[2 + i].nx = n[0];
+					v[2 + i].ny = n[1];
+					v[2 + i].nz = n[2];
                     v[2 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -386,16 +478,22 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
             make_texture(u_base, v_base, tex_w, tex_h, tex_fmt);
 
+			if(really_draw)
+			{
+
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
             {
                 u_coord = convert_texcoord_to_float(v[i].uv >> 16);
                 v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
 
+				glNormal3f(v[i].nx, v[i].ny, v[i].nz);
                 glTexCoord2f(u_coord / (GLfloat) tex_w, v_coord / (GLfloat) tex_h);
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+			} // really_draw
 
 //			glDisable(GL_BLEND);
 
@@ -413,6 +511,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[i].nx = n[0];
+					v[i].ny = n[1];
+					v[i].nz = n[2];
                     v[i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -428,6 +529,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -443,6 +547,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -458,6 +565,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -473,6 +583,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                     v[1 + i].x = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 0*4]));
                     v[1 + i].y = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 1*4]));
                     v[1 + i].z = convert_fixed_to_float(GETWORD(&buf[0x1C + i*16 + 2*4]));
+					v[1 + i].nx = n[0];
+					v[1 + i].ny = n[1];
+					v[1 + i].nz = n[2];
                     v[1 + i].uv = GETWORD(&buf[0x1C + i*16 + 3*4]);
                 }
 
@@ -487,6 +600,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
                 v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
                 v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+				v[2].nx = n[0];
+				v[2].ny = n[1];
+				v[2].nz = n[2];
                 v[2].uv = GETWORD(&buf[0x1C + 0*16 + 3*4]);
 
                 buf += 0x2C * sizeof(UINT8);
@@ -500,6 +616,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
                 v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
                 v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+				v[2].nx = n[0];
+				v[2].ny = n[1];
+				v[2].nz = n[2];
                 v[2].uv = GETWORD(&buf[0x1C + 0*16 + 3*4]);
 
                 buf += 0x2C * sizeof(UINT8);
@@ -513,6 +632,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
                 v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
                 v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+				v[2].nx = n[0];
+				v[2].ny = n[1];
+				v[2].nz = n[2];
                 v[2].uv = GETWORD(&buf[0x1C + 0*16 + 3*4]);
 
                 buf += 0x2C * sizeof(UINT8);
@@ -526,6 +648,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
                 v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
                 v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+				v[2].nx = n[0];
+				v[2].ny = n[1];
+				v[2].nz = n[2];
                 v[2].uv = GETWORD(&buf[0x1C + 0*16 + 3*4]);
 
                 buf += 0x2C * sizeof(UINT8);
@@ -539,6 +664,9 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 v[2].x = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 0*4]));
                 v[2].y = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 1*4]));
                 v[2].z = convert_fixed_to_float(GETWORD(&buf[0x1C + 0*16 + 2*4]));
+				v[2].nx = n[0];
+				v[2].ny = n[1];
+				v[2].nz = n[2];
                 v[2].uv = GETWORD(&buf[0x1C + 0*16 + 3*4]);
 
                 buf += 0x2C * sizeof(UINT8);
@@ -561,16 +689,24 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
             make_texture(u_base, v_base, tex_w, tex_h, tex_fmt);
 
+			if(really_draw)
+			{
+
             glBegin(GL_TRIANGLES);
             for (i = 0; i < 3; i++)
             {
                 u_coord = convert_texcoord_to_float(v[i].uv >> 16);
                 v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
 
+				glNormal3f(v[i].nx, v[i].ny, v[i].nz);
                 glTexCoord2f(u_coord / (GLfloat) tex_w, v_coord / (GLfloat) tex_h);
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+			} // really_draw
+
+//			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -583,7 +719,6 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 /* Scene Drawing                                                  */
 /******************************************************************/
 
-static UINT32   current_matrix; // number of current matrix to use
 static UINT8    *matrix_base;   // pointer to base of matrix table
 
 #define CMINDEX(y, x)	(x*4+y)
@@ -737,14 +872,14 @@ static void get_matrix(GLfloat *dest, UINT32 matrix_addr)
  * Sets the viewport for the current scene descriptor.
  */
 
-static void set_viewport(UINT32 scene_addr)
+static void set_viewport(UINT8 *scene_buf)
 {
     UINT    x, y, w, h;
 
-    x = (GETWORDLE(&culling_ram_8e[scene_addr + 0x1A*4]) & 0xFFFF);
-    y = GETWORDLE(&culling_ram_8e[scene_addr + 0x1A*4]) >> 16;
-    w = GETWORDLE(&culling_ram_8e[scene_addr + 0x14*4]) & 0xFFFF;
-    h = GETWORDLE(&culling_ram_8e[scene_addr + 0x14*4]) >> 16;
+    x = GETWORDLE(&scene_buf[0x1A*4]) & 0xFFFF;
+    y = GETWORDLE(&scene_buf[0x1A*4]) >> 16;
+    w = GETWORDLE(&scene_buf[0x14*4]) & 0xFFFF;
+    h = GETWORDLE(&scene_buf[0x14*4]) >> 16;
 
     x >>= 4;    // position is 12.4
     y >>= 4;
@@ -785,6 +920,30 @@ static void draw_list(UINT8 *list)
 }
 
 /*
+ * draw_pointer_list();
+ *
+ * Processes a 4-word pointer list, of those used in Scud Race.
+ * The meaning of bit 0x01000000 is unknown.
+ */
+
+static void draw_pointer_list(UINT8 *buf)
+{
+	if(GETWORDLE(&buf[0*4]) & 0x00800000)	// a model in VROM
+	{
+		R3D_LOG("model3.log", " ## pointer list: draw model at %08X\n", GETWORDLE(&buf[0*4]));
+//		draw_model(&vrom[(GETWORDLE(&buf[0*4]) & 0x00FFFFFF) * 4], 0);	// crashes Scud Race in-game
+	}
+	else
+	{
+		R3D_LOG("model3.log", " ## pointer list: draw block at %08X\n", GETWORDLE(&buf[0*4]));
+		draw_block(translate_r3d_address(GETWORDLE(&buf[0*4]) & 0x00FFFFFF));
+//		draw_block(translate_r3d_address(GETWORDLE(&buf[1*4]) & 0x00FFFFFF));
+//		draw_block(translate_r3d_address(GETWORDLE(&buf[2*4]) & 0x00FFFFFF));
+//		draw_block(translate_r3d_address(GETWORDLE(&buf[3*4]) & 0x00FFFFFF));
+	}
+}
+
+/*
  * draw_block():
  *
  * Processes a 10-word block. These blocks can either reference models or
@@ -804,61 +963,64 @@ static void draw_block(UINT8 *block)
 
     while (1)
     {
-        /*
-         * Scud Race has weird nodes which are preceeded with pointers. I
-         * check the header for bit 0x01000000 to determine if it's a block or
-         * a pointer to a block. This is just a hack, really.
-         *
-		 * Update: these weird 4-word headers are two pairs of pointers,
-		 * possibily symmetrical, and can have 0x01000000 either set or clear
-		 * in the first word. But at least two of the links must have this
-		 * set. These addresses can reference another block (usually the
-		 * following) or a model in VROM. Bit 0x00800000 is used to determine
-		 * which is the case.
-		 */
-
-        if (((GETWORDLE(&block[0*4]) >> 24) == 0x01) ||
-		    ((GETWORDLE(&block[1*4]) >> 24) == 0x01) ||
-		    ((GETWORDLE(&block[2*4]) >> 24) == 0x01) ||
-		    ((GETWORDLE(&block[3*4]) >> 24) == 0x01))
-		{
-			if(GETWORDLE(&block[0*4]) & 0x00800000)	// a model in VROM
-			{
-				R3D_LOG("model3.log", " ## block: block/list detected, draw model at %08X\n", GETWORDLE(&block[0*4]));
-//                draw_model(translate_r3d_address(GETWORDLE((&block[0*4]) & 0x00FFFFFF) | 0x01000000), 0);
-				return;
-			}
-
-			R3D_LOG("model3.log", " ## block: block/list detected, draw block at %08X\n", GETWORDLE(&block[0*4]));
-           	block = translate_r3d_address(GETWORDLE(&block[0*4]) & 0x00FFFFFF);
-		}
-
         if (m3_config.step == 0x10)
         {
+			/*
+			 * Model 3 Step 1.0 block tables are only 8-word long:
+			 * they lack scaling and texture selection words.
+			 */
+
+
+			R3D_LOG("model3.log",
+					"#\n"
+					"# block:\n"
+					"#\n"
+					"\n"
+					"00: %08X\n"
+					"01: %08X\n"
+					"02: %3.5f\n"
+					"03: %3.5f\n"
+					"04: %3.5f\n"
+					"05: %08X\n"
+					"06: %08X\n"
+					"07: %08X\n"
+					"\n",
+					GETWORDLE(&block[0 * 4]),
+					GETWORDLE(&block[1 * 4]),
+					get_float(&block[2 * 4]),
+					get_float(&block[3 * 4]),
+					get_float(&block[4 * 4]),
+					GETWORDLE(&block[5 * 4]),
+					GETWORDLE(&block[6 * 4]),
+					GETWORDLE(&block[7 * 4])
+			);
+
+	        /*
+	         * Multiply by the specified matrix -- apparently, if the number is 0,
+	         * it should not be used (Note that matrix 0 is reserved for coordinate
+			 * system selection)
+	         */
+
             glPushMatrix();
-            matrix = (GETWORDLE(&block[1*4]) & 0x3FF) * 12;
+            matrix = (GETWORDLE(&block[1*4]) & 0x3FF);
             if (matrix != 0)
             {
-                get_matrix(m, matrix);
+                get_matrix(m, matrix * 12);
                 glMultMatrixf(m);
             }
             glTranslatef(get_float(&block[2*4]), get_float(&block[3*4]), get_float(&block[4*4]));
+
+	        /*
+	         * Draw a model or process a list. If the address is of the form
+	         * 04XXXXXX, then the address points to a list, otherwise it points to
+	         * a model.
+	         */
 
             addr = GETWORDLE(&block[5*4]);
 
             if(GETWORDLE(&block[0*4]) & 0x08)
             {
-                /*
-                 * The block references a 4-element list (Scud Race).
-                 * The value of bit 0x01000000 in the address assumes another
-                 * (currently unknown) meaning.
-                 */
-
-                if(addr & 0xFE000000)
-                    error("Invalid list address: %08X\n", addr);
-
-                R3D_LOG("model3.log", " ## block: draw block at %08X (exception 1)\n\n", addr);
-                draw_block(translate_r3d_address(addr & 0x00FFFFFF));
+				error("step 1.0, block header references a pointer list (%08X)\n", addr);
             }
             else
             {
@@ -909,120 +1071,123 @@ static void draw_block(UINT8 *block)
 
             block = translate_r3d_address(next_ptr);
         }
-        else
+        else	// step 1.5+
         {
-            R3D_LOG("model3.log",
-                    "#\n"
-                    "# block:\n"
-                    "#\n"
-                    "\n"
-                    "00: %08X\n"
-                    "01: %08X\n"
-                    "02: %08X\n"
-                    "03: %08X\n"
-                    "04: %3.5f\n"
-                    "05: %3.5f\n"
-                    "06: %3.5f\n"
-                    "07: %08X\n"
-                    "08: %08X\n"
-                    "09: %08X\n"
-                    "\n",
-                    GETWORDLE(&block[0 * 4]),
-                    GETWORDLE(&block[1 * 4]),
-                    GETWORDLE(&block[2 * 4]),
-                    GETWORDLE(&block[3 * 4]),
-                    get_float(&block[4 * 4]),
-                    get_float(&block[5 * 4]),
-                    get_float(&block[6 * 4]),
-                    GETWORDLE(&block[7 * 4]),
-                    GETWORDLE(&block[8 * 4]),
-                    GETWORDLE(&block[9 * 4])
-            );
+			R3D_LOG("model3.log",
+					"#\n"
+					"# block:\n"
+					"#\n"
+					"\n"
+					"00: %08X\n"
+					"01: %08X\n"
+					"02: %08X\n"
+					"03: %08X\n"
+					"04: %3.5f\n"
+					"05: %3.5f\n"
+					"06: %3.5f\n"
+					"07: %08X\n"
+					"08: %08X\n"
+					"09: %08X\n"
+					"\n",
+					GETWORDLE(&block[0 * 4]),
+					GETWORDLE(&block[1 * 4]),
+					GETWORDLE(&block[2 * 4]),
+					GETWORDLE(&block[3 * 4]),
+					get_float(&block[4 * 4]),
+					get_float(&block[5 * 4]),
+					get_float(&block[6 * 4]),
+					GETWORDLE(&block[7 * 4]),
+					GETWORDLE(&block[8 * 4]),
+					GETWORDLE(&block[9 * 4])
+			);
 
-            /*
-             * Multiply by the specified matrix -- apparently, if the number
-             * is 0, it should not be used
-             */
+	        /*
+	         * Multiply by the specified matrix -- apparently, if the number is 0,
+	         * it should not be used (Note that matrix 0 is reserved for coordinate
+			 * system selection)
+	         */
 
-            glPushMatrix();
-            matrix = (GETWORDLE(&block[3*4]) & 0x3FF) * 12;
-            if (matrix != 0)
-            {
-                get_matrix(m, matrix);
-                glMultMatrixf(m);
-            }
-            glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
+	        glPushMatrix();
+	        matrix = (GETWORDLE(&block[3*4]) & 0x3FF);
+	        if (matrix != 0)
+	        {
+	            get_matrix(m, matrix * 12);
+	            glMultMatrixf(m);
+	        }
+	        glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
 
-            /*
-             * Draw a model or process a list. If the address is of the form
-             * 04XXXXXX, then the address points to a list, otherwise it points
-             * to a model.
-             */
+			// TODO: scaling (word 1) -- only used in Scud Race so far
+			// TODO: texture select (word 2)
 
-            addr = GETWORDLE(&block[7*4]);
+	        /*
+	         * Draw a model or process a list. If the address is of the form
+	         * 04XXXXXX, then the address points to a list, otherwise it points to
+	         * a model.
+	         */
 
-            if(GETWORDLE(&block[0*4]) & 0x08)
-            {
-                /*
-                 * The block references a 4-element list (Scud Race).
-                 * The value of bit 0x01000000 in the address assumes another
-                 * (currently unknown) meaning.
-                 */
+	        addr = GETWORDLE(&block[7*4]);
 
-                if(addr & 0xFE000000)
-                    error("Invalid list address: %08X\n", addr);
+			if(GETWORDLE(&block[0*4]) & 0x08)
+			{
+				/*
+				 * The block references a 4-element list (Scud Race).
+				 * The value of bit 0x01000000 in the address assumes another
+				 * (currently unknown) meaning.
+				 */
 
-                R3D_LOG("model3.log", " ## block: draw block at %08X (exception 1)\n\n", addr);
-                draw_block(translate_r3d_address(addr & 0x00FFFFFF));
-            }
-            else
-            {
-                switch ((addr >> 24) & 0xFF)
-                {
-                case 0x00:  // block
-                    if(addr != 0)
-                    {
-                        R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
-                        draw_block(translate_r3d_address(addr & 0x01FFFFFF));
-                    }
-                    break;
-                case 0x01:  // model
-                case 0x03:  // model in VROM (Scud Race)
-                    if(addr != 0)
-                    {
-                        R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
-                        if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-                            draw_model(translate_r3d_address(addr & 0x01FFFFFF), 0);
-                        else                                    // polygon RAM
-                            draw_model(translate_r3d_address(addr & 0x01FFFFFF), 1);
-                    }
-                    break;
-                case 0x04:  // list
-                    R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
-                    if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
-                    draw_list(translate_r3d_address(addr & 0x01FFFFFF));
-                    break;
-                default:
-                    error("Unable to handle Real3D address: %08X\n", addr);
-                    break;
-                }
-            }
+				if(addr & 0xFE000000)
+					error("Invalid list address: %08X\n", addr);
 
-            /*
-             * Pop the matrix
-             */
+				draw_pointer_list(translate_r3d_address(addr & 0x00FFFFFF));
+			}
+			else
+			{
+		        switch ((addr >> 24) & 0xFF)
+		        {
+				case 0x00:	// block
+					if(addr != 0)
+					{
+						R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
+						draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+					}
+					break;
+				case 0x01:	// model
+				case 0x03:	// model in VROM (Scud Race)
+					if(addr != 0)
+					{
+						R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
+						if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+	                        draw_model(translate_r3d_address(addr & 0x01FFFFFF), 0);
+						else                                    // polygon RAM
+	                        draw_model(translate_r3d_address(addr & 0x01FFFFFF), 1);
+					}
+					break;
+		        case 0x04:  // list
+					R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
+		            if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
+		            draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+		            break;
+		        default:
+		            error("Unable to handle Real3D address: %08X\n", addr);
+		            break;
+	    	    }
+			}
 
-            glPopMatrix();
+	        /*
+	         * Pop the matrix
+	         */
 
-            /*
-             * Advance to next block in list
-             */
+	        glPopMatrix();
 
-            next_ptr = GETWORDLE(&block[8*4]);
-            if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
-                break;
+	        /*
+	         * Advance to next block in list
+	         */
 
-            block = translate_r3d_address(next_ptr);
+	        next_ptr = GETWORDLE(&block[8*4]);
+	        if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
+	            break;
+
+	        block = translate_r3d_address(next_ptr);
         }
     }
 }
@@ -1035,6 +1200,7 @@ static void draw_block(UINT8 *block)
 
 static void draw_scene(void)
 {
+	UINT8	*buf;
     UINT32  i, j, next;
     BOOL    stop;
 
@@ -1045,15 +1211,17 @@ static void draw_scene(void)
     i = 0;
     stop = 0;
 
-//    LOG_INIT("model3.log");
+    LOG_INIT("model3.log");
 
     do
     {
+		buf = (UINT8 *)&culling_ram_8e[i];
+
         message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
         i,
-        GETWORDLE(&culling_ram_8e[i + 0]),
-        GETWORDLE(&culling_ram_8e[i + 4]),
-        GETWORDLE(&culling_ram_8e[i + 8])
+        GETWORDLE(&buf[0*4]),
+        GETWORDLE(&buf[1*4]),
+        GETWORDLE(&buf[2*4])
         );
 
 		R3D_LOG("model3.log",
@@ -1099,83 +1267,147 @@ static void draw_scene(void)
 				"23: %08X\n"
 				"24: %08X\n"
 				"25: %08X\n"
-				"26: %08X\n"
-				"27: %08X\n"
-				"28: %08X\n"
-				"29: %08X\n"
-				"2A: %08X\n"
-				"2B: %08X\n"
-				"2C: %08X\n"
-				"2D: %08X\n"
-				"2E: %08X\n"
-				"2F: %08X\n"
 				"\n",
 				i,
-				GETWORDLE(&culling_ram_8e[i + 0x00 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x01 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x02 * 4]),
-				get_float(&culling_ram_8e[i + 0x03 * 4]),
-				get_float(&culling_ram_8e[i + 0x04 * 4]),
-				get_float(&culling_ram_8e[i + 0x05 * 4]),
-				get_float(&culling_ram_8e[i + 0x06 * 4]),
-				get_float(&culling_ram_8e[i + 0x07 * 4]),
-				get_float(&culling_ram_8e[i + 0x08 * 4]),
-				get_float(&culling_ram_8e[i + 0x09 * 4]),
-				get_float(&culling_ram_8e[i + 0x0A * 4]),
-				get_float(&culling_ram_8e[i + 0x0B * 4]),
-				get_float(&culling_ram_8e[i + 0x0C * 4]),
-				get_float(&culling_ram_8e[i + 0x0D * 4]),
-				get_float(&culling_ram_8e[i + 0x0E * 4]),
-				get_float(&culling_ram_8e[i + 0x0F * 4]),
-				get_float(&culling_ram_8e[i + 0x10 * 4]),
-				get_float(&culling_ram_8e[i + 0x11 * 4]),
-				get_float(&culling_ram_8e[i + 0x12 * 4]),
-				get_float(&culling_ram_8e[i + 0x13 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x14 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x15 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x16 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x17 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x18 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x19 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x1A * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x1B * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x1C * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x1D * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x1E * 4]),
-				get_float(&culling_ram_8e[i + 0x1F * 4]),
-				get_float(&culling_ram_8e[i + 0x20 * 4]),
-				get_float(&culling_ram_8e[i + 0x21 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x22 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x23 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x24 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x25 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x26 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x27 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x28 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x29 * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x2A * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x2B * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x2C * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x2D * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x2E * 4]),
-				GETWORDLE(&culling_ram_8e[i + 0x2F * 4])
+				GETWORDLE(&buf[0x00 * 4]),
+				GETWORDLE(&buf[0x01 * 4]),
+				GETWORDLE(&buf[0x02 * 4]),
+				get_float(&buf[0x03 * 4]),
+				get_float(&buf[0x04 * 4]),
+				get_float(&buf[0x05 * 4]),
+				get_float(&buf[0x06 * 4]),
+				get_float(&buf[0x07 * 4]),
+				get_float(&buf[0x08 * 4]),
+				get_float(&buf[0x09 * 4]),
+				get_float(&buf[0x0A * 4]),
+				get_float(&buf[0x0B * 4]),
+				get_float(&buf[0x0C * 4]),
+				get_float(&buf[0x0D * 4]),
+				get_float(&buf[0x0E * 4]),
+				get_float(&buf[0x0F * 4]),
+				get_float(&buf[0x10 * 4]),
+				get_float(&buf[0x11 * 4]),
+				get_float(&buf[0x12 * 4]),
+				get_float(&buf[0x13 * 4]),
+				GETWORDLE(&buf[0x14 * 4]),
+				GETWORDLE(&buf[0x15 * 4]),
+				GETWORDLE(&buf[0x16 * 4]),
+				GETWORDLE(&buf[0x17 * 4]),
+				GETWORDLE(&buf[0x18 * 4]),
+				GETWORDLE(&buf[0x19 * 4]),
+				GETWORDLE(&buf[0x1A * 4]),
+				GETWORDLE(&buf[0x1B * 4]),
+				GETWORDLE(&buf[0x1C * 4]),
+				GETWORDLE(&buf[0x1D * 4]),
+				GETWORDLE(&buf[0x1E * 4]),
+				get_float(&buf[0x1F * 4]),
+				get_float(&buf[0x20 * 4]),
+				get_float(&buf[0x21 * 4]),
+				GETWORDLE(&buf[0x22 * 4]),
+				GETWORDLE(&buf[0x23 * 4]),
+				GETWORDLE(&buf[0x24 * 4]),
+				GETWORDLE(&buf[0x25 * 4])
 		);
 
-        set_matrix_base(GETWORDLE(&culling_ram_8e[i + 0x16*4]));
+        set_matrix_base(GETWORDLE(&buf[0x16*4]));
         init_coord_system();
-        set_viewport(i);
+        set_viewport(buf);
 
-        j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
+		#if LIGHTING
+		{
+		/*
+		 * Until material lighting properties aren't emulated
+		 * properly, light will never look decent on flat polys.
+		 * Moreover, we still lack emulation of shading selection
+		 * (Real3D docs enumerate flat, fixed, gouraud and
+		 * specular shading, selectable per polygon).
+		 *
+		 * Note that lighting has plin bad problems with untextured
+		 * polys.
+		 */
+
+		GLfloat vect[4];
+		GLfloat temp[4];
+
+		/*
+		 * Directional light
+		 */
+
+		vect[0] = -get_float(&buf[0x05 * 4]);
+		vect[1] = -get_float(&buf[0x06 * 4]);
+		vect[2] = get_float(&buf[0x04 * 4]);
+		vect[3] = 0.0f;
+
+		temp[0] = \
+		temp[1] = \
+		temp[2] = get_float(&buf[0x07 * 4]);
+		temp[3] = 1.0f;
+
+		glLightfv(GL_LIGHT0, GL_POSITION, vect);
+		glLightfv(GL_LIGHT0, GL_DIFFUSE, temp);
+
+		/*
+		 * Positional light
+		 */
+
+		/* This kind of lights uses a X and Y position,
+		 * a X and Y size, a start point and an extent.
+		 * It seems to describe a lighting volume
+		 * (considering the start and extent values as
+		 * Z coords). Currently unemulated.
+		 */
+
+		/*
+		 * Ambient light
+		 */
+
+		temp[0] = \
+		temp[1] = \
+		temp[2] = (GLfloat)((GETWORDLE(&buf[0x24 * 4]) >> 8) & 0xFF) / 256.0f;
+		temp[3] = 1.0f;
+
+		glLightfv(GL_LIGHT0, GL_AMBIENT, temp);
+
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+
+		}
+		#endif
+
+		#if FOGGING
+		{
+		/*
+		 * Very primitive fog implementation.
+		 */
+
+		GLfloat fog_color[4];
+
+		fog_color[0] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >> 16) & 0xFF) / 256.0f;
+		fog_color[1] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  8) & 0xFF) / 256.0f;
+		fog_color[2] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  0) & 0xFF) / 256.0f;
+		fog_color[3] = 1.0f;
+
+		glFogi(GL_FOG_MODE, GL_EXP2);
+		glFogf(GL_FOG_DENSITY, get_float(&buf[0x23 * 4]));
+		glFogf(GL_FOG_START, (GLfloat)(GETWORDLE(&buf[0x25 * 4]) & 0xFF) / 256.0f);
+		glFogf(GL_FOG_END, 10000.0f);
+		glFogfv(GL_FOG_COLOR, fog_color);
+
+		glEnable(GL_FOG);
+		}
+		#endif
+
+        j = GETWORDLE(&buf[2*4]);	// get address of 10-word block
         j = (j & 0xFFFF) * 4;
-        if (j == 0) // culling RAM probably hasn't been set up yet
+        if (j == 0)	// culling RAM probably hasn't been set up yet
             break;
 
-        next = GETWORDLE(&culling_ram_8e[i + 4]);   // get address of next block
-        if (next == 0x01000000)                     // 01000000 == STOP
+        next = GETWORDLE(&buf[4]);	// get address of next block
+        if (next == 0x01000000)		// 01000000 == STOP
             stop = TRUE;
         i = (next & 0xFFFF) * 4;
 
-		switch((GETWORDLE(&culling_ram_8e[i + 8]) >> 24) & 0xFE)
+		switch((GETWORDLE(&buf[2*4]) >> 24) & 0xFE)
 		{
 		case 0x00:	// block
 			R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", j);
@@ -1188,8 +1420,16 @@ static void draw_scene(void)
 			break;
 
 		default:
-			error("Unknown scene descriptor link %08X\n", GETWORDLE(&culling_ram_8e[i + 8]));
+			error("Unknown scene descriptor link %08X\n", GETWORDLE(&buf[2*4]));
 		}
+
+		#if FOGGING
+		glDisable(GL_FOG);
+		#endif
+
+		#if LIGHTING
+		glDisable(GL_LIGHTING);
+		#endif
     }
     while (!stop);
 }
@@ -1267,10 +1507,10 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 	        for (xi = 0; xi < w; xi++)
 	        {
                 rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
-                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 12) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  8) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  4) & 0xF) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >>  0) & 0xF) << 4; // not sure ...
+	            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >>  8) & 0xF) << 3;
+	            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  4) & 0xF) << 3;
+	            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  0) & 0xF) << 3;
+	            texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >> 12) & 0xF) << 3;
 	        }
 		}
 		break;
@@ -1282,7 +1522,7 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
 
     texture_grid[(y / 32) * 64 + (x / 32)] = tex_id;    // mark texture as used
 }
@@ -1335,15 +1575,31 @@ void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h)
  *      - 2D texturing is enabled
  *      - Alpha blending is disabled
  *
- * The entry state is restored on exit.
+ * The entry state is restored on exit (except for texture enviroment mode).
  */
 
 //TODO: Cannot be resized yet, hardcoded for 496x384
 
 void r3dgl_update_frame(void)
 {
-//    if (m3_config.step == 0x10) // we can't render this yet
-//        return;
+	#if LIGHTING
+
+	const GLfloat zero[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	const GLfloat full[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);			// remove default ambient light
+
+	/*
+	 * These are dummy values: we don't actually know where these are
+	 * located in 3D RAM and how they're selected.
+	 */
+
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, full);		// full material ambient reflection
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, full);		// full material diffuse reflection
+
+	#endif
 
     /*
      * Enable Z-buffering
@@ -1352,13 +1608,10 @@ void r3dgl_update_frame(void)
     glClearDepth(1.0);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-//    glDepthFunc(GL_LEQUAL);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     /*
      * Set up a perspective view and then set the matrix mode to modelview.
-     * Each Z coordinate is multiplied by 1 to flip the coordinate system
-     * (Model 3 uses a left-hand system, OpenGL is right-handed.)
      */
 
 	glMatrixMode(GL_PROJECTION);
@@ -1366,6 +1619,7 @@ void r3dgl_update_frame(void)
     gluPerspective(45.0, 496.0 / 384.0, 0.1, 100000.0);
 
 	glMatrixMode(GL_MODELVIEW);
+//	glLoadIdentity();
 
     /*
      * Draw the scene

@@ -163,7 +163,6 @@ int main(int argc, char *argv[])
             printf("%08X %s\t%s\n", op, mnem, oprs);
 
         m3_run_frame();
-
 	}
 
     for (i = 0; i < 32; i += 4)
@@ -190,6 +189,15 @@ void osd_error(CHAR * string)
 	/* revert to plain GUI. */
 }
 
+// temp
+extern UINT r3d_test_bit;
+static void show_test_bit(void)
+{
+	char string[256];
+	sprintf(string, "Test bit = %i, Test mask = %08X\n", r3d_test_bit, 1 << r3d_test_bit);
+	MessageBox(NULL, string, "Model 3", 0);
+}
+
 static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     CHAR    fname[13];
@@ -205,6 +213,18 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
             default:
                 printf("KEY = %02X\n", wParam);
                 break;
+
+			// temp
+			case 'O':
+				r3d_test_bit++;
+				r3d_test_bit &= 31;
+				show_test_bit();
+				break;
+			case 'P':
+				r3d_test_bit--;
+				r3d_test_bit &= 31;
+				show_test_bit();
+				break;
 
             case VK_F12:
                 m3_config.layer_enable ^= 1;
