@@ -21,11 +21,18 @@
  *
  * Rendering engine. Responsible for both Real3D graphics emulation and
  * for drawing the tile layers with correct priorities.
+ *
+ * NOTES:
+ * ------
+ *
+ * - The "hardware coordinate system" is the default Model 3 coordinate system
+ *   before any matrices are applied. In it, +X is to the right, +Y is down,
+ *   and +Z is further into the screen.
  */
 
 #include "model3.h"
 
-#define LOG_MODEL_ADDR  1   // logs model addresses to models.log
+#define LOG_MODEL_ADDR  0   // logs model addresses to models.log
 
 /******************************************************************/
 /* Useful Macros                                                  */
@@ -335,13 +342,13 @@ static void draw_pointer_list(UINT lod_num, UINT32* list)
 	#endif
 
 	if(1)
-		draw_model( list[0] );
+        draw_model( list[0] );
 	else if(0)
-		draw_model( list[1] );
+        draw_model( list[1] );
 	else if(0)
-		draw_model( list[2] );
+        draw_model( list[2] );
 	else
-		draw_model( list[3] );
+        draw_model( list[3] );
 }
 
 /*
@@ -370,6 +377,7 @@ static void draw_block(UINT32 *block)
     MATRIX  m;
     UINT32  addr;
     INT     offset;
+    INT     txoffs_x, txoffs_y, txoffs_page;
 
     if (m3_config.step == 0x10) // Step 1.0 blocks are only 8 words
         offset = 2;
@@ -377,6 +385,10 @@ static void draw_block(UINT32 *block)
         offset = 0;
 
     addr = block[7 - offset];
+
+    txoffs_x = ((block[2] >> 7) & 0x3F) * 32;
+    txoffs_y = (block[2] & 0x1F) * 32;
+    txoffs_page = !!(block[2] & 0x4000);
 
     /*
      * Apply matrix and translation
@@ -455,19 +467,26 @@ static void get_viewport_data(VIEWPORT *vp, UINT32 *node)
 /*
  * get_light_data():
  *
- * Sets up a LIGHT structure based on ambient sun light. The sun vector points
- * towards the light from (apparently) the origin of the coordinate system.
+ * Sets up a LIGHT structure based on ambient sun light. The sun vector
+ * indicates the direction of the parallel sun light. It is specified in the
+ * hardware coordinate system and must be applied before any matrices.
  */
 
 static void get_light_data(LIGHT* l, UINT32* node)
 {
 	memset( l, 0, sizeof(LIGHT) );
-    l->u = -GET_FLOAT(&node[5]);    // it seems X needs to be inverted
+    l->u = GET_FLOAT(&node[5]);    // it seems X needs to be inverted
     l->v = GET_FLOAT(&node[6]);
     l->w = GET_FLOAT(&node[4]);
+
 	l->diffuse_intensity = GET_FLOAT(&node[7]);
 	l->ambient_intensity = (UINT8)((node[0x24] >> 8) & 0xFF) / 256.0f;
+
+    LOG("model3.log", "sun light = (%f,%f,%f),%f,(%02X=%f)\n", l->u, l->v, l->w, l->diffuse_intensity, ((node[0x24] >> 8) & 0xFF), l->ambient_intensity);
+
 	l->color = 0xFFFFFFFF;
+
+
 }
 
 /*
@@ -611,14 +630,14 @@ void render_frame(void)
     osd_renderer_begin();
     osd_renderer_clear(1, 1);   // clear both the frame and Z-buffer
 
-	set_color_offset(tilegen_read_32(0x44));
+//    set_color_offset(tilegen_read_32(0x44));
 
     osd_renderer_draw_layer(3);
     osd_renderer_draw_layer(2);
 
     do_3d();
 
-	set_color_offset(tilegen_read_32(0x40));
+//    set_color_offset(tilegen_read_32(0x40));
 
     osd_renderer_draw_layer(1);
     osd_renderer_draw_layer(0);
