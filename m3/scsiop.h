@@ -60,7 +60,7 @@ INSTRUCTION(move_memory)
     FETCH(TEMP);
     dest = TEMP;
 
-//    message(0, "%08X: SCSI move memory: %08X->%08X, %X", ppc_get_reg(PPC_REG_PC), source, dest, num_bytes);
+    message(0, "%08X: SCSI move memory: %08X->%08X, %X", ppc_get_reg(PPC_REG_PC), source, dest, num_bytes);
 
     /*
      * Perform a 32-bit copy if possible and if necessary, finish off with a

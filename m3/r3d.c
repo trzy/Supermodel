@@ -225,11 +225,13 @@ void r3d_write_32(UINT32 a, UINT32 d)
 				last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;
 
             message(0, "texture transfer started: %dx%d, %08X (%08X)", size_x, size_y, d, last_addr);
+            LOG("model3.log", "texture transfer started: %dx%d, %08X (%08X)\n", size_x, size_y, d, last_addr);
         }
         else if (a == last_addr)    // last word written
         {
             osd_renderer_upload_texture(*(UINT32 *) &texture_buffer_ram[4], *(UINT32 *) &texture_buffer_ram[0], &texture_buffer_ram[8], 1);
             message(0, "texture upload complete");
+            LOG("model3.log", "texture upload complete\n");
         }
 
         return;
@@ -240,22 +242,23 @@ void r3d_write_32(UINT32 a, UINT32 d)
     case 0x88000000:    // 0xDEADDEAD
 //        controls_update();
 //        osd_renderer_update_frame();
-        message(0, "%08X: 88000000 = %08X", PPC_PC, BSWAP32(d));
+//        LOG("model3.log", "DEADDEAD\n");
+        message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
         return;
     case 0x90000000:    // VROM texture address
         vrom_texture_address = BSWAP32(d);
         LOG("model3.log", "VROM1 ADDR = %08X\n", BSWAP32(d));
-        message(0, "VROM texture address = %08X", BSWAP32(d));
+        message(0, "VROM texture address = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
     case 0x90000004:    
         vrom_texture_header = BSWAP32(d);
         LOG("model3.log", "VROM1 HEAD = %08X\n", BSWAP32(d));
-        message(0, "VROM texture header = %08X", BSWAP32(d));
+        message(0, "VROM texture header = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
     case 0x90000008:
         osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
         LOG("model3.log", "VROM1 SIZE = %08X\n", BSWAP32(d));
-        message(0, "VROM texture length = %08X", BSWAP32(d));
+        message(0, "VROM texture length = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
     case 0x9000000C:    // ? Virtual On 2: These are almost certainly for VROM textures as well (I was too lazy to check :P)
         vrom_texture_address = BSWAP32(d);
