@@ -629,8 +629,6 @@ static void set_color_offset(UINT32 reg)
 
 void render_frame(void)
 {
-    LOG("model3.log", "RENDER START\n");
-    
     tilegen_update();
 
     osd_renderer_begin();
@@ -650,8 +648,6 @@ void render_frame(void)
 
 	osd_renderer_end();
     osd_renderer_blit();
-
-	LOG("model3.log", "RENDER END\n");    
 }
 
 
