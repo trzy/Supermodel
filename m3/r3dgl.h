@@ -26,6 +26,7 @@
 #define INCLUDED_R3DGL_H
 
 extern void r3dgl_update_frame(void);
+extern void r3dgl_set_resolution(UINT, UINT);
 extern void r3dgl_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *, UINT8 *);
 extern void r3dgl_shutdown(void);
 

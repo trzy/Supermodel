@@ -56,7 +56,7 @@
 #define LOG_MODEL       0
 
 #define WIREFRAME       0
-#define LIGHTING        1
+#define LIGHTING        0
 #define FOGGING			1
 
 #ifndef PI
@@ -90,10 +90,19 @@ static UINT8    *texture_ram;       // pointer to Real3D texture RAM
 static UINT8    *vrom;              // pointer to VROM
 
 /*
+ * Resolution Ratios
+ *
+ * The ratio of the OpenGL physical resolution to the Model 3 resolution is
+ * kept.
+ */
+
+static float    xres_ratio, yres_ratio;
+
+/*
  * Texture Mapping
  *
  * The smallest Model 3 textures are 32x32 and the total VRAM texture sheet
- * is 2048x2048. Dividing this by 32 gives us 64x64. Each element contains an
+ * is 2048x2048. Dividings this by 32 gives us 64x64. Each element contains an
  * OpenGL ID for a texture.
  */
 
@@ -238,7 +247,8 @@ static void draw_model(UINT8 *buf, UINT little_endian)
         else
             texcoord_divisor = 8.0f;    // 13.3 format
 
-		tex_fmt = (GETWORD(&buf[6*4]) >> 8) & 3;
+        tex_fmt = (GETWORD(&buf[6*4]) >> 7) & 7;
+//        tex_fmt = (GETWORD(&buf[6*4]) >> 8) & 3;
         tex_rep_mode = GETWORD(&buf[2*4]) & 3;
 
         tex_w = 32 << ((GETWORD(&buf[3*4]) >> 3) & 7);
@@ -903,7 +913,9 @@ static void set_viewport_and_perspective(UINT8 *scene_buf)
     w >>= 2;
     h >>= 2;    // size is 14.2
 
-    glViewport(x, 384 - (y + h), w, h);
+    x = (UINT) ((float) x * xres_ratio);    // X position of window in physical screen space
+    y = (UINT) ((float) (384 - (y + h)) * yres_ratio);  // Y position
+    glViewport(x, y, w * xres_ratio, h * yres_ratio);
 
     /*
      * Set the field of view
@@ -1556,23 +1568,39 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 	switch(format)
 	{
-	case 0:	// 16-bit, ARGB1555
+    case 1: // mono 4-bit
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 0) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 0) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 0) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = 0xFF;
+	        }
+	    }
+
+		break;
+
+    case 0: // 16-bit, ARGB1555
 
 	    for (yi = 0; yi < h; yi++)
 	    {
 	        for (xi = 0; xi < w; xi++)
 	        {
                 rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
-	            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 10) & 0x1F) << 3;
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 10) & 0x1F) << 3;
 	            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 5) & 0x1F) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 0) & 0x1F) << 3;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 0) & 0x1F) << 3;
 	            texture_buffer[((yi * w) + xi) * 4 + 3] = (rgb16 & 0x8000) ? 0 : 0xFF;
 	        }
 	    }
 
 		break;
 
-	case 2:  // 8-bit, L8
+//    case 2:  // 8-bit, L8
+//    case 8:
 
 	    for (yi = 0; yi < h; yi++)
 	    {
@@ -1588,22 +1616,8 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 
 		break;
 
-    case 1: // 4-bit? make bright green to draw attention to it
-
-	    for (yi = 0; yi < h; yi++)
-	    {
-	        for (xi = 0; xi < w; xi++)
-	        {
-                texture_buffer[((yi * w) + xi) * 4 + 0] = 0x00;
-                texture_buffer[((yi * w) + xi) * 4 + 1] = 0xFF;
-                texture_buffer[((yi * w) + xi) * 4 + 2] = 0x00;
-                texture_buffer[((yi * w) + xi) * 4 + 3] = (UINT8) 0xFF;
-	        }
-	    }
-
-		break;
-
-	case 3:	// 16-bit, ARGB4444
+//    case 3: // 16-bit, ARGB4444
+    case 7:
 
 		for (yi = 0; yi < h; yi++)
 		{
@@ -1617,6 +1631,21 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 			}
 		}
 		break;
+
+    default:    // unknown, draw attention to it by making it bright green
+	    for (yi = 0; yi < h; yi++)
+	    {
+	        for (xi = 0; xi < w; xi++)
+	        {
+                texture_buffer[((yi * w) + xi) * 4 + 0] = 0x00;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = 0xFF;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = 0x00;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = (UINT8) 0xFF;
+	        }
+	    }
+
+		break;
+
 	}
 
     glGenTextures(1, &tex_id);
@@ -1681,8 +1710,6 @@ void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h)
  * The entry state is restored on exit (except for texture enviroment mode).
  */
 
-//TODO: Cannot be resized yet, hardcoded for 496x384
-
 void r3dgl_update_frame(void)
 {
 	#if LIGHTING
@@ -1743,6 +1770,18 @@ void r3dgl_update_frame(void)
      */
 
     glDisable(GL_DEPTH_TEST);
+}
+
+/*
+ * void r3dgl_set_resolution(UINT xres, UINT yres);
+ *
+ * Sets the resolution.
+ */
+
+void r3dgl_set_resolution(UINT xres, UINT yres)
+{
+    xres_ratio = (float) xres / 496.0;
+    yres_ratio = (float) yres / 384.0;
 }
 
 /*
