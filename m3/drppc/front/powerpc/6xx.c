@@ -69,9 +69,9 @@ void ShutdownModel (void)
 void SetMSR (UINT32 data)
 {
 	if ((MSR ^ data) & 0x20000)
-		Error("%08X: switched TGPRs on\n", PC);
+		Print("%08X: switched TGPRs on\n", PC);
 	if (data & 0x80000)
-		Error("%08X: PowerPC halted\n", PC);
+		Print("%08X: PowerPC halted\n", PC);
 
 	MSR = data;
 }
@@ -87,11 +87,12 @@ void SetSPR (UINT num, UINT32 data)
 	{
 	case SPR_DEC:
 		if ((data & 0x80000000) && !(SPR(SPR_DEC) & 0x80000000))
-			Error("%08X: DEC intentionally triggers IRQ\n", PC);
+			Print("%08X: DEC intentionally triggers IRQ\n", PC);
 		SPR(SPR_DEC) = data;
 		break;
 	case SPR_PVR:
-		Error("%08X: write to PVR\n", PC);
+		Print("%08X: write to PVR\n", PC);
+		break;
 	case SPR_TBL_W:
 	case SPR_TBL_R:	// special 603e case
 		WriteTimebaseLo(data);
@@ -103,7 +104,8 @@ void SetSPR (UINT num, UINT32 data)
 #if (PPC_MODEL == PPC_MODEL_GEKKO)
 	case SPR_DMA_U:
 	case SPR_DMA_L:
-		Error("%08X: Gekko DMA unimplemented\n", PC);
+		Print("%08X: Gekko DMA requested\n", PC);
+		break;
 #endif
 
 	}
@@ -116,13 +118,13 @@ UINT32 GetSPR (UINT num)
 	switch (num)
 	{
 	case SPR_TBL_R:
-		Error("%08X: GetSPR from TBL_R\n", PC);
+		return ReadTimebaseLo();
 	case SPR_TBU_R:
-		Error("%08X: GetSPR from TBU_R\n", PC);
+		return ReadTimebaseHi();
 	case SPR_TBL_W:
-		Error("%08X: GetSPR from TBL_W\n", PC);
+		return ReadTimebaseLo(); // TEMP
 	case SPR_TBU_W:
-		Error("%08X: GetSPR from TBU_W\n", PC);
+		return ReadTimebaseHi(); // TEMP
 	}
 
 	return SPR(num);

@@ -1,5 +1,5 @@
 /*
- * front/powerpc/i_special.c
+ * front/powerpc/interp/i_special.c
  *
  * Special instruction handlers
  */
@@ -18,28 +18,28 @@
 #define _BDM	((op >> 21) & 3)
 #define _BDN	((op >> 23) & 7)
 
-#define CROPD(op)	\
-		{ \
-		UINT32 bm = _BBM, bn = _BBN; \
-		UINT32 am = _BAM, an = _BAN; \
-		UINT32 dm = _BDM, dn = _BDN; \
-		UINT32 i, j; \
-		i = (CR(an) >> (3 - am)) & 1; \
-		j = (CR(bn) >> (3 - bm)) & 1; \
-		CR(dn) &= ~(8 >> dm); \
-		CR(dn) |= (i op j) << (3 - dm); \
+#define CROPD(op)										\
+		{												\
+		UINT32 bm = _BBM, bn = _BBN;					\
+		UINT32 am = _BAM, an = _BAN;					\
+		UINT32 dm = _BDM, dn = _BDN;					\
+		UINT32 i, j;									\
+		i = (CR(an) >> (3 - am)) & 1;					\
+		j = (CR(bn) >> (3 - bm)) & 1;					\
+		CR(dn) &= ~(8 >> dm);							\
+		CR(dn) |= (i op j) << (3 - dm);					\
 		}
 
-#define CROPN(op) \
-		{ \
-		UINT32 bm = _BBM, bn = _BBN; \
-		UINT32 am = _BAM, an = _BAN; \
-		UINT32 dm = _BDM, dn = _BDN; \
-		UINT32 i, j; \
-		i = (CR(an) >> (3 - am)) & 1; \
-		j = (CR(bn) >> (3 - bm)) & 1; \
-		CR(dn) &= ~(8 >> dm); \
-		CR(dn) |= (~(i op j) << (3 - dm)) & (8 >> dm); \
+#define CROPN(op)										\
+		{												\
+		UINT32 bm = _BBM, bn = _BBN;					\
+		UINT32 am = _BAM, an = _BAN;					\
+		UINT32 dm = _BDM, dn = _BDN;					\
+		UINT32 i, j;									\
+		i = (CR(an) >> (3 - am)) & 1;					\
+		j = (CR(bn) >> (3 - bm)) & 1;					\
+		CR(dn) &= ~(8 >> dm);							\
+		CR(dn) |= (~(i op j) << (3 - dm)) & (8 >> dm);	\
 		}
 
 /*******************************************************************************
@@ -102,7 +102,7 @@ INT I_Mcrf(UINT32 op)
 
 INT I_Mcrxr(UINT32 op)
 {
-	Error("%08X: mcrxr\n", PC);
+	Print("%08X: mcrxr\n", PC);
 	return 1;
 }
 
@@ -193,7 +193,7 @@ INT I_Mftb(UINT32 op)
 	case 268: R(t) = ReadTimebaseLo(); break;
 	case 269: R(t) = ReadTimebaseHi(); break;
 	default:
-		Error("invalid mftb\n");
+		Print("invalid mftb\n");
 	}
 
 	return 1;

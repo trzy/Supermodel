@@ -145,7 +145,7 @@ static INT HandleBBMiss (UINT32 addr, UINT page1, UINT page2, UINT offs)
 *******************************************************************************/
 
 /*
- * INT _BBLookup_Setup (struct drppc_cfg * cfg);
+ * INT BBLookup_Setup (struct drppc_cfg * cfg);
  *
  * Initialize the custom Basic Block lookup mechanism.
  */
@@ -155,7 +155,7 @@ INT BBLookup_Setup (struct drppc_cfg * cfg)
 	UINT32	mask;
 
 	/*
-	 * Compute the shift amount, bit mask and element number for each of the
+	 * Compute the shift amount, bit mask and number of elements for each of the
 	 * address components.
 	 */
 
@@ -187,6 +187,12 @@ INT BBLookup_Setup (struct drppc_cfg * cfg)
 		return DRPPC_INVALID_CONFIG;
 
 	/*
+	 * Clean the LUT in case it's allocated.
+	 */
+
+	BBLookup_Clean();
+
+	/*
 	 * Allocate the lookup table.
 	 */
 
@@ -199,7 +205,7 @@ INT BBLookup_Setup (struct drppc_cfg * cfg)
 }
 
 /*
- * void _BBLookup_Clean (void);
+ * void BBLookup_Clean (void);
  *
  * Cleanup the custom BB lookup system.
  */
@@ -237,14 +243,30 @@ DRPPC_BB * BBLookup_Lookup (UINT32 addr, INT * errcode)
 }
 
 /*
- * void _BBLookup_Invalidate (void);
+ * void BBLookup_Invalidate (void);
  *
  * Used on cache overflow to invalidate the entire LUT.
  */
 
 void BBLookup_Invalidate (void)
 {
-	/*
-	 * Not properly defined yet. It'll be a slow operation anyway.
-	 */
+	UINT	i, j, k;
+
+	if (lut != NULL)
+	{
+		for (i = 0; i < page1_num; i++)
+			if (lut[i] != NULL)
+			{
+				for (j = 0; j < page2_num; j++)
+					if (lut[j] != NULL)
+					{
+						for (k = 0; k < offs_num; k++)
+							if (lut[k] != NULL)
+								Free(lut[i][j][k]);
+						Free(lut[i][j]);
+					}
+				Free(lut[i]);
+			}
+		Free(lut);
+	}
 }

@@ -22,6 +22,7 @@
 #include "mmap.h"
 #include "bb_lookup.h"
 #include "ir.h"
+#include "target.h"
 
 #include "source.h"
 #include "internal.h"
@@ -55,16 +56,18 @@ static const struct
 
 };
 
+static INT		(* interp[65536])(UINT32);	// Interpreter dispatch table
+static INT		(* decode[65536])(UINT32);	// Decoder dispatch table
+
 #define DISPATCH_OP(table, op)	table[(_OP << 10) | _XO](op)
 
-static INT	(* interp[65536])(UINT32);	// Interpreter dispatch table
-static INT	(* decode[65536])(UINT32);	// Decoder dispatch table
+UINT32			mask_table[1024];			// Precomputed mask table (see RLW*)
 
-UINT32		mask_table[1024];			// Precomputed mask table (see RLW*)
+static UINT32	(* Fetch)(void);			// The unified fetch handler
 
-static UINT32	(* Fetch)(void);		// The unified fetch handler
+PPC_CONTEXT		ppc;						// The PowerPC context
 
-PPC_CONTEXT	ppc;						// The PowerPC context
+INT				decoded_bb_timing;			// Used by the decoder
 
 /*******************************************************************************
  Invalid Opcode Handlers
@@ -79,13 +82,16 @@ static void InvalidInst (CHAR * prefix, UINT32 op)
 
     DisassemblePowerPC(op, ppc.pc, (CHAR *)mnem, (CHAR *)oprs, FALSE);
 
-	Error("%08X: %s unhandled opcode %08X (op=%u xo=%u): %s; \t %s\n",
-		  PC, prefix, op, _OP, _XO, mnem, oprs);
+	Print("%s unhandled opcode %08X (%u,%u). Disassembly: %08X: %s\t%s\n",
+		  prefix, op, _OP, _XO, PC, mnem, oprs);
 }
 
 static INT I_Invalid(UINT32 op)
 {
 	InvalidInst("interpeter", op);
+
+	exit(1); // FIXME!
+
 	return 0;
 }
 
@@ -178,8 +184,12 @@ static void SetupMaskTable (void)
 			mask_table[(mb << 5) | me] = CalcMask(mb, me);
 }
 
-static void SetupMMapRegions (DRPPC_CFG * cfg)
+static INT SetupMMapRegions (DRPPC_CFG * cfg)
 {
+	/*
+	 * Copy the configuration to the current context.
+	 */
+
 	ppc.mmap.fetch		= cfg->mmap_cfg.fetch;
 	ppc.mmap.read8		= cfg->mmap_cfg.read8;
 	ppc.mmap.read16		= cfg->mmap_cfg.read16;
@@ -188,10 +198,14 @@ static void SetupMMapRegions (DRPPC_CFG * cfg)
 	ppc.mmap.write16	= cfg->mmap_cfg.write16;
 	ppc.mmap.write32	= cfg->mmap_cfg.write32;
 
-	MMap_Setup(&cfg->mmap_cfg);
+	/*
+	 * Now initialize the memory map module.
+	 */
+
+	return MMap_Setup(&cfg->mmap_cfg);
 }
 
-static void SetupBBLookupHandlers (DRPPC_CFG * cfg)
+static INT SetupBBLookupHandlers (DRPPC_CFG * cfg)
 {
 	if (cfg->SetupBBLookup == NULL)
 	{
@@ -208,7 +222,11 @@ static void SetupBBLookupHandlers (DRPPC_CFG * cfg)
 		ppc.InvalidateBBLookup	= cfg->InvalidateBBLookup;
 	}
 
-	ASSERT(ppc.SetupBBLookup && ppc.CleanBBLookup && ppc.LookupBB && ppc.InvalidateBBLookup);
+	if (!ppc.SetupBBLookup || !ppc.CleanBBLookup ||
+		!ppc.LookupBB || !ppc.InvalidateBBLookup)
+		return DRPPC_INVALID_CONFIG;
+
+	return DRPPC_OKAY;
 }
 
 /*******************************************************************************
@@ -218,8 +236,6 @@ static void SetupBBLookupHandlers (DRPPC_CFG * cfg)
 *******************************************************************************/
 
 static INT Decode (UINT32, DRPPC_BB *);
-
-extern INT RunNative (DRPPC_BB *); // back/x86/target.c
 
 /*
  * UINT32 Fetch* (void);
@@ -250,14 +266,14 @@ static UINT32 FetchDirectReverse (void)
 }
 
 /*
- * void UpdateFetchPtr (void);
+ * INT UpdateFetchPtr (void);
  *
  * Update the current fetch pointer. First, check if the new PC still lies in
  * the old PC's fetch region. If it doesn't, retrieve the new fetch region.
  * Then, update the PC pointer within the current fetch region.
  */
 
-static void UpdateFetchPtr (void)
+static INT UpdateFetchPtr (void)
 {
 	UINT32	pc = ppc.pc;
 
@@ -265,18 +281,21 @@ static void UpdateFetchPtr (void)
 		ppc.cur_fetch_region->start > pc || ppc.cur_fetch_region->end <= pc)
 	{
 		if ((ppc.cur_fetch_region = MMap_FindFetchRegion(pc)) == NULL)
-			Error("Invalid PC=%08X\n", pc);
+			return DRPPC_BAD_PC;
 
 		/*
 		 * Now install the correct fetch handler.
 		 */
 
 		if (ppc.cur_fetch_region->ptr == NULL)	// It's a handler-driven region
+		{
+			if (ppc.cur_fetch_region->handler == NULL)
+				return DRPPC_ERROR;
+
 			Fetch = FetchHandler;
+		}
 		else
 		{
-			ASSERT(ppc.cur_fetch_region->handler != NULL);
-
 			if (ppc.cur_fetch_region->big_endian == FALSE)
 			{
 #if TARGET_ENDIANESS == LITTLE_ENDIAN
@@ -301,29 +320,33 @@ static void UpdateFetchPtr (void)
 	 */
 
 	ppc.pc_ptr = (UINT32 *)((UINT32)ppc.cur_fetch_region->ptr + (pc - (UINT32)ppc.cur_fetch_region->start));
+
+	return DRPPC_OKAY;
 }
 
 /*
- * void UpdatePC(void);
+ * INT UpdatePC(void);
  *
  * This routine must be called whenever a branch is executed, so that the core
  * can perform the operations needed to switch between the interpreter and the
  * recompiler.
+ *
+ * NOTE: to achieve direct translation, and bypass the profiling stage, you must
+ * set hot_threshold to 1, *not* to 0! It is somewhat counterintuitive, so it'll
+ * probably be changed in the future.
  */
 
-void UpdatePC (void)
+INT UpdatePC (void)
 {
 	DRPPC_BB	* bb;
 	BOOL		hit_untraslated_bb = FALSE;
-	UINT32		pc;
-	UINT		i;
-	INT			errcode, ret;
+	INT			ret;
 
 	/*
 	 * Update the current fetch pointer.
 	 */
 
-	UpdateFetchPtr();
+	DRPPC_TRY( UpdateFetchPtr() );
 
 	/*
 	 * Run the translator till we hit a BB that cannot be translated.
@@ -331,14 +354,12 @@ void UpdatePC (void)
 
 	do
 	{
-		pc = ppc.pc;
-
 		/*
 		 * Retrieve BB info.
 		 */
 
-		if ((bb = ppc.LookupBB(pc, &errcode)) == NULL)
-			Error("LookupBB failed on PC=%08X\n", pc);
+		if ((bb = ppc.LookupBB(ppc.pc, &ret)) == NULL)
+			return ret;
 
 		if (bb->count < ppc.hot_threshold)
 		{
@@ -350,14 +371,14 @@ void UpdatePC (void)
 
 			if (++bb->count == ppc.hot_threshold)
 			{
-				if ((ret = Decode(pc, bb)) != DRPPC_OKAY)
-					Error("Decode failed on PC=%08X, ret=%d\n", pc, ret);
-				if ((ret = RunNative(bb)) != DRPPC_OKAY)
+				if ((ret = Decode(ppc.pc, bb)) != DRPPC_OKAY)
+					return ret;
+				if ((ret = Target_RunBB(bb)) != DRPPC_OKAY)
 				{
 					if (ret == DRPPC_TIMESLICE_ENDED)
-						hit_untraslated_bb = TRUE;
+						hit_untraslated_bb = TRUE; // Actually we've exausthed the cycle counter
 					else
-						Error("RunNative failed, ret=%d\n", ret);
+						return ret;
 				}
 			}
 			else
@@ -370,12 +391,12 @@ void UpdatePC (void)
 			 * translated. In this case, just execute it.
 			 */
 
-			if ((ret = RunNative(bb)) != DRPPC_OKAY)
+			if ((ret = Target_RunBB(bb)) != DRPPC_OKAY)
 			{
 				if (ret == DRPPC_TIMESLICE_ENDED)
-					hit_untraslated_bb = TRUE;
+					hit_untraslated_bb = TRUE;	// Actually we've exausthed the cycle counter
 				else
-					Error("RunNative failed, ret=%d\n", ret);
+					return ret;
 			}
 		}
 
@@ -385,7 +406,9 @@ void UpdatePC (void)
 	 * Keep the fetch pointer in sync.
 	 */
 
-	UpdateFetchPtr();
+	DRPPC_TRY( UpdateFetchPtr() );
+
+	return DRPPC_OKAY;
 }
 
 /*
@@ -409,7 +432,7 @@ UINT32 ReadTimebaseLo (void)
 
 UINT32 ReadTimebaseHi (void)
 {
-	return (UINT32)(ppc.timebase >> 34) & 0x00FFFFFF;
+	return (UINT32)(ppc.timebase >> 34) & 0x00FFFFFF; // sign extend?
 }
 
 void WriteTimebaseLo (UINT32 data)
@@ -429,8 +452,8 @@ void WriteTimebaseHi (UINT32 data)
  *
  * Function to step the timebase register by the specified amount of cycles.
  * It handles timebase overflow, too, althought overflow is very unlikely to
- * happen (every 2^58 cycles!), but the code may write to the timebase a value
- * near to 2^58 to cause an overflow on purpose.
+ * happen (every 2^58 cycles!), but the emulated code may write to the timebase
+ * a value near to 2^58 to cause an overflow on purpose.
  *
  * It also updates the decrementer register on 603 and Gekko models, and checks
  * for underflow. This computation relies on the fractionary part of the
@@ -470,21 +493,28 @@ void UpdateTimers (INT cycles)
 *******************************************************************************/
 
 /*
- * INT Interpret (INT count);
+ * INT Interpret (INT count, INT * err);
  *
  * Run the interpreter for count cycles. It returns the remaining cycles at
  * end of execution. Actually, it will try to run in native mode (i.e. through
  * the recompiler) whenever it can. So, the name 'Interpret' isn't correct.
+ *
+ * If an error happens, err is written with the corresponding error number.
  */
 
-static INT Interpret (INT count)
+static INT Interpret (INT count, INT * err)
 {
-	UINT32	op, cycles, old_dec;
+	UINT32	op, cycles;
+	UINT	ret;
 
 	ppc.requested = count;
 	ppc.remaining = count;
 
-	UpdatePC();
+	if (DRPPC_OKAY != (ret = UpdatePC()))
+	{
+		*err = ret;
+		return 0;
+	}
 
 	while (ppc.remaining > 0)
 	{
@@ -523,12 +553,21 @@ static INT Interpret (INT count)
 
 static INT Decode (UINT32 pc, DRPPC_BB * bb)
 {
-	DRPPC_REGION	* region;
-	UINT32			op;
-	INT				ret = 0;
+	UINT32	op;
+	INT		ret = 0;
+	IR		* ir;
+
+	decoded_bb_timing = 0;
 
 	/*
-	 * Get the region to fetch instructions from.
+	 * Let know the middle-end that a new BB is being translated.
+	 */
+
+	DRPPC_TRY( IR_BeginBB() );
+
+	/*
+	 * Now, fetch instructions sequentially and decode, till a branch is found,
+	 * or an  error is generated.
 	 */
 
 	do
@@ -537,18 +576,35 @@ static INT Decode (UINT32 pc, DRPPC_BB * bb)
 
 		op = Fetch();
 
-		pc += 4;
+		ppc.pc += 4;
 
 		ret = DISPATCH_OP(decode, op);
 
-	} while(ret == DRPPC_OKAY);
+	} while (ret == DRPPC_OKAY);
 
 	/*
-	 * Check if error.
+	 * Check if we hit a branch (terminator) or caught an error.
 	 */
 
-	if (ret != DRPPC_FOUND_TERMINATOR)
+	if (ret != DRPPC_TERMINATOR)
+	{
+		ASSERT(D_Invalid(op)); // Just to print out the disassembly.
 		return ret;
+	}
+
+	/*
+	 * Let know the middle-end that the BB translation has ended and retrieve
+	 * various informations about it (such as the address of the *final*
+	 * intermediate BB representation).
+	 */
+
+	DRPPC_TRY( IR_EndBB(&ir) );
+
+	/*
+	 * Finally generate the native BB translation. Don't execute it just yet!
+	 */
+
+	DRPPC_TRY( Target_GenerateBB(bb, ir, decoded_bb_timing) );
 
 	return DRPPC_OKAY;
 }
@@ -589,39 +645,39 @@ static INT Decode (UINT32 pc, DRPPC_BB * bb)
  *
  * Returns:
  *
- *	DRPPC_OKAY if no error occurred; the error code otherwise.
+ *	DRPPC_OKAY if no error occurred.
+ *	DRPPC_INVALID_CONFIG if some cfg field holds an invalid value.
+ *	DRPPC_OUT_OF_MEMORY if memory allocation failed.
  */
 
 INT PowerPC_Init (DRPPC_CFG * cfg, UINT32 pvr, UINT (* IRQCallback)(void))
 {
-	INT ret;
+	DRPPC_TRY( SetupBasicServices(cfg) );
 
-	if ((ret = SetupAllocHandlers(cfg)) != DRPPC_OKAY)
-		return ret;
+	DRPPC_TRY( SetupMMapRegions(cfg) );
 
-	SetupMMapRegions(cfg);
-	SetupBBLookupHandlers(cfg);
+	DRPPC_TRY( SetupBBLookupHandlers(cfg) );
 
-	if ((ret = ppc.SetupBBLookup(cfg)) != DRPPC_OKAY)
-		return ret;
+	DRPPC_TRY( ppc.SetupBBLookup(cfg) )
 
-	ppc.hot_threshold = cfg->hot_threshold; // Use 0 to switch off the interpreter.
+	DRPPC_TRY( AllocCache(&ppc.code_cache, cfg->native_cache_size, cfg->native_cache_guard_size) );
 
-	if ((ret = AllocCache(&ppc.code_cache, cfg->native_cache_size, cfg->native_cache_guard_size)) != DRPPC_OKAY)
-		return ret;
+	ppc.hot_threshold = cfg->hot_threshold;
 
 	SetupJumpTables();
+
 	SetupMaskTable();
+
+	if (NULL == (ppc.IRQCallback = IRQCallback))
+		return DRPPC_INVALID_CONFIG;
 
 	SPR(SPR_PVR) = pvr;
 
-	if ((ppc.IRQCallback = IRQCallback) == NULL)
-		return DRPPC_INVALID_CONFIG;
+	DRPPC_TRY( InitModel(cfg, pvr) );
 
-	if ((ret = InitModel(cfg, pvr)) != DRPPC_OKAY)
-		return ret;
+	DRPPC_TRY( IR_Init(cfg) );
 
-	IR_Init(cfg);
+	DRPPC_TRY( Target_Init(&ppc.code_cache) );
 
 	return DRPPC_OKAY;
 }
@@ -638,22 +694,20 @@ INT PowerPC_Init (DRPPC_CFG * cfg, UINT32 pvr, UINT (* IRQCallback)(void))
  *
  * Returns:
  *
- *	DRPPC_OKAY if no error occurred; the error code otherwise.
+ *	DRPPC_OKAY if no error occurred.
+ *	DRPPC_ERROR if MMap_Setup failed (because of invalid fetch/read/write ptrs).
  */
 
 INT PowerPC_Reset (void)
 {
 	UINT	i, pvr;
-	INT		ret;
 
 	for (i = 0; i < 32; i++)
 		R(i) = 0;
 
 	pvr = SPR(SPR_PVR);
-
 	for (i = 0; i < 1024; i++)
 		SPR(i) = 0;
-
 	SPR(SPR_PVR) = pvr;
 
 	for (i = 0; i < 8; i++)
@@ -665,16 +719,13 @@ INT PowerPC_Reset (void)
 	ppc.irq_state = 0;
 	ppc.timebase = 0;
 
-	if ((ret = ResetModel ()) != DRPPC_OKAY)
-		return ret;
+	DRPPC_TRY( MMap_Setup(&ppc.mmap) );
 
-	MMap_Setup(&ppc.mmap);
+	DRPPC_TRY( ResetModel() );
 
 	UpdateFetchPtr();
 
 	ppc.InvalidateBBLookup();
-
-	IR_Reset();
 
 	return DRPPC_OKAY;
 }
@@ -701,10 +752,12 @@ void PowerPC_Shutdown (void)
 	ppc.CleanBBLookup();
 
 	IR_Shutdown();
+
+	Target_Shutdown();
 }
 
 /*
- * INT PowerPC_Run (INT cycles);
+ * INT PowerPC_Run (INT cycles, INT * err);
  *
  * This routine runs the emulated context for the specified amount of cycles.
  *
@@ -714,17 +767,28 @@ void PowerPC_Shutdown (void)
  *
  *	  The amount of cycles to run for.
  *
+ *	- INT * err
+ *
+ *	  A non-NULL pointer to an integer to hold the return error code.
+ *
  * Returns:
  *
  *	The number of effective cycles the CPU has been emulated for, minus the
  *	specified amoung of cycles. The emulator isn't cycle-perfect, so it will
  *	probably run a few cycles *more* than specified; so, the returned value
  *	will very likely be positive.
+ *
+ *	err will eventually assume one of the following error codes:
+ *
+ *	DRPPC_OKAY when no error happened -- or we didn't notice it ;)
+ *	DRPPC_BAD_PC when the code branches to an invalid location.
+ *	DRPPC_ERROR when a generic error happens (self-generated, miracolous errors.
+ *	You won't see many of these. ;) In case, take a look at UpdateFetchPtr.)
  */
 
-INT PowerPC_Run (INT cycles)
+INT PowerPC_Run (INT cycles, INT * err)
 {
-	return Interpret (cycles);
+	return Interpret (cycles, err);
 }
 
 /*
@@ -833,7 +897,7 @@ void PowerPC_SetIRQLine (UINT state)
  *
  *	All of the structure fields are considered valid, on Get. That is, if you
  *	implement some kind of save state mechanism externally to drppc, you should
- *	provide valid function handlers and region descriptors in ctx, and not
+ *	provide valid function handlers and region descriptors in ctx, not
  *	merely the ones you saved in the file, otherwise you'll end up crashing the
  *  emulator (as the old pointers won't point to valid memory anymore.)
  */
@@ -863,6 +927,8 @@ INT PowerPC_SetContext (PPC_CONTEXT * ctx)
 /*******************************************************************************
  Additional routines that won't necessarily be included in the final version.
 *******************************************************************************/
+
+#if 0
 
 // TODO: how do we handle save states?
 
@@ -1044,3 +1110,5 @@ void PowerPC_SetReg (UINT reg, UINT32 val)
 		Error("PowerPC_SetReg(%d, %08X)\n", reg, val);
 	}
 }
+
+#endif

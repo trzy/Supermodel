@@ -1,5 +1,5 @@
 /*
- * front/powerpc/interp.h
+ * front/powerpc/interp/interp.h
  *
  * Interface to the PowerPC interpreter.
  */

@@ -1,5 +1,5 @@
 /*
- * front/powerpc/i_fp.c
+ * front/powerpc/interp/i_fp.c
  *
  * Floating-Point instruction handlers.
  */

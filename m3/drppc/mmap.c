@@ -8,15 +8,22 @@
 #include "drppc.h"
 #include "toplevel.h"
 #include "mmap.h"
-#include "front/powerpc/source.h"
+#include "target.h"
+#include "source.h"
+
+#ifndef TARGET_IMPLEMENTS_MMAP_HANDLING
 
 /******************************************************************************
- Local Routines
+ Local Variables
 ******************************************************************************/
 
 static DRPPC_REGION * fetch;
 static DRPPC_REGION * read8,  * read16,  * read32;
 static DRPPC_REGION * write8, * write16, * write32;
+
+/******************************************************************************
+ Local Routines
+******************************************************************************/
 
 static DRPPC_REGION * MMap_FindRegion(DRPPC_REGION * table, UINT32 addr)
 {
@@ -47,13 +54,9 @@ INT MMap_Setup (DRPPC_MMAP * cfg)
 	write16	= cfg->write16;
 	write32	= cfg->write32;
 
-	ASSERT(fetch   != NULL);
-	ASSERT(read8   != NULL);
-	ASSERT(read16  != NULL);
-	ASSERT(read32  != NULL);
-	ASSERT(write8  != NULL);
-	ASSERT(write16 != NULL);
-	ASSERT(write32 != NULL);
+	if (!fetch || !read8 || !read16 || !read32 ||
+		!write8 || !write16 || !write32)
+		return DRPPC_ERROR;
 
 	return DRPPC_OKAY;
 }
@@ -102,7 +105,7 @@ UINT8 MMap_GenericRead8(UINT32 addr)
 {
 	DRPPC_REGION * region;
 
-	if ((region = MMap_FindRegion(read8, addr)) == NULL)
+	if ((region = MMap_FindRead8Region(addr)) == NULL)
 		printf("Invalid GenericRead8 from %08X\n", addr);
 
 	if (region->ptr == NULL)
@@ -117,7 +120,7 @@ UINT16 MMap_GenericRead16(UINT32 addr)
 {
 	DRPPC_REGION * region;
 
-	if ((region = MMap_FindRegion(read16, addr)) == NULL)
+	if ((region = MMap_FindRead16Region(addr)) == NULL)
 		printf("Invalid GenericRead16 from %08X\n", addr);
 
 	if (region->ptr == NULL)
@@ -132,7 +135,7 @@ UINT32 MMap_GenericRead32(UINT32 addr)
 {
 	DRPPC_REGION * region;
 
-	if ((region = MMap_FindRegion(read32, addr)) == NULL)
+	if ((region = MMap_FindRead32Region(addr)) == NULL)
 		printf("Invalid GenericRead32 from %08X\n", addr);
 
 	if (region->ptr == NULL)
@@ -147,7 +150,7 @@ void MMap_GenericWrite8(UINT32 addr, UINT8 data)
 {
 	DRPPC_REGION * region;
 
-	if ((region = MMap_FindRegion(write8, addr)) == NULL)
+	if ((region = MMap_FindWrite8Region(addr)) == NULL)
 		printf("Invalid GenericWrite8 from %08X, %02X\n", addr, data);
 
 	if (region->ptr == NULL)
@@ -162,7 +165,7 @@ void MMap_GenericWrite16(UINT32 addr, UINT16 data)
 {
 	DRPPC_REGION * region;
 
-	if ((region = MMap_FindRegion(write16, addr)) == NULL)
+	if ((region = MMap_FindWrite16Region(addr)) == NULL)
 		printf("Invalid GenericWrite16 from %08X, %04X\n", addr, data);
 
 	if (region->ptr == NULL)
@@ -177,7 +180,7 @@ void MMap_GenericWrite32(UINT32 addr, UINT32 data)
 {
 	DRPPC_REGION * region;
 
-	if ((region = MMap_FindRegion(write32, addr)) == NULL)
+	if ((region = MMap_FindWrite32Region(addr)) == NULL)
 		printf("Invalid GenericWrite32 from %08X, %08X\n", addr, data);
 
 	if (region->ptr == NULL)
@@ -187,3 +190,5 @@ void MMap_GenericWrite32(UINT32 addr, UINT32 data)
 	else
 		WRITE_32_LE(region->ptr, addr, data);
 }
+
+#endif // TARGET_IMPLEMENTS_MMAP_HANDLING

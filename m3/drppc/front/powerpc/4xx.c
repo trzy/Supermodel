@@ -14,92 +14,6 @@
 #if PPC_MODEL == PPC_MODEL_4XX
 
 /*******************************************************************************
- SPU
-
- Serial Port Unit emulation. Local routines.
-*******************************************************************************/
-
-static void SPU_Write8 (UINT32 addr, UINT8 data)
-{
-	switch (addr & 15)
-	{
-	case 0: ppc.spu.spls &= ~(data & 0xF6); return;
-	case 2: ppc.spu.sphs &= ~(data & 0xC0); return;
-	case 4: ppc.spu.brdh = data; return;
-	case 5: ppc.spu.brdl = data; return;
-	case 6: ppc.spu.spctl = data; return;
-	case 7: ppc.spu.sprc = data; return;
-	case 8: ppc.spu.sptc = data; return;
-	case 9: ppc.spu.sptb = data; return;
-	}
-
-	Error("%08X: unhandled SPU write 8 %08X = %02X\n", PC, addr, data);
-}
-
-static UINT8 SPU_Read8 (UINT32 addr)
-{
-	switch (addr & 15)
-	{
-	case 0: return(ppc.spu.spls);
-	case 2: return(ppc.spu.sphs);
-	case 4: return(ppc.spu.brdh);
-	case 5: return(ppc.spu.brdl);
-	case 6: return(ppc.spu.spctl);
-	case 7: return(ppc.spu.sprc);
-	case 8: return(ppc.spu.sptc);
-	case 9: return(ppc.spu.sprb);
-	}
-
-	Error("%08X: unhandled SPU read 8 %08X\n", PC, addr);
-}
-
-/*******************************************************************************
- DMA
-
- Direct Memory Access emulation. Local routines.
-*******************************************************************************/
-
-#define DMA_CR(ch)	ppc.dcr[0xC0 + (ch << 3) + 0]
-#define DMA_CT(ch)	ppc.dcr[0xC0 + (ch << 3) + 1]
-#define DMA_DA(ch)	ppc.dcr[0xC0 + (ch << 3) + 2]
-#define DMA_SA(ch)	ppc.dcr[0xC0 + (ch << 3) + 3]
-#define DMA_CC(ch)	ppc.dcr[0xC0 + (ch << 3) + 4]
-#define DMA_SR		ppc.dcr[0xE0]
-
-/*
- * void DMA (UINT ch);
- *
- * Perform internal DMA transfer from channel ch.
- */
-
-static void DMA (UINT ch)
-{
-	UINT	unit;
-
-	if (DMA_CR(channel) & 0x000000F0)
-		Error("%08X: chained DMA%u\n", PC, ch);
-
-	unit = (DMA_CR(ch) >> 26) & 3;
-
-	switch (unit)
-	{
-	case 0:		// 8-bit
-	case 1:		// 16-bit
-	case 2:		// 32-bit
-	default:	// 256-bit
-		Error("%08X: DMA%u %08X --> %08X, %08X size=%i\n", PC, ch, DMA_SA(ch), DMA_DA(ch), DMA_CT(ch), unit);
-		break;
-	}
-
-	if (DMA_CR(ch) & 0x40000000)	// DIE
-	{
-		Error("%08X: DMA%u interrupt triggered\n", ch);
-		DCR(DCR_EXISR) |= (0x00800000 >> ch);
-		ppc.irq_state = 1;
-	}
-}
-
-/*******************************************************************************
  Model-Specific Management
 *******************************************************************************/
 
@@ -140,13 +54,101 @@ void ShutdownModel (void)
 }
 
 /*******************************************************************************
+ SPU
+
+ Serial Port Unit emulation. Local routines.
+*******************************************************************************/
+
+static void SPU_Write8 (UINT32 addr, UINT8 data)
+{
+	switch (addr & 15)
+	{
+	case 0: ppc.spu.spls &= ~(data & 0xF6); return;
+	case 2: ppc.spu.sphs &= ~(data & 0xC0); return;
+	case 4: ppc.spu.brdh = data; return;
+	case 5: ppc.spu.brdl = data; return;
+	case 6: ppc.spu.spctl = data; return;
+	case 7: ppc.spu.sprc = data; return;
+	case 8: ppc.spu.sptc = data; return;
+	case 9: ppc.spu.sptb = data; return;
+	}
+
+	Print("%08X: unhandled SPU write 8 %08X = %02X\n", PC, addr, data);
+}
+
+static UINT8 SPU_Read8 (UINT32 addr)
+{
+	switch (addr & 15)
+	{
+	case 0: return(ppc.spu.spls);
+	case 2: return(ppc.spu.sphs);
+	case 4: return(ppc.spu.brdh);
+	case 5: return(ppc.spu.brdl);
+	case 6: return(ppc.spu.spctl);
+	case 7: return(ppc.spu.sprc);
+	case 8: return(ppc.spu.sptc);
+	case 9: return(ppc.spu.sprb);
+	}
+
+	Print("%08X: unhandled SPU read 8 %08X\n", PC, addr);
+
+	return -1;
+}
+
+/*******************************************************************************
+ DMA
+
+ Direct Memory Access emulation. Local routines.
+*******************************************************************************/
+
+#define DMA_CR(ch)	ppc.dcr[0xC0 + (ch << 3) + 0]
+#define DMA_CT(ch)	ppc.dcr[0xC0 + (ch << 3) + 1]
+#define DMA_DA(ch)	ppc.dcr[0xC0 + (ch << 3) + 2]
+#define DMA_SA(ch)	ppc.dcr[0xC0 + (ch << 3) + 3]
+#define DMA_CC(ch)	ppc.dcr[0xC0 + (ch << 3) + 4]
+#define DMA_SR		ppc.dcr[0xE0]
+
+/*
+ * void DMA (UINT ch);
+ *
+ * Perform internal DMA transfer from channel ch.
+ */
+
+static void DMA (UINT ch)
+{
+	UINT	unit;
+
+	if (DMA_CR(channel) & 0x000000F0)
+		Print("%08X: chained DMA%u\n", PC, ch);
+
+	unit = (DMA_CR(ch) >> 26) & 3;
+
+	switch (unit)
+	{
+	case 0:		// 8-bit
+	case 1:		// 16-bit
+	case 2:		// 32-bit
+	default:	// 256-bit
+		Print("%08X: DMA%u %08X --> %08X, %08X size=%i\n", PC, ch, DMA_SA(ch), DMA_DA(ch), DMA_CT(ch), unit);
+		break;
+	}
+
+	if (DMA_CR(ch) & 0x40000000)	// DIE
+	{
+		Print("%08X: DMA%u interrupt triggered\n", ch);
+		DCR(DCR_EXISR) |= (0x00800000 >> ch);
+		ppc.irq_state = 1;
+	}
+}
+
+/*******************************************************************************
  Register Access
 *******************************************************************************/
 
 void SetMSR (UINT32 data)
 {
 	if (data & 0x80000)	// WE
-		Error("%08X: PowerPC halted\n", PC);
+		Print("%08X: PowerPC halted\n", PC);
 
 	MSR = data;
 }
@@ -161,10 +163,10 @@ void SetSPR (UINT num, UINT32 data)
 	switch (num)
 	{
 	case SPR_PVR:
-		Error("%08X: write to PVR\n", PC);
+		Print("%08X: write to PVR\n", PC);
 	case SPR_PIT:
 		if (data)
-			Error("%08X: PIT = %u\n", PC, data);
+			Print("%08X: PIT = %u\n", PC, data);
 		SPR(SPR_PIT) = data;
 		ppc.pit_reload = data;
 		break;
@@ -198,7 +200,7 @@ void SetDCR (UINT num, UINT32 data)
 	case DCR_DMACC2:
 	case DCR_DMACC3:
 		if (data)
-			Error("%08X: chained DMA requested\n", PC);
+			Print("%08X: chained DMA requested\n", PC);
 		break;
 	case DCR_DMACR0:
 		DCR(num) = data;

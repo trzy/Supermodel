@@ -20,14 +20,14 @@ endif
 
 ################################################################################
 
-EXE = drppc.exe
+EXE = test.exe # Now it conforms tester/test.c
 
 LFLAGS = -lz
 
-CFLAGS = -DDRPPC_DEBUG -DDRPPC_PROFILE -Wall -Wno-unused -pedantic \
-         -I./ -I./tester -I./middle -I./front/$(SOURCE_CPU) -I./back/$(TARGET_CPU) -std=gnu99
+CFLAGS = -DDRPPC_DEBUG -DDRPPC_PROFILE -Wall -Wno-unused -pedantic -std=gnu99 \
+         -I./ -I./tester -I./middle -I./front -I./front/$(SOURCE_CPU) -I./front/$(SOURCE_CPU)/interp -I./back -I./back/$(TARGET_CPU)
 
-AFLAGS = -f coff -b
+AFLAGS = -f coff
 
 COMPILE = $(CC) $< $(CFLAGS) -c -o $@
 ASSEMBLE = $(AS) $< $(AFLAGS) -o $@
@@ -41,7 +41,7 @@ SOURCE_OBJ =
 endif
 
 ifeq ($(TARGET_CPU),x86)
-TARGET_OBJ = obj/target.o
+TARGET_OBJ = obj/target.o obj/memory.o
 else
 TARGET_OBJ = 
 endif
@@ -58,6 +58,7 @@ all:	$(OBJ)
 
 clean:
 		del obj\*.o
+		del *.exe
 
 obj/%.o:	%.c %.h
 	$(COMPILE)
@@ -83,9 +84,17 @@ obj/%.o:    front/$(SOURCE_CPU)/%.c front/$(SOURCE_CPU)/%.h
 obj/%.o:	front/$(SOURCE_CPU)/%.c
 	$(COMPILE)
 
+obj/%.o:    front/$(SOURCE_CPU)/interp/%.c front/$(SOURCE_CPU)/interp/%.h
+	$(COMPILE)
+
+obj/%.o:	front/$(SOURCE_CPU)/interp/%.c
+	$(COMPILE)
+
 obj/%.o:    back/$(TARGET_CPU)/%.c front/$(TARGET_CPU)/%.h
 	$(COMPILE)
 
 obj/%.o:	back/$(TARGET_CPU)/%.c
 	$(COMPILE)
 
+obj/%.o:	back/$(TARGET_CPU)/%.asm
+	$(ASSEMBLE)

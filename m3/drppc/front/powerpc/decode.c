@@ -8,6 +8,8 @@
 #include "drppc.h"
 #include "internal.h"
 
+extern INT decoded_bb_timing;
+
 INT D_Addx(UINT32 op)
 {
 	return DRPPC_ERROR;
@@ -25,7 +27,9 @@ INT D_Addex(UINT32 op)
 
 INT D_Addi(UINT32 op)
 {
-	return DRPPC_ERROR;
+	// 0xFFF00104
+
+	return DRPPC_OKAY;
 }
 
 INT D_Addic(UINT32 op)
@@ -40,7 +44,9 @@ INT D_Addic_(UINT32 op)
 
 INT D_Addis(UINT32 op)
 {
-	return DRPPC_ERROR;
+	// 0xFFF00100
+
+	return DRPPC_OKAY;
 }
 
 INT D_Addmex(UINT32 op)
@@ -75,22 +81,22 @@ INT D_Andis_(UINT32 op)
 
 INT D_Bx(UINT32 op)
 {
-	return DRPPC_ERROR;
+	return DRPPC_TERMINATOR;
 }
 
 INT D_Bcx(UINT32 op)
 {
-	return DRPPC_ERROR;
+	return DRPPC_TERMINATOR;
 }
 
 INT D_Bcctrx(UINT32 op)
 {
-	return DRPPC_ERROR;
+	return DRPPC_TERMINATOR;
 }
 
 INT D_Bclrx(UINT32 op)
 {
-	return DRPPC_ERROR;
+	return DRPPC_TERMINATOR;
 }
 
 INT D_Cmp(UINT32 op)
@@ -100,7 +106,9 @@ INT D_Cmp(UINT32 op)
 
 INT D_Cmpi(UINT32 op)
 {
-	return DRPPC_ERROR;
+	// 0xFFF00150
+
+	return DRPPC_OKAY;
 }
 
 INT D_Cmpl(UINT32 op)
@@ -330,7 +338,9 @@ INT D_Lwz(UINT32 op)
 
 INT D_Lwzu(UINT32 op)
 {
-	return DRPPC_ERROR;
+	// 0xFFF0014C
+
+	return DRPPC_OKAY;
 }
 
 INT D_Lwzux(UINT32 op)
@@ -485,7 +495,9 @@ INT D_Srwx(UINT32 op)
 
 INT D_Stb(UINT32 op)
 {
-	return DRPPC_ERROR;
+	// 0xFFF00118
+
+	return DRPPC_OKAY;
 }
 
 INT D_Stbu(UINT32 op)
@@ -510,7 +522,9 @@ INT D_Sth(UINT32 op)
 
 INT D_Sthbrx(UINT32 op)
 {
-	return DRPPC_ERROR;
+	// 0xFFF00108
+
+	return DRPPC_OKAY;
 }
 
 INT D_Sthu(UINT32 op)

@@ -26,6 +26,17 @@
 #endif
 
 /*
+ * This simple macro is the standard method to propagate error codes backward.
+ */
+
+#define DRPPC_TRY(func_call)						\
+		{											\
+			INT ret;								\
+			if (DRPPC_OKAY != (ret = func_call))	\
+				return ret;							\
+		}
+
+/*
  * Auxiliary macros for memory access.
  */
 
@@ -139,10 +150,9 @@ typedef struct
 
 extern void *	(* Alloc)(UINT);
 extern void		(* Free)(void *);
+extern void		(* Print)(CHAR *, ...);
 
-extern void		Error(CHAR *, ...);
-
-extern INT		SetupAllocHandlers(DRPPC_CFG *);
+extern INT		SetupBasicServices(DRPPC_CFG *);
 extern INT		AllocCache(CODE_CACHE *, UINT, UINT);
 extern void		FreeCache(CODE_CACHE *);
 extern void		ResetCache(CODE_CACHE *);

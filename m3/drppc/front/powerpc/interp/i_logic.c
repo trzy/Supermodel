@@ -1,5 +1,5 @@
 /*
- * front/powerpc/i_logic.c
+ * front/powerpc/interp/i_logic.c
  *
  * ALU logic instruction handlers.
  */

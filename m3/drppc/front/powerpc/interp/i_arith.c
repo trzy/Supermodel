@@ -1,5 +1,5 @@
 /*
- * front/powerpc/i_arith.c
+ * front/powerpc/interp/i_arith.c
  *
  * Interpreter handlers for arithmetic instructions.
  */

@@ -1,5 +1,5 @@
 /*
- * i_ldst.c
+ * front/powerpc/interp/i_ldst.c
  *
  * Load/Store instruction handlers.
  */
@@ -447,7 +447,7 @@ INT I_Lmw(UINT32 op)
 
 #ifdef DRPPC_DEBUG
 	if (a >= t || a == 31)
-		Error("%08X: invalid lmw (ra = %i)", PC, a);
+		Print("%08X: invalid lmw (ra = %i)", PC, a);
 #endif
 
 	if (a) ea += R(a);
@@ -486,25 +486,25 @@ INT I_Stmw(UINT32 op)
 
 INT I_Lswi(UINT32 op)
 {
-	Error("%08X: unhandled instruction lswi\n", PC);
+	Print("%08X: unhandled instruction lswi\n", PC);
 	return 1;
 }
 
 INT I_Lswx(UINT32 op)
 {
-	Error("%08X: unhandled instruction lswx\n", PC);
+	Print("%08X: unhandled instruction lswx\n", PC);
 	return 1;
 }
 
 INT I_Stswi(UINT32 op)
 {
-	Error("%08X: unhandled instruction stswi\n", PC);
+	Print("%08X: unhandled instruction stswi\n", PC);
 	return 1;
 }
 
 INT I_Stswx(UINT32 op)
 {
-	Error("%08X: unhandled instruction stswx\n", PC);
+	Print("%08X: unhandled instruction stswx\n", PC);
 	return 1;
 }
 

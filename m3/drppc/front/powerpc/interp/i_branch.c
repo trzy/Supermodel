@@ -1,5 +1,5 @@
 /*
- * front/powerpc/i_branch.c
+ * front/powerpc/interp/i_branch.c
  *
  * Branch instructions handlers.
  */
@@ -150,14 +150,14 @@ INT I_Sc (UINT32 op)
 
 INT I_Tw (UINT32 op)
 {
-	Error("%08X: unhandled instruction tw\n", PC);
+	Print("%08X: unhandled instruction tw\n", PC);
 
 	return 1;
 }
 
 INT I_Twi (UINT32 op)
 {
-	Error("%08X: unhandled instruction twi\n", PC);
+	Print("%08X: unhandled instruction twi\n", PC);
 
 	return 1;
 }

@@ -46,7 +46,7 @@ extern void		Write64(UINT32, UINT64);
 
 extern void		CheckIRQs();
 
-extern void		UpdatePC(void);
+extern INT		UpdatePC(void);
 extern void		UpdateTimers(INT);
 extern UINT32	ReadTimebaseLo(void);
 extern UINT32	ReadTimebaseHi(void);

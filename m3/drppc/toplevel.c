@@ -17,25 +17,23 @@
 
 void *	(* Alloc)(UINT);
 void	(* Free)(void *);
+void	(* Print)(CHAR *, ...);
 
 /*******************************************************************************
- Error Routines
+ Basic Services
+
+ That stands memory allocation, output, etc.
 *******************************************************************************/
 
-void Error (CHAR * format, ...)
+INT SetupBasicServices (DRPPC_CFG * cfg)
 {
-	// Stefano: why don't we ask a pointer to an Error handler in DRPPC_CFG ?
-	// This way the user isn't forced to use stdout for output.
+	if ((Alloc = cfg->Alloc) == NULL || (Free = cfg->Free) == NULL)
+		return DRPPC_INVALID_CONFIG;
 
-	char	string[1024];
-	va_list	vl;
+	if ((Print = cfg->Print) == NULL)
+		return DRPPC_INVALID_CONFIG;
 
-	va_start(vl, format);
-	vsprintf(string, format, vl);
-	va_end(vl);
-
-	puts(string);
-	exit(-1);
+	return DRPPC_OKAY;
 }
 
 /*******************************************************************************
@@ -44,26 +42,15 @@ void Error (CHAR * format, ...)
  Native code and intermediate code caches management.
 *******************************************************************************/
 
-INT SetupAllocHandlers (DRPPC_CFG * cfg)
-{
-	if ((Alloc = cfg->Alloc) == NULL || (Free = cfg->Free) == NULL)
-		return DRPPC_INVALID_CONFIG;
-
-	return DRPPC_OKAY;
-}
-
 INT AllocCache (CODE_CACHE * cache, UINT size, UINT guard)
 {
-	if (cache->base)
-		Free(cache->base);
-
 	cache->base = (UINT8 *)Alloc(size);
 	cache->end = cache->base + size;
 	cache->ptr = cache->base;
 	cache->warning = cache->end - guard;
 
 	if (cache->base == NULL)
-		return DRPPC_ERROR;
+		return DRPPC_OUT_OF_MEMORY;
 
 	return DRPPC_OKAY;
 }

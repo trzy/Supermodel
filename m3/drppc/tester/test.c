@@ -23,47 +23,8 @@
 
 
 /*******************************************************************************
- Functions
- 
- These need to be fleshed out...
-*******************************************************************************/
-
-static UINT32 TestFetch (UINT32 addr){	printf("TestFetch ( %08X )\n", addr); return 0; }
-
-static UINT8  TestRead8  (UINT32 addr){ return 0; }
-static UINT16 TestRead16 (UINT32 addr){ return 0; }
-static UINT32 TestRead32 (UINT32 addr){ return 0; }
-
-static void TestWrite8  (UINT32 addr, UINT8 data){ }
-static void TestWrite16 (UINT32 addr, UINT16 data){ }
-static void TestWrite32 (UINT32 addr, UINT32 data){ }
-
-static UINT TestIRQCallback (void){ return 0; }
-
-
-/*******************************************************************************
  Variables
 *******************************************************************************/
-
-/*
- * drppc Configuration
- */
- 
-static DRPPC_CFG cfg;
-
-/*
- * PPC Memory Map
- */
- 
-#define NULL_REGION { 0, 0, NULL, NULL, FALSE }
-
-static DRPPC_REGION	mmap_fetch[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestFetch, FALSE }, NULL_REGION };
-static DRPPC_REGION	mmap_read8[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestRead8, FALSE }, NULL_REGION };
-static DRPPC_REGION	mmap_read16[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestRead16, FALSE }, NULL_REGION };
-static DRPPC_REGION	mmap_read32[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestRead32, FALSE }, NULL_REGION };
-static DRPPC_REGION	mmap_write8[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestWrite8, FALSE }, NULL_REGION };
-static DRPPC_REGION	mmap_write16[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestWrite16, FALSE }, NULL_REGION };
-static DRPPC_REGION	mmap_write32[]	= { { 0x00000000, 0xFFFFFFFF, NULL, (void *)TestWrite32, FALSE }, NULL_REGION };
 
 /*
  * Model 3 Memory Space
@@ -73,6 +34,65 @@ static UINT8	*ram = NULL;            // PowerPC RAM
 static UINT8    *crom = NULL;           // CROM (all CROM memory is allocated here)
 static UINT8    *crom_bank;             // points to current 8MB CROM bank
 
+/*
+ * drppc Configuration
+ */
+ 
+static DRPPC_CFG cfg;
+
+/*
+ * A few functions used by the code below, which use the code above.
+ */
+
+static UINT32 TestFetch (UINT32 addr)
+{
+	if (addr <= 0x007FFFFF)
+		return BSWAP32(*(UINT32 *)&ram[addr & 0x7FFFFF]);
+	else if (addr >= 0xFF800000)
+		return BSWAP32(*(UINT32 *)&crom[addr & 0x7FFFFF]);
+
+	printf("Bad PC!\n"); // impossible!
+
+	return 0;
+}
+
+static UINT TestIRQCallback (void)
+{
+	return 0;
+}
+
+/*
+ * PPC Memory Map
+ */
+
+static DRPPC_REGION mmap_fetch[] =
+{
+	DRPPC_REGION_HANDLER(0x00000000, 0xFFFFFFFF, TestFetch, FALSE),
+	DRPPC_REGION_END
+};
+
+static DRPPC_REGION mmap_read[] =
+{
+	DRPPC_REGION_PLACEHOLDER,	// RAM
+	DRPPC_REGION_PLACEHOLDER,	// CROM Bank
+	DRPPC_REGION_PLACEHOLDER,	// CROM
+	DRPPC_REGION_END
+};
+
+static DRPPC_REGION mmap_write[] =
+{
+	DRPPC_REGION_PLACEHOLDER,	// RAM
+	DRPPC_REGION_END
+};
+
+static void InitRegions (void)
+{
+	DRPPC_SET_REGION_BUF_BE(mmap_read[0], 0x00000000, 0x007FFFFF, ram, FALSE);
+	DRPPC_SET_REGION_BUF_BE(mmap_read[1], 0xFF000000, 0xFF7FFFFF, crom_bank, TRUE); // FIXME
+	DRPPC_SET_REGION_BUF_BE(mmap_read[2], 0xFF800000, 0xFFFFFFFF, crom, FALSE);
+
+	DRPPC_SET_REGION_BUF_BE(mmap_write[0], 0x00000000, 0x007FFFFF, ram, FALSE);
+}
 
 /*******************************************************************************
  ROM Loading
@@ -371,7 +391,7 @@ BOOL LoadROM(CHAR * id)
 {
     CHAR    string[256] = "";
     ROMSET  romset;
-	ROMFILE list_crom[4], list_crom0[4], list_crom1[4], list_crom2[4], list_crom3[4];	
+	ROMFILE list_crom[4], list_crom0[4], list_crom1[4], list_crom2[4], list_crom3[4];
     UINT8   * crom0 = NULL, * crom1 = NULL, * crom2 = NULL, * crom3 = NULL;
     INT     i;
 
@@ -537,11 +557,27 @@ static void FreeMemoryRegions(void)
  * Initialize the dynamic recompiler and its data structures to a usable state.
  * Returns non-zero if it failed.
  */
+
+void DynarecPrint (CHAR * format, ...)
+{
+	char	string[1024];
+	va_list	vl;
+
+	va_start(vl, format);
+	vsprintf(string, format, vl);
+	va_end(vl);
+
+	puts(string);
+	exit(-1);
+}
  
 static BOOL InitDynarec(void)
 {
+	InitRegions();
+
 	cfg.Alloc	= malloc;
 	cfg.Free	= free;
+	cfg.Print	= DynarecPrint;
 
 	cfg.SetupBBLookup		= NULL;
 	cfg.CleanBBLookup		= NULL;
@@ -554,7 +590,7 @@ static BOOL InitDynarec(void)
 	cfg.intermediate_cache_size			= 1*1024*1024;
 	cfg.intermediate_cache_guard_size	= 64*1024;
 
-	cfg.hot_threshold	= 1000;
+	cfg.hot_threshold	= DRPPC_ZERO_THRESHOLD;
 
 	cfg.address_bits	= 32;
 	cfg.page1_bits		= 8;
@@ -562,13 +598,13 @@ static BOOL InitDynarec(void)
 	cfg.offs_bits		= 10;
 	cfg.ignore_bits		= 2;
 
-	cfg.mmap_cfg.fetch		= mmap_fetch;
-	cfg.mmap_cfg.read8		= mmap_read8;
-	cfg.mmap_cfg.read16		= mmap_read16;
-	cfg.mmap_cfg.read32		= mmap_read32;
-	cfg.mmap_cfg.write8		= mmap_write8;
-	cfg.mmap_cfg.write16	= mmap_write16;
-	cfg.mmap_cfg.write32	= mmap_write32;
+	cfg.mmap_cfg.fetch		= (DRPPC_REGION *)mmap_fetch;
+	cfg.mmap_cfg.read8		= (DRPPC_REGION *)mmap_read;
+	cfg.mmap_cfg.read16		= (DRPPC_REGION *)mmap_read;
+	cfg.mmap_cfg.read32		= (DRPPC_REGION *)mmap_read;
+	cfg.mmap_cfg.write8		= (DRPPC_REGION *)mmap_write;
+	cfg.mmap_cfg.write16	= (DRPPC_REGION *)mmap_write;
+	cfg.mmap_cfg.write32	= (DRPPC_REGION *)mmap_write;
 
 	if (DRPPC_OKAY != PowerPC_Init(&cfg, 0x00070000, TestIRQCallback))
 	{
@@ -586,7 +622,7 @@ static BOOL InitDynarec(void)
 int main(int argc, char **argv)
 {
 	ROMSET	romset;
-	INT		i;
+	INT		i, errno;
 	
 	if (argc <= 1)
 	{
@@ -598,13 +634,14 @@ int main(int argc, char **argv)
 	 * Set up the dynamic recompiler and load the ROM set
 	 */
 	 
-	for (i = 0; i < 4; i++)
-	{
+//	for (i = 0; i < 4; i++) // Stefano: Bart, what is this loop for?
+//	{
 	if (AllocMemoryRegions())
 		exit(1);
+
 	if (LoadROM(argv[1]))
-		exit(1);					
-		
+		exit(1);
+
 	if (InitDynarec())
 		exit(1);
 
@@ -614,10 +651,13 @@ int main(int argc, char **argv)
 		return -1;
 	}	
 
-	//printf("PowerPC_Run = %i\n", PowerPC_Run(1000));
+	printf("PowerPC_Run = %i\n", PowerPC_Run(1000, &errno));
+
+	if (errno != DRPPC_OKAY)
+		printf("Error %i happened.\n", errno);
 	
 	FreeMemoryRegions();
-	}	
+//	}	
 
 	return 0;
 }

@@ -8,10 +8,11 @@
 #ifndef INCLUDED_DRPPC_H
 #define INCLUDED_DRPPC_H
 
+#include <stdarg.h>
 #include "types.h"
 
 /*******************************************************************************
- Defines
+ Configuration
 *******************************************************************************/
 
 #define DRPPC_INST_ADDR_BITS	32
@@ -21,11 +22,13 @@
 *******************************************************************************/
 
 /*
- * Error Codes.
+ * Error Codes &c
  */
 
 typedef enum
 {
+	// Error conditions
+
 	DRPPC_ERROR = -1,			// Generic error
 	DRPPC_INVALID_CONFIG = -2,	// Invalid configuration parameter
 	DRPPC_BAD_PC = -3,			// Invalid PC at runtime
@@ -34,9 +37,11 @@ typedef enum
 	DRPPC_RUNTIME_ERROR = -6,	// Runtime error
 
 	DRPPC_OKAY	= 0,			// Okay
-	DRPPC_NOT_EXECUTED = 1,		// No error; DRPPC_ExecBB didn't execute the BB
-	DRPPC_FOUND_TERMINATOR = 2,	// Used during decode when a branch is hit
-	DRPPC_TIMESLICE_ENDED = 3,	// Used by the native code
+
+	// Non-error conditions used internally (defined here for coherency)
+
+	DRPPC_TERMINATOR,			// Used during decode when a branch is hit
+	DRPPC_TIMESLICE_ENDED,		// Used by the native code
 
 } DRPPC_ERRNUM;
 
@@ -73,6 +78,67 @@ typedef struct drppc_region
 	BOOL	big_endian;
 
 } DRPPC_REGION;
+
+/*
+ * The following macros encode some standard region types.
+ *
+ * NOTE: only minimal typecasting is explicitized. This way, type conversion
+ * errors will be more consistent in user code.
+ */
+
+#define DRPPC_REGION_BUF_BE(start, end, buf, is_volatile) \
+			{ start, end, (UINT8 *)(buf), NULL, is_volatile, TRUE }
+
+#define DRPPC_REGION_BUF_LE(start, end, buf, is_volatile) \
+			{ start, end, (UINT8 *)(buf), NULL, is_volatile, FALSE }
+
+#define DRPPC_REGION_HANDLER(start, end, handler, is_volatile) \
+			{ start, end, NULL, (void *)(handler), is_volatile, FALSE }
+
+#define DRPPC_REGION_END \
+			{ 0, 0, NULL, NULL, TRUE, FALSE }
+
+// This is specifically thought as an 'empty' region to be used with the
+// macros below.
+#define DRPPC_REGION_PLACEHOLDER \
+			{ 0xDEADBEEF, 0xFEEDBEE5, NULL, NULL, FALSE, FALSE }
+
+/*
+ * The following macros are used to edit REGION variables on-the-fly.
+ *
+ * NOTE: only minimal typecasting is explicitized. This way, type conversion
+ * errors will be more consistent in user code.
+ */
+
+#define DRPPC_SET_REGION_BUF_BE(r, _start, _end, buf, is_volatile)	\
+		{															\
+			r.start			= _start;								\
+			r.end			= _end;									\
+			r.ptr			= (UINT8 *)buf;							\
+			r.handler		= NULL;									\
+			r.volatile_ptr	= is_volatile;							\
+			r.big_endian	= TRUE;									\
+		}
+
+#define DRPPC_SET_REGION_BUF_LE(r, _start, _end, buf, is_volatile)	\
+		{															\
+			r.start			= _start;								\
+			r.end			= _end;									\
+			r.ptr			= (UINT8 *)buf;							\
+			r.handler		= NULL;									\
+			r.volatile_ptr	= is_volatile;							\
+			r.big_endian	= FALSE;								\
+		}
+
+#define DRPPC_SET_REGION_HANDLER(r, _start, _end, h, is_volatile)	\
+		{															\
+			r.start			= _start;								\
+			r.end			= _end;									\
+			r.ptr			= NULL;									\
+			r.handler		= (void *)h;							\
+			r.volatile_ptr	= is_volatile;							\
+			r.big_endian	= FALSE; /* Ignored */					\
+		}
 
 /*
  * struct drppc_mmap
@@ -139,6 +205,7 @@ typedef struct drppc_cfg
 
 	void *		(* Alloc)(UINT);
 	void		(* Free)(void *);
+	void		(* Print)(CHAR *, ...);
 
 	// Optional BB Lookup Handlers
 
@@ -170,6 +237,10 @@ typedef struct drppc_cfg
 	DRPPC_MMAP	mmap_cfg;
 
 } DRPPC_CFG;
+
+// Move this in source.h!!!
+#define DRPPC_ZERO_THRESHOLD	1	// The exact threshold needed to bypass the
+									// profiling stage.
 
 /*******************************************************************************
  Interface

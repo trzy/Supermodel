@@ -238,7 +238,7 @@ typedef struct
 extern INT		PowerPC_Init(DRPPC_CFG *, UINT32, UINT (*)(void));
 extern INT		PowerPC_Reset(void);
 extern void		PowerPC_Shutdown(void);
-extern INT		PowerPC_Run(INT);
+extern INT		PowerPC_Run(INT, INT *);
 extern void		PowerPC_AddCycles(INT);
 extern void		PowerPC_ResetCycles(void);
 extern INT		PowerPC_GetCyclesLeft(void);
