@@ -1528,6 +1528,7 @@ void m3_shutdown(void)
 
 	/* shutdown all the modules */
 
+	osd_input_shutdown();
     controls_shutdown();
 //    scsp_shutdown();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
@@ -1627,4 +1628,5 @@ void m3_init(void)
 //    scsp_init();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
     controls_init();
+	osd_input_init();
 }
