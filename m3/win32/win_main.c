@@ -220,6 +220,32 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
 		case WM_KEYDOWN:
             switch (wParam)
             {
+            /*
+             * NOTE: VK_ macros are not defined for most keys, it seems, so
+             * I hardcoded these:
+             *
+             * A,S,D,F,G,H = 41,53,44,46,47,48
+             * Z,X,C,V,B   = 5A,58,43,56,42
+             */
+
+            case 0x41:  // A
+                controls.game_controls[0] &= ~0x01;
+                break;
+            case 0x53:  // S
+                controls.game_controls[0] &= ~0x02;
+                break;
+            case 0x44:  // D
+                controls.game_controls[0] &= ~0x04;
+                break;
+            case 0x46:  // F
+                controls.game_controls[0] &= ~0x08;
+                break;
+            case 0x47:  // G
+                controls.game_controls[0] &= ~0x80;
+                break;
+            case 0x48:  // H
+                controls.game_controls[0] &= ~0x40;
+                break;
             case VK_F12:
                 m3_config.layer_enable ^= 1;
                 break;
@@ -269,6 +295,24 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
         case WM_KEYUP:
             switch (wParam)
             {
+            case 0x41:  // A
+                controls.game_controls[0] |= 0x01;
+                break;
+            case 0x53:  // S
+                controls.game_controls[0] |= 0x02;
+                break;
+            case 0x44:  // D
+                controls.game_controls[0] |= 0x04;
+                break;
+            case 0x46:  // F
+                controls.game_controls[0] |= 0x08;
+                break;
+            case 0x47:  // G
+                controls.game_controls[0] |= 0x80;
+                break;
+            case 0x48:  // H
+                controls.game_controls[0] |= 0x40;
+                break;
             case VK_F1:
                 controls.system_controls[0] |= 0x04;
                 controls.system_controls[1] |= 0x04;
