@@ -629,10 +629,13 @@ static u32 ppc_get_dcr(u32 n){
 // Unhandled
 
 static void ppc_null(u32 op){
+    extern int  DisassemblePowerPC(unsigned, unsigned, char *, char *, int);
+    char    string[256];
+    char    mnem[16], oprs[48];
 
-	char string[256];
+    DisassemblePowerPC(op, CIA, mnem, oprs, 1);
 
-    printf("ERROR: %08X: unhandled opcode %08X\n", CIA, op);
+    printf("ERROR: %08X: unhandled opcode %08X: %s\t%s\n", CIA, op, mnem, oprs);
 //    printf("ERROR: %08X: unhandled opcode %08X (OP=%X XO=%X OE_XO=%X FP_XO=%X)\n%s\n",
 //    CIA, op, _OP, _XO&0x3FF, _XO&0x1FF, _XO&0x1F, ppc_disasm(CIA, op, string));
 	exit(1);
@@ -3763,7 +3766,7 @@ int ppc_init(void * x){
 	ppc_inst_19[50]		= ppc_rfi;
 	ppc_inst_31[24]		= ppc_slwx;
 	ppc_inst_31[792]	= ppc_srawx;
-	ppc_inst_31[824]	= ppc_srawix;
+    ppc_inst_31[824]    = ppc_srawix;                     
 	ppc_inst_31[536]	= ppc_srwx;
 	ppc_inst_31[247]	= ppc_stbux;
 	ppc_inst_31[215]	= ppc_stbx;
@@ -3777,7 +3780,7 @@ int ppc_init(void * x){
 	ppc_inst_31[183]	= ppc_stwux;
 	ppc_inst_31[151]	= ppc_stwx;
 	ppc_inst_31[40]		= ppc_inst[40|(_OE>>1)]		= ppc_subfx;
-	ppc_inst_31[8]		= ppc_inst[8|(_OE>>1)]		= ppc_subfcx;
+    ppc_inst_31[8]      = ppc_inst_31[8|(_OE>>1)]      = ppc_subfcx;
 	ppc_inst_31[136]	= ppc_inst[136|(_OE>>1)]	= ppc_subfex;
 	ppc_inst_31[232]	= ppc_inst[232|(_OE>>1)]	= ppc_subfmex;
 	ppc_inst_31[200]	= ppc_inst[200|(_OE>>1)]	= ppc_subfzex;

@@ -154,7 +154,6 @@ int main(int argc, char *argv[])
 		}
 
         printf("frame %d, PC = %08X, ", frame++, ppc_get_reg(PPC_REG_PC));
-		#if 0
         op = ppc_read_word(ppc_get_reg(PPC_REG_PC));
         if (DisassemblePowerPC(op, ppc_get_reg(PPC_REG_PC), mnem, oprs, 1))
         {
@@ -165,9 +164,6 @@ int main(int argc, char *argv[])
         }
         else
             printf("%08X %s\t%s\n", op, mnem, oprs);
-		#else
-		puts("");
-        #endif
 
         m3_run_frame();
 

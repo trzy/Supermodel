@@ -215,8 +215,6 @@ typedef struct
     FLAGS   flags;  // flags
 } IDESCR;
 
-#if 0
-
 /*
  * Instruction Table
  *
@@ -1262,7 +1260,5 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-#endif
 
 #endif

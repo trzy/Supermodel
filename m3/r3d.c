@@ -255,6 +255,15 @@ void r3d_write_32(UINT32 a, UINT32 d)
         osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
         message(0, "VROM texture length = %08X", BSWAP32(d));
         return;
+    case 0x9000000C:    // ? Virtual On 2: These are almost certainly for VROM textures as well (I was too lazy to check :P)
+        message(0, "90000000C = %08X", BSWAP32(d));
+        return;
+    case 0x90000010:    // ?
+        message(0, "900000010 = %08X", BSWAP32(d));
+        return;
+    case 0x90000014:    // ?
+        message(0, "900000014 = %08X", BSWAP32(d));
+        return;
     case 0x9C000000:    // ?
         message(0, "9C000000 = %08X", BSWAP32(d));
         return;

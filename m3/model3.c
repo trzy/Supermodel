@@ -168,32 +168,6 @@ void _log_init(char * path)
 /* PPC Access                                                     */
 /******************************************************************/
 
-static UINT32   _C0000000;  // latched value
-
-/*
-static ppc_region_t m3_ppc_mmap[] =
-{
-{ 0x00000000, 0x007FFFFF, PPC_DIRECT,	ram,		NULL,	NULL,   NULL,   NULL,   NULL,   NULL,   NULL },
-{ 0x84000000, 0x84000023, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0x88000000, 0x88000003, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0x8C000000, 0x8CFFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0x8E000000, 0x8EFFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0x94000000, 0x94FFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0x98000000, 0x98FFFFFF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0xF1000000, 0xF117FFFF, PPC_DIRECT,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0xF1180000, 0xF11800FF, PPC_HANDLER,	NULL,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0xFF000000, 0xFF7FFFFF, PPC_DIRECT,	crom_bank,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-{ 0xFF800000, 0xFFFFFFFF, PPC_DIRECT,	crom,		NULL,	NULL,	NULL,	NULL,	NULL,	NULL,	NULL },
-};
-
-// NOTE:
-// Other areas must be configured per-model and per-game.
-// The PCIBMC could edit the PPC memory map (with functions
-// i'll add to the core) directly when the PCI devices
-// are configured (i.e. when they're initialized).
-
-*/
-
 static UINT8 m3_ppc_read_8(UINT32 a)
 {
     /*
@@ -337,6 +311,9 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         {
         case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
             return bridge_read_config_data_32(a);
+        case 0xFE1A0000:    // ? Virtual On 2 -- important to return 0
+        case 0xFE1A001C:   
+            return 0;
         }
 
         break;
@@ -509,7 +486,7 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         switch (a)
         {
         case 0xC0000000:    // latched value
-            _C0000000 = d;
+            //_C0000000 = d;
             return;
 		case 0xC0010180:	// Network ? Scud Race at 0xB2A4
 			return;
@@ -541,7 +518,9 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             return;
         }
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
-                 (a >= 0xFE140000 && a <= 0xFE14003F))  // ?
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // ? Virtual On 2
+            return;
+        else if (a >= 0xFE180000 && a <= 0xFE19FFFF)    // ?
             return;
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
         {
@@ -582,7 +561,10 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
             bridge_write_config_data_32(a, d);
             return;
-        case 0xFE1A0014:    // ? Virtual On 2
+        case 0xFE1A0000:    // ? Virtual On 2
+        case 0xFE1A0010:   
+        case 0xFE1A0014:
+        case 0xFE1A0018:
             return;
         }
 
