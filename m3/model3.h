@@ -62,6 +62,8 @@
 #include "scsi.h"
 #include "scsp.h"
 #include "tilegen.h"
+#include "file.h"
+#include "cfgparse.h"
 
 #include "osd_common.h" // defines OSD interface (must be included last)
 
