@@ -40,6 +40,7 @@
 #else // RENDERER_GL
 #include <gl\gl.h>
 #include <gl\glu.h>
+#include <gl\glext.h>
 #endif 
 #include <dinput.h>
 
