@@ -23,6 +23,7 @@
  */
 
 #include "model3.h"
+#include <time.h>
 
 static UINT8 rtc_step = 0;
 static UINT8 rtc_reg[0x10]; /* 4-bit wide */
@@ -87,15 +88,73 @@ void rtc_load_state(FILE *fp)
 
 UINT8 rtc_read(UINT32 a)
 {
-	message(0, "RTC: read %08X", a);
+	time_t current_time;
+	struct tm* tms;
 
-	a &= 0xF;
+	int address = (a >> 2) & 0xF;
 
+	message(0, "RTC: read %08X", address);
+
+	time( &current_time );
+	tms = localtime( &current_time );
+
+	switch(address)
+	{
+		case 0:		// 1-second digit
+			return (tms->tm_sec % 10) & 0xF;
+			break;
+		case 1:		// 10-seconds digit
+			return (tms->tm_sec / 10) & 0x7;
+			break;
+		case 2:		// 1-minute digit
+			return (tms->tm_min % 10) & 0xF;
+			break;
+		case 3:		// 10-minute digit
+			return (tms->tm_min / 10) & 0x7;
+			break;
+		case 4:		// 1-hour digit
+			return (tms->tm_hour % 10) & 0xF;
+			break;
+		case 5:		// 10-hours digit
+			return (tms->tm_hour / 10) & 0x7;
+			break;
+		case 6:		// 1-day digit (days in month)
+			return (tms->tm_mday % 10) & 0xF;
+			break;
+		case 7:		// 10-days digit
+			return (tms->tm_mday / 10) & 0x3;
+			break;
+		case 8:		// 1-month digit
+			return ((tms->tm_mon + 1) % 10) & 0xF;
+			break;
+		case 9:		// 10-months digit
+			return ((tms->tm_mon + 1) / 10) & 0x1;
+			break;
+		case 10:	// 1-year digit
+			return (tms->tm_year % 10) & 0xF;
+			break;
+		case 11:	// 10-years digit
+			return ((tms->tm_year % 100) / 10) & 0xF;
+			break;
+		case 12:	// day of the week
+			return tms->tm_wday & 0x7;
+			break;
+		case 13:
+			return 0;
+			break;
+		case 14:
+			return 0;
+			break;
+		case 15:
+			return 0;
+			break;
+	}
 	return(rtc_reg[a]);
 }
 
 void rtc_write(UINT32 a, UINT8 d)
 {
+	a = (a >> 2) & 0xF;
 	message(0, "RTC: write %08X = %X", a, d);
 
 	a &= 0xF;
