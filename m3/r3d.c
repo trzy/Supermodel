@@ -286,126 +286,272 @@ void r3d_write_32(UINT32 a, UINT32 d)
 /* Real3D TAP Port                                                */
 /******************************************************************/
 
-typedef enum
-{
-	TAP_TEST_LOGIC_RESET = 0,
-	TAP_RUN_TEST_IDLE,
-	TAP_SELECT_DR_SCAN,		TAP_SELECT_IR_SCAN,
-	TAP_CAPTURE_DR,			TAP_CAPTURE_IR,
-	TAP_SHIFT_DR,			TAP_SHIFT_IR,
-	TAP_EXIT1_DR,			TAP_EXIT1_IR,
-	TAP_PAUSE_DR,			TAP_PAUSE_IR,
-	TAP_EXIT2_DR,			TAP_EXIT2_IR,
-	TAP_UPDATE_DR,			TAP_UPDATE_IR,
-
-} TAP_STATE;
-
-static const char * tap_state_name[] =
-{
-	"Test Logic/Reset",
-	"Run Test/Idle",
-	"Select DR Scan",	"Select IR Scan",
-	"Capture DR",		"Capture IR",
-	"Shift DR",			"Shift IR",
-	"Exit1 DR",			"Exit1 IR",
-	"Pause DR",			"Pause IR",
-	"Exit2 DR",			"Exit2 IR",
-	"Update DR",		"Update IR",
-};
-
 /*
- * Private Variables.
+ * State (corresponding to fsm[][] Y) and Instruction Names
  */
 
-static UINT tap_next_state[][2] =
-{
-//    TMS=0                 TMS=1
-	{ TAP_RUN_TEST_IDLE,	TAP_TEST_LOGIC_RESET },	// Test Logic/Reset
-	{ TAP_RUN_TEST_IDLE,	TAP_SELECT_DR_SCAN },	// Run Test/Idle
-	{ TAP_CAPTURE_DR,		TAP_SELECT_IR_SCAN },	// Select DR Scan
-	{ TAP_CAPTURE_IR,		TAP_TEST_LOGIC_RESET },	// Select IR Scan
-	{ TAP_SHIFT_DR,			TAP_EXIT1_DR },			// Capture DR
-	{ TAP_SHIFT_IR,			TAP_EXIT1_IR },			// Capture IR
-	{ TAP_SHIFT_DR,			TAP_EXIT1_DR },			// Shift DR
-	{ TAP_SHIFT_IR,			TAP_EXIT1_IR },			// Shift IR
-	{ TAP_PAUSE_DR,			TAP_UPDATE_DR },		// Exit1 DR
-	{ TAP_PAUSE_IR,			TAP_UPDATE_IR },		// Exit1 IR
-	{ TAP_PAUSE_DR,			TAP_EXIT2_DR },			// Pause DR
-	{ TAP_PAUSE_IR,			TAP_EXIT2_IR },			// Pause IR
-	{ TAP_UPDATE_DR,		TAP_SHIFT_DR },			// Exit2 DR
-	{ TAP_UPDATE_IR,		TAP_SHIFT_IR },			// Exit2 IR
-	{ TAP_RUN_TEST_IDLE,	TAP_SELECT_DR_SCAN },	// Update DR
-	{ TAP_RUN_TEST_IDLE,	TAP_SELECT_IR_SCAN },	// Update IR
-};
-
-static UINT tap_state;
-static UINT tap_tdo;
-
-static UINT tap_ireg_shift = 0;
-static UINT32 tap_ireg[4];			/* 128 bits available (96 used) */
-static UINT32 tap_inst[4];
-
-static UINT tap_dreg_shift = 0;
-static UINT32 tap_dreg[385];		/* 1540 bits available (1537 used) */
+static char *state_name[] = { "Test-Logic/Reset", "Run-Test/Idle", "Select-DR-Scan",
+                              "Capture-DR", "Shift-DR", "Exit1-DR", "Pause-DR",
+                              "Exit2-DR", "Update-DR", "Select-IR-Scan",
+                              "Capture-IR", "Shift-IR", "Exit1-IR", "Pause-IR",
+                              "Exit2-IR", "Update-IR"
+                            };
 
 /*
- * void tap_write(UINT tck, UINT tms, UINT tdi, UINT trst);
+ * TAP Finite State Machine
  *
- * JTAP TAP write port handler.
+ * Y are states and X are outgoing paths. Constructed from information on page
+ * 167 of the 3D-RAM manual.
  */
 
-void tap_write(UINT tck, UINT tms, UINT tdi, UINT trst)
+#define NEXT(new_state) fsm[state][new_state]
+
+static INT  state;  // current state
+static INT  fsm[][2] =  {
+                            {  1,  0 },  // 0  Test-Logic/Reset
+                            {  1,  2 },  // 1  Run-Test/Idle
+                            {  3,  9 },  // 2  Select-DR-Scan
+                            {  4,  5 },  // 3  Capture-DR
+                            {  4,  5 },  // 4  Shift-DR
+                            {  6,  8 },  // 5  Exit1-DR
+                            {  6,  7 },  // 6  Pause-DR
+                            {  4,  8 },  // 7  Exit2-DR
+                            {  1,  2 },  // 8  Update-DR
+                            { 10,  0 },  // 9  Select-IR-Scan
+                            { 11, 12 },  // 10 Capture-IR
+                            { 11, 12 },  // 11 Shift-IR
+                            { 13, 15 },  // 12 Exit1-IR
+                            { 13, 14 },  // 13 Pause-IR
+                            { 11, 15 },  // 14 Exit2-IR
+                            {  1,  2 }   // 15 Update-IR
+                        };
+
+/*
+ * TAP Registers
+ */
+
+static UINT64   current_instruction;    // latched IR (not always equal to IR)
+static UINT64   ir;                     // instruction register (46 bits)
+
+static UINT8    id_data[32];            // ASIC ID code data buffer
+static INT      id_size;                // size of ID data in bits
+static INT      ptr;                    // current bit ptr for data
+
+static BOOL     tdo;                    // bit shifted out to TDO
+
+/*
+ * rotate_right():
+ *
+ * Rotates a 32-bit word right by 1 bit.
+ */
+
+static UINT32 rotate_right(UINT32 data)
 {
-	if(tck)
-	{
-		if(!trst)
-			tap_state = TAP_TEST_LOGIC_RESET;
-		else
-			tap_state = tap_next_state[tap_state][tms];
-
-		tap_tdo = 0;
-
-		switch(tap_state)
-		{
-		case TAP_CAPTURE_DR:
-			break;
-
-		case TAP_SHIFT_DR:
-			break;
-
-		case TAP_UPDATE_DR:
-			break;
-
-		case TAP_CAPTURE_IR:
-			break;
-
-		case TAP_SHIFT_IR:
-			break;
-
-		case TAP_UPDATE_IR:
-			break;
-		}
-	}
+    return ((data >> 1) | ((data & 1) << 31));
 }
 
 /*
- * UINT tap_read(void);
+ * insert_bit():
  *
- * JTAG TAP read port handler.
+ * Inserts a bit into an arbitrarily long bit field. Bit 0 is assumed to be
+ * the MSB of the first byte in the buffer.
  */
 
-UINT tap_read(void){
+static void insert_bit(UINT8 *buf, INT bit_num, INT bit)
+{
+    INT bit_in_byte;
 
-	return(tap_tdo);
+    bit_in_byte = 7 - (bit_num & 7);
+
+    buf[bit_num / 8] &= ~(1 << bit_in_byte);
+    buf[bit_num / 8] |= (bit << bit_in_byte);
 }
 
-void tap_reset(void){
+/*
+ * insert_id():
+ *
+ * Inserts a 32-bit ID code into the ID bit field.
+ */
 
-	tap_state = TAP_TEST_LOGIC_RESET;
+static void insert_id(UINT32 id, INT start_bit)
+{
+    INT i;
 
-	tap_ireg_shift = 0;
-	tap_dreg_shift = 0;
+    for (i = 31; i >= 0; i--)
+        insert_bit(id_data, start_bit++, (id >> i) & 1);
+}
 
-	memset(tap_ireg, 0, sizeof(UINT32)*2);
-	memset(tap_dreg, 0, sizeof(UINT32)*385);
+/*
+ * shift():
+ *
+ * Shifts the data buffer right (towards LSB at byte 0) by 1 bit. The size of
+ * the number of bits must be specified. The bit shifted out of the LSB is
+ * returned.
+ */
+
+static BOOL shift(UINT8 *data, INT num_bits)
+{
+    INT     i;
+    BOOL    shift_out, shift_in;
+
+    /*
+     * This loop takes care of all the fully-filled bytes
+     */
+
+    shift_in = 0;
+    for (i = 0; i < num_bits / 8; i++)
+    {
+        shift_out = data[i] & 1;
+        data[i] >>= 1;
+        data[i] |= (shift_in << 7);
+        shift_in = shift_out;   // carry over to next element's MSB
+    }
+
+    /*
+     * Take care of the last partial byte (if there is one)
+     */
+
+    if ((num_bits & 7) != 0)
+    {
+        shift_out = (data[i] >> (8 - (num_bits & 7))) & 1;
+        data[i] >>= 1;
+        data[i] |= (shift_in << 7);
+    }
+
+    return shift_out;
+}
+
+static void shift_data(UINT32 *data, INT num_bytes)
+{
+    INT     i;
+    BOOL    shift_out, shift_in;
+
+    shift_in = 0;
+    for (i = 0; i < num_bytes; i++)
+    {
+        shift_out = data[i] & 1;
+        data[i] >>= 1;
+        data[i] |= (shift_in << 31);
+        shift_in = shift_out;   // so we add it to the next element's MSB
+    }
+}
+
+/*
+ * BOOL tap_read(void);
+ *
+ * Reads TDO.
+ *
+ * Returns:
+ *      TDO.
+ */
+
+BOOL tap_read(void)
+{
+    return tdo;
+}
+
+/*
+ * void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst);
+ *
+ * Writes to the TAP. State changes only occur on the rising edge of the clock
+ * (tck = 1.)
+ *
+ * Parameters:
+ *      tck  = Clock.
+ *      tms  = Test mode select.
+ *      tdi  = Serial data input. Must be 0 or 1 only!
+ *      trst = Reset.
+ */
+
+void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
+{
+    if (!tck)
+        return;
+
+    state = NEXT(tms);
+
+    switch (state)
+    {
+    case 3:     // Capture-DR
+
+        if (current_instruction == 0x0c631f8c7ffe)
+        {           
+            insert_id(0x116C7057, 1 + 0 * 32);
+            insert_id(0x216C3057, 1 + 1 * 32);
+            insert_id(0x116C4057, 1 + 2 * 32);
+            insert_id(0x216C5057, 1 + 3 * 32);
+            insert_id(0x116C6057, 1 + 4 * 32 + 1);
+            insert_id(0x116C6057, 1 + 5 * 32 + 1);
+        }
+
+        break;
+
+    case 4:     // Shift-DR
+
+        tdo = shift(id_data, id_size);
+        break;
+
+    case 10:    // Capture-IR
+
+        /*
+         * Load lower 2 bits with 01 as per IEEE 1149.1-1990
+         */
+
+        ir = 1;
+        break;
+
+    case 11:    // Shift-IR
+
+        /*
+         * Shift IR towards output and load in new data from TDI
+         */
+
+        tdo = ir & 1;   // shift LSB to output
+        ir >>= 1;
+        ir |= ((UINT64) tdi << 45);
+        break;
+
+    case 15:    // Update-IR
+
+        /*
+         * Latch IR (technically, this should occur on the falling edge of
+         * TCK)
+         */
+
+        ir &= 0x3fffffffffff;
+        current_instruction = ir;
+        {
+            UINT8   *i = (UINT8 *) &ir;
+//            LOG("model3.log", "current instruction set: %02X%02X%02X%02X%02X%02X\n", i[5], i[4], i[3], i[2], i[1], i[0]);
+        }
+
+
+        break;
+
+    default:
+        break;
+    }
+
+#if 0
+    if (state == 4)
+        LOG("model3.log", "state: Shift-DR %d\n", tdi);
+    else if (state == 11)
+        LOG("model3.log", "state: Shift-IR %d\n", tdi);
+    else
+        LOG("model3.log", "state: %s\n", state_name[state]);
+#endif
+}
+
+
+/*
+ * void tap_reset(void);
+ *
+ * Resets the TAP (simulating a power up or SCAN_RST signal.)
+ */
+
+void tap_reset(void)
+{
+    id_size = 197;  // 197 bits
+
+    state = 0;  // test-logic/reset
 }

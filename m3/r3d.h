@@ -36,8 +36,8 @@ extern UINT32   r3d_read_32(UINT32 a);
 extern void     r3d_write_32(UINT32 a, UINT32 d);
 
 extern void     tap_reset(void);
-extern UINT32   tap_read(void);
-extern void     tap_write(UINT32 tck, UINT32 tms, UINT32 tdi, UINT32 trst);
+extern BOOL     tap_read(void);
+extern void     tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst);
 
 #endif  // INCLUDED_R3D_H
 

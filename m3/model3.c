@@ -28,6 +28,11 @@
  *      Everything else is passed to its respective subsystem. This localizes
  *      all memory allocation to this single file and enforces separation
  *      between the different modules.
+ *
+ * VF3 SCSI Note:
+ *
+ *      In VF3, the SCSI appears at 0xC0000000. We've observed that at this
+ *      address on Step 1.5 there is some sort of 68K device. Oh, well :P
  */
 
 #include "model3.h"
@@ -134,7 +139,7 @@ void _log(char * path, char * fmt, ...)
 
 	if(m3_config.log_enabled)
 	{
-		char string[256];
+        char string[1024];
 		va_list vl;
 		FILE * file;
 
@@ -185,7 +190,8 @@ static UINT8 m3_ppc_read_8(UINT32 a)
     {
     case 0xC:
 
-        if (a >= 0xC1000000 && a <= 0xC10000FF)         // 53C810 SCSI
+        if ((a >= 0xC0000000 && a <= 0xC00000FF) ||
+            (a >= 0xC1000000 && a <= 0xC10000FF))       // 53C810 SCSI
             return scsi_read_8(a);
         else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
             return dma_read_8(a);
@@ -267,7 +273,7 @@ static UINT32 m3_ppc_read_32(UINT32 a)
 
     case 0xC:
 
-        if (a >= 0xC2000000 && a <= 0xC200001F)         // DMA device
+        if (a >= 0xC2000000 && a <= 0xC200001F)     // DMA device
             return dma_read_32(a);
 
         switch (a)
@@ -352,7 +358,12 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
     {
     case 0xC:
 
-        if (a >= 0xC2000000 && a <= 0xC200001F)         // DMA device
+        if (a >= 0xC0000000 && a <= 0xC00000FF)         // 53C810 SCSI
+        {
+            scsi_write_8(a, d);
+            return;
+        }
+        else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
         {
             dma_write_8(a, d);
             return;
@@ -474,7 +485,8 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
     case 0xC:
 
-        if (a >= 0xC1000000 && a <= 0xC10000FF)         // 53C810 SCSI
+        if ((a >= 0xC0000000 && a <= 0xC00000FF) ||
+            (a >= 0xC1000000 && a <= 0xC10000FF))       // 53C810 SCSI
         {
             scsi_write_32(a, d);
             return;
@@ -810,8 +822,13 @@ static UINT32 pci_command_callback(UINT32 cmd)
             return 0x16C311DB;  // 0x11DB = PCI vendor ID (Sega), 0x16C3 = device ID
         else
             return 0x178611DB;
+    case 0x80007000:
+        if (m3_config.step == 0x10)
+            return 0x00011000;  // VF3
+        break;
     }
 
+    LOG("model3.log", "%08X: PCI command issued: %08X\n", PPC_PC, cmd);
     message(0, "%08X: PCI command issued: %08X", PPC_PC, cmd);
     return 0;
 }

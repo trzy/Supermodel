@@ -264,6 +264,7 @@ UINT16 bridge_read_config_data_16(UINT32 addr)
 
 UINT32 bridge_read_config_data_32(UINT32 addr)
 {
+    LOG("model3.log", "%08X: READ CONFIG DATA\n", ppc_get_reg(PPC_REG_PC));
     return (config_data[0] << 24) | (config_data[1] << 16) |
            (config_data[2] << 8) | config_data[3];
 //    return (BYTE(reg_ptr + 0) << 24) | (BYTE(reg_ptr + 1) << 16) |
