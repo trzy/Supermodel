@@ -35,7 +35,7 @@ static UINT32 offs_shift, offs_mask, offs_num;
 *******************************************************************************/
 
 /*
- * BOOL IsInstAddr (UINT32 pc);
+ * IsInstAddr():
  *
  * Returns TRUE if pc is a valid instruction address (i.e. it does appear to lie
  * in the range of a fetch[] region), FALSE otherwise.
@@ -47,7 +47,7 @@ static BOOL IsInstAddr (UINT32 pc)
 }
 
 /*
- * INT Handle* (UINT32 addr, UINT page1, UINT page2, UINT offs);
+ * Handle*():
  *
  * These routines handle the possible misses during BB info lookup (see
  * BBLookup_Lookup below).
@@ -148,6 +148,16 @@ static INT HandleBBMiss (UINT32 addr, UINT page1, UINT page2, UINT offs)
  * INT BBLookup_Setup (struct drppc_cfg * cfg);
  *
  * Initialize the custom Basic Block lookup mechanism.
+ *
+ * Parameters:
+ *		cfg = Pointer to configuration data.
+ *
+ * Returns:
+ *		DRPPC_OKAY if successful.
+ *		DRPPC_INVALID_CONFIG if the configuration data for the lookup tables is
+ *      not valid.
+ *		DRPPC_OUT_OF_MEMORY if there wasn't enough memory to allocate the
+ *		tables.
  */
 
 INT BBLookup_Setup (struct drppc_cfg * cfg)
@@ -219,6 +229,17 @@ void BBLookup_Clean (void)
  * DRPPC_BB * BBLookup_Lookup (UINT32 addr, INT * errcode);
  *
  * This one looks up a BB info struct in the LUT.
+ *
+ * Parameters:
+ *		addr    = Address of the basic block entry point to look up.
+ *		errcode = If an error occured looking the block up, the error
+ *				  code is returned here. Possible error codes are:
+ *						DRPPC_OUT_OF_MEMORY if out of memory.
+ *						DRPPC_BAD_PC if the address is bad and cannot be used
+ *						to create a new block.
+ *
+ * Returns:
+ *		The basic block or NULL if the lookup failed for any reason.
  */
 
 DRPPC_BB * BBLookup_Lookup (UINT32 addr, INT * errcode)
