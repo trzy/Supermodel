@@ -99,7 +99,6 @@ extern UINT osd_renderer_get_layer_depth(void);
 extern void osd_renderer_get_layer_buffer(UINT, UINT8 **, UINT *);
 extern void osd_renderer_free_layer_buffer(UINT);
 extern void osd_renderer_upload_texture(UINT32, UINT32, UINT8 *, BOOL);
-extern void osd_renderer_upload_vrom_texture(UINT32, UINT32, UINT8 *);
 
 /******************************************************************/
 /* Sound Output                                                   */

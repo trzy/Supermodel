@@ -303,7 +303,7 @@ void osd_renderer_free_layer_buffer(UINT layer_num)
 	IDirect3DTexture9_UnlockRect( layer_data[layer_num], 0 );
 }
 
-static void decode_texture16(UINT16* ptr, UINT16* src, int width, int height)
+static void decode_texture16(UINT16* ptr, UINT16* src, int width, int height, BOOL little_endian)
 {
 	int i, j, x, y;
 	int index = 0;
@@ -314,9 +314,14 @@ static void decode_texture16(UINT16* ptr, UINT16* src, int width, int height)
 			// Decode tile
 			for( y=0; y<8; y++) {
 				for( x=0; x<8; x++) {
+					UINT16 pix;
 					int x2 = ((x / 2) * 4) + (x & 0x1);
 					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					UINT16 pix = src[index + x2 + y2 ^ 1];
+					if(little_endian) {
+						pix = src[index + x2 + y2 ^ 1];
+					} else {
+						pix = BSWAP16(src[index + x2 + y2]);
+					}
 
 					ptr[((j+y) * width) + i + x] = pix;
 				}
@@ -326,7 +331,7 @@ static void decode_texture16(UINT16* ptr, UINT16* src, int width, int height)
 	}
 }
 
-static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height)
+static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height, BOOL little_endian)
 {
 	int i, j, x, y;
 	int index = 0;
@@ -337,9 +342,14 @@ static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height)
 			// Decode tile
 			for( y=0; y<8; y++) {
 				for( x=0; x<8; x++) {
+					UINT8 pix;
 					int x2 = ((x / 2) * 4) + (x & 0x1);
 					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					UINT8 pix = src[index + x2 + y2 ^ 3];
+					if(little_endian) {
+						pix = src[index + x2 + y2 ^ 3];
+					} else {
+						pix = src[index + x2 + y2];
+					}
 
 					ptr[((j+y) * width) + i + x] = pix;
 				}
@@ -349,123 +359,7 @@ static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height)
 	}
 }
 
-void osd_renderer_upload_texture(UINT8 *src)
-{
-	UINT32 header[2];
-	int texture_num, i, j;
-	int width, height, xpos, ypos, type, depth, page;
-	D3DLOCKED_RECT	locked_rect;
-	HRESULT hr;
-	UINT8 *ptr;
-	D3DFORMAT	format = 0;
-
-	// Find a free D3D texture
-	texture_num = -1;
-	i = 0;
-	while( i < 4096 && texture_num == -1) {
-		if(texture[i] == NULL) {
-			texture_num = i;
-		}
-		i++;
-	}
-	if(texture_num < 0) {
-		osd_error("DirectX Error: No free textures available !\n");
-	}
-
-	// Get the texture information from the header
-	
-	header[0] = *(UINT32*)(&src[0]);
-	header[1] = *(UINT32*)(&src[4]);
-
-	width	= 32 << ((header[1] >> 14) & 0x7);
-	height	= 32 << ((header[1] >> 17) & 0x7);
-	xpos	= (header[1] & 0x3F) * 32;
-	ypos	= ((header[1] >> 7) & 0x1F) * 32;
-	type	= (header[1] >> 24) & 0xFF;
-	depth	= (header[1] & 0x800000) ? 1 : 0;
-	page	= (header[1] & 0x100000) ? 1 : 0;
-
-	if(type != 1)		// TODO: Handle mipmaps
-		return;
-
-	format = (depth) ? D3DFMT_A1R5G5B5 : D3DFMT_L8;
-
-	// Create D3D texture
-	hr = D3DXCreateTexture( device, width, height, 1, 0, format, D3DPOOL_MANAGED,
-							&texture[texture_num] );
-	if( FAILED(hr) )
-		osd_error("D3DXCreateTexture failed.\n");
-	
-	hr = IDirect3DTexture9_LockRect( texture[texture_num], 0, &locked_rect, NULL, 0 );
-	if( FAILED(hr) )
-		osd_error("IDirect3DTexture9_LockRect failed.\n");
-
-	ptr = (UINT8*)locked_rect.pBits;
-
-	// Decode the texture
-	if(depth) {
-		decode_texture16( (UINT16*)&ptr[0], (UINT16*)&src[8], width, height );
-	} else {
-		decode_texture8( ptr, &src[8], width, height );
-	}
-	IDirect3DTexture9_UnlockRect( texture[texture_num], 0 );
-
-	// Update texture table
-	for( j = ypos/32; j < (ypos+height)/32; j++) {
-		for( i = xpos/32; i < (xpos+width)/32; i++) {
-			texture_table[page][(j*64) + i] = texture_num;
-			// TODO: Remove overwritten textures
-		}
-	}
-}
-
-static void decode_vrom_texture16(UINT16* ptr, UINT16* src, int width, int height)
-{
-	int i, j, x, y;
-	int index = 0;
-
-	for( j=0; j<height; j+=8 ) {
-		for( i=0; i<width; i+=8 ) {
-
-			// Decode tile
-			for( y=0; y<8; y++) {
-				for( x=0; x<8; x++) {
-					int x2 = ((x / 2) * 4) + (x & 0x1);
-					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					UINT16 pix = BSWAP16(src[index + x2 + y2]);
-
-					ptr[((j+y) * width) + i + x] = pix;
-				}
-			}
-			index += 64;
-		}
-	}
-}
-
-static void decode_vrom_texture8(UINT8 *ptr, UINT8 *src, int width, int height)
-{
-	int i, j, x, y;
-	int index = 0;
-
-	for( j=0; j<height; j+=8 ) {
-		for( i=0; i<width; i+=8 ) {
-
-			// Decode tile
-			for( y=0; y<8; y++) {
-				for( x=0; x<8; x++) {
-					int x2 = ((x / 2) * 4) + (x & 0x1);
-					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					UINT8 pix = src[index + x2 + y2];
-
-					ptr[((j+y) * width) + i + x] = pix;
-				}
-			}
-			index += 64;
-		}
-	}
-}
-
-void osd_renderer_upload_vrom_texture(UINT32 header, UINT32 length, UINT8 *src)
+void osd_renderer_upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little_endian)
 {
 	int texture_num, i, j;
 	int width, height, xpos, ypos, type, depth, page;
@@ -516,9 +410,9 @@ void osd_renderer_upload_vrom_texture(UINT32 header, UINT32 length, UINT8 *src)
 
 	// Decode the texture
 	if(depth) {
-		decode_vrom_texture16( (UINT16*)&ptr[0], (UINT16*)&src[0], width, height );
+		decode_texture16( (UINT16*)&ptr[0], (UINT16*)&src[0], width, height, little_endian );
 	} else {
-		decode_vrom_texture8( ptr, &src[0], width, height );
+		decode_texture8( ptr, &src[0], width, height, little_endian );
 	}
 	IDirect3DTexture9_UnlockRect( texture[texture_num], 0 );
 
@@ -899,7 +793,8 @@ static void traverse_node(UINT32* node_ram)
 	int i;
 	float x, y, z;
 	UINT32 matrix_address = node_ram[0x3];
-	
+	D3DMATRIX matrix;
+
 	if(((matrix_address >> 24) & 0xFF) == 0x20) {
 		load_matrix(matrix_address & 0x7FFFFF);
 	}
