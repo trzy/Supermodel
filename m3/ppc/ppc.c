@@ -2553,8 +2553,9 @@ INLINE int is_qnan_f64(f64 x){
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
 		((*(u64 *)&(x) & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-		((*(u64 *)&(x) & 0x0008000000000000) == DOUBLE_ZERO)
-	);
+//        ((*(u64 *)&(x) & 0x0008000000000000) == DOUBLE_ZERO)
+        ((*(u64 *)&(x) & 0x008000000000000) == 0x008000000000000)
+    );
 }
 
 INLINE int is_snan_f64(f64 x){
@@ -2562,6 +2563,8 @@ INLINE int is_snan_f64(f64 x){
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
 		((*(u64 *)&(x) & 0x0008000000000000) != DOUBLE_ZERO)
+
+        && ((*(u64 *)&(x) & 0x0008000000000000) == DOUBLE_ZERO)
 	);
 }
 
@@ -3756,9 +3759,9 @@ int ppc_init(void * x){
 	ppc_inst_31[467]	= ppc_mtspr;
 	ppc_inst_31[75]		= ppc_mulhwx;
 	ppc_inst_31[11]		= ppc_mulhwux;
-	ppc_inst_31[235]	= ppc_inst[235|(_OE>>1)]	= ppc_mullwx;
+    ppc_inst_31[235]    = ppc_inst_31[235|(_OE>>1)]    = ppc_mullwx;
 	ppc_inst_31[476]	= ppc_nandx;
-	ppc_inst_31[104]	= ppc_inst[104|(_OE>>1)]	= ppc_negx;
+    ppc_inst_31[104]    = ppc_inst_31[104|(_OE>>1)]    = ppc_negx;
 	ppc_inst_31[124]	= ppc_norx;
 	ppc_inst_31[444]	= ppc_orx;
 	ppc_inst_31[412]	= ppc_orcx;
@@ -3779,11 +3782,11 @@ int ppc_init(void * x){
 	ppc_inst_31[150]	= ppc_stwcx;
 	ppc_inst_31[183]	= ppc_stwux;
 	ppc_inst_31[151]	= ppc_stwx;
-	ppc_inst_31[40]		= ppc_inst[40|(_OE>>1)]		= ppc_subfx;
+    ppc_inst_31[40]     = ppc_inst_31[40|(_OE>>1)]     = ppc_subfx;
     ppc_inst_31[8]      = ppc_inst_31[8|(_OE>>1)]      = ppc_subfcx;
-	ppc_inst_31[136]	= ppc_inst[136|(_OE>>1)]	= ppc_subfex;
-	ppc_inst_31[232]	= ppc_inst[232|(_OE>>1)]	= ppc_subfmex;
-	ppc_inst_31[200]	= ppc_inst[200|(_OE>>1)]	= ppc_subfzex;
+    ppc_inst_31[136]    = ppc_inst_31[136|(_OE>>1)]    = ppc_subfex;
+    ppc_inst_31[232]    = ppc_inst_31[232|(_OE>>1)]    = ppc_subfmex;
+    ppc_inst_31[200]    = ppc_inst_31[200|(_OE>>1)]    = ppc_subfzex;
 	ppc_inst_31[598]	= ppc_sync;
 	ppc_inst_31[4]		= ppc_tw;
 	ppc_inst_31[316]	= ppc_xorx;
