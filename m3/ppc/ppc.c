@@ -11,6 +11,8 @@
 #define LOG(...)
 #endif
 
+#define RECORD_BB_STATS
+
 /******************************************************************/
 /* Private Variables                                              */
 /******************************************************************/
@@ -22,6 +24,225 @@ static void			(* ppc_jump_table[131072])(UINT32 op);
 static PPC_CONTEXT	ppc;
 
 static void ppc_update_pc(void);
+
+/******************************************************************/
+/* Basic Block Stats                                              */
+/******************************************************************/
+
+#ifdef RECORD_BB_STATS
+
+typedef struct BB
+{
+	UINT32		addr;		// address
+	UINT		inst_count;	// instruction count
+	UINT		exec_count;	// number of times it has been executed
+	UINT		type;		// type
+
+	struct
+	{
+		UINT32	target;
+		UINT	exec_count;
+
+	} edge[2];				// 0 means false edge, 1 means true edge
+
+	struct BB	* prev;
+	struct BB	* next;
+
+} BB;
+
+#define BB_TYPE_UNCONDITIONAL	(0 << 0)
+#define BB_TYPE_CONDITIONAL		(1 << 0)
+#define BB_TYPE_DIRECT			(0 << 1)
+#define BB_TYPE_INDIRECT		(1 << 1)
+#define BB_COND(cc)				(((cc) & 31) << 2)
+
+#define BB_GET_TYPE(type)		(type & 3)
+#define BB_GET_COND(type)		((type >> 2) & 31)
+
+static BB		bb_list_head;
+static BB		bb_list_tail;
+static BB		* cur_bb;
+static UINT		bb_num;
+
+static BB * bb_search(UINT32 addr)
+{
+	BB * bb = bb_list_head.next;
+
+	while(bb->addr < addr)
+		bb = bb->next;
+
+	if(bb->addr == addr)
+		return bb;
+
+	return NULL;
+}
+
+static BB * bb_add(UINT32 addr)
+{
+	BB * bb = bb_list_head.next;
+	BB * new_bb = (BB *)malloc(sizeof(BB));
+
+	if(new_bb == NULL)
+		error("bb_add() failed\n");
+
+	// link the block in the list
+
+	while(bb->addr < addr)
+		bb = bb->next;
+
+	new_bb->prev = bb->prev;
+	new_bb->next = bb;
+
+	bb->prev->next = new_bb;
+	bb->prev = new_bb;
+
+	// init the new block
+
+	new_bb->addr = addr;
+	new_bb->inst_count = 0;
+	new_bb->exec_count = 1;
+	new_bb->type = 0;
+	new_bb->edge[0].target = 0;
+	new_bb->edge[0].exec_count = 0;
+	new_bb->edge[1].target = 0;
+	new_bb->edge[1].exec_count = 0;
+
+	bb_num++;
+
+	return new_bb;
+}
+
+static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true)
+{
+	BB * bb;
+
+	// end of the current block -- record type and edge profiling
+	// info.
+
+	cur_bb->inst_count = ((addr - cur_bb->addr) / 4) + 1;
+
+	cur_bb->type =	(is_direct ? BB_TYPE_DIRECT : BB_TYPE_INDIRECT) |
+					(is_uncond ? BB_TYPE_UNCONDITIONAL : BB_TYPE_CONDITIONAL);
+
+	if(!is_uncond)
+	{
+		cur_bb->type |= BB_COND(cc);
+
+		if(is_direct)	// static address, profile has a meaning
+		{
+			cur_bb->edge[cc_true].target = target;
+			cur_bb->edge[cc_true].exec_count ++;
+		}
+		else
+		{
+			cur_bb->edge[cc_true].target = target;
+			cur_bb->edge[cc_true].exec_count ++;
+		}
+	}
+	else
+		cur_bb->edge[0].target = target;
+
+	// search if the block was already traversed
+
+	if((bb = bb_search(target)) != NULL)
+	{
+		bb->exec_count++;
+		cur_bb = bb;
+		return;
+	}
+
+	// add a new block
+
+	bb = bb_add(target);
+	cur_bb = bb;
+}
+
+static void bb_stat_init(void)
+{
+	bb_list_head.next = &bb_list_tail;
+	bb_list_head.prev = NULL;
+	bb_list_head.addr = 0x00000000;
+
+	bb_list_tail.next = NULL;
+	bb_list_tail.prev = &bb_list_head;
+	bb_list_tail.addr = 0xFFFFFFFF;
+
+	cur_bb = &bb_list_head;
+
+	bb_num = 0;
+
+	LOG_INIT("bb.log");
+}
+
+static const char * cond_name[] =
+{
+	"--ctr != 0 && cc == 0",	"--ctr == 0 && cc == 0",
+	"cc == 0",					"cc == 0",
+	"--ctr != 0 && cc != 0",	"--ctr == 0 && cc != 0",
+	"cc != 0",					"cc != 0",
+	"--ctr != 0",				"--ctr == 0"
+	"always",					"always",
+	"--ctr != 0",				"--ctr == 0"
+	"always",					"always",
+};
+
+static void bb_stat_shutdown(void)
+{
+	BB		* bb = bb_list_head.next;
+	UINT	tot_bb_size = 0, cond_branch_num = 0, uncond_branch_num = 0;
+
+	LOG("bb.log", "\nTraversed %u BBs (stats below)\n\n", bb_num);
+
+	LOG("bb.log", "================================================================================\n");
+
+	while(bb != &bb_list_tail)
+	{
+		LOG("bb.log",
+			" BB %08X, %u instructions, executed %u time(s) [%s]\n",
+			bb->addr, bb->inst_count, bb->exec_count,
+			(bb->type & (1 << 1)) ? "indirect" : "direct");
+
+		if(bb->type & (1 << 0))	// conditional
+		{
+			LOG("bb.log",
+				"  cond = [%s]\n"
+				"   false  -> %08X, executed %u times (%f%%)\n"
+				"   true   -> %08X, executed %u times (%f%%)\n\n",
+				cond_name[((bb->type >> 2) & 31) >> 1],
+				bb->edge[0].target, bb->edge[0].exec_count,
+				(bb->edge[0].exec_count * 100.0f) / (float)bb->exec_count,
+				bb->edge[1].target, bb->edge[1].exec_count,
+				(bb->edge[1].exec_count * 100.0f) / (float)bb->exec_count
+			);
+			cond_branch_num++;
+		}
+		else					// unconditional
+		{
+			LOG("bb.log", "  target -> %08X\n\n", bb->edge[0].target);
+			uncond_branch_num++;
+		}
+
+		tot_bb_size += bb->inst_count * 4;
+
+		bb = bb->next;
+	}
+
+	LOG("bb.log", "================================================================================\n");
+
+	LOG("bb.log",
+		" average block size = %f bytes (%f instructions)\n",
+		(float)tot_bb_size / (float)bb_num,
+		((float)tot_bb_size / (float)bb_num) / 4.0f);
+	LOG("bb.log",
+		" %7u conditional branches   (%f%%)\n"
+		" %7u unconditional branches (%f%%)\n",
+		cond_branch_num,   (cond_branch_num * 100.0f) /   (float)(cond_branch_num + uncond_branch_num),
+		uncond_branch_num, (uncond_branch_num * 100.0f) / (float)(cond_branch_num + uncond_branch_num));
+
+	// add other stats here ...
+}
+
+#endif
 
 /******************************************************************/
 /* Shorthand Mnemonics                                            */
@@ -169,6 +390,7 @@ static void ppc_update_pc(void);
 #define _FXM	((op >> 12) & 0xff)
 #define _FM		((op >> 17) & 0xFF)
 
+#define PC		ppc.pc
 #define XER		ppc.spr[SPR_XER]
 #define LR		ppc.spr[SPR_LR]
 #define CTR		ppc.spr[SPR_CTR]
@@ -2819,13 +3041,18 @@ static void ppc_bx(u32 op)
 		LR = lr;
 
 	ppc_update_pc();
+
+#ifdef RECORD_BB_STATS
+	bb_record(lr-4, PC, TRUE, TRUE, 0, FALSE);
+#endif
 }
 
 static void ppc_bcx(u32 op)
 {
 	UINT32 lr = ppc.pc;
+	BOOL cond = ppc_bo[_BO >> 1](_BI);
 
-	if(ppc_bo[_BO >> 1](_BI))
+	if(cond)
 	{
 		ppc.pc = SIMM & ~3;
 		if((op & _AA) == 0)
@@ -2835,13 +3062,18 @@ static void ppc_bcx(u32 op)
 
 	if(op & _LK)
 		LR = lr;
+
+#ifdef RECORD_BB_STATS
+	bb_record(lr-4, PC, TRUE, FALSE, _BO, cond);
+#endif
 }
 
 static void ppc_bcctrx(u32 op)
 {
 	UINT32 lr = ppc.pc;
+	BOOL cond = ppc_bo[_BO >> 1](_BI);
 
-	if(ppc_bo[_BO >> 1](_BI))
+	if(cond)
 	{
 		ppc.pc = CTR & ~3;
 		ppc_update_pc();
@@ -2849,13 +3081,18 @@ static void ppc_bcctrx(u32 op)
 
 	if(op & _LK)
 		LR = lr;
+
+#ifdef RECORD_BB_STATS
+	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond);
+#endif
 }
 
 static void ppc_bclrx(u32 op)
 {
 	UINT32 lr = ppc.pc;
+	BOOL cond = ppc_bo[_BO >> 1](_BI);
 
-	if(ppc_bo[_BO >> 1](_BI))
+	if(cond)
 	{
 		ppc.pc = LR & ~3;
 		ppc_update_pc();
@@ -2863,10 +3100,18 @@ static void ppc_bclrx(u32 op)
 
 	if(op & _LK)
 		LR = lr;
+
+#ifdef RECORD_BB_STATS
+	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond);
+#endif
 }
 
 static void ppc_rfi(u32 op)
 {
+#ifdef RECORD_BB_STATS
+	bb_record(PC-4, SPR(SPR_SRR0), FALSE, TRUE, 0, FALSE);
+#endif
+
 	ppc.pc = ppc.spr[SPR_SRR0];
 	ppc_set_msr(ppc.spr[SPR_SRR1]);
 
@@ -2875,6 +3120,10 @@ static void ppc_rfi(u32 op)
 
 static void ppc_rfci(u32 op)
 {
+#ifdef RECORD_BB_STATS
+	bb_record(PC-4, SPR(SPR_SRR2), FALSE, TRUE, 0, FALSE);
+#endif
+
 	ppc.pc = ppc.spr[SPR_SRR2];
 	ppc_set_msr(ppc.spr[SPR_SRR3]);
 
@@ -3496,7 +3745,18 @@ int ppc_init(void)
 
 	ppc.fetch = NULL;
 
+#ifdef RECORD_BB_STATS
+	bb_stat_init();
+#endif
+
     return PPC_OKAY;
+}
+
+void ppc_shutdown(void)
+{
+#ifdef RECORD_BB_STATS
+	bb_stat_shutdown();
+#endif
 }
 
 void ppc_save_state(FILE *fp)

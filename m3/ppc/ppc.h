@@ -260,6 +260,7 @@ enum
  */
 
 extern int      ppc_init(void);
+extern void		ppc_shutdown(void);
 
 extern void		ppc_set_fetch(PPC_FETCH_REGION *);
 

@@ -1974,6 +1974,8 @@ void m3_shutdown(void)
 	dma_shutdown();
 	scsi_shutdown();
 
+	ppc_shutdown();
+
 	/* free any allocated buffer */
 
     save_file("ram", ram, 8*1024*1024, 0);
