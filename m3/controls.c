@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+//TODO: In controls_write(): Is EEPROM only written when bank_select = 1?
+//      This makes little sense because banking affects reg 4 only, right?
+
 /*
  * controls.c
  *
@@ -141,9 +144,10 @@ void controls_update(void)
     UINT            gun_x, gun_y;
 
     c = osd_input_update_controls();
-
+    
     controls_reg_bank[0] = c->system_controls[0];
     controls_reg_bank[1] = c->system_controls[1];
+
     controls_reg[0x08] = c->game_controls[0];
     controls_reg[0x0C] = c->game_controls[1];
 
@@ -242,6 +246,8 @@ UINT8 controls_read(UINT32 a)
     switch (a)
     {
     case 0x4:
+        // should this only be done when bank_select = 1?
+        controls_reg_bank[1] &= ~0x20;  // clear data bit before ORing it in
         controls_reg_bank[1] |= ((eeprom_read() & 1) << 5) ;
         return controls_reg_bank[controls_bank_select];
 	case 0x3C:
@@ -251,7 +257,7 @@ UINT8 controls_read(UINT32 a)
 		return steering_data[(steering_control - 1) & 0x7];
     }
 
-//    message(0, "CTRL %02X READ", a);
+//    LOG("model3.log", "CTRL %02X READ\n", a);
 
     return controls_reg[a];
 }
@@ -265,13 +271,15 @@ void controls_write(UINT32 a, UINT8 d)
 	{
 	case 0x0:
         controls_bank_select = d & 1;
-		if(controls_bank_select == 0)
-			eeprom_write(
+        if(controls_bank_select == 1)
+        {
+        	eeprom_write(
 				(d & 0x40) ? 1 : 0,
 				(d & 0x80) ? 1 : 0,
 				(d & 0x20) ? 1 : 0,
 				(d & 0x10) ? 1 : 0
 			);
+        }
         break;
     case 0x24:  // MCU command
         switch (d)
@@ -286,5 +294,7 @@ void controls_write(UINT32 a, UINT8 d)
         }
         break;
 	}
+
+//    LOG("model3.log", "CTRL%02X = %02X\n", a, d);
 }
 

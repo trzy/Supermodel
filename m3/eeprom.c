@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+//TODO: Check to make sure code is functioning correctly. See note in
+// eeprom_write()
+
 /*
  * eeprom.c
  *
@@ -24,7 +27,7 @@
 
 #include "model3.h"
 
-//#define LOG_EEPROM		// enable EEPROM logging
+#define LOG_EEPROM        // enable EEPROM logging
 
 /******************************************************************/
 /* Privates                                                       */
@@ -116,7 +119,7 @@ INT eeprom_load(char * fn)
 	FILE * f;
 	INT i = MODEL3_ERROR;
 
-	message(0, "loading EEPROM from %s", fn);
+    message(0, "loading EEPROM from %s", fn);
 
 	if((f = fopen(fn, "rb")) != NULL)
 	{
@@ -166,17 +169,27 @@ void eeprom_reset(void)
 void eeprom_write(UINT cs, UINT clk, UINT di, UINT we)
 {
 	#ifdef LOG_EEPROM
-	message(0, "EEPROM write: cs=%i clk=%i di=%i we=%i", cs, clk, di, we);
+//    message(0, "EEPROM write: cs=%i clk=%i di=%i we=%i", cs, clk, di, we);
 	#endif
 
+    //
+    // NOTE: I removed this because the behavior is almost certainly wrong.
+    // CS is held during the duration of any operation and at the end of the
+    // operation, we should clear count and possibly command.
+    //
+    // I'm not sure if the code is bug-free. Some checking and revision may
+    // be required.
+    //
+#if 0
 	if(cs)
 	{
 		// reset
 
-		eeprom.count = 0;
+        eeprom.count = 0;
 		eeprom.command = 0;
 		return;
 	}
+#endif
 
 	if(!we)
 		return;
@@ -187,7 +200,7 @@ void eeprom_write(UINT cs, UINT clk, UINT di, UINT we)
 		eeprom.serial |= (di) ? 1 : 0;
 
 		#ifdef LOG_EEPROM
-		message(0, "EEPROM serial = %08X [%i]", eeprom.serial, eeprom.count);
+//        message(0, "EEPROM serial = %08X [%i]", eeprom.serial, eeprom.count);
 		#endif
 
 		eeprom.count++;
@@ -198,16 +211,17 @@ void eeprom_write(UINT cs, UINT clk, UINT di, UINT we)
 
 			eeprom.command = eeprom.serial & 7;
 
+#if 0
 			switch(eeprom.command)
 			{
 			case 0x6:
 				#ifdef LOG_EEPROM
-				message(0, "EEPROM read");
+                message(0, "EEPROM read");
 				#endif
 				break;
 			case 0x5:
 				#ifdef LOG_EEPROM
-				message(0, "EEPROM write");
+                message(0, "EEPROM write");
 				#endif
 				if(eeprom.locked)
 					error("EEPROM locked write\n");
@@ -222,6 +236,7 @@ void eeprom_write(UINT cs, UINT clk, UINT di, UINT we)
 			default:
 				error("EEPROM invalid (%X)\n", eeprom.command);
 			}
+#endif
 		}
 		else if(eeprom.command == 4 && eeprom.count == 10)
 		{
@@ -320,7 +335,7 @@ eeprom_done:
 UINT8 eeprom_read(void)
 {
 	#ifdef LOG_EEPROM
-	message(0, "EEPROM read");
+//    message(0, "EEPROM read");
 	#endif
 
 	return(eeprom._do);
