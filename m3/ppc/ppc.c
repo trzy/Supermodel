@@ -274,6 +274,8 @@ static void bb_stat_reset(void)
  *
  * Iterates through every instruction in a BB to compute register usage
  * information. The information is printed out.
+ *
+ * See bb_stat_shutdown() for information on format of printout.
  */
 
 static void bb_analyze_regusage(BB *bb)
@@ -312,7 +314,7 @@ static void bb_analyze_regusage(BB *bb)
 	num_read = ppc_get_num_regs_used(&read);
 	num_total = ppc_get_num_regs_used(&total);	// NOTE: NOT the same as num_written + num_read, provides unique # of regs used
 	
-	LOG("bb.log", "  Register Usage: %d registers accessed (Written=%d, Read=%d)\n", num_total, num_written, num_read);
+	LOG("bb.log", "%u %u %u\n", num_total, num_written, num_read); 
 	
 	/*
 	 * Print the registers used and how many times they were accessed
@@ -321,25 +323,24 @@ static void bb_analyze_regusage(BB *bb)
 	for (i = 0; i < 32; i++)
 	{
 		if (total.r[i] != 0)
-			LOG("bb.log", "\tR%d: %d accesses (%d writes, %d reads)\n", i, total.r[i], written.r[i], read.r[i]);
+			LOG("bb.log", "R%d %u %u %u\n", i, total.r[i], written.r[i], read.r[i]);			
 	}
 	
 	for (i = 0; i < 32; i++)
 	{
 		if (total.f[i] != 0)
-			LOG("bb.log", "\tF%d: %d accesses (%d writes, %d reads)\n", i, total.f[i], written.f[i], read.f[i]);
+			LOG("bb.log", "F%d %u %u %u\n", i, total.f[i], written.f[i], read.f[i]);			
 	}
 	
-	if (total.lr != 0)	LOG("bb.log", "\tLR: %d accesses (%d writes, %d reads)\n", total.lr, written.lr, read.lr);
-	if (total.ctr != 0)	LOG("bb.log", "\tCTR: %d accesses (%d writes, %d reads)\n", total.ctr, written.ctr, read.ctr);	
-	if (total.cr != 0)	LOG("bb.log", "\tCR: %d accesses (%d writes, %d reads)\n", total.cr, written.cr, read.cr);
-	if (total.xer != 0)	LOG("bb.log", "\tXER: %d accesses (%d writes, %d reads)\n", total.xer, written.xer, read.xer);
-	if (total.msr != 0)	LOG("bb.log", "\tMSR: %d accesses (%d writes, %d reads)\n", total.msr, written.msr, read.msr);
-	if (total.fpscr != 0)	LOG("bb.log", "\tFPSCR: %d accesses (%d writes, %d reads)\n", total.fpscr, written.fpscr, read.fpscr);
-	if (total.tbu != 0)	LOG("bb.log", "\tTBU: %d accesses (%d writes, %d reads)\n", total.tbu, written.tbu, read.tbu);
-	if (total.tbl != 0)	LOG("bb.log", "\tTBL: %d accesses (%d writes, %d reads)\n", total.tbl, written.tbl, read.tbl);
-	if (total.dec != 0)	LOG("bb.log", "\tDEC: %d accesses (%d writes, %d reads)\n", total.dec, written.dec, read.dec);
-	LOG("bb.log", "\n");
+	if (total.lr != 0)	LOG("bb.log", "LR %u %u %u\n", total.lr, written.lr, read.lr);
+	if (total.ctr != 0)	LOG("bb.log", "CTR %u %u %u\n", total.ctr, written.ctr, read.ctr);	
+	if (total.cr != 0)	LOG("bb.log", "CR %u %u %u\n", total.cr, written.cr, read.cr);
+	if (total.xer != 0)	LOG("bb.log", "XER %u %u %u\n", total.xer, written.xer, read.xer);
+	if (total.msr != 0)	LOG("bb.log", "MSR %u %u %u\n", total.msr, written.msr, read.msr);
+	if (total.fpscr != 0)	LOG("bb.log", "FPSCR %u %u %u\n", total.fpscr, written.fpscr, read.fpscr);
+	if (total.tbu != 0)	LOG("bb.log", "TBU %u %u %u\n", total.tbu, written.tbu, read.tbu);
+	if (total.tbl != 0)	LOG("bb.log", "TBL %u %u %u\n", total.tbl, written.tbl, read.tbl);
+	if (total.dec != 0)	LOG("bb.log", "DEC %u %u %u\n", total.dec, written.dec, read.dec);	
 }
 
 static const char * cond_name[] =
@@ -357,7 +358,36 @@ static const char * cond_name[] =
 /*
  * bb_stat_shutdown():
  *
- * Traverses the BB list and prints out information for each one. 
+ * Traverses the BB list and prints out information for each one. The format of the file is listed below.
+ * All fields are separated by whitespace.
+ *
+ *		First item in file: 
+ *			# of basic blocks 		(unsigned integer)
+ *		First fields of a basic block record:
+ *			BB address				(hexadecimal)
+ *			# of instructions		(unsigned integer)
+ *			# times executed		(unsigned integer)
+ *			indirect				(1 if terminating branch is indirect, 0 otherwise)
+ *			subroutine				(1 if BB is a subroutine entry point, 0 otherwise)
+ *			conditional				(1 if terminating branch is conditional, 0 otherwise)
+ *		If branch is conditional, the next fields are:
+ *			CC field				(hexadecimal value of 5-bit BO field)
+ *			true branch address		(hexadecimal of target address if condition resolves true)
+ *			# times taken			(unsigned integer)
+ *			false branch address	(hexadecimal)
+ *			# times taken			(unsigned integer)
+ *		If branch is not conditional, the next field is:
+ *			branch address			(hexadecimal of target address)
+ *		Then, register allocation information:
+ *			# regs accessed	by BB	(unsigned integer)
+ *			# regs written to		(unsigned integer)
+ *			# regs read from		(unsigned integer)
+ *		For each register:
+ *			reg name				(name of register, uppercase)
+ *			# times written			(unsigned integer)
+ *			# times read			(unsigned integer)
+ *
+ * Repeat for as many basic blocks as there are.			
  */
  
 static void bb_stat_shutdown(void)
@@ -365,37 +395,28 @@ static void bb_stat_shutdown(void)
 	BB		* bb = bb_list_head.next;
 	UINT	tot_bb_size = 0, cond_branch_num = 0, uncond_branch_num = 0;
 
-	LOG("bb.log", "\nTraversed %u BBs (stats below)\n\n", bb_num);
-
-	LOG("bb.log", "================================================================================\n");
-
+	LOG("bb.log", "%u\n", bb_num);	// number of BBs traversed
+	
 	while(bb != &bb_list_tail)
 	{
-		LOG("bb.log",
-			" BB %08X, %u instructions, executed %u time(s) [%s]",
-			bb->addr, bb->inst_count, bb->exec_count,
-			(bb->type & (1 << 1)) ? "indirect" : "direct");
-		if (bb->is_subroutine)
-			LOG("bb.log", " [subroutine]");
-		LOG("bb.log", "\n");
+		LOG("bb.log", "%08X %u %u ", bb->addr, bb->inst_count, bb->exec_count);
+		LOG("bb.log", "%d %d %d\n", (bb->type & (1 << 1)) ? 1 : 0,	// indirect or not
+									bb->is_subroutine ? 1 : 0,		// subroutine
+									(bb->type & (1 << 0)) ? 1 : 0);	// conditional
 
 		if(bb->type & (1 << 0))	// conditional
 		{
-			LOG("bb.log",
-				"  cond = [%s]\n"
-				"   false  -> %08X, executed %u times (%f%%)\n"
-				"   true   -> %08X, executed %u times (%f%%)\n",
-				cond_name[((bb->type >> 2) & 31) >> 1],
-				bb->edge[0].target, bb->edge[0].exec_count,
-				(bb->edge[0].exec_count * 100.0f) / (float)bb->exec_count,
-				bb->edge[1].target, bb->edge[1].exec_count,
-				(bb->edge[1].exec_count * 100.0f) / (float)bb->exec_count
-			);
+			LOG("bb.log", "%02X ", (bb->type >> 2) & 31);		// 5-bit condition code (BO) field
+			LOG("bb.log", "%08X %u ", bb->edge[1].target,		// true branch target address
+									  bb->edge[1].exec_count);	// number of times taken
+			LOG("bb.log", "%08X %u\n", bb->edge[0].target,		// false branch target address
+									  bb->edge[0].exec_count);	// number of times taken			
+						
 			cond_branch_num++;
 		}
 		else					// unconditional
 		{
-			LOG("bb.log", "  target -> %08X\n", bb->edge[0].target);
+			LOG("bb.log", "%08X\n", bb->edge[0].target);			
 			uncond_branch_num++;
 		}
 		
@@ -405,19 +426,7 @@ static void bb_stat_shutdown(void)
 
 		bb = bb->next;
 	}
-
-	LOG("bb.log", "================================================================================\n");
-
-	LOG("bb.log",
-		" average block size = %f bytes (%f instructions)\n",
-		(float)tot_bb_size / (float)bb_num,
-		((float)tot_bb_size / (float)bb_num) / 4.0f);
-	LOG("bb.log",
-		" %7u conditional branches   (%f%%)\n"
-		" %7u unconditional branches (%f%%)\n",
-		cond_branch_num,   (cond_branch_num * 100.0f) /   (float)(cond_branch_num + uncond_branch_num),
-		uncond_branch_num, (uncond_branch_num * 100.0f) / (float)(cond_branch_num + uncond_branch_num));
-
+	
 	// add other stats here ...
 }
 
