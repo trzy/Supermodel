@@ -108,6 +108,8 @@ void win_gl_init(UINT xres, UINT yres)
 
     if (osd_gl_check_extension("GL_ARB_texture_mirrored_repeat"))
         osd_error("Your OpenGL implementation does not support mirrored texture repeating!");
+    if (osd_gl_check_extension("GL_ARB_texture_env_combine"))
+        osd_error("Your OpenGL implementation does not support texture combiner operations!");
 
     /*
      * Initialize GL engine
