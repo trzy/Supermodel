@@ -43,7 +43,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <conio.h>
 //#include "zlib.h"
 
 #include "osd_common.h"
