@@ -435,6 +435,7 @@ UINT32 r3d_read_32(UINT32 a)
 
 UINT32 _9C000000, _9C000004, _9C000008;
 static int texture_start_pos = 8;
+static int texture_ram_ptr = 0;
 
 void r3d_write_32(UINT32 a, UINT32 d)
 {
@@ -462,55 +463,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
     else if (a >= 0x94000000 && a <= 0x940FFFFF)    // texture buffer
     {
         d = BSWAP32(d);
-        *(UINT32 *) &texture_buffer_ram[a & 0xFFFFF] = d;
+		*(UINT32 *)&texture_buffer_ram[texture_ram_ptr] = d;
 
-        /*
-         * Texture Uploading:
-         *
-         * The first word indicates the last offset that a texture data word
-         * will be written to. When this address is written, the texture
-         * upload is triggered. If, however, the texture turns out to be
-         * smaller than was specified (as has been observed in Sega Rally 2),
-         * a write to 0x88000000 will trigger the upload. Sega Rally 2 also
-         * immediately overwrites the first 2 header words with texture data
-         * so those values have to be remembered (in fact, this may be the
-         * criteria used to determine whether 0x88000000 should trigger an
-         * upload: If the header words are overwritten. This isn't quite how
-         * the code currently works, though.)
-         *
-         * Be on the lookout for bugs caused by this new method. I'm sure it's
-         * not perfect.
-         */
-        
-        if (a == 0x94000000)
-        {
-            if (texture_last_addr == 0) // waiting for size word?
-            {
-                texture_last_addr = ((d >> 1) & ~3) + 0x94000000;
-                return;
-            }
-            else                        // overwritten, texture data at pos 0
-                texture_start_pos = 0;
-        }
-        else if (a == 0x94000004)
-        {
-            if (texture_header == 0)    // waiting for header word?
-            {
-                texture_header = d;
-                return;
-            }
-        }
-
-        if (a == texture_last_addr)     // if last offset reached, upload
-        {
-            message(0, "texture transfer: %08X, %08X", texture_header );
-            upload_texture(texture_header, &texture_buffer_ram[texture_start_pos], 1);
-
-            texture_last_addr = 0;      // reset these vars for next upload
-			texture_header = 0;
-			texture_start_pos = 8;
-		}
-
+		texture_ram_ptr += 4;
         return;
     }
 
@@ -520,20 +475,17 @@ void r3d_write_32(UINT32 a, UINT32 d)
 
         message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
 
-        /*
-         * If the game didn't write all the way to texture_last_addr, upload
-         * forcefully
-         */
-
-        if (texture_last_addr != 0 )
-        {
-            message(0, "texture transfer: %08X", texture_header );
-            upload_texture(texture_header, &texture_buffer_ram[texture_start_pos], 1);
-
-            texture_last_addr = 0;  // reset these vars for next upload
-			texture_header = 0;
-			texture_start_pos = 8;
+		if( texture_ram_ptr > 0 ) {
+			int i=0;
+			while( i < texture_ram_ptr ) {
+				UINT32 length = (*(UINT32*)&texture_buffer_ram[i+0] / 2) + 2;
+				UINT32 header = *(UINT32*)&texture_buffer_ram[i+4];
+				upload_texture( header, &texture_buffer_ram[i+8], 1 );
+				i += length;
+			};
 		}
+		texture_ram_ptr = 0;
+
         return;
     case 0x90000000:    // VROM texture address
         vrom_texture_address = BSWAP32(d);
