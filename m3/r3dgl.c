@@ -51,11 +51,11 @@
 /* Macros                                                         */
 /******************************************************************/
 
-#define TEST_BIT		0
+#define TEST_BIT        0
 
 #define R3D_LOG
 //#define R3D_LOG			LOG
-#define LOG_MODEL		1
+#define LOG_MODEL       0
 
 #define WIREFRAME       0
 #define LIGHTING		1
@@ -102,7 +102,7 @@ static GLbyte   texture_buffer[512*512*4];  // for 1 texture
  */
 
 static void draw_block(UINT8 *);
-static void make_texture(UINT, UINT, UINT, UINT, UINT);
+static void make_texture(UINT, UINT, UINT, UINT, UINT, UINT);
 
 /******************************************************************/
 /* Model Drawing                                                  */
@@ -162,13 +162,14 @@ typedef struct
  */
 
 UINT r3d_test_bit = 0;
+UINT r3d_test_word = 0;
 
 static void draw_model(UINT8 *buf, UINT little_endian)
 {
     UINT32  (* GETWORD)(UINT8 *buf);
 	R3D_VTX	v[4], prev_v[4];
     UINT    i, stop, tex_enable, poly_opaque;
-	UINT	tex_w, tex_h, tex_fmt, u_base, v_base;
+    UINT    tex_w, tex_h, tex_fmt, tex_rep_mode, u_base, v_base;    
     GLfloat u_coord, v_coord, n[3];
 
     if (buf == NULL)
@@ -208,7 +209,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 
 		#if TEST_BIT
 		really_draw = 0;
-		if(GETWORD(&buf[1*4]) & (1 << r3d_test_bit))
+        if(GETWORD(&buf[r3d_test_word*4]) & (1 << r3d_test_bit))
 			really_draw = 1;
 		#endif
 
@@ -227,17 +228,18 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 		 * Retrieves the normal
 		 */
 
-		n[0] = (GLfloat) (((INT32)GETWORDBE(&buf[1*4])) >> 8) / 4194304.0f;
-		n[1] = (GLfloat) (((INT32)GETWORDBE(&buf[2*4])) >> 8) / 4194304.0f;
-		n[2] = (GLfloat) (((INT32)GETWORDBE(&buf[3*4])) >> 8) / 4194304.0f;
+        n[0] = (GLfloat) (((INT32)GETWORD(&buf[1*4])) >> 8) / 4194304.0f;
+        n[1] = (GLfloat) (((INT32)GETWORD(&buf[2*4])) >> 8) / 4194304.0f;
+        n[2] = (GLfloat) (((INT32)GETWORD(&buf[3*4])) >> 8) / 4194304.0f;
 
 		//glNormal3f(n[0], n[1], n[2]);
 
         /*
          * Select a texture
          */
-
+        
 		tex_fmt = (GETWORD(&buf[6*4]) >> 8) & 3;
+        tex_rep_mode = GETWORD(&buf[2*4]) & 3;
 
         tex_w = 32 << ((GETWORD(&buf[3*4]) >> 3) & 7);
         tex_h = 32 << ((GETWORD(&buf[3*4]) >> 0) & 7);
@@ -476,7 +478,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 //			glEnable(GL_BLEND);
 //			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            make_texture(u_base, v_base, tex_w, tex_h, tex_fmt);
+            make_texture(u_base, v_base, tex_w, tex_h, tex_fmt, tex_rep_mode);
 
 			if(really_draw)
 			{
@@ -687,7 +689,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 //			glEnable(GL_BLEND);
 //			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            make_texture(u_base, v_base, tex_w, tex_h, tex_fmt);
+            make_texture(u_base, v_base, tex_w, tex_h, tex_fmt, tex_rep_mode);
 
 			if(really_draw)
 			{
@@ -767,8 +769,8 @@ static UINT8 *translate_r3d_address(UINT32 addr)
         addr &= 0x07FFFFF;
         return &vrom[addr * 4];
     }
-    else
-        LOG("model3.log", "unknown R3D addr = %08X\n", addr);
+//    else
+//        LOG("model3.log", "unknown R3D addr = %08X\n", addr);
     return NULL;
     // this one is a kludge to satisfy VON2 -- it probably has no relation to
     // polygon RAM, though
@@ -1157,9 +1159,9 @@ static void draw_block(UINT8 *block)
 					{
 						R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
 						if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-	                        draw_model(translate_r3d_address(addr & 0x01FFFFFF), 0);
+                            draw_model(translate_r3d_address(addr & 0x01FFFFFF), 0);
 						else                                    // polygon RAM
-	                        draw_model(translate_r3d_address(addr & 0x01FFFFFF), 1);
+                            draw_model(translate_r3d_address(addr & 0x01FFFFFF), 1);
 					}
 					break;
 		        case 0x04:  // list
@@ -1445,10 +1447,11 @@ static void draw_scene(void)
  * an OpenGL texture is created and uploaded. The texture will also be
  * selected so that the caller may use it.
  *
- * The type is just bits 9 and 8 of polygon header word 7.
+ * The format is just bits 9 and 8 of polygon header word 7. The repeat mode
+ * is bits 0 and 1 of word 2.
  */
 
-static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
+static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_mode)
 {
     UINT    xi, yi;
     GLint   tex_id;
@@ -1458,7 +1461,9 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
     tex_id = texture_grid[(y / 32) * 64 + (x / 32)];
     if (tex_id != 0)    // already exists, bind and exit
     {
-        glBindTexture(GL_TEXTURE_2D, tex_id);        
+        glBindTexture(GL_TEXTURE_2D, tex_id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (rep_mode & 2) ? GL_MIRRORED_REPEAT_ARB : GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (rep_mode & 1) ? GL_MIRRORED_REPEAT_ARB : GL_REPEAT);
         return;
     }
 
@@ -1518,8 +1523,8 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 
     glGenTextures(1, &tex_id);
     glBindTexture(GL_TEXTURE_2D, tex_id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (rep_mode & 2) ? GL_MIRRORED_REPEAT_ARB : GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (rep_mode & 1) ? GL_MIRRORED_REPEAT_ARB : GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
@@ -1607,7 +1612,8 @@ void r3dgl_update_frame(void)
 
     glClearDepth(1.0);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+//    glDepthFunc(GL_LESS);
+    glDepthFunc(GL_LEQUAL);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     /*
