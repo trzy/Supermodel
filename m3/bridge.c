@@ -93,7 +93,7 @@ static UINT32   (*config_addr_callback)(UINT32);
 
 UINT8 bridge_read_8(UINT32 addr)
 {
-    LOG("model3.log", "RB REG%02X", addr & 0xff);
+    LOG("model3.log", "RB REG%02X\n", addr & 0xff);
 
     return BYTE(addr & 0xff);
 }
@@ -117,7 +117,7 @@ UINT8 bridge_read_8(UINT32 addr)
 
 UINT16 bridge_read_16(UINT32 addr)
 {
-    LOG("model3.log", "RH REG%02X", addr & 0xff);
+    LOG("model3.log", "RH REG%02X\n", addr & 0xff);
     addr &= 0xfe;
     return (BYTE(addr + 0) << 8) | BYTE(addr + 1);
 }
@@ -140,7 +140,7 @@ UINT16 bridge_read_16(UINT32 addr)
 
 UINT32 bridge_read_32(UINT32 addr)
 {
-    LOG("model3.log", "RW REG%02X", addr & 0xff);
+    LOG("model3.log", "RW REG%02X\n", addr & 0xff);
     addr &= 0xfc;
     return (BYTE(addr + 0) << 24) | (BYTE(addr + 1) << 16) |
            (BYTE(addr + 2) << 8) | BYTE(addr + 3);
@@ -159,7 +159,7 @@ UINT32 bridge_read_32(UINT32 addr)
 
 void bridge_write_8(UINT32 addr, UINT8 data)
 {
-    LOG("model3.log", "REG%02X=%02X", addr & 0xff, data);
+    LOG("model3.log", "REG%02X=%02X\n", addr & 0xff, data);
     BYTE(addr & 0xff) = data;
 }
 
@@ -178,7 +178,7 @@ void bridge_write_8(UINT32 addr, UINT8 data)
 
 void bridge_write_16(UINT32 addr, UINT16 data)
 {
-    LOG("model3.log", "REG%02X=%02X%02X", addr & 0xff, data & 0xff, (data >> 8) & 0xff);
+    LOG("model3.log", "REG%02X=%02X%02X\n", addr & 0xff, data & 0xff, (data >> 8) & 0xff);
     addr &= 0xfe;
     BYTE(addr + 0) = data >> 8;
     BYTE(addr + 1) = (UINT8) data;
@@ -199,7 +199,7 @@ void bridge_write_16(UINT32 addr, UINT16 data)
 
 void bridge_write_32(UINT32 addr, UINT32 data)
 {
-    LOG("model3.log", "REG%02X=%02X%02X%02X%02X", addr & 0xff, data & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff);
+    LOG("model3.log", "REG%02X=%02X%02X%02X%02X\n", addr & 0xff, data & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff);
     addr &= 0xfc;
     BYTE(addr + 0) = data >> 24;
     BYTE(addr + 1) = data >> 16;
@@ -437,11 +437,11 @@ void bridge_load_state(FILE *fp)
 void bridge_reset(INT device)
 {
     if (device == 1)
-        LOG("model3.log", "Using MPC105");
+        LOG("model3.log", "Using MPC105\n");
     else if (device == 2)
-        LOG("model3.log", "Using MPC106");
+        LOG("model3.log", "Using MPC106\n");
     else
-        LOG("model3.log", "ERROR: Unknown bridge controller device ID (%d)", device);
+        LOG("model3.log", "ERROR: Unknown bridge controller device ID (%d)\n", device);
 
     memset(regs, 0, sizeof(UINT8) * 0x100);
     memset(config_data, 0, sizeof(UINT8) * 4);
