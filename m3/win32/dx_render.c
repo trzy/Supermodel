@@ -24,7 +24,7 @@
 
 //#define ENABLE_LIGHTING
 //#define WIREFRAME
-//#define ENABLE_ALPHA_BLENDING
+#define ENABLE_ALPHA_BLENDING
 
 typedef struct {
 	int tex_num;
@@ -45,9 +45,6 @@ static LPDIRECT3D9			d3d;
 static LPDIRECT3DDEVICE9	device;
 static LPDIRECT3DTEXTURE9	layer_data[4];
 static LPD3DXSPRITE			sprite;
-
-static LPDIRECT3DVERTEXBUFFER9	vertex_buffer;
-static POLYGON_LIST polygon_list[32768];
 
 static LPDIRECT3DTEXTURE9	texture[4096];
 static short texture_table[64*64];
@@ -74,6 +71,7 @@ static UINT32 matrix_start;
 static void traverse_node(UINT32*);
 static void traverse_list(UINT32*);
 static void render_scene(void);
+static UINT32* get_address(UINT32);
 
 /*
  * void osd_renderer_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
@@ -158,7 +156,7 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	d3dpp.BackBufferCount	= num_buffers - 1;
 	d3dpp.hDeviceWindow		= main_window;
 	d3dpp.PresentationInterval	= D3DPRESENT_INTERVAL_ONE;
-	d3dpp.BackBufferFormat	= d3ddm.Format;
+	d3dpp.BackBufferFormat	= D3DFMT_A8R8G8B8;
 	d3dpp.EnableAutoDepthStencil = TRUE;
 	d3dpp.AutoDepthStencilFormat = D3DFMT_D24X8;	// FIXME: All cards don't support 24-bit Z-buffer
 
@@ -213,12 +211,22 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	hr = D3DXCreateSprite( device, &sprite );
 	if(FAILED(hr))
 		osd_error("D3DXCreateSprite failed.");
+}
 
-	// Create vertex buffer
-	hr = IDirect3DDevice9_CreateVertexBuffer( device, sizeof(VERTEX) * 32768, D3DUSAGE_DYNAMIC,
-											  D3DFVF_VERTEX, D3DPOOL_DEFAULT, &vertex_buffer, NULL );
-	if(FAILED(hr))
-		osd_error("IDirect3DDevice9_CreateVertexBuffer failed.");
+void save_file(char* filename, UINT8* src, INT size)
+{
+	FILE* file = fopen(filename,"wb");
+	int i;
+	for(i=0;i<size;i+=2) {
+		UINT16 pix = src[i+1] << 8 | src[i];
+		int r = ((pix >> 10) & 0x1F) << 3;
+		int g = ((pix >> 5) & 0x1F) << 3;
+		int b = (pix & 0x1F) << 3;
+		fputc(r,file);
+		fputc(g,file);
+		fputc(b,file);
+	}
+	fclose(file);
 }
 
 void osd_renderer_shutdown(void)
@@ -227,6 +235,7 @@ void osd_renderer_shutdown(void)
 		IDirect3D9_Release(d3d);
 		d3d = NULL;
 	}
+	save_file("texture1.raw",texture_sheet,0x800000);
 }
 
 void osd_renderer_reset(void)
@@ -268,7 +277,6 @@ void osd_renderer_update_frame(void)
 	IDirect3DDevice9_SetTransform( device, D3DTS_VIEW, &view );
 
 	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX );
-	IDirect3DDevice9_SetStreamSource( device, 0, vertex_buffer, 0, sizeof(VERTEX) );
 	IDirect3DDevice9_SetRenderState( device, D3DRS_CULLMODE, D3DCULL_NONE );
 
 #ifdef ENABLE_LIGHTING
@@ -489,7 +497,7 @@ static int polylist_compare(const void *arg1, const void *arg2)
 	}
 }
 
-static void render_model(UINT32 *src, BOOL little_endian)
+static void render_model(UINT32 address, BOOL little_endian)
 {
 	float fixed_point_scale;
 	VERTEX vertex[4];
@@ -497,6 +505,12 @@ static void render_model(UINT32 *src, BOOL little_endian)
 	int end, index, polygon_index, vb_index, prev_texture, i, page;
 	VERTEX  *vb;
 	HRESULT hr;
+	UINT32* src;
+	float uv_scale;
+
+	src = get_address( address );
+	if(src == NULL)
+		error("render_model: invalid address %08X",address);
 
 	if(m3_config.step == 0x10)
 		fixed_point_scale = 32768.0f;
@@ -508,10 +522,6 @@ static void render_model(UINT32 *src, BOOL little_endian)
 	index = 0;
 	polygon_index = 0;
 	vb_index = 0;
-
-	hr = IDirect3DVertexBuffer9_Lock( vertex_buffer, 0, 0, (void**)&vb, D3DLOCK_DISCARD );
-	if(FAILED(hr))
-		osd_error("IDirect3DVertexBuffer9_Lock failed.");
 
 	do {
 		UINT32 header[7];
@@ -535,6 +545,8 @@ static void render_model(UINT32 *src, BOOL little_endian)
 			}
 		}
 
+		uv_scale = (header[1] & 0x40) ? 1.0f : 8.0f;
+
 		if(header[0] == 0)
 			return;
 
@@ -542,8 +554,12 @@ static void render_model(UINT32 *src, BOOL little_endian)
 		if(header[1] & 0x4)
 			end = 1;
 
-		transparency = (((header[6] >> 18) - 1) & 0x1F) << 3;
-		color = (transparency << 24) | (header[4] >> 8);
+		transparency = ((header[6] >> 18) & 0x1F) << 3;
+		if(header[6] & 0x800000) {
+			color = 0xFF000000 | (header[4] >> 8);
+		} else {
+			color = (transparency << 24) | (header[4] >> 8);
+		}
 
 		// Polygon normal
 		// Assuming 2.22 fixed-point. Is this correct ?
@@ -609,9 +625,8 @@ static void render_model(UINT32 *src, BOOL little_endian)
 			// Convert texture coordinates from 13.3 fixed-point to float
 			// Tex coords need to be divided by texture size because D3D wants them in
 			// range 0...1
-			vertex[v2].u = ((float)(tx) / 8.0f) / (float)xsize;
-			vertex[v2].v = ((float)(ty) / 8.0f) / (float)ysize;
-			
+			vertex[v2].u = ((float)(tx) / uv_scale) / (float)xsize;
+			vertex[v2].v = ((float)(ty) / uv_scale) / (float)ysize;
 			vertex[v2].nx = nx;
 			vertex[v2].ny = ny;
 			vertex[v2].nz = nz;
@@ -653,60 +668,34 @@ static void render_model(UINT32 *src, BOOL little_endian)
 			}
 		}
 
-		if(num_vertices == 3) {
-			polygon_list[polygon_index].tex_num = tex_num;
-			polygon_list[polygon_index].vb_index = vb_index;
-			polygon_list[polygon_index].flags = (header[2] & 0x3);
-			
-			memcpy(&vb[vb_index], &vertex[0], sizeof(VERTEX) * 3);
-			
-			polygon_index++;
-			vb_index += 3;
-		} else {
-			polygon_list[polygon_index].tex_num = tex_num;
-			polygon_list[polygon_index].vb_index = vb_index;
-			polygon_list[polygon_index].flags = (header[2] & 0x3);
-			polygon_list[polygon_index+1].tex_num = tex_num;
-			polygon_list[polygon_index+1].vb_index = vb_index + 3;
-			polygon_list[polygon_index+1].flags = (header[2] & 0x3);
+		if(tex_num)
+			IDirect3DDevice9_SetTexture( device, 0, texture[tex_num] );
+		else
+			IDirect3DDevice9_SetTexture( device, 0, NULL );
 
-			memcpy(&vb[vb_index], &vertex[0], sizeof(VERTEX) * 3);
-			memcpy(&vb[vb_index+3], &vertex[2], sizeof(VERTEX) * 2);
-			memcpy(&vb[vb_index+5], &vertex[0], sizeof(VERTEX));
-			
-			polygon_index += 2;
-			vb_index += 6;
-		}
-		// Copy current vertex as previous vertex
-		memcpy( prev_vertex, vertex, sizeof(VERTEX) * 4 );
-	} while(end == 0);
-
-	IDirect3DVertexBuffer9_Unlock( vertex_buffer );
-	// Sort the polygons per texture
-	qsort(polygon_list, polygon_index, sizeof(POLYGON_LIST), polylist_compare);
-
-	IDirect3DDevice9_SetTexture( device, 0, NULL );
-	prev_texture = -1;
-
-	for( i=0; i<polygon_index; i++) {
-		if(polygon_list[i].tex_num > prev_texture) {
-			IDirect3DDevice9_SetTexture( device, 0, texture[polygon_list[i].tex_num] );
-			prev_texture = polygon_list[i].tex_num;
-		}
-
-		if(polygon_list[i].flags & 0x2)
+		if(header[2] & 0x2)
 			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_MIRROR );
 		else
 			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
-
-		if(polygon_list[i].flags & 0x1)
+		if(header[2] & 0x1)
 			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_MIRROR );
 		else
 			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
 
+		if(header[6] & 0x80000000) {
+			IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
+		} else {
+			IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG2 );
+		}
 
-		IDirect3DDevice9_DrawPrimitive( device, D3DPT_TRIANGLELIST, polygon_list[i].vb_index, 1 );
-	}
+		if(num_vertices == 3) {
+			IDirect3DDevice9_DrawPrimitiveUP( device, D3DPT_TRIANGLELIST, 1, &vertex, sizeof(VERTEX) );
+		} else {
+			IDirect3DDevice9_DrawPrimitiveUP( device, D3DPT_TRIANGLEFAN, 2, &vertex, sizeof(VERTEX) );
+		}
+		// Copy current vertex as previous vertex
+		memcpy( prev_vertex, vertex, sizeof(VERTEX) * 4 );
+	} while(end == 0);
 }
 
 static void load_matrix(int address, D3DMATRIX *matrix)
@@ -754,91 +743,52 @@ static void load_coord_sys(int address, D3DMATRIX *matrix)
 	matrix->_44 = 1.0f;
 }
 
-static void handle_link(UINT32 link)
+static UINT32* get_address(UINT32 address)
 {
-	UINT32 type = (link >> 24) & 0xFF;
-	/*switch(type)
-	{
-		case 0:		// Node
-			if(link & 0x800000) {
-				traverse_node( &list_ram[link & 0x7FFFFF] );
-			} else {
-				traverse_node( &cull_ram[link & 0x7FFFFF] );
-			}
-			break;
-		case 1:		// Model
-		case 3:
-			if(link & 0x800000) {
-				render_model( &vrom[link & 0x7FFFFF], FALSE );
-			} else {
-				//printf("Render model: %08X\n",link*4);
-				if((link & 0x7FFFFF) < 0x80000)
-					render_model( &poly_ram[link & 0x7FFFFF], TRUE );
-			}
-			break;
-		case 4:		// List
-			if(link & 0x800000) {
-				traverse_list( &list_ram[link & 0x7FFFFF] );
-			} else {
-				traverse_list( &cull_ram[link & 0x7FFFFF] );
-			}
-			break;
-		default:
-			error("handle_link: Unknown type %d.",type);
-	}*/
-	switch(type)
-	{
-		case 0:		// Node
-			if(link & 0x800000) {
-				if((link & 0x7FFFFF) < 0x80000)
-					traverse_node( &list_ram[link & 0x7FFFFF] );
-			} else {
-				if((link & 0x7FFFFF) < 0x80000)
-					traverse_node( &cull_ram[link & 0x7FFFFF] );
-			}
-			break;
-		case 1:		// Model
-		case 3:
-			if(link & 0x800000) {
-				render_model( &vrom[link & 0x7FFFFF], FALSE );
-			} else {
-				//printf("Render model: %08X\n",link*4);
-				if((link & 0x7FFFFF) < 0x80000)
-					render_model( &poly_ram[link & 0x7FFFFF], TRUE );
-			}
-			break;
-		case 4:		// List
-			if(link & 0x800000) {
-				if((link & 0x7FFFFF) < 0x80000)
-					traverse_list( &list_ram[link & 0x7FFFFF] );
-			} else {
-				if((link & 0x7FFFFF) < 0x80000)
-					traverse_list( &cull_ram[link & 0x7FFFFF] );
-			}
-			break;
-		default:
-			error("handle_link: Unknown type %d.",type);
+	UINT32 a = address & 0x1FFFFFF;
+	
+	//printf("address: %08X\n",address);
+	if(a < 0x80000) {
+		return (UINT32*)(&cull_ram[a]);
+	}
+	else if(a >= 0x800000 && a < 0x840000) {
+		return (UINT32*)(&list_ram[a - 0x800000]);
+	}
+	else if(a >= 0x1000000 && a < 0x1080000) {
+		return (UINT32*)(&poly_ram[a - 0x1000000]);
+	}
+	else if(a >= 0x1800000 && a < 0x1FFFFFF) {
+		return (UINT32*)(&vrom[a - 0x1800000]);
+	}
+	else {
+		return 0;
 	}
 }
 
-static void traverse_pointer_list(UINT32* list)
+static void traverse_pointer_list(UINT32 address)
 {
 	int i;
+	UINT32* list;
+	list = get_address( address );
+	if(list == NULL)
+		error("traverse_pointer_list: invalid address %08X",address);
+
 	for( i=0; i<2; i++) {
 		UINT32 link = list[i];
 
-		if(link & 0x800000) {
-			render_model( &vrom[link & 0x7FFFFF], FALSE );
-		} else {
-			traverse_node( &cull_ram[link & 0x7FFFFF] );
-		}
+		traverse_node( link );
 	}
 }
 
-static void traverse_list(UINT32* list)
+static void traverse_list(UINT32 address)
 {
 	int end = 0;
 	int index = 0;
+	UINT32* list;
+	list = get_address( address );
+	if(list == NULL)
+		error("traverse_list: invalid address %08X",address);
+
 	do {
 		UINT32 link = list[index];
 		int type = (link >> 24) & 0xFF;
@@ -848,20 +798,16 @@ static void traverse_list(UINT32* list)
 			return;
 
 		// Check if this is the final node of the list
-		if(type == 0x2 || type != 0)
+		if((type & 0x2) == 0x2)
 			end = 1;
+			
+		traverse_node( link & 0xFFFFFF );
 
-		//handle_link( link & 0xFFFFFF );
-		if(link & 0x800000) {
-			traverse_node( &list_ram[link & 0x7FFFFF] );
-		} else {
-			traverse_node( &cull_ram[link & 0x7FFFFF] );
-		}
 		index++;
 	} while(end == 0);
 }
 
-static void traverse_node(UINT32* node_ram)
+static void traverse_node(UINT32 address)
 {
 	int i;
 	float x, y, z;
@@ -871,6 +817,10 @@ static void traverse_node(UINT32* node_ram)
 	D3DMATRIX matrix, *world_matrix;
 
 	UINT32 link,next;
+	UINT32* node_ram;
+	node_ram = get_address( address );
+	if(node_ram == NULL)
+		error("traverse_node: invalid address %08X",address);
 
 	if(m3_config.step == 0x10)
 		offset = 2;
@@ -880,12 +830,11 @@ static void traverse_node(UINT32* node_ram)
 	matrix_stack->lpVtbl->Push( matrix_stack );
 	pushed = TRUE;
 
-	//if(((matrix_address >> 24) & 0xFF) == 0x20) {
-		if((matrix_address & 0xFFF) != 0) {
-			load_matrix(matrix_address & 0x7FFFFF, &matrix);
-			matrix_stack->lpVtbl->MultMatrixLocal( matrix_stack, &matrix );
-		}
-	//}
+	if((matrix_address & 0xFFF) != 0) {
+		load_matrix(matrix_address & 0xFFF, &matrix);
+		matrix_stack->lpVtbl->MultMatrixLocal( matrix_stack, &matrix );
+	}
+	
 	x = *(float*)(&node_ram[0x4 - offset]);
 	y = *(float*)(&node_ram[0x5 - offset]);
 	z = *(float*)(&node_ram[0x6 - offset]);
@@ -901,12 +850,31 @@ static void traverse_node(UINT32* node_ram)
 		
 		// Test for valid links
 		if(link != 0x1000000 && link != 0x800800 && link != 0) {
+			UINT16 scale = (node_ram[0x9 + i - offset] >> 16) & 0xFFFF;
 
-			if(node_ram[0] & 0x8) {
-				// Scud Race weird node
-				traverse_pointer_list( &cull_ram[link & 0x7FFFFF] );
-			} else {
-				handle_link( link );
+			switch(type)
+			{
+			case 0:		// Node
+				if(node_ram[0] & 0x8) {
+					// Scud Race weird node
+					traverse_pointer_list( link );
+				} else {
+					traverse_node( link );
+				}
+				break;
+			case 1:		// Model
+			case 3:
+				if(link & 0x800000) {
+					render_model( link, FALSE );
+				} else {
+					render_model( link, TRUE );
+				}
+				break;
+			case 4:		// List
+				traverse_list( link );
+				break;
+			default:
+				error("traverse_node: Unknown type %d, %08X",type,link);
 			}
 		}
 		if(pushed) {
@@ -916,10 +884,11 @@ static void traverse_node(UINT32* node_ram)
 	}
 }
 
-static void traverse_main_tree(UINT32 *node_ram, int priority)
+static void traverse_main_tree(UINT32 address, int priority)
 {
 	int index = 0;
 	UINT32 next,link;
+	UINT32* node_ram;
 	D3DMATERIAL9 material;
 	D3DCOLORVALUE ambient;
 	D3DCOLORVALUE diffuse;
@@ -932,6 +901,10 @@ static void traverse_main_tree(UINT32 *node_ram, int priority)
 	float sun_diffuse_color, sun_ambient_color;
 	int tree_priority;
 	float fog_color, fog_density;
+
+	node_ram = get_address( address );
+	if(node_ram == NULL)
+		error("traverse_main_tree: invalid address %08X",address);
 
 	memset(&sun, 0, sizeof(sun));
 	memset(&material, 0, sizeof(material));
@@ -1010,13 +983,13 @@ static void traverse_main_tree(UINT32 *node_ram, int priority)
 	tree_priority = (node_ram[0] >> 3) & 0x3;
 	if(tree_priority == priority) {
 		if(((link >> 24) & 0xFF) == 0) {
-			traverse_node( &list_ram[link & 0x7FFFFF] );
+			traverse_node( link );
 		}
 	}
 
 	// Go to next tree node if valid link
 	if((next & 0x800000) != 0) {
-		traverse_main_tree( &list_ram[next & 0x7FFFFF], priority );
+		traverse_main_tree( next, priority );
 	}
 }
 
@@ -1033,13 +1006,13 @@ static void render_scene(void)
 	matrix_stack->lpVtbl->LoadIdentity( matrix_stack );
 
 	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( &list_ram[0], 0 );
+	traverse_main_tree( 0x800000, 0 );
 	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( &list_ram[0], 1 );
+	traverse_main_tree( 0x800000, 1 );
 	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( &list_ram[0], 2 );
+	traverse_main_tree( 0x800000, 2 );
 	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( &list_ram[0], 3 );
+	traverse_main_tree( 0x800000, 3 );
 
 	matrix_stack->lpVtbl->Release( matrix_stack );
 }
