@@ -86,19 +86,15 @@ void rtc_load_state(FILE *fp)
 /* Access                                                         */
 /******************************************************************/
 
-UINT8 rtc_read(UINT32 a)
+static UINT8 get_register(int reg)
 {
 	time_t current_time;
 	struct tm* tms;
 
-	int address = (a >> 2) & 0xF;
-
-	message(0, "RTC: read %08X", address);
-
 	time( &current_time );
 	tms = localtime( &current_time );
 
-	switch(address)
+	switch(reg)
 	{
 		case 0:		// 1-second digit
 			return (tms->tm_sec % 10) & 0xF;
@@ -149,7 +145,24 @@ UINT8 rtc_read(UINT32 a)
 			return 0;
 			break;
 	}
-	return(rtc_reg[a]);
+}
+
+UINT8 rtc_read_8(UINT32 a)
+{
+	int address = (a >> 2) & 0xF;
+
+	message(0, "RTC: read %08X, %08X", address,ppc_get_reg(PPC_REG_PC));
+
+	return get_register( address );
+}
+
+UINT32 rtc_read_32(UINT32 a)
+{
+	int address = (a >> 2) & 0xF;
+
+	message(0, "RTC: read %08X, %08X", address,ppc_get_reg(PPC_REG_PC));
+
+	return get_register( address) << 24 | 0x30000;	// Bits 0x30000 set to get battery voltage check to pass
 }
 
 void rtc_write(UINT32 a, UINT8 d)

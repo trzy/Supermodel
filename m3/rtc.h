@@ -33,7 +33,8 @@ extern void rtc_step_frame(void);
 extern void rtc_save_state(FILE *);
 extern void rtc_load_state(FILE *);
 
-extern UINT8 rtc_read(UINT32 a);
+extern UINT8 rtc_read_8(UINT32 a);
+extern UINT32 rtc_read_32(UINT32 a);
 extern void rtc_write(UINT32 a, UINT8 d);
 
 #endif  // INCLUDED_RTC_H

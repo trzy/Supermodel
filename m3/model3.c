@@ -445,7 +445,7 @@ static UINT8 m3_ppc_read_8(UINT32 a)
             return m3_sys_read_8(a);
 		else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
                  (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC
-            return rtc_read(a);
+            return rtc_read_8(a);
         else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
             return bridge_read_config_data_8(a);
 		else if(a >= 0xF9000000 && a <= 0xF90000FF)		// 53C810 SCSI
@@ -552,7 +552,7 @@ static UINT32 m3_ppc_read_32(UINT32 a)
             return m3_sys_read_32(a);
         else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
                  (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC
-            return (rtc_read(a) << 24);
+            return rtc_read_32(a);
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
             return tilegen_vram_read_32(a);
         else if (a >= 0xF1180000 && a <= 0xF11800FF)    // tile generator regs
