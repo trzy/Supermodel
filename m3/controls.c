@@ -242,7 +242,7 @@ UINT8 controls_read(UINT32 a)
     switch (a)
     {
     case 0x4:
-        controls_reg_bank[1] ^= 0x20; // fake EEPROM
+        controls_reg_bank[1] |= ((eeprom_read() & 1) << 5) ;
         return controls_reg_bank[controls_bank_select];
 	case 0x3C:
 		// I don't know if the register to be read can be selected.
@@ -265,6 +265,13 @@ void controls_write(UINT32 a, UINT8 d)
 	{
 	case 0x0:
         controls_bank_select = d & 1;
+		if(controls_bank_select == 0)
+			eeprom_write(
+				(d & 0x40) ? 1 : 0,
+				(d & 0x80) ? 1 : 0,
+				(d & 0x20) ? 1 : 0,
+				(d & 0x10) ? 1 : 0
+			);
         break;
     case 0x24:  // MCU command
         switch (d)
