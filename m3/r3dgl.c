@@ -131,6 +131,9 @@ static void draw_model_be(UINT8 *buf)
 			"\n"
 	);
 
+	if(GETWORDBE(&buf[0*4]) == 0)
+		return;
+
     do
     {
         /*
@@ -548,6 +551,9 @@ static void draw_model_le(UINT8 *buf)
 			"#\n"
 			"\n"
 	);
+
+	if(GETWORDLE(&buf[0*4]) == 0)
+		return;
 
     do
     {
@@ -1097,12 +1103,29 @@ static void draw_block(UINT8 *block)
          * Scud Race has weird nodes which are preceeded with pointers. I
          * check the header for bit 0x01000000 to determine if it's a block or
          * a pointer to a block. This is just a hack, really.
-         */
+         *
+		 * Update: these weird 4-word headers are two pairs of pointers,
+		 * possibily symmetrical, and can have 0x01000000 either set or clear
+		 * in the first word. But at least two of the links must have this
+		 * set. These addresses can reference another block (usually the
+		 * following) or a model in VROM. Bit 0x00800000 is used to determine
+		 * which is the case.
+		 */
 
-        if (GETWORDLE(&block[0*4]) & 0x01000000)
+        if (((GETWORDLE(&block[0*4]) >> 24) == 0x01) ||
+		    ((GETWORDLE(&block[1*4]) >> 24) == 0x01) ||
+		    ((GETWORDLE(&block[2*4]) >> 24) == 0x01) ||
+		    ((GETWORDLE(&block[3*4]) >> 24) == 0x01))
 		{
-			R3D_LOG("model3.log", " ## block: block/list detetcted, draw block at %08X\n", GETWORDLE(&block[0*4]));
-            block = translate_r3d_address(GETWORDLE(&block[0*4]) & 0x00FFFFFF);
+			if(GETWORDLE(&block[0*4]) & 0x00800000)	// a model in VROM
+			{
+				R3D_LOG("model3.log", " ## block: block/list detected, draw model at %08X\n", GETWORDLE(&block[0*4]));
+				draw_model_be(translate_r3d_address(GETWORDLE((&block[0*4]) & 0x00FFFFFF) | 0x01000000));
+				return;
+			}
+
+			R3D_LOG("model3.log", " ## block: block/list detected, draw block at %08X\n", GETWORDLE(&block[0*4]));
+           	block = translate_r3d_address(GETWORDLE(&block[0*4]) & 0x00FFFFFF);
 		}
 
 		R3D_LOG("model3.log",
@@ -1166,8 +1189,7 @@ static void draw_block(UINT8 *block)
 			if(addr & 0xFE000000)
 				error("Invalid list address: %08X\n", addr);
 
-			R3D_LOG("model3.log", " ## block: draw list at %08X (exception 1)\n\n", addr);
-
+			R3D_LOG("model3.log", " ## block: draw block at %08X (exception 1)\n\n", addr);
             draw_block(translate_r3d_address(addr & 0x00FFFFFF));
 		}
 		else
@@ -1177,7 +1199,7 @@ static void draw_block(UINT8 *block)
 			case 0x00:	// block
 				if(addr != 0)
 				{
-					R3D_LOG("model3.log", " ## block: draw block at %08X)\n\n", addr);
+					R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
 					draw_block(translate_r3d_address(addr & 0x01FFFFFF));
 				}
 				break;
