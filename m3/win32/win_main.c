@@ -62,8 +62,8 @@ BOOL win_create_window(void)
 	int width, height, window_width, window_height;
 
 	if(!m3_config.fullscreen) {
-		window_width	= MODEL3_SCREEN_WIDTH;
-		window_height	= MODEL3_SCREEN_HEIGHT;
+        window_width    = MODEL3_SCREEN_WIDTH;
+        window_height   = MODEL3_SCREEN_HEIGHT;
 	} else {
 		window_width	= m3_config.width;
 		window_height	= m3_config.height;
@@ -197,6 +197,13 @@ static void show_test_bit(void)
 	sprintf(string, "Test bit = %i, Test mask = %08X\n", r3d_test_bit, 1 << r3d_test_bit);
 	MessageBox(NULL, string, "Model 3", 0);
 }
+extern UINT r3d_test_word;
+static void show_test_word(void)
+{
+	char string[256];
+    sprintf(string, "Test word = %i", r3d_test_word);
+	MessageBox(NULL, string, "Model 3", 0);
+}
 
 static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -225,20 +232,30 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
 				r3d_test_bit &= 31;
 				show_test_bit();
 				break;
+            case 'I':
+                r3d_test_word--;
+                r3d_test_word %= 7;
+                show_test_word();
+                break;
+            case 'K':
+                r3d_test_word++;
+                r3d_test_word %= 7;
+                show_test_word();
+                break;
 
-            case VK_F12:
+            case 0x30:
                 m3_config.layer_enable ^= 1;
                 break;
-            case VK_F11:
+            case 0x39:
                 m3_config.layer_enable ^= 2;
                 break;
-            case VK_F10:
+            case 0x38:
                 m3_config.layer_enable ^= 4;
                 break;
-            case VK_F9:
+            case 0x37:
                 m3_config.layer_enable ^= 8;
                 break;
-            case VK_F8:
+            case 0x36:
                 m3_config.layer_enable = 0xF;
                 break;
             case VK_ESCAPE:
