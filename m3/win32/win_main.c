@@ -99,7 +99,7 @@ static void win_destroy(void)
 
 int main(int argc, char *argv[])
 {
-    CHAR    mnem[16], oprs[48];
+    CHAR    mnem[16], oprs[48], prof[1024];
     MSG     msg;
     BOOL    quit = FALSE;
     FILE    *fp;
@@ -170,6 +170,12 @@ int main(int argc, char *argv[])
             printf("%08X %s\t%s\n", op, mnem, oprs);
 
         m3_run_frame();
+
+		// gather profiler stats
+
+		profile_print(prof);
+
+		printf(prof);
 	}
 
     for (i = 0; i < 32; i += 4)
