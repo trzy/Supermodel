@@ -251,84 +251,85 @@ void osd_renderer_reset(void)
 
 }
 
-void osd_renderer_update_frame(void)
+/*
+ * set_ortho():
+ *
+ * Set up an orthogonal projection with corners: (0,0), (1,0), (1, 1), (0,1),
+ * in clockwise order
+ */
+
+static void set_ortho(void)
 {
-    INT     i;
-    GLfloat z;
-
-    /*
-     * Clear the depth buffer
-     */
-
-    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-    /*
-     * Set up an orthogonal projection with corners: (0,0), (1,0), (1, 1),
-     * (0,1), in clockwise order
-     */
-
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
     gluOrtho2D(0.0, 1.0, 1.0, 0.0);
 	
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
+
+/*
+ * render_layer():
+ *
+ * Renders one of the 2D layers at the specified Z.
+ */
+
+static void render_layer(INT layer, GLfloat z)
+{
+    glBindTexture(GL_TEXTURE_2D, layer_texture[layer]);
+    glBegin(GL_QUADS);  // NOTE: glBindTexture() must come before this :(
+
+    glTexCoord2f(0.0, 0.0);                     glVertex3f(0.0, 0.0, z);
+    glTexCoord2f(496.0 / 512.0, 0.0);           glVertex3f(1.0, 0.0, z);
+    glTexCoord2f(496.0 / 512.0, 384.0 / 512.0); glVertex3f(1.0, 1.0, z);
+    glTexCoord2f(0.0, 384.0 / 512.0);           glVertex3f(0.0, 1.0, z);
+
+    glEnd();
+}
+
+/*
+ * void osd_renderer_update_frame(void);
+ *
+ * Renders the entire frame.
+ */
+
+void osd_renderer_update_frame(void)
+{
+    INT     i;
+    GLfloat z;
 
     /*
-     * Enable blending -- the layers will have the alpha channel set to either
-     * 0xFF (opaque) for solid colors, or 0 for transparencies
-     */
-  
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    /*
-     * Use the texture replace mode (meaning: paint the textures on the poly)
+     * Clear the depth and color buffers and use the texture replace mode
+     * (meaning: paint the textures on the poly)
      */
 
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
     /*
-     * Render 4 layers back to front
+     * Render 4 layers back to front with the scene in the middle
      */
-		
-//TODO: perhaps create separate buffers that are 496x384 for the layers if
-// this saves space and 1 512x512 texture just to initialize
+
     for (i = 0; i < 4; i++)
     {
         glBindTexture(GL_TEXTURE_2D, layer_texture[i]);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, &layer[i][0][0][0]);
     }
 
-    z = -1.0;
-    for (i = 3; i >= 0; i--)
-    {
-        glBindTexture(GL_TEXTURE_2D, layer_texture[i]);
-        glBegin(GL_QUADS);  // NOTE: glBindTexture() must come before this :(
-
-        glTexCoord2f(0.0, 0.0);                     glVertex3f(0.0, 0.0, z);
-        glTexCoord2f(496.0 / 512.0, 0.0);           glVertex3f(1.0, 0.0, z);
-        glTexCoord2f(496.0 / 512.0, 384.0 / 512.0); glVertex3f(1.0, 1.0, z);
-        glTexCoord2f(0.0, 384.0 / 512.0);           glVertex3f(0.0, 1.0, z);
-
-        glEnd();
-
-        z += 0.25;
-    }
-
-    /*
-     * Disable blending
-     */
-
-	glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
-
-    /*
-     * Draw 3D scene
-     */
-
-    r3dgl_update_frame();
+    set_ortho();
+    glEnable(GL_BLEND); // enable blending, an alpha of 0xFF is opaque, 0 is transparent
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    render_layer(3, -1.00);
+    render_layer(2, -0.75);
+    glDisable(GL_BLEND);
+    r3dgl_update_frame();    
+    set_ortho();
+    glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    render_layer(1, -0.50);
+    render_layer(0, -0.25);
+    glDisable(GL_BLEND);
 
     /*
      * glFlush() may not be needed and it may be advantageous to SwapBuffers()
@@ -339,6 +340,7 @@ void osd_renderer_update_frame(void)
      * wasted on glFlush()
      */
 
+    glDisable(GL_TEXTURE_2D);
     glFlush();
     SwapBuffers(hdc);
 }
