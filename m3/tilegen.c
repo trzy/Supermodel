@@ -643,6 +643,7 @@ static void recache_palette(void)
 UINT32 tilegen_read_32(UINT32 a)
 {
 //    LOG("MODEL3.LOG", "TILEGEN: %08X: read 32 %08X\n", PPC_PC, a);
+    message(0, "tilegen: %08X: read 32 %08X", PPC_PC, a);
 
     a &= 0xFF;
 
