@@ -1449,7 +1449,7 @@ void m3_init(void)
 	osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
 	dma_init();
     tilegen_init(vram);
-    r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram);
+    r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
 //    scsp_init();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
     controls_init();
