@@ -1,5 +1,3 @@
-//TODO: fix subroutine code. if is_cond and cond is false, dont mark as subroutine.
-
 //#define WATCH_PC    0x101cd8
 //#define BREAK_PC    0x8ac34
 
@@ -93,7 +91,7 @@ static BB * bb_search(UINT32 addr)
 			/*
 			 * Move the BB we found to the front of the list
 			 */
-			 
+			 			
 			bb->next->prev = bb->prev;
 			bb->prev->next = bb->next;
 			
@@ -101,7 +99,7 @@ static BB * bb_search(UINT32 addr)
 			bb->prev = bb_list_head.next->prev;
 			
 			bb->next->prev = bb;
-			bb->prev->next = bb;	// this will automatically link the head to us			
+			bb->prev->next = bb;	// this will automatically link the head to us						
 			return bb;
 		}			
 		bb = bb->next;
@@ -116,7 +114,7 @@ static BB * bb_add(UINT32 addr, BOOL subrout)
 	BB * new_bb = (BB *)malloc(sizeof(BB));
 
 	if(new_bb == NULL)
-		error("bb_add() failed\n");
+		error("bb_add() failed\n");	
 
 	// link the block at the beginning of the list
 
@@ -125,7 +123,7 @@ static BB * bb_add(UINT32 addr, BOOL subrout)
 
 	bb->prev->next = new_bb;
 	bb->prev = new_bb;
-
+	
 	// init the new block
 
 	new_bb->is_subroutine = subrout;
@@ -152,26 +150,32 @@ static BB * bb_add(UINT32 addr, BOOL subrout)
  * NOTE: Any code encountered while the PPC is processing exceptions is ignored.
  *
  * Parameters:
- *		addr      = Address of (branch) instruction which will terminate current block.
- *		target    = Address of the new BB to record (which the current BB branches to.)
- *		is_direct = Whether the branch terminating the current BB is a direct branch.
- *		is_uncond = Whether it's an unconditional branch.
- *		cc        = Condition from branch instruction.
- *		cc_true   = Whether condition evaluated true or not. This is used to determine which edge
- *		            (0 or 1) to use for a conditional BB.
- *		subrout	  = If the branch terminating the current BB is a subroutine call. The next BB 
- *					will be marked as a subroutine entry point if this is true. 
+ *		addr         = Address of (branch) instruction which will terminate current block.
+ *		true_target  = Address of the new BB to record (which the current BB branches to)
+ *					   if condition is true. For unconditional branches, this is the target.
+ *		false_target = Address to go to if conditional branch fails.
+ *		is_direct    = Whether the branch terminating the current BB is a direct branch.
+ *		is_uncond    = Whether it's an unconditional branch.
+ *		cc           = Condition from branch instruction.
+ *		cc_true      = Whether condition evaluated true or not. This is used to determine which edge
+ *		               (0 or 1) was taken for a conditional BB.
+ *		subrout	     = If the branch terminating the current BB is a subroutine call. The next BB 
+ *					   will be marked as a subroutine entry point if this is true. 
  */
 
-static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true, BOOL subrout)
+//TODO: change params to: addr, true_target, false_target
+// then, fill in both edges and increment exec_count for edge[cc_true]
+
+void bb_record(UINT32 addr, UINT32 true_target, UINT32 false_target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true, BOOL subrout)
 {
-	BB * bb;
+	BB 		* bb;
+	UINT32	target;	// the taken branch address
 	
 	/*
 	 * Exceptions cause serious problems because they mess up the cur_bb and cannot be handled
 	 * nicely, so we choose not to do any logging while they're being processed.
 	 */
-	 
+	 	
 	if (bb_in_exception)
 		return;
 		
@@ -199,32 +203,41 @@ static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond
 
 		if(is_direct)	// static address, profile has a meaning
 		{
-			cur_bb->edge[cc_true].target = target;
+			cur_bb->edge[0].target = false_target;
+			cur_bb->edge[1].target = true_target;
 			cur_bb->edge[cc_true].exec_count ++;
 		}
 		else
 		{
-			cur_bb->edge[cc_true].target = target;
-			cur_bb->edge[cc_true].exec_count ++;
+			cur_bb->edge[0].target = false_target;
+			cur_bb->edge[1].target = true_target;
+			cur_bb->edge[cc_true].exec_count ++;			
 		}
+		
+		target = cur_bb->edge[cc_true].target;				
 	}
 	else
-		cur_bb->edge[0].target = target;
-
+	{
+		cur_bb->edge[0].target = true_target;
+		target = true_target;
+	}		
+		
 	// search if the block was already traversed
 
 	if((bb = bb_search(target)) != NULL)
 	{
-		bb->is_subroutine = subrout;
+		bb->is_subroutine |= subrout;
 		bb->exec_count++;
 		cur_bb = bb;
 		return;
 	}
-
+	
 	// add a new block
-
+	
 	bb = bb_add(target, subrout);
 	cur_bb = bb;
+	
+
 }
 
 static void bb_stat_init(void)
@@ -259,7 +272,7 @@ static void bb_stat_reset(void)
 	BB	*bb, *bb_next;
 	
 	bb = bb_list_head.next;
-	while (bb != NULL)
+	while (bb != NULL && bb != &bb_list_tail)
 	{
 		bb_next = bb->next;
 		free(bb);
@@ -3230,15 +3243,15 @@ static void ppc_bx(u32 op)
 
 	ppc_update_pc();
 
-#ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, TRUE, TRUE, 0, FALSE, (op & _LK) ? TRUE : FALSE);
+#ifdef RECORD_BB_STATS	
+	bb_record(lr-4, PC, 0, TRUE, TRUE, 0, FALSE, (op & _LK) ? TRUE : FALSE);
 #endif
 }
 
 static void ppc_bcx(u32 op)
 {
 	UINT32 lr = ppc.pc;
-	BOOL cond = ppc_bo[_BO >> 1](_BI);
+	BOOL cond = ppc_bo[_BO >> 1](_BI);	
 
 	if(cond)
 	{
@@ -3252,7 +3265,17 @@ static void ppc_bcx(u32 op)
 		LR = lr;
 
 #ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, TRUE, FALSE, _BO, cond, (op & _LK) ? TRUE : FALSE);
+	/*
+	 * NOTE: If bb_record() is static, this crashes for some reason
+	 */
+	 	
+	{	// compute branch address and record BB
+		UINT32	cctrue_addr;		
+		cctrue_addr = SIMM & ~3;		
+		if((op & _AA) == 0)
+			cctrue_addr += lr - 4;								
+		bb_record(lr-4, cctrue_addr, lr, TRUE, FALSE, _BO, cond, (op & _LK) ? TRUE : FALSE);
+	}
 #endif
 }
 
@@ -3270,8 +3293,8 @@ static void ppc_bcctrx(u32 op)
 	if(op & _LK)
 		LR = lr;
 
-#ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond, FALSE);
+#ifdef RECORD_BB_STATS			
+	bb_record(lr-4, CTR & ~3, lr, FALSE, FALSE, _BO, cond, FALSE);
 #endif
 }
 
@@ -3286,18 +3309,19 @@ static void ppc_bclrx(u32 op)
 		ppc_update_pc();
 	}
 
+#ifdef RECORD_BB_STATS
+	bb_record(lr-4, LR & ~3, lr, FALSE, FALSE, _BO, cond, FALSE);
+#endif
+
+
 	if(op & _LK)
 		LR = lr;
-
-#ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond, FALSE);
-#endif
 }
 
 static void ppc_rfi(u32 op)
 {
-#ifdef RECORD_BB_STATS
-	bb_record(PC-4, SPR(SPR_SRR0), FALSE, TRUE, 0, FALSE, FALSE);
+#ifdef RECORD_BB_STATS	
+	bb_record(PC-4, SPR(SPR_SRR0), 0, FALSE, TRUE, 0, FALSE, FALSE);
 #endif
 
 	ppc.pc = ppc.spr[SPR_SRR0];
@@ -3312,8 +3336,8 @@ static void ppc_rfi(u32 op)
 
 static void ppc_rfci(u32 op)
 {
-#ifdef RECORD_BB_STATS
-	bb_record(PC-4, SPR(SPR_SRR2), FALSE, TRUE, 0, FALSE, FALSE);
+#ifdef RECORD_BB_STATS	
+	bb_record(PC-4, SPR(SPR_SRR2), 0, FALSE, TRUE, 0, FALSE, FALSE);
 #endif
 
 	ppc.pc = ppc.spr[SPR_SRR2];
