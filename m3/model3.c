@@ -1498,31 +1498,26 @@ typedef struct
 
 } ROMFILE;
 
+typedef struct {
+	UINT32 address;
+	UINT32 opcode;
+} PATCH;
+
 typedef struct
 {
 	char	id[20];
 	char	superset_id[20];
-	char	title[48];
-	char	manuf[16];
-    UINT	year;
+	char	title[96];
+	char	manuf[32];
+    UINT	date;
     INT		step;
     FLAGS	flags;
+	INT		num_patches;
+	PATCH	patch[64];
 
-	ROMFILE	crom[4];
-	ROMFILE	crom0[4];
-	ROMFILE	crom1[4];
-	ROMFILE	crom2[4];
-	ROMFILE	crom3[4];
-	ROMFILE	vrom[16];
-	ROMFILE	srom[3];
-	ROMFILE	dsb_rom[5];
+	ROMFILE ic[61];
 
 } ROMSET;
-
-static ROMSET m3_rom_list[] =
-{
-#include "rom_list.h"
-};
 
 /*
  * Byteswap a buffer.
@@ -1550,6 +1545,127 @@ static void byteswap32(UINT8 *buf, UINT size)
 }
 
 /*
+ * BOOL load_romlist(char* id, char* file, ROMSET* romset);
+ *
+ * Load rom list from external file
+ *
+ * Parameters:
+ *      id = romset id
+ *      file = External romlist file name
+ *      romset = Pointer to romset structure
+ *
+ * Returns:
+ *      TRUE  = Success.
+ *      FALSE = Something went wrong (file doesn't exist, etc.)
+ */
+
+static BOOL load_romlist(char* id, char* file, ROMSET* romset)
+{
+	BOOL found, end;
+	int romsets = 0;
+	int num_params;
+	char* arg, *param;
+
+	if( cfgparser_set_file(file) != 0 ) {
+		error("Couldn't open ROM list file %s.",file);
+		return FALSE;
+	}
+	strcpy( romset->id, id );
+
+	found = FALSE;
+	while( cfgparser_step() == 0 && !found )
+	{
+		arg = cfgparser_get_lhs();
+
+		/* Find the romset id */
+		if( arg != NULL ) {
+			if( stricmp(arg, "ID") == 0 ) {
+				param = cfgparser_get_rhs_string(0);
+
+				if( stricmp(param, id) == 0 ) {
+					found = TRUE;
+					break;
+				}				
+			}
+		}
+	}
+	if( !found ) {
+		error("Romset %s not found in %s", id, file);
+		return FALSE;
+	}
+
+	/* Parse the romset */
+	end = FALSE;
+	while( cfgparser_step() == 0 && !end )
+	{
+		arg = cfgparser_get_lhs();
+		if( arg == NULL )
+			break;
+
+		if( stricmp(arg, "ID") == 0 ) {
+			end = TRUE;
+		}
+		else if( stricmp(arg, "NAME") == 0 ) {
+			char* name = cfgparser_get_rhs();
+			strcpy( romset->title, name );
+		}
+		else if( stricmp(arg, "PARENT") == 0 ) {
+			char* name = cfgparser_get_rhs();
+			strcpy( romset->superset_id, name );
+		}
+		else if( stricmp(arg, "MANUFACTURER") == 0 ) {
+			char* manuf = cfgparser_get_rhs();
+			strcpy( romset->manuf, manuf );
+		}
+		else if( stricmp(arg, "DATE") == 0 ) {
+			char* date = cfgparser_get_rhs_string(0);
+			sscanf( date, "%d", &romset->date );
+		}
+		else if( stricmp(arg, "STEP") == 0 ) {
+			float s;
+			char* step = cfgparser_get_rhs_string(0);
+			sscanf( step, "%f", &s );
+			romset->step = ((int)(s) << 4) | (int)((s - floor(s)) * 10);
+		}
+		else if( stricmp(arg, "PATCH") == 0 ) {
+			cfgparser_get_rhs_number( &romset->patch[romset->num_patches].address, 0 );
+			cfgparser_get_rhs_number( &romset->patch[romset->num_patches].opcode, 1 );
+			romset->num_patches++;
+		}
+		else if( stricmp(arg, "CONTROLLER") == 0 ) {
+			/* TODO: Handle this */
+		}
+		else if( strncmp(arg, "IC", 2) == 0 ) {
+			char* icnum, *name, *size, *crc;
+			int ic_number = 0;
+
+			/* get ic number */
+			icnum = &arg[2];
+			sscanf( icnum, "%d", &ic_number );
+
+			name = cfgparser_get_rhs_string( 0 );
+
+			if( name != NULL )
+				strcpy( romset->ic[ic_number].name, name );
+
+			cfgparser_get_rhs_number( &romset->ic[ic_number].size, 1 );
+			cfgparser_get_rhs_number( &romset->ic[ic_number].crc32, 2 );
+		}
+		else {
+			printf("%s: Unknown argument %s at line %d\n", file, arg, cfgparser_get_line_number() );
+		}
+	}
+	if( !end && !cfgparser_eof() ) {
+		error("%s: Parse error at line %d.", file, cfgparser_get_line_number() );
+		return FALSE;
+	}
+
+	cfgparser_unset_file();
+	return TRUE;
+}
+
+
+/*
  * Load a batch of files, (word)interleaving as needed.
  */
 
@@ -1558,17 +1674,10 @@ static void byteswap32(UINT8 *buf, UINT size)
 #define ITLV_4	4
 #define ITLV_16	16
 
-static INT load_romfile(UINT8 * buff, char * dir, ROMFILE * list, UINT32 itlv)
+static INT load_romfile(UINT8 * buff, ROMFILE * list, UINT32 itlv)
 {
 	CHAR string[256], temp[256];
 	UINT i, j;
-
-	/* build the ROMSET path */
-
-//    strcpy(string, m3_path);
-    strcpy(string, "roms/");
-    strcat(string, dir);
-	strcat(string, "/");
 
 	/* check if it's an unused ROMFILE, if so skip it */
 
@@ -1588,38 +1697,56 @@ static INT load_romfile(UINT8 * buff, char * dir, ROMFILE * list, UINT32 itlv)
 	for(i = 0; i < itlv; i++)
 	{
 		FILE * file;
+		int size;
+		UINT8* temp_buffer;
+		UINT32 crc;
 
 		/* all the files must be the same size */
 
 		if(list[i].size != list[0].size)
 			return(MODEL3_ERROR);
 
-		/* build the file path */
+		printf("loading %s\n", list[i].name); // temp
 
-		strcpy(temp, string);
-		strcat(temp, list[i].name);
+		size = get_file_size(list[i].name);
+		if( size <= 0 ) {
+			printf("File %s not found.\n", list[i].name);
+			return(MODEL3_ERROR);
+		}
+		if( size != list[i].size ) {
+			printf("File %s has wrong size ! (%d bytes, should be %d bytes)\n", list[i].name, size, list[i].size);
+			return(MODEL3_ERROR);
+		}
 
-		printf("loading \"%s\"\n", temp); // temp
-
-		if((file = fopen(temp, "rb")) == NULL)
+		temp_buffer = (UINT8*)malloc(size);
+		if( !read_file(list[i].name, temp_buffer, size) )
 			return(MODEL3_ERROR);
 
-		/* load interleaved (16-bit at once) */
+		/* check file CRC */
+		crc = 0;
+		crc = crc32(crc, temp_buffer, size);
+		if( crc != list[i].crc32 ) {
+			printf("File %s has wrong CRC: %08X (should be %08X)\n", list[i].name, crc, list[i].crc32);
+			return(MODEL3_ERROR);
+		}
+
+		/* interleave */
 
         for (j = 0; j < list[0].size; j += 2)
         {
-            buff[i*2+j*itlv+0] = fgetc(file);
-            buff[i*2+j*itlv+1] = fgetc(file);
+            buff[i*2+j*itlv+0] = temp_buffer[j];
+            buff[i*2+j*itlv+1] = temp_buffer[j+1];
         }
+
+		SAFE_FREE(temp_buffer);
 
 		fclose(file);
 	}
 
-	/* eveyrthing went right */
+	/* everything went right */
 
 	return(MODEL3_OKAY);
 }
-
 /*
  * void m3_unload_rom(void);
  *
@@ -1649,7 +1776,9 @@ void m3_unload_rom(void)
 BOOL m3_load_rom(CHAR * id)
 {
     CHAR    string[256] = "";
-    ROMSET  * romset = NULL;
+    ROMSET  romset;
+	ROMFILE list_crom[4], list_crom0[4], list_crom1[4], list_crom2[4], list_crom3[4];
+	ROMFILE list_vrom[16], list_srom[3], list_dsbrom[5];
     FILE    * file;
     UINT8   * crom0 = NULL, * crom1 = NULL, * crom2 = NULL, * crom3 = NULL;
     UINT    i, size;
@@ -1661,28 +1790,36 @@ BOOL m3_load_rom(CHAR * id)
 
     m3_unload_rom();
 
-	/* look for the ROM ID in the ROM list */
+	memset( &romset, 0, sizeof(ROMSET) );
+	if( !load_romlist(id, "games.ini", &romset) )
+		return FALSE;
 
-	size = sizeof(m3_rom_list) / sizeof(m3_rom_list[0]);
+	message(0, "Loading \"%s\"\n", romset.title);
 
-	for(i = 0; i < size; i++)
-	{
-        if(!stricmp(m3_rom_list[i].id, id))
-		{
-			romset = &m3_rom_list[i];
-			break;
-		}
+	/* set rom lists for rom loading */
+	for( i=0; i < 4; i++ ) {
+		memcpy( &list_crom[i], &romset.ic[17 + (3-i)], sizeof(ROMFILE) );
+		memcpy( &list_crom0[i], &romset.ic[1 + (3-i)], sizeof(ROMFILE) );
+		memcpy( &list_crom1[i], &romset.ic[5 + (3-i)], sizeof(ROMFILE) );
+		memcpy( &list_crom2[i], &romset.ic[9 + (3-i)], sizeof(ROMFILE) );
+		memcpy( &list_crom3[i], &romset.ic[13 + (3-i)], sizeof(ROMFILE) );
 	}
-
-	if(romset == NULL)
-		return(MODEL3_ERROR);
-
-	message(0, "Loading \"%s\"\n", romset->title);
+	for( i=0; i < 16; i++ ) {
+		memcpy( &list_vrom[i], &romset.ic[26 + (i^1)], sizeof(ROMFILE) );
+	}
+	memcpy( &list_srom[0], &romset.ic[21], sizeof(ROMFILE) );
+	memcpy( &list_srom[1], &romset.ic[22], sizeof(ROMFILE) );
+	memcpy( &list_srom[2], &romset.ic[24], sizeof(ROMFILE) );
+	memcpy( &list_dsbrom[0], &romset.ic[2], sizeof(ROMFILE) );
+	memcpy( &list_dsbrom[1], &romset.ic[57], sizeof(ROMFILE) );
+	memcpy( &list_dsbrom[2], &romset.ic[58], sizeof(ROMFILE) );
+	memcpy( &list_dsbrom[3], &romset.ic[59], sizeof(ROMFILE) );
+	memcpy( &list_dsbrom[4], &romset.ic[60], sizeof(ROMFILE) );
 
 	/* load the mother ROMSET if needed */
 
-	if(romset->superset_id[0] != '\0')
-        if(m3_load_rom(romset->superset_id) != MODEL3_OKAY)
+	if(romset.superset_id[0] != '\0')
+        if(m3_load_rom(romset.superset_id) != MODEL3_OKAY)
 			return(MODEL3_ERROR);
 
 	/* allocate as much memory as needed, if not already allocated by mother */
@@ -1691,10 +1828,10 @@ BOOL m3_load_rom(CHAR * id)
 	{
 		crom = (UINT8 *)malloc(72*1024*1024);
         vrom = (UINT8 *)malloc(64*1024*1024);
-        srom = (UINT8 *)malloc(romset->srom[0].size + romset->srom[1].size + romset->srom[2].size);
-		drom = (UINT8 *)malloc(romset->dsb_rom[0].size +
-							   romset->dsb_rom[1].size + romset->dsb_rom[2].size +
-							   romset->dsb_rom[3].size + romset->dsb_rom[4].size);
+        srom = (UINT8 *)malloc(list_srom[0].size + list_srom[1].size + list_srom[2].size);
+		drom = (UINT8 *)malloc(list_dsbrom[0].size +
+							   list_dsbrom[1].size + list_dsbrom[2].size +
+							   list_dsbrom[3].size + list_dsbrom[4].size);
 
 		if((crom == NULL) || (vrom == NULL) || (srom == NULL) || (drom == NULL))
 		{
@@ -1716,81 +1853,68 @@ BOOL m3_load_rom(CHAR * id)
 
 	/* load ROM files into memory */
 
-//    strcpy(string, m3_path);
-    strcpy(string, id);
-    strcat(string, ".zip");
-	file = fopen(string, "rb");
-
-	if(file == NULL)
-	{
-		/* load from directory */
-
-        if(romset->crom[0].size && load_romfile(&crom[8*1024*1024 - (romset->crom[0].size * 4)], id, romset->crom, ITLV_4))
-			error("Can't load CROM");
-
-		if(romset->crom0[0].size && load_romfile(crom0, id, romset->crom0, ITLV_4))
-			error("Can't load CROM0");
-
-		if(romset->crom1[0].size && load_romfile(crom1, id, romset->crom1, ITLV_4))
-			error("Can't load CROM1");
-
-		if(romset->crom2[0].size && load_romfile(crom2, id, romset->crom2, ITLV_4))
-			error("Can't load CROM2");
-
-		if(romset->crom3[0].size && load_romfile(crom3, id, romset->crom3, ITLV_4))
-			error("Can't load CROM3");
-
-		if(romset->vrom[0].size && load_romfile(vrom, id, romset->vrom, ITLV_16))
-			error("Can't load VROM");
-
-		if(romset->srom[0].size && load_romfile(srom, id, romset->srom, NO_ITLV))
-			error("Can't load SROM Program");
-
-		if(romset->srom[1].size && load_romfile(&srom[romset->srom[0].size], id, &romset->srom[1], ITLV_2))
-			error("Can't load SROM Samples");
-
-		if(romset->dsb_rom[0].size && load_romfile(drom, id, romset->dsb_rom, NO_ITLV))
-			error("Can't load DSB ROM Program");
-
-		if(romset->dsb_rom[1].size && load_romfile(&drom[romset->dsb_rom[0].size], id, &romset->dsb_rom[1], ITLV_4))
-			error("Can't load DSB ROM Samples");
-
-		/* byteswap buffers */
-
-        byteswap(&crom[8*1024*1024 - (romset->crom[0].size * 4)], romset->crom[0].size * 4);
-        byteswap(crom0, romset->crom0[0].size * 4);
-        byteswap(crom1, romset->crom1[0].size * 4);
-		byteswap(crom2, romset->crom2[0].size * 4);
-		byteswap(crom3, romset->crom3[0].size * 4);
-		byteswap(vrom, romset->vrom[0].size * 16);
-		byteswap32(vrom, romset->vrom[0].size * 16);
-
-		// TODO: swap SROM and DSB ROMs
+	/* first try to find a zip file */
+	if( !set_directory_zip("roms/%s.zip", romset.id) ) {
+		/* if that fails, use a normal directory */
+		set_directory("roms/%s", romset.id);
 	}
-	else
-	{
-		fclose(file);
+	
+	if( list_crom[0].size && load_romfile(&crom[8*1024*1024 - (list_crom[0].size * 4)], &list_crom, ITLV_4) )
+		error("Can't load CROM");
 
-		/* load from ZIP */
-	}
+	if( list_crom0[0].size && load_romfile(crom0, &list_crom0, ITLV_4) )
+		error("Can't load CROM0");
+
+	if( list_crom1[0].size && load_romfile(crom1, &list_crom1, ITLV_4) )
+		error("Can't load CROM1");
+
+	if( list_crom2[0].size && load_romfile(crom2, &list_crom2, ITLV_4) )
+		error("Can't load CROM2");
+
+	if( list_crom3[0].size && load_romfile(crom3, &list_crom3, ITLV_4) )
+		error("Can't load CROM3");
+
+	if( list_vrom[0].size && load_romfile(vrom, &list_vrom, ITLV_16) )
+		error("Can't load VROM");
+
+	if( list_srom[0].size && load_romfile(srom, &list_srom, NO_ITLV) )
+		error("Can't load SROM Program");
+
+	if( list_srom[1].size && load_romfile(&srom[list_srom[0].size], &list_srom[1], ITLV_2) )
+		error("Can't load SROM Samples");
+
+	if( list_dsbrom[0].size && load_romfile(drom, &list_dsbrom, NO_ITLV) )
+		error("Can't load DSB ROM Program");
+
+	if( list_dsbrom[1].size && load_romfile(&drom[list_dsbrom[0].size], &list_dsbrom[1], ITLV_4) )
+		error("Can't load DSB ROM Samples");
+
+	/* byteswap buffers */
+	byteswap(&crom[8*1024*1024 - (list_crom[0].size * 4)], list_crom[0].size * 4);
+	byteswap(crom0, list_crom0[0].size * 4);
+	byteswap(crom1, list_crom1[0].size * 4);
+	byteswap(crom2, list_crom2[0].size * 4);
+	byteswap(crom3, list_crom3[0].size * 4);
+	byteswap(vrom, list_vrom[0].size * 16);
+	byteswap32(vrom, list_vrom[0].size * 16);
 
     /* set stepping */
 
-    m3_config.step = romset->step;
+    m3_config.step = romset.step;
 
     /* set game flags */
 
-    if(romset->flags & GAME_OWN_STEERING_WHEEL)
+    if(romset.flags & GAME_OWN_STEERING_WHEEL)
         m3_config.flags |= GAME_OWN_STEERING_WHEEL;
-    if(romset->flags & GAME_OWN_GUN)
+    if(romset.flags & GAME_OWN_GUN)
         m3_config.flags |= GAME_OWN_GUN;
-    if(romset->dsb_rom[0].name[0] != '\0')
-        m3_config.flags |= GAME_OWN_DSB1;
+    //if(romset.dsb_rom[0].name[0] != '\0')
+    //    m3_config.flags |= GAME_OWN_DSB1;
 
     /* mirror CROM0 to CROM if needed */
 
-	if((romset->crom[0].size * 4) < 8*1024*1024)
-        memcpy(crom, crom0, 8*1024*1024 - romset->crom[0].size*4);
+	if((list_crom[0].size * 4) < 8*1024*1024)
+        memcpy(crom, crom0, 8*1024*1024 - list_crom[0].size*4);
 
 	/*
 	 * Perhaps mirroring must occur between the CROMx
@@ -1799,12 +1923,12 @@ BOOL m3_load_rom(CHAR * id)
 
     /* mirror lower VROM if necessary */
 
-    if ((romset->vrom[0].size * 16) < 64*1024*1024)
-        memcpy(&vrom[romset->vrom[0].size * 16], vrom, 64*1024*1024 - romset->vrom[0].size * 16);
+    if ((list_vrom[0].size * 16) < 64*1024*1024)
+        memcpy(&vrom[list_vrom[0].size * 16], vrom, 64*1024*1024 - list_vrom[0].size * 16);
 
 	/* if we're here, everything went fine! */
 
-    message(0, "ROM loaded succesfully!");
+    message(0, "ROM loaded successfully!");
 
     /*
      * Debug ROM dump
@@ -1817,174 +1941,10 @@ BOOL m3_load_rom(CHAR * id)
 //    save_file("crom1.bin", crom1, 16*1024*1024, 0);
 //    save_file("crom2.bin", crom2, 16*1024*1024, 0);
 
-
-    /*
-     * Patches
-     */
-
-    if (!stricmp(id, "VF3"))
-    {
-//        *(UINT32 *)&crom[0x710000 + 0x47C8] = BSWAP32(0x000076B4);
-        *(UINT32 *)&crom[0x710000 + 0x47CC] = BSWAP32(0x00007730);
-
-        
-
-        *(UINT32 *)&crom[0x710000 + 0x1C48] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x1C20] = BSWAP32(0x60000000);
-
-        *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x3C7C] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x3E54] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x25B0] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x25D0] = BSWAP32(0x60000000);
-#if 0
-        *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
-
-        *(UINT32 *)&crom[0x710000 + 0x8050] = BSWAP32(0x60000000);  // related to RTC test
-        *(UINT32 *)&crom[0x710000 + 0x4C788] = BSWAP32(0x4E800020);
-
-        *(UINT32 *)&crom[0x710000 + 0x4C0BC] = BSWAP32(0x60000000); // related to battery test
-        *(UINT32 *)&crom[0x710000 + 0x4C0C0] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x4C0C4] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x4C0C8] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x4C0CC] = BSWAP32(0x60000000);
-        *(UINT32 *)&crom[0x710000 + 0x4C0D0] = BSWAP32(0x60000000);
-
-        *(UINT32 *)&crom[0x710000 + 0x1E94C] = BSWAP32(0x4E800020); //???
-#endif
-    }
-    else if(!stricmp(id, "LOST"))
-	{
-		/*
-		 * this patch fixes the weird "add r4,r4,r4" with a "addi r4,r4,4".
-		 * there's another weird add instruction just before this one, but
-		 * it seems like it's never used.
-		 */
-
-		*(UINT32 *)&crom[0x7374F4] = BSWAP32((14 << 26) | (4 << 21) | (4 << 16) | 4);
+	/* Apply the patches */
+	for( i=0; i < romset.num_patches; i++ ) {
+		*(UINT32*)&crom[romset.patch[i].address] = BSWAP32(romset.patch[i].opcode);
 	}
-    else if(!stricmp(id, "SCUD"))
-	{
-        *(UINT32 *)&crom[0x799DE8] = BSWAP32(0x00050208);   // debug menu
-
-        /*
-         * Not required. See note in SCUDE.
-         */
-        
-#if 0
-        *(UINT32 *)&crom[0x700194] = 0x00000060;    // Timebase Skip
-        *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
-        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
-        *(UINT32 *)&crom[0x71AEBC] = 0x00000060;    // Loop Skip
-#endif
-
-        /*
-         * Required.
-         *
-         * In SCUD, unlike the SCUDE dump, the link ID is not single by
-         * default, so we patch it here.
-         */
-
-		*(UINT32 *)&crom[0x71277C] = 0x00000060;
-        *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ...
-
-        *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);  // allows game to start
-
-        *(UINT8  *)&crom[0x787B36] = 0x00;          // Link ID: 00 = single, 01 = master, 02 = slave
-        *(UINT8  *)&crom[0x787B30] = 0x00;
-	}
-    else if (!stricmp(id, "SCUDE"))
-    {
-        /*
-         * None of these patches are required, they're simply here to make
-         * the game boot faster.
-         *
-         * NOTE: It would be wise to periodically check to make sure that
-         * the game still runs with these patches off, especially when playing
-         * with the EEPROM code.
-         */
-
-#if 0
-        *(UINT32 *)&crom[0x700194] = 0x00000060;    // Timebase Skip
-        *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
-        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
-        *(UINT32 *)&crom[0x71AEBC] = 0x00000060;    // Loop Skip
-#endif
-
-        /*
-         * These patches are still required :(
-         */
-
-        *(UINT32 *)&crom[0x71277C] = 0x00000060;    // ?
-        *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ?
-
-        *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);
-    }
-    else if (!stricmp(id, "VON2"))
-    {
-        /*
-         * Patch an annoyingly long delay loop to: xor r3,r3,r3; nop
-         */
-
-        *(UINT32 *) &crom[0x1B0] = 0x781A637C;
-        *(UINT32 *) &crom[0x1B4] = 0x00000060;
-
-        /*
-         * VON2 will run without any of these patches, but this makes it
-         * start up much faster ;)
-         */
-
-//#if 0
-        *(UINT32 *) &crom[0x189168] = 0x00000060;
-
-        *(UINT32 *) &crom[0x1890AC] = 0x00000060;
-        *(UINT32 *) &crom[0x1890B8] = 0x00000060;
-
-        *(UINT32 *) &crom[0x1888A8] = 0x00000060;
-        *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
-        *(UINT32 *) &crom[0x1891C8] = 0x00000060;   // (required)
-//#endif
-    }
-	else if( !stricmp(id, "VS2") ) {
-		// Loops if irq 0x20 is set (0xF0100018)
-		*(UINT32 *) &crom[0x70C000 + 0x1DE0] = BSWAP32(0x60000000);
-
-		// Loops if memory at 0x15C5B0 != 0
-		*(UINT32 *) &crom[0x70C000 + 0xAF48] = BSWAP32(0x60000000);
-
-		// Weird loop
-		*(UINT32 *) &crom[0x70C000 + 0x26F0] = BSWAP32(0x60000000);
-		*(UINT32 *) &crom[0x70C000 + 0x2710] = BSWAP32(0x60000000);
-
-		// Waiting for decrementer == 0
-		*(UINT32 *) &crom[0x70C000 + 0x14940] = BSWAP32(0x60000000);
-	}
-	else if( !stricmp(id, "VS2_98") ) {
-		// Weird loop (see VS2)
-        // MIDI-related. Perhaps the sound hardware generates many interrupts
-        // per frame?        
-        *(UINT32 *) &crom[0x600000 + 0x28EC] = BSWAP32(0x60000000);
-        *(UINT32 *) &crom[0x600000 + 0x290C] = BSWAP32(0x60000000);
-
-		// Waiting for decrementer
-        *(UINT32 *) &crom[0x600000 + 0x14F2C] = BSWAP32(0x60000000);
-	}
-    else if (!stricmp(id, "SRALLY2"))
-    {
-//        *(UINT32 *) &crom[0x30] = BSWAP32(0x60000000);
-
-//        *(UINT32 *) &crom[0x78930] = BSWAP32(0x60000000);
-
-        /*
-         * Note: 7B560 checks for some value which may need to be returned
-         * by the TAP. This is handled by the first patch.
-         */
-        *(UINT32 *) &crom[0x7C0C4] = BSWAP32(0x60000000);
-        *(UINT32 *) &crom[0x7C0C8] = BSWAP32(0x60000000);
-        *(UINT32 *) &crom[0x7C0CC] = BSWAP32(0x60000000);
-
-//        *(UINT32 *) &crom[0x78894] = BSWAP32(0x60000000);
-    }
 
 	return(MODEL3_OKAY);
 }
@@ -2089,7 +2049,7 @@ void m3_shutdown(void)
 	#endif
 }
 
-static PPC_FETCH_REGION m3_ppc_fetch[2];
+static PPC_FETCH_REGION m3_ppc_fetch[3];
 
 void m3_init(void)
 {
