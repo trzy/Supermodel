@@ -117,6 +117,7 @@ static float    vertex_divisor, texcoord_divisor;
 #define IS_UV_16(h)                 (h[1] & 0x40)
 #define IS_TEXTURE_ENABLED(h)       (h[6] & 0x04000000)
 #define IS_TEXTURE_TRANSPARENT(h)   (h[6] & 0x80000000)
+#define IS_LIGHTING_DISABLED(h)     (h[6] & 0x10000)
 #define GET_LINK_DATA(h)            (h[0] & 0x0F)
 #define COLOR_RED(h)                ((h[4] >> 24) & 0xFF)
 #define COLOR_GREEN(h)              ((h[4] >> 16) & 0xFF)
@@ -341,7 +342,7 @@ static void bind_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
     case 64:    num_mips = 4; break;
     case 128:   num_mips = 5; break;
     case 256:   num_mips = 6; break;
-    defaul:		num_mips = 7; break;
+    default:    num_mips = 7; break;
     }
 
     /*
@@ -469,6 +470,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
     struct
     {
         GLfloat x, y, z;    // vertices
+        GLfloat nx, ny, nz; // normals
         UINT32  uv;         // texture coordinates
     }       v[4], prev_v[4];
     UINT32  (*get_word)(UINT32 *);
@@ -487,6 +489,9 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         get_word = get_word_little;
     else
         get_word = get_word_big;
+
+    if (get_word(mdl) == 0)
+        return;
 
     do
     {
@@ -525,6 +530,9 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             v[i].x = convert_vertex_to_float(get_word(mdl++));
             v[i].y = convert_vertex_to_float(get_word(mdl++));
             v[i].z = convert_vertex_to_float(get_word(mdl++));
+            v[i].nx = nx;
+            v[i].ny = ny;
+            v[i].nz = nz;
             v[i].uv = get_word(mdl++);
         }
 
@@ -539,6 +547,9 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         glColor4fv(color);
         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, color);
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color);
+
+        if (IS_LIGHTING_DISABLED(header))
+            glDisable(GL_LIGHTING);
 
         // TODO: specular
 
@@ -574,7 +585,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             prev_v[i] = v[i];
             u_coord = convert_texcoord_to_float(v[i].uv >> 16);
             v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
-            glNormal3f(nx, ny, nz);
+            glNormal3f(v[i].nx, v[i].ny, v[i].nz);
             glTexCoord2f(u_coord / (GLfloat) texture_width, v_coord / (GLfloat) texture_height);
             glVertex3f(v[i].x, v[i].y, v[i].z);
         }
@@ -584,6 +595,9 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             glDisable(GL_ALPHA_TEST);
         else
             glEnable(GL_TEXTURE_2D);
+
+        if (IS_LIGHTING_DISABLED(header))
+            glEnable(GL_LIGHTING);
     }
     while (!(header[1] & 4));   // continue until stop bit is hit
 }
@@ -595,7 +609,8 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
 /*
  * void osd_renderer_set_light(INT light_num, LIGHT *light);
  *
- * Sets a light.
+ * Sets a light. Remember that for sun light, the Model 3 vector points
+ * towards the light not from it.
  *
  * Parameters:
  *      light_num = Which light number. 
@@ -610,8 +625,8 @@ void osd_renderer_set_light(INT light_num, LIGHT *light)
     {
     case LIGHT_PARALLEL:
         v[0] = -light->u;
-        v[1] = light->v;
-        v[2] = light->w;
+        v[1] = -light->v;
+        v[2] = -light->w;
         v[3] = 0.0f;    // this is a directional light
         glLightfv(GL_LIGHT0 + light_num, GL_POSITION, v);
 
