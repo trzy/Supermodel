@@ -1162,20 +1162,16 @@ static void draw_block(UINT8 *block)
          * presume that no matrix is to be used.
          */
 
+        glPushMatrix();
         matrix = GETWORDLE(&block[3*4]);
         if ((matrix & 0x20000000) && (matrix & 0x3FF))
         {
             current_matrix = matrix & 0x03FF;
             get_matrix(m, (matrix & 0x03FF)*12);
-            glPushMatrix();
             if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
                 glMultMatrixf(m);
         }
-        else
-//        {
-            glPushMatrix();
-            glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
-//        }
+        glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
         ++current_matrix;
 
         /*
