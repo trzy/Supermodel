@@ -218,7 +218,7 @@ static void store_texture_tile(UINT x, UINT y, UINT8 *src, UINT bpp, BOOL little
             if (bpp == 2)
                 *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2] = rgb16;
             else
-                texture_ram[(y + yi) * 2048 + (x + xi)] = gray8;
+                texture_ram[(((y + yi) * 2048 + x) * 2) + xi] = gray8;
         }
     }
 }
@@ -236,12 +236,18 @@ static void store_texture_tile(UINT x, UINT y, UINT8 *src, UINT bpp, BOOL little
 static void store_texture(UINT x, UINT y, UINT w, UINT h, UINT8 *src, UINT bpp, BOOL little_endian)
 {
     UINT    xi, yi;
+	UINT bw;
+
+	if(bpp == 2)
+		bw = 1;
+	else
+		bw = 2;
 
     for (yi = 0; yi < h; yi += 8)
 	{
         for (xi = 0; xi < w; xi += 8)
 		{
-            store_texture_tile(x + xi, y + yi, src, bpp, little_endian);
+            store_texture_tile(x + (xi / bw), y + yi, src, bpp, little_endian);
             src += 8 * 8 * bpp; // each texture tile is 8x8 and 16-bit color
 		}
 	}
