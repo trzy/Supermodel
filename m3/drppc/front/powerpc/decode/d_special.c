@@ -458,6 +458,7 @@ INT D_Mtfsfx(UINT32 op)
 	UINT	rb = RB;
 	UINT	fm = _FM;
 
+	/*
 	UINT	fprm[4] =
 	{
 		IR_FPRM_ROUND,	IR_FPRM_TRUNC,
@@ -470,6 +471,7 @@ INT D_Mtfsfx(UINT32 op)
 	// Set rounding mode
 	IR_EncodeAndi(ID_TEMP(0), ID_TEMP(0), 3);
 	IR_EncodeSetFPRoundingMode(ID_TEMP(0));
+	*/
 
 	return DRPPC_OKAY;
 }

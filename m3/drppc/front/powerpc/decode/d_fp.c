@@ -130,12 +130,14 @@ INT D_Stfiwx(UINT32 op)
 
 	ASSERT(0);
 
+	/*
 	if (ra == 0)
 	{
 
 	}
 	else
 		IR_EncodeStore32(
+	*/
 
 	return DRPPC_OKAY;
 }
@@ -218,16 +220,6 @@ INT D_Fcmpo(UINT32 op)
 INT D_Fcmpu(UINT32 op)
 {
 	ASSERT(0); return DRPPC_OKAY;
-}
-
-void drc_append_set_temp_fp_rounding(struct drccore *drc, UINT8 rounding)
-{
-	_fldcw_m16abs(&fp_control[rounding]);							// fldcw [fp_control]
-}
-
-void drc_append_restore_fp_rounding(struct drccore *drc)
-{
-	_fldcw_m16abs(&drc->fpcw_curr);									// fldcw [fpcw_curr]
 }
 
 INT D_Fctiwx(UINT32 op)
