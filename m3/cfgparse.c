@@ -17,8 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "types.h"
-#include "cfgparse.h"
+#include "model3.h"
 
 /******************************************************************/
 /* Configuration                                                  */
