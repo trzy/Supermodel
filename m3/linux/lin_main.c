@@ -17,11 +17,15 @@
  */
 
 /******************************************************************/
-/* Linux Main													  */
+/* Linux Main  							  */
 /******************************************************************/
 
 #include <SDL.h>
 #include "model3.h"
+#include "lin_gl.h"
+
+#define XRES    (496)
+#define YRES    (384)
 
 static OSD_CONTROLS controls;
 
@@ -30,7 +34,7 @@ static CHAR class_name[]	= "MODEL3";
 
 static void osd_handle_key(int keysym, int updown);
 
-BOOL win_create_window(void)
+static BOOL win_create_window(UINT xres, UINT yres)
 {
 	int width, height;
         const SDL_VideoInfo* info = NULL;
@@ -52,8 +56,8 @@ BOOL win_create_window(void)
 		return FALSE;
 	}
 
-	width = MODEL3_SCREEN_WIDTH;
-	height = MODEL3_SCREEN_HEIGHT;
+	width = xres;
+	height = yres;
 	bpp = info->vfmt->BitsPerPixel;
 
 	// request 555rgb
@@ -108,14 +112,15 @@ int main(int argc, char *argv[])
 
 	// Some initialization
 
-	if(!win_create_window()) {
+	if(!win_create_window(XRES, YRES)) {
 		printf("win_create_window failed.");
 		return 0;
 	}
 
+	lin_gl_init(XRES, YRES);
+
 	m3_init();
 	m3_reset();
-    osd_renderer_set_mode(0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT);
 
 	// Now that everything works, we can show the window
 
@@ -160,6 +165,8 @@ int main(int argc, char *argv[])
         m3_run_frame();
 
 	}
+
+	lin_gl_shutdown();
 
 	SDL_Quit( );
 

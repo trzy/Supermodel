@@ -19,48 +19,65 @@
 /*
  * linux/lin_gl.c
  *
- * Linux OpenGL support.
+ * Linux/SDL OpenGL support. All of this will have to be rewritten to support
+ * run-time mode changes and fullscreen modes.
+ *
+ * The only osd_renderer function implemented here is osd_renderer_blit().
  */
 
 #include "model3.h"
-#include "osd_gl.h"
+#include "osd_common/osd_gl.h"
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glext.h>
 
 /*
- * void osd_gl_set_mode(BOOL fullscreen, UINT xres, UINT yres);
+ * void win_gl_init(UINT xres, UINT yres);
  *
- * Called by osd_renderer_set_mode() to set the rendering mode.
+ * Sets the rendering mode and initializes OpenGL. 
  *
  * Parameters:
- *      fullscreen = Non-zero if a full-screen mode is desired, 0 for a
- *                   windowed mode.
  *      xres       = Horizontal resolution in pixels.
  *      yres       = Vertical resolution.
  */
 
-void osd_gl_set_mode(BOOL fullscreen, UINT xres, UINT yres)
+void lin_gl_init(UINT xres, UINT yres)
 {
+    /*
+     * Check for mirrored texture repeat extension
+     */
+
+    if (osd_gl_check_extension("GL_ARB_texture_mirrored_repeat"))
+        osd_error("Your OpenGL implementation does not support mirrored texture repeating!");
+    if (osd_gl_check_extension("GL_ARB_texture_env_combine"))
+        osd_error("Your OpenGL implementation does not support texture combiner operations!");
+
+    /*
+     * Initialize GL engine
+     */
+
+    osd_gl_set_mode(xres, yres);       
 }
 
 /*
- * void osd_gl_unset_mode(void);
+ * void win_gl_shutdown(void);
  *
- * Called by osd_renderer_unset_mode() to "unsets" the current mode meaning it
- * releases the rendering and device contexts.
+ * Shuts down the rendering mode mode meaning it releases the rendering and
+ * device contexts.
  */
 
-void osd_gl_unset_mode(void)
+void lin_gl_shutdown(void)
 {
+    osd_gl_unset_mode();
 }
 
 /*
- * void osd_gl_swap_buffers(void);
+ * void osd_renderer_blit(void);
  *
  * Swaps the buffers to display what has been rendered in the last frame.
- * Called by osd_renderer_update_frame().
  */
 
-void osd_gl_swap_buffers(void)
+void osd_renderer_blit(void)
 {
     SDL_GL_SwapBuffers();
 }
-

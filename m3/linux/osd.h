@@ -73,5 +73,7 @@ typedef double              FLOAT64;    // double precision (64-bit)
 
 #define INLINE static __inline__
 
+#define min(a,b) ((a) < (b) ? (a) : (b))
+
 #endif  // INCLUDED_LINUX_OSD_H
 
