@@ -774,7 +774,6 @@ INLINE void ppc_test_irq(void)
 
 static void ppc_null(u32 op)
 {
-    extern int  DisassemblePowerPC(unsigned, unsigned, char *, char *, int);
     char    string[256];
     char    mnem[16], oprs[48];
 
