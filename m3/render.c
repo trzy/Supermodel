@@ -63,6 +63,7 @@ static UINT8    *vrom;              // pointer to VROM
  */
 
 static float    *matrix_base;       // current scene's matrix table
+static float	*lod_base;			// current scene's LOD table
 
 /*
  * Matrix Conversion Tables
@@ -223,21 +224,38 @@ static void draw_list(UINT32 *list)
 /*
  * draw_pointer_list():
  *
- * Draws a 4-element pointer list. Each pointer points to a model. Often times
- * the pointers are different but the model geometry is the same. We're not
- * certain how this is supposed to work.
+ * Draws a 4-element pointer list for model LOD selection.
  */
 
-static void draw_pointer_list(UINT32* list)
+static void draw_pointer_list(UINT lod_num, UINT32* list)
 {
-    /*
-     * NOTE: Bits 0x3000 of word 3 are probably the index into this table.
-     */
+	float *lod_control = (float *)((UINT32)lod_base + lod_num * 8);
 
-	draw_model( list[0] );
-//    draw_model( list[1] );
-//    draw_model( list[2] );
-//    draw_model( list[3] );
+	/*
+	 * Perform the actual LOD calculation, select the LOD model
+	 * to draw -- and perform additional LOD blending.
+	 */
+
+	#if 0
+	printf(	"LOD control = %f, %f\n"
+			"              %f, %f\n"
+			"              %f, %f\n"
+			"              %f, %f\n",
+			lod_control[0], lod_control[1],
+			lod_control[2], lod_control[3],
+			lod_control[4], lod_control[5],
+			lod_control[6], lod_control[7]
+	);
+	#endif
+
+	if(1)
+		draw_model( list[0] );
+	else if(0)
+		draw_model( list[1] );
+	else if(0)
+		draw_model( list[2] );
+	else
+		draw_model( list[3] );
 }
 
 /*
@@ -290,7 +308,7 @@ static void draw_block(UINT32 *block)
      */
 
     if ((block[0] & 0x08))
-		draw_pointer_list(translate_scene_graph_address(addr));
+		draw_pointer_list((block[3 - offset] >> 12) & 127, translate_scene_graph_address(addr));
     else
     {
         if (addr != 0x0FFFFFFF && addr != 0x01000000 && addr != 0x00800800 && addr != 0)  // valid?
@@ -407,6 +425,7 @@ static void draw_viewport(UINT pri, UINT32 addr)
         get_viewport_data(&vp, node);
         osd_renderer_set_viewport(&vp);
         matrix_base = (float *) translate_scene_graph_address(node[0x16]);
+		lod_base = (float *) translate_scene_graph_address(node[0x17]);
 
         /*
          * Lighting -- seems to work nice if applied before coordinate system
