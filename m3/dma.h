@@ -25,18 +25,17 @@
 #ifndef INCLUDED_DMA_H
 #define INCLUDED_DMA_H
 
-extern void dma_init(void);
-extern void dma_shutdown(void);
-extern void dma_reset(void);
+extern void     dma_init(UINT32 (*)(UINT32), void (*)(UINT32, UINT32));
+extern void     dma_shutdown(void);
+extern void     dma_reset(void);
 
-extern void dma_save_state(FILE *);
-extern void dma_load_state(FILE *);
+extern void     dma_save_state(FILE *);
+extern void     dma_load_state(FILE *);
 
 extern UINT8    dma_read_8(UINT32 a);
 extern UINT32   dma_read_32(UINT32 a);
-
-extern void dma_write_8(UINT32 a, UINT8 d);
-extern void dma_write_32(UINT32 a, UINT32 d);
+extern void     dma_write_8(UINT32 a, UINT8 d);
+extern void     dma_write_32(UINT32 a, UINT32 d);
 
 #endif  // INCLUDED_DMA_H
 

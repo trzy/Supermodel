@@ -213,6 +213,8 @@ static UINT8 m3_ppc_read_8(UINT32 a)
 
         if (a >= 0xC1000000 && a <= 0xC10000FF)         // 53C810 SCSI
             return scsi_read_8(a);
+        else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
+            return dma_read_8(a);
 
         break;
 
@@ -273,6 +275,9 @@ static UINT32 m3_ppc_read_32(UINT32 a)
 
     case 0xC:
 
+        if (a >= 0xC2000000 && a <= 0xC200001F)         // DMA device
+            return dma_read_32(a);
+
         switch (a)
         {
         case 0xC0000000:
@@ -300,7 +305,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
                  (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
             return m3_sys_read_32(a);
-        else if (a >= 0xF0140000 && a <= 0xF014003F)    // ?
+        else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // ?
             return 0xFFFFFFFF;
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
             return tilegen_vram_read_32(a);
@@ -348,6 +354,12 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
     switch (a >> 28)
     {
     case 0xC:
+
+        if (a >= 0xC2000000 && a <= 0xC200001F)         // DMA device
+        {
+            dma_write_8(a, d);
+            return;
+        }
 
         switch (a)
         {
@@ -458,6 +470,11 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             scsi_write_32(a, d);
             return;
         }
+        else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
+        {
+            dma_write_32(a, d);
+            return;
+        }
 
         switch (a)
         {
@@ -528,7 +545,8 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA
             bridge_write_config_data_32(a, d);
             return;
-
+        case 0xFE1A0014:    // ? Virtual On 2
+            return;
         }
 
         break;
@@ -1334,8 +1352,23 @@ BOOL m3_load_rom(CHAR * id)
          * Patch an annoyingly long delay loop to: xor r3,r3,r3; nop
          */
 
-        *((UINT32 *) &crom[0x1B0]) = 0x781A637C;
-        *((UINT32 *) &crom[0x1B4]) = 0x00000060;
+        *(UINT32 *) &crom[0x1B0] = 0x781A637C;
+        *(UINT32 *) &crom[0x1B4] = 0x00000060;
+
+        /*
+         * Ville's patches to make VON2 run further.
+         *
+         * VON2 will run with only the last 2 patches present, however it is
+         * recommended that all the patches be enabled in order to make the
+         * initialization screen go by quicker.
+         */
+
+        *(UINT32 *) &crom[0x189168] = 0x00000060;
+        *(UINT32 *) &crom[0x1890AC] = 0x00000060;
+        *(UINT32 *) &crom[0x1890B8] = 0x00000060;
+        *(UINT32 *) &crom[0x1888A8] = 0x00000060;
+        *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
+        *(UINT32 *) &crom[0x1891C8] = 0x00000060;   // (required)
     }
 
 	return(MODEL3_OKAY);
@@ -1372,7 +1405,7 @@ void m3_shutdown(void)
     save_file("ram", ram, 8*1024*1024);
     save_file("8e000000", culling_ram_8e, 1*1024*1024);
     save_file("8c000000", culling_ram_8c, 1*1024*1024);
-    save_file("98000000", polygon_ram, 1*1024*1024);
+    save_file("98000000", polygon_ram, 2*1024*1024);
     SAFE_FREE(ram);
 	SAFE_FREE(vram);
 	SAFE_FREE(sram);
@@ -1403,7 +1436,7 @@ void m3_init(void)
     bram = (UINT8 *) malloc(128*1024);
     culling_ram_8e = (UINT8 *) malloc(1*1024*1024);
     culling_ram_8c = (UINT8 *) malloc(1*1024*1024);
-    polygon_ram = (UINT8 *) malloc(1*1024*1024);
+    polygon_ram = (UINT8 *) malloc(2*1024*1024);
 
 	/* attach m3_shutdown to atexit */
 
@@ -1447,7 +1480,7 @@ void m3_init(void)
     bridge_init(pci_command_callback);
     scsi_init(m3_ppc_read_8, m3_ppc_read_16, m3_ppc_read_32, m3_ppc_write_8, m3_ppc_write_16, m3_ppc_write_32);
 	osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
-	dma_init();
+    dma_init(m3_ppc_read_32, m3_ppc_write_32);
     tilegen_init(vram);
     r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
 //    scsp_init();
