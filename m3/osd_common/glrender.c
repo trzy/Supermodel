@@ -1,4 +1,3 @@
-#define WIREFRAME 0
 /*
  * Sega Model 3 Emulator
  * Copyright (C) 2003 Bart Trzynadlowski, Ville Linde, Stefano Teso
@@ -470,14 +469,13 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
     struct
     {
         GLfloat x, y, z;    // vertices
-        GLfloat nx, ny, nz; // normal vector
         UINT32  uv;         // texture coordinates
     }       v[4], prev_v[4];
     UINT32  (*get_word)(UINT32 *);
     UINT32  header[7];
     UINT    link_data, texture_width, texture_height;
     INT     i, j, num_verts;
-    GLfloat u_coord, v_coord, nx, ny, nz;
+    GLfloat u_coord, v_coord, nx, ny, nz, color[4];
 
 #if WIREFRAME
     glPolygonMode(GL_FRONT, GL_LINE);
@@ -517,7 +515,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
         i = 0;
         for (j = 0; j < 4; j++) // fetch all previous vertices that we need
         {
-            if ((link_data & 1))
+            if ((link_data & 1))            
                 v[i++] = prev_v[j];
             link_data >>= 1;
         }
@@ -527,17 +525,26 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             v[i].x = convert_vertex_to_float(get_word(mdl++));
             v[i].y = convert_vertex_to_float(get_word(mdl++));
             v[i].z = convert_vertex_to_float(get_word(mdl++));
-            v[i].nx = nx;
-            v[i].ny = ny;
-            v[i].nz = nz;
             v[i].uv = get_word(mdl++);
         }
 
         /*
-         * Draw it (and save the vertices to prev_v[])
+         * Set color and material properties
          */
 
-        glColor3ub(COLOR_RED(header), COLOR_GREEN(header), COLOR_BLUE(header));
+        color[0] = (GLfloat) COLOR_RED(header) / 255.0f;
+        color[1] = (GLfloat) COLOR_GREEN(header) / 255.0f;
+        color[2] = (GLfloat) COLOR_BLUE(header) / 255.0f;
+        color[3] = 1.0f;    // TODO: if translucent polygon, modify this
+        glColor4fv(color);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, color);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color);
+
+        // TODO: specular
+
+        /*
+         * Draw it (and save the vertices to prev_v[])
+         */
 
         texture_width   = GET_TEXTURE_WIDTH(header);
         texture_height  = GET_TEXTURE_HEIGHT(header);
@@ -567,7 +574,7 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             prev_v[i] = v[i];
             u_coord = convert_texcoord_to_float(v[i].uv >> 16);
             v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
-            glNormal3f(v[i].nx, v[i].ny, v[i].nz);
+            glNormal3f(nx, ny, nz);
             glTexCoord2f(u_coord / (GLfloat) texture_width, v_coord / (GLfloat) texture_height);
             glVertex3f(v[i].x, v[i].y, v[i].z);
         }
@@ -579,6 +586,50 @@ void osd_renderer_draw_model(UINT32 *mdl, UINT32 addr, BOOL little_endian)
             glEnable(GL_TEXTURE_2D);
     }
     while (!(header[1] & 4));   // continue until stop bit is hit
+}
+
+/******************************************************************/
+/* Lighting                                                       */
+/******************************************************************/
+
+/*
+ * void osd_renderer_set_light(INT light_num, LIGHT *light);
+ *
+ * Sets a light.
+ *
+ * Parameters:
+ *      light_num = Which light number. 
+ *      light     = Light data.
+ */
+
+void osd_renderer_set_light(INT light_num, LIGHT *light)
+{
+    GLfloat v[4];
+
+    switch (light->type)
+    {
+    case LIGHT_PARALLEL:
+        v[0] = -light->u;
+        v[1] = light->v;
+        v[2] = light->w;
+        v[3] = 0.0f;    // this is a directional light
+        glLightfv(GL_LIGHT0 + light_num, GL_POSITION, v);
+
+        v[0] = v[1] = v[2] = light->diffuse_intensity;      // R, G, B
+        v[3] = 1.0f;
+        glLightfv(GL_LIGHT0 + light_num, GL_DIFFUSE, v);
+
+        v[0] = v[1] = v[2] = light->ambient_intensity;      // R, G, B
+        v[3] = 1.0f;
+        glLightfv(GL_LIGHT0 + light_num, GL_AMBIENT, v);
+
+        break;
+    default:
+        error("Unhandled light type: %d", light->type);
+        break;
+    }
+
+    glEnable(GL_LIGHT0 + light_num);
 }
 
 /******************************************************************/
@@ -749,9 +800,16 @@ void osd_renderer_clear(BOOL fbuf, BOOL zbuf)
  */
 
 void osd_renderer_draw_layer(UINT layer_num)
-{
+{    
     /*
-     * Set orthogonal projection and disable Z-buffering
+     * Disable lighting and set the replace texture mode
+     */
+
+    glDisable(GL_LIGHTING);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+    /*
+     * Set orthogonal projection and disable Z-buffering and lighting
      */
 
     glDisable(GL_DEPTH_TEST);
@@ -779,6 +837,13 @@ void osd_renderer_draw_layer(UINT layer_num)
     glEnd();
 
     glDisable(GL_BLEND);
+
+    /*
+     * Re-enable lighting
+     */
+
+    glEnable(GL_LIGHTING);
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 }
 
 /*
@@ -934,19 +999,19 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
     glClearDepth(1.0);
 
     /*
-     * Disable default ambient lighting
+     * Disable default ambient lighting and enable lighting
      */
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    
+    glEnable(GL_LIGHTING);
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, zero);
-    glDisable(GL_LIGHTING);
 
     /*
-     * Enable 2D texture mapping
+     * Enable 2D texture mapping, GL_MODULATE is for the 3D scene, layer
+     * rendering will have to use GL_REPLACE.
      */
 
     glEnable(GL_TEXTURE_2D);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     /*
      * Create the 2D layer textures
@@ -980,7 +1045,6 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
         vertex_divisor = 32768.0f;  // 17.15-format vertices
     else
         vertex_divisor = 524288.0f; // 13.19
-
 }
 
 /*

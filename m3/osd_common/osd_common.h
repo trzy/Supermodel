@@ -87,6 +87,7 @@ extern void osd_renderer_multiply_matrix(MATRIX);
 extern void osd_renderer_translate_matrix(float, float, float);
 extern void osd_renderer_push_matrix(void);
 extern void osd_renderer_pop_matrix(void);
+extern void osd_renderer_set_light(INT, LIGHT *);
 extern void osd_renderer_set_viewport(const VIEWPORT *);
 extern void osd_renderer_set_coordinate_system(const MATRIX);
 extern void osd_renderer_clear(BOOL, BOOL);
