@@ -7,19 +7,159 @@
 #include "ppc.h"
 #include "model3.h"
 
-////////////////////////////////////////////////////////////////
-// Context
+/*
+ * Private Variables
+ */
 
-ppc_t ppc;
+static ppc_t ppc;
 
 static u32 ppc_field_xlat[256];
 
-///////////////////////////////////////////////////////////////
-// Short Mnemonics
+/*
+ * Shorthand Mnemonics
+ */
 
-#define XER_SO	0x80000000
-#define XER_OV	0x40000000
-#define XER_CA	0x20000000
+#define SPR_XER			1		/* Fixed Point Exception Register				Read / Write */
+#define SPR_LR			8		/* Link Register								Read / Write */
+#define SPR_CTR			9		/* Count Register								Read / Write */
+#define SPR_SRR0		26		/* Save/Restore Register 0						Read / Write */
+#define SPR_SRR1		27		/* Save/Restore Register 1						Read / Write */
+#define SPR_SPRG0		272		/* SPR General 0								Read / Write */
+#define SPR_SPRG1		273		/* SPR General 1								Read / Write */
+#define SPR_SPRG2		274		/* SPR General 2								Read / Write */
+#define SPR_SPRG3		275		/* SPR General 3								Read / Write */
+#define SPR_PVR			287		/* Processor Version Number						Read Only */
+
+#define SPR_ICDBDR		0x3D3	/* 406GA Instruction Cache Debug Data Register	Rad Only */
+#define SPR_ESR			0x3D4	/* 406GA Exception Syndrome Register			Read / Write */
+#define SPR_DEAR		0x3D5	/* 406GA Data Exception Address Register		Read Only */
+#define SPR_EVPR		0x3D6	/* 406GA Exception Vector Prefix Register		Read / Write */
+#define SPR_CDBCR		0x3D7	/* 406GA Cache Debug Control Register			Read/Write */
+#define SPR_TSR			0x3D8	/* 406GA Timer Status Register					Read / Clear */
+#define SPR_TCR			0x3DA	/* 406GA Timer Control Register					Read / Write */
+#define SPR_PIT			0x3DB	/* 406GA Programmable Interval Timer			Read / Write */
+#define SPR_TBHI		988		/* 406GA Time Base High							Read / Write */
+#define SPR_TBLO		989		/* 406GA Time Base Low							Read / Write */
+#define SPR_SRR2		0x3DE	/* 406GA Save/Restore Register 2				Read / Write */
+#define SPR_SRR3		0x3DF	/* 406GA Save/Restore Register 3				Read / Write */
+#define SPR_DBSR		0x3F0	/* 406GA Debug Status Register					Read / Clear */
+#define SPR_DBCR		0x3F2	/* 406GA Debug Control Register					Read / Write */
+#define SPR_IAC1		0x3F4	/* 406GA Instruction Address Compare 1			Read / Write */
+#define SPR_IAC2		0x3F5	/* 406GA Instruction Address Compare 2			Read / Write */
+#define SPR_DAC1		0x3F6	/* 406GA Data Address Compare 1					Read / Write */
+#define SPR_DAC2		0x3F7	/* 406GA Data Address Compare 2					Read / Write */
+#define SPR_DCCR		0x3FA	/* 406GA Data Cache Cacheability Register		Read / Write */
+#define SPR_ICCR		0x3FB	/* 406GA I Cache Cacheability Registe			Read / Write */
+#define SPR_PBL1		0x3FC	/* 406GA Protection Bound Lower 1				Read / Write */
+#define SPR_PBU1		0x3FD	/* 406GA Protection Bound Upper 1				Read / Write */
+#define SPR_PBL2		0x3FE	/* 406GA Protection Bound Lower 2				Read / Write */
+#define SPR_PBU2		0x3FF	/* 406GA Protection Bound Upper 2				Read / Write */
+
+#define SPR_DSISR		18		/* 603E */
+#define SPR_DAR			19		/* 603E */
+#define SPR_DEC			22		/* 603E */
+#define SPR_SDR1		25		/* 603E */
+#define SPR_TBL_R		268		/* 603E Time Base Low (Read-only) */
+#define SPR_TBU_R		269		/* 603E Time Base High (Read-only) */
+#define SPR_TBL_W		284		/* 603E Time Base Low (Write-only) */
+#define SPR_TBU_W		285		/* 603E Time Base Hight (Write-only) */
+#define SPR_EAR			282		/* 603E */
+#define SPR_IBAT0U		528		/* 603E */
+#define SPR_IBAT0L		529		/* 603E */
+#define SPR_IBAT1U		530		/* 603E */
+#define SPR_IBAT1L		531		/* 603E */
+#define SPR_IBAT2U		532		/* 603E */
+#define SPR_IBAT2L		533		/* 603E */
+#define SPR_IBAT3U		534		/* 603E */
+#define SPR_IBAT3L		535		/* 603E */
+#define SPR_DBAT0U		536		/* 603E */
+#define SPR_DBAT0L		537		/* 603E */
+#define SPR_DBAT1U		538		/* 603E */
+#define SPR_DBAT1L		539		/* 603E */
+#define SPR_DBAT2U		540		/* 603E */
+#define SPR_DBAT2L		541		/* 603E */
+#define SPR_DBAT3U		542		/* 603E */
+#define SPR_DBAT3L		543		/* 603E */
+#define SPR_DABR		1013	/* 603E */
+#define SPR_DMISS		0x3d0	/* 603E */
+#define SPR_DCMP		0x3d1	/* 603E */
+#define SPR_HASH1		0x3d2	/* 603E */
+#define SPR_HASH2		0x3d3	/* 603E */
+#define SPR_IMISS		0x3d4	/* 603E */
+#define SPR_ICMP		0x3d5	/* 603E */
+#define SPR_RPA			0x3d6	/* 603E */
+#define SPR_HID0		1008	/* 603E */
+#define SPR_HID1		1009	/* 603E */
+#define SPR_IABR		1010	/* 603E */
+
+#define DCR_BEAR		0x90	/* bus error address */
+#define DCR_BESR		0x91	/* bus error syndrome */
+#define DCR_BR0			0x80	/* bank */
+#define DCR_BR1			0x81	/* bank */
+#define DCR_BR2			0x82	/* bank */
+#define DCR_BR3			0x83	/* bank */
+#define DCR_BR4			0x84	/* bank */
+#define DCR_BR5			0x85	/* bank */
+#define DCR_BR6			0x86	/* bank */
+#define DCR_BR7			0x87	/* bank */
+#define DCR_DMACC0		0xc4	/* dma chained count */
+#define DCR_DMACC1		0xcc	/* dma chained count */
+#define DCR_DMACC2		0xd4	/* dma chained count */
+#define DCR_DMACC3		0xdc	/* dma chained count */
+#define DCR_DMACR0		0xc0	/* dma channel control */
+#define DCR_DMACR1		0xc8	/* dma channel control */
+#define DCR_DMACR2		0xd0	/* dma channel control */
+#define DCR_DMACR3		0xd8	/* dma channel control */
+#define DCR_DMACT0		0xc1	/* dma destination address */
+#define DCR_DMACT1		0xc9	/* dma destination address */
+#define DCR_DMACT2		0xd1	/* dma destination address */
+#define DCR_DMACT3		0xd9	/* dma destination address */
+#define DCR_DMADA0		0xc2	/* dma destination address */
+#define DCR_DMADA1		0xca	/* dma destination address */
+#define DCR_DMADA2		0xd2	/* dma source address */
+#define DCR_DMADA3		0xda	/* dma source address */
+#define DCR_DMASA0		0xc3	/* dma source address */
+#define DCR_DMASA1		0xcb	/* dma source address */
+#define DCR_DMASA2		0xd3	/* dma source address */
+#define DCR_DMASA3		0xdb	/* dma source address */
+#define DCR_DMASR		0xe0	/* dma status */
+#define DCR_EXIER		0x42	/* external interrupt enable */
+#define DCR_EXISR		0x40	/* external interrupt status */
+#define DCR_IOCR		0xa0	/* io configuration */
+
+#define RD		((op >> 21) & 0x1F)
+#define RS		((op >> 21) & 0x1F)
+#define RT		((op >> 21) & 0x1F)
+#define RA		((op >> 16) & 0x1F)
+#define RB		((op >> 11) & 0x1F)
+#define RC		((op >>  6) & 0x1F)
+
+#define SIMM	((s32)(s16)op)
+#define UIMM	((u32)(u16)op)
+
+#define _OP		((op >> 26) & 0x3F)
+#define _XO		((op >> 1) & 0x3FF)
+
+#define _CRFD	((op >> 23) & 7)
+#define _CRFA	((op >> 18) & 7)
+
+#define _OVE	0x00000400
+#define _AA		0x00000002
+#define _RC		0x00000001
+#define _LK		0x00000001
+
+#define _SH		((op >> 11) & 31)
+#define _MB		((op >> 6) & 31)
+#define _ME		((op >> 1) & 31)
+#define _BO		((op >> 21) & 0x1f)
+#define _BI		((op >> 16) & 0x1f)
+#define _BD		((op >> 2) & 0x3fff)
+
+#define _SPRF	(((op >> 6) & 0x3E0) | ((op >> 16) & 0x1F))
+#define _DCRF	(((op >> 6) & 0x3E0) | ((op >> 16) & 0x1F))
+
+#define _FXM	((op >> 12) & 0xff)
+#define _FM		((op >> 17) & 0xFF)
 
 #define CIA		ppc.cia
 #define NIA		ppc.nia
@@ -35,6 +175,35 @@ static u32 ppc_field_xlat[256];
 #define _GT		4
 #define _EQ		2
 #define _SO		1
+
+#define XER_SO	0x80000000
+#define XER_OV	0x40000000
+#define XER_CA	0x20000000
+
+#define _NI		BIT(29)
+#define _XE		BIT(28)
+#define _ZE		BIT(27)
+#define _UE		BIT(26)
+#define _OE		BIT(25)
+#define _VE		BIT(24)
+#define _VXCVI	BIT(23)
+#define _VXSQRT	BIT(22)
+#define _VXSOFT	BIT(21)
+#define _FI		BIT(14)
+#define _FR		BIT(13)
+#define _VXVC	BIT(12)
+#define _VXIMZ	BIT(11)
+#define _VXZDZ	BIT(10)
+#define _VXIDI	BIT(9)
+#define _VXISI	BIT(8)
+#define _VXSNAN	BIT(7)
+#define _XX		BIT(6)
+#define _ZX		BIT(5)
+#define _UX		BIT(4)
+#define _OX		BIT(3)
+#define _VX		BIT(2)
+#define _FEX	BIT(1)
+#define _FX		BIT(0)
 
 /*
  * Helpers
@@ -53,46 +222,38 @@ static u32 ppc_field_xlat[256];
 #define ADD_V(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 #define SUB_V(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 
-#define SET_ADD_V(r,a,b)	if(op & _OE){ if(ADD_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
-#define SET_SUB_V(r,a,b)	if(op & _OE){ if(SUB_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
+#define SET_ADD_V(r,a,b)	if(op & _OVE){ if(ADD_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
+#define SET_SUB_V(r,a,b)	if(op & _OVE){ if(SUB_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
 
 #define CMPS(a,b)			(((s32)(a) < (s32)(b)) ? _LT : (((s32)(a) > (s32)(b)) ? _GT : _EQ))
 #define CMPU(a,b)			(((u32)(a) < (u32)(b)) ? _LT : (((u32)(a) > (u32)(b)) ? _GT : _EQ))
 
-#define _SET_ICR0(r)		{ CR(0) = CMPS(r,0); if(XER & XER_SO) CR(r) |= _SO; }
+#define _SET_ICR0(r)		{ CR(0) = CMPS(r,0); if(XER & XER_SO) CR(0) |= _SO; }
 #define SET_ICR0(r)			if(op & _RC){ _SET_ICR0(r); }
 
-#define _SET_FCR1()			{ CR(1) = (ppc.fpscr >> 28) & 15; }
+#define _SET_FCR1()			{ CR(1) = (ppc.fpscr >> 28); }
 #define SET_FCR1()			if(op & _RC){ _SET_FCR1(); }
 
-/* SET_VXSNAN() : sets VXSNAN and updates FX */
-
 #define SET_VXSNAN(a, b)    if (is_snan_f64(a) || is_snan_f64(b)) ppc.fpscr |= 0x80000000
-
-/* SET_VXSNAN_1() : sets VXSNAN and updates FX (for use with 1 number only) */
-
 #define SET_VXSNAN_1(c)     if (is_snan_f64(c)) ppc.fpscr |= 0x80000000
 
-#define CHECK_SUPERVISOR()	\
+#define CHECK_SUPERVISOR()			\
 	if((ppc.msr & 0x4000) != 0){	\
 	}
 
-#define CHECK_FPU_AVAILABLE()	\
-	if((ppc.msr & 0x2000) == 0){ \
+#define CHECK_FPU_AVAILABLE()		\
+	if((ppc.msr & 0x2000) == 0){	\
 	}
 
-////////////////////////////////////////////////////////////////
-// Serial Port Unit
+/******************************************************************/
+/* PowerPC 4xx Emulation                                          */
+/******************************************************************/
 
-// 0x40000000	SPLS:		RFEPLTt.	RBR,FE,OE,PE,LB,TBR,TSR	(10000110 = 0x86)
-// 0x40000002	SPHS:		DC......	DIS,CS
-// 0x40000004	BRDH:		....DDDD
-// 0x40000005	BRDL:		DDDDDDDD
-// 0x40000006	SPCTL:		LLDRdPpS	LM,DTRT,RTS,DB,PE,PTY,SB
-// 0x40000008	SPTC:		EDDTeStP	ET,DME,TIE,EIE,SPE,TB,PGM
-// 0x40000007	SPRC:		EDDeP...	ER,DME,EIE,PME
-// 0x40000009/R	SPRB:		xxxxxxxx	data
-// 0x40000009/W	SPTB:		xxxxxxxx	data
+#if PPC_MODEL == PPC_MODEL_4XX
+
+/*
+ * Serial Port
+ */
 
 static const char * spu_id[16] = {
 	"SPLS",		"-",		"SPHS",		"-",
@@ -101,7 +262,7 @@ static const char * spu_id[16] = {
 	"-",		"-",		"-",		"-",
 };
 
-INLINE void spu_wb(u32 a, u8 d){
+static INLINE void spu_wb(u32 a, u8 d){
 
 	switch(a & 15){
 
@@ -124,7 +285,7 @@ INLINE void spu_wb(u32 a, u8 d){
 	exit(1);
 }
 
-INLINE u8 spu_rb(u32 a){
+static INLINE u8 spu_rb(u32 a){
 
 	switch(a & 15){
 
@@ -143,8 +304,9 @@ INLINE u8 spu_rb(u32 a){
 	exit(1);
 }
 
-////////////////////////////////////////////////////////////////
-// DMA Unit
+/*
+ * DMA
+ */
 
 #define DMA_CR(ch)	ppc.dcr[0xC0 + (ch << 3) + 0]
 #define DMA_CT(ch)	ppc.dcr[0xC0 + (ch << 3) + 1]
@@ -153,7 +315,7 @@ INLINE u8 spu_rb(u32 a){
 #define DMA_CC(ch)	ppc.dcr[0xC0 + (ch << 3) + 4]
 #define DMA_SR		ppc.dcr[0xE0]
 
-static void ppc_dma(u32 ch){
+static INLINE  void ppc_dma(u32 ch){
 
 	if(DMA_CR(ch) & 0x000000F0){
 
@@ -198,355 +360,11 @@ static void ppc_dma(u32 ch){
 	}
 }
 
-////////////////////////////////////////////////////////////////
-// Memory Access : 4XX
-
-u32 ppc_4xx_fetch(u32 a){
-
-	return(ppc.rd(a & 0x0FFFFFFF));
-}
-
-u32 ppc_4xx_irb(u32 a){
-
-	if((a >> 28) == 4){
-
-		return(spu_rb(a));
-	}
-
-	return(ppc.rb(a & 0x0FFFFFFF));
-}
-
-u32 ppc_4xx_irw(u32 a){
-
-	if(a & 1){
-
-		printf("PPC : %08X rw %08X\n", CIA, a);
-		exit(1);
-	}
-
-	return(ppc.rw(a & 0x0FFFFFFE));
-}
-
-u32 ppc_4xx_ird(u32 a){
-
-	if(a & 3){
-
-		printf("PPC : %08X rd %08X\n", CIA, a);
-		exit(1);
-	}
-
-	return(ppc.rd(a & 0x0FFFFFFC));
-}
-
-void ppc_4xx_iwb(u32 a, u32 d){
-
-	if((a >> 28) == 4){
-
-		spu_wb(a,d);
-		return;
-	}
-
-	ppc.wb(a & 0x0FFFFFFF, d);
-}
-
-void ppc_4xx_iww(u32 a, u32 d){
-
-	if(a & 1){
-
-		printf("PPC : %08X ww %08X = %08X\n", CIA, a, d);
-		exit(1);
-	}
-
-	ppc.ww(a & 0x0FFFFFFE, d);
-}
-
-void ppc_4xx_iwd(u32 a, u32 d){
-
-	if(a & 3){
-
-		printf("PPC : %08X wd %08X = %08X\n", CIA, a, d);
-		exit(1);
-	}
-
-	ppc.wd(a & 0x0FFFFFFC, d);
-}
-
-////////////////////////////////////////////////////////////////
-// Memory Access : 6XX
-
-u32 ppc_6xx_fetch(u32 a){
-
-	if(ppc.msr & 0x20){
-
-	}
-
-	if(a & 3){
-
-		printf("ERROR: unaligned fetch %08X\n", a);
-		exit(1);
-	}
-
-	return(ppc.rd(a));
-}
-
-u32 ppc_6xx_irb(u32 a){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	return(ppc.rb(a));
-}
-
-u32 ppc_6xx_irw(u32 a){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	return(ppc.rw(a));
-}
-
-u32 ppc_6xx_ird(u32 a){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	return(ppc.rd(a));
-}
-
-u64 ppc_6xx_irq(u32 a){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	return(ppc.rq(a));
-}
-
-void ppc_6xx_iwb(u32 a, u32 d){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	ppc.wb(a, d);
-}
-
-void ppc_6xx_iww(u32 a, u32 d){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	ppc.ww(a, d);
-}
-
-void ppc_6xx_iwd(u32 a, u32 d){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	ppc.wd(a, d);
-}
-
-void ppc_6xx_iwq(u32 a, u64 d){
-
-	if(ppc.msr & 0x10){
-
-		/* ... */
-	}
-
-	ppc.wq(a, d);
-}
-
-////////////////////////////////////////////////////////////////
-// SPR Access : 4XX
-
-static void ppc_4xx_set_spr(u32 n, u32 d){
-
-	switch(n){
-
-	case SPR_PVR:
-		return;
-
-	case SPR_PIT:
-		if(d){
-			printf("PIT = %i\n", d);
-			exit(1);
-		}
-		ppc.spr[n] = d;
-		ppc.pit_reload = d;
-		break;
-
-	case SPR_TSR:
-		ppc.spr[n] &= ~d; // 1 clears, 0 does nothing
-		return;
-	}
-
-	ppc.spr[n] = d;
-}
-
-static u32 ppc_4xx_get_spr(u32 n){
-
-	if(n == SPR_TBLO)
-		return((u32)ppc.tb);
-	else
-	if(n == SPR_TBHI)
-		return((u32)(ppc.tb >> 32));
-
-	return(ppc.spr[n]);
-}
-
-////////////////////////////////////////////////////////////////
-// SPR Access : 6XX
-
-static void ppc_6xx_set_spr(u32 n, u32 d){
-
-	switch(n){
-
-	case SPR_DEC:
-
-		if((d & 0x80000000) && !(ppc.spr[SPR_DEC] & 0x80000000)){
-
-			/* trigger interrupt */
-
-			printf("ERROR: set_spr to DEC triggers IRQ\n");
-			exit(1);
-		}
-
-		ppc.spr[SPR_DEC] = d;
-		break;
-
-	case SPR_PVR:
-		return;
-
-	case SPR_PIT:
-		if(d){
-			printf("PIT = %i\n", d);
-			exit(1);
-		}
-		ppc.spr[n] = d;
-		ppc.pit_reload = d;
-		return;
-
-	case SPR_TSR:
-		ppc.spr[n] &= ~d; // 1 clears, 0 does nothing
-		return;
-
-	case SPR_TBL_W:
-	case SPR_TBL_R: // special 603e case
-		ppc.tb &= 0xFFFFFFFF00000000;
-		ppc.tb |= (u64)(d);
-		return;
-
-	case SPR_TBU_R:
-	case SPR_TBU_W: // special 603e case
-		printf("ERROR: set_spr - TBU_W = %08X\n", d);
-		exit(1);
-
-	}
-
-	ppc.spr[n] = d;
-}
-
-static u32 ppc_6xx_get_spr(u32 n){
-
-	switch(n){
-
-	case SPR_TBL_R:
-		printf("ERROR: get_spr - TBL_R\n");
-		exit(1);
-
-	case SPR_TBU_R:
-		printf("ERROR: get_spr - TBU_R\n");
-		exit(1);
-
-	case SPR_TBL_W:
-		printf("ERROR: invalid get_spr - TBL_W\n");
-		exit(1);
-
-	case SPR_TBU_W:
-		printf("ERROR: invalid get_spr - TBU_W\n");
-		exit(1);
-	}
-
-	return(ppc.spr[n]);
-}
-
-////////////////////////////////////////////////////////////////
-// Machine Status Register (4xx)
-
-void ppc_4xx_set_msr(u32 d){
-
-	ppc.msr = d;
-
-	if(d & 0x00080000){ // WE
-
-		printf("PPC : waiting ...\n");
-		exit(1);
-	}
-}
-
-u32 ppc_4xx_get_msr(void){
-
-	return(ppc.msr);
-}
-
-////////////////////////////////////////////////////////////////
-// Machine Status Register (6xx)
-
-void ppc_6xx_set_msr(u32 d){
-
-	if((ppc.msr ^ d) & 0x00020000){
-
-		// TGPR
-
-		u32 temp[4];
-
-		temp[0] = ppc.gpr[0];
-		temp[1] = ppc.gpr[1];
-		temp[2] = ppc.gpr[2];
-		temp[3] = ppc.gpr[3];
-
-		ppc.gpr[0] = ppc.tgpr[0];
-		ppc.gpr[1] = ppc.tgpr[1];
-		ppc.gpr[2] = ppc.tgpr[2];
-		ppc.gpr[3] = ppc.tgpr[3];
-
-		ppc.tgpr[0] = temp[0];
-		ppc.tgpr[1] = temp[1];
-		ppc.tgpr[2] = temp[2];
-		ppc.tgpr[3] = temp[3];
-	}
-
-	ppc.msr = d;
-
-	if(d & 0x00080000){ // WE
-
-		printf("PPC : waiting ...\n");
-		exit(1);
-	}
-}
-
-u32 ppc_6xx_get_msr(void){
-
-	return(ppc.msr);
-}
-
-////////////////////////////////////////////////////////////////
-// DCR Access : 4XX Only
-
-static void ppc_set_dcr(u32 n, u32 d){
+/*
+ * DCR Access
+ */
+
+static INLINE void ppc_set_dcr(u32 n, u32 d){
 
 	switch(n){
 
@@ -607,15 +425,355 @@ static void ppc_set_dcr(u32 n, u32 d){
 	ppc.dcr[n] = d;
 }
 
-static u32 ppc_get_dcr(u32 n){
+static INLINE u32 ppc_get_dcr(u32 n){
 
 	return(ppc.dcr[n]);
 }
 
-////////////////////////////////////////////////////////////////
-// Unhandled
+/*
+ * MSR Access
+ */
 
-static void ppc_null(u32 op){
+static INLINE void ppc_set_msr(u32 d){
+
+	ppc.msr = d;
+
+	if(d & 0x00080000){ // WE
+
+		printf("PPC : waiting ...\n");
+		exit(1);
+	}
+}
+
+static INLINE u32 ppc_get_msr(void){
+
+	return(ppc.msr);
+}
+
+/*
+ * SPR Access
+ */
+
+static INLINE void ppc_set_spr(u32 n, u32 d){
+
+	switch(n){
+
+	case SPR_PVR:
+		return;
+
+	case SPR_PIT:
+		if(d){
+			printf("PIT = %i\n", d);
+			exit(1);
+		}
+		ppc.spr[n] = d;
+		ppc.pit_reload = d;
+		break;
+
+	case SPR_TSR:
+		ppc.spr[n] &= ~d; // 1 clears, 0 does nothing
+		return;
+	}
+
+	ppc.spr[n] = d;
+}
+
+static INLINE u32 ppc_get_spr(u32 n){
+
+	if(n == SPR_TBLO)
+		return((u32)ppc.tb);
+	else
+	if(n == SPR_TBHI)
+		return((u32)(ppc.tb >> 32));
+
+	return(ppc.spr[n]);
+}
+
+/*
+ * Memory Access
+ */
+
+static INLINE u32 ppc_fetch(u32 a)
+{
+	return(ppc.rd(a & 0x0FFFFFFF));
+}
+
+static INLINE u32 ppc_read_8(u32 a)
+{
+	if((a >> 28) == 4)
+		return(spu_rb(a));
+
+	return(ppc.rb(a & 0x0FFFFFFF));
+}
+
+static INLINE u32 ppc_read_16(u32 a)
+{
+	return(ppc.rw(a & 0x0FFFFFFE));
+}
+
+static INLINE u32 ppc_read_32(u32 a)
+{
+	return(ppc.rd(a & 0x0FFFFFFC));
+}
+
+static INLINE u64 ppc_read_64(u32 a)
+{
+	return(0);
+}
+
+static INLINE void ppc_write_8(u32 a, u32 d)
+{
+	if((a >> 28) == 4)
+		spu_wb(a,d);
+	else
+		ppc.wb(a & 0x0FFFFFFF, d);
+}
+
+static INLINE void ppc_write_16(u32 a, u32 d)
+{
+	ppc.ww(a & 0x0FFFFFFE, d);
+}
+
+static INLINE void ppc_write_32(u32 a, u32 d)
+{
+	ppc.wd(a & 0x0FFFFFFC, d);
+}
+
+static INLINE void ppc_write_64(u32 a, u64 d)
+{
+}
+
+static INLINE void ppc_test_irq(void){
+}
+
+#endif /* PPC_MODEL == PPC_MODEL_4XX */
+
+/******************************************************************/
+/* PowerPC 6xx Emulation                                          */
+/******************************************************************/
+
+#if (PPC_MODEL == PPC_MODEL_6XX)
+
+/*
+ * MSR Access
+ */
+
+static INLINE void ppc_set_msr(u32 d){
+
+	if((ppc.msr ^ d) & 0x00020000){
+
+		// TGPR
+
+		u32 temp[4];
+
+		temp[0] = ppc.gpr[0];
+		temp[1] = ppc.gpr[1];
+		temp[2] = ppc.gpr[2];
+		temp[3] = ppc.gpr[3];
+
+		ppc.gpr[0] = ppc.tgpr[0];
+		ppc.gpr[1] = ppc.tgpr[1];
+		ppc.gpr[2] = ppc.tgpr[2];
+		ppc.gpr[3] = ppc.tgpr[3];
+
+		ppc.tgpr[0] = temp[0];
+		ppc.tgpr[1] = temp[1];
+		ppc.tgpr[2] = temp[2];
+		ppc.tgpr[3] = temp[3];
+	}
+
+	ppc.msr = d;
+
+	if(d & 0x00080000){ // WE
+
+		printf("PPC : waiting ...\n");
+		exit(1);
+	}
+}
+
+static INLINE u32 ppc_get_msr(void){
+
+	return(ppc.msr);
+}
+
+/*
+ * SPR Access
+ */
+
+static INLINE void ppc_set_spr(u32 n, u32 d)
+{
+	switch(n)
+	{
+	case SPR_DEC:
+
+		if((d & 0x80000000) && !(ppc.spr[SPR_DEC] & 0x80000000))
+		{
+			/* trigger interrupt */
+	
+			printf("ERROR: set_spr to DEC triggers IRQ\n");
+			exit(1);
+		}
+
+		ppc.spr[SPR_DEC] = d;
+		break;
+
+	case SPR_PVR:
+		return;
+
+	case SPR_PIT:
+		if(d){
+			printf("PIT = %i\n", d);
+			exit(1);
+		}
+		ppc.spr[n] = d;
+		ppc.pit_reload = d;
+		return;
+
+	case SPR_TSR:
+		ppc.spr[n] &= ~d; // 1 clears, 0 does nothing
+		return;
+
+	case SPR_TBL_W:
+	case SPR_TBL_R: // special 603e case
+		ppc.tb &= 0xFFFFFFFF00000000;
+		ppc.tb |= (u64)(d);
+		return;
+
+	case SPR_TBU_R:
+	case SPR_TBU_W: // special 603e case
+		printf("ERROR: set_spr - TBU_W = %08X\n", d);
+		exit(1);
+
+	}
+
+	ppc.spr[n] = d;
+}
+
+static INLINE u32 ppc_get_spr(u32 n)
+{
+	switch(n)
+	{
+	case SPR_TBL_R:
+		printf("ERROR: get_spr - TBL_R\n");
+		exit(1);
+
+	case SPR_TBU_R:
+		printf("ERROR: get_spr - TBU_R\n");
+		exit(1);
+
+	case SPR_TBL_W:
+		printf("ERROR: invalid get_spr - TBL_W\n");
+		exit(1);
+
+	case SPR_TBU_W:
+		printf("ERROR: invalid get_spr - TBU_W\n");
+		exit(1);
+	}
+
+	return(ppc.spr[n]);
+}
+
+/*
+ * Memory Access
+ */
+
+#define ITLB_ENABLED	(MSR & 0x20)
+#define DTLB_ENABLED	(MSR & 0x10)
+
+static INLINE u32 ppc_fetch(u32 a)
+{
+	return(ppc.read_32(a));
+}
+
+static INLINE u32 ppc_read_8(u32 a)
+{
+	return(ppc.read_8(a));
+}
+
+static INLINE u32 ppc_read_16(u32 a)
+{
+	return(ppc.read_16(a));
+}
+
+static INLINE u32 ppc_read_32(u32 a)
+{
+	return(ppc.read_32(a));
+}
+
+static INLINE u64 ppc_read_64(u32 a)
+{
+	return(ppc.read_64(a));
+}
+
+static INLINE void ppc_write_8(u32 a, u32 d)
+{
+	ppc.write_8(a, d);
+}
+
+static INLINE void ppc_write_16(u32 a, u32 d)
+{
+	ppc.write_16(a, d);
+}
+
+static INLINE void ppc_write_32(u32 a, u32 d)
+{
+	ppc.write_32(a, d);
+}
+
+static INLINE void ppc_write_64(u32 a, u64 d)
+{
+	ppc.write_64(a, d);
+}
+
+static INLINE void ppc_test_irq(void)
+{
+	if(ppc.msr & 0x8000){
+
+		/* external irq and decrementer enabled */
+
+		if(ppc.irq_state){
+
+			/* accept external interrupt */
+
+			ppc.spr[SPR_SRR0] = ppc.nia;
+			ppc.spr[SPR_SRR1] = ppc.msr;
+
+			ppc.nia = (ppc.msr & 0x40) ? 0xFFF00500 : 0x00000500;
+			ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
+
+			/* notify to the interrupt manager */
+
+			if(ppc.irq_callback != NULL)
+				ppc.irq_state = ppc.irq_callback();
+            else
+				ppc.irq_state = 0;
+
+		}else
+		if(ppc.dec_expired){
+
+			/* accept decrementer exception */
+
+			ppc.spr[SPR_SRR0] = ppc.nia;
+			ppc.spr[SPR_SRR1] = ppc.msr;
+
+			ppc.nia = (ppc.msr & 0x40) ? 0xFFF00900 : 0x00000900;
+			ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
+
+			/* clear pending decrementer exception */
+
+			ppc.dec_expired = 0;
+		}
+	}
+}
+
+#endif /* PPC_MODEL == PPC_MODEL_6XX */
+
+/******************************************************************/
+/* Instruction Handlers                                           */
+/******************************************************************/
+
+static void ppc_null(u32 op)
+{
     extern int  DisassemblePowerPC(unsigned, unsigned, char *, char *, int);
     char    string[256];
     char    mnem[16], oprs[48];
@@ -623,13 +781,12 @@ static void ppc_null(u32 op){
     DisassemblePowerPC(op, CIA, mnem, oprs, 1);
 
     printf("ERROR: %08X: unhandled opcode %08X: %s\t%s\n", CIA, op, mnem, oprs);
-//    printf("ERROR: %08X: unhandled opcode %08X (OP=%X XO=%X OE_XO=%X FP_XO=%X)\n%s\n",
-//    CIA, op, _OP, _XO&0x3FF, _XO&0x1FF, _XO&0x1F, ppc_disasm(CIA, op, string));
 	exit(1);
 }
 
-////////////////////////////////////////////////////////////////
-// Arithmetical
+/*
+ * Arithmetical
+ */
 
 static void ppc_addx(u32 op){
 
@@ -672,7 +829,7 @@ static void ppc_addex(u32 op){
 	else
 		XER &= ~XER_CA;
 
-	if(op & _OE)
+	if(op & _OVE)
 	{
 		if(ADD_V(temp, rb, c) || ADD_V(R(t), ra, temp))
 			XER |= XER_SO | XER_OV;
@@ -737,100 +894,78 @@ static void ppc_addis(u32 op){
 
 static void ppc_addmex(u32 op){
 
-	u32 a = RA;
+	u32 ra = R(RA);
 	u32 d = RT;
 	u32 c = (XER >> 29) & 1;
 
-	R(d) = R(a) + (c - 1);
+	R(d) = ra + (c - 1);
 
-	if(R(d) < R(a))
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	SET_ADD_V(R(d), R(a), (c - 1));
+	SET_ADD_C(R(d), ra, (c - 1));
+	SET_ADD_V(R(d), ra, (c - 1));
 	SET_ICR0(R(d));
 }
 
 static void ppc_addzex(u32 op){
 
-	u32 a = RA;
+	u32 ra = R(RA);
 	u32 d = RT;
 	u32 c = (XER >> 29) & 1;
 
-	R(d) = R(a) + c;
+	R(d) = ra + c;
 
-	if(R(d) < R(a))
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	SET_ADD_V(R(d), R(a), c);
+	SET_ADD_C(R(d), ra, c);
+	SET_ADD_V(R(d), ra, c);
 	SET_ICR0(R(d));
 }
 
 static void ppc_subfx(u32 op){
 
-	u32 b = RB;
-	u32 a = RA;
+	u32 rb = R(RB);
+	u32 ra = R(RA);
 	u32 d = RT;
 
-	R(d) = R(b) - R(a);
+	R(d) = rb - ra;
 
-	SET_SUB_V(R(d), R(b), R(a));
+	SET_SUB_V(R(d), rb, ra);
 	SET_ICR0(R(d));
 }
 
 static void ppc_subfcx(u32 op){
 
-	u32 b = RB;
-	u32 a = RA;
+	u32 rb = R(RB);
+	u32 ra = R(RA);
 	u32 t = RT;
 
-	R(t) = R(b) - R(a);
+	R(t) = rb - ra;
 
-	if(SUB_C(R(t), R(b), R(a)))
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	SET_SUB_V(R(t), R(b), R(a));
+	SET_SUB_C(R(t), rb, ra);
+	SET_SUB_V(R(t), rb, ra);
 	SET_ICR0(R(t));
 }
 
 static void ppc_subfex(u32 op){
 
-	// fixme
-
-	u32 b = RB;
-	u32 a = RA;
+	u32 rb = R(RB);
+	u32 ra = R(RA);
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
 
-//	R(t) = R(b) + ~R(a) + c; // R(b) - R(a) + (c - 1)
-	R(t) = R(b) - (R(a) + (c ^ 1));
+	R(t) = rb - (ra + (c ^ 1));
 
-	if(SUB_C(R(t), R(b), (R(a) + (c - 1))))
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	SET_SUB_V(R(t), R(b), (R(a) + (c - 1)));
+	SET_SUB_C(R(t), rb, (ra + (c - 1)));
+	SET_SUB_V(R(t), rb, (ra + (c - 1)));
 	SET_ICR0(R(t));
 }
 
 static void ppc_subfic(u32 op){
 
 	u32 i = SIMM;
-	u32 a = RA;
+	u32 ra = R(RA);
 	u32 t = RT;
 
-	R(t) = i - R(a);
+	R(t) = i - ra;
 
-	if(SUB_C(R(t), i, R(a)))
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
+	SET_SUB_C(R(t), i, ra);
 }
 
 static void ppc_subfmex(u32 op){
@@ -848,7 +983,7 @@ static void ppc_subfmex(u32 op){
 	else
 		XER &= ~XER_CA;
 
-	if(op & _OE){
+	if(op & _OVE){
 		if(c == 0 && (R(t) == 0x7FFFFFFF || R(t) == 0xFFFFFFFF))
 			XER |= (XER_OV | XER_SO);
 		else
@@ -873,7 +1008,7 @@ static void ppc_subfzex(u32 op){
 	else
 		XER &= ~XER_CA;
 
-	if(op & _OE){
+	if(op & _OVE){
 		if(c != 0 && (R(t) == 0 || R(t) == 0x80000000))
 			XER |= (XER_OV | XER_SO);
 		else
@@ -883,11 +1018,6 @@ static void ppc_subfzex(u32 op){
 	SET_ICR0(R(t));
 }
 
-char * ppc_stat_string(u32 x)
-{
-	return(NULL);
-}
-
 static void ppc_negx(u32 op){
 
 	u32 a = RA;
@@ -895,7 +1025,7 @@ static void ppc_negx(u32 op){
 
 	R(t) = -R(a);
 
-	if(op & _OE){
+	if(op & _OVE){
 		if(R(t) == 0x80000000)
 			XER |= (XER_SO | XER_OV);
 		else
@@ -923,7 +1053,6 @@ static void ppc_cmpl(u32 op){
 
 	CR(d) = CMPU(R(a), R(b));
 	CR(d) |= (XER >> 31);
-
 }
 
 static void ppc_cmpi(u32 op){
@@ -953,7 +1082,6 @@ static void ppc_mulli(u32 op){
 	u32 d = RD;
 
 	R(d) = ((s32)R(a) * (s32)i);
-
 }
 
 static void ppc_mulhwx(u32 op){
@@ -988,9 +1116,9 @@ static void ppc_mullwx(u32 op){
 	r = (s64)(s32)R(a) * (s64)(s32)R(b);
 	R(d) = (u32)r;
 
-	if(op & _OE){
+	if(op & _OVE){
 		XER &= ~XER_OV;
-		if( (u64)r > 0xFFFFFFFF)
+		if((u64)r > 0xFFFFFFFF)
 			XER |= (XER_OV | XER_SO);
 	}
 
@@ -1004,20 +1132,22 @@ static void ppc_divwx(u32 op){
 	u32 d = RD;
 
 	if((R(b) == 0) ||
-	   (R(b) == 0xFFFFFFFF && R(a) == 0x80000000)){
-
+	   (R(b) == 0xFFFFFFFF && R(a) == 0x80000000))
+	{
 		R(d) = 0;
 
-		if(op & _OE) XER |= (XER_SO | XER_OV);
-		/*if(op & _RC) CR(0) = 0x0F;*/
+		if(op & _OVE) XER |= (XER_SO | XER_OV);
 
-		return;
+		if(op & _RC) CR(0) = 0x0F;
 	}
+	else
+	{
+		R(d) = (s32)R(a) / (s32)R(b);
 
-	R(d) = (s32)R(a) / (s32)R(b);
+		if(op & _OVE) XER &= ~XER_OV;
 
-	if(op & _OE) XER &= ~XER_OV;
-	SET_ICR0(R(d));
+		SET_ICR0(R(d));
+	}
 }
 
 static void ppc_divwux(u32 op){
@@ -1026,24 +1156,63 @@ static void ppc_divwux(u32 op){
 	u32 a = RA;
 	u32 d = RD;
 
-	if(R(b) == 0){
-
+	if(R(b) == 0)
+	{
 		R(d) = 0;
 
-		if(op & _OE) XER |= (XER_SO | XER_OV);
-		/*if(op & _RC) CR(0) = 0x0F;*/
+		if(op & _OVE) XER |= (XER_SO | XER_OV);
 
-		return;
+		if(op & _RC) CR(0) = 0x0F;
 	}
+	else
+	{
+		R(d) = (u32)R(a) / (u32)R(b);
 
-	R(d) = (u32)R(a) / (u32)R(b);
+		if(op & _OVE) XER &= ~XER_OV;
 
-	if(op & _OE) XER &= ~XER_OV;
-	SET_ICR0(R(d));
+		SET_ICR0(R(d));
+	}
 }
 
-////////////////////////////////////////////////////////////////
-// Logical
+static void ppc_extsbx(u32 op){
+
+	u32 a = RA;
+	u32 s = RS;
+
+	R(a) = ((s32)R(s) << 24) >> 24;
+	SET_ICR0(R(a));
+}
+
+static void ppc_extshx(u32 op){
+
+	u32 a = RA;
+	u32 s = RS;
+
+	R(a) = ((s32)R(s) << 16) >> 16;
+	SET_ICR0(R(a));
+}
+
+static void ppc_cntlzwx(u32 op){
+
+	u32 a = RA;
+	u32 t = RT;
+	u32 m = 0x80000000;
+	u32 n = 0;
+
+	while(n < 32){
+		if(R(t) & m) break;
+		m >>= 1;
+		n++;
+	}
+
+	R(a) = n;
+
+	SET_ICR0(R(a));
+}
+
+/*
+ * Logical
+ */
 
 static void ppc_andx(u32 op){
 
@@ -1181,107 +1350,6 @@ static void ppc_xoris(u32 op){
 	R(a) = R(s) ^ i;
 }
 
-static void ppc_extsbx(u32 op){
-
-	u32 a = RA;
-	u32 s = RS;
-
-	R(a) = ((s32)R(s) << 24) >> 24;
-	SET_ICR0(R(a));
-}
-
-static void ppc_extshx(u32 op){
-
-	u32 a = RA;
-	u32 s = RS;
-
-	R(a) = ((s32)R(s) << 16) >> 16;
-	SET_ICR0(R(a));
-}
-
-static void ppc_cntlzwx(u32 op){
-
-	u32 a = RA;
-	u32 t = RT;
-
-	#if 1
-
-	u32 m = 0x80000000;
-	u32 n = 0;
-
-	while(n < 32){
-		if(R(t) & m) break;
-		m >>= 1;
-		n++;
-	}
-
-	R(a) = n;
-
-	SET_ICR0(R(a));
-
-	#else
-
-	u32 n[3];
-
-	// just an idea, bad implementation though
-
-	static const u32 ppc_onecnt_table[256] = {
-		0,	1,	2,	2,	3,	3,	3,	3,
-		4,	4,	4,	4,	4,	4,	4,	4,
-		5,	5,	5,	5,	5,	5,	5,	5,
-		5,	5,	5,	5,	5,	5,	5,	5,
-		6,	6,	6,	6,	6,	6,	6,	6,
-		6,	6,	6,	6,	6,	6,	6,	6,
-		6,	6,	6,	6,	6,	6,	6,	6,
-		6,	6,	6,	6,	6,	6,	6,	6,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		7,	7,	7,	7,	7,	7,	7,	7,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-		8,	8,	8,	8,	8,	8,	8,	8,
-	};
-
-	n[0] = ppc_onecnt_table[R(t) >> 24];
-	if(n[0] == 0){
-		n[1] = ppc_onecnt_table[(R(t) >> 16) & 0xFF];
-		if(n[1] == 0){
-			n[2] = ppc_onecnt_table[(R(t) >> 8) & 0xFF];
-			if(n[2] == 0){
-				n[2] = 8 + (8 - ppc_onecnt_table[R(t) & 0xFF]);
-			}
-			n[1] = (8 - n[1]) + n[2];
-		}
-		n[0] = (8 - n[0]) + n[1];
-	}
-
-	R(a) = n[0];
-	SET_ICR0(R(a));
-
-	#endif
-}
-
-////////////////////////////////////////////////////////////////
-// Rotate
-
 INLINE u32 ppc_calc_mask(u32 mb, u32 me){
 
 	u32 m ;
@@ -1376,7 +1444,7 @@ static void ppc_srawx(u32 op){
 	u32 t = RT;
 
 	XER &= ~XER_CA;
-	if(R(t) < 0 && R(t) & BITMASK_0(sa))
+	if(((s32)R(t) < 0) && R(t) & BITMASK_0(sa))
 		XER |= XER_CA;
 
 	R(a) = (s32)R(t) >> sa;
@@ -1391,7 +1459,7 @@ static void ppc_srawix(u32 op){
 	u32 t = RT;
 
 	XER &= ~XER_CA;
-	if(R(t) < 0 && R(t) & BITMASK_0(sa))
+	if(((s32)R(t) < 0) && R(t) & BITMASK_0(sa))
 		XER |= XER_CA;
 
 	R(a) = (s32)R(t) >> sa;
@@ -1409,7 +1477,7 @@ static void ppc_lbz(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (u32)(u8)ppc.irb(ea);
+	R(t) = (u32)(u8)ppc_read_8(ea);
 }
 
 static void ppc_lha(u32 op){
@@ -1419,7 +1487,7 @@ static void ppc_lha(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (s32)(s16)ppc.irw(ea);
+	R(t) = (s32)(s16)ppc_read_16(ea);
 }
 
 static void ppc_lhz(u32 op){
@@ -1429,7 +1497,7 @@ static void ppc_lhz(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (u32)(u16)ppc.irw(ea);
+	R(t) = (u32)(u16)ppc_read_16(ea);
 }
 
 static void ppc_lwz(u32 op){
@@ -1439,8 +1507,7 @@ static void ppc_lwz(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (u32)ppc.ird(ea);
-
+	R(t) = (u32)ppc_read_32(ea);
 }
 
 static void ppc_lbzu(u32 op){
@@ -1450,7 +1517,7 @@ static void ppc_lbzu(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (u32)(u8)ppc.irb(R(a));
+	R(t) = (u32)(u8)ppc_read_8(R(a));
 }
 
 static void ppc_lhau(u32 op){
@@ -1460,7 +1527,7 @@ static void ppc_lhau(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (s32)(s16)ppc.irw(R(a));
+	R(t) = (s32)(s16)ppc_read_16(R(a));
 }
 
 static void ppc_lhzu(u32 op){
@@ -1470,7 +1537,7 @@ static void ppc_lhzu(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (u32)(u16)ppc.irw(R(a));
+	R(t) = (u32)(u16)ppc_read_16(R(a));
 }
 
 static void ppc_lwzu(u32 op){
@@ -1480,7 +1547,7 @@ static void ppc_lwzu(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (u32)ppc.ird(R(a));
+	R(t) = (u32)ppc_read_32(R(a));
 }
 
 static void ppc_lbzx(u32 op){
@@ -1490,7 +1557,7 @@ static void ppc_lbzx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (u32)(u8)ppc.irb(ea);
+	R(t) = (u32)(u8)ppc_read_8(ea);
 }
 
 static void ppc_lhax(u32 op){
@@ -1500,7 +1567,7 @@ static void ppc_lhax(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (s32)(s16)ppc.irw(ea);
+	R(t) = (s32)(s16)ppc_read_16(ea);
 }
 
 static void ppc_lhzx(u32 op){
@@ -1510,7 +1577,7 @@ static void ppc_lhzx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (u32)(u16)ppc.irw(ea);
+	R(t) = (u32)(u16)ppc_read_16(ea);
 }
 
 static void ppc_lwzx(u32 op){
@@ -1520,7 +1587,7 @@ static void ppc_lwzx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = (u32)ppc.ird(ea);
+	R(t) = (u32)ppc_read_32(ea);
 }
 
 static void ppc_lbzux(u32 op){
@@ -1530,7 +1597,7 @@ static void ppc_lbzux(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (u32)(u8)ppc.irb(R(a));
+	R(t) = (u32)(u8)ppc_read_8(R(a));
 }
 
 static void ppc_lhaux(u32 op){
@@ -1540,7 +1607,7 @@ static void ppc_lhaux(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (s32)(s16)ppc.irw(R(a));
+	R(t) = (s32)(s16)ppc_read_16(R(a));
 }
 
 static void ppc_lhzux(u32 op){
@@ -1550,7 +1617,7 @@ static void ppc_lhzux(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (u32)(u16)ppc.irw(R(a));
+	R(t) = (u32)(u16)ppc_read_16(R(a));
 }
 
 static void ppc_lwzux(u32 op){
@@ -1560,7 +1627,7 @@ static void ppc_lwzux(u32 op){
 	u32 t = RT;
 
 	R(a) += ea;
-	R(t) = (u32)ppc.ird(R(a));
+	R(t) = (u32)ppc_read_32(R(a));
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1572,7 +1639,7 @@ static void ppc_stb(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	ppc.iwb(ea, R(t));
+	ppc_write_8(ea, R(t));
 }
 
 static void ppc_sth(u32 op){
@@ -1582,7 +1649,7 @@ static void ppc_sth(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	ppc.iww(ea, R(t));
+	ppc_write_16(ea, R(t));
 }
 
 static void ppc_stw(u32 op){
@@ -1592,7 +1659,7 @@ static void ppc_stw(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	ppc.iwd(ea, R(t));
+	ppc_write_32(ea, R(t));
 }
 
 static void ppc_stbu(u32 op){
@@ -1602,7 +1669,7 @@ static void ppc_stbu(u32 op){
 	u32 t = RT;
 
 	ea += R(a);
-	ppc.iwb(ea, R(t));
+	ppc_write_8(ea, R(t));
 	R(a) = ea;
 }
 
@@ -1613,7 +1680,7 @@ static void ppc_sthu(u32 op){
 	u32 t = RT;
 
 	ea += R(a);
-	ppc.iww(ea, R(t));
+	ppc_write_16(ea, R(t));
 	R(a) = ea;
 }
 
@@ -1624,7 +1691,7 @@ static void ppc_stwu(u32 op){
 	u32 t = RT;
 
 	ea += R(a);
-	ppc.iwd(ea, R(t));
+	ppc_write_32(ea, R(t));
 	R(a) = ea;
 }
 
@@ -1635,7 +1702,7 @@ static void ppc_stbx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	ppc.iwb(ea, R(t));
+	ppc_write_8(ea, R(t));
 }
 
 static void ppc_sthx(u32 op){
@@ -1645,7 +1712,7 @@ static void ppc_sthx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	ppc.iww(ea, R(t));
+	ppc_write_16(ea, R(t));
 }
 
 static void ppc_stwx(u32 op){
@@ -1655,7 +1722,7 @@ static void ppc_stwx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	ppc.iwd(ea, R(t));
+	ppc_write_32(ea, R(t));
 }
 
 static void ppc_stbux(u32 op){
@@ -1665,7 +1732,7 @@ static void ppc_stbux(u32 op){
 	u32 t = RT;
 
 	ea += R(a);
-	ppc.iwb(ea, R(t));
+	ppc_write_8(ea, R(t));
 	R(a) = ea;
 }
 
@@ -1676,7 +1743,7 @@ static void ppc_sthux(u32 op){
 	u32 t = RT;
 
 	ea += R(a);
-	ppc.iww(ea, R(t));
+	ppc_write_16(ea, R(t));
 	R(a) = ea;
 }
 
@@ -1687,7 +1754,7 @@ static void ppc_stwux(u32 op){
 	u32 t = RT;
 
 	ea += R(a);
-	ppc.iwd(ea, R(t));
+	ppc_write_32(ea, R(t));
 	R(a) = ea;
 }
 
@@ -1704,7 +1771,7 @@ static void ppc_lfs(u32 op){
 	if(a)
 		ea += R(a);
 
-	i = ppc.ird(ea);
+	i = ppc_read_32(ea);
 	ppc.fpr[t].fd = (f64)(*((f32 *)&i));
 }
 
@@ -1719,7 +1786,7 @@ static void ppc_lfsu(u32 op){
 
 	ea += R(a);
 
-	itemp = ppc.ird(ea);
+	itemp = ppc_read_32(ea);
 	ftemp = *(f32 *)&itemp;
 
 	ppc.fpr[t].fd = (f64)((f32)ftemp);
@@ -1738,14 +1805,12 @@ static void ppc_lfsux(u32 op){
 
 	ea += R(a);
 
-	itemp = ppc.ird(ea);
+	itemp = ppc_read_32(ea);
 	ftemp = *(f32 *)&itemp;
 
 	ppc.fpr[t].fd = (f64)((f32)ftemp);
 
 	R(a) = ea;
-
-	//ppc_null(op);
 }
 
 static void ppc_lfsx(u32 op){
@@ -1760,7 +1825,7 @@ static void ppc_lfsx(u32 op){
 	if(a)
 		ea += R(a);
 
-	itemp = ppc.ird(ea);
+	itemp = ppc_read_32(ea);
 	ftemp = *(f32 *)&itemp;
 
 	ppc.fpr[t].fd = (f64)((f32)ftemp);
@@ -1779,7 +1844,7 @@ static void ppc_stfs(u32 op){
 
 	ftemp = (f32)((f64)ppc.fpr[t].fd);
 
-	ppc.iwd(ea, *(u32 *)&ftemp);
+	ppc_write_32(ea, *(u32 *)&ftemp);
 }
 
 static void ppc_stfsu(u32 op){
@@ -1794,11 +1859,9 @@ static void ppc_stfsu(u32 op){
 
 	ftemp = (f32)((f64)ppc.fpr[t].fd);
 
-	ppc.iwd(ea, *(u32 *)&ftemp);
+	ppc_write_32(ea, *(u32 *)&ftemp);
 
 	R(a) = ea;
-
-	//ppc_null(op);
 }
 
 static void ppc_stfsux(u32 op){
@@ -1813,11 +1876,9 @@ static void ppc_stfsux(u32 op){
 
 	ftemp = (f32)((f64)ppc.fpr[t].fd);
 
-	ppc.iwd(ea, *(u32 *)&ftemp);
+	ppc_write_32(ea, *(u32 *)&ftemp);
 
 	R(a) = ea;
-
-	//ppc_null(op);
 }
 
 static void ppc_stfsx(u32 op){
@@ -1833,9 +1894,8 @@ static void ppc_stfsx(u32 op){
 
 	ftemp = (f32)((f64)ppc.fpr[t].fd);
 
-	ppc.iwd(ea, *(u32 *)&ftemp);
+	ppc_write_32(ea, *(u32 *)&ftemp);
 
-	//ppc_null(op);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1849,7 +1909,7 @@ static void ppc_lfd(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.fpr[t].id = ppc.irq(ea);
+	ppc.fpr[t].id = ppc_read_64(ea);
 }
 
 static void ppc_lfdu(u32 op){
@@ -1860,11 +1920,9 @@ static void ppc_lfdu(u32 op){
 
 	ea += R(a);
 
-	ppc.fpr[d].id = ppc.irq(ea);
+	ppc.fpr[d].id = ppc_read_64(ea);
 
 	R(a) = ea;
-
-	//ppc_null(op);
 }
 
 static void ppc_lfdux(u32 op){
@@ -1875,11 +1933,9 @@ static void ppc_lfdux(u32 op){
 
 	ea += R(a);
 
-	ppc.fpr[d].id = ppc.irq(ea);
+	ppc.fpr[d].id = ppc_read_64(ea);
 
 	R(a) = ea;
-
-	//ppc_null(op);
 }
 
 static void ppc_lfdx(u32 op){
@@ -1891,9 +1947,7 @@ static void ppc_lfdx(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.fpr[d].id = ppc.irq(ea);
-
-	//ppc_null(op);
+	ppc.fpr[d].id = ppc_read_64(ea);
 }
 
 static void ppc_stfd(u32 op){
@@ -1905,7 +1959,7 @@ static void ppc_stfd(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.iwq(ea, ppc.fpr[t].id);
+	ppc_write_64(ea, ppc.fpr[t].id);
 }
 
 static void ppc_stfdu(u32 op){
@@ -1916,7 +1970,7 @@ static void ppc_stfdu(u32 op){
 
 	ea += R(a);
 
-	ppc.iwq(ea, ppc.fpr[t].id);
+	ppc_write_64(ea, ppc.fpr[t].id);
 
 	R(a) = ea;
 }
@@ -1929,11 +1983,9 @@ static void ppc_stfdux(u32 op){
 
 	ea += R(a);
 
-	ppc.iwq(ea, ppc.fpr[t].id);
+	ppc_write_64(ea, ppc.fpr[t].id);
 
 	R(a) = ea;
-
-	//ppc_null(op);
 }
 
 static void ppc_stfdx(u32 op){
@@ -1945,9 +1997,7 @@ static void ppc_stfdx(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.iwq(ea, ppc.fpr[t].id);
-
-	//ppc_null(op);
+	ppc_write_64(ea, ppc.fpr[t].id);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1961,7 +2011,7 @@ static void ppc_stfiwx(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.iwd(ea, ppc.fpr[t].iw);
+	ppc_write_32(ea, ppc.fpr[t].iw);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1977,7 +2027,7 @@ static void ppc_lhbrx(u32 op){
 	if(a)
 		ea += R(a);
 
-	t = ppc.irw(ea);
+	t = ppc_read_16(ea);
 	R(d) =	((t >> 8) & 0x00FF) |
 			((t << 8) & 0xFF00);
 }
@@ -1992,7 +2042,7 @@ static void ppc_lwbrx(u32 op){
 	if(a)
 		ea += R(a);
 
-	t = ppc.ird(ea);
+	t = ppc_read_32(ea);
 	R(d) =	((t >> 24) & 0x000000FF) |
 			((t >>  8) & 0x0000FF00) |
 			((t <<  8) & 0x00FF0000) |
@@ -2008,7 +2058,7 @@ static void ppc_sthbrx(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.iww(ea, ((R(d) >> 8) & 0x00FF) |
+	ppc_write_16(ea, ((R(d) >> 8) & 0x00FF) |
 				((R(d) << 8) & 0xFF00));
 }
 
@@ -2021,7 +2071,7 @@ static void ppc_stwbrx(u32 op){
 	if(a)
 		ea += R(a);
 
-	ppc.iwd(ea, ((R(d) >> 24) & 0x000000FF) |
+	ppc_write_32(ea, ((R(d) >> 24) & 0x000000FF) |
 				((R(d) >>  8) & 0x0000FF00) |
 				((R(d) <<  8) & 0x00FF0000) |
 				((R(d) << 24) & 0xFF000000));
@@ -2045,7 +2095,7 @@ static void ppc_lmw(u32 op){
 
 	while(d < 32){
 
-		R(d) = ppc.ird(ea);
+		R(d) = ppc_read_32(ea);
 		ea += 4;
 		d++;
 	}
@@ -2061,7 +2111,7 @@ static void ppc_stmw(u32 op){
 
 	while(d < 32){
 
-		ppc.iwd(ea, R(d));
+		ppc_write_32(ea, R(d));
 		ea += 4;
 		d++;
 	}
@@ -2100,7 +2150,7 @@ static void ppc_lwarx(u32 op){
 	u32 t = RT;
 
 	if(a) ea += R(a);
-	R(t) = ppc.ird(ea);
+	R(t) = ppc_read_32(ea);
 	ppc.reserved = ea;
 }
 
@@ -2122,7 +2172,7 @@ static void ppc_stwcx(u32 op){
 
 		/* reserved */
 
-		ppc.iwd(ea, R(t));
+		ppc_write_32(ea, R(t));
 		CR(0) = 0x2 | (XER & XER_SO) ? 1 : 0; /* EQ | SO */
 	}
 
@@ -2177,15 +2227,7 @@ static void ppc_mcrf(u32 op){	CR(RD>>2) = CR(RA>>2); }
 ////////////////////////////////////////////////////////////////
 // Branch
 
-INLINE u32 CHECK_BI(u32 bi){
-
-	switch(bi & 3){
-	case 0:		return((CR(bi >> 2) & _LT) != 0);
-	case 1:		return((CR(bi >> 2) & _GT) != 0);
-	case 2:		return((CR(bi >> 2) & _EQ) != 0);
-	default:	return((CR(bi >> 2) & _SO) != 0);
-	}
-}
+#define CHECK_BI(bi)		((CR(bi >> 2) & (8 >> (bi & 3))) != 0)
 
 static u32 ppc_bo_0000(u32 bi){ return(--CTR != 0 && CHECK_BI(bi) == 0); }
 static u32 ppc_bo_0001(u32 bi){ return(--CTR == 0 && CHECK_BI(bi) == 0); }
@@ -2246,23 +2288,16 @@ static void ppc_bclrx(u32 op){
 		LR = CIA + 4;
 }
 
-////////////////////////////////////////////////////////////////
-// Exception Control
-
 static void ppc_rfi(u32 op){
 
 	ppc.nia = ppc.spr[SPR_SRR0];
-	ppc.msr = ppc.spr[SPR_SRR1];
-
-	// recalc ppc.test_irq
+	ppc_set_msr(ppc.spr[SPR_SRR1]);
 }
 
 static void ppc_rfci(u32 op){
 
 	ppc.nia = ppc.spr[SPR_SRR2];
-	ppc.msr = ppc.spr[SPR_SRR3];
-
-	// reacalc ppc.test_irq
+	ppc_set_msr(ppc.spr[SPR_SRR3]);
 }
 
 static void ppc_sc(u32 op){
@@ -2315,16 +2350,20 @@ static void ppc_mtcrf(u32 op){
 	if(f & 0x01) CR(7) = (R(d) >>  0) & 15;
 }
 
-static void ppc_mfmsr(u32 op){	R(RD) = ppc.get_msr(); }
-static void ppc_mtmsr(u32 op){	ppc.set_msr(R(RD));
+static void ppc_mfmsr(u32 op){	R(RD) = ppc_get_msr(); }
+static void ppc_mtmsr(u32 op){	ppc_set_msr(R(RD));
                                 LOG("model3.log", "FE0-1=%d%d\n", !!(R(RD) & 0x800), !!(R(RD) & 0x100));
                                                         }
 
-static void ppc_mfspr(u32 op){	R(RD) = ppc.get_spr(_SPRF); }
-static void ppc_mtspr(u32 op){	ppc.set_spr(_SPRF, R(RD)); }
+static void ppc_mfspr(u32 op){	R(RD) = ppc_get_spr(_SPRF); }
+static void ppc_mtspr(u32 op){	ppc_set_spr(_SPRF, R(RD)); }
+
+#if (PPC_MODEL == PPC_MODEL_4XX)
 
 static void ppc_mfdcr(u32 op){	R(RD) = ppc_get_dcr(_DCRF); }
 static void ppc_mtdcr(u32 op){	ppc_set_dcr(_DCRF, R(RD)); }
+
+#endif
 
 static void ppc_mftb(u32 op){
 
@@ -2511,17 +2550,16 @@ static void ppc_ecowx(u32 op){
 	ppc_null(op);
 }
 
-////////////////////////////////////////////////////////////////
-// Floating-Point Computation
-
-// everything is IEEE754, except "madd" and "estimate" instructions
+/*
+ * Floating-Point Instructions
+ */
 
 #define DOUBLE_SIGN		(0x8000000000000000)
 #define DOUBLE_EXP		(0x7FF0000000000000)
 #define DOUBLE_FRAC		(0x000FFFFFFFFFFFFF)
 #define DOUBLE_ZERO		(0)
 
-INLINE int is_nan_f64(f64 x){
+static INLINE int is_nan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2529,16 +2567,16 @@ INLINE int is_nan_f64(f64 x){
 	);
 }
 
-INLINE int is_qnan_f64(f64 x){
+static INLINE int is_qnan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((*(u64 *)&(x) & DOUBLE_FRAC) != DOUBLE_ZERO) &&
+		((*(u64 *)&(x) & 0x0007FFFFFFFFFFF) == 0x000000000000000) &&
         ((*(u64 *)&(x) & 0x000800000000000) == 0x000800000000000)
     );
 }
 
-INLINE int is_snan_f64(f64 x){
+static INLINE int is_snan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2547,7 +2585,7 @@ INLINE int is_snan_f64(f64 x){
 	);
 }
 
-INLINE int is_infinity_f64(f64 x)
+static INLINE int is_infinity_f64(f64 x)
 {
     return (
         ((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2555,7 +2593,7 @@ INLINE int is_infinity_f64(f64 x)
     );
 }
 
-INLINE int is_normalized_f64(f64 x)
+static INLINE int is_normalized_f64(f64 x)
 {
     u64 exp;
 
@@ -2564,7 +2602,7 @@ INLINE int is_normalized_f64(f64 x)
     return (exp >= 1) && (exp <= 2046);
 }
 
-INLINE int is_denormalized_f64(f64 x)
+static INLINE int is_denormalized_f64(f64 x)
 {
     return (
         ((*(u64 *)&(x) & DOUBLE_EXP) == 0) &&
@@ -2572,12 +2610,12 @@ INLINE int is_denormalized_f64(f64 x)
     );
 }
 
-INLINE int sign_f64(f64 x)
+static INLINE int sign_f64(f64 x)
 {
     return ((*(u64 *)&(x) & DOUBLE_SIGN) != 0);
 }
 
-INLINE s32 round_f64_to_s32(f64 v){
+static INLINE s32 round_f64_to_s32(f64 v){
 
 	if(v >= 0)
 		return((s32)(v + 0.5));
@@ -2585,7 +2623,7 @@ INLINE s32 round_f64_to_s32(f64 v){
 		return(-(s32)(-v + 0.5));
 }
 
-INLINE s32 trunc_f64_to_s32(f64 v){
+static INLINE s32 trunc_f64_to_s32(f64 v){
 
 	if(v >= 0)
 		return((s32)v);
@@ -2593,17 +2631,17 @@ INLINE s32 trunc_f64_to_s32(f64 v){
 		return(-((s32)(-v)));
 }
 
-INLINE s32 ceil_f64_to_s32(f64 v){
+static INLINE s32 ceil_f64_to_s32(f64 v){
 
 	return((s32)ceil(v));
 }
 
-INLINE s32 floor_f64_to_s32(f64 v){
+static INLINE s32 floor_f64_to_s32(f64 v){
 
 	return((s32)floor(v));
 }
 
-static void set_fprf(f64 f)
+static INLINE void set_fprf(f64 f)
 {
     u32 fprf;
 
@@ -2643,8 +2681,6 @@ static void set_fprf(f64 f)
     ppc.fpscr &= ~0x0001F000;
     ppc.fpscr |= (fprf << 12);
 }
-
-////////////////////////////////////////////////////////////////
 
 static void ppc_fabsx(u32 op){
 
@@ -3190,9 +3226,6 @@ static void ppc_fsubsx(u32 op){
 	SET_FCR1();
 }
 
-////////////////////////////////////////////////////////////////
-// Floating-Point Status / Control
-
 static void ppc_mcrfs(u32 op){
     u32 crfS, f;
 
@@ -3256,8 +3289,7 @@ static void ppc_mffsx(u32 op){
 
 	ppc.fpr[t].iw = ppc.fpscr;
 
-	if(op & _RC)
-		CR(1) = (ppc.fpscr >> 28);
+	SET_FCR1();
 }
 
 static void ppc_mtfsfx(u32 op){
@@ -3267,14 +3299,16 @@ static void ppc_mtfsfx(u32 op){
 
 	f = ppc_field_xlat[_FM];
 
-	ppc.fpscr &= ~f;
-	ppc.fpscr |= (ppc.fpr[b].iw);
+	ppc.fpscr &= (~f) | ~(_FEX | _VX);
+	ppc.fpscr |= (ppc.fpr[b].iw) & ~(_FEX | _VX);
 
-	if(op & _RC)
-		CR(1) = (ppc.fpscr >> 28);
+	// FEX, VX
+
+	SET_FCR1();
 }
 
 static void ppc_mtfsfix(u32 op){
+
     u32 crfD = _CRFD;
     u32 imm = (op >> 12) & 0xF;
 
@@ -3299,9 +3333,13 @@ static void ppc_mtfsfix(u32 op){
 
     ppc.fpscr &= ~(0xF << crfD);    // clear field
     ppc.fpscr |= (imm << crfD);     // insert new data
+
+	SET_FCR1();
 }
 
-////////////////////////////////////////////////////////////////
+/*
+ * Opcode Dispatcher
+ */
 
 static void (* ppc_inst_19[0x400])(u32 op);
 static void (* ppc_inst_31[0x400])(u32 op);
@@ -3313,10 +3351,8 @@ static void ppc_31(u32 op){ ppc_inst_31[_XO](op); }
 static void ppc_59(u32 op){ ppc_inst_59[_XO](op); }
 static void ppc_63(u32 op){ ppc_inst_63[_XO](op); }
 
-////////////////////////////////////////////////////////////////
-
-static void (* ppc_inst[64])(u32 op) = {
-
+static void (* ppc_inst[64])(u32 op) =
+{
 	ppc_null,	ppc_null,	ppc_null,	ppc_twi,		// 00 ~ 03
 	ppc_null,	ppc_null,	ppc_null,	ppc_mulli,		// 04 ~ 07
 	ppc_subfic,	ppc_null,	ppc_cmpli,	ppc_cmpi,		// 08 ~ 0b
@@ -3329,145 +3365,19 @@ static void (* ppc_inst[64])(u32 op) = {
 	ppc_stw,	ppc_stwu,	ppc_stb,	ppc_stbu,		// 24 ~ 27
 	ppc_lhz,	ppc_lhzu,	ppc_lha,	ppc_lhau,		// 28 ~ 2b
 	ppc_sth,	ppc_sthu,	ppc_lmw,	ppc_stmw,		// 2c ~ 2f
-	ppc_lfs,	ppc_lfsu,	ppc_lfd,	ppc_lfdu,		// 30 ~ 33
-	ppc_stfs,	ppc_stfsu,	ppc_stfd,	ppc_stfdu,		// 34 ~ 37
-	ppc_null,	ppc_null,	ppc_null,	ppc_59,			// 38 ~ 3b
-	ppc_null,	ppc_null,	ppc_null,	ppc_63,			// 3c ~ 3f
+	ppc_null,	ppc_null,	ppc_null,	ppc_null,		// 30 ~ 33
+	ppc_null,	ppc_null,	ppc_null,	ppc_null,		// 34 ~ 37
+	ppc_null,	ppc_null,	ppc_null,	ppc_null,		// 38 ~ 3b
+	ppc_null,	ppc_null,	ppc_null,	ppc_null,		// 3c ~ 3f
 };
 
-////////////////////////////////////////////////////////////////
-
-u64 ppc_read_time_stamp(void){
-
-	// for timer implementation and such
-
-	return(0);
-}
-
-////////////////////////////////////////////////////////////////
-
-void ppc_4xx_test_irq(void){
-
-	/*
-
-	//if(ppc.test_irq){
-
-		if(ppc.msr & 0x80000000){
-
-			// Critical Enabled
-
-			if(ppc.dcr[DCR_EXIER] & ppc.dcr[DCR_EXISR] & 0x80000000){
-
-				// Critical Interrupt
-
-				ppc.spr[SPR_SRR2] = ppc.nia;
-				ppc.nia = (ppc.spr[SPR_EVPR] & 0xFFFF0000) | 0x0100;
-				ppc.spr[SPR_SRR3] = ppc.msr;
-				ppc.msr &= ~0x8008C008; // WE=PR=CE=EE=DE=PE=0
-			}
-
-			// Watch-Dog Interrupt
-
-		}else
-		if(ppc.msr & 0x00008000){
-
-			// External Enabled
-
-			if(ppc.dcr[DCR_EXIER] & ppc.dcr[DCR_EXISR] & 0x0FF0001F){
-
-				// External Interrupt
-
-				ppc.spr[SPR_SRR0] = ppc.nia;
-				ppc.nia = (ppc.spr[SPR_EVPR] & 0xFFFF0000) | 0x0500;
-				ppc.spr[SPR_SRR1] = ppc.msr;
-				ppc.msr &= ~0x0008C008; // WE=EE=PR=PE=0
-			}
-		}
-
-	//	if(!(ppc.dcr[DCR_EXIER] & ppc.dcr[DCR_EXISR] & 0x8FF0001F))
-	//		ppc.test_irq = 0;
-	//	}
-
-	//}
-
-	*/
-}
-
-void ppc_machine_check(void){
-
-	if(ppc.msr & 0x1000){
-
-		/* machine check enabled */
-
-		ppc.spr[SPR_SRR0] = ppc.nia;
-		ppc.spr[SPR_SRR1] = ppc.msr;
-
-		ppc.nia = (ppc.msr & 0x40) ? 0xFFF00200 : 0x00000200;
-		ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
-	}
-
-	/* enter checkstop condition */
-}
-
-void ppc_6xx_test_irq(void){
-
-	if(ppc.msr & 0x8000){
-
-		/* external irq and decrementer enabled */
-
-		if(ppc.irq_state){
-
-			/* accept external interrupt */
-
-			ppc.spr[SPR_SRR0] = ppc.nia;
-			ppc.spr[SPR_SRR1] = ppc.msr;
-
-			ppc.nia = (ppc.msr & 0x40) ? 0xFFF00500 : 0x00000500;
-			ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
-
-			/* notify to the interrupt manager */
-
-			if(ppc.irq_callback != NULL)
-				ppc.irq_state = ppc.irq_callback();
-            else
-				ppc.irq_state = 0;
-
-		}else
-		if(ppc.dec_expired){
-
-			/* accept decrementer exception */
-
-			ppc.spr[SPR_SRR0] = ppc.nia;
-			ppc.spr[SPR_SRR1] = ppc.msr;
-
-			ppc.nia = (ppc.msr & 0x40) ? 0xFFF00900 : 0x00000900;
-			ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
-
-			/* clear pending decrementer exception */
-
-			ppc.dec_expired = 0;
-		}
-	}
-}
-
-void ppc_set_irq_line(u32 state){
-
-	ppc.irq_state = state;
-}
-
-void ppc_set_irq_callback(u32 (* callback)(void)){
-
-	ppc.irq_callback = callback;
-}
-
-////////////////////////////////////////////////////////////////
-
-char * m3_stat_string(u32 stat){
-
-	return(NULL);
-}
+/*
+ * Interface
+ */
 
 u32 ppc_run(u32 count){
+
+	u32 op;
 
 	ppc.count = count;
 
@@ -3475,31 +3385,13 @@ u32 ppc_run(u32 count){
 
 		ppc.count--;
 
-#if 0
-        if (ppc.cia == 0x3C7C)  // VF3
-        {
-            printf("BREAKPOINT!\n");
-            exit(0);
-        }
-#endif
+		op = ppc_fetch(ppc.cia);
 
-        // fetch and execute
+		ppc_inst[(op >> 26) & 0x3F](op);
 
-		ppc.ir = ppc.fetch(ppc.cia);
-
-		ppc_inst[(ppc.ir >> 26) & 0x3f](ppc.ir);
-
-		// check for interrupts
-
-		ppc.test_irq_event();
-
-		/* tb & dec are modified each 4 cycles! */
-
-		// increment time base
+		ppc_test_irq();
 
 		if((ppc.count & 3) == 0){
-
-			/* won't work with real instruction timings (non-1 cycle) */
 
 			ppc.tb++;
 			if(ppc.tb >> 56)
@@ -3510,61 +3402,17 @@ u32 ppc_run(u32 count){
                 ppc.dec_expired = 1;
 		}
 
-
-		// go to next instructions
-
 		ppc.cia = ppc.nia;
 		ppc.nia += 4;
-
 	}
 
-	return(0);
+	return(PPC_OKAY);
 }
 
-////////////////////////////////////////////////////////////////
+void ppc_set_irq_line(u32 state){
 
-void ppc_set_trace_callback(void * callback){
-
-	ppc.trace = (void (*)(u32, u32))callback;
+	ppc.irq_state = state;
 }
-
-////////////////////////////////////////////////////////////////
-
-void ppc_set_read_8_handler(void * handler){     ppc.rb = (u32 (*)(u32))handler; }
-void ppc_set_read_16_handler(void * handler){     ppc.rw = (u32 (*)(u32))handler; }
-void ppc_set_read_32_handler(void * handler){     ppc.rd = (u32 (*)(u32))handler; }
-void ppc_set_read_64_handler(void * handler){    ppc.rq = (u64 (*)(u32))handler; }
-
-void ppc_set_write_8_handler(void * handler){    ppc.wb = (void (*)(u32,u32))handler; }
-void ppc_set_write_16_handler(void * handler){    ppc.ww = (void (*)(u32,u32))handler; }
-void ppc_set_write_32_handler(void * handler){    ppc.wd = (void (*)(u32,u32))handler; }
-void ppc_set_write_64_handler(void * handler){   ppc.wq = (void (*)(u32,u64))handler; }
-
-////////////////////////////////////////////////////////////////
-
-static u32 ppc_rb_null(u32 a){ return(0); }
-static u32 ppc_rw_null(u32 a){ return(0); }
-static u32 ppc_rd_null(u32 a){ return(0); }
-static u64 ppc_rq_null(u32 a){ return(0); }
-
-static void ppc_wb_null(u32 a, u32 d){ }
-static void ppc_ww_null(u32 a, u32 d){ }
-static void ppc_wd_null(u32 a, u32 d){ }
-static void ppc_wq_null(u32 a, u64 d){ }
-
-////////////////////////////////////////////////////////////////
-
-u32 ppc_read_byte(u32 a){ return(ppc.irb(a)); }
-u32 ppc_read_half(u32 a){ return(ppc.irw(a)); }
-u32 ppc_read_word(u32 a){ return(ppc.ird(a)); }
-u64 ppc_read_dword(u32 a){ return(ppc.irq(a)); }
-
-void ppc_write_byte(u32 a, u32 d){ ppc.iwb(a, d); }
-void ppc_write_half(u32 a, u32 d){ ppc.iww(a, d); }
-void ppc_write_word(u32 a, u32 d){ ppc.iwd(a, d); }
-void ppc_write_dword(u32 a, u64 d){ ppc.iwq(a, d); }
-
-////////////////////////////////////////////////////////////////
 
 u32 ppc_get_r(int n){ return(ppc.gpr[n]); }
 void ppc_set_r(int n, u32 d){ ppc.gpr[n] = d; }
@@ -3572,7 +3420,7 @@ void ppc_set_r(int n, u32 d){ ppc.gpr[n] = d; }
 f64 ppc_get_f(int n){ return(ppc.fpr[n].fd); }
 void ppc_set_f(int n, f64 d){ ppc.fpr[n].fd = d; }
 
-u32 ppc_get_reg(PPC_REG r){
+u32 ppc_get_reg(int r){
 
 	switch(r){
 
@@ -3610,7 +3458,6 @@ u32 ppc_get_reg(PPC_REG r){
 	case PPC_REG_R31: return(ppc.gpr[31]);
 
 	case PPC_REG_PC: return(ppc.cia);
-	case PPC_REG_IR: return(ppc.ir);
 
 	case PPC_REG_CR:
 
@@ -3692,14 +3539,12 @@ u32 ppc_get_reg(PPC_REG r){
 	}
 }
 
-void ppc_set_reg(PPC_REG r, u32 d){
+void ppc_set_reg(int r, u32 d){
 
 	if(r == PPC_REG_PC){
 		ppc.nia = d;
 	}
 }
-
-////////////////////////////////////////////////////////////////
 
 int ppc_get_context(ppc_t * dst){
 
@@ -3725,8 +3570,6 @@ int ppc_set_context(ppc_t * src){
 	return(-1);
 }
 
-////////////////////////////////////////////////////////////////
-
 int ppc_reset(void){
 
 	int i;
@@ -3744,151 +3587,88 @@ int ppc_reset(void){
 	ppc.irq_state = 0;
 	ppc.tb = 0;
 
-	if(ppc.type == PPC_TYPE_4XX){
+	#if (PPC_MODEL == PPC_MODEL_4XX)
 
-		// PPC 4XX
+	ppc.msr	= 0;
 
-		ppc.msr	= 0;
+//	ppc.spr[SPR_PVR] = 0x00200011;	// 403GA
+	ppc.spr[SPR_PVR] = 0x00201400;	// Konami Custom ?
+	ppc.spr[SPR_DBSR] = 0x00000300;	// 0x100, 0x200
 
-	//	ppc.spr[SPR_PVR] = 0x00200011;	// 403GA
-		ppc.spr[SPR_PVR] = 0x00201400;	// Konami Custom ?
-		ppc.spr[SPR_DBSR] = 0x00000300;	// 0x100, 0x200
+	for(i = 0; i < 256; i++)
+		ppc.dcr[i] = 0;
 
-		for(i = 0; i < 256; i++)
-			ppc.dcr[i] = 0;
+	ppc.dcr[DCR_BR0]	= 0xFF193FFE;
+	ppc.dcr[DCR_BR1]	= 0xFF013FFE;
+	ppc.dcr[DCR_BR2]	= 0xFF013FFE;
+	ppc.dcr[DCR_BR3]	= 0xFF013FFE;
+	ppc.dcr[DCR_BR4]	= 0xFF013FFF;
+	ppc.dcr[DCR_BR5]	= 0xFF013FFF;
+	ppc.dcr[DCR_BR6]	= 0xFF013FFF;
+	ppc.dcr[DCR_BR7]	= 0xFF013FFF;
 
-		ppc.dcr[DCR_BR0]	= 0xFF193FFE;
-		ppc.dcr[DCR_BR1]	= 0xFF013FFE;
-		ppc.dcr[DCR_BR2]	= 0xFF013FFE;
-		ppc.dcr[DCR_BR3]	= 0xFF013FFE;
-		ppc.dcr[DCR_BR4]	= 0xFF013FFF;
-		ppc.dcr[DCR_BR5]	= 0xFF013FFF;
-		ppc.dcr[DCR_BR6]	= 0xFF013FFF;
-		ppc.dcr[DCR_BR7]	= 0xFF013FFF;
+	ppc.cia = 0xFFFFFFFC;
+	ppc.nia = 0xFFFFFFFF;
 
-		ppc.cia = 0xFFFFFFFC;
-		ppc.nia = 0xFFFFFFFF;
+	#elif (PPC_MODEL == PPC_MODEL_6XX)
 
-		// Serial Controller
+	ppc.dec_expired = 0;
 
-	}else
-	if(ppc.type == PPC_TYPE_6XX){
+	ppc.tgpr[0] = 0;
+	ppc.tgpr[1] = 0;
+	ppc.tgpr[2] = 0;
+	ppc.tgpr[3] = 0;
 
-		// PPC 6XX
+	for(i = 0; i < 32; i++)
+		ppc.fpr[i].fd = 1.0;
 
-		ppc.dec_expired = 0;
+	for(i = 0; i < 16; i++)
+		ppc.sr[i] = 0;
 
-		ppc.tgpr[0] = 0;
-		ppc.tgpr[1] = 0;
-		ppc.tgpr[2] = 0;
-		ppc.tgpr[3] = 0;
+	ppc.msr = 0x40;
+	ppc.fpscr = 0;
 
-		for(i = 0; i < 32; i++)
-			ppc.fpr[i].fd = 1.0;
+	ppc.spr[SPR_PVR] = 0x00060104;		// 603e, Stretch, 1.4 - checked against by VS2V991
+	ppc.spr[SPR_DEC] = 0xFFFFFFFF;
 
-		for(i = 0; i < 16; i++)
-			ppc.sr[i] = 0;
+	ppc.cia = 0xFFF00100;
+	ppc.nia = 0xFFF00104;
 
-		ppc.msr = 0x40;
-		ppc.fpscr = 0;
-
-		ppc.spr[SPR_PVR] = 0x00060104;		// 603e, Stretch, 1.4 - checked against by VS2V991
-		ppc.spr[SPR_DEC] = 0xFFFFFFFF;
-
-		ppc.cia = 0xFFF00100;
-		ppc.nia = 0xFFF00104;
-	}
+	#endif
 
     return PPC_OKAY;
 }
 
-////////////////////////////////////////////////////////////////
+u32 ppc_read_byte(u32 a){ return(ppc_read_8(a)); }
+u32 ppc_read_half(u32 a){ return(ppc_read_16(a)); }
+u32 ppc_read_word(u32 a){ return(ppc_read_32(a)); }
+u64 ppc_read_dword(u32 a){ return(ppc_read_64(a)); }
+
+void ppc_write_byte(u32 a, u32 d){ ppc_write_8(a, d); }
+void ppc_write_half(u32 a, u32 d){ ppc_write_16(a, d); }
+void ppc_write_word(u32 a, u32 d){ ppc_write_32(a, d); }
+void ppc_write_dword(u32 a, u64 d){ ppc_write_64(a, d); }
+
+void ppc_set_irq_callback(u32 (* callback)(void)){
+
+	ppc.irq_callback = callback;
+}
+
+void ppc_set_read_8_handler(void * handler){	ppc.read_8 = (u32 (*)(u32))handler; }
+void ppc_set_read_16_handler(void * handler){	ppc.read_16 = (u32 (*)(u32))handler; }
+void ppc_set_read_32_handler(void * handler){	ppc.read_32 = (u32 (*)(u32))handler; }
+void ppc_set_read_64_handler(void * handler){	ppc.read_64 = (u64 (*)(u32))handler; }
+
+void ppc_set_write_8_handler(void * handler){	ppc.write_8 = (void (*)(u32,u32))handler; }
+void ppc_set_write_16_handler(void * handler){	ppc.write_16 = (void (*)(u32,u32))handler; }
+void ppc_set_write_32_handler(void * handler){	ppc.write_32 = (void (*)(u32,u32))handler; }
+void ppc_set_write_64_handler(void * handler){	ppc.write_64 = (void (*)(u32,u64))handler; }
 
 int ppc_init(void * x){
 
 	int i;
 
 	x = NULL;
-
-	// setup cpu type
-
-	ppc.type = PPC_TYPE_6XX;
-
-	// install internal memory handlers
-
-	ppc.irq_callback = (u32 (*)(void))NULL;
-
-	switch(ppc.type){
-
-	case PPC_TYPE_4XX:
-
-		ppc.fetch = ppc_4xx_fetch;
-
-		ppc.irb = ppc_4xx_irb;
-		ppc.irw = ppc_4xx_irw;
-		ppc.ird = ppc_4xx_ird;
-		ppc.irq = NULL;
-
-		ppc.iwb = ppc_4xx_iwb;
-		ppc.iww = ppc_4xx_iww;
-		ppc.iwd = ppc_4xx_iwd;
-		ppc.iwq = NULL;
-
-		ppc.set_spr = ppc_4xx_set_spr;
-		ppc.get_spr = ppc_4xx_get_spr;
-
-		ppc.set_msr = ppc_4xx_set_msr;
-		ppc.get_msr = ppc_4xx_get_msr;
-
-		ppc.test_irq_event = ppc_4xx_test_irq;
-
-		break;
-
-	case PPC_TYPE_6XX:
-
-		ppc.fetch = ppc_6xx_fetch;
-
-		ppc.irb = ppc_6xx_irb;
-		ppc.irw = ppc_6xx_irw;
-		ppc.ird = ppc_6xx_ird;
-		ppc.irq = ppc_6xx_irq;
-
-		ppc.iwb = ppc_6xx_iwb;
-		ppc.iww = ppc_6xx_iww;
-		ppc.iwd = ppc_6xx_iwd;
-		ppc.iwq = ppc_6xx_iwq;
-
-		ppc.set_spr = ppc_6xx_set_spr;
-		ppc.get_spr = ppc_6xx_get_spr;
-
-		ppc.set_msr = ppc_6xx_set_msr;
-		ppc.get_msr = ppc_6xx_get_msr;
-
-		ppc.test_irq_event = ppc_6xx_test_irq;
-
-		break;
-
-	default:
-
-		printf("ERROR: unhandled cpu type in ppc_init\n");
-		exit(1);
-	}
-
-	// install default (noop) memory handlers
-
-	ppc.rb = ppc_rb_null;
-	ppc.rw = ppc_rw_null;
-	ppc.rd = ppc_rd_null;
-	ppc.rq = ppc_rq_null;
-
-	ppc.wb = ppc_wb_null;
-	ppc.ww = ppc_ww_null;
-	ppc.wd = ppc_wd_null;
-	ppc.wq = ppc_wq_null;
-
-	// install default callbacks
-
-	ppc.trace = NULL;
 
 	// cleanup extended opcodes handlers
 
@@ -3902,11 +3682,11 @@ int ppc_init(void * x){
 
 	// install extended opcodes handlers
 
-	ppc_inst_31[266]	= ppc_inst_31[266|(_OE>>1)]	= ppc_addx;
-	ppc_inst_31[10]		= ppc_inst_31[10|(_OE>>1)]	= ppc_addcx;
-	ppc_inst_31[138]	= ppc_inst_31[138|(_OE>>1)]	= ppc_addex;
-	ppc_inst_31[234]	= ppc_inst_31[234|(_OE>>1)]	= ppc_addmex;
-	ppc_inst_31[202]	= ppc_inst_31[202|(_OE>>1)]	= ppc_addzex;
+	ppc_inst_31[266]	= ppc_inst_31[266|(_OVE>>1)]	= ppc_addx;
+	ppc_inst_31[10]		= ppc_inst_31[10|(_OVE>>1)]		= ppc_addcx;
+	ppc_inst_31[138]	= ppc_inst_31[138|(_OVE>>1)]	= ppc_addex;
+	ppc_inst_31[234]	= ppc_inst_31[234|(_OVE>>1)]	= ppc_addmex;
+	ppc_inst_31[202]	= ppc_inst_31[202|(_OVE>>1)]	= ppc_addzex;
 	ppc_inst_31[28]		= ppc_andx;
 	ppc_inst_31[60]		= ppc_andcx;
 	ppc_inst_19[528]	= ppc_bcctrx;
@@ -3928,8 +3708,8 @@ int ppc_init(void * x){
 	ppc_inst_31[278]	= ppc_dcbt;
 	ppc_inst_31[246]	= ppc_dcbtst;
 	ppc_inst_31[1014]	= ppc_dcbz;
-	ppc_inst_31[491]	= ppc_inst_31[491|(_OE>>1)]	= ppc_divwx;
-	ppc_inst_31[459]	= ppc_inst_31[459|(_OE>>1)]	= ppc_divwux;
+	ppc_inst_31[491]	= ppc_inst_31[491|(_OVE>>1)]	= ppc_divwx;
+	ppc_inst_31[459]	= ppc_inst_31[459|(_OVE>>1)]	= ppc_divwux;
 	ppc_inst_31[854]	= ppc_eieio;
 	ppc_inst_31[284]	= ppc_eqvx;
 	ppc_inst_31[954]	= ppc_extsbx;
@@ -3959,9 +3739,9 @@ int ppc_init(void * x){
 	ppc_inst_31[467]	= ppc_mtspr;
 	ppc_inst_31[75]		= ppc_mulhwx;
 	ppc_inst_31[11]		= ppc_mulhwux;
-    ppc_inst_31[235]    = ppc_inst_31[235|(_OE>>1)]    = ppc_mullwx;
+    ppc_inst_31[235]    = ppc_inst_31[235|(_OVE>>1)]    = ppc_mullwx;
 	ppc_inst_31[476]	= ppc_nandx;
-    ppc_inst_31[104]    = ppc_inst_31[104|(_OE>>1)]    = ppc_negx;
+    ppc_inst_31[104]    = ppc_inst_31[104|(_OVE>>1)]    = ppc_negx;
 	ppc_inst_31[124]	= ppc_norx;
 	ppc_inst_31[444]	= ppc_orx;
 	ppc_inst_31[412]	= ppc_orcx;
@@ -3982,111 +3762,105 @@ int ppc_init(void * x){
 	ppc_inst_31[150]	= ppc_stwcx;
 	ppc_inst_31[183]	= ppc_stwux;
 	ppc_inst_31[151]	= ppc_stwx;
-    ppc_inst_31[40]     = ppc_inst_31[40|(_OE>>1)]     = ppc_subfx;
-    ppc_inst_31[8]      = ppc_inst_31[8|(_OE>>1)]      = ppc_subfcx;
-    ppc_inst_31[136]    = ppc_inst_31[136|(_OE>>1)]    = ppc_subfex;
-    ppc_inst_31[232]    = ppc_inst_31[232|(_OE>>1)]    = ppc_subfmex;
-    ppc_inst_31[200]    = ppc_inst_31[200|(_OE>>1)]    = ppc_subfzex;
+    ppc_inst_31[40]     = ppc_inst_31[40|(_OVE>>1)]     = ppc_subfx;
+    ppc_inst_31[8]      = ppc_inst_31[8|(_OVE>>1)]      = ppc_subfcx;
+    ppc_inst_31[136]    = ppc_inst_31[136|(_OVE>>1)]    = ppc_subfex;
+    ppc_inst_31[232]    = ppc_inst_31[232|(_OVE>>1)]    = ppc_subfmex;
+    ppc_inst_31[200]    = ppc_inst_31[200|(_OVE>>1)]    = ppc_subfzex;
 	ppc_inst_31[598]	= ppc_sync;
 	ppc_inst_31[4]		= ppc_tw;
 	ppc_inst_31[316]	= ppc_xorx;
 
-	switch(ppc.type){
+	#if (PPC_MODEL == PPC_MODEL_4xx)
 
-	case PPC_TYPE_4XX:
+	ppc_inst_31[454] = ppc_dccci;
+	ppc_inst_31[486] = ppc_dcread;
+	ppc_inst_31[262] = ppc_icbt;
+	ppc_inst_31[966] = ppc_iccci;
+	ppc_inst_31[998] = ppc_icread;
+	ppc_inst_31[323] = ppc_mfdcr;
+	ppc_inst_31[451] = ppc_mtdcr;
+	ppc_inst_31[131] = ppc_wrtee;
+	ppc_inst_31[163] = ppc_wrteei;
 
-		ppc_inst_31[454] = ppc_dccci;
-		ppc_inst_31[486] = ppc_dcread;
-		ppc_inst_31[262] = ppc_icbt;
-		ppc_inst_31[966] = ppc_iccci;
-		ppc_inst_31[998] = ppc_icread;
-		ppc_inst_31[323] = ppc_mfdcr;
-		ppc_inst_31[451] = ppc_mtdcr;
-		ppc_inst_31[131] = ppc_wrtee;
-		ppc_inst_31[163] = ppc_wrteei;
+	#elif (PPC_MODEL == PPC_MODEL_6XX)
 
-		break;
+	ppc_inst[48] = ppc_lfs;
+	ppc_inst[49] = ppc_lfsu;
+	ppc_inst[50] = ppc_lfd;
+	ppc_inst[51] = ppc_lfdu;
+	ppc_inst[52] = ppc_stfs;
+	ppc_inst[53] = ppc_stfsu;
+	ppc_inst[54] = ppc_stfd;
+	ppc_inst[55] = ppc_stfdu;
+	ppc_inst[59] = ppc_59;
+	ppc_inst[63] = ppc_63;
 
-	case PPC_TYPE_6XX:
+	ppc_inst_31[631] = ppc_lfdux;
+	ppc_inst_31[599] = ppc_lfdx;
+	ppc_inst_31[567] = ppc_lfsux;
+	ppc_inst_31[535] = ppc_lfsx;
+	ppc_inst_31[595] = ppc_mfsr;
+	ppc_inst_31[659] = ppc_mfsrin;
+	ppc_inst_31[371] = ppc_mftb;
+	ppc_inst_31[210] = ppc_mtsr;
+	ppc_inst_31[242] = ppc_mtsrin;
+	ppc_inst_31[758] = ppc_dcba;
+	ppc_inst_31[759] = ppc_stfdux;
+	ppc_inst_31[727] = ppc_stfdx;
+	ppc_inst_31[983] = ppc_stfiwx;
+	ppc_inst_31[695] = ppc_stfsux;
+	ppc_inst_31[663] = ppc_stfsx;
+	ppc_inst_31[370] = ppc_tlbia;
+	ppc_inst_31[306] = ppc_tlbie;
+	ppc_inst_31[566] = ppc_tlbsync;
+	ppc_inst_31[310] = ppc_eciwx;
+	ppc_inst_31[438] = ppc_ecowx;
 
-		ppc_inst[48] = ppc_lfs;
-		ppc_inst[49] = ppc_lfsu;
-		ppc_inst[50] = ppc_lfd;
-		ppc_inst[51] = ppc_lfdu;
-		ppc_inst[52] = ppc_stfs;
-		ppc_inst[53] = ppc_stfsu;
-		ppc_inst[54] = ppc_stfd;
-		ppc_inst[55] = ppc_stfdu;
+	ppc_inst_63[264] = ppc_fabsx;
+	ppc_inst_63[21] = ppc_faddx;
+	ppc_inst_63[32] = ppc_fcmpo;
+	ppc_inst_63[0] = ppc_fcmpu;
+	ppc_inst_63[14] = ppc_fctiwx;
+	ppc_inst_63[15] = ppc_fctiwzx;
+	ppc_inst_63[18] = ppc_fdivx;
+	ppc_inst_63[72] = ppc_fmrx;
+	ppc_inst_63[136] = ppc_fnabsx;
+	ppc_inst_63[40] = ppc_fnegx;
+	ppc_inst_63[12] = ppc_frspx;
+	ppc_inst_63[26] = ppc_frsqrtex;
+	ppc_inst_63[22] = ppc_fsqrtx;
+	ppc_inst_63[20] = ppc_fsubx;
+	ppc_inst_63[583] = ppc_mffsx;
+	ppc_inst_63[70] = ppc_mtfsb0x;
+	ppc_inst_63[38] = ppc_mtfsb1x;
+	ppc_inst_63[711] = ppc_mtfsfx;
+	ppc_inst_63[134] = ppc_mtfsfix;
+	ppc_inst_63[64] = ppc_mcrfs;
 
-		ppc_inst_31[631] = ppc_lfdux;
-		ppc_inst_31[599] = ppc_lfdx;
-		ppc_inst_31[567] = ppc_lfsux;
-		ppc_inst_31[535] = ppc_lfsx;
-		ppc_inst_31[595] = ppc_mfsr;
-		ppc_inst_31[659] = ppc_mfsrin;
-		ppc_inst_31[371] = ppc_mftb;
-		ppc_inst_31[210] = ppc_mtsr;
-		ppc_inst_31[242] = ppc_mtsrin;
-		ppc_inst_31[758] = ppc_dcba;
-		ppc_inst_31[759] = ppc_stfdux;
-		ppc_inst_31[727] = ppc_stfdx;
-		ppc_inst_31[983] = ppc_stfiwx;
-		ppc_inst_31[695] = ppc_stfsux;
-		ppc_inst_31[663] = ppc_stfsx;
-		ppc_inst_31[370] = ppc_tlbia;
-		ppc_inst_31[306] = ppc_tlbie;
-		ppc_inst_31[566] = ppc_tlbsync;
-		ppc_inst_31[310] = ppc_eciwx;
-		ppc_inst_31[438] = ppc_ecowx;
+	ppc_inst_59[21] = ppc_faddsx;
+	ppc_inst_59[18] = ppc_fdivsx;
+	ppc_inst_59[24] = ppc_fresx;
+	ppc_inst_59[22] = ppc_fsqrtsx;
+	ppc_inst_59[20] = ppc_fsubsx;
 
-		ppc_inst_63[264] = ppc_fabsx;
-		ppc_inst_63[21] = ppc_faddx;
-		ppc_inst_63[32] = ppc_fcmpo;
-		ppc_inst_63[0] = ppc_fcmpu;
-		ppc_inst_63[14] = ppc_fctiwx;
-		ppc_inst_63[15] = ppc_fctiwzx;
-		ppc_inst_63[18] = ppc_fdivx;
-		ppc_inst_63[72] = ppc_fmrx;
-		ppc_inst_63[136] = ppc_fnabsx;
-		ppc_inst_63[40] = ppc_fnegx;
-		ppc_inst_63[12] = ppc_frspx;
-		ppc_inst_63[26] = ppc_frsqrtex;
-		ppc_inst_63[22] = ppc_fsqrtx;
-		ppc_inst_63[20] = ppc_fsubx;
-		ppc_inst_63[583] = ppc_mffsx;
-		ppc_inst_63[70] = ppc_mtfsb0x;
-		ppc_inst_63[38] = ppc_mtfsb1x;
-		ppc_inst_63[711] = ppc_mtfsfx;
-		ppc_inst_63[134] = ppc_mtfsfix;
-		ppc_inst_63[64] = ppc_mcrfs;
+	for(i = 0; i < 32; i += 1)
+	{
+		ppc_inst_63[i * 32 | 29] = ppc_fmaddx;
+		ppc_inst_63[i * 32 | 28] = ppc_fmsubx;
+		ppc_inst_63[i * 32 | 25] = ppc_fmulx;
+		ppc_inst_63[i * 32 | 31] = ppc_fnmaddx;
+		ppc_inst_63[i * 32 | 30] = ppc_fnmsubx;
+		ppc_inst_63[i * 32 | 23] = ppc_fselx;
 
-		ppc_inst_59[21] = ppc_faddsx;
-		ppc_inst_59[18] = ppc_fdivsx;
-		ppc_inst_59[24] = ppc_fresx;
-		ppc_inst_59[22] = ppc_fsqrtsx;
-		ppc_inst_59[20] = ppc_fsubsx;
-
-		// special FP opcodes with C field must be
-		// installed another way. (5-bit field)
-
-		for(i = 0; i < 32; i += 1){
-
-			ppc_inst_63[i * 32 | 29] = ppc_fmaddx;
-			ppc_inst_63[i * 32 | 28] = ppc_fmsubx;
-			ppc_inst_63[i * 32 | 25] = ppc_fmulx;
-			ppc_inst_63[i * 32 | 31] = ppc_fnmaddx;
-			ppc_inst_63[i * 32 | 30] = ppc_fnmsubx;
-			ppc_inst_63[i * 32 | 23] = ppc_fselx;
-
-			ppc_inst_59[i * 32 | 29] = ppc_fmaddsx;
-			ppc_inst_59[i * 32 | 28] = ppc_fmsubsx;
-			ppc_inst_59[i * 32 | 25] = ppc_fmulsx;
-			ppc_inst_59[i * 32 | 31] = ppc_fnmaddsx;
-			ppc_inst_59[i * 32 | 30] = ppc_fnmsubsx;
-		}
-
-		break;
+		ppc_inst_59[i * 32 | 29] = ppc_fmaddsx;
+		ppc_inst_59[i * 32 | 28] = ppc_fmsubsx;
+		ppc_inst_59[i * 32 | 25] = ppc_fmulsx;
+		ppc_inst_59[i * 32 | 31] = ppc_fnmaddsx;
+		ppc_inst_59[i * 32 | 30] = ppc_fnmsubsx;
 	}
+
+	#endif
 
 	// create ppc_field_xlat
 
@@ -4108,11 +3882,13 @@ int ppc_init(void * x){
 
 void ppc_save_state(FILE *fp)
 {
+	u32 dummy;
+
     fwrite(ppc.gpr, sizeof(u32), 32, fp);
     fwrite(ppc.fpr, sizeof(fpr_t), 32, fp);
     fwrite(&ppc.cia, sizeof(u32), 1, fp);
     fwrite(&ppc.nia, sizeof(u32), 1, fp);
-    fwrite(&ppc.ir, sizeof(u32), 1, fp);
+    fwrite(&dummy, sizeof(u32), 1, fp);
     fwrite(&ppc.msr, sizeof(u32), 1, fp);
     fwrite(&ppc.fpscr, sizeof(u32), 1, fp);
     fwrite(&ppc.count, sizeof(u32), 1, fp);
@@ -4128,11 +3904,13 @@ void ppc_save_state(FILE *fp)
 
 void ppc_load_state(FILE *fp)
 {
+	u32 dummy;
+
     fread(ppc.gpr, sizeof(u32), 32, fp);
     fread(ppc.fpr, sizeof(fpr_t), 32, fp);
     fread(&ppc.cia, sizeof(u32), 1, fp);
     fread(&ppc.nia, sizeof(u32), 1, fp);
-    fread(&ppc.ir, sizeof(u32), 1, fp);
+    fread(&dummy, sizeof(u32), 1, fp);
     fread(&ppc.msr, sizeof(u32), 1, fp);
     fread(&ppc.fpscr, sizeof(u32), 1, fp);
     fread(&ppc.count, sizeof(u32), 1, fp);
