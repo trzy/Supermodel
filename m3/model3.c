@@ -759,9 +759,6 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
      * RAM tested for first for speed
      */
 
-    if (a == 0x100060)
-        LOG("model3.log", "%08X (%08X): %08X=%08X\n", PPC_PC, PPC_LR, a, d);
-
     if (a <= 0x007FFFFF)
     {
         *(UINT32 *) &ram[a] = BSWAP32(d);
@@ -1199,9 +1196,7 @@ void m3_load_eeprom(void)
 
 	BUILD_EEPROM_PATH
 
-	eeprom_reset();
-
-	if((i = eeprom_load(string)) != MODEL3_OKAY)
+    if((i = eeprom_load(string)) != MODEL3_OKAY)
 	{
 		message(0, "Can't load EEPROM from %s (%d)", string, i);
 	}
@@ -1213,7 +1208,7 @@ void m3_save_eeprom(void)
 
 	BUILD_EEPROM_PATH
 
-	if((i = eeprom_save(string)) != MODEL3_OKAY)
+    if((i = eeprom_save(string)) != MODEL3_OKAY)
 	{
 		message(0, "Can't save EEPROM to %s (%d)", string, i);
 	}
@@ -1455,6 +1450,7 @@ void m3_reset(void)
 		bridge_reset(2);
 	else
     bridge_reset(m3_config.step < 0x20 ? 1 : 2);
+    eeprom_reset();
 	scsi_reset();
 	dma_reset();
 
@@ -1855,13 +1851,15 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *)&crom[0x799DE8] = BSWAP32(0x00050208);   // debug menu
 
         /*
-         * Not required. See note in "SCUDE".
+         * Not required. See note in SCUDE.
          */
         
+#if 0
         *(UINT32 *)&crom[0x700194] = 0x00000060;    // Timebase Skip
         *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
         *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
         *(UINT32 *)&crom[0x71AEBC] = 0x00000060;    // Loop Skip
+#endif
 
         /*
          * Required.
@@ -1889,10 +1887,12 @@ BOOL m3_load_rom(CHAR * id)
          * with the EEPROM code.
          */
 
+#if 0
         *(UINT32 *)&crom[0x700194] = 0x00000060;    // Timebase Skip
         *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
         *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
         *(UINT32 *)&crom[0x71AEBC] = 0x00000060;    // Loop Skip
+#endif
 
         /*
          * These patches are still required :(

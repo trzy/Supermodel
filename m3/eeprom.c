@@ -16,51 +16,246 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-//TODO: Check to make sure code is functioning correctly. See note in
-// eeprom_write()
-
 /*
  * eeprom.c
  *
- * 93C46 EEPROM emulation.
+ * 93C46 EEPROM emulation courtesy of R. Belmont.
+ *
+ * NOTE: Save state code assumes enums will be the same across all compilers
+ * and systems. The eeprom_store[] array is endian-dependent.
  */
 
+/***************************************************************************
+ eeprom.cpp  - handles a serial eeprom with 64 16-bit addresses and 4-bit commands
+ 	       as seen in st-v, system 32, many konami boards, etc.
+
+	       originally written: May 20, 2000 by R. Belmont for "sim"
+	       update: Jan 27, 2001 (RB): implemented "erase" opcode,
+	       				  made opcode fetch check for start bit
+					  like the real chip.
+ 		       Mar 26, 2001 (FF): added get_image to access the eeprom
+		       Jan 28, 2004 (Bart): Interface changes to work with Supermodel.
+                      Crudely simulated busy status by setting olatch to 0 in
+                      ES_DESELECT.
+ ***************************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include "model3.h"
 
-#define LOG_EEPROM        // enable EEPROM logging
+#define LOG_EEPROM 0		// log channel for EEPROM
 
-/******************************************************************/
-/* Privates                                                       */
-/******************************************************************/
+static INT32    eeprom_state;
 
-typedef struct EEPROM {
+static UINT16   eeprom_store[64];   // 6 address bits times 16 bits per location
+static UINT8    opcode;     // current opcode
+static UINT8    adr;        // current address in eeprom_store
+static UINT8    curbit;     // current bit # in read/write/addr fetch operation
+static UINT8    lastclk;    // last clock
+static UINT8    dlatch;     // input data latch
+static UINT8    olatch;     // output data latch
+static UINT16   curio;
 
-	UINT32	buff[256];
+// states for the eeprom state machine
+enum
+{
+    ES_DESELECT = 0,// chip select not asserted
+	ES_ASSERT,		// chip select asserted, waiting for opcode
+	ES_OPCODE0,		// got opcode bit 0
+	ES_OPCODE1,		// got opcode bit 1
+	ES_OPCODE2,		// got opcode bit 2
+	ES_ADRFETCH,	// fetching address
+	ES_READBITS,	// reading bits, 1 out every time clock goes high
+	ES_WRITEBITS,	// writing bits, 1 in every time clock goes high
+    ES_WAITING      // done with read/write, waiting for deselect to finalize
+};
 
-	UINT	_di;
-	UINT	_do;
-	UINT	_cs;
-	UINT	_clk;
+/*
+ * UINT8 eeprom_read_bit(void);
+ *
+ * Reads a data bit from the EEPROM.
+ *
+ * Returns:
+ *      Latched data bit.
+ */
 
-	UINT	count;
-	UINT32	serial;
-	UINT	command;
-	UINT	addr;
+UINT8 eeprom_read_bit(void)
+{
+	return olatch;
+}
 
-	UINT	locked;
+/*
+ * void eeprom_set_ce(UINT8 ce);
+ *
+ * Passes the status of the chip enable.
+ *
+ * Parameters:
+ *      ce = Chip enable bit (must be 0 or 1.)
+ */
 
-} EEPROM;
+void eeprom_set_ce(UINT8 ce)
+{
+	// chip enable
+	if (ce)
+	{
+		// asserting CE - if deselected,
+		// select.  if selected already, 
+		// ignore
+		if (eeprom_state == ES_DESELECT)
+		{
+//			printf("EEPROM: asserting chip enable\n");
+            eeprom_state = ES_ASSERT;
+			opcode = 0;
+		}
+	}
+	else
+	{
+		// deasserting CE
+//		printf("EEPROM: deasserting chip enable\n");
+        eeprom_state = ES_DESELECT;
+	}
+}
 
-static EEPROM	eeprom;
+/*
+ * void eeprom_set_data(UINT8 data);
+ *
+ * Sets the data bit latch.
+ *
+ * Parameters:
+ *      data = Data bit (must be 0 or 1.)
+ */
 
-/******************************************************************/
-/* Interface                                                      */
-/******************************************************************/
+void eeprom_set_data(UINT8 data)
+{
+	dlatch = (data&0x01);	// latch the data
+}
+
+/*
+ * void eeprom_set_clk(UINT8 clk);
+ *
+ * Sets the clock pin.
+ *
+ * Parameters:
+ *      clk = Clock (zero or non-zero.)
+ */
+
+void eeprom_set_clk(UINT8 clk)
+{
+//	logWrite(LOG_EEPROM, "EEPROM: clock %d, data %d, state %d\n", clk, dlatch, eeprom_state);
+	// things only happen on the rising edge of the clock
+	if ((!lastclk) && (clk))
+	{
+		switch (eeprom_state)
+		{
+			case ES_DESELECT:
+                olatch = 0;
+				break;
+
+			case ES_ASSERT:
+			case ES_OPCODE0:
+			case ES_OPCODE1:
+			case ES_OPCODE2:
+				// first command bit must be a "1" in the real device
+				if ((eeprom_state == ES_OPCODE0) && (dlatch == 0))
+				{
+                    LOG("model3.log", "EEPROM: waiting for start bit\n");
+                    olatch = 1; // assert READY
+				}
+				else
+				{
+					opcode <<= 1;
+					opcode |= dlatch;
+                    LOG("model3.log", "EEPROM: opcode fetch state, currently %x\n", opcode);
+					eeprom_state++;
+				}
+
+				curbit = 0;
+				adr = 0;
+				break;
+
+			case ES_ADRFETCH:	// fetch address
+				adr <<= 1;
+				adr |= dlatch;
+                LOG("model3.log", "EEPROM: address fetch state, cur addr = %x\n", adr);
+				curbit++;
+				if (curbit == 6)
+				{
+					switch (opcode)
+					{
+						case 4:	// write enable - go back to accept a new opcode immediately
+							opcode = 0;
+							eeprom_state = ES_ASSERT;
+							printf("EEPROM: write enable\n");
+							break;
+
+						case 5: // write
+							eeprom_state = ES_WRITEBITS;
+							olatch = 0;	// indicate not ready yet
+							curbit = 0;
+							curio = 0;
+							break;
+
+						case 6:	// read
+							eeprom_state = ES_READBITS;
+							curbit = 0;
+							curio = eeprom_store[adr];
+							printf("EEPROM: read %04x from address %d\n", curio, adr);
+							break;
+
+						case 7:	// erase location to ffff and assert READY
+							eeprom_store[adr] = 0xffff;
+							olatch = 1;
+                            eeprom_state = ES_WAITING;
+							printf("EEPROM: erase at address %d\n", adr);
+							break;
+
+						default:
+                            LOG("model3.log", "Unknown EEPROM opcode %d!\n", opcode);
+                            eeprom_state = ES_WAITING;
+							olatch = 1;	// assert READY anyway
+							break;
+					}
+				}
+				break;
+
+			case ES_READBITS:
+				olatch = ((curio & 0x8000)>>15);
+				curio <<= 1;
+
+				curbit++;
+				if (curbit == 16)
+				{
+                    eeprom_state = ES_WAITING;
+				}
+				break;
+
+			case ES_WRITEBITS:
+				curio <<= 1;
+				curio |= dlatch;
+
+				curbit++;
+				if (curbit == 16)
+				{
+                    olatch = 1;     // indicate success
+					eeprom_store[adr] = curio;
+                    LOG("model3.log", "EEPROM: Wrote %04x to address %d\n", curio, adr);
+                    eeprom_state = ES_WAITING;
+				}
+				break;
+
+            case ES_WAITING:
+				break;
+		}
+	}
+
+	lastclk = clk;
+}
 
 /*
  * void eeprom_save_state(FILE *fp);
  *
- * Saves the state of the EEPROM to a file.
+ * Save the EEPROM state.
  *
  * Parameters:
  *      fp = File to save to.
@@ -68,30 +263,24 @@ static EEPROM	eeprom;
 
 void eeprom_save_state(FILE *fp)
 {
-    /*
-     * Each struct member is written out individually to prevent padding
-     * issues to occur (we're using different compilers for development)
-     */
-
-	if(fp != NULL)
-	{
-		fwrite(eeprom.buff, sizeof(UINT32), 256, fp);
-		fwrite(&eeprom._di, sizeof(UINT), 1, fp);
-		fwrite(&eeprom._do, sizeof(UINT), 1, fp);
-		fwrite(&eeprom._cs, sizeof(UINT), 1, fp);
-		fwrite(&eeprom._clk, sizeof(UINT), 1, fp);
-		fwrite(&eeprom.count, sizeof(UINT), 1, fp);
-		fwrite(&eeprom.serial, sizeof(UINT32), 1, fp);
-		fwrite(&eeprom.command, sizeof(UINT), 1, fp);
-		fwrite(&eeprom.addr, sizeof(UINT), 1, fp);
-		fwrite(&eeprom.locked, sizeof(UINT), 1, fp);
-	}
+    if (fp != NULL)
+    {
+        fwrite(&eeprom_state, sizeof(INT32), 1, fp);
+        fwrite(eeprom_store, sizeof(UINT16), 64, fp);
+        fwrite(&opcode, sizeof(UINT8), 1, fp);
+        fwrite(&adr, sizeof(UINT8), 1, fp);
+        fwrite(&curbit, sizeof(UINT8), 1, fp);
+        fwrite(&lastclk, sizeof(UINT8), 1, fp);
+        fwrite(&dlatch, sizeof(UINT8), 1, fp);
+        fwrite(&olatch, sizeof(UINT8), 1, fp);
+        fwrite(&curio, sizeof(UINT16), 1, fp);
+    }
 }
 
 /*
  * void eeprom_load_state(FILE *fp);
  *
- * Loads the state of the EEPROM from a file.
+ * Load the EEPROM state.
  *
  * Parameters:
  *      fp = File to load from.
@@ -99,244 +288,95 @@ void eeprom_save_state(FILE *fp)
 
 void eeprom_load_state(FILE *fp)
 {
-	if(fp != NULL)
-	{
-		fread(eeprom.buff, sizeof(UINT32), 256, fp);
-		fread(&eeprom._di, sizeof(UINT), 1, fp);
-		fread(&eeprom._do, sizeof(UINT), 1, fp);
-		fread(&eeprom._cs, sizeof(UINT), 1, fp);
-		fread(&eeprom._clk, sizeof(UINT), 1, fp);
-		fread(&eeprom.count, sizeof(UINT), 1, fp);
-		fread(&eeprom.serial, sizeof(UINT32), 1, fp);
-		fread(&eeprom.command, sizeof(UINT), 1, fp);
-		fread(&eeprom.addr, sizeof(UINT), 1, fp);
-		fread(&eeprom.locked, sizeof(UINT), 1, fp);
-	}
+    if (fp != NULL)
+    {
+        fread(&eeprom_state, sizeof(INT32), 1, fp);
+        fread(eeprom_store, sizeof(UINT16), 64, fp);
+        fread(&opcode, sizeof(UINT8), 1, fp);
+        fread(&adr, sizeof(UINT8), 1, fp);
+        fread(&curbit, sizeof(UINT8), 1, fp);
+        fread(&lastclk, sizeof(UINT8), 1, fp);
+        fread(&dlatch, sizeof(UINT8), 1, fp);
+        fread(&olatch, sizeof(UINT8), 1, fp);
+        fread(&curio, sizeof(UINT16), 1, fp);
+    }
 }
 
-INT eeprom_load(char * fn)
+/*
+ * INT eeprom_load(CHAR *fname);
+ *
+ * Loads data from the file specified. If the file does not exist, the EEPROM
+ * data is initialized with all 1's.
+ *
+ * Parameters:
+ *      fname = File name.
+ *
+ * Returns:
+ *      MODEL3_OKAY  = Success.
+ *      MODEL3_ERROR = Error reading from the file.
+ */
+
+INT eeprom_load(CHAR *fname)
 {
-	FILE * f;
-	INT i = MODEL3_ERROR;
+    FILE    *fp;
+    INT     error_code = MODEL3_ERROR;
 
-    message(0, "loading EEPROM from %s", fn);
+    message(0, "loading EEPROM from %s", fname);
 
-	if((f = fopen(fn, "rb")) != NULL)
+    if ((fp = fopen(fname, "rb")) != NULL)
 	{
-		i = fread(eeprom.buff, sizeof(UINT32), 256, f);
-		fclose(f);
+        error_code = fread(eeprom_store, sizeof(UINT16), 64, fp);
+        fclose(fp);
 
-		if(i == 256)
-			return(MODEL3_OKAY);
+        if (error_code == 64)
+            return MODEL3_OKAY;
 	}
 
-	memset(eeprom.buff, 0xFF, sizeof(UINT32)*256);
+    memset(eeprom_store, 0xFF, sizeof(UINT16) * 64);
 
-	return(i);
+    return error_code;
 }
 
-INT eeprom_save(char * fn)
+/*
+ * INT eeprom_save(CHAR *fname);
+ *
+ * Writes out the EEPROM data to the specified file.
+ *
+ * Parameters:
+ *      fname = File name to write.
+ *
+ * Returns:
+ *      MODEL3_OKAY  = Success.
+ *      MODEL3_ERROR = Unable to open or write file.
+ */
+
+INT eeprom_save(CHAR *fname)
 {
-	FILE * f;
-	INT i = MODEL3_ERROR;
+    FILE    *fp;
+    INT     i = MODEL3_ERROR;
 
-	message(0, "saving EEPROM to %s", fn);
+    message(0, "saving EEPROM to %s", fname);
 
-	if((f = fopen(fn, "wb")) != NULL)
+    if ((fp = fopen(fname, "wb")) != NULL)
 	{
-		i = fwrite(eeprom.buff, sizeof(UINT32), 256, f);
-		fclose(f);
+        i = fwrite(eeprom_store, sizeof(UINT16), 64, fp);
+        fclose(fp);
 
-		if(i == 256)
-			return(MODEL3_OKAY);
+        if (i == 64)
+            return MODEL3_OKAY;
 	}
 
-	return(i);
+    return i;
 }
+
+/*
+ * void eeprom_reset(void);
+ *
+ * Resets the EEPROM emulation.
+ */
 
 void eeprom_reset(void)
 {
-	memset(&eeprom, 0, sizeof(EEPROM));
-	memset(eeprom.buff, 0xFF, sizeof(UINT32)*256);
-	eeprom.locked = 1;
-}
-
-
-/******************************************************************/
-/* Access                                                         */
-/******************************************************************/
-
-void eeprom_write(UINT cs, UINT clk, UINT di, UINT we)
-{
-	#ifdef LOG_EEPROM
-//    message(0, "EEPROM write: cs=%i clk=%i di=%i we=%i", cs, clk, di, we);
-	#endif
-
-    //
-    // NOTE: I removed this because the behavior is almost certainly wrong.
-    // CS is held during the duration of any operation and at the end of the
-    // operation, we should clear count and possibly command.
-    //
-    // I'm not sure if the code is bug-free. Some checking and revision may
-    // be required.
-    //
-#if 0
-	if(cs)
-	{
-		// reset
-
-        eeprom.count = 0;
-		eeprom.command = 0;
-		return;
-	}
-#endif
-
-	if(!we)
-		return;
-
-	if(clk && !eeprom._clk)
-	{
-		eeprom.serial <<= 1;
-		eeprom.serial |= (di) ? 1 : 0;
-
-		#ifdef LOG_EEPROM
-//        message(0, "EEPROM serial = %08X [%i]", eeprom.serial, eeprom.count);
-		#endif
-
-		eeprom.count++;
-
-		if(eeprom.count == 4)
-		{
-			// command sent
-
-			eeprom.command = eeprom.serial & 7;
-
-#if 0
-			switch(eeprom.command)
-			{
-			case 0x6:
-				#ifdef LOG_EEPROM
-                message(0, "EEPROM read");
-				#endif
-				break;
-			case 0x5:
-				#ifdef LOG_EEPROM
-                message(0, "EEPROM write");
-				#endif
-				if(eeprom.locked)
-					error("EEPROM locked write\n");
-				break;
-			case 0x7:
-				error("EEPROM erase\n");
-			case 0x4:
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM ex\n");
-				#endif
-				break;
-			default:
-				error("EEPROM invalid (%X)\n", eeprom.command);
-			}
-#endif
-		}
-		else if(eeprom.command == 4 && eeprom.count == 10)
-		{
-			// extended command sent
-
-			eeprom.command = (eeprom.serial >> 4) & 0x1F;
-
-			switch(eeprom.command)
-			{
-			case 0x10:	// EEPROM lock
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM lock");
-				#endif
-				eeprom.locked = 1;
-				break;
-			case 0x13:	// EEPROM unlock
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM unlock");
-				#endif
-				eeprom.locked = 0;
-				break;
-			default:
-				error("EEPROM: invalid extended (%X)\n", eeprom.command);
-			}
-
-			eeprom.count = 0;
-			eeprom.serial = 0;
-		}
-		else if(eeprom.command == 5)
-		{
-			// EEPROM write
-
-			if(eeprom.count == (4+6))
-			{
-				eeprom.addr = eeprom.serial & 0x3F;
-
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM write, addr=%02X", eeprom.addr);
-				#endif
-			}
-			else if(eeprom.count == (4+6+16))
-			{
-				eeprom.buff[eeprom.addr] = eeprom.serial & 0xFFFF;
-				eeprom.count = 0;
-				eeprom.serial = 0;
-
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM write, addr=%02X, data=%04X", eeprom.addr, eeprom.buff[eeprom.addr]);
-				#endif
-			}
-		}
-		else if(eeprom.command == 6)
-		{
-			// EEPROM read
-
-			if(eeprom.count == 4+6)
-			{
-				eeprom.addr = eeprom.serial & 0x3F;
-
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM read, addr=%02X", eeprom.addr);
-				#endif
-			}
-			else if(eeprom.count > (4+6) && eeprom.count <= (4+6+16))
-			{
-				#ifdef LOG_EEPROM
-				message(0, "EEPROM read, addr=%02X, reading bit %i", eeprom.addr, eeprom.count-(4+6+1));
-				#endif
-
-				eeprom._do = (eeprom.buff[eeprom.addr] >> (15 - (eeprom.count-(4+6+1)))) & 1;
-
-				if(eeprom.count == (4+6+16))
-				{
-					#ifdef LOG_EEPROM
-					message(0, "EEPROM read, addr=%02X, finished", eeprom.addr);
-					#endif
-
-					eeprom.count = 0;
-					eeprom.serial = 0;
-				}
-
-				goto eeprom_done;
-			}
-		}
-	}
-
-	eeprom._do = 1;
-
-eeprom_done:
-
-	eeprom._di = di;
-	eeprom._cs = cs;
-	eeprom._clk = clk;
-}
-
-UINT8 eeprom_read(void)
-{
-	#ifdef LOG_EEPROM
-//    message(0, "EEPROM read");
-	#endif
-
-	return(eeprom._do);
+	eeprom_state = ES_DESELECT;
+	lastclk = 0;
 }

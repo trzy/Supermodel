@@ -19,20 +19,23 @@
 /*
  * eeprom.h
  *
- * 93C46 EEPROM header.
+ * 93C46 EEPROM emulation header.
  */
 
 #ifndef INCLUDED_EEPROM_H
 #define INCLUDED_EEPROM_H
 
-extern UINT8	eeprom_read(void);
-extern void		eeprom_write(UINT, UINT, UINT, UINT);
+extern UINT8    eeprom_read_bit(void);
+extern void     eeprom_set_clk(UINT8 clk);
+extern void     eeprom_set_ce(UINT8 ce);
+extern void     eeprom_set_data(UINT8 data);
 
-extern void	eeprom_save_state(FILE *);
-extern void	eeprom_load_state(FILE *);
+extern void     eeprom_save_state(FILE *);
+extern void     eeprom_load_state(FILE *);
 
-extern INT	eeprom_load(char *);
-extern INT	eeprom_save(char *);
-extern void	eeprom_reset(void);
+extern INT      eeprom_load(CHAR *);
+extern INT      eeprom_save(CHAR *);
+
+extern void     eeprom_reset(void);
 
 #endif  // INCLUDED_EEPROM_H
