@@ -511,6 +511,9 @@ static UINT16 m3_ppc_read_16(UINT32 a)
             (a >= 0xFE0C0000 && a <= 0xFE0FFFFF))  // backup RAM
             return BSWAP16(*(UINT16 *) &bram[a & 0x3FFFF]);
 
+		else if( a >= 0xF1000000 && a <= 0xF111FFFF )	// tilegen VRAM
+			return tilegen_vram_read_16(a);
+
         switch (a)
         {
         case 0xF0C00CFC:    // MPC105/106 CONFIG_DATA (Sega Bass Fishing)

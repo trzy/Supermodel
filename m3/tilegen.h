@@ -30,6 +30,7 @@ extern void     tilegen_update(void);
 extern UINT32   tilegen_vram_read_32(UINT32);
 extern void     tilegen_vram_write_32(UINT32, UINT32);
 
+extern UINT16	tilegen_read_16(UINT32);
 extern UINT32   tilegen_read_32(UINT32);
 extern void     tilegen_write_32(UINT32, UINT32);
 

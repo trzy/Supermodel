@@ -563,6 +563,23 @@ void tilegen_update(void)
 /******************************************************************/
 
 /*
+ * UINT16 tilegen_vram_read_16(UINT32 addr);
+ *
+ * Reads a 16-bit word from VRAM.
+ *
+ * Parameters:
+ *      addr = Address.
+ *
+ * Returns:
+ *      Data read.
+ */
+
+UINT16 tilegen_vram_read_16(UINT32 addr)
+{
+    return(BSWAP16(*(UINT16 *)&vram[addr & 0x1FFFFF]));
+}
+
+/*
  * UINT32 tilegen_vram_read_32(UINT32 addr);
  *
  * Reads a 32-bit word from VRAM.
