@@ -52,13 +52,13 @@
  **/
 
 static int              txres=2048; tyres=2048;
-static unsigned char    texture[2048*2048*4];
+static unsigned char    texture_555[2048*2048*4];
+static unsigned char    texture_444[2048*2048*4];
 
-static int OutBMP(char *filename)
+static int OutBMP(char *filename, unsigned char *texture)
 {
     FILE        *fp;
     int    i, j;
-    unsigned    pixel;
     unsigned char   r, g, b;
 
     if ((fp = fopen(filename,"wb")) == NULL)
@@ -113,7 +113,7 @@ static int OutBMP(char *filename)
     return 0;
 }
 
-static void DrawTextureTile(unsigned x, unsigned y, unsigned char *buf)
+static void DrawTextureTile(unsigned x, unsigned y, unsigned char *buf, BOOL little_endian)
 {
 	static const int	decode[64] = 
 						{
@@ -127,39 +127,55 @@ static void DrawTextureTile(unsigned x, unsigned y, unsigned char *buf)
 							50,51,54,55,58,59,62,63
 						};
     unsigned        xi, yi, pixel_offs, rgb16;
-    unsigned char   r, g, b;
+    unsigned char   r, g, b, r4, g4, b4;
     int             i = 0;
 
 	for (yi = 0; yi < 8; yi++)
 	{
 		for (xi = 0; xi < 8; xi++)
 		{
-			pixel_offs = decode[yi * 8 + xi] * 2;	// grab pixel offset			
+            pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
+            rgb16 = *(UINT16 *) &buf[pixel_offs];
 
-			rgb16 = (buf[pixel_offs + 0] << 8) | buf[pixel_offs + 1];
+            if (little_endian)
+            {
+                pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
+                rgb16 = *(UINT16 *) &buf[pixel_offs];
+            }
+            else
+            {
+                pixel_offs = decode[yi * 8 + xi] * 2;
+                rgb16 = (buf[pixel_offs + 0] << 8) | buf[pixel_offs + 1];
+            }
 
 			b = (rgb16 & 0x1f) << 3;
 			g = ((rgb16 >> 5) & 0x1f) << 3;
 			r = ((rgb16 >> 10) & 0x1f) << 3;
+            b4 = (rgb16 & 0xf) << 4;
+            g4 = ((rgb16 >> 4) & 0xf) << 4;
+            r4 = ((rgb16 >> 12) & 0xf) << 4;
 
-            texture[((y + yi) * txres + (x + xi)) * 4 + 0] = r;
-            texture[((y + yi) * txres + (x + xi)) * 4 + 1] = g;
-            texture[((y + yi) * txres + (x + xi)) * 4 + 2] = b;
-            texture[((y + yi) * txres + (x + xi)) * 4 + 3] = 0xff;  // opaque
+            texture_555[((y + yi) * txres + (x + xi)) * 4 + 0] = r;
+            texture_555[((y + yi) * txres + (x + xi)) * 4 + 1] = g;
+            texture_555[((y + yi) * txres + (x + xi)) * 4 + 2] = b;
+
+            texture_444[((y + yi) * txres + (x + xi)) * 4 + 0] = r4;
+            texture_444[((y + yi) * txres + (x + xi)) * 4 + 1] = g4;
+            texture_444[((y + yi) * txres + (x + xi)) * 4 + 2] = b4;
 		}
 	}
 }
 
 
-static void DrawTexture(unsigned x, unsigned y, unsigned w, unsigned h, unsigned char *buf)
+static void DrawTexture(unsigned x, unsigned y, unsigned w, unsigned h, unsigned char *buf, BOOL little_endian)
 {
-	int	xi, yi;
+    unsigned int    xi, yi;
 
 	for (yi = 0; yi < h * 8; yi += 8)
 	{
 		for (xi = 0; xi < w * 8; xi += 8)
 		{
-			DrawTextureTile(x + xi, y + yi, buf);
+            DrawTextureTile(x + xi, y + yi, buf, little_endian);
 			buf += 8 * 8 * 2;	// each texture is 8x8 and 16-bit color
 		}
 	}
@@ -196,16 +212,21 @@ static UINT8    *vrom;              // pointer to VROM
  * is 2048x2048. Dividing this by 32 gives us 64x64. Each element contains an
  * OpenGL ID for a texture. Larger textures take up multiple spaces in the
  * grid.
+ *
+ * The color words in the complete 2048x2048 texture sheet are stored
+ * undecoded (same as the way they were uploaded by the game.)
  */
 
-static GLint    texture_grid[64*64];
+static GLint    texture_grid[64*64];        // -1 indicates unused
 static GLbyte   texture_buffer[512*512*4];  // for 1 texture
+static UINT16   *texture_sheet;             // complete 2048x2048 texture
 
 /*
  * Function Prototypes (for forward references)
  */
 
 static void draw_block(UINT8 *);
+static void make_texture(UINT, UINT, UINT, UINT);
 
 /******************************************************************/
 /* Model Drawing                                                  */
@@ -222,7 +243,23 @@ static float convert_fixed_to_float(INT32 num)
     float   result;
 
     result = (float) (num >> 19);                   // 13-bit integer
-    result += (float) (num & 0x7ffff) / 524288.0f;  // 19-bit fraction
+    result += (float) (num & 0x7FFFF) / 524288.0f;  // 19-bit fraction
+
+    return result;
+}
+
+/*
+ * convert_texcoord_to_float():
+ *
+ * Converts a 13.3 fixed-point texture coordinate to a floating point number.
+ */
+
+static float convert_texcoord_to_float(UINT32 num)
+{
+    float   result;
+
+    result = (float) (num >> 3);
+    result += (float) (num & 7) / 8.0f;
 
     return result;
 }
@@ -240,8 +277,8 @@ static void draw_model_be(UINT8 *buf)
         GLfloat x, y, z;
         UINT    uv;
     }       v[4], prev_v[4];    
-    UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base, u_coord,
-            v_coord;
+    UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base;
+    GLfloat u_coord, v_coord;
 
 	R3D_LOG("model3.log",
 			"#\n"
@@ -447,25 +484,22 @@ static void draw_model_be(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//            glEnable(GL_BLEND);
+//            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
+            make_texture(u_base, v_base, tex_w, tex_h);
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
             {
-                u_coord = v[i].uv >> 16;
-                v_coord = v[i].uv & 0xFFFF;
+                u_coord = convert_texcoord_to_float(v[i].uv >> 16);
+                v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
 
-                u_coord >>= 3;
-                v_coord >>= 3;
-
-                glTexCoord2f((GLfloat) u_coord / (GLfloat) tex_w, (GLfloat) v_coord / (GLfloat) tex_h);
+                glTexCoord2f(u_coord / (GLfloat) tex_w, v_coord / (GLfloat) tex_h);
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
 
-			glDisable(GL_BLEND);
+//            glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -624,25 +658,20 @@ static void draw_model_be(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//            glEnable(GL_BLEND);
+//            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-            glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
+            make_texture(u_base, v_base, tex_w, tex_h);
             glBegin(GL_TRIANGLES);
             for (i = 0; i < 3; i++)
             {
-                u_coord = v[i].uv >> 16;
-                v_coord = v[i].uv & 0xFFFF;
+                u_coord = convert_texcoord_to_float(v[i].uv >> 16);
+                v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
 
-                u_coord >>= 3;
-                v_coord >>= 3;
-
-                glTexCoord2f((GLfloat) u_coord / (GLfloat) tex_w, (GLfloat) v_coord / (GLfloat) tex_h);
+                glTexCoord2f(u_coord / (GLfloat) tex_w, v_coord / (GLfloat) tex_h);
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
-
-			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -664,8 +693,8 @@ static void draw_model_le(UINT8 *buf)
         GLfloat x, y, z;
         UINT    uv;
     }       v[4], prev_v[4];    
-    UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base, u_coord,
-            v_coord;
+    UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base;
+    GLfloat u_coord, v_coord;
 
 	R3D_LOG("model3.log",
 			"#\n"
@@ -871,25 +900,17 @@ static void draw_model_le(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-            glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
+            make_texture(u_base, v_base, tex_w, tex_h);
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
             {
-                u_coord = v[i].uv >> 16;
-                v_coord = v[i].uv & 0xFFFF;
+                u_coord = convert_texcoord_to_float(v[i].uv >> 16);
+                v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
 
-                u_coord >>= 3;
-                v_coord >>= 3;
-
-                glTexCoord2f((GLfloat) u_coord / (GLfloat) tex_w, (GLfloat) v_coord / (GLfloat) tex_h);
+                glTexCoord2f(u_coord / (GLfloat) tex_w, v_coord / (GLfloat) tex_h);
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
-
-			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -1048,25 +1069,17 @@ static void draw_model_le(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-            glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
+            make_texture(u_base, v_base, tex_w, tex_h);
             glBegin(GL_TRIANGLES);
             for (i = 0; i < 3; i++)
             {
-                u_coord = v[i].uv >> 16;
-                v_coord = v[i].uv & 0xFFFF;
+                u_coord = convert_texcoord_to_float(v[i].uv >> 16);
+                v_coord = convert_texcoord_to_float(v[i].uv & 0xFFFF);
 
-                u_coord >>= 3;
-                v_coord >>= 3;
-
-                glTexCoord2f((GLfloat) u_coord / (GLfloat) tex_w, (GLfloat) v_coord / (GLfloat) tex_h);
+                glTexCoord2f(u_coord / (GLfloat) tex_w, v_coord / (GLfloat) tex_h);
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
-
-			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -1127,7 +1140,8 @@ static UINT8 *translate_r3d_address(UINT32 addr)
         addr &= 0x07FFFFF;
         return &vrom[addr * 4];
     }
-
+    else
+        LOG("model3.log", "unknown R3D addr = %08X\n", addr);
     return NULL;
     // this one is a kludge to satisfy VON2 -- it probably has no relation to
     // polygon RAM, though
@@ -1259,7 +1273,7 @@ static void draw_block(UINT8 *block)
 			if(GETWORDLE(&block[0*4]) & 0x00800000)	// a model in VROM
 			{
 				R3D_LOG("model3.log", " ## block: block/list detected, draw model at %08X\n", GETWORDLE(&block[0*4]));
-				draw_model_be(translate_r3d_address(GETWORDLE((&block[0*4]) & 0x00FFFFFF) | 0x01000000));
+//                draw_model_be(translate_r3d_address(GETWORDLE((&block[0*4]) & 0x00FFFFFF) | 0x01000000));
 				return;
 			}
 
@@ -1295,6 +1309,88 @@ static void draw_block(UINT8 *block)
 				GETWORDLE(&block[9 * 4])
 		);
 
+        if (m3_config.step == 0x10)
+        {
+            glPushMatrix();
+            matrix = GETWORDLE(&block[1*4]);
+            if ((matrix & 0x20000000)) // && (matrix & 0x3FF))
+            {
+                current_matrix = matrix & 0x03FF;
+                get_matrix(m, (matrix & 0x03FF)*12);
+                if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
+                    glMultMatrixf(m);
+            }
+            glTranslatef(get_float(&block[2*4]), get_float(&block[3*4]), get_float(&block[4*4]));
+
+            addr = GETWORDLE(&block[5*4]);
+
+            if(GETWORDLE(&block[0*4]) & 0x08)
+            {
+                /*
+                 * The block references a 4-element list (Scud Race).
+                 * The value of bit 0x01000000 in the address assumes another
+                 * (currently unknown) meaning.
+                 */
+
+                if(addr & 0xFE000000)
+                    error("Invalid list address: %08X\n", addr);
+
+                R3D_LOG("model3.log", " ## block: draw block at %08X (exception 1)\n\n", addr);
+                draw_block(translate_r3d_address(addr & 0x00FFFFFF));
+            }
+            else
+            {
+                switch ((addr >> 24) & 0xFF)
+                {
+                case 0x00:  // block
+                    if(addr != 0)
+                    {
+                        R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
+                        draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+                    }
+                    break;
+                case 0x01:  // model
+                case 0x03:  // model in VROM (Scud Race)
+                    if(addr != 0)
+                    {
+                        R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
+                        if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+                            draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
+                        else                                    // polygon RAM
+                            draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+                    }
+                    break;
+                case 0x04:  // list
+                    R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
+                    if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
+                    draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+                    break;
+                default:
+                    error("Unable to handle Real3D address: %08X\n", addr);
+                    break;
+                }
+            }
+
+            /*
+             * Pop the matrix if we pushed one
+             */
+
+    //        if ((matrix & 0x20000000))
+                glPopMatrix();
+    
+            /*
+             * Advance to next block in list
+             */
+
+            next_ptr = GETWORDLE(&block[6*4]);
+            if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
+                break;
+
+    //        message(0, "next_ptr = %08X", next_ptr);
+            block = translate_r3d_address(next_ptr);
+        }
+        else
+        {
         /*
          * Multiply by the specified matrix. If bit 0x20000000 is not set, I
          * presume that no matrix is to be used.
@@ -1302,11 +1398,11 @@ static void draw_block(UINT8 *block)
 
         glPushMatrix();
         matrix = GETWORDLE(&block[3*4]);
-        if ((matrix & 0x20000000) && (matrix & 0x3FF))
+        if ((matrix & 0x20000000))// && (matrix & 0x3FF))
         {
             current_matrix = matrix & 0x03FF;
             get_matrix(m, (matrix & 0x03FF)*12);
-            if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
+//            if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
                 glMultMatrixf(m);
         }
         glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
@@ -1351,9 +1447,9 @@ static void draw_block(UINT8 *block)
 				{
 					R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
 					if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-						draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
+                        draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
 					else                                    // polygon RAM
-						draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+                        draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
 				}
 				break;
 	        case 0x04:  // list
@@ -1384,6 +1480,7 @@ static void draw_block(UINT8 *block)
 
 //        message(0, "next_ptr = %08X", next_ptr);
         block = translate_r3d_address(next_ptr);
+        }
     }
 }
 
@@ -1405,7 +1502,7 @@ static void draw_scene(void)
     i = 0;
     stop = 0;
 
-	LOG_INIT("model3.log");
+//    LOG_INIT("model3.log");
 
     do
     {
@@ -1568,38 +1665,17 @@ static const INT	decode[64] =
 	50,51,54,55,58,59,62,63
 };
 
-static void draw_texture_tile_8(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
+/*
+ * store_texture_tile_16():
+ *
+ * Writes a single 8x8 texture tile into the appropriate part of the texture
+ * sheet.
+ */
+
+static void store_texture_tile_16(UINT x, UINT y, UINT8 *src, BOOL little_endian)
 {
     UINT    xi, yi, pixel_offs;
-    UINT8   lum8;
-
-	for (yi = 0; yi < 8; yi++)
-	{
-		for (xi = 0; xi < 8; xi++)
-		{
-            if (little_endian)
-            {
-                pixel_offs = decode[(yi * 8 + xi) ^ (8|1)]; // (yi ^ 1) * 8 + (xi ^ 1)
-                lum8 = buf[pixel_offs];
-            }
-            else
-            {
-                pixel_offs = decode[yi * 8 + xi];
-                lum8 = buf[pixel_offs + 0];
-            }
-
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 0] = lum8;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 1] = lum8;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 2] = lum8;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = (UINT8) 0xFF;
-        }
-    }
-}
-
-static void draw_texture_tile_16(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
-{
-    UINT    xi, yi, pixel_offs, rgb16;
-    GLbyte  r, g, b, a;
+    UINT16  rgb16;
 
 	for (yi = 0; yi < 8; yi++)
 	{
@@ -1618,65 +1694,87 @@ static void draw_texture_tile_16(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little
                  */
 
                 pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
-                rgb16 = *(UINT16 *) &buf[pixel_offs];
+                rgb16 = *(UINT16 *) &src[pixel_offs];
             }
             else
             {
                 pixel_offs = decode[yi * 8 + xi] * 2;
-                rgb16 = (buf[pixel_offs + 0] << 8) | buf[pixel_offs + 1];
+                rgb16 = (src[pixel_offs + 0] << 8) | src[pixel_offs + 1];
             }
 
-			b = (rgb16 & 0x1f) << 3;
-			g = ((rgb16 >> 5) & 0x1f) << 3;
-			r = ((rgb16 >> 10) & 0x1f) << 3;
-			a = (rgb16 & 0x8000) ? 0x00 : 0xFF;
-
 			/*
-			b = (rgb16 & 0xF) << 3;
-			g = ((rgb16 >> 4) & 0xF) << 3;
-			r = ((rgb16 >> 8) & 0xF) << 3;
-			a = (rgb16 & 0xF000) ? 0xFF : 0x00;
-			*/
+             * Store within the texture sheet
+             */
 
-			/*
-			 * Write R, G, B, and alpha. On Model 3, an alpha bit of 1
-             * indicates a transparent color and 0 is opaque
-			 */
-
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 0] = r;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 1] = g;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 2] = b;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = a;
+            texture_sheet[(y + yi) * 2048 + (x + xi)] = rgb16;
         }
     }
 }
 
-static void draw_texture_8(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
+/*
+ * store_texture_16():
+ *
+ * Writes a 16-bit texture into the texture sheet. The pixel words are not
+ * decoded, but they are all converted to a common endianness and stored as
+ * complete UINT16s.
+ */
+
+static void store_texture_16(UINT x, UINT y, UINT w, UINT h, UINT8 *src, BOOL little_endian)
 {
     UINT    xi, yi;
 
-	for (yi = 0; yi < h * 8; yi += 8)
+    for (yi = 0; yi < h; yi += 8)
 	{
-		for (xi = 0; xi < w * 8; xi += 8)
+        for (xi = 0; xi < w; xi += 8)
 		{
-            draw_texture_tile_8(xi, yi, buf, w * 8, little_endian);
-            buf += 8 * 8;	// each texture tile is 8x8 and 8-bit color
+            store_texture_tile_16(x + xi, y + yi, src, little_endian);
+            src += 8 * 8 * 2;   // each texture tile is 8x8 and 16-bit color
 		}
 	}
 }
 
-static void draw_texture_16(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
+/*
+ * make_texture():
+ *
+ * Given the coordinates of a texture and its size within the texture sheet,
+ * an OpenGL texture is created and uploaded. The texture will also be
+ * selected so that the caller may use it.
+ */
+
+static void make_texture(UINT x, UINT y, UINT w, UINT h)
 {
     UINT    xi, yi;
+    GLint   tex_id;
+    UINT16  rgb16;
 
-	for (yi = 0; yi < h * 8; yi += 8)
-	{
-		for (xi = 0; xi < w * 8; xi += 8)
-		{
-            draw_texture_tile_16(xi, yi, buf, w * 8, little_endian);
-            buf += 8 * 8 * 2;	// each texture tile is 8x8 and 16-bit color
-		}
-	}
+    tex_id = texture_grid[(y / 32) * 64 + (x / 32)];
+    if (tex_id != -1)   // already exists, bind and exit
+    {
+        glBindTexture(GL_TEXTURE_2D, tex_id);        
+        return;
+    }
+
+    for (yi = 0; yi < h; yi++)
+    {
+        for (xi = 0; xi < w; xi++)
+        {
+            rgb16 = texture_sheet[(y + yi) * 2048 + (x + xi)];
+            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 10) & 0x1F) << 3;
+            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >> 5) & 0x1F) << 3;
+            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >> 0) & 0x1F) << 3;
+            texture_buffer[((yi * w) + xi) * 4 + 3] = (rgb16 & 0x8000) ? 0 : 0xFF;
+        }
+    }
+
+    glGenTextures(1, &tex_id);
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
+
+    texture_grid[(y / 32) * 64 + (x / 32)] = tex_id;    // mark texture as used
 }
 
 /*
@@ -1696,12 +1794,13 @@ static void draw_texture_16(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
 //TODO: remove overwritten textures
 //TODO: some textures are 8-bit, this is not handled yet.
 
+//TODO: the texture grid code must be cleaned up. what happens if a partial
+//texture is overwritten? can -1 be guaranteed NOT to be a texture ID? etc.
+
 void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
                           BOOL little_endian)
 {    
-    static int  f=0;
-    UINT    tiles_x, tiles_y, xpos, ypos, xi, yi;
-    GLint   id;
+    UINT    size_x, size_y, xpos, ypos, xi, yi;
 
     /*
      * Model 3 texture RAM appears as 2 2048x1024 textures. When textures are
@@ -1709,10 +1808,10 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
      * texture sheet selection bit as an additional bit to the Y coordinate.
      */
 
-    tiles_x = (header >> 14) & 3;
-    tiles_y = (header >> 17) & 3;
-    tiles_x = (32 << tiles_x) / 8;  // width in terms of 8x8 tiles
-    tiles_y = (32 << tiles_y) / 8;  // height in terms of 8x8 tiles
+    size_x = (header >> 14) & 3;
+    size_y = (header >> 17) & 3;
+    size_x = (32 << size_x);    // width in pixels
+    size_y = (32 << size_y);    // height
 
     ypos = (((header >> 7) & 0x1F) | ((header >> 15) & 0x20)) * 32;
     xpos = ((header >> 0) & 0x3F) * 32;
@@ -1721,38 +1820,24 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
      * Render the texture into the texture buffer
      */
 
-    if ((header & 0x0f000000) == 0x02000000)
+    if ((header & 0x0F000000) == 0x02000000)
 		return;
 
-	if (header & 0x00800000)
-    {
-        draw_texture_16(tiles_x, tiles_y, src, little_endian);
-        DrawTexture(xpos, ypos, tiles_x, tiles_y, src);
+    if (header & 0x00800000)    // 16-bit texture
+    {        
+        store_texture_16(xpos, ypos, size_x, size_y, src, little_endian);
+        DrawTexture(xpos, ypos, size_x / 8, size_y / 8, src, little_endian);
     }
-	else
-		draw_texture_8(tiles_x, tiles_y, src, little_endian);
 
     /*
-     * Get a texture ID for this texture and set its properties, then upload
-     * it
+     * Mark the appropriate parts of the texture grid as clear so that they
+     * will be recached
      */
-
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_2D, id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, tiles_x * 8, tiles_y * 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
-
-    /*
-     * Mark the appropriate parts of the texture grid with this texture
-     */
-
-    for (yi = 0; yi < (tiles_y * 8) / 32; yi++)
+    
+    for (yi = 0; yi < size_y / 32; yi++)
     {
-        for (xi = 0; xi < (tiles_x * 8) / 32; xi++)
-            texture_grid[(yi + ypos / 32) * 64 + (xi + xpos / 32)] = id;
+        for (xi = 0; xi < size_x / 32; xi++)
+            texture_grid[(yi + ypos / 32) * 64 + (xi + xpos / 32)] = -1;
     }
 }
 
@@ -1777,7 +1862,7 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
 
 void r3dgl_update_frame(void)
 {
-//    if (m3_config.step >= 0x20) // we can't render this yet
+//    if (m3_config.step == 0x10) // we can't render this yet
 //        return;
 
     /*
@@ -1808,13 +1893,13 @@ void r3dgl_update_frame(void)
      * Draw the scene
      */
 
-    glPolygonMode(GL_FRONT, GL_LINE);
-    glPolygonMode(GL_BACK, GL_LINE);
-    glDisable(GL_TEXTURE_2D);
+//    glPolygonMode(GL_FRONT, GL_LINE);
+//    glPolygonMode(GL_BACK, GL_LINE);
+//    glDisable(GL_TEXTURE_2D);
     draw_scene();
-    glPolygonMode(GL_FRONT, GL_FILL);
-    glPolygonMode(GL_BACK, GL_FILL);
-    glEnable(GL_TEXTURE_2D);
+//    glPolygonMode(GL_FRONT, GL_FILL);
+//    glPolygonMode(GL_BACK, GL_FILL);
+//    glEnable(GL_TEXTURE_2D);
 
     /*
      * Disable anything we enabled here
@@ -1827,7 +1912,8 @@ void r3dgl_update_frame(void)
  * void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
  *                 UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr);
  *
- * Initializes the engine by passing pointers to Real3D memory regions.
+ * Initializes the engine by passing pointers to Real3D memory regions. Also
+ * allocates memory for textures.
  *
  * Parameters:
  *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
@@ -1843,6 +1929,11 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
     vrom = vrom_ptr;
+
+    if ((texture_sheet = (UINT16 *) malloc(2048 * 2048 * 2)) == NULL)
+        osd_error("Not enough memory for local 2048x2048 texture sheet!");
+
+    LOG_INIT("texture.log");
 }
 
 /*
@@ -1853,5 +1944,8 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 
 void r3dgl_shutdown(void)
 {
-    OutBMP("texture.bmp");
+//    OutBMP("texture.bmp", texture_555);
+//    OutBMP("texture4.bmp", texture_444);
+
+    SAFE_FREE(texture_sheet);
 }
