@@ -296,7 +296,10 @@ static void draw_list(UINT32 *list)
     {
         addr = *list_ptr;
         if ((addr & 0x02000000))    // last pointer in list
+        {
+        	--list_ptr;
             break;
+		}            
         if (addr == 0 || addr == 0x800800)  // safeguard in case memory hasn't been set up
         {
             --list_ptr;
@@ -309,7 +312,7 @@ static void draw_list(UINT32 *list)
     {
         addr = *list_ptr;
         if ((addr & 0x00FFFFFF) != 0x00FFFFFF)
-            draw_block(translate_scene_graph_address(addr));
+	    	draw_block(translate_scene_graph_address(addr));		
         --list_ptr; // next element
     }
 }
@@ -587,6 +590,7 @@ static void do_3d(void)
     {
         osd_renderer_clear(0, 1);   // clear Z-buffer
         draw_viewport(i, 0x00800000);
+        LOG("model3.log", "GOT HERE\n");
     }
 }
 
@@ -625,6 +629,8 @@ static void set_color_offset(UINT32 reg)
 
 void render_frame(void)
 {
+    LOG("model3.log", "RENDER START\n");
+    
     tilegen_update();
 
     osd_renderer_begin();
@@ -644,6 +650,8 @@ void render_frame(void)
 
 	osd_renderer_end();
     osd_renderer_blit();
+
+	LOG("model3.log", "RENDER END\n");    
 }
 
 
