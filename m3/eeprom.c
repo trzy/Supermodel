@@ -142,7 +142,6 @@ void eeprom_set_data(UINT8 data)
 
 void eeprom_set_clk(UINT8 clk)
 {
-//	logWrite(LOG_EEPROM, "EEPROM: clock %d, data %d, state %d\n", clk, dlatch, eeprom_state);
 	// things only happen on the rising edge of the clock
 	if ((!lastclk) && (clk))
 	{
@@ -158,15 +157,19 @@ void eeprom_set_clk(UINT8 clk)
 			case ES_OPCODE2:
 				// first command bit must be a "1" in the real device
 				if ((eeprom_state == ES_OPCODE0) && (dlatch == 0))
-				{
+				{                   
+#if LOG_EEPROM
                     LOG("model3.log", "EEPROM: waiting for start bit\n");
+#endif
                     olatch = 1; // assert READY
 				}
 				else
 				{
 					opcode <<= 1;
 					opcode |= dlatch;
+#if LOG_EEPROM
                     LOG("model3.log", "EEPROM: opcode fetch state, currently %x\n", opcode);
+#endif
 					eeprom_state++;
 				}
 
@@ -177,7 +180,9 @@ void eeprom_set_clk(UINT8 clk)
 			case ES_ADRFETCH:	// fetch address
 				adr <<= 1;
 				adr |= dlatch;
+#if LOG_EEPROM
                 LOG("model3.log", "EEPROM: address fetch state, cur addr = %x\n", adr);
+#endif
 				curbit++;
 				if (curbit == 6)
 				{
@@ -211,7 +216,9 @@ void eeprom_set_clk(UINT8 clk)
 							break;
 
 						default:
+#if LOG_EEPROM
                             LOG("model3.log", "Unknown EEPROM opcode %d!\n", opcode);
+#endif
                             eeprom_state = ES_WAITING;
 							olatch = 1;	// assert READY anyway
 							break;
@@ -239,7 +246,9 @@ void eeprom_set_clk(UINT8 clk)
 				{
                     olatch = 1;     // indicate success
 					eeprom_store[adr] = curio;
+#if LOG_EEPROM
                     LOG("model3.log", "EEPROM: Wrote %04x to address %d\n", curio, adr);
+#endif
                     eeprom_state = ES_WAITING;
 				}
 				break;
