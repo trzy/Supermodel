@@ -759,6 +759,9 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
      * RAM tested for first for speed
      */
 
+    if (a == 0x100060)
+        LOG("model3.log", "%08X (%08X): %08X=%08X\n", PPC_PC, PPC_LR, a, d);
+
     if (a <= 0x007FFFFF)
     {
         *(UINT32 *) &ram[a] = BSWAP32(d);
@@ -1286,6 +1289,7 @@ BOOL m3_save_state(CHAR *file)
 //    scsp_save_state(fp);
 
     fclose(fp);
+    LOG("model3.log", "saved state: %s\n", file);
     return MODEL3_OKAY;
 }
 
@@ -1340,6 +1344,7 @@ BOOL m3_load_state(CHAR *file)
 //    scsp_load_state(fp);
 
     fclose(fp);
+    LOG("model3.log", "loaded state: %s\n", file);
     return MODEL3_OKAY;
 }
 
@@ -1369,6 +1374,10 @@ void m3_run_frame(void)
      * Run the PowerPC and 68K
      */
 
+    LOG("model3.log", "-- ACTIVE SCAN\n");
+    m3_add_irq(m3_irq_enable & 0x0C);
+    ppc_set_irq_line(1);
+
 	PROFILE_SECT_ENTRY("ppc");
     ppc_run(ppc_freq / 60);
 	PROFILE_SECT_EXIT("ppc");
@@ -1388,8 +1397,10 @@ void m3_run_frame(void)
      * Generate interrupts for this frame and run the VBlank
      */
 
-    message(0, "enter VBL");
-    m3_add_irq(m3_irq_enable);
+    LOG("model3.log", "-- VBL\n");
+
+    m3_add_irq(m3_irq_enable & 0x42);
+//    m3_add_irq(m3_irq_enable);
 //    m3_add_irq(m3_irq_enable & 0x02);
     ppc_set_irq_line(1);
 
@@ -1399,15 +1410,14 @@ void m3_run_frame(void)
 
     m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
 
-    m3_add_irq(0x02);
-    ppc_set_irq_line(1);
+//    m3_add_irq(0x02);
+//    ppc_set_irq_line(1);
 #if 0
     m3_add_irq(1 << m3_irq_bit);
     ppc_set_irq_line(1);
     m3_irq_bit = (m3_irq_bit + 1) & 7;
 #endif
     
-
 	PROFILE_SECT_EXIT("-");
 }
 
@@ -1843,31 +1853,53 @@ BOOL m3_load_rom(CHAR * id)
     else if(!stricmp(id, "SCUD"))
 	{
         *(UINT32 *)&crom[0x799DE8] = BSWAP32(0x00050208);   // debug menu
-		/* directly from Ville's patch */
 
-		*(UINT32 *)&crom[0x700194] = 0x00000060;	// Timebase Skip
+        /*
+         * Not required. See note in "SCUDE".
+         */
+        
+        *(UINT32 *)&crom[0x700194] = 0x00000060;    // Timebase Skip
         *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
-//        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
-		*(UINT32 *)&crom[0x71AEBC] = 0x00000060;	// Loop Skip
-		*(UINT32 *)&crom[0x712268] = 0x00000060;
+        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
+        *(UINT32 *)&crom[0x71AEBC] = 0x00000060;    // Loop Skip
+
+        /*
+         * Required.
+         *
+         * In SCUD, unlike the SCUDE dump, the link ID is not single by
+         * default, so we patch it here.
+         */
+
 		*(UINT32 *)&crom[0x71277C] = 0x00000060;
         *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ...
-		*(UINT8  *)&crom[0x787B36] = 0x00;			// Link ID: 00 = single, 01 = master, 02 = slave
-		*(UINT8  *)&crom[0x787B30] = 0x00;
 
         *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);  // allows game to start
+
+        *(UINT8  *)&crom[0x787B36] = 0x00;          // Link ID: 00 = single, 01 = master, 02 = slave
+        *(UINT8  *)&crom[0x787B30] = 0x00;
 	}
     else if (!stricmp(id, "SCUDE"))
     {
-		*(UINT32 *)&crom[0x700194] = 0x00000060;	// Timebase Skip
-        *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
-		*(UINT32 *)&crom[0x71AEBC] = 0x00000060;	// Loop Skip
-		*(UINT32 *)&crom[0x712268] = 0x00000060;
-		*(UINT32 *)&crom[0x71277C] = 0x00000060;
-        *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ...
+        /*
+         * None of these patches are required, they're simply here to make
+         * the game boot faster.
+         *
+         * NOTE: It would be wise to periodically check to make sure that
+         * the game still runs with these patches off, especially when playing
+         * with the EEPROM code.
+         */
 
-        *(UINT8  *)&crom[0x787B56] = 0x00;          // Link ID: 00 = single, 01 = master, 02 = slave
-        *(UINT8  *)&crom[0x787B50] = 0x01;          // country (1=USA)
+        *(UINT32 *)&crom[0x700194] = 0x00000060;    // Timebase Skip
+        *(UINT32 *)&crom[0x712734] = 0x00000060;    // Speedup
+        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
+        *(UINT32 *)&crom[0x71AEBC] = 0x00000060;    // Loop Skip
+
+        /*
+         * These patches are still required :(
+         */
+
+        *(UINT32 *)&crom[0x71277C] = 0x00000060;    // ?
+        *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ?
 
         *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);
     }
@@ -1911,21 +1943,14 @@ BOOL m3_load_rom(CHAR * id)
 		*(UINT32 *) &crom[0x70C000 + 0x14940] = BSWAP32(0x60000000);
 	}
 	else if( !stricmp(id, "VS2_98") ) {
-		// Loops if irq 0x20 is set (0xF0100018)
-		*(UINT32 *) &crom[0x600000 + 0x1FD0] = BSWAP32(0x60000000);
-
-		// Loops if irq 0x40 is set
-		*(UINT32 *) &crom[0x600000 + 0x1FB4] = BSWAP32(0x60000000);
-
-		// Waiting for memory location
-		*(UINT32 *) &crom[0x600000 + 0xB664] = BSWAP32(0x60000000);
-
 		// Weird loop (see VS2)
-		*(UINT32 *) &crom[0x600000 + 0x28EC] = BSWAP32(0x60000000);
-		*(UINT32 *) &crom[0x600000 + 0x290C] = BSWAP32(0x60000000);
+        // MIDI-related. Perhaps the sound hardware generates many interrupts
+        // per frame?        
+        *(UINT32 *) &crom[0x600000 + 0x28EC] = BSWAP32(0x60000000);
+        *(UINT32 *) &crom[0x600000 + 0x290C] = BSWAP32(0x60000000);
 
 		// Waiting for decrementer
-		*(UINT32 *) &crom[0x600000 + 0x14F2C] = BSWAP32(0x60000000);
+        *(UINT32 *) &crom[0x600000 + 0x14F2C] = BSWAP32(0x60000000);
 	}
     else if (!stricmp(id, "SRALLY2"))
     {
