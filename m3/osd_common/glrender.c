@@ -55,9 +55,9 @@
 /* Macros (and Inlines)                                           */
 /******************************************************************/
 
-#define R3D_LOG
-//#define R3D_LOG           LOG
-#define LOG_MODEL       0
+//#define R3D_LOG
+#define R3D_LOG           LOG
+#define LOG_MODEL       1
 
 #define WIREFRAME       0
 #define LIGHTING        0
@@ -294,7 +294,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
             glDisable(GL_LIGHTING);
 #endif
 
-        if (tex_fmt == 7)   // RGBA4
+        if ((tex_fmt == 7) || (tex_fmt == 4))
         {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -753,7 +753,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 			} // really_draw
         }
 
-        if (tex_fmt == 7)
+        if ((tex_fmt == 7) || (tex_fmt == 4))
             glDisable(GL_BLEND);
 
         if (poly_trans)
@@ -1722,10 +1722,10 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 	        {
                 rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi / 2)) * 2];
                 gray8 = (rgb16 >> (!(xi & 1) * 8)) & 0xFF;
-                texture_buffer[((yi * w) + xi) * 4 + 0] = (gray8 & 0x0F) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 1] = (gray8 & 0x0F) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 2] = (gray8 & 0x0F) << 4;
-                texture_buffer[((yi * w) + xi) * 4 + 3] = (gray8 & 0xF0);
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 0] = ~(gray8 & 0x0F) << 4;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 1] = ~(gray8 & 0x0F) << 4;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 2] = ~(gray8 & 0x0F) << 4;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 3] = (gray8 & 0xF0); // fixme
 	        }
 	    }
 
@@ -1739,10 +1739,10 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
 	        {
                 rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi / 2)) * 2];
                 gray8 = (rgb16 >> (!(xi & 1) * 8)) & 0xFF;
-                texture_buffer[((yi * w) + xi) * 4 + 0] = gray8;
-                texture_buffer[((yi * w) + xi) * 4 + 1] = gray8;
-                texture_buffer[((yi * w) + xi) * 4 + 2] = gray8;
-                texture_buffer[((yi * w) + xi) * 4 + 3] = (UINT8) 0xFF;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 0] = gray8;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 1] = gray8;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 2] = gray8;
+                texture_buffer[((yi * w) + (xi ^ 1)) * 4 + 3] = (UINT8) 0xFF;
 	        }
 	    }
 
@@ -1974,6 +1974,8 @@ void osd_renderer_update_frame(void)
      * Render 2 back layers
      */
 
+	PROFILE_SECT_ENTRY("tilegen");
+
     for (i = 2; i < 4; i++)
     {
         glBindTexture(GL_TEXTURE_2D, layer_texture[i]);
@@ -1989,15 +1991,23 @@ void osd_renderer_update_frame(void)
     render_layer(2, -0.75);
     glDisable(GL_BLEND);
 
+	PROFILE_SECT_EXIT("tilegen");
+
 	/*
 	 * Render Real3D scene
 	 */
 
+	PROFILE_SECT_ENTRY("real3d");
+
     do_3d();
+
+	PROFILE_SECT_EXIT("real3d");
 
 	/*
 	 * Render 2 front layers
 	 */
+
+	PROFILE_SECT_ENTRY("tilegen");
 
     for (i = 0; i < 2; i++)
     {
@@ -2013,6 +2023,8 @@ void osd_renderer_update_frame(void)
     render_layer(1, -0.50);
     render_layer(0, -0.25);
     glDisable(GL_BLEND);
+
+	PROFILE_SECT_EXIT("tilegen");
 
     /*
      * glFlush() may not be needed and it may be advantageous to SwapBuffers()
