@@ -33,6 +33,13 @@
  *
  *      In VF3, the SCSI appears at 0xC0000000. We've observed that at this
  *      address on Step 1.5 there is some sort of 68K device. Oh, well :P
+ *
+ * TODO List:
+ *
+ *      - Investigate backup RAM. Sega Rally 2 seems to want 256KB when R3D
+ *      read commands are emulated with the DMA. This is emulated by making
+ *      the Step 2.X backup RAM region (starting at 0xFE0C0000) 256KB in size
+ *      but it is still kept as 128KB for Step 1.X.
  */
 
 #include "model3.h"
@@ -485,8 +492,8 @@ static UINT16 m3_ppc_read_16(UINT32 a)
 	case 0xF:
 
         if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
-                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
-            return BSWAP16(*(UINT16 *) &bram[a & 0x1FFFF]);
+            (a >= 0xFE0C0000 && a <= 0xFE0FFFFF))  // backup RAM
+            return BSWAP16(*(UINT16 *) &bram[a & 0x3FFFF]);
 
         switch (a)
         {
@@ -558,8 +565,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         else if (a >= 0xF0080000 && a <= 0xF00800FF)    // MIDI?
             return 0xFFFFFFFF;
         else if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
-                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
-            return BSWAP32(*(UINT32 *) &bram[a & 0x1FFFF]);
+                 (a >= 0xFE0C0000 && a <= 0xFE0FFFFF))  // backup RAM
+            return BSWAP32(*(UINT32 *) &bram[a & 0x3FFFF]);
         else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
                  (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
             return m3_sys_read_32(a);
@@ -719,6 +726,16 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
 
     switch (a >> 28)
     {
+    case 0xC:
+
+        if (a >= 0xC2000000 && a <= 0xC200001F) // DMA device
+        {
+            dma_write_16(a, d);
+            return;
+        }
+
+        break;
+
     case 0xF:
 
         if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)         // MPC105 regs
@@ -732,9 +749,9 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
             return;
         }
         else if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
-                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
+                 (a >= 0xFE0C0000 && a <= 0xFE0FFFFF))  // backup RAM
         {
-            *(UINT16 *) &bram[a & 0x1FFFF] = BSWAP16(d);
+            *(UINT16 *) &bram[a & 0x3FFFF] = BSWAP16(d);
             return;
         }
 
@@ -819,9 +836,9 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             return;
         }
         else if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
-                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
+                 (a >= 0xFE0C0000 && a <= 0xFE0FFFFF))  // backup RAM
         {
-            *(UINT32 *) &bram[a & 0x1FFFF] = BSWAP32(d);
+            *(UINT32 *) &bram[a & 0x3FFFF] = BSWAP32(d);
             return;
         }
         else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
@@ -1218,11 +1235,11 @@ void m3_load_bram(void)
 {
 	BUILD_BRAM_PATH
 
-    if(load_file(string, bram, 128*1024))
+    if(load_file(string, bram, 256*1024))
 	{
 		message(0, "Can't load Backup RAM from file, creating a new file.");
-		memset(bram, 0xFF, 128*1024);
-        save_file(string, bram, 128*1024, 0);
+        memset(bram, 0xFF, 256*1024);
+        save_file(string, bram, 256*1024, 0);
 	}
 }
 
@@ -1230,7 +1247,7 @@ void m3_save_bram(void)
 {
 	BUILD_BRAM_PATH
 
-    save_file(string, bram, 128*1024, 0);
+    save_file(string, bram, 256*1024, 0);
 }
 
 /*
@@ -1262,7 +1279,7 @@ BOOL m3_save_state(CHAR *file)
      */
 
     fwrite(ram, sizeof(UINT8), 8*1024*1024, fp);
-    fwrite(bram, sizeof(UINT8), 128*1024, fp);
+    fwrite(bram, sizeof(UINT8), 256*1024, fp);
     fwrite(&m3_irq_state, sizeof(UINT8), 1, fp);
     fwrite(&m3_irq_enable, sizeof(UINT8), 1, fp);
     fwrite(&crom_bank_reg, sizeof(UINT8), 1, fp);
@@ -1316,7 +1333,7 @@ BOOL m3_load_state(CHAR *file)
      */
 
     fread(ram, sizeof(UINT8), 8*1024*1024, fp);
-    fread(bram, sizeof(UINT8), 128*1024, fp);
+    fread(bram, sizeof(UINT8), 256*1024, fp);
     fread(&m3_irq_state, sizeof(UINT8), 1, fp);
     fread(&m3_irq_enable, sizeof(UINT8), 1, fp);
     fread(&crom_bank_reg, sizeof(UINT8), 1, fp);
@@ -1437,7 +1454,7 @@ void m3_reset(void)
     memset(ram, 0, 8*1024*1024);
     memset(vram, 0, 1*1024*1024+2*65536);
 	memset(sram, 0, 1*1024*1024);
-	memset(bram, 0, 128*1024);
+    memset(bram, 0, 256*1024);
 
 	/* reset all the modules */
 
@@ -2091,7 +2108,7 @@ void m3_init(void)
     ram = (UINT8 *) malloc(8*1024*1024);
     vram = (UINT8 *) malloc(2*1024*1024);
     sram = (UINT8 *) malloc(1*1024*1024);
-    bram = (UINT8 *) malloc(128*1024);
+    bram = (UINT8 *) malloc(256*1024);
     culling_ram_8e = (UINT8 *) malloc(1*1024*1024);
     culling_ram_8c = (UINT8 *) malloc(2*1024*1024);
     polygon_ram = (UINT8 *) malloc(2*1024*1024);

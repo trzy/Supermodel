@@ -252,6 +252,29 @@ void dma_write_8(UINT32 a, UINT8 d)
 }
 
 /*
+ * void dma_write_16(UINT32 a, UINT16 d);
+ *
+ * Writes a half-word to the DMA device.
+ *
+ * Parameters:
+ *      a = Address.
+ *      d = Data to write.
+ */
+
+void dma_write_16(UINT32 a, UINT16 d)
+{
+    switch (a & 0x1F)
+    {
+    case 0x14:
+        message(0, "%08X = %04X", a, d);
+        break;
+    default:
+        error("unknown DMA write: %08X = %04X", a, d);
+        break;
+    }
+}
+
+/*
  * void dma_write_32(UINT32 a, UINT32 d);
  *
  * Writes a word to the DMA device.
@@ -295,12 +318,16 @@ void dma_write_32(UINT32 a, UINT32 d)
 
         if (d == 0x20000000)
             *(UINT32 *) &dma_regs[0x14] = 0x16C311DB; // PCI Vendor and Device ID
+        else if ((d & 0x80000000))
+            *(UINT32 *) &dma_regs[0x14] = r3d_read_32((d & 0xFF) | 0x84000000);
+#if 0
         else if (d == 0x80000000)
         {
             static UINT32   result = 0x02000000;
             result ^= 0x02000000;
             *(UINT32 *) &dma_regs[0x14] = result;
         }
+#endif
         else
             message(0, "%08X: Unknown DMA command, %08X", ppc_get_reg(PPC_REG_PC), d);
 

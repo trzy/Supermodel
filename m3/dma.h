@@ -35,6 +35,7 @@ extern void     dma_load_state(FILE *);
 extern UINT8    dma_read_8(UINT32 a);
 extern UINT32   dma_read_32(UINT32 a);
 extern void     dma_write_8(UINT32 a, UINT8 d);
+extern void     dma_write_16(UINT32 a, UINT16 d);
 extern void     dma_write_32(UINT32 a, UINT32 d);
 
 #endif  // INCLUDED_DMA_H
