@@ -110,6 +110,8 @@ void message(UINT flags, char * fmt, ...)
     vsprintf(string, fmt, vl);
 	va_end(vl);
 
+	LOG("model3.log", "%s\n", string);
+
     puts(string);
     
 //	osd_message(flags, string);
@@ -1077,8 +1079,8 @@ static UINT32 pci_command_callback(UINT32 cmd)
  * Load a file to a buffer.
  */
 
-static INT load_file(char * path, UINT8 * dest, INT size){
-
+static INT load_file(char * path, UINT8 * dest, INT size)
+{
     FILE * fp;
 	INT i;
 
@@ -1157,24 +1159,36 @@ static void save_file(char * path, UINT8 * src, INT size, BOOL byte_reversed)
 
 void m3_load_eeprom(void)
 {
+	INT i;
+
 	BUILD_EEPROM_PATH
 
 	eeprom_reset();
-	eeprom_load(string);
+
+	if((i = eeprom_load(string)) != MODEL3_OKAY)
+	{
+		message(0, "Can't load EEPROM from %s (%d)", string, i);
+	}
 }
 
 void m3_save_eeprom(void)
 {
+	INT i;
+
 	BUILD_EEPROM_PATH
 
-	eeprom_save(string);
+	if((i = eeprom_save(string)) != MODEL3_OKAY)
+	{
+		message(0, "Can't save EEPROM to %s (%d)", string, i);
+	}
 }
 
 void m3_load_bram(void)
 {
 	BUILD_BRAM_PATH
 
-    if(load_file(string, bram, 128*1024)){
+    if(load_file(string, bram, 128*1024))
+	{
 		message(0, "Can't load Backup RAM from file, creating a new file.");
 		memset(bram, 0xFF, 128*1024);
         save_file(string, bram, 128*1024, 0);

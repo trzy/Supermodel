@@ -25,15 +25,14 @@
 #ifndef INCLUDED_EEPROM_H
 #define INCLUDED_EEPROM_H
 
-extern UINT8    eeprom_read(void);
-extern void     eeprom_write(UINT8, UINT8, UINT8);
+extern UINT8	eeprom_read(void);
+extern void		eeprom_write(UINT, UINT, UINT, UINT);
 
-extern void eeprom_save_state(FILE *);
-extern void eeprom_load_state(FILE *);
+extern void	eeprom_save_state(FILE *);
+extern void	eeprom_load_state(FILE *);
 
-extern void eeprom_load(char *);
-extern void eeprom_save(char *);
-extern void eeprom_reset(void);
+extern INT	eeprom_load(char *);
+extern INT	eeprom_save(char *);
+extern void	eeprom_reset(void);
 
 #endif  // INCLUDED_EEPROM_H
-

@@ -22,24 +22,33 @@
  * 93C46 EEPROM emulation.
  */
 
-/* rewrite me! */
-
 #include "model3.h"
+
+//#define LOG_EEPROM		// enable EEPROM logging
+
+/******************************************************************/
+/* Privates                                                       */
+/******************************************************************/
 
 typedef struct EEPROM {
 
-	UINT16 eeprom[64];	/* data buffer */
-	UINT32 res;			/* result (ready/data) */
-	UINT32 com;			/* current command */
-	UINT32 addr;		/* current address */
-	UINT32 latch;		/* current input bit data */
-	UINT32 serial;		/* current serial data */
-	UINT32 count;		/* current serial count */
-	UINT32 locked;		/* lock status */
+	UINT32	buff[256];
+
+	UINT	_di;
+	UINT	_do;
+	UINT	_cs;
+	UINT	_clk;
+
+	UINT	count;
+	UINT32	serial;
+	UINT	command;
+	UINT	addr;
+
+	UINT	locked;
 
 } EEPROM;
 
-static EEPROM eeprom;
+static EEPROM	eeprom;
 
 /******************************************************************/
 /* Interface                                                      */
@@ -61,14 +70,19 @@ void eeprom_save_state(FILE *fp)
      * issues to occur (we're using different compilers for development)
      */
 
-    fwrite(eeprom.eeprom, sizeof(UINT16), 64, fp);
-    fwrite(&eeprom.res, sizeof(UINT32), 1, fp);
-    fwrite(&eeprom.com, sizeof(UINT32), 1, fp);
-    fwrite(&eeprom.addr, sizeof(UINT32), 1, fp);
-    fwrite(&eeprom.latch, sizeof(UINT32), 1, fp);
-    fwrite(&eeprom.serial, sizeof(UINT32), 1, fp);
-    fwrite(&eeprom.count, sizeof(UINT32), 1, fp);
-    fwrite(&eeprom.locked, sizeof(UINT32), 1, fp);
+	if(fp != NULL)
+	{
+		fwrite(eeprom.buff, sizeof(UINT32), 256, fp);
+		fwrite(&eeprom._di, sizeof(UINT), 1, fp);
+		fwrite(&eeprom._do, sizeof(UINT), 1, fp);
+		fwrite(&eeprom._cs, sizeof(UINT), 1, fp);
+		fwrite(&eeprom._clk, sizeof(UINT), 1, fp);
+		fwrite(&eeprom.count, sizeof(UINT), 1, fp);
+		fwrite(&eeprom.serial, sizeof(UINT32), 1, fp);
+		fwrite(&eeprom.command, sizeof(UINT), 1, fp);
+		fwrite(&eeprom.addr, sizeof(UINT), 1, fp);
+		fwrite(&eeprom.locked, sizeof(UINT), 1, fp);
+	}
 }
 
 /*
@@ -82,193 +96,232 @@ void eeprom_save_state(FILE *fp)
 
 void eeprom_load_state(FILE *fp)
 {
-    fread(eeprom.eeprom, sizeof(UINT16), 64, fp);
-    fread(&eeprom.res, sizeof(UINT32), 1, fp);
-    fread(&eeprom.com, sizeof(UINT32), 1, fp);
-    fread(&eeprom.addr, sizeof(UINT32), 1, fp);
-    fread(&eeprom.latch, sizeof(UINT32), 1, fp);
-    fread(&eeprom.serial, sizeof(UINT32), 1, fp);
-    fread(&eeprom.count, sizeof(UINT32), 1, fp);
-    fread(&eeprom.locked, sizeof(UINT32), 1, fp);
+	if(fp != NULL)
+	{
+		fread(eeprom.buff, sizeof(UINT32), 256, fp);
+		fread(&eeprom._di, sizeof(UINT), 1, fp);
+		fread(&eeprom._do, sizeof(UINT), 1, fp);
+		fread(&eeprom._cs, sizeof(UINT), 1, fp);
+		fread(&eeprom._clk, sizeof(UINT), 1, fp);
+		fread(&eeprom.count, sizeof(UINT), 1, fp);
+		fread(&eeprom.serial, sizeof(UINT32), 1, fp);
+		fread(&eeprom.command, sizeof(UINT), 1, fp);
+		fread(&eeprom.addr, sizeof(UINT), 1, fp);
+		fread(&eeprom.locked, sizeof(UINT), 1, fp);
+	}
 }
 
-void eeprom_load(char * fn)
+INT eeprom_load(char * fn)
 {
 	FILE * f;
+	INT i = MODEL3_ERROR;
+
+	message(0, "loading EEPROM from %s", fn);
 
 	if((f = fopen(fn, "rb")) != NULL)
 	{
-		if((int)fread(eeprom.eeprom, 2, 64, f) != 64*2)
-			memset(eeprom.eeprom, 0, 64*2);
-
+		i = fread(eeprom.buff, sizeof(UINT32), 256, f);
 		fclose(f);
+
+		if(i == 256)
+			return(MODEL3_OKAY);
 	}
+
+	memset(eeprom.buff, 0xFF, sizeof(UINT32)*256);
+
+	return(i);
 }
 
-void eeprom_save(char * fn)
+INT eeprom_save(char * fn)
 {
 	FILE * f;
+	INT i = MODEL3_ERROR;
+
+	message(0, "saving EEPROM to %s", fn);
 
 	if((f = fopen(fn, "wb")) != NULL)
 	{
-		fwrite(eeprom.eeprom, 2, 64, f);
+		i = fwrite(eeprom.buff, sizeof(UINT32), 256, f);
 		fclose(f);
+
+		if(i == 256)
+			return(MODEL3_OKAY);
 	}
+
+	return(i);
 }
 
 void eeprom_reset(void)
 {
-	memset(eeprom.eeprom, 0, 64 * 2);
-
-	eeprom.res = 1;
-	eeprom.com = 0;
-	eeprom.addr = 0;
-	eeprom.latch = 0;
-	eeprom.serial = 0;
-	eeprom.count = 0;
-	eeprom.locked = 0;
+	memset(&eeprom, 0, sizeof(EEPROM));
+	memset(eeprom.buff, 0xFF, sizeof(UINT32)*256);
+	eeprom.locked = 1;
 }
+
 
 /******************************************************************/
 /* Access                                                         */
 /******************************************************************/
 
-void eeprom_write(UINT8 we, UINT8 clk, UINT8 cs)
+void eeprom_write(UINT cs, UINT clk, UINT di, UINT we)
 {
-	if(we)
+	#ifdef LOG_EEPROM
+	message(0, "EEPROM write: cs=%i clk=%i di=%i we=%i", cs, clk, di, we);
+	#endif
+
+	if(cs)
 	{
-		/* eeprom enabled */
+		// reset
 
-		if(clk == 0)
-		{
-			/* no clock, write latch */
-
-			eeprom.latch = cs;
-			eeprom.res = 1;
-			return;
-		}
-
-		/* pulse clock */
-
-		eeprom.serial <<= 1;
-		eeprom.serial |= eeprom.latch;
-		eeprom.count++;
-		eeprom.res = 1;
-
-		LOG("error.log", "EEPROM : write - we=%i clk=%i cs=%i - latch=%i res=%i - cnt=%i ser=%X - com =%i\n",
-		we, clk, cs, eeprom.latch, eeprom.res, eeprom.count, eeprom.serial, eeprom.com);
-
-		if(eeprom.count == 4){
-
-			/* command transferred, ignore MSB */
-
-			eeprom.com = eeprom.serial & 7;
-
-			if(	eeprom.com != 4 &&	/* extended */
-				eeprom.com != 5 &&	/* write */
-				eeprom.com != 6){	/* read */
-
-				printf("ERROR: unknown eeprom com %i\n", eeprom.com);
-				exit(1);
-
-				LOG("error.log", "EEPROM : com=%i\n", eeprom.com);
-
-			}
-
-		}else
-		if(eeprom.com == 4 && eeprom.count == 6){
-
-			/* extended command transferred, mask in */
-
-			eeprom.com = (eeprom.com << 2) | (eeprom.serial & 3);
-
-			LOG("error.log", "EEPROM : com=%i (extended)\n", eeprom.com);
-
-			switch(eeprom.com){
-
-			case 16: eeprom.locked = 1; break; /* lock */
-			case 19: eeprom.locked = 0; break; /* unlock */
-			default:
-				printf("ERROR: unknown eeprom ext com %i\n", eeprom.com);
-				exit(1);
-
-			}
-
-		}else
-		if((eeprom.com == 5 || eeprom.com == 6) && eeprom.count == 10){
-
-			/* read/write address transferred */
-
-			eeprom.addr = eeprom.serial & 63;
-
-			if(eeprom.com == 5)
-				eeprom.eeprom[eeprom.addr] = 0;
-
-			LOG("error.log", "EEPROM : addr=%i\n", eeprom.addr);
-
-		}else
-		if(eeprom.com == 5 && eeprom.count > 10){
-
-			/* writing */
-
-			LOG("error.log", "EEPROM : writing bit %i = %i\n", 15 - (eeprom.count - 11), eeprom.latch);
-
-			eeprom.eeprom[eeprom.addr] |= ((eeprom.latch & 1) << (15 - (eeprom.count - 11)));
-			eeprom.res = 1;
-
-			if(eeprom.count == 26){
-
-				LOG("error.log", "EEPROM : write finished = %04X\n", eeprom.eeprom[eeprom.addr]);
-
-				eeprom.com = 0;
-				eeprom.addr = 0;
-				eeprom.latch = 0;
-				eeprom.serial = 0;
-				eeprom.count = 0;
-			}
-
-		}else
-		if(eeprom.com == 6 && eeprom.count > 10){
-
-			/* reading */
-
-			LOG("error.log", "EEPROM : reading bit %i\n", 15 - (eeprom.count - 11));
-
-			eeprom.res = eeprom.eeprom[eeprom.addr];
-			eeprom.res = (eeprom.res >> (15 - (eeprom.count - 11))) & 1;
-
-			if(eeprom.count == 26){
-
-				LOG("error.log", "EEPROM: read finished\n");
-
-				eeprom.com = 0;
-				eeprom.addr = 0;
-				eeprom.latch = 0;
-				eeprom.serial = 0;
-				eeprom.count = 0;
-			}
-		}
-
-	}else{
-
-		/* eeprom disabled */
-
-		LOG("error.log", "EEPROM : reset - we=%i clk=%i cs=%i - latch=%i res=%i - cnt=%i ser=%X - com =%i\n",
-		we, clk, cs, eeprom.latch, eeprom.res, eeprom.count, eeprom.serial, eeprom.com);
-
-		eeprom.res = 1;
-		eeprom.com = 0;
-		eeprom.addr = 0;
-		eeprom.latch = 0;
-		eeprom.serial = 0;
 		eeprom.count = 0;
+		eeprom.command = 0;
+		return;
 	}
+
+	if(!we)
+		return;
+
+	if(clk && !eeprom._clk)
+	{
+		eeprom.serial <<= 1;
+		eeprom.serial |= (di) ? 1 : 0;
+
+		#ifdef LOG_EEPROM
+		message(0, "EEPROM serial = %08X [%i]", eeprom.serial, eeprom.count);
+		#endif
+
+		eeprom.count++;
+
+		if(eeprom.count == 4)
+		{
+			// command sent
+
+			eeprom.command = eeprom.serial & 7;
+
+			switch(eeprom.command)
+			{
+			case 0x6:
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM read");
+				#endif
+				break;
+			case 0x5:
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM write");
+				#endif
+				if(eeprom.locked)
+					error("EEPROM locked write\n");
+				break;
+			case 0x7:
+				error("EEPROM erase\n");
+			case 0x4:
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM ex\n");
+				#endif
+				break;
+			default:
+				error("EEPROM invalid (%X)\n", eeprom.command);
+			}
+		}
+		else if(eeprom.command == 4 && eeprom.count == 10)
+		{
+			// extended command sent
+
+			eeprom.command = (eeprom.serial >> 4) & 0x1F;
+
+			switch(eeprom.command)
+			{
+			case 0x10:	// EEPROM lock
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM lock");
+				#endif
+				eeprom.locked = 1;
+				break;
+			case 0x13:	// EEPROM unlock
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM unlock");
+				#endif
+				eeprom.locked = 0;
+				break;
+			default:
+				error("EEPROM: invalid extended (%X)\n", eeprom.command);
+			}
+
+			eeprom.count = 0;
+			eeprom.serial = 0;
+		}
+		else if(eeprom.command == 5)
+		{
+			// EEPROM write
+
+			if(eeprom.count == (4+6))
+			{
+				eeprom.addr = eeprom.serial & 0x3F;
+
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM write, addr=%02X", eeprom.addr);
+				#endif
+			}
+			else if(eeprom.count == (4+6+16))
+			{
+				eeprom.buff[eeprom.addr] = eeprom.serial & 0xFFFF;
+				eeprom.count = 0;
+				eeprom.serial = 0;
+
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM write, addr=%02X, data=%04X", eeprom.addr, eeprom.buff[eeprom.addr]);
+				#endif
+			}
+		}
+		else if(eeprom.command == 6)
+		{
+			// EEPROM read
+
+			if(eeprom.count == 4+6)
+			{
+				eeprom.addr = eeprom.serial & 0x3F;
+
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM read, addr=%02X", eeprom.addr);
+				#endif
+			}
+			else if(eeprom.count > (4+6) && eeprom.count <= (4+6+16))
+			{
+				#ifdef LOG_EEPROM
+				message(0, "EEPROM read, addr=%02X, reading bit %i", eeprom.addr, eeprom.count-(4+6+1));
+				#endif
+
+				eeprom._do = (eeprom.buff[eeprom.addr] >> (15 - (eeprom.count-(4+6+1)))) & 1;
+
+				if(eeprom.count == (4+6+16))
+				{
+					#ifdef LOG_EEPROM
+					message(0, "EEPROM read, addr=%02X, finished", eeprom.addr);
+					#endif
+
+					eeprom.count = 0;
+					eeprom.serial = 0;
+				}
+
+				goto eeprom_done;
+			}
+		}
+	}
+
+	eeprom._do = 1;
+
+eeprom_done:
+
+	eeprom._di = di;
+	eeprom._cs = cs;
+	eeprom._clk = clk;
 }
 
 UINT8 eeprom_read(void)
 {
-	LOG("error.log", "EEPROM : read result = %i\n", eeprom.res);
+	#ifdef LOG_EEPROM
+	message(0, "EEPROM read");
+	#endif
 
-	return(eeprom.res);
+	return(eeprom._do);
 }
-
