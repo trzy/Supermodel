@@ -113,9 +113,12 @@ static float convert_fixed_to_float(INT32 num)
 {
     float   result;
 
+#if 0
+    result = (float) (num >> 15);
+    result += (float) (num & 0x7FFF) / ((float) 0x8000);
+#endif
     result = (float) (num >> 19);                   // 13-bit integer
     result += (float) (num & 0x7FFFF) / 524288.0f;  // 19-bit fraction
-
     return result;
 }
 
@@ -830,34 +833,6 @@ static void draw_block(UINT8 *block)
            	block = translate_r3d_address(GETWORDLE(&block[0*4]) & 0x00FFFFFF);
 		}
 
-		R3D_LOG("model3.log",
-				"#\n"
-				"# block:\n"
-				"#\n"
-				"\n"
-				"00: %08X\n"
-				"01: %08X\n"
-				"02: %08X\n"
-				"03: %08X\n"
-				"04: %3.5f\n"
-				"05: %3.5f\n"
-				"06: %3.5f\n"
-				"07: %08X\n"
-				"08: %08X\n"
-				"09: %08X\n"
-				"\n",
-				GETWORDLE(&block[0 * 4]),
-				GETWORDLE(&block[1 * 4]),
-				GETWORDLE(&block[2 * 4]),
-				GETWORDLE(&block[3 * 4]),
-				get_float(&block[4 * 4]),
-				get_float(&block[5 * 4]),
-				get_float(&block[6 * 4]),
-				GETWORDLE(&block[7 * 4]),
-				GETWORDLE(&block[8 * 4]),
-				GETWORDLE(&block[9 * 4])
-		);
-
         if (m3_config.step == 0x10)
         {
             glPushMatrix();
@@ -932,96 +907,122 @@ static void draw_block(UINT8 *block)
             if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
                 break;
 
-    //        message(0, "next_ptr = %08X", next_ptr);
             block = translate_r3d_address(next_ptr);
         }
         else
         {
-        /*
-         * Multiply by the specified matrix -- apparently, if the number is 0,
-         * it should not be used
-         */
+            R3D_LOG("model3.log",
+                    "#\n"
+                    "# block:\n"
+                    "#\n"
+                    "\n"
+                    "00: %08X\n"
+                    "01: %08X\n"
+                    "02: %08X\n"
+                    "03: %08X\n"
+                    "04: %3.5f\n"
+                    "05: %3.5f\n"
+                    "06: %3.5f\n"
+                    "07: %08X\n"
+                    "08: %08X\n"
+                    "09: %08X\n"
+                    "\n",
+                    GETWORDLE(&block[0 * 4]),
+                    GETWORDLE(&block[1 * 4]),
+                    GETWORDLE(&block[2 * 4]),
+                    GETWORDLE(&block[3 * 4]),
+                    get_float(&block[4 * 4]),
+                    get_float(&block[5 * 4]),
+                    get_float(&block[6 * 4]),
+                    GETWORDLE(&block[7 * 4]),
+                    GETWORDLE(&block[8 * 4]),
+                    GETWORDLE(&block[9 * 4])
+            );
 
-        glPushMatrix();
-        matrix = (GETWORDLE(&block[3*4]) & 0x3FF) * 12;
-        if (matrix != 0)
-        {
-            get_matrix(m, matrix);
-            glMultMatrixf(m);
-        }
-        glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
+            /*
+             * Multiply by the specified matrix -- apparently, if the number
+             * is 0, it should not be used
+             */
 
-        /*
-         * Draw a model or process a list. If the address is of the form
-         * 04XXXXXX, then the address points to a list, otherwise it points to
-         * a model.
-         */
+            glPushMatrix();
+            matrix = (GETWORDLE(&block[3*4]) & 0x3FF) * 12;
+            if (matrix != 0)
+            {
+                get_matrix(m, matrix);
+                glMultMatrixf(m);
+            }
+            glTranslatef(get_float(&block[4*4]), get_float(&block[5*4]), get_float(&block[6*4]));
 
-        addr = GETWORDLE(&block[7*4]);
+            /*
+             * Draw a model or process a list. If the address is of the form
+             * 04XXXXXX, then the address points to a list, otherwise it points
+             * to a model.
+             */
 
-		if(GETWORDLE(&block[0*4]) & 0x08)
-		{
-			/*
-			 * The block references a 4-element list (Scud Race).
-			 * The value of bit 0x01000000 in the address assumes another
-			 * (currently unknown) meaning.
-			 */
+            addr = GETWORDLE(&block[7*4]);
 
-			if(addr & 0xFE000000)
-				error("Invalid list address: %08X\n", addr);
+            if(GETWORDLE(&block[0*4]) & 0x08)
+            {
+                /*
+                 * The block references a 4-element list (Scud Race).
+                 * The value of bit 0x01000000 in the address assumes another
+                 * (currently unknown) meaning.
+                 */
 
-			R3D_LOG("model3.log", " ## block: draw block at %08X (exception 1)\n\n", addr);
-            draw_block(translate_r3d_address(addr & 0x00FFFFFF));
-		}
-		else
-		{
-	        switch ((addr >> 24) & 0xFF)
-	        {
-			case 0x00:	// block
-				if(addr != 0)
-				{
-					R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
-					draw_block(translate_r3d_address(addr & 0x01FFFFFF));
-				}
-				break;
-			case 0x01:	// model
-			case 0x03:	// model in VROM (Scud Race)
-				if(addr != 0)
-				{
-					R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
-					if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-                        draw_model(translate_r3d_address(addr & 0x01FFFFFF), 0);
-					else                                    // polygon RAM
-                        draw_model(translate_r3d_address(addr & 0x01FFFFFF), 1);
-				}
-				break;
-	        case 0x04:  // list
-				R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
-	            if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
-	            draw_list(translate_r3d_address(addr & 0x01FFFFFF));
-	            break;
-	        default:
-	            error("Unable to handle Real3D address: %08X\n", addr);
-	            break;
-    	    }
-		}
+                if(addr & 0xFE000000)
+                    error("Invalid list address: %08X\n", addr);
 
-        /*
-         * Pop the matrix
-         */
+                R3D_LOG("model3.log", " ## block: draw block at %08X (exception 1)\n\n", addr);
+                draw_block(translate_r3d_address(addr & 0x00FFFFFF));
+            }
+            else
+            {
+                switch ((addr >> 24) & 0xFF)
+                {
+                case 0x00:  // block
+                    if(addr != 0)
+                    {
+                        R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
+                        draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+                    }
+                    break;
+                case 0x01:  // model
+                case 0x03:  // model in VROM (Scud Race)
+                    if(addr != 0)
+                    {
+                        R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
+                        if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+                            draw_model(translate_r3d_address(addr & 0x01FFFFFF), 0);
+                        else                                    // polygon RAM
+                            draw_model(translate_r3d_address(addr & 0x01FFFFFF), 1);
+                    }
+                    break;
+                case 0x04:  // list
+                    R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
+                    if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
+                    draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+                    break;
+                default:
+                    error("Unable to handle Real3D address: %08X\n", addr);
+                    break;
+                }
+            }
 
-        glPopMatrix();
+            /*
+             * Pop the matrix
+             */
 
-        /*
-         * Advance to next block in list
-         */
+            glPopMatrix();
 
-        next_ptr = GETWORDLE(&block[8*4]);
-        if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
-            break;
+            /*
+             * Advance to next block in list
+             */
 
-//        message(0, "next_ptr = %08X", next_ptr);
-        block = translate_r3d_address(next_ptr);
+            next_ptr = GETWORDLE(&block[8*4]);
+            if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
+                break;
+
+            block = translate_r3d_address(next_ptr);
         }
     }
 }
@@ -1266,10 +1267,10 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 	        for (xi = 0; xi < w; xi++)
 	        {
                 rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
-	            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >>  8) & 0xF) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  4) & 0xF) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  0) & 0xF) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >> 12) & 0xF) << 3; // not sure ...
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 12) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  8) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  4) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >>  0) & 0xF) << 4; // not sure ...
 	        }
 		}
 		break;
