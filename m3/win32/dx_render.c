@@ -73,11 +73,12 @@ static void render_scene(void);
  *
  * Parameters:
  *      list_ram_ptr = Pointer to Real3D display list RAM
+ *      cull_ram_ptr = Pointer to Real3D culling RAM
  *      poly_ram_ptr = Pointer to Real3D polygon RAM.
  *      vrom_ptr     = Pointer to VROM.
  */
 
-void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *poly_ram_ptr, UINT8 *vrom_ptr)
+void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_ptr, UINT8 *vrom_ptr)
 {
 	D3DPRESENT_PARAMETERS		d3dpp;
 	D3DDISPLAYMODE				d3ddm;
@@ -87,6 +88,7 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *poly_ram_ptr, UINT8 *vrom_ptr
 	int i, num_buffers, width, height;
 
 	list_ram	= (UINT32*)list_ram_ptr;
+	cull_ram	= (UINT32*)cull_ram_ptr;
 	poly_ram	= (UINT32*)poly_ram_ptr;
 	vrom		= (UINT32*)vrom_ptr;
 
@@ -314,7 +316,7 @@ static void decode_texture16(UINT16* ptr, UINT16* src, int width, int height)
 				for( x=0; x<8; x++) {
 					int x2 = ((x / 2) * 4) + (x & 0x1);
 					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					UINT16 pix = src[index + x2 + y2];
+					UINT16 pix = src[index + x2 + y2 ^ 1];
 
 					ptr[((j+y) * width) + i + x] = pix;
 				}
@@ -337,7 +339,7 @@ static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height)
 				for( x=0; x<8; x++) {
 					int x2 = ((x / 2) * 4) + (x & 0x1);
 					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					UINT8 pix = src[index + x2 + y2];
+					UINT8 pix = src[index + x2 + y2 ^1];
 
 					ptr[((j+y) * width) + i + x] = pix;
 				}
