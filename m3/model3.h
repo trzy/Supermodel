@@ -133,7 +133,7 @@ typedef struct
      * control over this stuff -- it's internal to the emulator only.
      */
 
-    CHAR    game_id[8];     // game ID string
+    CHAR    game_id[8+1];   // game ID string (max 8 chars + null terminator)
     INT     step;           // hardware step (0x15 = Step 1.5, etc.)
     FLAGS   flags;          // game info flags
 
