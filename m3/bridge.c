@@ -93,7 +93,7 @@ static UINT32   (*config_addr_callback)(UINT32);
 
 UINT8 bridge_read_8(UINT32 addr)
 {
-    LOG("RB REG%02X", addr & 0xff);
+    LOG("model3.log", "RB REG%02X", addr & 0xff);
 
     return BYTE(addr & 0xff);
 }
@@ -117,7 +117,7 @@ UINT8 bridge_read_8(UINT32 addr)
 
 UINT16 bridge_read_16(UINT32 addr)
 {
-    LOG("RH REG%02X", addr & 0xff);
+    LOG("model3.log", "RH REG%02X", addr & 0xff);
     addr &= 0xfe;
     return (BYTE(addr + 0) << 8) | BYTE(addr + 1);
 }
@@ -140,7 +140,7 @@ UINT16 bridge_read_16(UINT32 addr)
 
 UINT32 bridge_read_32(UINT32 addr)
 {
-    LOG("RW REG%02X", addr & 0xff);
+    LOG("model3.log", "RW REG%02X", addr & 0xff);
     addr &= 0xfc;
     return (BYTE(addr + 0) << 24) | (BYTE(addr + 1) << 16) |
            (BYTE(addr + 2) << 8) | BYTE(addr + 3);
@@ -159,7 +159,7 @@ UINT32 bridge_read_32(UINT32 addr)
 
 void bridge_write_8(UINT32 addr, UINT8 data)
 {
-    LOG("REG%02X=%02X", addr & 0xff, data);
+    LOG("model3.log", "REG%02X=%02X", addr & 0xff, data);
     BYTE(addr & 0xff) = data;
 }
 
@@ -178,7 +178,7 @@ void bridge_write_8(UINT32 addr, UINT8 data)
 
 void bridge_write_16(UINT32 addr, UINT16 data)
 {
-    LOG("REG%02X=%02X%02X", addr & 0xff, data & 0xff, (data >> 8) & 0xff);
+    LOG("model3.log", "REG%02X=%02X%02X", addr & 0xff, data & 0xff, (data >> 8) & 0xff);
     addr &= 0xfe;
     BYTE(addr + 0) = data >> 8;
     BYTE(addr + 1) = (UINT8) data;
@@ -199,7 +199,7 @@ void bridge_write_16(UINT32 addr, UINT16 data)
 
 void bridge_write_32(UINT32 addr, UINT32 data)
 {
-    LOG("REG%02X=%02X%02X%02X%02X", addr & 0xff, data & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff);
+    LOG("model3.log", "REG%02X=%02X%02X%02X%02X", addr & 0xff, data & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff);
     addr &= 0xfc;
     BYTE(addr + 0) = data >> 24;
     BYTE(addr + 1) = data >> 16;
@@ -296,7 +296,7 @@ void bridge_write_config_addr_32(UINT32 addr, UINT32 data)
      */
     
 
-//    LOG("CONFIG_ADDR=%02X%02X%02X%02X @ %08X", data & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff, PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
+//    LOG("model3.log", "CONFIG_ADDR=%02X%02X%02X%02X @ %08X", data & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff, PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
 //    reg_ptr = data >> 24;   // remember, data comes in little endian form
 //                            // see page 3-15 of MPC106UM/D REV.1
 
@@ -338,7 +338,7 @@ void bridge_write_config_addr_32(UINT32 addr, UINT32 data)
 
 void bridge_write_config_data_8(UINT32 addr, UINT8 data)
 {
-//    LOG("CONFIG_DATA=%02X @ %08X", data, PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
+//    LOG("model3.log", "CONFIG_DATA=%02X @ %08X", data, PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
     BYTE(reg_ptr + (addr & 3)) = data;
     config_data[addr & 3] = data;
 }
@@ -360,7 +360,7 @@ void bridge_write_config_data_16(UINT32 addr, UINT16 data)
     BYTE(reg_ptr + (addr & 2) + 1) = (UINT8) data;
     config_data[(addr & 2) + 0] = data >> 8;
     config_data[(addr & 2) + 1] = (UINT8) data;
-//    LOG("CONFIG_DATA=%04X @ %08X", WORD(reg_ptr), PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
+//    LOG("model3.log", "CONFIG_DATA=%04X @ %08X", WORD(reg_ptr), PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
 }
 
 /*
@@ -384,7 +384,7 @@ void bridge_write_config_data_32(UINT32 addr, UINT32 data)
     config_data[1] = data >> 16;
     config_data[2] = data >> 8;
     config_data[3] = data;
-//    LOG("CONFIG_DATA=%08X @ %08X", DWORD(reg_ptr), PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
+//    LOG("model3.log", "CONFIG_DATA=%08X @ %08X", DWORD(reg_ptr), PowerPC_ReadIntegerRegister(POWERPC_IREG_PC));
 }
 
 /*
@@ -436,11 +436,11 @@ void bridge_load_state(FILE *fp)
 void bridge_reset(INT device)
 {
     if (device == 1)
-        LOG("Using MPC105");
+        LOG("model3.log", "Using MPC105");
     else if (device == 2)
-        LOG("Using MPC106");
+        LOG("model3.log", "Using MPC106");
     else
-        LOG("ERROR: Unknown bridge controller device ID (%d)", device);
+        LOG("model3.log", "ERROR: Unknown bridge controller device ID (%d)", device);
 
     memset(regs, 0, sizeof(UINT8) * 0x100);
     memset(config_data, 0, sizeof(UINT8) * 4);

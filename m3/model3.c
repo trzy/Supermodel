@@ -170,8 +170,6 @@ void _log_init(char * path)
 
 static UINT32   _C0000000;  // latched value
 
-#define PPC_PC  ppc_get_reg(PPC_REG_PC)
-
 /*
 static ppc_region_t m3_ppc_mmap[] =
 {
@@ -254,6 +252,18 @@ static UINT16 m3_ppc_read_16(UINT32 a)
         return BSWAP16(*(UINT16 *) &crom_bank[a - 0xFF000000]);
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
         return BSWAP16(*(UINT16 *) &crom[a - 0xFF800000]);
+
+    switch (a >> 28)
+	{
+	case 0xF:
+        switch (a)
+        {
+        case 0xFEE00CFC:    // MPC105/106 CONFIG_DATA
+		case 0xFEE00CFE:
+            return bridge_read_config_data_16(a);
+        }
+		break;
+	}
 
     error("%08X: unknown read16, %08X\n", PPC_PC, a);
     return 0xFFFF;

@@ -75,6 +75,8 @@
 
 #define SAFE_FREE(p)	{ if(p != NULL) free(p); p = NULL; }
 
+#define PPC_PC  ppc_get_reg(PPC_REG_PC)
+
 INLINE UINT16 BSWAP16(UINT16 d)
 {
 	return(((d >> 8) & 0x00FF) |

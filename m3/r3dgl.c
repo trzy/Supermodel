@@ -47,11 +47,6 @@
 
 #include "model3.h"
 
-#ifndef RENDERER_OGL
-
-//#include <gl/gl.h>
-//#include <gl/glu.h>
-
 static int OutBMP(int f, unsigned txres, unsigned tyres, unsigned char *texture)
 {
     FILE        *fp;
@@ -1004,19 +999,19 @@ static float get_float(UINT8 *src)
  *
  * Translates an address from the Real3D internal space into a usable pointer.
  */
-//TODO: Polygon RAM is now 2MB, update this function 
+
 static UINT8 *translate_r3d_address(UINT32 addr)
 {
-    if (addr <= 0x003FFFF)                              // 8C culling RAM
+    if (addr <= 0x007FFFF)                              // 8C culling RAM
         return &culling_ram_8c[addr * 4];
     else if (addr >= 0x0800000 && addr <= 0x083FFFF)    // 8E culling RAM
     {
         addr &= 0x003FFFF;
         return &culling_ram_8e[addr * 4];
     }
-    else if (addr >= 0x1000000 && addr <= 0x103FFFF)    // polygon RAM
+    else if (addr >= 0x1000000 && addr <= 0x107FFFF)    // polygon RAM
     {
-        addr &=0x003FFFF;
+        addr &=0x007FFFF;
         return &polygon_ram[addr * 4];
     }
     else if (addr >= 0x1800000 && addr <= 0x1FFFFFF)    // VROM
@@ -1163,6 +1158,16 @@ static void draw_scene(void)
     stop = 0;
     do
     {
+		/*
+		// DEBUG
+		message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
+		i,
+		GETWORDLE(&culling_ram_8e[i + 0]),
+		GETWORDLE(&culling_ram_8e[i + 4]),
+		GETWORDLE(&culling_ram_8e[i + 8])
+		);
+		*/
+
         i = GETWORDLE(&culling_ram_8e[i + 4]);  // get address of next block
         if (i == 0x01000000)                    // 01000000 == STOP
 			stop = TRUE;
@@ -1176,6 +1181,11 @@ static void draw_scene(void)
         draw_block(&culling_ram_8e[j]);
     }
     while (!stop);
+
+	/*
+	// DEBUG
+	message(0, "done");
+	*/
 }
 
 /******************************************************************/
@@ -1296,16 +1306,19 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
      * Render the texture into the texture buffer
      */
 
-    if ((header & 0x0f000000) == 0x01000000)    // only render non-mipmap textures
+    if (((header & 0x0f000000) != 0x02000000) &&    // only render non-mipmap textures
+		((header & 0x00800000) == 0x00800000))		// only render 16-bit textures
         draw_texture(tiles_x, tiles_y, src, little_endian);
-    else
+	else
         return;
 
+	/*
     if (!little_endian)
     {
         OutBMP(f, tiles_x * 8, tiles_y * 8, texture_buffer);
         ++f;
     }
+	*/
 
     /*
      * Get a texture ID for this texture and set its properties, then upload

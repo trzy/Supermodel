@@ -189,9 +189,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
         *(UINT32 *) &culling_ram_8e[a & 0xFFFFF] = BSWAP32(d);
         return;
     }
-    else if (a >= 0x8C000000 && a <= 0x8C0FFFFF)    // culling RAM
+    else if (a >= 0x8C000000 && a <= 0x8C1FFFFF)    // culling RAM
     {
-        *(UINT32 *) &culling_ram_8c[a & 0xFFFFF] = BSWAP32(d);
+        *(UINT32 *) &culling_ram_8c[a & 0x1FFFFF] = BSWAP32(d);
         return;
     }
 	else if (a >= 0x8C100000 && a <= 0x8C1FFFFF)	// culling RAM (Scud Race)
@@ -221,7 +221,12 @@ void r3d_write_32(UINT32 a, UINT32 d)
             size_y = (d >> 17) & 3;
             size_x = 32 << size_x;
             size_y = 32 << size_y;
-            last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~0x3;
+
+			if(!(d & 0x00800000))
+				last_addr = (0x94000008 + size_x * size_y - 1) & ~3;		// 8-bit texture
+			else
+				last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;	// 16-bit texture
+
             message(0, "texture transfer started: %dx%d, %08X", size_x, size_y, d);
         }
         else if (a == last_addr)    // last word written
@@ -364,7 +369,7 @@ void tap_write(UINT tck, UINT tms, UINT tdi, UINT trst)
 }
 
 /*
- * UINT32 tap_read(void);
+ * UINT tap_read(void);
  *
  * JTAG TAP read port handler.
  */

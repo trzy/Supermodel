@@ -179,6 +179,8 @@ void dma_load_state(FILE *fp)
 
 UINT8 dma_read_8(UINT32 a)
 {
+//	message(0, "%08X: Unknown DMA read8, %08X", PPC_PC, a);
+
     return dma_regs[a & 0x1F];
 }
 
@@ -196,6 +198,8 @@ UINT8 dma_read_8(UINT32 a)
 
 UINT32 dma_read_32(UINT32 a)
 {
+//	message(0, "%08X: Unknown DMA read32, %08X", PPC_PC, a);
+
     return BSWAP32(*(UINT32 *) &dma_regs[a & 0x1F]);
 }
 
@@ -212,7 +216,8 @@ UINT32 dma_read_32(UINT32 a)
 void dma_write_8(UINT32 a, UINT8 d)
 {
     dma_regs[a & 0x1F] = d;
-//    message(0, "%08X: Unknown DMA write8, %08X = %02X", ppc_get_reg(PPC_REG_PC), a, d);
+
+//	message(0, "%08X: Unknown DMA write8, %08X = %02X", ppc_get_reg(PPC_REG_PC), a, d);
 }
 
 /*
@@ -252,15 +257,26 @@ void dma_write_32(UINT32 a, UINT32 d)
          * Command 0x80000000 is a little strange. It is issued and twice and
          * each time, a bit of the result is expected to be different. This
          * is crudely simulated by flipping a bit.
+		 *
+		 * Virtua Striker 2 '99 does something similar, except that it writes
+		 * commands 0x80000000, 0x80000004, ... 0x80000020.
          */
 
         if (d == 0x20000000)
             *(UINT32 *) &dma_regs[0x14] = 0x16C311DB; // PCI Vendor and Device ID
-        else if (d == 0x80000000)
+        else if (d >= 0x80000000 && d <= 0x80000020)
         {
-            static UINT32   result = 0x02000000;
-            result ^= 0x02000000;
-            *(UINT32 *) &dma_regs[0x14] = result;
+            static UINT32 result[9] =
+			{
+				0x02000000, 0x02000000, 0x02000000, 0x02000000,
+				0x02000000, 0x02000000, 0x02000000, 0x02000000,
+				0x02000000
+			};
+
+			result[(a / 4) % 9] ^= rand();
+            //result[(a / 4) % 9] ^= 0x02000000;
+
+            *(UINT32 *) &dma_regs[0x14] = result[(a / 4) % 9];
         }
         else
             message(0, "%08X: Unknown DMA command, %08X", ppc_get_reg(PPC_REG_PC), d);

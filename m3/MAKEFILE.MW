@@ -21,7 +21,7 @@ LD = gcc
 AS = nasm
 AR = ar
 
-CFLAGS = -I./ -I./win32/ -std=gnu99 -s -O3 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -Wall -Wno-unused -Wno-format
+CFLAGS = -D_LOG_ -I./ -I./win32/ -std=gnu99 -s -O3 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -Wall -Wno-unused -Wno-format
 AFLAGS = -f coff
 
 LIBS = -lmingw32 -ldxguid -ldinput8 -luser32 -lgdi32 -ladvapi32 # -lz
