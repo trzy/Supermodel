@@ -716,9 +716,11 @@ static UINT8 m3_sys_read_8(UINT32 a)
     case 0x18:  // IRQ status
         return m3_irq_state;
     case 0x1C:  // ?
+        LOG("model3.log", "%08X: unknown sys read8, %08X\n", PPC_PC, a);        
         return 0xFF;
 	}
 
+    LOG("model3.log", "%08X: unknown sys read8, %08X\n", PPC_PC, a);
     message(0, "%08X: unknown sys read8, %08X", PPC_PC, a);
     return 0xFF;
 }
@@ -735,6 +737,7 @@ static UINT32 m3_sys_read_32(UINT32 a)
         return (m3_irq_state << 24);
 	}
 
+    LOG("model3.log", "%08X: unknown sys read32, %08X\n", PPC_PC, a);
     message(0, "%08X: unknown sys read32, %08X", PPC_PC, a);
     return 0xFFFFFFFF;
 }
@@ -744,8 +747,10 @@ static void m3_sys_write_8(UINT32 a, UINT8 d)
 	switch(a & 0xFF)
 	{
 	case 0x00:	// ?
+        LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
 		return;
 	case 0x04:	// ?
+        LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
 		return;
     case 0x08:  // CROM bank
         m3_set_crom_bank(d);
@@ -760,14 +765,18 @@ static void m3_sys_write_8(UINT32 a, UINT8 d)
 		return;
     case 0x14:  // IRQ enable
         m3_irq_enable = d;
+        LOG("model3.log", "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
     case 0x1C:  // ?
+        LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
         return;
 	case 0x3C:	// ?
+        LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
 		return;
 	}
 
+    LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
     message(0, "%08X: unknown sys write8, %08X = %02X", PPC_PC, a, d);
 }
 
@@ -785,12 +794,15 @@ static void m3_sys_write_32(UINT32 a, UINT32 d)
         return;
     case 0x14:  // IRQ mask
         m3_irq_enable = (d >> 24);
+        LOG("model3.log", "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
     case 0x1C:  // ?
+        LOG("model3.log", "%08X: unknown sys write32, %08X = %08X\n", PPC_PC, a, d);
 		return;
 	}
 
+    LOG("model3.log", "%08X: unknown sys write32, %08X = %08X\n", PPC_PC, a, d);
     message(0, "%08X: unknown sys write32, %08X = %08X", PPC_PC, a, d);
 }
 
@@ -1064,7 +1076,7 @@ void m3_run_frame(void)
      */
 
 	rtc_step_frame();
-	tilegen_update();
+    tilegen_update();
     osd_renderer_update_frame();
     controls_update();
 
@@ -1075,7 +1087,9 @@ void m3_run_frame(void)
     m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
     ppc_run(100000);   
-    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
+    m3_remove_irq(0x60);
+//    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
+
 }
 
 void m3_reset(void)
@@ -1332,6 +1346,7 @@ BOOL m3_load_rom(CHAR * id)
 		}
 	}
 
+    memset(crom, 0xFF, 72*1024*1024);
 	crom0 = &crom[0x00800000];
 	crom1 = &crom[0x01800000];
 	crom2 = &crom[0x02800000];
@@ -1436,7 +1451,13 @@ BOOL m3_load_rom(CHAR * id)
      * Patches
      */
 
-	if(!stricmp(id, "LOST"))
+    if (!stricmp(id, "VF3"))
+    {
+        *(UINT32 *)&crom[0x710000 + 0x61C50] = BSWAP32(0x60000000);
+
+        *(UINT32 *)&crom[0x710000 + 0x4C1B8] = BSWAP32(0x4804C15E); // BA 0x4C158
+    }
+    else if(!stricmp(id, "LOST"))
 	{
 		/*
 		 * this patch fixes the weird "add r4,r4,r4" with a "addi r4,r4,4".
@@ -1448,11 +1469,12 @@ BOOL m3_load_rom(CHAR * id)
 	}
 	else if(!stricmp(id, "SCUD"))
 	{
+        *(UINT32 *)&crom[0x799DE8] = BSWAP32(0x00050208);   // debug menu
 		/* directly from Ville's patch */
 
 		*(UINT32 *)&crom[0x700194] = 0x00000060;	// Timebase Skip
 		*(UINT32 *)&crom[0x712734] = 0x00000060;	// Speedup
-		*(UINT32 *)&crom[0x717EC8] = 0x2000804E;
+//        *(UINT32 *)&crom[0x717EC8] = 0x2000804E;
 		*(UINT32 *)&crom[0x71AEBC] = 0x00000060;	// Loop Skip
 		*(UINT32 *)&crom[0x712268] = 0x00000060;
 		*(UINT32 *)&crom[0x71277C] = 0x00000060;
@@ -1482,7 +1504,7 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *) &crom[0x1890AC] = 0x00000060;
         *(UINT32 *) &crom[0x1890B8] = 0x00000060;
         *(UINT32 *) &crom[0x1888A8] = 0x00000060;
-        *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
+//        *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
         *(UINT32 *) &crom[0x1891C8] = 0x00000060;   // (required)
     }
 
