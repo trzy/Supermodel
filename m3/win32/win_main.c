@@ -22,6 +22,9 @@
 
 #include "model3.h"
 
+#define XRES    (496*1.5)
+#define YRES    (384*1.5)
+
 extern BOOL DisassemblePowerPC(UINT32, UINT32, CHAR *, CHAR *, BOOL);
 
 
@@ -33,7 +36,7 @@ HWND main_window;
 // Window Procedure prototype
 static LRESULT CALLBACK win_window_proc(HWND, UINT, WPARAM, LPARAM);
 
-BOOL win_register_class(void)
+static BOOL win_register_class(void)
 {
 	WNDCLASSEX wcex;
 
@@ -56,18 +59,13 @@ BOOL win_register_class(void)
 	return TRUE;
 }
 
-BOOL win_create_window(void)
+static BOOL win_create_window(UINT xres, UINT yres)
 {
 	DWORD frame_width, frame_height, caption_height;
 	int width, height, window_width, window_height;
 
-	if(!m3_config.fullscreen) {
-        window_width    = MODEL3_SCREEN_WIDTH;
-        window_height   = MODEL3_SCREEN_HEIGHT;
-	} else {
-		window_width	= m3_config.width;
-		window_height	= m3_config.height;
-	}
+    window_width = xres;
+    window_height = yres;
 
 	frame_width			= GetSystemMetrics(SM_CXSIZEFRAME);
 	frame_height		= GetSystemMetrics(SM_CYSIZEFRAME);
@@ -90,6 +88,17 @@ BOOL win_create_window(void)
 
 	return TRUE;
 }
+
+/*
+ * NOTE: This should actually return an error if something goes wrong, but
+ * it doesn't matter now. This stuff probably needs to be rewritten anyway ;)
+ */
+static void win_destroy(void)
+{
+    DestroyWindow(main_window);
+    UnregisterClass(class_name, GetModuleHandle(NULL));
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -121,13 +130,14 @@ int main(int argc, char *argv[])
 		printf("win_register_class failed.");
 		return 0;
 	}
-	if(!win_create_window()) {
+    if(!win_create_window(XRES, YRES)) {
 		printf("win_create_window failed.");
 		return 0;
 	}
 
     m3_init();
 	m3_reset();
+    osd_renderer_set_mode(0, XRES, YRES);
 
 	// Now that everything works, we can show the window
 
@@ -217,6 +227,7 @@ static void show_test_word(void)
 static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     CHAR    fname[13];
+    static UINT xres = 496, yres = 384;
 
 	switch(message)
 	{

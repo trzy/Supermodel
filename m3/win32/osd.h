@@ -111,7 +111,8 @@ extern void osd_error();
 
 extern void osd_renderer_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *, UINT8 *);
 extern void osd_renderer_shutdown(void);
-extern void osd_renderer_reset(void);
+extern void osd_renderer_set_mode(BOOL, UINT, UINT);
+extern void osd_renderer_unset_mode(void);
 extern void osd_renderer_update_frame(void);
 extern UINT osd_renderer_get_layer_depth(void);
 extern void osd_renderer_get_layer_buffer(UINT, UINT8 **, UINT *);

@@ -24,7 +24,11 @@
 
 #include "model3.h"
 
-#define BPP 32  // a 32-bit color depth is required to get a 24-bit z-buffer
+/*
+ * Resolution of screen
+ */
+
+static UINT xres, yres;
 
 /*
  * Layers
@@ -41,8 +45,8 @@ static GLuint   layer_texture[4];       // IDs for the 4 layer textures
 
 static HGLRC        hrc = 0;            // OpenGL rendering context
 static HDC          hdc = 0;            // GDI device context
-extern HWND         main_window;        // window handle
 static HINSTANCE    hinstance;          // application instance
+extern HWND         main_window;        // window handle
 
 /*
  * is_extension_supported():
@@ -83,9 +87,12 @@ static BOOL is_extension_supported(CHAR *extname)
  * NOTE: Textures should probably be created here for the layers.
  */
 
-static void init_gl(void)
+static void init_gl(UINT x, UINT y)
 {
     INT i;
+
+    xres = x;
+    yres = y;
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glShadeModel(GL_SMOOTH);
@@ -118,13 +125,6 @@ static void init_gl(void)
     }
 
     /*
-     * Set viewport size. We don't set up any projection matrix stuff because
-     * that must be done on a per-frame update basis
-     */
-
-    glViewport(0, 0, 496, 384); //TODO: replace with actual res
-
-    /*
      * Configure the tile generator
      */
 
@@ -132,24 +132,30 @@ static void init_gl(void)
 }
 
 /*
- * void osd_renderer_init(UINT8 *culling_ram_8e_ptr,
- *                        UINT8 *culling_ram_8c_ptr, UINT8 *polygon_ram_ptr,
- *                        UINT8 *texture_ram_ptr, UINT8 *vrom_ptr);
+ * deinit_gl():
  *
- * Initializes the renderer. It assumes a window has already been created.
- * Real3D memory regions are passed to it.
- *
- * Parameters:
- *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
- *      culling_ram_8c_ptr = Pointer to Real3D culling RAM at 0x8C000000.
- *      polygon_ram_ptr    = Pointer to Real3D polygon RAM.
- *      texture_ram_ptr    = Pointer to Real3D texture RAM.
- *      vrom_ptr           = Pointer to VROM.
+ * Frees up textures.
  */
 
-void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
-                       UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
-                       UINT8 *vrom_ptr)
+static void deinit_gl(void)
+{
+    osd_renderer_remove_textures(0, 0, 2048, 2048);
+    glDeleteTextures(4, layer_texture);
+}
+
+/*
+ * void osd_renderer_set_mode(BOOL fullscreen, UINT xres, UINT yres);
+ *
+ * Sets the rendering mode. After this, the renderer may draw freely.
+ *
+ * Parameters:
+ *      fullscreen = Non-zero if a full-screen mode is desired, 0 for a
+ *                   windowed mode.
+ *      xres       = Horizontal resolution in pixels.
+ *      yres       = Vertical resolution.
+ */
+
+void osd_renderer_set_mode(BOOL fullscreen, UINT xres, UINT yres)
 {
 	GLuint							pixel_format;
 	static PIXELFORMATDESCRIPTOR	pfd =			// must this be static?
@@ -158,7 +164,7 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
         1,                                          // version (must be 1)
         PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
         PFD_TYPE_RGBA,                              // RGBA pixels
-        0,											// bits per pixel, set this up later!!!
+        32,                                         // color depth
 		0, 0, 0, 0, 0, 0,							// color bits ignored
 		0,											// no alpha buffer
 		0,											// ignore shift bit
@@ -171,18 +177,6 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 		0,											// reserved
 		0, 0, 0										// layer masks ignored
 	};
-
-    /*
-     * Call osd_renderer_shutdown() when program quits
-     */
-
-    atexit(osd_renderer_shutdown);
-
-    /*
-     * Color depth is hard-coded to BPP for now 
-     */
-
-    pfd.cColorBits = BPP;
 
     /*
      * Get window instance
@@ -213,18 +207,21 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 	if (!wglMakeCurrent(hdc, hrc))
         osd_error("Unable to activate the OpenGL rendering context.");
 	
-    init_gl();
+    init_gl(xres, yres);
 
-    /*
-     * Initialize the OS-independent rendering engine
-     */
-
-    r3dgl_init(culling_ram_8e_ptr, culling_ram_8c_ptr, polygon_ram_ptr, texture_ram_ptr, vrom_ptr);
+    r3dgl_set_resolution(xres, yres);
 }
 
-void osd_renderer_shutdown(void)
+/*
+ * void osd_renderer_unset_mode(void);
+ *
+ * "Unsets" the current mode meaning it releases the rendering and device
+ * contexts.
+ */
+
+void osd_renderer_unset_mode(void)
 {
-    r3dgl_shutdown();
+    deinit_gl();
 
 	/*
 	 * If there is a rendering context, release it
@@ -244,9 +241,48 @@ void osd_renderer_shutdown(void)
         ReleaseDC(main_window, hdc);
 }
 
-void osd_renderer_reset(void)
-{
+/*
+ * void osd_renderer_init(UINT8 *culling_ram_8e_ptr,
+ *                        UINT8 *culling_ram_8c_ptr, UINT8 *polygon_ram_ptr,
+ *                        UINT8 *texture_ram_ptr, UINT8 *vrom_ptr);
+ *
+ * Initializes the renderer. Real3D memory regions are passed to it. The
+ * renderer will still not be ready for use after this, a mode must be set.
+ *
+ * Parameters:
+ *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
+ *      culling_ram_8c_ptr = Pointer to Real3D culling RAM at 0x8C000000.
+ *      polygon_ram_ptr    = Pointer to Real3D polygon RAM.
+ *      texture_ram_ptr    = Pointer to Real3D texture RAM.
+ *      vrom_ptr           = Pointer to VROM.
+ */
 
+void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
+                       UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
+                       UINT8 *vrom_ptr)
+{
+    /*
+     * Call osd_renderer_shutdown() when program quits
+     */
+
+    atexit(osd_renderer_shutdown);
+
+    /*
+     * Initialize the OS-independent rendering engine
+     */
+
+    r3dgl_init(culling_ram_8e_ptr, culling_ram_8c_ptr, polygon_ram_ptr, texture_ram_ptr, vrom_ptr);
+}
+
+/*
+ * void osd_renderer_shutdown(void);
+ *
+ * Shuts down the renderer.
+ */
+
+void osd_renderer_shutdown(void)
+{
+    r3dgl_shutdown();
 }
 
 /*
@@ -258,7 +294,7 @@ void osd_renderer_reset(void)
 
 static void set_ortho(void)
 {
-    glViewport(0, 0, 496, 384); //TODO: replace with actual res
+    glViewport(0, 0, xres, yres);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -277,13 +313,12 @@ static void set_ortho(void)
 static void render_layer(INT layer, GLfloat z)
 {
     glBindTexture(GL_TEXTURE_2D, layer_texture[layer]);
-    glBegin(GL_QUADS);  // NOTE: glBindTexture() must come before this :(
 
+    glBegin(GL_QUADS);
     glTexCoord2f(0.0, 0.0);                     glVertex3f(0.0, 0.0, z);
     glTexCoord2f(496.0 / 512.0, 0.0);           glVertex3f(1.0, 0.0, z);
     glTexCoord2f(496.0 / 512.0, 384.0 / 512.0); glVertex3f(1.0, 1.0, z);
     glTexCoord2f(0.0, 384.0 / 512.0);           glVertex3f(0.0, 1.0, z);
-
     glEnd();
 }
 
