@@ -58,7 +58,6 @@
 #include "eeprom.h"
 #include "bridge.h"
 #include "r3d.h"
-#include "r3dgl.h"
 #include "rtc.h"
 #include "scsi.h"
 #include "scsp.h"
