@@ -170,6 +170,57 @@ OSD_CONTROLS* osd_input_update_controls(void)
 	if(keyboard_get_key(DIK_H))
 		controls.game_controls[0] &= ~0x40;
 
+	if(keyboard_get_key(DIK_Q))
+		controls.game_controls[0] &= ~0x80;
+	if(keyboard_get_key(DIK_W))
+		controls.game_controls[0] &= ~0x40;
+	if(keyboard_get_key(DIK_E))
+		controls.game_controls[0] &= ~0x20;
+	if(keyboard_get_key(DIK_R))
+		controls.game_controls[0] &= ~0x10;
+	if(keyboard_get_key(DIK_T))
+		controls.game_controls[1] &= ~0x80;
+	if(keyboard_get_key(DIK_Y))
+		controls.game_controls[1] &= ~0x40;
+	if(keyboard_get_key(DIK_U))
+		controls.game_controls[1] &= ~0x20;
+	if(keyboard_get_key(DIK_I))
+		controls.game_controls[1] &= ~0x10;
+
+	if(keyboard_get_key(DIK_Z))		// VON2, shot trigger 1
+		controls.game_controls[0] &= ~0x01;
+	if(keyboard_get_key(DIK_X))		// VON2, shot trigger 2
+		controls.game_controls[1] &= ~0x01;
+	if(keyboard_get_key(DIK_C))		// VON2, turbo 1
+		controls.game_controls[0] &= ~0x02;
+	if(keyboard_get_key(DIK_V))		// VON2, turbo 2
+		controls.game_controls[1] &= ~0x02;
+
+	if(keyboard_get_key(DIK_UP)) {	// VON2, forward
+		controls.game_controls[0] &= ~0x10;
+		controls.game_controls[1] &= ~0x20;
+	}
+	if(keyboard_get_key(DIK_DOWN)) {// VON2, backward
+		controls.game_controls[0] &= ~0x20;
+		controls.game_controls[1] &= ~0x10;
+	}
+	if(keyboard_get_key(DIK_LEFT)) {// VON2, turn left
+		controls.game_controls[0] &= ~0x10;
+		controls.game_controls[1] &= ~0x20;
+	}
+	if(keyboard_get_key(DIK_RIGHT)) {// VON2, turn right
+		controls.game_controls[0] &= ~0x20;
+		controls.game_controls[1] &= ~0x10;
+	}
+	if(keyboard_get_key(DIK_NUMPAD1)) {// VON2, strafe left
+		controls.game_controls[0] &= ~0x80;
+		controls.game_controls[1] &= ~0x80;
+	}
+	if(keyboard_get_key(DIK_NUMPAD3)) {// VON2, strafe right
+		controls.game_controls[0] &= ~0x40;
+		controls.game_controls[1] &= ~0x40;
+	}
+
 	// System controls
 	if(keyboard_get_key(DIK_F1)) {	// Test button
 		controls.system_controls[0] &= ~0x04;
