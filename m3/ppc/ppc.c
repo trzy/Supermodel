@@ -262,7 +262,7 @@ static const char * spu_id[16] = {
 	"-",		"-",		"-",		"-",
 };
 
-static INLINE void spu_wb(u32 a, u8 d){
+INLINE void spu_wb(u32 a, u8 d){
 
 	switch(a & 15){
 
@@ -285,7 +285,7 @@ static INLINE void spu_wb(u32 a, u8 d){
 	exit(1);
 }
 
-static INLINE u8 spu_rb(u32 a){
+INLINE u8 spu_rb(u32 a){
 
 	switch(a & 15){
 
@@ -315,7 +315,7 @@ static INLINE u8 spu_rb(u32 a){
 #define DMA_CC(ch)	ppc.dcr[0xC0 + (ch << 3) + 4]
 #define DMA_SR		ppc.dcr[0xE0]
 
-static INLINE  void ppc_dma(u32 ch){
+INLINE  void ppc_dma(u32 ch){
 
 	if(DMA_CR(ch) & 0x000000F0){
 
@@ -364,7 +364,7 @@ static INLINE  void ppc_dma(u32 ch){
  * DCR Access
  */
 
-static INLINE void ppc_set_dcr(u32 n, u32 d){
+INLINE void ppc_set_dcr(u32 n, u32 d){
 
 	switch(n){
 
@@ -425,7 +425,7 @@ static INLINE void ppc_set_dcr(u32 n, u32 d){
 	ppc.dcr[n] = d;
 }
 
-static INLINE u32 ppc_get_dcr(u32 n){
+INLINE u32 ppc_get_dcr(u32 n){
 
 	return(ppc.dcr[n]);
 }
@@ -434,7 +434,7 @@ static INLINE u32 ppc_get_dcr(u32 n){
  * MSR Access
  */
 
-static INLINE void ppc_set_msr(u32 d){
+INLINE void ppc_set_msr(u32 d){
 
 	ppc.msr = d;
 
@@ -445,7 +445,7 @@ static INLINE void ppc_set_msr(u32 d){
 	}
 }
 
-static INLINE u32 ppc_get_msr(void){
+INLINE u32 ppc_get_msr(void){
 
 	return(ppc.msr);
 }
@@ -454,7 +454,7 @@ static INLINE u32 ppc_get_msr(void){
  * SPR Access
  */
 
-static INLINE void ppc_set_spr(u32 n, u32 d){
+INLINE void ppc_set_spr(u32 n, u32 d){
 
 	switch(n){
 
@@ -478,7 +478,7 @@ static INLINE void ppc_set_spr(u32 n, u32 d){
 	ppc.spr[n] = d;
 }
 
-static INLINE u32 ppc_get_spr(u32 n){
+INLINE u32 ppc_get_spr(u32 n){
 
 	if(n == SPR_TBLO)
 		return((u32)ppc.tb);
@@ -493,12 +493,12 @@ static INLINE u32 ppc_get_spr(u32 n){
  * Memory Access
  */
 
-static INLINE u32 ppc_fetch(u32 a)
+INLINE u32 ppc_fetch(u32 a)
 {
 	return(ppc.rd(a & 0x0FFFFFFF));
 }
 
-static INLINE u32 ppc_read_8(u32 a)
+INLINE u32 ppc_read_8(u32 a)
 {
 	if((a >> 28) == 4)
 		return(spu_rb(a));
@@ -506,22 +506,22 @@ static INLINE u32 ppc_read_8(u32 a)
 	return(ppc.rb(a & 0x0FFFFFFF));
 }
 
-static INLINE u32 ppc_read_16(u32 a)
+INLINE u32 ppc_read_16(u32 a)
 {
 	return(ppc.rw(a & 0x0FFFFFFE));
 }
 
-static INLINE u32 ppc_read_32(u32 a)
+INLINE u32 ppc_read_32(u32 a)
 {
 	return(ppc.rd(a & 0x0FFFFFFC));
 }
 
-static INLINE u64 ppc_read_64(u32 a)
+INLINE u64 ppc_read_64(u32 a)
 {
 	return(0);
 }
 
-static INLINE void ppc_write_8(u32 a, u32 d)
+INLINE void ppc_write_8(u32 a, u32 d)
 {
 	if((a >> 28) == 4)
 		spu_wb(a,d);
@@ -529,21 +529,21 @@ static INLINE void ppc_write_8(u32 a, u32 d)
 		ppc.wb(a & 0x0FFFFFFF, d);
 }
 
-static INLINE void ppc_write_16(u32 a, u32 d)
+INLINE void ppc_write_16(u32 a, u32 d)
 {
 	ppc.ww(a & 0x0FFFFFFE, d);
 }
 
-static INLINE void ppc_write_32(u32 a, u32 d)
+INLINE void ppc_write_32(u32 a, u32 d)
 {
 	ppc.wd(a & 0x0FFFFFFC, d);
 }
 
-static INLINE void ppc_write_64(u32 a, u64 d)
+INLINE void ppc_write_64(u32 a, u64 d)
 {
 }
 
-static INLINE void ppc_test_irq(void){
+INLINE void ppc_test_irq(void){
 }
 
 #endif /* PPC_MODEL == PPC_MODEL_4XX */
@@ -558,7 +558,7 @@ static INLINE void ppc_test_irq(void){
  * MSR Access
  */
 
-static INLINE void ppc_set_msr(u32 d){
+INLINE void ppc_set_msr(u32 d){
 
 	if((ppc.msr ^ d) & 0x00020000){
 
@@ -591,7 +591,7 @@ static INLINE void ppc_set_msr(u32 d){
 	}
 }
 
-static INLINE u32 ppc_get_msr(void){
+INLINE u32 ppc_get_msr(void){
 
 	return(ppc.msr);
 }
@@ -600,7 +600,7 @@ static INLINE u32 ppc_get_msr(void){
  * SPR Access
  */
 
-static INLINE void ppc_set_spr(u32 n, u32 d)
+INLINE void ppc_set_spr(u32 n, u32 d)
 {
 	switch(n)
 	{
@@ -649,7 +649,7 @@ static INLINE void ppc_set_spr(u32 n, u32 d)
 	ppc.spr[n] = d;
 }
 
-static INLINE u32 ppc_get_spr(u32 n)
+INLINE u32 ppc_get_spr(u32 n)
 {
 	switch(n)
 	{
@@ -680,52 +680,52 @@ static INLINE u32 ppc_get_spr(u32 n)
 #define ITLB_ENABLED	(MSR & 0x20)
 #define DTLB_ENABLED	(MSR & 0x10)
 
-static INLINE u32 ppc_fetch(u32 a)
+INLINE u32 ppc_fetch(u32 a)
 {
 	return(ppc.read_32(a));
 }
 
-static INLINE u32 ppc_read_8(u32 a)
+INLINE u32 ppc_read_8(u32 a)
 {
 	return(ppc.read_8(a));
 }
 
-static INLINE u32 ppc_read_16(u32 a)
+INLINE u32 ppc_read_16(u32 a)
 {
 	return(ppc.read_16(a));
 }
 
-static INLINE u32 ppc_read_32(u32 a)
+INLINE u32 ppc_read_32(u32 a)
 {
 	return(ppc.read_32(a));
 }
 
-static INLINE u64 ppc_read_64(u32 a)
+INLINE u64 ppc_read_64(u32 a)
 {
 	return(ppc.read_64(a));
 }
 
-static INLINE void ppc_write_8(u32 a, u32 d)
+INLINE void ppc_write_8(u32 a, u32 d)
 {
 	ppc.write_8(a, d);
 }
 
-static INLINE void ppc_write_16(u32 a, u32 d)
+INLINE void ppc_write_16(u32 a, u32 d)
 {
 	ppc.write_16(a, d);
 }
 
-static INLINE void ppc_write_32(u32 a, u32 d)
+INLINE void ppc_write_32(u32 a, u32 d)
 {
 	ppc.write_32(a, d);
 }
 
-static INLINE void ppc_write_64(u32 a, u64 d)
+INLINE void ppc_write_64(u32 a, u64 d)
 {
 	ppc.write_64(a, d);
 }
 
-static INLINE void ppc_test_irq(void)
+INLINE void ppc_test_irq(void)
 {
 	if(ppc.msr & 0x8000){
 
@@ -2559,7 +2559,7 @@ static void ppc_ecowx(u32 op){
 #define DOUBLE_FRAC		(0x000FFFFFFFFFFFFF)
 #define DOUBLE_ZERO		(0)
 
-static INLINE int is_nan_f64(f64 x){
+INLINE int is_nan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2567,7 +2567,7 @@ static INLINE int is_nan_f64(f64 x){
 	);
 }
 
-static INLINE int is_qnan_f64(f64 x){
+INLINE int is_qnan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2576,7 +2576,7 @@ static INLINE int is_qnan_f64(f64 x){
     );
 }
 
-static INLINE int is_snan_f64(f64 x){
+INLINE int is_snan_f64(f64 x){
 
 	return(
 		((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2585,7 +2585,7 @@ static INLINE int is_snan_f64(f64 x){
 	);
 }
 
-static INLINE int is_infinity_f64(f64 x)
+INLINE int is_infinity_f64(f64 x)
 {
     return (
         ((*(u64 *)&(x) & DOUBLE_EXP) == DOUBLE_EXP) &&
@@ -2593,7 +2593,7 @@ static INLINE int is_infinity_f64(f64 x)
     );
 }
 
-static INLINE int is_normalized_f64(f64 x)
+INLINE int is_normalized_f64(f64 x)
 {
     u64 exp;
 
@@ -2602,7 +2602,7 @@ static INLINE int is_normalized_f64(f64 x)
     return (exp >= 1) && (exp <= 2046);
 }
 
-static INLINE int is_denormalized_f64(f64 x)
+INLINE int is_denormalized_f64(f64 x)
 {
     return (
         ((*(u64 *)&(x) & DOUBLE_EXP) == 0) &&
@@ -2610,12 +2610,12 @@ static INLINE int is_denormalized_f64(f64 x)
     );
 }
 
-static INLINE int sign_f64(f64 x)
+INLINE int sign_f64(f64 x)
 {
     return ((*(u64 *)&(x) & DOUBLE_SIGN) != 0);
 }
 
-static INLINE s32 round_f64_to_s32(f64 v){
+INLINE s32 round_f64_to_s32(f64 v){
 
 	if(v >= 0)
 		return((s32)(v + 0.5));
@@ -2623,7 +2623,7 @@ static INLINE s32 round_f64_to_s32(f64 v){
 		return(-(s32)(-v + 0.5));
 }
 
-static INLINE s32 trunc_f64_to_s32(f64 v){
+INLINE s32 trunc_f64_to_s32(f64 v){
 
 	if(v >= 0)
 		return((s32)v);
@@ -2631,17 +2631,17 @@ static INLINE s32 trunc_f64_to_s32(f64 v){
 		return(-((s32)(-v)));
 }
 
-static INLINE s32 ceil_f64_to_s32(f64 v){
+INLINE s32 ceil_f64_to_s32(f64 v){
 
 	return((s32)ceil(v));
 }
 
-static INLINE s32 floor_f64_to_s32(f64 v){
+INLINE s32 floor_f64_to_s32(f64 v){
 
 	return((s32)floor(v));
 }
 
-static INLINE void set_fprf(f64 f)
+INLINE void set_fprf(f64 f)
 {
     u32 fprf;
 
