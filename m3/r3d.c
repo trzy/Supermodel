@@ -262,9 +262,21 @@ static void store_texture(UINT x, UINT y, UINT w, UINT h, UINT8 *src, UINT bpp, 
  * Uploads a texture to texture memory.
  */
 
+// Mipmap starting positions for each level
+static const int mipmap_xpos[11] =
+{ 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+static const int mipmap_ypos[11] =
+{ 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023, 0 };
+
+// Mipmap size dividers
+static const int mipmap_size[9] =
+{ 2, 4, 8, 16, 32, 64, 128, 256, 512 };
+
 static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little_endian)
 {    
-    UINT    size_x, size_y, xpos, ypos;
+	UINT    size_x, size_y, xpos, ypos, bit_depth, mip_ypos, page;
+	int mipmap_num = 0;
+	int mxpos, mypos, msize_x, msize_y;
 
 	PROFILE_SECT_ENTRY("real3d");
 
@@ -282,19 +294,69 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
     ypos = (((header >> 7) & 0x1F) | ((header >> 15) & 0x20)) * 32;
     xpos = ((header >> 0) & 0x3F) * 32;
 
+	mip_ypos = ((header >> 7) & 0x1F) * 32;
+	page = (header >> 15 & 0x20) ? 1 : 0;
+
+	if( header & 0x00800000 )
+		bit_depth = 2;		// 16-bit texture
+	else
+		bit_depth = 1;		// 8-bit texture
+
     LOG("texture.log", "%08X %08X %d,%d\t%dx%d\n", header, length, xpos, ypos, size_x, size_y);
 
     /*
      * Render the texture into the texture buffer
      */
 
-    if ((header & 0x0F000000) == 0x02000000)
-		return;
+	switch( (header >> 24) & 0xF )
+	{
+		case 0:		// Texture with mipmaps
+			store_texture(xpos, ypos, size_x, size_y, src, bit_depth, little_endian);
 
-    if (header & 0x00800000)    // 16-bit texture
-        store_texture(xpos, ypos, size_x, size_y, src, 2, little_endian);
-    else                        // 8-bit texture
-        store_texture(xpos, ypos, size_x, size_y, src, 1, little_endian);
+			msize_x = size_x;
+			msize_y = size_y;
+
+			// Store mipmaps
+			while( msize_y > 8 && msize_x > 8 ) {
+
+				src += (msize_x * msize_y * bit_depth);
+				msize_x /= 2;
+				msize_y /= 2;
+
+				mxpos = mipmap_xpos[mipmap_num] + (xpos / mipmap_size[mipmap_num]);
+				mypos = mipmap_ypos[mipmap_num] + (mip_ypos / mipmap_size[mipmap_num]);
+				if(page)
+					mypos += 1024;
+				mipmap_num++;
+
+				store_texture(mxpos, mypos, msize_x, msize_y, src, bit_depth, little_endian);
+			}
+			break;
+
+		case 1:		// Texture without mipmaps
+			store_texture(xpos, ypos, size_x, size_y, src, bit_depth, little_endian);
+			break;
+
+		case 2:		// Only mipmaps
+			msize_x = size_x;
+			msize_y = size_y;
+			while( msize_y > 8 && msize_x > 8 ) {
+
+				msize_x /= 2;
+				msize_y /= 2;
+
+				mxpos = mipmap_xpos[mipmap_num] + (xpos / mipmap_size[mipmap_num]);
+				mypos = mipmap_ypos[mipmap_num] + (mip_ypos / mipmap_size[mipmap_num]);
+				if(page)
+					mypos += 1024;
+				mipmap_num++;
+
+				store_texture(mxpos, mypos, msize_x, msize_y, src, bit_depth, little_endian);
+
+				src += (msize_x * msize_y * bit_depth);
+			}
+			break;
+	}
 
     /*
      * Remove any existing textures that may have been overwritten
