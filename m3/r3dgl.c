@@ -1664,7 +1664,8 @@ void r3dgl_update_frame(void)
 
     glClearDepth(1.0);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+    glDepthFunc(GL_LESS);
+//    glDepthFunc(GL_LEQUAL);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     /*
