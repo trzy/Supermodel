@@ -32,8 +32,11 @@
  *
  * Segment registers (SRn) are not kept track of at all.
  *
- * Load/store instructions which deal with multiple registers (LMW, STSWI, etc.) are not handled 
- * properly. The additional registers loaded/stored are not recognized.
+ * No checks are performed for invalid instruction forms as required by some load/store instructions
+ * and others.
+ *
+ * String instructions (LSWI, STSWI, etc.) are not handled properly. The additional registers 
+ * loaded/stored are not recognized.
  */
  
 #include "model3.h"
@@ -53,22 +56,22 @@
  * specifying a field to look in or a specific register.
  */
  
-#define R_RT	(1 << 0)	// rT field
-#define R_RA	(1 << 1)	// rA field
-#define R_RA_0	(1 << 2)	// rA field or none if 0
-#define R_RB	(1 << 3)	// rB field
-#define R_FRT	(1 << 4)	// frT field (floating-point)
-#define R_FRA	(1 << 5)	// frA field
-#define R_FRB	(1 << 6)	// frB field
-#define R_FRC	(1 << 7)	// frC field
-#define R_LR	(1 << 8)	// LR register
-#define R_CTR	(1 << 9)	// CTR register
-#define R_CR	(1 << 10)	// CR register
-#define R_MSR	(1 << 11)	// MSR register
-#define R_XER	(1 << 12)	// XER register
-#define R_FPSCR	(1 << 13)	// FPSCR register
-#define R_SPR	(1 << 14)	// SPR/TBR field (further decoding needed)
-
+#define R_RT		(1 << 0)	// rT field
+#define R_RT_MULTI	(1 << 1)	// rT field plus all regs up to R31
+#define R_RA		(1 << 2)	// rA field
+#define R_RA_0		(1 << 3)	// rA field or none if 0
+#define R_RB		(1 << 4)	// rB field
+#define R_FRT		(1 << 5)	// frT field (floating-point)
+#define R_FRA		(1 << 6)	// frA field
+#define R_FRB		(1 << 7)	// frB field
+#define R_FRC		(1 << 8)	// frC field
+#define R_LR		(1 << 9)	// LR register
+#define R_CTR		(1 << 10)	// CTR register
+#define R_CR		(1 << 11)	// CR register
+#define R_MSR		(1 << 12)	// MSR register
+#define R_XER		(1 << 13)	// XER register
+#define R_FPSCR		(1 << 14)	// FPSCR register
+#define R_SPR		(1 << 15)	// SPR/TBR field (further decoding needed)
 
 /*
  * Masks
@@ -360,8 +363,8 @@ static IDESCR itab[] =
     { "lhzu",   D_OP(41),           M_RT|M_RA|M_D,              F_RT_D_RA,      FL_CHECK_RA_RT, 	R_RT|R_RA,	R_RA		},
     { "lhzux",  D_OP(31)|D_XO(311), M_RT|M_RA|M_RB,             F_RT_RA_RB,     FL_CHECK_RA_RT, 	R_RT|R_RA,	R_RA|R_RB	},
     { "lhzx",   D_OP(31)|D_XO(279), M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   0,           		R_RT, 		R_RA_0|R_RB	},
-    { "lmw",    D_OP(46),           M_RT|M_RA|M_D,              F_RT_D_RA_0,    0,           		R_RT, 		R_RA_0		},		// multiple registers are actually loaded
-    { "lswi",   D_OP(31)|D_XO(597), M_RT|M_RA|M_NB,             F_RT_RA_0_NB,   FL_CHECK_LSWI, 		R_RT, 		R_RA_0		},		// ""
+    { "lmw",    D_OP(46),           M_RT|M_RA|M_D,              F_RT_D_RA_0,    0,           		R_RT_MULTI,	R_RA_0		},
+    { "lswi",   D_OP(31)|D_XO(597), M_RT|M_RA|M_NB,             F_RT_RA_0_NB,   FL_CHECK_LSWI, 		R_RT, 		R_RA_0		},		// multiple registers are actually loaded
     { "lswx",   D_OP(31)|D_XO(533), M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   FL_CHECK_LSWX, 		R_RT, 		R_RA_0|R_RB	},		// ""
     { "lwarx",  D_OP(31)|D_XO(20),  M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   0,           		R_RT, 		R_RA_0|R_RB	},
     { "lwbrx",  D_OP(31)|D_XO(534), M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   0,           		R_RT, 		R_RA_0|R_RB	},
@@ -426,8 +429,8 @@ static IDESCR itab[] =
     { "sthu",   D_OP(45),           M_RT|M_RA|M_D,              F_RT_D_RA,      FL_CHECK_RA, 		R_RA,    	R_RA		},
     { "sthux",  D_OP(31)|D_XO(439), M_RT|M_RA|M_RB,             F_RT_RA_RB,     FL_CHECK_RA, 		R_RA,    	R_RA|R_RB	},
     { "sthx",   D_OP(31)|D_XO(407), M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   0,           		0,	    	R_RA_0|R_RB	},
-    { "stmw",   D_OP(47),           M_RT|M_RA|M_D,              F_RT_D_RA_0,    0,           		0,	    	R_RA_0		},		// multiple registers are actually stored
-    { "stswi",  D_OP(31)|D_XO(725), M_RT|M_RA|M_NB,             F_RT_RA_0_NB,   0,           		0,	    	R_RA_0		},		// ""
+    { "stmw",   D_OP(47),           M_RT|M_RA|M_D,              F_RT_D_RA_0,    0,           		0,	    	R_RT_MULTI|R_RA_0 },
+    { "stswi",  D_OP(31)|D_XO(725), M_RT|M_RA|M_NB,             F_RT_RA_0_NB,   0,           		0,	    	R_RA_0		},		// multiple registers are actually stored
     { "stswx",  D_OP(31)|D_XO(661), M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   0,          		0,	    	R_RA_0|R_RB	},		// ""
     { "stw",    D_OP(36),           M_RT|M_RA|M_D,              F_RT_D_RA_0,    0,           		0,	    	R_RA_0		},
     { "stwbrx", D_OP(31)|D_XO(662), M_RT|M_RA|M_RB,             F_RT_RA_0_RB,   0,           		0,	    	R_RA_0|R_RB	},
@@ -466,7 +469,7 @@ static IDESCR itab[] =
 
 void determine_regusage(PPC_REGUSAGE *ru, FLAGS regs, UINT32 op)
 {
-	UINT32	spr_field, spr;
+	UINT32	spr_field, spr, i;
 	
 	if (regs & R_RT)
 		++ru->r[G_RT(op)];
@@ -497,6 +500,16 @@ void determine_regusage(PPC_REGUSAGE *ru, FLAGS regs, UINT32 op)
 	if (regs & R_XER)
 		++ru->xer;
 		
+	/*
+	 * Load/store multiple word instructions store from rT to R31
+	 */
+	 
+	if (regs & R_RT_MULTI)
+	{
+		for (i = G_RT(op); i < 32; i++)
+			++ru->r[i];
+	}
+
 	/*
 	 * Only some SPRs are currently handled. All SPR definitions come from 
 	 * ppc.h
