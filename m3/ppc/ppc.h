@@ -70,23 +70,33 @@
  * Context
  */
 
-typedef union fpr_t {
+typedef union FPR
+{
+	UINT32	iw;
+	UINT64	id;
+	FLOAT64	fd;
 
-	u32 iw;	/* integer word */
-	u64 id;	/* integer double word */
-	f64 fd; /* floating-point double */
+} FPR;
 
-} fpr_t;
+typedef struct
+{
+	UINT32	start;
+	UINT32	end;
+	UINT32	* ptr;
 
-typedef struct ppc_t {
+} PPC_FETCH_REGION;
 
-	// General Purpose
+typedef struct PPC_CONTEXT
+{
+	UINT32	gpr[32];
+	FPR		fpr[32];
 
-	u32	gpr[32];
-	fpr_t fpr[32];
+	UINT32	* _pc;
+	UINT32	pc;
 
-	u32	cia;
-	u32	nia;
+	PPC_FETCH_REGION	cur_fetch;
+	PPC_FETCH_REGION	* fetch;
+
 	u32	msr;
 	u32	fpscr;
 	u32	count;
@@ -156,7 +166,7 @@ typedef struct ppc_t {
 	void	(* write_32)(u32, u32);
 	void	(* write_64)(u32, u64);
 
-} ppc_t;
+} PPC_CONTEXT;
 
 /*
  * Macros
@@ -251,6 +261,8 @@ enum
 
 extern int      ppc_init(void * x);
 
+extern void		ppc_set_fetch(PPC_FETCH_REGION *);
+
 extern void     ppc_set_pvr(u32);
 extern void		ppc_set_irq_callback(u32 (*)(void));
 extern void     ppc_set_read_8_handler(void *);
@@ -268,8 +280,8 @@ extern void     ppc_set_write_64_handler(void *);
 extern void     ppc_save_state(FILE *);
 extern void     ppc_load_state(FILE *);
 
-extern int		ppc_get_context(ppc_t *);
-extern int		ppc_set_context(ppc_t *);
+extern int		ppc_get_context(PPC_CONTEXT *);
+extern int		ppc_set_context(PPC_CONTEXT *);
 
 extern int      ppc_reset(void);
 extern u32		ppc_run(u32);

@@ -4,20 +4,25 @@
  * PowerPC Emulator.
  */
 
+// TODO: build a jump table
+
 #include "model3.h"
 
 /*
  * Private Variables
  */
 
-static ppc_t    ppc;
-static u32      pvr;    // default value initialized by ppc_init()
+static PPC_CONTEXT	ppc;
+static u32			pvr;    // default value initialized by ppc_init()
 
 #ifndef LOG
 #define LOG(...)
 #endif
 
-static u32 ppc_field_xlat[256];
+static UINT32	ppc_field_xlat[256];
+static void		(* ppc_jump_table[131072])(UINT32 op);
+
+static void ppc_update_pc(void);
 
 /*
  * Shorthand Mnemonics
@@ -165,8 +170,6 @@ static u32 ppc_field_xlat[256];
 #define _FXM	((op >> 12) & 0xff)
 #define _FM		((op >> 17) & 0xFF)
 
-#define CIA		ppc.cia
-#define NIA		ppc.nia
 #define XER		ppc.spr[SPR_XER]
 #define LR		ppc.spr[SPR_LR]
 #define CTR		ppc.spr[SPR_CTR]
@@ -254,526 +257,15 @@ static u32 ppc_field_xlat[256];
 /******************************************************************/
 
 #if PPC_MODEL == PPC_MODEL_4XX
-
-/*
- * Serial Port
- */
-
-static const char * spu_id[16] = {
-	"SPLS",		"-",		"SPHS",		"-",
-	"BRDH",		"BRDL",		"SPCTL",	"SPRC",
-	"SPTC",		"SPXB",		"-",		"-",
-	"-",		"-",		"-",		"-",
-};
-
-INLINE void spu_wb(u32 a, u8 d){
-
-	switch(a & 15){
-
-	case 0: ppc.spu.spls &= ~(d & 0xF6); return;
-	case 2: ppc.spu.sphs &= ~(d & 0xC0); return;
-	case 4: ppc.spu.brdh = d; return;
-	case 5: ppc.spu.brdl = d; return;
-	case 6: ppc.spu.spctl = d; return;
-
-	case 7:
-	ppc.spu.sprc = d;
-		return;
-
-	case 8: ppc.spu.sptc = d; return;
-	case 9: ppc.spu.sptb = d; return;
-
-	}
-
-	printf("%08X : wb %08X = %02X\n", CIA, a, d);
-	exit(1);
-}
-
-INLINE u8 spu_rb(u32 a){
-
-	switch(a & 15){
-
-	case 0: return(ppc.spu.spls);
-	case 2: return(ppc.spu.sphs);
-	case 4: return(ppc.spu.brdh);
-	case 5: return(ppc.spu.brdl);
-	case 6: return(ppc.spu.spctl);
-	case 7: return(ppc.spu.sprc);
-	case 8: return(ppc.spu.sptc);
-	case 9: return(ppc.spu.sprb);
-
-	}
-
-	printf("%08X : rb %08X\n", CIA, a);
-	exit(1);
-}
-
-/*
- * DMA
- */
-
-#define DMA_CR(ch)	ppc.dcr[0xC0 + (ch << 3) + 0]
-#define DMA_CT(ch)	ppc.dcr[0xC0 + (ch << 3) + 1]
-#define DMA_DA(ch)	ppc.dcr[0xC0 + (ch << 3) + 2]
-#define DMA_SA(ch)	ppc.dcr[0xC0 + (ch << 3) + 3]
-#define DMA_CC(ch)	ppc.dcr[0xC0 + (ch << 3) + 4]
-#define DMA_SR		ppc.dcr[0xE0]
-
-INLINE  void ppc_dma(u32 ch){
-
-	if(DMA_CR(ch) & 0x000000F0){
-
-		printf("ERROR: PPC chained DMA %u\n", ch);
-		exit(1);
-	}
-
-	switch((DMA_CR(ch) >> 26) & 3){
-
-	case 0: // 1 byte
-
-		// internal transfer (prolly *SPU*)
-
-		while(DMA_CT(ch)){
-
-			//d = ppc_r_b(DMA_SA(ch));
-			if(DMA_CR(ch) & 0x01000000) DMA_SA(ch)++;
-			//ppc_w_b(DMA_DA(ch), d);
-			if(DMA_CR(ch) & 0x02000000) DMA_DA(ch)++;
-			DMA_CT(ch)--;
-		}
-
-		break;
-
-	case 1: // 2 bytes
-		printf("%08X : DMA%u %08X -> %08X * %08X (2-bytes)\n", CIA, ch, DMA_SA(ch), DMA_DA(ch), DMA_CT(ch));
-		exit(1);
-
-	case 2: // 4 bytes
-		printf("%08X : DMA%u %08X -> %08X * %08X (4-bytes)\n", CIA, ch, DMA_SA(ch), DMA_DA(ch), DMA_CT(ch));
-		exit(1);
-
-	default: // 16 bytes
-		printf("%08X : DMA%u %08X -> %08X * %08X (16-bytes)\n", CIA, ch, DMA_SA(ch), DMA_DA(ch), DMA_CT(ch));
-		exit(1);
-	}
-
-	if(DMA_CR(ch) & 0x40000000){ // DIE
-
-		ppc.dcr[DCR_EXISR] |= (0x00800000 >> ch);
-		ppc.irq_state = 1;
-	}
-}
-
-/*
- * DCR Access
- */
-
-INLINE void ppc_set_dcr(u32 n, u32 d){
-
-	switch(n){
-
-	case DCR_BEAR: ppc.dcr[n] = d; break;
-	case DCR_BESR: ppc.dcr[n] = d; break;
-
-	case DCR_DMACC0:
-	case DCR_DMACC1:
-	case DCR_DMACC2:
-	case DCR_DMACC3:
-		if(d){
-			printf("chained dma\n");
-			exit(1);
-		}
-		break;
-
-	case DCR_DMACR0:
-		ppc.dcr[n] = d;
-		if(d & 0x80000000)
-			ppc_dma(0);
-		return;
-
-	case DCR_DMACR1:
-		ppc.dcr[n] = d;
-		if(d & 0x80000000)
-			ppc_dma(1);
-		return;
-
-	case DCR_DMACR2:
-		ppc.dcr[n] = d;
-		if(d & 0x80000000)
-			ppc_dma(2);
-		return;
-
-	case DCR_DMACR3:
-		ppc.dcr[n] = d;
-		if(d & 0x80000000)
-			ppc_dma(3);
-		return;
-
-	case DCR_DMASR:
-		ppc.dcr[n] &= ~d;
-		return;
-
-	case DCR_EXIER:
-		ppc.dcr[n] = d;
-		break;
-
-	case DCR_EXISR:
-		ppc.dcr[n] = d;
-		break;
-
-	case DCR_IOCR:
-		ppc.dcr[n] = d;
-		break;
-	}
-
-	ppc.dcr[n] = d;
-}
-
-INLINE u32 ppc_get_dcr(u32 n){
-
-	return(ppc.dcr[n]);
-}
-
-/*
- * MSR Access
- */
-
-INLINE void ppc_set_msr(u32 d){
-
-	ppc.msr = d;
-
-	if(d & 0x00080000){ // WE
-
-		printf("PPC : waiting ...\n");
-		exit(1);
-	}
-}
-
-INLINE u32 ppc_get_msr(void){
-
-	return(ppc.msr);
-}
-
-/*
- * SPR Access
- */
-
-INLINE void ppc_set_spr(u32 n, u32 d){
-
-	switch(n){
-
-	case SPR_PVR:
-		return;
-
-	case SPR_PIT:
-		if(d){
-			printf("PIT = %i\n", d);
-			exit(1);
-		}
-		ppc.spr[n] = d;
-		ppc.pit_reload = d;
-		break;
-
-	case SPR_TSR:
-		ppc.spr[n] &= ~d; // 1 clears, 0 does nothing
-		return;
-	}
-
-	ppc.spr[n] = d;
-}
-
-INLINE u32 ppc_get_spr(u32 n){
-
-	if(n == SPR_TBLO)
-		return((u32)ppc.tb);
-	else
-	if(n == SPR_TBHI)
-		return((u32)(ppc.tb >> 32));
-
-	return(ppc.spr[n]);
-}
-
-/*
- * Memory Access
- */
-
-INLINE u32 ppc_fetch(u32 a)
-{
-	return(ppc.rd(a & 0x0FFFFFFF));
-}
-
-INLINE u32 ppc_read_8(u32 a)
-{
-	if((a >> 28) == 4)
-		return(spu_rb(a));
-
-	return(ppc.rb(a & 0x0FFFFFFF));
-}
-
-INLINE u32 ppc_read_16(u32 a)
-{
-	return(ppc.rw(a & 0x0FFFFFFE));
-}
-
-INLINE u32 ppc_read_32(u32 a)
-{
-	return(ppc.rd(a & 0x0FFFFFFC));
-}
-
-INLINE u64 ppc_read_64(u32 a)
-{
-	return(0);
-}
-
-INLINE void ppc_write_8(u32 a, u32 d)
-{
-	if((a >> 28) == 4)
-		spu_wb(a,d);
-	else
-		ppc.wb(a & 0x0FFFFFFF, d);
-}
-
-INLINE void ppc_write_16(u32 a, u32 d)
-{
-	ppc.ww(a & 0x0FFFFFFE, d);
-}
-
-INLINE void ppc_write_32(u32 a, u32 d)
-{
-	ppc.wd(a & 0x0FFFFFFC, d);
-}
-
-INLINE void ppc_write_64(u32 a, u64 d)
-{
-}
-
-INLINE void ppc_test_irq(void){
-}
-
-#endif /* PPC_MODEL == PPC_MODEL_4XX */
+#include "ppc_4xx.h"
+#endif
 
 /******************************************************************/
 /* PowerPC 6xx Emulation                                          */
 /******************************************************************/
 
 #if (PPC_MODEL == PPC_MODEL_6XX)
-
-/*
- * MSR Access
- */
-
-INLINE void ppc_set_msr(u32 d){
-
-	if((ppc.msr ^ d) & 0x00020000){
-
-		// TGPR
-
-		u32 temp[4];
-
-		temp[0] = ppc.gpr[0];
-		temp[1] = ppc.gpr[1];
-		temp[2] = ppc.gpr[2];
-		temp[3] = ppc.gpr[3];
-
-		ppc.gpr[0] = ppc.tgpr[0];
-		ppc.gpr[1] = ppc.tgpr[1];
-		ppc.gpr[2] = ppc.tgpr[2];
-		ppc.gpr[3] = ppc.tgpr[3];
-
-		ppc.tgpr[0] = temp[0];
-		ppc.tgpr[1] = temp[1];
-		ppc.tgpr[2] = temp[2];
-		ppc.tgpr[3] = temp[3];
-	}
-
-	ppc.msr = d;
-
-	if(d & 0x00080000){ // WE
-
-		printf("PPC : waiting ...\n");
-		exit(1);
-	}
-}
-
-INLINE u32 ppc_get_msr(void){
-
-	return(ppc.msr);
-}
-
-/*
- * SPR Access
- */
-
-INLINE void ppc_set_spr(u32 n, u32 d)
-{
-	switch(n)
-	{
-	case SPR_DEC:
-
-		if((d & 0x80000000) && !(ppc.spr[SPR_DEC] & 0x80000000))
-		{
-			/* trigger interrupt */
-	
-			printf("ERROR: set_spr to DEC triggers IRQ\n");
-			exit(1);
-		}
-
-		ppc.spr[SPR_DEC] = d;
-		break;
-
-	case SPR_PVR:
-		return;
-
-	case SPR_PIT:
-		if(d){
-			printf("PIT = %i\n", d);
-			exit(1);
-		}
-		ppc.spr[n] = d;
-		ppc.pit_reload = d;
-		return;
-
-	case SPR_TSR:
-		ppc.spr[n] &= ~d; // 1 clears, 0 does nothing
-		return;
-
-	case SPR_TBL_W:
-	case SPR_TBL_R: // special 603e case
-		ppc.tb &= 0xFFFFFFFF00000000;
-		ppc.tb |= (u64)(d);
-		return;
-
-	case SPR_TBU_R:
-	case SPR_TBU_W: // special 603e case
-		printf("ERROR: set_spr - TBU_W = %08X\n", d);
-		exit(1);
-
-	}
-
-	ppc.spr[n] = d;
-}
-
-INLINE u32 ppc_get_spr(u32 n)
-{
-	switch(n)
-	{
-	case SPR_TBL_R:
-		printf("ERROR: get_spr - TBL_R\n");
-		exit(1);
-
-	case SPR_TBU_R:
-		printf("ERROR: get_spr - TBU_R\n");
-		exit(1);
-
-	case SPR_TBL_W:
-		printf("ERROR: invalid get_spr - TBL_W\n");
-		exit(1);
-
-	case SPR_TBU_W:
-		printf("ERROR: invalid get_spr - TBU_W\n");
-		exit(1);
-	}
-
-	return(ppc.spr[n]);
-}
-
-/*
- * Memory Access
- */
-
-#define ITLB_ENABLED	(MSR & 0x20)
-#define DTLB_ENABLED	(MSR & 0x10)
-
-INLINE u32 ppc_fetch(u32 a)
-{
-#ifdef KHEPERIX_TEST
-	return(ppc.read_op(a));
-#else
-    return ppc.read_32(a);
-#endif
-}
-
-INLINE u32 ppc_read_8(u32 a)
-{
-	return(ppc.read_8(a));
-}
-
-INLINE u32 ppc_read_16(u32 a)
-{
-	return(ppc.read_16(a));
-}
-
-INLINE u32 ppc_read_32(u32 a)
-{
-	return(ppc.read_32(a));
-}
-
-INLINE u64 ppc_read_64(u32 a)
-{
-	return(ppc.read_64(a));
-}
-
-INLINE void ppc_write_8(u32 a, u32 d)
-{
-	ppc.write_8(a, d);
-}
-
-INLINE void ppc_write_16(u32 a, u32 d)
-{
-	ppc.write_16(a, d);
-}
-
-INLINE void ppc_write_32(u32 a, u32 d)
-{
-	ppc.write_32(a, d);
-}
-
-INLINE void ppc_write_64(u32 a, u64 d)
-{
-	ppc.write_64(a, d);
-}
-
-INLINE void ppc_test_irq(void)
-{
-	if(ppc.msr & 0x8000){
-
-		/* external irq and decrementer enabled */
-
-		if(ppc.irq_state){
-
-			/* accept external interrupt */
-
-			ppc.spr[SPR_SRR0] = ppc.nia;
-			ppc.spr[SPR_SRR1] = ppc.msr;
-
-			ppc.nia = (ppc.msr & 0x40) ? 0xFFF00500 : 0x00000500;
-			ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
-
-			/* notify to the interrupt manager */
-
-			if(ppc.irq_callback != NULL)
-				ppc.irq_state = ppc.irq_callback();
-            else
-                ppc.irq_state = 0;
-
-		}else
-		if(ppc.dec_expired){
-
-			/* accept decrementer exception */
-
-			ppc.spr[SPR_SRR0] = ppc.nia;
-			ppc.spr[SPR_SRR1] = ppc.msr;
-
-			ppc.nia = (ppc.msr & 0x40) ? 0xFFF00900 : 0x00000900;
-			ppc.msr = (ppc.msr & 0x11040) | ((ppc.msr >> 16) & 1);
-
-			/* clear pending decrementer exception */
-
-			ppc.dec_expired = 0;
-		}
-	}
-}
-
+#include "ppc_6xx.h"
 #endif /* PPC_MODEL == PPC_MODEL_6XX */
 
 /******************************************************************/
@@ -785,9 +277,9 @@ static void ppc_null(u32 op)
     char    string[256];
     char    mnem[16], oprs[48];
 
-    DisassemblePowerPC(op, CIA, mnem, oprs, 1);
+    DisassemblePowerPC(op, ppc.pc, mnem, oprs, 1);
 
-    printf("ERROR: %08X: unhandled opcode %08X: %s\t%s\n", CIA, op, mnem, oprs);
+    printf("ERROR: %08X: unhandled opcode %08X: %s\t%s\n", ppc.pc, op, mnem, oprs);
 	exit(1);
 }
 
@@ -2243,97 +1735,6 @@ static void ppc_creqv(u32 op){	CROPN(^); }
 static void ppc_mcrf(u32 op){	CR(RD>>2) = CR(RA>>2); }
 
 ////////////////////////////////////////////////////////////////
-// Branch
-
-#define CHECK_BI(bi)		((CR(bi >> 2) & (8 >> (bi & 3))) != 0)
-
-static u32 ppc_bo_0000(u32 bi){ return(--CTR != 0 && CHECK_BI(bi) == 0); }
-static u32 ppc_bo_0001(u32 bi){ return(--CTR == 0 && CHECK_BI(bi) == 0); }
-static u32 ppc_bo_001z(u32 bi){ return(CHECK_BI(bi) == 0); }
-static u32 ppc_bo_0100(u32 bi){ return(--CTR != 0 && CHECK_BI(bi) != 0); }
-static u32 ppc_bo_0101(u32 bi){ return(--CTR == 0 && CHECK_BI(bi) != 0); }
-static u32 ppc_bo_011z(u32 bi){ return(CHECK_BI(bi) != 0); }
-static u32 ppc_bo_1z00(u32 bi){ return(--CTR != 0); }
-static u32 ppc_bo_1z01(u32 bi){ return(--CTR == 0); }
-static u32 ppc_bo_1z1z(u32 bi){ return(1); }
-
-static u32 (* ppc_bo[16])(u32 bi) = {
-	ppc_bo_0000,	ppc_bo_0001,	ppc_bo_001z,	ppc_bo_001z,
-	ppc_bo_0100,	ppc_bo_0101,	ppc_bo_011z,	ppc_bo_011z,
-	ppc_bo_1z00,	ppc_bo_1z01,	ppc_bo_1z1z,	ppc_bo_1z1z,
-	ppc_bo_1z00,	ppc_bo_1z01,	ppc_bo_1z1z,	ppc_bo_1z1z,
-};
-
-static void ppc_bx(u32 op){
-
-	NIA = (((s32)op << 6) >> 6) & ~3;
-
-	if((op & _AA) == 0)
-		NIA += CIA;
-
-	if(op & _LK)
-		LR = CIA + 4;
-}
-
-static void ppc_bcx(u32 op){
-
-	if(ppc_bo[_BO >> 1](_BI)){
-		NIA = SIMM & ~3;
-		if((op & _AA) == 0)
-			NIA += CIA;
-	}
-
-	if(op & _LK)
-		LR = CIA + 4;
-}
-
-static void ppc_bcctrx(u32 op){
-
-	if(ppc_bo[_BO >> 1](_BI)){
-		NIA = CTR & ~3;
-	}
-
-	if(op & _LK)
-		LR = CIA + 4;
-}
-
-static void ppc_bclrx(u32 op){
-
-	if(ppc_bo[_BO >> 1](_BI))
-		NIA = LR & ~3;
-
-	if(op & _LK)
-		LR = CIA + 4;
-}
-
-static void ppc_rfi(u32 op){
-
-	ppc.nia = ppc.spr[SPR_SRR0];
-	ppc_set_msr(ppc.spr[SPR_SRR1]);
-}
-
-static void ppc_rfci(u32 op){
-
-	ppc.nia = ppc.spr[SPR_SRR2];
-	ppc_set_msr(ppc.spr[SPR_SRR3]);
-}
-
-static void ppc_sc(u32 op){
-
-	ppc_null(op);
-}
-
-static void ppc_tw(u32 op){
-
-	ppc_null(op);
-}
-
-static void ppc_twi(u32 op){
-
-	ppc_null(op);
-}
-
-////////////////////////////////////////////////////////////////
 
 static void ppc_mcrxr(u32 op){
 
@@ -3353,9 +2754,156 @@ static void ppc_mtfsfix(u32 op){
 	SET_FCR1();
 }
 
-/*
- * Opcode Dispatcher
- */
+/******************************************************************/
+/* Branch, Syscall, Trap                                          */
+/******************************************************************/
+
+#define CHECK_BI(bi)		((CR(bi >> 2) & (8 >> (bi & 3))) != 0)
+
+static u32 ppc_bo_0000(u32 bi){ return(--CTR != 0 && CHECK_BI(bi) == 0); }
+static u32 ppc_bo_0001(u32 bi){ return(--CTR == 0 && CHECK_BI(bi) == 0); }
+static u32 ppc_bo_001z(u32 bi){ return(CHECK_BI(bi) == 0); }
+static u32 ppc_bo_0100(u32 bi){ return(--CTR != 0 && CHECK_BI(bi) != 0); }
+static u32 ppc_bo_0101(u32 bi){ return(--CTR == 0 && CHECK_BI(bi) != 0); }
+static u32 ppc_bo_011z(u32 bi){ return(CHECK_BI(bi) != 0); }
+static u32 ppc_bo_1z00(u32 bi){ return(--CTR != 0); }
+static u32 ppc_bo_1z01(u32 bi){ return(--CTR == 0); }
+static u32 ppc_bo_1z1z(u32 bi){ return(1); }
+
+static u32 (* ppc_bo[16])(u32 bi) =
+{
+	ppc_bo_0000, ppc_bo_0001, ppc_bo_001z, ppc_bo_001z,
+	ppc_bo_0100, ppc_bo_0101, ppc_bo_011z, ppc_bo_011z,
+	ppc_bo_1z00, ppc_bo_1z01, ppc_bo_1z1z, ppc_bo_1z1z,
+	ppc_bo_1z00, ppc_bo_1z01, ppc_bo_1z1z, ppc_bo_1z1z,
+};
+
+static void ppc_update_pc(void)
+{
+	UINT i;
+
+	if(ppc.cur_fetch.start <= ppc.pc && ppc.pc <= ppc.cur_fetch.end)
+	{
+		ppc._pc = (UINT32)ppc.cur_fetch.ptr + (UINT32)(ppc.pc - ppc.cur_fetch.start);
+		return;
+	}
+
+	for(i = 0; ppc.fetch[i].ptr != NULL; i++)
+	{
+		if(ppc.fetch[i].start <= ppc.pc && ppc.pc <= ppc.fetch[i].end)
+		{
+			ppc.cur_fetch.start = ppc.fetch[i].start;
+			ppc.cur_fetch.end = ppc.fetch[i].end;
+			ppc.cur_fetch.ptr = ppc.fetch[i].ptr;
+
+			ppc._pc = (UINT32)ppc.cur_fetch.ptr + (UINT32)(ppc.pc - ppc.cur_fetch.start);
+
+			/*
+			message(0, "region = [%08X,%08X],%08X --> pc = %08X,%08X -- %08X",
+				ppc.cur_fetch.start, ppc.cur_fetch.end, ppc.cur_fetch.ptr,
+				ppc.pc, ppc._pc, (ppc.pc - ppc.cur_fetch.start));
+			*/
+
+			return;
+		}
+	}
+
+	error("ERROR: invalid PC %08X\n", ppc.pc);
+}
+
+static void ppc_bx(u32 op)
+{
+	UINT32 lr = ppc.pc;
+
+	ppc.pc = (((s32)op << 6) >> 6) & ~3;
+
+	if((op & _AA) == 0)
+		ppc.pc += lr - 4;
+
+	if(op & _LK)
+		LR = lr;
+
+	ppc_update_pc();
+}
+
+static void ppc_bcx(u32 op)
+{
+	UINT32 lr = ppc.pc;
+
+	if(ppc_bo[_BO >> 1](_BI))
+	{
+		ppc.pc = SIMM & ~3;
+		if((op & _AA) == 0)
+			ppc.pc += lr - 4;
+		ppc_update_pc();
+	}
+
+	if(op & _LK)
+		LR = lr;
+}
+
+static void ppc_bcctrx(u32 op)
+{
+	UINT32 lr = ppc.pc;
+
+	if(ppc_bo[_BO >> 1](_BI))
+	{
+		ppc.pc = CTR & ~3;
+		ppc_update_pc();
+	}
+
+	if(op & _LK)
+		LR = lr;
+}
+
+static void ppc_bclrx(u32 op)
+{
+	UINT32 lr = ppc.pc;
+
+	if(ppc_bo[_BO >> 1](_BI))
+	{
+		ppc.pc = LR & ~3;
+		ppc_update_pc();
+	}
+
+	if(op & _LK)
+		LR = lr;
+}
+
+static void ppc_rfi(u32 op)
+{
+	ppc.pc = ppc.spr[SPR_SRR0];
+	ppc_set_msr(ppc.spr[SPR_SRR1]);
+
+	ppc_update_pc();
+}
+
+static void ppc_rfci(u32 op)
+{
+	ppc.pc = ppc.spr[SPR_SRR2];
+	ppc_set_msr(ppc.spr[SPR_SRR3]);
+
+	ppc_update_pc();
+}
+
+static void ppc_sc(u32 op)
+{
+	ppc_null(op);
+}
+
+static void ppc_tw(u32 op)
+{
+	ppc_null(op);
+}
+
+static void ppc_twi(u32 op)
+{
+	ppc_null(op);
+}
+
+/******************************************************************/
+/* Opcode Dispatcher                                              */
+/******************************************************************/
 
 static void (* ppc_inst_19[0x400])(u32 op);
 static void (* ppc_inst_31[0x400])(u32 op);
@@ -3400,43 +2948,43 @@ static void log_regs(void)
 }
 #endif
 
-/*
- * Interface
- */
+/******************************************************************/
+/* Interface                                                      */
+/******************************************************************/
 
-u32 ppc_run(u32 count){
-
+u32 ppc_run(u32 count)
+{
 	u32 op;
 
 	ppc.count = count;
 
-	while(ppc.count > 0){
-
+	while(ppc.count > 0)
+	{
     	ppc.count--;
 
 #ifdef WATCH_PC
         if (ppc.cia == WATCH_PC)
             log_regs();
 #endif
-    	op = ppc_fetch(ppc.cia);
+
+		op = BSWAP32(*ppc._pc);
+
+		ppc.pc += 4;
+		ppc._pc++;
 
 		ppc_inst[(op >> 26) & 0x3F](op);
 
 		ppc_test_irq();
 
-		if((ppc.count & 3) == 0){
-
+		if((ppc.count & 3) == 0)
+		{
 			ppc.tb++;
 			if(ppc.tb >> 56)
 				ppc.tb = 0;
-
             ppc.spr[SPR_DEC]--;
             if(ppc.spr[SPR_DEC] == 0xFFFFFFFF)
                 ppc.dec_expired = 1;
 		}
-
-		ppc.cia = ppc.nia;
-		ppc.nia += 4;
 	}
 
 	return(PPC_OKAY);
@@ -3490,7 +3038,7 @@ u32 ppc_get_reg(int r){
 	case PPC_REG_R30: return(ppc.gpr[30]);
 	case PPC_REG_R31: return(ppc.gpr[31]);
 
-	case PPC_REG_PC: return(ppc.cia);
+	case PPC_REG_PC: return(ppc.pc);
 
 	case PPC_REG_CR:
 
@@ -3575,7 +3123,7 @@ u32 ppc_get_reg(int r){
 void ppc_set_reg(int r, u32 d){
   switch(r) {
   case PPC_REG_PC:
-	ppc.cia = d;
+	ppc.pc = d;
 	break;
   case PPC_REG_XER:
 	ppc.spr[SPR_XER] = d;
@@ -3599,33 +3147,32 @@ void ppc_set_reg(int r, u32 d){
   }
 }
 
-int ppc_get_context(ppc_t * dst){
-
-	if(dst != NULL){
-
-		memcpy((void *)dst, (void *)&ppc, sizeof(ppc_t));
-
-		return(sizeof(ppc_t));
+int ppc_get_context(PPC_CONTEXT * dst)
+{
+	if(dst != NULL)
+	{
+		memcpy((void *)dst, (void *)&ppc, sizeof(PPC_CONTEXT));
+		return(sizeof(PPC_CONTEXT));
 	}
-
 	return(-1);
 }
 
-int ppc_set_context(ppc_t * src){
-
-	if(src != NULL){
-
-		memcpy((void *)&ppc, (void *)src, sizeof(ppc_t));
-
-		return(sizeof(ppc_t));
+int ppc_set_context(PPC_CONTEXT * src)
+{
+	if(src != NULL)
+	{
+		memcpy((void *)&ppc, (void *)src, sizeof(PPC_CONTEXT));
+		return(sizeof(PPC_CONTEXT));
 	}
-
 	return(-1);
 }
 
-int ppc_reset(void){
-
+int ppc_reset(void)
+{
 	int i;
+
+	if(ppc.fetch == NULL)
+		error("ppc_reset() called without a previous call to ppc_set_fetch()!\n");
 
 	for(i = 0; i < 32; i++)
 		ppc.gpr[i] = 0;
@@ -3660,8 +3207,7 @@ int ppc_reset(void){
 	ppc.dcr[DCR_BR6]	= 0xFF013FFF;
 	ppc.dcr[DCR_BR7]	= 0xFF013FFF;
 
-	ppc.cia = 0xFFFFFFFC;
-	ppc.nia = 0xFFFFFFFF;
+	ppc.pc = 0xFFFFFFFC;
 
 	#elif (PPC_MODEL == PPC_MODEL_6XX)
 
@@ -3685,12 +3231,22 @@ int ppc_reset(void){
 //    ppc.spr[SPR_PVR] = 0x00060104;      // 603e, Stretch, 1.4 - checked against by VS2V991
 	ppc.spr[SPR_DEC] = 0xFFFFFFFF;
 
-	ppc.cia = 0xFFF00100;
-	ppc.nia = 0xFFF00104;
+	ppc.pc = 0xFFF00100;
 
 	#endif
 
+	ppc.cur_fetch.start = 0;
+	ppc.cur_fetch.end = 0;
+	ppc.cur_fetch.ptr = NULL;
+
+	ppc_update_pc();
+
     return PPC_OKAY;
+}
+
+void ppc_set_fetch(PPC_FETCH_REGION * fetch)
+{
+	ppc.fetch = fetch;
 }
 
 u32 ppc_read_byte(u32 a){ return(ppc_read_8(a)); }
@@ -3942,18 +3498,16 @@ int ppc_init(void * x){
 			((i & 0x01) ? 0x0000000F : 0);
 	}
 
+	ppc.fetch = NULL;
+
     return PPC_OKAY;
 }
 
 void ppc_save_state(FILE *fp)
 {
-	u32 dummy;
-
     fwrite(ppc.gpr, sizeof(u32), 32, fp);
-    fwrite(ppc.fpr, sizeof(fpr_t), 32, fp);
-    fwrite(&ppc.cia, sizeof(u32), 1, fp);
-    fwrite(&ppc.nia, sizeof(u32), 1, fp);
-    fwrite(&dummy, sizeof(u32), 1, fp);
+    fwrite(ppc.fpr, sizeof(FPR), 32, fp);
+    fwrite(&ppc.pc, sizeof(u32), 1, fp);
     fwrite(&ppc.msr, sizeof(u32), 1, fp);
     fwrite(&ppc.fpscr, sizeof(u32), 1, fp);
     fwrite(&ppc.count, sizeof(u32), 1, fp);
@@ -3969,13 +3523,9 @@ void ppc_save_state(FILE *fp)
 
 void ppc_load_state(FILE *fp)
 {
-	u32 dummy;
-
     fread(ppc.gpr, sizeof(u32), 32, fp);
-    fread(ppc.fpr, sizeof(fpr_t), 32, fp);
-    fread(&ppc.cia, sizeof(u32), 1, fp);
-    fread(&ppc.nia, sizeof(u32), 1, fp);
-    fread(&dummy, sizeof(u32), 1, fp);
+    fread(ppc.fpr, sizeof(FPR), 32, fp);
+    fread(&ppc.pc, sizeof(u32), 1, fp);
     fread(&ppc.msr, sizeof(u32), 1, fp);
     fread(&ppc.fpscr, sizeof(u32), 1, fp);
     fread(&ppc.count, sizeof(u32), 1, fp);
@@ -3987,4 +3537,10 @@ void ppc_load_state(FILE *fp)
     fread(ppc.spr, sizeof(u32), 1024, fp);
     fread(&ppc.irq_state, sizeof(u32), 1, fp);
     fread(&ppc.tb, sizeof(u64), 1, fp);
+
+	ppc.cur_fetch.start = 0;
+	ppc.cur_fetch.end = 0;
+	ppc.cur_fetch.ptr = NULL;
+
+	ppc_update_pc();
 }

@@ -92,5 +92,5 @@ $(OBJ_DIR)/%.o: osd_common/%.c
 $(OBJ_DIR)/%.o: win32/%.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
-$(OBJ_DIR)/%.o: ppc/%.c ppc/%.h
+$(OBJ_DIR)/%.o: ppc/%.c ppc/%.h ppc/ppc_4xx.h ppc/ppc_6xx.h
 	$(CC) $< $(CFLAGS) -c -o $@

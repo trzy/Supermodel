@@ -2035,6 +2035,8 @@ void m3_shutdown(void)
 	#endif
 }
 
+static PPC_FETCH_REGION m3_ppc_fetch[2];
+
 void m3_init(void)
 {
 	/* setup m3_config (which is already partially done in parse_command_line) */
@@ -2082,6 +2084,20 @@ void m3_init(void)
 
     if(ppc_init(0) != PPC_OKAY)
 		error("ppc_init failed.");
+
+	m3_ppc_fetch[0].start = 0;
+	m3_ppc_fetch[0].end = 0x7FFFFF;
+	m3_ppc_fetch[0].ptr = (UINT32 *)ram;
+
+	m3_ppc_fetch[1].start = 0xFF800000;
+	m3_ppc_fetch[1].end = 0xFFFFFFFF;
+	m3_ppc_fetch[1].ptr = (UINT32 *)crom;
+
+	m3_ppc_fetch[2].start = 0;
+	m3_ppc_fetch[2].end = 0;
+	m3_ppc_fetch[2].ptr = (UINT32 *)NULL;
+
+	ppc_set_fetch(m3_ppc_fetch);
 
     if (m3_config.step >= 0x20)
         ppc_set_pvr(0x00070100); 
