@@ -24,7 +24,7 @@
 
 #include "model3.h"
 
-#define BPP 16
+#define BPP 32  // a 32-bit color depth is required to get a 24-bit z-buffer
 
 /*
  * Layers
@@ -164,8 +164,8 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 		0,											// ignore shift bit
 		0,											// no accumulation buffer
 		0, 0, 0, 0,									// accumulation bits ignored
-        32,                                         // 16-bit z-buffer
-		0,											// no stencil buffer
+        24,                                         // 24-bit z-buffer
+        0,                                          // no stencil buffer
 		0,											// no auxilliary buffer
 		PFD_MAIN_PLANE,								// main drawing layer
 		0,											// reserved
@@ -179,8 +179,7 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     atexit(osd_renderer_shutdown);
 
     /*
-     * Color depth is hard-coded to BPP for now -- it's really all we need
-     * for Model 3
+     * Color depth is hard-coded to BPP for now 
      */
 
     pfd.cColorBits = BPP;
