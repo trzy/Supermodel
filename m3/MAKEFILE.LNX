@@ -1,0 +1,68 @@
+#
+# Makefile for MinGW 2.0.0.3
+# Requires GCC 3.2, Nasm 0.98, OpenGL, SDL 1.2
+#
+
+#
+# Options
+#
+
+EXE = m3
+
+CC = gcc
+LD = gcc
+AS = nasm
+AR = ar
+
+CFLAGS = -w -I./ -I./linux/ -DLINUX=1 -D__GCC__=1 `sdl-config --cflags`  
+AFLAGS = -f elf
+
+LIBS = 
+
+LIBS_REND = -lGL -lGLU `sdl-config --libs` 
+FLAGS_REND = -DRENDERER_OGL
+
+#
+# Objects
+#
+
+OBJ_DIR = obj
+OBJ=	$(OBJ_DIR)/bridge.o \
+	$(OBJ_DIR)/controls.o \
+	$(OBJ_DIR)/dma.o \
+	$(OBJ_DIR)/dsb1.o \
+	$(OBJ_DIR)/eeprom.o \
+	$(OBJ_DIR)/r3d.o \
+	$(OBJ_DIR)/rtc.o \
+	$(OBJ_DIR)/scsi.o \
+	$(OBJ_DIR)/tilegen.o \
+	$(OBJ_DIR)/model3.o \
+	$(OBJ_DIR)/ppc.o \
+	$(OBJ_DIR)/disasm.o	\
+	$(OBJ_DIR)/lin_main.o
+
+
+OBJ_REND = $(OBJ_DIR)/ogl_render.o $(OBJ_DIR)/r3dgl.o
+
+#
+# Rules
+#
+
+all:	$(OBJ) $(OBJ_REND)
+	$(CC) $(CFLAGS) $(FLAGS_REND) $(OBJ) $(OBJ_REND) -o $(EXE) $(LIBS) $(LIBS_REND)
+
+clean:
+	rm obj/*
+
+$(OBJ_DIR)/%.o: %.c %.h
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: %.c
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: linux/%.c
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: ppc/%.c ppc/%.h
+	$(CC) $< $(CFLAGS) -c -o $@
+
