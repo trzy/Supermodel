@@ -1457,7 +1457,7 @@ void m3_run_frame(void)
     ppc_set_irq_line(1);
 
 	PROFILE_SECT_ENTRY("ppc");
-    ppc_run(100000);   
+    ppc_run(100000);
 	PROFILE_SECT_EXIT("ppc");
 
     m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
@@ -1664,14 +1664,14 @@ static BOOL load_romlist(char* id, char* file, ROMSET* romset)
 		}
         else if(stricmp(arg, "BRIDGE") == 0) {
             char *bridge = cfgparser_get_rhs();
-            if (stricmp(bridge, "MPC105"))
+            if (stricmp(bridge, "MPC105") == 0)
                 romset->bridge = 1;
-            else if (stricmp(bridge, "MPC106"))
+            else if (stricmp(bridge, "MPC106") == 0)
                 romset->bridge = 2;
             else
             {
                 romset->bridge = 0;
-                message(0, "WARNING: unknown bridge controller type (%s), using default");
+                message(0, "WARNING: unknown bridge controller type (%s), using default", bridge);
             }
         }
 		else if( stricmp(arg, "PATCH") == 0 ) {
