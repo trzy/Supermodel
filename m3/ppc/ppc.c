@@ -1,26 +1,11 @@
-#include "model3.h"
-///////////////////////////////////////////////////////////////
-// Portable PowerPC Emulator
-
-// TODO:
-//
-// - fix 6xx set_spr and get_spr to handle read-only and write-only registers correctly
-// - change tb base to use a timestamp and arithmetic in get_spr/set_spr TBL,TBU
-// - add simple cycle count & change time base / decrementer method
-// - fix shift amount and carry in shift instructions
-// - fix carry and overflow in add, subtract instructions (especially extended)
-//
-// - increase opcode tables size to handle separate OE,RC,A,L instruction flavours
-// - fix lwarx and stwcx (lw/sw on same location reset "reserved"?)
-// - fix FP flags in FP instructions
-// - add FP result informations to FPSCR
-// - check BITMASK_0
-// - add missing FP instructions
-// - check FP load/store instructions
-// - add string load/store instructions
-// - major cleanup
+/*
+ * ppc.c
+ *
+ * PowerPC Emulator.
+ */
 
 #include "ppc.h"
+#include "model3.h"
 
 ////////////////////////////////////////////////////////////////
 // Context
@@ -51,30 +36,31 @@ static u32 ppc_field_xlat[256];
 #define _EQ		2
 #define _SO		1
 
-////////////////////////////////////////////////////////////////
+/*
+ * Helpers
+ */
 
 #define BIT(n)				((u32)0x80000000 >> n)
 
 #define BITMASK_0(n)		((u32)(((u64)1 << (n + 1)) - 1))
-#define BITMASK(n,m)		(BITMASK(n) & ~BITMASK(m))
 
-/* SET_XXX_Y : */
+#define ADD_C(r,a,b)		((u32)(r) < (u32)(a))
+#define SUB_C(r,a,b)		(!((u32)(a) < (u32)(b)))
 
-#define SET_ADD_C(a,b)		if(op & _OE){ _SET_ADD_C(a,b); }
+#define SET_ADD_C(r,a,b)	if(ADD_C(r,a,b)){ XER |= XER_CA; }else{ XER &= ~XER_CA; }
+#define SET_SUB_C(r,a,b)	if(SUB_C(r,a,b)){ XER |= XER_CA; }else{ XER &= ~XER_CA; }
 
-#define SET_SUB_C(a,b)		if(op & _OE){ _SET_SUB_C(a,b); }
+#define ADD_V(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
+#define SUB_V(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 
-/* CMPS, CMPU : signed and unsigned integer comparisons */
+#define SET_ADD_V(r,a,b)	if(op & _OE){ if(ADD_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
+#define SET_SUB_V(r,a,b)	if(op & _OE){ if(SUB_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
 
 #define CMPS(a,b)			(((s32)(a) < (s32)(b)) ? _LT : (((s32)(a) > (s32)(b)) ? _GT : _EQ))
 #define CMPU(a,b)			(((u32)(a) < (u32)(b)) ? _LT : (((u32)(a) > (u32)(b)) ? _GT : _EQ))
 
-/* SET_ICR0() : set result flags into CR#0 */
-
 #define _SET_ICR0(r)		{ CR(0) = CMPS(r,0); if(XER & XER_SO) CR(r) |= _SO; }
 #define SET_ICR0(r)			if(op & _RC){ _SET_ICR0(r); }
-
-/* SET_FCR1() : copies FPSCR MSBs into CR#1 */
 
 #define _SET_FCR1()			{ CR(1) = (ppc.fpscr >> 28) & 15; }
 #define SET_FCR1()			if(op & _RC){ _SET_FCR1(); }
@@ -87,20 +73,12 @@ static u32 ppc_field_xlat[256];
 
 #define SET_VXSNAN_1(c)     if (is_snan_f64(c)) ppc.fpscr |= 0x80000000
 
-/* */
-
 #define CHECK_SUPERVISOR()	\
 	if((ppc.msr & 0x4000) != 0){	\
-		printf("ERROR: %08X : supervisor instruction executed in user mode\n"); \
-		exit(1); \
 	}
-
-/* */
 
 #define CHECK_FPU_AVAILABLE()	\
 	if((ppc.msr & 0x2000) == 0){ \
-		printf("ERROR: %08X : fp unavailable\n"); \
-		exit(1); \
 	}
 
 ////////////////////////////////////////////////////////////////
@@ -653,63 +631,55 @@ static void ppc_null(u32 op){
 ////////////////////////////////////////////////////////////////
 // Arithmetical
 
-// Carry
-
-#define ADD_C(r,a,b)		((u32)(r) < (u32)(a))
-#define SUB_C(r,a,b)		(!((u32)(a) < (u32)(b)))
-
-// Overflow 
-
-#define ADD_V(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
-#define SUB_V(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
-
-#define SET_ADD_V(r,a,b)	if(op & _OE){ if(ADD_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
-#define SET_SUB_V(r,a,b)	if(op & _OE){ if(SUB_V(r,a,b)){ XER |= XER_SO | XER_OV; }else{ XER &= ~XER_OV; } }
-
 static void ppc_addx(u32 op){
 
-	u32 b = RB;
-	u32 a = RA;
+	u32 rb = R(RB);
+	u32 ra = R(RA);
 	u32 t = RT;
 
-	R(t) = R(a) + R(b);
+	R(t) = ra + rb;
 
-	SET_ADD_V(R(t), R(a), R(b));
+	SET_ADD_V(R(t), ra, rb);
 	SET_ICR0(R(t));
 }
 
 static void ppc_addcx(u32 op){
 
-	u32 b = RB;
-	u32 a = RA;
+	u32 rb = R(RB);
+	u32 ra = R(RA);
 	u32 t = RT;
 
-	R(t) = R(a) + R(b);
+	R(t) = ra + rb;
 
-	if(R(t) < R(a))
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	SET_ADD_V(R(t), R(a), R(b));
+	SET_ADD_C(R(t), ra, rb);
+	SET_ADD_V(R(t), ra, rb);
 	SET_ICR0(R(t));
 }
 
 static void ppc_addex(u32 op){
 
-	u32 b = RB;
-	u32 a = RA;
+	u32 rb = R(RB);
+	u32 ra = R(RA);
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
+	u32 temp;
 
-	R(t) = R(a) + (R(b) + c);
+	temp = rb + c;
+	R(t) = ra + temp;
 
-	if(R(t) < R(a))
+	if(ADD_C(temp, rb, c) || ADD_C(R(t), ra, temp))
 		XER |= XER_CA;
 	else
 		XER &= ~XER_CA;
 
-	SET_ADD_V(R(t), R(a), R(b));
+	if(op & _OE)
+	{
+		if(ADD_V(temp, rb, c) || ADD_V(R(t), ra, temp))
+			XER |= XER_SO | XER_OV;
+		else
+			XER &= ~XER_OV;
+	}
+
 	SET_ICR0(R(t));
 }
 
@@ -727,12 +697,12 @@ static void ppc_addi(u32 op){
 static void ppc_addic(u32 op){
 
 	u32 i = SIMM;
-	u32 a = RA;
+	u32 ra = R(RA);
 	u32 t = RT;
 
-	R(t) = R(a) + i;
+	R(t) = ra + i;
 
-	if(R(t) < R(a))
+	if(R(t) < ra)
 		XER |= XER_CA;
 	else
 		XER &= ~XER_CA;
@@ -741,12 +711,12 @@ static void ppc_addic(u32 op){
 static void ppc_addic_(u32 op){
 
 	u32 i = SIMM;
-	u32 a = RA;
+	u32 ra = R(RA);
 	u32 t = RT;
 
-	R(t) = R(a) + i;
+	R(t) = ra + i;
 
-	if(R(t) < R(a))
+	if(R(t) < ra)
 		XER |= XER_CA;
 	else
 		XER &= ~XER_CA;
@@ -2604,7 +2574,7 @@ INLINE int is_denormalized_f64(f64 x)
 
 INLINE int sign_f64(f64 x)
 {
-    return (*(u64 *)&(x) & DOUBLE_SIGN);
+    return ((*(u64 *)&(x) & DOUBLE_SIGN) != 0);
 }
 
 INLINE s32 round_f64_to_s32(f64 v){
