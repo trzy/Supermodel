@@ -150,7 +150,7 @@ void scsi_write_8(UINT32 addr, UINT8 data)
 {
     addr &= 0xFF;
     if (addr > 0x5F)
-        error("%08X: SCSI invalid write to %02X", ppc_get_reg(PPC_REG_PC), addr);
+        error("%08X: SCSI invalid write8 to %02X", ppc_get_reg(PPC_REG_PC), addr);
 
     message(0, "%08X: SCSI %02X = %02X", ppc_get_reg(PPC_REG_PC), addr, data);
 
@@ -247,9 +247,9 @@ void scsi_write_16(UINT32 addr, UINT16 data)
 
 void scsi_write_32(UINT32 addr, UINT32 data)
 {
+    if ((addr & 0xff) > 0x5C)
+        error("%08X: SCSI invalid write32 to %08X", ppc_get_reg(PPC_REG_PC), addr);
     addr &= 0xff;
-    if (addr > 0x5C)
-        error("%08X: SCSI invalid write to %02X", ppc_get_reg(PPC_REG_PC), addr);
 
     data = BSWAP32(data);
     REG32(addr) = data;

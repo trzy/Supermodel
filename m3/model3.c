@@ -426,8 +426,12 @@ static UINT8 m3_ppc_read_8(UINT32 a)
     {
     case 0xC:
 
-        if ((a >= 0xC0000000 && a <= 0xC00000FF) ||
-            (a >= 0xC1000000 && a <= 0xC10000FF))       // 53C810 SCSI
+        if (a >= 0xC0000000 && a <= 0xC00000FF)         // 53C810 SCSI (Step 1.0)
+        {
+            if (m3_config.step == 0x10)
+                return scsi_read_8(a);
+        }
+        else if (a >= 0xC1000000 && a <= 0xC10000FF)    // 53C810 SCSI
             return scsi_read_8(a);
         else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
             return dma_read_8(a);
@@ -520,7 +524,14 @@ static UINT32 m3_ppc_read_32(UINT32 a)
 
     case 0xC:
 
-        if (a >= 0xC2000000 && a <= 0xC200001F)     // DMA device
+        if (a >= 0xC0000000 && a <= 0xC00000FF)         // 53C810 SCSI (Step 1.0)
+        {
+            if (m3_config.step == 0x10)
+                return scsi_read_32(a);
+        }
+        else if (a >= 0xC1000000 && a <= 0xC10000FF)    // 53C810 SCSI
+            return scsi_read_32(a);
+        else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
             return dma_read_32(a);
 
         switch (a)
@@ -561,6 +572,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
             return tilegen_read_32(a);
         else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
             return bridge_read_config_data_32(a);
+        else if (a >= 0xF9000000 && a <= 0xF90000FF)	// 53C810 SCSI
+            return scsi_read_32(a);
 
         switch (a)
         {
@@ -613,8 +626,11 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
 
         if (a >= 0xC0000000 && a <= 0xC00000FF)         // 53C810 SCSI
         {
-            scsi_write_8(a, d);
-            return;
+            if (m3_config.step == 0x10)
+            {
+                scsi_write_8(a, d);
+                return;
+            }
         }
         else if (a >= 0xC2000000 && a <= 0xC200001F)    // DMA device
         {
@@ -759,8 +775,15 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
     case 0xC:
 
-        if ((a >= 0xC0000000 && a <= 0xC00000FF) ||
-            (a >= 0xC1000000 && a <= 0xC10000FF))       // 53C810 SCSI
+        if (a >= 0xC0000000 && a <= 0xC00000FF)         // 53C810 SCSI
+        {
+            if (m3_config.step == 0x10)
+            {
+                scsi_write_32(a, d);
+                return;
+            }
+        }
+        else if (a >= 0xC1000000 && a <= 0xC10000FF)    // 53C810 SCSI
         {
             scsi_write_32(a, d);
             return;
@@ -934,7 +957,7 @@ static void m3_set_crom_bank(UINT8 d)
     crom_bank_reg = d;
     crom_bank = &crom[0x800000 + ((~d) & 7) * 0x800000];
 
-//    LOG("model3.log", "CROM bank = %02X\n", d);
+    LOG("model3.log", "CROM bank = %02X\n", d);
 }
 
 static UINT8 m3_sys_read_8(UINT32 a)
@@ -1366,7 +1389,8 @@ void m3_run_frame(void)
      */
 
     message(0, "enter VBL");
-    m3_add_irq(m3_irq_enable & 0x02);
+    m3_add_irq(m3_irq_enable);
+//    m3_add_irq(m3_irq_enable & 0x02);
     ppc_set_irq_line(1);
 
 	PROFILE_SECT_ENTRY("ppc");
@@ -1375,11 +1399,13 @@ void m3_run_frame(void)
 
     m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
 
-//#if 0
+    m3_add_irq(0x02);
+    ppc_set_irq_line(1);
+#if 0
     m3_add_irq(1 << m3_irq_bit);
     ppc_set_irq_line(1);
     m3_irq_bit = (m3_irq_bit + 1) & 7;
-//#endif
+#endif
     
 
 	PROFILE_SECT_EXIT("-");
