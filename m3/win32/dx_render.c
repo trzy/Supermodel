@@ -24,7 +24,7 @@
 
 //#define ENABLE_LIGHTING
 //#define WIREFRAME
-#define ENABLE_ALPHA_BLENDING
+//#define ENABLE_ALPHA_BLENDING
 
 typedef struct {
 	int tex_num;
@@ -208,16 +208,6 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 		IDirect3DDevice9_Present( device, NULL, NULL, NULL, NULL );
 	}
 
-	memset(&viewport, 0, sizeof(D3DVIEWPORT9));
-	viewport.X		= 0;
-	viewport.Y		= 0;
-	viewport.Width	= MODEL3_SCREEN_WIDTH;
-	viewport.Height	= MODEL3_SCREEN_HEIGHT;
-	viewport.MinZ	= 0.1f;
-	viewport.MaxZ	= 100000.0f;
-
-	IDirect3DDevice9_SetViewport( device, &viewport );
-
 	hr = D3DXCreateSprite( device, &sprite );
 	if(FAILED(hr))
 		osd_error("D3DXCreateSprite failed.");
@@ -245,6 +235,19 @@ void osd_renderer_shutdown(void)
 void osd_renderer_reset(void)
 {
 
+}
+
+static void set_viewport(INT x, INT y, INT width, INT height)
+{
+	memset(&viewport, 0, sizeof(D3DVIEWPORT9));
+	viewport.X		= x;
+	viewport.Y		= y;
+	viewport.Width	= width;
+	viewport.Height	= height;
+	viewport.MinZ	= 0.1f;
+	viewport.MaxZ	= 100000.0f;
+
+	IDirect3DDevice9_SetViewport( device, &viewport );
 }
 
 void osd_renderer_update_frame(void)
@@ -278,6 +281,8 @@ void osd_renderer_update_frame(void)
 
 	IDirect3DDevice9_SetRenderState( device, D3DRS_ZENABLE, D3DZB_USEW );
 
+	set_viewport( 0, 0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT );
+	sprite->lpVtbl->Draw(sprite, layer_data[3], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 	sprite->lpVtbl->Draw(sprite, layer_data[2], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 
 #ifdef ENABLE_ALPHA_BLENDING
@@ -306,6 +311,8 @@ void osd_renderer_update_frame(void)
 
 	render_scene();
 
+	set_viewport( 0, 0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT );
+	//sprite->lpVtbl->Draw(sprite, layer_data[1], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 	sprite->lpVtbl->Draw(sprite, layer_data[0], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 	IDirect3DDevice9_EndScene( device );
 
@@ -790,6 +797,28 @@ static void load_matrix(int address, D3DMATRIX *matrix)
 	D3DXMatrixTranspose( matrix, matrix );
 }
 
+static void load_coord_sys(int address, D3DMATRIX *matrix)
+{
+	int index = matrix_start + (address * 12);
+
+	matrix->_11 = *(float*)(&list_ram[index + 6]);
+	matrix->_12 = *(float*)(&list_ram[index + 7]);
+	matrix->_13 = *(float*)(&list_ram[index + 8]);
+	matrix->_21 = *(float*)(&list_ram[index + 9]);
+	matrix->_22 = -*(float*)(&list_ram[index + 10]);
+	matrix->_23 = *(float*)(&list_ram[index + 11]);
+	matrix->_31 = *(float*)(&list_ram[index + 3]);
+	matrix->_32 = *(float*)(&list_ram[index + 4]);
+	matrix->_33 = *(float*)(&list_ram[index + 5]);
+	matrix->_41 = *(float*)(&list_ram[index + 0]);
+	matrix->_42 = *(float*)(&list_ram[index + 1]);
+	matrix->_43 = *(float*)(&list_ram[index + 2]);
+	matrix->_14 = 0.0f;
+	matrix->_24 = 0.0f;
+	matrix->_34 = 0.0f;
+	matrix->_44 = 1.0f;
+}
+
 static void handle_link(UINT32 link)
 {
 	UINT32 type = (link >> 24) & 0xFF;
@@ -928,6 +957,7 @@ static void traverse_main_tree(UINT32 *node_ram)
 	D3DXVECTOR3 sun_vector;
 	D3DLIGHT9 sun;
 	D3DMATRIX projection;
+	D3DMATRIX matrix;
 	UINT8 amb;
 	float sun_diffuse_color, sun_ambient_color;
 
@@ -962,6 +992,24 @@ static void traverse_main_tree(UINT32 *node_ram)
 	link = node_ram[index + 2];
 	matrix_start = node_ram[index + 22] & 0xFFFF;
 
+
+	// Set coordinate system
+	load_coord_sys( 0, &matrix );
+	IDirect3DDevice9_SetTransform( device, D3DTS_VIEW, &matrix );
+
+	// Set viewport and projection
+	{
+		INT x = (node_ram[index + 26] & 0xFFFF);
+		INT y = (node_ram[index + 26] >> 16) & 0xFFFF;
+		INT width = node_ram[index + 20] & 0xFFFF;
+		INT height = (node_ram[index + 20] >> 16) & 0xFFFF;
+
+		set_viewport( x >> 4, y >> 4, width >> 2, height >> 2 );
+		
+		// TODO: Use the correct FOV !!!
+		D3DXMatrixPerspectiveFovLH( &projection, D3DXToRadian(45.0f), (float)width / (float)height, 0.1f, 100000.0f );
+		IDirect3DDevice9_SetTransform( device, D3DTS_PROJECTION, &projection );
+	}
 	
 	// Set up fog
 	{
