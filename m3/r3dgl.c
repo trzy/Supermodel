@@ -51,6 +51,8 @@
 /* Macros                                                         */
 /******************************************************************/
 
+#define R3D_LOG			LOG
+
 #define GETWORDLE(a)    (*(UINT32 *) a)
 #define GETWORDBE(a)    BSWAP32(*(UINT32 *) a)
 
@@ -121,6 +123,13 @@ static void draw_model_be(UINT8 *buf)
     }       v[4], prev_v[4];    
     UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base, u_coord,
             v_coord;
+
+	R3D_LOG("model3.log",
+			"#\n"
+			"# model\n"
+			"#\n"
+			"\n"
+	);
 
     do
     {
@@ -532,6 +541,13 @@ static void draw_model_le(UINT8 *buf)
     }       v[4], prev_v[4];    
     UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base, u_coord,
             v_coord;
+
+	R3D_LOG("model3.log",
+			"#\n"
+			"# model\n"
+			"#\n"
+			"\n"
+	);
 
     do
     {
@@ -1046,6 +1062,8 @@ static void draw_list(UINT8 *list)
     {
         addr = GETWORDLE(list);
 
+		R3D_LOG("model3.log", " ## list: draw block at %08X\n\n", addr);
+
         if (addr == 0 || addr == 0x800800)  // safeguard: in case memory has not been uploaded yet
             break;
 
@@ -1082,7 +1100,38 @@ static void draw_block(UINT8 *block)
          */
 
         if (GETWORDLE(&block[0*4]) & 0x01000000)
+		{
+			R3D_LOG("model3.log", " ## block: block/list detetcted, draw block at %08X\n", GETWORDLE(&block[0*4]));
             block = translate_r3d_address(GETWORDLE(&block[0*4]) & 0x00FFFFFF);
+		}
+
+		R3D_LOG("model3.log",
+				"#\n"
+				"# block:\n"
+				"#\n"
+				"\n"
+				"00: %08X\n"
+				"01: %08X\n"
+				"02: %08X\n"
+				"03: %08X\n"
+				"04: %3.5f\n"
+				"05: %3.5f\n"
+				"06: %3.5f\n"
+				"07: %08X\n"
+				"08: %08X\n"
+				"09: %08X\n"
+				"\n",
+				GETWORDLE(&block[0 * 4]),
+				GETWORDLE(&block[1 * 4]),
+				GETWORDLE(&block[2 * 4]),
+				GETWORDLE(&block[3 * 4]),
+				get_float(&block[4 * 4]),
+				get_float(&block[5 * 4]),
+				get_float(&block[6 * 4]),
+				GETWORDLE(&block[7 * 4]),
+				GETWORDLE(&block[8 * 4]),
+				GETWORDLE(&block[9 * 4])
+		);
 
         /*
          * Multiply by the specified matrix. If bit 0x20000000 is not set, I
@@ -1092,9 +1141,10 @@ static void draw_block(UINT8 *block)
         matrix = GETWORDLE(&block[3*4]);
         if ((matrix & 0x20000000))
         {
-            get_matrix(m, (matrix & 0xFFFF)*12);
+            get_matrix(m, (matrix & 0x03FF)*12);
             glPushMatrix();
-            glMultMatrixf(m);
+			if((matrix & 0x03FF) != 0)		// safeguard for Scud Race
+            	glMultMatrixf(m);
         }
 
         /*
@@ -1104,30 +1154,54 @@ static void draw_block(UINT8 *block)
          */
 
         addr = GETWORDLE(&block[7*4]);
-        switch ((addr >> 24) & 0xFE)
-        {
-        case 0x04:  // list
-            if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
-            draw_list(translate_r3d_address(addr & 0x01FFFFFF));
-            break;
-        case 0x00:  // draw model or another 10-word block
-            if (addr != 0)  // safeguard: in case memory has not been uploaded yet
-            {
-                if ((addr & 0x01000000))                // VROM or poly RAM (draw model)
-                {
-                    if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
-                        draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
-                    else                                    // polygon RAM
-                        draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
-                }
-                else                                    // some Real3D region (another 10-word block)
-                    draw_block(translate_r3d_address(addr & 0x01FFFFFF));
-            }
-            break;
-        default:
-            error("Unable to handle Real3D address: %08X\n", addr);
-            break;
-        }
+
+		if(GETWORDLE(&block[0*4]) & 0x08)
+		{
+			/*
+			 * The block references a 4-element list (Scud Race).
+			 * The value of bit 0x01000000 in the address assumes another
+			 * (currently unknown) meaning.
+			 */
+
+			if(addr & 0xFE000000)
+				error("Invalid list address: %08X\n", addr);
+
+			R3D_LOG("model3.log", " ## block: draw list at %08X (exception 1)\n\n", addr);
+
+            draw_block(translate_r3d_address(addr & 0x00FFFFFF));
+		}
+		else
+		{
+	        switch ((addr >> 24) & 0xFF)
+	        {
+			case 0x00:	// block
+				if(addr != 0)
+				{
+					R3D_LOG("model3.log", " ## block: draw block at %08X)\n\n", addr);
+					draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+				}
+				break;
+			case 0x01:	// model
+			case 0x03:	// model in VROM (Scud Race)
+				if(addr != 0)
+				{
+					R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
+					if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+						draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
+					else                                    // polygon RAM
+						draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+				}
+				break;
+	        case 0x04:  // list
+				R3D_LOG("model3.log", " ## block: draw list at %08X\n\n", addr);
+	            if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
+	            draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+	            break;
+	        default:
+	            error("Unable to handle Real3D address: %08X\n", addr);
+	            break;
+    	    }
+		}
 
         /*
          * Pop the matrix if we pushed one
@@ -1167,19 +1241,124 @@ static void draw_scene(void)
     i = 0;
     stop = 0;
 
+	LOG_INIT("model3.log");
+
     do
     {
-//        /*
-        // DEBUG
         message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
         i,
         GETWORDLE(&culling_ram_8e[i + 0]),
         GETWORDLE(&culling_ram_8e[i + 4]),
         GETWORDLE(&culling_ram_8e[i + 8])
         );
-//        */
+
+		R3D_LOG("model3.log",
+				"#\n"
+				"# scene at %08X\n"
+				"#\n"
+				"\n"
+				"00: %08X\n"
+				"01: %08X\n"
+				"02: %08X\n"
+				"03: %3.5f\n"
+				"04: %3.5f\n"
+				"05: %3.5f\n"
+				"06: %3.5f\n"
+				"07: %3.5f\n"
+				"08: %3.5f\n"
+				"09: %3.5f\n"
+				"0A: %3.5f\n"
+				"0B: %3.5f\n"
+				"0C: %3.5f\n"
+				"0D: %3.5f\n"
+				"0E: %3.5f\n"
+				"0F: %3.5f\n"
+				"10: %3.5f\n"
+				"11: %3.5f\n"
+				"12: %3.5f\n"
+				"13: %3.5f\n"
+				"14: %08X\n"
+				"15: %08X\n"
+				"16: %08X\n"
+				"17: %08X\n"
+				"18: %08X\n"
+				"19: %08X\n"
+				"1A: %08X\n"
+				"1B: %08X\n"
+				"1C: %08X\n"
+				"1D: %08X\n"
+				"1E: %08X\n"
+				"1F: %3.5f\n"
+				"20: %3.5f\n"
+				"21: %3.5f\n"
+				"22: %08X\n"
+				"23: %08X\n"
+				"24: %08X\n"
+				"25: %08X\n"
+				"26: %08X\n"
+				"27: %08X\n"
+				"28: %08X\n"
+				"29: %08X\n"
+				"2A: %08X\n"
+				"2B: %08X\n"
+				"2C: %08X\n"
+				"2D: %08X\n"
+				"2E: %08X\n"
+				"2F: %08X\n"
+				"\n",
+				i,
+				GETWORDLE(&culling_ram_8e[i + 0x00 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x01 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x02 * 4]),
+				get_float(&culling_ram_8e[i + 0x03 * 4]),
+				get_float(&culling_ram_8e[i + 0x04 * 4]),
+				get_float(&culling_ram_8e[i + 0x05 * 4]),
+				get_float(&culling_ram_8e[i + 0x06 * 4]),
+				get_float(&culling_ram_8e[i + 0x07 * 4]),
+				get_float(&culling_ram_8e[i + 0x08 * 4]),
+				get_float(&culling_ram_8e[i + 0x09 * 4]),
+				get_float(&culling_ram_8e[i + 0x0A * 4]),
+				get_float(&culling_ram_8e[i + 0x0B * 4]),
+				get_float(&culling_ram_8e[i + 0x0C * 4]),
+				get_float(&culling_ram_8e[i + 0x0D * 4]),
+				get_float(&culling_ram_8e[i + 0x0E * 4]),
+				get_float(&culling_ram_8e[i + 0x0F * 4]),
+				get_float(&culling_ram_8e[i + 0x10 * 4]),
+				get_float(&culling_ram_8e[i + 0x11 * 4]),
+				get_float(&culling_ram_8e[i + 0x12 * 4]),
+				get_float(&culling_ram_8e[i + 0x13 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x14 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x15 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x16 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x17 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x18 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x19 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x1A * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x1B * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x1C * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x1D * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x1E * 4]),
+				get_float(&culling_ram_8e[i + 0x1F * 4]),
+				get_float(&culling_ram_8e[i + 0x20 * 4]),
+				get_float(&culling_ram_8e[i + 0x21 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x22 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x23 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x24 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x25 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x26 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x27 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x28 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x29 * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x2A * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x2B * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x2C * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x2D * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x2E * 4]),
+				GETWORDLE(&culling_ram_8e[i + 0x2F * 4])
+		);
 
         set_matrix_base(GETWORDLE(&culling_ram_8e[i + 0x16*4]));
+
         j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
         j = (j & 0xffff) * 4;
         if (j == 0) // culling RAM probably hasn't been set up yet
@@ -1190,8 +1369,21 @@ static void draw_scene(void)
             stop = TRUE;
         i = (i & 0xffff) * 4;
 
-//        draw_list(translate_r3d_address(GETWORDLE(&culling_ram_8e[j + 7*4]) & 0x01FFFFFF));
-        draw_block(&culling_ram_8e[j]);
+		switch((GETWORDLE(&culling_ram_8e[i + 8]) >> 24) & 0xFE)
+		{
+		case 0x00:	// block
+			R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", j);
+			draw_block(&culling_ram_8e[j]);
+			break;
+
+		case 0x04:	// list
+			R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", j);
+			draw_list(&culling_ram_8e[j]);
+			break;
+
+		default:
+			error("Unknown scene descriptor link %08X\n", GETWORDLE(&culling_ram_8e[i + 8]));
+		}
     }
     while (!stop);
 }
