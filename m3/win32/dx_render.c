@@ -87,6 +87,7 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	D3DPRESENT_PARAMETERS		d3dpp;
 	D3DDISPLAYMODE				d3ddm;
 	D3DCAPS9					caps;
+	D3DDISPLAYMODE				display_mode;
 	HRESULT hr;
 	DWORD flags = 0;
 	int i, num_buffers, width, height;
@@ -115,13 +116,31 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	else
 		num_buffers = 2;
 
+	width	= 0;
+	height	= 0;
+
 	if(!m3_config.fullscreen) {
 		width	= MODEL3_SCREEN_WIDTH;
 		height	= MODEL3_SCREEN_HEIGHT;
 	} else {
-		width	= m3_config.width;
-		height	= m3_config.height;
+		// Check if the display mode specified in m3_config is available
+		UINT modes = IDirect3D9_GetAdapterModeCount( d3d, D3DADAPTER_DEFAULT, d3ddm.Format );
+		
+		for( i=0; i<modes; i++) {
+			hr = IDirect3D9_EnumAdapterModes( d3d, D3DADAPTER_DEFAULT, d3ddm.Format, i, &display_mode );
+			if( FAILED(hr) )
+				error("IDirect3D9_EnumAdapterModes failed.\n");
+
+			// Check if this mode matches
+			if(display_mode.Width == m3_config.width && display_mode.Height == m3_config.height) {
+				width	= m3_config.width;
+				height	= m3_config.height;
+			}
+		}
 	}
+	// Check if we have a valid display mode
+	if(width == 0 || height == 0)
+		error("DirectX error: Display mode %dx%d not available\n",m3_config.width, m3_config.height );
 
 	memset(&d3dpp, 0, sizeof(d3dpp));
 	d3dpp.Windowed			= m3_config.fullscreen ? FALSE : TRUE;
@@ -156,7 +175,7 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	hr = IDirect3D9_CreateDevice( d3d, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, main_window, 
 								  flags, &d3dpp, &device );
 	if(FAILED(hr))
-		osd_error("IDirect3D9_CreateDevice failed.");
+		error("IDirect3D9_CreateDevice failed: %s",DXGetErrorString9(hr));
 
 	for( i=0; i<4; i++) {
 		hr = D3DXCreateTexture( device, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT, 1,
@@ -238,16 +257,21 @@ void osd_renderer_update_frame(void)
 	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX );
 	IDirect3DDevice9_SetStreamSource( device, 0, vertex_buffer, 0, sizeof(VERTEX) );
 	IDirect3DDevice9_SetRenderState( device, D3DRS_CULLMODE, D3DCULL_NONE );
+	
+	// Disabled for now
 	IDirect3DDevice9_SetRenderState( device, D3DRS_LIGHTING, FALSE );
+
 	IDirect3DDevice9_SetRenderState( device, D3DRS_ZENABLE, D3DZB_USEW );
 
 	sprite->lpVtbl->Draw(sprite, layer_data[2], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
+
+	IDirect3DDevice9_SetRenderState( device, 0, D3DRS_ALPHABLENDENABLE, TRUE );
 
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
 	IDirect3DDevice9_SetTextureStageState( device, 1, D3DTSS_COLOROP, D3DTOP_DISABLE );
-	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_DISABLE );
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
 
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
@@ -353,7 +377,8 @@ static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height, BOOL 
 						pix = src[index + x2 + y2];
 					}
 
-					ptr[((j+y) * width) + i + x] = pix;
+					ptr[(((j+y) * width) + i + x) * 2] = pix;
+					ptr[(((j+y) * width) + i + x) * 2 + 1] = pix;
 				}
 			}
 			index += 64;
@@ -396,7 +421,7 @@ void osd_renderer_upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL 
 	if(type != 1)		// TODO: Handle mipmaps
 		return;
 
-	format = (depth) ? D3DFMT_A1R5G5B5 : D3DFMT_L8;
+	format = (depth) ? D3DFMT_A1R5G5B5 : D3DFMT_A8L8;
 
 	// Create D3D texture
 	hr = D3DXCreateTexture( device, width, height, 1, 0, format, D3DPOOL_MANAGED,
@@ -742,7 +767,7 @@ static void render_model_vrom(UINT32 *src)
 
 static void load_matrix(int address, D3DMATRIX *matrix)
 {
-	int index = 0x2000 + (address * 12);
+	int index = matrix_start + (address * 12);
 
 	matrix->_11 = *(float*)(&list_ram[index + 3]);
 	matrix->_12 = *(float*)(&list_ram[index + 6]);
@@ -791,8 +816,11 @@ static void traverse_node(UINT32* node_ram)
 {
 	int i;
 	float x, y, z;
-	UINT32 matrix_address = node_ram[0x3];
+	int offset = 0;
+	UINT32 matrix_address = node_ram[0x3 - offset];
 	D3DMATRIX matrix, *world_matrix;
+	if(m3_config.step == 0x10)
+		offset = 2;
 
 	matrix_stack->lpVtbl->Push( matrix_stack );
 
@@ -801,9 +829,9 @@ static void traverse_node(UINT32* node_ram)
 		matrix_stack->lpVtbl->MultMatrix( matrix_stack, &matrix );
 	}
 
-	x = *(float*)(&node_ram[0x4]);
-	y = *(float*)(&node_ram[0x5]);
-	z = *(float*)(&node_ram[0x6]);
+	x = *(float*)(&node_ram[0x4 - offset]);
+	y = *(float*)(&node_ram[0x5 - offset]);
+	z = *(float*)(&node_ram[0x6 - offset]);
 	matrix_stack->lpVtbl->TranslateLocal( matrix_stack, x, y, z );
 
 	world_matrix = matrix_stack->lpVtbl->GetTop( matrix_stack );
@@ -811,7 +839,7 @@ static void traverse_node(UINT32* node_ram)
 
 	// Check both links
 	for( i=0; i<2; i++) {
-		UINT32 link = node_ram[0x7 + i];
+		UINT32 link = node_ram[0x7 + i - offset];
 		int type = (link >> 24) & 0xFF;
 		
 		// Test for valid links
@@ -851,9 +879,38 @@ static void traverse_node(UINT32* node_ram)
 static void traverse_main_tree(UINT32 *node_ram)
 {
 	int index = 0;
+	UINT32 next,link;
+	D3DMATERIAL9 material;
+	D3DCOLORVALUE ambient;
+	D3DCOLORVALUE diffuse;
+	D3DCOLORVALUE material_color;
+	D3DXVECTOR3 sun_vector;
+	D3DLIGHT9 sun;
+
+	float sun_diffuse_color = *(float*)&node_ram[index + 7];
+	float sun_ambient_color = *(float*)&node_ram[index + 10];
+	sun_vector.x = *(float*)&node_ram[index + 6];
+	sun_vector.y = *(float*)&node_ram[index + 5];
+	sun_vector.z = *(float*)&node_ram[index + 4];
+
+	diffuse.r = diffuse.g = diffuse.b = diffuse.a = sun_diffuse_color;
+	ambient.r = ambient.g = ambient.b = ambient.a = sun_ambient_color;
+	material.Diffuse = diffuse;
+	material.Ambient = ambient;
+	IDirect3DDevice9_SetMaterial( device, &material );
+
+	// Set up sun light
+	sun.Type = D3DLIGHT_DIRECTIONAL;
+	sun.Ambient = ambient;
+	sun.Diffuse = diffuse;
+	sun.Direction = sun_vector;
+
+	IDirect3DDevice9_SetLight( device, 0, &sun );
+	IDirect3DDevice9_LightEnable( device, 0, TRUE );
 	
-	UINT32 next = node_ram[index + 1];
-	UINT32 link = node_ram[index + 2];
+	next = node_ram[index + 1];
+	link = node_ram[index + 2];
+	matrix_start = node_ram[index + 22] & 0xFFFF;
 
 	// Go to next tree node if valid link
 	if((next & 0x800000) != 0) {
