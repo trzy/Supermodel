@@ -1329,6 +1329,8 @@ BOOL m3_load_rom(CHAR * id)
 
 			return(MODEL3_ERROR);
 		}
+
+        memset(crom, 0xFF, 72*1024*1024);
 	}
 
 	crom0 = &crom[0x00800000];
