@@ -154,16 +154,17 @@ void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 	GLuint							pixel_format;
 	static PIXELFORMATDESCRIPTOR	pfd =			// must this be static?
 	{
-		sizeof(PIXELFORMATDESCRIPTOR),
-		1,
-		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER | PFD_TYPE_RGBA,
-		0,											// bits per pixel, set this up later!!!
+        sizeof(PIXELFORMATDESCRIPTOR),              // size of structure
+        1,                                          // version (must be 1)
+        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+        PFD_TYPE_RGBA,                              // RGBA pixels
+        0,											// bits per pixel, set this up later!!!
 		0, 0, 0, 0, 0, 0,							// color bits ignored
 		0,											// no alpha buffer
 		0,											// ignore shift bit
 		0,											// no accumulation buffer
 		0, 0, 0, 0,									// accumulation bits ignored
-		16,											// 16-bit z-buffer
+        32,                                         // 16-bit z-buffer
 		0,											// no stencil buffer
 		0,											// no auxilliary buffer
 		PFD_MAIN_PLANE,								// main drawing layer
