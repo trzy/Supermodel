@@ -81,3 +81,22 @@ void osd_renderer_blit(void)
 {
     SDL_GL_SwapBuffers();
 }
+
+/*
+ * void * osd_gl_get_proc_address(const char *);
+ *
+ * Calls wglGetProcAddress.
+ */
+
+void * osd_gl_get_proc_address(const CHAR * id)
+{
+	void * ptr = glXGetProcAddressARB(id);
+
+	if (ptr == NULL)
+		error("GL proc %s not found!\n", id);
+	else
+		message(0, "found GL proc %s!", id);
+
+	return ptr;
+}
+

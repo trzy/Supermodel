@@ -1,6 +1,6 @@
 #
-# Makefile for MinGW 2.0.0.3
-# Requires GCC 3.2, Nasm 0.98, OpenGL, SDL 1.2
+# Makefile for Linux
+# Requires GCC 3.2.x, Nasm 0.98, OpenGL (version 21 glext.h from SGI), SDL 1.2+
 #
 
 #
@@ -9,15 +9,15 @@
 
 EXE = m3
 
-CC = gcc
-LD = gcc
+CC = gcc32
+LD = gcc32
 AS = nasm
 AR = ar
 
-CFLAGS = -w -I./ -I./linux/ -I./osd_common/ -DLINUX=1 -D__GCC__=1 `sdl-config --cflags`  
+CFLAGS = -O3 -mcpu=pentium4 -march=pentium4 -w -I./ -I./linux/ -I./osd_common/ -DLINUX=1 -D__GCC__=1 `sdl-config --cflags`  
 AFLAGS = -f elf
 
-LIBS = 
+LIBS = -lm -lz
 
 LIBS_REND = -lGL -lGLU `sdl-config --libs` 
 FLAGS_REND = -DRENDERER_OGL
@@ -28,10 +28,12 @@ FLAGS_REND = -DRENDERER_OGL
 
 OBJ_DIR = obj
 OBJ=	$(OBJ_DIR)/bridge.o \
+	$(OBJ_DIR)/cfgparse.o \
 	$(OBJ_DIR)/controls.o \
 	$(OBJ_DIR)/dma.o \
 	$(OBJ_DIR)/dsb1.o \
 	$(OBJ_DIR)/eeprom.o \
+	$(OBJ_DIR)/file.o \
 	$(OBJ_DIR)/r3d.o \
 	$(OBJ_DIR)/rtc.o \
 	$(OBJ_DIR)/scsi.o \
@@ -39,7 +41,9 @@ OBJ=	$(OBJ_DIR)/bridge.o \
 	$(OBJ_DIR)/model3.o \
 	$(OBJ_DIR)/ppc.o \
 	$(OBJ_DIR)/disasm.o	\
-	$(OBJ_DIR)/lin_main.o
+	$(OBJ_DIR)/lin_main.o	\
+	$(OBJ_DIR)/render.o	\
+	$(OBJ_DIR)/unzip/unzip.o
 
 
 OBJ_REND = $(OBJ_DIR)/lin_gl.o $(OBJ_DIR)/glrender.o
@@ -52,7 +56,7 @@ all:	$(OBJ) $(OBJ_REND)
 	$(CC) $(CFLAGS) $(FLAGS_REND) $(OBJ) $(OBJ_REND) -o $(EXE) $(LIBS) $(LIBS_REND)
 
 clean:
-	rm obj/*
+	rm obj/* obj/unzip/*
 
 $(OBJ_DIR)/%.o: %.c %.h
 	$(CC) $< $(CFLAGS) -c -o $@

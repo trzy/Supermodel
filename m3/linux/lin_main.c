@@ -85,6 +85,36 @@ static BOOL win_create_window(UINT xres, UINT yres)
 	return TRUE;
 }
 
+/* FPS calculator swiped from Modeler */
+static unsigned long lastFPSTick = 0;
+static long lastFPS = 0;
+static long fpsCountUp = 0;
+
+static inline unsigned long timeGetTime(void)
+{
+  struct timeval tv;
+  gettimeofday(&tv, 0);                                
+  return tv.tv_sec * 1000 + tv.tv_usec/1000;           
+}
+
+static void calcfps(void)
+{
+	unsigned long curTick;
+
+	curTick = timeGetTime();
+
+	if (curTick - lastFPSTick > 1000)
+	{
+		lastFPSTick = curTick;
+		lastFPS = fpsCountUp;
+		fpsCountUp = 0;
+	}
+	else
+	{
+		fpsCountUp++;
+	}
+}
+
 int main(int argc, char *argv[])
 {
     CHAR    mnem[16], oprs[48];
@@ -149,8 +179,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	calcfps();
 
-        printf("frame %d, PC = %08X, ", frame++, ppc_get_reg(PPC_REG_PC));
+        printf("frame %d, FPS = %02d, PC = %08X, ", frame++, lastFPS, ppc_get_reg(PPC_REG_PC));
         op = ppc_read_word(ppc_get_reg(PPC_REG_PC));
         if (DisassemblePowerPC(op, ppc_get_reg(PPC_REG_PC), mnem, oprs, 1))
         {
@@ -203,6 +234,11 @@ static void osd_handle_key(int keysym, int updown)
 {
     CHAR    fname[13];
 
+    controls.game_controls[0] = 0xFF;
+    controls.game_controls[1] = 0xFF;
+    controls.system_controls[0] = 0xFF;
+    controls.system_controls[1] = 0xFF;
+
     // $$$TODO
     #if 0
         case WM_LBUTTONDOWN:
@@ -221,103 +257,123 @@ static void osd_handle_key(int keysym, int updown)
 	{
 	        switch (keysym)
 	        {
-	        case 0x41:  // A
-	        controls.game_controls[0] &= ~0x01;
-	        break;
-	        case 0x53:  // S
-	        controls.game_controls[0] &= ~0x02;
-	        break;
-	        case 0x44:  // D
-	        controls.game_controls[0] &= ~0x04;
-	        break;
-	        case 0x46:  // F
-	        controls.game_controls[0] &= ~0x08;
-	        break;
-	        case 0x47:  // G
-	        controls.game_controls[0] &= ~0x80;
-	        break;
-	        case 0x48:  // H
-	        controls.game_controls[0] &= ~0x40;
-	        break;
+	        case 'A':  // A
+		        controls.game_controls[0] &= ~0x01;
+		        break;
+	        case 'S':  // S
+		        controls.game_controls[0] &= ~0x02;
+		        break;
+	        case 'D':  // D
+		        controls.game_controls[0] &= ~0x04;
+		        break;
+	        case 'F':  // F
+		        controls.game_controls[0] &= ~0x08;
+		        break;
+	        case 'G':  // G
+		        controls.game_controls[0] &= ~0x80;
+		        break;
+	        case 'H':  // H
+		        controls.game_controls[0] &= ~0x40;
+		        break;
+
+		case 'Q':
+			controls.game_controls[0] &= ~0x80;
+		        break;
+		case 'W':
+			controls.game_controls[0] &= ~0x40;
+		        break;
+		case 'E':
+			controls.game_controls[0] &= ~0x20;
+		        break;
+		case 'R':
+			controls.game_controls[0] &= ~0x10;
+		        break;
+		case 'T':
+			controls.game_controls[1] &= ~0x80;
+		        break;
+		case 'Y':
+			controls.game_controls[1] &= ~0x40;
+		        break;
+		case 'U':
+			controls.game_controls[1] &= ~0x20;
+		        break;
+		case 'I':
+			controls.game_controls[1] &= ~0x10;
+		        break;
+
+		case 'Z':
+			controls.game_controls[0] &= ~0x01;
+		        break;
+		case 'X':
+			controls.game_controls[1] &= ~0x01;
+		        break;
+		case 'C':
+			controls.game_controls[0] &= ~0x02;
+		        break;
+		case 'V':
+			controls.game_controls[1] &= ~0x02;
+		        break;
+
+		case SDLK_UP:
+		        controls.game_controls[0] &= ~0x20; // VON2, forward
+			controls.game_controls[1] &= ~0x20;
+			break;
+		case SDLK_DOWN:
+        		controls.game_controls[0] &= ~0x10; // VON2, backward
+			controls.game_controls[1] &= ~0x10;
+			break;
+		case SDLK_LEFT:
+        		controls.game_controls[0] &= ~0x10; // VON2, turn left
+			controls.game_controls[1] &= ~0x20;
+			break;
+		case SDLK_RIGHT:
+        		controls.game_controls[0] &= ~0x20; // VON2, turn right
+			controls.game_controls[1] &= ~0x10;
+			break;
+
 	        case SDLK_F12:
-	        m3_config.layer_enable ^= 1;
-	        break;
+		        m3_config.layer_enable ^= 1;
+		        break;
 	        case SDLK_F11:
-	        m3_config.layer_enable ^= 2;
-	        break;
+		        m3_config.layer_enable ^= 2;
+		        break;
 	        case SDLK_F10:
-	        m3_config.layer_enable ^= 4;
-	        break;
+		        m3_config.layer_enable ^= 4;
+		        break;
 	        case SDLK_F9:
-	        m3_config.layer_enable ^= 8;
-	        break;
+		        m3_config.layer_enable ^= 8;
+		        break;
 	        case SDLK_F8:
-	        m3_config.layer_enable = 0xF;
-	        break;
+		        m3_config.layer_enable = 0xF;
+		        break;
 	        case SDLK_F5:
-	        strncpy(fname, m3_config.game_id, 8);
-	        fname[8] = '\0';
-	        strcat(fname, ".sta");
-	        m3_save_state(fname);
-	        break;
+		        strncpy(fname, m3_config.game_id, 8);
+		        fname[8] = '\0';
+		        strcat(fname, ".sta");
+		        m3_save_state(fname);
+		        break;
 	        case SDLK_F7:
-	        strncpy(fname, m3_config.game_id, 8);
-	        fname[8] = '\0';
-	        strcat(fname, ".sta");
-	        m3_load_state(fname);
-	        break;
-	        case SDLK_F1: // Test
-	        controls.system_controls[0] &= ~0x04;
-	        controls.system_controls[1] &= ~0x04;
-	        break;
-	        case SDLK_F2:  // Service
-	        controls.system_controls[0] &= ~0x08;
-	        controls.system_controls[1] &= ~0x80;
-	        break;
-	        case SDLK_F3: // Start
-	        controls.system_controls[0] &= ~0x10;
-	        break;
-	        case SDLK_F4: // Coin #1
-	        controls.system_controls[0] &= ~0x01;
-	        break;
-	        }
-	}
-	else
-	{
-	        switch (keysym)
-	        {
-	        case 0x41:  // A
-	        controls.game_controls[0] |= 0x01;
-	        break;
-	        case 0x53:  // S
-	        controls.game_controls[0] |= 0x02;
-	        break;
-	        case 0x44:  // D
-	        controls.game_controls[0] |= 0x04;
-	        break;
-	        case 0x46:  // F
-	        controls.game_controls[0] |= 0x08;
-	        break;
-	        case 0x47:  // G
-	        controls.game_controls[0] |= 0x80;
-	        break;
-	        case 0x48:  // H
-	        controls.game_controls[0] |= 0x40;
-	        break;
-	        case SDLK_F1:
-	        controls.system_controls[0] |= 0x04;
-	        controls.system_controls[1] |= 0x04;
-	        break;
-	        case SDLK_F2:
-	        controls.system_controls[0] |= 0x08;
-	        controls.system_controls[1] |= 0x80;
-	        break;
-	        case SDLK_F3:
-	        controls.system_controls[0] |= 0x10;
-	        break;
-	        case SDLK_F4:
-	        controls.system_controls[0] |= 0x01;
-	        break;
+		        strncpy(fname, m3_config.game_id, 8);
+		        fname[8] = '\0';
+		        strcat(fname, ".sta");
+		        m3_load_state(fname);
+		        break;
+
+		// mame/hotrod-compatible keys
+	        case SDLK_F2: // Test
+		        controls.system_controls[0] &= ~0x04;
+		        controls.system_controls[1] &= ~0x04;
+		        break;
+	        case '9':  // Service
+		        controls.system_controls[0] &= ~0x08;
+		        controls.system_controls[1] &= ~0x80;
+		        break;
+	        case '1': // Start
+		        controls.system_controls[0] &= ~0x10;
+		        break;
+	        case '5': // Coin #1
+		        controls.system_controls[0] &= ~0x01;
+		        break;
 	        }
 	}
 	return 0;
