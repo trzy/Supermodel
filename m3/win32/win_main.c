@@ -190,11 +190,6 @@ void osd_error(CHAR * string)
 	/* revert to plain GUI. */
 }
 
-OSD_CONTROLS * osd_input_update_controls(void)
-{
-    return &controls;
-}
-
 static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     CHAR    fname[13];
