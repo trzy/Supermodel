@@ -375,6 +375,9 @@ static void draw_model_be(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
@@ -389,6 +392,8 @@ static void draw_model_be(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -547,6 +552,9 @@ static void draw_model_be(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_TRIANGLES);
             for (i = 0; i < 3; i++)
@@ -561,6 +569,8 @@ static void draw_model_be(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -776,6 +786,9 @@ static void draw_model_le(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
@@ -790,6 +803,8 @@ static void draw_model_le(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -948,6 +963,9 @@ static void draw_model_le(UINT8 *buf)
             if (!tex_enable)
                 glDisable(GL_TEXTURE_2D);
 
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_TRIANGLES);
             for (i = 0; i < 3; i++)
@@ -962,6 +980,8 @@ static void draw_model_le(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+			glDisable(GL_BLEND);
 
             if (!tex_enable)
                 glEnable(GL_TEXTURE_2D);
@@ -1147,66 +1167,79 @@ static void draw_block(UINT8 *block)
 
 static void draw_scene(void)
 {
-    UINT32  i, j;
-    BOOL    stop;
+    UINT32 index = 0;
+	UINT32 next, link;
+	UINT n = 0;
 
-    /*
-     * Draw each major node
-     */
+	do
+	{
+		next = GETWORDLE(&culling_ram_8e[index + 1 * 4]);
+		link = GETWORDLE(&culling_ram_8e[index + 2 * 4]);
 
-    i = 0;
-    stop = 0;
-    do
-    {
-//        /*
-		// DEBUG
-		message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
-		i,
-		GETWORDLE(&culling_ram_8e[i + 0]),
-		GETWORDLE(&culling_ram_8e[i + 4]),
-		GETWORDLE(&culling_ram_8e[i + 8])
-		);
-//        */
+		//scene_matrix = GETWORDLE(&culling_ram_8e[index + 22 * 4]);
+		//scene_fp_param = GETWORDLE(&culling_ram_8e[index + 23 * 4]);
 
-        j = GETWORDLE(&culling_ram_8e[i + 8]);  // get address of 10-word block
-		j = (j & 0xffff) * 4;
-        if (j == 0) // culling RAM probably hasn't been set up yet
-            break;
+		n++;
 
-        i = GETWORDLE(&culling_ram_8e[i + 4]);  // get address of next block
-        if (i == 0x01000000)                    // 01000000 == STOP
-			stop = TRUE;
-    	i = (i & 0xffff) * 4;
+		if(n == 1 && (next & 0x0000FFFF) == 0)
+			break;
 
-        draw_block(&culling_ram_8e[j]);
-    }
-    while (!stop);
+		if(link & 0x800000 && !(link & 0xFF000000))
+			draw_block(&culling_ram_8e[(link & 0x3FFFF) * 4]);
 
-	/*
-	// DEBUG
-	message(0, "done");
-	*/
+		index = (next & 0x3FFFF) * 4;
+
+	} while(next & 0x800000);
 }
 
 /******************************************************************/
 /* Texture Drawing                                                */
 /******************************************************************/
 
-static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
+static const INT	decode[64] =
 {
-    static const INT    decode[64] = 
-						{
-							 0, 1, 4, 5, 8, 9,12,13,
-							 2, 3, 6, 7,10,11,14,15,
-							16,17,20,21,24,25,28,29,
-							18,19,22,23,26,27,30,31,
-							32,33,36,37,40,41,44,45,
-							34,35,38,39,42,43,46,47,
-							48,49,52,53,56,57,60,61,
-							50,51,54,55,58,59,62,63
-						};
-    UINT    xi, yi, pixel_offs, rgb16;
+	 0, 1, 4, 5, 8, 9,12,13,
+	 2, 3, 6, 7,10,11,14,15,
+	16,17,20,21,24,25,28,29,
+	18,19,22,23,26,27,30,31,
+	32,33,36,37,40,41,44,45,
+	34,35,38,39,42,43,46,47,
+	48,49,52,53,56,57,60,61,
+	50,51,54,55,58,59,62,63
+};
+
+static void draw_texture_tile_8(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
+{
+    UINT    xi, yi, pixel_offs, lum8;
     GLbyte  r, g, b;
+
+	for (yi = 0; yi < 8; yi++)
+	{
+		for (xi = 0; xi < 8; xi++)
+		{
+            if (little_endian)
+            {
+                pixel_offs = decode[(yi * 8 + xi) ^ (8|1)]; // (yi ^ 1) * 8 + (xi ^ 1)
+                lum8 = buf[pixel_offs];
+            }
+            else
+            {
+                pixel_offs = decode[yi * 8 + xi];
+                lum8 = buf[pixel_offs + 0];
+            }
+
+            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 0] = lum8;
+            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 1] = lum8;
+            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 2] = lum8;
+            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = 0xFF;
+        }
+    }
+}
+
+static void draw_texture_tile_16(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
+{
+    UINT    xi, yi, pixel_offs, rgb16;
+    GLbyte  r, g, b, a;
 
 	for (yi = 0; yi < 8; yi++)
 	{
@@ -1236,6 +1269,14 @@ static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_en
 			b = (rgb16 & 0x1f) << 3;
 			g = ((rgb16 >> 5) & 0x1f) << 3;
 			r = ((rgb16 >> 10) & 0x1f) << 3;
+			a = (rgb16 & 0x8000) ? 0x00 : 0xFF;
+
+			/*
+			b = (rgb16 & 0xF) << 3;
+			g = ((rgb16 >> 4) & 0xF) << 3;
+			r = ((rgb16 >> 8) & 0xF) << 3;
+			a = (rgb16 & 0xF000) ? 0xFF : 0x00;
+			*/
 
 			/*
 			 * Write R, G, B, and alpha. On Model 3, an alpha bit of 1
@@ -1245,12 +1286,12 @@ static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_en
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 0] = r;
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 1] = g;
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 2] = b;
-            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = (rgb16 & 0x8000) ? 0x00 : 0xff;
+            texture_buffer[((y + yi) * w + (x + xi)) * 4 + 3] = a;
         }
     }
 }
 
-static void draw_texture(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
+static void draw_texture_8(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
 {
     UINT    xi, yi;
 
@@ -1258,8 +1299,22 @@ static void draw_texture(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
 	{
 		for (xi = 0; xi < w * 8; xi += 8)
 		{
-            draw_texture_tile(xi, yi, buf, w * 8, little_endian);
-            buf += 8 * 8 * 2;   // each texture tile is 8x8 and 16-bit color
+            draw_texture_tile_8(xi, yi, buf, w * 8, little_endian);
+            buf += 8 * 8;	// each texture tile is 8x8 and 8-bit color
+		}
+	}
+}
+
+static void draw_texture_16(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
+{
+    UINT    xi, yi;
+
+	for (yi = 0; yi < h * 8; yi += 8)
+	{
+		for (xi = 0; xi < w * 8; xi += 8)
+		{
+            draw_texture_tile_16(xi, yi, buf, w * 8, little_endian);
+            buf += 8 * 8 * 2;	// each texture tile is 8x8 and 16-bit color
 		}
 	}
 }
@@ -1306,11 +1361,13 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
      * Render the texture into the texture buffer
      */
 
-    if (((header & 0x0f000000) != 0x02000000) &&    // only render non-mipmap textures
-		((header & 0x00800000) == 0x00800000))		// only render 16-bit textures
-        draw_texture(tiles_x, tiles_y, src, little_endian);
+    if ((header & 0x0f000000) == 0x02000000)
+		return;
+
+	if (header & 0x00800000)
+        draw_texture_16(tiles_x, tiles_y, src, little_endian);
 	else
-        return;
+		draw_texture_8(tiles_x, tiles_y, src, little_endian);
 
     /*
      * Get a texture ID for this texture and set its properties, then upload
@@ -1321,8 +1378,8 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB5_A1, tiles_x * 8, tiles_y * 8, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_buffer);
 
     /*
@@ -1418,4 +1475,3 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     polygon_ram = polygon_ram_ptr;
     vrom = vrom_ptr;
 }
-
