@@ -176,6 +176,13 @@ void _log_init(char * path)
 
 static UINT8 m3_ppc_read_8(UINT32 a)
 {
+#if 0   // TEMP: some VF3 debug-related stuff
+    if (a == 0x102400)
+        return (ram[a] | 0x10);
+    if (a == 0x100087)
+        return (ram[a] | 0x20);
+#endif
+
     /*
      * RAM and ROM tested for first for speed
      */
@@ -255,6 +262,13 @@ static UINT16 m3_ppc_read_16(UINT32 a)
 
 static UINT32 m3_ppc_read_32(UINT32 a)
 {
+#if 0
+    if (a == 0x102400)
+        return (BSWAP32(*(UINT32 *) &ram[a]) | 0x10000000);
+    if (a == 0x100084)
+        return (BSWAP32(*(UINT32 *) &ram[a]) | 0x00000020);
+#endif
+
     /*
      * RAM and ROM tested for first for speed
      */
@@ -466,6 +480,10 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
 
 static void m3_ppc_write_32(UINT32 a, UINT32 d)
 {
+    if (a == 0x100060)
+    {
+        LOG("model3.log", "%08X = %08X @ PC=%08X\n", a, d, PPC_PC);
+    }
     /*
      * RAM tested for first for speed
      */
@@ -630,7 +648,8 @@ static void m3_ppc_write_64(UINT32 a, UINT64 d)
  | IRQ3 (0x08)        Tile Generator                  |
  | IRQ4 (0x10)        Network Board                   |
  | IRQ5 (0x20)        Unused ?                        |
- | IRQ6 (0x40)        Unused ?                        |
+ | IRQ6 (0x40)        Sound-related (see Scud Race    |
+ |                    routine at 0x1DFC)              |
  | IRQ7 (0x80)        Sound Request                   |
  +----------------------------------------------------+
 */
@@ -1048,6 +1067,8 @@ BOOL m3_load_state(CHAR *file)
 /* Machine Execution Loop                                         */
 /******************************************************************/
 
+UINT    m3_irq_bit = 0; // debug
+
 void m3_run_frame(void)
 {
     /*
@@ -1070,7 +1091,8 @@ void m3_run_frame(void)
      * Generate interrupts for this frame and run the VBlank
      */
 
-    m3_add_irq(2/*m3_irq_enable*/);
+//    m3_add_irq(2/*m3_irq_enable*/);
+    m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
     ppc_run(100000);   
 //    m3_remove_irq(0x60);
@@ -1154,7 +1176,7 @@ typedef struct
 
 static ROMSET m3_rom_list[] =
 {
-#include "ROM_LIST.H"
+#include "rom_list.h"
 };
 
 /*
@@ -1430,6 +1452,10 @@ BOOL m3_load_rom(CHAR * id)
 
     if (!stricmp(id, "VF3"))
     {
+//        *(UINT32 *)&crom[0x710000 + 0x47C8] = BSWAP32(0x000076B4);
+        *(UINT32 *)&crom[0x710000 + 0x47CC] = BSWAP32(0x00007730);
+
+        
 
         *(UINT32 *)&crom[0x710000 + 0x1C48] = BSWAP32(0x60000000);
         *(UINT32 *)&crom[0x710000 + 0x1C20] = BSWAP32(0x60000000);
@@ -1481,7 +1507,7 @@ BOOL m3_load_rom(CHAR * id)
 		*(UINT8  *)&crom[0x787B30] = 0x00;
 //        *(UINT32 *)&crom[0x741A20] = 0x00000060;    // Speed hack (causes bad textures!!)
 
-	*(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);	// allows game to start
+        *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);  // allows game to start
 	}
     else if (!stricmp(id, "SCUDE"))
     {
@@ -1495,7 +1521,7 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT8  *)&crom[0x787B56] = 0x00;          // Link ID: 00 = single, 01 = master, 02 = slave
         *(UINT8  *)&crom[0x787B50] = 0x01;          // country (1=USA)
 
-	*(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);
+        *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);
     }
     else if (!stricmp(id, "VON2"))
     {
