@@ -153,7 +153,8 @@ static void draw_model_be(UINT8 *buf)
         GLfloat x, y, z;
         UINT    uv;
     }       v[4], prev_v[4];    
-    UINT    i, stop, tex_w, tex_h, u_base, v_base, u_coord, v_coord;    
+    UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base, u_coord,
+            v_coord;
 
     do
     {
@@ -170,6 +171,9 @@ static void draw_model_be(UINT8 *buf)
         /*
          * Draw
          */
+
+        glColor3ub(buf[4*4+0], buf[4*4+1], buf[4*4+2]);
+        tex_enable = buf[6*4+0] & 0x04; // texture enable flag
 
         stop = buf[1*4+3] & 4;  // last poly?
         if (buf[0*4+3] & 0x40)  // quad
@@ -338,6 +342,9 @@ static void draw_model_be(UINT8 *buf)
             for (i = 0; i < 4; i++) // save all of these vertices
                 prev_v[i] = v[i];
 
+            if (!tex_enable)
+                glDisable(GL_TEXTURE_2D);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
@@ -352,6 +359,9 @@ static void draw_model_be(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+            if (!tex_enable)
+                glEnable(GL_TEXTURE_2D);
         }
         else                // triangle
         {
@@ -504,6 +514,8 @@ static void draw_model_be(UINT8 *buf)
             for (i = 0; i < 3; i++) // save all of these vertices
                 prev_v[i] = v[i];
 
+            if (!tex_enable)
+                glDisable(GL_TEXTURE_2D);
 
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_TRIANGLES);
@@ -519,6 +531,9 @@ static void draw_model_be(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+            if (!tex_enable)
+                glEnable(GL_TEXTURE_2D);
         }
     }
     while (!stop);
@@ -537,7 +552,8 @@ static void draw_model_le(UINT8 *buf)
         GLfloat x, y, z;
         UINT    uv;
     }       v[4], prev_v[4];    
-    UINT    i, stop, tex_w, tex_h, u_base, v_base, u_coord, v_coord;    
+    UINT    i, stop, tex_enable, tex_w, tex_h, u_base, v_base, u_coord,
+            v_coord;
 
     do
     {
@@ -554,6 +570,9 @@ static void draw_model_le(UINT8 *buf)
         /*
          * Draw
          */
+
+        glColor3ub(buf[4*4+3], buf[4*4+2], buf[4*4+1]);
+        tex_enable = buf[6*4+3] & 0x04; // texture enable flag
 
         stop = buf[1*4+0] & 4;  // last poly?
         if (buf[0*4+0] & 0x40)  // quad
@@ -722,6 +741,9 @@ static void draw_model_le(UINT8 *buf)
             for (i = 0; i < 4; i++) // save all of these vertices
                 prev_v[i] = v[i];
 
+            if (!tex_enable)
+                glDisable(GL_TEXTURE_2D);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_QUADS);
             for (i = 0; i < 4; i++)
@@ -736,6 +758,9 @@ static void draw_model_le(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+            if (!tex_enable)
+                glEnable(GL_TEXTURE_2D);
         }
         else                // triangle
         {
@@ -888,6 +913,9 @@ static void draw_model_le(UINT8 *buf)
             for (i = 0; i < 3; i++) // save all of these vertices
                 prev_v[i] = v[i];
 
+            if (!tex_enable)
+                glDisable(GL_TEXTURE_2D);
+
             glBindTexture(GL_TEXTURE_2D, texture_grid[(v_base / 32) * 64 + (u_base / 32)]);
             glBegin(GL_TRIANGLES);
             for (i = 0; i < 3; i++)
@@ -902,6 +930,9 @@ static void draw_model_le(UINT8 *buf)
                 glVertex3f(v[i].x, v[i].y, v[i].z);
             }
             glEnd();
+
+            if (!tex_enable)
+                glEnable(GL_TEXTURE_2D);
         }
     }
     while (!stop);
