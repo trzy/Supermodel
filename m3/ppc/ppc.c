@@ -831,7 +831,7 @@ static void ppc_addex(u32 op){
 
 	if(op & _OVE)
 	{
-		if(ADD_V(temp, rb, c) || ADD_V(R(t), ra, temp))
+        if(ADD_V(R(t), ra, rb))
 			XER |= XER_SO | XER_OV;
 		else
 			XER &= ~XER_OV;
@@ -897,10 +897,16 @@ static void ppc_addmex(u32 op){
 	u32 ra = R(RA);
 	u32 d = RT;
 	u32 c = (XER >> 29) & 1;
+    u32 temp;
 
-	R(d) = ra + (c - 1);
+    temp = ra + c;
+    R(d) = temp + -1;
 
-	SET_ADD_C(R(d), ra, (c - 1));
+    if (ADD_C(temp, ra, c) || ADD_C(R(d), temp, -1))
+        XER |= XER_CA;
+    else
+        XER &= ~XER_CA;
+
 	SET_ADD_V(R(d), ra, (c - 1));
 	SET_ICR0(R(d));
 }
