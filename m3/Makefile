@@ -17,10 +17,10 @@ OBJ_GL_LIBS = OpenGL32.lib GLu32.lib
 #
 
 OBJ_DIR = obj
-OBJ = $(OBJ_DIR)/disasm.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/tilegen.obj $(OBJ_DIR)/win_input.obj $(OBJ_DIR)/win_main.obj $(OBJ_DIR)/bridge.obj $(OBJ_DIR)/controls.obj $(OBJ_DIR)/dma.obj $(OBJ_DIR)/dsb1.obj $(OBJ_DIR)/eeprom.obj $(OBJ_DIR)/r3d.obj $(OBJ_DIR)/rtc.obj $(OBJ_DIR)/scsi.obj $(OBJ_DIR)/model3.obj $(OBJ_DIR)/render.obj
+OBJ = $(OBJ_DIR)/cfgparse.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/file.obj $(OBJ_DIR)/disasm.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/tilegen.obj $(OBJ_DIR)/win_input.obj $(OBJ_DIR)/win_main.obj $(OBJ_DIR)/bridge.obj $(OBJ_DIR)/controls.obj $(OBJ_DIR)/dma.obj $(OBJ_DIR)/dsb1.obj $(OBJ_DIR)/eeprom.obj $(OBJ_DIR)/r3d.obj $(OBJ_DIR)/rtc.obj $(OBJ_DIR)/scsi.obj $(OBJ_DIR)/model3.obj $(OBJ_DIR)/render.obj
 OBJ_D3D = $(OBJ_DIR)/dx_render.obj
 OBJ_GL = $(OBJ_DIR)/win_gl.obj $(OBJ_DIR)/glrender.obj
-OBJ_MS = $(OBJ_DIR)\disasm.obj $(OBJ_DIR)\ppc.obj $(OBJ_DIR)\tilegen.obj $(OBJ_DIR)\win_input.obj $(OBJ_DIR)\win_main.obj $(OBJ_DIR)\bridge.obj $(OBJ_DIR)\controls.obj $(OBJ_DIR)\dma.obj $(OBJ_DIR)\dsb1.obj $(OBJ_DIR)\eeprom.obj $(OBJ_DIR)\r3d.obj $(OBJ_DIR)\rtc.obj $(OBJ_DIR)\scsi.obj $(OBJ_DIR)\model3.obj $(OBJ_DIR)\render.obj
+OBJ_MS = $(OBJ_DIR)\cfgparse.obj $(OBJ_DIR)\unzip.obj $(OBJ_DIR)\file.obj $(OBJ_DIR)\disasm.obj $(OBJ_DIR)\ppc.obj $(OBJ_DIR)\tilegen.obj $(OBJ_DIR)\win_input.obj $(OBJ_DIR)\win_main.obj $(OBJ_DIR)\bridge.obj $(OBJ_DIR)\controls.obj $(OBJ_DIR)\dma.obj $(OBJ_DIR)\dsb1.obj $(OBJ_DIR)\eeprom.obj $(OBJ_DIR)\r3d.obj $(OBJ_DIR)\rtc.obj $(OBJ_DIR)\scsi.obj $(OBJ_DIR)\model3.obj $(OBJ_DIR)\render.obj
 OBJ_D3D_MS = $(OBJ_DIR)\dx_render.obj
 OBJ_GL_MS = $(OBJ_DIR)\win_gl.obj $(OBJ_DIR)\glrender.obj 
 
@@ -52,7 +52,13 @@ $(OBJ_DIR)/%.obj:	osd_common/%.c osd_common/%.h
 	$(CC) osd_common\$(*F).c $(CFLAGS) /Fo$(OBJ_DIR)\$(*F).obj
 	
 $(OBJ_DIR)/%.obj:	osd_common/%.c
-	$(CC) osd_common\$(*F).c $(CFLAGS) /Fo$(OBJ_DIR)\$(*F).obj	
+	$(CC) osd_common\$(*F).c $(CFLAGS) /Fo$(OBJ_DIR)\$(*F).obj
+
+$(OBJ_DIR)/%.obj:	unzip/%.c
+	$(CC) unzip\$(*F).c $(CFLAGS) /Fo$(OBJ_DIR)\$(*F).obj
+
+$(OBJ_DIR)/%.obj:	win32/%.c
+	$(CC) win32\$(*F).c $(CFLAGS) /Fo$(OBJ_DIR)\$(*F).obj
 	
 $(OBJ_DIR)/%.obj:	win32/%.c
 	$(CC) win32\$(*F).c $(CFLAGS) /Fo$(OBJ_DIR)\$(*F).obj
