@@ -48,6 +48,8 @@ static POLYGON_LIST polygon_list[32768];
 static LPDIRECT3DTEXTURE9	texture[4096];
 static short texture_table[2][64*32];
 
+static LPD3DXMATRIXSTACK		matrix_stack;
+
 static D3DFORMAT supported_formats[] = { D3DFMT_A1R5G5B5,
 										 D3DFMT_A8R8G8B8,
 										 D3DFMT_A8B8G8R8 };
@@ -61,6 +63,8 @@ static UINT32* list_ram;	// Display List ram at 0x8E000000
 static UINT32* cull_ram;	// Culling ram at 0x8C000000
 static UINT32* poly_ram;	// Polygon ram at 0x98000000
 static UINT32* vrom;		// VROM
+
+static UINT32 matrix_start;
 
 static void traverse_node(UINT32*);
 static void render_scene(void);
@@ -223,8 +227,6 @@ void osd_renderer_update_frame(void)
 	D3DXMatrixPerspectiveFovLH( &projection, D3DXToRadian(30.0f), 496.0f / 384.0f, 0.1f, 100000.0f );
 	D3DXMatrixIdentity( &world );
 	D3DXMatrixIdentity( &view );
-	//D3DXMatrixScaling( &view, 1.5f, 1.5f, 1.0f );
-
 
 	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
 
@@ -251,7 +253,7 @@ void osd_renderer_update_frame(void)
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-
+	
 #if 0
 	IDirect3DDevice9_SetRenderState( device, D3DRS_FILLMODE, D3DFILL_WIREFRAME );
 #endif
@@ -738,29 +740,26 @@ static void render_model_vrom(UINT32 *src)
 	}
 }
 
-static void load_matrix(int address)
+static void load_matrix(int address, D3DMATRIX *matrix)
 {
-	D3DMATRIX matrix;
-	int index = 0x2000 + (address * 12);	// FIXME: Is the base fixed ?
+	int index = 0x2000 + (address * 12);
 
-	matrix._11 = *(float*)(&list_ram[index + 3]);
-	matrix._12 = *(float*)(&list_ram[index + 6]);
-	matrix._13 = *(float*)(&list_ram[index + 9]);
-	matrix._21 = *(float*)(&list_ram[index + 4]);
-	matrix._22 = *(float*)(&list_ram[index + 7]);
-	matrix._23 = *(float*)(&list_ram[index + 10]);
-	matrix._31 = *(float*)(&list_ram[index + 5]);
-	matrix._32 = *(float*)(&list_ram[index + 8]);
-	matrix._33 = *(float*)(&list_ram[index + 11]);
-	matrix._41 = *(float*)(&list_ram[index + 0]);
-	matrix._42 = *(float*)(&list_ram[index + 1]);
-	matrix._43 = *(float*)(&list_ram[index + 2]);
-	matrix._14 = 0.0f;
-	matrix._24 = 0.0f;
-	matrix._34 = 0.0f;
-	matrix._44 = 1.0f;
-
-	IDirect3DDevice9_SetTransform( device, D3DTS_WORLD, &matrix );
+	matrix->_11 = *(float*)(&list_ram[index + 3]);
+	matrix->_12 = *(float*)(&list_ram[index + 6]);
+	matrix->_13 = *(float*)(&list_ram[index + 9]);
+	matrix->_21 = *(float*)(&list_ram[index + 4]);
+	matrix->_22 = *(float*)(&list_ram[index + 7]);
+	matrix->_23 = *(float*)(&list_ram[index + 10]);
+	matrix->_31 = *(float*)(&list_ram[index + 5]);
+	matrix->_32 = *(float*)(&list_ram[index + 8]);
+	matrix->_33 = *(float*)(&list_ram[index + 11]);
+	matrix->_41 = *(float*)(&list_ram[index + 0]);
+	matrix->_42 = *(float*)(&list_ram[index + 1]);
+	matrix->_43 = *(float*)(&list_ram[index + 2]);
+	matrix->_14 = 0.0f;
+	matrix->_24 = 0.0f;
+	matrix->_34 = 0.0f;
+	matrix->_44 = 1.0f;
 }
 
 static void traverse_list(UINT32* list)
@@ -776,7 +775,7 @@ static void traverse_list(UINT32* list)
 			return;
 
 		// Check if this is the final node of the list
-		if(type == 0x2)
+		if(type == 0x2 || type != 0)
 			end = 1;
 
 		if(link & 0x800000) {
@@ -793,20 +792,24 @@ static void traverse_node(UINT32* node_ram)
 	int i;
 	float x, y, z;
 	UINT32 matrix_address = node_ram[0x3];
-	D3DMATRIX matrix;
+	D3DMATRIX matrix, *world_matrix;
+
+	matrix_stack->lpVtbl->Push( matrix_stack );
 
 	if(((matrix_address >> 24) & 0xFF) == 0x20) {
-		load_matrix(matrix_address & 0x7FFFFF);
+		load_matrix(matrix_address & 0x7FFFFF, &matrix);
+		matrix_stack->lpVtbl->MultMatrix( matrix_stack, &matrix );
 	}
 
-	// This is some kind of position. 
 	x = *(float*)(&node_ram[0x4]);
 	y = *(float*)(&node_ram[0x5]);
 	z = *(float*)(&node_ram[0x6]);
+	matrix_stack->lpVtbl->TranslateLocal( matrix_stack, x, y, z );
+
+	world_matrix = matrix_stack->lpVtbl->GetTop( matrix_stack );
+	IDirect3DDevice9_SetTransform( device, D3DTS_WORLD, world_matrix );
 
 	// Check both links
-	// TODO: Scud Race has some special nodes which are bigger
-	//       What are the last two words for ?
 	for( i=0; i<2; i++) {
 		UINT32 link = node_ram[0x7 + i];
 		int type = (link >> 24) & 0xFF;
@@ -842,25 +845,40 @@ static void traverse_node(UINT32* node_ram)
 			}
 		}
 	}
+	matrix_stack->lpVtbl->Pop( matrix_stack );
+}
+
+static void traverse_main_tree(UINT32 *node_ram)
+{
+	int index = 0;
+	
+	UINT32 next = node_ram[index + 1];
+	UINT32 link = node_ram[index + 2];
+
+	// Go to next tree node if valid link
+	if((next & 0x800000) != 0) {
+		traverse_main_tree( &list_ram[next & 0x7FFFFF] );
+	}
+		
+	// Test for valid link
+	if(link & 0x800000 && ((link >> 24) & 0xFF) == 0) {
+		traverse_node( &list_ram[link & 0x7FFFFF] );
+	}
 }
 
 static void render_scene(void)
 {
 	int end = 0;
 	int index = 0;
-	do {
-		UINT32 next = list_ram[index + 1];
-		UINT32 link = list_ram[index + 2];
-		
-		// Test for valid link
-		if(link & 0x800000 && ((link >> 24) & 0xFF) == 0) {
-			traverse_node( &list_ram[link & 0x7FFFFF] );
-		}
+	HRESULT hr;
 
-		// Check for end
-		if((next & 0x800000) == 0)
-			end = 1;
+	hr = D3DXCreateMatrixStack( 0, &matrix_stack );
+	if(FAILED(hr))
+		osd_error("D3DXCreateMatrixStack failed.");
 
-		index = next & 0x7FFFFF;
-	} while(end == 0);
+	matrix_stack->lpVtbl->LoadIdentity( matrix_stack );
+
+	traverse_main_tree( &list_ram[0] );
+
+	matrix_stack->lpVtbl->Release( matrix_stack );
 }
