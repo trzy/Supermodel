@@ -25,6 +25,8 @@
 
 #include "model3.h"
 
+#define LOG_MODEL_ADDR  0   // logs model addresses to models.log
+
 /******************************************************************/
 /* Useful Macros                                                  */
 /******************************************************************/
@@ -93,6 +95,84 @@ static INT      coord_matrix[4*4] =     // coordinate system matrix
 static void draw_block(UINT32 *);
 
 /******************************************************************/
+/* TEMPORARY Model Tracking Code                                  */
+/*                                                                */
+/* This code builds a list of VROM model addresses as they are    */
+/* referenced.                                                    */
+/******************************************************************/
+
+#if LOG_MODEL_ADDR
+
+static struct model_addr
+{
+    UINT32              addr;       // model address in VROM
+    INT                 num_polys;  // number of polygons in model
+    struct model_addr   *next;      // next in list
+} *model_addr_list = NULL;
+
+static INT count_polys(UINT32 *mdl)
+{
+    UINT32  link_data, mask;
+    INT     num_polys = 0, num_verts, i, stop;
+
+    do
+    {
+        stop = BSWAP32(mdl[1]) & 4;     // get stop bit
+        link_data = BSWAP32(mdl[0]);    // link data
+
+        /*
+         * Count how many vertices the polygon has by subtracting the number
+         * of vertices used from the previous polygon from 4 (quad) or 3 (tri)
+         */
+
+        num_verts = (link_data & 0x40) ? 4 : 3;
+        mask = 8;
+        for (i = 0; i < 4 && num_verts; i++)
+        {
+            if ((link_data & mask))
+                --num_verts;
+            mask >>= 1;
+        }
+
+        /*
+         * Advance to next polygon
+         */
+
+        mdl += 7 + num_verts * 4;
+        ++num_polys;    // increment count
+    } while (!stop);
+
+    return num_polys;
+}
+
+static void record_model(UINT32 addr)
+{
+    struct model_addr   *l;
+
+    /*
+     * Search for this entry -- if already in the list, exit
+    for (l = model_addr_list; l != NULL; l = l->next)
+    {
+        if (addr == l->addr)
+            return;
+    }
+
+    /*
+     * Add new entry
+     */
+
+    l = malloc(sizeof(struct model_addr));
+    if (l == NULL)
+        error("out of memory in record_model()");
+    l->addr = addr;
+    l->num_polys = count_polys((UINT32 *) &vrom[addr * 4]);
+    l->next = model_addr_list;
+    model_addr_list = l;
+}
+
+#endif
+
+/******************************************************************/
 /* Real3D Address Translation                                     */
 /******************************************************************/
 
@@ -131,7 +211,12 @@ static void draw_model(UINT32 addr)
 {
     addr &= 0x00FFFFFF;     // only lower 24 bits matter
     if (addr > 0x00100000)  // VROM 
+    {
+#if LOG_MODEL_ADDR
+        record_model(addr); // TEMP: this tracks model addresses in VROM
+#endif
         osd_renderer_draw_model((UINT32 *) &vrom[(addr & 0x00FFFFFF) * 4], addr, 0);
+    }
     else                    // polygon RAM (may actually be 4MB)
         osd_renderer_draw_model((UINT32 *) &polygon_ram[(addr & 0x0007FFFF) * 4], addr, 1);
 }
@@ -585,4 +670,28 @@ void render_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
 
 void render_shutdown(void)
 {
+#if LOG_MODEL_ADDR
+    // TEMP code to print out model list
+
+    FILE                *fp;
+    struct model_addr   *l, *next;
+
+    fp = fopen("models.log", "w");
+    if (fp == NULL)
+    {
+        printf("failed to write models.log\n");
+        return;
+    }
+
+    l = model_addr_list;
+    while (l != NULL)
+    {
+        fprintf(fp, "addr = %08X\tnum_polys = %d\n", l->addr, l->num_polys);
+        next = l->next;
+        free(l);
+        l = next;
+    }
+
+    fclose(fp);
+#endif
 }
