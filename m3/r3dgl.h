@@ -28,6 +28,6 @@
 extern void r3dgl_upload_texture(UINT8 *);
 
 extern void r3dgl_update_frame(void);
-extern void r3dgl_init(UINT8 *, UINT8 *, UINT8 *);
+extern void r3dgl_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *);
 
 #endif  // INCLUDED_R3DGL_H

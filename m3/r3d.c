@@ -29,8 +29,9 @@
 /* Privates                                                       */
 /******************************************************************/
 
-static UINT8    *culling_ram;   // culling RAM (passed to r3d_init())
-static UINT8    *polygon_ram;   // polygon RAM (passed to r3d_init())
+static UINT8    *culling_ram_8e;    // culling RAM at 0x8E000000
+static UINT8    *culling_ram_8c;    // culling RAM at 0x8C000000
+static UINT8    *polygon_ram;       // polygon RAM at 0x98000000
 
 static UINT8    texture_buffer_ram[1*1024*1024];
 
@@ -39,18 +40,22 @@ static UINT8    texture_buffer_ram[1*1024*1024];
 /******************************************************************/
 
 /*
- * void r3d_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr);
+ * void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
+ *               UINT8 *polygon_ram_ptr);
  *
  * Initializes the Real3D graphics emulation.
  *
  * Parameters:
- *      culling_ram_ptr = Pointer to culling RAM.
- *      polygon_ram_ptr = Pointer to polygon RAM.
+ *      culling_ram_8e_ptr = Pointer to 0x8E000000 culling RAM.
+ *      culling_ram_8c_ptr = Pointer to 0x8C000000 culling RAM.
+ *      polygon_ram_ptr    = Pointer to polygon RAM.
  */
 
-void r3d_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr)
+void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
+              UINT8 *polygon_ram_ptr)
 {
-    culling_ram = culling_ram_ptr;
+    culling_ram_8e = culling_ram_8e_ptr;
+    culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
 }
 
@@ -73,7 +78,8 @@ void r3d_shutdown(void)
 
 void r3d_reset(void)
 {
-    memset(culling_ram, 0, 2*1024*1024);
+    memset(culling_ram_8e, 0, 1*1024*1024);
+    memset(culling_ram_8c, 0, 1*1024*1024);
     memset(polygon_ram, 0, 1*1024*1024);
 	tap_reset();
 }
@@ -89,7 +95,8 @@ void r3d_reset(void)
 
 void r3d_save_state(FILE *fp)
 {
-    fwrite(culling_ram, sizeof(UINT8), 2*1024*1024, fp);
+    fwrite(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
+    fwrite(culling_ram_8c, sizeof(UINT8), 1*1024*1024, fp);
     fwrite(polygon_ram, sizeof(UINT8), 1*1024*1024, fp);
 }
 
@@ -104,7 +111,8 @@ void r3d_save_state(FILE *fp)
 
 void r3d_load_state(FILE *fp)
 {
-    fread(culling_ram, sizeof(UINT8), 2*1024*1024, fp);
+    fread(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
+    fread(culling_ram_8c, sizeof(UINT8), 1*1024*1024, fp);
     fread(polygon_ram, sizeof(UINT8), 1*1024*1024, fp);
 }
 
@@ -162,9 +170,14 @@ void r3d_write_32(UINT32 a, UINT32 d)
     static UINT32   last_addr;
     UINT            size_x, size_y;
 
-    if (a >= 0x8E000000 && a <= 0x8E1FFFFF)         // culling RAM
+    if (a >= 0x8E000000 && a <= 0x8E0FFFFF)         // culling RAM
     {
-        *(UINT32 *) &culling_ram[a & 0x1FFFFF] = BSWAP32(d);
+        *(UINT32 *) &culling_ram_8e[a & 0xFFFFF] = BSWAP32(d);
+        return;
+    }
+    else if (a >= 0x8C000000 && a <= 0x8C0FFFFF)    // culling RAM
+    {
+        *(UINT32 *) &culling_ram_8c[a & 0xFFFFF] = BSWAP32(d);
         return;
     }
     else if (a >= 0x98000000 && a <= 0x980FFFFF)    // polygon RAM
@@ -194,8 +207,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
 
         return;
     }
-    else if (a >= 0x98000000)   // unhandled so far -- texture RAM, etc.
+    else if (a >= 0x90000000)
     {
+        message(0, "%08X: %08X = %08X", ppc_get_reg(PPC_REG_PC), a, d);
         return;
     }
 

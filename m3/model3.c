@@ -46,18 +46,18 @@ CONFIG m3_config;
  * Model 3 Memory Regions
  */
 
-static UINT8    * ram = NULL;           // PowerPC RAM
-static UINT8    * bram = NULL;          // backup RAM
-static UINT8    * sram = NULL;          // sound RAM
-static UINT8    * vram = NULL;          // tile generator VRAM (scroll RAM)
-static UINT8    * culling_ram = NULL;   // Real3D culling RAM
-static UINT8    * polygon_ram = NULL;   // Real3D polygon RAM
-static UINT8    * _8C000000 = NULL;     // Real3D ? RAM
-static UINT8    * crom = NULL;          // CROM (all CROM memory is allocated here)
-static UINT8    * crom_bank;            // points to current 8MB CROM bank
-static UINT8    * vrom = NULL;          // video ROM
-static UINT8    * srom = NULL;          // sound ROM
-static UINT8    * drom = NULL;          // DSB1 ROM
+static UINT8    *ram = NULL;            // PowerPC RAM
+static UINT8    *bram = NULL;           // backup RAM
+static UINT8    *sram = NULL;           // sound RAM
+static UINT8    *vram = NULL;           // tile generator VRAM (scroll RAM)
+static UINT8    *culling_ram_8e = NULL; // Real3D culling RAM
+static UINT8    *culling_ram_8c = NULL; // Real3D culling RAM
+static UINT8    *polygon_ram = NULL;    // Real3D polygon RAM
+static UINT8    *crom = NULL;           // CROM (all CROM memory is allocated here)
+static UINT8    *crom_bank;             // points to current 8MB CROM bank
+static UINT8    *vrom = NULL;           // video ROM
+static UINT8    *srom = NULL;           // sound ROM
+static UINT8    *drom = NULL;           // DSB1 ROM
 
 /*
  * Other
@@ -218,11 +218,14 @@ static UINT8 m3_ppc_read_8(UINT32 a)
 
     case 0xF:
 
-        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        if ((a >= 0xF0040000 && a <= 0xF004003F) ||
+            (a >= 0xFE040000 && a <= 0xFE04003F))       // control area
             return controls_read(a);
         else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
                  (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
             return m3_sys_read_8(a);
+        else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
+            return bridge_read_config_data_8(a);
 
         break;
     }
@@ -281,7 +284,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
 
     case 0xF:
 
-        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        if ((a >= 0xF0040000 && a <= 0xF004003F) ||     // control area
+            (a >= 0xFE040000 && a <= 0xFE04003F))
         {
             return (controls_read(a + 0) << 24) |
                    (controls_read(a + 1) << 16) |
@@ -302,6 +306,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
             return tilegen_vram_read_32(a);
         else if (a >= 0xF1180000 && a <= 0xF11800FF)    // tile generator regs
             return tilegen_read_32(a);
+        else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
+            return bridge_read_config_data_32(a);
 
         switch (a)
         {
@@ -353,12 +359,14 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
 
     case 0xF:
 
-        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        if ((a >= 0xF0040000 && a <= 0xF004003F) ||     // control area
+            (a >= 0xFE040000 && a <= 0xFE04003F))       
         {
             controls_write(a, d);
             return;
         }
-        else if (a >= 0xF0080000 && a <= 0xF00800FF)    // MIDI?
+        else if ((a >= 0xF0080000 && a <= 0xF00800FF) ||
+                 (a >= 0xFE080000 && a <= 0xFE0800FF))  // MIDI?
         {
             m3_midi_write(a, d);
             return;
@@ -372,6 +380,11 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
         else if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)    // MPC105 regs
         {
             bridge_write_8(a, d);
+            return;
+        }
+        else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
+        {
+            bridge_write_config_data_8(a, d);
             return;
         }
 
@@ -401,9 +414,14 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
     {
     case 0xF:
 
-        if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF) // MPC105 regs
+        if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)         // MPC105 regs
         {
             bridge_write_16(a, d);
+            return;
+        }
+        else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
+        {
+            bridge_write_config_data_16(a, d);
             return;
         }
 
@@ -430,12 +448,6 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
     case 0x8:
     case 0x9:
 
-        if (a >= 0x8C000000 && a <= 0x8C1FFFFF)
-        {
-            *(UINT32 *) &_8C000000[a & 0x1FFFFF] = BSWAP32(d);
-            return;
-        }
-
         r3d_write_32(a, d);     // Real3D memory regions
         return;
 
@@ -458,7 +470,8 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
     case 0xF:
 
-        if (a >= 0xF0040000 && a <= 0xF004003F)         // control area
+        if ((a >= 0xF0040000 && a <= 0xF004003F) ||     // control area
+            (a >= 0xFE040000 && a <= 0xFE04003F))       
         {
             controls_write(a + 0, (UINT8) (d >> 24));
             controls_write(a + 1, (UINT8) (d >> 16));
@@ -478,7 +491,8 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             m3_sys_write_32(a, d);
             return;
         }
-        else if (a >= 0xF0140000 && a <= 0xF014003F)    // ?
+        else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // ?
             return;
         else if (a >= 0xF1000000 && a <= 0xF111FFFF)    // tile generator VRAM
         {
@@ -493,6 +507,16 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         else if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)    // MPC105 regs
         {
             bridge_write_32(a, d);
+            return;
+        }
+        else if (a >= 0xFEC00000 && a <= 0xFEDFFFFF)    // MPC106 CONFIG_ADDR
+        {
+            bridge_write_config_addr_32(a, d);
+            return;
+        }
+        else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
+        {
+            bridge_write_config_data_32(a, d);
             return;
         }
 
@@ -955,7 +979,7 @@ void m3_run_frame(void)
     m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
     ppc_run(100000);
-//    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
+    m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
 }
 
 void m3_reset(void)
@@ -984,7 +1008,7 @@ void m3_reset(void)
 	scsi_reset();
 	dma_reset();
 
-    osd_renderer_init(culling_ram, polygon_ram, vrom);
+    osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, vrom);
 
 	tilegen_reset();
 	r3d_reset();
@@ -1302,6 +1326,20 @@ BOOL m3_load_rom(CHAR * id)
 
     */
 
+    /*
+     * Patches
+     */
+
+    if (!stricmp(id, "VON2"))
+    {
+        /*
+         * Patch an annoyingly long delay loop to: xor r3,r3,r3; nop
+         */
+
+        *((UINT32 *) &crom[0x1B0]) = 0x781A637C;
+        *((UINT32 *) &crom[0x1B4]) = 0x00000060;
+    }
+
 	return(MODEL3_OKAY);
 }
 
@@ -1334,14 +1372,15 @@ void m3_shutdown(void)
 	/* free any allocated buffer */
 
     save_file("ram", ram, 8*1024*1024);
-    save_file("8e000000", culling_ram, 2*1024*1024);
+    save_file("8e000000", culling_ram_8e, 1*1024*1024);
+    save_file("8c000000", culling_ram_8c, 1*1024*1024);
     save_file("98000000", polygon_ram, 1*1024*1024);
-    save_file("8c000000", _8C000000, 2*1024*1024);
     SAFE_FREE(ram);
 	SAFE_FREE(vram);
 	SAFE_FREE(sram);
 	SAFE_FREE(bram);
-    SAFE_FREE(culling_ram);
+    SAFE_FREE(culling_ram_8e);
+    SAFE_FREE(culling_ram_8c);
     SAFE_FREE(polygon_ram);
 
 	/* dump any other buffer for debug? */
@@ -1364,9 +1403,9 @@ void m3_init(void)
     vram = (UINT8 *) malloc(2*1024*1024);
     sram = (UINT8 *) malloc(1*1024*1024);
     bram = (UINT8 *) malloc(128*1024);
-    culling_ram = (UINT8 *) malloc(2*1024*1024);
+    culling_ram_8e = (UINT8 *) malloc(1*1024*1024);
+    culling_ram_8c = (UINT8 *) malloc(1*1024*1024);
     polygon_ram = (UINT8 *) malloc(1*1024*1024);
-    _8C000000 = (UINT8 *) malloc(2*1024*1024);
 
 	/* attach m3_shutdown to atexit */
 
@@ -1411,7 +1450,7 @@ void m3_init(void)
     scsi_init(m3_ppc_read_8, m3_ppc_read_16, m3_ppc_read_32, m3_ppc_write_8, m3_ppc_write_16, m3_ppc_write_32);
 	dma_init();
     tilegen_init(vram);
-    r3d_init(culling_ram, polygon_ram);
+    r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram);
 //    scsp_init();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
     controls_init();

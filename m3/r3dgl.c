@@ -20,6 +20,29 @@
  * r3dgl.c
  *
  * An OS-independent OpenGL-based Real3D rendering engine.
+ *
+ * Address Notes:
+ *
+ *      Addresses seem to take the form: CCAAAAAA, where A is the address and
+ *      C is a command. The lower 1 or 2 bits of CC is probably part of the
+ *      address as well. Addresses are word-granular.
+ *
+ *      0x04800600  -- Draw the list at 0x800600 (8E culling RAM.)
+ *      0x040301EA  -- Draw the list at 0x0301EA (8C culling RAM.)
+ *      0x018AA963  -- Draw the model at 0x18AA963 (VROM.)
+ *      0x01010000  -- Draw the model at 0x1010000 (polygon RAM.)
+ *
+ *      Address 0x0000000 = Culling RAM @ 0x8C000000
+ *              0x0800000 = Culling RAM @ 0x8E000000
+ *              0x1000000 = Polygon RAM @ 0x98000000
+ *              0x1800000 = VROM
+ *
+ *      If we assume that 0x8C000000 is the base of the Real3D memory space as
+ *      the PowerPC sees it, then 0x0800000*4+0x8C000000=0x8E000000. However,
+ *      0x1000000*4+0x8C000000 != 0x98000000. Also, 0x88000000 on the PowerPC
+ *      side is definitely something to do with the Real3D. It seems that
+ *      the addresses in culling RAM indicate that the Real3D has an internal
+ *      address space of its own.
  */
 
 #include "model3.h"
@@ -104,9 +127,10 @@ static int OutBMP(int f, unsigned txres, unsigned tyres, unsigned char *texture)
  * Memory Regions
  */
 
-static UINT8    *culling_ram;   // pointer to Real3D culling RAM
-static UINT8    *polygon_ram;   // pointer to Real3D polygon RAM
-static UINT8    *vrom;          // pointer to VROM
+static UINT8    *culling_ram_8e;    // pointer to Real3D culling RAM
+static UINT8    *culling_ram_8c;    // pointer to Real3D culling RAM
+static UINT8    *polygon_ram;       // pointer to Real3D polygon RAM
+static UINT8    *vrom;              // pointer to VROM
 
 /*
  * Texture Mapping
@@ -119,6 +143,12 @@ static UINT8    *vrom;          // pointer to VROM
 
 static GLint    texture_grid[64*64];
 static GLbyte   texture_buffer[512*512*4];  // for 1 texture
+
+/*
+ * Function Prototypes (for forward references)
+ */
+
+static void draw_block(UINT8 *);
 
 /******************************************************************/
 /* Model Drawing                                                  */
@@ -963,28 +993,58 @@ static float get_float(UINT8 *src)
 }
 
 /*
+ * translate_r3d_address():
+ *
+ * Translates an address from the Real3D internal space into a usable pointer.
+ */
+
+static UINT8 *translate_r3d_address(UINT32 addr)
+{
+    if (addr <= 0x003FFFF)                              // 8C culling RAM
+        return &culling_ram_8c[addr * 4];
+    else if (addr >= 0x0800000 && addr <= 0x083FFFF)    // 8E culling RAM
+    {
+        addr &= 0x003FFFF;
+        return &culling_ram_8e[addr * 4];
+    }
+    else if (addr >= 0x1000000 && addr <= 0x103FFFF)    // polygon RAM
+    {
+        addr &=0x003FFFF;
+        return &polygon_ram[addr * 4];
+    }
+    else if (addr >= 0x1800000 && addr <= 0x1FFFFFF)    // VROM
+    {
+        addr &= 0x07FFFFF;
+        return &vrom[addr * 4];
+    }
+
+    osd_error("Unable to translate Real3D address: %08X\n", addr);
+    return NULL;
+}
+
+/*
  * get_matrix():
  *
- * Fetches a matrix from culling RAM and converts it to OpenGL form.
+ * Fetches a matrix from 8E culling RAM and converts it to OpenGL form.
  */
 
 #define CMINDEX(y, x)	(x*4+y)
 static void get_matrix(GLfloat *dest, UINT32 src)
 {
-    dest[CMINDEX(0, 0)] = get_float(&culling_ram[src + 3*4]);
-    dest[CMINDEX(0, 1)] = get_float(&culling_ram[src + 4*4]);
-    dest[CMINDEX(0, 2)] = get_float(&culling_ram[src + 5*4]);
-    dest[CMINDEX(0, 3)] = get_float(&culling_ram[src + 0*4]);
+    dest[CMINDEX(0, 0)] = get_float(&culling_ram_8e[src + 3*4]);
+    dest[CMINDEX(0, 1)] = get_float(&culling_ram_8e[src + 4*4]);
+    dest[CMINDEX(0, 2)] = get_float(&culling_ram_8e[src + 5*4]);
+    dest[CMINDEX(0, 3)] = get_float(&culling_ram_8e[src + 0*4]);
 
-    dest[CMINDEX(1, 0)] = get_float(&culling_ram[src + 6*4]);
-    dest[CMINDEX(1, 1)] = get_float(&culling_ram[src + 7*4]);
-    dest[CMINDEX(1, 2)] = get_float(&culling_ram[src + 8*4]);
-    dest[CMINDEX(1, 3)] = get_float(&culling_ram[src + 1*4]);
+    dest[CMINDEX(1, 0)] = get_float(&culling_ram_8e[src + 6*4]);
+    dest[CMINDEX(1, 1)] = get_float(&culling_ram_8e[src + 7*4]);
+    dest[CMINDEX(1, 2)] = get_float(&culling_ram_8e[src + 8*4]);
+    dest[CMINDEX(1, 3)] = get_float(&culling_ram_8e[src + 1*4]);
 
-    dest[CMINDEX(2, 0)] = get_float(&culling_ram[src + 9*4]);
-    dest[CMINDEX(2, 1)] = get_float(&culling_ram[src + 10*4]);
-    dest[CMINDEX(2, 2)] = get_float(&culling_ram[src + 11*4]);
-    dest[CMINDEX(2, 3)] = get_float(&culling_ram[src + 2*4]);
+    dest[CMINDEX(2, 0)] = get_float(&culling_ram_8e[src + 9*4]);
+    dest[CMINDEX(2, 1)] = get_float(&culling_ram_8e[src + 10*4]);
+    dest[CMINDEX(2, 2)] = get_float(&culling_ram_8e[src + 11*4]);
+    dest[CMINDEX(2, 3)] = get_float(&culling_ram_8e[src + 2*4]);
 
     dest[CMINDEX(3, 0)] = 0.0;
     dest[CMINDEX(3, 1)] = 0.0;
@@ -993,57 +1053,85 @@ static void get_matrix(GLfloat *dest, UINT32 src)
 }
 
 /*
- * draw_models():
+ * draw_list():
  *
- * Draws the specified list of models.
+ * Processes a list. Each list element references a 10-word block.
  */
 
-static void draw_models(UINT32 list_addr)
+static void draw_list(UINT8 *list)
 {
-    GLfloat m[4*4]; // Model 3 matrix
-    UINT32  i, model_ptr_cmd, model_tab, model_addr, matrix_addr;
+    UINT32  addr;
 
-    for (i = list_addr; !(GETWORDLE(&culling_ram[i]) & 0x02000000); i += 4)   // go until a stop bit is hit (and don't draw that model)
-	{
-        /*
-         * Get address of the 10-word table
-         */
+    do
+    {
+        addr = GETWORDLE(list);
 
-        model_tab = GETWORDLE(&culling_ram[i]);
-		model_tab = (model_tab & 0xffff) * 4;
-		
-        /*
-         * Get the address of the model and the command in which the address
-         * appeared
-         */
+        if (addr == 0)  // safeguard: in case memory has not been uploaded yet
+            break;
 
-        model_ptr_cmd = GETWORDLE(&culling_ram[model_tab + 7*4]);
-		model_addr = model_ptr_cmd & 0x1fffff;
-		model_addr *= 4;
+        draw_block(translate_r3d_address(addr & 0x01FFFFFF));
+        list += 4;  // next element
+    }
+    while (!(addr & 0x02000000));
+}
 
-        /*
-         * Get the address of the matrix
-         */
+/*
+ * draw_block():
+ *
+ * Processes a 10-word block. These blocks can either reference models or
+ * lists.
+ */
 
-        matrix_addr = GETWORDLE(&culling_ram[model_tab + 3*4]) & 0xffff;
-		matrix_addr = 0x2000*4 + matrix_addr*12*4;
-								
-        /*
-         * Transform and draw
-         */
+static void draw_block(UINT8 *block)
+{
+    GLfloat m[4*4];
+    UINT32  matrix, addr;
 
-        get_matrix(m, matrix_addr);
-		glPushMatrix();                   
-		glMultMatrixf(m);					
-        
-        if ((model_ptr_cmd & 0xff800000) == 0x01000000)
-            draw_model_le(&polygon_ram[model_addr]);
-        else
-            draw_model_be(&vrom[model_addr]);
+    /*
+     * Multiply by the specified matrix. If bit 0x20000000 is not set, I
+     * presume that no matrix is to be used.
+     */
 
+    matrix = GETWORDLE(&block[3*4]);
+//    if ((matrix & 0x20000000))
+    {
+        get_matrix(m, 0x2000*4 + (matrix & 0xFFFF)*12*4);
+        glPushMatrix();
+        glMultMatrixf(m);
+    }
+
+    /*
+     * Draw a model or process a list. If the address is of the form 04XXXXXX,
+     * then the address points to a list, otherwise it points to a model.
+     */
+
+    addr = GETWORDLE(&block[7*4]);
+    switch ((addr >> 24) & 0xFE)
+    {
+    case 0x04:  // list
+        if ((addr & 0x01FFFFFF) >= 0x018000000) error("List in VROM %08X\n", addr);
+        draw_list(translate_r3d_address(addr & 0x01FFFFFF));
+        break;
+    case 0x00:  // draw model
+        if (addr != 0)  // safeguard: in case memory has not been uploaded yet
+        {
+            if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
+                draw_model_be(translate_r3d_address(addr & 0x01FFFFFF));
+            else                                    // some Real3D region...
+                draw_model_le(translate_r3d_address(addr & 0x01FFFFFF));
+        }
+        break;
+    default:
+        error("Unable to handle Real3D address: %08X\n", addr);
+        break;
+    }
+
+    /*
+     * Pop the matrix if we pushed one
+     */
+
+//    if ((matrix & 0x20000000))
         glPopMatrix();
-	}
-
 }
 
 /*
@@ -1065,17 +1153,17 @@ static void draw_scene(void)
     stop = 0;
     do
     {
-        i = GETWORDLE(&culling_ram[i + 4]); // get address of next block
-        if (i == 0x01000000)                // 01000000 == STOP
+        i = GETWORDLE(&culling_ram_8e[i + 4]);  // get address of next block
+        if (i == 0x01000000)                    // 01000000 == STOP
 			stop = TRUE;
 		i = (i & 0xffff) * 4;
         if (i == 0) // culling RAM probably hasn't been set up yet
             break;
 
-        j = GETWORDLE(&culling_ram[i + 8]); // get address of 10-word block
+        j = GETWORDLE(&culling_ram_8e[i + 8]); // get address of 10-word block
 		j = (j & 0xffff) * 4;
 
-        draw_models((GETWORDLE(&culling_ram[j + 7 * 4]) & 0xffff) * 4);
+        draw_block(&culling_ram_8e[j]);
     }
     while (!stop);
 }
@@ -1273,21 +1361,23 @@ void r3dgl_update_frame(void)
 }
 
 /*
- * void r3dgl_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
- *                 UINT8 *vrom_ptr);
+ * void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
+ *                 UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr);
  *
  * Initializes the engine by passing pointers to Real3D memory regions.
  *
  * Parameters:
- *      culling_ram_ptr = Pointer to Real3D culling RAM.
- *      polygon_ram_ptr = Pointer to Real3D polygon RAM.
- *      vrom_ptr        = Pointer to VROM.
+ *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
+ *      culling_ram_8c_ptr = Pointer to Real3D culling RAM at 0x8C000000.
+ *      polygon_ram_ptr    = Pointer to Real3D polygon RAM.
+ *      vrom_ptr           = Pointer to VROM.
  */
 
-void r3dgl_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
-                UINT8 *vrom_ptr)
+void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
+                UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr)
 {
-    culling_ram = culling_ram_ptr;
+    culling_ram_8e = culling_ram_8e_ptr;
+    culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
     vrom = vrom_ptr;
 }

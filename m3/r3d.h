@@ -25,7 +25,7 @@
 #ifndef INCLUDED_R3D_H
 #define INCLUDED_R3D_H
 
-extern void     r3d_init(UINT8 *, UINT8 *);
+extern void     r3d_init(UINT8 *, UINT8 *, UINT8 *);
 extern void     r3d_shutdown(void);
 extern void     r3d_reset(void);
 

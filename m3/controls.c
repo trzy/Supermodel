@@ -23,7 +23,8 @@
  */
 
 /*
- * Gun Notes:
+ * Lost World Gun Notes:
+ * ---------------------
  *
  *  MCU Command Reg = 0x24 (byte)
  *  MCU Arg Reg     = 0x28 (byte)
@@ -35,6 +36,16 @@
  *
  *  Command 0x00: Set address (in arg reg.)
  *  Command 0x87: Read gun data.
+ *
+ * Virtual On 2 Notes:
+ * -------------------
+ *
+ *  Control Area Offset 0x08:   Lever 1, LRUD??TS (T = Turbo, S = Shot Trigger)
+ *                      0x0C:   Lever 2
+ *                      0x18:   Dipswitch, bits 7-0 = DS1-8
+ *
+ * Dipswitch bit 0x20 (DS3) should be cleared otherwise some test is performed
+ * by Virtual On 2 at boot-up.
  */
 
 #include "model3.h"
@@ -104,6 +115,8 @@ void controls_reset(UINT32 flags)
     memset(controls_reg, 0xFF, 0x40);
     memset(controls_reg, 0x00, 8);
 
+    controls_reg[0x18] = 0xDF;  // clear bit 0x20 for Virtual On 2
+
     /*
      * NOTE: There will be problems if multiple flags are specified
      */
@@ -122,7 +135,6 @@ void controls_update(void)
 {
     OSD_CONTROLS    *c;
     UINT            gun_x, gun_y;
-    static          y = 383;
 
     c = osd_input_update_controls();
 
@@ -152,9 +164,9 @@ void controls_update(void)
 
     gun_y = c->gun_y[0];
 //    if (gun_y <= 272)
-        gun_y = 272 - gun_y;
+//        gun_y = 272 - gun_y;
 //    else
-    gun_x = c->gun_x[0] + 400;
+    gun_x = c->gun_x[0];// + 400;
     gun_data[0] = gun_y & 0xFF;
     gun_data[1] = (gun_y >> 8) & 7;
     gun_data[2] = gun_x & 0xFF;
