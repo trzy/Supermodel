@@ -419,6 +419,7 @@ UINT32 r3d_read_32(UINT32 a)
  */
 
 UINT32 _9C000000, _9C000004, _9C000008;
+static int texture_start_pos = 8;
 
 void r3d_write_32(UINT32 a, UINT32 d)
 {
@@ -452,6 +453,8 @@ void r3d_write_32(UINT32 a, UINT32 d)
 			if( texture_size == 0 ) {
 				texture_size = d;
 				return;
+			} else {
+				texture_start_pos = 0;
 			}
 		}
 		if (a == 0x94000004) {
@@ -474,10 +477,11 @@ void r3d_write_32(UINT32 a, UINT32 d)
 		// Upload the texture if available
 		if( texture_size != 0 ) {
 			message(0, "texture transfer: %08X, %08X", texture_size, texture_header );
-			upload_texture( texture_header, texture_size, &texture_buffer_ram[8], 1);
+			upload_texture( texture_header, texture_size, &texture_buffer_ram[texture_start_pos], 1);
 
 			texture_size = 0;
 			texture_header = 0;
+			texture_start_pos = 8;
 		}
 
         message(0, "%08X (%08X): 88000000 = %08X", PPC_PC, PPC_LR, BSWAP32(d));
@@ -493,7 +497,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
         message(0, "VROM texture header = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
     case 0x90000008:
-        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0xFFFFFF) * 4], 0);
         LOG("model3.log", "VROM1 SIZE = %08X\n", BSWAP32(d));
         message(0, "VROM texture length = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
@@ -508,7 +512,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
         message(0, "900000010 = %08X", BSWAP32(d));
         return;
     case 0x90000014:    // ?
-        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0xFFFFFF) * 4], 0);
         LOG("model3.log", "VROM2 SIZE = %08X\n", BSWAP32(d));
         message(0, "900000014 = %08X", BSWAP32(d));
         return;
