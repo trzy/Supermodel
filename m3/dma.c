@@ -75,7 +75,7 @@ static void do_dma(void)
     dest = *(UINT32 *) &dma_regs[0x04];
     len = (*(UINT32 *) &dma_regs[0x08]) * 4;
 
-    LOG("model3.log", "DMA %08X -> %08X, %X\n", src, dest, len);
+//    LOG("model3.log", "DMA %08X -> %08X, %X\n", src, dest, len);
 
     if ((dma_regs[0x0E] & 0x80))    // swap words
     {
@@ -232,7 +232,7 @@ void dma_write_8(UINT32 a, UINT8 d)
 {
     dma_regs[a & 0x1F] = d;
 
-    LOG("model3.log", "%08X: Unknown DMA write8, %08X = %02X\n", ppc_get_reg(PPC_REG_PC), a, d);
+//    LOG("model3.log", "%08X: Unknown DMA write8, %08X = %02X\n", ppc_get_reg(PPC_REG_PC), a, d);
 }
 
 /*
@@ -279,19 +279,11 @@ void dma_write_32(UINT32 a, UINT32 d)
 
         if (d == 0x20000000)
             *(UINT32 *) &dma_regs[0x14] = 0x16C311DB; // PCI Vendor and Device ID
-        else if (d >= 0x80000000 && d <= 0x80000020)
+        else if (d == 0x80000000)
         {
-            static UINT32 result[9] =
-			{
-				0x02000000, 0x02000000, 0x02000000, 0x02000000,
-				0x02000000, 0x02000000, 0x02000000, 0x02000000,
-				0x02000000
-			};
-
-			result[(a / 4) % 9] ^= rand();
-            //result[(a / 4) % 9] ^= 0x02000000;
-
-            *(UINT32 *) &dma_regs[0x14] = result[(a / 4) % 9];
+            static UINT32   result = 0x02000000;
+            result ^= 0x02000000;
+            *(UINT32 *) &dma_regs[0x14] = result;
         }
         else
             message(0, "%08X: Unknown DMA command, %08X", ppc_get_reg(PPC_REG_PC), d);
