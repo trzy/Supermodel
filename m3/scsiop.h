@@ -127,6 +127,9 @@ INSTRUCTION(invalid)
 
 void scsi_run(INT num)
 {
+    if (!scripts_exec)
+        return;
+
     while (num-- && scripts_exec)
     {
         UINT32  save_addr = REG32(0x2c);    // for debugging

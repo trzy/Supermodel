@@ -77,8 +77,8 @@ UINT8 scsi_read_8(UINT32 addr)
 {
     UINT8   reg;
 
-    addr &= 0xff;
-    if (addr > 0x5f)
+    addr &= 0xFF;
+    if (addr > 0x5F)
         error("%08X: SCSI invalid read from %02X", ppc_get_reg(PPC_REG_PC), addr);
 
     reg = REG8(addr);
@@ -86,7 +86,7 @@ UINT8 scsi_read_8(UINT32 addr)
     switch (addr)
     {
     case 0x14:  
-        REG8(addr) &= 0xfe; // clear DIP
+        REG8(addr) &= 0xFE; // clear DIP
         break;
     default:
         break;
@@ -107,13 +107,24 @@ UINT8 scsi_read_8(UINT32 addr)
 
 void scsi_write_8(UINT32 addr, UINT8 data)
 {
-    addr &= 0xff;
-    if (addr > 0x5f)
+    addr &= 0xFF;
+    if (addr > 0x5F)
         error("%08X: SCSI invalid write to %02X", ppc_get_reg(PPC_REG_PC), addr);
 
     message(0, "%08X: SCSI %02X = %02X", ppc_get_reg(PPC_REG_PC), addr, data);
 
     REG8(addr) = data;
+
+    switch (addr)
+    {
+    case 0x3B:  // DCNTL: DMA Control
+        if ((REG8(0x38) & 0x01) == 0x01)    // MAN=1, start SCRIPTS on STD=1
+        {
+            scripts_exec = data & 0x04;
+            scsi_run(100);
+        }
+        break;
+    }
 }
 
 /*
@@ -145,7 +156,7 @@ void scsi_write_16(UINT32 addr, UINT16 data)
 void scsi_write_32(UINT32 addr, UINT32 data)
 {
     addr &= 0xff;
-    if (addr > 0x5c)
+    if (addr > 0x5C)
         error("%08X: SCSI invalid write to %02X", ppc_get_reg(PPC_REG_PC), addr);
 
     data = BSWAP32(data);
@@ -155,8 +166,9 @@ void scsi_write_32(UINT32 addr, UINT32 data)
 
     switch (addr)
     {
-    case 0x2c:  // DSP: DMA SCRIPTS Pointer
-        scripts_exec = 1;
+    case 0x2C:  // DSP: DMA SCRIPTS Pointer
+        if ((REG8(0x38) & 0x01) == 0)   // MAN=0, start SCRIPTS automatically
+            scripts_exec = 1;
         scsi_run(100);
         break;
     default:
@@ -207,14 +219,14 @@ void scsi_reset(void)
     scripts_exec = 0;
 
     REG8(0x00) = 0xc0;
-    REG8(0x0c) = 0x80;
-    REG8(0x0f) = 0x02;
+    REG8(0x0C) = 0x80;
+    REG8(0x0F) = 0x02;
     REG8(0x18) = 0xff;
     REG8(0x19) = 0xf0;
-    REG8(0x1a) = 0x01;
+    REG8(0x1A) = 0x01;
     REG8(0x46) = 0x60;
     REG8(0x47) = 0x0f;
-    REG8(0x4c) = 0x03;
+    REG8(0x4C) = 0x03;
 }
 
 /*
