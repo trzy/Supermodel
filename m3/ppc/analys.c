@@ -563,19 +563,19 @@ void ppc_analyze_regusage(PPC_REGUSAGE *written, PPC_REGUSAGE *read, UINT32 op)
        		 
        		if (itab[i].flags & FL_COND_BRANCH)
        		{
-       			switch (G_BO(op))
-       			{			// BO field:
-       			case 0:		// 0000	      			
-       			case 1:		// 0001	
-       			case 4:		// 0100       			
-       			case 5:		// 0101
-       			case 8:		// 1z00
+        		switch (G_BO(op) >> 1)
+       			{			
+       			case 0x0:	// 0000y
+       			case 0x1:	// 0001y       			
+       			case 0x4:	// 0100y
+       			case 0x5:	// 0101y       			
+       			case 0x8:	// 1z00y
        			case 0xC:       			
-       			case 9:		// 1z01
+       			case 0x9:	// 1z01y
        			case 0xD:
        				++read->ctr;
        				break;
-       			default:
+       			default:	// 001zy, 011zy, 1z1zz
        				break;       				
 				}       			
        		}
@@ -663,6 +663,8 @@ void ppc_add_regusage_data(PPC_REGUSAGE *dest, PPC_REGUSAGE *src1, PPC_REGUSAGE 
 /* Output                                                         */
 /******************************************************************/
 
+#if 0	// currently unused, just causes warnings
+
 /*
  * void ppc_print_regusage(const CHAR *log_file, PPC_REGUSAGE *ru);
  *
@@ -699,3 +701,5 @@ void ppc_print_regusage(const CHAR *log_file, PPC_REGUSAGE *ru)
 	if (ru->tbl != 0)	LOG(log_file, "\tTBL=%d\n", ru->tbl);
 	if (ru->dec != 0)	LOG(log_file, "\tDEC=%d\n", ru->dec);
 }
+
+#endif
