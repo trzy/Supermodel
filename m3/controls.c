@@ -115,7 +115,8 @@ void controls_reset(UINT32 flags)
     memset(controls_reg, 0xFF, 0x40);
     memset(controls_reg, 0x00, 8);
 
-    controls_reg[0x18] = 0xDF;  // clear bit 0x20 for Virtual On 2
+//    controls_reg[0x18] = 0xDF;  // clear bit 0x20 for Virtual On 2
+    controls_reg[0x18] = 0x00;
 
     /*
      * NOTE: There will be problems if multiple flags are specified

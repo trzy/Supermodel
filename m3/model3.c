@@ -223,6 +223,9 @@ static UINT8 m3_ppc_read_8(UINT32 a)
         if ((a >= 0xF0040000 && a <= 0xF004003F) ||
             (a >= 0xFE040000 && a <= 0xFE04003F))       // control area
             return controls_read(a);
+        else if ((a >= 0xF0080000 && a <= 0xF00800FF) ||
+                 (a >= 0xFE080000 && a <= 0xFE0800FF))  // MIDI?
+            return m3_midi_read(a);
         else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
                  (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
             return m3_sys_read_8(a);
@@ -700,6 +703,7 @@ static void m3_set_crom_bank(UINT8 d)
 
 static UINT8 m3_sys_read_8(UINT32 a)
 {
+    static UINT8    x = 0x20;
 	switch(a & 0xFF)
 	{    
     case 0x08:  // CROM bank
@@ -793,7 +797,8 @@ static UINT8 m3_midi_read(UINT32 a)
 {
 	/* 0xFx0800xx */
 
-	return(0);
+    return 0xFF;
+//    return(0);
 }
 
 static void m3_midi_write(UINT32 a, UINT8 d)
@@ -1054,7 +1059,6 @@ void m3_run_frame(void)
 
 	rtc_step_frame();
 	tilegen_update();
-    //r3d_update();
     osd_renderer_update_frame();
     controls_update();
 
@@ -1064,7 +1068,7 @@ void m3_run_frame(void)
 
     m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
-    ppc_run(100000);
+    ppc_run(100000);   
     m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
 }
 
@@ -1376,7 +1380,6 @@ BOOL m3_load_rom(CHAR * id)
 		byteswap(crom2, romset->crom2[0].size * 4);
 		byteswap(crom3, romset->crom3[0].size * 4);
 		byteswap(vrom, romset->vrom[0].size * 16);
-
 		/* SROMs? DSB ROMs? i don't remember :p */
 
 	} else {

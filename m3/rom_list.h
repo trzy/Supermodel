@@ -369,7 +369,7 @@
 {
 	"VON2",
 	"",
-	"Virtua On 2 - Oratorio Tangram",
+    "Virtual On 2: Oratorio Tangram",
 	"SEGA",
 	1996,
     0x20,
