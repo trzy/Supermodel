@@ -29,6 +29,7 @@
 typedef struct {
 	int tex_num;
 	int vb_index;
+	int flags;
 } POLYGON_LIST;
 
 typedef struct {
@@ -288,11 +289,11 @@ void osd_renderer_update_frame(void)
 	IDirect3DDevice9_SetRenderState( device, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 #endif
 
-	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
 	IDirect3DDevice9_SetTextureStageState( device, 1, D3DTSS_COLOROP, D3DTOP_DISABLE );
-	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1 );
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
 
@@ -490,11 +491,17 @@ static int polylist_compare(const void *arg1, const void *arg2)
 
 static void render_model(UINT32 *src, BOOL little_endian)
 {
+	float fixed_point_scale;
 	VERTEX vertex[4];
 	VERTEX prev_vertex[4];
 	int end, index, polygon_index, vb_index, prev_texture, i, page;
 	VERTEX  *vb;
 	HRESULT hr;
+
+	if(m3_config.step == 0x10)
+		fixed_point_scale = 32768.0f;
+	else
+		fixed_point_scale = 524288.0f;
 
 	memset(prev_vertex, 0, sizeof(prev_vertex));
 	end = 0;
@@ -590,9 +597,9 @@ static void render_model(UINT32 *src, BOOL little_endian)
 			iy = entry[v_index + 1];
 			iz = entry[v_index + 2];
 
-			vertex[v2].x = (float)(ix) / 524288.0f;
-			vertex[v2].y = (float)(iy) / 524288.0f;
-			vertex[v2].z = (float)(iz) / 524288.0f;
+			vertex[v2].x = (float)(ix) / fixed_point_scale;
+			vertex[v2].y = (float)(iy) / fixed_point_scale;
+			vertex[v2].z = (float)(iz) / fixed_point_scale;
 
 			tx = (UINT16)((entry[v_index + 3] >> 16) & 0xFFFF);
 			ty = (UINT16)(entry[v_index + 3] & 0xFFFF);
@@ -649,6 +656,7 @@ static void render_model(UINT32 *src, BOOL little_endian)
 		if(num_vertices == 3) {
 			polygon_list[polygon_index].tex_num = tex_num;
 			polygon_list[polygon_index].vb_index = vb_index;
+			polygon_list[polygon_index].flags = (header[2] & 0x3);
 			
 			memcpy(&vb[vb_index], &vertex[0], sizeof(VERTEX) * 3);
 			
@@ -657,8 +665,10 @@ static void render_model(UINT32 *src, BOOL little_endian)
 		} else {
 			polygon_list[polygon_index].tex_num = tex_num;
 			polygon_list[polygon_index].vb_index = vb_index;
+			polygon_list[polygon_index].flags = (header[2] & 0x3);
 			polygon_list[polygon_index+1].tex_num = tex_num;
 			polygon_list[polygon_index+1].vb_index = vb_index + 3;
+			polygon_list[polygon_index+1].flags = (header[2] & 0x3);
 
 			memcpy(&vb[vb_index], &vertex[0], sizeof(VERTEX) * 3);
 			memcpy(&vb[vb_index+3], &vertex[2], sizeof(VERTEX) * 2);
@@ -683,6 +693,18 @@ static void render_model(UINT32 *src, BOOL little_endian)
 			IDirect3DDevice9_SetTexture( device, 0, texture[polygon_list[i].tex_num] );
 			prev_texture = polygon_list[i].tex_num;
 		}
+
+		if(polygon_list[i].flags & 0x2)
+			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_MIRROR );
+		else
+			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
+
+		if(polygon_list[i].flags & 0x1)
+			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_MIRROR );
+		else
+			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
+
+
 		IDirect3DDevice9_DrawPrimitive( device, D3DPT_TRIANGLELIST, polygon_list[i].vb_index, 1 );
 	}
 }
@@ -735,7 +757,7 @@ static void load_coord_sys(int address, D3DMATRIX *matrix)
 static void handle_link(UINT32 link)
 {
 	UINT32 type = (link >> 24) & 0xFF;
-	switch(type)
+	/*switch(type)
 	{
 		case 0:		// Node
 			if(link & 0x800000) {
@@ -749,7 +771,9 @@ static void handle_link(UINT32 link)
 			if(link & 0x800000) {
 				render_model( &vrom[link & 0x7FFFFF], FALSE );
 			} else {
-				render_model( &poly_ram[link & 0x7FFFFF], TRUE );
+				//printf("Render model: %08X\n",link*4);
+				if((link & 0x7FFFFF) < 0x80000)
+					render_model( &poly_ram[link & 0x7FFFFF], TRUE );
 			}
 			break;
 		case 4:		// List
@@ -757,6 +781,39 @@ static void handle_link(UINT32 link)
 				traverse_list( &list_ram[link & 0x7FFFFF] );
 			} else {
 				traverse_list( &cull_ram[link & 0x7FFFFF] );
+			}
+			break;
+		default:
+			error("handle_link: Unknown type %d.",type);
+	}*/
+	switch(type)
+	{
+		case 0:		// Node
+			if(link & 0x800000) {
+				if((link & 0x7FFFFF) < 0x80000)
+					traverse_node( &list_ram[link & 0x7FFFFF] );
+			} else {
+				if((link & 0x7FFFFF) < 0x80000)
+					traverse_node( &cull_ram[link & 0x7FFFFF] );
+			}
+			break;
+		case 1:		// Model
+		case 3:
+			if(link & 0x800000) {
+				render_model( &vrom[link & 0x7FFFFF], FALSE );
+			} else {
+				//printf("Render model: %08X\n",link*4);
+				if((link & 0x7FFFFF) < 0x80000)
+					render_model( &poly_ram[link & 0x7FFFFF], TRUE );
+			}
+			break;
+		case 4:		// List
+			if(link & 0x800000) {
+				if((link & 0x7FFFFF) < 0x80000)
+					traverse_list( &list_ram[link & 0x7FFFFF] );
+			} else {
+				if((link & 0x7FFFFF) < 0x80000)
+					traverse_list( &cull_ram[link & 0x7FFFFF] );
 			}
 			break;
 		default:
@@ -859,7 +916,7 @@ static void traverse_node(UINT32* node_ram)
 	}
 }
 
-static void traverse_main_tree(UINT32 *node_ram)
+static void traverse_main_tree(UINT32 *node_ram, int priority)
 {
 	int index = 0;
 	UINT32 next,link;
@@ -873,6 +930,8 @@ static void traverse_main_tree(UINT32 *node_ram)
 	D3DMATRIX matrix;
 	UINT8 amb;
 	float sun_diffuse_color, sun_ambient_color;
+	int tree_priority;
+	float fog_color, fog_density;
 
 	memset(&sun, 0, sizeof(sun));
 	memset(&material, 0, sizeof(material));
@@ -912,6 +971,9 @@ static void traverse_main_tree(UINT32 *node_ram)
 
 	// Set viewport and projection
 	{
+		float l1,l2,t1,t2,r1,r2,b1,b2;
+		float fov_x, fov_y;
+		int i;
 		INT x = (node_ram[index + 26] & 0xFFFF);
 		INT y = (node_ram[index + 26] >> 16) & 0xFFFF;
 		INT width = node_ram[index + 20] & 0xFFFF;
@@ -919,28 +981,42 @@ static void traverse_main_tree(UINT32 *node_ram)
 
 		set_viewport( x >> 4, y >> 4, width >> 2, height >> 2 );
 		
-		// TODO: Use the correct FOV !!!
-		D3DXMatrixPerspectiveFovLH( &projection, D3DXToRadian(45.0f), (float)width / (float)height, 0.1f, 100000.0f );
+		l1 = asin(*(float*)(&node_ram[index + 12]));
+		l2 = acos(*(float*)(&node_ram[index + 13]));
+		t1 = asin(*(float*)(&node_ram[index + 14]));
+		t2 = acos(*(float*)(&node_ram[index + 15]));
+		r1 = asin(*(float*)(&node_ram[index + 16]));
+		r2 = acos(*(float*)(&node_ram[index + 17]));
+		b1 = asin(*(float*)(&node_ram[index + 18]));
+		b2 = acos(*(float*)(&node_ram[index + 19]));
+
+		fov_x = l1 + r1;
+		fov_y = t1 + b1;
+
+		D3DXMatrixPerspectiveFovLH( &projection,fov_y, (float)width / (float)height, 0.1f, 100000.0f );
 		IDirect3DDevice9_SetTransform( device, D3DTS_PROJECTION, &projection );
 	}
 	
 	// Set up fog
-	{
-		float fog_density = *(float*)&node_ram[index + 35];
-		UINT32 fog_color = node_ram[index + 34];
-		IDirect3DDevice9_SetRenderState( device, D3DRS_FOGENABLE, TRUE );
-		IDirect3DDevice9_SetRenderState( device, D3DRS_FOGTABLEMODE, D3DFOG_EXP );
-		IDirect3DDevice9_SetRenderState( device, D3DRS_FOGDENSITY, *(DWORD*)&fog_density );
-		IDirect3DDevice9_SetRenderState( device, D3DRS_FOGCOLOR, fog_color );
-	}
+	
+	fog_density = *(float*)&node_ram[index + 35];
+	fog_color = node_ram[index + 34];
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGENABLE, TRUE );
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGTABLEMODE, D3DFOG_EXP );
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGDENSITY, *(DWORD*)&fog_density );
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGCOLOR, fog_color );
 
-	if(((link >> 24) & 0xFF) == 0) {
-		traverse_node( &list_ram[link & 0x7FFFFF] );
+	// Traverse to the node if the priority is correct
+	tree_priority = (node_ram[0] >> 3) & 0x3;
+	if(tree_priority == priority) {
+		if(((link >> 24) & 0xFF) == 0) {
+			traverse_node( &list_ram[link & 0x7FFFFF] );
+		}
 	}
 
 	// Go to next tree node if valid link
 	if((next & 0x800000) != 0) {
-		traverse_main_tree( &list_ram[next & 0x7FFFFF] );
+		traverse_main_tree( &list_ram[next & 0x7FFFFF], priority );
 	}
 }
 
@@ -956,7 +1032,14 @@ static void render_scene(void)
 
 	matrix_stack->lpVtbl->LoadIdentity( matrix_stack );
 
-	traverse_main_tree( &list_ram[0] );
+	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
+	traverse_main_tree( &list_ram[0], 0 );
+	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
+	traverse_main_tree( &list_ram[0], 1 );
+	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
+	traverse_main_tree( &list_ram[0], 2 );
+	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
+	traverse_main_tree( &list_ram[0], 3 );
 
 	matrix_stack->lpVtbl->Release( matrix_stack );
 }
