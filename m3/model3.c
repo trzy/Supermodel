@@ -83,7 +83,7 @@ static void     m3_sys_write_8(UINT32, UINT8);
 static void     m3_sys_write_32(UINT32, UINT32);
 static UINT8    m3_midi_read(UINT32);
 static void     m3_midi_write(UINT32, UINT8);
-static void		save_file(char *, UINT8 *, INT);
+static void     save_file(char *, UINT8 *, INT, BOOL);
 static INT		load_file(char *, UINT8 *, INT);
 
 /******************************************************************/
@@ -526,6 +526,8 @@ static UINT32 m3_ppc_read_32(UINT32 a)
         case 0xC0000000:
             //return _C0000000;
             return 0;
+        case 0xC0020000:    // Network? Sega Rally 2 at 0x79268
+            return 0;
         }
 
         break;
@@ -628,7 +630,7 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
 
     case 0xF:
 
-        if ((a >= 0xF0040000 && a <= 0xF004003F) ||     // control area
+        if ((a >= 0xF0040000 && a <= 0xF004003F) ||    // control area
             (a >= 0xFE040000 && a <= 0xFE04003F))       
         {
             controls_write(a, d);
@@ -646,6 +648,12 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
             m3_sys_write_8(a, d);
             return;
         }
+        else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC? (Sega Rally 2)
+		{
+            rtc_write(a, d);
+			return;
+		}
         else if (a >= 0xF8FFF000 && a <= 0xF8FFF0FF)    // MPC105 regs
         {
             bridge_write_8(a, d);
@@ -664,6 +672,8 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
 
         switch (a)
         {
+        case 0xFE000004:    // Sega Rally 2
+            return;
         }
 
         break;
@@ -757,6 +767,8 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
             return;
 		case 0xC0010180:	// Network ? Scud Race at 0xB2A4
 			return;
+        case 0xC0020000:    // Network? Sega Rally 2 at 0x79264
+            return;
         }
 
         break;
@@ -928,7 +940,7 @@ static UINT8 m3_sys_read_8(UINT32 a)
     case 0x18:  // IRQ status
 		return m3_irq_state;
     case 0x1C:  // ?
-        LOG("model3.log", "%08X: unknown sys read8, %08X\n", PPC_PC, a);        
+//        LOG("model3.log", "%08X: unknown sys read8, %08X\n", PPC_PC, a);        
         return 0xFF;
 	}
 
@@ -980,8 +992,8 @@ static void m3_sys_write_8(UINT32 a, UINT8 d)
         LOG("model3.log", "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
-    case 0x1C:  // ?
-        LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
+    case 0x1C:  // ? this may be the LED control 
+//        LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
         return;
 	case 0x3C:	// ?
         LOG("model3.log", "%08X: unknown sys write8, %08X = %02X\n", PPC_PC, a, d);
@@ -1089,15 +1101,26 @@ static INT load_file(char * path, UINT8 * dest, INT size){
 	return(i);
 }
 
+static void word_swap(UINT8 *src, INT size)
+{
+    while (size -= 4)
+    {
+        *((UINT32 *) src) = BSWAP32(*((UINT32 *) src));
+        src += sizeof(UINT32);
+    }
+}
+
 /*
  * Save a buffer to a file.
  */
 
-static void save_file(char * path, UINT8 * src, INT size)
+static void save_file(char * path, UINT8 * src, INT size, BOOL byte_reversed)
 {
-
     FILE * fp;
 
+    if (byte_reversed)
+        word_swap(src, size);
+        
     fp = fopen(path, "wb");
     if(fp != NULL)
 	{
@@ -1107,6 +1130,9 @@ static void save_file(char * path, UINT8 * src, INT size)
 	}
     else
         message(0, "Failed to write %s", path);
+
+    if (byte_reversed)
+        word_swap(src, size);
 }
 
 //TODO: Fix these macros. I removed the path and hacked them up just enough
@@ -1151,7 +1177,7 @@ void m3_load_bram(void)
     if(load_file(string, bram, 128*1024)){
 		message(0, "Can't load Backup RAM from file, creating a new file.");
 		memset(bram, 0xFF, 128*1024);
-        save_file(string, bram, 128*1024);
+        save_file(string, bram, 128*1024, 0);
 	}
 }
 
@@ -1159,7 +1185,7 @@ void m3_save_bram(void)
 {
 	BUILD_BRAM_PATH
 
-	save_file(string, bram, 128*1024);
+    save_file(string, bram, 128*1024, 0);
 }
 
 /*
@@ -1316,6 +1342,7 @@ void m3_run_frame(void)
      * Generate interrupts for this frame and run the VBlank
      */
 
+    message(0, "enter VBL");
     m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
 
@@ -1686,6 +1713,15 @@ BOOL m3_load_rom(CHAR * id)
     message(0, "ROM loaded succesfully!");
 
     /*
+     * Debug ROM dump
+     */
+
+//    save_file("crom.bin", &crom[0x800000 - romset->crom[0].size * 4], romset->crom[0].size * 4, 0);
+//    save_file("crom.bin", crom, 8*1024*1024, 0);
+//    save_file("vrom.bin", vrom, 32*1024*1024, 0);
+
+
+    /*
      * Patches
      */
 
@@ -1744,7 +1780,6 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *)&crom[0x74072C] = 0x00000060;    // ...
 		*(UINT8  *)&crom[0x787B36] = 0x00;			// Link ID: 00 = single, 01 = master, 02 = slave
 		*(UINT8  *)&crom[0x787B30] = 0x00;
-//        *(UINT32 *)&crom[0x741A20] = 0x00000060;    // Speed hack (causes bad textures!!)
 
         *(UINT32 *)&crom[0x710000 + 0x275C] = BSWAP32(0x60000000);  // allows game to start
 	}
@@ -1772,13 +1807,11 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *) &crom[0x1B4] = 0x00000060;
 
         /*
-         * Ville's patches to make VON2 run further.
-         *
-         * VON2 will run with only the last 2 patches present, however it is
-         * recommended that all the patches be enabled in order to make the
-         * initialization screen go by quicker.
+         * VON2 will run without any of these patches, but this makes it
+         * start up much faster ;)
          */
 
+//#if 0
         *(UINT32 *) &crom[0x189168] = 0x00000060;
 
         *(UINT32 *) &crom[0x1890AC] = 0x00000060;
@@ -1787,6 +1820,7 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *) &crom[0x1888A8] = 0x00000060;
         *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
         *(UINT32 *) &crom[0x1891C8] = 0x00000060;   // (required)
+//#endif
     }
 	else if( !stricmp(id, "VS2") ) {
 		// Loops if irq 0x20 is set (0xF0100018)
@@ -1819,6 +1853,10 @@ BOOL m3_load_rom(CHAR * id)
 		// Waiting for decrementer
 		*(UINT32 *) &crom[0x600000 + 0x14F2C] = BSWAP32(0x60000000);
 	}
+    else if (!stricmp(id, "SRALLY2"))
+    {
+        *(UINT32 *) &crom[0x30] = BSWAP32(0x60000000);
+    }
 
 	return(MODEL3_OKAY);
 }
@@ -1848,16 +1886,15 @@ void m3_shutdown(void)
 	tilegen_shutdown();
 	dma_shutdown();
 	scsi_shutdown();
-//    pcibmc_shutdown();
 
 	/* free any allocated buffer */
 
-    save_file("ram", ram, 8*1024*1024);
-	save_file("vram", vram, 1*1024*1024+2*65536);
-    save_file("8e000000", culling_ram_8e, 1*1024*1024);
-    save_file("8c000000", culling_ram_8c, 2*1024*1024);
-    save_file("98000000", polygon_ram, 2*1024*1024);
-    save_file("fe180000", _FE180000, 0x20000);
+    save_file("ram", ram, 8*1024*1024, 1);
+    save_file("vram", vram, 1*1024*1024+2*65536, 0);
+    save_file("8e000000", culling_ram_8e, 1*1024*1024, 0);
+    save_file("8c000000", culling_ram_8c, 2*1024*1024, 0);
+    save_file("98000000", polygon_ram, 2*1024*1024, 0);
+    save_file("fe180000", _FE180000, 0x20000, 0);
 
     SAFE_FREE(ram);
 	SAFE_FREE(vram);
@@ -1968,7 +2005,10 @@ void m3_init(void)
     if(ppc_init(0) != PPC_OKAY)
 		error("ppc_init failed.");
 
-    ppc_set_reg(PPC_REG_PVR, 0x00060104);
+    if (m3_config.step >= 0x20)
+        ppc_set_pvr(0x00070100); 
+    else
+        ppc_set_pvr(0x00060104);
 
     ppc_set_irq_callback(m3_ppc_irq_callback);
 
