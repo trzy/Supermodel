@@ -1358,6 +1358,8 @@ void m3_reset(void)
 
 	if( !stricmp(m3_config.game_id,"VS2") )
 		bridge_reset(2);
+	else if( !stricmp(m3_config.game_id, "VS2_98") )
+		bridge_reset(2);
 	else
     bridge_reset(m3_config.step < 0x20 ? 1 : 2);
 	scsi_reset();
@@ -1799,6 +1801,23 @@ BOOL m3_load_rom(CHAR * id)
 
 		// Waiting for decrementer == 0
 		*(UINT32 *) &crom[0x70C000 + 0x14940] = BSWAP32(0x60000000);
+	}
+	else if( !stricmp(id, "VS2_98") ) {
+		// Loops if irq 0x20 is set (0xF0100018)
+		*(UINT32 *) &crom[0x600000 + 0x1FD0] = BSWAP32(0x60000000);
+
+		// Loops if irq 0x40 is set
+		*(UINT32 *) &crom[0x600000 + 0x1FB4] = BSWAP32(0x60000000);
+
+		// Waiting for memory location
+		*(UINT32 *) &crom[0x600000 + 0xB664] = BSWAP32(0x60000000);
+
+		// Weird loop (see VS2)
+		*(UINT32 *) &crom[0x600000 + 0x28EC] = BSWAP32(0x60000000);
+		*(UINT32 *) &crom[0x600000 + 0x290C] = BSWAP32(0x60000000);
+
+		// Waiting for decrementer
+		*(UINT32 *) &crom[0x600000 + 0x14F2C] = BSWAP32(0x60000000);
 	}
 
 	return(MODEL3_OKAY);
