@@ -1507,10 +1507,10 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format)
 	        for (xi = 0; xi < w; xi++)
 	        {
                 rgb16 = *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2];
-	            texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >>  8) & 0xF) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  4) & 0xF) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  0) & 0xF) << 3;
-	            texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >> 12) & 0xF) << 3;
+                texture_buffer[((yi * w) + xi) * 4 + 0] = ((rgb16 >> 12) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 1] = ((rgb16 >>  8) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 2] = ((rgb16 >>  4) & 0xF) << 4;
+                texture_buffer[((yi * w) + xi) * 4 + 3] = ((rgb16 >>  0) & 0xF) << 4;
 	        }
 		}
 		break;
