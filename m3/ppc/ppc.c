@@ -1,3 +1,5 @@
+//TODO: fix subroutine code. if is_cond and cond is false, dont mark as subroutine.
+
 //#define WATCH_PC    0x101cd8
 //#define BREAK_PC    0x8ac34
 
@@ -32,16 +34,26 @@ static void ppc_update_pc(void);
 /* Basic Block Stats                                              */
 /******************************************************************/
 
+/*
+ * NOTES:
+ *
+ * Subroutine entry points are the targets of either unconditional
+ * (Bx) or conditional (BCx) branches with the link bit set. Other
+ * branch types (BCLRx, BCCTRx, etc.) are not considered to be 
+ * subroutine calls for now.
+ */
+ 
 #ifdef RECORD_BB_STATS
 
 #include "analys.h"
 
 typedef struct BB
-{
-	UINT32		addr;		// address
-	UINT		inst_count;	// instruction count
-	UINT		exec_count;	// number of times it has been executed
-	UINT		type;		// type
+{	
+	UINT32		addr;			// address
+	UINT		inst_count;		// instruction count
+	UINT		exec_count;		// number of times it has been executed
+	UINT		type;			// type
+	BOOL		is_subroutine;	// whether it appears to be a subroutine entry point or not
 
 	struct
 	{
@@ -98,7 +110,7 @@ static BB * bb_search(UINT32 addr)
 	return NULL;
 }
 
-static BB * bb_add(UINT32 addr)
+static BB * bb_add(UINT32 addr, BOOL subrout)
 {
 	BB * bb = bb_list_head.next;
 	BB * new_bb = (BB *)malloc(sizeof(BB));
@@ -116,6 +128,7 @@ static BB * bb_add(UINT32 addr)
 
 	// init the new block
 
+	new_bb->is_subroutine = subrout;
 	new_bb->addr = addr;
 	new_bb->inst_count = 0;
 	new_bb->exec_count = 1;
@@ -145,10 +158,12 @@ static BB * bb_add(UINT32 addr)
  *		is_uncond = Whether it's an unconditional branch.
  *		cc        = Condition from branch instruction.
  *		cc_true   = Whether condition evaluated true or not. This is used to determine which edge
- *		            (0 or 1) to use for a conditional BB. 
+ *		            (0 or 1) to use for a conditional BB.
+ *		subrout	  = If the branch terminating the current BB is a subroutine call. The next BB 
+ *					will be marked as a subroutine entry point if this is true. 
  */
 
-static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true)
+static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond, UINT cc, BOOL cc_true, BOOL subrout)
 {
 	BB * bb;
 	
@@ -160,6 +175,16 @@ static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond
 	if (bb_in_exception)
 		return;
 		
+	/*
+	 * If the branch is conditional but the condition is false, subrout
+	 * is set to 0 because the target will not be a subroutine entry 
+	 * point. If the branch is unconditional, obviously the subrout flag
+	 * does not need to be adjusted.
+	 */
+	 
+	if (!is_uncond && !cc_true)	// branch not actually taken
+		subrout = FALSE;	
+	 
 	// end of the current block -- record type and edge profiling
 	// info.
 
@@ -190,6 +215,7 @@ static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond
 
 	if((bb = bb_search(target)) != NULL)
 	{
+		bb->is_subroutine = subrout;
 		bb->exec_count++;
 		cur_bb = bb;
 		return;
@@ -197,7 +223,7 @@ static void bb_record(UINT32 addr, UINT32 target, BOOL is_direct, BOOL is_uncond
 
 	// add a new block
 
-	bb = bb_add(target);
+	bb = bb_add(target, subrout);
 	cur_bb = bb;
 }
 
@@ -346,9 +372,12 @@ static void bb_stat_shutdown(void)
 	while(bb != &bb_list_tail)
 	{
 		LOG("bb.log",
-			" BB %08X, %u instructions, executed %u time(s) [%s]\n",
+			" BB %08X, %u instructions, executed %u time(s) [%s]",
 			bb->addr, bb->inst_count, bb->exec_count,
 			(bb->type & (1 << 1)) ? "indirect" : "direct");
+		if (bb->is_subroutine)
+			LOG("bb.log", " [subroutine]");
+		LOG("bb.log", "\n");
 
 		if(bb->type & (1 << 0))	// conditional
 		{
@@ -3193,7 +3222,7 @@ static void ppc_bx(u32 op)
 	ppc_update_pc();
 
 #ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, TRUE, TRUE, 0, FALSE);
+	bb_record(lr-4, PC, TRUE, TRUE, 0, FALSE, (op & _LK) ? TRUE : FALSE);
 #endif
 }
 
@@ -3214,7 +3243,7 @@ static void ppc_bcx(u32 op)
 		LR = lr;
 
 #ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, TRUE, FALSE, _BO, cond);
+	bb_record(lr-4, PC, TRUE, FALSE, _BO, cond, (op & _LK) ? TRUE : FALSE);
 #endif
 }
 
@@ -3233,7 +3262,7 @@ static void ppc_bcctrx(u32 op)
 		LR = lr;
 
 #ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond);
+	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond, FALSE);
 #endif
 }
 
@@ -3252,14 +3281,14 @@ static void ppc_bclrx(u32 op)
 		LR = lr;
 
 #ifdef RECORD_BB_STATS
-	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond);
+	bb_record(lr-4, PC, FALSE, FALSE, _BO, cond, FALSE);
 #endif
 }
 
 static void ppc_rfi(u32 op)
 {
 #ifdef RECORD_BB_STATS
-	bb_record(PC-4, SPR(SPR_SRR0), FALSE, TRUE, 0, FALSE);
+	bb_record(PC-4, SPR(SPR_SRR0), FALSE, TRUE, 0, FALSE, FALSE);
 #endif
 
 	ppc.pc = ppc.spr[SPR_SRR0];
@@ -3275,7 +3304,7 @@ static void ppc_rfi(u32 op)
 static void ppc_rfci(u32 op)
 {
 #ifdef RECORD_BB_STATS
-	bb_record(PC-4, SPR(SPR_SRR2), FALSE, TRUE, 0, FALSE);
+	bb_record(PC-4, SPR(SPR_SRR2), FALSE, TRUE, 0, FALSE, FALSE);
 #endif
 
 	ppc.pc = ppc.spr[SPR_SRR2];
@@ -3662,7 +3691,7 @@ int ppc_reset(void)
 	
 #ifdef RECORD_BB_STATS
 	bb_stat_reset();	
-	cur_bb = bb_add(PC);
+	cur_bb = bb_add(PC, FALSE);
 #endif	
     return PPC_OKAY;
 }
@@ -3973,6 +4002,6 @@ void ppc_load_state(FILE *fp)
 	
 #ifdef 	RECORD_BB_STATS
 	bb_stat_reset();
-	cur_bb = bb_add(PC);
+	cur_bb = bb_add(PC, FALSE);
 #endif	
 }
