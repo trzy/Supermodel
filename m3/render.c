@@ -25,7 +25,7 @@
 
 #include "model3.h"
 
-#define LOG_MODEL_ADDR  0   // logs model addresses to models.log
+#define LOG_MODEL_ADDR  1   // logs model addresses to models.log
 
 /******************************************************************/
 /* Useful Macros                                                  */
@@ -301,7 +301,8 @@ static void draw_list(UINT32 *list)
     while (list_ptr >= list)
     {
         addr = *list_ptr;
-        draw_block(translate_scene_graph_address(addr));
+        if ((addr & 0x00FFFFFF) != 0x00FFFFFF)
+            draw_block(translate_scene_graph_address(addr));
         --list_ptr; // next element
     }
 }
@@ -424,8 +425,7 @@ static void draw_block(UINT32 *block)
 
 	addr = block[8 - offset];
 	if (addr != 0x01000000 && addr != 0x00800800 && addr != 0)  // valid?
-		draw_block(translate_scene_graph_address(addr));
-
+        draw_block(translate_scene_graph_address(addr));
 }
 
 /*
