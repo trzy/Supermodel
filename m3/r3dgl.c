@@ -54,12 +54,17 @@
 #define TEST_BIT        0
 
 #define R3D_LOG
-//#define R3D_LOG			LOG
+//#define R3D_LOG           LOG
 #define LOG_MODEL       0
 
 #define WIREFRAME       0
-#define LIGHTING		1
+#define LIGHTING        0
 #define FOGGING			1
+
+#ifndef PI
+#define PI          3.14159265
+#endif
+#define RAD2DEG(a)  (((a) * 180.0) / PI)
 
 static UINT32 GETWORDLE(UINT8 *a)
 {
@@ -120,8 +125,9 @@ static float convert_fixed_to_float(INT32 num)
 
 	if(m3_config.step == 0x10)
 	{
-		result = (float) (num >> 15);                   // 17-bit integer
+        result = (float) (num >> 15);                   // 17-bit integer
 		result += (float) (num & 0x7FFF) / 32768.0f;	// 15-bit fraction
+        
 	}
 	else
 	{
@@ -214,15 +220,15 @@ static void draw_model(UINT8 *buf, UINT little_endian)
 		#endif
 
 		// temp
-		if((GETWORD(&buf[6*4]) & 0x04000000) == 0 &&
-			GETWORD(&buf[5*4]) & 0xFFBFFF00)
-			error("Unknown word 5 = %08X on untextured poly\n", GETWORD(&buf[5*4]));
+//        if((GETWORD(&buf[6*4]) & 0x04000000) == 0 &&
+//            GETWORD(&buf[5*4]) & 0xFFBFFF00)
+//            error("Unknown word 5 = %08X on untextured poly\n", GETWORD(&buf[5*4]));
 
 		// temp
-		if(GETWORD(&buf[0*4]) & 0x80 && !(GETWORD(&buf[0*4]) & 0xFC000000))
-			error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
-		if(!(GETWORD(&buf[0*4]) & 0x80) && GETWORD(&buf[0*4]) & 0xFC000000)
-			error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
+//        if(GETWORD(&buf[0*4]) & 0x80 && !(GETWORD(&buf[0*4]) & 0xFC000000))
+//            error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
+//        if(!(GETWORD(&buf[0*4]) & 0x80) && GETWORD(&buf[0*4]) & 0xFC000000)
+//            error("Unknown word 0 = %08X on bit 0x80\n", GETWORD(&buf[0*4]));
 
 		/*
 		 * Retrieves the normal
@@ -280,6 +286,11 @@ static void draw_model(UINT8 *buf, UINT little_endian)
         {
             switch (GETWORD(&buf[0*4]) & 0x0F)
             {
+            case 7: // 1 vert
+                really_draw = 0;
+                buf += 0x2C * sizeof(UINT8);
+                break;
+
             case 0: // 4 verts
 
                 for (i = 0; i < 4; i++)
@@ -444,7 +455,7 @@ static void draw_model(UINT8 *buf, UINT little_endian)
                 buf += 0x3C * sizeof(UINT8);
 
                 break;
-
+            
             case 0xC:   // 2 verts
 
                 v[0] = prev_v[2];
@@ -506,6 +517,11 @@ static void draw_model(UINT8 *buf, UINT little_endian)
         {
             switch (GETWORD(&buf[0*4]) & 0x0F)
             {
+            case 7: // 1 vert
+                really_draw = 0;
+                buf += 0x1C * sizeof(UINT8);
+                break;
+
             case 0: // 3 verts
 
                 for (i = 0; i < 3; i++)
@@ -809,6 +825,7 @@ static void init_coord_system(void)
 {
     GLfloat m[4*4];
 
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glScalef(1.0, -1.0, -1.0);
 
@@ -869,14 +886,19 @@ static void get_matrix(GLfloat *dest, UINT32 matrix_addr)
 }
 
 /*
- * set_viewport():
+ * set_viewport_and_perspective():
  *
- * Sets the viewport for the current scene descriptor.
+ * Sets the viewport and perspective for the current scene descriptor.
  */
 
-static void set_viewport(UINT8 *scene_buf)
+static void set_viewport_and_perspective(UINT8 *scene_buf)
 {
+    double  fov_left, fov_right, fov_up, fov_down, fov_x, fov_y;
     UINT    x, y, w, h;
+
+    /*
+     * Set viewport
+     */
 
     x = GETWORDLE(&scene_buf[0x1A*4]) & 0xFFFF;
     y = GETWORDLE(&scene_buf[0x1A*4]) >> 16;
@@ -889,6 +911,42 @@ static void set_viewport(UINT8 *scene_buf)
     h >>= 2;    // size is 14.2
 
     glViewport(x, 384 - (y + h), w, h);
+
+    /*
+     * Set the field of view
+     */
+
+    fov_left = asin(get_float(&scene_buf[0x0C*4]));
+    fov_right = asin(get_float(&scene_buf[0x10*4]));
+    fov_up = asin(get_float(&scene_buf[0x0E*4]));
+    fov_down = asin(get_float(&scene_buf[0x12*4]));
+
+    fov_x = fov_left + fov_right;
+    fov_y = fov_up + fov_down;
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+    gluPerspective(RAD2DEG(fov_y), (GLfloat) w / (GLfloat) h, 0.1, 100000.0);
+
+#if 0
+    {
+        /*
+         * This code doesn't work quite right
+         */
+
+        GLdouble    ls, rs, ts, bs, n, f;
+
+        ls = get_float(&scene_buf[0x0C*4]);
+        rs = get_float(&scene_buf[0x10*4]);
+        ts = get_float(&scene_buf[0x0E*4]);
+        bs = get_float(&scene_buf[0x12*4]);
+        n = 0.1
+        f = 10000000.0;
+
+        glFrustum(-(ls * n), rs * n, -(bs * n), ts * n, n, f);
+
+    }
+#endif
 }
 
 /*
@@ -912,8 +970,10 @@ static void draw_list(UINT8 *list)
 
         if (addr == 0 || addr == 0x800800)  // safeguard: in case memory has not been uploaded yet
             break;
-        if (addr == 0x03000000) // VON2 (what does this mean???)
-            break;
+//        if (addr == 0x03000000) // VON2 (what does this mean???)
+//            break;
+        if ((addr & 0x03000000) == 0x03000000)
+            addr &= ~0x03000000;
 
         draw_block(translate_r3d_address(addr & 0x01FFFFFF));
         list += 4;  // next element
@@ -1004,7 +1064,7 @@ static void draw_block(UINT8 *block)
 	         */
 
             glPushMatrix();
-            matrix = (GETWORDLE(&block[1*4]) & 0x3FF);
+            matrix = (GETWORDLE(&block[1*4]) & 0xFFF);
             if (matrix != 0)
             {
                 get_matrix(m, matrix * 12);
@@ -1029,7 +1089,7 @@ static void draw_block(UINT8 *block)
                 switch ((addr >> 24) & 0xFF)
                 {
                 case 0x00:  // block
-                    if(addr != 0)
+                    if(addr != 0 && addr != 0xFFFF)
                     {
                         R3D_LOG("model3.log", " ## block: draw block at %08X\n\n", addr);
                         draw_block(translate_r3d_address(addr & 0x01FFFFFF));
@@ -1037,7 +1097,7 @@ static void draw_block(UINT8 *block)
                     break;
                 case 0x01:  // model
                 case 0x03:  // model in VROM (Scud Race)
-                    if(addr != 0)
+                    if(addr != 0 && addr != 0xFFFF)
                     {
                         R3D_LOG("model3.log", " ## block: draw model at %08X\n\n", addr);
                         if ((addr & 0x01FFFFFF) >= 0x01800000)  // VROM
@@ -1067,11 +1127,14 @@ static void draw_block(UINT8 *block)
              * Advance to next block in list
              */
 
+#if 0
             next_ptr = GETWORDLE(&block[6*4]);
             if ((next_ptr & 0x01000000) || (next_ptr == 0)) // no more links
                 break;
 
             block = translate_r3d_address(next_ptr);
+#endif
+            break;
         }
         else	// step 1.5+
         {
@@ -1110,7 +1173,7 @@ static void draw_block(UINT8 *block)
 	         */
 
 	        glPushMatrix();
-	        matrix = (GETWORDLE(&block[3*4]) & 0x3FF);
+            matrix = (GETWORDLE(&block[3*4]) & 0xFFF);
 	        if (matrix != 0)
 	        {
 	            get_matrix(m, matrix * 12);
@@ -1195,243 +1258,261 @@ static void draw_block(UINT8 *block)
 }
 
 /*
- * draw_scene():
+ * draw_viewport():
  *
- * Draws the scene by traversing each of the major nodes starting at 0.
+ * Draws all of the scenes which belong to the specified viewport. Culling RAM
+ * is traversed starting at 0. The Z buffer is cleared each time.
  */
 
-static void draw_scene(void)
+static void draw_viewport(UINT pri)
 {
 	UINT8	*buf;
-    UINT32  i, j, next;
+    UINT32  current_addr, ptr;
     BOOL    stop;
+
+    /*
+     * Clear Z buffer
+     */
+
+    glClear(GL_DEPTH_BUFFER_BIT);
 
     /*
      * Draw each major node
      */
 
-    i = 0;
+    current_addr = 0;
     stop = 0;
 
     LOG_INIT("model3.log");
 
     do
     {
-		buf = (UINT8 *)&culling_ram_8e[i];
+        buf = (UINT8 *)&culling_ram_8e[current_addr];
 
-        message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
-        i,
-        GETWORDLE(&buf[0*4]),
-        GETWORDLE(&buf[1*4]),
-        GETWORDLE(&buf[2*4])
-        );
+        /*
+         * Get the pointer and check if it's valid
+         */
 
-		R3D_LOG("model3.log",
-				"#\n"
-				"# scene at %08X\n"
-				"#\n"
-				"\n"
-				"00: %08X\n"
-				"01: %08X\n"
-				"02: %08X\n"
-				"03: %3.5f\n"
-				"04: %3.5f\n"
-				"05: %3.5f\n"
-				"06: %3.5f\n"
-				"07: %3.5f\n"
-				"08: %3.5f\n"
-				"09: %3.5f\n"
-				"0A: %3.5f\n"
-				"0B: %3.5f\n"
-				"0C: %3.5f\n"
-				"0D: %3.5f\n"
-				"0E: %3.5f\n"
-				"0F: %3.5f\n"
-				"10: %3.5f\n"
-				"11: %3.5f\n"
-				"12: %3.5f\n"
-				"13: %3.5f\n"
-				"14: %08X\n"
-				"15: %08X\n"
-				"16: %08X\n"
-				"17: %08X\n"
-				"18: %08X\n"
-				"19: %08X\n"
-				"1A: %08X\n"
-				"1B: %08X\n"
-				"1C: %08X\n"
-				"1D: %08X\n"
-				"1E: %08X\n"
-				"1F: %3.5f\n"
-				"20: %3.5f\n"
-				"21: %3.5f\n"
-				"22: %08X\n"
-				"23: %08X\n"
-				"24: %08X\n"
-				"25: %08X\n"
-				"\n",
-				i,
-				GETWORDLE(&buf[0x00 * 4]),
-				GETWORDLE(&buf[0x01 * 4]),
-				GETWORDLE(&buf[0x02 * 4]),
-				get_float(&buf[0x03 * 4]),
-				get_float(&buf[0x04 * 4]),
-				get_float(&buf[0x05 * 4]),
-				get_float(&buf[0x06 * 4]),
-				get_float(&buf[0x07 * 4]),
-				get_float(&buf[0x08 * 4]),
-				get_float(&buf[0x09 * 4]),
-				get_float(&buf[0x0A * 4]),
-				get_float(&buf[0x0B * 4]),
-				get_float(&buf[0x0C * 4]),
-				get_float(&buf[0x0D * 4]),
-				get_float(&buf[0x0E * 4]),
-				get_float(&buf[0x0F * 4]),
-				get_float(&buf[0x10 * 4]),
-				get_float(&buf[0x11 * 4]),
-				get_float(&buf[0x12 * 4]),
-				get_float(&buf[0x13 * 4]),
-				GETWORDLE(&buf[0x14 * 4]),
-				GETWORDLE(&buf[0x15 * 4]),
-				GETWORDLE(&buf[0x16 * 4]),
-				GETWORDLE(&buf[0x17 * 4]),
-				GETWORDLE(&buf[0x18 * 4]),
-				GETWORDLE(&buf[0x19 * 4]),
-				GETWORDLE(&buf[0x1A * 4]),
-				GETWORDLE(&buf[0x1B * 4]),
-				GETWORDLE(&buf[0x1C * 4]),
-				GETWORDLE(&buf[0x1D * 4]),
-				GETWORDLE(&buf[0x1E * 4]),
-				get_float(&buf[0x1F * 4]),
-				get_float(&buf[0x20 * 4]),
-				get_float(&buf[0x21 * 4]),
-				GETWORDLE(&buf[0x22 * 4]),
-				GETWORDLE(&buf[0x23 * 4]),
-				GETWORDLE(&buf[0x24 * 4]),
-				GETWORDLE(&buf[0x25 * 4])
-		);
-
-        set_matrix_base(GETWORDLE(&buf[0x16*4]));
-        init_coord_system();
-        set_viewport(buf);
-
-		#if LIGHTING
-		{
-		/*
-		 * Until material lighting properties aren't emulated
-		 * properly, light will never look decent on flat polys.
-		 * Moreover, we still lack emulation of shading selection
-		 * (Real3D docs enumerate flat, fixed, gouraud and
-		 * specular shading, selectable per polygon).
-		 *
-		 * Note that lighting has plin bad problems with untextured
-		 * polys.
-		 */
-
-		GLfloat vect[4];
-		GLfloat temp[4];
-
-		/*
-		 * Directional light
-		 */
-
-		vect[0] = -get_float(&buf[0x05 * 4]);
-		vect[1] = -get_float(&buf[0x06 * 4]);
-		vect[2] = get_float(&buf[0x04 * 4]);
-		vect[3] = 0.0f;
-
-		temp[0] = \
-		temp[1] = \
-		temp[2] = get_float(&buf[0x07 * 4]);
-		temp[3] = 1.0f;
-
-		glLightfv(GL_LIGHT0, GL_POSITION, vect);
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, temp);
-
-		/*
-		 * Positional light
-		 */
-
-		/* This kind of lights uses a X and Y position,
-		 * a X and Y size, a start point and an extent.
-		 * It seems to describe a lighting volume
-		 * (considering the start and extent values as
-		 * Z coords). Currently unemulated.
-		 */
-
-		/*
-		 * Ambient light
-		 */
-
-		temp[0] = \
-		temp[1] = \
-		temp[2] = (GLfloat)((GETWORDLE(&buf[0x24 * 4]) >> 8) & 0xFF) / 256.0f;
-		temp[3] = 1.0f;
-
-		glLightfv(GL_LIGHT0, GL_AMBIENT, temp);
-
-		glEnable(GL_LIGHTING);
-		glEnable(GL_LIGHT0);
-
-		}
-		#endif
-
-		#if FOGGING
-		{
-		/*
-		 * Very primitive fog implementation.
-		 */
-
-		GLfloat fog_color[4];
-
-		fog_color[0] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >> 16) & 0xFF) / 256.0f;
-		fog_color[1] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  8) & 0xFF) / 256.0f;
-		fog_color[2] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  0) & 0xFF) / 256.0f;
-		fog_color[3] = 1.0f;
-
-		glFogi(GL_FOG_MODE, GL_EXP2);
-		glFogf(GL_FOG_DENSITY, get_float(&buf[0x23 * 4]));
-		glFogf(GL_FOG_START, (GLfloat)(GETWORDLE(&buf[0x25 * 4]) & 0xFF) / 256.0f);
-		glFogf(GL_FOG_END, 10000.0f);
-		glFogfv(GL_FOG_COLOR, fog_color);
-
-		glEnable(GL_FOG);
-		}
-		#endif
-
-        j = GETWORDLE(&buf[2*4]);	// get address of 10-word block
-        j = (j & 0xFFFF) * 4;
-        if (j == 0)	// culling RAM probably hasn't been set up yet
+        ptr = GETWORDLE(&buf[2*4]); // get address of 10-word block
+        ptr = (ptr & 0xFFFF) * 4;
+        if (ptr == 0)   // culling RAM probably hasn't been set up yet
             break;
 
-        next = GETWORDLE(&buf[4]);	// get address of next block
-        if (next == 0x01000000)		// 01000000 == STOP
+        /*
+         * Check the viewport priority and if it matches, draw it
+         */
+
+        if (pri == ((GETWORDLE(&buf[0x00*4]) >> 3) & 3))
+        {
+            message(0, "processing scene descriptor %08X: %08X  %08X  %08X",
+            current_addr,
+            GETWORDLE(&buf[0*4]),
+            GETWORDLE(&buf[1*4]),
+            GETWORDLE(&buf[2*4])
+            );
+
+            R3D_LOG("model3.log",
+                    "#\n"
+                    "# scene at %08X\n"
+                    "#\n"
+                    "\n"
+                    "00: %08X\n"
+                    "01: %08X\n"
+                    "02: %08X\n"
+                    "03: %3.5f\n"
+                    "04: %3.5f\n"
+                    "05: %3.5f\n"
+                    "06: %3.5f\n"
+                    "07: %3.5f\n"
+                    "08: %3.5f\n"
+                    "09: %3.5f\n"
+                    "0A: %3.5f\n"
+                    "0B: %3.5f\n"
+                    "0C: %3.5f\n"
+                    "0D: %3.5f\n"
+                    "0E: %3.5f\n"
+                    "0F: %3.5f\n"
+                    "10: %3.5f\n"
+                    "11: %3.5f\n"
+                    "12: %3.5f\n"
+                    "13: %3.5f\n"
+                    "14: %08X\n"
+                    "15: %08X\n"
+                    "16: %08X\n"
+                    "17: %08X\n"
+                    "18: %08X\n"
+                    "19: %08X\n"
+                    "1A: %08X\n"
+                    "1B: %08X\n"
+                    "1C: %08X\n"
+                    "1D: %08X\n"
+                    "1E: %08X\n"
+                    "1F: %3.5f\n"
+                    "20: %3.5f\n"
+                    "21: %3.5f\n"
+                    "22: %08X\n"
+                    "23: %08X\n"
+                    "24: %08X\n"
+                    "25: %08X\n"
+                    "\n",
+                    current_addr,
+                    GETWORDLE(&buf[0x00 * 4]),
+                    GETWORDLE(&buf[0x01 * 4]),
+                    GETWORDLE(&buf[0x02 * 4]),
+                    get_float(&buf[0x03 * 4]),
+                    get_float(&buf[0x04 * 4]),
+                    get_float(&buf[0x05 * 4]),
+                    get_float(&buf[0x06 * 4]),
+                    get_float(&buf[0x07 * 4]),
+                    get_float(&buf[0x08 * 4]),
+                    get_float(&buf[0x09 * 4]),
+                     get_float(&buf[0x0A * 4]),
+                    get_float(&buf[0x0B * 4]),
+                    get_float(&buf[0x0C * 4]),
+                    get_float(&buf[0x0D * 4]),
+                    get_float(&buf[0x0E * 4]),
+                    get_float(&buf[0x0F * 4]),
+                    get_float(&buf[0x10 * 4]),
+                    get_float(&buf[0x11 * 4]),
+                    get_float(&buf[0x12 * 4]),
+                    get_float(&buf[0x13 * 4]),
+                    GETWORDLE(&buf[0x14 * 4]),
+                    GETWORDLE(&buf[0x15 * 4]),
+                    GETWORDLE(&buf[0x16 * 4]),
+                    GETWORDLE(&buf[0x17 * 4]),
+                    GETWORDLE(&buf[0x18 * 4]),
+                    GETWORDLE(&buf[0x19 * 4]),
+                    GETWORDLE(&buf[0x1A * 4]),
+                    GETWORDLE(&buf[0x1B * 4]),
+                    GETWORDLE(&buf[0x1C * 4]),
+                    GETWORDLE(&buf[0x1D * 4]),
+                    GETWORDLE(&buf[0x1E * 4]),
+                    get_float(&buf[0x1F * 4]),
+                    get_float(&buf[0x20 * 4]),
+                    get_float(&buf[0x21 * 4]),
+                    GETWORDLE(&buf[0x22 * 4]),
+                    GETWORDLE(&buf[0x23 * 4]),
+                    GETWORDLE(&buf[0x24 * 4]),
+                    GETWORDLE(&buf[0x25 * 4])
+            );
+
+            set_viewport_and_perspective(buf);
+            set_matrix_base(GETWORDLE(&buf[0x16*4]));
+            init_coord_system();
+
+            #if LIGHTING
+            {
+            /*
+             * Until material lighting properties aren't emulated
+             * properly, light will never look decent on flat polys.
+             * Moreover, we still lack emulation of shading selection
+             * (Real3D docs enumerate flat, fixed, gouraud and
+             * specular shading, selectable per polygon).
+             *
+             * Note that lighting has plain bad problems with untextured
+             * polys.
+             */
+
+            GLfloat vect[4];
+            GLfloat temp[4];
+
+            /*
+             * Directional light
+             */
+
+            vect[0] = -get_float(&buf[0x05 * 4]);
+            vect[1] = -get_float(&buf[0x06 * 4]);
+            vect[2] = get_float(&buf[0x04 * 4]);
+            vect[3] = 0.0f;
+
+            temp[0] = \
+            temp[1] = \
+            temp[2] = get_float(&buf[0x07 * 4]);
+            temp[3] = 1.0f;
+
+            glLightfv(GL_LIGHT0, GL_POSITION, vect);
+            glLightfv(GL_LIGHT0, GL_DIFFUSE, temp);
+
+            /*
+             * Positional light
+             */
+
+            /* This kind of lights uses a X and Y position,
+             * a X and Y size, a start point and an extent.
+             * It seems to describe a lighting volume
+             * (considering the start and extent values as
+             * Z coords). Currently unemulated.
+             */
+
+            /*
+             * Ambient light
+             */
+
+            temp[0] = \
+            temp[1] = \
+            temp[2] = (GLfloat)((GETWORDLE(&buf[0x24 * 4]) >> 8) & 0xFF) / 256.0f;
+            temp[3] = 1.0f;
+
+            glLightfv(GL_LIGHT0, GL_AMBIENT, temp);
+
+            glEnable(GL_LIGHTING);
+            glEnable(GL_LIGHT0);
+
+            }
+            #endif
+
+            #if FOGGING
+            {
+            /*
+             * Very primitive fog implementation.
+             */
+
+            GLfloat fog_color[4];
+
+            fog_color[0] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >> 16) & 0xFF) / 256.0f;
+            fog_color[1] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  8) & 0xFF) / 256.0f;
+            fog_color[2] = (GLfloat)((GETWORDLE(&buf[0x22 * 4]) >>  0) & 0xFF) / 256.0f;
+            fog_color[3] = 1.0f;
+
+            glFogi(GL_FOG_MODE, GL_EXP2);
+            glFogf(GL_FOG_DENSITY, get_float(&buf[0x23 * 4]));
+            glFogf(GL_FOG_START, (GLfloat)(GETWORDLE(&buf[0x25 * 4]) & 0xFF) / 256.0f);
+            glFogf(GL_FOG_END, 10000.0f);
+            glFogfv(GL_FOG_COLOR, fog_color);
+
+            glEnable(GL_FOG);
+            }
+            #endif
+
+            switch((GETWORDLE(&buf[2*4]) >> 24) & 0xFE)
+            {
+            case 0x00:  // block
+                R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", ptr);
+                draw_block(&culling_ram_8e[ptr]);
+                break;
+
+            case 0x04:  // list
+                R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", ptr);
+    //            draw_list(&culling_ram_8e[ptr]);
+                break;
+
+            default:
+                error("Unknown scene descriptor link %08X\n", GETWORDLE(&buf[2*4]));
+            }
+
+            #if FOGGING
+            glDisable(GL_FOG);
+            #endif
+
+            #if LIGHTING
+            glDisable(GL_LIGHTING);
+            #endif
+        }
+
+        current_addr = GETWORDLE(&buf[4]);  // get address of next descriptor
+        if (current_addr == 0x01000000)     // 01000000 == STOP
             stop = TRUE;
-        i = (next & 0xFFFF) * 4;
-
-		switch((GETWORDLE(&buf[2*4]) >> 24) & 0xFE)
-		{
-		case 0x00:	// block
-			R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", j);
-			draw_block(&culling_ram_8e[j]);
-			break;
-
-		case 0x04:	// list
-			R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", j);
-//            draw_list(&culling_ram_8e[j]);
-			break;
-
-		default:
-			error("Unknown scene descriptor link %08X\n", GETWORDLE(&buf[2*4]));
-		}
-
-		#if FOGGING
-		glDisable(GL_FOG);
-		#endif
-
-		#if LIGHTING
-		glDisable(GL_LIGHTING);
-		#endif
+        current_addr = (current_addr & 0xFFFF) * 4;
     }
     while (!stop);
 }
@@ -1457,6 +1538,9 @@ static void make_texture(UINT x, UINT y, UINT w, UINT h, UINT format, UINT rep_m
     GLint   tex_id;
     UINT16  rgb16;
     UINT8   gray8;
+
+    if (w > 512 || h > 512)
+        return;
 
     tex_id = texture_grid[(y / 32) * 64 + (x / 32)];
     if (tex_id != 0)    // already exists, bind and exit
@@ -1612,23 +1696,13 @@ void r3dgl_update_frame(void)
 
     glClearDepth(1.0);
     glEnable(GL_DEPTH_TEST);
-//    glDepthFunc(GL_LESS);
     glDepthFunc(GL_LEQUAL);
-    glClear(GL_DEPTH_BUFFER_BIT);
 
     /*
-     * Set up a perspective view and then set the matrix mode to modelview.
-     */
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-    gluPerspective(45.0, 496.0 / 384.0, 0.1, 100000.0);
-
-	glMatrixMode(GL_MODELVIEW);
-//	glLoadIdentity();
-
-    /*
-     * Draw the scene
+     * Draw the complete scene consisting of 4 viewports.
+     *
+     * Viewport 3 has highest priority (top-most) and must be drawn last
+     * because a Z-buffer clear is performed each time.
      */
 
 	#if WIREFRAME
@@ -1637,7 +1711,10 @@ void r3dgl_update_frame(void)
     glDisable(GL_TEXTURE_2D);
 	#endif
 
-    draw_scene();
+    draw_viewport(0);
+    draw_viewport(1);
+    draw_viewport(2);
+    draw_viewport(3);
 
 	#if WIREFRAME
     glPolygonMode(GL_FRONT, GL_FILL);
