@@ -32,8 +32,12 @@
 static UINT8    *culling_ram_8e;    // culling RAM at 0x8E000000
 static UINT8    *culling_ram_8c;    // culling RAM at 0x8C000000
 static UINT8    *polygon_ram;       // polygon RAM at 0x98000000
+static UINT8	*vrom;
 
 static UINT8    texture_buffer_ram[1*1024*1024];
+
+static UINT32	vrom_texture_address;
+static UINT32	vrom_texture_header;
 
 /******************************************************************/
 /* Interface                                                      */
@@ -52,11 +56,12 @@ static UINT8    texture_buffer_ram[1*1024*1024];
  */
 
 void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
-              UINT8 *polygon_ram_ptr)
+              UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr)
 {
     culling_ram_8e = culling_ram_8e_ptr;
     culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
+	vrom = vrom_ptr;
 }
 
 /*
@@ -209,7 +214,17 @@ void r3d_write_32(UINT32 a, UINT32 d)
     }
     else if (a >= 0x90000000)
     {
-        message(0, "%08X: %08X = %08X", ppc_get_reg(PPC_REG_PC), a, d);
+		if(a == 0x90000000) {
+			vrom_texture_address = BSWAP32(d);
+		} 
+		else if(a == 0x90000004) {
+			vrom_texture_header = BSWAP32(d);
+		}
+		else if(a == 0x90000008) {
+			UINT32 length = BSWAP32(d);
+			osd_renderer_upload_vrom_texture(vrom_texture_header, length, &vrom[(vrom_texture_address & 0x7FFFFF) * 4]);
+		}
+
         return;
     }
 
