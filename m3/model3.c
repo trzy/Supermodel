@@ -132,8 +132,6 @@ void _log(char * path, char * fmt, ...)
 	/* it doesn't make much difference since we're gonna log stuff */
 	/* with the LOG macro. */
 
-    return;
-
 	if(m3_config.log_enabled)
 	{
 		char string[256];
