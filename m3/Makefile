@@ -3,7 +3,7 @@ OUTFILE = m3.exe
 CC = cl
 LD = link
 
-CFLAGS = /c /nologo /I ".\\" /I "win32\\" /I "c:\dxsdk\include\\" /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD
+CFLAGS = /c /nologo /I ".\\" /I "win32\\" /I "c:\dxsdk\include\\" /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD # /D "_LOG_"
 LFLAGS = /libpath:"c:\dxsdk\lib" /nologo /subsystem:console /incremental:no /machine:I386 /out:"$(OUTFILE)" 
 OBJ_LIBS = zlib.lib dxguid.lib dinput8.lib user32.lib gdi32.lib advapi32.lib
 OBJ_D3D_LIBS = d3dx9.lib d3d9.lib
