@@ -141,20 +141,22 @@ static void init_gl(void)
 }
 
 /*
- * void osd_renderer_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
+ * void osd_renderer_init(UINT8 *culling_ram_8e_ptr,
+ *                        UINT8 *culling_ram_8c_ptr, UINT8 *polygon_ram_ptr,
  *                        UINT8 *vrom_ptr);
  *
  * Initializes the renderer. It assumes a window has already been created.
  * Real3D memory regions are passed to it.
  *
  * Parameters:
- *      culling_ram_ptr = Pointer to Real3D culling RAM.
- *      polygon_ram_ptr = Pointer to Real3D polygon RAM.
- *      vrom_ptr        = Pointer to VROM.
+ *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
+ *      culling_ram_8c_ptr = Pointer to Real3D culling RAM at 0x8C000000.
+ *      polygon_ram_ptr    = Pointer to Real3D polygon RAM.
+ *      vrom_ptr           = Pointer to VROM.
  */
 
-void osd_renderer_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
-                       UINT8 *vrom_ptr)
+void osd_renderer_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
+                       UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr)
 {
 	GLuint							pixel_format;
 	static PIXELFORMATDESCRIPTOR	pfd =			// must this be static?
@@ -224,7 +226,7 @@ void osd_renderer_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
      * Initialize the OS-independent rendering engine
      */
 
-    r3dgl_init(culling_ram_ptr, polygon_ram_ptr, vrom_ptr);
+    r3dgl_init(culling_ram_8e_ptr, culling_ram_8c_ptr, polygon_ram_ptr, vrom_ptr);
 }
 
 void osd_renderer_shutdown(void)
@@ -360,16 +362,20 @@ void osd_renderer_free_layer_buffer(UINT layer_num)
 }
 
 /*
- * void osd_renderer_upload_texture(UINT8 *src);
+ * void osd_renderer_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
+ *                                  BOOL little_endian);
  *
- * Uploads a Model 3 texture straight from the texture buffer RAM (the first
- * 2 words are header data.)
+ * Uploads a Model 3 texture. 
  *
  * Parameters:
- *      src = Pointer to the Model 3 texture buffer.
+ *      header        = Header word containing size and position information.
+ *      length        = Header word containing length information.
+ *      src           = Pointer to the texture image data (no header words.)
+ *      little_endian = True if image data is in little endian format.
  */
 
-void osd_renderer_upload_texture(UINT8 *src)
+void osd_renderer_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
+                                 BOOL little_endian)
 {
-    r3dgl_upload_texture(src);
+    r3dgl_upload_texture(header, length, src, little_endian);
 }

@@ -115,7 +115,8 @@ int main(int argc, char *argv[])
 
 	// Parse command-line
 
-	strcpy(m3_config.game_id, argv[1]);
+    strncpy(m3_config.game_id, argv[1], 8);
+    m3_config.game_id[8] = '\0';    // in case game name was 8 or more chars
 
 	// Some initialization
 
