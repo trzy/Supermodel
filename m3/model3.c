@@ -416,7 +416,7 @@ static UINT8 m3_ppc_read_8(UINT32 a)
      */
 
     if (a <= 0x007FFFFF)
-        return ram[a ^ 3];
+        return ram[a];
     else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
         return crom_bank[a - 0xFF000000];
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
@@ -474,7 +474,7 @@ static UINT16 m3_ppc_read_16(UINT32 a)
      */
 
     if (a <= 0x007FFFFF)
-        return *(UINT16 *) &ram[a ^ 2];
+        return BSWAP16(*(UINT16 *) &ram[a]);
     else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
         return BSWAP16(*(UINT16 *) &crom_bank[a - 0xFF000000]);
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
@@ -510,7 +510,7 @@ static UINT32 m3_ppc_read_32(UINT32 a)
      */
 
     if (a <= 0x007FFFFF)
-        return *(UINT32 *) &ram[a];
+        return BSWAP32(*(UINT32 *) &ram[a]);
     else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
         return BSWAP32(*(UINT32 *) &crom_bank[a - 0xFF000000]);
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
@@ -616,7 +616,7 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
 
     if (a <= 0x007FFFFF)
     {
-        ram[a ^ 3] = d;
+        ram[a] = d;
         return;
     }
 
@@ -713,7 +713,7 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
 
     if (a <= 0x007FFFFF)
     {
-        *(UINT16 *) &ram[a ^ 2] = d;
+        *(UINT16 *) &ram[a] = BSWAP16(d);
         return;
     }
 
@@ -761,7 +761,7 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
 
     if (a <= 0x007FFFFF)
     {
-        *(UINT32 *) &ram[a] = d;
+        *(UINT32 *) &ram[a] = BSWAP32(d);
         return;
     }
 
@@ -1966,7 +1966,7 @@ void m3_shutdown(void)
 
 	/* free any allocated buffer */
 
-    save_file("ram", ram, 8*1024*1024, 1);
+    save_file("ram", ram, 8*1024*1024, 0);
     save_file("vram", vram, 1*1024*1024+2*65536, 0);
     save_file("8e000000", culling_ram_8e, 1*1024*1024, 0);
     save_file("8c000000", culling_ram_8c, 2*1024*1024, 0);
