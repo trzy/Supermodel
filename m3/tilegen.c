@@ -519,6 +519,8 @@ void tilegen_update(void)
             else    // layer is disabled, fill with 0 (transparent, no data)
                 memset(layer, 0, 384 * pitch * sizeof(UINT16));
 
+			osd_renderer_free_layer_buffer(i);
+
             addr += 0x2000;
             layer_color_mask <<= 1;
             layer_enable_mask <<= 1;
@@ -539,6 +541,8 @@ void tilegen_update(void)
             }            
             else    // layer is disabled, fill with 0 (transparent, no data)
                 memset(layer, 0, 384 * pitch * sizeof(UINT32));
+
+			osd_renderer_free_layer_buffer(i);
 
             addr += 0x2000;
             layer_color_mask <<= 1;
