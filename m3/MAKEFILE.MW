@@ -21,7 +21,19 @@ LD = gcc
 AS = nasm
 AR = ar
 
-CFLAGS = -D_LOG_ -I./ -I./win32/ -std=gnu99 -s -O3 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -Wall -Wno-unused -Wno-format
+ifeq ($(REND),d3d)
+OBJ_REND = $(OBJ_DIR)/dx_render.o
+else
+OBJ_REND = $(OBJ_DIR)/glrender.o $(OBJ_DIR)/win_gl.o
+endif
+
+C_WFLAGS = -Wall -Wno-unused -Wno-format
+C_DFLAGS = -D_LOG_ -D_PROFILE_ $(FLAGS_REND)
+C_IFLAGS = -I./ -I./osd_common/ -I./win32/
+C_OFLAGS = -O3 -fexpensive-optimizations -mcpu=athlon-xp -malign-double -fomit-frame-pointer
+C_GFLAGS = -s #-Q #-g -pg
+
+CFLAGS = $(C_WFLAGS) $(C_DFLAGS) $(C_IFLAGS) $(C_OFLAGS) $(C_GFLAGS) -std=gnu99
 AFLAGS = -f coff
 
 LIBS = -lmingw32 -ldxguid -ldinput8 -luser32 -lgdi32 -ladvapi32 # -lz
@@ -43,30 +55,23 @@ OBJ = $(OBJ_DIR)/win_input.o \
 	$(OBJ_DIR)/win_main.o \
 	$(OBJ_DIR)/bridge.o \
 	$(OBJ_DIR)/controls.o \
-	$(OBJ_DIR)/dma.o \
 	$(OBJ_DIR)/dsb1.o \
 	$(OBJ_DIR)/eeprom.o \
 	$(OBJ_DIR)/r3d.o \
-	$(OBJ_DIR)/r3dgl.o \
+	$(OBJ_DIR)/tilegen.o \
+	$(OBJ_DIR)/dma.o \
 	$(OBJ_DIR)/rtc.o \
 	$(OBJ_DIR)/scsi.o \
-	$(OBJ_DIR)/tilegen.o \
 	$(OBJ_DIR)/model3.o \
 	$(OBJ_DIR)/ppc.o \
 	$(OBJ_DIR)/disasm.o
-
-ifeq ($(REND),d3d)
-OBJ_REND = $(OBJ_DIR)/dx_render.o
-else
-OBJ_REND = $(OBJ_DIR)/ogl_render.o
-endif
 
 #
 # Rules
 #
 
 all:	$(OBJ) $(OBJ_REND)
-	$(CC) $(CFLAGS) $(FLAGS_REND) $(OBJ) $(OBJ_REND) -o $(EXE) $(LIBS) $(LIBS_REND)
+	$(CC) $(CFLAGS) $(OBJ) $(OBJ_REND) -o $(EXE) $(LIBS) $(LIBS_REND)
 
 clean:
 	del obj\*.o
@@ -74,7 +79,13 @@ clean:
 $(OBJ_DIR)/%.o: %.c %.h rom_list.h
 	$(CC) $< $(CFLAGS) -c -o $@
 
+$(OBJ_DIR)/scsi.o: scsi.c scsi.h scsiop.h
+	$(CC) $< $(CFLAGS) -c -o $@
+
 $(OBJ_DIR)/%.o: %.c
+	$(CC) $< $(CFLAGS) -c -o $@
+
+$(OBJ_DIR)/%.o: osd_common/%.c
 	$(CC) $< $(CFLAGS) -c -o $@
 
 $(OBJ_DIR)/%.o: win32/%.c

@@ -67,9 +67,19 @@ static void     (*write_32)(UINT32, UINT32);
  * appropriate registers.
  */
 
+#ifdef _PROFILE_
+extern UINT is_dma;
+#endif
+
 static void do_dma(void)
 {
     UINT32  src, dest, len;
+
+	PROFILE_SECT_ENTRY("dma");
+
+	#ifdef _PROFILE_
+	is_dma = 1;
+	#endif
 
     src = *(UINT32 *) &dma_regs[0x00];
     dest = *(UINT32 *) &dma_regs[0x04];
@@ -98,7 +108,13 @@ static void do_dma(void)
         }
     }
 
+	#ifdef _PROFILE_
+	is_dma = 0;
+	#endif
+
     *(UINT32 *) &dma_regs[0x08] = 0;    // not sure if this is necessary
+
+	PROFILE_SECT_EXIT("dma");
 }
 
 /******************************************************************/

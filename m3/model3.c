@@ -171,24 +171,250 @@ void _log_init(char * path)
 }
 
 /******************************************************************/
+/* Profiling                                                      */
+/******************************************************************/
+
+#ifdef _PROFILE_
+
+typedef struct PROFILE_SECTION
+{
+	CHAR name[24];
+	UINT64 total;	// cumulative time elapsed
+	UINT64 time;	// time elapsed since section start
+
+	struct PROFILE_SECTION * next;
+
+} PROFILE_SECTION;
+
+static PROFILE_SECTION * section_list = NULL;
+static PROFILE_SECTION * last_section = NULL;
+
+/******************************************************************/
+
+static volatile UINT64 read_tsc(void)
+{
+	UINT32 i, j;
+
+	#if __GNUC__
+
+	__asm__ __volatile__ ("rdtsc" : "=&a" (i), "=&d" (j));
+
+	#else
+
+	__asm__
+	{
+		push eax
+		push edx
+		rdtsc
+		mov dword [j], edx
+		mov dword [i], eax
+		pop edx
+		pop eax
+	}
+
+	#endif
+
+	return( (((UINT64)j) << 32) + ((UINT64)i) );
+}
+
+static void reset_section(PROFILE_SECTION * sect)
+{
+	// reset section stats
+
+	sect->time = 0;
+	sect->total = 0;
+}
+
+static void start_section(PROFILE_SECTION * sect)
+{
+	// record the current tsc in the section
+
+	sect->time = read_tsc();
+}
+
+static void stop_section(PROFILE_SECTION * sect)
+{
+	// add the passed ticks to the total time amount
+
+	sect->total += (read_tsc() - sect->time);
+}
+
+static void add_section(CHAR * name)
+{
+	// link a new clean section to the end of the list
+
+	PROFILE_SECTION * section;
+
+	section = (PROFILE_SECTION *)malloc(sizeof(PROFILE_SECTION));
+
+	strcpy(section->name, name);
+	reset_section(section);
+	section->next = NULL;
+
+	if(section_list == NULL)
+	{
+		section_list = section;
+		last_section = section;
+	}
+	else
+	{
+		last_section->next = section;
+		last_section = section;
+	}
+}
+
+static PROFILE_SECTION * find_section(CHAR * name)
+{
+	// find a section in the list, else return NULL
+
+	PROFILE_SECTION * sect;
+
+	sect = section_list;
+
+	while(sect != NULL)
+	{
+		if(strcmp(sect->name, name) == 0)
+			return(sect);
+		sect = sect->next;
+	}
+
+	return(NULL);
+}
+
+/******************************************************************/
+
+void profile_section_entry(CHAR * name)
+{
+	PROFILE_SECTION * sect;
+
+	if(NULL == (sect = find_section(name)))
+	{
+		add_section(name);
+		sect = last_section;
+	}
+
+	start_section(sect);
+}
+
+void profile_section_exit(CHAR * name)
+{
+	PROFILE_SECTION * sect;
+
+	if(NULL != (sect = find_section(name)))
+	{
+		stop_section(sect);
+	}
+}
+
+UINT64 profile_get_stat(CHAR * name)
+{
+	// return the cumulative time spent executing this section
+
+	PROFILE_SECTION * sect;
+
+	if(NULL != (sect = find_section(name)))
+	{
+		return(sect->total);
+	}
+
+	return(0);
+}
+
+void profile_reset_sect(CHAR * name)
+{
+	PROFILE_SECTION * sect;
+
+	if(NULL != (sect = find_section(name)))
+	{
+		reset_section(sect);
+	}
+}
+
+void profile_cleanup(void)
+{
+	PROFILE_SECTION * sect;
+
+	sect = section_list;
+
+	while(sect != NULL)
+	{
+		PROFILE_SECTION * temp;
+
+		temp = sect->next;
+		free(sect);
+		sect = temp;
+	}
+}
+
+// NOTE: this is the only Model3-specific profile procedure
+
+#define PERC(time) (((FLOAT64)time) / ((FLOAT64)total / 100.0))
+ 
+void profile_print(CHAR * string)
+{
+	UINT64 total	= profile_get_stat("-");
+	UINT64 ppc		= profile_get_stat("ppc");
+	UINT64 m68k		= profile_get_stat("68k");
+	UINT64 tilegen	= profile_get_stat("tilegen");
+	UINT64 real3d	= profile_get_stat("real3d");
+	UINT64 dma		= profile_get_stat("dma");
+	UINT64 scsi		= profile_get_stat("scsi");
+
+	// odd-looking way to advance a pointer :)
+
+	string = &string[sprintf(string, "----------------------------------------\n")];
+	string = &string[sprintf(string, "total     = %3.2f%%\n", PERC(total))];
+	string = &string[sprintf(string, "----------------------------------------\n")];
+	string = &string[sprintf(string, "ppc       = %3.2f%%\n", PERC(ppc))];
+	string = &string[sprintf(string, "68k       = %3.2f%%\n", PERC(m68k))];
+	string = &string[sprintf(string, "tilegen   = %3.2f%%\n", PERC(tilegen))];
+	string = &string[sprintf(string, "real3d    = %3.2f%%\n", PERC(real3d))];
+	string = &string[sprintf(string, "dma       = %3.2f%%\n", PERC(dma))];
+	string = &string[sprintf(string, "scsi      = %3.2f%%\n", PERC(scsi))];
+	string = &string[sprintf(string, "----------------------------------------\n")];
+}
+
+#ifdef PERC
+#undef PERC
+#endif
+
+/******************************************************************/
+
+static UINT64 profile_read_8 = 0;
+static UINT64 profile_read_16 = 0;
+static UINT64 profile_read_32 = 0;
+static UINT64 profile_read_64 = 0;
+
+static UINT64 profile_write_8 = 0;
+static UINT64 profile_write_16 = 0;
+static UINT64 profile_write_32 = 0;
+static UINT64 profile_write_64 = 0;
+
+UINT is_dma = 0;
+
+#define PROFILE_MEM_ACCESS(type, size) \
+			if(!is_dma) profile_##type##_##size++;
+
+#else
+
+#define PROFILE_MEM_ACCESS(type, size);
+
+#endif
+
+/******************************************************************/
 /* PPC Access                                                     */
 /******************************************************************/
 
 static UINT8 m3_ppc_read_8(UINT32 a)
 {
-#if 0   // TEMP: some VF3 debug-related stuff
-    if (a == 0x102400)
-        return (ram[a] | 0x10);
-    if (a == 0x100087)
-        return (ram[a] | 0x20);
-#endif
+	PROFILE_MEM_ACCESS(read, 8);
 
     /*
      * RAM and ROM tested for first for speed
      */
 
     if (a <= 0x007FFFFF)
-        return ram[a];
+        return ram[a ^ 3];
     else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
         return crom_bank[a - 0xFF000000];
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
@@ -226,19 +452,20 @@ static UINT8 m3_ppc_read_8(UINT32 a)
         break;
     }
 
-
     error("%08X: unknown read8, %08X\n", PPC_PC, a);
     return 0xFF;
 }
 
 static UINT16 m3_ppc_read_16(UINT32 a)
 {
+	PROFILE_MEM_ACCESS(read, 16);
+
     /*
      * RAM and ROM tested for first for speed
      */
 
     if (a <= 0x007FFFFF)
-        return BSWAP16(*(UINT16 *) &ram[a]);
+        return *(UINT16 *) &ram[a ^ 2];
     else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
         return BSWAP16(*(UINT16 *) &crom_bank[a - 0xFF000000]);
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
@@ -262,19 +489,14 @@ static UINT16 m3_ppc_read_16(UINT32 a)
 
 static UINT32 m3_ppc_read_32(UINT32 a)
 {
-#if 0
-    if (a == 0x102400)
-        return (BSWAP32(*(UINT32 *) &ram[a]) | 0x10000000);
-    if (a == 0x100084)
-        return (BSWAP32(*(UINT32 *) &ram[a]) | 0x00000020);
-#endif
+	PROFILE_MEM_ACCESS(read, 32);
 
     /*
      * RAM and ROM tested for first for speed
      */
 
     if (a <= 0x007FFFFF)
-        return BSWAP32(*(UINT32 *) &ram[a]);
+        return *(UINT32 *) &ram[a];
     else if (a >= 0xFF000000 && a <= 0xFF7FFFFF)
         return BSWAP32(*(UINT32 *) &crom_bank[a - 0xFF000000]);
     else if (a >= 0xFF800000 && a <= 0xFFFFFFFF)
@@ -350,6 +572,8 @@ static UINT64 m3_ppc_read_64(UINT32 a)
 {
     UINT64  d;
 
+	PROFILE_MEM_ACCESS(read, 64);
+
     d = m3_ppc_read_32(a + 0);
     d <<= 32;
     d |= m3_ppc_read_32(a + 4);
@@ -359,13 +583,15 @@ static UINT64 m3_ppc_read_64(UINT32 a)
 
 static void m3_ppc_write_8(UINT32 a, UINT8 d)
 {
+	PROFILE_MEM_ACCESS(write, 8);
+
     /*
      * RAM tested for first for speed
      */
 
     if (a <= 0x007FFFFF)
     {
-        ram[a] = d;
+        ram[a ^ 3] = d;
         return;
     }
 
@@ -440,13 +666,15 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
 
 static void m3_ppc_write_16(UINT32 a, UINT16 d)
 {
+	PROFILE_MEM_ACCESS(write, 16);
+
     /*
      * RAM tested for first for speed
      */
 
     if (a <= 0x007FFFFF)
     {
-        *(UINT16 *) &ram[a] = BSWAP16(d);
+        *(UINT16 *) &ram[a ^ 2] = d;
         return;
     }
 
@@ -480,17 +708,15 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
 
 static void m3_ppc_write_32(UINT32 a, UINT32 d)
 {
-    if (a == 0x100060)
-    {
-        LOG("model3.log", "%08X = %08X @ PC=%08X\n", a, d, PPC_PC);
-    }
+	PROFILE_MEM_ACCESS(write, 32);
+
     /*
      * RAM tested for first for speed
      */
 
     if (a <= 0x007FFFFF)
     {
-        *(UINT32 *) &ram[a] = BSWAP32(d);
+        *(UINT32 *) &ram[a] = d;
         return;
     }
 
@@ -612,13 +838,13 @@ static void m3_ppc_write_32(UINT32 a, UINT32 d)
         break;
     }
 
-//	save_file("trace.bin", &ram[(PPC_PC&0x7FFFFF)-16], sizeof(UINT32)*32);
-
     error("%08X: unknown write32, %08X = %08X\n", PPC_PC, a, d);
 }
 
 static void m3_ppc_write_64(UINT32 a, UINT64 d)
 {
+	PROFILE_MEM_ACCESS(write, 64);
+
     m3_ppc_write_32(a + 0, (UINT32) (d >> 32));
     m3_ppc_write_32(a + 4, (UINT32) d);
 }
@@ -626,33 +852,6 @@ static void m3_ppc_write_64(UINT32 a, UINT64 d)
 /******************************************************************/
 /* System Control (0xFx100000 - 0xFx10003F)                       */
 /******************************************************************/
-
-/*
-
-  0xF0100000				8-bit		-W    Unknown
-  0xF0100004				8-bit		-W    Unknown
-  0xF0100008				8-bit		RW    CROM Banking (lower 3 bits select CROM bank that appears at 0xFF000000)
-  0xF010000C				8-bit		-W    Real3D TAP Write (0x80 = *TRST, 0x40 = TCK, 0x20 = TDI, 0x04 = TMS)
-  0xF0100010				8-bit		R-    Real3D TAP Read (0x20 = TDO)
-  0xF0100014                8-bit       RW    IRQ Enable (IRQ clear, read to acknowledge, as well?)
-  0xF0100018				8-bit		R-    IRQ Pending
-  0xF010001C                8-bit       RW    Unknown (IRQ related, perhaps)
-  0xF010003C				8-bit		-W    Unknown (0xAD,0xAF)
-
- +----------------------------------------------------+
- | PowerPC Interrupt Sources                          |
- +----------------------------------------------------+
- | IRQ0 (0x01)        Tile Generator (VBlank-Out?)    |
- | IRQ1 (0x02)        Tile Generator (VBlank-In)      |
- | IRQ2 (0x04)        Tile Generator                  |
- | IRQ3 (0x08)        Tile Generator                  |
- | IRQ4 (0x10)        Network Board                   |
- | IRQ5 (0x20)        Unused ?                        |
- | IRQ6 (0x40)        Sound-related (see Scud Race    |
- |                    routine at 0x1DFC)              |
- | IRQ7 (0x80)        Sound Request                   |
- +----------------------------------------------------+
-*/
 
 static UINT8    m3_irq_state = 0;   // 0xF0100018
 static UINT8    m3_irq_enable = 0;    // 0xF0100014
@@ -1071,12 +1270,30 @@ UINT    m3_irq_bit = 0; // debug
 
 void m3_run_frame(void)
 {
+	/*
+	 * Reset all profiling sections
+	 */
+
+	PROFILE_SECT_RESET("-");
+	PROFILE_SECT_RESET("ppc");
+	PROFILE_SECT_RESET("68k");
+	PROFILE_SECT_RESET("tilegen");
+	PROFILE_SECT_RESET("real3d");
+	PROFILE_SECT_RESET("dma");
+	PROFILE_SECT_RESET("scsi");
+
+	PROFILE_SECT_ENTRY("-");
+
     /*
      * Run the PowerPC and 68K
      */
 
+	PROFILE_SECT_ENTRY("ppc");
     ppc_run(ppc_freq / 60);
-    //m68k_run(11289600);
+	PROFILE_SECT_EXIT("ppc");
+
+	PROFILE_SECT_ENTRY("68k");
+	PROFILE_SECT_EXIT("68k");
 
     /*
      * Enter VBlank and update the graphics
@@ -1091,19 +1308,28 @@ void m3_run_frame(void)
      * Generate interrupts for this frame and run the VBlank
      */
 
-//    m3_add_irq(2/*m3_irq_enable*/);
     m3_add_irq(m3_irq_enable);
     ppc_set_irq_line(1);
+
+	PROFILE_SECT_ENTRY("ppc");
     ppc_run(100000);   
-//    m3_remove_irq(0x60);
+	PROFILE_SECT_EXIT("ppc");
+
     m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
 
+	PROFILE_SECT_EXIT("-");
 }
 
 void m3_reset(void)
 {
 	/* the ROM must be already loaded at this point. */
 	/* it must _always_ be called when you load a ROM. */
+
+	/* profiler */
+
+	#ifdef _PROFILE_
+	profile_cleanup();
+	#endif
 
 	/* init log file */
 
@@ -1597,6 +1823,57 @@ void m3_shutdown(void)
     SAFE_FREE(culling_ram_8c);
     SAFE_FREE(polygon_ram);
     SAFE_FREE(texture_ram);
+
+	#ifdef _PROFILE_
+	{
+	UINT64 total_read, total_write, total;
+
+	total_read = profile_read_8 + profile_read_16 + profile_read_32 + profile_read_64;
+	total_write = profile_write_8 + profile_write_16 + profile_write_32 + profile_write_64;
+	total = total_read + total_write;
+
+	fprintf(stderr,
+			"memory access stats:\n"
+			" read   8 : %2.6f%% of total reads,  %2.6f%% of total accesses\n"
+			" read  16 : %2.6f%% of total reads,  %2.6f%% of total accesses\n"
+			" read  32 : %2.6f%% of total reads,  %2.6f%% of total accesses\n"
+			" read  64 : %2.6f%% of total reads,  %2.6f%% of total accesses\n"
+			" write  8 : %2.6f%% of total writes, %2.6f%% of total accesses\n"
+			" write 16 : %2.6f%% of total writes, %2.6f%% of total accesses\n"
+			" write 32 : %2.6f%% of total writes, %2.6f%% of total accesses\n"
+			" write 64 : %2.6f%% of total writes, %2.6f%% of total accesses\n",
+
+			(FLOAT64)profile_read_8 / ((FLOAT64)total_read / 100.0),
+			(FLOAT64)profile_read_8 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_read_16 / ((FLOAT64)total_read / 100.0),
+			(FLOAT64)profile_read_16 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_read_32 / ((FLOAT64)total_read / 100.0),
+			(FLOAT64)profile_read_32 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_read_64 / ((FLOAT64)total_read / 100.0),
+			(FLOAT64)profile_read_64 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_write_8 / ((FLOAT64)total_write / 100.0),
+			(FLOAT64)profile_write_8 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_write_16 / ((FLOAT64)total_write / 100.0),
+			(FLOAT64)profile_write_16 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_write_32 / ((FLOAT64)total_write / 100.0),
+			(FLOAT64)profile_write_32 / ((FLOAT64)total / 100.0),
+
+			(FLOAT64)profile_write_64 / ((FLOAT64)total_write / 100.0),
+			(FLOAT64)profile_write_64 / ((FLOAT64)total / 100.0)
+	);
+
+	// generate profile informations
+
+	profile_cleanup();
+
+	}
+	#endif
 }
 
 void m3_init(void)
@@ -1644,7 +1921,7 @@ void m3_init(void)
 
     /* setup the PPC */
 
-    if(ppc_init(NULL) != PPC_OKAY)
+    if(ppc_init() != PPC_OKAY)
 		error("ppc_init failed.");
 
     ppc_set_reg(PPC_REG_PVR, 0x00060104);

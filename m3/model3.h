@@ -77,13 +77,13 @@
 #define PPC_PC  ppc_get_reg(PPC_REG_PC)
 #define PPC_LR  ppc_get_reg(PPC_REG_LR)
 
-INLINE UINT16 BSWAP16(UINT16 d)
+static INLINE UINT16 BSWAP16(UINT16 d)
 {
 	return(((d >> 8) & 0x00FF) |
 		   ((d << 8) & 0xFF00));
 }
 
-INLINE UINT32 BSWAP32(UINT32 d)
+static INLINE UINT32 BSWAP32(UINT32 d)
 {
 	return(((d >> 24) & 0x000000FF) |
 		   ((d >>  8) & 0x0000FF00) |
@@ -153,6 +153,27 @@ extern CONFIG m3_config;
 extern void message(UINT flags, char * fmt, ...);
 extern void error(char * fmt, ...);
 
+/*
+ * Profile
+ */
+
+extern void profile_section_entry(CHAR * name);
+extern void profile_section_exit(CHAR * name);
+extern UINT64 profile_get_stat(CHAR * name);
+extern void profile_reset_sect(CHAR * name);
+extern void profile_cleanup(void);
+extern void profile_print(CHAR * string);
+
+#ifdef _PROFILE_
+#define	PROFILE_SECT_ENTRY(n)	profile_section_entry(n);
+#define PROFILE_SECT_EXIT(n)	profile_section_exit(n);
+#define PROFILE_SECT_RESET(n)	profile_reset_sect(n);
+#else // !_PROFILE_
+#define PROFILE_SECT_ENTRY(n)
+#define PROFILE_SECT_EXIT(n)
+#define PROFILE_SECT_RESET(n)
+#endif // _PROFILE_
+
 /******************************************************************/
 /* Functions                                                      */
 /******************************************************************/
@@ -190,4 +211,3 @@ extern void m3_save_bram(void);
 /******************************************************************/
 
 #endif  // INCLUDED_MODEL3_H
-

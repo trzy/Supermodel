@@ -52,10 +52,20 @@ static BOOL (*op_table[256])();
  * Move Memory
  */
 
+#ifdef _PROFILE_
+extern UINT is_dma;
+#endif
+
 INSTRUCTION(move_memory)
 {
     UINT32  source = DSPS, dest;
     INT     num_bytes = DBC, i;
+
+	PROFILE_SECT_ENTRY("scsi");
+
+	#ifdef _PROFILE_
+	is_dma = 1;
+	#endif
 
     FETCH(TEMP);
     dest = TEMP;
@@ -81,9 +91,16 @@ INSTRUCTION(move_memory)
             write_8(dest++, read_8(source++));
     }
 
+	#ifdef _PROFILE_
+	is_dma = 0;
+	#endif
+
     REG32(0x24) &= 0xff000000;  // update DBC (is any of this necessary???)
     DSPS = source;
     TEMP = dest;
+
+	PROFILE_SECT_EXIT("scsi");
+
     return 0;
 }
 

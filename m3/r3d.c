@@ -263,6 +263,8 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
 {    
     UINT    size_x, size_y, xpos, ypos;
 
+	PROFILE_SECT_ENTRY("real3d");
+
     /*
      * Model 3 texture RAM appears as 2 2048x1024 textures. When textures are
      * uploaded, their size and position within a sheet is given. I treat the
@@ -296,6 +298,8 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
      */
     
     osd_renderer_remove_textures(xpos, ypos, size_x, size_y);
+
+	PROFILE_SECT_EXIT("real3d");
 }
 
 /******************************************************************/

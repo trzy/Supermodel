@@ -75,7 +75,8 @@ static UINT8    reg[0x100];     // tilemap generator registers
  * means the color is transparent. No other bit combinations should be used.
  */
 
-static UINT32   pal[65536];
+static UINT32   pal_bank[3][65536];
+static UINT32	* pal = pal_bank[0];
 
 /*
  * Layer Format
@@ -498,6 +499,8 @@ void tilegen_update(void)
      * Render layers
      */
 
+	PROFILE_SECT_ENTRY("tilegen");
+
     addr = 0xF8000;                 // offset of first layer in VRAM
     layer_colors = BSWAP32(*(UINT32 *) &reg[REG_LAYER_COLORS]);
     layer_color_mask = 0x00100000;  // first layer color bit (moves left)
@@ -551,6 +554,8 @@ void tilegen_update(void)
             layer_enable_mask <<= 1;
         }
     }
+
+	PROFILE_SECT_EXIT("tilegen");
 }
 
 /******************************************************************/
@@ -747,7 +752,7 @@ void tilegen_load_state(FILE *fp)
 void tilegen_shutdown(void)
 {
     vram = NULL;
-}
+  }
 
 /*
  * void tilegen_init(UINT8 *vramptr);
