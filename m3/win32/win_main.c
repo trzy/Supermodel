@@ -261,6 +261,9 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
             case VK_F3: // Start
                 controls.system_controls[0] &= ~0x10;
                 break;
+            case VK_F4: // Coin #1
+                controls.system_controls[0] &= ~0x01;
+                break;
             }
 			break;
         case WM_KEYUP:
@@ -275,7 +278,10 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
                 controls.system_controls[1] |= 0x80;
                 break;
             case VK_F3:
-                controls.system_controls[0] |= ~0x10;
+                controls.system_controls[0] |= 0x10;
+                break;
+            case VK_F4:
+                controls.system_controls[0] |= 0x01;
                 break;
             }
             break;
