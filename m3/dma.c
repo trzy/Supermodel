@@ -75,12 +75,27 @@ static void do_dma(void)
     dest = *(UINT32 *) &dma_regs[0x04];
     len = (*(UINT32 *) &dma_regs[0x08]) * 4;
 
-    while (len)
+    LOG("model3.log", "DMA %08X -> %08X, %X\n", src, dest, len);
+
+    if ((dma_regs[0x0E] & 0x80))    // swap words
     {
-        write_32(dest, read_32(src));
-        src += 4;
-        dest += 4;
-        len -= 4;
+        while (len)
+        {
+            write_32(dest, BSWAP32(read_32(src)));
+            src += 4;
+            dest += 4;
+            len -= 4;
+        }
+    }
+    else
+    {
+        while (len)
+        {
+            write_32(dest, read_32(src));
+            src += 4;
+            dest += 4;
+            len -= 4;
+        }
     }
 
     *(UINT32 *) &dma_regs[0x08] = 0;    // not sure if this is necessary
@@ -217,7 +232,7 @@ void dma_write_8(UINT32 a, UINT8 d)
 {
     dma_regs[a & 0x1F] = d;
 
-//	message(0, "%08X: Unknown DMA write8, %08X = %02X", ppc_get_reg(PPC_REG_PC), a, d);
+    LOG("model3.log", "%08X: Unknown DMA write8, %08X = %02X\n", ppc_get_reg(PPC_REG_PC), a, d);
 }
 
 /*

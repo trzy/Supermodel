@@ -131,6 +131,9 @@ static void draw_model_be(UINT8 *buf)
 			"\n"
 	);
 
+    if (buf == NULL)
+        return;
+
 	if(GETWORDBE(&buf[0*4]) == 0)
 		return;
 
@@ -551,6 +554,9 @@ static void draw_model_le(UINT8 *buf)
 			"#\n"
 			"\n"
 	);
+
+    if (buf == NULL)
+        return;
 
 	if(GETWORDLE(&buf[0*4]) == 0)
 		return;
@@ -1003,16 +1009,19 @@ static UINT8 *translate_r3d_address(UINT32 addr)
         return &vrom[addr * 4];
     }
 
+    return NULL;
     // this one is a kludge to satisfy VON2 -- it probably has no relation to
     // polygon RAM, though
+#if 0
     else if (addr >= 0x1200000 && addr <= 0x127FFFF)
     {
-        addr &= 0x007FFFFF;
+        addr &= 0x007FFFF;
         return &polygon_ram[addr * 4];
     }
 
     error("Unable to translate Real3D address: %08X\n", addr);
     return NULL;
+#endif
 }
 
 /*
@@ -1023,7 +1032,6 @@ static UINT8 *translate_r3d_address(UINT32 addr)
 
 static void set_matrix_base(UINT32 addr)
 {
-    message(0, "SET MATRIX = %08X", addr);
     matrix_base = translate_r3d_address(addr);
 }
 
@@ -1279,58 +1287,6 @@ static void draw_scene(void)
     stop = 0;
 
 	LOG_INIT("model3.log");
-
-    if (m3_config.step >= 0x20) // Step 2.0 is partially in the wrong endian
-    {
-        do
-        {
-            set_matrix_base(GETWORDBE(&culling_ram_8e[i + 0x16*4]));
-
-            j = GETWORDBE(&culling_ram_8e[i + 8]);  // get address of 10-word block
-            j = (j & 0xFFFF) * 4;
-            if (j == 0) // culling RAM probably hasn't been set up yet
-                break;
-
-            next = GETWORDBE(&culling_ram_8e[i + 4]);   // get address of next block
-            if (next == 0x01000000)                     // 01000000 == STOP
-                stop = TRUE;
-            i = (next & 0xFFFF) * 4;
-
-            switch((GETWORDBE(&culling_ram_8e[i + 8]) >> 24) & 0xFE)
-            {
-            case 0x00:  // block
-                R3D_LOG("model3.log", " ## scene: draw block at %08X\n\n", j);
-                if (((GETWORDBE(&culling_ram_8e[j+7*4]) >> 24) & 0xFE) == 0x04)
-                {
-                    GLfloat m[4*4];
-                    UINT32  matrix;
-
-                    glPushMatrix();
-                    matrix = GETWORDBE(&culling_ram_8e[j+3*4]);
-                    if ((matrix & 0x20000000) && (matrix & 0x3FF))
-                    {
-                        get_matrix(m, (matrix & 0x03FF)*12);
-                        if ((matrix & 0x3FF) != 0)  // safeguard for Scud Race
-                            glMultMatrixf(m);
-                    }
-                    draw_list(&culling_ram_8e[(GETWORDBE(&culling_ram_8e[j+7*4]) * 4) & 0xFFFFF]);
-                    glPopMatrix();
-                }
-                break;
-                
-            case 0x04:  // list
-                R3D_LOG("model3.log", " ## scene: draw list at %08X\n\n", j);
-//                draw_list(&culling_ram_8e[j]);
-                break;
-
-            default:
-                error("Unknown scene descriptor link %08X\n", GETWORDBE(&culling_ram_8e[i + 8]));
-            }
-        }
-        while (!stop);
-
-        return;
-    }
 
     do
     {
@@ -1699,8 +1655,8 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
 
 void r3dgl_update_frame(void)
 {
-    if (m3_config.step >= 0x20) // we can't render this yet
-        return;
+//    if (m3_config.step >= 0x20) // we can't render this yet
+//        return;
 
     /*
      * Enable Z-buffering
