@@ -115,7 +115,7 @@ static int OutBMP(int f, unsigned txres, unsigned tyres, unsigned char *texture)
 /* Macros                                                         */
 /******************************************************************/
 
-#define GETWORDLE(a)    (*(UINT32 *) a) // Real3D is a little endian device
+#define GETWORDLE(a)    (*(UINT32 *) a)
 #define GETWORDBE(a)    BSWAP32(*(UINT32 *) a)
 
 
@@ -195,9 +195,11 @@ static void draw_model_be(UINT8 *buf)
         tex_w = 32 << ((GETWORDBE(&buf[3*4]) >> 3) & 7);
         tex_h = 32 << ((GETWORDBE(&buf[3*4]) >> 0) & 7);
 
-        u_base = (((GETWORDBE(&buf[4*4]) & 0x1f) << 1) | ((GETWORDBE(&buf[5*4]) & 0x80) >> 7)) * 32;
-        v_base = (((GETWORDBE(&buf[5*4]) & 0x1f) << 1) | ((GETWORDBE(&buf[5*4]) & 0x00) >> 5)) * 16;
-        
+        u_base = ((GETWORDBE(&buf[4*4]) & 0x1F) << 1) | ((GETWORDBE(&buf[5*4]) & 0x80) >> 7);
+        v_base = (GETWORDBE(&buf[5*4]) & 0x1F) | ((GETWORDBE(&buf[4*4]) & 0x40) >> 1);
+        u_base *= 32;
+        v_base *= 32;
+
         /*
          * Draw
          */
@@ -594,9 +596,11 @@ static void draw_model_le(UINT8 *buf)
         tex_w = 32 << ((GETWORDLE(&buf[3*4]) >> 3) & 7);
         tex_h = 32 << ((GETWORDLE(&buf[3*4]) >> 0) & 7);
 
-        u_base = (((GETWORDLE(&buf[4*4]) & 0x1f) << 1) | ((GETWORDLE(&buf[5*4]) & 0x80) >> 7)) * 32;
-        v_base = (((GETWORDLE(&buf[5*4]) & 0x1f) << 1) | ((GETWORDLE(&buf[5*4]) & 0x00) >> 5)) * 16;
-        
+        u_base = ((GETWORDLE(&buf[4*4]) & 0x1F) << 1) | ((GETWORDLE(&buf[5*4]) & 0x80) >> 7);
+        v_base = (GETWORDLE(&buf[5*4]) & 0x1F) | ((GETWORDLE(&buf[4*4]) & 0x40) >> 1);
+        u_base *= 32;
+        v_base *= 32;
+
         /*
          * Draw
          */
@@ -997,7 +1001,7 @@ static float get_float(UINT8 *src)
  *
  * Translates an address from the Real3D internal space into a usable pointer.
  */
-
+//TODO: Polygon RAM is now 2MB, update this function 
 static UINT8 *translate_r3d_address(UINT32 addr)
 {
     if (addr <= 0x003FFFF)                              // 8C culling RAM
@@ -1018,7 +1022,7 @@ static UINT8 *translate_r3d_address(UINT32 addr)
         return &vrom[addr * 4];
     }
 
-    osd_error("Unable to translate Real3D address: %08X\n", addr);
+    error("Unable to translate Real3D address: %08X\n", addr);
     return NULL;
 }
 
@@ -1056,6 +1060,9 @@ static void get_matrix(GLfloat *dest, UINT32 src)
  * draw_list():
  *
  * Processes a list. Each list element references a 10-word block.
+ *
+ * On Step 2.0, the endianness of each list element is different from other
+ * data. 
  */
 
 static void draw_list(UINT8 *list)
@@ -1093,7 +1100,7 @@ static void draw_block(UINT8 *block)
      */
 
     matrix = GETWORDLE(&block[3*4]);
-//    if ((matrix & 0x20000000))
+    if ((matrix & 0x20000000))
     {
         get_matrix(m, 0x2000*4 + (matrix & 0xFFFF)*12*4);
         glPushMatrix();
@@ -1130,7 +1137,7 @@ static void draw_block(UINT8 *block)
      * Pop the matrix if we pushed one
      */
 
-//    if ((matrix & 0x20000000))
+    if ((matrix & 0x20000000))
         glPopMatrix();
 }
 
@@ -1172,7 +1179,7 @@ static void draw_scene(void)
 /* Texture Drawing                                                */
 /******************************************************************/
 
-static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w)
+static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w, BOOL little_endian)
 {
     static const INT    decode[64] = 
 						{
@@ -1193,22 +1200,33 @@ static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w)
 		for (xi = 0; xi < 8; xi++)
 		{
             /*
-             * Grab the pixel offset from the decode[] array. We XOR with 1
-             * because the Real3D is a little endian device and every word
-             * contains 2 16-bit pixels, thus they are swapped
+             * Grab the pixel offset from the decode[] array and fetch the
+             * pixel word
              */
 
-            pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
+            if (little_endian)
+            {
+                /*
+                 * XOR with 1 in little endian mode -- every word contains 2
+                 * 16-bit pixels, thus they are swapped
+                 */
 
-            rgb16 = *(UINT16 *) &buf[pixel_offs];
+                pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
+                rgb16 = *(UINT16 *) &buf[pixel_offs];
+            }
+            else
+            {
+                pixel_offs = decode[yi * 8 + xi] * 2;
+                rgb16 = (buf[pixel_offs + 0] << 8) | buf[pixel_offs + 1];
+            }
 
 			b = (rgb16 & 0x1f) << 3;
 			g = ((rgb16 >> 5) & 0x1f) << 3;
 			r = ((rgb16 >> 10) & 0x1f) << 3;
 
 			/*
-			 * Write R, G, B, and alpha. On Model 3, an alpha bit of 1 indicates a transparent
-			 * color and 0 is opaque
+			 * Write R, G, B, and alpha. On Model 3, an alpha bit of 1
+             * indicates a transparent color and 0 is opaque
 			 */
 
             texture_buffer[((y + yi) * w + (x + xi)) * 4 + 0] = r;
@@ -1219,7 +1237,7 @@ static void draw_texture_tile(UINT x, UINT y, UINT8 *buf, UINT w)
     }
 }
 
-static void draw_texture(UINT w, UINT h, UINT8 *buf)
+static void draw_texture(UINT w, UINT h, UINT8 *buf, BOOL little_endian)
 {
     UINT    xi, yi;
 
@@ -1227,56 +1245,64 @@ static void draw_texture(UINT w, UINT h, UINT8 *buf)
 	{
 		for (xi = 0; xi < w * 8; xi += 8)
 		{
-            draw_texture_tile(xi, yi, buf, w * 8);
+            draw_texture_tile(xi, yi, buf, w * 8, little_endian);
             buf += 8 * 8 * 2;   // each texture tile is 8x8 and 16-bit color
 		}
 	}
 }
 
 /*
- * void r3dgl_upload_texture(UINT8 *src);
+ * void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
+ *                           BOOL little_endian);
  *
  * Converts the specified Model 3 texture into OpenGL format and uploads it
  * for use.
  *
  * Parameters:
- *      src = Pointer to texture data with 2-word header.
+ *      header        = Header word with size and position info.
+ *      length        = Header word containing length information.
+ *      src           = Pointer to texture data (no header words.)
+ *      little_endian = Set to 1 if little endian, otherwise big endian.
  */
 
-void r3dgl_upload_texture(UINT8 *src)
-{
-    static int  f = 0;
+//TODO: remove overwritten textures
+//TODO: some textures are 8-bit, this is not handled yet.
 
-    UINT32  flags;
+void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
+                          BOOL little_endian)
+{    
+    static int  f=0;
     UINT    tiles_x, tiles_y, xpos, ypos, xi, yi;
     GLint   id;
 
-    flags = GETWORDLE(&src[4]);
-
     /*
-     * Calculate width and height in terms of 8x8 tiles and the
-     * position within the 2048x2048 texture sheet
+     * Model 3 texture RAM appears as 2 2048x1024 textures. When textures are
+     * uploaded, their size and position within a sheet is given. I treat the
+     * texture sheet selection bit as an additional bit to the Y coordinate.
      */
 
-    tiles_x = (flags >> 14) & 3;
-    tiles_y = (flags >> 17) & 3;
-    tiles_x = (32 << tiles_x) / 8;
-    tiles_y = (32 << tiles_y) / 8;
+    tiles_x = (header >> 14) & 3;
+    tiles_y = (header >> 17) & 3;
+    tiles_x = (32 << tiles_x) / 8;  // width in terms of 8x8 tiles
+    tiles_y = (32 << tiles_y) / 8;  // height in terms of 8x8 tiles
 
-    ypos = ((flags >> 6) & 0x3F) * 16 - 16; 
-    xpos = ((flags >> 0) & 0x3F) * 32;
+    ypos = (((header >> 7) & 0x1F) | ((header >> 15) & 0x20)) * 32;
+    xpos = ((header >> 0) & 0x3F) * 32;
 
     /*
      * Render the texture into the texture buffer
      */
 
-    if ((flags & 0x0f000000) == 0x01000000) // only render non-mipmap textures
-        draw_texture(tiles_x, tiles_y, &src[8]);
+    if ((header & 0x0f000000) == 0x01000000)    // only render non-mipmap textures
+        draw_texture(tiles_x, tiles_y, src, little_endian);
     else
         return;
 
-//    OutBMP(f, tiles_x * 8, tiles_y * 8, texture_buffer);
-    ++f;
+    if (!little_endian)
+    {
+        OutBMP(f, tiles_x * 8, tiles_y * 8, texture_buffer);
+        ++f;
+    }
 
     /*
      * Get a texture ID for this texture and set its properties, then upload
@@ -1317,6 +1343,9 @@ void r3dgl_upload_texture(UINT8 *src)
 
 void r3dgl_update_frame(void)
 {
+    if (m3_config.step >= 0x20) // we can't render this yet
+        return;
+
     /*
      * Enable Z-buffering
      */

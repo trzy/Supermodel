@@ -23,6 +23,15 @@
  * supposedly based on the Pro-1000.
  */
 
+/*
+ * RAM Size:
+ * ---------
+ *
+ * It appears that there is 2MB total of "culling RAM." 1MB appears at
+ * 0x8C000000 and the other at 0x8E000000. Step 1.0 and 1.5 appear to have
+ * 1MB of polygon RAM, but Step 2.0 (and probably 2.1) clearly uses 2MB.
+ */
+
 #include "model3.h"
 
 /******************************************************************/
@@ -85,7 +94,7 @@ void r3d_reset(void)
 {
     memset(culling_ram_8e, 0, 1*1024*1024);
     memset(culling_ram_8c, 0, 1*1024*1024);
-    memset(polygon_ram, 0, 1*1024*1024);
+    memset(polygon_ram, 0, 2*1024*1024);
 	tap_reset();
 }
 
@@ -102,7 +111,7 @@ void r3d_save_state(FILE *fp)
 {
     fwrite(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
     fwrite(culling_ram_8c, sizeof(UINT8), 1*1024*1024, fp);
-    fwrite(polygon_ram, sizeof(UINT8), 1*1024*1024, fp);
+    fwrite(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
 }
 
 /*
@@ -118,7 +127,7 @@ void r3d_load_state(FILE *fp)
 {
     fread(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
     fread(culling_ram_8c, sizeof(UINT8), 1*1024*1024, fp);
-    fread(polygon_ram, sizeof(UINT8), 1*1024*1024, fp);
+    fread(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
 }
 
 /******************************************************************/
@@ -185,9 +194,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
         *(UINT32 *) &culling_ram_8c[a & 0xFFFFF] = BSWAP32(d);
         return;
     }
-    else if (a >= 0x98000000 && a <= 0x980FFFFF)    // polygon RAM
+    else if (a >= 0x98000000 && a <= 0x981FFFFF)    // polygon RAM
     {
-        *(UINT32 *) &polygon_ram[a & 0xFFFFF] = BSWAP32(d);
+        *(UINT32 *) &polygon_ram[a & 0x1FFFFF] = BSWAP32(d);
         return;
     }
     else if (a >= 0x94000000 && a <= 0x940FFFFF)    // texture buffer
@@ -206,24 +215,9 @@ void r3d_write_32(UINT32 a, UINT32 d)
         }
         else if (a == last_addr)    // last word written
         {
-            osd_renderer_upload_texture(texture_buffer_ram);
+            osd_renderer_upload_texture(*(UINT32 *) &texture_buffer_ram[4], *(UINT32 *) &texture_buffer_ram[0], &texture_buffer_ram[8], 1);
             message(0, "texture upload complete");
         }
-
-        return;
-    }
-    else if (a >= 0x90000000)
-    {
-		if(a == 0x90000000) {
-			vrom_texture_address = BSWAP32(d);
-		} 
-		else if(a == 0x90000004) {
-			vrom_texture_header = BSWAP32(d);
-		}
-		else if(a == 0x90000008) {
-			UINT32 length = BSWAP32(d);
-			osd_renderer_upload_vrom_texture(vrom_texture_header, length, &vrom[(vrom_texture_address & 0x7FFFFF) * 4]);
-		}
 
         return;
     }
@@ -231,6 +225,20 @@ void r3d_write_32(UINT32 a, UINT32 d)
     switch (a)
     {
     case 0x88000000:    // 0xDEADDEAD
+        return;
+    case 0x90000000:    // VROM texture address
+        vrom_texture_address = BSWAP32(d);
+        message(0, "VROM texture address = %08X", BSWAP32(d));
+        return;
+    case 0x90000004:
+        vrom_texture_header = BSWAP32(d);
+        return;
+    case 0x90000008:
+        osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        return;
+    case 0x9C000000:    // ?
+    case 0x9C000004:    // ?
+    case 0x9C000008:    // ?
         return;
     }
 

@@ -25,7 +25,7 @@
 #ifndef INCLUDED_R3DGL_H
 #define INCLUDED_R3DGL_H
 
-extern void r3dgl_upload_texture(UINT8 *);
+extern void r3dgl_upload_texture(UINT32, UINT32, UINT8 *, BOOL);
 
 extern void r3dgl_update_frame(void);
 extern void r3dgl_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *);
