@@ -20,48 +20,67 @@
 /* DirectX 9 Renderer                                             */
 /******************************************************************/
 
-#include "MODEL3.H"
+#include "model3.h"
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <dxerr9.h>
 
+#include "dx_render.h"
+
 //#define ENABLE_LIGHTING
 //#define WIREFRAME
 #define ENABLE_ALPHA_BLENDING
-
-typedef struct {
-	int tex_num;
-	int vb_index;
-	int flags;
-} POLYGON_LIST;
+#define DRAW_STATS
+//#define ENABLE_MODEL_CACHING
 
 typedef struct {
 	float x, y, z;
 	float nx, ny, nz;
 	D3DCOLOR color;
+	D3DCOLOR specular;
 	float u, v;
 } VERTEX;
 
-#define D3DFVF_VERTEX (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0))
+typedef struct {
+	D3DXVECTOR4 direction;
+	D3DXVECTOR4 diffuse;
+	D3DXVECTOR4 ambient;
+} LIGHT2;
+
+static char num_bits[16] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
+
+#define D3DFVF_VERTEX (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_SPECULAR | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE2(0))
 
 static LPDIRECT3D9			d3d;
 static LPDIRECT3DDEVICE9	device;
 static LPDIRECT3DTEXTURE9	layer_data[4];
 static LPD3DXSPRITE			sprite;
+static LPD3DXFONT			font;
+static LPD3DXMATRIXSTACK	stack;
+static LPDIRECT3DVERTEXSHADER9 vertex_shader;
+
+static LIGHT2				light;
+
+static LPDIRECT3DVERTEXBUFFER9	vertex_buffer;
 
 static LPDIRECT3DTEXTURE9	texture[4096];
 static short texture_table[64*64];
+static int tris = 0;
 
-static LPD3DXMATRIXSTACK		matrix_stack;
+static D3DMATRIX coordinate_system;
+static D3DMATRIX projection;
 
 static D3DFORMAT supported_formats[] = { D3DFMT_A1R5G5B5,
 										 D3DFMT_A8R8G8B8,
 										 D3DFMT_A8B8G8R8 };
 
 static D3DFORMAT layer_format = 0;
-static char num_bits[16] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
-extern HWND main_window;
+static HWND main_window;
+static HFONT hfont;
+
+static int width;
+static int height;
 
 static UINT32* list_ram;	// Display List ram at 0x8E000000
 static UINT32* cull_ram;	// Culling ram at 0x8C000000
@@ -69,28 +88,142 @@ static UINT32* poly_ram;	// Polygon ram at 0x98000000
 static UINT32* vrom;		// VROM
 static UINT8* texture_sheet;
 
-static UINT32 matrix_start;
+static LONGLONG counter_start, counter_end, counter_frequency;
 
-static void traverse_node(UINT32*);
-static void traverse_list(UINT32*);
-static void render_scene(void);
-static UINT32* get_address(UINT32);
+typedef struct {
+	int refcount;
+	UINT32 address;
+	int vertex_index;
+	int length;
+} HASHTABLE;
+
+#define HASH_TABLE_SIZE 1048576
+static HASHTABLE model_hash_table[HASH_TABLE_SIZE];
+static int cached_vertices = 0;
+
+static void init_model_cache(void)
+{
+	int i;
+	for( i=0; i < HASH_TABLE_SIZE; i++ ) {
+		model_hash_table[i].refcount = 0;
+		model_hash_table[i].address = 0;
+	}
+}
+
+static HASHTABLE* cache_model(UINT32* mem,UINT32 address)
+{
+	VERTEX* vb;
+	int hash_index;
+	int index, end, vertex;
+	float fixed_point_scale;
+
+	address >>= 2;
+	hash_index = address % (HASH_TABLE_SIZE - 1);
+	if( model_hash_table[hash_index].refcount > 0 ) {
+		if( address == model_hash_table[hash_index].address ) {
+			return &model_hash_table[hash_index];
+		} else {
+			error("Direct3D error: Hash table collision: %08X, %08X\n",
+				address,model_hash_table[hash_index].address);
+		}
+	}
+
+	end = 0;
+	index = 0;
+	vertex = 0;
+
+	if(m3_config.step == 0x10)
+		fixed_point_scale = 32768.0f;
+	else
+		fixed_point_scale = 524288.0f;
+
+	model_hash_table[hash_index].refcount++;
+	model_hash_table[hash_index].address = address;
+	model_hash_table[hash_index].vertex_index = cached_vertices;
+
+	IDirect3DVertexBuffer9_Lock( vertex_buffer, cached_vertices * sizeof(VERTEX), 1000 * sizeof(VERTEX), (void**)&vb, D3DLOCK_DISCARD );
+
+	do {
+		UINT32 header[7];
+		UINT32 entry[16];
+		D3DCOLOR color;
+		int transparency;
+		int i, num_vertices, num_old_vertices;
+		int v2, v;
+		int texture_x, texture_y, tex_num, depth, tex_width, tex_height;
+		float nx, ny, nz;
+
+		for( i=0; i<7; i++) {
+			header[i] = BSWAP32(mem[index]);
+			index++;
+		}
+
+		// Check if this is the last polygon
+		if(header[1] & 0x4)
+			end = 1;
+
+		// Polygon normal
+		// Assuming 2.22 fixed-point. Is this correct ?
+		nx = (float)((int)header[1] >> 8) / 4194304.0f;
+		ny = (float)((int)header[2] >> 8) / 4194304.0f;
+		nz = (float)((int)header[3] >> 8) / 4194304.0f;
+
+		// If bit 0x40 set this is a quad, otherwise a triangle
+		if(header[0] & 0x40)
+			num_vertices = 4;
+		else
+			num_vertices = 3;
+
+		// How many vertices are reused
+		num_old_vertices = num_bits[header[0] & 0xF];
+
+		// Load vertex data
+		for( i=0; i<(num_vertices - num_old_vertices) * 4; i++) {
+			entry[i] = BSWAP32(mem[index]);
+			index++;
+		}
+
+		// Load new vertices
+		for( v=0; v < (num_vertices - num_old_vertices); v++) {
+			int ix, iy, iz;
+			int v_index = v * 4;
+
+			ix = entry[v_index];
+			iy = entry[v_index + 1];
+			iz = entry[v_index + 2];
+			vb[vertex].x = (float)(ix) / fixed_point_scale;
+			vb[vertex].y = (float)(iy) / fixed_point_scale;
+			vb[vertex].z = (float)(iz) / fixed_point_scale;
+			vb[vertex].u = 0.0f;
+			vb[vertex].v = 0.0f;
+			vb[vertex].nx = 0.0f;
+			vb[vertex].ny = 0.0f;
+			vb[vertex].nz = 0.0f;
+			vb[vertex].color = 0xFFFFFFFF;
+
+			vertex++;
+			cached_vertices++;
+		}
+	} while(end == 0);
+
+	model_hash_table[hash_index].length = cached_vertices - model_hash_table[hash_index].vertex_index;
+
+	IDirect3DVertexBuffer9_Unlock( vertex_buffer );
+	return &model_hash_table[hash_index];
+}
 
 /*
- * void osd_renderer_init(UINT8 *culling_ram_ptr, UINT8 *polygon_ram_ptr,
- *                        UINT8 *vrom_ptr);
+ * BOOL init_d3d_renderer(HWND hWnd, int width, int height)
  *
  * Initializes the renderer.
  *
  * Parameters:
- *      list_ram_ptr = Pointer to Real3D display list RAM
- *      cull_ram_ptr = Pointer to Real3D culling RAM
- *      poly_ram_ptr = Pointer to Real3D polygon RAM.
- *		texture_ram_ptr = Pointer to Real3D texture RAM
- *      vrom_ptr     = Pointer to VROM.
+ *		HWND hWnd = Window handle
+ *		int width = Width of the framebuffer
+ *		int height = Height of the framebuffer
  */
 
-void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_ptr, UINT8 *texture_ram_ptr,UINT8 *vrom_ptr)
+BOOL d3d_init(HWND hWnd)
 {
 	D3DPRESENT_PARAMETERS		d3dpp;
 	D3DDISPLAYMODE				d3ddm;
@@ -98,27 +231,35 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	D3DDISPLAYMODE				display_mode;
 	HRESULT hr;
 	DWORD flags = 0;
-	int i, num_buffers, width, height;
+	LPD3DXBUFFER vsh, errors;
+	int i, num_buffers;
 
-	list_ram	= (UINT32*)list_ram_ptr;
-	cull_ram	= (UINT32*)cull_ram_ptr;
-	poly_ram	= (UINT32*)poly_ram_ptr;
-	vrom		= (UINT32*)vrom_ptr;
-	texture_sheet = texture_ram_ptr;
+	main_window = hWnd;
 
-    atexit(osd_renderer_shutdown);
+    atexit(d3d_shutdown);
 
 	d3d = Direct3DCreate9(D3D_SDK_VERSION);
-	if(!d3d) 
-		osd_error("Direct3DCreate9 failed.");
+	if( !d3d ) {
+		error("Direct3D error: Direct3DCreate9 failed.");
+		return FALSE;
+	}
 
 	hr = IDirect3D9_GetAdapterDisplayMode( d3d, D3DADAPTER_DEFAULT, &d3ddm );
-	if(FAILED(hr))
-		osd_error("IDirect3D9_GetAdapterDisplayMode failed.");
+	if( FAILED(hr) ) {
+		error("Direct3D error: IDirect3D9_GetAdapterDisplayMode failed.");
+		return FALSE;
+	}
 
 	hr = IDirect3D9_GetDeviceCaps( d3d, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &caps );
-	if(FAILED(hr))
-		osd_error("IDirect3D9_GetDeviceCaps failed.");
+	if( FAILED(hr) ) {
+		error("Direct3D error: IDirect3D9_GetDeviceCaps failed.");
+		return FALSE;
+	}
+
+	if(caps.VertexShaderVersion < D3DVS_VERSION(1,1)) {
+		error("Direct3D error: Vertex Shader 1.1 not supported.");
+		return FALSE;
+	}
 
 	if(m3_config.triple_buffer)
 		num_buffers = 3;
@@ -133,12 +274,12 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 		height	= MODEL3_SCREEN_HEIGHT;
 	} else {
 		// Check if the display mode specified in m3_config is available
-		UINT modes = IDirect3D9_GetAdapterModeCount( d3d, D3DADAPTER_DEFAULT, d3ddm.Format );
+		INT modes = IDirect3D9_GetAdapterModeCount( d3d, D3DADAPTER_DEFAULT, d3ddm.Format );
 		
 		for( i=0; i<modes; i++) {
 			hr = IDirect3D9_EnumAdapterModes( d3d, D3DADAPTER_DEFAULT, d3ddm.Format, i, &display_mode );
 			if( FAILED(hr) )
-				error("IDirect3D9_EnumAdapterModes failed.\n");
+				error("Direct3D error: IDirect3D9_EnumAdapterModes failed.\n");
 
 			// Check if this mode matches
 			if(display_mode.Width == m3_config.width && display_mode.Height == m3_config.height) {
@@ -148,20 +289,22 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 		}
 	}
 	// Check if we have a valid display mode
-	if(width == 0 || height == 0)
-		error("DirectX error: Display mode %dx%d not available\n",m3_config.width, m3_config.height );
+	if(width == 0 || height == 0) {
+		error("Direct3D error: Display mode %dx%d not available\n",m3_config.width, m3_config.height );
+		return FALSE;
+	}
 
 	memset(&d3dpp, 0, sizeof(d3dpp));
-	d3dpp.Windowed			= m3_config.fullscreen ? FALSE : TRUE;
-	d3dpp.SwapEffect		= m3_config.stretch ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_DISCARD;
-	d3dpp.BackBufferWidth	= width;
-	d3dpp.BackBufferHeight	= height;
-	d3dpp.BackBufferCount	= num_buffers - 1;
-	d3dpp.hDeviceWindow		= main_window;
-	d3dpp.PresentationInterval	= D3DPRESENT_INTERVAL_ONE;
-	d3dpp.BackBufferFormat	= D3DFMT_A8R8G8B8;
-	d3dpp.EnableAutoDepthStencil = TRUE;
-	d3dpp.AutoDepthStencilFormat = D3DFMT_D24X8;	// FIXME: All cards don't support 24-bit Z-buffer
+	d3dpp.Windowed					= m3_config.fullscreen ? FALSE : TRUE;
+	d3dpp.SwapEffect				= m3_config.stretch ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_DISCARD;
+	d3dpp.BackBufferWidth			= width;
+	d3dpp.BackBufferHeight			= height;
+	d3dpp.BackBufferCount			= num_buffers - 1;
+	d3dpp.hDeviceWindow				= main_window;
+	d3dpp.PresentationInterval		= D3DPRESENT_INTERVAL_ONE;
+	d3dpp.BackBufferFormat			= d3ddm.Format;
+	d3dpp.EnableAutoDepthStencil	= TRUE;
+	d3dpp.AutoDepthStencilFormat	= D3DFMT_D24X8;	// FIXME: All cards don't support 24-bit Z-buffer
 
 	for( i=0; i < sizeof(supported_formats) / sizeof(D3DFORMAT); i++) {
 		hr = IDirect3D9_CheckDeviceFormat( d3d, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, d3ddm.Format, 
@@ -172,10 +315,12 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 			break;
 		}
 	}
-	if(!layer_format)
-		osd_error("DirectX: No supported pixel formats found !");
+	if( !layer_format ) {
+		error("Direct3D error: No supported pixel formats found !");
+		return FALSE;
+	}
 
-	if(caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT ) {
+	if( caps.DevCaps & D3DDEVCAPS_HWTRANSFORMANDLIGHT ) {
 		flags |= D3DCREATE_HARDWARE_VERTEXPROCESSING;
 	} else {
 		flags |= D3DCREATE_SOFTWARE_VERTEXPROCESSING;
@@ -183,17 +328,21 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 
 	hr = IDirect3D9_CreateDevice( d3d, D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, main_window, 
 								  flags, &d3dpp, &device );
-	if(FAILED(hr))
-		error("IDirect3D9_CreateDevice failed: %s",DXGetErrorString9(hr));
+	if( FAILED(hr) ) {
+		error("Direct3D error: IDirect3D9_CreateDevice failed: %s",DXGetErrorString9(hr));
+		return FALSE;
+	}
 
 	for( i=0; i<4; i++) {
 		hr = D3DXCreateTexture( device, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT, 1,
 								D3DUSAGE_DYNAMIC, layer_format, D3DPOOL_DEFAULT, &layer_data[i] );
-		if(FAILED(hr))
-			osd_error("D3DXCreateTexture failed.");
+		if( FAILED(hr) ) {
+			error("Direct3D error: D3DXCreateTexture failed.");
+			return FALSE;
+		}
 	}
-	memset(texture,0,sizeof(texture));
-	memset(texture_table,0,sizeof(texture_table));
+	memset( texture, 0, sizeof(texture) );
+	memset( texture_table, 0, sizeof(texture_table) );
 
 	switch(layer_format)
 	{
@@ -206,93 +355,230 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	}
 
 	// Clear the buffers
-	for( i=0; i<num_buffers + 1; i++) {
+	for( i=0; i < num_buffers + 1; i++ ) {
 		IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_TARGET, 0x00000000, 0.0f, 0 );
 		IDirect3DDevice9_Present( device, NULL, NULL, NULL, NULL );
 	}
 
 	hr = D3DXCreateSprite( device, &sprite );
-	if(FAILED(hr))
-		osd_error("D3DXCreateSprite failed.");
-}
-
-void save_file(char* filename, UINT8* src, INT size)
-{
-	FILE* file = fopen(filename,"wb");
-	int i;
-	for(i=0;i<size;i+=2) {
-		UINT16 pix = src[i+1] << 8 | src[i];
-		int r = ((pix >> 10) & 0x1F) << 3;
-		int g = ((pix >> 5) & 0x1F) << 3;
-		int b = (pix & 0x1F) << 3;
-		fputc(r,file);
-		fputc(g,file);
-		fputc(b,file);
+	if( FAILED(hr) ) {
+		error("Direct3D error: D3DXCreateSprite failed.");
+		return FALSE;
 	}
-	fclose(file);
+
+	// Create font for the on-screen display
+	hfont = CreateFont( 14, 0,					// Width, Height
+						0, 0,					// Escapement, Orientation
+						FW_BOLD,				// Font weight
+						FALSE, FALSE,			// Italic, underline
+						FALSE,					// Strikeout
+						ANSI_CHARSET,			// Charset
+						OUT_DEFAULT_PRECIS,		// Precision
+						CLIP_DEFAULT_PRECIS,	// Clip precision
+						DEFAULT_QUALITY,		// Output quality
+						DEFAULT_PITCH |			// Pitch and family
+						FF_DONTCARE,
+						"Terminal" );
+	if( hfont == NULL ) {
+		error("Direct3D error: Couldn't create font.");
+		return FALSE;
+	}
+
+	// Create D3D font
+	hr = D3DXCreateFont( device, hfont, &font );
+	if( FAILED(hr) ) {
+		error("Direct3D error: D3DXCreateFont failed.");
+		return FALSE;
+	}
+
+	QueryPerformanceFrequency((LARGE_INTEGER*)&counter_frequency);
+
+	D3DXCreateMatrixStack(0, &stack);
+	d3d_matrix_stack_init();
+
+#ifdef ENABLE_MODEL_CACHING
+	init_model_cache();
+	hr = IDirect3DDevice9_CreateVertexBuffer( device, 300000 * sizeof(VERTEX), 
+		0, D3DFVF_VERTEX, D3DPOOL_MANAGED, &vertex_buffer, NULL );
+	if( FAILED(hr) ) {
+		error("Direct3D error: IDirect3DDevice9_CreateVertexBuffer failed.");
+		return FALSE;
+	}
+#endif
+
+	// Create the vertex shader
+	hr = D3DXAssembleShaderFromFile( "m3/win32/dx_vertex_shader.vs", NULL, NULL, 0, &vsh, &errors );
+	if( FAILED(hr) ) {
+		error("Direct3D error: %s",errors->lpVtbl->GetBufferPointer(errors) );
+		return FALSE;
+	}
+	hr = IDirect3DDevice9_CreateVertexShader( device, (DWORD*)vsh->lpVtbl->GetBufferPointer(vsh), &vertex_shader );
+	if( FAILED(hr) ) {
+		error("Direct3D error: IDirect3DDevice9_CreateVertexShader failed.");
+		return FALSE;
+	}
+
+	return TRUE;
 }
 
-void osd_renderer_shutdown(void)
+void d3d_shutdown(void)
 {
-	if(d3d) {
+	if( d3d ) {
 		IDirect3D9_Release(d3d);
 		d3d = NULL;
 	}
-	save_file("texture1.raw",texture_sheet,0x800000);
 }
 
-void osd_renderer_reset(void)
+static D3DMATRIX matrix_to_d3d( const MATRIX m )
 {
+	D3DMATRIX c;
+	memcpy( &c, m, sizeof(MATRIX) );
 
+	return c;
 }
 
-static void set_viewport(INT x, INT y, INT width, INT height)
+static void draw_text( int x, int y, char* string, DWORD color, BOOL shadow )
+{
+	RECT rect = { x, y, width-1, height-1 };
+	RECT rect_s = { x+1, y+1, width-1, height-1 };
+	if( shadow )
+		font->lpVtbl->DrawText( font, string, -1, &rect_s, 0, 0xFF000000 );
+
+	font->lpVtbl->DrawText( font, string, -1, &rect, 0, color );
+}
+
+
+
+////////////////////////////
+//   Renderer Interface   //
+////////////////////////////
+
+/*
+ * void osd_renderer_set_memory(UINT8 *culling_ram_8e_ptr,
+ *                              UINT8 *culling_ram_8c_ptr,
+ *                              UINT8 *polygon_ram_ptr,
+ *                              UINT8 *texture_ram_ptr,
+ *                              UINT8 *vrom_ptr);
+ *
+ * Receives the Real3D memory regions.
+ *
+ * Currently, this function checks the Model 3 stepping and configures the
+ * renderer appropriately.
+ *
+ * Parameters:
+ *      culling_ram_8e_ptr = Pointer to Real3D culling RAM at 0x8E000000.
+ *      culling_ram_8c_ptr = Pointer to Real3D culling RAM at 0x8C000000.
+ *      polygon_ram_ptr    = Pointer to Real3D polygon RAM.
+ *      texture_ram_ptr    = Pointer to Real3D texture RAM.
+ *      vrom_ptr           = Pointer to VROM.
+ */
+
+void osd_renderer_set_memory(UINT8 *culling_ram_8e_ptr,
+                             UINT8 *culling_ram_8c_ptr,
+                             UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
+                             UINT8 *vrom_ptr)
+{
+    list_ram = (UINT32*)culling_ram_8e_ptr;
+    cull_ram = (UINT32*)culling_ram_8c_ptr;
+    poly_ram = (UINT32*)polygon_ram_ptr;
+    texture_sheet = texture_ram_ptr;
+    vrom = vrom_ptr;
+}
+
+/*
+ * void osd_renderer_set_viewport(const VIEWPORT *vp);
+ *
+ * Sets up a viewport. Enables Z-buffering.
+ *
+ * Parameters:
+ *      vp = Viewport and projection parameters.
+ */
+
+void osd_renderer_set_viewport(const VIEWPORT* vp)
 {
 	D3DVIEWPORT9	viewport;
+
+	float fov = D3DXToRadian( (float)(vp->up + vp->down) );
+	float aspect_ratio = (float)((float)vp->width / (float)vp->height);
+
 	memset(&viewport, 0, sizeof(D3DVIEWPORT9));
-	viewport.X		= x;
-	viewport.Y		= y;
-	viewport.Width	= width;
-	viewport.Height	= height;
-	viewport.MinZ	= 0.1f;
-	viewport.MaxZ	= 100000.0f;
+	viewport.X		= vp->x;
+	viewport.Y		= vp->y;
+	viewport.Width	= vp->width;
+	viewport.Height	= vp->height;
+	viewport.MinZ	= 1.0f;
+	viewport.MaxZ	= 1000.0f;
 
 	IDirect3DDevice9_SetViewport( device, &viewport );
+
+	D3DXMatrixPerspectiveFovLH( &projection, fov, aspect_ratio, 1.0f, 1000.0f );
+	IDirect3DDevice9_SetTransform( device, D3DTS_PROJECTION, &projection );
 }
 
-void osd_renderer_update_frame(void)
+/******************************************************************/
+/* Viewport and Projection                                        */
+/******************************************************************/
+
+/*
+ * void osd_renderer_set_coordinate_system(const MATRIX m);
+ *
+ * Applies the coordinate system matrix and makes adjustments so that the
+ * Model 3 coordinate system is properly handled.
+ *
+ * Parameters:
+ *      m = Matrix.
+ */
+
+void osd_renderer_set_coordinate_system( const MATRIX m )
 {
-	D3DMATRIX projection;
-	D3DMATRIX world;
-	D3DMATRIX view;
-	RECT src_rect = { 0, 0, MODEL3_SCREEN_WIDTH - 1, MODEL3_SCREEN_HEIGHT - 1 };
+	memcpy( &coordinate_system, m, sizeof(MATRIX) );
+	coordinate_system._22 = -coordinate_system._22;
+}
 
-	D3DXMatrixPerspectiveFovLH( &projection, D3DXToRadian(45.0f), 496.0f / 384.0f, 0.1f, 100000.0f );
-	D3DXMatrixIdentity( &world );
-	D3DXMatrixIdentity( &view );
-	D3DXMatrixScaling( &view, 1.0f, 1.0f, -1.0f );
+void osd_renderer_set_light( int light_num, LIGHT* param )
+{
+	D3DXVECTOR4 direction;
+	D3DXVECTOR4 diffuse, ambient;
 
-	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
+	switch(param->type)
+	{
+		case LIGHT_PARALLEL:
+			direction.x = param->u * coordinate_system._11;
+			direction.y = param->v * coordinate_system._22;
+			direction.z = -param->w * coordinate_system._33;
+			direction.w = 1.0f;
+			
+			diffuse.x = 1.0f * param->diffuse_intensity;	// R
+			diffuse.y = 1.0f * param->diffuse_intensity;	// G
+			diffuse.z = 1.0f * param->diffuse_intensity;	// B
+			diffuse.w = 1.0f;
 
-	IDirect3DDevice9_BeginScene( device );
-	IDirect3DDevice9_SetTransform( device, D3DTS_PROJECTION, &projection );
-	IDirect3DDevice9_SetTransform( device, D3DTS_WORLD, &world );
-	IDirect3DDevice9_SetTransform( device, D3DTS_VIEW, &view );
+			ambient.x = 1.0f * param->ambient_intensity;	// R
+			ambient.y = 1.0f * param->ambient_intensity;	// G
+			ambient.z = 1.0f * param->ambient_intensity;	// B
+			ambient.w = 1.0f;
 
-	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX );
-	IDirect3DDevice9_SetRenderState( device, D3DRS_CULLMODE, D3DCULL_NONE );
+			memcpy( &light.direction, &direction, sizeof(D3DXVECTOR4));
+			memcpy( &light.diffuse, &diffuse, sizeof(D3DXVECTOR4));
+			memcpy( &light.ambient, &ambient, sizeof(D3DXVECTOR4));
 
-#ifdef ENABLE_LIGHTING
-	IDirect3DDevice9_SetRenderState( device, D3DRS_LIGHTING, TRUE );
-#else
+			IDirect3DDevice9_SetVertexShaderConstantF( device, 32, (float*)&direction, 4 );
+			IDirect3DDevice9_SetVertexShaderConstantF( device, 33, (float*)&diffuse, 4 );
+			IDirect3DDevice9_SetVertexShaderConstantF( device, 34, (float*)&ambient, 4 );
+			
+			break;
+
+		default:
+			error("Direct3D error: Unsupported light type: %d",param->type);
+	}
+}
+
+void osd_renderer_begin(void)
+{
+	float mipmap_bias;
+	tris = 0;
+
 	IDirect3DDevice9_SetRenderState( device, D3DRS_LIGHTING, FALSE );
-#endif
-
-	IDirect3DDevice9_SetRenderState( device, D3DRS_ZENABLE, D3DZB_USEW );
-
-	set_viewport( 0, 0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT );
-	sprite->lpVtbl->Draw(sprite, layer_data[3], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
-	sprite->lpVtbl->Draw(sprite, layer_data[2], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 
 #ifdef ENABLE_ALPHA_BLENDING
 	IDirect3DDevice9_SetRenderState( device, D3DRS_ALPHABLENDENABLE, TRUE );
@@ -300,7 +586,23 @@ void osd_renderer_update_frame(void)
 	IDirect3DDevice9_SetRenderState( device, D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
 #endif
 
-	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
+#ifdef ENABLE_MODEL_CACHING
+	IDirect3DDevice9_SetStreamSource( device, 0, vertex_buffer, 0, sizeof(VERTEX) );
+#endif
+	IDirect3DDevice9_SetFVF( device, D3DFVF_VERTEX );
+	IDirect3DDevice9_SetVertexShader( device, vertex_shader );
+	IDirect3DDevice9_SetRenderState( device, D3DRS_CULLMODE, D3DCULL_NONE );
+
+	IDirect3DDevice9_SetRenderState( device, D3DRS_ZENABLE, D3DZB_USEW );
+
+	IDirect3DDevice9_BeginScene( device );
+
+#ifdef WIREFRAME
+	IDirect3DDevice9_SetRenderState( device, D3DRS_FILLMODE, D3DFILL_WIREFRAME );
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG2 );
+#endif
+
+	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
 	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
 	IDirect3DDevice9_SetTextureStageState( device, 1, D3DTSS_COLOROP, D3DTOP_DISABLE );
@@ -312,18 +614,52 @@ void osd_renderer_update_frame(void)
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP );
 	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
-	
-#ifdef WIREFRAME
-	IDirect3DDevice9_SetRenderState( device, D3DRS_FILLMODE, D3DFILL_WIREFRAME );
-	IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_COLOROP, D3DTOP_SELECTARG2 );
-#endif
+	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR );
+	mipmap_bias = -0.5f;
+	IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)(&mipmap_bias));
+}
 
-	render_scene();
-
-	set_viewport( 0, 0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT );
-	sprite->lpVtbl->Draw(sprite, layer_data[1], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
-	sprite->lpVtbl->Draw(sprite, layer_data[0], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
+void osd_renderer_end(void)
+{
 	IDirect3DDevice9_EndScene( device );
+}
+
+void osd_renderer_clear( BOOL fbuf, BOOL zbuf )
+{
+	DWORD flags = 0;
+	if( fbuf )
+		flags |= D3DCLEAR_TARGET;
+	if( zbuf )
+		flags |= D3DCLEAR_ZBUFFER;
+
+	IDirect3DDevice9_Clear( device, 0, NULL, flags, 0x00000000, 1.0f, 0 );
+}
+
+void osd_renderer_blit(void)
+{
+	char string[200];
+	double fps;
+	RECT src_rect = { 0, 0, 495, 383 };
+
+	QueryPerformanceCounter((LARGE_INTEGER*)&counter_end);
+	fps = 1.0 / ((double)(counter_end - counter_start) / (double)counter_frequency);
+	counter_start = counter_end;
+
+#ifdef DRAW_STATS
+	sprintf(string,"FPS: %3.3f",fps);
+	draw_text( 4, 1, string, RGB_GREEN, TRUE );
+	sprintf(string,"Tris: %d",tris);
+	draw_text( 4, 15, string, RGB_GREEN, TRUE );
+	sprintf(string,"Cached vertices: %d",cached_vertices);
+	draw_text( 4, 29, string, RGB_GREEN, TRUE );
+	sprintf(string,"Light 0: X: %3.6f, Y: %3.6f, Z: %3.6f",
+		light.direction.x, light.direction.y, light.direction.z );
+	draw_text( 4, 43, string, RGB_GREEN, TRUE );
+	sprintf(string,"Light 0: Ambient Intensity: %3.6f, Diffuse Intensity: %3.6f",
+		light.ambient.x, light.diffuse.x );
+	draw_text( 4, 57, string, RGB_GREEN, TRUE );
+
+#endif
 
 	if(m3_config.stretch) {
 		IDirect3DDevice9_Present( device, &src_rect, NULL, NULL, NULL );
@@ -367,153 +703,27 @@ void osd_renderer_free_layer_buffer(UINT layer_num)
 	IDirect3DTexture9_UnlockRect( layer_data[layer_num], 0 );
 }
 
-void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h)
+void osd_renderer_draw_layer(UINT layer_num)
 {
-	// Update texture table
-	// Removes the overwritten texture from cache
-	int i,j;
-	for( j = y/32; j < (y+h)/32; j++) {
-		for( i = x/32; i < (x+w)/32; i++) {
-			int tex_num = texture_table[(j*64) + i];
-			if(texture[tex_num] != NULL) {
-				IDirect3DTexture9_Release( texture[tex_num] );
-				texture[tex_num] = NULL;
-			}
-			texture_table[(j*64) + i] = 0;
-		}
-	}
+	VIEWPORT v;
+	v.x = 0;		v.y = 0;
+	v.width = 496;	v.height = 384;
+	v.up = 0;		v.down = 1;
+	v.left = 0;		v.right = 1;
+	osd_renderer_set_viewport( &v );
+
+	layer_num &= 0x3;
+	sprite->lpVtbl->Draw( sprite, layer_data[layer_num], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF );
 }
 
-static int cache_texture(int texture_x, int texture_y, int tex_width, int tex_height, int depth)
-{
-	D3DFORMAT format;
-	int i,j,x,y;
-	int texture_num;
-	HRESULT hr;
-	D3DLOCKED_RECT locked_rect;
-	UINT pitch;
-	UINT16* ptr, *src;
-	int texture_depth;
-
-	i = 0;
-	texture_num = -1;
-	while(i < 4096 && texture_num < 0) {
-		if(texture[i] == NULL) {
-			texture_num = i;
-		}
-		i++;
-	}
-	if(texture_num == -1)
-		error("DirectX: No available textures !");
-
-	texture_depth = (depth >> 8) & 0x3;
-	switch(texture_depth)
-	{
-		case 0: format = D3DFMT_A1R5G5B5;break;
-		case 1: format = D3DFMT_A4R4G4B4;break;	// Unknown
-		case 2: format = D3DFMT_A8L8;break;
-		case 3: format = D3DFMT_A4R4G4B4;break;
-	}
-
-	hr = D3DXCreateTexture( device, tex_width, tex_height, 1, 0, format, D3DPOOL_MANAGED,
-							&texture[texture_num] );
-	if( FAILED(hr) )
-		error("D3DXCreateTexture failed.");
-
-	hr = IDirect3DTexture9_LockRect( texture[texture_num], 0, &locked_rect, NULL, 0 );
-	if( FAILED(hr) )
-		error("IDirect3DTexture9_LockRect failed.");
-
-	ptr = (UINT16*)locked_rect.pBits;
-	pitch = locked_rect.Pitch / 2;
-
-	src = &texture_sheet[(texture_y * 2048 + texture_x) * 2];
-
-	switch(texture_depth)
-	{
-		case 0:	// ARGB1555
-			for( y=0; y < tex_height; y++) {
-				UINT32 s_index = y * 2048;
-				UINT32 t_index = y * pitch;
-				for( x=0; x < tex_width; x++) {
-					ptr[t_index + x] = src[s_index + x] ^ 0x8000;
-				}
-			}
-			break;
-		case 1:	// Unknown, 4-bit texture ???
-			for( y=0; y < tex_height; y++) {
-				UINT32 s_index = y * 2048;
-				UINT32 t_index = y * pitch;
-				for( x=0; x < tex_width; x++) {
-					ptr[t_index + x] = (x + y) % 2 ? 0xFC00 : 0x1F;
-				}
-			}
-			break;
-		case 2:	// A8L8
-			for( y=0; y < tex_height; y++) {
-				UINT32 s_index = y * 2048;
-				UINT32 t_index = y * pitch;
-				for( x=0; x < tex_width; x++) {
-					UINT16 pix = ((src[s_index + (x/2)] >> ((x & 0x1) ? 8 : 0)) & 0xFF);
-					ptr[t_index + x] = pix << 8 | pix;
-				}
-			}
-			break;
-		case 3:	// ARGB4444
-			for( y=0; y < tex_height; y++) {
-				UINT32 s_index = y * 2048;
-				UINT32 t_index = y * pitch;
-				for( x=0; x < tex_width; x++) {
-					UINT16 pix = src[s_index + x];
-					UINT16 a = ((pix & 0xF) << 12);
-					UINT16 b = ((pix & 0xF0) >> 4);
-					UINT16 g = ((pix & 0xF00) >> 4);
-					UINT16 r = ((pix & 0xF000) >> 4);
-					ptr[t_index + x] = a | r | g | b;
-				}
-			}
-			break;
-	}
-
-	IDirect3DTexture9_UnlockRect( texture[texture_num], 0 );
-	
-	// Update texture table
-	for( j = texture_y/32; j < (texture_y + tex_height)/32; j++) {
-		for( i = texture_x/32; i < (texture_x + tex_width)/32; i++) {
-			texture_table[(j*64) + i] = texture_num;
-		}
-	}
-	return texture_num;
-}
-
-static int polylist_compare(const void *arg1, const void *arg2)
-{
-	POLYGON_LIST *a = (POLYGON_LIST*)arg1;
-	POLYGON_LIST *b = (POLYGON_LIST*)arg2;
-
-	if(a->tex_num < b->tex_num) {
-		return -1;
-	} else if(a->tex_num == b->tex_num) {
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
-static void render_model(UINT32 address, BOOL little_endian)
+static void draw_uncached_model(UINT32* mem, UINT32 address, BOOL little_endian)
 {
 	float fixed_point_scale;
 	VERTEX vertex[4];
 	VERTEX prev_vertex[4];
 	int end, index, polygon_index, vb_index, prev_texture, i, page;
-	VERTEX  *vb;
 	HRESULT hr;
-	UINT32* src;
 	float uv_scale;
-
-	src = get_address( address );
-	if(src == NULL)
-		error("render_model: invalid address %08X",address);
 
 	if(m3_config.step == 0x10)
 		fixed_point_scale = 32768.0f;
@@ -529,8 +739,9 @@ static void render_model(UINT32 address, BOOL little_endian)
 	do {
 		UINT32 header[7];
 		UINT32 entry[16];
-		D3DCOLOR color;
+		D3DCOLOR color, specular;
 		int transparency;
+		int luminance = 0;
 		int i, num_vertices, num_old_vertices;
 		int v2, v;
 		int texture_x, texture_y, tex_num, depth, tex_width, tex_height;
@@ -538,20 +749,20 @@ static void render_model(UINT32 address, BOOL little_endian)
 
 		if(little_endian) {
 			for( i=0; i<7; i++) {
-				header[i] = src[index];
+				header[i] = mem[index];
 				index++;
 			}
 		} else {
 			for( i=0; i<7; i++) {
-				header[i] = BSWAP32(src[index]);
+				header[i] = BSWAP32(mem[index]);
 				index++;
 			}
 		}
 
-		uv_scale = (header[1] & 0x40) ? 1.0f : 8.0f;
-
-		if(header[0] == 0)
+		if( header[6] == 0 )
 			return;
+
+		uv_scale = (header[1] & 0x40) ? 1.0f : 8.0f;
 
 		// Check if this is the last polygon
 		if(header[1] & 0x4)
@@ -563,12 +774,16 @@ static void render_model(UINT32 address, BOOL little_endian)
 		} else {
 			color = (transparency << 24) | (header[4] >> 8);
 		}
+		if(header[6] & 0x10000)
+			luminance = (((header[6] >> 11) & 0x1F) << 3);
+
+		specular = (luminance << 24);
 
 		// Polygon normal
 		// Assuming 2.22 fixed-point. Is this correct ?
-		nx = (float)(header[1] >> 8) / 4194304.0f;
-		ny = (float)(header[2] >> 8) / 4194304.0f;
-		nz = (float)(header[3] >> 8) / 4194304.0f;
+		nx = (float)((int)header[1] >> 8) / 4194304.0f;
+		ny = (float)((int)header[2] >> 8) / 4194304.0f;
+		nz = (float)((int)header[3] >> 8) / 4194304.0f;
 
 		// If bit 0x40 set this is a quad, otherwise a triangle
 		if(header[0] & 0x40)
@@ -588,6 +803,7 @@ static void render_model(UINT32 address, BOOL little_endian)
 				vertex[v2].ny = ny;
 				vertex[v2].nz = nz;
 				vertex[v2].color = color;
+				vertex[v2].specular = specular;
 				v2++;
 			}
 		}
@@ -595,12 +811,12 @@ static void render_model(UINT32 address, BOOL little_endian)
 		// Load vertex data
 		if(little_endian) {
 			for( i=0; i<(num_vertices - num_old_vertices) * 4; i++) {
-				entry[i] = src[index];
+				entry[i] = mem[index];
 				index++;
 			}
 		} else {
 			for( i=0; i<(num_vertices - num_old_vertices) * 4; i++) {
-				entry[i] = BSWAP32(src[index]);
+				entry[i] = BSWAP32(mem[index]);
 				index++;
 			}
 		}
@@ -620,8 +836,8 @@ static void render_model(UINT32 address, BOOL little_endian)
 			vertex[v2].y = (float)(iy) / fixed_point_scale;
 			vertex[v2].z = (float)(iz) / fixed_point_scale;
 
-			tx = (UINT16)((entry[v_index + 3] >> 16) & 0xFFFF);
-			ty = (UINT16)(entry[v_index + 3] & 0xFFFF);
+			tx = (INT16)((entry[v_index + 3] >> 16) & 0xFFFF);
+			ty = (INT16)(entry[v_index + 3] & 0xFFFF);
 			xsize = 32 << ((header[3] >> 3) & 0x7);
 			ysize = 32 << (header[3] & 0x7);
 
@@ -634,6 +850,7 @@ static void render_model(UINT32 address, BOOL little_endian)
 			vertex[v2].ny = ny;
 			vertex[v2].nz = nz;
 			vertex[v2].color = color;
+			vertex[v2].specular = specular;
 
 			v2++;
 		}
@@ -652,25 +869,6 @@ static void render_model(UINT32 address, BOOL little_endian)
 		if((header[6] & 0x4000000) == 0)
 			tex_num = -1;
 
-		// Calculate normals
-		{
-			D3DXVECTOR3 v1,v2,v3;
-			D3DXVECTOR3 n1,n2;
-			D3DXVECTOR3 r1;
-			v1.x = vertex[0].x; v1.y = vertex[0].y; v1.z = vertex[0].z;
-			v2.x = vertex[1].x; v2.y = vertex[1].y; v2.z = vertex[1].z;
-			v3.x = vertex[2].x; v3.y = vertex[2].y; v3.z = vertex[2].z;
-			D3DXVec3Subtract( &n1, &v2, &v1 );
-			D3DXVec3Subtract( &n2, &v3, &v2 );
-			D3DXVec3Cross( &r1, &n1, &n2 );
-			D3DXVec3Normalize( &r1, &r1 );
-			for( i=0; i<4; i++) {
-				vertex[i].nx = r1.x;
-				vertex[i].ny = r1.y;
-				vertex[i].nz = r1.z;
-			}
-		}
-
 		if(tex_num)
 			IDirect3DDevice9_SetTexture( device, 0, texture[tex_num] );
 		else
@@ -685,15 +883,25 @@ static void render_model(UINT32 address, BOOL little_endian)
 		else
 			IDirect3DDevice9_SetSamplerState( device, 0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP );
 
-		if(header[6] & 0x80000000) {
+		// Transparent polygons
+		if((header[6] & 0x800000) == 0 || header[6] & 0x1) {
+			IDirect3DDevice9_SetRenderState( device, D3DRS_ZWRITEENABLE, FALSE );
+		} else {
+			IDirect3DDevice9_SetRenderState( device, D3DRS_ZWRITEENABLE, TRUE );
+		}
+
+		// Translucent texture (ARGB4444)
+		if(header[6] & 0x80000000 || header[6] & 0x1) {
 			IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
 		} else {
 			IDirect3DDevice9_SetTextureStageState( device, 0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG2 );
 		}
 
 		if(num_vertices == 3) {
+			tris++;
 			IDirect3DDevice9_DrawPrimitiveUP( device, D3DPT_TRIANGLELIST, 1, &vertex, sizeof(VERTEX) );
 		} else {
+			tris+=2;
 			IDirect3DDevice9_DrawPrimitiveUP( device, D3DPT_TRIANGLEFAN, 2, &vertex, sizeof(VERTEX) );
 		}
 		// Copy current vertex as previous vertex
@@ -701,321 +909,375 @@ static void render_model(UINT32 address, BOOL little_endian)
 	} while(end == 0);
 }
 
-static void load_matrix(int address, D3DMATRIX *matrix)
+void osd_renderer_draw_model(UINT32 *mem, UINT32 address, BOOL little_endian)
 {
-	int index = matrix_start + ((address & 0xFFF) * 12);
-
-	matrix->_11 = *(float*)(&list_ram[index + 3]);
-	matrix->_21 = *(float*)(&list_ram[index + 6]);
-	matrix->_31 = *(float*)(&list_ram[index + 9]);
-	matrix->_12 = *(float*)(&list_ram[index + 4]);
-	matrix->_22 = *(float*)(&list_ram[index + 7]);
-	matrix->_32 = *(float*)(&list_ram[index + 10]);
-	matrix->_13 = *(float*)(&list_ram[index + 5]);
-	matrix->_23 = *(float*)(&list_ram[index + 8]);
-	matrix->_33 = *(float*)(&list_ram[index + 11]);
-	matrix->_14 = *(float*)(&list_ram[index + 0]);
-	matrix->_24 = *(float*)(&list_ram[index + 1]);
-	matrix->_34 = *(float*)(&list_ram[index + 2]);
-	matrix->_41 = 0.0f;
-	matrix->_42 = 0.0f;
-	matrix->_43 = 0.0f;
-	matrix->_44 = 1.0f;
-	D3DXMatrixTranspose( matrix, matrix );
-}
-
-static void load_coord_sys(int address, D3DMATRIX *matrix)
-{
-	int index = matrix_start + (address * 12);
-
-	matrix->_11 = *(float*)(&list_ram[index + 6]);
-	matrix->_12 = *(float*)(&list_ram[index + 7]);
-	matrix->_13 = *(float*)(&list_ram[index + 8]);
-	matrix->_21 = *(float*)(&list_ram[index + 9]);
-	matrix->_22 = -*(float*)(&list_ram[index + 10]);
-	matrix->_23 = *(float*)(&list_ram[index + 11]);
-	matrix->_31 = *(float*)(&list_ram[index + 3]);
-	matrix->_32 = *(float*)(&list_ram[index + 4]);
-	matrix->_33 = *(float*)(&list_ram[index + 5]);
-	matrix->_41 = *(float*)(&list_ram[index + 0]);
-	matrix->_42 = *(float*)(&list_ram[index + 1]);
-	matrix->_43 = *(float*)(&list_ram[index + 2]);
-	matrix->_14 = 0.0f;
-	matrix->_24 = 0.0f;
-	matrix->_34 = 0.0f;
-	matrix->_44 = 1.0f;
-}
-
-static UINT32* get_address(UINT32 address)
-{
-	UINT32 a = address & 0x1FFFFFF;
+	HASHTABLE *h;
+	MATRIX m;
+	D3DMATRIX world_view, world_view_proj ;
+	D3DMATRIX world = d3d_matrix_stack_get_top( &m );
 	
-	//printf("address: %08X\n",address);
-	if(a < 0x80000) {
-		return (UINT32*)(&cull_ram[a]);
-	}
-	else if(a >= 0x800000 && a < 0x840000) {
-		return (UINT32*)(&list_ram[a - 0x800000]);
-	}
-	else if(a >= 0x1000000 && a < 0x1080000) {
-		return (UINT32*)(&poly_ram[a - 0x1000000]);
-	}
-	else if(a >= 0x1800000 && a < 0x1FFFFFF) {
-		return (UINT32*)(&vrom[a - 0x1800000]);
-	}
-	else {
-		return 0;
-	}
-}
+	// Make the world-view matrix
+	D3DXMatrixTranspose( &world_view, &world );
+	IDirect3DDevice9_SetVertexShaderConstantF( device, 4, (float*)&world_view, 4 );
 
-static void traverse_pointer_list(UINT32 address)
-{
-	int i;
-	UINT32* list;
-	list = get_address( address );
-	if(list == NULL)
-		error("traverse_pointer_list: invalid address %08X",address);
+	// Make the world-view-projection matrix
+	D3DXMatrixMultiply( &world_view_proj, &world, &coordinate_system );
+	D3DXMatrixMultiply( &world_view_proj, &world_view_proj, &projection );
+	D3DXMatrixTranspose( &world_view_proj, &world_view_proj );
+	IDirect3DDevice9_SetVertexShaderConstantF( device, 0, (float*)&world_view_proj, 4 );
 
-	for( i=0; i<2; i++) {
-		UINT32 link = list[i];
+#ifdef ENABLE_MODEL_CACHING
+	if(little_endian)
+		return;
 
-		traverse_node( link );
-	}
-}
-
-static void traverse_list(UINT32 address)
-{
-	int end = 0;
-	int index = 0;
-	UINT32* list;
-	list = get_address( address );
-	if(list == NULL)
-		error("traverse_list: invalid address %08X",address);
-
-	do {
-		UINT32 link = list[index];
-		int type = (link >> 24) & 0xFF;
-
-		// Test for invalid links
-		if(link == 0x800800 || (link & 0xFFFFFF) == 0)
-			return;
-
-		// Check if this is the final node of the list
-		if((type & 0x2) == 0x2)
-			end = 1;
-			
-		traverse_node( link & 0xFFFFFF );
-
-		index++;
-	} while(end == 0);
-}
-
-static void traverse_node(UINT32 address)
-{
-	int i;
-	float x, y, z;
-	int offset = 0;
-	BOOL pushed = FALSE;
-	UINT32 matrix_address;
-	D3DMATRIX matrix, *world_matrix;
-
-	UINT32 link,next;
-	UINT32* node_ram;
-	node_ram = get_address( address );
-	if(node_ram == NULL)
-		error("traverse_node: invalid address %08X",address);
-
-	if(m3_config.step == 0x10)
-		offset = 2;
-
-	matrix_address = node_ram[0x3 - offset];
-
-	matrix_stack->lpVtbl->Push( matrix_stack );
-	pushed = TRUE;
-
-	if((matrix_address & 0xFFF) != 0) {
-		load_matrix(matrix_address & 0xFFF, &matrix);
-		matrix_stack->lpVtbl->MultMatrixLocal( matrix_stack, &matrix );
-	}
-	
-	x = *(float*)(&node_ram[0x4 - offset]);
-	y = *(float*)(&node_ram[0x5 - offset]);
-	z = *(float*)(&node_ram[0x6 - offset]);
-	matrix_stack->lpVtbl->TranslateLocal( matrix_stack, x, y, z );
-
-	world_matrix = matrix_stack->lpVtbl->GetTop( matrix_stack );
-	IDirect3DDevice9_SetTransform( device, D3DTS_WORLD, world_matrix );
-
-	// Check both links
-	for( i=0; i<2; i++) {
-		UINT32 link = node_ram[0x7 + i - offset];
-		int type = (link >> 24) & 0xFF;
-		
-		// Test for valid links
-		if(link != 0x1000000 && link != 0x800800 && link != 0) {
-			UINT16 scale = (node_ram[0x9 + i - offset] >> 16) & 0xFFFF;
-
-			switch(type)
-			{
-			case 0:		// Node
-				if(node_ram[0] & 0x8) {
-					// Scud Race weird node
-					traverse_pointer_list( link );
-				} else {
-					traverse_node( link );
-				}
-				break;
-			case 1:		// Model
-			case 3:
-				if(link & 0x800000) {
-					render_model( link, FALSE );
-				} else {
-					render_model( link, TRUE );
-				}
-				break;
-			case 4:		// List
-				traverse_list( link );
-				break;
-			default:
-				error("traverse_node: Unknown type %d, %08X",type,link);
-			}
-		}
-		if(pushed) {
-			matrix_stack->lpVtbl->Pop( matrix_stack );
-			pushed = FALSE;
-		}
-	}
-}
-
-static void traverse_main_tree(UINT32 address, int priority)
-{
-	int index = 0;
-	UINT32 next,link;
-	UINT32* node_ram;
-	D3DMATERIAL9 material;
-	D3DCOLORVALUE ambient;
-	D3DCOLORVALUE diffuse;
-	D3DCOLORVALUE material_color;
-	D3DXVECTOR3 sun_vector;
-	D3DLIGHT9 sun;
-	D3DMATRIX projection;
-	D3DMATRIX matrix;
-	UINT8 amb;
-	float sun_diffuse_color, sun_ambient_color;
-	int tree_priority;
-	float fog_color, fog_density;
-
-	node_ram = get_address( address );
-	if(node_ram == NULL)
-		error("traverse_main_tree: invalid address %08X",address);
-
-	memset(&sun, 0, sizeof(sun));
-	memset(&material, 0, sizeof(material));
-
-#ifdef ENABLE_LIGHTING
-	sun_diffuse_color = *(float*)&node_ram[index + 7];
-	amb = (node_ram[index + 36] >> 8) & 0xFF;
-	sun_ambient_color = (float)amb / 255.0f;
-	sun_vector.y = *(float*)&node_ram[index + 6];
-	sun_vector.x = -*(float*)&node_ram[index + 5];
-	sun_vector.z = -*(float*)&node_ram[index + 4];
-
-	diffuse.r = diffuse.g = diffuse.b = sun_diffuse_color;
-	ambient.r = ambient.g = ambient.b = sun_ambient_color;
-	material.Diffuse = diffuse;
-	material.Ambient = ambient;
-	IDirect3DDevice9_SetMaterial( device, &material );
-
-	// Set up sun light
-	sun.Type = D3DLIGHT_DIRECTIONAL;
-	sun.Ambient = ambient;
-	sun.Diffuse = diffuse;
-	sun.Direction = sun_vector;
-
-	IDirect3DDevice9_SetLight( device, 0, &sun );
-	IDirect3DDevice9_LightEnable( device, 0, TRUE );
+	h = cache_model(mem, address);
+	IDirect3DDevice9_DrawPrimitive( device, D3DPT_POINTLIST, h->vertex_index, h->length );
+#else
+	draw_uncached_model(mem, address, little_endian);
 #endif
-	
-	next = node_ram[index + 1];
-	link = node_ram[index + 2];
-	matrix_start = node_ram[index + 22] & 0xFFFF;
+}
 
+/******************************************************************/
+/* Texture Management                                             */
+/******************************************************************/
 
-	// Set coordinate system
-	load_coord_sys( 0, &matrix );
-	IDirect3DDevice9_SetTransform( device, D3DTS_VIEW, &matrix );
+/*
+ * void osd_renderer_invalidate_textures(UINT x, UINT y, UINT w, UINT h);
+ *
+ * Invalidates all textures that are within the rectangle in texture memory
+ * defined by the parameters.
+ *
+ * Parameters:
+ *      x = Texture pixel X coordinate in texture memory.
+ *      y = Y coordinate.
+ *      w = Width of rectangle in pixels.
+ *      h = Height.
+ */
 
-	// Set viewport and projection
-	{
-		float l1,l2,t1,t2,r1,r2,b1,b2;
-		float fov_x, fov_y;
-		int i;
-		INT x = (node_ram[index + 26] & 0xFFFF);
-		INT y = (node_ram[index + 26] >> 16) & 0xFFFF;
-		INT width = node_ram[index + 20] & 0xFFFF;
-		INT height = (node_ram[index + 20] >> 16) & 0xFFFF;
-
-		set_viewport( x >> 4, y >> 4, width >> 2, height >> 2 );
-		
-		l1 = asin(*(float*)(&node_ram[index + 12]));
-		l2 = acos(*(float*)(&node_ram[index + 13]));
-		t1 = asin(*(float*)(&node_ram[index + 14]));
-		t2 = acos(*(float*)(&node_ram[index + 15]));
-		r1 = asin(*(float*)(&node_ram[index + 16]));
-		r2 = acos(*(float*)(&node_ram[index + 17]));
-		b1 = asin(*(float*)(&node_ram[index + 18]));
-		b2 = acos(*(float*)(&node_ram[index + 19]));
-
-		fov_x = l1 + r1;
-		fov_y = t1 + b1;
-
-		D3DXMatrixPerspectiveFovLH( &projection,fov_y, (float)width / (float)height, 0.1f, 100000.0f );
-		IDirect3DDevice9_SetTransform( device, D3DTS_PROJECTION, &projection );
-	}
-	
-	// Set up fog
-	
-	fog_density = *(float*)&node_ram[index + 35];
-	fog_color = node_ram[index + 34];
-	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGENABLE, TRUE );
-	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGTABLEMODE, D3DFOG_EXP );
-	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGDENSITY, *(DWORD*)&fog_density );
-	IDirect3DDevice9_SetRenderState( device, D3DRS_FOGCOLOR, fog_color );
-
-	// Traverse to the node if the priority is correct
-	tree_priority = (node_ram[0] >> 3) & 0x3;
-	if(tree_priority == priority) {
-		if(((link >> 24) & 0xFF) == 0) {
-			traverse_node( link );
+void osd_renderer_invalidate_textures(UINT x, UINT y, UINT w, UINT h)
+{
+	// Update texture table
+	// Removes the overwritten texture from cache
+	UINT i,j;
+	for( j = y/32; j < (y+h)/32; j++) {
+		for( i = x/32; i < (x+w)/32; i++) {
+			int tex_num = texture_table[(j*64) + i];
+			if(texture[tex_num] != NULL) {
+				IDirect3DTexture9_Release( texture[tex_num] );
+				texture[tex_num] = NULL;
+			}
+			texture_table[(j*64) + i] = 0;
 		}
-	}
-
-	// Go to next tree node if valid link
-	if((next & 0x800000) != 0) {
-		traverse_main_tree( next, priority );
 	}
 }
 
-static void render_scene(void)
+static void upload_tex(void* s, void* d, int tex_width, 
+					   int tex_height, int texture_depth, int pitch)
 {
-	int end = 0;
-	int index = 0;
+	int x,y;
+	switch(texture_depth)
+	{
+		case 0:	// ARGB1555
+		{
+			UINT16* ptr = (UINT16*)d;
+			UINT16* src = (UINT16*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					ptr[t_index + x] = src[s_index + x] ^ 0x8000;
+				}
+			}
+			break;
+		}
+		case 1:	// 4-bit, field 0x000F
+		{
+			UINT8* ptr = (UINT8*)d;
+			UINT16* src = (UINT16*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = src[s_index + x];
+					ptr[t_index + x] = ((pix >> 0) & 0xF) << 4;
+				}
+			}
+			break;
+		}
+		case 2:	// 4-bit, field 0x00F0
+		{
+			UINT8* ptr = (UINT8*)d;
+			UINT16* src = (UINT16*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = src[s_index + x];
+					ptr[t_index + x] = ((pix >> 4) & 0xF) << 4;
+				}
+			}
+			break;
+		}
+		case 3:	// 4-bit, field 0x0F00
+		{
+			UINT8* ptr = (UINT8*)d;
+			UINT16* src = (UINT16*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = src[s_index + x];
+					ptr[t_index + x] = ((pix >> 8) & 0xF) << 4;
+				}
+			}
+			break;
+		}
+		case 4:	// A4L4
+		{
+			UINT8* ptr = (UINT8*)d;
+			UINT8* src = (UINT8*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = ((src[s_index + (x/2)] >> ((x & 0x1) ? 8 : 0)) & 0xFF);
+					ptr[t_index + x] = ((pix >> 4) & 0xF) << 12 | 
+									   ((pix & 0xF) << 4);
+				}
+			}
+			break;
+		}
+		case 5:	// A8
+		{
+			UINT8* ptr = (UINT8*)d;
+			UINT8* src = (UINT8*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = ((src[s_index + (x/2)] >> ((x & 0x1) ? 8 : 0)) & 0xFF);
+					ptr[t_index + x] = pix;
+				}
+			}
+			break;
+		}
+		case 6:	// 4-bit, field 0xF000
+		{
+			UINT8* ptr = (UINT8*)d;
+			UINT16* src = (UINT16*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = src[s_index + x];
+					ptr[t_index + x] = ((pix >> 12) & 0xF) << 4;
+				}
+			}
+			break;
+		}
+		case 7:	// ARGB4444
+		{
+			UINT16* ptr = (UINT16*)d;
+			UINT16* src = (UINT16*)s;
+			for( y=0; y < tex_height; y++) {
+				UINT32 s_index = y * 2048;
+				UINT32 t_index = y * pitch;
+				for( x=0; x < tex_width; x++) {
+					UINT16 pix = src[s_index + x];
+					UINT16 a = ((pix & 0xF) << 12);
+					UINT16 b = ((pix & 0xF0) >> 4);
+					UINT16 g = ((pix & 0xF00) >> 4);
+					UINT16 r = ((pix & 0xF000) >> 4);
+					ptr[t_index + x] = a | r | g | b;
+				}
+			}
+			break;
+		}
+	}
+}
+
+static const int mipmap_x[12] =
+{ 0,1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+static const int mipmap_y[12] =
+{ 0,512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023, 0 };
+static const int mipmap_size[7] = { 1, 2, 4, 8, 16, 32, 64 };
+
+static int cache_texture(int texture_x, int texture_y, int tex_width, 
+						 int tex_height, int depth)
+{
+	D3DFORMAT format;
+	int i,j,x,y;
+	int texture_num;
 	HRESULT hr;
+	D3DLOCKED_RECT locked_rect;
+	UINT pitch;
+	UINT pitch8;
+	void* src;
+	int texture_depth, plane, width, height;
+	int mipmap_num, size, mip_y;
+	int page = (texture_y & 0x400) ? 1 : 0;
+	mip_y = texture_y & 0x3FF;
 
-	hr = D3DXCreateMatrixStack( 0, &matrix_stack );
-	if(FAILED(hr))
-		osd_error("D3DXCreateMatrixStack failed.");
+	if(tex_width > 512 || tex_height > 512)
+		return -1;
 
-	matrix_stack->lpVtbl->LoadIdentity( matrix_stack );
+	width = tex_width;
+	height = tex_height;
 
-	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( 0x800000, 0 );
-	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( 0x800000, 1 );
-	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( 0x800000, 2 );
-	IDirect3DDevice9_Clear( device, 0, NULL, D3DCLEAR_ZBUFFER, 0x00000000, 1.0f, 0 );
-	traverse_main_tree( 0x800000, 3 );
+	size = min(width,height);
+	if(size == 32)
+		mipmap_num = 3;
+	else if(size == 64)
+		mipmap_num = 4;
+	else if(size == 128)
+		mipmap_num = 5;
+	else if(size == 256)
+		mipmap_num = 6;
+	else if(size == 512)
+		mipmap_num = 7;
 
-	matrix_stack->lpVtbl->Release( matrix_stack );
+	i = 0;
+	texture_num = -1;
+	while(i < 4096 && texture_num < 0) {
+		if(texture[i] == NULL) {
+			texture_num = i;
+		}
+		i++;
+	}
+	if(texture_num == -1)
+		error("DirectX: No available textures !");
+
+	texture_depth = (depth >> 7) & 0x7;
+	switch(texture_depth)
+	{
+		case 0: format = D3DFMT_A1R5G5B5;break;	// 16-bit A1R5G5B5
+		case 1: format = D3DFMT_A8;break;		// 4-bit, field 0x000F
+		case 2: format = D3DFMT_A8;break;		// 4-bit, field 0x00F0
+		case 3: format = D3DFMT_A8;break;		// 4-bit, field 0x0F00
+		case 4: format = D3DFMT_A8L8;break;		// 8-bit A4L8
+		case 5: format = D3DFMT_A8;break;		// 8-bit grayscale
+		case 6: format = D3DFMT_A8;break;		// 4-bit, field 0xF000
+		case 7: format = D3DFMT_A4R4G4B4;break;	// 16-bit A4R4G4B4
+	}
+
+	switch(texture_depth)
+	{
+		case 1: plane = 3;break;
+		case 2: plane = 2;break;
+		case 3: plane = 1;break;
+		default: plane = 0; break;
+	}
+
+	hr = D3DXCreateTexture( device, tex_width, tex_height, mipmap_num, 0, format, D3DPOOL_MANAGED,
+							&texture[texture_num] );
+	if( FAILED(hr) )
+		error("D3DXCreateTexture failed.");
+
+	for( i=0; i < mipmap_num; i++ ) {
+		int mwidth = width / mipmap_size[i];
+		int mheight = height / mipmap_size[i];
+		int mx = mipmap_x[i] + (texture_x / mipmap_size[i]);
+		int my = mipmap_y[i] + (mip_y / mipmap_size[i]);
+		if(page)
+			my += 1024;
+
+		hr = IDirect3DTexture9_LockRect( texture[texture_num], i, &locked_rect, NULL, 0 );
+		if( FAILED(hr) )
+			error("IDirect3DTexture9_LockRect failed.");
+
+		pitch = locked_rect.Pitch;
+		if( texture_depth == 0 || texture_depth == 7 )
+			pitch /= 2;
+
+		src = &texture_sheet[(my * 2048 + mx) * 2];
+
+		upload_tex( src, locked_rect.pBits, mwidth, mheight, texture_depth, pitch );
+
+		IDirect3DTexture9_UnlockRect( texture[texture_num], i );
+	}
+	
+	// Update texture table
+	for( j = texture_y/32; j < (texture_y + tex_height)/32; j++) {
+		for( i = texture_x/32; i < (texture_x + tex_width)/32; i++) {
+			texture_table[(j*64) + i] = texture_num;
+		}
+	}
+	return texture_num;
+}
+
+
+
+////////////////////////
+//    Matrix Stack    //
+////////////////////////
+
+static void d3d_matrix_stack_init(void)
+{
+	stack->lpVtbl->LoadIdentity(stack);
+}
+
+static D3DXMATRIX d3d_matrix_stack_get_top(void)
+{
+	D3DXMATRIX *m = stack->lpVtbl->GetTop(stack);
+	return *m;
+}
+
+/*
+ * void osd_renderer_push_matrix(void);
+ *
+ * Pushes a matrix on to the stack. The matrix pushed is the former top of the
+ * stack.
+ */
+
+void osd_renderer_push_matrix(void)
+{
+	stack->lpVtbl->Push(stack);
+}
+
+/*
+ * void osd_renderer_pop_matrix(void);
+ *
+ * Pops a matrix off the top of the stack.
+ */
+
+void osd_renderer_pop_matrix(void)
+{
+	stack->lpVtbl->Pop(stack);
+}
+
+/*
+ * void osd_renderer_multiply_matrix(MATRIX m);
+ *
+ * Multiplies the top of the matrix stack by the specified matrix
+ *
+ * Parameters:
+ *      m = Matrix to multiply.
+ */
+
+void osd_renderer_multiply_matrix( MATRIX m )
+{
+	D3DMATRIX x = matrix_to_d3d( m );
+	stack->lpVtbl->MultMatrixLocal(stack, &x );
+}
+
+/*
+ * void osd_renderer_translate_matrix(float x, float y, float z);
+ *
+ * Translates the top of the matrix stack.
+ *
+ * Parameters:
+ *      x = Translation along X axis.
+ *      y = Y axis.
+ *      z = Z axis.
+ */
+
+void osd_renderer_translate_matrix( float x, float y, float z )
+{
+	//stack->lpVtbl->TranslateLocal(stack, x, y, z );
+	D3DMATRIX t;
+	t._11 = 1.0f; t._12 = 0.0f; t._13 = 0.0f; t._14 = 0.0f;
+	t._21 = 0.0f; t._22 = 1.0f; t._23 = 0.0f; t._24 = 0.0f;
+	t._31 = 0.0f; t._32 = 0.0f; t._33 = 1.0f; t._34 = 0.0f;
+	t._41 = x;	  t._42 = y;    t._43 = z;    t._44 = 1.0f;
+	stack->lpVtbl->MultMatrixLocal(stack,&t);
 }
