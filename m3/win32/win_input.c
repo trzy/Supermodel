@@ -138,10 +138,10 @@ OSD_CONTROLS* osd_input_update_controls(void)
 	INT32 mouse_x, mouse_y;
 	input_update();
 
-	controls.game_controls[0] = 0xFF;
-	controls.game_controls[1] = 0xFF;
-	controls.system_controls[0] = 0xFF;
-	controls.system_controls[1] = 0xFF;
+    controls.game_controls[0] = 0xFF;
+    controls.game_controls[1] = 0xFF;
+    controls.system_controls[0] = 0xFF;
+    controls.system_controls[1] = 0xFF;
 
 	// Lightgun
 	if(mouse_get_button(0))
@@ -196,20 +196,20 @@ OSD_CONTROLS* osd_input_update_controls(void)
 	if(keyboard_get_key(DIK_V))		// VON2, turbo 2
 		controls.game_controls[1] &= ~0x02;
 
-	if(keyboard_get_key(DIK_UP)) {	// VON2, forward
-		controls.game_controls[0] &= ~0x10;
+    if(keyboard_get_key(DIK_UP) || keyboard_get_key(DIK_NUMPAD8)) {
+        controls.game_controls[0] &= ~0x20; // VON2, forward
 		controls.game_controls[1] &= ~0x20;
 	}
-	if(keyboard_get_key(DIK_DOWN)) {// VON2, backward
-		controls.game_controls[0] &= ~0x20;
+    if(keyboard_get_key(DIK_DOWN) || keyboard_get_key(DIK_NUMPAD2)) {
+        controls.game_controls[0] &= ~0x10; // VON2, backward
 		controls.game_controls[1] &= ~0x10;
 	}
-	if(keyboard_get_key(DIK_LEFT)) {// VON2, turn left
-		controls.game_controls[0] &= ~0x10;
+    if(keyboard_get_key(DIK_LEFT) || keyboard_get_key(DIK_NUMPAD4)) {
+        controls.game_controls[0] &= ~0x10; // VON2, turn left
 		controls.game_controls[1] &= ~0x20;
 	}
-	if(keyboard_get_key(DIK_RIGHT)) {// VON2, turn right
-		controls.game_controls[0] &= ~0x20;
+    if(keyboard_get_key(DIK_RIGHT) || keyboard_get_key(DIK_NUMPAD6)) {
+        controls.game_controls[0] &= ~0x20; // VON2, turn right
 		controls.game_controls[1] &= ~0x10;
 	}
 	if(keyboard_get_key(DIK_NUMPAD1)) {// VON2, strafe left
@@ -219,6 +219,10 @@ OSD_CONTROLS* osd_input_update_controls(void)
 	if(keyboard_get_key(DIK_NUMPAD3)) {// VON2, strafe right
 		controls.game_controls[0] &= ~0x40;
 		controls.game_controls[1] &= ~0x40;
+	}
+    if(keyboard_get_key(DIK_NUMPAD5)) {// VON2, jump
+        controls.game_controls[0] &= ~0x80;
+        controls.game_controls[1] &= ~0x40;
 	}
 
 	// System controls
