@@ -1408,22 +1408,29 @@ static void ppc_rlwnmx(u32 op){
 
 static void ppc_slwx(u32 op){
 
-	u32 b = RB;
+	u32 sa = R(RB) & 0x3F;
 	u32 a = RA;
 	u32 t = RT;
-	
-	R(a) = R(t) << (R(b) & 0x3F);
+
+	if((sa & 0x20) == 0)
+		R(a) = R(t) << sa;
+	else
+		R(a) = 0;
 		
 	SET_ICR0(R(a));
 }
 
 static void ppc_srwx(u32 op){
 
-	u32 b = RB;
+	u32 sa = R(RB) & 0x3F;
 	u32 a = RA;
 	u32 t = RT;
 
-	R(a) = R(t) >> (R(b) & 0x3F);
+	if((sa & 0x20) == 0)
+		R(a) = R(t) >> sa;
+	else
+		R(a) = 0;
+
 	SET_ICR0(R(a));
 }
 
@@ -1437,7 +1444,10 @@ static void ppc_srawx(u32 op){
 	if(((s32)R(t) < 0) && R(t) & BITMASK_0(sa))
 		XER |= XER_CA;
 
-	R(a) = (s32)R(t) >> sa;
+	if((sa & 0x20) == 0)
+		R(a) = (s32)R(t) >> sa;
+	else
+		R(a) = (s32)R(t) >> 31;
 
 	SET_ICR0(R(a));
 }
