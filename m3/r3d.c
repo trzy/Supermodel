@@ -506,7 +506,7 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
 				insert_id(0x216C4057, 1 + 2 * 32);		// Lost World may to use 0x016C4057
 				insert_id(0x316C5057, 1 + 3 * 32);
 				insert_id(0x216C6057, 1 + 4 * 32 + 1);
-				insert_id(0x016C6057, 1 + 5 * 32 + 1);
+                insert_id(0x216C6057, 1 + 5 * 32 + 1);
 			}
 			else if(m3_config.step >= 0x20)
 			{
