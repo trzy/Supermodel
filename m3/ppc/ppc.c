@@ -949,11 +949,16 @@ static void ppc_subfex(u32 op){
 	u32 ra = R(RA);
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
+    u32 a;
 
-	R(t) = rb - (ra + (c ^ 1));
+    a = ~ra + c;
+    R(t) = rb + a;
 
-	SET_SUB_C(R(t), rb, (ra + (c - 1)));
-	SET_SUB_V(R(t), rb, (ra + (c - 1)));
+    SET_ADD_C(a, ~ra, c);   // step 1 carry
+    if (R(t) < a)           // step 2 carry
+        XER |= XER_CA;
+    SET_SUB_V(R(t), rb, ra);
+
 	SET_ICR0(R(t));
 }
 
@@ -968,52 +973,32 @@ static void ppc_subfic(u32 op){
 	SET_SUB_C(R(t), i, ra);
 }
 
-static void ppc_subfmex(u32 op){
-
-	// fixme
-
+static void ppc_subfmex(u32 op){    
 	u32 a = RA;
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
+    u32 a_c;
 
-	R(t) = ~R(a) + c - 1;
+    a_c = ~R(a) + c;    // step 1
+    R(t) = a_c - 1;     // step 2
 
-	if(R(t) == 0 && c == 0)
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	if(op & _OVE){
-		if(c == 0 && (R(t) == 0x7FFFFFFF || R(t) == 0xFFFFFFFF))
-			XER |= (XER_OV | XER_SO);
-		else
-			XER &= ~XER_OV;
-	}
+    SET_ADD_C(a_c, ~R(a), c);   // step 1 carry
+    if (R(t) < a_c)             // step 2 carry
+        XER |= XER_CA;
+    SET_SUB_V(R(t), -1, R(a));
 
 	SET_ICR0(R(t));
 }
 
 static void ppc_subfzex(u32 op){
-
-	// fixme
-
 	u32 a = RA;
 	u32 t = RT;
 	u32 c = (XER >> 29) & 1;
 
 	R(t) = ~R(a) + c;
 
-	if(R(t) == 0 && c)
-		XER |= XER_CA;
-	else
-		XER &= ~XER_CA;
-
-	if(op & _OVE){
-		if(c != 0 && (R(t) == 0 || R(t) == 0x80000000))
-			XER |= (XER_OV | XER_SO);
-		else
-			XER &= ~XER_OV;
-	}
+    SET_ADD_C(R(t), ~R(a), c);
+    SET_SUB_V(R(t), 0, R(a));
 
 	SET_ICR0(R(t));
 }
@@ -3385,7 +3370,7 @@ u32 ppc_run(u32 count){
 
 		ppc.count--;
 
-		op = ppc_fetch(ppc.cia);
+    	op = ppc_fetch(ppc.cia);
 
 		ppc_inst[(op >> 26) & 0x3F](op);
 
