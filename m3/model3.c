@@ -443,6 +443,9 @@ static UINT8 m3_ppc_read_8(UINT32 a)
         else if ((a >= 0xF0100000 && a <= 0xF010003F) ||
                  (a >= 0xFE100000 && a <= 0xFE10003F))  // system control
             return m3_sys_read_8(a);
+		else if ((a >= 0xF0140000 && a <= 0xF014003F) ||
+                 (a >= 0xFE140000 && a <= 0xFE14003F))  // RTC
+            return rtc_read(a);
         else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
             return bridge_read_config_data_8(a);
 		else if(a >= 0xF9000000 && a <= 0xF90000FF)		// 53C810 SCSI
@@ -474,6 +477,11 @@ static UINT16 m3_ppc_read_16(UINT32 a)
     switch (a >> 28)
 	{
 	case 0xF:
+
+        if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
+                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
+            return BSWAP16(*(UINT16 *) &bram[a & 0x1FFFF]);
+
         switch (a)
         {
         case 0xFEE00CFC:    // MPC105/106 CONFIG_DATA
@@ -918,7 +926,7 @@ static UINT8 m3_sys_read_8(UINT32 a)
     case 0x14:  // IRQ enable
         return m3_irq_enable;
     case 0x18:  // IRQ status
-        return m3_irq_state;
+		return m3_irq_state;
     case 0x1C:  // ?
         LOG("model3.log", "%08X: unknown sys read8, %08X\n", PPC_PC, a);        
         return 0xFF;
@@ -1348,6 +1356,9 @@ void m3_reset(void)
     if(ppc_reset() != PPC_OKAY)
         error("ppc_reset failed");
 
+	if( !stricmp(m3_config.game_id,"VS2") )
+		bridge_reset(2);
+	else
     bridge_reset(m3_config.step < 0x20 ? 1 : 2);
 	scsi_reset();
 	dma_reset();
@@ -1775,6 +1786,20 @@ BOOL m3_load_rom(CHAR * id)
         *(UINT32 *) &crom[0x18CA14] = 0x34010048;   // skip ASIC test (required)
         *(UINT32 *) &crom[0x1891C8] = 0x00000060;   // (required)
     }
+	else if( !stricmp(id, "VS2") ) {
+		// Loops if irq 0x20 is set (0xF0100018)
+		*(UINT32 *) &crom[0x70C000 + 0x1DE0] = BSWAP32(0x60000000);
+
+		// Loops if memory at 0x15C5B0 != 0
+		*(UINT32 *) &crom[0x70C000 + 0xAF48] = BSWAP32(0x60000000);
+
+		// Weird loop
+		*(UINT32 *) &crom[0x70C000 + 0x26F0] = BSWAP32(0x60000000);
+		*(UINT32 *) &crom[0x70C000 + 0x2710] = BSWAP32(0x60000000);
+
+		// Waiting for decrementer == 0
+		*(UINT32 *) &crom[0x70C000 + 0x14940] = BSWAP32(0x60000000);
+	}
 
 	return(MODEL3_OKAY);
 }
@@ -1921,7 +1946,7 @@ void m3_init(void)
 
     /* setup the PPC */
 
-    if(ppc_init() != PPC_OKAY)
+    if(ppc_init(0) != PPC_OKAY)
 		error("ppc_init failed.");
 
     ppc_set_reg(PPC_REG_PVR, 0x00060104);
