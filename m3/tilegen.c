@@ -551,42 +551,6 @@ void tilegen_update(void)
     }
 }
 
-#if 0   -- this version shows colors in palette to make sure its working
-void tilegen_update(void)
-{
-    UINT8   *layer;
-    INT     i, j, y, x, color, v;
-    UINT32  pixel;
-
-#define YRES 384
-#define XRES 496
-#define COLORS_PER_ROW  16
-#define COLORS_PER_COL  32
-#define BOX_SIZE        (YRES / COLORS_PER_COL)
-    osd_renderer_get_layer_buffer(0, &layer, &pitch);
-
-    color = 16384;
-    for (i = 0; i < COLORS_PER_COL; i++)
-    {
-        v = i * BOX_SIZE * pitch * 4 + ((XRES - COLORS_PER_ROW * BOX_SIZE) / 2) * 4;
-
-        for (j = 0; j < COLORS_PER_ROW; j++)
-        {           
-            pixel = pal[color++] | 0xff000000;
-
-            for (y = 0; y < BOX_SIZE; y++)
-            {
-                for (x = 0; x < BOX_SIZE; x++)
-                    *((UINT32 *) &layer[v + y * pitch * 4 + x * 4]) = pixel;
-            }
-
-            v += BOX_SIZE * 4;
-        }
-    }
-
-}
-#endif
-
 /******************************************************************/
 /* VRAM Access                                                    */
 /******************************************************************/
