@@ -44,14 +44,12 @@ static LPDIRECT3D9			d3d;
 static LPDIRECT3DDEVICE9	device;
 static LPDIRECT3DTEXTURE9	layer_data[4];
 static LPD3DXSPRITE			sprite;
-static D3DVIEWPORT9			viewport;
 
 static LPDIRECT3DVERTEXBUFFER9	vertex_buffer;
 static POLYGON_LIST polygon_list[32768];
 
 static LPDIRECT3DTEXTURE9	texture[4096];
-static short texture_table[2][64*32];
-static UINT16* texture_sheet[2];
+static short texture_table[64*64];
 
 static LPD3DXMATRIXSTACK		matrix_stack;
 
@@ -68,6 +66,7 @@ static UINT32* list_ram;	// Display List ram at 0x8E000000
 static UINT32* cull_ram;	// Culling ram at 0x8C000000
 static UINT32* poly_ram;	// Polygon ram at 0x98000000
 static UINT32* vrom;		// VROM
+static UINT8* texture_sheet;
 
 static UINT32 matrix_start;
 
@@ -85,10 +84,11 @@ static void render_scene(void);
  *      list_ram_ptr = Pointer to Real3D display list RAM
  *      cull_ram_ptr = Pointer to Real3D culling RAM
  *      poly_ram_ptr = Pointer to Real3D polygon RAM.
+ *		texture_ram_ptr = Pointer to Real3D texture RAM
  *      vrom_ptr     = Pointer to VROM.
  */
 
-void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_ptr, UINT8 *vrom_ptr)
+void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_ptr, UINT8 *texture_ram_ptr,UINT8 *vrom_ptr)
 {
 	D3DPRESENT_PARAMETERS		d3dpp;
 	D3DDISPLAYMODE				d3ddm;
@@ -102,6 +102,7 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 	cull_ram	= (UINT32*)cull_ram_ptr;
 	poly_ram	= (UINT32*)poly_ram_ptr;
 	vrom		= (UINT32*)vrom_ptr;
+	texture_sheet = texture_ram_ptr;
 
     atexit(osd_renderer_shutdown);
 
@@ -217,9 +218,6 @@ void osd_renderer_init(UINT8 *list_ram_ptr, UINT8 *cull_ram_ptr,UINT8 *poly_ram_
 											  D3DFVF_VERTEX, D3DPOOL_DEFAULT, &vertex_buffer, NULL );
 	if(FAILED(hr))
 		osd_error("IDirect3DDevice9_CreateVertexBuffer failed.");
-
-	texture_sheet[0] = malloc(1024 * 2048 * 2);
-	texture_sheet[1] = malloc(1024 * 2048 * 2);
 }
 
 void osd_renderer_shutdown(void)
@@ -228,8 +226,6 @@ void osd_renderer_shutdown(void)
 		IDirect3D9_Release(d3d);
 		d3d = NULL;
 	}
-	SAFE_FREE(texture_sheet[0]);
-	SAFE_FREE(texture_sheet[1]);
 }
 
 void osd_renderer_reset(void)
@@ -239,6 +235,7 @@ void osd_renderer_reset(void)
 
 static void set_viewport(INT x, INT y, INT width, INT height)
 {
+	D3DVIEWPORT9	viewport;
 	memset(&viewport, 0, sizeof(D3DVIEWPORT9));
 	viewport.X		= x;
 	viewport.Y		= y;
@@ -312,7 +309,7 @@ void osd_renderer_update_frame(void)
 	render_scene();
 
 	set_viewport( 0, 0, MODEL3_SCREEN_WIDTH, MODEL3_SCREEN_HEIGHT );
-	//sprite->lpVtbl->Draw(sprite, layer_data[1], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
+	sprite->lpVtbl->Draw(sprite, layer_data[1], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 	sprite->lpVtbl->Draw(sprite, layer_data[0], NULL, NULL, NULL, 0.0f, NULL, 0xFFFFFFFF);
 	IDirect3DDevice9_EndScene( device );
 
@@ -358,108 +355,24 @@ void osd_renderer_free_layer_buffer(UINT layer_num)
 	IDirect3DTexture9_UnlockRect( layer_data[layer_num], 0 );
 }
 
-static void decode_texture16(UINT16* ptr, UINT16* src, int width, int height, int pitch, BOOL little_endian)
+void osd_renderer_remove_textures(UINT x, UINT y, UINT w, UINT h)
 {
-	int i, j, x, y;
-	int index = 0;
-
-	for( j=0; j<height; j+=8 ) {
-		for( i=0; i<width; i+=8 ) {
-
-			// Decode tile
-			for( y=0; y<8; y++) {
-				for( x=0; x<8; x++) {
-					UINT16 pix;
-					int x2 = ((x / 2) * 4) + (x & 0x1);
-					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					if(little_endian) {
-						pix = src[index + x2 + y2 ^ 1];
-					} else {
-						pix = BSWAP16(src[index + x2 + y2]);
-					}
-
-					ptr[((j+y) * pitch) + i + x] = pix;
-				}
-			}
-			index += 64;
-		}
-	}
-}
-
-static void decode_texture8(UINT8 *ptr, UINT8 *src, int width, int height, int pitch, BOOL little_endian)
-{
-	int i, j, x, y;
-	int index = 0;
-
-	for( j=0; j<height; j+=8 ) {
-		for( i=0; i<width; i+=8 ) {
-
-			// Decode tile
-			for( y=0; y<8; y++) {
-				for( x=0; x<8; x++) {
-					UINT8 pix;
-					int x2 = ((x / 2) * 4) + (x & 0x1);
-					int y2 = ((y / 2) * 16) + ((y & 0x1) * 2);
-					if(little_endian) {
-						pix = src[index + x2 + y2 ^ 3];
-					} else {
-						pix = src[index + x2 + y2];
-					}
-
-
-					ptr[(((j+y) * pitch) * 2) + i + x] = pix;
-				}
-			}
-			index += 64;
-		}
-	}
-}
-
-void osd_renderer_upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little_endian)
-{
-	int texture_num, i, j;
-	int width, height, xpos, ypos, type, depth, page;
-	UINT16 *ptr;
-	UINT pitch;
-
-	// Get the texture information from the header
-
-	width	= 32 << ((header >> 14) & 0x7);
-	height	= 32 << ((header >> 17) & 0x7);
-	xpos	= (header & 0x3F) * 32;
-	ypos	= ((header >> 7) & 0x1F) * 32;
-	type	= (header >> 24) & 0xFF;
-	depth	= (header & 0x800000) ? 1 : 0;
-	page	= (header & 0x100000) ? 1 : 0;
-
-	if(type != 1 && type != 0)		// TODO: Handle mipmaps
-		return;
-
-	ptr = &texture_sheet[page][ypos * 2048 + xpos];
-	pitch = 2048;
-
-	// Decode the texture
-	if(depth) {
-		decode_texture16( ptr, (UINT16*)&src[0], width, height, pitch, little_endian );
-	} else {
-		decode_texture8( (UINT8*)ptr, &src[0], width, height, pitch, little_endian );
-	}
-
 	// Update texture table
 	// Removes the overwritten texture from cache
-	for( j = ypos/32; j < (ypos+height)/32; j++) {
-		for( i = xpos/32; i < (xpos+width)/32; i++) {
-			int tex_num = texture_table[page][(j*64) + i];
+	int i,j;
+	for( j = y/32; j < (y+h)/32; j++) {
+		for( i = x/32; i < (x+w)/32; i++) {
+			int tex_num = texture_table[(j*64) + i];
 			if(texture[tex_num] != NULL) {
 				IDirect3DTexture9_Release( texture[tex_num] );
 				texture[tex_num] = NULL;
 			}
-			texture_table[page][(j*64) + i] = 0;
+			texture_table[(j*64) + i] = 0;
 		}
 	}
 }
 
-static int cache_texture(int texture_x, int texture_y, int tex_width, int tex_height, int depth, int page)
+static int cache_texture(int texture_x, int texture_y, int tex_width, int tex_height, int depth)
 {
 	D3DFORMAT format;
 	int i,j,x,y;
@@ -502,7 +415,7 @@ static int cache_texture(int texture_x, int texture_y, int tex_width, int tex_he
 	ptr = (UINT16*)locked_rect.pBits;
 	pitch = locked_rect.Pitch / 2;
 
-	src = &texture_sheet[page][texture_y * 2048 + texture_x];
+	src = &texture_sheet[(texture_y * 2048 + texture_x) * 2];
 
 	switch(texture_depth)
 	{
@@ -555,7 +468,7 @@ static int cache_texture(int texture_x, int texture_y, int tex_width, int tex_he
 	// Update texture table
 	for( j = texture_y/32; j < (texture_y + tex_height)/32; j++) {
 		for( i = texture_x/32; i < (texture_x + tex_width)/32; i++) {
-			texture_table[page][(j*64) + i] = texture_num;
+			texture_table[(j*64) + i] = texture_num;
 		}
 	}
 	return texture_num;
@@ -701,16 +614,16 @@ static void render_model(UINT32 *src, BOOL little_endian)
 		}
 
 		// Get the texture number from texture table
-		texture_x = ((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 0x1);
-		texture_y = (header[5] & 0x1F);
 		page = (header[4] & 0x40) ? 1 : 0;
+		texture_x = ((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 0x1);
+		texture_y = (header[5] & 0x1F) | (page ? 0x20 : 0);
 		depth = header[6];
 		tex_width	= 32 << ((header[3] >> 3) & 0x7);
 		tex_height	= 32 << (header[3] & 0x7);
 
-		tex_num = texture_table[page][texture_y * 64 + texture_x];
+		tex_num = texture_table[texture_y * 64 + texture_x];
 		if(tex_num == 0)
-			tex_num = cache_texture(texture_x * 32,texture_y * 32, tex_width, tex_height, depth, page);
+			tex_num = cache_texture(texture_x * 32,texture_y * 32, tex_width, tex_height, depth);
 		if((header[6] & 0x4000000) == 0)
 			tex_num = -1;
 
@@ -776,7 +689,7 @@ static void render_model(UINT32 *src, BOOL little_endian)
 
 static void load_matrix(int address, D3DMATRIX *matrix)
 {
-	int index = matrix_start + (address * 12);
+	int index = matrix_start + ((address & 0xFFF) * 12);
 
 	matrix->_11 = *(float*)(&list_ram[index + 3]);
 	matrix->_21 = *(float*)(&list_ram[index + 6]);
@@ -910,12 +823,12 @@ static void traverse_node(UINT32* node_ram)
 	matrix_stack->lpVtbl->Push( matrix_stack );
 	pushed = TRUE;
 
-	if(((matrix_address >> 24) & 0xFF) == 0x20) {
+	//if(((matrix_address >> 24) & 0xFF) == 0x20) {
 		if((matrix_address & 0xFFF) != 0) {
 			load_matrix(matrix_address & 0x7FFFFF, &matrix);
 			matrix_stack->lpVtbl->MultMatrixLocal( matrix_stack, &matrix );
 		}
-	}
+	//}
 	x = *(float*)(&node_ram[0x4 - offset]);
 	y = *(float*)(&node_ram[0x5 - offset]);
 	z = *(float*)(&node_ram[0x6 - offset]);
