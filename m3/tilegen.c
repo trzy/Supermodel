@@ -503,6 +503,8 @@ void tilegen_update(void)
     layer_color_mask = 0x00100000;  // first layer color bit (moves left)
     layer_enable_mask = 1;
 
+//    layer_colors = 0; // enable this to force 8-bit mode for VF3
+
     if (bpp == 16)
     {
         for (i = 0; i < 4; i++)
