@@ -41,6 +41,7 @@
 static UINT8    *culling_ram_8e;    // culling RAM at 0x8E000000
 static UINT8    *culling_ram_8c;    // culling RAM at 0x8C000000
 static UINT8    *polygon_ram;       // polygon RAM at 0x98000000
+static UINT8    *texture_ram;       // texture RAM
 static UINT8	*vrom;
 
 static UINT8    texture_buffer_ram[1*1024*1024];
@@ -54,7 +55,7 @@ static UINT32	vrom_texture_header;
 
 /*
  * void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
- *               UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr);
+ *               UINT8 *polygon_ram_ptr, UINT8 *texture_ram, UINT8 *vrom_ptr);
  *
  * Initializes the Real3D graphics emulation.
  *
@@ -62,16 +63,20 @@ static UINT32	vrom_texture_header;
  *      culling_ram_8e_ptr = Pointer to 0x8E000000 culling RAM.
  *      culling_ram_8c_ptr = Pointer to 0x8C000000 culling RAM.
  *      polygon_ram_ptr    = Pointer to polygon RAM.
+ *      texture_ram        = Pointer to texture RAM.
  *      vrom_ptr           = Pointer to VROM.
  */
 
 void r3d_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
-              UINT8 *polygon_ram_ptr, UINT8 *vrom_ptr)
+              UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr, UINT8 *vrom_ptr)
 {
     culling_ram_8e = culling_ram_8e_ptr;
     culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
+    texture_ram = texture_ram_ptr;
 	vrom = vrom_ptr;
+
+    LOG_INIT("texture.log");
 }
 
 /*
@@ -96,6 +101,7 @@ void r3d_reset(void)
     memset(culling_ram_8e, 0, 1*1024*1024);
     memset(culling_ram_8c, 0, 2*1024*1024);
     memset(polygon_ram, 0, 2*1024*1024);
+    memset(texture_ram, 0, 2048*2048*2);
 	tap_reset();
 }
 
@@ -113,6 +119,7 @@ void r3d_save_state(FILE *fp)
     fwrite(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
     fwrite(culling_ram_8c, sizeof(UINT8), 2*1024*1024, fp);
     fwrite(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
+    fwrite(texture_ram, sizeof(UINT8), 2048*2048*2, fp);
 }
 
 /*
@@ -129,6 +136,160 @@ void r3d_load_state(FILE *fp)
     fread(culling_ram_8e, sizeof(UINT8), 1*1024*1024, fp);
     fread(culling_ram_8c, sizeof(UINT8), 2*1024*1024, fp);
     fread(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
+    fread(texture_ram, sizeof(UINT8), 2048*2048*2, fp);
+
+    osd_renderer_remove_textures(0, 0, 2048, 2048);
+}
+
+/******************************************************************/
+/* Texture Memory Management                                      */
+/******************************************************************/
+
+static const INT    decode[64] =
+{
+	 0, 1, 4, 5, 8, 9,12,13,
+	 2, 3, 6, 7,10,11,14,15,
+	16,17,20,21,24,25,28,29,
+	18,19,22,23,26,27,30,31,
+	32,33,36,37,40,41,44,45,
+	34,35,38,39,42,43,46,47,
+	48,49,52,53,56,57,60,61,
+	50,51,54,55,58,59,62,63
+};
+
+/*
+ * store_texture_tile():
+ *
+ * Writes a single 8x8 texture tile into the appropriate part of the texture
+ * sheet.
+ */
+
+static void store_texture_tile(UINT x, UINT y, UINT8 *src, UINT bpp, BOOL little_endian)
+{
+    UINT    xi, yi, pixel_offs;
+    UINT16  rgb16;
+    UINT8   gray8;
+
+	for (yi = 0; yi < 8; yi++)
+	{
+		for (xi = 0; xi < 8; xi++)
+		{
+            /*
+             * Grab the pixel offset from the decode[] array and fetch the
+             * pixel word
+             */
+
+            if (little_endian)
+            {            
+                if (bpp == 2)
+                {
+                    /*
+                     * XOR with 1 in little endian mode -- every word contains
+                     * 2 16-bit pixels, thus they are swapped
+                     */
+
+                    pixel_offs = decode[(yi * 8 + xi) ^ 1] * 2;
+                    rgb16 = *(UINT16 *) &src[pixel_offs];
+                }
+                else
+                {
+                    pixel_offs = decode[((yi ^ 1) * 8 + (xi ^ 1))];
+                    gray8 = src[pixel_offs];
+                }
+            }
+            else
+            {
+                if (bpp == 2)
+                {
+                    pixel_offs = decode[yi * 8 + xi] * 2;
+                    rgb16 = (src[pixel_offs + 0] << 8) | src[pixel_offs + 1];
+                }
+                else
+                {
+                    pixel_offs = decode[yi * 8 + xi];
+                    gray8 = src[pixel_offs + 0];
+                }
+            }
+
+			/*
+             * Store within the texture sheet
+             */
+
+            if (bpp == 2)
+                *(UINT16 *) &texture_ram[((y + yi) * 2048 + (x + xi)) * 2] = rgb16;
+            else
+                texture_ram[(y + yi) * 2048 + (x + xi)] = gray8;
+        }
+    }
+}
+
+/*
+ * store_texture():
+ *
+ * Writes a texture into the texture sheet. The pixel words are not decoded,
+ * but the 16-bit pixels are converted into a common endianness (little.)
+ * 8-bit pixels are not expanded into 16-bits.
+ *
+ * bpp (bytes per pixel) must be 1 or 2.
+ */
+
+static void store_texture(UINT x, UINT y, UINT w, UINT h, UINT8 *src, UINT bpp, BOOL little_endian)
+{
+    UINT    xi, yi;
+
+    for (yi = 0; yi < h; yi += 8)
+	{
+        for (xi = 0; xi < w; xi += 8)
+		{
+            store_texture_tile(x + xi, y + yi, src, bpp, little_endian);
+            src += 8 * 8 * bpp; // each texture tile is 8x8 and 16-bit color
+		}
+	}
+}
+
+/*
+ * upload_texture():
+ *
+ * Uploads a texture to texture memory.
+ */
+
+static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little_endian)
+{    
+    UINT    size_x, size_y, xpos, ypos;
+
+    /*
+     * Model 3 texture RAM appears as 2 2048x1024 textures. When textures are
+     * uploaded, their size and position within a sheet is given. I treat the
+     * texture sheet selection bit as an additional bit to the Y coordinate.
+     */
+
+    size_x = (header >> 14) & 3;
+    size_y = (header >> 17) & 3;
+    size_x = (32 << size_x);    // width in pixels
+    size_y = (32 << size_y);    // height
+
+    ypos = (((header >> 7) & 0x1F) | ((header >> 15) & 0x20)) * 32;
+    xpos = ((header >> 0) & 0x3F) * 32;
+
+    LOG("texture.log", "%08X %08X %d,%d\t%dx%d\n", header, length, xpos, ypos, size_x, size_y);
+
+    /*
+     * Render the texture into the texture buffer
+     */
+
+    if ((header & 0x0F000000) == 0x02000000)
+		return;
+
+    if (header & 0x00800000)    // 16-bit texture
+        store_texture(xpos, ypos, size_x, size_y, src, 2, little_endian);
+    else                        // 8-bit texture
+        store_texture(xpos, ypos, size_x, size_y, src, 1, little_endian);
+
+    /*
+     * Remove any existing textures that may have been overwritten
+     */
+    
+    osd_renderer_remove_textures(xpos, ypos, size_x, size_y);
 }
 
 /******************************************************************/
@@ -222,14 +383,14 @@ void r3d_write_32(UINT32 a, UINT32 d)
 			if(!(d & 0x00800000))	// 8-bit texture
 				last_addr = (0x94000008 + size_x * size_y - 1) & ~3;
 			else					// 16-bit texture
-				last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;
+                last_addr = (0x94000008 + size_x * size_y * 2 - 2) & ~3;
 
             message(0, "texture transfer started: %dx%d, %08X (%08X)", size_x, size_y, d, last_addr);
             LOG("model3.log", "texture transfer started: %dx%d, %08X (%08X)\n", size_x, size_y, d, last_addr);
         }
         else if (a == last_addr)    // last word written
         {
-            osd_renderer_upload_texture(*(UINT32 *) &texture_buffer_ram[4], *(UINT32 *) &texture_buffer_ram[0], &texture_buffer_ram[8], 1);
+            upload_texture(*(UINT32 *) &texture_buffer_ram[4], *(UINT32 *) &texture_buffer_ram[0], &texture_buffer_ram[8], 1);
             message(0, "texture upload complete");
             LOG("model3.log", "texture upload complete\n");
         }
@@ -256,7 +417,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
         message(0, "VROM texture header = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
     case 0x90000008:
-        osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
         LOG("model3.log", "VROM1 SIZE = %08X\n", BSWAP32(d));
         message(0, "VROM texture length = %08X @ %08X (%08X)", BSWAP32(d), PPC_PC, PPC_LR);
         return;
@@ -271,7 +432,7 @@ void r3d_write_32(UINT32 a, UINT32 d)
         message(0, "900000010 = %08X", BSWAP32(d));
         return;
     case 0x90000014:    // ?
-        osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
         LOG("model3.log", "VROM2 SIZE = %08X\n", BSWAP32(d));
         message(0, "900000014 = %08X", BSWAP32(d));
         return;
@@ -544,7 +705,7 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
         current_instruction = ir;
         {
             UINT8   *i = (UINT8 *) &ir;
-//            LOG("model3.log", "current instruction set: %02X%02X%02X%02X%02X%02X\n", i[5], i[4], i[3], i[2], i[1], i[0]);
+//            LOG("tap.log", "current instruction set: %02X%02X%02X%02X%02X%02X\n", i[5], i[4], i[3], i[2], i[1], i[0]);
         }
 
         break;
@@ -555,11 +716,11 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
 
 #if 0
     if (state == 4)
-        LOG("model3.log", "state: Shift-DR %d\n", tdi);
+        LOG("tap.log", "state: Shift-DR %d\n", tdi);
     else if (state == 11)
-        LOG("model3.log", "state: Shift-IR %d\n", tdi);
+        LOG("tap.log", "state: Shift-IR %d\n", tdi);
     else
-        LOG("model3.log", "state: %s\n", state_name[state]);
+        LOG("tap.log", "state: %s\n", state_name[state]);
 #endif
 }
 
