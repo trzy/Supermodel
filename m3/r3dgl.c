@@ -47,11 +47,130 @@
 
 #include "model3.h"
 
+/**
+ TMP
+ **/
+
+static int              txres=2048; tyres=2048;
+static unsigned char    texture[2048*2048*4];
+
+static int OutBMP(char *filename)
+{
+    FILE        *fp;
+    int    i, j;
+    unsigned    pixel;
+    unsigned char   r, g, b;
+
+    if ((fp = fopen(filename,"wb")) == NULL)
+        return 1;
+
+	/*
+     * Write the BMP file header
+     */
+
+	fwrite("BM", sizeof(char), 2, fp);
+    i = 14 + 40 + txres*tyres*3;    // size = 14 + 40 + x*y*bpp
+    fwrite(&i, sizeof(unsigned), 1, fp);
+    fwrite("\0\0\0\0", sizeof(unsigned char), 4, fp);
+    i = 40 + 14;                // image offset
+    fwrite(&i, sizeof(unsigned), 1, fp);
+    i = 40;
+    fwrite(&i, sizeof(unsigned), 1, fp);
+    i = txres;                        // image width in pixels
+    fwrite(&i, sizeof(unsigned), 1, fp);
+    i = tyres;                        // image height in pixels
+    fwrite(&i, sizeof(unsigned), 1, fp);
+    fwrite("\1\0", sizeof(unsigned char), 2, fp);
+    i = 24;                         // bits per pixel
+    fwrite(&i, sizeof(unsigned short), 1, fp);
+    fwrite("\0\0\0\0\0\0\0\0", sizeof(unsigned char), 8, fp);
+    fwrite("\0\0\0\0\0\0\0\0", sizeof(unsigned char), 8, fp);
+    i = 0;                          // 0 colors in palette (there is none!)
+    fwrite(&i, sizeof(unsigned), 1, fp);
+    fwrite("\0\0\0\0", sizeof(unsigned char), 4, fp);
+
+    /*
+     * Write the image data bottom-up
+     */
+
+    for (i = (tyres - 1) * txres * 4; (int) i >= 0; i -= txres * 4)
+    {
+        for (j = 0; j < txres * 4; j += 4)
+        {
+            r = texture[i + j + 0];
+            g = texture[i + j + 1];
+            b = texture[i + j + 2];
+            fwrite(&b, sizeof(unsigned char), 1, fp);
+            fwrite(&g, sizeof(unsigned char), 1, fp);
+            fwrite(&r, sizeof(unsigned char), 1, fp);
+        }      
+    }
+
+    printf("wrote %s\n", filename);
+
+
+    fclose(fp);
+    return 0;
+}
+
+static void DrawTextureTile(unsigned x, unsigned y, unsigned char *buf)
+{
+	static const int	decode[64] = 
+						{
+							 0, 1, 4, 5, 8, 9,12,13,
+							 2, 3, 6, 7,10,11,14,15,
+							16,17,20,21,24,25,28,29,
+							18,19,22,23,26,27,30,31,
+							32,33,36,37,40,41,44,45,
+							34,35,38,39,42,43,46,47,
+							48,49,52,53,56,57,60,61,
+							50,51,54,55,58,59,62,63
+						};
+    unsigned        xi, yi, pixel_offs, rgb16;
+    unsigned char   r, g, b;
+    int             i = 0;
+
+	for (yi = 0; yi < 8; yi++)
+	{
+		for (xi = 0; xi < 8; xi++)
+		{
+			pixel_offs = decode[yi * 8 + xi] * 2;	// grab pixel offset			
+
+			rgb16 = (buf[pixel_offs + 0] << 8) | buf[pixel_offs + 1];
+
+			b = (rgb16 & 0x1f) << 3;
+			g = ((rgb16 >> 5) & 0x1f) << 3;
+			r = ((rgb16 >> 10) & 0x1f) << 3;
+
+            texture[((y + yi) * txres + (x + xi)) * 4 + 0] = r;
+            texture[((y + yi) * txres + (x + xi)) * 4 + 1] = g;
+            texture[((y + yi) * txres + (x + xi)) * 4 + 2] = b;
+            texture[((y + yi) * txres + (x + xi)) * 4 + 3] = 0xff;  // opaque
+		}
+	}
+}
+
+
+static void DrawTexture(unsigned x, unsigned y, unsigned w, unsigned h, unsigned char *buf)
+{
+	int	xi, yi;
+
+	for (yi = 0; yi < h * 8; yi += 8)
+	{
+		for (xi = 0; xi < w * 8; xi += 8)
+		{
+			DrawTextureTile(x + xi, y + yi, buf);
+			buf += 8 * 8 * 2;	// each texture is 8x8 and 16-bit color
+		}
+	}
+}
+
 /******************************************************************/
 /* Macros                                                         */
 /******************************************************************/
 
-#define R3D_LOG			LOG
+#define R3D_LOG
+//#define R3D_LOG         LOG
 
 #define GETWORDLE(a)    (*(UINT32 *) a)
 #define GETWORDBE(a)    BSWAP32(*(UINT32 *) a)
@@ -1606,7 +1725,10 @@ void r3dgl_upload_texture(UINT32 header, UINT32 length, UINT8 *src,
 		return;
 
 	if (header & 0x00800000)
+    {
         draw_texture_16(tiles_x, tiles_y, src, little_endian);
+        DrawTexture(xpos, ypos, tiles_x, tiles_y, src);
+    }
 	else
 		draw_texture_8(tiles_x, tiles_y, src, little_endian);
 
@@ -1686,13 +1808,13 @@ void r3dgl_update_frame(void)
      * Draw the scene
      */
 
-//    glPolygonMode(GL_FRONT, GL_LINE);
-//    glPolygonMode(GL_BACK, GL_LINE);
-//    glDisable(GL_TEXTURE_2D);
+    glPolygonMode(GL_FRONT, GL_LINE);
+    glPolygonMode(GL_BACK, GL_LINE);
+    glDisable(GL_TEXTURE_2D);
     draw_scene();
-//    glPolygonMode(GL_FRONT, GL_FILL);
-//    glPolygonMode(GL_BACK, GL_FILL);
-//    glEnable(GL_TEXTURE_2D);
+    glPolygonMode(GL_FRONT, GL_FILL);
+    glPolygonMode(GL_BACK, GL_FILL);
+    glEnable(GL_TEXTURE_2D);
 
     /*
      * Disable anything we enabled here
@@ -1721,4 +1843,15 @@ void r3dgl_init(UINT8 *culling_ram_8e_ptr, UINT8 *culling_ram_8c_ptr,
     culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
     vrom = vrom_ptr;
+}
+
+/*
+ * void r3dgl_shutdown(void);
+ *
+ * Shuts down the engine.
+ */
+
+void r3dgl_shutdown(void)
+{
+    OutBMP("texture.bmp");
 }

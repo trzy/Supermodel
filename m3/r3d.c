@@ -151,13 +151,13 @@ UINT32 r3d_read_32(UINT32 a)
 {
     static UINT32   _84000000 = 0;
 
-	message(0, "%08X (%08X): Real3D read32 to %08X", PPC_PC, PPC_LR, a);
+//    message(0, "%08X (%08X): Real3D read32 to %08X", PPC_PC, PPC_LR, a);
 
     switch (a)
     {
     case 0x84000000:    // loop around 0x1174EC in Lost World expects bit
         return (_84000000 ^= 0xFFFFFFFF);
-    case 0x84000004:    // unknown, Lost World reads these
+    case 0x84000004:    // unknown
     case 0x84000008:
     case 0x8400000C:
     case 0x84000010:
@@ -201,8 +201,8 @@ void r3d_write_32(UINT32 a, UINT32 d)
     }
     else if (a >= 0x98000000 && a <= 0x981FFFFF)    // polygon RAM
     {
-		if(a >= 0x98001000 && a < 0x98002000)
-			message(1, "color table: %08X = %08X", a, BSWAP32(d));
+//        if(a >= 0x98001000 && a < 0x98002000)
+//            message(1, "color table: %08X = %08X", a, BSWAP32(d));
 
         *(UINT32 *) &polygon_ram[a & 0x1FFFFF] = BSWAP32(d);
         return;
@@ -238,30 +238,38 @@ void r3d_write_32(UINT32 a, UINT32 d)
     switch (a)
     {
     case 0x88000000:    // 0xDEADDEAD
+//        controls_update();
+//        osd_renderer_update_frame();
         message(0, "%08X: 88000000 = %08X", PPC_PC, BSWAP32(d));
         return;
     case 0x90000000:    // VROM texture address
         vrom_texture_address = BSWAP32(d);
+        LOG("model3.log", "VROM1 ADDR = %08X\n", BSWAP32(d));
         message(0, "VROM texture address = %08X", BSWAP32(d));
         return;
     case 0x90000004:    
         vrom_texture_header = BSWAP32(d);
+        LOG("model3.log", "VROM1 HEAD = %08X\n", BSWAP32(d));
         message(0, "VROM texture header = %08X", BSWAP32(d));
         return;
     case 0x90000008:
         osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        LOG("model3.log", "VROM1 SIZE = %08X\n", BSWAP32(d));
         message(0, "VROM texture length = %08X", BSWAP32(d));
         return;
     case 0x9000000C:    // ? Virtual On 2: These are almost certainly for VROM textures as well (I was too lazy to check :P)
         vrom_texture_address = BSWAP32(d);
+        LOG("model3.log", "VROM2 ADDR = %08X\n", BSWAP32(d));
         message(0, "90000000C = %08X", BSWAP32(d));
         return;
     case 0x90000010:    // ?
         vrom_texture_header = BSWAP32(d);
+        LOG("model3.log", "VROM2 HEAD = %08X\n", BSWAP32(d));
         message(0, "900000010 = %08X", BSWAP32(d));
         return;
     case 0x90000014:    // ?
         osd_renderer_upload_texture(vrom_texture_header, BSWAP32(d), &vrom[(vrom_texture_address & 0x7FFFFF) * 4], 0);
+        LOG("model3.log", "VROM2 SIZE = %08X\n", BSWAP32(d));
         message(0, "900000014 = %08X", BSWAP32(d));
         return;
     case 0x9C000000:    // ?
@@ -339,17 +347,6 @@ static INT      ptr;                    // current bit ptr for data
 static BOOL     tdo;                    // bit shifted out to TDO
 
 /*
- * rotate_right():
- *
- * Rotates a 32-bit word right by 1 bit.
- */
-
-static UINT32 rotate_right(UINT32 data)
-{
-    return ((data >> 1) | ((data & 1) << 31));
-}
-
-/*
  * insert_bit():
  *
  * Inserts a bit into an arbitrarily long bit field. Bit 0 is assumed to be
@@ -420,21 +417,6 @@ static BOOL shift(UINT8 *data, INT num_bits)
     return shift_out;
 }
 
-static void shift_data(UINT32 *data, INT num_bytes)
-{
-    INT     i;
-    BOOL    shift_out, shift_in;
-
-    shift_in = 0;
-    for (i = 0; i < num_bytes; i++)
-    {
-        shift_out = data[i] & 1;
-        data[i] >>= 1;
-        data[i] |= (shift_in << 31);
-        shift_in = shift_out;   // so we add it to the next element's MSB
-    }
-}
-
 /*
  * BOOL tap_read(void);
  *
@@ -473,7 +455,7 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
     {
     case 3:     // Capture-DR
 
-        if (current_instruction == 0x0c631f8c7ffe)
+        if (current_instruction == 0x0C631F8C7FFE)
         {
 			/*
 			 * Read ASIC IDs.
@@ -512,12 +494,12 @@ void tap_write(BOOL tck, BOOL tms, BOOL tdi, BOOL trst)
 			{
 				// not working
 
-				insert_id(0x416C7057, 1 + 0 * 32);
-				insert_id(0x416C3057, 1 + 1 * 32);
-				insert_id(0x316C4057, 1 + 2 * 32);
-				insert_id(0x416C5057, 1 + 3 * 32);
-				insert_id(0x316C6057, 1 + 4 * 32 + 1);
-				insert_id(0x316C6057, 1 + 5 * 32 + 1);
+//                insert_id(0x416C7057, 1 + 0 * 32);
+//                insert_id(0x416C3057, 1 + 1 * 32);
+//                insert_id(0x316C4057, 1 + 2 * 32);
+//                insert_id(0x416C5057, 1 + 3 * 32);
+//                insert_id(0x316C6057, 1 + 4 * 32 + 1);
+//                insert_id(0x316C6057, 1 + 5 * 32 + 1);
 			}
         }
 
