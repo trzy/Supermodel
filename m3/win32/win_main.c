@@ -21,6 +21,11 @@
 /******************************************************************/
 
 #include "model3.h"
+#ifdef RENDERER_D3D
+    // ...
+#else   // RENDERER_GL
+#include "win_gl.h"
+#endif
 
 #define XRES    (496)
 #define YRES    (384)
@@ -83,6 +88,12 @@ static BOOL win_create_window(UINT xres, UINT yres)
 	if(!main_window)
 		return FALSE;
 
+#ifdef RENDERER_D3D
+    // ...
+#else   // RENDERER_GL
+    win_gl_init(XRES, YRES);
+#endif
+
 	return TRUE;
 }
 
@@ -92,6 +103,11 @@ static BOOL win_create_window(UINT xres, UINT yres)
  */
 static void win_destroy(void)
 {
+#ifdef RENDERER_D3D
+    // ...
+#else   // RENDERER_GL
+    win_gl_shutdown();
+#endif
     DestroyWindow(main_window);
     UnregisterClass(class_name, GetModuleHandle(NULL));
 }
@@ -134,7 +150,6 @@ int main(int argc, char *argv[])
 
     m3_init();
 	m3_reset();
-    osd_renderer_set_mode(0, XRES, YRES);
 
 	// Now that everything works, we can show the window
 
@@ -173,9 +188,11 @@ int main(int argc, char *argv[])
 
 		// gather profiler stats
 
-		profile_print(prof);
+#ifdef _PROFILE_
+        profile_print(prof);
 
 		printf(prof);
+#endif
 	}
 
     for (i = 0; i < 32; i += 4)
@@ -202,31 +219,6 @@ void osd_error(CHAR * string)
 	/* revert to plain GUI. */
 }
 
-// temp
-extern UINT r3d_test_model;
-extern UINT r3d_test_bit;
-extern UINT r3d_test_word;
-extern UINT r3d_test_bit_default;
-static void show_test_bit(void)
-{
-	char string[256];
-	sprintf(string,
-			"Test bit = %i, Test mask = %08X\n"
-			"Default val = %i  0 = Draw the polys where the bit is 1\n"
-			"                  1 = Draw the polys where the bit is 0\n",
-			r3d_test_bit,
-			1 << r3d_test_bit,
-			r3d_test_bit_default
-	);
-	MessageBox(NULL, string, "Model 3", 0);
-}
-static void show_test_word(void)
-{
-	char string[256];
-    sprintf(string, "Test word = %i", r3d_test_word);
-	MessageBox(NULL, string, "Model 3", 0);
-}
-
 static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     CHAR    fname[13];
@@ -243,35 +235,6 @@ static LRESULT CALLBACK win_window_proc(HWND hWnd, UINT message, WPARAM wParam, 
             default:
                 printf("KEY = %02X\n", wParam);
                 break;
-
-			// temp
-			case 'M':
-				r3d_test_model ^= 1;
-				break;
-			case 'L':
-				r3d_test_bit_default ^= 1;
-				show_test_bit();
-				break;
-            case 'I':
-                r3d_test_word--;
-                r3d_test_word %= 7;
-                show_test_word();
-                break;
-            case 'K':
-                r3d_test_word++;
-                r3d_test_word %= 7;
-                show_test_word();
-                break;
-			case 'O':
-				r3d_test_bit++;
-				r3d_test_bit &= 31;
-				show_test_bit();
-				break;
-			case 'P':
-				r3d_test_bit--;
-				r3d_test_bit &= 31;
-				show_test_bit();
-				break;
 
             case '7':
                 m3_config.layer_enable ^= 1;

@@ -19,7 +19,8 @@
 /*
  * osd_common/osd_gl.h
  *
- * Header file which defines the OSD OpenGL interface.
+ * Header file which exposes the OSD OpenGL interface. These are functions
+ * which the OSD code must call. 
  */
 
 #ifndef INCLUDED_OSD_COMMON_OSD_GL_H
@@ -29,8 +30,8 @@
 /* OSD OpenGL Functions                                           */
 /******************************************************************/
 
-extern void osd_gl_swap_buffers(void);
-extern void osd_gl_set_mode(BOOL, UINT, UINT);
+extern BOOL osd_gl_check_extension(CHAR *);
+extern void osd_gl_set_mode(UINT, UINT);
 extern void osd_gl_unset_mode(void);
 
 #endif  // INCLUDED_OSD_COMMON_OSD_GL_H

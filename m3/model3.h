@@ -45,7 +45,7 @@
 #include <string.h>
 //#include "zlib.h"
 
-#include "osd_common.h"
+#include "osd.h"    // provided by the port to define data types, etc.
 
 #include "ppc/ppc.h"
 
@@ -57,10 +57,13 @@
 #include "eeprom.h"
 #include "bridge.h"
 #include "r3d.h"
+#include "render.h"
 #include "rtc.h"
 #include "scsi.h"
 #include "scsp.h"
 #include "tilegen.h"
+
+#include "osd_common.h" // defines OSD interface (must be included last)
 
 /******************************************************************/
 /* Helpful Macros                                                 */

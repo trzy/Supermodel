@@ -17,12 +17,12 @@ OBJ_GL_LIBS = OpenGL32.lib GLu32.lib
 #
 
 OBJ_DIR = obj
-OBJ = $(OBJ_DIR)/disasm.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/tilegen.obj $(OBJ_DIR)/win_input.obj $(OBJ_DIR)/win_main.obj $(OBJ_DIR)/bridge.obj $(OBJ_DIR)/controls.obj $(OBJ_DIR)/dma.obj $(OBJ_DIR)/dsb1.obj $(OBJ_DIR)/eeprom.obj $(OBJ_DIR)/r3d.obj $(OBJ_DIR)/rtc.obj $(OBJ_DIR)/scsi.obj $(OBJ_DIR)/model3.obj
+OBJ = $(OBJ_DIR)/disasm.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/tilegen.obj $(OBJ_DIR)/win_input.obj $(OBJ_DIR)/win_main.obj $(OBJ_DIR)/bridge.obj $(OBJ_DIR)/controls.obj $(OBJ_DIR)/dma.obj $(OBJ_DIR)/dsb1.obj $(OBJ_DIR)/eeprom.obj $(OBJ_DIR)/r3d.obj $(OBJ_DIR)/rtc.obj $(OBJ_DIR)/scsi.obj $(OBJ_DIR)/model3.obj $(OBJ_DIR)/render.obj
 OBJ_D3D = $(OBJ_DIR)/dx_render.obj
-OBJ_GL = $(OBJ_DIR)/glrender.obj $(OBJ_DIR)/win_gl.obj
-OBJ_MS = $(OBJ_DIR)\disasm.obj $(OBJ_DIR)\ppc.obj $(OBJ_DIR)\tilegen.obj $(OBJ_DIR)\win_input.obj $(OBJ_DIR)\win_main.obj $(OBJ_DIR)\bridge.obj $(OBJ_DIR)\controls.obj $(OBJ_DIR)\dma.obj $(OBJ_DIR)\dsb1.obj $(OBJ_DIR)\eeprom.obj $(OBJ_DIR)\r3d.obj $(OBJ_DIR)\rtc.obj $(OBJ_DIR)\scsi.obj $(OBJ_DIR)\model3.obj
+OBJ_GL = $(OBJ_DIR)/win_gl.obj $(OBJ_DIR)/glrender.obj
+OBJ_MS = $(OBJ_DIR)\disasm.obj $(OBJ_DIR)\ppc.obj $(OBJ_DIR)\tilegen.obj $(OBJ_DIR)\win_input.obj $(OBJ_DIR)\win_main.obj $(OBJ_DIR)\bridge.obj $(OBJ_DIR)\controls.obj $(OBJ_DIR)\dma.obj $(OBJ_DIR)\dsb1.obj $(OBJ_DIR)\eeprom.obj $(OBJ_DIR)\r3d.obj $(OBJ_DIR)\rtc.obj $(OBJ_DIR)\scsi.obj $(OBJ_DIR)\model3.obj $(OBJ_DIR)\render.obj
 OBJ_D3D_MS = $(OBJ_DIR)\dx_render.obj
-OBJ_GL_MS = $(OBJ_DIR)\glrender.obj $(OBJ_DIR)\win_gl.obj
+OBJ_GL_MS = $(OBJ_DIR)\win_gl.obj $(OBJ_DIR)\glrender.obj 
 
 #
 # Rules

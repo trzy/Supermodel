@@ -19,11 +19,14 @@
 /*
  * win32/win_gl.c
  *
- * Win32 OpenGL support. Defines the functions specified in
- * osd_common/osd_gl.h.
+ * Win32 OpenGL support. All of this will have to be rewritten to support
+ * run-time mode changes and fullscreen modes.
+ *
+ * The only osd_renderer function implemented here is osd_renderer_blit().
  */
 
 #include "model3.h"
+#include "osd_common/osd_gl.h"
 #include <gl\gl.h>
 #include <gl\glu.h>
 #include <gl\glext.h>
@@ -38,18 +41,16 @@ static HINSTANCE    hinstance;          // application instance
 extern HWND         main_window;        // window handle
 
 /*
- * void osd_gl_set_mode(BOOL fullscreen, UINT xres, UINT yres);
+ * void win_gl_init(UINT xres, UINT yres);
  *
- * Called by osd_renderer_set_mode() to set the rendering mode.
+ * Sets the rendering mode and initializes OpenGL. 
  *
  * Parameters:
- *      fullscreen = Non-zero if a full-screen mode is desired, 0 for a
- *                   windowed mode.
  *      xres       = Horizontal resolution in pixels.
  *      yres       = Vertical resolution.
  */
 
-void osd_gl_set_mode(BOOL fullscreen, UINT xres, UINT yres)
+void win_gl_init(UINT xres, UINT yres)
 {
 	GLuint							pixel_format;
 	static PIXELFORMATDESCRIPTOR	pfd =			// must this be static?
@@ -100,17 +101,32 @@ void osd_gl_set_mode(BOOL fullscreen, UINT xres, UINT yres)
 
 	if (!wglMakeCurrent(hdc, hrc))
         osd_error("Unable to activate the OpenGL rendering context.");
+
+    /*
+     * Check for mirrored texture repeat extension
+     */
+
+    if (osd_gl_check_extension("GL_ARB_texture_mirrored_repeat"))
+        osd_error("Your OpenGL implementation does not support mirrored texture repeating!");
+
+    /*
+     * Initialize GL engine
+     */
+
+    osd_gl_set_mode(xres, yres);       
 }
 
 /*
- * void osd_gl_unset_mode(void);
+ * void win_gl_shutdown(void);
  *
- * Called by osd_renderer_unset_mode() to "unsets" the current mode meaning it
- * releases the rendering and device contexts.
+ * Shuts down the rendering mode mode meaning it releases the rendering and
+ * device contexts.
  */
 
-void osd_gl_unset_mode(void)
+void win_gl_shutdown(void)
 {
+    osd_gl_unset_mode();
+
 	/*
 	 * If there is a rendering context, release it
 	 */
@@ -130,13 +146,12 @@ void osd_gl_unset_mode(void)
 }
 
 /*
- * void osd_gl_swap_buffers(void);
+ * void osd_renderer_blit(void);
  *
  * Swaps the buffers to display what has been rendered in the last frame.
- * Called by osd_renderer_update_frame().
  */
 
-void osd_gl_swap_buffers(void)
+void osd_renderer_blit(void)
 {
     SwapBuffers(hdc);
 }

@@ -19,7 +19,8 @@
 /*
  * osd_common/osd_common.h
  *
- * Header file which defines the OSD interface.
+ * Header file which defines the OSD interface. This is included last in
+ * model3.h because it relies on data structures defined there.
  */
 
 #ifndef INCLUDED_OSD_COMMON_OSD_H
@@ -29,15 +30,7 @@
 /* OSD Includes                                                   */
 /******************************************************************/
 
-/*
- * osd.h is provided by the port and must define a variety of things
- * (including basic data types) in addition to whatever the port needs for
- * itself
- */
-
-#include "osd.h"
-
-#include "disasm.h"
+#include "disasm.h" // didn't know where to put it, so I stuck it here ;)
 
 /******************************************************************/
 /* OSD Data Structures                                            */
@@ -88,14 +81,23 @@ extern void osd_error();
 /* Renderer                                                       */
 /******************************************************************/
 
-extern void osd_renderer_init(UINT8 *, UINT8 *, UINT8 *, UINT8 *, UINT8 *);
-extern void osd_renderer_shutdown(void);
-extern void osd_renderer_set_mode(BOOL, UINT, UINT);
-extern void osd_renderer_unset_mode(void);
-extern void osd_renderer_update_frame(void);
+extern void osd_renderer_invalidate_textures(UINT, UINT, UINT, UINT);
+extern void osd_renderer_draw_model(UINT32 *, UINT32, BOOL);
+extern void osd_renderer_multiply_matrix(MATRIX);
+extern void osd_renderer_translate_matrix(float, float, float);
+extern void osd_renderer_push_matrix(void);
+extern void osd_renderer_pop_matrix(void);
+extern void osd_renderer_set_viewport(const VIEWPORT *);
+extern void osd_renderer_set_coordinate_system(const MATRIX);
+extern void osd_renderer_clear(BOOL, BOOL);
+extern void osd_renderer_draw_layer(UINT);
 extern void osd_renderer_get_layer_buffer(UINT, UINT8 **, UINT *);
 extern void osd_renderer_free_layer_buffer(UINT);
-extern void osd_renderer_remove_textures(UINT, UINT, UINT, UINT);
+extern void osd_renderer_blit(void);
+extern void osd_renderer_begin(void);
+extern void osd_renderer_end(void);
+extern void osd_renderer_set_memory(UINT8 *, UINT8 *, UINT8 *, UINT8 *,
+                                    UINT8 *);
 
 /******************************************************************/
 /* Sound Output                                                   */

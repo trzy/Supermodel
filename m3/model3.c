@@ -625,6 +625,9 @@ static void m3_ppc_write_8(UINT32 a, UINT8 d)
         switch (a)
         {
         case 0xC0010180:    // ? Lost World, PC = 0x11B510
+        case 0xC1000014:    // ? Lost World, PC = 0xFF80098C
+        case 0xC1000038:    // ? Sega Rally, PC = 0x7B1F0
+        case 0xC1000039:    // ? Lost World, PC = 0x118BD8
             return;
         }
 
@@ -710,6 +713,12 @@ static void m3_ppc_write_16(UINT32 a, UINT16 d)
         else if (a >= 0xFEE00000 && a <= 0xFEEFFFFF)    // MPC106 CONFIG_DATA
         {
             bridge_write_config_data_16(a, d);
+            return;
+        }
+        else if ((a >= 0xF00C0000 && a <= 0xF00DFFFF) ||
+                 (a >= 0xFE0C0000 && a <= 0xFE0DFFFF))  // backup RAM
+        {
+            *(UINT16 *) &bram[a & 0x1FFFF] = BSWAP16(d);
             return;
         }
 
@@ -925,7 +934,7 @@ static void m3_set_crom_bank(UINT8 d)
     crom_bank_reg = d;
     crom_bank = &crom[0x800000 + ((~d) & 7) * 0x800000];
 
-    LOG("model3.log", "CROM bank = %02X\n", d);
+//    LOG("model3.log", "CROM bank = %02X\n", d);
 }
 
 static UINT8 m3_sys_read_8(UINT32 a)
@@ -991,7 +1000,7 @@ static void m3_sys_write_8(UINT32 a, UINT8 d)
 		return;
     case 0x14:  // IRQ enable
         m3_irq_enable = d;
-        LOG("model3.log", "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
+        LOG("model3.log", "%08X: IRQ enable = %02X\n", PPC_PC, m3_irq_enable);
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
     case 0x1C:  // ? this may be the LED control 
@@ -1020,7 +1029,7 @@ static void m3_sys_write_32(UINT32 a, UINT32 d)
         return;
     case 0x14:  // IRQ mask
         m3_irq_enable = (d >> 24);
-        LOG("model3.log", "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
+        LOG("model3.log", "%08X: IRQ enable = %02X\n", PPC_PC, m3_irq_enable);
         message(0, "%08X: IRQ enable = %02X", PPC_PC, m3_irq_enable);
         return;
     case 0x1C:  // ?
@@ -1060,9 +1069,10 @@ static UINT32 pci_command_callback(UINT32 cmd)
             return 0x16C311DB;  // 0x11DB = PCI vendor ID (Sega), 0x16C3 = device ID
         else
             return 0x178611DB;
-    case 0x80007000:
-        if (m3_config.step == 0x10)
-            return 0x00011000;  // VF3
+    case 0x80007000:    // VF3 
+    case 0x80007002:    // Sega Rally 2
+            return 0x00011000;
+    default:
         break;
     }
 
@@ -1348,8 +1358,7 @@ void m3_run_frame(void)
      */
 
 	rtc_step_frame();
-    tilegen_update();
-    osd_renderer_update_frame();
+    render_frame();
     controls_update();
 
     /*
@@ -1357,7 +1366,7 @@ void m3_run_frame(void)
      */
 
     message(0, "enter VBL");
-    m3_add_irq(m3_irq_enable);
+    m3_add_irq(m3_irq_enable & 0x02);
     ppc_set_irq_line(1);
 
 	PROFILE_SECT_ENTRY("ppc");
@@ -1365,6 +1374,13 @@ void m3_run_frame(void)
 	PROFILE_SECT_EXIT("ppc");
 
     m3_remove_irq(0xFF);    // some games expect a bunch of IRQs to go low after some time
+
+//#if 0
+    m3_add_irq(1 << m3_irq_bit);
+    ppc_set_irq_line(1);
+    m3_irq_bit = (m3_irq_bit + 1) & 7;
+//#endif
+    
 
 	PROFILE_SECT_EXIT("-");
 }
@@ -1617,7 +1633,7 @@ BOOL m3_load_rom(CHAR * id)
 	if(crom == NULL)
 	{
 		crom = (UINT8 *)malloc(72*1024*1024);
-		vrom = (UINT8 *)malloc(32*1024*1024);
+        vrom = (UINT8 *)malloc(64*1024*1024);
         srom = (UINT8 *)malloc(romset->srom[0].size + romset->srom[1].size + romset->srom[2].size);
 		drom = (UINT8 *)malloc(romset->dsb_rom[0].size +
 							   romset->dsb_rom[1].size + romset->dsb_rom[2].size +
@@ -1722,6 +1738,11 @@ BOOL m3_load_rom(CHAR * id)
 	 * and the CROMx space, if CROMx is < 16MB?
 	 */
 
+    /* mirror lower VROM if necessary */
+
+    if ((romset->vrom[0].size * 16) < 64*1024*1024)
+        memcpy(&vrom[romset->vrom[0].size * 16], vrom, 64*1024*1024 - romset->vrom[0].size * 16);
+
 	/* if we're here, everything went fine! */
 
     message(0, "ROM loaded succesfully!");
@@ -1732,7 +1753,10 @@ BOOL m3_load_rom(CHAR * id)
 
 //    save_file("crom.bin", &crom[0x800000 - romset->crom[0].size * 4], romset->crom[0].size * 4, 0);
 //    save_file("crom.bin", crom, 8*1024*1024, 0);
-//    save_file("vrom.bin", vrom, 32*1024*1024, 0);
+//    save_file("vrom.bin", vrom, 64*1024*1024, 0);
+//    save_file("crom0.bin", crom0, 16*1024*1024, 0);
+//    save_file("crom1.bin", crom1, 16*1024*1024, 0);
+//    save_file("crom2.bin", crom2, 16*1024*1024, 0);
 
 
     /*
@@ -1869,7 +1893,19 @@ BOOL m3_load_rom(CHAR * id)
 	}
     else if (!stricmp(id, "SRALLY2"))
     {
-        *(UINT32 *) &crom[0x30] = BSWAP32(0x60000000);
+//        *(UINT32 *) &crom[0x30] = BSWAP32(0x60000000);
+
+//        *(UINT32 *) &crom[0x78930] = BSWAP32(0x60000000);
+
+        /*
+         * Note: 7B560 checks for some value which may need to be returned
+         * by the TAP. This is handled by the first patch.
+         */
+        *(UINT32 *) &crom[0x7C0C4] = BSWAP32(0x60000000);
+        *(UINT32 *) &crom[0x7C0C8] = BSWAP32(0x60000000);
+        *(UINT32 *) &crom[0x7C0CC] = BSWAP32(0x60000000);
+
+//        *(UINT32 *) &crom[0x78894] = BSWAP32(0x60000000);
     }
 
 	return(MODEL3_OKAY);
@@ -1896,6 +1932,7 @@ void m3_shutdown(void)
     controls_shutdown();
 //    scsp_shutdown();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
+    render_shutdown();
 	r3d_shutdown();
 	tilegen_shutdown();
 	dma_shutdown();
@@ -1909,6 +1946,7 @@ void m3_shutdown(void)
     save_file("8c000000", culling_ram_8c, 2*1024*1024, 0);
     save_file("98000000", polygon_ram, 2*1024*1024, 0);
     save_file("fe180000", _FE180000, 0x20000, 0);
+    save_file("texture.bin", texture_ram, 2048*2048*2, 0);
 
     SAFE_FREE(ram);
 	SAFE_FREE(vram);
@@ -2054,9 +2092,9 @@ void m3_init(void)
 
     bridge_init(pci_command_callback);
     scsi_init(m3_ppc_read_8, m3_ppc_read_16, m3_ppc_read_32, m3_ppc_write_8, m3_ppc_write_16, m3_ppc_write_32);
-    osd_renderer_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
     dma_init(m3_ppc_read_32, m3_ppc_write_32);
     tilegen_init(vram);
+    render_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
     r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
 //    scsp_init();
 //    if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();

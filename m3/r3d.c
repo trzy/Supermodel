@@ -141,7 +141,7 @@ void r3d_load_state(FILE *fp)
     fread(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
     fread(texture_ram, sizeof(UINT8), 2048*2048*2, fp);
 
-    osd_renderer_remove_textures(0, 0, 2048, 2048);
+    osd_renderer_invalidate_textures(0, 0, 2048, 2048);
 }
 
 /******************************************************************/
@@ -362,7 +362,7 @@ static void upload_texture(UINT32 header, UINT32 length, UINT8 *src, BOOL little
      * Remove any existing textures that may have been overwritten
      */
     
-    osd_renderer_remove_textures(xpos, ypos, size_x, size_y);
+    osd_renderer_invalidate_textures(xpos, ypos, size_x, size_y);
 
 	PROFILE_SECT_EXIT("real3d");
 }
