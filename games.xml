@@ -1,0 +1,1655 @@
+<?xml version="1.0"?>
+<!DOCTYPE gamelist [
+<!ELEMENT gamelist (game+)>
+	<!ATTLIST gamelist>
+	<!ELEMENT game (description, year?, manufacturer, step, bridge?, cromsize?, rom*, patch*, input*)>
+		<!ATTLIST game name CDATA #REQUIRED>
+		<!ATTLIST game parent CDATA #IMPLIED>
+		<!ELEMENT description (#PCDATA)>
+		<!ELEMENT year (#PCDATA)>
+		<!ELEMENT manufacturer (#PCDATA)>
+		<!ELEMENT step (#PCDATA)>
+		<!ELEMENT bridge (#PCDATA)>
+		<!ELEMENT cromsize (#PCDATA)>
+		<!ELEMENT rom EMPTY>
+			<!ATTLIST rom type CDATA #REQUIRED>
+			<!ATTLIST rom name CDATA #REQUIRED>
+			<!ATTLIST rom size CDATA #REQUIRED>
+			<!ATTLIST rom crc CDATA #REQUIRED>
+			<!ATTLIST rom sha1 CDATA #IMPLIED>
+		<!ELEMENT patch EMPTY>
+			<!ATTLIST patch size CDATA #REQUIRED>
+			<!ATTLIST patch address CDATA #REQUIRED>
+			<!ATTLIST patch data CDATA #REQUIRED>
+		<!ELEMENT input EMPTY>
+			<!ATTLIST input type CDATA #REQUIRED>
+			<!ATTLIST input center CDATA #IMPLIED>
+			<!ATTLIST input mapping CDATA #REQUIRED>
+]>
+
+<gamelist>
+	<game name="vf3">
+		<description>Virtua Fighter 3</description>
+		<year>1996</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.0</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="7125b0" data="60000000"/>
+		<patch size="32" address="7125d0" data="60000000"/>
+		<patch size="32" address="72e97c" data="60000000"/>		<!-- waits for decrementer == 0 -->
+		<patch size="32" address="72e99c" data="60000000"/>		<!-- waits for decrementer -->
+		
+		<rom type="prog0" name="epr-19227c.17" size="524288" crc="a7df4d75" sha1="1b1186227f830556c5e2b6ca4c2bf20673b22f94"/>
+		<rom type="prog1" name="epr-19228c.18" size="524288" crc="9c5727e2" sha1="f9f8b8cf27fdce08ab2975dbaa8c7a03f5c064fb"/>
+		<rom type="prog2" name="epr-19229c.19" size="524288" crc="731b6b78" sha1="e39f92f721c2771f2d1f5b67625659e006f6fe0a"/>
+		<rom type="prog3" name="epr-19230c.20" size="524288" crc="736a9431" sha1="0f62a122f349c0b0aab43863a30284a8fe4b7ba9"/>
+		<rom type="crom00" name="mpr-19193.1" size="4194304" crc="7bab33d2" sha1="243a09959f3c4311070f1de760ee63958cd47660"/>
+		<rom type="crom01" name="mpr-19194.2" size="4194304" crc="66254702" sha1="843ac4f6791f312f3138f8f38d38c8e4d2bab305"/>
+		<rom type="crom02" name="mpr-19195.3" size="4194304" crc="bd5e27a3" sha1="778c67bf7b5c7e3ae52fe12308a81b095563f52b"/>
+		<rom type="crom03" name="mpr-19196.4" size="4194304" crc="f386b850" sha1="168d21382359acb8f1d52d722de8c6b9a9210378"/>
+		<rom type="crom10" name="mpr-19197.5" size="4194304" crc="a22d76c9" sha1="ad2d67a62436ccc6479e2a218ab09d2fc22c367d"/>
+		<rom type="crom11" name="mpr-19198.6" size="4194304" crc="d8ee5032" sha1="3e9274142874ace76dba2bc9b5351cfdfb3a50cd"/>
+		<rom type="crom12" name="mpr-19199.7" size="4194304" crc="9f80d6fe" sha1="97b9076d413e28d00e9c45fcc7dad6f534ca8874"/>
+		<rom type="crom13" name="mpr-19200.8" size="4194304" crc="74941091" sha1="914db3955f355779147d86446f5976121191ea6d"/>
+		<rom type="crom20" name="mpr-19201.9" size="4194304" crc="7c4a8c31" sha1="473b7bef932d7d54a5dc06bd80d286f2e2e96d44"/>
+		<rom type="crom21" name="mpr-19202.10" size="4194304" crc="aaa086c6" sha1="01871c8e5454aed80e907fde199cfb23a57aa1c2"/>
+		<rom type="crom22" name="mpr-19203.11" size="4194304" crc="0afa6334" sha1="1bb70e823fb6e05df069cbfafed2e57bda8776b9"/>
+		<rom type="crom23" name="mpr-19204.12" size="4194304" crc="2f93310a" sha1="3dfc5b72a78967d7772da4098adb41f18b5294d4"/>
+		<rom type="crom30" name="mpr-19205.13" size="4194304" crc="199c328e" sha1="1ef1f09ff1f5253bf03e06c5b6e42be9599b9ea5"/>
+		<rom type="crom31" name="mpr-19206.14" size="4194304" crc="71a98d73" sha1="dda617f9f5f986e3369fa3d3090c423eefdf913c"/>
+		<rom type="crom32" name="mpr-19207.15" size="4194304" crc="2ce1612d" sha1="736f559d460f0069c7a2d5ba7cddf9135737d6e2"/>
+		<rom type="crom33" name="mpr-19208.16" size="4194304" crc="08f30f71" sha1="393525b19cdecddfbd62c6209203db5f3edfd9a8"/>
+		<rom type="vrom00" name="mpr-19211.26" size="2097152" crc="9c8f5df1" sha1="d47c8bd0189c8e617a3ed9f75ee3812a229f56c0"/>
+		<rom type="vrom01" name="mpr-19212.27" size="2097152" crc="75036234" sha1="01a20a6a62408017bff8f2e76dbd21c00275bc70"/>
+		<rom type="vrom02" name="mpr-19213.28" size="2097152" crc="67b123cf" sha1="b84c4f83c25edcc8ac929d3f9cf51da713045071"/>
+		<rom type="vrom03" name="mpr-19214.29" size="2097152" crc="a6f5576b" sha1="e994b3ef8e6eb07e8f3bbe474410c06d6c42354b"/>
+		<rom type="vrom04" name="mpr-19215.30" size="2097152" crc="c6fd9f0d" sha1="1f3299706d6ac73836c069a7ed2866d412f60369"/>
+		<rom type="vrom05" name="mpr-19216.31" size="2097152" crc="201bb1ed" sha1="7ffd72ff56159529d74f01f8da0ba4798f109806"/>
+		<rom type="vrom06" name="mpr-19217.32" size="2097152" crc="4dadd41a" sha1="7a1e0908962afcfc737132478c0e45d153d94ecb"/>
+		<rom type="vrom07" name="mpr-19218.33" size="2097152" crc="cff91953" sha1="41e95704a65958377c3bbd9d00d90a5ad4552f66"/>
+		<rom type="vrom10" name="mpr-19219.34" size="2097152" crc="c610d521" sha1="cb146fe78d89176e9dd5c773644614cdc2ef57ce"/>
+		<rom type="vrom11" name="mpr-19220.35" size="2097152" crc="e62924d0" sha1="4d1ac11a5977a4e9cf942c9f1204960c0a895347"/>
+		<rom type="vrom12" name="mpr-19221.36" size="2097152" crc="24f83e3c" sha1="c587428fa47e849881bf45487af086db6b09264e"/>
+		<rom type="vrom13" name="mpr-19222.37" size="2097152" crc="61a6aa7d" sha1="cc26020b2f904f68822111073b595ee0cc8b2e0c"/>
+		<rom type="vrom14" name="mpr-19223.38" size="2097152" crc="1a8c1980" sha1="43b8efb019c8a20fe38f95050fe60dfe9bf322f0"/>
+		<rom type="vrom15" name="mpr-19224.39" size="2097152" crc="0a79a1bd" sha1="1df71cf77ea8611462380a449eb99199664b3da3"/>
+		<rom type="vrom16" name="mpr-19225.40" size="2097152" crc="91a985eb" sha1="5a842a260e4a78f5463222db44f13b068fa70b23"/>
+		<rom type="vrom17" name="mpr-19226.41" size="2097152" crc="00091722" sha1="ef86db36b4b91a66b3e401c3c91735b9d28da2e2"/>
+		<rom type="sprog" name="epr-19231.21" size="131072" crc="f2ae2558" sha1="7ab5fc508ffd1b0c9f3e70f4d3edeae44e3a0dc4"/>
+		<rom type="srom0" name="mpr-19209.22" size="4194304" crc="3715e38c" sha1="b11dbf8a5840990e9697c53b4796cd70ad91f6a1"/>
+		<rom type="srom1" name="mpr-19210.24" size="4194304" crc="c03d6502" sha1="4ca49fe5dd5105ca5f78f4740477beb64137d4be"/>
+	</game>
+	<game name="vf3tb" parent="vf3">
+		<description>Virtua Fighter 3 Team Battle</description>
+		<year>1996</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.0</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<rom type="prog0" name="epr-20126.17" size="524288" crc="27ecd3b0" sha1="a9b913294ac925adb501d3b47f346006b70dfcd6"/>
+		<rom type="prog1" name="epr-20127.18" size="524288" crc="5c0f694b" sha1="ca346d6b249bb7a3015f016d25bfb3050360c8ec"/>
+		<rom type="prog2" name="epr-20128.19" size="524288" crc="ffbdbdc5" sha1="3cbcc5ce3fcb563f11dc87ac514de2325c6cc9f2"/>
+		<rom type="prog3" name="epr-20129.20" size="524288" crc="0db897ce" sha1="68f5005082c69fab254d43485669dd6b95a6cc9b"/>
+		<rom type="crom00" name="mpr-20130.1" size="2097152" crc="19e1eaca" sha1="e63afe7d8f5e653d0efd026fe20da0850f908d5e"/>
+		<rom type="crom01" name="mpr-20131.2" size="2097152" crc="d86ec71b" sha1="da8ffb1a8000b8e656893c29dad8458e04c91df6"/>
+		<rom type="crom02" name="mpr-20132.3" size="2097152" crc="91ebc0fb" sha1="0c37d29c15ec7137dd5398c010a289ffce9ee1e8"/>
+		<rom type="crom03" name="mpr-20133.4" size="2097152" crc="d9a10a89" sha1="a1c1dff2cde54cd128690bb5896448786e5243b9"/>
+		<rom type="crom10" name="mpr-19197.5" size="4194304" crc="a22d76c9" sha1="ad2d67a62436ccc6479e2a218ab09d2fc22c367d"/>
+		<rom type="crom11" name="mpr-19198.6" size="4194304" crc="d8ee5032" sha1="3e9274142874ace76dba2bc9b5351cfdfb3a50cd"/>
+		<rom type="crom12" name="mpr-19199.7" size="4194304" crc="9f80d6fe" sha1="97b9076d413e28d00e9c45fcc7dad6f534ca8874"/>
+		<rom type="crom13" name="mpr-19200.8" size="4194304" crc="74941091" sha1="914db3955f355779147d86446f5976121191ea6d"/>
+		<rom type="crom20" name="mpr-19201.9" size="4194304" crc="7c4a8c31" sha1="473b7bef932d7d54a5dc06bd80d286f2e2e96d44"/>
+		<rom type="crom21" name="mpr-19202.10" size="4194304" crc="aaa086c6" sha1="01871c8e5454aed80e907fde199cfb23a57aa1c2"/>
+		<rom type="crom22" name="mpr-19203.11" size="4194304" crc="0afa6334" sha1="1bb70e823fb6e05df069cbfafed2e57bda8776b9"/>
+		<rom type="crom23" name="mpr-19204.12" size="4194304" crc="2f93310a" sha1="3dfc5b72a78967d7772da4098adb41f18b5294d4"/>
+		<rom type="crom30" name="mpr-19205.13" size="4194304" crc="199c328e" sha1="1ef1f09ff1f5253bf03e06c5b6e42be9599b9ea5"/>
+		<rom type="crom31" name="mpr-19206.14" size="4194304" crc="71a98d73" sha1="dda617f9f5f986e3369fa3d3090c423eefdf913c"/>
+		<rom type="crom32" name="mpr-19207.15" size="4194304" crc="2ce1612d" sha1="736f559d460f0069c7a2d5ba7cddf9135737d6e2"/>
+		<rom type="crom33" name="mpr-19208.16" size="4194304" crc="08f30f71" sha1="393525b19cdecddfbd62c6209203db5f3edfd9a8"/>
+		<rom type="vrom00" name="mpr-19211.26" size="2097152" crc="9c8f5df1" sha1="d47c8bd0189c8e617a3ed9f75ee3812a229f56c0"/>
+		<rom type="vrom01" name="mpr-19212.27" size="2097152" crc="75036234" sha1="01a20a6a62408017bff8f2e76dbd21c00275bc70"/>
+		<rom type="vrom02" name="mpr-19213.28" size="2097152" crc="67b123cf" sha1="b84c4f83c25edcc8ac929d3f9cf51da713045071"/>
+		<rom type="vrom03" name="mpr-19214.29" size="2097152" crc="a6f5576b" sha1="e994b3ef8e6eb07e8f3bbe474410c06d6c42354b"/>
+		<rom type="vrom04" name="mpr-19215.30" size="2097152" crc="c6fd9f0d" sha1="1f3299706d6ac73836c069a7ed2866d412f60369"/>
+		<rom type="vrom05" name="mpr-19216.31" size="2097152" crc="201bb1ed" sha1="7ffd72ff56159529d74f01f8da0ba4798f109806"/>
+		<rom type="vrom06" name="mpr-19217.32" size="2097152" crc="4dadd41a" sha1="7a1e0908962afcfc737132478c0e45d153d94ecb"/>
+		<rom type="vrom07" name="mpr-19218.33" size="2097152" crc="cff91953" sha1="41e95704a65958377c3bbd9d00d90a5ad4552f66"/>
+		<rom type="vrom10" name="mpr-19219.34" size="2097152" crc="c610d521" sha1="cb146fe78d89176e9dd5c773644614cdc2ef57ce"/>
+		<rom type="vrom11" name="mpr-19220.35" size="2097152" crc="e62924d0" sha1="4d1ac11a5977a4e9cf942c9f1204960c0a895347"/>
+		<rom type="vrom12" name="mpr-19221.36" size="2097152" crc="24f83e3c" sha1="c587428fa47e849881bf45487af086db6b09264e"/>
+		<rom type="vrom13" name="mpr-19222.37" size="2097152" crc="61a6aa7d" sha1="cc26020b2f904f68822111073b595ee0cc8b2e0c"/>
+		<rom type="vrom14" name="mpr-19223.38" size="2097152" crc="1a8c1980" sha1="43b8efb019c8a20fe38f95050fe60dfe9bf322f0"/>
+		<rom type="vrom15" name="mpr-19224.39" size="2097152" crc="0a79a1bd" sha1="1df71cf77ea8611462380a449eb99199664b3da3"/>
+		<rom type="vrom16" name="mpr-19225.40" size="2097152" crc="91a985eb" sha1="5a842a260e4a78f5463222db44f13b068fa70b23"/>
+		<rom type="vrom17" name="mpr-19226.41" size="2097152" crc="00091722" sha1="ef86db36b4b91a66b3e401c3c91735b9d28da2e2"/>
+		<rom type="sprog" name="epr-19231.21" size="131072" crc="f2ae2558" sha1="7ab5fc508ffd1b0c9f3e70f4d3edeae44e3a0dc4"/>
+		<rom type="srom0" name="mpr-19209.22" size="4194304" crc="3715e38c" sha1="b11dbf8a5840990e9697c53b4796cd70ad91f6a1"/>
+		<rom type="srom1" name="mpr-19210.24" size="4194304" crc="c03d6502" sha1="4ca49fe5dd5105ca5f78f4740477beb64137d4be"/>
+	</game>
+	<game name="bass">
+		<description>Sega Bass Fishing</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.0</step>
+		<bridge>mpc106</bridge>
+		
+		<patch size="32" address="7999a8" data="60000000"/>
+		<patch size="32" address="7999c8" data="60000000"/>
+		<patch size="32" address="799980" data="60000000"/>
+		<patch size="32" address="78ac14" data="60000000"/>
+		<patch size="32" address="78abf8" data="60000000"/>
+		<patch size="32" address="100174" data="60000000"/>
+		<patch size="32" address="791788" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20643.17" size="524288" crc="daf02716" sha1="b968f8ca602c78b9ca49969ff01f9440f175049a"/>
+		<rom type="prog1" name="epr-20644.18" size="524288" crc="c28db2b6" sha1="0b12fe9e5189714b1aca79c4bba4be57a9e0d5fd"/>
+		<rom type="prog2" name="epr-20645.19" size="524288" crc="8eefa2b0" sha1="130ce2a58daa2eba6e56e1f49488017ab871bb7d"/>
+		<rom type="prog3" name="epr-20646.20" size="524288" crc="d740ae06" sha1="f6c00b9f3f8cf67c8bd8fff73c64bc0c14d364c4"/>
+		<rom type="crom00" name="mpr-20256.1" size="4194304" crc="115302ac" sha1="45f60aa9f91c9a5821a14647e5ac4d53caf71d5f"/>
+		<rom type="crom01" name="mpr-20257.2" size="4194304" crc="025bc06d" sha1="e774021d8d884871e840100ba6f4c16299233a51"/>
+		<rom type="crom02" name="mpr-20258.3" size="4194304" crc="7b78b071" sha1="f2b29a1238c9eae0a7a68c91a9728ac31f05ef7d"/>
+		<rom type="crom03" name="mpr-20259.4" size="4194304" crc="40052562" sha1="2361fd299b76b1c0d112f1fed85bde16e1564382"/>
+		<rom type="crom10" name="mpr-20260.5" size="4194304" crc="c56b4c10" sha1="a0a81d4f05df5b8584c2dca53993c01a35d38812"/>
+		<rom type="crom11" name="mpr-20261.6" size="4194304" crc="b1e9d44a" sha1="dfe8c5ed848afd48040775bb5a440c590188272c"/>
+		<rom type="crom12" name="mpr-20262.7" size="4194304" crc="52b0674d" sha1="c9f817b46dc7fcd04dfc2bbc4b1d82b1f41fe258"/>
+		<rom type="crom13" name="mpr-20263.8" size="4194304" crc="1cf4cba9" sha1="2884bb00990ab4bdad0d524937123c2936523cbb"/>
+		<rom type="crom20" name="mpr-20264.9" size="4194304" crc="8d995196" sha1="ff410d80353956ee8e770d7b9e9dabac87ee76cc"/>
+		<rom type="crom21" name="mpr-20265.10" size="4194304" crc="28f76e3e" sha1="5446e0a0df60d77112bd71c726291fdbba7df284"/>
+		<rom type="crom22" name="mpr-20266.11" size="4194304" crc="abd2db85" sha1="ebe752071562c532e6ad494f285ff4d0b5050611"/>
+		<rom type="crom23" name="mpr-20267.12" size="4194304" crc="48989191" sha1="ddbf787ec5dae298ab29847f117eae2ce1ff935e"/>
+		<rom type="vrom00" name="mpr-20270.26" size="2097152" crc="df68a7a7" sha1="5d610962dd87c010a094fe2ce8d13408595b4ae4"/>
+		<rom type="vrom01" name="mpr-20271.27" size="2097152" crc="4b01c3a4" sha1="8d47109e7f410c9d34d57b22adfe1c3092e70074"/>
+		<rom type="vrom02" name="mpr-20272.28" size="2097152" crc="a658da23" sha1="b96270c64cf75625960fa7c03411af595880353f"/>
+		<rom type="vrom03" name="mpr-20273.29" size="2097152" crc="577e9ffa" sha1="b004fa10a073e6f4715b417da817051752db5636"/>
+		<rom type="vrom04" name="mpr-20274.30" size="2097152" crc="7c7056ae" sha1="79f6e0ac65f9e80875946b2e73cf9437ecf73407"/>
+		<rom type="vrom05" name="mpr-20275.31" size="2097152" crc="e739f77a" sha1="6547c4bc0925af6e07beab54377a174a9c17e9fa"/>
+		<rom type="vrom06" name="mpr-20276.32" size="2097152" crc="cbf966c0" sha1="7c63506d01b52c8ab86fe0dc9ac774e2d540f7c5"/>
+		<rom type="vrom07" name="mpr-20277.33" size="2097152" crc="9c75200b" sha1="b39f571eeab11a619ab964d78a2ba0aa7b1dd24f"/>
+		<rom type="vrom10" name="mpr-20278.34" size="2097152" crc="db3991ba" sha1="7854a047741042f087a146882e27f2624f1f9e98"/>
+		<rom type="vrom11" name="mpr-20279.35" size="2097152" crc="995a11b8" sha1="eddd32fc3688d12458c5ffb3b3e70459947889a2"/>
+		<rom type="vrom12" name="mpr-20280.36" size="2097152" crc="c2c8f9f5" sha1="dd30c1fbece0a3dc8dad2d9d87e58a9f3798f4a2"/>
+		<rom type="vrom13" name="mpr-20281.37" size="2097152" crc="da84b967" sha1="dfc13942adc9cf438e70470cb17f4d1f846c4c1a"/>
+		<rom type="vrom14" name="mpr-20282.38" size="2097152" crc="1869ff49" sha1="1368123edfd9c93d1ee591bf40ea110deeac88cf"/>
+		<rom type="vrom15" name="mpr-20283.39" size="2097152" crc="7d8fb469" sha1="ad95fec786e9181d91a6ea18808bbf2772e9be6a"/>
+		<rom type="vrom16" name="mpr-20284.40" size="2097152" crc="5c7f3a6f" sha1="d242bc7ad213a79203cd6a060229c356ec0867e7"/>
+		<rom type="vrom17" name="mpr-20285.41" size="2097152" crc="4aadc573" sha1="65aef06c8c48196a0c1f630529ae2248323c5747"/>
+		<rom type="sprog" name="epr-20313.21" size="524288" crc="863a7857" sha1="72384dc6d7613806ab6bb84d935a3b0497e9e9d2"/>
+		<rom type="srom0" name="mpr-20268.22" size="4194304" crc="3631e93e" sha1="3991d6cf03e4f39733d467c483857eac874505d1"/>
+		<rom type="srom1" name="mpr-20269.24" size="4194304" crc="105a3181" sha1="022cbce1d01366461a584ff6225ded40bcb9000b"/>
+	</game>
+	<game name="getbass" parent="bass">
+		<description>Get Bass</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.0</step>
+		<rom type="prog0" name="epr-20309.17" size="524288" crc="a42e1033" sha1="a834eb973e9529338413220a2d8e66ce98d6cb31"/>
+		<rom type="prog1" name="epr-20310.18" size="524288" crc="4efcddc9" sha1="d1362c2a844b605901083e875a6aad817401eb0a"/>
+		<rom type="prog2" name="epr-20311.19" size="524288" crc="f721050d" sha1="320a0bd29ac530760d941e54fec2dbc923d6d0f2"/>
+		<rom type="prog3" name="epr-20312.20" size="524288" crc="9d8b8b58" sha1="6e91aa6a56593e3df8909d149b0c8da189bfbe82"/>
+		<rom type="crom00" name="mpr-20256.1" size="4194304" crc="115302ac" sha1="45f60aa9f91c9a5821a14647e5ac4d53caf71d5f"/>
+		<rom type="crom01" name="mpr-20257.2" size="4194304" crc="025bc06d" sha1="e774021d8d884871e840100ba6f4c16299233a51"/>
+		<rom type="crom02" name="mpr-20258.3" size="4194304" crc="7b78b071" sha1="f2b29a1238c9eae0a7a68c91a9728ac31f05ef7d"/>
+		<rom type="crom03" name="mpr-20259.4" size="4194304" crc="40052562" sha1="2361fd299b76b1c0d112f1fed85bde16e1564382"/>
+		<rom type="crom10" name="mpr-20260.5" size="4194304" crc="c56b4c10" sha1="a0a81d4f05df5b8584c2dca53993c01a35d38812"/>
+		<rom type="crom11" name="mpr-20261.6" size="4194304" crc="b1e9d44a" sha1="dfe8c5ed848afd48040775bb5a440c590188272c"/>
+		<rom type="crom12" name="mpr-20262.7" size="4194304" crc="52b0674d" sha1="c9f817b46dc7fcd04dfc2bbc4b1d82b1f41fe258"/>
+		<rom type="crom13" name="mpr-20263.8" size="4194304" crc="1cf4cba9" sha1="2884bb00990ab4bdad0d524937123c2936523cbb"/>
+		<rom type="crom20" name="mpr-20264.9" size="4194304" crc="8d995196" sha1="ff410d80353956ee8e770d7b9e9dabac87ee76cc"/>
+		<rom type="crom21" name="mpr-20265.10" size="4194304" crc="28f76e3e" sha1="5446e0a0df60d77112bd71c726291fdbba7df284"/>
+		<rom type="crom22" name="mpr-20266.11" size="4194304" crc="abd2db85" sha1="ebe752071562c532e6ad494f285ff4d0b5050611"/>
+		<rom type="crom23" name="mpr-20267.12" size="4194304" crc="48989191" sha1="ddbf787ec5dae298ab29847f117eae2ce1ff935e"/>
+		<rom type="vrom00" name="mpr-20270.26" size="2097152" crc="df68a7a7" sha1="5d610962dd87c010a094fe2ce8d13408595b4ae4"/>
+		<rom type="vrom01" name="mpr-20271.27" size="2097152" crc="4b01c3a4" sha1="8d47109e7f410c9d34d57b22adfe1c3092e70074"/>
+		<rom type="vrom02" name="mpr-20272.28" size="2097152" crc="a658da23" sha1="b96270c64cf75625960fa7c03411af595880353f"/>
+		<rom type="vrom03" name="mpr-20273.29" size="2097152" crc="577e9ffa" sha1="b004fa10a073e6f4715b417da817051752db5636"/>
+		<rom type="vrom04" name="mpr-20274.30" size="2097152" crc="7c7056ae" sha1="79f6e0ac65f9e80875946b2e73cf9437ecf73407"/>
+		<rom type="vrom05" name="mpr-20275.31" size="2097152" crc="e739f77a" sha1="6547c4bc0925af6e07beab54377a174a9c17e9fa"/>
+		<rom type="vrom06" name="mpr-20276.32" size="2097152" crc="cbf966c0" sha1="7c63506d01b52c8ab86fe0dc9ac774e2d540f7c5"/>
+		<rom type="vrom07" name="mpr-20277.33" size="2097152" crc="9c75200b" sha1="b39f571eeab11a619ab964d78a2ba0aa7b1dd24f"/>
+		<rom type="vrom10" name="mpr-20278.34" size="2097152" crc="db3991ba" sha1="7854a047741042f087a146882e27f2624f1f9e98"/>
+		<rom type="vrom11" name="mpr-20279.35" size="2097152" crc="995a11b8" sha1="eddd32fc3688d12458c5ffb3b3e70459947889a2"/>
+		<rom type="vrom12" name="mpr-20280.36" size="2097152" crc="c2c8f9f5" sha1="dd30c1fbece0a3dc8dad2d9d87e58a9f3798f4a2"/>
+		<rom type="vrom13" name="mpr-20281.37" size="2097152" crc="da84b967" sha1="dfc13942adc9cf438e70470cb17f4d1f846c4c1a"/>
+		<rom type="vrom14" name="mpr-20282.38" size="2097152" crc="1869ff49" sha1="1368123edfd9c93d1ee591bf40ea110deeac88cf"/>
+		<rom type="vrom15" name="mpr-20283.39" size="2097152" crc="7d8fb469" sha1="ad95fec786e9181d91a6ea18808bbf2772e9be6a"/>
+		<rom type="vrom16" name="mpr-20284.40" size="2097152" crc="5c7f3a6f" sha1="d242bc7ad213a79203cd6a060229c356ec0867e7"/>
+		<rom type="vrom17" name="mpr-20285.41" size="2097152" crc="4aadc573" sha1="65aef06c8c48196a0c1f630529ae2248323c5747"/>
+		<rom type="sprog" name="epr-20313.21" size="524288" crc="863a7857" sha1="72384dc6d7613806ab6bb84d935a3b0497e9e9d2"/>
+		<rom type="srom0" name="mpr-20268.22" size="4194304" crc="3631e93e" sha1="3991d6cf03e4f39733d467c483857eac874505d1"/>
+		<rom type="srom1" name="mpr-20269.24" size="4194304" crc="105a3181" sha1="022cbce1d01366461a584ff6225ded40bcb9000b"/>
+	</game>
+	<game name="scud">
+		<description>Scud Race (Australia)</description>
+		<year>1996</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="71275c" data="60000000"/>
+		<patch size="32" address="71277c" data="60000000"/>
+		<patch size="32" address="74072c" data="60000000"/>
+		
+		<rom type="prog0" name="epr-19731.17" size="524288" crc="3ee6447e" sha1="124697791d90c1b352dd6e33bd3b45535aa92bb5"/>
+		<rom type="prog1" name="epr-19732.18" size="524288" crc="23e864bb" sha1="0f34d963ee681ca1006f3dec12b593d961e3e442"/>
+		<rom type="prog2" name="epr-19733.19" size="524288" crc="6565e29a" sha1="4fb4f3e77fa46a825900a63095307714e71c08f3"/>
+		<rom type="prog3" name="epr-19734.20" size="524288" crc="be897336" sha1="690e17f2f9a5fbe63686d197552a298efcc8c8c5"/>
+		<rom type="crom00" name="mpr-19658.01" size="4194304" crc="d523235c" sha1="0dbfe746b2bdc185768d82c50a329c4c58ad4a29"/>
+		<rom type="crom01" name="mpr-19659.02" size="4194304" crc="c47e7002" sha1="9644694e6d117564f92650f32f94ce4d7b5523fa"/>
+		<rom type="crom02" name="mpr-19660.03" size="4194304" crc="d999c935" sha1="ef5429e90314d7a789d8ccbad4d0efaeaff9741a"/>
+		<rom type="crom03" name="mpr-19661.04" size="4194304" crc="8e3fd241" sha1="df2596f483c759f068c75337320d369d80189ea1"/>
+		<rom type="crom10" name="mpr-19662.05" size="4194304" crc="3c700eff" sha1="2ebb149a3d8a9de95afe091b3a1776f4dc3fc579"/>
+		<rom type="crom11" name="mpr-19663.06" size="4194304" crc="f6af1ca4" sha1="c78237b8f568792202d927ba0af86df6df80f87a"/>
+		<rom type="crom12" name="mpr-19664.07" size="4194304" crc="b9d11294" sha1="69b6f5708f423fb11337184a3646597356554058"/>
+		<rom type="crom13" name="mpr-19665.08" size="4194304" crc="f97c78f9" sha1="39aa69e365bf597e5e9185aaf4a044b485ebad8d"/>
+		<rom type="crom20" name="mpr-19666.09" size="4194304" crc="b53dc97f" sha1="a4fbc7aade153e6f5fc1dd40ba97d462f643c2c4"/>
+		<rom type="crom21" name="mpr-19667.10" size="4194304" crc="a8676799" sha1="78734b194e2797ac7efc40f3d0a2ff09dc93409e"/>
+		<rom type="crom22" name="mpr-19668.11" size="4194304" crc="0b4dd8d5" sha1="b5668ce7ac5a4ac844a0a5a07df9649df9ad9615"/>
+		<rom type="crom23" name="mpr-19669.12" size="4194304" crc="cdc43c61" sha1="b096d0eb302a9285a8ee396fdbd7b8c546049fd4"/>
+		<rom type="vrom00" name="mpr-19672.26" size="2097152" crc="588c29fd" sha1="5f58c885b506592106aa15208fc1db9d55ab4481"/>
+		<rom type="vrom01" name="mpr-19673.27" size="2097152" crc="156abaa9" sha1="6ef9c042e9ee34090192c1c99c98d19f18efcfba"/>
+		<rom type="vrom02" name="mpr-19674.28" size="2097152" crc="c7b0f98c" sha1="632dbc4cb225d91c82f6a1874517ed0b03b7a0c5"/>
+		<rom type="vrom03" name="mpr-19675.29" size="2097152" crc="ff113396" sha1="af90bb696a3c1585318150cb83ea2ed85cdb67a1"/>
+		<rom type="vrom04" name="mpr-19676.30" size="2097152" crc="fd852ead" sha1="854204c33aec8fb9c014db06e4106be37ecdaf0d"/>
+		<rom type="vrom05" name="mpr-19677.31" size="2097152" crc="c6ac0347" sha1="c792da72af8bf9d011305c9ab7a6230b9e2c5316"/>
+		<rom type="vrom06" name="mpr-19678.32" size="2097152" crc="b8819cfe" sha1="b99f8d0626bc38c75058e94d2461dbec6029589d"/>
+		<rom type="vrom07" name="mpr-19679.33" size="2097152" crc="e126c3e3" sha1="5440540c2432a9ff5bd8e36467af46c456d16844"/>
+		<rom type="vrom10" name="mpr-19680.34" size="2097152" crc="00ea5cef" sha1="3aed46182c0e99c0b72b26c718e2fa20fa7d2e44"/>
+		<rom type="vrom11" name="mpr-19681.35" size="2097152" crc="c949325f" sha1="146de7abf764adc1840b84294cbd473f191cbcb8"/>
+		<rom type="vrom12" name="mpr-19682.36" size="2097152" crc="ce5ca065" sha1="2f518186b29e7cf5fa1c6b036427b8015cfb681e"/>
+		<rom type="vrom13" name="mpr-19683.37" size="2097152" crc="e5856419" sha1="3f8f5b8b36d417090955d34553dcf6d8d9f34558"/>
+		<rom type="vrom14" name="mpr-19684.38" size="2097152" crc="56f6ec97" sha1="dfd251dba77b39342457036fcbe4683d24029600"/>
+		<rom type="vrom15" name="mpr-19685.39" size="2097152" crc="42b49304" sha1="4e185d0f97de44a25b5f982a46f0c3d1dab406c2"/>
+		<rom type="vrom16" name="mpr-19686.40" size="2097152" crc="84eed592" sha1="cc03094770945096d81bc981bff77b540452b045"/>
+		<rom type="vrom17" name="mpr-19687.41" size="2097152" crc="776ce694" sha1="d1e56ebd0011aa3a54a5829c6bd0f5343b283fa0"/>
+		<rom type="sprog" name="epr-19692.21" size="524288" crc="a94f5521" sha1="22b6a17d44fec8bf796e1790bcabc41f34c89baf"/>
+		<rom type="srom0" name="mpr-19670.22" size="4194304" crc="bd31cc06" sha1="d1c85d0cf79b92de5bcbe20dfb8b626ad72de019"/>
+		<rom type="srom1" name="mpr-19671.24" size="4194304" crc="8e8526ab" sha1="3d2cbb09bd185660feea4dd80bee5af2e2a19aa6"/>
+		<rom type="dsbprog" name="epr-19612.2" size="131072" crc="13978fd4" sha1="bb597914a34308376239afab6e04fc231e39e379"/>
+		<rom type="dsbrom0" name="mpr-19603.57" size="2097152" crc="b1b1765f" sha1="cdcb4d6e6507322f84ac5153b386c3eb5d031e22"/>
+		<rom type="dsbrom1" name="mpr-19604.58" size="2097152" crc="6ac85b49" sha1="3e74ae6e9ac7b208e2cd5ebdf80bb3cee19d436d"/>
+		<rom type="dsbrom2" name="mpr-19605.59" size="2097152" crc="bec891eb" sha1="357849d2842ac77f9945eb4a0ca89253e474f617"/>
+		<rom type="dsbrom3" name="mpr-19606.60" size="2097152" crc="adad46b2" sha1="360b23870f1d15ab527fae1bb731da6e7a8b19c1"/>
+	</game>
+	<game name="scuda" parent="scud">
+		<description>Scud Race (Export)</description>
+		<year>1996</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="71275c" data="60000000"/>
+		<patch size="32" address="71277c" data="60000000"/>
+		<patch size="32" address="74072c" data="60000000"/>
+		
+		<rom type="prog0" name="epr-19688.17" size="524288" crc="a4c85103" sha1="b2e57f86d0a49e3e88fa7d6a77bbd99039c034bb"/>
+		<rom type="prog1" name="epr-19689.18" size="524288" crc="cbce6d62" sha1="b6051af013ee80406cfadb0c8acf24b8825ccaf2"/>
+		<rom type="prog2" name="epr-19690.19" size="524288" crc="25f007fe" sha1="d3814637f6278c30ea277e30e66ad06e37d37e15"/>
+		<rom type="prog3" name="epr-19691.20" size="524288" crc="83523b89" sha1="c881c71c961948c8ff3fab33e1db23cff4db0ed8"/>
+		<rom type="crom00" name="mpr-19658.01" size="4194304" crc="d523235c" sha1="0dbfe746b2bdc185768d82c50a329c4c58ad4a29"/>
+		<rom type="crom01" name="mpr-19659.02" size="4194304" crc="c47e7002" sha1="9644694e6d117564f92650f32f94ce4d7b5523fa"/>
+		<rom type="crom02" name="mpr-19660.03" size="4194304" crc="d999c935" sha1="ef5429e90314d7a789d8ccbad4d0efaeaff9741a"/>
+		<rom type="crom03" name="mpr-19661.04" size="4194304" crc="8e3fd241" sha1="df2596f483c759f068c75337320d369d80189ea1"/>
+		<rom type="crom10" name="mpr-19662.05" size="4194304" crc="3c700eff" sha1="2ebb149a3d8a9de95afe091b3a1776f4dc3fc579"/>
+		<rom type="crom11" name="mpr-19663.06" size="4194304" crc="f6af1ca4" sha1="c78237b8f568792202d927ba0af86df6df80f87a"/>
+		<rom type="crom12" name="mpr-19664.07" size="4194304" crc="b9d11294" sha1="69b6f5708f423fb11337184a3646597356554058"/>
+		<rom type="crom13" name="mpr-19665.08" size="4194304" crc="f97c78f9" sha1="39aa69e365bf597e5e9185aaf4a044b485ebad8d"/>
+		<rom type="crom20" name="mpr-19666.09" size="4194304" crc="b53dc97f" sha1="a4fbc7aade153e6f5fc1dd40ba97d462f643c2c4"/>
+		<rom type="crom21" name="mpr-19667.10" size="4194304" crc="a8676799" sha1="78734b194e2797ac7efc40f3d0a2ff09dc93409e"/>
+		<rom type="crom22" name="mpr-19668.11" size="4194304" crc="0b4dd8d5" sha1="b5668ce7ac5a4ac844a0a5a07df9649df9ad9615"/>
+		<rom type="crom23" name="mpr-19669.12" size="4194304" crc="cdc43c61" sha1="b096d0eb302a9285a8ee396fdbd7b8c546049fd4"/>
+		<rom type="vrom00" name="mpr-19672.26" size="2097152" crc="588c29fd" sha1="5f58c885b506592106aa15208fc1db9d55ab4481"/>
+		<rom type="vrom01" name="mpr-19673.27" size="2097152" crc="156abaa9" sha1="6ef9c042e9ee34090192c1c99c98d19f18efcfba"/>
+		<rom type="vrom02" name="mpr-19674.28" size="2097152" crc="c7b0f98c" sha1="632dbc4cb225d91c82f6a1874517ed0b03b7a0c5"/>
+		<rom type="vrom03" name="mpr-19675.29" size="2097152" crc="ff113396" sha1="af90bb696a3c1585318150cb83ea2ed85cdb67a1"/>
+		<rom type="vrom04" name="mpr-19676.30" size="2097152" crc="fd852ead" sha1="854204c33aec8fb9c014db06e4106be37ecdaf0d"/>
+		<rom type="vrom05" name="mpr-19677.31" size="2097152" crc="c6ac0347" sha1="c792da72af8bf9d011305c9ab7a6230b9e2c5316"/>
+		<rom type="vrom06" name="mpr-19678.32" size="2097152" crc="b8819cfe" sha1="b99f8d0626bc38c75058e94d2461dbec6029589d"/>
+		<rom type="vrom07" name="mpr-19679.33" size="2097152" crc="e126c3e3" sha1="5440540c2432a9ff5bd8e36467af46c456d16844"/>
+		<rom type="vrom10" name="mpr-19680.34" size="2097152" crc="00ea5cef" sha1="3aed46182c0e99c0b72b26c718e2fa20fa7d2e44"/>
+		<rom type="vrom11" name="mpr-19681.35" size="2097152" crc="c949325f" sha1="146de7abf764adc1840b84294cbd473f191cbcb8"/>
+		<rom type="vrom12" name="mpr-19682.36" size="2097152" crc="ce5ca065" sha1="2f518186b29e7cf5fa1c6b036427b8015cfb681e"/>
+		<rom type="vrom13" name="mpr-19683.37" size="2097152" crc="e5856419" sha1="3f8f5b8b36d417090955d34553dcf6d8d9f34558"/>
+		<rom type="vrom14" name="mpr-19684.38" size="2097152" crc="56f6ec97" sha1="dfd251dba77b39342457036fcbe4683d24029600"/>
+		<rom type="vrom15" name="mpr-19685.39" size="2097152" crc="42b49304" sha1="4e185d0f97de44a25b5f982a46f0c3d1dab406c2"/>
+		<rom type="vrom16" name="mpr-19686.40" size="2097152" crc="84eed592" sha1="cc03094770945096d81bc981bff77b540452b045"/>
+		<rom type="vrom17" name="mpr-19687.41" size="2097152" crc="776ce694" sha1="d1e56ebd0011aa3a54a5829c6bd0f5343b283fa0"/>
+		<rom type="sprog" name="epr-19692.21" size="524288" crc="a94f5521" sha1="22b6a17d44fec8bf796e1790bcabc41f34c89baf"/>
+		<rom type="srom0" name="mpr-19670.22" size="4194304" crc="bd31cc06" sha1="d1c85d0cf79b92de5bcbe20dfb8b626ad72de019"/>
+		<rom type="srom1" name="mpr-19671.24" size="4194304" crc="8e8526ab" sha1="3d2cbb09bd185660feea4dd80bee5af2e2a19aa6"/>
+		<rom type="dsbprog" name="epr-19612.2" size="131072" crc="13978fd4" sha1="bb597914a34308376239afab6e04fc231e39e379"/>
+		<rom type="dsbrom0" name="mpr-19603.57" size="2097152" crc="b1b1765f" sha1="cdcb4d6e6507322f84ac5153b386c3eb5d031e22"/>
+		<rom type="dsbrom1" name="mpr-19604.58" size="2097152" crc="6ac85b49" sha1="3e74ae6e9ac7b208e2cd5ebdf80bb3cee19d436d"/>
+		<rom type="dsbrom2" name="mpr-19605.59" size="2097152" crc="bec891eb" sha1="357849d2842ac77f9945eb4a0ca89253e474f617"/>
+		<rom type="dsbrom3" name="mpr-19606.60" size="2097152" crc="adad46b2" sha1="360b23870f1d15ab527fae1bb731da6e7a8b19c1"/>
+	</game>
+	<game name="scudp" parent="scud">
+		<description>Scud Race Plus</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="713724" data="60000000"/>
+		<patch size="32" address="713744" data="60000000"/>
+		<patch size="32" address="741f48" data="60000000"/>
+		<patch size="32" address="741f68" data="60000000"/>
+		<patch size="32" address="741efc" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20092a.17" size="524288" crc="a94ec57e" sha1="bda1d9cb38e10a25f7cdde38f30ae13541fdbc5e"/>
+		<rom type="prog1" name="epr-20093a.18" size="524288" crc="4ed2e35d" sha1="ac149b369db9fc80e63e1ed943d42ccd056dab1b"/>
+		<rom type="prog2" name="epr-20094a.19" size="524288" crc="dbf17a43" sha1="fd719515c8ed78dea80fef20f3af9b72461f81d7"/>
+		<rom type="prog3" name="epr-20095a.20" size="524288" crc="58c7e393" sha1="7e25101f72daa271f680a39042341d06249fd104"/>
+		<rom type="crom00" name="mpr-19658.01" size="4194304" crc="d523235c" sha1="0dbfe746b2bdc185768d82c50a329c4c58ad4a29"/>
+		<rom type="crom01" name="mpr-19659.02" size="4194304" crc="c47e7002" sha1="9644694e6d117564f92650f32f94ce4d7b5523fa"/>
+		<rom type="crom02" name="mpr-19660.03" size="4194304" crc="d999c935" sha1="ef5429e90314d7a789d8ccbad4d0efaeaff9741a"/>
+		<rom type="crom03" name="mpr-19661.04" size="4194304" crc="8e3fd241" sha1="df2596f483c759f068c75337320d369d80189ea1"/>
+		<rom type="crom10" name="mpr-19662.05" size="4194304" crc="3c700eff" sha1="2ebb149a3d8a9de95afe091b3a1776f4dc3fc579"/>
+		<rom type="crom11" name="mpr-19663.06" size="4194304" crc="f6af1ca4" sha1="c78237b8f568792202d927ba0af86df6df80f87a"/>
+		<rom type="crom12" name="mpr-19664.07" size="4194304" crc="b9d11294" sha1="69b6f5708f423fb11337184a3646597356554058"/>
+		<rom type="crom13" name="mpr-19665.08" size="4194304" crc="f97c78f9" sha1="39aa69e365bf597e5e9185aaf4a044b485ebad8d"/>
+		<rom type="crom20" name="mpr-19666.09" size="4194304" crc="b53dc97f" sha1="a4fbc7aade153e6f5fc1dd40ba97d462f643c2c4"/>
+		<rom type="crom21" name="mpr-19667.10" size="4194304" crc="a8676799" sha1="78734b194e2797ac7efc40f3d0a2ff09dc93409e"/>
+		<rom type="crom22" name="mpr-19668.11" size="4194304" crc="0b4dd8d5" sha1="b5668ce7ac5a4ac844a0a5a07df9649df9ad9615"/>
+		<rom type="crom23" name="mpr-19669.12" size="4194304" crc="cdc43c61" sha1="b096d0eb302a9285a8ee396fdbd7b8c546049fd4"/>
+		<rom type="crom30" name="mpr-20097.13" size="4194304" crc="269a9dbe" sha1="df804ec1df87c1ab6387cd1bbd5dd224adc8d528"/>
+		<rom type="crom31" name="mpr-20098.14" size="4194304" crc="8355fa41" sha1="e6ac03fd7f1ab882a2861f65f6fea977c106dc15"/>
+		<rom type="crom32" name="mpr-20099.15" size="4194304" crc="fc9bd7d9" sha1="2dbcbb4b7f8fbeeeeacab51179003d8a4a9e771b"/>
+		<rom type="crom33" name="mpr-20100.16" size="4194304" crc="c99e2c01" sha1="074d4b5e85f00f5b7550e9944664fdfba8666569"/>
+		<rom type="vrom00" name="mpr-19672.26" size="2097152" crc="588c29fd" sha1="5f58c885b506592106aa15208fc1db9d55ab4481"/>
+		<rom type="vrom01" name="mpr-19673.27" size="2097152" crc="156abaa9" sha1="6ef9c042e9ee34090192c1c99c98d19f18efcfba"/>
+		<rom type="vrom02" name="mpr-19674.28" size="2097152" crc="c7b0f98c" sha1="632dbc4cb225d91c82f6a1874517ed0b03b7a0c5"/>
+		<rom type="vrom03" name="mpr-19675.29" size="2097152" crc="ff113396" sha1="af90bb696a3c1585318150cb83ea2ed85cdb67a1"/>
+		<rom type="vrom04" name="mpr-19676.30" size="2097152" crc="fd852ead" sha1="854204c33aec8fb9c014db06e4106be37ecdaf0d"/>
+		<rom type="vrom05" name="mpr-19677.31" size="2097152" crc="c6ac0347" sha1="c792da72af8bf9d011305c9ab7a6230b9e2c5316"/>
+		<rom type="vrom06" name="mpr-19678.32" size="2097152" crc="b8819cfe" sha1="b99f8d0626bc38c75058e94d2461dbec6029589d"/>
+		<rom type="vrom07" name="mpr-19679.33" size="2097152" crc="e126c3e3" sha1="5440540c2432a9ff5bd8e36467af46c456d16844"/>
+		<rom type="vrom10" name="mpr-19680.34" size="2097152" crc="00ea5cef" sha1="3aed46182c0e99c0b72b26c718e2fa20fa7d2e44"/>
+		<rom type="vrom11" name="mpr-19681.35" size="2097152" crc="c949325f" sha1="146de7abf764adc1840b84294cbd473f191cbcb8"/>
+		<rom type="vrom12" name="mpr-19682.36" size="2097152" crc="ce5ca065" sha1="2f518186b29e7cf5fa1c6b036427b8015cfb681e"/>
+		<rom type="vrom13" name="mpr-19683.37" size="2097152" crc="e5856419" sha1="3f8f5b8b36d417090955d34553dcf6d8d9f34558"/>
+		<rom type="vrom14" name="mpr-19684.38" size="2097152" crc="56f6ec97" sha1="dfd251dba77b39342457036fcbe4683d24029600"/>
+		<rom type="vrom15" name="mpr-19685.39" size="2097152" crc="42b49304" sha1="4e185d0f97de44a25b5f982a46f0c3d1dab406c2"/>
+		<rom type="vrom16" name="mpr-19686.40" size="2097152" crc="84eed592" sha1="cc03094770945096d81bc981bff77b540452b045"/>
+		<rom type="vrom17" name="mpr-19687.41" size="2097152" crc="776ce694" sha1="d1e56ebd0011aa3a54a5829c6bd0f5343b283fa0"/>
+		<rom type="sprog" name="epr-20096a.21" size="524288" crc="0fef288b" sha1="d6842108d1baea5fffba679d81179c8ffaa87b93"/>
+		<rom type="srom0" name="mpr-19670.22" size="4194304" crc="bd31cc06" sha1="d1c85d0cf79b92de5bcbe20dfb8b626ad72de019"/>
+		<rom type="srom1" name="mpr-19671.24" size="4194304" crc="8e8526ab" sha1="3d2cbb09bd185660feea4dd80bee5af2e2a19aa6"/>
+		<rom type="srom2" name="mpr-20101.23" size="4194304" crc="66d1e31f" sha1="cbc06e9aebcdf82f14bef1c35cbb3203530ef6ae"/>
+		<rom type="dsbprog" name="epr-19612.2" size="131072" crc="13978fd4" sha1="bb597914a34308376239afab6e04fc231e39e379"/>
+		<rom type="dsbrom0" name="mpr-19603.57" size="2097152" crc="b1b1765f" sha1="cdcb4d6e6507322f84ac5153b386c3eb5d031e22"/>
+		<rom type="dsbrom1" name="mpr-19604.58" size="2097152" crc="6ac85b49" sha1="3e74ae6e9ac7b208e2cd5ebdf80bb3cee19d436d"/>
+		<rom type="dsbrom2" name="mpr-19605.59" size="2097152" crc="bec891eb" sha1="357849d2842ac77f9945eb4a0ca89253e474f617"/>
+		<rom type="dsbrom3" name="mpr-19606.60" size="2097152" crc="adad46b2" sha1="360b23870f1d15ab527fae1bb731da6e7a8b19c1"/>
+	</game>
+	<game name="lostwsga">
+		<description>The Lost World</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		
+		<patch size="32" address="7374f4" data="38840004"/>
+		
+		<rom type="prog0" name="epr-19939.17" size="524288" crc="8788b939" sha1="30932057f763545568526f85977aa0afc4b66e7d"/>
+		<rom type="prog1" name="epr-19938.18" size="524288" crc="38afe27a" sha1="718a238ee246eeed9fa698b58493806932d0e7cb"/>
+		<rom type="prog2" name="epr-19937.19" size="524288" crc="9dbf5712" sha1="ca5923bb5a0b7702391dcacc20e863a7f615929d"/>
+		<rom type="prog3" name="epr-19936.20" size="524288" crc="2f1ca664" sha1="9138e28ad6c0219b4b3a4609136ed69f484de9a3"/>
+		<rom type="crom00" name="mpr-19918.1" size="4194304" crc="95b690e9" sha1="50b71aa41372b9acda1db2e0b7ac70707a5cca4b"/>
+		<rom type="crom01" name="mpr-19919.2" size="4194304" crc="ff119949" sha1="2f2648c2eeb8be2838188c5ce65a932c5e6803a6"/>
+		<rom type="crom02" name="mpr-19920.3" size="4194304" crc="8df33574" sha1="671cfee1e5f304a480d8f4a9d44d0315b6839f99"/>
+		<rom type="crom03" name="mpr-19921.4" size="4194304" crc="9af3227f" sha1="f1232ee486b974409f25d94ade1b1f50258cc609"/>
+		<rom type="crom10" name="mpr-19922.5" size="4194304" crc="4dfd7fc6" sha1="7fe7445dbf2c1a0b03c1aec40c4e27b391178472"/>
+		<rom type="crom11" name="mpr-19923.6" size="4194304" crc="ed515cb2" sha1="7604f7bd277a2fc0855effe24b03702878076c13"/>
+		<rom type="crom12" name="mpr-19924.7" size="4194304" crc="4ee3ddc5" sha1="37b1ca13a7442ae2dedd0ced6c222846c3690984"/>
+		<rom type="crom13" name="mpr-19925.8" size="4194304" crc="cfa4bb49" sha1="2584fe57f0e117ff64eb34bc4bb782912a379bd3"/>
+		<rom type="crom20" name="mpr-19926.9" size="4194304" crc="05a232e0" sha1="712db7664be2efb6c93181194316a7436c40e638"/>
+		<rom type="crom21" name="mpr-19927.10" size="4194304" crc="0c96ef11" sha1="789878204f3b07def187a8e6c471530021a8504a"/>
+		<rom type="crom22" name="mpr-19928.11" size="4194304" crc="9afd5d4a" sha1="e81982b7ca21a4a76d3ca5e307a88ce3c8063a6c"/>
+		<rom type="crom23" name="mpr-19929.12" size="4194304" crc="16491f63" sha1="3ce750db13c6af5696dc14868487334cc7eb9276"/>
+		<rom type="crom30" name="mpr-19930.13" size="4194304" crc="b598c2f2" sha1="bd9f3b729bec539a9f9b3e021efa9f4248337456"/>
+		<rom type="crom31" name="mpr-19931.14" size="4194304" crc="448a5007" sha1="d842d5552867026a1f5d6d22aa5c08e2209f5487"/>
+		<rom type="crom32" name="mpr-19932.15" size="4194304" crc="04389385" sha1="e645159672c6edbaab5bb3eda3bfbac98bd36210"/>
+		<rom type="crom33" name="mpr-19933.16" size="4194304" crc="8e2acd3b" sha1="9a87086c06d3d22ade96d6057709008663aa3cfa"/>
+		<rom type="vrom00" name="mpr-19902.26" size="2097152" crc="178bd471" sha1="dc2cb409081e4fd1176470869e025320449a8d02"/>
+		<rom type="vrom01" name="mpr-19903.27" size="2097152" crc="fe575871" sha1="db7aec4997b0c9d9a77a611139d53bcfba4bf258"/>
+		<rom type="vrom02" name="mpr-19904.28" size="2097152" crc="57971d7d" sha1="710705d53e499c5cec6374438d8393a31277f8b7"/>
+		<rom type="vrom03" name="mpr-19905.29" size="2097152" crc="6fa122ee" sha1="d3e373e7c3f72cee0658820848993c5fd0d4752d"/>
+		<rom type="vrom04" name="mpr-19906.30" size="2097152" crc="a5b16dd9" sha1="956a3dbbb101effe92c7a9be3207b9882cf09882"/>
+		<rom type="vrom05" name="mpr-19907.31" size="2097152" crc="84a425cd" sha1="156541d9cacc0c57ac8d4e60f5ed85a87c7608e7"/>
+		<rom type="vrom06" name="mpr-19908.32" size="2097152" crc="7702aa7c" sha1="0ef4f56c95a6779a14b7df7c4e7b83bd219cb67d"/>
+		<rom type="vrom07" name="mpr-19909.33" size="2097152" crc="8fca65f9" sha1="17350103ddf0a2efdcde1c1f17d28800334d723f"/>
+		<rom type="vrom10" name="mpr-19910.34" size="2097152" crc="1ef585e2" sha1="69583635a52aace7986dd8e8139482d685547b7a"/>
+		<rom type="vrom11" name="mpr-19911.35" size="2097152" crc="ca26a48d" sha1="407434d74cb205211261e08bb633f5fc1863e495"/>
+		<rom type="vrom12" name="mpr-19912.36" size="2097152" crc="ffe000e0" sha1="d5a2fe8a6ddd5efb934af9f369b24e4508be3143"/>
+		<rom type="vrom13" name="mpr-19913.37" size="2097152" crc="c003049e" sha1="d3e26531fac33e36c01cdbc0d66f41b918af4c4d"/>
+		<rom type="vrom14" name="mpr-19914.38" size="2097152" crc="3c21a953" sha1="1968ba68298e9e73840aa8737dd6c7ad7220cff0"/>
+		<rom type="vrom15" name="mpr-19915.39" size="2097152" crc="fd0f2a2b" sha1="f47bcbc0a4564682578dde454b4f42ca1a8c6b87"/>
+		<rom type="vrom16" name="mpr-19916.40" size="2097152" crc="10b0c52e" sha1="1076352f9a0484815a4f14e66485337a6d5b565e"/>
+		<rom type="vrom17" name="mpr-19917.41" size="2097152" crc="3035833b" sha1="e55a225aa1268bcfcc3381d48fc7aaf75f6e1839"/>
+		<rom type="sprog" name="epr-19940.21" size="524288" crc="b06ffe5f" sha1="1b49c2fbc3f188168828daf7f7f56a04c394e832"/>
+		<rom type="srom0" name="mpr-19934.22" size="2097152" crc="661b09d0" sha1="cc4a30aa9fe17964808a7ae967de8f64da36379a"/>
+		<rom type="srom1" name="mpr-19935.24" size="2097152" crc="6436e483" sha1="f81b846e7898ec0172b50d74bb7f9062b81f38a8"/>
+		<rom type="srom2" name="mpr-19934.22" size="2097152" crc="661b09d0" sha1="cc4a30aa9fe17964808a7ae967de8f64da36379a"/>
+		<rom type="srom3" name="mpr-19935.24" size="2097152" crc="6436e483" sha1="f81b846e7898ec0172b50d74bb7f9062b81f38a8"/>
+	</game>
+	<game name="vs215" parent="vs2">
+		<description>Virtua Striker 2 (Step 1.5)</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		<bridge>mpc106</bridge>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="70dde0" data="60000000"/>
+		<patch size="32" address="70e6f0" data="60000000"/>
+		<patch size="32" address="70e710" data="60000000"/>
+		<patch size="32" address="716f48" data="60000000"/>
+		<patch size="32" address="720940" data="60000000"/>
+		
+		<rom type="prog0" name="epr-19900.17" size="524288" crc="8fb6045d" sha1="88497eafc23ba70ab4a43de552a16caccd8dccbe"/>
+		<rom type="prog1" name="epr-19899.18" size="524288" crc="8cc2be9f" sha1="ec82b1312c8d58adb200f4d7f6f9a9c8214415d5"/>
+		<rom type="prog2" name="epr-19898.19" size="524288" crc="4389d9ce" sha1="a5f412417484fdd70dc3dfb2f0cb5554ed4fc7f3"/>
+		<rom type="prog3" name="epr-19897.20" size="524288" crc="25a722a9" sha1="190b7d002009d91ac4521d180f7519cbeb49da30"/>
+		<rom type="crom00" name="mpr-19769.1" size="4194304" crc="dc020031" sha1="35eba49a237c1c647dbf13024e664e2cb09f38b5"/>
+		<rom type="crom01" name="mpr-19770.2" size="4194304" crc="91f690b0" sha1="e70482b255bdc37def897842313c2cb592dd3c6c"/>
+		<rom type="crom02" name="mpr-19771.3" size="4194304" crc="189c510f" sha1="9ebe3c4d98fc57744104608feef7c4e00c0dfd15"/>
+		<rom type="crom03" name="mpr-19772.4" size="4194304" crc="6db7b9d0" sha1="098daad081c8e3ab5dc88e5a8d453b82101c5fc4"/>
+		<rom type="crom10" name="mpr-19773.5" size="4194304" crc="4e381ae7" sha1="8ada8de80e019d521d8a3dbdc832745478c84a3d"/>
+		<rom type="crom11" name="mpr-19774.6" size="4194304" crc="1d61d287" sha1="f0ab5f687570fa3e33a87da9130859f804c8fc01"/>
+		<rom type="crom12" name="mpr-19775.7" size="4194304" crc="a6b32bd9" sha1="5e2e1e779ff11620a3cf2a8756f2ea08e46d0839"/>
+		<rom type="crom13" name="mpr-19776.8" size="4194304" crc="5b31c7c1" sha1="7821c5af52a9551be5358aae7df8cfddd58f0fb6"/>
+		<rom type="crom20" name="mpr-19777.9" size="4194304" crc="c8f216a6" sha1="0ec700ef15094f6746bbc886e7045329ccebb5d1"/>
+		<rom type="crom21" name="mpr-19778.10" size="4194304" crc="2192b189" sha1="63f81ab0bd099ef77470cc19fd6d218de72d7876"/>
+		<rom type="crom22" name="mpr-19779.11" size="4194304" crc="2242b21b" sha1="b5834c19a0a54fe38cac22cfbc2a1e14543aee9d"/>
+		<rom type="crom23" name="mpr-19780.12" size="4194304" crc="38508791" sha1="0e6d629a6e4d11368a367d74f44bc805805f4365"/>
+		<rom type="crom30" name="mpr-19781.13" size="4194304" crc="783213f4" sha1="042c0c0d8604d9d73f581064b0b31234ec7b81b2"/>
+		<rom type="crom31" name="mpr-19782.14" size="4194304" crc="43b43eef" sha1="8a8b40581a13f56ab2da75f049ba3101a4d3adb4"/>
+		<rom type="crom32" name="mpr-19783.15" size="4194304" crc="47c3d726" sha1="99ca84b9318c45721ccc5053a909b6ef67a6671c"/>
+		<rom type="crom33" name="mpr-19784.16" size="4194304" crc="a1cc70be" sha1="c0bb9e78ae9a45c03945b9bc647da129f6171812"/>
+		<rom type="vrom00" name="mpr-19787.26" size="2097152" crc="856cc4ad" sha1="a8856ee407c10b021f00f5fd2180dfae4cad2dad"/>
+		<rom type="vrom01" name="mpr-19788.27" size="2097152" crc="72ef970a" sha1="ee4af92444e7da61094b5eb5b8469b78aeeb8a32"/>
+		<rom type="vrom02" name="mpr-19789.28" size="2097152" crc="076add9a" sha1="117156fd7b802807ee2908dc8a1edb1cd79f1730"/>
+		<rom type="vrom03" name="mpr-19790.29" size="2097152" crc="74ce238c" sha1="f6662793d1f2f3c36d7548b912cd40b2ce58753e"/>
+		<rom type="vrom04" name="mpr-19791.30" size="2097152" crc="75a98f96" sha1="9c4cdc5a782cac957fc43952e8f3e35d54f23d1c"/>
+		<rom type="vrom05" name="mpr-19792.31" size="2097152" crc="85c81633" sha1="e4311ca92e77502626b312d38a5069ceed9e679f"/>
+		<rom type="vrom06" name="mpr-19793.32" size="2097152" crc="7f288cc4" sha1="71e42ac564c85402b35777e28fff2dce161cbf46"/>
+		<rom type="vrom07" name="mpr-19794.33" size="2097152" crc="e0c1c370" sha1="8efc2940857109bbe74fb7ce1e6fb11d601630f2"/>
+		<rom type="vrom10" name="mpr-19795.34" size="2097152" crc="90989b20" sha1="bf96f5770ffaae3b625a906461b8ea755baf9756"/>
+		<rom type="vrom11" name="mpr-19796.35" size="2097152" crc="5d1aab8d" sha1="e004c30b9bc8fcad23459e162e9db0c1afd0d5b1"/>
+		<rom type="vrom12" name="mpr-19797.36" size="2097152" crc="f5edc891" sha1="e8a23be9a81568892f95e7c66c28ea8d7bd0f508"/>
+		<rom type="vrom13" name="mpr-19798.37" size="2097152" crc="ae2da90f" sha1="8243d1f81faa57d5ff5e1f64bcd33cff59219b69"/>
+		<rom type="vrom14" name="mpr-19799.38" size="2097152" crc="92b18ad7" sha1="7be46d7ae2233337d866938ac803589156bfde94"/>
+		<rom type="vrom15" name="mpr-19800.39" size="2097152" crc="4a57b16c" sha1="341952460b2f7718e63d5f43a86f507de52bf421"/>
+		<rom type="vrom16" name="mpr-19801.40" size="2097152" crc="beb79a00" sha1="63385ff70bf9ae223e6acfa1b6cb2d641afa2790"/>
+		<rom type="vrom17" name="mpr-19802.41" size="2097152" crc="f2c3a7b7" sha1="d72fafe75baa3542ee27fed05230cd5da99aa459"/>
+		<rom type="sprog" name="epr-19807.21" size="524288" crc="9641cbaf" sha1="aaffde7678b40bc940be04fb107efc4d0d416ea1"/>
+		<rom type="srom0" name="mpr-19785.22" size="4194304" crc="e7d190e3" sha1="f263af149e303429f469a3ab601b87461256aaa7"/>
+		<rom type="srom1" name="mpr-19786.24" size="4194304" crc="b08d889b" sha1="790b5b2d62a28c39d43aeec9ffb365ccd9dc93af"/>
+	</game>
+	<game name="lemans24">
+		<description>LeMans 24</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="73fe38" data="38840004"/>
+		<patch size="32" address="73eb5c" data="60000000"/>
+		<patch size="32" address="73edd0" data="60000000"/>
+		<patch size="32" address="73edc4" data="60000000"/>
+		
+		<rom type="prog0" name="epr-19887.17" size="524288" crc="2842bb87" sha1="2acabf3f7281acaf6bab4d3bae9701df3909cf81"/>
+		<rom type="prog1" name="epr-19888.18" size="524288" crc="800d763d" sha1="4f2865a64d6dda638840d359db3bd2f22b6d1404"/>
+		<rom type="prog2" name="epr-19889.19" size="524288" crc="d1f7e44c" sha1="5faad711cf39c0fb10c3b9ccce25f5219ddd5a17"/>
+		<rom type="prog3" name="epr-19890.20" size="524288" crc="9c16c3cc" sha1="f1fba0c7cbdf7ddc4224356d50fdabea612c129d"/>
+		<rom type="crom00" name="mpr-19857.01" size="4194304" crc="82c9fcfc" sha1="31c38483b33606b11d74da21dc49df8fa9f227db"/>
+		<rom type="crom01" name="mpr-19858.02" size="4194304" crc="993fa656" sha1="9090156ece06b11f3f24fbb96240eca44122a805"/>
+		<rom type="crom02" name="mpr-19859.03" size="4194304" crc="15906869" sha1="7ad216ac6d048718e1a6c99f16c1a2f98db065b8"/>
+		<rom type="crom03" name="mpr-19860.04" size="4194304" crc="19a1ddc7" sha1="c13277a419ff8f1a8bc532f00375f015a99a1d7f"/>
+		<rom type="crom10" name="mpr-19861.05" size="4194304" crc="6ddf21b3" sha1="462f987068ac7a1c8caaf356f44e0452ef0e8238"/>
+		<rom type="crom11" name="mpr-19862.06" size="4194304" crc="b0f69ae4" sha1="a4e785cda6f0101e11cd82ac9aa9934926234ba1"/>
+		<rom type="crom12" name="mpr-19863.07" size="4194304" crc="2b2619d0" sha1="895c8090a8149429ca41d6b94822462d8482a533"/>
+		<rom type="crom13" name="mpr-19864.08" size="4194304" crc="c7baab2b" sha1="abc629abf677e8adb3b4eff4cb6e6cd21254bdba"/>
+		<rom type="crom20" name="mpr-19865.09" size="4194304" crc="b2749d2b" sha1="4e2a5d07eae2a2b2f9149328c68886df16389c2c"/>
+		<rom type="crom21" name="mpr-19866.10" size="4194304" crc="ede5fc78" sha1="ff170fad7aaf1a6ba86d50022ad7586d0e785668"/>
+		<rom type="crom22" name="mpr-19867.11" size="4194304" crc="ae610fc5" sha1="b03c85cb661a67becf59b6bb29e52de736470add"/>
+		<rom type="crom23" name="mpr-19868.12" size="4194304" crc="3c43d64f" sha1="00e1bd91496a6b3f73343ef4ad24a0dd3cb6bcf5"/>
+		<rom type="vrom00" name="mpr-19871.26" size="2097152" crc="5168e02b" sha1="3572c748c8f1b70b194fcf27919d3e671c7a09a5"/>
+		<rom type="vrom01" name="mpr-19872.27" size="2097152" crc="9e65fc06" sha1="7de713cf1161d921d0b19aa4af6ec0790f043424"/>
+		<rom type="vrom02" name="mpr-19873.28" size="2097152" crc="0b15d7ab" sha1="d3f42e096b9d9bd3b7b5905d2ae6f3205caa3c82"/>
+		<rom type="vrom03" name="mpr-19874.29" size="2097152" crc="6a28ec89" sha1="cd5ed506cb08a7420729157dba912a3e8e7a9076"/>
+		<rom type="vrom04" name="mpr-19875.30" size="2097152" crc="a03e1173" sha1="45a083a2aeecc0bc250f9e025940525dfdf607b1"/>
+		<rom type="vrom05" name="mpr-19876.31" size="2097152" crc="c93bb036" sha1="d317fc726c2c8e72234a507406b0e8b8b93fe85a"/>
+		<rom type="vrom06" name="mpr-19877.32" size="2097152" crc="b1e3df56" sha1="f9784b33c49b30612f5f4415c7be47198457a9e7"/>
+		<rom type="vrom07" name="mpr-19878.33" size="2097152" crc="a2acc111" sha1="f06205dbbf1fae5b20712270131c12ad8b014c82"/>
+		<rom type="vrom10" name="mpr-19879.34" size="2097152" crc="90c1553f" sha1="1424774c2c2bc126bcde985ee4acb62254357b90"/>
+		<rom type="vrom11" name="mpr-19880.35" size="2097152" crc="42504e63" sha1="ab4690e1ea701d391e731d8491e8769030bdc689"/>
+		<rom type="vrom12" name="mpr-19881.36" size="2097152" crc="d06985cf" sha1="daae76c0bad5fbcc610525a13aea39289021d929"/>
+		<rom type="vrom13" name="mpr-19882.37" size="2097152" crc="a86f2e2f" sha1="9b39f49618b86ccf5a80d84c5e3d4d349a3866cd"/>
+		<rom type="vrom14" name="mpr-19883.38" size="2097152" crc="12895d6e" sha1="347a85d0236fb5fed1a6b848425e905e8d5a3ddd"/>
+		<rom type="vrom15" name="mpr-19884.39" size="2097152" crc="711eebfb" sha1="3a14251399265f5c3d29830dd713efb49c8c2f2e"/>
+		<rom type="vrom16" name="mpr-19885.40" size="2097152" crc="d1ae5473" sha1="c225ad47175247b4cc0d3db57d2ecb68242639d5"/>
+		<rom type="vrom17" name="mpr-19886.41" size="2097152" crc="278aae0b" sha1="471a74ca21d0394742d0275029642c712a6bc924"/>
+		<rom type="sprog" name="epr-19891.21" size="524288" crc="c3ecd448" sha1="875ee429872f3a851fa0239e5c781870fa3f4323"/>
+		<rom type="srom0" name="mpr-19869.22" size="4194304" crc="ea1ef1cc" sha1="399c43659d83673f83b551b30b3b1410a75d8f8c"/>
+		<rom type="srom1" name="mpr-19870.24" size="4194304" crc="49c70296" sha1="9bf88a63c38d318006a9c6c6b7b4452439df876c"/>
+	</game>
+	<game name="vs29815" parent="vs298">
+		<description>Virtua Striker 2 '98 (Step 1.5)</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>1.5</step>
+		<bridge>mpc106</bridge>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="6028ec" data="60000000"/>
+		<patch size="32" address="60290c" data="60000000"/>
+		<patch size="32" address="614f2c" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20909.17" size="524288" crc="3dff0d7e" sha1="c6a6a103f499cd451796ae2480b8c38c3e87a143"/>
+		<rom type="prog1" name="epr-20910.18" size="524288" crc="dc75a2e3" sha1="f1b13674ae20b5b964be593171b9d6008d5a51b7"/>
+		<rom type="prog2" name="epr-20911.19" size="524288" crc="acb8fd97" sha1="2a0ae502283fc8b19ae2bb85b95f66bf80e1bcdf"/>
+		<rom type="prog3" name="epr-20912.20" size="524288" crc="cd2c0538" sha1="17b66f0cfa0530be3091f974ec959917f2805be1"/>
+		<rom type="crom00" name="mpr-20891.1" size="4194304" crc="9ecb0b39" sha1="97b2ba2a863b7559923efff315aab04f7dca33b0"/>
+		<rom type="crom01" name="mpr-20892.2" size="4194304" crc="8e5d3fe7" sha1="5fe7ad8577ce46fdd2ea741eb2a98028eee61a82"/>
+		<rom type="crom02" name="mpr-20893.3" size="4194304" crc="5c83dcaa" sha1="2d4794bc6c3bfd4913ee045692b6aec5680825e0"/>
+		<rom type="crom03" name="mpr-20894.4" size="4194304" crc="09c065cc" sha1="9a47c6fd45630549066f58b6872ad885908c6e38"/>
+		<rom type="crom10" name="mpr-19773.5" size="4194304" crc="4e381ae7" sha1="8ada8de80e019d521d8a3dbdc832745478c84a3d"/>
+		<rom type="crom11" name="mpr-19774.6" size="4194304" crc="1d61d287" sha1="f0ab5f687570fa3e33a87da9130859f804c8fc01"/>
+		<rom type="crom12" name="mpr-19775.7" size="4194304" crc="a6b32bd9" sha1="5e2e1e779ff11620a3cf2a8756f2ea08e46d0839"/>
+		<rom type="crom13" name="mpr-19776.8" size="4194304" crc="5b31c7c1" sha1="7821c5af52a9551be5358aae7df8cfddd58f0fb6"/>
+		<rom type="crom20" name="mpr-20895.9"  size="4194304" crc="9b51cbf5" sha1="670cfee991b997d4f7c3d51c48dad1ee032f93ef"/>
+		<rom type="crom21" name="mpr-20896.10" size="4194304" crc="bf1cbd5e" sha1="a677247d7c94f8d36ffece7824026047db1188e1"/>
+		<rom type="crom22" name="mpr-20897.11" size="4194304" crc="c5cf067a" sha1="ee9503bee3af238434590f439c87219fe45c91b9"/>
+		<rom type="crom23" name="mpr-20898.12" size="4194304" crc="94040d37" sha1="4a35a0e1cdfdf18a8b01ea11ae88815bf8e92ff3"/>
+		<rom type="crom30" name="mpr-20899.13" size="4194304" crc="65422425" sha1="ad4aba5996c2851f14741c5d0f3d7b65e7e765c5"/>
+		<rom type="crom31" name="mpr-20900.14" size="4194304" crc="7a38b571" sha1="664be2a614e3ce2cc75fdfb9baff55b6e9d77998"/>
+		<rom type="crom32" name="mpr-20901.15" size="4194304" crc="3492ddc8" sha1="2a36b91ca58b7cc1c8f7a337d2e40b671780ddeb"/>
+		<rom type="crom33" name="mpr-20902.16" size="4194304" crc="f4d3ff3a" sha1="da3ceba113bca0ea7bd8f67d39bdd7d0cbe5ff7f"/>
+		<rom type="vrom00" name="mpr-19787.26" size="2097152" crc="856cc4ad" sha1="a8856ee407c10b021f00f5fd2180dfae4cad2dad"/>
+		<rom type="vrom01" name="mpr-19788.27" size="2097152" crc="72ef970a" sha1="ee4af92444e7da61094b5eb5b8469b78aeeb8a32"/>
+		<rom type="vrom02" name="mpr-19789.28" size="2097152" crc="076add9a" sha1="117156fd7b802807ee2908dc8a1edb1cd79f1730"/>
+		<rom type="vrom03" name="mpr-19790.29" size="2097152" crc="74ce238c" sha1="f6662793d1f2f3c36d7548b912cd40b2ce58753e"/>
+		<rom type="vrom04" name="mpr-19791.30" size="2097152" crc="75a98f96" sha1="9c4cdc5a782cac957fc43952e8f3e35d54f23d1c"/>
+		<rom type="vrom05" name="mpr-19792.31" size="2097152" crc="85c81633" sha1="e4311ca92e77502626b312d38a5069ceed9e679f"/>
+		<rom type="vrom06" name="mpr-19793.32" size="2097152" crc="7f288cc4" sha1="71e42ac564c85402b35777e28fff2dce161cbf46"/>
+		<rom type="vrom07" name="mpr-19794.33" size="2097152" crc="e0c1c370" sha1="8efc2940857109bbe74fb7ce1e6fb11d601630f2"/>
+		<rom type="vrom10" name="mpr-19795.34" size="2097152" crc="90989b20" sha1="bf96f5770ffaae3b625a906461b8ea755baf9756"/>
+		<rom type="vrom11" name="mpr-19796.35" size="2097152" crc="5d1aab8d" sha1="e004c30b9bc8fcad23459e162e9db0c1afd0d5b1"/>
+		<rom type="vrom12" name="mpr-19797.36" size="2097152" crc="f5edc891" sha1="e8a23be9a81568892f95e7c66c28ea8d7bd0f508"/>
+		<rom type="vrom13" name="mpr-19798.37" size="2097152" crc="ae2da90f" sha1="8243d1f81faa57d5ff5e1f64bcd33cff59219b69"/>
+		<rom type="vrom14" name="mpr-19799.38" size="2097152" crc="92b18ad7" sha1="7be46d7ae2233337d866938ac803589156bfde94"/>
+		<rom type="vrom15" name="mpr-19800.39" size="2097152" crc="4a57b16c" sha1="341952460b2f7718e63d5f43a86f507de52bf421"/>
+		<rom type="vrom16" name="mpr-19801.40" size="2097152" crc="beb79a00" sha1="63385ff70bf9ae223e6acfa1b6cb2d641afa2790"/>
+		<rom type="vrom17" name="mpr-19802.41" size="2097152" crc="f2c3a7b7" sha1="d72fafe75baa3542ee27fed05230cd5da99aa459"/>
+		<rom type="sprog" name="epr-20921.21" size="524288" crc="30f032a7" sha1="d29c9631bd50fabe3d86343f44c37ee535db14a0"/>
+		<rom type="srom0" name="mpr-20903.22" size="4194304" crc="e343e131" sha1="cb144516e8c6f1e68bcb774a26cdc494383d3e1b"/>
+		<rom type="srom1" name="mpr-20904.24" size="4194304" crc="21a91b84" sha1="cd2d7231b8652ff38376b672c47127ce054d1f32"/>
+	</game>
+	<game name="vs2">
+		<description>Virtua Striker 2 (Step 2.0)</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="705884" data="60000000"/>
+		<patch size="32" address="7058a4" data="60000000"/>
+		<patch size="32" address="704798" data="60000000"/>
+		<patch size="32" address="7171c8" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20467.17" size="1048576" crc="25d7ae73" sha1="433a7c1dac1bd5524b018da2ed09f937d527ac3e"/>
+		<rom type="prog1" name="epr-20468.18" size="1048576" crc="f0f0b6ea" sha1="b3f545e5a4dd45b97df938093251cc7845c2a1f9"/>
+		<rom type="prog2" name="epr-20469.19" size="1048576" crc="9d7521f6" sha1="9efcb5e6a9add4331c5ea60998afce792b8d6623"/>
+		<rom type="prog3" name="epr-20470.20" size="1048576" crc="2f62b292" sha1="b38db0d7b690e7f9344adf7ee36037196bb521d2"/>
+		<rom type="crom00" name="mpr-19769.1" size="4194304" crc="dc020031" sha1="35eba49a237c1c647dbf13024e664e2cb09f38b5"/>
+		<rom type="crom01" name="mpr-19770.2" size="4194304" crc="91f690b0" sha1="e70482b255bdc37def897842313c2cb592dd3c6c"/>
+		<rom type="crom02" name="mpr-19771.3" size="4194304" crc="189c510f" sha1="9ebe3c4d98fc57744104608feef7c4e00c0dfd15"/>
+		<rom type="crom03" name="mpr-19772.4" size="4194304" crc="6db7b9d0" sha1="098daad081c8e3ab5dc88e5a8d453b82101c5fc4"/>
+		<rom type="crom10" name="mpr-19773.5" size="4194304" crc="4e381ae7" sha1="8ada8de80e019d521d8a3dbdc832745478c84a3d"/>
+		<rom type="crom11" name="mpr-19774.6" size="4194304" crc="1d61d287" sha1="f0ab5f687570fa3e33a87da9130859f804c8fc01"/>
+		<rom type="crom12" name="mpr-19775.7" size="4194304" crc="a6b32bd9" sha1="5e2e1e779ff11620a3cf2a8756f2ea08e46d0839"/>
+		<rom type="crom13" name="mpr-19776.8" size="4194304" crc="5b31c7c1" sha1="7821c5af52a9551be5358aae7df8cfddd58f0fb6"/>
+		<rom type="crom20" name="mpr-19777.9" size="4194304" crc="c8f216a6" sha1="0ec700ef15094f6746bbc886e7045329ccebb5d1"/>
+		<rom type="crom21" name="mpr-19778.10" size="4194304" crc="2192b189" sha1="63f81ab0bd099ef77470cc19fd6d218de72d7876"/>
+		<rom type="crom22" name="mpr-19779.11" size="4194304" crc="2242b21b" sha1="b5834c19a0a54fe38cac22cfbc2a1e14543aee9d"/>
+		<rom type="crom23" name="mpr-19780.12" size="4194304" crc="38508791" sha1="0e6d629a6e4d11368a367d74f44bc805805f4365"/>
+		<rom type="crom30" name="mpr-19781.13" size="4194304" crc="783213f4" sha1="042c0c0d8604d9d73f581064b0b31234ec7b81b2"/>
+		<rom type="crom31" name="mpr-19782.14" size="4194304" crc="43b43eef" sha1="8a8b40581a13f56ab2da75f049ba3101a4d3adb4"/>
+		<rom type="crom32" name="mpr-19783.15" size="4194304" crc="47c3d726" sha1="99ca84b9318c45721ccc5053a909b6ef67a6671c"/>
+		<rom type="crom33" name="mpr-19784.16" size="4194304" crc="a1cc70be" sha1="c0bb9e78ae9a45c03945b9bc647da129f6171812"/>
+		<rom type="vrom00" name="mpr-19787.26" size="2097152" crc="856cc4ad" sha1="a8856ee407c10b021f00f5fd2180dfae4cad2dad"/>
+		<rom type="vrom01" name="mpr-19788.27" size="2097152" crc="72ef970a" sha1="ee4af92444e7da61094b5eb5b8469b78aeeb8a32"/>
+		<rom type="vrom02" name="mpr-19789.28" size="2097152" crc="076add9a" sha1="117156fd7b802807ee2908dc8a1edb1cd79f1730"/>
+		<rom type="vrom03" name="mpr-19790.29" size="2097152" crc="74ce238c" sha1="f6662793d1f2f3c36d7548b912cd40b2ce58753e"/>
+		<rom type="vrom04" name="mpr-19791.30" size="2097152" crc="75a98f96" sha1="9c4cdc5a782cac957fc43952e8f3e35d54f23d1c"/>
+		<rom type="vrom05" name="mpr-19792.31" size="2097152" crc="85c81633" sha1="e4311ca92e77502626b312d38a5069ceed9e679f"/>
+		<rom type="vrom06" name="mpr-19793.32" size="2097152" crc="7f288cc4" sha1="71e42ac564c85402b35777e28fff2dce161cbf46"/>
+		<rom type="vrom07" name="mpr-19794.33" size="2097152" crc="e0c1c370" sha1="8efc2940857109bbe74fb7ce1e6fb11d601630f2"/>
+		<rom type="vrom10" name="mpr-19795.34" size="2097152" crc="90989b20" sha1="bf96f5770ffaae3b625a906461b8ea755baf9756"/>
+		<rom type="vrom11" name="mpr-19796.35" size="2097152" crc="5d1aab8d" sha1="e004c30b9bc8fcad23459e162e9db0c1afd0d5b1"/>
+		<rom type="vrom12" name="mpr-19797.36" size="2097152" crc="f5edc891" sha1="e8a23be9a81568892f95e7c66c28ea8d7bd0f508"/>
+		<rom type="vrom13" name="mpr-19798.37" size="2097152" crc="ae2da90f" sha1="8243d1f81faa57d5ff5e1f64bcd33cff59219b69"/>
+		<rom type="vrom14" name="mpr-19799.38" size="2097152" crc="92b18ad7" sha1="7be46d7ae2233337d866938ac803589156bfde94"/>
+		<rom type="vrom15" name="mpr-19800.39" size="2097152" crc="4a57b16c" sha1="341952460b2f7718e63d5f43a86f507de52bf421"/>
+		<rom type="vrom16" name="mpr-19801.40" size="2097152" crc="beb79a00" sha1="63385ff70bf9ae223e6acfa1b6cb2d641afa2790"/>
+		<rom type="vrom17" name="mpr-19802.41" size="2097152" crc="f2c3a7b7" sha1="d72fafe75baa3542ee27fed05230cd5da99aa459"/>
+		<rom type="sprog" name="epr-19807.21" size="524288" crc="9641cbaf" sha1="aaffde7678b40bc940be04fb107efc4d0d416ea1"/>
+		<rom type="srom0" name="mpr-19785.22" size="4194304" crc="e7d190e3" sha1="f263af149e303429f469a3ab601b87461256aaa7"/>
+		<rom type="srom1" name="mpr-19786.24" size="4194304" crc="b08d889b" sha1="790b5b2d62a28c39d43aeec9ffb365ccd9dc93af"/>
+	</game>
+	<game name="harley">
+		<description>Harley-Davidson and L.A. Riders</description>
+		<year>1997</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		
+		<patch size="32" address="50e8d4" data="60000000"/>
+		<patch size="32" address="50e8f4" data="60000000"/>
+		<patch size="32" address="50fb84" data="60000000"/>
+		<patch size="32" address="4f736c" data="60000000"/>
+		<patch size="32" address="4f738c" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20393a.17" size="2097152" crc="b5646556" sha1="4bff0e140e1d1df7459f7194aa4a335bc4592203"/>
+		<rom type="prog1" name="epr-20394a.18" size="2097152" crc="ce29e2b6" sha1="482aaf5480b219b8ac6e4e36a6d64359e1834f44"/>
+		<rom type="prog2" name="epr-20395a.19" size="2097152" crc="761f4976" sha1="3e451a99b87f05d6fa35efdd944cd4c2033dd5fd"/>
+		<rom type="prog3" name="epr-20396a.20" size="2097152" crc="16b0106b" sha1="3b8449805b73ff6ff1a1c8b134cd861b77b7f8d8"/>
+		<rom type="crom00" name="mpr-20361.1" size="4194304" crc="ddb66c2f" sha1="e47450cc38af99e2870aac1f598e057a0c6efe47"/>
+		<rom type="crom01" name="mpr-20362.2" size="4194304" crc="f7e60dfd" sha1="e87b1a35513d6c9392643e8e97e2bc3eccdf21cb"/>
+		<rom type="crom02" name="mpr-20363.3" size="4194304" crc="3e3cc6ff" sha1="ae0640ac00b6a09010984197a1aeb43817576181"/>
+		<rom type="crom03" name="mpr-20364.4" size="4194304" crc="a2a68ef2" sha1="4d6ddd85d3350e56276c7cb11dd428d2c13a0374"/>
+		<rom type="crom10" name="mpr-20365.5" size="4194304" crc="7dd50361" sha1="731ed1b660ebdaf1c9d583b374181ddc1496322b"/>
+		<rom type="crom11" name="mpr-20366.6" size="4194304" crc="45e3850e" sha1="54e6a285c594418355ab80cdfa4f5881cf74e39a"/>
+		<rom type="crom12" name="mpr-20367.7" size="4194304" crc="6c3f9748" sha1="0bec4c32c7e5fe715bb4572bf54c559583637170"/>
+		<rom type="crom13" name="mpr-20368.8" size="4194304" crc="100c9846" sha1="63b2ab000b5e4996c68724e3f3457a50e6185295"/>
+		<rom type="crom30" name="epr-20409.13" size="2097152" crc="58caaa75" sha1="ce27ff9109f4fd69191b6aec3298013261f657e5"/>
+		<rom type="crom31" name="epr-20410.14" size="2097152" crc="98b126f2" sha1="f102ce6fdcd5c7eebc2c802b80a3ee861fc50f19"/>
+		<rom type="crom32" name="epr-20411.15" size="2097152" crc="848daaf7" sha1="85486e8fbac4237a2fed31120cc15239d5037d9a"/>
+		<rom type="crom33" name="epr-20412.16" size="2097152" crc="0d51bb34" sha1="24ce007e1abdd26d10b3d2a294503bf70a48db2d"/>
+		<rom type="vrom00" name="mpr-20377.26" size="4194304" crc="4d2887e5" sha1="6c965262bbeb8c5a10cdcf5ee31f2f50616ad6f0"/>
+		<rom type="vrom01" name="mpr-20378.27" size="4194304" crc="5ad7c0ec" sha1="19eee9a512abf857e2fea40261f90d727f79961a"/>
+		<rom type="vrom02" name="mpr-20379.28" size="4194304" crc="1e51c9f0" sha1="e62f6b4b5378f2724cd7ae9a0c87a9de31d0ff37"/>
+		<rom type="vrom03" name="mpr-20380.29" size="4194304" crc="e10d35ae" sha1="d99615b9d6b6c89cb1f9bfeba4f3aebefbaf857c"/>
+		<rom type="vrom04" name="mpr-20381.30" size="4194304" crc="76cd36a2" sha1="026dfe1c996a923b8114defb96a3b200e2c72279"/>
+		<rom type="vrom05" name="mpr-20382.31" size="4194304" crc="f089ae37" sha1="d4366617fc956b2ad653409981227f238314c7eb"/>
+		<rom type="vrom06" name="mpr-20383.32" size="4194304" crc="9e96d3be" sha1="a674544eb5e1792f82d2b58ab26e9be2cf3a4e25"/>
+		<rom type="vrom07" name="mpr-20384.33" size="4194304" crc="5bdfbb52" sha1="31470f761170e489582db36124d7740d8dbb94aa"/>
+		<rom type="vrom10" name="mpr-20385.34" size="4194304" crc="12db1729" sha1="58fd946d8d63cf8b8da741a68d18c58f6894d661"/>
+		<rom type="vrom11" name="mpr-20386.35" size="4194304" crc="db2ccaf8" sha1="873fc1f293a50bb98e463449c8591d2cfc3cd93f"/>
+		<rom type="vrom12" name="mpr-20387.36" size="4194304" crc="c5dde91b" sha1="8155f49918cd57bc625fbc149ffdd9074f5906f0"/>
+		<rom type="vrom13" name="mpr-20388.37" size="4194304" crc="aeaa862e" sha1="e78a7e446df2f15570e1dc64a5f8b22ac09ac6a0"/>
+		<rom type="vrom14" name="mpr-20389.38" size="4194304" crc="49bb6593" sha1="ffed9c3748405e4835998f644077cf8581bd00c7"/>
+		<rom type="vrom15" name="mpr-20390.39" size="4194304" crc="1d4a8efe" sha1="7a4515906a351737fb5b3a221bad839e61ea03a2"/>
+		<rom type="vrom16" name="mpr-20391.40" size="4194304" crc="5dc452dc" sha1="203d5d8008bea8d2f43566fff6971b3f7add75bc"/>
+		<rom type="vrom17" name="mpr-20392.41" size="4194304" crc="892208cb" sha1="12b5309f5f66d7c2165b285e0a9710ee0d9c99f4"/>
+		<rom type="sprog" name="epr-20397.21" size="524288" crc="5b20b54a" sha1="26fa5aedc6ccc37f2c0879e1a0f9fbac2331e12e"/>
+		<rom type="srom0" name="mpr-20373.22" size="4194304" crc="c684e8a3" sha1="2be1db24c3b221976cbcc6ad3d8cb7c6f4e3a13e"/>
+		<rom type="srom1" name="mpr-20375.24" size="4194304" crc="906ace86" sha1="8edd2183d83897eda0578a34938b926672c21953"/>
+		<rom type="srom2" name="mpr-20374.23" size="4194304" crc="fcf6ea21" sha1="9102323cf867f9a87fe362b78d8e1be8a2809fd3"/>
+		<rom type="srom3" name="mpr-20376.25" size="4194304" crc="deeed366" sha1="6d4809960c34865374d146605bb3e009394f7a8c"/>
+	</game>
+	<game name="srally2">
+		<description>Sega Rally 2</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="7c0c4" data="60000000"/>
+		<patch size="32" address="7c0c8" data="60000000"/>
+		<patch size="32" address="7c0cc" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20632.17" size="2097152" crc="6829a801" sha1="2aa3834f6a8c53f5db57ab52994b8ab3fde2d7c2"/>
+		<rom type="prog1" name="epr-20633.18" size="2097152" crc="f5a24f24" sha1="6f741bc53d51ff4b5535dbee35aa490f159945ec"/>
+		<rom type="prog2" name="epr-20634.19" size="2097152" crc="45a09245" sha1="1e7e844d38e9cba59c2a7e6f2e6ca2bba2c8b352"/>
+		<rom type="prog3" name="epr-20635.20" size="2097152" crc="7937473f" sha1="d5bb57a08019a4523f976c418526efffc6ef988b"/>
+		<rom type="crom00" name="mpr-20602.1" size="4194304" crc="60cfa72a" sha1="2cb9e16d50979461d39e0493273ee38d23900b45"/>
+		<rom type="crom01" name="mpr-20603.2" size="4194304" crc="ad0d8eb8" sha1="5bcd0a72b2d48d1834f296b7b37a56ae13c461fa"/>
+		<rom type="crom02" name="mpr-20604.3" size="4194304" crc="99c5f396" sha1="dc586591a684bde224704f8356640343eb7651b3"/>
+		<rom type="crom03" name="mpr-20605.4" size="4194304" crc="00513401" sha1="c6ac665cea999dcf483e9837daefd7fcdd755043"/>
+		<rom type="crom10" name="mpr-20606.5" size="4194304" crc="072498fd" sha1="f7804a7c2139901367b06823bf0a6472e24078a6"/>
+		<rom type="crom11" name="mpr-20607.6" size="4194304" crc="6da85aa3" sha1="04fce70fa69aca615e5b009be99f7a657070b0c0"/>
+		<rom type="crom12" name="mpr-20608.7" size="4194304" crc="0c9b0571" sha1="2e13ab15d7fb6104316dc86770172269c8280306"/>
+		<rom type="crom13" name="mpr-20609.8" size="4194304" crc="c03cc0e5" sha1="8ee99dd37587dd1aa24d746ef14180515306e5d9"/>
+		<rom type="crom20" name="mpr-20610.9" size="4194304" crc="b6e0ff4e" sha1="9b6ab7925b64b34f0d16ff0ba72dd0a0e6d23290"/>
+		<rom type="crom21" name="mpr-20611.10" size="4194304" crc="5d9f8ba2" sha1="42bec0ca6cf8d0192183dd08c4a92157c34d3651"/>
+		<rom type="crom22" name="mpr-20612.11" size="4194304" crc="721a44b6" sha1="151e4f9e2ed4095620c88bf54bf69f13f441e5ce"/>
+		<rom type="crom23" name="mpr-20613.12" size="4194304" crc="2938c0d9" sha1="95c444ef0b53afd129d512f8a8961938b0fd703e"/>
+		<rom type="vrom00" name="mpr-20616.26" size="4194304" crc="e11dcf8b" sha1="bbc384e95d52d883cbc68122f5a3c44dee98d54c"/>
+		<rom type="vrom01" name="mpr-20617.27" size="4194304" crc="96acef3f" sha1="a72ed7ac3f8132562c3d2e9bdf7b5c596082cb29"/>
+		<rom type="vrom02" name="mpr-20618.28" size="4194304" crc="6c281281" sha1="ddf056386e7e44f2d2d034f405c55bc5a3109848"/>
+		<rom type="vrom03" name="mpr-20619.29" size="4194304" crc="0fa65819" sha1="b9ce62a149f019b04eb72e0d6c9339472f403823"/>
+		<rom type="vrom04" name="mpr-20620.30" size="4194304" crc="ee79585f" sha1="ea1797667a6ef6e38cf48543a63fd69a097b1e50"/>
+		<rom type="vrom05" name="mpr-20621.31" size="4194304" crc="3a99148f" sha1="0a2e5b4af85a4ce370c8defeb8d81def1279e693"/>
+		<rom type="vrom06" name="mpr-20622.32" size="4194304" crc="0618f056" sha1="873063ab147b6b513683d4b4fe6a874f920ba818"/>
+		<rom type="vrom07" name="mpr-20623.33" size="4194304" crc="ccf31b85" sha1="b25ea13706734a2e5c2f7587f494d59b6ad43c1f"/>
+		<rom type="vrom10" name="mpr-20624.34" size="4194304" crc="90f30936" sha1="43be3fe5a4200ab4200a49d571d9114e894db700"/>
+		<rom type="vrom11" name="mpr-20625.35" size="4194304" crc="04f804fa" sha1="6537733d6a0c12e084937366bbdcc1b3bea3b4aa"/>
+		<rom type="vrom12" name="mpr-20626.36" size="4194304" crc="2d6c97d6" sha1="201d01556e8381f21670b9637eb479e8f88e880e"/>
+		<rom type="vrom13" name="mpr-20627.37" size="4194304" crc="a14ee871" sha1="c846e39760570703ec97ae085992b2de0daef458"/>
+		<rom type="vrom14" name="mpr-20628.38" size="4194304" crc="bba829a3" sha1="ad44d53e9cf5bc1f6a03fe961d5f13410261d912"/>
+		<rom type="vrom15" name="mpr-20629.39" size="4194304" crc="ead2eb31" sha1="cfb2ff20d5fcdaa9e0b075f84e94d07ff069d17e"/>
+		<rom type="vrom16" name="mpr-20630.40" size="4194304" crc="cc5881b8" sha1="6d9b973c442c5d3bb872624412b8dfbef0677b34"/>
+		<rom type="vrom17" name="mpr-20631.41" size="4194304" crc="5cb69ffd" sha1="654d8187634726c8218bf84304765a40c2d4b117"/>
+		<rom type="sprog" name="epr-20636.21" size="524288" crc="7139ebf8" sha1="3e06e8aa5c3eaf371073caa51e5fc5b42826f015"/>
+		<rom type="srom0" name="mpr-20614.22" size="4194304" crc="a3930e4a" sha1="6a34f5b7817db8304454235997eaa453528bc655"/>
+		<rom type="srom1" name="mpr-20615.24" size="4194304" crc="62e8a94a" sha1="abed71b1c6eb2563fe58e6598c10dd266340e5e0"/>
+		<rom type="dsbprog" name="epr-20641.2" size="131072" crc="c9b82035" sha1="1e438f8104f79c2956bb1aeb710b01b6dc59101e"/>
+		<rom type="dsbrom0" name="mpr-20637.57" size="4194304" crc="d66e8a02" sha1="f5d2bf4c97139fa56d14ffe2885a86e8f17ee965"/>
+		<rom type="dsbrom1" name="mpr-20638.58" size="4194304" crc="d1513382" sha1="b4d5b7680e2e73b361530d689ffdb0bab62e9ee4"/>
+		<rom type="dsbrom2" name="mpr-20639.59" size="4194304" crc="f6603b7b" sha1="9f31a2562168e5eba51864935e1c15db4e3114fb"/>
+		<rom type="dsbrom3" name="mpr-20640.60" size="4194304" crc="9eea07b7" sha1="bdcf136f29e1435c9d82718730ef209d8cfe74d8"/>
+	</game>
+	<game name="von2">
+		<description>Virtual On 2: Oratorio Tangram</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		
+		<patch size="32" address="189168" data="60000000"/>
+		<patch size="32" address="1890ac" data="60000000"/>
+		<patch size="32" address="1890b8" data="60000000"/>
+		<patch size="32" address="1888a8" data="60000000"/>
+		<patch size="32" address="1891c8" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20683b.17" size="2097152" crc="59d9c974" sha1="c45594ed474a9e8fd074e0d9d5fa6662bc88dee6"/>
+		<rom type="prog1" name="epr-20684b.18" size="2097152" crc="1fc15431" sha1="c68c77dfcf5e2702214d64095ce07076d3702a5e"/>
+		<rom type="prog2" name="epr-20685b.19" size="2097152" crc="ae82cb35" sha1="b4563f325945cc943a46bdc094e0169fcf82023d"/>
+		<rom type="prog3" name="epr-20686b.20" size="2097152" crc="3ea4de9f" sha1="0d09e0a256e531c1e4115355e9ce29fa8016c458"/>
+		<rom type="crom00" name="mpr-20647.1" size="4194304" crc="e8586380" sha1="67dd49975b31ba2c3f889ff38a3bc4663145934a"/>
+		<rom type="crom01" name="mpr-20648.2" size="4194304" crc="107309e0" sha1="61657814a30020c0d4ea77625cb8f11a1db7e866"/>
+		<rom type="crom02" name="mpr-20649.3" size="4194304" crc="b8fd56ba" sha1="5e5051d4b752463e1da632f8294a6c8f9250dbc8"/>
+		<rom type="crom03" name="mpr-20650.4" size="4194304" crc="81f96649" sha1="0d7aba7654237b68de6e43811832fafaf61e2bec"/>
+		<rom type="crom10" name="mpr-20651.5" size="4194304" crc="8373cab3" sha1="1d36612668a3004e2448f99ab27d7184ff859478"/>
+		<rom type="crom11" name="mpr-20652.6" size="4194304" crc="64c6fbb6" sha1="c8682bda20d3119b4f95bbd2dbde301bfd036608"/>
+		<rom type="crom12" name="mpr-20653.7" size="4194304" crc="858e6bba" sha1="22b71826799249a577124a49d5a276908a53ce61"/>
+		<rom type="crom13" name="mpr-20654.8" size="4194304" crc="763ef905" sha1="4d5f6b1770cf9bf6cecd4d3a91a822e5cc658464"/>
+		<rom type="crom20" name="mpr-20655.9" size="4194304" crc="f0a471e9" sha1="8a40c9381e8b3733be297738c825b82abcb476d0"/>
+		<rom type="crom21" name="mpr-20656.10" size="4194304" crc="466bee13" sha1="bc2087a138037188f462fa1cecc898e5efb3e8b8"/>
+		<rom type="crom22" name="mpr-20657.11" size="4194304" crc="14bf8964" sha1="84444f7c489344ad1dd980b860364b5a4ed53038"/>
+		<rom type="crom23" name="mpr-20658.12" size="4194304" crc="b80175b9" sha1="26dc97f6a6e8415cbb7e9e1f64389d80a2b761a1"/>
+		<rom type="crom30" name="mpr-20659.13" size="4194304" crc="edb63e7b" sha1="761abcfc213e813967d053475c965459a9724a24"/>
+		<rom type="crom31" name="mpr-20660.14" size="4194304" crc="d961d385" sha1="7e341c2cf24715c5cecb276c42166bf426860819"/>
+		<rom type="crom32" name="mpr-20661.15" size="4194304" crc="50e6189e" sha1="04be5ff1379af4972edec3b320f148bdf09bfbb5"/>
+		<rom type="crom33" name="mpr-20662.16" size="4194304" crc="7130cb61" sha1="39de0e3c2086f339156bfd734a196b667df7f5ac"/>
+		<rom type="vrom00" name="mpr-20667.26" size="4194304" crc="321e006f" sha1="687165bd2d2d22f861cd79083adcab62eb827c0f"/>
+		<rom type="vrom01" name="mpr-20668.27" size="4194304" crc="c2dd8053" sha1="52bc88d172d335b47e3ae3d582233382e9608de2"/>
+		<rom type="vrom02" name="mpr-20669.28" size="4194304" crc="63432497" sha1="b072741fe9ba49f1a7eed03301c8b1956af94d26"/>
+		<rom type="vrom03" name="mpr-20670.29" size="4194304" crc="f7b554fd" sha1="84fb08413345e0f3afb6e20c723aa8aa8156fdc7"/>
+		<rom type="vrom04" name="mpr-20671.30" size="4194304" crc="fee1a49b" sha1="a024a0564df65e065e8b1830e85513d17ebd8635"/>
+		<rom type="vrom05" name="mpr-20672.31" size="4194304" crc="e4b8c6e6" sha1="674d4d26285f2825050fd27dd3382ca6245d54c7"/>
+		<rom type="vrom06" name="mpr-20673.32" size="4194304" crc="e7b6403b" sha1="0f74f7a916c091d49eed8222050981a6b73d4bdd"/>
+		<rom type="vrom07" name="mpr-20674.33" size="4194304" crc="9be22e13" sha1="a00b0c69b6ed086f3f61d4f767df6c4ddea45052"/>
+		<rom type="vrom10" name="mpr-20675.34" size="4194304" crc="6a7c3862" sha1="f77145c2a5e373f567783cf5db70e25b71e77bf5"/>
+		<rom type="vrom11" name="mpr-20676.35" size="4194304" crc="dd299648" sha1="c222c10cb23753ac3d6d1c779b2d026a64c61bc4"/>
+		<rom type="vrom12" name="mpr-20677.36" size="4194304" crc="3fc5f330" sha1="778c1932b093a4de96c76ea704463b7c67cdcb33"/>
+		<rom type="vrom13" name="mpr-20678.37" size="4194304" crc="62f794a1" sha1="fc7adafb49056b23b6cc483978ffe4fd3635977d"/>
+		<rom type="vrom14" name="mpr-20679.38" size="4194304" crc="35a37c53" sha1="cd727a8914c3c01e302378048e3998b4cd849c4a"/>
+		<rom type="vrom15" name="mpr-20680.39" size="4194304" crc="81fec46e" sha1="43b3fbb544d920a87f77437860e32a628ae2865b"/>
+		<rom type="vrom16" name="mpr-20681.40" size="4194304" crc="d517873b" sha1="8e50dd149716ae6b0b8d7ac99cd425a17b3c0a46"/>
+		<rom type="vrom17" name="mpr-20682.41" size="4194304" crc="5b43250c" sha1="fccb40cd03c096360ca3c565e8621d4110b273ab"/>
+		<rom type="sprog" name="epr-20687.21" size="524288" crc="fa084de5" sha1="8a760b76bc12d60d4727f93106830f19179c9046"/>
+		<rom type="srom0" name="mpr-20663.22" size="4194304" crc="977eb6a4" sha1="9dbba51630cbef2351d79b82ab6ae3af4aed99f0"/>
+		<rom type="srom1" name="mpr-20665.24" size="4194304" crc="0efc0ca8" sha1="1414becad21eb7d03d816a8cba47506f941b3c29"/>
+		<rom type="srom2" name="mpr-20664.23" size="4194304" crc="89220782" sha1="18a3585af960a76eb08f187223e9b69ad16809a1"/>
+		<rom type="srom3" name="mpr-20666.25" size="4194304" crc="3ecb2606" sha1="a38d1f61933c8873deaff0a913c657b768f9783d"/>
+	</game>
+	<game name="von254g" parent="von2">
+		<description>Virtual On 2: Oratorio Tangram (ver 5.4g)</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		<rom type="prog0" name="epr-21788.17" size="2097152" crc="97066bcf" sha1="234c45ee1f23b22f61893825eebf31d867cf420f"/>
+		<rom type="prog1" name="epr-21789.18" size="2097152" crc="3069108f" sha1="f4e82da677458423abcf07c9c5a837005ed8f1c4"/>
+		<rom type="prog2" name="epr-21790.19" size="2097152" crc="2ae1efd3" sha1="fc3957a140d741138a8eeacc19eedbb237f629cd"/>
+		<rom type="prog3" name="epr-21791.20" size="2097152" crc="d0bb3ca3" sha1="7d00205b5366d7a6f9ecc10f8f7dcf335789a043"/>
+		<rom type="crom00" name="mpr-20647.1" size="4194304" crc="e8586380" sha1="67dd49975b31ba2c3f889ff38a3bc4663145934a"/>
+		<rom type="crom01" name="mpr-20648.2" size="4194304" crc="107309e0" sha1="61657814a30020c0d4ea77625cb8f11a1db7e866"/>
+		<rom type="crom02" name="mpr-20649.3" size="4194304" crc="b8fd56ba" sha1="5e5051d4b752463e1da632f8294a6c8f9250dbc8"/>
+		<rom type="crom03" name="mpr-20650.4" size="4194304" crc="81f96649" sha1="0d7aba7654237b68de6e43811832fafaf61e2bec"/>
+		<rom type="crom10" name="mpr-20651.5" size="4194304" crc="8373cab3" sha1="1d36612668a3004e2448f99ab27d7184ff859478"/>
+		<rom type="crom11" name="mpr-20652.6" size="4194304" crc="64c6fbb6" sha1="c8682bda20d3119b4f95bbd2dbde301bfd036608"/>
+		<rom type="crom12" name="mpr-20653.7" size="4194304" crc="858e6bba" sha1="22b71826799249a577124a49d5a276908a53ce61"/>
+		<rom type="crom13" name="mpr-20654.8" size="4194304" crc="763ef905" sha1="4d5f6b1770cf9bf6cecd4d3a91a822e5cc658464"/>
+		<rom type="crom20" name="mpr-20655.9" size="4194304" crc="f0a471e9" sha1="8a40c9381e8b3733be297738c825b82abcb476d0"/>
+		<rom type="crom21" name="mpr-20656.10" size="4194304" crc="466bee13" sha1="bc2087a138037188f462fa1cecc898e5efb3e8b8"/>
+		<rom type="crom22" name="mpr-20657.11" size="4194304" crc="14bf8964" sha1="84444f7c489344ad1dd980b860364b5a4ed53038"/>
+		<rom type="crom23" name="mpr-20658.12" size="4194304" crc="b80175b9" sha1="26dc97f6a6e8415cbb7e9e1f64389d80a2b761a1"/>
+		<rom type="crom30" name="mpr-20659.13" size="4194304" crc="edb63e7b" sha1="761abcfc213e813967d053475c965459a9724a24"/>
+		<rom type="crom31" name="mpr-20660.14" size="4194304" crc="d961d385" sha1="7e341c2cf24715c5cecb276c42166bf426860819"/>
+		<rom type="crom32" name="mpr-20661.15" size="4194304" crc="50e6189e" sha1="04be5ff1379af4972edec3b320f148bdf09bfbb5"/>
+		<rom type="crom33" name="mpr-20662.16" size="4194304" crc="7130cb61" sha1="39de0e3c2086f339156bfd734a196b667df7f5ac"/>
+		<rom type="vrom00" name="mpr-20667.26" size="4194304" crc="321e006f" sha1="687165bd2d2d22f861cd79083adcab62eb827c0f"/>
+		<rom type="vrom01" name="mpr-20668.27" size="4194304" crc="c2dd8053" sha1="52bc88d172d335b47e3ae3d582233382e9608de2"/>
+		<rom type="vrom02" name="mpr-20669.28" size="4194304" crc="63432497" sha1="b072741fe9ba49f1a7eed03301c8b1956af94d26"/>
+		<rom type="vrom03" name="mpr-20670.29" size="4194304" crc="f7b554fd" sha1="84fb08413345e0f3afb6e20c723aa8aa8156fdc7"/>
+		<rom type="vrom04" name="mpr-20671.30" size="4194304" crc="fee1a49b" sha1="a024a0564df65e065e8b1830e85513d17ebd8635"/>
+		<rom type="vrom05" name="mpr-20672.31" size="4194304" crc="e4b8c6e6" sha1="674d4d26285f2825050fd27dd3382ca6245d54c7"/>
+		<rom type="vrom06" name="mpr-20673.32" size="4194304" crc="e7b6403b" sha1="0f74f7a916c091d49eed8222050981a6b73d4bdd"/>
+		<rom type="vrom07" name="mpr-20674.33" size="4194304" crc="9be22e13" sha1="a00b0c69b6ed086f3f61d4f767df6c4ddea45052"/>
+		<rom type="vrom10" name="mpr-20675.34" size="4194304" crc="6a7c3862" sha1="f77145c2a5e373f567783cf5db70e25b71e77bf5"/>
+		<rom type="vrom11" name="mpr-20676.35" size="4194304" crc="dd299648" sha1="c222c10cb23753ac3d6d1c779b2d026a64c61bc4"/>
+		<rom type="vrom12" name="mpr-20677.36" size="4194304" crc="3fc5f330" sha1="778c1932b093a4de96c76ea704463b7c67cdcb33"/>
+		<rom type="vrom13" name="mpr-20678.37" size="4194304" crc="62f794a1" sha1="fc7adafb49056b23b6cc483978ffe4fd3635977d"/>
+		<rom type="vrom14" name="mpr-20679.38" size="4194304" crc="35a37c53" sha1="cd727a8914c3c01e302378048e3998b4cd849c4a"/>
+		<rom type="vrom15" name="mpr-20680.39" size="4194304" crc="81fec46e" sha1="43b3fbb544d920a87f77437860e32a628ae2865b"/>
+		<rom type="vrom16" name="mpr-20681.40" size="4194304" crc="d517873b" sha1="8e50dd149716ae6b0b8d7ac99cd425a17b3c0a46"/>
+		<rom type="vrom17" name="mpr-20682.41" size="4194304" crc="5b43250c" sha1="fccb40cd03c096360ca3c565e8621d4110b273ab"/>
+		<rom type="sprog" name="epr-20687.21" size="524288" crc="fa084de5" sha1="8a760b76bc12d60d4727f93106830f19179c9046"/>
+		<rom type="srom0" name="mpr-20663.22" size="4194304" crc="977eb6a4" sha1="9dbba51630cbef2351d79b82ab6ae3af4aed99f0"/>
+		<rom type="srom1" name="mpr-20665.24" size="4194304" crc="0efc0ca8" sha1="1414becad21eb7d03d816a8cba47506f941b3c29"/>
+		<rom type="srom2" name="mpr-20664.23" size="4194304" crc="89220782" sha1="18a3585af960a76eb08f187223e9b69ad16809a1"/>
+		<rom type="srom3" name="mpr-20666.25" size="4194304" crc="3ecb2606" sha1="a38d1f61933c8873deaff0a913c657b768f9783d"/>
+	</game>
+	<game name="fvipers2">
+		<description>Fighting Vipers 2</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		
+		<patch size="32" address="a2e8" data="60000000"/>		<!-- Wait for decrementer 0 -->
+		
+		<rom type="prog0" name="epr-20596a.17" size="2097152" crc="969ab801" sha1="a7a2aa71204d1c38a6a8c0605331fd859cb224f1"/>
+		<rom type="prog1" name="epr-20597a.18" size="2097152" crc="6fcee322" sha1="d65303f2551902ac5446a35656241628d67f4a63"/>
+		<rom type="prog2" name="epr-20598a.19" size="2097152" crc="87bd070f" sha1="270840e828a59f74d41a852d26f0c44e74775100"/>
+		<rom type="prog3" name="epr-20599a.20" size="2097152" crc="9df02ab9" sha1="772185e0cd8b481ac62fee0dd472a155126c1fac"/>
+		<rom type="crom00" name="mpr-20560.1" size="4194304" crc="b0f6584d" sha1="e776a47fae42e43189840418945d33cf23a1f5fe"/>
+		<rom type="crom01" name="mpr-20561.2" size="4194304" crc="38a0f112" sha1="6ad9ee6a9f08ef379acce2360b3e861f574101f0"/>
+		<rom type="crom02" name="mpr-20562.3" size="4194304" crc="96e4942e" sha1="2567671fe9d7e207634464d08e5789f4521ffed2"/>
+		<rom type="crom03" name="mpr-20563.4" size="4194304" crc="999848ac" sha1="55b37ea0cfa7989871f88d89d9a13df5b1ec4e92"/>
+		<rom type="crom10" name="mpr-20564.5" size="4194304" crc="be69fca0" sha1="8a0c4449b5742235f8e5eaf6d168e7512ed96fa6"/>
+		<rom type="crom11" name="mpr-20565.6" size="4194304" crc="d6bbe638" sha1="725f53b087c65d09e28ad3cec8634d5e7e63158a"/>
+		<rom type="crom12" name="mpr-20566.7" size="4194304" crc="2901883b" sha1="f086587578e4f4931da8a18ff53adf8b3d665a09"/>
+		<rom type="crom13" name="mpr-20567.8" size="4194304" crc="80f4eba7" sha1="ead30d57e3ca39dcd4195eeb2b4c6ee71c968769"/>
+		<rom type="crom20" name="mpr-20568.9" size="4194304" crc="ff23cf1c" sha1="54b8a38c8deda1ddd0e26aa47504bfb0e2ed4b79"/>
+		<rom type="crom21" name="mpr-20569.10" size="4194304" crc="136c014f" sha1="c11b9b93ec6189ca745e6de9697bb274f07c6b1c"/>
+		<rom type="crom22" name="mpr-20570.11" size="4194304" crc="2c0d91fc" sha1="5ab896272da3650dbc482629ef7bdaccfa8eba54"/>
+		<rom type="crom23" name="mpr-20571.12" size="4194304" crc="40b459af" sha1="f2bca8783a787df45d4142436245d343a1a13fa7"/>
+		<rom type="crom30" name="mpr-20572.13" size="4194304" crc="d4a41a0b" sha1="2ceb45e5ff22e2539d52a960713606742e11ed18"/>
+		<rom type="crom31" name="mpr-20573.14" size="4194304" crc="e0dee793" sha1="be80a5ca9d3cd910b15a4372883e047c2cc6b267"/>
+		<rom type="crom32" name="mpr-20574.15" size="4194304" crc="68567771" sha1="6183f588092d079c10e002adf641520183148143"/>
+		<rom type="crom33" name="mpr-20575.16" size="4194304" crc="ebc99d8a" sha1="66bd76738d76f42e32d3a27db4a8586dbb694f36"/>
+		<rom type="vrom00" name="mpr-20580.26" size="4194304" crc="6d42775e" sha1="9cd77ee6a317dcac67466920f59ac5cac98f67e2"/>
+		<rom type="vrom01" name="mpr-20581.27" size="4194304" crc="ac9eec04" sha1="0d4af895bc7cc100f9618c52e989aadbc0aa6d6e"/>
+		<rom type="vrom02" name="mpr-20582.28" size="4194304" crc="b202f7bd" sha1="6600f4bf49795c2821a2119f1251348782bcbdb2"/>
+		<rom type="vrom03" name="mpr-20583.29" size="4194304" crc="0d6d508a" sha1="bf7e419b097b0c90ee278766a3ee527beb860e71"/>
+		<rom type="vrom04" name="mpr-20584.30" size="4194304" crc="eccf4de6" sha1="b5508aab6fd28f8b55aae495920382259b4c75e5"/>
+		<rom type="vrom05" name="mpr-20585.31" size="4194304" crc="b383f4e5" sha1="4a0d02de7fc41c66862917c35b0c2026ad06dfd0"/>
+		<rom type="vrom06" name="mpr-20586.32" size="4194304" crc="e7cd5dfb" sha1="b33698792b3a1190712ad1c8c337f1f7fe67a1cb"/>
+		<rom type="vrom07" name="mpr-20587.33" size="4194304" crc="e2b2abe1" sha1="32a6253948b852eb647a28438e8928684fc57b72"/>
+		<rom type="vrom10" name="mpr-20588.34" size="4194304" crc="84f4162d" sha1="efb7c632399616052e39f21dd399eba78563d83a"/>
+		<rom type="vrom11" name="mpr-20589.35" size="4194304" crc="4e653d02" sha1="120161ed82d882daa90b5637aa84714de7b26c95"/>
+		<rom type="vrom12" name="mpr-20590.36" size="4194304" crc="527049be" sha1="541bba0101baacfae3de7d998a5f29da61b2b956"/>
+		<rom type="vrom13" name="mpr-20591.37" size="4194304" crc="3be20243" sha1="83797b50f368843462dc46401940eda1a5c2acbd"/>
+		<rom type="vrom14" name="mpr-20592.38" size="4194304" crc="d7985b28" sha1="a7a15757802d88e8ded363bad4d1d673bfc53a76"/>
+		<rom type="vrom15" name="mpr-20593.39" size="4194304" crc="e670c4d3" sha1="bc180de98757972b322f4f0d461a8c8d8094ac05"/>
+		<rom type="vrom16" name="mpr-20594.40" size="4194304" crc="35578240" sha1="7902f41d376dd3449a17fb4d907e0bd84d70272b"/>
+		<rom type="vrom17" name="mpr-20595.41" size="4194304" crc="1d4a2cad" sha1="0ee9eef0bb969e715a98ca1c212a02d413f36145"/>
+		<rom type="sprog" name="epr-20600a.21" size="524288" crc="f0e7db7e" sha1="980c1c6d3e8534c414d8b8016531e90f77e00f90"/>
+		<rom type="srom0" name="mpr-20576" size="4194304" crc="1eeb540b" sha1="f8de2ff302757aad38b61e2093e3783857d5d0fb"/>
+		<rom type="srom1" name="mpr-20577" size="4194304" crc="3b236187" sha1="0ba1513e0652f6686b306a4f600a565570b1ebcc"/>
+		<rom type="srom2" name="mpr-20578" size="4194304" crc="d222f2d4" sha1="f6128f8267e91242d7fc3d85beb2cd35124dd018"/>
+		<rom type="srom3" name="mpr-20579" size="4194304" crc="08788436" sha1="6c9af2cf65e803882d6f4c0d57eb9e95cdeb5818"/>
+	</game>
+	<game name="vs298">
+		<description>Virtua Striker 2 '98 (Step 2.0)</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.0</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="603868" data="60000000"/>
+		<patch size="32" address="603888" data="60000000"/>
+		<patch size="32" address="60277c" data="60000000"/>
+		<patch size="32" address="6152b8" data="60000000"/>
+		<patch size="32" address="609220" data="4e800020"/>
+		<patch size="32" address="61511c" data="48000034"/>
+		
+		<rom type="prog0" name="epr-20917.17" size="1048576" crc="c3bbb270" sha1="16b2342031ff72408f2290e775df5c8aa344c2e4"/>
+		<rom type="prog1" name="epr-20918.18" size="1048576" crc="0e9cdc5b" sha1="356816d0380c791b9d812ce17fa95123d15bb5e9"/>
+		<rom type="prog2" name="epr-20919.19" size="1048576" crc="7a0713d2" sha1="595f962ae852e48fb24aa08d0b8603692acfb1b9"/>
+		<rom type="prog3" name="epr-20920.20" size="1048576" crc="428d05fc" sha1="451e78c7b381e7d84dbac2a3d68ebbd6f1490bad"/>
+		<rom type="crom00" name="mpr-20891.1" size="4194304" crc="9ecb0b39" sha1="97b2ba2a863b7559923efff315aab04f7dca33b0"/>
+		<rom type="crom01" name="mpr-20892.2" size="4194304" crc="8e5d3fe7" sha1="5fe7ad8577ce46fdd2ea741eb2a98028eee61a82"/>
+		<rom type="crom02" name="mpr-20893.3" size="4194304" crc="5c83dcaa" sha1="2d4794bc6c3bfd4913ee045692b6aec5680825e0"/>
+		<rom type="crom03" name="mpr-20894.4" size="4194304" crc="09c065cc" sha1="9a47c6fd45630549066f58b6872ad885908c6e38"/>
+		<rom type="crom10" name="mpr-19773.5" size="4194304" crc="4e381ae7" sha1="8ada8de80e019d521d8a3dbdc832745478c84a3d"/>
+		<rom type="crom11" name="mpr-19774.6" size="4194304" crc="1d61d287" sha1="f0ab5f687570fa3e33a87da9130859f804c8fc01"/>
+		<rom type="crom12" name="mpr-19775.7" size="4194304" crc="a6b32bd9" sha1="5e2e1e779ff11620a3cf2a8756f2ea08e46d0839"/>
+		<rom type="crom13" name="mpr-19776.8" size="4194304" crc="5b31c7c1" sha1="7821c5af52a9551be5358aae7df8cfddd58f0fb6"/>
+		<rom type="crom20" name="mpr-20895.9" size="4194304" crc="9b51cbf5" sha1="670cfee991b997d4f7c3d51c48dad1ee032f93ef"/>
+		<rom type="crom21" name="mpr-20896.10" size="4194304" crc="bf1cbd5e" sha1="a677247d7c94f8d36ffece7824026047db1188e1"/>
+		<rom type="crom22" name="mpr-20897.11" size="4194304" crc="c5cf067a" sha1="ee9503bee3af238434590f439c87219fe45c91b9"/>
+		<rom type="crom23" name="mpr-20898.12" size="4194304" crc="94040d37" sha1="4a35a0e1cdfdf18a8b01ea11ae88815bf8e92ff3"/>
+		<rom type="crom30" name="mpr-20899.13" size="4194304" crc="65422425" sha1="ad4aba5996c2851f14741c5d0f3d7b65e7e765c5"/>
+		<rom type="crom31" name="mpr-20900.14" size="4194304" crc="7a38b571" sha1="664be2a614e3ce2cc75fdfb9baff55b6e9d77998"/>
+		<rom type="crom32" name="mpr-20901.15" size="4194304" crc="3492ddc8" sha1="2a36b91ca58b7cc1c8f7a337d2e40b671780ddeb"/>
+		<rom type="crom33" name="mpr-20902.16" size="4194304" crc="f4d3ff3a" sha1="da3ceba113bca0ea7bd8f67d39bdd7d0cbe5ff7f"/>
+		<rom type="vrom00" name="mpr-19787.26" size="2097152" crc="856cc4ad" sha1="a8856ee407c10b021f00f5fd2180dfae4cad2dad"/>
+		<rom type="vrom01" name="mpr-19788.27" size="2097152" crc="72ef970a" sha1="ee4af92444e7da61094b5eb5b8469b78aeeb8a32"/>
+		<rom type="vrom02" name="mpr-19789.28" size="2097152" crc="076add9a" sha1="117156fd7b802807ee2908dc8a1edb1cd79f1730"/>
+		<rom type="vrom03" name="mpr-19790.29" size="2097152" crc="74ce238c" sha1="f6662793d1f2f3c36d7548b912cd40b2ce58753e"/>
+		<rom type="vrom04" name="mpr-19791.30" size="2097152" crc="75a98f96" sha1="9c4cdc5a782cac957fc43952e8f3e35d54f23d1c"/>
+		<rom type="vrom05" name="mpr-19792.31" size="2097152" crc="85c81633" sha1="e4311ca92e77502626b312d38a5069ceed9e679f"/>
+		<rom type="vrom06" name="mpr-19793.32" size="2097152" crc="7f288cc4" sha1="71e42ac564c85402b35777e28fff2dce161cbf46"/>
+		<rom type="vrom07" name="mpr-19794.33" size="2097152" crc="e0c1c370" sha1="8efc2940857109bbe74fb7ce1e6fb11d601630f2"/>
+		<rom type="vrom10" name="mpr-19795.34" size="2097152" crc="90989b20" sha1="bf96f5770ffaae3b625a906461b8ea755baf9756"/>
+		<rom type="vrom11" name="mpr-19796.35" size="2097152" crc="5d1aab8d" sha1="e004c30b9bc8fcad23459e162e9db0c1afd0d5b1"/>
+		<rom type="vrom12" name="mpr-19797.36" size="2097152" crc="f5edc891" sha1="e8a23be9a81568892f95e7c66c28ea8d7bd0f508"/>
+		<rom type="vrom13" name="mpr-19798.37" size="2097152" crc="ae2da90f" sha1="8243d1f81faa57d5ff5e1f64bcd33cff59219b69"/>
+		<rom type="vrom14" name="mpr-19799.38" size="2097152" crc="92b18ad7" sha1="7be46d7ae2233337d866938ac803589156bfde94"/>
+		<rom type="vrom15" name="mpr-19800.39" size="2097152" crc="4a57b16c" sha1="341952460b2f7718e63d5f43a86f507de52bf421"/>
+		<rom type="vrom16" name="mpr-19801.40" size="2097152" crc="beb79a00" sha1="63385ff70bf9ae223e6acfa1b6cb2d641afa2790"/>
+		<rom type="vrom17" name="mpr-19802.41" size="2097152" crc="f2c3a7b7" sha1="d72fafe75baa3542ee27fed05230cd5da99aa459"/>
+		<rom type="sprog" name="epr-20921.21" size="524288" crc="30f032a7" sha1="d29c9631bd50fabe3d86343f44c37ee535db14a0"/>
+		<rom type="srom0" name="mpr-20903.22" size="4194304" crc="e343e131" sha1="cb144516e8c6f1e68bcb774a26cdc494383d3e1b"/>
+		<rom type="srom1" name="mpr-20904.24" size="4194304" crc="21a91b84" sha1="cd2d7231b8652ff38376b672c47127ce054d1f32"/>
+	</game>
+	<game name="vs2v991">
+		<description>Virtua Striker 2 '99.1</description>
+		<year>1999</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="603868" data="60000000"/>
+		<patch size="32" address="603888" data="60000000"/>
+		<patch size="32" address="60277c" data="60000000"/>
+		<patch size="32" address="615458" data="60000000"/>
+		<patch size="32" address="6152bc" data="60000000"/>
+		
+		<rom type="prog0" name="epr-21535b.17" size="1048576" crc="76c5fa8e" sha1="862438198cb7fdd20beeba53e707a7c59e618ad9"/>
+		<rom type="prog1" name="epr-21536b.18" size="1048576" crc="1f2bd190" sha1="19843e6c5626de03eba3cba79c03ce9f2471c183"/>
+		<rom type="prog2" name="epr-21537b.19" size="1048576" crc="a8b3fa5c" sha1="884042590da9eef0fc2557f715c5d6811edb4ce1"/>
+		<rom type="prog3" name="epr-21538b.20" size="1048576" crc="b3f0ce2a" sha1="940b76afe3e66bcd026e74f58a08b13c3925f449"/>
+		<rom type="crom00" name="mpr-21497.1" size="4194304" crc="8ea759a1" sha1="0d444fa360d93f48e5d6607362a231f97a7685d4"/>
+		<rom type="crom01" name="mpr-21498.2" size="4194304" crc="4f53d6e0" sha1="c8cd14f46d4ac7afdf55035a20d2e9a5ce2b6cde"/>
+		<rom type="crom02" name="mpr-21499.3" size="4194304" crc="2cc4c1f1" sha1="fd0fd747368e798095119a21d82f14778aeaa45e"/>
+		<rom type="crom03" name="mpr-21500.4" size="4194304" crc="8c43964b" sha1="cf3a6e9402f9ba532fca73f6838478558fb9a3ba"/>
+		<rom type="crom10" name="mpr-21501.5" size="4194304" crc="08bc2185" sha1="6c4c977f68a73d605bdacdc0d76ca89bc7030c04"/>
+		<rom type="crom11" name="mpr-21502.6" size="4194304" crc="921486be" sha1="bb1261272992cf86e83e0c788788765f05b43bbf"/>
+		<rom type="crom12" name="mpr-21503.7" size="4194304" crc="c9e1de6b" sha1="d200c3da2c9bc6d4ed60dfa60a77056d25b19037"/>
+		<rom type="crom13" name="mpr-21504.8" size="4194304" crc="7aae557e" sha1="2128d7dfa52e639858d37eb6100875b9ce3d056f"/>
+		<rom type="crom20" name="mpr-21505.9" size="4194304" crc="e169ff72" sha1="9d407b424403261a224ea15b9476eba16406c4a4"/>
+		<rom type="crom21" name="mpr-21506.10" size="4194304" crc="2c1477c7" sha1="81ab7d9cef5127e1f0e16f9a94a9ea2acc4530a4"/>
+		<rom type="crom22" name="mpr-21507.11" size="4194304" crc="1d8eb68b" sha1="634693f066059c738526913498bb18be2f7cd086"/>
+		<rom type="crom23" name="mpr-21508.12" size="4194304" crc="2e8f798e" sha1="8298df90101dd5850db8fccb7661ca2bc6806b3f"/>
+		<rom type="crom30" name="mpr-21509.13" size="4194304" crc="9a65e6b4" sha1="e96c4bc2782b73490dffd5dcb11b9020077b11a3"/>
+		<rom type="crom31" name="mpr-21510.14" size="4194304" crc="f47489a4" sha1="8412505002628d7ae3ab766a13e2068a018f3bf3"/>
+		<rom type="crom32" name="mpr-21511.15" size="4194304" crc="5ad9660c" sha1="da387449292322a89af1cb6746d0fb8cea17575f"/>
+		<rom type="crom33" name="mpr-21512.16" size="4194304" crc="7cb2b05c" sha1="16edc6642c74d9cef883559ca6ec562d985a43d6"/>
+		<rom type="vrom00" name="mpr-21515.26" size="2097152" crc="8ce9910b" sha1="7a0d0696e4456d9ebf131041917c5214b7d2e3ec"/>
+		<rom type="vrom01" name="mpr-21516.27" size="2097152" crc="8971a753" sha1="00dfdb83a65f4fde337618c346157bb89f398531"/>
+		<rom type="vrom02" name="mpr-21517.28" size="2097152" crc="55a4533b" sha1="b5701bbf7780bb9fc386cef4c1835606ab792f91"/>
+		<rom type="vrom03" name="mpr-21518.29" size="2097152" crc="4134026c" sha1="2dfe1cbb354affe465c31a18c3ffb83a9bf555c9"/>
+		<rom type="vrom04" name="mpr-21519.30" size="2097152" crc="ef6757de" sha1="d41bbfcc551a4589bac577e311c67f2cba0a49aa"/>
+		<rom type="vrom05" name="mpr-21520.31" size="2097152" crc="c53be8cc" sha1="b12dc0327a00b7e056254d2f11f96dbf396a0c91"/>
+		<rom type="vrom06" name="mpr-21521.32" size="2097152" crc="abb501dc" sha1="88cb40b0f795e0de1ff56e1f31bf834fad0c7885"/>
+		<rom type="vrom07" name="mpr-21522.33" size="2097152" crc="e3b79973" sha1="4b6ca16a23bb3e195ca60bee81b2d069f371ff70"/>
+		<rom type="vrom10" name="mpr-21523.34" size="2097152" crc="fe4d1eac" sha1="d222743d25ca92904ec212c66d03b3e3ff0ddbd9"/>
+		<rom type="vrom11" name="mpr-21524.35" size="2097152" crc="8633b6e9" sha1="65ec24eb29613831dd28e5338cac14696b0d975d"/>
+		<rom type="vrom12" name="mpr-21525.36" size="2097152" crc="3c490167" sha1="6fd46049723e0790b2231301cfa23071cd6ff1f6"/>
+		<rom type="vrom13" name="mpr-21526.37" size="2097152" crc="5fe5f9b0" sha1="c708918cfc60f5fd9f6ec49ec1cd3167f2876e30"/>
+		<rom type="vrom14" name="mpr-21527.38" size="2097152" crc="10d0fe7e" sha1="63693b0de43e2eb6efbb3d2dfbe0e2f5bc6810dc"/>
+		<rom type="vrom15" name="mpr-21528.39" size="2097152" crc="4e346a6c" sha1="ae34038d5bf6f63ec5ad2e8dd8e06db66147c40e"/>
+		<rom type="vrom16" name="mpr-21529.40" size="2097152" crc="9a731a00" sha1="eca98b142acc02fb28387675e1cb1bc7e4e59b86"/>
+		<rom type="vrom17" name="mpr-21530.41" size="2097152" crc="78400d5e" sha1="9b4546848dbe213f33b02e8ea42743e60a0f763f"/>
+		<rom type="sprog" name="epr-21539.21" size="524288" crc="a1d3e00e" sha1="e03bb31967929a12de9ae21923914e0e3bd96aaa"/>
+		<rom type="srom0" name="mpr-21513.22" size="4194304" crc="cca1cc00" sha1="ba1fa3b8ef3bff7e116901a0a4bd80d2ae4018bf"/>
+		<rom type="srom1" name="mpr-21514.24" size="4194304" crc="6cedd292" sha1="c1f44715697a8bac9d39926bcd6558ec9a9b2319"/>
+	</game>
+	<game name="vs299" parent="vs2v991">
+		<description>Virtua Striker 2 '99</description>
+		<year>1999</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="button05" mapping="p1_joystick_up"/>
+		<input type="button06" mapping="p1_joystick_down"/>
+		<input type="button07" mapping="p1_joystick_right"/>
+		<input type="button08" mapping="p1_joystick_left"/>
+		
+		<patch size="32" address="603868" data="60000000"/>
+		<patch size="32" address="603888" data="60000000"/>
+		<patch size="32" address="60277c" data="60000000"/>
+		<patch size="32" address="615440" data="60000000"/>
+		<patch size="32" address="6152a4" data="60000000"/>
+		
+		<rom type="prog0" name="epr-21535.17" size="1048576" crc="976a00bf" sha1="d4be52ff59faa877b169f96ac509a2196cefb908"/>
+		<rom type="prog1" name="epr-21536.18" size="1048576" crc="9af2b0d5" sha1="6ec296014228782f372611fe774014d252956b63"/>
+		<rom type="prog2" name="epr-21537.19" size="1048576" crc="fb37dc16" sha1="205e7d6dae21ba2cd4c8e37c2acab680c3f5a9b4"/>
+		<rom type="prog3" name="epr-21538.20" size="1048576" crc="02df6ac8" sha1="2259b528264dd30fa38ea06934e2d38b44b32981"/>
+		<rom type="crom00" name="mpr-21497.1" size="4194304" crc="8ea759a1" sha1="0d444fa360d93f48e5d6607362a231f97a7685d4"/>
+		<rom type="crom01" name="mpr-21498.2" size="4194304" crc="4f53d6e0" sha1="c8cd14f46d4ac7afdf55035a20d2e9a5ce2b6cde"/>
+		<rom type="crom02" name="mpr-21499.3" size="4194304" crc="2cc4c1f1" sha1="fd0fd747368e798095119a21d82f14778aeaa45e"/>
+		<rom type="crom03" name="mpr-21500.4" size="4194304" crc="8c43964b" sha1="cf3a6e9402f9ba532fca73f6838478558fb9a3ba"/>
+		<rom type="crom10" name="mpr-21501.5" size="4194304" crc="08bc2185" sha1="6c4c977f68a73d605bdacdc0d76ca89bc7030c04"/>
+		<rom type="crom11" name="mpr-21502.6" size="4194304" crc="921486be" sha1="bb1261272992cf86e83e0c788788765f05b43bbf"/>
+		<rom type="crom12" name="mpr-21503.7" size="4194304" crc="c9e1de6b" sha1="d200c3da2c9bc6d4ed60dfa60a77056d25b19037"/>
+		<rom type="crom13" name="mpr-21504.8" size="4194304" crc="7aae557e" sha1="2128d7dfa52e639858d37eb6100875b9ce3d056f"/>
+		<rom type="crom20" name="mpr-21505.9" size="4194304" crc="e169ff72" sha1="9d407b424403261a224ea15b9476eba16406c4a4"/>
+		<rom type="crom21" name="mpr-21506.10" size="4194304" crc="2c1477c7" sha1="81ab7d9cef5127e1f0e16f9a94a9ea2acc4530a4"/>
+		<rom type="crom22" name="mpr-21507.11" size="4194304" crc="1d8eb68b" sha1="634693f066059c738526913498bb18be2f7cd086"/>
+		<rom type="crom23" name="mpr-21508.12" size="4194304" crc="2e8f798e" sha1="8298df90101dd5850db8fccb7661ca2bc6806b3f"/>
+		<rom type="crom30" name="mpr-21509.13" size="4194304" crc="9a65e6b4" sha1="e96c4bc2782b73490dffd5dcb11b9020077b11a3"/>
+		<rom type="crom31" name="mpr-21510.14" size="4194304" crc="f47489a4" sha1="8412505002628d7ae3ab766a13e2068a018f3bf3"/>
+		<rom type="crom32" name="mpr-21511.15" size="4194304" crc="5ad9660c" sha1="da387449292322a89af1cb6746d0fb8cea17575f"/>
+		<rom type="crom33" name="mpr-21512.16" size="4194304" crc="7cb2b05c" sha1="16edc6642c74d9cef883559ca6ec562d985a43d6"/>
+		<rom type="vrom00" name="mpr-21515.26" size="2097152" crc="8ce9910b" sha1="7a0d0696e4456d9ebf131041917c5214b7d2e3ec"/>
+		<rom type="vrom01" name="mpr-21516.27" size="2097152" crc="8971a753" sha1="00dfdb83a65f4fde337618c346157bb89f398531"/>
+		<rom type="vrom02" name="mpr-21517.28" size="2097152" crc="55a4533b" sha1="b5701bbf7780bb9fc386cef4c1835606ab792f91"/>
+		<rom type="vrom03" name="mpr-21518.29" size="2097152" crc="4134026c" sha1="2dfe1cbb354affe465c31a18c3ffb83a9bf555c9"/>
+		<rom type="vrom04" name="mpr-21519.30" size="2097152" crc="ef6757de" sha1="d41bbfcc551a4589bac577e311c67f2cba0a49aa"/>
+		<rom type="vrom05" name="mpr-21520.31" size="2097152" crc="c53be8cc" sha1="b12dc0327a00b7e056254d2f11f96dbf396a0c91"/>
+		<rom type="vrom06" name="mpr-21521.32" size="2097152" crc="abb501dc" sha1="88cb40b0f795e0de1ff56e1f31bf834fad0c7885"/>
+		<rom type="vrom07" name="mpr-21522.33" size="2097152" crc="e3b79973" sha1="4b6ca16a23bb3e195ca60bee81b2d069f371ff70"/>
+		<rom type="vrom10" name="mpr-21523.34" size="2097152" crc="fe4d1eac" sha1="d222743d25ca92904ec212c66d03b3e3ff0ddbd9"/>
+		<rom type="vrom11" name="mpr-21524.35" size="2097152" crc="8633b6e9" sha1="65ec24eb29613831dd28e5338cac14696b0d975d"/>
+		<rom type="vrom12" name="mpr-21525.36" size="2097152" crc="3c490167" sha1="6fd46049723e0790b2231301cfa23071cd6ff1f6"/>
+		<rom type="vrom13" name="mpr-21526.37" size="2097152" crc="5fe5f9b0" sha1="c708918cfc60f5fd9f6ec49ec1cd3167f2876e30"/>
+		<rom type="vrom14" name="mpr-21527.38" size="2097152" crc="10d0fe7e" sha1="63693b0de43e2eb6efbb3d2dfbe0e2f5bc6810dc"/>
+		<rom type="vrom15" name="mpr-21528.39" size="2097152" crc="4e346a6c" sha1="ae34038d5bf6f63ec5ad2e8dd8e06db66147c40e"/>
+		<rom type="vrom16" name="mpr-21529.40" size="2097152" crc="9a731a00" sha1="eca98b142acc02fb28387675e1cb1bc7e4e59b86"/>
+		<rom type="vrom17" name="mpr-21530.41" size="2097152" crc="78400d5e" sha1="9b4546848dbe213f33b02e8ea42743e60a0f763f"/>
+		<rom type="sprog" name="epr-21539.21" size="524288" crc="a1d3e00e" sha1="e03bb31967929a12de9ae21923914e0e3bd96aaa"/>
+		<rom type="srom0" name="mpr-21513.22" size="4194304" crc="cca1cc00" sha1="ba1fa3b8ef3bff7e116901a0a4bd80d2ae4018bf"/>
+		<rom type="srom1" name="mpr-21514.24" size="4194304" crc="6cedd292" sha1="c1f44715697a8bac9d39926bcd6558ec9a9b2319"/>
+	</game>
+	<game name="daytona2">
+		<description>Daytona USA 2</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		<cromsize>64M</cromsize>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="6063c4" data="60000000"/>
+		<patch size="32" address="616434" data="60000000"/>
+		<patch size="32" address="69f4e4" data="60000000"/>
+		
+		<rom type="prog0" name="epr-20861a.17" size="2097152" crc="89ba8e78" sha1="7d27124b976a63fdadd16551a664b2cc8cc08e79"/>
+		<rom type="prog1" name="epr-20862a.18" size="2097152" crc="e1b2ca61" sha1="a5aa3416554b9d62469af3fefa9c2bacd69b4707"/>
+		<rom type="prog2" name="epr-20863a.19" size="2097152" crc="1deb4686" sha1="dd6fcc95afa36148089b766c24c53a2af4d392d4"/>
+		<rom type="prog3" name="epr-20864a.20" size="2097152" crc="5250f3a8" sha1="d75b86cb320b854fcf53e1b76331f87806b9ae84"/>
+		<rom type="crom00" name="mpr-20845.1" size="4194304" crc="ab70d79e" sha1="938c492f1ea7208d27dd0ea44c4d826625e652d8"/>
+		<rom type="crom01" name="mpr-20846.2" size="4194304" crc="aabf4392" sha1="22d10c3e7896ff6e5cbbfd38e85ffa3daec895c0"/>
+		<rom type="crom02" name="mpr-20847.3" size="4194304" crc="96f3e97a" sha1="4f6a4dd7d1eecbad65dc10c2f47db4bb949b0dfc"/>
+		<rom type="crom03" name="mpr-20848.4" size="4194304" crc="7a22a63b" sha1="00c0b7c179f02936847d9e3fc2507d822efc7202"/>
+		<rom type="crom10" name="mpr-20849.5" size="4194304" crc="3c3cc882" sha1="2e34b999155e3bac7978428abaf77be9fedcc306"/>
+		<rom type="crom11" name="mpr-20850.6" size="4194304" crc="aa71a7a6" sha1="27f160c6ecdc4dc99198879976ad1ddc46dd28ea"/>
+		<rom type="crom12" name="mpr-20851.7" size="4194304" crc="ba128235" sha1="e307addb5c172c248c0472574148d5b54f1e0b78"/>
+		<rom type="crom13" name="mpr-20852.8" size="4194304" crc="e1000d4d" sha1="5a09106616a7c116ee770025d1eedff8a0cda5ca"/>
+		<rom type="crom20" name="mpr-20853.9" size="4194304" crc="3245ee68" sha1="f957df447bab0559076bc8a14eeaa080040acb85"/>
+		<rom type="crom21" name="mpr-20854.10" size="4194304" crc="68d94cdf" sha1="298236225ab5d0265ec615e71d084c79932d0438"/>
+		<rom type="crom22" name="mpr-20855.11" size="4194304" crc="f1ff0794" sha1="22782a01de0b699e7663aeb659169581830e69fd"/>
+		<rom type="crom23" name="mpr-20856.12" size="4194304" crc="0367a242" sha1="e3bb0ad7abddd8e81e4052dae169dfa245acbfa8"/>
+		<rom type="crom30" name="mpr-20857.13" size="4194304" crc="1eab9c62" sha1="7c5cbab2761609cdf6ab20c2e198135fa9ae1067"/>
+		<rom type="crom31" name="mpr-20858.14" size="4194304" crc="407fbad5" sha1="594d45311d1daf00773b466c64ece4975df4dd5a"/>
+		<rom type="crom32" name="mpr-20859.15" size="4194304" crc="e14f5c46" sha1="d80ccd2c5ea1f34280241aaa5c947397b0344820"/>
+		<rom type="crom33" name="mpr-20860.16" size="4194304" crc="e5ce2939" sha1="7e5626cfb68402de80a05e4c3b18bdfd8bb40f85"/>
+		<rom type="vrom00" name="mpr-20870.26" size="4194304" crc="7c9e573d" sha1="0c488dcca8946b846a179dd66ca09d9eabedc21c"/>
+		<rom type="vrom01" name="mpr-20871.27" size="4194304" crc="47a1b789" sha1="8f817fefcfe99c27b30bb3bd9276b0a0947e5992"/>
+		<rom type="vrom02" name="mpr-20872.28" size="4194304" crc="2f55b423" sha1="4fa5b00715163b8f68a01627eb04dadbcbb6e89a"/>
+		<rom type="vrom03" name="mpr-20873.29" size="4194304" crc="c9000e48" sha1="a64a13e3116e36309ed37ec8651ef8a38b27b71f"/>
+		<rom type="vrom04" name="mpr-20874.30" size="4194304" crc="26a9cca2" sha1="e3b68daaef95e004217c6f7cf3c6d256d083b994"/>
+		<rom type="vrom05" name="mpr-20875.31" size="4194304" crc="bfefd21e" sha1="8422b16569e029fead5cfca1ab31a04179a0f4b2"/>
+		<rom type="vrom06" name="mpr-20876.32" size="4194304" crc="fa701b87" sha1="4134da01818cd6776a3c3396ac4f9b9e815722f2"/>
+		<rom type="vrom07" name="mpr-20877.33" size="4194304" crc="2cd072f1" sha1="97881da77abc1aee309de64b53a0da3d22c4112c"/>
+		<rom type="vrom10" name="mpr-20878.34" size="4194304" crc="e6d5bc01" sha1="d8d2e202830693ac2f32304c484276193eb550a3"/>
+		<rom type="vrom11" name="mpr-20879.35" size="4194304" crc="f1d727ec" sha1="aecd2096bee590e8ccab9710845e8f0675bd06b0"/>
+		<rom type="vrom12" name="mpr-20880.36" size="4194304" crc="8b370602" sha1="2c461ae94e0bd0fea623724b82e08238f947e26b"/>
+		<rom type="vrom13" name="mpr-20881.37" size="4194304" crc="397322e7" sha1="9d1c24a063e3e00ca4ee02162dc0fc6de48de2d7"/>
+		<rom type="vrom14" name="mpr-20882.38" size="4194304" crc="9185be51" sha1="b9f5ce29d9dda45733a649aa049124990f536fd9"/>
+		<rom type="vrom15" name="mpr-20883.39" size="4194304" crc="d1e39e83" sha1="8d8ccd7f23004e43ede71f73069979a3834bc010"/>
+		<rom type="vrom16" name="mpr-20884.40" size="4194304" crc="63c4639a" sha1="d2b47f7bb8244e0a25c15d025d1bb295101f8875"/>
+		<rom type="vrom17" name="mpr-20885.41" size="4194304" crc="61c292ca" sha1="a2c7e81a8a8ded8d0fd33ffea74a8d2cc8f22520"/>
+		<rom type="sprog" name="epr-20865.21" size="131072" crc="b70c2699" sha1="9ec3f59eda18c03530a5ab7a54c09c1e14cb1c4d"/>
+		<rom type="srom0" name="mpr-20866.22" size="4194304" crc="91f40c1c" sha1="0c9bee8e9a8bb5ffb2699922204ec26b489eee84"/>
+		<rom type="srom1" name="mpr-20868.24" size="4194304" crc="fa0c7ec0" sha1="e3570318b67b9e9819830ad73529a627ac2f2821"/>
+		<rom type="srom2" name="mpr-20867.23" size="4194304" crc="a579c884" sha1="ffa626381b1b2c0b963f8f0bad508c052364e657"/>
+		<rom type="srom3" name="mpr-20869.25" size="4194304" crc="1f338832" sha1="77160ea4d336aa88725b868c0035a267e92030b3"/>
+		<rom type="dsbprog" name="epr-20886.ic2" size="131072" crc="65b05f98" sha1="b83a2a6e7ec3d2fcd34ce701ffa66d99f6feb86d"/>
+		<rom type="dsbrom0" name="mpr-20887.ic18" size="4194304" crc="a0757684" sha1="9222527d90b3f462846a4fff95af83011871c277"/>
+		<rom type="dsbrom1" name="mpr-20888.ic20" size="4194304" crc="b495fe65" sha1="1573ced683534bb279a6dd69f6460745b728eac0"/>
+		<rom type="dsbrom2" name="mpr-20889.ic22" size="4194304" crc="18eec79e" sha1="341982d89952ed85c921c627c294609bf83ec44b"/>
+		<rom type="dsbrom3" name="mpr-20890.ic24" size="4194304" crc="aac96fa2" sha1="bc68cd48eae50d3558d3c5a0302a3930639e3019"/>
+	</game>
+	<game name="dayto2pe">
+		<description>Daytona USA 2 Power Edition</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		<cromsize>64M</cromsize>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<patch size="32" address="606784" data="60000000"/>
+		<patch size="32" address="69a3fc" data="60000000"/>
+		<patch size="32" address="618b28" data="60000000"/>
+		<patch size="32" address="64ca34" data="60000000"/>
+		
+		<rom type="prog0" name="epr-21178.17" size="2097152" crc="230bf8ac" sha1="bc64c4f8a794ca59b5c488a34d1b5a2b67af8fec"/>
+		<rom type="prog1" name="epr-21179.18" size="2097152" crc="d5ffb4d6" sha1="e1160bfcc180667463815b64e1815be38b6ef49d"/>
+		<rom type="prog2" name="epr-21180.19" size="2097152" crc="6e7b98ed" sha1="67b0153dbc67c5df9231a968fd8a9714a1bb3f67"/>
+		<rom type="prog3" name="epr-21181.20" size="2097152" crc="bf0007ed" sha1="4e044313e7abbd4d68c1c78ad9464688d7614590"/>
+		<rom type="crom00" name="mpr-21182.1" size="4194304" crc="ba8e667f" sha1="649f273cc612b014d9b04d301da018d248a73839"/>
+		<rom type="crom01" name="mpr-21183.2" size="4194304" crc="b4b44805" sha1="8db3700207ec530ee3a83431fc891d7ab3d3bfec"/>
+		<rom type="crom02" name="mpr-21184.3" size="4194304" crc="25616403" sha1="6607734479806a8812bff4d6a697f6a024156142"/>
+		<rom type="crom03" name="mpr-21185.4" size="4194304" crc="b6d5d2a1" sha1="8e6548d65d926934c5ee3ee3669d1ce2a880bc82"/>
+		<rom type="crom10" name="mpr-21186.5" size="4194304" crc="a6128662" sha1="52514e8ad978688e812a2a7d0fb54817814f2729"/>
+		<rom type="crom11" name="mpr-21187.6" size="4194304" crc="3bd14ee6" sha1="55d403c38439d9d489ce94bc34017ea43df27e91"/>
+		<rom type="crom12" name="mpr-21188.7" size="4194304" crc="753fc2a5" sha1="1d4bd2b971fb0b7897109f078e260eaae437a78c"/>
+		<rom type="crom13" name="mpr-21189.8" size="4194304" crc="cb439c45" sha1="a6326ae9cbbaa7235d7c9e45fa4dbc7267b681c9"/>
+		<rom type="crom20" name="mpr-21190.9" size="4194304" crc="984d56eb" sha1="a04beeeadc8a11730b41ae66607777be3a7b1b5e"/>
+		<rom type="crom21" name="mpr-21191.10" size="4194304" crc="a2bdcfe0" sha1="c72896d0338a98efe83e70284c49b966d679e7ea"/>
+		<rom type="crom22" name="mpr-21192.11" size="4194304" crc="60cbb1fa" sha1="3b1d2da551a287efdc97e46ffeed56cf7e967bd5"/>
+		<rom type="crom23" name="mpr-21193.12" size="4194304" crc="4638fef4" sha1="0c880119c642c96b5f88eb024575f320d099d988"/>
+		<rom type="crom30" name="mpr-21194.13" size="4194304" crc="12c7a414" sha1="3069ce4e50a82e243fa0c794faeafd735625df5c"/>
+		<rom type="crom31" name="mpr-21195.14" size="4194304" crc="7f39761c" sha1="e861e3c622bdc44510bd0ca7e2ef1284e4550d2e"/>
+		<rom type="crom32" name="mpr-21196.15" size="4194304" crc="0ab46db5" sha1="8c7ab959c677e6b8f1d1bc79cd8e04299aab56aa"/>
+		<rom type="crom33" name="mpr-21197.16" size="4194304" crc="04015247" sha1="a8b3d1f9572367e1c84475035ae0c6bb7726f01d"/>
+		<rom type="vrom00" name="mpr-21198.26" size="4194304" crc="42ec9ed4" sha1="bdc73050a5e51032478df77a02f7cd4b4ed9d337"/>
+		<rom type="vrom01" name="mpr-21199.27" size="4194304" crc="fa28088c" sha1="851f4fc5baa596f78bed21b0fe0e756865c19a9b"/>
+		<rom type="vrom02" name="mpr-21200.28" size="4194304" crc="fbb5aa1d" sha1="04b25e8fb8783e785fd471ffcf8330ca9f2e3ae7"/>
+		<rom type="vrom03" name="mpr-21201.29" size="4194304" crc="e6b13469" sha1="4968ab49aba86d6adcfb6200a5a02a410bbbd98c"/>
+		<rom type="vrom04" name="mpr-21202.30" size="4194304" crc="e6b4c2be" sha1="d3209101793f44d4ece327f24cd3a8a52bfc8298"/>
+		<rom type="vrom05" name="mpr-21203.31" size="4194304" crc="32d08d33" sha1="dd9a3ac5a8306b861e32bbbfad2d4c5a7790c45d"/>
+		<rom type="vrom06" name="mpr-21204.32" size="4194304" crc="ef18fe0a" sha1="81c8c87537eef6266b5ab464ba84cd12594e64bd"/>
+		<rom type="vrom07" name="mpr-21205.33" size="4194304" crc="4687bea6" sha1="6633ad8ea96f8b3a89f49dbe52f92906be504ba1"/>
+		<rom type="vrom10" name="mpr-21206.34" size="4194304" crc="ec2d6884" sha1="8ec53005830902ebeb4f0ee36c5b2b73c2df5ebd"/>
+		<rom type="vrom11" name="mpr-21207.35" size="4194304" crc="eeaa510b" sha1="5f1b9e1d09f4866289ac4ad718cb90329a93353f"/>
+		<rom type="vrom12" name="mpr-21208.36" size="4194304" crc="b222fef0" sha1="88cf7ce17feef2da34a86217cced98a32051b22b"/>
+		<rom type="vrom13" name="mpr-21209.37" size="4194304" crc="170a28ce" sha1="ca0043d42e02f5913e4eb92686586704724a3e5e"/>
+		<rom type="vrom14" name="mpr-21210.38" size="4194304" crc="460cefe0" sha1="820f3780e89173134792c62cc43f7c629bd555dd"/>
+		<rom type="vrom15" name="mpr-21211.39" size="4194304" crc="c84759ce" sha1="9b2de7fa26684457a61a2eeb0a69bd28125dd118"/>
+		<rom type="vrom16" name="mpr-21212.40" size="4194304" crc="6f8a75e0" sha1="3b6cb238c29a6778be354882cd27b371ce96d332"/>
+		<rom type="vrom17" name="mpr-21213.41" size="4194304" crc="de75bec6" sha1="f0d6f143ad227b221bf7f7c3d1b2edaa28ad4813"/>
+		<rom type="sprog" name="epr-21325.21" size="131072" crc="004ad6ad" sha1="3cedc58aaf40539325870c99ecedf51f161f4f4c"/>
+		<rom type="srom0" name="mpr-21285.22" size="4194304" crc="7cdca6ac" sha1="fda23365d5c40f4f9e810def914cd70418e5662e"/>
+		<rom type="srom1" name="mpr-21287.24" size="4194304" crc="06b66f17" sha1="a7ce8f49d2db804429cedb5db53de8762b05845a"/>
+		<rom type="srom2" name="mpr-21286.23" size="4194304" crc="749dfef0" sha1="43032b465f426188a6d718f22a11c6d9a79f7577"/>
+		<rom type="srom3" name="mpr-21288.25" size="4194304" crc="14bee38e" sha1="68300bf663ec3f597c73e7a39ca7057cf51a7a47"/>
+		<rom type="dsbprog" name="epr-20886.ic2" size="131072" crc="65b05f98" sha1="b83a2a6e7ec3d2fcd34ce701ffa66d99f6feb86d"/>
+		<rom type="dsbrom0" name="mpr-20887.ic18" size="4194304" crc="a0757684" sha1="9222527d90b3f462846a4fff95af83011871c277"/>
+		<rom type="dsbrom1" name="mpr-20888.ic20" size="4194304" crc="b495fe65" sha1="1573ced683534bb279a6dd69f6460745b728eac0"/>
+		<rom type="dsbrom2" name="mpr-20889.ic22" size="4194304" crc="18eec79e" sha1="341982d89952ed85c921c627c294609bf83ec44b"/>
+		<rom type="dsbrom3" name="mpr-20890.ic24" size="4194304" crc="aac96fa2" sha1="bc68cd48eae50d3558d3c5a0302a3930639e3019"/>
+	</game>
+	<game name="dirtdvls">
+		<description>Dirt Devils</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<rom type="prog0" name="epr-21062a.17" size="2097152" crc="64b55254" sha1="0e5de3786edad77dde08652ac837dc9125e7851c"/>
+		<rom type="prog1" name="epr-21063a.18" size="2097152" crc="6ab7eb32" sha1="3a4226d4c786e7b64688af3b8883b4039b8c8407"/>
+		<rom type="prog2" name="epr-21064a.19" size="2097152" crc="2a01f9ad" sha1="d936d8eeecbcc502e35799d484c36f5da9457013"/>
+		<rom type="prog3" name="epr-21065a.20" size="2097152" crc="3223db1a" sha1="ad34d16475a571ffed48539ef98736357cb327b0"/>
+		<rom type="crom00" name="mpr-21023.1" size="4194304" crc="932a3724" sha1="146dfe897caa8a4385c527bc7c649e9dbd2ce0c0"/>
+		<rom type="crom01" name="mpr-21024.2" size="4194304" crc="ede859b0" sha1="cecd595a6ba60e248b7bf47778ba4da7658dcf93"/>
+		<rom type="crom02" name="mpr-21025.3" size="4194304" crc="6591c66e" sha1="feaae431692a3bab867b79d52bc3934f77c4022b"/>
+		<rom type="crom03" name="mpr-21026.4" size="4194304" crc="f4937e3f" sha1="21559ef991789ede4b4e7297e2a71f33f7cc7090"/>
+		<rom type="crom10" name="mpr-21027.5" size="4194304" crc="74e1496a" sha1="0988058a109216e8b97045dde9d1099688193a13"/>
+		<rom type="crom11" name="mpr-21028.6" size="4194304" crc="db11f50a" sha1="78bf2418bcea1ed30da9af936e9f95e9c76ce919"/>
+		<rom type="crom12" name="mpr-21029.7" size="4194304" crc="89867d8a" sha1="89ebd5bc5d98fbd63d4cad407033419a39b1d60a"/>
+		<rom type="crom13" name="mpr-21030.8" size="4194304" crc="f8e51bec" sha1="fe8a06ef21dd646e3ad6fa382e3f3d30db4cbd91"/>
+		<rom type="vrom00" name="mpr-21034.26" size="4194304" crc="acba5ca6" sha1="be213ca40d17f18e725349585f95d677e53c1bfc"/>
+		<rom type="vrom01" name="mpr-21035.27" size="4194304" crc="618b7d6a" sha1="0968b72c8d7fc4b2635062647da5d36a58e69b08"/>
+		<rom type="vrom02" name="mpr-21036.28" size="4194304" crc="0e665bb2" sha1="3b18ea93ed1d71873ff635358c3143e4f515bab9"/>
+		<rom type="vrom03" name="mpr-21037.29" size="4194304" crc="90b98493" sha1="3f98855caec5895c8651ed88e07f2dcec5a6c66a"/>
+		<rom type="vrom04" name="mpr-21038.30" size="4194304" crc="9b59d2c2" sha1="3f14cfc905a018e0aa2b2ad4918cd4ee2ef65c7b"/>
+		<rom type="vrom05" name="mpr-21039.31" size="4194304" crc="61407b07" sha1="d7676a03110ca694cc53c1d3a6c781d2f8cee98b"/>
+		<rom type="vrom06" name="mpr-21040.32" size="4194304" crc="b550c229" sha1="b13ea462914bb13388e11bed9a9b2e696a8eb759"/>
+		<rom type="vrom07" name="mpr-21041.33" size="4194304" crc="8f1ac988" sha1="11b628c85533a307298765641eb87c305bde64d1"/>
+		<rom type="vrom10" name="mpr-21042.34" size="4194304" crc="1dab621d" sha1="cf0e59be7b5a12146f5562e208009054074151cd"/>
+		<rom type="vrom11" name="mpr-21043.35" size="4194304" crc="707015c8" sha1="125ff08cc555a4c8d9863e7433fad7949230630d"/>
+		<rom type="vrom12" name="mpr-21044.36" size="4194304" crc="776f9580" sha1="0529532975d74da851a2fd1ce9810e218d751d5f"/>
+		<rom type="vrom13" name="mpr-21045.37" size="4194304" crc="a28ad02f" sha1="8734568153dbf304193491e746b19a423a547f0d"/>
+		<rom type="vrom14" name="mpr-21046.38" size="4194304" crc="05c995ae" sha1="d96391360692d30c456324dcd51511bf095a58cb"/>
+		<rom type="vrom15" name="mpr-21047.39" size="4194304" crc="06b7826f" sha1="cfdeb56964bd31196fde01b1f5cc294c8b49c215"/>
+		<rom type="vrom16" name="mpr-21048.40" size="4194304" crc="96849974" sha1="347e2216ea1225eda92693dcd80eb97df88caabf"/>
+		<rom type="vrom17" name="mpr-21049.41" size="4194304" crc="91e8161a" sha1="1edc0bc856e5d72f714bd0544814727f4ff12e7a"/>
+		<rom type="sprog" name="epr-21066.21" size="524288" crc="f7ed2582" sha1="a4f80d5f82c86f0bdb74bcda5dc69b83b475c542"/>
+		<rom type="srom0" name="mpr-21031.22" size="4194304" crc="32f6b23a" sha1="8cd092733b85aecf607c2f4b683c42e388a70906"/>
+		<rom type="srom1" name="mpr-21033.24" size="4194304" crc="253d3c70" sha1="bfbc42d08cf46d89c87505f53e31b8a53e8a729a"/>
+		<rom type="srom2" name="mpr-21032.23" size="4194304" crc="3d3ff407" sha1="5e298e24cb3050f8683658cef41ce59948e79166"/>
+	</game>
+	<game name="dirtdvla" parent="dirtdvls">
+		<description>Dirt Devils (alt)</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button02" mapping="p1_button_2"/>
+		<input type="button03" mapping="p1_button_3"/>
+		<input type="button04" mapping="p1_button_4"/>
+		<input type="analog1" center="128" mapping="analog_axis_1"/>
+		<input type="analog2" mapping="analog_axis_3"/>
+		<input type="analog3" mapping="analog_axis_4"/>
+		
+		<rom type="prog0" name="epr-21058a" size="2097152" crc="4d7fdc8d" sha1="c45031b4e3ea65519de671e0e11f87e0965e3c93"/>
+		<rom type="prog1" name="epr-21059a" size="2097152" crc="f31a2aa4" sha1="b7398db217372885f763efdb909f3e43ccbac34a"/>
+		<rom type="prog2" name="epr-21060a" size="2097152" crc="5ebe2816" sha1="9ebbaf69f4a3b071d65ce3cbe6aabcd7547f1634"/>
+		<rom type="prog3" name="epr-21061a" size="2097152" crc="755ca612" sha1="ba21cf7f445bf1c33962affd0400247e27268233"/>
+		<rom type="crom00" name="mpr-21023.1" size="4194304" crc="932a3724" sha1="146dfe897caa8a4385c527bc7c649e9dbd2ce0c0"/>
+		<rom type="crom01" name="mpr-21024.2" size="4194304" crc="ede859b0" sha1="cecd595a6ba60e248b7bf47778ba4da7658dcf93"/>
+		<rom type="crom02" name="mpr-21025.3" size="4194304" crc="6591c66e" sha1="feaae431692a3bab867b79d52bc3934f77c4022b"/>
+		<rom type="crom03" name="mpr-21026.4" size="4194304" crc="f4937e3f" sha1="21559ef991789ede4b4e7297e2a71f33f7cc7090"/>
+		<rom type="crom10" name="mpr-21027.5" size="4194304" crc="74e1496a" sha1="0988058a109216e8b97045dde9d1099688193a13"/>
+		<rom type="crom11" name="mpr-21028.6" size="4194304" crc="db11f50a" sha1="78bf2418bcea1ed30da9af936e9f95e9c76ce919"/>
+		<rom type="crom12" name="mpr-21029.7" size="4194304" crc="89867d8a" sha1="89ebd5bc5d98fbd63d4cad407033419a39b1d60a"/>
+		<rom type="crom13" name="mpr-21030.8" size="4194304" crc="f8e51bec" sha1="fe8a06ef21dd646e3ad6fa382e3f3d30db4cbd91"/>
+		<rom type="vrom00" name="mpr-21034.26" size="4194304" crc="acba5ca6" sha1="be213ca40d17f18e725349585f95d677e53c1bfc"/>
+		<rom type="vrom01" name="mpr-21035.27" size="4194304" crc="618b7d6a" sha1="0968b72c8d7fc4b2635062647da5d36a58e69b08"/>
+		<rom type="vrom02" name="mpr-21036.28" size="4194304" crc="0e665bb2" sha1="3b18ea93ed1d71873ff635358c3143e4f515bab9"/>
+		<rom type="vrom03" name="mpr-21037.29" size="4194304" crc="90b98493" sha1="3f98855caec5895c8651ed88e07f2dcec5a6c66a"/>
+		<rom type="vrom04" name="mpr-21038.30" size="4194304" crc="9b59d2c2" sha1="3f14cfc905a018e0aa2b2ad4918cd4ee2ef65c7b"/>
+		<rom type="vrom05" name="mpr-21039.31" size="4194304" crc="61407b07" sha1="d7676a03110ca694cc53c1d3a6c781d2f8cee98b"/>
+		<rom type="vrom06" name="mpr-21040.32" size="4194304" crc="b550c229" sha1="b13ea462914bb13388e11bed9a9b2e696a8eb759"/>
+		<rom type="vrom07" name="mpr-21041.33" size="4194304" crc="8f1ac988" sha1="11b628c85533a307298765641eb87c305bde64d1"/>
+		<rom type="vrom10" name="mpr-21042.34" size="4194304" crc="1dab621d" sha1="cf0e59be7b5a12146f5562e208009054074151cd"/>
+		<rom type="vrom11" name="mpr-21043.35" size="4194304" crc="707015c8" sha1="125ff08cc555a4c8d9863e7433fad7949230630d"/>
+		<rom type="vrom12" name="mpr-21044.36" size="4194304" crc="776f9580" sha1="0529532975d74da851a2fd1ce9810e218d751d5f"/>
+		<rom type="vrom13" name="mpr-21045.37" size="4194304" crc="a28ad02f" sha1="8734568153dbf304193491e746b19a423a547f0d"/>
+		<rom type="vrom14" name="mpr-21046.38" size="4194304" crc="05c995ae" sha1="d96391360692d30c456324dcd51511bf095a58cb"/>
+		<rom type="vrom15" name="mpr-21047.39" size="4194304" crc="06b7826f" sha1="cfdeb56964bd31196fde01b1f5cc294c8b49c215"/>
+		<rom type="vrom16" name="mpr-21048.40" size="4194304" crc="96849974" sha1="347e2216ea1225eda92693dcd80eb97df88caabf"/>
+		<rom type="vrom17" name="mpr-21049.41" size="4194304" crc="91e8161a" sha1="1edc0bc856e5d72f714bd0544814727f4ff12e7a"/>
+		<rom type="sprog" name="epr-21066.21" size="524288" crc="f7ed2582" sha1="a4f80d5f82c86f0bdb74bcda5dc69b83b475c542"/>
+		<rom type="srom0" name="mpr-21031.22" size="4194304" crc="32f6b23a" sha1="8cd092733b85aecf607c2f4b683c42e388a70906"/>
+		<rom type="srom1" name="mpr-21033.24" size="4194304" crc="253d3c70" sha1="bfbc42d08cf46d89c87505f53e31b8a53e8a729a"/>
+		<rom type="srom2" name="mpr-21032.23" size="4194304" crc="3d3ff407" sha1="5e298e24cb3050f8683658cef41ce59948e79166"/>
+	</game>
+	<game name="swtrilgy">
+		<description>Star Wars Trilogy (ver A)</description>
+		<year>1998</year>
+		<manufacturer>Sega/LucasArts</manufacturer>
+		<step>2.1</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button06" mapping="p1_button_2"/>
+		<input type="analog1" center="128" mapping="analog_axis_2"/>
+		<input type="analog2" center="128" mapping="analog_axis_1"/>
+		
+		<patch size="32" address="f0e48" data="60000000"/>
+		<patch size="32" address="043dc" data="48000090"/>
+		<patch size="32" address="029a0" data="60000000"/>
+		<patch size="32" address="02a0c" data="60000000"/>
+		
+		<rom type="prog0" name="epr-21379a.17" size="2097152" crc="24dc1555" sha1="0a4b458bb09238de0f38ba2805512b5dbee7d58e"/>
+		<rom type="prog1" name="epr-21380a.18" size="2097152" crc="780fb4e7" sha1="6650e114bad0e4c3f67b744599dba9845da82f11"/>
+		<rom type="prog2" name="epr-21381a.19" size="2097152" crc="2dd34e28" sha1="b9d2034aee6be2313f7286091f4660bbba87e376"/>
+		<rom type="prog3" name="epr-21382a.20" size="2097152" crc="69baf117" sha1="ceba6b9b092953b00777e5309bbba527270b0c40"/>
+		<rom type="crom00" name="mpr-21339.01" size="4194304" crc="c0ce5037" sha1="1765339ac94b7e7e54217cc9703610f6a39eda4f"/>
+		<rom type="crom01" name="mpr-21340.02" size="4194304" crc="ad36040e" sha1="d40b888f892aa40b1d7f375cf7523667f3b7ee12"/>
+		<rom type="crom02" name="mpr-21341.03" size="4194304" crc="b2a269e4" sha1="b32769251118d3ae5c1c30864b58e27365b9602d"/>
+		<rom type="crom03" name="mpr-21342.04" size="4194304" crc="339525ce" sha1="e93ee61705612ae7017d9d99b26a6b5c2d20a15c"/>
+		<rom type="crom10" name="mpr-21343.05" size="4194304" crc="12552d07" sha1="7ed31feecda71f44ca7d3409d753d75c36a03ae8"/>
+		<rom type="crom11" name="mpr-21344.06" size="4194304" crc="87453d76" sha1="5793ac0b4ae02364821d82e8cf30baf676bc7649"/>
+		<rom type="crom12" name="mpr-21345.07" size="4194304" crc="6c183a21" sha1="416e56b76464df4aed552fe2e7262334e5841b17"/>
+		<rom type="crom13" name="mpr-21346.08" size="4194304" crc="c8733594" sha1="1196ec899c64c58f21d56bff56e432b156aacb31"/>
+		<rom type="crom20" name="mpr-21347.09" size="4194304" crc="ecb6b934" sha1="49e394adc3c339a13df6679457b910b9e0a078c1"/>
+		<rom type="crom21" name="mpr-21348.10" size="4194304" crc="1f7cc5f5" sha1="6ac1bef009ba86e97541f4d6bbdb935fb8a22f5a"/>
+		<rom type="crom22" name="mpr-21349.11" size="4194304" crc="3d39454b" sha1="1c55339a0694fc817e7ee2f2087c7548361c3f8b"/>
+		<rom type="crom23" name="mpr-21350.12" size="4194304" crc="486195e7" sha1="b3725da2317561b8570666e459737022370256a8"/>
+		<rom type="vrom00" name="mpr-21359.26" size="4194304" crc="34ef4122" sha1="26e0726e1ab722ba0e12624efd01af3a40fc320b"/>
+		<rom type="vrom01" name="mpr-21360.27" size="4194304" crc="2882b95e" sha1="e553661c98da3e23318920576488b8ff97430f44"/>
+		<rom type="vrom02" name="mpr-21361.28" size="4194304" crc="9b61c3c1" sha1="93b4acb9340176b578f8222fcaf8fc67fd874556"/>
+		<rom type="vrom03" name="mpr-21362.29" size="4194304" crc="01a92169" sha1="0911d5a656a5b5de5fefab77ea34a1b495863610"/>
+		<rom type="vrom04" name="mpr-21363.30" size="4194304" crc="e7d18fed" sha1="3e77e09db4f00780a5bcf6e644bfdc72b9d4ac83"/>
+		<rom type="vrom05" name="mpr-21364.31" size="4194304" crc="cb6a5468" sha1="3ca093646b565eb6298c3d66da83664f718fe76a"/>
+		<rom type="vrom06" name="mpr-21365.32" size="4194304" crc="ad5449d8" sha1="e7f1b4b6ebbe578f292b5a71258c79767f57cf90"/>
+		<rom type="vrom07" name="mpr-21366.33" size="4194304" crc="defb6b95" sha1="a5de55c8e4bcbf2aef93972e3aba22ba64e46fdb"/>
+		<rom type="vrom10" name="mpr-21367.34" size="4194304" crc="dfd51029" sha1="44c2e6c8e36217bb4fc0743912f0b046a1944a74"/>
+		<rom type="vrom11" name="mpr-21368.35" size="4194304" crc="ae90fd21" sha1="a519add40e29e6b737f50d9314a6009d4c696a9f"/>
+		<rom type="vrom12" name="mpr-21369.36" size="4194304" crc="bf17eeb4" sha1="12d5f0c9c6ad27a225dbecdc7b94ade0e90a8f00"/>
+		<rom type="vrom13" name="mpr-21370.37" size="4194304" crc="2321592a" sha1="d4270b872e1a5ff82220014c65b726309305ecb0"/>
+		<rom type="vrom14" name="mpr-21371.38" size="4194304" crc="a68782fd" sha1="610530f804876206fdd2c2f9ff159db9813fabea"/>
+		<rom type="vrom15" name="mpr-21372.39" size="4194304" crc="fc3f4e8b" sha1="47240f14d81458e104452125eabf44619e026ff9"/>
+		<rom type="vrom16" name="mpr-21373.40" size="4194304" crc="b76ad261" sha1="de5a39a23ac6b12b17f16f2b3e82d1f5470ae600"/>
+		<rom type="vrom17" name="mpr-21374.41" size="4194304" crc="ae6c4d28" sha1="b57733cfaa63ba018b0c3c9c935c12c48cc7f184"/>
+		<rom type="sprog" name="epr-21383.21" size="524288" crc="544d1e28" sha1="8b4c99cf9ad0cf15d2d3da578bbc08705bafb829"/>
+		<rom type="srom0" name="mpr-21355.22" size="4194304" crc="c1b2d326" sha1="118d9e02cdb9f500bd677b1de8331b29c57ca02f"/>
+		<rom type="srom1" name="mpr-21357.24" size="4194304" crc="02703fab" sha1="c312f3d7967229660a7fb81b4fcd16c204d671cd"/>
+		<rom type="dsbprog" name="ep21384.2" size="131072" crc="12fa4780" sha1="a10ce82d81045cc49efcfba490693d06aeced3ae"/>
+		<rom type="dsbrom0" name="mp21375.18" size="4194304" crc="735157a9" sha1="d1ff5dc7a6be8c8b0b6ba33fdf353c2008507afc"/>
+		<rom type="dsbrom1" name="mp21376.20" size="4194304" crc="e635f81e" sha1="3eb4243fd275946ce0e85d074abd59b5ed31bbcd"/>
+		<rom type="dsbrom2" name="mp21377.22" size="4194304" crc="720621f8" sha1="191bd8159010c172a82159d0ebfa56637c2a8462"/>
+		<rom type="dsbrom3" name="mp21378.24" size="4194304" crc="1fcf715e" sha1="9706f36e7a61d885d34a6974311a2410fe3d6760"/>
+	</game>
+	<game name="swtrilga" parent="swtrilgy">
+		<description>Star Wars Trilogy</description>
+		<year>1998</year>
+		<manufacturer>Sega/LucasArts</manufacturer>
+		<step>2.1</step>
+		
+		<input type="button01" mapping="p1_button_1"/>
+		<input type="button06" mapping="p1_button_2"/>
+		<input type="analog1" center="128" mapping="analog_axis_2"/>
+		<input type="analog2" center="128" mapping="analog_axis_1"/>
+		
+		<patch size="32" address="f6dd0" data="60000000"/>
+		
+		<rom type="prog0" name="ep21379.17" size="2097152" crc="61ad51d9" sha1="b27ea929702bb94c86d03d6c1f479af32230b4d0"/>
+		<rom type="prog1" name="ep21380.18" size="2097152" crc="49b182f2" sha1="9a4e3180f2661c95976963ab17e66a5184bca9a3"/>
+		<rom type="prog2" name="ep21381.19" size="2097152" crc="bb5757bf" sha1="4e803f2a5fe09c82c0318d22240d3738e51e7e3b"/>
+		<rom type="prog3" name="ep21382.20" size="2097152" crc="0b9c44a0" sha1="e7171bda684263a92746a84fd91ac32b788bfab4"/>
+		<rom type="crom00" name="mpr-21339.01" size="4194304" crc="c0ce5037" sha1="1765339ac94b7e7e54217cc9703610f6a39eda4f"/>
+		<rom type="crom01" name="mpr-21340.02" size="4194304" crc="ad36040e" sha1="d40b888f892aa40b1d7f375cf7523667f3b7ee12"/>
+		<rom type="crom02" name="mpr-21341.03" size="4194304" crc="b2a269e4" sha1="b32769251118d3ae5c1c30864b58e27365b9602d"/>
+		<rom type="crom03" name="mpr-21342.04" size="4194304" crc="339525ce" sha1="e93ee61705612ae7017d9d99b26a6b5c2d20a15c"/>
+		<rom type="crom10" name="mpr-21343.05" size="4194304" crc="12552d07" sha1="7ed31feecda71f44ca7d3409d753d75c36a03ae8"/>
+		<rom type="crom11" name="mpr-21344.06" size="4194304" crc="87453d76" sha1="5793ac0b4ae02364821d82e8cf30baf676bc7649"/>
+		<rom type="crom12" name="mpr-21345.07" size="4194304" crc="6c183a21" sha1="416e56b76464df4aed552fe2e7262334e5841b17"/>
+		<rom type="crom13" name="mpr-21346.08" size="4194304" crc="c8733594" sha1="1196ec899c64c58f21d56bff56e432b156aacb31"/>
+		<rom type="crom20" name="mpr-21347.09" size="4194304" crc="ecb6b934" sha1="49e394adc3c339a13df6679457b910b9e0a078c1"/>
+		<rom type="crom21" name="mpr-21348.10" size="4194304" crc="1f7cc5f5" sha1="6ac1bef009ba86e97541f4d6bbdb935fb8a22f5a"/>
+		<rom type="crom22" name="mpr-21349.11" size="4194304" crc="3d39454b" sha1="1c55339a0694fc817e7ee2f2087c7548361c3f8b"/>
+		<rom type="crom23" name="mpr-21350.12" size="4194304" crc="486195e7" sha1="b3725da2317561b8570666e459737022370256a8"/>
+		<rom type="vrom00" name="mpr-21359.26" size="4194304" crc="34ef4122" sha1="26e0726e1ab722ba0e12624efd01af3a40fc320b"/>
+		<rom type="vrom01" name="mpr-21360.27" size="4194304" crc="2882b95e" sha1="e553661c98da3e23318920576488b8ff97430f44"/>
+		<rom type="vrom02" name="mpr-21361.28" size="4194304" crc="9b61c3c1" sha1="93b4acb9340176b578f8222fcaf8fc67fd874556"/>
+		<rom type="vrom03" name="mpr-21362.29" size="4194304" crc="01a92169" sha1="0911d5a656a5b5de5fefab77ea34a1b495863610"/>
+		<rom type="vrom04" name="mpr-21363.30" size="4194304" crc="e7d18fed" sha1="3e77e09db4f00780a5bcf6e644bfdc72b9d4ac83"/>
+		<rom type="vrom05" name="mpr-21364.31" size="4194304" crc="cb6a5468" sha1="3ca093646b565eb6298c3d66da83664f718fe76a"/>
+		<rom type="vrom06" name="mpr-21365.32" size="4194304" crc="ad5449d8" sha1="e7f1b4b6ebbe578f292b5a71258c79767f57cf90"/>
+		<rom type="vrom07" name="mpr-21366.33" size="4194304" crc="defb6b95" sha1="a5de55c8e4bcbf2aef93972e3aba22ba64e46fdb"/>
+		<rom type="vrom10" name="mpr-21367.34" size="4194304" crc="dfd51029" sha1="44c2e6c8e36217bb4fc0743912f0b046a1944a74"/>
+		<rom type="vrom11" name="mpr-21368.35" size="4194304" crc="ae90fd21" sha1="a519add40e29e6b737f50d9314a6009d4c696a9f"/>
+		<rom type="vrom12" name="mpr-21369.36" size="4194304" crc="bf17eeb4" sha1="12d5f0c9c6ad27a225dbecdc7b94ade0e90a8f00"/>
+		<rom type="vrom13" name="mpr-21370.37" size="4194304" crc="2321592a" sha1="d4270b872e1a5ff82220014c65b726309305ecb0"/>
+		<rom type="vrom14" name="mpr-21371.38" size="4194304" crc="a68782fd" sha1="610530f804876206fdd2c2f9ff159db9813fabea"/>
+		<rom type="vrom15" name="mpr-21372.39" size="4194304" crc="fc3f4e8b" sha1="47240f14d81458e104452125eabf44619e026ff9"/>
+		<rom type="vrom16" name="mpr-21373.40" size="4194304" crc="b76ad261" sha1="de5a39a23ac6b12b17f16f2b3e82d1f5470ae600"/>
+		<rom type="vrom17" name="mpr-21374.41" size="4194304" crc="ae6c4d28" sha1="b57733cfaa63ba018b0c3c9c935c12c48cc7f184"/>
+		<rom type="sprog" name="epr-21383.21" size="524288" crc="544d1e28" sha1="8b4c99cf9ad0cf15d2d3da578bbc08705bafb829"/>
+		<rom type="srom0" name="mpr-21355.22" size="4194304" crc="c1b2d326" sha1="118d9e02cdb9f500bd677b1de8331b29c57ca02f"/>
+		<rom type="srom1" name="mpr-21357.24" size="4194304" crc="02703fab" sha1="c312f3d7967229660a7fb81b4fcd16c204d671cd"/>
+		<rom type="dsbprog" name="ep21384.2" size="131072" crc="12fa4780" sha1="a10ce82d81045cc49efcfba490693d06aeced3ae"/>
+		<rom type="dsbrom0" name="mp21375.18" size="4194304" crc="735157a9" sha1="d1ff5dc7a6be8c8b0b6ba33fdf353c2008507afc"/>
+		<rom type="dsbrom1" name="mp21376.20" size="4194304" crc="e635f81e" sha1="3eb4243fd275946ce0e85d074abd59b5ed31bbcd"/>
+		<rom type="dsbrom2" name="mp21377.22" size="4194304" crc="720621f8" sha1="191bd8159010c172a82159d0ebfa56637c2a8462"/>
+		<rom type="dsbrom3" name="mp21378.24" size="4194304" crc="1fcf715e" sha1="9706f36e7a61d885d34a6974311a2410fe3d6760"/>
+	</game>
+	<game name="spikeout">
+		<description>Spikeout</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		<cromsize>64M</cromsize>
+		
+		<patch size="32" address="6059cc" data="60000000"/>
+		<patch size="32" address="6059ec" data="60000000"/>
+		
+		<rom type="prog0" name="epr21214c.17" size="2097152" crc="8dc0a85c" sha1="c75088fd0594964a4ed78b80a2585d3d89c85464"/>
+		<rom type="prog1" name="epr21215c.18" size="2097152" crc="e2878221" sha1="8c57efc942f6e091b7fbbed101c3a306b7368eed"/>
+		<rom type="prog2" name="epr21216c.19" size="2097152" crc="867d3a0f" sha1="15ba12099eaa2cfd1d6cd985805df69c48441fb2"/>
+		<rom type="prog3" name="epr21217c.20" size="2097152" crc="ea8c30ce" sha1="e076e32ba9134c63c7a5fb826eba4735774e3ab3"/>
+		<rom type="crom00" name="mpr21134.1" size="4194304" crc="7bfe21a4" sha1="accbb4272da313f4bd2b897f3f395f5523e7a3f4"/>
+		<rom type="crom01" name="mpr21135.2" size="4194304" crc="972f4b4f" sha1="fa6b9d1ef3a213cedbe42705de015f6ae8c216b6"/>
+		<rom type="crom02" name="mpr21136.3" size="4194304" crc="5d563fba" sha1="1f157b25e70438f1cfc04bbe8c83afa0e3858c2a"/>
+		<rom type="crom03" name="mpr21137.4" size="4194304" crc="707e5921" sha1="a38ac947860d0cf7ad40b641135f1fb203e3df67"/>
+		<rom type="crom10" name="mpr21138.5" size="4194304" crc="48619c98" sha1="34e0d10ea6c6a9dca3e1440e248ab0ec7bad0d8e"/>
+		<rom type="crom11" name="mpr21139.6" size="4194304" crc="0425ba5d" sha1="a2f347268279182e1be08a600d862adc49f3f3b4"/>
+		<rom type="crom12" name="mpr21140.7" size="4194304" crc="df574950" sha1="816f3c60f0cbcda3278e4acf99176af93e7c9b4b"/>
+		<rom type="crom13" name="mpr21141.8" size="4194304" crc="d6a51bf1" sha1="cb3196a7f9b378c755d4b29b01a97612d7d7a8d5"/>
+		<rom type="crom20" name="mpr21142.9" size="4194304" crc="da35cd51" sha1="6b89c79a4e207d4bb3fe36e918f41d09915facaa"/>
+		<rom type="crom21" name="mpr21143.10" size="4194304" crc="ddcada10" sha1="72a4d7a1bcd7e6745b7076f2a7945e8c7c51e68a"/>
+		<rom type="crom22" name="mpr21144.11" size="4194304" crc="d93d778c" sha1="b6be5f37c1e40764f2831537603bd88afa872b27"/>
+		<rom type="crom23" name="mpr21145.12" size="4194304" crc="0e6a3ae3" sha1="718bad86461e592ce1d56bd3dc0090b83ed82355"/>
+		<rom type="crom30" name="mpr21146.13" size="4194304" crc="85f55311" sha1="dc5529534e7702f05d48620fc9049289b7cbc9fb"/>
+		<rom type="crom31" name="mpr21147.14" size="4194304" crc="a1f2b73f" sha1="485bc11abd44826d00ac0c7e90cb72006cfa66e7"/>
+		<rom type="crom32" name="mpr21148.15" size="4194304" crc="56d980ad" sha1="f4175e97e68ca2c29ec6cb18d9ffd5ff170a6f6f"/>
+		<rom type="crom33" name="mpr21149.16" size="4194304" crc="9e4ebe58" sha1="130e2c09528d57522fec70fe93d2de55558ee87f"/>
+		<rom type="vrom00" name="mpr21154.26" size="4194304" crc="3b76f8e8" sha1="85773cdf1062ee0aed9b3cbc8a1a1b7dd2801afb"/>
+		<rom type="vrom01" name="mpr21155.27" size="4194304" crc="aca19901" sha1="d375defaa65e35aaf3f0f149bb1763f02d796c7a"/>
+		<rom type="vrom02" name="mpr21156.28" size="4194304" crc="5c9df226" sha1="00baf34ba2d4b57bf63b55386310ca6d6685fa96"/>
+		<rom type="vrom03" name="mpr21157.29" size="4194304" crc="f6fb1279" sha1="be61d8be27500c9af5f7dc6333fa37c667f337f8"/>
+		<rom type="vrom04" name="mpr21158.30" size="4194304" crc="61707554" sha1="62b2de8ce88a361b272fde4998766f29e5beafc7"/>
+		<rom type="vrom05" name="mpr21159.31" size="4194304" crc="fcc791f5" sha1="03c66f65885f41766e860fdb5324226f4fb555f7"/>
+		<rom type="vrom06" name="mpr21160.32" size="4194304" crc="b40a38d3" sha1="dec9590632b547a8eeb52528fa4f0b9f5f8bd769"/>
+		<rom type="vrom07" name="mpr21161.33" size="4194304" crc="559063f0" sha1="f31a6d117550f1422bee76972c21bbdee6f3505d"/>
+		<rom type="vrom10" name="mpr21162.34" size="4194304" crc="acc4b2e4" sha1="b3ab137b0712c4088daeed1ac0fa2eaedca85940"/>
+		<rom type="vrom11" name="mpr21163.35" size="4194304" crc="653c54c7" sha1="cc5121215c3c511df03cfbddead06f6c09db849b"/>
+		<rom type="vrom12" name="mpr21164.36" size="4194304" crc="902fd1e0" sha1="930fc166beb87ca4801c66fb4c6e92e59050892b"/>
+		<rom type="vrom13" name="mpr21165.37" size="4194304" crc="50b3be05" sha1="016f5ba71f41b9cf358d22195b08319d86b95f78"/>
+		<rom type="vrom14" name="mpr21166.38" size="4194304" crc="8f87a782" sha1="3631929f4d3dda71c3950a29a7d3135ecf4a9f57"/>
+		<rom type="vrom15" name="mpr21167.39" size="4194304" crc="0f3994d0" sha1="a5cf583c7ea4e05bd9ca493ca7ba9e61cdc803cd"/>
+		<rom type="vrom16" name="mpr21168.40" size="4194304" crc="c58be980" sha1="77e3d5109c6659e1839b56ca2fdb157cdfba4b6a"/>
+		<rom type="vrom17" name="mpr21169.41" size="4194304" crc="aa3b2cc0" sha1="1c804e602f9227a4e553cd1a5dfbfebd04930c61"/>
+		<rom type="sprog" name="epr21218.21" size="524288" crc="5821001a" sha1="f6bc416b77279670bc6c1c3a62f42faf9323387e"/>
+		<rom type="srom0" name="mpr21150.22" size="4194304" crc="125201ce" sha1="b6347042e1482561c6d468b05dfa3de261736485"/>
+		<rom type="srom1" name="mpr21151.23" size="4194304" crc="599527b9" sha1="bc124f916a72c85a1f2a10ababc4254adc951697"/>
+		<rom type="srom2" name="mpr21152.24" size="4194304" crc="0afdee87" sha1="2be20991a6d8fbee51dddc2dd0fbae7e43e5b3df"/>
+		<rom type="srom3" name="mpr21153.25" size="4194304" crc="4155f307" sha1="420a7b9d1a4aca9ff31ff7af7c8cea00963756af"/>
+		<rom type="dsbprog" name="epr21219.ic2" size="131072" crc="4e042b21" sha1="90937659702ddcda1bdbb623a38bf26c3b29f9d9"/>
+		<rom type="dsbrom0" name="mpr21170.ic18" size="4194304" crc="f51f7ce3" sha1="38b853b0545196e2c95822f572afb46a0a5d4c6c"/>
+		<rom type="dsbrom1" name="mpr21171.ic20" size="4194304" crc="8d3bd5b6" sha1="42167dd53e4562869382ec1c8a00b69d1fd4602a"/>
+		<rom type="dsbrom2" name="mpr21172.ic22" size="4194304" crc="be221e27" sha1="cf396d0145172a0492bf4203a7ff12c5c8480c0c"/>
+		<rom type="dsbrom3" name="mpr21173.ic24" size="4194304" crc="ca7226d6" sha1="e15c6fb9dee91a42889cef350479b1964bf1e5df"/>
+	</game>
+	<game name="spikeofe">
+		<description>Spikeout Final Edition</description>
+		<year>1998</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+		<cromsize>64M</cromsize>
+		
+		<patch size="32" address="6059cc" data="60000000"/>
+		<patch size="32" address="6059ec" data="60000000"/>
+		
+		<rom type="prog0" name="epr21653.17" size="2097152" crc="f4bd9c3c" sha1="de509c25226939d7a9c1b402ab6923844c12314e"/>
+		<rom type="prog1" name="epr21654.18" size="2097152" crc="5be245a3" sha1="69cc84dd4ccc80b6453ace1944962b666e6fca3d"/>
+		<rom type="prog2" name="epr21655.19" size="2097152" crc="68a9e417" sha1="8d5eb0d52eabde0d2cfb34ded4fc436f113cdcc0"/>
+		<rom type="prog3" name="epr21656.20" size="2097152" crc="bd2aaf64" sha1="850c08f3e2fa269d94b4dc88c9d33854d5e38f21"/>
+		<rom type="crom00" name="mpr21613.1" size="4194304" crc="39f181c0" sha1="a0734b2aa5fde29ff7af4d29443f7e76f3323af1"/>
+		<rom type="crom01" name="mpr21614.2" size="4194304" crc="789a96e9" sha1="6ac8908e9613cab1bf4b584c29ba6e2eec16b436"/>
+		<rom type="crom02" name="mpr21615.3" size="4194304" crc="50341c34" sha1="155f6e73bad81f98817e635352c0972b5544e466"/>
+		<rom type="crom03" name="mpr21616.4" size="4194304" crc="d5980569" sha1="22439b2ea5afdbb4cf20bfc5479f8e6c0664e4c5"/>
+		<rom type="crom10" name="mpr21617.5" size="4194304" crc="8306b52c" sha1="4519e41ca621fa6cf4b8f880adbd89d10ef445dd"/>
+		<rom type="crom11" name="mpr21618.6" size="4194304" crc="a9c0e6c4" sha1="467b4ce1805d71a3b07b998816ce70ac8a3b678e"/>
+		<rom type="crom12" name="mpr21619.7" size="4194304" crc="d2380847" sha1="2f4860222da18fa560862e6fd730eef3551dfdce"/>
+		<rom type="crom13" name="mpr21620.8" size="4194304" crc="3a1ecec4" sha1="98eda2c0ad206aaf27c142198e8439424d585142"/>
+		<rom type="crom20" name="mpr21621.9" size="4194304" crc="eaa96639" sha1="153307007debaf7e063d7599785736cbf53ec891"/>
+		<rom type="crom21" name="mpr21622.10" size="4194304" crc="8483a0d0" sha1="dff98e755112a3402a158b9d05b886dd9c0bffb0"/>
+		<rom type="crom22" name="mpr21623.11" size="4194304" crc="8d37d83e" sha1="6cff317b02215f6d9a16354e01767d978c0531c3"/>
+		<rom type="crom23" name="mpr21624.12" size="4194304" crc="56994cc6" sha1="f4be0e530226cf3df01d396e723bcb5db79e21d0"/>
+		<rom type="crom30" name="mpr21625.13" size="4194304" crc="72a34707" sha1="107b9e1dfead1d04a59ba9fbe9800c703a1bca56"/>
+		<rom type="crom31" name="mpr21626.14" size="4194304" crc="1861652e" sha1="45793397523ae0c1af0b5b0746182f9193bb35df"/>
+		<rom type="crom32" name="mpr21627.15" size="4194304" crc="efe94608" sha1="1c04b1ea6517acee8b306ae52fadaf33341750bb"/>
+		<rom type="crom33" name="mpr21628.16" size="4194304" crc="de3866ea" sha1="43068f2af2b84ce2ee63e806cfc048e75c77a451"/>
+		<rom type="vrom00" name="mpr21633.26" size="4194304" crc="735fb67d" sha1="7f8d1880b0e5302f3cc7e49c3f0de1d8800bb6f8"/>
+		<rom type="vrom01" name="mpr21634.27" size="4194304" crc="876e6788" sha1="18f80b79e1da6bc6e6c1f1d368d0ff1ff6b1f468"/>
+		<rom type="vrom02" name="mpr21635.28" size="4194304" crc="093534a8" sha1="8ecbc3e4456f0453f8728d1ab7687b7d05d7957b"/>
+		<rom type="vrom03" name="mpr21636.29" size="4194304" crc="2433f21c" sha1="8c62cc42f6a4d795855ec75512a38e5a8a120f8e"/>
+		<rom type="vrom04" name="mpr21637.30" size="4194304" crc="093534a8" sha1="8ecbc3e4456f0453f8728d1ab7687b7d05d7957b"/>
+		<rom type="vrom05" name="mpr21638.31" size="4194304" crc="3773a215" sha1="f36baf8e38bb1d853bc87b99db70efdcca217c93"/>
+		<rom type="vrom06" name="mpr21639.32" size="4194304" crc="313d1872" sha1="9e74786fc17c38b7687be3abcd115e3b817991b1"/>
+		<rom type="vrom07" name="mpr21640.33" size="4194304" crc="271366be" sha1="eab9ab8105f3d72ce797439c2c17f49aebbd8f07"/>
+		<rom type="vrom10" name="mpr21641.34" size="4194304" crc="782147e4" sha1="080f28daeee38c169b1bd5030800eca032a42da2"/>
+		<rom type="vrom11" name="mpr21642.35" size="4194304" crc="844732c9" sha1="20ee88b762eed38d1a6f16a0c1b375496187c676"/>
+		<rom type="vrom12" name="mpr21643.36" size="4194304" crc="9e922e9d" sha1="f66df4876672c0ee17525c4809d737523b04650d"/>
+		<rom type="vrom13" name="mpr21644.37" size="4194304" crc="617aa65a" sha1="eb856645a8e587207452ddc7e0e2bdc9b8642af5"/>
+		<rom type="vrom14" name="mpr21645.38" size="4194304" crc="71396f52" sha1="ef0d3068104e663143b42b7fd5f4c65d01b12a6b"/>
+		<rom type="vrom15" name="mpr21646.39" size="4194304" crc="90fd9c87" sha1="75097e021b7b91502793e3e1833aa55d3adbb084"/>
+		<rom type="vrom16" name="mpr21647.40" size="4194304" crc="cf87991f" sha1="8249e086d2ef5ded8a0544b0ddbd2328e3c64876"/>
+		<rom type="vrom17" name="mpr21648.41" size="4194304" crc="30f974a1" sha1="03e2481b9af9083c3b97273819c0fcd5edc41bd4"/>
+		<rom type="sprog" name="epr21657.21" size="524288" crc="7242e8fd" sha1="9712972d821e2eca8db6666693340aca884f4393"/>
+		<rom type="srom0" name="mpr21629.22" size="4194304" crc="bc9701c4" sha1="df8b4deb16736461d5ae69a42404785f57a84d7f"/>
+		<rom type="srom1" name="mpr21631.23" size="4194304" crc="299036c5" sha1="861f5d6579ee0fba1793140468194c2ef0fd0b7f"/>
+		<rom type="srom2" name="mpr21630.24" size="4194304" crc="9f2deadd" sha1="964dea6c8f5e34c5682cd7ca207a853aab80306e"/>
+		<rom type="srom3" name="mpr21632.25" size="4194304" crc="ff162f0d" sha1="e62dcf68a4bfe8087d0ab508468fd016ace1f9c5"/>
+		<rom type="dsbprog" name="epr21658.ic2" size="131072" crc="50bad8cb" sha1="83947cbf8f074e6f15055917502a77f198123efe"/>
+		<rom type="dsbrom0" name="mpr21649.ic18" size="4194304" crc="dac87f47" sha1="429734ba3d97162e175a074249baf7c7a1aecdee"/>
+		<rom type="dsbrom1" name="mpr21650.ic20" size="4194304" crc="86d90123" sha1="1e90fb0242fbb032825684e763a5ebb329f63869"/>
+		<rom type="dsbrom2" name="mpr21651.ic22" size="4194304" crc="81715565" sha1="533deefed3565e7373a0aa2d043ea10e43e78b71"/>
+		<rom type="dsbrom3" name="mpr21652.ic24" size="4194304" crc="e7c8c9bf" sha1="76d8fa89aed86fff4d1ba704aeef96fd2c326bc9"/>
+	</game>
+	<game name="eca">
+		<description>Emergency Call Ambulance</description>
+		<year>1999</year>
+		<manufacturer>Sega</manufacturer>
+		<step>2.1</step>
+	
+		<patch size="32" address="535560" data="60000000"/>		<!-- Wait for decrementer 0 -->
+		<patch size="32" address="535580" data="60000000"/>		<!-- Wait for 0xF118000C to change -->
+		<patch size="32" address="5023b4" data="60000000"/>
+		<patch size="32" address="5023d4" data="60000000"/>
+		
+		
+		<rom type="prog0" name="epr22895.17" size="2097152" crc="07df16a0" sha1="a9ad2b229854a5f4f761565141db738adde28720"/>
+		<rom type="prog1" name="epr22896.18" size="2097152" crc="0ff828a8" sha1="2a74414891ceb5989e6ccb6e9d597f7d2e31fec4"/>
+		<rom type="prog2" name="epr22897.19" size="2097152" crc="9755dd8c" sha1="41f27a303f4af179f17520d0c2d6a0aa4467aae8"/>
+		<rom type="prog3" name="epr22898.20" size="2097152" crc="efb96701" sha1="168c7763740225f832728ab02b22185c9b7997c3"/>
+		<rom type="crom00" name="mpr22870.1" size="4194304" crc="52054043" sha1="f07c1f95a5847393c9e640c10cd14e2a3750b3ff"/>
+		<rom type="crom01" name="mpr22871.2" size="4194304" crc="cf5bb5b5" sha1="fd056fcf9a48854faa357014c2cb4a6ed301c3a6"/>
+		<rom type="crom02" name="mpr22872.3" size="4194304" crc="4fde63a1" sha1="72f88e514caea28eeee9e57e55c835c490465df0"/>
+		<rom type="crom03" name="mpr22873.4" size="4194304" crc="dd406330" sha1="e17ed1814cb84820f19922eef27bbad65be1d355"/>
+		<rom type="crom10" name="mpr22874.5" size="4194304" crc="5e990497" sha1="f0df52a19a11ef23f82e88eddbacdcb2a6357ded"/>
+		<rom type="crom11" name="mpr22875.6" size="4194304" crc="1bb5c018" sha1="5d0146c32f6a50613340ba0d2f5cc5430b595965"/>
+		<rom type="crom12" name="mpr22876.7" size="4194304" crc="a7561249" sha1="b4217cb088234831ca2e9486af849866790bf704"/>
+		<rom type="crom13" name="mpr22877.8" size="4194304" crc="e53b8764" sha1="03756ef0526aa0b56c2944336590918d8ff9a9b8"/>
+		<rom type="crom30" name="epr22882.13" size="4194304" crc="b161416f" sha1="753810fa4db80a2d3a333a257dc92095a112d282"/>
+		<rom type="crom31" name="epr22883.14" size="4194304" crc="86d90148" sha1="4336efb9e3d62cc5e8073993c44cbe49141d987f"/>
+		<rom type="crom32" name="epr22884.15" size="4194304" crc="254c3b63" sha1="b5cd94ecbffb6f0da70fb2cb7541d5bfc96cb67c"/>
+		<rom type="crom33" name="epr22885.16" size="4194304" crc="3525b46d" sha1="d7914cd5c558b50b9115303f77bef63e04316b29"/>
+		<rom type="vrom00" name="mpr22854.26" size="4194304" crc="97a23d16" sha1="17a11a3e1b1806f7b994955ae22dd0e5333d47ea"/>
+		<rom type="vrom01" name="mpr22855.27" size="4194304" crc="7249cdc9" sha1="4bd07d911382cc569e09fb888858806d06809f9f"/>
+		<rom type="vrom02" name="mpr22856.28" size="4194304" crc="9c0d1d1b" sha1="f15c756fb262e15d784328ed3f731aea40797d98"/>
+		<rom type="vrom03" name="mpr22857.29" size="4194304" crc="44e6ce2b" sha1="03a33417dc96d3ddcbeb92422654f75f620ef265"/>
+		<rom type="vrom04" name="mpr22858.30" size="4194304" crc="0af40aae" sha1="1af762e09af932d267b860712fa46eaf4b1500ac"/>
+		<rom type="vrom05" name="mpr22859.31" size="4194304" crc="c64f0158" sha1="b92dba07e52b4fdabc9bd4bbd26cc41cdab0414d"/>
+		<rom type="vrom06" name="mpr22860.32" size="4194304" crc="053af14b" sha1="6d13609e52a4999d6dca3c4da695ebd973b06b7e"/>
+		<rom type="vrom07" name="mpr22861.33" size="4194304" crc="d26343da" sha1="9d8c860c388cc2434cc8d753cde139096c12e79e"/>
+		<rom type="vrom10" name="mpr22862.34" size="4194304" crc="38347c14" sha1="6222a5001d3a6ed8e8ff3010284658dbc69edee6"/>
+		<rom type="vrom11" name="mpr22863.35" size="4194304" crc="28b558e6" sha1="9b4849499baebbd2ea81d00663dff0d40c9db602"/>
+		<rom type="vrom12" name="mpr22864.36" size="4194304" crc="31ed02f6" sha1="a669aa8a42ff70562c86f348fcf4be6f14c2f650"/>
+		<rom type="vrom13" name="mpr22865.37" size="4194304" crc="3e3a211a" sha1="422f960914a6604de59b110b18f3e67ed9116f22"/>
+		<rom type="vrom14" name="mpr22866.38" size="4194304" crc="a863a3c8" sha1="52e13b76a3698deef05df4c607d047e6362d81c0"/>
+		<rom type="vrom15" name="mpr22867.39" size="4194304" crc="1ce6c7b2" sha1="d5fd49f9838d3dc636366c436c507ac2b4f2596e"/>
+		<rom type="vrom16" name="mpr22868.40" size="4194304" crc="2db40cf8" sha1="be1e04aeb5034c2edc5c0ad153700c385a1b773a"/>
+		<rom type="vrom17" name="mpr22869.41" size="4194304" crc="c6d62634" sha1="72d493653b50fb31333f70c7ee143a8c7531106f"/>
+		<rom type="sprog" name="epr22886.21" size="524288" crc="374ec1c6" sha1="b06e678db191971f6701bd1f739815d00d4cfb3e"/>
+		<rom type="srom0" name="mpr22887.22" size="4194304" crc="7d04a867" sha1="053de98105880188b4daff183710d7932617547f"/>
+		<rom type="srom1" name="mpr22888.23" size="4194304" crc="018fcf22" sha1="c5133358f591d699f177617463e7dfa22edf5369"/>
+		<rom type="srom2" name="mpr22889.24" size="4194304" crc="4f9ba45d" sha1="d60314e852637edf6510be52b9b6576a1f3e1b7e"/>
+		<rom type="srom3" name="mpr22890.25" size="4194304" crc="b638bd7c" sha1="ed9c69175fd0ca4c6f22e542b4e68398a6e4ad07"/>
+	</game>
+</gamelist>

@@ -1,0 +1,38 @@
+ps_3_0
+
+; parameters
+; c8 = color offset
+; c9 = (X,Y) scroll position, (Z) 0 = rendering background, 1 = rendering foreground
+
+; input declarations
+dcl_color		v0.xyzw
+dcl_texcoord0	v1.xy
+
+dcl_2d			s0
+dcl_2d			s1
+dcl_2d			s2
+
+def c0, 1.0, 0.0, 1.0f, 1.0f
+def c1, 0.5, 0.0, 0.0, 0.0
+
+add r5, v1.xy, c9.xy	; add scroll position
+frc r5, r5				; wrap
+
+texld r0, r5, s0
+
+texld r10, v1, s2		; load priority value
+mov r11.r, c9.z
+
+mov r1.xy, r0.ga
+texld r2, r1, s1
+
+add r2.rgb, r2.rgb, c8.yzw
+min r2, r2, c0.xxxx		; clamp to 1.0
+max r2, r2, c0.yyyy		; clamp to 0.0
+
+if_eq r11.r, c0.y		; invert priority if rendering foreground
+	sub r10.r, c0.x, r10.r
+endif
+mul r2.a, r2.a, r10.r	; multiply alpha with priority
+
+mov oC0, r2
