@@ -86,7 +86,7 @@ extern void osd_error();
 /* Renderer                                                       */
 /******************************************************************/
 
-extern void osd_renderer_invalidate_textures(UINT x, UINT y, UINT w, UINT h, UINT8 *texture_sheet);
+extern void osd_renderer_invalidate_textures(UINT x, UINT y, int u, int v, UINT w, UINT h, UINT8 *texture_sheet, int miplevel);
 extern void osd_renderer_draw_model(UINT32 *, UINT32, BOOL);
 extern void osd_renderer_multiply_matrix(MATRIX);
 extern void osd_renderer_translate_matrix(float, float, float);
@@ -97,11 +97,13 @@ extern void osd_renderer_set_viewport(const VIEWPORT *);
 extern void osd_renderer_set_coordinate_system(const MATRIX);
 extern void osd_renderer_clear(BOOL, BOOL);
 extern void osd_renderer_set_color_offset(BOOL, FLOAT32, FLOAT32, FLOAT32);
-extern void osd_renderer_draw_layer(int layer, UINT32 color_offset);
+extern void osd_renderer_draw_layer(int layer, UINT32 color_offset, int x, int y, BOOL top);
 extern void osd_renderer_get_layer_buffer(int layer_num, UINT8 **buffer, int *pitch);
 extern void osd_renderer_free_layer_buffer(UINT);
-extern void osd_renderer_get_palette_buffer(UINT32 **, int *, int *);
+extern void osd_renderer_get_palette_buffer(UINT32 **buffer, int *width, int *pitch);
 extern void osd_renderer_free_palette_buffer(void);
+extern void osd_renderer_get_priority_buffer(int layer_num, UINT8 **buffer, int *pitch);
+extern void osd_renderer_free_priority_buffer(int layer_num);
 extern void osd_renderer_blit(void);
 extern void osd_renderer_begin_3d_scene(void);
 extern void osd_renderer_end_3d_scene(void);

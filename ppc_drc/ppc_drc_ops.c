@@ -50,6 +50,7 @@ static UINT32 drc_recompile_block(void)
 	} while (res == 0);
 
 //	printf("Recompile block end: %08X\n", drc_pc);
+	return 0;
 }
 
 static UINT32 cr_flag_eq = 0x02;

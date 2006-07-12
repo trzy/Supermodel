@@ -37,6 +37,7 @@ extern void     tilegen_write_32(UINT32, UINT32);
 
 extern BOOL		tilegen_is_layer_enabled(int);
 extern UINT32	tilegen_get_layer_color_offset(int layer);
+extern UINT32*	tilegen_get_priority_buffer(void);
 
 extern void     tilegen_save_state(FILE *);
 extern void     tilegen_load_state(FILE *);

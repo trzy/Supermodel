@@ -150,7 +150,7 @@ void r3d_load_state(FILE *fp)
     fread(polygon_ram, sizeof(UINT8), 2*1024*1024, fp);
     fread(texture_ram, sizeof(UINT8), 2048*2048*2, fp);
 
-    osd_renderer_invalidate_textures(0, 0, 2048, 2048, texture_ram);
+    osd_renderer_invalidate_textures(0, 0, 0, 0, 2048, 2048, texture_ram, 0);
 }
 
 /******************************************************************/
