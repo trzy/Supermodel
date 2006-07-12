@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-#if RENDERER_D3D
+#ifdef RENDERER_D3D
 	if (d3d_pre_init() == FALSE)
 	{
 		message(0, "The video card doesn't meet the requirements, the program will not run further.");
@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
     model3_init();
 	model3_reset();
 
-#if RENDERER_D3D
+#ifdef RENDERER_D3D
 	if (!d3d_init(main_window))
 	{
 		message(0, "d3d_init failed.");
@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
 			time_start = time_end;
 		}
 
-#if RENDERER_D3D
+#ifdef RENDERER_D3D
 		if (m3_config.show_fps)
 		{
 			//fps = 1.0 / ((double)(time_end - time_start) / freq);
