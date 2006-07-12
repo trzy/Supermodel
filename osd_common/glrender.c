@@ -62,8 +62,6 @@
  * These will be passed to us before rendering begins.
  */
 
-static UINT8    *culling_ram_8e;    // pointer to Real3D culling RAM
-static UINT8    *culling_ram_8c;    // pointer to Real3D culling RAM
 static UINT8    *polygon_ram;       // pointer to Real3D polygon RAM
 static UINT8    *texture_ram;       // pointer to Real3D texture RAM
 static UINT8    *vrom;              // pointer to VROM
@@ -196,7 +194,7 @@ PFNGLGETBUFFERPOINTERVARBPROC		glGetBufferPointervARB = NULL;
  *      h = Height.
  */
 
-void osd_renderer_invalidate_textures(UINT x, UINT y, UINT w, UINT h)
+void osd_renderer_invalidate_textures(UINT x, UINT y, int u, int v, UINT w, UINT h, UINT8 *texture, int miplevel)
 {
     UINT    yi;
 
@@ -1162,7 +1160,7 @@ void osd_renderer_pop_matrix(void)
  * Called just before rendering begins for the current frame. Does nothing.
  */
 
-void osd_renderer_begin(void)
+void osd_renderer_begin_3d_scene(void)
 {
 }
 
@@ -1172,7 +1170,7 @@ void osd_renderer_begin(void)
  * Called just after rendering ends for the current frame. Does nothing.
  */
 
-void osd_renderer_end(void)
+void osd_renderer_end_3d_scene(void)
 {
 }
 
@@ -1369,6 +1367,24 @@ void osd_renderer_free_layer_buffer(UINT layer_num)
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RGBA, GL_UNSIGNED_BYTE, layer[layer_num]);
 }
 
+/*
+ * void osd_renderer_draw_text(int x, int y, const char* string, DWORD color, BOOL shadow);
+ *
+ * Draws text on screen
+ *
+ * Parameters:
+ *      x = Left X-coordinate of the text
+ *		y = Top Y-coordinate of the text
+ *		string = Text string
+ *		color = Packed 24-bit RGBA color of the text
+ *		shadow = if TRUE, draws a shadow behind the text
+ */
+void osd_renderer_draw_text(int x, int y, const char* string, DWORD color, BOOL shadow)
+{
+	// TODO: needs to be implemented
+}
+
+
 /******************************************************************/
 /* Initialization and Set Up                                      */
 /******************************************************************/
@@ -1393,13 +1409,9 @@ void osd_renderer_free_layer_buffer(UINT layer_num)
  *      vrom_ptr           = Pointer to VROM.
  */
 
-void osd_renderer_set_memory(UINT8 *culling_ram_8e_ptr,
-                             UINT8 *culling_ram_8c_ptr,
-                             UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
+void osd_renderer_set_memory(UINT8 *polygon_ram_ptr, UINT8 *texture_ram_ptr,
                              UINT8 *vrom_ptr)
 {
-    culling_ram_8e = culling_ram_8e_ptr;
-    culling_ram_8c = culling_ram_8c_ptr;
     polygon_ram = polygon_ram_ptr;
     texture_ram = texture_ram_ptr;
     vrom = vrom_ptr;
@@ -1466,7 +1478,7 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
     const GLfloat   zero[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     INT             i;
 
-    osd_renderer_invalidate_textures(0, 0, 2048, 2048);
+    osd_renderer_invalidate_textures(0, 0, 0, 0, 2048, 2048, NULL, 0);
 
     xres = new_xres;
     yres = new_yres;
@@ -1526,12 +1538,6 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
     }
 
     /*
-     * Configure the tile generator
-     */
-
-    tilegen_set_layer_format(32, 0, 8, 16, 24);
-
-    /*
      * Set vertex format
      */
 
@@ -1566,6 +1572,17 @@ void osd_gl_set_mode(UINT new_xres, UINT new_yres)
 
 void osd_gl_unset_mode(void)
 {
-    osd_renderer_invalidate_textures(0, 0, 2048, 2048);
+    osd_renderer_invalidate_textures(0, 0, 0, 0, 2048, 2048, NULL, 0);
     glDeleteTextures(4, layer_texture);
 }
+
+UINT32 osd_renderer_get_features(void)
+{
+	return 0;
+}
+
+// Not supported but the interface requires them
+void osd_renderer_get_palette_buffer(UINT32 **buffer, int *width, int *pitch) { };
+void osd_renderer_free_palette_buffer(void) { };
+void osd_renderer_get_priority_buffer(int layer_num, UINT8 **buffer, int *pitch) { };
+void osd_renderer_free_priority_buffer(int layer_num) { };

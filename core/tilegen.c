@@ -105,18 +105,18 @@ static int tilemap_redraw[4];
  * and advance the buffer pointer.
  */
 
-/*#define PUTPIXEL8_32(bp)                                    \
-    do {                                                    \
-        pixel = pal[((pattern >> bp) & 0xFF) | pal_bits];   \
-        *buf++ = pixel;                                     \
+#define PUTPIXEL8_NP(bp)                                    \
+    do														\
+	{														\
+        *buf++ = pal[((pattern >> bp) & 0xFF) | pal_bits];  \
     } while (0)
 
-#define PUTPIXEL4_32(bp)                                    \
-    do {                                                    \
-        pixel = pal[((pattern >> bp) & 0xF) | pal_bits];    \
-        *buf++ = pixel;                                     \
+#define PUTPIXEL4_NP(bp)                                    \
+    do														\
+	{											            \
+        *buf++ = pal[((pattern >> bp) & 0xF) | pal_bits];   \
     } while (0)
-*/
+
 
 #define PUTPIXEL8(bp)										\
 	do														\
@@ -129,12 +129,6 @@ static int tilemap_redraw[4];
 	{														\
 		*buf++ = ((pattern >> bp) & 0xf) | pal_bits;		\
 	} while(0)
-
-/*
- * draw_tile_8bit_32():
- *
- * Draws an 8-bit tile to a 32-bit layer buffer.
- */
 
 static void draw_tile_8bit(UINT tile, UINT16 *buf)
 {
@@ -195,12 +189,6 @@ static void draw_tile_8bit(UINT tile, UINT16 *buf)
     }
 }
 
-/*
- * draw_tile_4bit_32():
- *
- * Draws a 4-bit tile to a 32-bit layer buffer.
- */
-
 static void draw_tile_4bit(UINT tile, UINT16 *buf)
 {
     UINT    tile_offs;  // offset of tile within VRAM
@@ -251,6 +239,120 @@ static void draw_tile_4bit(UINT tile, UINT16 *buf)
         buf += (pitch - 8); // next line in layer buffer
     }
 }
+
+/*****************************************************************************/
+
+static void draw_tile_8bit_np(UINT tile, UINT32 *buf)
+{
+    UINT    tile_offs;  // offset of tile within VRAM
+    UINT    pal_bits;   // color palette bits obtained from tile
+    UINT    y;
+    UINT32  pattern;    // 4 pattern pixels fetched at once
+
+    /*
+     * Calculate tile offset; each tile occupies 64 bytes when using 8-bit
+     * pixels
+     */
+
+    //tile_offs = tile & 0x3fff;
+    //tile_offs *= 64;
+	tile_offs = ((tile & 0x3fff) << 1) | ((tile >> 15) & 1);
+    tile_offs *= 32;
+
+    /*
+     * Obtain upper color bits; the lower 8 bits come from the tile pattern
+     */
+
+    pal_bits = tile & 0x7F00;
+    
+    /*
+     * Draw!
+     */
+
+    for (y = 0; y < 8; y++)
+    {
+        /*
+         * Fetch first 4 pixels and draw them
+         */
+
+        pattern = *((UINT32 *) &vram[tile_offs]);
+        tile_offs += 4;
+        PUTPIXEL8_NP(24);
+        PUTPIXEL8_NP(16);
+        PUTPIXEL8_NP(8);
+        PUTPIXEL8_NP(0);
+
+        /*
+         * Next 4
+         */
+
+        pattern = *((UINT32 *) &vram[tile_offs]);
+        tile_offs += 4;
+        PUTPIXEL8_NP(24);
+        PUTPIXEL8_NP(16);
+        PUTPIXEL8_NP(8);
+        PUTPIXEL8_NP(0);
+
+        /*
+         * Move to the next line
+         */
+
+        buf += (pitch - 8); // next line in layer buffer
+    }
+}
+
+static void draw_tile_4bit_np(UINT tile, UINT32 *buf)
+{
+    UINT    tile_offs;  // offset of tile within VRAM
+    UINT    pal_bits;   // color palette bits obtained from tile
+    UINT    y;
+    UINT32  pattern;    // 8 pattern pixels fetched at once
+
+    /*
+     * Calculate tile offset; each tile occupies 32 bytes when using 4-bit
+     * pixels
+     */
+
+    tile_offs = ((tile & 0x3fff) << 1) | ((tile >> 15) & 1);
+    tile_offs *= 32;
+
+    /*
+     * Obtain upper color bits; the lower 4 bits come from the tile pattern
+     */
+
+    pal_bits = tile & 0x7FF0;
+    
+    /*
+     * Draw!
+     */
+
+    for (y = 0; y < 8; y++)
+    {
+        pattern = *((UINT32 *) &vram[tile_offs]);
+
+        /*
+         * Draw the 8 pixels we've fetched
+         */
+
+        PUTPIXEL4_NP(28);
+        PUTPIXEL4_NP(24);
+        PUTPIXEL4_NP(20);
+        PUTPIXEL4_NP(16);
+        PUTPIXEL4_NP(12);
+        PUTPIXEL4_NP(8);
+        PUTPIXEL4_NP(4);
+        PUTPIXEL4_NP(0);
+
+        /*
+         * Move to the next line
+         */
+
+        tile_offs += 4;     // next tile pattern line
+        buf += (pitch - 8); // next line in layer buffer
+    }
+}
+
+/*****************************************************************************/
 
 /*
  * draw_layer_8bit_32():
@@ -359,6 +461,118 @@ static void draw_layer_4bit(UINT16 *layer, int layer_num)
 
 	tilemap_redraw[layer_num] = 0;
 }
+
+/*****************************************************************************/
+
+/*
+ * draw_layer_8bit_32():
+ *
+ * Draws an entire layer of 8-bit tiles to a 32-bit layer buffer.
+ */
+
+static void draw_layer_8bit_np(UINT32 *layer, int layer_num)
+{
+    int ty, tx;
+	int tilenum;
+    UINT32 tile;
+	UINT32 addr = 0xf8000 + (layer_num * 0x2000);
+
+	if (tilemap_is_dirty[layer_num] == 0)
+	{
+		return;
+	}
+
+	tilemap_is_dirty[layer_num] = 0;
+    
+	tilenum = 0;
+    for (ty = 0; ty < 64; ty++)
+    {
+        for (tx = 0; tx < 64; tx+=2)
+        {
+			if (tilemap_redraw[layer_num] || tilemap_dirty[layer_num][tilenum+0])
+			{
+				tilemap_depth[layer_num][tilenum+0] = 0;
+				tilemap_dirty[layer_num][tilenum+0] = 0;
+				tile = *((UINT32 *) &vram[addr]) >> 16;
+
+				draw_tile_8bit_np(tile & 0xffff, layer);
+			}
+			if (tilemap_redraw[layer_num] || tilemap_dirty[layer_num][tilenum+1])
+			{
+				tilemap_depth[layer_num][tilenum+1] = 0;
+				tilemap_dirty[layer_num][tilenum+1] = 0;
+				tile = *((UINT32 *) &vram[addr]) >> 0;
+
+				draw_tile_8bit_np(tile & 0xffff, layer+8);
+			}
+
+			addr += 4;
+            layer += 16;
+			tilenum+=2;
+        }
+
+        //addr += (64 - 62) * 2;
+        layer += (7 * pitch) + (pitch - 512);   // next tile row
+    }
+
+	tilemap_redraw[layer_num] = 0;
+}
+
+/*
+ * draw_layer_4bit_32():
+ *
+ * Draws an entire layer of 4-bit tiles to a 32-bit layer buffer.
+ */
+
+static void draw_layer_4bit_np(UINT32 *layer, int layer_num)
+{
+    int ty, tx;
+	int tilenum;
+    UINT32 tile;
+	UINT32 addr = 0xf8000 + (layer_num * 0x2000);
+
+	if (tilemap_is_dirty[layer_num] == 0)
+	{
+		return;
+	}
+
+	tilemap_is_dirty[layer_num] = 0;
+    
+	tilenum = 0;
+    for (ty = 0; ty < 64; ty++)
+    {
+        for (tx = 0; tx < 64; tx+=2)
+        {
+			if (tilemap_redraw[layer_num] || tilemap_dirty[layer_num][tilenum+0])
+			{
+				tilemap_depth[layer_num][tilenum+0] = 1;
+				tilemap_dirty[layer_num][tilenum+0] = 0;
+				tile = *((UINT32 *) &vram[addr]) >> 16;
+
+				draw_tile_4bit_np(tile & 0xffff, layer);
+			}
+			if (tilemap_redraw[layer_num] || tilemap_dirty[layer_num][tilenum+1])
+			{
+				tilemap_depth[layer_num][tilenum+0] = 1;
+				tilemap_dirty[layer_num][tilenum+1] = 0;
+				tile = *((UINT32 *) &vram[addr]) >> 0;
+
+				draw_tile_4bit_np(tile & 0xffff, layer+8);
+			}
+
+			addr += 4;
+            layer += 16;
+			tilenum+=2;
+        }
+
+        //addr += (64 - 62) * 2;
+        layer += (7 * pitch) + (pitch - 512);   // next tile row
+    }
+
+	tilemap_redraw[layer_num] = 0;
+}
+
+/*****************************************************************************/
     
 /*
  * void tilegen_update(void);
@@ -372,6 +586,7 @@ void tilegen_update(void)
     UINT    layer_colors, layer_color_mask;
     FLAGS   layer_enable_mask;
     int     i, j;
+	UINT32	renderer_features;
 
     /*
      * Render layers
@@ -379,12 +594,16 @@ void tilegen_update(void)
 
 	PROFILE_SECT_ENTRY("tilegen");
 
+	renderer_features = osd_renderer_get_features();
+
     layer_colors = BSWAP32(*(UINT32 *) &reg[REG_LAYER_COLORS]);
     layer_color_mask = 0x00100000;  // first layer color bit (moves left)
     layer_enable_mask = 1;
 
 //    layer_colors = 0; // enable this to force 8-bit mode for VF3
 
+	// update palette if the renderer supports paletting
+	if (renderer_features & RENDERER_FEATURE_PALETTE)
 	{
 		UINT32 *palette;
 		int pwidth;
@@ -434,14 +653,28 @@ void tilegen_update(void)
 		{
 			osd_renderer_get_layer_buffer(i, &layer, &pitch);
 
-			if ((layer_colors & layer_color_mask))
+			if (renderer_features & RENDERER_FEATURE_PALETTE)
 			{
-				draw_layer_4bit((UINT16 *) layer, i);
+				if ((layer_colors & layer_color_mask))
+				{
+					draw_layer_4bit((UINT16 *) layer, i);
+				}
+				else
+				{
+					draw_layer_8bit((UINT16 *) layer, i);
+				}
 			}
 			else
 			{
-				draw_layer_8bit((UINT16 *) layer, i);
-            }            
+				if ((layer_colors & layer_color_mask))
+				{
+					draw_layer_4bit_np((UINT16 *) layer, i);
+				}
+				else
+				{
+					draw_layer_8bit_np((UINT16 *) layer, i);
+				}
+			}
 
 			osd_renderer_free_layer_buffer(i);	
 		}
@@ -542,10 +775,26 @@ void tilegen_vram_write_32(UINT32 addr, UINT32 data)
 	}
     else if (addr >= 0x100000 && addr < 0x120000)  // palette
     {
+		UINT32 renderer_features = osd_renderer_get_features();
+
 		*(UINT32 *)&vram[addr] = data;
         color = (addr - 0x100000) / 4;  // color number
 
-		pal[color] = data;
+		if (renderer_features & RENDERER_FEATURE_PALETTE)
+		{
+			pal[color] = data;
+		}
+		else
+		{
+			int a = (data & 0x8000) ? 0 : 0xff;
+			int r = (data >> 10) & 0x1f;
+			int g = (data >>  5) & 0x1f;
+			int b = (data >>  0) & 0x1f;
+			r = (r << 3) | (r >> 2);
+			g = (g << 3) | (g >> 2);
+			b = (b << 3) | (b >> 2);
+			pal[color] = (a << 24) | (r << 16) | (g << 8) | (b);
+		}
     }
 }
 

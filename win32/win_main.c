@@ -219,11 +219,13 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+#if RENDERER_D3D
 	if (d3d_pre_init() == FALSE)
 	{
 		message(0, "The video card doesn't meet the requirements, the program will not run further.");
 		exit(1);
 	}
+#endif
 
 	message(0, "");
 
@@ -266,11 +268,15 @@ int main(int argc, char *argv[])
     model3_init();
 	model3_reset();
 
+#if RENDERER_D3D
 	if (!d3d_init(main_window))
 	{
 		message(0, "d3d_init failed.");
 		exit(1);
 	}
+#else
+	win_gl_init(XRES, YRES);
+#endif
 
 	if (osd_input_init() == FALSE)
 	{
@@ -297,6 +303,9 @@ int main(int argc, char *argv[])
 		do_fps = TRUE;
 	else
 		do_fps = FALSE;
+
+	QueryPerformanceCounter((LARGE_INTEGER *)&time_start);
+	QueryPerformanceCounter((LARGE_INTEGER *)&time_end);
 
 	memset(&msg, 0, sizeof(MSG));
     while (quit == FALSE)
@@ -329,12 +338,17 @@ int main(int argc, char *argv[])
 			time_start = time_end;
 		}
 
+#if RENDERER_D3D
 		if (m3_config.show_fps)
 		{
 			//fps = 1.0 / ((double)(time_end - time_start) / freq);
 			sprintf(title, "FPS: %.3f", fps);
 			osd_renderer_draw_text(2, 2, title, 0xffff0000, TRUE);
 		}
+#else
+		sprintf(title, "%s: %s, FPS: %.3f", app_title, m3_config.game_name, fps);
+		SetWindowText(main_window, title);
+#endif
 
 		//osd_renderer_draw_text(2, 2, title, 0x00ff0000, TRUE);
 

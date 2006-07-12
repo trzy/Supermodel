@@ -1710,3 +1710,8 @@ void osd_renderer_invalidate_textures(UINT x, UINT y, int u, int v, UINT w, UINT
 {
 	renderer_upload_texture(x, y, u, v, w, h, texture_sheet, miplevel);
 }
+
+UINT32 osd_renderer_get_features(void)
+{
+	return RENDERER_FEATURE_PALETTE | RENDERER_FEATURE_PRIORITY;
+}

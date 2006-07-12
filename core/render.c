@@ -652,82 +652,114 @@ static void set_color_offset(UINT32 reg)
 
 void render_frame(void)
 {
+	UINT32 renderer_features;
 	int i, j;
 	UINT32 color_offset;
-	LONGLONG counter_start, counter_end, counter_frequency;
     LOG("model3.log", "RENDER START\n");
 
-	QueryPerformanceFrequency((LARGE_INTEGER*)&counter_frequency);
-    
     tilegen_update();
-	
+
+	renderer_features = osd_renderer_get_features();
+
+	if (renderer_features & RENDERER_FEATURE_PRIORITY)
 	{
-		UINT32 *priority = tilegen_get_priority_buffer();
+		// this is codepath for new-style renderers that support priorities
+		{
+			UINT32 *priority = tilegen_get_priority_buffer();
 		
-		for (i=0; i < 4; i++)
-		{
-			int pitch;
-			UINT8 *buffer;
-			osd_renderer_get_priority_buffer(i, &buffer, &pitch);
-
-			for (j=0; j < 512; j++)
+			for (i=0; i < 4; i++)
 			{
-				if (tilegen_is_priority_enabled())
+				int pitch;
+				UINT8 *buffer;
+				osd_renderer_get_priority_buffer(i, &buffer, &pitch);
+
+				for (j=0; j < 512; j++)
 				{
-					buffer[j*pitch] = (priority[j] >> ((3-i) * 8)) & 0xff;
+					if (tilegen_is_priority_enabled())
+					{
+						buffer[j*pitch] = (priority[j] >> ((3-i) * 8)) & 0xff;
+					}
+					else
+					{
+						if (i < 2)	buffer[j*pitch] = 0xff;
+						else		buffer[j*pitch] = 0x00;
+					}
 				}
-				else
-				{
-					if (i < 2)	buffer[j*pitch] = 0xff;
-					else		buffer[j*pitch] = 0x00;
-				}
+
+				osd_renderer_free_priority_buffer(i);
 			}
+		}
 
-			osd_renderer_free_priority_buffer(i);
+		osd_renderer_clear(1, 1);   // clear both the frame and Z-buffer
+
+		//    set_color_offset(tilegen_read_32(0x44));
+	
+		/*if (tilegen_is_layer_enabled(3))
+		{
+			UINT32 scroll = tilegen_get_layer_scroll_pos(3);
+			color_offset = tilegen_get_layer_color_offset(3);
+			osd_renderer_draw_layer(3, color_offset,  scroll & 0xffff, scroll >> 16);
+		}
+		if (tilegen_is_layer_enabled(2))
+		{
+			UINT32 scroll = tilegen_get_layer_scroll_pos(2);
+			color_offset = tilegen_get_layer_color_offset(2);
+			osd_renderer_draw_layer(2, color_offset, scroll & 0xffff, scroll >> 16);
+		}*/
+
+		for (i=3; i >= 0; i--)
+		{
+			if (tilegen_is_layer_enabled(i))
+			{
+				UINT32 scroll = tilegen_get_layer_scroll_pos(i);
+				color_offset = tilegen_get_layer_color_offset(i);
+				osd_renderer_draw_layer(i, color_offset, scroll & 0xffff, scroll >> 16, FALSE);
+			}
+		}
+
+		do_3d();
+
+		for (i=3; i >= 0; i--)
+		{
+			if (tilegen_is_layer_enabled(i))
+			{
+				UINT32 scroll = tilegen_get_layer_scroll_pos(i);
+				color_offset = tilegen_get_layer_color_offset(i);
+				osd_renderer_draw_layer(i, color_offset, scroll & 0xffff, scroll >> 16, TRUE);
+			}
 		}
 	}
-
-   
-    osd_renderer_clear(1, 1);   // clear both the frame and Z-buffer
-
-//    set_color_offset(tilegen_read_32(0x44));
-	
-	/*if (tilegen_is_layer_enabled(3))
+	else
 	{
-		UINT32 scroll = tilegen_get_layer_scroll_pos(3);
-		color_offset = tilegen_get_layer_color_offset(3);
-		osd_renderer_draw_layer(3, color_offset,  scroll & 0xffff, scroll >> 16);
-	}
-	if (tilegen_is_layer_enabled(2))
-	{
-		UINT32 scroll = tilegen_get_layer_scroll_pos(2);
-		color_offset = tilegen_get_layer_color_offset(2);
-		osd_renderer_draw_layer(2, color_offset, scroll & 0xffff, scroll >> 16);
-	}*/
-
-	for (i=3; i >= 0; i--)
-	{
-		if (tilegen_is_layer_enabled(i))
+		// this codepath is for the old-style renderers
+		osd_renderer_clear(1, 1);   // clear both the frame and Z-buffer
+		
+		if (tilegen_is_layer_enabled(3))
 		{
-			UINT32 scroll = tilegen_get_layer_scroll_pos(i);
-			color_offset = tilegen_get_layer_color_offset(i);
-			osd_renderer_draw_layer(i, color_offset, scroll & 0xffff, scroll >> 16, FALSE);
+			UINT32 scroll = tilegen_get_layer_scroll_pos(3);
+			color_offset = tilegen_get_layer_color_offset(3);
+			osd_renderer_draw_layer(3, color_offset, scroll & 0xffff, scroll >> 16, TRUE);
 		}
-	}
-
-	QueryPerformanceCounter((LARGE_INTEGER*)&counter_start);
-
-	do_3d();
-	
-	QueryPerformanceCounter((LARGE_INTEGER*)&counter_end);
-
-	for (i=3; i >= 0; i--)
-	{
-		if (tilegen_is_layer_enabled(i))
+		if (tilegen_is_layer_enabled(2))
 		{
-			UINT32 scroll = tilegen_get_layer_scroll_pos(i);
-			color_offset = tilegen_get_layer_color_offset(i);
-			osd_renderer_draw_layer(i, color_offset, scroll & 0xffff, scroll >> 16, TRUE);
+			UINT32 scroll = tilegen_get_layer_scroll_pos(2);
+			color_offset = tilegen_get_layer_color_offset(2);
+			osd_renderer_draw_layer(2, color_offset, scroll & 0xffff, scroll >> 16, TRUE);
+		}
+
+		do_3d();
+
+		if (tilegen_is_layer_enabled(1))
+		{
+			UINT32 scroll = tilegen_get_layer_scroll_pos(1);
+			color_offset = tilegen_get_layer_color_offset(1);
+			osd_renderer_draw_layer(1, color_offset, scroll & 0xffff, scroll >> 16, TRUE);
+		}
+		if (tilegen_is_layer_enabled(0))
+		{
+			UINT32 scroll = tilegen_get_layer_scroll_pos(0);
+			color_offset = tilegen_get_layer_color_offset(0);
+			osd_renderer_draw_layer(0, color_offset, scroll & 0xffff, scroll >> 16, TRUE);
 		}
 	}
 

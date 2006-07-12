@@ -2383,6 +2383,11 @@ BOOL model3_init(void)
 	tilegen_init(vram);
 	r3d_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
 	render_init(culling_ram_8e, culling_ram_8c, polygon_ram, texture_ram, vrom);
+
+#ifndef RENDERER_D3D
+	osd_renderer_set_memory(polygon_ram, texture_ram, vrom);
+#endif
+
 //  scsp_init();
 //  if(m3_config.flags & GAME_OWN_DSB1) dsb_reset();
 	controls_init();

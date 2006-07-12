@@ -108,7 +108,10 @@ extern void osd_renderer_blit(void);
 extern void osd_renderer_begin_3d_scene(void);
 extern void osd_renderer_end_3d_scene(void);
 extern void osd_renderer_draw_text(int x, int y, const char* string, DWORD color, BOOL shadow);
-                                    
+extern UINT32 osd_renderer_get_features(void);
+
+#define RENDERER_FEATURE_PALETTE			0x00000001
+#define RENDERER_FEATURE_PRIORITY			0x00000002
                                     
 
 /******************************************************************/
