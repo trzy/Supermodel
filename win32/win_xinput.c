@@ -20,7 +20,7 @@
 /* XInput for Xbox360 controller								  */
 /******************************************************************/
 
-#include "MODEL3.H"
+#include "model3.h"
 #include <dinput.h>
 #include <xinput.h>
 

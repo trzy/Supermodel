@@ -662,7 +662,7 @@ static UINT32 (* drc_op_table59[1024])(UINT32);
 static UINT32 (* drc_op_table63[1024])(UINT32);
 static UINT32 (* drc_op_table[64])(UINT32);
 
-#include "ppc_itp\ppc_ops.c"
+#include "ppc_itp/ppc_ops.c"
 #include "ppc_drc_ops.c"
 
 static void init_ppc_drc(void)
