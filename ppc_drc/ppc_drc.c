@@ -290,7 +290,7 @@ static PPC_REGS ppc;
 static UINT32 ppc_rotate_mask[32][32];
 
 
-#define TB_DIVIDER	4
+#define TB_DIVIDER	8		// NOTE: Daytona 2 won't work with 4
 
 INLINE int CYCLES_TO_DEC(int cycles)
 {
