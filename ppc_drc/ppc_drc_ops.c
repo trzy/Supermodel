@@ -4,6 +4,7 @@ static UINT32 drc_invalid_area(void)
 }
 
 #define PPCREG(x)		((UINT32)&ppc.r[x])
+#define FPRREG(x)		((UINT32)&ppc.fpr[x].fd)
 
 static int block_cycle_count;
 static UINT32 block_start_pc;
@@ -36,6 +37,9 @@ static UINT32 drc_recompile_block(void)
 		gen(SUBIM, (UINT32)&ppc_icount, 1);
 		
 		op = READ32(drc_pc);
+
+		if (op == 0) break;		// VF3 will hit this
+		
 		switch (op >> 26)
 		{
 			case 19:	res = drc_op_table19[(op >> 1) & 0x3ff](op); break;
@@ -66,6 +70,13 @@ static void insert_set_cr0(int reg)
 	gen(BTIM, (UINT32)&ppc.xer, 31);
 	gen(ADCI, REG_EAX, 0);
 	gen(MOVR8M8, (UINT32)&ppc.cr[0], REG_AL);
+}
+
+static void insert_set_cr1(void)
+{
+	gen(MOVMR, REG_EBX, (UINT32)&ppc.fpscr);
+	gen(SHRI, REG_EBX, 28);
+	gen(MOVR8M8, (UINT32)&ppc.cr[1], REG_BL);
 }
 
 
@@ -3801,19 +3812,48 @@ static UINT32 drc_ecowx(UINT32 op)
 
 static UINT32 drc_fabs(UINT32 op)
 {
+#if !COMPILE_FPU_OPS || DONT_COMPILE_FABS
+
 	gen(PUSHI, op, 0);
 	gen(CALLI, (UINT32)(ppc_fabsx), 0);
 	gen(ADDI, REG_ESP, 4);
 
+#else
+
+	gen(FLDM64, FPRREG(RB), 0);
+	gen(FABS, 0, 0);
+	gen(FSTPM64, FPRREG(RD), 0);
+	if (RCBIT)
+	{
+		insert_set_cr1();
+	}
+
+#endif
 	return 0;
 }
 
 static UINT32 drc_fadd(UINT32 op)
 {
+#if !COMPILE_FPU_OPS || DONT_COMPILE_FADD
+
 	gen(PUSHI, op, 0);
 	gen(CALLI, (UINT32)(ppc_faddx), 0);
 	gen(ADDI, REG_ESP, 4);
 
+#else
+
+	gen(FLDM64, FPRREG(RA), 0);
+	gen(FADDM64, FPRREG(RB), 0);
+	gen(FSTPM64, FPRREG(RD), 0);
+
+	// TODO: FPSCR/FPRF
+	
+	if (RCBIT)
+	{
+		insert_set_cr1();
+	}
+
+#endif
 	return 0;
 }
 
@@ -3855,37 +3895,93 @@ static UINT32 drc_fctiwz(UINT32 op)
 
 static UINT32 drc_fdiv(UINT32 op)
 {
+#if !COMPILE_FPU_OPS || DONT_COMPILE_FDIV
+
 	gen(PUSHI, op, 0);
 	gen(CALLI, (UINT32)(ppc_fdivx), 0);
 	gen(ADDI, REG_ESP, 4);
 
+#else
+
+	gen(FLDM64, FPRREG(RA), 0);
+	gen(FDIVM64, FPRREG(RB), 0);
+	gen(FSTPM64, FPRREG(RD), 0);
+	
+	// TODO: FPSCR/FPRF
+
+	if (RCBIT)
+	{
+		insert_set_cr1();
+	}
+
+#endif
 	return 0;
 }
 
 static UINT32 drc_fmr(UINT32 op)
 {
+#if !COMPILE_FPU_OPS || DONT_COMPILE_FMR
+
 	gen(PUSHI, op, 0);
 	gen(CALLI, (UINT32)(ppc_fmrx), 0);
 	gen(ADDI, REG_ESP, 4);
 
+#else
+
+	gen(FLDM64, FPRREG(RB), 0);
+	gen(FSTPM64, FPRREG(RD), 0);
+	if (RCBIT)
+	{
+		insert_set_cr1();
+	}
+
+#endif
 	return 0;
 }
 
+// NOTE: not tested!
 static UINT32 drc_fnabs(UINT32 op)
 {
+#if !COMPILE_FPU_OPS || DONT_COMPILE_FNABS || DISABLE_UNTESTED_OPS
+
 	gen(PUSHI, op, 0);
 	gen(CALLI, (UINT32)(ppc_fnabsx), 0);
 	gen(ADDI, REG_ESP, 4);
 
+#else
+
+	gen(FLDM64, FPRREG(RB), 0);
+	gen(FABS, 0, 0);
+	gen(FCHS, 0, 0);
+	gen(FSTPM64, FPRREG(RD), 0);
+	if (RCBIT)
+	{
+		insert_set_cr1();
+	}
+
+#endif
 	return 0;
 }
 
 static UINT32 drc_fneg(UINT32 op)
 {
+#if !COMPILE_FPU_OPS || DONT_COMPILE_FNEG
+
 	gen(PUSHI, op, 0);
 	gen(CALLI, (UINT32)(ppc_fnegx), 0);
 	gen(ADDI, REG_ESP, 4);
 
+#else
+
+	gen(FLDM64, FPRREG(RB), 0);
+	gen(FCHS, 0, 0);
+	gen(FSTPM64, FPRREG(RD), 0);
+	if (RCBIT)
+	{
+		insert_set_cr1();
+	}
+
+#endif
 	return 0;
 }
 

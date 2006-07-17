@@ -356,6 +356,52 @@ void gen(GENX86_OPCODE opcode, INT32 dst_param, INT32 src_param)
 			break;
 		}
 
+		case FABS:
+		{
+			emit_byte(0xd9);
+			emit_byte(0xe1);
+			break;
+		}
+
+		case FCHS:
+		{
+			emit_byte(0xd9);
+			emit_byte(0xe0);
+			break;
+		}
+
+		case FADDM64:
+		{
+			emit_byte(0xdc);
+			emit_byte(0x05);
+			emit_dword(dst_param);
+			break;
+		}
+
+		case FDIVM64:
+		{
+			emit_byte(0xdc);
+			emit_byte(0x35);
+			emit_dword(dst_param);
+			break;
+		}
+
+		case FLDM64:
+		{
+			emit_byte(0xdd);
+			emit_byte(0x05);
+			emit_dword(dst_param);
+			break;
+		}
+
+		case FSTPM64:
+		{
+			emit_byte(0xdd);
+			emit_byte(0x1d);
+			emit_dword(dst_param);
+			break;
+		}
+
 		case IDIV:
 		{
 			emit_byte(0xf7);

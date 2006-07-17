@@ -8,6 +8,7 @@
 #define DISABLE_UNTESTED_OPS		0
 #define ENABLE_FASTRAM_PATH			1
 #define ENABLE_FASTRAM_PATH_FPU		1
+#define COMPILE_FPU_OPS				1
 
 #define DONT_COMPILE_ADD			0
 #define DONT_COMPILE_ADDC			0
@@ -289,7 +290,7 @@ static PPC_REGS ppc;
 static UINT32 ppc_rotate_mask[32][32];
 
 
-#define TB_DIVIDER	5
+#define TB_DIVIDER	4
 
 INLINE int CYCLES_TO_DEC(int cycles)
 {
@@ -526,6 +527,12 @@ INLINE void ppc_set_spr(int spr, UINT32 value)
 			{
 				/* trigger interrupt */
 				//ppc.interrupt_pending |= 0x2;
+				ppc.interrupt_pending |= 0x2;
+				if (ppc.msr & MSR_EE)
+				{
+					ppc_stolen_cycles += ppc_icount;
+					ppc_icount = 0;
+				}
 			}
 			write_decrementer(value);
 			return;
@@ -1072,8 +1079,11 @@ void ppc_set_irq_line(int irqline)
 {
 	ppc.interrupt_pending |= 0x1;
 
-	ppc_stolen_cycles += ppc_icount;
-	ppc_icount = 0;
+	if (ppc.msr & MSR_EE)
+	{
+		ppc_stolen_cycles += ppc_icount;
+		ppc_icount = 0;
+	}
 }
 
 UINT32 ppc_get_pc(void)
