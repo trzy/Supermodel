@@ -533,6 +533,9 @@ INLINE void ppc_set_spr(int spr, UINT32 value)
 					ppc_stolen_cycles += ppc_icount;
 					ppc_icount = 0;
 				}
+
+				DEC = value;
+				return;
 			}
 			write_decrementer(value);
 			return;
@@ -632,10 +635,13 @@ INLINE void ppc_set_msr(UINT32 value)
 	if( value & (MSR_ILE | MSR_LE) )
 		error("ppc: set_msr: little_endian mode not supported !");
 
-	if (ppc.interrupt_pending != 0)
+	if (value & MSR_EE)
 	{
-		ppc_stolen_cycles = ppc_icount;
-		ppc_icount = 0;
+		if (ppc.interrupt_pending != 0)
+		{
+			ppc_stolen_cycles = ppc_icount;
+			ppc_icount = 0;
+		}
 	}
 
 	MSR = value;
@@ -950,7 +956,7 @@ void ppc_init(const PPC_CONFIG *config)
 		default: break;
 	}
 
-	ppc_dec_divider = (int)(multiplier * 2);
+	ppc_dec_divider = (int)(multiplier * 4);
 
 	if (pll_config == -1)
 	{
