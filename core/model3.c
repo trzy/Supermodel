@@ -1426,7 +1426,7 @@ void model3_load_bram(void)
     if(load_file(string, bram, 256*1024))
 	{
 		message(0, "Can't load Backup RAM from file, creating a new file.");
-        memset(bram, 0xFF, 256*1024);
+        memset(bram, 0x00, 256*1024);
         save_file(string, bram, 256*1024, 0);
 	}
 }
