@@ -78,7 +78,9 @@ typedef struct
 } MESH_CACHE;
 
 #define DYNAMIC_VB_SIZE			180000
-#define STATIC_VB_SIZE			1000000
+#define DYNAMIC_VB_SIZE_ALPHA	180000
+#define STATIC_VB_SIZE			1800000
+#define STATIC_VB_SIZE_ALPHA	200000
 
 #define NUM_DYNAMIC_MESHES		2048
 #define NUM_STATIC_MESHES		32768
@@ -314,7 +316,7 @@ BOOL d3d_init(HWND main_window)
 		return FALSE;
 	}
 	hr = IDirect3DDevice9_CreateVertexBuffer(device,
-			DYNAMIC_VB_SIZE * sizeof(VERTEX), D3DUSAGE_DYNAMIC|D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &dynamic_vb_alpha, NULL);
+			DYNAMIC_VB_SIZE_ALPHA * sizeof(VERTEX), D3DUSAGE_DYNAMIC|D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &dynamic_vb_alpha, NULL);
 	if (FAILED(hr))
 	{
 		message(0, "d3d->CreateVertexBuffer failed\n");
@@ -330,7 +332,7 @@ BOOL d3d_init(HWND main_window)
 		return FALSE;
 	}
 	hr = IDirect3DDevice9_CreateVertexBuffer(device,
-			STATIC_VB_SIZE * sizeof(VERTEX), 0, 0, D3DPOOL_MANAGED, &static_vb_alpha, NULL);
+			STATIC_VB_SIZE_ALPHA * sizeof(VERTEX), 0, 0, D3DPOOL_MANAGED, &static_vb_alpha, NULL);
 	if (FAILED(hr))
 	{
 		message(0, "d3d->CreateVertexBuffer failed\n");
@@ -1128,7 +1130,7 @@ void osd_renderer_draw_model(UINT32 *mem, UINT32 address, int dynamic)
 			printf("dynamic vertex cache overflow!\n");
 			exit(1);
 		}
-		if (dynamic_mesh_cache_vertex_top_alpha >= DYNAMIC_VB_SIZE)
+		if (dynamic_mesh_cache_vertex_top_alpha >= DYNAMIC_VB_SIZE_ALPHA)
 		{
 			printf("dynamic vertex cache alpha overflow!\n");
 			exit(1);
@@ -1177,7 +1179,7 @@ void osd_renderer_draw_model(UINT32 *mem, UINT32 address, int dynamic)
 				printf("static vertex cache overflow!\n");
 				exit(1);
 			}
-			if (static_mesh_cache_vertex_top_alpha >= STATIC_VB_SIZE)
+			if (static_mesh_cache_vertex_top_alpha >= STATIC_VB_SIZE_ALPHA)
 			{
 				printf("static vertex cache alpha overflow!\n");
 				exit(1);
