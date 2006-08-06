@@ -282,7 +282,7 @@ BOOL d3d_init(HWND main_window)
 
 	memset(&d3dpp, 0, sizeof(d3dpp));
 	d3dpp.Windowed					= m3_config.fullscreen ? FALSE : TRUE;
-	d3dpp.SwapEffect				= m3_config.stretch ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_FLIP;
+	d3dpp.SwapEffect				= m3_config.fullscreen ? (m3_config.stretch ? D3DSWAPEFFECT_COPY : D3DSWAPEFFECT_FLIP) : D3DSWAPEFFECT_FLIP;
 	d3dpp.BackBufferWidth			= width;
 	d3dpp.BackBufferHeight			= height;
 	d3dpp.BackBufferCount			= m3_config.stretch ? 1 : 2;
@@ -658,7 +658,7 @@ void osd_renderer_draw_layer(int layer, UINT32 color_offset, int x, int y, BOOL 
 
 void osd_renderer_blit(void)
 {
-	if (m3_config.stretch)
+	if (m3_config.stretch && m3_config.fullscreen)
 	{
 		RECT src_rect = {0, 0, 496, 384};
 		IDirect3DDevice9_Present(device, &src_rect, NULL, NULL, NULL);
