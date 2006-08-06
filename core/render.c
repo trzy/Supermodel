@@ -203,8 +203,8 @@ static UINT32 *translate_scene_graph_address(UINT32 addr)
     }
     else                        // 8C culling RAM
     {
-        if (addr >= 0x00100000)
-            error("translate_scene_graph_address(): addr = %08X", addr);
+        //if (addr >= 0x00100000)
+        //    error("translate_scene_graph_address(): addr = %08X", addr);
         return (UINT32 *) &culling_ram_8c[(addr & 0x000FFFFF) * 4];
     }
 }
