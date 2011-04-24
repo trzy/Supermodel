@@ -1,0 +1,185 @@
+##
+## Supermodel
+## A Sega Model 3 Arcade Emulator.
+## Copyright 2011 Bart Trzynadlowski 
+##
+## This file is part of Supermodel.
+##
+## Supermodel is free software: you can redistribute it and/or modify it under
+## the terms of the GNU General Public License as published by the Free 
+## Software Foundation, either version 3 of the License, or (at your option)
+## any later version.
+##
+## Supermodel is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+## more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+#
+# Makefile.SDL.Win32.MSVC
+#
+# GNU Makefile for SDL port using Microsoft Visual C++ 2008. Copy this Makefile
+# to the base directory of the source distribution (one up from Src/ and here).
+#
+# The DirectX SDK must be properly installed -- the DXSDK_DIR environment
+# variable must be set.
+#
+
+
+###############################################################################
+# Build Options
+###############################################################################
+
+#
+# Bitness of build
+#
+BITS = 32	# '32' or '64' only
+
+#
+# Experimental sound code (32-bit builds only)
+#
+ENABLE_SOUND = no	# 'yes' or 'no' only
+
+
+###############################################################################
+# Required Libraries
+#
+# Edit these paths as necessary.
+###############################################################################
+
+#
+# SDL
+#
+SDL_LIBPATH = c:\Code\SDL-1.2.14\lib\\
+SDL_INCLUDEPATH = c:\Code\SDL-1.2.14\include\\
+
+
+###############################################################################
+# Outputs
+###############################################################################
+
+OUTFILE = Supermodel.exe
+OBJ_DIR = obj
+
+
+###############################################################################
+# Compiler and Linker
+###############################################################################
+
+CC = cl
+LD = link
+COMPILER_FLAGS = /I "$(DXSDK_DIR)\Include" /I "$(SDL_INCLUDEPATH)" /I "Src\\" /I "Src\OSD\SDL\\" /Ox /D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL
+CFLAGS = $(COMPILER_FLAGS) /TC
+CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
+LFLAGS = /LIBPATH:"$(DXSDK_DIR)\Lib\x86" /LIBPATH:"$(SDL_LIBPATH)" /OUT:"$(OUTFILE)" /MANIFEST:NO /SUBSYSTEM:CONSOLE /NOLOGO /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /MACHINE:X86 /LTCG #/DEBUG
+OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
+
+#
+# Build options...
+#
+##ifdef ($(BITS),32)	# build type must be 32 bits for sound to be included
+#	ifeq ($(ENABLE_SOUND),yes)
+		COMPILER_FLAGS += /D "SUPERMODEL_SOUND"
+#	endif
+#endif
+
+
+###############################################################################
+# Build Instructions
+###############################################################################
+
+#
+# Ensure build options are consistent
+#
+ifneq ($(BITS),32)
+	ENABLE_SOUND = no
+endif
+
+#
+# Objects and Dependencies
+#
+HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
+OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/INIFile.obj $(OBJ_DIR)/BlockFile.obj $(OBJ_DIR)/93C46.obj $(OBJ_DIR)/ROMLoad.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/ioapi.obj $(OBJ_DIR)/Error.obj $(OBJ_DIR)/glew.obj $(OBJ_DIR)/Shader.obj $(OBJ_DIR)/Real3D.obj $(OBJ_DIR)/Render3D.obj $(OBJ_DIR)/Models.obj $(OBJ_DIR)/Render2D.obj $(OBJ_DIR)/TileGen.obj $(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/SoundBoard.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/MPC10x.obj $(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj $(OBJ_DIR)/InputTypes.obj $(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj
+
+#ifeq ($(BITS),32)	# if sound enabled and 32-bit build, include Turbo68K
+#	ifeq ($(ENABLE_SOUND),yes)
+		OBJ += $(OBJ_DIR)/Turbo68K.obj
+#	endif
+#endif
+
+
+#
+# Targets
+#
+all:	$(OBJ_DIR) $(OBJ)
+	$(LD) $(LFLAGS) $(OBJ_LIBS) $(OBJ)
+
+$(OBJ_DIR):
+	mkdir $(OBJ_DIR)
+
+clean:	
+	del $(OUTFILE)
+	del $(OBJ_DIR)\*.obj
+
+
+#
+# Turbo68K 
+#
+$(OBJ_DIR)/Make68K.exe: Src/CPU/68K/Make68K.c
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/Make68K.obj
+	$(LD) /OUT:$(OBJ_DIR)/Make68K.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/Make68K.obj
+
+$(OBJ_DIR)/Turbo68K.obj: $(OBJ_DIR)/Make68K.exe
+	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm -singleaddr 
+	nasm $(OBJ_DIR)/Turbo68K.asm -o $(OBJ_DIR)/Turbo68K.obj -f win32
+
+
+#
+# Rules for Supermodel C++ code
+#
+$(OBJ_DIR)/%.obj:	Src/%.cpp Src/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Model3/%.cpp Src/Model3/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Graphics/%.cpp Src/Graphics/%.h $(HEADERS) Src/Graphics/Shaders3D.h
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/Graphics/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/Sound/%.cpp Src/Sound/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Sound/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+		
+$(OBJ_DIR)/%.obj:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h Src/CPU/PowerPC/ppc603.c Src/CPU/PowerPC/ppc_ops.c $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/Inputs/%.cpp Src/Inputs/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+			
+$(OBJ_DIR)/%.obj:	Src/OSD/SDL/%.cpp Src/OSD/SDL/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/OSD/SDL/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/OSD/Windows/%.cpp Src/OSD/Windows/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Pkgs/%.c Src/Pkgs/%.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Pkgs/*.c
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
