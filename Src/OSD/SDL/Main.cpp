@@ -1025,9 +1025,11 @@ int main(int argc, char **argv)
 		InputSystem = new CSDLInputSystem();
 #ifdef SUPERMODEL_WIN32
 	else if (stricmp(inpSysName, "dinput") == 0)
-		InputSystem = new CDirectInputSystem(false);
+		InputSystem = new CDirectInputSystem(false, false, false);
+	else if (stricmp(inpSysName, "xinput") == 0)
+		InputSystem = new CDirectInputSystem(false, true, false);
 	else if (stricmp(inpSysName, "rawinput") == 0)
-		InputSystem = new CDirectInputSystem(true);
+		InputSystem = new CDirectInputSystem(true, false, false);
 #endif
 	else
 	{

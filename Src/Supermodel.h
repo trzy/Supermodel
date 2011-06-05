@@ -131,11 +131,17 @@ extern void InfoLog(const char *fmt, ...);
 #include "Graphics/Render2D.h"
 #include "Graphics/Render3D.h"
 #include "Graphics/Shader.h"
-#include "CPU/PowerPC/ppc.h"
 #include "CPU/PowerPC/PPCDisasm.h"
+#include "CPU/PowerPC/ppc.h"
 #ifdef SUPERMODEL_SOUND
 #include "CPU/68K/Turbo68K.h"
-#endif
+#endif // SUPERMODEL_SOUND
+#include "Inputs/Input.h"
+#include "Inputs/Inputs.h"
+#include "Inputs/InputSource.h"
+#include "Inputs/InputSystem.h"
+#include "Inputs/InputTypes.h"
+#include "Inputs/MultiInputSource.h"
 #include "Model3/Bus.h"
 #include "Model3/IRQ.h"
 #include "Model3/PCI.h"
@@ -148,12 +154,6 @@ extern void InfoLog(const char *fmt, ...);
 #include "Sound/SCSP.h"
 #include "Model3/SoundBoard.h"
 #include "Model3/Model3.h"
-#include "Inputs/Input.h"
-#include "Inputs/Inputs.h"
-#include "Inputs/InputSource.h"
-#include "Inputs/InputSystem.h"
-#include "Inputs/InputTypes.h"
-#include "Inputs/MultiInputSource.h"
 
 /******************************************************************************
  Helpful Macros and Inlines

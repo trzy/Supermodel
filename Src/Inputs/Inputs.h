@@ -12,6 +12,7 @@ class CAnalogInput;
 class CAxisInput;
 class CSwitchInput;
 class CGearShift4Input;
+class CTriggerInput;
 class CINIFile;
 struct GameInfo;
 
@@ -30,26 +31,32 @@ private:
 	/*
 	 * Adds a switch input (eg button) to this collection.
 	 */ 
-	CSwitchInput* AddSwitchInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
+	CSwitchInput *AddSwitchInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
 		UINT16 offVal = 0x00, UINT16 onVal = 0x01);
 
 	/*
 	 * Adds an analog input (eg pedal) to this collection.
 	 */
-	CAnalogInput* AddAnalogInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
+	CAnalogInput *AddAnalogInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
 		UINT16 minVal = 0x00, UINT16 maxVal = 0xFF);
 
 	/*
 	 * Adds an axis input (eg jostick axis, light gun axis or steering wheel) to this collection.
 	 */
-	CAxisInput* AddAxisInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
-		CAnalogInput* axisNeg, CAnalogInput* axisPos, UINT16 minVal = 0x00, UINT16 offVal = 0x80, UINT16 maxVal = 0xFF);
+	CAxisInput *AddAxisInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
+		CAnalogInput *axisNeg, CAnalogInput *axisPos, UINT16 minVal = 0x00, UINT16 offVal = 0x80, UINT16 maxVal = 0xFF);
 
 	/*
 	 * Adds a 4-gear shifter input to this collection.
 	 */
-	CGearShift4Input* AddGearShift4Input(const char *id, const char *label, unsigned gameFlags, 
+	CGearShift4Input *AddGearShift4Input(const char *id, const char *label, unsigned gameFlags, 
 		CSwitchInput *shift1, CSwitchInput *shift2, CSwitchInput *shift3, CSwitchInput *shift4, CSwitchInput *shiftUp, CSwitchInput *shiftDown);
+
+	/*
+	 * Adds a lightgun trigger input to this collection.
+	 */
+	CTriggerInput *AddTriggerInput(const char *id, const char *label, unsigned gameFlags, 
+		CSwitchInput *trigger, CSwitchInput *offscreen, UINT16 offVal = 0x00, UINT16 onVal = 0x01);
 
 	void PrintHeader(const char *fmt, ...);
 
@@ -57,86 +64,88 @@ private:
 
 public:
 	// UI controls
-	CSwitchInput*     uiExit;
-	CSwitchInput*     uiReset;
-	CSwitchInput*     uiPause;
-	CSwitchInput*     uiSaveState;
-	CSwitchInput*     uiChangeSlot;
-	CSwitchInput*     uiLoadState;
-	CSwitchInput*     uiDumpInpState;
-	CSwitchInput*     uiClearNVRAM;
-	CSwitchInput*     uiToggleCursor;
-	CSwitchInput*     uiToggleFrLimit;
+	CSwitchInput     *uiExit;
+	CSwitchInput     *uiReset;
+	CSwitchInput     *uiPause;
+	CSwitchInput     *uiSaveState;
+	CSwitchInput     *uiChangeSlot;
+	CSwitchInput     *uiLoadState;
+	CSwitchInput     *uiDumpInpState;
+	CSwitchInput     *uiClearNVRAM;
+	CSwitchInput     *uiToggleCursor;
+	CSwitchInput     *uiToggleFrLimit;
 
 	// Common controls between all games
-	CSwitchInput*     coin[2];
-	CSwitchInput*     start[2];
-	CSwitchInput*     test[2];
-	CSwitchInput*     service[2];
+	CSwitchInput     *coin[2];
+	CSwitchInput     *start[2];
+	CSwitchInput     *test[2];
+	CSwitchInput     *service[2];
 
 	// Joysticks (players 1 and 2)
-	CSwitchInput*     up[2];
-	CSwitchInput*     down[2];
-	CSwitchInput*     left[2];
-	CSwitchInput*     right[2];
+	CSwitchInput     *up[2];
+	CSwitchInput     *down[2];
+	CSwitchInput     *left[2];
+	CSwitchInput     *right[2];
 
 	// Fighting game controls (players 1 and 2)
-	CSwitchInput*     punch[2];
-	CSwitchInput*     kick[2];
-	CSwitchInput*     guard[2];
-	CSwitchInput*     escape[2];
+	CSwitchInput     *punch[2];
+	CSwitchInput     *kick[2];
+	CSwitchInput     *guard[2];
+	CSwitchInput     *escape[2];
 
 	// Soccer game controls (players 1 and 2)
-	CSwitchInput*     shortPass[2];
-	CSwitchInput*     longPass[2];
-	CSwitchInput*     shoot[2];
+	CSwitchInput     *shortPass[2];
+	CSwitchInput     *longPass[2];
+	CSwitchInput     *shoot[2];
 
 	// Vehicle controls
-	CAxisInput*       steering;
-	CAnalogInput*     accelerator;
-	CAnalogInput*     brake;
+	CAxisInput       *steering;
+	CAnalogInput     *accelerator;
+	CAnalogInput     *brake;
 
 	// VR view buttons: VR1 Red, VR2 Blue, VR3 Yellow, VR4 Green
-	CSwitchInput*     vr[4];
+	CSwitchInput     *vr[4];
  
 	// 4-speed gear shift
-	CGearShift4Input* gearShift4;
+	CGearShift4Input *gearShift4;
 
 	// Rally controls
-	CSwitchInput*	  viewChange;
-	CSwitchInput*	  handBrake;
+	CSwitchInput	 *viewChange;
+	CSwitchInput	 *handBrake;
 
 	// Twin joysticks
-	CSwitchInput*	  twinJoyTurnLeft;
-	CSwitchInput*     twinJoyTurnRight;
-	CSwitchInput*	  twinJoyStrafeLeft;
-	CSwitchInput*     twinJoyStrafeRight;
-	CSwitchInput*	  twinJoyForward;
-	CSwitchInput*     twinJoyReverse;
-	CSwitchInput*	  twinJoyJump;
-	CSwitchInput*     twinJoyCrouch;
-	CSwitchInput*	  twinJoyLeftShot;
-	CSwitchInput*     twinJoyRightShot;
-	CSwitchInput*	  twinJoyLeftTurbo;
-	CSwitchInput*     twinJoyRightTurbo;
+	CSwitchInput	 *twinJoyTurnLeft;
+	CSwitchInput     *twinJoyTurnRight;
+	CSwitchInput	 *twinJoyStrafeLeft;
+	CSwitchInput     *twinJoyStrafeRight;
+	CSwitchInput	 *twinJoyForward;
+	CSwitchInput     *twinJoyReverse;
+	CSwitchInput	 *twinJoyJump;
+	CSwitchInput     *twinJoyCrouch;
+	CSwitchInput	 *twinJoyLeftShot;
+	CSwitchInput     *twinJoyRightShot;
+	CSwitchInput	 *twinJoyLeftTurbo;
+	CSwitchInput     *twinJoyRightTurbo;
 	
 	// Analog joystick
-	CAxisInput*       analogJoyX;
-	CAxisInput*       analogJoyY;
-	CSwitchInput*	  analogJoyTrigger;
-	CSwitchInput*	  analogJoyEvent;
+	CAxisInput       *analogJoyX;
+	CAxisInput       *analogJoyY;
+	CSwitchInput	 *analogJoyTrigger;
+	CSwitchInput	 *analogJoyEvent;
 
 	// Gun controls (players 1 and 2)
-	CAxisInput*       gunX[2];
-	CAxisInput*       gunY[2];
-	CSwitchInput*     trigger[2];
-	CSwitchInput*     offscreen[2];
-
+	CAxisInput       *gunX[2];
+	CAxisInput       *gunY[2];
+	CTriggerInput    *trigger[2];
+	
 	/*
 	 * Creates a set of inputs with the given input system.
 	 */
 	CInputs(CInputSystem *system);
 	
+	/*
+	 * CInputs destructor.
+	 */
 	~CInputs();
 
 	/*
@@ -144,20 +153,30 @@ public:
 	 */
 	CInputSystem *GetInputSystem();
 
+	unsigned Count()
+	{
+		return (unsigned)m_inputs.size();
+	}
+
+	CInput *operator[](const unsigned index)
+	{
+		return m_inputs[index];
+	}
+
+	CInput *operator[](const char *idOrLabel)
+	{
+		for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+		{
+			if (stricmp((*it)->id, idOrLabel) == 0 || stricmp((*it)->label, idOrLabel) == 0)
+				return *it;
+		}
+		return NULL;
+	}
+
 	/*
 	 * Initializes the inputs.  Must be called before any other methods are used.
 	 */ 
 	bool Initialize();
-
-	/*
-	 * Looks up an input by its identifier.
-	 */
-	CInput* LookupInputByID(const char* id);
-
-	/*
-	 * Returns true if the given input is configurable and can be set by the user.
-	 */
-	bool InputIsConfigurable(CInput *input);
 
 	/*
 	 * Reads the input mapping assignments from the given INI file.

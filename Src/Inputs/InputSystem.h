@@ -1,6 +1,7 @@
 #ifndef INCLUDED_INPUTSYSTEM_H
 #define INCLUDED_INPUTSYSTEM_H
 
+#include <stdio.h>
 #include <string>
 #include <vector>
 using namespace std;
@@ -10,6 +11,8 @@ using namespace std;
 class CInput;
 class CInputSource;
 class CINIFile;
+
+#define MAX_NAME_LENGTH 255
 
 // Read flags for ReadMapping
 #define READ_KEYBOARD 1
@@ -262,17 +265,26 @@ struct JoySettings
 	}
 };
 
+struct KeyDetails
+{
+	char name[MAX_NAME_LENGTH];   // Keyboard name (if available)
+};
+
+struct MouseDetails
+{
+	char name[MAX_NAME_LENGTH];   // Mouse name (if available)
+	bool isAbsolute;              // True if uses absolute positions (ie lightgun)
+};
+
 struct JoyDetails
 {
-	bool hasXAxis;          // Flags to indicate which axes available on joystick
-	bool hasYAxis;
-	bool hasZAxis;
-	bool hasRXAxis;
-	bool hasRYAxis;
-	bool hasRZAxis;
-	int numAxes;            // Total number of axes on joystick
-	int numPOVs;            // Total number of POV hat controllers on joystick
-	int numButtons;         // Total number of buttons on joystick
+	char name[MAX_NAME_LENGTH];	  // Joystick name (if available)
+	int numAxes;                  // Total number of axes on joystick
+	int numPOVs;                  // Total number of POV hat controllers on joystick
+	int numButtons;               // Total number of buttons on joystick
+	bool hasFFeedback;	          // True if joystick supports force feedback
+	bool hasAxis[NUM_JOY_AXES];   // Flags to indicate which axes available on joystick
+	bool axisHasFF[NUM_JOY_AXES]; // Flags to indicate which axes are force feedback enabled
 };
 
 /*
@@ -290,9 +302,6 @@ private:
 
 	// Lookup table for translating joystick mapping strings to their respective joystick parts
 	static JoyPartsStruct s_joyParts[];
-
-	// Empty input source
-	static CMultiInputSource *s_emptySource;
 
 	// Number of keyboards, mice and joysticks
 	int m_numKbds;
@@ -317,6 +326,9 @@ private:
 	vector<MouseSettings*> m_mseSettings;
 	vector<JoySettings*> m_joySettings;
 
+	// Empty input source
+	CMultiInputSource *m_emptySource;
+
 	//
 	// Helper methods
 	//
@@ -327,27 +339,35 @@ private:
 	void CreateSourceCache();
 
 	/*
+	 * Returns true if the given source is in the source cache.
+	 */
+	bool IsInSourceCache(CInputSource *source);
+
+	/*
 	 * Deletes cache for all sources.
 	 */
 	void DeleteSourceCache();
 
 	/* 
-	 * Deletes an input source
+	 * Deletes an input source.
 	 */ 
 	void DeleteSource(CInputSource *source);
 	
 	/*
-	 * Returns a key source for the given keyboard number (or all keyboards if ANY_KEYBOARD supplied) and key index
+	 * Returns a key source for the given keyboard number (or all keyboards if ANY_KEYBOARD supplied) and key index.
+	 * Will check the source cache first and if not found will create the source with CreateAnyKeySource or CreateKeySource.
 	 */
 	CInputSource *GetKeySource(int kbdNum, int keyIndex);
 
 	/*
-	 * Returns a mouse source for the given mouse number (or all mice if ANY_MOUSE supplied) and mouse index
+	 * Returns a mouse source for the given mouse number (or all mice if ANY_MOUSE supplied) and mouse index.
+	 * Will check the source cache first and if not found will create the source with CreateAnyMouseSource or CreateMouseSource.
 	 */
 	CInputSource *GetMouseSource(int mseNum, EMousePart msePart);
 
 	/*
-	 * Returns a joystick source for the given joystick number (or all joysticks if ANY_JOYSTICK supplied) and joystick index
+	 * Returns a joystick source for the given joystick number (or all joysticks if ANY_JOYSTICK supplied) and joystick index.
+	 * Will check the source cache first and if not found will create the source with CreateAnyJoySource or CreateJoySource.
 	 */
 	CInputSource *GetJoySource(int joyNum, EJoyPart joyPart);
 
@@ -474,31 +494,13 @@ protected:
 	unsigned m_dispW;
 	unsigned m_dispH;	
 
-	// Flag to indicate if system currently being configured
-	bool m_isConfiguring;
+	// Flag to indicate if system has grabbed mouse
+	bool m_grabMouse;
 
 	/*
 	 * Constructs an input system with the given name.
 	 */
 	CInputSystem(const char *systemName);
-
-	/*
-	 * Returns the current key settings for given keyboard number, or common settings if ANY_KEYBOARD specified.
-	 * If no settings are found and useDefault is false, NULL is returned.  If useDefault is true then default settings are returned.
-	 */
-	KeySettings *GetKeySettings(int kbdNum, bool useDefault);
-
-	/*
-	 * Returns the current mouse settings for given mouse number, or common settings if ANY_MOUSE specified.
-	 * If no settings are found and useDefault is false, NULL is returned.  If useDefault is true then default settings are returned.
-	 */
-	MouseSettings *GetMouseSettings(int mseNum, bool useDefault);
-
-	/*
-	 * Returns the current joystick settings for given joystick number, or common settings if ANY_JOYSTICK specified.
-	 * If no settings are found and useDefault is false, NULL is returned.  If useDefault is true then default settings are returned.
-	 */
-	JoySettings *GetJoySettings(int joyNum, bool useDefault);
 
 	/*
 	 * Returns true if the given EMousePart is an axis.
@@ -603,24 +605,6 @@ protected:
 	virtual bool InitializeSystem() = 0;
 
 	/*
-	 * Returns the number of attached keyboards (or 0 if the system cannot handle keyboards at all or ANY_KEYBOARD if the system cannot 
-	 * handle multiple keyboards).
-	 */
-	virtual int GetNumKeyboards() = 0;
-	
-	/*
-	 * Returns the number of attached mice (or 0 if the system cannot handle mice at all or ANY_MOUSE if the system cannot handle 
-	 * multiple mice).
-	 */
-	virtual int GetNumMice() = 0;
-	
-	/*
-	 * Returns number of attached joysticks (or 0 if the system cannot handle joysticks at all or ANY_JOYSTICK if the system cannot 
-	 * handle multiple joysticks).
-	 */
-	virtual int GetNumJoysticks() = 0;
-
-	/*
 	 * Returns the system-specific key index that represents the given key name.
 	 */
 	virtual int GetKeyIndex(const char *keyName) = 0;
@@ -629,11 +613,6 @@ protected:
 	 * Returns the key name of the given system-specific integer key index.
 	 */
 	virtual const char *GetKeyName(int keyIndex) = 0;
-
-	/*
-	 * Returns details about the joystick with the given number, or NULL if it does not exist.
-	 */
-	virtual JoyDetails *GetJoyDetails(int joyNum) = 0;
 
 	/* 
 	 * Returns true if for the given keyboard the key with the system-specific key index is currently pressed.
@@ -672,6 +651,11 @@ protected:
 	virtual bool IsJoyButPressed(int joyNum, int butNum) = 0;
 
 	/*
+	 * Processes the given force feedback command for the given joystick and axis number.
+	 */
+	virtual bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd) = 0;
+
+	/*
 	 * Waits for the given time in milliseconds
 	 */
 	virtual void Wait(int ms) = 0;
@@ -681,7 +665,7 @@ protected:
 	//
 
 	/*
-	 * Returns true if the mouse is currently centered in the display.
+	 * Returns true if the mouse is currently centered in the display during configuration.
 	 */
 	virtual bool ConfigMouseCentered();
 
@@ -716,6 +700,7 @@ protected:
 	virtual CInputSource *CreateJoySource(int joyNum, EJoyPart joyPart);
 
 public:
+
 	// Name of this input system
 	const char *name;
 
@@ -731,12 +716,40 @@ public:
 	 * Sets the current display geometry so that mouse movements can be scaled properly.
 	 */ 
 	void SetDisplayGeom(unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
+
+	/*
+	 * Returns the number of attached keyboards (or 0 if the system cannot handle keyboards at all or ANY_KEYBOARD if the system cannot 
+	 * handle multiple keyboards).
+	 */
+	virtual int GetNumKeyboards() = 0;
 	
 	/*
-	 * Returns the input source for the given mapping, or NULL if mapping is not valid.
+	 * Returns the number of attached mice (or 0 if the system cannot handle mice at all or ANY_MOUSE if the system cannot handle 
+	 * multiple mice).
 	 */
-	CInputSource* ParseSource(const char *mapping, bool fullAxisOnly = false);
+	virtual int GetNumMice() = 0;
 	
+	/*
+	 * Returns number of attached joysticks (or 0 if the system cannot handle joysticks at all or ANY_JOYSTICK if the system cannot 
+	 * handle multiple joysticks).
+	 */
+	virtual int GetNumJoysticks() = 0;
+
+	/*
+	 * Returns details about the keyboard with the given number, or NULL if it does not exist.
+	 */
+	virtual const KeyDetails *GetKeyDetails(int kbdNum) = 0;
+
+	/*
+	 * Returns details about the mouse with the given number, or NULL if it does not exist.
+	 */
+	virtual const MouseDetails *GetMouseDetails(int mseNum) = 0;
+
+	/*
+	 * Returns details about the joystick with the given number, or NULL if it does not exist.
+	 */
+	virtual const JoyDetails *GetJoyDetails(int joyNum) = 0;
+
 	/*
 	 * Clears all keyboard, mouse and joystick settings.
      */
@@ -758,6 +771,34 @@ public:
 	virtual void WriteToINIFile(CINIFile *ini, const char *section);
 
 	/*
+	 * Returns the current key settings for given keyboard number, or common settings if ANY_KEYBOARD specified.
+	 * If no settings are found and useDefault is false, NULL is returned.  If useDefault is true then default settings are returned.
+	 */
+	KeySettings *GetKeySettings(int kbdNum, bool useDefault);
+
+	/*
+	 * Returns the current mouse settings for given mouse number, or common settings if ANY_MOUSE specified.
+	 * If no settings are found and useDefault is false, NULL is returned.  If useDefault is true then default settings are returned.
+	 */
+	MouseSettings *GetMouseSettings(int mseNum, bool useDefault);
+
+	/*
+	 * Returns the current joystick settings for given joystick number, or common settings if ANY_JOYSTICK specified.
+	 * If no settings are found and useDefault is false, NULL is returned.  If useDefault is true then default settings are returned.
+	 */
+	JoySettings *GetJoySettings(int joyNum, bool useDefault);
+	
+	/*
+	 * Returns the input source for the given mapping, or NULL if mapping is not valid.
+	 */
+	CInputSource* ParseSource(const char *mapping, bool fullAxisOnly = false);
+
+	/*
+	 * Releases the given source when it is no longer in use.
+	 */
+	void ReleaseSource(CInputSource *source);
+
+	/*
 	 * Waits for any input from the user and once received copies a mapping configuration representing the input (eg KEY_A or JOY1_AXIS_POS)
 	 * into the given buffer.
 	 * Returns true if input was successfully received or false if the user activated the given escape mapping or closed the window.
@@ -765,27 +806,77 @@ public:
 	 * mapping, eg return MOUSE_XAXIS rather than MOUSE3_XAXIS.
 	 * If fullAxisOnly is true, then only mappings representing a full axis are returned, eg JOY1_XAXIS is allowed but not JOY1_XAXIS_POS.
 	 */	
-	bool ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly, unsigned readFlags = READ_ALL, const char *escapeMapping = "KEY_ESCAPE");
+	bool ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly = false, unsigned readFlags = READ_ALL, const char *escapeMapping = "KEY_ESCAPE");
 
 	/*
-	 * Updates the current state of the input system (called by CInputs.Poll).
+	 * Updates the current state of the input system (called by CInputs::Poll).
 	 */
 	virtual bool Poll() = 0;
 
-	/*
-	 * Lets the input system know that inputs are being configured (called by CInputs.ConfigureInputs).
-	 */
-	virtual void ConfigStart();
+	virtual void GrabMouse();
 
-	/*
-	 * Lets the input system know that inputs are no longer being configured (called by CInputs.ConfigureInputs).
-	 */
-	virtual void ConfigEnd();
+	virtual void UngrabMouse();
 
 	/*
 	 * Sets the mouse visibility (some systems may choose to ignore this).
 	 */
 	virtual void SetMouseVisibility(bool visible) = 0;
+
+	virtual bool SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd)
+	{
+		const JoyDetails *joyDetails = GetJoyDetails(joyNum);
+		if (!joyDetails->hasFFeedback || !joyDetails->axisHasFF[axisNum])
+			return false;
+		return ProcessForceFeedbackCmd(joyNum, axisNum, ffCmd);
+	}
+
+	void PrintDevices()
+	{
+		puts("Keyboards:");
+		if (m_numKbds == 0)
+			puts(" None");
+		else if (m_numKbds == ANY_KEYBOARD)
+			puts(" System Keyboard");
+		else
+		{
+			for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
+			{
+				const KeyDetails *keyDetails = GetKeyDetails(kbdNum);
+				printf(" %d: %s\n", kbdNum + 1, keyDetails->name);
+			}
+		}
+
+		puts("Mice:");
+		if (m_numMice == 0)
+			puts(" None");
+		else if (m_numMice == ANY_MOUSE)
+			puts(" System Mouse");
+		else
+		{
+			for (int mseNum = 0; mseNum < m_numMice; mseNum++)
+			{
+				const MouseDetails *mseDetails = GetMouseDetails(mseNum);
+				printf(" %d: %s\n", mseNum + 1, mseDetails->name);
+			}
+		}
+
+		puts("Joysticks:");
+		if (m_numJoys == 0)
+			puts(" None");
+		else if (m_numJoys == ANY_JOYSTICK)
+			puts(" System Joystick");
+		else
+		{
+			for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
+			{
+				const JoyDetails *joyDetails = GetJoyDetails(joyNum);
+				if (joyDetails->hasFFeedback)
+					printf(" %d: %s [Force Feedback Available]\n", joyNum + 1, joyDetails->name);
+				else
+					printf(" %d: %s\n", joyNum + 1, joyDetails->name);
+			}
+		}
+	}
 
 	//
 	// Nested Classes
@@ -821,7 +912,7 @@ public:
 	private:
 		CInputSystem *m_system; // Parent input system
 		int m_mseNum;           // Mouse number
-		int m_axisNum;			// Axis number (0 = XAxis, 1 = YAxis, 2 = ZAxis)
+		int m_axisNum;			// Axis number (AXIS_X, AXIS_Y or AXIS_Z)
 		int m_axisDir;          // Axis direction (AXIS_FULL, AXIS_INVERTED, AXIS_POSITIVE or AXIS_NEGATIVE)
 		int m_deadPixels;       // Size in pixels of dead zone in centre of axis
 
@@ -864,7 +955,7 @@ public:
 	private:
 		CInputSystem *m_system; // Parent input system
 		int m_joyNum;           // Joystick number
-		int m_axisNum;          // Axis number (0 = XAxis, 1 = YAxis, 2 = ZAxis, 3 = RXAxis, 4 = RYAxis, 5 = RZAxis)
+		int m_axisNum;          // Axis number (AXIS_X, AXIS_Y, AXIS_Z, AXIS_RX, AXIS_RY or AXIS_RZ)
 		int m_axisDir;          // Axis direction (AXIS_FULL, AXIS_INVERTED, AXIS_POSITIVE or AXIS_NEGATIVE)
 		int m_posDZone;         // Dead zone for positive range
 		int m_negDZone;         // Dead zone for negative range
@@ -882,6 +973,8 @@ public:
 		bool GetValueAsSwitch(bool &val);
 
 		bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
+
+		bool SendForceFeedbackCmd(ForceFeedbackCmd *fFeedback);
 	};
 
 	/*

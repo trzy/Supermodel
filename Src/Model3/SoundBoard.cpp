@@ -203,7 +203,9 @@ int SCSP68KRunCallback(int numCycles)
 
 void CSoundBoard::WriteMIDIPort(UINT8 data)
 {
+#ifdef SUPERMODEL_SOUND
 	SCSP_MidiIn(data);
+#endif
 }
 
 void CSoundBoard::RunFrame(void)
@@ -252,6 +254,7 @@ void CSoundBoard::Reset(void)
 
 BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ *ppcIRQObjectPtr, unsigned soundIRQBit)
 {
+#ifdef SUPERMODEL_SOUND
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
 	// Attach IRQ controller
@@ -273,7 +276,6 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	ram2 = &memoryPool[OFFSET_RAM2];
 	
 	// Initialize 68K core
-#ifdef SUPERMODEL_SOUND
 	mapFetch[0].ptr = mapRead8[0].ptr = mapRead16[0].ptr = mapRead32[0].ptr = 
 	mapWrite8[0].ptr = mapWrite16[0].ptr = mapWrite32[0].ptr =	(UINT32)ram1 - mapFetch[0].base;;
 	
@@ -296,7 +298,6 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	Turbo68KSetWriteByte(mapWrite8, NULL);
 	Turbo68KSetWriteWord(mapWrite16, NULL);
 	Turbo68KSetWriteLong(mapWrite32, NULL);
-#endif
 	
 	// Initialize SCSPs
 	SCSP_SetBuffers(leftBuffer, rightBuffer, 44100/60);
@@ -306,7 +307,6 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	SCSP_SetRAM(1, ram2);
 	
 	// Binary logging
-#ifdef SUPERMODEL_SOUND
 	soundFP = fopen("sound.bin","wb");	// delete existing file
 	fclose(soundFP);
 	soundFP = fopen("sound.bin","ab");	// append mode
@@ -364,7 +364,6 @@ CSoundBoard::~CSoundBoard(void)
 		
 	}
 //#endif
-#endif
 
 	SCSP_Deinit();
 	
@@ -375,5 +374,7 @@ CSoundBoard::~CSoundBoard(void)
 	}
 	ram1 = NULL;
 	ram2 = NULL;
+#endif
+
 	DebugLog("Destroyed Sound Board\n");
 }

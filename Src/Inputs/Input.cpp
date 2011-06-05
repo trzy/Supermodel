@@ -2,13 +2,17 @@
 
 CInput::CInput(const char *inputId, const char *inputLabel, unsigned inputFlags, unsigned inputGameFlags, const char *defaultMapping, UINT16 initValue) : 
 	id(inputId), label(inputLabel), flags(inputFlags), gameFlags(inputGameFlags), m_defaultMapping(defaultMapping), value(initValue), prevValue(initValue),
-		m_system(NULL), m_source(NULL)
+	m_system(NULL), m_source(NULL)
 {
 	ResetToDefaultMapping();
 }
 
 void CInput::CreateSource()
 {
+	// If already have a source, then release it now
+	if (m_system != NULL && m_source != NULL)
+		m_system->ReleaseSource(m_source);
+
 	// If no system set yet or mapping is empty or NONE, then set source to NULL
 	if (m_system == NULL || m_mapping[0] == '\0' || stricmp(m_mapping, "NONE") == 0)
 		m_source = NULL;
@@ -38,6 +42,7 @@ const char* CInput::GetInputGroup()
 {
 	switch (gameFlags)
 	{
+		case GAME_INPUT_UI:              return "User Interface Controls";
 		case GAME_INPUT_COMMON:          return "Common Controls";
 		case GAME_INPUT_JOYSTICK1:       // Fall through to below
 		case GAME_INPUT_JOYSTICK2:       return "8-Way Joysticks";
@@ -92,6 +97,26 @@ void CInput::ResetToDefaultMapping()
 	SetMapping(m_defaultMapping);
 }
 
+void CInput::ReadFromINIFile(CINIFile *ini, const char *section)
+{
+	if (!IsConfigurable())
+		return;
+	string key("Input");
+	key.append(id);
+	string mapping;
+	if (ini->Get(section, key, mapping) == OKAY)
+		SetMapping(mapping.c_str());
+}
+
+void CInput::WriteToINIFile(CINIFile *ini, const char *section)
+{
+	if (!IsConfigurable())
+		return;
+	string key("Input");
+	key.append(id);
+	ini->Set(section, key, m_mapping);
+}
+
 bool CInput::Configure(bool append, const char *escapeMapping)
 {
 	char mapping[MAX_MAPPING_LENGTH];
@@ -102,4 +127,16 @@ bool CInput::Configure(bool append, const char *escapeMapping)
 	else
 		SetMapping(mapping);
 	return true;
+}
+
+bool CInput::Changed()
+{
+	return value != prevValue;
+}
+
+bool CInput::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
+{
+	if (m_source == NULL)
+		return false;
+	return m_source->SendForceFeedbackCmd(ffCmd);
 }

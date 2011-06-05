@@ -132,4 +132,40 @@ public:
 	void Poll();
 };
 
+/*
+ * Represents a trigger input, with both a trigger value and an offscreen value.  If required, it can simulate pointing offscreen and pulling
+ * the trigger (in that order, which lightgun games require to reload properly) when just the offscreen input is activated.  This makes
+ * reloading the gun easier when playing with just the mouse for example.
+ */
+class CTriggerInput : public CInput
+{
+private:
+	// Real trigger and offscreen inputs
+	CSwitchInput *m_triggerInput;
+	CSwitchInput *m_offscreenInput;
+	
+	// Offscreen on and off values
+	UINT16 m_offVal;
+	UINT16 m_onVal;
+
+	bool m_autoTrigger;
+	int m_offscreenCount;
+
+public:
+	// Offscreen value
+	UINT16 offscreenValue;
+
+	CTriggerInput(const char *inputId, const char *inputLabel, unsigned inputGameFlags, CSwitchInput *triggerInput, CSwitchInput *offscreenInput,
+		UINT16 offVal = 0x00, UINT16 onVal = 0x01);
+
+	void ReadFromINIFile(CINIFile *ini, const char *section);
+
+	void WriteToINIFile(CINIFile *ini, const char *section);
+
+	/*
+	 * Polls (updates) the input, updating its trigger value and offscreen value from the switch inputs
+	 */
+	void Poll();
+};
+
 #endif	// INCLUDED_INPUTTYPES_H

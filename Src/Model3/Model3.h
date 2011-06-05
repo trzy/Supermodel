@@ -28,8 +28,6 @@
 #ifndef INCLUDED_MODEL3_H
 #define INCLUDED_MODEL3_H
 
-#include "Inputs/Inputs.h"
-
 /*
  * CModel3:
  *

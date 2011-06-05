@@ -146,3 +146,65 @@ void CGearShift4Input::Poll()
 	if      (m_shiftUpInput->Pressed())   value = CInputSource::Clamp(value + 1, 0, 4);
 	else if (m_shiftDownInput->Pressed()) value = CInputSource::Clamp(value - 1, 0, 4);
 }
+
+CTriggerInput::CTriggerInput(const char *inputId, const char *inputLabel, unsigned inputGameFlags,
+	CSwitchInput *triggerInput, CSwitchInput *offscreenInput, UINT16 offVal, UINT16 onVal) :
+	CInput(inputId, inputLabel, INPUT_FLAGS_VIRTUAL, inputGameFlags),
+	m_triggerInput(triggerInput), m_offscreenInput(offscreenInput), m_autoTrigger(false), m_offscreenCount(0), m_offVal(offVal), m_onVal(onVal)
+{
+	//
+}
+
+void CTriggerInput::ReadFromINIFile(CINIFile *ini, const char *section)
+{
+	CInput::ReadFromINIFile(ini, section);
+
+	string key("Input");
+	key.append(id);
+	unsigned int autoTrigger;
+	if (ini->Get(section, key, autoTrigger) == OKAY)
+		m_autoTrigger = !!autoTrigger;
+}
+
+void CTriggerInput::WriteToINIFile(CINIFile *ini, const char *section)
+{
+	CInput::WriteToINIFile(ini, section);
+
+	string key("Input");
+	key.append(id);
+	ini->Set(section, key, (unsigned)m_autoTrigger);
+}
+
+void CTriggerInput::Poll()
+{
+	prevValue = value;
+
+	// See if auto-trigger on reload is enabled
+	if (m_autoTrigger)
+	{
+		// If so, when offscreen activated simulate triggered being pressed a short while afterwards
+		if (m_offscreenCount > 0)
+		{
+			value = m_offscreenCount < 5;
+			offscreenValue = m_onVal;
+			m_offscreenCount--;
+		}
+		else
+		{
+			value = m_triggerInput->value;
+			if (m_offscreenInput->Pressed())
+			{
+				offscreenValue = m_onVal;
+				m_offscreenCount = 10;
+			}
+			else
+				offscreenValue = m_offVal;
+		}
+	}
+	else
+	{
+		// Otherwise if disabled, just take raw values from inputs
+		value = m_triggerInput->value;
+		offscreenValue = m_offscreenInput->value;
+	}
+}

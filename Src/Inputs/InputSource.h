@@ -5,7 +5,11 @@
 using namespace std;
 
 class CInputSystem;
+struct ForceFeedbackCmd;
 
+/*
+ * Enumeration to represent different types of sources.
+ */
 enum ESourceType
 {
 	SourceInvalid = -1,
@@ -24,6 +28,9 @@ protected:
 	CInputSource(ESourceType sourceType);
 
 public:
+	/*
+	 * The type of this source.
+	 */
 	const ESourceType type;
 
 	//
@@ -47,11 +54,6 @@ public:
 	static int Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal, int toMinVal, int toOffVal, int toMaxVal);
 
 	/*
-	 * Returns true if this source represents a switch input (such as a button).  Otherwise it is assumed to be an analog input (such as axis or pedal).
-	 */
-	ESourceType GetType();
-
-	/*
 	 * Returns true if the source is active (taken from GetValueAsSwitch).
 	 */
 	bool IsActive();
@@ -67,6 +69,11 @@ public:
 	 * Returns true if the value was set.
 	 */
 	virtual bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal) = 0;
+
+	/*
+	 * Sends a force feedback command to the input source.
+	 */
+	virtual bool SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd);
 };
 
 #endif // INCLUDED_INPUTSOURCE_H

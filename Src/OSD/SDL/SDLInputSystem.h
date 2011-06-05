@@ -34,7 +34,8 @@ private:
 	// Vector to keep track of attached joysticks
 	vector<SDL_Joystick*> m_joysticks;
 
-	vector<JoyDetails*> m_joyDetails;
+	// Vector of joystick details
+	vector<JoyDetails> m_joyDetails;
 
 	// Current key state obtained from SDL
 	Uint8 *m_keyState;
@@ -62,17 +63,9 @@ protected:
 	 */
 	bool InitializeSystem();
 
-	int GetNumKeyboards();	
-
-	int GetNumMice();
-	
-	int GetNumJoysticks();
-
 	int GetKeyIndex(const char *keyName);
 
 	const char *GetKeyName(int keyIndex);
-
-	JoyDetails *GetJoyDetails(int joyNum);
 
 	bool IsKeyPressed(int kbdNum, int keyIndex);
 
@@ -88,9 +81,9 @@ protected:
 
 	bool IsJoyButPressed(int joyNum, int butNum);
 
-	void Wait(int ms);
+	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd);
 
-	void SetMouseVisibility(bool visible);
+	void Wait(int ms);
 
 public:
 	/*
@@ -100,7 +93,21 @@ public:
 
 	~CSDLInputSystem();
 
+	int GetNumKeyboards();	
+
+	int GetNumMice();
+	
+	int GetNumJoysticks();
+
+	const KeyDetails *GetKeyDetails(int kbdNum);
+
+	const MouseDetails *GetMouseDetails(int mseNum);
+
+	const JoyDetails *GetJoyDetails(int joyNum);
+
 	bool Poll();
+
+	void SetMouseVisibility(bool visible);
 };
 
 #endif	// INCLUDED_SDLINPUTSYSTEM_H

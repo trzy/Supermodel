@@ -471,7 +471,7 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
 					serialFIFO2 = (Inputs->gunX[1]->value>>8)&3;
 					break;
 				case 8:	// Off-screen indicator (bit 0 = player 1, bit 1 = player 2, set indicates off screen)
-					serialFIFO2 = (Inputs->offscreen[1]->value<<1)|Inputs->offscreen[0]->value;
+					serialFIFO2 = (Inputs->trigger[1]->offscreenValue<<1)|Inputs->trigger[0]->offscreenValue;
 					break;
 				default:
 					DebugLog("Unknown gun register: %X\n", gunReg);

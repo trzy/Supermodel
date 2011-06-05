@@ -178,17 +178,20 @@ void CSDLInputSystem::OpenJoysticks()
 			continue;
 		}
 		
-		// Gather joystick details (num POVs & buttons and which axes are available)
-		int numAxes = SDL_JoystickNumAxes(joystick);
-		JoyDetails *joyDetails = new JoyDetails();
-		joyDetails->hasXAxis = numAxes > 0;
-		joyDetails->hasYAxis = numAxes > 1;
-		joyDetails->hasZAxis = numAxes > 2;
-		joyDetails->hasRXAxis = numAxes > 3;
-		joyDetails->hasRYAxis = numAxes > 4;
-		joyDetails->hasRZAxis = numAxes > 5;
-		joyDetails->numPOVs = SDL_JoystickNumHats(joystick);
-		joyDetails->numButtons = SDL_JoystickNumButtons(joystick);
+		// Gather joystick details (name, num POVs & buttons and which axes are available)
+		JoyDetails joyDetails;
+		const char *pName = SDL_JoystickName(joyNum);
+		strncpy(joyDetails.name, pName, MAX_NAME_LENGTH - 1);
+		joyDetails.name[MAX_NAME_LENGTH - 1] = '\0';
+		joyDetails.numAxes = SDL_JoystickNumAxes(joystick);
+		for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+		{
+			joyDetails.hasAxis[axisNum] = joyDetails.numAxes > axisNum;
+			joyDetails.axisHasFF[axisNum] = false; // SDL 1.2 does not support force feedback
+		}
+		joyDetails.numPOVs = SDL_JoystickNumHats(joystick);
+		joyDetails.numButtons = SDL_JoystickNumButtons(joystick);
+		joyDetails.hasFFeedback = false; // SDL 1.2 does not support force feedback
 		
 		m_joysticks.push_back(joystick);
 		m_joyDetails.push_back(joyDetails);
@@ -201,10 +204,7 @@ void CSDLInputSystem::CloseJoysticks()
 	for (size_t i = 0; i < m_joysticks.size(); i++)
 	{	
 		SDL_Joystick *joystick = m_joysticks[i];
-		JoyDetails *joyDetails = m_joyDetails[i];
-
 		SDL_JoystickClose(joystick);
-		delete joyDetails;
 	}
 
 	m_joysticks.clear();
@@ -227,24 +227,6 @@ bool CSDLInputSystem::InitializeSystem()
 	return true;
 }
 
-int CSDLInputSystem::GetNumKeyboards()
-{
-	// Return ANY_KEYBOARD as SDL 1.2 cannot handle multiple keyboards
-	return ANY_KEYBOARD;
-}
-	
-int CSDLInputSystem::GetNumMice()
-{
-	// Return ANY_MOUSE as SDL 1.2 cannot handle multiple mice
-	return ANY_MOUSE;
-}
-	
-int CSDLInputSystem::GetNumJoysticks()
-{
-	// Return number of joysticks found
-	return m_joysticks.size();
-}
-
 int CSDLInputSystem::GetKeyIndex(const char *keyName)
 {
 	for (int i = 0; i < NUM_SDL_KEYS; i++)
@@ -260,11 +242,6 @@ const char *CSDLInputSystem::GetKeyName(int keyIndex)
 	if (keyIndex < 0 || keyIndex >= NUM_SDL_KEYS)
 		return NULL;
 	return s_keyMap[keyIndex].keyName;
-}
-
-JoyDetails *CSDLInputSystem::GetJoyDetails(int joyNum)
-{
-	return m_joyDetails[joyNum];
 }
 
 bool CSDLInputSystem::IsKeyPressed(int kbdNum, int keyIndex)
@@ -336,14 +313,50 @@ bool CSDLInputSystem::IsJoyButPressed(int joyNum, int butNum)
 	return !!SDL_JoystickGetButton(joystick, butNum);
 }
 
+bool CSDLInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd)
+{
+	// SDL 1.2 does not support force feedback
+	return false;
+}
+
 void CSDLInputSystem::Wait(int ms)
 {
 	SDL_Delay(ms);
 }
 
-void CSDLInputSystem::SetMouseVisibility(bool visible)
+int CSDLInputSystem::GetNumKeyboards()
 {
-	SDL_ShowCursor(visible ? SDL_ENABLE : SDL_DISABLE);  	
+	// Return ANY_KEYBOARD as SDL 1.2 cannot handle multiple keyboards
+	return ANY_KEYBOARD;
+}
+	
+int CSDLInputSystem::GetNumMice()
+{
+	// Return ANY_MOUSE as SDL 1.2 cannot handle multiple mice
+	return ANY_MOUSE;
+}
+	
+int CSDLInputSystem::GetNumJoysticks()
+{
+	// Return number of joysticks found
+	return m_joysticks.size();
+}
+
+const KeyDetails *CSDLInputSystem::GetKeyDetails(int kbdNum)
+{
+	// Return NULL as SDL 1.2 cannot handle multiple keyboards
+	return NULL;
+}
+
+const MouseDetails *CSDLInputSystem::GetMouseDetails(int mseNum)
+{
+	// Return NULL as SDL 1.2 cannot handle multiple mice
+	return NULL;
+}
+
+const JoyDetails *CSDLInputSystem::GetJoyDetails(int joyNum)
+{
+	return &m_joyDetails[joyNum];
 }
 
 bool CSDLInputSystem::Poll()
@@ -383,4 +396,9 @@ bool CSDLInputSystem::Poll()
 	// Update joystick state (not required as called implicitly by SDL_PollEvent above)
 	//SDL_JoystickUpdate();
 	return true;
+}
+
+void CSDLInputSystem::SetMouseVisibility(bool visible)
+{
+	SDL_ShowCursor(visible ? SDL_ENABLE : SDL_DISABLE);  	
 }

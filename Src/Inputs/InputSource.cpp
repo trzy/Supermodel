@@ -82,3 +82,8 @@ bool CInputSource::IsActive()
 	bool boolVal;
 	return GetValueAsSwitch(boolVal);
 }
+
+bool CInputSource::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
+{
+	return false;
+}

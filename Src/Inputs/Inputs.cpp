@@ -6,21 +6,19 @@
 #include <iostream>
 using namespace std;
 
-#define UI_INPUT 0
-
 CInputs::CInputs(CInputSystem *system) : m_system(system)
 {
 	// UI Controls  
-	uiExit             = AddSwitchInput("UIExit",             "Exit UI",               UI_INPUT, "KEY_ESCAPE");
-	uiReset            = AddSwitchInput("UIReset",            "Reset",                 UI_INPUT, "KEY_ALT+KEY_R");
-	uiPause            = AddSwitchInput("UIPause",            "Pause",                 UI_INPUT, "KEY_PAUSE");
-	uiSaveState        = AddSwitchInput("UISaveState",        "Save State",            UI_INPUT, "KEY_F5");
-	uiChangeSlot       = AddSwitchInput("UIChangeSlot",       "Change Save Slot",      UI_INPUT, "KEY_F6");
-	uiLoadState        = AddSwitchInput("UILoadState",        "Load State",            UI_INPUT, "KEY_F7");
-	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      UI_INPUT, "KEY_F8");
-	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           UI_INPUT, "KEY_ALT+KEY_N");
-	uiToggleCursor     = AddSwitchInput("UIToggleCursor",     "Toggle Cursor",         UI_INPUT, "KEY_ALT+KEY_I");
-	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", UI_INPUT, "KEY_ALT+KEY_T");
+	uiExit             = AddSwitchInput("UIExit",             "Exit UI",               GAME_INPUT_UI, "KEY_ESCAPE");
+	uiReset            = AddSwitchInput("UIReset",            "Reset",                 GAME_INPUT_UI, "KEY_ALT+KEY_R");
+	uiPause            = AddSwitchInput("UIPause",            "Pause",                 GAME_INPUT_UI, "KEY_ALT+KEY_P");
+	uiSaveState        = AddSwitchInput("UISaveState",        "Save State",            GAME_INPUT_UI, "KEY_F5");
+	uiChangeSlot       = AddSwitchInput("UIChangeSlot",       "Change Save Slot",      GAME_INPUT_UI, "KEY_F6");
+	uiLoadState        = AddSwitchInput("UILoadState",        "Load State",            GAME_INPUT_UI, "KEY_F7");
+	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      GAME_INPUT_UI, "KEY_F8");
+	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           GAME_INPUT_UI, "KEY_ALT+KEY_N");
+	uiToggleCursor     = AddSwitchInput("UIToggleCursor",     "Toggle Cursor",         GAME_INPUT_UI, "KEY_ALT+KEY_I");
+	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", GAME_INPUT_UI, "KEY_ALT+KEY_T");
 
 	// Common Controls
 	start[0]           = AddSwitchInput("Start1",   "P1 Start",  GAME_INPUT_COMMON, "KEY_1,JOY1_BUTTON9");
@@ -61,8 +59,8 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	shoot[1]           = AddSwitchInput("Shoot1",     "P2 Shoot",      GAME_INPUT_SOCCER, "JOY2_BUTTON3");
 
 	// Racing Game Steering Controls
-	CAnalogInput* steeringLeft  = AddAnalogInput("SteeringLeft",  "Steer Left",  GAME_INPUT_VEHICLE, "KEY_LEFT");
-	CAnalogInput* steeringRight = AddAnalogInput("SteeringRight", "Steer Right", GAME_INPUT_VEHICLE, "KEY_RIGHT");
+	CAnalogInput *steeringLeft  = AddAnalogInput("SteeringLeft",  "Steer Left",  GAME_INPUT_VEHICLE, "KEY_LEFT");
+	CAnalogInput *steeringRight = AddAnalogInput("SteeringRight", "Steer Right", GAME_INPUT_VEHICLE, "KEY_RIGHT");
 	
 	steering           = AddAxisInput  ("Steering",    "Full Steering",     GAME_INPUT_VEHICLE, "JOY1_XAXIS", steeringLeft, steeringRight);
 	accelerator        = AddAnalogInput("Accelerator", "Accelerator Pedal", GAME_INPUT_VEHICLE, "KEY_UP,JOY1_UP");
@@ -89,19 +87,19 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	handBrake          = AddSwitchInput("HandBrake",  "Hand Brake",  GAME_INPUT_RALLY, "KEY_S,JOY1_BUTTON2");
 
 	// Virtua On Controls
-	twinJoyTurnLeft    = AddSwitchInput("TwinJoyTurnLeft",    "Turn Left",          GAME_INPUT_TWIN_JOYSTICKS, "KEY_Q,JOY1_RZAXIS_POS");
-	twinJoyTurnRight   = AddSwitchInput("TwinJoyTurnRight",   "Turn Right",         GAME_INPUT_TWIN_JOYSTICKS, "KEY_W,JOY1_RZAXIS_NEG");
-	twinJoyForward     = AddSwitchInput("TwinJoyForward",     "Forward",            GAME_INPUT_TWIN_JOYSTICKS, "KEY_UP,JOY1_UP");
-	twinJoyReverse     = AddSwitchInput("TwinJoyReverse",     "Reverse",            GAME_INPUT_TWIN_JOYSTICKS, "KEY_DOWN,JOY1_DOWN");
-	twinJoyStrafeLeft  = AddSwitchInput("TwinJoyStrafeLeft",  "Strafe Left",        GAME_INPUT_TWIN_JOYSTICKS, "KEY_LEFT,JOY1_LEFT");
-	twinJoyStrafeRight = AddSwitchInput("TwinJoyStrafeRight", "Strafe Right",       GAME_INPUT_TWIN_JOYSTICKS, "KEY_RIGHT,JOY1_RIGHT");
+	twinJoyTurnLeft    = AddSwitchInput("TwinJoyTurnLeft",    "Turn Left",          GAME_INPUT_TWIN_JOYSTICKS, "KEY_Q,JOY1_RXAXIS_NEG");
+	twinJoyTurnRight   = AddSwitchInput("TwinJoyTurnRight",   "Turn Right",         GAME_INPUT_TWIN_JOYSTICKS, "KEY_W,JOY1_RXAXIS_POS");
+	twinJoyForward     = AddSwitchInput("TwinJoyForward",     "Forward",            GAME_INPUT_TWIN_JOYSTICKS, "KEY_UP,JOY1_YAXIS_NEG");
+	twinJoyReverse     = AddSwitchInput("TwinJoyReverse",     "Reverse",            GAME_INPUT_TWIN_JOYSTICKS, "KEY_DOWN,JOY1_YAXIS_POS");
+	twinJoyStrafeLeft  = AddSwitchInput("TwinJoyStrafeLeft",  "Strafe Left",        GAME_INPUT_TWIN_JOYSTICKS, "KEY_LEFT,JOY1_XAXIS_NEG");
+	twinJoyStrafeRight = AddSwitchInput("TwinJoyStrafeRight", "Strafe Right",       GAME_INPUT_TWIN_JOYSTICKS, "KEY_RIGHT,JOY1_XAXIS_POS");
 	twinJoyJump        = AddSwitchInput("TwinJoyJump",        "Jump",               GAME_INPUT_TWIN_JOYSTICKS, "KEY_E,JOY1_BUTTON1");
 	twinJoyCrouch      = AddSwitchInput("TwinJoyCrouch",      "Crouch",             GAME_INPUT_TWIN_JOYSTICKS, "KEY_R,JOY1_BUTTON2");
 	twinJoyLeftShot    = AddSwitchInput("TwinJoyLeftShot",    "Left Shot Trigger",  GAME_INPUT_TWIN_JOYSTICKS, "KEY_A,JOY1_BUTTON5");
 	twinJoyRightShot   = AddSwitchInput("TwinJoyRightShot",   "Right Shot Trigger", GAME_INPUT_TWIN_JOYSTICKS, "KEY_S,JOY1_BUTTON6");
 	twinJoyLeftTurbo   = AddSwitchInput("TwinJoyLeftTurbo",   "Left Turbo",         GAME_INPUT_TWIN_JOYSTICKS, "KEY_Z,JOY1_BUTTON7");
 	twinJoyRightTurbo  = AddSwitchInput("TwinJoyRightTurbo",  "Right Turbo",        GAME_INPUT_TWIN_JOYSTICKS, "KEY_X,JOY1_BUTTON8");
-
+	
 	// Analog Joystick
 	CAnalogInput *analogJoyLeft  = AddAnalogInput("AnalogJoyLeft",  "Analog Left",  GAME_INPUT_ANALOG_JOYSTICK, "KEY_LEFT");
 	CAnalogInput *analogJoyRight = AddAnalogInput("AnalogJoyRight", "Analog Right", GAME_INPUT_ANALOG_JOYSTICK, "KEY_RIGHT");
@@ -119,29 +117,36 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	CAnalogInput *gun1Up    = AddAnalogInput("GunUp",    "P1 Gun Up",    GAME_INPUT_GUN1, "KEY_UP");
 	CAnalogInput *gun1Down  = AddAnalogInput("GunDown",  "P1 Gun Down",  GAME_INPUT_GUN1, "KEY_DOWN");
 
-	gunX[0]            = AddAxisInput  ("GunX",      "P1 Gun X-Axis",       GAME_INPUT_GUN1, "JOY1_XAXIS,MOUSE_XAXIS", gun1Left, gun1Right, 150, 400, 651); // normalize to [150,651]
-	gunY[0]            = AddAxisInput  ("GunY",      "P1 Gun Y-Axis",       GAME_INPUT_GUN1, "JOY1_YAXIS,MOUSE_YAXIS", gun1Up,   gun1Down,  80,  272, 465); // normalize to [80,465]
-	trigger[0]         = AddSwitchInput("Trigger",   "P1 Trigger",          GAME_INPUT_GUN1, "KEY_A,JOY1_BUTTON1,MOUSE_LEFT_BUTTON");
-	offscreen[0]       = AddSwitchInput("Offscreen", "P1 Point Off-screen", GAME_INPUT_GUN1, "KEY_S,JOY1_BUTTON2,MOUSE_RIGHT_BUTTON");
+	gunX[0]            = AddAxisInput("GunX", "P1 Gun X-Axis", GAME_INPUT_GUN1, "MOUSE_XAXIS,JOY1_XAXIS", gun1Left, gun1Right, 150, 400, 651); // normalize to [150,651]
+	gunY[0]            = AddAxisInput("GunY", "P1 Gun Y-Axis", GAME_INPUT_GUN1, "MOUSE_YAXIS,JOY1_YAXIS", gun1Up,   gun1Down,  80,  272, 465); // normalize to [80,465]
+	
+	CSwitchInput *gun1Trigger   = AddSwitchInput("Trigger",   "P1 Trigger",          GAME_INPUT_GUN1, "KEY_A,JOY1_BUTTON1,MOUSE_LEFT_BUTTON");
+	CSwitchInput *gun1Offscreen = AddSwitchInput("Offscreen", "P1 Point Off-screen", GAME_INPUT_GUN1, "KEY_S,JOY1_BUTTON2,MOUSE_RIGHT_BUTTON");
+
+	trigger[0]         = AddTriggerInput("AutoTrigger", "P1 Auto Trigger", GAME_INPUT_GUN1, gun1Trigger, gun1Offscreen);
 	
 	CAnalogInput *gun2Left  = AddAnalogInput("GunLeft2",  "P2 Gun Left",  GAME_INPUT_GUN2, "NONE");
 	CAnalogInput *gun2Right = AddAnalogInput("GunRight2", "P2 Gun Right", GAME_INPUT_GUN2, "NONE");
 	CAnalogInput *gun2Up    = AddAnalogInput("GunUp2",    "P2 Gun Up",    GAME_INPUT_GUN2, "NONE");
 	CAnalogInput *gun2Down  = AddAnalogInput("GunDown2",  "P2 Gun Down",  GAME_INPUT_GUN2, "NONE");
 
-	gunX[1]            = AddAxisInput  ("GunX2",      "P2 Gun X-Axis",       GAME_INPUT_GUN2, "JOY2_XAXIS", gun2Left, gun2Right, 150, 400, 651); // normalize to [150,651]
-	gunY[1]            = AddAxisInput  ("GunY2",      "P2 Gun Y-Axis",       GAME_INPUT_GUN2, "JOY2_YAXIS", gun2Up,   gun2Down,  80,  272, 465); // normalize to [80,465]
-	trigger[1]         = AddSwitchInput("Trigger2",   "P2 Trigger",          GAME_INPUT_GUN2, "JOY2_BUTTON1");
-	offscreen[1]       = AddSwitchInput("Offscreen2", "P2 Point Off-screen", GAME_INPUT_GUN2, "JOY2_BUTTON2");
+	gunX[1]            = AddAxisInput("GunX2", "P2 Gun X-Axis", GAME_INPUT_GUN2, "JOY2_XAXIS", gun2Left, gun2Right, 150, 400, 651); // normalize to [150,651]
+	gunY[1]            = AddAxisInput("GunY2", "P2 Gun Y-Axis", GAME_INPUT_GUN2, "JOY2_YAXIS", gun2Up,   gun2Down,  80,  272, 465); // normalize to [80,465]
+	
+	CSwitchInput *gun2Trigger   = AddSwitchInput("Trigger2",   "P2 Trigger",          GAME_INPUT_GUN2, "JOY2_BUTTON1");
+	CSwitchInput *gun2Offscreen = AddSwitchInput("Offscreen2", "P2 Point Off-screen", GAME_INPUT_GUN2, "JOY2_BUTTON2");
+
+	trigger[1]         = AddTriggerInput("AutoTrigger2", "P2 Auto Trigger", GAME_INPUT_GUN2, gun2Trigger, gun2Offscreen);
 }
 
 CInputs::~CInputs()
 {
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 		delete *it;
+	m_inputs.clear();
 }
 
-CSwitchInput* CInputs::AddSwitchInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
+CSwitchInput *CInputs::AddSwitchInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
 	UINT16 offVal, UINT16 onVal)
 {
 	CSwitchInput *input = new CSwitchInput(id, label, gameFlags, defaultMapping, offVal, onVal);
@@ -149,7 +154,7 @@ CSwitchInput* CInputs::AddSwitchInput(const char *id, const char *label, unsigne
 	return input;
 }
 
-CAnalogInput* CInputs::AddAnalogInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
+CAnalogInput *CInputs::AddAnalogInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
 	UINT16 minVal, UINT16 maxVal)
 {
 	CAnalogInput *input = new CAnalogInput(id, label, gameFlags, defaultMapping, minVal, maxVal);
@@ -157,18 +162,26 @@ CAnalogInput* CInputs::AddAnalogInput(const char *id, const char *label, unsigne
 	return input;
 }
 
-CAxisInput* CInputs::AddAxisInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
-	CAnalogInput* axisNeg, CAnalogInput* axisPos, UINT16 minVal, UINT16 offVal, UINT16 maxVal)
+CAxisInput *CInputs::AddAxisInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
+	CAnalogInput *axisNeg, CAnalogInput *axisPos, UINT16 minVal, UINT16 offVal, UINT16 maxVal)
 {
 	CAxisInput *input = new CAxisInput(id, label, gameFlags, defaultMapping, axisNeg, axisPos, minVal, offVal, maxVal);
 	m_inputs.push_back(input);
 	return input;
 }
 
-CGearShift4Input* CInputs::AddGearShift4Input(const char *id, const char *label, unsigned gameFlags, 
+CGearShift4Input *CInputs::AddGearShift4Input(const char *id, const char *label, unsigned gameFlags, 
 	CSwitchInput *shift1, CSwitchInput *shift2, CSwitchInput *shift3, CSwitchInput *shift4, CSwitchInput *shiftUp, CSwitchInput *shiftDown)
 {
 	CGearShift4Input *input = new CGearShift4Input(id, label, gameFlags, shift1, shift2, shift3, shift4, shiftUp, shiftDown);
+	m_inputs.push_back(input);
+	return input;
+}
+
+CTriggerInput *CInputs::AddTriggerInput(const char *id, const char *label, unsigned gameFlags, 
+	CSwitchInput *trigger, CSwitchInput *offscreen, UINT16 offVal, UINT16 onVal)
+{
+	CTriggerInput *input = new CTriggerInput(id, label, gameFlags, trigger, offscreen, offVal, onVal);
 	m_inputs.push_back(input);
 	return input;
 }
@@ -199,20 +212,23 @@ void CInputs::PrintConfigureInputsHelp()
 	puts("  r       Reset current input mapping to default and remain there,");
 	puts("  Down    Move onto next control,");
 	puts("  Up      Go back to previous control,");
+	puts("  i       Display information about input system and attached devices,");
 	puts("  h       Display this help again,");
 	puts("  q       Finish and save all changes,");
 	puts("  Esc     Finish without saving any changes.");
 	puts("");
-	puts("To assign inputs, simply press the appropriate key, mouse button or");
-	puts("joystick button or move the mouse along an axis or move a joystick's");
-	puts("axis or POV hat controller.");
+	puts("To assign input(s), simply press the appropriate key(s), mouse button(s)");
+	puts("or joystick button(s) or move the mouse along one or more axes or move a");
+	puts("joystick's axis or POV hat controller(s).  The input(s) will be accepted");
+	puts("as soon as all pressed keys and buttons are released and all moved mouse");
+	puts("and joystick controllers are returned to their rest positions.");
 	puts("");
 	puts("NOTES:");
-	puts(" - in order to assign a key the configuration window must on top,");
-	puts(" - in order to assign a mouse button the mouse must be clicked");
+	puts(" - in order to assign keys the configuration window must on top,");
+	puts(" - in order to assign mouse buttons the mouse must be clicked");
 	puts("   within the window,");
-	puts(" - in order to assign a mouse axis, the cursor must be placed in");
-	puts("   the center of the window and moved in the corresponding");
+	puts(" - in order to assign mouse axes, the cursor must first be placed in");
+	puts("   the center of the window and then moved in the corresponding");
 	puts("   direction to the window's edge and then returned to the center.");
 	puts("");
 }
@@ -229,58 +245,26 @@ bool CInputs::Initialize()
 		return false;
 	
 	// Initialize all the inputs
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 		(*it)->Initialize(m_system);
 	return true;
 }
 
-bool CInputs::InputIsConfigurable(CInput *input)
-{
-	// All inputs except UI and virtual ones can be configured by the user
-	return input->flags != UI_INPUT && !(input->flags & INPUT_FLAGS_VIRTUAL);
-}
-
-CInput* CInputs::LookupInputByID(const char* id)
-{
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
-	{
-		if (stricmp(id, (*it)->id) == 0)
-			return *it;
-	}
-	return NULL;
-}
-
 void CInputs::ReadFromINIFile(CINIFile *ini, const char *section)
 {
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
-	{
-		if (!InputIsConfigurable(*it))
-			continue;
-
-		string key("Input");
-		key.append((*it)->id);
-		string mapping;
-		if (ini->Get(section, key, mapping) == OKAY)
-			(*it)->SetMapping(mapping.c_str());
-	}
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+		(*it)->ReadFromINIFile(ini, section);
 }
 
 void CInputs::WriteToINIFile(CINIFile *ini, const char *section)
 {
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
-	{
-		if (!InputIsConfigurable(*it))
-			continue;
-			
-		string key("Input");
-		key.append((*it)->id);
-		ini->Set(section, key, (*it)->GetMapping());
-	}
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+		(*it)->WriteToINIFile(ini, section);
 }
 
 bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH)
 {
-	m_system->ConfigStart();
+	m_system->UngrabMouse();
 
 	// Let the input system know the display geometry
 	m_system->SetDisplayGeom(dispX, dispY, dispW, dispH);
@@ -302,16 +286,16 @@ bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dis
 	// Get all inputs to be configured
 	vector<CInput*> toConfigure;
 	vector<CInput*>::iterator it;
-	for (it = m_inputs.begin(); it < m_inputs.end(); it++)
+	for (it = m_inputs.begin(); it != m_inputs.end(); it++)
 	{
-		if (InputIsConfigurable(*it) && ((*it)->gameFlags & gameFlags))
+		if ((*it)->IsConfigurable() && ((*it)->gameFlags & gameFlags))
 			toConfigure.push_back(*it);
 	}
 
 	// Remember current mappings for each input in case changes need to be undone later
 	vector<string> oldMappings(toConfigure.size());
 	size_t index = 0;
-	for (it = toConfigure.begin(); it < toConfigure.end(); it++)
+	for (it = toConfigure.begin(); it != toConfigure.end(); it++)
 		oldMappings[index++] = (*it)->GetMapping();
 
 	const char *groupLabel = NULL;
@@ -321,7 +305,7 @@ bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dis
 	while (index < toConfigure.size())
 	{
 		// Get the current input
-		CInput* input = toConfigure[index];
+		CInput *input = toConfigure[index];
 
 		// If have moved to a new input group, print the group heading
 		const char *itGroupLabel = input->GetInputGroup();
@@ -349,14 +333,14 @@ Redisplay:
 			{
 				// If user pressed aborted input, then undo all changes and finish configuration
 				index = 0;
-				for (it = toConfigure.begin(); it < toConfigure.end(); it++)
+				for (it = toConfigure.begin(); it != toConfigure.end(); it++)
 				{
 					(*it)->SetMapping(oldMappings[index].c_str());
 					index++;
 				}	
 				puts("");
 
-				m_system->ConfigEnd();
+				m_system->GrabMouse();
 				return false;
 			}
 
@@ -427,10 +411,17 @@ Redisplay:
 				index = 0;
 				done = true;
 			}
+			else if (stricmp(mapping, "KEY_I") == 0)
+			{
+				// Print info about input system
+				printf("\n\n");
+				m_system->PrintSettings();
+				goto Redisplay;
+			}
 			else if (stricmp(mapping, "KEY_H") == 0)
 			{
 				// Print the help message again
-				puts("");
+				printf("\n\n");
 				PrintConfigureInputsHelp();
 				goto Redisplay;
 			}
@@ -439,7 +430,7 @@ Redisplay:
 				// Finish configuration
 				puts("");
 
-				m_system->ConfigEnd();
+				m_system->GrabMouse();
 				return true;
 			}
 		}
@@ -448,7 +439,7 @@ Redisplay:
 	// All inputs set, finish configuration
 	puts("");
 
-	m_system->ConfigEnd();
+	m_system->GrabMouse();
 	return true;
 }
 
@@ -468,10 +459,9 @@ void CInputs::PrintInputs(const GameInfo *game)
 	}
 
 	const char *groupLabel = NULL;
-
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 	{
-		if (!InputIsConfigurable(*it) || !((*it)->gameFlags & gameFlags))
+		if (!(*it)->IsConfigurable() || !((*it)->gameFlags & gameFlags))
 			continue;
 
 		const char *itGroupLabel = (*it)->GetInputGroup();
@@ -498,9 +488,9 @@ bool CInputs::Poll(const GameInfo *game, unsigned dispX, unsigned dispY, unsigne
 
 	// Poll all UI inputs and all the inputs used by the current game, or all inputs if game is NULL
 	int gameFlags = (game != NULL ? game->inputFlags : GAME_INPUT_ALL);
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 	{
-		if ((*it)->gameFlags == UI_INPUT || (*it)->gameFlags & gameFlags)
+		if ((*it)->IsUIInput() || ((*it)->gameFlags & gameFlags))
 			(*it)->Poll();
 	}
 	return true;
@@ -522,14 +512,14 @@ void CInputs::DumpState(const GameInfo *game)
 	}
 
 	// Loop through the inputs used by the current game, or all inputs if game is NULL, and dump their values to stdout
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it < m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 	{
-		if (!((*it)->gameFlags & gameFlags))
+		if (!(*it)->IsUIInput() && !((*it)->gameFlags & gameFlags))
 			continue;
 
-		if (InputIsConfigurable(*it))
-			printf("%s [%s] = (%d)\n", (*it)->id, (*it)->GetMapping(), (*it)->value);
-		else
+		if ((*it)->IsVirtual())
 			printf("%s = (%d)\n", (*it)->id, (*it)->value);
+		else
+			printf("%s [%s] = (%d)\n", (*it)->id, (*it)->GetMapping(), (*it)->value);
 	}
 }
