@@ -35,57 +35,106 @@
 ###############################################################################
 
 #
-# Bitness of build
+# Bitness of build ('32' or '64')
 #
-BITS = 32	# '32' or '64' only
+BITS = 32
 
 #
-# Experimental sound code (32-bit builds only)
+# Experimental sound code ('yes' on 32-bit builds only or 'no')
 #
-ENABLE_SOUND = no	# 'yes' or 'no' only
+ENABLE_SOUND = no
+
+
+###############################################################################
+# 32/64-Bit SDK Directories and Options
+#
+# Edit these paths as necessary.
+# The following environment variables are used:
+#  VSINSTALLDIR is Visual Studio installation directory.
+#  WindowsSdkDir is Windows SDK installation directory.
+###############################################################################
+
+ifeq ($(strip $(BITS)),64)
+	ARCH = x64
+	VC_BIN = $(VSINSTALLDIR)\vc\bin\amd64
+	ARCH_LIBS = /LIBPATH:"$(VSINSTALLDIR)\vc\lib\amd64" /LIBPATH:"$(WindowsSdkDir)\lib\x64" 
+else
+	ARCH = x86
+	VC_BIN = $(VSINSTALLDIR)\vc\bin
+	ARCH_LIBS = 
+endif
 
 
 ###############################################################################
 # Required Libraries
 #
 # Edit these paths as necessary.
+# The following environment variables are used:
+#  DXSDK_DIR is Direct X installation directory.
 ###############################################################################
 
 #
 # SDL
 #
-SDL_LIBPATH = c:\Code\SDL-1.2.14\lib\\
-SDL_INCLUDEPATH = c:\Code\SDL-1.2.14\include\\
+SDL_LIBPATH = Libraries\SDL-1.2.14\lib-$(ARCH)-MT
+SDL_INCLUDEPATH = Libraries\SDL-1.2.14\include
+
+#
+# ZLib
+#
+ZLIB_LIBPATH = Libraries\zlib-1.2.4\lib-$(ARCH)-MT
+ZLIB_INCLUDEPATH = Libraries\zlib-1.2.4\include
+
+#
+# DirectX
+#
+DIRECTX_LIBPATH = $(DXSDK_DIR)\Lib\$(ARCH)
+DIRECTX_INCLUDEPATH = $(DXSDK_DIR)\Include
 
 
 ###############################################################################
 # Outputs
 ###############################################################################
 
-OUTFILE = Supermodel.exe
-OBJ_DIR = obj
+ifeq ($(strip $(BITS)),64)
+	OBJ_DIR = obj64
+	BIN_DIR = bin64
+else
+	OBJ_DIR = obj
+	BIN_DIR = bin
+endif
 
+OUTFILE = $(BIN_DIR)\Supermodel.exe
 
 ###############################################################################
 # Compiler and Linker
 ###############################################################################
 
-CC = cl
-LD = link
-COMPILER_FLAGS = /I "$(DXSDK_DIR)\Include" /I "$(SDL_INCLUDEPATH)" /I "Src\\" /I "Src\OSD\SDL\\" /Ox /D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL
+CC = "$(VC_BIN)\cl.exe"
+LD = "$(VC_BIN)\link.exe"
+COMPILER_FLAGS = /I "$(SDL_INCLUDEPATH)" /I "$(ZLIB_INCLUDEPATH)" /I "$(DIRECTX_INCLUDEPATH)" /I "Src\\" /I "Src\OSD\SDL\\" /Ox \
+	/D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL
 CFLAGS = $(COMPILER_FLAGS) /TC
 CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
-LFLAGS = /LIBPATH:"$(DXSDK_DIR)\Lib\x86" /LIBPATH:"$(SDL_LIBPATH)" /OUT:"$(OUTFILE)" /MANIFEST:NO /SUBSYSTEM:CONSOLE /NOLOGO /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /MACHINE:X86 /LTCG #/DEBUG
-OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
+LFLAGS = /MACHINE:$(ARCH) $(ARCH_LIBS) /LIBPATH:"$(SDL_LIBPATH)" /LIBPATH:"$(ZLIB_LIBPATH)" /LIBPATH:"$(DIRECTX_LIBPATH)" /OUT:"$(OUTFILE)" \
+	/MANIFEST:NO /SUBSYSTEM:CONSOLE /NOLOGO /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /LTCG #/DEBUG
+OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib \
+	odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
 
 #
 # Build options...
 #
-##ifdef ($(BITS),32)	# build type must be 32 bits for sound to be included
-#	ifeq ($(ENABLE_SOUND),yes)
-		COMPILER_FLAGS += /D "SUPERMODEL_SOUND"
-#	endif
-#endif
+
+# Ensure options are consistent
+# (ie build type must be 32 bits for sound to be included)
+ifneq ($(strip $(BITS)),32) 
+	ENABLE_SOUND = no
+endif
+
+# Add compiler flags for various options
+ifeq ($(strip $(ENABLE_SOUND)),yes)
+	COMPILER_FLAGS += /D "SUPERMODEL_SOUND"
+endif
 
 
 ###############################################################################
@@ -93,31 +142,37 @@ OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.
 ###############################################################################
 
 #
-# Ensure build options are consistent
-#
-ifneq ($(BITS),32)
-	ENABLE_SOUND = no
-endif
-
-#
 # Objects and Dependencies
 #
 HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
-OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/INIFile.obj $(OBJ_DIR)/BlockFile.obj $(OBJ_DIR)/93C46.obj $(OBJ_DIR)/ROMLoad.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/ioapi.obj $(OBJ_DIR)/Error.obj $(OBJ_DIR)/glew.obj $(OBJ_DIR)/Shader.obj $(OBJ_DIR)/Real3D.obj $(OBJ_DIR)/Render3D.obj $(OBJ_DIR)/Models.obj $(OBJ_DIR)/Render2D.obj $(OBJ_DIR)/TileGen.obj $(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/SoundBoard.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/MPC10x.obj $(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj $(OBJ_DIR)/InputTypes.obj $(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj
+OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/INIFile.obj $(OBJ_DIR)/BlockFile.obj $(OBJ_DIR)/93C46.obj \
+	$(OBJ_DIR)/ROMLoad.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/ioapi.obj $(OBJ_DIR)/Error.obj $(OBJ_DIR)/glew.obj $(OBJ_DIR)/Shader.obj \
+	$(OBJ_DIR)/Real3D.obj $(OBJ_DIR)/Render3D.obj $(OBJ_DIR)/Models.obj $(OBJ_DIR)/Render2D.obj $(OBJ_DIR)/TileGen.obj \
+	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/SoundBoard.obj \
+	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/MPC10x.obj \
+	$(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj $(OBJ_DIR)/InputTypes.obj \
+	$(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj
 
-#ifeq ($(BITS),32)	# if sound enabled and 32-bit build, include Turbo68K
-#	ifeq ($(ENABLE_SOUND),yes)
-		OBJ += $(OBJ_DIR)/Turbo68K.obj
-#	endif
-#endif
+# If sound enabled, include Turbo68K and SCSP code
+ifeq ($(strip $(ENABLE_SOUND)),yes)
+	OBJ += $(OBJ_DIR)/Turbo68K.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj
+endif
 
 
 #
 # Targets
 #
-all:	$(OBJ_DIR) $(OBJ)
-	$(LD) $(LFLAGS) $(OBJ_LIBS) $(OBJ)
+all:	$(OUTFILE) $(BIN_DIR)/SDL.dll
 
+$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ)
+	$(LD) $(LFLAGS) $(OBJ_LIBS) $(OBJ)
+	
+$(BIN_DIR)/SDL.dll:	$(SDL_LIBPATH)/SDL.dll
+	xcopy /D /Y $(SDL_LIBPATH)\SDL.dll $(BIN_DIR)
+		
+$(BIN_DIR):
+	mkdir $(BIN_DIR) 
+	
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
@@ -155,13 +210,13 @@ $(OBJ_DIR)/%.obj:	Src/Graphics/%.cpp Src/Graphics/%.h $(HEADERS) Src/Graphics/Sh
 	
 $(OBJ_DIR)/%.obj:	Src/Graphics/%.cpp $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
-	
+
 $(OBJ_DIR)/%.obj:	Src/Sound/%.cpp Src/Sound/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 
 $(OBJ_DIR)/%.obj:	Src/Sound/%.cpp $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
-		
+	
 $(OBJ_DIR)/%.obj:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h Src/CPU/PowerPC/ppc603.c Src/CPU/PowerPC/ppc_ops.c $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 	
@@ -182,4 +237,3 @@ $(OBJ_DIR)/%.obj:	Src/Pkgs/%.c Src/Pkgs/%.h
 
 $(OBJ_DIR)/%.obj:	Src/Pkgs/*.c
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
-
