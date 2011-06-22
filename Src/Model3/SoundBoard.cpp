@@ -43,6 +43,7 @@ static FILE		*soundFP;
 ******************************************************************************/
 
 // Prototypes for access handlers
+#ifdef SUPERMODEL_SOUND
 static UINT8	__cdecl	UnknownRead8(UINT32);
 static UINT16	__cdecl	UnknownRead16(UINT32);
 static UINT32	__cdecl	UnknownRead32(UINT32);
@@ -51,7 +52,6 @@ static void		__cdecl	UnknownWrite16(UINT32, UINT16);
 static void		__cdecl	UnknownWrite32(UINT32, UINT32);
 
 // Memory maps for 68K
-#ifdef SUPERMODEL_SOUND
 struct TURBO68K_FETCHREGION mapFetch[] =
 {
 	{ 0x000000, 0x0FFFFF, NULL },		// SCSP1 RAM
@@ -131,7 +131,6 @@ struct TURBO68K_DATAREGION mapWrite32[] =
 	{ 0x000000, 0xFFFFFF, NULL, UnknownWrite32 },
 	{ -1,		-1,		  NULL, NULL }
 };
-#endif
 
 static UINT8 __cdecl UnknownRead8(UINT32 addr)
 {
@@ -166,6 +165,7 @@ static void __cdecl UnknownWrite32(UINT32 addr, UINT32 data)
 {
 	printf("68K wrote %06X=%08X\n", addr, data);
 }
+#endif
 
 
 /******************************************************************************
