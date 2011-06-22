@@ -233,6 +233,26 @@ void CInputs::PrintConfigureInputsHelp()
 	puts("");
 }
 
+unsigned CInputs::Count()
+{
+	return (unsigned)m_inputs.size();
+}
+
+CInput *CInputs::operator[](const unsigned index)
+{
+	return m_inputs[index];
+}
+
+CInput *CInputs::operator[](const char *idOrLabel)
+{
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	{
+		if (stricmp((*it)->id, idOrLabel) == 0 || stricmp((*it)->label, idOrLabel) == 0)
+			return *it;
+	}
+	return NULL;
+}
+
 CInputSystem *CInputs::GetInputSystem()
 {
 	return m_system;

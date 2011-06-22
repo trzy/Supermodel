@@ -149,29 +149,24 @@ public:
 	~CInputs();
 
 	/*
+	 * Returns the number of available inputs.
+	 */
+	unsigned Count();
+
+	/*
+	 * Returns the input with the given index.
+	 */
+	CInput *operator[](const unsigned index);
+
+	/*
+	 * Returns the input with the given id or label.
+	 */
+	CInput *operator[](const char *idOrLabel);
+
+	/*
 	 * Returns the assigned input system.
 	 */
 	CInputSystem *GetInputSystem();
-
-	unsigned Count()
-	{
-		return (unsigned)m_inputs.size();
-	}
-
-	CInput *operator[](const unsigned index)
-	{
-		return m_inputs[index];
-	}
-
-	CInput *operator[](const char *idOrLabel)
-	{
-		for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
-		{
-			if (stricmp((*it)->id, idOrLabel) == 0 || stricmp((*it)->label, idOrLabel) == 0)
-				return *it;
-		}
-		return NULL;
-	}
 
 	/*
 	 * Initializes the inputs.  Must be called before any other methods are used.
