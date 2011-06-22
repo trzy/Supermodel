@@ -6,6 +6,11 @@
 #include <sstream>
 using namespace std;
 
+#ifdef DEBUG
+unsigned CInputSystem::totalSrcsAcquired = 0;
+unsigned CInputSystem::totalSrcsReleased = 0;
+#endif
+
 const char *CInputSystem::s_validKeyNames[] = 
 {
 	// General keys
@@ -343,17 +348,26 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ NULL,            JoyUnknown }
 };
 
+const char *CInputSystem::s_axisNames[] = { "X", "Y", "Z", "RX", "RY", "RZ" };
+
 CInputSystem::CInputSystem(const char *systemName) : 
 	name(systemName), m_dispX(0), m_dispY(0), m_dispW(0), m_dispH(0), m_grabMouse(false)
 {
-	m_emptySource = new CMultiInputSource(this);
+	m_emptySource = new CMultiInputSource();
+	m_emptySource->Acquire();
 }
 
 CInputSystem::~CInputSystem()
 {
-	DeleteSourceCache();
+	m_emptySource->Release();
+
 	ClearSettings();
-	delete m_emptySource;
+	ClearSourceCache(true);
+
+#ifdef DEBUG
+	if (totalSrcsAcquired != totalSrcsReleased)
+		printf("WARNING - number of input source acquisitions (%u) does not equal number of releases (%u)\n", totalSrcsAcquired, totalSrcsReleased);
+#endif
 }
 
 void CInputSystem::CreateSourceCache()
@@ -398,141 +412,95 @@ void CInputSystem::CreateSourceCache()
 	}
 }	
 
-bool CInputSystem::IsInSourceCache(CInputSource *source)
+void CInputSystem::ClearSourceCache(bool deleteCache)
 {
-	// Check keyboard source cache
+	// Clear cache of keyboard sources
 	if (m_anyKeySources != NULL)
 	{
 		for (int keyIndex = 0; keyIndex < NUM_VALID_KEYS; keyIndex++)
+			ReleaseSource(m_anyKeySources[keyIndex]);
+		if (deleteCache)
 		{
-			if (source == m_anyKeySources[keyIndex])
-				return true;
+			delete[] m_anyKeySources;
+			m_anyKeySources = NULL;
 		}
 		if (m_numKbds != ANY_KEYBOARD)
 		{
 			for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
 			{
 				for (int keyIndex = 0; keyIndex < NUM_VALID_KEYS; keyIndex++)
-				{
-					if (source == m_keySources[kbdNum][keyIndex])
-						return true;
-				}
+					ReleaseSource(m_keySources[kbdNum][keyIndex]);
+				if (deleteCache)
+					delete[] m_keySources[kbdNum];
+			}
+			if (deleteCache)
+			{
+				delete[] m_keySources;
+				m_keySources = NULL;
 			}
 		}
 	}
 
-	// Check mouse source cache
+	// Clear cache of mouse sources
 	if (m_anyMseSources != NULL)
 	{
 		for (int mseIndex = 0; mseIndex < NUM_MOUSE_PARTS; mseIndex++)
+			ReleaseSource(m_anyMseSources[mseIndex]);
+		if (deleteCache)
 		{
-			if (source == m_anyMseSources[mseIndex])
-				return true;
+			delete[] m_anyMseSources;
+			m_anyMseSources = NULL;
 		}
 		if (m_numMice != ANY_MOUSE)
 		{
 			for (int mseNum = 0; mseNum < m_numMice; mseNum++)
 			{
 				for (int mseIndex = 0; mseIndex < NUM_MOUSE_PARTS; mseIndex++)
-				{
-					if (source == m_mseSources[mseNum][mseIndex])
-						return true;
-				}
+					ReleaseSource(m_mseSources[mseNum][mseIndex]);
+				if (deleteCache)
+					delete[] m_mseSources[mseNum];
+			}
+			if (deleteCache)
+			{
+				delete[] m_mseSources;
+				m_mseSources = NULL;
 			}
 		}
 	}
 
-	// Check joystick source cache
+	// Clear cache of joystick sources
 	if (m_anyJoySources != NULL)
 	{
 		for (int joyIndex = 0; joyIndex < NUM_JOY_PARTS; joyIndex++)
+			ReleaseSource(m_anyJoySources[joyIndex]);
+		if (deleteCache)
 		{
-			if (source == m_anyJoySources[joyIndex])
-				return true;
+			delete[] m_anyJoySources;
+			m_anyJoySources = NULL;
 		}
 		if (m_numJoys != ANY_JOYSTICK)
 		{
 			for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
 			{
 				for (int joyIndex = 0; joyIndex < NUM_JOY_PARTS; joyIndex++)
-				{
-					if (source == m_joySources[joyNum][joyIndex])
-						return true;
-				}
+					ReleaseSource(m_joySources[joyNum][joyIndex]);
+				if (deleteCache)
+					delete[] m_joySources[joyNum];
 			}
-		}
-	}
-
-	return false;
-}
-
-void CInputSystem::DeleteSourceCache()
-{
-	// Delete cache for keyboard sources
-	if (m_anyKeySources != NULL)
-	{
-		for (int keyIndex = 0; keyIndex < NUM_VALID_KEYS; keyIndex++)
-			DeleteSource(m_anyKeySources[keyIndex]);
-		delete[] m_anyKeySources;
-		m_anyKeySources = NULL;
-		if (m_numKbds != ANY_KEYBOARD)
-		{
-			for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
+			if (deleteCache)
 			{
-				for (int keyIndex = 0; keyIndex < NUM_VALID_KEYS; keyIndex++)
-					DeleteSource(m_keySources[kbdNum][keyIndex]);
-				delete[] m_keySources[kbdNum];
+				delete[] m_joySources;
+				m_joySources = NULL;
 			}
-			delete[] m_keySources;
-			m_keySources = NULL;
-		}
-	}
-
-	// Delete cache for mouse sources
-	if (m_anyMseSources != NULL)
-	{
-		for (int mseIndex = 0; mseIndex < NUM_MOUSE_PARTS; mseIndex++)
-			DeleteSource(m_anyMseSources[mseIndex]);
-		delete[] m_anyMseSources;
-		m_anyMseSources = NULL;
-		if (m_numMice != ANY_MOUSE)
-		{
-			for (int mseNum = 0; mseNum < m_numMice; mseNum++)
-			{
-				for (int mseIndex = 0; mseIndex < NUM_MOUSE_PARTS; mseIndex++)
-					DeleteSource(m_mseSources[mseNum][mseIndex]);
-				delete[] m_mseSources[mseNum];
-			}
-			delete[] m_mseSources;
-			m_mseSources = NULL;
-		}
-	}
-
-	// Delete cache for joystick sources
-	if (m_anyJoySources != NULL)
-	{
-		for (int joyIndex = 0; joyIndex < NUM_JOY_PARTS; joyIndex++)
-			DeleteSource(m_anyJoySources[joyIndex]);
-		delete[] m_anyJoySources;
-		m_anyJoySources = NULL;
-		if (m_numJoys != ANY_JOYSTICK)
-		{
-			for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
-			{
-				for (int joyIndex = 0; joyIndex < NUM_JOY_PARTS; joyIndex++)
-					DeleteSource(m_joySources[joyNum][joyIndex]);
-				delete[] m_joySources[joyNum];
-			}
-			delete[] m_joySources;
-			m_joySources = NULL;
 		}
 	}
 }
 
-void CInputSystem::DeleteSource(CInputSource *source)
+void CInputSystem::ReleaseSource(CInputSource *&source)
 {
-	if (source != NULL && source != m_emptySource)
-		delete source;
+	if (source != NULL)
+		source->Release();
+	source = NULL;
 }
 	
 CInputSource *CInputSystem::GetKeySource(int kbdNum, int keyIndex)
@@ -546,6 +514,7 @@ CInputSource *CInputSystem::GetKeySource(int kbdNum, int keyIndex)
 				m_anyKeySources[keyIndex] = CreateKeySource(ANY_KEYBOARD, keyIndex);
 			else
 				m_anyKeySources[keyIndex] = CreateAnyKeySource(keyIndex);
+			m_anyKeySources[keyIndex]->Acquire();
 		}
 		return m_anyKeySources[keyIndex];
 	}
@@ -553,7 +522,10 @@ CInputSource *CInputSystem::GetKeySource(int kbdNum, int keyIndex)
 	{
 		// Check keyboard source cache first
 		if (m_keySources[kbdNum][keyIndex] == NULL)
+		{
 			m_keySources[kbdNum][keyIndex] = CreateKeySource(kbdNum, keyIndex);
+			m_keySources[kbdNum][keyIndex]->Acquire();
+		}
 		return m_keySources[kbdNum][keyIndex];
 	}
 	else
@@ -572,6 +544,7 @@ CInputSource *CInputSystem::GetMouseSource(int mseNum, EMousePart msePart)
 				m_anyMseSources[mseIndex] = CreateMouseSource(ANY_MOUSE, msePart);
 			else
 				m_anyMseSources[mseIndex] = CreateAnyMouseSource(msePart);
+			m_anyMseSources[mseIndex]->Acquire();
 		}
 		return m_anyMseSources[mseIndex];
 	}
@@ -579,7 +552,10 @@ CInputSource *CInputSystem::GetMouseSource(int mseNum, EMousePart msePart)
 	{
 		// Check mouse source cache first
 		if (m_mseSources[mseNum][mseIndex] == NULL)
+		{
 			m_mseSources[mseNum][mseIndex] = CreateMouseSource(mseNum, msePart);
+			m_mseSources[mseNum][mseIndex]->Acquire();
+		}
 		return m_mseSources[mseNum][mseIndex];
 	}
 	else
@@ -598,6 +574,7 @@ CInputSource *CInputSystem::GetJoySource(int joyNum, EJoyPart joyPart)
 				m_anyJoySources[joyIndex] = CreateJoySource(ANY_JOYSTICK, joyPart);
 			else
 				m_anyJoySources[joyIndex] = CreateAnyJoySource(joyPart);
+			m_anyJoySources[joyIndex]->Acquire();
 		}
 		return m_anyJoySources[joyIndex];
 	}
@@ -605,14 +582,63 @@ CInputSource *CInputSystem::GetJoySource(int joyNum, EJoyPart joyPart)
 	{
 		// Check joystick source cache first
 		if (m_joySources[joyNum][joyIndex] == NULL)
+		{
 			m_joySources[joyNum][joyIndex] = CreateJoySource(joyNum, joyPart);
+			m_joySources[joyNum][joyIndex]->Acquire();
+		}
 		return m_joySources[joyNum][joyIndex];
 	}
 	else
 		return m_emptySource;
 }
 
-void CInputSystem::CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping)
+void CInputSystem::CheckAllSources(unsigned readFlags, bool fullAxisOnly, bool &mseCentered, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources)
+{
+	// See if should read keyboards
+	if (readFlags & READ_KEYBOARD)
+	{
+		// Check all keyboard sources for inputs, merging devices if required
+		if ((readFlags & READ_MERGE_KEYBOARD) || m_numKbds == ANY_KEYBOARD)
+			CheckKeySources(ANY_KEYBOARD, fullAxisOnly, sources, mapping, badSources);
+		else
+		{
+			for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
+				CheckKeySources(kbdNum, fullAxisOnly, sources, mapping, badSources);
+		}
+	}
+
+	// See if should read mice
+	if (readFlags & READ_MOUSE)
+	{
+		// For mouse input, wait until mouse is in centre of display before parsing X- and Y-axis movements
+		if (!mseCentered)
+			mseCentered = ConfigMouseCentered();
+	
+		// Check all mouse sources for input, merging devices if required
+		if ((readFlags & READ_MERGE_MOUSE) || m_numMice == ANY_MOUSE)
+			CheckMouseSources(ANY_MOUSE, fullAxisOnly, mseCentered, sources, mapping, badSources);
+		else
+		{
+			for (int mseNum = 0; mseNum < m_numMice; mseNum++)
+				CheckMouseSources(mseNum, fullAxisOnly, mseCentered, sources, mapping, badSources);
+		}
+	}
+	
+	// See if should read joysticks
+	if (readFlags & READ_JOYSTICK)
+	{
+		// Check all joystick sources, merging devices if required
+		if ((readFlags & READ_MERGE_JOYSTICK) || m_numJoys == ANY_JOYSTICK)
+			CheckJoySources(ANY_JOYSTICK, fullAxisOnly, sources, mapping, badSources);
+		else
+		{
+			for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
+				CheckJoySources(joyNum, fullAxisOnly, sources, mapping, badSources);
+		}
+	}
+}
+
+void CInputSystem::CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources)
 {
 	// Loop through all valid keys
 	for (int i = 0; i < NUM_VALID_KEYS; i++)
@@ -621,9 +647,10 @@ void CInputSystem::CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputS
 		int keyIndex = GetKeyIndex(keyName);
 		if (keyIndex < 0)
 			continue;
-		// Get key source for keyboard number and key and test it to see if it is active (but was not previously)
+		// Get key source for keyboard number and key and test to see if it is active (but was not previously) and that it is not a "bad" source
 		CInputSource *source = GetKeySource(kbdNum, keyIndex);
-		if (source != NULL && source->IsActive() && find(sources.begin(), sources.end(), source) == sources.end())
+		if (source != NULL && source->IsActive() && find(sources.begin(), sources.end(), source) == sources.end() &&
+			find(badSources.begin(), badSources.end(), source) == badSources.end())
 		{
 			// Update mapping string and add source to list
 			if (sources.size() == 0)
@@ -639,7 +666,7 @@ void CInputSystem::CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputS
 	}
 }
 
-void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCentered, vector<CInputSource*> &sources, string &mapping)
+void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCentered, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources)
 {
 	// Loop through all mouse parts
 	for (int mseIndex = 0; mseIndex < NUM_MOUSE_PARTS; mseIndex++)
@@ -653,9 +680,10 @@ void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCent
 		// Ignore X- & Y-axes if mouse hasn't been centered yet and filter axes according to fullAxisOnly
 		if (isXYAxis && !mseCentered || isAxis && (IsFullAxis(msePart) && !fullAxisOnly || !IsFullAxis(msePart) && fullAxisOnly))
 			continue;
-		// Get mouse source for mouse number and part and test it to see if it is active (but was not previously)
+		// Get mouse source for mouse number and part and test to see if it is active (but was not previously) and that it is not a "bad" source
 		CInputSource *source = GetMouseSource(mseNum, msePart);
-		if (source != NULL && source->IsActive() && find(sources.begin(), sources.end(), source) == sources.end())
+		if (source != NULL && source->IsActive() && find(sources.begin(), sources.end(), source) == sources.end() &&
+			find(badSources.begin(), badSources.end(), source) == badSources.end())
 		{
 			// Otherwise, update mapping string and add source to list
 			const char *partName = LookupName(msePart);
@@ -672,7 +700,7 @@ void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCent
 	}
 }
 
-void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping)
+void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources)
 {
 	// Loop through all joystick parts
 	for (int joyIndex = 0; joyIndex < NUM_JOY_PARTS; joyIndex++)
@@ -681,9 +709,10 @@ void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputS
 		// Filter axes according to fullAxisOnly
 		if (IsAxis(joyPart) && (IsFullAxis(joyPart) && !fullAxisOnly || !IsFullAxis(joyPart) && fullAxisOnly))
 			continue;
-		// Get joystick source for joystick number and part and test it to see if it is active (but was not previously)
+		// Get joystick source for joystick number and part and test to see if it is active (but was not previously) and that it is not a "bad" source
 		CInputSource *source = GetJoySource(joyNum, joyPart);
-		if (source != NULL && source->IsActive() && find(sources.begin(), sources.end(), source) == sources.end())
+		if (source != NULL && source->IsActive() && find(sources.begin(), sources.end(), source) == sources.end() &&
+			find(badSources.begin(), badSources.end(), source) == badSources.end())
 		{
 			// Otherwise, update mapping string and add source to list
 			const char *partName = LookupName(joyPart);
@@ -870,7 +899,7 @@ CInputSource* CInputSystem::ParseMultiSource(string str, bool fullAxisOnly, bool
 	while (start < size);
 
 	// If only parsed a single source, return that, otherwise return a CMultiInputSource combining all the sources
-	return (isMulti ? new CMultiInputSource(this, isOr, sources) : source);
+	return (isMulti ? new CMultiInputSource(isOr, sources) : source);
 }
 
 CInputSource *CInputSystem::ParseSingleSource(string str)
@@ -886,7 +915,7 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
 
 		CInputSource *source = ParseSingleSource(str);
 		if (source != NULL && source != m_emptySource)
-			return new CNegInputSource(this, source);
+			return new CNegInputSource(source);
 		else
 			return source;
 	}	
@@ -924,7 +953,7 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
 						sources.push_back(rightSource);
 				}
 				if (sources.size() > 0)
-					return new CMultiInputSource(this, true, sources);
+					return new CMultiInputSource(true, sources);
 			}
 			return m_emptySource;
 		}
@@ -1037,9 +1066,12 @@ void CInputSystem::PrintMouseSettings(MouseSettings *settings)
 	}
 
 	// Print all common settings and any settings that are different to common/default settings
-	if (common == NULL || settings->xDeadZone != common->xDeadZone) printf(" X Dead Zone = %d %%\n", settings->xDeadZone);
-	if (common == NULL || settings->yDeadZone != common->yDeadZone) printf(" Y Dead Zone = %d %%\n", settings->yDeadZone);
-	if (common == NULL || settings->zDeadZone != common->zDeadZone) printf(" Z Dead Zone = %d %%\n", settings->zDeadZone);
+	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
+	{
+		const char *axisName = s_axisNames[axisNum];
+		if (common == NULL || settings->deadZones[axisNum] != common->deadZones[axisNum])
+			printf(" %s-Axis Dead Zone = %d %%\n", axisName, settings->deadZones[axisNum]);
+	}
 }
 
 MouseSettings *CInputSystem::ReadMouseSettings(CINIFile *ini, const char *section, int mseNum)
@@ -1054,9 +1086,11 @@ MouseSettings *CInputSystem::ReadMouseSettings(CINIFile *ini, const char *sectio
 	if (mseNum != ANY_MOUSE)
 		baseKey.append(IntToString(mseNum + 1));
 	bool read = false;
-	read |= ini->Get(section, baseKey + "XDeadZone", settings->xDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "YDeadZone", settings->yDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "ZDeadZone", settings->zDeadZone) == OKAY;
+	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
+	{
+		const char *axisName = s_axisNames[axisNum];
+		read |= ini->Get(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
+	}
 	if (read)
 		return settings;
 	delete settings;
@@ -1072,9 +1106,12 @@ void CInputSystem::WriteMouseSettings(CINIFile *ini, const char *section, MouseS
 	string baseKey("InputMouse");
 	if (settings->mseNum != ANY_MOUSE)
 		baseKey.append(IntToString(settings->mseNum + 1));
-	if (settings->xDeadZone != common->xDeadZone) ini->Set(section, baseKey + "XDeadZone", settings->xDeadZone);
-	if (settings->yDeadZone != common->yDeadZone) ini->Set(section, baseKey + "YDeadZone", settings->yDeadZone);
-	if (settings->zDeadZone != common->zDeadZone) ini->Set(section, baseKey + "ZDeadZone", settings->zDeadZone);
+	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
+	{
+		const char *axisName = s_axisNames[axisNum];
+		if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
+			ini->Set(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]);
+	}
 }
 
 void CInputSystem::PrintJoySettings(JoySettings *settings)
@@ -1093,18 +1130,20 @@ void CInputSystem::PrintJoySettings(JoySettings *settings)
 	}
 
 	// Print all common settings and any settings that are different to common/default settings
-	if (common == NULL || settings->xDeadZone != common->xDeadZone) printf(" X-Axis Dead Zone = %d %%\n", settings->xDeadZone);
-	if (common == NULL || settings->xSaturation != common->xSaturation) printf(" X-Axis Saturation = %d %%\n", settings->xSaturation);
-	if (common == NULL || settings->yDeadZone != common->yDeadZone) printf(" Y-Axis Dead Zone = %d %%\n", settings->yDeadZone);
-	if (common == NULL || settings->ySaturation != common->ySaturation) printf(" Y-Axis Saturation = %d %%\n", settings->ySaturation);
-	if (common == NULL || settings->zDeadZone != common->zDeadZone) printf(" Z-Axis Dead Zone = %d %%\n", settings->zDeadZone);
-	if (common == NULL || settings->zSaturation != common->zSaturation) printf(" Z-Axis Saturation = %d %%\n", settings->zSaturation);
-	if (common == NULL || settings->rxDeadZone != common->rxDeadZone) printf(" RX-Axis Dead Zone = %d %%\n", settings->rxDeadZone);
-	if (common == NULL || settings->rxSaturation != common->rxSaturation) printf(" RX-Axis Saturation = %d %%\n", settings->rxSaturation);
-	if (common == NULL || settings->ryDeadZone != common->ryDeadZone) printf(" RY-Axis Dead Zone = %d %%\n", settings->ryDeadZone);
-	if (common == NULL || settings->rySaturation != common->rySaturation) printf(" RY-Axis Saturation = %d %%\n", settings->rySaturation);
-	if (common == NULL || settings->rzDeadZone != common->rzDeadZone) printf(" RZ-Axis Dead Zone = %d %%\n", settings->rzDeadZone);
-	if (common == NULL || settings->rzSaturation != common->rzSaturation) printf(" RZ-Axis Saturation = %d %%\n", settings->rzSaturation);
+	for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+	{	
+		const char *axisName = s_axisNames[axisNum];
+		if (common == NULL || settings->axisMinVals[axisNum] != common->axisMinVals[axisNum])
+			printf(" %-2s-Axis Min Value        = %d\n", axisName, settings->axisMinVals[axisNum]);
+		if (common == NULL || settings->axisOffVals[axisNum] != common->axisOffVals[axisNum])
+			printf(" %-2s-Axis Center/Off Value = %d\n", axisName, settings->axisOffVals[axisNum]);
+		if (common == NULL || settings->axisMaxVals[axisNum] != common->axisMaxVals[axisNum])
+			printf(" %-2s-Axis Max Value        = %d\n", axisName, settings->axisMaxVals[axisNum]);
+		if (common == NULL || settings->deadZones[axisNum] != common->deadZones[axisNum])
+			printf(" %-2s-Axis Dead Zone        = %d %%\n", axisName, settings->deadZones[axisNum]);
+		if (common == NULL || settings->saturations[axisNum] != common->saturations[axisNum])
+			printf(" %-2s-Axis Saturation       = %d %%\n", axisName, settings->saturations[axisNum]);
+	}
 }
 
 JoySettings *CInputSystem::ReadJoySettings(CINIFile *ini, const char *section, int joyNum)
@@ -1119,18 +1158,15 @@ JoySettings *CInputSystem::ReadJoySettings(CINIFile *ini, const char *section, i
 	if (joyNum != ANY_JOYSTICK)
 		baseKey.append(IntToString(joyNum + 1));
 	bool read = false;
-	read |= ini->Get(section, baseKey + "XDeadZone", settings->xDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "XSaturation", settings->xSaturation) == OKAY;
-	read |= ini->Get(section, baseKey + "YDeadZone", settings->yDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "YSaturation", settings->ySaturation) == OKAY;
-	read |= ini->Get(section, baseKey + "ZDeadZone", settings->zDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "ZSaturation", settings->zSaturation) == OKAY;
-	read |= ini->Get(section, baseKey + "RXDeadZone", settings->rxDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "RXSaturation", settings->rxSaturation) == OKAY;
-	read |= ini->Get(section, baseKey + "RYDeadZone", settings->ryDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "RYSaturation", settings->rySaturation) == OKAY;
-	read |= ini->Get(section, baseKey + "RZDeadZone", settings->rzDeadZone) == OKAY;
-	read |= ini->Get(section, baseKey + "RZSaturation", settings->rzSaturation) == OKAY;
+	for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+	{
+		const char *axisName = s_axisNames[axisNum];
+		read |= ini->Get(section, baseKey + axisName + "MinVal", settings->axisMinVals[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisName + "OffVal", settings->axisOffVals[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisName + "MaxVal", settings->axisMaxVals[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisName + "Saturation", settings->saturations[axisNum]) == OKAY; 
+	}
 	if (read)
 		return settings;
 	delete settings;
@@ -1146,18 +1182,20 @@ void CInputSystem::WriteJoySettings(CINIFile *ini, const char *section, JoySetti
 	string baseKey("InputJoy");
 	if (settings->joyNum != ANY_JOYSTICK)
 		baseKey.append(IntToString(settings->joyNum + 1));
-	if (settings->xDeadZone != common->xDeadZone) ini->Set(section, baseKey + "XDeadZone", settings->xDeadZone);
-	if (settings->xSaturation != common->xSaturation) ini->Set(section, baseKey + "XSaturation", settings->xSaturation);
-	if (settings->yDeadZone != common->yDeadZone) ini->Set(section, baseKey + "YDeadZone", settings->yDeadZone);
-	if (settings->ySaturation != common->ySaturation) ini->Set(section, baseKey + "YSaturation", settings->ySaturation);
-	if (settings->zDeadZone != common->zDeadZone) ini->Set(section, baseKey + "ZDeadZone", settings->zDeadZone);
-	if (settings->zSaturation != common->zSaturation) ini->Set(section, baseKey + "ZSaturation", settings->zSaturation);
-	if (settings->rxDeadZone != common->rxDeadZone) ini->Set(section, baseKey + "RXDeadZone", settings->rxDeadZone);
-	if (settings->rxSaturation != common->rxSaturation) ini->Set(section, baseKey + "RXSaturation", settings->rxSaturation);
-	if (settings->ryDeadZone != common->ryDeadZone) ini->Set(section, baseKey + "RYDeadZone", settings->ryDeadZone);
-	if (settings->rySaturation != common->rySaturation) ini->Set(section, baseKey + "RYSaturation", settings->rySaturation);
-	if (settings->rzDeadZone != common->rzDeadZone) ini->Set(section, baseKey + "RZDeadZone", settings->rzDeadZone);
-	if (settings->rzSaturation != common->rzSaturation) ini->Set(section, baseKey + "RZSaturation", settings->rzSaturation);
+	for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+	{
+		const char *axisName = s_axisNames[axisNum];
+		if (settings->axisMinVals[axisNum] != common->axisMinVals[axisNum]) 
+			ini->Set(section, baseKey + axisName + "MinVal", settings->axisMinVals[axisNum]);
+		if (settings->axisOffVals[axisNum] != common->axisOffVals[axisNum]) 
+			ini->Set(section, baseKey + axisName + "OffVal", settings->axisOffVals[axisNum]);
+		if (settings->axisMaxVals[axisNum] != common->axisMaxVals[axisNum])
+			ini->Set(section, baseKey + axisName + "MaxVal", settings->axisMaxVals[axisNum]);
+		if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
+			ini->Set(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]);
+		if (settings->saturations[axisNum] != common->saturations[axisNum]) 
+			ini->Set(section, baseKey + axisName + "Saturation", settings->saturations[axisNum]);
+	}
 }
 
 KeySettings *CInputSystem::GetKeySettings(int kbdNum, bool useDefault)
@@ -1338,7 +1376,7 @@ CInputSource *CInputSystem::CreateAnyKeySource(int keyIndex)
 		if (keySrc != NULL)
 			keySrcs.push_back(keySrc);
 	}
-	return new CMultiInputSource(this, true, keySrcs);
+	return new CMultiInputSource(true, keySrcs);
 }
 
 CInputSource *CInputSystem::CreateAnyMouseSource(EMousePart msePart)
@@ -1351,7 +1389,7 @@ CInputSource *CInputSystem::CreateAnyMouseSource(EMousePart msePart)
 		if (mseSrc != NULL)
 			mseSrcs.push_back(mseSrc);
 	}
-	return new CMultiInputSource(this, true, mseSrcs);
+	return new CMultiInputSource(true, mseSrcs);
 }
 
 CInputSource *CInputSystem::CreateAnyJoySource(EJoyPart joyPart)
@@ -1364,7 +1402,7 @@ CInputSource *CInputSystem::CreateAnyJoySource(EJoyPart joyPart)
 		if (joySrc != NULL)
 			joySrcs.push_back(joySrc);
 	}
-	return new CMultiInputSource(this, true, joySrcs);
+	return new CMultiInputSource(true, joySrcs);
 }
 
 CInputSource *CInputSystem::CreateKeySource(int kbdNum, int keyIndex)
@@ -1386,16 +1424,8 @@ CInputSource *CInputSystem::CreateMouseSource(int mseNum, EMousePart msePart)
 	int axisDir;
 	if (GetAxisDetails(msePart, axisNum, axisDir))
 	{
-		// Part is mouse axis so get the deadzone setting for it
-		unsigned deadZone;
-		switch (axisNum)
-		{
-			case AXIS_X: deadZone = settings->xDeadZone; break;
-			case AXIS_Y: deadZone = settings->yDeadZone; break;
-			case AXIS_Z: deadZone = settings->zDeadZone; break;
-			default:     return NULL;  // Any other axis numbers are invalid
-		}
-		return new CMseAxisInputSource(this, mseNum, axisNum, axisDir, deadZone);
+		// Part is mouse axis so create axis source with appropriate deadzone setting
+		return new CMseAxisInputSource(this, mseNum, axisNum, axisDir, settings->deadZones[axisNum]);
 	}
 	else if (IsButton(msePart))
 	{
@@ -1423,23 +1453,13 @@ CInputSource *CInputSystem::CreateJoySource(int joyNum, EJoyPart joyPart)
 	int povDir;
 	if (GetAxisDetails(joyPart, axisNum, axisDir))
 	{
-		// Part is joystick axis so get the deadzone and saturation settings for it
-		unsigned axisDZone;
-		unsigned axisSat;
-		switch (axisNum)
-		{
-			case AXIS_X:  axisDZone = settings->xDeadZone; axisSat = settings->xSaturation; break;
-			case AXIS_Y:  axisDZone = settings->yDeadZone; axisSat = settings->ySaturation; break;
-			case AXIS_Z:  axisDZone = settings->zDeadZone; axisSat = settings->zSaturation; break;
-			case AXIS_RX: axisDZone = settings->rxDeadZone; axisSat = settings->rxSaturation; break;
-			case AXIS_RY: axisDZone = settings->ryDeadZone; axisSat = settings->rySaturation; break;
-			case AXIS_RZ: axisDZone = settings->rzDeadZone; axisSat = settings->rzSaturation; break;
-			default:      return NULL;  // Any other axis numbers are invalid
-		}
-		// See whether joystick has this axis
+		// Part is joystick axis, so see whether joystick actually has this axis
 		if (!joyDetails->hasAxis[axisNum])
 			return m_emptySource;  // If joystick doesn't have axis, then return empty source rather than NULL as not really an error
-		return new CJoyAxisInputSource(this, joyNum, axisNum, axisDir, axisDZone, axisSat);
+		// Otherwise, create axis source with appropriate axis range, deadzone and saturation settings
+		return new CJoyAxisInputSource(this, joyNum, axisNum, axisDir, 
+			settings->axisMinVals[axisNum], settings->axisOffVals[axisNum], settings->axisMaxVals[axisNum],
+			settings->deadZones[axisNum], settings->saturations[axisNum]);
 	}
 	else if (GetPOVDetails(joyPart, povNum, povDir))
 	{
@@ -1452,7 +1472,7 @@ CInputSource *CInputSystem::CreateJoySource(int joyNum, EJoyPart joyPart)
 	{	
 		// Part is joystick button so map it to a button number
 		int butNum = GetButtonNumber(joyPart);
-		if (butNum < 0)
+		if (butNum < 0 || butNum >= NUM_JOY_BUTTONS)
 			return NULL;  // Buttons out of range are invalid
 		if (butNum >= joyDetails->numButtons)
 			return m_emptySource;  // If joystick doesn't have button, then return empty source rather than NULL as not really an error
@@ -1491,13 +1511,6 @@ void CInputSystem::SetDisplayGeom(unsigned dispX, unsigned dispY, unsigned dispW
 CInputSource* CInputSystem::ParseSource(const char *mapping, bool fullAxisOnly)
 {
 	return ParseMultiSource(mapping, fullAxisOnly, true);
-}
-
-void CInputSystem::ReleaseSource(CInputSource *source)
-{
-	// If source is not being cached then delete it
-	if (!IsInSourceCache(source))
-		DeleteSource(source);
 }
 
 void CInputSystem::ClearSettings()
@@ -1568,6 +1581,7 @@ void CInputSystem::PrintSettings()
 void CInputSystem::ReadFromINIFile(CINIFile *ini, const char *section)
 {
 	ClearSettings();
+	ClearSourceCache();
 
 	// Read all key settings for attached keyboards
 	KeySettings *keySettings = ReadKeySettings(ini, section, ANY_KEYBOARD);
@@ -1622,17 +1636,33 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 {
 	// Map given escape mapping to an input source
 	CInputSource *escape = ParseSource(escapeMapping);
+	escape->Acquire();
 	
+	string badMapping;
 	string mapping;
+	vector<CInputSource*> badSources;
 	vector<CInputSource*> sources;
 	bool mseCentered = false;
+
+	// See which sources activated to begin with and from here on ignore these (this stops badly calibrated axes that are constantly "active"
+	// from preventing the user from exiting read loop)
+	if (!Poll())
+	{
+		escape->Release();
+		return false;
+	}
+
+	CheckAllSources(readFlags, fullAxisOnly, mseCentered, badSources, badMapping, sources);
 
 	// Loop until have received meaningful inputs
 	for (;;)
 	{
 		// Poll inputs
 		if (!Poll())
+		{
+			escape->Release();
 			return false;
+		}
 
 		// Check if escape source was triggered
 		if (escape != NULL && escape->IsActive())
@@ -1641,56 +1671,20 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 			while (escape->IsActive())
 			{
 				if (!Poll())
+				{
+					escape->Release();
 					return false; 
+				}
 				Wait(1000/60);
 			}
+			escape->Release();
 			return false;
 		}
 
-		// See if should read keyboards
-		if (readFlags & READ_KEYBOARD)
-		{
-			// Check all keyboard sources for inputs, merging devices if required
-			if ((readFlags & READ_MERGE_KEYBOARD) || m_numKbds == ANY_KEYBOARD)
-				CheckKeySources(ANY_KEYBOARD, fullAxisOnly, sources, mapping);
-			else
-			{
-				for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
-					CheckKeySources(kbdNum, fullAxisOnly, sources, mapping);
-			}
-		}
+		// Check all active sources
+		CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, mapping, badSources);
 
-		// See if should read mice
-		if (readFlags & READ_MOUSE)
-		{
-			// For mouse input, wait until mouse is in centre of display before parsing X- and Y-axis movements
-			if (!mseCentered)
-				mseCentered = ConfigMouseCentered();
-		
-			// Check all mouse sources for input, merging devices if required
-			if ((readFlags & READ_MERGE_MOUSE) || m_numMice == ANY_MOUSE)
-				CheckMouseSources(ANY_MOUSE, fullAxisOnly, mseCentered, sources, mapping);
-			else
-			{
-				for (int mseNum = 0; mseNum < m_numMice; mseNum++)
-					CheckMouseSources(mseNum, fullAxisOnly, mseCentered, sources, mapping);
-			}
-		}
-		
-		// See if should read joysticks
-		if (readFlags & READ_JOYSTICK)
-		{
-			// Check all joystick sources, merging devices if required
-			if ((readFlags & READ_MERGE_JOYSTICK) || m_numJoys == ANY_JOYSTICK)
-				CheckJoySources(ANY_JOYSTICK, fullAxisOnly, sources, mapping);
-			else
-			{
-				for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
-					CheckJoySources(joyNum, fullAxisOnly, sources, mapping);
-			}
-		}
-
-		// When some inputs have been activated, keep lopping until they have all been released again.
+		// When some inputs have been activated, keep looping until they have all been released again.
 		if (sources.size() > 0)
 		{
 			// Check each source is no longer active
@@ -1723,6 +1717,8 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 	// Copy mapping to buffer and return
 	strncpy(buffer, mapping.c_str(), bufSize - 1);
 	buffer[bufSize - 1] = '\0';
+	
+	escape->Release();
 	return true;
 }
 
@@ -1737,6 +1733,62 @@ void CInputSystem::UngrabMouse()
 
 	// Make sure mouse is visible
 	SetMouseVisibility(true);
+}
+
+bool CInputSystem::SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd)
+{
+	const JoyDetails *joyDetails = GetJoyDetails(joyNum);
+	if (!joyDetails->hasFFeedback || !joyDetails->axisHasFF[axisNum])
+		return false;
+	return ProcessForceFeedbackCmd(joyNum, axisNum, ffCmd);
+}
+
+void CInputSystem::PrintDevices()
+{
+	puts("Keyboards:");
+	if (m_numKbds == 0)
+		puts(" None");
+	else if (m_numKbds == ANY_KEYBOARD)
+		puts(" System Keyboard");
+	else
+	{
+		for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
+		{
+			const KeyDetails *keyDetails = GetKeyDetails(kbdNum);
+			printf(" %d: %s\n", kbdNum + 1, keyDetails->name);
+		}
+	}
+
+	puts("Mice:");
+	if (m_numMice == 0)
+		puts(" None");
+	else if (m_numMice == ANY_MOUSE)
+		puts(" System Mouse");
+	else
+	{
+		for (int mseNum = 0; mseNum < m_numMice; mseNum++)
+		{
+			const MouseDetails *mseDetails = GetMouseDetails(mseNum);
+			printf(" %d: %s\n", mseNum + 1, mseDetails->name);
+		}
+	}
+
+	puts("Joysticks:");
+	if (m_numJoys == 0)
+		puts(" None");
+	else if (m_numJoys == ANY_JOYSTICK)
+		puts(" System Joystick");
+	else
+	{
+		for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
+		{
+			const JoyDetails *joyDetails = GetJoyDetails(joyNum);
+			if (joyDetails->hasFFeedback)
+				printf(" %d: %s [Force Feedback Available]\n", joyNum + 1, joyDetails->name);
+			else
+				printf(" %d: %s\n", joyNum + 1, joyDetails->name);
+		}
+	}
 }
 
 /*
@@ -1888,26 +1940,28 @@ bool CInputSystem::CMseButInputSource::GetValueAsAnalog(int &val, int minVal, in
 /*
  * CInputSystem::CJoyAxisInputSource
  */
-CInputSystem::CJoyAxisInputSource::CJoyAxisInputSource(CInputSystem *system, int joyNum, int axisNum, int axisDir, unsigned deadZone, unsigned saturation) : 
+CInputSystem::CJoyAxisInputSource::CJoyAxisInputSource(CInputSystem *system, int joyNum, int axisNum, int axisDir,
+	int axisMinVal, int axisOffVal, int axisMaxVal, unsigned deadZone, unsigned saturation) : 
 	CInputSource(axisDir == AXIS_FULL || axisDir == AXIS_INVERTED ? SourceFullAxis : SourceHalfAxis),
-	m_system(system), m_joyNum(joyNum), m_axisNum(axisNum), m_axisDir(axisDir)
+	m_system(system), m_joyNum(joyNum), m_axisNum(axisNum), m_axisDir(axisDir), m_axisMinVal(axisMinVal), m_axisOffVal(axisOffVal), m_axisMaxVal(axisMaxVal)
 {
-	// Calculate pos/neg deadzone and saturation points (joystick raw values range from -32768 to 32767, deadzone given as 
-	// percentage 0-99 and saturation given as percentage 1-100)
+	m_axisInverted = m_axisMaxVal < m_axisMinVal;
+	// Calculate pos/neg deadzone and saturation points (joystick raw values range from axisMinVal to axisMasVal (centered/off at axisOffVal),
+	// deadzone given as percentage 0-99 and saturation given as percentage 1-100)
 	double dDeadZone = (double)Clamp((int)deadZone, 0, 99) / 100.0;
 	double dSaturation = (double)Clamp((int)saturation, (int)deadZone + 1, 100) / 100.0;
-	m_posDZone = (int)(dDeadZone * 32767.0);
-	m_negDZone = (int)(dDeadZone * -32768.0);
-	m_posSat = (int)(dSaturation * 32767.0);
-	m_negSat = (int)(dSaturation * -32868.0);
+	m_posDZone = m_axisOffVal + (int)(dDeadZone * (m_axisMaxVal - m_axisOffVal));
+	m_negDZone = m_axisOffVal + (int)(dDeadZone * (m_axisMinVal - m_axisOffVal));
+	m_posSat = m_axisOffVal + (int)(dSaturation * (m_axisMaxVal - m_axisOffVal));
+	m_negSat = m_axisOffVal + (int)(dSaturation * (m_axisMinVal - m_axisOffVal));
 }
 
 int CInputSystem::CJoyAxisInputSource::ScaleAxisValue(int minVal, int offVal, int maxVal)
 {
-	// Get raw axis value from input system (values range from -32768 to 32767)
+	// Get raw axis value from input system
 	int joyVal = m_system->GetJoyAxisValue(m_joyNum, m_axisNum);
-	// Check value is not zero
-	if (joyVal == 0)
+	// Check if value is at axis off value
+	if (joyVal == m_axisOffVal)
 		return offVal;
 	// Scale value between deadzone and saturation points, taking positive or negative values only or using the whole axis range as required
 	if      (m_axisDir == AXIS_POS)  return Scale(joyVal, m_posDZone, m_posDZone, m_posSat, minVal, offVal, maxVal);
@@ -1915,14 +1969,18 @@ int CInputSystem::CJoyAxisInputSource::ScaleAxisValue(int minVal, int offVal, in
 	else if (m_axisDir == AXIS_FULL)
 	{
 		// Full axis range
-		if (joyVal > 0) return Scale(joyVal, m_posDZone, m_posDZone, m_posSat, minVal, offVal, maxVal);
-		else            return Scale(joyVal, m_negSat, m_negDZone, m_negDZone, minVal, offVal, maxVal);
+		if (!m_axisInverted && joyVal > m_axisOffVal || m_axisInverted && joyVal < m_axisOffVal) 
+			return Scale(joyVal, m_posDZone, m_posDZone, m_posSat, minVal, offVal, maxVal);
+		else
+			return Scale(joyVal, m_negSat, m_negDZone, m_negDZone, minVal, offVal, maxVal);
 	}
 	else
 	{
 		// Full axis range, but inverted
-		if (joyVal > 0) return Scale(joyVal, m_posDZone, m_posDZone, m_posSat, maxVal, offVal, minVal);
-		else            return Scale(joyVal, m_negSat, m_negDZone, m_negDZone, maxVal, offVal, minVal);
+		if (!m_axisInverted && joyVal > m_axisOffVal || m_axisInverted && joyVal < m_axisOffVal)
+			return Scale(joyVal, m_posDZone, m_posDZone, m_posSat, maxVal, offVal, minVal);
+		else
+			return Scale(joyVal, m_negSat, m_negDZone, m_negDZone, maxVal, offVal, minVal);
 	}
 }
 
@@ -1943,7 +2001,7 @@ bool CInputSystem::CJoyAxisInputSource::GetValueAsAnalog(int &val, int minVal, i
 	return true;
 }
 
-bool CInputSystem::CJoyAxisInputSource::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
+bool CInputSystem::CJoyAxisInputSource::SendForceFeedbackCmd(ForceFeedbackCmd ffCmd)
 {
 	return m_system->SendForceFeedbackCmd(m_joyNum, m_axisNum, ffCmd);
 }

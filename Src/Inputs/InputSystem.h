@@ -33,6 +33,9 @@ class CINIFile;
 #define DEFAULT_KEY_SENSITIVITY 25
 #define DEFAULT_KEY_DECAYSPEED 50
 #define DEFAULT_MSE_DEADZONE 0
+#define DEFAULT_JOY_AXISMINVAL -32768
+#define DEFAULT_JOY_AXISOFFVAL 0
+#define DEFAULT_JOY_AXISMAXVAL 32767
 #define DEFAULT_JOY_DEADZONE 3
 #define DEFAULT_JOY_SATURATION 100
 
@@ -208,10 +211,8 @@ struct KeySettings
  */
 struct MouseSettings
 {
-	int mseNum;             // Mouse number (or ANY_MOUSE for settings that apply to all mice)
-	unsigned xDeadZone;     // X-Axis dead zone as a percentage 0-99 of display width
-	unsigned yDeadZone;     // Y-Axis dead zone as a percentage 0-99 of display height
-	unsigned zDeadZone;     // Z-Axis dead zone as a percentage 0-99 of axis range
+	int mseNum;                         // Mouse number (or ANY_MOUSE for settings that apply to all mice)
+	unsigned deadZones[NUM_MOUSE_AXES]; // Axis dead zone as a percentage 0-99 of display width (X)/height (Y) or axis range (Z)
 
 	/*
 	 * Creates a MouseSettings with default settings
@@ -219,9 +220,9 @@ struct MouseSettings
 	MouseSettings()
 	{
 		mseNum = ANY_MOUSE;
-		xDeadZone = DEFAULT_MSE_DEADZONE;
-		yDeadZone = DEFAULT_MSE_DEADZONE;
-		zDeadZone = 0;
+		deadZones[AXIS_X] = DEFAULT_MSE_DEADZONE;
+		deadZones[AXIS_Y] = DEFAULT_MSE_DEADZONE;
+		deadZones[AXIS_Z] = 0;
 	}
 };
 
@@ -230,19 +231,12 @@ struct MouseSettings
  */
 struct JoySettings
 {
-	int joyNum;             // Joystick number (or ANY_JOYSTICK for settings that apply to all joysticks)
-	unsigned xDeadZone;     // X-Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned xSaturation;   // X-Axis saturation as a percentage 1-100 of axis positive/negative ranges
-	unsigned yDeadZone;     // Y-Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned ySaturation;   // Y-Axis saturation as a percentage 1-100 of axis positive/negative ranges
-	unsigned zDeadZone;     // Z-Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned zSaturation;   // Z-Axis saturation as a percentage 1-100 of axis positive/negative ranges
-	unsigned rxDeadZone;    // RX-Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned rxSaturation;  // RX-Axis saturation as a percentage 1-100 of joystick axis positive/negative ranges
-	unsigned ryDeadZone;    // RY-Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned rySaturation;  // RY-Axis saturation as a percentage 1-100 of joystick axis positive/negative ranges
-	unsigned rzDeadZone;    // RZ-Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned rzSaturation;  // RZ-Axis saturation as a percentage 1-100 of joystick axis positive/negative ranges
+	int joyNum;                         // Joystick number (or ANY_JOYSTICK for settings that apply to all joysticks)
+	int axisMinVals[NUM_JOY_AXES];		// Axis min raw value (default -32768)
+	int axisOffVals[NUM_JOY_AXES];		// Axis center/off value (default 0)
+	int axisMaxVals[NUM_JOY_AXES];		// Axis max raw value (default 32767)
+	unsigned deadZones[NUM_JOY_AXES];   // Axis dead zone as a percentage 0-99 of axis positive/negative ranges
+	unsigned saturations[NUM_JOY_AXES]; // Axis saturation as a percentage 1-100 of axis positive/negative ranges
 
 	/*
 	 * Creates a JoySettings with default settings
@@ -250,41 +244,37 @@ struct JoySettings
 	JoySettings()
 	{
 		joyNum = ANY_JOYSTICK;
-		xDeadZone = DEFAULT_JOY_DEADZONE;
-		xSaturation = DEFAULT_JOY_SATURATION;
-		yDeadZone = DEFAULT_JOY_DEADZONE;
-		ySaturation = DEFAULT_JOY_SATURATION;
-		zDeadZone = DEFAULT_JOY_DEADZONE;
-		zSaturation = DEFAULT_JOY_SATURATION;
-		rxDeadZone = DEFAULT_JOY_DEADZONE;
-		rxSaturation = DEFAULT_JOY_SATURATION;
-		ryDeadZone = DEFAULT_JOY_DEADZONE;
-		rySaturation = DEFAULT_JOY_SATURATION;
-		rzDeadZone = DEFAULT_JOY_DEADZONE;
-		rzSaturation = DEFAULT_JOY_SATURATION;
+		for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+		{
+			axisMinVals[axisNum] = DEFAULT_JOY_AXISMINVAL;
+			axisOffVals[axisNum] = DEFAULT_JOY_AXISOFFVAL;
+			axisMaxVals[axisNum] = DEFAULT_JOY_AXISMAXVAL;
+			deadZones[axisNum] = DEFAULT_JOY_DEADZONE;
+			saturations[axisNum] = DEFAULT_JOY_SATURATION;
+		}
 	}
 };
 
 struct KeyDetails
 {
-	char name[MAX_NAME_LENGTH];   // Keyboard name (if available)
+	char name[MAX_NAME_LENGTH + 1]; // Keyboard name (if available)
 };
 
 struct MouseDetails
 {
-	char name[MAX_NAME_LENGTH];   // Mouse name (if available)
-	bool isAbsolute;              // True if uses absolute positions (ie lightgun)
+	char name[MAX_NAME_LENGTH + 1]; // Mouse name (if available)
+	bool isAbsolute;                // True if uses absolute positions (ie lightgun)
 };
 
 struct JoyDetails
 {
-	char name[MAX_NAME_LENGTH];	  // Joystick name (if available)
-	int numAxes;                  // Total number of axes on joystick
-	int numPOVs;                  // Total number of POV hat controllers on joystick
-	int numButtons;               // Total number of buttons on joystick
-	bool hasFFeedback;	          // True if joystick supports force feedback
-	bool hasAxis[NUM_JOY_AXES];   // Flags to indicate which axes available on joystick
-	bool axisHasFF[NUM_JOY_AXES]; // Flags to indicate which axes are force feedback enabled
+	char name[MAX_NAME_LENGTH + 1]; // Joystick name (if available)
+	int numAxes;                    // Total number of axes on joystick
+	int numPOVs;                    // Total number of POV hat controllers on joystick
+	int numButtons;                 // Total number of buttons on joystick
+	bool hasFFeedback;	            // True if joystick supports force feedback
+	bool hasAxis[NUM_JOY_AXES];     // Flags to indicate which axes available on joystick
+	bool axisHasFF[NUM_JOY_AXES];   // Flags to indicate which axes are force feedback enabled
 };
 
 /*
@@ -302,6 +292,9 @@ private:
 
 	// Lookup table for translating joystick mapping strings to their respective joystick parts
 	static JoyPartsStruct s_joyParts[];
+
+	// Names of axes
+	static const char *s_axisNames[];
 
 	// Number of keyboards, mice and joysticks
 	int m_numKbds;
@@ -334,24 +327,19 @@ private:
 	//
 
 	/*
-	 * Creates cache for all sources.
+	 * Creates source cache.
 	 */
 	void CreateSourceCache();
 
 	/*
-	 * Returns true if the given source is in the source cache.
+	 * Clears cache of all sources and optionally deletes cache itself.
 	 */
-	bool IsInSourceCache(CInputSource *source);
-
-	/*
-	 * Deletes cache for all sources.
-	 */
-	void DeleteSourceCache();
+	void ClearSourceCache(bool deleteCache = false);
 
 	/* 
-	 * Deletes an input source.
+	 * Releases a source from the cache.
 	 */ 
-	void DeleteSource(CInputSource *source);
+	void ReleaseSource(CInputSource *&source);
 	
 	/*
 	 * Returns a key source for the given keyboard number (or all keyboards if ANY_KEYBOARD supplied) and key index.
@@ -371,26 +359,28 @@ private:
 	 */
 	CInputSource *GetJoySource(int joyNum, EJoyPart joyPart);
 
+	void CheckAllSources(unsigned readFlags, bool fullAxisOnly, bool &mseCentered, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
+
 	/*
 	 * Finds any currently activated key sources for the given keyboard number (or all keyboards if ANY_KEYBOARD supplied)
 	 * and adds them to the sources vector, aswell as constructing the corresponding mapping(s) in the given string.
 	 * If fullAxisOnly is true, then only sources that represent a full axis range (eg MouseXAxis) are considered.
 	 */
-	void CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping);
+	void CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
 
 	/*
 	 * Finds any currently activated mouse sources for the given mouse number (or all mice if ANY_MOUSE supplied)
 	 * and adds them to the sources vector, aswell as constructing the corresponding mapping(s) in the given string.
 	 * If fullAxisOnly is true, then only sources that represent a full axis range (eg MouseXAxis) are considered.
 	 */
-	void CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCentered, vector<CInputSource*> &sources, string &mapping);
+	void CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCentered, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
 
 	/*
 	 * Finds any currently activated joystick sources for the given joystick number (or all joysticks if ANY_JOYSTICK supplied)
 	 * and adds them to the sources vector, aswell as constructing the corresponding mapping(s) in the given string.
 	 * If fullAxisOnly is true, then only sources that represent a full axis range (eg MouseXAxis) are considered.
 	 */
-	void CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping);
+	void CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
 
 	bool ParseInt(string str, int &num);
 
@@ -653,7 +643,7 @@ protected:
 	/*
 	 * Processes the given force feedback command for the given joystick and axis number.
 	 */
-	virtual bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd) = 0;
+	virtual bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd) = 0;
 
 	/*
 	 * Waits for the given time in milliseconds
@@ -700,6 +690,10 @@ protected:
 	virtual CInputSource *CreateJoySource(int joyNum, EJoyPart joyPart);
 
 public:
+#ifdef DEBUG
+	static unsigned totalSrcsAcquired;
+	static unsigned totalSrcsReleased;
+#endif
 
 	// Name of this input system
 	const char *name;
@@ -794,11 +788,6 @@ public:
 	CInputSource* ParseSource(const char *mapping, bool fullAxisOnly = false);
 
 	/*
-	 * Releases the given source when it is no longer in use.
-	 */
-	void ReleaseSource(CInputSource *source);
-
-	/*
 	 * Waits for any input from the user and once received copies a mapping configuration representing the input (eg KEY_A or JOY1_AXIS_POS)
 	 * into the given buffer.
 	 * Returns true if input was successfully received or false if the user activated the given escape mapping or closed the window.
@@ -809,7 +798,7 @@ public:
 	bool ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly = false, unsigned readFlags = READ_ALL, const char *escapeMapping = "KEY_ESCAPE");
 
 	/*
-	 * Updates the current state of the input system (called by CInputs::Poll).
+	 * Updates the current state of the input system (called by CInputs.Poll).
 	 */
 	virtual bool Poll() = 0;
 
@@ -822,61 +811,9 @@ public:
 	 */
 	virtual void SetMouseVisibility(bool visible) = 0;
 
-	virtual bool SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd)
-	{
-		const JoyDetails *joyDetails = GetJoyDetails(joyNum);
-		if (!joyDetails->hasFFeedback || !joyDetails->axisHasFF[axisNum])
-			return false;
-		return ProcessForceFeedbackCmd(joyNum, axisNum, ffCmd);
-	}
+	virtual bool SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
-	void PrintDevices()
-	{
-		puts("Keyboards:");
-		if (m_numKbds == 0)
-			puts(" None");
-		else if (m_numKbds == ANY_KEYBOARD)
-			puts(" System Keyboard");
-		else
-		{
-			for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
-			{
-				const KeyDetails *keyDetails = GetKeyDetails(kbdNum);
-				printf(" %d: %s\n", kbdNum + 1, keyDetails->name);
-			}
-		}
-
-		puts("Mice:");
-		if (m_numMice == 0)
-			puts(" None");
-		else if (m_numMice == ANY_MOUSE)
-			puts(" System Mouse");
-		else
-		{
-			for (int mseNum = 0; mseNum < m_numMice; mseNum++)
-			{
-				const MouseDetails *mseDetails = GetMouseDetails(mseNum);
-				printf(" %d: %s\n", mseNum + 1, mseDetails->name);
-			}
-		}
-
-		puts("Joysticks:");
-		if (m_numJoys == 0)
-			puts(" None");
-		else if (m_numJoys == ANY_JOYSTICK)
-			puts(" System Joystick");
-		else
-		{
-			for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
-			{
-				const JoyDetails *joyDetails = GetJoyDetails(joyNum);
-				if (joyDetails->hasFFeedback)
-					printf(" %d: %s [Force Feedback Available]\n", joyNum + 1, joyDetails->name);
-				else
-					printf(" %d: %s\n", joyNum + 1, joyDetails->name);
-			}
-		}
-	}
+	void PrintDevices();
 
 	//
 	// Nested Classes
@@ -957,10 +894,14 @@ public:
 		int m_joyNum;           // Joystick number
 		int m_axisNum;          // Axis number (AXIS_X, AXIS_Y, AXIS_Z, AXIS_RX, AXIS_RY or AXIS_RZ)
 		int m_axisDir;          // Axis direction (AXIS_FULL, AXIS_INVERTED, AXIS_POSITIVE or AXIS_NEGATIVE)
-		int m_posDZone;         // Dead zone for positive range
-		int m_negDZone;         // Dead zone for negative range
-		int m_posSat;           // Saturation for positive range
-		int m_negSat;           // Saturation for negative range
+		int m_axisMinVal;	    // Axis min raw value (default -32768)
+		int m_axisOffVal;		// Axis center/off raw value (default 0)
+		int m_axisMaxVal;		// Axis max raw value (default 32767)
+		bool m_axisInverted;	// True if axis max raw value less than axis min raw value
+		int m_posDZone;         // Dead zone for positive range (0-99%)
+		int m_negDZone;         // Dead zone for negative range (0-99%)
+		int m_posSat;           // Saturation for positive range (1-100%)
+		int m_negSat;           // Saturation for negative range (1-100%)
 
 		/*
 		 * Scales the joystick axis value to the given range.
@@ -968,13 +909,14 @@ public:
 		int ScaleAxisValue(int minVal, int offVal, int maxVal);
 
 	public:
-		CJoyAxisInputSource(CInputSystem *system, int joyNum, int axisNum, int axisDir, unsigned deadZone, unsigned saturation);
+		CJoyAxisInputSource(CInputSystem *system, int joyNum, int axisNum, int axisDir, int axisMinVal, int axisOffVal, int axisMaxVal,
+			unsigned deadZone, unsigned saturation);
 
 		bool GetValueAsSwitch(bool &val);
 
 		bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
 
-		bool SendForceFeedbackCmd(ForceFeedbackCmd *fFeedback);
+		bool SendForceFeedbackCmd(ForceFeedbackCmd ffCmd);
 	};
 
 	/*

@@ -161,7 +161,7 @@ void CTriggerInput::ReadFromINIFile(CINIFile *ini, const char *section)
 
 	string key("Input");
 	key.append(id);
-	unsigned int autoTrigger;
+	unsigned autoTrigger;
 	if (ini->Get(section, key, autoTrigger) == OKAY)
 		m_autoTrigger = !!autoTrigger;
 }

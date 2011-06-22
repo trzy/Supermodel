@@ -134,7 +134,7 @@ public:
 
 /*
  * Represents a trigger input, with both a trigger value and an offscreen value.  If required, it can simulate pointing offscreen and pulling
- * the trigger (in that order, which lightgun games require to reload properly) when just the offscreen input is activated.  This makes
+ * the trigger (in that order, which lightgun games require to reload properly) just when the offscreen input is activated.  This makes
  * reloading the gun easier when playing with just the mouse for example.
  */
 class CTriggerInput : public CInput

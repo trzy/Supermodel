@@ -63,6 +63,7 @@ public:
 	 *		OKAY if the setting was found, FAIL otherwise. The type is not 
 	 *		checked.
 	 */
+	BOOL	Get(string SectionName, string SettingName, int& value);
 	BOOL	Get(string SectionName, string SettingName, unsigned& value);
 	BOOL	Get(string SectionName, string SettingName, string& String);
 	
@@ -82,7 +83,7 @@ public:
 	 *		value			Value to write. String will be set to "".
 	 *		String			String to write. Value will be set to 0.
 	 */
-	void 	Set(string SectionName, string SettingName, unsigned value);
+	void 	Set(string SectionName, string SettingName, int value);
 	void 	Set(string SectionName, string SettingName, string String);
 	
 	/*
@@ -146,7 +147,7 @@ private:
 	{
 	public:
 		int			type;	// token type (defined privately in INIFile.cpp)
-		unsigned	number;	// numbers and bools
+		int         number;	// numbers and bools
 		string		String;	// strings and identifiers
 	
 		// Constructor (initialize to null token)
@@ -177,7 +178,7 @@ private:
 	{
 		string		Name;		// setting name
 		BOOL		isNumber;	// internal flag: true if the setting is a number, false if it is a string
-		unsigned	value;		// value of number
+		int      	value;		// value of number
 		string		String;		// string
 		
 		Setting(void)

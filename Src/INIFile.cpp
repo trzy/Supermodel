@@ -172,7 +172,7 @@ BOOL CINIFile::LookUpSetting(unsigned *idx, unsigned sectionIdx, string SettingN
 
 
 // Assigns a value to the given setting, creating the setting if it does not exist. Nulls out the string (sets it to "").
-void CINIFile::Set(string SectionName, string SettingName, unsigned value)
+void CINIFile::Set(string SectionName, string SettingName, int value)
 {
 	unsigned	sectionIdx, settingIdx;
 	
@@ -234,7 +234,7 @@ void CINIFile::Set(string SectionName, string SettingName, string String)
 }
 
 // Obtains a numerical setting, if it exists, otherwise does nothing.
-BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
+BOOL CINIFile::Get(string SectionName, string SettingName, int& value)
 {
 	unsigned	sectionIdx, settingIdx;
 	
@@ -245,6 +245,17 @@ BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
 	
 	value = Sections[sectionIdx].Settings[settingIdx].value;
 	
+	return OKAY;
+}
+
+BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
+{
+	int intVal;
+	if (Get(SectionName, SettingName, intVal) == FAIL || intVal < 0)
+		return FAIL;
+
+	value = (unsigned)intVal;
+
 	return OKAY;
 }
 
@@ -323,15 +334,24 @@ CINIFile::CToken CINIFile::GetString(void)
 	return T;
 }			
 
-// Fetch number (decimal or hexadecimal integer). linePtr must point to a character and therefore linePtr[1] is guaranteed to be within bounds.
+// Fetch number (decimal or hexadecimal positive/negative integer).
+// linePtr must point to a character and therefore linePtr[1] is guaranteed to be within bounds.
 CINIFile::CToken CINIFile::GetNumber(void)
 {
 	CToken	T;
 	unsigned long long	number = 0;
+	BOOL                isNeg = FALSE;
 	int					overflow = 0;
 	
 	T.type = TOKEN_NUMBER;
 	
+	// See if begins with minus sign 
+	if (linePtr[0]=='-')
+	{
+		isNeg = TRUE;
+		linePtr++;
+	}
+
 	// Hexadecimal?
 	if ((linePtr[0]=='0') && ((linePtr[1]=='X') || (linePtr[1]=='x')))
 	{
@@ -360,7 +380,7 @@ CINIFile::CToken CINIFile::GetNumber(void)
 				++linePtr;
 				
 				// Check for overflows
-				if (number > 0x00000000FFFFFFFFULL)
+				if (!isNeg && number > 0x000000007FFFFFFFULL || isNeg && number > 0x0000000080000000ULL)
 					overflow = 1;
 			}
 			else if (IsBlank(linePtr[0]))
@@ -387,7 +407,7 @@ CINIFile::CToken CINIFile::GetNumber(void)
 				++linePtr;
 				
 				// Check for overflows
-				if (number > 0x00000000FFFFFFFFULL)
+				if (!isNeg && number > 0x000000007FFFFFFFULL || isNeg && number > 0x0000000080000000ULL)
 					overflow = 1;
 			}
 			else if (IsBlank(linePtr[0]))
@@ -404,7 +424,7 @@ CINIFile::CToken CINIFile::GetNumber(void)
 	//if (overflow)
 	//	printf("tokenizer: number exceeds 32 bits and has been truncated\n");
 	
-	T.number = (unsigned) number;
+	T.number = (isNeg ? -(int)number : (int)number);
 	return T;
 }
 

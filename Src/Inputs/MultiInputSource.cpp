@@ -39,10 +39,13 @@ ESourceType CMultiInputSource::GetCombinedType(vector<CInputSource*> &sources)
 	else                  return SourceEmpty;
 }
 
-CMultiInputSource::CMultiInputSource(CInputSystem *system) : CInputSource(SourceEmpty), m_system(system), m_isOr(true), m_numSrcs(0), m_srcArray(NULL) { }
+CMultiInputSource::CMultiInputSource() : CInputSource(SourceEmpty), m_isOr(true), m_numSrcs(0), m_srcArray(NULL) 
+{
+	//
+}
 
-CMultiInputSource::CMultiInputSource(CInputSystem *system, bool isOr, vector<CInputSource*> &sources) : 
-	CInputSource(GetCombinedType(sources)), m_system(system), m_isOr(isOr), m_numSrcs(sources.size())
+CMultiInputSource::CMultiInputSource(bool isOr, vector<CInputSource*> &sources) : 
+	CInputSource(GetCombinedType(sources)), m_isOr(isOr), m_numSrcs(sources.size())
 {
 	m_srcArray = new CInputSource*[m_numSrcs];
 	copy(sources.begin(), sources.end(), m_srcArray);
@@ -51,11 +54,31 @@ CMultiInputSource::CMultiInputSource(CInputSystem *system, bool isOr, vector<CIn
 CMultiInputSource::~CMultiInputSource()
 {
 	if (m_srcArray != NULL)
-	{
-		for (int i = 0; i < m_numSrcs; i++)
-			m_system->ReleaseSource(m_srcArray[i]);
 		delete m_srcArray;
+}
+
+void CMultiInputSource::Acquire()
+{
+	CInputSource::Acquire();
+
+	if (m_acquired == 1)
+	{
+		// Acquire all sources
+		for (int i = 0; i < m_numSrcs; i++)
+			m_srcArray[i]->Acquire();
 	}
+}
+
+void CMultiInputSource::Release()
+{
+	if (m_acquired == 1)
+	{
+		// Release all sources
+		for (int i = 0; i < m_numSrcs; i++)
+			m_srcArray[i]->Release();
+	}
+
+	CInputSource::Release();
 }
 
 bool CMultiInputSource::GetValueAsSwitch(bool &val)
@@ -113,7 +136,7 @@ bool CMultiInputSource::GetValueAsAnalog(int &val, int minVal, int offVal, int m
 	}
 }
 
-bool CMultiInputSource::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
+bool CMultiInputSource::SendForceFeedbackCmd(ForceFeedbackCmd ffCmd)
 {
 	bool result = false;
 	for (int i = 0; i < m_numSrcs; i++)
@@ -121,11 +144,28 @@ bool CMultiInputSource::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
 	return result;
 }
 
-CNegInputSource::CNegInputSource(CInputSystem *system, CInputSource *source) : CInputSource(source->type), m_system(system), m_source(source) { }
-
-CNegInputSource::~CNegInputSource()
+CNegInputSource::CNegInputSource(CInputSource *source) : CInputSource(source->type), m_source(source) 
 {
-	m_system->ReleaseSource(m_source);
+	// Acquire source
+	m_source->Acquire();
+}
+
+void CNegInputSource::Acquire()
+{
+	CInputSource::Acquire();
+
+	// Acquire source
+	if (m_acquired == 1)
+		m_source->Acquire();
+}
+
+void CNegInputSource::Release()
+{
+	// Release source
+	if (m_acquired == 1)
+		m_source->Release();
+
+	CInputSource::Release();
 }
 
 bool CNegInputSource::GetValueAsSwitch(bool &val)

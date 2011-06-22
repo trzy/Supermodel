@@ -81,7 +81,7 @@ protected:
 
 	bool IsJoyButPressed(int joyNum, int butNum);
 
-	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd);
+	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
 	void Wait(int ms);
 

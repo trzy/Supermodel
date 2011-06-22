@@ -1,11 +1,30 @@
-#include "InputSource.h"
+#include "Supermodel.h"
 
 #include <vector>
 using namespace std;
 
-CInputSource::CInputSource(ESourceType sourceType) : type(sourceType)
+CInputSource::CInputSource(ESourceType sourceType) : type(sourceType), m_acquired(0)
 {
 	//
+}
+
+void CInputSource::Acquire()
+{
+	m_acquired++;
+
+#ifdef DEBUG
+	CInputSystem::totalSrcsAcquired++;
+#endif
+}
+
+void CInputSource::Release()
+{
+	if (--m_acquired == 0)
+		delete this;
+
+#ifdef DEBUG
+	CInputSystem::totalSrcsReleased++;
+#endif
 }
 
 int CInputSource::Clamp(int val, int minVal, int maxVal)
@@ -22,19 +41,19 @@ int CInputSource::Scale(int val, int fromMinVal, int fromMaxVal, int toMinVal, i
 
 int CInputSource::Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal, int toMinVal, int toOffVal, int toMaxVal)
 {
-	int fromRange;
+	double fromRange;
 	double frac;
 	if (fromMaxVal > fromMinVal)
 	{
 		val = Clamp(val, fromMinVal, fromMaxVal);
 		if (val > fromOffVal)
 		{
-			fromRange = fromMaxVal - fromOffVal;
+			fromRange = (double)(fromMaxVal - fromOffVal);
 			frac = (double)(val - fromOffVal) / fromRange;
 		}
 		else if (val < fromOffVal)
 		{
-			fromRange = fromOffVal - fromMinVal;
+			fromRange = (double)(fromOffVal - fromMinVal);
 			frac = (double)(val - fromOffVal) / fromRange;
 		}
 		else
@@ -45,12 +64,12 @@ int CInputSource::Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal,
 		val = Clamp(val, fromMaxVal, fromMinVal);
 		if (val > fromOffVal)
 		{
-			fromRange = fromMinVal - fromOffVal;
+			fromRange = (double)(fromMinVal - fromOffVal);
 			frac = (double)(fromOffVal - val) / fromRange;
 		}
 		else if (val < fromOffVal)
 		{
-			fromRange = fromOffVal - fromMaxVal;
+			fromRange = (double)(fromOffVal - fromMaxVal);
 			frac = (double)(fromOffVal - val) / fromRange;
 		}
 		else
@@ -83,7 +102,7 @@ bool CInputSource::IsActive()
 	return GetValueAsSwitch(boolVal);
 }
 
-bool CInputSource::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
+bool CInputSource::SendForceFeedbackCmd(ForceFeedbackCmd ffCmd)
 {
 	return false;
 }

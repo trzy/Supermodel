@@ -160,6 +160,7 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 
 bool IsXInputDevice(const GUID &devProdGUID)
 {
+	// Following code taken from MSDN
 	IWbemLocator* pIWbemLocator  = NULL;
     IEnumWbemClassObject* pEnumDevices = NULL;
     IWbemClassObject* pDevices[20] = {0};
@@ -191,7 +192,7 @@ bool IsXInputDevice(const GUID &devProdGUID)
         goto exit;
 
     // Loop over all devices
-    while (true)
+    for (;;)
     {
         // Get 20 at a time
 		DWORD uReturned;
@@ -259,12 +260,13 @@ exit:
 BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID context)
 {
 	// Keep track of all joystick device GUIDs
-	vector<DIJoyInfo> *infos = (vector<DIJoyInfo>*)context;
+	DIEnumDevsContext *diContext = (DIEnumDevsContext*)context;
 	DIJoyInfo info;
 	memset(&info, 0, sizeof(DIJoyInfo));
 	info.guid = instance->guidInstance;
-	info.isXInput = IsXInputDevice(instance->guidProduct);
-	infos->push_back(info);
+	// If XInput is enabled, see if device is an XInput device
+	info.isXInput = diContext->useXInput && IsXInputDevice(instance->guidProduct);
+	diContext->infos->push_back(info);
 	return DIENUM_CONTINUE;
 }
 
@@ -295,7 +297,8 @@ BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID con
 BOOL CALLBACK DI8EnumEffectsCallback(LPCDIEFFECTINFO effectInfo, LPVOID context)
 {
 	JoyDetails *joyDetails = (JoyDetails*)context;
-	if (effectInfo->dwEffType == DIEFT_CONSTANTFORCE) 
+	// Check joystick has at least one of required types of effects
+	if (!!(effectInfo->dwEffType & (DIEFT_CONSTANTFORCE | DIEFT_PERIODIC | DIEFT_CONDITION)))
 		joyDetails->hasFFeedback = true;
 	return DIENUM_CONTINUE;
 }
@@ -651,7 +654,7 @@ void CDirectInputSystem::PollKeyboardsAndMice()
 	if (m_useRawInput)
 	{
 		// For RawInput, only thing to do is update wheelDir from wheelData for each mouse state.  Everything else is updated via WM events.
-		for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it < m_rawMseStates.end(); it++)
+		for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
 		{
 			if (it->wheelDelta != 0)
 			{
@@ -745,7 +748,7 @@ void CDirectInputSystem::CloseKeyboardsAndMice()
 		}
 
 		// Delete storage for keyboards
-		for (vector<BOOL*>::iterator it = m_rawKeyStates.begin(); it < m_rawKeyStates.end(); it++)
+		for (vector<BOOL*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); it++)
 			delete[] *it;
 		m_keyDetails.clear();
 		m_rawKeyboards.clear();
@@ -785,7 +788,7 @@ void CDirectInputSystem::ResetMice()
 		m_combRawMseState.x = p.x;
 		m_combRawMseState.y = p.y;
 		m_combRawMseState.z = 0;
-		for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it < m_rawMseStates.end(); it++)
+		for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
 		{
 			it->x = p.x;
 			it->y = p.y;
@@ -927,7 +930,7 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 				}
 
 				m_combRawMseState.buttons = 0;
-				for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it < m_rawMseStates.end(); it++)
+				for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
 					m_combRawMseState.buttons |= it->buttons;
 			}
 		}
@@ -940,14 +943,17 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 void CDirectInputSystem::OpenJoysticks()
 {
 	// Get the info about all attached joystick devices
+	DIEnumDevsContext diContext;
+	diContext.infos = &m_diJoyInfos;
+	diContext.useXInput = m_useXInput;
 	HRESULT hr;
-	if (FAILED(hr = m_di8->EnumDevices(DI8DEVCLASS_GAMECTRL, DI8EnumDevicesCallback, &m_diJoyInfos, DIEDFL_ATTACHEDONLY)))
+	if (FAILED(hr = m_di8->EnumDevices(DI8DEVCLASS_GAMECTRL, DI8EnumDevicesCallback, &diContext, DIEDFL_ATTACHEDONLY)))
 		return;
 
 	// Loop through those found
 	int joyNum = 0;
 	int xNum = 0;
-	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it < m_diJoyInfos.end(); it++)
+	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
 	{
 		joyNum++;
 
@@ -955,14 +961,14 @@ void CDirectInputSystem::OpenJoysticks()
 		memset(&joyDetails, 0, sizeof(joyDetails));
 
 		// See if can use XInput for device
-		if (m_useXInput && it->isXInput)
+		if (it->isXInput)
 		{
 			// If so, set joystick details (currently XBox controller is only gamepad handled by XInput and so its capabilities are fixed)
 			sprintf(joyDetails.name, "Xbox 360 Controller %d (via XInput)", (xNum + 1));
 			joyDetails.numAxes = 6;  // Left & right triggers are mapped to axes in addition to the two analog sticks, giving a total of 6 axes
 			joyDetails.numPOVs = 1;  // Digital D-pad
 			joyDetails.numButtons = 10;
-			joyDetails.hasFFeedback = true;
+			joyDetails.hasFFeedback = m_enableFFeedback;
 			joyDetails.hasAxis[AXIS_X] = true;
 			joyDetails.hasAxis[AXIS_Y] = true;
 			joyDetails.hasAxis[AXIS_Z] = true;
@@ -982,28 +988,28 @@ void CDirectInputSystem::OpenJoysticks()
 		else 
 		{
 			// Otherwise, open joystick with DirectInput for given GUID and set its data format
-			LPDIRECTINPUTDEVICE8 di8Joystick;
-			if (FAILED(hr = m_di8->CreateDevice(it->guid, &di8Joystick, NULL)))
+			LPDIRECTINPUTDEVICE8 joystick;
+			if (FAILED(hr = m_di8->CreateDevice(it->guid, &joystick, NULL)))
 			{
 				ErrorLog("Unable to create DirectInput joystick device %d (error %d) - skipping joystick.\n", joyNum, hr);
 				continue;
 			}
-			if (FAILED(hr = di8Joystick->SetDataFormat(&c_dfDIJoystick2)))
+			if (FAILED(hr = joystick->SetDataFormat(&c_dfDIJoystick2)))
 			{
 				ErrorLog("Unable to set data format for DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 				
-				di8Joystick->Release();
+				joystick->Release();
 				continue;
 			}
 
 			// Get joystick's capabilities
 			DIDEVCAPS devCaps;
 			devCaps.dwSize = sizeof(DIDEVCAPS);
-			if (FAILED(hr = di8Joystick->GetCapabilities(&devCaps)))
+			if (FAILED(hr = joystick->GetCapabilities(&devCaps)))
 			{
 				ErrorLog("Unable to query capabilities of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 				
-				di8Joystick->Release();
+				joystick->Release();
 				continue;
 			}
 
@@ -1013,11 +1019,11 @@ void CDirectInputSystem::OpenJoysticks()
 			didps.diph.dwHeaderSize = sizeof(DIPROPHEADER); 
 			didps.diph.dwHow = DIPH_DEVICE;
 			didps.diph.dwObj = 0;
-			if (FAILED(hr = di8Joystick->GetProperty(DIPROP_INSTANCENAME, &didps.diph)))
+			if (FAILED(hr = joystick->GetProperty(DIPROP_INSTANCENAME, &didps.diph)))
 			{
 				ErrorLog("Unable to get name of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
-				di8Joystick->Release();
+				joystick->Release();
 				continue;
 			}
 			// DInput returns name as Unicode, convert to ASCII
@@ -1028,20 +1034,24 @@ void CDirectInputSystem::OpenJoysticks()
 			joyDetails.numButtons = devCaps.dwButtons;
 			
 			// Enumerate axes
-			if (FAILED(hr = di8Joystick->EnumObjects(DI8EnumAxesCallback, &joyDetails, DIDFT_AXIS)))
+			if (FAILED(hr = joystick->EnumObjects(DI8EnumAxesCallback, &joyDetails, DIDFT_AXIS)))
 			{
 				ErrorLog("Unable to enumerate axes of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
-				di8Joystick->Release();
+				joystick->Release();
 				continue;
 			}
 			joyDetails.numAxes = 0;
 			for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 				joyDetails.numAxes += joyDetails.hasAxis[axisNum];
 			
-			// See if force feedback available for joystick
-			if (FAILED(hr = di8Joystick->EnumEffects(DI8EnumEffectsCallback, &joyDetails, DIEFT_ALL)))
-				ErrorLog("Unable to enumerate effects of DirectInput joystick %d (error %d) - force feedback will be unavailable for joystick.\n", joyNum, hr);
+			// See if force feedback enabled and is available for joystick 
+			if (m_enableFFeedback && (devCaps.dwFlags & DIDC_FORCEFEEDBACK))
+			{
+				// If so, see what types of effects are available and for which axes
+				if (FAILED(hr = joystick->EnumEffects(DI8EnumEffectsCallback, &joyDetails, DIEFT_ALL)))
+					ErrorLog("Unable to enumerate effects of DirectInput joystick %d (error %d) - force feedback will be unavailable for joystick.\n", joyNum, hr);
+			}
 
 			// Configure axes, if any
 			if (joyDetails.numAxes > 0)
@@ -1054,11 +1064,11 @@ void CDirectInputSystem::OpenJoysticks()
 				didpr.diph.dwObj = 0;
 				didpr.lMin = -32768;
 				didpr.lMax = 32767;
-				if (FAILED(hr = di8Joystick->SetProperty(DIPROP_RANGE, &didpr.diph)))
+				if (FAILED(hr = joystick->SetProperty(DIPROP_RANGE, &didpr.diph)))
 				{
 					ErrorLog("Unable to set axis range of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
-					di8Joystick->Release();
+					joystick->Release();
 					continue;
 				}
 
@@ -1069,40 +1079,40 @@ void CDirectInputSystem::OpenJoysticks()
 				dipdw.diph.dwHow = DIPH_DEVICE;
 				dipdw.diph.dwObj = 0;
 				dipdw.dwData = DIPROPAXISMODE_ABS;
-				if (FAILED(hr = di8Joystick->SetProperty(DIPROP_AXISMODE, &dipdw.diph)))
+				if (FAILED(hr = joystick->SetProperty(DIPROP_AXISMODE, &dipdw.diph)))
 				{
 					ErrorLog("Unable to set axis mode of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
-					di8Joystick->Release();
+					joystick->Release();
 					continue;
 				}
 
 				// Turn off deadzone as handled by this class
 				dipdw.dwData = 0;
-				if (FAILED(hr = di8Joystick->SetProperty(DIPROP_DEADZONE, &dipdw.diph)))
+				if (FAILED(hr = joystick->SetProperty(DIPROP_DEADZONE, &dipdw.diph)))
 				{
 					ErrorLog("Unable to set deadzone of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
-					di8Joystick->Release();
+					joystick->Release();
 					continue;
 				}
 
 				// Turn off saturation as handle by this class
 				dipdw.dwData = 10000;
-				if (FAILED(hr = di8Joystick->SetProperty(DIPROP_SATURATION, &dipdw.diph)))
+				if (FAILED(hr = joystick->SetProperty(DIPROP_SATURATION, &dipdw.diph)))
 				{
 					ErrorLog("Unable to set saturation of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
-					di8Joystick->Release();
+					joystick->Release();
 					continue;
 				}
 			
-				// If joystick force feedback is enabled and joystick has force feedback capabilities then disable auto-center
-				if (m_enableFFeedback && joyDetails.hasFFeedback)
+				// If joystick has force feedback capabilities then disable auto-center
+				if (joyDetails.hasFFeedback)
 				{
 					dipdw.dwData = FALSE;
 
-					if (FAILED(hr = di8Joystick->SetProperty(DIPROP_AUTOCENTER, &dipdw.diph)))
+					if (FAILED(hr = joystick->SetProperty(DIPROP_AUTOCENTER, &dipdw.diph)))
 					{
 						ErrorLog("Unable to unset auto-center of DirectInput joystick %d (error %d) - force feedback will be unavailable for joystick.\n", joyNum, hr);
 
@@ -1114,7 +1124,7 @@ void CDirectInputSystem::OpenJoysticks()
 			// Keep track of DirectInput device number
 			it->dInputNum = m_di8Joysticks.size();
 
-			m_di8Joysticks.push_back(di8Joystick);
+			m_di8Joysticks.push_back(joystick);
 		}
 
 		// Create initial blank joystick state
@@ -1131,20 +1141,31 @@ void CDirectInputSystem::OpenJoysticks()
 void CDirectInputSystem::ActivateJoysticks()
 {
 	// Set DirectInput cooperative level of joysticks
-	for (vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it < m_di8Joysticks.end(); it++)
-		(*it)->SetCooperativeLevel(m_hwnd, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
+	unsigned joyNum = 0;
+	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	{
+		if (!it->isXInput)
+		{	
+			LPDIRECTINPUTDEVICE8 joystick = m_di8Joysticks[it->dInputNum];
+			if (m_joyDetails[joyNum].hasFFeedback)
+				joystick->SetCooperativeLevel(m_hwnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND);
+			else
+				joystick->SetCooperativeLevel(m_hwnd, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
+		}
+		joyNum++;
+	}
 }
 
 void CDirectInputSystem::PollJoysticks()
 {
 	// Get current joystick states from XInput and DirectInput
 	int i = 0;
-	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it < m_diJoyInfos.end(); it++)
+	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
 	{
 		LPDIJOYSTATE2 pJoyState = &m_diJoyStates[i++];
 
 		HRESULT hr;
-		if (m_useXInput && it->isXInput)
+		if (it->isXInput)
 		{
 			// Use XInput to query joystick
 			XINPUT_STATE xState;
@@ -1219,8 +1240,24 @@ void CDirectInputSystem::PollJoysticks()
 
 void CDirectInputSystem::CloseJoysticks()
 {
+	// Release any DirectInput force feedback effects that were created
+	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	{
+		for (unsigned axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+		{
+			for (unsigned effNum = 0; effNum < NUM_FF_EFFECTS; effNum++)
+			{
+				if (it->dInputEffects[axisNum][effNum] != NULL)
+				{
+					it->dInputEffects[axisNum][effNum]->Release();
+					it->dInputEffects[axisNum][effNum] = NULL;
+				}
+			}
+		}
+	}
+
 	// Release each DirectInput joystick
-	for (vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it < m_di8Joysticks.end(); it++)
+	for (vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it != m_di8Joysticks.end(); it++)
 	{
 		(*it)->Unacquire();
 		(*it)->Release();
@@ -1232,47 +1269,102 @@ void CDirectInputSystem::CloseJoysticks()
 	m_di8Joysticks.clear();
 }
 
-HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 di8Joystick, int axisNum, LPDIRECTINPUTEFFECT *di8Effect)
+HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, int axisNum, ForceFeedbackCmd ffCmd, LPDIRECTINPUTEFFECT *pEffect)
 {
-	// TODO - following is not finished
+	// Map axis number to DI object offset
 	DWORD axisOfs;
 	switch (axisNum)
 	{
 		case AXIS_X:  axisOfs = DIJOFS_X; break;
-		case AXIS_Y:  axisNum = DIJOFS_Y; break;
-		case AXIS_Z:  axisNum = DIJOFS_Z; break;
-		case AXIS_RX: axisNum = DIJOFS_RX; break;
-		case AXIS_RY: axisNum = DIJOFS_RY; break;
-		case AXIS_RZ: axisNum = DIJOFS_RZ; break;
+		case AXIS_Y:  axisOfs = DIJOFS_Y; break;
+		case AXIS_Z:  axisOfs = DIJOFS_Z; break;
+		case AXIS_RX: axisOfs = DIJOFS_RX; break;
+		case AXIS_RY: axisOfs = DIJOFS_RY; break;
+		case AXIS_RZ: axisOfs = DIJOFS_RZ; break;
 		default:      return E_FAIL;
 	}
 
 	DWORD rgdwAxes[1] = { axisOfs };
 	LONG rglDirection[1] = { 0 };
-	DICONSTANTFORCE cf = { 0 };
+	DICONSTANTFORCE dicf;
+	DICONDITION dic;
+	DIPERIODIC dip;
+	DIENVELOPE die;
+	GUID guid;
+
+	// Set common effects parameters
 	DIEFFECT eff;
 	memset(&eff, 0, sizeof(eff));
 	eff.dwSize = sizeof(DIEFFECT);
 	eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
-	eff.dwDuration = INFINITE;
-	eff.dwSamplePeriod = 0;
-	eff.dwGain = DI_FFNOMINALMAX;
 	eff.dwTriggerButton = DIEB_NOTRIGGER;
 	eff.dwTriggerRepeatInterval = 0;
+	eff.dwGain = DI_FFNOMINALMAX;
 	eff.cAxes = 1;
 	eff.rgdwAxes = rgdwAxes;
 	eff.rglDirection = rglDirection;
-	eff.lpEnvelope = 0;
-	eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
-	eff.lpvTypeSpecificParams = &cf;
+	eff.dwDuration = INFINITE;
 	eff.dwStartDelay = 0;
+	
+	// Set specific effects parameters
+	switch (ffCmd.id)
+	{
+		case FFStop:
+			return E_FAIL;
+			
+		case FFSelfCenter:
+			guid = GUID_Spring;
 
-	// Create the prepared effect
+			dic.lOffset = 0;
+			dic.lPositiveCoefficient = 0;
+			dic.lNegativeCoefficient = 0;
+			dic.dwPositiveSaturation = DI_FFNOMINALMAX;
+			dic.dwNegativeSaturation = DI_FFNOMINALMAX;
+			dic.lDeadBand = (LONG)0.05 * DI_FFNOMINALMAX;
+			
+			eff.lpEnvelope = NULL;
+			eff.cbTypeSpecificParams = sizeof(DICONDITION);
+			eff.lpvTypeSpecificParams = &dic;
+			break;
+
+		case FFConstantForce:
+			guid = GUID_ConstantForce;
+
+			dicf.lMagnitude = 0;
+			
+			eff.lpEnvelope = NULL;
+			eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
+			eff.lpvTypeSpecificParams = &dicf;
+			break;
+
+		case FFVibrate:
+			guid = GUID_Sine;
+
+			dip.dwMagnitude = 0;
+			dip.lOffset  = 0;
+            dip.dwPhase  = 0;
+            dip.dwPeriod = (DWORD)0.1 * DI_SECONDS; // 1/10th second
+				
+			die.dwSize = sizeof(die);
+			die.dwAttackLevel = 0;
+			die.dwAttackTime = (DWORD)0.5 * DI_SECONDS;
+			die.dwFadeLevel = 0;
+			die.dwFadeTime = (DWORD)0.5 * DI_SECONDS;
+
+			eff.lpEnvelope = &die;
+			eff.cbTypeSpecificParams = sizeof(DIPERIODIC);
+			eff.lpvTypeSpecificParams = &dip;
+			break;
+	}
+
+	joystick->Acquire();
+
 	HRESULT hr;
-	if (FAILED(hr = di8Joystick->CreateEffect(GUID_ConstantForce, &eff, di8Effect, NULL)))
+	if (FAILED(hr = joystick->CreateEffect(guid, &eff, pEffect, NULL)))
 		return hr;
-	if (di8Effect == NULL)
+	if (*pEffect == NULL)
 		return E_FAIL;
+	(*pEffect)->Start(1, 0);
 	return S_OK;
 }
 
@@ -1490,18 +1582,15 @@ bool CDirectInputSystem::IsJoyButPressed(int joyNum, int butNum)
 	return !!m_diJoyStates[joyNum].rgbButtons[butNum];
 }
 
-bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd)
+bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd)
 {
-	if (!m_enableFFeedback)
-		return false;
-
 	DIJoyInfo *pInfo = &m_diJoyInfos[joyNum];
 
 	HRESULT hr;
-	if (m_useXInput && pInfo->isXInput)
+	if (pInfo->isXInput)
 	{	
 		XINPUT_VIBRATION vibration;
-		switch (ffCmd->id)
+		switch (ffCmd.id)
 		{
 			case FFStop:
 				if (axisNum == AXIS_X || axisNum == AXIS_Y)
@@ -1510,70 +1599,101 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					vibration.wRightMotorSpeed = 0;
 				else
 					return false;
-				if (FAILED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration)))
-					return false;
-				break;
+				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
 
 			case FFConstantForce:
 				if (axisNum == AXIS_X || axisNum == AXIS_Y)
-					vibration.wLeftMotorSpeed = ffCmd->data; // TODO - scale data to 0-65535
+					vibration.wLeftMotorSpeed = ffCmd.data; // TODO - scale data to 0-65535
 				else if (axisNum == AXIS_RX || axisNum == AXIS_RY) 
-					vibration.wRightMotorSpeed = ffCmd->data; // TODO - scale data to 0-65535
+					vibration.wRightMotorSpeed = ffCmd.data; // TODO - scale data to 0-65535
 				else
 					return false;
-				if (FAILED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration)))
-					return false;
-				break;
+				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
+
+			default:
+				// TODO - other force feedback types
+				return false;
 		}
 	}
 	else
 	{
-		LPDIRECTINPUTDEVICE8 di8Joystick = m_di8Joysticks[pInfo->dInputNum];
-		switch (ffCmd->id)	
+		LPDIRECTINPUTDEVICE8 joystick = m_di8Joysticks[pInfo->dInputNum];
+		
+		// See if command is to stop all force feedback
+		if (ffCmd.id == -1)
+			return SUCCEEDED(hr = joystick->SendForceFeedbackCommand(DISFFC_STOPALL));
+		
+		// Create effect for given axis if has not already been created
+		int effNum = (int)ffCmd.id;
+		LPDIRECTINPUTEFFECT *pEffect = &pInfo->dInputEffects[axisNum][effNum];
+		if ((*pEffect) == NULL)
 		{
-			case FFStop: 
-				if (FAILED(hr = di8Joystick->SendForceFeedbackCommand(DISFFC_STOPALL)))
-				{
-					// TODO
-					return false;
-				}
+			if (FAILED(hr = CreateJoystickEffect(joystick, axisNum, ffCmd, pEffect)))
+				return false;
+			
+		}
+		
+		LONG rglDirection[1] = { 0 };
+		DICONSTANTFORCE dicf;
+		DICONDITION dic;
+		DIPERIODIC dip;
+		DIENVELOPE die;
+				
+		// Set common parameters
+		DIEFFECT eff;
+		memset(&eff, 0, sizeof(eff));
+		eff.dwSize = sizeof(DIEFFECT);
+		eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
+		eff.cAxes = 1;
+		eff.rglDirection = rglDirection;
+		eff.dwStartDelay = 0;
+				
+		switch (ffCmd.id)	
+		{
+			case FFSelfCenter:
+				dic.lPositiveCoefficient = ffCmd.data;
+				dic.lNegativeCoefficient = ffCmd.data;
+				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
+				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
+				dic.lDeadBand = (LONG)0.05 * DI_FFNOMINALMAX;
+
+				eff.lpEnvelope = NULL;
+				eff.cbTypeSpecificParams = sizeof(DICONDITION);
+				eff.lpvTypeSpecificParams = &dic;
 				break;
 
 			case FFConstantForce:
-				LPDIRECTINPUTEFFECT di8Effect;
-				if (FAILED(hr = CreateJoystickEffect(di8Joystick, axisNum, &di8Effect)))
-				{
-					// TODO
-					return false;
-				}
-
-				DICONSTANTFORCE cf;
-				cf.lMagnitude = ffCmd->data; // TODO - scale data to what?
-				LONG rglDirection[1] = { 0 };
-				DIEFFECT eff;
-				memset(&eff, 0, sizeof(eff));
-				eff.dwSize = sizeof(DIEFFECT);
-				eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
-				eff.cAxes = 1;
-				eff.rglDirection = rglDirection;
-				eff.lpEnvelope = 0;
+				dicf.lMagnitude = ffCmd.data; // TODO - scale & cap at +/- DI_FFNOMINALMAX
+				
+				eff.lpEnvelope = NULL;
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
-				eff.lpvTypeSpecificParams = &cf;
-				eff.dwStartDelay = 0;
-
-				// Now set the new parameters and start the effect immediately.
-				if (FAILED(hr = di8Effect->SetParameters(&eff, DIEP_DIRECTION | DIEP_TYPESPECIFICPARAMS | DIEP_START)))
-				{
-					// TODO
-					return false;
-				}
-
-				//di8Effect->Release();
+				eff.lpvTypeSpecificParams = &dicf;
 				break;
-		}
-	}
 
-	return true;
+			case FFVibrate:
+				dip.dwMagnitude = ffCmd.data;
+				dip.lOffset = 0;
+                dip.dwPhase = 0;
+                dip.dwPeriod = (DWORD)0.1 * DI_SECONDS; // 1/10th second
+
+				die.dwSize = sizeof(die);
+				die.dwAttackLevel = 0;
+				die.dwAttackTime = (DWORD)0.5 * DI_SECONDS;
+				die.dwFadeLevel = 0;
+				die.dwFadeTime = (DWORD)0.5 * DI_SECONDS;
+
+				eff.lpEnvelope = &die;
+				eff.cbTypeSpecificParams = sizeof(DIPERIODIC);
+				eff.lpvTypeSpecificParams = &dip;
+				break;
+
+			default:
+				return false;
+		}
+
+		// Now set the new parameters and start the effect immediately.
+		return SUCCEEDED(hr = (*pEffect)->SetParameters(&eff, DIEP_DIRECTION | DIEP_TYPESPECIFICPARAMS | DIEP_START));
+	}
 }
 
 void CDirectInputSystem::Wait(int ms)

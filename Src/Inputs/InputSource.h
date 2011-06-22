@@ -25,6 +25,8 @@ enum ESourceType
 class CInputSource
 {
 protected:
+	unsigned m_acquired;
+
 	CInputSource(ESourceType sourceType);
 
 public:
@@ -32,6 +34,10 @@ public:
 	 * The type of this source.
 	 */
 	const ESourceType type;
+
+	virtual void Acquire();
+
+	virtual void Release();
 
 	//
 	// Static helper methods
@@ -73,7 +79,7 @@ public:
 	/*
 	 * Sends a force feedback command to the input source.
 	 */
-	virtual bool SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd);
+	virtual bool SendForceFeedbackCmd(ForceFeedbackCmd ffCmd);
 };
 
 #endif // INCLUDED_INPUTSOURCE_H

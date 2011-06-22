@@ -181,7 +181,6 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
 	INI.Parse();
 	
 	Inputs->ReadFromINIFile(&INI, "Global");
-	InputSystem->ReadFromINIFile(&INI, "Global");
 		
 	// If the user wants to configure the inputs, do that now
 	if (configure)
@@ -199,14 +198,13 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
 		{
 			// Write input configuration and input system settings to config file
 			Inputs->WriteToINIFile(&INI, "Global");
-			InputSystem->WriteToINIFile(&INI, "Global");
 		
-		if (OKAY != INI.Write(CONFIG_FILE_COMMENT))
-			ErrorLog("Unable to save configuration to %s.", CONFIG_FILE_PATH);
+			if (OKAY != INI.Write(CONFIG_FILE_COMMENT))
+				ErrorLog("Unable to save configuration to %s.", CONFIG_FILE_PATH);
+			else
+				printf("Configuration successfully saved to %s.\n", CONFIG_FILE_PATH);
+		}
 		else
-			printf("Configuration successfully saved to %s.\n", CONFIG_FILE_PATH);
-	}
-	else
 			puts("Configuration aborted...");
 		puts("");
 	}
@@ -1090,10 +1088,10 @@ int main(int argc, char **argv)
 	exitCode = Supermodel(argv[fileIdx],Inputs,ppcFrequency,xRes,yRes,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
 
 Exit:
-	if (InputSystem != NULL)
-		delete InputSystem;
 	if (Inputs != NULL)
 		delete Inputs;
+	if (InputSystem != NULL)
+		delete InputSystem;
 	SDL_Quit();
 	return exitCode;
 }

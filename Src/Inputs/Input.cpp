@@ -7,11 +7,18 @@ CInput::CInput(const char *inputId, const char *inputLabel, unsigned inputFlags,
 	ResetToDefaultMapping();
 }
 
+CInput::~CInput()
+{
+	// Release source, if any
+	if (m_source != NULL)
+		m_source->Release();
+}
+
 void CInput::CreateSource()
 {
 	// If already have a source, then release it now
-	if (m_system != NULL && m_source != NULL)
-		m_system->ReleaseSource(m_source);
+	if (m_source != NULL)
+		m_source->Release();
 
 	// If no system set yet or mapping is empty or NONE, then set source to NULL
 	if (m_system == NULL || m_mapping[0] == '\0' || stricmp(m_mapping, "NONE") == 0)
@@ -21,12 +28,18 @@ void CInput::CreateSource()
 		// Otherwise, ask system to parse mapping into appropriate input source
 		m_source = m_system->ParseSource(m_mapping, !!(flags & INPUT_FLAGS_AXIS));
 
-		// Check that mapping was parsed okay and if not then fall back to default mapping
-		if (m_source == NULL && stricmp(m_mapping, m_defaultMapping) != 0)
+		// Check that mapping was parsed okay and if so acquire it
+		if (m_source != NULL)
+			m_source->Acquire();
+		else
 		{
-			ErrorLog("Unable to map input %s to [%s] - switching to default [%s].\n", id, m_mapping, m_defaultMapping);
+			// Otherwise, fall back to default mapping
+			if (stricmp(m_mapping, m_defaultMapping) != 0)
+			{
+				ErrorLog("Unable to map input %s to [%s] - switching to default [%s].\n", id, m_mapping, m_defaultMapping);
 
-			ResetToDefaultMapping();
+				ResetToDefaultMapping();
+			}
 		}
 	}
 }
@@ -72,8 +85,8 @@ void CInput::ClearMapping()
 
 void CInput::SetMapping(const char *mapping)
 {
-	strncpy(m_mapping, mapping, MAX_MAPPING_LENGTH - 1);
-	m_mapping[MAX_MAPPING_LENGTH - 1] = '\0';
+	strncpy(m_mapping, mapping, MAX_MAPPING_LENGTH);
+	m_mapping[MAX_MAPPING_LENGTH] = '\0';
 	CreateSource();
 }
 
@@ -99,13 +112,23 @@ void CInput::ResetToDefaultMapping()
 
 void CInput::ReadFromINIFile(CINIFile *ini, const char *section)
 {
-	if (!IsConfigurable())
-		return;
-	string key("Input");
-	key.append(id);
-	string mapping;
-	if (ini->Get(section, key, mapping) == OKAY)
-		SetMapping(mapping.c_str());
+	// See if input is configurable
+	if (IsConfigurable())
+	{
+		// If so, check INI file for mapping string
+		string key("Input");
+		key.append(id);
+		string mapping;
+		if (ini->Get(section, key, mapping) == OKAY)
+		{
+			// If found, then set mapping string
+			SetMapping(mapping.c_str());
+			return;
+		}
+	}
+
+	// If input has not been configured, then force recreation of source anyway since input system settings may have changed 
+	CreateSource();
 }
 
 void CInput::WriteToINIFile(CINIFile *ini, const char *section)
@@ -134,7 +157,7 @@ bool CInput::Changed()
 	return value != prevValue;
 }
 
-bool CInput::SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd)
+bool CInput::SendForceFeedbackCmd(ForceFeedbackCmd ffCmd)
 {
 	if (m_source == NULL)
 		return false;

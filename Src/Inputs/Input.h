@@ -18,10 +18,14 @@ class CINIFile;
 
 #define MAX_MAPPING_LENGTH 255
 
+#define NUM_FF_EFFECTS 3
+
 enum EForceFeedback
 {
-	FFStop,
-	FFConstantForce
+	FFStop = -1,
+	FFSelfCenter = 0,
+	FFConstantForce = 1,
+	FFVibrate = 2
 };
 
 struct ForceFeedbackCmd
@@ -37,7 +41,7 @@ class CInput
 {
 private:
 	// Current mapping(s) for input, eg JOY1_XAXIS_POS
-	char m_mapping[MAX_MAPPING_LENGTH];
+	char m_mapping[MAX_MAPPING_LENGTH + 1];
 	
 	// Default mapping for input
 	const char *m_defaultMapping;
@@ -53,8 +57,16 @@ private:
 protected:
 	// Current input source
 	CInputSource *m_source;
+	
+	/*
+	 * Constructs an input with the given identifier, label, flags, game flags, default mapping and initial value.
+	 */ 
+	CInput(const char *inputId, const char *inputLabel, unsigned inputFlags, unsigned inputGameFlags, 
+		const char *defaultMapping = "NONE", UINT16 initValue = 0);
 
 public:
+	virtual ~CInput();
+
 	// Input identifier
 	const char *id;
 
@@ -72,12 +84,6 @@ public:
 
 	// Previous input value
 	UINT16 prevValue;
-
-	/*
-	 * Constructs an input with the given identifier, label, flags, game flags, default mapping and initial value.
-	 */ 
-	CInput(const char *inputId, const char *inputLabel, unsigned inputFlags, unsigned inputGameFlags, 
-		const char *defaultMapping = "NONE", UINT16 initValue = 0);
 	
 	/*
 	 * Initializes this input with the given input system.  Must be called before any other methods are used.
@@ -161,7 +167,7 @@ public:
 	/*
 	 * Sends a force feedback command to the input source of this input.
 	 */
-	bool SendForceFeedbackCmd(ForceFeedbackCmd *ffCmd);
+	bool SendForceFeedbackCmd(ForceFeedbackCmd ffCmd);
 };
 
 //

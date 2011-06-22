@@ -181,8 +181,8 @@ void CSDLInputSystem::OpenJoysticks()
 		// Gather joystick details (name, num POVs & buttons and which axes are available)
 		JoyDetails joyDetails;
 		const char *pName = SDL_JoystickName(joyNum);
-		strncpy(joyDetails.name, pName, MAX_NAME_LENGTH - 1);
-		joyDetails.name[MAX_NAME_LENGTH - 1] = '\0';
+		strncpy(joyDetails.name, pName, MAX_NAME_LENGTH);
+		joyDetails.name[MAX_NAME_LENGTH] = '\0';
 		joyDetails.numAxes = SDL_JoystickNumAxes(joystick);
 		for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 		{
@@ -313,7 +313,7 @@ bool CSDLInputSystem::IsJoyButPressed(int joyNum, int butNum)
 	return !!SDL_JoystickGetButton(joystick, butNum);
 }
 
-bool CSDLInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd)
+bool CSDLInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd)
 {
 	// SDL 1.2 does not support force feedback
 	return false;

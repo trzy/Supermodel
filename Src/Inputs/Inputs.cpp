@@ -252,12 +252,16 @@ bool CInputs::Initialize()
 
 void CInputs::ReadFromINIFile(CINIFile *ini, const char *section)
 {
+	m_system->ReadFromINIFile(ini, section);
+
 	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 		(*it)->ReadFromINIFile(ini, section);
 }
 
 void CInputs::WriteToINIFile(CINIFile *ini, const char *section)
 {
+	m_system->WriteToINIFile(ini, section);
+
 	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
 		(*it)->WriteToINIFile(ini, section);
 }

@@ -46,7 +46,14 @@ struct DIJoyInfo
 	GUID guid;
 	bool isXInput;
 	int dInputNum;
+	LPDIRECTINPUTEFFECT dInputEffects[NUM_JOY_AXES][NUM_FF_EFFECTS];
 	int xInputNum;
+};
+
+struct DIEnumDevsContext
+{
+	vector<DIJoyInfo> *infos;
+	bool useXInput;
 };
 
 // RawInput API
@@ -151,7 +158,7 @@ private:
 
 	void CloseJoysticks();
 
-	HRESULT CreateJoystickEffect(LPDIRECTINPUTDEVICE8 di8Joystick, int axisNum, LPDIRECTINPUTEFFECT *di8Effect);
+	HRESULT CreateJoystickEffect(LPDIRECTINPUTDEVICE8 di8Joystick, int axisNum, ForceFeedbackCmd ffCmd, LPDIRECTINPUTEFFECT *di8Effect);
 
 protected:
 	/*
@@ -177,7 +184,7 @@ protected:
 
 	bool IsJoyButPressed(int joyNum, int butNum);
 	
-	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd *ffCmd);
+	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
 	void Wait(int ms);
 
