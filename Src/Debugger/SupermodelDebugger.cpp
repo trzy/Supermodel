@@ -31,44 +31,45 @@ namespace Debugger
 
 	bool CSupermodelDebugger::ProcessToken(const char *token, const char *cmd)
 	{
-		if (CheckToken(token, "les", "loademustate"))			// loademustate FILENAME
-		{
-			// Parse arguments
-			token = strtok(NULL, " ");
-			if (token == NULL)
-			{
-				puts("Missing filename.");
-				return false;
-			}
+		// TODO - load/saving emu state not supported
+		//if (CheckToken(token, "les", "loademustate"))				// loademustate FILENAME
+		//{
+		//	// Parse arguments
+		//	token = strtok(NULL, " ");
+		//	if (token == NULL)
+		//	{
+		//		puts("Missing filename.");
+		//		return false;
+		//	}
 
-			if (LoadModel3State(token))
-				printf("Emulator state successfully loaded from <%s>\n", token);
-			else
-				printf("Unable to load emulator state from <%s>\n", token);
-			return false;
-		}
-		else if (CheckToken(token, "ses", "savestate"))				// saveemustate FILENAME
-		{
-			// Parse arguments
-			token = strtok(NULL, " ");
-			if (token == NULL)
-			{
-				puts("Missing filename.");
-				return false;
-			}
+		//	if (LoadModel3State(token))
+		//		printf("Emulator state successfully loaded from <%s>\n", token);
+		//	else
+		//		printf("Unable to load emulator state from <%s>\n", token);
+		//	return false;
+		//}
+		//else if (CheckToken(token, "ses", "savestate"))				// saveemustate FILENAME
+		//{
+		//	// Parse arguments
+		//	token = strtok(NULL, " ");
+		//	if (token == NULL)
+		//	{
+		//		puts("Missing filename.");
+		//		return false;
+		//	}
 
-			if (SaveModel3State(token))
-				printf("Emulator state successfully saved to <%s>\n", token);
-			else
-				printf("Unable to save emulator state to <%s>\n", token);
-			return false;
-		}
-		else if (CheckToken(token, "lip", "listinputs"))				// listinputs
+		//	if (SaveModel3State(token))
+		//		printf("Emulator state successfully saved to <%s>\n", token);
+		//	else
+		//		printf("Unable to save emulator state to <%s>\n", token);
+		//	return false;
+		//}
+		if (CheckToken(token, "lip", "listinputs"))					// listinputs
 		{
 			ListInputs();
 			return false;
 		}
-		else if (CheckToken(token, "pip", "printinput"))				// printinput NAME
+		else if (CheckToken(token, "pip", "printinput"))			// printinput NAME
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
@@ -134,6 +135,7 @@ namespace Debugger
 		else if (CheckToken(token, "cip", "configinput"))			// configinput NAME
 		{
 			//// Parse arguments
+			// TODO
 			//token = strtok(NULL, " ");
 			//if (token == NULL)
 			//{

@@ -16,7 +16,6 @@ namespace Debugger
 		//
 	}
 
-	// TODO - tidy up this function - it is a mess!
 	void CConsoleDebugger::WaitCommand(CCPUDebug *cpu)
 	{
 		m_cpu = cpu;
@@ -104,6 +103,7 @@ namespace Debugger
 		}
 	}
 
+	// TODO - tidy up this function - it is a mess!
 	bool CConsoleDebugger::ProcessToken(const char *token, const char *cmd)
 	{
 		UINT32 pc = m_cpu->pc;
