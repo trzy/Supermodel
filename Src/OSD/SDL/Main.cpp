@@ -57,6 +57,9 @@
 #include "OSD/Windows/DirectInputSystem.h"
 #endif
 
+CLogger *GetLogger();
+void SetLogger(CLogger *logger);
+
 /******************************************************************************
  Display Management
 ******************************************************************************/
@@ -75,7 +78,8 @@ unsigned 	xRes, yRes;			// renderer output resolution (can be smaller than GL vi
  * because the actual drawing area may need to be adjusted to preserve the 
  * Model 3 aspect ratio. The new resolution will be passed back as well.
  */
-static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, BOOL fullScreen)
+static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr,
+						   BOOL keepAspectRatio, BOOL fullScreen)
 {
 	const SDL_VideoInfo	*VideoInfo;
 	GLenum				err;
@@ -102,15 +106,18 @@ static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
   	
   	VideoInfo = SDL_GetVideoInfo();	// what resolution did we actually get?
   	
-  	// Fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
+  	// If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
   	xRes = (float) *xResPtr;
   	yRes = (float) *yResPtr;
-  	model3Ratio = 496.0f/384.0f;
-  	ratio = xRes/yRes;
-  	if (yRes < (xRes/model3Ratio))
-  		xRes = yRes*model3Ratio;
-  	if (xRes < (yRes*model3Ratio))
-		yRes = xRes/model3Ratio;
+  	if (keepAspectRatio)
+	{
+		model3Ratio = 496.0f/384.0f;
+  		ratio = xRes/yRes;
+  		if (yRes < (xRes/model3Ratio))
+  			xRes = yRes*model3Ratio;
+  		if (xRes < (yRes*model3Ratio))
+			yRes = xRes/model3Ratio;
+	}
 		
 	// Center the visible area 
   	*xOffsetPtr = (*xResPtr - (unsigned) xRes)/2;
@@ -186,8 +193,8 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
 	if (configure)
 	{
 		// Open an SDL window 
-		unsigned	xOffset, yOffset, xRes=496, yRes=384;
-		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,FALSE))
+		unsigned xOffset, yOffset, xRes=496, yRes=384;
+		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
 		{
 			ErrorLog("Unable to start SDL to configure inputs.\n");
 			return NULL;
@@ -353,10 +360,18 @@ static void LoadNVRAM(CModel3 *Model3)
  All configuration management is done prior to calling Supermodel().
 ******************************************************************************/
 
-static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsigned xResParam, unsigned yResParam, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, const char *vsFile, const char *fsFile)
+#ifdef SUPERMODEL_DEBUGGER
+int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, unsigned ppcFrequency, 
+			   unsigned xResParam, unsigned yResParam, BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, 
+			   const char *vsFile, const char *fsFile)
 {
-	char			titleStr[128], titleFPSStr[128];
+#else
+int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsigned xResParam, unsigned yResParam,
+			   BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, const char *vsFile, const char *fsFile)
+{				  
 	CModel3			*Model3 = new CModel3();
+#endif // SUPERMODEL_DEBUGGER
+	char			titleStr[128], titleFPSStr[128];
 	CRender2D		*Render2D = new CRender2D();
 	CRender3D		*Render3D = new CRender3D();
 	unsigned		prevFPSTicks, currentFPSTicks, currentTicks, targetTicks, startTicks;
@@ -382,7 +397,7 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
   	xRes = xResParam;
   	yRes = yResParam;
   	sprintf(titleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
-	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,fullScreen))
+	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,keepAspectRatio,fullScreen))
 		return 1;
 		
 	// Hide mouse if fullscreen
@@ -397,16 +412,28 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
 	if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, vsFile, fsFile))
 		goto QuitError;
 	Model3->AttachRenderers(Render2D,Render3D);
-	
-	// Emulate!
+
+	// Reset emulator
 	Model3->Reset();
+	
+#ifdef SUPERMODEL_DEBUGGER
+	// If debugger was supplied, set it as logger and attach it to system
+	CLogger *oldLogger = GetLogger();
+	if (Debugger != NULL)
+	{
+		SetLogger(Debugger);
+		Debugger->Attach();
+	}
+#endif // SUPERMODEL_DEBUGGER
+
+	// Emulate!
 	fpsFramesElapsed = 0;
 	framesElapsed = 0;
 	prevFPSTicks = SDL_GetTicks();
 	startTicks = prevFPSTicks;
 	while (!quit)
 	{
-		// If not paused, run one frame
+		// Check if paused
 		if (!paused)
 		{
 			// If not, run one frame
@@ -420,20 +447,41 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
 		if (!Inputs->Poll(Model3->GetGameInfo(), xOffset, yOffset, xRes, yRes))
 			quit = 1;
 		
+#ifdef SUPERMODEL_DEBUGGER
+		if (Debugger != NULL)
+		{
+			Debugger->Poll();
+
+			// Check if debugger requests exit or pause
+			if (Debugger->CheckExit())
+				quit = 1;
+			else if (Debugger->CheckPause())	
+				paused = 1;
+			else
+			{
+#endif // SUPERMODEL_DEBUGGER
+
 		// Check UI controls
 		if (Inputs->uiExit->Pressed())
  		{
 			// Quit emulator
- 				quit = 1; 			
+ 			quit = 1; 			
 		}
 		else if (Inputs->uiReset->Pressed())
- 			{
+ 		{
 			// Reset emulator
 			Model3->Reset();
+			
+#ifdef SUPERMODEL_DEBUGGER
+			// If debugger was supplied, reset it too
+			if (Debugger != NULL)
+				Debugger->Reset();
+#endif // SUPERMODEL_DEBUGGER
+
 			printf("Model 3 reset.\n");
 		}
 		else if (Inputs->uiPause->Pressed())
- 		{
+		{
 			// Toggle emulator paused flag
 			paused = !paused;
 		}
@@ -453,6 +501,12 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
 		{
 			// Load game state
 			LoadState(Model3);
+						
+#ifdef SUPERMODEL_DEBUGGER
+			// If debugger was supplied, reset it after loading state
+			if (Debugger != NULL)
+				Debugger->Reset();
+#endif // SUPERMODEL_DEBUGGER
 		}
 		else if (Inputs->uiDumpInpState->Pressed())
 		{
@@ -495,6 +549,15 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
  			// A0 11 xx (0F=time extend, 11=jumbo left right)
  			// AF 10 xx (music -- 01 seems to work)
  		}
+#ifdef SUPERMODEL_DEBUGGER
+				else if (Inputs->uiEnterDebugger->Pressed())
+				{
+					// Break execution and enter debugger
+					Debugger->ForceBreak(true);
+				}
+			}
+		}
+#endif // SUPERMODEL_DEBUGGER
  		
  		// FPS and frame rate
  		currentFPSTicks = SDL_GetTicks();
@@ -527,12 +590,23 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
 			}
 		}
 	}
+
+#ifdef SUPERMODEL_DEBUGGER
+	// If debugger was supplied, detach it from system and restore old logger
+	if (Debugger != NULL)
+	{
+		Debugger->Detach();
+		SetLogger(oldLogger);
+	}
+#endif // SUPERMODEL_DEBUGGER
 	
 	// Save NVRAM
 	SaveNVRAM(Model3);
 	
 	// Shut down
+#ifndef SUPERMODEL_DEBUGGER
 	delete Model3;
+#endif // SUPERMODEL_DEBUGGER
 	delete Render2D;
 	delete Render3D;
 	
@@ -561,14 +635,18 @@ static int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequenc
 		printf("SR%d=%08X\n", i, ppc_read_sr(i));
 	printf("SDR1=%08X\n", ppc_read_spr(SPR603E_SDR1));
 	*/
+#ifdef SUPERMODEL_SOUND
 	printf("68K PC =%08X\n", Turbo68KReadPC());
+#endif
 #endif
 	
 	return 0;
 
 	// Quit with an error
 QuitError:
+#ifndef SUPERMODEL_DEBUGGER
 	delete Model3;
+#endif // SUPERMODEL_DEBUGGER
 	delete Render2D;
 	delete Render3D;
 	return 1;
@@ -579,14 +657,28 @@ QuitError:
  Error and Debug Logging
 ******************************************************************************/
 
-#define DEBUG_LOG_FILE	"debug.log"
-#define ERROR_LOG_FILE	"error.log"
+static CLogger *s_logger = NULL;
+
+/*
+ * Returns the current logger.
+ */ 
+CLogger *GetLogger()
+{
+	return s_logger;
+}
+
+/*
+ * Sets the current logger.
+ */
+void SetLogger(CLogger *logger)
+{
+	s_logger = logger;
+}
 
 /*
  * DebugLog(fmt, ...):
  *
- * Prints to debug log. The file is opened and closed each time so that its 
- * contents are preserved even if the program crashes.
+ * Logs a debug message with the logger.
  *
  * Parameters:
  *		fmt		Format string (same as printf()).
@@ -594,28 +686,18 @@ QuitError:
  */
 void DebugLog(const char *fmt, ...)
 {
-#ifdef DEBUG
-	char	string[1024];
-	va_list	vl;
-	FILE 	*fp;
-
-	fp = fopen(DEBUG_LOG_FILE, "ab");
-	if (NULL != fp)
-	{
-		va_start(vl, fmt);
-		vsprintf(string, fmt, vl);
-		va_end(vl);
-		fprintf(fp, string);
-		fclose(fp);
-	}
-#endif
+	if (s_logger == NULL)
+		return;
+	va_list vl;
+	va_start(vl, fmt);
+	s_logger->DebugLog(fmt, vl);
+	va_end(vl);
 }
 
 /*
  * InfoLog(fmt, ...);
  *
- * Prints information to the error log file but does not print to stderr. This
- * is useful for logging non-error information.
+ * Logs an info message with the logger.
  *
  * Parameters:
  *		fmt		Format string (same as printf()).
@@ -623,30 +705,18 @@ void DebugLog(const char *fmt, ...)
  */
 void InfoLog(const char *fmt, ...)
 {
-	char	string[4096];
-	va_list	vl;
-	FILE 	*fp;
-
+	if (s_logger == NULL)
+		return;
+	va_list vl;
 	va_start(vl, fmt);
-	vsprintf(string, fmt, vl);
+	s_logger->InfoLog(fmt, vl);
 	va_end(vl);
-	
-	fp = fopen(ERROR_LOG_FILE, "ab");
-	if (NULL != fp)
-	{
-		fprintf(fp, "%s\n", string);
-		fclose(fp);
-	}
-	
-	DebugLog("Info: ");
-	DebugLog(string);
-	DebugLog("\n");
 }
 
 /*
  * ErrorLog(fmt, ...):
  *
- * Prints an error to stderr and the error log file.
+ * Logs an error message with the logger.
  *
  * Parameters:
  *		fmt		Format string (same as printf()).
@@ -657,44 +727,129 @@ void InfoLog(const char *fmt, ...)
  */
 BOOL ErrorLog(const char *fmt, ...)
 {
-	char	string[4096];
-	va_list	vl;
-	FILE 	*fp;
-
+	if (s_logger == NULL)
+		return FAIL;
+	va_list vl;
 	va_start(vl, fmt);
-	vsprintf(string, fmt, vl);
+	s_logger->ErrorLog(fmt, vl);
 	va_end(vl);
-	fprintf(stderr, "Error: %s\n", string);
-	
-	fp = fopen(ERROR_LOG_FILE, "ab");
-	if (NULL != fp)
-	{
-		fprintf(fp, "%s\n", string);
-		fclose(fp);
-	}
-	
-	DebugLog("Error: ");
-	DebugLog(string);
-	DebugLog("\n");
-	
 	return FAIL;
 }
- 
-// Clear log file
-static void ClearLog(const char *file, const char *title)
-{
-	FILE *fp = fopen(file, "w");
-	if (NULL != fp)
-	{
-		unsigned	i;
-		fprintf(fp, "%s\n", title);
-		for (i = 0; i < strlen(title); i++)
-			fputc('-', fp);
-		fprintf(fp, "\n\n");
-		fclose(fp);
-	}
-}
 
+#define DEBUG_LOG_FILE	"debug.log"
+#define ERROR_LOG_FILE	"error.log"
+
+/*
+ * Default logger that logs to debug and error log files.
+ */ 
+class CFileLogger : public CLogger
+{
+private:
+	const char *m_debugLogFile;
+	const char *m_errorLogFile;
+
+public:
+	CFileLogger(const char *debugLogFile, const char *errorLogFile) : 
+		m_debugLogFile(debugLogFile), m_errorLogFile(errorLogFile)
+	{
+		//
+	}
+
+	/*
+	 * DebugLog(fmt, ...):
+	 *
+	 * Prints to debug log. The file is opened and closed each time so that its 
+	 * contents are preserved even if the program crashes.
+	 */
+	void DebugLog(const char *fmt, va_list vl)
+	{	
+#ifdef DEBUG
+		char	string[1024];
+		FILE 	*fp;
+
+		fp = fopen(m_debugLogFile, "ab");
+		if (NULL != fp)
+		{
+			vsprintf(string, fmt, vl);
+			fprintf(fp, string);
+			fclose(fp);
+		}
+#endif // DEBUG
+	}
+
+	/*
+	 * InfoLog(fmt, ...);
+	 *
+	 * Prints information to the error log file but does not print to stderr. This
+	 * is useful for logging non-error information.
+	 */
+	void InfoLog(const char *fmt, va_list vl)
+	{
+		char	string[4096];
+		FILE 	*fp;
+
+		vsprintf(string, fmt, vl);
+		
+		fp = fopen(m_errorLogFile, "ab");
+		if (NULL != fp)
+		{
+			fprintf(fp, "%s\n", string);
+			fclose(fp);
+		}
+	
+		CLogger::DebugLog("Info: ");
+		CLogger::DebugLog(string);
+		CLogger::DebugLog("\n");
+	}
+
+	/*
+	 * ErrorLog(fmt, ...):
+	 *
+	 * Prints an error to stderr and the error log file.
+	 */
+	void ErrorLog(const char *fmt, va_list vl)
+	{
+		char	string[4096];
+		FILE 	*fp;
+
+		vsprintf(string, fmt, vl);
+		fprintf(stderr, "Error: %s\n", string);
+		
+		fp = fopen(m_errorLogFile, "ab");
+		if (NULL != fp)
+		{
+			fprintf(fp, "%s\n", string);
+			fclose(fp);
+		}
+		
+		CLogger::DebugLog("Error: ");
+		CLogger::DebugLog(string);
+		CLogger::DebugLog("\n");
+	}
+
+	void ClearLogs()
+	{
+#ifdef DEBUG
+		ClearLog(DEBUG_LOG_FILE, "Supermodel v"SUPERMODEL_VERSION" Debug Log");
+#endif // DEBUG
+		ClearLog(ERROR_LOG_FILE, "Supermodel v"SUPERMODEL_VERSION" Error Log");	
+	}
+	
+	// Clear log file
+	void ClearLog(const char *file, const char *title)
+	{
+		FILE *fp = fopen(file, "w");
+		if (NULL != fp)
+		{
+			unsigned	i;
+			fprintf(fp, "%s\n", title);
+			for (i = 0; i < strlen(title); i++)
+				fputc('-', fp);
+			fprintf(fp, "\n\n");
+			fclose(fp);
+		}
+	}
+};
 
 /******************************************************************************
  Diagnostic Commands
@@ -772,7 +927,7 @@ static void PrintGLInfo(BOOL printExtensions)
 	GLint			value;
 	unsigned		xOffset, yOffset, xRes=496, yRes=384;
 	
-	if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,FALSE))
+	if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
 	{
 		ErrorLog("Unable to query OpenGL.\n");
 		return;
@@ -847,6 +1002,10 @@ static void Help(void)
 	puts("");
 	puts("Emulation Options:");
 	puts("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: 25]");
+#ifdef SUPERMODEL_DEBUGGER
+	puts("    -disable-debugger	     Completely disable debugger functionality");
+	puts("    -enter-debugger        Enter debugger at start of emulation");
+#endif // SUPERMODEL_DEBUGGER
 	puts("");
 	puts("Video Options:");
 	puts("    -res=<x>,<y>           Resolution");
@@ -897,6 +1056,9 @@ int main(int argc, char **argv)
 {
 	int			i, ret;
 	int			cmd=0, fileIdx=0, cmdFullScreen=0, cmdNoThrottle=0, cmdShowFPS=0, cmdPrintInputs=0, cmdConfigInputs=0, cmdPrintGames=0, cmdDis=0, cmdPrintGLInfo=0;
+#ifdef SUPERMODEL_DEBUGGER
+	int			cmdDisableDebugger = 0, cmdEnterDebugger=0;
+#endif // SUPERMODEL_DEBUGGER
 	unsigned	n, xRes=496, yRes=384, ppcFrequency=25000000;
 	char		*vsFile = NULL, *fsFile = NULL, *inpSysName = NULL;
 	UINT32		addr;
@@ -907,11 +1069,11 @@ int main(int argc, char **argv)
 		Help();
 		return 0;
 	}
-	
-#ifdef DEBUG
-	ClearLog(DEBUG_LOG_FILE, "Supermodel v"SUPERMODEL_VERSION" Debug Log");
-#endif
-	ClearLog(ERROR_LOG_FILE, "Supermodel v"SUPERMODEL_VERSION" Error Log");	
+
+	// Create default logger
+	CFileLogger Logger(DEBUG_LOG_FILE, ERROR_LOG_FILE);
+	Logger.ClearLogs();
+	SetLogger(&Logger);
 
 	// Parse command line
 	for (i = 1; i < argc; i++)
@@ -937,6 +1099,12 @@ int main(int argc, char **argv)
 					ppcFrequency = f*1000000;
 			}
 		}
+#ifdef SUPERMODEL_DEBUGGER
+		else if (!strncmp(argv[i],"-disable-debugger",17))
+			cmd = cmdDisableDebugger = 1;
+		else if (!strncmp(argv[i],"-enter-debugger",15))
+			cmd = cmdEnterDebugger = 1;
+#endif // SUPERMODEL_DEBUGGER
 		else if (!strncmp(argv[i],"-res",4))
 		{
 			unsigned	x, y;
@@ -1017,6 +1185,10 @@ int main(int argc, char **argv)
 	CInputSystem *InputSystem = NULL;
 	CInputs *Inputs = NULL;
 	int exitCode = 0;
+#ifdef SUPERMODEL_DEBUGGER
+	CModel3 *Model3 = NULL;
+	Debugger::CSupermodelDebugger *Debugger = NULL;
+#endif // SUPERMODEL_DEBUGGER
 
 	// Create input system (default is SDL)
 	if (inpSysName == NULL || stricmp(inpSysName, "sdl") == 0)
@@ -1028,7 +1200,7 @@ int main(int argc, char **argv)
 		InputSystem = new CDirectInputSystem(false, true, false);
 	else if (stricmp(inpSysName, "rawinput") == 0)
 		InputSystem = new CDirectInputSystem(true, false, false);
-#endif
+#endif // SUPERMODEL_WIN32
 	else
 	{
 		ErrorLog("Unknown input system: '%s'.\n", inpSysName);
@@ -1084,8 +1256,26 @@ int main(int argc, char **argv)
 		}
 	}
 
+#ifdef SUPERMODEL_DEBUGGER
+	// Create Model3
+	Model3 = new CModel3();
+	// Create Supermodel debugger unless debugging is disabled
+	if (!cmdDisableDebugger)
+	{
+		Debugger = new Debugger::CSupermodelDebugger(Model3, Inputs, &Logger);
+		// If -enter-debugger option was set force debugger to break straightaway
+		if (cmdEnterDebugger)
+			Debugger->ForceBreak(true);
+	}
+	// Fire up Supermodel with debugger
+	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Debugger,ppcFrequency,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+	if (Debugger != NULL)
+		delete Debugger;
+	delete Model3;
+#else
 	// Fire up Supermodel
-	exitCode = Supermodel(argv[fileIdx],Inputs,ppcFrequency,xRes,yRes,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+	exitCode = Supermodel(argv[fileIdx],Inputs,ppcFrequency,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+#endif // SUPERMODEL_DEBUGGER
 
 Exit:
 	if (Inputs != NULL)
