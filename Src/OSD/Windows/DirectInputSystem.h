@@ -95,6 +95,7 @@ private:
 	DWORD m_screenW;
 	DWORD m_screenH;
 
+	bool m_initializedCOM;
 	bool m_activated;
 	
 	// Function pointers for RawInput API

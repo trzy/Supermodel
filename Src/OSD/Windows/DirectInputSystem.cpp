@@ -314,7 +314,7 @@ const char *CDirectInputSystem::ConstructName(bool useRawInput, bool useXInput, 
 CDirectInputSystem::CDirectInputSystem(bool useRawInput, bool useXInput, bool enableFFeedback) : 
 	CInputSystem(ConstructName(useRawInput, useXInput, enableFFeedback)),
 	m_useRawInput(useRawInput), m_useXInput(useXInput), m_enableFFeedback(enableFFeedback),
-	m_activated(false), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
+	m_initializedCOM(false), m_activated(false), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
 	m_getRIDevListPtr(NULL), m_getRIDevInfoPtr(NULL), m_regRIDevsPtr(NULL), m_getRIDataPtr(NULL),
 	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL)
 {
@@ -333,7 +333,8 @@ CDirectInputSystem::~CDirectInputSystem()
 	{
 		m_di8->Release();
 		m_di8 = NULL;
-		CoUninitialize();
+		if (m_initializedCOM)
+			CoUninitialize();
 	}
 }
 
@@ -1422,17 +1423,24 @@ bool CDirectInputSystem::InitializeSystem()
 	// Dynamically create DirectInput8 via COM, rather than statically linking to dinput8.dll
 	// TODO - if fails, try older versions of DirectInput
 	HRESULT hr;
-	if (FAILED(hr = CoInitialize(NULL)))
+	if (SUCCEEDED(hr = CoInitialize(NULL)))
+		m_initializedCOM = true;
+	else
 	{
-		ErrorLog("Unable to initialize COM (error %d).\n", hr);
+		// CoInitialize fails if called from managed context (ie .NET debugger) so check for this and ignore this error
+		if (hr != RPC_E_CHANGED_MODE)
+		{
+			ErrorLog("Unable to initialize COM (error %d).\n", hr);
 
-		return false;
+			return false;
+		}
 	}
 	if (FAILED(hr = CoCreateInstance(CLSID_DirectInput8, NULL, CLSCTX_INPROC_SERVER, IID_IDirectInput8A, (LPVOID*)&m_di8)))
 	{
 		ErrorLog("Unable to initialize DirectInput API (error %d) - is DirectX 8 or later installed?\n", hr);
 		
-		CoUninitialize();
+		if (m_initializedCOM)
+			CoUninitialize();
 		return false;
 	}
 	if (FAILED(hr = m_di8->Initialize(GetModuleHandle(NULL), DIRECTINPUT_VERSION)))
@@ -1441,7 +1449,8 @@ bool CDirectInputSystem::InitializeSystem()
 
 		m_di8->Release();
 		m_di8 = NULL;
-		CoUninitialize();
+		if (m_initializedCOM)
+			CoUninitialize();
 		return false;
 	}
 
@@ -1622,7 +1631,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		// See if command is to stop all force feedback
 		if (ffCmd.id == -1)
 			return SUCCEEDED(hr = joystick->SendForceFeedbackCommand(DISFFC_STOPALL));
-		
+
 		// Create effect for given axis if has not already been created
 		int effNum = (int)ffCmd.id;
 		LPDIRECTINPUTEFFECT *pEffect = &pInfo->dInputEffects[axisNum][effNum];
