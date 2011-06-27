@@ -19,6 +19,9 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           GAME_INPUT_UI, "KEY_ALT+KEY_N");
 	uiToggleCursor     = AddSwitchInput("UIToggleCursor",     "Toggle Cursor",         GAME_INPUT_UI, "KEY_ALT+KEY_I");
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", GAME_INPUT_UI, "KEY_ALT+KEY_T");
+#ifdef SUPERMODEL_DEBUGGER
+	uiEnterDebugger    = AddSwitchInput("UIEnterDebugger",    "Enter Debugger",        GAME_INPUT_UI, "KEY_ALT+KEY_B");
+#endif
 
 	// Common Controls
 	start[0]           = AddSwitchInput("Start1",   "P1 Start",  GAME_INPUT_COMMON, "KEY_1,JOY1_BUTTON9");

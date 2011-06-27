@@ -74,6 +74,9 @@ public:
 	CSwitchInput     *uiClearNVRAM;
 	CSwitchInput     *uiToggleCursor;
 	CSwitchInput     *uiToggleFrLimit;
+#ifdef SUPERMODEL_DEBUGGER
+	CSwitchInput     *uiEnterDebugger;
+#endif
 
 	// Common controls between all games
 	CSwitchInput     *coin[2];
