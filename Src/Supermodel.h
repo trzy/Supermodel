@@ -128,9 +128,17 @@ extern void InfoLog(const char *fmt, ...);
 #include "ROMLoad.h"
 #include "INIFile.h"
 #include "BlockFile.h"
+#include "Logger.h"
 #include "Graphics/Render2D.h"
 #include "Graphics/Render3D.h"
 #include "Graphics/Shader.h"
+#ifdef SUPERMODEL_DEBUGGER
+#include "Debugger/SupermodelDebugger.h"
+#include "Debugger/CPU/PPCDebug.h"
+#ifdef SUPERMODEL_SOUND
+#include "Debugger/CPU/68KDebug.h"
+#endif // SUPERMODEL_SOUND
+#endif // SUPERMODEL_DEBUGGER
 #include "CPU/PowerPC/PPCDisasm.h"
 #include "CPU/PowerPC/ppc.h"
 #ifdef SUPERMODEL_SOUND
