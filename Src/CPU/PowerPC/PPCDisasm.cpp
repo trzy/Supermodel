@@ -524,7 +524,7 @@ static void SPR(char *dest, unsigned spr_field)
  * DecodeSigned16():
  *
  * Predecodes the SIMM field for us. If do_unsigned, it is printed as an
- * unsigned 16-bit integer.
+ * unsigned 32-bit integer.
  */
 static void DecodeSigned16(char *outbuf, UINT32 op, BOOL do_unsigned)
 {
@@ -536,12 +536,9 @@ static void DecodeSigned16(char *outbuf, UINT32 op, BOOL do_unsigned)
     else                // print as signed 16 bits
     {
         if (s < 0)
-        {
-            s *= -1;
-            sprintf(outbuf, "-0x%04X", s);
-        }
+            sprintf(outbuf, "-0x%02X", -s);
         else
-            sprintf(outbuf, "0x%04X",s);
+            sprintf(outbuf, "0x%02X",s);
     }
 }
 
