@@ -41,6 +41,10 @@ typedef unsigned int	UINT;
 // Model 3 context provides read/write handlers
 static class CBus	*Bus = NULL;	// pointer to Model 3 bus object (for access handlers)
 
+#ifdef SUPERMODEL_DEBUGGER
+// Pointer to current PPC debugger (if any)
+static class Debugger::CPPCDebug *PPCDebug = NULL;
+#endif
 
 void ppc603_exception(int exception);
 static void ppc603_check_interrupts(void);
@@ -275,8 +279,6 @@ static int bus_freq_multiplier = 1;
 static PPC_REGS ppc;
 static UINT32 ppc_rotate_mask[32][32];
 
-
-
 static void ppc_change_pc(UINT32 newpc)
 {
 	UINT i;
@@ -298,7 +300,6 @@ static void ppc_change_pc(UINT32 newpc)
 
 //			ppc.op = (UINT32 *)((UINT32)ppc.cur_fetch.ptr + (UINT32)(newpc - ppc.cur_fetch.start));
 			ppc.op = &ppc.cur_fetch.ptr[(newpc-ppc.cur_fetch.start)/4];			
-
 			return;
 		}
 	}
@@ -1030,6 +1031,11 @@ UINT32 ppc_get_gpr(unsigned num)
 	return ppc.r[num&31];
 }
 
+double ppc_get_fpr(unsigned num)
+{
+	return ppc.fpr[num&31].fd;
+}
+
 UINT32 ppc_get_lr(void)
 {
 	return ppc.lr;
@@ -1044,3 +1050,67 @@ UINT32 ppc_read_sr(unsigned num)
 {
 	return ppc.sr[num&15];
 }
+
+/******************************************************************************
+ Debugger Interface
+******************************************************************************/
+
+#ifdef SUPERMODEL_DEBUGGER
+void ppc_attach_debugger(Debugger::CPPCDebug *PPCDebugPtr)
+{
+	if (PPCDebug != NULL)
+		ppc_detach_debugger();
+	PPCDebug = PPCDebugPtr;
+	Bus = PPCDebug->AttachBus(Bus);
+}
+
+void ppc_detach_debugger()
+{
+	if (PPCDebug == NULL)
+		return;
+	Bus = PPCDebug->DetachBus(); 
+	PPCDebug = NULL;
+}
+
+void ppc_set_pc(UINT32 pc)
+{
+	ppc.pc = pc;
+	ppc_change_pc(pc);
+	ppc.npc = pc + 4;
+}
+
+UINT8 ppc_get_cr(unsigned num)
+{
+	return ppc.cr[num&7];
+}
+
+void ppc_set_cr(unsigned num, UINT8 val)
+{
+	ppc.cr[num&7] = val;
+}
+
+void ppc_set_gpr(unsigned num, UINT32 val)
+{
+	ppc.r[num&31] = val;
+}
+
+void ppc_set_fpr(unsigned num, double val)
+{
+	ppc.fpr[num&31].fd = val;
+}
+
+void ppc_write_spr(unsigned spr, UINT32 val)
+{
+	// TODO
+}
+
+void ppc_write_sr(unsigned num, UINT32 val)
+{
+	ppc.sr[num&15] = val;
+}
+
+UINT32 ppc_read_msr()
+{
+	return ppc_get_msr();
+}
+#endif // SUPERMODEL_DEBUGGER

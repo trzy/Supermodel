@@ -358,9 +358,23 @@ extern void ppc_attach_bus(class CBus *BusPtr);		// must be called first!
 extern void ppc_save_state(class CBlockFile *SaveState);
 extern void ppc_load_state(class CBlockFile *SaveState);
 extern UINT32 ppc_get_gpr(unsigned num);
+extern double ppc_get_fpr(unsigned num);
 extern UINT32 ppc_get_lr(void);
 extern UINT32 ppc_read_spr(unsigned spr);
 extern UINT32 ppc_read_sr(unsigned num);
 
+#ifdef SUPERMODEL_DEBUGGER
+// These have been added to support the Supermodel debugger
+extern void ppc_attach_debugger(class Debugger::CPPCDebug *PPCDebugPtr);
+extern void ppc_detach_debugger();
+extern void ppc_set_pc(UINT32 pc);
+extern UINT8 ppc_get_cr(unsigned num);
+extern void ppc_set_cr(unsigned num, UINT8 val);
+extern void ppc_set_gpr(unsigned num, UINT32 val);
+extern void ppc_set_fpr(unsigned num, double val);
+extern void ppc_write_spr(unsigned spr, UINT32 val);
+extern void ppc_write_sr(unsigned num, UINT32 val);
+extern UINT32 ppc_read_msr();
+#endif  // SUPERMODEL_DEBUGGER
 
 #endif	// INCLUDED_PPC_H

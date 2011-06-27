@@ -27,6 +27,11 @@
 
 void ppc603_exception(int exception)
 {
+#ifdef SUPERMODEL_DEBUGGER
+		if (PPCDebug != NULL)
+			PPCDebug->CheckException(exception);
+#endif
+
 	switch( exception )
 	{
 		case EXCEPTION_IRQ:		/* External Interrupt */
@@ -284,8 +289,17 @@ int ppc_execute(int cycles)
 			
 		opcode = *ppc.op++;	// Supermodel byte reverses each aligned word (converting them to little endian) so they can be fetched directly
 		//opcode = BSWAP32(*ppc.op++);
-		
+
 		ppc.npc = ppc.pc + 4;
+
+#ifdef SUPERMODEL_DEBUGGER
+		if (PPCDebug != NULL)
+		{
+			while (PPCDebug->CheckExecution(ppc.pc, opcode))
+				opcode = *ppc.op++;
+		}
+#endif
+
 		switch(opcode >> 26)
 		{
 			case 19:	optable19[(opcode >> 1) & 0x3ff](opcode); break;
