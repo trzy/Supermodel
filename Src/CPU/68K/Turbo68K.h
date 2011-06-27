@@ -78,6 +78,7 @@ struct TURBO68K_CONTEXT_68000
     TURBO68K_UINT32 d[8], a[8], sp, sr, pc, status;
     void            *InterruptAcknowledge;
     void            *Reset;
+    void            *Debug;
 };
 
 struct TURBO68K_CONTEXT_68010
@@ -95,6 +96,7 @@ struct TURBO68K_CONTEXT_68010
     TURBO68K_UINT32 d[8], a[8], sp, sr, pc, fc, vbr, status;
     void            *InterruptAcknowledge;
     void            *Reset, *Bkpt;
+    void            *Debug;
 };
 
 

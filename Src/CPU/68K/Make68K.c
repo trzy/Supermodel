@@ -87,6 +87,7 @@ int             pcfetch = 0;                /* special PC-relative fetching */
 int             multiaddr = 1;              /* supervisor and user spaces */
 int             memmap_type = 0;            /* memory map type */
 int             call_convention = 0;        /* calling convention */
+int             debug = 0;                  /* call debug function at every instruction */
 int             mmx = 0;                    /* MMX support -- don't use! */
 unsigned        num_handlers = 0;           /* # of inst. handlers emitted */
 
@@ -558,6 +559,46 @@ void InstBegin(unsigned short op, char *mnem, unsigned num)
         e("I%04X: ; %s\t\t0x%04X\n", op, mnem, op);
     else
         e("I%04X: ; %s\t\t0x%04X-0x%04X\n", op, mnem, op, op+(num-1));
+	if (debug)
+	{
+		// Debugging code 
+		char noDebugLabel[16];
+		char noPCChgLabel[16];
+		sprintf(noDebugLabel, ".no_debug%04X", op);
+		sprintf(noPCChgLabel, ".no_pcchg%04X", op);
+
+		e("mov  ebx, [Debug]\n");            /* Get debug handler */
+		e("test ebx, ebx\n");                /* If no handler set, skip debugging */
+		e("jz   short %s\n", noDebugLabel);
+
+		e("push eax\n");					 /* Note: __cdecl calling convention used to call handler */
+		e("push edi\n");
+		e("push ebp\n");
+		WRITEPCTOMEM("pc");                  /* Save esi */
+		e("mov  [remaining], ecx\n");
+		e("push edi\n");                     /* Pass instruction opcode to handler */
+		e("sub  esi, ebp\n");                /* Convert PC to base offset */
+		e("sub  esi, byte 2\n");             /* Adjust back to beginning of instruction */
+		e("push esi\n");				     /* Pass result to handler */
+		e("call ebx\n");                     /* Call handler */
+		e("add  esp, byte 8\n");
+		e("mov  esi, [pc]\n");               /* Restore esi (this could have been changed) */
+		e("mov  ecx, [remaining]\n");        /* This could have been changed */
+		e("pop  ebp\n");
+		e("pop  edi\n");
+		e("add  esi, ebp\n");				 /* Convert esi to pointer (base+pc) */
+		e("test eax, eax\n");			     /* Check if debug handler changed PC */
+		e("jz   short %s\n", noPCChgLabel); 
+		e("pop  eax\n");                     /* If so, move onto instruction at new PC */
+		e("mov  di, [esi]\n");
+		e("add  esi, byte 2\n");             /* Point to word after next opcode */
+		e("jmp  dword [jmptab+edi*4]\n");
+
+		EmitLabel(noPCChgLabel);
+		e("pop  eax\n");
+
+		EmitLabel(noDebugLabel);
+	}
     decoded[op] = num;
     num_handlers++;
 
@@ -6652,8 +6693,9 @@ void EmitData()
                                            bit 2:1=processing ints, 0=not */
     e("InterruptAcknowledge dd 0\n");   /* interrupt acknowledge callback */
     e("Reset      dd 0\n");             /* pointer to RESET handler */
-    if (mpu == 68010)
+	if (mpu == 68010)
         e("Bkpt   dd 0\n");             /* pointer to BKPT handler */
+    e("Debug      dd 0\n");			    /* pointer to debug handler */
     e("context_end:\n");
     e("x          dd 0\n");             /* X flag (maintained internally) */
     for (i = 0; i < 7; i++)
@@ -8675,6 +8717,7 @@ int main(int argc, char **argv)
     if (FindV("-handler", 0, 0, 0, argc, argv, 0))      memmap_type = 1;
     if (FindV("-stackcall", 0, 0, 0, argc, argv, 0))    call_convention = 0;
     if (FindV("-regcall", 0, 0, 0, argc, argv, 0))      call_convention = 1;
+	if (FindV("-debug", 0, 0, 0, argc, argv, 0))        debug = 1;
 
     if ((i = FindV("-id", 0, 0, 0, argc, argv, 0)))
     {
@@ -8752,6 +8795,11 @@ int main(int argc, char **argv)
         printf("- Identifers start with: %s\n", id);
         e("; - Identifiers start with: %s\n", id);
     }
+	if (debug)
+	{
+		printf("- Debug function called at every instruction\n");
+		e("; - Debug function called at every instruction\n");
+	}
     e(";\n");
     printf("\n");
     e("bits 32\n");
