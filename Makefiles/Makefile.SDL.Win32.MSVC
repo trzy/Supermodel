@@ -40,6 +40,11 @@
 BITS = 32
 
 #
+# Include console-based debugger in emulator ('yes' or 'no')
+#
+ENABLE_DEBUGGER = no
+
+#
 # Experimental sound code ('yes' on 32-bit builds only or 'no')
 #
 ENABLE_SOUND = no
@@ -122,6 +127,12 @@ OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.
 	odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
 
 #
+# Turbo68K options
+#
+MAKE68KFLAGS = -singleaddr 
+
+
+#
 # Build options...
 #
 
@@ -132,6 +143,11 @@ ifneq ($(strip $(BITS)),32)
 endif
 
 # Add compiler flags for various options
+ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+	COMPILER_FLAGS += /D "SUPERMODEL_DEBUGGER"
+	MAKE68KFLAGS += -debug
+endif
+
 ifeq ($(strip $(ENABLE_SOUND)),yes)
 	COMPILER_FLAGS += /D "SUPERMODEL_SOUND"
 endif
@@ -156,6 +172,19 @@ OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/INIFile.obj $(OBJ
 # If sound enabled, include Turbo68K and SCSP code
 ifeq ($(strip $(ENABLE_SOUND)),yes)
 	OBJ += $(OBJ_DIR)/Turbo68K.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj
+endif
+
+# If built-in debugger enabled, include all debugging classes
+ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+	OBJ += $(OBJ_DIR)/Debugger.obj $(OBJ_DIR)/ConsoleDebugger.obj $(OBJ_DIR)/SupermodelDebugger.obj $(OBJ_DIR)/CPUDebug.obj \
+		$(OBJ_DIR)/AddressTable.obj $(OBJ_DIR)/Breakpoint.obj $(OBJ_DIR)/CodeAnalyser.obj $(OBJ_DIR)/Exception.obj \
+		$(OBJ_DIR)/Interrupt.obj $(OBJ_DIR)/IO.obj $(OBJ_DIR)/Label.obj $(OBJ_DIR)/Register.obj $(OBJ_DIR)/Watch.obj \
+		$(OBJ_DIR)/PPCDebug.obj
+		
+	# If sound enabled, add debugging support for Turbo68K
+	ifeq ($(strip $(ENABLE_SOUND)),yes)
+		OBJ += $(OBJ_DIR)/68KDebug.obj
+	endif
 endif
 
 
@@ -189,7 +218,7 @@ $(OBJ_DIR)/Make68K.exe: Src/CPU/68K/Make68K.c
 	$(LD) /OUT:$(OBJ_DIR)/Make68K.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/Make68K.obj
 
 $(OBJ_DIR)/Turbo68K.obj: $(OBJ_DIR)/Make68K.exe
-	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm -singleaddr 
+	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm $(MAKE68KFLAGS)
 	nasm $(OBJ_DIR)/Turbo68K.asm -o $(OBJ_DIR)/Turbo68K.obj -f win32
 
 
@@ -216,6 +245,12 @@ $(OBJ_DIR)/%.obj:	Src/Sound/%.cpp Src/Sound/%.h $(HEADERS)
 
 $(OBJ_DIR)/%.obj:	Src/Sound/%.cpp $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Debugger/%.cpp Src/Debugger/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Debugger/CPU/%.cpp Src/Debugger/CPU/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 	
 $(OBJ_DIR)/%.obj:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h Src/CPU/PowerPC/ppc603.c Src/CPU/PowerPC/ppc_ops.c $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
@@ -235,5 +270,5 @@ $(OBJ_DIR)/%.obj:	Src/OSD/Windows/%.cpp Src/OSD/Windows/%.h $(HEADERS)
 $(OBJ_DIR)/%.obj:	Src/Pkgs/%.c Src/Pkgs/%.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 
-$(OBJ_DIR)/%.obj:	Src/Pkgs/*.c
+$(OBJ_DIR)/%.obj:	Src/Pkgs/%.c
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
