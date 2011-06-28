@@ -198,7 +198,7 @@ namespace Debugger
 		frameCount++;
 	}
 
-	void CDebugger::WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, ...)
+	void CDebugger::Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, ...)
 	{
 		va_list vl;
 		va_start(vl, fmtStr);

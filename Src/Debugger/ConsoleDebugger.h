@@ -7,6 +7,7 @@
 #include "Types.h"
 
 #include <stdarg.h>
+#include <stdio.h>
 
 #define NUM_LISTAUTOLABELS (sizeof(s_listAutoLabels) / sizeof(ELabelFlags))
 
@@ -16,6 +17,7 @@ namespace Debugger
 	class CException;
 	class CWatch;
 	class CBreakpoint;
+	class CRegister;
 	class CRegMonitor;
 
 	/*
@@ -29,6 +31,9 @@ namespace Debugger
 
 		CCPUDebug *m_cpu;
 
+		bool m_nextFrame;
+		unsigned m_nextFrameCount;
+
 		UINT32 m_listDism;
 		UINT32 m_listMem;
 		
@@ -41,10 +46,26 @@ namespace Debugger
 		bool m_showOpCodes;
 		unsigned m_memBytesPerRow;
 
+		FILE *m_file;
+
 	protected:
+		void Read(char *str, size_t maxLen);
+
+		void Print(const char *fmtStr, ...);
+
+		void Error(const char *fmtStr, ...);
+
+		void PrintVL(const char *fmtStr, va_list vl);
+
+		void Flush();
+
 		bool CheckToken(const char *token, const char *simple, const char *full);
 
+		bool CheckToken(const char *token, const char *simple, const char *full, char *modifier, size_t modSize, const char *defaultMod);
+
 		void Truncate(char *dst, size_t maxLen, const char *src);
+
+		void UpperFirst(char *dst, const char *src);
 
 		void FormatOpCodes(char *str, int addr, int codesLen);
 
@@ -61,6 +82,10 @@ namespace Debugger
 		bool ParseAddress(CCPUDebug *cpu, const char *str, UINT32 *addr);
 
 		bool ParseDataSize(const char *str, unsigned &dataSize);
+
+		bool ParseCPU(const char *str, CCPUDebug *&cpu);
+
+		bool ParseRegister(const char *str, CRegister *&reg);
 
 		void ListCPUs();
 
@@ -92,10 +117,6 @@ namespace Debugger
 
 		UINT32 ListMemory(UINT32 start, UINT32 end, unsigned bytesPerRow);
 
-		void Attach();
-
-		void Detach();
-
 		virtual void ApplyConfig();
 
 		virtual void Attached();
@@ -122,12 +143,18 @@ namespace Debugger
 
 		virtual bool ProcessToken(const char *token, const char *cmd);
 
+		virtual void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl);
+		
+		virtual void FlushOut(CCPUDebug *cpu);
+
 	public:
 		CConsoleDebugger();
 
-		void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl);
-		
-		void FlushOut(CCPUDebug *cpu);
+		void Attach();
+
+		void Detach();
+
+		virtual void Poll();
 	};
 }
 

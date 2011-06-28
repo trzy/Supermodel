@@ -12,11 +12,11 @@ namespace Debugger
 	CCPUDebug::CCPUDebug(const char *cpuName, UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen) : 
 		name(cpuName), minInstrLen(cpuMinInstrLen), maxInstrLen(cpuMaxInstrLen), 
 		bigEndian(cpuBigEndian), memBusWidth(cpuMemBusWidth), maxMnemLen(cpuMaxMnemLen),
-		addrFmt(HexDollar), portFmt(Decimal), dataFmt(HexDollar), debugger(NULL), 
+		enabled(true), addrFmt(HexDollar), portFmt(Decimal), dataFmt(HexDollar), debugger(NULL), 
 		numExCodes(0), numIntCodes(0), numPorts(0), memSize(0), instrCount(0), pc(0), opcode(0),
 		m_break(false), m_userBreak(false), m_step(false), m_steppingOver(false), m_steppingOut(false), m_count(0), m_until(false), m_untilAddr(0),
-		m_mappedIOTable(NULL), m_memWatchTable(NULL), m_bpTable(NULL), m_numRegMons(0), m_regMonArray(NULL), m_analyser(NULL),
-		m_stateUpdated(false), m_exTrapped(NULL), m_intTrapped(NULL), m_bpReached(NULL), 
+		m_mappedIOTable(NULL), m_memWatchTable(NULL), m_bpTable(NULL), m_numRegMons(0), m_regMonArray(NULL),
+		m_analyser(NULL), m_stateUpdated(false), m_exRaised(NULL), m_exTrapped(NULL), m_intRaised(NULL), m_intTrapped(NULL), m_bpReached(NULL), 
 		m_memWatchTriggered(NULL), m_ioWatchTriggered(NULL), m_regMonTriggered(NULL)
 	{ 
 		memset(m_exArray, NULL, sizeof(m_exArray));
@@ -1171,6 +1171,7 @@ namespace Debugger
 		if (ex == NULL)
 			return;
 
+		m_exRaised = ex;
 		ex->count++;
 		if (!ex->trap)
 			return;
@@ -1188,6 +1189,7 @@ namespace Debugger
 		if (in == NULL)
 			return;
 
+		m_intRaised = in;
 		in->count++;
 		if (!in->trap)
 			return;

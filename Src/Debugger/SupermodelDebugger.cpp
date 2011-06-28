@@ -12,7 +12,8 @@
 namespace Debugger
 {
 	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger) : 
-		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger)
+		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger), 
+		m_loadEmuState(false), m_saveEmuState(false), m_resetEmu(false)
 	{
 		AddCPU(new CPPCDebug());
 #ifdef SUPERMODEL_SOUND
@@ -31,62 +32,64 @@ namespace Debugger
 
 	bool CSupermodelDebugger::ProcessToken(const char *token, const char *cmd)
 	{
-		// TODO - load/saving emu state not supported
-		//if (CheckToken(token, "les", "loademustate"))				// loademustate FILENAME
-		//{
-		//	// Parse arguments
-		//	token = strtok(NULL, " ");
-		//	if (token == NULL)
-		//	{
-		//		puts("Missing filename.");
-		//		return false;
-		//	}
-
-		//	if (LoadModel3State(token))
-		//		printf("Emulator state successfully loaded from <%s>\n", token);
-		//	else
-		//		printf("Unable to load emulator state from <%s>\n", token);
-		//	return false;
-		//}
-		//else if (CheckToken(token, "ses", "savestate"))				// saveemustate FILENAME
-		//{
-		//	// Parse arguments
-		//	token = strtok(NULL, " ");
-		//	if (token == NULL)
-		//	{
-		//		puts("Missing filename.");
-		//		return false;
-		//	}
-
-		//	if (SaveModel3State(token))
-		//		printf("Emulator state successfully saved to <%s>\n", token);
-		//	else
-		//		printf("Unable to save emulator state to <%s>\n", token);
-		//	return false;
-		//}
-		if (CheckToken(token, "lip", "listinputs"))					// listinputs
-		{
-			ListInputs();
-			return false;
-		}
-		else if (CheckToken(token, "pip", "printinput"))			// printinput NAME
+		if (CheckToken(token, "les", "loademustate"))				// loademustate FILENAME
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Mising input name.");
+				Print("Missing filename.\n");
+				return false;
+			}
+
+			strncpy(m_stateFile, token, 254);
+			m_stateFile[254] = '\0';
+			m_loadEmuState = true;
+			return true;
+		}
+		else if (CheckToken(token, "ses", "saveemustate"))			// saveemustate FILENAME
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			if (token == NULL)
+			{
+				Print("Missing filename.\n");
+				return false;
+			}
+
+			strncpy(m_stateFile, token, 254);
+			m_stateFile[254] = '\0';
+			m_saveEmuState = true;
+			return true;
+		}
+		else if (CheckToken(token, "res", "resetemu"))				// resetemu
+		{
+			m_resetEmu = true;
+			return true;
+		}
+		else if (CheckToken(token, "lip", "listinputs"))			// listinputs
+		{
+			ListInputs();
+			return false;
+		}
+		else if (CheckToken(token, "pip", "printinput"))			// printinput (<id>|<label>)
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			if (token == NULL)
+			{
+				Print("Mising input name.\n");
 				return false;
 			}
 			::CInput *input = (*m_inputs)[token];
 			if (input == NULL)
 			{
-				printf("No input with id or label '%s'.\n", token);
+				Print("No input with id or label '%s'.\n", token);
 				return false;
 			}
 			if (!InputIsValid(input))
 			{
-				printf("Input '%s' is not valid for current game.\n", token);
+				Print("Input '%s' is not valid for current game.\n", token);
 				return false;
 			}
 
@@ -94,58 +97,115 @@ namespace Debugger
 			{
 				char mapTrunc[41];
 				Truncate(mapTrunc, 40, input->GetMapping());
-				printf("Input %s (%s) [%s] = %04X (%d)\n", input->id, input->label, mapTrunc, input->value, input->value);
+				Print("Input %s (%s) [%s] = %04X (%d)\n", input->id, input->label, mapTrunc, input->value, input->value);
 			}
 			else
-				printf("Input %s (%s) = %04X (%d)\n", input->id, input->label, input->value, input->value);
+				Print("Input %s (%s) = %04X (%d)\n", input->id, input->label, input->value, input->value);
 			return false;
 		}
-		else if (CheckToken(token, "sip", "setinput"))				// setinput NAME MAPPING
+		else if (CheckToken(token, "sip", "setinput"))				// setinput (<id>|<label>) <mapping>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Mising input name.");
+				Print("Mising input id or label.\n");
 				return false;
 			}
 			::CInput *input = (*m_inputs)[token];
 			if (input == NULL)
 			{
-				printf("No input with id or label '%s'.\n", token);
+				Print("No input with id or label '%s'.\n", token);
 				return false;
 			}
 			if (!InputIsValid(input))
 			{
-				printf("Input '%s' is not valid for current game.\n", token);
+				Print("Input '%s' is not valid for current game.\n", token);
 				return false;
 			}
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing mapping to set.");
+				Print("Missing mapping to set.\n");
 				return false;
 			}
 
 			input->SetMapping(token);
 
-			printf("Set input %s (%s) to [%s]\n", input->id, input->label, input->GetMapping());
+			Print("Set input %s (%s) to [%s]\n", input->id, input->label, input->GetMapping());
 			return false;
 		}
-		else if (CheckToken(token, "cip", "configinput"))			// configinput NAME
+		else if (CheckToken(token, "rip", "resetinput"))            // resetinput (<id>|<label>)
 		{
-			//// Parse arguments
-			// TODO
-			//token = strtok(NULL, " ");
-			//if (token == NULL)
-			//{
-			//	puts("Missing mode (a)ll, (s)et single, (a)ppend single or (r)eset single");
-			//	return false;
-			//}
-			//if (CheckToken("a", "all"))
-			//{
-			//	//m_inputs->ConfigureInputs();
-			//}
+			// Parse arguments
+			token = strtok(NULL, " ");
+			if (token == NULL)
+			{
+				Print("Mising input id or label.\n");
+				return false;
+			}
+			::CInput *input = (*m_inputs)[token];
+			if (input == NULL)
+			{
+				Print("No input with id or label '%s'.\n", token);
+				return false;
+			}
+			if (!InputIsValid(input))
+			{
+				Print("Input '%s' is not valid for current game.\n", token);
+				return false;
+			}
+
+			input->ResetToDefaultMapping();
+
+			Print("Reset input %s (%s) to [%s]\n", input->id, input->label, input->GetMapping());
+			return false;
+		}
+		else if (CheckToken(token, "cip", "configinput"))			// configinput (<id>|<label>) [(s)et|(a)ppend]
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			if (token == NULL)
+			{
+				Print("Mising input id or label.\n");
+				return false;
+			}
+			CInput *input = (*m_inputs)[token];
+			if (input == NULL)
+			{
+				Print("No input with id or label '%s'.\n", token);
+				return false;
+			}
+			if (!InputIsValid(input))
+			{
+				Print("Input '%s' is not valid for current game.\n", token);
+				return false;
+			}
+			token = strtok(NULL, " ");
+			bool append;
+			if (token == NULL || CheckToken(token, "s", "set"))
+				append = false;
+			else if (CheckToken(token, "a", "append"))
+				append = true;
+			else 
+			{
+				Print("Enter a valid mode (s)et or (a)ppend.\n");
+				return false;
+			}
+
+			Print("Configure input %s [%s]: %s...", input->label, input->GetMapping(), (append ? "Appending" : "Setting"));
+			fflush(stdout);	// required on terminals that use buffering
+	
+			// Configure the input
+			if (input->Configure(append, "KEY_ESCAPE"))
+				Print(" %s\n", input->GetMapping());
+			else
+				Print(" [Cancelled]\n");
+			return false;
+		}
+		else if (CheckToken(token, "caip", "configallinputs"))		// configallinputs
+		{
+			m_inputs->ConfigureInputs(m_model3->GetGameInfo());
 			return false;
 		}
 		else
@@ -159,9 +219,9 @@ namespace Debugger
 
 	void CSupermodelDebugger::ListInputs()
 	{
-		puts("Inputs:");
+		Print("Inputs:\n");
 		if (m_inputs->Count() == 0)
-			puts(" None");
+			Print(" None\n");
 
 		// Get maximum id, label and mapping widths
 		size_t idAndLabelWidth = 0;
@@ -191,16 +251,16 @@ namespace Debugger
 			if (groupLabel == NULL || stricmp(groupLabel, input->GetInputGroup()) != 0)
 			{
 				groupLabel = input->GetInputGroup();
-				printf(" %s:\n", groupLabel);
+				Print(" %s:\n", groupLabel);
 			}
 
 			sprintf(idAndLabel, "%s (%s)", input->id, input->label);
-			printf("  %-*s", (int)idAndLabelWidth, idAndLabel);
+			Print("  %-*s", (int)idAndLabelWidth, idAndLabel);
 			if (!input->IsVirtual())
 				Truncate(mapping, 20, input->GetMapping());
 			else
 				mapping[0] = '\0';
-			printf(" %-*s %04X (%d)\n", (int)mappingWidth, mapping, input->value, input->value);
+			Print(" %-*s %04X (%d)\n", (int)mappingWidth, mapping, input->value, input->value);
 		}
 	}
 
@@ -269,6 +329,15 @@ namespace Debugger
 		return true;
 	}
 
+	void CSupermodelDebugger::ResetModel3()
+	{
+		// Reset Model3
+		m_model3->Reset();
+
+		// Reset debugger
+		Reset();
+	}
+
 	void CSupermodelDebugger::DebugLog(const char *fmt, va_list vl)
 	{
 		// Use the supplied logger, if any
@@ -294,6 +363,31 @@ namespace Debugger
 			m_logger->ErrorLog(fmt, vl);
 		else
 			CConsoleDebugger::ErrorLog(fmt, vl);
+	}
+
+	void CSupermodelDebugger::Poll()
+	{
+		CConsoleDebugger::Poll();
+
+		// Load/saving of emulator state and resetting emulator must be done here
+		if (m_loadEmuState)
+		{
+			LoadModel3State(m_stateFile);
+			m_loadEmuState = false;
+			ForceBreak(false);
+		}
+		else if (m_saveEmuState)
+		{
+			SaveModel3State(m_stateFile);
+			m_saveEmuState = false;
+			ForceBreak(false);
+		}
+		else if (m_resetEmu)
+		{
+			ResetModel3();
+			m_resetEmu = false;
+			ForceBreak(false);
+		}
 	}
 }
 

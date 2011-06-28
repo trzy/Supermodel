@@ -26,6 +26,11 @@ namespace Debugger
 		::CInputs *m_inputs;
 		::CLogger *m_logger;
 
+		bool m_loadEmuState;
+		bool m_saveEmuState;
+		bool m_resetEmu;
+		char m_stateFile[255];
+
 		bool InputIsValid(CInput *input);
 
 		void ListInputs();
@@ -35,16 +40,20 @@ namespace Debugger
 
 		bool ProcessToken(const char *token, const char *cmd);
 
-	public:
-		CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger);
-
 		void Attached();
 
 		void Detaching();
+
+	public:
+		CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger);
+
+		void Poll();
 		
 		bool LoadModel3State(const char *fileName);
 
 		bool SaveModel3State(const char *fileName);
+
+		void ResetModel3();
 
 		void DebugLog(const char *fmt, va_list vl);
 		

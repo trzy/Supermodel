@@ -77,6 +77,9 @@ namespace Debugger
 	class CDebugger
 #endif // DEBUGGER_HASLOGGER
 	{
+	friend class CCPUDebug;
+	friend class CCodeAnalyser;
+
 	private:
 		bool m_exit;
 		bool m_pause;
@@ -87,6 +90,32 @@ namespace Debugger
 
 		virtual bool SaveState(CBlockFile *state);
 #endif
+
+		//
+		// Protected virtual methods for sub-classes to implement
+		//
+
+		virtual void AnalysisUpdated(CCodeAnalyser *analyser) = 0;
+
+		virtual void ExceptionTrapped(CException *ex) = 0;
+
+		virtual void InterruptTrapped(CInterrupt *in) = 0;
+
+		virtual void MemWatchTriggered(CWatch *watch, UINT32 addr, unsigned dataSize, UINT64 data, bool isRead) = 0;
+
+		virtual void IOWatchTriggered(CWatch *watch, CIO *io, UINT64 data, bool isInput) = 0;
+
+		virtual void BreakpointReached(CBreakpoint *bp) = 0;
+
+		virtual void MonitorTriggered(CRegMonitor *regMon) = 0;
+
+		virtual void ExecutionHalted(CCPUDebug *cpu, EHaltReason reason) = 0;
+
+		virtual void WaitCommand(CCPUDebug *cpu) = 0;
+
+		virtual void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl) = 0;
+		
+		virtual void FlushOut(CCPUDebug *cpu) = 0;
 
 	public:
 		vector<CCPUDebug*> cpus;
@@ -134,10 +163,10 @@ namespace Debugger
 		bool CheckPause();
 		
 		//
-		// Console output
+		// Log
 		//
 
-		void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, ...);
+		void Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, ...);
 
 #ifdef DEBUGGER_HASLOGGER
 		//
@@ -182,28 +211,6 @@ namespace Debugger
 		virtual void Reset();
 
 		virtual void Poll();
-
-		virtual void AnalysisUpdated(CCodeAnalyser *analyser) = 0;
-
-		virtual void ExceptionTrapped(CException *ex) = 0;
-
-		virtual void InterruptTrapped(CInterrupt *in) = 0;
-
-		virtual void MemWatchTriggered(CWatch *watch, UINT32 addr, unsigned dataSize, UINT64 data, bool isRead) = 0;
-
-		virtual void IOWatchTriggered(CWatch *watch, CIO *io, UINT64 data, bool isInput) = 0;
-
-		virtual void BreakpointReached(CBreakpoint *bp) = 0;
-
-		virtual void MonitorTriggered(CRegMonitor *regMon) = 0;
-
-		virtual void ExecutionHalted(CCPUDebug *cpu, EHaltReason reason) = 0;
-
-		virtual void WaitCommand(CCPUDebug *cpu) = 0;
-
-		virtual void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl) = 0;
-		
-		virtual void FlushOut(CCPUDebug *cpu) = 0;
 	};
 
 	//

@@ -270,10 +270,10 @@ namespace Debugger
 		if (io != NULL)
 		{
 			io->GetLocation(locStr);
-			cpu->debugger->WriteOut(cpu, NULL, "%s data [%s] %s I/O %s\n", rwStr, dataStr, tfStr, locStr);
+			cpu->debugger->Log(cpu, NULL, "%s data [%s] %s I/O %s\n", rwStr, dataStr, tfStr, locStr);
 		}
 		else
-			cpu->debugger->WriteOut(cpu, NULL, "%s data [%s] %s memory address %s\n", rwStr, dataStr, tfStr, addrStr);
+			cpu->debugger->Log(cpu, NULL, "%s data [%s] %s memory address %s\n", rwStr, dataStr, tfStr, addrStr);
 		return false;
 	}
 }

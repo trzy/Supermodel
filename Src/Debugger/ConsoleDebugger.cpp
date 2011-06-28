@@ -6,16 +6,19 @@
 #include "Label.h"
 
 #include <string.h>
+#include <ctype.h>
 
 namespace Debugger
 {
-	CConsoleDebugger::CConsoleDebugger() : CDebugger(), m_listDism(0), m_listMem(0), m_analyseCode(true), 
+	CConsoleDebugger::CConsoleDebugger() : CDebugger(), 
+		m_nextFrame(false), m_listDism(0), m_listMem(0), m_analyseCode(true), 
 		m_addrFmt(HexDollar), m_portFmt(Decimal), m_dataFmt(HexDollar),
-		m_showLabels(true), m_labelsOverAddr(true), m_showOpCodes(false), m_memBytesPerRow(12)
+		m_showLabels(true), m_labelsOverAddr(true), m_showOpCodes(false), m_memBytesPerRow(12), m_file(NULL)
 	{
 		//
 	}
 
+	// TODO - tidy upf this function, ie do some proper parsing of commands - it is a mess!
 	void CConsoleDebugger::WaitCommand(CCPUDebug *cpu)
 	{
 		m_cpu = cpu;
@@ -40,11 +43,18 @@ namespace Debugger
 				CCodeAnalyser *analyser = m_cpu->GetCodeAnalyser();
 				if (analyser->NeedsAnalysis())
 				{
-					printf("Analysing %s...\n", m_cpu->name);
+					Print("Analysing %s...\n", m_cpu->name);
 					analyser->AnalyseCode();
 				}
 			}
 		
+			// Close redirected output file, if exists
+			if (m_file != NULL)
+			{
+				fclose(m_file);
+				m_file = NULL;
+			}
+
 			// Get details for current PC address
 			bool hasLabel;
 			if (m_cpu->instrCount > 0)
@@ -68,31 +78,63 @@ namespace Debugger
 			bpChr = (bp != NULL ? bp->symbol : ' ');
 		
 			// Output command prompt
-			printf("%s%c", m_cpu->name, bpChr);
+			Print("%s%c", m_cpu->name, bpChr);
 			if (m_showLabels)
 			{
 				if (m_labelsOverAddr)
-					printf("%-12s ", (hasLabel ? labelStr : addrStr));
+					Print("%-12s ", (hasLabel ? labelStr : addrStr));
 				else
-					printf("%s %-12s ", addrStr, labelStr);
+					Print("%s %-12s ", addrStr, labelStr);
 			}
 			else
-				printf("%s ", addrStr);
+				Print("%s ", addrStr);
 			if (m_showOpCodes) 
-				printf("[%s] ", opCodes);
+				Print("[%s] ", opCodes);
 			if (codesLen > 0)
-				printf("%-*s %s > ", (int)m_cpu->maxMnemLen, mnemonic, operands);
+				Print("%-*s %s > ", (int)m_cpu->maxMnemLen, mnemonic, operands);
 			else
-				printf("??? > ");
-			fflush(stdout);
+				Print("??? > ");
+			Flush();
 
 			// Wait for command
-			gets(cmd);
+			Read(cmd, 255);
 
 			if (cmd[0] == '\0')
 			{
 				m_cpu->SetStepMode(StepInto);
 				break;
+			}
+
+			// Check for redirection
+			char *pos = strchr(cmd, '>');
+			if (pos != NULL)
+			{
+				*pos = '\0';
+				pos++;
+				const char *mode;
+				if (*pos == '>')
+				{
+					mode = "ab";
+					pos++;
+				}
+				else
+					mode = "w";
+				while (*pos == ' ')
+					pos++;
+				if (*pos != '\0')
+				{
+					m_file = fopen(pos, mode);
+					if (m_file == NULL)
+					{
+						Error("Unable to direct output to file %s\n", pos);	
+						continue;
+					}
+				}
+				else
+				{
+					Error("Missing file to direct output to\n");
+					continue;
+				}
 			}
 
 			char *token = strtok(cmd, " ");
@@ -103,40 +145,66 @@ namespace Debugger
 		}
 	}
 
-	// TODO - tidy up this function - it is a mess!
 	bool CConsoleDebugger::ProcessToken(const char *token, const char *cmd)
 	{
 		UINT32 pc = m_cpu->pc;
 
+		int number;
+		unsigned size;
+		const char *sizeStr;
 		UINT32 addr;
 		UINT16 portNum;
+		UINT64 data;
 		char addrStr[50];
 		char portNumStr[50];
+		char dataStr[50];
+		char mod[10];
+
 		if (CheckToken(token, "x", "exit"))							// exit
 		{
-			puts("Exiting...");
+			Print("Exiting...\n");
 			SetExit();
 			return true;
 		}
-		else if (CheckToken(token, "n", "next"))					// next [COUNT]
+		else if (CheckToken(token, "n", "next"))					// next [<count>=1]
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token != NULL)
 			{
-				int count;
-				if (!ParseInt(token, &count) || count <= 0)
+				if (!ParseInt(token, &number) || number <= 0)
 				{
-					puts("Enter a valid instruction count.");
+					Error("Enter a valid instruction count.\n");
 					return false;
 				}
 				
-				if (count > 1)
-					printf("Running %d instructions.\n", count);
-				m_cpu->SetCount(count);
+				if (number > 1)
+					Print("Running %d instructions.\n", number);
+				m_cpu->SetCount(number);
 			}
 			else
 				m_cpu->SetStepMode(StepInto);
+			return true;
+		}
+		else if (CheckToken(token, "nf", "nextframe"))				// nextframe [<count>=1]
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			if (token != NULL)
+			{
+				if (!ParseInt(token, &number) || number <= 0)
+				{
+					Error("Enter a valid frame count.\n");
+					return false;
+				}
+				
+				if (number > 1)
+					Print("Running %d frames.\n", number);
+				m_nextFrameCount = number;
+			}
+			else
+				m_nextFrameCount = 1;
+			m_nextFrame = true;
 			return true;
 		}
 		else if (CheckToken(token, "s", "stepover"))				// stepover
@@ -154,7 +222,7 @@ namespace Debugger
 			m_cpu->SetStepMode(StepOut);
 			return true;
 		}
-		else if (CheckToken(token, "c", "continue"))				// continue [ADDR]
+		else if (CheckToken(token, "c", "continue"))				// continue [<addr>]
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
@@ -162,12 +230,12 @@ namespace Debugger
 			{
 				if (!ParseAddress(m_cpu, token, &addr))
 				{
-					puts("Enter a valid address.");
+					Error("Enter a valid address.\n");
 					return false;
 				}
 
 				m_cpu->FormatAddress(addrStr, addr);
-				printf("Continuing until %s.\n", addrStr);
+				Print("Continuing until %s.\n", addrStr);
 				m_cpu->SetUntil(addr);
 			}
 			else
@@ -178,37 +246,56 @@ namespace Debugger
 		{
 			ListCPUs();
 		}
-		else if (CheckToken(token, "sc", "switchcpu"))				// switchcpu (NAME|NUM)
+		else if (CheckToken(token, "sc", "switchcpu"))				// switchcpu (<name>|<num>)
 		{	
 			// Parse arguments
 			token = strtok(NULL, " ");
-			if (token == NULL)
+			CCPUDebug *cpu;
+			if (!ParseCPU(token, cpu))
+				return false;
+			
+			if (!cpu->enabled)
 			{
-				puts("Missing CPU name or number.");
+				Error("CPU %s is currently disabled for debugging.\n", cpu->name);
 				return false;
 			}
 
-			CCPUDebug *cpu = NULL;
-			int cpuNum;
-			if (ParseInt(token, &cpuNum))
-			{
-				if (cpuNum >= 0 && cpuNum < (int)cpus.size())
-					cpu = cpus[cpuNum];
-			}
-			if (cpu == NULL)
-			{
-				cpu = GetCPU(token);
-				if (cpu == NULL)
-				{
-					puts("No CPU with that name or number.");
-					return false;
-				}
-			}
-			
 			m_cpu = cpu;
 			pc = cpu->pc;
 			m_listDism = (cpu->instrCount > 0 && pc > 10 * cpu->minInstrLen ? pc - 10 * cpu->minInstrLen : 0);
 			return false;
+		}
+		else if (CheckToken(token, "dc", "disablecpu"))				// disablecpu (<name>|<num>)
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			CCPUDebug *cpu;
+			if (!ParseCPU(token, cpu))
+				return false;
+			
+			if (cpu == m_cpu)
+			{
+				Error("Cannot enable/disable debugging on current CPU.\n");
+				return false;
+			}
+			cpu->enabled = false;
+			Print("Disabled debugging on CPU %s.\n", cpu->name);
+		}
+		else if (CheckToken(token, "ec", "enablecpu"))				// enablecpu (<name>|<num>)
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			CCPUDebug *cpu;
+			if (!ParseCPU(token, cpu))
+				return false;
+
+			if (cpu == m_cpu)
+			{
+				Error("Cannot enable/disable debugging on current CPU.\n");
+				return false;
+			}
+			cpu->enabled = true;
+			Print("Enabled debugging on CPU %s.\n", cpu->name);
 		}
 		else if (CheckToken(token, "lr", "listregisters"))			// listregisters
 		{
@@ -230,25 +317,84 @@ namespace Debugger
 		{
 			ListRegions();
 		}
-		else if (CheckToken(token, "al", "addlabel"))				// addlabel ADDR NAME
+		else if (CheckToken(token, "ll", "listlabels"))				// listlabels [(d)efault|(c)ustom|(a)utos|(e)ntrypoints|e(x)cephandlers|(i)interhandlers|(j)umptargets|(l)ooppoints]
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			bool customLabels;
+			ELabelFlags labelFlags;
+			if (token == NULL || CheckToken(token, "d", "default"))
+			{
+				customLabels = true;
+				labelFlags = (ELabelFlags)(LFEntryPoint | LFExcepHandler | LFInterHandler | LFSubroutine);
+			}
+			else if (CheckToken(token, "c", "custom"))
+			{
+				customLabels = true;
+				labelFlags = LFNone;
+			}
+			else if (CheckToken(token, "a", "autos"))
+			{
+				customLabels = true;
+				labelFlags = (ELabelFlags)(LFEntryPoint | LFExcepHandler | LFInterHandler | LFSubroutine | LFJumpTarget | LFLoopPoint);
+			}
+			else if (CheckToken(token, "e", "entrypoints"))
+			{
+				customLabels = false;
+				labelFlags = LFEntryPoint;
+			}
+			else if (CheckToken(token, "x", "excephandlers"))
+			{
+				customLabels = false;
+				labelFlags = LFExcepHandler;
+			}
+			else if (CheckToken(token, "i", "interhandlers"))
+			{
+				customLabels = false;
+				labelFlags = LFInterHandler;
+			}
+			else if (CheckToken(token, "s", "subroutines"))
+			{
+				customLabels = false;
+				labelFlags = LFSubroutine;
+			}
+			else if (CheckToken(token, "j", "jumptargets"))
+			{
+				customLabels = false;
+				labelFlags = LFJumpTarget;
+			}
+			else if (CheckToken(token, "l", "looppoints"))
+			{
+				customLabels = false;
+				labelFlags = LFLoopPoint;
+			}
+			else
+			{
+				Error("Enter a valid filter (a)ll, (c)ustom, (e)ntrypoints, e(x)cephandlers, (i)interhandlers, (j)umptargets or (l)ooppoints.\n");
+				return false;
+			}
+
+			ListLabels(customLabels, labelFlags);
+		}
+		else if (CheckToken(token, "al", "addlabel"))				// addlabel <addr> <name>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing label address.");
+				Error("Missing label address.\n");
 				return false;
 			}
 			else if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Enter a valid label address.");
+				Error("Enter a valid label address.\n");
 				return false;
 			}
 
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing label name.");
+				Error("Missing label name.\n");
 				return false;
 			}
 			const char *name = token;
@@ -256,116 +402,50 @@ namespace Debugger
 			// Add label
 			CLabel *label = m_cpu->AddLabel(addr, name);
 			m_cpu->FormatAddress(addrStr, label->addr);
-			printf("Label %s added at %s.\n", label->name, addrStr);
+			Print("Label '%s' added at %s.\n", label->name, addrStr);
 		}
-		else if (CheckToken(token, "ll", "listlabels"))				// listlabels
-		{
-			// Parse arguments
-			token = strtok(NULL, " ");
-
-			bool customLabels;
-			bool autoLabels;
-			if (token != NULL)
-			{
-				if (CheckToken(token, "a", "all"))
-				{
-					customLabels = true;
-					autoLabels = true;
-				}
-				else if (CheckToken(token, "c", "custom"))
-				{
-					customLabels = true;
-					autoLabels = false;
-				}
-				else if (CheckToken(token, "u", "auto"))
-				{
-					customLabels = false;
-					autoLabels = true;
-				}
-				else
-				{
-					puts("Enter a valid mode (a)ll, (c)ustom or a(u)to.");
-					return false;
-				}
-			}
-			else
-			{
-				customLabels = true;
-				autoLabels = true;
-			}
-
-			ELabelFlags autoLabelFlags = (autoLabels ? (ELabelFlags)(LFEntryPoint | LFExcepHandler | LFInterHandler | LFSubroutine) : LFNone);
-			ListLabels(customLabels, autoLabelFlags);
-		}
-		else if (CheckToken(token, "rl", "removelabel"))
+		else if (CheckToken(token, "rl", "removelabel"))			// removelabel [<name>|<addr>]
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
+				token = "-";
+			
+			if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Missing mode (a)ll, (n)ame or a(d)dress.");
+				Error("Enter a valid label name or address.\n");
 				return false;
 			}
 
-			if (CheckToken(token, "a", "all"))
+			CLabel *label = m_cpu->GetLabel(addr);
+			if (label == NULL)
 			{
-				m_cpu->RemoveAllLabels();
-				puts("All labels removed.");
-			}
-			else if (CheckToken(token, "n", "name"))
-			{
-				token = strtok(NULL, " ");
-				if (token == NULL)
-				{
-					puts("Missing label name.");
-					return false;
-				}
-
-				// Remove label
-				if (m_cpu->RemoveLabel(token))
-					printf("Label [%s] removed.\n", token);
-				else
-					puts("Enter a valid label name.");
-			}
-			else if (CheckToken(token, "d", "address"))
-			{
-				token = strtok(NULL, " ");
-				if (token == NULL)
-				{
-					puts("Missing label address.");
-					return false;
-				}
-				if (!ParseAddress(m_cpu, token, &addr))
-				{
-					puts("Enter a valid label address.");
-					return false;
-				}
-
-				// Remove label
 				m_cpu->FormatAddress(addrStr, addr);
-				if (m_cpu->RemoveLabel(addr))
-					printf("Label at address %s removed.\n", addrStr);
-				else
-					printf("No label at address %s.\n", addrStr);
-			}
-			else
-			{
-				puts("Enter a valid mode (a)ll, (n)ame or a(d)dress.");
+				Error("No label at %s.\n", addrStr);
 				return false;
 			}
+			
+			const char *name = label->name;
+			m_cpu->FormatAddress(addrStr, label->addr);
+			Print("Custom label '%s' removed at address %s.\n", name, addrStr);
 		}
-		else if (CheckToken(token, "ac", "addcomment"))				// addcomment ADDR TEXT...
+		else if (CheckToken(token, "ral", "removealllabels"))		// removealllabels
+		{
+			m_cpu->RemoveAllLabels();
+			Print("All custom labels removed.\m");
+		}
+		else if (CheckToken(token, "ac", "addcomment"))				// addcomment <addr> <text...>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing comment address.");
+				Error("Missing comment address.\n");
 				return false;
 			}
 			else if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Enter a valid comment address.");
+				Error("Enter a valid comment address.\n");
 				return false;
 			}
 
@@ -384,44 +464,46 @@ namespace Debugger
 			}
 			if (text[0] == '\0')
 			{
-				puts("Missing comment text.");
+				Error("Missing comment text.\n");
 				return false;
 			}
 
 			// Add comment
 			CComment *comment = m_cpu->AddComment(addr, text);
 			m_cpu->FormatAddress(addrStr, comment->addr);
-			printf("Comment added at %s.\n", addrStr);
+			Print("Comment added at %s.\n", addrStr);
 		}
-		else if (CheckToken(token, "rc", "removecomment"))			// removecomment ADDR
+		else if (CheckToken(token, "rc", "removecomment"))			// removecomment [<addr>]
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
+				token = "-";
+			if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Missing comment address.");
-				return false;
-			}
-			else if (!ParseAddress(m_cpu, token, &addr))
-			{
-				puts("Enter a valid comment address.");
+				Error("Enter a valid comment address.\n");
 				return false;
 			}
 
 			m_cpu->FormatAddress(addrStr, addr);
 			if (m_cpu->RemoveComment(addr))
-				printf("Comment at address %s removed.\n", addrStr);
+				Print("Comment at address %s removed.\n", addrStr);
 			else
-				printf("No comment at address %s.\n", addrStr);
+				Error("No comment at address %s.\n", addrStr);
 		}
-		else if (CheckToken(token, "t", "trap") ||					// addtrap (e|i) ID
+		else if (CheckToken(token, "rac", "removeallcomments"))     // removeallcomments
+		{
+			m_cpu->RemoveAllComments();
+			Print("All comments removed.\n");
+		}
+		else if (CheckToken(token, "t", "trap") ||					// addtrap ((e)xception|(i)nterrupt) <id>
 			CheckToken(token, "at", "addtrap"))
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing type (e)xception or (i)interrupt");
+				Error("Missing type (e)xception or (i)interrupt\n");
 				return false;
 			}
 			
@@ -430,56 +512,50 @@ namespace Debugger
 				token = strtok(NULL, " ");
 				if (token == NULL)
 				{
-					puts("Missing exception id.");
+					Error("Missing exception id.\n");
 					return false;
 				}
 				CException *ex = m_cpu->GetException(token);
 				if (ex == NULL)
 				{
-					puts("Enter a valid exception id.");
+					Error("Enter a valid exception id.\n");
 					return false;
 				}
 
-				if (!ex->trap)
-				{
-					ex->trap = true;
-					printf("Trap added for exceptions of type %s (%s).\n", ex->id, ex->name);
-				}
+				ex->trap = true;
+				Print("Trap added for exceptions of type %s.\n", ex->id);
 			}
 			else if (CheckToken(token, "i", "interrupt"))
 			{
 				token = strtok(NULL, " ");
 				if (token == NULL)
 				{
-					puts("Missing interrupt id.");
+					Error("Missing interrupt id.\n");
 					return false;
 				}
 				CInterrupt *in = m_cpu->GetInterrupt(token);
 				if (in == NULL)
 				{
-					puts("Enter a valid interrupt id.");
+					Error("Enter a valid interrupt id.\n");
 					return false;
 				}
 
-				if (!in->trap)
-				{
-					in->trap = true;
-					printf("Trap added for interrupts of type %s (%s).\n", in->id, in->name);
-				}
+				in->trap = true;
+				Print("Trap added for interrupts of type %s.\n", in->id);
 			}
 			else
 			{
-				puts("Enter valid type (e)xception or (i)interrupt.");
+				Error("Enter valid type (e)xception or (i)interrupt.\n");
 				return false;
 			}
 		}
-		else if (CheckToken(token, "rt", "removetrap"))				// removetrap (e|i) (a|i) ID
+		else if (CheckToken(token, "rt", "removetrap"))				// removetrap ((e)xception|(i)nterrupt) <id>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing type (e)xception or (i)interrupt");
+				Error("Missing type (e)xception or (i)interrupt.\n");
 				return false;
 			}
 			
@@ -488,121 +564,108 @@ namespace Debugger
 				token = strtok(NULL, " ");
 				if (token == NULL)
 				{
-					puts("Missing mode (a)ll or (i)d.");
+					Error("Missing exception id.\n");
+					return false;
+				}
+				CException *ex = m_cpu->GetException(token);
+				if (ex == NULL)
+				{
+					Error("Enter a valid exception id.\n");
 					return false;
 				}
 
-				if (CheckToken(token, "a", "all"))
-				{
-					bool removed = false;
-					for (vector<CException*>::iterator it = m_cpu->exceps.begin(); it != m_cpu->exceps.end(); it++)
-					{
-						if ((*it)->trap)
-							(*it)->trap = false;
-						removed = true;
-					}
-					if (removed)
-						puts("All exception traps removed.");
-				}
-				else if (CheckToken(token, "i", "id"))
-				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing exception id.");
-						return false;
-					}
-
-					CException *ex = m_cpu->GetException(token);
-					if (ex != NULL)
-					{
-						if (ex->trap)
-						{
-							ex->trap = false;
-							printf("Trap for exception %s removed.\n", ex->name);
-						}
-					}
-					else
-						puts("Enter a valid exception id.");
-				}
-				else
-				{
-					puts("Enter valid mode (a)ll or (i)d.");
-					return false;
-				}
+				ex->trap = false;
+				Print("Trap for exception %s removed.\n", ex->name);
 			}
 			else if (CheckToken(token, "i", "interrupt"))
 			{
 				token = strtok(NULL, " ");
 				if (token == NULL)
 				{
-					puts("Missing mode (a)ll or (i)d.");
+					Error("Missing interrupt id.\n");
+					return false;
+				}
+				CInterrupt *in = m_cpu->GetInterrupt(token);
+				if (in == NULL)
+				{
+					Error("Enter a valid interrupt id.\n");
 					return false;
 				}
 
-				if (CheckToken(token, "a", "all"))
-				{
-					bool removed = false;
-					for (vector<CInterrupt*>::iterator it = m_cpu->inters.begin(); it != m_cpu->inters.end(); it++)
-					{
-						if ((*it)->trap)
-							(*it)->trap = false;
-						removed = true;
-					}
-					if (removed)
-						puts("All interrupt traps removed.");
-				}
-				else if (CheckToken(token, "i", "id"))
-				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing exception id.");
-						return false;
-					}
-
-					CInterrupt *in = m_cpu->GetInterrupt(token);
-					if (in != NULL)
-					{
-						if (in->trap)
-						{
-							in->trap = false;
-							printf("Trap for interrupt %s removed.\n", in->name);
-						}
-					}
-					else
-						puts("Enter a valid interrupt id.");
-				}
-				else
-				{
-					puts("Enter valid mode (a)ll or (i)d.");
-					return false;
-				}
+				in->trap = false;
+				Print("Trap for interrupt %s removed.\n", in->name);
 			}
 			else
 			{
-				puts("Enter valid type (e)xception or (i)interrupt.");
+				Error("Enter a valid type (e)xception or (i)interrupt.\n");
 				return false;
 			}
 		}
-		else if (CheckToken(token, "w", "memwatch") ||				// addmemwatch ADDR [(n|r|w|rw) [SIZE [(s|c|m|h|f) [ARGS]]]]
-			CheckToken(token, "aw", "addmemwatch"))
+		else if (CheckToken(token, "rat", "removealltraps"))		// removealltraps [(a)ll|(e)xceptions|(i)nterrupts]
+		{
+			bool removeExs;
+			bool removeInts;
+			const char *coverage;
+			if (token == NULL || CheckToken(token, "a", "all"))
+			{
+				removeExs  = true;
+				removeInts = true;
+				coverage = "exceptions and interrupts";
+			}
+			else if (CheckToken(token, "e", "exceptions"))
+			{
+				removeExs = true;
+				removeInts = false;
+				coverage = "exceptions";
+			}
+			else if (CheckToken(token, "i", "interrupts"))
+			{
+				removeExs = false;
+				removeInts = true;
+				coverage = "interrupts";
+			}
+			else
+			{
+				Error("Enter a valid mode (a)ll, (e)xceptions or (i)nterrupts\n");
+				return false;
+			}
+
+			if (removeExs)
+			{	
+				for (vector<CException*>::iterator it = m_cpu->exceps.begin(); it != m_cpu->exceps.end(); it++)
+					(*it)->trap = false;
+			}
+			if (removeInts)
+			{
+				for (vector<CInterrupt*>::iterator it = m_cpu->inters.begin(); it != m_cpu->inters.end(); it++)
+					(*it)->trap = false;
+			}
+			Print("All traps for %s removed.\n", coverage);
+		}
+		else if (CheckToken(token, "lw", "listmemwatches"))			// listmemwatches
+		{
+			ListMemWatches();
+		}
+		else if (CheckToken(token, "w", "memwatch", mod, 9, "b") ||	// addmemwatch[.<size>=b] <addr> [((n)one|(r)ead|(w)rite|(rw)eadwrite) [((s)imple|(c)ount <count>|(m)atch <sequence>|captu(r)e <maxlen>|(p)rint)]]
+			CheckToken(token, "aw", "addmemwatch", mod, 9, "b"))
 		{
 			// Parse arguments
+			if (!ParseDataSize(mod, size))
+				return false;
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing address.");
+				Error("Missing address.\n");
 				return false;
 			}
 			if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Enter a valid address.");
+				Error("Enter a valid address.\n");
 				return false;
 			}
+			token = strtok(NULL, " ");
 			bool read;
 			bool write;
-			token = strtok(NULL, " ");
 			if (token == NULL || CheckToken(token, "n", "none"))
 			{
 				read = false;
@@ -625,177 +688,146 @@ namespace Debugger
 			}
 			else
 			{
-				puts("Enter valid read/write flags (n)one, (r)ead, (w)rite or (rw)ead/write.");
+				Error("Enter valid read/write flags (n)one, (r)ead, (w)rite or (rw)ead/write.\n");
 				return false;
 			}
-			unsigned size;
-			token = strtok(NULL, " ");
-			if (token != NULL)
-			{
-				if (!ParseDataSize(token, size))
-					return false;
-			}
-			else
-				size = 1;
 
 			// Add mem watch
 			CWatch *watch;
 			token = strtok(NULL, " ");
-			if (token != NULL)
+			if (token == NULL || CheckToken(token, "s", "simple"))
+				watch = m_cpu->AddSimpleMemWatch(addr, size, read, write);
+			else if (CheckToken(token, "c", "count"))
 			{
-				if (CheckToken(token, "s", "simple"))
-					watch = m_cpu->AddSimpleMemWatch(addr, size, read, write);
-				else if (CheckToken(token, "c", "count"))
+				token = strtok(NULL, " ");
+				if (token == NULL)
 				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing watch count.");
-						return false;
-					}
-					int count;
-					if (!ParseInt(token, &count) || count <= 0)
-					{
-						puts("Enter a valid watch count.");
-						return false;
-					}
-					watch = m_cpu->AddCountMemWatch(addr, size, read, write, count);
-				}
-				else if (CheckToken(token, "m", "match"))
-				{
-					vector<UINT64> dataSeq;
-					while ((token = strtok(NULL, " ")) != NULL)
-					{
-						UINT64 data;
-						if (m_cpu->ParseData(token, size, &data))
-							dataSeq.push_back(data);
-					}
-					if (dataSeq.size() == 0)
-					{
-						const char *sizeStr = GetSizeString(size);
-						printf("Enter a sequence of %s data to match.", sizeStr);
-						return false;
-					}
-					watch = m_cpu->AddMatchMemWatch(addr, size, read, write, dataSeq);
-				}
-				else if (CheckToken(token, "r", "capture"))
-				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing maximum capture length.");
-						return false;
-					}
-					int maxLen;
-					if (!ParseInt(token, &maxLen) || maxLen <= 0)
-					{
-						puts("Enter a valid maximum capture length.");
-						return false;
-					}
-					watch = m_cpu->AddCaptureMemWatch(addr, size, read, write, maxLen);
-				}
-				else if (CheckToken(token, "p", "print"))
-					watch = m_cpu->AddPrintMemWatch(addr, size, read, write);
-				else
-				{
-					puts("Enter a valid watch type (s)imple, (c)ount, (m)atch, captu(r)e or (p)rint.");
+					Error("Missing count.\n");
 					return false;
 				}
+				int count;
+				if (!ParseInt(token, &count) || count <= 0)
+				{
+					Error("Enter a valid count.\n");
+					return false;
+				}
+				watch = m_cpu->AddCountMemWatch(addr, size, read, write, count);
 			}
+			else if (CheckToken(token, "m", "match"))
+			{
+				vector<UINT64> dataSeq;
+				while ((token = strtok(NULL, " ")) != NULL)
+				{
+					if (m_cpu->ParseData(token, size, &data))
+						dataSeq.push_back(data);
+				}
+				if (dataSeq.size() == 0)
+				{
+					sizeStr = GetSizeString(size);
+					Error("Enter a sequence of %s data to match.", sizeStr);
+					return false;
+				}
+				watch = m_cpu->AddMatchMemWatch(addr, size, read, write, dataSeq);
+			}
+			else if (CheckToken(token, "r", "capture"))
+			{
+				token = strtok(NULL, " ");
+				if (token == NULL)
+				{
+					Error("Missing maximum capture length.\n");
+					return false;
+				}
+				int maxLen;
+				if (!ParseInt(token, &maxLen) || maxLen <= 0)
+				{
+					Error("Enter a valid maximum capture length.\n");
+					return false;
+				}
+				watch = m_cpu->AddCaptureMemWatch(addr, size, read, write, maxLen);
+			}
+			else if (CheckToken(token, "p", "print"))
+				watch = m_cpu->AddPrintMemWatch(addr, size, read, write);
 			else
-				watch = m_cpu->AddSimpleMemWatch(addr, size, read, write);	
+			{
+				Error("Enter a valid watch type (s)imple, (c)ount, (m)atch, captu(r)e or (p)rint.\n");
+				return false;
+			}
+
 			m_cpu->FormatAddress(addrStr, watch->addr);
-			printf("Memory watch [%s] added at %s.\n", watch->type, addrStr);
+			Print("Memory watch [%s %s] added at address %s.\n", GetSizeString(watch->size), watch->type, addrStr);
 		}
-		else if (CheckToken(token, "lw", "listmemwatches"))
-		{
-			ListMemWatches();
-		}
-		else if (CheckToken(token, "rw", "removememwatch"))			// removememwatch (a|n|d) [NUM|ADDR]
+		else if (CheckToken(token, "rw", "removememwatch"))			// removememwatch (#<num>|<addr>)
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing mode (a)ll, (n)umber or a(d)dress.");
+				Error("Missing watch number or address.\n");
 				return false;
 			}
-			
-			if (CheckToken(token, "a", "all"))
+			if (token[0] == '#')
 			{
-				// Remove all memory watches
+				// Remove watch by number
 				vector<CWatch*> watches;
 				GetAllMemWatches(watches);
-				for (vector<CWatch*>::iterator it = watches.begin(); it != watches.end(); it++)
-					m_cpu->RemoveWatch(*it);
-				puts("All memory watches removed.");
-			}
-			else if (CheckToken(token, "n", "number"))
-			{
-				token = strtok(NULL, " ");
-				if (token == NULL)
+				if (!ParseInt(token + 1, &number) || number < 0 || number >= watches.size())
 				{
-					puts("Missing watch number.");
+					Error("Enter a valid watch number.\n");
 					return false;
 				}
 
-				// Remove memory watch by number
-				vector<CWatch*> watches;
-				GetAllMemWatches(watches);
-				int number;
-				if (ParseInt(token, &number) && number >= 0 && number < watches.size())
-				{
-					m_cpu->RemoveWatch(watches[number]);
-					printf("Memory watch %d removed.\n", number);
-				}
-				else
-					puts("Enter a valid watch number.");
+				// Remove watch
+				m_cpu->RemoveWatch(watches[number]);
+				Print("Memory watch #%d removed.\n", number);
 			}
-			else if (CheckToken(token, "d", "address"))
+			else
 			{
-				token = strtok(NULL, " ");
-				if (token == NULL)
-				{
-					puts("Missing address.");
-					return false;
-				}
+				// Remove watch by address
 				if (!ParseAddress(m_cpu, token, &addr))
 				{
-					puts("Enter a valid address.");
+					Error("Enter a valid address.\n");
 					return false;
 				}
 
 				// Remove watch
 				m_cpu->FormatAddress(addrStr, addr);
 				if (m_cpu->RemoveMemWatch(addr, 1))
-					printf("Memory watch at address %s removed.\n", addrStr);
+					Print("Memory watch at address %s removed.\n", addrStr);
 				else
-					printf("No memory watch at address %s.\n", addrStr);
-			}
-			else
-			{
-				puts("Enter a valid mode (a)ll, (n)umber or a(d)dress.");
-				return false;
+					Error("No memory watch at address %s.\n", addrStr);
 			}
 		}
-		else if (CheckToken(token, "pw", "portwatch") ||			// addportwatch PORT [(i|o|io) [(s|c|m|h|f) [ARGS]]]
+		else if (CheckToken(token, "raw", "removeallmemwatches"))	// removeallmemwatches
+		{
+			// Remove all memory watches
+			vector<CWatch*> watches;
+			GetAllMemWatches(watches);
+			for (vector<CWatch*>::iterator it = watches.begin(); it != watches.end(); it++)
+				m_cpu->RemoveWatch(*it);
+			Print("All memory watches removed.\n");
+		}
+		else if (CheckToken(token, "lpw", "listportwatches"))		// listportwatches
+		{
+			ListPortWatches();
+		}
+		else if (CheckToken(token, "pw", "portwatch") ||			// addportwatch <port> [((n)one|(i)nput|(o)|(io)nputoutput) [((s)imple|(c)ount <count>|(m)atch <sequence>|captu(r)e <maxlen>|(p)rint)]]
 			CheckToken(token, "apw", "addportwatch"))
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing port number.");
+				Error("Missing port number.\n");
 				return false;
 			}
 			if (!m_cpu->ParsePortNum(token, &portNum))
 			{
-				puts("Enter a valid port number.");
+				Error("Enter a valid port number.\n");
 				return false;
 			}
-			bool input = false;
-			bool output = false;
 			token = strtok(NULL, " ");
+			bool input;
+			bool output;
 			if (token == NULL || CheckToken(token, "n", "none"))
 			{
 				input = false;
@@ -818,7 +850,7 @@ namespace Debugger
 			}
 			else
 			{
-				puts("Enter valid input/output flags (n)one, (i)nput, (o)utput or (io)nput/output.");
+				Error("Enter valid input/output flags (n)one, (i)nput, (o)utput or (io)nput/output.\n");
 				return false;
 			}
 
@@ -826,75 +858,65 @@ namespace Debugger
 			CPortIO *port = m_cpu->GetPortIO(portNum);
 			CWatch *watch;
 			token = strtok(NULL, " ");
-			if (token != NULL)
+			if (token == NULL || CheckToken(token, "s", "simple"))
+				watch = port->AddSimpleWatch(input, output);
+			else if (CheckToken(token, "c", "count"))
 			{
-				if (CheckToken(token, "s", "simple"))
-					watch = port->AddSimpleWatch(input, output);
-				else if (CheckToken(token, "c", "count"))
+				token = strtok(NULL, " ");
+				if (token == NULL)
 				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing watch count.");
-						return false;
-					}
-					int count;
-					if (!ParseInt(token, &count) || count <= 0)
-					{
-						puts("Enter a valid watch count.");
-						return false;
-					}
-					watch = port->AddCountWatch(input, output, count);
-				}
-				else if (CheckToken(token, "m", "match"))
-				{
-					vector<UINT64> dataSeq;
-					while ((token = strtok(NULL, " ")) != NULL)
-					{
-						UINT64 data;
-						if (m_cpu->ParseData(token, port->dataSize, &data))
-							dataSeq.push_back(data);
-					}
-					if (dataSeq.size() == 0)
-					{
-						printf("Enter a sequence of %s to match.", GetSizeString(port->dataSize));
-						return false;
-					}
-					watch = port->AddMatchWatch(input, output, dataSeq);
-				}
-				else if (CheckToken(token, "r", "capture"))
-				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing maximum capture length.");
-						return false;
-					}
-					int maxLen;
-					if (!ParseInt(token, &maxLen) || maxLen <= 0)
-					{
-						puts("Enter a valid maximum capture length.");
-						return false;
-					}
-					watch = port->AddCaptureWatch(input, output, maxLen);
-				}
-				else if (CheckToken(token, "p", "print"))
-					watch = port->AddPrintWatch(input, output);
-				else
-				{
-					puts("Enter a valid I/O watch type (s)imple, (c)ount, (m)atch, captu(r)e or (p)rint.");
+					Error("Missing count.\n");
 					return false;
 				}
+				int count;
+				if (!ParseInt(token, &count) || count <= 0)
+				{
+					Error("Enter a valid count.\n");
+					return false;
+				}
+				watch = port->AddCountWatch(input, output, count);
 			}
+			else if (CheckToken(token, "m", "match"))
+			{
+				vector<UINT64> dataSeq;
+				while ((token = strtok(NULL, " ")) != NULL)
+				{
+					if (m_cpu->ParseData(token, port->dataSize, &data))
+						dataSeq.push_back(data);
+				}
+				if (dataSeq.size() == 0)
+				{
+					Error("Enter a sequence of %s to match.", GetSizeString(port->dataSize));
+					return false;
+				}
+				watch = port->AddMatchWatch(input, output, dataSeq);
+			}
+			else if (CheckToken(token, "r", "capture"))
+			{
+				token = strtok(NULL, " ");
+				if (token == NULL)
+				{
+					Error("Missing maximum capture length.\n");
+					return false;
+				}
+				int maxLen;
+				if (!ParseInt(token, &maxLen) || maxLen <= 0)
+				{
+					Error("Enter a valid maximum capture length.\n");
+					return false;
+				}
+				watch = port->AddCaptureWatch(input, output, maxLen);
+			}
+			else if (CheckToken(token, "p", "print"))
+				watch = port->AddPrintWatch(input, output);
 			else
-				watch = port->AddSimpleWatch(input, output);	
-
+			{
+				Error("Enter a valid watch type (s)imple, (c)ount, (m)atch, captu(r)e or (p)rint.\n");
+				return false;
+			}
+			
 			m_cpu->FormatPortNum(portNumStr, portNum);
-			printf("Port watch (%s) added for port %u.\n", watch->type, portNumStr);
-		}
-		else if (CheckToken(token, "lpw", "listportwatches"))		// listportwatches
-		{
-			ListPortWatches();
+			Print("Port watch [%s] added for port %u.\n", watch->type, portNumStr);
 		}
 		else if (CheckToken(token, "rpw", "removeportwatch"))		// removeportwatch (a|n|p) [NUM|PORT]
 		{
@@ -902,251 +924,172 @@ namespace Debugger
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing mode (a)ll, (n)umber or (p)ort.");
+				Error("Missing watch number or port number.\n");
 				return false;
 			}
-			
-			if (CheckToken(token, "a", "all"))
+			if (token[0] == '#')
 			{
-				// Remove all port watches
+				// Remove watch by number
 				vector<CWatch*> watches;
 				GetAllPortWatches(watches);
-				for (vector<CWatch*>::iterator it = watches.begin(); it != watches.end(); it++)
-					m_cpu->RemoveWatch(*it);
-				puts("All port watches removed.");
-			}
-			else if (CheckToken(token, "n", "number"))
-			{
-				token = strtok(NULL, " ");
-				if (token == NULL)
+				if (!ParseInt(token + 1, &number) || number < 0 || number >= watches.size())
 				{
-					puts("Missing watch number.");
+					Error("Enter a valid watch number.\n");
 					return false;
 				}
 
-				// Remove port watch by number
-				vector<CWatch*> watches;
-				GetAllPortWatches(watches);
-				int number;
-				if (ParseInt(token, &number) && number >= 0 && number < watches.size())
-				{
-					m_cpu->RemoveWatch(watches[number]);
-					printf("Port watch %d removed.\n", number);
-				}
-				else
-					puts("Enter a valid port watch number.");
+				// Remove watch
+				m_cpu->RemoveWatch(watches[number]);
+				Print("Port watch #%d removed.\n", number);
 			}
-			else if (CheckToken(token, "p", "port"))
+			else
 			{
-				token = strtok(NULL, " ");
-				if (token == NULL)
-				{
-					puts("Missing port number.");
-					return false;
-				}
+				// Remove watch by port number
 				if (!m_cpu->ParsePortNum(token, &portNum))
 				{
-					puts("Enter a valid port number.");
+					Error("Enter a valid port number.\n");
 					return false;
 				}
 
-				// Remove port watch by port number
+				// Remove watch
 				CPortIO *port = m_cpu->GetPortIO(portNum);
 				m_cpu->FormatPortNum(portNumStr, portNum);
 				if (port->RemoveWatch())
-					printf("Port watch for port %s removed.\n", portNumStr);
+					Print("Port watch for port %s removed.\n", portNumStr);
 				else
-					printf("No port watch for port %s.\n", portNumStr);
-			}
-			else
-			{
-				puts("Enter a valid mode (a)ll, (n)umber or (p)ort.");
-				return false;
+					Error("No port watch for port %s.\n", portNumStr);
 			}
 		}
-		else if (CheckToken(token, "b", "breakpoint") ||			// addbreakpoint [ADDR [(s|c) [ARGS]]] 
-			CheckToken(token, "ab", "addbreakpoint"))
+		else if (CheckToken(token, "rapw", "removeallportwatches")) // removeallportwatches
 		{
-			// Parse arguments
-			token = strtok(NULL, " ");
-			CBreakpoint *bp;
-			if (token != NULL)
-			{
-				if (!ParseAddress(m_cpu, token, &addr))
-				{
-					puts("Enter a valid address.");
-					return false;
-				}
-			
-				token = strtok(NULL, " ");
-				if (token != NULL)
-				{
-					if (CheckToken(token, "s", "simple"))
-						bp = m_cpu->AddSimpleBreakpoint(addr);
-					else if (CheckToken(token, "c", "count"))
-					{
-						token = strtok(NULL, " ");
-						if (token == NULL)
-						{
-							puts("Missing breakpoint count.");
-							return false;
-						}
-						int count;
-						if (!ParseInt(token, &count) || count <= 0)
-						{
-							puts("Enter a valid breakpoint count.");
-							return false;
-						}
-
-						bp = m_cpu->AddCountBreakpoint(addr, count);
-					}
-					else
-					{
-						puts("Enter a valid breakpoint type (s)imple or (c)ount.");
-						return false;
-					}
-				}
-				else
-					bp = m_cpu->AddSimpleBreakpoint(addr);
-			}
-			else
-			{
-				if (m_cpu->instrCount == 0)
-				{
-					puts("Cannot set breakpoint at current position as processor not ready.");
-					return false;
-				}
-				bp = m_cpu->AddSimpleBreakpoint(pc);
-			}
-
-			m_cpu->FormatAddress(addrStr, bp->addr);
-			printf("Breakpoint [%s] added at %s.\n", bp->type, addrStr);
+			// Remove all port watches
+			vector<CWatch*> watches;
+			GetAllPortWatches(watches);
+			for (vector<CWatch*>::iterator it = watches.begin(); it != watches.end(); it++)
+				m_cpu->RemoveWatch(*it);
+			Print("All port watches removed.\n");
 		}
 		else if (CheckToken(token, "lb", "listbreakpoints"))		// listbreakpoints
 		{
 			ListBreakpoints();
 		}
-		else if (CheckToken(token, "rb", "removebreakpoint"))		// removebreakpoint [(a|n|d) [NUM|ADDR]]
-		{
-			// Parse arguments
-			token = strtok(NULL, " ");
-			if (token != NULL)
-			{
-				if (CheckToken(token, "a", "all"))
-				{
-					m_cpu->RemoveAllBreakpoints();
-					puts("All breakpoints removed.");
-				}
-				else if (CheckToken(token, "n", "number"))
-				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing breakpoint number.");
-						return false;
-					}
-
-					// Remove breakpoint
-					int number;
-					if (ParseInt(token, &number) && number >= 0 && number < m_cpu->bps.size())
-					{
-						m_cpu->RemoveBreakpoint(m_cpu->bps[number]);
-						printf("Breakpoint %d removed.\n", number);
-					}
-					else
-						puts("Enter a valid breakpoint number.");
-				}
-				else if (CheckToken(token, "d", "address"))
-				{
-					token = strtok(NULL, " ");
-					if (token == NULL)
-					{
-						puts("Missing breakpoint address.");
-						return false;
-					}
-					if (!ParseAddress(m_cpu, token, &addr))
-					{
-						puts("Enter a valid breakpoint address.");
-						return false;
-					}
-
-					// Remove breakpoint
-					m_cpu->FormatAddress(addrStr, addr);
-					if (m_cpu->RemoveBreakpoint(addr))
-						printf("Breakpoint at address %s removed.\n", addrStr);
-					else
-						printf("No breakpoint at address %s.\n", addrStr);
-				}
-				else
-					puts("Enter a valid mode (a)ll, (n)umber or a(d)dress.");
-			}
-			else
-			{
-				if (m_cpu->RemoveBreakpoint(pc))
-					puts("Current breakpoint removed.");
-			}
-		}
-		else if (CheckToken(token, "m", "monitor") ||				// addmonitor REG
-			CheckToken(token, "am", "addmonitor"))
+		else if (CheckToken(token, "b", "breakpoint") ||			// addbreakpoint [<addr> [[s)imple|(c)ount <count>)]]
+			CheckToken(token, "ab", "addbreakpoint"))
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
+				token = "-";
+			if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Missing register name.");
+				Error("Enter a valid address.\n");
 				return false;
 			}
-			CRegMonitor *regMon = m_cpu->AddRegMonitor(token);
-			if (regMon == NULL)
-			{
-				puts("Enter a valid register name.");
-				return false;
-			}
-			
-			printf("Monitor added to register %s.\n", regMon->reg->name);
-		}
-		else if (CheckToken(token, "lm", "listmonitors"))			// listmonitors
-		{
-			ListMonitors();
-		}
-		else if (CheckToken(token, "rm", "removemonitor"))			// removemonitor (a|n) [REG]
-		{
-			// Parse arguments
 			token = strtok(NULL, " ");
-			if (token == NULL)
-			{
-				puts("Missing mode (a)ll or (n)ame.");
-				return false;
-			}
-
-			if (CheckToken(token, "a", "all"))
-			{
-				m_cpu->RemoveAllRegMonitors();
-				puts("All register monitors removed.");
-			}
-			else if (CheckToken(token, "n", "name"))
+			CBreakpoint *bp;
+			if (token == NULL || CheckToken(token, "s", "simple"))
+				bp = m_cpu->AddSimpleBreakpoint(addr);
+			else if (CheckToken(token, "c", "count"))
 			{
 				token = strtok(NULL, " ");
 				if (token == NULL)
 				{
-					puts("Missing register name.");
+					Error("Missing count.\n");
+					return false;
+				}
+				int count;
+				if (!ParseInt(token, &count) || count <= 0)
+				{
+					Error("Enter a valid count.\n");
 					return false;
 				}
 
-				CRegister *reg = m_cpu->GetRegister(token);
-				if (reg != NULL)
-				{
-					m_cpu->RemoveRegMonitor(reg->name);
-					printf("Monitor for register %s removed.\n", reg->name);
-				}
-				else
-					puts("Enter a valid register name.");
+				bp = m_cpu->AddCountBreakpoint(addr, count);
 			}
 			else
-				puts("Enter a valid mode (a)ll or (n)ame.");
+			{
+				Error("Enter a valid breakpoint type (s)imple or (c)ount.\n");
+				return false;
+			}
+
+			m_cpu->FormatAddress(addrStr, bp->addr);
+			Print("Breakpoint [%s] added at address %s.\n", bp->type, addrStr);
 		}
-		else if (CheckToken(token, "l", "list") ||					// listdisassem [START [END]]
-			CheckToken(token, "ld", "listdisassem"))
+		else if (CheckToken(token, "rb", "removebreakpoint"))		// removebreakpoint [#<num>|<addr>]
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			if (token == NULL)
+				token = "-";
+			if (token[0] == '#')
+			{
+				// Remove breakpoint by number
+				if (!ParseInt(token + 1, &number) || number < 0 || number >= m_cpu->bps.size())
+				{
+					Error("Enter a valid breakpoint number.\n");
+					return false;
+				}
+
+				// Remove breakpoint
+				m_cpu->RemoveBreakpoint(m_cpu->bps[number]);
+				Print("Breakpoint #%d removed.\n", number);
+			}
+			else
+			{
+				// Remove breakpoint by address
+				if (!ParseAddress(m_cpu, token, &addr))
+				{
+					Error("Enter a valid address.\n");
+					return false;
+				}
+
+				// Remove breakpoint
+				m_cpu->FormatAddress(addrStr, addr);
+				if (m_cpu->RemoveBreakpoint(addr))
+					Print("Breakpoint at address %s removed.\n", addrStr);
+				else
+					Error("No breakpoint at address %s.\n", addrStr);
+			}
+		}
+		else if (CheckToken(token, "rab", "removeallbreakpoints"))  // removeallbreakpoints
+		{
+			m_cpu->RemoveAllBreakpoints();
+			Print("All breakpoints removed.\n");
+		}	
+		else if (CheckToken(token, "lm", "listmonitors"))			// listmonitors
+		{
+			ListMonitors();
+		}	
+		else if (CheckToken(token, "m", "monitor") ||				// addmonitor <reg>
+			CheckToken(token, "am", "addmonitor"))
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			CRegister *reg;
+			if (!ParseRegister(token, reg))
+				return false;
+
+			m_cpu->AddRegMonitor(reg->name);
+			Print("Monitor added to register %s.\n", reg->name);
+		}
+		else if (CheckToken(token, "rm", "removemonitor"))			// removemonitor <reg>
+		{
+			// Parse arguments
+			token = strtok(NULL, " ");
+			CRegister *reg;
+			if (!ParseRegister(token, reg))
+				return false;
+
+			m_cpu->RemoveRegMonitor(reg->name);
+			Print("Monitor for register %s removed.\n", reg->name);
+		}
+		else if (CheckToken(token, "ram", "removeallmonitors"))     // removeallmonitors
+		{
+			m_cpu->RemoveAllRegMonitors();
+			Print("All register monitors removed.\n");
+		}
+		else if (CheckToken(token, "l", "list") ||					// listdisassembly [<start>=last [#<instrs>=20|<end>]]
+			CheckToken(token, "ld", "listdisassembly"))
 		{
 			// Get start address
 			UINT32 start;
@@ -1155,7 +1098,7 @@ namespace Debugger
 			{
 				if (!ParseAddress(m_cpu, token, &start))
 				{
-					puts("Enter a valid start address.");
+					Error("Enter a valid start address.\n");
 					return false;
 				}
 			}
@@ -1171,12 +1114,25 @@ namespace Debugger
 			token = strtok(NULL, " ");
 			if (token != NULL)
 			{
-				if (!ParseAddress(m_cpu, token, &end))
+				if (token[0] == '#')
 				{
-					puts("Enter a valid end address.");
-					return false;
+					if (!ParseInt(token + 1, &number) || number <= 0)
+					{
+						Error("Enter a valid number of instructions.\n");
+						return false;
+					}
+					numInstrs = (unsigned)number;
+					end = 0xFFFFFFFF;
 				}
-				numInstrs = 0xFFFFFFFF;
+				else 
+				{
+					if (!ParseAddress(m_cpu, token, &end))
+					{
+						Error("Enter a valid end address.\n");
+						return false;
+					}
+					numInstrs = 0xFFFFFFFF;
+				}
 			}
 			else
 			{
@@ -1188,7 +1144,7 @@ namespace Debugger
 			// List the disassembled code
 			m_listDism = ListDisassembly(start, end, numInstrs);
 		}
-		else if (CheckToken(token, "ly", "listmemory"))				// listmemory [START [END]]
+		else if (CheckToken(token, "ly", "listmemory"))				// listmemory [<start>=last [#<rows>=8|<end>]]
 		{
 			// Get start address
 			UINT32 start;
@@ -1197,7 +1153,7 @@ namespace Debugger
 			{
 				if (!ParseAddress(m_cpu, token, &start))
 				{
-					puts("Enter a valid start address.");
+					Error("Enter a valid start address.\n");
 					return false;
 				}
 			}
@@ -1212,30 +1168,41 @@ namespace Debugger
 			token = strtok(NULL, " ");
 			if (token != NULL)
 			{
-				if (!ParseAddress(m_cpu, token, &end))
+				if (token[0] == '#')
 				{
-					puts("Enter a valid end address.");
-					return false;
+					if (!ParseInt(token + 1, &number) || number <= 0)
+					{
+						Error("Enter a valid number of rows.\n");
+						return false;
+					}
+					end = start + number * m_memBytesPerRow;
+				}
+				else
+				{
+					if (!ParseAddress(m_cpu, token, &end))
+					{
+						Error("Enter a valid end address.\n");
+						return false;
+					}
 				}
 			}
 			else
 				// Default is 8 rows after start
 				end = start + 8 * m_memBytesPerRow;
 
-			// List the code
+			// List the memory
 			m_listMem = ListMemory(start, end, m_memBytesPerRow);
 		}
-		else if (CheckToken(token, "p", "print"))					// print EXPR
+		else if (CheckToken(token, "p", "print"))					// print <expr>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{	
-				puts("Missing argument.");
+				Error("Missing expression.\n");
 				return false;
 			}
 
-			UINT64 data;
 			char str[255];
 			const char *result;
 			if (ParseAddress(m_cpu, token, &addr))
@@ -1252,145 +1219,114 @@ namespace Debugger
 			}
 			else 
 				result = token;	
-			printf("%s = %s\n", token, result);
+			Print("%s = %s\n", token, result);
 		}
-		else if (CheckToken(token, "pr", "printregister"))			// printregister REG
+		else if (CheckToken(token, "pr", "printregister")) // printregister <reg>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
-			if (token == NULL)
-			{
-				puts("Missing register name.");
+			CRegister *reg;
+			if (!ParseRegister(token, reg))
 				return false;
-			}
-			CRegister *reg = m_cpu->GetRegister(token);
-			if (reg == NULL)
-			{
-				printf("No register called '%s'.\n", token);
-				return false;
-			}
 
 			char valStr[50];
+			// TODO - hook up size
 			reg->GetValue(valStr);
-			printf("Register %s = %s\n", reg->name, valStr);
+			Print("Register %s = %s\n", reg->name, valStr);
 		}
-		else if (CheckToken(token, "sr", "setregister"))			// setregister REG VALUE
+		else if (CheckToken(token, "sr", "setregister", mod, 9, "vl")) // setregister <reg> <expr>
 		{
 			// Parse arguments
+			if (!ParseDataSize(mod, size))
+				return false;
+			token = strtok(NULL, " ");
+			CRegister *reg;
+			if (!ParseRegister(token, reg))
+				return false;
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing register name.");
-				return false;
-			}
-			CRegister *reg = m_cpu->GetRegister(token);
-			if (reg == NULL)
-			{
-				printf("No register called '%s'.\n", token);
-				return false;
-			}
-			token = strtok(NULL, " ");
-			if (token == NULL)
-			{
-				puts("Missing value to set.");
+				Error("Missing value to set.\n");
 				return false;
 			}
 
 			if (!reg->SetValue(token))
 			{
-				printf("Unable to set value of register %s.\n", reg->name);
+				Error("Unable to set value of register %s.\n", reg->name);
 				return false;
 			}
 
 			char valStr[50];
 			reg->GetValue(valStr);
-			printf("Set register %s to %s.\n", reg->name, valStr);
+			Print("Set register %s to %s.\n", reg->name, valStr);
 		}
-		else if (CheckToken(token, "py", "printmemory"))			// printmemory ADDR SIZE
+		else if (CheckToken(token, "py", "printmemory", mod, 9, "b")) // printmemory[.<size>=b] <addr>
 		{
 			// Parse arguments
+			if (!ParseDataSize(mod, size))
+				return false;
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing address.");
+				Error("Missing address.\n");
 				return false;
 			}
 			if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Enter a valid address.");
+				Error("Enter a valid address.\n");
 				return false;
 			}
 
-			token = strtok(NULL, " ");
-			unsigned dataSize = -1;
-			if (token != NULL)
-			{
-				if (!ParseDataSize(token, dataSize))
-					return false;
-			}
-			else
-				dataSize = 1;
-			
-			const char *sizeStr = GetSizeString(dataSize);
-			UINT64 data = m_cpu->ReadMem(addr, dataSize);
-			char dataStr[50];
-			m_cpu->FormatData(dataStr, dataSize, data);
+			// Read and print memory
+			sizeStr = GetSizeString(size);
+			data = m_cpu->ReadMem(addr, size);
+			m_cpu->FormatData(dataStr, size, data);
 			m_cpu->FormatAddress(addrStr, addr);
-			printf("%s data at %s = %s.\n", sizeStr, addrStr, dataStr);
+			Print("%s data at %s = %s.\n", sizeStr, addrStr, dataStr);
 		}
-		else if (CheckToken(token, "sy", "setmemory"))				// setmemory ADDR SIZE VALUE
+		else if (CheckToken(token, "sy", "setmemory", mod, 9, "b"))	// setmemory[.<size>=b] <addr> <value>
 		{
 			// Parse arguments
+			if (!ParseDataSize(mod, size))
+				return false;
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing address.");
+				Error("Missing address.\n");
 				return false;
 			}
 			if (!ParseAddress(m_cpu, token, &addr))
 			{
-				puts("Enter a valid address.");
+				Error("Enter a valid address.\n");
 				return false;
 			}
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing a size (b)yte, (w)ord, (l)ong or (v)erylong or number (1, 2, 4 or 8).");
+				Error("Missing value to set.\n");
 				return false;
 			}
-			
-			unsigned dataSize;
-			if (!ParseDataSize(token, dataSize))
-				return false;
-			
-			token = strtok(NULL, " ");
-			if (token == NULL)
+			sizeStr = GetSizeString(size);
+			if (!m_cpu->ParseData(token, size, &data))
 			{
-				puts("Missing value to set.");
-				return false;
-			}
-			const char *sizeStr = GetSizeString(dataSize);
-			UINT64 data;
-			if (!m_cpu->ParseData(token, dataSize, &data))
-			{
-				printf("Enter a valid %s value.\n", sizeStr);
+				Error("Enter a valid %s value.\n", sizeStr);
 				return false;
 			}	
 			
-			m_cpu->WriteMem(addr, dataSize, data);
-			char dataStr[50];
-			m_cpu->FormatData(dataStr, dataSize, data);
+			// Set memory
+			m_cpu->WriteMem(addr, size, data);
+			m_cpu->FormatData(dataStr, size, data);
 			m_cpu->FormatAddress(addrStr, addr);
-			printf("Set %s data at %s to %s.\n", sizeStr, addrStr, dataStr);
+			Print("Set %s data at %s to %s.\n", sizeStr, addrStr, dataStr);
 		}
-		else if (CheckToken(token, "pp", "printio"))				// printio PORT
-		{
-			// TODO - read I/O
-		}
-		else if (CheckToken(token, "sp", "sendio"))					// sendio PORT VALUE
-		{
-			// TODO - send I/O
-		}
+		//else if (CheckToken(token, "pp", "printio"))				// printio <port>
+		//{
+		//	// TODO - read I/O
+		//}
+		//else if (CheckToken(token, "sp", "sendio"))				// sendio <port> <value>
+		//{
+		//	// TODO - send I/O
+		//}
 		else if (CheckToken(token, "cfg", "configure"))				// configure ...
 		{
 			// Parse arguments
@@ -1398,14 +1334,14 @@ namespace Debugger
 			if (token == NULL)
 			{
 				// If no arguments, then print out current configuration
-				printf("Configuration:\n");
-				printf(" %-20s %-12s %s\n", "Code Analysis",     (m_analyseCode ? "On" : "Off"), "(a)nalysis"); 
-				printf(" %-20s %-12s %s\n", "Address Format",    GetFmtConfig(m_addrFmt),        "a(d)dressfmt"); 
-				printf(" %-20s %-12s %s\n", "Port Format",       GetFmtConfig(m_portFmt),        "(p)ortfmt"); 
-				printf(" %-20s %-12s %s\n", "Data Format",       GetFmtConfig(m_dataFmt),        "da(t)afmt");
-				printf(" %-20s %-12s %s\n", "Show Labels",       (m_showLabels  ? "On" : "Off"), "show(l)abels");
-				printf(" %-20s %-12s %s\n", "Show Opcodes",      (m_showOpCodes ? "On" : "Off"), "show(o)pcodes");
-				printf(" %-20s %-12u %s\n", "Mem Bytes Per Row", m_memBytesPerRow,               "mem(b)ytesrow");
+				Print("Configuration:\n");
+				Print(" %-20s %-12s %s\n", "Code Analysis",     (m_analyseCode ? "On" : "Off"), "(a)nalysis"); 
+				Print(" %-20s %-12s %s\n", "Address Format",    GetFmtConfig(m_addrFmt),        "a(d)dressfmt"); 
+				Print(" %-20s %-12s %s\n", "Port Format",       GetFmtConfig(m_portFmt),        "(p)ortfmt"); 
+				Print(" %-20s %-12s %s\n", "Data Format",       GetFmtConfig(m_dataFmt),        "da(t)afmt");
+				Print(" %-20s %-12s %s\n", "Show Labels",       (m_showLabels  ? "On" : "Off"), "show(l)abels");
+				Print(" %-20s %-12s %s\n", "Show Opcodes",      (m_showOpCodes ? "On" : "Off"), "show(o)pcodes");
+				Print(" %-20s %-12u %s\n", "Mem Bytes Per Row", m_memBytesPerRow,               "mem(b)ytesrow");
 				return false;
 			}
 
@@ -1446,7 +1382,7 @@ namespace Debugger
 			}
 			else
 			{
-				puts("Enter a valid option (a)nalysis, a(d)dressfmt, (p)ortfmt, da(t)afmt.");
+				Error("Enter a valid option (a)nalysis, a(d)dressfmt, (p)ortfmt, da(t)afmt, show(l)abels, show(o)pcodes, mem(b)ytesrow.\n");
 				return false;
 			}
 		}
@@ -1456,14 +1392,14 @@ namespace Debugger
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing filename.");
+				Error("Missing filename.\n");
 				return false;
 			}
 
 			if (LoadState(token))
-				printf("Debugger state successfully loaded from <%s>\n", token);
+				Print("Debugger state successfully loaded from <%s>\n", token);
 			else
-				printf("Unable to load debugger state from <%s>\n", token);
+				Error("Unable to load debugger state from <%s>\n", token);
 		}
 		else if (CheckToken(token, "ss", "savestate"))				// savestate FILENAME
 		{
@@ -1471,49 +1407,144 @@ namespace Debugger
 			token = strtok(NULL, " ");
 			if (token == NULL)
 			{
-				puts("Missing filename.");
+				Error("Missing filename.\n");
 				return false;
 			}
 
 			if (SaveState(token))
-				printf("Debugger state successfully saved to <%s>\n", token);
+				Print("Debugger state successfully saved to <%s>\n", token);
 			else
-				printf("Unable to save debugger state to <%s>\n", token);
+				Error("Unable to save debugger state to <%s>\n", token);
 		}
 		else if (CheckToken(token, "h", "help"))					// help
 		{
-			const char *fmt = " %-5s %-15s %s\n";
-			printf("Debugger Commands:\n");
-			printf(fmt, "x",    "exit",           "");
-			printf(fmt, "n",    "next",           "[COUNT]");
-			printf(fmt, "s",    "stepover",       "");
-			printf(fmt, "si",   "stepinto",       "");
-			printf(fmt, "so",   "stepout",        "");
-			printf(fmt, "si",   "stepinto",       "");
-			printf(fmt, "si",   "continue",       "[ADDR]");
-			printf(fmt, "lc",   "listcpus",       "");
-			printf(fmt, "sc",   "switchcpu",      "(NAME|NUM)");
-			printf(fmt, "lr",   "listregisters",  "");
-			printf(fmt, "le",   "listexceptions", "");
-			printf(fmt, "li",   "listinterrupts", "");
-			printf(fmt, "lo",   "listios",        "");
-			printf(fmt, "ln",   "listregions",    "");
-			printf(fmt, "al",   "addlabel",       "ADDR NAME");
-			printf(fmt, "ll",   "listlabels",     "[(a)ll|(c)ustom|a(u)to]");
-			printf(fmt, "rl",   "removelabel",    "((a)ll|(n)ame|a(d)dress) [NAME|ADDR]");
-			printf(fmt, "ac",   "addcomment",     "ADDR TEXT...");
-			printf(fmt, "rc",   "removecomment",  "ADDR");
-			printf(fmt, "t/at", "addtrap",        "(e|i) ID");
-			// TODO - finish
+			// TODO - do this better
+			const char *fmt = " %-6s %-20s %s\n";
+			Print("Debugger Commands:\n");
+			Print(fmt, "x",      "exit",                   "");
+			Print(fmt, "n",      "next",                   "[<count>=1]");
+			Print(fmt, "nf",     "nextframe",              "[<count>=1]");
+			Print(fmt, "s",      "stepover",               "");
+			Print(fmt, "si",     "stepinto",               "");
+			Print(fmt, "so",     "stepout",                "");
+			Print(fmt, "c",      "continue",               "[<addr>]");
+			Print(fmt, "lc",     "listcpus",               "");
+			Print(fmt, "sc",     "switchcpu",              "(<name>|<num>)");
+			Print(fmt, "dc",     "disablecpu",             "(<name>|<num>)");
+			Print(fmt, "ec",     "enablecpu",              "(<name>|<num>)");
+			Print(fmt, "lr",     "listregisters",          "");
+			Print(fmt, "le",     "listexceptions",         "");
+			Print(fmt, "li",     "listinterrupts",         "");
+			Print(fmt, "lo",     "listios",                "");
+			Print(fmt, "ln",     "listregions",            "");
+			Print(fmt, "ll",     "listlabels",             "[(d)efault|(c)ustom|(a)utos|(e)ntrypoints|e(x)cephandlers|(i)interhandlers|(j)umptargets|(l)ooppoints]");
+			Print(fmt, "al",     "addlabel",               "<addr> <name>");
+			Print(fmt, "rl",     "removelabel",            "[<name>|<addr>]");
+			Print(fmt, "ral",    "removealllabels",        "");
+			Print(fmt, "ac",     "addcomment",             "<addr> <text...>");
+			Print(fmt, "rc",     "removecomment",          "[<addr>]");
+			Print(fmt, "rac",    "removeallcomments",      "");
+			Print(fmt, "t/at",   "addtrap",		           "((e)xception|(i)nterrupt) <id>");
+			Print(fmt, "rt",     "removetrap",             "((e)xception|(i)nterrupt) <id>");
+			Print(fmt, "rat",    "removealltraps",         "[(a)ll|(e)xceptions|(i)nterrupts]");
+			Print(fmt, "lw",     "listmemwatches",         "");
+			Print(fmt, "w/aw",   "addmemwatch[.<size>=b]", "<addr> [((n)one|(r)ead|(w)rite|(rw)eadwrite) [((s)imple|(c)ount <count>|(m)atch <sequence>|captu(r)e <maxlen>|(p)rint)]]");
+			Print(fmt, "rw",     "removememwatch",         "(#<num>|<addr>)");
+			Print(fmt, "raw",    "removeallmemwatches",    "");
+			Print(fmt, "pw/apw", "addportwatch",           "<port> [((n)one|(i)nput|(o)utput|(io)nputoutput) [(s)imple|(c)ount <count>|(m)atch <sequence>|captu(r)e <maxlen>|(p)rint]]");
+			Print(fmt, "rpw",    "removeportwatch",        "(#<num>|<port>)");
+			Print(fmt, "rapw",   "removeallportwatches",   "");
+			Print(fmt, "lb",     "listbreakpoints",        "");
+			Print(fmt, "b/ab",   "addbreakpoint",          "[<addr> [[s)imple|(c)ount <count>)]]");
+			Print(fmt, "rb",     "removebreakpoint",       "[#<num>|<addr>]");
+			Print(fmt, "rab",    "removeallbreakpoints",   "");
+			Print(fmt, "lm",     "listmonitors",           "");
+			Print(fmt, "m/am",   "addmonitor",             "<reg>");
+			Print(fmt, "rm",     "removemonitor",          "<reg>");
+			Print(fmt, "ram",    "removeallmonitors",      "");
+			Print(fmt, "l/ld",   "listdisassembly",        "[<start>=last [#<instrs>=20|<end>]]");
+			Print(fmt, "l/ly",   "listmemory",             "[<start>=last [#<rows>=8|<end>]]");
+			Print(fmt, "p",      "print",                  "<expr>");
+			Print(fmt, "pr",     "printregister",          "<reg>");
+			Print(fmt, "sr",     "setregister",            "<reg> <expr>");
+			Print(fmt, "py",     "printmemory[.<size>=b]", "<addr>");
+			Print(fmt, "sy",     "setmemory[.<size>=b]",   "<addr> <value>");
 		}
 		else
-			printf("Unknown command '%s'.\n", token);
+			Print("Unknown command '%s'.\n", token);
 		return false;
 	}
 
-	bool CConsoleDebugger::CheckToken(const char *str, const char *simple, const char *full)
+	void CConsoleDebugger::Read(char *str, size_t maxSize)
 	{
-		return (stricmp(str, simple) == 0 || stricmp(str, full) == 0);
+		if (fgets(str, maxSize, stdin) != NULL)
+		{
+			char *pos = strchr(str, '\n');
+			if (pos)
+				*pos = '\0';
+		}
+		else
+			str[0] = '\0';
+	}
+
+	void CConsoleDebugger::Print(const char *fmtStr, ...)
+	{
+		va_list vl;
+		va_start(vl, fmtStr);
+		PrintVL(fmtStr, vl);
+		va_end(vl);
+	}
+
+	void CConsoleDebugger::Error(const char *fmtStr, ...)
+	{
+		// Don't log errors to file
+		va_list vl;
+		va_start(vl, fmtStr);
+		vprintf(fmtStr, vl);	
+		va_end(vl);
+	}
+
+	void CConsoleDebugger::PrintVL(const char *fmtStr, va_list vl)
+	{
+		if (m_file != NULL)
+			vfprintf(m_file, fmtStr, vl);
+		else
+			vprintf(fmtStr, vl);	
+	}
+
+	void CConsoleDebugger::Flush()
+	{
+		fflush(stdout);
+	}
+
+	bool CConsoleDebugger::CheckToken(const char *token, const char *simple, const char *full)
+	{
+		return stricmp(token, simple) == 0 || stricmp(token, full) == 0;
+	}
+
+	bool CConsoleDebugger::CheckToken(const char *token, const char *simple, const char *full, char *modifier, size_t modSize, const char *defaultMod)
+	{
+		const char *pos = strchr(token, '.');
+		if (pos == NULL)
+		{
+			strncpy(modifier, defaultMod, modSize);
+			modifier[modSize] = '\0';
+			return CheckToken(token, simple, full);
+		}
+		else
+		{
+			pos++;
+			if (pos == '\0')
+				return false;
+			strncpy(modifier, pos, modSize);
+			modifier[modSize] = '\0';
+			
+			char actual[255];
+			size_t actSize = min(pos - token - 1, 254);
+			strncpy(actual, token, actSize);
+			actual[actSize] = '\0';
+			return CheckToken(actual, simple, full);
+		}
 	}
 
 	void CConsoleDebugger::Truncate(char *dst, size_t maxLen, const char *src)
@@ -1522,6 +1553,17 @@ namespace Debugger
 		if (strlen(src) > maxLen)
 			strncpy(&dst[maxLen - 3], "...", 3);
 		dst[maxLen] = '\0';
+	}
+
+	void CConsoleDebugger::UpperFirst(char *dst, const char *src)
+	{
+		if (*src != '\0')
+		{
+			*dst++ = toupper(*src++);
+			while (*src != '\0')
+				*dst++ = *src++;
+		}
+		*dst = '\0';
 	}
 
 	void CConsoleDebugger::FormatOpCodes(char *str, int addr, int codesLen)
@@ -1605,37 +1647,78 @@ namespace Debugger
 		}
 		else
 		{
-			puts("Enter a valid size (b)yte, (w)ord, (l)ong or (v)erylong or a number 1, 2, 4 or 8.");
+			Error("Enter a valid size (b)yte, (w)ord, (l)ong or (v)erylong or a number 1, 2, 4 or 8.\n");
 			return false;
 		}
+	}
+
+	bool CConsoleDebugger::ParseCPU(const char *str, CCPUDebug *&cpu)
+	{
+		if (str == NULL)
+		{
+			Error("Missing CPU name or number.\n");
+			return false;
+		}
+		int cpuNum;
+		if (ParseInt(str, &cpuNum))
+		{
+			if (cpuNum >= 0 && cpuNum < (int)cpus.size())
+			{
+				cpu = cpus[cpuNum];
+				return true;
+			}
+		}
+		cpu = GetCPU(str);
+		if (cpu == NULL)
+		{
+			Error("No CPU with that name or number.\n");
+			return false;
+		}
+		return true;
+	}
+
+	bool CConsoleDebugger::ParseRegister(const char *str, CRegister *&reg)
+	{
+		if (str == NULL)
+		{
+			Error("Missing register name.\n");
+			return false;
+		}
+		reg = m_cpu->GetRegister(str);
+		if (reg == NULL)
+		{
+			Error("Enter a valid register name.\n");
+			return false;
+		}
+		return true;
 	}
 
 	bool CConsoleDebugger::SetBoolConfig(const char *str, bool &cfg)
 	{
 		if (str == NULL)
 		{
-			printf("Current setting: %-12s\n", (cfg ? "On" : "Off"));
-			puts("Change setting with (o)n, o(f)f.");
+			Print("Current setting: %-12s\n", (cfg ? "On" : "Off"));
+			Print("Change setting with (o)n, o(f)f.\n");
 			return false;
 		}
 
 		if (CheckToken(str, "o", "on"))
 		{
 			cfg = true;
-			printf("Changed setting: On\n");
+			Print("Changed setting: On\n");
 			ApplyConfig();
 			return true;
 		}
 		else if (CheckToken(str, "f", "off"))
 		{
 			cfg = false;
-			printf("Changed setting: Off\n");
+			Print("Changed setting: Off\n");
 			ApplyConfig();
 			return true;
 		}
 		else
 		{
-			puts("Enter a valid setting (o)n, o(f)f.");
+			Error("Enter a valid setting (o)n, o(f)f.\n");
 			return false;
 		}
 	}
@@ -1644,19 +1727,19 @@ namespace Debugger
 	{
 		if (str == NULL)
 		{
-			printf("Current setting: %-12u\n", cfg);
+			Print("Current setting: %-12u\n", cfg);
 			return false;
 		}
 
 		int number;
 		if (!ParseInt(str, &number))
 		{
-			puts("Enter a valid number.");
+			Error("Enter a valid number.\n");
 			return false;
 		}
 
 		cfg = (unsigned)number;
-		printf("Changed setting: %-12u\n", cfg);
+		Print("Changed setting: %-12u\n", cfg);
 		ApplyConfig();
 		return true;
 	}
@@ -1678,8 +1761,8 @@ namespace Debugger
 	{
 		if (str == NULL)
 		{
-			printf("Current setting: %-12s\n", GetFmtConfig(cfg));
-			puts("Change setting with (h)ex, hex(z)ero, hexdo(l)ar, hex(p)osth, (d)ecimal, (b)inary.");
+			Print("Current setting: %-12s\n", GetFmtConfig(cfg));
+			Print("Change setting with (h)ex, hex(z)ero, hexdo(l)ar, hex(p)osth, (d)ecimal, (b)inary.\n");
 			return false;
 		}
 
@@ -1691,35 +1774,36 @@ namespace Debugger
 		else if (CheckToken(str, "b", "binary"))    cfg = Binary;
 		else
 		{
-			puts("Enter a valid setting (h)ex, hex(z)ero, hexdo(l)ar, hex(p)osth, (d)ecimal, (b)inary.");
+			Error("Enter a valid setting (h)ex, hex(z)ero, hexdo(l)ar, hex(p)osth, (d)ecimal, (b)inary.\n");
 			return false;
 		}
 
-		printf("Changed setting: %-12s\n", GetFmtConfig(cfg));
+		Print("Changed setting: %-12s\n", GetFmtConfig(cfg));
 		ApplyConfig();
 		return true;
 	}
 
 	void CConsoleDebugger::ListCPUs()
 	{
-		puts("CPUs:");
+		Print("CPUs:\n");
 		if (cpus.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
-		int num = 0;
+		Print(" %-3s %-12s %-9s %12s\n", "Num", "CPU", "Debugging", "Instr Count"); 
+		unsigned num = 0;
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
-			printf(" %d - %s\n", num++, (*it)->name); 
+			Print(" %-3u %-12s %-9s %12llu\n", num++, (*it)->name, ((*it)->enabled ? "Enabled" : "Disabled"), (*it)->instrCount);
 	}
 
 	void CConsoleDebugger::ListRegisters()
 	{
-		printf("%s Registers:\n", m_cpu->name);
+		Print("%s Registers:\n", m_cpu->name);
 		if (m_cpu->regs.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 		
@@ -1748,6 +1832,7 @@ namespace Debugger
 		vector<size_t> valueWidths(numGroups);
 		vector<size_t> groupWidths(numGroups);
 		char valStr[50];
+		Print(" ");
 		for (size_t index = 0; index < numGroups; index++)
 		{
 			labelWidths[index] = 0;
@@ -1763,14 +1848,15 @@ namespace Debugger
 
 			const char *group = groups[index];
 			groupWidths[index] = max<size_t>(labelWidths[index] + valueWidths[index] + 3, strlen(group) + 1);
-			printf("%-*s", (int)groupWidths[index], group);
+			Print("%-*s", (int)groupWidths[index], group);
 		}
-		puts("");
+		Print("\n");
 
 		// Print rows of register values
 		char rowStr[50];
 		for (size_t row = 0; row < totalRows; row++)
 		{
+			Print(" ");
 			for (size_t index = 0; index < numGroups; index++)
 			{
 				vector<CRegister*> *pRegsInGroup = &regsByGroup[index];
@@ -1785,18 +1871,18 @@ namespace Debugger
 				else
 					rowStr[0] = '\0';
 
-				printf("%-*s", (int)groupWidths[index], rowStr);
+				Print("%-*s", (int)groupWidths[index], rowStr);
 			}
-			puts("");
+			Print("\n");
 		}
 	}	
 
 	void CConsoleDebugger::ListExceptions()
 	{
-		printf("%s Exceptions:\n", m_cpu->name);
+		Print("%s Exceptions:\n", m_cpu->name);
 		if (m_cpu->exceps.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
@@ -1808,16 +1894,16 @@ namespace Debugger
 				m_cpu->FormatAddress(addrStr, handlerAddr, true, (m_analyseCode ? LFExcepHandler : LFNone));
 			else
 				addrStr[0] = '\0';
-			printf("%c%-12s %-30s %-12s %u\n", ((*it)->trap ? '*' : ' '), (*it)->id, (*it)->name, addrStr, (*it)->count);
+			Print("%c%-12s %-30s %-12s %u\n", ((*it)->trap ? '*' : ' '), (*it)->id, (*it)->name, addrStr, (*it)->count);
 		}
 	}
 
 	void CConsoleDebugger::ListInterrupts()
 	{
-		printf("%s Interrupts:\n", m_cpu->name);
+		Print("%s Interrupts:\n", m_cpu->name);
 		if (m_cpu->inters.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
@@ -1829,16 +1915,16 @@ namespace Debugger
 				m_cpu->FormatAddress(addrStr, handlerAddr, true, (m_analyseCode ? LFInterHandler : LFNone));
 			else
 				addrStr[0] = '\0';
-			printf("%c%-12s %-30s %-12s %u\n", ((*it)->trap ? '*' : ' '), (*it)->id, (*it)->name, addrStr, (*it)->count);
+			Print("%c%-12s %-30s %-12s %u\n", ((*it)->trap ? '*' : ' '), (*it)->id, (*it)->name, addrStr, (*it)->count);
 		}
 	}
 
 	void CConsoleDebugger::ListIOs()
 	{
-		printf("%s I/O Ports:\n", m_cpu->name);
+		Print("%s I/O Ports:\n", m_cpu->name);
 		if (m_cpu->ios.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
@@ -1853,7 +1939,7 @@ namespace Debugger
 			if (group == NULL || stricmp((*it)->group, group) != 0)
 			{
 				group = (*it)->group;
-				printf(" %s:\n", group);
+				Print(" %s:\n", group);
 			}
 
 			// Get location string (memory address or port number)
@@ -1888,17 +1974,17 @@ namespace Debugger
 			int outRPad = 5 - (int)outLen + (int)outLen / 2;
 			
 			// Print details
-			printf(" %c%-12s %-30s %-8s %*s%s%*s%c%*s%s%*s\n", ((*it)->watch != NULL ? '*' : ' '), locStr, (*it)->name, GetSizeString((*it)->dataSize),
+			Print(" %c%-12s %-30s %-8s %*s%s%*s%c%*s%s%*s\n", ((*it)->watch != NULL ? '*' : ' '), locStr, (*it)->name, GetSizeString((*it)->dataSize),
 				inLPad, "", inStr, inRPad, "", dirChar, outLPad, "", outStr, outRPad, "");
 		}
 	}
 
 	void CConsoleDebugger::ListRegions()
 	{
-		printf("%s Regions:\n", m_cpu->name);
+		Print("%s Regions:\n", m_cpu->name);
 		if (m_cpu->regions.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
@@ -1911,24 +1997,24 @@ namespace Debugger
 			m_cpu->FormatAddress(endStr, (*it)->addrEnd);
 
 			// Print details
-			printf("%c%s-%s %s\n", ((*it)->isCode ? '*' : ' '), startStr, endStr, (*it)->name);
+			Print("%c%s-%s %s\n", ((*it)->isCode ? '*' : ' '), startStr, endStr, (*it)->name);
 		}
 	}
 
 	void CConsoleDebugger::ListLabels(bool customLabels, ELabelFlags autoLabelFlags)
 	{
-		printf("%s Labels:\n", m_cpu->name);
+		Print("%s Labels:\n", m_cpu->name);
 		
 		unsigned count = 0;
 
 		char addrStr[20];
 		if (customLabels && m_cpu->labels.size() > 0)
 		{
-			puts(" Custom Labels:");
+			Print(" Custom Labels:\n");
 			for (vector<CLabel*>::iterator it = m_cpu->labels.begin(); it != m_cpu->labels.end(); it++)
 			{
 				m_cpu->FormatAddress(addrStr, (*it)->addr);
-				printf("  %s %s\n", addrStr, (*it)->name);
+				Print("  %s %s\n", addrStr, (*it)->name);
 				count++;
 			}
 		}
@@ -1946,7 +2032,7 @@ namespace Debugger
 				if (withFlag.size() == 0)
 					continue;
 				const char *flagStr = CAutoLabel::GetFlagString(flag);
-				printf(" %ss:\n", flagStr);
+				Print(" %ss:\n", flagStr);
 				for (vector<CAutoLabel*>::iterator it = withFlag.begin(); it != withFlag.end(); it++)
 				{
 					if (!(*it)->GetLabel(labelStr, flag))
@@ -1954,7 +2040,7 @@ namespace Debugger
 					CBreakpoint *bp = m_cpu->GetBreakpoint((*it)->addr);
 					char bpChr = (bp != NULL ? bp->symbol : ' ');
 					m_cpu->FormatAddress(addrStr, (*it)->addr);
-					printf(" %c%s %s\n", bpChr, addrStr, labelStr);
+					Print(" %c%s %s\n", bpChr, addrStr, labelStr);
 					count++;
 				}
 			}
@@ -1962,7 +2048,7 @@ namespace Debugger
 
 		if (count == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 	}
@@ -1980,20 +2066,21 @@ namespace Debugger
 
 	void CConsoleDebugger::ListMemWatches()
 	{
-		printf("%s Memory Watches:\n", m_cpu->name);
+		Print("%s Memory Watches:\n", m_cpu->name);
 
 		vector<CWatch*> watches;
 		GetAllMemWatches(watches);
 
 		if (watches.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
-		printf(" %-3s %-8s %-12s %-4s %-20s %s\n", "Num", "Type", "Address", "Trig", "Value", "Info");
+		Print(" %-3s %-8s %-12s %-6s %-4s %-20s %s\n", "Num", "Type", "Address", "Size", "Trig", "Value", "Info");
 
 		char addrStr[20];
+		const char *sizeStr;
 		const char *trigStr;
 		char valStr[20];
 		char infoStr[255];
@@ -2001,6 +2088,7 @@ namespace Debugger
 		for (vector<CWatch*>::iterator it = watches.begin(); it != watches.end(); it++)
 		{
 			m_cpu->FormatAddress(addrStr, (*it)->addr, true);
+			sizeStr = GetSizeString((*it)->size);
 			if      ((*it)->trigRead && (*it)->trigWrite) trigStr = "R/W";
 			else if ((*it)->trigRead)                     trigStr = "R";
 			else if ((*it)->trigWrite)                    trigStr = "W";
@@ -2008,7 +2096,7 @@ namespace Debugger
 			m_cpu->FormatData(valStr, (*it)->size, (*it)->GetValue());
 			if (!(*it)->GetInfo(infoStr))
 				infoStr[0] = '\0';
-			printf(" %-3u %-8s %-12s %-4s %-20s %s\n", wNum++, (*it)->type, addrStr, trigStr, valStr, infoStr);
+			Print(" %-3u %-8s %-12s %-6s %-4s %-20s %s\n", wNum++, (*it)->type, addrStr, sizeStr, trigStr, valStr, infoStr);
 		}
 	}
 
@@ -2023,18 +2111,18 @@ namespace Debugger
 
 	void CConsoleDebugger::ListPortWatches()
 	{
-		printf("%s I/O Port Watches:\n", m_cpu->name);
+		Print("%s I/O Port Watches:\n", m_cpu->name);
 
 		vector<CWatch*> watches;
 		GetAllPortWatches(watches);
 
 		if (watches.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
-		printf(" %-3s %-8s %-12s %-4s %-20s %s\n", "Num", "Type", "Location", "Trig", "Last In/Out", "Info");
+		Print(" %-3s %-8s %-12s %-4s %-20s %s\n", "Num", "Type", "Location", "Trig", "Last In/Out", "Info");
 
 		char locStr[255];
 		const char *trigStr;
@@ -2057,16 +2145,16 @@ namespace Debugger
 				m_cpu->FormatData(valStr, (*it)->size, (*it)->GetValue());
 			if (!(*it)->GetInfo(infoStr))
 				infoStr[0] = '\0';
-			printf(" %-3u %-8s %-12s %-4s %-20s %s\n", wNum++, (*it)->type, locStr, trigStr, valStr, infoStr);
+			Print(" %-3u %-8s %-12s %-4s %-20s %s\n", wNum++, (*it)->type, locStr, trigStr, valStr, infoStr);
 		}
 	}
 
 	void CConsoleDebugger::ListBreakpoints()
 	{
-		printf("%s Breakpoints:\n", m_cpu->name);
+		Print("%s Breakpoints:\n", m_cpu->name);
 		if (m_cpu->bps.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
@@ -2077,18 +2165,18 @@ namespace Debugger
 		{
 			m_cpu->FormatAddress(addrStr, (*it)->addr, true, (m_analyseCode ? LFAll : LFNone));
 			if ((*it)->GetInfo(infoStr))
-				printf(" %u - %s breakpoint [%s] at %s\n", bpNum++, (*it)->type, infoStr, addrStr);
+				Print(" %u - %s breakpoint [%s] at %s\n", bpNum++, (*it)->type, infoStr, addrStr);
 			else
-				printf(" %u - %s breakpoint at %s\n", bpNum++, (*it)->type, addrStr);
+				Print(" %u - %s breakpoint at %s\n", bpNum++, (*it)->type, addrStr);
 		}
 	}
 
 	void CConsoleDebugger::ListMonitors()
 	{
-		printf("%s Register Monitors:\n", m_cpu->name);
+		Print("%s Register Monitors:\n", m_cpu->name);
 		if (m_cpu->regMons.size() == 0)
 		{
-			puts(" None");
+			Print(" None\n");
 			return;
 		}
 
@@ -2097,7 +2185,7 @@ namespace Debugger
 		for (vector<CRegMonitor*>::iterator it = m_cpu->regMons.begin(); it != m_cpu->regMons.end(); it++)
 		{
 			(*it)->GetBeforeValue(valStr);
-			printf(" %d - %s change from: %s\n", num++, (*it)->reg->name, valStr);
+			Print(" %d - %s change from: %s\n", num++, (*it)->reg->name, valStr);
 		}
 	}
 
@@ -2171,7 +2259,7 @@ namespace Debugger
 		// Format start and end addresses and output title
 		m_cpu->FormatAddress(startStr, start);
 		m_cpu->FormatAddress(endStr, end);
-		printf("%s Code %s - %s:\n", m_cpu->name, startStr, endStr);
+		Print("%s Code %s - %s:\n", m_cpu->name, startStr, endStr);
 
 		// Output the disassembly
 		addr = start;
@@ -2208,25 +2296,25 @@ namespace Debugger
 			CComment *comment = m_cpu->GetComment(addr);
 			
 			// Output line
-			printf("%s", ind);
+			Print("%s", ind);
 			if (m_showLabels)
 			{
 				if (m_labelsOverAddr)
-					printf("%-12s ", (hasLabel ? labelStr : addrStr));
+					Print("%-12s ", (hasLabel ? labelStr : addrStr));
 				else
-					printf("%s %-12s ", addrStr, labelStr);
+					Print("%s %-12s ", addrStr, labelStr);
 			}
 			else
-				printf("%s ", addrStr);
+				Print("%s ", addrStr);
 			if (m_showOpCodes) 
-				printf("[%s] ", opCodes);
+				Print("[%s] ", opCodes);
 			if (codesLen > 0)
-				printf("%-*s %-20s", (int)m_cpu->maxMnemLen, mnemonic, operands);
+				Print("%-*s %-20s", (int)m_cpu->maxMnemLen, mnemonic, operands);
 			else
-				printf("???");
+				Print("???");
 			if (comment != NULL)
-				printf(" ; %s", comment->text);
-			printf("\n");
+				Print(" ; %s", comment->text);
+			Print("\n");
 
 			// Move onto next valid instruction address
 			addr += abs(codesLen);
@@ -2252,7 +2340,7 @@ namespace Debugger
 		// Format start and end addresses and output title
 		m_cpu->FormatAddress(startStr, start);
 		m_cpu->FormatAddress(endStr, end);
-		printf("%s Memory %s - %s:\n", m_cpu->name, startStr, endStr);
+		Print("%s Memory %s - %s:\n", m_cpu->name, startStr, endStr);
 
 		UINT32 addr = start;
 		while (addr < end)
@@ -2269,12 +2357,12 @@ namespace Debugger
 			if (m_showLabels)
 			{
 				if (m_labelsOverAddr)
-					printf("   %-12s", (hasLabel ? labelStr : addrStr));
+					Print("   %-12s", (hasLabel ? labelStr : addrStr));
 				else
-					printf("   %s %-12s", addrStr, labelStr);
+					Print("   %s %-12s", addrStr, labelStr);
 			}
 			else
-				printf("   %s%c", addrStr);
+				Print("   %s%c", addrStr);
 			UINT32 lAddr = addr;
 			for (unsigned i = 0; i < bytesPerRow; i++)
 			{
@@ -2286,10 +2374,10 @@ namespace Debugger
 				//	data = (UINT8)io->last;
 				//else
 					data = (UINT8)m_cpu->ReadMem(lAddr, 1);
-				printf("%c%02X", wChar, data);
+				Print("%c%02X", wChar, data);
 				lAddr++;
 			}
-			printf(" ");
+			Print(" ");
 			lAddr = addr;
 			for (unsigned i = 0; i < bytesPerRow; i++)
 			{
@@ -2300,12 +2388,107 @@ namespace Debugger
 				//else
 					data = (UINT8)m_cpu->ReadMem(lAddr, 1);
 				dChar = (data >= 32 && data <= 126 ? (char)data : '.');
-				printf("%c", dChar);
+				Print("%c", dChar);
 			}
-			printf("\n");
+			Print("\n");
 			addr += bytesPerRow;
 		}
 		return addr;
+	}
+
+	void CConsoleDebugger::AnalysisUpdated(CCodeAnalyser *analyser)
+	{
+		//
+	}
+
+	void CConsoleDebugger::ExceptionTrapped(CException *ex)
+	{
+		char addrStr[255];
+		ex->cpu->FormatAddress(addrStr, ex->cpu->pc, true, (m_analyseCode ? LFExcepHandler : LFNone));
+		Print("Exception %s (%s) on %s trapped at %s.\n", ex->id, ex->name, ex->cpu->name, addrStr);
+	}
+
+	void CConsoleDebugger::InterruptTrapped(CInterrupt *in)
+	{
+		char addrStr[255];
+		in->cpu->FormatAddress(addrStr, in->cpu->pc, true, (m_analyseCode ? LFInterHandler : LFNone));
+		Print("Interrupt %s (%s) on %s trapped at %s.\n", in->id, in->name, in->cpu->name, addrStr);
+	}
+
+	void CConsoleDebugger::MemWatchTriggered(CWatch *watch, UINT32 addr, unsigned dataSize, UINT64 data, bool isRead)
+	{
+		const char *sizeStr = GetSizeString(dataSize);
+		char dataStr[50];
+		m_cpu->FormatData(dataStr, dataSize, data);
+		const char *rwStr = (isRead ? "read" : "write");
+		char addrStr[255];
+		char infoStr[255];
+		watch->cpu->FormatAddress(addrStr, addr, true);
+		if (watch->GetInfo(infoStr))
+			Print("%s memory %s (%s) by %s at address %s triggered %s watch.\n", sizeStr, rwStr, dataStr, watch->cpu->name, addrStr, watch->type, infoStr);
+		else
+			Print("%s memory %s (%s) by %s at address %s triggered %s watch.\n", sizeStr, rwStr, dataStr, watch->cpu->name, addrStr, watch->type);
+	}
+
+	void CConsoleDebugger::IOWatchTriggered(CWatch *watch, CIO *io, UINT64 data, bool isInput)
+	{
+		const char *sizeStr = GetSizeString(io->dataSize);
+		char dataStr[50];
+		m_cpu->FormatData(dataStr, io->dataSize, data);
+		const char *ioStr = (isInput ? "input" : "output");
+		const char *tfStr = (isInput ? "from" : "to");
+		char locStr[255];
+		char infoStr[255];
+		watch->io->GetLocation(locStr);
+		if (watch->GetInfo(infoStr))
+			Print("%s I/O %s (%s) by %s %s %s triggered %s watch [%s].\n", sizeStr, ioStr, dataStr, watch->cpu->name, tfStr, locStr, watch->type, infoStr);
+		else
+			Print("%s I/O %s (%s) by %s %s %s triggered %s watch.\n", sizeStr, ioStr, dataStr, watch->cpu->name, tfStr, locStr, watch->type);
+	}
+
+	void CConsoleDebugger::BreakpointReached(CBreakpoint *bp)
+	{
+		char addrStr[255];
+		char infoStr[255];
+		bp->cpu->FormatAddress(addrStr, bp->cpu->pc, true, (m_analyseCode ? LFAll : LFNone));
+		if (bp->GetInfo(infoStr))
+			Print("%s reached %s breakpoint [%s] at %s.\n", bp->cpu->name, bp->type, infoStr, addrStr);
+		else
+			Print("%s reached %s breakpoint at %s.\n", bp->cpu->name, bp->type, addrStr);
+	}
+
+	void CConsoleDebugger::MonitorTriggered(CRegMonitor *regMon)
+	{
+		char addrStr[255];
+		char valStr[255];
+		CRegister *reg = regMon->reg;
+		reg->cpu->FormatAddress(addrStr, reg->cpu->pc, true, (m_analyseCode ? LFAll : LFNone));
+		reg->GetValue(valStr);
+		Print("Register %s of %s has changed value at %s to %s.\n", reg->name, reg->cpu->name, addrStr, valStr);
+	}
+
+	void CConsoleDebugger::ExecutionHalted(CCPUDebug *cpu, EHaltReason reason)
+	{
+		if (reason&HaltUser)
+		{
+			char addrStr[255];
+			cpu->FormatAddress(addrStr, cpu->pc, true, (m_analyseCode ? LFAll : LFNone));
+			Print("Execution halted on %s at %s.\n", cpu->name, addrStr);
+		}
+	}
+	
+	void CConsoleDebugger::WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl)
+	{
+		if (cpu != NULL)
+			Print("%s: ", cpu->name);
+		if (typeStr != NULL)
+			Print(" %s - ", typeStr);
+		PrintVL(fmtStr, vl);
+	}
+		
+	void CConsoleDebugger::FlushOut(CCPUDebug *cpu)
+	{
+		Flush();
 	}
 
 	void CConsoleDebugger::Attach()
@@ -2322,6 +2505,24 @@ namespace Debugger
 		Detaching();
 
 		CDebugger::Detach();
+
+		// Close redirected output file, if exists
+		if (m_file != NULL)
+		{
+			fclose(m_file);
+			m_file = NULL;
+		}
+	}
+
+	void CConsoleDebugger::Poll()
+	{
+		CDebugger::Poll();
+
+		if (m_nextFrame)
+		{
+			if (--m_nextFrameCount == 0)
+				ForceBreak(true);
+		}	
 	}
 
 	void CConsoleDebugger::ApplyConfig()
@@ -2342,101 +2543,6 @@ namespace Debugger
 	void CConsoleDebugger::Detaching()
 	{
 		//
-	}
-
-	void CConsoleDebugger::AnalysisUpdated(CCodeAnalyser *analyser)
-	{
-		//
-	}
-
-	void CConsoleDebugger::ExceptionTrapped(CException *ex)
-	{
-		char addrStr[255];
-		ex->cpu->FormatAddress(addrStr, ex->cpu->pc, true, (m_analyseCode ? LFExcepHandler : LFNone));
-		printf("Exception %s (%s) on %s trapped at %s.\n", ex->id, ex->name, ex->cpu->name, addrStr);
-	}
-
-	void CConsoleDebugger::InterruptTrapped(CInterrupt *in)
-	{
-		char addrStr[255];
-		in->cpu->FormatAddress(addrStr, in->cpu->pc, true, (m_analyseCode ? LFInterHandler : LFNone));
-		printf("Interrupt %s (%s) on %s trapped at %s.\n", in->id, in->name, in->cpu->name, addrStr);
-	}
-
-	void CConsoleDebugger::MemWatchTriggered(CWatch *watch, UINT32 addr, unsigned dataSize, UINT64 data, bool isRead)
-	{
-		const char *sizeStr = GetSizeString(dataSize);
-		char dataStr[20];
-		m_cpu->FormatData(dataStr, dataSize, data);
-		const char *rwStr = (isRead ? "read" : "write");
-		char addrStr[255];
-		char infoStr[255];
-		watch->cpu->FormatAddress(addrStr, addr, true);
-		if (watch->GetInfo(infoStr))
-			printf("%s memory %s (%s) by %s at address %s triggered %s watch.\n", sizeStr, rwStr, dataStr, watch->cpu->name, addrStr, watch->type, infoStr);
-		else
-			printf("%s memory %s (%s) by %s at address %s triggered %s watch.\n", sizeStr, rwStr, dataStr, watch->cpu->name, addrStr, watch->type);
-	}
-
-	void CConsoleDebugger::IOWatchTriggered(CWatch *watch, CIO *io, UINT64 data, bool isInput)
-	{
-		const char *sizeStr = GetSizeString(io->dataSize);
-		char dataStr[20];
-		m_cpu->FormatData(dataStr, io->dataSize, data);
-		const char *ioStr = (isInput ? "input" : "output");
-		const char *tfStr = (isInput ? "from" : "to");
-		char locStr[255];
-		char infoStr[255];
-		watch->io->GetLocation(locStr);
-		if (watch->GetInfo(infoStr))
-			printf("%s I/O %s (%s) by %s %s %s triggered %s watch [%s].\n", sizeStr, ioStr, dataStr, watch->cpu->name, tfStr, locStr, watch->type, infoStr);
-		else
-			printf("%s I/O %s (%s) by %s %s %s triggered %s watch.\n", sizeStr, ioStr, dataStr, watch->cpu->name, tfStr, locStr, watch->type);
-	}
-
-	void CConsoleDebugger::BreakpointReached(CBreakpoint *bp)
-	{
-		char addrStr[255];
-		char infoStr[255];
-		bp->cpu->FormatAddress(addrStr, bp->cpu->pc, true, (m_analyseCode ? LFAll : LFNone));
-		if (bp->GetInfo(infoStr))
-			printf("%s reached %s breakpoint [%s] at %s.\n", bp->cpu->name, bp->type, infoStr, addrStr);
-		else
-			printf("%s reached %s breakpoint at %s.\n", bp->cpu->name, bp->type, addrStr);
-	}
-
-	void CConsoleDebugger::MonitorTriggered(CRegMonitor *regMon)
-	{
-		char addrStr[255];
-		char valStr[255];
-		CRegister *reg = regMon->reg;
-		reg->cpu->FormatAddress(addrStr, reg->cpu->pc, true, (m_analyseCode ? LFAll : LFNone));
-		reg->GetValue(valStr);
-		printf("Register %s of %s has changed value at %s to %s.\n", reg->name, reg->cpu->name, addrStr, valStr);
-	}
-
-	void CConsoleDebugger::ExecutionHalted(CCPUDebug *cpu, EHaltReason reason)
-	{
-		if (reason&HaltUser)
-		{
-			char addrStr[255];
-			cpu->FormatAddress(addrStr, cpu->pc, true, (m_analyseCode ? LFAll : LFNone));
-			printf("Execution halted on %s at %s.\n", cpu->name, addrStr);
-		}
-	}
-
-	void CConsoleDebugger::WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl)
-	{
-		if (cpu != NULL)
-			printf("%s: ", cpu->name);
-		if (typeStr != NULL)
-			printf(" %s - ", typeStr);
-		vprintf(fmtStr, vl);
-	}
-		
-	void CConsoleDebugger::FlushOut(CCPUDebug *cpu)
-	{
-		fflush(stdout);
 	}
 }
 

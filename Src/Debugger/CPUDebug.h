@@ -104,15 +104,17 @@ namespace Debugger
 		void DetachFromDebugger(CDebugger *theDebugger);
 		
 	protected:
+		CCodeAnalyser *m_analyser;
+
 		bool m_stateUpdated;
+		CException *m_exRaised;
 		CException *m_exTrapped;
+		CInterrupt *m_intRaised;
 		CInterrupt *m_intTrapped;
 		CBreakpoint *m_bpReached;
 		CWatch *m_memWatchTriggered;
 		CWatch *m_ioWatchTriggered;
 		CRegMonitor *m_regMonTriggered;
-
-		CCodeAnalyser *m_analyser;
 
 		CCPUDebug(const char *cpuName, UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen);
 
@@ -163,6 +165,7 @@ namespace Debugger
 		const UINT8 memBusWidth;
 		const UINT8 maxMnemLen;
 		
+		bool enabled;
 		EFormat addrFmt;
 		EFormat portFmt;
 		EFormat dataFmt;
@@ -173,6 +176,7 @@ namespace Debugger
 		UINT16 numIntCodes;
 		UINT16 numPorts;
 		UINT32 memSize;
+
 		UINT64 instrCount;
 		UINT32 pc;
 		UINT32 opcode;
@@ -744,6 +748,16 @@ namespace Debugger
 
 	inline bool CCPUDebug::CheckExecution(UINT32 newPC, UINT32 newOpcode)
 	{
+		// Check if debugging is enabled for this CPU
+		if (!enabled)
+		{
+			// If not, update instruction count, pc and opcode but don't allow any execution control
+			instrCount++;
+			pc = newPC;
+			opcode = newOpcode;		
+			return false;
+		}
+
 		// Check not just updating state
 		bool stepBreak, countBreak, untilBreak;
 		if (!m_stateUpdated)
@@ -764,7 +778,7 @@ namespace Debugger
 				}
 			}
 
-			// Now increase instruction count and update pc and opcode
+			// Now update instruction count, pc and opcode
 			instrCount++;
 			pc = newPC;
 			opcode = newOpcode;		
@@ -799,16 +813,17 @@ namespace Debugger
 							stepBreak = !m_steppingOver || pc == m_stepOverAddr;
 							break;
 						case StepOut:
-							// Step-out steps over any jumps and breaks when it reaches a return
-							// TODO - following doesn't work if an exception occurs before the return
-							if (m_steppingOver)
+							// Step-out steps over any jumps and breaks when it reaches a return or an exception/interrupt is raised
+							if (m_exRaised != NULL || m_intRaised != NULL)
+								stepBreak = true;
+							else if (m_steppingOver)
 							{
 								if (pc == m_stepOverAddr)
 									m_steppingOver = false;
 								stepBreak = false;
 							}
-							else if (m_steppingOut)
-								stepBreak = pc == m_stepOutAddr;
+							else
+								stepBreak = m_steppingOut && pc == m_stepOutAddr;
 							break;
 						default:
 							stepBreak = false;
@@ -825,7 +840,7 @@ namespace Debugger
 		}
 		else
 		{
-			// Update pc and opcode
+			// Just updating state so update pc and opcode, but do not update instruction count
 			pc = newPC;
 			opcode = newOpcode;		
 
@@ -867,7 +882,9 @@ namespace Debugger
 			m_steppingOut = false;
 			m_count = 0;
 			m_until = false;
+			m_exRaised = NULL;
 			m_exTrapped = NULL;
+			m_intRaised = NULL;
 			m_intTrapped = NULL;
 			m_bpReached = NULL;
 			m_memWatchTriggered = NULL;
@@ -894,8 +911,6 @@ namespace Debugger
 		// If stepping out, then make sure step over any jumps and if encounter a return instruction then break at return address
 		if (m_step && m_stepMode == StepOut)
 		{
-			// TODO - following is flakey, for example if an exception occurs whilst stepping out, then it obviously doesn't work
-			// - really ought to keep proper call stack, but harder to implement and will slow down debugger even more
 			if (!m_steppingOver)
 				m_steppingOver = GetJumpRetAddr(pc, opcode, m_stepOverAddr);
 			if (!m_steppingOver)
