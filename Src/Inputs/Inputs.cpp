@@ -289,12 +289,9 @@ void CInputs::WriteToINIFile(CINIFile *ini, const char *section)
 		(*it)->WriteToINIFile(ini, section);
 }
 
-bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH)
+bool CInputs::ConfigureInputs(const GameInfo *game)
 {
 	m_system->UngrabMouse();
-
-	// Let the input system know the display geometry
-	m_system->SetDisplayGeom(dispX, dispY, dispW, dispH);
 
 	// Print header and help message
 	int gameFlags;
@@ -468,6 +465,14 @@ Redisplay:
 
 	m_system->GrabMouse();
 	return true;
+}
+
+bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH)
+{
+	// Let the input system know the display geometry
+	m_system->SetDisplayGeom(dispX, dispY, dispW, dispH);
+
+	return ConfigureInputs(game);
 }
 
 void CInputs::PrintInputs(const GameInfo *game)
