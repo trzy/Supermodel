@@ -777,12 +777,14 @@ namespace Debugger
 			if (io->watch != NULL)
 				RemoveWatch(io->watch);
 			ioWatches.push_back(watch);
+			UpdateIOWatchNums();
 			io->watch = watch;
 		}
 		else
 		{
 			RemoveMemWatch(watch->addr, watch->size);
 			memWatches.push_back(watch);
+			UpdateMemWatchNums();
 			if (m_memWatchTable == NULL)
 				m_memWatchTable = new CAddressTable();
 			m_memWatchTable->Add(watch);
@@ -799,6 +801,7 @@ namespace Debugger
 			if (it == ioWatches.end())
 				return false;
 			ioWatches.erase(it);
+			UpdateIOWatchNums();
 		}
 		else
 		{
@@ -806,6 +809,7 @@ namespace Debugger
 			if (it == memWatches.end())
 				return false;
 			memWatches.erase(it);
+			UpdateMemWatchNums();
 			m_memWatchTable->Remove(watch);
 			if (m_memWatchTable->IsEmpty())
 			{
@@ -815,6 +819,20 @@ namespace Debugger
 		}
 		delete watch;
 		return true;
+	}
+
+	void CCPUDebug::UpdateIOWatchNums()
+	{
+		unsigned num = 0;
+		for (vector<CWatch*>::iterator it = ioWatches.begin(); it != ioWatches.end(); it++)
+			(*it)->num = num++;
+	}
+
+	void CCPUDebug::UpdateMemWatchNums()
+	{
+		unsigned num = 0;
+		for (vector<CWatch*>::iterator it = memWatches.begin(); it != memWatches.end(); it++)
+			(*it)->num = num++;
 	}
 
 	CSimpleBreakpoint *CCPUDebug::AddSimpleBreakpoint(UINT32 addr)
@@ -829,7 +847,14 @@ namespace Debugger
 		CCountBreakpoint *bp = new CCountBreakpoint(this, addr, count);
 		AddBreakpoint(bp);
 		return bp;
-	}	
+	}
+
+	CPrintBreakpoint *CCPUDebug::AddPrintBreakpoint(UINT32 addr)
+	{
+		CPrintBreakpoint *bp = new CPrintBreakpoint(this, addr);
+		AddBreakpoint(bp);
+		return bp;
+	}
 
 	CBreakpoint *CCPUDebug::GetBreakpoint(UINT32 addr)
 	{
@@ -842,6 +867,7 @@ namespace Debugger
 	{
 		RemoveBreakpoint(bp->addr);
 		bps.push_back(bp);
+		UpdateBreakpointNums();
 		if (m_bpTable == NULL)
 			m_bpTable = new CAddressTable();
 		m_bpTable->Add(bp);
@@ -861,6 +887,7 @@ namespace Debugger
 		if (it == bps.end())
 			return false;
 		bps.erase(it);
+		UpdateBreakpointNums();
 		m_bpTable->Remove(bp);
 		if (m_bpTable->IsEmpty())
 		{
@@ -881,6 +908,13 @@ namespace Debugger
 		delete m_bpTable;
 		m_bpTable = NULL;
 		return true;
+	}
+
+	void CCPUDebug::UpdateBreakpointNums()
+	{
+		unsigned num = 0;
+		for (vector<CBreakpoint*>::iterator it = bps.begin(); it != bps.end(); it++)
+			(*it)->num = num++;
 	}
 
 	CRegMonitor *CCPUDebug::AddRegMonitor(const char *regName)

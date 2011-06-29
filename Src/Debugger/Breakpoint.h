@@ -21,6 +21,8 @@ namespace Debugger
 		const char symbol;
 		const char *type;
 
+		unsigned num;
+
 		bool active;
 
 		bool Check(UINT32 pc, UINT32 opcode);
@@ -56,6 +58,18 @@ namespace Debugger
 
 	public:
 		CCountBreakpoint(CCPUDebug *bpCPU, int bpAddr, int count);
+
+		bool CheckBreak(UINT32 pc, UINT32 opcode);
+
+		void Reset();
+
+		bool GetInfo(char *str);
+	};
+
+	class CPrintBreakpoint : public CBreakpoint
+	{
+	public:
+		CPrintBreakpoint(CCPUDebug *bpCPU, int bpAddr);
 
 		bool CheckBreak(UINT32 pc, UINT32 opcode);
 

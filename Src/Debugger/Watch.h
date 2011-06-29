@@ -33,6 +33,7 @@ namespace Debugger
 		bool trigRead;
 		bool trigWrite;
 		
+		unsigned num;
 		bool active;
 
 		unsigned readCount;

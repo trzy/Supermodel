@@ -198,11 +198,11 @@ namespace Debugger
 		frameCount++;
 	}
 
-	void CDebugger::Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, ...)
+	void CDebugger::PrintEvent(CCPUDebug *cpu, const char *fmt, ...)
 	{
 		va_list vl;
-		va_start(vl, fmtStr);
-		WriteOut(cpu, typeStr, fmtStr, vl);
+		va_start(vl, fmt);
+		Log(cpu, NULL, fmt, vl);
 		va_end(vl);
 	}
 
@@ -210,19 +210,19 @@ namespace Debugger
 	void CDebugger::DebugLog(const char *fmt, va_list vl)
 	{
 		if (logDebug)
-			WriteOut(NULL, "Debug", fmt, vl);
+			Log(NULL, "Debug", fmt, vl);
 	}
 
 	void CDebugger::InfoLog(const char *fmt, va_list vl)
 	{
 		if (logInfo)
-			WriteOut(NULL, "Info", fmt, vl);
+			Log(NULL, "Info", fmt, vl);
 	}
 
 	void CDebugger::ErrorLog(const char *fmt, va_list vl)
 	{
 		if (logError)
-			WriteOut(NULL, "Error", fmt, vl);
+			Log(NULL, "Error", fmt, vl);
 	}
 #endif // DEBUGGER_HASLOGGER
 

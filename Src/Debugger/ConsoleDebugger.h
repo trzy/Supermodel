@@ -79,9 +79,13 @@ namespace Debugger
 
 		bool SetFmtConfig(const char *str, EFormat &cfg);
 
-		bool ParseAddress(CCPUDebug *cpu, const char *str, UINT32 *addr);
+		bool ParseAddress(const char *str, UINT32 *addr);
+
+		const char *GetDataSizeStr(unsigned dataSize, bool shortName);
 
 		bool ParseDataSize(const char *str, unsigned &dataSize);
+
+		bool ParseFormat(const char *str, EFormat &fmt);
 
 		bool ParseCPU(const char *str, CCPUDebug *&cpu);
 
@@ -103,9 +107,13 @@ namespace Debugger
 
 		void GetAllMemWatches(vector<CWatch*> &watches);
 
+		int GetIndexOfMemWatch(CWatch *watch);
+
 		void ListMemWatches();
 
 		void GetAllPortWatches(vector<CWatch*> &watches);
+
+		int GetIndexOfPortWatch(CWatch *watch);
 
 		void ListPortWatches();
 
@@ -143,9 +151,7 @@ namespace Debugger
 
 		virtual bool ProcessToken(const char *token, const char *cmd);
 
-		virtual void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl);
-		
-		virtual void FlushOut(CCPUDebug *cpu);
+		virtual void Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl);
 
 	public:
 		CConsoleDebugger();

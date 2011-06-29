@@ -89,7 +89,7 @@ namespace Debugger
 		virtual bool LoadState(CBlockFile *state);
 
 		virtual bool SaveState(CBlockFile *state);
-#endif
+#endif // DEBUGGER_HASBLOCKFILE
 
 		//
 		// Protected virtual methods for sub-classes to implement
@@ -113,9 +113,7 @@ namespace Debugger
 
 		virtual void WaitCommand(CCPUDebug *cpu) = 0;
 
-		virtual void WriteOut(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl) = 0;
-		
-		virtual void FlushOut(CCPUDebug *cpu) = 0;
+		virtual void Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl) = 0;
 
 	public:
 		vector<CCPUDebug*> cpus;
@@ -161,17 +159,15 @@ namespace Debugger
 		bool CheckExit();
 
 		bool CheckPause();
-		
+
 		//
-		// Log
+		// Printing/logging
 		//
 
-		void Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, ...);
+		void PrintEvent(CCPUDebug *cpu, const char *fmt, ...);
 
 #ifdef DEBUGGER_HASLOGGER
-		//
 		// CLogger logging methods
-		//
 		virtual void DebugLog(const char *fmt, va_list vl);
 
 		virtual void InfoLog(const char *fmt, va_list vl);

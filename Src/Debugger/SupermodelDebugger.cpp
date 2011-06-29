@@ -32,7 +32,10 @@ namespace Debugger
 
 	bool CSupermodelDebugger::ProcessToken(const char *token, const char *cmd)
 	{
-		if (CheckToken(token, "les", "loademustate"))				// loademustate FILENAME
+		//
+		// Emulator
+		//
+		if (CheckToken(token, "les", "loademustate"))				// loademustate <filename>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
@@ -47,7 +50,7 @@ namespace Debugger
 			m_loadEmuState = true;
 			return true;
 		}
-		else if (CheckToken(token, "ses", "saveemustate"))			// saveemustate FILENAME
+		else if (CheckToken(token, "ses", "saveemustate"))			// saveemustate  <filename>
 		{
 			// Parse arguments
 			token = strtok(NULL, " ");
@@ -67,6 +70,9 @@ namespace Debugger
 			m_resetEmu = true;
 			return true;
 		}
+		//
+		// Inputs
+		//
 		else if (CheckToken(token, "lip", "listinputs"))			// listinputs
 		{
 			ListInputs();
@@ -206,6 +212,27 @@ namespace Debugger
 		else if (CheckToken(token, "caip", "configallinputs"))		// configallinputs
 		{
 			m_inputs->ConfigureInputs(m_model3->GetGameInfo());
+			return false;
+		}
+		//
+		// Help
+		//
+		else if (CheckToken(token, "h", "help"))
+		{
+			CConsoleDebugger::ProcessToken(token, cmd);
+
+			const char *fmt = "  %-6s %-25s %s\n";
+			Print(" Emulator:\n");
+			Print(fmt, "les",    "loademustate",           "<filename>");
+			Print(fmt, "ses",    "saveemustate",           "<filename>");
+			Print(fmt, "res",    "resetemu",               "");
+			Print(" Inputs:\n");
+			Print(fmt, "lip",    "listinputs",             "");
+			Print(fmt, "pip",    "printinput",             "(<id>|<label>)");
+			Print(fmt, "sip",    "setinput",               "(<id>|<label>) <mapping>");
+			Print(fmt, "rip",    "resetinput",             "(<id>|<label>)");
+			Print(fmt, "cip",    "configinput",            "(<id>|<label>) [(s)et|(a)ppend]");
+			Print(fmt, "caip",   "configallinputs",        "");   
 			return false;
 		}
 		else

@@ -260,20 +260,20 @@ namespace Debugger
 	bool CPrintWatch::CheckBreak(bool isRead, UINT64 data)
 	{
 		const char *sizeStr = CDebugger::GetSizeString(size);
+		const char *rwStr = (isRead ? "Read" : "Wrote");
+		const char *tfStr = (isRead ? "from" : "to");
 		char dataStr[50];
 		char addrStr[50];
 		char locStr[50];
 		cpu->FormatData(dataStr, size, data);
 		cpu->FormatAddress(addrStr, addr, true);
-		const char *rwStr = (isRead ? "Read" : "Wrote");
-		const char *tfStr = (isRead ? "from" : "to");
 		if (io != NULL)
 		{
 			io->GetLocation(locStr);
-			cpu->debugger->Log(cpu, NULL, "%s data [%s] %s I/O %s\n", rwStr, dataStr, tfStr, locStr);
+			cpu->debugger->PrintEvent(cpu, "%s %s data (%s) %s I/O %s.\n", rwStr, sizeStr, dataStr, tfStr, locStr);
 		}
 		else
-			cpu->debugger->Log(cpu, NULL, "%s data [%s] %s memory address %s\n", rwStr, dataStr, tfStr, addrStr);
+			cpu->debugger->PrintEvent(cpu, "%s %s data (%s) %s memory %s.\n", rwStr, sizeStr, dataStr, tfStr, addrStr);
 		return false;
 	}
 }

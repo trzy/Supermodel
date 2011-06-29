@@ -411,6 +411,10 @@ namespace Debugger
 
 		bool RemoveWatch(CWatch *watch);
 
+		void UpdateIOWatchNums();
+	
+		void UpdateMemWatchNums();
+
 		//
 		// Breakpoint handling
 		//
@@ -418,6 +422,8 @@ namespace Debugger
 		CSimpleBreakpoint *AddSimpleBreakpoint(UINT32 addr);
 
 		CCountBreakpoint *AddCountBreakpoint(UINT32 addr, unsigned count);
+
+		CPrintBreakpoint *AddPrintBreakpoint(UINT32 addr);
 
 		void AddBreakpoint(CBreakpoint *bp);
 
@@ -428,6 +434,8 @@ namespace Debugger
 		bool RemoveBreakpoint(CBreakpoint *bp);
 
 		bool RemoveAllBreakpoints();
+
+		void UpdateBreakpointNums();
 
 		//
 		// Register monitor handling
