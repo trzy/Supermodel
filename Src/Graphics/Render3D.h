@@ -92,6 +92,7 @@ struct DisplayList
 		struct
 		{
 			GLfloat		modelViewMatrix[4*4];	// model-view matrix
+			GLfloat		texOffset[2];			// texture offset (X, Y)
 			unsigned	index;					// index in VBO
 			unsigned	numVerts;				// number of vertices
 		} Model;
@@ -357,6 +358,9 @@ private:
 	int		listDepth;	// how many lists have we recursed into
 	int		stackDepth;	// for debugging and error handling purposes
 	
+	// Texture offset (during scene graph processing)
+	GLfloat	texOffset[2];	// X, Y
+	
 	// Resolution scaling factors (to support resolutions higher than 496x384) and offsets
 	GLfloat		xRatio, yRatio;
 	unsigned	xOffs, yOffs;
@@ -375,6 +379,7 @@ private:
 	GLuint	spotEllipseLoc;			// uniform
 	GLuint	spotRangeLoc;			// uniform
 	GLuint	spotColorLoc;			// uniform
+	GLuint	texOffsetLoc;			// uniform
 	GLuint	subTextureLoc;			// attribute
 	GLuint	texParamsLoc;			// attribute
 	GLuint	texFormatLoc;			// attribute

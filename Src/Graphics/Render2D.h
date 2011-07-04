@@ -145,6 +145,8 @@ private:
 	void DisplayLayer(int layerNum, GLfloat z);
 	void Setup2D(void);
 	void ColorOffset(GLfloat colorOffset[3], UINT32 reg);
+	void WritePalette(unsigned color, UINT32 data);
+	void InitPalette(void);
 		
 	// Data received from tile generator device object
 	const UINT32	*vram;

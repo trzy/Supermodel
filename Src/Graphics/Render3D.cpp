@@ -188,6 +188,9 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 	UINT16	texel;
 	GLfloat	c, a;
 	
+	x %= 2048;
+	y %= 2048;
+	
 	if ((x+width)>2048 || (y+height)>2048)
 		return;
 	if (width > 512 || height > 512)
@@ -662,7 +665,8 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 {
 	const UINT32	*node, *lodTable;
 	UINT32			matrixOffset, node1Ptr, node2Ptr;
-	float			x, y, z;
+	float			x, y, z, oldTexOffsetX, oldTexOffsetY;
+	int				tx, ty;
 	
 	++stackDepth;
 	// Stack depth of 64 is too small for Star Wars Trilogy (Hoth)
@@ -691,6 +695,18 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 	y				= *(float *) &node[0x05-offset];
 	z				= *(float *) &node[0x06-offset];
 	
+	// Texture offset?
+	oldTexOffsetX = texOffset[0];	// save old offsets
+	oldTexOffsetY = texOffset[1];
+	tx = 32*((node[0x02]>>7)&0x3F);
+	ty = 32*(node[0x02]&0x3F) + ((node[0x02]&0x4000)?1024:0);
+	if ((node[0x02]&0x8000))	// apply texture offsets, else retain current ones
+	{
+		texOffset[0] = (GLfloat) tx;
+		texOffset[1] = (GLfloat) ty;
+		//printf("Tex Offset: %d, %d (%08X %08X)\n", tx, ty, node[0x02], node[0x00]);
+	}
+	
 	// Apply matrix and translation
 	glPushMatrix();
 	if ((node[0x00]&0x10))	// apply translation vector
@@ -717,6 +733,10 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 	glPopMatrix();
 	DescendNodePtr(node2Ptr);
 	--stackDepth;
+	
+	// Restore old texture offsets
+	texOffset[0] = oldTexOffsetX;
+	texOffset[1] = oldTexOffsetY;
 }
 
 // A list of pointers. MAME assumes that these may only point to culling nodes.
@@ -1098,6 +1118,10 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 	//printf("scrollFog = %g, scrollAtt = %g\n", scrollFog, scrollAtt);
 	//printf("Fog: R=%02X G=%02X B=%02X density=%g (%X) %d start=%g\n", ((vpnode[0x22]>>16)&0xFF), ((vpnode[0x22]>>8)&0xFF), ((vpnode[0x22]>>0)&0xFF), fogParams[3], vpnode[0x23], (fogParams[3]==fogParams[3]), fogParams[4]);
  	
+ 	// Clear texture offsets before proceeding
+ 	texOffset[0] = 0.0;
+ 	texOffset[1] = 0.0;
+ 	
  	// Set up coordinate system and base matrix
  	glMatrixMode(GL_MODELVIEW);
  	InitMatrixStack(matrixBase);
@@ -1305,6 +1329,7 @@ BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	spotEllipseLoc = glGetUniformLocation(shaderProgram, "spotEllipse");
 	spotRangeLoc = glGetUniformLocation(shaderProgram, "spotRange");
 	spotColorLoc = glGetUniformLocation(shaderProgram, "spotColor");
+	texOffsetLoc = glGetUniformLocation(shaderProgram, "texOffset");
 	
 	// Get locations of custom vertex attributes
 	subTextureLoc = glGetAttribLocation(shaderProgram,"subTexture");
