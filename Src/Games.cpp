@@ -30,6 +30,323 @@
 
 const struct GameInfo	Model3GameList[] =
 {
+	// Spikeout
+	{
+		"spikeout",
+		"Spikeout",
+		"Sega",
+		1998,
+		0x21,
+		0x800000,	// 8 MB of fixed CROM
+		FALSE,	// 96 MB of banked CROM (Do not Mirror)
+		0x4000000,	// 64 MB of VROM
+		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_FIGHTING,
+		
+		{
+			// Fixed CROM
+			{ "CROM",	"epr21214c.17", 0x8DC0A85C, 0x200000,	2, 0x0000006,	8,	TRUE },
+			{ "CROM", 	"epr21215c.18", 0xE2878221, 0x200000,	2, 0x0000004,	8, 	TRUE },
+			{ "CROM", 	"epr21216c.19", 0x867D3A0F, 0x200000,	2, 0x0000002,	8, 	TRUE },
+			{ "CROM", 	"epr21217c.20", 0xEA8C30CE, 0x200000,	2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM0
+			{ "CROMxx",	"mpr21134.1", 0x65399935, 0x800000,		2, 0x0000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21135.2", 0xF3FA7C50, 0x800000,		2, 0x0000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr21136.3", 0xB730FE50, 0x800000,		2, 0x0000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr21137.4", 0x3572D417, 0x800000,		2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM1
+			{ "CROMxx",	"mpr21138.5", 0xA9A2DE2C, 0x800000,		2, 0x2000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21139.6", 0x06D441F5, 0x800000,		2, 0x2000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr21140.7", 0x1390746D, 0x800000,		2, 0x2000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr21141.8", 0x1D0763CB, 0x800000,		2, 0x2000000,	8, 	TRUE },
+
+			// Banked CROM1
+			{ "CROMxx",	"mpr21142.9",  0xDA35CD51, 0x400000,	2, 0x4000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21143.10", 0xDDCADA10, 0x400000,	2, 0x4000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr21144.11", 0xD93D778C, 0x400000,	2, 0x4000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr21145.12", 0x0E6A3AE3, 0x400000,	2, 0x4000000,	8, 	TRUE },
+
+			// Banked CROM2 (note: appears at offset 0x6000000 rather than 0x5000000 as expected)
+			{ "CROMxx",	"mpr21146.13", 0x85F55311, 0x400000,	2, 0x6000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21147.14", 0xA1F2B73F, 0x400000,	2, 0x6000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr21148.15", 0x56D980AD, 0x400000,	2, 0x6000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr21149.16", 0x9E4EBE58, 0x400000,	2, 0x6000000,	8, 	TRUE },
+
+			// Banked CROM0
+			//{ "CROMxx",	"mpr21150.22", 0x125201CE, 0x400000,	2, 0x0000004,	8, 	TRUE },
+			//{ "CROMxx",	"mpr21151.23", 0x599527B9, 0x400000,	2, 0x0000002,	8, 	TRUE },
+			//{ "CROMxx",	"mpr21152.24", 0x0AFDEE87, 0x400000,	2, 0x0000000,	8, 	TRUE },
+			//{ "CROMxx",	"mpr21153.25", 0x4155F307, 0x400000,	2, 0x0000006,	8,	TRUE },
+
+			// Video ROM
+			{ "VROM",	"mpr21154.26", 0x3B76F8E8, 0x400000, 	2, 0, 			32,	FALSE },
+			{ "VROM",	"mpr21155.27", 0xACA19901, 0x400000, 	2, 2, 			32,	FALSE },
+			{ "VROM",	"mpr21156.28", 0x5C9DF226, 0x400000, 	2, 4, 			32,	FALSE },
+			{ "VROM",	"mpr21157.29", 0xF6FB1279, 0x400000, 	2, 6, 			32,	FALSE },
+			{ "VROM",	"mpr21158.30", 0x61707554, 0x400000, 	2, 8, 			32,	FALSE },
+			{ "VROM",	"mpr21159.31", 0xFCC791F5, 0x400000, 	2, 10, 			32,	FALSE },
+			{ "VROM",	"mpr21160.32", 0xB40A38D3, 0x400000, 	2, 12, 			32,	FALSE },
+			{ "VROM",	"mpr21161.33", 0x559063F0, 0x400000, 	2, 14, 			32,	FALSE },
+			{ "VROM",	"mpr21162.34", 0xACC4B2E4, 0x400000, 	2, 16, 			32,	FALSE },
+			{ "VROM",	"mpr21163.35", 0x653C54C7, 0x400000, 	2, 18, 			32,	FALSE },
+			{ "VROM",	"mpr21164.36", 0x902FD1E0, 0x400000, 	2, 20, 			32,	FALSE },
+			{ "VROM",	"mpr21165.37", 0x50B3BE05, 0x400000, 	2, 22, 			32,	FALSE },
+			{ "VROM",	"mpr21166.38", 0x8F87A782, 0x400000, 	2, 24, 			32,	FALSE },
+			{ "VROM",	"mpr21167.39", 0x0F3994D0, 0x400000, 	2, 26, 			32,	FALSE },
+			{ "VROM",	"mpr21168.40", 0xC58BE980, 0x400000, 	2, 28, 			32,	FALSE },
+			{ "VROM",	"mpr21169.41", 0xAA3B2CC0, 0x400000, 	2, 30, 			32,	FALSE },
+			
+			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
+		}
+	},
+
+	// Ski Champ
+	{
+		"skichamp",
+		"Ski Champ",
+		"Sega",
+		1998,
+		0x20,
+		0x800000,	// 8 MB of fixed CROM
+		TRUE,		// 80 MB of banked CROM
+		0x4000000,	// 64 MB of VROM
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		
+		{
+			// Fixed CROM
+			{ "CROM",	"epr20352.17", 0xC92C2545, 0x200000,	2, 0x0400006,	8,	TRUE },
+			{ "CROM", 	"epr20354.18", 0xACA62BF8, 0x200000,	2, 0x0400004,	8, 	TRUE },
+			{ "CROM", 	"epr20353.19", 0xBADF5F04, 0x200000,	2, 0x0400002,	8, 	TRUE },
+			{ "CROM", 	"epr20355.20", 0x7A784E67, 0x200000,	2, 0x0400000,	8, 	TRUE },
+			
+			// Banked CROM0
+			{ "CROMxx",	"mpr20318.1", 0xB0CAD2C8, 0x400000,		2, 0x0000006,	8,	TRUE },
+			{ "CROMxx",	"mpr20319.2", 0x228047F3, 0x400000,		2, 0x0000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr20320.3", 0xEDC9A9E5, 0x400000,		2, 0x0000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr20321.4", 0x698A97EE, 0x400000,		2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM1
+			{ "CROMxx",	"mpr20322.5", 0x2F69B205, 0x400000,		2, 0x1000006,	8,	TRUE },
+			{ "CROMxx",	"mpr20323.6", 0x075DE2AE, 0x400000,		2, 0x1000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr20324.7", 0x8F5848D0, 0x400000,		2, 0x1000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr20325.8", 0xCB0EB133, 0x400000,		2, 0x1000000,	8, 	TRUE },
+
+			// Banked CROM2
+			{ "CROMxx",	"mpr20326.9",  0xB63E1CB4, 0x400000,	2, 0x2000006,	8,	TRUE },
+			{ "CROMxx",	"mpr20327.10", 0xF55F51B2, 0x400000,	2, 0x2000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr20328.11", 0x5FA5E9F5, 0x400000,	2, 0x2000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr20329.12", 0x0807EA33, 0x400000,	2, 0x2000000,	8, 	TRUE },
+
+			// Banked CROM3
+			{ "CROMxx",	"mpr20330.13", 0xFBC7BBD5, 0x400000,	2, 0x3000006,	8,	TRUE },
+			{ "CROMxx",	"mpr20331.14", 0xC4C45FB1, 0x400000,	2, 0x3000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr20332.15", 0x500DB1EE, 0x400000,	2, 0x3000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr20333.16", 0x76B8E0FA, 0x400000,	2, 0x3000000,	8, 	TRUE },
+
+			// Banked CROM4
+			//{ "CROMxx",	"epr20356.21", 0x4E4015D0, 0x80000,		2, 0x3000004,	8,	TRUE },
+			//{ "CROMxx",	"mpr20334.22", 0xDE1D67CD, 0x400000,	2, 0x3000002,	8, 	TRUE },
+			//{ "CROMxx",	"mpr20335.24", 0x7300D0A2, 0x400000,	2, 0x3000000,	8, 	TRUE },
+
+			// Video ROM
+			{ "VROM",	"mpr20336.26", 0x261E3D39, 0x400000, 	2, 0, 			32,	FALSE },
+			{ "VROM",	"mpr20337.27", 0x2C7E9EB8, 0x400000, 	2, 2, 			32,	FALSE },
+			{ "VROM",	"mpr20338.28", 0x0AA626DF, 0x400000, 	2, 4, 			32,	FALSE },
+			{ "VROM",	"mpr20339.29", 0x7AF05417, 0x400000, 	2, 6, 			32,	FALSE },
+			{ "VROM",	"mpr20340.30", 0x82EF4A21, 0x400000, 	2, 8, 			32,	FALSE },
+			{ "VROM",	"mpr20341.31", 0x9373096E, 0x400000, 	2, 10, 			32,	FALSE },
+			{ "VROM",	"mpr20342.32", 0xEF98CD37, 0x400000, 	2, 12, 			32,	FALSE },
+			{ "VROM",	"mpr20343.33", 0x9825A46B, 0x400000, 	2, 14, 			32,	FALSE },
+			{ "VROM",	"mpr20344.34", 0xACBBCD68, 0x400000, 	2, 16, 			32,	FALSE },
+			{ "VROM",	"mpr20345.35", 0x431E7585, 0x400000, 	2, 18, 			32,	FALSE },
+			{ "VROM",	"mpr20346.36", 0x4F87F2D2, 0x400000, 	2, 20, 			32,	FALSE },
+			{ "VROM",	"mpr20347.37", 0x389A2D98, 0x400000, 	2, 22, 			32,	FALSE },
+			{ "VROM",	"mpr20348.38", 0x8BE8D4D2, 0x400000, 	2, 24, 			32,	FALSE },
+			{ "VROM",	"mpr20349.39", 0xA3240428, 0x400000, 	2, 26, 			32,	FALSE },
+			{ "VROM",	"mpr20350.40", 0xC48F9ACE, 0x400000, 	2, 28, 			32,	FALSE },
+			{ "VROM",	"mpr20351.41", 0x1FBD3E10, 0x400000, 	2, 30, 			32,	FALSE },
+			
+			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
+		}
+	},
+
+	// Magical Truck Adventure
+	{
+		"magtruck",
+		"Magical Truck Adventure",
+		"Sega",
+		1998,
+		0x21,
+		0x800000,	// 8 MB of fixed CROM
+		TRUE,		// 32 MB of banked CROM
+		0x4000000,	// 64 MB of VROM
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		
+		{
+			// Fixed CROM
+			{ "CROM",	"epr21435.17", 0x9B169446, 0x200000,	2, 0x0000006,	8,	TRUE },
+			{ "CROM", 	"epr21433.18", 0x60AA9D76, 0x200000,	2, 0x0000004,	8, 	TRUE },
+			{ "CROM", 	"epr21436.19", 0x22BCBCA3, 0x200000,	2, 0x0000002,	8, 	TRUE },
+			{ "CROM", 	"epr21434.20", 0xE028D7CA, 0x200000,	2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM0
+			{ "CROMxx",	"mpr21423.1", 0x4EE0060A, 0x400000,		2, 0x0000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21424.2", 0x25358FDF, 0x400000,		2, 0x0000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr21425.3", 0xAD235849, 0x400000,		2, 0x0000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr21426.4", 0xCE77E26E, 0x400000,		2, 0x0000000,	8, 	TRUE },
+
+			// Banked CROM3
+			{ "CROMxx",	"epr21438.21", 0x6815AF9E, 0x80000,		2, 0x1000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21427.22", 0x884566F6, 0x400000,	2, 0x1000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr21431.23", 0x0EF8F7BB, 0x400000,	2, 0x1000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr21428.24", 0x162D1E43, 0x400000,	2, 0x1000000,	8, 	TRUE },
+
+			// Video ROM
+			{ "VROM",	"mpr21407.26", 0x3FFB416C, 0x400000, 	2, 0, 			32,	FALSE },
+			{ "VROM",	"mpr21408.27", 0x3E00A7EF, 0x400000, 	2, 2, 			32,	FALSE },
+			{ "VROM",	"mpr21409.28", 0xA4673BBF, 0x400000, 	2, 4, 			32,	FALSE },
+			{ "VROM",	"mpr21410.29", 0xC9F43B4A, 0x400000, 	2, 6, 			32,	FALSE },
+			{ "VROM",	"mpr21411.30", 0xF14957C7, 0x400000, 	2, 8, 			32,	FALSE },
+			{ "VROM",	"mpr21412.31", 0xEC24091F, 0x400000, 	2, 10, 			32,	FALSE },
+			{ "VROM",	"mpr21413.32", 0xEA9049E0, 0x400000, 	2, 12, 			32,	FALSE },
+			{ "VROM",	"mpr21414.33", 0x79BC5FFD, 0x400000, 	2, 14, 			32,	FALSE },
+			{ "VROM",	"mpr21415.34", 0xF96FE7A2, 0x400000, 	2, 16, 			32,	FALSE },
+			{ "VROM",	"mpr21416.35", 0x84A08B3E, 0x400000, 	2, 18, 			32,	FALSE },
+			{ "VROM",	"mpr21417.36", 0x6094975C, 0x400000, 	2, 20, 			32,	FALSE },
+			{ "VROM",	"mpr21418.37", 0x7BB868BA, 0x400000, 	2, 22, 			32,	FALSE },
+			{ "VROM",	"mpr21419.38", 0xBE7325C2, 0x400000, 	2, 24, 			32,	FALSE },
+			{ "VROM",	"mpr21420.39", 0x8B577E7B, 0x400000, 	2, 26, 			32,	FALSE },
+			{ "VROM",	"mpr21421.40", 0x71E4E9FC, 0x400000, 	2, 28, 			32,	FALSE },
+			{ "VROM",	"mpr21422.41", 0xFECA77A5, 0x400000, 	2, 30, 			32,	FALSE },
+			
+			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
+		}
+	},
+
+	// Sega Bass Fishing
+	{
+		"bass",
+		"Sega Bass Fishing",
+		"Sega",
+		1997,
+		0x10,
+		0x200000,	// 2 MB of fixed CROM
+		TRUE,		// 64 MB of banked CROM
+		0x2000000,	// 32 MB of VROM
+		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1,
+		
+		{
+			// Fixed CROM
+			{ "CROM",	"epr-20643.17", 0xDAF02716, 0x80000,	2, 0x0600006,	8,	TRUE },
+			{ "CROM", 	"epr-20644.18", 0xC28DB2B6, 0x80000,	2, 0x0600004,	8, 	TRUE },
+			{ "CROM", 	"epr-20645.19", 0x8EEFA2B0, 0x80000,	2, 0x0600002,	8, 	TRUE },
+			{ "CROM", 	"epr-20646.20", 0xD740AE06, 0x80000,	2, 0x0600000,	8, 	TRUE },
+			
+			// Banked CROM0
+			{ "CROMxx",	"mpr-20256.1", 0x115302AC, 0x400000,	2, 0x0000006,	8,	TRUE },
+			{ "CROMxx",	"mpr-20257.2", 0x025BC06D, 0x400000,	2, 0x0000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20258.3", 0x7B78B071, 0x400000,	2, 0x0000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20259.4", 0x40052562, 0x400000,	2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM1
+			{ "CROMxx",	"mpr-20260.5", 0xC56B4C10, 0x400000,	2, 0x1000006,	8,	TRUE },
+			{ "CROMxx",	"mpr-20261.6", 0xB1E9D44A, 0x400000,	2, 0x1000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20262.7", 0x52B0674D, 0x400000,	2, 0x1000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20263.8", 0x1CF4CBA9, 0x400000,	2, 0x1000000,	8, 	TRUE },
+			
+			// Banked CROM2
+			{ "CROMxx",	"mpr-20264.9",  0x8D995196, 0x400000,	2, 0x2000006,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20265.10", 0x28F76E3E, 0x400000,	2, 0x2000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20266.11", 0xABD2DB85, 0x400000,	2, 0x2000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20267.12", 0x48989191, 0x400000,	2, 0x2000000,	8,	TRUE },
+
+			// Banked CROM3
+			{ "CROMxx",	"epr-20313.21", 0x863A7857, 0x80000,	2, 0x3000004,	8,	TRUE },
+			{ "CROMxx",	"mpr-20268.22", 0x3631E93E, 0x400000,	2, 0x3000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-20269.24", 0x105A3181, 0x400000,	2, 0x3000000,	8, 	TRUE },
+
+			// Video ROM
+			{ "VROM",	"mpr-20270.26", 0xDF68A7A7, 0x200000, 	2, 0, 			32,	FALSE },
+			{ "VROM",	"mpr-20271.27", 0x4B01C3A4, 0x200000, 	2, 2, 			32,	FALSE },
+			{ "VROM",	"mpr-20272.28", 0xA658DA23, 0x200000, 	2, 4, 			32,	FALSE },
+			{ "VROM",	"mpr-20273.29", 0x577E9FFA, 0x200000, 	2, 6, 			32,	FALSE },
+			{ "VROM",	"mpr-20274.30", 0x7C7056AE, 0x200000, 	2, 8, 			32,	FALSE },
+			{ "VROM",	"mpr-20275.31", 0xE739F77A, 0x200000, 	2, 10, 			32,	FALSE },
+			{ "VROM",	"mpr-20276.32", 0xCBF966C0, 0x200000, 	2, 12, 			32,	FALSE },
+			{ "VROM",	"mpr-20277.33", 0x9C75200B, 0x200000, 	2, 14, 			32,	FALSE },
+			{ "VROM",	"mpr-20278.34", 0xDB3991BA, 0x200000, 	2, 16, 			32,	FALSE },
+			{ "VROM",	"mpr-20279.35", 0x995A11B8, 0x200000, 	2, 18, 			32,	FALSE },
+			{ "VROM",	"mpr-20280.36", 0xC2C8F9F5, 0x200000, 	2, 20, 			32,	FALSE },
+			{ "VROM",	"mpr-20281.37", 0xDA84B967, 0x200000, 	2, 22, 			32,	FALSE },
+			{ "VROM",	"mpr-20282.38", 0x1869FF49, 0x200000, 	2, 24, 			32,	FALSE },
+			{ "VROM",	"mpr-20283.39", 0x7D8FB469, 0x200000, 	2, 26, 			32,	FALSE },
+			{ "VROM",	"mpr-20284.40", 0x5C7F3A6F, 0x200000, 	2, 28, 			32,	FALSE },
+			{ "VROM",	"mpr-20285.41", 0x4AADC573, 0x200000, 	2, 30, 			32,	FALSE },
+			
+			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
+		}
+	},
+
+	// Dirt Devils
+	{
+		"dirtdvls",
+		"Dirt Devils",
+		"Sega",
+		1998,
+		0x21,
+		0x800000,	// 8 MB of fixed CROM
+		TRUE,		// 40 MB of banked CROM
+		0x4000000,	// 64 MB of VROM
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		
+		{
+			// Fixed CROM
+			{ "CROM",	"epr-21062a.17", 0x64B55254, 0x200000,	2, 0x0000006,	8,	TRUE },
+			{ "CROM", 	"epr-21063a.18", 0x6AB7EB32, 0x200000,	2, 0x0000004,	8, 	TRUE },
+			{ "CROM", 	"epr-21064a.19", 0x2A01F9AD, 0x200000,	2, 0x0000002,	8, 	TRUE },
+			{ "CROM", 	"epr-21065a.20", 0x3223DB1A, 0x200000,	2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM0
+			{ "CROMxx",	"mpr-21023.1", 0x932A3724, 0x400000,	2, 0x0000006,	8,	TRUE },
+			{ "CROMxx",	"mpr-21024.2", 0xEDE859B0, 0x400000,	2, 0x0000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr-21025.3", 0x6591C66E, 0x400000,	2, 0x0000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-21026.4", 0xF4937E3F, 0x400000,	2, 0x0000000,	8, 	TRUE },
+			
+			// Banked CROM1
+			{ "CROMxx",	"mpr-21027.5", 0x74E1496A, 0x400000,	2, 0x1000006,	8,	TRUE },
+			{ "CROMxx",	"mpr-21028.6", 0xDB11F50A, 0x400000,	2, 0x1000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr-21029.7", 0x89867D8A, 0x400000,	2, 0x1000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-21030.8", 0xF8E51BEC, 0x400000,	2, 0x1000000,	8, 	TRUE },
+			
+			// Banked CROM3
+			{ "CROMxx",	"epr-21066.21", 0xF7ED2582, 0x80000,	2, 0x2000006,	8,	TRUE },
+			{ "CROMxx",	"mpr-21031.22", 0x32F6B23A, 0x400000,	2, 0x2000004,	8, 	TRUE },
+			{ "CROMxx",	"mpr-21032.23", 0x3D3FF407, 0x400000,	2, 0x2000002,	8, 	TRUE },
+			{ "CROMxx",	"mpr-21033.24", 0x253D3C70, 0x400000,	2, 0x2000000,	8, 	TRUE },
+
+			// Video ROM
+			{ "VROM",	"mpr-21034.26", 0xACBA5CA6, 0x400000, 	2, 0, 			32,	FALSE },
+			{ "VROM",	"mpr-21035.27", 0x618B7D6A, 0x400000, 	2, 2, 			32,	FALSE },
+			{ "VROM",	"mpr-21036.28", 0x0E665BB2, 0x400000, 	2, 4, 			32,	FALSE },
+			{ "VROM",	"mpr-21037.29", 0x90B98493, 0x400000, 	2, 6, 			32,	FALSE },
+			{ "VROM",	"mpr-21038.30", 0x9B59D2C2, 0x400000, 	2, 8, 			32,	FALSE },
+			{ "VROM",	"mpr-21039.31", 0x61407B07, 0x400000, 	2, 10, 			32,	FALSE },
+			{ "VROM",	"mpr-21040.32", 0xB550C229, 0x400000, 	2, 12, 			32,	FALSE },
+			{ "VROM",	"mpr-21041.33", 0x8F1AC988, 0x400000, 	2, 14, 			32,	FALSE },
+			{ "VROM",	"mpr-21042.34", 0x1DAB621D, 0x400000, 	2, 16, 			32,	FALSE },
+			{ "VROM",	"mpr-21043.35", 0x707015C8, 0x400000, 	2, 18, 			32,	FALSE },
+			{ "VROM",	"mpr-21044.36", 0x776F9580, 0x400000, 	2, 20, 			32,	FALSE },
+			{ "VROM",	"mpr-21045.37", 0xA28AD02F, 0x400000, 	2, 22, 			32,	FALSE },
+			{ "VROM",	"mpr-21046.38", 0x05C995AE, 0x400000, 	2, 24, 			32,	FALSE },
+			{ "VROM",	"mpr-21047.39", 0x06B7826F, 0x400000, 	2, 26, 			32,	FALSE },
+			{ "VROM",	"mpr-21048.40", 0x96849974, 0x400000, 	2, 28, 			32,	FALSE },
+			{ "VROM",	"mpr-21049.41", 0x91E8161A, 0x400000, 	2, 30, 			32,	FALSE },
+			
+			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
+		}
+	},
+	
 	// Virtua Fighter 3
 	{
 		"vf3",
