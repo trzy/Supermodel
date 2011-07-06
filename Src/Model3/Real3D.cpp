@@ -674,6 +674,14 @@ void CReal3D::Flush(void)
 			size = 2+textureFIFO[i+0]/2;
 			size /= 4;
 			header = textureFIFO[i+1];		// texture information header
+			
+			// Spikeout seems to be uploading 0 length textures
+			if (0 == size)
+			{
+				DebugLog("Real3D: 0-length texture upload @ PC=%08X (%08X %08X %08X)\n", ppc_get_pc(), textureFIFO[i+0], textureFIFO[i+1], textureFIFO[i+2]);
+				break;
+			}
+			
 			UploadTexture(header,(UINT16 *)&textureFIFO[i+2]);
 			DebugLog("Real3D: Texture upload completed: %X bytes (%X)\n", size*4, textureFIFO[i+0]);
 			i += size;

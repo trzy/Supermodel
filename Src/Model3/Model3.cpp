@@ -504,6 +504,17 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
  data from it.
 ******************************************************************************/
 
+static const UINT16 spikeoutSecurity[] =
+{
+	0x0000,
+	0x4f4d, 0x4544, 0x2d4c, 0x2033, 0x7953, 0x7473, 0x6d65, 0x5020,
+	0x6f72, 0x7267, 0x6d61, 0x4320, 0x706f, 0x7279, 0x6769, 0x7468,
+	0x2820, 0x2943, 0x3120, 0x3939, 0x2035, 0x4553, 0x4147, 0x4520,
+	0x746e, 0x7265, 0x7270, 0x7369, 0x7365, 0x4c2c, 0x4454, 0x202e,
+	0x6c41, 0x206c, 0x6972, 0x6867, 0x2074, 0x6572, 0x6573, 0x7672,
+	0x6465, 0x202e, 0x2020, 0x0020
+};
+
 static const UINT16 vs298Security[] =
 {
 	0x0000,	// dummy read
@@ -578,7 +589,12 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 		return 0;
 	case 0x1C:	// Data
 		
-		if (!strcmp(Game->id, "vs298"))
+		if (!strcmp(Game->id, "spikeout"))
+		{
+			data = (spikeoutSecurity[securityPtr++] << 16);
+			securityPtr %= (sizeof(spikeoutSecurity)/sizeof(UINT16));
+		}
+		else if (!strcmp(Game->id, "vs298"))
 		{
 			data = (vs298Security[securityPtr++] << 16);
 			securityPtr %= (sizeof(vs298Security)/sizeof(UINT16));
@@ -1859,9 +1875,7 @@ void CModel3::ClearNVRAM(void)
 }
 
 void CModel3::RunFrame(void)
-{
-	printf("cmdbuf=%08X %08X %08X %08X %08X %08X %08X %08X\n", Read32(0x100180), Read32(0x100184), Read32(0x100188), Read32(0x10018C), Read32(0x100190), Read32(0x100194), Read32(0x100198), Read32(0x10019C));
-	
+{	
 	// Run the PowerPC for a frame
 	ppc_execute(ppcFrequency/60-10000);
 	
@@ -1888,6 +1902,10 @@ void CModel3::RunFrame(void)
 	}
 	SoundBoard.RunFrame();
 	IRQ.Deassert(0x40);
+	
+	
+	// Print out sound command buffer in Scud Race RAM
+	printf("cmdbuf=%08X %08X %08X %08X %08X %08X %08X %08X\n", Read32(0x100180), Read32(0x100184), Read32(0x100188), Read32(0x10018C), Read32(0x100190), Read32(0x100194), Read32(0x100198), Read32(0x10019C));
 #endif
 	
 	// End frame
