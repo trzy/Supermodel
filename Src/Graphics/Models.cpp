@@ -132,6 +132,7 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
        	else
        	{
 			glUniformMatrix4fv(modelViewMatrixLoc, 1, GL_FALSE, D->Data.Model.modelViewMatrix);
+			glUniform2fv(texOffsetLoc, 1, D->Data.Model.texOffset);
 			glDrawArrays(GL_TRIANGLES, D->Data.Model.index, D->Data.Model.numVerts);
 		}
 		
@@ -183,6 +184,10 @@ BOOL CRender3D::AppendDisplayList(ModelCache *Cache, BOOL isViewport, int modelN
 			
 			// Copy modelview matrix
 			glGetFloatv(GL_MODELVIEW_MATRIX, Cache->List[lm].Data.Model.modelViewMatrix);
+			
+			// Texture offset
+			Cache->List[lm].Data.Model.texOffset[0] = texOffset[0];
+			Cache->List[lm].Data.Model.texOffset[1] = texOffset[1];
 		}
 		else	// nothing to do, continue loop
 			continue;
@@ -594,7 +599,7 @@ BOOL CRender3D::CacheModel(ModelCache *Cache, int lutIdx, const UINT32 *data)
 		}	
 			
 		// Decode the texture
-		DecodeTexture(texFormat, texBaseX, texBaseY, texWidth, texHeight);
+		DecodeTexture(texFormat, texBaseX+(int)texOffset[0], texBaseY+(int)texOffset[1], texWidth, texHeight);
 		
 		// Polygon normal is in upper 24 bits: sign + 1.22 fixed point
 		P.n[0] = (GLfloat) (((INT32)P.header[1])>>8) * (1.0f/4194304.0f);
