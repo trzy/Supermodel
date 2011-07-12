@@ -545,6 +545,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsi
 
  			SCSP_MidiIn(0xAF);SCSP_MidiIn(0x10);SCSP_MidiIn(0x01);
  */			
+ 			SCSP_MidiIn(0xAF);SCSP_MidiIn(0x10);SCSP_MidiIn(0x00);
+ 			//static int snd=0xF;
+ 			//SCSP_MidiIn(0xA0);SCSP_MidiIn(0x11);SCSP_MidiIn(snd++);
  			//Sound codes:
  			// A0 11 xx (0F=time extend, 11=jumbo left right)
  			// AF 10 xx (music -- 01 seems to work)
@@ -635,9 +638,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsi
 		printf("SR%d=%08X\n", i, ppc_read_sr(i));
 	printf("SDR1=%08X\n", ppc_read_spr(SPR603E_SDR1));
 	*/
-#ifdef SUPERMODEL_SOUND
-	printf("68K PC =%08X\n", Turbo68KReadPC());
-#endif
 #endif
 	
 	return 0;

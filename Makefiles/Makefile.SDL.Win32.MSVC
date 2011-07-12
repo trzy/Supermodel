@@ -47,7 +47,7 @@ ENABLE_DEBUGGER = no
 #
 # Experimental sound code ('yes' on 32-bit builds only or 'no')
 #
-ENABLE_SOUND = no
+ENABLE_SOUND = yes
 
 
 ###############################################################################
@@ -118,7 +118,7 @@ OUTFILE = $(BIN_DIR)\Supermodel.exe
 CC = "$(VC_BIN)\cl.exe"
 LD = "$(VC_BIN)\link.exe"
 COMPILER_FLAGS = /I "$(SDL_INCLUDEPATH)" /I "$(ZLIB_INCLUDEPATH)" /I "$(DIRECTX_INCLUDEPATH)" /I "Src\\" /I "Src\OSD\SDL\\" /Ox \
-	/D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL
+	/D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL /D "DEBUG" /DEBUG
 CFLAGS = $(COMPILER_FLAGS) /TC
 CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
 LFLAGS = /MACHINE:$(ARCH) $(ARCH_LIBS) /LIBPATH:"$(SDL_LIBPATH)" /LIBPATH:"$(ZLIB_LIBPATH)" /LIBPATH:"$(DIRECTX_LIBPATH)" /OUT:"$(OUTFILE)" \
@@ -129,7 +129,7 @@ OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.
 #
 # Turbo68K options
 #
-MAKE68KFLAGS = -singleaddr 
+TURBO68K_FLAGS = -singleaddr 
 
 
 #
@@ -145,7 +145,7 @@ endif
 # Add compiler flags for various options
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	COMPILER_FLAGS += /D "SUPERMODEL_DEBUGGER"
-	MAKE68KFLAGS += -debug
+	TURBO68K_FLAGS += -debug
 endif
 
 ifeq ($(strip $(ENABLE_SOUND)),yes)
@@ -164,15 +164,11 @@ HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
 OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/INIFile.obj $(OBJ_DIR)/BlockFile.obj $(OBJ_DIR)/93C46.obj \
 	$(OBJ_DIR)/ROMLoad.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/ioapi.obj $(OBJ_DIR)/Error.obj $(OBJ_DIR)/glew.obj $(OBJ_DIR)/Shader.obj \
 	$(OBJ_DIR)/Real3D.obj $(OBJ_DIR)/Render3D.obj $(OBJ_DIR)/Models.obj $(OBJ_DIR)/Render2D.obj $(OBJ_DIR)/TileGen.obj \
-	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/SoundBoard.obj \
+	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/SoundBoard.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/M68K.obj\
+	$(OBJ_DIR)/m68kcpu.obj $(OBJ_DIR)/m68kopnz.obj $(OBJ_DIR)/m68kopdm.obj $(OBJ_DIR)/m68kopac.obj $(OBJ_DIR)/m68kops.obj \
 	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/MPC10x.obj \
 	$(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj $(OBJ_DIR)/InputTypes.obj \
 	$(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj
-
-# If sound enabled, include Turbo68K and SCSP code
-ifeq ($(strip $(ENABLE_SOUND)),yes)
-	OBJ += $(OBJ_DIR)/Turbo68K.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj
-endif
 
 # If built-in debugger enabled, include all debugging classes
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
@@ -208,17 +204,51 @@ $(OBJ_DIR):
 clean:	
 	del $(OUTFILE)
 	del $(OBJ_DIR)\*.obj
+	del $(OBJ_DIR)\*.c
+	del $(OBJ_DIR)\*.h
+	del $(OBJ_DIR)\*.exe
+
+
+#
+# Musashi 68K emulator
+#
+# All generated source files are emitted to the object directory. For MSVC, 
+# INLINE must be redefined as "static __inline", which is the syntax in C mode.
+#
+$(OBJ_DIR)/m68kmake.exe: Src/CPU/68K/Musashi/m68kmake.c
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kmake.obj
+	$(LD) /OUT:$(OBJ_DIR)/m68kmake.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/m68kmake.obj
+	
+$(OBJ_DIR)/m68kops.h: $(OBJ_DIR)/m68kmake.exe Src/CPU/68K/Musashi/m68k_in.c
+	$(OBJ_DIR)/m68kmake.exe $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
+
+$(OBJ_DIR)/m68kcpu.obj: Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kcpu.obj /I "$(OBJ_DIR)" /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kops.obj: $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kops.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kopac.obj: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopac.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kopdm.obj: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopdm.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kopnz.obj: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopnz.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
 
 
 #
 # Turbo68K 
 #
-$(OBJ_DIR)/Make68K.exe: Src/CPU/68K/Make68K.c
+# 32-bit only.
+#
+$(OBJ_DIR)/Make68K.exe: Src/CPU/68K/Turbo68K/Make68K.c
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/Make68K.obj
 	$(LD) /OUT:$(OBJ_DIR)/Make68K.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/Make68K.obj
 
 $(OBJ_DIR)/Turbo68K.obj: $(OBJ_DIR)/Make68K.exe
-	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm $(MAKE68KFLAGS)
+	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm $(TURBO68K_FLAGS)
 	nasm $(OBJ_DIR)/Turbo68K.asm -o $(OBJ_DIR)/Turbo68K.obj -f win32
 
 
@@ -253,6 +283,9 @@ $(OBJ_DIR)/%.obj:	Src/Debugger/CPU/%.cpp Src/Debugger/CPU/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 	
 $(OBJ_DIR)/%.obj:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h Src/CPU/PowerPC/ppc603.c Src/CPU/PowerPC/ppc_ops.c $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/CPU/68K/%.cpp Src/CPU/68K/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 	
 $(OBJ_DIR)/%.obj:	Src/Inputs/%.cpp Src/Inputs/%.h $(HEADERS)

@@ -32,7 +32,7 @@
  Program-Wide Definitions
 ******************************************************************************/
 
-#define SUPERMODEL_VERSION	"0.2-WIP"	// version string 
+#define SUPERMODEL_VERSION	"0.2a-WIP"	// version string 
 
 
 /******************************************************************************
@@ -63,6 +63,10 @@
  *		INT8	Signed 8-bit integer.
  *		FLOAT32	Single-precision, 32-bit floating point number.
  *		FLOAT64	Double-precision, 64-bit floating point number.
+ *
+ * Types.h is used within C++ and C modules, so it must NOT include any C++-
+ * specific stuff. Some modules may choose to include it directly rather than
+ * use Supermodel.h, so it must exist.
  */
 #include "Types.h"
 
@@ -141,9 +145,7 @@ extern void InfoLog(const char *fmt, ...);
 #endif // SUPERMODEL_DEBUGGER
 #include "CPU/PowerPC/PPCDisasm.h"
 #include "CPU/PowerPC/ppc.h"
-#ifdef SUPERMODEL_SOUND
-#include "CPU/68K/Turbo68K.h"
-#endif // SUPERMODEL_SOUND
+#include "CPU/68K/M68K.h"
 #include "Inputs/Input.h"
 #include "Inputs/Inputs.h"
 #include "Inputs/InputSource.h"

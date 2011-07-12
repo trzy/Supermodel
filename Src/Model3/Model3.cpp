@@ -1900,13 +1900,13 @@ void CModel3::RunFrame(void)
 		
 		//printf("---*\n");
 	}
-	SoundBoard.RunFrame();
-	IRQ.Deassert(0x40);
-	
-	
+
 	// Print out sound command buffer in Scud Race RAM
 	printf("cmdbuf=%08X %08X %08X %08X %08X %08X %08X %08X\n", Read32(0x100180), Read32(0x100184), Read32(0x100188), Read32(0x10018C), Read32(0x100190), Read32(0x100194), Read32(0x100198), Read32(0x10019C));
 #endif
+	
+	SoundBoard.RunFrame();
+	IRQ.Deassert(0x40);
 	
 	// End frame
 	GPU.EndFrame();

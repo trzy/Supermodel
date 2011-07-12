@@ -22,7 +22,9 @@
 /*
  * Types.h
  * 
- * Fundamental data types.
+ * Fundamental data types. This file is used by both C++ and C modules, so it
+ * must NOT include any C++-specific constructs. Some modules may elect to 
+ * include it directly rather than through Supermodel.h.
  */
  
 #ifndef INCLUDED_TYPES_H

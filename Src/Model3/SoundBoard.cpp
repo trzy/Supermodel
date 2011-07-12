@@ -34,178 +34,264 @@ static INT16	leftBuffer[44100/60],rightBuffer[44100/60];
 static FILE		*soundFP;
 
 /******************************************************************************
- Global 68K Access Handlers
- 
- The 68K must interface with globally-accessible memory maps and access
- handlers.  Turbo68K uses the __cdecl calling convention. Note that this is not
- explicitly defined for the Turbo68K functions themselves but in case Turbo68K
- crashes, this may be the culprit.
+ 68K Access Handlers
 ******************************************************************************/
 
-// Prototypes for access handlers
-#ifdef SUPERMODEL_SOUND
-static UINT8	__cdecl	UnknownRead8(UINT32);
-static UINT16	__cdecl	UnknownRead16(UINT32);
-static UINT32	__cdecl	UnknownRead32(UINT32);
-static void		__cdecl	UnknownWrite8(UINT32, UINT8);
-static void		__cdecl	UnknownWrite16(UINT32, UINT16);
-static void		__cdecl	UnknownWrite32(UINT32, UINT32);
+// Memory regions passed out of CSoundBoard object for global access handlers
+static UINT8		*sbRAM1, *sbRAM2;
+static const UINT8	*sbSoundROM, *sbSampleROM;
 
-// Memory maps for 68K
-struct TURBO68K_FETCHREGION mapFetch[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL },		// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL },		// SCSP2 RAM
-	{ 0x600000, 0x67FFFF, NULL },		// program ROM
-	{ -1,       -1,       NULL }
-};
-
-struct TURBO68K_DATAREGION mapRead8[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL, NULL },	// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL, NULL },	// SCSP2 RAM
-	{ 0x600000, 0x67FFFF, NULL, NULL },	// program ROM
-	{ 0x800000,	0x9FFFFF, NULL, NULL },	// sample ROM (low 2 MB)
-	{ 0xA00000,	0xDFFFFF, NULL, NULL },	// sample ROM (bank)
-	{ 0xE00000, 0xFFFFFF, NULL, NULL },	// sample ROM (bank)
-	{ 0x100000, 0x10FFFF, NULL, SCSP_Master_r8 },
-	{ 0x300000, 0x30FFFF, NULL, SCSP_Slave_r8 },
-	{ 0x000000, 0xFFFFFF, NULL, UnknownRead8 },
-	{ -1,		-1,		  NULL, NULL }
-};
-
-struct TURBO68K_DATAREGION mapRead16[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL, NULL },	// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL, NULL },	// SCSP2 RAM
-	{ 0x600000, 0x67FFFF, NULL, NULL },	// program ROM
-	{ 0x800000,	0x9FFFFF, NULL, NULL },	// sample ROM (low 2 MB)
-	{ 0xA00000,	0xDFFFFF, NULL, NULL },	// sample ROM (bank)
-	{ 0xE00000, 0xFFFFFF, NULL, NULL },	// sample ROM (bank)
-	{ 0x100000, 0x10FFFF, NULL, SCSP_Master_r16 },
-	{ 0x300000, 0x30FFFF, NULL, SCSP_Slave_r16 },
-	{ 0x000000, 0xFFFFFF, NULL, UnknownRead16 },
-	{ -1,		-1,		  NULL, NULL }
-};
-
-struct TURBO68K_DATAREGION mapRead32[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL, NULL },	// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL, NULL },	// SCSP2 RAM
-	{ 0x600000, 0x67FFFF, NULL, NULL },	// program ROM
-	{ 0x800000,	0x9FFFFF, NULL, NULL },	// sample ROM (low 2 MB)
-	{ 0xA00000,	0xDFFFFF, NULL, NULL },	// sample ROM (bank)
-	{ 0xE00000, 0xFFFFFF, NULL, NULL },	// sample ROM (bank)
-	{ 0x100000, 0x10FFFF, NULL, SCSP_Master_r32 },
-	{ 0x300000, 0x30FFFF, NULL, SCSP_Slave_r32 },
-	{ 0x000000, 0xFFFFFF, NULL, UnknownRead32 },
-	{ -1,		-1,		  NULL, NULL }
-};
-
-struct TURBO68K_DATAREGION mapWrite8[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL, NULL },	// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL, NULL },	// SCSP2 RAM
-	{ 0x100000, 0x10FFFF, NULL, SCSP_Master_w8 },
-	{ 0x300000, 0x30FFFF, NULL, SCSP_Slave_w8 },
-	{ 0x000000, 0xFFFFFF, NULL, UnknownWrite8 },
-	{ -1,		-1,		  NULL, NULL }
-};
-
-struct TURBO68K_DATAREGION mapWrite16[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL, NULL },	// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL, NULL },	// SCSP2 RAM
-	{ 0x100000, 0x10FFFF, NULL, SCSP_Master_w16 },
-	{ 0x300000, 0x30FFFF, NULL, SCSP_Slave_w16 },
-	{ 0x000000, 0xFFFFFF, NULL, UnknownWrite16 },
-	{ -1,		-1,		  NULL, NULL }
-};
-
-struct TURBO68K_DATAREGION mapWrite32[] =
-{
-	{ 0x000000, 0x0FFFFF, NULL, NULL },	// SCSP1 RAM
-	{ 0x200000,	0x2FFFFF, NULL, NULL },	// SCSP2 RAM
-	{ 0x100000, 0x10FFFF, NULL, SCSP_Master_w32 },
-	{ 0x300000, 0x30FFFF, NULL, SCSP_Slave_w32 },
-	{ 0x000000, 0xFFFFFF, NULL, UnknownWrite32 },
-	{ -1,		-1,		  NULL, NULL }
-};
-
-static UINT8 __cdecl UnknownRead8(UINT32 addr)
-{
-	printf("68K read from %06X (byte)\n", addr);
-	return 0;
+static UINT8 Read8(UINT32 a)
+{ 
+	// SCSP RAM 1
+	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+		return sbRAM1[a^1];
+	
+	// SCSP RAM 2
+	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
+		return sbRAM2[(a-0x200000)^1];
+		
+	// Program ROM
+	else if ((a >= 0x600000) && (a <= 0x67FFFF))
+		return sbSoundROM[(a-0x600000)^1];
+	
+	// Sample ROM (low 2MB, fixed)
+	else if ((a >= 0x800000) && (a <= 0x9FFFFF))
+		return sbSampleROM[(a-0x800000)^1];
+		
+	// Sample ROM (bank)
+	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
+		return sbSampleROM[(a-0x800000)^1];
+		
+	// Sample ROM (bank)
+	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
+		return sbSampleROM[(a-0x800000)^1];
+		
+	// SCSP (Master)
+	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+		return SCSP_Master_r8(a);
+		
+	// SCSP (Slave)
+	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+		return SCSP_Slave_r8(a);
+		
+	// Unknown
+	else
+	{
+		printf("68K: Unknown read8 %06X\n", a);
+		return 0;
+	}
 }
 
-static UINT16 __cdecl UnknownRead16(UINT32 addr)
-{
-	printf("68K read from %06X (word)\n", addr);
-	return 0;
+static UINT16 Read16(UINT32 a) 
+{ 
+	// SCSP RAM 1
+	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+		return *(UINT16 *) &sbRAM1[a];
+	
+	// SCSP RAM 2
+	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
+		return *(UINT16 *) &sbRAM2[(a-0x200000)];
+		
+	// Program ROM
+	else if ((a >= 0x600000) && (a <= 0x67FFFF))
+		return *(UINT16 *) &sbSoundROM[(a-0x600000)];
+	
+	// Sample ROM (low 2MB, fixed)
+	else if ((a >= 0x800000) && (a <= 0x9FFFFF))
+		return *(UINT16 *) &sbSampleROM[(a-0x800000)];
+		
+	// Sample ROM (bank)
+	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
+		return *(UINT16 *) &sbSampleROM[(a-0x800000)];
+		
+	// Sample ROM (bank)
+	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
+		return *(UINT16 *) &sbSampleROM[(a-0x800000)];
+		
+	// SCSP (Master)
+	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+		return SCSP_Master_r16(a);
+		
+	// SCSP (Slave)
+	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+		return SCSP_Slave_r16(a);
+		
+	// Unknown
+	else
+	{
+		printf("68K: Unknown read16 %06X\n", a);
+		return 0;
+	}
 }
 
-static UINT32 __cdecl UnknownRead32(UINT32 addr)
-{
-	printf("68K read from %06X (longword)\n", addr);
-	return 0;
+static UINT32 Read32(UINT32 a) 
+{ 
+	// SCSP RAM 1
+	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+		return (Read16(a)<<16)|Read16(a+2);
+	
+	// SCSP RAM 2
+	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
+		return (Read16(a)<<16)|Read16(a+2);
+		
+	// Program ROM
+	else if ((a >= 0x600000) && (a <= 0x67FFFF))
+		return (Read16(a)<<16)|Read16(a+2);
+	
+	// Sample ROM (low 2MB, fixed)
+	else if ((a >= 0x800000) && (a <= 0x9FFFFF))
+		return (Read16(a)<<16)|Read16(a+2);
+		
+	// Sample ROM (bank)
+	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
+		return (Read16(a)<<16)|Read16(a+2);
+		
+	// Sample ROM (bank)
+	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
+		return (Read16(a)<<16)|Read16(a+2);
+		
+	// SCSP (Master)
+	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+		return SCSP_Master_r32(a);
+		
+	// SCSP (Slave)
+	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+		return SCSP_Slave_r32(a);
+		
+	// Unknown
+	else
+	{
+		printf("68K: Unknown read32 %06X\n", a);
+		return 0;
+	}
 }
 
-
-static void __cdecl UnknownWrite8(UINT32 addr, UINT8 data)
-{
-	printf("68K wrote %06X=%02X\n", addr, data);
+static void Write8 (unsigned int a,unsigned char d)  
+{ 
+	
+	// SCSP RAM 1
+	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+		sbRAM1[a^1] = d;
+	
+	// SCSP RAM 2
+	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
+		sbRAM2[(a-0x200000)^1] = d;
+		
+	// SCSP (Master)
+	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+		SCSP_Master_w8(a,d);
+		
+	// SCSP (Slave)
+	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+		SCSP_Slave_w8(a,d);
+		
+	// Unknown
+	else
+		printf("68K: Unknown write8 %06X=%02X\n", a, d);
 }
 
-static void __cdecl UnknownWrite16(UINT32 addr, UINT16 data)
-{
-	printf("68K wrote %06X=%04X\n", addr, data);
+static void Write16(unsigned int a,unsigned short d) 
+{ 
+		
+	// SCSP RAM 1
+	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+		*(UINT16 *) &sbRAM1[a] = d;
+	
+	// SCSP RAM 2
+	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
+		*(UINT16 *) &sbRAM2[(a-0x200000)] = d;
+		
+	// SCSP (Master)
+	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+		SCSP_Master_w16(a,d);
+		
+	// SCSP (Slave)
+	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+		SCSP_Slave_w16(a,d);
+		
+	// Unknown
+	else
+		printf("68K: Unknown write16 %06X=%04X\n", a, d);
+	
 }
 
-static void __cdecl UnknownWrite32(UINT32 addr, UINT32 data)
+static void Write32(unsigned int a,unsigned int d)
 {
-	printf("68K wrote %06X=%08X\n", addr, data);
+	// SCSP RAM 1
+	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+	{
+		Write16(a,d>>16);
+		Write16(a+2,d&0xFFFF);
+	}
+		
+	// SCSP RAM 2
+	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
+	{
+		Write16(a,d>>16);
+		Write16(a+2,d&0xFFFF);
+	}
+		
+	// SCSP (Master)
+	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+		SCSP_Master_w32(a,d);
+		
+	// SCSP (Slave)
+	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+		SCSP_Slave_w32(a,d);
+		
+	// Unknown
+	else
+		printf("68K: Unknown write32 %06X=%08X\n", a, d);
 }
-#endif
 
 
 /******************************************************************************
- Emulation Functions
+ SCSP 68K Callbacks
+ 
+ The SCSP emulator drives the 68K via callbacks.
 ******************************************************************************/
-int irqLine = 0;
+
+// Status of IRQ pins (IPL2-0) on 68K
+static int	irqLine = 0;
+
+// Interrupt acknowledge callback (TODO: don't need this, default behavior in M68K.cpp is fine)
+int IRQAck(int irqLevel)
+{
+	M68KSetIRQ(0);
+	irqLine = 0;
+	return M68K_IRQ_AUTOVECTOR;
+}
 
 // SCSP callback for generating IRQs
-void SCSP68KIRQCallback(int irqNum)
+void SCSP68KIRQCallback(int irqLevel)
 {
-#ifdef SUPERMODEL_SOUND
-	//printf("IRQ: %d\n", irqNum);
-	irqLine = irqNum;
-	//Turbo68KInterrupt(irqNum, TURBO68K_AUTOVECTOR);
-#endif
+	/*
+	 * IRQ arbitration logic: only allow higher priority IRQs to be asserted or
+	 * 0 to clear pending IRQ.
+	 */
+	if ((irqLevel>irqLine) || (0==irqLevel))
+	{
+		irqLine = irqLevel;	
+		
+	}
+	M68KSetIRQ(irqLine);
 }
 
 // SCSP callback for running the 68K
 int SCSP68KRunCallback(int numCycles)
 {
-#ifdef SUPERMODEL_SOUND
-	for (int i = 0; i < numCycles; i++)
-	{
-		if (irqLine)
-			Turbo68KInterrupt(irqLine,TURBO68K_AUTOVECTOR);
-		Turbo68KRun(1);
-	}
-	return numCycles;
-	//Turbo68KRun(numCycles);
-	//return Turbo68KGetElapsedCycles();
-#else
-	return numCycles;
-#endif
+	return M68KRun(numCycles);
 }
+
+
+/******************************************************************************
+ Sound Board Emulation
+******************************************************************************/
 
 void CSoundBoard::WriteMIDIPort(UINT8 data)
 {
-#ifdef SUPERMODEL_SOUND
 	SCSP_MidiIn(data);
-#endif
 }
 
 void CSoundBoard::RunFrame(void)
@@ -227,18 +313,8 @@ void CSoundBoard::RunFrame(void)
 
 void CSoundBoard::Reset(void)
 {
-#ifdef SUPERMODEL_SOUND
 	memcpy(ram1, soundROM, 16);	// copy 68K vector table
-	Turbo68KReset();
-	/*
-	printf("68K PC=%06X\n", Turbo68KReadPC());
-	for (int i = 0; i < 1000000; i++)
-	{
-		//printf("%06X\n", Turbo68KReadPC());
-		Turbo68KRun(1);
-	}
-	*/
-#endif
+	M68KReset();
 	DebugLog("Sound Board Reset\n");
 }
 
@@ -248,13 +324,12 @@ void CSoundBoard::Reset(void)
 ******************************************************************************/
 
 // Offsets of memory regions within sound board's pool
-#define OFFSET_RAM1			0			// 1 MB SCSP1 RAM
-#define OFFSET_RAM2			0x100000	// 1 MB SCSP2 RAM
+#define OFFSETsbRAM1			0			// 1 MB SCSP1 RAM
+#define OFFSETsbRAM2			0x100000	// 1 MB SCSP2 RAM
 #define MEMORY_POOL_SIZE	(0x100000+0x100000)
 
 BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ *ppcIRQObjectPtr, unsigned soundIRQBit)
 {
-#ifdef SUPERMODEL_SOUND
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
 	// Attach IRQ controller
@@ -272,33 +347,28 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	memset(memoryPool, 0, MEMORY_POOL_SIZE);
 	
 	// Set up memory pointers
-	ram1 = &memoryPool[OFFSET_RAM1];
-	ram2 = &memoryPool[OFFSET_RAM2];
+	ram1 = &memoryPool[OFFSETsbRAM1];
+	ram2 = &memoryPool[OFFSETsbRAM2];
 	
+	// Make global copies of memory pointers for 68K access handlers
+	sbRAM1 = ram1;
+	sbRAM2 = ram2;
+	sbSoundROM = soundROM;
+	sbSampleROM = sampleROM;
+
 	// Initialize 68K core
-	mapFetch[0].ptr = mapRead8[0].ptr = mapRead16[0].ptr = mapRead32[0].ptr = 
-	mapWrite8[0].ptr = mapWrite16[0].ptr = mapWrite32[0].ptr =	(UINT32)ram1 - mapFetch[0].base;;
-	
-	mapFetch[1].ptr = mapRead8[1].ptr = mapRead16[1].ptr = mapRead32[1].ptr = 
-	mapWrite8[1].ptr = mapWrite16[1].ptr = mapWrite32[1].ptr =	(UINT32)ram2 - mapFetch[1].base;
-
-	mapFetch[2].ptr = mapRead8[2].ptr = mapRead16[2].ptr = mapRead32[2].ptr = (UINT32)soundROM - mapFetch[2].base;
-	
-	mapRead8[3].ptr = mapRead16[3].ptr = mapRead32[3].ptr = (UINT32)&sampleROM[0x000000] - mapRead8[3].base;
-	
-	mapRead8[4].ptr = mapRead16[4].ptr = mapRead32[4].ptr = (UINT32)&sampleROM[0x200000] - mapRead8[4].base;
-
-	mapRead8[5].ptr = mapRead16[5].ptr = mapRead32[5].ptr = (UINT32)&sampleROM[0x600000] - mapRead8[5].base;
-	
-	Turbo68KInit();
-	Turbo68KSetFetch(mapFetch, NULL);
-	Turbo68KSetReadByte(mapRead8, NULL);
-	Turbo68KSetReadWord(mapRead16, NULL);
-	Turbo68KSetReadLong(mapRead32, NULL);
-	Turbo68KSetWriteByte(mapWrite8, NULL);
-	Turbo68KSetWriteWord(mapWrite16, NULL);
-	Turbo68KSetWriteLong(mapWrite32, NULL);
-	
+	M68KInit();
+	M68KSetIRQCallback(IRQAck);
+	M68KSetFetch8Callback(Read8);
+	M68KSetFetch16Callback(Read16);
+	M68KSetFetch32Callback(Read32);
+	M68KSetRead8Callback(Read8);
+	M68KSetRead16Callback(Read16);
+	M68KSetRead32Callback(Read32);
+	M68KSetWrite8Callback(Write8);
+	M68KSetWrite16Callback(Write16);
+	M68KSetWrite32Callback(Write32);
+		
 	// Initialize SCSPs
 	SCSP_SetBuffers(leftBuffer, rightBuffer, 44100/60);
 	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback, ppcIRQ, ppcSoundIRQBit);
@@ -307,6 +377,7 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	SCSP_SetRAM(1, ram2);
 	
 	// Binary logging
+#ifdef SUPERMODEL_SOUND
 	soundFP = fopen("sound.bin","wb");	// delete existing file
 	fclose(soundFP);
 	soundFP = fopen("sound.bin","ab");	// append mode
@@ -364,6 +435,7 @@ CSoundBoard::~CSoundBoard(void)
 		
 	}
 //#endif
+#endif
 
 	SCSP_Deinit();
 	
@@ -374,7 +446,5 @@ CSoundBoard::~CSoundBoard(void)
 	}
 	ram1 = NULL;
 	ram2 = NULL;
-#endif
-
 	DebugLog("Destroyed Sound Board\n");
 }

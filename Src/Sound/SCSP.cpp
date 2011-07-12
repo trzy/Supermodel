@@ -738,6 +738,7 @@ void SCSP_UpdateSlotReg(int s,int r)
 						if(KEYONB(s2) && (!s2->active || (s2->active && s2->EG.state==RELEASE)))
 						{
 							DebugLog("KEYON %d",sl);
+							printf("KEYON %d\n",sl);
 							SCSP_StartSlot(s2);
 						}
 						if(!KEYONB(s2) && s2->active)
@@ -880,7 +881,7 @@ void SCSP_UpdateRegR(int reg)
 				unsigned short v=SCSP->data[0x5/2];
 				v&=0xff00;
 				v|=MidiStack[MidiR];
-				printf("read MIDI\n");
+				//printf("read MIDI\n");
 				if(MidiR!=MidiW)
 				{
 					++MidiR;
@@ -914,6 +915,7 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		DebugLog("Slot %02X Reg %02X write byte %04X",slot,addr^1,val);
+		printf("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
 		*((unsigned char *) (SCSP->Slots[slot].datab+(addr^1))) = val;
 		SCSP_UpdateSlotReg(slot,(addr^1)&0x1f);
 	}
@@ -953,6 +955,7 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		DebugLog("Slot %02X Reg %02X write word %04X",slot,addr,val);
+		printf("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
 		*((unsigned short *) (SCSP->Slots[slot].datab+(addr))) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
 	}
@@ -992,6 +995,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		DebugLog("Slot %02X Reg %02X write dword %08X",slot,addr,val);
+		printf("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
 		_asm rol val,16
 		*((unsigned int *) (SCSP->Slots[slot].datab+(addr))) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
