@@ -1,3 +1,4 @@
+//TODO: Update save state file format (must output) MIDI control port; will no longer be compatible with 0.1a save states
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
