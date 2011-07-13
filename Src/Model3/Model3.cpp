@@ -1,4 +1,3 @@
-int midiCtrlPort=0, midiPort=0;
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -189,6 +188,7 @@ int midiCtrlPort=0, midiPort=0;
 #include <stdlib.h>
 #include <string.h>
 #include "Supermodel.h"
+
 
 /******************************************************************************
  Model 3 Inputs
@@ -624,7 +624,6 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 		else
 		{
 			data = 0xFFFFFFFF;
-			//ErrorLog("Protection device for %s not yet implemented!", Game->title);
 			DebugLog("Security read: reg=%X, PC=%08X, LR=%08X\n", reg, ppc_get_pc(), ppc_get_lr());
 		}
 		return data;
@@ -808,7 +807,7 @@ UINT8 CModel3::Read8(UINT32 addr)
 		
 		// Sound Board
 		case 0x08:
-			printf("Read8 %08X\n", addr);
+			printf("PPC: Read8 %08X\n", addr);
 			break;
 
 		// System registers
@@ -885,7 +884,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 			
 		// Sound Board
 		case 0x08:
-			printf("Read16 %08X\n", addr);
+			printf("PPC: Read16 %08X\n", addr);
 			break;
 
 		// MPC105
@@ -977,7 +976,7 @@ UINT32 CModel3::Read32(UINT32 addr)
 		
 		// Sound Board
 		case 0x08:
-			printf("Read32 %08X\n", addr);
+			printf("PPC: Read32 %08X\n", addr);
 			break;
 
 		// Backup RAM
@@ -1121,35 +1120,13 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 			break;
 			
 		// Sound Board
-#if 0	//def SUPERMODEL_SOUND
 		case 0x08:
-			//printf("%08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
-			if ((addr&0xF)==0)
-			{
-				midiPort = data;
-				//SoundBoard.WriteMIDIPort(data);
-				Turbo68KRun(480);
-				IRQ.Deassert(0x40);
-			}
-			else if ((addr&0xF)==4)
-			{
-				printf("Ctrl port=%02X\n", data);
-				SCSP_WriteMIDICtrlPort(data);
-				/*
-				if (data==0x27)
-					;//IRQ.Assert(0x40);
-				*/
-				
-				midiCtrlPort=data;
-				if (data==0x6)
-				{
-					printf("MIDI port=%02X\n", midiPort);
-					if (midiPort!=0xFF)
-					SoundBoard.WriteMIDIPort(midiPort);
-				}
-			}
+			printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
+			if ((addr&0xF) == 0)		// MIDI data port
+				SoundBoard.WriteMIDIPort(data);
+			else if ((addr&0xF) == 4)	// MIDI control port
+				midiCtrlPort = data;
 			break;
-#endif
 	
 		// Backup RAM
 		case 0x0C:
@@ -1225,7 +1202,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 		{
 		// Sound Board
 		case 0x08:
-			printf("%08X=%04X\n", addr, data);
+			printf("PPC: %08X=%04X\n", addr, data);
 			break;
 			
 		// Backup RAM
@@ -1334,7 +1311,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
 		// Sound Board
 		case 0x08:
-			printf("%08X=%08X\n", addr, data);
+			printf("PPC: %08X=%08X\n", addr, data);
 			break;
 			
 		// Backup RAM
@@ -1641,6 +1618,13 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 		GPU.WriteDMARegister8(addr&0xFF,data);
 	else if (((addr>=0xF0040000) && (addr<0xF0040040)) || ((addr>=0xFE040000) && (addr<0xFE040040)))
 		WriteInputs(addr&0x3F,data);
+	else if (((addr>=0xF0080000) && (addr<=0xF0080007)) || ((addr>=0xFE080000) && (addr<=0xFE080007)))
+	{
+			if ((addr&0xF) == 0)		// MIDI data port
+				SoundBoard.WriteMIDIPort(data);
+			else if ((addr&0xF) == 4)	// MIDI control port
+				midiCtrlPort = data;
+	}
 	else if (((addr>=0xF00C0000) && (addr<0xF00E0000)) || ((addr>=0xFE0C0000) && (addr<0xFE0E0000)))
 		backupRAM[(addr&0x1FFFF)^3] = data;
 	else if (((addr>=0xF0100000) && (addr<0xF0100040)) || ((addr>=0xFE100000) && (addr<0xFE100040)))
@@ -1886,27 +1870,25 @@ void CModel3::RunFrame(void)
 	IRQ.Assert(0x02);
 	ppc_execute(10000);	// TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
 	
-	// Update sound
-#if 0	//def SUPERMODEL_SOUND
-	//if (midiCtrlPort==0x27)
+	// Sound
+	int irqCount = 0;
+	while (midiCtrlPort == 0x27)	// 27 triggers IRQ sequence, 06 stops it
 	{
-		//printf("*---\n");
+		IRQ.Assert(0x40);
+		ppc_execute(200);
+		IRQ.Deassert(0x40);
+		ppc_execute(200);
 		
-		for (int i = 0; i < 128; i++)
+		++irqCount;
+		if (irqCount > (128*3))
 		{
-			IRQ.Assert(0x40);
-			ppc_execute(2000);
+			printf("MIDI TIMEOUT!\n");
+			break;
 		}
-		
-		//printf("---*\n");
 	}
 
-	// Print out sound command buffer in Scud Race RAM
-	printf("cmdbuf=%08X %08X %08X %08X %08X %08X %08X %08X\n", Read32(0x100180), Read32(0x100184), Read32(0x100188), Read32(0x10018C), Read32(0x100190), Read32(0x100194), Read32(0x100198), Read32(0x10019C));
-#endif
-	
-	SoundBoard.RunFrame();
 	IRQ.Deassert(0x40);
+	SoundBoard.RunFrame();
 	
 	// End frame
 	GPU.EndFrame();
@@ -1930,6 +1912,9 @@ void CModel3::Reset(void)
 	serialFIFO1 = 0;
 	serialFIFO2 = 0;
 	adcChannel = 0;
+	
+	// MIDI
+	midiCtrlPort = 0;
 	
 	// Reset all devices
 	ppc_reset();

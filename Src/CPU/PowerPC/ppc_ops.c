@@ -1324,6 +1324,7 @@ static void ppc_stwcx_rc(UINT32 op)
 		ea = REG(RA) + REG(RB);
 
 	/*if( ppc.reserved ) {
+	*/
 		WRITE32(ea, REG(RS));
 
 		ppc.reserved = 0;
@@ -1332,12 +1333,14 @@ static void ppc_stwcx_rc(UINT32 op)
 		CR(0) = 0x2;
 		if( XER & XER_SO )
 			CR(0) |= 0x1;
-	} else*/ {
+	/*
+	} else {
 		//CR(0) = 0;
 		CR(0) = 2;	// set EQ to indicate success
 		if( XER & XER_SO )
 			CR(0) |= 0x1;
 	}
+	*/
 }
 
 static void ppc_stwu(UINT32 op)

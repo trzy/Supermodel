@@ -279,6 +279,9 @@ private:
 	UINT8		gunReg;
 	int			adcChannel;
 	
+	// MIDI port
+	UINT8		midiCtrlPort;	// controls MIDI (SCSP) IRQ behavior
+	
 	// Emulated core Model 3 memory regions
 	UINT8		*memoryPool;	// single allocated region for all ROM and system RAM
 	UINT8		*ram;			// 8 MB PowerPC RAM

@@ -1,6 +1,3 @@
-
-unsigned char midiCtrlPort=0;
-
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -29,6 +26,13 @@ unsigned char midiCtrlPort=0;
  * donated by ElSemi. Interfaces directly to the 68K processor through
  * callbacks. Some minor interface changes were made (external global variables
  * were removed). 
+ *
+ * The MIDI input buffer has been increased from 8 (which I assume is the
+ * actual size) in order to accommodate Model 3's PowerPC/68K communication.
+ * There is probably tight synchronization between the CPUs, with PowerPC-side
+ * interrupts being generated to fill the MIDI buffer as the 68K pulls data
+ * out, or there may be a UART with a large FIFO buffer. This can be simulated
+ * by increasing the MIDI buffer (MIDI_STACK_SIZE).
  *
  * To-Do List
  * ----------
@@ -118,9 +122,12 @@ static DWORD IrqTimA=1;
 static DWORD IrqTimBC=2;
 static DWORD IrqMidi=3;
 
+#define MIDI_STACK_SIZE			128
+#define MIDI_STACK_SIZE_MASK	(MIDI_STACK_SIZE-1)
+
 static BYTE MidiOutStack[8];
 static BYTE MidiOutW=0,MidiOutR=0;
-static BYTE MidiStack[8];
+static BYTE MidiStack[MIDI_STACK_SIZE];
 static BYTE MidiOutFill;
 static BYTE MidiInFill;
 static BYTE MidiW=0,MidiR=0;
@@ -329,7 +336,7 @@ void CheckPendingIRQ()
 	{
 		//SCSP.data[0x20/2]|=0x8;	//Hold midi line while there are commands pending
 		Int68kCB(IrqMidi);
-		printf("MIDI IRQ\n");
+		//printf("68K: MIDI IRQ\n");
 		//ErrorLogMessage("Midi");
 		return;
 	}
@@ -738,7 +745,7 @@ void SCSP_UpdateSlotReg(int s,int r)
 						if(KEYONB(s2) && (!s2->active || (s2->active && s2->EG.state==RELEASE)))
 						{
 							DebugLog("KEYON %d",sl);
-							printf("KEYON %d\n",sl);
+							printf("68K: KEYON %d\n",sl);
 							SCSP_StartSlot(s2);
 						}
 						if(!KEYONB(s2) && s2->active)
@@ -885,7 +892,7 @@ void SCSP_UpdateRegR(int reg)
 				if(MidiR!=MidiW)
 				{
 					++MidiR;
-					MidiR&=7;
+					MidiR&=MIDI_STACK_SIZE_MASK;
 					//Int68kCB(IrqMidi);
 					
 				}
@@ -914,8 +921,8 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
-		DebugLog("Slot %02X Reg %02X write byte %04X",slot,addr^1,val);
-		printf("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
+		DebugLog("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
+		//printf("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
 		*((unsigned char *) (SCSP->Slots[slot].datab+(addr^1))) = val;
 		SCSP_UpdateSlotReg(slot,(addr^1)&0x1f);
 	}
@@ -954,8 +961,8 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
-		DebugLog("Slot %02X Reg %02X write word %04X",slot,addr,val);
-		printf("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
+		DebugLog("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
+		//printf("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
 		*((unsigned short *) (SCSP->Slots[slot].datab+(addr))) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
 	}
@@ -994,8 +1001,8 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
-		DebugLog("Slot %02X Reg %02X write dword %08X",slot,addr,val);
-		printf("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
+		DebugLog("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
+		//printf("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
 		_asm rol val,16
 		*((unsigned int *) (SCSP->Slots[slot].datab+(addr))) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
@@ -1857,7 +1864,7 @@ void SCSP_MidiIn(BYTE val)
 	DebugLog("Midi Buffer push %02X",val);
 
 	MidiStack[MidiW++]=val;
-	MidiW&=7;
+	MidiW&=MIDI_STACK_SIZE_MASK;
 	MidiInFill++;
 	//Int68kCB(IrqMidi);
 //	SCSP.data[0x20/2]|=0x8;
@@ -1865,7 +1872,7 @@ void SCSP_MidiIn(BYTE val)
 
 void SCSP_MidiOutW(BYTE val)
 {
-	printf("MIDI out\n");
+	printf("68K: MIDI out\n");
 	DebugLog("Midi Out Buffer push %02X",val);
 	MidiStack[MidiOutW++]=val;
 	MidiOutW&=7;
@@ -1999,11 +2006,6 @@ unsigned int SCSP_Slave_r32(unsigned int addr)
 /******************************************************************************
  Extra Supermodel Interface Functions
 ******************************************************************************/
-
-void SCSP_WriteMIDICtrlPort(UINT8 data)
-{
-	midiCtrlPort = data;
-}
 
 void SCSP_SetBuffers(INT16 *leftBufferPtr, INT16 *rightBufferPtr, int bufferLength)
 {
