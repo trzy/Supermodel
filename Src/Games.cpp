@@ -38,8 +38,9 @@ const struct GameInfo	Model3GameList[] =
 		1998,
 		0x21,
 		0x800000,	// 8 MB of fixed CROM
-		FALSE,	// 96 MB of banked CROM (Do not Mirror)
+		FALSE,		// 96 MB of banked CROM (Do not Mirror)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_FIGHTING,
 		
 		{
@@ -111,6 +112,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 80 MB of banked CROM
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
 		
 		{
@@ -181,6 +183,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 32 MB of banked CROM
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
 		
 		{
@@ -234,6 +237,7 @@ const struct GameInfo	Model3GameList[] =
 		0x200000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM
 		0x2000000,	// 32 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1,
 		
 		{
@@ -298,6 +302,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 40 MB of banked CROM
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
 		
 		{
@@ -357,6 +362,7 @@ const struct GameInfo	Model3GameList[] =
 		0x200000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x2000000,	// 32 MB of VROM (will need to be mirrored)
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_JOYSTICK2|GAME_INPUT_FIGHTING,
 		
 		{
@@ -427,6 +433,7 @@ const struct GameInfo	Model3GameList[] =
 		0x200000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x2000000,	// 32 MB of VROM (will need to be mirrored)
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,	// for now, Shift Up/Down mapped to Shift 3/4
 		
 		{
@@ -491,6 +498,7 @@ const struct GameInfo	Model3GameList[] =
 		0x200000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x2000000,	// 32 MB of VROM (will need to be mirrored)
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
 		
 		{
@@ -555,6 +563,7 @@ const struct GameInfo	Model3GameList[] =
 		0x200000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x2000000,	// 32 MB of VROM (will need to be mirrored)
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
 		
 		{
@@ -625,6 +634,7 @@ const struct GameInfo	Model3GameList[] =
 		0x200000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x2000000,	// 32 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_GUN1|GAME_INPUT_GUN2,
 		
 		{
@@ -695,6 +705,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_TWIN_JOYSTICKS,
 		
 		{
@@ -760,6 +771,7 @@ const struct GameInfo	Model3GameList[] =
 		0x400000,	// 2 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x2000000,	// 32 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_JOYSTICK2|GAME_INPUT_SOCCER,
 		
 		{
@@ -830,6 +842,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 64 MB of banked CROM (needs to be mirrored)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_RALLY|GAME_INPUT_SHIFT4,
 		
 		{
@@ -894,6 +907,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		FALSE,		// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
+		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
 		
 		{
@@ -945,6 +959,13 @@ const struct GameInfo	Model3GameList[] =
 			{ "VROM",	"mpr-20884.40", 0x63C4639A, 0x400000, 	2, 28, 			32,	FALSE },
 			{ "VROM",	"mpr-20885.41", 0x61C292CA, 0x400000, 	2, 30, 			32,	FALSE },
 			
+			// Sound ROMs
+			{ "SndProg","epr-20865.21",	0xB70C2699,	0x20000,	2, 0,			2,	TRUE },
+			{ "Samples","mpr-20866.22", 0x91F40C1C, 0x400000,	2, 0x000000,	2,	FALSE },
+			{ "Samples","mpr-20868.24", 0xFA0C7EC0, 0x400000,	2, 0x400000,	2,	FALSE },
+			{ "Samples","mpr-20867.23", 0xA579C884, 0x400000,	2, 0x800000,	2,	FALSE },
+			{ "Samples","mpr-20869.25", 0x1F338832, 0x400000,	2, 0xC00000,	2,	FALSE },
+			
 			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
 		}
 	},
@@ -959,6 +980,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		FALSE,		// do not mirror banked CROM
 		0x4000000,	// 64 MB of VROM
+		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
 		
 		{
@@ -1010,6 +1032,13 @@ const struct GameInfo	Model3GameList[] =
 			{ "VROM",	"mpr-21212.40", 0x6F8A75E0, 0x400000, 	2, 28, 			32,	FALSE },
 			{ "VROM",	"mpr-21213.41", 0xDE75BEC6, 0x400000, 	2, 30, 			32,	FALSE },
 			
+			// Sound ROMs
+			{ "SndProg","epr-21325.21",	0x004AD6AD,	0x20000,	2, 0,			2,	TRUE },
+			{ "Samples","mpr-21285.22", 0x7CDCA6AC, 0x400000,	2, 0x000000,	2,	FALSE },
+			{ "Samples","mpr-21287.24", 0x06B66F17, 0x400000,	2, 0x400000,	2,	FALSE },
+			{ "Samples","mpr-21286.23", 0x749DFEF0, 0x400000,	2, 0x800000,	2,	FALSE },
+			{ "Samples","mpr-21288.25", 0x14BEE38E, 0x400000,	2, 0xC00000,	2,	FALSE },
+			
 			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
 		}
 	},
@@ -1022,9 +1051,9 @@ const struct GameInfo	Model3GameList[] =
 		1998,
 		0x20,
 		0x800000,	// 8 MB of fixed CROM
-		TRUE,
-		//0x6000000,	// 64 MB of banked CROM
+		TRUE,		// 64 MB of banked CROM (must be mirrored)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_JOYSTICK2|GAME_INPUT_FIGHTING,
 		
 		{
@@ -1090,6 +1119,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 40 MB of banked CROM
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
 		
 		{
@@ -1149,6 +1179,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 48 MB of banked CROM (mirror)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_JOYSTICK,
 		
 		{
@@ -1208,6 +1239,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		FALSE,		// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM (will need to be mirrored)
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_JOYSTICK,
 		
 		{
@@ -1267,6 +1299,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 48 MB of banked CROM (mirror)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_JOYSTICK,
 		
 		{
@@ -1331,6 +1364,7 @@ const struct GameInfo	Model3GameList[] =
 		0x800000,	// 8 MB of fixed CROM
 		TRUE,		// 48 MB of banked CROM (mirror)
 		0x4000000,	// 64 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
 		
 		{
@@ -1386,6 +1420,7 @@ const struct GameInfo	Model3GameList[] =
 		"",
 		NULL,
 		NULL,
+		0,
 		0,
 		0,
 		0,

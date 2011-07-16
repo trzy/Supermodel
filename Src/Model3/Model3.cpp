@@ -1,4 +1,5 @@
 //TODO: Update save state file format (must output) MIDI control port; will no longer be compatible with 0.1a save states
+//TODO: should sample roms be byteswapped? They currently are. This could also be done in the game list with the byteswap flag...
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -1881,7 +1882,7 @@ void CModel3::RunFrame(void)
 		ppc_execute(200);
 		
 		++irqCount;
-		if (irqCount > (128*3))
+		if (irqCount > (128))
 		{
 			printf("MIDI TIMEOUT!\n");
 			break;
@@ -2157,8 +2158,8 @@ static void Dump(const char *file, UINT8 *buf, unsigned size, BOOL reverse32, BO
 #define OFFSET_BACKUPRAM	0xD000000	// 128 KB
 #define OFFSET_SECURITYRAM	0xD020000	// 128 KB
 #define OFFSET_SOUNDROM		0xD040000	// 512 KB
-#define OFFSET_SAMPLEROM	0xD0C0000	// 8 MB
-#define MEMORY_POOL_SIZE	(0x800000+0x800000+0x8000000+0x4000000+0x20000+0x20000+0x80000+0x800000)
+#define OFFSET_SAMPLEROM	0xD0C0000	// 16 MB
+#define MEMORY_POOL_SIZE	(0x800000+0x800000+0x8000000+0x4000000+0x20000+0x20000+0x80000+0x1000000)
 
 const struct GameInfo * CModel3::GetGameInfo(void)
 {
@@ -2185,19 +2186,21 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 		return ErrorLog("Failed to load ROM set.");	
 	
 	// Perform mirroring as necessary 
-	if (Game->vromSize < 0x4000000)	// VROM is actually 64 MB
+	if (Game->vromSize < 0x4000000)		// VROM is actually 64 MB
 		CopyRegion(vrom, Game->vromSize, 0x4000000, vrom, Game->vromSize);
-	if (Game->cromSize < 0x800000)	// low part of fixed CROM region contains CROM0
+	if (Game->cromSize < 0x800000)		// low part of fixed CROM region contains CROM0
 		CopyRegion(crom, 0, 0x800000-Game->cromSize, &crom[0x800000], 0x800000);
-	if (Game->mirrorLow64MB)		// for games w/ 64 MB or less banked CROM, mirror to upper 128 MB
+	if (Game->mirrorLow64MB)			// for games w/ 64 MB or less banked CROM, mirror to upper 128 MB
 		CopyRegion(&crom[0x800000], 0x4000000, 0x8000000, &crom[0x800000], 0x4000000);
+	if (Game->sampleSize < 0x1000000)	// if less than 16 MB of sample ROMs, mirror
+		CopyRegion(sampleROM, 0x800000, 0x1000000, sampleROM, 0x800000);
 		
 	// Byte reverse the PowerPC ROMs (convert to little endian words)
 	Reverse32(crom, 0x800000+0x8000000);
 	
 	// Byte swap 68K ROMs
 	Reverse16(soundROM, 0x80000);
-	Reverse16(sampleROM, 0x800000);	// is this correct?
+	Reverse16(sampleROM, 0x1000000);	// is this correct?
 		
 	// Initialize CPU and configure hardware (CPU speed is set in Init())
 	if (Game->step >= 0x20)			// Step 2.0+

@@ -1,3 +1,5 @@
+//TODO: clean up M68K interface. pass a bus pointer (SoundBoard should be derived from it), so that M68K handlers have access to CSoundBoard
+//TODO: must store actual value of bank register so we can save it to save states
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -25,6 +27,37 @@
  * Model 3 sound board. Implementation of the CSoundBoard class. This class can
  * only be instantiated once because it relies on global variables (the non-OOP
  * 68K core).
+ *
+ * TO-DO List
+ * ----------
+ * - Optimize memory handlers (jump table).
+ *
+ * Bank Switching
+ * --------------
+ * Banking is not fully understood yet. It is presumed that the low 2MB of the 
+ * sample ROMs are not banked (MAME), but this is not guaranteed. Below are 
+ * examples of known situations where banking helps (sound names are as they
+ * appear in the sound test menu).
+ *
+ *		sound name
+ *			ROM Offsets -> Address
+ * 			
+ *		dayto2pe
+ *		--------
+ *		let's hope he does better
+ *			A... -> A...	(400001=3E)
+ *		doing good i'd say you have a ..
+ *			E... -> E...	(400001=3D)
+ *
+ * From the above, it appears that when (400001)&10, then:
+ *
+ *		ROM A00000-DFFFFF -> A00000-DFFFFF
+ *		ROM E00000-FFFFFF -> E00000-FFFFFF
+ *
+ * And when that bit is clear (just use default mapping, upper 6MB of ROM):
+ *
+ *		ROM 200000-5FFFFF -> A00000-DFFFFF
+ *		ROM 600000-7FFFFF -> E00000-FFFFFF
  */
 
 #include "Supermodel.h"
@@ -39,7 +72,7 @@ static FILE		*soundFP;
 
 // Memory regions passed out of CSoundBoard object for global access handlers
 static UINT8		*sbRAM1, *sbRAM2;
-static const UINT8	*sbSoundROM, *sbSampleROM;
+static const UINT8	*sbSoundROM, *sbSampleROM, *sbSampleBankLo, *sbSampleBankHi;
 
 static UINT8 Read8(UINT32 a)
 { 
@@ -61,11 +94,11 @@ static UINT8 Read8(UINT32 a)
 		
 	// Sample ROM (bank)
 	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
-		return sbSampleROM[(a-0x800000)^1];
+		return sbSampleBankLo[(a-0xA00000)^1];
 		
 	// Sample ROM (bank)
 	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
-		return sbSampleROM[(a-0x800000)^1];
+		return sbSampleBankHi[(a-0xE00000)^1];
 		
 	// SCSP (Master)
 	else if ((a >= 0x100000) && (a <= 0x10FFFF))
@@ -103,11 +136,11 @@ static UINT16 Read16(UINT32 a)
 		
 	// Sample ROM (bank)
 	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
-		return *(UINT16 *) &sbSampleROM[(a-0x800000)];
+		return *(UINT16 *) &sbSampleBankLo[(a-0xA00000)];
 		
 	// Sample ROM (bank)
 	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
-		return *(UINT16 *) &sbSampleROM[(a-0x800000)];
+		return *(UINT16 *) &sbSampleBankHi[(a-0xE00000)];
 		
 	// SCSP (Master)
 	else if ((a >= 0x100000) && (a <= 0x10FFFF))
@@ -167,7 +200,7 @@ static UINT32 Read32(UINT32 a)
 	}
 }
 
-static void Write8 (unsigned int a,unsigned char d)  
+static void Write8(unsigned int a,unsigned char d)  
 { 
 	
 	// SCSP RAM 1
@@ -186,6 +219,21 @@ static void Write8 (unsigned int a,unsigned char d)
 	else if ((a >= 0x300000) && (a <= 0x30FFFF))
 		SCSP_Slave_w8(a,d);
 		
+	// Bank register
+	else if (a == 0x400001)
+	{
+		if ((d&0x10))
+		{
+			sbSampleBankLo = &sbSampleROM[0xA00000];
+			sbSampleBankHi = &sbSampleROM[0xE00000];
+		}
+		else
+		{
+			sbSampleBankLo = &sbSampleROM[0x200000];
+			sbSampleBankHi = &sbSampleROM[0x600000];
+		}
+	}
+	
 	// Unknown
 	else
 		printf("68K: Unknown write8 %06X=%02X\n", a, d);
@@ -313,7 +361,10 @@ void CSoundBoard::RunFrame(void)
 
 void CSoundBoard::Reset(void)
 {
-	memcpy(ram1, soundROM, 16);	// copy 68K vector table
+	// lets hope he does better... -> 
+	memcpy(ram1, soundROM, 16);				// copy 68K vector table
+	sbSampleBankLo = &sampleROM[0x200000];	// default banks
+	sbSampleBankHi = &sampleROM[0x600000];
 	M68KReset();
 	DebugLog("Sound Board Reset\n");
 }
@@ -324,8 +375,8 @@ void CSoundBoard::Reset(void)
 ******************************************************************************/
 
 // Offsets of memory regions within sound board's pool
-#define OFFSETsbRAM1			0			// 1 MB SCSP1 RAM
-#define OFFSETsbRAM2			0x100000	// 1 MB SCSP2 RAM
+#define OFFSET_RAM1			0			// 1 MB SCSP1 RAM
+#define OFFSET_RAM2			0x100000	// 1 MB SCSP2 RAM
 #define MEMORY_POOL_SIZE	(0x100000+0x100000)
 
 BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ *ppcIRQObjectPtr, unsigned soundIRQBit)
@@ -347,14 +398,16 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	memset(memoryPool, 0, MEMORY_POOL_SIZE);
 	
 	// Set up memory pointers
-	ram1 = &memoryPool[OFFSETsbRAM1];
-	ram2 = &memoryPool[OFFSETsbRAM2];
+	ram1 = &memoryPool[OFFSET_RAM1];
+	ram2 = &memoryPool[OFFSET_RAM2];
 	
 	// Make global copies of memory pointers for 68K access handlers
 	sbRAM1 = ram1;
 	sbRAM2 = ram2;
 	sbSoundROM = soundROM;
 	sbSampleROM = sampleROM;
+	sbSampleBankLo = &sampleROM[0x200000];
+	sbSampleBankHi = &sampleROM[0x600000];
 
 	// Initialize 68K core
 	M68KInit();
