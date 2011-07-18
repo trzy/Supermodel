@@ -147,6 +147,7 @@ extern void InfoLog(const char *fmt, ...);
 #include "CPU/PowerPC/PPCDisasm.h"
 #include "CPU/PowerPC/ppc.h"
 #include "CPU/68K/M68K.h"
+#include "CPU/Z80/Z80.h"
 #include "Inputs/Input.h"
 #include "Inputs/Inputs.h"
 #include "Inputs/InputSource.h"
