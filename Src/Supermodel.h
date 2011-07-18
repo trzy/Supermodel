@@ -143,6 +143,7 @@ extern void InfoLog(const char *fmt, ...);
 #include "Debugger/CPU/68KDebug.h"
 #endif // SUPERMODEL_SOUND
 #endif // SUPERMODEL_DEBUGGER
+#include "CPU/Bus.h"
 #include "CPU/PowerPC/PPCDisasm.h"
 #include "CPU/PowerPC/ppc.h"
 #include "CPU/68K/M68K.h"
@@ -152,7 +153,6 @@ extern void InfoLog(const char *fmt, ...);
 #include "Inputs/InputSystem.h"
 #include "Inputs/InputTypes.h"
 #include "Inputs/MultiInputSource.h"
-#include "Model3/Bus.h"
 #include "Model3/IRQ.h"
 #include "Model3/PCI.h"
 #include "Model3/53C810.h"

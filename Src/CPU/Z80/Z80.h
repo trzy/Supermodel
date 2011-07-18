@@ -1,0 +1,192 @@
+/**
+ ** Supermodel
+ ** A Sega Model 3 Arcade Emulator.
+ ** Copyright 2011 Bart Trzynadlowski 
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free 
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+ 
+/*
+ * Z80.h
+ *
+ * Z80 emulator header file. Based on the Z80 instruction set simulator by
+ * Frank D. Cringle and taken from YAZE-AG by Andreas Gerlich.
+ *
+ * Known inaccuracies:
+ *
+ *		- No timing. Each instruction takes one "cycle".
+ *		- Interrupts are accepted immediately after EI instruction. In reality,
+ *		  interrupts become enabled after the instruction following EI. This
+ *		  could be implemented with a state machine in Run() if needed.
+ *		  This feature exists to prevent interrupts from occuring before a RETI
+ *		  instruction executes in the interrupt handler. Interrupt callbacks
+ *		  should take care to immediately clear the interrupt line, otherwise,
+ *		  an improperly timed interrupt may occur right after an EI instruction
+ *		  but before the service routine has a chance to return.
+ *		- HALT instruction is not implemented (it just exits).
+ *		- 16-bit words are read as two bytes but these reads may not occur in
+ *		  the exact same order as the real device. Needs to be checked.
+ */
+
+#ifndef INCLUDED_Z80_H
+#define INCLUDED_Z80_H
+
+#include "Types.h"
+#include "CPU/Bus.h"
+
+/*
+ * Special Return Codes for Interrupt Callbacks
+ *
+ * When the Z80 takes an interrupt in mode 0, it expects an instruction (up to
+ * 3 bytes) to be presented on the bus. Typically, an RST instruction is
+ * supplied, and this is the only supported behavior here. The interrupt
+ * callback must return one of these values when the Z80 is in mode 0.
+ */
+#define Z80_INT_RST_00	0xC7	// RST 0x00 (jumps to 0x0000)
+#define Z80_INT_RST_08	0xCF	// RST 0x08 (jumps to 0x0008)
+#define Z80_INT_RST_10	0xD7	// RST 0x10 (...)
+#define Z80_INT_RST_18	0xDF	// RST 0x18
+#define Z80_INT_RST_20	0xE7	// RST 0x20
+#define Z80_INT_RST_28	0xEF	// RST 0x28
+#define Z80_INT_RST_30	0xF7	// RST 0x30
+#define Z80_INT_RST_38	0xFF	// RST 0x38
+
+/*
+ * CZ80:
+ *
+ * A Z80 CPU.
+ */
+class CZ80
+{
+public:
+	/*
+	 * Run(numOps):
+	 *
+	 * Runs the Z80 for the specified number of instructions.
+	 *
+	 * Parameters:
+	 *		numOps	Number of instructions to execute. Cycle-accurate timing
+	 *				is not yet supported.
+	 *
+	 * Returns:
+	 *		Number of instructions actually executed. For now, this will not
+	 *		differ from numOps.
+	 */
+	int Run(int numOps);
+	
+	/*
+	 * TriggerNMI(void):
+	 *
+	 * Triggers a non-maskable interrupt. This is equivalent to a high-to-low
+	 * transition on the NMI pin (NMI pin is triggered on falling edges). This
+	 * may be called while the Z80 is running. NMIs are always higher priority
+	 * than interrupts and are taken first.
+	 */
+	void TriggerNMI(void);
+	
+	/*
+	 * SetINT(state):
+	 *
+	 * Set or clear the interrupt request. This may be called from memory 
+	 * handlers while the Z80 is running and should be used by interrupt 
+	 * callbacks to clear interrupts.
+	 *
+	 * Parameters:
+	 *		state	If TRUE, this is equivalent to /INT being asserted on the
+	 *				Z80 (INT line low, which triggers an interrupt). If FALSE,
+	 *				this deasserts /INT (INT line high, no interrupt pending).
+	 */
+	void SetINT(BOOL state);
+	
+	/*
+	 * Reset(void):
+	 *
+	 * Resets the Z80, clearing all registers and pending interrupt requests.
+	 */
+	void Reset(void);
+	
+	/*
+	 * Init(BusPtr, INTF):
+	 *
+	 * One-time initialization of the Z80 emulator. Must be called first. 
+	 *
+	 * A bus object must be supplied which will be used to handle all memory 
+	 * and IO accesses. The Read8, Write8, IORead8, and IOWrite8 members need 
+	 * to be defined. Addresses are automatically clamped to 16 bits for memory
+	 * and 8 bits for IO accesses.
+	 *
+	 * An interrupt callback, which is called each time an interrupt occurs,
+	 * should also be supplied. The interrupt callback should explicitly clear
+	 * the INT status (using SetINT(FALSE)) and then return the appropriate 
+	 * vector depending on the interrupt mode that is used by the system.
+	 *
+	 * For mode 0, only Z80_INT_RST_* values are acceptable. For mode 1, the
+	 * return value is discarded because the Z80 will always use vector 0x0038.
+	 * In mode 2, an 8-bit value supplying the lower 8-bits of the interrupt
+	 * vector address must be returned. Bit 0 will be ignored in this case (0
+	 * is used).
+	 *
+	 * If a callback is not installed, the interrupt status will automatically
+	 * be cleared and interrupts will not be taken when the Z80 is in a mode 
+	 * that requires vector data from the callback. In mode 1, the interrupt 
+	 * callback (if one is provided) should explicitly clear the interrupt. The
+	 * value returned will be unused.
+	 *
+	 * Parameters:
+	 *		BusPtr	Pointer to a bus object.
+	 *		INTF	Pointer to callback function. The function accepts a
+	 *				a pointer to the Z80 object that received the interrupt.
+	 */
+	void Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80));
+	
+	/*
+	 * CZ80(void):
+	 * ~CZ80(void):
+	 *
+	 * Constructor and destructor.
+	 */
+	CZ80(void);
+	~CZ80(void);
+	
+private:
+	// Registers
+	struct GPR {	// general purpose registers
+		UINT16	bc;
+		UINT16	de;
+		UINT16	hl;
+	} regs[2];		// two sets: primary (0) and alternate (1)
+	UINT16	af[2];	// AF (primary and alternate)
+	UINT16	ir;		// interrupt vector (I) and memory refresh (R)
+	UINT16	ix;		// index register X
+	UINT16	iy;		// index register Y
+	UINT16	sp;		// stack pointer
+	UINT16	pc;		// program counter
+	UINT8	iff;	// interrupt flip flops (bit 1: IFF2, 0: IFF1)
+	UINT8	im;		// interrupt mode (0, 1, or 2 only)
+	int		regs_sel;	// active register set (primary or alternate)
+	int		af_sel;		// active AF
+	
+	// Memory and IO bus
+	CBus	*Bus;
+	
+	// Interrupts
+	BOOL	nmiTrigger;
+	BOOL	intLine;
+	int		(*INTCallback)(CZ80 *Z80);
+};
+
+
+#endif	// INCLUDED_Z80_H

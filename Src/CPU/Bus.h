@@ -33,7 +33,10 @@
  * CBus:
  *
  * An abstract base class for an address bus. Defines handlers for 8-, 16-,
- * 32-, and 64-bit random access. All accesses are big endian.
+ * 32-, and 64-bit random access. Endianness should depend on the application.
+ *
+ * Two buses are supported: a memory bus and an IO bus. All addresses are 32
+ * bits.
  */
 class CBus
 {
@@ -53,10 +56,10 @@ public:
 	 * Returns:
 	 *		Data of the appropriate size (8, 16, 32, or 64 bits).
 	 */
-	virtual UINT8	Read8(UINT32 addr) = 0;
-	virtual UINT16	Read16(UINT32 addr) = 0;
-	virtual UINT32	Read32(UINT32 addr) = 0;
-	virtual UINT64	Read64(UINT32 addr) = 0;
+	virtual UINT8	Read8(UINT32 addr)	{ return 0xFF; }
+	virtual UINT16	Read16(UINT32 addr)	{ return 0xFFFF; }
+	virtual UINT32	Read32(UINT32 addr)	{ return 0xFFFFFFFF; }
+	virtual UINT64	Read64(UINT32 addr)	{ return 0xFFFFFFFFFFFFFFFFULL; }
 	
 	/*
 	 * Write8(addr, data):
@@ -71,10 +74,35 @@ public:
 	 *				boundary, corresponding to the size).
 	 *		data	Data to write.
 	 */
-	virtual void	Write8(UINT32 addr, UINT8 data) = 0;
-	virtual void	Write16(UINT32 addr, UINT16 data) = 0;
-	virtual void	Write32(UINT32 addr, UINT32 data) = 0;
-	virtual void	Write64(UINT32 addr, UINT64 data) = 0;
+	virtual void	Write8(UINT32 addr, UINT8 data)		{}
+	virtual void	Write16(UINT32 addr, UINT16 data)	{}
+	virtual void	Write32(UINT32 addr, UINT32 data)	{}
+	virtual void	Write64(UINT32 addr, UINT64 data)	{}
+	
+	/*
+	 * IORead8(addr):
+	 *
+	 * Read handler for the IO bus. Only 8-bit data supported for now. Add more
+	 * as needed.
+	 *
+	 * Parameters:
+	 *		addr	Address.
+	 *
+	 * Returns:
+	 *		Data.
+	 */
+	virtual UINT8	IORead8(UINT32 addr)	{ return 0xFF; }
+	
+	/*
+	 * IOWrite8(addr, data):
+	 *
+	 * Write handler for the IO bus.
+	 *
+	 * Parameters:
+	 *		addr	Address.
+	 *		data	Data to write.
+	 */
+	virtual void	IOWrite8(UINT32 addr, UINT8 data)	{}
 };
 
 
