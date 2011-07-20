@@ -346,7 +346,10 @@ void CSoundBoard::RunFrame(void)
 {
 #ifdef SUPERMODEL_SOUND
 	SCSP_Update();
-	
+
+	// Output the audio buffers
+	OutputAudio(44100/60, leftBuffer, rightBuffer);
+
 	// Output to binary file
 	INT16	s;
 	for (int i = 0; i < 44100/60; i++)

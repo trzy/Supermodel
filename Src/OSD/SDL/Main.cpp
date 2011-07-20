@@ -54,7 +54,7 @@
 #include "Supermodel.h"
 #include "SDLInputSystem.h"
 #ifdef SUPERMODEL_WIN32
-#include "OSD/Windows/DirectInputSystem.h"
+#include "DirectInputSystem.h"
 #endif
 
 CLogger *GetLogger();
@@ -361,12 +361,12 @@ static void LoadNVRAM(CModel3 *Model3)
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, unsigned ppcFrequency, 
+int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, unsigned ppcFrequency, BOOL multiThreaded, 
 			   unsigned xResParam, unsigned yResParam, BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, 
 			   const char *vsFile, const char *fsFile)
 {
 #else
-int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsigned xResParam, unsigned yResParam,
+int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL multiThreaded, unsigned xResParam, unsigned yResParam,
 			   BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, const char *vsFile, const char *fsFile)
 {				  
 	CModel3			*Model3 = new CModel3();
@@ -386,7 +386,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsi
 	InfoLog("Frame rate limiting: %s", noThrottle?"Disabled":"Enabled");
 
 	// Initialize and load ROMs
-	Model3->Init(ppcFrequency);
+	Model3->Init(ppcFrequency, multiThreaded);
 	if (OKAY != Model3->LoadROMSet(Model3GameList, zipFile))
 		return 1;
 		
@@ -399,7 +399,11 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsi
   	sprintf(titleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
 	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,keepAspectRatio,fullScreen))
 		return 1;
-		
+	
+	// Initialize audio system
+	if (OKAY != OpenAudio())
+		return 1;
+
 	// Hide mouse if fullscreen
 	Inputs->GetInputSystem()->SetMouseVisibility(!fullScreen);
 
@@ -606,6 +610,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, unsi
 	// Save NVRAM
 	SaveNVRAM(Model3);
 	
+	// Close audio
+	CloseAudio();
+
 	// Shut down
 #ifndef SUPERMODEL_DEBUGGER
 	delete Model3;
@@ -1002,6 +1009,7 @@ static void Help(void)
 	puts("");
 	puts("Emulation Options:");
 	puts("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: 25]");
+	puts("    -multi-threaded        Enable multi-threading");
 #ifdef SUPERMODEL_DEBUGGER
 	puts("    -disable-debugger	     Completely disable debugger functionality");
 	puts("    -enter-debugger        Enter debugger at start of emulation");
@@ -1055,7 +1063,7 @@ static void PrintGameList(void)
 int main(int argc, char **argv)
 {
 	int			i, ret;
-	int			cmd=0, fileIdx=0, cmdFullScreen=0, cmdNoThrottle=0, cmdShowFPS=0, cmdPrintInputs=0, cmdConfigInputs=0, cmdPrintGames=0, cmdDis=0, cmdPrintGLInfo=0;
+	int			cmd=0, fileIdx=0, cmdMultiThreaded=0, cmdFullScreen=0, cmdNoThrottle=0, cmdShowFPS=0, cmdPrintInputs=0, cmdConfigInputs=0, cmdPrintGames=0, cmdDis=0, cmdPrintGLInfo=0;
 #ifdef SUPERMODEL_DEBUGGER
 	int			cmdDisableDebugger = 0, cmdEnterDebugger=0;
 #endif // SUPERMODEL_DEBUGGER
@@ -1099,6 +1107,8 @@ int main(int argc, char **argv)
 					ppcFrequency = f*1000000;
 			}
 		}
+		else if (!strncmp(argv[i],"-multi-threaded", 16))
+			cmd = cmdMultiThreaded = 1;
 #ifdef SUPERMODEL_DEBUGGER
 		else if (!strncmp(argv[i],"-disable-debugger",17))
 			cmd = cmdDisableDebugger = 1;
@@ -1268,13 +1278,13 @@ int main(int argc, char **argv)
 			Debugger->ForceBreak(true);
 	}
 	// Fire up Supermodel with debugger
-	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Debugger,ppcFrequency,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Debugger,ppcFrequency,cmdMultiThreaded,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
 	if (Debugger != NULL)
 		delete Debugger;
 	delete Model3;
 #else
 	// Fire up Supermodel
-	exitCode = Supermodel(argv[fileIdx],Inputs,ppcFrequency,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+	exitCode = Supermodel(argv[fileIdx],Inputs,ppcFrequency,cmdMultiThreaded,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
 #endif // SUPERMODEL_DEBUGGER
 
 Exit:

@@ -70,6 +70,10 @@
  */
 #include "Types.h"
 
+// OSD Interfaces
+#include "Thread.h"
+#include "Audio.h"
+
 /*
  * Error and Debug Logging
  */
@@ -139,9 +143,6 @@ extern void InfoLog(const char *fmt, ...);
 #ifdef SUPERMODEL_DEBUGGER
 #include "Debugger/SupermodelDebugger.h"
 #include "Debugger/CPU/PPCDebug.h"
-#ifdef SUPERMODEL_SOUND
-#include "Debugger/CPU/68KDebug.h"
-#endif // SUPERMODEL_SOUND
 #endif // SUPERMODEL_DEBUGGER
 #include "CPU/Bus.h"
 #include "CPU/PowerPC/PPCDisasm.h"

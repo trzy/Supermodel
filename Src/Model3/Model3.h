@@ -171,7 +171,7 @@ public:
 	 * Runs one frame (assuming 60 Hz video refresh rate).
 	 */
 	void RunFrame(void);
-	
+
 	/*
 	 * Reset(void):
 	 *
@@ -224,7 +224,7 @@ public:
 	void AttachInputs(CInputs *InputsPtr);
 	
 	/*
-	 * Init(ppcFrequencyParam):
+	 * Init(ppcFrequencyParam, multiThreadedParam):
 	 *
 	 * One-time initialization of the context. Must be called prior to all
 	 * other members. Allocates memory and initializes device states.
@@ -237,7 +237,7 @@ public:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	BOOL Init(unsigned ppcFrequencyParam);
+	BOOL Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam);
 	 
 	/*
 	 * CModel3(void):
@@ -256,7 +256,6 @@ public:
 	 * Tresspassers will be shot! ;)
 	 */
 private:
-	
 	// Private member functions
 	UINT8	ReadInputs(unsigned reg);
 	void	WriteInputs(unsigned reg, UINT8 data);
@@ -267,11 +266,26 @@ private:
 	void 	WriteSystemRegister(unsigned reg, UINT8 data);
 	void	Patch(void);
 
+	void    RunMainBoardFrame();    // Runs the main board (PPC) for a frame
+	bool    StartThreads();         // Starts all threads
+	void    StopThreads();          // Stops all threads
+	void    DeleteThreadObjects();  // Deletes all threads and synchronization objects
+
+	static int StartSoundBoardThread(void *data);    // Callback to start sound board thread
+#ifdef SUPERMODEL_DRIVEBOARD
+	static int StartDriveBoardThread(void *data);    // Callback to start drive board thread
+#endif
+
+	void    RunSoundBoardThread();                   // Runs sound board thread 
+#ifdef SUPERMODEL_DRIVEBOARD
+	void    RunDriveBoardThread();                   // Runs drive board thread
+#endif
+	
 	// Game and hardware information
 	const struct GameInfo	*Game;
 	
 	// Game inputs
-	CInputs *Inputs;
+	CInputs     *Inputs;
 		 
 	// Input registers (game controls)
 	UINT8		inputBank;
@@ -302,6 +316,26 @@ private:
 	// PowerPC
 	PPC_FETCH_REGION	PPCFetchRegions[3];
 	unsigned			ppcFrequency;	// clock frequency (Hz)
+
+	// Multiple threading
+	bool        multiThreaded;     // True if should run CPUs in multiple threads, otherwise everything is run in a single thread
+	bool        startedThreads;    // True if threads have been created and started
+	CThread     *sndBrdThread;     // Sound board thread
+#ifdef SUPERMODEL_DRIVEBOARD
+	CThread     *drvBrdThread;     // Drive board thread
+#endif
+	bool        sndBrdThreadDone;  // Flag to indicate sound board thread has finished processing for current frame
+#ifdef SUPERMODEL_DRIVEBOARD
+	bool        drvBrdThreadDone;  // Flag to indicate drive board thread has finished processing for current frame
+#endif
+
+	// Thread synchronization objects
+	CSemaphore  *sndBrdThreadSync;
+#ifdef SUPERMODEL_DRIVEBOARD
+	CSemaphore  *drvBrdThreadSync;
+#endif
+	CMutex      *notifyLock;
+	CCondVar    *notifySync;	
 	
 	// Other devices
 	CIRQ		IRQ;		// Model 3 IRQ controller
@@ -312,7 +346,10 @@ private:
 	C93C46		EEPROM;		// 93C46 EEPROM
 	CTileGen	TileGen;	// Sega 2D tile generator
 	CReal3D		GPU;		// Real3D graphics hardware
-	CSoundBoard	SoundBoard;	// sound board
+	CSoundBoard	SoundBoard;	// Sound board
+#ifdef SUPERMODEL_DRIVEBOARD
+	CDriveBoard DriveBoard; // Drive board
+#endif
 };
 
 

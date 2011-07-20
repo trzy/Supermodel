@@ -173,23 +173,23 @@ bool IsXInputDevice(const GUID &devProdGUID)
     bool isXInpDev = false;
     HRESULT hr = CoCreateInstance(__uuidof(WbemLocator), NULL, CLSCTX_INPROC_SERVER, __uuidof(IWbemLocator), (LPVOID*)&pIWbemLocator);
     if (FAILED(hr) || pIWbemLocator == NULL)
-        goto exit;
+        goto Finish;
 
-    if ((bstrNamespace = SysAllocString(L"\\\\.\\root\\cimv2")) == NULL) goto exit;        
-    if ((bstrClassName = SysAllocString(L"Win32_PNPEntity")) == NULL)    goto exit;        
-    if ((bstrDeviceID  = SysAllocString(L"DeviceID")) == NULL)           goto exit;        
+    if ((bstrNamespace = SysAllocString(L"\\\\.\\root\\cimv2")) == NULL) goto Finish;        
+    if ((bstrClassName = SysAllocString(L"Win32_PNPEntity")) == NULL)    goto Finish;        
+    if ((bstrDeviceID  = SysAllocString(L"DeviceID")) == NULL)           goto Finish;        
     
     // Connect to WMI 
     hr = pIWbemLocator->ConnectServer(bstrNamespace, NULL, NULL, 0L, 0L, NULL, NULL, &pIWbemServices);
     if (FAILED(hr) || pIWbemServices == NULL)
-        goto exit;
+        goto Finish;
 
     // Switch security level to IMPERSONATE 
     CoSetProxyBlanket(pIWbemServices, RPC_C_AUTHN_WINNT, RPC_C_AUTHZ_NONE, NULL, RPC_C_AUTHN_LEVEL_CALL, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE);
     
 	hr = pIWbemServices->CreateInstanceEnum(bstrClassName, 0, NULL, &pEnumDevices); 
     if (FAILED(hr) || pEnumDevices == NULL)
-        goto exit;
+        goto Finish;
 
     // Loop over all devices
     for (;;)
@@ -198,7 +198,7 @@ bool IsXInputDevice(const GUID &devProdGUID)
 		DWORD uReturned;
         hr = pEnumDevices->Next(10000, 20, pDevices, &uReturned);
         if (FAILED(hr) || uReturned == 0)
-            goto exit;
+            goto Finish;
 
         for (unsigned devNum = 0; devNum < uReturned; devNum++)
         {
@@ -224,7 +224,7 @@ bool IsXInputDevice(const GUID &devProdGUID)
                     if (dwVidPid == devProdGUID.Data1)
                     {
                         isXInpDev = true;
-                        goto exit;
+                        goto Finish;
                     }
                 }
             }   
@@ -236,7 +236,7 @@ bool IsXInputDevice(const GUID &devProdGUID)
         }
     }
 
-exit:
+Finish:
     if (bstrNamespace)
         SysFreeString(bstrNamespace);
     if (bstrDeviceID)

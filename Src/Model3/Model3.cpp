@@ -191,7 +191,6 @@
 #include <string.h>
 #include "Supermodel.h"
 
-
 /******************************************************************************
  Model 3 Inputs
  
@@ -1226,7 +1225,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 			break;
 		}
 
-		DebugLog("PC=%08X\twrite8 : %08X=%02X\n", ppc_get_pc(), addr, data);		
+		DebugLog("PC=%08X\twrite16 : %08X=%04X\n", ppc_get_pc(), addr, data);		
 		break;
 
 	// MPC105/106
@@ -1238,7 +1237,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
 	// Unknown
 	default:
-		DebugLog("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
+		DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
 		break;
 	}
 }	
@@ -1865,6 +1864,244 @@ void CModel3::ClearNVRAM(void)
 
 void CModel3::RunFrame(void)
 {	
+	// See if currently running multi-threaded
+	if (multiThreaded)
+	{
+		// If so, check all threads are up and running
+		if (!StartThreads())
+			goto ThreadError;
+
+		// Wake sound board and drive board threads so they can process a frame
+#ifdef SUPERMODEL_DRIVEBOARD
+		if (!sndBrdThreadSync->Post() || !drvBrdThreadSync->Post())
+#else
+		if (!sndBrdThreadSync->Post())
+#endif
+			goto ThreadError;
+
+		// At the same time, process a single frame for main board (PPC) in this thread
+		RunMainBoardFrame();
+
+		// Enter notify wait critical section
+		if (!notifyLock->Lock())
+			goto ThreadError;
+
+		// Wait for sound board and drive board threads to finish their work (if they haven't done so already)
+#ifdef SUPERMODEL_DRIVEBOARD
+		while (!sndBrdThreadDone || !drvBrdThreadDone)
+#else
+		while (!sndBrdThreadDone)
+#endif
+		{
+			if (!notifySync->Wait(notifyLock))
+				goto ThreadError;
+		}
+		sndBrdThreadDone = false;
+#ifdef SUPERMODEL_DRIVEBOARD
+		drvBrdThreadDone = false;
+#endif
+		
+		// Leave notify wait critical section
+		if (!notifyLock->Unlock())
+			goto ThreadError;
+	}
+	else
+	{
+		// If not multi-threaded, then just process a single frame for main board, sound board and drive board in turn in this thread
+		RunMainBoardFrame();
+		SoundBoard.RunFrame();
+#ifdef SUPERMODEL_DRIVEBOARD
+		DriveBoard.RunFrame();
+#endif
+	}
+	
+	// End frame
+	GPU.EndFrame();
+	TileGen.EndFrame();
+	IRQ.Assert(0x0D);
+	return;
+
+ThreadError:
+	ErrorLog("Threading error in CModel3::RunFrame: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	multiThreaded = false;
+}
+
+bool CModel3::StartThreads()
+{
+	if (startedThreads)
+		return true;
+			
+	// Create synchronization objects
+	sndBrdThreadSync = CThread::CreateSemaphore(1);
+	if (sndBrdThreadSync == NULL)
+		goto ThreadError;
+#ifdef SUPERMODEL_DRIVEBOARD
+	drvBrdThreadSync = CThread::CreateSemaphore(1);
+	if (drvBrdThreadSync == NULL)
+		goto ThreadError;
+#endif
+	notifyLock = CThread::CreateMutex();
+	if (notifyLock == NULL)
+		goto ThreadError;
+	notifySync = CThread::CreateCondVar();
+	if (notifySync == NULL)
+		goto ThreadError;
+
+	// Create sound board thread
+	sndBrdThread = CThread::CreateThread(StartSoundBoardThread, this);
+	if (sndBrdThread == NULL)
+		goto ThreadError;
+
+#ifdef SUPERMODEL_DRIVEBOARD
+	// Create drive board thread
+	drvBrdThread = CThread::CreateThread(StartDriveBoardThread, this);
+	if (drvBrdThread == NULL)
+		goto ThreadError;
+#endif
+	
+	startedThreads = true;
+	return true;
+
+ThreadError:
+	ErrorLog("Unable to create threads and/or synchronization objects: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	DeleteThreadObjects();
+	multiThreaded = false;
+	return false;
+}
+
+void CModel3::StopThreads()
+{
+	if (!startedThreads)
+		return;
+
+	DeleteThreadObjects();
+	startedThreads = false;
+}
+
+void CModel3::DeleteThreadObjects()
+{
+	// Delete (which in turn kills) sound board and drive board threads
+	// Note that can do so here safely because threads will always be waiting on their semaphores when this method is called
+	if (sndBrdThread != NULL)
+	{
+		delete sndBrdThread;
+		sndBrdThread = NULL;
+	}
+#ifdef SUPERMODEL_DRIVEBOARD
+	if (drvBrdThread != NULL)
+	{
+		delete drvBrdThread;
+		drvBrdThread = NULL;
+	}
+#endif
+
+	// Delete synchronization objects
+	if (sndBrdThreadSync != NULL)
+	{
+		delete sndBrdThreadSync;
+		sndBrdThreadSync = NULL;
+	}
+#ifdef SUPERMODEL_DRIVEBOARD
+	if (drvBrdThreadSync != NULL)
+	{
+		delete drvBrdThreadSync;
+		drvBrdThreadSync = NULL;
+	}
+#endif
+	if (notifyLock != NULL)
+	{
+		delete notifyLock;
+		notifyLock = NULL;
+	}
+	if (notifySync != NULL)
+	{
+		delete notifySync;
+		notifySync = NULL;
+	}
+}
+
+int CModel3::StartSoundBoardThread(void *data)
+{
+	// Call sound board thread method on CModel3
+	CModel3 *model3 = (CModel3*)data;
+	model3->RunSoundBoardThread();
+	return 0;
+}
+
+#ifdef SUPERMODEL_DRIVEBOARD
+int CModel3::StartDriveBoardThread(void *data)
+{
+	// Call drive board thread method on CModel3
+	CModel3 *model3 = (CModel3*)data;
+	model3->RunDriveBoardThread();
+	return 0;
+}
+#endif
+
+void CModel3::RunSoundBoardThread()
+{
+	for (;;)
+	{
+		// Wait on sound board thread semaphore
+		if (!sndBrdThreadSync->Wait())
+			goto ThreadError;
+
+		// Process a single frame for sound board
+		SoundBoard.RunFrame();
+
+		// Enter notify critical section
+		if (!notifyLock->Lock())
+			goto ThreadError;
+
+		// Let main thread know processing has finished
+		sndBrdThreadDone = true;
+		if (!notifySync->Signal())
+			goto ThreadError;
+
+		// Leave notify critical section
+		if (!notifyLock->Unlock())
+			goto ThreadError;
+	}
+
+ThreadError:
+	ErrorLog("Threading error in sound board thread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	multiThreaded = false;
+}
+
+#ifdef SUPERMODEL_DRIVEBOARD
+void CModel3::RunDriveBoardThread()
+{
+	for (;;)
+	{
+		// Wait on drive board thread semaphore
+		if (!drvBrdThreadSync->Wait())
+			goto ThreadError;
+
+		// Process a single frame for drive board
+		//DriveBoard.RunFrame();
+
+		// Enter notify critical section
+		if (!notifyLock->Lock())
+			goto ThreadError;
+
+		// Let main thread know processing has finished
+		drvBrdThreadDone = true;
+		if (!notifySync->Signal())
+			goto ThreadError;
+
+		// Leave notify critical section
+		if (!notifyLock->Unlock())
+			goto ThreadError;
+	}
+
+ThreadError:
+	ErrorLog("Threading error in drive board thread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	multiThreaded = false;
+}
+#endif
+
+void CModel3::RunMainBoardFrame(void)
+{
 	// Run the PowerPC for a frame
 	ppc_execute(ppcFrequency/60-10000);
 	
@@ -1891,14 +2128,7 @@ void CModel3::RunFrame(void)
 			break;
 		}
 	}
-
 	IRQ.Deassert(0x40);
-	SoundBoard.RunFrame();
-	
-	// End frame
-	GPU.EndFrame();
-	TileGen.EndFrame();
-	IRQ.Assert(0x0D);
 }
 
 void CModel3::Reset(void)
@@ -1932,6 +2162,9 @@ void CModel3::Reset(void)
 	TileGen.Reset();
 	GPU.Reset();
 	SoundBoard.Reset();
+#ifdef SUPERMODEL_DRIVEBOARD
+	DriveBoard.Reset();
+#endif
 	
 	DebugLog("Model 3 reset\n");
 }
@@ -2289,7 +2522,7 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 	DebugLog("Model 3 attached inputs\n");
 }
 
-BOOL CModel3::Init(unsigned ppcFrequencyParam)
+BOOL CModel3::Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -2297,6 +2530,7 @@ BOOL CModel3::Init(unsigned ppcFrequencyParam)
 	ppcFrequency = ppcFrequencyParam;
 	if (ppcFrequency < 1000000)
 		ppcFrequency = 1000000;
+	multiThreaded = !!multiThreadedParam;
 	
 	// Allocate all memory for ROMs and PPC RAM
 	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
@@ -2326,6 +2560,9 @@ BOOL CModel3::Init(unsigned ppcFrequencyParam)
 		return FAIL;
 	if (OKAY != SoundBoard.Init(soundROM,sampleROM,&IRQ,0x40))
 		return FAIL;
+#ifdef SUPERMODEL_DRIVEBOARD
+	DriveBoard.Init();
+#endif
 		
 	PCIBridge.AttachPCIBus(&PCIBus);
 	PCIBus.AttachDevice(13,&GPU);
@@ -2333,6 +2570,7 @@ BOOL CModel3::Init(unsigned ppcFrequencyParam)
 	PCIBus.AttachDevice(16,this);
 	
 	DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
+	
 	return OKAY;
 }
 
@@ -2354,6 +2592,23 @@ CModel3::CModel3(void)
 	
 	securityPtr = 0;
 	
+	multiThreaded = true;
+	startedThreads = false;
+	sndBrdThread = NULL; 
+#ifdef SUPERMODEL_DRIVEBOARD
+	drvBrdThread = NULL;
+#endif
+	sndBrdThreadDone = false;
+#ifdef SUPERMODEL_DRIVEBOARD
+	drvBrdThreadDone = false;
+#endif
+	sndBrdThreadSync = NULL;
+#ifdef SUPERMODEL_DRIVEBOARD
+	drvBrdThreadSync = NULL;
+#endif
+	notifyLock = NULL;
+	notifySync = NULL;
+	
 	DebugLog("Built Model 3\n");
 }
 
@@ -2368,6 +2623,9 @@ CModel3::~CModel3(void)
 	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
 	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
 #endif
+	
+	// Stop all threads
+	StopThreads();
 	
 	if (memoryPool != NULL)
 	{
