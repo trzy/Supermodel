@@ -137,12 +137,6 @@ TURBO68K_FLAGS = -singleaddr
 # Build options...
 #
 
-# Ensure options are consistent
-# (ie build type must be 32 bits for sound to be included)
-ifneq ($(strip $(BITS)),32) 
-	ENABLE_SOUND = no
-endif
-
 # Add compiler flags for various options
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	COMPILER_FLAGS += /D "SUPERMODEL_DEBUGGER"
