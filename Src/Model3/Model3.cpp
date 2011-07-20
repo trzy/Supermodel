@@ -502,8 +502,11 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
 /******************************************************************************
  Model 3 Security Device
  
- The security device is present in some games. Virtual On 2 reads tile pattern
- data from it.
+ The security device is present in some games. Virtual On and Dirt Devils read
+ tile pattern data from it. Spikeout calls a routine at PC=0x6FAC8 that writes/
+ reads the security device and, if the return value in R3 is 0, prints "ILLEGAL
+ ROM" and locks the game. Our habit of returning all 1's for unknown reads 
+ seems to help avoid this.
 ******************************************************************************/
 
 static const UINT16 spikeoutSecurity[] =
@@ -639,7 +642,7 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 
 void CModel3::WriteSecurity(unsigned reg, UINT32 data)
 {
-	DebugLog("Security write: reg=%X, data=%08X\n", reg, data);
+	DebugLog("Security write: reg=%X, data=%08X (PC=%08X, LR=%08X)\n", reg, data, ppc_get_pc(), ppc_get_lr());
 }
 
 
@@ -2097,6 +2100,22 @@ void CModel3::Patch(void)
 		
 		*(UINT32 *) &crom[0x535560] = 0x60000000;	// decrementer loop
 	}
+	else if (!strcmp(Game->id, "spikeout"))
+	{
+		/*
+		 * Decrementer loop at 0x31994 seems to work until a few frames into
+		 * the attract mode and game, at which point a very large value is
+		 * loaded into the decrementer and locks up the CPU (the usual
+		 * decrementer problem). "Insert Coin" keeps flashing because it is
+		 * managed via an IRQ, evidently.
+		 *
+		 * 0x00031994: 0x7C9602A6	mfspr	r4,dec
+		 * 0x00031998: 0x2C040000	cmpi	cr0,0,r4,0x0000
+		 * 0x0003199C: 0x41A0FFF8	bt	cr0[lt],0x00031994
+		 */
+		
+		*(UINT32 *) &crom[0x600000+0x3199C] = 0x60000000;
+	}
 }
 
 // Reverses all aligned 16-bit words, thereby switching their endianness (assumes buffer size is divisible by 2)
@@ -2346,8 +2365,8 @@ CModel3::~CModel3(void)
 	//Dump("vrom", vrom, 0x4000000, TRUE, FALSE);
 	//Dump("crom", crom, 0x800000, TRUE, FALSE);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, TRUE, FALSE);
-	Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
-	Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
+	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
+	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
 #endif
 	
 	if (memoryPool != NULL)
