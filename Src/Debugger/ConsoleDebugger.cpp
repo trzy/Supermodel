@@ -18,7 +18,7 @@ namespace Debugger
 		//
 	}
 
-	// TODO - tidy upf this function, ie do some proper parsing of commands - it is a mess!
+	// TODO - tidy up this function, ie do some proper parsing of commands - it is a mess!
 	void CConsoleDebugger::WaitCommand(CCPUDebug *cpu)
 	{
 		m_cpu = cpu;
@@ -485,7 +485,7 @@ namespace Debugger
 				}
 
 				ex->trap = false;
-				Print("Trap for exception %s removed.\n", ex->name);
+				Print("Trap for exceptions of type %s removed.\n", ex->id);
 			}
 			else if (CheckToken(token, "i", "interrupt"))
 			{
@@ -503,7 +503,7 @@ namespace Debugger
 				}
 
 				in->trap = false;
-				Print("Trap for interrupt %s removed.\n", in->name);
+				Print("Trap for interrupts ot type %s removed.\n", in->id);
 			}
 			else
 			{
@@ -725,7 +725,7 @@ namespace Debugger
 		else if (CheckToken(token, "ral", "removealllabels"))		// removealllabels
 		{
 			m_cpu->RemoveAllLabels();
-			Print("All custom labels removed.\m");
+			Print("All custom labels removed.\n");
 		}
 		else if (CheckToken(token, "ac", "addcomment"))				// addcomment <addr> <text...>
 		{

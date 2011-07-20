@@ -3,7 +3,7 @@
 #define INCLUDED_PPCDEBUG_H
 
 #include "Debugger/CPUDebug.h"
-#include "Model3/Bus.h"
+#include "CPU/Bus.h"
 #include "Types.h"
 
 #define PPCSPECIAL_LR 0

@@ -1,5 +1,4 @@
 #ifdef SUPERMODEL_DEBUGGER
-#ifdef SUPERMODEL_SOUND
 
 #include "68KDebug.h"
 
@@ -8,73 +7,8 @@
 
 namespace Debugger
 {
-	UINT32 GetSpecialReg(CCPUDebug *cpu, unsigned id)
+	C68KDebug::C68KDebug() : CCPUDebug("68K", 2, 10, true, 24, 7)
 	{
-		switch (id)
-		{
-			case M68KSPECIAL_SP: return (UINT32)turbo68kcontext_68000.a[7];
-			case M68KSPECIAL_SR: return (UINT32)turbo68kcontext_68000.sr;
-			default:             return 0;
-		}
-	}
-
-	bool SetSpecialReg(CCPUDebug *cpu, unsigned id, UINT32 data)
-	{
-		switch (id)
-		{
-			case M68KSPECIAL_SP: turbo68kcontext_68000.a[7] = data; return true;
-			case M68KSPECIAL_SR: turbo68kcontext_68000.sr = data; return true;
-			default:             return false;
-		}
-	}
-
-	UINT32 GetDataReg(CCPUDebug *cpu, unsigned id) 
-	{
-		return (UINT32)turbo68kcontext_68000.d[id];
-	}
-
-	bool SetDataReg(CCPUDebug *cpu, unsigned id, UINT32 data) 
-	{
-		turbo68kcontext_68000.d[id] = data;
-		return true;
-	}
-
-	UINT32 GetAddressReg(CCPUDebug *cpu, unsigned id)
-	{
-		return (UINT32)turbo68kcontext_68000.a[id];
-	}
-
-	bool SetAddressReg(CCPUDebug *cpu, unsigned id, UINT32 data)
-	{
-		turbo68kcontext_68000.a[id] = data;
-		return true;
-	}
-
-	static const char *srGroup = "Special Registers";
-	static const char *drGroup = "Data Registers";
-	static const char *arGroup = "Address Regsters";
-
-	C68KDebug::C68KDebug() : CCPUDebug("68K", 2, 10, true, 24, 7), m_resetAddr(0)
-	{
-		// Special registers
-		AddPCRegister      ("PC", srGroup);
-		AddAddrRegister    ("SP", srGroup, M68KSPECIAL_SP, GetSpecialReg, SetSpecialReg);
-		AddStatus32Register("SR", srGroup, M68KSPECIAL_SR, "TtSM.210...XNZVC", GetSpecialReg, SetSpecialReg);
-
-		// Data registers
-		for (unsigned id = 0; id < 8; id++)
-		{
-			sprintf(m_drNames[id], "D%u", id);
-			AddInt32Register(m_drNames[id], drGroup, id, GetDataReg, SetDataReg);
-		}
-
-		// Address registers
-		for (unsigned id = 0; id < 8; id++)
-		{
-			sprintf(m_arNames[id], "A%u", id);
-			AddInt32Register(m_arNames[id], arGroup, id, GetAddressReg, SetAddressReg);
-		}
-
 		// Exceptions
 		AddException("BUS",     2,  "Bus Error");
 		AddException("ADDRESS", 3,  "Address Error");
@@ -146,180 +80,6 @@ namespace Debugger
 				AddMappedIO(addr, 2, m_regStr[reg], m_sSlotStr[slot]);
 			}
 		}
-	}
-
-	C68KDebug::~C68KDebug()
-	{
-		DetachFromCPU();	
-	}
-
-	BOOL __cdecl DebugHandler(TURBO68K_INT32 pc, TURBO68K_INT32 opcode)
-	{
-		// Return true to let Turbo68K know if PC was changed by user
-		return debug->CheckExecution((UINT32)pc, (UINT32)opcode);
-	}
-
-	void __cdecl InterruptHandler(TURBO68K_UINT32 intVec)
-	{
-		// TODO - is following correct handling of interrupts?  - need to check readme file
-		if (intVec > 47)
-			return;
-		else if (intVec >= 25 || intVec < 32)
-		{
-			debug->CheckException(25); 
-			debug->CheckInterrupt((UINT16)intVec - 25);
-		}
-		else 
-			debug->CheckException((UINT16)intVec);
-		
-		if (origIntAckPtr != NULL)
-			origIntAckPtr(intVec);
-	}
-
-	void C68KDebug::AttachToCPU()
-	{
-		if (debug != NULL)
-			DetachFromCPU();
-
-		debug = this;
-
-		origDebugPtr = (DebugPtr)turbo68kcontext_68000.Debug;
-		origIntAckPtr = (IntAckPtr)turbo68kcontext_68000.InterruptAcknowledge;
-
-		origRead8Regions = (TURBO68K_DATAREGION*)Turbo68KGetReadByte(TURBO68K_NULL);
-		origRead16Regions = (TURBO68K_DATAREGION*)Turbo68KGetReadWord(TURBO68K_NULL);
-		origRead32Regions = (TURBO68K_DATAREGION*)Turbo68KGetReadLong(TURBO68K_NULL);
-		origWrite8Regions = (TURBO68K_DATAREGION*)Turbo68KGetWriteByte(TURBO68K_NULL);
-		origWrite16Regions = (TURBO68K_DATAREGION*)Turbo68KGetWriteWord(TURBO68K_NULL);
-		origWrite32Regions = (TURBO68K_DATAREGION*)Turbo68KGetWriteLong(TURBO68K_NULL);
-
-		turbo68kcontext_68000.Debug = DebugHandler;
-		turbo68kcontext_68000.InterruptAcknowledge = InterruptHandler;
-
-		debugRead8Regions[0].handler = ReadByteDebug;
-		debugRead16Regions[0].handler = ReadWordDebug;
-		debugRead32Regions[0].handler = ReadLongDebug;
-		debugWrite8Regions[0].handler = WriteByteDebug;
-		debugWrite16Regions[0].handler = WriteWordDebug;
-		debugWrite32Regions[0].handler = WriteLongDebug;
-
-		Turbo68KSetReadByte(debugRead8Regions, TURBO68K_NULL);
-		Turbo68KSetReadWord(debugRead16Regions, TURBO68K_NULL);
-		Turbo68KSetReadLong(debugRead32Regions, TURBO68K_NULL);
-		Turbo68KSetWriteByte(debugWrite8Regions, TURBO68K_NULL);
-		Turbo68KSetWriteWord(debugWrite16Regions, TURBO68K_NULL);
-		Turbo68KSetWriteLong(debugWrite32Regions, TURBO68K_NULL);
-
-		// Reset address is held at 0x000004
-		m_resetAddr = ReadLongDirect(0x000004);
-	}
-
-	void C68KDebug::DetachFromCPU()
-	{
-		if (debug == NULL)
-			return;
-
-		turbo68kcontext_68000.Debug = origDebugPtr;
-		turbo68kcontext_68000.InterruptAcknowledge = origIntAckPtr;
-
-		Turbo68KSetReadByte(origRead8Regions, TURBO68K_NULL);
-		Turbo68KSetReadWord(origRead16Regions, TURBO68K_NULL);
-		Turbo68KSetReadLong(origRead32Regions, TURBO68K_NULL);
-		Turbo68KSetWriteByte(origWrite8Regions, TURBO68K_NULL);
-		Turbo68KSetWriteWord(origWrite16Regions, TURBO68K_NULL);
-		Turbo68KSetWriteLong(origWrite32Regions, TURBO68K_NULL);
-
-		debug = NULL;
-	}
-
-	UINT32 C68KDebug::GetResetAddr()
-	{
-		return m_resetAddr;
-	}
-
-	bool C68KDebug::UpdatePC(UINT32 newPC)
-	{ 
-		turbo68kcontext_68000.pc = newPC;
-		return true;
-	}
-
-	bool C68KDebug::ForceException(CException *ex)
-	{
-		//switch (ex->code)
-		//{
-		//	 TODO
-		//}
-		return false;
-	}
-
-	bool C68KDebug::ForceInterrupt(CInterrupt *in)
-	{
-		if (in->code > 6)
-			return false;
-		//Turbo68KInterrupt(in->code, TURBO64K_AUTOVECTOR);
-		//Turbo68KProcessInterrupts(); TODO - call this?
-		return false; // TODO
-	}
-
-	UINT64 C68KDebug::ReadMem(UINT32 addr, unsigned dataSize)
-	{
-		switch (dataSize)
-		{
-			case 1:  return ReadByteDirect(addr);
-			case 2:  return ReadWordDirect(addr);
-			case 4:  return ReadLongDirect(addr);
-			default: return CCPUDebug::ReadMem(addr, dataSize);	
-		}
-	}
-
-	bool C68KDebug::WriteMem(UINT32 addr, unsigned dataSize, UINT64 data)
-	{
-		switch (dataSize)
-		{
-			case 1:  WriteByteDirect(addr, (TURBO68K_UINT8)data); return true;
-			case 2:  WriteWordDirect(addr, (TURBO68K_UINT16)data); return true;
-			case 4:  WriteLongDirect(addr, (TURBO68K_UINT32)data); return true;
-			default: return CCPUDebug::WriteMem(addr, dataSize, data);
-		}
-	}
-
-	TURBO68K_UINT8 __cdecl ReadByteDebug(TURBO68K_UINT32 addr)
-	{
-		TURBO68K_UINT8 data = ReadByteDirect(addr);
-		debug->CheckRead8((UINT32)addr, (UINT8)data);
-		return data;
-	}
-
-	TURBO68K_UINT16 __cdecl ReadWordDebug(TURBO68K_UINT32 addr)
-	{
-		TURBO68K_UINT16 data = ReadWordDirect(addr);
-		debug->CheckRead16((UINT32)addr, (UINT16)data);
-		return data;
-	}
-
-	TURBO68K_UINT32 __cdecl ReadLongDebug(TURBO68K_UINT32 addr)
-	{
-		TURBO68K_UINT32 data = ReadLongDirect(addr);
-		debug->CheckRead32((UINT32)addr, (UINT32)data);
-		return data;
-	}
-
-	void __cdecl WriteByteDebug(TURBO68K_UINT32 addr, TURBO68K_UINT8 data)
-	{
-		WriteByteDirect(addr, data);
-		debug->CheckWrite8((UINT32)addr, (UINT8)data);
-	}
-
-	void __cdecl WriteWordDebug(TURBO68K_UINT32 addr, TURBO68K_UINT16 data)
-	{
-		WriteWordDirect(addr, data);
-		debug->CheckWrite16((UINT32)addr, (UINT16)data);
-	}
-
-	void __cdecl WriteLongDebug(TURBO68K_UINT32 addr, TURBO68K_UINT32 data)
-	{
-		WriteLongDirect(addr, data);
-		debug->CheckWrite32((UINT32)addr, (UINT32)data);
 	}
 
 	static const char *opATable0004[] = { "movep.w [DW3](A0),D0","movep.w [DW3](A1),D0","movep.w [DW3](A2),D0",
@@ -1485,7 +1245,7 @@ namespace Debugger
 	int C68KDebug::Disassemble(UINT32 addr, char *mnemonic, char *operands)
 	{
 		// Read opcode head word
-		UINT16 opcode = ReadWordDirect(addr);
+		UINT16 opcode = (UINT16)ReadMem(addr, 16);
 		int offset = 2;
 
 		const char *instr;
@@ -1537,7 +1297,7 @@ namespace Debugger
 				if ((opcode&0x0B80) == 0x0880)
 				{
 					// movem.z reg-list,a or movem.z a,reg-list
-					u16 = ReadWordDirect(addr + offset);
+					u16 = (UINT16)ReadMem(addr + offset, 2);
 					offset += 2;
 					char sizeC = (opcode&0x40 ? 'l' : 'w');
 					char regList[50];
@@ -1923,14 +1683,14 @@ namespace Debugger
 					if (p[2] == 'N')
 					{
 						// Check first byte is zero
-						u8 = ReadByteDirect(addr + offset++);
+						u8 = (UINT8)ReadMem(addr + offset++, 1);
 						if (u8 != 0)
 						{
 							offset++;
 							goto invalid;
 						}
 						// Get data byte
-						u8 = ReadByteDirect(addr + offset++);
+						u8 = (UINT8)ReadMem(addr + offset++, 1);
 						// Check top 3 bits are zero
 						if (u8&0xE0)
 							goto invalid;
@@ -1940,16 +1700,16 @@ namespace Debugger
 					else if (p[2] == 'B')
 					{
 						// Check first byte is zero
-						u8 = ReadByteDirect(addr + offset++);
+						u8 = (UINT8)ReadMem(addr + offset++, 1);
 						if (u8 != 0)
 						{
 							offset++;
 							goto invalid;
 						}
 						// Get data byte
-						u8 = ReadByteDirect(addr + offset++);
+						u8 = (UINT8)ReadMem(addr + offset++, 1);
 						FormatData(r, 1, u8);
-						//i8 = (INT8)ReadByteDirect(addr + offset++);
+						//i8 = (INT8)ReadMem(addr + offset++, 1);
 						//if (i8 < 0)
 						//{
 						//	*r++ = '-';
@@ -1964,10 +1724,10 @@ namespace Debugger
 					}
 					else if (p[2] == 'W')
 					{
-						u16 = ReadWordDirect(addr + offset);
+						u16 = (UINT16)ReadMem(addr + offset, 2);
 						offset += 2;
 						FormatData(r, 2, u16);
-						//i16 = (INT16)ReadWordDirect(addr + offset);
+						//i16 = (INT16)ReadMem(addr + offset, 2);
 						//offset += 2;
 						//if (i16 < 0)
 						//{
@@ -1983,10 +1743,10 @@ namespace Debugger
 					}
 					else
 					{
-						u32 = ReadLongDirect(addr + offset);
+						u32 = (UINT32)ReadMem(addr + offset, 4);
 						offset += 4;
 						FormatData(r, 4, u32);
-						//i32 = (INT32)ReadLongDirect(addr + offset);
+						//i32 = (INT32)ReadMem(addr + offset, 4);
 						//offset += 4;
 						//if (i32 < 0)
 						//{
@@ -2006,7 +1766,7 @@ namespace Debugger
 				else if (sscanf(p, "[LL%d]", &part) == 1) // TODO - this should be LW
 				{
 					// Fixed width label offset
-					i16 = (INT16)ReadWordDirect(addr + offset);
+					i16 = (INT16)ReadMem(addr + offset, 2);
 					offset += 2;
 					// Offset is from PC + 2
 					opFlags = GetOpFlags(addr, opcode);
@@ -2022,14 +1782,14 @@ namespace Debugger
 					INT32 labOffset;
 					if (i8 == 0x00)
 					{
-						i16 = (INT16)ReadWordDirect(addr + offset);
+						i16 = (INT16)ReadMem(addr + offset, 2);
 						offset += 2;
 						labOffset = i16;
 					}
 					// Following 68020+ only
 					//else if (i8 == 0xFF)
 					//{
-					//	i32 = (INT32)ReadLongDirect(addr + offset);
+					//	i32 = (INT32)ReadMem(addr + offset, 4);
 					//	offset += 4;
 					//	labOffset = i32;
 					//*/
@@ -2138,7 +1898,7 @@ namespace Debugger
 				sprintf(dest, "-(A%u)", reg);
 				break;
 			case 0x05: // (d16,An)
-				i16 = (INT16)ReadWordDirect(addr + offset);
+				i16 = (INT16)ReadMem(addr + offset, 2);
 				offset += 2;
 				if (i16 < 0)
 				{
@@ -2154,7 +1914,7 @@ namespace Debugger
 				}
 				break;
 			case 0x06: // (d8,An,Ri.z)
-				u8 = ReadByteDirect(addr + offset++);
+				u8 = (UINT8)ReadMem(addr + offset++, 1);
 				// Check first 3-bits of first byte are zero
 				if (u8&0x7)
 				{
@@ -2171,7 +1931,7 @@ namespace Debugger
 					ofsReg -= 8;
 				}
 				ofsSizeC = (u8&0x8 ? 'l' : 'w');
-				i8 = (INT8)ReadByteDirect(addr + offset++);
+				i8 = (INT8)ReadMem(addr + offset++, 1);
 				if (i8 < 0)
 				{
 					FormatData(dataStr, 1, -i8);
@@ -2189,21 +1949,21 @@ namespace Debugger
 				switch (reg)
 				{
 					case 0x00: // addr16
-						u16 = ReadWordDirect(addr + offset);
+						u16 = (UINT16)ReadMem(addr + offset, 2);
 						offset += 2;
 						opFlags = GetOpFlags(addr, opcode);
 						FormatJumpAddress(dest, u16, opFlags); 
 						//sprintf(dest, "0x%06X", u16); // Format this way as memory bus width is 24-bits
 						break;
 					case 0x01: // addr32
-						u32 = ReadLongDirect(addr + offset);
+						u32 = (UINT32)ReadMem(addr + offset, 4);
 						offset += 4;
 						opFlags = GetOpFlags(addr, opcode);
 						FormatJumpAddress(dest, u32, opFlags); 
 						//sprintf(dest, "0x%06X", u32); // Format this way as memory bus width is only 24-bits
 						break;
 					case 0x02: // d16(PC)
-						i16 = (INT16)ReadWordDirect(addr + offset);
+						i16 = (INT16)ReadMem(addr + offset, 2);
 						offset += 2;
 						if (i16 < 0)
 						{
@@ -2219,7 +1979,7 @@ namespace Debugger
 						}
 						break;
 					case 0x03: // u8(PC,Ri.x)
-						u8 = ReadByteDirect(addr + offset++);
+						u8 = (UINT8)ReadMem(addr + offset++, 1);
 						// Check first 3-bits of first byte are zero
 						if (u8&0x7)
 						{
@@ -2236,7 +1996,7 @@ namespace Debugger
 							ofsReg -= 8;
 						}
 						ofsSizeC = (u8&0x8 ? 'l' : 'w');
-						i8 = (INT8)ReadByteDirect(addr + offset++);
+						i8 = (INT8)ReadMem(addr + offset++, 1);
 						if (i8 < 0)
 						{
 							FormatData(dataStr, 1, -i8);
@@ -2254,17 +2014,17 @@ namespace Debugger
 						if (sizeC == 'b')
 						{
 							// Check first byte is zero
-							u8 = ReadByteDirect(addr + offset++);
+							u8 = (UINT8)ReadMem(addr + offset++, 1);
 							if (u8 != 0)
 							{
 								offset++;
 								return false;
 							}
 							// Get data byte
-							u8 = ReadByteDirect(addr + offset++);
+							u8 = (UINT8)ReadMem(addr + offset++, 1);
 							FormatData(dataStr, 1, u8);
 							sprintf(dest, "#%s", dataStr);
-							//i8 = (INT8)ReadByteDirect(addr + offset++);
+							//i8 = (INT8)ReadMem(addr + offset++, 1);
 							//if (i8 < 0)
 							//{
 							//	FormatData(dataStr, 1, -i8);
@@ -2280,11 +2040,11 @@ namespace Debugger
 						}
 						else if (sizeC == 'w')
 						{
-							u16 = ReadWordDirect(addr + offset);
+							u16 = (UINT16)ReadMem(addr + offset, 2);
 							offset += 2;
 							FormatData(dataStr, 2, u16);
 							sprintf(dest, "#%s", dataStr);
-							//i16 = (INT16)ReadWordDirect(addr + offset);
+							//i16 = (INT16)ReadMem(addr + offset, 2);
 							//offset += 2;
 							//if (i16 < 0)
 							//{
@@ -2301,11 +2061,11 @@ namespace Debugger
 						}
 						else if (sizeC == 'l')
 						{
-							u32 = ReadLongDirect(addr + offset);
+							u32 = (UINT32)ReadMem(addr + offset, 4);
 							offset += 4;
 							FormatData(dataStr, 4, u32);
 							sprintf(dest, "#%s", dataStr);
-							//i32 = (INT32)ReadLongDirect(addr + offset);
+							//i32 = (INT32)ReadMem(addr + offset, 4);
 							//offset += 4;
 							//if (i32 < 0)
 							//{
@@ -2372,12 +2132,12 @@ namespace Debugger
 			{
 				if (reg == 0x00)
 				{
-					jumpAddr = ReadWordDirect(addr + 2);
+					jumpAddr = (UINT32)ReadMem(addr + 2, 4);
 					return true;
 				}
 				else if (reg == 0x01)
 				{
-					jumpAddr = ReadLongDirect(addr + 2);
+					jumpAddr = (UINT32)ReadMem(addr + 2, 4);
 					return true;
 				}
 			}
@@ -2388,7 +2148,7 @@ namespace Debugger
 			// Instruction is bra, bsr or bCC
 			INT8 i8 = (INT8)(opcode&0xFF);
 			if (i8 == 0x00)
-				jumpAddr = addr + 2 + (INT16)ReadWordDirect(addr + 2);
+				jumpAddr = addr + 2 + (INT16)ReadMem(addr + 2, 2);
 			else
 				jumpAddr = addr + 2 + i8;
 			return true;
@@ -2396,7 +2156,7 @@ namespace Debugger
 		else if ((opcode&0xF0F8) == 0x50C8)
 		{
 			// Instruction is dbCC
-			jumpAddr = addr + 2 + (INT16)ReadWordDirect(addr + 2);
+			jumpAddr = addr + 2 + (INT16)ReadMem(addr + 2, 2);
 			return true;
 		}
 		else
@@ -2444,28 +2204,27 @@ namespace Debugger
 		if (opcode != 0x4E74 && opcode != 0x4E75 && opcode != 0x4E73)
 			return false;
 		// Return address will be at top of stack for rts and stack + 2 for rtr or rte
-		UINT32 sp = (UINT32)turbo68kcontext_68000.a[7];
+		UINT32 sp = 0; // TODO GetSP(); //(UINT32)turbo68kcontext_68000.a[7];
 		if (opcode == 0x4E75)
-			retAddr = ReadLongDirect(sp);
+			retAddr = (UINT32)ReadMem(sp, 4);
 		else
-			retAddr = ReadLongDirect(sp + 2);
+			retAddr = (UINT32)ReadMem(sp + 2, 4);
 		return true;
 	}
 
 	bool C68KDebug::GetHandlerAddr(CException *ex, UINT32 &handlerAddr)
 	{
 		UINT32 vecAddr = ex->code * 4;
-		handlerAddr = (UINT32)ReadLongDirect(vecAddr);
+		handlerAddr = (UINT32)ReadMem(vecAddr, 4);
 		return !!handlerAddr;
 	}
 
 	bool C68KDebug::GetHandlerAddr(CInterrupt *in, UINT32 &handlerAddr)
 	{
 		UINT32 vecAddr = (in->code + 25) * 4;
-		handlerAddr = (UINT32)ReadLongDirect(vecAddr);
+		handlerAddr = (UINT32)ReadMem(vecAddr, 4);
 		return !!handlerAddr;
 	}
 }
 
-#endif  // SUPERMODEL_SOUND
 #endif  // SUPERMODEL_DEBUGGER

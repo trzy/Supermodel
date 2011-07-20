@@ -16,9 +16,6 @@ namespace Debugger
 		m_loadEmuState(false), m_saveEmuState(false), m_resetEmu(false)
 	{
 		AddCPU(new CPPCDebug());
-#ifdef SUPERMODEL_SOUND
-		AddCPU(new C68KDebug());
-#endif
 	}
 
 	void CSupermodelDebugger::WaitCommand(CCPUDebug *cpu)
