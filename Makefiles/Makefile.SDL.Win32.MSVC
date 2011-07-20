@@ -117,8 +117,9 @@ OUTFILE = $(BIN_DIR)\Supermodel.exe
 
 CC = "$(VC_BIN)\cl.exe"
 LD = "$(VC_BIN)\link.exe"
-COMPILER_FLAGS = /I "$(SDL_INCLUDEPATH)" /I "$(ZLIB_INCLUDEPATH)" /I "$(DIRECTX_INCLUDEPATH)" /I "Src\\" /I "Src\OSD\SDL\\" /Ox \
-	/D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL /D "DEBUG" /DEBUG
+COMPILER_FLAGS = /I "$(SDL_INCLUDEPATH)" /I "$(ZLIB_INCLUDEPATH)" /I "$(DIRECTX_INCLUDEPATH)" /I "Src" /I "Src\\OSD" /I "Src\\OSD\\SDL" \
+	/I "Src\\OSD\\Windows" /Ox /D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL \
+	/D "DEBUG" /DEBUG
 CFLAGS = $(COMPILER_FLAGS) /TC
 CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
 LFLAGS = /MACHINE:$(ARCH) $(ARCH_LIBS) /LIBPATH:"$(SDL_LIBPATH)" /LIBPATH:"$(ZLIB_LIBPATH)" /LIBPATH:"$(DIRECTX_LIBPATH)" /OUT:"$(OUTFILE)" \
@@ -164,11 +165,11 @@ HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
 OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/INIFile.obj $(OBJ_DIR)/BlockFile.obj $(OBJ_DIR)/93C46.obj \
 	$(OBJ_DIR)/ROMLoad.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/ioapi.obj $(OBJ_DIR)/Error.obj $(OBJ_DIR)/glew.obj $(OBJ_DIR)/Shader.obj \
 	$(OBJ_DIR)/Real3D.obj $(OBJ_DIR)/Render3D.obj $(OBJ_DIR)/Models.obj $(OBJ_DIR)/Render2D.obj $(OBJ_DIR)/TileGen.obj \
-	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/SoundBoard.obj $(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/M68K.obj\
-	$(OBJ_DIR)/m68kcpu.obj $(OBJ_DIR)/m68kopnz.obj $(OBJ_DIR)/m68kopdm.obj $(OBJ_DIR)/m68kopac.obj $(OBJ_DIR)/m68kops.obj \
-	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/MPC10x.obj \
-	$(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj $(OBJ_DIR)/InputTypes.obj \
-	$(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj
+	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/Audio.obj $(OBJ_DIR)/Thread.obj $(OBJ_DIR)/SoundBoard.obj \
+	$(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/M68K.obj $(OBJ_DIR)/m68kcpu.obj $(OBJ_DIR)/m68kopnz.obj $(OBJ_DIR)/m68kopdm.obj \
+	$(OBJ_DIR)/m68kopac.obj $(OBJ_DIR)/m68kops.obj $(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj \
+	$(OBJ_DIR)/MPC10x.obj $(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj \
+	$(OBJ_DIR)/InputTypes.obj $(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj
 
 # If built-in debugger enabled, include all debugging classes
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
@@ -176,11 +177,6 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 		$(OBJ_DIR)/AddressTable.obj $(OBJ_DIR)/Breakpoint.obj $(OBJ_DIR)/CodeAnalyser.obj $(OBJ_DIR)/Exception.obj \
 		$(OBJ_DIR)/Interrupt.obj $(OBJ_DIR)/IO.obj $(OBJ_DIR)/Label.obj $(OBJ_DIR)/Register.obj $(OBJ_DIR)/Watch.obj \
 		$(OBJ_DIR)/PPCDebug.obj
-		
-	# If sound enabled, add debugging support for Turbo68K
-	ifeq ($(strip $(ENABLE_SOUND)),yes)
-		OBJ += $(OBJ_DIR)/68KDebug.obj
-	endif
 endif
 
 
@@ -217,7 +213,7 @@ clean:
 #
 $(OBJ_DIR)/m68kmake.exe: Src/CPU/68K/Musashi/m68kmake.c
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kmake.obj
-	$(LD) /OUT:$(OBJ_DIR)/m68kmake.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/m68kmake.obj
+	$(LD) /OUT:$(OBJ_DIR)/m68kmake.exe /MACHINE:$(ARCH) $(ARCH_LIBS) /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/m68kmake.obj
 	
 $(OBJ_DIR)/m68kops.h: $(OBJ_DIR)/m68kmake.exe Src/CPU/68K/Musashi/m68k_in.c
 	$(OBJ_DIR)/m68kmake.exe $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
