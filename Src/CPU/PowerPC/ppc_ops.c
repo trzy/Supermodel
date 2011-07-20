@@ -1323,24 +1323,20 @@ static void ppc_stwcx_rc(UINT32 op)
 	else
 		ea = REG(RA) + REG(RB);
 
-	/*if( ppc.reserved ) {
-	*/
+	if( ppc.reserved ) {
 		WRITE32(ea, REG(RS));
 
 		ppc.reserved = 0;
 		ppc.reserved_address = 0;
 
-		CR(0) = 0x2;
+		CR(0) = 0x2;	// set EQ to indicate success
 		if( XER & XER_SO )
 			CR(0) |= 0x1;
-	/*
 	} else {
-		//CR(0) = 0;
-		CR(0) = 2;	// set EQ to indicate success
+		CR(0) = 0;
 		if( XER & XER_SO )
 			CR(0) |= 0x1;
 	}
-	*/
 }
 
 static void ppc_stwu(UINT32 op)
