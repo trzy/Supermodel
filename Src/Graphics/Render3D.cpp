@@ -188,8 +188,8 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 	UINT16	texel;
 	GLfloat	c, a;
 	
-	x %= 2048;
-	y %= 2048;
+	x &= 2047;
+	y &= 2047;
 	
 	if ((x+width)>2048 || (y+height)>2048)
 		return;
@@ -198,7 +198,7 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 		//ErrorLog("Encountered a texture that is too large (%d,%d,%d,%d)", x, y, width, height);
 		return;
 	}
-
+	
 	// Check to see if ALL texture tiles have been properly decoded 
 	if ((textureFormat[y/32][x/32]==format) && (textureWidth[y/32][x/32]>=width) && (textureHeight[y/32][x/32]>=height))
 		return;
@@ -616,12 +616,16 @@ void CRender3D::ClearStack(void)
  * buffer overflows and display list overflows will be detected. An attempt is
  * made to salvage the situation if this occurs, so if DrawModel() returns
  * FAIL, it is a serious matter and rendering should be aborted for the frame.
+ *
+ * The current texture offset state, texOffset, is also used. Models are cached
+ * for each unique texOffset.
  */
 BOOL CRender3D::DrawModel(UINT32 modelAddr)
 {
 	ModelCache		*Cache;
 	const UINT32	*model;
 	int				lutIdx;
+	struct VBORef	*ModelRef;
 	
 	//if (modelAddr==0x7FFF00)	// Fighting Vipers (this is not polygon data!)
 	//	return;
@@ -637,10 +641,12 @@ BOOL CRender3D::DrawModel(UINT32 modelAddr)
 		
 	// Look up the model in the LUT and cache it if necessary
 	lutIdx = modelAddr&0xFFFFFF;
-	if (NeedToCache(Cache, lutIdx))
+	ModelRef = LookUpModel(Cache, lutIdx, texOffset);
+	if (NULL == ModelRef)
 	{
 		// Attempt to cache the model
-		if (CacheModel(Cache, lutIdx, model) != OKAY)
+		ModelRef = CacheModel(Cache, lutIdx, texOffset, model);
+		if (NULL == ModelRef)
 		{
 			// Model could not be cached. Render what we have so far and try again.
 			DrawDisplayList(&VROMCache, POLY_STATE_NORMAL);
@@ -651,13 +657,14 @@ BOOL CRender3D::DrawModel(UINT32 modelAddr)
 			ClearModelCache(&PolyCache);
 			
 			// Try caching again...
-			if (CacheModel(Cache, lutIdx, model) != OKAY)
+			ModelRef = CacheModel(Cache, lutIdx, texOffset, model);
+			if (NULL == ModelRef)
 				return ErrorUnableToCacheModel(modelAddr);	// nothing we can do :(
 		}
 	}
 
 	// Add to display list
-	return AppendDisplayList(Cache, FALSE, Cache->lut[lutIdx]);
+	return AppendDisplayList(Cache, FALSE, ModelRef);
 }
 
 // Descends into a 10-word culling node
@@ -667,6 +674,7 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 	UINT32			matrixOffset, node1Ptr, node2Ptr;
 	float			x, y, z, oldTexOffsetX, oldTexOffsetY;
 	int				tx, ty;
+	UINT16			oldTexOffset;
 	
 	++stackDepth;
 	// Stack depth of 64 is too small for Star Wars Trilogy (Hoth)
@@ -696,15 +704,20 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 	z				= *(float *) &node[0x06-offset];
 	
 	// Texture offset?
-	oldTexOffsetX = texOffset[0];	// save old offsets
-	oldTexOffsetY = texOffset[1];
-	tx = 32*((node[0x02]>>7)&0x3F);
-	ty = 32*(node[0x02]&0x3F) + ((node[0x02]&0x4000)?1024:0);
-	if ((node[0x02]&0x8000))	// apply texture offsets, else retain current ones
+	oldTexOffsetX = texOffsetXY[0];	// save old offsets
+	oldTexOffsetY = texOffsetXY[1];
+	oldTexOffset = texOffset;
+	if (!offset)	// Step 1.5+
 	{
-		texOffset[0] = (GLfloat) tx;
-		texOffset[1] = (GLfloat) ty;
-		//printf("Tex Offset: %d, %d (%08X %08X)\n", tx, ty, node[0x02], node[0x00]);
+		tx = 32*((node[0x02]>>7)&0x3F);
+		ty = 32*(node[0x02]&0x3F) + ((node[0x02]&0x4000)?1024:0);	// TODO: 5 or 6 bits for Y coord?
+		if ((node[0x02]&0x8000))	// apply texture offsets, else retain current ones
+		{
+			texOffsetXY[0] = (GLfloat) tx;
+			texOffsetXY[1] = (GLfloat) ty;
+			texOffset = node[0x02]&0x7FFF;
+			//printf("Tex Offset: %d, %d (%08X %08X)\n", tx, ty, node[0x02], node1Ptr);
+		}
 	}
 	
 	// Apply matrix and translation
@@ -735,8 +748,9 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 	--stackDepth;
 	
 	// Restore old texture offsets
-	texOffset[0] = oldTexOffsetX;
-	texOffset[1] = oldTexOffsetY;
+	texOffsetXY[0] = oldTexOffsetX;
+	texOffsetXY[1] = oldTexOffsetY;
+	texOffset = oldTexOffset;
 }
 
 // A list of pointers. MAME assumes that these may only point to culling nodes.
@@ -1119,8 +1133,9 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 	//printf("Fog: R=%02X G=%02X B=%02X density=%g (%X) %d start=%g\n", ((vpnode[0x22]>>16)&0xFF), ((vpnode[0x22]>>8)&0xFF), ((vpnode[0x22]>>0)&0xFF), fogParams[3], vpnode[0x23], (fogParams[3]==fogParams[3]), fogParams[4]);
  	
  	// Clear texture offsets before proceeding
- 	texOffset[0] = 0.0;
- 	texOffset[1] = 0.0;
+ 	texOffsetXY[0] = 0.0;
+ 	texOffsetXY[1] = 0.0;
+ 	texOffset = 0x0000;
  	
  	// Set up coordinate system and base matrix
  	glMatrixMode(GL_MODELVIEW);
@@ -1329,7 +1344,6 @@ BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	spotEllipseLoc = glGetUniformLocation(shaderProgram, "spotEllipse");
 	spotRangeLoc = glGetUniformLocation(shaderProgram, "spotRange");
 	spotColorLoc = glGetUniformLocation(shaderProgram, "spotColor");
-	texOffsetLoc = glGetUniformLocation(shaderProgram, "texOffset");
 	
 	// Get locations of custom vertex attributes
 	subTextureLoc = glGetAttribLocation(shaderProgram,"subTexture");

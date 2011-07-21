@@ -23,6 +23,11 @@
  * Models.cpp
  *
  * Model parsing, caching, and drawing.
+ *
+ * TO-DO List:
+ * -----------
+ * - More should be predecoded into the polygon structures, so that things like
+ *   texture base coordinates are not re-decoded in two different places!
  */
 
 #include <math.h>
@@ -132,7 +137,6 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
        	else
        	{
 			glUniformMatrix4fv(modelViewMatrixLoc, 1, GL_FALSE, D->Data.Model.modelViewMatrix);
-			glUniform2fv(texOffsetLoc, 1, D->Data.Model.texOffset);
 			glDrawArrays(GL_TRIANGLES, D->Data.Model.index, D->Data.Model.numVerts);
 		}
 		
@@ -141,7 +145,7 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 }
 
 // Appends an instance of a model or viewport to the display list, copying over the required state information
-BOOL CRender3D::AppendDisplayList(ModelCache *Cache, BOOL isViewport, int modelNum)
+BOOL CRender3D::AppendDisplayList(ModelCache *Cache, BOOL isViewport, const struct VBORef *Model)
 {
 	int	lm, i;
 	
@@ -173,21 +177,17 @@ BOOL CRender3D::AppendDisplayList(ModelCache *Cache, BOOL isViewport, int modelN
 			// Copy projection matrix
 			glGetFloatv(GL_PROJECTION_MATRIX, Cache->List[lm].Data.Viewport.projectionMatrix);
 		}
-		else if (Cache->Models[modelNum].numVerts[i] > 0)	// vertices exist for this state
+		else if (Model->numVerts[i] > 0)	// vertices exist for this state
 		{	
 			// Get index for new display list item and advance to next one
 			lm = Cache->listSize++;
 			
 			// Point to VBO for current model and state
-			Cache->List[lm].Data.Model.index = Cache->Models[modelNum].index[i];
-			Cache->List[lm].Data.Model.numVerts = Cache->Models[modelNum].numVerts[i];
+			Cache->List[lm].Data.Model.index = Model->index[i];
+			Cache->List[lm].Data.Model.numVerts = Model->numVerts[i];
 			
 			// Copy modelview matrix
 			glGetFloatv(GL_MODELVIEW_MATRIX, Cache->List[lm].Data.Model.modelViewMatrix);
-			
-			// Texture offset
-			Cache->List[lm].Data.Model.texOffset[0] = texOffset[0];
-			Cache->List[lm].Data.Model.texOffset[1] = texOffset[1];
 		}
 		else	// nothing to do, continue loop
 			continue;
@@ -252,8 +252,8 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	texWidth 	= (GLfloat) (32<<((P->header[3]>>3)&7));
     texHeight	= (GLfloat) (32<<((P->header[3]>>0)&7));
     texPage		= (P->header[4]&0x40) ? 1024 : 0;	// treat texture page as Y coordinate
-    texBaseX 	= (GLfloat) (32*(((P->header[4]&0x1F)<<1)|((P->header[5]>>7)&1)));
-	texBaseY 	= (GLfloat) (32*(P->header[5]&0x1F)+texPage);
+    texBaseX 	= (GLfloat) (32*(((P->header[4]&0x1F)<<1)|((P->header[5]>>7)&1))) + texOffsetXY[0];
+	texBaseY 	= (GLfloat) (32*(P->header[5]&0x1F)+texPage) + texOffsetXY[1];
 	
 	/*
 	 * Lighting and Color Modulation:
@@ -494,43 +494,55 @@ BOOL CRender3D::BeginModel(ModelCache *Cache)
 }
 
 // Uploads all vertices from the local vertex buffer to the VBO, sets up the VBO reference, updates the LUT
-void CRender3D::EndModel(ModelCache *Cache, int lutIdx)
+struct VBORef *CRender3D::EndModel(ModelCache *Cache, int lutIdx, UINT16 texOffset)
 {
-	int	m;
+	struct VBORef	*Model;
+	int				m;
 	
 	m = Cache->numModels++;
+	Model = &(Cache->Models[m]);
 
 	// Record the number of vertices, completing the VBORef
 	for (int i = 0; i < 2; i++)
-		Cache->Models[m].numVerts[i] = Cache->curVertIdx[i];
+		Model->numVerts[i] = Cache->curVertIdx[i];
 
 	// First alpha polygon immediately follows the normal polygons
-	Cache->Models[m].index[POLY_STATE_ALPHA] = Cache->Models[m].index[POLY_STATE_NORMAL]+Cache->Models[m].numVerts[POLY_STATE_NORMAL];
+	Model->index[POLY_STATE_ALPHA] = Model->index[POLY_STATE_NORMAL] + Model->numVerts[POLY_STATE_NORMAL];
 
 	// Upload from local vertex buffer to real VBO
 	glBindBuffer(GL_ARRAY_BUFFER, Cache->vboID);
-	if (Cache->Models[m].numVerts[POLY_STATE_NORMAL] > 0)
-		glBufferSubData(GL_ARRAY_BUFFER, Cache->Models[m].index[POLY_STATE_NORMAL]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->curVertIdx[POLY_STATE_NORMAL]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->verts[POLY_STATE_NORMAL]);
-	if (Cache->Models[m].numVerts[POLY_STATE_ALPHA] > 0)
-		glBufferSubData(GL_ARRAY_BUFFER, Cache->Models[m].index[POLY_STATE_ALPHA]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->curVertIdx[POLY_STATE_ALPHA]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->verts[POLY_STATE_ALPHA]);
-	
-	// Update the LUT
-	Cache->lut[lutIdx] = m;
-	
+	if (Model->numVerts[POLY_STATE_NORMAL] > 0)
+		glBufferSubData(GL_ARRAY_BUFFER, Model->index[POLY_STATE_NORMAL]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->curVertIdx[POLY_STATE_NORMAL]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->verts[POLY_STATE_NORMAL]);
+	if (Model->numVerts[POLY_STATE_ALPHA] > 0)
+		glBufferSubData(GL_ARRAY_BUFFER, Model->index[POLY_STATE_ALPHA]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->curVertIdx[POLY_STATE_ALPHA]*VBO_VERTEX_SIZE*sizeof(GLfloat), Cache->verts[POLY_STATE_ALPHA]);
+		
 	// Record LUT index in the model VBORef
-	Cache->Models[m].lutIdx = lutIdx;
+	Model->lutIdx = lutIdx;
+	
+	// Texture offset of this model state
+	Model->texOffset = texOffset;
+	
+	// Update the LUT and link up to any existing model that already exists here
+	if (Cache->lut[lutIdx] >= 0)	// another texture offset state already cached
+		Model->nextTexOffset = &(Cache->Models[Cache->lut[lutIdx]]);
+	Cache->lut[lutIdx] = m;
+
+	// Return a pointer to the cached model's VBO reference
+	return Model;
 }
 
 /*
  * CacheModel():
  *
- * Decodes and caches a complete model. Returns FAIL if any sort of overflow in
+ * Decodes and caches a complete model. Returns NULL if any sort of overflow in
  * the cache occurred. In this case, the model cache should be cleared before
  * being used again because an incomplete model will be stored, wasting vertex
  * buffer space.
+ *
+ * A pointer to the VBO reference for the cached model is returned when
+ * successful.
  */
-
-BOOL CRender3D::CacheModel(ModelCache *Cache, int lutIdx, const UINT32 *data)
+struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOffset, const UINT32 *data)
 {
 	Vertex			Prev[4];	// previous vertices
 	int				numPolys = 0;
@@ -541,11 +553,11 @@ BOOL CRender3D::CacheModel(ModelCache *Cache, int lutIdx, const UINT32 *data)
 	//	return FAIL;
 		
 	if (data == NULL)
-		return FAIL;
+		return NULL;
 		
 	// Start constructing a new model
 	if (FAIL == BeginModel(Cache))
-		return FAIL;	// too many models!
+		return NULL;	// too many models!
 	
 	// Cache all polygons
 	while (!done)
@@ -572,8 +584,10 @@ BOOL CRender3D::CacheModel(ModelCache *Cache, int lutIdx, const UINT32 *data)
 		texWidth 	= (32<<((P.header[3]>>3)&7));
     	texHeight	= (32<<((P.header[3]>>0)&7));
     	texPage		= (P.header[4]&0x40) ? 1024 : 0;	// treat texture page as Y coordinate
-    	texBaseX 	= (32*(((P.header[4]&0x1F)<<1)|((P.header[5]>>7)&1)));
-		texBaseY 	= (32*(P.header[5]&0x1F)+texPage);
+    	texBaseX 	= (32*(((P.header[4]&0x1F)<<1)|((P.header[5]>>7)&1))) + (int)texOffsetXY[0];
+		texBaseY 	= (32*(P.header[5]&0x1F)+texPage) + (int)texOffsetXY[1];
+		texBaseX	&= 2047;
+		texBaseY	&= 2047;
 		uvScale		= (P.header[1]&0x40)?1.0f:(1.0f/8.0f);
 		
 		// Determine whether this is an alpha polygon
@@ -599,7 +613,7 @@ BOOL CRender3D::CacheModel(ModelCache *Cache, int lutIdx, const UINT32 *data)
 		}	
 			
 		// Decode the texture
-		DecodeTexture(texFormat, texBaseX+(int)texOffset[0], texBaseY+(int)texOffset[1], texWidth, texHeight);
+		DecodeTexture(texFormat, texBaseX, texBaseY, texWidth, texHeight);
 		
 		// Polygon normal is in upper 24 bits: sign + 1.22 fixed point
 		P.n[0] = (GLfloat) (((INT32)P.header[1])>>8) * (1.0f/4194304.0f);
@@ -661,16 +675,13 @@ BOOL CRender3D::CacheModel(ModelCache *Cache, int lutIdx, const UINT32 *data)
 			
 		// Copy this polygon into the model buffer
 		if (OKAY != InsertPolygon(Cache,&P))
-			return FAIL;
+			return NULL;
 		
 		++numPolys;
 	}
-StopDecoding:
 	
 	// Finish model and enter it into the LUT
-	EndModel(Cache,lutIdx);
-	
-	return OKAY;
+	return EndModel(Cache,lutIdx,texOffset);
 }
 
 
@@ -678,12 +689,26 @@ StopDecoding:
  Cache Management
 ******************************************************************************/
 
-// Use this to determine if a model needs to be cached (returns TRUE if so)
-BOOL CRender3D::NeedToCache(ModelCache *Cache, int lutIdx)
+/*
+ * Look up a model. Use this to determine if a model needs to be cached
+ * (returns NULL if so).
+ */
+struct VBORef *CRender3D::LookUpModel(ModelCache *Cache, int lutIdx, UINT16 texOffset)
 {
-	//if (Cache->dynamic)	// never permanently store models in dynamic caches
-	//	return TRUE;
-	return (Cache->lut[lutIdx]<0) ? TRUE : FALSE;
+	int	m = Cache->lut[lutIdx];
+	
+	// Has any state associated with this model LUT index been cached at all?
+	if (m < 0)
+		return NULL;
+	
+	// Has the specified texture offset been cached?
+	for (struct VBORef *Model = &(Cache->Models[m]); Model != NULL; Model = Model->nextTexOffset)
+	{
+		if (Model->texOffset == texOffset)
+			return Model;
+	}
+	
+	return NULL;	// no match found, we must cache this new model state
 }
 
 // Discard all models in the cache and the display list

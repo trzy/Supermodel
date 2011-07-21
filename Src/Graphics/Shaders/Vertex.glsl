@@ -34,7 +34,7 @@ uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, light
 uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (normalized device coordinates), .y=Y position, .z=half-width, .w=half-height)
 uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
 uniform vec3	spotColor;			// spotlight RGB color
-uniform vec2	texOffset;			// offset (within 2048x2048 texture sheet) to apply to texture base coordinates
+//uniform vec2	texOffset;			// offset (within 2048x2048 texture sheet) to apply to texture base coordinates
 
 // Custom vertex attributes
 attribute vec4	subTexture;		// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
@@ -139,7 +139,7 @@ void main(void)
 	// Pass remaining parameters to fragment shader
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	fsSubTexture = subTexture;
-	fsSubTexture.xy += texOffset;	// apply texture offset
+	//fsSubTexture.xy += texOffset;	// apply texture offset
 	fsTexParams = texParams;
 	fsTransLevel = transLevel;
 	fsTexFormat = texFormat;

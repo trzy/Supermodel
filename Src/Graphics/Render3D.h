@@ -60,12 +60,20 @@ struct Poly
 	const UINT32	*header;	// pointer to Real3D 7-word polygon header
 };
 
-// References to model polygons stored in a VBO
+/*
+ * VBORef:
+ *
+ * Reference to model polygons stored in a VBO. Each reference has two sets of
+ * vertices: normal and alpha. Copies of the model with different texture
+ * offsets applied are searchable via the linked list of texture offset states.
+ */
 struct VBORef
 {
-	unsigned	index[2];		// index of model polygons in VBO
-	unsigned	numVerts[2];	// number of vertices
-	unsigned	lutIdx;			// LUT index associated with this model (for fast LUT clearing)
+	unsigned		index[2];	// index of model polygons in VBO
+	unsigned		numVerts[2];// number of vertices
+	unsigned		lutIdx;		// LUT index associated with this model (for fast LUT clearing)
+	struct VBORef	*nextTexOffset;	// linked list of models with different texture offset states
+	UINT16			texOffset;	// texture offset data for this model
 };
 
 // Display list items: model instances and viewport settings
@@ -92,7 +100,6 @@ struct DisplayList
 		struct
 		{
 			GLfloat		modelViewMatrix[4*4];	// model-view matrix
-			GLfloat		texOffset[2];			// texture offset (X, Y)
 			unsigned	index;					// index in VBO
 			unsigned	numVerts;				// number of vertices
 		} Model;
@@ -281,18 +288,18 @@ private:
 	const UINT32 *TranslateModelAddress(UINT32 addr);
 	
 	// Model caching and display list management
-	void DrawDisplayList(ModelCache *Cache, POLY_STATE state);
-	BOOL AppendDisplayList(ModelCache *Cache, BOOL isViewport, int modelNum);
-	void ClearDisplayList(ModelCache *Cache);
-	BOOL InsertPolygon(ModelCache *cache, const Poly *p);
-	void InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
-	BOOL BeginModel(ModelCache *cache);
-	void EndModel(ModelCache *cache, int lutIdx);
-	BOOL CacheModel(ModelCache *cache, int lutIdx, const UINT32 *data);
-	BOOL NeedToCache(ModelCache *cache, int lutIdx);
-	void ClearModelCache(ModelCache *cache);
-	BOOL CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, BOOL isDynamic);
-	void DestroyModelCache(ModelCache *cache);
+	void 			DrawDisplayList(ModelCache *Cache, POLY_STATE state);
+	BOOL 			AppendDisplayList(ModelCache *Cache, BOOL isViewport, const struct VBORef *Model);
+	void 			ClearDisplayList(ModelCache *Cache);
+	BOOL 			InsertPolygon(ModelCache *cache, const Poly *p);
+	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
+	BOOL 			BeginModel(ModelCache *cache);
+	struct VBORef	*EndModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
+	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 texOffset, const UINT32 *data);
+	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
+	void 			ClearModelCache(ModelCache *cache);
+	BOOL 			CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, BOOL isDynamic);
+	void 			DestroyModelCache(ModelCache *cache);
 	
 	// Texture management
 	void DecodeTexture(int format, int x, int y, int width, int height);
@@ -359,7 +366,8 @@ private:
 	int		stackDepth;	// for debugging and error handling purposes
 	
 	// Texture offset (during scene graph processing)
-	GLfloat	texOffset[2];	// X, Y
+	GLfloat	texOffsetXY[2];	// decoded X, Y offsets
+	UINT16	texOffset;		// raw texture offset data as it appears in culling node
 	
 	// Resolution scaling factors (to support resolutions higher than 496x384) and offsets
 	GLfloat		xRatio, yRatio;
@@ -379,7 +387,6 @@ private:
 	GLuint	spotEllipseLoc;			// uniform
 	GLuint	spotRangeLoc;			// uniform
 	GLuint	spotColorLoc;			// uniform
-	GLuint	texOffsetLoc;			// uniform
 	GLuint	subTextureLoc;			// attribute
 	GLuint	texParamsLoc;			// attribute
 	GLuint	texFormatLoc;			// attribute
