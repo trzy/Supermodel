@@ -565,7 +565,7 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 		Poly		P;		// current polygon
 		GLfloat		mag;
 		GLfloat		uvScale;
-		int			texFormat, texWidth, texHeight, texPage, texBaseX, texBaseY;
+		int			texEnable, texFormat, texWidth, texHeight, texPage, texBaseX, texBaseY;
 		unsigned	i, j, vmask;
 		UINT32		ix, iy, iz, it;
 		
