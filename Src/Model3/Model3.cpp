@@ -2474,7 +2474,10 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 		PPCConfig.pvr = PPC_MODEL_603R;	// 66 MHz
 		PPCConfig.bus_frequency = BUS_FREQUENCY_66MHZ;
 		PPCConfig.bus_frequency_multiplier = 0x10;	// 1X multiplier
-		PCIBridge.SetModel(0x105);		// MPC105
+		if (!strcmp(Game->id, "bass"))	// some Step 1.0 games use MPC106
+			PCIBridge.SetModel(0x106);
+		else
+			PCIBridge.SetModel(0x105);	// MPC105
 	}
 	else
 		return ErrorLog("Game uses an unrecognized stepping (%d.%d), cannot configure Model 3.", (Game->step>>4)&0xF, Game->step&0xF);
