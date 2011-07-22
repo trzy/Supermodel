@@ -580,6 +580,7 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 		P.numVerts = (P.header[0]&0x40)?4:3;
 			
 		// Texture data
+		texEnable	= P.header[6]&0x04000000;
 		texFormat 	= (P.header[6]>>7)&7;
 		texWidth 	= (32<<((P.header[3]>>3)&7));
     	texHeight	= (32<<((P.header[3]>>0)&7));
@@ -590,7 +591,7 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 		texBaseY	&= 2047;
 		uvScale		= (P.header[1]&0x40)?1.0f:(1.0f/8.0f);
 		
-		// Determine whether this is an alpha polygon
+		// Determine whether this is an alpha polygon (TODO: when testing textures, test if texturing enabled? Might not matter)
 		if (((P.header[6]&0x00800000)==0) ||	// translucent polygon
 			(texFormat==7) ||					// RGBA4 texture
 			(texFormat==4))						// A4L4 texture
@@ -613,7 +614,8 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 		}	
 			
 		// Decode the texture
-		DecodeTexture(texFormat, texBaseX, texBaseY, texWidth, texHeight);
+		if (texEnable)
+			DecodeTexture(texFormat, texBaseX, texBaseY, texWidth, texHeight);
 		
 		// Polygon normal is in upper 24 bits: sign + 1.22 fixed point
 		P.n[0] = (GLfloat) (((INT32)P.header[1])>>8) * (1.0f/4194304.0f);
