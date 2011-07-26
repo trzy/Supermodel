@@ -27,7 +27,6 @@
  *
  * Known inaccuracies:
  *
- *		- No timing. Each instruction takes one "cycle".
  *		- Interrupts are accepted immediately after EI instruction. In reality,
  *		  interrupts become enabled after the instruction following EI. This
  *		  could be implemented with a state machine in Run() if needed.
@@ -73,19 +72,17 @@ class CZ80
 {
 public:
 	/*
-	 * Run(numOps):
+	 * Run(numCycles):
 	 *
-	 * Runs the Z80 for the specified number of instructions.
+	 * Runs the Z80 for the specified number of instruction cycles.
 	 *
 	 * Parameters:
-	 *		numOps	Number of instructions to execute. Cycle-accurate timing
-	 *				is not yet supported.
+	 *		numCycles	Number of instruction cycles to execute.
 	 *
 	 * Returns:
-	 *		Number of instructions actually executed. For now, this will not
-	 *		differ from numOps.
+	 *		Number of instruction cycles actually executed.
 	 */
-	int Run(int numOps);
+	int Run(int numCycles);
 	
 	/*
 	 * TriggerNMI(void):
