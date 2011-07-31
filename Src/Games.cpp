@@ -1026,10 +1026,10 @@ const struct GameInfo	Model3GameList[] =
 		
 		{
 			// Fixed CROM
-			{ "CROM",	"epr20355.20",	0x7A784E67,	0x200000,	2,	0x0400000,	8,	TRUE },
-			{ "CROM",	"epr20353.19",	0xBADF5F04,	0x200000,	2,	0x0400002,	8,	TRUE },
-			{ "CROM",	"epr20354.18",	0xACA62BF8,	0x200000,	2,	0x0400004,	8,	TRUE },
-			{ "CROM",	"epr20352.17",	0xC92C2545,	0x200000,	2,	0x0400006,	8,	TRUE },
+			{ "CROM",	"epr20355.20",	0x7A784E67,	0x200000,	2,	0x0000000,	8,	TRUE },
+			{ "CROM",	"epr20354.18",	0xACA62BF8,	0x200000,	2,	0x0000002,	8,	TRUE },
+			{ "CROM",	"epr20353.19",	0xBADF5F04,	0x200000,	2,	0x0000004,	8,	TRUE },
+			{ "CROM",	"epr20352.17",	0xC92C2545,	0x200000,	2,	0x0000006,	8,	TRUE },
 
 			// Banked CROM0
 			{ "CROMxx",	"mpr20321.4",	0x698A97EE,	0x400000,	2,	0x0000000,	8,	TRUE },
