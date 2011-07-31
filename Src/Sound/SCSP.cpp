@@ -528,7 +528,7 @@ void SCSP_StopSlot(_SLOT *slot,int keyoff)
 	else
 		slot->active=0;
 	slot->data[0]&=~0x800;
-	DebugLog("KEYOFF2 %d",slot->slot);
+	//DebugLog("KEYOFF2 %d",slot->slot);
 }
 
 #define log2(n) (log((float) n)/log((float) 2))
@@ -742,7 +742,7 @@ void SCSP_UpdateSlotReg(int s,int r)
 					{
 						if(KEYONB(s2) && (!s2->active || (s2->active && s2->EG.state==RELEASE)))
 						{
-							DebugLog("KEYON %d",sl);
+							//DebugLog("KEYON %d",sl);
 							//printf("68K: KEYON %d\n",sl);
 							SCSP_StartSlot(s2);
 						}
@@ -750,7 +750,7 @@ void SCSP_UpdateSlotReg(int s,int r)
 						{
 							//s2->active=0;
 							SCSP_StopSlot(s2,1);
-							DebugLog("KEYOFF %d",sl);
+							//DebugLog("KEYOFF %d",sl);
 						}
 					}
 				}
@@ -919,7 +919,7 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
-		DebugLog("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
+		//DebugLog("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
 		//printf("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
 		*((unsigned char *) (SCSP->Slots[slot].datab+(addr^1))) = val;
 		SCSP_UpdateSlotReg(slot,(addr^1)&0x1f);
@@ -959,7 +959,7 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
-		DebugLog("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
+		//DebugLog("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
 		//printf("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
 		*((unsigned short *) (SCSP->Slots[slot].datab+(addr))) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
@@ -999,7 +999,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
-		DebugLog("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
+		//DebugLog("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
 		//printf("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
 #ifdef _MSC_VER	// MS VisualC++
 		_asm rol val,16
@@ -1058,7 +1058,7 @@ unsigned char SCSP_r8(unsigned int addr)
 		SCSP_UpdateSlotRegR(slot,(addr^1)&0x1f);
 		
 		v=*((unsigned char *) (SCSP->Slots[slot].datab+(addr^1)));
-		DebugLog("Slot %02X Reg %02X Read byte %02X",slot,addr^1,v);
+		//DebugLog("Slot %02X Reg %02X Read byte %02X",slot,addr^1,v);
 	}
 	else if(addr<0x600)
 	{
@@ -1081,7 +1081,7 @@ unsigned short SCSP_r16(unsigned int addr)
 		addr&=0x1f;
 		SCSP_UpdateSlotRegR(slot,addr&0x1f);
 		v=*((unsigned short *) (SCSP->Slots[slot].datab+(addr)));
-		DebugLog("Slot %02X Reg %02X Read word %04X",slot,addr,v);
+		//DebugLog("Slot %02X Reg %02X Read word %04X",slot,addr,v);
 	}
 	else if(addr<0x600)
 	{
@@ -1869,7 +1869,7 @@ void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq))
 
 void SCSP_MidiIn(BYTE val)
 {
-	DebugLog("Midi Buffer push %02X",val);
+	//DebugLog("Midi Buffer push %02X",val);
 
 	MidiStack[MidiW++]=val;
 	MidiW&=MIDI_STACK_SIZE_MASK;
@@ -1881,7 +1881,7 @@ void SCSP_MidiIn(BYTE val)
 void SCSP_MidiOutW(BYTE val)
 {
 	//printf("68K: MIDI out\n");
-	DebugLog("Midi Out Buffer push %02X",val);
+	//DebugLog("Midi Out Buffer push %02X",val);
 	MidiStack[MidiOutW++]=val;
 	MidiOutW&=7;
 	++MidiOutFill;
@@ -1895,7 +1895,7 @@ unsigned char SCSP_MidiOutR()
 		return 0xff;
 
 	val=MidiStack[MidiOutR++];
-	DebugLog("Midi Out Buffer pop %02X",val);
+	//DebugLog("Midi Out Buffer pop %02X",val);
 	MidiOutR&=7;
 	--MidiOutFill;
 	return val;
