@@ -256,7 +256,6 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 				DebugLog("%s also contains: %s (%s)\n", zipFile, CurGame->id, CurGame->title);
 				if (multipleGameError == FALSE)	// only warn about this once
 				{
-					printf("ROM=%s\n", CurGame->ROM[romIdx].fileName);
 					ErrorLog("Multiple games were found in %s; loading \"%s\".", zipFile, Game->title);
 					multipleGameError = TRUE;
 				}
