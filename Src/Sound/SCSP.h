@@ -36,7 +36,7 @@ unsigned char SCSP_r8(unsigned int addr);
 unsigned short SCSP_r16(unsigned int addr);
 unsigned int SCSP_r32(unsigned int addr);
 
-void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq), CIRQ *ppcIRQObjectPtr, unsigned soundIRQBit);
+void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq));
 void SCSP_Update();
 void SCSP_MidiIn(unsigned char);
 void SCSP_MidiOutW(unsigned char);

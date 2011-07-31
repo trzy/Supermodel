@@ -303,6 +303,8 @@ private:
 	UINT8		*vrom;			// 64 MB VROM (video ROM, visible only to Real3D)
 	UINT8		*soundROM;		// 512 KB sound ROM (68K program)
 	UINT8		*sampleROM;		// 8 MB samples (68K)
+	UINT8		*dsbROM;		// 128 KB DSB ROM (Z80 program)
+	UINT8		*mpegROM;		// 8 MB DSB MPEG ROM
 	UINT8		*backupRAM;		// 128 KB Backup RAM (battery backed)
 	UINT8		*securityRAM;	// 128 KB Security Board RAM
 	
@@ -347,6 +349,7 @@ private:
 	CTileGen	TileGen;	// Sega 2D tile generator
 	CReal3D		GPU;		// Real3D graphics hardware
 	CSoundBoard	SoundBoard;	// Sound board
+	CDSB		*DSB;		// Digital Sound Board (type determined dynamically at load time)
 #ifdef SUPERMODEL_DRIVEBOARD
 	CDriveBoard DriveBoard; // Drive board
 #endif

@@ -203,7 +203,20 @@
  Supermodel Interface
 ******************************************************************************/
 
-#include "../M68K.h"	// Supermodel's 68K interface
+// Supermodel 68K interface (these functions defined in CPU/68K.cpp)
+//#ifndef FASTCALL (this doesn't work for now (needs to be added to the prototypes in m68k.h for m68k_read_memory*)
+	#undef FASTCALL
+	#define FASTCALL
+//#endif
+unsigned int FASTCALL M68KFetch8(unsigned int a);
+unsigned int FASTCALL M68KFetch16(unsigned int a);
+unsigned int FASTCALL M68KFetch32(unsigned int a);
+unsigned int FASTCALL M68KRead8(unsigned int a);
+unsigned int FASTCALL M68KRead16(unsigned int a);
+unsigned int FASTCALL M68KRead32(unsigned int a);
+void FASTCALL M68KWrite8(unsigned int a, unsigned int d);
+void FASTCALL M68KWrite16(unsigned int a, unsigned int d);
+void FASTCALL M68KWrite32(unsigned int a, unsigned int d);
 
 /* Read data relative to the PC */
 #define m68k_read_pcrelative_8(address) M68KFetch8(address)

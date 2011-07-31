@@ -113,8 +113,6 @@ unsigned int RevR,RevW;
 #define DWORD UINT32
 #endif
 
-static CIRQ *ppcIRQ;
-static unsigned	ppcSoundIRQBit;
 static int (*Run68kCB)(int cycles);
 static void (*Int68kCB)(int irq);
 static void (*RetIntCB)();
@@ -745,7 +743,7 @@ void SCSP_UpdateSlotReg(int s,int r)
 						if(KEYONB(s2) && (!s2->active || (s2->active && s2->EG.state==RELEASE)))
 						{
 							DebugLog("KEYON %d",sl);
-							printf("68K: KEYON %d\n",sl);
+							//printf("68K: KEYON %d\n",sl);
 							SCSP_StartSlot(s2);
 						}
 						if(!KEYONB(s2) && s2->active)
@@ -1851,12 +1849,10 @@ void SCSP_Update()
 	SCSP_DoMasterSamples(length);
 }
 
-void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq), CIRQ *ppcIRQObjectPtr, unsigned ppcIRQBit)
+void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq))
 {
 	Int68kCB=Int68k;
 	Run68kCB=Run68k;
-	ppcIRQ = ppcIRQObjectPtr;
-	ppcSoundIRQBit = ppcIRQBit;
 }
 
 void SCSP_MidiIn(BYTE val)
@@ -1872,7 +1868,7 @@ void SCSP_MidiIn(BYTE val)
 
 void SCSP_MidiOutW(BYTE val)
 {
-	printf("68K: MIDI out\n");
+	//printf("68K: MIDI out\n");
 	DebugLog("Midi Out Buffer push %02X",val);
 	MidiStack[MidiOutW++]=val;
 	MidiOutW&=7;

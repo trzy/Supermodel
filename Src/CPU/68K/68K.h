@@ -20,26 +20,21 @@
  **/
  
 /*
- * M68K.h
+ * 68K.h
  * 
- * Header file for 68K CPU interface. Caution: there is only a single 68K core
- * available to Supermodel right now. Therefore, multiple 68K CPUs are not 
- * presently supported. See M68K.c for more details.
+ * Header file for 68K CPU interface. Caution: 68K emulator is not thread-safe.
  *
  * TO-DO List:
  * -----------
  * - Optimize things, perhaps by using FASTCALL
  */
 
-#ifndef INCLUDED_M68K_H
-#define INCLUDED_M68K_H
+#ifndef INCLUDED_68K_H
+#define INCLUDED_68K_H
 
 #include "Types.h"
 #include "Musashi/m68k.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "CPU/Bus.h"
 
 // This doesn't work for now (needs to be added to the prototypes in m68k.h for m68k_read_memory*)
 //#ifndef FASTCALL
@@ -58,7 +53,43 @@ extern "C" {
 
 
 /******************************************************************************
+ CPU Context
+******************************************************************************/
+
+/*
+ * M68KCtx:
+ *
+ * Complete state of a single 68K. Do NOT manipulate these directly. Set the
+ * context and then use the M68K* functions below to attach a bus and IRQ
+ * callback to the active context.
+ */
+typedef struct SM68KCtx
+{
+public:
+	CBus			*Bus;			// memory handlers
+	int				(*IRQAck)(int);	// IRQ acknowledge callback
+	unsigned char	*musashiCtx;	// holds CPU state
+	
+	SM68KCtx(void)
+	{
+		Bus = NULL;
+		IRQAck = NULL;
+		musashiCtx = new unsigned char[m68k_context_size()];
+	}
+	
+	~SM68KCtx(void)
+	{
+		Bus = NULL;
+		IRQAck = NULL;
+		delete [] musashiCtx;
+	}
+} M68KCtx;
+
+
+/******************************************************************************
  68K Interface
+ 
+ Unless otherwise noted, all functions operate on the active context.
 ******************************************************************************/
 
 /*
@@ -124,8 +155,8 @@ extern void M68KReset(void);
 /*
  * M68KSetIRQCallback(F):
  *
- * Installs an interrupt acknowledge callback. The default behavior is to 
- * always assume autovectored interrupts.
+ * Installs an interrupt acknowledge callback for the currently active CPU. The
+ * default behavior is to always assume autovectored interrupts.
  *
  * Parameters:
  *		F	Callback function.
@@ -133,43 +164,49 @@ extern void M68KReset(void);
 extern void M68KSetIRQCallback(int (*F)(int));
 
 /*
- * M68KSetFetch8Callback(F):
- * M68KSetFetch16Callback(F):
- * M68KSetFetch32Callback(F):
- * M68KSetRead8Callback(F):
- * M68KSetRead16Callback(F):
- * M68KSetRead32Callback(F):
- * M68KSetWrite8Callback(F):
- * M68KSetWrite16Callback(F):
- * M68KSetWrite32Callback(F):
+ * M68KAttachBus(CBus *BusPtr):
  *
- * Installs address space handler callbacks. There is no default behavior;
- * these must all be set up before any 68K-related emulation functions are
- * invoked.
+ * Attaches a bus object to the 68K, which will be used to perform all address
+ * space accesses. The 8, 16, and 32-bit read and write handlers are used.
+ * This must be set up before any 68K-related emulation functions are invoked
+ * or the program will crash!
  *
  * Parameters:
- *		F	Callback function.
+ *		BusPtr	Pointer to bus object to use for all address space accesses.
  */
-extern void M68KSetFetch8Callback(UINT8 (*F)(UINT32));
-extern void M68KSetFetch16Callback(UINT16 (*F)(UINT32));
-extern void M68KSetFetch32Callback(UINT32 (*F)(UINT32));
-extern void M68KSetRead8Callback(UINT8 (*F)(UINT32));
-extern void M68KSetRead16Callback(UINT16 (*F)(UINT32));
-extern void M68KSetRead32Callback(UINT32 (*F)(UINT32));
-extern void M68KSetWrite8Callback(void (*F)(UINT32,UINT8));
-extern void M68KSetWrite16Callback(void (*F)(UINT32,UINT16));
-extern void M68KSetWrite32Callback(void (*F)(UINT32,UINT32));
+extern void M68KAttachBus(CBus *BusPtr);
 
 /*
  * M68KInit():
  *
  * Initializes the 68K emulator. Must be called once per program session prior
- * to any other 68K interface calls.
+ * to any 68K emulation functions. A context must be mapped before calling
+ * this.
  *
  * Returns:
  *		Always returns OKAY.
  */
 extern BOOL M68KInit(void);
+
+/*
+ * M68KGetContext(M68KCtx *Dest):
+ *
+ * Copies the internal (active) 68K context back to the destination.
+ *
+ * Parameters:
+ *		Dest	Location to which to copy 68K context.
+ */
+extern void M68KGetContext(M68KCtx *Dest);
+
+/*
+ * M68KSetContext(M68KCtx *Src):
+ *
+ * Sets the specified 68K context by copying it to the internal context.
+ *
+ * Parameters:
+ *		Src		Location from which to copy 68K context.
+ */
+extern void M68KSetContext(M68KCtx *Src);
 
 
 /******************************************************************************
@@ -178,6 +215,8 @@ extern BOOL M68KInit(void);
  Intended for use directly by the 68K core.
 ******************************************************************************/
 
+extern "C" {
+	
 /*
  * M68KIRQCallback(nIRQ):
  *
@@ -243,10 +282,7 @@ void FASTCALL M68KWrite8(unsigned int a, unsigned int d);
 void FASTCALL M68KWrite16(unsigned int a, unsigned int d);
 void FASTCALL M68KWrite32(unsigned int a, unsigned int d);
 
-
-#ifdef __cplusplus
- }
-#endif
+}	// extern "C"
 
 
-#endif	// INCLUDED_M68K_H
+#endif	// INCLUDED_68K_H

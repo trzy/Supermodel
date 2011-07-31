@@ -1,4 +1,3 @@
-//TODO: clean up M68K interface. pass a bus pointer (SoundBoard should be derived from it), so that M68K handlers have access to CSoundBoard
 //TODO: must store actual value of bank register so we can save it to save states
 /**
  ** Supermodel
@@ -26,11 +25,7 @@
  * 
  * Model 3 sound board. Implementation of the CSoundBoard class. This class can
  * only be instantiated once because it relies on global variables (the non-OOP
- * 68K core).
- *
- * TO-DO List
- * ----------
- * - Optimize memory handlers (jump table).
+ * 68K core and an IRQ line).
  *
  * Bank Switching
  * --------------
@@ -62,248 +57,261 @@
 
 #include "Supermodel.h"
 
-//TEMP: these need to be dynamically allocated in the memory pool
-static INT16	leftBuffer[44100/60],rightBuffer[44100/60];
+// DEBUG
+//#define SUPERMODEL_LOG_AUDIO	// define this to log all audio to sound.bin
+#ifdef SUPERMODEL_LOG_AUDIO
 static FILE		*soundFP;
+#endif
+
 
 /******************************************************************************
  68K Access Handlers
 ******************************************************************************/
 
-// Memory regions passed out of CSoundBoard object for global access handlers
-static UINT8		*sbRAM1, *sbRAM2;
-static const UINT8	*sbSoundROM, *sbSampleROM, *sbSampleBankLo, *sbSampleBankHi;
-
-static UINT8 Read8(UINT32 a)
+UINT8 CSoundBoard::Read8(UINT32 a)
 { 
-	// SCSP RAM 1
-	if ((a >= 0x000000) && (a <= 0x0FFFFF))
-		return sbRAM1[a^1];
-	
-	// SCSP RAM 2
-	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
-		return sbRAM2[(a-0x200000)^1];
+	switch ((a>>20)&0xF)
+	{
+	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
+		return ram1[a^1];
 		
-	// Program ROM
-	else if ((a >= 0x600000) && (a <= 0x67FFFF))
-		return sbSoundROM[(a-0x600000)^1];
-	
-	// Sample ROM (low 2MB, fixed)
-	else if ((a >= 0x800000) && (a <= 0x9FFFFF))
-		return sbSampleROM[(a-0x800000)^1];
-		
-	// Sample ROM (bank)
-	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
-		return sbSampleBankLo[(a-0xA00000)^1];
-		
-	// Sample ROM (bank)
-	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
-		return sbSampleBankHi[(a-0xE00000)^1];
-		
-	// SCSP (Master)
-	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+	case 0x1:	// SCSP registers (master): 100000-10FFFF (unlike real hardware, we mirror up to 1FFFFF)
 		return SCSP_Master_r8(a);
 		
-	// SCSP (Slave)
-	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
+		return ram2[(a&0x0FFFFF)^1];
+	
+	case 0x3:	// SCSP registers (slave): 300000-30FFFF (unlike real hardware, we mirror up to 3FFFFF)
 		return SCSP_Slave_r8(a);
 		
-	// Unknown
-	else
-	{
+	case 0x6:	// Program ROM: 600000-67FFFF (unlike real hardware, we mirror up to 6FFFFF here)	
+		return soundROM[(a&0x07FFFF)^1];
+	
+	case 0x8:	// Sample ROM (low 2MB, fixed): 800000-9FFFFF
+	case 0x9:
+		return sampleROM[(a&0x1FFFFF)^1];
+	
+	case 0xA:	// Sample ROM (bank): A00000-DFFFFF
+	case 0xB:
+	case 0xC:
+	case 0xD:
+		return sampleBankLo[(a-0xA00000)^1];
+
+	case 0xE:	// Sample ROM (bank): E00000-FFFFFF
+	case 0xF:
+		return sampleBankHi[(a&0x1FFFFF)^1];
+		
+	default:
 		printf("68K: Unknown read8 %06X\n", a);
-		return 0;
+		break;
 	}
+	
+	return 0;
 }
 
-static UINT16 Read16(UINT32 a) 
+UINT16 CSoundBoard::Read16(UINT32 a) 
 { 
-	// SCSP RAM 1
-	if ((a >= 0x000000) && (a <= 0x0FFFFF))
-		return *(UINT16 *) &sbRAM1[a];
-	
-	// SCSP RAM 2
-	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
-		return *(UINT16 *) &sbRAM2[(a-0x200000)];
+	switch ((a>>20)&0xF)
+	{
+	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
+		return *(UINT16 *) &ram1[a];
 		
-	// Program ROM
-	else if ((a >= 0x600000) && (a <= 0x67FFFF))
-		return *(UINT16 *) &sbSoundROM[(a-0x600000)];
-	
-	// Sample ROM (low 2MB, fixed)
-	else if ((a >= 0x800000) && (a <= 0x9FFFFF))
-		return *(UINT16 *) &sbSampleROM[(a-0x800000)];
-		
-	// Sample ROM (bank)
-	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
-		return *(UINT16 *) &sbSampleBankLo[(a-0xA00000)];
-		
-	// Sample ROM (bank)
-	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
-		return *(UINT16 *) &sbSampleBankHi[(a-0xE00000)];
-		
-	// SCSP (Master)
-	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+	case 0x1:	// SCSP registers (master): 100000-10FFFF
 		return SCSP_Master_r16(a);
 		
-	// SCSP (Slave)
-	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
+		return *(UINT16 *) &ram2[a&0x0FFFFF];
+	
+	case 0x3:	// SCSP registers (slave): 300000-30FFFF
 		return SCSP_Slave_r16(a);
 		
-	// Unknown
-	else
-	{
+	case 0x6:	// Program ROM: 600000-67FFFF
+		return *(UINT16 *) &soundROM[a&0x07FFFF];
+	
+	case 0x8:	// Sample ROM (low 2MB, fixed): 800000-9FFFFF
+	case 0x9:
+		return *(UINT16 *) &sampleROM[a&0x1FFFFF];
+	
+	case 0xA:	// Sample ROM (bank): A00000-DFFFFF
+	case 0xB:
+	case 0xC:
+	case 0xD:
+		return *(UINT16 *) &sampleBankLo[a-0xA00000];
+
+	case 0xE:	// Sample ROM (bank): E00000-FFFFFF
+	case 0xF:
+		return *(UINT16 *) &sampleBankHi[a&0x1FFFFF];
+		
+	default:
 		printf("68K: Unknown read16 %06X\n", a);
-		return 0;
+		break;
 	}
+	
+	return 0;
 }
 
-static UINT32 Read32(UINT32 a) 
-{ 
-	// SCSP RAM 1
-	if ((a >= 0x000000) && (a <= 0x0FFFFF))
-		return (Read16(a)<<16)|Read16(a+2);
+UINT32 CSoundBoard::Read32(UINT32 a) 
+{
+	UINT32	hi, lo;
 	
-	// SCSP RAM 2
-	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
-		return (Read16(a)<<16)|Read16(a+2);
+	switch ((a>>20)&0xF)
+	{
+	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
+		hi = *(UINT16 *) &ram1[a];
+		lo = *(UINT16 *) &ram1[a+2];	// TODO: clamp? Possible bounds hazard.
+		return (hi<<16)|lo;
 		
-	// Program ROM
-	else if ((a >= 0x600000) && (a <= 0x67FFFF))
-		return (Read16(a)<<16)|Read16(a+2);
-	
-	// Sample ROM (low 2MB, fixed)
-	else if ((a >= 0x800000) && (a <= 0x9FFFFF))
-		return (Read16(a)<<16)|Read16(a+2);
-		
-	// Sample ROM (bank)
-	else if ((a >= 0xA00000) && (a <= 0xDFFFFF))
-		return (Read16(a)<<16)|Read16(a+2);
-		
-	// Sample ROM (bank)
-	else if ((a >= 0xE00000) && (a <= 0xFFFFFF))
-		return (Read16(a)<<16)|Read16(a+2);
-		
-	// SCSP (Master)
-	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+	case 0x1:	// SCSP registers (master): 100000-10FFFF
 		return SCSP_Master_r32(a);
 		
-	// SCSP (Slave)
-	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
+		hi = *(UINT16 *) &ram2[a&0x0FFFFF];
+		lo = *(UINT16 *) &ram2[(a+2)&0x0FFFFF];
+		return (hi<<16)|lo;
+	
+	case 0x3:	// SCSP registers (slave): 300000-30FFFF
 		return SCSP_Slave_r32(a);
 		
-	// Unknown
-	else
-	{
+	case 0x6:	// Program ROM: 600000-67FFFF
+		hi = *(UINT16 *) &soundROM[a&0x07FFFF];
+		lo = *(UINT16 *) &soundROM[(a+2)&0x07FFFF];
+		return (hi<<16)|lo;
+	
+	case 0x8:	// Sample ROM (low 2MB, fixed): 800000-9FFFFF
+	case 0x9:
+		hi = *(UINT16 *) &sampleROM[a&0x1FFFFF];
+		lo = *(UINT16 *) &sampleROM[(a+2)&0x1FFFFF];
+		return (hi<<16)|lo;
+	
+	case 0xA:	// Sample ROM (bank): A00000-DFFFFF
+	case 0xB:
+	case 0xC:
+	case 0xD:
+		hi = *(UINT16 *) &sampleBankLo[a-0xA00000];
+		lo = *(UINT16 *) &sampleBankLo[a+2-0xA00000];
+		return (hi<<16)|lo;
+
+	case 0xE:	// Sample ROM (bank): E00000-FFFFFF
+	case 0xF:
+		hi = *(UINT16 *) &sampleBankHi[a&0x1FFFFF];
+		lo = *(UINT16 *) &sampleBankHi[(a+2)&0x1FFFFF];
+		return (hi<<16)|lo;
+		
+	default:
 		printf("68K: Unknown read32 %06X\n", a);
-		return 0;
+		break;
 	}
+	
+	return 0;
 }
 
-static void Write8(unsigned int a,unsigned char d)  
+void CSoundBoard::Write8(unsigned int a,unsigned char d)  
 { 
-	
-	// SCSP RAM 1
-	if ((a >= 0x000000) && (a <= 0x0FFFFF))
-		sbRAM1[a^1] = d;
-	
-	// SCSP RAM 2
-	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
-		sbRAM2[(a-0x200000)^1] = d;
-		
-	// SCSP (Master)
-	else if ((a >= 0x100000) && (a <= 0x10FFFF))
-		SCSP_Master_w8(a,d);
-		
-	// SCSP (Slave)
-	else if ((a >= 0x300000) && (a <= 0x30FFFF))
-		SCSP_Slave_w8(a,d);
-		
-	// Bank register
-	else if (a == 0x400001)
+	switch ((a>>20)&0xF)
 	{
-		if ((d&0x10))
+	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
+		ram1[a^1] = d;
+		break;
+		
+	case 0x1:	// SCSP registers (master): 100000-10FFFF
+		SCSP_Master_w8(a,d);
+		break;
+		
+	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
+		ram2[(a&0x0FFFFF)^1] = d;
+		break;
+	
+	case 0x3:	// SCSP registers (slave): 300000-30FFFF
+		SCSP_Slave_w8(a,d);
+		break;
+	
+	default:
+		if (a == 0x400001)
 		{
-			sbSampleBankLo = &sbSampleROM[0xA00000];
-			sbSampleBankHi = &sbSampleROM[0xE00000];
+			if ((d&0x10))
+			{
+				sampleBankLo = &sampleROM[0xA00000];
+				sampleBankHi = &sampleROM[0xE00000];
+			}
+			else
+			{
+				sampleBankLo = &sampleROM[0x200000];
+				sampleBankHi = &sampleROM[0x600000];
+			}
 		}
 		else
-		{
-			sbSampleBankLo = &sbSampleROM[0x200000];
-			sbSampleBankHi = &sbSampleROM[0x600000];
-		}
+			printf("68K: Unknown write8 %06X=%02X\n", a, d);
+		break;
 	}
-	
-	// Unknown
-	else
-		printf("68K: Unknown write8 %06X=%02X\n", a, d);
 }
 
-static void Write16(unsigned int a,unsigned short d) 
+void CSoundBoard::Write16(unsigned int a,unsigned short d) 
 { 
+	switch ((a>>20)&0xF)
+	{
+	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
+		*(UINT16 *) &ram1[a] = d;
+		break;
 		
-	// SCSP RAM 1
-	if ((a >= 0x000000) && (a <= 0x0FFFFF))
-		*(UINT16 *) &sbRAM1[a] = d;
-	
-	// SCSP RAM 2
-	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
-		*(UINT16 *) &sbRAM2[(a-0x200000)] = d;
-		
-	// SCSP (Master)
-	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+	case 0x1:	// SCSP registers (master): 100000-10FFFF
 		SCSP_Master_w16(a,d);
+		break;
 		
-	// SCSP (Slave)
-	else if ((a >= 0x300000) && (a <= 0x30FFFF))
-		SCSP_Slave_w16(a,d);
-		
-	// Unknown
-	else
-		printf("68K: Unknown write16 %06X=%04X\n", a, d);
+	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
+		*(UINT16 *) &ram2[a&0x0FFFFF] = d;
+		break;
 	
+	case 0x3:	// SCSP registers (slave): 300000-30FFFF
+		SCSP_Slave_w16(a,d);
+		break;
+	
+	default:
+		printf("68K: Unknown write16 %06X=%04X\n", a, d);
+		break;
+	}
 }
 
-static void Write32(unsigned int a,unsigned int d)
+void CSoundBoard::Write32(unsigned int a,unsigned int d)
 {
-	// SCSP RAM 1
-	if ((a >= 0x000000) && (a <= 0x0FFFFF))
+	switch ((a>>20)&0xF)
 	{
-		Write16(a,d>>16);
-		Write16(a+2,d&0xFFFF);
-	}
+	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
+		*(UINT16 *) &ram1[a] = (d>>16);
+		*(UINT16 *) &ram1[a+2] = (d&0xFFFF);
+		break;
 		
-	// SCSP RAM 2
-	else if ((a >= 0x200000) && (a <= 0x2FFFFF))
-	{
-		Write16(a,d>>16);
-		Write16(a+2,d&0xFFFF);
-	}
-		
-	// SCSP (Master)
-	else if ((a >= 0x100000) && (a <= 0x10FFFF))
+	case 0x1:	// SCSP registers (master): 100000-10FFFF
 		SCSP_Master_w32(a,d);
+		break;
 		
-	// SCSP (Slave)
-	else if ((a >= 0x300000) && (a <= 0x30FFFF))
+	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
+		*(UINT16 *) &ram2[a&0x0FFFFF] = (d>>16);
+		*(UINT16 *) &ram2[(a+2)&0x0FFFFF] = (d&0xFFFF);
+		break;
+	
+	case 0x3:	// SCSP registers (slave): 300000-30FFFF
 		SCSP_Slave_w32(a,d);
-		
-	// Unknown
-	else
+		break;
+	
+	default:
 		printf("68K: Unknown write32 %06X=%08X\n", a, d);
+		break;
+	}
 }
 
 
 /******************************************************************************
  SCSP 68K Callbacks
  
- The SCSP emulator drives the 68K via callbacks.
+ The SCSP emulator drives the 68K via callbacks. These have to live outside of
+ the CSoundBoard object for now, unfortunately.
 ******************************************************************************/
 
 // Status of IRQ pins (IPL2-0) on 68K
+// TODO: can we get rid of this global variable altogether?
 static int	irqLine = 0;
 
-// Interrupt acknowledge callback (TODO: don't need this, default behavior in M68K.cpp is fine)
+// Interrupt acknowledge callback (TODO: don't need this, default behavior in M68K.cpp should be fine)
 int IRQAck(int irqLevel)
 {
 	M68KSetIRQ(0);
@@ -334,41 +342,55 @@ int SCSP68KRunCallback(int numCycles)
 
 
 /******************************************************************************
- Sound Board Emulation
+ Sound Board Interface
 ******************************************************************************/
 
 void CSoundBoard::WriteMIDIPort(UINT8 data)
 {
 	SCSP_MidiIn(data);
+	if (NULL != DSB)	// DSB receives all commands as well
+		DSB->SendCommand(data);
 }
 
 void CSoundBoard::RunFrame(void)
 {
 #ifdef SUPERMODEL_SOUND
+	// Run sound board first to generate SCSP audio
+	M68KSetContext(&M68K);
 	SCSP_Update();
+	M68KGetContext(&M68K);
+	
+	// Run DSB and mix with existing audio
+	if (NULL != DSB)
+		DSB->RunFrame(audioL, audioR);
 
 	// Output the audio buffers
-	OutputAudio(44100/60, leftBuffer, rightBuffer);
+	OutputAudio(44100/60, audioL, audioR);
 
+#ifdef SUPERMODEL_LOG_AUDIO
 	// Output to binary file
 	INT16	s;
 	for (int i = 0; i < 44100/60; i++)
-	{
-		s = ((UINT16)leftBuffer[i]>>8) | ((leftBuffer[i]&0xFF)<<8);
+	{	
+		s = audioL[i];
 		fwrite(&s, sizeof(INT16), 1, soundFP);	// left channel
-		s = ((UINT16)rightBuffer[i]>>8) | ((rightBuffer[i]&0xFF)<<8);
+		s = audioR[i];
 		fwrite(&s, sizeof(INT16), 1, soundFP);	// right channel
 	}
+#endif
 #endif
 }
 
 void CSoundBoard::Reset(void)
 {
-	// lets hope he does better... -> 
 	memcpy(ram1, soundROM, 16);				// copy 68K vector table
-	sbSampleBankLo = &sampleROM[0x200000];	// default banks
-	sbSampleBankHi = &sampleROM[0x600000];
+	sampleBankLo = &sampleROM[0x200000];	// default banks
+	sampleBankHi = &sampleROM[0x600000];
+	M68KSetContext(&M68K);
 	M68KReset();
+	M68KGetContext(&M68K);
+	if (NULL != DSB)
+		DSB->Reset();
 	DebugLog("Sound Board Reset\n");
 }
 
@@ -377,22 +399,28 @@ void CSoundBoard::Reset(void)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
+void CSoundBoard::AttachDSB(CDSB *DSBPtr)
+{
+	DSB = DSBPtr;
+	DebugLog("Sound Board connected to DSB\n");
+}
+
 // Offsets of memory regions within sound board's pool
 #define OFFSET_RAM1			0			// 1 MB SCSP1 RAM
 #define OFFSET_RAM2			0x100000	// 1 MB SCSP2 RAM
-#define MEMORY_POOL_SIZE	(0x100000+0x100000)
+#define OFFSET_AUDIO_LEFT	0x200000	// 1470 bytes (16 bits, 44.1 KHz, 1/60th second) left audio channel
+#define OFFSET_AUDIO_RIGHT	0x2005BE	// 1470 bytes right audio channel
+#define MEMORY_POOL_SIZE	(0x100000+0x100000+0x5BE+0x5BE)
 
-BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ *ppcIRQObjectPtr, unsigned soundIRQBit)
+BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
-	
-	// Attach IRQ controller
-	ppcIRQ = ppcIRQObjectPtr;
-	ppcSoundIRQBit = soundIRQBit;
 	
 	// Receive sound ROMs
 	soundROM = soundROMPtr;
 	sampleROM = sampleROMPtr;
+	sampleBankLo = &sampleROM[0x200000];
+	sampleBankHi = &sampleROM[0x600000];
 	
 	// Allocate all memory for RAM
 	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
@@ -403,37 +431,25 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 	// Set up memory pointers
 	ram1 = &memoryPool[OFFSET_RAM1];
 	ram2 = &memoryPool[OFFSET_RAM2];
+	audioL = (INT16 *) &memoryPool[OFFSET_AUDIO_LEFT];
+	audioR = (INT16 *) &memoryPool[OFFSET_AUDIO_RIGHT];
 	
-	// Make global copies of memory pointers for 68K access handlers
-	sbRAM1 = ram1;
-	sbRAM2 = ram2;
-	sbSoundROM = soundROM;
-	sbSampleROM = sampleROM;
-	sbSampleBankLo = &sampleROM[0x200000];
-	sbSampleBankHi = &sampleROM[0x600000];
-
 	// Initialize 68K core
+	M68KSetContext(&M68K);
 	M68KInit();
+	M68KAttachBus(this);
 	M68KSetIRQCallback(IRQAck);
-	M68KSetFetch8Callback(Read8);
-	M68KSetFetch16Callback(Read16);
-	M68KSetFetch32Callback(Read32);
-	M68KSetRead8Callback(Read8);
-	M68KSetRead16Callback(Read16);
-	M68KSetRead32Callback(Read32);
-	M68KSetWrite8Callback(Write8);
-	M68KSetWrite16Callback(Write16);
-	M68KSetWrite32Callback(Write32);
+	M68KGetContext(&M68K);
 		
 	// Initialize SCSPs
-	SCSP_SetBuffers(leftBuffer, rightBuffer, 44100/60);
-	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback, ppcIRQ, ppcSoundIRQBit);
+	SCSP_SetBuffers(audioL, audioR, 44100/60);
+	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback);
 	SCSP_Init(2);
 	SCSP_SetRAM(0, ram1);
 	SCSP_SetRAM(1, ram2);
 	
 	// Binary logging
-#ifdef SUPERMODEL_SOUND
+#ifdef SUPERMODEL_LOG_AUDIO
 	soundFP = fopen("sound.bin","wb");	// delete existing file
 	fclose(soundFP);
 	soundFP = fopen("sound.bin","ab");	// append mode
@@ -444,9 +460,14 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ
 
 CSoundBoard::CSoundBoard(void)
 {
+	DSB = NULL;
 	memoryPool = NULL;
 	ram1 = NULL;
 	ram2 = NULL;
+	audioL = NULL;
+	audioR = NULL;
+	soundROM = NULL;
+	sampleROM = NULL;
 	
 	DebugLog("Built Sound Board\n");
 }
@@ -466,34 +487,14 @@ static void Reverse16(UINT8 *buf, unsigned size)
 
 CSoundBoard::~CSoundBoard(void)
 {	
-#ifdef SUPERMODEL_SOUND
+#ifdef SUPERMODEL_LOG_AUDIO
 	// close binary log file
 	fclose(soundFP);
-//#if 0
-	FILE	*fp;
-	
-	Reverse16(ram1, 0x100000);
-	Reverse16(ram2, 0x100000);
-	fp = fopen("scspRAM1", "wb");
-	if (NULL != fp)
-	{
-		fwrite(ram1, sizeof(UINT8), 0x100000, fp);
-		fclose(fp);
-		printf("dumped %s\n", "scspRAM1");
-		
-	}
-	fp = fopen("scspRAM2", "wb");
-	if (NULL != fp)
-	{
-		fwrite(ram2, sizeof(UINT8), 0x100000, fp);
-		fclose(fp);
-		printf("dumped %s\n", "scspRAM2");
-		
-	}
-//#endif
 #endif
 
 	SCSP_Deinit();
+	
+	DSB = NULL;
 	
 	if (memoryPool != NULL)
 	{
@@ -502,5 +503,10 @@ CSoundBoard::~CSoundBoard(void)
 	}
 	ram1 = NULL;
 	ram2 = NULL;
+	audioL = NULL;
+	audioR = NULL;
+	soundROM = NULL;
+	sampleROM = NULL;
+	
 	DebugLog("Destroyed Sound Board\n");
 }

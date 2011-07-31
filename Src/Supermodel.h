@@ -147,7 +147,7 @@ extern void InfoLog(const char *fmt, ...);
 #include "CPU/Bus.h"
 #include "CPU/PowerPC/PPCDisasm.h"
 #include "CPU/PowerPC/ppc.h"
-#include "CPU/68K/M68K.h"
+#include "CPU/68K/68K.h"
 #include "CPU/Z80/Z80.h"
 #include "Inputs/Input.h"
 #include "Inputs/Inputs.h"
@@ -164,7 +164,9 @@ extern void InfoLog(const char *fmt, ...);
 #include "Model3/TileGen.h"
 #include "Model3/Real3D.h"
 #include "Sound/SCSP.h"
+#include "Sound/MPEG/MPEG.h"
 #include "Model3/SoundBoard.h"
+#include "Model3/DSB.h"
 #include "Model3/Model3.h"
 
 /******************************************************************************

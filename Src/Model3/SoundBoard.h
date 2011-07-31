@@ -28,15 +28,52 @@
 #ifndef INCLUDED_SOUNDBOARD_H
 #define INCLUDED_SOUNDBOARD_H
 
+#include "Types.h"
+#include "CPU/Bus.h"
+#include "Model3/DSB.h"
 
 /*
  * CSoundBoard:
  *
  * Model 3 sound board (68K CPU + 2 x SCSP).
  */
-class CSoundBoard
+class CSoundBoard: public CBus
 {
 public:
+	/*
+	 * Read8(addr):
+	 * Read16(addr):
+	 * Read32(addr):
+	 * Read64(addr):
+	 *
+	 * Read a byte, 16-bit word, or 32-bit long word from the 68K address 
+	 * space. 
+	 *
+	 * Parameters:
+	 *		addr	Address to read.
+	 *
+	 * Returns:
+	 *		Data at the address.
+	 */
+	UINT8 Read8(UINT32 addr);
+	UINT16 Read16(UINT32 addr);
+	UINT32 Read32(UINT32 addr);
+	
+	/*
+	 * Write8(addr, data):
+	 * Write16(addr, data):
+	 * Write32(addr, data):
+	 *
+	 * Write a byte, word, or long word to the 68K address space.
+	 *
+	 * Parameters:
+	 *		addr	Address to write.
+	 *		data	Data to write.
+	 */
+	void Write8(UINT32 addr, UINT8 data);
+	void Write16(UINT32 addr, UINT16 data);
+	void Write32(UINT32 addr, UINT32 data);
+
 	/*
 	 * WriteMIDIPort(data):
 	 *
@@ -62,6 +99,18 @@ public:
 	void Reset(void);
 	
 	/*
+	 * AttachDSB(CDSB *DSBPtr):
+	 *
+	 * Connects a Digital Sound Board. The sound board passes MIDI commands,
+	 * resets the board, and runs it each frame to generate audio. If there is
+	 * no DSB, this function does not need to be called.
+	 *
+	 * Parameters:
+	 *		DSBPtr	Pointer to DSB object.
+	 */
+	void AttachDSB(CDSB *DSBPtr);
+	
+	/*
 	 * Init(soundROMPtr, sampleROMPtr):
 	 *
 	 * One-time initialization. Must be called prior to all other members.
@@ -69,14 +118,12 @@ public:
 	 * Parameters:
 	 *		soundROMPtr		Pointer to sound ROM (68K program).
 	 *		sampleROMPtr	Pointer to sample ROM.
-	 *		ppcIRQObjectPtr	Pointer to PowerPC-side IRQ object.
-	 *		soundIRQBit		IRQ bit mask to use for sound board PowerPC IRQs.
 	 *
 	 * Returns:
 	 *		OKAY if successful, FAIL if unable to allocate memory. Prints own
 	 *		error messages.
 	 */
-	BOOL Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr, CIRQ *ppcIRQObjectPtr, unsigned soundIRQBit);
+	BOOL Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
 	 
 	/*
 	 * CSoundBoard(void):
@@ -88,15 +135,22 @@ public:
 	~CSoundBoard(void);
 	
 private:
-	// PowerPC IRQ controller
-	CIRQ		*ppcIRQ;
-	unsigned	ppcSoundIRQBit;
+	// Digital Sound Board
+	CDSB		*DSB;
+	
+	// 68K context
+	M68KCtx		M68K;
 	
 	// Sound board memory
 	const UINT8	*soundROM;		// 68K program ROM (passed in from parent object)
 	const UINT8	*sampleROM;		// 68K sample ROM (passed in from parent object)
+	const UINT8	*sampleBankLo;	// sample ROM bank switching
+	const UINT8	*sampleBankHi;
 	UINT8		*memoryPool;	// single allocated region for all sound board RAM
 	UINT8		*ram1, *ram2;	// SCSP1 and SCSP2 RAM
+	
+	// Audio
+	INT16	*audioL, *audioR;	// left and right audio channels (1/60th second, 44.1 KHz)
 };
 
 

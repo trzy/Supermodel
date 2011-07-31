@@ -68,7 +68,7 @@ static BOOL FindROMByCRCInGame(const struct GameInfo **gamePtr, int *romIdxPtr, 
 	{
 		if (crc == Game->ROM[j].crc)	// found it!
 		{
-			*gamePtr = Game;
+			*gamePtr = Game;	// I know this seems redundant, but we do it here because FindROMByCRC() uses this function
 			*romIdxPtr = j;
 			return OKAY;
 		}
@@ -95,6 +95,23 @@ static BOOL FindROMByCRC(const struct GameInfo **gamePtr, int *romIdxPtr, const 
 	}
 	
 	return FAIL;
+}
+
+// Returns TRUE if this ROM appears only a single time in the entire game list (ie., it is not shared between games)
+static BOOL ROMIsUnique(const struct GameInfo *GameList, UINT32 crc)
+{
+	int	timesFound = 0;
+	
+	for (int i = 0; GameList[i].title != NULL; i++)
+	{
+		for (int j = 0; GameList[i].ROM[j].region != NULL; j++)
+		{
+			if (crc == GameList[i].ROM[j].crc)
+				timesFound++;
+		}
+	}
+	
+	return (timesFound == 1) ? TRUE : FALSE;
 }
 
 static void ByteSwap(UINT8 *buf, unsigned size)
@@ -189,8 +206,9 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 {
 	unzFile					zf;
 	unz_file_info			fileInfo;
-	const struct GameInfo	*Game = NULL, *CurGame;
-	int						romIdx;	// index within Game->ROM
+	const struct GameInfo	*Game = NULL;
+	const struct GameInfo	*CurGame;	// this is the game to which the last ROM found is thought to belong
+	int						romIdx;		// index within Game->ROM
 	unsigned				romsFound[sizeof(Game->ROM)/sizeof(struct ROMInfo)], numROMs;
 	int						err;
 	unsigned				i, n, maxSize;
@@ -205,8 +223,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		return NULL;
 	}
 		
-	// Check ROMs: scan ZIP file for first known ROM and check to ensure all ROMs are present
-	memset(romsFound, 0, sizeof(romsFound));
+	// First pass: scan every file and determine the game
 	err = unzGoToFirstFile(zf);
 	if (UNZ_OK != err)
 	{
@@ -221,54 +238,73 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 			continue;			
 		if (OKAY != FindROMByCRC(&CurGame, &romIdx, GameList, Game, fileInfo.crc))
 			continue;
+		
+		// If the ROM appears in multiple games, do not use it to identify the game!
+		if (!ROMIsUnique(GameList, fileInfo.crc))
+			continue;
+			
+		// We have a unique ROM used by a single game; identify that game
 		if (Game == NULL)	// this is the first game we've identified within the ZIP
 		{
 			Game = CurGame;
-			DebugLog("%ROM set identified: %s (%s), %s\n", Game->id, Game->title, zipFile);
+			DebugLog("ROM set identified: %s (%s), %s\n", Game->id, Game->title, zipFile);
 		}
-		else
+		else				// we've already identified a game
 		{
-			if (CurGame != Game)
+			if (CurGame != Game)	// another game?
 			{
 				DebugLog("%s also contains: %s (%s)\n", zipFile, CurGame->id, CurGame->title);
 				if (multipleGameError == FALSE)	// only warn about this once
 				{
+					printf("ROM=%s\n", CurGame->ROM[romIdx].fileName);
 					ErrorLog("Multiple games were found in %s; loading \"%s\".", zipFile, Game->title);
 					multipleGameError = TRUE;
 				}
 			}
 		}
-		
-		// If we have found a ROM for the correct game, mark it
-		if (Game == CurGame)
-			romsFound[romIdx] = 1;
 	}
 	
-	if (Game == NULL)
+	// Second pass: check if all ROM files for the identified game are present
+	err = unzGoToFirstFile(zf);
+	if (UNZ_OK != err)
 	{
-		ErrorLog("%s contains no supported games.", zipFile);
+		ErrorLog("Unable to read the contents of %s (code %X)", zipFile, err);
 		return NULL;
 	}
+	memset(romsFound, 0, sizeof(romsFound));	// here, romsFound[] indicates which ROMs were found in the ZIP file for the game
+	for (; err != UNZ_END_OF_LIST_OF_FILE; err = unzGoToNextFile(zf))
+	{
+		// Identify the file we're looking at
+		err = unzGetCurrentFileInfo(zf, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
+		if (err != UNZ_OK)
+			continue;			
 		
+		// If it's not part of the game we've identified, skip it
+		if (OKAY != FindROMByCRCInGame(&CurGame, &romIdx, Game, fileInfo.crc))
+			continue;
+		
+		// If we have found a ROM for the correct game, mark its corresponding indicator
+		romsFound[romIdx] = 1;
+	}
+	
 	// Compute how many ROM files this game has
 	for (numROMs = 0; Game->ROM[numROMs].region != NULL; numROMs++)
 		;
-
+	
 	// If not all ROMs were present, tell the user
 	err = OKAY;
 	for (i = 0; i < numROMs; i++)
 	{
 		if (romsFound[i] == 0)
-			err |= ErrorLog("%s (CRC=%08X) is missing from %s.", Game->ROM[i].file, Game->ROM[i].crc, zipFile);
+			err |= ErrorLog("%s (CRC=%08X) is missing from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 	}
 	if (err != OKAY)
 	{
 		unzClose(zf);
 		return NULL;
-		//return FAIL;
 	}
 		
-	// Allocate memory for the largest ROM to load
+	// Allocate a scratch buffer big enough to hold the biggest ROM
 	maxSize = 0;
 	for (i = 0; i < numROMs; i++)
 	{
@@ -283,8 +319,8 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		return NULL;
 	}
 		
-	// Load ROMs
-	memset(romsFound, 0, sizeof(romsFound));
+	// Third pass: load the ROMs
+	memset(romsFound, 0, sizeof(romsFound));	// now, romsFound[] is used to indicate whether we successfully loaded the ROM
 	err = unzGoToFirstFile(zf);
 	if (UNZ_OK != err)
 	{
@@ -297,13 +333,14 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		err = unzGetCurrentFileInfo(zf, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
 		if (err != UNZ_OK)
 			continue;			
-		if (OKAY != FindROMByCRC(&CurGame, &romIdx, GameList, Game, fileInfo.crc))
+		
+		// If this ROM is not part of the game we're loading, skip it
+		if (OKAY != FindROMByCRCInGame(&CurGame, &romIdx, Game, fileInfo.crc))
 			continue;
-		if (CurGame == Game)	// if ROM belongs to correct game
-		{
-			if (OKAY == LoadROM(buf, maxSize, Map, &Game->ROM[romIdx], zf, zipFile, loadAll))
-				romsFound[romIdx] = 1;	// success! mark as loaded
-		}
+
+		// Load the ROM and mark that we did so successfully
+		if (OKAY == LoadROM(buf, maxSize, Map, &Game->ROM[romIdx], zf, zipFile, loadAll))
+			romsFound[romIdx] = 1;	// success! mark as loaded
 	}
 	
 	// Ensure all ROMs were loaded
@@ -315,7 +352,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 			if (romsFound[i])
 				++n;
 			else
-				ErrorLog("Failed to load %s (CRC=%08X) from %s.", Game->ROM[i].file, Game->ROM[i].crc, zipFile);
+				ErrorLog("Failed to load %s (CRC=%08X) from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 		}
 		if (n < numROMs)
 			err = FAIL;

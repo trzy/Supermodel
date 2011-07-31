@@ -44,7 +44,7 @@ struct ROMInfo
 	const char	*region;	// ROM region identifier (used as a key to search ROMMap)
 	
 	// Information used to identify files
-	const char	*file;		// file name
+	const char	*fileName;	// file name
 	UINT32		crc;		// CRC-32 checksum (same as zip format)
 	unsigned	fileSize;	// file size in bytes (must be the same as all other ROMs with same region ID)
 	

@@ -20,7 +20,7 @@
  **/
  
 /*
- * M68K.cpp
+ * 68K.cpp
  * 
  * 68K CPU interface. This is presently just a wrapper for the Musashi 68K core
  * and therefore, only a single CPU is supported. In the future, we may want to
@@ -30,26 +30,28 @@
 #include "Supermodel.h"
 #include "Musashi/m68k.h"	// Musashi 68K core
 
+
+/******************************************************************************
+ Internal Context
+ 
+ An active context must be mapped before calling M68K interface functions. Only
+ the bus and IRQ handlers are copied here; the CPU context is passed directly
+ to Musashi.
+******************************************************************************/
+
+// Bus
+static CBus	*Bus = NULL;
+
+// IRQ callback
+static int	(*IRQAck)(int nIRQ) = NULL;
+
+
 /******************************************************************************
  68K Interface
 ******************************************************************************/
 
-// Interface function pointers
-static int		(*IRQAck)(int nIRQ) = NULL;
-static UINT8	(*Fetch8)(UINT32 addr) = NULL;
-static UINT16	(*Fetch16)(UINT32 addr) = NULL;
-static UINT32	(*Fetch32)(UINT32 addr) = NULL;
-static UINT8	(*Read8)(UINT32 addr) = NULL;
-static UINT16	(*Read16)(UINT32 addr) = NULL;
-static UINT32	(*Read32)(UINT32 addr) = NULL;
-static void		(*Write8)(UINT32 addr, UINT8 data) = NULL;
-static void		(*Write16)(UINT32 addr, UINT16 data) = NULL;
-static void		(*Write32)(UINT32 addr, UINT32 data) = NULL;
-
-extern "C" {
-	
 // CPU state
-
+	
 UINT32 M68KGetARegister(int n)
 {
 	m68k_register_t	r;
@@ -110,6 +112,7 @@ int M68KRun(int numCycles)
 void M68KReset(void)
 {
 	m68k_pulse_reset();
+	DebugLog("68K reset\n");
 }
 
 // Callback setup
@@ -119,49 +122,26 @@ void M68KSetIRQCallback(int (*F)(int nIRQ))
 	IRQAck = F;
 }
 
-void M68KSetFetch8Callback(UINT8 (*F)(UINT32))
+void M68KAttachBus(CBus *BusPtr)
 {
-	Fetch8 = F;
+	Bus = BusPtr;
+	DebugLog("Attached bus to 68K\n");
 }
 
-void M68KSetFetch16Callback(UINT16 (*F)(UINT32))
+// Context switching
+
+void M68KGetContext(M68KCtx *Dest)
 {
-	Fetch16 = F;
+	Dest->IRQAck = IRQAck;
+	Dest->Bus = Bus;
+	m68k_get_context(Dest->musashiCtx);
 }
 
-void M68KSetFetch32Callback(UINT32 (*F)(UINT32))
+void M68KSetContext(M68KCtx *Src)
 {
-	Fetch32 = F;
-}
-
-void M68KSetRead8Callback(UINT8 (*F)(UINT32))
-{
-	Read8 = F;
-}
-
-void M68KSetRead16Callback(UINT16 (*F)(UINT32))
-{
-	Read16 = F;
-}
-
-void M68KSetRead32Callback(UINT32 (*F)(UINT32))
-{
-	Read32 = F;
-}
-
-void M68KSetWrite8Callback(void (*F)(UINT32,UINT8))
-{
-	Write8 = F;
-}
-
-void M68KSetWrite16Callback(void (*F)(UINT32,UINT16))
-{
-	Write16 = F;
-}
-
-void M68KSetWrite32Callback(void (*F)(UINT32,UINT32))
-{
-	Write32 = F;
+	IRQAck = Src->IRQAck;
+	Bus = Src->Bus;
+	m68k_set_context(Src->musashiCtx);
 }
 
 // One-time initialization
@@ -171,10 +151,11 @@ BOOL M68KInit(void)
 	m68k_init();
 	m68k_set_cpu_type(M68K_CPU_TYPE_68000);
 	m68k_set_int_ack_callback(M68KIRQCallback);
+	Bus = NULL;
+	
+	DebugLog("Initialized 68K\n");
 	return OKAY;
 }
-
-}	// extern "C"
 
 
 /******************************************************************************
@@ -187,55 +168,58 @@ extern "C" {
 		
 int M68KIRQCallback(int nIRQ)
 {
-	if (NULL == IRQAck)
+	if (NULL == IRQAck)	// no handler, use default behavior
+	{
+		m68k_set_irq(0);	// clear line
 		return M68K_IRQ_AUTOVECTOR;
+	}
 	else
 		return IRQAck(nIRQ);
 }
 
 unsigned int FASTCALL M68KFetch8(unsigned int a)
 {
-	return Fetch8(a);
+	return Bus->Read8(a);
 }
 
 unsigned int FASTCALL M68KFetch16(unsigned int a)
 {
-	return Fetch16(a);
+	return Bus->Read16(a);
 }
 
 unsigned int FASTCALL M68KFetch32(unsigned int a)
 {
-	return Fetch32(a);
+	return Bus->Read32(a);
 }
 
 unsigned int FASTCALL M68KRead8(unsigned int a)
 {
-	return Read8(a);
+	return Bus->Read8(a);
 }
 
 unsigned int FASTCALL M68KRead16(unsigned int a)
 {
-	return Read16(a);
+	return Bus->Read16(a);
 }
 
 unsigned int FASTCALL M68KRead32(unsigned int a)
 {
-	return Read32(a);
+	return Bus->Read32(a);
 }
 
 void FASTCALL M68KWrite8(unsigned int a, unsigned int d)
 {
-	Write8(a, d);
+	Bus->Write8(a, d);
 }
 
 void FASTCALL M68KWrite16(unsigned int a, unsigned int d)
 {
-	Write16(a, d);
+	Bus->Write16(a, d);
 }
 
 void FASTCALL M68KWrite32(unsigned int a, unsigned int d)
 {
-	Write32(a, d);
+	Bus->Write32(a, d);
 }
 
 }	// extern "C"

@@ -534,27 +534,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 			// Toggle frame limiting
  			noThrottle = !noThrottle;
  			printf("Frame limiting: %s\n", noThrottle?"Off":"On");
-/* 				
- 			SCSP_MidiIn(0xA0);
- 			SCSP_MidiIn(0x00);
- 			SCSP_MidiIn(0x01);	// stop?
-			
- 			SCSP_MidiIn(0xA0);
- 			SCSP_MidiIn(0x11);
- 			SCSP_MidiIn(0x2E);
-			
- 			SCSP_MidiIn(0xA1);
- 			SCSP_MidiIn(0x70);
- 			SCSP_MidiIn(0x03);
-
- 			SCSP_MidiIn(0xAF);SCSP_MidiIn(0x10);SCSP_MidiIn(0x01);
- */			
- 			SCSP_MidiIn(0xAF);SCSP_MidiIn(0x10);SCSP_MidiIn(0x00);
- 			//static int snd=0xF;
- 			//SCSP_MidiIn(0xA0);SCSP_MidiIn(0x11);SCSP_MidiIn(snd++);
- 			//Sound codes:
- 			// A0 11 xx (0F=time extend, 11=jumbo left right)
- 			// AF 10 xx (music -- 01 seems to work)
  		}
 #ifdef SUPERMODEL_DEBUGGER
 				else if (Inputs->uiEnterDebugger->Pressed())

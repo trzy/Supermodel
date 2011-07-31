@@ -1,5 +1,6 @@
 //TODO: Update save state file format (must output) MIDI control port; will no longer be compatible with 0.1a save states
-//TODO: should sample roms be byteswapped? They currently are. This could also be done in the game list with the byteswap flag...
+//TODO: Star Wars expects bit 0x80 to be set when reading from MIDI control port. This should be made explicit! Lostwsga may behave similarly
+
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -1125,7 +1126,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 			
 		// Sound Board
 		case 0x08:
-			printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
+			//printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
 			if ((addr&0xF) == 0)		// MIDI data port
 				SoundBoard.WriteMIDIPort(data);
 			else if ((addr&0xF) == 4)	// MIDI control port
@@ -2112,23 +2113,38 @@ void CModel3::RunMainBoardFrame(void)
 	IRQ.Assert(0x02);
 	ppc_execute(10000);	// TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
 	
-	// Sound
+	/*
+	 * Sound:
+	 *
+	 * Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
+	 * which are used to send MIDI commands. Often games will write 0x27, send
+	 * a series of commands, and write 0x06 to stop. Other games, like Star
+	 * Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
+	 * by writing 0x37 and will disable/enable interrupts to control command
+	 * output.
+	 */
 	int irqCount = 0;
-	while (midiCtrlPort == 0x27)	// 27 triggers IRQ sequence, 06 stops it
+	while ((midiCtrlPort&0x20))
+	//while (midiCtrlPort == 0x27)	// 27 triggers IRQ sequence, 06 stops it
 	{
+		// Don't waste time firing MIDI interrupts if game has disabled them
+		if ((IRQ.ReadIRQEnable()&0x40) == 0)
+			break;
+			
+		// Process MIDI interrupt
 		IRQ.Assert(0x40);
-		ppc_execute(200);
+		ppc_execute(200);	// give PowerPC time to acknowledge IRQ
 		IRQ.Deassert(0x40);
-		ppc_execute(200);
+		ppc_execute(200);	// acknowledge that IRQ was deasserted (TODO: is this really needed?)
 		
 		++irqCount;
-		if (irqCount > (128))
+		if (irqCount > 128)
 		{
-			printf("MIDI TIMEOUT!\n");
+			printf("MIDI FIFO OVERFLOW!\n");
 			break;
 		}
 	}
-	IRQ.Deassert(0x40);
+	IRQ.Deassert(0x40);	//todo: no longer needed, remove it
 }
 
 void CModel3::Reset(void)
@@ -2409,9 +2425,11 @@ static void Dump(const char *file, UINT8 *buf, unsigned size, BOOL reverse32, BO
 #define OFFSET_VROM			0x9000000	// 64 MB
 #define OFFSET_BACKUPRAM	0xD000000	// 128 KB
 #define OFFSET_SECURITYRAM	0xD020000	// 128 KB
-#define OFFSET_SOUNDROM		0xD040000	// 512 KB
-#define OFFSET_SAMPLEROM	0xD0C0000	// 16 MB
-#define MEMORY_POOL_SIZE	(0x800000+0x800000+0x8000000+0x4000000+0x20000+0x20000+0x80000+0x1000000)
+#define OFFSET_SOUNDROM		0xD040000	// 512 KB (68K sound board program)
+#define OFFSET_SAMPLEROM	0xD0C0000	// 16 MB (sound board samples)
+#define OFFSET_DSBPROGROM	0xE0C0000	// 128 KB (DSB program)
+#define OFFSET_DSBMPEGROM	0xE0E0000	// 16 MB (DSB MPEG data -- Z80 version only uses 8MB)
+#define MEMORY_POOL_SIZE	(0x800000+0x800000+0x8000000+0x4000000+0x20000+0x20000+0x80000+0x1000000+0x20000+0x1000000)
 
 const struct GameInfo * CModel3::GetGameInfo(void)
 {
@@ -2428,6 +2446,8 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 		{ "VROM", 		vrom },
 		{ "SndProg",	soundROM },
 		{ "Samples",	sampleROM },
+		{ "DSBProg",	dsbROM },
+		{ "DSBMPEG",	mpegROM },
 		{ NULL, NULL }
 	};
 	PPC_CONFIG	PPCConfig;
@@ -2450,9 +2470,9 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	// Byte reverse the PowerPC ROMs (convert to little endian words)
 	Reverse32(crom, 0x800000+0x8000000);
 	
-	// Byte swap 68K ROMs
+	// Byte swap sound board 68K ROMs
 	Reverse16(soundROM, 0x80000);
-	Reverse16(sampleROM, 0x1000000);	// is this correct?
+	Reverse16(sampleROM, 0x1000000);
 		
 	// Initialize CPU and configure hardware (CPU speed is set in Init())
 	if (Game->step >= 0x20)			// Step 2.0+
@@ -2499,6 +2519,26 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	
 	ppc_set_fetch(PPCFetchRegions);
 	
+	// DSB board (if present)
+	if (Game->mpegBoard == 1)		// Z80 board, do not byte swap program ROM
+	{
+		DSB = new(std::nothrow) CDSB1();
+		if (NULL == DSB)
+			return ErrorLog("Insufficient memory for Digital Sound Board object.");
+		if (OKAY != DSB->Init(dsbROM,mpegROM))
+			return FAIL;
+	}
+	else if (Game->mpegBoard == 2)	// 68K board
+	{
+		Reverse16(dsbROM, 0x20000);	// byte swap program ROM
+		DSB = new(std::nothrow) CDSB2();
+		if (NULL == DSB)
+			return ErrorLog("Insufficient memory for Digital Sound Board object.");
+		if (OKAY != DSB->Init(dsbROM,mpegROM))
+			return FAIL;
+	}
+	SoundBoard.AttachDSB(DSB);
+	
 	// Apply ROM patches
 	Patch();
 	
@@ -2525,6 +2565,7 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 	DebugLog("Model 3 attached inputs\n");
 }
 
+// Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
 BOOL CModel3::Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
@@ -2546,11 +2587,13 @@ BOOL CModel3::Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam)
 	vrom = &memoryPool[OFFSET_VROM];
 	soundROM = &memoryPool[OFFSET_SOUNDROM];
 	sampleROM = &memoryPool[OFFSET_SAMPLEROM];
+	dsbROM = &memoryPool[OFFSET_DSBPROGROM];
+	mpegROM = &memoryPool[OFFSET_DSBMPEGROM];
 	backupRAM = &memoryPool[OFFSET_BACKUPRAM];
 	securityRAM = &memoryPool[OFFSET_SECURITYRAM];
 	SetCROMBank(0xFF);
 	
-	// Initialize other devices
+	// Initialize other devices (PowerPC and DSB initialized after ROMs loaded)
 	IRQ.Init();
 	PCIBridge.Init();
 	PCIBus.Init();
@@ -2561,8 +2604,9 @@ BOOL CModel3::Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam)
 		return FAIL;
 	if (OKAY != GPU.Init(vrom,this,&IRQ,0x100))	// same for Real3D DMA interrupt
 		return FAIL;
-	if (OKAY != SoundBoard.Init(soundROM,sampleROM,&IRQ,0x40))
+	if (OKAY != SoundBoard.Init(soundROM,sampleROM))
 		return FAIL;
+	
 #ifdef SUPERMODEL_DRIVEBOARD
 	DriveBoard.Init();
 #endif
@@ -2589,9 +2633,13 @@ CModel3::CModel3(void)
 	vrom = NULL;
 	soundROM = NULL;
 	sampleROM = NULL;
+	dsbROM = NULL;
+	mpegROM = NULL;
 	cromBank = NULL;
 	backupRAM = NULL;
 	securityRAM = NULL;
+	
+	DSB = NULL;
 	
 	securityPtr = 0;
 	
@@ -2630,10 +2678,17 @@ CModel3::~CModel3(void)
 	// Stop all threads
 	StopThreads();
 	
+	// Free memory
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
 		memoryPool = NULL;
+	}
+	
+	if (DSB != NULL)
+	{
+		delete DSB;
+		DSB = NULL;
 	}
 	
 	Game = NULL;
@@ -2642,6 +2697,8 @@ CModel3::~CModel3(void)
 	vrom = NULL;
 	soundROM = NULL;
 	sampleROM = NULL;
+	dsbROM = NULL;
+	mpegROM = NULL;
 	cromBank = NULL;
 	backupRAM = NULL;
 	securityRAM = NULL;
