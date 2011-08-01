@@ -422,7 +422,7 @@ void CDSB1::Reset(void)
 #define DSB1_OFFSET_RAM			0		// 32KB Z80 RAM
 #define DSB1_OFFSET_MPEG_LEFT	0x8000	// 1604 bytes (48 KHz max., 1/60th second, 2 extra = 2*(48000/60+2)) left MPEG buffer
 #define DSB1_OFFSET_MPEG_RIGHT	0x8644	// 1604 bytes right MPEG buffer
-#define DSB1_MEMORY_POOL_SIZE	(0x8000+0x644+0x644)
+#define DSB1_MEMORY_POOL_SIZE	(0x8000 + 0x644 + 0x644)
 
 BOOL CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
@@ -809,7 +809,7 @@ void CDSB2::Reset(void)
 #define DSB2_OFFSET_RAM			0		// 128KB 68K RAM
 #define DSB2_OFFSET_MPEG_LEFT	0x20000	// 1604 bytes (48 KHz max., 1/60th second, 2 extra = 2*(48000/60+2)) left MPEG buffer
 #define DSB2_OFFSET_MPEG_RIGHT	0x20644	// 1604 bytes right MPEG buffer
-#define DSB2_MEMORY_POOL_SIZE	(0x20000+0x644+0x644)
+#define DSB2_MEMORY_POOL_SIZE	(0x20000 + 0x644 + 0x644)
 
 BOOL CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {

@@ -178,6 +178,10 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 {
 	//printf("OutputAudio(%u)\n", numSamples);
 
+	UINT32 bytesRemaining;
+	UINT32 bytesToCopy;
+	INT16 *src;
+
 	// Number of samples should never be more than max number of samples per frame
 	if (numSamples > SAMPLES_PER_FRAME)
 		numSamples = SAMPLES_PER_FRAME;
@@ -224,7 +228,7 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 		writeWrapped = true;
 	}
 
-	INT16 *src = mixBuffer;
+	src = mixBuffer;
 	INT8 *dst1;
 	INT8 *dst2;
 	UINT32 len1;
@@ -249,8 +253,8 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 	}
 
 	// Copy chunk to write position in buffer
-	UINT32 bytesRemaining = numBytes;
-	UINT32 bytesToCopy = (bytesRemaining > len1 ? len1 : bytesRemaining);
+	bytesRemaining = numBytes;
+	bytesToCopy = (bytesRemaining > len1 ? len1 : bytesRemaining);
 	memcpy(dst1, src, bytesToCopy);
 
 	// Adjust for number of bytes copied

@@ -169,6 +169,7 @@ extern void InfoLog(const char *fmt, ...);
 #include "Model3/DSB.h"
 #include "Model3/Model3.h"
 
+
 /******************************************************************************
  Helpful Macros and Inlines
 ******************************************************************************/
@@ -187,16 +188,12 @@ extern void InfoLog(const char *fmt, ...);
  */
 static inline UINT16 FLIPENDIAN16(UINT16 d)
 {
-	return(((d >> 8) & 0x00FF) |
-		   ((d << 8) & 0xFF00));
+	return ((d>>8) | (d<<8));
 }
 
 static inline UINT32 FLIPENDIAN32(UINT32 d)
 {
-	return(((d >> 24) & 0x000000FF) |
-		   ((d >>  8) & 0x0000FF00) |
-		   ((d <<  8) & 0x00FF0000) |
-		   ((d << 24) & 0xFF000000));
+	return ((d>>24) | ((d<<8)&0x00FF0000) | ((d>>8)&0x0000FF00) | (d<<24));
 }
 
 #endif	// INCLUDED_SUPERMODEL_H
