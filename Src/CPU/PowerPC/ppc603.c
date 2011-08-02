@@ -284,12 +284,11 @@ int ppc_execute(int cycles)
 	{
 		ppc.pc = ppc.npc;
 		
-		//if (ppc.pc == 0x279C)
-		//	printf("R3=%08X\n", REG(3));
+		// Debug breakpoints
+		//if (ppc.pc == 0x9e4d4)
+		//	printf("%X R0=%08X\n", ppc.pc, REG(0));
 			
 		opcode = *ppc.op++;	// Supermodel byte reverses each aligned word (converting them to little endian) so they can be fetched directly
-		//opcode = BSWAP32(*ppc.op++);
-
 		ppc.npc = ppc.pc + 4;
 
 #ifdef SUPERMODEL_DEBUGGER

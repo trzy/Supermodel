@@ -381,7 +381,8 @@ void CRender3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned 
 {
 	unsigned	xi, yi;
 	
-	// debug: make everything red
+	// Make everything red
+#ifdef DEBUG
 	for (int i = 0; i < 512*512; )
 	{
 		textureBuffer[i++] = 1.0f;
@@ -389,6 +390,7 @@ void CRender3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned 
 		textureBuffer[i++] = 0.0f;
 		textureBuffer[i++] = 1.0f;
 	}
+#endif
 
 	for (xi = x/32; xi < (x+width)/32; xi++)
 		for (yi = y/32; yi < (y+height)/32; yi++)

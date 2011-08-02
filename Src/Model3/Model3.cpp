@@ -1126,7 +1126,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 			
 		// Sound Board
 		case 0x08:
-			//printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
+			printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
 			if ((addr&0xF) == 0)		// MIDI data port
 				SoundBoard.WriteMIDIPort(data);
 			else if ((addr&0xF) == 4)	// MIDI control port
@@ -1916,10 +1916,6 @@ void CModel3::RunFrame(void)
 #endif
 	}
 	
-	// End frame
-	GPU.EndFrame();
-	TileGen.EndFrame();
-	IRQ.Assert(0x0D);
 	return;
 
 ThreadError:
@@ -2123,6 +2119,7 @@ void CModel3::RunMainBoardFrame(void)
 	 * by writing 0x37 and will disable/enable interrupts to control command
 	 * output.
 	 */
+	//printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
 	int irqCount = 0;
 	while ((midiCtrlPort&0x20))
 	//while (midiCtrlPort == 0x27)	// 27 triggers IRQ sequence, 06 stops it
@@ -2140,11 +2137,16 @@ void CModel3::RunMainBoardFrame(void)
 		++irqCount;
 		if (irqCount > 128)
 		{
-			printf("MIDI FIFO OVERFLOW!\n");
+			printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
 			break;
 		}
 	}
-	IRQ.Deassert(0x40);	//todo: no longer needed, remove it
+	//printf("\t-- END --\n");
+
+	// End frame
+	GPU.EndFrame();
+	TileGen.EndFrame();
+	IRQ.Assert(0x0D);
 }
 
 void CModel3::Reset(void)
@@ -2364,6 +2366,11 @@ void CModel3::Patch(void)
 		 */
 		
 		*(UINT32 *) &crom[0x600000+0x3199C] = 0x60000000;
+	}
+	else if (!strcmp(Game->id, "skichamp"))
+	{
+		// Base address of program in CROM: 0x480000
+		*(UINT32 *) &crom[0x480000+0x96B9C] = 0x60000000;	// decrementer loop
 	}
 }
 
@@ -2669,7 +2676,7 @@ CModel3::~CModel3(void)
 #if 0
 	Dump("ram", ram, 0x800000, TRUE, FALSE);
 	//Dump("vrom", vrom, 0x4000000, TRUE, FALSE);
-	//Dump("crom", crom, 0x800000, TRUE, FALSE);
+	Dump("crom", crom, 0x800000, TRUE, FALSE);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, TRUE, FALSE);
 	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
 	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);

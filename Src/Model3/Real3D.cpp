@@ -369,6 +369,8 @@ void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
     switch (tapState)
     {
     case 3:     // Capture-DR
+    	//printf("TAP: Capture-DR\n");
+    	//bit = 0;
 
         /*
          * Read ASIC IDs.
@@ -413,7 +415,7 @@ void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
         {
             InsertID(0x416C7057, 1 + 0 * 32);
             InsertID(0x416C3057, 1 + 1 * 32);
-            InsertID(0x316C4057, 1 + 2 * 32);
+            InsertID(0x316C4057, 1 + 2 * 32);	// skichamp at PC=A89F4, this value causes "NO DAUGHTER BOARD" message
             InsertID(0x416C5057, 1 + 3 * 32);
             InsertID(0x316C6057, 1 + 4 * 32 + 1);
             InsertID(0x316C6057, 1 + 5 * 32 + 1);
@@ -424,6 +426,7 @@ void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
     case 4:     // Shift-DR
 
         tapTDO = Shift(tapID, tapIDSize);
+        //printf("TAP: Shift-DR Bit %d\n", bit++);
         break;
 
     case 10:    // Capture-IR
@@ -448,6 +451,7 @@ void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
          */
         tapIR &= 0x3FFFFFFFFFFFULL;
         tapCurrentInstruction = tapIR;
+        //printf("TAP: Update-IR %XLL\n", tapCurrentInstruction);
         break;
 
     default:
