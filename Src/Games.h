@@ -18,13 +18,13 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
-  
+
 /*
  * Games.h
  * 
  * Header file containing Model 3 game and ROM file information.
  */
- 
+
 #ifndef INCLUDED_GAMES_H
 #define INCLUDED_GAMES_H
 
@@ -37,20 +37,21 @@
 ******************************************************************************/
 
 // Input flags
-#define GAME_INPUT_COMMON           0x0001  // game has common controls
-#define GAME_INPUT_VEHICLE			0x0002	// game has vehicle controls
-#define GAME_INPUT_JOYSTICK1		0x0004	// game has joystick 1 
-#define GAME_INPUT_JOYSTICK2		0x0008	// game has joystick 2
-#define GAME_INPUT_FIGHTING			0x0010	// game has fighting game controls
-#define GAME_INPUT_VR				0x0020	// game has VR view buttons
-#define GAME_INPUT_RALLY			0x0040	// game has rally car controls
-#define GAME_INPUT_GUN1				0x0080	// game has gun 1
-#define GAME_INPUT_GUN2             0x0100  // game has gun 2
-#define GAME_INPUT_SHIFT4			0x0200	// game has 4-speed shifter
+#define GAME_INPUT_COMMON		0x0001	// game has common controls
+#define GAME_INPUT_VEHICLE		0x0002	// game has vehicle controls
+#define GAME_INPUT_JOYSTICK1	0x0004	// game has joystick 1 
+#define GAME_INPUT_JOYSTICK2	0x0008	// game has joystick 2
+#define GAME_INPUT_FIGHTING		0x0010	// game has fighting game controls
+#define GAME_INPUT_VR			0x0020	// game has VR view buttons
+#define GAME_INPUT_RALLY		0x0040	// game has rally car controls
+#define GAME_INPUT_GUN1			0x0080	// game has gun 1
+#define GAME_INPUT_GUN2			0x0100	// game has gun 2
+#define GAME_INPUT_SHIFT4		0x0200	// game has 4-speed shifter
 #define GAME_INPUT_ANALOG_JOYSTICK	0x0400	// game has analog joystick
 #define GAME_INPUT_TWIN_JOYSTICKS	0x0800	// game has twin joysticks
-#define GAME_INPUT_SOCCER			0x1000	// game has soccer controls
-#define GAME_INPUT_ALL              0x1FFF
+#define GAME_INPUT_SOCCER		0x1000	// game has soccer controls
+#define GAME_INPUT_ALL			0x1FFF
+
 
 /******************************************************************************
  Data Structures
@@ -64,7 +65,7 @@
 struct GameInfo
 {
 	// Game information
-	const char		id[9];			// 8-character game identifier (also serves as zip archive file name)
+	const char		id[10];			// 9-character game identifier (also serves as zip archive file name)
 	const char		*title;			// complete game title
 	const char		*mfgName;		// name of manufacturer
 	unsigned		year;			// year released (in decimal)
@@ -75,7 +76,7 @@ struct GameInfo
 	unsigned		sampleSize;		// size of sample ROMS (8 or 16 MB; if 8 MB, will have to be mirrored)
 	unsigned		inputFlags;		// game input types
 	int				mpegBoard;		// MPEG music board type: 0 = none, 1 = DSB1 (Z80), 2 = DSB2 (68K).
-	
+
 	// ROM files
 	struct ROMInfo	ROM[48];
 };
@@ -83,7 +84,7 @@ struct GameInfo
 
 /******************************************************************************
  Model 3 Game List
- 
+
  All games supported by Supermodel. All ROMs are loaded according to their 
  native endianness. That is, the PowerPC ROMs are loaded just as a real 
  PowerPC would see them. The emulator may reorder the bytes on its own for 

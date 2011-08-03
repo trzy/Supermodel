@@ -26,6 +26,12 @@
  *
  * To-Do List
  * ----------
+ * - Fix file writing. Null sections are not printed but it is currently
+ *   possible to create a new INI, create a non-null section as the first one,
+ *   and then create a null section. When the file is written, the null section
+ *   header will not be output and all of its settings will be interpreted as
+ *   a continuation of the previous section, which is incorrect. Can easily be
+ *	 fixed by always initializing with a null section.
  * - Add boolean on/off, true/false keywords.
  * - Allow a "default" section to be specified (other than "").
  * - Note that linePtr does not necessarily correspond to actual lines in the

@@ -2101,6 +2101,7 @@ void CModel3::RunMainBoardFrame(void)
 {
 	// Run the PowerPC for a frame
 	ppc_execute(ppcFrequency/60-10000);
+//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 	
 	// VBlank
 	TileGen.BeginFrame();
@@ -2108,6 +2109,7 @@ void CModel3::RunMainBoardFrame(void)
 	GPU.RenderFrame();
 	IRQ.Assert(0x02);
 	ppc_execute(10000);	// TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
+//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
 	
 	/*
 	 * Sound:
@@ -2142,6 +2144,7 @@ void CModel3::RunMainBoardFrame(void)
 		}
 	}
 	//printf("\t-- END --\n");
+//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 
 	// End frame
 	GPU.EndFrame();
@@ -2215,6 +2218,7 @@ void CModel3::Patch(void)
 	}
 	else if (!strcmp(Game->id, "scud"))
 	{
+		// Base offset of program in CROM: 0x710000
 		*(UINT32 *) &crom[0x712734] = 0x60000000;	// skips some ridiculously slow delay loop during boot-up
 		*(UINT32 *) &crom[0x71AEBC] = 0x60000000;	// waiting for some flag in RAM that never gets modified (IRQ problem? try emulating VBL on Real3D)
 		*(UINT32 *) &crom[0x712268] = 0x60000000;	// this corrects the boot-up menu (but why?)
@@ -2223,6 +2227,14 @@ void CModel3::Patch(void)
 		*(UINT32 *) &crom[0x74072C] = 0x60000000; 	// ... ditto
 		
 		//*(UINT32 *)&crom[0x799DE8] = 0x00050208;   // debug menu
+	}
+	else if (!strcmp(Game->id, "scuda"))
+	{
+		*(UINT32 *) &crom[0x712734] = 0x60000000;	// skips some ridiculously slow delay loop during boot-up
+	}
+	else if (!strcmp(Game->id, "scudj"))
+	{
+		*(UINT32 *) &crom[0x7126C8] = 0x60000000;	// skips some ridiculously slow delay loop during boot-up
 	}
 	else if (!strcmp(Game->id, "scudp"))
 	{
@@ -2342,6 +2354,13 @@ void CModel3::Patch(void)
 		*(UINT32 *)	&crom[0x043DC] = 0x48000090;
 		*(UINT32 *)	&crom[0x029A0] = 0x60000000;
 		*(UINT32 *)	&crom[0x02A0C] = 0x60000000;
+  	}
+  	else if (!strcmp(Game->id, "swtrilgya"))
+  	{
+  		*(UINT32 *) &crom[0xF6DD0] = 0x60000000;	// from MAME
+  		
+  		//*(UINT32 *) &crom[0xF1128] = 0x60000000;
+  		//*(UINT32 *) &crom[0xF10E0] = 0x60000000;
   	}
   	else if (!strcmp(Game->id, "eca"))
   	{
@@ -2673,14 +2692,14 @@ CModel3::CModel3(void)
 CModel3::~CModel3(void)
 {
 	// Dump some files first
-#if 0
+//#if 0
 	Dump("ram", ram, 0x800000, TRUE, FALSE);
 	//Dump("vrom", vrom, 0x4000000, TRUE, FALSE);
 	Dump("crom", crom, 0x800000, TRUE, FALSE);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, TRUE, FALSE);
 	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
 	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
-#endif
+//#endif
 	
 	// Stop all threads
 	StopThreads();
