@@ -572,17 +572,17 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			break;
 
 		case ST_GOT14:
-			mpegStart &= ~0xff0000;
+			mpegStart &= 0x00FFFF;
 			mpegStart |= (byte<<16);
 			mpegState++;
 			break;
 		case ST_14_0:
-			mpegStart &= ~0xff00;
+			mpegStart &= 0xFF00FF;
 			mpegStart |= (byte<<8);
 			mpegState++;
 			break;
 		case ST_14_1:
-			mpegStart &= ~0xff;
+			mpegStart &= 0xFFFF00;
 			mpegStart |= (byte);
 			mpegState = ST_IDLE;
 
@@ -595,17 +595,17 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			printf("mpegStart=%x\n", mpegStart);
 			break;
 		case ST_GOT24:
-			mpegEnd &= ~0xff0000;
+			mpegEnd &= 0x00FFFF; 
 			mpegEnd |= (byte<<16);
 			mpegState++;
 			break;
 		case ST_24_0:
-			mpegEnd &= ~0xff00;
+			mpegEnd &= 0xFF00FF;
 			mpegEnd |= (byte<<8);
 			mpegState++;
 			break;
 		case ST_24_1:
-			mpegEnd &= ~0xff;
+			mpegEnd &= 0xFFFF00;
 			mpegEnd |= (byte);
 			printf("mpegEnd=%x\n", mpegEnd);
 
@@ -827,6 +827,8 @@ void CDSB2::Reset(void)
 	fifoIdxW = fifoIdxR = 0;
 	
 	mpegState = ST_IDLE;
+	mpegStart = 0;
+	mpegEnd = 0;
 	playing = 0;
 	
 	M68KSetContext(&M68K);
