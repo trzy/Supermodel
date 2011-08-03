@@ -291,9 +291,11 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 		break;		
 		
 	case 0xE8:	// MPEG volume
+		volume = data;
 		break;
 		
 	case 0xE9:	// MPEG stereo
+		stereo = data;
 		break;
 		
 	case 0xF0:	// command echo back
@@ -394,6 +396,8 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 	// Run remaining cycles
 	Z80.Run(cycles);
 	
+	//printf("VOLUME=%02X STEREO=%02X\n", volume, stereo);
+	
 	// Decode MPEG for this frame
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
@@ -490,6 +494,7 @@ CDSB1::~CDSB1(void)
  Digital Sound Board Type 2: 68K CPU
 ******************************************************************************/
 
+// MPEG state machine
 enum 
 {
 	ST_IDLE = 0,
@@ -510,9 +515,28 @@ enum
 	ST_GOTB5,
 };
 
+static const char *stateName[] = 
+{
+	"idle",
+	"st_14_0",
+	"st_14_1",
+	"st_got24",
+	"st_24_0",
+	"st_24_1",
+	"st_got74",
+	"st_gota0",
+	"st_gota1",
+	"st_gota4",
+	"st_gota5",
+	"st_gotb0",
+	"st_gotb1",
+	"st_gotb4",
+	"st_gotb5"
+};
+
 void CDSB2::WriteMPEGFIFO(UINT8 byte)
 {
-	//printf("fifo: %x (state %d)\n", byte, mpegState);
+	printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
 	switch (mpegState)
 	{
 		case ST_IDLE:
@@ -524,6 +548,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			else if (byte == 0x74 || byte == 0x75)	// "start play"
 			{
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
+				printf("playing %X\n", mpegStart);
 				mpegState = ST_IDLE;
 				playing = 1;
 			}
@@ -563,11 +588,11 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			if (playing)
 			{
-				//printf("Setting loop point to %x\n", mpegStart);
+				printf("Setting loop point to %x\n", mpegStart);
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
 			}
 
-			//printf("mpegStart=%x\n", mpegStart);
+			printf("mpegStart=%x\n", mpegStart);
 			break;
 		case ST_GOT24:
 			mpegEnd &= ~0xff0000;
@@ -582,7 +607,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		case ST_24_1:
 			mpegEnd &= ~0xff;
 			mpegEnd |= (byte);
-			//printf("mpegEnd=%x\n", mpegEnd);
+			printf("mpegEnd=%x\n", mpegEnd);
 
 			// default to full stereo
 //			mixer_set_stereo_volume(0, 255, 255);
@@ -599,8 +624,14 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		case ST_GOTA1:
 			mpegState = ST_IDLE;
 			break;
-		case ST_GOTA4:
+		case ST_GOTA4:	// dayto2pe plays advertise tune from this state by writing 0x75
 			mpegState = ST_IDLE;
+			if (byte == 0x75)
+			{
+				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
+				printf("playing %X (from st_gota4)\n", mpegStart);
+				playing = 1;
+			}
 			break;
 		case ST_GOTA5:
 			mpegState = ST_IDLE;
@@ -720,7 +751,7 @@ void CDSB2::Write16(UINT32 addr, UINT16 data)
 		*(UINT16 *) &ram[addr] = data;
 		return;
 	}
-//	printf("W16: %x @ %x\n", data, addr);
+	printf("W16: %x @ %x\n", data, addr);
 }
 
 void CDSB2::Write32(UINT32 addr, UINT32 data)
@@ -732,7 +763,7 @@ void CDSB2::Write32(UINT32 addr, UINT32 data)
 		*(UINT16 *) &ram[addr+2] = data&0xFFFF;
 		return;
 	}
-//	printf("W32: %x @ %x\n", data, addr);
+	printf("W32: %x @ %x\n", data, addr);
 }
 
 void CDSB2::SendCommand(UINT8 data)

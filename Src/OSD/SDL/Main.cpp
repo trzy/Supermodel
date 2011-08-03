@@ -365,6 +365,7 @@ int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::
 			   unsigned xResParam, unsigned yResParam, BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, 
 			   const char *vsFile, const char *fsFile)
 {
+CLogger *oldLogger;
 #else
 int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL multiThreaded, unsigned xResParam, unsigned yResParam,
 			   BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, const char *vsFile, const char *fsFile)
@@ -422,7 +423,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 	
 #ifdef SUPERMODEL_DEBUGGER
 	// If debugger was supplied, set it as logger and attach it to system
-	CLogger *oldLogger = GetLogger();
+	oldLogger = GetLogger();
 	if (Debugger != NULL)
 	{
 		SetLogger(Debugger);
@@ -1023,12 +1024,12 @@ static void PrintGameList(void)
 	
 	puts("Supported games:");
 	puts("");
-	puts("    ROM Set        Title");
-	puts("    -------        -----");
+	puts("    ROM Set         Title");
+	puts("    -------         -----");
 	for (i = 0; Model3GameList[i].title != NULL; i++)
 	{
 		printf("    %s", Model3GameList[i].id);
-		for (j = strlen(Model3GameList[i].id); j < 8; j++)	// pad for alignment (no game ID is more than 8 letters)
+		for (j = strlen(Model3GameList[i].id); j < 9; j++)	// pad for alignment (no game ID is more than 9 letters)
 			printf(" ");
 		printf("       %s\n", Model3GameList[i].title);
 	}

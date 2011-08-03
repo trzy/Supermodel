@@ -188,8 +188,9 @@ private:
 	UINT32	startLatch;	// MPEG start address latch
 	UINT32	endLatch;	// MPEG end address latch
 	UINT8	status;
-	UINT8	chain;
 	UINT8	cmdLatch;
+	UINT8	volume;
+	UINT8	stereo;
 	
 	// Z80 CPU
 	CZ80	Z80;
