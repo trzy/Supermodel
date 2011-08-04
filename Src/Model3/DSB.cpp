@@ -589,7 +589,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			if (playing)
 			{
 				printf("Setting loop point to %x\n", mpegStart);
-				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
+				MPEG_SetLoop((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
 			}
 
 			printf("mpegStart=%x\n", mpegStart);
