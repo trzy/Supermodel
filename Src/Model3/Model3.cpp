@@ -2198,7 +2198,7 @@ void CModel3::Reset(void)
 // Apply patches to games
 void CModel3::Patch(void)
 {
-	if (!strcmp(Game->id, "vf3"))
+	if (!strcmp(Game->id, "vf3") || !strcmp(Game->id, "vf3a"))
 	{
 		*(UINT32 *) &crom[0x713C7C] = 0x60000000;
 		*(UINT32 *) &crom[0x713E54] = 0x60000000;
@@ -2341,6 +2341,15 @@ void CModel3::Patch(void)
   		*(UINT32 *) &crom[0x4F736C] = 0x60000000;
 		*(UINT32 *) &crom[0x4F738C] = 0x60000000;
   	}
+  	else if (!strcmp(Game->id, "harleyb"))
+  	{
+  		*(UINT32 *) &crom[0x50ECB4] = 0x60000000;
+		*(UINT32 *) &crom[0x50ECD4] = 0x60000000;
+		*(UINT32 *) &crom[0x50FF64] = 0x60000000;
+  		
+  		*(UINT32 *) &crom[0x4F774C] = 0x60000000;
+		*(UINT32 *) &crom[0x4F776C] = 0x60000000;
+  	}
   	else if (!strcmp(Game->id, "oceanhun"))
   	{
   		// Base address of program in CROM: 588FD8-108FD8=480000
@@ -2362,7 +2371,7 @@ void CModel3::Patch(void)
   		//*(UINT32 *) &crom[0xF1128] = 0x60000000;
   		//*(UINT32 *) &crom[0xF10E0] = 0x60000000;
   	}
-  	else if (!strcmp(Game->id, "eca"))
+  	else if (!strcmp(Game->id, "eca") || !strcmp(Game->id, "ecax"))
   	{
 		*(UINT32 *) &crom[0x535580] = 0x60000000;
 		*(UINT32 *) &crom[0x5023B4] = 0x60000000;
