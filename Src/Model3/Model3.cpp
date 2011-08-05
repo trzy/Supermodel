@@ -2101,7 +2101,7 @@ void CModel3::RunMainBoardFrame(void)
 {
 	// Run the PowerPC for a frame
 	ppc_execute(ppcFrequency/60-10000);
-//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 	
 	// VBlank
 	TileGen.BeginFrame();
@@ -2109,7 +2109,7 @@ void CModel3::RunMainBoardFrame(void)
 	GPU.RenderFrame();
 	IRQ.Assert(0x02);
 	ppc_execute(10000);	// TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
-//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
+printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
 	
 	/*
 	 * Sound:
@@ -2144,7 +2144,7 @@ void CModel3::RunMainBoardFrame(void)
 		}
 	}
 	//printf("\t-- END --\n");
-//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 
 	// End frame
 	GPU.EndFrame();
@@ -2264,6 +2264,13 @@ void CModel3::Patch(void)
   	else if (!strcmp(Game->id, "lostwsga"))
   	{
   		*(UINT32 *) &crom[0x7374f4] = 0x38840004;	// an actual bug in the game code
+  	}
+  	else if (!strcmp(Game->id, "vs215"))
+  	{
+  		// VS215 is a modification of VS2 that runs on Step 1.5 hardware. I
+  		// suspect the code here is trying to detect the system type but am too
+  		// lazy to figure it out right now.
+  		*(UINT32 *) &crom[0x7001A8] = 0x48000000+(0xFFF01630-0xFFF001A8);	// force a jump to FFF01630
   	}
   	else if (!strcmp(Game->id, "vs298"))
   	{
