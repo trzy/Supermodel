@@ -604,7 +604,7 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 			data = (vs298Security[securityPtr++] << 16);
 			securityPtr %= (sizeof(vs298Security)/sizeof(UINT16));
 		}
-		else if (!strcmp(Game->id, "eca"))
+		else if (!strcmp(Game->id, "eca") || !strcmp(Game->id, "ecax"))
 		{
 			data = (ecaSecurity[securityPtr++] << 16);
 			securityPtr %= (sizeof(ecaSecurity)/sizeof(UINT16));
@@ -2101,7 +2101,7 @@ void CModel3::RunMainBoardFrame(void)
 {
 	// Run the PowerPC for a frame
 	ppc_execute(ppcFrequency/60-10000);
-printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 	
 	// VBlank
 	TileGen.BeginFrame();
@@ -2109,7 +2109,7 @@ printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 	GPU.RenderFrame();
 	IRQ.Assert(0x02);
 	ppc_execute(10000);	// TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
-printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
+	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
 	
 	/*
 	 * Sound:
@@ -2144,7 +2144,7 @@ printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 		}
 	}
 	//printf("\t-- END --\n");
-printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 
 	// End frame
 	GPU.EndFrame();
