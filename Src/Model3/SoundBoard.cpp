@@ -337,7 +337,7 @@ void SCSP68KIRQCallback(int irqLevel)
 // SCSP callback for running the 68K
 int SCSP68KRunCallback(int numCycles)
 {
-	return M68KRun(numCycles);
+	return numCycles - M68KRun(numCycles);
 }
 
 
