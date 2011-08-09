@@ -30,7 +30,8 @@
  */
 
 #include <cstdio>	// for NULL
-#include "Z80.h"
+#include "Z80.h"	// must include this first to define CZ80
+#include "Supermodel.h"
 
 
 /******************************************************************************
@@ -3764,6 +3765,60 @@ void CZ80::Reset(void)
   	
   	intLine		= FALSE;
   	nmiTrigger	= FALSE;
+}
+
+void CZ80::SaveState(CBlockFile *StateFile, const char *name)
+{
+	StateFile->NewBlock(name, __FILE__);
+	
+	for (int i = 0; i < 2; i++)
+	{
+		StateFile->Write(&regs[i].bc, sizeof(regs[i].bc));
+		StateFile->Write(&regs[i].de, sizeof(regs[i].de));
+		StateFile->Write(&regs[i].hl, sizeof(regs[i].hl));
+	}
+	
+	StateFile->Write(af, sizeof(af));
+	StateFile->Write(&ir, sizeof(ir));
+	StateFile->Write(&ix, sizeof(ix));
+	StateFile->Write(&iy, sizeof(iy));
+	StateFile->Write(&sp, sizeof(sp));
+	StateFile->Write(&pc, sizeof(pc));
+	StateFile->Write(&iff, sizeof(iff));
+	StateFile->Write(&im, sizeof(im));
+	StateFile->Write(&regs_sel, sizeof(regs_sel));
+	StateFile->Write(&af_sel, sizeof(af_sel));
+	StateFile->Write(&nmiTrigger, sizeof(nmiTrigger));
+	StateFile->Write(&intLine, sizeof(intLine));
+}
+
+void CZ80::LoadState(CBlockFile *StateFile, const char *name)
+{
+	if (OKAY != StateFile->FindBlock(name))
+	{
+		ErrorLog("Unable to load Z80 state. Save state file is corrupted.");
+		return;
+	}
+	
+	for (int i = 0; i < 2; i++)
+	{
+		StateFile->Read(&regs[i].bc, sizeof(regs[i].bc));
+		StateFile->Read(&regs[i].de, sizeof(regs[i].de));
+		StateFile->Read(&regs[i].hl, sizeof(regs[i].hl));
+	}
+	
+	StateFile->Read(af, sizeof(af));
+	StateFile->Read(&ir, sizeof(ir));
+	StateFile->Read(&ix, sizeof(ix));
+	StateFile->Read(&iy, sizeof(iy));
+	StateFile->Read(&sp, sizeof(sp));
+	StateFile->Read(&pc, sizeof(pc));
+	StateFile->Read(&iff, sizeof(iff));
+	StateFile->Read(&im, sizeof(im));
+	StateFile->Read(&regs_sel, sizeof(regs_sel));
+	StateFile->Read(&af_sel, sizeof(af_sel));
+	StateFile->Read(&nmiTrigger, sizeof(nmiTrigger));
+	StateFile->Read(&intLine, sizeof(intLine));
 }
 
 void CZ80::Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80))

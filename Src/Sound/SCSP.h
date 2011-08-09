@@ -63,6 +63,8 @@ unsigned short SCSP_Slave_r16(unsigned int addr);
 unsigned int SCSP_Slave_r32(unsigned int addr);
 
 // Supermodel interface functions
+void SCSP_SaveState(CBlockFile *StateFile);
+void SCSP_LoadState(CBlockFile *StateFile);
 void SCSP_SetBuffers(INT16 *leftBufferPtr, INT16 *rightBufferPtr, int bufferLength);
 void SCSP_Deinit(void);
 

@@ -222,7 +222,9 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
 /******************************************************************************
  Save States and NVRAM
  
- Save states and NVRAM use the same basic format.
+ Save states and NVRAM use the same basic format. When anything changes that
+ breaks compatibility with previous versions of Supermodel, the save state
+ and NVRAM version numbers must be incremented as needed.
  
  Header block name: "Supermodel Save State" or "Supermodel NVRAM State"
  Data: Save state file version (4-byte integer), ROM set ID (up to 9 bytes, 
@@ -231,7 +233,8 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
  Different subsystems output their own blocks.
 ******************************************************************************/
 
-#define STATE_FILE_VERSION	0	// save state file version
+#define STATE_FILE_VERSION	1	// save state file version
+#define NVRAM_FILE_VERSION	0	// NVRAM file version
 
 static unsigned	saveSlot = 0;	// save state slot #
 
@@ -284,7 +287,7 @@ static void LoadState(CModel3 *Model3)
 	SaveState.Read(&fileVersion, sizeof(fileVersion));
 	if (fileVersion != STATE_FILE_VERSION)
 	{
-		ErrorLog("Format of %s is incompatible with this version of Supermodel.", filePath);
+		ErrorLog("%s is incompatible with this version of Supermodel.", filePath);
 		return;
 	}
 	
@@ -299,7 +302,7 @@ static void SaveNVRAM(CModel3 *Model3)
 {
 	CBlockFile	NVRAM;
 	char		filePath[24];
-	int			fileVersion = STATE_FILE_VERSION;
+	int			fileVersion = NVRAM_FILE_VERSION;
 	
 	sprintf(filePath, "NVRAM/%s.nv", Model3->GetGameInfo()->id);
 	if (OKAY != NVRAM.Create(filePath, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
@@ -341,9 +344,9 @@ static void LoadNVRAM(CModel3 *Model3)
 	}
 	
 	NVRAM.Read(&fileVersion, sizeof(fileVersion));
-	if (fileVersion != STATE_FILE_VERSION)
+	if (fileVersion != NVRAM_FILE_VERSION)
 	{
-		ErrorLog("Format of %s is incompatible with this version of Supermodel.", filePath);
+		ErrorLog("%s is incompatible with this version of Supermodel.", filePath);
 		return;
 	}
 	

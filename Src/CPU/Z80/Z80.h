@@ -45,6 +45,7 @@
 
 #include "Types.h"
 #include "CPU/Bus.h"
+#include "BlockFile.h"
 
 /*
  * Special Return Codes for Interrupt Callbacks
@@ -115,6 +116,29 @@ public:
 	 */
 	void Reset(void);
 	
+	/*
+	 * SaveState(StateFile, name):
+	 *
+	 * Saves the CPU state to the block file.
+	 *
+	 * Parameters:
+	 *		StateFile	Block file.
+	 *		name		Name of block to create (e.g. "Main Z80"), to facilitate
+	 *					multiple Z80 states in the same file.
+	 */
+	void SaveState(CBlockFile *StateFile, const char *name);
+
+	/*
+	 * LoadState(StateFile, name):
+	 *
+	 * Loads the CPU state.
+	 *
+	 * Parameters:
+	 *		StateFile	Block file.
+	 *		name		Name of block to load.
+	 */
+	void LoadState(CBlockFile *StateFile, const char *name);
+
 	/*
 	 * Init(BusPtr, INTF):
 	 *

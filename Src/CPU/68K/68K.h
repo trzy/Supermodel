@@ -123,6 +123,29 @@ extern UINT32 M68KGetDRegister(int reg);
 extern UINT32 M68KGetPC(void);
 
 /*
+ * M68KSaveState(StateFile, name):
+ *
+ * Saves the CPU state to the block file.
+ *
+ * Parameters:
+ *		StateFile	Block file.
+ *		name		Name of block to create (e.g. "Main 68K"), to facilitate
+ *					multiple 68K states in the same file.
+ */
+extern void M68KSaveState(CBlockFile *StateFile, const char *name);
+
+/*
+ * M68KLoadState(StateFile, name):
+ *
+ * Loads the CPU state.
+ *
+ * Parameters:
+ *		StateFile	Block file.
+ *		name		Name of block to load.
+ */
+extern void M68KLoadState(CBlockFile *StateFile, const char *name);
+
+/*
  * M68KSetIRQ(irqLevel):
  *
  * Sets the interrupt level (IPL2-IPL0 pins).

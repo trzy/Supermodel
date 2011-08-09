@@ -40,12 +40,31 @@
 ******************************************************************************/
 
 /*
+ * MPEG_IsPlaying(void):
+ *
+ * Returns:
+ *		TRUE if an MPEG stream is currently playing, otherwise FALSE.
+ */
+extern BOOL MPEG_IsPlaying(void);
+
+/*
  * MPEG_GetProgress(void):
  *
  * Returns:
- * 		The current byte offset within the MPEG stream.
+ * 		The current byte offset within the MPEG stream, relative to the start.
  */
-extern int MPEG_GetProgress(void);								
+extern int MPEG_GetProgress(void);							
+
+/*
+ * MPEG_SetOffset(pos):
+ *
+ * Sets the playback position within an MPEG stream.
+ *
+ * Parameters:
+ *		pos		Byte offset relative to the beginning of the current MPEG
+ *				stream.
+ */
+extern void MPEG_SetOffset(int pos);
 
 /*
  * MPEG_SetLoop(loop, loopend):
@@ -54,7 +73,7 @@ extern int MPEG_GetProgress(void);
  *
  * Parameters:
  *		loop		Start address.
- *		loopend		End address.
+ *		loopend		End offset.
  */
 extern void MPEG_SetLoop(const char *loop, int loopend);		
 
@@ -77,7 +96,8 @@ extern void MPEG_Decode(INT16 **outputs, int length);
  * MPEG_PlayMemory(sa, length):
  *
  * Specifies the memory buffer to decode from. This initializes the playback
- * process and will decode the first MPEG frame internally.
+ * process and will decode the first MPEG frame internally. The loop start
+ * position is cleared (set looping after this call).
  *
  * Parameters:
  *		sa		Start address of MPEG stream.

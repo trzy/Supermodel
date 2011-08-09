@@ -370,6 +370,11 @@ void MPEG_StopPlaying(void)
 	}
 }
 
+BOOL MPEG_IsPlaying(void)
+{
+	return playing ? TRUE : FALSE;
+}
+
 BOOL MPEG_Init(void)
 {
 	if (!decoder_init)

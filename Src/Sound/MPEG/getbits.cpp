@@ -27,6 +27,11 @@ int MPEG_GetProgress(void)
 	return offset;
 }
 
+void MPEG_SetOffset(int pos)
+{
+	offset = pos;
+}
+
 void m1setfile(const char *mstart, int mend)
 {
 	fstart = mstart;

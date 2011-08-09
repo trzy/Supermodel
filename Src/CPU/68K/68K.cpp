@@ -25,6 +25,12 @@
  * 68K CPU interface. This is presently just a wrapper for the Musashi 68K core
  * and therefore, only a single CPU is supported. In the future, we may want to
  * add in another 68K core (eg., Turbo68K, A68K, or a recompiler). 
+ *
+ * To-Do List
+ * ----------
+ * - Registers may not completely describe the 68K state. Musashi also has
+ *   additional CPU state information in the context that its MAME interface
+ *   accesses (interrupts pending, halted status, etc.)
  */
 
 #include "Supermodel.h"
@@ -95,6 +101,102 @@ UINT32 M68KGetDRegister(int n)
 UINT32 M68KGetPC(void)
 {
 	return m68k_get_reg(NULL, M68K_REG_PC);
+}
+
+void M68KSaveState(CBlockFile *StateFile, const char *name)
+{
+	StateFile->NewBlock(name, __FILE__);
+	
+	/*
+	 * Rather than writing the context directly to the save state, each
+	 * register is copied into an array first to ensure the same result across
+	 * different compilers (in case the struct is ordered differently). This
+	 * also prevents us from inadvertently modifying the callback pointers.
+	 *
+	 * Note: Some of these are undoubtedly 68010 or 68020 registers and not
+	 * really necessary. But if the layout is changed now, the save state 
+	 * version has to be changed, so don't do it!
+	 */
+	 
+	UINT32	data[31];
+	
+	data[0] = m68k_get_reg(NULL, M68K_REG_D0);
+	data[1] = m68k_get_reg(NULL, M68K_REG_D1);
+	data[2] = m68k_get_reg(NULL, M68K_REG_D2);
+	data[3] = m68k_get_reg(NULL, M68K_REG_D3);
+	data[4] = m68k_get_reg(NULL, M68K_REG_D4);
+	data[5] = m68k_get_reg(NULL, M68K_REG_D5);
+	data[6] = m68k_get_reg(NULL, M68K_REG_D6);
+	data[7] = m68k_get_reg(NULL, M68K_REG_D7);
+	data[8] = m68k_get_reg(NULL, M68K_REG_A0);
+	data[9] = m68k_get_reg(NULL, M68K_REG_A1);
+	data[10] = m68k_get_reg(NULL, M68K_REG_A2);
+	data[11] = m68k_get_reg(NULL, M68K_REG_A3);
+	data[12] = m68k_get_reg(NULL, M68K_REG_A4);
+	data[13] = m68k_get_reg(NULL, M68K_REG_A5);
+	data[14] = m68k_get_reg(NULL, M68K_REG_A6);
+	data[15] = m68k_get_reg(NULL, M68K_REG_A7);
+	data[16] = m68k_get_reg(NULL, M68K_REG_PC);
+	data[17] = m68k_get_reg(NULL, M68K_REG_SR);
+	data[18] = m68k_get_reg(NULL, M68K_REG_SP);
+	data[19] = m68k_get_reg(NULL, M68K_REG_USP);
+	data[20] = m68k_get_reg(NULL, M68K_REG_ISP);
+	data[21] = m68k_get_reg(NULL, M68K_REG_MSP);
+	data[22] = m68k_get_reg(NULL, M68K_REG_SFC);
+	data[23] = m68k_get_reg(NULL, M68K_REG_DFC);
+	data[24] = m68k_get_reg(NULL, M68K_REG_VBR);
+	data[25] = m68k_get_reg(NULL, M68K_REG_CACR);
+	data[26] = m68k_get_reg(NULL, M68K_REG_CAAR);
+	data[27] = m68k_get_reg(NULL, M68K_REG_PREF_ADDR);
+	data[28] = m68k_get_reg(NULL, M68K_REG_PREF_DATA);
+	data[29] = m68k_get_reg(NULL, M68K_REG_PPC);
+	data[30] = m68k_get_reg(NULL, M68K_REG_IR);
+	
+	StateFile->Write(data, sizeof(data));
+}
+
+void M68KLoadState(CBlockFile *StateFile, const char *name)
+{
+	if (OKAY != StateFile->FindBlock(name))
+	{
+		ErrorLog("Unable to load 68K state. Save state file is corrupted.");
+		return;
+	}
+
+	UINT32	data[31];
+	
+	StateFile->Read(data, sizeof(data));
+	m68k_set_reg(M68K_REG_D0, data[0]);
+	m68k_set_reg(M68K_REG_D1, data[1]);
+	m68k_set_reg(M68K_REG_D2, data[2]);
+	m68k_set_reg(M68K_REG_D3, data[3]);
+	m68k_set_reg(M68K_REG_D4, data[4]);
+	m68k_set_reg(M68K_REG_D5, data[5]);
+	m68k_set_reg(M68K_REG_D6, data[6]);
+	m68k_set_reg(M68K_REG_D7, data[7]);
+	m68k_set_reg(M68K_REG_A0, data[8]);
+	m68k_set_reg(M68K_REG_A1, data[9]);
+	m68k_set_reg(M68K_REG_A2, data[10]);
+	m68k_set_reg(M68K_REG_A3, data[11]);
+	m68k_set_reg(M68K_REG_A4, data[12]);
+	m68k_set_reg(M68K_REG_A5, data[13]);
+	m68k_set_reg(M68K_REG_A6, data[14]);
+	m68k_set_reg(M68K_REG_A7, data[15]);
+	m68k_set_reg(M68K_REG_PC, data[16]);
+	m68k_set_reg(M68K_REG_SR, data[17]);
+	m68k_set_reg(M68K_REG_SP, data[18]);
+	m68k_set_reg(M68K_REG_USP, data[19]);
+	m68k_set_reg(M68K_REG_ISP, data[20]);
+	m68k_set_reg(M68K_REG_MSP, data[21]);
+	m68k_set_reg(M68K_REG_SFC, data[22]);
+	m68k_set_reg(M68K_REG_DFC, data[23]);
+	m68k_set_reg(M68K_REG_VBR, data[24]);
+	m68k_set_reg(M68K_REG_CACR, data[25]);
+	m68k_set_reg(M68K_REG_CAAR, data[26]);
+	m68k_set_reg(M68K_REG_PREF_ADDR, data[27]);
+	m68k_set_reg(M68K_REG_PREF_DATA, data[28]);
+	m68k_set_reg(M68K_REG_PPC, data[29]);
+	m68k_set_reg(M68K_REG_IR, data[30]);
 }
 
 // Emulation functions

@@ -1075,6 +1075,7 @@ void SCSPDSP_Start(_SCSPDSP *DSP)
 	}
 	DSP->LastStep=i+1;
 
+/*
 	int test=0;
 	if(test)
 	{
@@ -1086,6 +1087,7 @@ void SCSPDSP_Start(_SCSPDSP *DSP)
 		fwrite(DSP->MADRS,32*2,1,f1);
 		fclose(f1);
 	}
+*/
 
 	for(int t=0;t<0x10000;++t)
 	{

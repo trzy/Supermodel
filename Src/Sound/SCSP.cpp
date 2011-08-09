@@ -22,6 +22,9 @@
 /*
  * SCSP.cpp
  * 
+ * WARNING: Here be dragons! Tread carefully. Enabling/disabling things may
+ * break save state support.
+ *
  * SCSP (Sega Custom Sound Processor) emulation. This code was generously
  * donated by ElSemi. Interfaces directly to the 68K processor through
  * callbacks. Some minor interface changes were made (external global variables
@@ -148,7 +151,6 @@ static int RPANTABLE[0x10000];
 
 static int TimPris[3];
 static int TimCnt[3];
-static DWORD OnIRQ=0;
 
 #define SHIFT	12
 #define FIX(v)	((DWORD) ((float) (1<<SHIFT)*(v)))
@@ -2012,8 +2014,193 @@ unsigned int SCSP_Slave_r32(unsigned int addr)
 
 
 /******************************************************************************
- Extra Supermodel Interface Functions
+ Supermodel Interface Functions
 ******************************************************************************/
+
+void SCSP_SaveState(CBlockFile *StateFile)
+{
+	StateFile->NewBlock("SCSP x 2", __FILE__);
+	
+	/*
+	 * Save global variables.
+	 *
+	 * Difficult to say exactly what is necessary given that many things are
+	 * commented out and should not be enabled but I try to save as much as
+	 * possible. 
+	 *
+	 * Things not saved:
+	 *
+	 *	- Reverb buffers and pointers
+	 *	- FNS table (populated by SCSP_Init() and only read)
+	 *	- RB_VOLUME stuff
+	 * 	- ARTABLE, DRTABLE
+	 *	- RBUFDST
+	 */
+	StateFile->Write(&IrqTimA, sizeof(IrqTimA));
+	StateFile->Write(&IrqTimBC, sizeof(IrqTimBC));
+	StateFile->Write(&IrqMidi, sizeof(IrqMidi));
+	StateFile->Write(MidiOutStack, sizeof(MidiOutStack));
+	StateFile->Write(&MidiOutW, sizeof(MidiOutW));
+	StateFile->Write(&MidiOutR, sizeof(MidiOutR));
+	StateFile->Write(MidiStack, sizeof(MidiStack));
+	StateFile->Write(&MidiOutFill, sizeof(MidiOutFill));
+	StateFile->Write(&MidiInFill, sizeof(MidiInFill));
+	StateFile->Write(&MidiW, sizeof(MidiW));
+	StateFile->Write(&MidiR, sizeof(MidiR));
+	StateFile->Write(TimPris, sizeof(TimPris));
+	StateFile->Write(TimCnt, sizeof(TimCnt));
+	
+	// Save both SCSP states
+	for (int i = 0; i < 2; i++)
+	{
+		StateFile->Write(SCSPs[i].datab, sizeof(SCSPs[i].datab));
+		StateFile->Write(&(SCSPs[i].BUFPTR), sizeof(SCSPs[i].BUFPTR));
+		StateFile->Write(&(SCSPs[i].Master), sizeof(SCSPs[i].Master));
+		
+		// Save each slot
+		for (int j = 0; j < 32; j++)
+		{
+			UINT32	baseOffset;
+			UINT8	egState;
+			
+			StateFile->Write(SCSPs[i].Slots[j].datab, sizeof(SCSPs[i].Slots[j].datab));
+			StateFile->Write(&(SCSPs[i].Slots[j].active), sizeof(SCSPs[i].Slots[j].active));
+			baseOffset = (UINT32) (SCSPs[i].Slots[j].base - SCSPs[i].SCSPRAM);
+			StateFile->Write(&baseOffset, sizeof(baseOffset));
+			StateFile->Write(&(SCSPs[i].Slots[j].cur_addr), sizeof(SCSPs[i].Slots[j].cur_addr));
+			StateFile->Write(&(SCSPs[i].Slots[j].step), sizeof(SCSPs[i].Slots[j].step));
+			StateFile->Write(&(SCSPs[i].Slots[j].Back), sizeof(SCSPs[i].Slots[j].Back));
+			StateFile->Write(&(SCSPs[i].Slots[j].slot), sizeof(SCSPs[i].Slots[j].slot));
+			StateFile->Write(&(SCSPs[i].Slots[j].Prev), sizeof(SCSPs[i].Slots[j].Prev));
+			
+			// EG
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.volume), sizeof(SCSPs[i].Slots[j].EG.volume));
+			egState = SCSPs[i].Slots[j].EG.state;
+			StateFile->Write(&egState, sizeof(egState));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.step), sizeof(SCSPs[i].Slots[j].EG.step));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.AR), sizeof(SCSPs[i].Slots[j].EG.AR));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.D1R), sizeof(SCSPs[i].Slots[j].EG.D1R));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.D2R), sizeof(SCSPs[i].Slots[j].EG.D2R));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.RR), sizeof(SCSPs[i].Slots[j].EG.RR));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.DL), sizeof(SCSPs[i].Slots[j].EG.DL));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.EGHOLD), sizeof(SCSPs[i].Slots[j].EG.EGHOLD));
+			StateFile->Write(&(SCSPs[i].Slots[j].EG.LPLINK), sizeof(SCSPs[i].Slots[j].EG.LPLINK));
+			
+			// PLFO
+			StateFile->Write(&(SCSPs[i].Slots[j].PLFO.phase), sizeof(SCSPs[i].Slots[j].PLFO.phase));
+			StateFile->Write(&(SCSPs[i].Slots[j].PLFO.phase_step), sizeof(SCSPs[i].Slots[j].PLFO.phase_step));
+			
+			// ALFO
+			StateFile->Write(&(SCSPs[i].Slots[j].ALFO.phase), sizeof(SCSPs[i].Slots[j].ALFO.phase));
+			StateFile->Write(&(SCSPs[i].Slots[j].ALFO.phase_step), sizeof(SCSPs[i].Slots[j].ALFO.phase_step));
+			
+			//when loading, make sure to compute lfo
+		}
+		
+		// DSP
+		StateFile->Write(&(SCSPs[i].DSP.RBP), sizeof(SCSPs[i].DSP.RBP));
+		StateFile->Write(&(SCSPs[i].DSP.RBL), sizeof(SCSPs[i].DSP.RBL));
+		StateFile->Write(SCSPs[i].DSP.COEF, sizeof(SCSPs[i].DSP.COEF));
+		StateFile->Write(SCSPs[i].DSP.MADRS, sizeof(SCSPs[i].DSP.MADRS));
+		StateFile->Write(SCSPs[i].DSP.MPRO, sizeof(SCSPs[i].DSP.MPRO));
+		StateFile->Write(SCSPs[i].DSP.TEMP, sizeof(SCSPs[i].DSP.TEMP));
+		StateFile->Write(SCSPs[i].DSP.MEMS, sizeof(SCSPs[i].DSP.MEMS));
+		StateFile->Write(&(SCSPs[i].DSP.DEC), sizeof(SCSPs[i].DSP.DEC));
+		StateFile->Write(SCSPs[i].DSP.MIXS, sizeof(SCSPs[i].DSP.MIXS));
+		StateFile->Write(SCSPs[i].DSP.EXTS, sizeof(SCSPs[i].DSP.EXTS));
+		StateFile->Write(SCSPs[i].DSP.EFREG, sizeof(SCSPs[i].DSP.EFREG));
+		StateFile->Write(&(SCSPs[i].DSP.Stopped), sizeof(SCSPs[i].DSP.Stopped));
+		StateFile->Write(&(SCSPs[i].DSP.LastStep), sizeof(SCSPs[i].DSP.LastStep));
+	}
+}
+
+void SCSP_LoadState(CBlockFile *StateFile)
+{
+	if (OKAY != StateFile->FindBlock("SCSP x 2"))
+	{
+		ErrorLog("Unable to load SCSP state. Save state file is corrupted.");
+		return;
+	}
+	
+	// Load global variables
+	StateFile->Read(&IrqTimA, sizeof(IrqTimA));
+	StateFile->Read(&IrqTimBC, sizeof(IrqTimBC));
+	StateFile->Read(&IrqMidi, sizeof(IrqMidi));
+	StateFile->Read(MidiOutStack, sizeof(MidiOutStack));
+	StateFile->Read(&MidiOutW, sizeof(MidiOutW));
+	StateFile->Read(&MidiOutR, sizeof(MidiOutR));
+	StateFile->Read(MidiStack, sizeof(MidiStack));
+	StateFile->Read(&MidiOutFill, sizeof(MidiOutFill));
+	StateFile->Read(&MidiInFill, sizeof(MidiInFill));
+	StateFile->Read(&MidiW, sizeof(MidiW));
+	StateFile->Read(&MidiR, sizeof(MidiR));
+	StateFile->Read(TimPris, sizeof(TimPris));
+	StateFile->Read(TimCnt, sizeof(TimCnt));
+	
+	// Load both SCSP states
+	for (int i = 0; i < 2; i++)
+	{
+		StateFile->Read(SCSPs[i].datab, sizeof(SCSPs[i].datab));
+		StateFile->Read(&(SCSPs[i].BUFPTR), sizeof(SCSPs[i].BUFPTR));
+		StateFile->Read(&(SCSPs[i].Master), sizeof(SCSPs[i].Master));
+		
+		// Load each slot
+		for (int j = 0; j < 32; j++)
+		{
+			UINT32	baseOffset;
+			UINT8	egState;
+			
+			StateFile->Read(SCSPs[i].Slots[j].datab, sizeof(SCSPs[i].Slots[j].datab));
+			StateFile->Read(&(SCSPs[i].Slots[j].active), sizeof(SCSPs[i].Slots[j].active));
+			StateFile->Read(&baseOffset, sizeof(baseOffset));
+			SCSPs[i].Slots[j].base = &(SCSPs[i].SCSPRAM[baseOffset&0xFFFFF]);	// clamp to 1 MB
+			StateFile->Read(&(SCSPs[i].Slots[j].cur_addr), sizeof(SCSPs[i].Slots[j].cur_addr));
+			StateFile->Read(&(SCSPs[i].Slots[j].step), sizeof(SCSPs[i].Slots[j].step));
+			StateFile->Read(&(SCSPs[i].Slots[j].Back), sizeof(SCSPs[i].Slots[j].Back));
+			StateFile->Read(&(SCSPs[i].Slots[j].slot), sizeof(SCSPs[i].Slots[j].slot));
+			StateFile->Read(&(SCSPs[i].Slots[j].Prev), sizeof(SCSPs[i].Slots[j].Prev));
+			
+			// EG
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.volume), sizeof(SCSPs[i].Slots[j].EG.volume));
+			StateFile->Read(&egState, sizeof(egState));
+			SCSPs[i].Slots[j].EG.state = (_STATE) egState;
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.step), sizeof(SCSPs[i].Slots[j].EG.step));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.AR), sizeof(SCSPs[i].Slots[j].EG.AR));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.D1R), sizeof(SCSPs[i].Slots[j].EG.D1R));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.D2R), sizeof(SCSPs[i].Slots[j].EG.D2R));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.RR), sizeof(SCSPs[i].Slots[j].EG.RR));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.DL), sizeof(SCSPs[i].Slots[j].EG.DL));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.EGHOLD), sizeof(SCSPs[i].Slots[j].EG.EGHOLD));
+			StateFile->Read(&(SCSPs[i].Slots[j].EG.LPLINK), sizeof(SCSPs[i].Slots[j].EG.LPLINK));
+			
+			// PLFO
+			StateFile->Read(&(SCSPs[i].Slots[j].PLFO.phase), sizeof(SCSPs[i].Slots[j].PLFO.phase));
+			StateFile->Read(&(SCSPs[i].Slots[j].PLFO.phase_step), sizeof(SCSPs[i].Slots[j].PLFO.phase_step));
+			
+			// ALFO
+			StateFile->Read(&(SCSPs[i].Slots[j].ALFO.phase), sizeof(SCSPs[i].Slots[j].ALFO.phase));
+			StateFile->Read(&(SCSPs[i].Slots[j].ALFO.phase_step), sizeof(SCSPs[i].Slots[j].ALFO.phase_step));
+
+			// Recompute LFOs
+			Compute_LFO(&(SCSPs[i].Slots[j]));
+		}
+		
+		// DSP
+		StateFile->Read(&(SCSPs[i].DSP.RBP), sizeof(SCSPs[i].DSP.RBP));
+		StateFile->Read(&(SCSPs[i].DSP.RBL), sizeof(SCSPs[i].DSP.RBL));
+		StateFile->Read(SCSPs[i].DSP.COEF, sizeof(SCSPs[i].DSP.COEF));
+		StateFile->Read(SCSPs[i].DSP.MADRS, sizeof(SCSPs[i].DSP.MADRS));
+		StateFile->Read(SCSPs[i].DSP.MPRO, sizeof(SCSPs[i].DSP.MPRO));
+		StateFile->Read(SCSPs[i].DSP.TEMP, sizeof(SCSPs[i].DSP.TEMP));
+		StateFile->Read(SCSPs[i].DSP.MEMS, sizeof(SCSPs[i].DSP.MEMS));
+		StateFile->Read(&(SCSPs[i].DSP.DEC), sizeof(SCSPs[i].DSP.DEC));
+		StateFile->Read(SCSPs[i].DSP.MIXS, sizeof(SCSPs[i].DSP.MIXS));
+		StateFile->Read(SCSPs[i].DSP.EXTS, sizeof(SCSPs[i].DSP.EXTS));
+		StateFile->Read(SCSPs[i].DSP.EFREG, sizeof(SCSPs[i].DSP.EFREG));
+		StateFile->Read(&(SCSPs[i].DSP.Stopped), sizeof(SCSPs[i].DSP.Stopped));
+		StateFile->Read(&(SCSPs[i].DSP.LastStep), sizeof(SCSPs[i].DSP.LastStep));
+	}
+}
 
 void SCSP_SetBuffers(INT16 *leftBufferPtr, INT16 *rightBufferPtr, int bufferLength)
 {
