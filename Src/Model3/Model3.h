@@ -121,7 +121,8 @@ public:
 	/*
 	 * SaveState(SaveState):
 	 *
-	 * Saves an image of the current state.
+	 * Saves an image of the current state. Must never be called while emulator
+	 * is running (inside RunFrame()).
 	 *
 	 * Parameters:
 	 *		SaveState	Block file to save state information to.
@@ -131,7 +132,10 @@ public:
 	/*
 	 * LoadState(SaveState):
 	 *
-	 * Loads and resumes execution from a state image.
+	 * Loads and resumes execution from a state image. Modifies data that may
+	 * be used by multiple threads -- use with caution and ensure threads are
+	 * not accessing data that will be touched. Must never be called while
+	 * emulator is running (inside RunFrame()).
 	 *
 	 * Parameters:
 	 *		SaveState	Block file to load state information from.

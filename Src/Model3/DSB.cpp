@@ -1,3 +1,5 @@
+//TODO: MPEG_IsPlaying() -- must be saved to save state file so we don't continue playing when loading a silent state
+//TODO: amp can print error messages -- change them to Supermodel error messages
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -28,7 +30,8 @@
  *
  * TODO List
  * ---------
- * - Music looping on DSB2 does not work in Daytona 2 (will play next track).
+ * - Volume fade out in Daytona 2 is much too slow. Probably caused by 68K
+ *	 timing or interrupts.
  * - Check actual MPEG sample rate. So far, all games seem to use 32 KHz, which
  *   may be a hardware requirement, but if other sampling rates are allowable,
  *   the code here will fail (it is hard coded for 32 KHz).
@@ -132,20 +135,30 @@ static inline INT16 MixAndClip(INT32 a, INT32 b)
 }
 
 // Mixes audio and returns number of samples copied back to start of buffer (ie. offset at which new samples should be written)
-int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *inR, int sizeOut, int sizeIn, int outRate, int inRate)
+int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *inR, UINT8 volumeL, UINT8 volumeR, int sizeOut, int sizeIn, int outRate, int inRate)
 {
 	int 	delta = (inRate<<8)/outRate;	// (1/fout)/(1/fin)=fin/fout, 24.8 fixed point
 	int		outIdx = 0;
 	int		inIdx = 0;
 	INT16	leftSample, rightSample;
+	INT16	v[2];
 	
+	// Scale volume from 0x00-0xFF -> 0x00-0x100 (24.8 fixed point)
+	v[0] = (INT16) ((float) 0x100 * (float) volumeL / 255.0f);
+	v[1] = (INT16) ((float) 0x100 * (float) volumeR / 255.0f);
+	
+	// Up-sample and mix!
 	while (outIdx < sizeOut)
 	{
 		// nFrac, pFrac will never exceed 1.0 (0x100) (only true if delta does not exceed 1)
 		leftSample	= ((int)inL[inIdx]*pFrac+(int)inL[inIdx+1]*nFrac) >> 8;	// left channel
 		rightSample	= ((int)inR[inIdx]*pFrac+(int)inR[inIdx+1]*nFrac) >> 8;	// right channel
 		
+		// Apply volume
+		leftSample = (leftSample*v[0]) >> 8;
+		rightSample = (rightSample*v[0]) >> 8;
 		
+		// Mix and output
 		outL[outIdx] = MixAndClip(outL[outIdx], leftSample);
 		outR[outIdx] = MixAndClip(outR[outIdx], rightSample);
 		outIdx++;
@@ -213,15 +226,23 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 
 		if (data == 1)	// play without loop
 		{
+			//printf("====> Playing %06X (mpegEnd=%06X)\n", mpegStart, mpegEnd);
 			MPEG_SetLoop(NULL, 0);
-			//printf("====> Playing %06X\n", mpegStart);
+			usingLoopStart = 0;		// save the settings of the MPEG currently playing
+			usingLoopEnd = 0;
+			usingMPEGStart = mpegStart;
+			usingMPEGEnd = mpegEnd;
 			MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
 			return;
 		}
 
-		if (data == 2)	// play with loop
+		if (data == 2)	// play with loop (NOTE: I don't think this actually loops b/c MPEG_PlayMemory() clears lstart)
 		{
-			//printf("====> Playing %06X\n", mpegStart);
+			//printf("====> Playing w/ loop %06X (mpegEnd=%06X, loopStart=%06X, loopEnd=%06X)\n", mpegStart, mpegEnd, loopStart, loopEnd);
+			usingLoopStart = 0;		// MPEG_PlayMemory() clears these settings and Z80 will set them up later
+			usingLoopEnd = 0;
+			usingMPEGStart = mpegStart;
+			usingMPEGEnd = mpegEnd;
 			MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
 			return;
 		}
@@ -253,11 +274,15 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			// SWA: if loop end is zero, it means "keep previous end marker"
 			if (loopEnd == 0)
 			{
-				MPEG_SetLoop((const char *) &mpegROM[loopStart], mpegEnd-loopStart);
+				usingLoopStart = loopStart;
+				usingLoopEnd = mpegEnd-loopStart;
+				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 			}
 			else
 			{
-				MPEG_SetLoop((const char *) &mpegROM[loopStart], loopEnd-loopStart);
+				usingLoopStart = loopStart;
+				usingLoopEnd = loopEnd-loopStart;
+				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 			}
 		}
 			
@@ -286,12 +311,15 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 		{
 			loopEnd = endLatch;
 			//printf("loopEnd = %08X\n", loopEnd);
-			MPEG_SetLoop((const char *) &mpegROM[loopStart], loopEnd-loopStart);
+			usingLoopStart = loopStart;
+			usingLoopEnd = loopEnd-loopStart;
+			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 		}
 		break;		
 		
 	case 0xE8:	// MPEG volume
-		volume = data;
+		volume = 0x7F-data;
+		//printf("Set Volume: %02X\n", volume);
 		break;
 		
 	case 0xE9:	// MPEG stereo
@@ -383,7 +411,8 @@ void CDSB1::SendCommand(UINT8 data)
 void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 {
 #ifdef SUPERMODEL_SOUND
-	int	cycles;
+	int		cycles;
+	UINT8	v;
 	
 	// While FIFO not empty, fire interrupts, run for up to one frame
 	for (cycles = (4000000/60)/4; (cycles > 0) && (fifoIdxR != fifoIdxW);  )
@@ -398,10 +427,13 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 	
 	//printf("VOLUME=%02X STEREO=%02X\n", volume, stereo);
 	
+	// Convert volume from 0x00-0x7F -> 0x00-0xFF
+	v = (UINT8) ((float) 255.0f * (float) volume /127.0f);
+	
 	// Decode MPEG for this frame
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
-	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 44100/60, 32000/60+2, 44100, 32000);
+	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, 44100/60, 32000/60+2, 44100, 32000);
 	
 #endif
 }
@@ -417,9 +449,91 @@ void CDSB1::Reset(void)
 	
 	status = 1;
 	mpegState = 0;	// why doesn't RB ever init this?
+	volume = 0x7F;	// full volume
+	usingLoopStart = 0;
 	
 	Z80.Reset();
 	DebugLog("DSB1 Reset\n");
+}
+
+void CDSB1::SaveState(CBlockFile *StateFile)
+{
+	UINT32	mpegPos;
+	UINT8	isPlaying;
+	
+	StateFile->NewBlock("DSB1", __FILE__);
+	
+	// MPEG playback state
+	isPlaying = (UINT8) MPEG_IsPlaying();
+	mpegPos = MPEG_GetProgress();
+	StateFile->Write(&isPlaying, sizeof(isPlaying));
+	StateFile->Write(&mpegPos, sizeof(mpegPos));
+	StateFile->Write(&usingMPEGStart, sizeof(usingMPEGStart));
+	StateFile->Write(&usingMPEGEnd, sizeof(usingMPEGEnd));
+	StateFile->Write(&usingLoopStart, sizeof(usingLoopStart));
+	StateFile->Write(&usingLoopEnd, sizeof(usingLoopEnd));
+	
+	// MPEG board state
+	StateFile->Write(ram, 0x8000);
+	StateFile->Write(fifo, sizeof(fifo));
+	StateFile->Write(&fifoIdxR, sizeof(fifoIdxR));
+	StateFile->Write(&fifoIdxW, sizeof(fifoIdxW));
+	StateFile->Write(&mpegStart, sizeof(mpegStart));
+	StateFile->Write(&mpegEnd, sizeof(mpegEnd));
+	StateFile->Write(&mpegState, sizeof(mpegState));
+	StateFile->Write(&loopStart, sizeof(loopStart));
+	StateFile->Write(&loopEnd, sizeof(loopEnd));
+	StateFile->Write(&status, sizeof(status));
+	StateFile->Write(&cmdLatch, sizeof(cmdLatch));
+	StateFile->Write(&volume, sizeof(volume));
+	StateFile->Write(&stereo, sizeof(stereo));
+	
+	// Z80 CPU state
+	Z80.SaveState(StateFile, "DSB1 Z80");
+}
+
+void CDSB1::LoadState(CBlockFile *StateFile)
+{
+	UINT32	mpegPos;
+	UINT8	isPlaying;
+	
+	if (OKAY != StateFile->FindBlock("DSB1"))
+	{
+		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupted.");
+		return;
+	}
+	
+	StateFile->Read(&isPlaying, sizeof(isPlaying));
+	StateFile->Read(&mpegPos, sizeof(mpegPos));
+	StateFile->Read(&usingMPEGStart, sizeof(usingMPEGStart));
+	StateFile->Read(&usingMPEGEnd, sizeof(usingMPEGEnd));
+	StateFile->Read(&usingLoopStart, sizeof(usingLoopStart));
+	StateFile->Read(&usingLoopEnd, sizeof(usingLoopEnd));
+	StateFile->Read(ram, 0x8000);
+	StateFile->Read(fifo, sizeof(fifo));
+	StateFile->Read(&fifoIdxR, sizeof(fifoIdxR));
+	StateFile->Read(&fifoIdxW, sizeof(fifoIdxW));
+	StateFile->Read(&mpegStart, sizeof(mpegStart));
+	StateFile->Read(&mpegEnd, sizeof(mpegEnd));
+	StateFile->Read(&mpegState, sizeof(mpegState));
+	StateFile->Read(&loopStart, sizeof(loopStart));
+	StateFile->Read(&loopEnd, sizeof(loopEnd));
+	StateFile->Read(&status, sizeof(status));
+	StateFile->Read(&cmdLatch, sizeof(cmdLatch));
+	StateFile->Read(&volume, sizeof(volume));
+	StateFile->Read(&stereo, sizeof(stereo));
+	
+	Z80.LoadState(StateFile, "DSB1 Z80");
+	
+	// Restart MPEG audio at the appropriate position
+	if (isPlaying)
+	{
+		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
+		MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+		MPEG_SetOffset(mpegPos);
+	}
+	else
+		MPEG_StopPlaying();
 }
 
 // Offsets of memory regions within DSB2's pool
@@ -507,17 +621,22 @@ enum
 	ST_GOT74,
 	ST_GOTA0,
 	ST_GOTA1,
+	ST_GOTA3,
 	ST_GOTA4,
 	ST_GOTA5,
+	ST_GOTA7,
 	ST_GOTB0,
 	ST_GOTB1,
+	ST_GOTB2,
 	ST_GOTB4,
 	ST_GOTB5,
+	ST_GOTB6
 };
 
 static const char *stateName[] = 
 {
 	"idle",
+	"st_got_14",
 	"st_14_0",
 	"st_14_1",
 	"st_got24",
@@ -526,12 +645,16 @@ static const char *stateName[] =
 	"st_got74",
 	"st_gota0",
 	"st_gota1",
+	"st_gota3",
 	"st_gota4",
 	"st_gota5",
+	"st_gota7",
 	"st_gotb0",
 	"st_gotb1",
+	"st_gotb2",
 	"st_gotb4",
-	"st_gotb5"
+	"st_gotb5",
+	"st_gotb6"
 };
 
 void CDSB2::WriteMPEGFIFO(UINT8 byte)
@@ -561,13 +684,17 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			else if (byte == 0xa0) mpegState = ST_GOTA0;
 			else if (byte == 0xa1) mpegState = ST_GOTA1;
+			else if (byte == 0xA3) mpegState = ST_GOTA3;	// volume (front right?)
 			else if (byte == 0xa4) mpegState = ST_GOTA4;
 			else if (byte == 0xa5) mpegState = ST_GOTA5;
+			else if (byte == 0xA7) mpegState = ST_GOTA7;	// volume (rear right?)
 
 			else if (byte == 0xb0) mpegState = ST_GOTB0;
 			else if (byte == 0xb1) mpegState = ST_GOTB1;
+			else if (byte == 0xB2) mpegState = ST_GOTB2;	// volume (front left?)
 			else if (byte == 0xb4) mpegState = ST_GOTB4;
 			else if (byte == 0xb5) mpegState = ST_GOTB5;
+			else if (byte == 0xB6) mpegState = ST_GOTB6;	// volume (rear left?)
 
 			break;
 
@@ -614,16 +741,13 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 //			mixer_set_stereo_pan(0, MIXER_PAN_RIGHT, MIXER_PAN_LEFT);
 			mpegState = ST_IDLE;
 			break;
-		case ST_GOTA0:
+//		case ST_GOTA0:
 			// ch 0 mono
 //			mixer_set_stereo_volume(0, 0, 255);
 //			printf("ch 0 mono\n");
 //			mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
 			mpegState = ST_IDLE;
-			break;
-		case ST_GOTA1:
-			mpegState = ST_IDLE;
-			break;
+//			break;
 		case ST_GOTA4:	// dayto2pe plays advertise tune from this state by writing 0x75
 			mpegState = ST_IDLE;
 			if (byte == 0x75)
@@ -634,9 +758,6 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			}
 			break;
 		case ST_GOTA5:
-			mpegState = ST_IDLE;
-			break;
-		case ST_GOTB0:
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB1:
@@ -650,6 +771,35 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB5:
+			mpegState = ST_IDLE;
+			break;
+		
+		/*
+		 * Speaker Volume:
+		 *
+		 * Daytona 2 uses B6, A7 for rear speakers; B2, A3 for front speakers.
+		 *
+		 * Star Wars Trilogy uses B0, A1 but B4, A4, B1, A1, B5, and A5 may be
+		 * volume/speaker related.
+		 *
+		 * Sega Rally 2 uses B0, A0 and B4, A4 when setting all four but B0, A1
+		 * when only setting two (in-game)
+		 */
+		case ST_GOTB6:	// rear left(?) volume
+		case ST_GOTB0:	// left volume
+			volume[0] = byte;
+			printf("Set L Volume: %02X\n", byte);
+			mpegState = ST_IDLE;
+			break;
+		case ST_GOTA7:	// rear right(?) volume
+		case ST_GOTA1:	// right volume
+		case ST_GOTA0:
+			volume[1] = byte;
+			printf("Set R Volume: %02X\n", byte);
+			mpegState = ST_IDLE;
+			break;
+		case ST_GOTB2:
+		case ST_GOTA3:
 			mpegState = ST_IDLE;
 			break;
 		default:
@@ -812,7 +962,7 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	// Decode MPEG for this frame
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
-	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 44100/60, 32000/60+2, 44100, 32000);
+	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
 
 #endif
 }
@@ -830,12 +980,22 @@ void CDSB2::Reset(void)
 	mpegStart = 0;
 	mpegEnd = 0;
 	playing = 0;
+	volume[0] = 0xFF;	// set to max volume in case we miss the volume commands
+	volume[1] = 0xFF;
 	
 	M68KSetContext(&M68K);
 	M68KReset();
 	M68KGetContext(&M68K);
 	
 	DebugLog("DSB2 Reset\n");
+}
+
+void CDSB2::SaveState(CBlockFile *StateFile)
+{
+}
+
+void CDSB2::LoadState(CBlockFile *StateFile)
+{
 }
 
 // Offsets of memory regions within DSB2's pool

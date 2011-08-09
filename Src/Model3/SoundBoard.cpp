@@ -65,8 +65,22 @@ static FILE		*soundFP;
 
 
 /******************************************************************************
- 68K Access Handlers
+ 68K Address Space Handlers
 ******************************************************************************/
+
+void CSoundBoard::UpdateROMBanks(void)
+{
+	if ((ctrlReg&0x10))
+	{
+		sampleBankLo = &sampleROM[0xA00000];
+		sampleBankHi = &sampleROM[0xE00000];
+	}
+	else
+	{
+		sampleBankLo = &sampleROM[0x200000];
+		sampleBankHi = &sampleROM[0x600000];
+	}
+}
 
 UINT8 CSoundBoard::Read8(UINT32 a)
 { 
@@ -228,16 +242,8 @@ void CSoundBoard::Write8(unsigned int a,unsigned char d)
 	default:
 		if (a == 0x400001)
 		{
-			if ((d&0x10))
-			{
-				sampleBankLo = &sampleROM[0xA00000];
-				sampleBankHi = &sampleROM[0xE00000];
-			}
-			else
-			{
-				sampleBankLo = &sampleROM[0x200000];
-				sampleBankHi = &sampleROM[0x600000];
-			}
+			ctrlReg = d;
+			UpdateROMBanks();
 		}
 		else
 			printf("68K: Unknown write8 %06X=%02X\n", a, d);
@@ -359,6 +365,7 @@ void CSoundBoard::RunFrame(void)
 	M68KSetContext(&M68K);
 	SCSP_Update();
 	M68KGetContext(&M68K);
+	//memset(audioL, 0, 44100/60*sizeof(INT16));memset(audioR, 0, 44100/60*sizeof(INT16));	// clear, I want DSB only
 	
 	// Run DSB and mix with existing audio
 	if (NULL != DSB)
@@ -384,14 +391,51 @@ void CSoundBoard::RunFrame(void)
 void CSoundBoard::Reset(void)
 {
 	memcpy(ram1, soundROM, 16);				// copy 68K vector table
-	sampleBankLo = &sampleROM[0x200000];	// default banks
-	sampleBankHi = &sampleROM[0x600000];
+	ctrlReg = 0;							// set default banks
+	UpdateROMBanks();
 	M68KSetContext(&M68K);
 	M68KReset();
 	M68KGetContext(&M68K);
 	if (NULL != DSB)
 		DSB->Reset();
 	DebugLog("Sound Board Reset\n");
+}
+
+void CSoundBoard::SaveState(CBlockFile *SaveState)
+{
+	SaveState->NewBlock("Sound Board", __FILE__);
+	SaveState->Write(ram1, 0x100000);
+	SaveState->Write(ram2, 0x100000);
+	SaveState->Write(&ctrlReg, sizeof(ctrlReg));
+	
+	// All other devices...
+	M68KSetContext(&M68K);
+	M68KSaveState(SaveState, "Sound Board 68K");
+	SCSP_SaveState(SaveState);
+	if (NULL != DSB)
+		DSB->SaveState(SaveState);
+}
+
+void CSoundBoard::LoadState(CBlockFile *SaveState)
+{
+	if (OKAY != SaveState->FindBlock("Sound Board"))
+	{
+		ErrorLog("Unable to load sound board state. Save state file is corrupted.");
+		return;
+	}
+	
+	SaveState->Read(ram1, 0x100000);
+	SaveState->Read(ram2, 0x100000);
+	SaveState->Read(&ctrlReg, sizeof(ctrlReg));
+	UpdateROMBanks();
+	
+	// All other devices
+	M68KSetContext(&M68K);	// so we don't lose callback pointers when copying context back
+	M68KLoadState(SaveState, "Sound Board 68K");
+	M68KGetContext(&M68K);
+	SCSP_LoadState(SaveState);
+	if (NULL != DSB)
+		DSB->LoadState(SaveState);
 }
 
 
@@ -419,9 +463,9 @@ BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	// Receive sound ROMs
 	soundROM = soundROMPtr;
 	sampleROM = sampleROMPtr;
-	sampleBankLo = &sampleROM[0x200000];
-	sampleBankHi = &sampleROM[0x600000];
-	
+	ctrlReg = 0;
+	UpdateROMBanks();
+
 	// Allocate all memory for RAM
 	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
 	if (NULL == memoryPool)

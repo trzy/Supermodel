@@ -63,7 +63,7 @@
 class CDSBResampler
 {
 public:
-	int		UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *inR, int sizeOut, int sizeIn, int outRate, int inRate);
+	int		UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *inR, UINT8 volumeL, UINT8 volumeR, int sizeOut, int sizeIn, int outRate, int inRate);
 	void	Reset(void);
 private:
 	int	nFrac;
@@ -111,6 +111,26 @@ public:
 	virtual void Reset(void) = 0;
 	
 	/*
+	 * SaveState(SaveState):
+	 *
+	 * Saves an image of the current device state.
+	 *
+	 * Parameters:
+	 *		SaveState	Block file to save state information to.
+	 */
+	virtual void SaveState(CBlockFile *SaveState) = 0;
+
+	/*
+	 * LoadState(SaveState):
+	 *
+	 * Loads and a state image.
+	 *
+	 * Parameters:
+	 *		SaveState	Block file to load state information from.
+	 */
+	virtual void LoadState(CBlockFile *SaveState) = 0;
+	
+	/*
 	 * Init(progROMPtr, mpegROMPtr):
 	 *
 	 * Initializes the DSB board. This member must be called first.
@@ -152,6 +172,8 @@ public:
 	void 	SendCommand(UINT8 data);
 	void 	RunFrame(INT16 *audioL, INT16 *audioR);
 	void 	Reset(void);
+	void	SaveState(CBlockFile *StateFile);
+	void	LoadState(CBlockFile *StateFile);
 	BOOL 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 	
 	// Constructor and destructor
@@ -184,12 +206,18 @@ private:
 	int		loopStart;
 	int		loopEnd;
 	
+	// Settings of currently playing stream (may not match the playback register variables above)
+	UINT32	usingLoopStart;	// what was last set by MPEG_SetLoop() or MPEG_PlayMemory()
+	UINT32	usingLoopEnd;
+	UINT32	usingMPEGStart;	// what was last set by MPEG_PlayMemory()
+	UINT32	usingMPEGEnd;
+	
 	// Registers
 	UINT32	startLatch;	// MPEG start address latch
 	UINT32	endLatch;	// MPEG end address latch
 	UINT8	status;
 	UINT8	cmdLatch;
-	UINT8	volume;
+	UINT8	volume;		// 0x00-0x7F
 	UINT8	stereo;
 	
 	// Z80 CPU
@@ -216,6 +244,8 @@ public:
 	void 	SendCommand(UINT8 data);
 	void 	RunFrame(INT16 *audioL, INT16 *audioR);
 	void 	Reset(void);
+	void	SaveState(CBlockFile *StateFile);
+	void	LoadState(CBlockFile *StateFile);
 	BOOL 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 
 	// Constructor and destructor
@@ -245,9 +275,10 @@ private:
 	int		fifoIdxW;		// write position
 	
 	// Registers
-	int cmdLatch;
-	int mpegState;
-	int mpegStart, mpegEnd, playing;
+	int 	cmdLatch;
+	int 	mpegState;
+	int 	mpegStart, mpegEnd, playing;
+	UINT8	volume[2];		// left, right volume (0x00-0xFF)
 	
 	// M68K CPU
 	M68KCtx	M68K;

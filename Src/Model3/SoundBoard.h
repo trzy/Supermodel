@@ -85,6 +85,26 @@ public:
 	void WriteMIDIPort(UINT8 data);
 	
 	/*
+	 * SaveState(SaveState):
+	 *
+	 * Saves an image of the current device state.
+	 *
+	 * Parameters:
+	 *		SaveState	Block file to save state information to.
+	 */
+	void SaveState(CBlockFile *SaveState);
+
+	/*
+	 * LoadState(SaveState):
+	 *
+	 * Loads and a state image.
+	 *
+	 * Parameters:
+	 *		SaveState	Block file to load state information from.
+	 */
+	void LoadState(CBlockFile *SaveState);
+
+	/*
 	 * RunFrame(void):
 	 *
 	 * Runs the sound board for one frame, updating sound in the process.
@@ -135,6 +155,9 @@ public:
 	~CSoundBoard(void);
 	
 private:
+	// Private helper functions
+	void		UpdateROMBanks(void);
+	
 	// Digital Sound Board
 	CDSB		*DSB;
 	
@@ -148,6 +171,9 @@ private:
 	const UINT8	*sampleBankHi;
 	UINT8		*memoryPool;	// single allocated region for all sound board RAM
 	UINT8		*ram1, *ram2;	// SCSP1 and SCSP2 RAM
+	
+	// Registers
+	UINT8	ctrlReg;			// control register: ROM banking
 	
 	// Audio
 	INT16	*audioL, *audioR;	// left and right audio channels (1/60th second, 44.1 KHz)

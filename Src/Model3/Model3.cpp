@@ -1,6 +1,3 @@
-//TODO: Update save state file format (must output) MIDI control port; will no longer be compatible with 0.1a save states
-//TODO: Star Wars expects bit 0x80 to be set when reading from MIDI control port. This should be made explicit! Lostwsga may behave similarly
-
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -812,7 +809,8 @@ UINT8 CModel3::Read8(UINT32 addr)
 		
 		// Sound Board
 		case 0x08:
-			printf("PPC: Read8 %08X\n", addr);
+			if ((addr&0xF) == 4)	// MIDI control port
+				return 0xFF;		// one of these bits (0x80?) indicates "ready"
 			break;
 
 		// System registers
@@ -889,7 +887,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 			
 		// Sound Board
 		case 0x08:
-			printf("PPC: Read16 %08X\n", addr);
+			//printf("PPC: Read16 %08X\n", addr);
 			break;
 
 		// MPC105
@@ -981,7 +979,7 @@ UINT32 CModel3::Read32(UINT32 addr)
 		
 		// Sound Board
 		case 0x08:
-			printf("PPC: Read32 %08X\n", addr);
+			//printf("PPC: Read32 %08X\n", addr);
 			break;
 
 		// Backup RAM
@@ -1126,7 +1124,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 			
 		// Sound Board
 		case 0x08:
-			printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
+			//printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
 			if ((addr&0xF) == 0)		// MIDI data port
 				SoundBoard.WriteMIDIPort(data);
 			else if ((addr&0xF) == 4)	// MIDI control port
@@ -1207,7 +1205,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 		{
 		// Sound Board
 		case 0x08:
-			printf("PPC: %08X=%04X\n", addr, data);
+			//printf("%08X=%04X\n", addr, data);
 			break;
 			
 		// Backup RAM
@@ -1245,9 +1243,6 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
 void CModel3::Write32(UINT32 addr, UINT32 data)
 {
-	//if (addr==0x100060 || addr==0x100180)
-	//	printf("  %08X=%08X\n", addr, data);
-	
 	if ((addr&3))
 	{
 		Write16(addr+0,data>>16);
@@ -1316,7 +1311,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
 		// Sound Board
 		case 0x08:
-			printf("PPC: %08X=%08X\n", addr, data);
+			//printf("PPC: %08X=%08X\n", addr, data);
 			break;
 			
 		// Backup RAM
@@ -1470,6 +1465,11 @@ UINT8 CModel3::Read8(UINT32 addr)
 		return GPU.ReadDMARegister8(addr&0xFF);
 	else if (((addr>=0xF0040000) && (addr<0xF0040040)) || ((addr>=0xFE040000) && (addr<0xFE040040)))
 		return ReadInputs(addr&0x3F);
+	else if (((addr>=0xF0080000) && (addr<=0xF0080007)) || ((addr>=0xFE080000) && (addr<=0xFE080007)))
+	{
+		if ((addr&0xF) == 4)	// MIDI control port
+			return 0xFF;
+	}
 	else if (((addr>=0xF00C0000) && (addr<0xF00DFFFF)) || ((addr>=0xFE0C0000) && (addr<0xFE0DFFFF)))
 		return backupRAM[(addr&0x1FFFF)^3];
 	else if (((addr>=0xF0100000) && (addr<0xF0100040)) || ((addr>=0xFE100000) && (addr<0xFE100040)))
@@ -1791,6 +1791,7 @@ void CModel3::SaveState(CBlockFile *SaveState)
 	SaveState->Write(ram, 0x800000);
 	SaveState->Write(backupRAM, 0x20000);
 	SaveState->Write(securityRAM, 0x20000);
+	SaveState->Write(&midiCtrlPort, sizeof(midiCtrlPort));
 	
 	// All devices...
 	ppc_save_state(SaveState);
@@ -1800,6 +1801,7 @@ void CModel3::SaveState(CBlockFile *SaveState)
 	EEPROM.SaveState(SaveState);
 	TileGen.SaveState(SaveState);
 	GPU.SaveState(SaveState);
+	SoundBoard.SaveState(SaveState);	// also saves DSB state
 }
 
 void CModel3::LoadState(CBlockFile *SaveState)
@@ -1822,6 +1824,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
 	SaveState->Read(ram, 0x800000);
 	SaveState->Read(backupRAM, 0x20000);
 	SaveState->Read(securityRAM, 0x20000);
+	SaveState->Read(&midiCtrlPort, sizeof(midiCtrlPort));
 	
 	// All devices...
 	GPU.LoadState(SaveState);
@@ -1831,6 +1834,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
 	PCIBridge.LoadState(SaveState);
 	IRQ.LoadState(SaveState);
 	ppc_load_state(SaveState);
+	SoundBoard.LoadState(SaveState);
 }
 
 void CModel3::SaveNVRAM(CBlockFile *NVRAM)
@@ -2375,7 +2379,7 @@ void CModel3::Patch(void)
   	{
   		*(UINT32 *) &crom[0xF6DD0] = 0x60000000;	// from MAME
   		
-  		//*(UINT32 *) &crom[0xF1128] = 0x60000000;
+  		//*(UINT32 *) &crom[0xF1128] = 0x60000000;	// these bypass required delay loops and break game timing
   		//*(UINT32 *) &crom[0xF10E0] = 0x60000000;
   	}
   	else if (!strcmp(Game->id, "eca") || !strcmp(Game->id, "ecax"))
@@ -2707,15 +2711,15 @@ CModel3::CModel3(void)
 
 CModel3::~CModel3(void)
 {
-	// Dump some files first
-//#if 0
+	// Debug: dump some files
+#if 0
 	Dump("ram", ram, 0x800000, TRUE, FALSE);
 	//Dump("vrom", vrom, 0x4000000, TRUE, FALSE);
 	Dump("crom", crom, 0x800000, TRUE, FALSE);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, TRUE, FALSE);
 	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
 	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
-//#endif
+#endif
 	
 	// Stop all threads
 	StopThreads();
