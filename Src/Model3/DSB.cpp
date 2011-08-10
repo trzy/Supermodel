@@ -1,3 +1,4 @@
+//TODO: DSB2 save states not working!
 //TODO: amp can print error messages -- change them to Supermodel error messages
 /**
  ** Supermodel
@@ -1029,6 +1030,7 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 	StateFile->Write(volume, sizeof(volume));
 	
 	// 68K CPU state
+	M68KSetContext(&M68K);
 	M68KSaveState(StateFile, "DSB2 68K");
 }
 
@@ -1061,7 +1063,9 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	StateFile->Read(&playing, sizeof(playing));
 	StateFile->Read(volume, sizeof(volume));
 	
+	M68KSetContext(&M68K);
 	M68KLoadState(StateFile, "DSB2 68K");
+	M68KGetContext(&M68K);
 	
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)

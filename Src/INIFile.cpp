@@ -26,14 +26,11 @@
  *
  * To-Do List
  * ----------
- * - Fix file writing. Null sections are not printed but it is currently
- *   possible to create a new INI, create a non-null section as the first one,
- *   and then create a null section. When the file is written, the null section
- *   header will not be output and all of its settings will be interpreted as
- *   a continuation of the previous section, which is incorrect. Can easily be
- *	 fixed by always initializing with a null section.
+ * - Allow default section name to be set at any time. To support this, must
+ *   allow for multiple sections with the same name to co-exist. The search
+ *   procedure must look through all sections rather than stopping at the
+ *   first section match. This is easy enough to add.
  * - Add boolean on/off, true/false keywords.
- * - Allow a "default" section to be specified (other than "").
  * - Note that linePtr does not necessarily correspond to actual lines in the
  *   file (newlines should be counted by the tokenizer for that).
  *
@@ -57,10 +54,11 @@
  * INI file is written out, the current INI file on the disk is cleared. If an
  * error occurs during this process, the data will be lost.
  *
- * Blank sections (sections for which no settings are defined) are not stored
- * in the parse tree. Sections are added only when a setting is found in that 
- * section. A default section name can be specified (for settings that are not
- * associated with any section), otherwise an empty string ("") is used.
+ * Sections are added only when a setting is found in that section. Empty
+ * sections are not added to the tree with the exception of the default ("")
+ * section. A default section name can be specified, which creates an alias
+ * for the default section. The alias will be output when the file is
+ * written (there will be no settings without an explicit section).
  */
  
 #include "Supermodel.h"
@@ -91,23 +89,31 @@ BOOL CINIFile::Write(const char *comment)
 	// Iterate through all sections sequentially
 	for (unsigned i = 0; i < Sections.size(); i++)
 	{
-		// Output section name
-		if (Sections[i].Name != "")	// if null name, don't output section at all
-			File << "[ " << Sections[i].Name << " ]" << endl << endl;
-		
-		// Iterate through all settings within this section
-		for (unsigned j = 0; j < Sections[i].Settings.size(); j++)
+		if (Sections[i].Settings.size() != 0)
 		{
-			// Output setting
-			File << Sections[i].Settings[j].Name << " = ";
-			if (Sections[i].Settings[j].isNumber)
-				File << Sections[i].Settings[j].value << endl;
-			else
-				File << '\"' << Sections[i].Settings[j].String << '\"' << endl;
-		}
+			// Output section name
+			if (Sections[i].Name != "")
+				File << "[ " << Sections[i].Name << " ]" << endl << endl;
+			else	// if null name, use default section name (if exists) or nothing at all
+			{
+				if (DefaultSectionName != "")
+					File << "[ " << DefaultSectionName << " ]" << endl << endl;
+			}
 		
-		// New line
-		File << endl;
+			// Iterate through all settings within this section
+			for (unsigned j = 0; j < Sections[i].Settings.size(); j++)
+			{
+				// Output setting
+				File << Sections[i].Settings[j].Name << " = ";
+				if (Sections[i].Settings[j].isNumber)
+					File << Sections[i].Settings[j].value << endl;
+				else
+					File << '\"' << Sections[i].Settings[j].String << '\"' << endl;
+			}
+		
+			// New line
+			File << endl;
+		}
 	}
 	
 	writeSuccess = File.good()?OKAY:FAIL;
@@ -128,12 +134,32 @@ BOOL CINIFile::Write(const char *comment)
 BOOL CINIFile::Open(const char *fileNameStr)
 {
 	FileName = fileNameStr;
+
+	// Try to open for reading AND writing
+	File.open(fileNameStr, fstream::in|fstream::out);
+	if (File.fail())
+		return FAIL;
+		
+	InitParseTree();
+	return OKAY;
+}
+
+BOOL CINIFile::OpenAndCreate(const char *fileNameStr)
+{
+	FileName = fileNameStr;
+
+	// Try to open for reading and writing
 	File.open(fileNameStr, fstream::in|fstream::out);
 	if (File.fail())
 	{
-		//printf("unable to open %s\n", fileNameStr);
-		return FAIL;
+		// File does not exist, try opening as write only (create it)
+		File.clear();
+		File.open(fileNameStr, fstream::out);
+		if (File.fail())
+			return FAIL;
 	}
+	
+	InitParseTree();
 	return OKAY;
 }
 
@@ -148,12 +174,14 @@ void CINIFile::Close(void)
  Management of Settings
 ******************************************************************************/
 
-// Finds index of section in the section list. Returns FAIL if not found.
+// Finds index of first matching section in the section list. Returns FAIL if not found.
 BOOL CINIFile::LookUpSection(unsigned *idx, string SectionName)
 {
 	for (unsigned i = 0; i < Sections.size(); i++)
 	{
-		if (Sections[i].Name == SectionName)
+		if ((Sections[i].Name == SectionName) ||
+			((Sections[i].Name == "") && (SectionName == DefaultSectionName)) ||	// if default section, also accept its alias
+			((Sections[i].Name == DefaultSectionName) && (SectionName == "")))		// ...
 		{
 			*idx = i;
 			return OKAY;
@@ -161,27 +189,14 @@ BOOL CINIFile::LookUpSection(unsigned *idx, string SectionName)
 	}
 	return FAIL;
 }
-
-// Finds index of the setting in the given section. Returns FAIL if not found.
-BOOL CINIFile::LookUpSetting(unsigned *idx, unsigned sectionIdx, string SettingName)
-{
-	for (unsigned i = 0; i < Sections[sectionIdx].Settings.size(); i++)
-	{
-		if (Sections[sectionIdx].Settings[i].Name == SettingName)
-		{
-			*idx = i;
-			return OKAY;
-		}
-	}
-	return FAIL;
-}
-
 
 // Assigns a value to the given setting, creating the setting if it does not exist. Nulls out the string (sets it to "").
 void CINIFile::Set(string SectionName, string SettingName, int value)
 {
-	unsigned	sectionIdx, settingIdx;
+	struct Setting	NewSetting;
+	unsigned		sectionIdx, settingIdx;
 	
+	// Check if the section exists anywhere in parse tree. If not, create it
 	if (OKAY != LookUpSection(&sectionIdx, SectionName))
 	{
 		//printf("unable to find %s:%s, creating section\n", SectionName.c_str(), SettingName.c_str());
@@ -192,17 +207,33 @@ void CINIFile::Set(string SectionName, string SettingName, int value)
 		sectionIdx = Sections.size()-1;	// the new section will be at the last index
 	}
 	
-	if (OKAY != LookUpSetting(&settingIdx, sectionIdx, SettingName))
+	// Search through all sections with the requested name for the first occurance of the desired setting
+	for (unsigned i = 0; i < Sections.size(); i++)
 	{
-		//printf("unable to find %s:%s, creating setting\n", SectionName.c_str(), SettingName.c_str());
-		struct Setting	NewSetting;
-		
-		NewSetting.Name = SettingName;
-		Sections[sectionIdx].Settings.push_back(NewSetting);
-		settingIdx = Sections[sectionIdx].Settings.size()-1;
+		if ((Sections[i].Name == SectionName) ||
+			((Sections[i].Name == "") && (SectionName == DefaultSectionName)) ||	// accept alias for default section
+			((Sections[i].Name == DefaultSectionName) && (SectionName == "")))		// ...
+		{
+			for (unsigned j = 0; j < Sections[i].Settings.size(); j++)
+			{
+				if (Sections[i].Settings[j].Name == SettingName)
+				{
+					// Found it! Update value of this setting
+					sectionIdx = i;
+					settingIdx = j;
+					goto UpdateIntValue;
+				}
+			}
+		}
 	}
 	
-	// Update value of this setting
+	// Couldn't find setting, create it in the first matching section found earlier	
+	NewSetting.Name = SettingName;
+	Sections[sectionIdx].Settings.push_back(NewSetting);
+	settingIdx = Sections[sectionIdx].Settings.size()-1;
+
+	// Update the setting!	
+UpdateIntValue:
 	Sections[sectionIdx].Settings[settingIdx].isNumber = TRUE;
 	Sections[sectionIdx].Settings[settingIdx].value = value;	
 	Sections[sectionIdx].Settings[settingIdx].String = "";
@@ -211,8 +242,10 @@ void CINIFile::Set(string SectionName, string SettingName, int value)
 // Assigns the string to the given setting, creating the setting if it does not exist. Zeros out the value.
 void CINIFile::Set(string SectionName, string SettingName, string String)
 {
-	unsigned	sectionIdx, settingIdx;
+	struct Setting	NewSetting;
+	unsigned		sectionIdx, settingIdx;
 	
+	// Check if the section exists anywhere in parse tree. If not, create it
 	if (OKAY != LookUpSection(&sectionIdx, SectionName))
 	{
 		//printf("unable to find %s:%s, creating section\n", SectionName.c_str(), SettingName.c_str());
@@ -223,17 +256,33 @@ void CINIFile::Set(string SectionName, string SettingName, string String)
 		sectionIdx = Sections.size()-1;	// the new section will be at the last index
 	}
 	
-	if (OKAY != LookUpSetting(&settingIdx, sectionIdx, SettingName))
+	// Search through all sections with the requested name for the first occurance of the desired setting
+	for (unsigned i = 0; i < Sections.size(); i++)
 	{
-		//printf("unable to find %s:%s, creating setting\n", SectionName.c_str(), SettingName.c_str());
-		struct Setting	NewSetting;
-		
-		NewSetting.Name = SettingName;
-		Sections[sectionIdx].Settings.push_back(NewSetting);
-		settingIdx = Sections[sectionIdx].Settings.size()-1;
+		if ((Sections[i].Name == SectionName) ||
+			((Sections[i].Name == "") && (SectionName == DefaultSectionName)) ||	// accept alias for default section
+			((Sections[i].Name == DefaultSectionName) && (SectionName == "")))		// ...
+		{
+			for (unsigned j = 0; j < Sections[i].Settings.size(); j++)
+			{
+				if (Sections[i].Settings[j].Name == SettingName)
+				{
+					// Found it! Update value of this setting
+					sectionIdx = i;
+					settingIdx = j;
+					goto UpdateString;
+				}
+			}
+		}
 	}
 	
-	// Update string
+	// Couldn't find setting, create it in the first matching section found earlier
+	NewSetting.Name = SettingName;
+	Sections[sectionIdx].Settings.push_back(NewSetting);
+	settingIdx = Sections[sectionIdx].Settings.size()-1;
+
+	// Update the setting!	
+UpdateString:
 	Sections[sectionIdx].Settings[settingIdx].isNumber = FALSE;
 	Sections[sectionIdx].Settings[settingIdx].String = String;
 	Sections[sectionIdx].Settings[settingIdx].value = 0;
@@ -242,16 +291,24 @@ void CINIFile::Set(string SectionName, string SettingName, string String)
 // Obtains a numerical setting, if it exists, otherwise does nothing.
 BOOL CINIFile::Get(string SectionName, string SettingName, int& value)
 {
-	unsigned	sectionIdx, settingIdx;
-	
-	if (OKAY != LookUpSection(&sectionIdx, SectionName))
-		return FAIL;
-	if (OKAY != LookUpSetting(&settingIdx, sectionIdx, SettingName))
-		return FAIL;
-	
-	value = Sections[sectionIdx].Settings[settingIdx].value;
-	
-	return OKAY;
+	for (unsigned i = 0; i < Sections.size(); i++)
+	{
+		if ((Sections[i].Name == SectionName) ||
+			((Sections[i].Name == "") && (SectionName == DefaultSectionName)) ||	// accept alias for default section
+			((Sections[i].Name == DefaultSectionName) && (SectionName == "")))		// ...
+		{
+			for (unsigned j = 0; j < Sections[i].Settings.size(); j++)
+			{
+				if (Sections[i].Settings[j].Name == SettingName)
+				{
+					value = Sections[i].Settings[j].value;
+					return OKAY;
+				}
+			}
+		}
+	}
+
+	return FAIL;
 }
 
 BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
@@ -268,16 +325,29 @@ BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
 // Obtains a string setting, if it exists, otherwise does nothing.
 BOOL CINIFile::Get(string SectionName, string SettingName, string& String)
 {
-	unsigned	sectionIdx, settingIdx;
-	
-	if (OKAY != LookUpSection(&sectionIdx, SectionName))
-		return FAIL;
-	if (OKAY != LookUpSetting(&settingIdx, sectionIdx, SettingName))
-		return FAIL;
-	
-	String = Sections[sectionIdx].Settings[settingIdx].String;
-	
-	return OKAY;
+	for (unsigned i = 0; i < Sections.size(); i++)
+	{
+		if ((Sections[i].Name == SectionName) ||
+			((Sections[i].Name == "") && (SectionName == DefaultSectionName)) ||	// accept alias for default section
+			((Sections[i].Name == DefaultSectionName) && (SectionName == "")))		// ...
+		{
+			for (unsigned j = 0; j < Sections[i].Settings.size(); j++)
+			{
+				if (Sections[i].Settings[j].Name == SettingName)
+				{
+					String = Sections[i].Settings[j].String;
+					return OKAY;
+				}
+			}
+		}
+	}
+
+	return FAIL;
+}
+
+void CINIFile::SetDefaultSectionName(string SectionName)
+{
+	DefaultSectionName = SectionName;
 }
 
 
@@ -515,13 +585,27 @@ CINIFile::CToken CINIFile::GetToken(void)
  Parser
 ******************************************************************************/
 
+/*
+ * Parse tree is initialized with a blank section in case the user adds 
+ * settings with defined sections before adding settings without an explicit
+ * section. If this is not done, settings without a section will be wrongly
+ * output as part of the previous section in the parse tree.
+ */
+void CINIFile::InitParseTree(void)
+{
+	struct Section	FirstSection;
+		
+	FirstSection.Name = "";
+	Sections.clear();
+	Sections.push_back(FirstSection);
+}
+
 BOOL CINIFile::Parse(void)
 {
 	CToken	T, U, V, W;
 	string	currentSection;	// current section we're processing
 	BOOL	parseStatus = OKAY;
 	
-	//currentSection = defaultSection;	// default "global" section
 	lineNum = 0;
 	
 	if (!File.is_open())

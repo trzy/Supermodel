@@ -34,6 +34,8 @@
 #include <vector>
 using namespace std;
 
+#include "Types.h"
+
 /*
  * CINIFile:
  *
@@ -91,7 +93,7 @@ public:
 	 *
 	 * Outputs the parse tree to the INI file. The current contents of the file
 	 * on the disk are discarded and overwritten. This means that comments are
-	 * lost.
+	 * lost. The file is also put into write mode and cannot be re-parsed.
 	 *
 	 * Parameters:
 	 *		comment		An optional C-string containing a comment to insert at
@@ -117,14 +119,39 @@ public:
 	 * already present in the parse tree will continue to exist and will be
 	 * overwritten if new, matching settings are found in the file.
 	 *
+	 * This should be done once and at the beginning.
+	 *
 	 * Returns:
+	 *		OKAY if successful, FAIL if there was a file or parse error.
 	 */
 	BOOL	Parse(void);
 	
 	/*
+	 * SetDefaultSectionName(SectionName):
+	 *
+	 * Sets the default section name. Any settings not associated with a
+	 * particular section (ie. those assigned to a blank section, "") will be
+	 * output under this section when Write() is called. 
+	 *
+	 * This should be called before parsing and before adding any settings.
+	 * If the same setting is added to the default section, "", and a section
+	 * named "Global", and afterwards "Global" is set as the default name,
+	 * the setting originally in the default section will be the one that is
+	 * subsequently accessible (the Get()/Set() methods look for the first
+	 * match). However, when the file is written out, the second setting
+	 * will be written out as well using the same section name and, thus,
+	 * when the INI file is re-parsed, its value will be used instead.
+	 *
+	 * Parameters:
+	 *		SectionName		String defining the section name.
+	 */
+	void	SetDefaultSectionName(string SectionName);
+	
+	/*
 	 * Open(fileNameStr):
 	 *
-	 * Opens an INI file.
+	 * Opens an INI file. The file must already exist. A new one will not be
+	 * created. Do not open another file before closing the current one!
 	 *
 	 * Parameters:
 	 *		fileNameStr		File path (C string).
@@ -133,6 +160,20 @@ public:
 	 *		OKAY if successful, FAIL if unable to open for reading and writing.
 	 */
 	BOOL	Open(const char *fileNameStr);
+	
+	/*
+	 * OpenAndCreate(fileNameStr):
+	 *
+	 * Opens an INI file and, if it does not exist, creates a new one. Do not
+	 * open another file before closing the current one!
+	 *
+	 * Parameters:
+	 *		fileNameStr		File path (C string).
+	 *
+	 * Returns:
+	 *		OKAY if successful, FAIL if unable to open file.
+	 */
+	BOOL	OpenAndCreate(const char *fileNameStr);
 	
 	/*
 	 * Close(void):
@@ -154,9 +195,9 @@ private:
 		CToken(void);
 	};
 
-	// Searching/modification of settings
+	// Parse tree 
 	BOOL	LookUpSection(unsigned *idx, string SectionName);
-	BOOL 	LookUpSetting(unsigned *idx, unsigned sectionIdx, string SettingName);
+	void	InitParseTree(void);
 	
 	// Tokenizer
 	CToken	GetString(void);
@@ -167,6 +208,9 @@ private:
 	// File state
 	fstream		File;
 	string		FileName;		// name of last file opened
+	
+	// Default section name (name to use for the blank section)
+	string		DefaultSectionName;
 	
 	// Parser state
 	char		lineBuf[2048];	// holds current line
