@@ -25,6 +25,15 @@
 # GNU Makefile for SDL port using GCC on Mac OS X.
 #
 
+###############################################################################
+# Build Options
+###############################################################################
+
+#
+# Include console-based debugger in emulator ('yes' or 'no')
+#
+ENABLE_DEBUGGER = no
+
 
 ###############################################################################
 # Required Libraries
@@ -54,10 +63,19 @@ OBJ_DIR = obj
 CC = gcc
 OCC = gcc
 LD = gcc
-COMPILER_FLAGS = -ISrc/ -ISrc/OSD/SDL/ -ISrc/Pkgs/ -c -Wall -O3 -DUSE_FILE32API -DSUPERMODEL_OSX
+COMPILER_FLAGS = -I$(OBJ_DIR) -ISrc/ -ISrc/OSD -ISrc/OSD/SDL/ -ISrc/Pkgs/ -ISrc/CPU/68K/Musashi -ISrc/Sound/MPEG -DSUPERMODEL_SOUND -c -Wall -O3 -DUSE_FILE32API -DSUPERMODEL_OSX
 CFLAGS = $(COMPILER_FLAGS)
 CPPFLAGS = $(COMPILER_FLAGS)
 LFLAGS = -o $(OUTFILE) $(SDL_LDFLAGS) -lz -lm -lstdc++
+
+#
+# Build options...
+#
+
+# Add compiler flags for various options
+ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+	COMPILER_FLAGS += -DSUPERMODEL_DEBUGGER
+endif
 
 
 ###############################################################################
@@ -69,7 +87,26 @@ LFLAGS = -o $(OUTFILE) $(SDL_LDFLAGS) -lz -lm -lstdc++
 #
 
 HEADERS = Src/Supermodel.h Src/Games.h Src/OSD/SDL/Types.h
-OBJ = $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o $(OBJ_DIR)/ROMLoad.o $(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o $(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Render3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o $(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/IRQ.o $(OBJ_DIR)/53C810.o $(OBJ_DIR)/PCI.o $(OBJ_DIR)/RTC72421.o $(OBJ_DIR)/MPC10x.o $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/SDLMain_tmpl.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Inputs.o $(OBJ_DIR)/InputSource.o $(OBJ_DIR)/InputSystem.o $(OBJ_DIR)/InputTypes.o $(OBJ_DIR)/MultiInputSource.o $(OBJ_DIR)/SDLInputSystem.o
+OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
+	$(OBJ_DIR)/ROMLoad.o $(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o \
+	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Render3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
+	$(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/Audio.o $(OBJ_DIR)/Thread.o $(OBJ_DIR)/SoundBoard.o \
+	$(OBJ_DIR)/SCSP.o $(OBJ_DIR)/SCSPDSP.o $(OBJ_DIR)/68K.o $(OBJ_DIR)/m68kcpu.o $(OBJ_DIR)/m68kopnz.o $(OBJ_DIR)/m68kopdm.o \
+	$(OBJ_DIR)/m68kopac.o $(OBJ_DIR)/m68kops.o $(OBJ_DIR)/DSB.o $(OBJ_DIR)/Z80.o \
+	$(OBJ_DIR)/IRQ.o $(OBJ_DIR)/53C810.o $(OBJ_DIR)/PCI.o $(OBJ_DIR)/RTC72421.o \
+	$(OBJ_DIR)/MPC10x.o $(OBJ_DIR)/Input.o $(OBJ_DIR)/Inputs.o $(OBJ_DIR)/InputSource.o $(OBJ_DIR)/InputSystem.o \
+	$(OBJ_DIR)/InputTypes.o $(OBJ_DIR)/MultiInputSource.o $(OBJ_DIR)/SDLInputSystem.o \
+	$(OBJ_DIR)/amp_audio.o $(OBJ_DIR)/amp_dump.o $(OBJ_DIR)/amp_getbits.o $(OBJ_DIR)/amp_getdata.o $(OBJ_DIR)/amp_huffman.o \
+	$(OBJ_DIR)/amp_layer2.o $(OBJ_DIR)/amp_layer3.o $(OBJ_DIR)/amp_misc2.o $(OBJ_DIR)/amp_position.o $(OBJ_DIR)/amp_transform.o \
+	$(OBJ_DIR)/amp_util.o $(OBJ_DIR)/SDLMain_tmpl.o
+
+# If built-in debugger enabled, include all debugging classes
+ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+	OBJ += $(OBJ_DIR)/Debugger.o $(OBJ_DIR)/ConsoleDebugger.o $(OBJ_DIR)/SupermodelDebugger.o $(OBJ_DIR)/CPUDebug.o \
+		$(OBJ_DIR)/AddressTable.o $(OBJ_DIR)/Breakpoint.o $(OBJ_DIR)/CodeAnalyser.o $(OBJ_DIR)/Exception.o \
+		$(OBJ_DIR)/Interrupt.o $(OBJ_DIR)/IO.o $(OBJ_DIR)/Label.o $(OBJ_DIR)/Register.o $(OBJ_DIR)/Watch.o \
+		$(OBJ_DIR)/PPCDebug.o		
+endif
 
 #
 # Rules
@@ -84,6 +121,34 @@ $(OBJ_DIR):
 clean:	
 	rm -f $(OUTFILE)
 	rm -f $(OBJ_DIR)/*.o
+
+#
+# Musashi 68K emulator
+#
+# All generated source files are emitted to the object directory. For MSVC, 
+# INLINE must be redefined as "static __inline", which is the syntax in C mode.
+#
+$(OBJ_DIR)/m68kmake: Src/CPU/68K/Musashi/m68kmake.c
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/m68kmake.o
+	$(LD) -o $(OBJ_DIR)/m68kmake $(ARCH_LIBS) $(OBJ_DIR)/m68kmake.o
+	
+$(OBJ_DIR)/m68kops.h: $(OBJ_DIR)/m68kmake Src/CPU/68K/Musashi/m68k_in.c
+	$(OBJ_DIR)/m68kmake $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
+
+$(OBJ_DIR)/m68kcpu.o: Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/m68kcpu.o
+
+$(OBJ_DIR)/m68kops.o: $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/m68kops.o
+
+$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/m68kopac.o
+
+$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/m68kopdm.o
+
+$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/m68kopnz.o
 
 $(OBJ_DIR)/%.o:	Src/%.cpp Src/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
@@ -103,20 +168,39 @@ $(OBJ_DIR)/%.o:	Src/Graphics/%.cpp Src/Graphics/%.h $(HEADERS)
 $(OBJ_DIR)/%.o:	Src/Graphics/%.cpp $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 	
+$(OBJ_DIR)/%.o:	Src/Debugger/%.cpp Src/Debugger/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/Debugger/CPU/%.cpp Src/Debugger/CPU/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
 $(OBJ_DIR)/%.o:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/CPU/68K/%.cpp Src/CPU/68K/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/CPU/Z80/%.cpp Src/CPU/Z80/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
 $(OBJ_DIR)/%.o: Src/Inputs/%.cpp Src/Inputs/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
-$(OBJ_DIR)/%.o:	Src/OSD/SDL/%.cpp $(HEADERS)
+$(OBJ_DIR)/%.o: Src/Sound/%.cpp Src/Sound/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
+$(OBJ_DIR)/%.o: Src/Sound/MPEG/%.cpp
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/OSD/SDL/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
 $(OBJ_DIR)/%.o: Src/OSD/SDL/%.m $(HEADERS)
 	$(OCC) -x objective-c++ $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 	
 $(OBJ_DIR)/%.o:	Src/Pkgs/%.c Src/Pkgs/%.h
 	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
 
-$(OBJ_DIR)/%.o:	Src/Pkgs/*.c
+$(OBJ_DIR)/%.o:	Src/Pkgs/%.c
 	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
+

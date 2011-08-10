@@ -1,3 +1,4 @@
+#include "Supermodel.h"
 #include "SCSPDSP.h"
 #include <assert.h>
 #include <memory.h>
@@ -366,7 +367,7 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 		//if(Y&0x1000)
 		//	Y|=0xFFFFF000;
 
-		__int64 v=(((__int64) X*(__int64) Y)>>12);
+		INT64 v=(((INT64) X*(INT64) Y)>>12);
 		ACC=(int) v+B;
 
 		if(TWT)

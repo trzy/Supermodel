@@ -1,4 +1,3 @@
-//TODO: MPEG_IsPlaying() -- must be saved to save state file so we don't continue playing when loading a silent state
 //TODO: amp can print error messages -- change them to Supermodel error messages
 /**
  ** Supermodel
@@ -536,7 +535,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 		MPEG_StopPlaying();
 }
 
-// Offsets of memory regions within DSB2's pool
+// Offsets of memory regions within DSB1's pool
 #define DSB1_OFFSET_RAM			0		// 32KB Z80 RAM
 #define DSB1_OFFSET_MPEG_LEFT	0x8000	// 1604 bytes (48 KHz max., 1/60th second, 2 extra = 2*(48000/60+2)) left MPEG buffer
 #define DSB1_OFFSET_MPEG_RIGHT	0x8644	// 1604 bytes right MPEG buffer
@@ -920,7 +919,7 @@ void CDSB2::SendCommand(UINT8 data)
 {
 	/*
 	 * Commands are buffered in a FIFO. This probably does not actually exist
-	 * on the real DSB but is necessary because the Z80 is not really synced
+	 * on the real DSB but is necessary because the 68K is not really synced
 	 * up with the other CPUs and must process all commands it has received
 	 * over the course of a frame at once.
 	 */
