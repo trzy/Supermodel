@@ -264,10 +264,10 @@ private:
 	INT16	*mpegL, *mpegR;
 	
 	// DSB memory
-	const UINT8	*progROM;		// Z80 program ROM (passed in from parent object)
+	const UINT8	*progROM;		// 68K program ROM (passed in from parent object)
 	const UINT8	*mpegROM;		// MPEG music ROM
 	UINT8		*memoryPool;	// all memory allocated here
-	UINT8		*ram;			// Z80 RAM
+	UINT8		*ram;			// 68K RAM
 
 	// Command FIFO
 	UINT8	fifo[128];
@@ -279,6 +279,12 @@ private:
 	int 	mpegState;
 	int 	mpegStart, mpegEnd, playing;
 	UINT8	volume[2];		// left, right volume (0x00-0xFF)
+	
+	// Settings of currently playing stream (may not match the playback register variables above)
+	UINT32	usingLoopStart;	// what was last set by MPEG_SetLoop() or MPEG_PlayMemory()
+	UINT32	usingLoopEnd;
+	UINT32	usingMPEGStart;	// what was last set by MPEG_PlayMemory()
+	UINT32	usingMPEGEnd;
 	
 	// M68K CPU
 	M68KCtx	M68K;

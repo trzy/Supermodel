@@ -669,6 +669,10 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			else if (byte == 0x74 || byte == 0x75)	// "start play"
 			{
+				usingLoopStart = 0;
+				usingLoopEnd = 0;
+				usingMPEGStart = mpegStart;
+				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
 				printf("playing %X\n", mpegStart);
 				mpegState = ST_IDLE;
@@ -715,7 +719,9 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			if (playing)
 			{
 				printf("Setting loop point to %x\n", mpegStart);
-				MPEG_SetLoop((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
+				usingLoopStart = mpegStart;
+				usingLoopEnd = mpegEnd-mpegStart;
+				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 			}
 
 			printf("mpegStart=%x\n", mpegStart);
@@ -751,6 +757,10 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			mpegState = ST_IDLE;
 			if (byte == 0x75)
 			{
+				usingLoopStart = 0;
+				usingLoopEnd = 0;
+				usingMPEGStart = mpegStart;
+				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
 				printf("playing %X (from st_gota4)\n", mpegStart);
 				playing = 1;
@@ -991,10 +1001,77 @@ void CDSB2::Reset(void)
 
 void CDSB2::SaveState(CBlockFile *StateFile)
 {
+	UINT32	mpegPos;
+	UINT8	isPlaying;
+	
+	StateFile->NewBlock("DSB2", __FILE__);
+	
+	// MPEG playback state
+	isPlaying = (UINT8) MPEG_IsPlaying();
+	mpegPos = MPEG_GetProgress();
+	StateFile->Write(&isPlaying, sizeof(isPlaying));
+	StateFile->Write(&mpegPos, sizeof(mpegPos));
+	StateFile->Write(&usingMPEGStart, sizeof(usingMPEGStart));
+	StateFile->Write(&usingMPEGEnd, sizeof(usingMPEGEnd));
+	StateFile->Write(&usingLoopStart, sizeof(usingLoopStart));
+	StateFile->Write(&usingLoopEnd, sizeof(usingLoopEnd));
+	
+	// MPEG board state
+	StateFile->Write(ram, 0x20000);
+	StateFile->Write(fifo, sizeof(fifo));
+	StateFile->Write(&fifoIdxR, sizeof(fifoIdxR));
+	StateFile->Write(&fifoIdxW, sizeof(fifoIdxW));
+	StateFile->Write(&cmdLatch, sizeof(cmdLatch));
+	StateFile->Write(&mpegState, sizeof(mpegState));
+	StateFile->Write(&mpegStart, sizeof(mpegStart));
+	StateFile->Write(&mpegEnd, sizeof(mpegEnd));
+	StateFile->Write(&playing, sizeof(playing));
+	StateFile->Write(volume, sizeof(volume));
+	
+	// 68K CPU state
+	M68KSaveState(StateFile, "DSB2 68K");
 }
 
 void CDSB2::LoadState(CBlockFile *StateFile)
 {
+	UINT32	mpegPos;
+	UINT8	isPlaying;
+	
+	if (OKAY != StateFile->FindBlock("DSB2"))
+	{
+		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupted.");
+		return;
+	}
+	
+	StateFile->Read(&isPlaying, sizeof(isPlaying));
+	StateFile->Read(&mpegPos, sizeof(mpegPos));
+	StateFile->Read(&usingMPEGStart, sizeof(usingMPEGStart));
+	StateFile->Read(&usingMPEGEnd, sizeof(usingMPEGEnd));
+	StateFile->Read(&usingLoopStart, sizeof(usingLoopStart));
+	StateFile->Read(&usingLoopEnd, sizeof(usingLoopEnd));
+	
+	StateFile->Read(ram, 0x20000);
+	StateFile->Read(fifo, sizeof(fifo));
+	StateFile->Read(&fifoIdxR, sizeof(fifoIdxR));
+	StateFile->Read(&fifoIdxW, sizeof(fifoIdxW));
+	StateFile->Read(&cmdLatch, sizeof(cmdLatch));
+	StateFile->Read(&mpegState, sizeof(mpegState));
+	StateFile->Read(&mpegStart, sizeof(mpegStart));
+	StateFile->Read(&mpegEnd, sizeof(mpegEnd));
+	StateFile->Read(&playing, sizeof(playing));
+	StateFile->Read(volume, sizeof(volume));
+	
+	M68KLoadState(StateFile, "DSB2 68K");
+	
+	// Restart MPEG audio at the appropriate position
+	if (isPlaying)
+	{
+		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
+		MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+		MPEG_SetOffset(mpegPos);
+	}
+	else
+		MPEG_StopPlaying();
 }
 
 // Offsets of memory regions within DSB2's pool

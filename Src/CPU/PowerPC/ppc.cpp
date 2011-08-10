@@ -155,8 +155,8 @@ static UINT32		ppc_field_xlat[256];
 #define TSR_ENW			0x80000000
 #define TSR_WIS			0x40000000
 
-#define BYTE_REVERSE16(x)	((((x) >> 8) & 0xff) | (((x) << 8) & 0xff00))
-#define BYTE_REVERSE32(x)	((((x) >> 24) & 0xff) | (((x) >> 8) & 0xff00) | (((x) << 8) & 0xff0000) | (((x) << 24) & 0xff000000))
+#define BYTE_REVERSE16(x)	(((x >> 8) | (x << 8)) & 0xFFFF)
+#define BYTE_REVERSE32(x)	((x >> 24) | ((x << 8) & 0x00FF0000) | ((x >> 8) & 0x0000FF00) | (x << 24))
 
 typedef union {
 	UINT64	id;
