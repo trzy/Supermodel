@@ -394,10 +394,15 @@ void CSoundBoard::Reset(void)
 	UpdateROMBanks();
 	M68KSetContext(&M68K);
 	M68KReset();
+	printf("SBrd PC=%06X\n", M68KGetPC());
 	M68KGetContext(&M68K);
 	if (NULL != DSB)
 		DSB->Reset();
 	DebugLog("Sound Board Reset\n");
+	printf("PC=%06X\n", M68KGetPC());
+	M68KSetContext(&M68K);
+	M68KGetContext(&M68K);
+	printf("PC=%06X\n", M68KGetPC());
 }
 
 void CSoundBoard::SaveState(CBlockFile *SaveState)
@@ -453,7 +458,7 @@ void CSoundBoard::AttachDSB(CDSB *DSBPtr)
 #define OFFSET_RAM2			(0x100000)	// 1 MB SCSP2 RAM
 #define OFFSET_AUDIO_LEFT	(0x200000)	// 1470 bytes (16 bits, 44.1 KHz, 1/60th second) left audio channel
 #define OFFSET_AUDIO_RIGHT	(0x2005BE)	// 1470 bytes right audio channel
-#define MEMORY_POOL_SIZE	(0x100000 + 0x100000 + 0x5be + 0x5be)
+#define MEMORY_POOL_SIZE	(0x100000+0x100000+0x5be+0x5be)
 
 BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 {

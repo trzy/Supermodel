@@ -1,4 +1,3 @@
-//TODO: DSB2 save states not working!
 //TODO: amp can print error messages -- change them to Supermodel error messages
 /**
  ** Supermodel
@@ -950,6 +949,7 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 {
 #ifdef SUPERMODEL_SOUND
 	M68KSetContext(&M68K);
+	//printf("DSB2 run frame PC=%06X\n", M68KGetPC());
 	
 	// While FIFO not empty...
 	while (fifoIdxR != fifoIdxW)
@@ -995,6 +995,7 @@ void CDSB2::Reset(void)
 	
 	M68KSetContext(&M68K);
 	M68KReset();
+	printf("DSB2 PC=%06X\n", M68KGetPC());
 	M68KGetContext(&M68K);
 	
 	DebugLog("DSB2 Reset\n");

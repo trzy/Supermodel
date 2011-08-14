@@ -26,6 +26,10 @@
  *
  * Permission was obtained from Karl Stenerud to apply the GPL license to this
  * code.
+ *
+ * NOTE: The internal CPU context is initialized to all zeros here. If setting
+ * an external context for the first time, make sure it is cleared first, 
+ * otherwise interrupts may appear pending and other nasty problems.
  */
 
 /* ======================================================================== */

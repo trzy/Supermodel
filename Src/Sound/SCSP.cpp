@@ -1719,7 +1719,7 @@ void SCSP_DoMasterSamples(int nsamples)
 {
 	int slice=12000000/(SysFPS*nsamples);	// 68K cycles/sample
 	static int lastdiff=0;
-
+	
 	for(int s=0;s<nsamples;++s)
 	{
 		signed int smpl=0;

@@ -32,6 +32,7 @@
 #ifndef INCLUDED_68K_H
 #define INCLUDED_68K_H
 
+#include <cstring>
 #include "Types.h"
 #include "Musashi/m68k.h"
 #include "CPU/Bus.h"
@@ -75,6 +76,7 @@ public:
 		Bus = NULL;
 		IRQAck = NULL;
 		musashiCtx = new unsigned char[m68k_context_size()];
+		memset(musashiCtx, 0, m68k_context_size());	// very important! garbage in context at reset can cause very strange bugs
 	}
 	
 	~SM68KCtx(void)
