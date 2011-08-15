@@ -2475,7 +2475,7 @@ static void Dump(const char *file, UINT8 *buf, unsigned size, BOOL reverse32, BO
 #define OFFSET_SAMPLEROM	0xD0C0000	// 16 MB (sound board samples)
 #define OFFSET_DSBPROGROM	0xE0C0000	// 128 KB (DSB program)
 #define OFFSET_DSBMPEGROM	0xE0E0000	// 16 MB (DSB MPEG data -- Z80 version only uses 8MB)
-#define MEMORY_POOL_SIZE	(0x800000+0x800000+0x8000000+0x4000000+0x20000+0x20000+0x80000+0x1000000+0x20000+0x1000000)
+#define MEMORY_POOL_SIZE	(0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000)
 
 const struct GameInfo * CModel3::GetGameInfo(void)
 {
