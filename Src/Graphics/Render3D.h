@@ -163,8 +163,26 @@ struct ModelCache
 
 
 /******************************************************************************
- CRender3D Class Definition
+ CRender3D Classes
 ******************************************************************************/
+
+/*
+ * CRender3DConfig:
+ *
+ * Settings used by CRender3D.
+ */
+class CRender3DConfig
+{
+public:
+	string vertexShaderFile;	// path to vertex shader or "" to use internal shader
+	string fragmentShaderFile;	// fragment shader
+	
+	// Defaults
+	CRender3DConfig(void)
+	{
+		// nothing to do, strings will be clear to begin with
+	}
+};
 
 /*
  * CRender3D:
@@ -244,11 +262,13 @@ public:
 	void SetStep(int stepID);
 	
 	/*
-	 * Init(xOffset, yOffset, xRes, yRes, vsFile, fsFile):
+	 * Init(xOffset, yOffset, xRes, yRes):
 	 *
 	 * One-time initialization of the context. Must be called before any other
 	 * members (meaning it should be called even before being attached to any
 	 * other objects that want to use it).
+	 *
+	 * External shader files are loaded according to configuration settings.
 	 *
 	 * Parameters:
 	 *		xOffset		X offset of display surface in pixels (in case resolution
@@ -256,18 +276,13 @@ public:
 	 *		yOffset		Y offset.
 	 *		xRes		Horizontal resolution of display surface in pixels.
 	 *		yRes		Vertical resolution.
-	 *		vsFile		External vertex shader path. If NULL, the internal
-	 *					shader is used.
-	 *		fsFile		External fragment shader path. If NULL, the internal
-	 *					shader is used.
 	 *
 	 * Returns:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Any allocated memory will not be freed until the
 	 *		destructor is called. Prints own error messages.
 	 */
-	BOOL Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes,
-			  const char *vsFile, const char *fsFile);
+	BOOL Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
 	 
 	/*
 	 * CRender3D(void):

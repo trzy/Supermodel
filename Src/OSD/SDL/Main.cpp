@@ -40,10 +40,10 @@
  */
  
 #include <new>
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdarg>
 #include "Pkgs/glew.h"
 #ifdef SUPERMODEL_OSX
 #include <SDL/SDL.h>
@@ -57,15 +57,69 @@
 #include "DirectInputSystem.h"
 #endif
 
-CLogger *GetLogger();
-void SetLogger(CLogger *logger);
+
+/******************************************************************************
+ Error and Debug Logging
+******************************************************************************/
+
+// Log file names
+#define DEBUG_LOG_FILE	"debug.log"
+#define ERROR_LOG_FILE	"error.log"
+
+// Logger object is used to redirect log messages appropriately
+static CLogger *s_Logger = NULL;
+
+CLogger *GetLogger()
+{
+	return s_Logger;
+}
+
+void SetLogger(CLogger *Logger)
+{
+	s_Logger = Logger;
+}
+
+void DebugLog(const char *fmt, ...)
+{
+	if (s_Logger == NULL)
+		return;
+	va_list vl;
+	va_start(vl, fmt);
+	s_Logger->DebugLog(fmt, vl);
+	va_end(vl);
+}
+
+void InfoLog(const char *fmt, ...)
+{
+	if (s_Logger == NULL)
+		return;
+	va_list vl;
+	va_start(vl, fmt);
+	s_Logger->InfoLog(fmt, vl);
+	va_end(vl);
+}
+
+BOOL ErrorLog(const char *fmt, ...)
+{
+	if (s_Logger == NULL)
+		return FAIL;
+	va_list vl;
+	va_start(vl, fmt);
+	s_Logger->ErrorLog(fmt, vl);
+	va_end(vl);
+	return FAIL;
+}
+
 
 /******************************************************************************
  Display Management
 ******************************************************************************/
 
 /*
- * Position and size of rectangular region within OpenGL display to render to
+ * Position and size of rectangular region within OpenGL display to render to.
+ * Unlike the g_Config object, these end up containing the actual resolution 
+ * (and computed offsets within the viewport) that will be rendered based on
+ * what was obtained from SDL.
  */
 unsigned	xOffset, yOffset;	// offset of renderer output within OpenGL viewport
 unsigned 	xRes, yRes;			// renderer output resolution (can be smaller than GL viewport)
@@ -162,8 +216,11 @@ static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
 	return 0;
 }
 
+	
 /******************************************************************************
  Configuration
+ 
+ Configuration file management and input settings.
 ******************************************************************************/
 
 #define CONFIG_FILE_PATH	"Config/Supermodel.ini"
@@ -172,19 +229,12 @@ static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
 							";\n"
 
 // Create and configure inputs
-static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
+static bool ConfigureInputs(CInputs *Inputs, bool configure)
 {
-	// Create and initialize inputs
-	CInputs* Inputs = new CInputs(InputSystem);
-	if (!Inputs->Initialize())
-	{
-		ErrorLog("Unable to initalize inputs.\n");
-		return NULL;
-	}
-	
 	// Open and parse configuration file
 	CINIFile INI;
 	INI.Open(CONFIG_FILE_PATH);	// doesn't matter if it exists or not, will get overwritten
+	INI.SetDefaultSectionName("Global");
 	INI.Parse();
 	
 	Inputs->ReadFromINIFile(&INI, "Global");
@@ -195,10 +245,7 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
 		// Open an SDL window 
 		unsigned xOffset, yOffset, xRes=496, yRes=384;
 		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
-		{
-			ErrorLog("Unable to start SDL to configure inputs.\n");
-			return NULL;
-		}
+			return (bool) ErrorLog("Unable to start SDL to configure inputs.\n");
 		
 		// Configure the inputs
 		if (Inputs->ConfigureInputs(NULL, xOffset, yOffset, xRes, yRes))
@@ -216,9 +263,82 @@ static CInputs *CreateInputs(CInputSystem *InputSystem, BOOL configure)
 		puts("");
 	}
 	
-	return Inputs;
+	INI.Close();
+	return OKAY;
 }
+
+// Apply configuration settings from configuration file
+static void ApplySettings(CInputs *Inputs, CINIFile *INI, const char *section)
+{
+	unsigned	x;
+	string		String;
 	
+	// Model 3
+	if (OKAY == INI->Get(section, "MultiThreaded", x))
+		g_Config.multiThreaded = x ? true : false;
+	if (OKAY == INI->Get(section, "PowerPCFrequency", x))
+		g_Config.SetPowerPCFrequency(x);
+	
+	// 3D renderer
+	INI->Get(section, "VertexShader", g_Config.vertexShaderFile);
+	INI->Get(section, "FragmentShader", g_Config.fragmentShaderFile);
+	
+	// SCSP and DSB
+	if (OKAY == INI->Get(section, "SoundVolume", x))
+		g_Config.SetSoundVolume(x);
+	if (OKAY == INI->Get(section, "MusicVolume", x))
+		g_Config.SetMusicVolume(x);
+	if (OKAY == INI->Get(section, "EmulateSCSP", x))
+		g_Config.emulateSCSP = x ? true : false;
+	if (OKAY == INI->Get(section, "EmulateDSB", x))
+		g_Config.emulateDSB = x ? true : false;
+	
+	// OSD
+	INI->Get(section, "XResolution", g_Config.xRes);
+	INI->Get(section, "YResolution", g_Config.yRes);
+	if (OKAY == INI->Get(section, "FullScreen", x))
+		g_Config.fullScreen = x ? true : false;
+	if (OKAY == INI->Get(section, "Throttle", x))
+		g_Config.throttle = x ? true : false;
+	if (OKAY == INI->Get(section, "ShowFrameRate", x))
+		g_Config.showFPS = x ? true : false;
+			
+	// Inputs
+	if (Inputs != NULL)
+		Inputs->ReadFromINIFile(INI, section);
+}
+
+// Read settings (from a specific section) from the config file
+static void ReadConfigFile(CInputs *Inputs, const char *section)
+{
+	CINIFile	INI;	
+	
+	INI.Open(CONFIG_FILE_PATH);
+	INI.SetDefaultSectionName("Global");	// required to read settings not associated with a specific section
+	INI.Parse();
+	ApplySettings(Inputs, &INI, section);
+	INI.Close();
+}
+
+// Debug
+static void DumpConfig(void)
+{
+	printf("MultiThreaded    = %d\n", g_Config.multiThreaded);
+	printf("PowerPCFrequency = %d\n", g_Config.GetPowerPCFrequency());
+	printf("EmulateSCSP      = %d\n", g_Config.emulateSCSP);
+	printf("EmulateDSB       = %d\n", g_Config.emulateDSB);
+	printf("VertexShader     = %s\n", g_Config.vertexShaderFile.c_str());
+	printf("FragmentShader   = %s\n", g_Config.fragmentShaderFile.c_str());
+	printf("XResolution      = %d\n", g_Config.xRes);
+	printf("YResolution      = %d\n", g_Config.yRes);
+	printf("FullScreen       = %d\n", g_Config.fullScreen);
+	printf("Throttle         = %d\n", g_Config.throttle);
+	printf("ShowFrameRate    = %d\n", g_Config.showFPS);
+	printf("InputSystem      = %s\n", g_Config.GetInputSystem());
+	printf("\n");
+}
+
+
 /******************************************************************************
  Save States and NVRAM
  
@@ -364,14 +484,11 @@ static void LoadNVRAM(CModel3 *Model3)
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, unsigned ppcFrequency, BOOL multiThreaded, 
-			   unsigned xResParam, unsigned yResParam, BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, 
-			   const char *vsFile, const char *fsFile)
+int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
 {
 CLogger *oldLogger;
 #else
-int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL multiThreaded, unsigned xResParam, unsigned yResParam,
-			   BOOL keepAspectRatio, BOOL fullScreen, BOOL noThrottle, BOOL showFPS, const char *vsFile, const char *fsFile)
+int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 {				  
 	CModel3			*Model3 = new CModel3();
 #endif // SUPERMODEL_DEBUGGER
@@ -385,23 +502,30 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 	BOOL            paused = 0;
 	
 	// Info log user options
-	InfoLog("PowerPC frequency: %d Hz", ppcFrequency); 	
-	InfoLog("Resolution: %dx%d (%s)", xResParam, yResParam, fullScreen?"full screen":"windowed");
-	InfoLog("Frame rate limiting: %s", noThrottle?"Disabled":"Enabled");
+	InfoLog("PowerPC frequency: %d Hz", g_Config.GetPowerPCFrequency()); 	
+	InfoLog("Resolution requested: %dx%d (%s)", g_Config.xRes, g_Config.yRes, g_Config.fullScreen?"full screen":"windowed");
+	InfoLog("Frame rate limiting: %s", g_Config.throttle?"Enabled":"Disabled");
 
 	// Initialize and load ROMs
-	Model3->Init(ppcFrequency, multiThreaded);
+	if (OKAY != Model3->Init())
+		return 1;
 	if (OKAY != Model3->LoadROMSet(Model3GameList, zipFile))
 		return 1;
+		
+	// Apply game-specific settings and then, lastly, command line settings
+	ReadConfigFile(Inputs, Model3->GetGameInfo()->id);
+	//DumpConfig();
+	ApplySettings(Inputs, CmdLine, "Global");
+	//DumpConfig();
 		
 	// Load NVRAM
 	LoadNVRAM(Model3);
 		
 	// Start up SDL and open a GL window
-  	xRes = xResParam;
-  	yRes = yResParam;
+  	xRes = g_Config.xRes;
+  	yRes = g_Config.yRes;
   	sprintf(titleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
-	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,keepAspectRatio,fullScreen))
+	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,TRUE,g_Config.fullScreen))
 		return 1;
 	
 	// Initialize audio system
@@ -409,7 +533,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 		return 1;
 
 	// Hide mouse if fullscreen
-	Inputs->GetInputSystem()->SetMouseVisibility(!fullScreen);
+	Inputs->GetInputSystem()->SetMouseVisibility(!g_Config.fullScreen);
 
 	// Attach the inputs to the emulator
 	Model3->AttachInputs(Inputs);
@@ -417,7 +541,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 	// Initialize the renderer
 	if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes))
 		goto QuitError;
-	if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, vsFile, fsFile))
+	if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes))
 		goto QuitError;
 	Model3->AttachRenderers(Render2D,Render3D);
 
@@ -521,7 +645,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 			// Dump input states
 			Inputs->DumpState(Model3->GetGameInfo());
 		}
-		else if (Inputs->uiToggleCursor->Pressed() && fullScreen)
+		else if (Inputs->uiToggleCursor->Pressed() && g_Config.fullScreen)
  		{
 			// Toggle cursor in full screen mode
 			showCursor = !showCursor;
@@ -536,8 +660,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 		else if (Inputs->uiToggleFrLimit->Pressed())
  		{
 			// Toggle frame limiting
- 			noThrottle = !noThrottle;
- 			printf("Frame limiting: %s\n", noThrottle?"Off":"On");
+ 			g_Config.throttle = !g_Config.throttle;
+ 			printf("Frame limiting: %s\n", g_Config.throttle?"On":"Off");
  		}
 #ifdef SUPERMODEL_DEBUGGER
 				else if (Inputs->uiEnterDebugger->Pressed())
@@ -554,7 +678,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
  		currentTicks = currentFPSTicks;
  		
  		// FPS
- 		if (showFPS)
+ 		if (g_Config.showFPS)
  		{
  			++fpsFramesElapsed;
 			if((currentFPSTicks-prevFPSTicks) >= 1000)	// update FPS every 1 second (each tick is 1 ms)
@@ -567,7 +691,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, unsigned ppcFrequency, BOOL
 		}
 		
 		// Frame limiting/paused
-		if (paused || !noThrottle)
+		if (paused || g_Config.throttle)
 		{
 			++framesElapsed;
 			targetTicks = startTicks + (unsigned) ((float)framesElapsed * 1000.0f/60.0f);
@@ -642,204 +766,6 @@ QuitError:
 	return 1;
 }
 
-
-/******************************************************************************
- Error and Debug Logging
-******************************************************************************/
-
-static CLogger *s_logger = NULL;
-
-/*
- * Returns the current logger.
- */ 
-CLogger *GetLogger()
-{
-	return s_logger;
-}
-
-/*
- * Sets the current logger.
- */
-void SetLogger(CLogger *logger)
-{
-	s_logger = logger;
-}
-
-/*
- * DebugLog(fmt, ...):
- *
- * Logs a debug message with the logger.
- *
- * Parameters:
- *		fmt		Format string (same as printf()).
- *		...		Variable number of arguments as required by format string.
- */
-void DebugLog(const char *fmt, ...)
-{
-	if (s_logger == NULL)
-		return;
-	va_list vl;
-	va_start(vl, fmt);
-	s_logger->DebugLog(fmt, vl);
-	va_end(vl);
-}
-
-/*
- * InfoLog(fmt, ...);
- *
- * Logs an info message with the logger.
- *
- * Parameters:
- *		fmt		Format string (same as printf()).
- *		...		Variable number of arguments as required by format string.
- */
-void InfoLog(const char *fmt, ...)
-{
-	if (s_logger == NULL)
-		return;
-	va_list vl;
-	va_start(vl, fmt);
-	s_logger->InfoLog(fmt, vl);
-	va_end(vl);
-}
-
-/*
- * ErrorLog(fmt, ...):
- *
- * Logs an error message with the logger.
- *
- * Parameters:
- *		fmt		Format string (same as printf()).
- *		...		Variable number of arguments as required by format string.
- *
- * Returns:
- *		Always returns FAIL.
- */
-BOOL ErrorLog(const char *fmt, ...)
-{
-	if (s_logger == NULL)
-		return FAIL;
-	va_list vl;
-	va_start(vl, fmt);
-	s_logger->ErrorLog(fmt, vl);
-	va_end(vl);
-	return FAIL;
-}
-
-#define DEBUG_LOG_FILE	"debug.log"
-#define ERROR_LOG_FILE	"error.log"
-
-/*
- * Default logger that logs to debug and error log files.
- */ 
-class CFileLogger : public CLogger
-{
-private:
-	const char *m_debugLogFile;
-	const char *m_errorLogFile;
-
-public:
-	CFileLogger(const char *debugLogFile, const char *errorLogFile) : 
-		m_debugLogFile(debugLogFile), m_errorLogFile(errorLogFile)
-	{
-		//
-	}
-
-	/*
-	 * DebugLog(fmt, ...):
-	 *
-	 * Prints to debug log. The file is opened and closed each time so that its 
-	 * contents are preserved even if the program crashes.
-	 */
-	void DebugLog(const char *fmt, va_list vl)
-	{	
-#ifdef DEBUG
-		char	string[1024];
-		FILE 	*fp;
-
-		fp = fopen(m_debugLogFile, "ab");
-		if (NULL != fp)
-		{
-			vsprintf(string, fmt, vl);
-			fprintf(fp, string);
-			fclose(fp);
-		}
-#endif // DEBUG
-	}
-
-	/*
-	 * InfoLog(fmt, ...);
-	 *
-	 * Prints information to the error log file but does not print to stderr. This
-	 * is useful for logging non-error information.
-	 */
-	void InfoLog(const char *fmt, va_list vl)
-	{
-		char	string[4096];
-		FILE 	*fp;
-
-		vsprintf(string, fmt, vl);
-		
-		fp = fopen(m_errorLogFile, "ab");
-		if (NULL != fp)
-		{
-			fprintf(fp, "%s\n", string);
-			fclose(fp);
-		}
-	
-		CLogger::DebugLog("Info: ");
-		CLogger::DebugLog(string);
-		CLogger::DebugLog("\n");
-	}
-
-	/*
-	 * ErrorLog(fmt, ...):
-	 *
-	 * Prints an error to stderr and the error log file.
-	 */
-	void ErrorLog(const char *fmt, va_list vl)
-	{
-		char	string[4096];
-		FILE 	*fp;
-
-		vsprintf(string, fmt, vl);
-		fprintf(stderr, "Error: %s\n", string);
-		
-		fp = fopen(m_errorLogFile, "ab");
-		if (NULL != fp)
-		{
-			fprintf(fp, "%s\n", string);
-			fclose(fp);
-		}
-		
-		CLogger::DebugLog("Error: ");
-		CLogger::DebugLog(string);
-		CLogger::DebugLog("\n");
-	}
-
-	void ClearLogs()
-	{
-#ifdef DEBUG
-		ClearLog(DEBUG_LOG_FILE, "Supermodel v"SUPERMODEL_VERSION" Debug Log");
-#endif // DEBUG
-		ClearLog(ERROR_LOG_FILE, "Supermodel v"SUPERMODEL_VERSION" Error Log");	
-	}
-	
-	// Clear log file
-	void ClearLog(const char *file, const char *title)
-	{
-		FILE *fp = fopen(file, "w");
-		if (NULL != fp)
-		{
-			unsigned	i;
-			fprintf(fp, "%s\n", title);
-			for (i = 0; i < strlen(title); i++)
-				fputc('-', fp);
-			fprintf(fp, "\n\n");
-			fclose(fp);
-		}
-	}
-};
 
 /******************************************************************************
  Diagnostic Commands
@@ -988,10 +914,12 @@ static void Help(void)
 	puts("");
 	puts("General Options:");
 	puts("    -?, -h                 Print this help text");
-	puts("    -print-games           List supported games");
+	puts("    -print-games           List supported games and quit");
 	puts("");
 	puts("Emulation Options:");
-	puts("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: 25]");
+	puts("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: 40]");
+	puts("    -no-scsp               Disable Sega Custom Sound Processor (sound effects)");
+	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("    -multi-threaded        Enable multi-threading");
 #ifdef SUPERMODEL_DEBUGGER
 	puts("    -disable-debugger	     Completely disable debugger functionality");
@@ -1008,6 +936,10 @@ static void Help(void)
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
 #endif
 	puts("");
+	puts("Audio Options:");
+	puts("    -sound-volume=<v>      Set volume of sound effects in % [Default: 100]");
+	puts("    -music-volume=<v>      Set volume of MPEG music in % [Default: 100]");
+	puts("");
 	puts("Input Options:");
 	puts("    -input-system=<s>      Set input system [Default: SDL]");
 	puts("    -print-inputs          Prints current input configuration");
@@ -1017,7 +949,7 @@ static void Help(void)
 #ifdef DEBUG
 	puts("    -dis=<addr>[,n]        Disassemble PowerPC code from CROM");
 #endif
-	puts("    -print-gl-info         Print extensive OpenGL information\n");
+	puts("    -print-gl-info         Print extensive OpenGL information and quit\n");
 }
 
 // Print game list
@@ -1045,13 +977,14 @@ static void PrintGameList(void)
  */
 int main(int argc, char **argv)
 {
+	CINIFile	CmdLine;	// not associated with any files, holds command line options
 	int			i, ret;
-	int			cmd=0, fileIdx=0, cmdMultiThreaded=0, cmdFullScreen=0, cmdNoThrottle=0, cmdShowFPS=0, cmdPrintInputs=0, cmdConfigInputs=0, cmdPrintGames=0, cmdDis=0, cmdPrintGLInfo=0;
+	int			fileIdx=0;
+	bool		cmdPrintInputs=false, cmdConfigInputs=false, cmdDis=false;
 #ifdef SUPERMODEL_DEBUGGER
-	int			cmdDisableDebugger = 0, cmdEnterDebugger=0;
+	int			cmdEnterDebugger=false;
 #endif // SUPERMODEL_DEBUGGER
-	unsigned	n, xRes=496, yRes=384, ppcFrequency=25000000;
-	char		*vsFile = NULL, *fsFile = NULL, *inpSysName = NULL;
+	unsigned	n;
 	UINT32		addr;
 
 	Title();
@@ -1065,8 +998,21 @@ int main(int argc, char **argv)
 	CFileLogger Logger(DEBUG_LOG_FILE, ERROR_LOG_FILE);
 	Logger.ClearLogs();
 	SetLogger(&Logger);
+	
+	// Read global settings from INI file
+	ReadConfigFile(NULL, "Global");
+	//DumpConfig();
 
-	// Parse command line
+	/*
+	 * Parse command line. 
+	 *
+	 * Settings are stored in CmdLine so that they can be applied later, after
+	 * game-specific settings are read from the configuration file (which
+	 * requires the ROM set to be identified and therefore is done later).
+	 *
+	 * Some commands are processed here directly.
+	 */
+	CmdLine.SetDefaultSectionName("Global");	// command line settings are global-level
 	for (i = 1; i < argc; i++)
 	{
 		if (!strcmp(argv[i],"-h") || !strcmp(argv[i],"-?"))
@@ -1075,7 +1021,10 @@ int main(int argc, char **argv)
 			return 0;
 		}
 		else if (!strcmp(argv[i],"-print-games"))
-			cmd = cmdPrintGames = 1;
+		{
+			PrintGameList();
+			return 0;
+		}
 		else if (!strncmp(argv[i],"-ppc-frequency",14))
 		{
 			int	f;
@@ -1083,21 +1032,45 @@ int main(int argc, char **argv)
 			if (ret != 1)
 				ErrorLog("-ppc-frequency requires a frequency.");
 			else
-			{
-				if ((f<1) || (f>1000))	// limit to 1-1000MHz
-					ErrorLog("PowerPC frequency must be between 1 and 1000 MHz. Ignoring.");
-				else
-					ppcFrequency = f*1000000;
-			}
+				CmdLine.Set("Global", "PowerPCFrequency", f);
 		}
-		else if (!strncmp(argv[i],"-multi-threaded", 16))
-			cmd = cmdMultiThreaded = 1;
+		else if (!strcmp(argv[i],"-multi-threaded"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "MultiThreaded", n);
+		}
 #ifdef SUPERMODEL_DEBUGGER
-		else if (!strncmp(argv[i],"-disable-debugger",17))
-			cmd = cmdDisableDebugger = 1;
-		else if (!strncmp(argv[i],"-enter-debugger",15))
-			cmd = cmdEnterDebugger = 1;
+		else if (!strncmp(argv[i],"-disable-debugger"))
+			g_Config.disableDebugger = true;
+		else if (!strcmp(argv[i],"-enter-debugger"))
+			cmdEnterDebugger = true;
 #endif // SUPERMODEL_DEBUGGER
+		else if (!strncmp(argv[i],"-sound-vol",10))
+		{
+			ret = sscanf(&argv[i][10],"=%d",&n);
+			if (ret != 1)
+				ErrorLog("-sound-vol requires a volume setting.");
+			else
+				CmdLine.Set("Global", "SoundVolume", n);
+		}
+		else if (!strncmp(argv[i],"-music-vol",10))
+		{
+			ret = sscanf(&argv[i][10],"=%d",&n);
+			if (ret != 1)
+				ErrorLog("-music-vol requires a volume setting.");
+			else
+				CmdLine.Set("Global", "MusicVolume", n);
+		}
+		else if (!strcmp(argv[i], "-no-scsp"))
+		{
+			n = 0;
+			CmdLine.Set("Global", "EmulateSCSP", n);
+		}
+		else if (!strcmp(argv[i], "-no-dsb"))
+		{
+			n = 0;
+			CmdLine.Set("Global", "EmulateDSB", n);
+		}
 		else if (!strncmp(argv[i],"-res",4))
 		{
 			unsigned	x, y;
@@ -1107,56 +1080,68 @@ int main(int argc, char **argv)
 				ErrorLog("-res requires both a width and a height.");
 			else
 			{
-				xRes = x;
-				yRes = y;
+				CmdLine.Set("Global", "XResolution", x);
+				CmdLine.Set("Global", "YResolution", y);
 			}
 		}
 		else if (!strcmp(argv[i],"-fullscreen"))
-			cmd = cmdFullScreen = 1;
+		{
+			n = 1;
+			CmdLine.Set("Global", "FullScreen", n);
+		}
 		else if (!strcmp(argv[i],"-no-throttle"))
-			cmd = cmdNoThrottle = 1;
+		{
+			n = 0;
+			CmdLine.Set("Global", "Throttle", n);
+		}
 		else if (!strcmp(argv[i],"-show-fps"))
-			cmd = cmdShowFPS = 1;
+		{
+			n = 1;
+			CmdLine.Set("Global", "ShowFrameRate", n);
+		}
 		else if (!strncmp(argv[i],"-vert-shader=",13))
 		{
 			if (argv[i][13] == '\0')
 				ErrorLog("-vert-shader requires a file path.");
 			else
-				vsFile = &argv[i][13];
+				CmdLine.Set("Global", "VertexShader", &argv[i][13]);
 		}
 		else if (!strncmp(argv[i],"-frag-shader=",13))
 		{
 			if (argv[i][13] == '\0')
 				ErrorLog("-frag-shader requires a file path.");
 			else
-				fsFile = &argv[i][13];
+				CmdLine.Set("Global", "FragmentShader", &argv[i][13]);
 		}
 		else if (!strncmp(argv[i],"-input-system=", 14))
 		{
 			if (argv[i][14] == '\0')
 				ErrorLog("-input-system requires an input system name.");
 			else
-				inpSysName = &argv[i][14];
+				CmdLine.Set("Global", "InputSystem", &argv[i][14]);
 		}
 		else if (!strcmp(argv[i],"-print-inputs"))
-			cmd = cmdPrintInputs = 1;
+			cmdPrintInputs = true;
 		else if (!strcmp(argv[i],"-config-inputs"))
-			cmd = cmdConfigInputs = 1;
+			cmdConfigInputs = true;
 		else if (!strncmp(argv[i],"-dis",4))
 		{
 			ret = sscanf(&argv[i][4],"=%X,%X",&addr,&n);
 			if (ret == 1)
 			{
 				n = 16;
-				cmd = cmdDis = 1;
+				cmdDis = true;
 			}
 			else if (ret == 2)
-				cmd = cmdDis = 1;
+				cmdDis = true;
 			else
 				ErrorLog("-dis requires address and, optionally, number of instructions.");
 		}
 		else if (!strcmp(argv[i],"-print-gl-info"))
-			cmd = cmdPrintGLInfo = 1;
+		{
+			PrintGLInfo(FALSE);
+			return 0;
+		}
 		else if (argv[i][0] == '-')
 			ErrorLog("Ignoring invalid option: %s.", argv[i]);
 		else
@@ -1175,6 +1160,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
+	// Create input system (default is SDL) and debugger
 	CInputSystem *InputSystem = NULL;
 	CInputs *Inputs = NULL;
 	int exitCode = 0;
@@ -1183,27 +1169,33 @@ int main(int argc, char **argv)
 	Debugger::CSupermodelDebugger *Debugger = NULL;
 #endif // SUPERMODEL_DEBUGGER
 
-	// Create input system (default is SDL)
-	if (inpSysName == NULL || stricmp(inpSysName, "sdl") == 0)
+	if (stricmp(g_Config.GetInputSystem(), "sdl") == 0)
 		InputSystem = new CSDLInputSystem();
 #ifdef SUPERMODEL_WIN32
-	else if (stricmp(inpSysName, "dinput") == 0)
+	else if (stricmp(g_Config.GetInputSystem(), "dinput") == 0)
 		InputSystem = new CDirectInputSystem(false, false, false);
-	else if (stricmp(inpSysName, "xinput") == 0)
+	else if (stricmp(g_Config.GetInputSystem(), "xinput") == 0)
 		InputSystem = new CDirectInputSystem(false, true, false);
-	else if (stricmp(inpSysName, "rawinput") == 0)
+	else if (stricmp(g_Config.GetInputSystem(), "rawinput") == 0)
 		InputSystem = new CDirectInputSystem(true, false, false);
 #endif // SUPERMODEL_WIN32
 	else
 	{
-		ErrorLog("Unknown input system: '%s'.\n", inpSysName);
+		ErrorLog("Unknown input system: '%s'.\n", g_Config.GetInputSystem());
 		exitCode = 1;
 		goto Exit;
 	}
 
 	// Create inputs from input system (configuring them if required)
-	Inputs = CreateInputs(InputSystem, cmdConfigInputs);
-	if (Inputs == NULL)
+	Inputs = new CInputs(InputSystem);
+	if (!Inputs->Initialize())
+	{
+		ErrorLog("Unable to initalize inputs.\n");
+		exitCode = 1;
+		goto Exit;
+	}
+	
+	if (ConfigureInputs(Inputs, cmdConfigInputs))
 	{
 		exitCode = 1;
 		goto Exit;
@@ -1215,22 +1207,7 @@ int main(int argc, char **argv)
 		InputSystem->PrintSettings();
 	}
 	
-	// Process commands that don't require ROM set
-	if (cmd)
-	{	
-		if (cmdPrintGames)
-		{
-			PrintGameList();
-			goto Exit;
-		}
-		
-		if (cmdPrintGLInfo)
-		{
-			PrintGLInfo(FALSE);
-			goto Exit;
-		}
-	}
-	
+	// From this point onwards, a ROM set is needed
 	if (fileIdx == 0)
 	{
 		ErrorLog("No ROM set specified.");
@@ -1238,22 +1215,18 @@ int main(int argc, char **argv)
 		goto Exit;
 	}
 	
-	// Process commands that require ROMs
-	if (cmd)
-	{				
-		if (cmdDis)
-		{
-			if (OKAY != DisassembleCROM(argv[fileIdx], addr, n))
-				exitCode = 1;
-			goto Exit;
-		}
+	if (cmdDis)
+	{
+		if (OKAY != DisassembleCROM(argv[fileIdx], addr, n))
+			exitCode = 1;
+		goto Exit;
 	}
 
 #ifdef SUPERMODEL_DEBUGGER
 	// Create Model3
 	Model3 = new CModel3();
 	// Create Supermodel debugger unless debugging is disabled
-	if (!cmdDisableDebugger)
+	if (!g_Config.disableDebugger)
 	{
 		Debugger = new Debugger::CSupermodelDebugger(Model3, Inputs, &Logger);
 		// If -enter-debugger option was set force debugger to break straightaway
@@ -1261,13 +1234,13 @@ int main(int argc, char **argv)
 			Debugger->ForceBreak(true);
 	}
 	// Fire up Supermodel with debugger
-	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Debugger,ppcFrequency,cmdMultiThreaded,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Debugger,&CmdLine);
 	if (Debugger != NULL)
 		delete Debugger;
 	delete Model3;
 #else
 	// Fire up Supermodel
-	exitCode = Supermodel(argv[fileIdx],Inputs,ppcFrequency,cmdMultiThreaded,xRes,yRes,TRUE,cmdFullScreen,cmdNoThrottle,cmdShowFPS,vsFile,fsFile);
+	exitCode = Supermodel(argv[fileIdx],Inputs,&CmdLine);
 #endif // SUPERMODEL_DEBUGGER
 
 Exit:

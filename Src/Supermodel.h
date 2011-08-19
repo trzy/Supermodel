@@ -28,6 +28,12 @@
 #ifndef INCLUDED_SUPERMODEL_H
 #define INCLUDED_SUPERMODEL_H
 
+// Used throughout Supermodel
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+
 /******************************************************************************
  Program-Wide Definitions
 ******************************************************************************/
@@ -38,8 +44,11 @@
 /******************************************************************************
  OS-Dependent (OSD) Items
  
- Everything here must be provided by the OSD layer. Include files should be
- located in the OSD directories for each port.
+ Everything here must be provided by the OSD layer. The following include files
+ must be located in the OSD directories for each port:
+ 
+ 	Types.h			Defines fundamental data types.
+ 	OSDConfig.h		COSDConfig class (OSD-specific configuration settings).
 ******************************************************************************/
 
 // stricmp() is non-standard, apparently...
@@ -48,6 +57,7 @@
 #else			// assume GCC
 	#define stricmp	strcasecmp
 #endif
+
 
 /* 
  * Fundamental Data Types:
@@ -68,58 +78,21 @@
  * specific stuff. Some modules may choose to include it directly rather than
  * use Supermodel.h, so it must exist.
  */
-#include "Types.h"
-
-// OSD Interfaces
-#include "Thread.h"
-#include "Audio.h"
+#include "Types.h"		// located in OSD/<port>/ directory
 
 /*
- * Error and Debug Logging
+ * OSD Header Files
  */
  
-/*
- * DebugLog(fmt, ...):
- *
- * Prints debugging information. The OSD layer may choose to print this to a
- * log file, the screen, neither, or both. Newlines and other formatting codes
- * must be explicitly included.
- *
- * Parameters:
- *		fmt		A format string (the same as printf()).
- *		...		Variable number of arguments, as required by format string.
- */
-extern void	DebugLog(const char *fmt, ...);
+// Error logging interface
+#include "OSD/Logger.h"
 
-/*
- * ErrorLog(fmt, ...):
- *
- * Prints error information. Errors need not require program termination and
- * may simply be informative warnings to the user. Newlines should not be 
- * included in the format string -- they are automatically added at the end of
- * a line.
- *
- * Parameters:
- *		fmt		A format string (the same as printf()).
- *		...		Variable number of arguments, as required by format string.
- *
- * Returns:
- *		Must always return FAIL.
- */
-extern BOOL	ErrorLog(const char *fmt, ...);
+// OSD configuration
+#include "OSDConfig.h"	// located in OSD/<port>/ directory
 
-/*
- * InfoLog(fmt, ...);
- *
- * Prints information to the error log file but does not print to stderr. This
- * is useful for logging non-error information. Newlines are automatically
- * appended.
- *
- * Parameters:
- *		fmt		Format string (same as printf()).
- *		...		Variable number of arguments as required by format string.
- */
-extern void InfoLog(const char *fmt, ...);
+// OSD Interfaces
+#include "OSD/Thread.h"
+#include "OSD/Audio.h"
 
 
 /******************************************************************************
@@ -129,9 +102,6 @@ extern void InfoLog(const char *fmt, ...);
  here, except for external packages and APIs.
 ******************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "Games.h"
 #include "ROMLoad.h"
 #include "INIFile.h"
@@ -168,6 +138,7 @@ extern void InfoLog(const char *fmt, ...);
 #include "Model3/SoundBoard.h"
 #include "Model3/DSB.h"
 #include "Model3/Model3.h"
+#include "Config.h"
 
 
 /******************************************************************************

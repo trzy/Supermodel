@@ -36,6 +36,71 @@
 
 
 /******************************************************************************
+ Configuration
+ 
+ Because DSB code mixes both the sound board SCSP and MPEG audio together, both
+ volume settings are stored here (for now). 
+******************************************************************************/
+
+/*
+ * CDSBConfig:
+ *
+ * Settings used by CDSB.
+ */
+class CDSBConfig
+{
+public:
+	bool	emulateDSB;	// DSB emulation (enabled if TRUE)
+	
+	// Sound (SCSP) volume (0-200, 100 being full amplitude)
+	inline void SetSoundVolume(unsigned vol)
+	{
+		if (vol > 200)
+		{
+			ErrorLog("Sound volume cannot exceed 200%%; setting to 100%%.\n");
+			vol = 100;
+		}
+		
+		soundVol = vol;
+	}
+	
+	inline unsigned GetSoundVolume(void)
+	{
+		return soundVol;
+	}
+	
+	// Music (DSB MPEG) volume (0-200)
+	inline void SetMusicVolume(unsigned vol)
+	{
+		if (vol > 200)
+		{
+			ErrorLog("Music volume cannot exceed 200%%; setting to 100%%.\n");
+			vol = 100;
+		}
+		
+		musicVol = vol;
+	}
+	
+	inline unsigned GetMusicVolume(void)
+	{
+		return musicVol;
+	}
+	
+	// Defaults
+	CDSBConfig(void)
+	{
+		emulateDSB = true;
+		soundVol = 100;
+		musicVol = 100;
+	}
+	
+private:
+	unsigned soundVol;
+	unsigned musicVol;
+};
+
+
+/******************************************************************************
  Resampling
  
  Used internally by the DSB's MPEG code. If this becomes sufficiently generic,

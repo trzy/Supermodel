@@ -22,11 +22,47 @@
 /*
  * Model3.h
  * 
- * Header file defining the CModel3 and CModel3Inputs classes.
+ * Header file defining the CModel3, CModel3Config, and CModel3Inputs classes.
  */
 
 #ifndef INCLUDED_MODEL3_H
 #define INCLUDED_MODEL3_H
+
+/*
+ * CModel3Config:
+ *
+ * Settings used by CModel3.
+ */
+class CModel3Config
+{
+public:
+	bool multiThreaded;	// Multi-threading (enabled if TRUE)
+	
+	// PowerPC clock frequency in MHz (minimum: 1 MHz)
+	inline void SetPowerPCFrequency(unsigned f)
+	{
+		if ((f<1) || (f>1000))
+		{
+			ErrorLog("PowerPC frequency must be between 1 and 1000 MHz; setting to 40 MHz.");
+			f = 40;
+		}		
+		ppcFrequency = f*1000000;
+	}
+	inline unsigned GetPowerPCFrequency(void)
+	{
+		return ppcFrequency/1000000;
+	}
+	
+	// Defaults
+	CModel3Config(void)
+	{
+		multiThreaded = false;		// disable by default
+		ppcFrequency = 40*1000000;	// 40 MHz
+	}
+	
+private:
+	unsigned ppcFrequency;	// in Hz
+};
 
 /*
  * CModel3:
@@ -228,20 +264,16 @@ public:
 	void AttachInputs(CInputs *InputsPtr);
 	
 	/*
-	 * Init(ppcFrequencyParam, multiThreadedParam):
+	 * Init(void):
 	 *
 	 * One-time initialization of the context. Must be called prior to all
 	 * other members. Allocates memory and initializes device states.
-	 *
-	 * Parameters:
-	 *		ppcFrequencyParam	PowerPC frequency in Hz. If less than 1 MHz,
-	 *							will be clamped to 1 MHz.
 	 *
 	 * Returns:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	BOOL Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam);
+	BOOL Init(void);
 	 
 	/*
 	 * CModel3(void):
@@ -321,10 +353,8 @@ private:
 	
 	// PowerPC
 	PPC_FETCH_REGION	PPCFetchRegions[3];
-	unsigned			ppcFrequency;	// clock frequency (Hz)
 
 	// Multiple threading
-	bool        multiThreaded;     // True if should run CPUs in multiple threads, otherwise everything is run in a single thread
 	bool        startedThreads;    // True if threads have been created and started
 	CThread     *sndBrdThread;     // Sound board thread
 #ifdef SUPERMODEL_DRIVEBOARD

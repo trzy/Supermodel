@@ -26,10 +26,8 @@
  *
  * To-Do List
  * ----------
- * - Allow default section name to be set at any time. To support this, must
- *   allow for multiple sections with the same name to co-exist. The search
- *   procedure must look through all sections rather than stopping at the
- *   first section match. This is easy enough to add.
+ * - Add an iterator to retrieve all settings associated with a given section.
+ *   This will allow detection of invalid setting names, if the caller desires.
  * - Add boolean on/off, true/false keywords.
  * - Note that linePtr does not necessarily correspond to actual lines in the
  *   file (newlines should be counted by the tokenizer for that).

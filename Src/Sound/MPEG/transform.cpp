@@ -1503,7 +1503,7 @@ static int min_cycles = 99999999;
 			
 	if (cnt2-cnt1 < min_cycles) {
 	  min_cycles = cnt2-cnt1;
-	  printf("%d, %d cycles, %d\n", cnt3-cnt1, min_cycles, start);
+	  //printf("%d, %d cycles, %d\n", cnt3-cnt1, min_cycles, start);
 	}
 #endif
 }

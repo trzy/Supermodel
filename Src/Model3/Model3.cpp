@@ -184,9 +184,9 @@
  */
 
 #include <new>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "Supermodel.h"
 
 /******************************************************************************
@@ -1870,7 +1870,7 @@ void CModel3::ClearNVRAM(void)
 void CModel3::RunFrame(void)
 {	
 	// See if currently running multi-threaded
-	if (multiThreaded)
+	if (g_Config.multiThreaded)
 	{
 		// If so, check all threads are up and running
 		if (!StartThreads())
@@ -1924,7 +1924,7 @@ void CModel3::RunFrame(void)
 
 ThreadError:
 	ErrorLog("Threading error in CModel3::RunFrame: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-	multiThreaded = false;
+	g_Config.multiThreaded = false;
 }
 
 bool CModel3::StartThreads()
@@ -1966,7 +1966,7 @@ bool CModel3::StartThreads()
 ThreadError:
 	ErrorLog("Unable to create threads and/or synchronization objects: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	DeleteThreadObjects();
-	multiThreaded = false;
+	g_Config.multiThreaded = false;
 	return false;
 }
 
@@ -2066,7 +2066,7 @@ void CModel3::RunSoundBoardThread()
 
 ThreadError:
 	ErrorLog("Threading error in sound board thread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-	multiThreaded = false;
+	g_Config.multiThreaded = false;
 }
 
 #ifdef SUPERMODEL_DRIVEBOARD
@@ -2097,14 +2097,14 @@ void CModel3::RunDriveBoardThread()
 
 ThreadError:
 	ErrorLog("Threading error in drive board thread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-	multiThreaded = false;
+	g_Config.multiThreaded = false;
 }
 #endif
 
 void CModel3::RunMainBoardFrame(void)
 {
 	// Run the PowerPC for a frame
-	ppc_execute(ppcFrequency/60-10000);
+	ppc_execute(g_Config.GetPowerPCFrequency()*1000000/60-10000);
 	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 	
 	// VBlank
@@ -2612,15 +2612,9 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 }
 
 // Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
-BOOL CModel3::Init(unsigned ppcFrequencyParam, BOOL multiThreadedParam)
+BOOL CModel3::Init(void)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
-	
-	// PowerPC frequency
-	ppcFrequency = ppcFrequencyParam;
-	if (ppcFrequency < 1000000)
-		ppcFrequency = 1000000;
-	multiThreaded = !!multiThreadedParam;
 	
 	// Allocate all memory for ROMs and PPC RAM
 	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
@@ -2689,7 +2683,7 @@ CModel3::CModel3(void)
 	
 	securityPtr = 0;
 	
-	multiThreaded = true;
+	g_Config.multiThreaded = true;
 	startedThreads = false;
 	sndBrdThread = NULL; 
 #ifdef SUPERMODEL_DRIVEBOARD

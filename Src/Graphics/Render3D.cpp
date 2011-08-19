@@ -1283,7 +1283,7 @@ void CRender3D::SetStep(int stepID)
 	DebugLog("Render3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 	
-BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, const char *vsFile, const char *fsFile)
+BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
 {
 	// Allocate memory for texture buffer
 	textureBuffer = new(std::nothrow) GLfloat[512*512*4];
@@ -1331,6 +1331,8 @@ BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     yOffs = yOffset;
 
 	// Load shaders
+	const char *vsFile = g_Config.vertexShaderFile.size() ? g_Config.vertexShaderFile.c_str() : NULL;
+	const char *fsFile = g_Config.fragmentShaderFile.size() ? g_Config.fragmentShaderFile.c_str() : NULL;
 	if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,vsFile,fsFile,vertexShaderSource,fragmentShaderSource))
 		return FAIL;
 	

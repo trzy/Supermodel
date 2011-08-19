@@ -139,8 +139,14 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 	int 	delta = (inRate<<8)/outRate;	// (1/fout)/(1/fin)=fin/fout, 24.8 fixed point
 	int		outIdx = 0;
 	int		inIdx = 0;
-	INT16	leftSample, rightSample;
-	INT16	v[2];
+	INT32	leftSample, rightSample, leftSoundSample, rightSoundSample;
+	INT32	v[2], musicVol, soundVol;
+	
+	// Obtain program volume settings and convert to 24.8 fixed point (0-200 -> 0x00-0x200)
+	musicVol = g_Config.GetMusicVolume();
+	soundVol = g_Config.GetSoundVolume();
+	musicVol = (INT32) ((float) 0x100 * (float) musicVol / 100.0f);
+	soundVol = (INT32) ((float) 0x100 * (float) soundVol / 100.0f);
 	
 	// Scale volume from 0x00-0xFF -> 0x00-0x100 (24.8 fixed point)
 	v[0] = (INT16) ((float) 0x100 * (float) volumeL / 255.0f);
@@ -153,13 +159,17 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 		leftSample	= ((int)inL[inIdx]*pFrac+(int)inL[inIdx+1]*nFrac) >> 8;	// left channel
 		rightSample	= ((int)inR[inIdx]*pFrac+(int)inR[inIdx+1]*nFrac) >> 8;	// right channel
 		
-		// Apply volume
-		leftSample = (leftSample*v[0]) >> 8;
-		rightSample = (rightSample*v[0]) >> 8;
+		// Apply DSB volume and then overall music volume setting
+		leftSample = (leftSample*v[0]*musicVol) >> 16;		// multiplied by two 24.8 numbers, shift back by 16
+		rightSample = (rightSample*v[0]*musicVol) >> 16;
+		
+		// Apply sound volume setting
+		leftSoundSample = (outL[outIdx]*soundVol) >> 8;
+		rightSoundSample = (outR[outIdx]*soundVol) >> 8;
 		
 		// Mix and output
-		outL[outIdx] = MixAndClip(outL[outIdx], leftSample);
-		outR[outIdx] = MixAndClip(outR[outIdx], rightSample);
+		outL[outIdx] = MixAndClip(leftSoundSample, leftSample);
+		outR[outIdx] = MixAndClip(rightSoundSample, rightSample);
 		outIdx++;
 		
 		// Time step
@@ -412,6 +422,15 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 #ifdef SUPERMODEL_SOUND
 	int		cycles;
 	UINT8	v;
+	
+	if (!g_Config.emulateDSB)
+	{
+		// DSB code applies SCSP volume, too, so we must still mix
+		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
+		memset(mpegR, 0, (32000/60+2)*sizeof(INT16));
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, 44100/60, 32000/60+2, 44100, 32000);
+		return;
+	}
 	
 	// While FIFO not empty, fire interrupts, run for up to one frame
 	for (cycles = (4000000/60)/4; (cycles > 0) && (fifoIdxR != fifoIdxW);  )
@@ -948,6 +967,15 @@ void CDSB2::SendCommand(UINT8 data)
 void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 {
 #ifdef SUPERMODEL_SOUND
+	if (!g_Config.emulateDSB)
+	{
+		// DSB code applies SCSP volume, too, so we must still mix
+		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
+		memset(mpegR, 0, (32000/60+2)*sizeof(INT16));
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
+		return;
+	}
+
 	M68KSetContext(&M68K);
 	//printf("DSB2 run frame PC=%06X\n", M68KGetPC());
 	

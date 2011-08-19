@@ -119,7 +119,7 @@ int g,snd_eof=0;
 
 	if (header.protection_bit==0) getcrc();
 
-	printf("%d Hz, layer %d\n", t_sampling_frequency[header.ID][header.sampling_frequency], header.layer);
+	//printf("%d Hz, layer %d\n", t_sampling_frequency[header.ID][header.sampling_frequency], header.layer);
 
 	if (setup_audio(&header)!=0) {
 		warn("Cannot set up audio. Exiting\n");

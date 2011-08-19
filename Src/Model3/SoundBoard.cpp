@@ -58,7 +58,7 @@
 #include "Supermodel.h"
 
 // DEBUG
-//#define SUPERMODEL_LOG_AUDIO	// define this to log all audio to sound.bin
+#define SUPERMODEL_LOG_AUDIO	// define this to log all audio to sound.bin
 #ifdef SUPERMODEL_LOG_AUDIO
 static FILE		*soundFP;
 #endif
@@ -362,10 +362,17 @@ void CSoundBoard::RunFrame(void)
 {
 #ifdef SUPERMODEL_SOUND
 	// Run sound board first to generate SCSP audio
-	M68KSetContext(&M68K);
-	SCSP_Update();
-	M68KGetContext(&M68K);
-	//memset(audioL, 0, 44100/60*sizeof(INT16));memset(audioR, 0, 44100/60*sizeof(INT16));	// clear, I want DSB only
+	if (g_Config.emulateSCSP)
+	{
+		M68KSetContext(&M68K);
+		SCSP_Update();
+		M68KGetContext(&M68K);
+	}
+	else
+	{
+		memset(audioL, 0, 44100/60*sizeof(INT16));
+		memset(audioR, 0, 44100/60*sizeof(INT16));
+	}
 	
 	// Run DSB and mix with existing audio
 	if (NULL != DSB)

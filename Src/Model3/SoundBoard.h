@@ -33,6 +33,23 @@
 #include "Model3/DSB.h"
 
 /*
+ * CSoundBoardConfig:
+ *
+ * Settings used by CSoundBoard.
+ */
+class CSoundBoardConfig
+{
+public:
+	bool	emulateSCSP;	// SCSP emulation (enabled if TRUE)
+	
+	// Defaults
+	CSoundBoardConfig(void)
+	{
+		emulateSCSP = true;
+	}
+};
+
+/*
  * CSoundBoard:
  *
  * Model 3 sound board (68K CPU + 2 x SCSP).

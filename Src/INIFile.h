@@ -63,7 +63,8 @@ public:
 	 *
 	 * Returns:
 	 *		OKAY if the setting was found, FAIL otherwise. The type is not 
-	 *		checked.
+	 *		checked. If the setting is not found, the output parameter will not
+	 *		be modified.
 	 */
 	BOOL	Get(string SectionName, string SettingName, int& value);
 	BOOL	Get(string SectionName, string SettingName, unsigned& value);
