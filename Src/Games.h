@@ -91,7 +91,7 @@ struct GameInfo
  performance reasons (but the ROMs are not specified that way here).
 ******************************************************************************/
 
-extern const struct GameInfo Model3GameList[];
+extern const struct GameInfo g_Model3GameList[];
 
 
 #endif	// INCLUDED_GAMES_H

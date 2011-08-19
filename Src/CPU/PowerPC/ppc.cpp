@@ -28,7 +28,7 @@
 
 /* IBM/Motorola PowerPC 4xx/6xx Emulator */
 
-#include <string.h>	// memset()
+#include <cstring>	// memset()
 #include "Supermodel.h"
 #include "ppc.h"
 

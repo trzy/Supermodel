@@ -66,7 +66,7 @@
  *   endian, pushing the responsibility onto the caller.
  */
 
-#include <string.h>
+#include <cstring>
 #include "Supermodel.h"
 
 

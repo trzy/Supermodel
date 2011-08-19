@@ -509,7 +509,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	// Initialize and load ROMs
 	if (OKAY != Model3->Init())
 		return 1;
-	if (OKAY != Model3->LoadROMSet(Model3GameList, zipFile))
+	if (OKAY != Model3->LoadROMSet(g_Model3GameList, zipFile))
 		return 1;
 		
 	// Apply game-specific settings and then, lastly, command line settings
@@ -797,7 +797,7 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 	Map[1].ptr = &crom[0x800000];
 	
 	// Load ROM set
-	Game = LoadROMSetFromZIPFile(Map, Model3GameList, zipFile, FALSE);
+	Game = LoadROMSetFromZIPFile(Map, g_Model3GameList, zipFile, FALSE);
 	if (NULL == Game)
 		return ErrorLog("Failed to load ROM set.");	
 		
@@ -961,12 +961,12 @@ static void PrintGameList(void)
 	puts("");
 	puts("    ROM Set         Title");
 	puts("    -------         -----");
-	for (i = 0; Model3GameList[i].title != NULL; i++)
+	for (i = 0; g_Model3GameList[i].title != NULL; i++)
 	{
-		printf("    %s", Model3GameList[i].id);
-		for (j = strlen(Model3GameList[i].id); j < 9; j++)	// pad for alignment (no game ID is more than 9 letters)
+		printf("    %s", g_Model3GameList[i].id);
+		for (j = strlen(g_Model3GameList[i].id); j < 9; j++)	// pad for alignment (no game ID is more than 9 letters)
 			printf(" ");
-		printf("       %s\n", Model3GameList[i].title);
+		printf("       %s\n", g_Model3GameList[i].title);
 	}
 }
 

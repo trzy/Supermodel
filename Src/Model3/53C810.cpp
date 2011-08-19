@@ -48,7 +48,7 @@
  *
  */
 
-#include <string.h>
+#include <cstring>
 #include "Supermodel.h"
 
 

@@ -26,7 +26,7 @@
  */
  
 #include <new>
-#include <string.h>
+#include <cstring>
 #include "Supermodel.h"
 #include "Pkgs/unzip.h"
 

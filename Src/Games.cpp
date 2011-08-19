@@ -33,7 +33,7 @@
 #include "Supermodel.h"
 
 
-const struct GameInfo	Model3GameList[] =
+const struct GameInfo	g_Model3GameList[] =
 {
 	// Sega Bass Fishing
 	{

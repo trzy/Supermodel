@@ -31,7 +31,7 @@
  *   manually reverse the data. This keeps with the convention for VRAM.
  */
 
-#include <string.h>
+#include <cstring>
 #include "Supermodel.h"
 
 
