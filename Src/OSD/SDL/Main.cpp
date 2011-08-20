@@ -26,9 +26,7 @@
  *
  * Compile-Time Options
  * --------------------
- * - SUPERMODEL_SOUND: Enables experimental sound code. The 68K core (Turbo68K)
- *   only works on x86 (32-bit) systems, so this cannot be enabled on 64-bit
- *   builds.
+ * - SUPERMODEL_SOUND: Deprecated. Remove this.
  * - SUPERMODEL_WIN32: Define this if compiling on Windows.
  * - SUPERMODEL_OSX: Define this if compiling on Mac OS X.
  *
@@ -216,6 +214,89 @@ static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
 	return 0;
 }
 
+/*
+ * PrintGLInfo():
+ *
+ * Queries and prints OpenGL information. A full list of extensions can
+ * optionally be printed.
+ */
+static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
+{
+	const GLubyte	*str;
+	char			*strLocal;
+	GLint			value;
+	unsigned		xOffset, yOffset, xRes=496, yRes=384;
+	
+	if (createScreen)
+	{
+		if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
+		{
+			ErrorLog("Unable to query OpenGL.\n");
+			return;
+		}
+	}
+	
+	if (infoLog)	InfoLog("OpenGL information:");
+	else			puts("OpenGL information:\n");
+
+	str = glGetString(GL_VENDOR);
+	if (infoLog)	InfoLog("                   Vendor: %s", str);
+	else			printf("                   Vendor: %s\n", str);
+	
+	str = glGetString(GL_RENDERER);
+	if (infoLog)	InfoLog("                 Renderer: %s", str);
+	else			printf("                 Renderer: %s\n", str);
+	
+	str = glGetString(GL_VERSION);
+	if (infoLog)	InfoLog("                  Version: %s", str);
+	else			printf("                  Version: %s\n", str);
+	
+	str = glGetString(GL_SHADING_LANGUAGE_VERSION);
+	if (infoLog)	InfoLog(" Shading Language Version: %s", str);
+	else			printf(" Shading Language Version: %s\n", str);
+	
+	glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &value);
+	if (infoLog) 	InfoLog("Maximum Vertex Array Size: %d vertices", value);
+	else			printf("Maximum Vertex Array Size: %d vertices\n", value);
+	
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &value);
+	if (infoLog)	InfoLog("     Maximum Texture Size: %d texels", value);
+	else			printf("     Maximum Texture Size: %d texels\n", value);
+	
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &value);
+	if (infoLog)	InfoLog("Maximum Vertex Attributes: %d", value);
+	else			printf("Maximum Vertex Attributes: %d\n", value);
+	
+	glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &value);
+	if (infoLog)	InfoLog("  Maximum Vertex Uniforms: %d", value);
+	else			printf("  Maximum Vertex Uniforms: %d\n", value);
+	
+	if (printExtensions)
+	{
+		str = glGetString(GL_EXTENSIONS);
+		strLocal = (char *) malloc((strlen((char *) str)+1)*sizeof(char));
+		if (NULL == strLocal)
+		{
+			if (infoLog)	InfoLog("     Supported Extensions: %s", str);
+			else			printf("     Supported Extensions: %s\n", str);
+		}
+		else
+		{
+			strcpy(strLocal, (char *) str);
+			if (infoLog) 	InfoLog("     Supported Extensions: %s", (strLocal = strtok(strLocal, " \t\n")));
+			else			printf("     Supported Extensions: %s\n", (strLocal = strtok(strLocal, " \t\n")));
+			while ((strLocal = strtok(NULL, " \t\n")) != NULL)
+			{
+				if (infoLog) 	InfoLog("                           %s", strLocal);
+				else			printf("                           %s\n", strLocal);
+			}
+		}
+	}
+	
+	printf("\n");
+	if (infoLog) InfoLog("");
+}
+
 	
 /******************************************************************************
  Configuration
@@ -320,22 +401,39 @@ static void ReadConfigFile(CInputs *Inputs, const char *section)
 	INI.Close();
 }
 
-// Debug
-static void DumpConfig(void)
+// Log the configuration to info log
+static void LogConfig(void)
 {
-	printf("MultiThreaded    = %d\n", g_Config.multiThreaded);
-	printf("PowerPCFrequency = %d\n", g_Config.GetPowerPCFrequency());
-	printf("EmulateSCSP      = %d\n", g_Config.emulateSCSP);
-	printf("EmulateDSB       = %d\n", g_Config.emulateDSB);
-	printf("VertexShader     = %s\n", g_Config.vertexShaderFile.c_str());
-	printf("FragmentShader   = %s\n", g_Config.fragmentShaderFile.c_str());
-	printf("XResolution      = %d\n", g_Config.xRes);
-	printf("YResolution      = %d\n", g_Config.yRes);
-	printf("FullScreen       = %d\n", g_Config.fullScreen);
-	printf("Throttle         = %d\n", g_Config.throttle);
-	printf("ShowFrameRate    = %d\n", g_Config.showFPS);
-	printf("InputSystem      = %s\n", g_Config.GetInputSystem());
-	printf("\n");
+	InfoLog("Program settings:");
+	
+	// COSDConfig
+	InfoLog("\tXResolution      = %d", g_Config.xRes);
+	InfoLog("\tYResolution      = %d", g_Config.yRes);
+	InfoLog("\tFullScreen       = %d", g_Config.fullScreen);
+	InfoLog("\tThrottle         = %d", g_Config.throttle);
+	InfoLog("\tShowFrameRate    = %d", g_Config.showFPS);
+#ifdef SUPERMODEL_DEBUGGER
+	InfoLog("\tDisableDebugger  = %d", g_Config.disableDebugger);
+#endif
+	InfoLog("\tInputSystem      = %s", g_Config.GetInputSystem());
+	
+	// CModel3Config
+	InfoLog("\tMultiThreaded    = %d", g_Config.multiThreaded);
+	InfoLog("\tPowerPCFrequency = %d", g_Config.GetPowerPCFrequency());
+	
+	// CSoundBoardConfig
+	InfoLog("\tEmulateSCSP      = %d", g_Config.emulateSCSP);
+	
+	// CDSBConfig
+	InfoLog("\tEmulateDSB       = %d", g_Config.emulateDSB);
+	InfoLog("\tSoundVolume      = %d", g_Config.GetSoundVolume());
+	InfoLog("\tMusicVolume      = %d", g_Config.GetMusicVolume());
+	
+	// CRender3DConfig
+	InfoLog("\tVertexShader     = %s", g_Config.vertexShaderFile.c_str());
+	InfoLog("\tFragmentShader   = %s", g_Config.fragmentShaderFile.c_str());
+	
+	InfoLog("");
 }
 
 
@@ -500,11 +598,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	BOOL			showCursor = FALSE;	// show cursor in full screen mode?
 	BOOL			quit = 0;
 	BOOL            paused = 0;
-	
-	// Info log user options
-	InfoLog("PowerPC frequency: %d Hz", g_Config.GetPowerPCFrequency()); 	
-	InfoLog("Resolution requested: %dx%d (%s)", g_Config.xRes, g_Config.yRes, g_Config.fullScreen?"full screen":"windowed");
-	InfoLog("Frame rate limiting: %s", g_Config.throttle?"Enabled":"Disabled");
 
 	// Initialize and load ROMs
 	if (OKAY != Model3->Init())
@@ -514,9 +607,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		
 	// Apply game-specific settings and then, lastly, command line settings
 	ReadConfigFile(Inputs, Model3->GetGameInfo()->id);
-	//DumpConfig();
 	ApplySettings(Inputs, CmdLine, "Global");
-	//DumpConfig();
 		
 	// Load NVRAM
 	LoadNVRAM(Model3);
@@ -527,6 +618,10 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
   	sprintf(titleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
 	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,TRUE,g_Config.fullScreen))
 		return 1;
+		
+	// Info log GL information and user options
+	PrintGLInfo(false, true, false);
+	LogConfig();
 	
 	// Initialize audio system
 	if (OKAY != OpenAudio())
@@ -768,7 +863,7 @@ QuitError:
 
 
 /******************************************************************************
- Diagnostic Commands
+ CROM Disassembler
 ******************************************************************************/
 
 // Disassemble instructions from CROM
@@ -830,69 +925,6 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 	return OKAY;
 }
 
-/*
- * PrintGLInfo():
- *
- * Queries and prints OpenGL information. A full list of extensions can
- * optionally be printed.
- */
-static void PrintGLInfo(BOOL printExtensions)
-{
-	const GLubyte	*str;
-	char			*strLocal;
-	GLint			value;
-	unsigned		xOffset, yOffset, xRes=496, yRes=384;
-	
-	if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
-	{
-		ErrorLog("Unable to query OpenGL.\n");
-		return;
-	}
-	
-	puts("OpenGL information:\n");
-
-	str = glGetString(GL_VENDOR);
-	printf("                   Vendor: %s\n", str);
-	
-	str = glGetString(GL_RENDERER);
-	printf("                 Renderer: %s\n", str);
-	
-	str = glGetString(GL_VERSION);
-	printf("                  Version: %s\n", str);
-	
-	str = glGetString(GL_SHADING_LANGUAGE_VERSION);
-	printf(" Shading Language Version: %s\n", str);
-	
-	glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &value);
-	printf("Maximum Vertex Array Size: %d vertices\n", value);
-	
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &value);
-	printf("     Maximum Texture Size: %d texels\n", value);
-	
-	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &value);
-	printf("Maximum Vertex Attributes: %d\n", value);
-	
-	glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &value);
-	printf("  Maximum Vertex Uniforms: %d\n", value);
-	
-	if (printExtensions)
-	{
-		str = glGetString(GL_EXTENSIONS);
-		strLocal = (char *) malloc((strlen((char *) str)+1)*sizeof(char));
-		if (NULL == strLocal)
-			printf("     Supported Extensions: %s\n", str);
-		else
-		{
-			strcpy(strLocal, (char *) str);
-			printf("     Supported Extensions: %s\n", (strLocal = strtok(strLocal, " \t\n")));
-			while ((strLocal = strtok(NULL, " \t\n")) != NULL)
-				printf("                           %s\n", strLocal);
-		}
-	}
-	
-	printf("\n");
-}
-
 
 /******************************************************************************
  Entry Point and Command Line Procesing
@@ -931,10 +963,8 @@ static void Help(void)
 	puts("    -fullscreen            Full screen mode");
 	puts("    -no-throttle           Disable 60 Hz frame rate limit");
 	puts("    -show-fps              Display frame rate in window title bar");
-#ifdef DEBUG	// ordinary users do not need to know about these, but they are always available
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
-#endif
 	puts("");
 	puts("Audio Options:");
 	puts("    -sound-volume=<v>      Set volume of sound effects in % [Default: 100]");
@@ -943,13 +973,13 @@ static void Help(void)
 	puts("Input Options:");
 	puts("    -input-system=<s>      Set input system [Default: SDL]");
 	puts("    -print-inputs          Prints current input configuration");
-	puts("    -config-inputs         Configure inputs for keyboards, mice and joysticks");
+	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 	puts("");
 	puts("Diagnostic Options:");
-#ifdef DEBUG
+#ifdef DEBUG	// intended for developers only
 	puts("    -dis=<addr>[,n]        Disassemble PowerPC code from CROM");
 #endif
-	puts("    -print-gl-info         Print extensive OpenGL information and quit\n");
+	puts("    -print-gl-info         Print OpenGL driver information and quit\n");
 }
 
 // Print game list
@@ -999,9 +1029,14 @@ int main(int argc, char **argv)
 	Logger.ClearLogs();
 	SetLogger(&Logger);
 	
+	// Log the command line used to start Supermodel
+	InfoLog("Started as:");
+	for (i = 0; i < argc; i++)
+		InfoLog("\targv[%d] = %s", i, argv[i]);
+	InfoLog("");
+	
 	// Read global settings from INI file
 	ReadConfigFile(NULL, "Global");
-	//DumpConfig();
 
 	/*
 	 * Parse command line. 
@@ -1139,7 +1174,7 @@ int main(int argc, char **argv)
 		}
 		else if (!strcmp(argv[i],"-print-gl-info"))
 		{
-			PrintGLInfo(FALSE);
+			PrintGLInfo(true, false, false);
 			return 0;
 		}
 		else if (argv[i][0] == '-')
