@@ -293,8 +293,8 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
 		}
 	}
 	
-	printf("\n");
-	if (infoLog) InfoLog("");
+	if (infoLog)	InfoLog("");
+	else			printf("\n");
 }
 
 	
