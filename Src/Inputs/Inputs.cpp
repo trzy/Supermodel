@@ -89,19 +89,27 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	viewChange         = AddSwitchInput("ViewChange", "View Change", GAME_INPUT_RALLY, "KEY_A,JOY1_BUTTON1");
 	handBrake          = AddSwitchInput("HandBrake",  "Hand Brake",  GAME_INPUT_RALLY, "KEY_S,JOY1_BUTTON2");
 
-	// Virtua On Controls
-	twinJoyTurnLeft    = AddSwitchInput("TwinJoyTurnLeft",    "Turn Left",          GAME_INPUT_TWIN_JOYSTICKS, "KEY_Q,JOY1_RXAXIS_NEG");
-	twinJoyTurnRight   = AddSwitchInput("TwinJoyTurnRight",   "Turn Right",         GAME_INPUT_TWIN_JOYSTICKS, "KEY_W,JOY1_RXAXIS_POS");
-	twinJoyForward     = AddSwitchInput("TwinJoyForward",     "Forward",            GAME_INPUT_TWIN_JOYSTICKS, "KEY_UP,JOY1_YAXIS_NEG");
-	twinJoyReverse     = AddSwitchInput("TwinJoyReverse",     "Reverse",            GAME_INPUT_TWIN_JOYSTICKS, "KEY_DOWN,JOY1_YAXIS_POS");
-	twinJoyStrafeLeft  = AddSwitchInput("TwinJoyStrafeLeft",  "Strafe Left",        GAME_INPUT_TWIN_JOYSTICKS, "KEY_LEFT,JOY1_XAXIS_NEG");
-	twinJoyStrafeRight = AddSwitchInput("TwinJoyStrafeRight", "Strafe Right",       GAME_INPUT_TWIN_JOYSTICKS, "KEY_RIGHT,JOY1_XAXIS_POS");
-	twinJoyJump        = AddSwitchInput("TwinJoyJump",        "Jump",               GAME_INPUT_TWIN_JOYSTICKS, "KEY_E,JOY1_BUTTON1");
-	twinJoyCrouch      = AddSwitchInput("TwinJoyCrouch",      "Crouch",             GAME_INPUT_TWIN_JOYSTICKS, "KEY_R,JOY1_BUTTON2");
-	twinJoyLeftShot    = AddSwitchInput("TwinJoyLeftShot",    "Left Shot Trigger",  GAME_INPUT_TWIN_JOYSTICKS, "KEY_A,JOY1_BUTTON5");
-	twinJoyRightShot   = AddSwitchInput("TwinJoyRightShot",   "Right Shot Trigger", GAME_INPUT_TWIN_JOYSTICKS, "KEY_S,JOY1_BUTTON6");
-	twinJoyLeftTurbo   = AddSwitchInput("TwinJoyLeftTurbo",   "Left Turbo",         GAME_INPUT_TWIN_JOYSTICKS, "KEY_Z,JOY1_BUTTON7");
-	twinJoyRightTurbo  = AddSwitchInput("TwinJoyRightTurbo",  "Right Turbo",        GAME_INPUT_TWIN_JOYSTICKS, "KEY_X,JOY1_BUTTON8");
+	// Virtual On Controls
+	twinJoyTurnLeft    = AddSwitchInput("TwinJoyTurnLeft",    "Macro Turn Left",    	GAME_INPUT_TWIN_JOYSTICKS, "KEY_Q,JOY1_RXAXIS_NEG");
+	twinJoyTurnRight   = AddSwitchInput("TwinJoyTurnRight",   "Macro Turn Right",   	GAME_INPUT_TWIN_JOYSTICKS, "KEY_W,JOY1_RXAXIS_POS");
+	twinJoyForward     = AddSwitchInput("TwinJoyForward",     "Macro Forward",      	GAME_INPUT_TWIN_JOYSTICKS, "KEY_UP,JOY1_YAXIS_NEG");
+	twinJoyReverse     = AddSwitchInput("TwinJoyReverse",     "Macro Reverse",      	GAME_INPUT_TWIN_JOYSTICKS, "KEY_DOWN,JOY1_YAXIS_POS");
+	twinJoyStrafeLeft  = AddSwitchInput("TwinJoyStrafeLeft",  "Macro Strafe Left",  	GAME_INPUT_TWIN_JOYSTICKS, "KEY_LEFT,JOY1_XAXIS_NEG");
+	twinJoyStrafeRight = AddSwitchInput("TwinJoyStrafeRight", "Macro Strafe Right", 	GAME_INPUT_TWIN_JOYSTICKS, "KEY_RIGHT,JOY1_XAXIS_POS");
+	twinJoyJump        = AddSwitchInput("TwinJoyJump",        "Macro Jump",         	GAME_INPUT_TWIN_JOYSTICKS, "KEY_E,JOY1_BUTTON1");
+	twinJoyCrouch      = AddSwitchInput("TwinJoyCrouch",      "Macro Crouch",       	GAME_INPUT_TWIN_JOYSTICKS, "KEY_R,JOY1_BUTTON2");
+	twinJoyLeft1	   = AddSwitchInput("TwinJoyLeft1",       "Left Joystick Left", 	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyLeft2	   = AddSwitchInput("TwinJoyLeft2",       "Right Joystick Left",	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyRight1	   = AddSwitchInput("TwinJoyRight1",      "Left Joystick Right", 	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyRight2	   = AddSwitchInput("TwinJoyRight2",      "Right Joystick Right", 	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyUp1	   	   = AddSwitchInput("TwinJoyUp1",         "Left Joystick Up", 		GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyUp2	   	   = AddSwitchInput("TwinJoyUp2",         "Right Joystick Up", 		GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyDown1	   = AddSwitchInput("TwinJoyDown1",       "Left Joystick Down", 	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyDown2	   = AddSwitchInput("TwinJoyDown2",       "Right Joystick Down", 	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyShot1       = AddSwitchInput("TwinJoyShot1",       "Left Shot Trigger",  	GAME_INPUT_TWIN_JOYSTICKS, "KEY_A,JOY1_BUTTON5");
+	twinJoyShot2       = AddSwitchInput("TwinJoyShot2",       "Right Shot Trigger", 	GAME_INPUT_TWIN_JOYSTICKS, "KEY_S,JOY1_BUTTON6");
+	twinJoyTurbo1      = AddSwitchInput("TwinJoyTurbo1",      "Left Turbo",         	GAME_INPUT_TWIN_JOYSTICKS, "KEY_Z,JOY1_BUTTON7");
+	twinJoyTurbo2      = AddSwitchInput("TwinJoyTurbo2",      "Right Turbo",        	GAME_INPUT_TWIN_JOYSTICKS, "KEY_X,JOY1_BUTTON8");
 	
 	// Analog Joystick
 	CAnalogInput *analogJoyLeft  = AddAnalogInput("AnalogJoyLeft",  "Analog Left",  GAME_INPUT_ANALOG_JOYSTICK, "KEY_LEFT");

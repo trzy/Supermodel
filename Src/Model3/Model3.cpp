@@ -292,6 +292,25 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 		if ((Game->inputFlags&GAME_INPUT_TWIN_JOYSTICKS))	// First twin joystick
 		{
 			/*
+			 * Process left joystick inputs first
+			 */
+			 
+			// Shot trigger and Turbo
+			data &= ~(Inputs->twinJoyShot1->value<<0);
+			data &= ~(Inputs->twinJoyTurbo1->value<<1);
+			
+			// Stick
+			data &= ~(Inputs->twinJoyLeft1->value<<7);
+			data &= ~(Inputs->twinJoyRight1->value<<6);
+			data &= ~(Inputs->twinJoyUp1->value<<5);
+			data &= ~(Inputs->twinJoyDown1->value<<4);
+			
+			/*
+			 * Next, process twin joystick macro inputs (higher level inputs
+			 * that map to actions on both joysticks simultaneously).
+			 */
+			 
+			/*
 			 * Forward/reverse/turn are mutually exclusive.
 			 *
 			 * Turn Left: 	1D 2U
@@ -324,10 +343,6 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 				data &= ~0x80;
 			else if (Inputs->twinJoyCrouch->value)
 				data &= ~0x40;
-				
-			// Shot trigger and Turbo
-			data &= ~(Inputs->twinJoyLeftShot->value<<0);
-			data &= ~(Inputs->twinJoyLeftTurbo->value<<1);
 		}
 		
 		return data;
@@ -360,6 +375,15 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 		
 		if ((Game->inputFlags&GAME_INPUT_TWIN_JOYSTICKS))	// Second twin joystick (see register 0x08 for comments)
 		{
+						
+			data &= ~(Inputs->twinJoyShot2->value<<0);
+			data &= ~(Inputs->twinJoyTurbo2->value<<1);
+			
+			data &= ~(Inputs->twinJoyLeft2->value<<7);
+			data &= ~(Inputs->twinJoyRight2->value<<6);
+			data &= ~(Inputs->twinJoyUp2->value<<5);
+			data &= ~(Inputs->twinJoyDown2->value<<4);
+
 			if (Inputs->twinJoyTurnLeft->value)
 				data &= ~0x20;
 			else if (Inputs->twinJoyTurnRight->value)
@@ -377,9 +401,6 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 				data &= ~0x40;
 			else if (Inputs->twinJoyCrouch->value)
 				data &= ~0x80;
-			
-			data &= ~(Inputs->twinJoyRightShot->value<<0);
-			data &= ~(Inputs->twinJoyRightTurbo->value<<1);
 		}
 		
 		if ((Game->inputFlags&GAME_INPUT_GUN2))

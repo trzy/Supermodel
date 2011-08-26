@@ -64,82 +64,93 @@ private:
 
 public:
 	// UI controls
-	CSwitchInput     *uiExit;
-	CSwitchInput     *uiReset;
-	CSwitchInput     *uiPause;
-	CSwitchInput     *uiSaveState;
-	CSwitchInput     *uiChangeSlot;
-	CSwitchInput     *uiLoadState;
-	CSwitchInput     *uiDumpInpState;
-	CSwitchInput     *uiClearNVRAM;
-	CSwitchInput     *uiToggleCursor;
-	CSwitchInput     *uiToggleFrLimit;
+	CSwitchInput    *uiExit;
+	CSwitchInput    *uiReset;
+	CSwitchInput    *uiPause;
+	CSwitchInput    *uiSaveState;
+	CSwitchInput    *uiChangeSlot;
+	CSwitchInput    *uiLoadState;
+	CSwitchInput    *uiDumpInpState;
+	CSwitchInput    *uiClearNVRAM;
+	CSwitchInput    *uiToggleCursor;
+	CSwitchInput	*uiToggleFrLimit;
 #ifdef SUPERMODEL_DEBUGGER
 	CSwitchInput     *uiEnterDebugger;
 #endif
 
 	// Common controls between all games
-	CSwitchInput     *coin[2];
-	CSwitchInput     *start[2];
-	CSwitchInput     *test[2];
-	CSwitchInput     *service[2];
+	CSwitchInput    *coin[2];
+	CSwitchInput    *start[2];
+	CSwitchInput    *test[2];
+	CSwitchInput    *service[2];
 
 	// Joysticks (players 1 and 2)
-	CSwitchInput     *up[2];
-	CSwitchInput     *down[2];
-	CSwitchInput     *left[2];
-	CSwitchInput     *right[2];
+	CSwitchInput    *up[2];
+	CSwitchInput    *down[2];
+	CSwitchInput    *left[2];
+	CSwitchInput    *right[2];
 
 	// Fighting game controls (players 1 and 2)
-	CSwitchInput     *punch[2];
-	CSwitchInput     *kick[2];
-	CSwitchInput     *guard[2];
-	CSwitchInput     *escape[2];
+	CSwitchInput    *punch[2];
+	CSwitchInput    *kick[2];
+	CSwitchInput    *guard[2];
+	CSwitchInput    *escape[2];
 
 	// Soccer game controls (players 1 and 2)
-	CSwitchInput     *shortPass[2];
-	CSwitchInput     *longPass[2];
-	CSwitchInput     *shoot[2];
+	CSwitchInput    *shortPass[2];
+	CSwitchInput    *longPass[2];
+	CSwitchInput    *shoot[2];
 
 	// Vehicle controls
-	CAxisInput       *steering;
-	CAnalogInput     *accelerator;
-	CAnalogInput     *brake;
+	CAxisInput      *steering;
+	CAnalogInput    *accelerator;
+	CAnalogInput    *brake;
 
 	// VR view buttons: VR1 Red, VR2 Blue, VR3 Yellow, VR4 Green
-	CSwitchInput     *vr[4];
+	CSwitchInput    *vr[4];
  
 	// 4-speed gear shift
 	CGearShift4Input *gearShift4;
 
 	// Rally controls
-	CSwitchInput	 *viewChange;
-	CSwitchInput	 *handBrake;
+	CSwitchInput	*viewChange;
+	CSwitchInput	*handBrake;
 
-	// Twin joysticks
-	CSwitchInput	 *twinJoyTurnLeft;
-	CSwitchInput     *twinJoyTurnRight;
-	CSwitchInput	 *twinJoyStrafeLeft;
-	CSwitchInput     *twinJoyStrafeRight;
-	CSwitchInput	 *twinJoyForward;
-	CSwitchInput     *twinJoyReverse;
-	CSwitchInput	 *twinJoyJump;
-	CSwitchInput     *twinJoyCrouch;
-	CSwitchInput	 *twinJoyLeftShot;
-	CSwitchInput     *twinJoyRightShot;
-	CSwitchInput	 *twinJoyLeftTurbo;
-	CSwitchInput     *twinJoyRightTurbo;
+	// Twin joysticks (individually mapped version; 1 = left stick, 2 = right stick)
+	CSwitchInput	*twinJoyLeft1;
+	CSwitchInput	*twinJoyLeft2;
+	CSwitchInput	*twinJoyRight1;
+	CSwitchInput	*twinJoyRight2;
+	CSwitchInput	*twinJoyUp1;
+	CSwitchInput	*twinJoyUp2;
+	CSwitchInput	*twinJoyDown1;
+	CSwitchInput	*twinJoyDown2;
+	CSwitchInput	*twinJoyShot1;
+	CSwitchInput    *twinJoyShot2;
+	CSwitchInput	*twinJoyTurbo1;
+	CSwitchInput    *twinJoyTurbo2;
+	
+	// Twin joysticks (macro mapping, for users w/out dual joysticks) 
+	CSwitchInput	*twinJoyTurnLeft;
+	CSwitchInput    *twinJoyTurnRight;
+	CSwitchInput	*twinJoyStrafeLeft;
+	CSwitchInput    *twinJoyStrafeRight;
+	CSwitchInput	*twinJoyForward;
+	CSwitchInput    *twinJoyReverse;
+	CSwitchInput	*twinJoyJump;
+	CSwitchInput    *twinJoyCrouch;
+	
 	
 	// Analog joystick
-	CAxisInput       *analogJoyX;
-	CAxisInput       *analogJoyY;
-	CSwitchInput	 *analogJoyTrigger;
-	CSwitchInput	 *analogJoyEvent;
+	CAxisInput      *analogJoyX;
+	CAxisInput      *analogJoyY;
+	CSwitchInput	*analogJoyTrigger;
+	CSwitchInput	*analogJoyEvent;
 
 	// Gun controls (players 1 and 2)
-	CAxisInput       *gunX[2];
-	CAxisInput       *gunY[2];
-	CTriggerInput    *trigger[2];
+	CAxisInput      *gunX[2];
+	CAxisInput      *gunY[2];
+	CTriggerInput   *trigger[2];
 	
 	/*
 	 * Creates a set of inputs with the given input system.

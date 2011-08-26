@@ -65,7 +65,7 @@ const char* CInput::GetInputGroup()
 		case GAME_INPUT_SHIFT4:          return "Racing Game Gear Shift";
 		case GAME_INPUT_VR:              return "Racing Game VR View Buttons";
 		case GAME_INPUT_RALLY:           return "Sega Rally Buttons";
-		case GAME_INPUT_TWIN_JOYSTICKS:  return "Virtua On Controls";
+		case GAME_INPUT_TWIN_JOYSTICKS:  return "Virtual On Controls";
 		case GAME_INPUT_ANALOG_JOYSTICK: return "Analog Joystick";
 		case GAME_INPUT_GUN1:            // Fall through to below
 		case GAME_INPUT_GUN2:            return "Lightguns";

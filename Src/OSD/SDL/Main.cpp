@@ -348,8 +348,8 @@ static bool ConfigureInputs(CInputs *Inputs, bool configure)
 	return OKAY;
 }
 
-// Apply configuration settings from configuration file
-static void ApplySettings(CInputs *Inputs, CINIFile *INI, const char *section)
+// Apply configuration settings from configuration file (does NOT read input settings; see ConfigureInputs())
+static void ApplySettings(CINIFile *INI, const char *section)
 {
 	unsigned	x;
 	string		String;
@@ -383,21 +383,17 @@ static void ApplySettings(CInputs *Inputs, CINIFile *INI, const char *section)
 		g_Config.throttle = x ? true : false;
 	if (OKAY == INI->Get(section, "ShowFrameRate", x))
 		g_Config.showFPS = x ? true : false;
-			
-	// Inputs
-	if (Inputs != NULL)
-		Inputs->ReadFromINIFile(INI, section);
 }
 
 // Read settings (from a specific section) from the config file
-static void ReadConfigFile(CInputs *Inputs, const char *section)
+static void ReadConfigFile(const char *section)
 {
 	CINIFile	INI;	
 	
 	INI.Open(CONFIG_FILE_PATH);
 	INI.SetDefaultSectionName("Global");	// required to read settings not associated with a specific section
 	INI.Parse();
-	ApplySettings(Inputs, &INI, section);
+	ApplySettings(&INI, section);
 	INI.Close();
 }
 
@@ -576,9 +572,7 @@ static void LoadNVRAM(CModel3 *Model3)
 
 
 /******************************************************************************
- Main Program Driver
- 
- All configuration management is done prior to calling Supermodel().
+ Main Program Loop
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
@@ -606,8 +600,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		return 1;
 		
 	// Apply game-specific settings and then, lastly, command line settings
-	ReadConfigFile(Inputs, Model3->GetGameInfo()->id);
-	ApplySettings(Inputs, CmdLine, "Global");
+	ReadConfigFile(Model3->GetGameInfo()->id);
+	ApplySettings(CmdLine, "Global");
 		
 	// Load NVRAM
 	LoadNVRAM(Model3);
@@ -1036,7 +1030,7 @@ int main(int argc, char **argv)
 	InfoLog("");
 	
 	// Read global settings from INI file
-	ReadConfigFile(NULL, "Global");
+	ReadConfigFile("Global");
 
 	/*
 	 * Parse command line. 
@@ -1284,5 +1278,11 @@ Exit:
 	if (InputSystem != NULL)
 		delete InputSystem;
 	SDL_Quit();
+	
+	if (exitCode)
+		InfoLog("Program terminated due to an error.");
+	else
+		InfoLog("Program terminated normally.");
+		
 	return exitCode;
 }
