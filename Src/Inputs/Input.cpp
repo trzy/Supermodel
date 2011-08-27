@@ -58,8 +58,9 @@ const char* CInput::GetInputGroup()
 		case GAME_INPUT_UI:              return "User Interface Controls";
 		case GAME_INPUT_COMMON:          return "Common Controls";
 		case GAME_INPUT_JOYSTICK1:       // Fall through to below
-		case GAME_INPUT_JOYSTICK2:       return "8-Way Joysticks";
+		case GAME_INPUT_JOYSTICK2:       return "4-Way Joysticks";
 		case GAME_INPUT_FIGHTING:        return "Fighting Game Buttons";
+		case GAME_INPUT_SPIKEOUT:		 return "Spikeout Buttons";
 		case GAME_INPUT_SOCCER:          return "Virtua Striker Buttons";
 		case GAME_INPUT_VEHICLE:         return "Racing Game Steering Controls";
 		case GAME_INPUT_SHIFT4:          return "Racing Game Gear Shift";

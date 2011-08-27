@@ -247,6 +247,14 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 			data &= ~(Inputs->punch[0]->value<<0);		    // P1 Punch
 		}
 		
+		if ((Game->inputFlags&GAME_INPUT_SPIKEOUT))
+		{
+			data &= ~(Inputs->shift->value<<2);	        	// Shift
+			data &= ~(Inputs->beat->value<<0);		    	// Beat
+			data &= ~(Inputs->charge->value<<1);		    // Charge
+			data &= ~(Inputs->jump->value<<3);		    	// Jump
+		}
+		
 		if ((Game->inputFlags&GAME_INPUT_SOCCER))
 		{
 			data &= ~(Inputs->shortPass[0]->value<<2);	    // P1 Short Pass
@@ -2164,7 +2172,7 @@ void CModel3::RunMainBoardFrame(void)
 		++irqCount;
 		if (irqCount > 128)
 		{
-			printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
+			//printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
 			break;
 		}
 	}

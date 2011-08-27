@@ -1,3 +1,12 @@
+//TODO before release:
+// - Controls for Dirt Devils, and other recent games (is bass working?)
+// - Crosshairs
+// - Comment source code, clean up
+// - BOOL -> bool, TRUE/FALSE -> true/false
+// - Add option for building with /MD in MSVC Makefile
+// - Remove SUPERMODEL_SOUND
+// - EmulateSCSP -> EmulateSound ?
+
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -572,6 +581,70 @@ static void LoadNVRAM(CModel3 *Model3)
 
 
 /******************************************************************************
+ UI Rendering
+ 
+ Currently, only does crosshairs for light gun games.
+******************************************************************************/
+
+static void GunToViewCoords(float *x, float *y)
+{
+	*x = (*x-150.0f)/(651.0f-150.0f);	// Scale [150,651] -> [0.0,1.0]
+	*y = (*y-80.0f)/(465.0f-80.0f);		// Scale [80,465] -> [0.0,1.0]
+}
+
+static void DrawCrosshair(float x, float y, float r, float g, float b)
+{
+	glColor3f(r, g, b);
+	glVertex2f(x-0.01f, y);
+	glVertex2f(x-0.002f, y);
+	glVertex2f(x+0.003f, y);
+	glVertex2f(x+0.01f, y);
+	glVertex2f(x, y-0.01f*(float)xRes/(float)yRes);
+	glVertex2f(x, y-0.003f*(float)xRes/(float)yRes);
+	glVertex2f(x, y+0.002f*(float)xRes/(float)yRes);
+	glVertex2f(x, y+0.01f*(float)xRes/(float)yRes);
+}
+
+static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
+{
+	float	x[2], y[2];
+	
+	showCrosshairs &= 3;
+	if (!showCrosshairs)
+		return;
+		
+	// Set up the viewport and orthogonal projection
+	glViewport(xOffset, yOffset, xRes, yRes);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+    gluOrtho2D(0.0, 1.0, 1.0, 0.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glDisable(GL_TEXTURE_2D);	// no texture mapping
+	glDisable(GL_BLEND);		// no blending
+	glDisable(GL_DEPTH_TEST);	// no Z-buffering needed
+	glUseProgram(NULL);			// no shaders
+	
+	// Convert gun coordinates to viewspace coordinates
+	x[0] = (float) Inputs->gunX[0]->value;
+	y[0] = (float) Inputs->gunY[0]->value;
+	x[1] = (float) Inputs->gunX[1]->value;
+	y[1] = (float) Inputs->gunY[1]->value;
+	GunToViewCoords(&x[0], &y[0]);
+	GunToViewCoords(&x[1], &y[1]);
+	
+	// Draw visible crosshairs
+	glBegin(GL_LINES);
+	glLineWidth(1.0f);
+	if ((showCrosshairs & 2) && !Inputs->trigger[0]->offscreenValue)	// Player 1
+		DrawCrosshair(x[0], y[0], 1.0f, 0.0f, 0.0f);
+	if ((showCrosshairs & 1) && !Inputs->trigger[1]->offscreenValue)	// Player 2
+		DrawCrosshair(x[1], y[1], 0.0f, 1.0f, 0.0f);
+	glEnd();		
+}
+
+
+/******************************************************************************
  Main Program Loop
 ******************************************************************************/
 
@@ -589,7 +662,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	CRender3D		*Render3D = new CRender3D();
 	unsigned		prevFPSTicks, currentFPSTicks, currentTicks, targetTicks, startTicks;
 	unsigned		fpsFramesElapsed, framesElapsed;
-	BOOL			showCursor = FALSE;	// show cursor in full screen mode?
+	unsigned		showCrosshairs = 0;	// bit 1: player 1 crosshair, bit 0: player 2
+	bool			gameHasLightguns = false;
 	BOOL			quit = 0;
 	BOOL            paused = 0;
 
@@ -621,8 +695,14 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	if (OKAY != OpenAudio())
 		return 1;
 
-	// Hide mouse if fullscreen
+	// Hide mouse if fullscreen, enable crosshairs for gun games
 	Inputs->GetInputSystem()->SetMouseVisibility(!g_Config.fullScreen);
+	gameHasLightguns = !!(Model3->GetGameInfo()->inputFlags & (GAME_INPUT_GUN1|GAME_INPUT_GUN2));
+	if (g_Config.fullScreen)
+	{
+		if (gameHasLightguns)
+			showCrosshairs = 3;
+	}
 
 	// Attach the inputs to the emulator
 	Model3->AttachInputs(Inputs);
@@ -659,6 +739,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		{
 			// If not, run one frame
 			Model3->RunFrame();
+			
+			// Show crosshairs for light gun games
+			UpdateCrosshairs(Inputs, showCrosshairs);
 		
 			// Swap the buffers
 			SDL_GL_SwapBuffers();
@@ -699,7 +782,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 				Debugger->Reset();
 #endif // SUPERMODEL_DEBUGGER
 
-			printf("Model 3 reset.\n");
+			puts("Model 3 reset.");
 		}
 		else if (Inputs->uiPause->Pressed())
 		{
@@ -734,17 +817,23 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			// Dump input states
 			Inputs->DumpState(Model3->GetGameInfo());
 		}
-		else if (Inputs->uiToggleCursor->Pressed() && g_Config.fullScreen)
+		else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
  		{
-			// Toggle cursor in full screen mode
-			showCursor = !showCursor;
-			Inputs->GetInputSystem()->SetMouseVisibility(!!showCursor);
+			// Count downwards to get this sequence: both, player 1, player 2, none
+			showCrosshairs--;
+			switch ((showCrosshairs&3))
+			{
+			case 0:	puts("Crosshairs disabled."); 				break;
+			case 3:	puts("Crosshairs enabled.");				break;
+			case 2:	puts("Showing Player 1 crosshair only.");	break;
+			case 1: puts("Showing Player 2 crosshair only.");	break;
+			}
  		}
 		else if (Inputs->uiClearNVRAM->Pressed())
  		{
 			// Clear NVRAM
  			Model3->ClearNVRAM();
- 			printf("NVRAM cleared.\n");
+ 			puts("NVRAM cleared.");
  		}
 		else if (Inputs->uiToggleFrLimit->Pressed())
  		{
@@ -928,8 +1017,7 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 static void Title(void)
 {
 	puts("Supermodel: A Sega Model 3 Arcade Emulator (Version "SUPERMODEL_VERSION")");
-	puts("Copyright (C) 2011 by Bart Trzynadlowski");
-	puts("");
+	puts("Copyright (C) 2011 by Bart Trzynadlowski\n");
 }
 
 // Print usage information
@@ -965,7 +1053,9 @@ static void Help(void)
 	puts("    -music-volume=<v>      Set volume of MPEG music in % [Default: 100]");
 	puts("");
 	puts("Input Options:");
+#ifdef SUPERMODEL_WIN32
 	puts("    -input-system=<s>      Set input system [Default: SDL]");
+#endif
 	puts("    -print-inputs          Prints current input configuration");
 	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 	puts("");
@@ -1142,6 +1232,7 @@ int main(int argc, char **argv)
 			else
 				CmdLine.Set("Global", "FragmentShader", &argv[i][13]);
 		}
+#ifdef SUPERMODEL_WIN32
 		else if (!strncmp(argv[i],"-input-system=", 14))
 		{
 			if (argv[i][14] == '\0')
@@ -1149,6 +1240,7 @@ int main(int argc, char **argv)
 			else
 				CmdLine.Set("Global", "InputSystem", &argv[i][14]);
 		}
+#endif
 		else if (!strcmp(argv[i],"-print-inputs"))
 			cmdPrintInputs = true;
 		else if (!strcmp(argv[i],"-config-inputs"))
@@ -1172,7 +1264,7 @@ int main(int argc, char **argv)
 			return 0;
 		}
 		else if (argv[i][0] == '-')
-			ErrorLog("Ignoring invalid option: %s.", argv[i]);
+			ErrorLog("Ignoring unrecognized option: %s.", argv[i]);
 		else
 		{
 			if (fileIdx)		// already specified a file

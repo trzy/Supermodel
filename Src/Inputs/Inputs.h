@@ -72,7 +72,7 @@ public:
 	CSwitchInput    *uiLoadState;
 	CSwitchInput    *uiDumpInpState;
 	CSwitchInput    *uiClearNVRAM;
-	CSwitchInput    *uiToggleCursor;
+	CSwitchInput    *uiSelectCrosshairs;
 	CSwitchInput	*uiToggleFrLimit;
 #ifdef SUPERMODEL_DEBUGGER
 	CSwitchInput     *uiEnterDebugger;
@@ -95,6 +95,12 @@ public:
 	CSwitchInput    *kick[2];
 	CSwitchInput    *guard[2];
 	CSwitchInput    *escape[2];
+	
+	// Spikeout controls
+	CSwitchInput	*shift;
+	CSwitchInput	*beat;
+	CSwitchInput	*charge;
+	CSwitchInput	*jump;
 
 	// Soccer game controls (players 1 and 2)
 	CSwitchInput    *shortPass[2];
@@ -139,7 +145,6 @@ public:
 	CSwitchInput    *twinJoyReverse;
 	CSwitchInput	*twinJoyJump;
 	CSwitchInput    *twinJoyCrouch;
-	
 	
 	// Analog joystick
 	CAxisInput      *analogJoyX;

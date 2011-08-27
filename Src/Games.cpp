@@ -1497,7 +1497,7 @@ const struct GameInfo	g_Model3GameList[] =
 		FALSE,	// 96 MB of banked CROM (Do not Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_FIGHTING,
+		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_SPIKEOUT,
 		2,		// DSB2 MPEG board
 
 		{
@@ -1577,7 +1577,7 @@ const struct GameInfo	g_Model3GameList[] =
 		FALSE,	// 96 MB of banked CROM (Do not Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_FIGHTING,
+		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_SPIKEOUT,
 		2,		// DSB2 MPEG board
 
 		{

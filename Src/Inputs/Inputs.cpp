@@ -17,7 +17,7 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	uiLoadState        = AddSwitchInput("UILoadState",        "Load State",            GAME_INPUT_UI, "KEY_F7");
 	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      GAME_INPUT_UI, "KEY_F8");
 	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           GAME_INPUT_UI, "KEY_ALT+KEY_N");
-	uiToggleCursor     = AddSwitchInput("UIToggleCursor",     "Toggle Cursor",         GAME_INPUT_UI, "KEY_ALT+KEY_I");
+	uiSelectCrosshairs = AddSwitchInput("UISelectCrosshairs", "Select Crosshairs",     GAME_INPUT_UI, "KEY_ALT+KEY_I");
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", GAME_INPUT_UI, "KEY_ALT+KEY_T");
 #ifdef SUPERMODEL_DEBUGGER
 	uiEnterDebugger    = AddSwitchInput("UIEnterDebugger",    "Enter Debugger",        GAME_INPUT_UI, "KEY_ALT+KEY_B");
@@ -33,7 +33,7 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	test[0]            = AddSwitchInput("TestA",    "Test A",    GAME_INPUT_COMMON, "KEY_6");
 	test[1]            = AddSwitchInput("TestB",    "Test B",    GAME_INPUT_COMMON, "KEY_8");
 	
-	// 8-Way Joysticks
+	// 4-Way Joysticks
 	up[0]              = AddSwitchInput("JoyUp",     "P1 Joystick Up",    GAME_INPUT_JOYSTICK1, "KEY_UP,JOY1_UP");
 	down[0]            = AddSwitchInput("JoyDown",   "P1 Joystick Down",  GAME_INPUT_JOYSTICK1, "KEY_DOWN,JOY1_DOWN");
 	left[0]            = AddSwitchInput("JoyLeft",   "P1 Joystick Left",  GAME_INPUT_JOYSTICK1, "KEY_LEFT,JOY1_LEFT");
@@ -52,6 +52,12 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	kick[1]            = AddSwitchInput("Kick2",   "P2 Kick",   GAME_INPUT_FIGHTING, "JOY2_BUTTON2");
 	guard[1]           = AddSwitchInput("Guard2",  "P2 Guard",  GAME_INPUT_FIGHTING, "JOY2_BUTTON3");
 	escape[1]          = AddSwitchInput("Escape2", "P2 Escape", GAME_INPUT_FIGHTING, "JOY2_BUTTON4");
+	
+	// Spikeout Buttons
+	shift              = AddSwitchInput("Shift",   "Shift", GAME_INPUT_SPIKEOUT, "KEY_A,JOY1_BUTTON1");
+	beat               = AddSwitchInput("Beat",    "Beat",  GAME_INPUT_SPIKEOUT, "KEY_S,JOY1_BUTTON2");
+	charge             = AddSwitchInput("Charge",  "Charge",GAME_INPUT_SPIKEOUT, "KEY_D,JOY1_BUTTON3");
+	jump               = AddSwitchInput("Jump",    "Jump",  GAME_INPUT_SPIKEOUT, "KEY_F,JOY1_BUTTON4");
 
 	// Virtua Striker Buttons
 	shortPass[0]       = AddSwitchInput("ShortPass",  "P1 Short Pass", GAME_INPUT_SOCCER, "KEY_A,JOY1_BUTTON1");

@@ -50,7 +50,8 @@
 #define GAME_INPUT_ANALOG_JOYSTICK	0x0400	// game has analog joystick
 #define GAME_INPUT_TWIN_JOYSTICKS	0x0800	// game has twin joysticks
 #define GAME_INPUT_SOCCER		0x1000	// game has soccer controls
-#define GAME_INPUT_ALL			0x1FFF
+#define GAME_INPUT_SPIKEOUT		0x2000	// game has Spikeout buttons
+#define GAME_INPUT_ALL			0x3FFF
 
 
 /******************************************************************************

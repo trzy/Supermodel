@@ -351,6 +351,9 @@ private:
 	int				step;	// hardware stepping (as in GameInfo structure)
 	UINT32			pciID;	// PCI vendor and device ID
 	
+	// Error flag (to limit errors to once per frame)
+	bool		error;		// true if an error occurred this frame
+	
 	// Real3D memory
 	UINT8		*memoryPool;	// all memory allocated here
 	UINT32		*cullingRAMLo;	// 4MB of culling RAM at 8C000000

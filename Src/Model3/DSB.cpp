@@ -677,7 +677,7 @@ static const char *stateName[] =
 
 void CDSB2::WriteMPEGFIFO(UINT8 byte)
 {
-	printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
+	//printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
 	switch (mpegState)
 	{
 		case ST_IDLE:
@@ -693,7 +693,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart = mpegStart;
 				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				printf("playing %X\n", mpegStart);
+				//printf("playing %X\n", mpegStart);
 				mpegState = ST_IDLE;
 				playing = 1;
 			}
@@ -737,13 +737,13 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			if (playing)
 			{
-				printf("Setting loop point to %x\n", mpegStart);
+				//printf("Setting loop point to %x\n", mpegStart);
 				usingLoopStart = mpegStart;
 				usingLoopEnd = mpegEnd-mpegStart;
 				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 			}
 
-			printf("mpegStart=%x\n", mpegStart);
+			//printf("mpegStart=%x\n", mpegStart);
 			break;
 		case ST_GOT24:
 			mpegEnd &= 0x00FFFF; 
@@ -758,7 +758,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		case ST_24_1:
 			mpegEnd &= 0xFFFF00;
 			mpegEnd |= (byte);
-			printf("mpegEnd=%x\n", mpegEnd);
+			//printf("mpegEnd=%x\n", mpegEnd);
 
 			// default to full stereo
 //			mixer_set_stereo_volume(0, 255, 255);
@@ -781,7 +781,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart = mpegStart;
 				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				printf("playing %X (from st_gota4)\n", mpegStart);
+				//printf("playing %X (from st_gota4)\n", mpegStart);
 				playing = 1;
 			}
 			break;
@@ -816,14 +816,14 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		case ST_GOTB6:	// rear left(?) volume
 		case ST_GOTB0:	// left volume
 			volume[0] = byte;
-			printf("Set L Volume: %02X\n", byte);
+			//printf("Set L Volume: %02X\n", byte);
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTA7:	// rear right(?) volume
 		case ST_GOTA1:	// right volume
 		case ST_GOTA0:
 			volume[1] = byte;
-			printf("Set R Volume: %02X\n", byte);
+			//printf("Set R Volume: %02X\n", byte);
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB2:
@@ -929,7 +929,7 @@ void CDSB2::Write16(UINT32 addr, UINT16 data)
 		*(UINT16 *) &ram[addr] = data;
 		return;
 	}
-	printf("W16: %x @ %x\n", data, addr);
+	//printf("W16: %x @ %x\n", data, addr);
 }
 
 void CDSB2::Write32(UINT32 addr, UINT32 data)
@@ -941,7 +941,7 @@ void CDSB2::Write32(UINT32 addr, UINT32 data)
 		*(UINT16 *) &ram[addr+2] = data&0xFFFF;
 		return;
 	}
-	printf("W32: %x @ %x\n", data, addr);
+	//printf("W32: %x @ %x\n", data, addr);
 }
 
 void CDSB2::SendCommand(UINT8 data)
@@ -1023,7 +1023,7 @@ void CDSB2::Reset(void)
 	
 	M68KSetContext(&M68K);
 	M68KReset();
-	printf("DSB2 PC=%06X\n", M68KGetPC());
+	//printf("DSB2 PC=%06X\n", M68KGetPC());
 	M68KGetContext(&M68K);
 	
 	DebugLog("DSB2 Reset\n");

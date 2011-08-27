@@ -132,6 +132,7 @@ void CReal3D::BeginFrame(void)
 
 void CReal3D::EndFrame(void)
 {
+	error = false;	// clear error (just needs to be done once per frame)
 	status &= ~2;
 	Render3D->EndFrame();
 }
@@ -698,9 +699,14 @@ void CReal3D::Flush(void)
 
 void CReal3D::WriteTextureFIFO(UINT32 data)
 {
-	textureFIFO[fifoIdx++] = data;
 	if (fifoIdx >= (0x100000/4))
-		ErrorLog("Real3D texture FIFO maxed out!");
+	{
+		if (!error)
+			ErrorLog("Overflow in Real3D texture FIFO!");
+		error = true;
+	}
+	else
+		textureFIFO[fifoIdx++] = data;
 }
 
 void CReal3D::WriteTexturePort(unsigned reg, UINT32 data)
@@ -797,6 +803,8 @@ void CReal3D::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, 
 	
 void CReal3D::Reset(void)
 {
+	error = false;
+	
 	commandPortWritten = FALSE;
 	
 	fifoIdx = 0;
@@ -885,6 +893,7 @@ CReal3D::CReal3D(void)
 	textureRAM = NULL;
 	textureFIFO = NULL;
 	vrom = NULL;
+	error = false;
 	fifoIdx = 0;
 	vromTextureAddr = 0;
 	vromTextureHeader = 0;
