@@ -106,7 +106,6 @@
 #include "ROMLoad.h"
 #include "INIFile.h"
 #include "BlockFile.h"
-#include "Logger.h"
 #include "Graphics/Render2D.h"
 #include "Graphics/Render3D.h"
 #include "Graphics/Shader.h"

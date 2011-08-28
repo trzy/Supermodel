@@ -549,7 +549,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	if (isPlaying)
 	{
 		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
-		if ((usingLoopStart != 0) && (usingLoopEnd != 0))
+		if (usingLoopEnd != 0)	// only if looping was actually enabled
 			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 		MPEG_SetOffset(mpegPos);
 	}
@@ -1103,7 +1103,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	if (isPlaying)
 	{
 		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
-		if ((usingLoopStart != 0) && (usingLoopEnd != 0))
+		if (usingLoopEnd != 0)	// only if looping was actually enabled
 			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 		MPEG_SetOffset(mpegPos);
 	}

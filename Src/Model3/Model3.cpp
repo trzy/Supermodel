@@ -620,7 +620,7 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 		return 0;
 	case 0x1C:	// Data
 		
-		if (!strcmp(Game->id, "spikeout"))
+		if (!strcmp(Game->id, "spikeout") || !strcmp(Game->id, "spikeofe"))
 		{
 			data = (spikeoutSecurity[securityPtr++] << 16);
 			securityPtr %= (sizeof(spikeoutSecurity)/sizeof(UINT16));
@@ -2435,6 +2435,12 @@ void CModel3::Patch(void)
 		
 		*(UINT32 *) &crom[0x600000+0x3199C] = 0x60000000;
 	}
+	else if (!strcmp(Game->id, "spikeofe"))
+	{
+		//*(UINT32 *) &crom[0x600000+0x1240C] = 0x60000000;	// illegal ROM
+		
+		*(UINT32 *) &crom[0x600000+0x36F2C] = 0x60000000;	// decrementer loop (see Spikeout)
+	}
 	else if (!strcmp(Game->id, "skichamp"))
 	{
 		// Base address of program in CROM: 0x480000
@@ -2738,7 +2744,7 @@ CModel3::~CModel3(void)
 #if 0
 	Dump("ram", ram, 0x800000, TRUE, FALSE);
 	//Dump("vrom", vrom, 0x4000000, TRUE, FALSE);
-	Dump("crom", crom, 0x800000, TRUE, FALSE);
+	//Dump("crom", crom, 0x800000, TRUE, FALSE);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, TRUE, FALSE);
 	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
 	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
