@@ -73,7 +73,7 @@ extern void MPEG_SetOffset(int pos);
  *
  * Parameters:
  *		loop		Start address.
- *		loopend		End offset.
+ *		loopend		End offset. Must NOT be 0!
  */
 extern void MPEG_SetLoop(const char *loop, int loopend);		
 

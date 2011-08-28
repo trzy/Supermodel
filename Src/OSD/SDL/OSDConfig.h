@@ -67,7 +67,7 @@ public:
 #endif
 			)
 		{
-			ErrorLog("Unknown input system (%s), defaulting to SDL.", inpSysName);
+			ErrorLog("Unknown input system '%s', defaulting to SDL.", inpSysName);
 			inputSystem = "sdl";
 			return;
 		}

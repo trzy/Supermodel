@@ -729,7 +729,7 @@ void CModel3::SetCROMBank(unsigned idx)
 	idx = (~idx) & 0xF;
 	cromBank = &crom[0x800000 + (idx*0x800000)];
 	DebugLog("CROM bank setting: %d (%02X), PC=%08X, LR=%08X\n", idx, cromBankReg, ppc_get_pc(), ppc_get_lr());
-//	printf("CROM bank setting: %d (%02X), PC=%08X, LR=%08X\n", idx, cromBankReg, ppc_get_pc(), ppc_get_lr());
+	//printf("CROM bank setting: %d (%02X), PC=%08X, LR=%08X\n", idx, cromBankReg, ppc_get_pc(), ppc_get_lr());
 }
 
 UINT8 CModel3::ReadSystemRegister(unsigned reg)

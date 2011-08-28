@@ -109,7 +109,7 @@ const struct GameInfo	g_Model3GameList[] =
 		1998,
 		0x21,
 		0x800000,	// 8 MB of fixed CROM
-		FALSE,	// 96 MB of banked CROM (Do not Mirror)
+		FALSE,	// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
@@ -188,7 +188,7 @@ const struct GameInfo	g_Model3GameList[] =
 		1998,
 		0x21,
 		0x800000,	// 8 MB of fixed CROM
-		FALSE,	// 64 MB of banked CROM (Do not Mirror)
+		FALSE,	// 64 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
@@ -1063,7 +1063,7 @@ const struct GameInfo	g_Model3GameList[] =
 		1998,
 		0x21,
 		0x800000,	// 8 MB of fixed CROM
-		FALSE,	// 96 MB of banked CROM (Do not Mirror)
+		FALSE,	// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_JOYSTICK,
@@ -1485,7 +1485,6 @@ const struct GameInfo	g_Model3GameList[] =
 		}
 	},
 
-	/*
 	// Spikeout Final Edition (disabled because this is a bad dump according to MAME)
 	{
 		"spikeofe",
@@ -1494,11 +1493,11 @@ const struct GameInfo	g_Model3GameList[] =
 		1998,
 		0x21,
 		0x800000,	// 8 MB of fixed CROM
-		FALSE,	// 96 MB of banked CROM (Do not Mirror)
+		FALSE,		// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_SPIKEOUT,
-		2,		// DSB2 MPEG board
+		2,			// DSB2 MPEG board
 
 		{
 			// Fixed CROM
@@ -1508,16 +1507,16 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "CROM",	"epr21653.17",	0xF4BD9C3C,	0x200000,	2,	0x0000006,	8,	TRUE },
 
 			// Banked CROM0
-			{ "CROMxx",	"mpr21616.4",	0xD5980569,	0x400000,	2,	0x0000000,	8,	TRUE },
-			{ "CROMxx",	"mpr21615.3",	0x50341C34,	0x400000,	2,	0x0000002,	8,	TRUE },
-			{ "CROMxx",	"mpr21614.2",	0x789A96E9,	0x400000,	2,	0x0000004,	8,	TRUE },
-			{ "CROMxx",	"mpr21613.1",	0x39F181C0,	0x400000,	2,	0x0000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21616.4",	0x5240FC3A,	0x800000,	2,	0x0000000,	8,	TRUE },
+			{ "CROMxx",	"mpr21615.3",	0x58293076,	0x800000,	2,	0x0000002,	8,	TRUE },
+			{ "CROMxx",	"mpr21614.2",	0x9EC89AE6,	0x800000,	2,	0x0000004,	8,	TRUE },
+			{ "CROMxx",	"mpr21613.1",	0x1738C350,	0x800000,	2,	0x0000006,	8,	TRUE },
 
 			// Banked CROM1
-			{ "CROMxx",	"mpr21620.8",	0x3A1ECEC4,	0x400000,	2,	0x2000000,	8,	TRUE },
-			{ "CROMxx",	"mpr21619.7",	0xD2380847,	0x400000,	2,	0x2000002,	8,	TRUE },
-			{ "CROMxx",	"mpr21618.6",	0xA9C0E6C4,	0x400000,	2,	0x2000004,	8,	TRUE },
-			{ "CROMxx",	"mpr21617.5",	0x8306B52C,	0x400000,	2,	0x2000006,	8,	TRUE },
+			{ "CROMxx",	"mpr21620.8",	0x1CFE931A,	0x800000,	2,	0x2000000,	8,	TRUE },
+			{ "CROMxx",	"mpr21619.7",	0xE6D69E72,	0x800000,	2,	0x2000002,	8,	TRUE },
+			{ "CROMxx",	"mpr21618.6",	0x222F1829,	0x800000,	2,	0x2000004,	8,	TRUE },
+			{ "CROMxx",	"mpr21617.5",	0x6C874B78,	0x800000,	2,	0x2000006,	8,	TRUE },
 
 			// Banked CROM2
 			{ "CROMxx",	"mpr21624.12",	0x56994CC6,	0x400000,	2,	0x4000000,	8,	TRUE },
@@ -1536,7 +1535,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	"mpr21634.27",	0x876E6788,	0x400000,	2,	2,		32,	FALSE },
 			{ "VROM",	"mpr21635.28",	0x093534A8,	0x400000,	2,	4,		32,	FALSE },
 			{ "VROM",	"mpr21636.29",	0x2433F21C,	0x400000,	2,	6,		32,	FALSE },
-			{ "VROM",	"mpr21637.30",	0x093534A8,	0x400000,	2,	8,		32,	FALSE },
+			/*{ "VROM",	"mpr21637.30",	0x093534A8,	0x400000,	2,	8,		32,	FALSE },*/
 			{ "VROM",	"mpr21638.31",	0x3773A215,	0x400000,	2,	10,		32,	FALSE },
 			{ "VROM",	"mpr21639.32",	0x313D1872,	0x400000,	2,	12,		32,	FALSE },
 			{ "VROM",	"mpr21640.33",	0x271366BE,	0x400000,	2,	14,		32,	FALSE },
@@ -1564,7 +1563,6 @@ const struct GameInfo	g_Model3GameList[] =
 			{ NULL,	NULL, 0, 0, 0, 0, 0, FALSE }
 		}
 	},
-	*/
 
 	// Spikeout (Revision C)
 	{
@@ -1574,7 +1572,7 @@ const struct GameInfo	g_Model3GameList[] =
 		1998,
 		0x21,
 		0x800000,	// 8 MB of fixed CROM
-		FALSE,	// 96 MB of banked CROM (Do not Mirror)
+		FALSE,	// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
 		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_SPIKEOUT,

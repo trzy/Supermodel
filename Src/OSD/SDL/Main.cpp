@@ -1098,6 +1098,9 @@ int main(int argc, char **argv)
 #ifdef SUPERMODEL_DEBUGGER
 	int			cmdEnterDebugger=false;
 #endif // SUPERMODEL_DEBUGGER
+#ifdef SUPERMODEL_WIN32
+	char		*inputSystem = NULL;
+#endif	// SUPERMODEL_WIN32	
 	unsigned	n;
 	UINT32		addr;
 
@@ -1164,19 +1167,19 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[i],"-enter-debugger"))
 			cmdEnterDebugger = true;
 #endif // SUPERMODEL_DEBUGGER
-		else if (!strncmp(argv[i],"-sound-vol",10))
+		else if (!strncmp(argv[i],"-sound-volume",13))
 		{
-			ret = sscanf(&argv[i][10],"=%d",&n);
+			ret = sscanf(&argv[i][13],"=%d",&n);
 			if (ret != 1)
-				ErrorLog("-sound-vol requires a volume setting.");
+				ErrorLog("-sound-volume requires a volume setting.");
 			else
 				CmdLine.Set("Global", "SoundVolume", n);
 		}
-		else if (!strncmp(argv[i],"-music-vol",10))
+		else if (!strncmp(argv[i],"-music-volume",13))
 		{
-			ret = sscanf(&argv[i][10],"=%d",&n);
+			ret = sscanf(&argv[i][13],"=%d",&n);
 			if (ret != 1)
-				ErrorLog("-music-vol requires a volume setting.");
+				ErrorLog("-music-volume requires a volume setting.");
 			else
 				CmdLine.Set("Global", "MusicVolume", n);
 		}
@@ -1238,9 +1241,9 @@ int main(int argc, char **argv)
 			if (argv[i][14] == '\0')
 				ErrorLog("-input-system requires an input system name.");
 			else
-				CmdLine.Set("Global", "InputSystem", &argv[i][14]);
+				inputSystem = &argv[i][14];
 		}
-#endif
+#endif	// SUPERMODEL_WIN32
 		else if (!strcmp(argv[i],"-print-inputs"))
 			cmdPrintInputs = true;
 		else if (!strcmp(argv[i],"-config-inputs"))
@@ -1290,6 +1293,7 @@ int main(int argc, char **argv)
 	Debugger::CSupermodelDebugger *Debugger = NULL;
 #endif // SUPERMODEL_DEBUGGER
 
+	g_Config.SetInputSystem(inputSystem);
 	if (stricmp(g_Config.GetInputSystem(), "sdl") == 0)
 		InputSystem = new CSDLInputSystem();
 #ifdef SUPERMODEL_WIN32

@@ -52,6 +52,8 @@ int m1fread(unsigned char *buf, int size1, int size2, void *f)
 	int total = size1 * size2;
 
 	if (in_file) return fread(buf, size1, size2, (FILE *) f);
+	
+	//printf("total=%X, offset=%X, end=%X\n", total, offset, end);
 
 	// if past EOF
 	if ((total + offset) >= end)

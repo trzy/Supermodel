@@ -177,7 +177,7 @@ static BOOL LoadROM(UINT8 *buf, unsigned bufSize, const struct ROMMap *Map, cons
 	}
 	
 	if (loadAll)	// need to load all ROMs, so there should be no unmapped regions
-		return ErrorLog("%s:%d: No mapping for \"%s\".", __FILE__, __LINE__, ROM->region);
+		return ErrorLog("%s:%d: No mapping for '%s'.", __FILE__, __LINE__, ROM->region);
 	else
 		return OKAY;
 }	
@@ -256,7 +256,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 				DebugLog("%s also contains: %s (%s)\n", zipFile, CurGame->id, CurGame->title);
 				if (multipleGameError == FALSE)	// only warn about this once
 				{
-					ErrorLog("Multiple games were found in %s; loading \"%s\".", zipFile, Game->title);
+					ErrorLog("Multiple games were found in %s; loading '%s'.", zipFile, Game->title);
 					multipleGameError = TRUE;
 				}
 			}

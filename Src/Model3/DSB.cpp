@@ -29,6 +29,8 @@
  *
  * TODO List
  * ---------
+ * - Should MPEG_SetLoop() check for loopEnd==0? This causes crashes. Usually
+ *   only occurs when loopStart is also 0, and that can only be checked here.
  * - Volume fade out in Daytona 2 is much too slow. Probably caused by 68K
  *	 timing or interrupts.
  * - Check actual MPEG sample rate. So far, all games seem to use 32 KHz, which
@@ -547,7 +549,8 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	if (isPlaying)
 	{
 		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
-		MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+		if ((usingLoopStart != 0) && (usingLoopEnd != 0))
+			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 		MPEG_SetOffset(mpegPos);
 	}
 	else
@@ -677,7 +680,7 @@ static const char *stateName[] =
 
 void CDSB2::WriteMPEGFIFO(UINT8 byte)
 {
-	//printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
+	printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
 	switch (mpegState)
 	{
 		case ST_IDLE:
@@ -693,7 +696,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart = mpegStart;
 				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				//printf("playing %X\n", mpegStart);
+				printf("playing %X\n", mpegStart);
 				mpegState = ST_IDLE;
 				playing = 1;
 			}
@@ -737,7 +740,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			if (playing)
 			{
-				//printf("Setting loop point to %x\n", mpegStart);
+				printf("Setting loop point to %x\n", mpegStart);
 				usingLoopStart = mpegStart;
 				usingLoopEnd = mpegEnd-mpegStart;
 				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
@@ -781,7 +784,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart = mpegStart;
 				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				//printf("playing %X (from st_gota4)\n", mpegStart);
+				printf("playing %X (from st_gota4)\n", mpegStart);
 				playing = 1;
 			}
 			break;
@@ -1100,11 +1103,18 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	if (isPlaying)
 	{
 		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
-		MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+		if ((usingLoopStart != 0) && (usingLoopEnd != 0))
+			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 		MPEG_SetOffset(mpegPos);
 	}
 	else
 		MPEG_StopPlaying();
+		
+	//DEBUG
+	printf("mpegStart=%X, mpegEnd=%X\n", mpegStart, mpegEnd);
+	printf("usingMPEGStart=%X, usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
+	printf("usingLoopStart=%X, usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
+	
 }
 
 // Offsets of memory regions within DSB2's pool

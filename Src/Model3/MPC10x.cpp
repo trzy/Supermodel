@@ -312,7 +312,7 @@ void CMPC10x::SetModel(int modelNum)
 	
 	if ((modelNum!=0x105) && (modelNum!=0x106))
 	{
-		ErrorLog("%s:%s: Invalid MPC10x model number (%X).", __FILE__, __LINE__, modelNum);
+		ErrorLog("%s:%d: Invalid MPC10x model number (%X).", __FILE__, __LINE__, modelNum);
 		model = 0x105;
 	}
 	
