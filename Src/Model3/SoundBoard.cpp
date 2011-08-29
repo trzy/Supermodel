@@ -58,7 +58,7 @@
 #include "Supermodel.h"
 
 // DEBUG
-#define SUPERMODEL_LOG_AUDIO	// define this to log all audio to sound.bin
+//#define SUPERMODEL_LOG_AUDIO	// define this to log all audio to sound.bin
 #ifdef SUPERMODEL_LOG_AUDIO
 static FILE		*soundFP;
 #endif
