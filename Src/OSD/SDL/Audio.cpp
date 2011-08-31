@@ -61,11 +61,8 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 
 			// Check if play position has moved past end of buffer
 			if (playPos >= audioBufferSize)
-			{
-				// If so, wrap it around to beginning again and reset write wrapped flag
+				// If so, wrap it around to beginning again (but keep write wrapped flag as before)
 				playPos -= audioBufferSize;
-				writeWrapped = false;
-			}
 			else 
 				// Otherwise, set write wrapped flag as will now appear as if write has wrapped but play position has not
 				writeWrapped = true;
@@ -243,11 +240,8 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 			
 			// Check if play position has moved past end of buffer
 			if (playPos >= audioBufferSize)
-			{
-				// If so, wrap it around to beginning again and reset write wrapped flag
+				// If so, wrap it around to beginning again (but keep write wrapped flag as before)
 				playPos -= audioBufferSize;
-				writeWrapped = false;
-			}
 			else 
 			{
 				// Otherwise, set write wrapped flag as will now appear as if write has wrapped but play position has not
