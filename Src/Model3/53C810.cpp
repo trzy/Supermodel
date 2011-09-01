@@ -228,7 +228,7 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
 {
 	if (reg >= 0x60)
 	{
-		ErrorLog("%s:%d: Invalid 53C810 register (%02X).", __FILE__, __LINE__, reg);
+		ErrorLog("Write to invalid 53C810 register (%02X).", reg);
 		return;
 	}
 	
@@ -343,7 +343,7 @@ UINT8 C53C810::ReadRegister(unsigned reg)
 	
 	if (reg >= 0x60)
 	{
-		ErrorLog("%s:%d: Invalid 53C810 register (%02X).", __FILE__, __LINE__, reg);
+		ErrorLog("Read from invalid 53C810 register (%02X).", reg);
 		return 0;
 	}
 	

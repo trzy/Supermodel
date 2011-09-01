@@ -47,6 +47,7 @@ public:
 	bool 		fullScreen;		// Full screen mode (if TRUE)
 	bool 		throttle;		// 60 Hz frame limiting
 	bool		showFPS;		// Show frame rate
+	bool		flipStereo;		// Flip stereo channels
 
 #ifdef SUPERMODEL_DEBUGGER
 	bool		disableDebugger;	// disables the debugger (not stored in the config. file)
@@ -88,6 +89,7 @@ public:
 		fullScreen = false;
 		throttle = true;
 		showFPS = false;
+		flipStereo = false;
 #ifdef SUPERMODEL_DEBUGGER
 		disableDebugger = false;
 #endif

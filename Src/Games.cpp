@@ -1,3 +1,4 @@
+//TODO: clean up game titles (for example: Star Wars is incorrectly labeled rev.A)
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.

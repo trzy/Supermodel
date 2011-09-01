@@ -1,6 +1,6 @@
 //TODO before release:
 // - Controls for Dirt Devils, and other recent games (is bass working?)
-// - Crosshairs
+// - Stereo reverse option (see Srally2 sound test menu)
 // - Comment source code, clean up
 // - BOOL -> bool, TRUE/FALSE -> true/false
 // - Add option for building with /MD in MSVC Makefile
@@ -392,6 +392,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.throttle = x ? true : false;
 	if (OKAY == INI->Get(section, "ShowFrameRate", x))
 		g_Config.showFPS = x ? true : false;
+	if (OKAY == INI->Get(section, "FlipStereo", x))
+		g_Config.flipStereo = x ? true : false;
 }
 
 // Read settings (from a specific section) from the config file
@@ -421,6 +423,7 @@ static void LogConfig(void)
 	InfoLog("\tDisableDebugger  = %d", g_Config.disableDebugger);
 #endif
 	InfoLog("\tInputSystem      = %s", g_Config.GetInputSystem());
+	InfoLog("\tFlipStereo       = %d", g_Config.flipStereo);
 	
 	// CModel3Config
 	InfoLog("\tMultiThreaded    = %d", g_Config.multiThreaded);
@@ -1031,10 +1034,10 @@ static void Help(void)
 	puts("    -print-games           List supported games and quit");
 	puts("");
 	puts("Emulation Options:");
-	puts("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: 40]");
+	printf("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
 	puts("    -no-scsp               Disable Sega Custom Sound Processor (sound effects)");
 	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
-	puts("    -multi-threaded        Enable multi-threading");
+	puts("    -multi-threaded        Enable multi-threading for enhanced performance");
 #ifdef SUPERMODEL_DEBUGGER
 	puts("    -disable-debugger	     Completely disable debugger functionality");
 	puts("    -enter-debugger        Enter debugger at start of emulation");
@@ -1051,6 +1054,7 @@ static void Help(void)
 	puts("Audio Options:");
 	puts("    -sound-volume=<v>      Set volume of sound effects in % [Default: 100]");
 	puts("    -music-volume=<v>      Set volume of MPEG music in % [Default: 100]");
+	puts("    -flip-stereo           Swap left and right audio channels");
 	puts("");
 	puts("Input Options:");
 #ifdef SUPERMODEL_WIN32
@@ -1183,6 +1187,11 @@ int main(int argc, char **argv)
 			else
 				CmdLine.Set("Global", "MusicVolume", n);
 		}
+		else if (!strcmp(argv[i], "-flip-stereo"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "FlipStereo", n);
+		}
 		else if (!strcmp(argv[i], "-no-scsp"))
 		{
 			n = 0;
@@ -1236,7 +1245,7 @@ int main(int argc, char **argv)
 				CmdLine.Set("Global", "FragmentShader", &argv[i][13]);
 		}
 #ifdef SUPERMODEL_WIN32
-		else if (!strncmp(argv[i],"-input-system=", 14))
+		else if (!strncmp(argv[i],"-input-system=", 14))	// this setting is not written to the config file!
 		{
 			if (argv[i][14] == '\0')
 				ErrorLog("-input-system requires an input system name.");

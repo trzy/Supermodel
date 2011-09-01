@@ -137,15 +137,37 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, void *dest)
 {
 	INT16 *p = (INT16*)dest;
-	for (unsigned i = 0; i < numSamples; i++)
-	{
+	
 #if (NUM_CHANNELS == 1)
-		*p++ = leftBuffer[i] + rightBuffer[i];
+	for (unsigned i = 0; i < numSamples; i++)
+		*p++ = leftBuffer[i] + rightBuffer[i];	// TODO: these should probably be clipped! 
 #else
-		*p++ = rightBuffer[i];
-		*p++ = leftBuffer[i];
-#endif
+	if (g_Config.flipStereo)	// swap left and right channels
+	{
+		for (unsigned i = 0; i < numSamples; i++)
+		{
+			*p++ = rightBuffer[i];
+			*p++ = leftBuffer[i];
+		}
 	}
+	else						// stereo as God intended!
+	{
+		for (unsigned i = 0; i < numSamples; i++)
+		{
+			*p++ = leftBuffer[i];
+			*p++ = rightBuffer[i];
+		}
+	}
+#endif	// NUM_CHANNELS
+}
+
+static void LogAudioInfo(SDL_AudioSpec *fmt)
+{
+	InfoLog("Audio device information:");
+	InfoLog("    Frequency: %d", fmt->freq);
+	InfoLog("     Channels: %d", fmt->channels);
+	InfoLog("Sample Format: %d", fmt->format);
+	InfoLog("");
 }
 
 BOOL OpenAudio()
@@ -167,7 +189,12 @@ BOOL OpenAudio()
 	SDL_AudioSpec obtained;
 	if (SDL_OpenAudio(&fmt, &obtained) < 0)
 		return ErrorLog("Unable to open 44.1KHz 2-channel audio with SDL: %s\n", SDL_GetError());
-
+	LogAudioInfo(&obtained);
+		
+	// Check if obtained format is what we really requested
+	if ((obtained.freq!=fmt.freq) || (obtained.channels!=fmt.channels) || (obtained.format!=fmt.format))
+		ErrorLog("Incompatible audio settings (44.1KHz, 16-bit required). Check drivers!\n");
+		
 	// Check what buffer sample size was actually obtained, and use that
 	playSamples = obtained.samples;
 

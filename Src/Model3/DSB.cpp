@@ -454,7 +454,6 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
 	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, 44100/60, 32000/60+2, 44100, 32000);
-	
 #endif
 }
 
@@ -1004,7 +1003,6 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
 	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
-
 #endif
 }
 
