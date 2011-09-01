@@ -40,7 +40,8 @@ static unsigned overRuns = 0;       // Number of buffer over-runs that have occu
 
 static void PlayCallback(void *data, Uint8 *stream, int len)
 {
-	//printf("PlayCallback(%d)\n", len);
+	//printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n", 
+	//	len, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
 
 	// Get current write position and adjust it if write has wrapped but play position has not
 	UINT32 adjWritePos = writePos;
@@ -50,9 +51,11 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 	// Check if play position overlaps write position (ie buffer under-run)
 	if (playPos + len > adjWritePos)
 	{
-		//printf("Audio buffer under-run in PlayCallback\n");
 		underRuns++;
 
+		//printf("Audio buffer under-run #%u in PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
+		//	underRuns, len, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
+		
 		// See what action to take on under-run
 		if (underRunLoop)
 		{
@@ -226,7 +229,8 @@ BOOL OpenAudio()
 
 void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 {
-	//printf("OutputAudio(%u)\n", numSamples);
+	//printf("OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
+	//	numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
 
 	UINT32 bytesRemaining;
 	UINT32 bytesToCopy;
@@ -256,9 +260,11 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 	// Check if play region has caught up with write position and now overlaps it (ie buffer under-run)
 	if (playEndPos > writePos)
 	{
-		//printf("Audio buffer under-run in OutputAudio\n");
 		underRuns++;
 
+		//printf("Audio buffer under-run #%u in OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u, numBytes = %u]\n",
+		//	underRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
+		
 		// See what action to take on under-run
 		if (underRunLoop)
 		{
@@ -288,21 +294,22 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 	}
 
 	// Check if write position has caught up with play region and now overlaps it (ie buffer over-run)
-	if (writePos + numBytes > playPos + audioBufferSize)
-	{
-		//printf("Audio buffer over-run in OutputAudio\n");
-		overRuns++;
-		
-		// If so, then discard current chunk of data
-		goto Finish;
-	}
-
-	// Check if write position has moved past end of buffer
+	bool overRun = writePos + numBytes > playPos + audioBufferSize;
+	
+	// Move write position back to within buffer
 	if (writePos >= audioBufferSize)
-	{
-		// If so, wrap it around to beginning again and set write wrapped flag
 		writePos -= audioBufferSize;
-		writeWrapped = true;
+
+	// Handle buffer over-run
+	if (overRun)
+	{
+		overRuns++;
+
+		//printf("Audio buffer over-run #%u in OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u, numBytes = %u]\n",
+		//	overRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
+		
+		// Discard current chunk of data
+		goto Finish;
 	}
 
 	src = mixBuffer;
