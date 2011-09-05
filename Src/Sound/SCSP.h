@@ -29,38 +29,38 @@
 #define INCLUDED_SCSP_H
 
 
-void SCSP_w8(unsigned int addr,unsigned char val);
-void SCSP_w16(unsigned int addr,unsigned short val);
-void SCSP_w32(unsigned int addr,unsigned int val);
-unsigned char SCSP_r8(unsigned int addr);
-unsigned short SCSP_r16(unsigned int addr);
-unsigned int SCSP_r32(unsigned int addr);
+void SCSP_w8(UINT32 addr,UINT8 val);
+void SCSP_w16(UINT32 addr,UINT16 val);
+void SCSP_w32(UINT32 addr,UINT32 val);
+UINT8 SCSP_r8(UINT32 addr);
+UINT16 SCSP_r16(UINT32 addr);
+UINT32 SCSP_r32(UINT32 addr);
 
 void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq));
 void SCSP_Update();
-void SCSP_MidiIn(unsigned char);
-void SCSP_MidiOutW(unsigned char);
-unsigned char SCSP_MidiOutFill();
-unsigned char SCSP_MidiInFill();
+void SCSP_MidiIn(UINT8);
+void SCSP_MidiOutW(UINT8);
+UINT8 SCSP_MidiOutFill();
+UINT8 SCSP_MidiInFill();
 void SCSP_CpuRunScanline();
-unsigned char SCSP_MidiOutR();
+UINT8 SCSP_MidiOutR();
 void SCSP_Init(int n);
-void SCSP_SetRAM(int n,unsigned char *r);
+void SCSP_SetRAM(int n,UINT8 *r);
 void SCSP_RTECheck();
 int SCSP_IRQCB(int);
 
-void SCSP_Master_w8(unsigned int addr,unsigned char val);
-void SCSP_Master_w16(unsigned int addr,unsigned short val);
-void SCSP_Master_w32(unsigned int addr,unsigned int val);
-void SCSP_Slave_w8(unsigned int addr,unsigned char val);
-void SCSP_Slave_w16(unsigned int addr,unsigned short val);
-void SCSP_Slave_w32(unsigned int addr,unsigned int val);
-unsigned char SCSP_Master_r8(unsigned int addr);
-unsigned short SCSP_Master_r16(unsigned int addr);
-unsigned int SCSP_Master_r32(unsigned int addr);
-unsigned char SCSP_Slave_r8(unsigned int addr);
-unsigned short SCSP_Slave_r16(unsigned int addr);
-unsigned int SCSP_Slave_r32(unsigned int addr);
+void SCSP_Master_w8(UINT32 addr,UINT8 val);
+void SCSP_Master_w16(UINT32 addr,UINT16 val);
+void SCSP_Master_w32(UINT32 addr,UINT32 val);
+void SCSP_Slave_w8(UINT32 addr,UINT8 val);
+void SCSP_Slave_w16(UINT32 addr,UINT16 val);
+void SCSP_Slave_w32(UINT32 addr,UINT32 val);
+UINT8 SCSP_Master_r8(UINT32 addr);
+UINT16 SCSP_Master_r16(UINT32 addr);
+UINT32 SCSP_Master_r32(UINT32 addr);
+UINT8 SCSP_Slave_r8(UINT32 addr);
+UINT16 SCSP_Slave_r16(UINT32 addr);
+UINT32 SCSP_Slave_r32(UINT32 addr);
 
 // Supermodel interface functions
 void SCSP_SaveState(CBlockFile *StateFile);

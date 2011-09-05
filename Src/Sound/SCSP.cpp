@@ -923,12 +923,12 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
 		//printf("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
-		*((unsigned char *) (SCSP->Slots[slot].datab+(addr^1))) = val;
+		*(unsigned char *) &(SCSP->Slots[slot].datab[addr^1]) = val;
 		SCSP_UpdateSlotReg(slot,(addr^1)&0x1f);
 	}
 	else if(addr<0x600)
 	{
-		*((unsigned char *) (SCSP->datab+((addr&0xff)^1))) = val;
+		*(unsigned char *) &(SCSP->datab[(addr&0xff)^1]) = val;
 		SCSP_UpdateReg((addr^1)&0xff);
 	}	
 	else if(addr<0x700)
@@ -938,11 +938,11 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 #ifdef USEDSP
 		//DSP
 		if(addr<0x780)	//COEF
-			*(((unsigned char *) SCSP->DSP.COEF) + ((addr-0x700)^1))=val;
+			((unsigned char *) SCSP->DSP.COEF)[(addr-0x700)^1]=val;
 		else if(addr<0x7C0)
-			*(((unsigned char *) SCSP->DSP.MADRS) + ((addr-0x780)^1))=val;
+			((unsigned char *) SCSP->DSP.MADRS)[(addr-0x780)^1]=val;
 		else if(addr>=0x800 && addr<0xC00)
-			*(((unsigned char *) SCSP->DSP.MPRO) + ((addr-0x800)^1))=val;
+			((unsigned char *) SCSP->DSP.MPRO)[(addr-0x800)^1]=val;
 		else
 			int a=1;
 		if(addr==0xBFE)
@@ -963,12 +963,12 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
 		//printf("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
-		*((unsigned short *) (SCSP->Slots[slot].datab+(addr))) = val;
+		*(unsigned short *) &(SCSP->Slots[slot].datab[addr]) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
 	}
 	else if(addr<0x600)
 	{
-		*((unsigned short *) (SCSP->datab+((addr&0xff)))) = val;
+		*(unsigned short *) &(SCSP->datab[addr&0xff]) = val;
 		SCSP_UpdateReg(addr&0xff);
 	}	
 	else if(addr<0x700)
@@ -978,11 +978,11 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 #ifdef USEDSP
 		//DSP
 		if(addr<0x780)	//COEF
-			*((unsigned short *) (SCSP->DSP.COEF+(addr-0x700)/2))=val;
+			*(unsigned short *) &(SCSP->DSP.COEF[(addr-0x700)/2])=val;
 		else if(addr<0x800)
-			*((unsigned short *) (SCSP->DSP.MADRS+(addr-0x780)/2))=val;
+			*(unsigned short *) &(SCSP->DSP.MADRS[(addr-0x780)/2])=val;
 		else if(addr<0xC00)
-			*((unsigned short *) (SCSP->DSP.MPRO+(addr-0x800)/2))=val;
+			*(unsigned short *) &(SCSP->DSP.MPRO[(addr-0x800)/2])=val;
 		else
 			int a=1;
 		if(addr==0xBFE)
@@ -1008,7 +1008,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 #else
 		val = (val>>16)|(val<<16);
 #endif
-		*((unsigned int *) (SCSP->Slots[slot].datab+(addr))) = val;
+		*(unsigned int *) &(SCSP->Slots[slot].datab[addr]) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
 		SCSP_UpdateSlotReg(slot,(addr&0x1f)+2);
 	}
@@ -1019,7 +1019,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 #else
 		val = (val>>16)|(val<<16);
 #endif
-		*((unsigned int *) (SCSP->datab+((addr&0xff)))) = val;
+		*(unsigned int *) &(SCSP->datab[addr&0xff]) = val;
 		SCSP_UpdateReg(addr&0xff);
 		SCSP_UpdateReg((addr&0xff)+2);
 	}	
@@ -1035,11 +1035,11 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 			val = (val>>16)|(val<<16);
 #endif
 			if(addr<0x780)	//COEF
-				*((unsigned int *) (SCSP->DSP.COEF+(addr-0x700)/2))=val;
+				*(unsigned int *) &(SCSP->DSP.COEF[(addr-0x700)/2])=val;
 			else if(addr<0x800)
-				*((unsigned int *) (SCSP->DSP.MADRS+(addr-0x780)/2))=val;
+				*(unsigned int *) &(SCSP->DSP.MADRS[(addr-0x780)/2])=val;
 			else if(addr<0xC00)
-				*((unsigned int *) (SCSP->DSP.MPRO+(addr-0x800)/2))=val;
+				*(unsigned int *) &(SCSP->DSP.MPRO[(addr-0x800)/2])=val;
 			else
 				int a=1;
 			if(addr==0xBFC)
@@ -1059,13 +1059,13 @@ unsigned char SCSP_r8(unsigned int addr)
 		addr&=0x1f;
 		SCSP_UpdateSlotRegR(slot,(addr^1)&0x1f);
 		
-		v=*((unsigned char *) (SCSP->Slots[slot].datab+(addr^1)));
+		v=*(unsigned char *) &(SCSP->Slots[slot].datab[addr^1]);
 		//DebugLog("Slot %02X Reg %02X Read byte %02X",slot,addr^1,v);
 	}
 	else if(addr<0x600)
 	{
 		SCSP_UpdateRegR(addr&0xff);
-		v= *((unsigned char *) (SCSP->datab+((addr&0xff)^1)));
+		v= *(unsigned char *) &(SCSP->datab[(addr&0xff)^1]);
 		//ErrorLogMessage("SCSP Reg %02X Read byte %02X",addr&0xff,v);		
 	}	
 	else if(addr<0x700)
@@ -1082,13 +1082,13 @@ unsigned short SCSP_r16(unsigned int addr)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		SCSP_UpdateSlotRegR(slot,addr&0x1f);
-		v=*((unsigned short *) (SCSP->Slots[slot].datab+(addr)));
+		v=*(unsigned short *) &(SCSP->Slots[slot].datab[addr]);
 		//DebugLog("Slot %02X Reg %02X Read word %04X",slot,addr,v);
 	}
 	else if(addr<0x600)
 	{
 		SCSP_UpdateRegR(addr&0xff);
-		v= *((unsigned short *) (SCSP->datab+((addr&0xff))));
+		v= *(unsigned short *) &(SCSP->datab[addr&0xff]);
 		//ErrorLogMessage("SCSP Reg %02X Read word %04X",addr&0xff,v);
 	}	
 	else if(addr<0x700)
@@ -1279,7 +1279,7 @@ SCSPNAME(_8bit,lfo,alfo,loop)\
 		}\
 		else\
 		{\
-			signed short *p=(signed short *) (slot->base+((slot->cur_addr>>(SHIFT-1))&(~1)));\
+			signed short *p=(signed short *) &(slot->base[(slot->cur_addr>>(SHIFT-1))&(~1)]);\
 			signed int fpart=slot->cur_addr&((1<<SHIFT)-1);\
 			sample=(p[0]);\
 		}\
@@ -1611,7 +1611,7 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 
 	if(PCM8B(slot))	//8 bit signed
 	{	
-		signed char *p=(signed char *) (slot->base+(addr^1));
+		signed char *p=(signed char *) &(slot->base[addr^1]);
 		int s;
 		signed int fpart=slot->cur_addr&((1<<SHIFT)-1);
 		sample=(p[0])<<8;
@@ -1626,7 +1626,7 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 	}
 	else	//16 bit signed (endianness?)
 	{
-		signed short *p=(signed short *) (slot->base+addr);
+		signed short *p=(signed short *) &(slot->base[addr]);
 		int s;
 		signed int fpart=slot->cur_addr&((1<<SHIFT)-1);
 		sample=(p[0]);

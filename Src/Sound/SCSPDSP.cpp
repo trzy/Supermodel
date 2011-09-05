@@ -195,7 +195,7 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 		f=fopen("dsp.txt","wt");
 	for(int step=0;step</*128*/DSP->LastStep;++step)
 	{
-		unsigned short *IPtr=DSP->MPRO+step*4;
+		unsigned short *IPtr=&(DSP->MPRO[step*4]);
 
 //		if(IPtr[0]==0 && IPtr[1]==0 && IPtr[2]==0 && IPtr[3]==0)
 //			break;
@@ -615,7 +615,7 @@ void SCSPDSP_Recompile(_SCSPDSP *DSP)
 
 	for(int step=0;step</*128*/DSP->LastStep;++step)
 	{
-		unsigned short *IPtr=DSP->MPRO+step*4;
+		unsigned short *IPtr=&(DSP->MPRO[step*4]);
 		_INST ThisInst,NextInst;
 		DecodeInst(IPtr,&ThisInst);
 		DecodeInst(IPtr+4,&NextInst);
@@ -1069,7 +1069,7 @@ void SCSPDSP_Start(_SCSPDSP *DSP)
 	DSP->Stopped=false;
 	for(i=127;i>=0;--i)
 	{
-		unsigned short *IPtr=DSP->MPRO+i*4;
+		unsigned short *IPtr=&(DSP->MPRO[i*4]);
 
 		if(IPtr[0]!=0 || IPtr[1]!=0 || IPtr[2]!=0 || IPtr[3]!=0)
 			break;
