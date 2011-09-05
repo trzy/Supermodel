@@ -2718,7 +2718,6 @@ CModel3::CModel3(void)
 	
 	securityPtr = 0;
 	
-	g_Config.multiThreaded = true;
 	startedThreads = false;
 	sndBrdThread = NULL; 
 #ifdef SUPERMODEL_DRIVEBOARD
