@@ -1,3 +1,4 @@
+//TODO: save states are not 64-bit safe. need to use UINT64s for addresses
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -1600,6 +1601,7 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 
 	if(MDL(slot)!=0 || MDXSL(slot)!=0 || MDYSL(slot)!=0)
 	{
+//TODO: is this correct? SCSP is not necessarily set to the slave SCSP. ElSemi may not have noticed this.
 		unsigned char v;
 		signed int smp=(SCSP->RINGBUF[(SCSP->BUFPTR+MDXSL(slot))&63]+SCSP->RINGBUF[(SCSP->BUFPTR+MDYSL(slot))&63])/2;
 		
@@ -1615,6 +1617,10 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 		int s;
 		signed int fpart=slot->cur_addr&((1<<SHIFT)-1);
 		sample=(p[0])<<8;
+		
+		//if (p>=(signed char *) &SCSP->SCSPRAM[0x200000])
+		//	printf("%X %X %X %p %p %p\n", addr, SA(slot), LEA(slot), p, slot->base, SCSP->SCSPRAM);
+		
 		/*s=(int) p[0]*((1<<SHIFT)-fpart)+(int) p[1]*fpart;
 		sample=(s>>SHIFT)<<8;
 		*/
@@ -2060,12 +2066,12 @@ void SCSP_SaveState(CBlockFile *StateFile)
 		// Save each slot
 		for (int j = 0; j < 32; j++)
 		{
-			UINT32	baseOffset;
+			UINT64	baseOffset;
 			UINT8	egState;
 			
 			StateFile->Write(SCSPs[i].Slots[j].datab, sizeof(SCSPs[i].Slots[j].datab));
 			StateFile->Write(&(SCSPs[i].Slots[j].active), sizeof(SCSPs[i].Slots[j].active));
-			baseOffset = (UINT32) (SCSPs[i].Slots[j].base - SCSPs[i].SCSPRAM);
+			baseOffset = (UINT64) (SCSPs[i].Slots[j].base - SCSPs[i].SCSPRAM);
 			StateFile->Write(&baseOffset, sizeof(baseOffset));
 			StateFile->Write(&(SCSPs[i].Slots[j].cur_addr), sizeof(SCSPs[i].Slots[j].cur_addr));
 			StateFile->Write(&(SCSPs[i].Slots[j].step), sizeof(SCSPs[i].Slots[j].step));
@@ -2147,7 +2153,7 @@ void SCSP_LoadState(CBlockFile *StateFile)
 		// Load each slot
 		for (int j = 0; j < 32; j++)
 		{
-			UINT32	baseOffset;
+			UINT64	baseOffset;
 			UINT8	egState;
 			
 			StateFile->Read(SCSPs[i].Slots[j].datab, sizeof(SCSPs[i].Slots[j].datab));
