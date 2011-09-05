@@ -1004,22 +1004,16 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
 		//printf("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
-#ifdef _MSC_VER	// MS VisualC++
-		_asm rol val,16
-#else
-		val = (val>>16)|(val<<16);
-#endif
+		rotl(val, 16);
+
 		*(unsigned int *) &(SCSP->Slots[slot].datab[addr]) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
 		SCSP_UpdateSlotReg(slot,(addr&0x1f)+2);
 	}
 	else if(addr<0x600)
 	{
-#ifdef _MSC_VER	// MS VisualC++
-		_asm rol val,16
-#else
-		val = (val>>16)|(val<<16);
-#endif
+		rotl(val, 16);
+
 		*(unsigned int *) &(SCSP->datab[addr&0xff]) = val;
 		SCSP_UpdateReg(addr&0xff);
 		SCSP_UpdateReg((addr&0xff)+2);
@@ -1030,11 +1024,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 	{
 #ifdef USEDSP
 		//DSP
-#ifdef _MSC_VER	// MS VisualC++
-			_asm rol val,16
-#else
-			val = (val>>16)|(val<<16);
-#endif
+		rotl(val, 16);
 			if(addr<0x780)	//COEF
 				*(unsigned int *) &(SCSP->DSP.COEF[(addr-0x700)/2])=val;
 			else if(addr<0x800)
@@ -1606,7 +1596,11 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 		signed int smp=(SCSP->RINGBUF[(SCSP->BUFPTR+MDXSL(slot))&63]+SCSP->RINGBUF[(SCSP->BUFPTR+MDYSL(slot))&63])/2;
 		
 		smp>>=11;
-		addr+=smp;
+		// Check for underflow before adding to addr
+		if (smp >= 0 || (DWORD)(-smp) < addr)
+			addr+=smp;
+		else 
+			addr = 0;
 		if(!PCM8B(slot))
 			addr&=~1;
 	}
