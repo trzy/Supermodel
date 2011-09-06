@@ -23,15 +23,16 @@ class CINIFile;
 enum EForceFeedback
 {
 	FFStop = -1,
-	FFSelfCenter = 0,
-	FFConstantForce = 1,
-	FFVibrate = 2
+	FFConstantForce = 0,
+	FFSelfCenter = 1,
+	FFFriction = 2,
+	FFVibrate = 3
 };
 
 struct ForceFeedbackCmd
 {
-	EForceFeedback id;
-	int data;
+	EForceFeedback id;   // Type of effect to apply
+	float force;         // Intensity (and, for FFConstantForce, direction) of effect with 0.0f = off and +/1.0f = maximum
 };
 
 /*
