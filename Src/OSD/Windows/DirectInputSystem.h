@@ -135,6 +135,18 @@ private:
 	vector<DIJoyInfo> m_diJoyInfos;
 	vector<DIJOYSTATE2> m_diJoyStates;
 
+	// DirectInput force feedback parameters
+	LONG m_diEffectsGain;
+	LONG m_diConstForceMax;
+	LONG m_diSelfCenterMax;
+	LONG m_diFrictionMax;
+	LONG m_diVibrateMax;
+
+	// XInput force feedback parameters
+	float m_xiConstForceThreshold;
+	WORD m_xiConstForceMax;
+	WORD m_xiVibrateMax;
+
 	bool GetRegString(HKEY regKey, const char *regPath, string &str);
 
 	bool GetRegDeviceName(const char *rawDevName, char *name);

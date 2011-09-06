@@ -316,7 +316,9 @@ CDirectInputSystem::CDirectInputSystem(bool useRawInput, bool useXInput, bool en
 	m_useRawInput(useRawInput), m_useXInput(useXInput), m_enableFFeedback(enableFFeedback),
 	m_initializedCOM(false), m_activated(false), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
 	m_getRIDevListPtr(NULL), m_getRIDevInfoPtr(NULL), m_regRIDevsPtr(NULL), m_getRIDataPtr(NULL),
-	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL)
+	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL),
+	m_diEffectsGain(DI_FFNOMINALMAX), m_diConstForceMax(DI_FFNOMINALMAX), m_diSelfCenterMax(DI_FFNOMINALMAX), m_diFrictionMax(DI_FFNOMINALMAX), m_diVibrateMax(DI_FFNOMINALMAX),
+	m_xiConstForceThreshold(0.75f), m_xiConstForceMax(65535), m_xiVibrateMax(65535)
 {
 	// Reset initial states
 	memset(&m_combRawMseState, 0, sizeof(RawMseState));
@@ -1285,8 +1287,8 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 		default:      return E_FAIL;
 	}
 
-	DWORD rgdwAxes[1] = { axisOfs };
-	LONG rglDirection[1] = { 0 };
+	DWORD dwAxis = axisOfs;
+	LONG lDirection = 0;
 	DICONSTANTFORCE dicf;
 	DICONDITION dic;
 	DIPERIODIC dip;
@@ -1300,59 +1302,65 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
 	eff.dwTriggerButton = DIEB_NOTRIGGER;
 	eff.dwTriggerRepeatInterval = 0;
-	eff.dwGain = DI_FFNOMINALMAX;
+	eff.dwGain = m_diEffectsGain;
 	eff.cAxes = 1;
-	eff.rgdwAxes = rgdwAxes;
-	eff.rglDirection = rglDirection;
+	eff.rgdwAxes = &dwAxis;
+	eff.rglDirection = &lDirection;
 	eff.dwDuration = INFINITE;
 	eff.dwStartDelay = 0;
+	eff.lpEnvelope = NULL;
 	
 	// Set specific effects parameters
 	switch (ffCmd.id)
 	{
 		case FFStop:
 			return E_FAIL;
-			
-		case FFSelfCenter:
-			guid = GUID_Spring;
-
-			dic.lOffset = 0;
-			dic.lPositiveCoefficient = 0;
-			dic.lNegativeCoefficient = 0;
-			dic.dwPositiveSaturation = DI_FFNOMINALMAX;
-			dic.dwNegativeSaturation = DI_FFNOMINALMAX;
-			dic.lDeadBand = (LONG)0.05 * DI_FFNOMINALMAX;
-			
-			eff.lpEnvelope = NULL;
-			eff.cbTypeSpecificParams = sizeof(DICONDITION);
-			eff.lpvTypeSpecificParams = &dic;
-			break;
 
 		case FFConstantForce:
 			guid = GUID_ConstantForce;
 
 			dicf.lMagnitude = 0;
 			
-			eff.lpEnvelope = NULL;
 			eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 			eff.lpvTypeSpecificParams = &dicf;
+			break;
+
+		case FFSelfCenter:
+			guid = GUID_Spring;
+
+			dic.lOffset = 0; // offset is +ve/-ve bias, 0 = evenly spread in both directions
+			dic.lPositiveCoefficient = 0;
+			dic.lNegativeCoefficient = 0;
+			dic.dwPositiveSaturation = DI_FFNOMINALMAX;
+			dic.dwNegativeSaturation = DI_FFNOMINALMAX;
+			dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX);  // 5% deadband
+			
+			eff.cbTypeSpecificParams = sizeof(DICONDITION);
+			eff.lpvTypeSpecificParams = &dic;
+			break;
+
+		case FFFriction:
+			guid = GUID_Friction;
+	
+			dic.lOffset = 0;
+			dic.lPositiveCoefficient = 0;
+			dic.lNegativeCoefficient = 0;
+			dic.dwPositiveSaturation = DI_FFNOMINALMAX;
+			dic.dwNegativeSaturation = DI_FFNOMINALMAX;
+			dic.lDeadBand = 0; // 0% deadband
+			
+			eff.cbTypeSpecificParams = sizeof(DICONDITION);
+			eff.lpvTypeSpecificParams = &dic;
 			break;
 
 		case FFVibrate:
 			guid = GUID_Sine;
 
 			dip.dwMagnitude = 0;
-			dip.lOffset  = 0;
-            dip.dwPhase  = 0;
-            dip.dwPeriod = (DWORD)0.1 * DI_SECONDS; // 1/10th second
+			dip.lOffset = 0;
+            dip.dwPhase = 0;
+            dip.dwPeriod = (DWORD)(0.05 * DI_SECONDS); // 1/20th second
 				
-			die.dwSize = sizeof(die);
-			die.dwAttackLevel = 0;
-			die.dwAttackTime = (DWORD)0.5 * DI_SECONDS;
-			die.dwFadeLevel = 0;
-			die.dwFadeTime = (DWORD)0.5 * DI_SECONDS;
-
-			eff.lpEnvelope = &die;
 			eff.cbTypeSpecificParams = sizeof(DIPERIODIC);
 			eff.lpvTypeSpecificParams = &dip;
 			break;
@@ -1598,29 +1606,45 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 	HRESULT hr;
 	if (pInfo->isXInput)
 	{	
+		if (axisNum != AXIS_X && axisNum != AXIS_Y && axisNum != AXIS_RX && axisNum != AXIS_RY)
+			return false;
 		XINPUT_VIBRATION vibration;
+		bool negForce;
+		float absForce;
 		switch (ffCmd.id)
 		{
 			case FFStop:
-				if (axisNum == AXIS_X || axisNum == AXIS_Y)
-					vibration.wLeftMotorSpeed = 0;
-				else if (axisNum == AXIS_RX || axisNum == AXIS_RY)
-					vibration.wRightMotorSpeed = 0;
-				else
-					return false;
+				// Stop command halts all vibration
+				vibration.wLeftMotorSpeed = 0;
+				vibration.wRightMotorSpeed = 0;
 				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
 
 			case FFConstantForce:
-				if (axisNum == AXIS_X || axisNum == AXIS_Y)
-					vibration.wLeftMotorSpeed = ffCmd.data; // TODO - scale data to 0-65535
-				else if (axisNum == AXIS_RX || axisNum == AXIS_RY) 
-					vibration.wRightMotorSpeed = ffCmd.data; // TODO - scale data to 0-65535
-				else
+				// Constant force effect is mapped to either left or right vibration motor depending on its direction and providing it's magnitude
+				// is above threshold setting
+				negForce = ffCmd.force < 0.0f;
+				absForce = (negForce ? -ffCmd.force : ffCmd.force);
+				if (absForce < m_xiConstForceThreshold)
 					return false;
+				if (negForce)
+					vibration.wLeftMotorSpeed = (WORD)(ffCmd.force * (float)m_xiConstForceMax);
+				else
+					vibration.wRightMotorSpeed = (WORD)(ffCmd.force * (float)m_xiConstForceMax);
+				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
+
+			case FFSelfCenter:
+			case FFFriction:
+				// Self center and friction effects are not mapped
+				return false;
+
+			case FFVibrate:
+				// Vibration effect is mapped to both vibration motors
+				vibration.wLeftMotorSpeed = (WORD)(ffCmd.force * (float)m_xiVibrateMax);
+				vibration.wRightMotorSpeed = (WORD)(ffCmd.force * (float)m_xiVibrateMax);
 				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
 
 			default:
-				// TODO - other force feedback types
+				// Unknown feedback command
 				return false;
 		}
 	}
@@ -1628,8 +1652,8 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 	{
 		LPDIRECTINPUTDEVICE8 joystick = m_di8Joysticks[pInfo->dInputNum];
 		
-		// See if command is to stop all force feedback
-		if (ffCmd.id == -1)
+		// See if command is to stop all force feedback, if so send appropriate command
+		if (ffCmd.id == FFStop)
 			return SUCCEEDED(hr = joystick->SendForceFeedbackCommand(DISFFC_STOPALL));
 
 		// Create effect for given axis if has not already been created
@@ -1639,10 +1663,9 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		{
 			if (FAILED(hr = CreateJoystickEffect(joystick, axisNum, ffCmd, pEffect)))
 				return false;
-			
 		}
 		
-		LONG rglDirection[1] = { 0 };
+		LONG lDirection = 0;
 		DICONSTANTFORCE dicf;
 		DICONDITION dic;
 		DIPERIODIC dip;
@@ -1654,53 +1677,64 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		eff.dwSize = sizeof(DIEFFECT);
 		eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
 		eff.cAxes = 1;
-		eff.rglDirection = rglDirection;
+		eff.rglDirection = &lDirection;
 		eff.dwStartDelay = 0;
+		eff.lpEnvelope = NULL;
 				
+		// Set command specific parameters
 		switch (ffCmd.id)	
 		{
-			case FFSelfCenter:
-				dic.lPositiveCoefficient = ffCmd.data;
-				dic.lNegativeCoefficient = ffCmd.data;
-				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
-				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
-				dic.lDeadBand = (LONG)0.05 * DI_FFNOMINALMAX;
-
-				eff.lpEnvelope = NULL;
-				eff.cbTypeSpecificParams = sizeof(DICONDITION);
-				eff.lpvTypeSpecificParams = &dic;
-				break;
-
 			case FFConstantForce:
-				dicf.lMagnitude = ffCmd.data; // TODO - scale & cap at +/- DI_FFNOMINALMAX
+				//printf("FFConstantForce %0.2f\n", 100.0f * ffCmd.force);
+				dicf.lMagnitude = (LONG)(-ffCmd.force * (float)m_diConstForceMax); // Invert sign for DirectInput effect
 				
-				eff.lpEnvelope = NULL;
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 				eff.lpvTypeSpecificParams = &dicf;
 				break;
 
+			case FFSelfCenter:
+				//printf("FFSelfCenter %0.2f\n", 100.0f * ffCmd.force);
+				dic.lOffset = 0;
+				dic.lPositiveCoefficient = (LONG)(ffCmd.force * (float)m_diSelfCenterMax);
+				dic.lNegativeCoefficient = (LONG)(ffCmd.force * (float)m_diSelfCenterMax);
+				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
+				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
+				dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX);
+
+				eff.cbTypeSpecificParams = sizeof(DICONDITION);
+				eff.lpvTypeSpecificParams = &dic;
+				break;
+
+			case FFFriction:
+				//printf("FFFriction %0.2f\n", 100.0f * ffCmd.force);
+				dic.lOffset = 0;
+				dic.lPositiveCoefficient = (LONG)(ffCmd.force * (float)m_diFrictionMax);
+				dic.lNegativeCoefficient = (LONG)(ffCmd.force * (float)m_diFrictionMax);
+				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
+				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
+				dic.lDeadBand = 0;
+
+				eff.cbTypeSpecificParams = sizeof(DICONDITION);
+				eff.lpvTypeSpecificParams = &dic;
+				break;
+
 			case FFVibrate:
-				dip.dwMagnitude = ffCmd.data;
+				//printf("FFVibrate %0.2f\n", 100.0f * ffCmd.force);
+				dip.dwMagnitude = (DWORD)(ffCmd.force * (float)m_diVibrateMax);
 				dip.lOffset = 0;
                 dip.dwPhase = 0;
-                dip.dwPeriod = (DWORD)0.1 * DI_SECONDS; // 1/10th second
+                dip.dwPeriod = (DWORD)(0.05 * DI_SECONDS); // 1/20th second
 
-				die.dwSize = sizeof(die);
-				die.dwAttackLevel = 0;
-				die.dwAttackTime = (DWORD)0.5 * DI_SECONDS;
-				die.dwFadeLevel = 0;
-				die.dwFadeTime = (DWORD)0.5 * DI_SECONDS;
-
-				eff.lpEnvelope = &die;
 				eff.cbTypeSpecificParams = sizeof(DIPERIODIC);
 				eff.lpvTypeSpecificParams = &dip;
 				break;
 
 			default:
+				// Unknown feedback command
 				return false;
 		}
 
-		// Now set the new parameters and start the effect immediately.
+		// Set the new parameters and start effect immediately
 		return SUCCEEDED(hr = (*pEffect)->SetParameters(&eff, DIEP_DIRECTION | DIEP_TYPESPECIFICPARAMS | DIEP_START));
 	}
 }
