@@ -110,6 +110,16 @@ public:
 	void SetINT(BOOL state);
 	
 	/*
+	 * GetPC(void):
+	 *
+	 * Returns the current PC value.
+
+	 * Returns:
+	 *		Current value of PC register.
+	 */
+	UINT16 GetPC(void);
+
+	/*
 	 * Reset(void):
 	 *
 	 * Resets the Z80, clearing all registers and pending interrupt requests.

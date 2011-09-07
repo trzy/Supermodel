@@ -3742,6 +3742,11 @@ void CZ80::SetINT(BOOL state)
 	intLine = state;
 }
 
+UINT16 CZ80::GetPC(void)
+{
+	return pc;
+}
+
 void CZ80::Reset(void)
 {
 	pc			= 0x0000;
