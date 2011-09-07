@@ -1,4 +1,6 @@
 //TODO before release:
+// - remove UI dump input state
+// - VBL timing?
 // - Controls for Dirt Devils, and other recent games (is bass working?)
 // - Stereo reverse option (see Srally2 sound test menu)
 // - Comment source code, clean up
@@ -442,7 +444,7 @@ static void LogConfig(void)
 	InfoLog("\tMusicVolume      = %d", g_Config.GetMusicVolume());
 	
 	// CDriveBoardConfig
-	InfoLog("\tEnableFeedback   = %d", g_Config.enableFFeedback);
+	InfoLog("\tEnableFFeedback  = %d", g_Config.enableFFeedback);
 
 	// CRender3DConfig
 	InfoLog("\tVertexShader     = %s", g_Config.vertexShaderFile.c_str());
@@ -1039,10 +1041,8 @@ static void Help(void)
 	puts("    -?, -h                 Print this help text");
 	puts("    -print-games           List supported games and quit");
 	puts("");
-	puts("Emulation Options:");
+	puts("Core Options:");
 	printf("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
-	puts("    -no-scsp               Disable Sega Custom Sound Processor (sound effects)");
-	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("    -multi-threaded        Enable multi-threading for enhanced performance");
 #ifdef SUPERMODEL_DEBUGGER
 	puts("    -disable-debugger	     Completely disable debugger functionality");
@@ -1061,11 +1061,14 @@ static void Help(void)
 	puts("    -sound-volume=<v>      Set volume of sound effects in % [Default: 100]");
 	puts("    -music-volume=<v>      Set volume of MPEG music in % [Default: 100]");
 	puts("    -flip-stereo           Swap left and right audio channels");
+	puts("    -no-scsp               Disable Sega Custom Sound Processor (sound effects)");
+	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("");
 	puts("Input Options:");
 #ifdef SUPERMODEL_WIN32
 	puts("    -input-system=<s>      Set input system [Default: SDL]");
 #endif
+	puts("    -force-feedback        Enable force feedback (DirectInput, XInput)");
 	puts("    -print-inputs          Prints current input configuration");
 	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 	puts("");
