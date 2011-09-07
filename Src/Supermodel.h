@@ -142,6 +142,7 @@
 #include "Sound/MPEG/MPEG.h"
 #include "Model3/SoundBoard.h"
 #include "Model3/DSB.h"
+#include "Model3/DriveBoard.h"
 #include "Model3/Model3.h"
 #include "Config.h"
 
