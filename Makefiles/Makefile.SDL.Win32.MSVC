@@ -119,7 +119,7 @@ CC = "$(VC_BIN)\cl.exe"
 LD = "$(VC_BIN)\link.exe"
 COMPILER_FLAGS = /I "$(SDL_INCLUDEPATH)" /I "$(ZLIB_INCLUDEPATH)" /I "$(DIRECTX_INCLUDEPATH)" /I "Src" /I "Src\\OSD" /I "Src\\OSD\\SDL" \
 	/I "Src\\OSD\\Windows" /Ox /D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL \
-	/DEBUG /Zi #/D "DEBUG" /DEBUG
+	/DEBUG #/D "DEBUG" 
 CFLAGS = $(COMPILER_FLAGS) /TC
 CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
 LFLAGS = /MACHINE:$(ARCH) $(ARCH_LIBS) /LIBPATH:"$(SDL_LIBPATH)" /LIBPATH:"$(ZLIB_LIBPATH)" /LIBPATH:"$(DIRECTX_LIBPATH)" /OUT:"$(OUTFILE)" \
@@ -162,7 +162,7 @@ OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/Config.obj $(OBJ_
 	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/Audio.obj $(OBJ_DIR)/Thread.obj $(OBJ_DIR)/SoundBoard.obj \
 	$(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/68K.obj $(OBJ_DIR)/m68kcpu.obj $(OBJ_DIR)/m68kopnz.obj $(OBJ_DIR)/m68kopdm.obj \
 	$(OBJ_DIR)/m68kopac.obj $(OBJ_DIR)/m68kops.obj $(OBJ_DIR)/DSB.obj $(OBJ_DIR)/Z80.obj \
-	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj \
+	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/DriveBoard.obj \
 	$(OBJ_DIR)/MPC10x.obj $(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj \
 	$(OBJ_DIR)/InputTypes.obj $(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj \
 	$(OBJ_DIR)/amp_audio.obj $(OBJ_DIR)/amp_dump.obj $(OBJ_DIR)/amp_getbits.obj $(OBJ_DIR)/amp_getdata.obj $(OBJ_DIR)/amp_huffman.obj \
