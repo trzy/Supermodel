@@ -308,14 +308,10 @@ private:
 	void    DeleteThreadObjects();  // Deletes all threads and synchronization objects
 
 	static int StartSoundBoardThread(void *data);    // Callback to start sound board thread
-#ifdef SUPERMODEL_DRIVEBOARD
 	static int StartDriveBoardThread(void *data);    // Callback to start drive board thread
-#endif
 
 	void    RunSoundBoardThread();                   // Runs sound board thread 
-#ifdef SUPERMODEL_DRIVEBOARD
 	void    RunDriveBoardThread();                   // Runs drive board thread
-#endif
 	
 	// Game and hardware information
 	const struct GameInfo	*Game;
@@ -343,6 +339,7 @@ private:
 	UINT8		*mpegROM;		// 8 MB DSB MPEG ROM
 	UINT8		*backupRAM;		// 128 KB Backup RAM (battery backed)
 	UINT8		*securityRAM;	// 128 KB Security Board RAM
+	UINT8       *driveROM;      // 32 KB drive board ROM (Z80 program) (optional)
 	
 	// Banked CROM
 	UINT8		*cromBank;		// currently mapped in CROM bank
@@ -357,19 +354,13 @@ private:
 	// Multiple threading
 	bool        startedThreads;    // True if threads have been created and started
 	CThread     *sndBrdThread;     // Sound board thread
-#ifdef SUPERMODEL_DRIVEBOARD
 	CThread     *drvBrdThread;     // Drive board thread
-#endif
 	bool        sndBrdThreadDone;  // Flag to indicate sound board thread has finished processing for current frame
-#ifdef SUPERMODEL_DRIVEBOARD
 	bool        drvBrdThreadDone;  // Flag to indicate drive board thread has finished processing for current frame
-#endif
 
 	// Thread synchronization objects
 	CSemaphore  *sndBrdThreadSync;
-#ifdef SUPERMODEL_DRIVEBOARD
 	CSemaphore  *drvBrdThreadSync;
-#endif
 	CMutex      *notifyLock;
 	CCondVar    *notifySync;	
 	
@@ -384,9 +375,7 @@ private:
 	CReal3D		GPU;		// Real3D graphics hardware
 	CSoundBoard	SoundBoard;	// Sound board
 	CDSB		*DSB;		// Digital Sound Board (type determined dynamically at load time)
-#ifdef SUPERMODEL_DRIVEBOARD
 	CDriveBoard DriveBoard; // Drive board
-#endif
 };
 
 

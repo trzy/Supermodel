@@ -352,11 +352,15 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 			else if (Inputs->twinJoyCrouch->value)
 				data &= ~0x40;
 		}
-		
+
 		return data;
 
 	case 0x0C:	// game-specific inputs
+
 		data = 0xFF;
+
+		if (DriveBoard.IsAttached())
+			data = DriveBoard.Read();
 		
 		if ((Game->inputFlags&GAME_INPUT_JOYSTICK2))
 		{
@@ -461,6 +465,12 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
 		EEPROM.Write((data>>6)&1,(data>>7)&1,(data>>5)&1);
 		inputBank = data;
 		break;
+
+	case 0x10:  // Drive board
+		if (DriveBoard.IsAttached())
+			DriveBoard.Write(data);
+		break;
+
 	case 0x24:	// Serial FIFO 1
 		switch (data)	// Command
 		{
@@ -1831,6 +1841,8 @@ void CModel3::SaveState(CBlockFile *SaveState)
 	TileGen.SaveState(SaveState);
 	GPU.SaveState(SaveState);
 	SoundBoard.SaveState(SaveState);	// also saves DSB state
+	if (DriveBoard.IsAttached())
+		DriveBoard.SaveState(SaveState);
 }
 
 void CModel3::LoadState(CBlockFile *SaveState)
@@ -1864,6 +1876,8 @@ void CModel3::LoadState(CBlockFile *SaveState)
 	IRQ.LoadState(SaveState);
 	ppc_load_state(SaveState);
 	SoundBoard.LoadState(SaveState);
+	if (DriveBoard.IsAttached())
+		DriveBoard.LoadState(SaveState);
 }
 
 void CModel3::SaveNVRAM(CBlockFile *NVRAM)
@@ -1906,11 +1920,7 @@ void CModel3::RunFrame(void)
 			goto ThreadError;
 
 		// Wake sound board and drive board threads so they can process a frame
-#ifdef SUPERMODEL_DRIVEBOARD
-		if (!sndBrdThreadSync->Post() || !drvBrdThreadSync->Post())
-#else
-		if (!sndBrdThreadSync->Post())
-#endif
+		if (!sndBrdThreadSync->Post() || DriveBoard.IsAttached() && !drvBrdThreadSync->Post())
 			goto ThreadError;
 
 		// At the same time, process a single frame for main board (PPC) in this thread
@@ -1921,19 +1931,13 @@ void CModel3::RunFrame(void)
 			goto ThreadError;
 
 		// Wait for sound board and drive board threads to finish their work (if they haven't done so already)
-#ifdef SUPERMODEL_DRIVEBOARD
-		while (!sndBrdThreadDone || !drvBrdThreadDone)
-#else
-		while (!sndBrdThreadDone)
-#endif
+		while (!sndBrdThreadDone || DriveBoard.IsAttached() && !drvBrdThreadDone)
 		{
 			if (!notifySync->Wait(notifyLock))
 				goto ThreadError;
 		}
 		sndBrdThreadDone = false;
-#ifdef SUPERMODEL_DRIVEBOARD
 		drvBrdThreadDone = false;
-#endif
 		
 		// Leave notify wait critical section
 		if (!notifyLock->Unlock())
@@ -1944,9 +1948,8 @@ void CModel3::RunFrame(void)
 		// If not multi-threaded, then just process a single frame for main board, sound board and drive board in turn in this thread
 		RunMainBoardFrame();
 		SoundBoard.RunFrame();
-#ifdef SUPERMODEL_DRIVEBOARD
-		DriveBoard.RunFrame();
-#endif
+		if (DriveBoard.IsAttached())
+			DriveBoard.RunFrame();
 	}
 	
 	return;
@@ -1965,11 +1968,12 @@ bool CModel3::StartThreads()
 	sndBrdThreadSync = CThread::CreateSemaphore(1);
 	if (sndBrdThreadSync == NULL)
 		goto ThreadError;
-#ifdef SUPERMODEL_DRIVEBOARD
-	drvBrdThreadSync = CThread::CreateSemaphore(1);
-	if (drvBrdThreadSync == NULL)
-		goto ThreadError;
-#endif
+	if (DriveBoard.IsAttached())
+	{
+		drvBrdThreadSync = CThread::CreateSemaphore(1);
+		if (drvBrdThreadSync == NULL)
+			goto ThreadError;
+	}
 	notifyLock = CThread::CreateMutex();
 	if (notifyLock == NULL)
 		goto ThreadError;
@@ -1982,12 +1986,13 @@ bool CModel3::StartThreads()
 	if (sndBrdThread == NULL)
 		goto ThreadError;
 
-#ifdef SUPERMODEL_DRIVEBOARD
-	// Create drive board thread
-	drvBrdThread = CThread::CreateThread(StartDriveBoardThread, this);
-	if (drvBrdThread == NULL)
-		goto ThreadError;
-#endif
+	// Create drive board thread, if drive board is attached
+	if (DriveBoard.IsAttached())
+	{
+		drvBrdThread = CThread::CreateThread(StartDriveBoardThread, this);
+		if (drvBrdThread == NULL)
+			goto ThreadError;
+	}
 	
 	startedThreads = true;
 	return true;
@@ -2017,13 +2022,11 @@ void CModel3::DeleteThreadObjects()
 		delete sndBrdThread;
 		sndBrdThread = NULL;
 	}
-#ifdef SUPERMODEL_DRIVEBOARD
 	if (drvBrdThread != NULL)
 	{
 		delete drvBrdThread;
 		drvBrdThread = NULL;
 	}
-#endif
 
 	// Delete synchronization objects
 	if (sndBrdThreadSync != NULL)
@@ -2031,13 +2034,11 @@ void CModel3::DeleteThreadObjects()
 		delete sndBrdThreadSync;
 		sndBrdThreadSync = NULL;
 	}
-#ifdef SUPERMODEL_DRIVEBOARD
 	if (drvBrdThreadSync != NULL)
 	{
 		delete drvBrdThreadSync;
 		drvBrdThreadSync = NULL;
 	}
-#endif
 	if (notifyLock != NULL)
 	{
 		delete notifyLock;
@@ -2058,7 +2059,6 @@ int CModel3::StartSoundBoardThread(void *data)
 	return 0;
 }
 
-#ifdef SUPERMODEL_DRIVEBOARD
 int CModel3::StartDriveBoardThread(void *data)
 {
 	// Call drive board thread method on CModel3
@@ -2066,7 +2066,6 @@ int CModel3::StartDriveBoardThread(void *data)
 	model3->RunDriveBoardThread();
 	return 0;
 }
-#endif
 
 void CModel3::RunSoundBoardThread()
 {
@@ -2098,7 +2097,6 @@ ThreadError:
 	g_Config.multiThreaded = false;
 }
 
-#ifdef SUPERMODEL_DRIVEBOARD
 void CModel3::RunDriveBoardThread()
 {
 	for (;;)
@@ -2108,7 +2106,7 @@ void CModel3::RunDriveBoardThread()
 			goto ThreadError;
 
 		// Process a single frame for drive board
-		//DriveBoard.RunFrame();
+		DriveBoard.RunFrame();
 
 		// Enter notify critical section
 		if (!notifyLock->Lock())
@@ -2128,8 +2126,6 @@ ThreadError:
 	ErrorLog("Threading error in drive board thread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
 }
-#endif
-
 void CModel3::RunMainBoardFrame(void)
 {
 	// Run the PowerPC for a frame
@@ -2141,7 +2137,7 @@ void CModel3::RunMainBoardFrame(void)
 	GPU.BeginFrame();
 	GPU.RenderFrame();
 	IRQ.Assert(0x02);
-	ppc_execute(10000);	// TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
+	ppc_execute(10000);     // TO-DO: Vblank probably needs to be longer. Maybe that's why some games run too fast/slow
 	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
 	
 	/*
@@ -2216,9 +2212,9 @@ void CModel3::Reset(void)
 	TileGen.Reset();
 	GPU.Reset();
 	SoundBoard.Reset();
-#ifdef SUPERMODEL_DRIVEBOARD
-	DriveBoard.Reset();
-#endif
+
+	if (DriveBoard.IsAttached())
+		DriveBoard.Reset();
 	
 	DebugLog("Model 3 reset\n");
 }
@@ -2584,7 +2580,7 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 		return ErrorLog("Game uses an unrecognized stepping (%d.%d), cannot configure Model 3.", (Game->step>>4)&0xF, Game->step&0xF);
 
 	GPU.SetStep(Game->step);
-	
+
 	ppc_init(&PPCConfig);
 	ppc_attach_bus(this);
 	
@@ -2643,6 +2639,9 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 {
 	Inputs = InputsPtr;
 
+	if (DriveBoard.IsAttached())
+		DriveBoard.AttachInputs(InputsPtr, Game->inputFlags);
+
 	DebugLog("Model 3 attached inputs\n");
 }
 
@@ -2666,6 +2665,7 @@ BOOL CModel3::Init(void)
 	mpegROM = &memoryPool[OFFSET_DSBMPEGROM];
 	backupRAM = &memoryPool[OFFSET_BACKUPRAM];
 	securityRAM = &memoryPool[OFFSET_SECURITYRAM];
+	driveROM = NULL; // TODO - need to read drive board ROM, but not complain if it is not available
 	SetCROMBank(0xFF);
 	
 	// Initialize other devices (PowerPC and DSB initialized after ROMs loaded)
@@ -2681,10 +2681,8 @@ BOOL CModel3::Init(void)
 		return FAIL;
 	if (OKAY != SoundBoard.Init(soundROM,sampleROM))
 		return FAIL;
-	
-#ifdef SUPERMODEL_DRIVEBOARD
-	DriveBoard.Init();
-#endif
+	if (OKAY != DriveBoard.Init(driveROM))
+		return FAIL;
 		
 	PCIBridge.AttachPCIBus(&PCIBus);
 	PCIBus.AttachDevice(13,&GPU);
@@ -2720,17 +2718,11 @@ CModel3::CModel3(void)
 	
 	startedThreads = false;
 	sndBrdThread = NULL; 
-#ifdef SUPERMODEL_DRIVEBOARD
 	drvBrdThread = NULL;
-#endif
 	sndBrdThreadDone = false;
-#ifdef SUPERMODEL_DRIVEBOARD
 	drvBrdThreadDone = false;
-#endif
 	sndBrdThreadSync = NULL;
-#ifdef SUPERMODEL_DRIVEBOARD
 	drvBrdThreadSync = NULL;
-#endif
 	notifyLock = NULL;
 	notifySync = NULL;
 	
