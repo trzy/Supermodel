@@ -382,6 +382,10 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.emulateSCSP = x ? true : false;
 	if (OKAY == INI->Get(section, "EmulateDSB", x))
 		g_Config.emulateDSB = x ? true : false;
+
+	// Drive board
+	if (OKAY == INI->Get(section, "EnableFFeedback", x))
+		g_Config.enableFFeedback = x ? true : false;
 	
 	// OSD
 	INI->Get(section, "XResolution", g_Config.xRes);
@@ -437,6 +441,9 @@ static void LogConfig(void)
 	InfoLog("\tSoundVolume      = %d", g_Config.GetSoundVolume());
 	InfoLog("\tMusicVolume      = %d", g_Config.GetMusicVolume());
 	
+	// CDriveBoardConfig
+	InfoLog("\tEnableFeedback   = %d", g_Config.enableFFeedback);
+
 	// CRender3DConfig
 	InfoLog("\tVertexShader     = %s", g_Config.vertexShaderFile.c_str());
 	InfoLog("\tFragmentShader   = %s", g_Config.fragmentShaderFile.c_str());
@@ -654,7 +661,7 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 #ifdef SUPERMODEL_DEBUGGER
 int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
 {
-CLogger *oldLogger;
+	CLogger *oldLogger;
 #else
 int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 {				  
@@ -851,7 +858,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 					Debugger->ForceBreak(true);
 				}
 			}
-		}
 #endif // SUPERMODEL_DEBUGGER
  		
  		// FPS and frame rate
@@ -1166,7 +1172,7 @@ int main(int argc, char **argv)
 			CmdLine.Set("Global", "MultiThreaded", n);
 		}
 #ifdef SUPERMODEL_DEBUGGER
-		else if (!strncmp(argv[i],"-disable-debugger"))
+		else if (!strcmp(argv[i],"-disable-debugger"))
 			g_Config.disableDebugger = true;
 		else if (!strcmp(argv[i],"-enter-debugger"))
 			cmdEnterDebugger = true;
@@ -1201,6 +1207,11 @@ int main(int argc, char **argv)
 		{
 			n = 0;
 			CmdLine.Set("Global", "EmulateDSB", n);
+		}
+		else if (!strcmp(argv[i], "-force-feedback"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "EnableFFeedback", n);
 		}
 		else if (!strncmp(argv[i],"-res",4))
 		{
@@ -1302,16 +1313,17 @@ int main(int argc, char **argv)
 	Debugger::CSupermodelDebugger *Debugger = NULL;
 #endif // SUPERMODEL_DEBUGGER
 
+	// Create input system (default is SDL)
 	g_Config.SetInputSystem(inputSystem);
 	if (stricmp(g_Config.GetInputSystem(), "sdl") == 0)
 		InputSystem = new CSDLInputSystem();
 #ifdef SUPERMODEL_WIN32
 	else if (stricmp(g_Config.GetInputSystem(), "dinput") == 0)
-		InputSystem = new CDirectInputSystem(false, false, false);
+		InputSystem = new CDirectInputSystem(false, false, true);
 	else if (stricmp(g_Config.GetInputSystem(), "xinput") == 0)
-		InputSystem = new CDirectInputSystem(false, true, false);
+		InputSystem = new CDirectInputSystem(false, true, true);
 	else if (stricmp(g_Config.GetInputSystem(), "rawinput") == 0)
-		InputSystem = new CDirectInputSystem(true, false, false);
+		InputSystem = new CDirectInputSystem(true, false, true);
 #endif // SUPERMODEL_WIN32
 	else
 	{
