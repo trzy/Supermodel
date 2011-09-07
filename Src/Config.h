@@ -56,7 +56,7 @@
  * - User-tunable settings should be stored here, not necessarily every 
  *   concievable parameter a class initializer might take.
  */
-class CConfig: public COSDConfig, public CRender3DConfig, public CModel3Config, public CSoundBoardConfig, public CDSBConfig
+class CConfig: public COSDConfig, public CRender3DConfig, public CModel3Config, public CSoundBoardConfig, public CDSBConfig, public CDriveBoardConfig
 {
 };
 
