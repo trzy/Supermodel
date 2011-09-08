@@ -233,6 +233,8 @@ public:
 	 *
 	 * Loads a complete ROM set from the specified ZIP archive.
 	 *
+	 * NOTE: Command line settings will not have been applied here yet.
+	 *
 	 * Parameters:
 	 *		GameList	List of all supported games and their ROMs.
  	 *		zipFile		ZIP file to load from.
@@ -268,6 +270,8 @@ public:
 	 *
 	 * One-time initialization of the context. Must be called prior to all
 	 * other members. Allocates memory and initializes device states.
+	 *
+	 * NOTE: Command line settings will not have been applied here yet.
 	 *
 	 * Returns:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error

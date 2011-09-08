@@ -470,6 +470,7 @@ void CDSB1::Reset(void)
 	volume = 0x7F;	// full volume
 	usingLoopStart = 0;
 	
+	// Even if DSB emulation is disabled, must reset to establish valid Z80 state
 	Z80.Reset();
 	DebugLog("DSB1 Reset\n");
 }
@@ -1023,6 +1024,7 @@ void CDSB2::Reset(void)
 	volume[0] = 0xFF;	// set to max volume in case we miss the volume commands
 	volume[1] = 0xFF;
 	
+	// Even if DSB emulation is disabled, must reset to establish valid Z80 state
 	M68KSetContext(&M68K);
 	M68KReset();
 	//printf("DSB2 PC=%06X\n", M68KGetPC());

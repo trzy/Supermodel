@@ -116,7 +116,7 @@ UINT8 CSoundBoard::Read8(UINT32 a)
 		return sampleBankHi[(a&0x1FFFFF)^1];
 		
 	default:
-		printf("68K: Unknown read8 %06X\n", a);
+		//printf("68K: Unknown read8 %06X\n", a);
 		break;
 	}
 	
@@ -157,7 +157,7 @@ UINT16 CSoundBoard::Read16(UINT32 a)
 		return *(UINT16 *) &sampleBankHi[a&0x1FFFFF];
 		
 	default:
-		printf("68K: Unknown read16 %06X\n", a);
+		//printf("68K: Unknown read16 %06X\n", a);
 		break;
 	}
 	
@@ -212,7 +212,7 @@ UINT32 CSoundBoard::Read32(UINT32 a)
 		return (hi<<16)|lo;
 		
 	default:
-		printf("68K: Unknown read32 %06X\n", a);
+		//printf("68K: Unknown read32 %06X\n", a);
 		break;
 	}
 	
@@ -245,8 +245,8 @@ void CSoundBoard::Write8(unsigned int a,unsigned char d)
 			ctrlReg = d;
 			UpdateROMBanks();
 		}
-		else
-			printf("68K: Unknown write8 %06X=%02X\n", a, d);
+		//else
+		//	printf("68K: Unknown write8 %06X=%02X\n", a, d);
 		break;
 	}
 }
@@ -272,7 +272,7 @@ void CSoundBoard::Write16(unsigned int a,unsigned short d)
 		break;
 	
 	default:
-		printf("68K: Unknown write16 %06X=%04X\n", a, d);
+		//printf("68K: Unknown write16 %06X=%04X\n", a, d);
 		break;
 	}
 }
@@ -300,7 +300,7 @@ void CSoundBoard::Write32(unsigned int a,unsigned int d)
 		break;
 	
 	default:
-		printf("68K: Unknown write32 %06X=%08X\n", a, d);
+		//printf("68K: Unknown write32 %06X=%08X\n", a, d);
 		break;
 	}
 }
@@ -397,6 +397,7 @@ void CSoundBoard::RunFrame(void)
 
 void CSoundBoard::Reset(void)
 {
+	// Even if SCSP emulation is disabled, we must reset to establish a valid 68K state
 	memcpy(ram1, soundROM, 16);				// copy 68K vector table
 	ctrlReg = 0;							// set default banks
 	UpdateROMBanks();

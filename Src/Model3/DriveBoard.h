@@ -11,7 +11,7 @@
 class CDriveBoardConfig
 {
 public:
-	bool	 forceFeedback;		// Enable drive board emulation/simulation
+	bool	 forceFeedback;		// Enable drive board emulation/simulation (read only during Reset(), cannot be changed in-game)
 	bool     simulateDrvBoard;  // Simulate drive board rather than emulating it
 	unsigned steeringStrength;  // Setting for steering strength on DIP switches of drive board
 

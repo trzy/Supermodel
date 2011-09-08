@@ -123,7 +123,7 @@ bool CDriveBoard::Init(const UINT8 *romPtr)
 	m_rom = romPtr;
 
 	// Check have a valid ROM and force feedback is enabled
-	m_attached = m_rom && g_Config.forceFeedback;
+	m_attached = (m_rom != NULL);
 	if (!m_attached)
 		return OKAY;
 
@@ -135,10 +135,6 @@ bool CDriveBoard::Init(const UINT8 *romPtr)
 		return ErrorLog("Insufficient memoy for drive board (needs %1.1f MB).", ramSizeMB);
 	}
 	memset(m_ram, 0, RAM_SIZE);
-
-	// Configure options
-	m_simulated = g_Config.simulateDrvBoard;
-	SetSteeringStrength(g_Config.steeringStrength);
 
 	// Initialize Z80
 	m_z80.Init(this, NULL);
@@ -185,8 +181,14 @@ void CDriveBoard::Reset(void)
 	m_lastFriction = 0;
 	m_lastVibrate = 0;
 
-	if (!m_simulated)
-		m_z80.Reset();
+	// Configure options (cannot be done in Init() because command line settings weren't yet parsed)
+	m_simulated = g_Config.simulateDrvBoard;
+	SetSteeringStrength(g_Config.steeringStrength);
+
+	m_z80.Reset();	// always reset to provide a valid Z80 state
+	
+	if (!g_Config.forceFeedback)
+		m_attached = false;
 }
 
 UINT8 CDriveBoard::Read(void)
