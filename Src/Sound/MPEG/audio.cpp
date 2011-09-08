@@ -32,7 +32,7 @@
 
 #include <new>
 #include <cstring>
-#include "Types.h"
+#include "Supermodel.h"
 #include "MPEG.h"
 
 //#include "m1snd.h"
@@ -89,12 +89,12 @@ int decodeMPEGOneFrame(struct AUDIO_HEADER *header)
 
 	if (header->layer==1) {
 		if (layer3_frame(header,cnt)) {
-			warn(" error. blip.\n");
+			ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 			return -1;
 		}
 	} else if (header->layer==2)
 		if (layer2_frame(header,cnt)) {
-			warn(" error. blip.\n");
+			ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 			return -1;
 		}
 
@@ -121,19 +121,19 @@ int g,snd_eof=0;
 
 	//printf("%d Hz, layer %d\n", t_sampling_frequency[header.ID][header.sampling_frequency], header.layer);
 
-	if (setup_audio(&header)!=0) {
-		warn("Cannot set up audio. Exiting\n");
+	if (setup_audio(&header)!=0) {	// will never fail (setup_audio() does nothing)
+		ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 		return -1;
 	}
 	
 	if (header.layer==1) {
 		if (layer3_frame(&header,cnt)) {
-			warn(" error. blip.\n");
+			ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 			return -1;
 		}
 	} else if (header.layer==2)
 		if (layer2_frame(&header,cnt)) {
-			warn(" error. blip.\n");
+			ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 			return -1;
 		}
 
@@ -173,17 +173,20 @@ void initialise_globals(void)
 void report_header_error(int err)
 {
 	switch (err) {
-		case GETHDR_ERR: die("error reading mpeg bitstream. exiting.\n");
+		case GETHDR_ERR:
+					ErrorLog("Internal error in MPEG decoder: unable to read bit stream.");
 					break;
-		case GETHDR_NS : warn("this is a file in MPEG 2.5 format, which is not defined\n");
-				 warn("by ISO/MPEG. It is \"a special Fraunhofer format\".\n");
-				 warn("amp does not support this format. sorry.\n");
+		case GETHDR_NS : 
+					ErrorLog("Internal error in MPEG decoder: invalid MPEG format encountered.");
 					break;
-		case GETHDR_FL1: warn("ISO/MPEG layer 1 is not supported by amp.\n");
+		case GETHDR_FL1: 
+					ErrorLog("Internal error in MPEG decoder: unsupported MPEG format encountered.");
 					break;
-		case GETHDR_FF : warn("free format bitstreams are not supported. sorry.\n");
+		case GETHDR_FF : 
+					ErrorLog("Internal error in MPEG decoder: unsupported bit stream encountered.");
 					break;	
-		case GETHDR_SYN: warn("oops, we're out of sync.\n");
+		case GETHDR_SYN: 
+					ErrorLog("Internal error in MPEG decoder: out of sync!");
 					break;
 		case GETHDR_EOF: 
 		default: 		; /* some stupid compilers need the semicolon */

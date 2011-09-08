@@ -15,7 +15,11 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	uiSaveState        = AddSwitchInput("UISaveState",        "Save State",            GAME_INPUT_UI, "KEY_F5");
 	uiChangeSlot       = AddSwitchInput("UIChangeSlot",       "Change Save Slot",      GAME_INPUT_UI, "KEY_F6");
 	uiLoadState        = AddSwitchInput("UILoadState",        "Load State",            GAME_INPUT_UI, "KEY_F7");
-	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      GAME_INPUT_UI, "KEY_F8");
+	uiMusicVolUp	   = AddSwitchInput("UIMusicVolUp",		  "Increase Music Volume", GAME_INPUT_UI, "KEY_F10");
+	uiMusicVolDown	   = AddSwitchInput("UIMusicVolDown",	  "Decrease Music Volume", GAME_INPUT_UI, "KEY_F9");
+	uiSoundVolUp	   = AddSwitchInput("UISoundVolUp",		  "Increase Sound Volume", GAME_INPUT_UI, "KEY_F12");
+	uiSoundVolDown	   = AddSwitchInput("UISoundVolDown",	  "Decrease Sound Volume", GAME_INPUT_UI, "KEY_F11");
+	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      GAME_INPUT_UI, "NONE");	// disabled for release
 	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           GAME_INPUT_UI, "KEY_ALT+KEY_N");
 	uiSelectCrosshairs = AddSwitchInput("UISelectCrosshairs", "Select Crosshairs",     GAME_INPUT_UI, "KEY_ALT+KEY_I");
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", GAME_INPUT_UI, "KEY_ALT+KEY_T");

@@ -1,4 +1,3 @@
-//TODO: amp can print error messages -- change them to Supermodel error messages
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -679,7 +678,7 @@ static const char *stateName[] =
 
 void CDSB2::WriteMPEGFIFO(UINT8 byte)
 {
-	printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
+	//printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
 	switch (mpegState)
 	{
 		case ST_IDLE:
@@ -695,7 +694,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart = mpegStart;
 				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				printf("playing %X\n", mpegStart);
+				//printf("playing %X\n", mpegStart);
 				mpegState = ST_IDLE;
 				playing = 1;
 			}
@@ -739,7 +738,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			if (playing)
 			{
-				printf("Setting loop point to %x\n", mpegStart);
+				//printf("Setting loop point to %x\n", mpegStart);
 				usingLoopStart = mpegStart;
 				usingLoopEnd = mpegEnd-mpegStart;
 				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
@@ -763,17 +762,19 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			//printf("mpegEnd=%x\n", mpegEnd);
 
 			// default to full stereo
-//			mixer_set_stereo_volume(0, 255, 255);
-//			mixer_set_stereo_pan(0, MIXER_PAN_RIGHT, MIXER_PAN_LEFT);
+			//mixer_set_stereo_volume(0, 255, 255);
+			//mixer_set_stereo_pan(0, MIXER_PAN_RIGHT, MIXER_PAN_LEFT);
 			mpegState = ST_IDLE;
 			break;
-//		case ST_GOTA0:
+		/*
+		case ST_GOTA0:
 			// ch 0 mono
-//			mixer_set_stereo_volume(0, 0, 255);
-//			printf("ch 0 mono\n");
-//			mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
+			mixer_set_stereo_volume(0, 0, 255);
+			printf("ch 0 mono\n");
+			mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
 			mpegState = ST_IDLE;
-//			break;
+			break;
+		*/
 		case ST_GOTA4:	// dayto2pe plays advertise tune from this state by writing 0x75
 			mpegState = ST_IDLE;
 			if (byte == 0x75)
@@ -783,7 +784,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart = mpegStart;
 				usingMPEGEnd = mpegEnd;
 				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				printf("playing %X (from st_gota4)\n", mpegStart);
+				//printf("playing %X (from st_gota4)\n", mpegStart);
 				playing = 1;
 			}
 			break;
@@ -792,9 +793,9 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			break;
 		case ST_GOTB1:
 			// ch 1 mono
-//			printf("ch 1 mono\n");
-//			mixer_set_stereo_volume(0, 255, 0);
-//			mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
+			//printf("ch 1 mono\n");
+			//mixer_set_stereo_volume(0, 255, 0);
+			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB4:
@@ -862,7 +863,7 @@ UINT8 CDSB2::Read8(UINT32 addr)
 		return ram[addr^1];
 	}
 
-//	printf("R8 @ %x\n", addr);
+	//printf("R8 @ %x\n", addr);
 	return 0;
 }
 
@@ -878,7 +879,7 @@ UINT16 CDSB2::Read16(UINT32 addr)
 		return *(UINT16 *) &ram[addr];
 	}
 
-//	printf("R16 @ %x\n", addr);
+	//printf("R16 @ %x\n", addr);
 	return 0;
 }
 
@@ -899,7 +900,7 @@ UINT32 CDSB2::Read32(UINT32 addr)
 		lo = *(UINT16 *) &ram[addr+2];
 		return (hi<<16)|lo;
 	}
-//	printf("R32 @ %x\n", addr);
+	//printf("R32 @ %x\n", addr);
 	return 0;
 }
 
@@ -920,7 +921,7 @@ void CDSB2::Write8(UINT32 addr, UINT8 data)
 		return;
 	}
 
-//	printf("W8: %x @ %x (PC=%x)\n", data, addr, m68k_get_reg(NULL, M68K_REG_PC));
+	//printf("W8: %x @ %x (PC=%x)\n", data, addr, m68k_get_reg(NULL, M68K_REG_PC));
 }
 
 void CDSB2::Write16(UINT32 addr, UINT16 data)
@@ -1109,9 +1110,9 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 		MPEG_StopPlaying();
 		
 	//DEBUG
-	printf("mpegStart=%X, mpegEnd=%X\n", mpegStart, mpegEnd);
-	printf("usingMPEGStart=%X, usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
-	printf("usingLoopStart=%X, usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
+	//printf("mpegStart=%X, mpegEnd=%X\n", mpegStart, mpegEnd);
+	//printf("usingMPEGStart=%X, usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
+	//printf("usingLoopStart=%X, usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
 	
 }
 

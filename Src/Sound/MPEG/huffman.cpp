@@ -13,6 +13,8 @@
 #define HUFFMAN
 #include "huffman.h"
 
+#include "Supermodel.h"
+
 static inline unsigned int viewbits(int n)
 {
 unsigned int pos,ret_value;
@@ -65,7 +67,8 @@ int len;
 			 * have another table with huffman tables lengths, and
 			 * it would be a mess. just in case, scream&shout.
 			 */ 
-			printf(" h_cue clobbered. this is a bug. blip.\n");
+			
+			ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);	// h_cue clobbered
 			exit (-1);
 		}
 		chunk <<= 32-19;

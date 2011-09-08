@@ -14,6 +14,8 @@
 #define LAYER2
 #include "layer2.h"
 
+#include "Supermodel.h"
+
 int layer2_frame(struct AUDIO_HEADER *header,int cnt)
 {
 int i,s,sb,ch,gr,bitrate,bound=0;
@@ -80,7 +82,7 @@ int hsize,fs,mean_frame_size;
 					   nbal=(char (*)[])&t_nbal2;
 					   sblimit=8;
 					   break;
-				default  : printf(" bit alloc info no gud ");
+				default  : ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 				}
 				break;
 		case 1 : switch (bitrate)	/* 1 = 48 kHz */
@@ -101,7 +103,7 @@ int hsize,fs,mean_frame_size;
 					   nbal=(char (*)[])&t_nbal2;
 					   sblimit=8;
 					   break;
-				default  : printf(" bit alloc info no gud ");
+				default  : ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 				}
 				break;
 		case 2 : switch (bitrate)	/* 2 = 32 kHz */
@@ -125,10 +127,10 @@ int hsize,fs,mean_frame_size;
                                    nbal=(char (*)[])&t_nbal3;
                                    sblimit=12;
 				   break;
-			default  : printf("bit alloc info not ok\n");
+			default  : ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);
 			}
 	                break;                                                    
-		default  : printf("sampling freq. not ok/n");
+		default  : ErrorLog("Internal error in MPEG decoder (%s:%d).", __FILE__, __LINE__);	// sampling frequency no good
 	} else {
 		bit_alloc_index=(char (*)[][16])&t_allocMPG2;
 		nbal=(char (*)[])&t_nbalMPG2;

@@ -1,3 +1,7 @@
+/*
+ * None of these functions should ever be called in Supermodel.
+ */
+
 /* this file is a part of amp software
 
 	util.c: created by Andrew Richards

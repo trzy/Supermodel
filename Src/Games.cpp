@@ -1,4 +1,3 @@
-//TODO: clean up game titles (for example: Star Wars is incorrectly labeled rev.A)
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -106,7 +105,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Daytona USA 2 (Revision A)
 	{
 		"daytona2",
-		"Daytona USA 2: Battle on the Edge (Revision A)",
+		"Daytona USA 2: Battle on the Edge",
 		"Sega",
 		1998,
 		0x21,
@@ -272,7 +271,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Dirt Devils (Revision A)
 	{
 		"dirtdvls",
-		"Dirt Devils (Revision A)",
+		"Dirt Devils",
 		"Sega",
 		1998,
 		0x21,
@@ -280,7 +279,7 @@ const struct GameInfo	g_Model3GameList[] =
 		TRUE,		// 32 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0xC00000,	// 12 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_RALLY,
 		0,		// no MPEG board
 		false,		// no drive board
 
@@ -334,7 +333,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Dirt Devils (Alt)(Revision A)
 	{
 		"dirtdvlsa",
-		"Dirt Devils (Alt)(Revision A)",
+		"Dirt Devils (Alt.)",
 		"Sega",
 		1998,
 		0x21,
@@ -342,7 +341,7 @@ const struct GameInfo	g_Model3GameList[] =
 		TRUE,		// 32 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0xC00000,	// 12 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4,
 		0,		// no MPEG board
 		false,	// no drive board
 
@@ -534,7 +533,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Fighting Vipers 2 (Revision A)
 	{
 		"fvipers2",
-		"Fighting Vipers 2 (Revision A)",
+		"Fighting Vipers 2",
 		"Sega",
 		1998,
 		0x20,
@@ -676,7 +675,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Harley-Davidson & L.A. Riders (Revision A)
 	{
 		"harley",
-		"Harley-Davidson & L.A. Riders (Revision A)",
+		"Harley-Davidson & L.A. Riders",
 		"Sega",
 		1997,
 		0x20,
@@ -1374,7 +1373,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Scud Race Plus (Revision A)
 	{
 		"scudp",
-		"Scud Race Plus (Revision A)",
+		"Scud Race Plus",
 		"Sega",
 		1997,
 		0x15,
@@ -1608,7 +1607,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Spikeout (Revision C)
 	{
 		"spikeout",
-		"Spikeout (Revision C)",
+		"Spikeout",
 		"Sega",
 		1998,
 		0x21,
@@ -1977,7 +1976,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Fighter 3 (Revision C)
 	{
 		"vf3",
-		"Virtua Fighter 3 (Revision C)",
+		"Virtua Fighter 3",
 		"Sega",
 		1996,
 		0x10,
@@ -2196,7 +2195,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtual On: Oratorio Tangram (Revision B)
 	{
 		"von2",
-		"Virtual On: Oratorio Tangram (Revision B)",
+		"Virtual On: Oratorio Tangram",
 		"Sega",
 		1998,
 		0x20,
@@ -2268,10 +2267,10 @@ const struct GameInfo	g_Model3GameList[] =
 		}
 	},
 
-	// Virtual On: Oratorio Tangram (Ver 5.4g)
+	// Virtual On: Oratorio Tangram (Version 5.4g)
 	{
 		"von254g",
-		"Virtual On: Oratorio Tangram (Ver 5.4g)",
+		"Virtual On: Oratorio Tangram (Version 5.4g)",
 		"Sega",
 		1998,
 		0x20,
@@ -2857,7 +2856,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '99.1 (Revision B)
 	{
 		"vs2v991",
-		"Virtua Striker 2 '99.1 (Revision B)",
+		"Virtua Striker 2 '99.1",
 		"Sega",
 		1999,
 		0x21,

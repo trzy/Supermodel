@@ -1,6 +1,7 @@
 #include "Supermodel.h"
 #include "SCSPDSP.h"
-#include <assert.h>
+//#include <assert.h>
+#define assert(x)	;	// disable assert() for releases
 #include <memory.h>
 #include <stdio.h>
 #include <malloc.h>

@@ -647,7 +647,8 @@ void CReal3D::UploadTexture(UINT32 header, UINT16 *texData)
 	case 0x80:	// MAME thinks these might be a gamma table
 		//break;
 	default:	// unknown
-		printf("unknown texture format %02X\n", header>>24);
+		DebugLog("Unknown texture format %02X\n", header>>24);
+		//printf("unknown texture format %02X\n", header>>24);
 		break;
 	}
 	

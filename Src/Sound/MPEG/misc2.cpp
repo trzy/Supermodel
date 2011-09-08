@@ -18,6 +18,8 @@
 #define MISC2
 #include "misc2.h"
 
+#include "Supermodel.h"
+
 /* 
  * fras == Formula for Requantization and All Scaling **************************
  */
@@ -623,7 +625,7 @@ float a[2];
 	*/
 	if (info->window_switching_flag[gr][0] && info->block_type[gr][0]==2)
 		if (info->mixed_block_flag[gr][0]) {
-			die("mixed block? hmmmm...., downmix for mixed blocks is not yet implemented\n");
+			ErrorLog("Internal error in MPEG decoder: mixed blocks encountered.");
 		} else {
 			int window,window_len;
 			int isbound[3];

@@ -70,6 +70,10 @@ public:
 	CSwitchInput    *uiSaveState;
 	CSwitchInput    *uiChangeSlot;
 	CSwitchInput    *uiLoadState;
+	CSwitchInput	*uiMusicVolUp;
+	CSwitchInput	*uiMusicVolDown;
+	CSwitchInput	*uiSoundVolUp;
+	CSwitchInput	*uiSoundVolDown;
 	CSwitchInput    *uiDumpInpState;
 	CSwitchInput    *uiClearNVRAM;
 	CSwitchInput    *uiSelectCrosshairs;

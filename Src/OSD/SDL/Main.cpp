@@ -2,12 +2,10 @@
 // - remove UI dump input state
 // - VBL timing?
 // - Controls for Dirt Devils, and other recent games (is bass working?)
-// - Stereo reverse option (see Srally2 sound test menu)
 // - Comment source code, clean up
 // - BOOL -> bool, TRUE/FALSE -> true/false
 // - Add option for building with /MD in MSVC Makefile
 // - Remove SUPERMODEL_SOUND
-// - EmulateSCSP -> EmulateSound ?
 
 /**
  ** Supermodel
@@ -823,6 +821,58 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			if (Debugger != NULL)
 				Debugger->Reset();
 #endif // SUPERMODEL_DEBUGGER
+		}
+		else if (Inputs->uiMusicVolUp->Pressed())
+		{
+			// Increase music volume by 10%
+			int vol = (int) g_Config.GetMusicVolume() + 10;
+			if (vol > 200)
+				vol = 200;
+			g_Config.SetMusicVolume(vol);
+			printf("Music volume: %d%%", vol);
+			if (200 == vol)
+				puts(" (maximum)");
+			else
+				printf("\n");
+		}
+		else if (Inputs->uiMusicVolDown->Pressed())
+		{
+			// Decrease music volume by 10%
+			int vol = (int) g_Config.GetMusicVolume() - 10;
+			if (vol < 0)
+				vol = 0;
+			g_Config.SetMusicVolume(vol);
+			printf("Music volume: %d%%", vol);
+			if (0 == vol)
+				puts(" (muted)");
+			else
+				printf("\n");
+		}	
+		else if (Inputs->uiSoundVolUp->Pressed())
+		{
+			// Increase sound volume by 10%
+			int vol = (int) g_Config.GetSoundVolume() + 10;
+			if (vol > 200)
+				vol = 200;
+			g_Config.SetSoundVolume(vol);
+			printf("Sound volume: %d%%", vol);
+			if (200 == vol)
+				puts(" (maximum)");
+			else
+				printf("\n");
+		}
+		else if (Inputs->uiSoundVolDown->Pressed())
+		{
+			// Decrease sound volume by 10%
+			int vol = (int) g_Config.GetSoundVolume() - 10;
+			if (vol < 0)
+				vol = 0;
+			g_Config.SetSoundVolume(vol);
+			printf("Sound volume: %d%%", vol);
+			if (0 == vol)
+				puts(" (muted)");
+			else
+				printf("\n");
 		}
 		else if (Inputs->uiDumpInpState->Pressed())
 		{
