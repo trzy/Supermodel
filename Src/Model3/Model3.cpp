@@ -2633,6 +2633,8 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 			if (DriveBoard.Init(driveROM))
 				return FAIL;
 		}
+		else
+			DriveBoard.Init(NULL);
 	}
 	else
 		DriveBoard.Init(NULL);	// disable
