@@ -120,7 +120,7 @@ public:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	BOOL Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
 	 
 	/*
 	 * CRender2D(void):
@@ -167,7 +167,7 @@ private:
 	
 	// Dirty rectangles (non-zero indicates region is dirty)
 	UINT8	dirty[2][64/DIRTY_RECT_HEIGHT][48/DIRTY_RECT_WIDTH];
-	BOOL	allDirty;	// global dirty flag (forces everything to be updated)
+	bool	allDirty;	// global dirty flag (forces everything to be updated)
 	
 	// Buffers
 	UINT8	*memoryPool;	// all memory is allocated here

@@ -53,7 +53,7 @@ struct ROMInfo
 	unsigned	groupSize;	// number of consecutive bytes to fetch each time (groupSize%2 must = 0, must be consistent for region)
 	unsigned	offset;		// starting offset within ROM region
 	unsigned	stride;		// number of bytes to skip before loading next group of bytes from file (must be >= groupSize)
-	BOOL		byteSwap;	// swap every pair of bytes if true
+	bool		byteSwap;	// swap every pair of bytes if true
 };
 
 /*
@@ -113,7 +113,7 @@ extern void CopyRegion(UINT8 *dest, unsigned destOffset, unsigned destSize, UINT
  *		otherwise. Prints errors.
  */
 extern const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const struct GameInfo *GameList, const char *zipFile,
-													 BOOL loadAll);
+													 bool loadAll);
 
 
 #endif	// INCLUDED_ROMLOAD_H

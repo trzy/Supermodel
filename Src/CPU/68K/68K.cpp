@@ -248,7 +248,7 @@ void M68KSetContext(M68KCtx *Src)
 
 // One-time initialization
 
-BOOL M68KInit(void)
+bool M68KInit(void)
 {
 	m68k_init();
 	m68k_set_cpu_type(M68K_CPU_TYPE_68000);

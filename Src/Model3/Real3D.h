@@ -323,7 +323,7 @@ public:
 	 *		OKAY if successful otherwise FAIL (not enough memory). Prints own
 	 *		errors.
 	 */
-	BOOL Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
+	bool Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
 	 
 	/*
 	 * CReal3D(void):
@@ -382,7 +382,7 @@ private:
 	UINT8	dmaConfig;
 	
 	// Command port
-	BOOL	commandPortWritten;
+	bool	commandPortWritten;
 	
 	// Status and command registers
 	UINT32	status;

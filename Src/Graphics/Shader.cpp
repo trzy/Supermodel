@@ -82,13 +82,13 @@ static char *LoadShaderSource(const char *file)
 	return buf;
 }
 
-BOOL LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const char *vsFile, const char *fsFile, const char *vsString, const char *fsString)
+bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const char *vsFile, const char *fsFile, const char *vsString, const char *fsString)
 {
 	char		msg[2048+128], infoLog[2048];
 	const char	*vsSource, *fsSource;	// source code
 	GLuint		shaderProgram, vertexShader, fragmentShader;
 	GLint		result, len;
-	BOOL		ret = OKAY;
+	bool		ret = OKAY;
 	
 	// Load shaders from files if specified
 	if (vsFile != NULL)

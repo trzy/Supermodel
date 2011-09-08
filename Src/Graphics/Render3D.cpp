@@ -547,7 +547,7 @@ void CRender3D::InitMatrixStack(UINT32 matrixBaseAddr)
  * operations within the stack machine). We must be careful to ensure that no
  * games ever write data to this high nibble.
  */
-void CRender3D::Push(UINT32 ptr, BOOL pushMatrix)
+void CRender3D::Push(UINT32 ptr, bool pushMatrix)
 {
 #ifdef DEBUG
 	if ((ptr&0xF0000000))	// high nibble already being used for something!
@@ -572,7 +572,7 @@ void CRender3D::Push(UINT32 ptr, BOOL pushMatrix)
 	}
 	else
 	{
-		stackOverflow = TRUE;	// signal that a stack overflow occurred
+		stackOverflow = true;	// signal that a stack overflow occurred
 #ifdef DEBUG
 		printf("stack overflow\n");
 #endif
@@ -601,7 +601,7 @@ UINT32 CRender3D::Pop(void)
 void CRender3D::ClearStack(void)
 {
 	stackTop = 0;
-	stackOverflow = FALSE;
+	stackOverflow = false;
 }
 
 
@@ -622,7 +622,7 @@ void CRender3D::ClearStack(void)
  * The current texture offset state, texOffset, is also used. Models are cached
  * for each unique texOffset.
  */
-BOOL CRender3D::DrawModel(UINT32 modelAddr)
+bool CRender3D::DrawModel(UINT32 modelAddr)
 {
 	ModelCache		*Cache;
 	const UINT32	*model;
@@ -666,7 +666,7 @@ BOOL CRender3D::DrawModel(UINT32 modelAddr)
 	}
 
 	// Add to display list
-	return AppendDisplayList(Cache, FALSE, ModelRef);
+	return AppendDisplayList(Cache, false, ModelRef);
 }
 
 // Descends into a 10-word culling node
@@ -865,7 +865,7 @@ void CRender3D::StackMachine(UINT32 nodeAddr)
 	unsigned	listStackDepth = 0;
 	
 	// Push this address on to the stack to begin the process
-	Push(nodeAddr,FALSE);
+	Push(nodeAddr,false);
 	
 	// Process the stack (keep popping until all finished)
 	while (stackTop > 0)
@@ -943,7 +943,7 @@ void CRender3D::StackMachine(UINT32 nodeAddr)
 				if (!(list[i]&0x01000000))		// Fighting Vipers (this bit seems to indicate "do not process"
 				{
 					if ((nodeAddr != 0) && (nodeAddr != 0x800800))
-						Push(nodeAddr,FALSE);	// don't need to save matrix (each culling node saves/restores matrix)
+						Push(nodeAddr,false);	// don't need to save matrix (each culling node saves/restores matrix)
 				}
 				
 				if ((list[i]&0x02000000))		// list terminator
@@ -980,7 +980,7 @@ void CRender3D::StackMachine(UINT32 nodeAddr)
 			z				= *(float *) &node[0x06-offset];
 			
 			// Push second link on stack (this also saves current matrix and will ensure it is restored)
-			Push(node2Ptr,TRUE);
+			Push(node2Ptr,true);
 			
 			// Apply matrix and translation, then process first link
 			if ((node[0x00]&0x10))	// apply translation vector
@@ -994,7 +994,7 @@ void CRender3D::StackMachine(UINT32 nodeAddr)
 				if (NULL != lodTable)
 				{
 					if ((node[0x03-offset]&0x20000000))
-						Push(lodTable[0]&0x00FFFFFF,FALSE);	// process as culling node
+						Push(lodTable[0]&0x00FFFFFF,false);	// process as culling node
 					else
 					{
 						if (DrawModel(lodTable[0]&0x00FFFFFF)) 
@@ -1003,7 +1003,7 @@ void CRender3D::StackMachine(UINT32 nodeAddr)
 				}
 			}
 			else
-				Push(node1Ptr,FALSE);
+				Push(node1Ptr,false);
 		
 			break;
 		
@@ -1166,8 +1166,8 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
  	}
  	
  	// Render
- 	AppendDisplayList(&VROMCache, TRUE, 0);	// add a viewport display list node
- 	AppendDisplayList(&PolyCache, TRUE, 0);
+ 	AppendDisplayList(&VROMCache, true, 0);	// add a viewport display list node
+ 	AppendDisplayList(&PolyCache, true, 0);
  	stackDepth = 0;
  	listDepth = 0;
  	
@@ -1283,7 +1283,7 @@ void CRender3D::SetStep(int stepID)
 	DebugLog("Render3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 	
-BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
+bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
 {
 	// Allocate memory for texture buffer
 	textureBuffer = new(std::nothrow) GLfloat[512*512*4];
@@ -1311,9 +1311,9 @@ BOOL CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 		return ErrorLog("OpenGL was unable to provide a 2048x2048-texel texture map.");
 	
 	// Create model caches and VBOs
-	if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, FALSE))
+	if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false))
 		return FAIL;
-	if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x400000/4, NUM_DISPLAY_LIST_ITEMS, TRUE))
+	if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x400000/4, NUM_DISPLAY_LIST_ITEMS, true))
 		return FAIL;
 
 	// Initialize lighting parameters (updated as viewports are traversed)

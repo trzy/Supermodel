@@ -117,10 +117,10 @@ private:
 	UINT32		bitBufferOut;	// bits to be shifted out
 	UINT32		bitBufferIn;	// stores bits as they are shifted in
 	int			bitsOut;		// how many bits have been shifted out
-	BOOL		receiving;		// if true, accepting data, if false, sending data out (read commands)
+	bool		receiving;		// if true, accepting data, if false, sending data out (read commands)
 	unsigned	addr;			// latched address
 	int			busyCycles;		// when > 0, counts down delay cycles and indicates busy
-	BOOL		locked;			// whether the EEPROM is in a locked state
+	bool		locked;			// whether the EEPROM is in a locked state
 };
 
 

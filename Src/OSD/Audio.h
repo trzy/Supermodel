@@ -12,7 +12,7 @@
  *
  * Initializes the audio system.
  */
-extern BOOL OpenAudio();
+extern bool OpenAudio();
 
 /*
  * OutputAudio(unsigned numSamples, *INT16 leftBuffer, *INT16 rightBuffer)

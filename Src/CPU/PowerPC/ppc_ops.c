@@ -38,7 +38,7 @@ static void ppc_unimplemented(UINT32 op)
 {
 	ErrorLog("PowerPC hit an unimplemented instruction. Halting emulation until reset.");
 	DebugLog("PowerPC encountered an unimplemented opcode %08X at %08X\n", op, ppc.pc);
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 }
 
 static void ppc_addx(UINT32 op)
@@ -769,7 +769,7 @@ static void ppc_lswx(UINT32 op)
 {
 	ErrorLog("PowerPC hit an unimplemented instruction. Halting emulation until reset.");
 	DebugLog("ppc: lswx unimplemented at %08X\n", ppc.pc);
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 }
 
 static void ppc_lwarx(UINT32 op)
@@ -1285,7 +1285,7 @@ static void ppc_stswx(UINT32 op)
 {
 	ErrorLog("PowerPC hit an unimplemented instruction. Halting emulation until reset.");
 	DebugLog("ppc: stswx unimplemented\n");
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 }
 
 static void ppc_stw(UINT32 op)
@@ -1553,7 +1553,7 @@ static void ppc_invalid(UINT32 op)
 {
 	ErrorLog("PowerPC hit an invalid instruction. Halting emulation until reset.");
 	DebugLog("ppc: Invalid opcode %08X PC : %X, %08X\n", op, ppc.pc, ppc.npc);
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 }
 
 
@@ -1964,7 +1964,7 @@ static void ppc_mftb(UINT32 op)
 		default:	
 			ErrorLog("PowerPC read from an invalid register. Halting emulation until reset.");
 			DebugLog("ppc: Invalid timebase register %d at %08X\n", x, ppc.pc);
-			ppc.fatalError = TRUE;
+			ppc.fatalError = true;
 			break;
 	}
 }

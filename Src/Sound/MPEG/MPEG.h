@@ -43,9 +43,9 @@
  * MPEG_IsPlaying(void):
  *
  * Returns:
- *		TRUE if an MPEG stream is currently playing, otherwise FALSE.
+ *		TRUE if an MPEG stream is currently playing, otherwise false.
  */
-extern BOOL MPEG_IsPlaying(void);
+extern bool MPEG_IsPlaying(void);
 
 /*
  * MPEG_GetProgress(void):
@@ -121,7 +121,7 @@ extern void MPEG_StopPlaying(void);
  * Returns:
  *		OKAY if successful, FAIL if internal buffer could not be allocated.
  */
-extern BOOL MPEG_Init(void);
+extern bool MPEG_Init(void);
 
 /*
  * MPEG_Shutdown(void):

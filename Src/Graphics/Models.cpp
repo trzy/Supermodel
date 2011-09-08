@@ -145,7 +145,7 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 }
 
 // Appends an instance of a model or viewport to the display list, copying over the required state information
-BOOL CRender3D::AppendDisplayList(ModelCache *Cache, BOOL isViewport, const struct VBORef *Model)
+bool CRender3D::AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model)
 {
 	int	lm, i;
 	
@@ -363,11 +363,11 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	Cache->vboCurOffset += VBO_VERTEX_SIZE*sizeof(GLfloat);
 }
 
-BOOL CRender3D::InsertPolygon(ModelCache *Cache, const Poly *P)
+bool CRender3D::InsertPolygon(ModelCache *Cache, const Poly *P)
 {
 	GLfloat	n[3], v1[3], v2[3], normZFlip;
 	int		i;
-	BOOL	doubleSided;
+	bool	doubleSided;
 	
 	// Bounds testing: up to 12 triangles will be inserted (worst case: double sided quad is 6 triangles)
 	if ((Cache->curVertIdx[P->state]+6*2) >= Cache->maxVertIdx)
@@ -376,7 +376,7 @@ BOOL CRender3D::InsertPolygon(ModelCache *Cache, const Poly *P)
 		return FAIL;	// this just indicates we may need to re-cache
 		
 	// Is the polygon double sided?
-	doubleSided = (P->header[1]&0x10) ? TRUE : FALSE;
+	doubleSided = (P->header[1]&0x10) ? true : false;
 	
 	/*
  	 * Determine polygon winding by taking cross product of vectors formed from
@@ -468,7 +468,7 @@ BOOL CRender3D::InsertPolygon(ModelCache *Cache, const Poly *P)
 }
 
 // Begins caching a new model by resetting to the start of the local vertex buffer
-BOOL CRender3D::BeginModel(ModelCache *Cache)
+bool CRender3D::BeginModel(ModelCache *Cache)
 {
 	int	m;
 	
@@ -546,7 +546,7 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 {
 	Vertex			Prev[4];	// previous vertices
 	int				numPolys = 0;
-	BOOL			done = FALSE;
+	bool			done = false;
 	
 	// Sega Rally 2 bad models
 	//if (lutIdx == 0x27a1  || lutIdx == 0x21e0)
@@ -731,13 +731,13 @@ void CRender3D::ClearModelCache(ModelCache *Cache)
 	ClearDisplayList(Cache);
 }
 
-BOOL CRender3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts, 
+bool CRender3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts, 
 								 unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, 
-								 unsigned displayListSize, BOOL isDynamic)
+								 unsigned displayListSize, bool isDynamic)
 {
 	unsigned	i;
 	int			vboBytes, localBytes;
-	BOOL		success;
+	bool		success;
 	
 	Cache->dynamic = isDynamic;
 	
@@ -757,13 +757,13 @@ BOOL CRender3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts,
 	localBytes = localMaxVerts*VBO_VERTEX_SIZE*sizeof(GLfloat);
 	
 	// Try allocating until size is 
-	success = FALSE;
+	success = false;
 	while (vboBytes >= localBytes)
 	{
 		glBufferData(GL_ARRAY_BUFFER, vboBytes, 0, isDynamic?GL_STREAM_DRAW:GL_STATIC_DRAW);
 		if (glGetError() == GL_NO_ERROR)
 		{
-			success = TRUE;
+			success = true;
 			break;
 		}
 		

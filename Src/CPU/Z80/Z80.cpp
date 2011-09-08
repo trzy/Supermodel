@@ -3621,7 +3621,7 @@ int CZ80::Run(int numCycles)
     	pc = 0x0066;
     	iff = (iff&~2) | ((iff&1)<<1);
     	iff &= ~1;
-    	nmiTrigger = FALSE;	// clear NMI
+    	nmiTrigger = false;	// clear NMI
     	// TODO: if in HALTed state, un-halt
     }
     else if (intLine)	// INT asserted
@@ -3679,7 +3679,7 @@ int CZ80::Run(int numCycles)
     				}
     			}
     			else	// if no callback, do nothing, clear INT line
-    				intLine = FALSE;
+    				intLine = false;
     			break;
     		case 1:
     			/*
@@ -3693,7 +3693,7 @@ int CZ80::Run(int numCycles)
     			if (NULL != INTCallback)
     				INTCallback(this);
     			else	// no callback, clear INT line automatically
-    				intLine = FALSE;
+    				intLine = false;
     			break;
     		case 2:
     			/*
@@ -3712,10 +3712,10 @@ int CZ80::Run(int numCycles)
     				iff = 0;    				
     			}
     			else	// if no callback, do nothing, clear INT line
-    				intLine = FALSE;
+    				intLine = false;
     			break;
     		default:	// should never happen (nothing will be done)
-    			intLine = FALSE;
+    			intLine = false;
     			break;
     		}
     	}
@@ -3734,10 +3734,10 @@ HALTExit:
 
 void CZ80::TriggerNMI(void)
 {
-	nmiTrigger = TRUE;
+	nmiTrigger = true;
 }
 
-void CZ80::SetINT(BOOL state)
+void CZ80::SetINT(bool state)
 {
 	intLine = state;
 }
@@ -3768,8 +3768,8 @@ void CZ80::Reset(void)
   	af_sel 		= 0;
   	regs_sel	= 0;
   	
-  	intLine		= FALSE;
-  	nmiTrigger	= FALSE;
+  	intLine		= false;
+  	nmiTrigger	= false;
 }
 
 void CZ80::SaveState(CBlockFile *StateFile, const char *name)

@@ -72,7 +72,7 @@ struct GameInfo
 	unsigned		year;			// year released (in decimal)
 	int				step;			// Model 3 hardware stepping: 0x10 = 1.0, 0x15 = 1.5, 0x20 = 2.0, 0x21 = 2.1
 	unsigned		cromSize;		// size of fixed CROM (up to 8 MB)
-	BOOL			mirrorLow64MB;	// mirror low 64 MB of banked CROM space to upper 64 MB
+	bool			mirrorLow64MB;	// mirror low 64 MB of banked CROM space to upper 64 MB
 	unsigned		vromSize;		// size of video ROMs (32 or 64 MB; if 32 MB, will have to be mirrored)
 	unsigned		sampleSize;		// size of sample ROMS (8 or 16 MB; if 8 MB, will have to be mirrored)
 	unsigned		inputFlags;		// game input types

@@ -162,7 +162,7 @@ int main(int argc, char **argv)
     UINT8   	*buffer;
     unsigned	i, num, offset, fsize, start = 0, len, org, file = 0;
     UINT32  	op[3];
-    BOOL    	len_specified = 0, org_specified = 0;
+    bool    	len_specified = 0, org_specified = 0;
     char    	*c;
 
 

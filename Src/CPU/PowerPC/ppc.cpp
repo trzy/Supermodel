@@ -175,7 +175,7 @@ typedef struct {
 
 
 typedef struct {
-	BOOL	fatalError;	// if true, halt PowerPC until hard reset
+	bool	fatalError;	// if true, halt PowerPC until hard reset
 	
 	UINT32 r[32];
 	UINT32 pc;
@@ -306,7 +306,7 @@ static void ppc_change_pc(UINT32 newpc)
 
 	DebugLog("Invalid PC %08X, previous PC %08X\n", newpc, ppc.pc);
 	ErrorLog("PowerPC is out of bounds. Halting emulation until reset.");
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 }
 
 INLINE UINT8 READ8(UINT32 address)
@@ -551,7 +551,7 @@ INLINE void ppc_set_spr(int spr, UINT32 value)
 
 	ErrorLog("PowerPC wrote to an invalid register. Halting emulation until reset.");
 	DebugLog("ppc: set_spr: unknown spr %d (%03X) !\n", spr, spr);
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 }
 
 INLINE UINT32 ppc_get_spr(int spr)
@@ -613,7 +613,7 @@ INLINE UINT32 ppc_get_spr(int spr)
 	
 	ErrorLog("PowerPC read from an invalid register. Halting emulation until reset.");
 	DebugLog("ppc: get_spr: unknown spr %d (%03X) !\n", spr, spr);
-	ppc.fatalError = TRUE;
+	ppc.fatalError = true;
 	return 0;
 }
 
@@ -623,7 +623,7 @@ INLINE void ppc_set_msr(UINT32 value)
 	{
 		ErrorLog("PowerPC entered an unemulated mode. Halting emulation until reset.");
 		DebugLog("ppc: set_msr: little_endian mode not supported !\n");
-		ppc.fatalError = TRUE;
+		ppc.fatalError = true;
 	}
 
 	MSR = value;

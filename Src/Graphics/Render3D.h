@@ -79,7 +79,7 @@ struct VBORef
 // Display list items: model instances and viewport settings
 struct DisplayList
 {
-	BOOL		isViewport;				// if true, this is a viewport node
+	bool		isViewport;				// if true, this is a viewport node
 	
 	union
 	{
@@ -125,7 +125,7 @@ struct DisplayList
 struct ModelCache
 {
 	// Cache type
-	BOOL		dynamic;
+	bool		dynamic;
 	
 	// Vertex buffer object
 	unsigned	vboMaxOffset;	// size of VBO (in bytes)
@@ -282,7 +282,7 @@ public:
 	 *		occurred. Any allocated memory will not be freed until the
 	 *		destructor is called. Prints own error messages.
 	 */
-	BOOL Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
 	 
 	/*
 	 * CRender3D(void):
@@ -304,16 +304,16 @@ private:
 	
 	// Model caching and display list management
 	void 			DrawDisplayList(ModelCache *Cache, POLY_STATE state);
-	BOOL 			AppendDisplayList(ModelCache *Cache, BOOL isViewport, const struct VBORef *Model);
+	bool 			AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model);
 	void 			ClearDisplayList(ModelCache *Cache);
-	BOOL 			InsertPolygon(ModelCache *cache, const Poly *p);
+	bool 			InsertPolygon(ModelCache *cache, const Poly *p);
 	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
-	BOOL 			BeginModel(ModelCache *cache);
+	bool 			BeginModel(ModelCache *cache);
 	struct VBORef	*EndModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
 	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 texOffset, const UINT32 *data);
 	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
 	void 			ClearModelCache(ModelCache *cache);
-	BOOL 			CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, BOOL isDynamic);
+	bool 			CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, bool isDynamic);
 	void 			DestroyModelCache(ModelCache *cache);
 	
 	// Texture management
@@ -322,12 +322,12 @@ private:
 	// Stack management
 	void	MultMatrix(UINT32 matrixOffset);
 	void 	InitMatrixStack(UINT32 matrixBaseAddr);
-	void	Push(UINT32 ptr, BOOL pushMatrix);
+	void	Push(UINT32 ptr, bool pushMatrix);
 	UINT32	Pop(void);
 	void	ClearStack(void);
 	
 	// Scene database traversal
-	BOOL DrawModel(UINT32 modelAddr);
+	bool DrawModel(UINT32 modelAddr);
 	void DescendCullingNode(UINT32 addr);
 	void DescendPointerList(UINT32 addr);
 	void DescendNodePtr(UINT32 nodeAddr);
@@ -335,8 +335,8 @@ private:
 	void RenderViewport(UINT32 addr, int pri);
 	
 	// In-frame error reporting
-	BOOL ErrorLocalVertexOverflow(void);
-	BOOL ErrorUnableToCacheModel(UINT32 modelAddr);
+	bool ErrorLocalVertexOverflow(void);
+	bool ErrorUnableToCacheModel(UINT32 modelAddr);
 	void ClearErrors(void);
 	
 	/*
@@ -365,7 +365,7 @@ private:
 	UINT32	*stack;
 	int		stackSize;		// number of elements stack can contain
 	int		stackTop;		// current top of stack (free spot, last element is stackTop-1)
-	BOOL	stackOverflow;	// records stack overflows (cleared by ClearStack())
+	bool	stackOverflow;	// records stack overflows (cleared by ClearStack())
 
 	// Current viewport parameters (updated as viewports are traversed)
 	GLfloat	lightingParams[6];

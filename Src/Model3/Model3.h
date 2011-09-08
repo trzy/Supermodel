@@ -36,7 +36,7 @@
 class CModel3Config
 {
 public:
-	bool multiThreaded;	// Multi-threading (enabled if TRUE)
+	bool multiThreaded;	// Multi-threading (enabled if true)
 	
 	// PowerPC clock frequency in MHz (minimum: 1 MHz)
 	inline void SetPowerPCFrequency(unsigned f)
@@ -240,7 +240,7 @@ public:
  	 * Returns:
  	 *		OKAY if successful, FAIL otherwise. Prints errors.
  	 */
- 	BOOL LoadROMSet(const struct GameInfo *GameList, const char *zipFile);
+ 	bool LoadROMSet(const struct GameInfo *GameList, const char *zipFile);
  	
 	/*
 	 * AttachRenderers(Render2DPtr, Render3DPtr):
@@ -273,7 +273,7 @@ public:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	BOOL Init(void);
+	bool Init(void);
 	 
 	/*
 	 * CModel3(void):

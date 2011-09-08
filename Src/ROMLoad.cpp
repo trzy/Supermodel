@@ -60,7 +60,7 @@ void CopyRegion(UINT8 *dest, unsigned destOffset, unsigned destSize, UINT8 *src,
 }
 
 // Search for a ROM within a single game based on its CRC
-static BOOL FindROMByCRCInGame(const struct GameInfo **gamePtr, int *romIdxPtr, const struct GameInfo *Game, UINT32 crc)
+static bool FindROMByCRCInGame(const struct GameInfo **gamePtr, int *romIdxPtr, const struct GameInfo *Game, UINT32 crc)
 {
 	unsigned	j;
 	
@@ -78,7 +78,7 @@ static BOOL FindROMByCRCInGame(const struct GameInfo **gamePtr, int *romIdxPtr, 
 }
 	
 // Search for a ROM in the complete game list based on CRC32 and return its GameInfo and ROMInfo entries
-static BOOL FindROMByCRC(const struct GameInfo **gamePtr, int *romIdxPtr, const struct GameInfo *GameList, const struct GameInfo *TryGame, UINT32 crc)
+static bool FindROMByCRC(const struct GameInfo **gamePtr, int *romIdxPtr, const struct GameInfo *GameList, const struct GameInfo *TryGame, UINT32 crc)
 {
 	unsigned	i;
 	
@@ -97,8 +97,8 @@ static BOOL FindROMByCRC(const struct GameInfo **gamePtr, int *romIdxPtr, const 
 	return FAIL;
 }
 
-// Returns TRUE if this ROM appears only a single time in the entire game list (ie., it is not shared between games)
-static BOOL ROMIsUnique(const struct GameInfo *GameList, UINT32 crc)
+// Returns true if this ROM appears only a single time in the entire game list (ie., it is not shared between games)
+static bool ROMIsUnique(const struct GameInfo *GameList, UINT32 crc)
 {
 	int	timesFound = 0;
 	
@@ -111,7 +111,7 @@ static BOOL ROMIsUnique(const struct GameInfo *GameList, UINT32 crc)
 		}
 	}
 	
-	return (timesFound == 1) ? TRUE : FALSE;
+	return (timesFound == 1) ? true : false;
 }
 
 static void ByteSwap(UINT8 *buf, unsigned size)
@@ -128,7 +128,7 @@ static void ByteSwap(UINT8 *buf, unsigned size)
 }
 
 // Load a single ROM file
-static BOOL LoadROM(UINT8 *buf, unsigned bufSize, const struct ROMMap *Map, const struct ROMInfo *ROM, unzFile zf, const char *zipFile, BOOL loadAll)
+static bool LoadROM(UINT8 *buf, unsigned bufSize, const struct ROMMap *Map, const struct ROMInfo *ROM, unzFile zf, const char *zipFile, bool loadAll)
 {
 	char			file[2048+1];
 	int				err, bytes;
@@ -202,7 +202,7 @@ static BOOL LoadROM(UINT8 *buf, unsigned bufSize, const struct ROMMap *Map, cons
  *		Pointer to GameInfo struct for loaded game if successful, NULL 
  *		otherwise. Prints errors.
  */
-const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const struct GameInfo *GameList, const char *zipFile, BOOL loadAll)
+const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const struct GameInfo *GameList, const char *zipFile, bool loadAll)
 {
 	unzFile					zf;
 	unz_file_info			fileInfo;
@@ -212,7 +212,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	unsigned				romsFound[sizeof(Game->ROM)/sizeof(struct ROMInfo)], numROMs;
 	int						err;
 	unsigned				i, maxSize;
-	BOOL					multipleGameError = FALSE;
+	bool					multipleGameError = false;
 	UINT8					*buf;
 	
 	// Try to open file
@@ -254,10 +254,10 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 			if (CurGame != Game)	// another game?
 			{
 				DebugLog("%s also contains: %s (%s)\n", zipFile, CurGame->id, CurGame->title);
-				if (multipleGameError == FALSE)	// only warn about this once
+				if (multipleGameError == false)	// only warn about this once
 				{
 					ErrorLog("Multiple games were found in %s; loading '%s'.", zipFile, Game->title);
-					multipleGameError = TRUE;
+					multipleGameError = true;
 				}
 			}
 		}
@@ -295,7 +295,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	for (i = 0; i < numROMs; i++)
 	{
 		if ((0 == romsFound[i]) && !Game->ROM[i].optional)	// if not found and also not optional
-			err |= ErrorLog("%s (CRC=%08X) is missing from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
+			err |= (int) ErrorLog("%s (CRC=%08X) is missing from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 	}
 	if (err != OKAY)
 	{
@@ -345,6 +345,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	// Ensure all ROMs were loaded
 	if (loadAll)
 	{
+		// See if any ROMs (that are not optional) could not be found
 		err = OKAY;
 		for (i = 0; i < numROMs; i++)
 		{

@@ -67,9 +67,9 @@ using namespace std;
  Basic Functions
 ******************************************************************************/
 
-BOOL CINIFile::Write(const char *comment)
+bool CINIFile::Write(const char *comment)
 {
-	BOOL	writeSuccess;
+	bool	writeSuccess;
 	
 	// In order to truncate, we must close and reopen as truncated
 	File.close();
@@ -129,7 +129,7 @@ BOOL CINIFile::Write(const char *comment)
 	return writeSuccess;
 }
 
-BOOL CINIFile::Open(const char *fileNameStr)
+bool CINIFile::Open(const char *fileNameStr)
 {
 	FileName = fileNameStr;
 
@@ -142,7 +142,7 @@ BOOL CINIFile::Open(const char *fileNameStr)
 	return OKAY;
 }
 
-BOOL CINIFile::OpenAndCreate(const char *fileNameStr)
+bool CINIFile::OpenAndCreate(const char *fileNameStr)
 {
 	FileName = fileNameStr;
 
@@ -173,7 +173,7 @@ void CINIFile::Close(void)
 ******************************************************************************/
 
 // Finds index of first matching section in the section list. Returns FAIL if not found.
-BOOL CINIFile::LookUpSection(unsigned *idx, string SectionName)
+bool CINIFile::LookUpSection(unsigned *idx, string SectionName)
 {
 	for (unsigned i = 0; i < Sections.size(); i++)
 	{
@@ -232,7 +232,7 @@ void CINIFile::Set(string SectionName, string SettingName, int value)
 
 	// Update the setting!	
 UpdateIntValue:
-	Sections[sectionIdx].Settings[settingIdx].isNumber = TRUE;
+	Sections[sectionIdx].Settings[settingIdx].isNumber = true;
 	Sections[sectionIdx].Settings[settingIdx].value = value;	
 	Sections[sectionIdx].Settings[settingIdx].String = "";
 }
@@ -281,13 +281,13 @@ void CINIFile::Set(string SectionName, string SettingName, string String)
 
 	// Update the setting!	
 UpdateString:
-	Sections[sectionIdx].Settings[settingIdx].isNumber = FALSE;
+	Sections[sectionIdx].Settings[settingIdx].isNumber = false;
 	Sections[sectionIdx].Settings[settingIdx].String = String;
 	Sections[sectionIdx].Settings[settingIdx].value = 0;
 }
 
 // Obtains a numerical setting, if it exists, otherwise does nothing.
-BOOL CINIFile::Get(string SectionName, string SettingName, int& value)
+bool CINIFile::Get(string SectionName, string SettingName, int& value)
 {
 	for (unsigned i = 0; i < Sections.size(); i++)
 	{
@@ -309,7 +309,7 @@ BOOL CINIFile::Get(string SectionName, string SettingName, int& value)
 	return FAIL;
 }
 
-BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
+bool CINIFile::Get(string SectionName, string SettingName, unsigned& value)
 {
 	int intVal;
 	if (Get(SectionName, SettingName, intVal) == FAIL || intVal < 0)
@@ -321,7 +321,7 @@ BOOL CINIFile::Get(string SectionName, string SettingName, unsigned& value)
 }
 
 // Obtains a string setting, if it exists, otherwise does nothing.
-BOOL CINIFile::Get(string SectionName, string SettingName, string& String)
+bool CINIFile::Get(string SectionName, string SettingName, string& String)
 {
 	for (unsigned i = 0; i < Sections.size(); i++)
 	{
@@ -371,11 +371,11 @@ CINIFile::CToken::CToken(void)
 }
 
 // Returns true for white space, comment symbol, or null terminator.
-static BOOL IsBlank(char c)
+static bool IsBlank(char c)
 {
 	if (isspace(c) || (c==';') || (c=='\0'))
-		return TRUE;
-	return FALSE;
+		return true;
+	return false;
 }
 
 // Fetches a string. Tolerates all characters between quotes.
@@ -414,7 +414,7 @@ CINIFile::CToken CINIFile::GetNumber(void)
 {
 	CToken	T;
 	unsigned long long	number = 0;
-	BOOL                isNeg = FALSE;
+	bool                isNeg = false;
 	int					overflow = 0;
 	
 	T.type = TOKEN_NUMBER;
@@ -422,7 +422,7 @@ CINIFile::CToken CINIFile::GetNumber(void)
 	// See if begins with minus sign 
 	if (linePtr[0]=='-')
 	{
-		isNeg = TRUE;
+		isNeg = true;
 		linePtr++;
 	}
 
@@ -598,11 +598,11 @@ void CINIFile::InitParseTree(void)
 	Sections.push_back(FirstSection);
 }
 
-BOOL CINIFile::Parse(void)
+bool CINIFile::Parse(void)
 {
 	CToken	T, U, V, W;
 	string	currentSection;	// current section we're processing
-	BOOL	parseStatus = OKAY;
+	bool	parseStatus = OKAY;
 	
 	lineNum = 0;
 	

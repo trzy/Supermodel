@@ -156,7 +156,7 @@ void CTileGen::AttachRenderer(CRender2D *Render2DPtr)
 
 #define MEMORY_POOL_SIZE	0x120000
 
-BOOL CTileGen::Init(CIRQ *IRQObjectPtr)
+bool CTileGen::Init(CIRQ *IRQObjectPtr)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	

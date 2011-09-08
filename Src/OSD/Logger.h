@@ -249,7 +249,7 @@ extern void	DebugLog(const char *fmt, ...);
  * Returns:
  *		Must always return FAIL.
  */
-extern BOOL	ErrorLog(const char *fmt, ...);
+extern bool	ErrorLog(const char *fmt, ...);
 
 /*
  * InfoLog(fmt, ...);

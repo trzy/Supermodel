@@ -106,7 +106,7 @@ void InfoLog(const char *fmt, ...)
 	va_end(vl);
 }
 
-BOOL ErrorLog(const char *fmt, ...)
+bool ErrorLog(const char *fmt, ...)
 {
 	if (s_Logger == NULL)
 		return FAIL;
@@ -139,8 +139,8 @@ unsigned 	xRes, yRes;			// renderer output resolution (can be smaller than GL vi
  * because the actual drawing area may need to be adjusted to preserve the 
  * Model 3 aspect ratio. The new resolution will be passed back as well.
  */
-static BOOL CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr,
-						   BOOL keepAspectRatio, BOOL fullScreen)
+static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr,
+						   bool keepAspectRatio, bool fullScreen)
 {
 	const SDL_VideoInfo	*VideoInfo;
 	GLenum				err;
@@ -238,7 +238,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
 	
 	if (createScreen)
 	{
-		if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
+		if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,false,false))
 		{
 			ErrorLog("Unable to query OpenGL.\n");
 			return;
@@ -334,7 +334,7 @@ static bool ConfigureInputs(CInputs *Inputs, bool configure)
 	{
 		// Open an SDL window 
 		unsigned xOffset, yOffset, xRes=496, yRes=384;
-		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,FALSE,FALSE))
+		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,false,false))
 			return (bool) ErrorLog("Unable to start SDL to configure inputs.\n");
 		
 		// Configure the inputs
@@ -674,8 +674,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	unsigned		fpsFramesElapsed, framesElapsed;
 	unsigned		showCrosshairs = 0;	// bit 1: player 1 crosshair, bit 0: player 2
 	bool			gameHasLightguns = false;
-	BOOL			quit = 0;
-	BOOL            paused = 0;
+	bool			quit = 0;
+	bool            paused = 0;
 
 	// Initialize and load ROMs
 	if (OKAY != Model3->Init())
@@ -694,7 +694,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
   	xRes = g_Config.xRes;
   	yRes = g_Config.yRes;
   	sprintf(titleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
-	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,TRUE,g_Config.fullScreen))
+	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,true,g_Config.fullScreen))
 		return 1;
 		
 	// Info log GL information and user options
@@ -1036,7 +1036,7 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 	Map[1].ptr = &crom[0x800000];
 	
 	// Load ROM set
-	Game = LoadROMSetFromZIPFile(Map, g_Model3GameList, zipFile, FALSE);
+	Game = LoadROMSetFromZIPFile(Map, g_Model3GameList, zipFile, false);
 	if (NULL == Game)
 		return ErrorLog("Failed to load ROM set.");	
 		

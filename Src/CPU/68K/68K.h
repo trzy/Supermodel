@@ -211,7 +211,7 @@ extern void M68KAttachBus(CBus *BusPtr);
  * Returns:
  *		Always returns OKAY.
  */
-extern BOOL M68KInit(void);
+extern bool M68KInit(void);
 
 /*
  * M68KGetContext(M68KCtx *Dest):

@@ -44,7 +44,7 @@ class COSDConfig
 {
 public:
 	unsigned	xRes, yRes;		// X and Y resolution, in pixels
-	bool 		fullScreen;		// Full screen mode (if TRUE)
+	bool 		fullScreen;		// Full screen mode (if true)
 	bool 		throttle;		// 60 Hz frame limiting
 	bool		showFPS;		// Show frame rate
 	bool		flipStereo;		// Flip stereo channels

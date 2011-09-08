@@ -51,7 +51,7 @@ struct NCR53C810Context
 	UINT8	regISTAT;	// ISTAT: Interrupt Status
 	
 	// Operational status
-	BOOL	halt;		// set TRUE if halted by interrupt instruction
+	bool	halt;		// set true if halted by interrupt instruction
 	
 	// Big endian bus object for DMA memory access and instruction fetching
 	CBus	*Bus;
@@ -185,10 +185,10 @@ public:
 	
 private:
 	// Private members
-	void	Run(int numOps);
+	void	Run(bool singleStep);
 	void	BuildOpTable(void);
-	void	Insert(UINT8 mask, UINT8 op, BOOL (*Handler)(struct NCR53C810Context *));
-	BOOL	(*OpTable[256])(struct NCR53C810Context *);
+	void	Insert(UINT8 mask, UINT8 op, bool (*Handler)(struct NCR53C810Context *));
+	bool	(*OpTable[256])(struct NCR53C810Context *);
 	
 	// Context (register file)
 	struct NCR53C810Context	Ctx;

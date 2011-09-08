@@ -40,7 +40,7 @@
 class CSoundBoardConfig
 {
 public:
-	bool	emulateSCSP;	// SCSP emulation (enabled if TRUE)
+	bool	emulateSCSP;	// SCSP emulation (enabled if true)
 	
 	// Defaults
 	CSoundBoardConfig(void)
@@ -160,7 +160,7 @@ public:
 	 *		OKAY if successful, FAIL if unable to allocate memory. Prints own
 	 *		error messages.
 	 */
-	BOOL Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
+	bool Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
 	 
 	/*
 	 * CSoundBoard(void):

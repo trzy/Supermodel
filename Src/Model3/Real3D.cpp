@@ -121,7 +121,7 @@ void CReal3D::RenderFrame(void)
 {
 	//if (commandPortWritten)
 		Render3D->RenderFrame();
-	commandPortWritten = FALSE;
+	commandPortWritten = false;
 }
 
 void CReal3D::BeginFrame(void)
@@ -668,7 +668,7 @@ void CReal3D::Flush(void)
 	unsigned	i, size;
 	UINT32		header;
 	
-	commandPortWritten = TRUE;
+	commandPortWritten = true;
 	
 	DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
 	
@@ -806,7 +806,7 @@ void CReal3D::Reset(void)
 {
 	error = false;
 	
-	commandPortWritten = FALSE;
+	commandPortWritten = false;
 	
 	fifoIdx = 0;
 	status = 0;
@@ -857,7 +857,7 @@ void CReal3D::SetStep(int stepID)
 	DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 
-BOOL CReal3D::Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
+bool CReal3D::Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 

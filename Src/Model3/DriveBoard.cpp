@@ -117,7 +117,7 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 	SendStopAll();
 }
 
-BOOL CDriveBoard::Init(const UINT8 *romPtr)
+bool CDriveBoard::Init(const UINT8 *romPtr)
 {	
 	// Assign ROM (note that the ROM data has not yet been loaded)
 	m_rom = romPtr;

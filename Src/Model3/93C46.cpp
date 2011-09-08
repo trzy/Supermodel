@@ -118,7 +118,7 @@ void C93C46::Write(unsigned pinCS, unsigned pinCLK, unsigned pinDI)
 	if (CS == 0)
 	{
 		bitBufferIn = 0;	// this must be cleared each time (only leading 0's can exist prior to commands)
-		receiving = TRUE;	// ready to accept commands
+		receiving = true;	// ready to accept commands
 		busyCycles = 5;		// some applications require the chip to take time while writing
 		return;
 	}
@@ -126,7 +126,7 @@ void C93C46::Write(unsigned pinCS, unsigned pinCLK, unsigned pinDI)
 	// Rising clock edge
 	if (!prevCLK && CLK)
 	{
-		if (receiving == TRUE)	// is the chip receiving commands?
+		if (receiving == true)	// is the chip receiving commands?
 		{
 			// Shift in a new bit
 			bitBufferIn	<<= 1;
@@ -139,17 +139,17 @@ void C93C46::Write(unsigned pinCS, unsigned pinCLK, unsigned pinDI)
 				bitBufferOut = ReverseBits16(regs[addr]);	// reverse so that D15 is shifted out first
 				//bitBufferOut <<= 1;	// a leading 0 precedes the first word read (causes problems)
 				bitsOut = 0;		// how many bits read out
-				receiving = FALSE;	// transmitting data now
+				receiving = false;	// transmitting data now
 				DebugLog("93C46: READ %X\n", addr);
 			}
 			else if (bitBufferIn == 0x13)						// WEN (write enable)
 			{
-				locked = FALSE;
+				locked = false;
 				DebugLog("93C46: WEN\n");
 			}
 			else if (bitBufferIn == 0x10)						// WDS (write disable)
 			{
-				locked = TRUE;
+				locked = true;
 				DebugLog("93C46: WDS\n");
 			}
 			else if ((bitBufferIn&0xFFC00000) == 0x01400000)	// WRITE
@@ -232,8 +232,8 @@ void C93C46::Clear(void)
 
 void C93C46::Reset(void)
 {
-	receiving = TRUE;
-	locked = TRUE;
+	receiving = true;
+	locked = true;
 	bitBufferIn = 0;
 	bitBufferOut = 0;
 	addr = 0;

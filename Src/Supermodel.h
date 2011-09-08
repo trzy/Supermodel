@@ -68,7 +68,6 @@
 /* 
  * Fundamental Data Types:
  *
- *		BOOL	Boolean (w/ TRUE = FAIL = 1, OKAY = FALSE = 0).
  *		UINT64	Unsigned 64-bit integer.
  *		INT64	Signed 64-bit integer.
  *		UINT32	Unsigned 32-bit integer.
@@ -79,6 +78,11 @@
  *		INT8	Signed 8-bit integer.
  *		FLOAT32	Single-precision, 32-bit floating point number.
  *		FLOAT64	Double-precision, 64-bit floating point number.
+ *
+ * Boolean Values:
+ *
+ *		OKAY	0
+ *		FAIL	1
  *
  * Types.h is used within C++ and C modules, so it must NOT include any C++-
  * specific stuff. Some modules may choose to include it directly rather than

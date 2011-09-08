@@ -201,7 +201,7 @@ void ppc603_exception(int exception)
 		default:
 			ErrorLog("PowerPC triggered an unknown exception. Emulation halted until reset.");
 			DebugLog("PowerPC triggered an unknown exception (%d).\n", exception);
-			ppc.fatalError = TRUE;
+			ppc.fatalError = true;
 			break;
 	}
 }
@@ -237,7 +237,7 @@ static void ppc603_check_interrupts(void)
 
 void ppc_reset(void)
 {
-	ppc.fatalError = FALSE;	// reset the fatal error flag
+	ppc.fatalError = false;	// reset the fatal error flag
 	
 	ppc.pc = ppc.npc = 0xfff00100;
 
@@ -272,7 +272,7 @@ int ppc_execute(int cycles)
 		char string1[200];
 		char string2[200];
 		opcode = BSWAP32(*ppc.op);
-		DisassemblePowerPC(opcode, ppc.npc, string1, string2, TRUE);
+		DisassemblePowerPC(opcode, ppc.npc, string1, string2, true);
 		printf("%08X: %s %s\n", ppc.npc, string1, string2);
 	}*/
 //	printf("trigger cycle %d (%08X)\n", ppc_dec_trigger_cycle, ppc_dec_trigger_cycle);
@@ -333,7 +333,7 @@ int ppc_execute(int cycles)
 		char string1[200];
 		char string2[200];
 		opcode = BSWAP32(*ppc.op);
-		DisassemblePowerPC(opcode, ppc.npc, string1, string2, TRUE);
+		DisassemblePowerPC(opcode, ppc.npc, string1, string2, true);
 		printf("%08X: %s %s\n", ppc.npc, string1, string2);
 	}
 	*/

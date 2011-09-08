@@ -173,7 +173,7 @@ static void LogAudioInfo(SDL_AudioSpec *fmt)
 	InfoLog("");
 }
 
-BOOL OpenAudio()
+bool OpenAudio()
 {
 	// Initialize SDL audio sub-system
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0)

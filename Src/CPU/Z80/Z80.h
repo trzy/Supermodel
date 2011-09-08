@@ -103,11 +103,11 @@ public:
 	 * callbacks to clear interrupts.
 	 *
 	 * Parameters:
-	 *		state	If TRUE, this is equivalent to /INT being asserted on the
-	 *				Z80 (INT line low, which triggers an interrupt). If FALSE,
+	 *		state	If true, this is equivalent to /INT being asserted on the
+	 *				Z80 (INT line low, which triggers an interrupt). If false,
 	 *				this deasserts /INT (INT line high, no interrupt pending).
 	 */
-	void SetINT(BOOL state);
+	void SetINT(bool state);
 	
 	/*
 	 * GetPC(void):
@@ -161,7 +161,7 @@ public:
 	 *
 	 * An interrupt callback, which is called each time an interrupt occurs,
 	 * should also be supplied. The interrupt callback should explicitly clear
-	 * the INT status (using SetINT(FALSE)) and then return the appropriate 
+	 * the INT status (using SetINT(false)) and then return the appropriate 
 	 * vector depending on the interrupt mode that is used by the system.
 	 *
 	 * For mode 0, only Z80_INT_RST_* values are acceptable. For mode 1, the
@@ -214,8 +214,8 @@ private:
 	CBus	*Bus;
 	
 	// Interrupts
-	BOOL	nmiTrigger;
-	BOOL	intLine;
+	bool	nmiTrigger;
+	bool	intLine;
 	int		(*INTCallback)(CZ80 *Z80);
 };
 

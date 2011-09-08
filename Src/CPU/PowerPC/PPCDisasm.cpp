@@ -526,7 +526,7 @@ static void SPR(char *dest, unsigned spr_field)
  * Predecodes the SIMM field for us. If do_unsigned, it is printed as an
  * unsigned 32-bit integer.
  */
-static void DecodeSigned16(char *outbuf, UINT32 op, BOOL do_unsigned)
+static void DecodeSigned16(char *outbuf, UINT32 op, bool do_unsigned)
 {
     INT16   s;
 
@@ -573,7 +573,7 @@ static UINT32 Mask(unsigned mb, unsigned me)
  * Perform checks on the instruction as required by the flags. Returns 1 if
  * the instruction failed.
  */
-static BOOL Check(UINT32 op, unsigned flags)
+static bool Check(UINT32 op, unsigned flags)
 {
     unsigned	nb, rt, ra;
 
@@ -634,7 +634,7 @@ static BOOL Check(UINT32 op, unsigned flags)
  * Handles all simplified instruction forms. Returns 1 if one was decoded,
  * otherwise 0 to indicate disassembly should carry on as normal.
  */
-static BOOL Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *oprs)
+static bool Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *oprs)
 {
     UINT32  value, disp;
 
@@ -806,8 +806,8 @@ static BOOL Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *
  *      Zero if successful, non-zero if the instruction was unrecognized or
  *      had an invalid form (see note above in function description.)
  */ 
-BOOL DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
-                        BOOL simplify)
+bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
+                        bool simplify)
 {
     char    signed16[12];
     UINT32  disp;
@@ -1135,7 +1135,7 @@ int main(int argc, char **argv)
     UINT8   	*buffer;
     unsigned	i, fsize, start = 0, len, org, file = 0;
     UINT32  	op;
-    BOOL    	len_specified = 0, org_specified = 0, little = 0, simple = 1;
+    bool    	len_specified = 0, org_specified = 0, little = 0, simple = 1;
     char    	*c;
 
 

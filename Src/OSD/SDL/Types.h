@@ -33,13 +33,10 @@
 #define INCLUDED_TYPES_H
 
 // Booleans (must be 0 or 1 only)
-#define	TRUE	1
-#define FALSE	0
-#define OKAY	FALSE
-#define FAIL	TRUE
+#define OKAY	0
+#define FAIL	1
 
 // Types
-typedef int					BOOL;
 typedef unsigned long long	UINT64;
 typedef signed long long	INT64;
 typedef unsigned int		UINT32;

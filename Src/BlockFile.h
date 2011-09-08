@@ -70,7 +70,7 @@ public:
 	 * Returns:
 	 *		OKAY if found, FAIL if unable to locate.
 	 */
-	BOOL FindBlock(const char *name);
+	bool FindBlock(const char *name);
 	
 	/*
 	 * Write(data, numBytes):
@@ -112,7 +112,7 @@ public:
 	 * Returns:
   	 * 		OKAY if successfully opened, otherwise FAIL.
 	 */
-	BOOL Create(const char *file, const char *headerName, const char *comment);
+	bool Create(const char *file, const char *headerName, const char *comment);
 
 	/*
 	 * Load(file):
@@ -128,7 +128,7 @@ public:
 	 *		subsequent operations will be silently ignored (reads will return
 	 *		0's). Write commands will be ignored.
 	 */
-	BOOL Load(const char *file);
+	bool Load(const char *file);
 
 	/*
 	 * Close(void):

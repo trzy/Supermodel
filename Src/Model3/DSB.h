@@ -50,7 +50,7 @@
 class CDSBConfig
 {
 public:
-	bool	emulateDSB;	// DSB emulation (enabled if TRUE)
+	bool	emulateDSB;	// DSB emulation (enabled if true)
 	
 	// Sound (SCSP) volume (0-200, 100 being full amplitude)
 	inline void SetSoundVolume(unsigned vol)
@@ -207,7 +207,7 @@ public:
 	 * Returns:
 	 *		OKAY if successful, otherwise FAIL. 
 	 */
-	virtual BOOL	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
+	virtual bool	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
 };
 
 
@@ -239,7 +239,7 @@ public:
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
-	BOOL 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 	
 	// Constructor and destructor
 	CDSB1(void);
@@ -311,7 +311,7 @@ public:
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
-	BOOL 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 
 	// Constructor and destructor
 	CDSB2(void);

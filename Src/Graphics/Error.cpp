@@ -40,7 +40,7 @@
 
 
 // Overflow in the local vertex buffer, which holds one model
-BOOL CRender3D::ErrorLocalVertexOverflow(void)
+bool CRender3D::ErrorLocalVertexOverflow(void)
 {
 	if ((errorMsgFlags&ERROR_LOCAL_VERTEX_OVERFLOW))
 		return FAIL;
@@ -49,7 +49,7 @@ BOOL CRender3D::ErrorLocalVertexOverflow(void)
 }
 
 // Model could not be cached, even after dumping display list and re-caching
-BOOL CRender3D::ErrorUnableToCacheModel(UINT32 modelAddr)
+bool CRender3D::ErrorUnableToCacheModel(UINT32 modelAddr)
 {
 	if ((errorMsgFlags&ERROR_UNABLE_TO_CACHE_MODEL))
 		return FAIL;

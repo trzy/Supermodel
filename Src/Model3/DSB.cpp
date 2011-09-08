@@ -377,7 +377,7 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 		else
 			status |= 2;
 			
-		Z80.SetINT(FALSE);	// clear IRQ
+		Z80.SetINT(false);	// clear IRQ
 		//printf("Z80: INT cleared, read from FIFO\n");
 		return d;
 		
@@ -436,7 +436,7 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 	// While FIFO not empty, fire interrupts, run for up to one frame
 	for (cycles = (4000000/60)/4; (cycles > 0) && (fifoIdxR != fifoIdxW);  )
 	{
-		Z80.SetINT(TRUE);	// fire an IRQ to indicate pending command
+		Z80.SetINT(true);	// fire an IRQ to indicate pending command
 		//printf("Z80 INT fired\n");
 		cycles -= Z80.Run(500);
 	}	
@@ -561,7 +561,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 #define DSB1_OFFSET_MPEG_RIGHT	0x8644	// 1604 bytes right MPEG buffer
 #define DSB1_MEMORY_POOL_SIZE	(0x8000 + 0x644 + 0x644)
 
-BOOL CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
+bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float	memSizeMB = (float)DSB1_MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -1122,7 +1122,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 #define DSB2_OFFSET_MPEG_RIGHT	0x20644	// 1604 bytes right MPEG buffer
 #define DSB2_MEMORY_POOL_SIZE	(0x20000 + 0x644 + 0x644)
 
-BOOL CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
+bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float	memSizeMB = (float)DSB2_MEMORY_POOL_SIZE/(float)0x100000;
 	

@@ -2476,7 +2476,7 @@ static void Reverse32(UINT8 *buf, unsigned size)
 }
 
 // Dumps a memory region to a file for debugging purposes
-static void Dump(const char *file, UINT8 *buf, unsigned size, BOOL reverse32, BOOL reverse16)
+static void Dump(const char *file, UINT8 *buf, unsigned size, bool reverse32, bool reverse16)
 {
 	FILE	*fp;
 	
@@ -2518,7 +2518,7 @@ const struct GameInfo * CModel3::GetGameInfo(void)
 }
 	
 // Stepping-dependent parameters (MPC10x type, etc.) are initialized here
-BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
+bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 {
 	struct ROMMap Map[] =
 	{
@@ -2538,7 +2538,7 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	*(UINT64 *) driveROM = MAGIC_NUMBER;
 	
 	// Load game
-	Game = LoadROMSetFromZIPFile(Map, GameList, zipFile, TRUE);
+	Game = LoadROMSetFromZIPFile(Map, GameList, zipFile, true);
 	if (NULL == Game)
 		return ErrorLog("Failed to load ROM set.");	
 	
@@ -2669,7 +2669,7 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 }
 
 // Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
-BOOL CModel3::Init(void)
+bool CModel3::Init(void)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -2754,12 +2754,12 @@ CModel3::~CModel3(void)
 {
 	// Debug: dump some files
 #if 0
-	Dump("ram", ram, 0x800000, TRUE, FALSE);
-	//Dump("vrom", vrom, 0x4000000, TRUE, FALSE);
-	//Dump("crom", crom, 0x800000, TRUE, FALSE);
-	//Dump("bankedCrom", &crom[0x800000], 0x7000000, TRUE, FALSE);
-	//Dump("soundROM", soundROM, 0x80000, FALSE, TRUE);
-	//Dump("sampleROM", sampleROM, 0x800000, FALSE, TRUE);
+	Dump("ram", ram, 0x800000, true, false);
+	//Dump("vrom", vrom, 0x4000000, true, false);
+	//Dump("crom", crom, 0x800000, true, false);
+	//Dump("bankedCrom", &crom[0x800000], 0x7000000, true, false);
+	//Dump("soundROM", soundROM, 0x80000, false, true);
+	//Dump("sampleROM", sampleROM, 0x800000, false, true);
 #endif
 	
 	// Stop all threads

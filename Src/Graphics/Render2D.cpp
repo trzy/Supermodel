@@ -265,7 +265,7 @@ void CRender2D::DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase)
 	int				hFullScrollPri, hFullScrollAlt;			// full-screen horizontal scroll values (from registers)
 	int				vOffset;								// vertical pixel offset within tile
 	int				tx, i, j;
-	BOOL			lineScrollPri, lineScrollAlt;			// line scrolling enable/disable
+	bool			lineScrollPri, lineScrollAlt;			// line scrolling enable/disable
 	UINT16			mask;
 	
 	// Determine layer color depths (1 if 4-bit, 0 if 8-bit)
@@ -491,7 +491,7 @@ void CRender2D::DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase)
 	int				hOffset, vOffset;						// pixel offsets
 	int				ntOffset;								// offset in name table
 	int				tx;
-	BOOL			lineScrollPri, lineScrollAlt;			// line scrolling enable/disable
+	bool			lineScrollPri, lineScrollAlt;			// line scrolling enable/disable
 	UINT16			mask;
 	
 	// Determine layer color depths (1 if 4-bit, 0 if 8-bit)
@@ -614,7 +614,7 @@ void CRender2D::UpdateLayer(int layerNum)
 {
 	glBindTexture(GL_TEXTURE_2D, texID[layerNum]);
 
-	allDirty = TRUE;
+	allDirty = true;
 	if (allDirty)
 	{
 		// If everything is dirty, update the whole thing at once
@@ -710,7 +710,7 @@ void CRender2D::BeginFrame(void)
 	{
 		UpdateLayer(i);
 	}
-	allDirty = FALSE;
+	allDirty = false;
 	
 	// Draw bottom layer
 	Setup2D();
@@ -762,7 +762,7 @@ void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
 		return;
 		
 	// For now, mark everything as dirty
-	allDirty = TRUE;
+	allDirty = true;
 		
 	// Palette
 	if (addr >= 0x100000)
@@ -810,7 +810,7 @@ void CRender2D::AttachVRAM(const UINT8 *vramPtr)
 
 #define MEMORY_POOL_SIZE	(512*512*4+0x20000)
 
-BOOL CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
+bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -843,7 +843,7 @@ BOOL CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	// Clear textures and dirty rectangles (all memory)
 	memset(memoryPool, 0, MEMORY_POOL_SIZE);
 	memset(dirty, 0, sizeof(dirty));
-	allDirty = TRUE;
+	allDirty = true;
 	
 	// Create textures
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

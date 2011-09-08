@@ -59,7 +59,7 @@ struct DIEnumDevsContext
 // RawInput API
 typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDeviceListPtr)(OUT PRAWINPUTDEVICELIST pRawInputDeviceList, IN OUT PUINT puiNumDevices, IN UINT cbSize);
 typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDeviceInfoPtr)(IN HANDLE hDevice, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize);
-typedef /*WINUSERAPI*/ BOOL (WINAPI *RegisterRawInputDevicesPtr)(IN PCRAWINPUTDEVICE pRawInputDevices, IN UINT uiNumDevices, IN UINT cbSize);
+typedef /*WINUSERAPI*/ bool (WINAPI *RegisterRawInputDevicesPtr)(IN PCRAWINPUTDEVICE pRawInputDevices, IN UINT uiNumDevices, IN UINT cbSize);
 typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDataPtr)(IN HRAWINPUT hRawInput, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize, IN UINT cbSizeHeader);
 
 // XInput API
@@ -111,7 +111,7 @@ private:
 	
 	// RawInput keyboard and mice handles and states
 	vector<HANDLE> m_rawKeyboards;
-	vector<BOOL*> m_rawKeyStates;
+	vector<bool*> m_rawKeyStates;
 	vector<HANDLE> m_rawMice;
 	RawMseState m_combRawMseState;
 	vector<RawMseState> m_rawMseStates;

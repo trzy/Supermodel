@@ -522,8 +522,8 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 							strcpy(keyDetails.name, "Unknown Keyboard");
 						m_keyDetails.push_back(keyDetails);
 
-						BOOL *pKeyState = new BOOL[255];
-						memset(pKeyState, 0, sizeof(BOOL) * 255);
+						bool *pKeyState = new bool[255];
+						memset(pKeyState, 0, sizeof(bool) * 255);
 						m_rawKeyStates.push_back(pKeyState);
 					}
 					else if (device.dwType == RIM_TYPEMOUSE)
@@ -751,7 +751,7 @@ void CDirectInputSystem::CloseKeyboardsAndMice()
 		}
 
 		// Delete storage for keyboards
-		for (vector<BOOL*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); it++)
+		for (vector<bool*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); it++)
 			delete[] *it;
 		m_keyDetails.clear();
 		m_rawKeyboards.clear();
@@ -828,7 +828,7 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 		if (pData->header.dwType == RIM_TYPEKEYBOARD)
 		{
 			// Keyboard event, so identify which keyboard produced event
-			BOOL *pKeyState = NULL;
+			bool *pKeyState = NULL;
 			size_t kbdNum;
 			for (kbdNum = 0; kbdNum < m_rawKeyboards.size(); kbdNum++)
 			{
@@ -843,9 +843,9 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 			if (pKeyState != NULL)
 			{
 				// Get scancode of key and whether key was pressed or released
-				BOOL isRight = pData->data.keyboard.Flags & RI_KEY_E0;
+				int isRight = (pData->data.keyboard.Flags & RI_KEY_E0);
 				UINT8 scanCode = (pData->data.keyboard.MakeCode & 0x7f) | (isRight ? 0x80 : 0x00);
-				BOOL pressed = !(pData->data.keyboard.Flags & RI_KEY_BREAK);
+				bool pressed = !(pData->data.keyboard.Flags & RI_KEY_BREAK);
 
 				// Store current state for key 
 				if (scanCode != 0xAA)
@@ -1113,7 +1113,7 @@ void CDirectInputSystem::OpenJoysticks()
 				// If joystick has force feedback capabilities then disable auto-center
 				if (joyDetails.hasFFeedback)
 				{
-					dipdw.dwData = FALSE;
+					dipdw.dwData = false;
 
 					if (FAILED(hr = joystick->SetProperty(DIPROP_AUTOCENTER, &dipdw.diph)))
 					{
@@ -1188,10 +1188,10 @@ void CDirectInputSystem::PollJoysticks()
 			pJoyState->lRy = (LONG)-gamepad.sThumbRY;
 			pJoyState->lRz = (LONG)CInputSource::Scale(gamepad.bRightTrigger, 0, 255, 0, 32767);
 			WORD buttons = gamepad.wButtons;
-			BOOL dUp = buttons & XINPUT_GAMEPAD_DPAD_UP;
-			BOOL dDown = buttons & XINPUT_GAMEPAD_DPAD_DOWN;
-			BOOL dLeft = buttons & XINPUT_GAMEPAD_DPAD_LEFT;
-			BOOL dRight = buttons & XINPUT_GAMEPAD_DPAD_RIGHT;
+			int dUp = (buttons & XINPUT_GAMEPAD_DPAD_UP);
+			int dDown = (buttons & XINPUT_GAMEPAD_DPAD_DOWN);
+			int dLeft = (buttons & XINPUT_GAMEPAD_DPAD_LEFT);
+			int dRight = (buttons & XINPUT_GAMEPAD_DPAD_RIGHT);
 			if (dUp)
 			{
 				if      (dLeft)  pJoyState->rgdwPOV[0] = 31500;
@@ -1494,7 +1494,7 @@ bool CDirectInputSystem::IsKeyPressed(int kbdNum, int keyIndex)
 	if (m_useRawInput)
 	{
 		// For RawInput, check if key is currently pressed for given keyboard number
-		BOOL *keyState = m_rawKeyStates[kbdNum];
+		bool *keyState = m_rawKeyStates[kbdNum];
 		return !!keyState[diKey];
 	}
 
@@ -1877,9 +1877,9 @@ bool CDirectInputSystem::Poll()
 void CDirectInputSystem::SetMouseVisibility(bool visible)
 {
 	if (m_useRawInput)
-		ShowCursor(!m_grabMouse && visible ? TRUE : FALSE);
+		ShowCursor(!m_grabMouse && visible ? true : false);
 	else
-		ShowCursor(visible ? TRUE : FALSE);
+		ShowCursor(visible ? true : false);
 }
 
 void CDirectInputSystem::GrabMouse()

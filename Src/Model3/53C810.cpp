@@ -104,9 +104,9 @@ static inline UINT32 Fetch(struct NCR53C810Context *Ctx)
 }
 
 //TO-DO: check if this ever occurs in single-step mode (if so, we would need to stack interrupts)
-static BOOL SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
+static bool SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
 {
-	Ctx->halt = TRUE;	// halt SCRIPTS execution
+	Ctx->halt = true;	// halt SCRIPTS execution
 	Ctx->regISTAT |= 1;	// DMA interrupt pending
 	Ctx->regDSTAT |= 4;	// SCRIPTS interrupt instruction received
 	Ctx->IRQ->Assert(Ctx->scsiIRQ);
@@ -116,7 +116,7 @@ static BOOL SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
 	return OKAY;
 }
 
-static BOOL SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
+static bool SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
 {
 	UINT32		src, dest;
     unsigned	numBytes, i;
@@ -154,13 +154,13 @@ static BOOL SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
 }
 
 // Invalid instruction handler
-static BOOL SCRIPTS_Invalid(struct NCR53C810Context *Ctx)
+static bool SCRIPTS_Invalid(struct NCR53C810Context *Ctx)
 {
 	DebugLog("53C810 encountered an unrecognized instruction (%02X%06X, DSP=%08X)\n!", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
 	return FAIL;
 }
 
-void C53C810::Run(BOOL singleStep)
+void C53C810::Run(bool singleStep)
 {
 	UINT32	op;
 	int		i;
@@ -201,7 +201,7 @@ void C53C810::Run(BOOL singleStep)
 }
 
 // Insert instructions into the LUT under control of the mask
-void C53C810::Insert(UINT8 mask, UINT8 op, BOOL (*Handler)(struct NCR53C810Context *))
+void C53C810::Insert(UINT8 mask, UINT8 op, bool (*Handler)(struct NCR53C810Context *))
 {
     UINT32  i;
 
@@ -291,13 +291,13 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
 	case 0x2F:		// DSP 31-24
 		Ctx.regDSP &= 0x00FFFFFF;
 		Ctx.regDSP |= (data<<24);
-		Ctx.halt = FALSE;	// writing this register un-halts 53C810 operation (pg.6-31 of LSI manual)
+		Ctx.halt = false;	// writing this register un-halts 53C810 operation (pg.6-31 of LSI manual)
 		if (!(Ctx.regDMODE&1))	// if MAN=0, start SCRIPTS automatically
 		// To-Do: is this correct? Should single step really be tested first?
 		//if (!(Ctx.regDCNTL&0x10) && !(Ctx.regDMODE&1))	// if MAN=0 and not single stepping, start SCRIPTS automatically
 		{
 			DebugLog("53C810: Automatically starting (PC=%08X, LR=%08X, single step=%d)\n", ppc_get_pc(), ppc_get_lr(), !!(Ctx.regDCNTL&0x10));
-			Run(FALSE);				// automatic
+			Run(false);				// automatic
 		}
 		break;	
 	case 0x30:		// DSPS 7-0
@@ -324,12 +324,12 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
 		if ((Ctx.regDCNTL&0x14) == 0x14)		// single step
 		{
 			DebugLog("53C810: single step: %08X, (halt=%d)\n", Ctx.regDSP, Ctx.halt);
-			Run(TRUE);
+			Run(true);
 		}
 		else if ((Ctx.regDCNTL&0x04))			// start DMA bit
 		{
 			DebugLog("53C810: Manually starting\n");
-			Run(FALSE);
+			Run(false);
 		}
 		break;
 	default:
@@ -472,7 +472,7 @@ void C53C810::Reset(void)
 	Ctx.regDMODE = 0;
 	Ctx.regDSTAT = 0x80;	// DMA FIFO empty
 	Ctx.regISTAT = 0;
-	Ctx.halt = FALSE;
+	Ctx.halt = false;
 	
 	DebugLog("53C810 reset\n");
 }

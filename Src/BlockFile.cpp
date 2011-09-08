@@ -170,7 +170,7 @@ void CBlockFile::NewBlock(const char *name, const char *comment)
 		WriteBlockHeader(name, comment);
 }
 
-BOOL CBlockFile::FindBlock(const char *name)
+bool CBlockFile::FindBlock(const char *name)
 {
 	long int	curPos = 0;
 	unsigned	blockLen, nameLen, commentLen;
@@ -208,7 +208,7 @@ BOOL CBlockFile::FindBlock(const char *name)
 	return FAIL;
 }
 
-BOOL CBlockFile::Create(const char *file, const char *headerName, const char *comment)
+bool CBlockFile::Create(const char *file, const char *headerName, const char *comment)
 {
 	fp = fopen(file, "wb");
 	if (NULL == fp)
@@ -218,7 +218,7 @@ BOOL CBlockFile::Create(const char *file, const char *headerName, const char *co
 	return OKAY;
 }
 	
-BOOL CBlockFile::Load(const char *file)
+bool CBlockFile::Load(const char *file)
 {
 	fp = fopen(file, "rb");
 	if (NULL == fp)

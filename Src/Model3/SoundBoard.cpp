@@ -468,7 +468,7 @@ void CSoundBoard::AttachDSB(CDSB *DSBPtr)
 #define OFFSET_AUDIO_RIGHT	0x2005BE	// 1470 bytes right audio channel
 #define MEMORY_POOL_SIZE	(0x100000 + 0x100000 + 0x5BE + 0x5BE)
 
-BOOL CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
+bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	

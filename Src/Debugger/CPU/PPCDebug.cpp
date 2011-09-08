@@ -301,7 +301,7 @@ namespace Debugger
 		char valStr[40];
 		UINT32 opcode = m_bus->Read32(addr);
 		operands[0] = '\0';
-		if (!::DisassemblePowerPC(opcode, addr, mnemonic, opStr, TRUE))
+		if (!::DisassemblePowerPC(opcode, addr, mnemonic, opStr, true))
 		{
 			char *o = opStr;
 			char *s = strstr(o, "0x");

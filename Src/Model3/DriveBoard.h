@@ -50,7 +50,7 @@ public:
 
 	void LoadState(CBlockFile *SaveState);
 
-	BOOL Init(const UINT8 *romPtr);
+	bool Init(const UINT8 *romPtr);
 
 	void AttachInputs(CInputs *InputsPtr, unsigned gameInputFlags);
 

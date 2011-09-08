@@ -113,7 +113,7 @@ namespace Debugger
 		DetachFromCPU();	
 	}
 
-	BOOL __cdecl DebugHandler(TURBO68K_INT32 pc, TURBO68K_INT32 opcode)
+	bool __cdecl DebugHandler(TURBO68K_INT32 pc, TURBO68K_INT32 opcode)
 	{
 		// Return true to let Turbo68K know if PC was changed by user
 		return debug->CheckExecution((UINT32)pc, (UINT32)opcode);

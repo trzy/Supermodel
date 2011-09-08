@@ -66,9 +66,9 @@ public:
 	 *		checked. If the setting is not found, the output parameter will not
 	 *		be modified.
 	 */
-	BOOL	Get(string SectionName, string SettingName, int& value);
-	BOOL	Get(string SectionName, string SettingName, unsigned& value);
-	BOOL	Get(string SectionName, string SettingName, string& String);
+	bool	Get(string SectionName, string SettingName, int& value);
+	bool	Get(string SectionName, string SettingName, unsigned& value);
+	bool	Get(string SectionName, string SettingName, string& String);
 	
 	/*
 	 * Set(SectionName, SettingName, value):
@@ -111,7 +111,7 @@ public:
 	 *		procedure, it is possible that nothing will be output and the
 	 *		previous contents will be lost.
 	 */
-	BOOL	Write(const char *comment);
+	bool	Write(const char *comment);
 	
 	/*
 	 * Parse(void):
@@ -125,7 +125,7 @@ public:
 	 * Returns:
 	 *		OKAY if successful, FAIL if there was a file or parse error.
 	 */
-	BOOL	Parse(void);
+	bool	Parse(void);
 	
 	/*
 	 * SetDefaultSectionName(SectionName):
@@ -160,7 +160,7 @@ public:
 	 * Returns:
 	 *		OKAY if successful, FAIL if unable to open for reading and writing.
 	 */
-	BOOL	Open(const char *fileNameStr);
+	bool	Open(const char *fileNameStr);
 	
 	/*
 	 * OpenAndCreate(fileNameStr):
@@ -174,7 +174,7 @@ public:
 	 * Returns:
 	 *		OKAY if successful, FAIL if unable to open file.
 	 */
-	BOOL	OpenAndCreate(const char *fileNameStr);
+	bool	OpenAndCreate(const char *fileNameStr);
 	
 	/*
 	 * Close(void):
@@ -197,7 +197,7 @@ private:
 	};
 
 	// Parse tree 
-	BOOL	LookUpSection(unsigned *idx, string SectionName);
+	bool	LookUpSection(unsigned *idx, string SectionName);
 	void	InitParseTree(void);
 	
 	// Tokenizer
@@ -222,14 +222,14 @@ private:
 	struct Setting	// it is up to caller to determine whether to use value or string
 	{
 		string		Name;		// setting name
-		BOOL		isNumber;	// internal flag: true if the setting is a number, false if it is a string
+		bool		isNumber;	// internal flag: true if the setting is a number, false if it is a string
 		int      	value;		// value of number
 		string		String;		// string
 		
 		Setting(void)
 		{
 			value = 0;			// initialize value to 0
-			isNumber = TRUE;	// indicate the setting is initially a number
+			isNumber = true;	// indicate the setting is initially a number
 		}
 	};
 	struct Section
