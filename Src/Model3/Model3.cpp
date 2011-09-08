@@ -2506,7 +2506,11 @@ static void Dump(const char *file, UINT8 *buf, unsigned size, BOOL reverse32, BO
 #define OFFSET_SAMPLEROM	0xD0C0000	// 16 MB (sound board samples)
 #define OFFSET_DSBPROGROM	0xE0C0000	// 128 KB (DSB program)
 #define OFFSET_DSBMPEGROM	0xE0E0000	// 16 MB (DSB MPEG data -- Z80 version only uses 8MB)
-#define MEMORY_POOL_SIZE	(0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000)
+#define OFFSET_DRIVEROM		0xF0E0000	// 64 KB
+#define MEMORY_POOL_SIZE	(0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000)
+
+// 64-bit magic number to use detect if ROM was loaded
+#define MAGIC_NUMBER	0x4C444D5245505553ULL
 
 const struct GameInfo * CModel3::GetGameInfo(void)
 {
@@ -2525,9 +2529,13 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 		{ "Samples",	sampleROM },
 		{ "DSBProg",	dsbROM },
 		{ "DSBMPEG",	mpegROM },
+		{ "DriveBd",	driveROM },
 		{ NULL, NULL }
 	};
 	PPC_CONFIG	PPCConfig;
+	
+	// Magic numbers to detect if optional ROMs are loaded
+	*(UINT64 *) driveROM = MAGIC_NUMBER;
 	
 	// Load game
 	Game = LoadROMSetFromZIPFile(Map, GameList, zipFile, TRUE);
@@ -2616,6 +2624,19 @@ BOOL CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	}
 	SoundBoard.AttachDSB(DSB);
 	
+	// Drive board (if present)
+	if (Game->driveBoard)
+	{
+		// Was the optional drive board ROM loaded?
+		if (MAGIC_NUMBER != *(UINT64 *) driveROM)	// magic number overwritten by ROM
+		{
+			if (DriveBoard.Init(driveROM))
+				return FAIL;
+		}
+	}
+	else
+		DriveBoard.Init(NULL);	// disable
+	
 	// Apply ROM patches
 	Patch();
 	
@@ -2665,7 +2686,7 @@ BOOL CModel3::Init(void)
 	mpegROM = &memoryPool[OFFSET_DSBMPEGROM];
 	backupRAM = &memoryPool[OFFSET_BACKUPRAM];
 	securityRAM = &memoryPool[OFFSET_SECURITYRAM];
-	driveROM = NULL; // TODO - need to read drive board ROM, but not complain if it is not available
+	driveROM = &memoryPool[OFFSET_DRIVEROM];
 	SetCROMBank(0xFF);
 	
 	// Initialize other devices (PowerPC and DSB initialized after ROMs loaded)
@@ -2680,8 +2701,6 @@ BOOL CModel3::Init(void)
 	if (OKAY != GPU.Init(vrom,this,&IRQ,0x100))	// same for Real3D DMA interrupt
 		return FAIL;
 	if (OKAY != SoundBoard.Init(soundROM,sampleROM))
-		return FAIL;
-	if (OKAY != DriveBoard.Init(driveROM))
 		return FAIL;
 		
 	PCIBridge.AttachPCIBus(&PCIBus);

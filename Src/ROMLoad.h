@@ -42,6 +42,7 @@ struct ROMInfo
 {
 	// Function
 	const char	*region;	// ROM region identifier (used as a key to search ROMMap)
+	bool		optional;	// whether needs to be present or not
 	
 	// Information used to identify files
 	const char	*fileName;	// file name

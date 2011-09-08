@@ -386,8 +386,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.emulateDSB = x ? true : false;
 
 	// Drive board
-	if (OKAY == INI->Get(section, "EnableFFeedback", x))
-		g_Config.enableFFeedback = x ? true : false;
+	if (OKAY == INI->Get(section, "ForceFeedback", x))
+		g_Config.forceFeedback = x ? true : false;
 	
 	// OSD
 	INI->Get(section, "XResolution", g_Config.xRes);
@@ -444,7 +444,7 @@ static void LogConfig(void)
 	InfoLog("\tMusicVolume      = %d", g_Config.GetMusicVolume());
 	
 	// CDriveBoardConfig
-	InfoLog("\tEnableFFeedback  = %d", g_Config.enableFFeedback);
+	InfoLog("\tForceFeedback    = %d", g_Config.forceFeedback);
 
 	// CRender3DConfig
 	InfoLog("\tVertexShader     = %s", g_Config.vertexShaderFile.c_str());
@@ -1214,7 +1214,7 @@ int main(int argc, char **argv)
 		else if (!strcmp(argv[i], "-force-feedback"))
 		{
 			n = 1;
-			CmdLine.Set("Global", "EnableFFeedback", n);
+			CmdLine.Set("Global", "ForceFeedback", n);
 		}
 		else if (!strncmp(argv[i],"-res",4))
 		{

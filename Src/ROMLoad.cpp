@@ -211,7 +211,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	int						romIdx;		// index within Game->ROM
 	unsigned				romsFound[sizeof(Game->ROM)/sizeof(struct ROMInfo)], numROMs;
 	int						err;
-	unsigned				i, n, maxSize;
+	unsigned				i, maxSize;
 	BOOL					multipleGameError = FALSE;
 	UINT8					*buf;
 	
@@ -294,7 +294,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	err = OKAY;
 	for (i = 0; i < numROMs; i++)
 	{
-		if (romsFound[i] == 0)
+		if ((0 == romsFound[i]) && !Game->ROM[i].optional)	// if not found and also not optional
 			err |= ErrorLog("%s (CRC=%08X) is missing from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 	}
 	if (err != OKAY)
@@ -345,18 +345,12 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	// Ensure all ROMs were loaded
 	if (loadAll)
 	{
-		n = 0;
+		err = OKAY;
 		for (i = 0; i < numROMs; i++)
 		{
-			if (romsFound[i])
-				++n;
-			else
-				ErrorLog("Failed to load %s (CRC=%08X) from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
+			if (!(romsFound[i] || Game->ROM[i].optional))	// if ROM not found and also not optional
+				err = ErrorLog("Could not load %s (CRC=%08X) from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 		}
-		if (n < numROMs)
-			err = FAIL;
-		else
-			err = OKAY;
 	}
 	else
 		err = OKAY;

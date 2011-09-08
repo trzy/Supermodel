@@ -77,6 +77,7 @@ struct GameInfo
 	unsigned		sampleSize;		// size of sample ROMS (8 or 16 MB; if 8 MB, will have to be mirrored)
 	unsigned		inputFlags;		// game input types
 	int				mpegBoard;		// MPEG music board type: 0 = none, 1 = DSB1 (Z80), 2 = DSB2 (68K).
+	bool			driveBoard;		// drive board (supported if true)
 
 	// ROM files
 	struct ROMInfo	ROM[48];

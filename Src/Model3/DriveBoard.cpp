@@ -1,3 +1,5 @@
+//TODO: save state must record whether the drive board is active (if we load a state with inactive drive board while drive board is active, should 
+// disable currently active drive board. Perhaps this should be done in Model3.cpp?
 #include "Supermodel.h"
 
 #include <stdio.h>
@@ -117,11 +119,11 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 
 BOOL CDriveBoard::Init(const UINT8 *romPtr)
 {	
-	// Assign ROM
+	// Assign ROM (note that the ROM data has not yet been loaded)
 	m_rom = romPtr;
 
 	// Check have a valid ROM and force feedback is enabled
-	m_attached = m_rom && g_Config.enableFFeedback;
+	m_attached = m_rom && g_Config.forceFeedback;
 	if (!m_attached)
 		return OKAY;
 
