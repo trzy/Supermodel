@@ -1344,7 +1344,7 @@ int main(int argc, char **argv)
 		else
 		{
 			if (fileIdx)		// already specified a file
- 				ErrorLog("Multiple files specified. Using %s, ignoring %s.", argv[i], argv[fileIdx]);
+ 				ErrorLog("Multiple files specified. Using %s, ignoring %s.", argv[fileIdx], argv[i]);
  			else
  				fileIdx = i;
  		}
