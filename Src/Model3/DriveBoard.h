@@ -77,6 +77,7 @@ public:
 	
 private:
 	bool m_attached;		// True if drive board is attached
+	bool m_tmpDisabled;	    // True if temporarily disabled by loading an incompatible save state
 	bool m_simulated;       // True if drive board should be simulated rather than emulated
 
 	UINT8 m_dip1;		    // Value of DIP switch 1

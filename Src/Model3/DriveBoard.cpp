@@ -1,5 +1,3 @@
-//TODO: save state must record whether the drive board is active (if we load a state with inactive drive board while drive board is active, should 
-// disable currently active drive board. Perhaps this should be done in Model3.cpp?
 #include "Supermodel.h"
 
 #include <stdio.h>
@@ -7,7 +5,7 @@
 
 bool CDriveBoard::IsAttached(void)
 {
-	return m_attached;
+	return m_attached && !m_tmpDisabled;
 }
 
 bool CDriveBoard::IsSimulated(void)
@@ -54,34 +52,44 @@ void CDriveBoard::SaveState(CBlockFile *SaveState)
 {
 	SaveState->NewBlock("DriveBoard", __FILE__);
 	
-	// Overall config
-	SaveState->Write(&m_simulated, sizeof(m_simulated));
+	// Check board is attached and not temporarily disabled
+	bool attached = m_attached && !m_tmpDisabled;
+	SaveState->Write(&attached, sizeof(attached));
+	if (attached)
+	{
+		// Check if simulated
+		SaveState->Write(&m_simulated, sizeof(m_simulated));
+		if (m_simulated)
+		{
+			// TODO - save board simulation state
+		}
+		else
+		{
+			// Save DIP switches and digit displays
+			SaveState->Write(&m_dip1, sizeof(m_dip1));	
+			SaveState->Write(&m_dip2, sizeof(m_dip2));
+			//SaveState->Write(&m_seg1Digit1, sizeof(m_seg1Digit1)); // No point in saving these
+			//SaveState->Write(&m_seg1Digit2, sizeof(m_seg1Digit2));
+			//SaveState->Write(&m_seg2Digit1, sizeof(m_seg2Digit1));
+			//SaveState->Write(&m_seg2Digit2, sizeof(m_seg2Digit2));
 
-	// DIP switches and digit displays
-	SaveState->Write(&m_dip1, sizeof(m_dip1));
-	SaveState->Write(&m_dip2, sizeof(m_dip2));
-	//SaveState->Write(&m_seg1Digit1, sizeof(m_seg1Digit1)); // No point in saving these
-	//SaveState->Write(&m_seg1Digit2, sizeof(m_seg1Digit2));
-	//SaveState->Write(&m_seg2Digit1, sizeof(m_seg2Digit1));
-	//SaveState->Write(&m_seg2Digit2, sizeof(m_seg2Digit2));
-
-	// RAM
-	SaveState->Write(&m_ram, sizeof(m_ram));
+			// Save RAM state
+			SaveState->Write(&m_ram, sizeof(m_ram));
 	
-	// Board emulation state
-	SaveState->Write(&m_initialized, sizeof(m_initialized));
-	SaveState->Write(&m_allowInterrupts, sizeof(m_allowInterrupts));
-	SaveState->Write(&m_dataSent, sizeof(m_dataSent));
-	SaveState->Write(&m_dataReceived, sizeof(m_dataReceived));
-	SaveState->Write(&m_adcPortRead, sizeof(m_adcPortRead));
-	SaveState->Write(&m_adcPortBit, sizeof(m_adcPortBit));
-	SaveState->Write(&m_uncenterVal1, sizeof(m_uncenterVal1));
-	SaveState->Write(&m_uncenterVal2, sizeof(m_uncenterVal2));
-
-	// TODO - board simulation state
-
-	// CPU
-	m_z80.SaveState(SaveState, "DriveBoard Z80");
+			// Save interrupt and input/output state
+			SaveState->Write(&m_initialized, sizeof(m_initialized));
+			SaveState->Write(&m_allowInterrupts, sizeof(m_allowInterrupts));
+			SaveState->Write(&m_dataSent, sizeof(m_dataSent));
+			SaveState->Write(&m_dataReceived, sizeof(m_dataReceived));
+			SaveState->Write(&m_adcPortRead, sizeof(m_adcPortRead));
+			SaveState->Write(&m_adcPortBit, sizeof(m_adcPortBit));
+			SaveState->Write(&m_uncenterVal1, sizeof(m_uncenterVal1));
+			SaveState->Write(&m_uncenterVal2, sizeof(m_uncenterVal2));
+		
+			// Save CPU state
+			m_z80.SaveState(SaveState, "DriveBoard Z80");
+		}
+	}
 }
 
 void CDriveBoard::LoadState(CBlockFile *SaveState)
@@ -92,27 +100,60 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 		return;
 	}
 	
-	SaveState->Read(&m_simulated, sizeof(m_simulated));
+	// Check that board was attached in saved state
+	bool wasAttached;
+	SaveState->Read(&wasAttached, sizeof(wasAttached));
+	if (wasAttached)
+	{
+		// Check that board configuration exactly matches current configuration
+		bool wasSimulated;
+		SaveState->Read(&wasSimulated, sizeof(wasSimulated));
+		if (wasAttached == m_attached && wasSimulated == m_simulated)
+		{
+			// Check if board was simulated
+			if (wasSimulated)
+			{
+				// TODO - load board simulation state
+			}
+			else
+			{
+				// Load DIP switches and digit displays
+				SaveState->Read(&m_dip1, sizeof(m_dip1));
+				SaveState->Read(&m_dip2, sizeof(m_dip2));
+				//SaveState->Read(&m_seg1Digit1, sizeof(m_seg1Digit1));
+				//SaveState->Read(&m_seg1Digit2, sizeof(m_seg1Digit2));
+				//SaveState->Read(&m_seg2Digit1, sizeof(m_seg2Digit1));
+				//SaveState->Read(&m_seg2Digit2, sizeof(m_seg2Digit2));
 
-	SaveState->Read(&m_dip1, sizeof(m_dip1));
-	SaveState->Read(&m_dip2, sizeof(m_dip2));
-	//SaveState->Read(&m_seg1Digit1, sizeof(m_seg1Digit1));
-	//SaveState->Read(&m_seg1Digit2, sizeof(m_seg1Digit2));
-	//SaveState->Read(&m_seg2Digit1, sizeof(m_seg2Digit1));
-	//SaveState->Read(&m_seg2Digit2, sizeof(m_seg2Digit2));
+				// Load RAM state
+				SaveState->Read(&m_ram, sizeof(m_ram));
+				
+				// Load interrupt and input/output state
+				SaveState->Read(&m_initialized, sizeof(m_initialized));
+				SaveState->Read(&m_allowInterrupts, sizeof(m_allowInterrupts));
+				SaveState->Read(&m_dataSent, sizeof(m_dataSent));
+				SaveState->Read(&m_dataReceived, sizeof(m_dataReceived));
+				SaveState->Read(&m_adcPortRead, sizeof(m_adcPortRead));
+				SaveState->Read(&m_adcPortBit, sizeof(m_adcPortBit));
+				SaveState->Read(&m_uncenterVal1, sizeof(m_uncenterVal1));
+				SaveState->Read(&m_uncenterVal2, sizeof(m_uncenterVal2));
+			
+				// Load CPU state
+				m_z80.LoadState(SaveState, "DriveBoard Z80");
+			}
 
-	SaveState->Read(&m_ram, sizeof(m_ram));
-	
-	SaveState->Read(&m_initialized, sizeof(m_initialized));
-	SaveState->Read(&m_allowInterrupts, sizeof(m_allowInterrupts));
-	SaveState->Read(&m_dataSent, sizeof(m_dataSent));
-	SaveState->Read(&m_dataReceived, sizeof(m_dataReceived));
-	SaveState->Read(&m_adcPortRead, sizeof(m_adcPortRead));
-	SaveState->Read(&m_adcPortBit, sizeof(m_adcPortBit));
-	SaveState->Read(&m_uncenterVal1, sizeof(m_uncenterVal1));
-	SaveState->Read(&m_uncenterVal2, sizeof(m_uncenterVal2));
-
-	m_z80.LoadState(SaveState, "DriveBoard Z80");
+			// Enable board
+			m_tmpDisabled = false;
+		}
+		else
+		{
+			// Otherwise, disable board as it can't be used with a mismatching configuratin
+			m_tmpDisabled = true;
+		}
+	}
+	else
+		// Disable board if it was not attached
+		m_tmpDisabled = true;
 
 	SendStopAll();
 }
@@ -122,7 +163,7 @@ bool CDriveBoard::Init(const UINT8 *romPtr)
 	// Assign ROM (note that the ROM data has not yet been loaded)
 	m_rom = romPtr;
 
-	// Check have a valid ROM and force feedback is enabled
+	// Check have a valid ROM
 	m_attached = (m_rom != NULL);
 	if (!m_attached)
 		return OKAY;
@@ -152,6 +193,8 @@ void CDriveBoard::AttachInputs(CInputs *InputsPtr, unsigned gameInputFlags)
 
 void CDriveBoard::Reset(void)
 {
+	m_tmpDisabled = false;
+
 	m_initialized = false;
 	m_allowInterrupts = false;
 
@@ -203,12 +246,12 @@ UINT8 CDriveBoard::Read(void)
 
 void CDriveBoard::Write(UINT8 data)
 {
-	if (data >= 0x01 && data <= 0x0F ||
-		data >= 0x20 && data <= 0x2F || 
-		data >= 0x30 && data <= 0x3F || 
-		data >= 0x40 && data <= 0x4F || 
-		data >= 0x70 && data <= 0x7F) 
-		printf("DriveBoard.Write(%02X)\n", data);
+	//if (data >= 0x01 && data <= 0x0F ||
+	//	data >= 0x20 && data <= 0x2F || 
+	//	data >= 0x30 && data <= 0x3F || 
+	//	data >= 0x40 && data <= 0x4F || 
+	//	data >= 0x70 && data <= 0x7F) 
+	//	printf("DriveBoard.Write(%02X)\n", data);
 	if (m_simulated)
 		SimulateWrite(data);
 	else
@@ -441,10 +484,11 @@ UINT8 CDriveBoard::IORead8(UINT32 portNum)
 		case 40: // PPC command
 			return m_dataSent;
 		case 44: // Encoder error reporting (kept at 0x00 for no error)
-			// Bits 0 & 1 clear = no error
-			// Bit 1 set        = 
-			// Bit 2 set        =
-			// Bit 3 set        =
+			// Bit 1 0	
+			//     0 0 = encoder okay, no error
+			//     0 1 = encoder error 1 - overcurrent error
+			//     1 0 = encoder error 2 - overheat error
+			//     1 1 = encoder error 3 - encoder error, reinitializes board
 			return 0x00;
 		default:
 			printf("Unhandled Z80 input on port %u (at PC = %04X)\n", portNum, m_z80.GetPC());
@@ -520,8 +564,8 @@ void CDriveBoard::ProcessEncoderCmd(void)
 		switch (m_port46Out)
 		{
 			case 0xFB:
-				// Friction?  Sent during power slide
-				SendFriction(m_port42Out);
+				// TODO - friction?  Sent during power slide.  0xFF = strongest or 0x00?
+				//SendFriction(m_port42Out);
 				break;
 
 			case 0xFC:
@@ -576,13 +620,29 @@ void CDriveBoard::ProcessEncoderCmd(void)
 				break;
 		
 			case 0xFD:
-				// Unsure?  Sent as velocity changes, similar to self-centering
+				// TODO - unsure?  Sent as velocity changes, similar to self-centering
 				break;
 		
 			case 0xFE:
 				// Apply constant force to wheel
-				// Value is: 0x80 = stop motor, 0x80-0xC0 = roll wheel left, 0x40-0x80 = roll wheel right, scale to range -0xFF-0xFF
-				SendConstantForce((0x80 - m_port42Out) * 4);
+				// Value is: 0x80 = stop motor, 0x81-0xC0 = roll wheel left, 0x40-0x7F = roll wheel right, scale to range -0x80-0x7F
+				// Note: seems to often output 0x7F or 0x81 for stop motor, so narrowing wheel ranges to 0x40-0x7E and 0x82-0xC0
+				if (m_port42Out > 0x81)
+				{
+					if (m_port42Out <= 0xC0)
+						SendConstantForce(2 * (0x81 - m_port42Out));	
+					else
+						SendConstantForce(-0x80);
+				}
+				else if (m_port42Out < 0x7F)
+				{
+					if (m_port42Out >= 0x40)
+						SendConstantForce(2 * (0x7F - m_port42Out));
+					else
+						SendConstantForce(0x7F);
+				}
+				else
+					SendConstantForce(0);
 				break;
 		
 			case 0xFF:
@@ -614,12 +674,23 @@ void CDriveBoard::SendConstantForce(INT8 val)
 {
 	if (val == m_lastConstForce)
 		return;
-	if (val >= 0)
+	if (val > 0)
 		printf(">> Constant Force Right %02X\n", val);
-	else
+	else if (val < 0)
 		printf(">> Constant Force Left %02X\n", -val);
-
+	else
+		printf(">> Stop Constant Force\n");
+	
 	ForceFeedbackCmd ffCmd;
+
+	// TODO - need to cancel other effects?
+	//ffCmd.id = FFSelfCenter;
+	//ffCmd.force = (val == 0.0 ? (float)m_lastSelfCenter / 255.0f : 0);
+	//m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+	//ffCmd.id = FFVibrate;
+	//ffCmd.force = (val == 0.0 ? (float)m_lastFriction / 255.0f : 0);
+	//m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+
 	ffCmd.id = FFConstantForce;			
 	ffCmd.force = (float)val / (val >= 0 ? 127.0f : 128.0f);
 	m_inputs->steering->SendForceFeedbackCmd(ffCmd);
@@ -669,7 +740,8 @@ void CDriveBoard::SendVibrate(UINT8 val)
 	m_lastVibrate = val;
 }
 
-CDriveBoard::CDriveBoard() : m_attached(false), m_simulated(false), m_rom(NULL), m_ram(NULL), m_inputs(NULL), m_dip1(0xCF), m_dip2(0xFF)
+CDriveBoard::CDriveBoard() : m_attached(false), m_tmpDisabled(false), m_simulated(false), 
+	m_rom(NULL), m_ram(NULL), m_inputs(NULL), m_dip1(0xCF), m_dip2(0xFF)
 {
 	DebugLog("Built Drive Board\n");
 }

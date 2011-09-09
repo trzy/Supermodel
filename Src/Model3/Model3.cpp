@@ -1841,8 +1841,7 @@ void CModel3::SaveState(CBlockFile *SaveState)
 	TileGen.SaveState(SaveState);
 	GPU.SaveState(SaveState);
 	SoundBoard.SaveState(SaveState);	// also saves DSB state
-	if (DriveBoard.IsAttached())
-		DriveBoard.SaveState(SaveState);
+	DriveBoard.SaveState(SaveState);
 }
 
 void CModel3::LoadState(CBlockFile *SaveState)
@@ -1876,8 +1875,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
 	IRQ.LoadState(SaveState);
 	ppc_load_state(SaveState);
 	SoundBoard.LoadState(SaveState);
-	if (DriveBoard.IsAttached())
-		DriveBoard.LoadState(SaveState);
+	DriveBoard.LoadState(SaveState);
 }
 
 void CModel3::SaveNVRAM(CBlockFile *NVRAM)
