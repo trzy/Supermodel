@@ -1309,9 +1309,13 @@ int main(int argc, char **argv)
 				CmdLine.Set("Global", "FragmentShader", &argv[i][13]);
 		}
 #ifdef SUPERMODEL_WIN32
-		else if (!strncmp(argv[i],"-input-system=", 14))	// this setting is not written to the config file!
+		else if (!strncmp(argv[i],"-input-system", 13))	// this setting is not written to the config file!
 		{
-			if (argv[i][14] == '\0')
+			if (argv[i][13] == '\0')
+				ErrorLog("-input-system requires an input system name.");
+			else if (argv[i][13] != '=')
+				ErrorLog("Ignoring unrecognized option: %s.", argv[i]);
+			else if (argv[i][14] == '\0')
 				ErrorLog("-input-system requires an input system name.");
 			else
 				inputSystem = &argv[i][14];
