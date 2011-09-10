@@ -155,7 +155,8 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 		// Disable board if it was not attached
 		m_tmpDisabled = true;
 
-	SendStopAll();
+	if (m_attached)
+		SendStopAll();
 }
 
 bool CDriveBoard::Init(const UINT8 *romPtr)
