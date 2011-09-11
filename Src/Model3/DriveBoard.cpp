@@ -74,7 +74,7 @@ void CDriveBoard::SaveState(CBlockFile *SaveState)
 			//SaveState->Write(&m_seg2Digit2, sizeof(m_seg2Digit2));
 
 			// Save RAM state
-			SaveState->Write(&m_ram, sizeof(m_ram));
+			SaveState->Write(m_ram, RAM_SIZE);
 	
 			// Save interrupt and input/output state
 			SaveState->Write(&m_initialized, sizeof(m_initialized));
@@ -126,7 +126,7 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 				//SaveState->Read(&m_seg2Digit2, sizeof(m_seg2Digit2));
 
 				// Load RAM state
-				SaveState->Read(&m_ram, sizeof(m_ram));
+				SaveState->Read(m_ram, RAM_SIZE);
 				
 				// Load interrupt and input/output state
 				SaveState->Read(&m_initialized, sizeof(m_initialized));
@@ -423,7 +423,7 @@ UINT8 CDriveBoard::Read8(UINT32 addr)
 	if (addr < 0x9000)        // ROM is 0x0000-0x8FFF
 		return m_rom[addr];
 	else if (addr >= 0xE000)  // RAM is 0xE000-0xFFFF
-		return m_ram[addr-0xE000];
+		return m_ram[(addr-0xE000)&0x1FFF];
 	else
 	{
 		printf("Unhandled Z80 read of %08X (at PC = %04X)\n", addr, m_z80.GetPC());
@@ -433,8 +433,8 @@ UINT8 CDriveBoard::Read8(UINT32 addr)
 
 void CDriveBoard::Write8(UINT32 addr, UINT8 data)
 {
-	if (addr >= 0xE000)       // ROM is 0x0000-0x8FFF
-		m_ram[addr-0xE000] = data;
+	if (addr >= 0xE000)  // RAM is 0xE000-0xFFFF
+		m_ram[(addr-0xE000)&0x1FFF] = data;
 	else
 		printf("Unhandled Z80 write to %08X (at PC = %04X)\n", addr, m_z80.GetPC());
 }
