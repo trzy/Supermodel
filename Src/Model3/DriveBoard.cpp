@@ -156,7 +156,12 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 		m_tmpDisabled = true;
 
 	if (m_attached)
+	{
+		if (m_tmpDisabled)
+			printf("Disabled DriveBoard due to incompatible save state\n");
+
 		SendStopAll();
+	}
 }
 
 bool CDriveBoard::Init(const UINT8 *romPtr)
@@ -561,7 +566,7 @@ void CDriveBoard::ProcessEncoderCmd(void)
 {
 	if (m_prev42Out != m_port42Out || m_prev46Out != m_port46Out)
 	{
-		printf("46 [%02X] / 42 [%02X]\n", m_port46Out, m_port42Out);
+		//printf("46 [%02X] / 42 [%02X]\n", m_port46Out, m_port42Out);
 		switch (m_port46Out)
 		{
 			case 0xFB:
@@ -653,7 +658,7 @@ void CDriveBoard::ProcessEncoderCmd(void)
 				break;
 
 			default:
-				printf("Unknown = 46 [%02X] / 42 [%02X]\n", m_port46Out, m_port42Out);
+				//printf("Unknown = 46 [%02X] / 42 [%02X]\n", m_port46Out, m_port42Out);
 				break;
 		}
 
@@ -669,6 +674,11 @@ void CDriveBoard::SendStopAll(void)
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFStop;
 	m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+
+	m_lastConstForce = 0;
+	m_lastSelfCenter = 0;
+	m_lastFriction   = 0;
+	m_lastVibrate    = 0;
 }
 
 void CDriveBoard::SendConstantForce(INT8 val)
@@ -676,22 +686,23 @@ void CDriveBoard::SendConstantForce(INT8 val)
 	if (val == m_lastConstForce)
 		return;
 	if (val > 0)
-		printf(">> Constant Force Right %02X\n", val);
+	{
+		printf(">> Force Right %02X [%8s", val, "");
+		for (unsigned i = 0; i < 8; i++)
+			printf(i == 0 || i <= (val + 1) / 16 ? ">" : " ");
+		printf("]\n");
+	}
 	else if (val < 0)
-		printf(">> Constant Force Left %02X\n", -val);
+	{
+		printf(">> Force Left  %02X [", -val);
+		for (unsigned i = 0; i < 8; i++)
+			printf(i == 7 || i >= (val + 128) / 16 ? "<" : " ");
+		printf("%8s]\n", "");
+	}
 	else
-		printf(">> Stop Constant Force\n");
+		printf(">> Stop Force     [%16s]\n", "");
 	
 	ForceFeedbackCmd ffCmd;
-
-	// TODO - need to cancel other effects?
-	//ffCmd.id = FFSelfCenter;
-	//ffCmd.force = (val == 0.0 ? (float)m_lastSelfCenter / 255.0f : 0);
-	//m_inputs->steering->SendForceFeedbackCmd(ffCmd);
-	//ffCmd.id = FFVibrate;
-	//ffCmd.force = (val == 0.0 ? (float)m_lastFriction / 255.0f : 0);
-	//m_inputs->steering->SendForceFeedbackCmd(ffCmd);
-
 	ffCmd.id = FFConstantForce;			
 	ffCmd.force = (float)val / (val >= 0 ? 127.0f : 128.0f);
 	m_inputs->steering->SendForceFeedbackCmd(ffCmd);
@@ -703,7 +714,10 @@ void CDriveBoard::SendSelfCenter(UINT8 val)
 {
 	if (val == m_lastSelfCenter)
 		return;
-	printf(">> Self center %02X\n", val);
+	if (val == 0)
+		printf(">> Stop Self-Center\n");
+	else
+		printf(">> Self-Center %02X\n", val);
 	
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFSelfCenter;
@@ -717,7 +731,10 @@ void CDriveBoard::SendFriction(UINT8 val)
 {
 	if (val == m_lastFriction)
 		return;
-	printf(">> Friction %02X\n", val);
+	if (val == 0)
+		printf(">> Stop Friction\n");
+	else
+		printf(">> Friction %02X\n", val);
 	
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFFriction;
@@ -731,7 +748,10 @@ void CDriveBoard::SendVibrate(UINT8 val)
 {
 	if (val == m_lastVibrate)
 		return;
-	printf(">> Vibrate %02X\n", val);
+	if (val == 0)
+		printf(">> Stop Vibrate\n");
+	else
+		printf(">> Vibrate %02X\n", val);
 
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFVibrate;
