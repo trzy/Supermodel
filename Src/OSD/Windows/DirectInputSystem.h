@@ -16,6 +16,12 @@ using namespace std;
 
 #define NUM_DI_KEYS (sizeof(s_keyMap) / sizeof(DIKeyMapStruct))
 
+#define DI_EFFECTS_MAX DI_FFNOMINALMAX
+#define DI_EFFECTS_SCALE (DI_EFFECTS_MAX / 100)
+
+#define XI_VIBRATE_MAX 65535
+#define XI_VIBRATE_SCALE (XI_VIBRATE_MAX / 100)
+
 struct DIKeyMapStruct
 {
 	const char *keyName;
@@ -135,17 +141,17 @@ private:
 	vector<DIJoyInfo> m_diJoyInfos;
 	vector<DIJOYSTATE2> m_diJoyStates;
 
-	// DirectInput force feedback parameters
-	LONG m_diEffectsGain;
-	LONG m_diConstForceMax;
-	LONG m_diSelfCenterMax;
-	LONG m_diFrictionMax;
-	LONG m_diVibrateMax;
+	// DirectInput force feedback parameters (100% = max)
+	unsigned m_diEffectsGain;
+	unsigned m_diConstForceMax;
+	unsigned m_diSelfCenterMax;
+	unsigned m_diFrictionMax;
+	unsigned m_diVibrateMax;
 
-	// XInput force feedback parameters
-	float m_xiConstForceThreshold;
-	WORD m_xiConstForceMax;
-	WORD m_xiVibrateMax;
+	// XInput force feedback parameters (100% = max)
+	unsigned m_xiConstForceThreshold;
+	unsigned m_xiConstForceMax;
+	unsigned m_xiVibrateMax;
 
 	bool GetRegString(HKEY regKey, const char *regPath, string &str);
 
@@ -233,6 +239,10 @@ public:
 	const MouseDetails *GetMouseDetails(int mseNum);
 
 	const JoyDetails *GetJoyDetails(int joyNum);
+
+	void ReadFromINIFile(CINIFile *ini, const char *section);
+
+	void WriteToINIFile(CINIFile *ini, const char *section);
 
 	bool Poll();
 
