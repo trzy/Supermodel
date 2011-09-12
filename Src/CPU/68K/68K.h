@@ -35,6 +35,7 @@
 #include <cstring>
 #include "Types.h"
 #include "Musashi/m68k.h"
+#include "Musashi/m68kctx.h"
 #include "CPU/Bus.h"
 
 // This doesn't work for now (needs to be added to the prototypes in m68k.h for m68k_read_memory*)
@@ -67,23 +68,21 @@
 typedef struct SM68KCtx
 {
 public:
+	m68ki_cpu_core	musashiCtx;		// CPU context
 	CBus			*Bus;			// memory handlers
 	int				(*IRQAck)(int);	// IRQ acknowledge callback
-	unsigned char	*musashiCtx;	// holds CPU state
 	
 	SM68KCtx(void)
 	{
 		Bus = NULL;
 		IRQAck = NULL;
-		musashiCtx = new unsigned char[m68k_context_size()];
-		memset(musashiCtx, 0, m68k_context_size());	// very important! garbage in context at reset can cause very strange bugs
+		memset(&musashiCtx, 0, sizeof(musashiCtx));	// very important! garbage in context at reset can cause very strange bugs
 	}
 	
 	~SM68KCtx(void)
 	{
 		Bus = NULL;
 		IRQAck = NULL;
-		delete [] musashiCtx;
 	}
 } M68KCtx;
 

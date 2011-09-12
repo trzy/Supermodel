@@ -836,63 +836,7 @@
 /* =============================== PROTOTYPES ============================= */
 /* ======================================================================== */
 
-typedef struct
-{
-	uint cpu_type;     /* CPU Type: 68000, 68008, 68010, 68EC020, or 68020 */
-	uint dar[16];      /* Data and Address Registers */
-	uint ppc;		   /* Previous program counter */
-	uint pc;           /* Program Counter */
-	uint sp[7];        /* User, Interrupt, and Master Stack Pointers */
-	uint vbr;          /* Vector Base Register (m68010+) */
-	uint sfc;          /* Source Function Code Register (m68010+) */
-	uint dfc;          /* Destination Function Code Register (m68010+) */
-	uint cacr;         /* Cache Control Register (m68020, unemulated) */
-	uint caar;         /* Cache Address Register (m68020, unemulated) */
-	uint ir;           /* Instruction Register */
-	uint t1_flag;      /* Trace 1 */
-	uint t0_flag;      /* Trace 0 */
-	uint s_flag;       /* Supervisor */
-	uint m_flag;       /* Master/Interrupt state */
-	uint x_flag;       /* Extend */
-	uint n_flag;       /* Negative */
-	uint not_z_flag;   /* Zero, inverted for speedups */
-	uint v_flag;       /* Overflow */
-	uint c_flag;       /* Carry */
-	uint int_mask;     /* I0-I2 */
-	uint int_level;    /* State of interrupt pins IPL0-IPL2 -- ASG: changed from ints_pending */
-	uint int_cycles;   /* ASG: extra cycles from generated interrupts */
-	uint stopped;      /* Stopped state */
-	uint pref_addr;    /* Last prefetch address */
-	uint pref_data;    /* Data in the prefetch queue */
-	uint address_mask; /* Available address pins */
-	uint sr_mask;      /* Implemented status register bits */
-	uint instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
-	uint run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
-
-	/* Clocks required for instructions / exceptions */
-	uint cyc_bcc_notake_b;
-	uint cyc_bcc_notake_w;
-	uint cyc_dbcc_f_noexp;
-	uint cyc_dbcc_f_exp;
-	uint cyc_scc_r_true;
-	uint cyc_movem_w;
-	uint cyc_movem_l;
-	uint cyc_shift;
-	uint cyc_reset;
-	uint8* cyc_instruction;
-	uint8* cyc_exception;
-
-	/* Callbacks to host */
-	int  (*int_ack_callback)(int int_line);           /* Interrupt Acknowledge */
-	void (*bkpt_ack_callback)(unsigned int data);     /* Breakpoint Acknowledge */
-	void (*reset_instr_callback)(void);               /* Called when a RESET instruction is encountered */
-	void (*cmpild_instr_callback)(unsigned int, int); /* Called when a CMPI.L #v, Dn instruction is encountered */
-	void (*rte_instr_callback)(void);                 /* Called when a RTE instruction is encountered */
-	void (*pc_changed_callback)(unsigned int new_pc); /* Called when the PC changes by a large amount */
-	void (*set_fc_callback)(unsigned int new_fc);     /* Called when the CPU function code changes */
-	void (*instr_hook_callback)(void);                /* Called every instruction cycle prior to execution */
-
-} m68ki_cpu_core;
+#include "m68kctx.h"
 
 
 extern m68ki_cpu_core m68ki_cpu;
@@ -2010,7 +1954,9 @@ void m68ki_exception_interrupt(uint int_level)
 INLINE void m68ki_check_interrupts(void)
 {
 	if(CPU_INT_LEVEL > FLAG_INT_MASK)
+	{
 		m68ki_exception_interrupt(CPU_INT_LEVEL>>8);
+	}
 }
 
 
