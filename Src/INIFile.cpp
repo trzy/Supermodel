@@ -378,7 +378,7 @@ static bool IsBlank(char c)
 	return false;
 }
 
-// Fetches a string. Tolerates all characters between quotes.
+// Fetches a string. Tolerates all characters between quotes, except \n.
 CINIFile::CToken CINIFile::GetString(void)
 {
 	CToken	T;
@@ -394,7 +394,7 @@ CINIFile::CToken CINIFile::GetString(void)
 			++linePtr;	// so we can find next token
 			break;
 		}
-		else if (linePtr[0] == '\0')
+		else if ((linePtr[0] == '\0') || (linePtr[0] == '\n'))
 		{
 			//printf("tokenizer: warning: string is missing end quote\n");
 			break;
@@ -537,7 +537,7 @@ CINIFile::CToken CINIFile::GetToken(void)
 		else if ((linePtr[0]==';') || (linePtr[0]=='\0'))
 		{
 			T.type = TOKEN_NULL;
-			return T;
+			return T;	// do not advance linePtr (so we do not de-sync the parser)
 		}
 			
 		// Delimiters
