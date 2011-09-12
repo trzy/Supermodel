@@ -126,7 +126,7 @@ public:
 	 *
 	 * Runs the sound board for one frame, updating sound in the process.
 	 */
-	void RunFrame(void);
+	bool RunFrame(void);
 	
 	/*
 	 * Reset(void):
@@ -161,7 +161,7 @@ public:
 	 *		error messages.
 	 */
 	bool Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
-	 
+
 	/*
 	 * CSoundBoard(void):
 	 * ~CSoundBoard(void):

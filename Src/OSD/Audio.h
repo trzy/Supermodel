@@ -7,6 +7,12 @@
  * Function-based interface for audio output.
  */
 
+typedef void (*AudioCallbackFPtr)(void *data);
+
+extern void SetAudioCallback(AudioCallbackFPtr callback, void *data);
+
+extern void SetAudioEnabled(bool enabled);
+
 /*
  * OpenAudio()
  *
@@ -19,7 +25,7 @@ extern bool OpenAudio();
  *
  * Sends a chunk of two-channel audio with the given number of samples to the audio system.
  */
-extern void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer);
+extern bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer);
 
 /*
  * CloseAudio()

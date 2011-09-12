@@ -278,7 +278,7 @@ public:
 	 *		occurred. Prints own error messages.
 	 */
 	bool Init(void);
-	 
+	
 	/*
 	 * CModel3(void):
 	 * ~CModel3(void):
@@ -290,7 +290,10 @@ public:
 	 */
 	CModel3(void);
 	~CModel3(void);
-	
+
+	bool PauseThreads(void);
+	void ResumeThreads(void);
+
 	/*
 	 * Private Property.
 	 * Tresspassers will be shot! ;)
@@ -306,16 +309,21 @@ private:
 	void 	WriteSystemRegister(unsigned reg, UINT8 data);
 	void	Patch(void);
 
-	void    RunMainBoardFrame();    // Runs the main board (PPC) for a frame
-	bool    StartThreads();         // Starts all threads
-	void    StopThreads();          // Stops all threads
-	void    DeleteThreadObjects();  // Deletes all threads and synchronization objects
+	void    RunMainBoardFrame(void);                   // Runs the main board (PPC) for a frame
+	bool    StartThreads(void);                        // Starts all threads
+	void    StopThreads(void);                         // Stops all threads
+	void    DeleteThreadObjects(void);                 // Deletes all threads and synchronization objects
 
-	static int StartSoundBoardThread(void *data);    // Callback to start sound board thread
-	static int StartDriveBoardThread(void *data);    // Callback to start drive board thread
+	static int StartSoundBoardThread(void *data);      // Callback to start unsync'd sound board thread
+	static int StartSoundBoardThreadSyncd(void *data); // Callback to start sync'd sound board thread
+	static int StartDriveBoardThreadSyncd(void *data); // Callback to start sync'd drive board thread
 
-	void    RunSoundBoardThread();                   // Runs sound board thread 
-	void    RunDriveBoardThread();                   // Runs drive board thread
+	static void AudioCallback(void *data);             // Audio buffer callback
+	
+	void    WakeSoundBoardThread(void);	               // Used by audio callback to wake sound board thread when not sync'd with PPC thread
+	void    RunSoundBoardThread(void);                 // Runs sound board thread unsync'd with PPC thread, ie at full speed
+	void    RunSoundBoardThreadSyncd(void);            // Runs sound board thread sync'd in step with PPC thread
+	void    RunDriveBoardThreadSyncd(void);            // Runs drive board thread sync'd in step with PPC thread
 	
 	// Game and hardware information
 	const struct GameInfo	*Game;
@@ -356,14 +364,20 @@ private:
 	PPC_FETCH_REGION	PPCFetchRegions[3];
 
 	// Multiple threading
-	bool        startedThreads;    // True if threads have been created and started
-	CThread     *sndBrdThread;     // Sound board thread
-	CThread     *drvBrdThread;     // Drive board thread
-	bool        sndBrdThreadDone;  // Flag to indicate sound board thread has finished processing for current frame
-	bool        drvBrdThreadDone;  // Flag to indicate drive board thread has finished processing for current frame
+	bool        startedThreads;      // True if threads have been created and started
+	bool        pausedThreads;       // True if threads are currently paused
+	CThread     *sndBrdThread;       // Sound board thread
+	CThread     *drvBrdThread;       // Drive board thread
+	bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
+	bool        sndBrdThreadDone;    // Flag to indicate sound board thread has finished processing
+	bool        drvBrdThreadRunning; // Flag to indicate drive board thread is currently processing
+	bool        drvBrdThreadDone;    // Flag to indicate drive board thread has finished processing
 
 	// Thread synchronization objects
+	bool        syncSndBrdThread;
 	CSemaphore  *sndBrdThreadSync;
+	CMutex      *sndBrdNotifyLock;
+	CCondVar    *sndBrdNotifySync;
 	CSemaphore  *drvBrdThreadSync;
 	CMutex      *notifyLock;
 	CCondVar    *notifySync;	

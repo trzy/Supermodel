@@ -1,4 +1,3 @@
-//TODO: before release, comment out printf()'s
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -358,7 +357,7 @@ void CSoundBoard::WriteMIDIPort(UINT8 data)
 		DSB->SendCommand(data);
 }
 
-void CSoundBoard::RunFrame(void)
+bool CSoundBoard::RunFrame(void)
 {
 #ifdef SUPERMODEL_SOUND
 	// Run sound board first to generate SCSP audio
@@ -379,7 +378,7 @@ void CSoundBoard::RunFrame(void)
 		DSB->RunFrame(audioL, audioR);
 
 	// Output the audio buffers
-	OutputAudio(44100/60, audioL, audioR);
+	bool bufferFull = OutputAudio(44100/60, audioL, audioR);
 
 #ifdef SUPERMODEL_LOG_AUDIO
 	// Output to binary file
@@ -391,8 +390,10 @@ void CSoundBoard::RunFrame(void)
 		s = audioR[i];
 		fwrite(&s, sizeof(INT16), 1, soundFP);	// right channel
 	}
-#endif
-#endif
+#endif // SUPERMODEL_LOG_AUDIO
+#endif // SUPERMODEL_SOUND
+
+	return bufferFull;
 }
 
 void CSoundBoard::Reset(void)

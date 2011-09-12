@@ -509,6 +509,10 @@ void CDSB1::SaveState(CBlockFile *StateFile)
 	
 	// Z80 CPU state
 	Z80.SaveState(StateFile, "DSB1 Z80");
+	
+	//DEBUG
+	//printf("usingMPEGStart=%X usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
+	//printf("usingLoopStart=%X usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
 }
 
 void CDSB1::LoadState(CBlockFile *StateFile)
@@ -554,6 +558,10 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	}
 	else
 		MPEG_StopPlaying();
+		
+	//DEBUG
+	//printf("usingMPEGStart=%X usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
+	//printf("usingLoopStart=%X usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
 }
 
 // Offsets of memory regions within DSB1's pool
@@ -1065,6 +1073,11 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 	// 68K CPU state
 	M68KSetContext(&M68K);
 	M68KSaveState(StateFile, "DSB2 68K");
+	
+	//DEBUG
+	//printf("mpegStart=%X, mpegEnd=%X\n", mpegStart, mpegEnd);
+	//printf("usingMPEGStart=%X, usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
+	//printf("usingLoopStart=%X, usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
 }
 
 void CDSB2::LoadState(CBlockFile *StateFile)

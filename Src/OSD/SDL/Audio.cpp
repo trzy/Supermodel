@@ -38,11 +38,30 @@ static bool writeWrapped = false;   // True if write position has wrapped around
 static unsigned underRuns = 0;      // Number of buffer under-runs that have occured
 static unsigned overRuns = 0;       // Number of buffer over-runs that have occured
 
+static AudioCallbackFPtr callback = NULL;
+static void *callbackData = NULL;
+
+void SetAudioCallback(AudioCallbackFPtr newCallback, void *newData)
+{
+	// Lock audio whilst changing callback pointers
+	SDL_LockAudio();
+
+	callback = newCallback;
+	callbackData = newData;
+
+	SDL_UnlockAudio();
+}
+
+void SetAudioEnabled(bool newEnabled)
+{
+	enabled = newEnabled;
+}
+
 static void PlayCallback(void *data, Uint8 *stream, int len)
 {
 	//printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n", 
 	//	len, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
-
+	
 	// Get current write position and adjust it if write has wrapped but play position has not
 	UINT32 adjWritePos = writePos;
 	if (writeWrapped)
@@ -128,6 +147,8 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 	// Move play position forward for next time
 	playPos += len;
 
+	bool halfEmpty = adjWritePos + audioBufferSize / 2 - BYTES_PER_FRAME / 2 < playPos + audioBufferSize;
+	
 	// Check if play position has moved past end of buffer
 	if (playPos >= audioBufferSize)
 	{
@@ -135,6 +156,10 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 		playPos -= audioBufferSize;
 		writeWrapped = false;
 	}
+
+	// If buffer is more than half empty then call callback
+	if (callback && halfEmpty)
+		callback(callbackData);
 }
 
 static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, void *dest)
@@ -227,10 +252,12 @@ bool OpenAudio()
 	return OKAY;
 }
 
-void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
+bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 {
 	//printf("OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
 	//	numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
+
+	bool halfFull = false;
 
 	UINT32 bytesRemaining;
 	UINT32 bytesToCopy;
@@ -296,6 +323,9 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 	// Check if write position has caught up with play region and now overlaps it (ie buffer over-run)
 	bool overRun = writePos + numBytes > playPos + audioBufferSize;
 	
+	if (writePos + audioBufferSize / 2 + BYTES_PER_FRAME / 2 > playPos + audioBufferSize)
+		halfFull = true;
+
 	// Move write position back to within buffer
 	if (writePos >= audioBufferSize)
 		writePos -= audioBufferSize;
@@ -308,6 +338,8 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 		//printf("Audio buffer over-run #%u in OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u, numBytes = %u]\n",
 		//	overRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
 		
+		halfFull = true;
+
 		// Discard current chunk of data
 		goto Finish;
 	}
@@ -366,6 +398,9 @@ void OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 Finish:
 	// Unlock SDL audio callback
 	SDL_UnlockAudio();
+
+	// Return whether buffer is half full
+	return halfFull;
 }
 
 void CloseAudio()

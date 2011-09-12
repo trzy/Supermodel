@@ -762,17 +762,25 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			quit = 1;
 		
 #ifdef SUPERMODEL_DEBUGGER
+		bool processUI = true;
 		if (Debugger != NULL)
 		{
 			Debugger->Poll();
 
 			// Check if debugger requests exit or pause
 			if (Debugger->CheckExit())
-				quit = 1;
-			else if (Debugger->CheckPause())	
-				paused = 1;
-			else
 			{
+				quit = 1;
+				processUI = false;
+			}
+			else if (Debugger->CheckPause())	
+			{
+				paused = 1;
+				processUI = false;
+			}
+		}
+		if (processUI)
+		{
 #endif // SUPERMODEL_DEBUGGER
 
 		// Check UI controls
@@ -783,6 +791,12 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		}
 		else if (Inputs->uiReset->Pressed())
  		{
+			if (!paused)
+			{
+				Model3->PauseThreads();
+				SetAudioEnabled(false);
+			}
+
 			// Reset emulator
 			Model3->Reset();
 			
@@ -792,17 +806,46 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 				Debugger->Reset();
 #endif // SUPERMODEL_DEBUGGER
 
+			if (!paused)
+			{
+				Model3->ResumeThreads();
+				SetAudioEnabled(true);
+			}
+
 			puts("Model 3 reset.");
 		}
 		else if (Inputs->uiPause->Pressed())
 		{
 			// Toggle emulator paused flag
 			paused = !paused;
+
+			if (paused)
+			{
+				Model3->PauseThreads();
+				SetAudioEnabled(false);
+			}
+			else
+			{
+				Model3->ResumeThreads();
+				SetAudioEnabled(true);
+			}
 		}
 		else if (Inputs->uiSaveState->Pressed())
 		{
+			if (!paused)
+			{
+				Model3->PauseThreads();
+				SetAudioEnabled(false);
+			}
+
 			// Save game state
  			SaveState(Model3);
+
+			if (!paused)
+			{
+				Model3->ResumeThreads();
+				SetAudioEnabled(true);
+			}
 		}
 		else if (Inputs->uiChangeSlot->Pressed())
 		{
@@ -813,6 +856,12 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		}
 		else if (Inputs->uiLoadState->Pressed())
 		{
+			if (!paused)
+			{
+				Model3->PauseThreads();
+				SetAudioEnabled(false);
+			}
+
 			// Load game state
 			LoadState(Model3);
 						
@@ -821,6 +870,12 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			if (Debugger != NULL)
 				Debugger->Reset();
 #endif // SUPERMODEL_DEBUGGER
+
+			if (!paused)
+			{
+				Model3->ResumeThreads();
+				SetAudioEnabled(true);
+			}
 		}
 		else if (Inputs->uiMusicVolUp->Pressed())
 		{
@@ -904,12 +959,12 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
  			printf("Frame limiting: %s\n", g_Config.throttle?"On":"Off");
  		}
 #ifdef SUPERMODEL_DEBUGGER
-				else if (Inputs->uiEnterDebugger->Pressed())
-				{
-					// Break execution and enter debugger
-					Debugger->ForceBreak(true);
-				}
+			else if (Debugger != NULL && Inputs->uiEnterDebugger->Pressed())
+			{
+				// Break execution and enter debugger
+				Debugger->ForceBreak(true);
 			}
+		}
 #endif // SUPERMODEL_DEBUGGER
  		
  		// FPS and frame rate

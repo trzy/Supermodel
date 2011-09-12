@@ -122,6 +122,11 @@ bool CCondVar::Signal()
 	return SDL_CondSignal((SDL_cond*)m_impl) == 0;
 }
 
+bool CCondVar::SignalAll()
+{
+	return SDL_CondBroadcast((SDL_cond*)m_impl) == 0;
+}
+
 CMutex::CMutex(void *impl) : m_impl(impl)
 {
 	//
