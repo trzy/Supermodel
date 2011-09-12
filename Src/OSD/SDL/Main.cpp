@@ -1173,7 +1173,7 @@ static void Help(void)
 #ifdef SUPERMODEL_WIN32
 	puts("    -input-system=<s>      Set input system [Default: SDL]");
 #endif
-	puts("    -force-feedback        Enable force feedback (DirectInput, XInput)");
+	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
 	puts("    -print-inputs          Prints current input configuration");
 	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 	puts("");
