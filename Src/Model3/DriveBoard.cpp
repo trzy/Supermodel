@@ -602,14 +602,14 @@ void CDriveBoard::ProcessEncoderCmd(void)
 						case 2: m_uncenterVal2 = data<<4; break;
 						case 3: m_uncenterVal2 |= data;   break;
 					}
-					if (seqNum == 3)
+					if (seqNum == 0 && m_uncenterVal1 == 0)
 					{
-						if (m_uncenterVal1 == 0)
-						{
-							// Disable uncentering
-							SendVibrate(0);
-						}
-						else
+						// Disable uncentering
+						SendVibrate(0);
+					}
+					else if (seqNum == 3)
+					{
+						if (m_uncenterVal1 > 0)
 						{
 							// Uncentering - unsure exactly how values sent map to strength or whether they specify some other attributes of effect
 							// For now just attempting to map them to a sensible value in range 0x00-0xFF
