@@ -38,8 +38,8 @@ static bool writeWrapped = false;   // True if write position has wrapped around
 static unsigned underRuns = 0;      // Number of buffer under-runs that have occured
 static unsigned overRuns = 0;       // Number of buffer over-runs that have occured
 
-static AudioCallbackFPtr callback = NULL;
-static void *callbackData = NULL;
+static AudioCallbackFPtr callback = NULL; // Pointer to audio callback that is called when audio buffer is less than half empty
+static void *callbackData = NULL;         // Pointer to data to be passed to audio callback when it is called
 
 void SetAudioCallback(AudioCallbackFPtr newCallback, void *newData)
 {
@@ -147,8 +147,8 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 	// Move play position forward for next time
 	playPos += len;
 
-	bool halfEmpty = adjWritePos + audioBufferSize / 2 - BYTES_PER_FRAME / 2 < playPos + audioBufferSize;
-	
+	bool bufferFull = adjWritePos + 2 * BYTES_PER_FRAME > playPos + audioBufferSize;
+
 	// Check if play position has moved past end of buffer
 	if (playPos >= audioBufferSize)
 	{
@@ -157,8 +157,8 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 		writeWrapped = false;
 	}
 
-	// If buffer is more than half empty then call callback
-	if (callback && halfEmpty)
+	// If buffer is not full then call audio callback
+	if (callback && !bufferFull)
 		callback(callbackData);
 }
 
@@ -228,8 +228,8 @@ bool OpenAudio()
 
 	// Create audio buffer
 	audioBufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;
-	int roundBuffer = 2 * playSamples;
-	audioBufferSize = max<int>(roundBuffer, (audioBufferSize / roundBuffer) * roundBuffer);
+	int minBufferSize = 3 * BYTES_PER_FRAME;
+	audioBufferSize = max<int>(minBufferSize, audioBufferSize);
 	audioBuffer = new(std::nothrow) INT8[audioBufferSize];
 	if (audioBuffer == NULL)
 	{
@@ -240,7 +240,7 @@ bool OpenAudio()
 	
 	// Set initial play position to be beginning of buffer and initial write position to be half-way into buffer
 	playPos = 0;
-	writePos = (BYTES_PER_FRAME + audioBufferSize) / 2;
+	writePos = min<int>(audioBufferSize - BYTES_PER_FRAME, (BYTES_PER_FRAME + audioBufferSize) / 2);
 	writeWrapped = false;
 
 	// Reset counters
@@ -256,8 +256,6 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 {
 	//printf("OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
 	//	numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
-
-	bool halfFull = false;
 
 	UINT32 bytesRemaining;
 	UINT32 bytesToCopy;
@@ -323,8 +321,7 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 	// Check if write position has caught up with play region and now overlaps it (ie buffer over-run)
 	bool overRun = writePos + numBytes > playPos + audioBufferSize;
 	
-	if (writePos + audioBufferSize / 2 + BYTES_PER_FRAME / 2 > playPos + audioBufferSize)
-		halfFull = true;
+	bool bufferFull = writePos + 2 * BYTES_PER_FRAME > playPos + audioBufferSize;
 
 	// Move write position back to within buffer
 	if (writePos >= audioBufferSize)
@@ -338,7 +335,7 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 		//printf("Audio buffer over-run #%u in OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u, numBytes = %u]\n",
 		//	overRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
 		
-		halfFull = true;
+		bufferFull = true;
 
 		// Discard current chunk of data
 		goto Finish;
@@ -400,7 +397,7 @@ Finish:
 	SDL_UnlockAudio();
 
 	// Return whether buffer is half full
-	return halfFull;
+	return bufferFull;
 }
 
 void CloseAudio()
