@@ -1,9 +1,6 @@
 //TODO before release:
-// - remove UI dump input state
-// - VBL timing?
-// - Controls for Dirt Devils, and other recent games (is bass working?)
+// - Re-do cursors, make them larger
 // - Comment source code, clean up
-// - BOOL -> bool, TRUE/FALSE -> true/false
 // - Add option for building with /MD in MSVC Makefile
 // - Remove SUPERMODEL_SOUND
 
@@ -165,7 +162,8 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
     	return FAIL;
   	}
   	
-  	VideoInfo = SDL_GetVideoInfo();	// what resolution did we actually get?
+  	// What resolution did we actually get?
+  	VideoInfo = SDL_GetVideoInfo();
   	
   	// If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
   	xRes = (float) *xResPtr;
@@ -219,6 +217,13 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
  	// Write back resolution parameters
  	*xResPtr = (unsigned) xRes;
  	*yResPtr = (unsigned) yRes;
+ 	
+ 	// Scissor box (to clip visible area)
+ 	if (VideoInfo->current_w > *xResPtr || VideoInfo->current_h > *yResPtr)
+ 	{
+ 		glEnable(GL_SCISSOR_TEST);
+ 		glScissor(xOffset, yOffset, xRes, yRes);
+ 	}
  	 	
 	return 0;
 }
@@ -752,7 +757,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			
 			// Show crosshairs for light gun games
 			UpdateCrosshairs(Inputs, showCrosshairs);
-		
+			
 			// Swap the buffers
 			SDL_GL_SwapBuffers();
 		}
