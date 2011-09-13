@@ -1628,7 +1628,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				negForce = ffCmd.force < 0.0f;
 				absForce = (negForce ? -ffCmd.force : ffCmd.force);
 				threshold = (float)m_xiConstForceThreshold / 100.0f;
-				if (absForce < threshold)
+				if ((absForce < threshold) && (absForce > 0.001))	// if absForce == 0, must process command to stop controller vibrating
 					return false;
 				if (negForce)
 					vibration.wLeftMotorSpeed = min<WORD>(ffCmd.force * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE), XI_VIBRATE_MAX);
