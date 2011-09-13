@@ -366,6 +366,7 @@ private:
 	// Multiple threading
 	bool        startedThreads;      // True if threads have been created and started
 	bool        pausedThreads;       // True if threads are currently paused
+	bool        syncSndBrdThread;    // True if sound board thread should be sync'd with PPC thread
 	CThread     *sndBrdThread;       // Sound board thread
 	CThread     *drvBrdThread;       // Drive board thread
 	bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
@@ -374,7 +375,6 @@ private:
 	bool        drvBrdThreadDone;    // Flag to indicate drive board thread has finished processing
 
 	// Thread synchronization objects
-	bool        syncSndBrdThread;
 	CSemaphore  *sndBrdThreadSync;
 	CMutex      *sndBrdNotifyLock;
 	CCondVar    *sndBrdNotifySync;
