@@ -1616,25 +1616,39 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		{
 			case FFStop:
 				// Stop command halts all vibration
-				vibration.wLeftMotorSpeed = 0;
-				vibration.wRightMotorSpeed = 0;
-				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
+				pInfo->xiConstForceLeft = 0;
+				pInfo->xiConstForceRight = 0;
+				pInfo->xiVibrateBoth = 0;
+				break;
 
 			case FFConstantForce:
-				// Constant force effect is mapped to either left or right vibration motor depending on its direction and providing it's magnitude
-				// is above threshold setting
+				// Check if constant force effect is disabled
 				if (m_xiConstForceMax == 0)
 					return false;
+				// Constant force effect is mapped to either left or right vibration motor depending on its direction
 				negForce = ffCmd.force < 0.0f;
 				absForce = (negForce ? -ffCmd.force : ffCmd.force);
 				threshold = (float)m_xiConstForceThreshold / 100.0f;
-				if ((absForce < threshold) && (absForce > 0.001))	// if absForce == 0, must process command to stop controller vibrating
-					return false;
-				if (negForce)
-					vibration.wLeftMotorSpeed = min<WORD>(ffCmd.force * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE), XI_VIBRATE_MAX);
+				// Check if constant force effect is being stopped or is below threshold 
+				if (absForce == 0.0f || absForce < threshold)
+				{
+					// If so, stop vibration due to force effect
+					pInfo->xiConstForceLeft = 0;
+					pInfo->xiConstForceRight = 0;
+				}
+				else if (negForce)
+				{
+					// If force is negative (to left), set left motor vibrating
+					pInfo->xiConstForceLeft = (WORD)(absForce * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE));
+					pInfo->xiConstForceRight = 0;
+				}
 				else
-					vibration.wRightMotorSpeed = min<WORD>(ffCmd.force * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE), XI_VIBRATE_MAX);
-				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
+				{
+					// If force positive (to right), set right motor vibrating
+					pInfo->xiConstForceLeft = 0;
+					pInfo->xiConstForceRight = (WORD)(absForce * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE));
+				}
+				break;
 
 			case FFSelfCenter:
 			case FFFriction:
@@ -1642,17 +1656,31 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				return false;
 
 			case FFVibrate:
-				// Vibration effect is mapped to both vibration motors
+				// Check if vibration effect is disabled
 				if (m_xiVibrateMax == 0)
 					return false;
-				vibration.wLeftMotorSpeed = min<WORD>(ffCmd.force * (float)(m_xiVibrateMax * XI_VIBRATE_SCALE), XI_VIBRATE_MAX);
-				vibration.wRightMotorSpeed = min<WORD>(ffCmd.force * (float)(m_xiVibrateMax * XI_VIBRATE_SCALE), XI_VIBRATE_MAX);
-				return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
+				// Check if vibration effect is being stopped
+				if (ffCmd.force == 0.0f)
+				{
+					// If so, stop vibration due to vibration effect
+					pInfo->xiVibrateBoth = 0;
+				}
+				else
+				{
+					// Otherwise, set both motors vibrating
+					pInfo->xiVibrateBoth = (WORD)(ffCmd.force * (float)(m_xiVibrateMax * XI_VIBRATE_SCALE));
+				}
+				break;
 
 			default:
 				// Unknown feedback command
 				return false;
 		}
+
+		// Combine vibration speeds from both constant force effect and vibration effect and set motors in action
+		vibration.wLeftMotorSpeed = min<WORD>(pInfo->xiConstForceLeft + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
+		vibration.wRightMotorSpeed = min<WORD>(pInfo->xiConstForceRight + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
+		return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
 	}
 	else
 	{

@@ -49,11 +49,19 @@ struct DIMseState
 
 struct DIJoyInfo
 {
+	// DirectInput details
 	GUID guid;
-	bool isXInput;
 	int dInputNum;
 	LPDIRECTINPUTEFFECT dInputEffects[NUM_JOY_AXES][NUM_FF_EFFECTS];
-	int xInputNum;
+
+	// XInput details
+	bool isXInput;  // True if joystick is XInput controller
+	int xInputNum;  // XInput controller number
+
+	// XInput force feedback state
+	WORD xiConstForceLeft;
+	WORD xiConstForceRight;
+	WORD xiVibrateBoth;
 };
 
 struct DIEnumDevsContext
