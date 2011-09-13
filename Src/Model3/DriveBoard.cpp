@@ -238,6 +238,10 @@ void CDriveBoard::Reset(void)
 	
 	if (!g_Config.forceFeedback)
 		m_attached = false;
+
+	// Stop any effects that may still be playing
+	if (m_attached)
+		SendStopAll();
 }
 
 UINT8 CDriveBoard::Read(void)
@@ -761,7 +765,7 @@ void CDriveBoard::SendVibrate(UINT8 val)
 	m_lastVibrate = val;
 }
 
-CDriveBoard::CDriveBoard() : m_attached(false), m_tmpDisabled(false), m_simulated(false), 
+CDriveBoard::CDriveBoard() : m_attached(false), m_tmpDisabled(false), m_simulated(false),
 	m_rom(NULL), m_ram(NULL), m_inputs(NULL), m_dip1(0xCF), m_dip2(0xFF)
 {
 	DebugLog("Built Drive Board\n");
