@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -32,7 +32,8 @@
 #ifndef INCLUDED_TYPES_H
 #define INCLUDED_TYPES_H
 
-// Booleans (must be 0 or 1 only)
+
+// Boolean return codes (must be 0 or 1 only)
 #define OKAY	0
 #define FAIL	1
 

@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
@@ -22,7 +22,8 @@
 /*
  * PPCDisasm.cpp
  *
- * PowerPC 603e disassembler.
+ * PowerPC 603e disassembler from the original Supermodel project.
+ * Copyright 2003 Bart Trzynadlowski, Ville Linde, and Stefano Teso.
  *
  * When possible, invalid forms of instructions are checked for. To the best
  * of my knowledge, all appropriate load/store instructions are checked. I'm

@@ -53,9 +53,10 @@
 
 #include "Supermodel.h"
 #include "Sound/SCSP.h"
-#include <stdio.h>
-#include <memory.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 #include "Sound/SCSPDSP.h"
 
 //#define NEWSCSP

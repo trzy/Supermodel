@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
@@ -20,10 +20,10 @@
  **/
  
 /*
- * MPEG.cpp
+ * MPEG.h
  * 
- * Header file for MPEG decoder based on AMP by Tomislav Uzalec, modified to
- * play from memory buffers by R. Belmont for his music player, M1.
+ * Header file for MPEG decoder based on AMP by Tomislav Uzalec. Modified to
+ * play from memory buffers by R. Belmont for his arcade music player, M1.
  */
  
 #ifndef INCLUDED_MPEG_H
