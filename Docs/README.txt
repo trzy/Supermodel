@@ -71,6 +71,9 @@ still low.
 		  screen mode and selectable by pressing Alt-I.
     	- Drive board and force feedback emulation for 'Scud Race', 'Daytona
     	  USA 2', and 'Sega Rally 2'.  [Nik Henson]
+        - Viewable display area properly clipped.  Ghost artifacts no longer
+          appear in border regions when the resolution exceeds the display 
+          area.
     	- Changed gear shifting: added a dedicated neutral gear and sequential
     	  shifting.
     	- Console-based debugger (not enabled by default, must be
