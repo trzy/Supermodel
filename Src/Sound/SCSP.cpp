@@ -1,4 +1,3 @@
-//TODO: save states are not 64-bit safe. need to use UINT64s for addresses
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.

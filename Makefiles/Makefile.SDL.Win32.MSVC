@@ -44,11 +44,6 @@ BITS = 32
 #
 ENABLE_DEBUGGER = no
 
-#
-# Experimental sound code ('yes' on 32-bit builds only or 'no')
-#
-ENABLE_SOUND = yes
-
 
 ###############################################################################
 # 32/64-Bit SDK Directories and Options
@@ -141,10 +136,6 @@ TURBO68K_FLAGS = -singleaddr
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	COMPILER_FLAGS += /D "SUPERMODEL_DEBUGGER"
 	TURBO68K_FLAGS += -debug
-endif
-
-ifeq ($(strip $(ENABLE_SOUND)),yes)
-	COMPILER_FLAGS += /D "SUPERMODEL_SOUND"
 endif
 
 

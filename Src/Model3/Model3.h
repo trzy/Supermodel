@@ -56,7 +56,7 @@ public:
 	// Defaults
 	CModel3Config(void)
 	{
-		multiThreaded = false;		// disable by default
+		multiThreaded = true;		// enable by default
 		ppcFrequency = 40*1000000;	// 40 MHz
 	}
 	

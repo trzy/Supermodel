@@ -1,13 +1,19 @@
 //TODO before release:
-// - Re-do cursors, make them larger
+// x Change EmulateSCSP -> EmulateSound
+// x Map neutral gear to individual button
+// x Re-do cursors, make them larger
 // - Comment source code, clean up
 // - Add option for building with /MD in MSVC Makefile
-// - Remove SUPERMODEL_SOUND
+// x Remove SUPERMODEL_SOUND
+// x Make dinput default for Windows
+// x Make multi-threading the default
+// x Export INI file
+// TODO: test on Linux and make sure that no input system options besides SDL are available
 
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
@@ -32,7 +38,6 @@
  *
  * Compile-Time Options
  * --------------------
- * - SUPERMODEL_SOUND: Deprecated. Remove this.
  * - SUPERMODEL_WIN32: Define this if compiling on Windows.
  * - SUPERMODEL_OSX: Define this if compiling on Mac OS X.
  *
@@ -222,7 +227,7 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
  	if (VideoInfo->current_w > *xResPtr || VideoInfo->current_h > *yResPtr)
  	{
  		glEnable(GL_SCISSOR_TEST);
- 		glScissor(xOffset, yOffset, xRes, yRes);
+ 		glScissor(*xOffsetPtr, *yOffsetPtr, *xResPtr, *yResPtr);
  	}
  	 	
 	return 0;
@@ -383,8 +388,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.SetSoundVolume(x);
 	if (OKAY == INI->Get(section, "MusicVolume", x))
 		g_Config.SetMusicVolume(x);
-	if (OKAY == INI->Get(section, "EmulateSCSP", x))
-		g_Config.emulateSCSP = x ? true : false;
+	if (OKAY == INI->Get(section, "EmulateSound", x))
+		g_Config.emulateSound = x ? true : false;
 	if (OKAY == INI->Get(section, "EmulateDSB", x))
 		g_Config.emulateDSB = x ? true : false;
 
@@ -439,7 +444,7 @@ static void LogConfig(void)
 	InfoLog("\tPowerPCFrequency = %d", g_Config.GetPowerPCFrequency());
 	
 	// CSoundBoardConfig
-	InfoLog("\tEmulateSCSP      = %d", g_Config.emulateSCSP);
+	InfoLog("\tEmulateSound     = %d", g_Config.emulateSound);
 	
 	// CDSBConfig
 	InfoLog("\tEmulateDSB       = %d", g_Config.emulateDSB);
@@ -609,15 +614,23 @@ static void GunToViewCoords(float *x, float *y)
 
 static void DrawCrosshair(float x, float y, float r, float g, float b)
 {
+	float	base = 0.01f, height = 0.02f;	// geometric parameters of each triangle
+	float	dist = 0.004f;					// distance of triangle tip from center
+	float	a = (float)xRes/(float)yRes;	// aspect ratio (to square the crosshair)
+	
 	glColor3f(r, g, b);
-	glVertex2f(x-0.01f, y);
-	glVertex2f(x-0.002f, y);
-	glVertex2f(x+0.003f, y);
-	glVertex2f(x+0.01f, y);
-	glVertex2f(x, y-0.01f*(float)xRes/(float)yRes);
-	glVertex2f(x, y-0.003f*(float)xRes/(float)yRes);
-	glVertex2f(x, y+0.002f*(float)xRes/(float)yRes);
-	glVertex2f(x, y+0.01f*(float)xRes/(float)yRes);
+	glVertex2f(x, y+dist);	// bottom triangle
+	glVertex2f(x+base/2.0f, y+(dist+height)*a);
+	glVertex2f(x-base/2.0f, y+(dist+height)*a);	
+	glVertex2f(x, y-dist);	// top triangle
+	glVertex2f(x-base/2.0f, y-(dist+height)*a);
+	glVertex2f(x+base/2.0f, y-(dist+height)*a);
+	glVertex2f(x-dist, y);	// left triangle
+	glVertex2f(x-dist-height, y+(base/2.0f)*a);
+	glVertex2f(x-dist-height, y-(base/2.0f)*a);
+	glVertex2f(x+dist, y);	// right triangle
+	glVertex2f(x+dist+height, y-(base/2.0f)*a);
+	glVertex2f(x+dist+height, y+(base/2.0f)*a);
 }
 
 static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
@@ -649,8 +662,7 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 	GunToViewCoords(&x[1], &y[1]);
 	
 	// Draw visible crosshairs
-	glBegin(GL_LINES);
-	glLineWidth(1.0f);
+	glBegin(GL_TRIANGLES);
 	if ((showCrosshairs & 2) && !Inputs->trigger[0]->offscreenValue)	// Player 1
 		DrawCrosshair(x[0], y[0], 1.0f, 0.0f, 0.0f);
 	if ((showCrosshairs & 1) && !Inputs->trigger[1]->offscreenValue)	// Player 2
@@ -672,7 +684,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 {				  
 	CModel3			*Model3 = new CModel3();
 #endif // SUPERMODEL_DEBUGGER
-	char			titleStr[128], titleFPSStr[128];
+	char			baseTitleStr[128], titleStr[128];
 	CRender2D		*Render2D = new CRender2D();
 	CRender3D		*Render3D = new CRender3D();
 	unsigned		prevFPSTicks, currentFPSTicks, currentTicks, targetTicks, startTicks;
@@ -698,8 +710,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	// Start up SDL and open a GL window
   	xRes = g_Config.xRes;
   	yRes = g_Config.yRes;
-  	sprintf(titleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
-	if (OKAY != CreateGLScreen(titleStr,&xOffset,&yOffset,&xRes,&yRes,true,g_Config.fullScreen))
+  	sprintf(baseTitleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
+	if (OKAY != CreateGLScreen(baseTitleStr,&xOffset,&yOffset,&xRes,&yRes,true,g_Config.fullScreen))
 		return 1;
 		
 	// Info log GL information and user options
@@ -828,11 +840,14 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			{
 				Model3->PauseThreads();
 				SetAudioEnabled(false);
+				sprintf(titleStr, "%s (Paused)", baseTitleStr);
+				SDL_WM_SetCaption(titleStr,NULL);
 			}
 			else
 			{
 				Model3->ResumeThreads();
 				SetAudioEnabled(true);
+				SDL_WM_SetCaption(baseTitleStr,NULL);
 			}
 		}
 		else if (Inputs->uiSaveState->Pressed())
@@ -982,8 +997,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
  			++fpsFramesElapsed;
 			if((currentFPSTicks-prevFPSTicks) >= 1000)	// update FPS every 1 second (each tick is 1 ms)
 			{
-				sprintf(titleFPSStr, "%s - %1.1f FPS", titleStr, (float)fpsFramesElapsed*(float)(currentFPSTicks-prevFPSTicks)/1000.0f);
-				SDL_WM_SetCaption(titleFPSStr,NULL);
+				sprintf(titleStr, "%s - %1.1f FPS%s", baseTitleStr, (float)fpsFramesElapsed*(float)(currentFPSTicks-prevFPSTicks)/1000.0f, paused ? " (Paused)" : "");
+				SDL_WM_SetCaption(titleStr,NULL);
 				prevFPSTicks = currentFPSTicks;			// reset tick count
 				fpsFramesElapsed = 0;					// reset frame count
 			}
@@ -1138,7 +1153,7 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 static void Title(void)
 {
 	puts("Supermodel: A Sega Model 3 Arcade Emulator (Version "SUPERMODEL_VERSION")");
-	puts("Copyright (C) 2011 by Bart Trzynadlowski\n");
+	puts("Copyright (C) 2011 by Bart Trzynadlowski and Nik Henson\n");
 }
 
 // Print usage information
@@ -1152,8 +1167,8 @@ static void Help(void)
 	puts("    -print-games           List supported games and quit");
 	puts("");
 	puts("Core Options:");
-	printf("    -ppc-frequency=<f>     Set PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
-	puts("    -multi-threaded        Enable multi-threading for enhanced performance");
+	printf("    -ppc-frequency=<f>     PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
+	puts("    -no-threads            Disable multi-threading");
 #ifdef SUPERMODEL_DEBUGGER
 	puts("    -disable-debugger	     Completely disable debugger functionality");
 	puts("    -enter-debugger        Enter debugger at start of emulation");
@@ -1168,15 +1183,15 @@ static void Help(void)
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
 	puts("");
 	puts("Audio Options:");
-	puts("    -sound-volume=<v>      Set volume of sound effects in % [Default: 100]");
-	puts("    -music-volume=<v>      Set volume of MPEG music in % [Default: 100]");
+	puts("    -sound-volume=<v>      Volume of sound effects in % [Default: 100]");
+	puts("    -music-volume=<v>      Volume of MPEG music in % [Default: 100]");
 	puts("    -flip-stereo           Swap left and right audio channels");
-	puts("    -no-scsp               Disable Sega Custom Sound Processor (sound effects)");
+	puts("    -no-sound              Disable sound board emulation (sound effects)");
 	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("");
 	puts("Input Options:");
 #ifdef SUPERMODEL_WIN32
-	puts("    -input-system=<s>      Set input system [Default: SDL]");
+	printf("    -input-system=<s>      Input system [Default: %s]\n", g_Config.GetInputSystem());
 #endif
 	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
 	puts("    -print-inputs          Prints current input configuration");
@@ -1279,9 +1294,9 @@ int main(int argc, char **argv)
 			else
 				CmdLine.Set("Global", "PowerPCFrequency", f);
 		}
-		else if (!strcmp(argv[i],"-multi-threaded"))
+		else if (!strcmp(argv[i],"-no-threads"))
 		{
-			n = 1;
+			n = 0;
 			CmdLine.Set("Global", "MultiThreaded", n);
 		}
 #ifdef SUPERMODEL_DEBUGGER
@@ -1311,10 +1326,10 @@ int main(int argc, char **argv)
 			n = 1;
 			CmdLine.Set("Global", "FlipStereo", n);
 		}
-		else if (!strcmp(argv[i], "-no-scsp"))
+		else if (!strcmp(argv[i], "-no-sound"))
 		{
 			n = 0;
-			CmdLine.Set("Global", "EmulateSCSP", n);
+			CmdLine.Set("Global", "EmulateSound", n);
 		}
 		else if (!strcmp(argv[i], "-no-dsb"))
 		{
@@ -1430,7 +1445,7 @@ int main(int argc, char **argv)
 	Debugger::CSupermodelDebugger *Debugger = NULL;
 #endif // SUPERMODEL_DEBUGGER
 
-	// Create input system (default is SDL)
+	// Create input system
 	g_Config.SetInputSystem(inputSystem);
 	if (stricmp(g_Config.GetInputSystem(), "sdl") == 0)
 		InputSystem = new CSDLInputSystem();

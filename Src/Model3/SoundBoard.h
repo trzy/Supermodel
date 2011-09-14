@@ -40,12 +40,12 @@
 class CSoundBoardConfig
 {
 public:
-	bool	emulateSCSP;	// SCSP emulation (enabled if true)
+	bool	emulateSound;	// sound board emulation (enabled if true)
 	
 	// Defaults
 	CSoundBoardConfig(void)
 	{
-		emulateSCSP = true;
+		emulateSound = true;
 	}
 };
 

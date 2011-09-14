@@ -121,26 +121,27 @@ double CAxisInput::ValueAsFraction()
  * CGearShift4Input
  */
 CGearShift4Input::CGearShift4Input(const char *inputId, const char *inputLabel, unsigned inputGameFlags,
-		CSwitchInput *shift1Input, CSwitchInput *shift2Input, CSwitchInput *shift3Input, CSwitchInput *shift4Input,
+		CSwitchInput *shift1Input, CSwitchInput *shift2Input, CSwitchInput *shift3Input, CSwitchInput *shift4Input, CSwitchInput *shiftNInput,
 		CSwitchInput *shiftUpInput, CSwitchInput *shiftDownInput) : 
 	CInput(inputId, inputLabel, INPUT_FLAGS_VIRTUAL, inputGameFlags),
-		m_shift1Input(shift1Input), m_shift2Input(shift2Input), m_shift3Input(shift3Input), m_shift4Input(shift4Input),
+		m_shift1Input(shift1Input), m_shift2Input(shift2Input), m_shift3Input(shift3Input), m_shift4Input(shift4Input), m_shiftNInput(shiftNInput),
 		m_shiftUpInput(shiftUpInput), m_shiftDownInput(shiftDownInput)
 {
-	//
+	// Initialize to gear 1
+	prevValue = value = 1;
 }
 
 void CGearShift4Input::Poll()
 {
 	prevValue = value;
 
-	// Neutral is when all gear buttons are released so shifting here is implemented as follows:
-	// Gears (values 1-4) are set by pressing a button (lower gears have priority) and "stick" until a shift to another gear or until the
-	// button is pressed again, at which point neutral (value 0) is assumed.
-	if      (m_shift1Input->Pressed()) value = (value == 1 ? 0 : 1);
-	else if (m_shift2Input->Pressed()) value = (value == 2 ? 0 : 2);
-	else if (m_shift3Input->Pressed()) value = (value == 3 ? 0 : 3);
-	else if (m_shift4Input->Pressed()) value = (value == 4 ? 0 : 4);
+	// Gears (values 1-4) are set by pressing a button (lower gears have priority) and "stick" until a shift to another gear is made.
+	// Neutral is selected by pressing the neutral gear button. It means all gears are released (value 0).
+	if		(m_shiftNInput->Pressed()) value = 0;
+	else if (m_shift1Input->Pressed()) value = 1;
+	else if (m_shift2Input->Pressed()) value = 2;
+	else if (m_shift3Input->Pressed()) value = 3;
+	else if (m_shift4Input->Pressed()) value = 4;
 
 	// Also the shift up/down controls can increase/decrease the gears too
 	if      (m_shiftUpInput->Pressed())   value = CInputSource::Clamp(value + 1, 0, 4);

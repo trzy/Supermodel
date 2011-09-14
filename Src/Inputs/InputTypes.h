@@ -111,11 +111,12 @@ public:
 class CGearShift4Input : public CInput
 {
 private:
-	// Four switch inputs for gears 1-4
+	// Five switch inputs for gears 1-4 and N
 	CSwitchInput *m_shift1Input;
 	CSwitchInput *m_shift2Input;
 	CSwitchInput *m_shift3Input;
 	CSwitchInput *m_shift4Input;
+	CSwitchInput *m_shiftNInput;
 
 	// Two switch inputs for up/down gear
 	CSwitchInput *m_shiftUpInput;
@@ -123,7 +124,7 @@ private:
 
 public:
 	CGearShift4Input(const char *inputId, const char *inputLabel, unsigned inputGameFlags,
-		CSwitchInput *shift1Input, CSwitchInput *shift2Input, CSwitchInput *shift3Input, CSwitchInput *shift4Input, 
+		CSwitchInput *shift1Input, CSwitchInput *shift2Input, CSwitchInput *shift3Input, CSwitchInput *shift4Input, CSwitchInput *shiftNInput, 
 		CSwitchInput *shiftUpInput, CSwitchInput *shiftDownInput);
 
 	/*

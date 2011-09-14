@@ -58,7 +58,11 @@ public:
 	{
 		if (inpSysName == NULL)
 		{
+#ifdef SUPERMODEL_WIN32	// default is DirectInput on Windows
+			inputSystem = "dinput";
+#else					// everyone else uses SDL
 			inputSystem = "sdl";
+#endif
 			return;
 		}
 		
@@ -68,8 +72,13 @@ public:
 #endif
 			)
 		{
+#ifdef SUPERMODEL_WIN32
+			ErrorLog("Unknown input system '%s', defaulting to DirectInput.", inpSysName);
+			inputSystem = "dinput";
+#else
 			ErrorLog("Unknown input system '%s', defaulting to SDL.", inpSysName);
 			inputSystem = "sdl";
+#endif
 			return;
 		}
 		
@@ -93,7 +102,11 @@ public:
 #ifdef SUPERMODEL_DEBUGGER
 		disableDebugger = false;
 #endif
+#ifdef SUPERMODEL_WIN32
+		inputSystem = "dinput";
+#else
 		inputSystem = "sdl";
+#endif
 	}
 	
 private:

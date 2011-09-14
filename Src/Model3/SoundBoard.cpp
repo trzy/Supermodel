@@ -359,9 +359,8 @@ void CSoundBoard::WriteMIDIPort(UINT8 data)
 
 bool CSoundBoard::RunFrame(void)
 {
-#ifdef SUPERMODEL_SOUND
 	// Run sound board first to generate SCSP audio
-	if (g_Config.emulateSCSP)
+	if (g_Config.emulateSound)
 	{
 		M68KSetContext(&M68K);
 		SCSP_Update();
@@ -391,7 +390,6 @@ bool CSoundBoard::RunFrame(void)
 		fwrite(&s, sizeof(INT16), 1, soundFP);	// right channel
 	}
 #endif // SUPERMODEL_LOG_AUDIO
-#endif // SUPERMODEL_SOUND
 
 	return bufferFull;
 }
