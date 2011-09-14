@@ -1897,6 +1897,7 @@ void CDirectInputSystem::WriteToINIFile(CINIFile *ini, const char *section)
 	CInputSystem::WriteToINIFile(ini, section);
 
 	// Only write out those settings which have changed from default
+	/*
 	if (m_diEffectsGain != 100)        ini->Set(section, "DirectInputEffectsGain", m_diEffectsGain);
 	if (m_diConstForceMax != 100)      ini->Set(section, "DirectInputConstForceMax", m_diConstForceMax);
 	if (m_diSelfCenterMax != 100)      ini->Set(section, "DirectInputSelfCenterMax", m_diSelfCenterMax);
@@ -1905,6 +1906,17 @@ void CDirectInputSystem::WriteToINIFile(CINIFile *ini, const char *section)
 	if (m_xiConstForceThreshold != 65) ini->Set(section, "XInputConstForceThreshold", m_xiConstForceThreshold);
 	if (m_xiConstForceMax != 100)      ini->Set(section, "XInputConstForceMax", m_xiConstForceMax);
 	if (m_xiVibrateMax != 100)         ini->Set(section, "XInputVibrateMax", m_xiVibrateMax);
+	*/
+	
+	// Always write out
+	ini->Set(section, "DirectInputEffectsGain", m_diEffectsGain);
+	ini->Set(section, "DirectInputConstForceMax", m_diConstForceMax);
+	ini->Set(section, "DirectInputSelfCenterMax", m_diSelfCenterMax);
+	ini->Set(section, "DirectInputFrictionMax", m_diFrictionMax);
+	ini->Set(section, "DirectInputVibrateMax", m_diVibrateMax);
+	ini->Set(section, "XInputConstForceThreshold", m_xiConstForceThreshold);
+	ini->Set(section, "XInputConstForceMax", m_xiConstForceMax);
+	ini->Set(section, "XInputVibrateMax", m_xiVibrateMax);
 }
 
 bool CDirectInputSystem::Poll()
