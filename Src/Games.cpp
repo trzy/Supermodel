@@ -179,7 +179,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",false,	"mpr-20890.ic24",	0xAAC96FA2,	0x400000,	2,	0xC00000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-20985_D2.rom", 0xB139481D, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-20985.bin", 0xB139481D, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -262,7 +262,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",	false,"mpr-20890.ic24",	0xAAC96FA2,	0x400000,	2,	0xC00000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-20985_D2.rom", 0xB139481D, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-20985.bin", 0xB139481D, 0x10000, 2, 0, 2, false },
 
 			{ NULL,	false,	NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1214,7 +1214,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",	false,	"mpr-19606.60",	0xADAD46B2,	0x200000,	2,	0x600000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-19338A_Scud.rom", 0xC9FAC464, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-19338a.bin", 0xC9FAC464, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1289,7 +1289,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",	false,	"mpr-19606.60",	0xADAD46B2,	0x200000,	2,	0x600000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-19338A_Scud.rom", 0xC9FAC464, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-19338a.bin", 0xC9FAC464, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1364,7 +1364,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",	false,	"mpr-19606.60",	0xADAD46B2,	0x200000,	2,	0x600000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-19338A_Scud.rom", 0xC9FAC464, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-19338a.bin", 0xC9FAC464, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1445,7 +1445,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",	false,	"mpr-19606.60",	0xADAD46B2,	0x200000,	2,	0x600000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-19338A_Scud.rom", 0xC9FAC464, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-19338a.bin", 0xC9FAC464, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1753,7 +1753,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "DSBMPEG",	false,	"mpr-20640.60",	0x9EEA07B7,	0x400000,	2,	0xC00000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-20512_SR2.rom", 0xCF64350D, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-20512.bin", 0xCF64350D, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1823,7 +1823,7 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "Samples",	false,	"mpr-20485.24",	0xCFD8C19B,	0x400000,	2,	0x400000,	2,	false },
 			
 			// Drive Board ROM
-			{ "DriveBd",	true,	"EPR-20512_SR2.rom", 0xCF64350D, 0x10000, 2, 0, 2, false },
+			{ "DriveBd",	true,	"epr-20512.bin", 0xCF64350D, 0x10000, 2, 0, 2, false },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
