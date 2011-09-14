@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
@@ -116,6 +116,7 @@ unsigned int RevR,RevW;
 #define DWORD UINT32
 #endif
 
+static CMutex *MIDILock;	// for safe access to the MIDI FIFOs
 static int (*Run68kCB)(int cycles);
 static void (*Int68kCB)(int irq);
 static void (*RetIntCB)();
@@ -332,14 +333,31 @@ void CheckPendingIRQ()
 			return;
 		}
 	*/
+	
+	/*
+	 * MIDI FIFO critical section
+	 *
+	 * NOTE: I don't think a mutex is really needed here, so I've disabled
+	 * this critical section.
+	 */
+	//if (g_Config.multiThreaded)
+	//	MIDILock->Lock();
+
 	if(MidiW!=MidiR)
 	{
+		//if (g_Config.multiThreaded)
+		//	MIDILock->Unlock();
+		
 		//SCSP.data[0x20/2]|=0x8;	//Hold midi line while there are commands pending
 		Int68kCB(IrqMidi);
 		//printf("68K: MIDI IRQ\n");
 		//ErrorLogMessage("Midi");
 		return;
 	}
+	
+	//if (g_Config.multiThreaded)
+	//	MIDILock->Unlock();
+	
 	if(!pend)
 		return;
 	if(pend&0x40)
@@ -535,7 +553,7 @@ void SCSP_StopSlot(_SLOT *slot,int keyoff)
 
 #define log2(n) (log((float) n)/log((float) 2))
 
-void SCSP_Init(int n)
+bool SCSP_Init(int n)
 {
 	if(n==2)
 	{
@@ -712,10 +730,30 @@ void SCSP_Init(int n)
 #endif
 
 	LFO_Init();
+	buffertmpl = NULL;
+	buffertmpr = NULL;
 	buffertmpl=(signed int*) malloc(44100*sizeof(signed int));
+	if (NULL == buffertmpl)
+		return ErrorLog("Insufficient memory for internal SCSP buffers.");
 	buffertmpr=(signed int*) malloc(44100*sizeof(signed int));
+	if (NULL == buffertmpl)
+	{
+		free(buffertmpl);
+		return ErrorLog("Insufficient memory for internal SCSP buffers.");
+	}
 	memset(buffertmpl,0,44100*sizeof(signed int));
 	memset(buffertmpr,0,44100*sizeof(signed int));
+	
+	// MIDI FIFO mutex
+	MIDILock = CThread::CreateMutex();
+	if (NULL == MIDILock)
+	{
+		free(buffertmpl);
+		free(buffertmpr);
+		return ErrorLog("Unable to create MIDI mutex!");
+	}
+	
+	return OKAY;
 }
 
 void SCSP_SetRAM(int n,unsigned char *r)
@@ -887,6 +925,13 @@ void SCSP_UpdateRegR(int reg)
 			{
 				unsigned short v=SCSP->data[0x5/2];
 				v&=0xff00;
+				
+				/*
+				 * MIDI FIFO critical section!
+				 */
+				if (g_Config.multiThreaded)
+					MIDILock->Lock();
+					
 				v|=MidiStack[MidiR];
 				//printf("read MIDI\n");
 				if(MidiR!=MidiW)
@@ -894,11 +939,13 @@ void SCSP_UpdateRegR(int reg)
 					++MidiR;
 					MidiR&=MIDI_STACK_SIZE_MASK;
 					//Int68kCB(IrqMidi);
-					
 				}
 				
 				MidiInFill--;
 				SCSP->data[0x5/2]=v;
+				
+				if (g_Config.multiThreaded)
+					MIDILock->Unlock();
 			}
 			break;
 		case 8:
@@ -1870,46 +1917,100 @@ void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq))
 
 void SCSP_MidiIn(BYTE val)
 {
+	/*
+	 * MIDI FIFO critical section
+	 */
+	if (g_Config.multiThreaded)
+		MIDILock->Lock();
+		
 	//DebugLog("Midi Buffer push %02X",val);
-
 	MidiStack[MidiW++]=val;
 	MidiW&=MIDI_STACK_SIZE_MASK;
 	MidiInFill++;
 	//Int68kCB(IrqMidi);
 //	SCSP.data[0x20/2]|=0x8;
+
+	if (g_Config.multiThreaded)
+		MIDILock->Unlock();
 }
 
 void SCSP_MidiOutW(BYTE val)
 {
+	/*
+	 * MIDI FIFO critical section
+	 */
+	if (g_Config.multiThreaded)
+		MIDILock->Lock();
+
 	//printf("68K: MIDI out\n");
 	//DebugLog("Midi Out Buffer push %02X",val);
 	MidiStack[MidiOutW++]=val;
 	MidiOutW&=7;
 	++MidiOutFill;
+	
+	if (g_Config.multiThreaded)
+		MIDILock->Unlock();
 }
 
 
 unsigned char SCSP_MidiOutR()
 {
 	unsigned char val;
-	if(MidiOutR==MidiOutW)
+
+	if(MidiOutR==MidiOutW)	// I don't think this needs to be a critical section...
 		return 0xff;
+		
+	/*
+	 * MIDI FIFO critical section
+	 */
+	if (g_Config.multiThreaded)
+		MIDILock->Lock();
 
 	val=MidiStack[MidiOutR++];
 	//DebugLog("Midi Out Buffer pop %02X",val);
 	MidiOutR&=7;
 	--MidiOutFill;
+	
+	if (g_Config.multiThreaded)
+		MIDILock->Unlock();
+		
 	return val;
 }
 
 unsigned char SCSP_MidiOutFill()
 {
-	return MidiOutFill;
+	unsigned char v;
+	
+	/*
+	 * MIDI FIFO critical section
+	 */
+	if (g_Config.multiThreaded)
+		MIDILock->Lock();
+
+	v = MidiOutFill;
+	
+	if (g_Config.multiThreaded)
+		MIDILock->Unlock();
+	
+	return v;
 }
 
 unsigned char SCSP_MidiInFill()
 {
-	return MidiInFill;
+	unsigned char v;
+	
+	/*
+	 * MIDI FIFO critical section
+	 */
+	if (g_Config.multiThreaded)
+		MIDILock->Lock();
+
+	v = MidiInFill;
+	
+	if (g_Config.multiThreaded)
+		MIDILock->Unlock();
+	
+	return v;
 }
 
 void SCSP_RTECheck()
@@ -2218,4 +2319,8 @@ void SCSP_Deinit(void)
 #endif
 	free(buffertmpl);
 	free(buffertmpr);
+	delete MIDILock;
+	buffertmpl = NULL;
+	buffertmpr = NULL;
+	MIDILock = NULL;
 }

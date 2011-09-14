@@ -44,7 +44,22 @@ UINT8 SCSP_MidiOutFill();
 UINT8 SCSP_MidiInFill();
 void SCSP_CpuRunScanline();
 UINT8 SCSP_MidiOutR();
-void SCSP_Init(int n);
+
+/*
+ * SCSP_Init(n):
+ *
+ * Initializes the SCSPs, allocates internal memory, and creates a mutex for 
+ * MIDI FIFO access. Call SCSP_SetCB() and SCSP_SetBuffers() before calling
+ * this.
+ *
+ * Parameters:
+ *		n	Number of SCSPs to create. Always use 2! 
+ *
+ * Returns:
+ *		FAIL if an error occured (prints own error messages), OKAY otherwise.
+ */
+bool SCSP_Init(int n);
+
 void SCSP_SetRAM(int n,UINT8 *r);
 void SCSP_RTECheck();
 int SCSP_IRQCB(int);

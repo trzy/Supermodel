@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -500,7 +500,8 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	// Initialize SCSPs
 	SCSP_SetBuffers(audioL, audioR, 44100/60);
 	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback);
-	SCSP_Init(2);
+	if (OKAY != SCSP_Init(2))
+		return FAIL;
 	SCSP_SetRAM(0, ram1);
 	SCSP_SetRAM(1, ram2);
 	
