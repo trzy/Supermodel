@@ -900,29 +900,39 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		else if (Inputs->uiMusicVolUp->Pressed())
 		{
 			// Increase music volume by 10%
-			int vol = (int) g_Config.GetMusicVolume() + 10;
-			if (vol > 200)
-				vol = 200;
-			g_Config.SetMusicVolume(vol);
-			printf("Music volume: %d%%", vol);
-			if (200 == vol)
-				puts(" (maximum)");
+			if (Model3->GetGameInfo()->mpegBoard)
+			{
+				int vol = (int) g_Config.GetMusicVolume() + 10;
+				if (vol > 200)
+					vol = 200;
+				g_Config.SetMusicVolume(vol);
+				printf("Music volume: %d%%", vol);
+				if (200 == vol)
+					puts(" (maximum)");
+				else
+					printf("\n");
+			}
 			else
-				printf("\n");
+				puts("This game does not have an MPEG music board.");
 		}
 		else if (Inputs->uiMusicVolDown->Pressed())
 		{
 			// Decrease music volume by 10%
-			int vol = (int) g_Config.GetMusicVolume() - 10;
-			if (vol < 0)
-				vol = 0;
-			g_Config.SetMusicVolume(vol);
-			printf("Music volume: %d%%", vol);
-			if (0 == vol)
-				puts(" (muted)");
+			if (Model3->GetGameInfo()->mpegBoard)
+			{
+				int vol = (int) g_Config.GetMusicVolume() - 10;
+				if (vol < 0)
+					vol = 0;
+				g_Config.SetMusicVolume(vol);
+				printf("Music volume: %d%%", vol);
+				if (0 == vol)
+					puts(" (muted)");
+				else
+					printf("\n");
+			}	
 			else
-				printf("\n");
-		}	
+				puts("This game does not have an MPEG music board.");
+		}
 		else if (Inputs->uiSoundVolUp->Pressed())
 		{
 			// Increase sound volume by 10%

@@ -16,8 +16,14 @@ TODO: convert all tabs to spaces
 
 
 ----------------
-  Terms of Use
+  Introduction
 ----------------
+
+Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
+is available for Windows, Linux, and Mac OS X.  In order to use it, you must 
+legally possess ROM images of Model 3 games.  Learning to operate Supermodel
+may come with a steep learning curve for most people.  Carefully reading this
+document in its entirety before seeking out help is strongly advised.
 
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included in LICENSE.txt.  Additional copyright information for
@@ -40,20 +46,33 @@ as a proper user interface, are not yet implemented and game compatibility is
 still low.
 
 
+---------------------
+  Table of Contents
+---------------------
+
+    -- Introduction
+    -- Disclaimer
+    -- Table of Conents
+    1. Revision History
+    2. Installing Supermodel
+    3. Basic Usage
+    4. 
+
+
 --------------------
   Revision History
 --------------------
 
-    Version 0.2a
-    	- New, fully customizable input system.  Supports any combination of 
-    	  keyboards, mice, and analog and digital game pads.  [Nik Henson]
-    	- Texture offsets.  Fixes models in 'Fighting Vipers 2', 'Virtual On',
-    	  cars in the 'Scud Race' and 'Daytona USA 2' selection screens, etc.
-    	- Fixed a 2D palette bug that would cause black pixels to occasionally
-    	  turn transparent.
-    	- Added all remaining ROM sets.  [krom]
-    	- Got some new games to boot: 'Spikeout', 'Ski Champ', 'Sega Bass 
-    	  Fishing', 'Dirt Devils', etc.
+    Version 0.2a (September ?, 2011)
+        - New, fully customizable input system.  Supports any combination of 
+          keyboards, mice, and analog and digital controllers.  [Nik Henson]
+        - Texture offsets.  Fixes models in 'Fighting Vipers 2', 'Virtual On',
+          cars in the 'Scud Race' and 'Daytona USA 2' selection screens, etc.
+        - Fixed a 2D palette bug that would cause black pixels to occasionally
+          turn transparent.
+        - Added all remaining ROM sets.  [krom]
+        - Got some new games to boot: 'Spikeout', 'Ski Champ', 'Sega Bass 
+          Fishing', 'Dirt Devils', etc.
         - Sound support.  Special thanks to ElSemi for contributing his SCSP
           emulator and Karl Stenerud for allowing us to use his 68K emulator.
         - Multi-threading support.  Sound and drive board emulation are off-
@@ -66,24 +85,24 @@ still low.
         - Improved ROM loading.  It should no longer be as easily confused by
           combined ROM sets as long as unused files are removed.
         - Configuration file now supports more settings and allows game-
-		  specific customization.
-		- Added light gun crosshairs ('Lost World'), enabled by default in full
-		  screen mode and selectable by pressing Alt-I.
-    	- Drive board and force feedback emulation for 'Scud Race', 'Daytona
-    	  USA 2', and 'Sega Rally 2'.  [Nik Henson]
+          specific customization.
+        - Added light gun crosshairs ('Lost World'), enabled by default in full
+          screen mode and selectable by pressing Alt-I.
+        - Drive board and force feedback emulation for 'Scud Race', 'Daytona
+          USA 2', and 'Sega Rally 2'.  [Nik Henson]
         - Viewable display area properly clipped.  Ghost artifacts no longer
           appear in border regions when the resolution exceeds the display 
           area.
-    	- Changed gear shifting: added a dedicated neutral gear and sequential
-    	  shifting.
-    	- Console-based debugger (not enabled by default, must be
-    	  enabled during compile-time).  [Nik Henson]
-    	- Source code and Makefile cleanup.
+        - Changed gear shifting: added a dedicated neutral gear and sequential
+          shifting.
+        - Console-based debugger (not enabled by default, must be
+          enabled during compile-time).  [Nik Henson]
+        - Source code and Makefile cleanup.
 
-    Version 0.1.2a
+    Version 0.1.2a (April 3, 2011)
         - Included missing GLEW files.
 
-    Version 0.1.1a
+    Version 0.1.1a (April 2, 2011)
         - Minor source code update.
         - Set Render3D to NULL in the CReal3D constructor.  Fixes crashes that
           occur on some builds. [Nik Henson]
@@ -92,7 +111,7 @@ still low.
         - Included glew.h into the source tree.  [R. Belmont]
         - Changed WIN32 definition to SUPERMODEL_WIN32.
         
-    Version 0.1a
+    Version 0.1a (April 1, 2011)
         - Initial public alpha release.
         
         
@@ -110,15 +129,17 @@ directories should be created:
     SDL.dll                 The SDL library. Use the bundled DLL file.
     README.txt              This text file.
     LICENSE.txt             Supermodel license and terms of use.
-    Config/                 Directory where configuration files will be stored.
+    Config/                 Directory where the configuration file is stored.
+    Config/Supermodel.ini   Configuration file containing default input 
+                            settings.
     NVRAM/                  Directory where NVRAM contents will be saved.
     Saves/                  Directory where save states will be saved.
     
-Supermodel requires OpenGL 2.0 and a substantial amount of both video and
-system memory.  The 'error.log' file, which is produced during each session,
-records the amount of video memory allocated for vertex buffers.  If either the
-static or dynamic vertex buffer are substantially less than 16 MB or 4 MB,
-respectively, Supermodel may run abnormally slowly and drop some geometry.
+Supermodel requires OpenGL 2.1 and a substantial amount of both video and
+system memory.
+
+As of this version, Linux and Mac OS X binaries are not provided.  Users must
+compile their own.
 
 
 -----------------------------
@@ -147,31 +168,59 @@ locate SDL if it was installed properly.
 Finally, run 'make'.  If all goes well it should produce a Supermodel binary.
 
 
----------------
-  Basic Usage
----------------
+----------------------
+  Running Supermodel
+----------------------
 
 For now, Supermodel does not include a proper user interface.  It is operated
-entirely from the command line.  Run 'Supermodel' without any command line 
+entirely from the command line.  Run 'supermodel' without any command line 
 arguments for an explanation of supported options.
 
 Supermodel uses MAME-compatible ROM sets.  It loads from ZIP archives based on
 file checksums and automatically detects games; therefore, file names are not
-important.  ROMs that are split into parent and child sets (eg., 'Scud Race
-Plus', whose parent ROM set is 'Scud Race') must be combined into a single ZIP 
-file with the child ROM set appearing first to ensure Supermodel detects the 
-correct game to load.  The best way to do this is to add the contents of the
-parent ROM set into the child ROM set ZIP file.  If for some reason Supermodel
-detects the wrong game, you should try to combine them the opposite way.
+important.  A maximum of one ZIP file can be specified on the command line. For
+example:
 
-To improve performance, Supermodel underclocks the PowerPC down to 25 MHz by
-default.  This may be the cause of some games running too slowly even when the
-frame rate is at 60 FPS (which is the native rate).  You may want to experiment
-with increasing the clock frequency, although this comes with a performance 
-penalty.
+    supermodel scud.zip -fullscreen
+
+This will load 'scud.zip' (Scud Race) and run it in full screen mode.
+
+Initially, inputs are assigned according to the settings in 'Supermodel.ini',
+located in the 'Config' subdirectory.
 
 Note that there is no user interface and all messages are printed to the 
-terminal.  In full screen mode, they will not be visible.
+command prompt.  In full screen mode, they will not be visible. 
+
+
+--------------------------
+  Merging Split ROM Sets
+--------------------------
+
+ROMs that are split into parent and child sets (eg., 'Scud Race Plus', whose
+parent ROM set is 'Scud Race') must be combined into a single ZIP file.  ROM
+files from the parent set that have the same IC numbers (usually the file 
+extension but sometimes the number in the file name itself) as child ROMs
+should be deleted, otherwise Supermodel may choose to load the parent game. 
+
+For example, 'Scud Race Plus' is normally distributed containing only the
+following files:
+
+    epr-20092a.17
+    epr-20093a.18
+    epr-20094a.19
+    epr-20095a.20
+    epr-20096a.21
+    mpr-20097.13
+    mpr-20098.14
+    mpr-20099.15
+    mpr-20100.16
+    mpr-20101.24
+    
+To merge with the parent ROM set, copy over all files from 'Scud Race' except
+those with extension numbers 17-21, 13-16, and 24.  Some 'Scud Race Plus' ROM
+sets may have 'mpr-20101.23' instead of 'mpr-20101.24'.  They are the same file
+and in both cases should replace the file with extension 24 from 'Scud Race'
+('mpr-19671.24').
 
 
 -------------------
@@ -214,10 +263,60 @@ cannot be overriden.  Changing video modes at run-time is not yet supported.
 
 By default, Supermodel limits the frame rate to 60 Hz.  This has no impact on
 performance except when the frame rate exceeds 60 FPS on fast systems.  This
-can be disabled with the '-no-throttle' option.
+can be disabled with the '-no-throttle' option.  Some video drivers may
+continue to lock to the refresh rate.
 
-The mouse cursor is disabled by default in full screen modes but can be toggled
-with the Alt-I command.
+To change the resolution, use the '-res' command line option.  For full screen
+mode, use '-fullscreen'.  For example, to set a full screen 1920x1080 mode,
+try:
+
+	supermodel game.zip -res=1920,1080 -fullscreen
+
+Video settings may also be specified globally or on a per-game basis in the
+configuration file, described elsewhere in this document.
+
+
+------------------
+  Audio Settings
+------------------
+
+All Model 3 games have a sound board that is used for sound effects and, in
+some games, background music.  A few games use additional Digital Sound Boards
+(DSB) for MPEG music.  'Music' in Supermodel refers exclusively to MPEG music
+produced by the DSB and 'sound' refers to both the sound effects and background
+music produced by the regular sound board.
+
+Model 3 sound and MPEG music are generated separately and then mixed by an 
+amplifier.  The relative signal levels are not known, so Supermodel simply
+outputs all audio at full volume.  This causes the MPEG music to be too quiet
+in some games ('Scud Race', 'Daytona USA 2') and too loud in others ('Star Wars
+Trilogy').  The '-sound-volume' and '-music-volume' options can be used to 
+change the volume.  As arguments, they take a volume level in percent ranging
+from 0 (muted) to 200% (maximum, doubled amplitude).  For example:
+
+	supermodel game.zip -sound-volume=50 -music-volume=170
+	
+This command line cuts the sound volume in half and increases the music volume
+by 70%.
+
+The F9 and F10 keys can be used to adjust music volume during run-time, while
+F11 and F12 control sound volume.
+
+Clipping and distortion will occur if the combined sound and music volume
+levels become too high.
+
+To disable sound and music board emulation altogether, use the '-no-sound' and
+'-no-dsb' options.  These will not merely mute the corresponding audio channels
+but will prevent the CPUs and audio chips from being emulated altogether.  Save
+states generate with these disabled may not be able to restore audio properly.
+
+Audio settings may also be specified globally or on a per-game basis in the
+configuration file, described elsewhere in this document.
+
+Please keep in mind that MPEG music emulation is preliminary and the decoder is
+buggy.  Periodic squeaks and pops occur on many music tracks.  The Sega Custom
+Sound Processor (SCSP) emulator, used for sound emulation, is an older version
+of ElSemi's code and still quite buggy.
 
 
 ------------
@@ -230,80 +329,209 @@ are listed below and cannot be changed.
     Function                                Key Assignment
     --------                                --------------
     Exit                                    Escape
+    Pause                                   Alt-P
     Reset                                   Alt-R
     Clear NVRAM                             Alt-N
-    Toggle Mouse Cursor (Full Screen Mode)  Alt-I
+    Crosshairs (for light gun games)        Alt-I
     Toggle 60 Hz Frame Limiting             Alt-T
     Save State                              F5
     Load State                              F7
     Change Save Slot                        F6
+    Decrease Music Volume                   F9
+    Increase Music Volume                   F10
+    Decrease Sound Volume                   F11
+    Increase Sound Volume                   F12
 
-Game controls can be configured using the '-config-inputs' command line option.
-This starts a configuration utility and requires each button for all supported
-games to be defined.  Pressing Escape retains the current setting.  The blank
-window that opens up must be selected when pressing keys.  To choose a mouse
-button, click the black area of the window.  New configurations are saved to
-Config/Supermodel.ini.  The Config/ directory should have been automatically
-created when Supermodel was extracted from its ZIP file.
 
-Default settings are given below.
+Learning and Configuring Game Controls
+--------------------------------------
 
-    Game/Input Type                    Input                Default Assignment
-    ---------------                    -----                ------------------
-    All                                Start 1              1
-    All                                Start 2              2
-    All                                Coin 1               3
-    All                                Coin 2               4
-    All                                Service A            5
-    All                                Test A               6
-    All                                Service B            7
-    All                                Test B               8
-    Digital joystick                   Up                   Up arrow
-    Digital joystick                   Down                 Down arrow
-    Digital joystick                   Left                 Left arrow
-    Digital joystick                   Right                Right arrow
-    Fighting games                     Punch                A
-    Fighting games                     Kick                 S
-    Fighting games                     Guard                D
-    Fighting games                     Escape               F
-    Racing games                       Steering             Left/Right arrows
-    Racing games                       Accelerate           Up arrow
-    Racing games                       Brake                Down arrow
-    Racing games                       Shift 1/Up           Q
-    Racing games                       Shift 2/Down         W
-    Racing games                       Shift 3              E
-    Racing games                       Shift 4              R
-    Racing games                       VR1 (Red)            A
-    Racing games                       VR1 (Blue)           S
-    Racing games                       VR1 (Yellow)         D
-    Racing games                       VR1 (Green)          F
-    Sega Rally 2                       View Change          A
-    Sega Rally 2                       Hand Brake           S
-    Virtua Striker 2                   Short Pass           A
-    Virtua Striker 2                   Long Pass            S
-    Virtua Striker 2                   Shoot                D
-    Virtual On Oratorio Tangram        Turn Left            Q        
-    Virtual On Oratorio Tangram        Turn Right           W
-    Virtual On Oratorio Tangram        Forward              Up arrow
-    Virtual On Oratorio Tangram        Reverse              Down arrow
-    Virtual On Oratorio Tangram        Strafe Left          Left arrow
-    Virtual On Oratorio Tangram        Strafe Right         Right arrow
-    Virtual On Oratorio Tangram        Jump                 E
-    Virtual On Oratorio Tangram        Crouch               R
-    Virtual On Oratorio Tangram        Left Shot Trigger    A
-    Virtual On Oratorio Tangram        Right Shot Trigger   S
-    Virtual On Oratorio Tangram        Left Turbo           Z
-    Virtual On Oratorio Tangram        Right Turbo          X
-    Analog joystick                    Motion               Mouse
-    Analog joystick                    Trigger Button       A
-    Analog joystick                    Event Button         S
-    Lightgun                           Aim                  Mouse
-    Lightgun                           Trigger              Left mouse button
-    Lightgun                           Point Off-screen     Right mouse button
+Settings for game controls are stored in 'Supermodel.ini'.  To learn the
+current configuration, use the '-print-inputs' command line option.  If you
+delete 'Supermodel.ini', all inputs will become unmapped and will have to be
+reconfigured!
 
-The lightgun will point off-screen as long as the 'point off-screen' button is
-held down.  To shoot off-screen, hold this button and then simultaneously press
+    supermodel -print-inputs
+    
+If you wish to reconfigure, use the '-config-inputs' option.  A blank window
+will open up and instructions will be printed to the command prompt.  Read them
+carefully!  Pressing the Escape key exits without saving changes.  Pressing 'q'
+will save changes to 'Supermodel.ini'.  You can choose which input to configure
+using the Up and Down arrow keys.  Clearing an input means it will be unusable.
+
+If the configuration dialog is not responding to your key presses, make sure
+that the blank window rather than the command prompt is selected.  This may 
+seem counter-intuitive but inputs are captured by the graphical window while
+messages are printed to the command prompt.
+
+
+XBox 360 Controllers
+--------------------
+
+For full XBox 360 controller support, the XInput system must be used
+('-input-system=xinput').  Otherwise, the left and right trigger buttons cannot
+be mapped individually and force feedback will not work.  Please read the
+section titled 'Input Systems', further below.
+
+
+Analog Controls
+---------------
+
+Analog controls, such as steering wheels, pedals, and the light gun axes, can
+be mapped to analog controllers, such as joysticks, wheels, and mice, if
+available.  Under digital control, the analog value will increment or decrement
+until it reaches its maximum/minimum values.  The rate of change can only be
+set manually in the configuration file.  These options are described elsewhere
+in this document.
+
+Most analog inputs, such as the steering wheel, require two settings to be 
+controlled digitally.  For example, the steering wheel can be turned left and
+right by setting 'Steer Left' and 'Steer Right', or it can be mapped to a
+single analog control ('Full Steering').
+
+
+Shifting Gears
+--------------
+
+Racing game gears can be mapped to individual buttons, including one for the
+neutral position, or can be shifted sequentially.  Games which only provide two
+gears name them 'Up' and 'Down'.  These should not be confused with 'Shift Up'
+and 'Shift Down', the sequential shift commands.
+
+
+Virtual On Twin Joysticks
+-------------------------
+
+'Virtual On Oratorio Tangram' features a twin joystick control scheme similar
+to a tracked vehicle (e.g. a tank).  Movement is accomplished by pushing both
+joysticks in the same direction.  Pushing and pulling in opposite directions
+will turn the robot, while pulling the joysticks apart sideways or pushing them
+inwards is for jumping and falling back down to the ground, respectively.
+
+Supermodel supports mapping the individual joysticks but also provides 'macro'
+controls by default.  These allow all the necessary twin joystick commands to
+be replicated with individual controls.  The mapping is below:
+
+    Macro Control       Twin Joystick Equivalent
+    -------------       ------------------------
+    Turn Left           Left joystick down, right joystick up.
+    Turn Right          Left joystick up, right joystick down.
+    Forward             Both joysticks up.
+    Reverse             Both joysticks down.
+    Strafe Left         Both joysticks left.
+    Strafe Right        Both joysticks right.
+    Jump                Left joystick left, right joystick right.
+    Crouch              Left joystick right, right joystick left.
+
+
+Light Guns
+----------
+
+Light gun axes can be mapped to mice, analog controls, or even digital buttons.
+To simulate pointing off-screen (required in order to reload), a 'point off-
+screen' input is provided which, for as long as it is pressed, will aim the gun
+off-screen.  To reload, hold down this button and then, while holding it, press
 the trigger.
+
+Crosshairs for both players will be visible in full screen mode and can also be
+enabled in windowed modes.  Use Alt-I to select the crosshair mode.
+
+For multiple mouse support, allowing two mice or PC light guns to be used, Raw
+Input must be used.  This is supported only on Windows and is described below.
+
+
+Input Systems
+-------------
+
+Supermodel supports multiple input APIs to provide the best possible
+compatibility for different input devices and configuration schemes.  On
+Windows, the default is DirectInput.  On all other platforms, SDL is the only
+option available.
+
+Windows users can select between four different input systems:
+
+	- DirectInput.  Selected with '-input-system=dinput'.  This is the default.
+	  It provides the best support for PC game controllers and, when emulating
+	  force feedback, allows all effects (if the controller supports them).
+	- XInput.  Selected with '-input-system=xinput'.  This must be used with
+	  XBox 360 controllers, otherwise some buttons will not be usable and force
+	  feedback will not work.
+	- Raw Input.  Selected with '-input-system=rawinput'.  This is intended for
+	  use with multiple mice and keyboards but is not recommended otherwise.
+	- SDL.  Selected with '-input-system=sdl'.  The standard, cross-platform
+	  input system intended for non-Windows builds.  It is accessible on
+	  Windows but does not provide full support for all devices.
+
+When switching input systems with '-input-system', you must also configure your
+inputs using the same option.  For example, when running Supermodel with
+XInput ('supermodel game.zip -input-system=xinput'), you must configure with
+XInput ('supermodel -config-inputs -input-system=xinput').  Many settings are
+not compatible between input systems.
+
+A common mistake is to configure inputs using one system and then launch
+Supermodel with another.
+
+
+------------------
+  Force Feedback
+------------------
+
+Force feedback is presently supported in 'Scud Race' (including 'Scud Race 
+Plus'), 'Daytona USA 2' (both editions), and 'Sega Rally 2' on Windows only. To
+enable it, use the '-force-feedback' option.
+
+Drive board ROMs are required.
+
+	Game			Drive Board ROM File	Size		Checksum (CRC32)
+	----     		--------------------	----		----------------
+	Daytona USA 2	epr-20985.bin   		64 KB		B139481D
+	Scud Race		epr-19338a.bin     		64 KB		C9FAC464
+	Sega Rally 2	epr-20512.bin    		64 KB		CF64350D
+
+The sizes and checksums must match those listed above.  The file names may be
+different but will almost certainly contain the same identifying numbers.
+Ensure that the appropriate drive board ROM files are present in the 
+corresponding games' ZIP archive, otherwise Supermodel will silently proceed
+without force feedback.
+
+Force feedback will only work with the DirectInput (the default on Windows) and
+XInput input systems.  XInput is intended only for XBox 360 controllers, which
+do not support force feedback through DirectInput.
+
+
+Tuning Force Feedback
+---------------------
+
+Force feedback can be enabled and tuned in the configuration file.  Setting
+'ForceFeedback' to 1 enables it:
+
+	ForceFeedback = 1
+	
+There are three DirectInput effects: constant force, self centering, and
+vibration.  The strength of each can be tuned with the following settings:
+
+	DirectInputConstForceMax = 100
+	DirectInputSelfCenterMax = 100
+	DirectInputVibrateMax = 100
+	
+They are given as percentages and represent the maximum strength for each
+effect.  Setting them to 0 disables them entirely.  Values above 100% are
+accepted but may clip or distort the effect (and possibly damage your
+hardware).  By default, they are set to 100%, as shown above.
+
+XInput devices only support vibration feedback via the left and right motors.
+Because the characteristics of the motors are different, the effects will feel
+somewhat asymmetric.  The constant force effect is simulated with vibrations.
+The relevant settings are:
+
+	XInputConstForceThreshold = 65
+ 	XInputConstForceMax = 100
+  	XInputVibrateMax = 100
+
+The constant force threshold specifies how strong a constant force command must
+be before it is sent to the controller as a vibration effect (whose strength is
+determined by XInputConstForceMax).  The default values are shown above and 
+will require calibration by the user on a game-by-game basis.
 
 
 -------------------------
@@ -312,11 +540,11 @@ the trigger.
 
 Save states are saved and restored by pressing F5 and F7, respectively.  Up to
 10 different save slots can be selected with F6.  All files are written to the
-Saves/ directory, which must exist.  If you extracted the Supermodel ZIP file
-correctly, they will have automatically been created.
+Saves/ directory, which must exist beforehand.  If you extracted the Supermodel
+ZIP file correctly, it will have been created automatically.
 
 Non-volatile memory (NVRAM) consists of battery-backed backup RAM and an EEPROM
-chip.  The former is used for things like high score data whereas the latter 
+chip.  The former is used for high score data and statistics whereas the latter
 stores machine settings (often accessed using the Test buttons).  NVRAM is 
 automatically saved each time Supermodel exits and is loaded at start-up.  It
 can be cleared by deleting the NVRAM files or using Alt-N.
@@ -325,14 +553,6 @@ can be cleared by deleting the NVRAM files or using Alt-N.
 -----------------------------------
   Game-Specific Comments and Tips
 -----------------------------------
-
-The following games are not playable due to unimplemented controls, severe
-graphical problems, or other issues:
-
-    - L.A. Machineguns
-    - The Ocean Hunter
-    - Harley Davidson & L.A. Riders
-    - Emergency Call Ambulance
     
 Daytona USA 2 and Daytona USA 2 Power Edition
 ---------------------------------------------
@@ -371,6 +591,18 @@ The game is playable but there are numerous graphical glitches, particularly
 during transition scenes.
 
 
+--------------------------
+  The Configuration File
+--------------------------
+
+---------------------------------
+  Index of Command Line Options
+---------------------------------
+
+----------------------------------------
+  Index of Configuration File Settings
+----------------------------------------
+
 -----------------------
   Contact Information
 -----------------------
@@ -379,7 +611,7 @@ The official Supermodel web site is:
 
     http://www.Supermodel3.com
     
-Questions? Comments? Contributions? Your feedback is welcome! I only ask that
+Questions? Comments? Contributions? Your feedback is welcome! We only ask that
 you refrain from making feature requests or asking about ROMs. The primary
 author, Bart Trzynadlowski, can be reached at:
 
@@ -392,20 +624,21 @@ author, Bart Trzynadlowski, can be reached at:
 
 Numerous people contributed their precious time and energy to this project.
 Without them, Supermodel would not have been possible.  In no particular order,
-I would like to thank:
+we would like to thank:
 
     - Ville Linde, original Supermodel team member and MAMEDev extraordinaire
     - Stefano Teso, original Supermodel team member
     - ElSemi, for all sorts of technical information and insight
     - Naibo Zhang, for his work on Model 3 graphics
     - R. Belmont, for all sorts of help
+    - Andrew Lewis (a.k.a. Andy Geezer), for dumping the drive board ROMs and
+      providing region codes
     - The Guru, for his efforts in dumping Model 3 ROM sets
-    - Andrew Lewis, for his arcade know-how and helpfulness
     - Abelardo Vidal Martos, for providing extremely useful video recordings of
       actual Model 3 games
     - Andrew Gardner, for fruitful discussion
     - Chad Reker, for being an especially thorough play-tester
-    - And, of course, my sister Nicole, for help with web site images
+    - And of course, my sister Nicole, for help with web site images
 
 Supermodel includes code from the following projects:
 

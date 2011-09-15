@@ -2849,10 +2849,19 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	// Print game information
 	printf("    Title:          %s\n", Game->title);
 	printf("    ROM Set:        %s\n", Game->id);
-	printf("    Manufacturer:   %s\n", Game->mfgName);
+	printf("    Developer:      %s\n", Game->mfgName);
 	printf("    Year:           %d\n", Game->year);
 	printf("    Step:           %d.%d\n", (Game->step>>4)&0xF, Game->step&0xF);
-	printf("\n");
+	if (Game->mpegBoard)
+	{
+		printf("    Extra Hardware: Digital Sound Board (Type %d)", Game->mpegBoard);
+		if (Game->driveBoard)
+			printf(", Drive Board");
+		printf("\n");
+	}
+	else if (Game->driveBoard)
+		printf("    Extra Hardware: Drive Board\n");
+		
 	return OKAY;
 }
 
