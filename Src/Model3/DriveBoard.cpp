@@ -646,15 +646,12 @@ void CDriveBoard::ProcessEncoderCmd(void)
 						// Disable uncentering
 						SendVibrate(0);
 					}
-					else if (seqNum == 3)
+					else if (seqNum == 3 && m_uncenterVal1 > 0)
 					{
-						if (m_uncenterVal1 > 0)
-						{
-							// Uncentering - unsure exactly how values sent map to strength or whether they specify some other attributes of effect
-							// For now just attempting to map them to a sensible value in range 0x00-0xFF
-							UINT8 strength = ((m_uncenterVal1>>1) - 7) * 0x50 + ((m_uncenterVal2>>1) - 5) * 0x10 + 0xF;
-							SendVibrate(strength);
-						}
+						// Uncentering - unsure exactly how values sent map to strength or whether they specify some other attributes of effect
+						// For now just attempting to map them to a sensible value in range 0x00-0xFF
+						UINT8 strength = ((m_uncenterVal1>>1) - 7) * 0x50 + ((m_uncenterVal2>>1) - 5) * 0x10 + 0xF;
+						SendVibrate(strength);
 					}
 				}
 				break;

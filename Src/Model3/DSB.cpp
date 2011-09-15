@@ -590,6 +590,11 @@ bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 	return OKAY;
 }
 
+CZ80 *CDSB1::GetZ80(void)
+{
+	return &Z80;
+}
+
 CDSB1::CDSB1(void)
 {
 	progROM = NULL;
@@ -1159,6 +1164,11 @@ bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 	retainedSamples = 0;
 		
 	return OKAY;
+}
+
+M68KCtx *CDSB2::GetM68K(void)
+{
+	return &M68K;
 }
 
 CDSB2::CDSB2(void)

@@ -241,6 +241,9 @@ public:
 	void	LoadState(CBlockFile *StateFile);
 	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 	
+	// Returns a reference to the Z80 CPU
+	CZ80 *GetZ80(void);
+
 	// Constructor and destructor
 	CDSB1(void);
 	~CDSB1(void);
@@ -312,6 +315,9 @@ public:
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
 	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+
+	// Returns a reference to the 68K CPU context
+	M68KCtx *GetM68K(void);
 
 	// Constructor and destructor
 	CDSB2(void);

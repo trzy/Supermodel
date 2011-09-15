@@ -149,6 +149,26 @@ public:
 	void AttachDSB(CDSB *DSBPtr);
 	
 	/*
+	 * GetMS68K(void):
+	 *
+	 * Returns a reference to the 68K CPU of the sound board.
+	 *
+	 * Returns:
+	 *		A pointer to the M68K context.
+	 */
+	M68KCtx *GetM68K(void);
+
+	/*
+	 * GetDSB(void):
+	 * 
+	 * Returns a reference the Digital Sound Board (if attached).
+	 *
+	 * Returns:
+	 *		A pointer to the DSB object or NULL if not attached.
+	 */
+	CDSB *GetDSB(void);
+
+	/*
 	 * Init(soundROMPtr, sampleROMPtr):
 	 *
 	 * One-time initialization. Must be called prior to all other members.

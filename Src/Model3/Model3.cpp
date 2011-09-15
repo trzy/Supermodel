@@ -2197,7 +2197,7 @@ void CModel3::RunSoundBoardThread(void)
 				goto ThreadError;
 		}
 
-		// Keep processing frames until audio buffer is half full
+		// Keep processing frames until audio buffer is full
 		bool repeat = true;
 		// NOTE - performs an unlocked read of pausedThreads here, but this is okay
 		while (!pausedThreads && !SoundBoard.RunFrame())
@@ -2926,6 +2926,16 @@ bool CModel3::Init(void)
 	DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 	
 	return OKAY;
+}
+
+CSoundBoard *CModel3::GetSoundBoard(void)
+{
+	return &SoundBoard;
+}
+ 
+CDriveBoard *CModel3::GetDriveBoard(void)
+{
+	return &DriveBoard;
 }
 
 CModel3::CModel3(void)

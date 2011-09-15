@@ -515,6 +515,16 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	return OKAY;
 }
 
+M68KCtx *CSoundBoard::GetM68K(void)
+{
+	return &M68K;
+}
+
+CDSB *CSoundBoard::GetDSB(void)
+{
+	return DSB;
+}
+
 CSoundBoard::CSoundBoard(void)
 {
 	DSB = NULL;

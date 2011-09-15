@@ -170,8 +170,9 @@ public:
 	 *
 	 * Loads and resumes execution from a state image. Modifies data that may
 	 * be used by multiple threads -- use with caution and ensure threads are
-	 * not accessing data that will be touched. Must never be called while
-	 * emulator is running (inside RunFrame()).
+	 * not accessing data that will be touched, this can be done by calling
+	 * PauseThreads beforehand. Must never be called while emulator is running
+	 * (inside RunFrame()).
 	 *
 	 * Parameters:
 	 *		SaveState	Block file to load state information from.
@@ -280,6 +281,41 @@ public:
 	bool Init(void);
 	
 	/*
+	 * GetSoundBoard(void):
+	 * 
+	 * Returns a reference to the sound board.
+	 *
+	 * Returns:
+	 *		Pointer to CSoundBoard object.
+	 */
+	CSoundBoard *GetSoundBoard(void);
+
+	/*
+	 * GetDriveBoard(void):
+	 *
+	 * Returns a reference to the drive board.
+
+	 * Returns:
+	 *		Pointer to CDriveBoard object.
+	 */
+	CDriveBoard *GetDriveBoard(void);
+
+	/*
+	 * PauseThreads(void):
+	 *
+	 * Flags that any running threads should pause and waits for them to do so.
+	 * Should be used before invoking any method that accesses the internal state, eg LoadState or SaveState.
+	 */
+	bool PauseThreads(void);
+
+	/*
+	 * ResumeThreads(void):
+	 *
+	 * Flags that any paused threads should resume running.
+	 */
+	void ResumeThreads(void);
+
+	/*
 	 * CModel3(void):
 	 * ~CModel3(void):
 	 *
@@ -290,9 +326,6 @@ public:
 	 */
 	CModel3(void);
 	~CModel3(void);
-
-	bool PauseThreads(void);
-	void ResumeThreads(void);
 
 	/*
 	 * Private Property.
