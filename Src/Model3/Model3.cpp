@@ -2329,7 +2329,7 @@ void CModel3::RunMainBoardFrame(void)
 {
 	// Compute display and VBlank timings
 	unsigned	frameCycles = g_Config.GetPowerPCFrequency()*1000000/60;
-	unsigned	vblCycles = (unsigned) ((float) frameCycles * 20.0f/100.0f);	// 20% vblank (just a guess; probably too long)
+	unsigned	vblCycles = (unsigned) ((float) frameCycles * 2.5f/100.0f);	// 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
 	unsigned	dispCycles = frameCycles - vblCycles;
 	
 	// Run the PowerPC for the active display part of the frame

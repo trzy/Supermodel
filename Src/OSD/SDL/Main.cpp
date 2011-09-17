@@ -1,4 +1,5 @@
 //TODO before release:
+// x VBL to 2.5%
 // x Change EmulateSCSP -> EmulateSound
 // x Map neutral gear to individual button
 // x Re-do cursors, make them larger
@@ -354,9 +355,9 @@ static bool ConfigureInputs(CInputs *Inputs, bool configure)
 			Inputs->WriteToINIFile(&INI, "Global");
 		
 			if (OKAY != INI.Write(CONFIG_FILE_COMMENT))
-				ErrorLog("Unable to save configuration to %s.", CONFIG_FILE_PATH);
+				ErrorLog("Unable to save configuration to '%s'.", CONFIG_FILE_PATH);
 			else
-				printf("Configuration successfully saved to %s.\n", CONFIG_FILE_PATH);
+				printf("Configuration successfully saved to '%s'.\n", CONFIG_FILE_PATH);
 		}
 		else
 			puts("Configuration aborted...");
@@ -490,7 +491,7 @@ static void SaveState(CModel3 *Model3)
 	sprintf(filePath, "Saves/%s.st%d", Model3->GetGameInfo()->id, saveSlot);
 	if (OKAY != SaveState.Create(filePath, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
 	{
-		ErrorLog("Unable to save state to %s.", filePath);
+		ErrorLog("Unable to save state to '%s'.", filePath);
 		return;
 	}
 	
@@ -501,8 +502,8 @@ static void SaveState(CModel3 *Model3)
 	// Save state
 	Model3->SaveState(&SaveState);
 	SaveState.Close();
-	printf("Saved state to %s.\n", filePath);
-	DebugLog("Saved state to %s.\n", filePath);
+	printf("Saved state to '%s'.\n", filePath);
+	DebugLog("Saved state to '%s'.\n", filePath);
 }
 
 static void LoadState(CModel3 *Model3)
@@ -517,28 +518,28 @@ static void LoadState(CModel3 *Model3)
 	// Open and check to make sure format is correct
 	if (OKAY != SaveState.Load(filePath))
 	{
-		ErrorLog("Unable to load state from %s.", filePath);
+		ErrorLog("Unable to load state from '%s'.", filePath);
 		return;
 	}
 	
 	if (OKAY != SaveState.FindBlock("Supermodel Save State"))
 	{
-		ErrorLog("%s does not appear to be a valid save state file.", filePath);
+		ErrorLog("'%s' does not appear to be a valid save state file.", filePath);
 		return;
 	}
 	
 	SaveState.Read(&fileVersion, sizeof(fileVersion));
 	if (fileVersion != STATE_FILE_VERSION)
 	{
-		ErrorLog("%s is incompatible with this version of Supermodel.", filePath);
+		ErrorLog("'%s' is incompatible with this version of Supermodel.", filePath);
 		return;
 	}
 	
 	// Load
 	Model3->LoadState(&SaveState);
 	SaveState.Close();
-	printf("Loaded state from %s.\n", filePath);
-	DebugLog("Loaded state from %s.\n", filePath);
+	printf("Loaded state from '%s'.\n", filePath);
+	DebugLog("Loaded state from '%s'.\n", filePath);
 }
 
 static void SaveNVRAM(CModel3 *Model3)
@@ -550,7 +551,7 @@ static void SaveNVRAM(CModel3 *Model3)
 	sprintf(filePath, "NVRAM/%s.nv", Model3->GetGameInfo()->id);
 	if (OKAY != NVRAM.Create(filePath, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
 	{
-		ErrorLog("Unable to save NVRAM to %s. Make sure directory exists!", filePath);
+		ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", filePath);
 		return;
 	}
 	
@@ -561,7 +562,7 @@ static void SaveNVRAM(CModel3 *Model3)
 	// Save NVRAM
 	Model3->SaveNVRAM(&NVRAM);
 	NVRAM.Close();
-	DebugLog("Saved NVRAM to %s.\n", filePath);
+	DebugLog("Saved NVRAM to '%s'.\n", filePath);
 }
 
 static void LoadNVRAM(CModel3 *Model3)
@@ -576,27 +577,27 @@ static void LoadNVRAM(CModel3 *Model3)
 	// Open and check to make sure format is correct
 	if (OKAY != NVRAM.Load(filePath))
 	{
-		//ErrorLog("Unable to restore NVRAM from %s.", filePath);
+		//ErrorLog("Unable to restore NVRAM from '%s'.", filePath);
 		return;
 	}
 	
 	if (OKAY != NVRAM.FindBlock("Supermodel NVRAM State"))
 	{
-		ErrorLog("%s does not appear to be a valid NVRAM file.", filePath);
+		ErrorLog("'%s' does not appear to be a valid NVRAM file.", filePath);
 		return;
 	}
 	
 	NVRAM.Read(&fileVersion, sizeof(fileVersion));
 	if (fileVersion != NVRAM_FILE_VERSION)
 	{
-		ErrorLog("%s is incompatible with this version of Supermodel.", filePath);
+		ErrorLog("'%s' is incompatible with this version of Supermodel.", filePath);
 		return;
 	}
 	
 	// Load
 	Model3->LoadNVRAM(&NVRAM);
 	NVRAM.Close();
-	DebugLog("Loaded NVRAM from %s.\n", filePath);
+	DebugLog("Loaded NVRAM from '%s'.\n", filePath);
 }
 
 
@@ -1179,10 +1180,6 @@ static void Help(void)
 	puts("Core Options:");
 	printf("    -ppc-frequency=<f>     PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
 	puts("    -no-threads            Disable multi-threading");
-#ifdef SUPERMODEL_DEBUGGER
-	puts("    -disable-debugger	     Completely disable debugger functionality");
-	puts("    -enter-debugger        Enter debugger at start of emulation");
-#endif // SUPERMODEL_DEBUGGER
 	puts("");
 	puts("Video Options:");
 	puts("    -res=<x>,<y>           Resolution");
@@ -1191,6 +1188,7 @@ static void Help(void)
 	puts("    -show-fps              Display frame rate in window title bar");
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
+	puts("    -print-gl-info         Print OpenGL driver information and quit\n");
 	puts("");
 	puts("Audio Options:");
 	puts("    -sound-volume=<v>      Volume of sound effects in % [Default: 100]");
@@ -1204,14 +1202,15 @@ static void Help(void)
 	printf("    -input-system=<s>      Input system [Default: %s]\n", g_Config.GetInputSystem());
 #endif
 	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
-	puts("    -print-inputs          Prints current input configuration");
 	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
+	puts("    -print-inputs          Prints current input configuration");
+#ifdef SUPERMODEL_DEBUGGER
 	puts("");
 	puts("Diagnostic Options:");
-#ifdef DEBUG	// intended for developers only
+	puts("    -disable-debugger	     Completely disable debugger functionality");
+	puts("    -enter-debugger        Enter debugger at start of emulation");
 	puts("    -dis=<addr>[,n]        Disassemble PowerPC code from CROM");
-#endif
-	puts("    -print-gl-info         Print OpenGL driver information and quit\n");
+#endif // SUPERMODEL_DEBUGGER
 }
 
 // Print game list
@@ -1433,7 +1432,7 @@ int main(int argc, char **argv)
 		else
 		{
 			if (fileIdx)		// already specified a file
- 				ErrorLog("Multiple files specified. Using %s, ignoring %s.", argv[fileIdx], argv[i]);
+ 				ErrorLog("Multiple files specified. Using '%s', ignoring '%s'.", argv[fileIdx], argv[i]);
  			else
  				fileIdx = i;
  		}
@@ -1469,7 +1468,7 @@ int main(int argc, char **argv)
 #endif // SUPERMODEL_WIN32
 	else
 	{
-		ErrorLog("Unknown input system: '%s'.\n", g_Config.GetInputSystem());
+		ErrorLog("Unknown input system: %s.\n", g_Config.GetInputSystem());
 		exitCode = 1;
 		goto Exit;
 	}

@@ -491,7 +491,7 @@ Drive board ROMs are required.
 The sizes and checksums must match those listed above.  The file names may be
 different but will almost certainly contain the same identifying numbers.
 Ensure that the appropriate drive board ROM files are present in the 
-corresponding games' ZIP archive, otherwise Supermodel will silently proceed
+corresponding games' ZIP archives, otherwise Supermodel will silently proceed
 without force feedback.
 
 Force feedback will only work with the DirectInput (the default on Windows) and
@@ -515,7 +515,7 @@ vibration.  The strength of each can be tuned with the following settings:
 	DirectInputVibrateMax = 100
 	
 They are given as percentages and represent the maximum strength for each
-effect.  Setting them to 0 disables them entirely.  Values above 100% are
+effect.  A setting of 0 disables them entirely.  Values above 100% are
 accepted but may clip or distort the effect (and possibly damage your
 hardware).  By default, they are set to 100%, as shown above.
 

@@ -105,7 +105,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Daytona USA 2 (Revision A)
 	{
 		"daytona2",
-		"Daytona USA 2: Battle on the Edge",
+		"Daytona USA 2 Battle on the Edge",
 		"Sega",
 		1998,
 		0x21,
@@ -2939,13 +2939,13 @@ const struct GameInfo	g_Model3GameList[] =
 		0,
 		0,
 		0,
-		0,
+		false,
 
 		{
-			{ NULL, NULL, 0, 0, 0, 0, false },
-			{ NULL, NULL, 0, 0, 0, 0, false },
-			{ NULL, NULL, 0, 0, 0, 0, false },
-			{ NULL, NULL, 0, 0, 0, 0, false }
+			{ NULL, false, NULL, 0, 0, 0, 0, 0, false },
+			{ NULL, false, NULL, 0, 0, 0, 0, 0, false },
+			{ NULL, false, NULL, 0, 0, 0, 0, 0, false },
+			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
 	}
 };

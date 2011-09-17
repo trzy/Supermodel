@@ -138,21 +138,21 @@ static bool LoadROM(UINT8 *buf, unsigned bufSize, const struct ROMMap *Map, cons
 	// Read the file into the buffer
 	err = unzGetCurrentFileInfo(zf, &fileInfo, file, 2048, NULL, 0, NULL, 0);
 	if (err != UNZ_OK)
-		return ErrorLog("Unable to extract a file name from %s.", zipFile);
+		return ErrorLog("Unable to extract a file name from '%s'.", zipFile);
 	if (fileInfo.uncompressed_size != ROM->fileSize)
-		return ErrorLog("%s in %s is not the correct size (must be %d bytes).", file, zipFile, ROM->fileSize);
+		return ErrorLog("'%s' in '%s' is not the correct size (must be %d bytes).", file, zipFile, ROM->fileSize);
 	err = unzOpenCurrentFile(zf);
 	if (UNZ_OK != err)
-		return ErrorLog("Unable to read %s from %s.", file, zipFile);
+		return ErrorLog("Unable to read '%s' from '%s'.", file, zipFile);
 	bytes = unzReadCurrentFile(zf, buf, bufSize);
 	if (bytes != ROM->fileSize)
 	{
 		unzCloseCurrentFile(zf);
-		return ErrorLog("Unable to read %s from %s.", file, zipFile);
+		return ErrorLog("Unable to read '%s' from '%s'.", file, zipFile);
 	}
 	err = unzCloseCurrentFile(zf);
 	if (UNZ_CRCERROR == err)
-		ErrorLog("CRC error reading %s from %s. File may be corrupt.", file, zipFile);
+		ErrorLog("CRC error reading '%s' from '%s'. File may be corrupt.", file, zipFile);
 		
 	// Byte swap
 	if (ROM->byteSwap)
@@ -219,7 +219,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	zf = unzOpen(zipFile);
 	if (NULL == zf)
 	{
-		ErrorLog("Unable to open %s.", zipFile);
+		ErrorLog("Could not open '%s'.", zipFile);
 		return NULL;
 	}
 		
@@ -227,7 +227,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	err = unzGoToFirstFile(zf);
 	if (UNZ_OK != err)
 	{
-		ErrorLog("Unable to read the contents of %s (code %X)", zipFile, err);
+		ErrorLog("Unable to read the contents of '%s' (code %X)", zipFile, err);
 		return NULL;
 	}
 	for (; err != UNZ_END_OF_LIST_OF_FILE; err = unzGoToNextFile(zf))
@@ -256,7 +256,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 				DebugLog("%s also contains: %s (%s)\n", zipFile, CurGame->id, CurGame->title);
 				if (multipleGameError == false)	// only warn about this once
 				{
-					ErrorLog("Multiple games were found in %s; loading '%s'.", zipFile, Game->title);
+					ErrorLog("Multiple games were found in '%s'; loading '%s'.", zipFile, Game->title);
 					multipleGameError = true;
 				}
 			}
@@ -267,7 +267,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	err = unzGoToFirstFile(zf);
 	if (UNZ_OK != err)
 	{
-		ErrorLog("Unable to read the contents of %s (code %X)", zipFile, err);
+		ErrorLog("Unable to read the contents of '%s' (code %X)", zipFile, err);
 		return NULL;
 	}
 	memset(romsFound, 0, sizeof(romsFound));	// here, romsFound[] indicates which ROMs were found in the ZIP file for the game
@@ -295,7 +295,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	for (i = 0; i < numROMs; i++)
 	{
 		if ((0 == romsFound[i]) && !Game->ROM[i].optional)	// if not found and also not optional
-			err |= (int) ErrorLog("%s (CRC=%08X) is missing from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
+			err |= (int) ErrorLog("'%s' (CRC=%08X) is missing from '%s'.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 	}
 	if (err != OKAY)
 	{
@@ -323,7 +323,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	err = unzGoToFirstFile(zf);
 	if (UNZ_OK != err)
 	{
-		ErrorLog("Unable to read the contents of %s (code %X).", zipFile, err);
+		ErrorLog("Unable to read the contents of '%s' (code %X).", zipFile, err);
 		err = FAIL;
 		goto Quit;
 	}
@@ -350,7 +350,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		for (i = 0; i < numROMs; i++)
 		{
 			if (!(romsFound[i] || Game->ROM[i].optional))	// if ROM not found and also not optional
-				err = ErrorLog("Could not load %s (CRC=%08X) from %s.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
+				err = ErrorLog("Could not load '%s' (CRC=%08X) from '%s'.", Game->ROM[i].fileName, Game->ROM[i].crc, zipFile);
 		}
 	}
 	else
