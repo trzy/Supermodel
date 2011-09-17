@@ -1188,7 +1188,7 @@ static void Help(void)
 	puts("    -show-fps              Display frame rate in window title bar");
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
-	puts("    -print-gl-info         Print OpenGL driver information and quit\n");
+	puts("    -print-gl-info         Print OpenGL driver information and quit");
 	puts("");
 	puts("Audio Options:");
 	puts("    -sound-volume=<v>      Volume of sound effects in % [Default: 100]");
@@ -1204,12 +1204,13 @@ static void Help(void)
 	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
 	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 	puts("    -print-inputs          Prints current input configuration");
-#ifdef SUPERMODEL_DEBUGGER
 	puts("");
+#ifdef SUPERMODEL_DEBUGGER
 	puts("Diagnostic Options:");
 	puts("    -disable-debugger	     Completely disable debugger functionality");
 	puts("    -enter-debugger        Enter debugger at start of emulation");
 	puts("    -dis=<addr>[,n]        Disassemble PowerPC code from CROM");
+	puts("");
 #endif // SUPERMODEL_DEBUGGER
 }
 
