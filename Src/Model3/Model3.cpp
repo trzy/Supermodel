@@ -2055,10 +2055,13 @@ void CModel3::StopThreads(void)
 	if (!startedThreads)
 		return;
 
-	// Remove callback
+	// If sound board not sync'd then remove callback
 	if (!syncSndBrdThread)
 		SetAudioCallback(NULL, NULL);
-
+	
+	// Pause threads so that can safely delete thread objects
+	PauseThreads();
+	
 	DeleteThreadObjects();
 	startedThreads = false;
 }
