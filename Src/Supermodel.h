@@ -122,6 +122,8 @@
 #ifdef SUPERMODEL_DEBUGGER
 #include "Debugger/SupermodelDebugger.h"
 #include "Debugger/CPU/PPCDebug.h"
+#include "Debugger/CPU/Musashi68KDebug.h"
+#include "Debugger/CPU/Z80Debug.h"
 #endif // SUPERMODEL_DEBUGGER
 #include "CPU/Bus.h"
 #include "CPU/PowerPC/PPCDisasm.h"
