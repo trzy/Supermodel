@@ -265,6 +265,7 @@ void CInputs::PrintConfigureInputsHelp()
 	puts("  r       Reset current input mapping to default and remain there,");
 	puts("  Down    Move onto next control,");
 	puts("  Up      Go back to previous control,");
+	puts("  b       Calibrate joystick axes,");
 	puts("  i       Display information about input system and attached devices,");
 	puts("  h       Display this help again,");
 	puts("  q       Finish and save all changes,");
@@ -374,6 +375,8 @@ bool CInputs::ConfigureInputs(const GameInfo *game)
 
 	const char *groupLabel = NULL;
 
+	bool cancelled = false;
+		
 	// Loop through all the inputs to be configured
 	index = 0;
 	while (index < toConfigure.size())
@@ -392,9 +395,9 @@ bool CInputs::ConfigureInputs(const GameInfo *game)
 Redisplay:
 		// Print the input label, current input mapping and available options
 		if (index > 0)
-			printf(" %s [%s]: Ret/c/s/a/r/Up/Down/h/q/Esc? ", input->label, input->GetMapping());
+			printf(" %s [%s]: Ret/c/s/a/r/Up/Down/b/h/q/Esc? ", input->label, input->GetMapping());
 		else
-			printf(" %s [%s]: Ret/c/s/a/r/Down/h/q/Esc? ", input->label, input->GetMapping());
+			printf(" %s [%s]: Ret/c/s/a/r/Down/h/b/q/Esc? ", input->label, input->GetMapping());
 		fflush(stdout);	// required on terminals that use buffering
 
 		// Loop until user has selected a valid option
@@ -412,27 +415,26 @@ Redisplay:
 					(*it)->SetMapping(oldMappings[index].c_str());
 					index++;
 				}	
-				puts("");
 
-				m_system->GrabMouse();
-				return false;
+				cancelled = true;
+				goto Finish;
 			}
 
 			if (stricmp(mapping, "KEY_RETURN") == 0 || stricmp(mapping, "KEY_S") == 0)
 			{
 				// Set the input mapping
-				printf("Setting...");
+				printf("Setting... ");
 				fflush(stdout);	// required on terminals that use buffering
 				if (input->Configure(false, uiExit->GetMapping()))
 				{
-					printf(" %s\n", input->GetMapping());
+					puts(input->GetMapping());
 					if (stricmp(mapping, "KEY_RETURN") == 0)
 						index++;
 					done = true;
 				}
 				else
 				{
-					printf(" [Cancelled]\n");
+					puts("[Cancelled]");
 					goto Redisplay;
 				}
 			}
@@ -442,23 +444,23 @@ Redisplay:
 				printf("Appending...");
 				fflush(stdout);	// required on terminals that use buffering
 				if (input->Configure(true, uiExit->GetMapping()))
-					printf(" %s\n", input->GetMapping());
+					puts(input->GetMapping());
 				else
-					printf(" [Cancelled]\n");
+					puts("[Cancelled]");
 				goto Redisplay;
 			}
 			else if (stricmp(mapping, "KEY_C") == 0)
 			{
 				// Clear the input mapping(s)
 				input->SetMapping("NONE");
-				printf("Cleared\n");
+				puts("Cleared");
 				goto Redisplay;
 			}
 			else if (stricmp(mapping, "KEY_R") == 0)
 			{
 				// Reset the input mapping(s) to the default
 				input->ResetToDefaultMapping();
-				printf("Reset\n");
+				puts("Reset");
 				goto Redisplay;
 			}
 			else if (stricmp(mapping, "KEY_DOWN") == 0)
@@ -485,6 +487,14 @@ Redisplay:
 				index = 0;
 				done = true;
 			}
+			else if (stricmp(mapping, "KEY_B") == 0)
+			{
+				// Calibrate joysticks
+				printf("\n\n");
+				CalibrateJoysticks();
+				puts("");
+				goto Redisplay;
+			}	
 			else if (stricmp(mapping, "KEY_I") == 0)
 			{
 				// Print info about input system
@@ -500,21 +510,15 @@ Redisplay:
 				goto Redisplay;
 			}
 			else if (stricmp(mapping, "KEY_Q") == 0)
-			{
-				// Finish configuration
-				puts("");
-
-				m_system->GrabMouse();
-				return true;
-			}
+				goto Finish;
 		}
 	}
 
-	// All inputs set, finish configuration
-	puts("");
+Finish:
+	printf("\n\n");
 
 	m_system->GrabMouse();
-	return true;
+	return !cancelled;
 }
 
 bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH)
@@ -523,6 +527,85 @@ bool CInputs::ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dis
 	m_system->SetDisplayGeom(dispX, dispY, dispW, dispH);
 
 	return ConfigureInputs(game);
+}
+
+void CInputs::CalibrateJoysticks()
+{
+	unsigned numJoys = m_system->GetNumJoysticks();
+	if (numJoys == 0 || numJoys == ANY_JOYSTICK)
+		puts("No joysticks attached to calibrate!");
+	else
+	{
+		puts("Choose joystick to calibrate (or press Esc to cancel):");
+		if (numJoys > 10)
+			numJoys = 10;
+		for (int joyNum = 0; joyNum < numJoys; joyNum++)
+		{
+			const JoyDetails *joyDetails = m_system->GetJoyDetails(joyNum);
+			unsigned dispNum = (joyNum == 9 ? 0 : joyNum + 1);
+			printf(" %u: %s\n", dispNum, joyDetails->name);
+		}
+
+		char mapping[50];
+		while (m_system->ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, uiExit->GetMapping()))
+		{
+			if (strlen(mapping) != 5 || strncmp(mapping, "KEY_", 4) != 0)
+				continue;
+			char c = mapping[4];
+			if (!isdigit(c))
+				continue;
+			unsigned joyNum = c - '0';
+			joyNum = (joyNum == 0 ? 9 : joyNum - 1);
+			if (joyNum >= numJoys)
+				continue;
+			puts("");
+			CalibrateJoystick(joyNum);
+			return;
+		}
+	}
+}
+
+void CInputs::CalibrateJoystick(int joyNum)
+{
+	const JoyDetails *joyDetails = m_system->GetJoyDetails(joyNum);
+	if (joyDetails == NULL || joyDetails->numAxes == 0)
+	{
+		printf("No axes available to calibrate on joystick!");
+		return;
+	}
+
+	printf("Calibrating joystick '%s'.\n\n", joyDetails->name);
+
+	puts("Choose axis to calibrate (or press Esc to cancel):");
+	vector<unsigned> axisNumList;
+	for (unsigned axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+	{
+		if (!joyDetails->hasAxis[axisNum])
+			continue;
+		axisNumList.push_back(axisNum);
+		printf(" %u: %s\n", axisNumList.size(), joyDetails->axisName[axisNum]);
+	}
+	
+	char mapping[50];
+	while (m_system->ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, uiExit->GetMapping()))
+	{
+		if (strlen(mapping) != 5 || strncmp(mapping, "KEY_", 4) != 0)
+			continue;
+		char c = mapping[4];
+		if (!isdigit(c))
+			continue;
+		unsigned optNum = c - '0';
+		if (optNum == 0 || optNum > axisNumList.size())
+			continue;
+		unsigned axisNum = axisNumList[optNum - 1];
+		puts("");
+		if (m_system->CalibrateJoystickAxis(joyNum, axisNum))
+		{
+			for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+				(*it)->InputSystemChanged();
+		}
+		return;
+	}
 }
 
 void CInputs::PrintInputs(const GameInfo *game)

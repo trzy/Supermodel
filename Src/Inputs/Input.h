@@ -161,6 +161,8 @@ public:
 	 */
 	virtual void WriteToINIFile(CINIFile *ini, const char *section);
 
+	void InputSystemChanged();
+
 	/*
 	 * Returns true if the input is a UI input.
 	 */

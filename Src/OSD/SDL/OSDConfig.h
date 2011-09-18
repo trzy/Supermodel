@@ -52,7 +52,18 @@ public:
 #ifdef SUPERMODEL_DEBUGGER
 	bool		disableDebugger;	// disables the debugger (not stored in the config. file)
 #endif
-	
+
+#ifdef SUPERMODEL_WIN32
+	unsigned	dInputEffectsGain;
+	unsigned	dInputConstForceMax;
+	unsigned	dInputSelfCenterMax;
+	unsigned	dInputFrictionMax;
+	unsigned	dInputVibrateMax;
+	unsigned	xInputConstForceThreshold;
+	unsigned	xInputConstForceMax;
+	unsigned	xInputVibrateMax;
+#endif
+
 	// Input system
 	inline void SetInputSystem(const char *inpSysName)
 	{
@@ -104,6 +115,14 @@ public:
 #endif
 #ifdef SUPERMODEL_WIN32
 		inputSystem = "dinput";
+		dInputEffectsGain = 100;
+		dInputConstForceMax = 100;
+		dInputSelfCenterMax = 100;
+		dInputFrictionMax = 100;
+		dInputVibrateMax = 100;
+		xInputConstForceThreshold = 30;
+		xInputConstForceMax = 100;
+		xInputVibrateMax = 100;
 #else
 		inputSystem = "sdl";
 #endif

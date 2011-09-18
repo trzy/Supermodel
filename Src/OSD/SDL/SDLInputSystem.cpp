@@ -215,6 +215,9 @@ void CSDLInputSystem::OpenJoysticks()
 		{
 			joyDetails.hasAxis[axisNum] = joyDetails.numAxes > axisNum;
 			joyDetails.axisHasFF[axisNum] = false; // SDL 1.2 does not support force feedback
+			char *axisName = joyDetails.axisName[axisNum];
+			strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum)); // SDL 1.2 does not support axis names
+			strcat(axisName, "-Axis");
 		}
 		joyDetails.numPOVs = SDL_JoystickNumHats(joystick);
 		joyDetails.numButtons = SDL_JoystickNumButtons(joystick);

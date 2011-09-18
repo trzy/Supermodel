@@ -29,7 +29,7 @@
 #ifndef INCLUDED_INPUTSYSTEM_H
 #define INCLUDED_INPUTSYSTEM_H
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <vector>
 using namespace std;
@@ -264,7 +264,7 @@ struct JoySettings
 	int axisOffVals[NUM_JOY_AXES];		// Axis center/off value (default 0)
 	int axisMaxVals[NUM_JOY_AXES];		// Axis max raw value (default 32767)
 	unsigned deadZones[NUM_JOY_AXES];   // Axis dead zone as a percentage 0-99 of axis positive/negative ranges
-	unsigned saturations[NUM_JOY_AXES]; // Axis saturation as a percentage 1-100 of axis positive/negative ranges
+	unsigned saturations[NUM_JOY_AXES]; // Axis saturation as a percentage 1-200 of axis positive/negative ranges
 
 	/*
 	 * Creates a JoySettings with default settings
@@ -296,13 +296,14 @@ struct MouseDetails
 
 struct JoyDetails
 {
-	char name[MAX_NAME_LENGTH + 1]; // Joystick name (if available)
-	int numAxes;                    // Total number of axes on joystick
-	int numPOVs;                    // Total number of POV hat controllers on joystick
-	int numButtons;                 // Total number of buttons on joystick
-	bool hasFFeedback;	            // True if joystick supports force feedback
-	bool hasAxis[NUM_JOY_AXES];     // Flags to indicate which axes available on joystick
-	bool axisHasFF[NUM_JOY_AXES];   // Flags to indicate which axes are force feedback enabled
+	char name[MAX_NAME_LENGTH + 1];                   // Joystick name (if available)
+	int numAxes;                                      // Total number of axes on joystick
+	int numPOVs;                                      // Total number of POV hat controllers on joystick
+	int numButtons;                                   // Total number of buttons on joystick
+	bool hasFFeedback;	                              // True if joystick supports force feedback
+	bool hasAxis[NUM_JOY_AXES];                       // Flags to indicate which axes available on joystick
+	char axisName[NUM_JOY_AXES][MAX_NAME_LENGTH + 1]; // Axis names (if available)
+	bool axisHasFF[NUM_JOY_AXES];                     // Flags to indicate which axes are force feedback enabled
 };
 
 /*
@@ -722,6 +723,7 @@ public:
 	static unsigned totalSrcsAcquired;
 	static unsigned totalSrcsReleased;
 #endif
+	static const char *GetDefaultAxisName(int axisNum);
 
 	// Name of this input system
 	const char *name;
@@ -840,6 +842,8 @@ public:
 	virtual void SetMouseVisibility(bool visible) = 0;
 
 	virtual bool SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
+
+	bool CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, const char *escapeMapping = "KEY_ESCAPE", const char *confirmMapping = "KEY_RETURN");
 
 	void PrintDevices();
 

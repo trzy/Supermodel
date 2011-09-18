@@ -246,6 +246,10 @@ public:
 	 */
 	bool ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
 
+	void CalibrateJoysticks();
+
+	void CalibrateJoystick(int joyNum);
+
 	/*
 	 * Prints to stdout the current input mapping assignments for the given game, or all inputs if game is NULL.
 	 */

@@ -24,9 +24,17 @@
  *
  * Implementation of CInputSystem, the base input system class.
  */
- 
+
+// TODO
+// - switch to using more C++ strings
+// - simplify handling of configuration settings because it is a mess
+// - think more about where config, calibrate and debug methods should go - OSD classes, CInputs or here?
+// - open up API to allow direct access to keyboard, mouse and joystick values
+// - add GetKey method that is easier to use than reading keyboard with ReadMapping
+
 #include "Supermodel.h"
 
+#include <cmath>
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -376,6 +384,11 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 };
 
 const char *CInputSystem::s_axisNames[] = { "X", "Y", "Z", "RX", "RY", "RZ" };
+
+const char *CInputSystem::GetDefaultAxisName(int axisNum)
+{
+	return (axisNum >= 0 && axisNum < 6 ? s_axisNames[axisNum] : "");
+}
 
 CInputSystem::CInputSystem(const char *systemName) : 
 	name(systemName), m_dispX(0), m_dispY(0), m_dispW(0), m_dispH(0), m_grabMouse(false)
@@ -1523,6 +1536,8 @@ bool CInputSystem::Initialize()
 
 	// Create cache to hold input sources
 	CreateSourceCache();
+
+	GrabMouse();
 	return true;
 }
 
@@ -1663,20 +1678,22 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 {
 	// Map given escape mapping to an input source
 	CInputSource *escape = ParseSource(escapeMapping);
-	escape->Acquire();
+	if (escape)
+		escape->Acquire();
 	
 	string badMapping;
 	string mapping;
 	vector<CInputSource*> badSources;
 	vector<CInputSource*> sources;
 	bool mseCentered = false;
-
+	bool cancelled = false;
+	
 	// See which sources activated to begin with and from here on ignore these (this stops badly calibrated axes that are constantly "active"
 	// from preventing the user from exiting read loop)
 	if (!Poll())
 	{
-		escape->Release();
-		return false;
+		cancelled = true;
+		goto Finish;
 	}
 
 	CheckAllSources(readFlags, fullAxisOnly, mseCentered, badSources, badMapping, sources);
@@ -1687,25 +1704,25 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 		// Poll inputs
 		if (!Poll())
 		{
-			escape->Release();
-			return false;
+			cancelled = true;
+			goto Finish;
 		}
 
 		// Check if escape source was triggered
-		if (escape != NULL && escape->IsActive())
+		if (escape && escape->IsActive())
 		{
 			// If so, wait until source no longer active and then exit
 			while (escape->IsActive())
 			{
 				if (!Poll())
 				{
-					escape->Release();
-					return false; 
+					cancelled = true;
+					goto Finish;
 				}
 				Wait(1000/60);
 			}
-			escape->Release();
-			return false;
+			cancelled = true;
+			goto Finish;
 		}
 
 		// Check all active sources
@@ -1745,8 +1762,10 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 	strncpy(buffer, mapping.c_str(), bufSize - 1);
 	buffer[bufSize - 1] = '\0';
 	
-	escape->Release();
-	return true;
+Finish:
+	if (escape)
+		escape->Release();
+	return !cancelled;
 }
 
 void CInputSystem::GrabMouse()
@@ -1768,6 +1787,233 @@ bool CInputSystem::SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCm
 	if (!joyDetails->hasFFeedback || !joyDetails->axisHasFF[axisNum])
 		return false;
 	return ProcessForceFeedbackCmd(joyNum, axisNum, ffCmd);
+}
+
+bool CInputSystem::CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, const char *escapeMapping, const char *confirmMapping)
+{
+	const JoyDetails *joyDetails = GetJoyDetails(joyNum);
+	if (joyDetails == NULL || axisNum >= NUM_JOY_AXES || !joyDetails->hasAxis[axisNum])
+	{
+		printf("No such axis or joystick");
+		return true;
+	}
+
+	// Map given escape mapping to input source
+	CInputSource *escape = ParseSource(escapeMapping);
+	CInputSource *output = ParseSource("KEY_SHIFT");
+	if (escape)
+		escape->Acquire();
+	if (output)
+		output->Acquire();
+
+Repeat:
+	printf("Calibrating %s of joystick '%s'.\n\n", joyDetails->axisName[axisNum], joyDetails->name);
+	
+	int posVal;
+	int negVal;
+	int offVal;
+	unsigned posRange;
+	unsigned negRange;
+	unsigned posOffRange;
+	unsigned negOffRange;
+	char mapping[50];
+	bool cancelled = false;
+	for (unsigned step = 0; step < 3; step++)
+	{
+		switch (step)
+		{
+			case 0: 
+				puts("Step 1:");
+				puts(" Move axis now to its furthest positive/'on' position and hold, ie:");
+				if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+					puts(" - for a joystick X-Axis, push it all the way to the right.");
+				if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+					puts(" - for a joystick Y-Axis, push it all the way downwards.");
+				puts(" - for a steering wheel, turn it all the way to the right.");
+				puts(" - for a pedal, press it all the way to the floor.");
+				break;
+			case 1: 
+				puts("Step 2:");
+				puts(" Move axis the other way to its furthest negative position and hold, ie:");
+				if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+					puts(" - for a joystick X-Axis, push it all the way to the left.");
+				if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+					puts(" - for a joystick Y-Axis, push it all the way updwards.");
+				puts(" - for a steering wheel, turn it all the way to the left.");
+				puts(" - for a pedal, let go of the pedal completely.  If there is another pedal");
+				puts("   that shares the same axis then press that one all the way to the floor.");
+				break;
+			case 2: 
+				puts("Step 3:");
+				puts(" Return axis to its center/'off' position and hold, ie:");
+				puts(" - for a joystick axis, let it return to the middle.");
+				puts(" - for a steering weel, turn it back to its central position.");
+				puts(" - for a pedal, let go of all pedals completely.");
+				break;
+		}
+		printf("\nPress Return when ready (or press Esc to cancel): ");
+
+		// Loop until user confirms or aborts
+		for (;;)
+		{
+			if (!ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, escapeMapping))
+			{
+				cancelled = true;
+				goto Finish;
+			}
+			if (stricmp(mapping, confirmMapping) == 0)
+				break;
+		}
+
+		printf("Calibrating... ");
+
+		// Loop until at least three seconds have elapsed or user aborts
+		int joyVal = GetJoyAxisValue(joyNum, axisNum);
+		int minVal = joyVal;
+		int maxVal = joyVal;
+		bool firstOut = true;
+		for (unsigned frames = 0; frames < 3 * 60; frames++)
+		{	
+			if (!Poll())
+			{
+				cancelled = true;
+				goto Finish;
+			}
+
+			// Check if escape source was triggered
+			if (escape && escape->IsActive())
+			{
+				// If so, wait until source no longer active and then exit
+				while (escape->IsActive())
+				{
+					if (!Poll())
+					{
+						cancelled = true;
+						goto Finish; 
+					}
+					Wait(1000/60);
+				}
+				cancelled = true;
+				goto Finish;
+			}
+
+			joyVal = GetJoyAxisValue(joyNum, axisNum);
+			minVal = min<int>(minVal, joyVal);
+			maxVal = max<int>(maxVal, joyVal);
+
+			// Check if output source is triggered, and if so output value for debugging
+			if (output != NULL && output->IsActive())
+			{
+				if (firstOut)
+					puts("");
+				printf(" [value: %d, min: %d, %max: %d]\n", joyVal, minVal, maxVal);
+				firstOut = false;
+			}
+
+			// Don't poll continuously
+			Wait(1000/60);
+		}
+
+		printf("Done\n\n");
+
+		switch (step)
+		{
+			case 0:	posVal = (abs(maxVal) >= abs(minVal) ? maxVal : minVal); break;
+			case 1: negVal = (abs(minVal) >= abs(maxVal) ? minVal : maxVal); break;
+			case 2: 
+				if (minVal <= 0 && maxVal >= 0)
+					offVal = 0;
+				else if (minVal == DEFAULT_JOY_AXISMINVAL)
+					offVal = DEFAULT_JOY_AXISMINVAL;
+				else if (maxVal == DEFAULT_JOY_AXISMAXVAL)
+					offVal = DEFAULT_JOY_AXISMAXVAL;
+				else
+					offVal = (minVal + maxVal) / 2;
+				posRange = abs(posVal - offVal);
+				negRange = abs(negVal - offVal);
+				posOffRange = (unsigned)(posVal > offVal ? maxVal - offVal : offVal - minVal);
+				negOffRange = (unsigned)(posVal > offVal ? offVal - minVal : maxVal - offVal);
+				break;
+		}
+	}
+	
+	unsigned totalRange = posRange + negRange;
+
+	unsigned posDeadZone = (unsigned)ceil(100.0 * (double)posOffRange / (double)posRange);
+	unsigned negDeadZone = (unsigned)ceil(100.0 * (double)negOffRange / (double)negRange);
+	unsigned deadZone = max<unsigned>(1, max<unsigned>(negDeadZone, posDeadZone));
+		
+	bool okay;
+	if (posVal > negVal)
+		okay = negVal <= offVal && offVal <= posVal && totalRange > 3000 && deadZone < 90;
+	else
+		okay = posVal <= offVal && offVal <= negVal && totalRange > 3000 && deadZone < 90;
+	if (okay)
+	{
+		JoySettings *commonSettings = GetJoySettings(ANY_JOYSTICK, true);
+		JoySettings *joySettings = GetJoySettings(joyNum, false);
+		if (joySettings == NULL)
+		{
+			joySettings = new JoySettings(*commonSettings);
+			m_joySettings.push_back(joySettings);
+			joySettings->joyNum = joyNum;
+		}
+
+		printf("Calibrated Axis Settings:\n\n");
+		printf(" Min Value        = %d\n", negVal);
+		printf(" Center/Off Value = %d\n", offVal);
+		printf(" Max Value        = %d\n", posVal);
+		printf(" Dead Zone        = %d %%\n", deadZone);
+		printf("\nAccept these settings: y/n? ");
+		
+		// Loop until user confirms or declines
+		while (ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, escapeMapping))
+		{
+			if (stricmp(mapping, "KEY_N") == 0)
+				break;
+			else if (stricmp(mapping, "KEY_Y") == 0)
+			{
+				joySettings->axisMinVals[axisNum] = negVal;
+				joySettings->axisMaxVals[axisNum] = posVal;
+				joySettings->axisOffVals[axisNum] = offVal;
+				joySettings->deadZones[axisNum] = deadZone;
+				
+				ClearSourceCache();
+
+				puts("Accepted");
+				goto Finish;		
+			}
+		}
+		cancelled = true;
+	}
+	else
+	{
+		puts("There was a problem calibrating the axis.  This may be because the steps");
+		puts("were not followed correctly or the joystick is sending invalid data.");
+		printf("\nTry calibrating again: y/n? ");
+		
+		// Loop until user confirms or declines
+		while (ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, escapeMapping))
+		{
+			if (stricmp(mapping, "KEY_N") == 0)
+				break;
+			else if (stricmp(mapping, "KEY_Y") == 0)
+			{
+				puts("[Cancelled]");
+				goto Repeat;
+			}
+		}
+		cancelled = true;
+	}
+	
+Finish:
+	if (cancelled)
+		puts("[Cancelled]");
+	if (escape)
+		escape->Release();
+	if (output)
+		output->Release();
+	return !cancelled;
 }
 
 void CInputSystem::PrintDevices()
@@ -1974,9 +2220,9 @@ CInputSystem::CJoyAxisInputSource::CJoyAxisInputSource(CInputSystem *system, int
 {
 	m_axisInverted = m_axisMaxVal < m_axisMinVal;
 	// Calculate pos/neg deadzone and saturation points (joystick raw values range from axisMinVal to axisMasVal (centered/off at axisOffVal),
-	// deadzone given as percentage 0-99 and saturation given as percentage 1-100)
+	// deadzone given as percentage 0-99 and saturation given as percentage 1 - 200)
 	double dDeadZone = (double)Clamp((int)deadZone, 0, 99) / 100.0;
-	double dSaturation = (double)Clamp((int)saturation, (int)deadZone + 1, 100) / 100.0;
+	double dSaturation = (double)Clamp((int)saturation, (int)deadZone + 1, 200) / 100.0;
 	m_posDZone = m_axisOffVal + (int)(dDeadZone * (m_axisMaxVal - m_axisOffVal));
 	m_negDZone = m_axisOffVal + (int)(dDeadZone * (m_axisMinVal - m_axisOffVal));
 	m_posSat = m_axisOffVal + (int)(dSaturation * (m_axisMaxVal - m_axisOffVal));

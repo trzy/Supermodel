@@ -169,6 +169,12 @@ void CInput::WriteToINIFile(CINIFile *ini, const char *section)
 	ini->Set(section, key, m_mapping);
 }
 
+void CInput::InputSystemChanged()
+{
+	// If input system or its settings have changed, then force recreation of source
+	CreateSource();
+}
+
 bool CInput::Configure(bool append, const char *escapeMapping)
 {
 	char mapping[MAX_MAPPING_LENGTH];

@@ -319,6 +319,14 @@ BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID con
 	JoyDetails *joyDetails = (JoyDetails*)context;
 	joyDetails->hasAxis[axisNum] = true; 
 	joyDetails->axisHasFF[axisNum] = !!(instance->dwFlags & DIDOI_FFACTUATOR);
+
+	// Get axis name from DirectInput
+	char *axisName = joyDetails->axisName[axisNum];
+	strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
+	strcat(axisName, "-Axis (");
+	strncat(axisName, instance->tszName, MAX_NAME_LENGTH - strlen(axisName) - 1);
+	strcat(axisName, ")");
+
 	return DIENUM_CONTINUE;
 }
 
@@ -331,7 +339,7 @@ BOOL CALLBACK DI8EnumEffectsCallback(LPCDIEFFECTINFO effectInfo, LPVOID context)
 	return DIENUM_CONTINUE;
 }
 
-const char *CDirectInputSystem::ConstructName(bool useRawInput, bool useXInput, bool enableFFeedback)
+const char *CDirectInputSystem::ConstructName(bool useRawInput, bool useXInput)
 {
 	if (useRawInput)
 		return (useXInput ? "RawInput/XInput" : "RawInput/DirectInput");
@@ -339,14 +347,12 @@ const char *CDirectInputSystem::ConstructName(bool useRawInput, bool useXInput, 
 		return (useXInput ? "Xinput" : "DirectInput");
 }
 
-CDirectInputSystem::CDirectInputSystem(bool useRawInput, bool useXInput, bool enableFFeedback) : 
-	CInputSystem(ConstructName(useRawInput, useXInput, enableFFeedback)),
-	m_useRawInput(useRawInput), m_useXInput(useXInput), m_enableFFeedback(enableFFeedback),
+CDirectInputSystem::CDirectInputSystem(bool useRawInput, bool useXInput) : 
+	CInputSystem(ConstructName(useRawInput, useXInput)),
+	m_useRawInput(useRawInput), m_useXInput(useXInput), m_enableFFeedback(true),
 	m_initializedCOM(false), m_activated(false), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
 	m_getRIDevListPtr(NULL), m_getRIDevInfoPtr(NULL), m_regRIDevsPtr(NULL), m_getRIDataPtr(NULL),
-	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL),
-	m_diEffectsGain(100), m_diConstForceMax(100), m_diSelfCenterMax(100), m_diFrictionMax(100), m_diVibrateMax(100),
-	m_xiConstForceThreshold(65), m_xiConstForceMax(100), m_xiVibrateMax(100)
+	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL)
 {
 	// Reset initial states
 	memset(&m_combRawMseState, 0, sizeof(RawMseState));
@@ -675,9 +681,17 @@ void CDirectInputSystem::ActivateKeyboardsAndMice()
 	
 	// Set DirectInput cooperative level of keyboard and mouse
 	if (m_di8Keyboard != NULL)
-		m_di8Keyboard->SetCooperativeLevel(m_hwnd, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
+	{
+		m_di8Keyboard->Unacquire();
+		m_di8Keyboard->SetCooperativeLevel(m_hwnd, (m_grabMouse ? DISCL_FOREGROUND : DISCL_BACKGROUND) | DISCL_NONEXCLUSIVE);
+		m_di8Keyboard->Acquire();
+	}
 	if (m_di8Mouse != NULL)
-		m_di8Mouse->SetCooperativeLevel(m_hwnd, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
+	{
+		m_di8Mouse->Unacquire();
+		m_di8Mouse->SetCooperativeLevel(m_hwnd, (m_grabMouse ? DISCL_FOREGROUND : DISCL_BACKGROUND) | DISCL_NONEXCLUSIVE);
+		m_di8Mouse->Acquire();
+	}
 }
 
 void CDirectInputSystem::PollKeyboardsAndMice()
@@ -1178,10 +1192,12 @@ void CDirectInputSystem::ActivateJoysticks()
 		if (!it->isXInput)
 		{	
 			LPDIRECTINPUTDEVICE8 joystick = m_di8Joysticks[it->dInputNum];
-			if (m_joyDetails[joyNum].hasFFeedback)
+			joystick->Unacquire();
+			if (m_grabMouse)
 				joystick->SetCooperativeLevel(m_hwnd, DISCL_EXCLUSIVE | DISCL_FOREGROUND);
 			else
 				joystick->SetCooperativeLevel(m_hwnd, DISCL_NONEXCLUSIVE | DISCL_BACKGROUND);
+			joystick->Acquire();
 		}
 		joyNum++;
 	}
@@ -1330,7 +1346,7 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
 	eff.dwTriggerButton = DIEB_NOTRIGGER;
 	eff.dwTriggerRepeatInterval = 0;
-	eff.dwGain = min<LONG>(m_diEffectsGain * DI_EFFECTS_SCALE, DI_EFFECTS_MAX);
+	eff.dwGain = min<LONG>(g_Config.dInputEffectsGain * DI_EFFECTS_SCALE, DI_EFFECTS_MAX);
 	eff.cAxes = 1;
 	eff.rgdwAxes = &dwAxis;
 	eff.rglDirection = &lDirection;
@@ -1651,12 +1667,12 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 
 			case FFConstantForce:
 				// Check if constant force effect is disabled
-				if (m_xiConstForceMax == 0)
+				if (g_Config.xInputConstForceMax == 0)
 					return false;
 				// Constant force effect is mapped to either left or right vibration motor depending on its direction
 				negForce = ffCmd.force < 0.0f;
 				absForce = (negForce ? -ffCmd.force : ffCmd.force);
-				threshold = (float)m_xiConstForceThreshold / 100.0f;
+				threshold = (float)g_Config.xInputConstForceThreshold / 100.0f;
 				// Check if constant force effect is being stopped or is below threshold 
 				if (absForce == 0.0f || absForce < threshold)
 				{
@@ -1667,14 +1683,14 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				else if (negForce)
 				{
 					// If force is negative (to left), set left motor vibrating
-					pInfo->xiConstForceLeft = (WORD)(absForce * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE));
+					pInfo->xiConstForceLeft = (WORD)(absForce * (float)(g_Config.xInputConstForceMax * XI_VIBRATE_SCALE));
 					pInfo->xiConstForceRight = 0;
 				}
 				else
 				{
 					// If force positive (to right), set right motor vibrating
 					pInfo->xiConstForceLeft = 0;
-					pInfo->xiConstForceRight = (WORD)(absForce * (float)(m_xiConstForceMax * XI_VIBRATE_SCALE));
+					pInfo->xiConstForceRight = (WORD)(absForce * (float)(g_Config.xInputConstForceMax * XI_VIBRATE_SCALE));
 				}
 				break;
 
@@ -1685,7 +1701,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 
 			case FFVibrate:
 				// Check if vibration effect is disabled
-				if (m_xiVibrateMax == 0)
+				if (g_Config.xInputVibrateMax == 0)
 					return false;
 				// Check if vibration effect is being stopped
 				if (ffCmd.force == 0.0f)
@@ -1696,7 +1712,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				else
 				{
 					// Otherwise, set both motors vibrating
-					pInfo->xiVibrateBoth = (WORD)(ffCmd.force * (float)(m_xiVibrateMax * XI_VIBRATE_SCALE));
+					pInfo->xiVibrateBoth = (WORD)(ffCmd.force * (float)(g_Config.xInputVibrateMax * XI_VIBRATE_SCALE));
 				}
 				break;
 
@@ -1748,9 +1764,9 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		{
 			case FFConstantForce:
 				//printf("FFConstantForce %0.2f\n", 100.0f * ffCmd.force);
-				if (m_diConstForceMax == 0)
+				if (g_Config.dInputConstForceMax == 0)
 					return false;
-				dicf.lMagnitude = min<LONG>(-ffCmd.force * (float)(m_diConstForceMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX); // Invert sign for DirectInput effect
+				dicf.lMagnitude = min<LONG>(-ffCmd.force * (float)(g_Config.dInputConstForceMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX); // Invert sign for DirectInput effect
 				
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 				eff.lpvTypeSpecificParams = &dicf;
@@ -1758,11 +1774,11 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 
 			case FFSelfCenter:
 				//printf("FFSelfCenter %0.2f\n", 100.0f * ffCmd.force);
-				if (m_diSelfCenterMax == 0)
+				if (g_Config.dInputSelfCenterMax == 0)
 					return false;
 				dic.lOffset = 0;
-				dic.lPositiveCoefficient = min<LONG>(ffCmd.force * (float)(m_diSelfCenterMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
-				dic.lNegativeCoefficient = min<LONG>(ffCmd.force * (float)(m_diSelfCenterMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dic.lPositiveCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dic.lNegativeCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
 				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
 				dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX);
@@ -1773,11 +1789,11 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 
 			case FFFriction:
 				//printf("FFFriction %0.2f\n", 100.0f * ffCmd.force);
-				if (m_diFrictionMax == 0)
+				if (g_Config.dInputFrictionMax == 0)
 					return false;
 				dic.lOffset = 0;
-				dic.lPositiveCoefficient = min<LONG>(ffCmd.force * (float)(m_diFrictionMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
-				dic.lNegativeCoefficient = min<LONG>(ffCmd.force * (float)(m_diFrictionMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dic.lPositiveCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dic.lNegativeCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
 				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
 				dic.lDeadBand = 0;
@@ -1788,9 +1804,9 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 
 			case FFVibrate:
 				//printf("FFVibrate %0.2f\n", 100.0f * ffCmd.force);
-				if (m_diVibrateMax == 0)
+				if (g_Config.dInputVibrateMax == 0)
 					return false;
-				dip.dwMagnitude = min<DWORD>(ffCmd.force * (float)(m_diVibrateMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dip.dwMagnitude = min<DWORD>(ffCmd.force * (float)(g_Config.dInputVibrateMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
 				dip.lOffset = 0;
                 dip.dwPhase = 0;
                 dip.dwPeriod = (DWORD)(0.05 * DI_SECONDS); // 1/20th second
@@ -1878,47 +1894,6 @@ const JoyDetails *CDirectInputSystem::GetJoyDetails(int joyNum)
 	return &m_joyDetails[joyNum];
 }
 
-void CDirectInputSystem::ReadFromINIFile(CINIFile *ini, const char *section)
-{
-	CInputSystem::ReadFromINIFile(ini, section);
-
-	ini->Get(section, "DirectInputEffectsGain",    m_diEffectsGain);
-	ini->Get(section, "DirectInputConstForceMax",  m_diConstForceMax);
-	ini->Get(section, "DirectInputSelfCenterMax",  m_diSelfCenterMax);
-	ini->Get(section, "DirectInputFrictionMax",    m_diFrictionMax);
-	ini->Get(section, "DirectInputVibrateMax",     m_diVibrateMax);
-	ini->Get(section, "XInputConstForceThreshold", m_xiConstForceThreshold);
-	ini->Get(section, "XInputConstForceMax",       m_xiConstForceMax);
-	ini->Get(section, "XInputVibrateMax",          m_xiVibrateMax);
-}
-
-void CDirectInputSystem::WriteToINIFile(CINIFile *ini, const char *section)
-{
-	CInputSystem::WriteToINIFile(ini, section);
-
-	// Only write out those settings which have changed from default
-	/*
-	if (m_diEffectsGain != 100)        ini->Set(section, "DirectInputEffectsGain", m_diEffectsGain);
-	if (m_diConstForceMax != 100)      ini->Set(section, "DirectInputConstForceMax", m_diConstForceMax);
-	if (m_diSelfCenterMax != 100)      ini->Set(section, "DirectInputSelfCenterMax", m_diSelfCenterMax);
-	if (m_diFrictionMax != 100)        ini->Set(section, "DirectInputFrictionMax", m_diFrictionMax);
-	if (m_diVibrateMax != 100)         ini->Set(section, "DirectInputVibrateMax", m_diVibrateMax);
-	if (m_xiConstForceThreshold != 65) ini->Set(section, "XInputConstForceThreshold", m_xiConstForceThreshold);
-	if (m_xiConstForceMax != 100)      ini->Set(section, "XInputConstForceMax", m_xiConstForceMax);
-	if (m_xiVibrateMax != 100)         ini->Set(section, "XInputVibrateMax", m_xiVibrateMax);
-	*/
-	
-	// Always write out
-	ini->Set(section, "DirectInputEffectsGain", m_diEffectsGain);
-	ini->Set(section, "DirectInputConstForceMax", m_diConstForceMax);
-	ini->Set(section, "DirectInputSelfCenterMax", m_diSelfCenterMax);
-	ini->Set(section, "DirectInputFrictionMax", m_diFrictionMax);
-	ini->Set(section, "DirectInputVibrateMax", m_diVibrateMax);
-	ini->Set(section, "XInputConstForceThreshold", m_xiConstForceThreshold);
-	ini->Set(section, "XInputConstForceMax", m_xiConstForceMax);
-	ini->Set(section, "XInputVibrateMax", m_xiVibrateMax);
-}
-
 bool CDirectInputSystem::Poll()
 {
 	// See if keyboard, mice and joysticks have been activated yet
@@ -1997,18 +1972,25 @@ void CDirectInputSystem::GrabMouse()
 {
 	CInputSystem::GrabMouse();
 
-	SetMouseVisibility(false);
+	if (m_useRawInput)
+		SetMouseVisibility(false);
 
 	// When grabbing mouse, make sure devices get re-activated
-	ActivateKeyboardsAndMice();
-	ActivateJoysticks();
+	if (m_activated)
+	{
+		ActivateKeyboardsAndMice();
+		ActivateJoysticks();
+	}
 }
 
 void CDirectInputSystem::UngrabMouse()
 {
 	CInputSystem::UngrabMouse();
 
-	// When ungrabbing mouse place, make sure devices get re-activated
-	ActivateKeyboardsAndMice();
-	ActivateJoysticks();
+	// When ungrabbing mouse, make sure devices get re-activated
+	if (m_activated)
+	{
+		ActivateKeyboardsAndMice();
+		ActivateJoysticks();
+	}
 }

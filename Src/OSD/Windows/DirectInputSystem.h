@@ -126,7 +126,7 @@ private:
 	// Lookup table to map key names to DirectInput keycodes and Virtual keycodes
 	static DIKeyMapStruct s_keyMap[];
 
-	static const char *ConstructName(bool useRawInput, bool useXInput, bool enableFFeedback);
+	static const char *ConstructName(bool useRawInput, bool useXInput);
 
 	bool m_useRawInput;
 	bool m_useXInput;
@@ -175,18 +175,6 @@ private:
 	// DirectInput joystick infos and states
 	vector<DIJoyInfo> m_diJoyInfos;
 	vector<DIJOYSTATE2> m_diJoyStates;
-
-	// DirectInput force feedback parameters (100% = max)
-	unsigned m_diEffectsGain;
-	unsigned m_diConstForceMax;
-	unsigned m_diSelfCenterMax;
-	unsigned m_diFrictionMax;
-	unsigned m_diVibrateMax;
-
-	// XInput force feedback parameters (100% = max)
-	unsigned m_xiConstForceThreshold;
-	unsigned m_xiConstForceMax;
-	unsigned m_xiVibrateMax;
 
 	bool GetRegString(HKEY regKey, const char *regPath, string &str);
 
@@ -259,7 +247,7 @@ public:
 	 * to the same shared axis and so cannot be distinguished when pressed together.
 	 * If enableFFeedback is true then force feedback is enabled (for those joysticks which are force feedback capable).
 	 */
-	CDirectInputSystem(bool useRawInput, bool useXInput, bool enableFFeedback);
+	CDirectInputSystem(bool useRawInput, bool useXInput);
 
 	~CDirectInputSystem();
 
@@ -274,10 +262,6 @@ public:
 	const MouseDetails *GetMouseDetails(int mseNum);
 
 	const JoyDetails *GetJoyDetails(int joyNum);
-
-	void ReadFromINIFile(CINIFile *ini, const char *section);
-
-	void WriteToINIFile(CINIFile *ini, const char *section);
 
 	bool Poll();
 
