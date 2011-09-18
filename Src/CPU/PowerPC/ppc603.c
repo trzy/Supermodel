@@ -29,7 +29,7 @@ void ppc603_exception(int exception)
 {
 #ifdef SUPERMODEL_DEBUGGER
 		if (PPCDebug != NULL)
-			PPCDebug->CheckException(exception);
+			PPCDebug->CPUException(exception);
 #endif
 
 	switch( exception )
@@ -280,6 +280,11 @@ int ppc_execute(int cycles)
 
 	ppc603_check_interrupts();
 
+#ifdef SUPERMODEL_DEBUGGER
+	if (PPCDebug != NULL)
+		PPCDebug->CPUActive();
+#endif // SUPERMODEL_DEBUGGER
+
 	while( ppc_icount > 0 && !ppc.fatalError)
 	{
 		ppc.pc = ppc.npc;
@@ -294,10 +299,10 @@ int ppc_execute(int cycles)
 #ifdef SUPERMODEL_DEBUGGER
 		if (PPCDebug != NULL)
 		{
-			while (PPCDebug->CheckExecution(ppc.pc, opcode))
+			while (PPCDebug->CPUExecute(ppc.pc, opcode, (PPCDebug->instrCount > 0 ? 1 : 0)))
 				opcode = *ppc.op++;
 		}
-#endif
+#endif // SUPERMODEL_DEBUGGER
 
 		switch(opcode >> 26)
 		{
@@ -319,6 +324,11 @@ int ppc_execute(int cycles)
 
 		//ppc603_check_interrupts();
 	}
+
+#ifdef SUPERMODEL_DEBUGGER
+	if (PPCDebug != NULL)
+		PPCDebug->CPUInactive();
+#endif // SUPERMODEL_DEBUGGER
 
 	// update timebase
 	// timebase is incremented once every four core clock cycles, so adjust the cycles accordingly
