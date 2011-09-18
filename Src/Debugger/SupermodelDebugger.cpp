@@ -228,7 +228,13 @@ namespace Debugger
 		if (dsb1 != NULL)
 		{
 			CZ80Debug *cpu = new CZ80Debug("DSBZ80", dsb1->GetZ80());
-			// TODO
+			
+			// Regions
+			cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
+			cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
+
+			// TODO - rename some I/O ports
+
 			return cpu;
 		}
 		
@@ -236,7 +242,13 @@ namespace Debugger
 		if (dsb2 != NULL)
 		{
 			CMusashi68KDebug *cpu = new CMusashi68KDebug("DSB68K", dsb2->GetM68K());
-			// TODO
+			
+			// Regions
+			cpu->AddRegion(0x000000, 0x020000, true,  true,  "ROM");
+			cpu->AddRegion(0xF00000, 0xF10000, false, false, "RAM");
+
+			// TODO - memory mapped I/O
+
 			return cpu;
 		}
 
@@ -252,9 +264,10 @@ namespace Debugger
 		
 		// Regions
 		cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
-		cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
+		cpu->AddRegion(0x8000, 0xFFFF, false, false, "RAM");
 
 		// TODO - rename some I/O ports
+
 		return cpu;
 	}
 
