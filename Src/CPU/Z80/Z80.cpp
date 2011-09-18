@@ -30,8 +30,8 @@
  */
 
 #include <cstdio>	// for NULL
-#include "Z80.h"	// must include this first to define CZ80
 #include "Supermodel.h"
+#include "Z80.h"	// must include this first to define CZ80
 
 
 /******************************************************************************
@@ -228,16 +228,6 @@ static const unsigned char cycleTables[5][256] = {
 			pc += 2;							\
 	}
 	
-// Save local copies of Z80 registers back to context
-#define SAVE_TO_CONTEXT()	\
-    af[af_sel] = AF;		\
-    regs[regs_sel].bc = BC;	\
-    regs[regs_sel].de = DE;	\
-    regs[regs_sel].hl = HL;	\
-    ix = IX;				\
-    iy = IY;				\
-    sp = SP
-
 
 /*******************************************************************************
  Functions
@@ -245,6 +235,16 @@ static const unsigned char cycleTables[5][256] = {
 
 int CZ80::Run(int numCycles)
 {
+#ifdef SUPERMODEL_DEBUGGER
+	// If debugging enabled, don't optimize access to registers as they need to be accesible to debugger during execution
+#define AF af[af_sel]
+#define BC regs[regs_sel].bc
+#define DE regs[regs_sel].de
+#define HL regs[regs_sel].hl
+#define SP sp
+#define IX ix
+#define IY iy
+#else
     // Optimization: copy registers into native word-sized local variables
     unsigned int AF = af[af_sel];
     unsigned int BC = regs[regs_sel].bc;
@@ -253,13 +253,31 @@ int CZ80::Run(int numCycles)
     unsigned int SP = sp;
     unsigned int IX = ix;
     unsigned int IY = iy;
+#endif 
     unsigned int temp, acu, sum, cbits;
     unsigned int op, adr;
-    
+
 	int cycles = numCycles;
+
+#ifdef SUPERMODEL_DEBUGGER
+	if (Debug != NULL)
+	{
+		Debug->CPUActive();
+		lastCycles += numCycles;
+	}
+#endif // SUPERMODEL_DEBUGGER
+
 	while (cycles > 0)
 	{
 	op = GetBYTE_pp(pc);
+#ifdef SUPERMODEL_DEBUGGER
+	if (Debug != NULL)
+	{
+		while (Debug->CPUExecute(pc - 1, op, lastCycles - cycles))
+			op = GetBYTE_pp(pc);
+		lastCycles = cycles;
+	}
+#endif // SUPERMODEL_DEBUGGER
 	switch(op) {
 	case 0x00:			/* NOP */
 		cycles -= cycleTables[0][0x00];
@@ -3617,6 +3635,12 @@ int CZ80::Run(int numCycles)
     	 *	- Clear IFF1 (disable interrupts)
     	 *	- Un-halt CPU (if in HALT state)
     	 */
+
+#ifdef SUPERMODEL_DEBUGGER
+		if (Debug != NULL)
+			Debug->CPUException(Z80_EX_NMI);
+#endif // SUPERMODEL_DEBUGGER
+
     	PUSH(pc);
     	pc = 0x0066;
     	iff = (iff&~2) | ((iff&1)<<1);
@@ -3656,8 +3680,13 @@ int CZ80::Run(int numCycles)
     			 */
     			if (NULL != INTCallback)
     			{
-    				v = INTCallback(this);
-    				
+    				v = INTCallback(this);	
+
+#ifdef SUPERMODEL_DEBUGGER
+					if (Debug != NULL)
+						Debug->CPUException(v);
+#endif // SUPERMODEL_DEBUGGER
+
     				switch (v)
     				{
     				case Z80_INT_RST_00:	v = 0x0000;	break;
@@ -3687,6 +3716,12 @@ int CZ80::Run(int numCycles)
     			 *
     			 * Vector is 0x0038.
     			 */
+
+#ifdef SUPERMODEL_DEBUGGER
+				if (Debug != NULL)
+					Debug->CPUException(Z80_IM1_IRQ);
+#endif // SUPERMODEL_DEBUGGER
+
     			PUSH(pc);
     			pc = 0x0038;
     			iff = 0;
@@ -3703,6 +3738,12 @@ int CZ80::Run(int numCycles)
     			 * and 8 bits read from the bus (with bit 0 cleared). The final
     			 * 16-bit vector is read from this address.
     			 */
+
+#ifdef SUPERMODEL_DEBUGGER
+				if (Debug != NULL)
+					Debug->CPUException(Z80_IM2_VECTOR);
+#endif // SUPERMODEL_DEBUGGER
+
     			if (NULL != INTCallback)
     			{
     				v = INTCallback(this);
@@ -3723,10 +3764,25 @@ int CZ80::Run(int numCycles)
     
     
 	}	// end while
-    
+
 	// write registers back to context
-HALTExit:
-    SAVE_TO_CONTEXT();
+HALTExit:	
+#ifdef SUPERMODEL_DEBUGGER
+	if (Debug != NULL)
+	{
+		Debug->CPUInactive();
+		lastCycles = lastCycles - cycles;
+	}
+#else
+	// Save local copies of Z80 registers back to context
+	af[af_sel] = AF;
+    regs[regs_sel].bc = BC;
+    regs[regs_sel].de = DE;
+    regs[regs_sel].hl = HL;
+    ix = IX;
+    iy = IY;
+    sp = SP;
+#endif // SUPERMODEL_DEBUGGER
 
 	// Return number of cycles actually executed
     return numCycles - cycles;
@@ -3746,6 +3802,90 @@ UINT16 CZ80::GetPC(void)
 {
 	return pc;
 }
+
+#ifdef SUPERMODEL_DEBUGGER
+UINT8 CZ80::GetReg8(unsigned reg8)
+{
+	switch (reg8)
+	{
+		case Z80_REG8_IFF: return iff; 
+		case Z80_REG8_IM:  return im; 
+		case Z80_REG8_I:   return ir>>8; 
+		case Z80_REG8_R:   return ir&0xFF;
+		case Z80_REG8_A:   return af[0]>>8;
+		case Z80_REG8_F:   return af[0]&0xFF;
+		case Z80_REG8_B:   return regs[0].bc>>8; 
+		case Z80_REG8_C:   return regs[0].bc&0xFF;
+		case Z80_REG8_D:   return regs[0].de>>8;
+		case Z80_REG8_E:   return regs[0].de&0xFF;
+		case Z80_REG8_H:   return regs[0].hl>>8;
+		case Z80_REG8_L:   return regs[0].hl&0xFF;
+		default:           return 0;
+	}
+}
+
+bool CZ80::SetReg8(unsigned reg8, UINT8 value)
+{
+	switch (reg8)
+	{
+		case Z80_REG8_IFF: iff = value; return true;
+		case Z80_REG8_IM:  im = value; return true; 
+		case Z80_REG8_I:   ir |= value<<8; return true; 
+		case Z80_REG8_R:   ir |= value; return true;
+		case Z80_REG8_A:   af[0] |= value<<8; return true;
+		case Z80_REG8_F:   af[0] |= value; return true;
+		case Z80_REG8_B:   regs[0].bc |= value<<8; return true; 
+		case Z80_REG8_C:   regs[0].bc |= value; return true;
+		case Z80_REG8_D:   regs[0].de |= value<<8; return true;
+		case Z80_REG8_E:   regs[0].de |= value; return true;
+		case Z80_REG8_H:   regs[0].hl |= value<<8; return true;
+		case Z80_REG8_L:   regs[0].hl |= value; return true;
+		default:           return false;
+	}
+}
+
+UINT16 CZ80::GetReg16(unsigned reg16)
+{
+	switch (reg16)
+	{
+		case Z80_REG16_SP:  return sp;
+		case Z80_REG16_PC:  return pc;
+		case Z80_REG16_IR:  return ir;
+		case Z80_REG16_AF:  return af[0];
+		case Z80_REG16_BC:  return regs[0].bc;
+		case Z80_REG16_DE:  return regs[0].de;
+		case Z80_REG16_HL:  return regs[0].hl;
+		case Z80_REG16_IX:  return ix;
+		case Z80_REG16_IY:  return iy;
+		case Z80_REG16_AF_: return af[1];
+		case Z80_REG16_BC_: return regs[1].bc;
+		case Z80_REG16_DE_: return regs[1].de;
+		case Z80_REG16_HL_: return regs[1].hl;
+		default:            return 0;
+	}
+}
+
+bool CZ80::SetReg16(unsigned reg16, UINT16 value)
+{
+	switch (reg16)
+	{
+		case Z80_REG16_SP:  sp = value; return true;
+		case Z80_REG16_PC:  pc = value; return true;
+		case Z80_REG16_IR:  ir = value; return true;
+		case Z80_REG16_AF:  af[0] = value; return true;
+		case Z80_REG16_BC:  regs[0].bc = value; return true;
+		case Z80_REG16_DE:  regs[0].de = value; return true;
+		case Z80_REG16_HL:  regs[0].hl = value; return true;
+		case Z80_REG16_IX:  ix = value; return true;
+		case Z80_REG16_IY:  iy = value; return true;
+		case Z80_REG16_AF_: af[1] = value; return true;
+		case Z80_REG16_BC_: regs[1].bc = value; return true;
+		case Z80_REG16_DE_: regs[1].de = value; return true;
+		case Z80_REG16_HL_: regs[1].hl = value; return true;
+		default:            return false;
+	}
+}
+#endif // SUPERMODEL_DEBUGGER
 
 void CZ80::Reset(void)
 {
@@ -3770,6 +3910,10 @@ void CZ80::Reset(void)
   	
   	intLine		= false;
   	nmiTrigger	= false;
+
+#ifdef SUPERMODEL_DEBUGGER
+	lastCycles  = 0;
+#endif // SUPERMODEL_DEBUGGER
 }
 
 void CZ80::SaveState(CBlockFile *StateFile, const char *name)
@@ -3832,14 +3976,41 @@ void CZ80::Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80))
 	INTCallback	= INTF;
 }
 
+
+#ifdef SUPERMODEL_DEBUGGER
+void CZ80::AttachDebugger(Debugger::CZ80Debug *DebugPtr)
+{
+	if (Debug != NULL)
+		DetachDebugger();
+	Debug = DebugPtr;
+	Bus = Debug->AttachBus(Bus);
+}
+
+void CZ80::DetachDebugger()
+{
+	if (Debug == NULL)
+		return;
+	Bus = Debug->DetachBus();
+	Debug = NULL;
+}
+#endif //SUPERMODEL_DEBUGGER
+
 CZ80::CZ80(void)
 {
 	INTCallback	= NULL;	// so we can later check to see if one has been installed
 	Bus 		= NULL;
+
+#ifdef SUPERMODEL_DEBUGGER
+	Debug       = NULL;
+#endif //SUPERMODEL_DEBUGGER
 }
 
 CZ80::~CZ80(void)
 {
 	INTCallback	= NULL;
 	Bus			= NULL;
+
+#ifdef SUPERMODEL_DEBUGGER
+	Debug       = NULL;
+#endif //SUPERMODEL_DEBUGGER
 }

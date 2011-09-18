@@ -64,6 +64,44 @@
 #define Z80_INT_RST_30	0xF7	// RST 0x30
 #define Z80_INT_RST_38	0xFF	// RST 0x38
 
+#ifdef SUPERMODEL_DEBUGGER
+// Extra interrupt types
+#define Z80_EX_NMI 0
+#define Z80_IM1_IRQ 1
+#define Z80_IM2_VECTOR 2
+
+// 8-bit registers
+#define Z80_REG8_IFF 0
+#define Z80_REG8_IM 1
+#define Z80_REG8_I 2
+#define Z80_REG8_R 3
+#define Z80_REG8_A 4
+#define Z80_REG8_F 5
+#define Z80_REG8_B 6
+#define Z80_REG8_C 7
+#define Z80_REG8_D 8
+#define Z80_REG8_E 9
+#define Z80_REG8_H 10
+#define Z80_REG8_L 11
+
+// 16-bit registers
+#define Z80_REG16_SP 0
+#define Z80_REG16_PC 1
+#define Z80_REG16_IR 2
+#define Z80_REG16_AF 3
+#define Z80_REG16_BC 4
+#define Z80_REG16_DE 5
+#define Z80_REG16_HL 6
+#define Z80_REG16_IX 7
+#define Z80_REG16_IY 8
+#define Z80_REG16_AF_ 9
+#define Z80_REG16_BC_ 10
+#define Z80_REG16_DE_ 11
+#define Z80_REG16_HL_ 12
+
+class Debugger::CZ80Debug;
+#endif // SUPERMODEL_DEBUGGER
+
 /*
  * CZ80:
  *
@@ -103,12 +141,12 @@ public:
 	 * callbacks to clear interrupts.
 	 *
 	 * Parameters:
-	 *		state	If true, this is equivalent to /INT being asserted on the
-	 *				Z80 (INT line low, which triggers an interrupt). If false,
+	 *		state	If TRUE, this is equivalent to /INT being asserted on the
+	 *				Z80 (INT line low, which triggers an interrupt). If FALSE,
 	 *				this deasserts /INT (INT line high, no interrupt pending).
 	 */
 	void SetINT(bool state);
-	
+
 	/*
 	 * GetPC(void):
 	 *
@@ -118,6 +156,36 @@ public:
 	 *		Current value of PC register.
 	 */
 	UINT16 GetPC(void);
+
+#ifdef SUPERMODEL_DEBUGGER
+	/*
+	 * GetReg8(state):
+	 *
+	 * Returns value of given 8-bit register.
+	 */
+	UINT8 GetReg8(unsigned reg8);
+
+	/*
+	 * SetReg8(state):
+	 *
+	 * Sets value of given 8-bit register.
+	 */
+	bool SetReg8(unsigned reg8, UINT8 value);
+
+	/*
+	 * GetReg16(state):
+	 *
+	 * Returns value of given 16-bit register.
+	 */
+	UINT16 GetReg16(unsigned reg16);
+
+	/*
+	 * SetReg16(state):
+	 *
+	 * Sets value of given 16-bit register.
+	 */
+	bool SetReg16(unsigned reg16, UINT16 value);
+#endif // SUPERMODEL_DEBUGGER
 
 	/*
 	 * Reset(void):
@@ -161,7 +229,7 @@ public:
 	 *
 	 * An interrupt callback, which is called each time an interrupt occurs,
 	 * should also be supplied. The interrupt callback should explicitly clear
-	 * the INT status (using SetINT(false)) and then return the appropriate 
+	 * the INT status (using SetINT(FALSE)) and then return the appropriate 
 	 * vector depending on the interrupt mode that is used by the system.
 	 *
 	 * For mode 0, only Z80_INT_RST_* values are acceptable. For mode 1, the
@@ -182,7 +250,23 @@ public:
 	 *				a pointer to the Z80 object that received the interrupt.
 	 */
 	void Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80));
-	
+
+#ifdef SUPERMODEL_DEBUGGER
+	/*
+	 * AttachDebugger(DebugPtr):
+	 *
+	 * Attaches debugger to CPU.
+	 */
+	void AttachDebugger(Debugger::CZ80Debug *DebugPtr);
+
+	/*
+	 * DetachDebugger():
+	 *
+	 * Detaches debugger from CPU.
+	 */
+	void DetachDebugger();
+#endif // SUPERMODEL_DEBUGGER
+		
 	/*
 	 * CZ80(void):
 	 * ~CZ80(void):
@@ -191,7 +275,7 @@ public:
 	 */
 	CZ80(void);
 	~CZ80(void);
-	
+
 private:
 	// Registers
 	struct GPR {	// general purpose registers
@@ -217,7 +301,12 @@ private:
 	bool	nmiTrigger;
 	bool	intLine;
 	int		(*INTCallback)(CZ80 *Z80);
-};
 
+#ifdef SUPERMODEL_DEBUGGER
+	int     lastCycles;
+
+	Debugger::CZ80Debug *Debug;
+#endif // SUPERMODEL_DEBUGGER
+};
 
 #endif	// INCLUDED_Z80_H
