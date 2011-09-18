@@ -23,6 +23,10 @@ using namespace std;
 #include "BlockFile.h"
 #endif // DEBUGGER_HASBLOCKFILE
 
+#ifdef DEBUGGER_HASTHREAD
+#include "Thread.h"
+#endif // DEBUGGER_HASTHREAD
+
 #define MAX_EXCEPTIONS 255
 #define MAX_INTERRUPTS 255
 #define MAX_IOPORTS 255
@@ -66,7 +70,11 @@ namespace Debugger
 
 	private:
 		bool m_break;
-		bool m_userBreak;
+#ifdef DEBUGGER_HASTHREAD
+		bool m_breakWait;
+#endif // DEBUGGER_HASTHREAD
+		bool m_breakUser;
+		bool m_halted;
 		bool m_step;
 		EStepMode m_stepMode;
 		bool m_stepBreak;
@@ -77,6 +85,11 @@ namespace Debugger
 		int m_count;
 		bool m_until;
 		UINT32 m_untilAddr;
+
+#ifdef DEBUGGER_HASTHREAD
+		CMutex *m_mutex;
+		CCondVar *m_condVar;
+#endif // DEBUGGER_HASTHREAD
 
 		CException *m_exArray[MAX_EXCEPTIONS];
 		CInterrupt *m_intArray[MAX_INTERRUPTS];
@@ -116,11 +129,67 @@ namespace Debugger
 		CWatch *m_ioWatchTriggered;
 		CRegMonitor *m_regMonTriggered;
 
-		CCPUDebug(const char *cpuName, UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen);
+		UINT64 m_prevTotalCycles;
+
+		CCPUDebug(const char *cpuType, const char *cpuName, 
+			UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen);
 
 		//
-		// Methods to define CPU features, such as registers, exceptions and interrupts
+		// Protected virtual methods for sub-class to implement
 		//
+
+		virtual bool UpdatePC(UINT32 pc) = 0;
+		
+		virtual bool ForceException(CException *ex) = 0;
+
+		virtual bool ForceInterrupt(CInterrupt *in) = 0;
+
+	public:
+		const char *type;
+		const char *name;
+		
+		const UINT8 minInstrLen;
+		const UINT8 maxInstrLen;
+		const bool bigEndian;
+		const UINT8 memBusWidth;
+		const UINT8 maxMnemLen;
+		
+		bool enabled;
+		EFormat addrFmt;
+		EFormat portFmt;
+		EFormat dataFmt;
+
+		CDebugger *debugger;
+
+		UINT16 numExCodes;
+		UINT16 numIntCodes;
+		UINT16 numPorts;
+		UINT32 memSize;
+
+		bool active;
+		UINT64 instrCount;
+		UINT64 totalCycles;
+		UINT64 cyclesPerPoll;
+		UINT32 pc;
+		UINT32 opcode;
+
+		vector<CRegister*> regs;
+		vector<CException*> exceps;
+		vector<CInterrupt*> inters;
+		vector<CIO*> ios;
+		// TODO - should use map<UINT32,T*> for T=CRegion,CLabel&CComment so that look-ups via address are faster
+		vector<CRegion*> regions;
+		vector<CLabel*> labels;
+		vector<CComment*> comments;
+		vector<CWatch*> memWatches;
+		vector<CWatch*> ioWatches;
+		vector<CBreakpoint*> bps;
+		vector<CRegMonitor*> regMons;
+
+		virtual ~CCPUDebug();
+
+		//
+		// Methods to define CPU registers (must be called before attached to debugger)
 
 		CPCRegister *AddPCRegister(const char *name, const char *group);
 
@@ -142,59 +211,13 @@ namespace Debugger
 
 		CFPointRegister *AddFPointRegister(const char *name, const char *group, unsigned id, GetFPointFPtr getFunc, SetFPointFPtr setFunc = NULL);
 
+		//
+		// Methods to add exceptions and interrupts (must be called before attached to debugger)
+		//
+
 		CException *AddException(const char *id, UINT16 code, const char *name);
 
 		CInterrupt *AddInterrupt(const char *id, UINT16 code, const char *name);
-
-		//
-		// Protected virtual methods for sub-class to implement
-		//
-
-		virtual bool UpdatePC(UINT32 pc) = 0;
-		
-		virtual bool ForceException(CException *ex) = 0;
-
-		virtual bool ForceInterrupt(CInterrupt *in) = 0;
-
-	public:
-		const char *name;
-		
-		const UINT8 minInstrLen;
-		const UINT8 maxInstrLen;
-		const bool bigEndian;
-		const UINT8 memBusWidth;
-		const UINT8 maxMnemLen;
-		
-		bool enabled;
-		EFormat addrFmt;
-		EFormat portFmt;
-		EFormat dataFmt;
-
-		CDebugger *debugger;
-
-		UINT16 numExCodes;
-		UINT16 numIntCodes;
-		UINT16 numPorts;
-		UINT32 memSize;
-
-		UINT64 instrCount;
-		UINT32 pc;
-		UINT32 opcode;
-
-		vector<CRegister*> regs;
-		vector<CException*> exceps;
-		vector<CInterrupt*> inters;
-		vector<CIO*> ios;
-		// TODO - should use map<UINT32,T*> for T=CRegion,CLabel&CComment so that look-ups via address are faster
-		vector<CRegion*> regions;
-		vector<CLabel*> labels;
-		vector<CComment*> comments;
-		vector<CWatch*> memWatches;
-		vector<CWatch*> ioWatches;
-		vector<CBreakpoint*> bps;
-		vector<CRegMonitor*> regMons;
-
-		virtual ~CCPUDebug();
 
 		//
 		// Methods to define memory layout (must be called before attached to debugger)
@@ -279,21 +302,43 @@ namespace Debugger
 		void CheckPortOutput(UINT16 portNum, UINT64 data);
 
 		/*
-		 * Should be called before every instruction.
+		 * Should be called by CPU when it becomes active and starts executing an instruction loop.
+		 * This call is needed so that the debugger can handle multi-threading of CPUs.
+		 */
+		void CPUActive();
+
+		/*
+		 * Should be called by CPU when it becomes inactive after having finished executing an instruction loop.
+		 * This call is needed so that the debugger can handle multi-threading of CPUs.
+		 */
+		void CPUInactive();
+
+		/*
+		 * Should be called by CPU before every instruction.
 		 * If returns true, then PC may have been changed by user and/or an exception/interrupt may have forced, so CPU core should 
 		 * check for this and handle appropriately.  Otherwise, it can continue to execute as normal.
 		 */
-		bool CheckExecution(UINT32 newPC, UINT32 newOpcode);
+		bool CPUExecute(UINT32 newPC, UINT32 newOpcode, UINT32 lastCycles);
 
 		/*
-		 * Should be called whenever a CPU exception is raised (and before the exception handler is executed).
+		 * Should be called by CPU whenever a CPU exception is raised (and before the exception handler is executed).
 		 */
-		virtual void CheckException(UINT16 exCode);
+		virtual void CPUException(UINT16 exCode);
 
 		/*
-		 * Should be called whenever a CPU interrupt is raised (and before the interrupt handler is executed).
+		 * Should be called by CPU whenever a CPU interrupt is raised (and before the interrupt handler is executed).
 		 */
-		virtual void CheckInterrupt(UINT16 intCode);
+		virtual void CPUInterrupt(UINT16 intCode);
+
+		void WaitCommand(EHaltReason reason);
+
+#ifdef DEBUGGER_HASTHREAD
+		void ForceWait();
+
+		void WaitForHalt();
+
+		void ClearWait();
+#endif // DEBUGGER_HASTHREAD
 
 		//
 		// Execution control
@@ -488,6 +533,8 @@ namespace Debugger
 		virtual void DetachFromCPU() = 0;
 
 		virtual void DebuggerReset();
+
+		virtual void DebuggerPolled();
 
 		virtual UINT32 GetResetAddr() = 0;
 
@@ -754,13 +801,14 @@ namespace Debugger
 			IOWatchTriggered(port->watch, port, data, false);
 	}	
 
-	inline bool CCPUDebug::CheckExecution(UINT32 newPC, UINT32 newOpcode)
+	inline bool CCPUDebug::CPUExecute(UINT32 newPC, UINT32 newOpcode, UINT32 lastCycles)
 	{
 		// Check if debugging is enabled for this CPU
 		if (!enabled)
 		{
-			// If not, update instruction count, pc and opcode but don't allow any execution control
+			// If not, update instruction count, total cycles counts, pc and opcode but don't allow any execution control
 			instrCount++;
+			totalCycles += lastCycles;
 			pc = newPC;
 			opcode = newOpcode;		
 			return false;
@@ -786,8 +834,9 @@ namespace Debugger
 				}
 			}
 
-			// Now update instruction count, pc and opcode
+			// Now update instruction count, total cycles count, pc and opcode
 			instrCount++;
+			totalCycles += lastCycles;
 			pc = newPC;
 			opcode = newOpcode;		
 
@@ -862,17 +911,13 @@ namespace Debugger
 		if (m_break || m_stateUpdated || stepBreak || countBreak || untilBreak)
 		{
 			// See if execution halt was caused by user manually breaking execution in some manner
-			if (m_stateUpdated || m_userBreak || stepBreak || countBreak || untilBreak)
-			{
-				EHaltReason reason = HaltNone;
-				if (m_stateUpdated) reason = (EHaltReason)(reason | HaltState);
-				if (m_userBreak)    reason = (EHaltReason)(reason | HaltUser);
-				if (stepBreak)      reason = (EHaltReason)(reason | HaltStep);
-				if (countBreak)     reason = (EHaltReason)(reason | HaltCount);
-				if (untilBreak)     reason = (EHaltReason)(reason | HaltUntil);
-				debugger->ExecutionHalted(this, reason);
-			}
-
+			EHaltReason reason = HaltNone;
+			if (m_stateUpdated) reason = (EHaltReason)(reason | HaltState);
+			if (m_breakUser)    reason = (EHaltReason)(reason | HaltUser);
+			if (stepBreak)      reason = (EHaltReason)(reason | HaltStep);
+			if (countBreak)     reason = (EHaltReason)(reason | HaltCount);
+			if (untilBreak)     reason = (EHaltReason)(reason | HaltUntil);
+			
 			// Keep hold of breakpoint, if any, and its address so that can reset it later
 			UINT32 bpAddr = 0;
 			CBreakpoint *bpToReset = NULL;
@@ -883,7 +928,6 @@ namespace Debugger
 			}
 
 			// Reset all control flags
-			debugger->ClearBreak();
 			m_stateUpdated = false;
 			m_step = false;
 			m_steppingOver = false;
@@ -898,9 +942,9 @@ namespace Debugger
 			m_memWatchTriggered = NULL;
 			m_ioWatchTriggered = NULL;
 			m_regMonTriggered = NULL;
-
+		
 			// Wait for instruction from user
-			debugger->WaitCommand(this);
+			WaitCommand(reason);
 			
 			// Reset breakpoint, if any
 			if (bpToReset != NULL && m_bpTable != NULL)

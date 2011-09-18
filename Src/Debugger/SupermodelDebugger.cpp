@@ -11,20 +11,291 @@
 
 namespace Debugger
 {
+	static const char *s_giGroup = "Game Inputs";
+	static const char *s_gmGroup = "Game Inputs (Mirrored)";
+	static const char *s_sbGroup = "Sound Board";
+
+	static char s_mSlotStr[32][20];
+	static char s_sSlotStr[32][20];
+		
+	CCPUDebug *CSupermodelDebugger::CreateMainBoardCPUDebug(::CModel3 *model3)
+	{
+		CPPCDebug *cpu = new CPPCDebug("MainPPC");
+
+		// Interrupts
+		cpu->AddInterrupt("VD0", 0, "Unknown video-related");
+		cpu->AddInterrupt("VBL", 1, "VBlank start");
+		cpu->AddInterrupt("VD2", 2, "Unknown video-related");
+		cpu->AddInterrupt("VD3", 3, "Unknown video-related");
+		cpu->AddInterrupt("NET", 4, "Network");
+		cpu->AddInterrupt("UN5", 5, "Unknown");
+		cpu->AddInterrupt("SND", 6, "SCSP (sound)");
+		cpu->AddInterrupt("UN7", 7, "Unknown");
+
+		// Memory regions
+		cpu->AddRegion(0x00000000, 0x007FFFFF, true,  false, "RAM");
+		cpu->AddRegion(0x84000000, 0x8400003F, false, false, "Real3D Status Registers");
+		cpu->AddRegion(0x88000000, 0x88000007, false, false, "Real3D Command Port");
+		cpu->AddRegion(0x8C000000, 0x8C3FFFFF, false, false, "Real3D Culling RAM (Low)");
+		cpu->AddRegion(0x8E000000, 0x8E0FFFFF, false, false, "Real3D Culling RAM (High)");
+		cpu->AddRegion(0x90000000, 0x9000000B, false, false, "Real3D VROM Texture Port");
+		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
+		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
+		cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI (Step 1.x)");
+		cpu->AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI (Step 1.x) (Lost World expects it here)");
+		cpu->AddRegion(0xC2000000, 0xC20000FF, false, false, "Real3D DMA (Step 2.x)");
+		cpu->AddRegion(0xF0040000, 0xF004003F, false, false, "Input (Controls) Registers");
+		cpu->AddRegion(0xF0080000, 0xF0080007, false, false, "Sound Board Registers");
+		cpu->AddRegion(0xF00C0000, 0xF00DFFFF, false, false, "Backup RAM");
+		cpu->AddRegion(0xF0100000, 0xF010003F, false, false, "System Registers");
+		cpu->AddRegion(0xF0140000, 0xF014003F, false, false, "Real, 0xTime Clock");
+		cpu->AddRegion(0xF0180000, 0xF019FFFF, false, false, "Security Board RAM");
+		cpu->AddRegion(0xF01A0000, 0xF01A003F, false, false, "Security Board Registers");
+		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_cpu->AddR (Step 1.x)");
+		cpu->AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA (Step 1.x)");
+		cpu->AddRegion(0xF1000000, 0xF10F7FFF, false, false, "Tile Generator Pattern Table");
+		cpu->AddRegion(0xF10F8000, 0xF10FFFFF, false, false, "Tile Generator Name Table");
+		cpu->AddRegion(0xF1100000, 0xF111FFFF, false, false, "Tile Generator Palette");
+		cpu->AddRegion(0xF1180000, 0xF11800FF, false, false, "Tile Generator Registers");
+		cpu->AddRegion(0xF8FFF000, 0xF8FFF0FF, false, false, "MPC105 (Step 1.x) or MPC106 (Step 2.x) Registers");
+		cpu->AddRegion(0xF9000000, 0xF90000FF, false, false, "NCR 53C810 Registers (Step 1.x?)");
+		cpu->AddRegion(0xFE040000, 0xFE04003F, false, false, "Mirrored Input Registers");
+		cpu->AddRegion(0xFEC00000, 0xFEDFFFFF, false, false, "MPC106 CONFIG_cpu->AddR (Step 2.x)");
+		cpu->AddRegion(0xFEE00000, 0xFEFFFFFF, false, false, "MPC106 CONFIG_DATA (Step 2.x)");
+		cpu->AddRegion(0xFF000000, 0xFF7FFFFF, true,  true,  "Banked CROM (CROMxx)");
+		cpu->AddRegion(0xFF800000, 0xFFFFFFFF, true,  true,  "Fixed CROM");
+
+		// Memory-mapped IO
+		cpu->AddMappedIO(0xF0040000, 1, "Input Bank Select",      s_giGroup);
+		cpu->AddMappedIO(0xF0040004, 1, "Current Input Bank",     s_giGroup);
+		cpu->AddMappedIO(0xF0040008, 1, "Game Specific Inputs 1", s_giGroup);
+		cpu->AddMappedIO(0xF004000C, 1, "Game Specific Inputs 2", s_giGroup);
+		cpu->AddMappedIO(0xF0040010, 1, "Drive Board",            s_giGroup);
+		cpu->AddMappedIO(0xF0040014, 1, "LED Outputs?",           s_giGroup);
+		cpu->AddMappedIO(0xF0040018, 1, "Unknown?",               s_giGroup);
+		cpu->AddMappedIO(0xF0040024, 1, "Serial FIFO 1 Control",  s_giGroup);
+		cpu->AddMappedIO(0xF0040028, 1, "Serial FIFO 2 Control",  s_giGroup);
+		cpu->AddMappedIO(0xF004002C, 1, "Serial FIFO 1",          s_giGroup);
+		cpu->AddMappedIO(0xF0040030, 1, "Serial FIFO 2",          s_giGroup);
+		cpu->AddMappedIO(0xF0040034, 1, "Serial FIFO Flags",      s_giGroup);
+		cpu->AddMappedIO(0xF004003C, 1, "ADC",                    s_giGroup);
+
+		cpu->AddMappedIO(0xFE040000, 1, "Input Bank Select",      s_gmGroup);
+		cpu->AddMappedIO(0xFE040004, 1, "Current Input Bank",     s_gmGroup);
+		cpu->AddMappedIO(0xFE040008, 1, "Game Specific Inputs 1", s_gmGroup);
+		cpu->AddMappedIO(0xFE04000C, 1, "Game Specific Inputs 2", s_gmGroup);
+		cpu->AddMappedIO(0xFE040010, 1, "Drive Board",            s_gmGroup);
+		cpu->AddMappedIO(0xFE040014, 1, "LED Outputs?",           s_gmGroup);
+		cpu->AddMappedIO(0xFE040018, 1, "Unknown?",               s_gmGroup);
+		cpu->AddMappedIO(0xFE040024, 1, "Serial FIFO 1 Control",  s_gmGroup);
+		cpu->AddMappedIO(0xFE040028, 1, "Serial FIFO 2 Control",  s_gmGroup);
+		cpu->AddMappedIO(0xFE04002C, 1, "Serial FIFO 1",          s_gmGroup);
+		cpu->AddMappedIO(0xFE040030, 1, "Serial FIFO 2",          s_gmGroup);
+		cpu->AddMappedIO(0xFE040034, 1, "Serial FIFO Flags",      s_gmGroup);
+		cpu->AddMappedIO(0xFE04003C, 1, "ADC",                    s_gmGroup);
+
+		cpu->AddMappedIO(0xF0080000, 1, "MIDI",    s_sbGroup);
+		cpu->AddMappedIO(0xF0080004, 1, "Control", s_sbGroup);
+
+		return cpu;
+	}
+
+	CCPUDebug *CSupermodelDebugger::CreateSoundBoardCPUDebug(::CModel3 *model3)
+	{
+		CSoundBoard *sndBrd = model3->GetSoundBoard();
+		CMusashi68KDebug *cpu = new CMusashi68KDebug("Snd68K", sndBrd->GetM68K());
+
+		// Regions
+		cpu->AddRegion(0x000000, 0x0FFFFF, true,  false, "SCSP1 RAM");
+		cpu->AddRegion(0x200000, 0x2FFFFF, true,  false, "SCSP2 RAM");
+		cpu->AddRegion(0x600000, 0x67FFFF, true,  true,  "Program ROM");
+		cpu->AddRegion(0x800000, 0x9FFFFF, false, true,  "Sample ROM (low 2 MB)");
+		cpu->AddRegion(0xA00000, 0xDFFFFF, false, true,  "Sample ROM (bank)");
+		cpu->AddRegion(0xE00000, 0xFFFFFF, false, true,  "Sample ROM (bank)");
+		cpu->AddRegion(0x100000, 0x10FFFF, false, false, "SCSP Master");
+		cpu->AddRegion(0x300000, 0x30FFFF, false, false, "SCSP Slave");
+
+		// Mapped I/O
+
+		// SCSP Master 32 slots
+		for (unsigned slot = 0; slot < 32; slot++)
+		{
+			sprintf(s_mSlotStr[slot], "SCSP Master Slot %02X", slot);
+			UINT32 addr = 0x100000 + slot * 0x20;
+			cpu->AddMappedIO(addr + 0x00, 2, "KYONX,KYONB,SBCTL,SSCTL,LPCTL,PCM8B,SA", s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x02, 2, "SA",                                     s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x04, 2, "LSA",                                    s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x06, 2, "LEA",                                    s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x08, 2, "D2R,D1R,EGHOLD,AR",                      s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0A, 2, "LPSLNK,KRS,DL,RR",                       s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0C, 1, "STWINH",                                 s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0D, 1, "SDIR,TL",                                s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0E, 2, "MDL,MDXSL,MDYSL",                        s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x10, 2, "OCT,FNS",                                s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x12, 1, "LFORE,LFOF,PLFOWS",                      s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x13, 1, "PLFOS,ALFOWS,ALFOS",                     s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x15, 1, "ISEL,OMXL",                              s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x16, 1, "DISDL,DIPAN",                            s_mSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x17, 1, "EFSDL,EFPAN",                            s_mSlotStr[slot]);
+		}
+		// SCSP Master control registers
+		const char *masterCtl = "SCSP Master Control Registers";
+		cpu->AddMappedIO(0x100400, 1, "MEM4MB,DAC18B",                   masterCtl);
+		cpu->AddMappedIO(0x100401, 1, "VER,MVOL",                        masterCtl);
+		cpu->AddMappedIO(0x100402, 2, "RBL,RBP",                         masterCtl);
+		cpu->AddMappedIO(0x100404, 1, "MOFULL,MOEMP,MIOVF,MIFULL,MIEMP", masterCtl);
+		cpu->AddMappedIO(0x100405, 1, "MIBUF",                           masterCtl);
+		cpu->AddMappedIO(0x100407, 1, "MOBUF",                           masterCtl);
+		cpu->AddMappedIO(0x100408, 2, "MSLC,CA",                         masterCtl);
+		cpu->AddMappedIO(0x100412, 2, "DMEAL",                           masterCtl);
+		cpu->AddMappedIO(0x100414, 2, "DMEAH,DRGA",                      masterCtl);
+		cpu->AddMappedIO(0x100416, 2, "DGATE,DDIR,DEXE,DTLG",            masterCtl);
+		cpu->AddMappedIO(0x100418, 1, "TACTL",                           masterCtl);
+		cpu->AddMappedIO(0x100419, 1, "TIMA",                            masterCtl);
+		cpu->AddMappedIO(0x10041A, 1, "TBCTL",                           masterCtl);
+		cpu->AddMappedIO(0x10041B, 1, "TIMB",                            masterCtl);
+		cpu->AddMappedIO(0x10041C, 1, "TCCTL",                           masterCtl);
+		cpu->AddMappedIO(0x10041D, 1, "TIMC",                            masterCtl);
+		cpu->AddMappedIO(0x10041E, 2, "SCIEB",                           masterCtl);
+		cpu->AddMappedIO(0x100420, 2, "SCIPD",                           masterCtl);
+		cpu->AddMappedIO(0x100422, 2, "SCIRE",                           masterCtl);
+		cpu->AddMappedIO(0x100425, 1, "SCILV0",                          masterCtl);
+		cpu->AddMappedIO(0x100427, 1, "SCILV1",                          masterCtl);
+		cpu->AddMappedIO(0x100429, 1, "SCILV2",                          masterCtl);
+		cpu->AddMappedIO(0x10042A, 2, "MCIEB",                           masterCtl);
+		cpu->AddMappedIO(0x10042C, 2, "MCIPD",                           masterCtl);
+		cpu->AddMappedIO(0x10042E, 2, "MCIRE",                           masterCtl);
+
+		// SCSP Slave 32 slots
+		for (unsigned slot = 0; slot < 32; slot++)
+		{
+			sprintf(s_sSlotStr[slot], "SCSP Slave Slot %02X", slot);
+			UINT32 addr = 0x300000 + slot * 0x20;
+			cpu->AddMappedIO(addr + 0x00, 2, "KYONX,KYONB,SBCTL,SSCTL,LPCTL,PCM8B,SA", s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x02, 2, "SA",                                     s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x04, 2, "LSA",                                    s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x06, 2, "LEA",                                    s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x08, 2, "D2R,D1R,EGHOLD,AR",                      s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0A, 2, "LPSLNK,KRS,DL,RR",                       s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0C, 1, "STWINH",                                 s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0D, 1, "SDIR,TL",                                s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x0E, 2, "MDL,MDXSL,MDYSL",                        s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x10, 2, "OCT,FNS",                                s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x12, 1, "LFORE,LFOF,PLFOWS",                      s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x13, 1, "PLFOS,ALFOWS,ALFOS",                     s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x15, 1, "ISEL,OMXL",                              s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x16, 1, "DISDL,DIPAN",                            s_sSlotStr[slot]);
+			cpu->AddMappedIO(addr + 0x17, 1, "EFSDL,EFPAN",                            s_sSlotStr[slot]);
+		}
+
+		// SCSP Master control registers
+		const char *slaveCtl = "SCSP Slave Control Registers";
+		cpu->AddMappedIO(0x300400, 1, "MEM4MB,DAC18B",                   slaveCtl);
+		cpu->AddMappedIO(0x300401, 1, "VER,MVOL",                        slaveCtl);
+		cpu->AddMappedIO(0x300402, 2, "RBL,RBP",                         slaveCtl);
+		cpu->AddMappedIO(0x300404, 1, "MOFULL,MOEMP,MIOVF,MIFULL,MIEMP", slaveCtl);
+		cpu->AddMappedIO(0x300405, 1, "MIBUF",                           slaveCtl);
+		cpu->AddMappedIO(0x300407, 1, "MOBUF",                           slaveCtl);
+		cpu->AddMappedIO(0x300408, 2, "MSLC,CA",                         slaveCtl);
+		cpu->AddMappedIO(0x300412, 2, "DMEAL",                           slaveCtl);
+		cpu->AddMappedIO(0x300414, 2, "DMEAH,DRGA",                      slaveCtl);
+		cpu->AddMappedIO(0x300416, 2, "DGATE,DDIR,DEXE,DTLG",            slaveCtl);
+		cpu->AddMappedIO(0x300418, 1, "TACTL",                           slaveCtl);
+		cpu->AddMappedIO(0x300419, 1, "TIMA",                            slaveCtl);
+		cpu->AddMappedIO(0x30041A, 1, "TBCTL",                           slaveCtl);
+		cpu->AddMappedIO(0x30041B, 1, "TIMB",                            slaveCtl);
+		cpu->AddMappedIO(0x30041C, 1, "TCCTL",                           slaveCtl);
+		cpu->AddMappedIO(0x30041D, 1, "TIMC",                            slaveCtl);
+		cpu->AddMappedIO(0x30041E, 2, "SCIEB",                           slaveCtl);
+		cpu->AddMappedIO(0x300420, 2, "SCIPD",                           slaveCtl);
+		cpu->AddMappedIO(0x300422, 2, "SCIRE",                           slaveCtl);
+		cpu->AddMappedIO(0x300425, 1, "SCILV0",                          slaveCtl);
+		cpu->AddMappedIO(0x300427, 1, "SCILV1",                          slaveCtl);
+		cpu->AddMappedIO(0x300429, 1, "SCILV2",                          slaveCtl);
+		cpu->AddMappedIO(0x30042A, 2, "MCIEB",                           slaveCtl);
+		cpu->AddMappedIO(0x30042C, 2, "MCIPD",                           slaveCtl);
+		cpu->AddMappedIO(0x30042E, 2, "MCIRE",                           slaveCtl);
+
+		return cpu;
+	}
+
+	CCPUDebug *CSupermodelDebugger::CreateDSBCPUDebug(::CModel3 *model3)
+	{
+		CSoundBoard *sndBrd = model3->GetSoundBoard();
+		CDSB *dsb = sndBrd->GetDSB();
+		
+		CDSB1 *dsb1 = dynamic_cast<CDSB1*>(dsb);
+		if (dsb1 != NULL)
+		{
+			CZ80Debug *cpu = new CZ80Debug("DSBZ80", dsb1->GetZ80());
+			// TODO
+			return cpu;
+		}
+		
+		CDSB2 *dsb2 = dynamic_cast<CDSB2*>(dsb);
+		if (dsb2 != NULL)
+		{
+			CMusashi68KDebug *cpu = new CMusashi68KDebug("DSB68K", dsb2->GetM68K());
+			// TODO
+			return cpu;
+		}
+
+		return NULL;
+	}
+
+	CCPUDebug *CSupermodelDebugger::CreateDriveBoardCPUDebug(::CModel3 *model3)
+	{
+		CDriveBoard *drvBrd = model3->GetDriveBoard();
+		if (!drvBrd->IsAttached())
+			return NULL;
+		CZ80Debug *cpu = new CZ80Debug("DrvZ80", drvBrd->GetZ80());
+		
+		// Regions
+		cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
+		cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
+
+		// TODO - rename some I/O ports
+		return cpu;
+	}
+
 	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger) : 
 		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger), 
 		m_loadEmuState(false), m_saveEmuState(false), m_resetEmu(false)
 	{
-		AddCPU(new CPPCDebug());
+		//
+	}
+
+	void CSupermodelDebugger::AddCPUs()
+	{
+		CCPUDebug *cpu;
+
+		// Add main board CPU
+		cpu = CreateMainBoardCPUDebug(m_model3);
+		if (cpu) AddCPU(cpu);
+		
+		// Add sound board CPU (if attached)
+		cpu = CreateSoundBoardCPUDebug(m_model3);
+		if (cpu) AddCPU(cpu);
+
+		// Add sound daughter board CPU (if attached)
+		cpu = CreateDSBCPUDebug(m_model3);
+		if (cpu) AddCPU(cpu);
+		
+		// Add drive board CPU (if attached)
+		cpu = CreateDriveBoardCPUDebug(m_model3);
+		if (cpu) AddCPU(cpu);
 	}
 
 	void CSupermodelDebugger::WaitCommand(CCPUDebug *cpu)
 	{
+		// Ungrab mouse and disable audio
 		m_inputs->GetInputSystem()->UngrabMouse();
+		SetAudioEnabled(false);
 
 		CConsoleDebugger::WaitCommand(cpu);
 
 		m_inputs->GetInputSystem()->GrabMouse();
+		SetAudioEnabled(true);
 	}
 
 	bool CSupermodelDebugger::ProcessToken(const char *token, const char *cmd)

@@ -85,10 +85,8 @@ namespace Debugger
 	static const char *crGroup = "Condition Registers";
 	static const char *grGroup = "GPR Registers";
 	static const char *frGroup = "FPR Registers";
-	static const char *giGroup = "Game Inputs";
-	static const char *sbGroup = "Sound Board";
 
-	CPPCDebug::CPPCDebug() : CCPUDebug("PPC", 4, 4, true, 32, 7), m_irqState(0)
+	CPPCDebug::CPPCDebug(const char *name) : CCPUDebug("PPC", name, 4, 4, true, 32, 7), m_irqState(0)
 	{
 		// PC & Link registers
 		AddPCRegister  ("pc", srGroup);
@@ -131,69 +129,6 @@ namespace Debugger
 		AddException("SMI",     EXCEPTION_SMI,         "SMI");
 		AddException("DSI",     EXCEPTION_DSI,         "DSI");
 		AddException("ISI",     EXCEPTION_ISI,         "ISI");
-
-		// TODO - following Model3-specific stuff should be moved to SupermodelDebugger
-
-		// Interrupts
-		AddInterrupt("VD0", 0, "Unknown video-related");
-		AddInterrupt("VBL", 1, "VBlank start");
-		AddInterrupt("VD2", 2, "Unknown video-related");
-		AddInterrupt("VD3", 3, "Unknown video-related");
-		AddInterrupt("NET", 4, "Network");
-		AddInterrupt("UN5", 5, "Unknown");
-		AddInterrupt("SND", 6, "SCSP (sound)");
-		AddInterrupt("UN7", 7, "Unknown");
-
-		// Memory regions
-		AddRegion(0x00000000, 0x007FFFFF, true,  false, "RAM");
-		AddRegion(0x84000000, 0x8400003F, false, false, "Real3D Status Registers");
-		AddRegion(0x88000000, 0x88000007, false, false, "Real3D Command Port");
-		AddRegion(0x8C000000, 0x8C3FFFFF, false, false, "Real3D Culling RAM (Low)");
-		AddRegion(0x8E000000, 0x8E0FFFFF, false, false, "Real3D Culling RAM (High)");
-		AddRegion(0x90000000, 0x9000000B, false, false, "Real3D VROM Texture Port");
-		AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
-		AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
-		AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI (Step 1.x)");
-		AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI (Step 1.x) (Lost World expects it here)");
-		AddRegion(0xC2000000, 0xC20000FF, false, false, "Real3D DMA (Step 2.x)");
-		AddRegion(0xF0040000, 0xF004003F, false, false, "Input (Controls) Registers");
-		AddRegion(0xF0080000, 0xF0080007, false, false, "Sound Board Registers");
-		AddRegion(0xF00C0000, 0xF00DFFFF, false, false, "Backup RAM");
-		AddRegion(0xF0100000, 0xF010003F, false, false, "System Registers");
-		AddRegion(0xF0140000, 0xF014003F, false, false, "Real, 0xTime Clock");
-		AddRegion(0xF0180000, 0xF019FFFF, false, false, "Security Board RAM");
-		AddRegion(0xF01A0000, 0xF01A003F, false, false, "Security Board Registers");
-		AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_ADDR (Step 1.x)");
-		AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA (Step 1.x)");
-		AddRegion(0xF1000000, 0xF10F7FFF, false, false, "Tile Generator Pattern Table");
-		AddRegion(0xF10F8000, 0xF10FFFFF, false, false, "Tile Generator Name Table");
-		AddRegion(0xF1100000, 0xF111FFFF, false, false, "Tile Generator Palette");
-		AddRegion(0xF1180000, 0xF11800FF, false, false, "Tile Generator Registers");
-		AddRegion(0xF8FFF000, 0xF8FFF0FF, false, false, "MPC105 (Step 1.x) or MPC106 (Step 2.x) Registers");
-		AddRegion(0xF9000000, 0xF90000FF, false, false, "NCR 53C810 Registers (Step 1.x?)");
-		AddRegion(0xFE040000, 0xFE04003F, false, false, "Mirrored Input Registers");
-		AddRegion(0xFEC00000, 0xFEDFFFFF, false, false, "MPC106 CONFIG_ADDR (Step 2.x)");
-		AddRegion(0xFEE00000, 0xFEFFFFFF, false, false, "MPC106 CONFIG_DATA (Step 2.x)");
-		AddRegion(0xFF000000, 0xFF7FFFFF, true,  true,  "Banked CROM (CROMxx)");
-		AddRegion(0xFF800000, 0xFFFFFFFF, true,  true,  "Fixed CROM");
-
-		// Memory-mapped IO
-		AddMappedIO(0xF0040000, 1, "Input Bank Select",      giGroup);
-		AddMappedIO(0xF0040004, 1, "Current Input Bank",     giGroup);
-		AddMappedIO(0xF0040008, 1, "Game Specific Inputs 1", giGroup);
-		AddMappedIO(0xF004000C, 1, "Game Specific Inputs 2", giGroup);
-		AddMappedIO(0xF0040010, 1, "Drive Board",            giGroup);
-		AddMappedIO(0xF0040014, 1, "LED Outputs?",           giGroup);
-		AddMappedIO(0xF0040018, 1, "Unknown?",               giGroup);
-		AddMappedIO(0xF0040024, 1, "Serial FIFO 1 Control",  giGroup);
-		AddMappedIO(0xF0040028, 1, "Serial FIFO 2 Control",  giGroup);
-		AddMappedIO(0xF004002C, 1, "Serial FIFO 1",          giGroup);
-		AddMappedIO(0xF0040030, 1, "Serial FIFO 2",          giGroup);
-		AddMappedIO(0xF0040034, 1, "Serial FIFO Flags",      giGroup);
-		AddMappedIO(0xF004003C, 1, "ADC",                    giGroup);
-
-		AddMappedIO(0xF0080000, 1, "MIDI",    sbGroup);
-		AddMappedIO(0xF0080004, 1, "Control", sbGroup);
 	}
 
 	CPPCDebug::~CPPCDebug()
@@ -278,7 +213,7 @@ namespace Debugger
 
 	void CPPCDebug::CheckException(UINT16 exCode)
 	{
-		CCPUDebug::CheckException(exCode);
+		CCPUDebug::CPUException(exCode);
 		
 		if (exCode == EXCEPTION_IRQ)
 		{
@@ -288,7 +223,7 @@ namespace Debugger
 			for (int intCode = 0; newIRQs && intCode < 8; intCode++)
 			{
 				if (newIRQs&0x01)
-					CheckInterrupt(intCode);
+					CPUInterrupt(intCode);
 				newIRQs >>= 1;
 			}
 			m_irqState = irqState;
@@ -350,7 +285,6 @@ namespace Debugger
 			return 4;
 		}
 		else
-
 			return -4;
 	}
 

@@ -35,7 +35,7 @@ namespace Debugger
 		UINT8 m_irqState;
 
 	public:
-		CPPCDebug();
+		CPPCDebug(const char *name);
 
 		virtual ~CPPCDebug();
 

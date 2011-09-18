@@ -11,7 +11,12 @@ using namespace std;
 
 #include "Types.h"
 
+#include "Debugger.h"
 #include "AddressTable.h"
+
+#ifdef DEBUGGER_HASBLOCKFILE
+#include "BlockFile.h"
+#endif // DEBUGGER_HASBLOCKFILE
 
 namespace Debugger
 {
@@ -202,15 +207,31 @@ namespace Debugger
 
 		bool GetIndexOfAddr(UINT32 addr, unsigned &index);
 
+		//
+		// Methods to check, run or abort analysis
+		//
+
 		bool NeedsAnalysis();
 
 		bool AnalyseCode();
 
 		void AbortAnalysis();
 
+		//
+		// Methods to manipulate custom entry addresses
+		//
+
+		void ClearCustomEntryAddrs();
+
 		void AddCustomEntryAddr(UINT32 entryAddr);
 
 		bool RemoveCustomEntryAddr(UINT32 entryAddr);
+
+#ifdef DEBUGGER_HASBLOCKFILE
+		bool LoadState(CBlockFile *state);
+
+		bool SaveState(CBlockFile *state);
+#endif // DEBUGGER_HASBLOCKFILE
 	};
 }
 

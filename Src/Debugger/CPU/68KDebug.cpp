@@ -5,9 +5,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#define M68KSPECIAL_SP 0
+#define M68KSPECIAL_SR 1
+
 namespace Debugger
 {
-	C68KDebug::C68KDebug() : CCPUDebug("68K", 2, 10, true, 24, 7)
+	C68KDebug::C68KDebug(const char *name) : CCPUDebug("68K", name, 2, 10, true, 24, 7)
 	{
 		// Exceptions
 		AddException("BUS",     2,  "Bus Error");
@@ -47,39 +50,6 @@ namespace Debugger
 		AddInterrupt("AUTO5", 4, "Level 5 Interrupt Autovector");
 		AddInterrupt("AUTO6", 5, "Level 6 Interrupt Autovector");
 		AddInterrupt("AUTO7", 6, "Level 7 Interrupt Autovector");
-
-		// TODO - following Model3-specific stuff should be moved to SupermodelDebugger
-
-		// Regions
-		AddRegion(0x000000, 0x0FFFFF, true,  false, "SCSP1 RAM");
-		AddRegion(0x200000,	0x2FFFFF, true,  false, "SCSP2 RAM");
-		AddRegion(0x600000, 0x67FFFF, true,  true,  "Program ROM");
-		AddRegion(0x800000,	0x9FFFFF, false, true,  "Sample ROM (low 2 MB)");
-		AddRegion(0xA00000,	0xDFFFFF, false, true,  "Sample ROM (bank)");
-		AddRegion(0xE00000, 0xFFFFFF, false, true,  "Sample ROM (bank)");
-		AddRegion(0x100000, 0x10FFFF, false, false, "SCSP Master");
-		AddRegion(0x300000, 0x30FFFF, false, false, "SCSP Slave");
-
-		// Mapped I/O
-		for (unsigned slot = 0; slot < 32; slot++)
-		{
-			sprintf(m_mSlotStr[slot], "SCSP Master Slot %02X", slot);
-			for (unsigned reg = 0; reg < 16; reg++)
-			{
-				UINT32 addr = 0x100000 + slot * 0x20 + reg * 0x02;
-				sprintf(m_regStr[reg], "Register %u", reg);
-				AddMappedIO(addr, 2, m_regStr[reg], m_mSlotStr[slot]);
-			}
-		}
-		for (unsigned slot = 0; slot < 32; slot++)
-		{
-			sprintf(m_sSlotStr[slot], "SCSP Slave Slot %02X", slot);
-			for (unsigned reg = 0; reg < 16; reg++)
-			{
-				UINT32 addr = 0x300000 + slot * 0x20 + reg * 0x02;
-				AddMappedIO(addr, 2, m_regStr[reg], m_sSlotStr[slot]);
-			}
-		}
 	}
 
 	static const char *opATable0004[] = { "movep.w [DW3](A0),D0","movep.w [DW3](A1),D0","movep.w [DW3](A2),D0",
@@ -1245,7 +1215,7 @@ namespace Debugger
 	int C68KDebug::Disassemble(UINT32 addr, char *mnemonic, char *operands)
 	{
 		// Read opcode head word
-		UINT16 opcode = (UINT16)ReadMem(addr, 16);
+		UINT16 opcode = (UINT16)ReadMem(addr, 2);
 		int offset = 2;
 
 		const char *instr;
@@ -2204,7 +2174,7 @@ namespace Debugger
 		if (opcode != 0x4E74 && opcode != 0x4E75 && opcode != 0x4E73)
 			return false;
 		// Return address will be at top of stack for rts and stack + 2 for rtr or rte
-		UINT32 sp = 0; // TODO GetSP(); //(UINT32)turbo68kcontext_68000.a[7];
+		UINT32 sp = GetSP();
 		if (opcode == 0x4E75)
 			retAddr = (UINT32)ReadMem(sp, 4);
 		else

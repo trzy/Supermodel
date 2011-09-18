@@ -9,19 +9,27 @@
 
 namespace Debugger
 {
-	CCPUDebug::CCPUDebug(const char *cpuName, UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen) : 
-		name(cpuName), minInstrLen(cpuMinInstrLen), maxInstrLen(cpuMaxInstrLen), 
+	CCPUDebug::CCPUDebug(const char *cpuType, const char *cpuName,
+		UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen) : 
+		type(cpuType), name(cpuName), minInstrLen(cpuMinInstrLen), maxInstrLen(cpuMaxInstrLen), 
 		bigEndian(cpuBigEndian), memBusWidth(cpuMemBusWidth), maxMnemLen(cpuMaxMnemLen),
 		enabled(true), addrFmt(HexDollar), portFmt(Decimal), dataFmt(HexDollar), debugger(NULL), 
-		numExCodes(0), numIntCodes(0), numPorts(0), memSize(0), instrCount(0), pc(0), opcode(0),
-		m_break(false), m_userBreak(false), m_step(false), m_steppingOver(false), m_steppingOut(false), m_count(0), m_until(false), m_untilAddr(0),
+		numExCodes(0), numIntCodes(0), numPorts(0), memSize(0), active(false), instrCount(0), totalCycles(0), cyclesPerPoll(0), pc(0), opcode(0),
+		m_break(false), m_breakUser(false), m_halted(false), m_step(false), m_steppingOver(false), m_steppingOut(false), 
+		m_count(0), m_until(false), m_untilAddr(0),
 		m_mappedIOTable(NULL), m_memWatchTable(NULL), m_bpTable(NULL), m_numRegMons(0), m_regMonArray(NULL),
 		m_analyser(NULL), m_stateUpdated(false), m_exRaised(NULL), m_exTrapped(NULL), m_intRaised(NULL), m_intTrapped(NULL), m_bpReached(NULL), 
-		m_memWatchTriggered(NULL), m_ioWatchTriggered(NULL), m_regMonTriggered(NULL)
+		m_memWatchTriggered(NULL), m_ioWatchTriggered(NULL), m_regMonTriggered(NULL), m_prevTotalCycles(0)
 	{ 
 		memset(m_exArray, NULL, sizeof(m_exArray));
 		memset(m_intArray, NULL, sizeof(m_intArray));
 		memset(m_portArray, NULL, sizeof(m_portArray));
+
+#ifdef DEBUGGER_HASTHREAD
+		m_breakWait = false;
+		m_mutex = CThread::CreateMutex();
+		m_condVar = CThread::CreateCondVar();
+#endif // DEBUGGER_HASTHREAD
 	}
 
 	CCPUDebug::~CCPUDebug()
@@ -377,14 +385,17 @@ namespace Debugger
 
 	void CCPUDebug::ForceBreak(bool user)
 	{
+		m_breakUser |= user;
 		m_break = true;
-		m_userBreak |= user;
 	}
 
 	void CCPUDebug::ClearBreak()
 	{
+#ifdef DEBUGGER_HASTHREAD
+		m_breakWait = false;
+#endif // DEBUGGER_HASTHREAD
+		m_breakUser = false;
 		m_break = false;
-		m_userBreak = false;
 	}
 
 	void CCPUDebug::SetContinue()
@@ -1145,6 +1156,11 @@ namespace Debugger
 			}
 		}
 
+		// Load analyser state
+		CCodeAnalyser *analyser = GetCodeAnalyser();
+		if (!analyser->LoadState(state))
+			return false;
+
 		// TODO - load breakpoints, watches, exception/interrupt traps and register monitors
 
 		return true;
@@ -1191,13 +1207,17 @@ namespace Debugger
 			state->Write(str, strLen * sizeof(char));
 		}
 
+		// Save analyser state, if available
+		if (m_analyser != NULL && !m_analyser->SaveState(state))
+			return false;
+
 		// TODO - save breakpoints, watches, exception/interrupt traps and register monitors
 
 		return true;
 	}
 #endif // DEBUGGER_HASBLOCKFILE
 
-	void CCPUDebug::CheckException(UINT16 exCode)
+	void CCPUDebug::CPUException(UINT16 exCode)
 	{
 		if (exCode >= numExCodes)
 			return;
@@ -1215,7 +1235,7 @@ namespace Debugger
 		m_break = true;	
 	}
 
-	void CCPUDebug::CheckInterrupt(UINT16 intCode)
+	void CCPUDebug::CPUInterrupt(UINT16 intCode)
 	{
 		if (intCode >= numIntCodes)
 			return;
@@ -1233,6 +1253,106 @@ namespace Debugger
 		m_break = true;	
 	}
 
+	void CCPUDebug::CPUActive()
+	{
+#ifdef DEBUGGER_HASTHREAD
+		m_mutex->Lock();
+
+		active = true;
+		m_condVar->Signal();
+
+		m_mutex->Unlock();
+#else
+		active = true;
+#endif // DEBUGGER_HASTHREAD
+	}
+
+	void CCPUDebug::CPUInactive()
+	{
+#ifdef DEBUGGER_HASTHREAD
+		m_mutex->Lock();
+
+		active = false;
+		m_condVar->Signal();
+
+		m_mutex->Unlock();
+#else
+		active = false;
+#endif // DEBUGGER_HASTHREAD
+	}
+
+	void CCPUDebug::WaitCommand(EHaltReason reason)
+	{
+#ifdef DEBUGGER_HASTHREAD
+		m_mutex->Lock();
+
+		m_halted = true;
+		m_condVar->Signal();
+
+		if (debugger->MakePrimary(this))
+		{
+			if (reason != HaltNone)
+				debugger->ExecutionHalted(this, reason);
+			debugger->WaitCommand(this);
+
+			if (!m_stateUpdated)
+				debugger->ReleasePrimary();
+		}
+		else
+		{
+			if (reason != HaltNone)
+				debugger->ExecutionHalted(this, reason);
+			while (m_breakWait)
+				m_condVar->Wait(m_mutex);
+		}
+
+		m_halted = false;
+		m_condVar->Signal();
+
+		m_mutex->Unlock();
+#else
+		if (reason != HaltNone)
+			debugger->ExecutionHalted(this, reason);
+		debugger->WaitCommand(this);
+
+		debugger->ClearBreak();
+#endif // DEBUGGER_HASTHREAD
+	}
+
+#ifdef DEBUGGER_HASTHREAD
+	void CCPUDebug::ForceWait()
+	{
+		m_mutex->Lock();
+
+		m_breakWait = true;
+		m_break = true;
+		m_condVar->Signal();
+
+		m_mutex->Unlock();
+	}
+
+	void CCPUDebug::WaitForHalt()
+	{
+		m_mutex->Lock();
+			
+		// Wait for CPU to become inactive or halt
+		while (active && !m_halted)
+			m_condVar->Wait(m_mutex);
+		
+		m_mutex->Unlock();
+	}
+
+	void CCPUDebug::ClearWait()
+	{
+		m_mutex->Lock();
+		
+		ClearBreak();
+		m_condVar->Signal();
+
+		m_mutex->Unlock();
+	}
+#endif // DEBUGGER_HASTHREAD
+
 	void CCPUDebug::DebuggerReset()
 	{
 		instrCount = 0;
@@ -1242,6 +1362,12 @@ namespace Debugger
 		// Reset code analyser
 		if (m_analyser != NULL)
 			m_analyser->Reset();
+	}
+
+	void CCPUDebug::DebuggerPolled()
+    {
+        cyclesPerPoll = totalCycles - m_prevTotalCycles;
+        m_prevTotalCycles = totalCycles;
 	}
 
 	UINT64 CCPUDebug::ReadMem(UINT32 addr, unsigned dataSize)

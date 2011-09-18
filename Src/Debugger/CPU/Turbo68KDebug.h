@@ -7,8 +7,8 @@
 
 #include "CPU/68K/Turbo68K/Turbo68K.h"
 
-#define M68KSPECIAL_SP 0
-#define M68KSPECIAL_SR 1
+#define TBO68K_REG_SP 0
+#define TBO68K_REG_SR 1
 
 #define USE_NATIVE_READ 0
 #define USE_NATIVE_WRITE 0
@@ -93,14 +93,13 @@ namespace Debugger
 		char m_drNames[8][3];
 		char m_arNames[8][3];
 
-		char m_mSlotStr[32][20];
-		char m_sSlotStr[32][20];
-		char m_regStr[16][12];
-
 		UINT32 m_resetAddr;
 
+	protected:
+		UINT32 GetSP();
+
 	public:
-		CTurbo68KDebug();
+		CTurbo68KDebug(const char *name);
 
 		virtual ~CTurbo68KDebug();
 
@@ -111,8 +110,6 @@ namespace Debugger
 		void DetachFromCPU();
 
 		UINT32 GetResetAddr();
-
-		UINT32 GetSP();
 
 		bool UpdatePC(UINT32 pc);
 

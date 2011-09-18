@@ -36,6 +36,8 @@ namespace Debugger
 		void ListInputs();
 
 	protected:
+		void AddCPUs();
+
 		void WaitCommand(CCPUDebug *cpu);
 
 		bool ProcessToken(const char *token, const char *cmd);
@@ -45,6 +47,14 @@ namespace Debugger
 		void Detaching();
 
 	public:
+		static CCPUDebug *CreateMainBoardCPUDebug(::CModel3 *model3);
+		
+		static CCPUDebug *CreateSoundBoardCPUDebug(::CModel3 *model3);
+
+		static CCPUDebug *CreateDSBCPUDebug(::CModel3 *model3);
+
+		static CCPUDebug *CreateDriveBoardCPUDebug(::CModel3 *model3);
+
 		CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger);
 
 		void Poll();

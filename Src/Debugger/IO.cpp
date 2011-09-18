@@ -92,7 +92,7 @@ namespace Debugger
 	void CPortIO::GetLocation(char *str)
 	{
 		if (name != NULL)
-			sprintf(str, "port %s", name);
+			strcpy(str, name);
 		else
 			sprintf(str, "port %u", portNum);
 	}

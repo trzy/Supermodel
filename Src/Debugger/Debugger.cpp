@@ -101,21 +101,33 @@ namespace Debugger
 		return sscanf(str, "%d", val) == 1;
 	}
 
-	CDebugger::CDebugger() : m_exit(false), m_pause(false), frameCount(0), logDebug(true), logInfo(true), logError(true)
+	CDebugger::CDebugger() : m_exit(false), m_pause(false), m_break(false), m_breakUser(false),
+		frameCount(0), logDebug(true), logInfo(true), logError(true)
 	{ 
-		//
+#ifdef DEBUGGER_HASTHREAD
+		m_mutex = CThread::CreateMutex();
+		m_primaryCPU = NULL;
+#endif // DEBUGGER_HASTHREAD
 	}
 
 	CDebugger::~CDebugger()
 	{	
+		DeleteCPUs();
+	}
+
+	void CDebugger::DeleteCPUs()
+	{
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 			delete *it;
+		cpus.clear();
 	}
 
 	void CDebugger::AddCPU(CCPUDebug *cpu)
 	{
 		cpu->AttachToDebugger(this);
 		cpus.push_back(cpu);
+		if (m_break)
+			cpu->ForceBreak(m_breakUser);
 	}
 
 	void CDebugger::RemoveCPU(CCPUDebug *cpu)
@@ -158,24 +170,70 @@ namespace Debugger
 
 	void CDebugger::ForceBreak(bool user)
 	{
+		m_break = true;
+		m_breakUser = user;
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 			(*it)->ForceBreak(user);
 	}
 
 	void CDebugger::ClearBreak()
 	{
+		m_break = false;
+		m_breakUser = false;
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 			(*it)->ClearBreak();
 	}
 
-	void CDebugger::SetContinue()
+#ifdef DEBUGGER_HASTHREAD
+	bool CDebugger::MakePrimary(CCPUDebug *cpu)
 	{
-		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
-			(*it)->SetContinue();
+		m_mutex->Lock();
+
+		bool isPrimary = m_primaryCPU == NULL || m_primaryCPU == cpu;
+		if (isPrimary)
+			m_primaryCPU = cpu;
+		
+		m_mutex->Unlock();
+		
+		if (isPrimary)
+		{
+			for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
+			{
+				if ((*it) != m_primaryCPU)
+					(*it)->ForceWait();
+			}
+			for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
+			{
+				if ((*it) != m_primaryCPU)
+					(*it)->WaitForHalt();
+			}
+		}
+
+		return isPrimary;
 	}
+
+	void CDebugger::ReleasePrimary()
+	{
+		m_mutex->Lock();
+
+		m_primaryCPU = NULL;
+
+		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
+		{
+			if ((*it) == m_primaryCPU)
+				(*it)->ClearBreak();
+			else 
+				(*it)->ClearWait();
+		}
+
+		m_mutex->Unlock();
+	}
+#endif // DEBUGGER_HASTHREAD
 
 	void CDebugger::Attach()
 	{
+		AddCPUs();
+
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 			(*it)->AttachToCPU();
 	}
@@ -184,6 +242,8 @@ namespace Debugger
 	{
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 			(*it)->DetachFromCPU();
+
+		DeleteCPUs();
 	}
 
 	void CDebugger::Reset()
@@ -196,6 +256,8 @@ namespace Debugger
 	void CDebugger::Poll()
 	{
 		frameCount++;
+		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
+			(*it)->DebuggerPolled();
 	}
 
 	void CDebugger::PrintEvent(CCPUDebug *cpu, const char *fmt, ...)

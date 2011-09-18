@@ -1661,7 +1661,7 @@ namespace Debugger
 			modifier[modSize] = '\0';
 			
 			char actual[255];
-			size_t actSize = min(pos - token - 1, 254);
+			size_t actSize = min<size_t>(pos - token - 1, 254);
 			strncpy(actual, token, actSize);
 			actual[actSize] = '\0';
 			return CheckToken(actual, simple, full);
@@ -1932,16 +1932,30 @@ namespace Debugger
 			return;
 		}
 
-		Print(" %-3s %-12s %-9s %12s\n", "Num", "CPU", "Debugging", "Instr Count"); 
+		Print(" %-3s %-9s %-6s %-9s %-7s %-12s %-12s %-9s\n", "Num", "Name", "Type", "Debugging", "State", "Instr Count", "Total Cycles", "Frequency"); 
 		unsigned num = 0;
+		double freq;
+		char onCPU;
+		const char *debugStr;
 		const char *stateStr;
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 		{
-			stateStr = ((*it)->enabled ? "Enabled" : "Disabled");
+			onCPU = (*it == m_cpu ? '*': ' ');
+			debugStr = ((*it)->enabled ? "Enabled" : "Disabled");
+			stateStr = ((*it)->active ? "Running" : "Waiting");
+			
 			if ((*it)->instrCount > 0)
-				Print(" %-3u %-12s %-9s %12llu\n", num++, (*it)->name, stateStr, (*it)->instrCount - 1);
+			{
+				if (frameCount > 0)
+				{
+					freq = ((*it)->cyclesPerPoll * 60.0) / 1000000.0;
+					Print("%c%-3u %-9s %-6s %-9s %-7s %12llu %12llu %6.1fMHz\n", onCPU, num++, (*it)->name, (*it)->type, debugStr, stateStr, (*it)->instrCount - 1, (*it)->totalCycles, freq);
+				}
+				else
+					Print("%c%-3u %-9s %-6s %-9s %-7s %12llu %12llu %9s\n", onCPU, num++, (*it)->name, (*it)->type, debugStr, stateStr, (*it)->instrCount - 1, (*it)->totalCycles, "-");
+			}
 			else
-				Print(" %-3u %-12s %-9s -\n", num++, (*it)->name, stateStr);
+				Print("%c%-3u %-9s %-6s %-9s %-7s %12s %12s %9s\n", onCPU, num++, (*it)->name, (*it)->type, debugStr, stateStr, "-", "-", "-");
 		}
 	}
 
@@ -2097,7 +2111,7 @@ namespace Debugger
 				dirChar = ((*it)->last == &(*it)->lastIn ? '<' : '>');
 			else
 				dirChar = ' ';
-			// Formatt last input
+			// Format last input
 			if ((*it)->inCount > 0)
 				m_cpu->FormatData(inStr, (*it)->dataSize, (*it)->lastIn);
 			else
@@ -2109,7 +2123,7 @@ namespace Debugger
 			int inLPad = 5 - (int)inLen / 2;
 			int inRPad = 5 - (int)inLen + (int)inLen / 2;
 			// Format last output
-			if ((*it)->inCount > 0)
+			if ((*it)->outCount > 0)
 				m_cpu->FormatData(outStr, (*it)->dataSize, (*it)->lastOut);
 			else
 			{
@@ -2402,7 +2416,8 @@ namespace Debugger
 			// In the absence of code analyser, try to align code with current PC address
 			if (m_cpu->instrCount > 0 && pc >= start && pc <= end)
 			{
-				while (start < end)
+				unsigned count = m_cpu->instrCount;
+				while (start < end && count-- > 0)
 				{	
 					bool okay = false;
 					addr = start;

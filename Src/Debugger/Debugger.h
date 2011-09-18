@@ -13,6 +13,7 @@ using namespace std;
 #if defined(SUPERMODEL_WIN32) || defined(SUPERMODEL_UNIX) || defined(SUPERMODEL_OSX)
 #define DEBUGGER_HASBLOCKFILE
 #define DEBUGGER_HASLOGGER
+#define DEBUGGER_HASTHREAD
 #endif
 
 #define DEBUGGER_STATEFILE_VERSION 0
@@ -22,8 +23,15 @@ using namespace std;
 #endif // DEBUGGER_HASBLOCKFILE
 
 #ifdef DEBUGGER_HASLOGGER
+#ifndef SUPERMODEL_VERSION
+#define SUPERMODEL_VERSION ""
+#endif // SUPERMODEL_VERSEION
 #include "Logger.h"
 #endif // DEBUGGER_HASLOGGER
+
+#ifdef DEBUGGER_HASTHREAD
+#include "Thread.h"
+#endif // DEBUGGER_HASTHREAD
 
 #ifndef stricmp
 #ifdef _MSC_VER	// MS VisualC++
@@ -83,8 +91,19 @@ namespace Debugger
 	private:
 		bool m_exit;
 		bool m_pause;
+		bool m_break;
+		bool m_breakUser;
+
+#ifdef DEBUGGER_HASTHREAD
+		CMutex *m_mutex;
+		CCPUDebug *m_primaryCPU;
+#endif
 
 	protected:
+		virtual void AddCPUs() = 0;
+		
+		virtual void DeleteCPUs();
+	
 #ifdef DEBUGGER_HASBLOCKFILE
 		virtual bool LoadState(CBlockFile *state);
 
@@ -154,11 +173,15 @@ namespace Debugger
 
 		void ClearBreak();
 
-		void SetContinue();
-
 		bool CheckExit();
 
 		bool CheckPause();
+
+#ifdef DEBUGGER_HASTHREAD
+		bool MakePrimary(CCPUDebug *cpu);
+
+		void ReleasePrimary();
+#endif // DEBUGGER_HASTHREAD
 
 		//
 		// Printing/logging

@@ -461,7 +461,7 @@ namespace Debugger
 		unsigned i = 0;
 		for (vector<UINT32>::iterator it = m_customEntryAddrs.begin(); it != m_customEntryAddrs.end(); it++)
 		{
-			sprintf(labelStr, "Custom%s", i++);
+			sprintf(labelStr, "Custom%u", i++);
 			AddEntryPoint(entryPoints, *it, LFEntryPoint, labelStr);
 		}
 
@@ -651,6 +651,11 @@ namespace Debugger
 	{
 		m_abortAnalysis = true;
 	}
+	
+	void CCodeAnalyser::ClearCustomEntryAddrs()
+	{
+		m_customEntryAddrs.clear();
+	}
 
 	void CCodeAnalyser::AddCustomEntryAddr(UINT32 entryAddr)
 	{
@@ -666,6 +671,43 @@ namespace Debugger
 		m_customEntryAddrs.erase(it);
 		return true;
 	}
-}
 
+#ifdef DEBUGGER_HASBLOCKFILE
+	bool CCodeAnalyser::LoadState(CBlockFile *state)
+	{
+		// Load custom entry addresses
+		char blockStr[255];
+		sprintf(blockStr, "%s.entryaddrs", cpu->name);
+		if (state->FindBlock(blockStr) == OKAY)
+		{
+			m_customEntryAddrs.clear();
+			UINT32 numAddrs;
+			state->Read(&numAddrs, sizeof(numAddrs));
+			for (UINT32 i = 0; i < numAddrs; i++)
+			{
+				UINT32 addr;
+				state->Read(&addr, sizeof(addr));
+				m_customEntryAddrs.push_back(addr);
+			}
+		}
+		return true;
+	}
+
+	bool CCodeAnalyser::SaveState(CBlockFile *state)
+	{
+		// Save custom entry addresses
+		char blockStr[255];
+		sprintf(blockStr, "%s.entryaddrs", cpu->name);
+		state->NewBlock(blockStr, __FILE__);
+		UINT32 numAddrs = m_customEntryAddrs.size();
+		state->Write(&numAddrs, sizeof(numAddrs));
+		for (UINT32 i = 0; i < numAddrs; i++)
+		{
+			UINT32 addr = m_customEntryAddrs[i];
+			state->Write(&addr, sizeof(addr));
+		}
+		return true;
+	}
+#endif // DEBUGGER_HASBLOCKFILE
+}
 #endif  // SUPERMODEL_DEBUGGER
