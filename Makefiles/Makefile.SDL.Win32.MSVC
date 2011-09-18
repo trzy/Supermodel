@@ -166,7 +166,7 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	OBJ += $(OBJ_DIR)/Debugger.obj $(OBJ_DIR)/ConsoleDebugger.obj $(OBJ_DIR)/SupermodelDebugger.obj $(OBJ_DIR)/CPUDebug.obj \
 		$(OBJ_DIR)/AddressTable.obj $(OBJ_DIR)/Breakpoint.obj $(OBJ_DIR)/CodeAnalyser.obj $(OBJ_DIR)/Exception.obj \
 		$(OBJ_DIR)/Interrupt.obj $(OBJ_DIR)/IO.obj $(OBJ_DIR)/Label.obj $(OBJ_DIR)/Register.obj $(OBJ_DIR)/Watch.obj \
-		$(OBJ_DIR)/PPCDebug.obj
+		$(OBJ_DIR)/PPCDebug.obj $(OBJ_DIR)/68KDebug.obj $(OBJ_DIR)/Musashi68KDebug.obj $(OBJ_DIR)/Z80Debug.obj
 endif
 
 
