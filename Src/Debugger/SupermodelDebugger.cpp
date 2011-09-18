@@ -231,10 +231,9 @@ namespace Debugger
 			
 			// Regions
 			cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
-			cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
+			cpu->AddRegion(0x8000, 0xFFFF, false, false, "RAM");
 
 			// TODO - rename some I/O ports
-
 			return cpu;
 		}
 		
@@ -248,7 +247,6 @@ namespace Debugger
 			cpu->AddRegion(0xF00000, 0xF10000, false, false, "RAM");
 
 			// TODO - memory mapped I/O
-
 			return cpu;
 		}
 
@@ -264,10 +262,9 @@ namespace Debugger
 		
 		// Regions
 		cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
-		cpu->AddRegion(0x8000, 0xFFFF, false, false, "RAM");
+		cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
 
 		// TODO - rename some I/O ports
-
 		return cpu;
 	}
 
