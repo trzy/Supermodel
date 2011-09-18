@@ -555,7 +555,7 @@ CINIFile::CToken CINIFile::GetToken(void)
 		}
 		
 		// Number? (+/-?)
-		else if (isdigit(linePtr[0]))
+		else if (linePtr[0]=='-' || isdigit(linePtr[0]))
 		{
 			T = GetNumber();
 			return T;
