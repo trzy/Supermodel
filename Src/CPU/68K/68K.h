@@ -44,6 +44,9 @@
 	#define FASTCALL
 //#endif
 
+#ifdef SUPERMODEL_DEBUGGER
+class CMusashi68KDebug;
+#endif // SUPERMODEL_DEBUGGER
 
 /******************************************************************************
  Definitions 
@@ -71,12 +74,18 @@ public:
 	m68ki_cpu_core	musashiCtx;		// CPU context
 	CBus			*Bus;			// memory handlers
 	int				(*IRQAck)(int);	// IRQ acknowledge callback
-	
+#ifdef SUPERMODEL_DEBUGGER
+	CMusashi68KDebug *Debug;        // holds debugger (if attached)
+#endif // SUPERMODEL_DEBUGGER
+
 	SM68KCtx(void)
 	{
 		Bus = NULL;
 		IRQAck = NULL;
 		memset(&musashiCtx, 0, sizeof(musashiCtx));	// very important! garbage in context at reset can cause very strange bugs
+#ifdef SUPERMODEL_DEBUGGER
+		Debug = NULL;
+#endif // SUPERMODEL_DEBUGGER
 	}
 	
 	~SM68KCtx(void)
@@ -92,9 +101,9 @@ public:
  
  Unless otherwise noted, all functions operate on the active context.
 ******************************************************************************/
-
+	
 /*
- * M68KGetDRegister(int n):
+ * M68KGetARegister(int n):
  *
  * Parameters:
  *		n	Register number (0-7).
@@ -105,6 +114,15 @@ public:
 extern UINT32 M68KGetARegister(int n);
 
 /*
+ * M68KSetARegister(int n, UINT32 v):
+ *
+ * Parameters:
+ *		n	Register number (0-7).
+ *      v   Value to set register An to.
+ */
+extern void M68KSetARegister(int n, UINT32 v);
+
+/*
  * M68KGetDRegister(int n):
  *
  * Parameters:
@@ -113,7 +131,16 @@ extern UINT32 M68KGetARegister(int n);
  * Returns:
  *		Register Dn.
  */
-extern UINT32 M68KGetDRegister(int reg);
+extern UINT32 M68KGetDRegister(int n);
+
+/*
+ * M68KGetDRegister(int n, UINT32 v):
+ *
+ * Parameters:
+ *		n	Register number (0-7).
+ *      v   Value to set register Dn to.
+ */
+extern void M68KSetDRegister(int n, UINT32 v);
 
 /*
  * M68KGetPC():
@@ -232,6 +259,33 @@ extern void M68KGetContext(M68KCtx *Dest);
  */
 extern void M68KSetContext(M68KCtx *Src);
 
+#ifdef SUPERMODEL_DEBUGGER
+#define DBG68K_REG_PC 0
+#define DBG68K_REG_SR 1
+#define DBG68K_REG_SP 2
+#define DBG68K_REG_D0 3
+#define DBG68K_REG_D1 4
+#define DBG68K_REG_D2 5
+#define DBG68K_REG_D3 6
+#define DBG68K_REG_D4 7
+#define DBG68K_REG_D5 8
+#define DBG68K_REG_D6 9
+#define DBG68K_REG_D7 10
+#define DBG68K_REG_A0 11
+#define DBG68K_REG_A1 12
+#define DBG68K_REG_A2 13
+#define DBG68K_REG_A3 14
+#define DBG68K_REG_A4 15
+#define DBG68K_REG_A5 16
+#define DBG68K_REG_A6 17
+#define DBG68K_REG_A7 18
+
+static int lastCycles = 0;
+
+UINT32 M68KGetRegister(SM68KCtx *ctx, unsigned reg);
+
+UINT32 M68KSetRegister(SM68KCtx *ctx, unsigned reg, UINT32 val);
+#endif // SUPERMODEL_DEBUGGER
 
 /******************************************************************************
  68K Handlers
@@ -239,7 +293,12 @@ extern void M68KSetContext(M68KCtx *Src);
  Intended for use directly by the 68K core.
 ******************************************************************************/
 
+
 extern "C" {
+
+#ifdef SUPERMODEL_DEBUGGER
+extern void M68KDebugCallback();
+#endif // SUPERMODEL_DEBUGGER
 	
 /*
  * M68KIRQCallback(nIRQ):

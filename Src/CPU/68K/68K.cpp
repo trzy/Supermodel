@@ -48,6 +48,11 @@
 // Bus
 static CBus	*Bus = NULL;
 
+#ifdef SUPERMODEL_DEBUGGER
+// Debugger
+static CMusashi68KDebug *Debug = NULL;
+#endif
+
 // IRQ callback
 static int	(*IRQAck)(int nIRQ) = NULL;
 
@@ -221,12 +226,30 @@ void M68KSetIRQ(int irqLevel)
 
 int M68KRun(int numCycles)
 {
-	return m68k_execute(numCycles);
+#ifdef SUPERMODEL_DEBUGGER
+	if (Debug != NULL)
+	{
+		Debug->CPUActive();
+		lastCycles += numCycles;
+	}
+#endif // SUPERMODEL_DEBUGGER
+	int doneCycles = m68k_execute(numCycles);
+#ifdef SUPERMODEL_DEBUGGER
+	if (Debug != NULL)
+	{
+		Debug->CPUInactive();
+		lastCycles -= m68k_cycles_remaining();
+	}
+#endif // SUPERMODEL_DEBUGGER
+	return doneCycles;
 }
 
 void M68KReset(void)
 {
 	m68k_pulse_reset();
+#ifdef SUPERMODEL_DEBUGGER
+	lastCycles = 0;
+#endif
 	DebugLog("68K reset\n");
 }
 
@@ -249,6 +272,9 @@ void M68KGetContext(M68KCtx *Dest)
 {
 	Dest->IRQAck = IRQAck;
 	Dest->Bus = Bus;
+#ifdef SUPERMODEL_DEBUGGER
+	Dest->Debug = Debug;
+#endif // SUPERMODEL_DEBUGGER
 	m68k_get_context(&(Dest->musashiCtx));
 }
 
@@ -256,6 +282,9 @@ void M68KSetContext(M68KCtx *Src)
 {
 	IRQAck = Src->IRQAck;
 	Bus = Src->Bus;
+#ifdef SUPERMODEL_DEBUGGER
+	Debug = Src->Debug;
+#endif // SUPERMODEL_DEBUGGER
 	m68k_set_context(&(Src->musashiCtx));
 }
 
@@ -267,11 +296,68 @@ bool M68KInit(void)
 	m68k_set_cpu_type(M68K_CPU_TYPE_68000);
 	m68k_set_int_ack_callback(M68KIRQCallback);
 	Bus = NULL;
-	
+#ifdef SUPERMODEL_DEBUGGER
+	Debug = NULL;
+#endif // SUPERMODEL_DEBUGGER
 	DebugLog("Initialized 68K\n");
 	return OKAY;
 }
 
+#ifdef SUPERMODEL_DEBUGGER
+UINT32 M68KGetRegister(M68KCtx *Src, unsigned reg)
+{
+	switch (reg)
+	{
+		case DBG68K_REG_PC: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_PC);
+		case DBG68K_REG_SR: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_SR);
+		case DBG68K_REG_SP: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_SP);
+		case DBG68K_REG_D0: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D0);
+		case DBG68K_REG_D1: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D1);
+		case DBG68K_REG_D2: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D2);
+		case DBG68K_REG_D3: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D3);
+		case DBG68K_REG_D4: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D4);
+		case DBG68K_REG_D5: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D5);
+		case DBG68K_REG_D6: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D6);
+		case DBG68K_REG_D7: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_D7);
+		case DBG68K_REG_A0: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A0);
+		case DBG68K_REG_A1: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A1);
+		case DBG68K_REG_A2: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A2);
+		case DBG68K_REG_A3: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A3);
+		case DBG68K_REG_A4: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A4);
+		case DBG68K_REG_A5: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A5);
+		case DBG68K_REG_A6: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A6);
+		case DBG68K_REG_A7: return m68k_get_reg(&(Src->musashiCtx), M68K_REG_A7);
+		default:            return 0;
+	}
+}
+
+UINT32 M68KSetRegister(M68KCtx *Src, unsigned reg, UINT32 val)
+{
+	switch (reg)
+	{
+		case DBG68K_REG_PC: m68k_set_reg(M68K_REG_PC, val); return true;
+		case DBG68K_REG_SR: m68k_set_reg(M68K_REG_SR, val); return true;
+		case DBG68K_REG_SP: m68k_set_reg(M68K_REG_SP, val); return true;
+		case DBG68K_REG_D0: m68k_set_reg(M68K_REG_D0, val); return true;
+		case DBG68K_REG_D1: m68k_set_reg(M68K_REG_D1, val); return true;
+		case DBG68K_REG_D2: m68k_set_reg(M68K_REG_D2, val); return true;
+		case DBG68K_REG_D3: m68k_set_reg(M68K_REG_D3, val); return true;
+		case DBG68K_REG_D4: m68k_set_reg(M68K_REG_D4, val); return true;
+		case DBG68K_REG_D5: m68k_set_reg(M68K_REG_D5, val); return true;
+		case DBG68K_REG_D6: m68k_set_reg(M68K_REG_D6, val); return true;
+		case DBG68K_REG_D7: m68k_set_reg(M68K_REG_D7, val); return true;
+		case DBG68K_REG_A0: m68k_set_reg(M68K_REG_A0, val); return true;
+		case DBG68K_REG_A1: m68k_set_reg(M68K_REG_A1, val); return true;
+		case DBG68K_REG_A2: m68k_set_reg(M68K_REG_A2, val); return true;
+		case DBG68K_REG_A3: m68k_set_reg(M68K_REG_A3, val); return true;
+		case DBG68K_REG_A4: m68k_set_reg(M68K_REG_A4, val); return true;
+		case DBG68K_REG_A5: m68k_set_reg(M68K_REG_A5, val); return true;
+		case DBG68K_REG_A6: m68k_set_reg(M68K_REG_A6, val); return true;
+		case DBG68K_REG_A7: m68k_set_reg(M68K_REG_A7, val); return true;
+		default:            return false;
+	}
+}
+#endif // SUPERMODEL_DEBUGGER
 
 /******************************************************************************
  Musashi 68K Handlers
@@ -280,9 +366,29 @@ bool M68KInit(void)
 ******************************************************************************/
 
 extern "C" {
-		
+
+#ifdef SUPERMODEL_DEBUGGER
+void M68KDebugCallback()
+{
+	if (Debug != NULL)
+	{
+		UINT32 pc = m68k_get_reg(NULL, M68K_REG_PC);
+		UINT32 opcode = Bus->Read16(pc);
+		Debug->CPUExecute(pc, opcode, lastCycles - m68k_cycles_remaining());
+		lastCycles = m68k_cycles_remaining();
+	}
+}
+#endif // SUPERMODEL_DEBUGGER
+
 int M68KIRQCallback(int nIRQ)
 {
+#ifdef SUPERMODEL_DEBUGGER
+	if (Debug != NULL)
+	{
+		Debug->CPUException(25);
+		Debug->CPUInterrupt(nIRQ - 1);
+	}
+#endif // SUPERMODEL_DEBUGGER
 	if (NULL == IRQAck)	// no handler, use default behavior
 	{
 		m68k_set_irq(0);	// clear line

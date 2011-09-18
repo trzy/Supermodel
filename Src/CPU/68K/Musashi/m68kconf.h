@@ -153,9 +153,13 @@
 /* If ON, CPU will call the instruction hook callback before every
  * instruction.
  */
+#ifdef SUPERMODEL_DEBUGGER
+#define M68K_INSTRUCTION_HOOK       OPT_SPECIFY_HANDLER
+#define M68K_INSTRUCTION_CALLBACK() M68KDebugCallback()
+#else
 #define M68K_INSTRUCTION_HOOK       OPT_OFF
 #define M68K_INSTRUCTION_CALLBACK() your_instruction_hook_function()
-
+#endif // SUPERMODEL_DEBUGGER
 
 /* If ON, the CPU will emulate the 4-byte prefetch queue of a real 68000 */
 #define M68K_EMULATE_PREFETCH       OPT_OFF
