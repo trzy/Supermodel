@@ -258,7 +258,6 @@ int CZ80::Run(int numCycles)
     unsigned int op, adr;
 
 	int cycles = numCycles;
-
 #ifdef SUPERMODEL_DEBUGGER
 	if (Debug != NULL)
 	{
@@ -3771,7 +3770,7 @@ HALTExit:
 	if (Debug != NULL)
 	{
 		Debug->CPUInactive();
-		lastCycles = lastCycles - cycles;
+		lastCycles -= cycles;
 	}
 #else
 	// Save local copies of Z80 registers back to context
@@ -3910,7 +3909,6 @@ void CZ80::Reset(void)
   	
   	intLine		= false;
   	nmiTrigger	= false;
-
 #ifdef SUPERMODEL_DEBUGGER
 	lastCycles  = 0;
 #endif // SUPERMODEL_DEBUGGER
@@ -3976,7 +3974,6 @@ void CZ80::Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80))
 	INTCallback	= INTF;
 }
 
-
 #ifdef SUPERMODEL_DEBUGGER
 void CZ80::AttachDebugger(Debugger::CZ80Debug *DebugPtr)
 {
@@ -3999,7 +3996,6 @@ CZ80::CZ80(void)
 {
 	INTCallback	= NULL;	// so we can later check to see if one has been installed
 	Bus 		= NULL;
-
 #ifdef SUPERMODEL_DEBUGGER
 	Debug       = NULL;
 #endif //SUPERMODEL_DEBUGGER
@@ -4009,7 +4005,6 @@ CZ80::~CZ80(void)
 {
 	INTCallback	= NULL;
 	Bus			= NULL;
-
 #ifdef SUPERMODEL_DEBUGGER
 	Debug       = NULL;
 #endif //SUPERMODEL_DEBUGGER
