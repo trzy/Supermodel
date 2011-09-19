@@ -574,6 +574,13 @@ holding down the Start button, and pressing: VR4, VR4, VR2, VR3, VR1, VR3, VR2.
 Changing the region to USA changes game text to English.
 
 
+Le Mans 24
+----------
+
+The region can be changed by entering the test menu (press the Test button) and
+pressing: Start, Start, Service, Service, Start, Test.
+
+
 Star Wars Trilogy
 -----------------
 
@@ -594,6 +601,21 @@ As with Star Wars Trilogy, you may experience problems if you attempt to start
 a game before any 3D graphics are displayed (for example, during the Sega
 logo).
 
+The region can be changed by entering the test menu (press the Test button) and
+then pressing the Service button four times for short durations, twice for long
+durations, twice for short durations, and once again for a long duration.
+
+
+The Lost World
+--------------
+
+To reload, the light gun must be pointed off-screen by pressing (and holding)
+the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
+
+The region can be changed by entering the test menu (press the Test button) and
+pressing: Start, Start, Service, Start, Service, Test.  Use the player 1 Start
+button.
+
 
 Virtua Fighter 3
 ----------------
@@ -602,9 +624,135 @@ The game is playable but there are numerous graphical glitches, particularly
 during transition scenes.
 
 
+Virtua Striker 2 '98 (Step 1.5 and 2.0 versions)
+------------------------------------------------
+
+The region can be changed by entering the test menu (press the Test button)
+and, in the 'Game Assignments' menu, performing the following sequence:
+
+	1. Press the Service button once for about 5 seconds.
+	2. Press the Service button three times shortly.
+	3. Press the Service button again one time for about 5 seconds.
+
+
 ==========================
   The Configuration File
 ==========================
+
+Supermodel reads configuration settings from 'Supermodel.ini' located in the
+'Config' subdirectory.  If Supermodel was installed properly, a default file
+should have been created.  When starting up, Supermodel parses settings in the
+following order:
+
+	1. Global settings are read from 'Supermodel.ini'.  These include input
+	   mappings and apply to all games.
+	2. If the ROM set was loaded correctly, game-specific settings are read
+	   from 'Supermodel.ini', overriding settings from step 1.
+	3. Command line options are applied, overriding settings from the previous
+	   steps.
+	   
+In other words, command line options have the highest precedence, followed by
+game-specific settings, and lastly, global settings.
+
+An index of all allowed settings is provided further below in this document.
+
+NOTE: Type carefully!  Supermodel will not report syntax errors or detect 
+typos.  Carefully read the discussion of the file syntax below and type care-
+fully!
+
+
+File Structure and Syntax
+-------------------------
+
+The configuration file is a list of settings grouped under sections.  All names
+and settings in the file are case sensitive.  Settings take the form:
+
+	Name = Argument
+	
+Names are case sensitive.  Only one setting per line is allowed.  Only two
+types of arguments are allowed: integers and strings.  The choice of which to
+use is determined by the setting.  Integers are unsigned and begin at 0.
+Strings can contain any characters and are enclosed by double quotes.  
+Examples:
+
+	IntegerSetting1 = 0
+	IntegerSetting2 = 65536
+	StringSetting1 = "This is a string."
+	StringSetting2 = "123"
+	StringSetting3 = "1+1, abc, these are all valid characters!"
+
+Many settings are simply boolean variables expecting an integer value of either
+0 (disabled) or 1 (enabled).  Some settings require values and others take 
+strings for file names or input mappings.
+
+Section names appear in between square brackets on their own lines.
+
+	[ SectionName ]
+	
+Settings that appear at the beginning of the file without a preceeding section
+are automatically assigned to 'Global'.
+
+Comments begin with a semicolon and extend until the end of the line.
+
+	; This is a comment.
+
+
+The Purpose of Sections
+-----------------------
+
+Sections determine whether settings are applied globally, to all games, or to
+specific games.  Game-specific settings will override global settings and can
+be used to tune Supermodel on a game-by-game basis.  Global settings should be
+placed in the 'Global' section and game-specific settings in sections named
+after the ROM sets.  ROM sets must be typed in lower case and use the MAME
+(http://www.mamedev.org) naming convention.  They can be obtained by running
+'supermodel -print-games'.
+
+Input mappings are special.  They are only read from the 'Global' section!
+
+In the example below, custom configurations are created for 'Scud Race' and
+'The Lost World'.  All other games will use the global settings.
+
+	[ Global ]
+	
+	; Run full screen at 1024x768
+	XResolution = 1024
+	YResolution = 768
+	FullScreen = 1
+
+	; Scud Race
+	[ scud ]
+	
+	; Run at 1080p
+	XResolution = 1920
+	YResolution = 1080
+	
+	; Music is too quiet by default
+	SoundVolume = 50
+	MusicVolume = 200
+	
+	; The Lost World
+	[ lostwsga ]
+	
+	PowerPCFrequency = 25	; run PowerPC at 25 MHz
+
+In this example, only 'Scud Race' will run at 1920x1080.  All other games will
+use 1024x768.  'Scud Race' will also have altered volume settings.  'The Lost
+World' will be run with a lower PowerPC frequency but all other games will use
+the default.
+
+
+Input Mappings
+--------------
+
+Input mappings are specified with strings that have their own internal syntax.
+They may only be specified in the 'Global' section and are ignored elsewhere.
+
+... TODO: write me
+
+The complete list of input settings can be found in the settings index below or
+by generating a configuration file using '-config-inputs'.  
+
 
 =================================
   Index of Command Line Options
@@ -618,7 +766,7 @@ Square brackets ('[' and ']') indicate optional parameters.  Angled brackets
 ('<' and '>') indicate mandatory parameters.  Do not type the brackets.  No 
 spaces may appear inside of an option.  For example, 'supermodel game.zip
 -ppc-frequency=25' is correct but 'supermodel game.zip -ppc-frequency = 25' is
-not.  All options are case-sensitive.
+not.  All options are case sensitive.
 
 
 	Option:			-?
@@ -781,7 +929,7 @@ not.  All options are case-sensitive.
 All valid configuration file settings are listed here, ordered by category.
 Please read the section describing the configuration file for more information.
 
-All settings are case-sensitive.
+All settings are case sensitive.
 
 	
 	Name:			MultiThreaded
