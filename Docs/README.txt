@@ -1,4 +1,8 @@
 TODO: convert all tabs to spaces
+TODO: describe Dinputeffectsgain in config index
+TODO: XInputConstForceThreshold default? Set in source code.
+TODO: describe auto trigger in config index
+TODO: Andy Geezer's region codes
  
  
   ####                                                      ###           ###
@@ -15,9 +19,9 @@ TODO: convert all tabs to spaces
                 Copyright 2011 Bart Trzynadlowski, Nik Henson
 
 
-----------------
+================
   Introduction
-----------------
+================
 
 Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
 is available for Windows, Linux, and Mac OS X.  In order to use it, you must 
@@ -34,9 +38,9 @@ The source code may be obtained from the official Supermodel web site:
     http://www.Supermodel3.com
 
 
---------------
+==============
   Disclaimer
---------------
+==============
 
 This is an early public release of Supermodel.  It is very much preliminary,
 alpha version software (hence the 'a' in the version number).  Development was
@@ -46,9 +50,9 @@ as a proper user interface, are not yet implemented and game compatibility is
 still low.
 
 
----------------------
+=====================
   Table of Contents
----------------------
+=====================
 
     -- Introduction
     -- Disclaimer
@@ -59,9 +63,9 @@ still low.
     4. 
 
 
---------------------
+====================
   Revision History
---------------------
+====================
 
     Version 0.2a (September ?, 2011)
         - New, fully customizable input system.  Supports any combination of 
@@ -86,8 +90,8 @@ still low.
           combined ROM sets as long as unused files are removed.
         - Configuration file now supports more settings and allows game-
           specific customization.
-        - Added light gun crosshairs ('Lost World'), enabled by default in full
-          screen mode and selectable by pressing Alt-I.
+        - Added light gun crosshairs ('The Lost World'), enabled by default in
+          full screen mode and selectable by pressing Alt-I.
         - Drive board and force feedback emulation for 'Scud Race', 'Daytona
           USA 2', and 'Sega Rally 2'.  [Nik Henson]
         - Viewable display area properly clipped.  Ghost artifacts no longer
@@ -115,9 +119,9 @@ still low.
         - Initial public alpha release.
         
         
--------------------------
+=========================
   Installing Supermodel
--------------------------
+=========================
 
 To install Supermodel on Windows, extract the ZIP archive containing the
 Supermodel executable to a folder of your choice.  The following files and
@@ -142,9 +146,9 @@ As of this version, Linux and Mac OS X binaries are not provided.  Users must
 compile their own.
 
 
------------------------------
+=============================
   Compiling the Source Code
------------------------------
+=============================
 
 First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
 (http://zlib.net) are installed. GLEW (http://glew.sourceforge.net) is now
@@ -168,9 +172,9 @@ locate SDL if it was installed properly.
 Finally, run 'make'.  If all goes well it should produce a Supermodel binary.
 
 
-----------------------
+======================
   Running Supermodel
-----------------------
+======================
 
 For now, Supermodel does not include a proper user interface.  It is operated
 entirely from the command line.  Run 'supermodel' without any command line 
@@ -192,9 +196,9 @@ Note that there is no user interface and all messages are printed to the
 command prompt.  In full screen mode, they will not be visible. 
 
 
---------------------------
+==========================
   Merging Split ROM Sets
---------------------------
+==========================
 
 ROMs that are split into parent and child sets (eg., 'Scud Race Plus', whose
 parent ROM set is 'Scud Race') must be combined into a single ZIP file.  ROM
@@ -223,9 +227,9 @@ and in both cases should replace the file with extension 24 from 'Scud Race'
 ('mpr-19671.24').
 
 
--------------------
+===================
   Supported Games
--------------------
+===================
 
 The following games and ROM sets are supported by this version of Supermodel.
 Not all of them are playable.
@@ -252,9 +256,9 @@ Not all of them are playable.
 The '-print-games' option can be used to obtain this list.
 
 
-------------------
+==================
   Video Settings
-------------------
+==================
 
 Supermodel may be run in either windowed (default) or full screen mode.  It 
 automatically adjusts the display area to retain the aspect ratio of the Model
@@ -276,9 +280,9 @@ Video settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this document.
 
 
-------------------
+==================
   Audio Settings
-------------------
+==================
 
 All Model 3 games have a sound board that is used for sound effects and, in
 some games, background music.  A few games use additional Digital Sound Boards
@@ -308,7 +312,8 @@ levels become too high.
 To disable sound and music board emulation altogether, use the '-no-sound' and
 '-no-dsb' options.  These will not merely mute the corresponding audio channels
 but will prevent the CPUs and audio chips from being emulated altogether.  Save
-states generate with these disabled may not be able to restore audio properly.
+states generated with these settings may not be able to properly restore audio
+when loaded after emulation is re-enabled.
 
 Audio settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this document.
@@ -319,9 +324,9 @@ Sound Processor (SCSP) emulator, used for sound emulation, is an older version
 of ElSemi's code and still quite buggy.
 
 
-------------
+============
   Controls
-------------
+============
 
 Supermodel only supports the keyboard and mouse at present.  Emulator functions
 are listed below and cannot be changed.
@@ -472,9 +477,9 @@ A common mistake is to configure inputs using one system and then launch
 Supermodel with another.
 
 
-------------------
+==================
   Force Feedback
-------------------
+==================
 
 Force feedback is presently supported in 'Scud Race' (including 'Scud Race 
 Plus'), 'Daytona USA 2' (both editions), and 'Sega Rally 2' on Windows only. To
@@ -500,7 +505,7 @@ do not support force feedback through DirectInput.
 
 
 Tuning Force Feedback
----------------------
+=====================
 
 Force feedback can be enabled and tuned in the configuration file.  Setting
 'ForceFeedback' to 1 enables it:
@@ -510,8 +515,10 @@ Force feedback can be enabled and tuned in the configuration file.  Setting
 There are three DirectInput effects: constant force, self centering, and
 vibration.  The strength of each can be tuned with the following settings:
 
+	DirectInputEffectsGain = 100
 	DirectInputConstForceMax = 100
 	DirectInputSelfCenterMax = 100
+	DirectInputFrictionMax = 100
 	DirectInputVibrateMax = 100
 	
 They are given as percentages and represent the maximum strength for each
@@ -524,7 +531,7 @@ Because the characteristics of the motors are different, the effects will feel
 somewhat asymmetric.  The constant force effect is simulated with vibrations.
 The relevant settings are:
 
-	XInputConstForceThreshold = 65
+	XInputConstForceThreshold = 30
  	XInputConstForceMax = 100
   	XInputVibrateMax = 100
 
@@ -534,9 +541,9 @@ determined by XInputConstForceMax).  The default values are shown above and
 will require calibration by the user on a game-by-game basis.
 
 
--------------------------
+=========================
   Save States and NVRAM  
--------------------------
+=========================
 
 Save states are saved and restored by pressing F5 and F7, respectively.  Up to
 10 different save slots can be selected with F6.  All files are written to the
@@ -550,10 +557,11 @@ automatically saved each time Supermodel exits and is loaded at start-up.  It
 can be cleared by deleting the NVRAM files or using Alt-N.
 
 
------------------------------------
+===================================
   Game-Specific Comments and Tips
------------------------------------
+===================================
     
+
 Daytona USA 2 and Daytona USA 2 Power Edition
 ---------------------------------------------
 
@@ -564,6 +572,7 @@ with Test.  Change 'Link ID' from 'Master' to 'Single'.
 In 'Daytona USA 2', the region menu can be accessed by entering the Test Menu,
 holding down the Start button, and pressing: VR4, VR4, VR2, VR3, VR1, VR3, VR2.
 Changing the region to USA changes game text to English.
+
 
 Star Wars Trilogy
 -----------------
@@ -577,12 +586,14 @@ If Star Wars Trilogy is booting directly into the stage select screen, it is
 probably because you exited Supermodel with credits still in the machine.
 Clear the NVRAM (Alt-N) and reset the game (Alt-R).
 
+
 Sega Rally 2
 ------------
 
 As with Star Wars Trilogy, you may experience problems if you attempt to start
 a game before any 3D graphics are displayed (for example, during the Sega
 logo).
+
 
 Virtua Fighter 3
 ----------------
@@ -591,21 +602,672 @@ The game is playable but there are numerous graphical glitches, particularly
 during transition scenes.
 
 
---------------------------
+==========================
   The Configuration File
---------------------------
+==========================
 
----------------------------------
+=================================
   Index of Command Line Options
----------------------------------
+=================================
 
-----------------------------------------
+All valid command line settings are listed here, ordered by category.  Defaults
+are given under the assumption that they also have not been changed in the 
+configuration file.
+
+Square brackets ('[' and ']') indicate optional parameters.  Angled brackets
+('<' and '>') indicate mandatory parameters.  Do not type the brackets.  No 
+spaces may appear inside of an option.  For example, 'supermodel game.zip
+-ppc-frequency=25' is correct but 'supermodel game.zip -ppc-frequency = 25' is
+not.  All options are case-sensitive.
+
+
+	Option:			-?
+					-h
+	
+	Description:	Prints a message with an overview of the command line 
+					options and how to run Supermodel.
+					
+	----------------
+	
+	Option:			-print-games
+	
+	Description:	Lists all supported ROM sets.  Not all supported ROM sets
+					are playable yet.
+	
+	----------------
+	
+	Option:			-no-threads
+	
+	Description:	Disables multi-threading.  When enabled (the default), the
+					PowerPC, graphics rendering, and user interface are run in
+					one	thread, sound emulation in a second thread, and the 
+					drive board in a third.  It is enabled by default.  On 
+					single-core systems, multi-threading adds overhead and 
+					slows Supermodel down but can make audio sound a bit 
+					smoother.
+	
+	----------------
+	
+	Option:			-ppc-frequency=<f>
+	
+	Description:	Sets the PowerPC frequency in MHz.  The default is 50. 
+					Higher frequencies will allow games to do more processing
+					per	frame, making them run faster in 'virtual' time, but 
+					may	slow down Supermodel on weaker computers.  Supermodel's
+					performance can frequently be improved by lowering the
+					PowerPC frequency (25 MHz works in many games).  In some
+					games, this will cause timing problems.  The optimum value
+					for this setting will vary from game to game and system to
+					system.  Valid values are 1 to 1000.
+	
+	----------------
+	
+	Option:			-fullscreen
+	
+	Description:	Runs in full screen mode.  The default is to run in a
+					window.
+	
+	----------------
+	
+	Option:			-no-throttle
+	
+	Description:	Disables 60 FPS throttling.  The Model 3 runs at a 60 Hz
+					refresh rate, which Supermodel enforces if this option is 
+					omitted.  Unthrottled operation may not work on some 
+					systems because graphics drivers may lock the refresh rate.
+	
+	----------------
+	
+	Option:			-print-gl-info
+	
+	Description:	Prints OpenGL driver information and quits.
+	
+	----------------
+	
+	Option:			-res=<x>,<y>
+	
+	Description:	Resolution of the display in pixels.  The default is
+					496x384, the Model 3's native resolution.
+	
+	----------------
+	
+	Option:			-show-fps
+	
+	Description:	Shows the frame rate in the window title bar.
+	
+	----------------
+	
+	Option:			-frag-shader=<file>
+					-vert-shader=<file>
+					
+	Description:	Allows external fragment and vertex shaders to be used for
+					3D rendering.  Files should be ASCII text files containing
+					GLSL source code.  The file extension is not important.  By
+					default, Supermodel's internal shader programs are used.
+	
+	----------------
+	
+	Option:			-flip-stereo
+	
+	Description:	Swaps the left and right audio channels.
+	
+	----------------
+	
+	Option:			-no-music
+	
+	Description:	Disables Digital Sound Board (MPEG music) emulation.  See
+					the section on audio settings for more information.
+	
+	----------------
+	
+	Option:			-no-sound
+	
+	Description:	Disables sound board (sound effects) emulation.  See the
+					section on audio settings for more information.
+	
+	----------------
+	
+	Option:			-music-volume=<v>
+					-sound-volume=<v>
+	
+	Description:	Specifies the volume of MPEG music produced by the Digital
+					Sound Board and the audio produced by the sound board in 
+					percent.  The default is 100, which is full volume, and the
+					valid range is 0 (muted) to 200%.  See the section on audio
+					settings for more information.
+	
+	----------------
+	
+	Option:			-config-inputs
+	
+	Description:	Launches the interacive input configuration utility in the
+					command prompt window.  Allows controls to be remapped.
+					See the section on controls for more information.
+	
+	----------------
+	
+	Option:			-force-feedback
+	
+	Description:	Enables force feedback.  Force feedback is only supported
+					in a few games (see the section on force feedback for more
+					details).
+	
+	----------------
+	
+	Option:			-input-system=<s>
+	
+	Description:	Sets the input system.  This is only available on Windows,
+					where the default is 'dinput' (DirectInput).  SDL is used
+					for all other platforms.  Valid input systems are:
+					
+						dinput		DirectInput.
+						xinput		XInput
+						rawinput	Raw Input.
+						sdl			SDL.
+						
+					See the section on input systems for more details.
+	
+	----------------
+	
+	Option:			-print-inputs
+	
+	Description:	Prints the current input configuration.
+
+
+========================================
   Index of Configuration File Settings
-----------------------------------------
+========================================
 
------------------------
+All valid configuration file settings are listed here, ordered by category.
+Please read the section describing the configuration file for more information.
+
+All settings are case-sensitive.
+
+	
+	Name:			MultiThreaded
+	
+	Argument:		Integer.
+	
+	Description:	If set to 1, enables multi-threading; if set to 0, runs all
+					emulation in a single thread.  Read the description of the
+					'-no-threads' command line option for more information.
+					
+	----------------
+	
+	Name:			PowerPCFrequency
+	
+	Argument:		Integer.
+	
+	Description:	The PowerPC frequency in MHz.  The default is 50.  
+					Equivalent to the '-ppc-frequency' command line option.
+					
+	----------------
+	
+	Name:			FullScreen
+	
+	Argument:		Integer.
+	
+	Description:	If set to 1, runs in full screen mode; if set to 0, runs in
+					a window.  Disabled by default.  Equivalent to the 
+					'-fullscreen' command line option.
+
+	----------------
+	
+	Name:			ShowFrameRate
+	
+	Argument:		Integer.
+	
+	Description:	Shows the frame rate in the window title bar when set to 1.
+					If set to 0, the frame rate is not computed.  Disabled by
+					default.  Equivalent to the '-show-fps' command line
+					option.
+
+	----------------
+	
+	Name:			Throttle
+	
+	Argument:		Integer.
+	
+	Description:	Controls 60 FPS throttling.  It is enabled by setting to 1
+					and disabled by setting to 0.  For more information, read
+					the description of the '-no-throttle' command line option.
+
+	----------------
+	
+	Name:			XResolution
+					YResolution
+	
+	Argument:		Integer.
+	
+	Description:	Resolution of the display in pixels.  The default is
+					496x384, the Model 3's native resolution.  Equivalent to
+					the '-res' command line option.
+
+	----------------
+	
+	Name:			FragmentShader
+					VertexShader
+	
+	Argument:		String.
+	
+	Description:	Path to the external fragment or vertex shader file to use
+					for 3D	rendering.  By default, these are not set and the 
+					internal default shaders are used.  These are equivalent to
+					the '-frag-shader' and '-vert-shader' command line options.
+
+	----------------
+	
+	Name:			EmulateMusic
+	
+	Argument:		Integer.
+	
+	Description:	Emulates the Digital Sound Board if set to 1, disables it
+					if set to 0.  See the section on audio settings for more
+					information.  A setting of 0 is equivalent to the 
+					'-no-music' command line option. 
+
+	----------------
+	
+	Name:			EmulateSound
+	
+	Argument:		Integer.
+	
+	Description:	Emulates the sound board and its two Sega Custom Sound 
+					Processors if set to 1, disables it if set to 0.  See the
+					section on audio settings for more information.  A setting
+					of 0 is equivalent to the '-no-sound' command line option.
+	
+	----------------
+	
+	Name:			FlipStereo
+	
+	Argument:		Integer.
+	
+	Description:	Swaps the left and right stereo channels if set to 1.  If
+					set to 0, outputs the channels normally.  Disabled by
+					default.  A setting of 1 is equivalent to using the 
+					'-flip-stereo' command line option.
+					
+	----------------
+	
+	Name:			MusicVolume
+					SoundVolume
+	
+	Argument:		Integer.
+	
+	Description:	Specifies the volume of MPEG music produced by the Digital
+					Sound Board and the audio produced by the sound board in 
+					percent.  The default is 100, which is full volume, and the
+					valid range is 0 (muted) to 200%.  See the section on audio
+					settings for more information.  The equivalent command line
+					options are '-music-volume' and '-sound-volume'.
+
+	----------------
+	
+	Name:			ForceFeedback
+	
+	Argument:		Integer.
+	
+	Description:	If set to 1, enables force feedback emulation; if set to 0,
+					disables it (the default behavior).  Equivalent to the 
+					'-force-feedback' command line option.
+	
+	----------------
+	
+	Name:			DirectInputConstForceMax
+					DirectInputFrictionMax
+					DirectInputSelfCenterMax
+					DirectInputVibrateMax
+	
+	Argument:		Integer value.
+	
+	Description:	Sets strength of the four DirectInput force feedback
+					effects in percent.  Default is 100, indicating	full 
+					strength.  Values exceeding 100% will distort the effects
+					and may damage your controller.
+	
+	----------------
+	
+	Name: 			DirectInputEffectsGain
+	
+	Argument:		Integer value.
+	
+	Description:	
+
+	----------------
+		
+	Name:			XInputConstForceMax
+					XInputVibrateMax
+	
+	Argument:		Integer value.
+	
+	Description:	Sets strength of XInput force feedback effects in percent.
+					Default is 100, indicating full strength.  Values exceeding
+					100% will distort the effects and may damage your 
+					controller.  The constant force effect is simulated using 
+					vibration.
+	
+	----------------
+	
+	Name:			XInputConstForceThreshold
+	
+	Argument:		Integer value.
+	
+	Description:	Minimum strength above which a Model 3 constant force
+					command will be simulated on an XInput device.  
+					XInputConstForceMax determines the vibration strength for
+					this effect.  The default value is 30.
+					
+	----------------
+		
+	Names:			InputStart1
+					InputStart2
+					InputCoin1
+					InputCoin2
+					InputServiceA
+					InputServiceB
+					InputTestA
+					InputTestB
+				
+	Argument:		String.
+	
+	Description:	Mappings for common inputs: player 1 and 2 Start buttons,
+					both coin slots, and both Service and Test buttons.  Can
+					only be set in the 'Global' section.
+					
+	----------------
+					
+	Names:			InputJoyDown
+					InputJoyDown2
+					InputJoyLeft
+					InputJoyLeft2
+					InputJoyRight
+					InputJoyRight2
+					InputJoyUp
+					InputJoyUp2
+	
+	Argument:		String.
+	
+	Description:	Mappings for 4-way digital joysticks (players 1 and 2).
+					These controls appear in 'Virtua Fighter 3', 'Fighting
+					Vipers 2', 'Spikeout', etc.  Can only be set in the
+					'Global' section.
+	
+	----------------
+	
+	Names:			InputEscape
+					InputEscape2
+					InputGuard
+					InputGuard2
+					InputKick
+					InputKick2
+					InputPunch
+					InputPunch2
+	
+	Argument:		String.
+	
+	Description:	Mappings for fighting game buttons (players 1 and 2).  Can
+					only be set in the 'Global' section.
+
+	----------------
+	
+	Names:			InputBeat
+					InputCharge
+					InputJump
+					InputShift
+	
+	Argument:		String.
+	
+	Description:	Mappings for 'Spikeout' and 'Spikeout Final Edition'
+					buttons.  Can only be set in the 'Global' section.
+					
+	----------------
+	
+	Name:			InputLongPass
+					InputLongPass2
+					InputShortPass
+					InputShortPass2
+					InputShoot
+					InputShoot2
+	
+	Argument:		String.
+	
+	Description:	Mappings for the 'Virtua Striker 2' series of games
+					(players 1 and 2).  Can only be set in the 'Global' 
+					section.
+					
+	----------------
+					
+	Name:			InputSteering
+	
+	Argument:		String.
+	
+	Description:	Mapping for the analog steering wheel axis, used in all 
+					driving games.  Can only be set in the 'Global' section.
+	
+	----------------
+	
+	Name:			InputSteeringLeft
+					InputSteeringRight
+	
+	Argument:		String.
+	
+	Description:	Mappings for digital control of the steering wheel, 
+					intended for users who do not have an analog controller.
+					Can only be set in the 'Global' section.
+					
+	----------------
+	
+	Name:			InputBrake
+					InputAccelerator
+	
+	Argument:		String.
+	
+	Description:	Mappings for brake and accelerator pedals used in driving
+					games.  These are analog axes but can also be mapped to
+					digital inputs if needed.  Can only be set in the 'Global'
+					section.
+					
+	----------------
+	
+	Name:			InputGearShift1
+					InputGearShift2
+					InputGearShift3
+					InputGearShift4
+					InputGearShiftN
+	
+	Argument:		String.
+	
+	Description:	Mappings for the gear box used in driving games.  In games
+					with only two gears (e.g. 'Le Mans 24'), InputGearShift1
+					maps to 'Up' and InputGearShift2 to 'Down'.  A neutral 
+					position can also be selected.  Can only be set in the
+					'Global' section.
+					
+	----------------
+	
+	Name:			InputGearShiftDown
+					InputGearShiftUp
+	
+	Argument:		String.
+	
+	Description:	Mappings for sequential shifting.  These allow gears to be
+					selected sequentially: N, 1, 2, 3, 4.  Can only be set in
+					the 'Global' section.
+
+	----------------
+											
+	Name:			InputVR1
+					InputVR2
+					InputVR3
+					InputVR4
+	
+	Argument:		String.
+	
+	Description:	Mappings for the 'VR' (color-coded view select) buttons in
+					racing games (e.g. 'Scud Race', 'Daytona USA 2', etc.)  Can
+					only be set in the 'Global' section.
+	
+	----------------
+	
+	Name:			InputViewChange
+	
+	Argument:		String.
+	
+	Description:	Mapping for the view change button used in 'Sega Rally 2'
+					and 'Dirt Devils'.  Can only be set in the 'Global' 
+					section.
+	
+	----------------
+	
+	Name:			InputHandBrake
+	
+	Argument:		String.
+	
+	Description:	Mapping for the hand brake button used in 'Sega Rally 2'.
+					Can only be set in the 'Global' section.
+
+	----------------
+	
+	Name:			InputTwinJoyCrouch
+					InputTwinJoyForward
+					InputTwinJoyJump
+					InputTwinJoyReverse
+					InputTwinJoyStrafeLeft
+					InputTwinJoyStrafeRight
+					InputTwinJoyTurnLeft
+					InputTwinJoyTurnRight
+	
+	Argument:		String.
+	
+	Description:	Mappings for 'macro' commands for 'Virtual On Oratorio
+					Tangram'.  These allow movements to be mapped to single
+					digital inputs and do not require the use of two joysticks.
+					Can only be set in the 'Global' section.
+	
+	----------------
+	
+	Name:			InputTwinJoyDown1
+					InputTwinJoyDown2
+					InputTwinJoyLeft1
+					InputTwinJoyLeft2
+					InputTwinJoyRight1
+					InputTwinJoyRight2
+					InputTwinJoyUp1
+					InputTwinJoyUp2
+	
+	Argument:		String.
+	
+	Description:	Mappings for the individual joysticks used by 'Virtual On
+					Oratorio Tangram'.  The left stick is stick #1 and the
+					right stick is #2.  Can only be set in the 'Global' 
+					section.
+					
+	----------------
+	
+	Name:			InputTwinJoyShot1
+					InputTwinJoyShot2
+					InputTwinJoyTurbo1
+					InputTwinJoyTurbo2
+	
+	Argument:		String.
+	
+	Description:	Mappings for the shot (trigger) and turbo buttons located
+					on the left (1) and right (2) joysticks in 'Virtual On
+					Oratorio Tangram'.  Can only be set in the 'Global' 
+					section.
+					
+	----------------
+	
+	Name:			InputAnalogJoyDown
+					InputAnalogJoyLeft
+					InputAnalogJoyRight
+					InputAnalogJoyUp
+	
+	Argument:		String.
+	
+	Description:	Mappings for digital control of the analog joystick used in
+					'Star Wars Trilogy'.  Two inputs are provided for the two
+					directions available on each axis.  Can only be set in the
+					'Global' section.
+	
+	----------------
+	
+	Name:			InputAnalogJoyX
+					InputAnalogJoyY
+	
+	Argument:		String.
+	
+	Description:	Mappings for X and Y axes of the analog joystick in 'Star
+					Wars Trilogy'.  Can only be set in the 'Global' section.
+	
+	----------------
+	
+	Name:			InputAnalogJoyTrigger
+					InputAnalogJoyEvent
+	
+	Argument:		String.
+	
+	Description:	Mappings for the trigger and Event button in 'Star Wars
+					Trilogy'.  Can only be set in the 'Global' section.
+					
+	----------------
+	
+	Name:			InputGunDown
+					InputGunDown2
+					InputGunLeft
+					InputGunLeft2
+					InputGunRight
+					InputGunRight2
+					InputGunUp
+					InputGunUp2
+	
+	Argument:		String.
+	
+	Description:	Mappings for digital control of the light guns in 'The Lost
+					World'.  Inputs for motion in each direction are provided.
+					Can only be set in the 'Global' section.
+					
+	----------------
+	
+	Name:			InputGunX
+					InputGunX2
+					InputGunY
+					InputGunY2
+	
+	Argument:		String.
+	
+	Description:	Mappings for both analog axes of the light guns in 'The
+					Lost World'.  Can only be set in the 'Global' section.
+
+	----------------
+	
+	Name:			InputOffscreen
+					InputOffscreen2
+					InputTrigger
+					InputTrigger2
+	
+	Argument:		String.
+	
+	Description:	Mappings for the light gun triggers and off-screen
+					controls in 'The Lost World'.  The off-screen button aims
+					the light gun off-screen while it is pressed, which makes
+					re-loading possible.  Can only be set in the 'Global' 
+					section.
+
+	----------------
+	
+	Name:			InputAutoTrigger
+					InputAutoTrigger2
+	
+	Argument:		Integer.
+	
+	Description:	?  Can only be set in the 'Global' section.
+	
+
+=======================
   Contact Information
------------------------
+=======================
 
 The official Supermodel web site is:
 
@@ -618,9 +1280,9 @@ author, Bart Trzynadlowski, can be reached at:
     supermodel.emu@gmail.com
 
 
--------------------
+===================
   Acknowledgments
--------------------
+===================
 
 Numerous people contributed their precious time and energy to this project.
 Without them, Supermodel would not have been possible.  In no particular order,

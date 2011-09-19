@@ -1229,15 +1229,15 @@ static void Help(void)
 	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("");
 	puts("Input Options:");
+	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
+	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 #ifdef SUPERMODEL_WIN32
 	printf("    -input-system=<s>      Input system [Default: %s]\n", g_Config.GetInputSystem());
 #endif
-	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
-	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
 	puts("    -print-inputs          Prints current input configuration");
 	puts("");
 #ifdef SUPERMODEL_DEBUGGER
-	puts("Diagnostic Options:");
+	puts("Debug Options:");
 	puts("    -disable-debugger	     Completely disable debugger functionality");
 	puts("    -enter-debugger        Enter debugger at start of emulation");
 	puts("    -dis=<addr>[,n]        Disassemble PowerPC code from CROM");

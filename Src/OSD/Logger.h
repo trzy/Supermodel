@@ -134,7 +134,7 @@ public:
 		char	string[1024];
 		FILE 	*fp;
 
-		fp = fopen(m_debugLogFile, "ab");
+		fp = fopen(m_debugLogFile, "a");
 		if (NULL != fp)
 		{
 			vsprintf(string, fmt, vl);
@@ -151,7 +151,7 @@ public:
 
 		vsprintf(string, fmt, vl);
 		
-		fp = fopen(m_errorLogFile, "ab");
+		fp = fopen(m_errorLogFile, "a");
 		if (NULL != fp)
 		{
 			fprintf(fp, "%s\n", string);
@@ -171,7 +171,7 @@ public:
 		vsprintf(string, fmt, vl);
 		fprintf(stderr, "Error: %s\n", string);
 		
-		fp = fopen(m_errorLogFile, "ab");
+		fp = fopen(m_errorLogFile, "a");
 		if (NULL != fp)
 		{
 			fprintf(fp, "%s\n", string);

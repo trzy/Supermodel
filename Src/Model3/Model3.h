@@ -43,8 +43,8 @@ public:
 	{
 		if ((f<1) || (f>1000))
 		{
-			ErrorLog("PowerPC frequency must be between 1 and 1000 MHz; setting to 40 MHz.");
-			f = 40;
+			ErrorLog("PowerPC frequency must be between 1 and 1000 MHz; setting to 50 MHz.");
+			f = 50;
 		}		
 		ppcFrequency = f*1000000;
 	}
@@ -57,7 +57,7 @@ public:
 	CModel3Config(void)
 	{
 		multiThreaded = true;		// enable by default
-		ppcFrequency = 40*1000000;	// 40 MHz
+		ppcFrequency = 50*1000000;	// 50 MHz
 	}
 	
 private:
