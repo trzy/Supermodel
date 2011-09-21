@@ -412,7 +412,6 @@ static void ApplySettings(CINIFile *INI, const char *section)
 
 #ifdef SUPERMODEL_WIN32
 	// DirectInput ForceFeedback
-	INI->Get(section, "DirectInputEffectsGain", g_Config.dInputEffectsGain);
 	INI->Get(section, "DirectInputConstForceMax", g_Config.dInputConstForceMax);
 	INI->Get(section, "DirectInputSelfCenterMax", g_Config.dInputSelfCenterMax);
 	INI->Get(section, "DirectInputFrictionMax", g_Config.dInputFrictionMax);
@@ -456,7 +455,6 @@ static void LogConfig(void)
 	
 #ifdef SUPERMODEL_WIN32
 	// DirectInput ForceFeedback
-	InfoLog("\tDirectInputEffectsGain    = %u", g_Config.dInputEffectsGain);
 	InfoLog("\tDirectInputConstForceMax  = %u", g_Config.dInputConstForceMax);
 	InfoLog("\tDirectInputSelfCenterMax  = %u", g_Config.dInputSelfCenterMax);
 	InfoLog("\tDirectInputFrictionMax    = %u", g_Config.dInputFrictionMax);

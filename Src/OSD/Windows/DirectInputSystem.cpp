@@ -1397,7 +1397,7 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
 	eff.dwTriggerButton = DIEB_NOTRIGGER;
 	eff.dwTriggerRepeatInterval = 0;
-	eff.dwGain = min<LONG>(g_Config.dInputEffectsGain * DI_EFFECTS_SCALE, DI_EFFECTS_MAX);
+	eff.dwGain = DI_FFNOMINALMAX;
 	eff.cAxes = 1;
 	eff.rgdwAxes = &dwAxis;
 	eff.rglDirection = &lDirection;

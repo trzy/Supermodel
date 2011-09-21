@@ -54,7 +54,6 @@ public:
 #endif
 
 #ifdef SUPERMODEL_WIN32
-	unsigned	dInputEffectsGain;
 	unsigned	dInputConstForceMax;
 	unsigned	dInputSelfCenterMax;
 	unsigned	dInputFrictionMax;
@@ -115,7 +114,6 @@ public:
 #endif
 #ifdef SUPERMODEL_WIN32
 		inputSystem = "dinput";
-		dInputEffectsGain = 100;
 		dInputConstForceMax = 100;
 		dInputSelfCenterMax = 100;
 		dInputFrictionMax = 100;
