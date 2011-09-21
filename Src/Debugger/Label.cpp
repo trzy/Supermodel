@@ -27,6 +27,7 @@
 
 #include "Label.h"
 
+#include <cstring>
 #include <string>
 
 namespace Debugger
