@@ -42,7 +42,7 @@
 
 namespace Debugger
 {
-	UINT32 GetSpecialReg(CCPUDebug *cpu, unsigned id) 
+	static UINT32 GetSpecialReg(CCPUDebug *cpu, unsigned id) 
 	{
 		switch (id)
 		{
@@ -52,7 +52,7 @@ namespace Debugger
 		}
 	}
 
-	bool SetSpecialReg(CCPUDebug *cpu, unsigned id, UINT32 data)
+	static bool SetSpecialReg(CCPUDebug *cpu, unsigned id, UINT32 data)
 	{
 		switch (id)
 		{
@@ -62,45 +62,45 @@ namespace Debugger
 		}
 	}
 
-	UINT8 GetCR(CCPUDebug *cpu, unsigned id)
+	static UINT8 GetCR(CCPUDebug *cpu, unsigned id)
 	{
 		return ::ppc_get_cr(id);
 	}
 
-	bool SetCR(CCPUDebug *cpu, unsigned id, UINT8 data)
+	static bool SetCR(CCPUDebug *cpu, unsigned id, UINT8 data)
 	{
 		::ppc_set_cr(id, data);
 		return true;
 	}
 
-	UINT32 GetSPR(CCPUDebug *cpu, unsigned id)
+	static UINT32 GetSPR(CCPUDebug *cpu, unsigned id)
 	{
 		return ::ppc_read_spr(id);
 	}
 
-	bool SetSPR(CCPUDebug *cpu, unsigned id, UINT32 data)
+	static bool SetSPR(CCPUDebug *cpu, unsigned id, UINT32 data)
 	{
 		::ppc_write_spr(id, data);
 		return true;
 	}
 
-	UINT32 GetGPR(CCPUDebug *cpu, unsigned id)
+	static UINT32 GetGPR(CCPUDebug *cpu, unsigned id)
 	{
 		return ::ppc_get_gpr(id);
 	}
 
-	bool SetGPR(CCPUDebug *cpu, unsigned id, UINT32 data)
+	static bool SetGPR(CCPUDebug *cpu, unsigned id, UINT32 data)
 	{
 		::ppc_set_gpr(id, data);
 		return true;
 	}
 
-	double GetFPR(CCPUDebug *cpu, unsigned id)
+	static double GetFPR(CCPUDebug *cpu, unsigned id)
 	{
 		return ::ppc_get_fpr(id);
 	}
 
-	bool SetFPR(CCPUDebug *cpu, unsigned id, double data)
+	static bool SetFPR(CCPUDebug *cpu, unsigned id, double data)
 	{
 		::ppc_set_fpr(id, data);
 		return true;

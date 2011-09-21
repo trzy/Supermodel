@@ -35,11 +35,11 @@ using namespace std;
 
 #include "Types.h"
 
-#if defined(SUPERMODEL_WIN32) || defined(SUPERMODEL_UNIX) || defined(SUPERMODEL_OSX)
+//#if defined(SUPERMODEL_WIN32) || defined(SUPERMODEL_UNIX) || defined(SUPERMODEL_OSX)
 #define DEBUGGER_HASBLOCKFILE
 #define DEBUGGER_HASLOGGER
 #define DEBUGGER_HASTHREAD
-#endif
+//#endif
 
 #define DEBUGGER_STATEFILE_VERSION 0
 
@@ -51,11 +51,11 @@ using namespace std;
 #ifndef SUPERMODEL_VERSION
 #define SUPERMODEL_VERSION ""
 #endif // SUPERMODEL_VERSEION
-#include "Logger.h"
+#include "OSD/Logger.h"
 #endif // DEBUGGER_HASLOGGER
 
 #ifdef DEBUGGER_HASTHREAD
-#include "Thread.h"
+#include "OSD/Thread.h"
 #endif // DEBUGGER_HASTHREAD
 
 #ifndef stricmp

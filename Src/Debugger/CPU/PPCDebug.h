@@ -36,15 +36,6 @@
 
 namespace Debugger
 {
-	static UINT32 GetSpecialReg(CCPUDebug *cpu, unsigned id);
-	static bool SetSpecialReg(CCPUDebug *cpu, unsigned id, UINT32 data);
-	static UINT32 GetSPR(CCPUDebug *cpu, unsigned id);
-	static bool SetSPR(CCPUDebug *cpu, unsigned id, UINT32 data);
-	static UINT32 GetGPR(CCPUDebug *cpu, unsigned id);
-	static bool SetGPR(CCPUDebug *cpu, unsigned id, UINT32 data);
-	static double GetFPR(CCPUDebug *cpu, unsigned id);
-	static bool SetFRP(CCPUDebug *cpu, unsigned id, double data);
-
 	/*
 	 * CCPUDebug implementation for the PowerPC PPC603 emulator.
 	 */

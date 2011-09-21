@@ -107,8 +107,9 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	OBJ += $(OBJ_DIR)/Debugger.o $(OBJ_DIR)/ConsoleDebugger.o $(OBJ_DIR)/SupermodelDebugger.o $(OBJ_DIR)/CPUDebug.o \
 		$(OBJ_DIR)/AddressTable.o $(OBJ_DIR)/Breakpoint.o $(OBJ_DIR)/CodeAnalyser.o $(OBJ_DIR)/Exception.o \
 		$(OBJ_DIR)/Interrupt.o $(OBJ_DIR)/IO.o $(OBJ_DIR)/Label.o $(OBJ_DIR)/Register.o $(OBJ_DIR)/Watch.o \
-		$(OBJ_DIR)/PPCDebug.o		
+		$(OBJ_DIR)/PPCDebug.o $(OBJ_DIR)/68KDebug.o $(OBJ_DIR)/Musashi68KDebug.o $(OBJ_DIR)/Z80Debug.o		
 endif
+
 
 #
 # Targets

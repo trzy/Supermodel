@@ -459,6 +459,7 @@ void CDriveBoard::EmulateFrame(void)
 
 UINT8 CDriveBoard::Read8(UINT32 addr)
 {
+	// TODO - shouldn't end of ROM be 0x7FFF not 0x8FFF?
 	if (addr < 0x9000)        // ROM is 0x0000-0x8FFF
 		return m_rom[addr];
 	else if (addr >= 0xE000)  // RAM is 0xE000-0xFFFF

@@ -27,6 +27,7 @@
 
 #include "AddressTable.h"
 
+#include <cstring>
 #include <string>
 
 namespace Debugger
