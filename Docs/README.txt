@@ -657,8 +657,9 @@ game-specific settings, and lastly, global settings.
 An index of all allowed settings is provided further below in this document.
 
 NOTE: Type carefully!  Supermodel will not report syntax errors or detect 
-typos.  Carefully read the discussion of the file syntax below and type care-
-fully!
+typos.  Carefully read the discussion of the file syntax below.  To verify that
+your intended settings are taking effect, check the 'error.log' file that is
+produced by Supermodel during each run.
 
 
 File Structure and Syntax
