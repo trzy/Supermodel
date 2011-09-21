@@ -1809,6 +1809,11 @@ bool CInputSystem::CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, cons
 Repeat:
 	printf("Calibrating %s of joystick '%s'.\n\n", joyDetails->axisName[axisNum], joyDetails->name);
 	
+	unsigned totalRange;
+	unsigned posDeadZone;
+	unsigned negDeadZone;
+	unsigned deadZone;
+			
 	int posVal;
 	int negVal;
 	int offVal;
@@ -1937,11 +1942,10 @@ Repeat:
 		}
 	}
 	
-	unsigned totalRange = posRange + negRange;
-
-	unsigned posDeadZone = (unsigned)ceil(100.0 * (double)posOffRange / (double)posRange);
-	unsigned negDeadZone = (unsigned)ceil(100.0 * (double)negOffRange / (double)negRange);
-	unsigned deadZone = max<unsigned>(1, max<unsigned>(negDeadZone, posDeadZone));
+	totalRange = posRange + negRange;
+	posDeadZone = (unsigned)ceil(100.0 * (double)posOffRange / (double)posRange);
+	negDeadZone = (unsigned)ceil(100.0 * (double)negOffRange / (double)negRange);
+	deadZone = max<unsigned>(1, max<unsigned>(negDeadZone, posDeadZone));
 		
 	bool okay;
 	if (posVal > negVal)

@@ -201,7 +201,7 @@ clean:
 # All generated source files are emitted to the object directory. For MSVC, 
 # INLINE must be redefined as "static __inline", which is the syntax in C mode.
 #
-$(OBJ_DIR)/m68kmake.exe: Src/CPU/68K/Musashi/m68kmake.c
+$(OBJ_DIR)/m68kmake: Src/CPU/68K/Musashi/m68kmake.c
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kmake.obj
 	$(LD) /OUT:$(OBJ_DIR)/m68kmake.exe /MACHINE:$(ARCH) $(ARCH_LIBS) /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/m68kmake.obj
 	
@@ -211,16 +211,16 @@ $(OBJ_DIR)/m68kops.h: $(OBJ_DIR)/m68kmake.exe Src/CPU/68K/Musashi/m68k_in.c
 $(OBJ_DIR)/m68kcpu.obj: Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kcpu.obj /I "$(OBJ_DIR)" /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
 
-$(OBJ_DIR)/m68kops.obj: $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+$(OBJ_DIR)/m68kops.obj: $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kops.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
 
-$(OBJ_DIR)/m68kopac.obj: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+$(OBJ_DIR)/m68kopac.obj: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopac.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
 
-$(OBJ_DIR)/m68kopdm.obj: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+$(OBJ_DIR)/m68kopdm.obj: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopdm.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
 
-$(OBJ_DIR)/m68kopnz.obj: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+$(OBJ_DIR)/m68kopnz.obj: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kmake $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopnz.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
 
 

@@ -160,7 +160,7 @@ static int TimCnt[3];
 
 #define EG_SHIFT	8
 
-#include "scsplfo.cpp"
+#include "SCSPLFO.cpp"
 
 /*
 	SCSP features 32 programmable slots

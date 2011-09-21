@@ -1277,9 +1277,7 @@ int main(int argc, char **argv)
 #ifdef SUPERMODEL_DEBUGGER
 	int			cmdEnterDebugger=false;
 #endif // SUPERMODEL_DEBUGGER
-#ifdef SUPERMODEL_WIN32
-	char		*inputSystem = NULL;
-#endif	// SUPERMODEL_WIN32	
+	char		*inputSystem = NULL;	// use default input system
 	unsigned	n;
 	UINT32		addr;
 
