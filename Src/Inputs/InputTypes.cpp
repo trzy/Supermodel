@@ -22,12 +22,11 @@
 /*
  * InputTypes.cpp
  *
- * Different input subclasses, grouped together here as all are very simple classes.
+ * The different input subclasses.  They are grouped together here as they are 
+ * all very simple classes.
  */
 
 #include "Supermodel.h"
-
-// All the input subclasses have been grouped together here as they are very simple classes
 
 /*
  * CSwitchInput
