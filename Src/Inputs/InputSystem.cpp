@@ -1782,6 +1782,9 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 
 	printf("Move axis around and then press Return (or press Esc to cancel): ");
 
+	unsigned maxRange;
+	unsigned maxAxisNum;
+
 	int minVals[NUM_JOY_AXES];
 	int maxVals[NUM_JOY_AXES];
 	for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
@@ -1836,8 +1839,8 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 		Wait(1000/60);
 	}
 
-	unsigned maxRange = 0;
-	unsigned maxAxisNum = 0;
+	maxRange = 0;
+	maxAxisNum = 0;
 	for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
 	{
 		if (!joyDetails->hasAxis[loopAxisNum])
