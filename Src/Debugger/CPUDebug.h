@@ -49,7 +49,7 @@ using namespace std;
 #endif // DEBUGGER_HASBLOCKFILE
 
 #ifdef DEBUGGER_HASTHREAD
-#include "Thread.h"
+#include "OSD/Thread.h"
 #endif // DEBUGGER_HASTHREAD
 
 #define MAX_EXCEPTIONS 255
