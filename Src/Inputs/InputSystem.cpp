@@ -1037,24 +1037,10 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
 	return NULL;
 }
 
-void CInputSystem::PrintKeySettings(KeySettings *settings)
+void CInputSystem::PrintKeySettings(int kbdNum, KeySettings *settings)
 {
-	// Get common key settings and print header
-	KeySettings *common;
-	if (settings->kbdNum == ANY_KEYBOARD)
-	{
-		puts("Common Keyboard Settings:");
-		common = NULL;
-	}
-	else
-	{
-		printf("Keyboard %d Settings:\n", settings->kbdNum + 1);
-		common = GetKeySettings(ANY_KEYBOARD, true);
-	}
-
-	// Print all common settings and any settings that are different to common settings
-	if (common == NULL || settings->sensitivity != common->sensitivity) printf(" Sensitivity = %d %%\n", settings->sensitivity);
-	if (common == NULL || settings->decaySpeed != common->decaySpeed)   printf(" Decay Speed = %d %%\n", settings->decaySpeed);
+	printf(" Sensitivity = %d %%\n", settings->sensitivity);
+	printf(" Decay Speed = %d %%\n", settings->decaySpeed);
 }
 
 KeySettings *CInputSystem::ReadKeySettings(CINIFile *ini, const char *section, int kbdNum)
@@ -1090,27 +1076,12 @@ void CInputSystem::WriteKeySettings(CINIFile *ini, const char *section, KeySetti
 	if (settings->decaySpeed != common->decaySpeed) ini->Set(section, baseKey + "DecaySpeed", settings->decaySpeed);
 }
 
-void CInputSystem::PrintMouseSettings(MouseSettings *settings)
+void CInputSystem::PrintMouseSettings(int mseNum, MouseSettings *settings)
 {
-	// Get common mouse settings and print header
-	MouseSettings *common;
-	if (settings->mseNum == ANY_MOUSE)
-	{
-		puts("Common Mouse Settings:");
-		common = NULL;
-	}
-	else
-	{
-		printf("Mouse %d Settings:\n", settings->mseNum + 1);
-		common = GetMouseSettings(ANY_MOUSE, true);
-	}
-
-	// Print all common settings and any settings that are different to common/default settings
 	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
 	{
 		const char *axisName = s_axisNames[axisNum];
-		if (common == NULL || settings->deadZones[axisNum] != common->deadZones[axisNum])
-			printf(" %s-Axis Dead Zone = %d %%\n", axisName, settings->deadZones[axisNum]);
+		printf(" %s-Axis Dead Zone = %d %%\n", axisName, settings->deadZones[axisNum]);
 	}
 }
 
@@ -1154,35 +1125,19 @@ void CInputSystem::WriteMouseSettings(CINIFile *ini, const char *section, MouseS
 	}
 }
 
-void CInputSystem::PrintJoySettings(JoySettings *settings)
+void CInputSystem::PrintJoySettings(int joyNum, JoySettings *settings)
 {
-	// Get common mouse settings and print header
-	JoySettings *common;
-	if (settings->joyNum == ANY_JOYSTICK)
-	{
-		puts("Common Joystick Settings:");
-		common = NULL;
-	}
-	else
-	{
-		printf("Joystick %d Settings:\n", settings->joyNum + 1);
-		common = GetJoySettings(ANY_JOYSTICK, true);
-	}
-
-	// Print all common settings and any settings that are different to common/default settings
+	const JoyDetails *joyDetails = (joyNum != ANY_JOYSTICK ? GetJoyDetails(joyNum) : NULL);
 	for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 	{	
+		if (joyDetails && !joyDetails->hasAxis[axisNum])
+			continue;
 		const char *axisName = s_axisNames[axisNum];
-		if (common == NULL || settings->axisMinVals[axisNum] != common->axisMinVals[axisNum])
-			printf(" %-2s-Axis Min Value        = %d\n", axisName, settings->axisMinVals[axisNum]);
-		if (common == NULL || settings->axisOffVals[axisNum] != common->axisOffVals[axisNum])
-			printf(" %-2s-Axis Center/Off Value = %d\n", axisName, settings->axisOffVals[axisNum]);
-		if (common == NULL || settings->axisMaxVals[axisNum] != common->axisMaxVals[axisNum])
-			printf(" %-2s-Axis Max Value        = %d\n", axisName, settings->axisMaxVals[axisNum]);
-		if (common == NULL || settings->deadZones[axisNum] != common->deadZones[axisNum])
-			printf(" %-2s-Axis Dead Zone        = %d %%\n", axisName, settings->deadZones[axisNum]);
-		if (common == NULL || settings->saturations[axisNum] != common->saturations[axisNum])
-			printf(" %-2s-Axis Saturation       = %d %%\n", axisName, settings->saturations[axisNum]);
+		printf(" %-2s-Axis Min Value        = %d\n", axisName, settings->axisMinVals[axisNum]);
+		printf(" %-2s-Axis Center/Off Value = %d\n", axisName, settings->axisOffVals[axisNum]);
+		printf(" %-2s-Axis Max Value        = %d\n", axisName, settings->axisMaxVals[axisNum]);
+		printf(" %-2s-Axis Dead Zone        = %d %%\n", axisName, settings->deadZones[axisNum]);
+		printf(" %-2s-Axis Saturation       = %d %%\n", axisName, settings->saturations[axisNum]);
 	}
 }
 
@@ -1588,33 +1543,57 @@ void CInputSystem::PrintSettings()
 	puts("");
 
 	// Print all key settings for attached keyboards
-	KeySettings *keySettings = GetKeySettings(ANY_KEYBOARD, true);
-	PrintKeySettings(keySettings);
-	for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
+	KeySettings *keySettings;
+	if (m_numKbds == ANY_KEYBOARD)
 	{
-		keySettings = GetKeySettings(kbdNum, false);
-		if (keySettings != NULL)
-			PrintKeySettings(keySettings);
+		puts("Common Keyboard Settings:");
+		keySettings = GetKeySettings(ANY_KEYBOARD, true);
+		PrintKeySettings(ANY_KEYBOARD, keySettings);
+	}
+	else
+	{
+		for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
+		{
+			printf("Keyboard %d Settings:\n", kbdNum + 1);
+			keySettings = GetKeySettings(kbdNum, true);
+			PrintKeySettings(kbdNum, keySettings);
+		}
 	}
 
 	// Print all mouse settings for attached mice
-	MouseSettings *mseSettings = GetMouseSettings(ANY_MOUSE, true);
-	PrintMouseSettings(mseSettings);
-	for (int mseNum = 0; mseNum < m_numMice; mseNum++)
+	MouseSettings *mseSettings;
+	if (m_numMice == ANY_MOUSE)
 	{
-		mseSettings = GetMouseSettings(mseNum, false);
-		if (mseSettings != NULL)
-			PrintMouseSettings(mseSettings);
+		puts("Common Mouse Settings:");
+		mseSettings = GetMouseSettings(ANY_MOUSE, true);
+		PrintMouseSettings(ANY_MOUSE, mseSettings);
+	}
+	else
+	{
+		for (int mseNum = 0; mseNum < m_numMice; mseNum++)
+		{
+			printf("Mouse %d Settings:\n", mseNum + 1);
+			mseSettings = GetMouseSettings(mseNum, true);
+			PrintMouseSettings(mseNum, mseSettings);
+		}
 	}
 
 	// Print all joystick settings for attached joysticks
-	JoySettings *joySettings = GetJoySettings(ANY_JOYSTICK, true);
-	PrintJoySettings(joySettings);
-	for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
+	JoySettings *joySettings;
+	if (m_numJoys == ANY_JOYSTICK)
 	{
-		joySettings = GetJoySettings(joyNum, false);
-		if (joySettings != NULL)
-			PrintJoySettings(joySettings);
+		puts("Common Joystick Settings:");
+		joySettings = GetJoySettings(ANY_JOYSTICK, true);
+		PrintJoySettings(ANY_JOYSTICK, joySettings);
+	}
+	else
+	{
+		for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
+		{
+			printf("Joystick %d Settings:\n", joyNum + 1);
+			joySettings = GetJoySettings(joyNum, true);
+			PrintJoySettings(joyNum, joySettings);
+		}
 	}
 
 	puts("");
@@ -1677,6 +1656,7 @@ void CInputSystem::WriteToINIFile(CINIFile *ini, const char *section)
 bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly, unsigned readFlags, const char *escapeMapping)
 {
 	// Map given escape mapping to an input source
+	bool cancelled = false;
 	CInputSource *escape = ParseSource(escapeMapping);
 	if (escape)
 		escape->Acquire();
@@ -1686,15 +1666,11 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 	vector<CInputSource*> badSources;
 	vector<CInputSource*> sources;
 	bool mseCentered = false;
-	bool cancelled = false;
 	
 	// See which sources activated to begin with and from here on ignore these (this stops badly calibrated axes that are constantly "active"
 	// from preventing the user from exiting read loop)
 	if (!Poll())
-	{
-		cancelled = true;
-		goto Finish;
-	}
+		goto Cancelled;
 
 	CheckAllSources(readFlags, fullAxisOnly, mseCentered, badSources, badMapping, sources);
 
@@ -1703,10 +1679,7 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 	{
 		// Poll inputs
 		if (!Poll())
-		{
-			cancelled = true;
-			goto Finish;
-		}
+			goto Cancelled;
 
 		// Check if escape source was triggered
 		if (escape && escape->IsActive())
@@ -1715,14 +1688,10 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 			while (escape->IsActive())
 			{
 				if (!Poll())
-				{
-					cancelled = true;
-					goto Finish;
-				}
+					goto Cancelled;
 				Wait(1000/60);
 			}
-			cancelled = true;
-			goto Finish;
+			goto Cancelled;
 		}
 
 		// Check all active sources
@@ -1761,7 +1730,11 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 	// Copy mapping to buffer and return
 	strncpy(buffer, mapping.c_str(), bufSize - 1);
 	buffer[bufSize - 1] = '\0';
-	
+	goto Finish;
+
+Cancelled:
+	cancelled = true;
+
 Finish:
 	if (escape)
 		escape->Release();
@@ -1789,16 +1762,126 @@ bool CInputSystem::SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCm
 	return ProcessForceFeedbackCmd(joyNum, axisNum, ffCmd);
 }
 
+bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const char *escapeMapping, const char *confirmMapping)
+{
+	const JoyDetails *joyDetails = GetJoyDetails(joyNum);
+	if (joyDetails == NULL)
+	{
+		puts("No such joystick!");
+		return false;
+	}
+
+	// Map given escape & confirm mappings to input sources
+	bool cancelled = false;
+	CInputSource *escape = ParseSource(escapeMapping);
+	CInputSource *confirm = ParseSource(confirmMapping);
+	if (escape)
+		escape->Acquire();
+	if (confirm)
+		confirm->Acquire();
+
+	printf("Move axis around and then press Return (or press Esc to cancel): ");
+
+	int minVals[NUM_JOY_AXES];
+	int maxVals[NUM_JOY_AXES];
+	for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
+	{
+		if (!joyDetails->hasAxis[loopAxisNum])
+			continue;
+		int joyVal = GetJoyAxisValue(joyNum, loopAxisNum);
+		minVals[loopAxisNum] = joyVal;
+		maxVals[loopAxisNum] = joyVal;
+	}
+	for (;;)
+	{	
+		if (!Poll())
+			goto Cancelled;
+		
+		// Check if escape source was triggered
+		if (escape && escape->IsActive())
+		{
+			// If so, wait until source no longer active and then exit
+			while (escape->IsActive())
+			{
+				if (!Poll())
+					goto Cancelled;
+				Wait(1000/60);
+			}
+			goto Cancelled;
+		}
+
+		// Check if confirm source was triggered
+		if (confirm && confirm->IsActive())
+		{
+			// If so, wait until source no longer active and then exit
+			while (confirm->IsActive())
+			{
+				if (!Poll())
+					goto Cancelled;
+				Wait(1000/60);
+			}
+			break;
+		}
+
+		for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
+		{
+			if (!joyDetails->hasAxis[loopAxisNum])
+				continue;
+			int joyVal = GetJoyAxisValue(joyNum, loopAxisNum);
+			minVals[loopAxisNum] = min<int>(joyVal, minVals[loopAxisNum]);
+			maxVals[loopAxisNum] = max<int>(joyVal, maxVals[loopAxisNum]);
+		}
+
+		// Don't poll continuously
+		Wait(1000/60);
+	}
+
+	unsigned maxRange = 0;
+	unsigned maxAxisNum = 0;
+	for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
+	{
+		if (!joyDetails->hasAxis[loopAxisNum])
+			continue;
+		unsigned range = maxVals[loopAxisNum] - minVals[loopAxisNum];
+		if (range > maxRange)
+		{
+			maxRange = range;
+			axisNum = loopAxisNum;
+		}
+	}
+
+	if (maxRange > 3000)
+		printf("Detected\n", joyDetails->axisName[axisNum]);
+	else
+	{
+		cancelled = true;
+		puts("Not Detected");
+	}
+	goto Finish;	
+	
+Cancelled:
+	puts("[Cancelled]");
+	cancelled = true;
+
+Finish:
+	if (escape)
+		escape->Release();
+	if (confirm)
+		confirm->Release();
+	return !cancelled;
+}
+
 bool CInputSystem::CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, const char *escapeMapping, const char *confirmMapping)
 {
 	const JoyDetails *joyDetails = GetJoyDetails(joyNum);
 	if (joyDetails == NULL || axisNum >= NUM_JOY_AXES || !joyDetails->hasAxis[axisNum])
 	{
-		printf("No such axis or joystick");
-		return true;
+		puts("No such axis or joystick!");
+		return false;
 	}
 
 	// Map given escape mapping to input source
+	bool cancelled = false;
 	CInputSource *escape = ParseSource(escapeMapping);
 	CInputSource *output = ParseSource("KEY_SHIFT");
 	if (escape)
@@ -1822,7 +1905,6 @@ Repeat:
 	unsigned posOffRange;
 	unsigned negOffRange;
 	char mapping[50];
-	bool cancelled = false;
 	for (unsigned step = 0; step < 3; step++)
 	{
 		switch (step)
@@ -1831,9 +1913,9 @@ Repeat:
 				puts("Step 1:");
 				puts(" Move axis now to its furthest positive/'on' position and hold, ie:");
 				if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-					puts(" - for a joystick X-Axis, push it all the way to the right.");
+					puts(" - for a horizontal joystick axis, push it all the way to the right.");
 				if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-					puts(" - for a joystick Y-Axis, push it all the way downwards.");
+					puts(" - for a vertical joystick axis, push it all the way downwards.");
 				puts(" - for a steering wheel, turn it all the way to the right.");
 				puts(" - for a pedal, press it all the way to the floor.");
 				break;
@@ -1841,31 +1923,29 @@ Repeat:
 				puts("Step 2:");
 				puts(" Move axis the other way to its furthest negative position and hold, ie:");
 				if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-					puts(" - for a joystick X-Axis, push it all the way to the left.");
+					puts(" - for a horizontal joystick axis, push it all the way to the left.");
 				if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-					puts(" - for a joystick Y-Axis, push it all the way updwards.");
+					puts(" - for a vertical joystick axis, push it all the way updwards.");
 				puts(" - for a steering wheel, turn it all the way to the left.");
 				puts(" - for a pedal, let go of the pedal completely.  If there is another pedal");
 				puts("   that shares the same axis then press that one all the way to the floor.");
 				break;
 			case 2: 
 				puts("Step 3:");
-				puts(" Return axis to its center/'off' position and hold, ie:");
+				puts(" Return axis to its central/'off' position and hold, ie:");
 				puts(" - for a joystick axis, let it return to the middle.");
-				puts(" - for a steering weel, turn it back to its central position.");
-				puts(" - for a pedal, let go of all pedals completely.");
+				puts(" - for a steering weel, turn it back to the center.");
+				puts(" - for a pedal, let go of pedal completely.  Likewise for any other pedal");
+				puts("   that shares the same axis.");
 				break;
 		}
-		printf("\nPress Return when ready (or press Esc to cancel): ");
+		printf("\nPress Return when done (or press Esc to cancel): ");
 
 		// Loop until user confirms or aborts
 		for (;;)
 		{
 			if (!ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, escapeMapping))
-			{
-				cancelled = true;
-				goto Finish;
-			}
+				goto Cancelled;
 			if (stricmp(mapping, confirmMapping) == 0)
 				break;
 		}
@@ -1880,10 +1960,7 @@ Repeat:
 		for (unsigned frames = 0; frames < 3 * 60; frames++)
 		{	
 			if (!Poll())
-			{
-				cancelled = true;
-				goto Finish;
-			}
+				goto Cancelled;
 
 			// Check if escape source was triggered
 			if (escape && escape->IsActive())
@@ -1892,14 +1969,10 @@ Repeat:
 				while (escape->IsActive())
 				{
 					if (!Poll())
-					{
-						cancelled = true;
-						goto Finish; 
-					}
+						goto Cancelled;
 					Wait(1000/60);
 				}
-				cancelled = true;
-				goto Finish;
+				goto Cancelled;
 			}
 
 			joyVal = GetJoyAxisValue(joyNum, axisNum);
@@ -1907,7 +1980,7 @@ Repeat:
 			maxVal = max<int>(maxVal, joyVal);
 
 			// Check if output source is triggered, and if so output value for debugging
-			if (output != NULL && output->IsActive())
+			if (output && output->IsActive())
 			{
 				if (firstOut)
 					puts("");
@@ -1988,7 +2061,7 @@ Repeat:
 				goto Finish;		
 			}
 		}
-		cancelled = true;
+		goto Cancelled;
 	}
 	else
 	{
@@ -2007,12 +2080,14 @@ Repeat:
 				goto Repeat;
 			}
 		}
-		cancelled = true;
+		goto Cancelled;
 	}
 	
+Cancelled:
+	puts("[Cancelled]");
+	cancelled = true;
+
 Finish:
-	if (cancelled)
-		puts("[Cancelled]");
 	if (escape)
 		escape->Release();
 	if (output)

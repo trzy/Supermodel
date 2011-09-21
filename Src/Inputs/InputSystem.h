@@ -461,7 +461,7 @@ private:
 	/*
 	 * Prints the given key settings to stdout.
 	 */
-	void PrintKeySettings(KeySettings *settings);
+	void PrintKeySettings(int kbdNum, KeySettings *settings);
 
 	/*
 	 * Reads key settings from an INI file for the given keyboard number, or common settings if ANY_KEYBOARD specified.
@@ -477,7 +477,7 @@ private:
 	/*
 	 * Prints the given mouse settings to stdout.
 	 */
-	void PrintMouseSettings(MouseSettings *settings);
+	void PrintMouseSettings(int mseNum, MouseSettings *settings);
 
 	/*
 	 * Reads mouse settings from an INI file for the given mouse number, or common settings if ANY_MOUSE specified.
@@ -493,7 +493,7 @@ private:
 	/*
 	 * Prints the given joystick settings to stdout.
 	 */
-	void PrintJoySettings(JoySettings *settings);
+	void PrintJoySettings(int joyNum, JoySettings *settings);
 
 	/*
 	 * Reads joystick settings from an INI file for the given joystick number, or common settings if ANY_JOYSTICK specified.
@@ -842,6 +842,8 @@ public:
 	virtual void SetMouseVisibility(bool visible) = 0;
 
 	virtual bool SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
+
+	bool DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const char *escapeMapping = "KEY_ESCAPE", const char *confirmMapping = "KEY_RETURN");
 
 	bool CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, const char *escapeMapping = "KEY_ESCAPE", const char *confirmMapping = "KEY_RETURN");
 

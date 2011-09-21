@@ -441,7 +441,7 @@ Redisplay:
 			else if (stricmp(mapping, "KEY_A") == 0)
 			{
 				// Append to the input mapping(s)
-				printf("Appending...");
+				printf("Appending... ");
 				fflush(stdout);	// required on terminals that use buffering
 				if (input->Configure(true, uiExit->GetMapping()))
 					puts(input->GetMapping());
@@ -570,7 +570,7 @@ void CInputs::CalibrateJoystick(int joyNum)
 	const JoyDetails *joyDetails = m_system->GetJoyDetails(joyNum);
 	if (joyDetails == NULL || joyDetails->numAxes == 0)
 	{
-		printf("No axes available to calibrate on joystick!");
+		puts("No axes available to calibrate on joystick!");
 		return;
 	}
 
@@ -585,19 +585,30 @@ void CInputs::CalibrateJoystick(int joyNum)
 		axisNumList.push_back(axisNum);
 		printf(" %u: %s\n", axisNumList.size(), joyDetails->axisName[axisNum]);
 	}
+	printf(" 0: Unsure - help me choose...\n");
 	
 	char mapping[50];
 	while (m_system->ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, uiExit->GetMapping()))
 	{
-		if (strlen(mapping) != 5 || strncmp(mapping, "KEY_", 4) != 0)
-			continue;
-		char c = mapping[4];
-		if (!isdigit(c))
-			continue;
-		unsigned optNum = c - '0';
-		if (optNum == 0 || optNum > axisNumList.size())
-			continue;
-		unsigned axisNum = axisNumList[optNum - 1];
+		unsigned axisNum;
+		if (stricmp(mapping, "KEY_0") == 0)
+		{
+			puts("");
+			if (!m_system->DetectJoystickAxis(joyNum, axisNum))
+				return;
+		}
+		else
+		{
+			if (strlen(mapping) != 5 || strncmp(mapping, "KEY_", 4) != 0)
+				continue;
+			char c = mapping[4];
+			if (!isdigit(c))
+				continue;
+			unsigned optNum = c - '0';
+			if (optNum == 0 || optNum > axisNumList.size())
+				continue;
+			axisNum = axisNumList[optNum - 1];
+		}
 		puts("");
 		if (m_system->CalibrateJoystickAxis(joyNum, axisNum))
 		{
