@@ -91,12 +91,6 @@ struct DIJoyInfo
 	WORD xiVibrateBoth;
 };
 
-struct DIEnumDevsContext
-{
-	vector<DIJoyInfo> *infos;
-	bool useXInput;
-};
-
 // RawInput API
 typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDeviceListPtr)(OUT PRAWINPUTDEVICELIST pRawInputDeviceList, IN OUT PUINT puiNumDevices, IN UINT cbSize);
 typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDeviceInfoPtr)(IN HANDLE hDevice, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize);
@@ -107,15 +101,6 @@ typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDataPtr)(IN HRAWINPUT hRawInput, 
 typedef /*WINUSERAPI*/ DWORD (WINAPI *XInputGetCapabilitiesPtr)(IN DWORD dwUserIndex, IN DWORD dwFlags, OUT PXINPUT_CAPABILITIES pCapabilities);
 typedef /*WINUSERAPI*/ DWORD (WINAPI *XInputGetStatePtr)(IN DWORD dwUserIndex, OUT PXINPUT_STATE pState);
 typedef /*WINUSERAPI*/ DWORD (WINAPI *XInputSetStatePtr)(IN DWORD dwUserIndex, IN PXINPUT_VIBRATION pVibration);
-
-// DirectInput callbacks
-static bool IsXInputDevice(const GUID &devProdGUID);
-
-static BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID context);
-
-static BOOL CALLBACK DI8EnumAxesCallback(LPDIDEVICEOBJECTINSTANCE instance, LPVOID context);
-
-static BOOL CALLBACK DI8EnumEffectsCallback(LPCDIEFFECTINFO effectInfo, LPVOID context);
 
 /*
  * Input system that uses combination of DirectInput, XInput and RawInput APIs.

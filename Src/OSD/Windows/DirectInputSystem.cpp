@@ -186,7 +186,7 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	//{ "UNDO",				?? },
 };
 
-bool IsXInputDevice(const GUID &devProdGUID)
+static bool IsXInputDevice(const GUID &devProdGUID)
 {
 	// Following code taken from MSDN
 	IWbemLocator* pIWbemLocator  = NULL;
@@ -285,42 +285,72 @@ Finish:
     return isXInpDev;
 }
 
-BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID context)
+struct DIEnumDevsContext
+{
+	vector<DIJoyInfo> *infos;
+	bool useXInput;
+};
+
+static BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID context)
 {
 	// Keep track of all joystick device GUIDs
-	DIEnumDevsContext *diContext = (DIEnumDevsContext*)context;
+	DIEnumDevsContext *diDevsContext = (DIEnumDevsContext*)context;
 	DIJoyInfo info;
 	memset(&info, 0, sizeof(DIJoyInfo));
 	info.guid = instance->guidInstance;
 	// If XInput is enabled, see if device is an XInput device
-	info.isXInput = diContext->useXInput && IsXInputDevice(instance->guidProduct);
-	diContext->infos->push_back(info);
+	info.isXInput = diDevsContext->useXInput && IsXInputDevice(instance->guidProduct);
+	diDevsContext->infos->push_back(info);
 	return DIENUM_CONTINUE;
 }
 
-BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID context)
+struct DIEnumAxesContext
 {
-	// Workout which axis is currently being enumerated
-	int objNum = DIDFT_GETINSTANCE(instance->dwType);
-	DIOBJECTDATAFORMAT fmt = c_dfDIJoystick2.rgodf[objNum];
+	JoyDetails *joyDetails;
+	bool enumError;
+};
+
+static BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID context)
+{
+	// Work out which axis is currently being enumerated from the GUID
+	DIEnumAxesContext *diAxesContext = (DIEnumAxesContext*)context;
 	int axisNum;
-	switch (fmt.dwOfs)
+	if      (instance->guidType == GUID_XAxis)  axisNum = AXIS_X;
+	else if (instance->guidType == GUID_YAxis)  axisNum = AXIS_Y;
+	else if (instance->guidType == GUID_ZAxis)  axisNum = AXIS_Z;
+	else if (instance->guidType == GUID_RxAxis) axisNum = AXIS_RX;
+	else if (instance->guidType == GUID_RyAxis) axisNum = AXIS_RY;
+	else if (instance->guidType == GUID_RzAxis) axisNum = AXIS_RZ;
+	else
 	{
-		case DIJOFS_X:  axisNum = AXIS_X; break;
-		case DIJOFS_Y:  axisNum = AXIS_Y; break;
-		case DIJOFS_Z:  axisNum = AXIS_Z; break;
-		case DIJOFS_RX: axisNum = AXIS_RX; break;
-		case DIJOFS_RY: axisNum = AXIS_RY; break;
-		case DIJOFS_RZ: axisNum = AXIS_RZ; break;
-		default:        return DIENUM_CONTINUE;
+		// If couldn't match GUID (which, according to MSDN, is an optional attribute), then flag error and try matching using a different method
+		diAxesContext->enumError = true;
+		int objNum = DIDFT_GETINSTANCE(instance->dwType);
+		DIOBJECTDATAFORMAT fmt = c_dfDIJoystick2.rgodf[objNum];
+		switch (fmt.dwOfs)
+		{
+			case DIJOFS_X:  axisNum = AXIS_X; break;
+			case DIJOFS_Y:  axisNum = AXIS_Y; break;
+			case DIJOFS_Z:  axisNum = AXIS_Z; break;
+			case DIJOFS_RX: axisNum = AXIS_RX; break;
+			case DIJOFS_RY: axisNum = AXIS_RY; break;
+			case DIJOFS_RZ: axisNum = AXIS_RZ; break;
+			default:        
+				// If still couldn't match then it is not an axis
+				return DIENUM_CONTINUE;  
+		}
 	}
 	
+	// If axis overlaps with a previous ones, flag error
+	JoyDetails *joyDetails = diAxesContext->joyDetails;
+	if (joyDetails->hasAxis[axisNum])
+		diAxesContext->enumError = true;
+
 	// Record fact that axis is present and also whether it has force feedback available
-	JoyDetails *joyDetails = (JoyDetails*)context;
 	joyDetails->hasAxis[axisNum] = true; 
 	joyDetails->axisHasFF[axisNum] = !!(instance->dwFlags & DIDOI_FFACTUATOR);
 
-	// Get axis name from DirectInput
+	// Get axis name from DirectInput and store that too
 	char *axisName = joyDetails->axisName[axisNum];
 	strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
 	strcat(axisName, "-Axis (");
@@ -330,10 +360,10 @@ BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID con
 	return DIENUM_CONTINUE;
 }
 
-BOOL CALLBACK DI8EnumEffectsCallback(LPCDIEFFECTINFO effectInfo, LPVOID context)
+static BOOL CALLBACK DI8EnumEffectsCallback(LPCDIEFFECTINFO effectInfo, LPVOID context)
 {
-	JoyDetails *joyDetails = (JoyDetails*)context;
 	// Check joystick has at least one of required types of effects
+	JoyDetails *joyDetails = (JoyDetails*)context;
 	if (!!(effectInfo->dwEffType & (DIEFT_CONSTANTFORCE | DIEFT_PERIODIC | DIEFT_CONDITION)))
 		joyDetails->hasFFeedback = true;
 	return DIENUM_CONTINUE;
@@ -988,11 +1018,11 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 void CDirectInputSystem::OpenJoysticks()
 {
 	// Get the info about all attached joystick devices
-	DIEnumDevsContext diContext;
-	diContext.infos = &m_diJoyInfos;
-	diContext.useXInput = m_useXInput;
+	DIEnumDevsContext diDevsContext;
+	diDevsContext.infos = &m_diJoyInfos;
+	diDevsContext.useXInput = m_useXInput;
 	HRESULT hr;
-	if (FAILED(hr = m_di8->EnumDevices(DI8DEVCLASS_GAMECTRL, DI8EnumDevicesCallback, &diContext, DIEDFL_ATTACHEDONLY)))
+	if (FAILED(hr = m_di8->EnumDevices(DI8DEVCLASS_GAMECTRL, DI8EnumDevicesCallback, &diDevsContext, DIEDFL_ATTACHEDONLY)))
 		return;
 
 	// Loop through those found
@@ -1079,13 +1109,34 @@ void CDirectInputSystem::OpenJoysticks()
 			joyDetails.numButtons = devCaps.dwButtons;
 			
 			// Enumerate axes
-			if (FAILED(hr = joystick->EnumObjects(DI8EnumAxesCallback, &joyDetails, DIDFT_AXIS)))
+			DIEnumAxesContext diAxesContext;
+			diAxesContext.joyDetails = &joyDetails;
+			diAxesContext.enumError = false;
+			if (FAILED(hr = joystick->EnumObjects(DI8EnumAxesCallback, &diAxesContext, DIDFT_AXIS)))
 			{
 				ErrorLog("Unable to enumerate axes of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
 				joystick->Release();
 				continue;
 			}
+
+			// If enumeration failed for some reason then include all possible joystick axes so that no axis is left off due to error
+			if (diAxesContext.enumError)
+			{
+				for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
+				{
+					if (!joyDetails.hasAxis[axisNum])
+					{
+						joyDetails.hasAxis[axisNum] = true;
+						joyDetails.axisHasFF[axisNum] = false;
+						char *axisName = joyDetails.axisName[axisNum];
+						strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
+						strcat(axisName, "-Axis");
+					}
+				}
+			}
+
+			// Count number of axes
 			joyDetails.numAxes = 0;
 			for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 				joyDetails.numAxes += joyDetails.hasAxis[axisNum];
