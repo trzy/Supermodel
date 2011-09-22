@@ -395,8 +395,10 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.emulateDSB = x ? true : false;
 
 	// Drive board
+#ifdef SUPERMODEL_WIN32
 	if (OKAY == INI->Get(section, "ForceFeedback", x))
 		g_Config.forceFeedback = x ? true : false;
+#endif
 	
 	// OSD
 	INI->Get(section, "XResolution", g_Config.xRes);
@@ -479,7 +481,9 @@ static void LogConfig(void)
 	InfoLog("\tMusicVolume               = %d", g_Config.GetMusicVolume());
 	
 	// CDriveBoardConfig
+#ifdef SUPERMODEL_WIN32
 	InfoLog("\tForceFeedback             = %d", g_Config.forceFeedback);
+#endif
 
 	// CRender3DConfig
 	InfoLog("\tVertexShader              = %s", g_Config.vertexShaderFile.c_str());
@@ -1227,7 +1231,9 @@ static void Help(void)
 	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("");
 	puts("Input Options:");
+#ifdef SUPERMODEL_WIN32
 	puts("    -force-feedback        Enable force feedback (DirectInput, XInput)");
+#endif
 	puts("    -config-inputs         Configure keyboards, mice, and game controllers");
 #ifdef SUPERMODEL_WIN32
 	printf("    -input-system=<s>      Input system [Default: %s]\n", g_Config.GetInputSystem());
@@ -1373,11 +1379,13 @@ int main(int argc, char **argv)
 			n = 0;
 			CmdLine.Set("Global", "EmulateDSB", n);
 		}
+#ifdef SUPERMODEL_WIN32
 		else if (!strcmp(argv[i], "-force-feedback"))
 		{
 			n = 1;
 			CmdLine.Set("Global", "ForceFeedback", n);
 		}
+#endif
 		else if (!strncmp(argv[i],"-res",4))
 		{
 			unsigned	x, y;
