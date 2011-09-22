@@ -347,20 +347,23 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 
 UINT8 CDSB1::IORead8(UINT32 addr)
 {
-	int	progress;
+	int	progress, end;
 	
 	switch ((addr&0xFF))
 	{
 	case 0xE2:	// MPEG position, high byte
-		progress = MPEG_GetProgress() + mpegStart;	// byte address currently playing
+		MPEG_GetPlayPosition(&progress, &end);
+		progress += mpegStart;	// byte address currently playing
 		return (progress>>16)&0xFF;
 		
 	case 0xE3:	// MPEG position, middle byte
-		progress = MPEG_GetProgress() + mpegStart;
+		MPEG_GetPlayPosition(&progress, &end);
+		progress += mpegStart;
 		return (progress>>8)&0xFF;
 		
 	case 0xE4:	// MPEG position, low byte
-		progress = MPEG_GetProgress() + mpegStart;
+		MPEG_GetPlayPosition(&progress, &end);
+		progress += mpegStart;
 		return progress&0xFF;
 		
 	case 0xF0:	// Latch
@@ -475,16 +478,20 @@ void CDSB1::Reset(void)
 
 void CDSB1::SaveState(CBlockFile *StateFile)
 {
-	UINT32	mpegPos;
+	int		i, j;
+	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 	
 	StateFile->NewBlock("DSB1", __FILE__);
 	
 	// MPEG playback state
 	isPlaying = (UINT8) MPEG_IsPlaying();
-	mpegPos = MPEG_GetProgress();
+	MPEG_GetPlayPosition(&i, &j);
+	playOffset = (UINT32) i;	// in case sizeof(int) != sizeof(INT32)
+	endOffset = (UINT32) j;
 	StateFile->Write(&isPlaying, sizeof(isPlaying));
-	StateFile->Write(&mpegPos, sizeof(mpegPos));
+	StateFile->Write(&playOffset, sizeof(playOffset));
+	StateFile->Write(&endOffset, sizeof(endOffset));
 	StateFile->Write(&usingMPEGStart, sizeof(usingMPEGStart));
 	StateFile->Write(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Write(&usingLoopStart, sizeof(usingLoopStart));
@@ -511,7 +518,7 @@ void CDSB1::SaveState(CBlockFile *StateFile)
 
 void CDSB1::LoadState(CBlockFile *StateFile)
 {
-	UINT32	mpegPos;
+	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 	
 	if (OKAY != StateFile->FindBlock("DSB1"))
@@ -521,7 +528,8 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	}
 	
 	StateFile->Read(&isPlaying, sizeof(isPlaying));
-	StateFile->Read(&mpegPos, sizeof(mpegPos));
+	StateFile->Read(&playOffset, sizeof(playOffset));
+	StateFile->Read(&endOffset, sizeof(endOffset));
 	StateFile->Read(&usingMPEGStart, sizeof(usingMPEGStart));
 	StateFile->Read(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Read(&usingLoopStart, sizeof(usingLoopStart));
@@ -548,7 +556,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
 		if (usingLoopEnd != 0)	// only if looping was actually enabled
 			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
-		MPEG_SetOffset(mpegPos);
+		MPEG_SetPlayPosition(playOffset, endOffset);
 	}
 	else
 		MPEG_StopPlaying();
@@ -1036,16 +1044,20 @@ void CDSB2::Reset(void)
 
 void CDSB2::SaveState(CBlockFile *StateFile)
 {
-	UINT32	mpegPos;
+	int		i, j;
+	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 	
 	StateFile->NewBlock("DSB2", __FILE__);
 	
 	// MPEG playback state
 	isPlaying = (UINT8) MPEG_IsPlaying();
-	mpegPos = MPEG_GetProgress();
+	MPEG_GetPlayPosition(&i, &j);
+	playOffset = (UINT32) i;	// in case sizeof(int) != sizeof(INT32)
+	endOffset = (UINT32) j;
 	StateFile->Write(&isPlaying, sizeof(isPlaying));
-	StateFile->Write(&mpegPos, sizeof(mpegPos));
+	StateFile->Write(&playOffset, sizeof(playOffset));
+	StateFile->Write(&endOffset, sizeof(endOffset));
 	StateFile->Write(&usingMPEGStart, sizeof(usingMPEGStart));
 	StateFile->Write(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Write(&usingLoopStart, sizeof(usingLoopStart));
@@ -1076,7 +1088,7 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 
 void CDSB2::LoadState(CBlockFile *StateFile)
 {
-	UINT32	mpegPos;
+	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 	
 	if (OKAY != StateFile->FindBlock("DSB2"))
@@ -1086,7 +1098,8 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	}
 	
 	StateFile->Read(&isPlaying, sizeof(isPlaying));
-	StateFile->Read(&mpegPos, sizeof(mpegPos));
+	StateFile->Read(&playOffset, sizeof(playOffset));
+	StateFile->Read(&endOffset, sizeof(endOffset));
 	StateFile->Read(&usingMPEGStart, sizeof(usingMPEGStart));
 	StateFile->Read(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Read(&usingLoopStart, sizeof(usingLoopStart));
@@ -1113,7 +1126,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
 		if (usingLoopEnd != 0)	// only if looping was actually enabled
 			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
-		MPEG_SetOffset(mpegPos);
+		MPEG_SetPlayPosition(playOffset, endOffset);
 	}
 	else
 		MPEG_StopPlaying();

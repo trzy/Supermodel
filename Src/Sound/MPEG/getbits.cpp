@@ -48,16 +48,19 @@
 static const char *fstart, *lstart;
 static int offset, end, eof, lend;
 
-int MPEG_GetProgress(void)
+void MPEG_GetPlayPosition(int *playOffset, int *endOffset)
 {
-	if (in_file) return ftell(in_file);
-
-	return offset;
+	if (in_file) 
+		*playOffset = ftell(in_file);
+	else
+		*playOffset = offset;
+	*endOffset = end;
 }
 
-void MPEG_SetOffset(int pos)
+void MPEG_SetPlayPosition(int playOffset, int endOffset)
 {
-	offset = pos;
+	offset = playOffset;
+	end = endOffset;
 }
 
 void m1setfile(const char *mstart, int mend)

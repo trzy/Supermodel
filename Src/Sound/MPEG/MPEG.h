@@ -48,23 +48,27 @@
 extern bool MPEG_IsPlaying(void);
 
 /*
- * MPEG_GetProgress(void):
+ * MPEG_GetPlayPosition(playOffset, endOffset):
  *
- * Returns:
- * 		The current byte offset within the MPEG stream, relative to the start.
+ * Obtains the current playback and end offsets of the MPEG stream.
+ *
+ * Parameters:
+ *		playOffset	Pointer to which playback byte offset will be written.
+ *		endOffset	Pointer to which end offset will be written.
  */
-extern int MPEG_GetProgress(void);							
+extern void MPEG_GetPlayPosition(int *playOffset, int *endOffset);
 
 /*
- * MPEG_SetOffset(pos):
+ * MPEG_SetPlayPosition(playOffset, endOffset):
  *
  * Sets the playback position within an MPEG stream.
  *
  * Parameters:
- *		pos		Byte offset relative to the beginning of the current MPEG
- *				stream.
+ *		playOffset	Playback byte offset (relative to beginning of the current
+ *					MPEG stream).
+ *		endOffset	End offset.
  */
-extern void MPEG_SetOffset(int pos);
+extern void MPEG_SetPlayPosition(int playOffset, int endOffset);
 
 /*
  * MPEG_SetLoop(loop, loopend):
