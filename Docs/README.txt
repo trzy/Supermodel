@@ -1,5 +1,8 @@
+TODO: discussion of missing input settings in index: saturation, dead zone, analog/digital sensitivity, etc. All missing now.
 TODO: input stuff to be written in section 12
+TODO: add a title to this document and LICENSE.txt (e.g. 'User Manual for Supermodel Version 0.2a', 'License Agreement for Supermodel v0.2a')
 TODO: final proof read, then convert all tabs to spaces
+TODO: don't forget to add date to revision history!
  
  
   ####                                                      ###           ###
@@ -296,7 +299,7 @@ ROM set is reported.
 | vs2v991   | Virtua Striker 2 '99.1                  | No  | PowerPC error.  |
 +-----------+-----------------------------------------+-----+-----------------+
 
-Most ROM sets suffering from severe graphics problems are categorized as non-
+Most ROM sets suffering from severe graphical problems are categorized as non-
 playable when in fact many are partially playable.  Controls may not be fully 
 functional, however, and none have been tested thoroughly.
 
