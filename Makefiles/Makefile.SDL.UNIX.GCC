@@ -20,7 +20,7 @@
 ##
 
 #
-# Makefile.SDL.UNIX-MODERN.GCC
+# Makefile.SDL.UNIX.GCC
 #
 # GNU Makefile for SDL port using GCC on modern Linux (e.g. Fedora 14). 
 # Copy this Makefile to the base directory of the source distribution (one up 

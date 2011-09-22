@@ -1,6 +1,5 @@
+TODO supported games, compatibility matrix
 TODO: convert all tabs to spaces
-TODO: describe Dinputeffectsgain in config index
-TODO: XInputConstForceThreshold default? Set in source code.
 TODO: describe auto trigger in config index
 TODO: Andy Geezer's region codes
  
@@ -227,33 +226,125 @@ and in both cases should replace the file with extension 24 from 'Scud Race'
 ('mpr-19671.24').
 
 
-===================
-  Supported Games
-===================
+======================
+  Game Compatibility
+======================
 
-The following games and ROM sets are supported by this version of Supermodel.
-Not all of them are playable.
+Supermodel recognizes all known Model 3 ROM sets but not all of them are 
+playable.  Below is a compatibility matrix.  The most obvious problem with each
+ROM set is stated.
 
-    ROM Set        Game Title
-    -------        ----------
-    vf3            Virtua Fighter 3
-    lemans24       Le Mans 24
-    scud           Scud Race
-    scudp          Scud Race Plus
-    lostwsga       The Lost World
-    von2           Virtual On Oratorio Tangram
-    vs298          Virtua Striker 2 '98
-    srally2        Sega Rally 2
-    daytona2       Daytona USA 2
-    dayto2pe       Daytona USA 2 Power Edition
-    fvipers2       Fighting Vipers 2
-    harley         Harley Davidson & L.A. Riders
-    lamachin       L.A. Machineguns
-    oceanhun       The Ocean Hunter
-    swtrilgy       Star Wars Trilogy
-    eca            Emergency Car Ambulance
+   ROM Set                    Title                  Playable?   Comments
++-----------+-----------------------------------------+-----+-----------------+
+| bass      | Sega Bass Fishing                       | No  | No controls.    |
++-----------+-----------------------------------------+-----+-----------------+
+| daytona2  | Daytona USA 2 Battle on the Edge        | Yes | Minor graphics  |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| dayto2pe  | Daytona USA 2 Power Edition             | Yes | Minor graphics  |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| dirtdvls  | Dirt Devils                             | Yes | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| dirtdvlsa | Dirt Devils (Alternate)                 | Yes | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| eca       | Emergency Call Ambulance                | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| ecax      | Emergency Call Ambulance (Export)       | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| fvipers2  | Fighting Vipers 2                       | Yes | Slow.           |
++-----------+-----------------------------------------+-----+-----------------+
+| getbass   | Get Bass                                | No  | Does not boot.  |
++-----------+-----------------------------------------+-----+-----------------+
+| harley    | Harley Davidson & L.A. Riders           | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| harleyb   | Harley Davidson & L.A. Riders (Rev. B)  | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| lamachin  | L.A. Machineguns                        | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| lemans24  | Le Mans 24                              | Yes | Some texture    |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| lostwsga  | The Lost World                          | Yes | Some texture    |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| magtruck  | Magical Truck Adventure                 | No  | Does not boot.  |
++-----------+-----------------------------------------+-----+-----------------+
+| oceanhun  | The Ocean Hunter                        | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| scud      | Scud Race (Australia)                   | Yes | Minor shading   |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| scuda     | Scud Race (Export)                      | Yes | Minor shading   |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| scudj     | Scud Race (Japan)                       | Yes | Mis-colored 2D  |
+|           |                                         |     | graphics.       |
++-----------+-----------------------------------------+-----+-----------------+
+| scudp     | Scud Race Plus                          | Yes | Minor shading   |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| skichamp  | Ski Champ                               | No  | Severe graphics |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| spikeofe  | Spikeout Final Edition                  | Yes | Some texture    |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| spikeout  | Spikeout                                | Yes | Some texture    |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| srally2   | Sega Rally 2                            | Yes | Major graphics  |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| srally2x  | Sega Rally 2 DX                         | No  | Does not boot.  |
++-----------+-----------------------------------------+-----+-----------------+
+| swtrilgy  | Star Wars Trilogy (Rev. A)              | Yes | Some graphics   |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| swtrilgya | Star Wars Trilogy                       | No  | Does not boot.  |
++-----------+-----------------------------------------+-----+-----------------+
+| vf3       | Virtua Fighter 3                        | Yes | Major graphics  |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| vf3a      | Virtua Fighter 3 (Rev. A)               | Yes | Major graphics  |
+|           |                                         |     | problems.       |
++-----------+-----------------------------------------+-----+-----------------+
+| vf3tb     | Virtua Fighter 3 Team Battle            | No  | Cannot coin up. |
++-----------+-----------------------------------------+-----+-----------------+
+| von2      | Virtual On Oratorio Tangram             | Yes | Encrypted 2D    |
+|           |                                         |     | graphics.       |
++-----------+-----------------------------------------+-----+-----------------+
+| von254g   | Virtual On Oratorio Tangram (Ver. 5.4g) | Yes | Encrypted 2D    |
+|           |                                         |     | graphics.       |
++-----------+-----------------------------------------+-----+-----------------+
+| vs2       | Virtua Striker 2 (Step 2.0)             | Yes | Slow.           |
++-----------+-----------------------------------------+-----+-----------------+
+| vs215     | Virtua Striker 2 (Step 1.5)             | Yes | Slow.           |
++-----------+-----------------------------------------+-----+-----------------+
+| vs298     | Virtua Striker 2 '98 (Step 2.0)         | Yes | Slow.           |
++-----------+-----------------------------------------+-----+-----------------+
+| vs29815   | Virtua Striker 2 '98 (Step 1.5)         | Yes | Slow.           |
++-----------+-----------------------------------------+-----+-----------------+
+| vs299     | Virtua Striker 2 '99                    | No  | PowerPC error.  |
++-----------+-----------------------------------------+-----+-----------------+
+| vs299a    | Virtua Striker 2 '99 (Rev. A)           | No  | PowerPC error.  |
++-----------+-----------------------------------------+-----+-----------------+
+| vs299b    | Virtua Striker 2 '99 (Rev. B)           | No  | PowerPC error.  |
++-----------+-----------------------------------------+-----+-----------------+
+| vs2v991   | Virtua Striker 2 '99.1                  | No  | PowerPC error.  |
++-----------+-----------------------------------------+-----+-----------------+
 
-The '-print-games' option can be used to obtain this list.
+Most ROM sets suffering from severe graphics problems are categorized as non-
+playable when in fact many are partially playable.  Controls may not be fully 
+functional, however, and none have been tested thoroughly.
 
 
 ==================
@@ -274,7 +365,7 @@ To change the resolution, use the '-res' command line option.  For full screen
 mode, use '-fullscreen'.  For example, to set a full screen 1920x1080 mode,
 try:
 
-	supermodel game.zip -res=1920,1080 -fullscreen
+    supermodel game.zip -res=1920,1080 -fullscreen
 
 Video settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this document.
@@ -298,8 +389,8 @@ Trilogy').  The '-sound-volume' and '-music-volume' options can be used to
 change the volume.  As arguments, they take a volume level in percent ranging
 from 0 (muted) to 200% (maximum, doubled amplitude).  For example:
 
-	supermodel game.zip -sound-volume=50 -music-volume=170
-	
+    supermodel game.zip -sound-volume=50 -music-volume=170
+    
 This command line cuts the sound volume in half and increases the music volume
 by 70%.
 
@@ -321,7 +412,8 @@ configuration file, described elsewhere in this document.
 Please keep in mind that MPEG music emulation is preliminary and the decoder is
 buggy.  Periodic squeaks and pops occur on many music tracks.  The Sega Custom
 Sound Processor (SCSP) emulator, used for sound emulation, is an older version
-of ElSemi's code and still quite buggy.
+of ElSemi's code and also quite buggy.  Sound glitches are known to occur now
+and then, and many sounds and tunes do not sound quite correct.
 
 
 ============
@@ -455,17 +547,17 @@ option available.
 
 Windows users can select between four different input systems:
 
-	- DirectInput.  Selected with '-input-system=dinput'.  This is the default.
-	  It provides the best support for PC game controllers and, when emulating
-	  force feedback, allows all effects (if the controller supports them).
-	- XInput.  Selected with '-input-system=xinput'.  This must be used with
-	  XBox 360 controllers, otherwise some buttons will not be usable and force
-	  feedback will not work.
-	- Raw Input.  Selected with '-input-system=rawinput'.  This is intended for
-	  use with multiple mice and keyboards but is not recommended otherwise.
-	- SDL.  Selected with '-input-system=sdl'.  The standard, cross-platform
-	  input system intended for non-Windows builds.  It is accessible on
-	  Windows but does not provide full support for all devices.
+    - DirectInput.  Selected with '-input-system=dinput'.  This is the default.
+      It provides the best support for PC game controllers and, when emulating
+      force feedback, allows all effects (if the controller supports them).
+    - XInput.  Selected with '-input-system=xinput'.  This must be used with
+      XBox 360 controllers, otherwise some buttons will not be usable and force
+      feedback will not work.
+    - Raw Input.  Selected with '-input-system=rawinput'.  This is intended for
+      use with multiple mice and keyboards but is not recommended otherwise.
+    - SDL.  Selected with '-input-system=sdl'.  The standard, cross-platform
+      input system intended for non-Windows builds.  It is accessible on
+      Windows but does not provide full support for all devices.
 
 When switching input systems with '-input-system', you must also configure your
 inputs using the same option.  For example, when running Supermodel with
@@ -487,11 +579,11 @@ enable it, use the '-force-feedback' option.
 
 Drive board ROMs are required.
 
-	Game			Drive Board ROM File	Size		Checksum (CRC32)
-	----     		--------------------	----		----------------
-	Daytona USA 2	epr-20985.bin   		64 KB		B139481D
-	Scud Race		epr-19338a.bin     		64 KB		C9FAC464
-	Sega Rally 2	epr-20512.bin    		64 KB		CF64350D
+    Game            Drive Board ROM File    Size        Checksum (CRC32)
+    ----            --------------------    ----        ----------------
+    Daytona USA 2   epr-20985.bin           64 KB       B139481D
+    Scud Race       epr-19338a.bin          64 KB       C9FAC464
+    Sega Rally 2    epr-20512.bin           64 KB       CF64350D
 
 The sizes and checksums must match those listed above.  The file names may be
 different but will almost certainly contain the same identifying numbers.
@@ -510,17 +602,16 @@ Tuning Force Feedback
 Force feedback can be enabled and tuned in the configuration file.  Setting
 'ForceFeedback' to 1 enables it:
 
-	ForceFeedback = 1
-	
+    ForceFeedback = 1
+    
 There are three DirectInput effects: constant force, self centering, and
 vibration.  The strength of each can be tuned with the following settings:
 
-	DirectInputEffectsGain = 100
-	DirectInputConstForceMax = 100
-	DirectInputSelfCenterMax = 100
-	DirectInputFrictionMax = 100
-	DirectInputVibrateMax = 100
-	
+    DirectInputConstForceMax = 100
+    DirectInputSelfCenterMax = 100
+    DirectInputFrictionMax = 100
+    DirectInputVibrateMax = 100
+    
 They are given as percentages and represent the maximum strength for each
 effect.  A setting of 0 disables them entirely.  Values above 100% are
 accepted but may clip or distort the effect (and possibly damage your
@@ -531,9 +622,9 @@ Because the characteristics of the motors are different, the effects will feel
 somewhat asymmetric.  The constant force effect is simulated with vibrations.
 The relevant settings are:
 
-	XInputConstForceThreshold = 30
- 	XInputConstForceMax = 100
-  	XInputVibrateMax = 100
+    XInputConstForceThreshold = 30
+    XInputConstForceMax = 100
+    XInputVibrateMax = 100
 
 The constant force threshold specifies how strong a constant force command must
 be before it is sent to the controller as a vibration effect (whose strength is
@@ -630,9 +721,9 @@ Virtua Striker 2 '98 (Step 1.5 and 2.0 versions)
 The region can be changed by entering the test menu (press the Test button)
 and, in the 'Game Assignments' menu, performing the following sequence:
 
-	1. Press the Service button once for about 5 seconds.
-	2. Press the Service button three times shortly.
-	3. Press the Service button again one time for about 5 seconds.
+    1. Press the Service button once for about 5 seconds.
+    2. Press the Service button three times shortly.
+    3. Press the Service button again one time for about 5 seconds.
 
 
 ==========================
@@ -644,13 +735,13 @@ Supermodel reads configuration settings from 'Supermodel.ini' located in the
 should have been created.  When starting up, Supermodel parses settings in the
 following order:
 
-	1. Global settings are read from 'Supermodel.ini'.  These include input
-	   mappings and apply to all games.
-	2. If the ROM set was loaded correctly, game-specific settings are read
-	   from 'Supermodel.ini', overriding settings from step 1.
-	3. Command line options are applied, overriding settings from the previous
-	   steps.
-	   
+    1. Global settings are read from 'Supermodel.ini'.  These include input
+       mappings and apply to all games.
+    2. If the ROM set was loaded correctly, game-specific settings are read
+       from 'Supermodel.ini', overriding settings from step 1.
+    3. Command line options are applied, overriding settings from the previous
+       steps.
+       
 In other words, command line options have the highest precedence, followed by
 game-specific settings, and lastly, global settings.
 
@@ -668,19 +759,19 @@ File Structure and Syntax
 The configuration file is a list of settings grouped under sections.  All names
 and settings in the file are case sensitive.  Settings take the form:
 
-	Name = Argument
-	
+    Name = Argument
+    
 Names are case sensitive.  Only one setting per line is allowed.  Only two
 types of arguments are allowed: integers and strings.  The choice of which to
 use is determined by the setting.  Integers are unsigned and begin at 0.
 Strings can contain any characters and are enclosed by double quotes.  
 Examples:
 
-	IntegerSetting1 = 0
-	IntegerSetting2 = 65536
-	StringSetting1 = "This is a string."
-	StringSetting2 = "123"
-	StringSetting3 = "1+1, abc, these are all valid characters!"
+    IntegerSetting1 = 0
+    IntegerSetting2 = 65536
+    StringSetting1 = "This is a string."
+    StringSetting2 = "123"
+    StringSetting3 = "1+1, abc, these are all valid characters!"
 
 Many settings are simply boolean variables expecting an integer value of either
 0 (disabled) or 1 (enabled).  Some settings require values and others take 
@@ -688,14 +779,14 @@ strings for file names or input mappings.
 
 Section names appear in between square brackets on their own lines.
 
-	[ SectionName ]
-	
+    [ SectionName ]
+    
 Settings that appear at the beginning of the file without a preceeding section
 are automatically assigned to 'Global'.
 
 Comments begin with a semicolon and extend until the end of the line.
 
-	; This is a comment.
+    ; This is a comment.
 
 
 The Purpose of Sections
@@ -714,28 +805,28 @@ Input mappings are special.  They are only read from the 'Global' section!
 In the example below, custom configurations are created for 'Scud Race' and
 'The Lost World'.  All other games will use the global settings.
 
-	[ Global ]
-	
-	; Run full screen at 1024x768
-	XResolution = 1024
-	YResolution = 768
-	FullScreen = 1
+    [ Global ]
+    
+    ; Run full screen at 1024x768
+    XResolution = 1024
+    YResolution = 768
+    FullScreen = 1
 
-	; Scud Race
-	[ scud ]
-	
-	; Run at 1080p
-	XResolution = 1920
-	YResolution = 1080
-	
-	; Music is too quiet by default
-	SoundVolume = 50
-	MusicVolume = 200
-	
-	; The Lost World
-	[ lostwsga ]
-	
-	PowerPCFrequency = 25	; run PowerPC at 25 MHz
+    ; Scud Race
+    [ scud ]
+    
+    ; Run at 1080p
+    XResolution = 1920
+    YResolution = 1080
+    
+    ; Music is too quiet by default
+    SoundVolume = 50
+    MusicVolume = 200
+    
+    ; The Lost World
+    [ lostwsga ]
+    
+    PowerPCFrequency = 25   ; run PowerPC at 25 MHz
 
 In this example, only 'Scud Race' will run at 1920x1080.  All other games will
 use 1024x768.  'Scud Race' will also have altered volume settings.  'The Lost
@@ -770,157 +861,157 @@ spaces may appear inside of an option.  For example, 'supermodel game.zip
 not.  All options are case sensitive.
 
 
-	Option:			-?
-					-h
-	
-	Description:	Prints a message with an overview of the command line 
-					options and how to run Supermodel.
-					
-	----------------
-	
-	Option:			-print-games
-	
-	Description:	Lists all supported ROM sets.  Not all supported ROM sets
-					are playable yet.
-	
-	----------------
-	
-	Option:			-no-threads
-	
-	Description:	Disables multi-threading.  When enabled (the default), the
-					PowerPC, graphics rendering, and user interface are run in
-					one	thread, sound emulation in a second thread, and the 
-					drive board in a third.  It is enabled by default.  On 
-					single-core systems, multi-threading adds overhead and 
-					slows Supermodel down but can make audio sound a bit 
-					smoother.
-	
-	----------------
-	
-	Option:			-ppc-frequency=<f>
-	
-	Description:	Sets the PowerPC frequency in MHz.  The default is 50. 
-					Higher frequencies will allow games to do more processing
-					per	frame, making them run faster in 'virtual' time, but 
-					may	slow down Supermodel on weaker computers.  Supermodel's
-					performance can frequently be improved by lowering the
-					PowerPC frequency (25 MHz works in many games).  In some
-					games, this will cause timing problems.  The optimum value
-					for this setting will vary from game to game and system to
-					system.  Valid values are 1 to 1000.
-	
-	----------------
-	
-	Option:			-fullscreen
-	
-	Description:	Runs in full screen mode.  The default is to run in a
-					window.
-	
-	----------------
-	
-	Option:			-no-throttle
-	
-	Description:	Disables 60 FPS throttling.  The Model 3 runs at a 60 Hz
-					refresh rate, which Supermodel enforces if this option is 
-					omitted.  Unthrottled operation may not work on some 
-					systems because graphics drivers may lock the refresh rate.
-	
-	----------------
-	
-	Option:			-print-gl-info
-	
-	Description:	Prints OpenGL driver information and quits.
-	
-	----------------
-	
-	Option:			-res=<x>,<y>
-	
-	Description:	Resolution of the display in pixels.  The default is
-					496x384, the Model 3's native resolution.
-	
-	----------------
-	
-	Option:			-show-fps
-	
-	Description:	Shows the frame rate in the window title bar.
-	
-	----------------
-	
-	Option:			-frag-shader=<file>
-					-vert-shader=<file>
-					
-	Description:	Allows external fragment and vertex shaders to be used for
-					3D rendering.  Files should be ASCII text files containing
-					GLSL source code.  The file extension is not important.  By
-					default, Supermodel's internal shader programs are used.
-	
-	----------------
-	
-	Option:			-flip-stereo
-	
-	Description:	Swaps the left and right audio channels.
-	
-	----------------
-	
-	Option:			-no-music
-	
-	Description:	Disables Digital Sound Board (MPEG music) emulation.  See
-					the section on audio settings for more information.
-	
-	----------------
-	
-	Option:			-no-sound
-	
-	Description:	Disables sound board (sound effects) emulation.  See the
-					section on audio settings for more information.
-	
-	----------------
-	
-	Option:			-music-volume=<v>
-					-sound-volume=<v>
-	
-	Description:	Specifies the volume of MPEG music produced by the Digital
-					Sound Board and the audio produced by the sound board in 
-					percent.  The default is 100, which is full volume, and the
-					valid range is 0 (muted) to 200%.  See the section on audio
-					settings for more information.
-	
-	----------------
-	
-	Option:			-config-inputs
-	
-	Description:	Launches the interacive input configuration utility in the
-					command prompt window.  Allows controls to be remapped.
-					See the section on controls for more information.
-	
-	----------------
-	
-	Option:			-force-feedback
-	
-	Description:	Enables force feedback.  Force feedback is only supported
-					in a few games (see the section on force feedback for more
-					details).
-	
-	----------------
-	
-	Option:			-input-system=<s>
-	
-	Description:	Sets the input system.  This is only available on Windows,
-					where the default is 'dinput' (DirectInput).  SDL is used
-					for all other platforms.  Valid input systems are:
-					
-						dinput		DirectInput.
-						xinput		XInput
-						rawinput	Raw Input.
-						sdl			SDL.
-						
-					See the section on input systems for more details.
-	
-	----------------
-	
-	Option:			-print-inputs
-	
-	Description:	Prints the current input configuration.
+    Option:         -?
+                    -h
+    
+    Description:    Prints a message with an overview of the command line 
+                    options and how to run Supermodel.
+                    
+    ----------------
+    
+    Option:         -print-games
+    
+    Description:    Lists all supported ROM sets.  Not all supported ROM sets
+                    are playable yet.
+    
+    ----------------
+    
+    Option:         -no-threads
+    
+    Description:    Disables multi-threading.  When enabled (the default), the
+                    PowerPC, graphics rendering, and user interface are run in
+                    one thread, sound emulation in a second thread, and the 
+                    drive board in a third.  It is enabled by default.  On 
+                    single-core systems, multi-threading adds overhead and 
+                    slows Supermodel down but can make audio sound a bit 
+                    smoother.
+    
+    ----------------
+    
+    Option:         -ppc-frequency=<f>
+    
+    Description:    Sets the PowerPC frequency in MHz.  The default is 50. 
+                    Higher frequencies will allow games to do more processing
+                    per frame, making them run faster in 'virtual' time, but 
+                    may slow down Supermodel on weaker computers.  Supermodel's
+                    performance can frequently be improved by lowering the
+                    PowerPC frequency (25 MHz works in many games).  In some
+                    games, this will cause timing problems.  The optimum value
+                    for this setting will vary from game to game and system to
+                    system.  Valid values are 1 to 1000.
+    
+    ----------------
+    
+    Option:         -fullscreen
+    
+    Description:    Runs in full screen mode.  The default is to run in a
+                    window.
+    
+    ----------------
+    
+    Option:         -no-throttle
+    
+    Description:    Disables 60 FPS throttling.  The Model 3 runs at a 60 Hz
+                    refresh rate, which Supermodel enforces if this option is 
+                    omitted.  Unthrottled operation may not work on some 
+                    systems because graphics drivers may lock the refresh rate.
+    
+    ----------------
+    
+    Option:         -print-gl-info
+    
+    Description:    Prints OpenGL driver information and quits.
+    
+    ----------------
+    
+    Option:         -res=<x>,<y>
+    
+    Description:    Resolution of the display in pixels.  The default is
+                    496x384, the Model 3's native resolution.
+    
+    ----------------
+    
+    Option:         -show-fps
+    
+    Description:    Shows the frame rate in the window title bar.
+    
+    ----------------
+    
+    Option:         -frag-shader=<file>
+                    -vert-shader=<file>
+                    
+    Description:    Allows external fragment and vertex shaders to be used for
+                    3D rendering.  Files should be ASCII text files containing
+                    GLSL source code.  The file extension is not important.  By
+                    default, Supermodel's internal shader programs are used.
+    
+    ----------------
+    
+    Option:         -flip-stereo
+    
+    Description:    Swaps the left and right audio channels.
+    
+    ----------------
+    
+    Option:         -no-music
+    
+    Description:    Disables Digital Sound Board (MPEG music) emulation.  See
+                    the section on audio settings for more information.
+    
+    ----------------
+    
+    Option:         -no-sound
+    
+    Description:    Disables sound board (sound effects) emulation.  See the
+                    section on audio settings for more information.
+    
+    ----------------
+    
+    Option:         -music-volume=<v>
+                    -sound-volume=<v>
+    
+    Description:    Specifies the volume of MPEG music produced by the Digital
+                    Sound Board and the audio produced by the sound board in 
+                    percent.  The default is 100, which is full volume, and the
+                    valid range is 0 (muted) to 200%.  See the section on audio
+                    settings for more information.
+    
+    ----------------
+    
+    Option:         -config-inputs
+    
+    Description:    Launches the interacive input configuration utility in the
+                    command prompt window.  Allows controls to be remapped.
+                    See the section on controls for more information.
+    
+    ----------------
+    
+    Option:         -force-feedback
+    
+    Description:    Enables force feedback.  Force feedback is only supported
+                    in a few games (see the section on force feedback for more
+                    details).
+    
+    ----------------
+    
+    Option:         -input-system=<s>
+    
+    Description:    Sets the input system.  This is only available on Windows,
+                    where the default is 'dinput' (DirectInput).  SDL is used
+                    for all other platforms.  Valid input systems are:
+                    
+                        dinput      DirectInput.
+                        xinput      XInput
+                        rawinput    Raw Input.
+                        sdl         SDL.
+                        
+                    See the section on input systems for more details.
+    
+    ----------------
+    
+    Option:         -print-inputs
+    
+    Description:    Prints the current input configuration.
 
 
 ========================================
@@ -932,487 +1023,481 @@ Please read the section describing the configuration file for more information.
 
 All settings are case sensitive.
 
-	
-	Name:			MultiThreaded
-	
-	Argument:		Integer.
-	
-	Description:	If set to 1, enables multi-threading; if set to 0, runs all
-					emulation in a single thread.  Read the description of the
-					'-no-threads' command line option for more information.
-					
-	----------------
-	
-	Name:			PowerPCFrequency
-	
-	Argument:		Integer.
-	
-	Description:	The PowerPC frequency in MHz.  The default is 50.  
-					Equivalent to the '-ppc-frequency' command line option.
-					
-	----------------
-	
-	Name:			FullScreen
-	
-	Argument:		Integer.
-	
-	Description:	If set to 1, runs in full screen mode; if set to 0, runs in
-					a window.  Disabled by default.  Equivalent to the 
-					'-fullscreen' command line option.
+    
+    Name:           MultiThreaded
+    
+    Argument:       Integer.
+    
+    Description:    If set to 1, enables multi-threading; if set to 0, runs all
+                    emulation in a single thread.  Read the description of the
+                    '-no-threads' command line option for more information.
+                    
+    ----------------
+    
+    Name:           PowerPCFrequency
+    
+    Argument:       Integer.
+    
+    Description:    The PowerPC frequency in MHz.  The default is 50.  
+                    Equivalent to the '-ppc-frequency' command line option.
+                    
+    ----------------
+    
+    Name:           FullScreen
+    
+    Argument:       Integer.
+    
+    Description:    If set to 1, runs in full screen mode; if set to 0, runs in
+                    a window.  Disabled by default.  Equivalent to the 
+                    '-fullscreen' command line option.
 
-	----------------
-	
-	Name:			ShowFrameRate
-	
-	Argument:		Integer.
-	
-	Description:	Shows the frame rate in the window title bar when set to 1.
-					If set to 0, the frame rate is not computed.  Disabled by
-					default.  Equivalent to the '-show-fps' command line
-					option.
+    ----------------
+    
+    Name:           ShowFrameRate
+    
+    Argument:       Integer.
+    
+    Description:    Shows the frame rate in the window title bar when set to 1.
+                    If set to 0, the frame rate is not computed.  Disabled by
+                    default.  Equivalent to the '-show-fps' command line
+                    option.
 
-	----------------
-	
-	Name:			Throttle
-	
-	Argument:		Integer.
-	
-	Description:	Controls 60 FPS throttling.  It is enabled by setting to 1
-					and disabled by setting to 0.  For more information, read
-					the description of the '-no-throttle' command line option.
+    ----------------
+    
+    Name:           Throttle
+    
+    Argument:       Integer.
+    
+    Description:    Controls 60 FPS throttling.  It is enabled by setting to 1
+                    and disabled by setting to 0.  For more information, read
+                    the description of the '-no-throttle' command line option.
 
-	----------------
-	
-	Name:			XResolution
-					YResolution
-	
-	Argument:		Integer.
-	
-	Description:	Resolution of the display in pixels.  The default is
-					496x384, the Model 3's native resolution.  Equivalent to
-					the '-res' command line option.
+    ----------------
+    
+    Name:           XResolution
+                    YResolution
+    
+    Argument:       Integer.
+    
+    Description:    Resolution of the display in pixels.  The default is
+                    496x384, the Model 3's native resolution.  Equivalent to
+                    the '-res' command line option.
 
-	----------------
-	
-	Name:			FragmentShader
-					VertexShader
-	
-	Argument:		String.
-	
-	Description:	Path to the external fragment or vertex shader file to use
-					for 3D	rendering.  By default, these are not set and the 
-					internal default shaders are used.  These are equivalent to
-					the '-frag-shader' and '-vert-shader' command line options.
+    ----------------
+    
+    Name:           FragmentShader
+                    VertexShader
+    
+    Argument:       String.
+    
+    Description:    Path to the external fragment or vertex shader file to use
+                    for 3D  rendering.  By default, these are not set and the 
+                    internal default shaders are used.  These are equivalent to
+                    the '-frag-shader' and '-vert-shader' command line options.
 
-	----------------
-	
-	Name:			EmulateMusic
-	
-	Argument:		Integer.
-	
-	Description:	Emulates the Digital Sound Board if set to 1, disables it
-					if set to 0.  See the section on audio settings for more
-					information.  A setting of 0 is equivalent to the 
-					'-no-music' command line option. 
+    ----------------
+    
+    Name:           EmulateMusic
+    
+    Argument:       Integer.
+    
+    Description:    Emulates the Digital Sound Board if set to 1, disables it
+                    if set to 0.  See the section on audio settings for more
+                    information.  A setting of 0 is equivalent to the 
+                    '-no-music' command line option. 
 
-	----------------
-	
-	Name:			EmulateSound
-	
-	Argument:		Integer.
-	
-	Description:	Emulates the sound board and its two Sega Custom Sound 
-					Processors if set to 1, disables it if set to 0.  See the
-					section on audio settings for more information.  A setting
-					of 0 is equivalent to the '-no-sound' command line option.
-	
-	----------------
-	
-	Name:			FlipStereo
-	
-	Argument:		Integer.
-	
-	Description:	Swaps the left and right stereo channels if set to 1.  If
-					set to 0, outputs the channels normally.  Disabled by
-					default.  A setting of 1 is equivalent to using the 
-					'-flip-stereo' command line option.
-					
-	----------------
-	
-	Name:			MusicVolume
-					SoundVolume
-	
-	Argument:		Integer.
-	
-	Description:	Specifies the volume of MPEG music produced by the Digital
-					Sound Board and the audio produced by the sound board in 
-					percent.  The default is 100, which is full volume, and the
-					valid range is 0 (muted) to 200%.  See the section on audio
-					settings for more information.  The equivalent command line
-					options are '-music-volume' and '-sound-volume'.
+    ----------------
+    
+    Name:           EmulateSound
+    
+    Argument:       Integer.
+    
+    Description:    Emulates the sound board and its two Sega Custom Sound 
+                    Processors if set to 1, disables it if set to 0.  See the
+                    section on audio settings for more information.  A setting
+                    of 0 is equivalent to the '-no-sound' command line option.
+    
+    ----------------
+    
+    Name:           FlipStereo
+    
+    Argument:       Integer.
+    
+    Description:    Swaps the left and right stereo channels if set to 1.  If
+                    set to 0, outputs the channels normally.  Disabled by
+                    default.  A setting of 1 is equivalent to using the 
+                    '-flip-stereo' command line option.
+                    
+    ----------------
+    
+    Name:           MusicVolume
+                    SoundVolume
+    
+    Argument:       Integer.
+    
+    Description:    Specifies the volume of MPEG music produced by the Digital
+                    Sound Board and the audio produced by the sound board in 
+                    percent.  The default is 100, which is full volume, and the
+                    valid range is 0 (muted) to 200%.  See the section on audio
+                    settings for more information.  The equivalent command line
+                    options are '-music-volume' and '-sound-volume'.
 
-	----------------
-	
-	Name:			ForceFeedback
-	
-	Argument:		Integer.
-	
-	Description:	If set to 1, enables force feedback emulation; if set to 0,
-					disables it (the default behavior).  Equivalent to the 
-					'-force-feedback' command line option.
-	
-	----------------
-	
-	Name:			DirectInputConstForceMax
-					DirectInputFrictionMax
-					DirectInputSelfCenterMax
-					DirectInputVibrateMax
-	
-	Argument:		Integer value.
-	
-	Description:	Sets strength of the four DirectInput force feedback
-					effects in percent.  Default is 100, indicating	full 
-					strength.  Values exceeding 100% will distort the effects
-					and may damage your controller.
-	
-	----------------
-	
-	Name: 			DirectInputEffectsGain
-	
-	Argument:		Integer value.
-	
-	Description:	
+    ----------------
+    
+    Name:           ForceFeedback
+    
+    Argument:       Integer.
+    
+    Description:    If set to 1, enables force feedback emulation; if set to 0,
+                    disables it (the default behavior).  Equivalent to the 
+                    '-force-feedback' command line option.
+    
+    ----------------
+    
+    Name:           DirectInputConstForceMax
+                    DirectInputFrictionMax
+                    DirectInputSelfCenterMax
+                    DirectInputVibrateMax
+    
+    Argument:       Integer value.
+    
+    Description:    Sets strength of the four DirectInput force feedback
+                    effects in percent.  Default is 100, indicating full 
+                    strength.  Values exceeding 100% will distort the effects
+                    and may damage your controller.
+    
+    ----------------
+    
+    Name:           XInputConstForceMax
+                    XInputVibrateMax
+    
+    Argument:       Integer value.
+    
+    Description:    Sets strength of XInput force feedback effects in percent.
+                    Default is 100, indicating full strength.  Values exceeding
+                    100% will distort the effects and may damage your 
+                    controller.  The constant force effect is simulated using 
+                    vibration.
+    
+    ----------------
+    
+    Name:           XInputConstForceThreshold
+    
+    Argument:       Integer value.
+    
+    Description:    Minimum strength above which a Model 3 constant force
+                    command will be simulated on an XInput device.  
+                    XInputConstForceMax determines the vibration strength for
+                    this effect.  The default value is 30.
+                    
+    ----------------
+        
+    Names:          InputStart1
+                    InputStart2
+                    InputCoin1
+                    InputCoin2
+                    InputServiceA
+                    InputServiceB
+                    InputTestA
+                    InputTestB
+                
+    Argument:       String.
+    
+    Description:    Mappings for common inputs: player 1 and 2 Start buttons,
+                    both coin slots, and both Service and Test buttons.  Can
+                    only be set in the 'Global' section.
+                    
+    ----------------
+                    
+    Names:          InputJoyDown
+                    InputJoyDown2
+                    InputJoyLeft
+                    InputJoyLeft2
+                    InputJoyRight
+                    InputJoyRight2
+                    InputJoyUp
+                    InputJoyUp2
+    
+    Argument:       String.
+    
+    Description:    Mappings for 4-way digital joysticks (players 1 and 2).
+                    These controls appear in 'Virtua Fighter 3', 'Fighting
+                    Vipers 2', 'Spikeout', etc.  Can only be set in the
+                    'Global' section.
+    
+    ----------------
+    
+    Names:          InputEscape
+                    InputEscape2
+                    InputGuard
+                    InputGuard2
+                    InputKick
+                    InputKick2
+                    InputPunch
+                    InputPunch2
+    
+    Argument:       String.
+    
+    Description:    Mappings for fighting game buttons (players 1 and 2).  Can
+                    only be set in the 'Global' section.
 
-	----------------
-		
-	Name:			XInputConstForceMax
-					XInputVibrateMax
-	
-	Argument:		Integer value.
-	
-	Description:	Sets strength of XInput force feedback effects in percent.
-					Default is 100, indicating full strength.  Values exceeding
-					100% will distort the effects and may damage your 
-					controller.  The constant force effect is simulated using 
-					vibration.
-	
-	----------------
-	
-	Name:			XInputConstForceThreshold
-	
-	Argument:		Integer value.
-	
-	Description:	Minimum strength above which a Model 3 constant force
-					command will be simulated on an XInput device.  
-					XInputConstForceMax determines the vibration strength for
-					this effect.  The default value is 30.
-					
-	----------------
-		
-	Names:			InputStart1
-					InputStart2
-					InputCoin1
-					InputCoin2
-					InputServiceA
-					InputServiceB
-					InputTestA
-					InputTestB
-				
-	Argument:		String.
-	
-	Description:	Mappings for common inputs: player 1 and 2 Start buttons,
-					both coin slots, and both Service and Test buttons.  Can
-					only be set in the 'Global' section.
-					
-	----------------
-					
-	Names:			InputJoyDown
-					InputJoyDown2
-					InputJoyLeft
-					InputJoyLeft2
-					InputJoyRight
-					InputJoyRight2
-					InputJoyUp
-					InputJoyUp2
-	
-	Argument:		String.
-	
-	Description:	Mappings for 4-way digital joysticks (players 1 and 2).
-					These controls appear in 'Virtua Fighter 3', 'Fighting
-					Vipers 2', 'Spikeout', etc.  Can only be set in the
-					'Global' section.
-	
-	----------------
-	
-	Names:			InputEscape
-					InputEscape2
-					InputGuard
-					InputGuard2
-					InputKick
-					InputKick2
-					InputPunch
-					InputPunch2
-	
-	Argument:		String.
-	
-	Description:	Mappings for fighting game buttons (players 1 and 2).  Can
-					only be set in the 'Global' section.
+    ----------------
+    
+    Names:          InputBeat
+                    InputCharge
+                    InputJump
+                    InputShift
+    
+    Argument:       String.
+    
+    Description:    Mappings for 'Spikeout' and 'Spikeout Final Edition'
+                    buttons.  Can only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputLongPass
+                    InputLongPass2
+                    InputShortPass
+                    InputShortPass2
+                    InputShoot
+                    InputShoot2
+    
+    Argument:       String.
+    
+    Description:    Mappings for the 'Virtua Striker 2' series of games
+                    (players 1 and 2).  Can only be set in the 'Global' 
+                    section.
+                    
+    ----------------
+                    
+    Name:           InputSteering
+    
+    Argument:       String.
+    
+    Description:    Mapping for the analog steering wheel axis, used in all 
+                    driving games.  Can only be set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputSteeringLeft
+                    InputSteeringRight
+    
+    Argument:       String.
+    
+    Description:    Mappings for digital control of the steering wheel, 
+                    intended for users who do not have an analog controller.
+                    Can only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputBrake
+                    InputAccelerator
+    
+    Argument:       String.
+    
+    Description:    Mappings for brake and accelerator pedals used in driving
+                    games.  These are analog axes but can also be mapped to
+                    digital inputs if needed.  Can only be set in the 'Global'
+                    section.
+                    
+    ----------------
+    
+    Name:           InputGearShift1
+                    InputGearShift2
+                    InputGearShift3
+                    InputGearShift4
+                    InputGearShiftN
+    
+    Argument:       String.
+    
+    Description:    Mappings for the gear box used in driving games.  In games
+                    with only two gears (e.g. 'Le Mans 24'), InputGearShift1
+                    maps to 'Up' and InputGearShift2 to 'Down'.  A neutral 
+                    position can also be selected.  Can only be set in the
+                    'Global' section.
+                    
+    ----------------
+    
+    Name:           InputGearShiftDown
+                    InputGearShiftUp
+    
+    Argument:       String.
+    
+    Description:    Mappings for sequential shifting.  These allow gears to be
+                    selected sequentially: N, 1, 2, 3, 4.  Can only be set in
+                    the 'Global' section.
 
-	----------------
-	
-	Names:			InputBeat
-					InputCharge
-					InputJump
-					InputShift
-	
-	Argument:		String.
-	
-	Description:	Mappings for 'Spikeout' and 'Spikeout Final Edition'
-					buttons.  Can only be set in the 'Global' section.
-					
-	----------------
-	
-	Name:			InputLongPass
-					InputLongPass2
-					InputShortPass
-					InputShortPass2
-					InputShoot
-					InputShoot2
-	
-	Argument:		String.
-	
-	Description:	Mappings for the 'Virtua Striker 2' series of games
-					(players 1 and 2).  Can only be set in the 'Global' 
-					section.
-					
-	----------------
-					
-	Name:			InputSteering
-	
-	Argument:		String.
-	
-	Description:	Mapping for the analog steering wheel axis, used in all 
-					driving games.  Can only be set in the 'Global' section.
-	
-	----------------
-	
-	Name:			InputSteeringLeft
-					InputSteeringRight
-	
-	Argument:		String.
-	
-	Description:	Mappings for digital control of the steering wheel, 
-					intended for users who do not have an analog controller.
-					Can only be set in the 'Global' section.
-					
-	----------------
-	
-	Name:			InputBrake
-					InputAccelerator
-	
-	Argument:		String.
-	
-	Description:	Mappings for brake and accelerator pedals used in driving
-					games.  These are analog axes but can also be mapped to
-					digital inputs if needed.  Can only be set in the 'Global'
-					section.
-					
-	----------------
-	
-	Name:			InputGearShift1
-					InputGearShift2
-					InputGearShift3
-					InputGearShift4
-					InputGearShiftN
-	
-	Argument:		String.
-	
-	Description:	Mappings for the gear box used in driving games.  In games
-					with only two gears (e.g. 'Le Mans 24'), InputGearShift1
-					maps to 'Up' and InputGearShift2 to 'Down'.  A neutral 
-					position can also be selected.  Can only be set in the
-					'Global' section.
-					
-	----------------
-	
-	Name:			InputGearShiftDown
-					InputGearShiftUp
-	
-	Argument:		String.
-	
-	Description:	Mappings for sequential shifting.  These allow gears to be
-					selected sequentially: N, 1, 2, 3, 4.  Can only be set in
-					the 'Global' section.
+    ----------------
+                                            
+    Name:           InputVR1
+                    InputVR2
+                    InputVR3
+                    InputVR4
+    
+    Argument:       String.
+    
+    Description:    Mappings for the 'VR' (color-coded view select) buttons in
+                    racing games (e.g. 'Scud Race', 'Daytona USA 2', etc.)  Can
+                    only be set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputViewChange
+    
+    Argument:       String.
+    
+    Description:    Mapping for the view change button used in 'Sega Rally 2',
+                    'Dirt Devils', and 'Emergency Car Ambulance'.  Can only be
+                    set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputHandBrake
+    
+    Argument:       String.
+    
+    Description:    Mapping for the hand brake button used in 'Sega Rally 2'.
+                    Can only be set in the 'Global' section.
 
-	----------------
-											
-	Name:			InputVR1
-					InputVR2
-					InputVR3
-					InputVR4
-	
-	Argument:		String.
-	
-	Description:	Mappings for the 'VR' (color-coded view select) buttons in
-					racing games (e.g. 'Scud Race', 'Daytona USA 2', etc.)  Can
-					only be set in the 'Global' section.
-	
-	----------------
-	
-	Name:			InputViewChange
-	
-	Argument:		String.
-	
-	Description:	Mapping for the view change button used in 'Sega Rally 2'
-					and 'Dirt Devils'.  Can only be set in the 'Global' 
-					section.
-	
-	----------------
-	
-	Name:			InputHandBrake
-	
-	Argument:		String.
-	
-	Description:	Mapping for the hand brake button used in 'Sega Rally 2'.
-					Can only be set in the 'Global' section.
+    ----------------
+    
+    Name:           InputTwinJoyCrouch
+                    InputTwinJoyForward
+                    InputTwinJoyJump
+                    InputTwinJoyReverse
+                    InputTwinJoyStrafeLeft
+                    InputTwinJoyStrafeRight
+                    InputTwinJoyTurnLeft
+                    InputTwinJoyTurnRight
+    
+    Argument:       String.
+    
+    Description:    Mappings for 'macro' commands for 'Virtual On Oratorio
+                    Tangram'.  These allow movements to be mapped to single
+                    digital inputs and do not require the use of two joysticks.
+                    Can only be set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputTwinJoyDown1
+                    InputTwinJoyDown2
+                    InputTwinJoyLeft1
+                    InputTwinJoyLeft2
+                    InputTwinJoyRight1
+                    InputTwinJoyRight2
+                    InputTwinJoyUp1
+                    InputTwinJoyUp2
+    
+    Argument:       String.
+    
+    Description:    Mappings for the individual joysticks used by 'Virtual On
+                    Oratorio Tangram'.  The left stick is stick #1 and the
+                    right stick is #2.  Can only be set in the 'Global' 
+                    section.
+                    
+    ----------------
+    
+    Name:           InputTwinJoyShot1
+                    InputTwinJoyShot2
+                    InputTwinJoyTurbo1
+                    InputTwinJoyTurbo2
+    
+    Argument:       String.
+    
+    Description:    Mappings for the shot (trigger) and turbo buttons located
+                    on the left (1) and right (2) joysticks in 'Virtual On
+                    Oratorio Tangram'.  Can only be set in the 'Global' 
+                    section.
+                    
+    ----------------
+    
+    Name:           InputAnalogJoyDown
+                    InputAnalogJoyLeft
+                    InputAnalogJoyRight
+                    InputAnalogJoyUp
+    
+    Argument:       String.
+    
+    Description:    Mappings for digital control of the analog joystick used in
+                    'Star Wars Trilogy'.  Two inputs are provided for the two
+                    directions available on each axis.  Can only be set in the
+                    'Global' section.
+    
+    ----------------
+    
+    Name:           InputAnalogJoyX
+                    InputAnalogJoyY
+    
+    Argument:       String.
+    
+    Description:    Mappings for X and Y axes of the analog joystick in 'Star
+                    Wars Trilogy'.  Can only be set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputAnalogJoyTrigger
+                    InputAnalogJoyEvent
+    
+    Argument:       String.
+    
+    Description:    Mappings for the trigger and Event button in 'Star Wars
+                    Trilogy'.  Can only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputGunDown
+                    InputGunDown2
+                    InputGunLeft
+                    InputGunLeft2
+                    InputGunRight
+                    InputGunRight2
+                    InputGunUp
+                    InputGunUp2
+    
+    Argument:       String.
+    
+    Description:    Mappings for digital control of the light guns in 'The Lost
+                    World'.  Inputs for motion in each direction are provided.
+                    Can only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputGunX
+                    InputGunX2
+                    InputGunY
+                    InputGunY2
+    
+    Argument:       String.
+    
+    Description:    Mappings for both analog axes of the light guns in 'The
+                    Lost World'.  Can only be set in the 'Global' section.
 
-	----------------
-	
-	Name:			InputTwinJoyCrouch
-					InputTwinJoyForward
-					InputTwinJoyJump
-					InputTwinJoyReverse
-					InputTwinJoyStrafeLeft
-					InputTwinJoyStrafeRight
-					InputTwinJoyTurnLeft
-					InputTwinJoyTurnRight
-	
-	Argument:		String.
-	
-	Description:	Mappings for 'macro' commands for 'Virtual On Oratorio
-					Tangram'.  These allow movements to be mapped to single
-					digital inputs and do not require the use of two joysticks.
-					Can only be set in the 'Global' section.
-	
-	----------------
-	
-	Name:			InputTwinJoyDown1
-					InputTwinJoyDown2
-					InputTwinJoyLeft1
-					InputTwinJoyLeft2
-					InputTwinJoyRight1
-					InputTwinJoyRight2
-					InputTwinJoyUp1
-					InputTwinJoyUp2
-	
-	Argument:		String.
-	
-	Description:	Mappings for the individual joysticks used by 'Virtual On
-					Oratorio Tangram'.  The left stick is stick #1 and the
-					right stick is #2.  Can only be set in the 'Global' 
-					section.
-					
-	----------------
-	
-	Name:			InputTwinJoyShot1
-					InputTwinJoyShot2
-					InputTwinJoyTurbo1
-					InputTwinJoyTurbo2
-	
-	Argument:		String.
-	
-	Description:	Mappings for the shot (trigger) and turbo buttons located
-					on the left (1) and right (2) joysticks in 'Virtual On
-					Oratorio Tangram'.  Can only be set in the 'Global' 
-					section.
-					
-	----------------
-	
-	Name:			InputAnalogJoyDown
-					InputAnalogJoyLeft
-					InputAnalogJoyRight
-					InputAnalogJoyUp
-	
-	Argument:		String.
-	
-	Description:	Mappings for digital control of the analog joystick used in
-					'Star Wars Trilogy'.  Two inputs are provided for the two
-					directions available on each axis.  Can only be set in the
-					'Global' section.
-	
-	----------------
-	
-	Name:			InputAnalogJoyX
-					InputAnalogJoyY
-	
-	Argument:		String.
-	
-	Description:	Mappings for X and Y axes of the analog joystick in 'Star
-					Wars Trilogy'.  Can only be set in the 'Global' section.
-	
-	----------------
-	
-	Name:			InputAnalogJoyTrigger
-					InputAnalogJoyEvent
-	
-	Argument:		String.
-	
-	Description:	Mappings for the trigger and Event button in 'Star Wars
-					Trilogy'.  Can only be set in the 'Global' section.
-					
-	----------------
-	
-	Name:			InputGunDown
-					InputGunDown2
-					InputGunLeft
-					InputGunLeft2
-					InputGunRight
-					InputGunRight2
-					InputGunUp
-					InputGunUp2
-	
-	Argument:		String.
-	
-	Description:	Mappings for digital control of the light guns in 'The Lost
-					World'.  Inputs for motion in each direction are provided.
-					Can only be set in the 'Global' section.
-					
-	----------------
-	
-	Name:			InputGunX
-					InputGunX2
-					InputGunY
-					InputGunY2
-	
-	Argument:		String.
-	
-	Description:	Mappings for both analog axes of the light guns in 'The
-					Lost World'.  Can only be set in the 'Global' section.
+    ----------------
+    
+    Name:           InputOffscreen
+                    InputOffscreen2
+                    InputTrigger
+                    InputTrigger2
+    
+    Argument:       String.
+    
+    Description:    Mappings for the light gun triggers and off-screen
+                    controls in 'The Lost World'.  The off-screen button aims
+                    the light gun off-screen while it is pressed, which makes
+                    re-loading possible.  Can only be set in the 'Global' 
+                    section.
 
-	----------------
-	
-	Name:			InputOffscreen
-					InputOffscreen2
-					InputTrigger
-					InputTrigger2
-	
-	Argument:		String.
-	
-	Description:	Mappings for the light gun triggers and off-screen
-					controls in 'The Lost World'.  The off-screen button aims
-					the light gun off-screen while it is pressed, which makes
-					re-loading possible.  Can only be set in the 'Global' 
-					section.
-
-	----------------
-	
-	Name:			InputAutoTrigger
-					InputAutoTrigger2
-	
-	Argument:		Integer.
-	
-	Description:	?  Can only be set in the 'Global' section.
-	
+    ----------------
+    
+    Name:           InputAutoTrigger
+                    InputAutoTrigger2
+    
+    Argument:       Integer.
+    
+    Description:    When set to 1, the off-screen button will also 
+                    automatically reload (no need to pull the trigger).  Can 
+                    only be set in the 'Global' section.
+    
 
 =======================
   Contact Information

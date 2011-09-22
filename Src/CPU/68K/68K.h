@@ -103,7 +103,7 @@ public:
 ******************************************************************************/
 	
 /*
- * M68KGetARegister(int n):
+ * M68KGetARegister(n):
  *
  * Parameters:
  *		n	Register number (0-7).
@@ -114,7 +114,7 @@ public:
 extern UINT32 M68KGetARegister(int n);
 
 /*
- * M68KSetARegister(int n, UINT32 v):
+ * M68KSetARegister(n, v):
  *
  * Parameters:
  *		n	Register number (0-7).
@@ -123,7 +123,7 @@ extern UINT32 M68KGetARegister(int n);
 extern void M68KSetARegister(int n, UINT32 v);
 
 /*
- * M68KGetDRegister(int n):
+ * M68KGetDRegister(n):
  *
  * Parameters:
  *		n	Register number (0-7).
@@ -134,7 +134,7 @@ extern void M68KSetARegister(int n, UINT32 v);
 extern UINT32 M68KGetDRegister(int n);
 
 /*
- * M68KGetDRegister(int n, UINT32 v):
+ * M68KGetDRegister(n, v):
  *
  * Parameters:
  *		n	Register number (0-7).
@@ -282,8 +282,29 @@ extern void M68KSetContext(M68KCtx *Src);
 
 static int lastCycles = 0;
 
+/*
+ * M68KGetRegister(ctx, reg):
+ *
+ * Parameters:
+ *		ctx		Musashi 68K context.
+ *		reg		Register (use DBG68K_REG_* macros).
+ *
+ * Returns:
+ *		Register value.
+ */
 UINT32 M68KGetRegister(SM68KCtx *ctx, unsigned reg);
 
+/*
+ * M68KSetRegister(ctx, reg, value):
+ *
+ * Parameters:
+ *		ctx		Musashi 68K context.
+ *		reg		Register (use DBG68K_REG_* macros).
+ *		value	Vale to write.
+ *
+ * Returns:
+ *		True if successful, false if register does not exist.
+ */
 UINT32 M68KSetRegister(SM68KCtx *ctx, unsigned reg, UINT32 val);
 #endif // SUPERMODEL_DEBUGGER
 

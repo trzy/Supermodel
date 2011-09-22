@@ -1849,7 +1849,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
 	// Load Model 3 state
 	if (OKAY != SaveState->FindBlock("Model 3"))
 	{
-		ErrorLog("Unable to load Model 3 core state. Save state file is corrupted.");
+		ErrorLog("Unable to load Model 3 core state. Save state file is corrupt.");
 		return;
 	}
 	
@@ -1896,7 +1896,7 @@ void CModel3::LoadNVRAM(CBlockFile *NVRAM)
 	// Load backup RAM
 	if (OKAY != NVRAM->FindBlock("Backup RAM"))
 	{
-		ErrorLog("Unable to load Model 3 backup RAM. NVRAM file is corrupted.");
+		ErrorLog("Unable to load Model 3 backup RAM. NVRAM file is corrupt.");
 		return;
 	}
 	NVRAM->Read(backupRAM, 0x20000);
@@ -2640,8 +2640,6 @@ void CModel3::Patch(void)
 	}
 	else if (!strcmp(Game->id, "spikeofe"))
 	{
-		//*(UINT32 *) &crom[0x600000+0x1240C] = 0x60000000;	// illegal ROM
-		
 		*(UINT32 *) &crom[0x600000+0x36F2C] = 0x60000000;	// decrementer loop (see Spikeout)
 	}
 	else if (!strcmp(Game->id, "skichamp"))

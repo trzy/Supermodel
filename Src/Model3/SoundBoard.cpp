@@ -432,7 +432,7 @@ void CSoundBoard::LoadState(CBlockFile *SaveState)
 {
 	if (OKAY != SaveState->FindBlock("Sound Board"))
 	{
-		ErrorLog("Unable to load sound board state. Save state file is corrupted.");
+		ErrorLog("Unable to load sound board state. Save state file is corrupt.");
 		return;
 	}
 	

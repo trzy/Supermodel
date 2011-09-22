@@ -169,7 +169,7 @@ void M68KLoadState(CBlockFile *StateFile, const char *name)
 {
 	if (OKAY != StateFile->FindBlock(name))
 	{
-		ErrorLog("Unable to load 68K state. Save state file is corrupted.");
+		ErrorLog("Unable to load 68K state. Save state file is corrupt.");
 		return;
 	}
 

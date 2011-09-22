@@ -50,7 +50,7 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 {
 	if (OKAY != SaveState->FindBlock("Tile Generator"))
 	{
-		ErrorLog("Unable to load tile generator state. Save state file is corrupted.");
+		ErrorLog("Unable to load tile generator state. Save state file is corrupt.");
 		return;
 	}
 	

@@ -151,7 +151,7 @@ public:
 	 * GetPC(void):
 	 *
 	 * Returns the current PC value.
-
+	 *
 	 * Returns:
 	 *		Current value of PC register.
 	 */
@@ -159,23 +159,42 @@ public:
 
 #ifdef SUPERMODEL_DEBUGGER
 	/*
-	 * GetReg8(state):
+	 * GetReg8(reg8):
 	 *
-	 * Returns value of given 8-bit register.
+	 * Reads an 8-bit register.
+	 *
+	 * Parameters:
+	 *		reg8	Register number (use Z80_REG8_* macros).
+	 *
+	 * Returns:
+	 * 		Value of given 8-bit register.
 	 */
 	UINT8 GetReg8(unsigned reg8);
 
 	/*
-	 * SetReg8(state):
+	 * SetReg8(reg8, value):
 	 *
 	 * Sets value of given 8-bit register.
+	 *
+	 * Parameters:
+	 *		reg8	Register number.
+	 *		value	Value to write.
+	 *
+	 * Returns:
+	 *		True if succeeded, false if invalid register.
 	 */
 	bool SetReg8(unsigned reg8, UINT8 value);
 
 	/*
-	 * GetReg16(state):
+	 * GetReg16(reg16, value):
 	 *
-	 * Returns value of given 16-bit register.
+	 * Reads a 16-bit register.
+	 *
+	 * Parameters:
+	 *		reg16	Register number (use Z80_REG16_* macros).
+	 *
+	 * Returns:
+	 * 		Value of given 16-bit register.
 	 */
 	UINT16 GetReg16(unsigned reg16);
 
@@ -183,6 +202,13 @@ public:
 	 * SetReg16(state):
 	 *
 	 * Sets value of given 16-bit register.
+	 *
+	 * Parameters:
+	 *		reg16	Register.
+	 *		value	Value to write.
+	 *
+	 * Returns:
+	 *		True if succeeded, false if invalid register.
 	 */
 	bool SetReg16(unsigned reg16, UINT16 value);
 #endif // SUPERMODEL_DEBUGGER

@@ -88,7 +88,7 @@ void CMPC10x::LoadState(CBlockFile *SaveState)
 {
 	if (OKAY != SaveState->FindBlock("MPC10x"))
 	{
-		ErrorLog("Unable to load MPC%X state. Save state file is corrupted.", model);
+		ErrorLog("Unable to load MPC%X state. Save state file is corrupt.", model);
 		return;
 	}
 	

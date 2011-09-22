@@ -75,7 +75,7 @@ void C53C810::LoadState(CBlockFile *SaveState)
 {
 	if (OKAY != SaveState->FindBlock("53C810"))
 	{
-		ErrorLog("Unable to load 53C810 state. Save state file is corrupted.");
+		ErrorLog("Unable to load 53C810 state. Save state file is corrupt.");
 		return;
 	}
 	

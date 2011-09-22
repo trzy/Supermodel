@@ -55,49 +55,207 @@ public:
 class CDriveBoard : public CBus
 {
 public:
+	/*
+	 * IsAttached(void):
+	 *
+	 * Returns:
+	 *		True if the drive board is "attached" and should be emulated,
+	 *		otherwise false.
+	 */
 	bool IsAttached(void);
 
+	/*
+	 * IsSimulated(void):
+	 *
+	 * Returns:
+	 *		True if the drive board is being simulated rather than actually
+	 *		emulated, otherwise false.
+	 */
 	bool IsSimulated(void);
 
+	/*
+	 * GetDIPSwitches(dip1, dip2):
+	 *
+	 * Reads the two sets of DIP switches on the drive board.
+	 *
+	 * Parameters:
+	 *		dip1	Reference of variable to store DIP switch 1 to.
+	 *		dip2	DIP switch 2.
+	 */
 	void GetDIPSwitches(UINT8 &dip1, UINT8 &dip2);
 
+	/*
+	 * SetDIPSwitches(dip1, dip2):
+	 *
+	 * Sets the DIP switches.
+	 *
+	 * Parameters:
+	 *		dip1	DIP switch 1 value.
+	 *		dip2	DIP switch 2 value.
+	 */
 	void SetDIPSwitches(UINT8 dip1, UINT8 dip2);
 
-	unsigned GetSteeringStrength();
+	/*
+	 * GetSteeringStrength(void):
+	 *
+	 * Returns:
+	 *		Strength of the steering based on drive board DIP switches (1-8).
+	 */
+	unsigned GetSteeringStrength(void);
 
+	/*
+	 * SetSteeringStrength(steeringStrength):
+	 *
+	 * Sets the steering strength (modifies the DIP switch setting).
+	 *
+	 * Parameters:
+	 *		steeringStrength	A value ranging from 1 to 8.
+	 */
 	void SetSteeringStrength(unsigned steeringStrength);
 
+	/*
+	 * Get7SegDisplays(seg1Digit1, seg1Digit2, seg2Digit1, seg2Digit2):
+	 *
+	 * Reads the 7-segment displays.
+	 *
+	 * Parameters:
+	 *		seg1Digit1	Reference of variable to store digit 1 of the first 7-
+	 *					segment display to.
+	 *		seg1Digit2	First display, second digit.
+	 *		seg2Digit1	Second display, first digit.
+	 *		seg2Digit2	Second display, second digit.
+	 */
 	void Get7SegDisplays(UINT8 &seg1Digit, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2);
 
+	/*
+	 * GetZ80(void):
+	 *
+	 * Returns:
+	 *		The Z80 object.
+	 */
 	CZ80 *GetZ80(void);
 
+	/*
+	 * SaveState(SaveState):
+	 *
+	 * Saves the drive board state.
+	 *
+	 * Parameters:
+	 *		SaveState	Block file to save state information to.
+	 */
 	void SaveState(CBlockFile *SaveState);
 
+	/*
+	 * LoadState(SaveState):
+	 *
+	 * Restores the drive board state.
+	 *
+	 * Parameters:
+	 *		SaveState	Block file to load save state information from.
+	 */
 	void LoadState(CBlockFile *SaveState);
 
+	/*
+	 * Init(romPtr):
+	 *
+	 * Initializes (and "attaches") the drive board. This should be called
+	 * before other members.
+	 *
+	 * Parameters:
+	 *		romPtr		Pointer to the drive board ROM (Z80 program). If this
+	 *					is NULL, then the drive board will not be emulated.
+	 *
+	 * Returns:
+	 *		FAIL if the drive board could not be initialized (prints own error
+	 *		message), otherwise OKAY. If the drive board is not attached
+	 *		because no ROM was passed to it, no error is generated and the
+	 *		drive board is silently disabled (detached).
+	 */
 	bool Init(const UINT8 *romPtr);
 
+	/*
+	 * AttachInputs(InputsPtr, gameInputFlags):
+	 *
+	 * Attaches inputs to the drive board (for access to the steering wheel 
+	 * position).
+	 *
+	 * Parameters:
+	 *		InputsPtr		Pointer to the input object.
+	 *		gameInputFlags	The current game's input flags.
+	 */
 	void AttachInputs(CInputs *InputsPtr, unsigned gameInputFlags);
 
+	/*
+	 * Reset(void):
+	 *
+	 * Resets the drive board.
+	 */
 	void Reset(void);
 
+	/*
+	 * Read():
+	 *
+	 * Reads data from the drive board.
+	 *
+	 * Returns:
+	 *		Data read.
+	 */
 	UINT8 Read(void);
 
+	/*
+	 * Write(data):
+	 *
+	 * Writes data to the drive board.
+	 *
+	 * Parameters:
+	 *		data	Data to send.
+	 */
 	void Write(UINT8 data);
 
+	/*
+	 * RunFrame(void):
+	 *
+	 * Emulates a single frame's worth of time on the drive board.
+	 */
 	void RunFrame(void);
 
+	/*
+	 * CDriveBoard():
+	 * ~CDriveBoard():
+	 *
+	 * Constructor and destructor. Memory is freed by destructor.
+	 */
 	CDriveBoard();
-	
 	~CDriveBoard(void);
 
-	// CBus methods
+	/*
+	 * Read8(addr):
+	 * IORead8(portNum):
+	 *
+	 * Methods for reading from Z80's memory and IO space. Required by CBus.
+	 *
+	 * Parameters:
+	 *		addr		Address in memory (0-0xFFFF).
+	 *		portNum		Port address (0-255).
+	 *
+	 * Returns:
+	 *		A byte of data from the address or port.
+	 */
 	UINT8 Read8(UINT32 addr);
-	
-	void Write8(UINT32 addr, UINT8 data);
-
 	UINT8 IORead8(UINT32 portNum);
 	
+	/*
+	 * Write8(addr, data):
+	 * IORead8(portNum, data):
+	 *
+	 * Methods for writing to Z80's memory and IO space. Required by CBus.
+	 *
+	 * Parameters:
+	 *		addr		Address in memory (0-0xFFFF).
+	 *		portNum		Port address (0-255).
+	 *		data		Byte to write.
+	 */
+	void Write8(UINT32 addr, UINT8 data);
 	void IOWrite8(UINT32 portNum, UINT8 data);
 	
 private:

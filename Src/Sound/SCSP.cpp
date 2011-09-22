@@ -2219,7 +2219,7 @@ void SCSP_LoadState(CBlockFile *StateFile)
 {
 	if (OKAY != StateFile->FindBlock("SCSP x 2"))
 	{
-		ErrorLog("Unable to load SCSP state. Save state file is corrupted.");
+		ErrorLog("Unable to load SCSP state. Save state file is corrupt.");
 		return;
 	}
 	

@@ -1213,7 +1213,7 @@ static void Help(void)
 	puts("Video Options:");
 	puts("    -res=<x>,<y>           Resolution");
 	puts("    -fullscreen            Full screen mode");
-	puts("    -no-throttle           Disable 60 Hz frame rate limit");
+	puts("    -no-throttle           Disable 60 Hz frame rate lock");
 	puts("    -show-fps              Display frame rate in window title bar");
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
@@ -1227,8 +1227,8 @@ static void Help(void)
 	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
 	puts("");
 	puts("Input Options:");
-	puts("    -force-feedback        Enable force feedback (DirectInput, XInput) [EXPERIMENTAL]");
-	puts("    -config-inputs         Configure inputs for keyboards, mice, and joysticks");
+	puts("    -force-feedback        Enable force feedback (DirectInput, XInput)");
+	puts("    -config-inputs         Configure keyboards, mice, and game controllers");
 #ifdef SUPERMODEL_WIN32
 	printf("    -input-system=<s>      Input system [Default: %s]\n", g_Config.GetInputSystem());
 #endif

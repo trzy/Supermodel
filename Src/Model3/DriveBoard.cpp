@@ -24,6 +24,8 @@
  *
  * Implementation of the CDriveBoard class: drive board (force feedback)
  * emulation.
+ *
+ * NOTE: Simulation does not yet work. Drive board ROMs are required.
  */
 
 #include "Supermodel.h"
@@ -126,7 +128,7 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 {
 	if (SaveState->FindBlock("DriveBoard") != OKAY)
 	{
-		ErrorLog("Unable to load DriveBoard state. Save state file is corrupted.");
+		ErrorLog("Unable to load DriveBoard state. Save state file is corrupt.");
 		return;
 	}
 	

@@ -950,7 +950,7 @@ void ppc_load_state(CBlockFile *SaveState)
 {	
 	if (OKAY != SaveState->FindBlock("PowerPC"))
 	{
-		ErrorLog("Unable to load PowerPC state. Save state file is corrupted.");
+		ErrorLog("Unable to load PowerPC state. Save state file is corrupt.");
 		return;
 	}
 	
