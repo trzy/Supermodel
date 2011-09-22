@@ -128,7 +128,7 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 {
 	if (SaveState->FindBlock("DriveBoard") != OKAY)
 	{
-		ErrorLog("Unable to load DriveBoard state. Save state file is corrupt.");
+		ErrorLog("Unable to load drive board state. Save state file is corrupt.");
 		return;
 	}
 	
@@ -190,7 +190,7 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 	if (m_attached)
 	{
 		if (m_tmpDisabled)
-			printf("Disabled DriveBoard due to incompatible save state.\n");
+			printf("Disabled drive board due to incompatible save state.\n");
 
 		SendStopAll();
 	}

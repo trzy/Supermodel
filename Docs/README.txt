@@ -1,3 +1,4 @@
+TODO: Proof source code, fix capitalization in config dialog!
 TODO: discussion of missing input settings in index: saturation, dead zone, analog/digital sensitivity, etc. All missing now.
 TODO: input stuff to be written in section 12
 TODO: add a title to this document and LICENSE.txt (e.g. 'User Manual for Supermodel Version 0.2a', 'License Agreement for Supermodel v0.2a')
@@ -946,7 +947,7 @@ not.  All options are case sensitive.
     
     ----------------
     
-    Option:         -no-music
+    Option:         -no-dsb
     
     Description:    Disables Digital Sound Board (MPEG music) emulation.  See
                     the section on audio settings for more information.
@@ -1090,14 +1091,14 @@ All settings are case sensitive.
 
     ----------------
     
-    Name:           EmulateMusic
+    Name:           EmulateDSB
     
     Argument:       Integer.
     
     Description:    Emulates the Digital Sound Board if set to 1, disables it
                     if set to 0.  See the section on audio settings for more
                     information.  A setting of 0 is equivalent to the 
-                    '-no-music' command line option. 
+                    '-no-dsb' command line option. 
 
     ----------------
     

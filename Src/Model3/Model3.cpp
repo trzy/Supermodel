@@ -2862,6 +2862,7 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	}
 	else if (Game->driveBoard)
 		printf("    Extra Hardware: Drive Board\n");
+	printf("\n");
 		
 	return OKAY;
 }

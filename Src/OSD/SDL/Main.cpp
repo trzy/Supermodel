@@ -1,16 +1,3 @@
-//TODO before release:
-// x VBL to 2.5%
-// x Change EmulateSCSP -> EmulateSound
-// x Map neutral gear to individual button
-// x Re-do cursors, make them larger
-// - Comment source code, clean up
-// - Add option for building with /MD in MSVC Makefile
-// x Remove SUPERMODEL_SOUND
-// x Make dinput default for Windows
-// x Make multi-threading the default
-// x Export INI file
-// TODO: test on Linux and make sure that no input system options besides SDL are available
-
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -41,12 +28,8 @@
  * --------------------
  * - SUPERMODEL_WIN32: Define this if compiling on Windows.
  * - SUPERMODEL_OSX: Define this if compiling on Mac OS X.
- *
- * TO-DO List
- * ----------
- * - A lot of this code is actually OS-independent! Should it be moved into the
- *   root of the source tree? Might not be worth it; eventually, OS-dependent
- *	 UIs will be introduced.
+ * - SUPERMODEL_DEBUGGER: Enable the debugger.
+ * - DEBUG: Debug mode (use with caution, produces large logs of game behavior)
  */
  
 #include <new>
