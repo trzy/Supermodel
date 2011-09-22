@@ -125,7 +125,7 @@ $(OBJ_DIR):
 
 clean:	
 	rm -f $(OUTFILE)
-	rm -f $(OBJ_DIR)/*.o
+	rm -f $(OBJ_DIR)/*.*
 
 #
 # Musashi 68K emulator
