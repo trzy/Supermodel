@@ -190,7 +190,7 @@ void CDriveBoard::LoadState(CBlockFile *SaveState)
 	if (m_attached)
 	{
 		if (m_tmpDisabled)
-			printf("Disabled DriveBoard due to incompatible save state\n");
+			printf("Disabled DriveBoard due to incompatible save state.\n");
 
 		SendStopAll();
 	}
@@ -468,7 +468,7 @@ UINT8 CDriveBoard::Read8(UINT32 addr)
 		return m_ram[(addr-0xE000)&0x1FFF];
 	else
 	{
-		printf("Unhandled Z80 read of %08X (at PC = %04X)\n", addr, m_z80.GetPC());
+		//printf("Unhandled Z80 read of %08X (at PC = %04X)\n", addr, m_z80.GetPC());
 		return 0xFF;
 	}
 }
@@ -477,8 +477,10 @@ void CDriveBoard::Write8(UINT32 addr, UINT8 data)
 {
 	if (addr >= 0xE000)  // RAM is 0xE000-0xFFFF
 		m_ram[(addr-0xE000)&0x1FFF] = data;
+#ifdef DEBUG
 	else
 		printf("Unhandled Z80 write to %08X (at PC = %04X)\n", addr, m_z80.GetPC());
+#endif
 }
 
 UINT8 CDriveBoard::IORead8(UINT32 portNum)
@@ -514,14 +516,18 @@ UINT8 CDriveBoard::IORead8(UINT32 portNum)
 						adcVal = 0x00;
 						break;
 					default:
+#ifdef DEBUG						
 						printf("Unhandled Z80 input on ADC port %u (at PC = %04X)\n", portNum, m_z80.GetPC());
+#endif
 						return 0xFF;
 				}
 				return (adcVal>>m_adcPortBit)&0x01;
 			}
 			else
 			{
+#ifdef DEBUG
 				printf("Unhandled Z80 input on ADC port %u (at PC = %04X)\n", portNum, m_z80.GetPC());
+#endif
 				return 0xFF;
 			}
 		case 40: // PPC command
@@ -534,7 +540,9 @@ UINT8 CDriveBoard::IORead8(UINT32 portNum)
 			//     1 1 = encoder error 3 - encoder error, reinitializes board
 			return 0x00;
 		default:
+#ifdef DEBUG
 			printf("Unhandled Z80 input on port %u (at PC = %04X)\n", portNum, m_z80.GetPC());
+#endif
 			return 0xFF;
 	}
 }
@@ -594,7 +602,9 @@ void CDriveBoard::IOWrite8(UINT32 portNum, UINT8 data)
 		case 241: // Unsure? - single byte 0x4E sent regularly - some sort of watchdog?
 			return;
 		default:
+#ifdef DEBUG
 			printf("Unhandled Z80 output on port %u (at PC = %04X)\n", portNum, m_z80.GetPC());
+#endif
 			return;
 	}
 }
@@ -703,7 +713,7 @@ void CDriveBoard::ProcessEncoderCmd(void)
 
 void CDriveBoard::SendStopAll(void)
 {
-	printf(">> Stop All Effects\n");
+	//printf(">> Stop All Effects\n");
 
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFStop;
@@ -719,6 +729,7 @@ void CDriveBoard::SendConstantForce(INT8 val)
 {
 	if (val == m_lastConstForce)
 		return;
+	/*
 	if (val > 0)
 	{
 		printf(">> Force Right %02X [%8s", val, "");
@@ -735,6 +746,7 @@ void CDriveBoard::SendConstantForce(INT8 val)
 	}
 	else
 		printf(">> Stop Force     [%16s]\n", "");
+	*/
 	
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFConstantForce;			
@@ -748,10 +760,12 @@ void CDriveBoard::SendSelfCenter(UINT8 val)
 {
 	if (val == m_lastSelfCenter)
 		return;
+	/*
 	if (val == 0)
 		printf(">> Stop Self-Center\n");
 	else
 		printf(">> Self-Center %02X\n", val);
+	*/
 	
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFSelfCenter;
@@ -765,10 +779,12 @@ void CDriveBoard::SendFriction(UINT8 val)
 {
 	if (val == m_lastFriction)
 		return;
+	/*
 	if (val == 0)
 		printf(">> Stop Friction\n");
 	else
 		printf(">> Friction %02X\n", val);
+	*/
 	
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFFriction;
@@ -782,10 +798,12 @@ void CDriveBoard::SendVibrate(UINT8 val)
 {
 	if (val == m_lastVibrate)
 		return;
+	/*
 	if (val == 0)
 		printf(">> Stop Vibrate\n");
 	else
 		printf(">> Vibrate %02X\n", val);
+	*/
 
 	ForceFeedbackCmd ffCmd;
 	ffCmd.id = FFVibrate;
