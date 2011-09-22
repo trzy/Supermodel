@@ -1,7 +1,5 @@
-TODO supported games, compatibility matrix
-TODO: convert all tabs to spaces
-TODO: describe auto trigger in config index
-TODO: Andy Geezer's region codes
+TODO: input stuff to be written in section 12
+TODO: final proof read, then convert all tabs to spaces
  
  
   ####                                                      ###           ###
@@ -53,18 +51,31 @@ still low.
   Table of Contents
 =====================
 
-    -- Introduction
-    -- Disclaimer
-    -- Table of Conents
-    1. Revision History
-    2. Installing Supermodel
-    3. Basic Usage
-    4. 
+    --- Introduction
+    --- Disclaimer
+    --- Table of Conents
+     1. Revision History
+     2. Installing Supermodel
+     3. Running Supermodel
+     4. Game Compatibility
+     5. Video Settings
+     6. Audio Settings
+     7. Controls
+     8. Force Feedback
+     9. Save States and NVRAM
+    10. Game-Specific Comments and Tips
+    11. Merging Split ROM Sets
+    12. The Configuration File
+    13. Index of Command Line Options
+    14. Index of Configuration File Settings
+    15. Compiling the Source Code
+    16. Contact Information
+    17. Acknowledgments
+    
 
-
-====================
-  Revision History
-====================
+=======================
+  1. Revision History
+=======================
 
     Version 0.2a (September ?, 2011)
         - New, fully customizable input system.  Supports any combination of 
@@ -118,9 +129,9 @@ still low.
         - Initial public alpha release.
         
         
-=========================
-  Installing Supermodel
-=========================
+============================
+  2. Installing Supermodel
+============================
 
 To install Supermodel on Windows, extract the ZIP archive containing the
 Supermodel executable to a folder of your choice.  The following files and
@@ -145,35 +156,9 @@ As of this version, Linux and Mac OS X binaries are not provided.  Users must
 compile their own.
 
 
-=============================
-  Compiling the Source Code
-=============================
-
-First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
-(http://zlib.net) are installed. GLEW (http://glew.sourceforge.net) is now
-included in the source tree and should not need to be installed separately.
-
-Next, extract the Supermodel source code and copy the appropriate Makefile 
-from the Makefiles/ directory to the base directory (that is, the one above
-Src/ and Makefiles/).  Makefiles for 32-bit Windows (Microsoft Visual C++ 
-2008), Linux/UNIX (GCC), and Mac OS X (GCC) are provided, all requiring GNU
-Make.  For Windows developers, MinGW (http://www.mingw.org) provides GNU Make.
-Alternatively, you can write a Makefile compatible with Microsoft Nmake and 
-submit it to me for inclusion in the next release. ;)  Consult the Visual 
-Studio documentation to learn how to configure the Microsoft compiler for 
-command line operation.
-
-Edit SDL_LIBPATH and SDL_INCLUDEPATH to reflect the location of the SDL
-development library and header files.  This should only be necessary for 
-Windows.  The UNIX and Mac OS X Makefiles should be able to automatically
-locate SDL if it was installed properly.
-
-Finally, run 'make'.  If all goes well it should produce a Supermodel binary.
-
-
-======================
-  Running Supermodel
-======================
+=========================
+  3. Running Supermodel
+=========================
 
 For now, Supermodel does not include a proper user interface.  It is operated
 entirely from the command line.  Run 'supermodel' without any command line 
@@ -195,44 +180,13 @@ Note that there is no user interface and all messages are printed to the
 command prompt.  In full screen mode, they will not be visible. 
 
 
-==========================
-  Merging Split ROM Sets
-==========================
-
-ROMs that are split into parent and child sets (eg., 'Scud Race Plus', whose
-parent ROM set is 'Scud Race') must be combined into a single ZIP file.  ROM
-files from the parent set that have the same IC numbers (usually the file 
-extension but sometimes the number in the file name itself) as child ROMs
-should be deleted, otherwise Supermodel may choose to load the parent game. 
-
-For example, 'Scud Race Plus' is normally distributed containing only the
-following files:
-
-    epr-20092a.17
-    epr-20093a.18
-    epr-20094a.19
-    epr-20095a.20
-    epr-20096a.21
-    mpr-20097.13
-    mpr-20098.14
-    mpr-20099.15
-    mpr-20100.16
-    mpr-20101.24
-    
-To merge with the parent ROM set, copy over all files from 'Scud Race' except
-those with extension numbers 17-21, 13-16, and 24.  Some 'Scud Race Plus' ROM
-sets may have 'mpr-20101.23' instead of 'mpr-20101.24'.  They are the same file
-and in both cases should replace the file with extension 24 from 'Scud Race'
-('mpr-19671.24').
-
-
-======================
-  Game Compatibility
-======================
+=========================
+  4. Game Compatibility
+=========================
 
 Supermodel recognizes all known Model 3 ROM sets but not all of them are 
 playable.  Below is a compatibility matrix.  The most obvious problem with each
-ROM set is stated.
+ROM set is reported.
 
    ROM Set                    Title                  Playable?   Comments
 +-----------+-----------------------------------------+-----+-----------------+
@@ -347,9 +301,9 @@ playable when in fact many are partially playable.  Controls may not be fully
 functional, however, and none have been tested thoroughly.
 
 
-==================
-  Video Settings
-==================
+=====================
+  5. Video Settings
+=====================
 
 Supermodel may be run in either windowed (default) or full screen mode.  It 
 automatically adjusts the display area to retain the aspect ratio of the Model
@@ -371,9 +325,9 @@ Video settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this document.
 
 
-==================
-  Audio Settings
-==================
+=====================
+  6. Audio Settings
+=====================
 
 All Model 3 games have a sound board that is used for sound effects and, in
 some games, background music.  A few games use additional Digital Sound Boards
@@ -416,9 +370,9 @@ of ElSemi's code and also quite buggy.  Sound glitches are known to occur now
 and then, and many sounds and tunes do not sound quite correct.
 
 
-============
-  Controls
-============
+===============
+  7. Controls
+===============
 
 Supermodel only supports the keyboard and mouse at present.  Emulator functions
 are listed below and cannot be changed.
@@ -569,15 +523,16 @@ A common mistake is to configure inputs using one system and then launch
 Supermodel with another.
 
 
-==================
-  Force Feedback
-==================
+=====================
+  8. Force Feedback
+=====================
 
 Force feedback is presently supported in 'Scud Race' (including 'Scud Race 
 Plus'), 'Daytona USA 2' (both editions), and 'Sega Rally 2' on Windows only. To
 enable it, use the '-force-feedback' option.
 
-Drive board ROMs are required.
+Drive board ROMs are required.  They first appear in the MAME 0.143u6 ROM
+catalog and at the time of this writing, have not yet widely proliferated.
 
     Game            Drive Board ROM File    Size        Checksum (CRC32)
     ----            --------------------    ----        ----------------
@@ -597,7 +552,7 @@ do not support force feedback through DirectInput.
 
 
 Tuning Force Feedback
-=====================
+---------------------
 
 Force feedback can be enabled and tuned in the configuration file.  Setting
 'ForceFeedback' to 1 enables it:
@@ -632,9 +587,9 @@ determined by XInputConstForceMax).  The default values are shown above and
 will require calibration by the user on a game-by-game basis.
 
 
-=========================
-  Save States and NVRAM  
-=========================
+============================
+  9. Save States and NVRAM  
+============================
 
 Save states are saved and restored by pressing F5 and F7, respectively.  Up to
 10 different save slots can be selected with F6.  All files are written to the
@@ -648,9 +603,9 @@ automatically saved each time Supermodel exits and is loaded at start-up.  It
 can be cleared by deleting the NVRAM files or using Alt-N.
 
 
-===================================
-  Game-Specific Comments and Tips
-===================================
+=======================================
+  10. Game-Specific Comments and Tips
+=======================================
     
 
 Daytona USA 2 and Daytona USA 2 Power Edition
@@ -663,6 +618,10 @@ with Test.  Change 'Link ID' from 'Master' to 'Single'.
 In 'Daytona USA 2', the region menu can be accessed by entering the Test Menu,
 holding down the Start button, and pressing: VR4, VR4, VR2, VR3, VR1, VR3, VR2.
 Changing the region to USA changes game text to English.
+
+By default, the 'Power Edition' ROM set features remixed music lyrics by
+Takenobu Mitsuyoshi.  These can be changed back to the Dennis St. James version
+in the Test Menu, under 'Game Assignments'.
 
 
 Le Mans 24
@@ -726,9 +685,40 @@ and, in the 'Game Assignments' menu, performing the following sequence:
     3. Press the Service button again one time for about 5 seconds.
 
 
-==========================
-  The Configuration File
-==========================
+==============================
+  11. Merging Split ROM Sets
+==============================
+
+ROMs that are split into parent and child sets (eg., 'Scud Race Plus', whose
+parent ROM set is 'Scud Race') must be combined into a single ZIP file.  ROM
+files from the parent set that have the same IC numbers (usually the file 
+extension but sometimes the number in the file name itself) as child ROMs
+should be deleted, otherwise Supermodel may choose to load the parent game. 
+
+For example, 'Scud Race Plus' is normally distributed containing only the
+following files:
+
+    epr-20092a.17
+    epr-20093a.18
+    epr-20094a.19
+    epr-20095a.20
+    epr-20096a.21
+    mpr-20097.13
+    mpr-20098.14
+    mpr-20099.15
+    mpr-20100.16
+    mpr-20101.24
+    
+To merge with the parent ROM set, copy over all files from 'Scud Race' except
+those with extension numbers 17-21, 13-16, and 24.  Some 'Scud Race Plus' ROM
+sets may have 'mpr-20101.23' instead of 'mpr-20101.24'.  They are the same file
+and in both cases should replace the file with extension 24 from 'Scud Race'
+('mpr-19671.24').
+
+
+==============================
+  12. The Configuration File
+==============================
 
 Supermodel reads configuration settings from 'Supermodel.ini' located in the
 'Config' subdirectory.  If Supermodel was installed properly, a default file
@@ -789,8 +779,8 @@ Comments begin with a semicolon and extend until the end of the line.
     ; This is a comment.
 
 
-The Purpose of Sections
------------------------
+Global and Game-Specific Sections
+---------------------------------
 
 Sections determine whether settings are applied globally, to all games, or to
 specific games.  Game-specific settings will override global settings and can
@@ -846,9 +836,9 @@ The complete list of input settings can be found in the settings index below or
 by generating a configuration file using '-config-inputs'.  
 
 
-=================================
-  Index of Command Line Options
-=================================
+=====================================
+  13. Index of Command Line Options
+=====================================
 
 All valid command line settings are listed here, ordered by category.  Defaults
 are given under the assumption that they also have not been changed in the 
@@ -990,7 +980,7 @@ not.  All options are case sensitive.
     
     Description:    Enables force feedback.  Force feedback is only supported
                     in a few games (see the section on force feedback for more
-                    details).
+                    details).  Available only on Windows.
     
     ----------------
     
@@ -1014,9 +1004,9 @@ not.  All options are case sensitive.
     Description:    Prints the current input configuration.
 
 
-========================================
-  Index of Configuration File Settings
-========================================
+============================================
+  14. Index of Configuration File Settings
+============================================
 
 All valid configuration file settings are listed here, ordered by category.
 Please read the section describing the configuration file for more information.
@@ -1150,7 +1140,8 @@ All settings are case sensitive.
     
     Description:    If set to 1, enables force feedback emulation; if set to 0,
                     disables it (the default behavior).  Equivalent to the 
-                    '-force-feedback' command line option.
+                    '-force-feedback' command line option.  Available only on 
+                    Windows.
     
     ----------------
     
@@ -1164,7 +1155,7 @@ All settings are case sensitive.
     Description:    Sets strength of the four DirectInput force feedback
                     effects in percent.  Default is 100, indicating full 
                     strength.  Values exceeding 100% will distort the effects
-                    and may damage your controller.
+                    and may damage your controller.  Available only on Windows.
     
     ----------------
     
@@ -1177,7 +1168,7 @@ All settings are case sensitive.
                     Default is 100, indicating full strength.  Values exceeding
                     100% will distort the effects and may damage your 
                     controller.  The constant force effect is simulated using 
-                    vibration.
+                    vibration.  Available only on Windows.
     
     ----------------
     
@@ -1188,7 +1179,8 @@ All settings are case sensitive.
     Description:    Minimum strength above which a Model 3 constant force
                     command will be simulated on an XInput device.  
                     XInputConstForceMax determines the vibration strength for
-                    this effect.  The default value is 30.
+                    this effect.  The default value is 30.  Available only on
+                    Windows.
                     
     ----------------
         
@@ -1499,24 +1491,64 @@ All settings are case sensitive.
                     only be set in the 'Global' section.
     
 
-=======================
-  Contact Information
-=======================
+=================================
+  15. Compiling the Source Code
+=================================
+
+First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
+(http://zlib.net) are installed. GLEW (http://glew.sourceforge.net) is
+included in the source tree and does not need to be installed separately.
+
+Next, extract the Supermodel source code and copy the appropriate Makefile 
+from the Makefiles/ directory to the base directory (that is, the one above
+Src/ and Makefiles/).  Makefiles for 32-bit Windows (Microsoft Visual C++ 
+2008), Linux/UNIX (GCC), and Mac OS X (GCC) are provided, all requiring GNU
+Make.  For Windows developers, MinGW (http://www.mingw.org) provides GNU Make.
+Alternatively, you can write a Makefile compatible with Microsoft Nmake and 
+submit it for inclusion in the next release. ;)  Consult the Visual Studio 
+documentation to learn how to configure the Microsoft compiler for command line
+operation.
+
+Edit SDL_LIBPATH and SDL_INCLUDEPATH to reflect the location of the SDL
+development library and header files.  This should only be necessary for 
+Windows.  The UNIX and Mac OS X Makefiles should be able to automatically
+locate SDL if it was installed properly.
+
+On Windows, Supermodel is compiled with the multi-threaded, static version of
+the run-time library (/MT option).  However, the SDL and zlib development 
+libraries, and the SDL run-time DLL, are distributed for use with the dynamic
+run-time (/MD option).  They must all be recompiled using /MT to work with 
+Supermodel.  Alternatively, Supermodel's Makefile can be edited to use the /MD
+option.
+
+When everything is ready, rename the appropriate Makefile to 'Makefile' and run
+'make'.  If all goes well it should produce a Supermodel binary.
+
+
+===========================
+  16. Contact Information
+===========================
 
 The official Supermodel web site is:
 
     http://www.Supermodel3.com
     
-Questions? Comments? Contributions? Your feedback is welcome! We only ask that
-you refrain from making feature requests or asking about ROMs. The primary
-author, Bart Trzynadlowski, can be reached at:
+Questions?  Comments?  Contributions?  Your feedback is welcome!  A discussion
+forum is available at the web site and the primary author, Bart Trzynadlowski,
+can be reached by email at:
 
-    supermodel.emu@gmail.com
+	supermodel.emu@gmail.com
+	
+We ask that you remain mindful of the following courtesies:
+
+	- Do NOT ask about ROMs.
+	- Do NOT request features.
+	- Do NOT ask about release dates of future versions.
 
 
-===================
-  Acknowledgments
-===================
+=======================
+  17. Acknowledgments
+=======================
 
 Numerous people contributed their precious time and energy to this project.
 Without them, Supermodel would not have been possible.  In no particular order,
@@ -1526,14 +1558,17 @@ we would like to thank:
     - Stefano Teso, original Supermodel team member
     - ElSemi, for all sorts of technical information and insight
     - Naibo Zhang, for his work on Model 3 graphics
-    - R. Belmont, for all sorts of help
+    - R. Belmont, for all sorts of help and the Mac OS X port
     - Andrew Lewis (a.k.a. Andy Geezer), for dumping the drive board ROMs and
       providing region codes
     - The Guru, for his efforts in dumping Model 3 ROM sets
     - Abelardo Vidal Martos, for providing extremely useful video recordings of
       actual Model 3 games
     - Andrew Gardner, for fruitful discussion
-    - Chad Reker, for being an especially thorough play-tester
+    - Chad Reker, Alex Corrigan, pcvideogamer, and Groni, for being especially
+      thorough play-testers
+    - Charles MacDonald, for his helpful description of the System 24 tile 
+      generator
     - And of course, my sister Nicole, for help with web site images
 
 Supermodel includes code from the following projects:
