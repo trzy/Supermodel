@@ -1,0 +1,119 @@
+##
+## Supermodel
+## A Sega Model 3 Arcade Emulator.
+## Copyright 2011 Bart Trzynadlowski 
+##
+## This file is part of Supermodel.
+##
+## Supermodel is free software: you can redistribute it and/or modify it under
+## the terms of the GNU General Public License as published by the Free 
+## Software Foundation, either version 3 of the License, or (at your option)
+## any later version.
+##
+## Supermodel is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+## more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+#
+# Makefile.SDL.OSX.GCC
+#
+# GNU Makefile for SDL port using GCC.
+#
+
+
+###############################################################################
+# Required Libraries
+#
+# Edit these paths as necessary.
+###############################################################################
+
+#
+# SDL
+#
+SDL_LDFLAGS = -framework SDL -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
+SDL_INCLUDEPATH = 
+
+
+###############################################################################
+# Outputs
+###############################################################################
+
+OUTFILE = Supermodel
+OBJ_DIR = obj
+
+
+###############################################################################
+# Compiler
+###############################################################################
+
+CC = gcc
+OCC = gcc
+LD = gcc
+COMPILER_FLAGS = -ISrc/ -ISrc/OSD/SDL/ -ISrc/Pkgs/ -c -Wall -O3 -DUSE_FILE32API -DSUPERMODEL_OSX
+CFLAGS = $(COMPILER_FLAGS)
+CPPFLAGS = $(COMPILER_FLAGS)
+LFLAGS = -o $(OUTFILE) $(SDL_LDFLAGS) -lz -lm -lstdc++
+
+
+###############################################################################
+# Build Instructions
+###############################################################################
+
+#
+# Objects and Dependencies
+#
+
+HEADERS = Src/Supermodel.h Src/Games.h Src/OSD/SDL/Types.h
+OBJ = $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o $(OBJ_DIR)/ROMLoad.o $(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o $(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Render3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o $(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/IRQ.o $(OBJ_DIR)/53C810.o $(OBJ_DIR)/PCI.o $(OBJ_DIR)/RTC72421.o $(OBJ_DIR)/MPC10x.o $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/SDLMain_tmpl.o $(OBJ_DIR)/Games.o
+
+#
+# Rules
+#
+
+all:	$(OBJ_DIR) $(OBJ)
+	$(LD) $(LFLAGS) $(OBJ_LIBS) $(OBJ)
+
+$(OBJ_DIR):
+	mkdir $(OBJ_DIR)
+
+clean:	
+	rm -f $(OUTFILE)
+	rm -f $(OBJ_DIR)/*.o
+
+$(OBJ_DIR)/%.o:	Src/%.cpp Src/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
+$(OBJ_DIR)/%.o:	Src/OSD/SDL/%.cpp Src/OSD/SDL/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/Model3/%.cpp Src/Model3/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/Graphics/%.cpp Src/Graphics/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
+$(OBJ_DIR)/%.o:	Src/Graphics/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
+$(OBJ_DIR)/%.o:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/OSD/SDL/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o: Src/OSD/SDL/%.m $(HEADERS)
+	$(OCC) -x objective-c++ $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
+$(OBJ_DIR)/%.o:	Src/Pkgs/%.c Src/Pkgs/%.h
+	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/Pkgs/*.c
+	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
