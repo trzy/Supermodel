@@ -71,6 +71,10 @@ endif
 # Edit these paths as necessary.
 # The following environment variables are used:
 #  DXSDK_DIR is Direct X installation directory.
+#
+# SDL and zlib must have been built with the multi-threaded static run-time
+# library (/MT option). By default, they usually come built with /MD. You must
+# either compile them yourself or edit the compiler options below to use /MD.
 ###############################################################################
 
 #

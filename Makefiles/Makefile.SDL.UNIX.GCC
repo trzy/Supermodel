@@ -67,7 +67,7 @@ OUTFILE = $(BIN_DIR)/Supermodel
 CC = gcc
 LD = gcc
 COMPILER_FLAGS = `sdl-config --cflags` -ISrc/ -ISrc/OSD/SDL/ -ISrc/Pkgs/ -c -Wall -O3
-CFLAGS = $(COMPILER_FLAGS) -std=c99
+CFLAGS = $(COMPILER_FLAGS)
 CPPFLAGS = $(COMPILER_FLAGS)
 LFLAGS = -o $(OUTFILE) -L$(SDL_LIBPATH) -lGL -lGLU -lSDL -lz -lm -lstdc++
 
@@ -215,7 +215,7 @@ $(OBJ_DIR)/%.o:	Src/Pkgs/%.c
 # To eliminate name conflicts, object files have the prefix "amp_" attached.
 #
 $(OBJ_DIR)/amp_%.o:	Src/Sound/MPEG/%.cpp Src/Sound/MPEG/%.h
-	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/amp_$(*F).o
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/amp_$(*F).o
 	
 $(OBJ_DIR)/amp_%.o:	Src/Sound/MPEG/%.cpp
-	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/amp_$(*F).o
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/amp_$(*F).o

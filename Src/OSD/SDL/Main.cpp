@@ -677,9 +677,9 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 	
 	// Draw visible crosshairs
 	glBegin(GL_TRIANGLES);
-	if ((showCrosshairs & 2) && !Inputs->trigger[0]->offscreenValue)	// Player 1
+	if ((showCrosshairs & 1) && !Inputs->trigger[0]->offscreenValue)	// Player 1
 		DrawCrosshair(x[0], y[0], 1.0f, 0.0f, 0.0f);
-	if ((showCrosshairs & 1) && !Inputs->trigger[1]->offscreenValue)	// Player 2
+	if ((showCrosshairs & 2) && !Inputs->trigger[1]->offscreenValue)	// Player 2
 		DrawCrosshair(x[1], y[1], 0.0f, 1.0f, 0.0f);
 	glEnd();		
 }
@@ -739,11 +739,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	// Hide mouse if fullscreen, enable crosshairs for gun games
 	Inputs->GetInputSystem()->SetMouseVisibility(!g_Config.fullScreen);
 	gameHasLightguns = !!(Model3->GetGameInfo()->inputFlags & (GAME_INPUT_GUN1|GAME_INPUT_GUN2));
-	if (g_Config.fullScreen)
-	{
-		if (gameHasLightguns)
-			showCrosshairs = 3;
-	}
+	if (g_Config.fullScreen && gameHasLightguns)
+		showCrosshairs = 1;	// show player 1 cursor only by default (TODO: add an IsMapped() member to CInput to allow testing for both lightguns)
 
 	// Attach the inputs to the emulator
 	Model3->AttachInputs(Inputs);
@@ -980,14 +977,14 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		}
 		else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
  		{
-			// Count downwards to get this sequence: both, player 1, player 2, none
-			showCrosshairs--;
+ 			
+			showCrosshairs++;
 			switch ((showCrosshairs&3))
 			{
 			case 0:	puts("Crosshairs disabled."); 				break;
 			case 3:	puts("Crosshairs enabled.");				break;
-			case 2:	puts("Showing Player 1 crosshair only.");	break;
-			case 1: puts("Showing Player 2 crosshair only.");	break;
+			case 1:	puts("Showing Player 1 crosshair only.");	break;
+			case 2: puts("Showing Player 2 crosshair only.");	break;
 			}
  		}
 		else if (Inputs->uiClearNVRAM->Pressed())

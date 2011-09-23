@@ -1,7 +1,7 @@
-TODO: Proof source code, fix capitalization in config dialog!
+TODO: Proof source code
+TODO: if Nik adds MSVC project files, mention that first in compiling section
 TODO: discussion of missing input settings in index: saturation, dead zone, analog/digital sensitivity, etc. All missing now.
 TODO: input stuff to be written in section 12
-TODO: add a title to this document and LICENSE.txt (e.g. 'User Manual for Supermodel Version 0.2a', 'License Agreement for Supermodel v0.2a')
 TODO: final proof read, then convert all tabs to spaces
 TODO: don't forget to add date to revision history!
  
@@ -15,9 +15,11 @@ TODO: don't forget to add date to revision history!
   ####    ### ##  ##      ####   ####    ##   ##  ####    ### ##  ####    ####
                  ####                                                            
 
-                           Supermodel Version 0.2a
                        A Sega Model 3 Arcade Emulator.
                 Copyright 2011 Bart Trzynadlowski, Nik Henson
+
+
+                   USER MANUAL FOR SUPERMODEL VERSION 0.2A
 
 
 ================
@@ -25,10 +27,10 @@ TODO: don't forget to add date to revision history!
 ================
 
 Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
-is available for Windows, Linux, and Mac OS X.  In order to use it, you must 
-legally possess ROM images of Model 3 games.  Learning to operate Supermodel
-may come with a steep learning curve for most people.  Carefully reading this
-document in its entirety before seeking out help is strongly advised.
+runs on Windows, Linux, and Mac OS X.  In order to use it, you must legally 
+possess ROM images of Model 3 games.  Learning to operate Supermodel will come
+with a steep learning curve for most people.  Before seeking out help, please
+read this user manual carefully.
 
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included in LICENSE.txt.  Additional copyright information for
@@ -44,10 +46,10 @@ The source code may be obtained from the official Supermodel web site:
 ==============
 
 This is an early public release of Supermodel.  It is very much preliminary,
-alpha version software (hence the 'a' in the version number).  Development was
-started in January of 2011 and has focused on reverse engineering aspects of 
-the system that are still unknown.  Consequently, many important features, such
-as a proper user interface, are not yet implemented and game compatibility is
+alpha version software (hence the 'a' in the version number).  Development 
+began in January of 2011 and has focused on reverse engineering aspects of the
+Model 3 that are still unknown.  Consequently, many important features, such as
+a proper user interface, are not yet implemented and game compatibility is
 still low.
 
 
@@ -81,7 +83,7 @@ still low.
   1. Revision History
 =======================
 
-    Version 0.2a (September ?, 2011)
+    Version 0.2a (September 24, 2011)
         - New, fully customizable input system.  Supports any combination of 
           keyboards, mice, and analog and digital controllers.  [Nik Henson]
         - Texture offsets.  Fixes models in 'Fighting Vipers 2', 'Virtual On',
@@ -94,13 +96,13 @@ still low.
         - Sound support.  Special thanks to ElSemi for contributing his SCSP
           emulator and Karl Stenerud for allowing us to use his 68K emulator.
         - Multi-threading support.  Sound and drive board emulation are off-
-          loaded to a separate thread, substantially enhancing performance. 
+          loaded to separate threads, substantially enhancing performance. 
           [Nik Henson]
         - Z80 emulation based on code by Frank D. Cringle and YAZE-AG by 
           Andreas Gerlich.
         - Digital Sound Board (MPEG music) emulation courtesy of R. Belmont and
           the MPEG decoder library by Tomislav Uzelac.
-        - Improved ROM loading.  It should no longer be as easily confused by
+        - Improved ROM loader.  It should no longer be as easily confused by
           combined ROM sets as long as unused files are removed.
         - Configuration file now supports more settings and allows game-
           specific customization.
@@ -143,8 +145,8 @@ directories should be created:
 
     Name                    Description
     ----                    -----------
-    Supermodel.exe          Supermodel program. Run this.
-    SDL.dll                 The SDL library. Use the bundled DLL file.
+    Supermodel.exe          Supermodel program.  Run this.
+    SDL.dll                 The SDL library.  Use the bundled DLL file.
     README.txt              This text file.
     LICENSE.txt             Supermodel license and terms of use.
     Config/                 Directory where the configuration file is stored.
@@ -154,7 +156,8 @@ directories should be created:
     Saves/                  Directory where save states will be saved.
     
 Supermodel requires OpenGL 2.1 and a substantial amount of both video and
-system memory.
+system memory.  A very fast CPU and GPU are needed to achieve playable frame
+rates.
 
 As of this version, Linux and Mac OS X binaries are not provided.  Users must
 compile their own.
@@ -170,7 +173,7 @@ arguments for an explanation of supported options.
 
 Supermodel uses MAME-compatible ROM sets.  It loads from ZIP archives based on
 file checksums and automatically detects games; therefore, file names are not
-important.  A maximum of one ZIP file can be specified on the command line. For
+important.  Only one ZIP file can be specified on the command line. For
 example:
 
     supermodel scud.zip -fullscreen
@@ -314,10 +317,10 @@ automatically adjusts the display area to retain the aspect ratio of the Model
 3's native (and Supermodel's default) resolution, 496x384.  Currently, this
 cannot be overriden.  Changing video modes at run-time is not yet supported.
 
-By default, Supermodel limits the frame rate to 60 Hz.  This has no impact on
-performance except when the frame rate exceeds 60 FPS on fast systems.  This
-can be disabled with the '-no-throttle' option.  Some video drivers may
-continue to lock to the refresh rate.
+By default, Supermodel limits the frame rate to 60 frames per second.  This has
+no impact on performance except when the frame rate exceeds 60 FPS on fast 
+systems.  Frame rate limiting can be disabled with the '-no-throttle' option.
+Some video drivers may continue to lock to the refresh rate.
 
 To change the resolution, use the '-res' command line option.  For full screen
 mode, use '-fullscreen'.  For example, to set a full screen 1920x1080 mode,
@@ -326,7 +329,7 @@ try:
     supermodel game.zip -res=1920,1080 -fullscreen
 
 Video settings may also be specified globally or on a per-game basis in the
-configuration file, described elsewhere in this document.
+configuration file, described elsewhere in this manual.
 
 
 =====================
@@ -360,7 +363,7 @@ levels become too high.
 
 To disable sound and music board emulation altogether, use the '-no-sound' and
 '-no-dsb' options.  These will not merely mute the corresponding audio channels
-but will prevent the CPUs and audio chips from being emulated altogether.  Save
+but will prevent the audio co-processors from being emulated altogether.  Save
 states generated with these settings may not be able to properly restore audio
 when loaded after emulation is re-enabled.
 
@@ -371,15 +374,16 @@ Please keep in mind that MPEG music emulation is preliminary and the decoder is
 buggy.  Periodic squeaks and pops occur on many music tracks.  The Sega Custom
 Sound Processor (SCSP) emulator, used for sound emulation, is an older version
 of ElSemi's code and also quite buggy.  Sound glitches are known to occur now
-and then, and many sounds and tunes do not sound quite correct.
+and then, and many sounds and tunes do not sound quite correct yet.
 
 
 ===============
   7. Controls
 ===============
 
-Supermodel only supports the keyboard and mouse at present.  Emulator functions
-are listed below and cannot be changed.
+Game controls are fully configurable and can be mapped to keyboards, mice, and
+game controllers.  Emulator functions, on the other hand, cannot be changed and
+are listed below.
 
     Function                                Key Assignment
     --------                                --------------
@@ -415,18 +419,21 @@ will save changes to 'Supermodel.ini'.  You can choose which input to configure
 using the Up and Down arrow keys.  Clearing an input means it will be unusable.
 
 If the configuration dialog is not responding to your key presses, make sure
-that the blank window rather than the command prompt is selected.  This may 
-seem counter-intuitive but inputs are captured by the graphical window while
-messages are printed to the command prompt.
+that the blank pop-up window rather than the command prompt is selected.  This
+may seem counter-intuitive but inputs are captured by the graphical window 
+while messages are printed to the command prompt.
 
 
 XBox 360 Controllers
 --------------------
 
-For full XBox 360 controller support, the XInput system must be used
+For full XBox 360 controller support, the XInput system must be used on Windows
 ('-input-system=xinput').  Otherwise, the left and right trigger buttons cannot
 be mapped individually and force feedback will not work.  Please read the
 section titled 'Input Systems', further below.
+
+Mac OS X users can use Colin Munro's XBox 360 controller driver:
+http://tattiebogle.net/index.php/ProjectRoot/Xbox360Controller/OsxDriver
 
 
 Analog Controls
@@ -461,7 +468,7 @@ Virtual On Twin Joysticks
 to a tracked vehicle (e.g. a tank).  Movement is accomplished by pushing both
 joysticks in the same direction.  Pushing and pulling in opposite directions
 will turn the robot, while pulling the joysticks apart sideways or pushing them
-inwards is for jumping and falling back down to the ground, respectively.
+inwards are for jumping and falling back down to the ground, respectively.
 
 Supermodel supports mapping the individual joysticks but also provides 'macro'
 controls by default.  These allow all the necessary twin joystick commands to
@@ -486,13 +493,16 @@ Light gun axes can be mapped to mice, analog controls, or even digital buttons.
 To simulate pointing off-screen (required in order to reload), a 'point off-
 screen' input is provided which, for as long as it is pressed, will aim the gun
 off-screen.  To reload, hold down this button and then, while holding it, press
-the trigger.
+the trigger.  For automatic reloading, the 'InputAutoTrigger' setting can be
+enabled in the configuration file (described elsewhere in this manual).
 
-Crosshairs for both players will be visible in full screen mode and can also be
-enabled in windowed modes.  Use Alt-I to select the crosshair mode.
+Crosshairs will be visible in full screen mode and can also be enabled in 
+windowed modes.  Use Alt-I to cycle through different crosshair options (enable
+for a single player, both, or none).
 
-For multiple mouse support, allowing two mice or PC light guns to be used, Raw
-Input must be used.  This is supported only on Windows and is described below.
+For multiple mouse support, allowing two mice or PC light guns to be mapped, 
+Raw Input must be used.  This is supported only on Windows and is described 
+below.
 
 
 Input Systems
@@ -518,8 +528,8 @@ Windows users can select between four different input systems:
       Windows but does not provide full support for all devices.
 
 When switching input systems with '-input-system', you must also configure your
-inputs using the same option.  For example, when running Supermodel with
-XInput ('supermodel game.zip -input-system=xinput'), you must configure with
+inputs using the same option.  For example, when running Supermodel with XInput
+('supermodel game.zip -input-system=xinput'), you must also configure with 
 XInput ('supermodel -config-inputs -input-system=xinput').  Many settings are
 not compatible between input systems.
 
@@ -563,8 +573,8 @@ Force feedback can be enabled and tuned in the configuration file.  Setting
 
     ForceFeedback = 1
     
-There are three DirectInput effects: constant force, self centering, and
-vibration.  The strength of each can be tuned with the following settings:
+There are four DirectInput effects: constant force, self centering, friction,
+and vibration.  The strength of each can be tuned with the following settings:
 
     DirectInputConstForceMax = 100
     DirectInputSelfCenterMax = 100
@@ -588,7 +598,8 @@ The relevant settings are:
 The constant force threshold specifies how strong a constant force command must
 be before it is sent to the controller as a vibration effect (whose strength is
 determined by XInputConstForceMax).  The default values are shown above and 
-will require calibration by the user on a game-by-game basis.
+will require calibration by the user on a game-by-game basis to achieve the
+best feel.
 
 
 ============================
@@ -600,11 +611,19 @@ Save states are saved and restored by pressing F5 and F7, respectively.  Up to
 Saves/ directory, which must exist beforehand.  If you extracted the Supermodel
 ZIP file correctly, it will have been created automatically.
 
+If a Model 3 co-processor (ie. sound board, DSB, drive board) is disabled when
+a save state is taken, it will not resume normal operation when the state is
+loaded, even if Supermodel is running with the co-processor re-enabled.  The
+drive board (and consequently, force feedback effects) is explicitly disabled
+for the remainder of the session if a save state with an inactive drive board
+is loaded.  Audio co-processors are not, and therefore audio playback may 
+eventually resume after the audio boards have booted themselves up.
+
 Non-volatile memory (NVRAM) consists of battery-backed backup RAM and an EEPROM
 chip.  The former is used for high score data and statistics whereas the latter
 stores machine settings (often accessed using the Test buttons).  NVRAM is 
 automatically saved each time Supermodel exits and is loaded at start-up.  It
-can be cleared by deleting the NVRAM files or using Alt-N.
+can be cleared by deleting the NVRAM files or pressing Alt-N.
 
 
 =======================================
@@ -643,7 +662,7 @@ in attract mode will result in a PowerPC crash before the stage loads.  This is
 caused by an unknown emulation bug.  Simply wait until the Darth Vader sequence
 appears before attempting to start a game.
 
-If Star Wars Trilogy is booting directly into the stage select screen, it is
+If 'Star Wars Trilogy' is booting directly into the stage select screen, it is
 probably because you exited Supermodel with credits still in the machine.
 Clear the NVRAM (Alt-N) and reset the game (Alt-R).
 
@@ -651,8 +670,8 @@ Clear the NVRAM (Alt-N) and reset the game (Alt-R).
 Sega Rally 2
 ------------
 
-As with Star Wars Trilogy, you may experience problems if you attempt to start
-a game before any 3D graphics are displayed (for example, during the Sega
+As with 'Star Wars Trilogy', you may experience problems if you attempt to 
+start a game before any 3D graphics are displayed (for example, during the Sega
 logo).
 
 The region can be changed by entering the test menu (press the Test button) and
@@ -660,11 +679,22 @@ then pressing the Service button four times for short durations, twice for long
 durations, twice for short durations, and once again for a long duration.
 
 
+Spikeout and Spikeout Final Edition
+-----------------------------------
+
+These games can be played all the way through but may lock up during the
+attract mode.  There are periodic texture glitches due to Supermodel's
+inadequate texture caching system and possibly also due to a texture offset
+bug.
+
+
 The Lost World
 --------------
 
 To reload, the light gun must be pointed off-screen by pressing (and holding)
 the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
+This behavior can be changed with the 'InputAutoTrigger' setting in the
+configuration file.
 
 The region can be changed by entering the test menu (press the Test button) and
 pressing: Start, Start, Service, Start, Service, Test.  Use the player 1 Start
@@ -680,6 +710,8 @@ during transition scenes.
 
 Virtua Striker 2 '98 (Step 1.5 and 2.0 versions)
 ------------------------------------------------
+
+The Virtua Striker games all run very slowly for an unknown reason.
 
 The region can be changed by entering the test menu (press the Test button)
 and, in the 'Game Assignments' menu, performing the following sequence:
@@ -741,7 +773,7 @@ game-specific settings, and lastly, global settings.
 
 An index of all allowed settings is provided further below in this document.
 
-NOTE: Type carefully!  Supermodel will not report syntax errors or detect 
+NOTE: Type carefully!  Supermodel will not report syntax errors nor detect 
 typos.  Carefully read the discussion of the file syntax below.  To verify that
 your intended settings are taking effect, check the 'error.log' file that is
 produced by Supermodel during each run.
@@ -750,16 +782,15 @@ produced by Supermodel during each run.
 File Structure and Syntax
 -------------------------
 
-The configuration file is a list of settings grouped under sections.  All names
-and settings in the file are case sensitive.  Settings take the form:
+The configuration file is a list of settings grouped by sections.  All setting
+names and their arguments are case sensitive.  They take the form:
 
     Name = Argument
     
-Names are case sensitive.  Only one setting per line is allowed.  Only two
-types of arguments are allowed: integers and strings.  The choice of which to
-use is determined by the setting.  Integers are unsigned and begin at 0.
-Strings can contain any characters and are enclosed by double quotes.  
-Examples:
+Only one setting per line is allowed.  Only two types of arguments are allowed:
+integers and strings.  The choice of which to use is determined by the setting.
+Integers are unsigned and begin at 0.  Strings can contain any characters and 
+are enclosed by double quotes.  Examples:
 
     IntegerSetting1 = 0
     IntegerSetting2 = 65536
@@ -788,7 +819,7 @@ Global and Game-Specific Sections
 
 Sections determine whether settings are applied globally, to all games, or to
 specific games.  Game-specific settings will override global settings and can
-be used to tune Supermodel on a game-by-game basis.  Global settings should be
+be used to tune Supermodel on a game-by-game basis.  Global settings must be
 placed in the 'Global' section and game-specific settings in sections named
 after the ROM sets.  ROM sets must be typed in lower case and use the MAME
 (http://www.mamedev.org) naming convention.  They can be obtained by running
@@ -845,7 +876,7 @@ by generating a configuration file using '-config-inputs'.
 =====================================
 
 All valid command line settings are listed here, ordered by category.  Defaults
-are given under the assumption that they also have not been changed in the 
+are given under the assumption that they have not been changed in the 
 configuration file.
 
 Square brackets ('[' and ']') indicate optional parameters.  Angled brackets
@@ -890,9 +921,10 @@ not.  All options are case sensitive.
                     may slow down Supermodel on weaker computers.  Supermodel's
                     performance can frequently be improved by lowering the
                     PowerPC frequency (25 MHz works in many games).  In some
-                    games, this will cause timing problems.  The optimum value
-                    for this setting will vary from game to game and system to
-                    system.  Valid values are 1 to 1000.
+                    games, this will cause timing problems and jerky 
+                    performance.  The optimum frequency will vary from game to
+                    game and system to system.  Valid values for <f> are 1 to 
+                    1000.
     
     ----------------
     
@@ -908,7 +940,8 @@ not.  All options are case sensitive.
     Description:    Disables 60 FPS throttling.  The Model 3 runs at a 60 Hz
                     refresh rate, which Supermodel enforces if this option is 
                     omitted.  Unthrottled operation may not work on some 
-                    systems because graphics drivers may lock the refresh rate.
+                    systems because graphics drivers may lock the refresh rate
+                    on their own.
     
     ----------------
     
@@ -920,8 +953,9 @@ not.  All options are case sensitive.
     
     Option:         -res=<x>,<y>
     
-    Description:    Resolution of the display in pixels.  The default is
-                    496x384, the Model 3's native resolution.
+    Description:    Resolution of the display in pixels, with <x> being width
+    				and <y> being height.  The default is 496x384, the Model 
+    				3's native resolution.
     
     ----------------
     
@@ -935,9 +969,12 @@ not.  All options are case sensitive.
                     -vert-shader=<file>
                     
     Description:    Allows external fragment and vertex shaders to be used for
-                    3D rendering.  Files should be ASCII text files containing
-                    GLSL source code.  The file extension is not important.  By
-                    default, Supermodel's internal shader programs are used.
+                    3D rendering.  <file> is the file path.  Files should be 
+                    ASCII text files containing GLSL source code.  The file 
+                    extension is not important.  By default, Supermodel's 
+                    internal shader programs are used.  These options are 
+                    intended for future extensibility and for use by 
+                    developers.
     
     ----------------
     
@@ -967,8 +1004,8 @@ not.  All options are case sensitive.
     Description:    Specifies the volume of MPEG music produced by the Digital
                     Sound Board and the audio produced by the sound board in 
                     percent.  The default is 100, which is full volume, and the
-                    valid range is 0 (muted) to 200%.  See the section on audio
-                    settings for more information.
+                    valid range of <v> is 0 (muted) to 200.  See the section on
+                    audio settings for more information.
     
     ----------------
     
@@ -992,7 +1029,7 @@ not.  All options are case sensitive.
     
     Description:    Sets the input system.  This is only available on Windows,
                     where the default is 'dinput' (DirectInput).  SDL is used
-                    for all other platforms.  Valid input systems are:
+                    for all other platforms.  Valid choices for <s> are:
                     
                         dinput      DirectInput.
                         xinput      XInput
@@ -1563,6 +1600,7 @@ we would like to thank:
     - ElSemi, for all sorts of technical information and insight
     - Naibo Zhang, for his work on Model 3 graphics
     - R. Belmont, for all sorts of help and the Mac OS X port
+    - krom, for adding in the remaining ROM sets
     - Andrew Lewis (a.k.a. Andy Geezer), for dumping the drive board ROMs and
       providing region codes
     - The Guru, for his efforts in dumping Model 3 ROM sets
@@ -1577,10 +1615,12 @@ we would like to thank:
 
 Supermodel includes code from the following projects:
 
-    zlib:                       http://zlib.net
-    minizip:                    http://www.winimage.com/zLibDll/minizip.html
-    The OpenGL Extension 
-    Wrangler Library (GLEW):    http://glew.sourceforge.net
+    - zlib:                     http://zlib.net
+    - minizip:                  http://www.winimage.com/zLibDll/minizip.html
+    - YAZE-AG:					http://www.mathematik.uni-ulm.de/users/ag/yaze/
+    - Amp by Tomislav Uzalec
+    - The OpenGL Extension Wrangler Library (GLEW):  
+    							http://glew.sourceforge.net
     
 The OpenGL Extension Wrangler Library
 Copyright (C) 2002-2008, Milan Ikits <milan ikits[]ieee org>

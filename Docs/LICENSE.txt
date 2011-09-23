@@ -11,7 +11,10 @@
 
                        A Sega Model 3 Arcade Emulator.
                 Copyright 2011 Bart Trzynadlowski, Nik Henson
-                      
+
+
+                LICENSE AGREEMENT FOR SUPERMODEL VERSION 0.2A
+
                       
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included below.  See README.txt for additional documentation.
