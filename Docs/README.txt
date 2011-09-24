@@ -431,6 +431,9 @@ Supermodel.
 In order to calibrate a control, press 'b' when configuring the inputs and
 follow the on-screen instructions carefully.
 
+NOTE: After calibration, you must remap the control again or it will not 
+function properly!
+
 Several input-related settings are stored in the configuration file.  Refer to
 the section discussing the configuration file for more details.
 
@@ -599,6 +602,15 @@ Common input-related problems are discussed below.
         the pedals send are inverted.  This means that without configuration,
         Supermodel will be unable to recognize them.  To fix this, they should
         be calibrated on the calibration screen in the same way as above.
+        
+    ---------
+    
+    Problem:
+        A control isn't working despite having been calibrated.
+   
+    Solution:
+        After calibration, while still in the configuration dialog, you must
+        remap the control again for the new settings to take effect.
 
     ---------
     
