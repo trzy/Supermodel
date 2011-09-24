@@ -1,9 +1,3 @@
-TODO: Proof source code
-TODO: if Nik adds MSVC project files, mention that first in compiling section
-TODO: discussion of missing input settings in index: saturation, dead zone, analog/digital sensitivity, etc. All missing now.
-TODO: input stuff to be written in section 12
-TODO: final proof read, then convert all tabs to spaces
-TODO: don't forget to add date to revision history!
  
  
   ####                                                      ###           ###
@@ -373,9 +367,9 @@ configuration file, described elsewhere in this document.
 
 Please keep in mind that MPEG music emulation is preliminary and the decoder is
 buggy.  Periodic squeaks and pops occur on many music tracks.  The Sega Custom
-Sound Processor (SCSP) emulator, used for sound emulation, is an older version
-of ElSemi's code and also quite buggy.  Sound glitches are known to occur now
-and then, and many sounds and tunes do not sound quite correct yet.
+Sound Processor (SCSP) emulator, used for sound emulation, is also still quite 
+buggy.  Sound glitches are known to occur now and then, and many sounds and 
+tunes do not sound quite correct yet.
 
 
 ===============
@@ -559,60 +553,61 @@ Troubleshooting
 
 Common input-related problems are discussed below.
 
-	
-	Problem: 	
-		No response while configuring inputs.
-	
-	Solution:   
-		Make sure the main window is top window, especially with the SDL input
-		system.
+    
+    Problem:    
+        No response while configuring inputs.
+    
+    Solution:   
+        Make sure the main window is top window, especially with the SDL input
+        system.
 
-	---------
-	
-	Problem:
-		An attached controller is not recognized at all.
-	
-	Solution:	
-		- On the input configuration screen, press 'I' to see information about
-		  the input system and check that the required controller is in the
-		  list.
-   		- If it is not in the list, check that it is plugged in and visible in
-   		  the operating system.  If a controller is plugged in while Supermodel
-   		  is running, Supermodel will need to be restarted in order for it to 
-   		  recognize the new controller.
-   		- On Windows, if after checking the above points the controller is 
-   		  still not in the list, try running Supermodel with the SDL input 
-   		  system by specifying '-input-system=sdl' on the command line.
-		  
-	---------
+    ---------
+    
+    Problem:
+        An attached controller is not recognized at all.
+    
+    Solution:   
+        - On the input configuration screen, press 'I' to see information about
+          the input system and check that the required controller is in the
+          list.
+        - If it is not in the list, check that it is plugged in and visible in
+          the operating system.  If a controller is plugged in while Supermodel
+          is running, Supermodel will need to be restarted in order for it to 
+          recognize the new controller.
+        - On Windows, if after checking the above points the controller is 
+          still not in the list, try running Supermodel with the SDL input 
+          system by specifying '-input-system=sdl' on the command line.
+          
+    ---------
 
-	Problem:
-		Unable to select a particular joysick axis when configuring a mapping.
+    Problem:
+        Unable to select a particular joysick axis when configuring a mapping.
 
-   	Solution:
-   		- This may mean that the joystick axis needs calibrating.  This can be done by pressing
-		  'b' on the configuration screen and following the instructions.
+    Solution:
+        This may mean that the joystick axis needs calibrating.  This can be
+        done by pressing 'b' on the configuration screen and following the 
+        instructions.
 
-	---------
-	
-	Problem:
-		Steering wheel pedals are not being recognized.
+    ---------
+    
+    Problem:
+        Steering wheel pedals are not being recognized.
    
-	Solution:
-   		For some steering wheels where the pedals have been configured in a 
-   		'split axis' mode (ie. not sharing a combined axis), the values that 
-   		the pedals send are inverted.  This means that without configuration
-   		Supermodel will be unable to recognize them.  To fix this, they should
-   		be calibrated on the calibration screen in the same way as above.
+    Solution:
+        For some steering wheels where the pedals have been configured in a 
+        'split axis' mode (ie. not sharing a combined axis), the values that 
+        the pedals send are inverted.  This means that without configuration,
+        Supermodel will be unable to recognize them.  To fix this, they should
+        be calibrated on the calibration screen in the same way as above.
 
-	---------
-	
-	Problem:
-		XBox 360 controller trigger buttons cannot be triggered simultaneously
-		or no rumble effects.
-	
-	Solution:
-   		On Windows, make sure that you specify '-input-system=xinput'.
+    ---------
+    
+    Problem:
+        XBox 360 controller trigger buttons cannot be triggered simultaneously
+        or no rumble effects.
+    
+    Solution:
+        On Windows, make sure that you specify '-input-system=xinput'.
 
 
 =====================
@@ -867,11 +862,12 @@ names and their arguments are case sensitive.  They take the form:
     
 Only one setting per line is allowed.  Only two types of arguments are allowed:
 integers and strings.  The choice of which to use is determined by the setting.
-Integers are unsigned and begin at 0.  Strings can contain any characters and 
-are enclosed by double quotes.  Examples:
+Integers can be negative.  Strings can contain any characters and are enclosed
+by double quotes.  Examples:
 
     IntegerSetting1 = 0
     IntegerSetting2 = 65536
+    IntegerSetting3 = -32768
     StringSetting1 = "This is a string."
     StringSetting2 = "123"
     StringSetting3 = "1+1, abc, these are all valid characters!"
@@ -945,14 +941,14 @@ They may only be specified in the 'Global' section and are ignored elsewhere.
 
 A mapping may be specified in one of the following three ways:
 
-	KEY_XXX		For a key XXX on a keyboard (eg. KEY_A, KEY_SPACE, KEY_ALT).
+    KEY_XXX     For a key XXX on a keyboard (eg. KEY_A, KEY_SPACE, KEY_ALT).
 
- 	MOUSE_XXX   For a mouse axis (X or Y), wheel, or button (1-5) (eg.
- 				MOUSE_XAXIS, MOUSE_WHEEL_UP, MOUSE_BUTTON3).
+    MOUSE_XXX   For a mouse axis (X or Y), wheel, or button (1-5) (eg.
+                MOUSE_XAXIS, MOUSE_WHEEL_UP, MOUSE_BUTTON3).
 
-	JOY1_XXX	For a joystick axis (X, Y, Z, RX, RY, RZ), POV controller 
-	JOY2_XXX	(1-4), or button (1-12) (e.g. JOY1_XAXIS, JOY3_POV2_UP,
-	...			JOY2_BUTTON4).
+    JOY1_XXX    For a joystick axis (X, Y, Z, RX, RY, RZ), POV controller 
+    JOY2_XXX    (1-4), or button (1-12) (e.g. JOY1_XAXIS, JOY3_POV2_UP,
+    ...         JOY2_BUTTON4).
  
 Joysticks, including game pads and steering wheels, are numbered from 1 on up.
 Their ordering is system dependent and if controllers are swapped between
@@ -983,10 +979,10 @@ joystick 1 must be pushed left (negative direction) in order to activate the
 input.  Additionally, the following shortcuts are provided for some common 
 joystick axis directions:
 
-	JOY1_LEFT  is the same as JOY1_XAXIS_NEG
-	JOY1_RIGHT is the same as JOY1_XAXIS_POS
-	JOY1_UP    is the same as JOY1_YAXIS_NEG
-	JOY1_DOWN  is the same as JOY1_YAXIS_POS
+    JOY1_LEFT  is the same as JOY1_XAXIS_NEG
+    JOY1_RIGHT is the same as JOY1_XAXIS_POS
+    JOY1_UP    is the same as JOY1_YAXIS_NEG
+    JOY1_DOWN  is the same as JOY1_YAXIS_POS
 
 Another axis manipulator is _INV.  This inverts an axis when it is mapped to an
 analog input.  JOY1_YAXIS_INV could be used for example to invert the y-axis
@@ -994,22 +990,22 @@ of joystick 1 in Star Wars Trilogy so that it acts like a plane's yoke.
 
 Examples:
 
-	1. InputLeft = "KEY_LEFT,JOY1_LEFT"  
+    1. InputLeft = "KEY_LEFT,JOY1_LEFT"  
 
-  		Digital input InputLeft will be triggered whenever the left arrow key 
-  		is pressed or joystick 1 is pushed left.
+        Digital input InputLeft will be triggered whenever the left arrow key 
+        is pressed or joystick 1 is pushed left.
 
-	2. InputStart1 = "KEY_ALT+KEY_S"
+    2. InputStart1 = "KEY_ALT+KEY_S"
 
-  		Both Alt and S must be pressed at the same time in order to trigger the 
-  		digital input InputStart1 (player 1 Start button).
+        Both Alt and S must be pressed at the same time in order to trigger the 
+        digital input InputStart1 (player 1 Start button).
 
-	3. InputSteering = "JOY1_XAXIS,MOUSE_XAXIS"
+    3. InputSteering = "JOY1_XAXIS,MOUSE_XAXIS"
 
-  		Analog steering can be controlled with either the joystick or by moving
-  		the mouse.  Due to the ordering used, the joystick will take preference
-  		and so the mouse can only control the steering when the joystick is 
-  		released.
+        Analog steering can be controlled with either the joystick or by moving
+        the mouse.  Due to the ordering used, the joystick will take preference
+        and so the mouse can only control the steering when the joystick is 
+        released.
 
 The complete list of input mappings can be found in the settings index below or
 by generating a configuration file using '-config-inputs'.
@@ -1062,7 +1058,7 @@ their perfect center when released.  The dead zone is expressed as a percentage
 
 InputJoy**Saturation: The saturation of a joystick axis is the point at which
 the axis is considered to be at its most extreme position.  It can be thought
-of as a measure of the sensivity of the axis.  Like the deadzone, it is 
+of as a measure of the sensivity of the axis.  Like the dead zone, it is 
 expressed as a percentage of the axis range but its value may be larger than 
 100, up to a maximum of 200.  A value of 50 means that the joystick only needs 
 to be moved halfway in order for Supermodel to see it as fully extended.  
@@ -1190,8 +1186,8 @@ not.  All options are case sensitive.
     Option:         -res=<x>,<y>
     
     Description:    Resolution of the display in pixels, with <x> being width
-    				and <y> being height.  The default is 496x384, the Model 
-    				3's native resolution.
+                    and <y> being height.  The default is 496x384, the Model 
+                    3's native resolution.
     
     ----------------
     
@@ -1765,6 +1761,90 @@ All settings are case sensitive.
     Description:    When set to 1, the off-screen button will also 
                     automatically reload (no need to pull the trigger).  Can 
                     only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputKeySensitivity
+    
+    Argument:       Integer.
+    
+    Description:    The rate at which analog control values increase/decrease
+                    when controlled by a key.  Valid range is 1-100, with 1
+                    being the least sensitive (slowest response).  The default
+                    is 25.  Can only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputKeyDecaySpeed
+    
+    Argument:       Integer.
+    
+    Description:    The rate at which analog control values return to their
+                    rest or 'off' position after a key has been released.  The
+                    value is expressed as a percentage of the attack speed,
+                    ranging from 1-200.  The default is 50, meaning analog
+                    controls take twice as long to return to their rest state
+                    as they do to reach their minimum/maximum values.  Can only
+                    be set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputMouseXDeadZone
+                    InputMouseYDeadZone
+    
+    Argument:       Integer.
+    
+    Description:    Specifies a rectangular region in the center of the display
+                    within which the mouse is considered inactive.  Expressed
+                    as percentages, from 0-99, of the width and height of the
+                    display.  The default values are 0, which disable this
+                    option.  Can only be set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputJoy**DeadZone
+    
+    Argument:       Integer.
+    
+    Description:    '**' must be the joystick number and axis (eg. '1X', '2RZ',
+                    etc.).  If the joystick number is omitted, the setting will
+                    apply to all joysticks.  Specifies the dead zone as a
+                    percentage, 0-99, of the total range of the axis.  Within
+                    the dead zone, the joystick is inactive.  This is useful
+                    for joysticks that are 'noisy' when at rest.  Can only be
+                    set in the 'Global' section.
+                    
+    ----------------
+    
+    Name:           InputJoy**Saturation
+    
+    Argument:       Integer.
+    
+    Description:    '**' must be the joystick number and axis (eg. '1X', '2RZ',
+                    etc.).  If the joystick number is omitted, the setting will
+                    apply to all joysticks.  Specifies the saturation, the 
+                    position at which the joystick is interpreted as being in
+                    its most extreme position, as a percentage of the total 
+                    range of the axis, from 0-200.  Values exceeding 100% mean
+                    the axis will not use its full range.  A value of 200 means
+                    that the range will be halved (fully pressed will only 
+                    register as 50%).  The default is 100, a 1-to-1 mapping.
+                    Can only be set in the 'Global' section.
+    
+    ----------------
+    
+    Name:           InputJoy**MinVal
+                    InputJoy**MaxVal
+                    InputJoy**OffVal
+    
+    Argument:       Integer.
+    
+    Description:    '**' must be the joystick number and axis (eg. '1X', '2RZ',
+                    etc.).  If the joystick number is omitted, the setting will
+                    apply to all joysticks.  Specifies the maximum, minimum, or
+                    offset value of an axis.  The range is -32768 to 32768.  By
+                    default, MinVal is -32768, OffVal is 0, and MaxVal is 
+                    32767.  Can only be set in the 'Global' section.
     
 
 =================================
@@ -1813,13 +1893,13 @@ Questions?  Comments?  Contributions?  Your feedback is welcome!  A discussion
 forum is available at the web site and the primary author, Bart Trzynadlowski,
 can be reached by email at:
 
-	supermodel.emu@gmail.com
-	
+    supermodel.emu@gmail.com
+    
 We ask that you remain mindful of the following courtesies:
 
-	- Do NOT ask about ROMs.
-	- Do NOT request features.
-	- Do NOT ask about release dates of future versions.
+    - Do NOT ask about ROMs.
+    - Do NOT request features.
+    - Do NOT ask about release dates of future versions.
 
 
 =======================
@@ -1833,8 +1913,9 @@ we would like to thank:
     - Ville Linde, original Supermodel team member and MAMEDev extraordinaire
     - Stefano Teso, original Supermodel team member
     - ElSemi, for all sorts of technical information and insight
+    - R. Belmont, for DSB code and modified Amp library from his music player,
+      M1, and the Mac OS X port
     - Naibo Zhang, for his work on Model 3 graphics
-    - R. Belmont, for all sorts of help and the Mac OS X port
     - krom, for adding in the remaining ROM sets
     - Andrew Lewis (a.k.a. Andy Geezer), for dumping the drive board ROMs and
       providing region codes
@@ -1846,16 +1927,15 @@ we would like to thank:
       thorough play-testers
     - Charles MacDonald, for his helpful description of the System 24 tile 
       generator
-    - And of course, my sister Nicole, for help with web site images
 
 Supermodel includes code from the following projects:
 
     - zlib:                     http://zlib.net
     - minizip:                  http://www.winimage.com/zLibDll/minizip.html
-    - YAZE-AG:					http://www.mathematik.uni-ulm.de/users/ag/yaze/
+    - YAZE-AG:                  http://www.mathematik.uni-ulm.de/users/ag/yaze/
     - Amp by Tomislav Uzalec
     - The OpenGL Extension Wrangler Library (GLEW):  
-    							http://glew.sourceforge.net
+                                http://glew.sourceforge.net
     
 The OpenGL Extension Wrangler Library
 Copyright (C) 2002-2008, Milan Ikits <milan ikits[]ieee org>
