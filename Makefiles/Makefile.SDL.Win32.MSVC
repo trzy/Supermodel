@@ -1,0 +1,311 @@
+##
+## Supermodel
+## A Sega Model 3 Arcade Emulator.
+## Copyright 2011 Bart Trzynadlowski, Nik Henson
+##
+## This file is part of Supermodel.
+##
+## Supermodel is free software: you can redistribute it and/or modify it under
+## the terms of the GNU General Public License as published by the Free 
+## Software Foundation, either version 3 of the License, or (at your option)
+## any later version.
+##
+## Supermodel is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+## more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+#
+# Makefile.SDL.Win32.MSVC
+#
+# GNU Makefile for SDL port using Microsoft Visual C++ 2008. Copy this Makefile
+# to the base directory of the source distribution (one up from Src/ and here).
+#
+# The DirectX SDK must be properly installed -- the DXSDK_DIR environment
+# variable must be set.
+#
+
+
+###############################################################################
+# Build Options
+###############################################################################
+
+#
+# Bitness of build ('32' or '64')
+#
+BITS = 32
+
+#
+# Include console-based debugger in emulator ('yes' or 'no')
+#
+ENABLE_DEBUGGER = no
+
+
+###############################################################################
+# 32/64-Bit SDK Directories and Options
+#
+# Edit these paths as necessary.
+# The following environment variables are used:
+#  VSINSTALLDIR is Visual Studio installation directory.
+#  WindowsSdkDir is Windows SDK installation directory.
+###############################################################################
+
+ifeq ($(strip $(BITS)),64)
+	ARCH = x64
+	VC_BIN = $(VSINSTALLDIR)\vc\bin\amd64
+	ARCH_LIBS = /LIBPATH:"$(VSINSTALLDIR)\vc\lib\amd64" /LIBPATH:"$(WindowsSdkDir)\lib\x64" 
+else
+	ARCH = x86
+	VC_BIN = $(VSINSTALLDIR)\vc\bin
+	ARCH_LIBS = 
+endif
+
+
+###############################################################################
+# Required Libraries
+#
+# Edit these paths as necessary.
+# The following environment variables are used:
+#  DXSDK_DIR is Direct X installation directory.
+#
+# SDL and zlib must have been built with the multi-threaded static run-time
+# library (/MT option). By default, they usually come built with /MD. You must
+# either compile them yourself or edit the compiler options below to use /MD.
+###############################################################################
+
+#
+# SDL
+#
+SDL_LIBPATH = Libraries\SDL-1.2.14\lib-$(ARCH)-MT
+SDL_INCLUDEPATH = Libraries\SDL-1.2.14\include
+
+#
+# ZLib
+#
+ZLIB_LIBPATH = Libraries\zlib-1.2.4\lib-$(ARCH)-MT
+ZLIB_INCLUDEPATH = Libraries\zlib-1.2.4\include
+
+#
+# DirectX
+#
+DIRECTX_LIBPATH = $(DXSDK_DIR)\Lib\$(ARCH)
+DIRECTX_INCLUDEPATH = $(DXSDK_DIR)\Include
+
+
+###############################################################################
+# Outputs
+###############################################################################
+
+ifeq ($(strip $(BITS)),64)
+	OBJ_DIR = obj64
+	BIN_DIR = bin64
+else
+	OBJ_DIR = obj
+	BIN_DIR = bin
+endif
+
+OUTFILE = $(BIN_DIR)\Supermodel.exe
+
+###############################################################################
+# Compiler and Linker
+###############################################################################
+
+CC = "$(VC_BIN)\cl.exe"
+LD = "$(VC_BIN)\link.exe"
+COMPILER_FLAGS = /I "$(SDL_INCLUDEPATH)" /I "$(ZLIB_INCLUDEPATH)" /I "$(DIRECTX_INCLUDEPATH)" /I "Src" /I "Src\\OSD" /I "Src\\OSD\\SDL" \
+	/I "Src\\OSD\\Windows" /Ox /D "SUPERMODEL_WIN32" /D "GLEW_STATIC" /D "_MBCS" /D "_CRT_SECURE_NO_WARNINGS" /MT /Gy /W3 /nologo /c /Zi /GL \
+	/DEBUG #/D "DEBUG" 
+CFLAGS = $(COMPILER_FLAGS) /TC
+CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
+LFLAGS = /MACHINE:$(ARCH) $(ARCH_LIBS) /LIBPATH:"$(SDL_LIBPATH)" /LIBPATH:"$(ZLIB_LIBPATH)" /LIBPATH:"$(DIRECTX_LIBPATH)" /OUT:"$(OUTFILE)" \
+	/MANIFEST:NO /SUBSYSTEM:CONSOLE /NOLOGO /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /LTCG /DEBUG
+OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib \
+	odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
+
+#
+# Turbo68K options
+#
+TURBO68K_FLAGS = -singleaddr 
+
+
+#
+# Build options...
+#
+
+# Add compiler flags for various options
+ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+	COMPILER_FLAGS += /D "SUPERMODEL_DEBUGGER"
+	TURBO68K_FLAGS += -debug
+endif
+
+
+###############################################################################
+# Build Instructions
+###############################################################################
+
+#
+# Objects and Dependencies
+#
+HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
+OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/Config.obj $(OBJ_DIR)/INIFile.obj $(OBJ_DIR)/BlockFile.obj $(OBJ_DIR)/93C46.obj \
+	$(OBJ_DIR)/ROMLoad.obj $(OBJ_DIR)/unzip.obj $(OBJ_DIR)/ioapi.obj $(OBJ_DIR)/Error.obj $(OBJ_DIR)/glew.obj $(OBJ_DIR)/Shader.obj \
+	$(OBJ_DIR)/Real3D.obj $(OBJ_DIR)/Render3D.obj $(OBJ_DIR)/Models.obj $(OBJ_DIR)/Render2D.obj $(OBJ_DIR)/TileGen.obj \
+	$(OBJ_DIR)/Model3.obj $(OBJ_DIR)/ppc.obj $(OBJ_DIR)/Main.obj $(OBJ_DIR)/Audio.obj $(OBJ_DIR)/Thread.obj $(OBJ_DIR)/SoundBoard.obj \
+	$(OBJ_DIR)/SCSP.obj $(OBJ_DIR)/SCSPDSP.obj $(OBJ_DIR)/68K.obj $(OBJ_DIR)/m68kcpu.obj $(OBJ_DIR)/m68kopnz.obj $(OBJ_DIR)/m68kopdm.obj \
+	$(OBJ_DIR)/m68kopac.obj $(OBJ_DIR)/m68kops.obj $(OBJ_DIR)/DSB.obj $(OBJ_DIR)/Z80.obj \
+	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/DriveBoard.obj \
+	$(OBJ_DIR)/MPC10x.obj $(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj \
+	$(OBJ_DIR)/InputTypes.obj $(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj \
+	$(OBJ_DIR)/amp_audio.obj $(OBJ_DIR)/amp_dump.obj $(OBJ_DIR)/amp_getbits.obj $(OBJ_DIR)/amp_getdata.obj $(OBJ_DIR)/amp_huffman.obj \
+	$(OBJ_DIR)/amp_layer2.obj $(OBJ_DIR)/amp_layer3.obj $(OBJ_DIR)/amp_misc2.obj $(OBJ_DIR)/amp_position.obj $(OBJ_DIR)/amp_transform.obj \
+	$(OBJ_DIR)/amp_util.obj
+	
+
+# If built-in debugger enabled, include all debugging classes
+ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+	OBJ += $(OBJ_DIR)/Debugger.obj $(OBJ_DIR)/ConsoleDebugger.obj $(OBJ_DIR)/SupermodelDebugger.obj $(OBJ_DIR)/CPUDebug.obj \
+		$(OBJ_DIR)/AddressTable.obj $(OBJ_DIR)/Breakpoint.obj $(OBJ_DIR)/CodeAnalyser.obj $(OBJ_DIR)/Exception.obj \
+		$(OBJ_DIR)/Interrupt.obj $(OBJ_DIR)/IO.obj $(OBJ_DIR)/Label.obj $(OBJ_DIR)/Register.obj $(OBJ_DIR)/Watch.obj \
+		$(OBJ_DIR)/PPCDebug.obj $(OBJ_DIR)/68KDebug.obj $(OBJ_DIR)/Musashi68KDebug.obj $(OBJ_DIR)/Z80Debug.obj
+endif
+
+
+#
+# Targets
+#
+all:	$(OUTFILE) $(BIN_DIR)/SDL.dll
+
+$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ)
+	$(LD) $(LFLAGS) $(OBJ_LIBS) $(OBJ)
+	
+$(BIN_DIR)/SDL.dll:	$(SDL_LIBPATH)/SDL.dll
+	xcopy /D /Y $(SDL_LIBPATH)\SDL.dll $(BIN_DIR)
+		
+$(BIN_DIR):
+	mkdir $(BIN_DIR) 
+	
+$(OBJ_DIR):
+	mkdir $(OBJ_DIR)
+
+clean:	
+	del $(OUTFILE)
+	del $(OBJ_DIR)\*.obj
+	del $(OBJ_DIR)\*.c
+	del $(OBJ_DIR)\*.h
+	del $(OBJ_DIR)\*.exe
+
+
+#
+# Musashi 68K emulator
+#
+# All generated source files are emitted to the object directory. For MSVC, 
+# INLINE must be redefined as "static __inline", which is the syntax in C mode.
+#
+$(OBJ_DIR)/m68kmake.exe: Src/CPU/68K/Musashi/m68kmake.c
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kmake.obj
+	$(LD) /OUT:$(OBJ_DIR)/m68kmake.exe /MACHINE:$(ARCH) $(ARCH_LIBS) /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/m68kmake.obj
+	
+$(OBJ_DIR)/m68kops.h: $(OBJ_DIR)/m68kmake.exe Src/CPU/68K/Musashi/m68k_in.c
+	$(OBJ_DIR)/m68kmake.exe $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
+
+$(OBJ_DIR)/m68kcpu.obj: Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kcpu.obj /I "$(OBJ_DIR)" /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kops.obj: $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kops.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kopac.obj: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopac.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kopdm.obj: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopdm.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+$(OBJ_DIR)/m68kopnz.obj: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopnz.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
+
+
+#
+# Turbo68K 
+#
+# 32-bit only.
+#
+$(OBJ_DIR)/Make68K.exe: Src/CPU/68K/Turbo68K/Make68K.c
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/Make68K.obj
+	$(LD) /OUT:$(OBJ_DIR)/Make68K.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/Make68K.obj
+
+$(OBJ_DIR)/Turbo68K.obj: $(OBJ_DIR)/Make68K.exe
+	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm $(TURBO68K_FLAGS)
+	nasm $(OBJ_DIR)/Turbo68K.asm -o $(OBJ_DIR)/Turbo68K.obj -f win32
+
+
+#
+# Rules for Supermodel C++ code
+#
+$(OBJ_DIR)/%.obj:	Src/%.cpp Src/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Model3/%.cpp Src/Model3/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Graphics/%.cpp Src/Graphics/%.h $(HEADERS) Src/Graphics/Shaders3D.h
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/Graphics/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Sound/%.cpp Src/Sound/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Sound/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Debugger/%.cpp Src/Debugger/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Debugger/CPU/%.cpp Src/Debugger/CPU/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/CPU/PowerPC/%.cpp Src/CPU/PowerPC/%.h Src/CPU/PowerPC/ppc603.c Src/CPU/PowerPC/ppc_ops.c $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/CPU/68K/%.cpp Src/CPU/68K/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/CPU/Z80/%.cpp Src/CPU/Z80/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/Inputs/%.cpp Src/Inputs/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+			
+$(OBJ_DIR)/%.obj:	Src/OSD/SDL/%.cpp Src/OSD/SDL/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
+$(OBJ_DIR)/%.obj:	Src/OSD/SDL/%.cpp $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/OSD/Windows/%.cpp Src/OSD/Windows/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Pkgs/%.c Src/Pkgs/%.h
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+$(OBJ_DIR)/%.obj:	Src/Pkgs/%.c
+	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+
+#
+# AMP MPEG decoder library
+#
+# To eliminate name conflicts, object files have the prefix "amp_" attached.
+#
+$(OBJ_DIR)/amp_%.obj:	Src/Sound/MPEG/%.cpp Src/Sound/MPEG/%.h
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/amp_$(*F).obj
+	
+$(OBJ_DIR)/amp_%.obj:	Src/Sound/MPEG/%.cpp
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/amp_$(*F).obj
