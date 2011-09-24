@@ -84,7 +84,7 @@ static char *LoadShaderSource(const char *file)
 
 bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const char *vsFile, const char *fsFile, const char *vsString, const char *fsString)
 {
-	char		msg[2048+128], infoLog[2048];
+	char		infoLog[2048];
 	const char	*vsSource, *fsSource;	// source code
 	GLuint		shaderProgram, vertexShader, fragmentShader;
 	GLint		result, len;
@@ -109,7 +109,7 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	if ((glCreateProgram==NULL) || (glCreateShader==NULL) || (glShaderSource==NULL) || (glCompileShader==NULL))
 	{
 		ret = FAIL;
-		ErrorLog("OpenGL 2.0 does not appear to be present. Unable to proceed.");
+		ErrorLog("OpenGL 2.x does not appear to be present. Unable to proceed.");
 		goto Quit;
 	}
 	
@@ -128,7 +128,7 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	if (!result)	// failed to compile
 	{
 		glGetShaderInfoLog(vertexShader, 2048, &len, infoLog);
-		ErrorLog("Vertex shader failed to compile. Compiler says:\n%s", infoLog);
+		ErrorLog("Vertex shader failed to compile. Your OpenGL driver said:\n%s", infoLog);
 		ret = FAIL;	// error
 	}
 	
@@ -139,8 +139,7 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	if (!result)	// failed to compile
 	{
 		glGetShaderInfoLog(fragmentShader, 2048, &len, infoLog);
-		ErrorLog("Fragment shader failed to compile. Compiler says:\n%s", infoLog);
-		fprintf(stderr, msg);
+		ErrorLog("Fragment shader failed to compile. Your OpenGL driver said:\n%s", infoLog);
 		ret = FAIL;	// error
 	}
 	
@@ -152,7 +151,7 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	if (result == GL_FALSE)
 	{
 		glGetProgramInfoLog(shaderProgram, 2048, &len, infoLog);
-		ErrorLog("Failed to link shader objects. Linker says:\n%s\n", infoLog);
+		ErrorLog("Failed to link shader objects. Your OpenGL driver said:\n%s\n", infoLog);
 		ret = FAIL;	// error
 	}
 

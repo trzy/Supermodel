@@ -27,10 +27,10 @@ TODO: don't forget to add date to revision history!
 ================
 
 Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
-runs on Windows, Linux, and Mac OS X.  In order to use it, you must legally 
-possess ROM images of Model 3 games.  Learning to operate Supermodel will come
-with a steep learning curve for most people.  Before seeking out help, please
-read this user manual carefully.
+SDL, and can run on Windows, Linux, and Mac OS X.  In order to use it, you must
+legally possess ROM images of Model 3 games.  Learning to operate Supermodel 
+will come with a steep learning curve for most people.  Before seeking out 
+help, please read this user manual carefully.
 
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included in LICENSE.txt.  Additional copyright information for

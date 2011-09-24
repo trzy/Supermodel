@@ -1313,7 +1313,7 @@ int main(int argc, char **argv)
 			int	f;
 			ret = sscanf(&argv[i][14],"=%d",&f);
 			if (ret != 1)
-				ErrorLog("-ppc-frequency requires a frequency.");
+				ErrorLog("'-ppc-frequency' requires a frequency.");
 			else
 				CmdLine.Set("Global", "PowerPCFrequency", f);
 		}
@@ -1332,7 +1332,7 @@ int main(int argc, char **argv)
 		{
 			ret = sscanf(&argv[i][13],"=%d",&n);
 			if (ret != 1)
-				ErrorLog("-sound-volume requires a volume setting.");
+				ErrorLog("'-sound-volume' requires a volume setting.");
 			else
 				CmdLine.Set("Global", "SoundVolume", n);
 		}
@@ -1340,7 +1340,7 @@ int main(int argc, char **argv)
 		{
 			ret = sscanf(&argv[i][13],"=%d",&n);
 			if (ret != 1)
-				ErrorLog("-music-volume requires a volume setting.");
+				ErrorLog("'-music-volume' requires a volume setting.");
 			else
 				CmdLine.Set("Global", "MusicVolume", n);
 		}
@@ -1372,7 +1372,7 @@ int main(int argc, char **argv)
 			
 			ret = sscanf(&argv[i][4],"=%d,%d",&x,&y);
 			if (ret != 2)
-				ErrorLog("-res requires both a width and a height.");
+				ErrorLog("'-res' requires both a width and a height.");
 			else
 			{
 				CmdLine.Set("Global", "XResolution", x);
@@ -1394,17 +1394,25 @@ int main(int argc, char **argv)
 			n = 1;
 			CmdLine.Set("Global", "ShowFrameRate", n);
 		}
-		else if (!strncmp(argv[i],"-vert-shader=",13))
+		else if (!strncmp(argv[i],"-vert-shader",12))
 		{
-			if (argv[i][13] == '\0')
-				ErrorLog("-vert-shader requires a file path.");
+			if (argv[i][12] == '\0')
+				ErrorLog("'-vert-shader' requires a file path.");
+			else if (argv[i][12] != '=')
+				ErrorLog("Ignoring unrecognized option: %s", argv[i]);
+			else if (argv[i][13] == '\0')
+				ErrorLog("'-vert-shader' requires a file path.");
 			else
 				CmdLine.Set("Global", "VertexShader", &argv[i][13]);
 		}
-		else if (!strncmp(argv[i],"-frag-shader=",13))
+		else if (!strncmp(argv[i],"-frag-shader",12))
 		{
-			if (argv[i][13] == '\0')
-				ErrorLog("-frag-shader requires a file path.");
+			if (argv[i][12] == '\0')
+				ErrorLog("'-frag-shader' requires a file path.");
+			else if (argv[i][12] != '=')
+				ErrorLog("Ignoring unrecognized option: %s", argv[i]);
+			else if (argv[i][13] == '\0')
+				ErrorLog("'-frag-shader' requires a file path.");
 			else
 				CmdLine.Set("Global", "FragmentShader", &argv[i][13]);
 		}
@@ -1412,11 +1420,11 @@ int main(int argc, char **argv)
 		else if (!strncmp(argv[i],"-input-system", 13))	// this setting is not written to the config file!
 		{
 			if (argv[i][13] == '\0')
-				ErrorLog("-input-system requires an input system name.");
+				ErrorLog("'-input-system' requires an input system name.");
 			else if (argv[i][13] != '=')
-				ErrorLog("Ignoring unrecognized option: %s.", argv[i]);
+				ErrorLog("Ignoring unrecognized option: %s", argv[i]);
 			else if (argv[i][14] == '\0')
-				ErrorLog("-input-system requires an input system name.");
+				ErrorLog("'-input-system' requires an input system name.");
 			else
 				inputSystem = &argv[i][14];
 		}
@@ -1436,7 +1444,7 @@ int main(int argc, char **argv)
 			else if (ret == 2)
 				cmdDis = true;
 			else
-				ErrorLog("-dis requires address and, optionally, number of instructions.");
+				ErrorLog("'-dis' requires address and, optionally, number of instructions.");
 		}
 		else if (!strcmp(argv[i],"-print-gl-info"))
 		{
@@ -1444,7 +1452,7 @@ int main(int argc, char **argv)
 			return 0;
 		}
 		else if (argv[i][0] == '-')
-			ErrorLog("Ignoring unrecognized option: %s.", argv[i]);
+			ErrorLog("Ignoring unrecognized option: %s", argv[i]);
 		else
 		{
 			if (fileIdx)		// already specified a file
@@ -1484,7 +1492,7 @@ int main(int argc, char **argv)
 #endif // SUPERMODEL_WIN32
 	else
 	{
-		ErrorLog("Unknown input system: %s.\n", g_Config.GetInputSystem());
+		ErrorLog("Unknown input system: %s\n", g_Config.GetInputSystem());
 		exitCode = 1;
 		goto Exit;
 	}

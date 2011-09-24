@@ -39,8 +39,6 @@
  *
  * To-Do List
  * ----------
- * - Remove asserts() in DSP code and make sure memory allocation errors are
- *   being handled properly.
  * - Wrap up into an object. Remove any unused #ifdef pathways.
  */
 
