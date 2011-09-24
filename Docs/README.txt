@@ -363,7 +363,8 @@ levels become too high.
 
 To disable sound and music board emulation altogether, use the '-no-sound' and
 '-no-dsb' options.  These will not merely mute the corresponding audio channels
-but will prevent the audio co-processors from being emulated altogether.  Save
+but will prevent the audio co-processors from being emulated altogether and
+may slightly improve performance, especially on single-core systems.  Save
 states generated with these settings may not be able to properly restore audio
 when loaded after emulation is re-enabled.
 
@@ -406,22 +407,38 @@ Learning and Configuring Game Controls
 --------------------------------------
 
 Settings for game controls are stored in 'Supermodel.ini'.  To learn the
-current configuration, use the '-print-inputs' command line option.  If you
-delete 'Supermodel.ini', all inputs will become unmapped and will have to be
-reconfigured!
+current configuration, use the '-print-inputs' command line option.  
 
     supermodel -print-inputs
+
+If you delete 'Supermodel.ini', all inputs will become unmapped and will have
+to be reconfigured!
     
-If you wish to reconfigure, use the '-config-inputs' option.  A blank window
+To reconfigure the inputs, use the '-config-inputs' option.  A blank window
 will open up and instructions will be printed to the command prompt.  Read them
 carefully!  Pressing the Escape key exits without saving changes.  Pressing 'q'
 will save changes to 'Supermodel.ini'.  You can choose which input to configure
 using the Up and Down arrow keys.  Clearing an input means it will be unusable.
 
-If the configuration dialog is not responding to your key presses, make sure
-that the blank pop-up window rather than the command prompt is selected.  This
-may seem counter-intuitive but inputs are captured by the graphical window 
-while messages are printed to the command prompt.
+If the configuration dialog is not responding to your key presses or mouse and
+joystick movements, make sure that the blank pop-up window rather than the 
+command prompt is selected.  This may seem counter-intuitive but inputs are 
+captured by the graphical window while messages are printed to the command 
+prompt.
+
+
+Calibrating Controls
+--------------------
+
+Some controls, in particular the accelerator and brake pedals of steering
+wheels, may need calibrating before they will function properly with
+Supermodel.
+
+In order to calibrate a control, press 'b' when configuring the inputs and
+follow the on-screen instructions carefully.
+
+Several input-related settings are stored in the configuration file.  Refer to
+the section discussing the configuration file for more details.
 
 
 XBox 360 Controllers
@@ -493,7 +510,7 @@ Light gun axes can be mapped to mice, analog controls, or even digital buttons.
 To simulate pointing off-screen (required in order to reload), a 'point off-
 screen' input is provided which, for as long as it is pressed, will aim the gun
 off-screen.  To reload, hold down this button and then, while holding it, press
-the trigger.  For automatic reloading, the 'InputAutoTrigger' setting can be
+the trigger.  For easier reloading, the 'InputAutoTrigger' setting can be
 enabled in the configuration file (described elsewhere in this manual).
 
 Crosshairs will be visible in full screen mode and can also be enabled in 
@@ -519,8 +536,8 @@ Windows users can select between four different input systems:
       It provides the best support for PC game controllers and, when emulating
       force feedback, allows all effects (if the controller supports them).
     - XInput.  Selected with '-input-system=xinput'.  This must be used with
-      XBox 360 controllers, otherwise some buttons will not be usable and force
-      feedback will not work.
+      XBox 360 controllers, otherwise some buttons will not function properly
+      and force feedback will not work.
     - Raw Input.  Selected with '-input-system=rawinput'.  This is intended for
       use with multiple mice and keyboards but is not recommended otherwise.
     - SDL.  Selected with '-input-system=sdl'.  The standard, cross-platform
@@ -535,6 +552,67 @@ not compatible between input systems.
 
 A common mistake is to configure inputs using one system and then launch
 Supermodel with another.
+
+
+Troubleshooting
+---------------
+
+Common input-related problems are discussed below.
+
+	
+	Problem: 	
+		No response while configuring inputs.
+	
+	Solution:   
+		Make sure the main window is top window, especially with the SDL input
+		system.
+
+	---------
+	
+	Problem:
+		An attached controller is not recognized at all.
+	
+	Solution:	
+		- On the input configuration screen, press 'I' to see information about
+		  the input system and check that the required controller is in the
+		  list.
+   		- If it is not in the list, check that it is plugged in and visible in
+   		  the operating system.  If a controller is plugged in while Supermodel
+   		  is running, Supermodel will need to be restarted in order for it to 
+   		  recognize the new controller.
+   		- On Windows, if after checking the above points the controller is 
+   		  still not in the list, try running Supermodel with the SDL input 
+   		  system by specifying '-input-system=sdl' on the command line.
+		  
+	---------
+
+	Problem:
+		Unable to select a particular joysick axis when configuring a mapping.
+
+   	Solution:
+   		- This may mean that the joystick axis needs calibrating.  This can be done by pressing
+		  'b' on the configuration screen and following the instructions.
+
+	---------
+	
+	Problem:
+		Steering wheel pedals are not being recognized.
+   
+	Solution:
+   		For some steering wheels where the pedals have been configured in a 
+   		'split axis' mode (ie. not sharing a combined axis), the values that 
+   		the pedals send are inverted.  This means that without configuration
+   		Supermodel will be unable to recognize them.  To fix this, they should
+   		be calibrated on the calibration screen in the same way as above.
+
+	---------
+	
+	Problem:
+		XBox 360 controller trigger buttons cannot be triggered simultaneously
+		or no rumble effects.
+	
+	Solution:
+   		On Windows, make sure that you specify '-input-system=xinput'.
 
 
 =====================
@@ -583,8 +661,8 @@ and vibration.  The strength of each can be tuned with the following settings:
     
 They are given as percentages and represent the maximum strength for each
 effect.  A setting of 0 disables them entirely.  Values above 100% are
-accepted but may clip or distort the effect (and possibly damage your
-hardware).  By default, they are set to 100%, as shown above.
+accepted but may clip or distort the effect.  By default, they are set to 100%,
+as shown above.
 
 XInput devices only support vibration feedback via the left and right motors.
 Because the characteristics of the motors are different, the effects will feel
@@ -865,10 +943,168 @@ Input Mappings
 Input mappings are specified with strings that have their own internal syntax.
 They may only be specified in the 'Global' section and are ignored elsewhere.
 
-... TODO: write me
+A mapping may be specified in one of the following three ways:
 
-The complete list of input settings can be found in the settings index below or
-by generating a configuration file using '-config-inputs'.  
+	KEY_XXX		For a key XXX on a keyboard (eg. KEY_A, KEY_SPACE, KEY_ALT).
+
+ 	MOUSE_XXX   For a mouse axis (X or Y), wheel, or button (1-5) (eg.
+ 				MOUSE_XAXIS, MOUSE_WHEEL_UP, MOUSE_BUTTON3).
+
+	JOY1_XXX	For a joystick axis (X, Y, Z, RX, RY, RZ), POV controller 
+	JOY2_XXX	(1-4), or button (1-12) (e.g. JOY1_XAXIS, JOY3_POV2_UP,
+	...			JOY2_BUTTON4).
+ 
+Joysticks, including game pads and steering wheels, are numbered from 1 on up.
+Their ordering is system dependent and if controllers are swapped between
+invocations of Supermodel, then the ordering may change.  If the number is 
+omitted then the mapping applies to all joysticks, eg. JOY_BUTTON1 means button
+1 on any attached joystick.
+
+In addition to the above, when using the Raw Input system on Windows (command 
+line option '-input-system=rawinput') it is possible to refer to a particular
+mouse or keyboard by including its number in the mapping, eg. KEY2_A or 
+MOUSE3_XAXIS.  This allows the independent mapping of dual mice or dual light
+guns (which present themselves as mice to Supermodel) for 'The Lost World'.
+
+Mappings may be combined with a plus '+' or a comma ',' and negated with an
+exclamation mark '!'.  The plus signifies that both mappings must be active to
+trigger the input and the comma means that just one needs to be active.  The
+exclamation mark means that a mapping must not be active.
+
+Of the above the comma is the most useful.  It allows the mapping of several
+different control methods to a single input.  For example, both a keyboard and 
+a joystick could be mapped to the same input.  When combining mappings in this
+way, the ordering is important as mappings earlier in the list will take 
+precedence over later ones (see example 3 below).
+
+When an axis is mapped to a digital input, its direction must be qualified with
+a _POS or _NEG after the axis name.  For example, JOY1_XAXIS_NEG indicates that
+joystick 1 must be pushed left (negative direction) in order to activate the 
+input.  Additionally, the following shortcuts are provided for some common 
+joystick axis directions:
+
+	JOY1_LEFT  is the same as JOY1_XAXIS_NEG
+	JOY1_RIGHT is the same as JOY1_XAXIS_POS
+	JOY1_UP    is the same as JOY1_YAXIS_NEG
+	JOY1_DOWN  is the same as JOY1_YAXIS_POS
+
+Another axis manipulator is _INV.  This inverts an axis when it is mapped to an
+analog input.  JOY1_YAXIS_INV could be used for example to invert the y-axis
+of joystick 1 in Star Wars Trilogy so that it acts like a plane's yoke.
+
+Examples:
+
+	1. InputLeft = "KEY_LEFT,JOY1_LEFT"  
+
+  		Digital input InputLeft will be triggered whenever the left arrow key 
+  		is pressed or joystick 1 is pushed left.
+
+	2. InputStart1 = "KEY_ALT+KEY_S"
+
+  		Both Alt and S must be pressed at the same time in order to trigger the 
+  		digital input InputStart1 (player 1 Start button).
+
+	3. InputSteering = "JOY1_XAXIS,MOUSE_XAXIS"
+
+  		Analog steering can be controlled with either the joystick or by moving
+  		the mouse.  Due to the ordering used, the joystick will take preference
+  		and so the mouse can only control the steering when the joystick is 
+  		released.
+
+The complete list of input mappings can be found in the settings index below or
+by generating a configuration file using '-config-inputs'.
+
+
+Controller Settings
+-------------------
+
+Several settings are available to fine tune the way Supermodel handles 
+controllers.
+
+
+Keyboard Settings:
+
+The rate at which analog controls' values increase or decrease when controlled 
+by a key can be set with the InputyKeySensitivity option.  It takes a value in 
+the range 1-100, with 100 being the most sensitive (fastest response) and 1 
+being the least sensitive (slowest response).  The default value is 25.
+
+The speed with which analog controls return to their rest or 'off' values after
+a key has been released is configured with InputKeyDecaySpeed.  This takes a 
+value in the range 1-200 and is expressed as a percentage of the attack speed.
+The default setting is 50, which means that analog controls take twice as long 
+to return to their off values as they do to reach their maximum and minimum 
+values.
+
+
+Mouse Settings:
+
+For a mouse it is possible to specify a rectangular area in the center of 
+Supermodel's display within which the mouse is considered to be inactive.  The
+width and height of this zone is set with the options 'InputMouseXDeadZone' and
+'InputMouseYDeadZone'.  They are expressed as a percentage 0-99 of the width
+and height of the display.  The default value is 0 which disables this option.
+
+
+Joystick Options:
+
+Each joystick axis has a set of parameters that can be configured and these are
+given below.  The joystick number and axis name (X, Y, Z, RX, RY, or RZ) must
+be substituted in for '**' like so: InputJoy1XDeadZone.  If the joystick number
+is omitted, then the option becomes the default for all joysticks, eg.
+InputJoyYSaturation.
+
+InputJoy**Deadzone: The dead zone of a joystick axis is the size of the zone 
+around its central or 'off' position within which the axis is considered to be
+inactive.  It is important to specify this since joysticks rarely return to 
+their perfect center when released.  The dead zone is expressed as a percentage
+0-99 of the total range of the axis and the default value is 2%.
+
+InputJoy**Saturation: The saturation of a joystick axis is the point at which
+the axis is considered to be at its most extreme position.  It can be thought
+of as a measure of the sensivity of the axis.  Like the deadzone, it is 
+expressed as a percentage of the axis range but its value may be larger than 
+100, up to a maximum of 200.  A value of 50 means that the joystick only needs 
+to be moved halfway in order for Supermodel to see it as fully extended.  
+Conversely a value of 200 means that when the joystick is at its extreme 
+position Supermodel will see it as only halfway.  The default sensitivity is
+100%, which corresponds to a 1-to-1 mapping.  For playing driving games with a
+game pad, it is sometimes a good idea to use a value larger than 100% so that 
+the steering feels less sensitive on a thumbstick.
+
+InputJoy**MinVal, InputJoy**OffVal, InputJoy**MaxVal: Normally a joystick axis 
+will send values to Supermodel that fall within the range -32768 to +32767, 
+with 0 representing the central or 'off' position.  However, in some cases an 
+axis may behave differently.  This has been observed with certain steering 
+wheels that have their pedals configured in a 'split axis' mode.  The pedals 
+invert their range so that they send -32768 when released and +32767 when fully
+depressed.  In order for Supermodel to be able to handle such cases the 
+minimum, off, and maximum values of the axis can be specified with these three
+options.  The default values are MinVal -32768, OffVal 0, and MaxVal 32767 but
+with the pedal example just given, they would need to be set to MinVal 32767,
+OffVal 32767, and MaxVal -32768.
+
+In most cases it will be unecessary to alter the DeadZone, MinVal, OffVal, and 
+MaxVal options by hand as calibrating a joystick axis from within the input 
+configuration screens of Supermodel will set them automatically.  Only the 
+sensitivity option is not configured in this way.
+
+
+Additional Options:
+
+InputAutoTrigger, InputAutoTrigger2: When playing light gun games such as 'The
+Lost World', the gun must be pointed off-screen and then fired in order to 
+reload.  With a mouse and the default mappings, this requires clicking both the
+right and left mouse buttons.  In order to be able to reload the gun with just
+a single click of the right mouse button, enable these options for players 1 
+and 2 by setting them to 1.  By default they are disabled (value 0).
+
+Enabling these options is also recommended when playing with PC light guns as
+these often map the action "point off screen and press trigger" to a single 
+right mouse button click.  Supermodel has been tested successfully with 
+UltiMarc's AimTrak light-guns.  In order to use dual PC light-guns for two 
+player games, the Raw Input system must be selected with the command line 
+option '-input-system=rawinput' and the input mappings configured for each gun.
 
 
 =====================================
@@ -1195,8 +1431,8 @@ All settings are case sensitive.
     
     Description:    Sets strength of the four DirectInput force feedback
                     effects in percent.  Default is 100, indicating full 
-                    strength.  Values exceeding 100% will distort the effects
-                    and may damage your controller.  Available only on Windows.
+                    strength.  Values exceeding 100% will distort the effects.
+                    Available only on Windows.
     
     ----------------
     
@@ -1207,9 +1443,8 @@ All settings are case sensitive.
     
     Description:    Sets strength of XInput force feedback effects in percent.
                     Default is 100, indicating full strength.  Values exceeding
-                    100% will distort the effects and may damage your 
-                    controller.  The constant force effect is simulated using 
-                    vibration.  Available only on Windows.
+                    100% will distort the effects.  The constant force effect 
+                    is simulated using vibration.  Available only on Windows.
     
     ----------------
     

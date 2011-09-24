@@ -1781,6 +1781,7 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 		confirm->Acquire();
 
 	printf("Move axis around and then press Return (or press Esc to cancel): ");
+	fflush(stdout);	// required on terminals that use buffering
 
 	unsigned maxRange;
 	unsigned maxAxisNum;
@@ -1943,6 +1944,7 @@ Repeat:
 				break;
 		}
 		printf("\nPress Return when done (or press Esc to cancel): ");
+		fflush(stdout);	// required on terminals that use buffering
 
 		// Loop until user confirms or aborts
 		for (;;)
@@ -1954,6 +1956,7 @@ Repeat:
 		}
 
 		printf("Calibrating... ");
+		fflush(stdout);	// required on terminals that use buffering
 
 		// Loop until at least three seconds have elapsed or user aborts
 		int joyVal = GetJoyAxisValue(joyNum, axisNum);
@@ -2045,6 +2048,7 @@ Repeat:
 		printf(" Max Value        = %d\n", posVal);
 		printf(" Dead Zone        = %d %%\n", deadZone);
 		printf("\nAccept these settings: y/n? ");
+		fflush(stdout);	// required on terminals that use buffering
 		
 		// Loop until user confirms or declines
 		while (ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, escapeMapping))
@@ -2071,6 +2075,7 @@ Repeat:
 		puts("There was a problem calibrating the axis.  This may be because the steps");
 		puts("were not followed correctly or the joystick is sending invalid data.");
 		printf("\nTry calibrating again: y/n? ");
+		fflush(stdout);	// required on terminals that use buffering
 		
 		// Loop until user confirms or declines
 		while (ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, escapeMapping))
