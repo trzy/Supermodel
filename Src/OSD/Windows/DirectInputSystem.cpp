@@ -1811,13 +1811,19 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		eff.lpEnvelope = NULL;
 				
 		// Set command specific parameters
+		LONG lFFMag;
+		DWORD dFFMag;
 		switch (ffCmd.id)	
 		{
 			case FFConstantForce:
 				//printf("FFConstantForce %0.2f\n", 100.0f * ffCmd.force);
 				if (g_Config.dInputConstForceMax == 0)
 					return false;
-				dicf.lMagnitude = min<LONG>(-ffCmd.force * (float)(g_Config.dInputConstForceMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX); // Invert sign for DirectInput effect
+				lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
+				if (lFFMag >= 0)
+					dicf.lMagnitude = min<LONG>(lFFMag, DI_EFFECTS_MAX);
+				else
+					dicf.lMagnitude = max<LONG>(lFFMag, -DI_EFFECTS_MAX);
 				
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 				eff.lpvTypeSpecificParams = &dicf;
@@ -1827,9 +1833,10 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				//printf("FFSelfCenter %0.2f\n", 100.0f * ffCmd.force);
 				if (g_Config.dInputSelfCenterMax == 0)
 					return false;
+				lFFMag = (LONG)(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE));
 				dic.lOffset = 0;
-				dic.lPositiveCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
-				dic.lNegativeCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dic.lPositiveCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
+				dic.lNegativeCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
 				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
 				dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX);
@@ -1842,9 +1849,10 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				//printf("FFFriction %0.2f\n", 100.0f * ffCmd.force);
 				if (g_Config.dInputFrictionMax == 0)
 					return false;
+				lFFMag = (LONG)(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE));
 				dic.lOffset = 0;
-				dic.lPositiveCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
-				dic.lNegativeCoefficient = min<LONG>(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dic.lPositiveCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
+				dic.lNegativeCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
 				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
 				dic.lDeadBand = 0;
@@ -1857,7 +1865,8 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				//printf("FFVibrate %0.2f\n", 100.0f * ffCmd.force);
 				if (g_Config.dInputVibrateMax == 0)
 					return false;
-				dip.dwMagnitude = min<DWORD>(ffCmd.force * (float)(g_Config.dInputVibrateMax * DI_EFFECTS_SCALE), DI_EFFECTS_MAX);
+				dFFMag = (DWORD)(ffCmd.force * (float)(g_Config.dInputVibrateMax * DI_EFFECTS_SCALE));
+				dip.dwMagnitude = max<DWORD>(0, min<DWORD>(dFFMag, DI_EFFECTS_MAX));
 				dip.lOffset = 0;
                 dip.dwPhase = 0;
                 dip.dwPeriod = (DWORD)(0.05 * DI_SECONDS); // 1/20th second
