@@ -397,7 +397,10 @@ static void ApplySettings(CINIFile *INI, const char *section)
 
 #ifdef SUPERMODEL_WIN32
 	// DirectInput ForceFeedback
-	INI->Get(section, "DirectInputConstForceMax", g_Config.dInputConstForceMax);
+	INI->Get(section, "DirectInputConstForceMax", g_Config.dInputConstForceLeftMax);
+	INI->Get(section, "DirectInputConstForceMax", g_Config.dInputConstForceRightMax);
+	INI->Get(section, "DirectInputConstForceLeftMax", g_Config.dInputConstForceLeftMax);
+	INI->Get(section, "DirectInputConstForceRightMax", g_Config.dInputConstForceRightMax);
 	INI->Get(section, "DirectInputSelfCenterMax", g_Config.dInputSelfCenterMax);
 	INI->Get(section, "DirectInputFrictionMax", g_Config.dInputFrictionMax);
 	INI->Get(section, "DirectInputVibrateMax", g_Config.dInputVibrateMax);
@@ -427,50 +430,51 @@ static void LogConfig(void)
 	InfoLog("Program settings:");
 	
 	// COSDConfig
-	InfoLog("\tXResolution               = %d", g_Config.xRes);
-	InfoLog("\tYResolution               = %d", g_Config.yRes);
-	InfoLog("\tFullScreen                = %d", g_Config.fullScreen);
-	InfoLog("\tThrottle                  = %d", g_Config.throttle);
-	InfoLog("\tShowFrameRate             = %d", g_Config.showFPS);
+	InfoLog("\tXResolution                   = %d", g_Config.xRes);
+	InfoLog("\tYResolution                   = %d", g_Config.yRes);
+	InfoLog("\tFullScreen                    = %d", g_Config.fullScreen);
+	InfoLog("\tThrottle                      = %d", g_Config.throttle);
+	InfoLog("\tShowFrameRate                 = %d", g_Config.showFPS);
 #ifdef SUPERMODEL_DEBUGGER
-	InfoLog("\tDisableDebugger           = %d", g_Config.disableDebugger);
+	InfoLog("\tDisableDebugger               = %d", g_Config.disableDebugger);
 #endif
-	InfoLog("\tInputSystem               = %s", g_Config.GetInputSystem());
-	InfoLog("\tFlipStereo                = %d", g_Config.flipStereo);
+	InfoLog("\tInputSystem                   = %s", g_Config.GetInputSystem());
+	InfoLog("\tFlipStereo                    = %d", g_Config.flipStereo);
 	
 #ifdef SUPERMODEL_WIN32
 	// DirectInput ForceFeedback
-	InfoLog("\tDirectInputConstForceMax  = %u", g_Config.dInputConstForceMax);
-	InfoLog("\tDirectInputSelfCenterMax  = %u", g_Config.dInputSelfCenterMax);
-	InfoLog("\tDirectInputFrictionMax    = %u", g_Config.dInputFrictionMax);
-	InfoLog("\tDirectInputVibrateMax     = %u", g_Config.dInputVibrateMax);
+	InfoLog("\tDirectInputConstForceLeftMax  = %u", g_Config.dInputConstForceLeftMax);
+	InfoLog("\tDirectInputConstForceRightMax = %u", g_Config.dInputConstForceRightMax);
+	InfoLog("\tDirectInputSelfCenterMax      = %u", g_Config.dInputSelfCenterMax);
+	InfoLog("\tDirectInputFrictionMax        = %u", g_Config.dInputFrictionMax);
+	InfoLog("\tDirectInputVibrateMax         = %u", g_Config.dInputVibrateMax);
 
 	// XInput ForceFeedback
-	InfoLog("\tXInputConstForceThreshold = %u", g_Config.xInputConstForceThreshold);
-	InfoLog("\tXInputConstForceMax       = %u", g_Config.xInputConstForceMax);
-	InfoLog("\tXInputVibrateMax          = %u", g_Config.xInputVibrateMax);
+	InfoLog("\tXInputConstForceThreshold     = %u", g_Config.xInputConstForceThreshold);
+	InfoLog("\tXInputConstForceMax           = %u", g_Config.xInputConstForceMax);
+	InfoLog("\tXInputVibrateMax              = %u", g_Config.xInputVibrateMax);
 #endif // SUPERMODEL_WIN32
 
 	// CModel3Config
-	InfoLog("\tMultiThreaded             = %d", g_Config.multiThreaded);
-	InfoLog("\tPowerPCFrequency          = %d", g_Config.GetPowerPCFrequency());
+	InfoLog("\tMultiThreaded                 = %d", g_Config.multiThreaded);
+	InfoLog("\tPowerPCFrequency              = %d", g_Config.GetPowerPCFrequency());
 	
 	// CSoundBoardConfig
-	InfoLog("\tEmulateSound              = %d", g_Config.emulateSound);
+	InfoLog("\tEmulateSound                  = %d", g_Config.emulateSound);
 	
 	// CDSBConfig
-	InfoLog("\tEmulateDSB                = %d", g_Config.emulateDSB);
-	InfoLog("\tSoundVolume               = %d", g_Config.GetSoundVolume());
-	InfoLog("\tMusicVolume               = %d", g_Config.GetMusicVolume());
+	InfoLog("\tEmulateDSB                    = %d", g_Config.emulateDSB);
+	InfoLog("\tSoundVolume                   = %d", g_Config.GetSoundVolume());
+	InfoLog("\tMusicVolume                   = %d", g_Config.GetMusicVolume());
 	
 	// CDriveBoardConfig
 #ifdef SUPERMODEL_WIN32
-	InfoLog("\tForceFeedback             = %d", g_Config.forceFeedback);
+	InfoLog("\tForceFeedback                 = %d", g_Config.forceFeedback);
 #endif
 
 	// CRender3DConfig
-	InfoLog("\tVertexShader              = %s", g_Config.vertexShaderFile.c_str());
-	InfoLog("\tFragmentShader            = %s", g_Config.fragmentShaderFile.c_str());
+	InfoLog("\tVertexShader                  = %s", g_Config.vertexShaderFile.c_str());
+	InfoLog("\tFragmentShader                = %s", g_Config.fragmentShaderFile.c_str());
 
 	InfoLog("");
 }

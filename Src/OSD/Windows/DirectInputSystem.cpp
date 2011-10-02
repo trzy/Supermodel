@@ -1817,13 +1817,20 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		{
 			case FFConstantForce:
 				//printf("FFConstantForce %0.2f\n", 100.0f * ffCmd.force);
-				if (g_Config.dInputConstForceMax == 0)
-					return false;
-				lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
-				if (lFFMag >= 0)
-					dicf.lMagnitude = min<LONG>(lFFMag, DI_EFFECTS_MAX);
-				else
+				if (ffCmd.force >= 0.0f)
+				{
+					if (g_Config.dInputConstForceRightMax == 0)
+						return false;
+					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceRightMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
 					dicf.lMagnitude = max<LONG>(lFFMag, -DI_EFFECTS_MAX);
+				}
+				else
+				{
+					if (g_Config.dInputConstForceLeftMax == 0)
+						return false;
+					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceLeftMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
+					dicf.lMagnitude = min<LONG>(lFFMag, DI_EFFECTS_MAX);
+				}
 				
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 				eff.lpvTypeSpecificParams = &dicf;
