@@ -557,7 +557,7 @@ bool SCSP_Init(int n)
 	if(n==2)
 	{
 		SCSP=SCSPs+1;
-		memset(SCSP,0,sizeof(SCSP));
+		memset(SCSP,0,sizeof(_SCSP));
 		SCSP->Master=0;
 		HasSlaveSCSP=1;
 #ifdef USEDSP
@@ -566,7 +566,7 @@ bool SCSP_Init(int n)
 
 	}
 	SCSP=SCSPs+0;
-	memset(SCSP,0,sizeof(SCSP));
+	memset(SCSP,0,sizeof(_SCSP));
 #ifdef USEDSP
 	SCSPDSP_Init(&SCSP->DSP);
 #endif
