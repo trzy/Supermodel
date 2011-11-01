@@ -293,8 +293,9 @@ struct DIEnumDevsContext
 
 static BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID context)
 {
-	// Keep track of all joystick device GUIDs
 	DIEnumDevsContext *diDevsContext = (DIEnumDevsContext*)context;
+	
+	// Keep track of all joystick device GUIDs
 	DIJoyInfo info;
 	memset(&info, 0, sizeof(DIJoyInfo));
 	info.guid = instance->guidInstance;
@@ -304,16 +305,22 @@ static BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID
 	return DIENUM_CONTINUE;
 }
 
-struct DIEnumAxesContext
+struct DIEnumObjsContext
 {
 	JoyDetails *joyDetails;
+	unsigned sliderCount;
 	bool enumError;
 };
 
-static BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID context)
+static BOOL CALLBACK DI8EnumObjectsCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPVOID context)
 {
-	// Work out which axis is currently being enumerated from the GUID
-	DIEnumAxesContext *diAxesContext = (DIEnumAxesContext*)context;
+	DIEnumObjsContext *diObjsContext = (DIEnumObjsContext*)context;
+	
+	// Get data format for object
+	int objNum = DIDFT_GETINSTANCE(instance->dwType);
+	DIOBJECTDATAFORMAT fmt = c_dfDIJoystick2.rgodf[objNum];
+	
+	// Work out which axis or slider is currently being enumerated from the GUID
 	int axisNum;
 	if      (instance->guidType == GUID_XAxis)  axisNum = AXIS_X;
 	else if (instance->guidType == GUID_YAxis)  axisNum = AXIS_Y;
@@ -321,12 +328,24 @@ static BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPV
 	else if (instance->guidType == GUID_RxAxis) axisNum = AXIS_RX;
 	else if (instance->guidType == GUID_RyAxis) axisNum = AXIS_RY;
 	else if (instance->guidType == GUID_RzAxis) axisNum = AXIS_RZ;
-	else
+	else if (instance->guidType == GUID_Slider)
 	{
-		// If couldn't match GUID (which, according to MSDN, is an optional attribute), then flag error and try matching using a different method
-		diAxesContext->enumError = true;
+		// Work out which slider from count
+		switch (diObjsContext->sliderCount++)
+		{
+			case 0: axisNum = AXIS_S1; break;
+			case 1: axisNum = AXIS_S2; break;
+			default:
+				// If couldn't match then ignore slider
+				return DIENUM_CONTINUE;
+		}
+	}
+	else if (instance->dwType & DIDFT_AXIS)
+	{
+		// If is an axis but couldn't match GUID above (which, according to MSDN, is an optional attribute), then flag error and try matching via offset
 		int objNum = DIDFT_GETINSTANCE(instance->dwType);
 		DIOBJECTDATAFORMAT fmt = c_dfDIJoystick2.rgodf[objNum];
+		diObjsContext->enumError = true;
 		switch (fmt.dwOfs)
 		{
 			case DIJOFS_X:  axisNum = AXIS_X; break;
@@ -340,11 +359,16 @@ static BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPV
 				return DIENUM_CONTINUE;  
 		}
 	}
+	else
+	{
+		// Ignore all other types of object
+		return DIENUM_CONTINUE;
+	}
 	
-	// If axis overlaps with a previous ones, flag error
-	JoyDetails *joyDetails = diAxesContext->joyDetails;
+	// If axis overlaps with a previous one, flag error
+	JoyDetails *joyDetails = diObjsContext->joyDetails;
 	if (joyDetails->hasAxis[axisNum])
-		diAxesContext->enumError = true;
+		diObjsContext->enumError = true;
 
 	// Record fact that axis is present and also whether it has force feedback available
 	joyDetails->hasAxis[axisNum] = true; 
@@ -353,7 +377,7 @@ static BOOL CALLBACK DI8EnumAxesCallback(LPCDIDEVICEOBJECTINSTANCE instance, LPV
 	// Get axis name from DirectInput and store that too
 	char *axisName = joyDetails->axisName[axisNum];
 	strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
-	strcat(axisName, "-Axis (");
+	strcat(axisName, " (");
 	strncat(axisName, instance->tszName, MAX_NAME_LENGTH - strlen(axisName) - 1);
 	strcat(axisName, ")");
 
@@ -1050,12 +1074,16 @@ void CDirectInputSystem::OpenJoysticks()
 			joyDetails.hasAxis[AXIS_RX] = true;
 			joyDetails.hasAxis[AXIS_RY] = true;
 			joyDetails.hasAxis[AXIS_RZ] = true;
+			joyDetails.hasAxis[AXIS_S1] = false;
+			joyDetails.hasAxis[AXIS_S2] = false;
 			joyDetails.axisHasFF[AXIS_X] = true;  // Force feedback simulated on left and right sticks
 			joyDetails.axisHasFF[AXIS_Y] = true;
 			joyDetails.axisHasFF[AXIS_Z] = false;
 			joyDetails.axisHasFF[AXIS_RX] = true;
 			joyDetails.axisHasFF[AXIS_RY] = true;
 			joyDetails.axisHasFF[AXIS_RZ] = false;
+			joyDetails.axisHasFF[AXIS_S1] = false;
+			joyDetails.axisHasFF[AXIS_S2] = false;
 			
 			// Keep track of XInput device number
 			it->xInputNum = xNum++;		
@@ -1109,10 +1137,10 @@ void CDirectInputSystem::OpenJoysticks()
 			joyDetails.numButtons = devCaps.dwButtons;
 			
 			// Enumerate axes
-			DIEnumAxesContext diAxesContext;
-			diAxesContext.joyDetails = &joyDetails;
-			diAxesContext.enumError = false;
-			if (FAILED(hr = joystick->EnumObjects(DI8EnumAxesCallback, &diAxesContext, DIDFT_AXIS)))
+			DIEnumObjsContext diObjsContext;
+			memset(&diObjsContext, 0, sizeof(DIEnumObjsContext));
+			diObjsContext.joyDetails = &joyDetails;
+			if (FAILED(hr = joystick->EnumObjects(DI8EnumObjectsCallback, &diObjsContext, DIDFT_ALL)))
 			{
 				ErrorLog("Unable to enumerate axes of DirectInput joystick %d (error %d) - skipping joystick.\n", joyNum, hr);
 
@@ -1121,7 +1149,7 @@ void CDirectInputSystem::OpenJoysticks()
 			}
 
 			// If enumeration failed for some reason then include all possible joystick axes so that no axis is left off due to error
-			if (diAxesContext.enumError)
+			if (diObjsContext.enumError)
 			{
 				for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 				{
@@ -1131,7 +1159,6 @@ void CDirectInputSystem::OpenJoysticks()
 						joyDetails.axisHasFF[axisNum] = false;
 						char *axisName = joyDetails.axisName[axisNum];
 						strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
-						strcat(axisName, "-Axis");
 					}
 				}
 			}
@@ -1379,6 +1406,8 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 		case AXIS_RX: axisOfs = DIJOFS_RX; break;
 		case AXIS_RY: axisOfs = DIJOFS_RY; break;
 		case AXIS_RZ: axisOfs = DIJOFS_RZ; break;
+		case AXIS_S1: axisOfs = DIJOFS_SLIDER(0); break;
+		case AXIS_S2: axisOfs = DIJOFS_SLIDER(1); break;
 		default:      return E_FAIL;
 	}
 
@@ -1428,7 +1457,7 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 			dic.lNegativeCoefficient = 0;
 			dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 			dic.dwNegativeSaturation = DI_FFNOMINALMAX;
-			dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX);  // 5% deadband
+			dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX); // 5% deadband
 			
 			eff.cbTypeSpecificParams = sizeof(DICONDITION);
 			eff.lpvTypeSpecificParams = &dic;
@@ -1670,6 +1699,8 @@ int CDirectInputSystem::GetJoyAxisValue(int joyNum, int axisNum)
 		case AXIS_RX: return (int)m_diJoyStates[joyNum].lRx;
 		case AXIS_RY: return (int)m_diJoyStates[joyNum].lRy;
 		case AXIS_RZ: return (int)m_diJoyStates[joyNum].lRz;
+		case AXIS_S1: return (int)m_diJoyStates[joyNum].rglSlider[0];
+		case AXIS_S2: return (int)m_diJoyStates[joyNum].rglSlider[1];
 		default:      return 0;
 	}
 }
@@ -1831,7 +1862,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceLeftMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
 					dicf.lMagnitude = min<LONG>(lFFMag, DI_EFFECTS_MAX);
 				}
-				
+
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
 				eff.lpvTypeSpecificParams = &dicf;
 				break;

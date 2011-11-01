@@ -73,7 +73,7 @@ class CINIFile;
 #define NUM_MOUSE_AXES 3
 #define NUM_MOUSE_BUTTONS 5
 #define NUM_JOY_PARTS ((int)JoyButton31 + 1)
-#define NUM_JOY_AXES 6
+#define NUM_JOY_AXES 8
 #define NUM_JOY_POVS 4
 #define NUM_JOY_BUTTONS 32
 
@@ -84,6 +84,8 @@ class CINIFile;
 #define AXIS_RX 3
 #define AXIS_RY 4
 #define AXIS_RZ 5
+#define AXIS_S1 6
+#define AXIS_S2 7
 
 // Axis directions
 #define AXIS_FULL 0
@@ -152,6 +154,14 @@ enum EJoyPart
 	JoyRZAxisInv,
 	JoyRZAxisPos,
 	JoyRZAxisNeg,
+	JoyS1Axis,
+	JoyS1AxisInv,
+	JoyS1AxisPos,
+	JoyS1AxisNeg,
+	JoyS2Axis,
+	JoyS2AxisInv,
+	JoyS2AxisPos,
+	JoyS2AxisNeg,
 	JoyPOV0Up,
 	JoyPOV0Down,
 	JoyPOV0Left,
@@ -322,7 +332,8 @@ private:
 	// Lookup table for translating joystick mapping strings to their respective joystick parts
 	static JoyPartsStruct s_joyParts[];
 
-	// Names of axes
+	// Ids and names of axes
+	static const char *s_axisIds[];
 	static const char *s_axisNames[];
 
 	// Number of keyboards, mice and joysticks
@@ -569,6 +580,11 @@ protected:
 	 * Returns true if the given EJoyPart represents a full axis, eg JoyXAxis.
 	 */
 	bool IsFullAxis(EJoyPart joyPart);
+
+	/*
+	 * Returns true if the given EJoyPart represents a slider axis, eg JoyS1Axis.
+	 */
+	bool IsSliderAxis(EJoyPart joyPart);
 
 	/*
 	 * Returns true if joystick part represents an axis and sets axisPart and axisDir as follows:

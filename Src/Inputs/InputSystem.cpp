@@ -201,7 +201,7 @@ const char *CInputSystem::s_validKeyNames[] =
 
 MousePartsStruct CInputSystem::s_mseParts[] = 
 {
-	// X Axis (Axis 0)
+	// X Axis (Axis 1)
 	{ "XAXIS",         MouseXAxis },
 	{ "XAXIS_INV",     MouseXAxisInv },
 	{ "XAXIS_POS",     MouseXAxisPos },
@@ -213,7 +213,7 @@ MousePartsStruct CInputSystem::s_mseParts[] =
 	{ "AXIS1_POS",     MouseXAxisPos },
 	{ "AXIS1_NEG",     MouseXAxisNeg },
 	
-	// Y Axis (Axis 1)
+	// Y Axis (Axis 2)
 	{ "YAXIS",         MouseYAxis },
 	{ "YAXIS_INV",     MouseYAxisInv },
 	{ "YAXIS_POS",     MouseYAxisPos },
@@ -225,7 +225,7 @@ MousePartsStruct CInputSystem::s_mseParts[] =
 	{ "AXIS2_POS",     MouseYAxisPos },
 	{ "AXIS2_NEG",     MouseYAxisNeg },
 
-	// Z/Wheel Axis (Axis 2)
+	// Z/Wheel Axis (Axis 3)
 	{ "ZAXIS",         MouseZAxis },
 	{ "ZAXIS_INV",     MouseZAxisInv },
 	{ "ZAXIS_POS",     MouseZAxisPos },
@@ -237,7 +237,7 @@ MousePartsStruct CInputSystem::s_mseParts[] =
 	{ "AXIS3_POS",     MouseZAxisPos },
 	{ "AXIS3_NEG",     MouseZAxisNeg },
 
-	// Left/Middle/Right Buttons (Buttons 0-2)
+	// Left/Middle/Right Buttons (Buttons 1-3)
 	{ "LEFT_BUTTON",   MouseButtonLeft },
 	{ "BUTTON1",       MouseButtonLeft },
 	{ "MIDDLE_BUTTON", MouseButtonMiddle },
@@ -245,7 +245,7 @@ MousePartsStruct CInputSystem::s_mseParts[] =
 	{ "RIGHT_BUTTON",  MouseButtonRight },
 	{ "BUTTON3",       MouseButtonRight },
 
-	// Extra Buttons (Buttons 3 & 4)
+	// Extra Buttons (Buttons 4 & 5)
 	{ "BUTTONX1",      MouseButtonX1 },
 	{ "BUTTON4",       MouseButtonX1 },
 	{ "BUTTONX2",      MouseButtonX2 },
@@ -257,7 +257,7 @@ MousePartsStruct CInputSystem::s_mseParts[] =
 
 JoyPartsStruct CInputSystem::s_joyParts[] = 
 {
-	// X-Axis (Axis 0)
+	// X-Axis (Axis 1)
 	{ "XAXIS",         JoyXAxis },
 	{ "XAXIS_INV",     JoyXAxisInv },
 	{ "XAXIS_POS",     JoyXAxisPos },
@@ -269,7 +269,7 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ "AXIS1_POS",     JoyXAxisPos },
 	{ "AXIS1_NEG",     JoyXAxisNeg },
 	
-	// Y-Axis (Axis 1)
+	// Y-Axis (Axis 2)
 	{ "YAXIS",         JoyYAxis },
 	{ "YAXIS_INV",     JoyYAxisInv },
 	{ "YAXIS_POS",     JoyYAxisPos },
@@ -281,7 +281,7 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ "AXIS2_POS",     JoyYAxisPos },
 	{ "AXIS2_NEG",     JoyYAxisNeg },
 	
-	// Z-Axis (Axis 2)
+	// Z-Axis (Axis 3)
 	{ "ZAXIS",         JoyZAxis },
 	{ "ZAXIS_INV",     JoyZAxisInv },
 	{ "ZAXIS_POS",     JoyZAxisPos },
@@ -291,7 +291,7 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ "AXIS3_POS",     JoyZAxisPos },
 	{ "AXIS3_NEG",     JoyZAxisNeg },
 
-	// RX-Axis (Axis 3)
+	// RX-Axis (Axis 4)
 	{ "RXAXIS",        JoyRXAxis },
 	{ "RXAXIS_INV",    JoyRXAxisInv },
 	{ "RXAXIS_POS",    JoyRXAxisPos },
@@ -301,7 +301,7 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ "AXIS4_POS",     JoyRXAxisPos },
 	{ "AXIS4_NEG",     JoyRXAxisNeg },
 
-	// RY-Axis (Axis 4)
+	// RY-Axis (Axis 5)
 	{ "RYAXIS",        JoyRYAxis },
 	{ "RYAXIS_INV",    JoyRYAxisInv },
 	{ "RYAXIS_POS",    JoyRYAxisPos },
@@ -311,7 +311,7 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ "AXIS5_POS",     JoyRYAxisPos },
 	{ "AXIS5_NEG",     JoyRYAxisNeg },
 	
-	// RZ-Axis (Axis 5)
+	// RZ-Axis (Axis 6)
 	{ "RZAXIS",        JoyRZAxis },
 	{ "RZAXIS_INV",    JoyRZAxisInv },
 	{ "RZAXIS_POS",    JoyRZAxisPos },
@@ -321,31 +321,51 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ "AXIS6_POS",     JoyRZAxisPos },
 	{ "AXIS6_NEG",     JoyRZAxisNeg },
 
-	// POV Hat 0
+	// Slider 1 (Axis 7)
+	{ "SLIDER1",       JoyS1Axis },
+	{ "SLIDER1_INV",   JoyS1AxisInv },
+	{ "SLIDER1_POS",   JoyS1AxisPos },
+	{ "SLIDER1_NEG",   JoyS1AxisNeg },
+	{ "AXIS7",         JoyS1Axis },
+	{ "AXIS7_INV",     JoyS1AxisInv },
+	{ "AXIS7_POS",     JoyS1AxisPos },
+	{ "AXIS7_NEG",     JoyS1AxisNeg },
+
+	// Slider 2 (Axis 8)
+	{ "SLIDER2",       JoyS1Axis },
+	{ "SLIDER2_INV",   JoyS1AxisInv },
+	{ "SLIDER2_POS",   JoyS1AxisPos },
+	{ "SLIDER2_NEG",   JoyS1AxisNeg },
+	{ "AXIS8",         JoyS1Axis },
+	{ "AXIS8_INV",     JoyS1AxisInv },
+	{ "AXIS8_POS",     JoyS1AxisPos },
+	{ "AXIS8_NEG",     JoyS1AxisNeg },
+
+	// POV Hat 1
 	{ "POV1_UP",       JoyPOV0Up },
 	{ "POV1_DOWN",     JoyPOV0Down },
 	{ "POV1_LEFT",     JoyPOV0Left },
 	{ "POV1_RIGHT",    JoyPOV0Right },
 
-	// POV Hat 1
+	// POV Hat 2
 	{ "POV2_UP",       JoyPOV1Up },
 	{ "POV2_DOWN",     JoyPOV1Down },
 	{ "POV2_LEFT",     JoyPOV1Left },
 	{ "POV2_RIGHT",    JoyPOV1Right },
 
-	// POV Hat 2
+	// POV Hat 3
 	{ "POV3_UP",       JoyPOV2Up },
 	{ "POV3_DOWN",     JoyPOV2Down },
 	{ "POV3_LEFT",     JoyPOV2Left },
 	{ "POV3_RIGHT",    JoyPOV2Right },
 
-	// POV Hat 3
+	// POV Hat 4
 	{ "POV4_UP",       JoyPOV3Up },
 	{ "POV4_DOWN",     JoyPOV3Down },
 	{ "POV4_LEFT",     JoyPOV3Left },
 	{ "POV4_RIGHT",    JoyPOV3Right },
 
-	// Buttons 0-31
+	// Buttons 1-32
 	{ "BUTTON1",       JoyButton0 },
 	{ "BUTTON2",       JoyButton1 },
 	{ "BUTTON3",       JoyButton2 },
@@ -383,11 +403,13 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
 	{ NULL,            JoyUnknown }
 };
 
-const char *CInputSystem::s_axisNames[] = { "X", "Y", "Z", "RX", "RY", "RZ" };
+const char *CInputSystem::s_axisIds[] = { "X", "Y", "Z", "RX", "RY", "RZ", "S1", "S2" };
+
+const char *CInputSystem::s_axisNames[] = { "X-Axis", "Y-Axis", "Z-Axis", "RX-Axis", "RY-Axis", "RZ-Axis", "Slider1", "Slider2" };
 
 const char *CInputSystem::GetDefaultAxisName(int axisNum)
 {
-	return (axisNum >= 0 && axisNum < 6 ? s_axisNames[axisNum] : "");
+	return (axisNum >= 0 && axisNum < NUM_JOY_AXES ? s_axisNames[axisNum] : "");
 }
 
 CInputSystem::CInputSystem(const char *systemName) : 
@@ -1039,8 +1061,8 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
 
 void CInputSystem::PrintKeySettings(int kbdNum, KeySettings *settings)
 {
-	printf(" Sensitivity = %d %%\n", settings->sensitivity);
-	printf(" Decay Speed = %d %%\n", settings->decaySpeed);
+	printf(" Sensitivity = %u %%\n", settings->sensitivity);
+	printf(" Decay Speed = %u %%\n", settings->decaySpeed);
 }
 
 KeySettings *CInputSystem::ReadKeySettings(CINIFile *ini, const char *section, int kbdNum)
@@ -1079,10 +1101,7 @@ void CInputSystem::WriteKeySettings(CINIFile *ini, const char *section, KeySetti
 void CInputSystem::PrintMouseSettings(int mseNum, MouseSettings *settings)
 {
 	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
-	{
-		const char *axisName = s_axisNames[axisNum];
-		printf(" %s-Axis Dead Zone = %d %%\n", axisName, settings->deadZones[axisNum]);
-	}
+		printf(" %-7s Dead Zone = %u %%\n", s_axisNames[axisNum], settings->deadZones[axisNum]);
 }
 
 MouseSettings *CInputSystem::ReadMouseSettings(CINIFile *ini, const char *section, int mseNum)
@@ -1098,10 +1117,7 @@ MouseSettings *CInputSystem::ReadMouseSettings(CINIFile *ini, const char *sectio
 		baseKey.append(IntToString(mseNum + 1));
 	bool read = false;
 	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
-	{
-		const char *axisName = s_axisNames[axisNum];
-		read |= ini->Get(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
-	}
+		read |= ini->Get(section, baseKey + s_axisIds[axisNum] + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
 	if (read)
 		return settings;
 	delete settings;
@@ -1119,9 +1135,8 @@ void CInputSystem::WriteMouseSettings(CINIFile *ini, const char *section, MouseS
 		baseKey.append(IntToString(settings->mseNum + 1));
 	for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
 	{
-		const char *axisName = s_axisNames[axisNum];
 		if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
-			ini->Set(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]);
+			ini->Set(section, baseKey + s_axisIds[axisNum] + "DeadZone", settings->deadZones[axisNum]);
 	}
 }
 
@@ -1133,11 +1148,11 @@ void CInputSystem::PrintJoySettings(int joyNum, JoySettings *settings)
 		if (joyDetails && !joyDetails->hasAxis[axisNum])
 			continue;
 		const char *axisName = s_axisNames[axisNum];
-		printf(" %-2s-Axis Min Value        = %d\n", axisName, settings->axisMinVals[axisNum]);
-		printf(" %-2s-Axis Center/Off Value = %d\n", axisName, settings->axisOffVals[axisNum]);
-		printf(" %-2s-Axis Max Value        = %d\n", axisName, settings->axisMaxVals[axisNum]);
-		printf(" %-2s-Axis Dead Zone        = %d %%\n", axisName, settings->deadZones[axisNum]);
-		printf(" %-2s-Axis Saturation       = %d %%\n", axisName, settings->saturations[axisNum]);
+		printf(" %-7s Min Value        = %d\n", axisName, settings->axisMinVals[axisNum]);
+		printf(" %-7s Center/Off Value = %d\n", axisName, settings->axisOffVals[axisNum]);
+		printf(" %-7s Max Value        = %d\n", axisName, settings->axisMaxVals[axisNum]);
+		printf(" %-7s Dead Zone        = %u %%\n", axisName, settings->deadZones[axisNum]);
+		printf(" %-7s Saturation       = %u %%\n", axisName, settings->saturations[axisNum]);
 	}
 }
 
@@ -1155,12 +1170,12 @@ JoySettings *CInputSystem::ReadJoySettings(CINIFile *ini, const char *section, i
 	bool read = false;
 	for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 	{
-		const char *axisName = s_axisNames[axisNum];
-		read |= ini->Get(section, baseKey + axisName + "MinVal", settings->axisMinVals[axisNum]) == OKAY; 
-		read |= ini->Get(section, baseKey + axisName + "OffVal", settings->axisOffVals[axisNum]) == OKAY; 
-		read |= ini->Get(section, baseKey + axisName + "MaxVal", settings->axisMaxVals[axisNum]) == OKAY; 
-		read |= ini->Get(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
-		read |= ini->Get(section, baseKey + axisName + "Saturation", settings->saturations[axisNum]) == OKAY; 
+		const char *axisId = s_axisIds[axisNum];
+		read |= ini->Get(section, baseKey + axisId + "MinVal", settings->axisMinVals[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisId + "OffVal", settings->axisOffVals[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisId + "MaxVal", settings->axisMaxVals[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisId + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
+		read |= ini->Get(section, baseKey + axisId + "Saturation", settings->saturations[axisNum]) == OKAY; 
 	}
 	if (read)
 		return settings;
@@ -1179,17 +1194,17 @@ void CInputSystem::WriteJoySettings(CINIFile *ini, const char *section, JoySetti
 		baseKey.append(IntToString(settings->joyNum + 1));
 	for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 	{
-		const char *axisName = s_axisNames[axisNum];
+		const char *axisId = s_axisIds[axisNum];
 		if (settings->axisMinVals[axisNum] != common->axisMinVals[axisNum]) 
-			ini->Set(section, baseKey + axisName + "MinVal", settings->axisMinVals[axisNum]);
+			ini->Set(section, baseKey + axisId + "MinVal", settings->axisMinVals[axisNum]);
 		if (settings->axisOffVals[axisNum] != common->axisOffVals[axisNum]) 
-			ini->Set(section, baseKey + axisName + "OffVal", settings->axisOffVals[axisNum]);
+			ini->Set(section, baseKey + axisId + "OffVal", settings->axisOffVals[axisNum]);
 		if (settings->axisMaxVals[axisNum] != common->axisMaxVals[axisNum])
-			ini->Set(section, baseKey + axisName + "MaxVal", settings->axisMaxVals[axisNum]);
+			ini->Set(section, baseKey + axisId + "MaxVal", settings->axisMaxVals[axisNum]);
 		if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
-			ini->Set(section, baseKey + axisName + "DeadZone", settings->deadZones[axisNum]);
+			ini->Set(section, baseKey + axisId + "DeadZone", settings->deadZones[axisNum]);
 		if (settings->saturations[axisNum] != common->saturations[axisNum]) 
-			ini->Set(section, baseKey + axisName + "Saturation", settings->saturations[axisNum]);
+			ini->Set(section, baseKey + axisId + "Saturation", settings->saturations[axisNum]);
 	}
 }
 
@@ -1285,12 +1300,17 @@ EMousePart CInputSystem::GetMouseButton(int butNum)
 
 bool CInputSystem::IsAxis(EJoyPart joyPart)
 {
-	return joyPart >= JoyXAxis && joyPart <= JoyRZAxisNeg;
+	return joyPart >= JoyXAxis && joyPart <= JoyS2AxisNeg;
 }
 
 bool CInputSystem::IsFullAxis(EJoyPart joyPart)
 {
 	return IsAxis(joyPart) && (((joyPart - JoyXAxis) % 4) == AXIS_FULL || ((joyPart - JoyXAxis) % 4) == AXIS_INVERTED);
+}
+
+bool CInputSystem::IsSliderAxis(EJoyPart joyPart)
+{
+	return joyPart >= JoyS1Axis && joyPart <= JoyS2AxisNeg;
 }
 
 bool CInputSystem::GetAxisDetails(EJoyPart joyPart, int &axisNum, int &axisDir)
@@ -1754,6 +1774,8 @@ void CInputSystem::UngrabMouse()
 	SetMouseVisibility(true);
 }
 
+#include <SDL.h>
+
 bool CInputSystem::SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd)
 {
 	const JoyDetails *joyDetails = GetJoyDetails(joyNum);
@@ -1775,10 +1797,13 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 	bool cancelled = false;
 	CInputSource *escape = ParseSource(escapeMapping);
 	CInputSource *confirm = ParseSource(confirmMapping);
+	CInputSource *output = ParseSource("KEY_SHIFT");
 	if (escape)
 		escape->Acquire();
 	if (confirm)
 		confirm->Acquire();
+	if (output)
+		output->Acquire();
 
 	printf("Move axis around and then press Return (or press Esc to cancel): ");
 	fflush(stdout);	// required on terminals that use buffering
@@ -1786,6 +1811,7 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 	unsigned maxRange;
 	unsigned maxAxisNum;
 
+	bool firstOut = true;
 	int minVals[NUM_JOY_AXES];
 	int maxVals[NUM_JOY_AXES];
 	for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
@@ -1836,6 +1862,23 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 			maxVals[loopAxisNum] = max<int>(joyVal, maxVals[loopAxisNum]);
 		}
 
+		// Check if output source is triggered, and if so output value for debugging
+		if (output && output->IsActive())
+		{
+			if (firstOut)
+				puts("");
+			printf(" [");
+			for (unsigned loopAxisNum = 0; loopAxisNum < NUM_JOY_AXES; loopAxisNum++)
+			{
+				int joyVal = GetJoyAxisValue(joyNum, loopAxisNum);
+				if (loopAxisNum > 0)
+					printf(", ");
+				printf("%s: %d", s_axisIds[loopAxisNum], joyVal);
+			}
+			puts("]");
+			firstOut = false;
+		}
+
 		// Don't poll continuously
 		Wait(1000/60);
 	}
@@ -1872,6 +1915,8 @@ Finish:
 		escape->Release();
 	if (confirm)
 		confirm->Release();
+	if (output)
+		output->Release();
 	return !cancelled;
 }
 
@@ -1920,6 +1965,8 @@ Repeat:
 					puts(" - for a horizontal joystick axis, push it all the way to the right.");
 				if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
 					puts(" - for a vertical joystick axis, push it all the way downwards.");
+				if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
+					puts(" - for a joystick slider, push it all the way to its extreme.");
 				puts(" - for a steering wheel, turn it all the way to the right.");
 				puts(" - for a pedal, press it all the way to the floor.");
 				break;
@@ -1930,6 +1977,8 @@ Repeat:
 					puts(" - for a horizontal joystick axis, push it all the way to the left.");
 				if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
 					puts(" - for a vertical joystick axis, push it all the way updwards.");
+				if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
+					puts(" - for a joystick slider, return it to its off position.");
 				puts(" - for a steering wheel, turn it all the way to the left.");
 				puts(" - for a pedal, let go of the pedal completely.  If there is another pedal");
 				puts("   that shares the same axis then press that one all the way to the floor.");
@@ -1937,7 +1986,10 @@ Repeat:
 			case 2: 
 				puts("Step 3:");
 				puts(" Return axis to its central/'off' position and hold, ie:");
-				puts(" - for a joystick axis, let it return to the middle.");
+				if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+					 puts(" - for a joystick axis, let it return to the middle.");
+				else if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
+					puts(" - for a joystick slider, keep it at its off position.");
 				puts(" - for a steering weel, turn it back to the center.");
 				puts(" - for a pedal, let go of pedal completely.  Likewise for any other pedal");
 				puts("   that shares the same axis.");
@@ -2046,7 +2098,7 @@ Repeat:
 		printf(" Min Value        = %d\n", negVal);
 		printf(" Center/Off Value = %d\n", offVal);
 		printf(" Max Value        = %d\n", posVal);
-		printf(" Dead Zone        = %d %%\n", deadZone);
+		printf(" Dead Zone        = %u %%\n", deadZone);
 		printf("\nAccept these settings: y/n? ");
 		fflush(stdout);	// required on terminals that use buffering
 		
