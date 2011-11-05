@@ -24,7 +24,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -51,10 +51,10 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;&quot;..\Libraries\SDL-1.2.14\include&quot;;&quot;..\Libraries\zlib-1.2.4\include&quot;;&quot;$(DXSDK_DIR)\Include&quot;"
-				PreprocessorDefinitions="SUPERMODEL_DEBUGGER;SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
+				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="0"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
@@ -70,10 +70,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib zlib.lib SDLmain.lib SDL.lib dinput8.lib dxguid.lib"
-				OutputFile="$(OutDir)\Supermodel.exe"
+				AdditionalDependencies="opengl32.lib glu32.lib dinput8.lib dxguid.lib"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;..\Libraries\SDL-1.2.14\lib-x86-MT&quot;;&quot;..\Libraries\zlib-1.2.4\lib-x86-MT&quot;;&quot;$(DXSDK_DIR)\Lib\x86&quot;"
+				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x86&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -98,12 +98,12 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /D /Y $(ProjectDir)\..\Libraries\SDL-1.2.14\lib-x86-MT\SDL.dll $(TargetDir)"
+				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -131,10 +131,10 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;&quot;..\Libraries\SDL-1.2.14\include&quot;;&quot;..\Libraries\zlib-1.2.4\include&quot;;&quot;$(DXSDK_DIR)\Include&quot;"
-				PreprocessorDefinitions="SUPERMODEL_DEBUGGER;SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
+				PreprocessorDefinitions="SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;$(NOINHERIT)"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="0"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -150,10 +150,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib zlib.lib SDLmain.lib SDL.lib dinput8.lib dxguid.lib"
-				OutputFile="$(OutDir)\Supermodel.exe"
+				AdditionalDependencies="opengl32.lib glu32.lib dinput8.lib dxguid.lib"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;..\Libraries\SDL-1.2.14\lib-x64-MT&quot;;&quot;..\Libraries\zlib-1.2.4\lib-x64-MT&quot;;&quot;$(DXSDK_DIR)\Lib\x64&quot;"
+				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x64&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="17"
@@ -178,12 +178,12 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /D /Y $(ProjectDir)\..\Libraries\SDL-1.2.14\lib-x64-MT\SDL.dll $(TargetDir)"
+				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -230,10 +230,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib zlib.lib SDLmain.lib SDL.lib dinput8.lib dxguid.lib"
-				OutputFile="$(OutDir)\Supermodel.exe"
+				AdditionalDependencies="opengl32.lib glu32.lib dinput8.lib dxguid.lib"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;..\Libraries\SDL-1.2.14\lib-x86-MT&quot;;&quot;..\Libraries\zlib-1.2.4\lib-x86-MT&quot;;&quot;$(DXSDK_DIR)\Lib\x86&quot;"
+				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x86&quot;"
 				GenerateManifest="false"
 				GenerateDebugInformation="false"
 				SubSystem="1"
@@ -261,12 +261,12 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /D /Y $(ProjectDir)\..\Libraries\SDL-1.2.14\lib-x86-MT\SDL.dll $(TargetDir)"
+				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -315,10 +315,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="opengl32.lib glu32.lib zlib.lib SDLmain.lib SDL.lib dinput8.lib dxguid.lib"
-				OutputFile="$(OutDir)\Supermodel.exe"
+				AdditionalDependencies="opengl32.lib glu32.lib dinput8.lib dxguid.lib"
+				OutputFile="$(OutDir)\$(ProjectName).exe"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;..\Libraries\SDL-1.2.14\lib-x64-MT&quot;;&quot;..\Libraries\zlib-1.2.4\lib-x64-MT&quot;;&quot;$(DXSDK_DIR)\Lib\x64&quot;"
+				AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)\Lib\x64&quot;"
 				GenerateManifest="false"
 				GenerateDebugInformation="false"
 				SubSystem="1"
@@ -347,11 +347,23 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="xcopy /D /Y $(ProjectDir)\..\Libraries\SDL-1.2.14\lib-x64-MT\SDL.dll $(TargetDir)"
+				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{248D61E0-2E9B-4C73-8839-A31FBCB7D109}"
+			RelativePathToProject=".\ZLib\ZLib.vcproj"
+		/>
+		<ProjectReference
+			ReferencedProjectIdentifier="{81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68}"
+			RelativePathToProject=".\SDL\SDL.vcproj"
+		/>
+		<ProjectReference
+			ReferencedProjectIdentifier="{DA956FD3-E142-46F2-9DD5-C78BEBB56B7A}"
+			RelativePathToProject=".\SDLmain\SDLmain.vcproj"
+		/>
 	</References>
 	<Files>
 		<Filter
@@ -2045,12 +2057,6 @@
 					</File>
 				</Filter>
 			</Filter>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
-			>
 		</Filter>
 	</Files>
 	<Globals>
