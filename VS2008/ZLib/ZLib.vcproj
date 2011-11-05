@@ -323,7 +323,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\adler32.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\adler32.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -359,7 +359,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\compress.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\compress.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -395,7 +395,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\crc32.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\crc32.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -431,7 +431,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\deflate.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\deflate.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -467,7 +467,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\gzclose.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\gzclose.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -503,7 +503,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\gzlib.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\gzlib.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -539,7 +539,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\gzread.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\gzread.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -575,7 +575,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\gzwrite.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\gzwrite.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -611,7 +611,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\infback.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\infback.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -647,7 +647,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inffast.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inffast.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -683,7 +683,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inflate.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inflate.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -719,7 +719,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inftrees.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inftrees.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -755,7 +755,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\trees.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\trees.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -791,7 +791,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\uncompr.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\uncompr.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -827,7 +827,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\zutil.c"
+				RelativePath="..\..\Libraries\zlib-1.2.4\zutil.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -868,43 +868,43 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\crc32.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\crc32.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\deflate.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\deflate.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inffast.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inffast.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inffixed.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inffixed.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inflate.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inflate.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\inftrees.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\inftrees.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\trees.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\trees.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\zconf.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\zconf.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\zlib.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\zlib.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Libraries\ZLib-1.2.4\zutil.h"
+				RelativePath="..\..\Libraries\zlib-1.2.4\zutil.h"
 				>
 			</File>
 		</Filter>
