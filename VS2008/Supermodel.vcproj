@@ -98,7 +98,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
+				CommandLine="mkdir &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\NVRAM&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\Saves&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Docs\*&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Config\*&quot; &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -178,7 +178,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
+				CommandLine="mkdir &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\NVRAM&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\Saves&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Docs\*&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Config\*&quot; &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -261,7 +261,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
+				CommandLine="mkdir &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\NVRAM&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\Saves&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Docs\*&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Config\*&quot; &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -347,7 +347,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="mkdir $(TargetDir)\Config&#x0D;&#x0A;mkdir $(TargetDir)\NVRAM&#x0D;&#x0A;mkdir $(TargetDir)\Saves&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Docs\* $(TargetDir)&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\..\Config\* $(TargetDir)\Config&#x0D;&#x0A;xcopy /D /Y $(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll $(TargetDir)&#x0D;&#x0A;"
+				CommandLine="mkdir &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\NVRAM&quot;&#x0D;&#x0A;mkdir &quot;$(TargetDir)\Saves&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Docs\*&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\..\Config\*&quot; &quot;$(TargetDir)\Config&quot;&#x0D;&#x0A;xcopy /D /Y &quot;$(ProjectDir)\SDL\$(PlatformName)\$(ConfigurationName)\SDL.dll&quot; &quot;$(TargetDir)&quot;&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>

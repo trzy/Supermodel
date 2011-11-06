@@ -83,7 +83,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="$(TargetPath) $(ProjectDir)\..\..\Src\CPU\68K\Musashi\ $(ProjectDir)\..\..\Src\CPU\68K\Musashi\m68k_in.c"
+				CommandLine="&quot;$(TargetPath)&quot; ..\..\Src\CPU\68K\Musashi\ ..\..\Src\CPU\68K\Musashi\m68k_in.c"
 			/>
 		</Configuration>
 		<Configuration
@@ -152,7 +152,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="$(TargetPath) $(ProjectDir)\..\..\Src\CPU\68K\Musashi\ $(ProjectDir)\..\..\Src\CPU\68K\Musashi\m68k_in.c"
+				CommandLine="&quot;$(TargetPath)&quot; ..\..\Src\CPU\68K\Musashi\ ..\..\Src\CPU\68K\Musashi\m68k_in.c"
 			/>
 		</Configuration>
 		<Configuration
@@ -223,7 +223,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="$(TargetPath) $(ProjectDir)\..\..\Src\CPU\68K\Musashi\ $(ProjectDir)\..\..\Src\CPU\68K\Musashi\m68k_in.c"
+				CommandLine="&quot;$(TargetPath)&quot; ..\..\Src\CPU\68K\Musashi\ ..\..\Src\CPU\68K\Musashi\m68k_in.c"
 			/>
 		</Configuration>
 		<Configuration
@@ -295,7 +295,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="$(TargetPath) $(ProjectDir)\..\..\Src\CPU\68K\Musashi\ $(ProjectDir)\..\..\Src\CPU\68K\Musashi\m68k_in.c"
+				CommandLine="&quot;$(TargetPath)&quot; ..\..\Src\CPU\68K\Musashi\ ..\..\Src\CPU\68K\Musashi\m68k_in.c"
 			/>
 		</Configuration>
 	</Configurations>
