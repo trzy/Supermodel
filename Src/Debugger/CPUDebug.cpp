@@ -38,9 +38,9 @@ namespace Debugger
 		UINT8 cpuMinInstrLen, UINT8 cpuMaxInstrLen, bool cpuBigEndian, UINT8 cpuMemBusWidth, UINT8 cpuMaxMnemLen) : 
 		type(cpuType), name(cpuName), minInstrLen(cpuMinInstrLen), maxInstrLen(cpuMaxInstrLen), 
 		bigEndian(cpuBigEndian), memBusWidth(cpuMemBusWidth), maxMnemLen(cpuMaxMnemLen),
-		enabled(true), addrFmt(HexDollar), portFmt(Decimal), dataFmt(HexDollar), debugger(NULL), 
+		addrFmt(HexDollar), portFmt(Decimal), dataFmt(HexDollar), debugger(NULL), 
 		numExCodes(0), numIntCodes(0), numPorts(0), memSize(0), active(false), instrCount(0), totalCycles(0), cyclesPerPoll(0), pc(0), opcode(0),
-		m_break(false), m_breakUser(false), m_halted(false), m_step(false), m_steppingOver(false), m_steppingOut(false), 
+		m_enabled(true), m_break(false), m_breakUser(false), m_halted(false), m_step(false), m_steppingOver(false), m_steppingOut(false), 
 		m_count(0), m_until(false), m_untilAddr(0),
 		m_mappedIOTable(NULL), m_memWatchTable(NULL), m_bpTable(NULL), m_numRegMons(0), m_regMonArray(NULL),
 		m_analyser(NULL), m_stateUpdated(false), m_exRaised(NULL), m_exTrapped(NULL), m_intRaised(NULL), m_intTrapped(NULL), m_bpReached(NULL), 
@@ -49,6 +49,9 @@ namespace Debugger
 		memset(m_exArray, NULL, sizeof(m_exArray));
 		memset(m_intArray, NULL, sizeof(m_intArray));
 		memset(m_portArray, NULL, sizeof(m_portArray));
+
+		UpdateExecMasks();
+		UpdateMemMasks();
 
 #ifdef DEBUGGER_HASTHREAD
 		m_breakWait = false;
@@ -242,6 +245,7 @@ namespace Debugger
 		CMappedIO *mapped = new CMappedIO(this, name, group, dataSize, addr);
 		ios.push_back(mapped);
 		m_mappedIOTable->Add(mapped);
+		UpdateMemMasks();
 		return mapped;
 	}
 
@@ -408,10 +412,22 @@ namespace Debugger
 		debugger->FormatData(str, portFmt, dataSize, (UINT64)portNum);
 	}
 
+	bool CCPUDebug::IsEnabled()
+	{
+		return m_enabled;
+	}
+
+	void CCPUDebug::SetEnabled(bool enabled)
+	{
+		m_enabled = enabled;
+		UpdateExecMasks();
+	}
+
 	void CCPUDebug::ForceBreak(bool user)
 	{
 		m_breakUser |= user;
 		m_break = true;
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::ClearBreak()
@@ -421,6 +437,7 @@ namespace Debugger
 #endif // DEBUGGER_HASTHREAD
 		m_breakUser = false;
 		m_break = false;
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::SetContinue()
@@ -428,6 +445,7 @@ namespace Debugger
 		m_step = false;
 		m_count = 0;
 		m_until = false;
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::SetStepMode(EStepMode stepMode)
@@ -438,6 +456,7 @@ namespace Debugger
 		m_steppingOut = false;
 		m_count = 0;
 		m_until = false;
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::SetCount(int count)
@@ -445,6 +464,7 @@ namespace Debugger
 		m_step = false;
 		m_count = count;
 		m_until = false;
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::SetUntil(UINT32 untilAddr)
@@ -453,6 +473,7 @@ namespace Debugger
 		m_count = 0;
 		m_until = true;
 		m_untilAddr = untilAddr;
+		UpdateExecMasks();
 	}
 
 	bool CCPUDebug::SetPC(UINT32 newPC)
@@ -461,6 +482,7 @@ namespace Debugger
 			return false;
 		pc = newPC;
 		m_stateUpdated = true;
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -469,6 +491,7 @@ namespace Debugger
 		if (!ForceException(ex))
 			return false;
 		m_stateUpdated = true;
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -477,6 +500,7 @@ namespace Debugger
 		if (!ForceInterrupt(in))
 			return false;
 		m_stateUpdated = true;
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -764,6 +788,7 @@ namespace Debugger
 		memWatches.clear();
 		delete m_memWatchTable;
 		m_memWatchTable = NULL;
+		UpdateMemMasks();
 		return true;
 	}
 
@@ -824,6 +849,7 @@ namespace Debugger
 			if (m_memWatchTable == NULL)
 				m_memWatchTable = new CAddressTable();
 			m_memWatchTable->Add(watch);
+			UpdateMemMasks();
 		}
 	}
 
@@ -852,6 +878,7 @@ namespace Debugger
 				delete m_memWatchTable;
 				m_memWatchTable = NULL;
 			}
+			UpdateMemMasks();
 		}
 		delete watch;
 		return true;
@@ -869,6 +896,145 @@ namespace Debugger
 		unsigned num = 0;
 		for (vector<CWatch*>::iterator it = memWatches.begin(); it != memWatches.end(); it++)
 			(*it)->num = num++;
+	}
+
+	void CCPUDebug::UpdateExecMasks()
+	{
+		if (!m_enabled)
+		{
+			m_execAndMask = 0xFFFFFFFF;
+			m_execOrMask = 0xFFFFFFFF;
+		}
+		else if (m_break || m_stateUpdated || m_numRegMons > 0 || m_step || m_count > 0)
+		{
+			m_execAndMask = 0;
+			m_execOrMask = 0;
+		}
+		else if (bps.size() > 0 || m_until)
+		{
+			UINT32 andMask = 0xFFFFFFFF;
+			UINT32 orMask = 0;
+			for (vector<CBreakpoint*>::iterator it = bps.begin(), end = bps.end(); it != end; it++)
+			{
+				UINT32 addr = (*it)->addr;
+				andMask &= addr;
+				orMask |= addr;
+			}
+			if (m_until)
+			{
+				andMask &= m_untilAddr;
+				orMask |= m_untilAddr;
+			}
+			m_execAndMask = andMask;
+			m_execOrMask = ~orMask;
+		}
+		else
+		{
+			m_execAndMask = 0xFFFFFFFF;
+			m_execOrMask = 0xFFFFFFFF;
+		}
+	}
+
+	void CCPUDebug::UpdateMemMasks()
+	{
+		UINT32 and8Mask = 0xFFFFFFFF;
+		UINT32 and16Mask = 0xFFFFFFFF;
+		UINT32 and32Mask = 0xFFFFFFFF;
+		UINT32 and64Mask = 0xFFFFFFFF;
+		UINT32 or8Mask = 0;
+		UINT32 or16Mask = 0;
+		UINT32 or32Mask = 0;
+		UINT32 or64Mask = 0;
+		for (vector<CIO*>::iterator it = ios.begin(), end = ios.end(); it != end; it++)
+		{
+			CMappedIO *mapped = dynamic_cast<CMappedIO*>(*it);
+			if (!mapped)
+				continue;
+			UINT32 addr = mapped->addr;
+			CRegion *region = GetRegion(addr);
+			for (int offset = -7; offset < mapped->size; offset++)
+			{
+				if (offset < 0 && addr < abs(offset) || offset > 0 && addr > 0xFFFFFFFF - offset)
+					continue;
+				UINT32 offAddr = addr + offset;
+				if (!region->CheckAddr(offAddr))
+					continue;
+				if (offset >= 0)
+				{
+					and8Mask &= offAddr;
+					or8Mask |= offAddr;
+					and16Mask &= offAddr;
+					or16Mask |= offAddr;
+					and32Mask &= offAddr;
+					or32Mask |= offAddr;
+					and64Mask &= offAddr;
+					or64Mask |= offAddr;
+				}
+				else
+				{
+					if (offset > -2)
+					{
+						and16Mask &= offAddr;
+						or16Mask |= offAddr;
+					}
+					if (offset > -4)
+					{
+						and32Mask &= offAddr;
+						or32Mask |= offAddr;
+					}
+					and64Mask &= offAddr;
+					or64Mask |= offAddr;
+				}
+			}
+		}
+		for (vector<CWatch*>::iterator it = memWatches.begin(), end = memWatches.end(); it != end; it++)
+		{
+			UINT32 addr = (*it)->addr;
+			CRegion *region = GetRegion(addr);
+			for (int offset = -7; offset < (*it)->size; offset++)
+			{
+				if (offset < 0 && addr < abs(offset) || offset > 0 && addr > 0xFFFFFFFF - offset)
+					continue;
+				UINT32 offAddr = addr + offset;
+				CRegion *offRegion = GetRegion(offAddr);
+				if (!region->CheckAddr(offAddr))
+					continue;
+				if (offset >= 0)
+				{
+					and8Mask &= offAddr;
+					or8Mask |= offAddr;
+					and16Mask &= offAddr;
+					or16Mask |= offAddr;
+					and32Mask &= offAddr;
+					or32Mask |= offAddr;
+					and64Mask &= offAddr;
+					or64Mask |= offAddr;
+				}
+				else
+				{
+					if (offset > -2)
+					{
+						and16Mask &= offAddr;
+						or16Mask |= offAddr;
+					}
+					if (offset > -4)
+					{
+						and32Mask &= offAddr;
+						or32Mask |= offAddr;
+					}
+					and64Mask &= offAddr;
+					or64Mask |= offAddr;
+				}
+			}
+		}
+		m_mem8AndMask = and8Mask;
+		m_mem8OrMask = ~or8Mask;
+		m_mem16AndMask = and16Mask;
+		m_mem16OrMask = ~or16Mask;
+		m_mem32AndMask = and32Mask;
+		m_mem32OrMask = ~or32Mask;
+		m_mem64AndMask = and64Mask;
+		m_mem64OrMask = ~or64Mask;
 	}
 
 	CSimpleBreakpoint *CCPUDebug::AddSimpleBreakpoint(UINT32 addr)
@@ -907,6 +1073,7 @@ namespace Debugger
 		if (m_bpTable == NULL)
 			m_bpTable = new CAddressTable();
 		m_bpTable->Add(bp);
+		UpdateExecMasks();
 	}
 
 	bool CCPUDebug::RemoveBreakpoint(UINT32 addr)
@@ -931,6 +1098,7 @@ namespace Debugger
 			m_bpTable = NULL;
 		}
 		delete bp;
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -943,6 +1111,7 @@ namespace Debugger
 		bps.clear();
 		delete m_bpTable;
 		m_bpTable = NULL;
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -979,6 +1148,7 @@ namespace Debugger
 	{
 		regMons.push_back(regMon);
 		UpdateRegMonArray();
+		UpdateExecMasks();
 	}
 
 	bool CCPUDebug::RemoveRegMonitor(const char *regName)
@@ -997,6 +1167,7 @@ namespace Debugger
 		regMons.erase(it);
 		delete regMon;
 		UpdateRegMonArray();
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -1008,6 +1179,7 @@ namespace Debugger
 			delete *it;
 		regMons.clear();
 		UpdateRegMonArray();
+		UpdateExecMasks();
 		return true;
 	}
 
@@ -1258,6 +1430,7 @@ namespace Debugger
 		m_exTrapped = ex;
 		debugger->ExceptionTrapped(ex);
 		m_break = true;	
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::CPUInterrupt(UINT16 intCode)
@@ -1276,6 +1449,7 @@ namespace Debugger
 		m_intTrapped = in;
 		debugger->InterruptTrapped(in);
 		m_break = true;	
+		UpdateExecMasks();
 	}
 
 	void CCPUDebug::CPUActive()
@@ -1351,6 +1525,7 @@ namespace Debugger
 
 		m_breakWait = true;
 		m_break = true;
+		UpdateExecMasks();
 		m_condVar->Signal();
 
 		m_mutex->Unlock();

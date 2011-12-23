@@ -94,6 +94,7 @@ namespace Debugger
 	friend class CDebugger;
 
 	private:
+		bool m_enabled;
 		bool m_break;
 #ifdef DEBUGGER_HASTHREAD
 		bool m_breakWait;
@@ -110,6 +111,16 @@ namespace Debugger
 		int m_count;
 		bool m_until;
 		UINT32 m_untilAddr;
+		UINT32 m_execAndMask;
+		UINT32 m_execOrMask;
+		UINT32 m_mem8AndMask;
+		UINT32 m_mem8OrMask;
+		UINT32 m_mem16AndMask;
+		UINT32 m_mem16OrMask;
+		UINT32 m_mem32AndMask;
+		UINT32 m_mem32OrMask;
+		UINT32 m_mem64AndMask;
+		UINT32 m_mem64OrMask;
 
 #ifdef DEBUGGER_HASTHREAD
 		CMutex *m_mutex;
@@ -140,6 +151,18 @@ namespace Debugger
 		void AttachToDebugger(CDebugger *theDebugger);
 
 		void DetachFromDebugger(CDebugger *theDebugger);
+		
+		void UpdateRegMonArray();
+
+		void UpdateIOWatchNums();
+	
+		void UpdateMemWatchNums();
+
+		void UpdateExecMasks();
+
+		void UpdateMemMasks();
+
+		bool CheckExecute(UINT32 newPC, UINT32 newOpcode, UINT32 lastCycles);
 		
 	protected:
 		CCodeAnalyser *m_analyser;
@@ -179,7 +202,6 @@ namespace Debugger
 		const UINT8 memBusWidth;
 		const UINT8 maxMnemLen;
 		
-		bool enabled;
 		EFormat addrFmt;
 		EFormat portFmt;
 		EFormat dataFmt;
@@ -368,6 +390,10 @@ namespace Debugger
 		//
 		// Execution control
 		//
+	
+		bool IsEnabled();
+
+		void SetEnabled(bool enabled);
 
 		void ForceBreak(bool user);
 
@@ -481,10 +507,6 @@ namespace Debugger
 
 		bool RemoveWatch(CWatch *watch);
 
-		void UpdateIOWatchNums();
-	
-		void UpdateMemWatchNums();
-
 		//
 		// Breakpoint handling
 		//
@@ -522,8 +544,6 @@ namespace Debugger
 		bool RemoveRegMonitor(CRegMonitor *regMon);
 
 		bool RemoveAllRegMonitors();
-
-		void UpdateRegMonArray();
 
 		//
 		// Code analyser
@@ -626,7 +646,7 @@ namespace Debugger
 
 	inline void CCPUDebug::CheckRead(UINT32 addr, unsigned dataSize, UINT64 data)
 	{
-		// TODO - currently assumes big-endian - should act according to this.bigEndian
+		// TODO - currently assumes big-endian - should act according to this->bigEndian
 		
 		// For reads larger than 1 byte, care is taken with mapped I/O or watches that overlap within the read region
 		while (dataSize > 0)
@@ -673,8 +693,8 @@ namespace Debugger
 
 	inline void CCPUDebug::CheckWrite(UINT32 addr, unsigned dataSize, UINT64 data)
 	{
-		// TODO - currently assumes big-endian - should act according to this.bigEndian
-
+		// TODO - currently assumes big-endian - should act according to this->bigEndian
+		
 		// For writes larger than 1 byte, care is taken with mapped I/O or watches that overlap within the written region
 		while (dataSize > 0)
 		{
@@ -736,6 +756,9 @@ namespace Debugger
 
 	inline void CCPUDebug::CheckRead8(UINT32 addr, UINT8 data)
 	{
+		if ((addr&m_mem8AndMask) != m_mem8AndMask || (addr&m_mem8OrMask) != 0)
+			return;
+
 		// Check if reading from mapped I/O address
 		unsigned dataSize = 1;
 		if (m_mappedIOTable != NULL)
@@ -758,21 +781,27 @@ namespace Debugger
 
 	inline void CCPUDebug::CheckRead16(UINT32 addr, UINT16 data)
 	{
-		CheckRead(addr, 2, data);
+		if ((addr&m_mem16AndMask) == m_mem16AndMask && (addr&m_mem16OrMask) == 0)
+			CheckRead(addr, 2, data);
 	}
 
 	inline void CCPUDebug::CheckRead32(UINT32 addr, UINT32 data)
 	{
-		CheckRead(addr, 4, data);
+		if ((addr&m_mem32AndMask) == m_mem32AndMask && (addr&m_mem32OrMask) == 0)
+			CheckRead(addr, 4, data);
 	}
 
 	inline void CCPUDebug::CheckRead64(UINT32 addr, UINT64 data)
 	{
-		CheckRead(addr, 8, data);
+		if ((addr&m_mem64AndMask) == m_mem64AndMask && (addr&m_mem64OrMask) == 0)
+			CheckRead(addr, 8, data);
 	}
 
 	inline void CCPUDebug::CheckWrite8(UINT32 addr, UINT8 data)
 	{
+		if ((addr&m_mem8AndMask) != m_mem8AndMask || (addr&m_mem8OrMask) != 0)
+			return;
+
 		// Check if writing to mapped I/O address
 		unsigned dataSize = 1;
 		if (m_mappedIOTable != NULL)
@@ -795,17 +824,20 @@ namespace Debugger
 
 	inline void CCPUDebug::CheckWrite16(UINT32 addr, UINT16 data)
 	{
-		CheckWrite(addr, 2, data);
+		if ((addr&m_mem16AndMask) == m_mem16AndMask && (addr&m_mem16OrMask) == 0)
+			CheckWrite(addr, 2, data);
 	}
 
 	inline void CCPUDebug::CheckWrite32(UINT32 addr, UINT32 data)
 	{
-		CheckWrite(addr, 4, data);
+		if ((addr&m_mem32AndMask) == m_mem32AndMask && (addr&m_mem32OrMask) == 0)
+			CheckWrite(addr, 4, data);
 	}
 
 	inline void CCPUDebug::CheckWrite64(UINT32 addr, UINT64 data)
 	{
-		CheckWrite(addr, 8, data);
+		if ((addr&m_mem64AndMask) == m_mem64AndMask && (addr&m_mem64OrMask) == 0)
+			CheckWrite(addr, 8, data);
 	}
 
 	inline void CCPUDebug::CheckPortInput(UINT16 portNum, UINT64 data)
@@ -828,17 +860,22 @@ namespace Debugger
 
 	inline bool CCPUDebug::CPUExecute(UINT32 newPC, UINT32 newOpcode, UINT32 lastCycles)
 	{
-		// Check if debugging is enabled for this CPU
-		if (!enabled)
+		// Check if should check execution flow
+		if ((newPC&m_execAndMask) == m_execAndMask && (newPC&m_execOrMask) == 0)
+			return CheckExecute(newPC, newOpcode, lastCycles);
+		else
 		{
-			// If not, update instruction count, total cycles counts, pc and opcode but don't allow any execution control
+			// If not, then just update instruction count, total cycles counts, pc and opcode
 			instrCount++;
 			totalCycles += lastCycles;
 			pc = newPC;
 			opcode = newOpcode;		
 			return false;
 		}
-
+	}
+	
+	inline bool CCPUDebug::CheckExecute(UINT32 newPC, UINT32 newOpcode, UINT32 lastCycles)
+	{
 		// Check not just updating state
 		bool stepBreak, countBreak, untilBreak;
 		if (!m_stateUpdated)
@@ -967,6 +1004,7 @@ namespace Debugger
 			m_memWatchTriggered = NULL;
 			m_ioWatchTriggered = NULL;
 			m_regMonTriggered = NULL;
+			UpdateExecMasks();
 		
 			// Wait for instruction from user
 			WaitCommand(reason);

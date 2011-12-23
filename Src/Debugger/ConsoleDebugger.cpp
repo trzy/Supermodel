@@ -305,7 +305,7 @@ namespace Debugger
 			if (!ParseCPU(token, cpu))
 				return false;
 			
-			if (!cpu->enabled)
+			if (!cpu->IsEnabled())
 			{
 				Error("CPU %s is currently disabled for debugging.\n", cpu->name);
 				return false;
@@ -329,7 +329,7 @@ namespace Debugger
 				Error("Cannot enable/disable debugging on current CPU.\n");
 				return false;
 			}
-			cpu->enabled = false;
+			cpu->SetEnabled(false);
 			Print("Disabled debugging on CPU %s.\n", cpu->name);
 		}
 		else if (CheckToken(token, "ec", "enablecpu"))				// enablecpu (<name>|<num>)
@@ -345,7 +345,7 @@ namespace Debugger
 				Error("Cannot enable/disable debugging on current CPU.\n");
 				return false;
 			}
-			cpu->enabled = true;
+			cpu->SetEnabled(true);
 			Print("Enabled debugging on CPU %s.\n", cpu->name);
 		}
 		//
@@ -1966,7 +1966,7 @@ namespace Debugger
 		for (vector<CCPUDebug*>::iterator it = cpus.begin(); it != cpus.end(); it++)
 		{
 			onCPU = (*it == m_cpu ? '*': ' ');
-			debugStr = ((*it)->enabled ? "Enabled" : "Disabled");
+			debugStr = ((*it)->IsEnabled() ? "Enabled" : "Disabled");
 			stateStr = ((*it)->active ? "Running" : "Waiting");
 			
 			if ((*it)->instrCount > 0)
