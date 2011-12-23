@@ -951,7 +951,8 @@ namespace Debugger
 				continue;
 			UINT32 addr = mapped->addr;
 			CRegion *region = GetRegion(addr);
-			for (int offset = -7; offset < mapped->size; offset++)
+			int intSize = (int)mapped->size;
+			for (int offset = -7; offset < intSize; offset++)
 			{
 				if (offset < 0 && addr < abs(offset) || offset > 0 && addr > 0xFFFFFFFF - offset)
 					continue;
@@ -990,7 +991,8 @@ namespace Debugger
 		{
 			UINT32 addr = (*it)->addr;
 			CRegion *region = GetRegion(addr);
-			for (int offset = -7; offset < (*it)->size; offset++)
+			int intSize = (int)(*it)->size;
+			for (int offset = -7; offset < intSize; offset++)
 			{
 				if (offset < 0 && addr < abs(offset) || offset > 0 && addr > 0xFFFFFFFF - offset)
 					continue;
