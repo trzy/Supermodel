@@ -2714,7 +2714,7 @@ static void Dump(const char *file, UINT8 *buf, unsigned size, bool reverse32, bo
 #define OFFSET_DRIVEROM		0xF0E0000	// 64 KB
 #define MEMORY_POOL_SIZE	(0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000)
 
-// 64-bit magic number to use detect if ROM was loaded
+// 64-bit magic number used to detect loading of optional ROMs
 #define MAGIC_NUMBER	0x4C444D5245505553ULL
 
 const struct GameInfo * CModel3::GetGameInfo(void)
