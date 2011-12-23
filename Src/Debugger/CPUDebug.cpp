@@ -50,9 +50,6 @@ namespace Debugger
 		memset(m_intArray, NULL, sizeof(m_intArray));
 		memset(m_portArray, NULL, sizeof(m_portArray));
 
-		UpdateExecMasks();
-		UpdateMemMasks();
-
 #ifdef DEBUGGER_HASTHREAD
 		m_breakWait = false;
 		m_mutex = CThread::CreateMutex();
@@ -106,6 +103,9 @@ namespace Debugger
 
 	void CCPUDebug::AttachToDebugger(CDebugger *theDebugger)
 	{
+		UpdateExecMasks();
+		UpdateMemMasks();
+
 		debugger = theDebugger;
 	}
 
@@ -245,7 +245,6 @@ namespace Debugger
 		CMappedIO *mapped = new CMappedIO(this, name, group, dataSize, addr);
 		ios.push_back(mapped);
 		m_mappedIOTable->Add(mapped);
-		UpdateMemMasks();
 		return mapped;
 	}
 
@@ -996,7 +995,6 @@ namespace Debugger
 				if (offset < 0 && addr < abs(offset) || offset > 0 && addr > 0xFFFFFFFF - offset)
 					continue;
 				UINT32 offAddr = addr + offset;
-				CRegion *offRegion = GetRegion(offAddr);
 				if (!region->CheckAddr(offAddr))
 					continue;
 				if (offset >= 0)
