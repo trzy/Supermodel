@@ -70,15 +70,9 @@ static FILE		*soundFP;
 void CSoundBoard::UpdateROMBanks(void)
 {
 	if ((ctrlReg&0x10))
-	{
-		sampleBankLo = &sampleROM[0xA00000];
-		sampleBankHi = &sampleROM[0xE00000];
-	}
+		sampleBank = &sampleROM[0x800000];
 	else
-	{
-		sampleBankLo = &sampleROM[0x200000];
-		sampleBankHi = &sampleROM[0x600000];
-	}
+		sampleBank = &sampleROM[0x000000];
 }
 
 UINT8 CSoundBoard::Read8(UINT32 a)
@@ -100,19 +94,15 @@ UINT8 CSoundBoard::Read8(UINT32 a)
 	case 0x6:	// Program ROM: 600000-67FFFF (unlike real hardware, we mirror up to 6FFFFF here)	
 		return soundROM[(a&0x07FFFF)^1];
 	
-	case 0x8:	// Sample ROM (low 2MB, fixed): 800000-9FFFFF
-	case 0x9:
-		return sampleROM[(a&0x1FFFFF)^1];
-	
-	case 0xA:	// Sample ROM (bank): A00000-DFFFFF
+	case 0x8:	// Sample ROM bank: 800000-FFFFFF
+	case 0x9:	
+	case 0xA:
 	case 0xB:
 	case 0xC:
 	case 0xD:
-		return sampleBankLo[(a-0xA00000)^1];
-
-	case 0xE:	// Sample ROM (bank): E00000-FFFFFF
+	case 0xE:
 	case 0xF:
-		return sampleBankHi[(a&0x1FFFFF)^1];
+		return sampleBank[(a&0x7FFFFF)^1];
 		
 	default:
 		//printf("68K: Unknown read8 %06X\n", a);
@@ -123,7 +113,7 @@ UINT8 CSoundBoard::Read8(UINT32 a)
 }
 
 UINT16 CSoundBoard::Read16(UINT32 a) 
-{ 
+{ 	
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
@@ -141,19 +131,15 @@ UINT16 CSoundBoard::Read16(UINT32 a)
 	case 0x6:	// Program ROM: 600000-67FFFF
 		return *(UINT16 *) &soundROM[a&0x07FFFF];
 	
-	case 0x8:	// Sample ROM (low 2MB, fixed): 800000-9FFFFF
-	case 0x9:
-		return *(UINT16 *) &sampleROM[a&0x1FFFFF];
-	
-	case 0xA:	// Sample ROM (bank): A00000-DFFFFF
+	case 0x8:	// Sample ROM bank: 800000-FFFFFF
+	case 0x9:	
+	case 0xA:
 	case 0xB:
 	case 0xC:
 	case 0xD:
-		return *(UINT16 *) &sampleBankLo[a-0xA00000];
-
-	case 0xE:	// Sample ROM (bank): E00000-FFFFFF
+	case 0xE:
 	case 0xF:
-		return *(UINT16 *) &sampleBankHi[a&0x1FFFFF];
+		return *(UINT16 *) sampleBank[a&0x7FFFFF];
 		
 	default:
 		//printf("68K: Unknown read16 %06X\n", a);
@@ -189,25 +175,17 @@ UINT32 CSoundBoard::Read32(UINT32 a)
 		hi = *(UINT16 *) &soundROM[a&0x07FFFF];
 		lo = *(UINT16 *) &soundROM[(a+2)&0x07FFFF];
 		return (hi<<16)|lo;
-	
-	case 0x8:	// Sample ROM (low 2MB, fixed): 800000-9FFFFF
-	case 0x9:
-		hi = *(UINT16 *) &sampleROM[a&0x1FFFFF];
-		lo = *(UINT16 *) &sampleROM[(a+2)&0x1FFFFF];
-		return (hi<<16)|lo;
-	
-	case 0xA:	// Sample ROM (bank): A00000-DFFFFF
+
+	case 0x8:	// Sample ROM bank: 800000-FFFFFF
+	case 0x9:	
+	case 0xA:
 	case 0xB:
 	case 0xC:
 	case 0xD:
-		hi = *(UINT16 *) &sampleBankLo[a-0xA00000];
-		lo = *(UINT16 *) &sampleBankLo[a+2-0xA00000];
-		return (hi<<16)|lo;
-
-	case 0xE:	// Sample ROM (bank): E00000-FFFFFF
+	case 0xE:
 	case 0xF:
-		hi = *(UINT16 *) &sampleBankHi[a&0x1FFFFF];
-		lo = *(UINT16 *) &sampleBankHi[(a+2)&0x1FFFFF];
+		hi = *(UINT16 *) &sampleBank[a&0x7FFFFF];
+		lo = *(UINT16 *) &sampleBank[(a+2)&0x7FFFFF];
 		return (hi<<16)|lo;
 		
 	default:

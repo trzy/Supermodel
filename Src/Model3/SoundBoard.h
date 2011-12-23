@@ -205,8 +205,7 @@ private:
 	// Sound board memory
 	const UINT8	*soundROM;		// 68K program ROM (passed in from parent object)
 	const UINT8	*sampleROM;		// 68K sample ROM (passed in from parent object)
-	const UINT8	*sampleBankLo;	// sample ROM bank switching
-	const UINT8	*sampleBankHi;
+	const UINT8	*sampleBank;	// sample ROM bank switching (points to high or low 8MB)
 	UINT8		*memoryPool;	// single allocated region for all sound board RAM
 	UINT8		*ram1, *ram2;	// SCSP1 and SCSP2 RAM
 	
