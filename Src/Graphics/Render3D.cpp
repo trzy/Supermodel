@@ -28,6 +28,9 @@
  * Optimization To-Do List
  * -----------------------
  *
+ * 0. Optimize backface culling. Is it possible to compute normal matrix only
+ *    when needed? Should also be more careful about OpenGL state info, such as
+ *    the winding mode.
  * 1. Do not store matrices in a uniform, use glLoadMatrix() in MODELVIEW mode.
  *    It will no longer be necessary to compute normal matrix!
  * 2. Move stuff into vertex shader (vision by 2048? Subtract of 0.5,0.5 for bilinear filtering?)
@@ -481,7 +484,7 @@ void CRender3D::MultMatrix(UINT32 matrixOffset)
 	
 	glMultMatrixf(m);
 }
-	
+
 /*
  * InitMatrixStack():
  *
@@ -1222,6 +1225,7 @@ void CRender3D::RenderFrame(void)
 		DrawDisplayList(&VROMCache, POLY_STATE_ALPHA);
 		DrawDisplayList(&PolyCache, POLY_STATE_ALPHA);
 	}
+	glFrontFace(GL_CW);	// restore front face
 	
 	// Disable VBO client states
 	glDisableVertexAttribArray(fogIntensityLoc);
@@ -1233,7 +1237,7 @@ void CRender3D::RenderFrame(void)
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);	
+	glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void CRender3D::EndFrame(void)

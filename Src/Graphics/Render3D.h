@@ -102,6 +102,7 @@ struct DisplayList
 			GLfloat		modelViewMatrix[4*4];	// model-view matrix
 			unsigned	index;					// index in VBO
 			unsigned	numVerts;				// number of vertices
+			GLint		frontFace;				// GL_CW (default), GL_CCW, or -GL_CW to indicate no culling
 		} Model;
 	} Data;
 			
