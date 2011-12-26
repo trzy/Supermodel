@@ -139,7 +139,7 @@ UINT16 CSoundBoard::Read16(UINT32 a)
 	case 0xD:
 	case 0xE:
 	case 0xF:
-		return *(UINT16 *) sampleBank[a&0x7FFFFF];
+		return *(UINT16 *) &sampleBank[a&0x7FFFFF];
 		
 	default:
 		//printf("68K: Unknown read16 %06X\n", a);
