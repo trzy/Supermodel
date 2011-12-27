@@ -38,7 +38,7 @@
  Program-Wide Definitions
 ******************************************************************************/
 
-#define SUPERMODEL_VERSION	"0.2a"	// version string 
+#define SUPERMODEL_VERSION	"0.3a-WIP"	// version string 
 
 
 /******************************************************************************
