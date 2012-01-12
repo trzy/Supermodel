@@ -47,7 +47,8 @@ ENABLE_DEBUGGER = no
 #
 # SDL
 #
-SDL_LIBPATH = `sdl-config --libs`
+SDL_CFLAGS = `sdl-config --cflags`
+SDL_LIBFLAGS = `sdl-config --libs`
 
 
 ###############################################################################
@@ -66,10 +67,10 @@ OUTFILE = $(BIN_DIR)/Supermodel
 
 CC = gcc
 LD = gcc
-COMPILER_FLAGS = `sdl-config --cflags` -ISrc/ -ISrc/OSD/SDL/ -ISrc/Pkgs/ -c -Wall -O3
+COMPILER_FLAGS = $(SDL_CFLAGS) -ISrc/ -ISrc/OSD/SDL/ -ISrc/Pkgs/ -c -Wall -O3
 CFLAGS = $(COMPILER_FLAGS)
 CPPFLAGS = $(COMPILER_FLAGS)
-LFLAGS = -o $(OUTFILE) -L$(SDL_LIBPATH) -lGL -lGLU -lSDL -lz -lm -lstdc++
+LFLAGS = -o $(OUTFILE) $(SDL_LIBFLAGS) -lGL -lGLU -lz -lm -lstdc++
 
 #
 # Build options...
@@ -115,7 +116,7 @@ endif
 # Targets
 #
 all:	$(BIN_DIR) $(OBJ_DIR) $(OBJ)
-	$(LD) $(LFLAGS) $(OBJ_LIBS) $(OBJ)
+	$(LD) $(OBJ_LIBS) $(OBJ) $(LFLAGS)
 
 $(BIN_DIR):
 	mkdir $(BIN_DIR) 
