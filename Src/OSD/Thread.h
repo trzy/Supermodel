@@ -48,6 +48,20 @@ private:
 
 public:
 	/*
+	 * Sleep
+	 *
+	 * Sleeps for specified number of milliseconds.
+	 */
+	static void Sleep(UINT32 ms);
+	
+	/*
+	 * GetTicks
+	 *
+	 * Gets number of millseconds since beginning of program.
+	 */
+	static UINT32 GetTicks();
+	
+	/*
      * CreateThread
 	 *
 	 * Creates a new thread with the given ThreadStart callback and start parameter.  The thread starts running immediately.

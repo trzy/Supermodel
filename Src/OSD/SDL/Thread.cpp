@@ -35,6 +35,16 @@
 #include <SDL_thread.h>
 #endif
 
+void CThread::Sleep(UINT32 ms)
+{
+	SDL_Delay(ms);
+}
+
+UINT32 CThread::GetTicks()
+{
+	return SDL_GetTicks();
+}
+
 CThread *CThread::CreateThread(ThreadStart start, void *startParam)
 {
 	SDL_Thread *impl = SDL_CreateThread(start, startParam);
