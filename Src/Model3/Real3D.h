@@ -29,6 +29,20 @@
 #ifndef INCLUDED_REAL3D_H
 #define INCLUDED_REAL3D_H
 
+/* 
+ * QueuedUploadTextures:
+ *
+ * When rendering is multi-threaded, this struct is used to represent a postponed
+ * call to CRender3D::UploadTextures that will be performed by the render thread
+ * at the beginning of the next frame, rather than directly in the PPC thread.
+ */
+struct QueuedUploadTextures
+{
+	unsigned x;
+	unsigned y;
+	unsigned width;
+	unsigned height;
+};
 
 /*
  * CReal3D:
@@ -60,28 +74,56 @@ public:
 	 *		SaveState	Block file to load state information from.
 	 */
 	void LoadState(CBlockFile *SaveState);
+
+	/*
+	 * BeginVBlank(void):
+	 *
+	 * Must be called before the VBlank starts.
+	 */
+	void BeginVBlank(void);
 	
 	/*
-	 * RenderFrame(void):
+	 * EndVBlank(void)
 	 *
-	 * Traverses the scene database and renders a frame. Must be called after
-	 * BeginFrame() but before EndFrame().
+	 * Must be called after the VBlank finishes.
 	 */
-	void RenderFrame(void);
-	
+	void EndVBlank(void);
+
+	/*
+	 * SyncSnapshots(void):
+	 *
+	 * Syncs the read-only memory snapshots with the real ones so that rendering
+	 * of the current frame can begin in the render thread.  Must be called at the
+	 * end of each frame when both the render thread and the PPC thread have finished
+	 * their work.  If multi-threaded rendering is not enabled, then this method does
+	 * nothing.
+	 */
+	UINT32 SyncSnapshots(void);
+
 	/*
 	 * BeginFrame(void):
 	 *
-	 * Prepare to render a new frame. Must be called once per frame prior to
-	 * drawing anything.
+	 * Prepares to render a new frame.  Must be called once per frame prior to
+	 * drawing anything and must only access read-only snapshots and variables
+     * since it may be running in a separate thread.
 	 */
 	void BeginFrame(void);
 	
 	/*
+	 * RenderFrame(void):
+	 *
+	 * Traverses the scene database and renders a frame.  Must be called after
+	 * BeginFrame() but before EndFrame() and must only access read-only snapshots
+	 * and variables since it may be running in a separate thread.
+	 */
+	void RenderFrame(void);
+
+	/*
 	 * EndFrame(void):
 	 *
-	 * Signals the end of rendering for this frame. Must be called last during
-	 * the frame.
+	 * Signals the end of rendering for this frame.  Must be called last during
+	 * the frame and must only access read-only snapshots and variables since it
+	 * may be running in a separate thread.
 	 */
 	void EndFrame(void);
 	
@@ -342,7 +384,9 @@ private:
 	unsigned	Shift(UINT8 *data, unsigned numBits);
 	void		StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, UINT16 *texData, unsigned bytesPerTexel);
 	void		UploadTexture(UINT32 header, UINT16 *texData);
-			
+	UINT32		UpdateSnapshots(bool copyWhole);
+	UINT32		UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty);
+
 	// Renderer attached to the Real3D
 	CRender3D	*Render3D;
 	
@@ -353,17 +397,33 @@ private:
 	
 	// Error flag (to limit errors to once per frame)
 	bool		error;		// true if an error occurred this frame
-	
+
 	// Real3D memory
-	UINT8		*memoryPool;	// all memory allocated here
-	UINT32		*cullingRAMLo;	// 4MB of culling RAM at 8C000000
-	UINT32		*cullingRAMHi;	// 1MB of culling RAM at 8E000000
-	UINT32		*polyRAM;		// 4MB of polygon RAM at 98000000
-	UINT16		*textureRAM;	// 8MB of internal texture RAM
-	UINT32		*textureFIFO;	// 1MB texture FIFO at 0x94000000
-	unsigned	fifoIdx;		// index into texture FIFO
+	UINT8		*memoryPool;	    // all memory allocated here
+	UINT32		*cullingRAMLo;	    // 4MB of culling RAM at 8C000000
+	UINT32		*cullingRAMHi;	    // 1MB of culling RAM at 8E000000
+	UINT32		*polyRAM;		    // 4MB of polygon RAM at 98000000
+	UINT16		*textureRAM;	    // 8MB of internal texture RAM
+	UINT32		*textureFIFO;	    // 1MB texture FIFO at 0x94000000
+	unsigned	fifoIdx;		    // index into texture FIFO
 	UINT32		vromTextureAddr;	// VROM texture port address data
 	UINT32		vromTextureHeader;	// VROM texture port header data
+	
+	// Read-only snapshots
+	UINT32		*cullingRAMLoRO;    // 4MB of culling RAM at 8C000000 [read-only snapshot]
+	UINT32		*cullingRAMHiRO;    // 1MB of culling RAM at 8E000000 [read-only snapshot]
+	UINT32		*polyRAMRO;	        // 4MB of polygon RAM at 98000000 [read-only snapshot]
+	UINT16		*textureRAMRO;	    // 8MB of internal texture RAM    [read-only snapshot]
+	
+	// Arrays to keep track of dirty pages in memory regions
+	UINT8       *cullingRAMLoDirty;
+	UINT8       *cullingRAMHiDirty;
+	UINT8       *polyRAMDirty;
+	UINT8       *textureRAMDirty;
+
+	// Queued texture uploads
+	vector<QueuedUploadTextures> queuedUploadTextures;
+	vector<QueuedUploadTextures> queuedUploadTexturesRO;  // Read-only copy of queue
 	
 	// Big endian bus object for DMA memory access
 	CBus	*Bus;
@@ -383,6 +443,7 @@ private:
 	
 	// Command port
 	bool	commandPortWritten;
+	bool    commandPortWrittenRO;       // Read-only copy of flag
 	
 	// Status and command registers
 	UINT32	status;
@@ -394,7 +455,6 @@ private:
 	unsigned	tapIDSize;				// size of ID data in bits
 	unsigned	tapTDO;					// bit shifted out to TDO
 	int			tapState;				// current state
-
 };
 
 

@@ -101,10 +101,11 @@ public:
 	CSwitchInput	*uiMusicVolDown;
 	CSwitchInput	*uiSoundVolUp;
 	CSwitchInput	*uiSoundVolDown;
-	CSwitchInput    *uiDumpInpState;
 	CSwitchInput    *uiClearNVRAM;
 	CSwitchInput    *uiSelectCrosshairs;
 	CSwitchInput	*uiToggleFrLimit;
+	CSwitchInput    *uiDumpInpState;
+	CSwitchInput    *uiDumpTimings;
 #ifdef SUPERMODEL_DEBUGGER
 	CSwitchInput     *uiEnterDebugger;
 #endif

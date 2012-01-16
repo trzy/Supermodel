@@ -59,21 +59,48 @@ public:
 	void LoadState(CBlockFile *SaveState);
 	
 	/*
+	 * BeginVBlank(void):
+	 *
+	 * Must be called before the VBlank starts.
+	 */
+	void BeginVBlank(void);
+	
+	/*
+	 * EndVBlank(void)
+	 *
+	 * Must be called after the VBlank finishes.
+	 */
+	void EndVBlank(void);
+
+	/*
+	 * SyncSnapshots(void):
+	 *
+	 * Syncs the read-only memory snapshots with the real ones so that rendering
+	 * of the current frame can begin in the render thread.  Must be called at the
+	 * end of each frame when both the render thread and the PPC thread have finished
+	 * their work.  If multi-threaded rendering is not enabled, then this method does
+	 * nothing.
+	 */
+	UINT32 SyncSnapshots(void);
+
+	/*
 	 * BeginFrame(void):
 	 *
-	 * Prepare to render a new frame. Must be called once per frame prior to
-	 * drawing anything.
+	 * Prepares to render a new frame.  Must be called once per frame prior to
+	 * drawing anything and must only access read-only snapshots and variables
+     * since it may be running in a separate thread.
 	 */
 	void BeginFrame(void);
-	
+
 	/*
 	 * EndFrame(void):
 	 *
-	 * Signals the end of rendering for this frame. Must be called last during
-	 * the frame.
+	 * Signals the end of rendering for this frame.  Must be called last during
+	 * the frame and must only access read-only snapshots and variables since it
+	 * may be running in a separate thread.
 	 */
 	void EndFrame(void);
-	
+
 	/*
 	 * ReadRAM(addr):
 	 *
@@ -163,14 +190,32 @@ public:
 	~CTileGen(void);
 	
 private:
+	// Private member functions
+	void		InitPalette(void);
+	void		WritePalette(unsigned color, UINT32 data);
+	UINT32		UpdateSnapshots(bool copyWhole);
+	UINT32		UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty);
+	
 	CIRQ		*IRQ;		// IRQ controller the tile generator is attached to
 	CRender2D	*Render2D;	// 2D renderer the tile generator is attached to
 	
 	// Tile generator VRAM
 	UINT8	*memoryPool;	// all memory allocated here
+	UINT8   *vram;          // 1.8MB of VRAM
+	UINT32	*pal;			// 0x20000 byte (32K colors) palette
+
+	// Read-only snapshots
+	UINT8   *vramRO;        // 1.8MB of VRAM                     [read-only snapshot]	
+	UINT32  *palRO;	        // 0x20000 byte (32K colors) palette [read-only snapshot]
 	
+	// Arrays to keep track of dirty pages in memory regions
+	UINT8   *vramDirty;
+	UINT8   *palDirty;
+
 	// Registers
 	UINT32	regs[64];
+	UINT32  regsRO[64];     // Read-only copy of registers
+	
 };
 
 

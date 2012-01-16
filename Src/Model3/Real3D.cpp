@@ -44,14 +44,30 @@
 #include <cstring>
 #include "Supermodel.h"
 
-// Offsets of memory regions within Real3D memory pool
-#define OFFSET_8C			0			// 4 MB, culling RAM low (at 0x8C000000)
-#define OFFSET_8E			0x400000	// 1 MB, culling RAM high (at 0x8E000000)
-#define OFFSET_98			0x500000	// 4 MB, polygon RAM (at 0x98000000)
-#define OFFSET_TEXRAM		0x900000	// 8 MB, texture RAM
-#define OFFSET_TEXFIFO		0x1100000	// 1 MB, texture FIFO
-#define MEMORY_POOL_SIZE	(0x400000+0x100000+0x400000+0x800000+0x100000)
+// Macros that divide memory regions into pages and mark them as dirty when they are written to
+#define PAGE_WIDTH 12
+#define PAGE_SIZE (1<<PAGE_WIDTH)
+#define DIRTY_SIZE(arraySize) (1+(arraySize-1)/(8*PAGE_SIZE))
+#define MARK_DIRTY(dirtyArray, addr) dirtyArray[addr>>(PAGE_WIDTH+3)] |= 1<<((addr>>PAGE_WIDTH)&7)
 
+// Offsets of memory regions within Real3D memory pool
+#define OFFSET_8C			0x0000000	// 4 MB, culling RAM low (at 0x8C000000)
+#define OFFSET_8E			0x0400000	// 1 MB, culling RAM high (at 0x8E000000)
+#define OFFSET_98			0x0500000	// 4 MB, polygon RAM (at 0x98000000)
+#define OFFSET_TEXRAM		0x0900000	// 8 MB, texture RAM
+#define OFFSET_TEXFIFO		0x1100000	// 1 MB, texture FIFO
+#define MEM_POOL_SIZE_RW    (0x400000+0x100000+0x400000+0x800000+0x100000)
+#define OFFSET_8C_RO		0x1200000	// 4 MB, culling RAM low (at 0x8C000000)  [read-only snapshot]
+#define OFFSET_8E_RO		0x1600000	// 1 MB, culling RAM high (at 0x8E000000) [read-only snapshot]
+#define OFFSET_98_RO		0x1700000	// 4 MB, polygon RAM (at 0x98000000)      [read-only snapshot]
+#define OFFSET_TEXRAM_RO	0x1B00000	// 8 MB, texture RAM                      [read-only snapshot]
+#define MEM_POOL_SIZE_RO    (0x400000+0x100000+0x400000+0x800000)
+#define OFFSET_8C_DIRTY     0x2300000
+#define OFFSET_8E_DIRTY     (OFFSET_8C_DIRTY+DIRTY_SIZE(0x400000))
+#define OFFSET_98_DIRTY     (OFFSET_8E_DIRTY+DIRTY_SIZE(0x100000))
+#define OFFSET_TEXRAM_DIRTY (OFFSET_98_DIRTY+DIRTY_SIZE(0x400000))
+#define MEM_POOL_SIZE_DIRTY (DIRTY_SIZE(MEM_POOL_SIZE_RO))
+#define MEMORY_POOL_SIZE	(MEM_POOL_SIZE_RW+MEM_POOL_SIZE_RO+MEM_POOL_SIZE_DIRTY)
 
 /******************************************************************************
  Save States
@@ -61,7 +77,7 @@ void CReal3D::SaveState(CBlockFile *SaveState)
 {
 	SaveState->NewBlock("Real3D", __FILE__);
 	
-	SaveState->Write(memoryPool, MEMORY_POOL_SIZE);
+	SaveState->Write(memoryPool, MEM_POOL_SIZE_RW); // Don't write out read-only snapshots or dirty page arrays
 	SaveState->Write(&fifoIdx, sizeof(fifoIdx));
 	SaveState->Write(&vromTextureAddr, sizeof(vromTextureAddr));
 	SaveState->Write(&vromTextureHeader, sizeof(vromTextureHeader));
@@ -90,8 +106,11 @@ void CReal3D::LoadState(CBlockFile *SaveState)
 		return;
 	}
 	
-	SaveState->Read(memoryPool, MEMORY_POOL_SIZE);
-	Render3D->UploadTextures(0,0,2048,2048);
+	SaveState->Read(memoryPool, MEM_POOL_SIZE_RW);
+	// If multi-threaded, update read-only snapshots too
+	if (g_Config.gpuMultiThreaded)
+		UpdateSnapshots(true);
+	Render3D->UploadTextures(0, 0, 2048, 2048);
 	SaveState->Read(&fifoIdx, sizeof(fifoIdx));
 	SaveState->Read(&vromTextureAddr, sizeof(vromTextureAddr));
 	SaveState->Read(&vromTextureHeader, sizeof(vromTextureHeader));
@@ -117,23 +136,111 @@ void CReal3D::LoadState(CBlockFile *SaveState)
  Rendering
 ******************************************************************************/
 
-void CReal3D::RenderFrame(void)
+void CReal3D::BeginVBlank(void)
 {
-	//if (commandPortWritten)
-		Render3D->RenderFrame();
+	status |= 2;	// VBlank bit
+}
+
+void CReal3D::EndVBlank(void)
+{
+	error = false;	// clear error (just needs to be done once per frame)
+	status &= ~2;
+}
+
+UINT32 CReal3D::SyncSnapshots(void)
+{
+	// Update read-only copy of command port flag
+	commandPortWrittenRO = commandPortWritten;
 	commandPortWritten = false;
+
+	if (!g_Config.gpuMultiThreaded)
+		return 0;
+
+	// Update read-only queue
+	queuedUploadTexturesRO = queuedUploadTextures;
+	queuedUploadTextures.clear();
+
+	// Update read-only snapshots
+	return UpdateSnapshots(false);
+}
+
+UINT32 CReal3D::UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty)
+{
+	unsigned dirtySize = DIRTY_SIZE(size);
+	if (copyWhole)
+	{
+		// If updating whole region, then just copy all data in one go
+		memcpy(dst, src, size);
+		memset(dirty, 0, dirtySize);
+		return size;
+	}
+	else
+	{
+		// Otherwise, loop through dirty pages array to find out what needs to be updated and copy only those parts
+		UINT32 copied = 0;
+		UINT8 *pSrc = src;
+		UINT8 *pDst = dst;
+		for (unsigned i = 0; i < dirtySize; i++)
+		{
+			UINT8 d = dirty[i];
+			if (d)
+			{
+				for (unsigned j = 0; j < 8; j++)
+				{
+					if (d&1)
+					{
+						// If not at very end of region, then copy an extra 4 bytes to allow for a possible 32-bit overlap
+						UINT32 toCopy = (i < dirtySize - 1 || j < 7 ? PAGE_SIZE + 4 : PAGE_SIZE);
+						memcpy(pDst, pSrc, toCopy);
+						copied += toCopy;
+					}
+					d >>= 1;
+					pSrc += PAGE_SIZE;	
+					pDst += PAGE_SIZE;
+				}
+				dirty[i] = 0;
+			}
+			else
+			{
+				pSrc += 8 * PAGE_SIZE;	
+				pDst += 8 * PAGE_SIZE;
+			}
+		}
+		return copied;
+	}
+}
+
+UINT32 CReal3D::UpdateSnapshots(bool copyWhole)
+{
+	// Update all memory region snapshots
+	UINT32 cullLoCopied  = UpdateSnapshot(copyWhole, (UINT8*)cullingRAMLo, (UINT8*)cullingRAMLoRO, 0x400000, cullingRAMLoDirty);
+	UINT32 cullHiCopied  = UpdateSnapshot(copyWhole, (UINT8*)cullingRAMHi, (UINT8*)cullingRAMHiRO, 0x100000, cullingRAMHiDirty);
+	UINT32 polyCopied    = UpdateSnapshot(copyWhole, (UINT8*)polyRAM,      (UINT8*)polyRAMRO,      0x400000, polyRAMDirty);
+	UINT32 textureCopied = UpdateSnapshot(copyWhole, (UINT8*)textureRAM,   (UINT8*)textureRAMRO,   0x800000, textureRAMDirty);
+	//printf("Read3D copied - cullLo:%4uK, cullHi:%4uK, poly:%4uK, texture:%4uK\n", cullLoCopied / 1024, cullHiCopied / 1024, polyCopied / 1024, textureCopied / 1024);
+	return cullLoCopied + cullHiCopied + polyCopied + textureCopied;
 }
 
 void CReal3D::BeginFrame(void)
 {
-	status |= 2;	// VBlank bit
+	// If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
+	if (g_Config.gpuMultiThreaded)
+	{
+		for (vector<QueuedUploadTextures>::iterator it = queuedUploadTexturesRO.begin(), end = queuedUploadTexturesRO.end(); it != end; it++)
+			Render3D->UploadTextures(it->x, it->y, it->width, it->height);
+	}
+
 	Render3D->BeginFrame();
+}
+
+void CReal3D::RenderFrame(void)
+{
+	//if (commandPortWrittenRO)
+		Render3D->RenderFrame();
 }
 
 void CReal3D::EndFrame(void)
 {
-	error = false;	// clear error (just needs to be done once per frame)
-	status &= ~2;
 	Render3D->EndFrame();
 }
 
@@ -528,7 +635,12 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
 				for (yy = 0; yy < 8; yy++)
 				{
 					for (xx = 0; xx < 8; xx++)
+					{	
+						if (g_Config.gpuMultiThreaded)
+							MARK_DIRTY(textureRAMDirty, destOffset * 2);
 						textureRAM[destOffset++] = texData[decode[(yy*8+xx)^1]];
+					}
+
 					destOffset += 2048-8;	// next line
 				}
 				texData += 8*8;	// next tile
@@ -554,7 +666,11 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
 				{
 					for (xx = 0; xx < 8; xx += 2)
 					{
+						if (g_Config.gpuMultiThreaded)
+							MARK_DIRTY(textureRAMDirty, destOffset * 2);
 						textureRAM[destOffset++] = texData[decode[(yy^1)*8+((xx+0)^1)]/2]>>8;
+						if (g_Config.gpuMultiThreaded)
+							MARK_DIRTY(textureRAMDirty, destOffset * 2);
 						textureRAM[destOffset++] = texData[decode[(yy^1)*8+((xx+1)^1)]/2]&0xFF;
 
 					}
@@ -564,6 +680,21 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
 			}
 		}
 	}
+
+	// Signal to renderer that textures have changed
+	// TO-DO: mipmaps? What if a game writes non-mipmap textures to mipmap area?
+	if (g_Config.gpuMultiThreaded)
+	{
+		// If multi-threaded, then queue calls to UploadTextures for render thread to perform at beginning of next frame
+		QueuedUploadTextures upl;
+		upl.x = xPos;
+		upl.y = yPos;
+		upl.width = width;
+		upl.height = height;
+		queuedUploadTextures.push_back(upl);
+	}
+	else
+		Render3D->UploadTextures(xPos, yPos, width, height);
 }
 
 // Texture data will be in little endian format
@@ -651,11 +782,6 @@ void CReal3D::UploadTexture(UINT32 header, UINT16 *texData)
 		//printf("unknown texture format %02X\n", header>>24);
 		break;
 	}
-	
-	// Signal to renderer that textures have changed
-	// TO-DO: mipmaps? What if a game writes non-mipmap textures to mipmap area?
-	//Render3D->UploadTextures(x,y,width,height);
-	Render3D->UploadTextures(0,0,2048,2048);	// TO-DO: should not have to upload all 2048x2048 texels
 }
 
 
@@ -736,16 +862,22 @@ void CReal3D::WriteTexturePort(unsigned reg, UINT32 data)
 
 void CReal3D::WriteLowCullingRAM(UINT32 addr, UINT32 data)
 {
+	if (g_Config.gpuMultiThreaded)
+		MARK_DIRTY(cullingRAMLoDirty, addr);
 	cullingRAMLo[addr/4] = data;
 }
 
 void CReal3D::WriteHighCullingRAM(UINT32 addr, UINT32 data)
 {
+	if (g_Config.gpuMultiThreaded)
+		MARK_DIRTY(cullingRAMHiDirty, addr);
 	cullingRAMHi[addr/4] = data;
 }
 
 void CReal3D::WritePolygonRAM(UINT32 addr, UINT32 data)
 {
+	if (g_Config.gpuMultiThreaded)
+		MARK_DIRTY(polyRAMDirty, addr);
 	polyRAM[addr/4] = data;
 }
 
@@ -807,7 +939,11 @@ void CReal3D::Reset(void)
 	error = false;
 	
 	commandPortWritten = false;
-	
+	commandPortWrittenRO = false;
+
+	queuedUploadTextures.clear();
+	queuedUploadTexturesRO.clear();
+
 	fifoIdx = 0;
 	status = 0;
 	vromTextureAddr = 0;
@@ -817,8 +953,9 @@ void CReal3D::Reset(void)
 	dmaStatus = 0;
 	dmaUnknownReg = 0;
 	
-	memset(memoryPool, 0, MEMORY_POOL_SIZE);
-	
+	unsigned memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+	memset(memoryPool, 0, memSize);
+
 	DebugLog("Real3D reset\n");
 }
 
@@ -830,8 +967,15 @@ void CReal3D::Reset(void)
 void CReal3D::AttachRenderer(CRender3D *Render3DPtr)
 {
 	Render3D = Render3DPtr;
-	Render3D->AttachMemory(cullingRAMLo,cullingRAMHi,polyRAM,vrom,textureRAM);
+
+	// If multi-threaded, attach read-only snapshots to renderer instead of real ones
+	if (g_Config.gpuMultiThreaded)
+		Render3D->AttachMemory(cullingRAMLoRO, cullingRAMHiRO, polyRAMRO, vrom, textureRAMRO);
+	else
+		Render3D->AttachMemory(cullingRAMLo, cullingRAMHi, polyRAM, vrom, textureRAM);
+
 	Render3D->SetStep(step);
+
 	DebugLog("Real3D attached a Render3D object\n");
 }
 
@@ -859,7 +1003,8 @@ void CReal3D::SetStep(int stepID)
 
 bool CReal3D::Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
-	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
+	unsigned memSize   = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+	float	 memSizeMB = (float)memSize/(float)0x100000;
 
 	// IRQ and bus objects
 	Bus = BusObjectPtr; 
@@ -867,20 +1012,34 @@ bool CReal3D::Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr,
 	dmaIRQ = dmaIRQBit;
 		
 	// Allocate all Real3D RAM regions
-	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
+	memoryPool = new(std::nothrow) UINT8[memSize];
 	if (NULL == memoryPool)
 		return ErrorLog("Insufficient memory for Real3D object (needs %1.1f MB).", memSizeMB);
 	
-	// Set up pointers
+	// Set up main pointers
 	cullingRAMLo = (UINT32 *) &memoryPool[OFFSET_8C];
 	cullingRAMHi = (UINT32 *) &memoryPool[OFFSET_8E];
 	polyRAM = (UINT32 *) &memoryPool[OFFSET_98];
 	textureRAM = (UINT16 *) &memoryPool[OFFSET_TEXRAM];
 	textureFIFO = (UINT32 *) &memoryPool[OFFSET_TEXFIFO];
 
+	// If multi-threaded, set up pointers for read-only snapshots and dirty page arrays too
+	if (g_Config.gpuMultiThreaded)
+	{
+		cullingRAMLoRO = (UINT32 *) &memoryPool[OFFSET_8C_RO];
+		cullingRAMHiRO = (UINT32 *) &memoryPool[OFFSET_8E_RO];
+		polyRAMRO = (UINT32 *) &memoryPool[OFFSET_98_RO];
+		textureRAMRO = (UINT16 *) &memoryPool[OFFSET_TEXRAM_RO];
+		cullingRAMLoDirty = (UINT8 *) &memoryPool[OFFSET_8C_DIRTY];
+		cullingRAMHiDirty = (UINT8 *) &memoryPool[OFFSET_8E_DIRTY];
+		polyRAMDirty = (UINT8 *) &memoryPool[OFFSET_98_DIRTY];
+		textureRAMDirty = (UINT8 *) &memoryPool[OFFSET_TEXRAM_DIRTY];
+	}
+	
 	// VROM pointer passed to us
 	vrom = (UINT32 *) vromPtr;
 	
+	DebugLog("Initialized Real3D (allocated %1.1f MB)\n", memSizeMB);
 	return OKAY;
 }
 

@@ -50,10 +50,11 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	uiMusicVolDown	   = AddSwitchInput("UIMusicVolDown",	  "Decrease Music Volume", GAME_INPUT_UI, "KEY_F9");
 	uiSoundVolUp	   = AddSwitchInput("UISoundVolUp",		  "Increase Sound Volume", GAME_INPUT_UI, "KEY_F12");
 	uiSoundVolDown	   = AddSwitchInput("UISoundVolDown",	  "Decrease Sound Volume", GAME_INPUT_UI, "KEY_F11");
-	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      GAME_INPUT_UI, "NONE");	// disabled for release
 	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           GAME_INPUT_UI, "KEY_ALT+KEY_N");
 	uiSelectCrosshairs = AddSwitchInput("UISelectCrosshairs", "Select Crosshairs",     GAME_INPUT_UI, "KEY_ALT+KEY_I");
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", GAME_INPUT_UI, "KEY_ALT+KEY_T");
+	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      GAME_INPUT_UI, "KEY_ALT+KEY_U");
+	uiDumpTimings      = AddSwitchInput("UIDumpTimings",      "Dump Frame Timings",    GAME_INPUT_UI, "KEY_ALT+KEY_O");
 #ifdef SUPERMODEL_DEBUGGER
 	uiEnterDebugger    = AddSwitchInput("UIEnterDebugger",    "Enter Debugger",        GAME_INPUT_UI, "KEY_ALT+KEY_B");
 #endif

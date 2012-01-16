@@ -91,6 +91,8 @@ public:
 	 */
 	void AttachRegisters(const UINT32 *regPtr);
 	
+	void AttachPalette(const UINT32 *palPtr);
+
 	/*
 	 * AttachVRAM(vramPtr):
 	 *
@@ -145,11 +147,10 @@ private:
 	void DisplayLayer(int layerNum, GLfloat z);
 	void Setup2D(void);
 	void ColorOffset(GLfloat colorOffset[3], UINT32 reg);
-	void WritePalette(unsigned color, UINT32 data);
-	void InitPalette(void);
 		
 	// Data received from tile generator device object
 	const UINT32	*vram;
+	const UINT32    *pal;
 	const UINT32	*regs;
 	
 	// OpenGL data
@@ -172,7 +173,6 @@ private:
 	// Buffers
 	UINT8	*memoryPool;	// all memory is allocated here
 	UINT32	*surf;			// 512x512x32bpp pixel surface
-	UINT32	*pal;			// 0x20000 byte (32K colors) palette
 };
 
 

@@ -360,6 +360,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 	// Model 3
 	if (OKAY == INI->Get(section, "MultiThreaded", x))
 		g_Config.multiThreaded = x ? true : false;
+	if (OKAY == INI->Get(section, "GPUMultiThreaded", x))
+		g_Config.gpuMultiThreaded = x ? true : false;
 	if (OKAY == INI->Get(section, "PowerPCFrequency", x))
 		g_Config.SetPowerPCFrequency(x);
 	
@@ -381,7 +383,7 @@ static void ApplySettings(CINIFile *INI, const char *section)
 #ifdef SUPERMODEL_WIN32
 	if (OKAY == INI->Get(section, "ForceFeedback", x))
 		g_Config.forceFeedback = x ? true : false;
-#endif
+#endif // SUPERMODEL_WIN32
 	
 	// OSD
 	INI->Get(section, "XResolution", g_Config.xRes);
@@ -457,6 +459,7 @@ static void LogConfig(void)
 
 	// CModel3Config
 	InfoLog("\tMultiThreaded                 = %d", g_Config.multiThreaded);
+	InfoLog("\tGPUMultiThreaded              = %d", g_Config.gpuMultiThreaded);
 	InfoLog("\tPowerPCFrequency              = %d", g_Config.GetPowerPCFrequency());
 	
 	// CSoundBoardConfig
@@ -709,8 +712,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	unsigned		fpsFramesElapsed, framesElapsed;
 	unsigned		showCrosshairs = 0;	// bit 1: player 1 crosshair, bit 0: player 2
 	bool			gameHasLightguns = false;
-	bool			quit = 0;
-	bool            paused = 0;
+	bool			quit = false;
+	bool            paused = false;
+	bool            dumpTimings = false;
 
 	// Initialize and load ROMs
 	if (OKAY != Model3->Init())
@@ -791,7 +795,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		
 		// Poll the inputs
 		if (!Inputs->Poll(Model3->GetGameInfo(), xOffset, yOffset, xRes, yRes))
-			quit = 1;
+			quit = true;
 		
 #ifdef SUPERMODEL_DEBUGGER
 		bool processUI = true;
@@ -802,12 +806,12 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			// Check if debugger requests exit or pause
 			if (Debugger->CheckExit())
 			{
-				quit = 1;
+				quit = true;
 				processUI = false;
 			}
 			else if (Debugger->CheckPause())	
 			{
-				paused = 1;
+				paused = true;
 				processUI = false;
 			}
 		}
@@ -819,7 +823,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		if (Inputs->uiExit->Pressed())
  		{
 			// Quit emulator
- 			quit = 1; 			
+ 			quit = true; 			
 		}
 		else if (Inputs->uiReset->Pressed())
  		{
@@ -979,9 +983,12 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 			// Dump input states
 			Inputs->DumpState(Model3->GetGameInfo());
 		}
+		else if (Inputs->uiDumpTimings->Pressed())
+		{
+			dumpTimings = !dumpTimings;
+		}
 		else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
  		{
- 			
 			showCrosshairs++;
 			switch ((showCrosshairs&3))
 			{
@@ -1042,6 +1049,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 				startTicks = currentTicks;
 			}
 		}
+
+		if (dumpTimings && !paused)
+			Model3->DumpTimings();
 	}
 
 	// Make sure all threads are paused before shutting down

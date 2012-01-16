@@ -28,6 +28,7 @@
 #ifndef INCLUDED_MODEL3_H
 #define INCLUDED_MODEL3_H
 
+
 /*
  * CModel3Config:
  *
@@ -36,7 +37,8 @@
 class CModel3Config
 {
 public:
-	bool multiThreaded;	// Multi-threading (enabled if true)
+	bool multiThreaded;	   // Multi-threaded (enabled if true)
+	bool gpuMultiThreaded; // Multi-threaded rendering (enabled if true)
 	
 	// PowerPC clock frequency in MHz (minimum: 1 MHz)
 	inline void SetPowerPCFrequency(unsigned f)
@@ -57,6 +59,7 @@ public:
 	CModel3Config(void)
 	{
 		multiThreaded = true;		// enable by default
+		gpuMultiThreaded = true;    // enable by default
 		ppcFrequency = 50*1000000;	// 50 MHz
 	}
 	
@@ -313,7 +316,14 @@ public:
 	 *
 	 * Flags that any paused threads should resume running.
 	 */
-	void ResumeThreads(void);
+	bool ResumeThreads(void);
+
+	/*
+	 * DumpTimings(void):
+	 *
+	 * Prints all timings for the most recent frame to the console, for debugging purposes.
+	 */
+	void DumpTimings(void);
 
 	/*
 	 * CModel3(void):
@@ -342,21 +352,28 @@ private:
 	void 	WriteSystemRegister(unsigned reg, UINT8 data);
 	void	Patch(void);
 
-	void    RunMainBoardFrame(void);                   // Runs the main board (PPC) for a frame
+	void    RunMainBoardFrame(void);                   // Runs PPC main board for a frame
+	void    SyncGPUs(void);                            // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
+	void    RenderFrame(void);                         // Renders current frame
+	bool    RunSoundBoardFrame(void);                  // Runs sound board for a frame
+	void    RunDriveBoardFrame(void);                  // Runs drive board for a frame
+
 	bool    StartThreads(void);                        // Starts all threads
 	void    StopThreads(void);                         // Stops all threads
 	void    DeleteThreadObjects(void);                 // Deletes all threads and synchronization objects
 
-	static int StartSoundBoardThread(void *data);      // Callback to start unsync'd sound board thread
-	static int StartSoundBoardThreadSyncd(void *data); // Callback to start sync'd sound board thread
-	static int StartDriveBoardThreadSyncd(void *data); // Callback to start sync'd drive board thread
+	static int StartMainBoardThread(void *data);       // Callback to start PPC main board thread
+	static int StartSoundBoardThread(void *data);      // Callback to start sound board thread (unsync'd)
+	static int StartSoundBoardThreadSyncd(void *data); // Callback to start sound board thread (sync'd)
+	static int StartDriveBoardThread(void *data);      // Callback to start drive board thread
 
 	static void AudioCallback(void *data);             // Audio buffer callback
 	
 	void    WakeSoundBoardThread(void);	               // Used by audio callback to wake sound board thread when not sync'd with PPC thread
-	void    RunSoundBoardThread(void);                 // Runs sound board thread unsync'd with PPC thread, ie at full speed
-	void    RunSoundBoardThreadSyncd(void);            // Runs sound board thread sync'd in step with PPC thread
-	void    RunDriveBoardThreadSyncd(void);            // Runs drive board thread sync'd in step with PPC thread
+	void    RunMainBoardThread(void);                  // Runs PPC main board thread (sync'd in step with render thread)
+	void    RunSoundBoardThread(void);                 // Runs sound board thread (unsync'd with render thread, ie at full speed)
+	void    RunSoundBoardThreadSyncd(void);            // Runs sound board thread (sync'd in step with render thread)
+	void    RunDriveBoardThread(void);                 // Runs drive board thread (sync'd in step with render thread)
 	
 	// Game and hardware information
 	const struct GameInfo	*Game;
@@ -397,17 +414,22 @@ private:
 	PPC_FETCH_REGION	PPCFetchRegions[3];
 
 	// Multiple threading
+	bool        gpusReady;           // True if GPUs are ready to render
 	bool        startedThreads;      // True if threads have been created and started
 	bool        pausedThreads;       // True if threads are currently paused
-	bool        syncSndBrdThread;    // True if sound board thread should be sync'd with PPC thread
+	bool        syncSndBrdThread;    // True if sound board thread should be sync'd in step with render thread
+	CThread     *ppcBrdThread;       // PPC main board thread
 	CThread     *sndBrdThread;       // Sound board thread
 	CThread     *drvBrdThread;       // Drive board thread
+	bool        ppcBrdThreadRunning; // Flag to indicate PPC main board thread is currently processing
+	bool        ppcBrdThreadDone;    // Flag to indicate PPC main board thread has finished processing
 	bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
 	bool        sndBrdThreadDone;    // Flag to indicate sound board thread has finished processing
 	bool        drvBrdThreadRunning; // Flag to indicate drive board thread is currently processing
 	bool        drvBrdThreadDone;    // Flag to indicate drive board thread has finished processing
 
 	// Thread synchronization objects
+	CSemaphore  *ppcBrdThreadSync;
 	CSemaphore  *sndBrdThreadSync;
 	CMutex      *sndBrdNotifyLock;
 	CCondVar    *sndBrdNotifySync;
@@ -427,6 +449,15 @@ private:
 	CSoundBoard	SoundBoard;	// Sound board
 	CDSB		*DSB;		// Digital Sound Board (type determined dynamically at load time)
 	CDriveBoard DriveBoard; // Drive board
+
+	// Frame timings
+	UINT32 ppcTicks;
+	UINT32 syncSize;
+	UINT32 syncTicks;
+	UINT32 renderTicks;
+	UINT32 sndTicks;
+	UINT32 drvTicks;
+	UINT32 frameTicks;
 };
 
 

@@ -1910,6 +1910,8 @@ void CModel3::ClearNVRAM(void)
 
 void CModel3::RunFrame(void)
 {
+	UINT32 start = CThread::GetTicks();
+
 	// See if currently running multi-threaded
 	if (g_Config.multiThreaded)
 	{
@@ -1917,44 +1919,175 @@ void CModel3::RunFrame(void)
 		if (!StartThreads())
 			goto ThreadError;
 
-		// Wake threads for sound board (if sync'd) and drive board (if attached) so they can process a frame
-		if (syncSndBrdThread && !sndBrdThreadSync->Post() || DriveBoard.IsAttached() && !drvBrdThreadSync->Post())
+		// Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd) and drive board (if attached) so they can process a frame
+		if (g_Config.gpuMultiThreaded && !ppcBrdThreadSync->Post() || 
+			syncSndBrdThread          && !sndBrdThreadSync->Post() || 
+			DriveBoard.IsAttached()   && !drvBrdThreadSync->Post())
 			goto ThreadError;
 
-		// At the same time, process a single frame for main board (PPC) in this thread
-		RunMainBoardFrame();
+		// If not multi-threading GPU, then run PPC main board for a frame and sync GPUs now in this thread
+		if (!g_Config.gpuMultiThreaded)
+		{
+			RunMainBoardFrame();
+			SyncGPUs();
+		}
+
+		// Render frame if ready to do so
+		if (gpusReady)
+			RenderFrame();
 
 		// Enter notify wait critical section
 		if (!notifyLock->Lock())
 			goto ThreadError;
 
-		// Wait for sound board and drive board threads to finish their work (if they haven't done so already)
-		while (syncSndBrdThread && !sndBrdThreadDone || DriveBoard.IsAttached() && !drvBrdThreadDone)
+		// Wait for PPC main board, sound board and drive board threads to finish their work (if they are running and haven't finished already)
+		while (g_Config.gpuMultiThreaded && !ppcBrdThreadDone || 
+			   syncSndBrdThread          && !sndBrdThreadDone || 
+			   DriveBoard.IsAttached()   && !drvBrdThreadDone)
 		{
 			if (!notifySync->Wait(notifyLock))
 				goto ThreadError;
 		}
+		ppcBrdThreadDone = false;
 		sndBrdThreadDone = false;
 		drvBrdThreadDone = false;
 		
 		// Leave notify wait critical section
 		if (!notifyLock->Unlock())
 			goto ThreadError;
+
+		// If multi-threading GPU, then sync GPUs last while PPC main board thread is waiting
+		if (g_Config.gpuMultiThreaded)
+			SyncGPUs();
 	}
 	else
 	{
-		// If not multi-threaded, then just process a single frame for main board, sound board and drive board in turn in this thread
+		// If not multi-threaded, then just process and render a single frame for PPC main board, sound board and drive board in turn in this thread
 		RunMainBoardFrame();
-		SoundBoard.RunFrame();
+		SyncGPUs();
+		RenderFrame();
+		RunSoundBoardFrame();
 		if (DriveBoard.IsAttached())
-			DriveBoard.RunFrame();
+			RunDriveBoardFrame();
 	}
-	
+
+	frameTicks = CThread::GetTicks() - start;
+
 	return;
 
 ThreadError:
 	ErrorLog("Threading error in CModel3::RunFrame: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
+}
+
+void CModel3::RunMainBoardFrame(void)
+{
+	UINT32 start = CThread::GetTicks();
+
+	// Compute display and VBlank timings
+	unsigned frameCycles = g_Config.GetPowerPCFrequency()*1000000/60;
+	unsigned vblCycles   = (unsigned) ((float) frameCycles * 2.5f/100.0f);	// 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
+	unsigned dispCycles  = frameCycles - vblCycles;
+	
+	// VBlank
+	if (gpusReady)
+	{
+		TileGen.BeginVBlank();
+		GPU.BeginVBlank();
+		IRQ.Assert(0x02);
+		ppc_execute(vblCycles);
+		//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+	
+		/*
+		 * Sound:
+		 *
+		 * Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
+		 * which are used to send MIDI commands. Often games will write 0x27, send
+		 * a series of commands, and write 0x06 to stop. Other games, like Star
+		 * Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
+		 * by writing 0x37 and will disable/enable interrupts to control command
+		 * output.
+		 */
+		//printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
+		int irqCount = 0;
+		while ((midiCtrlPort&0x20))
+		//while (midiCtrlPort == 0x27)	// 27 triggers IRQ sequence, 06 stops it
+		{
+			// Don't waste time firing MIDI interrupts if game has disabled them
+			if ((IRQ.ReadIRQEnable()&0x40) == 0)
+				break;
+				
+			// Process MIDI interrupt
+			IRQ.Assert(0x40);
+			ppc_execute(200);	// give PowerPC time to acknowledge IRQ
+			IRQ.Deassert(0x40);
+			ppc_execute(200);	// acknowledge that IRQ was deasserted (TODO: is this really needed?)
+			
+			++irqCount;
+			if (irqCount > 128)
+			{
+				//printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
+				break;
+			}
+		}
+		//printf("\t-- END --\n");
+		//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+		
+		// End VBlank
+		GPU.EndVBlank();
+		TileGen.EndVBlank();
+		IRQ.Assert(0x0D);
+	}
+
+	// Run the PowerPC for the active display part of the frame
+	ppc_execute(dispCycles);
+	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+
+	ppcTicks = CThread::GetTicks() - start;
+}
+
+void CModel3::SyncGPUs(void)
+{
+	UINT32 start = CThread::GetTicks();
+
+	syncSize = GPU.SyncSnapshots() + TileGen.SyncSnapshots();
+	gpusReady = true;
+
+	syncTicks = CThread::GetTicks() - start;
+}
+
+void CModel3::RenderFrame(void)
+{
+	UINT32 start = CThread::GetTicks();
+
+	// Render frame
+	TileGen.BeginFrame();
+    GPU.BeginFrame();
+    GPU.RenderFrame();
+	GPU.EndFrame();
+	TileGen.EndFrame();
+
+	renderTicks = CThread::GetTicks() - start;
+}
+
+bool CModel3::RunSoundBoardFrame(void)
+{
+	UINT32 start = CThread::GetTicks();
+
+	bool bufferFull = SoundBoard.RunFrame();
+
+	sndTicks = CThread::GetTicks() - start;
+
+	return bufferFull;
+}
+
+void CModel3::RunDriveBoardFrame(void)
+{
+	UINT32 start = CThread::GetTicks();
+
+	DriveBoard.RunFrame();
+
+	drvTicks = CThread::GetTicks() - start;
 }
 
 bool CModel3::StartThreads(void)
@@ -1963,7 +2096,13 @@ bool CModel3::StartThreads(void)
 		return true;
 			
 	// Create synchronization objects
-	sndBrdThreadSync = CThread::CreateSemaphore(1);
+	if (g_Config.gpuMultiThreaded)
+	{
+		ppcBrdThreadSync = CThread::CreateSemaphore(0);
+		if (ppcBrdThreadSync == NULL)
+			goto ThreadError;
+	}
+	sndBrdThreadSync = CThread::CreateSemaphore(0);
 	if (sndBrdThreadSync == NULL)
 		goto ThreadError;
 	sndBrdNotifyLock = CThread::CreateMutex();
@@ -1974,7 +2113,7 @@ bool CModel3::StartThreads(void)
 		goto ThreadError;
 	if (DriveBoard.IsAttached())
 	{
-		drvBrdThreadSync = CThread::CreateSemaphore(1);
+		drvBrdThreadSync = CThread::CreateSemaphore(0);
 		if (drvBrdThreadSync == NULL)
 			goto ThreadError;
 	}
@@ -1985,6 +2124,14 @@ bool CModel3::StartThreads(void)
 	if (notifySync == NULL)
 		goto ThreadError;
 
+	// Create PPC main board thread, if multi-threading GPU
+	if (g_Config.gpuMultiThreaded)
+	{
+		ppcBrdThread = CThread::CreateThread(StartMainBoardThread, this);
+		if (ppcBrdThread == NULL)
+			goto ThreadError;
+	}
+
 	// Create sound board thread (sync'd or unsync'd)
 	if (syncSndBrdThread)
 		sndBrdThread = CThread::CreateThread(StartSoundBoardThreadSyncd, this);
@@ -1993,15 +2140,15 @@ bool CModel3::StartThreads(void)
 	if (sndBrdThread == NULL)
 		goto ThreadError;
 
-	// Create drive board thread (sync'd), if drive board is attached
+	// Create drive board thread, if drive board is attached
 	if (DriveBoard.IsAttached())
 	{
-		drvBrdThread = CThread::CreateThread(StartDriveBoardThreadSyncd, this);
+		drvBrdThread = CThread::CreateThread(StartDriveBoardThread, this);
 		if (drvBrdThread == NULL)
 			goto ThreadError;
 	}
 
-	// Set audio callback if unsync'd
+	// Set audio callback if sound board thread is unsync'd
 	if (!syncSndBrdThread)
 		SetAudioCallback(AudioCallback, this);
 	
@@ -2026,7 +2173,7 @@ bool CModel3::PauseThreads(void)
 
 	// Wait for all threads to finish their processing
 	pausedThreads = true;
-	while (sndBrdThreadRunning || drvBrdThreadRunning)
+	while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
 	{
 		if (!notifySync->Wait(notifyLock))
 			goto ThreadError;
@@ -2043,11 +2190,27 @@ ThreadError:
 	return false;
 }
 
-void CModel3::ResumeThreads(void)
+bool CModel3::ResumeThreads(void)
 {	
-	// No need to use any locking here
+	if (!startedThreads)
+		return true;
+
+	// Enter notify critical section
+	if (!notifyLock->Lock())
+		goto ThreadError;
+
+	// Let all threads know that they can continue running
 	pausedThreads = false;
-	return;
+
+	// Leave notify critical section
+	if (!notifyLock->Unlock())
+		goto ThreadError;
+	return true;
+
+ThreadError:
+	ErrorLog("Threading error in CModel3::ResumeThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	g_Config.multiThreaded = false;
+	return false;
 }
 
 void CModel3::StopThreads(void)
@@ -2055,7 +2218,7 @@ void CModel3::StopThreads(void)
 	if (!startedThreads)
 		return;
 
-	// If sound board not sync'd then remove callback
+	// If sound board thread is unsync'd then remove audio callback
 	if (!syncSndBrdThread)
 		SetAudioCallback(NULL, NULL);
 	
@@ -2068,8 +2231,13 @@ void CModel3::StopThreads(void)
 
 void CModel3::DeleteThreadObjects(void)
 {
-	// Delete (which in turn kills) sound board and drive board threads
+	// Delete (which in turn kills) PPC main board, sound board and drive board threads
 	// Note that can do so here safely because threads will always be waiting on their semaphores when this method is called
+	if (ppcBrdThread != NULL)
+	{
+		delete ppcBrdThread;
+		ppcBrdThread = NULL;
+	}
 	if (sndBrdThread != NULL)
 	{
 		delete sndBrdThread;
@@ -2082,6 +2250,11 @@ void CModel3::DeleteThreadObjects(void)
 	}
 
 	// Delete synchronization objects
+	if (ppcBrdThreadSync != NULL)
+	{
+		delete ppcBrdThreadSync;
+		ppcBrdThreadSync = NULL;
+	}
 	if (sndBrdThreadSync != NULL)
 	{
 		delete sndBrdThreadSync;
@@ -2114,9 +2287,28 @@ void CModel3::DeleteThreadObjects(void)
 	}
 }
 
+void CModel3::DumpTimings(void)
+{
+	printf("PPC:%3ums%c render:%3ums%c sync:%4uK%c%3ums%c snd:%3ums%c drv:%3ums%c frame:%3ums%c\n",
+		ppcTicks, (ppcTicks > renderTicks ? '!' : ','),
+		renderTicks, (renderTicks > ppcTicks ? '!' : ','), 
+		syncSize / 1024, (syncSize / 1024 > 128 ? '!' : ','), syncTicks, (syncTicks > 1 ? '!' : ','),
+		sndTicks, (sndTicks > 10 ? '!' : ','),
+		drvTicks, (drvTicks > 10 ? '!' : ','),
+		frameTicks, (frameTicks > 16 ? '!' : ' '));
+}
+
+int CModel3::StartMainBoardThread(void *data)
+{
+	// Call method on CModel3 to run PPC main board thread
+	CModel3 *model3 = (CModel3*)data;
+	model3->RunMainBoardThread();
+	return 0;
+}
+
 int CModel3::StartSoundBoardThread(void *data)
 {
-	// Call method on CModel3 to run unsync'd sound board thread
+	// Call method on CModel3 to run sound board thread (unsync'd)
 	CModel3 *model3 = (CModel3*)data;
 	model3->RunSoundBoardThread();
 	return 0;
@@ -2124,18 +2316,68 @@ int CModel3::StartSoundBoardThread(void *data)
 
 int CModel3::StartSoundBoardThreadSyncd(void *data)
 {
-	// Call method on CModel3 to run sync'd sound board thread
+	// Call method on CModel3 to run sound board thread (sync'd)
 	CModel3 *model3 = (CModel3*)data;
 	model3->RunSoundBoardThreadSyncd();
 	return 0;
 }
 
-int CModel3::StartDriveBoardThreadSyncd(void *data)
+int CModel3::StartDriveBoardThread(void *data)
 {
-	// Call method on CModel3 to run sync'd drive board thread
+	// Call method on CModel3 to run drive board thread
 	CModel3 *model3 = (CModel3*)data;
-	model3->RunDriveBoardThreadSyncd();
+	model3->RunDriveBoardThread();
 	return 0;
+}
+
+void CModel3::RunMainBoardThread(void)
+{
+	for (;;)
+	{
+		bool wait = true;
+		while (wait)
+		{
+			// Wait on PPC main board thread semaphore
+			if (!ppcBrdThreadSync->Wait())
+				goto ThreadError;
+
+			// Enter notify critical section
+			if (!notifyLock->Lock())
+				goto ThreadError;
+
+			// Check threads not paused
+			if (!pausedThreads)
+			{
+				wait = false;
+				ppcBrdThreadRunning = true;
+			}
+	
+			// Leave notify critical section
+			if (!notifyLock->Unlock())
+				goto ThreadError;
+		}
+
+		// Process a single frame for PPC main board
+		RunMainBoardFrame();
+
+		// Enter notify critical section
+		if (!notifyLock->Lock())
+			goto ThreadError;
+
+		// Let other threads know processing has finished
+		ppcBrdThreadRunning = false;
+		ppcBrdThreadDone = true;
+		if (!notifySync->SignalAll())
+			goto ThreadError;
+
+		// Leave notify critical section
+		if (!notifyLock->Unlock())
+			goto ThreadError;
+	}
+
+ThreadError:
+	ErrorLog("Threading error in RunMainBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	g_Config.multiThreaded = false;
 }
 
 void CModel3::AudioCallback(void *data)
@@ -2151,7 +2393,7 @@ void CModel3::WakeSoundBoardThread(void)
 	if (!sndBrdNotifyLock->Lock())
 		goto ThreadError;
 
-	// Signal to sound board that it should start processing again
+	// Signal to sound board thread that it should start processing again
 	if (!sndBrdNotifySync->Signal())
 		goto ThreadError;
 
@@ -2200,11 +2442,22 @@ void CModel3::RunSoundBoardThread(void)
 				goto ThreadError;
 		}
 
-		// Keep processing frames until audio buffer is full
-		bool repeat = true;
-		// NOTE - performs an unlocked read of pausedThreads here, but this is okay
-		while (!pausedThreads && !SoundBoard.RunFrame())
+		// Keep processing frames until paused or audio buffer is full
+		while (true)
 		{
+			// Enter main notify critical section
+			bool paused;
+			if (!notifyLock->Lock())
+				goto ThreadError;
+
+			paused = pausedThreads;
+				
+			// Leave main notify critical section
+			if (!notifyLock->Unlock())
+				goto ThreadError;
+
+			if (paused || RunSoundBoardFrame())
+				break;
 			//printf("Rerunning sound board\n");
 		}
 
@@ -2256,7 +2509,7 @@ void CModel3::RunSoundBoardThreadSyncd(void)
 		}
 
 		// Process a single frame for sound board
-		SoundBoard.RunFrame();
+		RunSoundBoardFrame();
 
 		// Enter notify critical section
 		if (!notifyLock->Lock())
@@ -2278,7 +2531,7 @@ ThreadError:
 	g_Config.multiThreaded = false;
 }
 
-void CModel3::RunDriveBoardThreadSyncd(void)
+void CModel3::RunDriveBoardThread(void)
 {
 	for (;;)
 	{
@@ -2306,7 +2559,7 @@ void CModel3::RunDriveBoardThreadSyncd(void)
 		}
 
 		// Process a single frame for drive board
-		DriveBoard.RunFrame();
+		RunDriveBoardFrame();
 
 		// Enter notify critical section
 		if (!notifyLock->Lock())
@@ -2324,68 +2577,8 @@ void CModel3::RunDriveBoardThreadSyncd(void)
 	}
 
 ThreadError:
-	ErrorLog("Threading error in RunDriveBoardThreadSyncd: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	ErrorLog("Threading error in RunDriveBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
-}
-
-void CModel3::RunMainBoardFrame(void)
-{
-	// Compute display and VBlank timings
-	unsigned	frameCycles = g_Config.GetPowerPCFrequency()*1000000/60;
-	unsigned	vblCycles = (unsigned) ((float) frameCycles * 2.5f/100.0f);	// 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
-	unsigned	dispCycles = frameCycles - vblCycles;
-	
-	// Run the PowerPC for the active display part of the frame
-	ppc_execute(dispCycles);
-	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-	
-	// VBlank
-	TileGen.BeginFrame();
-	GPU.BeginFrame();
-	GPU.RenderFrame();
-	IRQ.Assert(0x02);
-	ppc_execute(vblCycles);
-	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());	
-	
-	/*
-	 * Sound:
-	 *
-	 * Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
-	 * which are used to send MIDI commands. Often games will write 0x27, send
-	 * a series of commands, and write 0x06 to stop. Other games, like Star
-	 * Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
-	 * by writing 0x37 and will disable/enable interrupts to control command
-	 * output.
-	 */
-	//printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-	int irqCount = 0;
-	while ((midiCtrlPort&0x20))
-	//while (midiCtrlPort == 0x27)	// 27 triggers IRQ sequence, 06 stops it
-	{
-		// Don't waste time firing MIDI interrupts if game has disabled them
-		if ((IRQ.ReadIRQEnable()&0x40) == 0)
-			break;
-			
-		// Process MIDI interrupt
-		IRQ.Assert(0x40);
-		ppc_execute(200);	// give PowerPC time to acknowledge IRQ
-		IRQ.Deassert(0x40);
-		ppc_execute(200);	// acknowledge that IRQ was deasserted (TODO: is this really needed?)
-		
-		++irqCount;
-		if (irqCount > 128)
-		{
-			//printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-			break;
-		}
-	}
-	//printf("\t-- END --\n");
-	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-
-	// End frame
-	GPU.EndFrame();
-	TileGen.EndFrame();
-	IRQ.Assert(0x0D);
 }
 
 void CModel3::Reset(void)
@@ -2422,6 +2615,15 @@ void CModel3::Reset(void)
 
 	if (DriveBoard.IsAttached())
 		DriveBoard.Reset();
+
+	gpusReady = false;
+	ppcTicks = 0;
+	syncSize = 0;
+	syncTicks = 0;
+	renderTicks = 0;
+	sndTicks = 0;
+	drvTicks = 0;
+	frameTicks = 0;
 	
 	DebugLog("Model 3 reset\n");
 }
@@ -2964,13 +3166,17 @@ CModel3::CModel3(void)
 	
 	startedThreads = false;
 	pausedThreads = false;
+	ppcBrdThread = NULL;
 	sndBrdThread = NULL; 
 	drvBrdThread = NULL;
+	ppcBrdThreadRunning = false;
+	ppcBrdThreadDone = false;
 	sndBrdThreadRunning = false;
 	sndBrdThreadDone = false;
 	drvBrdThreadRunning = false;
 	drvBrdThreadDone = false;
 	syncSndBrdThread = false;
+	ppcBrdThreadSync = NULL;
 	sndBrdThreadSync = NULL;
 	drvBrdThreadSync = NULL;
 	notifyLock = NULL;

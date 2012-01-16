@@ -737,24 +737,7 @@ void CRender2D::EndFrame(void)
  Emulation Callbacks
 ******************************************************************************/
 
-void CRender2D::WritePalette(unsigned color, UINT32 data)
-{
-	UINT8		r, g, b, a;
-	
-	a = 0xFF * ((data>>15)&1); 	// decode the RGBA (make alpha 0xFF or 0x00)
-    a = ~a;                  	// invert it (set on Model 3 means clear pixel)
-	
-	if ((data&0x8000))
-    	r = g = b = 0;
-	else
-    {
-    	b = (data>>7)&0xF8;
-        g = (data>>2)&0xF8;
-        r = (data<<3)&0xF8;
-	}
-	
-	pal[color] = (a<<24)|(b<<16)|(g<<8)|r;
-}
+
 
 void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
 {
@@ -763,31 +746,6 @@ void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
 		
 	// For now, mark everything as dirty
 	allDirty = true;
-		
-	// Palette
-	if (addr >= 0x100000)
-    {
-		unsigned color = (addr-0x100000)/4;	// color index
-        WritePalette(color, data);
-    }
-}
-
-/*
- * InitPalette():
- *
- * This must be called from AttachVRAM() to initialize the palette. The reason 
- * is that because WriteVRAM() always compares incoming data to what is already
- * in the VRAM, there is no actual way to initialize the palette by calling
- * WriteVRAM() and passing it the initial VRAM contents. It will always fail to
- * update because nothing is being changed.
- *
- * This function fixes the transparent pixel bug that frequently occurred when
- * loading save states in Supermodel 0.1a.
- */
-void CRender2D::InitPalette(void)
-{
-	for (int i = 0; i < 0x20000/4; i++)
-		WritePalette(i, vram[0x100000/4 + i]);
 }
 
 
@@ -801,14 +759,19 @@ void CRender2D::AttachRegisters(const UINT32 *regPtr)
 	DebugLog("Render2D attached registers\n");
 }
 
+void CRender2D::AttachPalette(const UINT32 *palPtr)
+{
+	pal = palPtr;
+	DebugLog("Render2D attached palette\n");
+}
+
 void CRender2D::AttachVRAM(const UINT8 *vramPtr)
 {
 	vram = (UINT32 *) vramPtr;
-	InitPalette();
 	DebugLog("Render2D attached VRAM\n");
 }
 
-#define MEMORY_POOL_SIZE	(512*512*4+0x20000)
+#define MEMORY_POOL_SIZE	(512*512*4)
 
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
 {
@@ -832,7 +795,6 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	
 	// Set up pointers to memory regions
 	surf = (UINT32 *) memoryPool;
-	pal = (UINT32 *) &memoryPool[512*512*4];
 	
 	// Resolution
 	xPixels = xRes;

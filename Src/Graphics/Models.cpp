@@ -834,13 +834,8 @@ void CRender3D::ClearModelCache(ModelCache *Cache)
 	Cache->vboCurOffset = 0;
 	for (int i = 0; i < 2; i++)
 		Cache->curVertIdx[i] = 0;
-	if (!Cache->dynamic)
-		memset(Cache->lut, 0xFF, sizeof(INT16)*Cache->lutSize);	// set all to -1
-	else
-	{
-		for (int i = 0; i < Cache->numModels; i++)
-			Cache->lut[Cache->Models[i].lutIdx] = -1;
-	}
+	for (int i = 0; i < Cache->numModels; i++)
+		Cache->lut[Cache->Models[i].lutIdx] = -1;
 
 	Cache->numModels = 0;
 	ClearDisplayList(Cache);
