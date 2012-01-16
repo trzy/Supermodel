@@ -1774,8 +1774,6 @@ void CInputSystem::UngrabMouse()
 	SetMouseVisibility(true);
 }
 
-#include <SDL.h>
-
 bool CInputSystem::SendForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd)
 {
 	const JoyDetails *joyDetails = GetJoyDetails(joyNum);
