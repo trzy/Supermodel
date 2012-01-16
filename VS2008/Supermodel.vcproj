@@ -691,10 +691,10 @@
 					>
 				</File>
 				<Filter
-					Name="GLSL"
+					Name="Shaders"
 					>
 					<File
-						RelativePath="..\Src\Graphics\Fragment.glsl"
+						RelativePath="..\Src\Graphics\Shaders\Fragment.glsl"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
@@ -730,7 +730,7 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\Src\Graphics\Fragment2D.glsl"
+						RelativePath="..\Src\Graphics\Shaders\Fragment2D.glsl"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
@@ -766,7 +766,7 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\Src\Graphics\Vertex.glsl"
+						RelativePath="..\Src\Graphics\Shaders\Fragment_Flat.glsl"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
@@ -802,7 +802,79 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\Src\Graphics\Vertex2D.glsl"
+						RelativePath="..\Src\Graphics\Shaders\Fragment_NoSpotlight.glsl"
+						>
+						<FileConfiguration
+							Name="Debug|Win32"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Debug|x64"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|Win32"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|x64"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\Src\Graphics\Shaders\Vertex.glsl"
+						>
+						<FileConfiguration
+							Name="Debug|Win32"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Debug|x64"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|Win32"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|x64"
+							ExcludedFromBuild="true"
+							>
+							<Tool
+								Name="VCCustomBuildTool"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\Src\Graphics\Shaders\Vertex2D.glsl"
 						>
 						<FileConfiguration
 							Name="Debug|Win32"
