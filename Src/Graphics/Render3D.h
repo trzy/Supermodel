@@ -320,19 +320,15 @@ private:
 	// Texture management
 	void DecodeTexture(int format, int x, int y, int width, int height);
 	
-	// Stack management
+	// Matrix stack
 	void	MultMatrix(UINT32 matrixOffset);
 	void 	InitMatrixStack(UINT32 matrixBaseAddr);
-	void	Push(UINT32 ptr, bool pushMatrix);
-	UINT32	Pop(void);
-	void	ClearStack(void);
 	
 	// Scene database traversal
 	bool DrawModel(UINT32 modelAddr);
 	void DescendCullingNode(UINT32 addr);
 	void DescendPointerList(UINT32 addr);
 	void DescendNodePtr(UINT32 nodeAddr);
-	void StackMachine(UINT32 nodeAddr);
 	void RenderViewport(UINT32 addr, int pri);
 	
 	// In-frame error reporting
@@ -362,12 +358,6 @@ private:
 	// Real3D Base Matrix Pointer
 	const float	*matrixBasePtr;
 	
-	// Processing stack (experimental)
-	UINT32	*stack;
-	int		stackSize;		// number of elements stack can contain
-	int		stackTop;		// current top of stack (free spot, last element is stackTop-1)
-	bool	stackOverflow;	// records stack overflows (cleared by ClearStack())
-
 	// Current viewport parameters (updated as viewports are traversed)
 	GLfloat	lightingParams[6];
 	GLfloat	fogParams[5];

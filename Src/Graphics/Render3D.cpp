@@ -443,9 +443,7 @@ const UINT32 *CRender3D::TranslateModelAddress(UINT32 modelAddr)
 
 
 /******************************************************************************
- Stack Management
- 
- Matrix and processing stack (for the experimental stack-based scene parser).
+ Matrix Stack
 ******************************************************************************/
 
 // Macro to generate column-major (OpenGL) index from y,x subscripts
@@ -539,72 +537,6 @@ void CRender3D::InitMatrixStack(UINT32 matrixBaseAddr)
 	// Set matrix base address and apply matrix #0 (coordinate system matrix)
 	matrixBasePtr = (float *) TranslateCullingAddress(matrixBaseAddr);
 	MultMatrix(0);
-}
-
-/*
- * Push():
- *
- * Pushes a pointer onto the processing stack and, optionally, pushes the
- * current matrix onto the matrix stack. Note that the high nibble is used by
- * Supermodel to encode commands (such as pushing the matrix stack, and other
- * operations within the stack machine). We must be careful to ensure that no
- * games ever write data to this high nibble.
- */
-void CRender3D::Push(UINT32 ptr, bool pushMatrix)
-{
-#ifdef DEBUG
-	if ((ptr&0xF0000000))	// high nibble already being used for something!
-		printf("Push(): MSB already in use!\n");
-#endif	
-
-	// MSB of address is used to encode whether or not matrix has been pushed
-	if (pushMatrix)
-		ptr |= 0x80000000;
-		
-	if (stackTop < stackSize)
-	{
-		stack[stackTop++] = ptr;
-		if (pushMatrix)
-		{
-			glPushMatrix();
-#ifdef DEBUG			
-			if (glGetError() == GL_STACK_OVERFLOW)
-				printf("GL stack overflow\n");
-#endif
-		}
-	}
-	else
-	{
-		stackOverflow = true;	// signal that a stack overflow occurred
-#ifdef DEBUG
-		printf("stack overflow\n");
-#endif
-	}
-}
-
-// Pop the stack
-UINT32 CRender3D::Pop(void)
-{
-	UINT32	ptr;
-	
-	if (stackTop > 0)
-	{
-		ptr = stack[--stackTop];
-		if ((ptr&0x80000000))
-		{
-			glPopMatrix();
-			ptr &= 0x7FFFFFFF;
-		}
-		return ptr;
-	}
-	return 0;
-}
-
-// Clear the stack
-void CRender3D::ClearStack(void)
-{
-	stackTop = 0;
-	stackOverflow = false;
 }
 
 
@@ -837,193 +769,6 @@ void CRender3D::DescendNodePtr(UINT32 nodeAddr)
 		//printf("ATTENTION: Unknown pointer format: %08X\n\n", nodeAddr);
 		break;
 	}
-}
-
-/*
- * StackMachine():
- *
- * The new scene traversal engine. Uses a "processing stack" to avoid
- * recursion when traversing the scene graph. The real hardware almost 
- * certainly does something similar, although it probably does not use a stack
- * for everything (for instance, display lists). 
- *
- * If the OpenGL stack is pushed/popped as frequently as the node pointers, it
- * will rapidly overflow. Therefore, it is only saved when necessary (while
- * processing the first link in a culling node).
- *
- * Some games have been observed to create circular references in their display
- * lists (a culling node at some point will call the same display list from 
- * which it was called). To handle this unusual situation, the stack machine
- * function maintains a small "stack" of list pointers. To pop this stack,
- * specially encoded pointers are pushed on the processing stack. It is assumed
- * that no games use the upper nibble of the node pointers for anything.
- *
- * Problems
- * --------
- * For some reason, terminating early can corrupt the OpenGL stack, so I've
- * added code to pop everything. It's still slower than the recursive method.
- */
-void CRender3D::StackMachine(UINT32 nodeAddr)
-{
-	unsigned	listStackDepth = 0;
-	
-	// Push this address on to the stack to begin the process
-	Push(nodeAddr,false);
-	
-	// Process the stack (keep popping until all finished)
-	while (stackTop > 0)
-	{
-		unsigned	nodeType;
-
-		// Pop
-		nodeAddr = Pop();
-		
-		// Check for our special "list stack" indicator
-		if ((nodeAddr&0x40000000))
-		{
-			listStackDepth--;
-			continue;
-		}
-		
-		// Determine how to process this node
-		nodeType = (nodeAddr>>24)&0xFF;	// extract type
-		nodeAddr &= 0x00FFFFFF;			// extract the address itself
-		if (nodeAddr == 0)				// ignore null links
-			continue;		
-		switch (nodeType)
-		{
-		/*
-		 * Unknown
-		 */
-		default:
-			//printf("ATTENTION: Unknown pointer format: %08X\n\n", nodeAddr);
-			break;
-
-		/*
-		 * Model
-		 */
-		case 0x01:
-		case 0x03:	// perhaps bit 1 is a flag?
-			if (DrawModel(nodeAddr&0x00FFFFFF)) 
-				goto PopAll;
-			break;
-		
-		/*
-		 * Display List
-		 *
-		 * Circular references in display lists are handled with a nasty hack
-		 * here which abuses the processing stack by encoding a bit into the
-		 * highest nibble of a pointer. Note that we may have to maintain an 
-		 * actual list stack in case more than a few nested lists are used 
-		 * without circular references (in that case, we would have to scan the
-		 * list stack each time for duplicates). For now, we use the simple
-		 * approach.
-		 */
-		case 0x04:
-			const UINT32	*list;
-						
-			list = TranslateCullingAddress(nodeAddr);
-			if (NULL == list)
-				break;
-			
-			// Push our special "list stack" indicator onto the stack, if there is room
-			if (listStackDepth > 4)	// probably indicates a recursive list
-				break;
-			else
-			{
-				Push(0x40000000,NULL);
-				listStackDepth++;
-			}
-			
-			// Push all list elements onto stack (they will be processed backwards)
-			for (int i = 0; ; i++)
-			{	
-				nodeAddr = list[i]&0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
-				if (nodeAddr==0)				// we went too far, the display list has ended
-					break;
-				//if (((list[i]>>24)&0xFC) != 0)
-				//	ErrorLog("Unrecognized pointer format in display list: %08X\n", list[i]);
-				if (!(list[i]&0x01000000))		// Fighting Vipers (this bit seems to indicate "do not process"
-				{
-					if ((nodeAddr != 0) && (nodeAddr != 0x800800))
-						Push(nodeAddr,false);	// don't need to save matrix (each culling node saves/restores matrix)
-				}
-				
-				if ((list[i]&0x02000000))		// list terminator
-					break;
-			}
-			
-			break;
-			
-		/*
-		 * Culling Node
-		 *
-		 * The current matrix stack must be saved when processing a culling
-		 * node and restored after the first link is finished. Therefore,
-		 * the only point at which the matrix needs to be saved is when pushing
-		 * the second link onto the processing stack. In other words, the 
-		 * second link is more of a "JUMP" than a nested "CALL."
-		 */
-		case 0x00:
-			const UINT32	*node, *lodTable;
-			UINT32			matrixOffset, node1Ptr, node2Ptr;
-			float			x, y, z;
-			
-			// Get pointer
-			node = TranslateCullingAddress(nodeAddr);
-			if (NULL == node)	// invalid address, ignore
-				break;
-			
-			// Extract known fields
-			node1Ptr		= node[0x07-offset];
-			node2Ptr		= node[0x08-offset];
-			matrixOffset	= node[0x03-offset]&0xFFF;
-			x				= *(float *) &node[0x04-offset];
-			y				= *(float *) &node[0x05-offset];
-			z				= *(float *) &node[0x06-offset];
-			
-			// Push second link on stack (this also saves current matrix and will ensure it is restored)
-			Push(node2Ptr,true);
-			
-			// Apply matrix and translation, then process first link
-			if ((node[0x00]&0x10))	// apply translation vector
-				glTranslatef(x,y,z);
-			else if (matrixOffset)	// multiply matrix, if specified
-				MultMatrix(matrixOffset);
-
-			if ((node[0x00]&0x08))	// 4-element LOD table
-			{
-				lodTable = TranslateCullingAddress(node1Ptr);
-				if (NULL != lodTable)
-				{
-					if ((node[0x03-offset]&0x20000000))
-						Push(lodTable[0]&0x00FFFFFF,false);	// process as culling node
-					else
-					{
-						if (DrawModel(lodTable[0]&0x00FFFFFF)) 
-							goto PopAll;
-					}
-				}
-			}
-			else
-				Push(node1Ptr,false);
-		
-			break;
-		
-		}
-		
-		// Check for overflows and abort
-		if (stackOverflow)
-		{
-			ErrorLog("Stack overflow in scene database!");
-			return;
-		}
-	}
-
-	// Pop everything off the stack (ensures OpenGL matrix stack will be cleared)
-PopAll:
-	while (stackTop > 0)
-		Pop();
 }
 
 // Draws viewports of the given priority
@@ -1294,12 +1039,6 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	if (NULL == textureBuffer)
 		return ErrorLog("Insufficient memory for texture decode buffer.");
 		
-	// Allocate memory for scene stack
-	stackSize = STACK_SIZE;
-	stack = new(std::nothrow) UINT32[STACK_SIZE];
-	if (NULL == stack)
-		return ErrorLog("Insufficient memory for scene stack.");
-	
 	// Create texture map
 	glGetError();	// clear error flag
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1385,7 +1124,6 @@ CRender3D::CRender3D(void)
 	vrom = NULL;
 	textureRAM = NULL;
 	textureBuffer = NULL;
-	stack = NULL;
 	
 	// Clear model cache pointers so we can safely destroy them if init fails
 	for (int i = 0; i < 2; i++)
@@ -1426,10 +1164,6 @@ CRender3D::~CRender3D(void)
 	if (textureBuffer != NULL)
 		delete [] textureBuffer;
 	textureBuffer = NULL;
-	
-	if (stack != NULL)
-		delete [] stack;
-	stack = NULL;
 
 	DebugLog("Destroyed Render3D\n");
 }
