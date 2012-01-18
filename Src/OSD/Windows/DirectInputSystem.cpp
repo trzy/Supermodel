@@ -35,6 +35,29 @@
 #include <SDL.h>
 #include <SDL_syswm.h>
 
+/*
+ * MinGW compatibility: the XInput.h distributed with MinGW is missing these
+ * definitions. I've copied them from the Microsoft DirectX SDK. If a proper
+ * header file appears, this hack should be removed.
+ */
+#if !defined(XINPUT_DLL_A)
+
+#ifndef XINPUT_USE_9_1_0
+#define XINPUT_DLL_A  "xinput1_3.dll"
+#define XINPUT_DLL_W L"xinput1_3.dll"
+#else
+#define XINPUT_DLL_A  "xinput9_1_0.dll"
+#define XINPUT_DLL_W L"xinput9_1_0.dll"
+#endif
+#ifdef UNICODE
+    #define XINPUT_DLL XINPUT_DLL_W
+#else
+    #define XINPUT_DLL XINPUT_DLL_A
+#endif 
+
+#endif	// XINPUT_DLL_A
+
+
 // TODO - need to double check these all correct and see if can fill in any missing codes (although most just don't exist)
 DIKeyMapStruct CDirectInputSystem::s_keyMap[] = 
 {
@@ -199,7 +222,8 @@ static bool IsXInputDevice(const GUID &devProdGUID)
     
     // Create WMI
     bool isXInpDev = false;
-    HRESULT hr = CoCreateInstance(__uuidof(WbemLocator), NULL, CLSCTX_INPROC_SERVER, __uuidof(IWbemLocator), (LPVOID*)&pIWbemLocator);
+    HRESULT hr = CoCreateInstance(CLSID_WbemLocator, NULL, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID*)&pIWbemLocator);	// this version does not use __uuidof() and works w/ gcc
+    //HRESULT hr = CoCreateInstance(__uuidof(WbemLocator), NULL, CLSCTX_INPROC_SERVER, __uuidof(IWbemLocator), (LPVOID*)&pIWbemLocator);
     if (FAILED(hr) || pIWbemLocator == NULL)
         goto Finish;
 
@@ -346,6 +370,7 @@ static BOOL CALLBACK DI8EnumObjectsCallback(LPCDIDEVICEOBJECTINSTANCE instance, 
 		int objNum = DIDFT_GETINSTANCE(instance->dwType);
 		DIOBJECTDATAFORMAT fmt = c_dfDIJoystick2.rgodf[objNum];
 		diObjsContext->enumError = true;
+#ifdef _MSC_VER	// MS VisualC++
 		switch (fmt.dwOfs)
 		{
 			case DIJOFS_X:  axisNum = AXIS_X; break;
@@ -358,6 +383,19 @@ static BOOL CALLBACK DI8EnumObjectsCallback(LPCDIDEVICEOBJECTINSTANCE instance, 
 				// If still couldn't match then it is not an axis
 				return DIENUM_CONTINUE;  
 		}
+#else			// GCC
+		// DIJOFS_* are not technically constants (at least in the MinGW dinput.h that I'm using)
+		if 		(DIJOFS_X == fmt.dwOfs)		axisNum = AXIS_X;
+		else if	(DIJOFS_Y == fmt.dwOfs)		axisNum = AXIS_Y;
+		else if	(DIJOFS_Z == fmt.dwOfs)		axisNum = AXIS_Z;
+		else if	(DIJOFS_Z == fmt.dwOfs)		axisNum = AXIS_Z;
+		else if	(DIJOFS_RX == fmt.dwOfs)	axisNum = AXIS_RX;
+		else if	(DIJOFS_RY == fmt.dwOfs)	axisNum = AXIS_RY;
+		else if	(DIJOFS_RZ == fmt.dwOfs)	axisNum = AXIS_RZ;
+		else
+			// If still couldn't match then it is not an axis
+			return DIENUM_CONTINUE;
+#endif			
 	}
 	else
 	{
