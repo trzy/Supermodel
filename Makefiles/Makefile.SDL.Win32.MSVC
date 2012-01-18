@@ -127,19 +127,12 @@ OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.
 	odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
 
 #
-# Turbo68K options
-#
-TURBO68K_FLAGS = -singleaddr 
-
-
-#
 # Build options...
 #
 
 # Add compiler flags for various options
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	COMPILER_FLAGS += /D "SUPERMODEL_DEBUGGER"
-	TURBO68K_FLAGS += -debug
 endif
 
 
@@ -226,20 +219,6 @@ $(OBJ_DIR)/m68kopdm.obj: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR
 
 $(OBJ_DIR)/m68kopnz.obj: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kmake.exe $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h Src/CPU/68K/Musashi/m68kctx.h
 	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/m68kopnz.obj /I "Src\CPU\68K\Musashi" /DINLINE="static __inline"
-
-
-#
-# Turbo68K 
-#
-# 32-bit only.
-#
-$(OBJ_DIR)/Make68K.exe: Src/CPU/68K/Turbo68K/Make68K.c
-	$(CC) $< $(CFLAGS) /Fo$(OBJ_DIR)/Make68K.obj
-	$(LD) /OUT:$(OBJ_DIR)/Make68K.exe /SUBSYSTEM:CONSOLE /NOLOGO /MANIFEST:NO /LTCG $(OBJ_DIR)/Make68K.obj
-
-$(OBJ_DIR)/Turbo68K.obj: $(OBJ_DIR)/Make68K.exe
-	$(OBJ_DIR)/Make68K.exe $(OBJ_DIR)/Turbo68K.asm $(TURBO68K_FLAGS)
-	nasm $(OBJ_DIR)/Turbo68K.asm -o $(OBJ_DIR)/Turbo68K.obj -f win32
 
 
 #
