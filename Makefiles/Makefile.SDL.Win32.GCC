@@ -81,7 +81,7 @@ else
 	BIN_DIR = bin
 endif
 
-OUTFILE = $(BIN_DIR)/Supermodel.exe
+OUTFILE = $(BIN_DIR)\Supermodel.exe
 
 
 ###############################################################################
@@ -148,11 +148,11 @@ $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
 clean:	
-	rm -f $(OUTFILE)
-	rm -f $(OBJ_DIR)/*.o
-	rm -f $(OBJ_DIR)/*.c
-	rm -f $(OBJ_DIR)/*.h
-	rm -f $(OBJ_DIR)/*.exe
+	del $(OUTFILE)
+	del $(OBJ_DIR)\*.o
+	del $(OBJ_DIR)\*.c
+	del $(OBJ_DIR)\*.h
+	del $(OBJ_DIR)\*.exe
 
 
 #
