@@ -125,8 +125,7 @@ void main(void)
 		sunFactor = max(dot(sunVector,viewNormal),0.0);
 		
 		// Total light intensity: sum of all components
-		fsLightIntensity *= (sunFactor*lighting[1].x+lighting[1].y);
-		fsLightIntensity = clamp(fsLightIntensity,0.0,1.0);
+		fsLightIntensity *= (sunFactor*lighting[1].x+lighting[1].y);		
 	}
 	
 	// Fog

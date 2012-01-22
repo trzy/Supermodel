@@ -183,7 +183,7 @@ void main(void)
 	ellipse = (gl_FragCoord.xy-spotEllipse.xy)/spotEllipse.zw;
 	insideSpot = dot(ellipse,ellipse);
 	if ((insideSpot <= 1.0) &&  (fsViewZ>=spotRange.x) && (fsViewZ<spotRange.y))
-		lightIntensity = min(fsLightIntensity+(1.0-insideSpot)*spotColor,1.0);
+		lightIntensity = fsLightIntensity+(1.0-insideSpot)*spotColor;
 	else
 		lightIntensity = fsLightIntensity;
 	fragColor.rgb *= lightIntensity;

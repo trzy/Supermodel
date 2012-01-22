@@ -117,7 +117,7 @@ void main(void)
 	// Textured polygons: set fragment color to texel value
 	{			
 		fragColor = texture2D(textureMap,(fsSubTexture.xy+fsSubTexture.zw/2.0)/2048.0);
-		//fragColor += texture2D(textureMap,(fsSubTexture.xy+fsSubTexture.zw))/2048.0);
+		//fragColor += texture2D(textureMap,(fsSubTexture.xy+fsSubTexture.zw)/2048.0);
 	
 	}
 
@@ -125,12 +125,11 @@ void main(void)
 	ellipse = (gl_FragCoord.xy-spotEllipse.xy)/spotEllipse.zw;
 	insideSpot = dot(ellipse,ellipse);
 	if ((insideSpot <= 1.0) &&  (fsViewZ>=spotRange.x) && (fsViewZ<spotRange.y))
-		lightIntensity = min(fsLightIntensity+(1.0-insideSpot)*spotColor,1.0);
+		lightIntensity = fsLightIntensity+(1.0-insideSpot)*spotColor;
 	else
 		lightIntensity = fsLightIntensity;
 	fragColor.rgb *= lightIntensity;
-	fragColor.rgb *= fsLightIntensity;
-
+		
 	// Translucency (modulates existing alpha channel for RGBA4 texels)
 	fragColor.a *= fsTransLevel;
 
