@@ -142,7 +142,6 @@ private:
 	void DrawTileLine8Bit(UINT32 *buf, int offset, UINT16 tile, int tileLine);
 	void DrawTileLine8BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels);
 	void DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase);
-	void DrawRect(int layerNum, const UINT16 *nameTableBase, int tileX, int tileY, int tileW, int tileH);
 	void UpdateLayer(int layerNum);
 	void DisplayLayer(int layerNum, GLfloat z);
 	void Setup2D(void);
