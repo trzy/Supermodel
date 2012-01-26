@@ -26,8 +26,7 @@
  *
  * To-Do List
  * ----------
- * - Add dirty rectangles? There is already some inactive code in here for
- *   this purpose and it needs to be updated or deleted once and for all.
+ * - Add dirty rectangles? 
  * - Are v-scroll values 9 or 10 bits? 
  * - Add fast paths for no scrolling (including unclipped tile rendering).
  * - Inline the loops in the tile renderers.
@@ -613,30 +612,7 @@ void CRender2D::DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase)
 void CRender2D::UpdateLayer(int layerNum)
 {
 	glBindTexture(GL_TEXTURE_2D, texID[layerNum]);
-
-	allDirty = true;
-	if (allDirty)
-	{
-		// If everything is dirty, update the whole thing at once
-		DrawCompleteLayer(layerNum, (UINT16 *) &vram[(0xF8000+layerNum*2*0x2000)/4]);
-		//DrawRect(layerNum, (UINT16 *) &vram[(0xF8000+layerNum*2*0x2000)/4], 0, 0, 62, 48);
-		memset(dirty, 0, sizeof(dirty));
-	}
-	else
-	{
-		// Otherwise, for now, use a dumb approach that updates each rectangle individually
-		for (int y = 0; y < 64/DIRTY_RECT_HEIGHT; y++)
-		{
-			for (int x = 0; x < 48/DIRTY_RECT_WIDTH; x++)
-			{
-				if (dirty[layerNum][y][x])
-				{
-					DrawRect(layerNum, (UINT16 *) &vram[(0xF8000+layerNum*2*0x2000)/4], x*DIRTY_RECT_WIDTH, y*DIRTY_RECT_HEIGHT, DIRTY_RECT_WIDTH, DIRTY_RECT_HEIGHT);
-					dirty[layerNum][y][x] = 0;	// not dirty anymore
-				}
-			}
-		}
-	}
+	DrawCompleteLayer(layerNum, (UINT16 *) &vram[(0xF8000+layerNum*2*0x2000)/4]);
 }
 
 
@@ -707,10 +683,7 @@ void CRender2D::BeginFrame(void)
 	
 	// Update all layers
 	for (int i = 0; i < 2; i++)
-	{
 		UpdateLayer(i);
-	}
-	allDirty = false;
 	
 	// Draw bottom layer
 	Setup2D();
@@ -743,9 +716,6 @@ void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
 {
 	if (vram[addr/4] == data)	// do nothing if no changes
 		return;
-		
-	// For now, mark everything as dirty
-	allDirty = true;
 }
 
 
@@ -802,11 +772,9 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	xOffs = xOffset;
 	yOffs = yOffset;
 	
-	// Clear textures and dirty rectangles (all memory)
+	// Clear textures
 	memset(memoryPool, 0, MEMORY_POOL_SIZE);
-	memset(dirty, 0, sizeof(dirty));
-	allDirty = true;
-	
+			
 	// Create textures
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(2, texID);

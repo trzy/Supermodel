@@ -154,7 +154,7 @@ private:
 	const UINT32	*regs;
 	
 	// OpenGL data
-	GLuint   	texID[2];			// IDs for the 2 layer textures
+	GLuint   	texID[2];			// IDs for the 2 layer textures (top and bottom)
 	unsigned	xPixels, yPixels;	// display surface resolution
 	unsigned	xOffs, yOffs;		// offset
 	
@@ -165,11 +165,6 @@ private:
 	GLuint	textureMapLoc;	// location of "textureMap" uniform
 	GLuint	colorOffsetLoc;	// uniform
 
-	
-	// Dirty rectangles (non-zero indicates region is dirty)
-	UINT8	dirty[2][64/DIRTY_RECT_HEIGHT][48/DIRTY_RECT_WIDTH];
-	bool	allDirty;	// global dirty flag (forces everything to be updated)
-	
 	// Buffers
 	UINT8	*memoryPool;	// all memory is allocated here
 	UINT32	*surf;			// 512x512x32bpp pixel surface
