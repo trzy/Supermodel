@@ -1,4 +1,3 @@
-//TODO: organize memory pool more tightly: 2 512x384 layers plus 4 extra lines
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -25,13 +24,248 @@
  * 
  * Implementation of the CRender2D class: OpenGL tile generator graphics. 
  *
+ * Tile Generator Hardware Overview
+ * --------------------------------
+ *
+ * Model 3's medium resolution tile generator hardware appears to be derived
+ * from the Model 2 and System 24 chipset. It consists of four 64x64 tile 
+ * layers, comprised of 8x8 pixel tiles, with configurable priorities. There
+ * may be additional features but so far, no known Model 3 games use them.
+ *
+ * VRAM is comprised of 1 MB for tile data and an additional 128 KB for the 
+ * palette. The four tilemap layers are referred to as: A (0), A' (1), B (2),
+ * and B' (3). Palette RAM may be located on a separate RAM IC.
+ *
+ * NOTE: Supermodel allocates 128 KB for the palette. Either this is incorrect
+ * (only 64 KB is needed to store 32K colors), the colors are inaccessible, or
+ * there is a way to access them but no game has done so yet. My suspicion is
+ * that the palette RAM is in fact only 64 KB but this needs to be verified by
+ * checking to see if any games write to the high 64 KB.
+ *
+ * Registers
+ * ---------
+ *
+ * Registers are listed by their byte offset in the PowerPC address space. Each
+ * is 32 bits wide and little endian. Only those registers relevant to 
+ * rendering are listed here (see CTileGen for others).
+ *
+ *		Offset:		Description:
+ *
+ *		0x20		Layer configuration
+ *		0x40		Layer A/A' color offset
+ *		0x44		Layer B/B' color offset
+ *		0x60		Layer A scroll
+ *		0x64		Layer A' scroll
+ *		0x68		Layer B scroll
+ *		0x6C		Layer B' scroll
+ *
+ * Layer configuration is formatted as:
+ *
+ *		31                                     0
+ *		 ???? ???? ???? ???? pqrs tuvw ???? ????
+ *
+ * Bits 'pqrs' control the color depth of layers B', B, A', and A, 
+ * respectively, and 'tuvw' form a 4-bit priority code. The other bits are
+ * unused or unknown.
+ *
+ * The remaining registers are described where appropriate further below.
+ *
+ * VRAM Memory Map
+ * ---------------
+ *
+ * The lower 1 MB of VRAM is used for storing tiles, per-line horizontal scroll
+ * values, and the stencil mask, which determines which of each pair of layers
+ * is displayed on a given line and column.
+ *
+ *		00000-F5FFF		Tile pattern data
+ * 		F6000-F63FF		Layer A horizontal scroll table (512 lines)
+ *		F6400-F67FF		Layer A' horizontal scroll table	
+ *		F6800-F6BFF		Layer B horizontal scroll table
+ *		F6C00-F6FFF		Layer B' horizontal scroll table
+ *		F7000-F77FF		Mask table (assuming 4 bytes per line, 512 lines)
+ *		F7800-F7FFF		?
+ *		F8000-F9FFF		Layer A name table
+ *		FA000-FBFFF		Layer A' name table
+ *		FC000-FDFFF		Layer B name table
+ *		FE000-FFFFF		Layer B' name table
+ *
+ * Tiles may actually address the entire 1 MB space, although in practice,
+ * that would conflict with the other fixed memory regions.
+ * 
+ * Palette
+ * -------
+ *
+ * The palette stores 32768 colors. Each entry is a little endian 16-bit word.
+ *
+ * The format of a palette word is:
+ *
+ *		15                 0
+ *		 tbbb bbgg gggr rrrr
+ *
+ * The 't' bit is for transparency. When set, pixels of that color are
+ * transparent, unless they are the bottom-most layer.
+ *
+ * Tile Name Table and Pattern Layout
+ * ----------------------------------
+ *
+ * The name table is a 64x64 array of 16-bit words serving as indices for tile
+ * pattern data and the palette. The first 64 words correspond to the first 
+ * row of tiles, the next 64 to the second row, etc. Although 64x64 entries
+ * describes a 512x512 pixel screen, only the upper-left 62x48 tiles are
+ * visible when the vertical and horizontal scroll values are 0. Scrolling 
+ * moves the 496x384 pixel 'window' around, with individual wrapping of the
+ * two axes.
+ *
+ * The data is actually arranged in 32-bit chunks in little endian format, so 
+ * that tiles 0, 1, 2, and 3 will be stored as 1, 0, 3, 2. Fetching two name 
+ * table entries as a single 32-bit word places the left tile in the high 16 
+ * bits and the right tile in the low 16 bits.
+ *
+ * The format of a name table entry in 4-bit color mode is:
+ *
+ *		15                 0
+ *		 jkpp pppp pppp iiii
+ *
+ * The pattern index is '0ppp pppp pppi iiij'. Multiplying by 32 yields the
+ * offset in VRAM at which the tile pattern data is stored. Note that the MSB 
+ * of the name table entry becomes the LSB of the pattern index. This allows 
+ * for 32768 4-bit tile patterns, each occupying 32 bytes, which means the 
+ * whole 1 MB VRAM space can be addressed.
+ *
+ * The 4-bit pattern data is stored as 8 32-bit words. Each word stores a row
+ * of 8 pixels:
+ *
+ *		31                                     0
+ *		 aaaa bbbb cccc dddd eeee ffff gggg hhhh
+ *
+ * 'a' is the left-most pixel data. These 4-bit values are combined with bits
+ * from the name table to form a palette index, which determines the final
+ * color. For example, for pixel 'a', the 15-bit color index is:
+ *		
+ *      14                0
+ *		 kpp pppp pppp aaaa
+ *
+ * Note that index bits are re-used to form the palette index, meaning that
+ * the pattern address partly determines the color.
+ *
+ * In 8-bit color mode, the name table entry looks like:
+ *
+ *		15                 0
+ *		 ?ppp pppp iiii iiii
+ *
+ * The low 15 'p' and 'i' bits together form the pattern index, which must be 
+ * multiplied by 64 to get the offset. The pattern data now consists of 16 32-
+ * bit words, each containing four 8-bit pixels:
+ *
+ *		31                                     0
+ *		 aaaa aaaa bbbb bbbb cccc cccc dddd dddd
+ *
+ * 'a' is the left-most pixel. Each line is therefore comprised of two 32-bit
+ * words. The palette index for pixel 'a' is now formed from:
+ *
+ *		14                0
+ *		 ppp pppp aaaa aaaa
+ *
+ * Stencil Mask 
+ * ------------
+ *
+ * For any pixel position, there are in fact only two visible layers, despite
+ * there being four defined layers. The layers are grouped in pairs: A (the
+ * 'primary' layer) and A' (the 'alternate') form one pair, and B and B' form
+ * the other. Only one of the primary or alternate layers from each group may
+ * be visible at a given position. The 'stencil mask' controls this.
+ *
+ * The mask table is a bit field organized into 512 (or 384?) lines with each
+ * bit controlling four columns (32 pixels). The mask does not appear to be
+ * affected by scrolling -- that is, it does not scroll with the underlying
+ * tiles, which do so independently. The mask remains fixed. Caveat: a bug in
+ * Scud Race's 'ROLLING START' animation may indicate this is either not 
+ * strictly true or that the upper-left corner of the mask needs to be adjusted
+ * slightly. This bug has not been investigated thoroughly yet.
+ *
+ * Each mask entry is a little endian 32-bit word. The high 16 bits control
+ * A/A' and the low 16 bits control B/B'. Each word controls an entire line
+ * (32 pixels per bit, 512 pixels per 16-bit line mask). If a bit is set to 1,
+ * the pixel from the primary layer is used, otherwise the alternate layer is
+ * used when the mask is 0. It is important to remember that the layers may
+ * have been scrolled independently. The mask operates on the final resultant
+ * two pixels that are determined for each location.
+ *
+ * Example of a line mask:
+ *
+ *		31                  15                 0
+ *		 0111 0000 0000 1111 0000 0000 1111 1111
+ *
+ * These settings would display layer A' for the first 32 pixels of the line,
+ * followed by layer A for the next 96 pixels, A' for the subsequent 256 
+ * pixels, and A for the final 128 pixels. The first 256 pixels of the line
+ * would display layer B' and the second 256 pixels would be from layer B.
+ *
+ * The stencil mask does not affect layer priorities, which are managed 
+ * separately regardless of mask settings.
+ *
+ * Scrolling
+ * ---------
+ *
+ * Each of the four layers can be scrolled independently. Vertical scroll
+ * values are stored in the appropriate scroll register and horizontal scroll
+ * values can be sourced either from the register (in which case the entire
+ * layer will be scrolled uniformly) or from a table in VRAM (which contains
+ * independent values for each line). 
+ *
+ * The scroll registers are laid out as:
+ *
+ *		31                                     0
+ *		 v??? ???y yyyy yyyy h??? ??xx xxxx xxxx
+ *
+ * The 'y' bits comprise a vertical scroll value in pixels. The 'x' bits form a
+ * horizontal scroll value. If 'h' is set, then the VRAM table (line-by-line 
+ * scrolling) is used, otherwise the 'x' values are applied to every line. The
+ * meaning of 'v' is unknown. It is also possible that the scroll values use
+ * more or less bits, but probably no more than 1.
+ *
+ * Each line must be wrapped back to the beginning of the same line. Likewise,
+ * vertical scrolling wraps around back to the top of the tilemap.
+ *
+ * The horizontal scroll table is a series of 16-bit little endian words, one
+ * for each line beginning at 0. It appears all the values can be used for
+ * scrolling (no control bits have been observed). The number of bits actually
+ * used by the hardware is irrelevant -- wrapping has the effect of making 
+ * higher order bits unimportant.
+ *
+ * Layer Priorities
+ * ----------------
+ *
+ * The layer control register (0x20) contains 4 bits that appear to control
+ * layer priorities. It is assumed that the 3D graphics, output by the Real3D
+ * pixel processors independently of the tile generator, constitute their own
+ * 'layer' and that the 2D tilemaps appear in front or behind. There may be a
+ * specific function for each priority bit or the field may be interpreted as a
+ * single 4-bit value denoting preset layer orders.
+ *
+ * Color Offsets
+ * -------------
+ *
+ * Color offsets can be applied to the final RGB color value of every pixel.
+ * This is used for effects such as fading to a certain color, lightning (Lost
+ * World), etc. The current best guess is that the two registers control each
+ * pair (A/A' and B/B') of layers. The format appears to be:
+ *
+ *		31                                     0
+ *		 ???? ???? rrrr rrrr gggg gggg bbbb bbbb
+ *
+ * Where 'r', 'g', and 'b' appear to be signed 8-bit color offsets. Because
+ * they exceed the color resolution of the palette, they must be scaled
+ * appropriately.
+ *
  * To-Do List
  * ----------
- * - Add dirty rectangles? 
+ * - Fix color offsets: they should probably be applied to layers A/A' and B/B'
+ *   rather than to the top and bottom surfaces (an artifact left over from
+ *   when layer priorities were fixed as B/B' -> bottom, A/A' -> top). This can
+ *   no longer be performed by the shaders, unfortunately, because of arbitrary
+ *   layer priorities.
  * - Are v-scroll values 9 or 10 bits? 
- * - Add fast paths for no scrolling (including unclipped tile rendering).
- * - Inline the loops in the tile renderers.
- * - Update description of tile generator before you forget :)
  * - A proper shut-down function is needed! OpenGL might not be available when
  *   the destructor for this class is called.
  */
@@ -110,132 +344,6 @@ void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine)
     *buf++ = pal[((pattern>>16)&0xFF) | palette];
     *buf++ = pal[((pattern>>8)&0xFF) | palette];
     *buf++ = pal[((pattern>>0)&0xFF) | palette];
-}
-
-
-// Draw 4-bit tile line, clipped at left edge
-void CRender2D::DrawTileLine4Bit(UINT32 *buf, int offset, UINT16 tile, int tileLine)
-{
-    unsigned	tileOffset;	// offset of tile pattern within VRAM
-    unsigned	palette;   	// color palette bits obtained from tile
-    UINT32  	pattern;    // 8 pattern pixels fetched at once
-
-	// Tile pattern offset: each tile occupies 32 bytes when using 4-bit pixels
-    tileOffset = ((tile&0x3FFF)<<1) | ((tile>>15)&1);
-    tileOffset *= 32;
-    tileOffset /= 4;	// VRAM is a UINT32 array
-
-	// Upper color bits; the lower 4 bits come from the tile pattern
-	palette = tile&0x7FF0;
-    
-    // Draw 8 pixels
-    pattern = vram[tileOffset+tileLine];
-    for (int bitPos = 28; bitPos >= 0; bitPos -= 4)
-   	{
-    	if (offset >= 0)
-    		buf[offset] = pal[((pattern>>bitPos)&0xF) | palette];
-    	++offset;
-    }
-}
-
-// Draw 4-bit tile line, clipped at right edge
-void CRender2D::DrawTileLine4BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels)
-{
-    unsigned	tileOffset;	// offset of tile pattern within VRAM
-    unsigned	palette;   	// color palette bits obtained from tile
-    UINT32  	pattern;    // 8 pattern pixels fetched at once
-    int			bitPos;
-
-	// Tile pattern offset: each tile occupies 32 bytes when using 4-bit pixels
-    tileOffset = ((tile&0x3FFF)<<1) | ((tile>>15)&1);
-    tileOffset *= 32;
-    tileOffset /= 4;	// VRAM is a UINT32 array
-
-	// Upper color bits; the lower 4 bits come from the tile pattern
-	palette = tile&0x7FF0;
-    
-    // Draw 8 pixels
-    pattern = vram[tileOffset+tileLine];
-    bitPos = 28;
-    for (int i = 0; i < numPixels; i++)
-   	{
-    	buf[offset] = pal[((pattern>>bitPos)&0xF) | palette];
-    	++offset;
-    	bitPos -= 4;
-    }
-}
-
-// Draw 8-bit tile line, clipped at left edge
-void CRender2D::DrawTileLine8Bit(UINT32 *buf, int offset, UINT16 tile, int tileLine)
-{
-    unsigned	tileOffset;	// offset of tile pattern within VRAM
-    unsigned	palette;   	// color palette bits obtained from tile
-    UINT32  	pattern;    // 4 pattern pixels fetched at once
-
-	tileLine *= 2;	// 8-bit pixels, each line is two words
-	
-	// Tile pattern offset: each tile occupies 64 bytes when using 8-bit pixels
-    tileOffset = tile&0x3FFF;
-    tileOffset *= 64;
-    tileOffset /= 4;
-
-	// Upper color bits
-	palette = tile&0x7F00;
-    
-    // Draw 4 pixels at a time
-    pattern = vram[tileOffset+tileLine];
-    for (int bitPos = 24; bitPos >= 0; bitPos -= 8)
-   	{
-    	if (offset >= 0)
-    		buf[offset] = pal[((pattern>>bitPos)&0xFF) | palette];
-    	++offset;
-    }
-    
-    pattern = vram[tileOffset+tileLine+1];
-    for (int bitPos = 24; bitPos >= 0; bitPos -= 8)
-   	{
-    	if (offset >= 0)
-    		buf[offset] = pal[((pattern>>bitPos)&0xFF) | palette];
-    	++offset;
-    }
-}
-
-// Draw 8-bit tile line, clipped at right edge
-void CRender2D::DrawTileLine8BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels)
-{
-    unsigned	tileOffset;	// offset of tile pattern within VRAM
-    unsigned	palette;   	// color palette bits obtained from tile
-    UINT32  	pattern;    // 4 pattern pixels fetched at once
-    int			bitPos;
-
-	tileLine *= 2;	// 8-bit pixels, each line is two words
-	
-	// Tile pattern offset: each tile occupies 64 bytes when using 8-bit pixels
-    tileOffset = tile&0x3FFF;
-    tileOffset *= 64;
-    tileOffset /= 4;
-    
-	// Upper color bits
-	palette = tile&0x7F00;
-    
-    // Draw 4 pixels at a time
-    pattern = vram[tileOffset+tileLine];
-    bitPos = 24;
-    for (int i = 0; (i < 4) && (i < numPixels); i++)
-   	{
-    	buf[offset] = pal[((pattern>>bitPos)&0xFF) | palette];
-    	++offset;
-    	bitPos -= 8;
-    }
-    
-    pattern = vram[tileOffset+tileLine+1];
-    bitPos = 24;
-    for (int i = 0; (i < 4) && (i < numPixels); i++)
-   	{
-    	buf[offset] = pal[((pattern>>bitPos)&0xFF) | palette];
-    	++offset;
-    	bitPos -= 8;
-    }
 }
 
 
