@@ -398,6 +398,7 @@ private:
 	GLuint	texFormatLoc;			// attribute
 	GLuint	transLevelLoc;			// attribute
 	GLuint	lightEnableLoc;			// attribute
+	GLuint	shininessLoc;			// attribute
 	GLuint	fogIntensityLoc;		// attribute
 	
 	// Model caching

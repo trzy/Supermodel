@@ -45,30 +45,31 @@
  * All vertex information is stored in an array of GLfloats. Offset and size
  * information is defined here for now.
  */
-#define VBO_VERTEX_OFFSET_X						0	// vertex X		*
-#define VBO_VERTEX_OFFSET_Y						1	// vertex Y		*
-#define VBO_VERTEX_OFFSET_Z						2	// vertex Z		*
-#define VBO_VERTEX_OFFSET_NX					3	// normal X		*
-#define VBO_VERTEX_OFFSET_NY					4	// normal Y		*
-#define VBO_VERTEX_OFFSET_NZ					5	// normal Z		*
-#define VBO_VERTEX_OFFSET_R						6	// color (untextured polys) and material (textured polys) R		c (w/ texenable?)
+#define VBO_VERTEX_OFFSET_X						0	// vertex X
+#define VBO_VERTEX_OFFSET_Y						1	// vertex Y
+#define VBO_VERTEX_OFFSET_Z						2	// vertex Z
+#define VBO_VERTEX_OFFSET_NX					3	// normal X
+#define VBO_VERTEX_OFFSET_NY					4	// normal Y
+#define VBO_VERTEX_OFFSET_NZ					5	// normal Z
+#define VBO_VERTEX_OFFSET_R						6	// color (untextured polys) and material (textured polys) R
 #define VBO_VERTEX_OFFSET_G						7	// color and material G		
 #define VBO_VERTEX_OFFSET_B						8	// color and material B
-#define VBO_VERTEX_OFFSET_TRANSLUCENCE			9	// translucence level (0.0 fully transparent, 1.0 opaque)	*
-#define VBO_VERTEX_OFFSET_LIGHTENABLE			10	// lighting enabled (0.0 luminous, 1.0 light enabled)		*
-#define VBO_VERTEX_OFFSET_FOGINTENSITY			11	// fog intensity (0.0 no fog applied, 1.0 all fog applied)	* (combine w/ lightenable, making one negative)
-#define VBO_VERTEX_OFFSET_U						12	// texture U coordinate (in texels, relative to sub-texture)	*
-#define VBO_VERTEX_OFFSET_V						13	// texture V coordinate											*
-#define VBO_VERTEX_OFFSET_TEXTURE_X				14	// sub-texture parameters, X (position in overall texture map, in texels)	*
-#define VBO_VERTEX_OFFSET_TEXTURE_Y				15	// "" Y ""																	*
-#define VBO_VERTEX_OFFSET_TEXTURE_W				16	// sub-texture parameters, width of texture in texels						*
-#define VBO_VERTEX_OFFSET_TEXTURE_H				17	// "" height of texture in texels											*
-#define VBO_VERTEX_OFFSET_TEXPARAMS_EN			18	// texture parameter: ==1 texturing enabled, ==0 disabled (per-polygon)		c (w/ R?)
-#define VBO_VERTEX_OFFSET_TEXPARAMS_TRANS		19	// texture parameter: >=0 use transparency bit, <0 no transparency (per-polygon)	c (w/ contour?)
-#define VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP		20	// texture parameters: U wrap mode: ==1 mirrored repeat, ==0 normal repeat
-#define VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP		21	// "" V wrap mode ""
-#define VBO_VERTEX_OFFSET_TEXFORMAT_CONTOUR		22	// contour texture: >0 indicates contour texture (see also texParams.trans)	c (w/ trans?)
-#define VBO_VERTEX_SIZE							23	// total size (may include padding for alignment)
+#define VBO_VERTEX_OFFSET_TRANSLUCENCE			9	// translucence level (0.0 fully transparent, 1.0 opaque)
+#define VBO_VERTEX_OFFSET_LIGHTENABLE			10	// lighting enabled (0.0 luminous, 1.0 light enabled)
+#define VBO_VERTEX_OFFSET_SHININESS				11	// shininess (if negative, disables specular lighting)
+#define VBO_VERTEX_OFFSET_FOGINTENSITY			12	// fog intensity (0.0 no fog applied, 1.0 all fog applied)
+#define VBO_VERTEX_OFFSET_U						13	// texture U coordinate (in texels, relative to sub-texture)
+#define VBO_VERTEX_OFFSET_V						14	// texture V coordinate
+#define VBO_VERTEX_OFFSET_TEXTURE_X				15	// sub-texture parameters, X (position in overall texture map, in texels)
+#define VBO_VERTEX_OFFSET_TEXTURE_Y				16	// "" Y ""
+#define VBO_VERTEX_OFFSET_TEXTURE_W				17	// sub-texture parameters, width of texture in texels
+#define VBO_VERTEX_OFFSET_TEXTURE_H				18	// "" height of texture in texels
+#define VBO_VERTEX_OFFSET_TEXPARAMS_EN			19	// texture parameter: ==1 texturing enabled, ==0 disabled (per-polygon)
+#define VBO_VERTEX_OFFSET_TEXPARAMS_TRANS		20	// texture parameter: >=0 use transparency bit, <0 no transparency (per-polygon)
+#define VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP		21	// texture parameters: U wrap mode: ==1 mirrored repeat, ==0 normal repeat
+#define VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP		22	// "" V wrap mode ""
+#define VBO_VERTEX_OFFSET_TEXFORMAT_CONTOUR		23	// contour texture: >0 indicates contour texture (see also texParams.trans)
+#define VBO_VERTEX_SIZE							24	// total size (may include padding for alignment)
 
 
 /******************************************************************************
@@ -156,6 +157,7 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 	glVertexAttribPointer(texFormatLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXFORMAT_CONTOUR*sizeof(GLfloat)));
 	glVertexAttribPointer(transLevelLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TRANSLUCENCE*sizeof(GLfloat)));
 	glVertexAttribPointer(lightEnableLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_LIGHTENABLE*sizeof(GLfloat)));
+	glVertexAttribPointer(shininessLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_SHININESS*sizeof(GLfloat)));
 	glVertexAttribPointer(fogIntensityLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_FOGINTENSITY*sizeof(GLfloat)));
 	
 	// Set up state
@@ -357,7 +359,7 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	GLfloat		r, g, b;
 	GLfloat		translucence, fogIntensity, texWidth, texHeight, texBaseX, texBaseY, contourProcessing;
 	unsigned	baseIdx, texFormat, texEnable, lightEnable, modulate, colorIdx;
-	int			s, texPage;
+	int			s, texPage, shininess;
 	
 	// Texture selection
 	texEnable	= P->header[6]&0x04000000;
@@ -377,9 +379,8 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	 */
 	 
 	lightEnable = !(P->header[6]&0x00010000);
-	modulate	= !(P->header[4]&0x80);
+	//modulate	= !(P->header[4]&0x80);
 	modulate	= P->header[3]&0x80;	// seems to work better
-
 	
 	// Material color
 	if ((P->header[1]&2) == 0)
@@ -404,6 +405,14 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 		if (!modulate)
 			r = g = b = 1.0f;
 	}
+	
+	// Specular shininess
+	shininess = (P->header[0]>>26)&0x3F;
+	//shininess = (P->header[0]>>28)&0xF;
+	//if (shininess)
+	//	printf("%X\n", shininess);
+	if (!(P->header[0]&0x80) || (shininess == 0))	// bit 0x80 seems to enable specular lighting
+		shininess = -1;	// disable
 
 #if 0	
 	if (texFormat==5)//texFormat==6||texFormat==2)
@@ -415,13 +424,18 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	}
 #endif
 #if 0
-	if ((P->header[testWord]&(1<<testBit)))
+	int testWord = 0;
+	int testBit = 7;
+	//if ((P->header[testWord]&(1<<testBit)))
+	if (((P->header[0]>>24) & 0x3) != 0)
+	//if (!((P->header[0]>>26) & 0x3F) && (P->header[0]&0x80))
 	{
 		texEnable = 0;
 		r=b=0;
 		g=1.0f;
-		if (!lightEnable)
-			b=1.0f;
+		g = ((P->header[0]>>26)&0x3F) * (1.0f/64.0f);
+		//if (!lightEnable)
+		//	b=1.0f;
 		lightEnable=0;
 	}
 #endif
@@ -454,6 +468,7 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_B] = b;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TRANSLUCENCE] = translucence;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_LIGHTENABLE] = lightEnable ? 1.0f : 0.0f;
+	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_SHININESS] = (GLfloat) shininess;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_FOGINTENSITY] = fogIntensity;
 	
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NX] = V->n[0]*normFlip;

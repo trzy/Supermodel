@@ -953,6 +953,7 @@ void CRender3D::RenderFrame(void)
 	glEnableVertexAttribArray(texFormatLoc);
 	glEnableVertexAttribArray(transLevelLoc);
 	glEnableVertexAttribArray(lightEnableLoc);
+	glEnableVertexAttribArray(shininessLoc);
 	glEnableVertexAttribArray(fogIntensityLoc);
 	
 	// Draw
@@ -974,6 +975,7 @@ void CRender3D::RenderFrame(void)
 	
 	// Disable VBO client states
 	glDisableVertexAttribArray(fogIntensityLoc);
+	glDisableVertexAttribArray(shininessLoc);
 	glDisableVertexAttribArray(lightEnableLoc);
 	glDisableVertexAttribArray(transLevelLoc);
 	glDisableVertexAttribArray(texFormatLoc);
@@ -1098,6 +1100,7 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	texFormatLoc = glGetAttribLocation(shaderProgram,"texFormat");
 	transLevelLoc = glGetAttribLocation(shaderProgram,"transLevel");
 	lightEnableLoc = glGetAttribLocation(shaderProgram,"lightEnable");
+	shininessLoc = glGetAttribLocation(shaderProgram,"shininess");
 	fogIntensityLoc = glGetAttribLocation(shaderProgram,"fogIntensity");
 	
 	// Additional OpenGL stuff

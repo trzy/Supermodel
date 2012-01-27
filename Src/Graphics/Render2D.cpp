@@ -1,3 +1,4 @@
+//TODO: organize memory pool more tightly: 2 512x384 layers plus 4 extra lines
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -243,154 +244,111 @@ void CRender2D::DrawTileLine8BitRightClip(UINT32 *buf, int offset, UINT16 tile, 
 ******************************************************************************/
 
 /*
- * DrawCompleteLayer():
+ * DrawLine():
  *
- * Updates the complete layer.
+ * Draws a single scanline of single layer. Vertical (but not horizontal)
+ * scrolling is applied here.
+ *
+ * Parametes:
+ *		dest				Destination of 512-pixel wide output buffer to draw
+ *							to.
+ *		layerNum			Layer number:
+ *								0 = Layer A		(@ 0xF8000)
+ *								1 = Layer A'	(@ 0xFA000)
+ *								2 = Layer B		(@ 0xFC000)
+ *								3 = Layer B'	(@ 0xFE000)
+ *		y					Line number (0-495).
+ *		nameTableBase		Pointer to VRAM name table (see above addresses) 
+ *							for this layer.
+ *		hScrollTable		Pointer to the line-by-line horizontal scroll value
+ *							table for this layer.
  */
-void CRender2D::DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase)
+void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase)
 {
-	UINT32			*dest = surf;							// destination surface to write to
-	UINT32			*lineBufferPri = &surf[512*496];		// line buffer for primary and alternate layer
-	UINT32			*lineBufferAlt = &surf[512*497];
-	UINT32			*buf;
-	const UINT16	*maskTable;								// pointer to start of mask table
-	const UINT16	*hScrollTablePri, *hScrollTableAlt;		// pointers to line scroll tables
-	const UINT16	*nameTablePri = nameTableBase;			// primary (this layer) name table
-	const UINT16	*nameTableAlt = &nameTableBase[64*64];	// alternate layer's name table	
-	const UINT16	*nameTable;
-	int				colorDepthPri, colorDepthAlt;			// primary and alternate layer color depths
-	int				hScrollPri, hScrollAlt;					// primary and alternate layer scroll offsets
-	int				vScrollPri, vScrollAlt;
-	int				hFullScrollPri, hFullScrollAlt;			// full-screen horizontal scroll values (from registers)
-	int				vOffset;								// vertical pixel offset within tile
-	int				tx, i, j;
-	bool			lineScrollPri, lineScrollAlt;			// line scrolling enable/disable
-	UINT16			mask;
 	
-	// Determine layer color depths (1 if 4-bit, 0 if 8-bit)
-	colorDepthPri = regs[0x20/4] & (1<<(12+layerNum*2));
-	colorDepthAlt = regs[0x20/4] & (1<<(12+layerNum*2+1));
+	// Determine the layer color depth (4 or 8-bit pixels)
+	bool is4Bit = regs[0x20/4] & (1<<(12+layerNum));
 	
-	// Line scroll tables
-	hScrollTablePri = (UINT16 *) &vram[(0xF6000+layerNum*2*0x400)/4];
-	hScrollTableAlt = (UINT16 *) &vram[(0xF6000+layerNum*2*0x400+0x400)/4];
+	// Compute offsets due to vertical scrolling
+	int 		 vScroll    = (regs[0x60/4+layerNum]>>16)&0x1FF;
+	const UINT16 *nameTable = &nameTableBase[(64*((y+vScroll)/8)) & 0xFFF];	// clamp to 64x64=0x1000
+	int          vOffset    = (y+vScroll)&7;	// vertical pixel offset within 8x8 tile
 	
-	// Get correct offset into mask table
-	maskTable = (UINT16 *) &vram[0xF7000/4];
-	if (layerNum == 0)
-		++maskTable;	// little endian, layer 0 is second word in each pair
-		
-	// Load horizontal full-screen scroll values and scroll mode
-	hFullScrollPri = regs[0x60/4+layerNum*2]&0x3FF;
-	hFullScrollAlt = regs[0x60/4+layerNum*2+1]&0x3FF;
-	lineScrollPri = regs[0x60/4+layerNum*2]&0x8000;
-	lineScrollAlt = regs[0x60/4+layerNum*2+1]&0x8000;
-	
-	// Load vertical scroll values
-	vScrollPri = (regs[0x60/4+layerNum*2]>>16)&0x1FF;
-	vScrollAlt = (regs[0x60/4+layerNum*2+1]>>16)&0x1FF;
-	
-	// Iterate over all displayed lines
-	for (int y = 0; y < 384; y++)
+	// Render 512 pixels (64 tiles) w/out any horizontal scrolling or masking
+	if (is4Bit)
 	{
-		/*
-		 * Draw all tiles from primary layer first. Horizontal scrolling is not
-		 * applied yet, but vertical scrolling is taken into account. An entire
-		 * 512-pixel line is rendered so that it can be scrolled during mixing.
-		 */		
-		nameTable = &nameTablePri[(64*((y+vScrollPri)/8)) & 0xFFF];	// clamp to 64x64=0x1000
-		vOffset = (y+vScrollPri)&7;
-		buf = lineBufferPri;	// output to primary line buffer
-		for (tx = 0; tx < 64; tx += 4)	// 4 tiles at a time (for masking)
+		for (int tx = 0; tx < 64; tx += 4)
 		{
-			if (colorDepthPri)	//TODO: move this test outside of loop
-			{
-				DrawTileLine4BitNoClip(buf, nameTable[1], vOffset);
-				buf += 8;
-				DrawTileLine4BitNoClip(buf, nameTable[0], vOffset);
-				buf += 8;
-				DrawTileLine4BitNoClip(buf, nameTable[3], vOffset);
-				buf += 8;
-				DrawTileLine4BitNoClip(buf, nameTable[2], vOffset);
-				buf += 8;
-			}
-			else
-			{
-				DrawTileLine8BitNoClip(buf, nameTable[1], vOffset);
-				buf += 8;
-				DrawTileLine8BitNoClip(buf, nameTable[0], vOffset);
-				buf += 8;
-				DrawTileLine8BitNoClip(buf, nameTable[3], vOffset);
-				buf += 8;
-				DrawTileLine8BitNoClip(buf, nameTable[2], vOffset);
-				buf += 8;
-			}
-				
-			// Next set of 4 tiles
+			// Little endian: offsets 0,1,2,3 become 1,0,3,2
+			DrawTileLine4BitNoClip(dest, nameTable[1], vOffset);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[0], vOffset);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[3], vOffset);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[2], vOffset);	dest += 8;
+			nameTable += 4;	// next set of 4 tiles
+		}
+	}
+	else
+	{
+		for (int tx = 0; tx < 64; tx += 4)
+		{
+			DrawTileLine8BitNoClip(dest, nameTable[1], vOffset);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[0], vOffset);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[3], vOffset);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[2], vOffset);	dest += 8;
 			nameTable += 4;
 		}
-		
-		/*
-		 * Draw the alternate layer wherever the primary layer was masked
-		 */		
-		nameTable = &nameTableAlt[(64*((y+vScrollAlt)/8))&0xFFF];
-		vOffset = (y+vScrollAlt)&7;
-		buf = lineBufferAlt;	// output to alternate line buffer
-		for (tx = 0; tx < 64; tx += 4)	// 4 tiles at a time (for masking)
-		{
-			if (colorDepthAlt)	//TODO: move this test outside of loop
-			{
-				DrawTileLine4BitNoClip(buf, nameTable[1], vOffset);
-				buf += 8;
-				DrawTileLine4BitNoClip(buf, nameTable[0], vOffset);
-				buf += 8;
-				DrawTileLine4BitNoClip(buf, nameTable[3], vOffset);
-				buf += 8;
-				DrawTileLine4BitNoClip(buf, nameTable[2], vOffset);
-				buf += 8;
-			}
-			else
-			{
-				DrawTileLine8BitNoClip(buf, nameTable[1], vOffset);
-				buf += 8;
-				DrawTileLine8BitNoClip(buf, nameTable[0], vOffset);
-				buf += 8;
-				DrawTileLine8BitNoClip(buf, nameTable[3], vOffset);
-				buf += 8;
-				DrawTileLine8BitNoClip(buf, nameTable[2], vOffset);
-				buf += 8;
-			}
-				
-			// Next set of 4 tiles
-			nameTable += 4;
-		}
-		
-		/*
-		 * Mix the two layers into the current line under control of the 
-		 * stencil mask, applying scrolling in the process.
-		 */
+	}				
+}
+
+void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool isBottom)
+{
+	/*
+	 * Mix in the appropriate layer under control of the stencil mask, applying
+	 * horizontal scrolling in theprocess
+	 */
 		 
-		// Load horizontal scroll values
-		if (lineScrollPri)
-			hScrollPri = hScrollTablePri[y];
-		else
-			hScrollPri = hFullScrollPri;
-		if (lineScrollAlt)
-			hScrollAlt = hScrollTableAlt[y];
-		else
-			hScrollAlt = hFullScrollAlt;
+	// Line scroll table
+	const UINT16 *hScrollTable = (UINT16 *) &vram[(0xF6000+layerNum*0x400)/4];
+	
+	// Load horizontal full-screen scroll values and scroll mode
+	int  hFullScroll    = regs[0x60/4+layerNum]&0x3FF;
+	bool lineScrollMode = regs[0x60/4+layerNum]&0x8000;
+	
+	// Load horizontal scroll values
+	int hScroll;
+	if (lineScrollMode)
+		hScroll = hScrollTable[y];
+	else
+		hScroll = hFullScroll;
+		
+	// Get correct offset into mask table
+	const UINT16 *maskTable = (UINT16 *) &vram[0xF7000/4];
+	maskTable += 2*y;
+	if (layerNum < 2)	// little endian: layers A and A' use second word in each pair
+		++maskTable;
+		
+	// Figure out what mask bit should be to mix in this layer
+	UINT16 doCopy;
+	if ((layerNum & 1))		// layers 1 and 3 are A' and B': alternates
+		doCopy = 0x0000;	// if mask is clear, copy alternate layer
+	else
+		doCopy = 0x8000;	// copy primary layer when mask is set
 			
-		// Mix first 60 tiles (4 at a time)
-		mask = *maskTable;
-		i = hScrollPri&511;	// primary line index
-		j = hScrollAlt&511;	// alternate line index
-		for (tx = 0; tx < 60; tx += 4)
+	// Mix first 60 tiles (4 at a time)
+	UINT16 mask = *maskTable;	// mask for this line (each bit covers 4 tiles)
+	int    i    = hScroll&511;	// line index (where to copy from)
+	for (int tx = 0; tx < 60; tx += 4)
+	{
+		// If bottom layer, we can copy without worrying about transparency, and must also write blank values when this layer is not showing
+		//TODO: move this test outside of loop
+		if (isBottom)
 		{
-			if ((mask&0x8000))	// copy tiles from primary layer
+			// Only copy pixels if the mask bit is appropriate for this layer type
+			if ((mask&0x8000) == doCopy)
 			{
 				if (i <= (512-32))	// safe to use memcpy for fast blit?
 				{
-					memcpy(dest, &lineBufferPri[i], 32*sizeof(UINT32));
+					memcpy(dest, &src[i], 32*sizeof(UINT32));
 					i += 32;
 					dest += 32;
 				}
@@ -399,76 +357,148 @@ void CRender2D::DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase)
 					for (int k = 0; k < 32; k++)
 					{
 						i &= 511;
-						*dest++ = lineBufferPri[i++];
+						*dest++ = src[i++];
 					}
 				}
-				j += 32;	// update alternate pointer as well
-			}		
-			else				// copy tiles from alternate layer
-			{
-				if (j <= (512-32))
-				{
-					memcpy(dest, &lineBufferAlt[j], 32*sizeof(UINT32));
-					j += 32;
-					dest += 32;
-				}
-				else
-				{
-					for (int k = 0; k < 32; k++)
-					{
-						j &= 511;
-						*dest++ = lineBufferAlt[j++];
-					}
-				}
-				
-				i += 32;	// update primary
 			}
-			
-			mask <<= 1;
+			else
+			{
+				// Write blank pixels
+				memset(dest, 0, 32*sizeof(UINT32));
+				i += 32;
+				i &= 511;	// wrap line boundaries
+				dest += 32;
+			}
+		}
+		else
+		{
+			// Copy while testing for transparencies
+			if ((mask&0x8000) == doCopy)
+			{
+				UINT32	p;
+				for (int k = 0; k < 32; k++)
+				{
+					i &= 511;
+					p = src[i++];
+					if ((p>>24) != 0)	// opaque pixel, put it down
+						*dest = p;
+					dest++;
+				}
+			}
+			else
+			{
+				i += 32;
+				i &= 511;
+				dest += 32;
+			}
 		}
 		
-		// Mix last two tiles
-		if ((mask&0x8000))	// copy tiles from primary layer
+		mask <<= 1;
+	}
+	
+	// Mix last two tiles
+	if (isBottom)
+	{
+		if ((mask&0x8000) == doCopy)
 		{
 			for (int k = 0; k < 16; k++)
 			{
 				i &= 511;
-				*dest++ = lineBufferPri[i++];
+				*dest++ = src[i++];
 			}
 		}
-		else				// copy from alternate
+		else	// clear
 		{
 			for (int k = 0; k < 16; k++)
 			{
-				j &= 511;
-				*dest++ = lineBufferAlt[j++];
+				i &= 511;
+				*dest++ = 0;
 			}
 		}
-
-		// Next line
-		maskTable += 2;	// next mask line
 	}
-	
-	// Upload
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surf);	
+	else
+	{
+		if ((mask&0x8000) == doCopy)
+		{
+			UINT32	p;
+			for (int k = 0; k < 16; k++)
+			{
+				i &= 511;
+				p = src[i++];
+				if ((p>>24) != 0)
+					*dest = p;
+				dest++;
+			}
+		}
+	}
 }
 
-// Updates any changed portions of a layer
-void CRender2D::UpdateLayer(int layerNum)
+
+void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 {
-	glBindTexture(GL_TEXTURE_2D, texID[layerNum]);
-	DrawCompleteLayer(layerNum, (UINT16 *) &vram[(0xF8000+layerNum*2*0x2000)/4]);
-}
+	// Base address of all 4 name tables
+	const UINT16 *nameTableBase[4];
+	nameTableBase[0] = (UINT16 *) &vram[(0xF8000+0*0x2000)/4];	// A
+	nameTableBase[1] = (UINT16 *) &vram[(0xF8000+1*0x2000)/4];	// A'
+	nameTableBase[2] = (UINT16 *) &vram[(0xF8000+2*0x2000)/4];	// B
+	nameTableBase[3] = (UINT16 *) &vram[(0xF8000+3*0x2000)/4];	// B'
+	
+	// Render and mix each line
+	for (int y = 0; y < 384; y++)
+	{
+		// Draw each layer
+		DrawLine(lineBuffer[0], 0, y, nameTableBase[0]);
+		DrawLine(lineBuffer[1], 1, y, nameTableBase[1]);
+		DrawLine(lineBuffer[2], 2, y, nameTableBase[2]);
+		DrawLine(lineBuffer[3], 3, y, nameTableBase[3]);
 
+		//TODO: could probably further optimize: only have a single layer clear masked-out areas, then if alt. layer is being written to same place, don't bother worrying about transparencies if directly on top
+		// Combine according to priority settings		
+		// NOTE: question mark indicates unobserved and therefore unknown
+		switch ((regs[0x20/4]>>8)&0xF)
+		{
+		case 0x5:	// top: A, B, A'?	bottom: B'
+			MixLine(destBottom, lineBuffer[3], 3, y, true);
+			MixLine(destTop, lineBuffer[2], 2, y, true);
+			MixLine(destTop, lineBuffer[0], 0, y, false);
+			MixLine(destTop, lineBuffer[1], 1, y, false);
+			break;
+		case 0xF:	// all on top
+			memset(destBottom, 0, 496*sizeof(UINT32));	//TODO: use glClear(GL_COLOR_BUFFER_BIT) if there is no bottom layer
+			MixLine(destTop, lineBuffer[2], 2, y, true);
+			MixLine(destTop, lineBuffer[3], 3, y, false);
+			MixLine(destTop, lineBuffer[0], 0, y, false);
+			MixLine(destTop, lineBuffer[1], 1, y, false);
+			break;
+		case 0x7:	// top: A, B	bottom: A'?, B'
+			MixLine(destBottom, lineBuffer[3], 3, y, true);
+			MixLine(destBottom, lineBuffer[1], 1, y, false);
+			MixLine(destTop, lineBuffer[2], 2, y, true);
+			MixLine(destTop, lineBuffer[0], 0, y, false);
+			break;
+		default:	// unknown, use A and A' on top, B and B' on the bottom
+			MixLine(destBottom, lineBuffer[2], 2, y, true);
+			MixLine(destBottom, lineBuffer[3], 3, y, false);
+			MixLine(destTop, lineBuffer[0], 0, y, true);
+			MixLine(destTop, lineBuffer[1], 1, y, false);
+			break;
+		}
+		
+		// Advance to next line in output surfaces
+		destBottom += 496;
+		destTop += 496;
+	}
+}
+		
 
 /******************************************************************************
  Frame Display Functions
 ******************************************************************************/
 
-// Draws a layer to the screen
-void CRender2D::DisplayLayer(int layerNum, GLfloat z)
+// Draws a surface to the screen (0 is top and 1 is bottom)
+void CRender2D::DisplaySurface(int surface, GLfloat z)
 {	
-	glBindTexture(GL_TEXTURE_2D, texID[layerNum]);
+	glBindTexture(GL_TEXTURE_2D, texID[surface]);
     glBegin(GL_QUADS);
     glTexCoord2f(0.0f/512.0f, 0.0f);          	glVertex3f(0.0f, 0.0f, z);
     glTexCoord2f(496.0f/512.0f, 0.0f);         	glVertex3f(1.0f, 0.0f, z);
@@ -527,14 +557,17 @@ void CRender2D::BeginFrame(void)
 	GLfloat	colorOffset[3];	
 	
 	// Update all layers
-	for (int i = 0; i < 2; i++)
-		UpdateLayer(i);
+	DrawTilemaps(surfBottom, surfTop);
+	glBindTexture(GL_TEXTURE_2D, texID[0]);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfTop);	
+	glBindTexture(GL_TEXTURE_2D, texID[1]);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfBottom);	
 	
-	// Draw bottom layer
+	// Display bottom surface
 	Setup2D();
 	ColorOffset(colorOffset, regs[0x44/4]);
 	glUniform3fv(colorOffsetLoc, 1, colorOffset);
-	DisplayLayer(1, 0.0);
+	DisplaySurface(1, 0.0);
 }
 
 // Top layers
@@ -542,20 +575,18 @@ void CRender2D::EndFrame(void)
 {	
 	GLfloat	colorOffset[3];
 	
-	// Draw top layer
+	// Display top surface
 	Setup2D();
 	glEnable(GL_BLEND);
 	ColorOffset(colorOffset, regs[0x40/4]);
 	glUniform3fv(colorOffsetLoc, 1, colorOffset);
-	DisplayLayer(0, -0.5);
+	DisplaySurface(0, -0.5);
 }
 
 
 /******************************************************************************
  Emulation Callbacks
 ******************************************************************************/
-
-
 
 void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
 {
@@ -586,7 +617,11 @@ void CRender2D::AttachVRAM(const UINT8 *vramPtr)
 	DebugLog("Render2D attached VRAM\n");
 }
 
-#define MEMORY_POOL_SIZE	(512*512*4)
+// Memory pool and offsets within it
+#define MEMORY_POOL_SIZE		(2*512*384*4 + 4*512*4)
+#define OFFSET_TOP_SURFACE		0				// 512*384*4 bytes
+#define OFFSET_BOTTOM_SURFACE	(512*384*4) 	// 512*384*4
+#define OFFSET_LINE_BUFFERS		(2*512*384*4)	// 4*512*4 (4 lines)
 
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
 {
@@ -602,23 +637,23 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	glUniform1i(textureMapLoc,0);	// attach it to texture unit 0
 	colorOffsetLoc = glGetUniformLocation(shaderProgram, "colorOffset");
 	
-	// Allocate memory for layer surfaces and palette
+	// Allocate memory for layer surfaces
 	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
 	if (NULL == memoryPool)
-		return ErrorLog("Insufficient memory for tile layer surfaces (need %1.1f MB).", memSizeMB);	
-	memset(memoryPool,0,MEMORY_POOL_SIZE);
+		return ErrorLog("Insufficient memory for tilemap surfaces (need %1.1f MB).", memSizeMB);	
+	memset(memoryPool,0,MEMORY_POOL_SIZE);	// clear textures
 	
 	// Set up pointers to memory regions
-	surf = (UINT32 *) memoryPool;
+	surfTop    	  = (UINT32 *) &memoryPool[OFFSET_TOP_SURFACE];
+	surfBottom 	  = (UINT32 *) &memoryPool[OFFSET_BOTTOM_SURFACE];
+	for (int i = 0; i < 4; i++)
+		lineBuffer[i] = (UINT32 *) &memoryPool[OFFSET_LINE_BUFFERS + i*512*4];
 	
 	// Resolution
 	xPixels = xRes;
 	yPixels = yRes;
 	xOffs = xOffset;
 	yOffs = yOffset;
-	
-	// Clear textures
-	memset(memoryPool, 0, MEMORY_POOL_SIZE);
 			
 	// Create textures
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -630,9 +665,9 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, surf);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, surfTop);
         if (glGetError() != GL_NO_ERROR)
-        	return ErrorLog("OpenGL was unable to provide 512x512-texel texture maps for tile map layers.");
+        	return ErrorLog("OpenGL was unable to provide 512x512-texel texture maps for tilemap layers.");
     }
 
 	DebugLog("Render2D initialized (allocated %1.1f MB)\n", memSizeMB);
@@ -648,7 +683,10 @@ CRender2D::CRender2D(void)
 	
 	memoryPool = NULL;
 	vram = NULL;
-	surf = NULL;
+	surfTop = NULL;
+	surfBottom = NULL;
+	for (int i = 0; i < 4; i++)
+		lineBuffer[i] = NULL;
 	
 	DebugLog("Built Render2D\n");
 }
@@ -664,8 +702,11 @@ CRender2D::~CRender2D(void)
 		memoryPool = NULL;
 	}
 	
-	surf = NULL;
 	vram = NULL;
+	surfTop = NULL;
+	surfBottom = NULL;
+	for (int i = 0; i < 4; i++)
+		lineBuffer[i] = NULL;
 
 	DebugLog("Destroyed Render2D\n");
 }

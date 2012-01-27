@@ -31,10 +31,6 @@
 #include "Pkgs/glew.h"
 
 
-// Dirty rectangle size, must be multiples of 4 because masking code relies on this
-#define DIRTY_RECT_WIDTH	8	// width of a dirty rectangle in 8-pixel tiles (multiples of 4, divisible into 64)
-#define DIRTY_RECT_HEIGHT	8	// height (multiples of 4, divisible into 48)
-
 /*
  * CRender2D:
  *
@@ -141,9 +137,10 @@ private:
 	void DrawTileLine4BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels);
 	void DrawTileLine8Bit(UINT32 *buf, int offset, UINT16 tile, int tileLine);
 	void DrawTileLine8BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels);
-	void DrawCompleteLayer(int layerNum, const UINT16 *nameTableBase);
-	void UpdateLayer(int layerNum);
-	void DisplayLayer(int layerNum, GLfloat z);
+	void DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase);
+	void MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool isBottom);
+	void DrawTilemaps(UINT32 *destBottom, UINT32 *destTop);
+	void DisplaySurface(int surface, GLfloat z);
 	void Setup2D(void);
 	void ColorOffset(GLfloat colorOffset[3], UINT32 reg);
 		
@@ -166,7 +163,9 @@ private:
 
 	// Buffers
 	UINT8	*memoryPool;	// all memory is allocated here
-	UINT32	*surf;			// 512x512x32bpp pixel surface
+	UINT32	*surfTop;		// 512x384x32bpp pixel surface for top layers
+	UINT32	*surfBottom;	// bottom layers
+	UINT32	*lineBuffer[4];	// 512 32bpp pixel line buffers for layer composition
 };
 
 
