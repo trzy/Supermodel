@@ -2638,10 +2638,10 @@ void CModel3::Patch(void)
 {
 	if (!strcmp(Game->id, "vf3") || !strcmp(Game->id, "vf3a"))
 	{
-		*(UINT32 *) &crom[0x713C7C] = 0x60000000;
-		*(UINT32 *) &crom[0x713E54] = 0x60000000;
-		*(UINT32 *) &crom[0x7125B0] = 0x60000000;
-		*(UINT32 *) &crom[0x7125D0] = 0x60000000;
+		*(UINT32 *) &crom[0x713C7C] = 0x60000000;	// this patch may not be needed anymore (find out why)
+		*(UINT32 *) &crom[0x713E54] = 0x60000000;	// affects timing but prevents game from coining up -- investigate this carefully
+		*(UINT32 *) &crom[0x7125B0] = 0x60000000;	// this patch may not be needed anymore (find out why)
+		*(UINT32 *) &crom[0x7125D0] = 0x60000000;	// this patch may not be needed anymore (find out why)
 	}
 	else if (!strcmp(Game->id, "lemans24"))
 	{
@@ -3189,8 +3189,8 @@ CModel3::~CModel3(void)
 {
 	// Debug: dump some files
 #if 0
-	Dump("ram", ram, 0x800000, true, false);
-	//Dump("vrom", vrom, 0x4000000, true, false);
+	//Dump("ram", ram, 0x800000, true, false);
+	Dump("vrom", vrom, 0x4000000, true, false);
 	//Dump("crom", crom, 0x800000, true, false);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, true, false);
 	//Dump("soundROM", soundROM, 0x80000, false, true);
