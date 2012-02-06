@@ -34,14 +34,14 @@ uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, light
 uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (normalized device coordinates), .y=Y position, .z=half-width, .w=half-height)
 uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
 uniform vec3	spotColor;			// spotlight RGB color
-//uniform vec2	texOffset;			// offset (within 2048x2048 texture sheet) to apply to texture base coordinates
 
 // Custom vertex attributes
 attribute vec4	subTexture;		// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
 attribute vec4	texParams;		// .x=texture enable (if 1, else 0), .y=use transparency (if >=0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
-attribute float	texFormat;		// .x=T1RGB5 contour texture (if > 0)
+attribute float	texFormat;		// T1RGB5 contour texture (if > 0)
 attribute float	transLevel;		// translucence level, 0.0 (transparent) to 1.0 (opaque). if less than 1.0, replace alpha value
 attribute float	lightEnable;	// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
+attribute float	shininess;		// specular shininess (if >= 0.0) or disable specular lighting (negative)
 attribute float	fogIntensity;	// fog intensity (1.0, full fog effect, 0.0, no fog) 
 
 // Custom outputs to fragment shader
@@ -50,6 +50,7 @@ varying vec4	fsTexParams;
 varying float	fsTexFormat;
 varying float	fsTransLevel;
 varying vec3	fsLightIntensity;	// total light intensity for this vertex
+varying float	fsSpecularTerm;		// specular light term (additive)
 varying float	fsFogFactor;		// fog factor
 varying float	fsViewZ;
 
@@ -104,7 +105,7 @@ void main(void)
 	gl_FrontColor = gl_Color;	// untextured polygons will use this
 	gl_FrontColor.a = 1.0;	
 	fsLightIntensity = vec3(1.0,1.0,1.0);
-	if (texParams.x > 0.0)		// textured
+	if (texParams.x > 0.5)		// textured
 		fsLightIntensity *= gl_Color.rgb;
 		
 	/*
@@ -113,7 +114,8 @@ void main(void)
 	 * Parallel light source and ambient lighting are only applied for non-
 	 * luminous polygons.
  	 */
-	if (lightEnable > 0.5)	// not luminous
+	fsSpecularTerm = 0.0;
+ 	if (lightEnable > 0.5)	// not luminous
 	{
 		// Normal -> view space
 		viewNormal = normalize(GetLinearPart(modelViewMatrix)*gl_Normal);
@@ -125,7 +127,39 @@ void main(void)
 		sunFactor = max(dot(sunVector,viewNormal),0.0);
 		
 		// Total light intensity: sum of all components
-		fsLightIntensity *= (sunFactor*lighting[1].x+lighting[1].y);		
+		fsLightIntensity *= (sunFactor*lighting[1].x+lighting[1].y);
+		
+		/*
+		 * Specular Lighting
+		 *
+		 * The specular term is treated similarly to the "separate specular
+		 * color" functionality of OpenGL: it is added as a highlight in the
+		 * fragment shader. This allows even black textures to be lit.
+		 *
+		 * TO-DO: Ambient intensity viewport parameter is known but what about
+		 * the intensity of the specular term? Always applied with full 
+		 * intensity here but this is unlikely to be correct.
+		 */
+  		if (shininess >= 0.0)
+  		{
+  			// Standard specular lighting equation
+  			vec3 V = normalize(-viewVertex);
+  			vec3 H = normalize(sunVector+V);	// halfway vector
+  			float s = max(10,64-shininess);		// seems to look nice, but probably not correct
+  			fsSpecularTerm = pow(max(dot(viewNormal,H),0),s);
+  			if (sunFactor <= 0) fsSpecularTerm = 0;
+  			
+  			// Faster approximation  			
+  			//float temp = max(dot(viewNormal,H),0);
+  			//float s = 64-shininess;
+  			//fsSpecularTerm = temp/(s-temp*s+temp);
+  			
+  			// Phong formula
+  			//vec3 R = normalize(2*dot(sunVector,viewNormal)*viewNormal - sunVector);
+  			//vec3 V = normalize(-viewVertex);
+  			//float s = max(2,64-shininess);
+  			//fsSpecularTerm = pow(max(dot(R,V),0),s);
+  		}
 	}
 	
 	// Fog
@@ -138,7 +172,6 @@ void main(void)
 	// Pass remaining parameters to fragment shader
 	gl_TexCoord[0] = gl_MultiTexCoord0;
 	fsSubTexture = subTexture;
-	//fsSubTexture.xy += texOffset;	// apply texture offset
 	fsTexParams = texParams;
 	fsTransLevel = transLevel;
 	fsTexFormat = texFormat;

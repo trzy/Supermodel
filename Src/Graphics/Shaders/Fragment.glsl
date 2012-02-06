@@ -32,14 +32,16 @@ uniform sampler2D	textureMap;		// complete texture map, 2048x2048 texels
 uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
 uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
 uniform vec3	spotColor;			// spotlight RGB color
+uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
 
 // Inputs from vertex shader 
 varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
 varying vec4		fsTexParams;	// .x=texture enable (if 1, else 0), .y=use transparency (if > 0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
-varying float		fsTexFormat;	// .x=T1RGB5 contour texture (if > 0)
+varying float		fsTexFormat;	// T1RGB5 contour texture (if > 0)
 varying float		fsTransLevel;	// translucence level, 0.0 (transparent) to 1.0 (opaque)
 varying vec3		fsLightIntensity;	// lighting intensity 
-varying float		fsFogFactor;		// fog factor
+varying float		fsSpecularTerm;	// specular highlight
+varying float		fsFogFactor;	// fog factor
 varying float		fsViewZ;		// Z distance to fragment from viewpoint at origin
 
 /*
@@ -82,12 +84,6 @@ vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEna
 					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
 					texOffset
 				 ) / 2048.0;
-/*
-	glTexCoord = (	mirror*(texSize-vec4(1.0,1.0,1.0,1.0)-clampedCoord) +
-					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
-					texOffset
-				 ) / 2048.0;
-*/
 	return glTexCoord;
 }
 
@@ -105,10 +101,11 @@ void main(void)
 	vec2	ellipse;
 	vec3	lightIntensity;
 	float	insideSpot;
+	int		x;
 	
 	// Get polygon color for untextured polygons (textured polygons will overwrite)
-	if (fsTexParams.x==0.0)
-		fragColor = gl_Color;
+	if (fsTexParams.x < 0.5)
+		fragColor = gl_Color;		
 	else
 	// Textured polygons: set fragment color to texel value
 	{			
@@ -163,7 +160,7 @@ void main(void)
 		 * When the alpha value is 0.0 (or close), pixels are discarded 
 		 * entirely.
 		 */
-		if (fsTexParams.y > 0.0)	// contour processing enabled
+		if (fsTexParams.y > 0.5)	// contour processing enabled
 		{
 			if (fragColor.a < 0.01)	// discard anything with alpha == 0
 				discard;
@@ -182,12 +179,13 @@ void main(void)
 	else
 		lightIntensity = fsLightIntensity;
 	fragColor.rgb *= lightIntensity;
-
+	fragColor.rgb += vec3(fsSpecularTerm,fsSpecularTerm,fsSpecularTerm);
+	
 	// Translucency (modulates existing alpha channel for RGBA4 texels)
 	fragColor.a *= fsTransLevel;
 
 	// Apply fog under the control of fog factor setting from polygon header
-	fragColor.rgb = mix(gl_Fog.color.rgb, fragColor.rgb, fsFogFactor );
+	fragColor.rgb = mix(gl_Fog.color.rgb, fragColor.rgb, fsFogFactor);
 
 	// Store final color
 	gl_FragColor = fragColor;
