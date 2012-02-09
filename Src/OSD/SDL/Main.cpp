@@ -24,6 +24,11 @@
  * 
  * Main program driver for the SDL port.
  *
+ * To Do Before Next Release
+ * -------------------------
+ * - Add UI keys for balance setting? 
+ * - 5.1 audio support?
+ *
  * Compile-Time Options
  * --------------------
  * - SUPERMODEL_WIN32: Define this if compiling on Windows.
@@ -201,7 +206,13 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
  	glLoadIdentity();
  	gluPerspective(90.0,(GLfloat)xRes/(GLfloat)yRes,0.1,1e5);
  	glMatrixMode(GL_MODELVIEW);
- 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);	// clear at least once to ensure black border
+ 	
+ 	// Clear the screen to ensure black border
+ 	for (int i = 0; i < 2; i++)
+ 	{
+ 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+ 		SDL_GL_SwapBuffers();
+ 	}
  	
  	// Write back resolution parameters
  	*xResPtr = (unsigned) xRes;

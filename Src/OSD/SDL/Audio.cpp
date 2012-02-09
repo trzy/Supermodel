@@ -201,16 +201,16 @@ static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuff
 	{
 		for (unsigned i = 0; i < numSamples; i++)
 		{
-			*p++ = rightBuffer[i];
 			*p++ = leftBuffer[i];
+			*p++ = rightBuffer[i];
 		}
 	}
 	else						// stereo as God intended!
 	{
 		for (unsigned i = 0; i < numSamples; i++)
 		{
-			*p++ = leftBuffer[i];
 			*p++ = rightBuffer[i];
+			*p++ = leftBuffer[i];
 		}
 	}
 #endif	// NUM_CHANNELS
