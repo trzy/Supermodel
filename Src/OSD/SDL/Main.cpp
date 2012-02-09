@@ -355,6 +355,7 @@ static bool ConfigureInputs(CInputs *Inputs, bool configure)
 static void ApplySettings(CINIFile *INI, const char *section)
 {
 	unsigned	x;
+	int			y;
 	string		String;
 	
 	// Model 3
@@ -374,6 +375,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.SetSoundVolume(x);
 	if (OKAY == INI->Get(section, "MusicVolume", x))
 		g_Config.SetMusicVolume(x);
+	if (OKAY == INI->Get(section, "Balance", y))
+		g_Config.SetSCSPBalance(y);
 	if (OKAY == INI->Get(section, "EmulateSound", x))
 		g_Config.emulateSound = x ? true : false;
 	if (OKAY == INI->Get(section, "EmulateDSB", x))
@@ -464,6 +467,7 @@ static void LogConfig(void)
 	
 	// CSoundBoardConfig
 	InfoLog("\tEmulateSound                  = %d", g_Config.emulateSound);
+	InfoLog("\tBalance                       = %d", g_Config.GetSCSPBalance());
 	
 	// CDSBConfig
 	InfoLog("\tEmulateDSB                    = %d", g_Config.emulateDSB);
@@ -1205,7 +1209,7 @@ static void Help(void)
 	puts("    -print-games           List supported games and quit");
 	puts("");
 	puts("Core Options:");
-	printf("    -ppc-frequency=<f>     PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
+	printf("    -ppc-frequency=<freq>  PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
 	puts("    -no-threads            Disable multi-threading");
 	puts("");
 	puts("Video Options:");
@@ -1218,8 +1222,9 @@ static void Help(void)
 	puts("    -print-gl-info         Print OpenGL driver information and quit");
 	puts("");
 	puts("Audio Options:");
-	puts("    -sound-volume=<v>      Volume of sound effects in % [Default: 100]");
-	puts("    -music-volume=<v>      Volume of MPEG music in % [Default: 100]");
+	puts("    -sound-volume=<vol>    Volume of sound effects in % [Default: 100]");
+	puts("    -music-volume=<vol>    Volume of MPEG music in % [Default: 100]");
+	puts("    -balance=<bal>         Relative front/rear balance in % front [Default: 0]");
 	puts("    -flip-stereo           Swap left and right audio channels");
 	puts("    -no-sound              Disable sound board emulation (sound effects)");
 	puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
@@ -1277,6 +1282,7 @@ int main(int argc, char **argv)
 #endif // SUPERMODEL_DEBUGGER
 	char		*inputSystem = NULL;	// use default input system
 	unsigned	n;
+	int			m;
 	UINT32		addr;
 
 	Title();
@@ -1357,6 +1363,14 @@ int main(int argc, char **argv)
 				ErrorLog("'-music-volume' requires a volume setting.");
 			else
 				CmdLine.Set("Global", "MusicVolume", n);
+		}
+		else if (!strncmp(argv[i],"-balance",8))
+		{
+			ret = sscanf(&argv[i][8],"=%d",&m);
+			if (ret != 1)
+				ErrorLog("'-balance' requires a front/rear balance setting.");
+			else
+				CmdLine.Set("Global", "Balance", m);
 		}
 		else if (!strcmp(argv[i], "-flip-stereo"))
 		{

@@ -968,7 +968,7 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
-		//printf("Slot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
+		//printf("\tSlot %02X Reg %02X write byte %04X\n",slot,addr^1,val);
 		*(unsigned char *) &(SCSP->Slots[slot].datab[addr^1]) = val;
 		SCSP_UpdateSlotReg(slot,(addr^1)&0x1f);
 	}
@@ -1008,7 +1008,7 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
-		//printf("Slot %02X Reg %02X write word %04X\n",slot,addr,val);
+		//printf("\tSlot %02X Reg %02X write word %04X\n",slot,addr,val);
 		*(unsigned short *) &(SCSP->Slots[slot].datab[addr]) = val;
 		SCSP_UpdateSlotReg(slot,addr&0x1f);
 	}
@@ -1042,13 +1042,12 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 void SCSP_w32(unsigned int addr,unsigned int val)
 {
 	addr&=0xffff;
-	
 	if(addr<0x400)
 	{
 		int slot=addr/0x20;
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
-		//printf("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
+		//printf("\tSlot %02X Reg %02X write dword %08X\n",slot,addr,val);
 		rotl(val, 16);
 
 		*(unsigned int *) &(SCSP->Slots[slot].datab[addr]) = val;
@@ -1765,6 +1764,19 @@ void SCSP_DoMasterSamples(int nsamples)
 	int slice=12000000/(SysFPS*nsamples);	// 68K cycles/sample
 	static int lastdiff=0;
 	
+	/*
+	 * Compute relative master/slave SCSP balance (note: master is often used 
+	 * for the front speakers). Equal balance is a 1.0 scale factor for both.
+	 * When one SCSP is fully attenuated, the other's samples will be multiplied
+	 * by 2.
+	 */
+	float balance = (float) g_Config.GetSCSPBalance() / 100.0f;
+	float masterBalance = 1.0f+balance;
+	float slaveBalance = 1.0f-balance;
+
+	/*
+	 * Generate samples
+	 */
 	for(int s=0;s<nsamples;++s)
 	{
 		signed int smpl=0;
@@ -1778,12 +1790,12 @@ void SCSP_DoMasterSamples(int nsamples)
 				unsigned short Enc=((TL(slot))<<0x8)|((DIPAN(slot))<<0x0)|((DISDL(slot))<<0x5);
 				RBUFDST=SCSPs[0].RINGBUF+SCSPs[0].BUFPTR;
 				signed int sample;
-				//signed int sample=SCSP_UpdateSlot(slot);
+				//signed int sample=(int) (masterBalance*(float)SCSP_UpdateSlot(slot));
 				//if(SA(slot)!=0x2ccf4)
 				/*if(SA(slot)!=0x1c77e)
 					sample=0;
 				else*/
-					sample=SCSP_UpdateSlot(slot);
+					sample= (int) (masterBalance*(float)SCSP_UpdateSlot(slot));
 
 				
 				/*unsigned char ef=EFSDL(slot);
@@ -1816,7 +1828,7 @@ void SCSP_DoMasterSamples(int nsamples)
 					_SLOT *slot=SCSPs[1].Slots+sl;
 					unsigned short Enc=((TL(slot))<<0x8)|((DIPAN(slot))<<0x0)|((DISDL(slot))<<0x5);
 					RBUFDST=SCSPs[1].RINGBUF+SCSPs[1].BUFPTR;
-					signed int sample=SCSP_UpdateSlot(slot);
+					signed int sample=(int) (slaveBalance*(float)SCSP_UpdateSlot(slot));
 #ifdef USEDSP
 					SCSPDSP_SetSample(&SCSPs[1].DSP,(sample*LPANTABLE[(Enc|0xE0)&0xFFE0])>>(SHIFT+3),ISEL(slot),IMXL(slot));
 #endif
@@ -1847,8 +1859,10 @@ void SCSP_DoMasterSamples(int nsamples)
 			if(ef)
 			{
 				unsigned short Enc=0|((EFPAN(slot))<<0x0)|((EFSDL(slot))<<0x5);
-				smpl+=(SCSPs[0].DSP.EFREG[i]*LPANTABLE[Enc])>>SHIFT;
-				smpr+=(SCSPs[0].DSP.EFREG[i]*RPANTABLE[Enc])>>SHIFT;
+				signed int leftSample  = (int) (masterBalance*(float)((SCSPs[0].DSP.EFREG[i]*LPANTABLE[Enc])>>SHIFT));
+				signed int rightSample = (int) (masterBalance*(float)((SCSPs[0].DSP.EFREG[i]*RPANTABLE[Enc])>>SHIFT));
+				smpl+=leftSample;
+				smpr+=rightSample;
 			}
 			if(HasSlaveSCSP)
 			{
@@ -1857,8 +1871,10 @@ void SCSP_DoMasterSamples(int nsamples)
 				if(ef)
 				{
 					unsigned short Enc=0|((EFPAN(slot))<<0x0)|((EFSDL(slot))<<0x5);
-					smpl+=(SCSPs[1].DSP.EFREG[i]*LPANTABLE[Enc])>>SHIFT;
-					smpr+=(SCSPs[1].DSP.EFREG[i]*RPANTABLE[Enc])>>SHIFT;
+					signed int leftSample  = (int) (slaveBalance*(float)((SCSPs[1].DSP.EFREG[i]*LPANTABLE[Enc])>>SHIFT));
+					signed int rightSample = (int) (slaveBalance*(float)((SCSPs[1].DSP.EFREG[i]*RPANTABLE[Enc])>>SHIFT));
+					smpl+=leftSample;
+					smpr+=rightSample;
 				}
 			}
 		}

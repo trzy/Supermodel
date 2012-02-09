@@ -43,11 +43,38 @@ class CSoundBoardConfig
 public:
 	bool	emulateSound;	// sound board emulation (enabled if true)
 	
+	// Master/slave SCSP relative balance (0-100, with 100 meaning master volume doubled, slave silenced)
+	inline void SetSCSPBalance(int bal)
+	{
+		if (bal > 100)
+		{
+			ErrorLog("Front/rear balance cannot exceed 100%%; setting to 100%%.\n");
+			bal = 100;
+		}
+		
+		if (bal < -100)
+		{
+			ErrorLog("Front/rear balance cannot be less than -100%%; setting to -100%%.\n");
+			bal = -100;
+		}
+		
+		scspBalance = bal;
+	}
+	
+	inline int GetSCSPBalance(void)
+	{
+		return scspBalance;
+	}
+	
 	// Defaults
 	CSoundBoardConfig(void)
 	{
 		emulateSound = true;
+		scspBalance = 50;
 	}
+	
+private:
+	int	scspBalance;
 };
 
 /*

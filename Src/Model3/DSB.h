@@ -53,7 +53,7 @@ public:
 	bool	emulateDSB;	// DSB emulation (enabled if true)
 	
 	// Sound (SCSP) volume (0-200, 100 being full amplitude)
-	inline void SetSoundVolume(unsigned vol)
+	inline void SetSoundVolume(int vol)
 	{
 		if (vol > 200)
 		{
@@ -61,7 +61,13 @@ public:
 			vol = 100;
 		}
 		
-		soundVol = vol;
+		if (vol < 0)
+		{
+			ErrorLog("Sound volume cannot be negative; setting to 0%%.\n");
+			vol = 0;
+		}
+		
+		soundVol = (unsigned) vol;
 	}
 	
 	inline unsigned GetSoundVolume(void)
@@ -70,7 +76,7 @@ public:
 	}
 	
 	// Music (DSB MPEG) volume (0-200)
-	inline void SetMusicVolume(unsigned vol)
+	inline void SetMusicVolume(int vol)
 	{
 		if (vol > 200)
 		{
@@ -78,7 +84,13 @@ public:
 			vol = 100;
 		}
 		
-		musicVol = vol;
+		if (vol < 0)
+		{
+			ErrorLog("Music volume cannot be negative; setting to 0%%.\n");
+			vol = 0;
+		}
+		
+		musicVol = (unsigned) vol;
 	}
 	
 	inline unsigned GetMusicVolume(void)
