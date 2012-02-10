@@ -22,15 +22,35 @@
 /*
  * Render2D.cpp
  * 
+ * To-Do List
+ * ----------
+ * - Fix color offsets: they should probably be applied to layers A/A' and B/B'
+ *   rather than to the top and bottom surfaces (an artifact left over from
+ *   when layer priorities were fixed as B/B' -> bottom, A/A' -> top). This can
+ *   no longer be performed by the shaders, unfortunately, because of arbitrary
+ *   layer priorities. Rather, three palettes should be maintained: master (the
+ *   actual palette data), A, and B.  Color offset writes should recompute 
+ *   these and the tile renderer should use either A or B palette (depending on
+ *   the layer being drawn).
+ * - Is there a better way to handle the overscan regions in wide screen mode 
+ *   than using palette entry 0 as the fill color? Is clearing two thin
+ *   viewports better than one big clear?
+ * - Layer priorities in Spikeout attract mode might not be totally correct.
+ * - Are v-scroll values 9 or 10 bits? (Does it matter?) Lost World seems to
+ *   have some scrolling issues.
+ * - A proper shut-down function is needed! OpenGL might not be available when
+ *   the destructor for this class is called.
+ *
  * Implementation of the CRender2D class: OpenGL tile generator graphics. 
  *
  * Tile Generator Hardware Overview
  * --------------------------------
  *
  * Model 3's medium resolution tile generator hardware appears to be derived
- * from the Model 2 and System 24 chipset. It consists of four 64x64 tile 
- * layers, comprised of 8x8 pixel tiles, with configurable priorities. There
- * may be additional features but so far, no known Model 3 games use them.
+ * from the Model 2 and System 24 chipset, but is much simpler. It consists of
+ * four 64x64 tile layers, comprised of 8x8 pixel tiles, with configurable 
+ * priorities. There may be additional features but so far, no known Model 3 
+ * games use them.
  *
  * VRAM is comprised of 1 MB for tile data and an additional 128 KB for the 
  * palette. The four tilemap layers are referred to as: A (0), A' (1), B (2),
@@ -65,8 +85,9 @@
  *		 ???? ???? ???? ???? pqrs tuvw ???? ????
  *
  * Bits 'pqrs' control the color depth of layers B', B, A', and A, 
- * respectively, and 'tuvw' form a 4-bit priority code. The other bits are
- * unused or unknown.
+ * respectively. If set, the layer's pattern data is encoded as 4 bits,
+ * otherwise the pixels are 8 bits. Bits 'tuvw' form a 4-bit priority code. The
+ * other bits are unused or unknown.
  *
  * The remaining registers are described where appropriate further below.
  *
@@ -257,17 +278,6 @@
  * Where 'r', 'g', and 'b' appear to be signed 8-bit color offsets. Because
  * they exceed the color resolution of the palette, they must be scaled
  * appropriately.
- *
- * To-Do List
- * ----------
- * - Fix color offsets: they should probably be applied to layers A/A' and B/B'
- *   rather than to the top and bottom surfaces (an artifact left over from
- *   when layer priorities were fixed as B/B' -> bottom, A/A' -> top). This can
- *   no longer be performed by the shaders, unfortunately, because of arbitrary
- *   layer priorities.
- * - Are v-scroll values 9 or 10 bits? 
- * - A proper shut-down function is needed! OpenGL might not be available when
- *   the destructor for this class is called.
  */
 
 #include <string.h>
@@ -358,8 +368,7 @@ void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine)
  * scrolling is applied here.
  *
  * Parametes:
- *		dest				Destination of 512-pixel wide output buffer to draw
- *							to.
+ *		dest				Destination of 512-pixel output buffer to draw to.
  *		layerNum			Layer number:
  *								0 = Layer A		(@ 0xF8000)
  *								1 = Layer A'	(@ 0xFA000)
@@ -571,6 +580,13 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 			MixLine(destTop, lineBuffer[0], 0, y, false);
 			MixLine(destTop, lineBuffer[1], 1, y, false);
 			break;
+		case 0x9:	// ? all layers on top but relative order unknown (Spikeout Final Edition, after first boss)
+			memset(destBottom, 0, 496*sizeof(UINT32));	//TODO: use glClear(GL_COLOR_BUFFER_BIT) if there is no bottom layer
+			MixLine(destTop, lineBuffer[2], 2, y, true);
+			MixLine(destTop, lineBuffer[3], 3, y, false);
+			MixLine(destTop, lineBuffer[1], 1, y, false);
+			MixLine(destTop, lineBuffer[0], 0, y, false);
+			break;
 		case 0xF:	// all on top
 			memset(destBottom, 0, 496*sizeof(UINT32));	//TODO: use glClear(GL_COLOR_BUFFER_BIT) if there is no bottom layer
 			MixLine(destTop, lineBuffer[2], 2, y, true);
@@ -606,6 +622,29 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 // Draws a surface to the screen (0 is top and 1 is bottom)
 void CRender2D::DisplaySurface(int surface, GLfloat z)
 {	
+	// If bottom surface and wide screen, clear overscan areas
+	if (surface && g_Config.wideScreen)
+	{
+		UINT32 	c = pal[0];	// just use palette color 0 for now (not the best solution, it's usually black)
+		GLfloat	r = (GLfloat)(c&0xFF) / 255.0f;
+		GLfloat	g = (GLfloat)((c>>8)&0xFF) / 255.0f;
+		GLfloat	b = (GLfloat)((c>>16)&0xFF) / 255.0f;
+		glClearColor(r, g, b, 0.0);
+		glViewport(0, 0, xOffs, totalYPixels);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(xOffs+xPixels, 0, totalXPixels, totalYPixels);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	
+	// Set up the viewport and orthogonal projection
+	glViewport(xOffs, yOffs, xPixels, yPixels);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+    gluOrtho2D(0.0, 1.0, 1.0, 0.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	
+	// Draw the surface
 	glBindTexture(GL_TEXTURE_2D, texID[surface]);
     glBegin(GL_QUADS);
     glTexCoord2f(0.0f/512.0f, 0.0f);          	glVertex3f(0.0f, 0.0f, z);
@@ -618,14 +657,6 @@ void CRender2D::DisplaySurface(int surface, GLfloat z)
 // Set up viewport and OpenGL state for 2D rendering (sets up blending function but disables blending)
 void CRender2D::Setup2D(void)
 {
-	// Set up the viewport and orthogonal projection
-	glViewport(xOffs, yOffs, xPixels, yPixels);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-    gluOrtho2D(0.0, 1.0, 1.0, 0.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
 	// Enable texture mapping and blending
 	glEnable(GL_TEXTURE_2D);
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
@@ -731,7 +762,7 @@ void CRender2D::AttachVRAM(const UINT8 *vramPtr)
 #define OFFSET_BOTTOM_SURFACE	(512*384*4) 	// 512*384*4
 #define OFFSET_LINE_BUFFERS		(2*512*384*4)	// 4*512*4 (4 lines)
 
-bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
+bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -762,6 +793,8 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	yPixels = yRes;
 	xOffs = xOffset;
 	yOffs = yOffset;
+	totalXPixels = totalXRes;
+	totalYPixels = totalYRes;
 			
 	// Create textures
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

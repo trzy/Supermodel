@@ -102,23 +102,26 @@ public:
 	void AttachVRAM(const UINT8 *vramPtr);
 
 	/*
-	 * Init(xOffset, yOffset, xRes, yRes);
+	 * Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);
 	 *
 	 * One-time initialization of the context. Must be called before any other
 	 * members (meaning it should be called even before being attached to any
 	 * other objects that want to use it).
 	 *
 	 * Parameters:
-	 *		xOffset		X offset within OpenGL display surface in pixels.
+	 *		xOffset		X offset of the viewable area within OpenGL display 
+	 *                  surface, in pixels.
 	 *		yOffset		Y offset.
-	 *		xRes		Horizontal resolution of display surface in pixels.
+	 *		xRes		Horizontal resolution of the viewable area.
 	 *		yRes		Vertical resolution.
+	 *		totalXRes	Horizontal resolution of the complete display area.
+	 *		totalYRes	Vertical resolution.
 	 *
 	 * Returns:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
 	 
 	/*
 	 * CRender2D(void):
@@ -150,9 +153,10 @@ private:
 	const UINT32	*regs;
 	
 	// OpenGL data
-	GLuint   	texID[2];			// IDs for the 2 layer textures (top and bottom)
-	unsigned	xPixels, yPixels;	// display surface resolution
-	unsigned	xOffs, yOffs;		// offset
+	GLuint   	texID[2];					// IDs for the 2 layer textures (top and bottom)
+	unsigned	xPixels, yPixels;			// display surface resolution
+	unsigned	xOffs, yOffs;				// offset
+	unsigned	totalXPixels, totalYPixels;	// totay display surface resolution
 	
 	// Shader programs and input data locations
 	GLuint	shaderProgram;	// shader program object

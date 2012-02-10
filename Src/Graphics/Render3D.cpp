@@ -210,7 +210,20 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 	i = 0;
 	switch (format)
 	{
-	default:
+	default:	// Unknown
+		
+		for (yi = y; yi < (y+height); yi++)
+		{
+			for (xi = x; xi < (x+width); xi++)
+			{
+				textureBuffer[i++] = 0.0;	// R
+				textureBuffer[i++] = 0.0;	// G
+				textureBuffer[i++] = 1.0f;	// B
+				textureBuffer[i++] = 1.0f;	// A
+			}
+		}
+		break;
+		
 	case 0:	// T1RGB5
 		for (yi = y; yi < (y+height); yi++)
 		{
@@ -236,7 +249,7 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 			}
 		}
 		break;
-	
+
 	case 5:	// 8-bit grayscale
 		for (yi = y; yi < (y+height); yi++)
 	    {
@@ -261,7 +274,6 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 	    }
 
 		break;
-
 	
 	case 4: // 8-bit, L4A4
 
@@ -826,15 +838,28 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 	// TO-DO: investigate clipping planes
 	
 	// Set up viewport and projection (TO-DO: near and far clipping)
-	viewportX 	   = xOffs + (GLint) ((float)vpX*xRatio);
-	viewportY 	   = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
-	viewportWidth  = (GLint) ((float)vpWidth*xRatio);
-	viewportHeight = (GLint) ((float)vpHeight*yRatio);
 	glMatrixMode(GL_PROJECTION);
  	glLoadIdentity();
- 	gluPerspective(fovYDegrees,(GLfloat)vpWidth/(GLfloat)vpHeight,0.1f,1e5);
- 	
- 	// Lighting (note that sun vector points toward sun -- away from vertex)
+	if (g_Config.wideScreen && (vpX==0) && (vpY==0) && (vpWidth>=495) && (vpHeight >= 383))
+	{
+		// Wide screen hack only modifies X axis and not the Y FOV
+		viewportX 	   = 0;
+		viewportY 	   = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
+		viewportWidth  = totalXRes;
+		viewportHeight = (GLint) ((float)vpHeight*yRatio);
+		gluPerspective(fovYDegrees,(GLfloat)viewportWidth/(GLfloat)viewportHeight,0.1f,1e5);	// use actual full screen ratio to get proper X FOV
+		//printf("viewportX=%d, viewportY=%d, viewportWidth=%d, viewportHeight=%d\tvpY=%d vpHeight=%d\n", viewportX, viewportY, viewportWidth, viewportHeight, vpY,vpHeight);
+	}
+	else
+	{
+		viewportX 	   = xOffs + (GLint) ((float)vpX*xRatio);
+		viewportY 	   = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
+		viewportWidth  = (GLint) ((float)vpWidth*xRatio);
+		viewportHeight = (GLint) ((float)vpHeight*yRatio);
+		gluPerspective(fovYDegrees,(GLfloat)vpWidth/(GLfloat)vpHeight,0.1f,1e5);				// use Model 3 viewport ratio
+	}
+	
+	// Lighting (note that sun vector points toward sun -- away from vertex)
  	lightingParams[0] = *(float *) &vpnode[0x05];							// sun X
  	lightingParams[1] = *(float *) &vpnode[0x06];							// sun Y
  	lightingParams[2] = *(float *) &vpnode[0x04];							// sun Z
@@ -1034,7 +1059,7 @@ void CRender3D::SetStep(int stepID)
 	DebugLog("Render3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 	
-bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes)
+bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
 {
 	// Allocate memory for texture buffer
 	textureBuffer = new(std::nothrow) GLfloat[512*512*4];
@@ -1074,6 +1099,8 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     yRatio = (GLfloat) yRes / 384.0f;
     xOffs = xOffset;
     yOffs = yOffset;
+    totalXRes = totalXResParam;
+    totalYRes = totalYResParam;
 
 	// Load shaders
 	const char *vsFile = g_Config.vertexShaderFile.size() ? g_Config.vertexShaderFile.c_str() : NULL;

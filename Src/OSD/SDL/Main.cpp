@@ -119,8 +119,9 @@ bool ErrorLog(const char *fmt, ...)
  * (and computed offsets within the viewport) that will be rendered based on
  * what was obtained from SDL.
  */
-unsigned	xOffset, yOffset;	// offset of renderer output within OpenGL viewport
-unsigned 	xRes, yRes;			// renderer output resolution (can be smaller than GL viewport)
+unsigned	xOffset, yOffset;		// offset of renderer output within OpenGL viewport
+unsigned 	xRes, yRes;				// renderer output resolution (can be smaller than GL viewport)
+unsigned	totalXRes, totalYRes;	// total resolution (the whole GL viewport)
 
 /*
  * CreateGLScreen():
@@ -128,10 +129,13 @@ unsigned 	xRes, yRes;			// renderer output resolution (can be smaller than GL vi
  * Creates an OpenGL display surface of the requested size. xOffset and yOffset
  * are used to return a display surface offset (for OpenGL viewport commands)
  * because the actual drawing area may need to be adjusted to preserve the 
- * Model 3 aspect ratio. The new resolution will be passed back as well.
+ * Model 3 aspect ratio. The new resolution will be passed back as well -- both
+ * the adjusted viewable area resolution and the total resolution.
+ *
+ * NOTE: keepAspectRatio should always be true. It has not yet been tested with
+ * the wide screen hack.
  */
-static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr,
-						   bool keepAspectRatio, bool fullScreen)
+static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
 	const SDL_VideoInfo	*VideoInfo;
 	GLenum				err;
@@ -158,6 +162,8 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
   	
   	// What resolution did we actually get?
   	VideoInfo = SDL_GetVideoInfo();
+  	*totalXResPtr = VideoInfo->current_w;
+  	*totalYResPtr = VideoInfo->current_h;
   	
   	// If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
   	xRes = (float) *xResPtr;
@@ -207,7 +213,7 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
  	gluPerspective(90.0,(GLfloat)xRes/(GLfloat)yRes,0.1,1e5);
  	glMatrixMode(GL_MODELVIEW);
  	
- 	// Clear the screen to ensure black border
+ 	// Clear both buffers to ensure a black border
  	for (int i = 0; i < 2; i++)
  	{
  		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -219,10 +225,13 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
  	*yResPtr = (unsigned) yRes;
  	
  	// Scissor box (to clip visible area)
- 	if (VideoInfo->current_w > *xResPtr || VideoInfo->current_h > *yResPtr)
+ 	if (!g_Config.wideScreen)
  	{
- 		glEnable(GL_SCISSOR_TEST);
- 		glScissor(*xOffsetPtr, *yOffsetPtr, *xResPtr, *yResPtr);
+ 		if (VideoInfo->current_w > *xResPtr || VideoInfo->current_h > *yResPtr)
+ 		{
+	 		glEnable(GL_SCISSOR_TEST);
+ 			glScissor(*xOffsetPtr, *yOffsetPtr, *xResPtr, *yResPtr);
+ 		}
  	}
  	 	
 	return 0;
@@ -239,11 +248,11 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
 	const GLubyte	*str;
 	char			*strLocal;
 	GLint			value;
-	unsigned		xOffset, yOffset, xRes=496, yRes=384;
+	unsigned		xOffset, yOffset, xRes=496, yRes=384, totalXRes, totalYRes;
 	
 	if (createScreen)
 	{
-		if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,false,false))
+		if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...",&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,false,false))
 		{
 			ErrorLog("Unable to query OpenGL.\n");
 			return;
@@ -339,7 +348,7 @@ static bool ConfigureInputs(CInputs *Inputs, bool configure)
 	{
 		// Open an SDL window 
 		unsigned xOffset, yOffset, xRes=496, yRes=384;
-		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,false,false))
+		if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...",&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,false,false))
 			return (bool) ErrorLog("Unable to start SDL to configure inputs.\n");
 		
 		// Configure the inputs
@@ -404,6 +413,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 	INI->Get(section, "YResolution", g_Config.yRes);
 	if (OKAY == INI->Get(section, "FullScreen", x))
 		g_Config.fullScreen = x ? true : false;
+	if (OKAY == INI->Get(section, "WideScreen", x))
+		g_Config.wideScreen = x ? true : false;			
 	if (OKAY == INI->Get(section, "Throttle", x))
 		g_Config.throttle = x ? true : false;
 	if (OKAY == INI->Get(section, "ShowFrameRate", x))
@@ -449,6 +460,7 @@ static void LogConfig(void)
 	InfoLog("\tXResolution                   = %d", g_Config.xRes);
 	InfoLog("\tYResolution                   = %d", g_Config.yRes);
 	InfoLog("\tFullScreen                    = %d", g_Config.fullScreen);
+	InfoLog("\tWideScreen                    = %d", g_Config.wideScreen);
 	InfoLog("\tThrottle                      = %d", g_Config.throttle);
 	InfoLog("\tShowFrameRate                 = %d", g_Config.showFPS);
 #ifdef SUPERMODEL_DEBUGGER
@@ -745,10 +757,10 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	LoadNVRAM(Model3);
 		
 	// Start up SDL and open a GL window
-  	xRes = g_Config.xRes;
-  	yRes = g_Config.yRes;
+  	totalXRes = xRes = g_Config.xRes;
+  	totalYRes = yRes = g_Config.yRes;
   	sprintf(baseTitleStr, "Supermodel - %s", Model3->GetGameInfo()->title);
-	if (OKAY != CreateGLScreen(baseTitleStr,&xOffset,&yOffset,&xRes,&yRes,true,g_Config.fullScreen))
+	if (OKAY != CreateGLScreen(baseTitleStr,&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,true,g_Config.fullScreen))
 		return 1;
 		
 	// Info log GL information and user options
@@ -769,9 +781,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	Model3->AttachInputs(Inputs);
 	
 	// Initialize the renderer
-	if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes))
+	if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
 		goto QuitError;
-	if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes))
+	if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
 		goto QuitError;
 	Model3->AttachRenderers(Render2D,Render3D);
 
@@ -1226,6 +1238,7 @@ static void Help(void)
 	puts("Video Options:");
 	puts("    -res=<x>,<y>           Resolution");
 	puts("    -fullscreen            Full screen mode");
+	puts("    -wide-screen           Expand 3D field of view to screen width");
 	puts("    -no-throttle           Disable 60 Hz frame rate lock");
 	puts("    -show-fps              Display frame rate in window title bar");
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
@@ -1422,6 +1435,11 @@ int main(int argc, char **argv)
 		{
 			n = 1;
 			CmdLine.Set("Global", "FullScreen", n);
+		}
+		else if (!strcmp(argv[i],"-wide-screen"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "WideScreen", n);
 		}
 		else if (!strcmp(argv[i],"-no-throttle"))
 		{

@@ -263,7 +263,7 @@ public:
 	void SetStep(int stepID);
 	
 	/*
-	 * Init(xOffset, yOffset, xRes, yRes):
+	 * Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes):
 	 *
 	 * One-time initialization of the context. Must be called before any other
 	 * members (meaning it should be called even before being attached to any
@@ -272,18 +272,20 @@ public:
 	 * External shader files are loaded according to configuration settings.
 	 *
 	 * Parameters:
-	 *		xOffset		X offset of display surface in pixels (in case resolution
-	 *					is smaller than the true display surface).
+	 *		xOffset		X offset of the viewable area within OpenGL display 
+	 *                  surface, in pixels.
 	 *		yOffset		Y offset.
-	 *		xRes		Horizontal resolution of display surface in pixels.
+	 *		xRes		Horizontal resolution of the viewable area.
 	 *		yRes		Vertical resolution.
+	 *		totalXRes	Horizontal resolution of the complete display area.
+	 *		totalYRes	Vertical resolution.
 	 *
 	 * Returns:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Any allocated memory will not be freed until the
 	 *		destructor is called. Prints own error messages.
 	 */
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
 	 
 	/*
 	 * CRender3D(void):
@@ -375,9 +377,10 @@ private:
 	GLfloat	texOffsetXY[2];	// decoded X, Y offsets
 	UINT16	texOffset;		// raw texture offset data as it appears in culling node
 	
-	// Resolution scaling factors (to support resolutions higher than 496x384) and offsets
+	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	GLfloat		xRatio, yRatio;
 	unsigned	xOffs, yOffs;
+	unsigned 	totalXRes, totalYRes;
 	
 	// Texture ID for complete 2048x2048 texture map
 	GLuint	texID;
