@@ -1233,10 +1233,13 @@ static void Help(void)
 	puts("");
 	puts("Core Options:");
 	printf("    -ppc-frequency=<freq>  PowerPC frequency in MHz [Default: %d]\n", g_Config.GetPowerPCFrequency());
-	puts("    -no-threads            Disable multi-threading");
+	puts("    -no-threads            Disable multi-threading entirely");
+	puts("    -gpu-multi-threaded    Run graphics rendering in separate thread [Default]");
+	puts("    -no-gpu-thread         Run graphics rendering in main thread");
 	puts("");
 	puts("Video Options:");
-	puts("    -res=<x>,<y>           Resolution");
+	puts("    -res=<x>,<y>           Resolution [Default: 496,384]");
+	puts("    -window                Windowed mode [Default]");
 	puts("    -fullscreen            Full screen mode");
 	puts("    -wide-screen           Expand 3D field of view to screen width");
 	puts("    -no-throttle           Disable 60 Hz frame rate lock");
@@ -1366,6 +1369,16 @@ int main(int argc, char **argv)
 			n = 0;
 			CmdLine.Set("Global", "MultiThreaded", n);
 		}
+		else if (!strcmp(argv[i],"-gpu-multi-threaded"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "GPUMultiThreaded", n);
+		}
+		else if (!strcmp(argv[i],"-no-gpu-thread"))
+		{
+			n = 0;
+			CmdLine.Set("Global", "GPUMultiThreaded", n);
+		}
 #ifdef SUPERMODEL_DEBUGGER
 		else if (!strcmp(argv[i],"-disable-debugger"))
 			g_Config.disableDebugger = true;
@@ -1430,6 +1443,11 @@ int main(int argc, char **argv)
 				CmdLine.Set("Global", "XResolution", x);
 				CmdLine.Set("Global", "YResolution", y);
 			}
+		}
+		else if (!strcmp(argv[i],"-window"))
+		{
+			n = 0;
+			CmdLine.Set("Global", "FullScreen", n);
 		}
 		else if (!strcmp(argv[i],"-fullscreen"))
 		{
