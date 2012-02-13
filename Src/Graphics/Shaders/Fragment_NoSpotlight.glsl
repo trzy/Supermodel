@@ -111,7 +111,7 @@ void main(void)
 	float	insideSpot;
 	
 	// Get polygon color for untextured polygons (textured polygons will overwrite)
-	if (fsTexParams.x==0.0)
+	if (fsTexParams.x < 0.5)
 		fragColor = gl_Color;
 	else
 	// Textured polygons: set fragment color to texel value
@@ -167,14 +167,14 @@ void main(void)
 		 * When the alpha value is 0.0 (or close), pixels are discarded 
 		 * entirely.
 		 */
-		if (fsTexParams.y > 0.0)	// contour processing enabled
+		if (fsTexParams.y > 0.5)	// contour processing enabled
 		{
 			if (fragColor.a < 0.01)	// discard anything with alpha == 0
 				discard;
 		}
 		
 		// If contour texture and not discarded, force alpha to 1.0 because will later be modified by polygon translucency
-		if (fsTexFormat > 0.0)		// contour (T1RGB5) texture map
+		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture map
 			fragColor.a = 1.0;
 	}
 

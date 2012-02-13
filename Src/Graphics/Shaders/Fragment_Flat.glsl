@@ -111,7 +111,7 @@ void main(void)
 	float	insideSpot;
 	
 	// Get polygon color for untextured polygons (textured polygons will overwrite)
-	if (fsTexParams.x==0.0)
+	if (fsTexParams.x < 0.5)
 		fragColor = gl_Color;
 	else
 	// Textured polygons: set fragment color to texel value
