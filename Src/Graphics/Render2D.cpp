@@ -550,7 +550,6 @@ void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bo
 	}
 }
 
-
 void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 {
 	// Base address of all 4 name tables
@@ -645,6 +644,7 @@ void CRender2D::DisplaySurface(int surface, GLfloat z)
 	glLoadIdentity();
 	
 	// Draw the surface
+	glActiveTexture(GL_TEXTURE0);	// texture unit 0
 	glBindTexture(GL_TEXTURE_2D, texID[surface]);
     glBegin(GL_QUADS);
     glTexCoord2f(0.0f/512.0f, 0.0f);          	glVertex3f(0.0f, 0.0f, z);
@@ -697,6 +697,7 @@ void CRender2D::BeginFrame(void)
 	
 	// Update all layers
 	DrawTilemaps(surfBottom, surfTop);
+	glActiveTexture(GL_TEXTURE0);	// texture unit 0
 	glBindTexture(GL_TEXTURE_2D, texID[0]);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfTop);	
 	glBindTexture(GL_TEXTURE_2D, texID[1]);
@@ -801,6 +802,7 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	glGenTextures(2, texID);
     for (int i = 0; i < 2; i++)
     {
+		glActiveTexture(GL_TEXTURE0);	// texture unit 0
         glBindTexture(GL_TEXTURE_2D, texID[i]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);

@@ -384,7 +384,7 @@ static const char fragmentShaderSource[] =
 "\t\t}\n"
 "\t\t\n"
 "\t\t// If contour texture and not discarded, force alpha to 1.0 because will later be modified by polygon translucency\n"
-"\t\tif (fsTexFormat > 0.0)\t\t// contour (T1RGB5) texture map\n"
+"\t\tif (fsTexFormat < 0.5)\t\t// contour (T1RGB5) texture map\n"
 "\t\t\tfragColor.a = 1.0;\n"
 "\t}\n"
 "\n"

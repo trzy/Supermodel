@@ -177,11 +177,13 @@ class CRender3DConfig
 public:
 	string vertexShaderFile;	// path to vertex shader or "" to use internal shader
 	string fragmentShaderFile;	// fragment shader
-	
+	unsigned maxTexUnits;       // maximum number of texture units to use (1-9)
+
 	// Defaults
 	CRender3DConfig(void)
 	{
-		// nothing to do, strings will be clear to begin with
+		// strings will be clear to begin with
+		maxTexUnits = 9;
 	}
 };
 
@@ -382,27 +384,31 @@ private:
 	unsigned	xOffs, yOffs;
 	unsigned 	totalXRes, totalYRes;
 	
-	// Texture ID for complete 2048x2048 texture map
-	GLuint	texID;
+	// Texture details
+	unsigned    numTexUnits;        // number of texture units
+	int         fmtToTexUnit[8];    // mapping from Model3 texture format to texture unit
+	unsigned    numTexIDs;          // number of 2048x2048 texture sheets (maximum 8, one for each Model3 texture format)
+	GLuint		texIDs[8];          // texture IDs of texture sheets
 	
 	// Shader programs and input data locations
 	GLuint	shaderProgram;			// shader program object
 	GLuint	vertexShader;			// vertex shader handle
 	GLuint	fragmentShader;			// fragment shader
-	GLuint	textureMapLoc;			// location of "textureMap" uniform
-	GLuint	modelViewMatrixLoc;		// uniform
-	GLuint	projectionMatrixLoc;	// uniform
-	GLuint	lightingLoc;			// uniform
-	GLuint	spotEllipseLoc;			// uniform
-	GLuint	spotRangeLoc;			// uniform
-	GLuint	spotColorLoc;			// uniform
-	GLuint	subTextureLoc;			// attribute
-	GLuint	texParamsLoc;			// attribute
-	GLuint	texFormatLoc;			// attribute
-	GLuint	transLevelLoc;			// attribute
-	GLuint	lightEnableLoc;			// attribute
-	GLuint	shininessLoc;			// attribute
-	GLuint	fogIntensityLoc;		// attribute
+	GLint   textureMapLoc;          // location of "textureMap" uniform (default combined sheet for all Model3 textures formats)
+	GLint	textureMapLocs[8];		// location of "textureMap[0-7]" uniforms (one sheet per Model3 texture format)
+	GLint	modelViewMatrixLoc;		// uniform
+	GLint	projectionMatrixLoc;	// uniform
+	GLint	lightingLoc;			// uniform
+	GLint	spotEllipseLoc;			// uniform
+	GLint	spotRangeLoc;			// uniform
+	GLint	spotColorLoc;			// uniform
+	GLint	subTextureLoc;			// attribute
+	GLint	texParamsLoc;			// attribute
+	GLint	texFormatLoc;			// attribute
+	GLint	transLevelLoc;			// attribute
+	GLint	lightEnableLoc;			// attribute
+	GLint	shininessLoc;			// attribute
+	GLint	fogIntensityLoc;		// attribute
 	
 	// Model caching
 	ModelCache	VROMCache;	// VROM (static) models
@@ -417,9 +423,9 @@ private:
 	 * correspond to the texture format bits in the polygon headers. They can
 	 * be used to determine whether a texture needs to be updated.
 	 */
-	int		textureWidth[2048/32][2048/32];
-	int		textureHeight[2048/32][2048/32];
-	INT8	textureFormat[2048/32][2048/32];
+	int		textureWidth[8][2048/32][2048/32];
+	int		textureHeight[8][2048/32][2048/32];
+	INT8    textureFormat[8][2048/32][2048/32];
 	
 	/*
  	 * Texture Decode Buffer

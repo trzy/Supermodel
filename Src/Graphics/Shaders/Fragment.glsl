@@ -167,7 +167,7 @@ void main(void)
 		}
 		
 		// If contour texture and not discarded, force alpha to 1.0 because will later be modified by polygon translucency
-		if (fsTexFormat > 0.0)		// contour (T1RGB5) texture map
+		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture map
 			fragColor.a = 1.0;
 	}
 

@@ -68,7 +68,7 @@
 #define VBO_VERTEX_OFFSET_TEXPARAMS_TRANS		20	// texture parameter: >=0 use transparency bit, <0 no transparency (per-polygon)
 #define VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP		21	// texture parameters: U wrap mode: ==1 mirrored repeat, ==0 normal repeat
 #define VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP		22	// "" V wrap mode ""
-#define VBO_VERTEX_OFFSET_TEXFORMAT_CONTOUR		23	// contour texture: >0 indicates contour texture (see also texParams.trans)
+#define VBO_VERTEX_OFFSET_TEXFORMAT				23	// texture format 0-7 (also ==0 indicates contour texture - see also texParams.trans)
 #define VBO_VERTEX_SIZE							24	// total size (may include padding for alignment)
 
 
@@ -154,7 +154,7 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 	glColorPointer(3, GL_FLOAT, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_R*sizeof(GLfloat)));
 	glVertexAttribPointer(subTextureLoc, 4, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXTURE_X*sizeof(GLfloat)));
 	glVertexAttribPointer(texParamsLoc, 4, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXPARAMS_EN*sizeof(GLfloat)));
-	glVertexAttribPointer(texFormatLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXFORMAT_CONTOUR*sizeof(GLfloat)));
+	glVertexAttribPointer(texFormatLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXFORMAT*sizeof(GLfloat)));
 	glVertexAttribPointer(transLevelLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TRANSLUCENCE*sizeof(GLfloat)));
 	glVertexAttribPointer(lightEnableLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_LIGHTENABLE*sizeof(GLfloat)));
 	glVertexAttribPointer(shininessLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_SHININESS*sizeof(GLfloat)));
@@ -485,8 +485,8 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXPARAMS_TRANS] = contourProcessing;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP] = (P->header[2]&2) ? 1.0f : 0.0f;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP] = (P->header[2]&1) ? 1.0f : 0.0f;
-	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXFORMAT_CONTOUR] = (texFormat==0) ? 1.0f : 0.0f;
-	
+	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXFORMAT] = (float)texFormat;
+
 	Cache->curVertIdx[s]++;
 	Cache->vboCurOffset += VBO_VERTEX_SIZE*sizeof(GLfloat);
 }
