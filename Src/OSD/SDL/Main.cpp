@@ -320,7 +320,6 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
 	else			printf("\n");
 }
 
-	
 /******************************************************************************
  Configuration
  
@@ -718,6 +717,29 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 	glEnd();		
 }
 
+	
+/******************************************************************************
+ Video Callbacks
+******************************************************************************/
+
+static CInputs *videoInputs = NULL;
+static unsigned videoShowCrosshairs = 0; // bit 1: player 1 crosshair, bit 0: player 2
+
+bool BeginFrameVideo()
+{
+	return true;
+}
+
+void EndFrameVideo()
+{
+	// Show crosshairs for light gun games
+	if (videoInputs)
+		UpdateCrosshairs(videoInputs, videoShowCrosshairs);
+
+	// Swap the buffers
+	SDL_GL_SwapBuffers();
+}
+
 
 /******************************************************************************
  Main Program Loop
@@ -737,7 +759,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	CRender3D		*Render3D = new CRender3D();
 	unsigned		prevFPSTicks, currentFPSTicks, currentTicks, targetTicks, startTicks;
 	unsigned		fpsFramesElapsed, framesElapsed;
-	unsigned		showCrosshairs = 0;	// bit 1: player 1 crosshair, bit 0: player 2
 	bool			gameHasLightguns = false;
 	bool			quit = false;
 	bool            paused = false;
@@ -774,8 +795,14 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	// Hide mouse if fullscreen, enable crosshairs for gun games
 	Inputs->GetInputSystem()->SetMouseVisibility(!g_Config.fullScreen);
 	gameHasLightguns = !!(Model3->GetGameInfo()->inputFlags & (GAME_INPUT_GUN1|GAME_INPUT_GUN2));
-	if (g_Config.fullScreen && gameHasLightguns)
-		showCrosshairs = 1;	// show player 1 cursor only by default (TODO: add an IsMapped() member to CInput to allow testing for both lightguns)
+	if (gameHasLightguns)
+	{
+		videoInputs = Inputs;
+		if (g_Config.fullScreen && gameHasLightguns)
+			videoShowCrosshairs = 1; // show player 1 cursor only by default (TODO: add an IsMapped() member to CInput to allow testing for both lightguns)
+	}
+	else
+		videoInputs = NULL;
 
 	// Attach the inputs to the emulator
 	Model3->AttachInputs(Inputs);
@@ -812,12 +839,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		{
 			// If not, run one frame
 			Model3->RunFrame();
-			
-			// Show crosshairs for light gun games
-			UpdateCrosshairs(Inputs, showCrosshairs);
-			
-			// Swap the buffers
-			SDL_GL_SwapBuffers();
 		}
 		
 		// Poll the inputs
@@ -1016,8 +1037,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		}
 		else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
  		{
-			showCrosshairs++;
-			switch ((showCrosshairs&3))
+			videoShowCrosshairs++;
+			switch ((videoShowCrosshairs&3))
 			{
 			case 0:	puts("Crosshairs disabled."); 				break;
 			case 3:	puts("Crosshairs enabled.");				break;

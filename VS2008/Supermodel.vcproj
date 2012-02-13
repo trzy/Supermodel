@@ -1892,6 +1892,10 @@
 					RelativePath="..\Src\OSD\Thread.h"
 					>
 				</File>
+				<File
+					RelativePath="..\Src\OSD\Video.h"
+					>
+				</File>
 				<Filter
 					Name="SDL"
 					>

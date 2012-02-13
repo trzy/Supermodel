@@ -1932,9 +1932,8 @@ void CModel3::RunFrame(void)
 			SyncGPUs();
 		}
 
-		// Render frame if ready to do so
-		if (gpusReady)
-			RenderFrame();
+		// Render frame
+		RenderFrame();
 
 		// Enter notify wait critical section
 		if (!notifyLock->Lock())
@@ -2060,12 +2059,18 @@ void CModel3::RenderFrame(void)
 {
 	UINT32 start = CThread::GetTicks();
 
-	// Render frame
-	TileGen.BeginFrame();
-    GPU.BeginFrame();
-    GPU.RenderFrame();
-	GPU.EndFrame();
-	TileGen.EndFrame();
+	// Call OSD video callbacks
+	if (BeginFrameVideo() && gpusReady)
+	{
+		// Render frame
+		TileGen.BeginFrame();
+		GPU.BeginFrame();
+		GPU.RenderFrame();
+		GPU.EndFrame();
+		TileGen.EndFrame();
+	}
+
+	EndFrameVideo();
 
 	renderTicks = CThread::GetTicks() - start;
 }
