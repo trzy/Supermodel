@@ -413,7 +413,9 @@ static void ApplySettings(CINIFile *INI, const char *section)
 	if (OKAY == INI->Get(section, "FullScreen", x))
 		g_Config.fullScreen = x ? true : false;
 	if (OKAY == INI->Get(section, "WideScreen", x))
-		g_Config.wideScreen = x ? true : false;			
+		g_Config.wideScreen = x ? true : false;
+	if (OKAY == INI->Get(section, "MultiTexture", x))
+		g_Config.multiTexture = x ? true : false;
 	if (OKAY == INI->Get(section, "Throttle", x))
 		g_Config.throttle = x ? true : false;
 	if (OKAY == INI->Get(section, "ShowFrameRate", x))
@@ -460,6 +462,7 @@ static void LogConfig(void)
 	InfoLog("\tYResolution                   = %d", g_Config.yRes);
 	InfoLog("\tFullScreen                    = %d", g_Config.fullScreen);
 	InfoLog("\tWideScreen                    = %d", g_Config.wideScreen);
+	InfoLog("\tMultiTexture                  = %d", g_Config.multiTexture);
 	InfoLog("\tThrottle                      = %d", g_Config.throttle);
 	InfoLog("\tShowFrameRate                 = %d", g_Config.showFPS);
 #ifdef SUPERMODEL_DEBUGGER
@@ -1263,6 +1266,8 @@ static void Help(void)
 	puts("    -window                Windowed mode [Default]");
 	puts("    -fullscreen            Full screen mode");
 	puts("    -wide-screen           Expand 3D field of view to screen width");
+	puts("    -multi-texture         Use 8 texture maps for accurate decoding [Default]");
+	puts("    -no-multi-texture      Decode to a single texture map");
 	puts("    -no-throttle           Disable 60 Hz frame rate lock");
 	puts("    -show-fps              Display frame rate in window title bar");
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
@@ -1479,6 +1484,16 @@ int main(int argc, char **argv)
 		{
 			n = 1;
 			CmdLine.Set("Global", "WideScreen", n);
+		}
+		else if (!strcmp(argv[i],"-multi-texture"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "MultiTexture", n);
+		}
+		else if (!strcmp(argv[i],"-no-multi-texture"))
+		{
+			n = 0;
+			CmdLine.Set("Global", "MultiTexture", n);
 		}
 		else if (!strcmp(argv[i],"-no-throttle"))
 		{

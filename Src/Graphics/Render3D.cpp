@@ -1110,16 +1110,24 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     totalXRes = totalXResParam;
     totalYRes = totalYResParam;
 
-	// Load shaders
-	const char *vsFile = g_Config.vertexShaderFile.size() ? g_Config.vertexShaderFile.c_str() : NULL;
-	const char *fsFile = g_Config.fragmentShaderFile.size() ? g_Config.fragmentShaderFile.c_str() : NULL;
-	if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,vsFile,fsFile,vertexShaderSource,fragmentShaderSource))
-		return FAIL;
-	
 	// Query max number of texture units supported by video card to use as upper limit
 	GLint glMaxTexUnits;
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glMaxTexUnits);
 	unsigned maxTexUnits = max<int>(1, min<int>(g_Config.maxTexUnits, glMaxTexUnits));
+	
+	// Load shaders. Use multi-sheet shader if requested and possible.
+	const char *vsFile = g_Config.vertexShaderFile.size() ? g_Config.vertexShaderFile.c_str() : NULL;
+	const char *fsFile = g_Config.fragmentShaderFile.size() ? g_Config.fragmentShaderFile.c_str() : NULL;
+	const char *fragmentShaderSource = fragmentShaderSingleSheetSource;	// single texture shader
+	if (g_Config.multiTexture)
+	{ 
+		if (maxTexUnits >= 8)	// can we use the multi-sheet shader?
+			fragmentShaderSource = fragmentShaderMultiSheetSource;
+		else
+			ErrorLog("Your system has too few texture units. Reverting to single texture shader.");
+	}
+	if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,vsFile,fsFile,vertexShaderSource,fragmentShaderSource))
+		return FAIL;
 	
 	// Try locating default "textureMap" uniform in shader program
 	glUseProgram(shaderProgram); // bind program
@@ -1157,7 +1165,7 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 
 	// Check located at least one uniform to bind to a texture unit
 	if (numTexUnits == 0)
-		return ErrorLog("Could not locate any textureMap uniforms in shader script.");
+		return ErrorLog("Fragment shader must contain at least one 'textureMap' uniform.");
 	InfoLog("Located and bound %u uniform(s) in GL shader script to %u texture unit(s).", numTexUnits, unitCount);
 
 	// Now try creating texture sheets, one for each texture unit (memory permitting)

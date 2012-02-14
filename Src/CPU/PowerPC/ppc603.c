@@ -252,6 +252,7 @@ void ppc_reset(void)
 int ppc_execute(int cycles)
 {
 	UINT32 opcode;
+	
 	ppc_icount = cycles;
 	ppc_tb_base_icount = cycles;
 	ppc_dec_base_icount = cycles + ppc.dec_frac;
@@ -290,8 +291,13 @@ int ppc_execute(int cycles)
 		ppc.pc = ppc.npc;
 		
 		// Debug breakpoints
-		//if (ppc.pc == 0x9e4d4)
-		//	printf("%X R0=%08X\n", ppc.pc, REG(0));
+		/*
+		if (ppc.pc == 0x9d40)
+		{
+			printf("%X R3=%08X R4=%08X\n", ppc.pc, REG(3), REG(4));			
+			
+		}
+		*/
 			
 		opcode = *ppc.op++;	// Supermodel byte reverses each aligned word (converting them to little endian) so they can be fetched directly
 		ppc.npc = ppc.pc + 4;
@@ -314,6 +320,9 @@ int ppc_execute(int cycles)
 		}
 
 		ppc_icount--;
+		
+		// Updating TB four times per core cycle fixes VF3 timing  but breaks other games (Daytona 2 too fast, Spikeout has some geometry flickering)
+		//ppc.tb += 4;
 
 		if(ppc_icount == ppc_dec_trigger_cycle)
 		{
@@ -332,6 +341,9 @@ int ppc_execute(int cycles)
 
 	// update timebase
 	// timebase is incremented once every four core clock cycles, so adjust the cycles accordingly
+	// NOTE: updating at the end of the time slice breaks things that try to wait on TBL. Performing
+	// the update inside the execution loop fixes VF3 and allows many decrementer patches to be 
+	// removed but it adversely affects Spikeout and other games.
 	ppc.tb += ((ppc_tb_base_icount - ppc_icount) / 4);
 
 	// update decrementer

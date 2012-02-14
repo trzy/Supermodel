@@ -175,15 +175,17 @@ struct ModelCache
 class CRender3DConfig
 {
 public:
-	string vertexShaderFile;	// path to vertex shader or "" to use internal shader
-	string fragmentShaderFile;	// fragment shader
-	unsigned maxTexUnits;       // maximum number of texture units to use (1-9)
+	string 		vertexShaderFile;	// path to vertex shader or "" to use internal shader
+	string 		fragmentShaderFile;	// fragment shader
+	unsigned	maxTexUnits;       	// maximum number of texture units to use (1-9)
+	bool		multiTexture;		// if enabled and no external fragment shader, select internal shader w/ multiple texture sheet support
 
 	// Defaults
 	CRender3DConfig(void)
 	{
 		// strings will be clear to begin with
 		maxTexUnits = 9;
+		multiTexture = true;
 	}
 };
 
