@@ -43,7 +43,7 @@ class CSoundBoardConfig
 public:
 	bool	emulateSound;	// sound board emulation (enabled if true)
 	
-	// Master/slave SCSP relative balance (0-100, with 100 meaning master volume doubled, slave silenced)
+	// Master/slave SCSP relative balance (-100-100, with 100 meaning master volume doubled, slave silenced)
 	inline void SetSCSPBalance(int bal)
 	{
 		if (bal > 100)
@@ -70,7 +70,7 @@ public:
 	CSoundBoardConfig(void)
 	{
 		emulateSound = true;
-		scspBalance = 50;
+		scspBalance = 0;
 	}
 	
 private:
