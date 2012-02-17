@@ -26,6 +26,10 @@
  *
  * TO-DO List:
  * -----------
+ * - If vertex normals aren't offset from polygon normals, would that improve
+ *   specular lighting?
+ * - Check to see if vertices in LA Machineguns and Dirt Devils contain color
+ *   values rather than normals.
  * - More should be predecoded into the polygon structures, so that things like
  *   texture base coordinates are not re-decoded in two different places!
  */
@@ -450,12 +454,21 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	if (!(P->header[6]&0x00010000))	// if not luminous, always use full fog intensity
 		fogIntensity = 1.0f;
 		
-	// Contour processing
-	if ((P->header[6]&0x80000000) || (texFormat==7))	// contour processing enabled or alpha texture
+	/*
+	 * Contour processing. Any alpha value sufficiently close to 0 seems to
+	 * cause pixels to be discarded entirely on Model 3 (no modification of the
+	 * depth buffer). Strictly speaking, only T1RGB5 format textures are
+	 * "contour textures" (in Real3D lingo), we enable contour processing for
+	 * alpha blended texture formats as well in order to discard fully
+	 * transparent pixels.
+	 */
+	if ((P->header[6]&0x80000000) || (texFormat==7) ||	// contour processing enabled or RGBA4 texture
+		((texFormat==1) && (P->header[6]&2)) ||			// A4L4 interleaved (these formats are not being interpreted correctly, see Scud Race clock tower)
+		((texFormat==3) && (P->header[6]&4)))			// A4L4 interleaved
 		contourProcessing = 1.0f;
 	else
 		contourProcessing = -1.0f;
-				
+
 	// Store to local vertex buffer
 	s = P->state;
 	baseIdx = Cache->curVertIdx[s]*VBO_VERTEX_SIZE;
