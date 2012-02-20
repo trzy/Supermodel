@@ -624,51 +624,26 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 	/*
 	 * Render and mix each line
 	 */
-	if (clearBottom)
-	{
-		for (int y = 0; y < 384; y++)
-		{
-			// Draw one scanline from each layer
-			DrawLine(lineBuffer[0], 0, y, nameTableBase[0], pal[0]);
-			DrawLine(lineBuffer[1], 1, y, nameTableBase[1], pal[0]);
-			DrawLine(lineBuffer[2], 2, y, nameTableBase[2], pal[1]);
-			DrawLine(lineBuffer[3], 3, y, nameTableBase[3], pal[1]);
-						
-			// No bottom layer
-			memset(destBottom, 0, 496*sizeof(UINT32));
-			
-			// Mix the layers in the correct order
-			for (int i = 0; i < 4; i++)
-			{
-				MixLine(dest[i], src[i], sortedLayerNum[i], y, sortedIsBottom[i], sortedHScrollTable[i], maskTableLine, sortedHFullScroll[i], sortedLineScrollMode[i]);				
-				dest[i] += 496;	// next line
-			}
-		
-			// Next line in mask table
-			maskTableLine += 2;
-		}
-	}
-	else
-	{
-		for (int y = 0; y < 384; y++)
-		{
-			// Draw one scanline from each layer
-			DrawLine(lineBuffer[0], 0, y, nameTableBase[0], pal[0]);
-			DrawLine(lineBuffer[1], 1, y, nameTableBase[1], pal[0]);
-			DrawLine(lineBuffer[2], 2, y, nameTableBase[2], pal[1]);
-			DrawLine(lineBuffer[3], 3, y, nameTableBase[3], pal[1]);
-						
-			// Mix the layers in the correct order
-			for (int i = 0; i < 4; i++)
-			{
-				MixLine(dest[i], src[i], sortedLayerNum[i], y, sortedIsBottom[i], sortedHScrollTable[i], maskTableLine, sortedHFullScroll[i], sortedLineScrollMode[i]);				
-				dest[i] += 496;	// next line
-			}
-		
-			// Next line in mask table
-			maskTableLine += 2;
-		}
+	if (clearBottom)	// no bottom layer
+		memset(destBottom, 0, 496*384*sizeof(UINT32));
 
+	for (int y = 0; y < 384; y++)
+	{
+		// Draw one scanline from each layer
+		DrawLine(lineBuffer[0], 0, y, nameTableBase[0], pal[0]);
+		DrawLine(lineBuffer[1], 1, y, nameTableBase[1], pal[0]);
+		DrawLine(lineBuffer[2], 2, y, nameTableBase[2], pal[1]);
+		DrawLine(lineBuffer[3], 3, y, nameTableBase[3], pal[1]);
+						
+		// Mix the layers in the correct order
+		for (int i = 0; i < 4; i++)
+		{
+			MixLine(dest[i], src[i], sortedLayerNum[i], y, sortedIsBottom[i], sortedHScrollTable[i], maskTableLine, sortedHFullScroll[i], sortedLineScrollMode[i]);				
+			dest[i] += 496;	// next line
+		}
+	
+		// Next line in mask table
+		maskTableLine += 2;
 	}
 }
 		
