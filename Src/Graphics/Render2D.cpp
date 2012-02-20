@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -278,9 +278,12 @@
  * Where 'r', 'g', and 'b' appear to be signed 8-bit color offsets. Because
  * they exceed the color resolution of the palette, they must be scaled
  * appropriately.
+ *
+ * Color offset registers are handled in TileGen.cpp. Two palettes are computed
+ * -- one for A/A' and another for B/B'. These are passed to the renderer.
  */
 
-#include <string.h>
+#include <cstring>
 #include "Pkgs/glew.h"
 #include "Supermodel.h"
 #include "Graphics/Shaders2D.h"	// fragment and vertex shaders
@@ -300,7 +303,7 @@
 ******************************************************************************/
 
 // Draw 4-bit tile line, no clipping performed
-void CRender2D::DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine)
+void CRender2D::DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal)
 {
     unsigned	tileOffset;	// offset of tile pattern within VRAM
     unsigned	palette;   	// color palette bits obtained from tile
@@ -326,8 +329,8 @@ void CRender2D::DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine)
     *buf++ = pal[((pattern>>0)&0xF) | palette];
 }
 
-// Draw 8-bit tile line, clipped at left edge
-void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine)
+// Draw 8-bit tile line, no clipping performed
+void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal)
 {
     unsigned	tileOffset;	// offset of tile pattern within VRAM
     unsigned	palette;   	// color palette bits obtained from tile
@@ -379,8 +382,9 @@ void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine)
  *							for this layer.
  *		hScrollTable		Pointer to the line-by-line horizontal scroll value
  *							table for this layer.
+ *		pal					Palette to draw with.
  */
-void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase)
+void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal)
 {
 	
 	// Determine the layer color depth (4 or 8-bit pixels)
@@ -397,10 +401,10 @@ void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTa
 		for (int tx = 0; tx < 64; tx += 4)
 		{
 			// Little endian: offsets 0,1,2,3 become 1,0,3,2
-			DrawTileLine4BitNoClip(dest, nameTable[1], vOffset);	dest += 8;
-			DrawTileLine4BitNoClip(dest, nameTable[0], vOffset);	dest += 8;
-			DrawTileLine4BitNoClip(dest, nameTable[3], vOffset);	dest += 8;
-			DrawTileLine4BitNoClip(dest, nameTable[2], vOffset);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[1], vOffset, pal);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[0], vOffset, pal);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[3], vOffset, pal);	dest += 8;
+			DrawTileLine4BitNoClip(dest, nameTable[2], vOffset, pal);	dest += 8;
 			nameTable += 4;	// next set of 4 tiles
 		}
 	}
@@ -408,41 +412,28 @@ void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTa
 	{
 		for (int tx = 0; tx < 64; tx += 4)
 		{
-			DrawTileLine8BitNoClip(dest, nameTable[1], vOffset);	dest += 8;
-			DrawTileLine8BitNoClip(dest, nameTable[0], vOffset);	dest += 8;
-			DrawTileLine8BitNoClip(dest, nameTable[3], vOffset);	dest += 8;
-			DrawTileLine8BitNoClip(dest, nameTable[2], vOffset);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[1], vOffset, pal);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[0], vOffset, pal);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[3], vOffset, pal);	dest += 8;
+			DrawTileLine8BitNoClip(dest, nameTable[2], vOffset, pal);	dest += 8;
 			nameTable += 4;
 		}
 	}				
 }
 
-void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool isBottom)
+// Mix in the appropriate layer (add on top of current contents) with horizontal scrolling under control of the stencil mask
+static void MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool isBottom, const UINT16 *hScrollTable, const UINT16 *maskTableLine, int hFullScroll, bool lineScrollMode)
 {
-	/*
-	 * Mix in the appropriate layer under control of the stencil mask, applying
-	 * horizontal scrolling in theprocess
-	 */
-		 
-	// Line scroll table
-	const UINT16 *hScrollTable = (UINT16 *) &vram[(0xF6000+layerNum*0x400)/4];
-	
-	// Load horizontal full-screen scroll values and scroll mode
-	int  hFullScroll    = regs[0x60/4+layerNum]&0x3FF;
-	bool lineScrollMode = regs[0x60/4+layerNum]&0x8000;
-	
-	// Load horizontal scroll values
+	// Determine horizontal scroll values
 	int hScroll;
 	if (lineScrollMode)
 		hScroll = hScrollTable[y];
 	else
 		hScroll = hFullScroll;
 		
-	// Get correct offset into mask table
-	const UINT16 *maskTable = (UINT16 *) &vram[0xF7000/4];
-	maskTable += 2*y;
+	// Get correct mask table entry
 	if (layerNum < 2)	// little endian: layers A and A' use second word in each pair
-		++maskTable;
+		++maskTableLine;
 		
 	// Figure out what mask bit should be to mix in this layer
 	UINT16 doCopy;
@@ -452,13 +443,15 @@ void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bo
 		doCopy = 0x8000;	// copy primary layer when mask is set
 			
 	// Mix first 60 tiles (4 at a time)
-	UINT16 mask = *maskTable;	// mask for this line (each bit covers 4 tiles)
-	int    i    = hScroll&511;	// line index (where to copy from)
-	for (int tx = 0; tx < 60; tx += 4)
+	UINT16 mask = *maskTableLine;	// mask for this line (each bit covers 4 tiles)
+	int    i    = hScroll&511;		// line index (where to copy from)
+	if (isBottom)
 	{
-		// If bottom layer, we can copy without worrying about transparency, and must also write blank values when this layer is not showing
-		//TODO: move this test outside of loop
-		if (isBottom)
+		/*
+		 * Bottom layers can be copied in without worrying about transparency 
+		 * but we must write blank values when layer is not showing.
+		 */
+		for (int tx = 0; tx < 60; tx += 4)
 		{
 			// Only copy pixels if the mask bit is appropriate for this layer type
 			if ((mask&0x8000) == doCopy)
@@ -486,36 +479,11 @@ void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bo
 				i &= 511;	// wrap line boundaries
 				dest += 32;
 			}
-		}
-		else
-		{
-			// Copy while testing for transparencies
-			if ((mask&0x8000) == doCopy)
-			{
-				UINT32	p;
-				for (int k = 0; k < 32; k++)
-				{
-					i &= 511;
-					p = src[i++];
-					if ((p>>24) != 0)	// opaque pixel, put it down
-						*dest = p;
-					dest++;
-				}
-			}
-			else
-			{
-				i += 32;
-				i &= 511;
-				dest += 32;
-			}
+			
+			mask <<= 1;
 		}
 		
-		mask <<= 1;
-	}
-	
-	// Mix last two tiles
-	if (isBottom)
-	{
+		// Mix last two tiles
 		if ((mask&0x8000) == doCopy)
 		{
 			for (int k = 0; k < 16; k++)
@@ -535,6 +503,34 @@ void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bo
 	}
 	else
 	{
+		/* 
+		 * Subsequent layers must test for transparency while mixing.
+		 */
+		for (int tx = 0; tx < 60; tx += 4)
+		{
+			if ((mask&0x8000) == doCopy)
+			{
+				UINT32	p;
+				for (int k = 0; k < 32; k++)
+				{
+					i &= 511;
+					p = src[i++];
+					if ((p>>24) != 0)	// opaque pixel, put it down
+						*dest = p;
+					dest++;
+				}
+			}
+			else
+			{
+				i += 32;
+				i &= 511;
+				dest += 32;
+			}
+				
+			mask <<= 1;
+		}
+		
+		
 		if ((mask&0x8000) == doCopy)
 		{
 			UINT32	p;
@@ -552,64 +548,127 @@ void CRender2D::MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bo
 
 void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 {
-	// Base address of all 4 name tables
-	const UINT16 *nameTableBase[4];
-	nameTableBase[0] = (UINT16 *) &vram[(0xF8000+0*0x2000)/4];	// A
-	nameTableBase[1] = (UINT16 *) &vram[(0xF8000+1*0x2000)/4];	// A'
-	nameTableBase[2] = (UINT16 *) &vram[(0xF8000+2*0x2000)/4];	// B
-	nameTableBase[3] = (UINT16 *) &vram[(0xF8000+3*0x2000)/4];	// B'
+	/*
+	 * Precompute data needed for each layer
+	 */
+	const UINT16 	*nameTableBase[4];
+	const UINT16	*hScrollTable[4];
+	const UINT16 	*maskTableLine = (UINT16 *) &vram[0xF7000/4];	// start at line 0
+	int				hFullScroll[4];
+	bool			lineScrollMode[4];
 	
-	// Render and mix each line
-	for (int y = 0; y < 384; y++)
+	for (int i = 0; i < 4; i++)	// 0=A, 1=A', 2=B, 3=B'
 	{
-		// Draw each layer
-		DrawLine(lineBuffer[0], 0, y, nameTableBase[0]);
-		DrawLine(lineBuffer[1], 1, y, nameTableBase[1]);
-		DrawLine(lineBuffer[2], 2, y, nameTableBase[2]);
-		DrawLine(lineBuffer[3], 3, y, nameTableBase[3]);
-
-		//TODO: could probably further optimize: only have a single layer clear masked-out areas, then if alt. layer is being written to same place, don't bother worrying about transparencies if directly on top
-		// Combine according to priority settings		
-		// NOTE: question mark indicates unobserved and therefore unknown
-		switch ((regs[0x20/4]>>8)&0xF)
-		{
-		case 0x5:	// top: A, B, A'?	bottom: B'
-			MixLine(destBottom, lineBuffer[3], 3, y, true);
-			MixLine(destTop, lineBuffer[2], 2, y, true);
-			MixLine(destTop, lineBuffer[0], 0, y, false);
-			MixLine(destTop, lineBuffer[1], 1, y, false);
-			break;
-		case 0x9:	// ? all layers on top but relative order unknown (Spikeout Final Edition, after first boss)
-			memset(destBottom, 0, 496*sizeof(UINT32));	//TODO: use glClear(GL_COLOR_BUFFER_BIT) if there is no bottom layer
-			MixLine(destTop, lineBuffer[2], 2, y, true);
-			MixLine(destTop, lineBuffer[3], 3, y, false);
-			MixLine(destTop, lineBuffer[1], 1, y, false);
-			MixLine(destTop, lineBuffer[0], 0, y, false);
-			break;
-		case 0xF:	// all on top
-			memset(destBottom, 0, 496*sizeof(UINT32));	//TODO: use glClear(GL_COLOR_BUFFER_BIT) if there is no bottom layer
-			MixLine(destTop, lineBuffer[2], 2, y, true);
-			MixLine(destTop, lineBuffer[3], 3, y, false);
-			MixLine(destTop, lineBuffer[0], 0, y, false);
-			MixLine(destTop, lineBuffer[1], 1, y, false);
-			break;
-		case 0x7:	// top: A, B	bottom: A'?, B'
-			MixLine(destBottom, lineBuffer[3], 3, y, true);
-			MixLine(destBottom, lineBuffer[1], 1, y, false);
-			MixLine(destTop, lineBuffer[2], 2, y, true);
-			MixLine(destTop, lineBuffer[0], 0, y, false);
-			break;
-		default:	// unknown, use A and A' on top, B and B' on the bottom
-			MixLine(destBottom, lineBuffer[2], 2, y, true);
-			MixLine(destBottom, lineBuffer[3], 3, y, false);
-			MixLine(destTop, lineBuffer[0], 0, y, true);
-			MixLine(destTop, lineBuffer[1], 1, y, false);
-			break;
-		}
+		// Base of name table
+		nameTableBase[i] = (UINT16 *) &vram[(0xF8000+i*0x2000)/4];
 		
-		// Advance to next line in output surfaces
-		destBottom += 496;
-		destTop += 496;
+		// Horizontal line scroll tables
+		hScrollTable[i] = (UINT16 *) &vram[(0xF6000+i*0x400)/4];
+		
+		// Load horizontal full-screen scroll values and scroll mode
+		hFullScroll[i]    = regs[0x60/4+i]&0x3FF;
+		lineScrollMode[i] = regs[0x60/4+i]&0x8000;
+	}
+	
+	/*
+	 * Precompute layer mixing order 
+	 */
+	UINT32 			*dest[4];
+	const UINT32	*src[4];
+	int				sortedLayerNum[4];
+	bool			sortedIsBottom[4];
+	const UINT16	*sortedHScrollTable[4];
+	int				sortedHFullScroll[4];
+	bool			sortedLineScrollMode[4];
+	bool			clearBottom;	// when true, no layer assigned to bottom surface
+	
+	switch ((regs[0x20/4]>>8)&0xF)
+	{
+	case 0x5:	// top: A, B, A'?	bottom: B'
+		clearBottom = false;
+		dest[0]=destBottom; src[0]=lineBuffer[3]; sortedLayerNum[0]=3; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[3]; sortedHFullScroll[0]=hFullScroll[3]; sortedLineScrollMode[0]=lineScrollMode[3];
+		dest[1]=destTop;    src[1]=lineBuffer[2]; sortedLayerNum[1]=2; sortedIsBottom[1]=true;  sortedHScrollTable[1] = hScrollTable[2]; sortedHFullScroll[1]=hFullScroll[2]; sortedLineScrollMode[1]=lineScrollMode[2];
+		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
+		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
+		break;
+	case 0x9:	// ? all layers on top but relative order unknown (Spikeout Final Edition, after first boss)
+		clearBottom = true;
+		dest[0]=destTop;    src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[3];
+		dest[1]=destTop;    src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[2];
+		dest[2]=destTop;    src[2]=lineBuffer[1]; sortedLayerNum[2]=1; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[1]; sortedHFullScroll[2]=hFullScroll[1]; sortedLineScrollMode[2]=lineScrollMode[1];
+		dest[3]=destTop;    src[3]=lineBuffer[0]; sortedLayerNum[3]=0; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[0]; sortedHFullScroll[3]=hFullScroll[0]; sortedLineScrollMode[3]=lineScrollMode[0];
+		break;
+	case 0xF:	// all on top
+		clearBottom = true;
+		dest[0]=destTop;    src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[2];
+		dest[1]=destTop;    src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[3];
+		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
+		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
+		break;
+	case 0x7:	// top: A, B	bottom: A'?, B'
+		clearBottom = false;
+		dest[0]=destBottom; src[0]=lineBuffer[3]; sortedLayerNum[0]=3; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[3]; sortedHFullScroll[0]=hFullScroll[3]; sortedLineScrollMode[0]=lineScrollMode[3];
+		dest[1]=destBottom; src[1]=lineBuffer[1]; sortedLayerNum[1]=1; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[1]; sortedHFullScroll[1]=hFullScroll[1]; sortedLineScrollMode[1]=lineScrollMode[1];
+		dest[2]=destTop;    src[2]=lineBuffer[2]; sortedLayerNum[2]=2; sortedIsBottom[2]=true;  sortedHScrollTable[2] = hScrollTable[2]; sortedHFullScroll[2]=hFullScroll[2]; sortedLineScrollMode[2]=lineScrollMode[2];
+		dest[3]=destTop;    src[3]=lineBuffer[0]; sortedLayerNum[3]=0; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[0]; sortedHFullScroll[3]=hFullScroll[0]; sortedLineScrollMode[3]=lineScrollMode[0];
+		break;
+	default:	// unknown, use A and A' on top, B and B' on the bottom
+		clearBottom = false;
+		dest[0]=destBottom; src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[2];
+		dest[1]=destBottom; src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[3];
+		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=true;  sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
+		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
+		break;
+	}
+	
+	/*
+	 * Render and mix each line
+	 */
+	if (clearBottom)
+	{
+		for (int y = 0; y < 384; y++)
+		{
+			// Draw one scanline from each layer
+			DrawLine(lineBuffer[0], 0, y, nameTableBase[0], pal[0]);
+			DrawLine(lineBuffer[1], 1, y, nameTableBase[1], pal[0]);
+			DrawLine(lineBuffer[2], 2, y, nameTableBase[2], pal[1]);
+			DrawLine(lineBuffer[3], 3, y, nameTableBase[3], pal[1]);
+						
+			// No bottom layer
+			memset(destBottom, 0, 496*sizeof(UINT32));
+			
+			// Mix the layers in the correct order
+			for (int i = 0; i < 4; i++)
+			{
+				MixLine(dest[i], src[i], sortedLayerNum[i], y, sortedIsBottom[i], sortedHScrollTable[i], maskTableLine, sortedHFullScroll[i], sortedLineScrollMode[i]);				
+				dest[i] += 496;	// next line
+			}
+		
+			// Next line in mask table
+			maskTableLine += 2;
+		}
+	}
+	else
+	{
+		for (int y = 0; y < 384; y++)
+		{
+			// Draw one scanline from each layer
+			DrawLine(lineBuffer[0], 0, y, nameTableBase[0], pal[0]);
+			DrawLine(lineBuffer[1], 1, y, nameTableBase[1], pal[0]);
+			DrawLine(lineBuffer[2], 2, y, nameTableBase[2], pal[1]);
+			DrawLine(lineBuffer[3], 3, y, nameTableBase[3], pal[1]);
+						
+			// Mix the layers in the correct order
+			for (int i = 0; i < 4; i++)
+			{
+				MixLine(dest[i], src[i], sortedLayerNum[i], y, sortedIsBottom[i], sortedHScrollTable[i], maskTableLine, sortedHFullScroll[i], sortedLineScrollMode[i]);				
+				dest[i] += 496;	// next line
+			}
+		
+			// Next line in mask table
+			maskTableLine += 2;
+		}
+
 	}
 }
 		
@@ -624,11 +683,8 @@ void CRender2D::DisplaySurface(int surface, GLfloat z)
 	// If bottom surface and wide screen, clear overscan areas
 	if (surface && g_Config.wideScreen)
 	{
-		UINT32 	c = pal[0];	// just use palette color 0 for now (not the best solution, it's usually black)
-		GLfloat	r = (GLfloat)(c&0xFF) / 255.0f;
-		GLfloat	g = (GLfloat)((c>>8)&0xFF) / 255.0f;
-		GLfloat	b = (GLfloat)((c>>16)&0xFF) / 255.0f;
-		glClearColor(r, g, b, 0.0);
+		// For now, clear w/ black (may want to use color 0 later)
+		glClearColor(0.0, 0.0, 0.0, 0.0);
 		glViewport(0, 0, xOffs, totalYPixels);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glViewport(xOffs+xPixels, 0, totalXPixels, totalYPixels);
@@ -670,31 +726,9 @@ void CRender2D::Setup2D(void)
 	glUseProgram(shaderProgram);
 }
 
-// Convert color offset register data to RGB
-void CRender2D::ColorOffset(GLfloat colorOffset[3], UINT32 reg)
-{
-	INT8	ir, ig, ib;
-	
-	ib = (reg>>16)&0xFF;
-	ig = (reg>>8)&0xFF;
-	ir = (reg>>0)&0xFF;
-	
-	/*
-	 * Uncertain how these should be interpreted. It appears to be signed, 
-	 * which means the values range from -128 to +127. The division by 128
-	 * normalizes this to roughly -1,+1.
-	 */
-	colorOffset[0] = (GLfloat) ir * (1.0f/128.0f);
-	colorOffset[1] = (GLfloat) ig * (1.0f/128.0f);
-	colorOffset[2] = (GLfloat) ib * (1.0f/128.0f);		
-	//printf("%08X -> %g,%g,%g\n", reg, colorOffset[2], colorOffset[1], colorOffset[0]);
-}
-
 // Bottom layers
 void CRender2D::BeginFrame(void)
 {
-	GLfloat	colorOffset[3];	
-	
 	// Update all layers
 	DrawTilemaps(surfBottom, surfTop);
 	glActiveTexture(GL_TEXTURE0);	// texture unit 0
@@ -705,21 +739,15 @@ void CRender2D::BeginFrame(void)
 	
 	// Display bottom surface
 	Setup2D();
-	ColorOffset(colorOffset, regs[0x44/4]);
-	glUniform3fv(colorOffsetLoc, 1, colorOffset);
 	DisplaySurface(1, 0.0);
 }
 
 // Top layers
 void CRender2D::EndFrame(void)
 {	
-	GLfloat	colorOffset[3];
-	
 	// Display top surface
 	Setup2D();
 	glEnable(GL_BLEND);
-	ColorOffset(colorOffset, regs[0x40/4]);
-	glUniform3fv(colorOffsetLoc, 1, colorOffset);
 	DisplaySurface(0, -0.5);
 }
 
@@ -745,9 +773,10 @@ void CRender2D::AttachRegisters(const UINT32 *regPtr)
 	DebugLog("Render2D attached registers\n");
 }
 
-void CRender2D::AttachPalette(const UINT32 *palPtr)
+void CRender2D::AttachPalette(const UINT32 *palPtr[2])
 {
-	pal = palPtr;
+	pal[0] = palPtr[0];
+	pal[1] = palPtr[1];
 	DebugLog("Render2D attached palette\n");
 }
 
@@ -775,7 +804,6 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	glUseProgram(shaderProgram);	// bind program
 	textureMapLoc = glGetUniformLocation(shaderProgram, "textureMap");
 	glUniform1i(textureMapLoc,0);	// attach it to texture unit 0
-	colorOffsetLoc = glGetUniformLocation(shaderProgram, "colorOffset");
 	
 	// Allocate memory for layer surfaces
 	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];

@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -34,7 +34,7 @@ static const char vertexShaderSource[] =
 "/**\n"
 " ** Supermodel\n"
 " ** A Sega Model 3 Arcade Emulator.\n"
-" ** Copyright 2011 Bart Trzynadlowski, Nik Henson \n"
+" ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson \n"
 " **\n"
 " ** This file is part of Supermodel.\n"
 " **\n"
@@ -178,20 +178,20 @@ static const char vertexShaderSource[] =
 "  \t\t\t// Standard specular lighting equation\n"
 "  \t\t\tvec3 V = normalize(-viewVertex);\n"
 "  \t\t\tvec3 H = normalize(sunVector+V);\t// halfway vector\n"
-"  \t\t\tfloat s = max(10,64-shininess);\t\t// seems to look nice, but probably not correct\n"
-"  \t\t\tfsSpecularTerm = pow(max(dot(viewNormal,H),0),s);\n"
-"  \t\t\tif (sunFactor <= 0) fsSpecularTerm = 0;\n"
+"  \t\t\tfloat s = max(10.0,64.0-shininess);\t\t// seems to look nice, but probably not correct\n"
+"  \t\t\tfsSpecularTerm = pow(max(dot(viewNormal,H),0.0),s);\n"
+"  \t\t\tif (sunFactor <= 0.0) fsSpecularTerm = 0.0;\n"
 "  \t\t\t\n"
 "  \t\t\t// Faster approximation  \t\t\t\n"
-"  \t\t\t//float temp = max(dot(viewNormal,H),0);\n"
-"  \t\t\t//float s = 64-shininess;\n"
+"  \t\t\t//float temp = max(dot(viewNormal,H),0.0);\n"
+"  \t\t\t//float s = 64.0-shininess;\n"
 "  \t\t\t//fsSpecularTerm = temp/(s-temp*s+temp);\n"
 "  \t\t\t\n"
 "  \t\t\t// Phong formula\n"
-"  \t\t\t//vec3 R = normalize(2*dot(sunVector,viewNormal)*viewNormal - sunVector);\n"
+"  \t\t\t//vec3 R = normalize(2.0*dot(sunVector,viewNormal)*viewNormal - sunVector);\n"
 "  \t\t\t//vec3 V = normalize(-viewVertex);\n"
-"  \t\t\t//float s = max(2,64-shininess);\n"
-"  \t\t\t//fsSpecularTerm = pow(max(dot(R,V),0),s);\n"
+"  \t\t\t//float s = max(2.0,64.0-shininess);\n"
+"  \t\t\t//fsSpecularTerm = pow(max(dot(R,V),0.0),s);\n"
 "  \t\t}\n"
 "\t}\n"
 "\t\n"
@@ -218,7 +218,7 @@ static const char fragmentShaderSingleSheetSource[] =
 "/**\n"
 " ** Supermodel\n"
 " ** A Sega Model 3 Arcade Emulator.\n"
-" ** Copyright 2011 Bart Trzynadlowski, Nik Henson \n"
+" ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson \n"
 " **\n"
 " ** This file is part of Supermodel.\n"
 " **\n"
@@ -416,7 +416,7 @@ static const char fragmentShaderMultiSheetSource[] =
 "/**\n"
 " ** Supermodel\n"
 " ** A Sega Model 3 Arcade Emulator.\n"
-" ** Copyright 2011 Bart Trzynadlowski, Nik Henson \n"
+" ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson \n"
 " **\n"
 " ** This file is part of Supermodel.\n"
 " **\n"

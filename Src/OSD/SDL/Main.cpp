@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
@@ -1242,7 +1242,7 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 static void Title(void)
 {
 	puts("Supermodel: A Sega Model 3 Arcade Emulator (Version "SUPERMODEL_VERSION")");
-	puts("Copyright (C) 2011 by Bart Trzynadlowski and Nik Henson\n");
+	puts("Copyright (C) 2011-2012 by Bart Trzynadlowski and Nik Henson\n");
 }
 
 // Print usage information

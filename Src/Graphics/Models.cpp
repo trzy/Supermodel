@@ -34,8 +34,8 @@
  *   texture base coordinates are not re-decoded in two different places!
  */
 
-#include <math.h>
-#include <string.h>
+#include <cmath>
+#include <cstring>
 #include "Supermodel.h"
 
 

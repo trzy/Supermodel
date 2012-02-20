@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -853,7 +853,7 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 	// Set up viewport and projection (TO-DO: near and far clipping)
 	glMatrixMode(GL_PROJECTION);
  	glLoadIdentity();
-	if (g_Config.wideScreen && (vpX==0) && (vpY==0) && (vpWidth>=495) && (vpHeight >= 383))
+	if (g_Config.wideScreen && (vpX==0) && (vpWidth>=495) && (vpY==0) && (vpHeight >= 383))		// only expand viewports that occupy whole screen
 	{
 		// Wide screen hack only modifies X axis and not the Y FOV
 		viewportX 	   = 0;

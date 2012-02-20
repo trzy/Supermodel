@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -145,19 +145,19 @@ void main(void)
   			// Standard specular lighting equation
   			vec3 V = normalize(-viewVertex);
   			vec3 H = normalize(sunVector+V);	// halfway vector
-  			float s = max(10,64-shininess);		// seems to look nice, but probably not correct
-  			fsSpecularTerm = pow(max(dot(viewNormal,H),0),s);
-  			if (sunFactor <= 0) fsSpecularTerm = 0;
+  			float s = max(10.0,64.0-shininess);	// seems to look nice, but probably not correct
+  			fsSpecularTerm = pow(max(dot(viewNormal,H),0.0),s);
+  			if (sunFactor <= 0.0) fsSpecularTerm = 0.0;
   			
   			// Faster approximation  			
-  			//float temp = max(dot(viewNormal,H),0);
-  			//float s = 64-shininess;
+  			//float temp = max(dot(viewNormal,H),0.0);
+  			//float s = 64.0-shininess;
   			//fsSpecularTerm = temp/(s-temp*s+temp);
   			
   			// Phong formula
-  			//vec3 R = normalize(2*dot(sunVector,viewNormal)*viewNormal - sunVector);
+  			//vec3 R = normalize(2.0*dot(sunVector,viewNormal)*viewNormal - sunVector);
   			//vec3 V = normalize(-viewVertex);
-  			//float s = max(2,64-shininess);
+  			//float s = max(2.0,64.0-shininess);
   			//fsSpecularTerm = pow(max(dot(R,V),0),s);
   		}
 	}

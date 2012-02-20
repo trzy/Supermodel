@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -29,7 +29,6 @@
 
 // Global uniforms
 uniform sampler2D	textureMap;		// 512x512 layer surface
-uniform vec3		colorOffset;	// color offset for this layer
 
 /*
  * main():
@@ -40,5 +39,4 @@ uniform vec3		colorOffset;	// color offset for this layer
 void main(void)
 {	
 	gl_FragColor = texture2D(textureMap, gl_TexCoord[0].st);
-	gl_FragColor.rgb = clamp(gl_FragColor.rgb+colorOffset,0.0,1.0);
 }

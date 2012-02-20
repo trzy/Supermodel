@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -82,12 +82,22 @@ public:
 	 * rendering otherwise the program may crash with an access violation.
 	 *
 	 * Parameters:
-	 *		regPtr		Pointer to the base of the tile generator registers.
-	 *					There are assumed to be 64 in all.
+	 *		regPtr	Pointer to the base of the tile generator registers. There
+	 *				are assumed to be 64 in all.
 	 */
 	void AttachRegisters(const UINT32 *regPtr);
 	
-	void AttachPalette(const UINT32 *palPtr);
+	/*
+	 * AttachPalette(palPtr):
+	 *
+	 * Attaches tile generator palettes. This must be done prior to any
+	 * rendering.
+	 *
+	 * Parameters:
+	 *		palPtr	Pointer to two palettes. The first is for layers A/A' and
+	 *				the second is for B/B'.
+	 */
+	void AttachPalette(const UINT32 *palPtr[2]);
 
 	/*
 	 * AttachVRAM(vramPtr):
@@ -134,22 +144,16 @@ public:
 	
 private:
 	// Private member functions
-	void DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine);
-	void DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine);
-	void DrawTileLine4Bit(UINT32 *buf, int offset, UINT16 tile, int tileLine);
-	void DrawTileLine4BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels);
-	void DrawTileLine8Bit(UINT32 *buf, int offset, UINT16 tile, int tileLine);
-	void DrawTileLine8BitRightClip(UINT32 *buf, int offset, UINT16 tile, int tileLine, int numPixels);
-	void DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase);
-	void MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool isBottom);
+	void DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal);
+	void DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal);
+	void DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal);
 	void DrawTilemaps(UINT32 *destBottom, UINT32 *destTop);
 	void DisplaySurface(int surface, GLfloat z);
 	void Setup2D(void);
-	void ColorOffset(GLfloat colorOffset[3], UINT32 reg);
-		
+			
 	// Data received from tile generator device object
 	const UINT32	*vram;
-	const UINT32    *pal;
+	const UINT32    *pal[2];	// palettes for A/A' and B/B'
 	const UINT32	*regs;
 	
 	// OpenGL data
@@ -163,7 +167,6 @@ private:
 	GLuint	vertexShader;	// vertex shader handle
 	GLuint	fragmentShader;	// fragment shader
 	GLuint	textureMapLoc;	// location of "textureMap" uniform
-	GLuint	colorOffsetLoc;	// uniform
 
 	// Buffers
 	UINT8	*memoryPool;	// all memory is allocated here

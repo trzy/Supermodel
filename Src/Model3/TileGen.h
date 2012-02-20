@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -191,6 +191,7 @@ public:
 	
 private:
 	// Private member functions
+	void		RecomputePalettes(void);
 	void		InitPalette(void);
 	void		WritePalette(unsigned color, UINT32 data);
 	UINT32		UpdateSnapshots(bool copyWhole);
@@ -199,18 +200,23 @@ private:
 	CIRQ		*IRQ;		// IRQ controller the tile generator is attached to
 	CRender2D	*Render2D;	// 2D renderer the tile generator is attached to
 	
-	// Tile generator VRAM
-	UINT8	*memoryPool;	// all memory allocated here
-	UINT8   *vram;          // 1.8MB of VRAM
-	UINT32	*pal;			// 0x20000 byte (32K colors) palette
+	/*
+	 * Tile generator VRAM. The upper 128KB of VRAM stores the palette data.
+	 * Two palettes are computed from this based on the color offset registers:
+	 * A/A' and B/B'.
+	 */
+	UINT8	*memoryPool;		// all memory allocated here
+	UINT8   *vram;          	// 1.125MB of VRAM
+	UINT32	*pal[2];			// 2 x 0x20000 byte (32K colors) palette
+	bool	recomputePalettes;	// whether to recompute palettes A/A' and B/B' during sync
 
 	// Read-only snapshots
-	UINT8   *vramRO;        // 1.8MB of VRAM                     [read-only snapshot]	
-	UINT32  *palRO;	        // 0x20000 byte (32K colors) palette [read-only snapshot]
+	UINT8   *vramRO;        // 1.125MB of VRAM                       [read-only snapshot]	
+	UINT32  *palRO[2];      // 2 x 0x20000 byte (32K colors) palette [read-only snapshot]
 	
 	// Arrays to keep track of dirty pages in memory regions
 	UINT8   *vramDirty;
-	UINT8   *palDirty;
+	UINT8   *palDirty[2];	// one for each palette
 
 	// Registers
 	UINT32	regs[64];

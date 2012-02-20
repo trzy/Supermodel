@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -43,7 +43,7 @@
  */
 
 #include <new>
-#include <stdio.h>
+#include <cstdio>
 #include "Pkgs/glew.h"
 #include "Supermodel.h"
 
