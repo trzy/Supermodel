@@ -147,9 +147,9 @@ private:
 	void DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal);
 	void DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal);
 	void DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal);
-	void DrawTilemaps(UINT32 *destBottom, UINT32 *destTop);
+	bool DrawTilemaps(UINT32 *destBottom, UINT32 *destTop);
 	void DisplaySurface(int surface, GLfloat z);
-	void Setup2D(void);
+	void Setup2D(bool isBottom, bool clearAll);
 			
 	// Data received from tile generator device object
 	const UINT32	*vram;

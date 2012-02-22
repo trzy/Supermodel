@@ -53,14 +53,9 @@
  * games use them.
  *
  * VRAM is comprised of 1 MB for tile data and an additional 128 KB for the 
- * palette. The four tilemap layers are referred to as: A (0), A' (1), B (2),
- * and B' (3). Palette RAM may be located on a separate RAM IC.
- *
- * NOTE: Supermodel allocates 128 KB for the palette. Either this is incorrect
- * (only 64 KB is needed to store 32K colors), the colors are inaccessible, or
- * there is a way to access them but no game has done so yet. My suspicion is
- * that the palette RAM is in fact only 64 KB but this needs to be verified by
- * checking to see if any games write to the high 64 KB.
+ * palette (each color occupies 32 bits). The four tilemap layers are referred
+ * to as: A (0), A' (1), B (2), and B' (3). Palette RAM may be located on a 
+ * separate RAM IC.
  *
  * Registers
  * ---------
@@ -116,9 +111,8 @@
  * Palette
  * -------
  *
- * The palette stores 32768 colors. Each entry is a little endian 16-bit word.
- *
- * The format of a palette word is:
+ * The palette stores 32768 colors. Each entry is a little endian 32-bit word.
+ * The upper 16 bits are unused and the lower 16 bits contain the color:
  *
  *		15                 0
  *		 tbbb bbgg gggr rrrr
@@ -386,7 +380,6 @@ void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, c
  */
 void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal)
 {
-	
 	// Determine the layer color depth (4 or 8-bit pixels)
 	bool is4Bit = regs[0x20/4] & (1<<(12+layerNum));
 	
@@ -530,7 +523,6 @@ static void MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool i
 			mask <<= 1;
 		}
 		
-		
 		if ((mask&0x8000) == doCopy)
 		{
 			UINT32	p;
@@ -546,7 +538,8 @@ static void MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool i
 	}
 }
 
-void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
+// Returns true if there is no bottom layer (requiring the color buffer to be cleared)
+bool CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 {
 	/*
 	 * Precompute data needed for each layer
@@ -580,40 +573,40 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 	const UINT16	*sortedHScrollTable[4];
 	int				sortedHFullScroll[4];
 	bool			sortedLineScrollMode[4];
-	bool			clearBottom;	// when true, no layer assigned to bottom surface
+	bool			noBottom;	// when true, no layer assigned to bottom surface
 	
 	switch ((regs[0x20/4]>>8)&0xF)
 	{
 	case 0x5:	// top: A, B, A'?	bottom: B'
-		clearBottom = false;
+		noBottom = false;
 		dest[0]=destBottom; src[0]=lineBuffer[3]; sortedLayerNum[0]=3; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[3]; sortedHFullScroll[0]=hFullScroll[3]; sortedLineScrollMode[0]=lineScrollMode[3];
 		dest[1]=destTop;    src[1]=lineBuffer[2]; sortedLayerNum[1]=2; sortedIsBottom[1]=true;  sortedHScrollTable[1] = hScrollTable[2]; sortedHFullScroll[1]=hFullScroll[2]; sortedLineScrollMode[1]=lineScrollMode[2];
 		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
 		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
 		break;
 	case 0x9:	// ? all layers on top but relative order unknown (Spikeout Final Edition, after first boss)
-		clearBottom = true;
+		noBottom = true;
 		dest[0]=destTop;    src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[3];
 		dest[1]=destTop;    src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[2];
 		dest[2]=destTop;    src[2]=lineBuffer[1]; sortedLayerNum[2]=1; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[1]; sortedHFullScroll[2]=hFullScroll[1]; sortedLineScrollMode[2]=lineScrollMode[1];
 		dest[3]=destTop;    src[3]=lineBuffer[0]; sortedLayerNum[3]=0; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[0]; sortedHFullScroll[3]=hFullScroll[0]; sortedLineScrollMode[3]=lineScrollMode[0];
 		break;
 	case 0xF:	// all on top
-		clearBottom = true;
+		noBottom = true;
 		dest[0]=destTop;    src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[2];
 		dest[1]=destTop;    src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[3];
 		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
 		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
 		break;
 	case 0x7:	// top: A, B	bottom: A'?, B'
-		clearBottom = false;
+		noBottom = false;
 		dest[0]=destBottom; src[0]=lineBuffer[3]; sortedLayerNum[0]=3; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[3]; sortedHFullScroll[0]=hFullScroll[3]; sortedLineScrollMode[0]=lineScrollMode[3];
 		dest[1]=destBottom; src[1]=lineBuffer[1]; sortedLayerNum[1]=1; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[1]; sortedHFullScroll[1]=hFullScroll[1]; sortedLineScrollMode[1]=lineScrollMode[1];
 		dest[2]=destTop;    src[2]=lineBuffer[2]; sortedLayerNum[2]=2; sortedIsBottom[2]=true;  sortedHScrollTable[2] = hScrollTable[2]; sortedHFullScroll[2]=hFullScroll[2]; sortedLineScrollMode[2]=lineScrollMode[2];
 		dest[3]=destTop;    src[3]=lineBuffer[0]; sortedLayerNum[3]=0; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[0]; sortedHFullScroll[3]=hFullScroll[0]; sortedLineScrollMode[3]=lineScrollMode[0];
 		break;
 	default:	// unknown, use A and A' on top, B and B' on the bottom
-		clearBottom = false;
+		noBottom = false;
 		dest[0]=destBottom; src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[2];
 		dest[1]=destBottom; src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[3];
 		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=true;  sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
@@ -624,9 +617,6 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 	/*
 	 * Render and mix each line
 	 */
-	if (clearBottom)	// no bottom layer
-		memset(destBottom, 0, 496*384*sizeof(UINT32));
-
 	for (int y = 0; y < 384; y++)
 	{
 		// Draw one scanline from each layer
@@ -645,6 +635,9 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 		// Next line in mask table
 		maskTableLine += 2;
 	}
+	
+	// Indicate whether color buffer must be cleared because no bottom layer
+	return noBottom;
 }
 		
 
@@ -655,25 +648,6 @@ void CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 // Draws a surface to the screen (0 is top and 1 is bottom)
 void CRender2D::DisplaySurface(int surface, GLfloat z)
 {	
-	// If bottom surface and wide screen, clear overscan areas
-	if (surface && g_Config.wideScreen)
-	{
-		// For now, clear w/ black (may want to use color 0 later)
-		glClearColor(0.0, 0.0, 0.0, 0.0);
-		glViewport(0, 0, xOffs, totalYPixels);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glViewport(xOffs+xPixels, 0, totalXPixels, totalYPixels);
-		glClear(GL_COLOR_BUFFER_BIT);
-	}
-	
-	// Set up the viewport and orthogonal projection
-	glViewport(xOffs, yOffs, xPixels, yPixels);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-    gluOrtho2D(0.0, 1.0, 1.0, 0.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	
 	// Draw the surface
 	glActiveTexture(GL_TEXTURE0);	// texture unit 0
 	glBindTexture(GL_TEXTURE_2D, texID[surface]);
@@ -686,7 +660,7 @@ void CRender2D::DisplaySurface(int surface, GLfloat z)
 }
 
 // Set up viewport and OpenGL state for 2D rendering (sets up blending function but disables blending)
-void CRender2D::Setup2D(void)
+void CRender2D::Setup2D(bool isBottom, bool clearAll)
 {
 	// Enable texture mapping and blending
 	glEnable(GL_TEXTURE_2D);
@@ -699,13 +673,38 @@ void CRender2D::Setup2D(void)
 	
 	// Shader program
 	glUseProgram(shaderProgram);
+	
+	// Clear everything if requested or just overscan areas for wide screen mode
+	if (clearAll)
+	{
+		glClearColor(0.0, 0.0, 0.0, 0.0);
+		glViewport(0, 0, totalXPixels, totalYPixels);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	else if (isBottom && g_Config.wideScreen)
+	{
+		// For now, clear w/ black (may want to use color 0 later)
+		glClearColor(0.0, 0.0, 0.0, 0.0);
+		glViewport(0, 0, xOffs, totalYPixels);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(xOffs+xPixels, 0, totalXPixels, totalYPixels);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
+	// Set up the viewport and orthogonal projection
+	glViewport(xOffs, yOffs, xPixels, yPixels);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+    gluOrtho2D(0.0, 1.0, 1.0, 0.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 }
 
 // Bottom layers
 void CRender2D::BeginFrame(void)
 {
 	// Update all layers
-	DrawTilemaps(surfBottom, surfTop);
+	bool clear = DrawTilemaps(surfBottom, surfTop);
 	glActiveTexture(GL_TEXTURE0);	// texture unit 0
 	glBindTexture(GL_TEXTURE_2D, texID[0]);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfTop);	
@@ -713,15 +712,16 @@ void CRender2D::BeginFrame(void)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfBottom);	
 	
 	// Display bottom surface
-	Setup2D();
-	DisplaySurface(1, 0.0);
+	Setup2D(true, clear);
+	if (!clear)
+		DisplaySurface(1, 0.0);
 }
 
 // Top layers
 void CRender2D::EndFrame(void)
 {	
 	// Display top surface
-	Setup2D();
+	Setup2D(false, false);
 	glEnable(GL_BLEND);
 	DisplaySurface(0, -0.5);
 }
