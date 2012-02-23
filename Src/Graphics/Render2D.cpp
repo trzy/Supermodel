@@ -21,27 +21,18 @@
  
 /*
  * Render2D.cpp
- * 
+ *
+ * Implementation of the CRender2D class: OpenGL tile generator graphics. 
+ *
  * To-Do List
  * ----------
- * - Fix color offsets: they should probably be applied to layers A/A' and B/B'
- *   rather than to the top and bottom surfaces (an artifact left over from
- *   when layer priorities were fixed as B/B' -> bottom, A/A' -> top). This can
- *   no longer be performed by the shaders, unfortunately, because of arbitrary
- *   layer priorities. Rather, three palettes should be maintained: master (the
- *   actual palette data), A, and B.  Color offset writes should recompute 
- *   these and the tile renderer should use either A or B palette (depending on
- *   the layer being drawn).
- * - Is there a better way to handle the overscan regions in wide screen mode 
- *   than using palette entry 0 as the fill color? Is clearing two thin
- *   viewports better than one big clear?
+ * - Is there a better way to handle the overscan regions in wide screen mode? 
+ *   Is clearing two thin viewports better than one big clear?
  * - Layer priorities in Spikeout attract mode might not be totally correct.
  * - Are v-scroll values 9 or 10 bits? (Does it matter?) Lost World seems to
  *   have some scrolling issues.
  * - A proper shut-down function is needed! OpenGL might not be available when
  *   the destructor for this class is called.
- *
- * Implementation of the CRender2D class: OpenGL tile generator graphics. 
  *
  * Tile Generator Hardware Overview
  * --------------------------------
@@ -731,10 +722,9 @@ void CRender2D::EndFrame(void)
  Emulation Callbacks
 ******************************************************************************/
 
+// Deprecated
 void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
 {
-	if (vram[addr/4] == data)	// do nothing if no changes
-		return;
 }
 
 
