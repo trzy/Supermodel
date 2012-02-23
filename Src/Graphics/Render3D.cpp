@@ -160,7 +160,6 @@
 	#define ISINF(x)	(std::isinf(x))
 #endif
 
-
 /******************************************************************************
  Definitions and Constants
 ******************************************************************************/
@@ -427,11 +426,7 @@ void CRender3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned 
 			}
 		}
 	}
-	
-	ClearModelCache(&VROMCache);
-	ClearModelCache(&PolyCache);
 }
-
 
 /******************************************************************************
  Real3D Address Translation
@@ -624,6 +619,11 @@ bool CRender3D::DrawModel(UINT32 modelAddr)
 				return ErrorUnableToCacheModel(modelAddr);	// nothing we can do :(
 		}
 	}
+
+	// If cache is static then decode all the texture references contained in the cached model
+	// before rendering (models in dynamic cache will have been decoded already in CacheModel)
+	if (!Cache->dynamic)
+		ModelRef->texRefs.DecodeAllTextures(this);
 
 	// Add to display list
 	return AppendDisplayList(Cache, false, ModelRef);
@@ -956,10 +956,6 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
  	AppendDisplayList(&PolyCache, true, 0);
  	stackDepth = 0;
  	listDepth = 0;
- 	
- 	// Descend down the node link: Use stack machine to traverse display list
- 	//ClearStack();
- 	//StackMachine(nodeAddr);
  	
  	// Descend down the node link: Use recursive traversal
  	DescendNodePtr(nodeAddr);

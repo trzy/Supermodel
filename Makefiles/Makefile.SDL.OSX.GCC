@@ -90,7 +90,7 @@ endif
 HEADERS = Src/Supermodel.h Src/Games.h Src/OSD/SDL/Types.h
 OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Config.o $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/ROMLoad.o $(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o \
-	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Render3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
+	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Render3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o $(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
 	$(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/Audio.o $(OBJ_DIR)/Thread.o $(OBJ_DIR)/SoundBoard.o \
 	$(OBJ_DIR)/SCSP.o $(OBJ_DIR)/SCSPDSP.o $(OBJ_DIR)/68K.o $(OBJ_DIR)/m68kcpu.o $(OBJ_DIR)/m68kopnz.o $(OBJ_DIR)/m68kopdm.o \
 	$(OBJ_DIR)/m68kopac.o $(OBJ_DIR)/m68kops.o $(OBJ_DIR)/DSB.o $(OBJ_DIR)/Z80.o \

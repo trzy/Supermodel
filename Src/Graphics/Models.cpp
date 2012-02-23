@@ -611,39 +611,40 @@ bool CRender3D::InsertPolygon(ModelCache *Cache, const Poly *P)
 }
 
 // Begins caching a new model by resetting to the start of the local vertex buffer
-bool CRender3D::BeginModel(ModelCache *Cache)
+struct VBORef *CRender3D::BeginModel(ModelCache *Cache)
 {
-	int	m;
+	struct VBORef	*Model;
+	
+	unsigned	m = Cache->numModels;
 	
 	// Determine whether we've exceeded the model cache limits (caller will have to recache)
-	if (Cache->numModels >= Cache->maxModels)
-		return FAIL;	// too many models
-		//return ErrorLog("Too many %s models.", Cache->dynamic?"dynamic":"static");
+	if (m >= Cache->maxModels)
+	{
+		//ErrorLog("Too many %s models.", Cache->dynamic?"dynamic":"static");
+		return NULL;	
+	}
 	
-	m = Cache->numModels;
+	Model = &(Cache->Models[m]);
 	
 	// Reset to the beginning of the local vertex buffer
 	for (int i = 0; i < 2; i++)
 		Cache->curVertIdx[i] = 0;
 	
-	// Clear the VBO reference to 0
-	memset(&(Cache->Models[m]), 0, sizeof(VBORef));
+	// Clear the VBO reference to 0 and clear texture references
+	memset(Model, 0, sizeof(VBORef) - sizeof(CTextureRefs));
+	Model->texRefs.Clear();
 	
 	// Record starting index of first opaque polygon in VBO (alpha poly index will be re-set in EndModel())
-	Cache->Models[m].index[POLY_STATE_NORMAL] = Cache->vboCurOffset/(VBO_VERTEX_SIZE*sizeof(GLfloat));
-	Cache->Models[m].index[POLY_STATE_ALPHA] = Cache->Models[m].index[POLY_STATE_NORMAL];
+	Model->index[POLY_STATE_NORMAL] = Cache->vboCurOffset/(VBO_VERTEX_SIZE*sizeof(GLfloat));
+	Model->index[POLY_STATE_ALPHA] = Model->index[POLY_STATE_NORMAL];
 	
-	return OKAY;
+	return Model;
 }
 
 // Uploads all vertices from the local vertex buffer to the VBO, sets up the VBO reference, updates the LUT
-struct VBORef *CRender3D::EndModel(ModelCache *Cache, int lutIdx, UINT16 texOffset)
+void CRender3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UINT16 texOffset)
 {
-	struct VBORef	*Model;
-	int				m;
-	
-	m = Cache->numModels++;
-	Model = &(Cache->Models[m]);
+	int	m = Cache->numModels++;
 
 	// Record the number of vertices, completing the VBORef
 	for (int i = 0; i < 2; i++)
@@ -669,9 +670,6 @@ struct VBORef *CRender3D::EndModel(ModelCache *Cache, int lutIdx, UINT16 texOffs
 	if (Cache->lut[lutIdx] >= 0)	// another texture offset state already cached
 		Model->nextTexOffset = &(Cache->Models[Cache->lut[lutIdx]]);
 	Cache->lut[lutIdx] = m;
-
-	// Return a pointer to the cached model's VBO reference
-	return Model;
 }
 
 /*
@@ -699,7 +697,8 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 		return NULL;
 		
 	// Start constructing a new model
-	if (FAIL == BeginModel(Cache))
+	struct VBORef *Model = BeginModel(Cache);
+	if (NULL == Model)
 		return NULL;	// too many models!
 	
 	// Cache all polygons
@@ -758,7 +757,13 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 			
 		// Decode the texture
 		if (texEnable)
-			DecodeTexture(texFormat, texBaseX, texBaseY, texWidth, texHeight);
+		{
+			// If model cache is static, record texture reference in model cache entry for later decoding.
+			// If cache is dynamic, or if it's not possible to record the texture reference (due to lack of
+			// memory) then decode the texture now.
+			if (Cache->dynamic || !Model->texRefs.AddRef(texFormat, texBaseX, texBaseY, texWidth, texHeight))
+				DecodeTexture(texFormat, texBaseX, texBaseY, texWidth, texHeight);
+		}
 		
 		// Polygon normal is in upper 24 bits: sign + 1.22 fixed point
 		P.n[0] = (GLfloat) (((INT32)P.header[1])>>8) * (1.0f/4194304.0f);
@@ -826,7 +831,8 @@ struct VBORef *CRender3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
 	}
 	
 	// Finish model and enter it into the LUT
-	return EndModel(Cache,lutIdx,texOffset);
+	EndModel(Cache,Model,lutIdx,texOffset);
+	return Model;
 }
 
 

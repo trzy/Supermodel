@@ -67,13 +67,17 @@ struct Poly
  * vertices: normal and alpha. Copies of the model with different texture
  * offsets applied are searchable via the linked list of texture offset states.
  */
+
 struct VBORef
 {
-	unsigned		index[2];	// index of model polygons in VBO
-	unsigned		numVerts[2];// number of vertices
-	unsigned		lutIdx;		// LUT index associated with this model (for fast LUT clearing)
+	unsigned		index[2];		// index of model polygons in VBO
+	unsigned		numVerts[2];	// number of vertices
+	unsigned		lutIdx;			// LUT index associated with this model (for fast LUT clearing)
+	
 	struct VBORef	*nextTexOffset;	// linked list of models with different texture offset states
-	UINT16			texOffset;	// texture offset data for this model
+	UINT16			texOffset;		// texture offset data for this model
+	
+	CTextureRefs	texRefs;		// unique texture references contained in this model
 };
 
 // Display list items: model instances and viewport settings
@@ -196,6 +200,8 @@ public:
  */
 class CRender3D
 {
+	friend class CTextureRefs;
+
 public:
 	/*
 	 * RenderFrame(void):
@@ -299,7 +305,7 @@ public:
 	 */
 	CRender3D(void);
 	~CRender3D(void);
-	
+
 private:
 	/*
 	 * Private Members
@@ -315,8 +321,8 @@ private:
 	void 			ClearDisplayList(ModelCache *Cache);
 	bool 			InsertPolygon(ModelCache *cache, const Poly *p);
 	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
-	bool 			BeginModel(ModelCache *cache);
-	struct VBORef	*EndModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
+	struct VBORef	*BeginModel(ModelCache *cache);
+	void			EndModel(ModelCache *cache, struct VBORef *Model, int lutIdx, UINT16 texOffset);
 	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 texOffset, const UINT32 *data);
 	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
 	void 			ClearModelCache(ModelCache *cache);

@@ -118,6 +118,7 @@
 #include "INIFile.h"
 #include "BlockFile.h"
 #include "Graphics/Render2D.h"
+#include "Graphics/TextureRefs.h"
 #include "Graphics/Render3D.h"
 #include "Graphics/Shader.h"
 #ifdef SUPERMODEL_DEBUGGER

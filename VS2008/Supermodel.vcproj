@@ -690,6 +690,10 @@
 					RelativePath="..\Src\Graphics\Shader.cpp"
 					>
 				</File>
+				<File
+					RelativePath="..\Src\Graphics\TextureRefs.cpp"
+					>
+				</File>
 				<Filter
 					Name="Shaders"
 					>
@@ -1822,6 +1826,10 @@
 				</File>
 				<File
 					RelativePath="..\Src\Graphics\Shaders3D.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Src\Graphics\TextureRefs.h"
 					>
 				</File>
 			</Filter>
