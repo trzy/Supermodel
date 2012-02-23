@@ -629,7 +629,6 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 	case 0x00:	// Status
 		return 0;
 	case 0x1C:	// Data
-		
 		if (!strcmp(Game->id, "spikeout") || !strcmp(Game->id, "spikeofe"))
 		{
 			data = (spikeoutSecurity[securityPtr++] << 16);
@@ -658,7 +657,7 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 		else if (!strcmp(Game->id, "fvipers2"))
 		{
 			data = (fvipers2Security[securityPtr++] << 16);
-			securityPtr %= (sizeof(fvipers2Security)/sizeof(UINT16));
+			securityPtr %= (sizeof(fvipers2Security)/sizeof(UINT16));			
 		}
 		else if (!strcmp(Game->id, "von2"))
 			data = 0xFFFFFFFF;
@@ -2643,10 +2642,11 @@ void CModel3::Patch(void)
 {
 	if (!strcmp(Game->id, "vf3") || !strcmp(Game->id, "vf3a"))
 	{
-		*(UINT32 *) &crom[0x713C7C] = 0x60000000;	// this patch may not be needed anymore (find out why)
+		// Base offset of program in CROM: 0x710000
+		//*(UINT32 *) &crom[0x713C7C] = 0x60000000;	// this patch may not be needed anymore (find out why)
 		*(UINT32 *) &crom[0x713E54] = 0x60000000;	// affects timing but prevents game from coining up -- investigate this carefully
-		*(UINT32 *) &crom[0x7125B0] = 0x60000000;	// this patch may not be needed anymore (find out why)
-		*(UINT32 *) &crom[0x7125D0] = 0x60000000;	// this patch may not be needed anymore (find out why)
+		//*(UINT32 *) &crom[0x7125B0] = 0x60000000;	// this patch may not be needed anymore (find out why)
+		//*(UINT32 *) &crom[0x7125D0] = 0x60000000;	// this patch may not be needed anymore (find out why)
 	}
 	else if (!strcmp(Game->id, "lemans24"))
 	{
@@ -2779,7 +2779,21 @@ void CModel3::Patch(void)
 		*(UINT32 *) &crom[0xFFF0000C-0xFF800000] = (24<<26)|(1<<16)|0xA2E8;		// ori 		r1,r0,0xA2E8	; [A2E8] <- nop	(decrementer loop)
 		*(UINT32 *) &crom[0xFFF00010-0xFF800000] = (36<<26)|(2<<21)|(1<<16);	// stw 		r2,0(r1)
 		*(UINT32 *) &crom[0xFFF00014-0xFF800000] = 0x4E800020;					// bclr		0x14,0			; return to RAM code
-		
+
+		/* // Security board patch for Andy
+		*(UINT32 *) &crom[0xFFF01560-0xFF800000] = 0x4BF00006;							// ba 		0xFFF00004
+		*(UINT32 *) &crom[0xFFF00004-0xFF800000] = (31<<26)|(316<<1);					// xor 		r0,r0,r0		; R0 = 0
+		*(UINT32 *) &crom[0xFFF00008-0xFF800000] = (15<<26)|(2<<21)|0x3860;				// addis	r2,0,0x3860		; R2 = "li r3,0xFFFFFFFF"
+		*(UINT32 *) &crom[0xFFF0000C-0xFF800000] = (24<<26)|(2<<21)|(2<<16)|0xFFFF;		// ori 		r2,r2,0xFFFF
+		*(UINT32 *) &crom[0xFFF00010-0xFF800000] = (24<<26)|(1<<16)|0x9CF8;				// ori 		r1,r0,0x9CF8	; [9CF8] <- set return value to "success"
+		*(UINT32 *) &crom[0xFFF00014-0xFF800000] = (36<<26)|(2<<21)|(1<<16);			// stw 		r2,0(r1)
+		*(UINT32 *) &crom[0xFFF00018-0xFF800000] = (15<<26)|(2<<21)|0x4800;				// addis	r2,0,0x4800		; R2 = "ba 0x9D40"        
+		*(UINT32 *) &crom[0xFFF0001C-0xFF800000] = (24<<26)|(2<<21)|(2<<16)|0x9D42;		// ori 		r2,r2,0xFFFF
+		*(UINT32 *) &crom[0xFFF00020-0xFF800000] = (24<<26)|(1<<16)|0x9CFC;				// ori 		r1,r0,0x9CFC	; [9CFC] <- jump to end of security board routine
+		*(UINT32 *) &crom[0xFFF00024-0xFF800000] = (36<<26)|(2<<21)|(1<<16);			// stw 		r2,0(r1)
+		*(UINT32 *) &crom[0xFFF00028-0xFF800000] = 0x4E800020;							// bclr		0x14,0			; return to RAM code
+		*/		
+
 		// NOTE: At 32714, a test is made that determines the message: ONE PROCESSOR DETECTED, TWO "", etc.
   	}
   	else if (!strcmp(Game->id, "harley"))
@@ -2887,6 +2901,44 @@ static void Reverse32(UINT8 *buf, unsigned size)
 	}
 }
 
+// Reads in CROMs directly (for debugging purposes only)
+static void ReadCROMDirectly(UINT8 *crom, char *fileName[4], unsigned combinedSize)
+{
+	FILE	*fp[4] = { NULL, NULL, NULL, NULL };
+	long	size[4];
+	
+	// Open all files
+	for (int i = 0; i < 4; i++)
+	{
+		fp[i] = fopen(fileName[i],"rb");
+		if (NULL == fp[i])
+		{
+			ErrorLog("Unable to open file for reading: %s.", fileName[i]);
+			goto ReadCleanup;
+		}
+	}
+
+	// Read and interleave 2 bytes at a time
+	for (unsigned i = 0; i < combinedSize; i += 8)
+	{
+		fread(&crom[i+0], 1, 2, fp[0]);
+		fread(&crom[i+2], 1, 2, fp[1]);
+		fread(&crom[i+4], 1, 2, fp[2]);
+		fread(&crom[i+6], 1, 2, fp[3]);
+	}
+	Reverse16(crom, combinedSize);	// byte reverse ROMs
+	
+	// Reverse 32 bit words for Supermodel
+	Reverse32(crom, combinedSize);
+
+ReadCleanup:
+	for (int i = 0; i < 4; i++)
+	{
+		if (fp[i] != NULL)
+			fclose(fp[i]);
+	}
+}
+
 // Dumps a memory region to a file for debugging purposes
 static void Dump(const char *file, UINT8 *buf, unsigned size, bool reverse32, bool reverse16)
 {
@@ -2967,7 +3019,7 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	// Byte reverse the PowerPC ROMs (convert to little endian words)
 	Reverse32(crom, 0x800000+0x8000000);
 	
-	// Byte swap sound board 68K ROMs
+	// Byte swap sound board 68K ROMs (convert to little endian words)
 	Reverse16(soundROM, 0x80000);
 	Reverse16(sampleROM, 0x1000000);
 		
@@ -3070,6 +3122,10 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	else if (Game->driveBoard)
 		printf("    Extra Hardware: Drive Board\n");
 	printf("\n");
+	
+	// Load patched CROM directly (for testing out ROM patches)
+	//char *fileName[4] = { "epr-20599a.patched.20","epr-20598a.patched.19","epr-20597a.patched.18","epr-20596a.patched.17" };
+	//ReadCROMDirectly(crom, fileName, 0x800000);
 		
 	return OKAY;
 }
@@ -3195,8 +3251,8 @@ CModel3::~CModel3(void)
 	// Debug: dump some files
 #if 0
 	//Dump("ram", ram, 0x800000, true, false);
-	Dump("vrom", vrom, 0x4000000, true, false);
-	//Dump("crom", crom, 0x800000, true, false);
+	//Dump("vrom", vrom, 0x4000000, true, false);
+	Dump("crom", crom, 0x800000, true, false);
 	//Dump("bankedCrom", &crom[0x800000], 0x7000000, true, false);
 	//Dump("soundROM", soundROM, 0x80000, false, true);
 	//Dump("sampleROM", sampleROM, 0x800000, false, true);

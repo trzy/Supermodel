@@ -94,9 +94,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20285.41",	0x4AADC573,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",false,	"epr-20313.21",	0x863A7857,	0x80000,	2,	0,		2,	true },
-			{ "Samples",false,	"mpr-20268.22",	0x3631E93E,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",false,	"mpr-20269.24",	0x105A3181,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",false,	"epr-20313.21",	0x863A7857,	0x80000,	2,	0,			2,	true },
+			{ "Samples",false,	"mpr-20268.22",	0x3631E93E,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",false,	"mpr-20269.24",	0x105A3181,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL,	false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -167,12 +167,12 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20885.41",	0x61C292CA,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",false,	"epr-20865.21",		0xB70C2699,	0x20000,	2,	0,		2,	true },
-			{ "Samples",false,	"mpr-20866.22",		0x91F40C1C,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",false,	"mpr-20868.24",		0xFA0C7EC0,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",false,	"mpr-20867.23",		0xA579C884,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",false,	"mpr-20869.25",		0x1F338832,	0x400000,	2,	0xC00000,	2,	false },
-			{ "DSBProg",false,	"epr-20886.ic2",	0x65B05F98,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",false,	"epr-20865.21",		0xB70C2699,	0x20000,	2,	0,			2,	true },
+			{ "Samples",false,	"mpr-20866.22",		0x91F40C1C,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",false,	"mpr-20868.24",		0xFA0C7EC0,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",false,	"mpr-20867.23",		0xA579C884,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",false,	"mpr-20869.25",		0x1F338832,	0x400000,	2,	0xC00000,	2,	true },
+			{ "DSBProg",false,	"epr-20886.ic2",	0x65B05F98,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",false,	"mpr-20887.ic18",	0xA0757684,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",false,	"mpr-20888.ic20",	0xB495FE65,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",false,	"mpr-20889.ic22",	0x18EEC79E,	0x400000,	2,	0x800000,	2,	false },
@@ -250,12 +250,12 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21213.41",	0xDE75BEC6,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,"epr-21325.21",	0x004AD6AD,	0x20000,	2,	0,		2,	true },
-			{ "Samples",	false,"mpr-21285.22",	0x7CDCA6AC,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,"mpr-21287.24",	0x06B66F17,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,"mpr-21286.23",	0x749DFEF0,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,"mpr-21288.25",	0x14BEE38E,	0x400000,	2,	0xC00000,	2,	false },
-			{ "DSBProg",	false,"epr-20886.ic2",	0x65B05F98,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",	false,"epr-21325.21",	0x004AD6AD,	0x20000,	2,	0,			2,	true },
+			{ "Samples",	false,"mpr-21285.22",	0x7CDCA6AC,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,"mpr-21287.24",	0x06B66F17,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,"mpr-21286.23",	0x749DFEF0,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,"mpr-21288.25",	0x14BEE38E,	0x400000,	2,	0xC00000,	2,	true },
+			{ "DSBProg",	false,"epr-20886.ic2",	0x65B05F98,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",	false,"mpr-20887.ic18",	0xA0757684,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,"mpr-20888.ic20",	0xB495FE65,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",	false,"mpr-20889.ic22",	0x18EEC79E,	0x400000,	2,	0x800000,	2,	false },
@@ -321,10 +321,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21049.41",	0x91E8161A,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,"epr-21066.21",	0xF7ED2582,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,"mpr-21031.22",	0x32F6B23A,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,"mpr-21033.24",	0x253D3C70,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,"mpr-21032.23",	0x3D3FF407,	0x400000,	2,	0x800000,	2,	false },
+			{ "SndProg",	false,"epr-21066.21",	0xF7ED2582,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,"mpr-21031.22",	0x32F6B23A,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,"mpr-21033.24",	0x253D3C70,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,"mpr-21032.23",	0x3D3FF407,	0x400000,	2,	0x800000,	2,	true },
 
 			{ NULL,	false,	NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -383,10 +383,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21049.41",	0x91E8161A,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,"epr-21066.21",	0xF7ED2582,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,"mpr-21031.22",	0x32F6B23A,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,"mpr-21033.24",	0x253D3C70,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,"mpr-21032.23",	0x3D3FF407,	0x400000,	2,	0x800000,	2,	false },
+			{ "SndProg",	false,"epr-21066.21",	0xF7ED2582,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,"mpr-21031.22",	0x32F6B23A,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,"mpr-21033.24",	0x253D3C70,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,"mpr-21032.23",	0x3D3FF407,	0x400000,	2,	0x800000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -451,11 +451,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr22869.41",	0xC6D62634,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,"epr22886.21",	0x374EC1C6,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,"mpr22887.22",	0x7D04A867,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,"mpr22889.24",	0x4F9BA45D,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,"mpr22888.23",	0x018FCF22,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,"mpr22890.25",	0xB638BD7C,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,"epr22886.21",	0x374EC1C6,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,"mpr22887.22",	0x7D04A867,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,"mpr22889.24",	0x4F9BA45D,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,"mpr22888.23",	0x018FCF22,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,"mpr22890.25",	0xB638BD7C,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL,	false,	NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -520,11 +520,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr22869.41",	0xC6D62634,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr22886.21",	0x374EC1C6,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr22887.22",	0x7D04A867,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr22889.24",	0x4F9BA45D,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr22888.23",	0x018FCF22,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr22890.25",	0xB638BD7C,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr22886.21",	0x374EC1C6,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr22887.22",	0x7D04A867,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr22889.24",	0x4F9BA45D,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr22888.23",	0x018FCF22,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr22890.25",	0xB638BD7C,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -595,11 +595,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20595.41",	0x1D4A2CAD,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20600a.21",	0xF0E7DB7E,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20576",	0x1EEB540B, 0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20578",	0xD222F2D4, 0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr-20577",	0x3B236187, 0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr-20579",	0x08788436, 0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr-20600a.21",	0xF0E7DB7E,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20576",		0x1EEB540B, 0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20578",		0xD222F2D4, 0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr-20577",		0x3B236187, 0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr-20579",		0x08788436, 0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -664,9 +664,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20285.41",	0x4AADC573,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20313.21",	0x863A7857,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20268.22",	0x3631E93E,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20269.24",	0x105A3181,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-20313.21",	0x863A7857,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20268.22",	0x3631E93E,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20269.24",	0x105A3181,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -731,11 +731,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20392.41",	0x892208CB,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20397.21",	0x5B20B54A, 0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20373.22",	0xC684E8A3, 0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20375.24",	0x906ACE86, 0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr-20374.23",	0xFCF6EA21, 0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr-20376.25",	0xDEEED366, 0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr-20397.21",	0x5B20B54A, 0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20373.22",	0xC684E8A3, 0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20375.24",	0x906ACE86, 0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr-20374.23",	0xFCF6EA21, 0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr-20376.25",	0xDEEED366, 0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -800,11 +800,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20392.41",	0x892208CB,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20397.21",	0x5B20B54A, 0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20373.22",	0xC684E8A3, 0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20375.24",	0x906ACE86, 0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr-20374.23",	0xFCF6EA21, 0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr-20376.25",	0xDEEED366, 0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr-20397.21",	0x5B20B54A, 0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20373.22",	0xC684E8A3, 0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20375.24",	0x906ACE86, 0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr-20374.23",	0xFCF6EA21, 0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr-20376.25",	0xDEEED366, 0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -869,11 +869,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr21482.41",	0xE995F554,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr21487.21",	0xC2942448,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr21463.22",	0x0E6d6C0E,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr21465.24",	0x1A62D925,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr21464.23",	0x8230C1DE,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr21466.25",	0xCA20359E,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr21487.21",	0xC2942448,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr21463.22",	0x0E6d6C0E,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr21465.24",	0x1A62D925,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr21464.23",	0x8230C1DE,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr21466.25",	0xCA20359E,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -938,9 +938,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19886.41",	0x278AAE0B,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19891.21",	0xC3ECD448,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19869.22",	0xEA1EF1CC,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19870.24",	0x49C70296,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-19891.21",	0xC3ECD448,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19869.22",	0xEA1EF1CC,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19870.24",	0x49C70296,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1011,9 +1011,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19917.41",	0x3035833B,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19940.21",	0xB06FFE5F,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr19934.22",	0xC7D8E194,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr19935.24",	0x91C1B618,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-19940.21",	0xB06FFE5F,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr19934.22",	0xC7D8E194,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr19935.24",	0x91C1B618,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1066,11 +1066,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr21422.41",	0xFECA77A5,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr21438.21",	0x6815AF9E,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr21427.22",	0x884566F6,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr21428.24",	0x162D1E43,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr21431.23",	0x0EF8F7BB,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr21432.25",	0x59C0F6DF,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr21438.21",	0x6815AF9E,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr21427.22",	0x884566F6,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr21428.24",	0x162D1E43,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr21431.23",	0x0EF8F7BB,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr21432.25",	0x59C0F6DF,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1135,11 +1135,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr21113.41",	0x864BF325,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr21118.21",	0x598C00F0,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr21094.22",	0xC262B80A,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr21096.24",	0x0A0021A0,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr21095.23",	0x16D27A0A,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr21097.25",	0x0D8033FC,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr21118.21",	0x598C00F0,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr21094.22",	0xC262B80A,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr21096.24",	0x0A0021A0,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr21095.23",	0x16D27A0A,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr21097.25",	0x0D8033FC,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1204,10 +1204,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19687.41",	0x776CE694,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19692.21",	0xA94F5521,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19670.22",	0xBD31CC06,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19671.24",	0x8E8526AB,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,		2,	false },
+			{ "SndProg",	false,	"epr-19692.21",	0xA94F5521,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19670.22",	0xBD31CC06,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19671.24",	0x8E8526AB,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,			2,	false },
 			{ "DSBMPEG",	false,	"mpr-19603.57",	0xB1B1765F,	0x200000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19604.58",	0x6AC85B49,	0x200000,	2,	0x200000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19605.59",	0xBEC891EB,	0x200000,	2,	0x400000,	2,	false },
@@ -1279,10 +1279,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19687.41",	0x776CE694,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19692.21",	0xA94F5521,	0x80000,	2,	0,		2,	true },
+			{ "SndProg",	false,	"epr-19692.21",	0xA94F5521,	0x80000,	2,	0,			2,	true },
 			{ "Samples",	false,	"mpr-19670.22",	0xBD31CC06,	0x400000,	2,	0x000000,	2,	false },
 			{ "Samples",	false,	"mpr-19671.24",	0x8E8526AB,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,		2,	false },
+			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,			2,	false },
 			{ "DSBMPEG",	false,	"mpr-19603.57",	0xB1B1765F,	0x200000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19604.58",	0x6AC85B49,	0x200000,	2,	0x200000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19605.59",	0xBEC891EB,	0x200000,	2,	0x400000,	2,	false },
@@ -1354,10 +1354,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19587.41",	0xC288C910,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19611a.21",	0x9D4A34F6,	0x40000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19601.22",	0xBA350FCC,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19602.24",	0xA92231C1,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,		2,	false },
+			{ "SndProg",	false,	"epr-19611a.21",0x9D4A34F6,	0x40000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19601.22",	0xBA350FCC,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19602.24",	0xA92231C1,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,			2,	false },
 			{ "DSBMPEG",	false,	"mpr-19603.57",	0xB1B1765F,	0x200000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19604.58",	0x6AC85B49,	0x200000,	2,	0x200000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19605.59",	0xBEC891EB,	0x200000,	2,	0x400000,	2,	false },
@@ -1435,10 +1435,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19687.41",	0x776CE694,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20096a.21",	0x0FEF288B,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19670.22",	0xBD31CC06,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20101.24",	0x66D1E31F,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,		2,	false },
+			{ "SndProg",	false,	"epr-20096a.21",0x0FEF288B,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19670.22",	0xBD31CC06,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20101.24",	0x66D1E31F,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,			2,	false },
 			{ "DSBMPEG",	false,	"mpr-19603.57",	0xB1B1765F,	0x200000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19604.58",	0x6AC85B49,	0x200000,	2,	0x200000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-19605.59",	0xBEC891EB,	0x200000,	2,	0x400000,	2,	false },
@@ -1516,9 +1516,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr20351.41",	0x1FBD3E10,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr20356.21",	0x4E4015D0,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr20334.22",	0xDE1D67CD,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr20335.24",	0x7300D0A2,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr20356.21",	0x4E4015D0,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr20334.22",	0xDE1D67CD,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr20335.24",	0x7300D0A2,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -1589,12 +1589,12 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr21648.41",	0x30F974A1,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr21657.21",	0x7242E8FD,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr21629.22",	0xBC9701C4,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr21630.24",	0x9F2DEADD,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr21631.23",	0x299036C5,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr21632.25",	0xFF162F0D,	0x400000,	2,	0xC00000,	2,	false },
-			{ "DSBProg",	false,	"epr21658.ic2",	0x50BAD8CB,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",	false,	"epr21657.21",		0x7242E8FD,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr21629.22",		0xBC9701C4,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr21630.24",		0x9F2DEADD,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr21631.23",		0x299036C5,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr21632.25",		0xFF162F0D,	0x400000,	2,	0xC00000,	2,	true },
+			{ "DSBProg",	false,	"epr21658.ic2",		0x50BAD8CB,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",	false,	"mpr21649.ic18",	0xDAC87F47,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr21650.ic20",	0x86D90123,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr21651.ic22",	0x81715565,	0x400000,	2,	0x800000,	2,	false },
@@ -1669,12 +1669,12 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr21169.41",	0xAA3B2CC0,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr21218.21",	0x5821001A,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr21150.22",	0x125201CE,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr21152.24",	0x0AFDEE87,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr21151.23",	0x599527B9,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr21153.25",	0x4155F307,	0x400000,	2,	0xC00000,	2,	false },
-			{ "DSBProg",	false,	"epr21219.ic2",	0x4E042B21,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",	false,	"epr21218.21",		0x5821001A,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr21150.22",		0x125201CE,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr21152.24",		0x0AFDEE87,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr21151.23",		0x599527B9,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr21153.25",		0x4155F307,	0x400000,	2,	0xC00000,	2,	true },
+			{ "DSBProg",	false,	"epr21219.ic2",		0x4E042B21,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",	false,	"mpr21170.ic18",	0xF51F7CE3,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr21171.ic20",	0x8D3BD5B6,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr21172.ic22",	0xBE221E27,	0x400000,	2,	0x800000,	2,	false },
@@ -1743,10 +1743,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20631.41",	0x5CB69FFD,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20636.21",	0x7139EBF8,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20614.22",	0xA3930E4A,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20615.24",	0x62E8A94A,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"epr-20641.2",	0xC9B82035,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",	false,	"epr-20636.21",	0x7139EBF8,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20614.22",	0xA3930E4A,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20615.24",	0x62E8A94A,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"epr-20641.2",	0xC9B82035,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",	false,	"mpr-20637.57",	0xD66E8A02,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-20638.58",	0xD1513382,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",	false,	"mpr-20639.59",	0xF6603B7B,	0x400000,	2,	0x800000,	2,	false },
@@ -1818,9 +1818,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20501.41",	0x741DA4AC,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20506.21",	0x855AF67B,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20484.22",	0x8AC3FBC4,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20485.24",	0xCFD8C19B,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-20506.21",	0x855AF67B,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20484.22",	0x8AC3FBC4,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20485.24",	0xCFD8C19B,	0x400000,	2,	0x400000,	2,	true },
 			
 			// Drive Board ROM
 			{ "DriveBd",	true,	"epr-20512.bin", 0xCF64350D, 0x10000, 2, 0, 2, false },
@@ -1888,10 +1888,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21374.41",	0xAE6C4D28,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-21383.21",	0x544D1E28,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-21355.22",	0xC1B2D326,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-21357.24",	0x02703FAB,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"ep21384.2",	0x12FA4780,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",	false,	"epr-21383.21",	0x544D1E28,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-21355.22",	0xC1B2D326,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-21357.24",	0x02703FAB,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"ep21384.2",	0x12FA4780,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",	false,	"mp21375.18",	0x735157a9,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mp21376.20",	0xE635F81E,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",	false,	"mp21377.22",	0x720621F8,	0x400000,	2,	0x800000,	2,	false },
@@ -1960,10 +1960,10 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21374.41",	0xAE6C4D28,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-21383.21",	0x544D1E28,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-21355.22",	0xC1B2D326,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-21357.24",	0x02703FAB,	0x400000,	2,	0x400000,	2,	false },
-			{ "DSBProg",	false,	"ep21384.2",	0x12FA4780,	0x20000,	2,	0,		2,	true },
+			{ "SndProg",	false,	"epr-21383.21",	0x544D1E28,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-21355.22",	0xC1B2D326,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-21357.24",	0x02703FAB,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"ep21384.2",	0x12FA4780,	0x20000,	2,	0,			2,	true },
 			{ "DSBMPEG",	false,	"mp21375.18",	0x735157a9,	0x400000,	2,	0x000000,	2,	false },
 			{ "DSBMPEG",	false,	"mp21376.20",	0xE635F81E,	0x400000,	2,	0x400000,	2,	false },
 			{ "DSBMPEG",	false,	"mp21377.22",	0x720621F8,	0x400000,	2,	0x800000,	2,	false },
@@ -2038,9 +2038,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19226.41",	0x00091722,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr19231.21",	0xB416FE96,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19209.22",	0x3715E38C,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19210.24",	0xC03D6502,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr19231.21",	0xB416FE96,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19209.22",	0x3715E38C,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19210.24",	0xC03D6502,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2111,9 +2111,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19226.41",	0x00091722,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr19231.21",	0xB416FE96,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19209.22",	0x3715E38C,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19210.24",	0xC03D6502,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr19231.21",	0xB416FE96,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19209.22",	0x3715E38C,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19210.24",	0xC03D6502,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2184,9 +2184,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19226.41",	0x00091722,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr19231.21",	0xB416FE96,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19209.22",	0x3715E38C,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19210.24",	0xC03D6502,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr19231.21",	0xB416FE96,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19209.22",	0x3715E38C,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19210.24",	0xC03D6502,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2257,11 +2257,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20682.41",	0x5B43250C,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20687.21",	0xFA084DE5,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20663.22",	0x977EB6A4,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20665.24",	0x0EFC0CA8,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr-20664.23",	0x89220782,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr-20666.25",	0x3ECB2606,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr-20687.21",	0xFA084DE5,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20663.22",	0x977EB6A4,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20665.24",	0x0EFC0CA8,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr-20664.23",	0x89220782,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr-20666.25",	0x3ECB2606,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2332,11 +2332,11 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-20682.41",	0x5B43250C,	0x400000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20687.21",	0xFA084DE5,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20663.22",	0x977EB6A4,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20665.24",	0x0EFC0CA8,	0x400000,	2,	0x400000,	2,	false },
-			{ "Samples",	false,	"mpr-20664.23",	0x89220782,	0x400000,	2,	0x800000,	2,	false },
-			{ "Samples",	false,	"mpr-20666.25",	0x3ECB2606,	0x400000,	2,	0xC00000,	2,	false },
+			{ "SndProg",	false,	"epr-20687.21",	0xFA084DE5,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20663.22",	0x977EB6A4,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20665.24",	0x0EFC0CA8,	0x400000,	2,	0x400000,	2,	true },
+			{ "Samples",	false,	"mpr-20664.23",	0x89220782,	0x400000,	2,	0x800000,	2,	true },
+			{ "Samples",	false,	"mpr-20666.25",	0x3ECB2606,	0x400000,	2,	0xC00000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2407,9 +2407,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19802.41",	0xF2C3A7B7,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19807.21",	0x9641CBAF,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19785.22",	0xE7D190E3,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19786.24",	0xB08D889B,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-19807.21",	0x9641CBAF,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19785.22",	0xE7D190E3,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19786.24",	0xB08D889B,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2480,9 +2480,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19802.41",	0xF2C3A7B7,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-19807.21",	0x9641CBAF,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-19785.22",	0xE7D190E3,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-19786.24",	0xB08D889B,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-19807.21",	0x9641CBAF,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19785.22",	0xE7D190E3,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19786.24",	0xB08D889B,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2553,9 +2553,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19802.41",	0xF2C3A7B7,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20921.21",	0x30F032A7,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20903.22",	0xE343E131,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20904.24",	0x21A91B84,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-20921.21",	0x30F032A7,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20903.22",	0xE343E131,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20904.24",	0x21A91B84,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2626,9 +2626,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-19802.41",	0xF2C3A7B7,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-20921.21",	0x30F032A7,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-20903.22",	0xE343E131,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-20904.24",	0x21A91B84,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-20921.21",	0x30F032A7,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-20903.22",	0xE343E131,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20904.24",	0x21A91B84,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2699,9 +2699,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21530.41",	0x78400D5E,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2772,9 +2772,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21530.41",	0x78400D5E,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2845,9 +2845,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21530.41",	0x78400D5E,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
@@ -2918,9 +2918,9 @@ const struct GameInfo	g_Model3GameList[] =
 			{ "VROM",	false,	"mpr-21530.41",	0x78400D5E,	0x200000,	2,	30,		32,	false },
 
 			// Sound ROMs
-			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,		2,	true },
-			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	false },
-			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	false },
+			{ "SndProg",	false,	"epr-21539.21",	0xA1D3E00E,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-21513.22",	0xCCA1CC00,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-21514.24",	0x6CEDD292,	0x400000,	2,	0x400000,	2,	true },
 
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
