@@ -631,8 +631,7 @@ struct VBORef *CRender3D::BeginModel(ModelCache *Cache)
 		Cache->curVertIdx[i] = 0;
 	
 	// Clear the VBO reference to 0 and clear texture references
-	memset(Model, 0, sizeof(VBORef) - sizeof(CTextureRefs));
-	Model->texRefs.Clear();
+	Model->Clear();
 	
 	// Record starting index of first opaque polygon in VBO (alpha poly index will be re-set in EndModel())
 	Model->index[POLY_STATE_NORMAL] = Cache->vboCurOffset/(VBO_VERTEX_SIZE*sizeof(GLfloat));

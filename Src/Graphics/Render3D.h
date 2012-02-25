@@ -78,6 +78,25 @@ struct VBORef
 	UINT16			texOffset;		// texture offset data for this model
 	
 	CTextureRefs	texRefs;		// unique texture references contained in this model
+	
+	/*
+	 * Clear():
+	 *
+	 * Clears the VBORef by setting all fields to 0 and clearing the texture
+	 * references.
+	 */
+	inline void Clear(void)
+	{
+		texRefs.Clear();
+		lutIdx = 0;
+		texOffset = 0;
+		nextTexOffset = NULL;
+		for (int i = 0; i < 2; i++)
+		{
+			index[i] = 0;
+			numVerts[i] = 0;
+		}
+	}
 };
 
 // Display list items: model instances and viewport settings
