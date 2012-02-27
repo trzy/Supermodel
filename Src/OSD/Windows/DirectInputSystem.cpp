@@ -321,7 +321,7 @@ static BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID
 	
 	// Keep track of all joystick device GUIDs
 	DIJoyInfo info;
-	memset(&info, 0, sizeof(DIJoyInfo));
+	memset(&info, 0, sizeof(info));
 	info.guid = instance->guidInstance;
 	// If XInput is enabled, see if device is an XInput device
 	info.isXInput = diDevsContext->useXInput && IsXInputDevice(instance->guidProduct);
@@ -447,9 +447,9 @@ CDirectInputSystem::CDirectInputSystem(bool useRawInput, bool useXInput) :
 	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL)
 {
 	// Reset initial states
-	memset(&m_combRawMseState, 0, sizeof(RawMseState));
-	memset(&m_diKeyState, 0, sizeof(LPDIRECTINPUTDEVICE8));
-	memset(&m_diMseState, 0, sizeof(LPDIRECTINPUTDEVICE8));
+	memset(&m_combRawMseState, 0, sizeof(m_combRawMseState));
+	memset(&m_diKeyState, 0, sizeof(m_diKeyState));
+	memset(&m_diMseState, 0, sizeof(m_diMseState));
 }
 
 CDirectInputSystem::~CDirectInputSystem()
@@ -663,7 +663,7 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 						m_mseDetails.push_back(mseDetails);
 
 						RawMseState mseState;
-						memset(&mseState, 0, sizeof(RawMseState));
+						memset(&mseState, 0, sizeof(mseState));
 						m_rawMseStates.push_back(mseState);
 					}
 				}
@@ -1176,7 +1176,7 @@ void CDirectInputSystem::OpenJoysticks()
 			
 			// Enumerate axes
 			DIEnumObjsContext diObjsContext;
-			memset(&diObjsContext, 0, sizeof(DIEnumObjsContext));
+			memset(&diObjsContext, 0, sizeof(diObjsContext));
 			diObjsContext.joyDetails = &joyDetails;
 			if (FAILED(hr = joystick->EnumObjects(DI8EnumObjectsCallback, &diObjsContext, DIDFT_ALL)))
 			{
@@ -1290,7 +1290,7 @@ void CDirectInputSystem::OpenJoysticks()
 
 		// Create initial blank joystick state
 		DIJOYSTATE2 joyState;
-		memset(&joyState, 0, sizeof(DIJOYSTATE2));
+		memset(&joyState, 0, sizeof(joyState));
 		for (int povNum = 0; povNum < 4; povNum++)
 			joyState.rgdwPOV[povNum] = -1;
 		
@@ -1332,7 +1332,7 @@ void CDirectInputSystem::PollJoysticks()
 		{
 			// Use XInput to query joystick
 			XINPUT_STATE xState;
-			memset(&xState, 0, sizeof(XINPUT_STATE));
+			memset(&xState, 0, sizeof(xState));
 			if (FAILED(hr = m_xiGetStatePtr(it->xInputNum, &xState)))
 			{
 				memset(pJoyState, 0, sizeof(DIJOYSTATE2));
