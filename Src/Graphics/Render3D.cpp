@@ -706,7 +706,8 @@ void CRender3D::DescendCullingNode(UINT32 addr)
 		
 	// Proceed to second link
 	glPopMatrix();
-	DescendNodePtr(node2Ptr);
+	if ((node[0x00] & 0x07) != 0x06)	// seems to indicate second link is invalid (fixes circular references)
+		DescendNodePtr(node2Ptr);
 	--stackDepth;
 	
 	// Restore old texture offsets
@@ -815,7 +816,7 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 	int				curPri;
 	int				vpX, vpY, vpWidth, vpHeight;
 	int				spotColorIdx;
-	GLfloat			vpTopAngle, vpBotAngle, fovYDegrees, near, far;
+	GLfloat			vpTopAngle, vpBotAngle, fovYDegrees;
 	GLfloat			scrollFog, scrollAtt;
 	
 	// Translate address and obtain pointer
@@ -848,20 +849,8 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 	vpTopAngle	= (float) asin(*(float *)&vpnode[0x0E]);	// FOV Y upper half-angle (radians)
 	vpBotAngle	= (float) asin(*(float *)&vpnode[0x12]);	// FOV Y lower half-angle
 	fovYDegrees	= (vpTopAngle+vpBotAngle)*(float)(180.0/3.14159265358979323846);
-	// TO-DO: figure out how near and far planes are stored
-	if (step >= 0x15)
-	{
-		near	= 1e-2;
-		far		= 1e5;
-	}
-	else
-	{
-		// Move near plane out a bit on Step 1.0 to avoid issues w/ Z-fighting.
-		// This may be unnecessary.
-		near	= 1e-1;
-		far		= 1e5;
-	}	
-
+	// TO-DO: investigate clipping planes
+	
 	// Set up viewport and projection (TO-DO: near and far clipping)
 	glMatrixMode(GL_PROJECTION);
  	glLoadIdentity();
@@ -872,8 +861,7 @@ void CRender3D::RenderViewport(UINT32 addr, int pri)
 		viewportY 	   = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
 		viewportWidth  = totalXRes;
 		viewportHeight = (GLint) ((float)vpHeight*yRatio);
-		gluPerspective(fovYDegrees,(GLfloat)viewportWidth/(GLfloat)viewportHeight,0.01f,1e5);
-		//gluPerspective(fovYDegrees,(GLfloat)viewportWidth/(GLfloat)viewportHeight,0.1f,1e5);	// use actual full screen ratio to get proper X FOV
+		gluPerspective(fovYDegrees,(GLfloat)viewportWidth/(GLfloat)viewportHeight,0.1f,1e5);	// use actual full screen ratio to get proper X FOV
 		//printf("viewportX=%d, viewportY=%d, viewportWidth=%d, viewportHeight=%d\tvpY=%d vpHeight=%d\n", viewportX, viewportY, viewportWidth, viewportHeight, vpY,vpHeight);
 	}
 	else
