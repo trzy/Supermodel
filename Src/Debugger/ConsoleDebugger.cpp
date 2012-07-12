@@ -1030,7 +1030,7 @@ namespace Debugger
 			m_cpu->WriteMem(addr, size, data);
 			m_cpu->FormatData(dataStr, size, data);
 			m_cpu->FormatAddress(addrStr, addr);
-			Print("Set %s data at %s to %s.\n", addrStr, dataStr);
+			Print("Set %s data at %s to %s.\n", uSizeStr, addrStr, dataStr);
 		}
 		else if (CheckToken(token, "lo", "listios"))				// listios
 		{

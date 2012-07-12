@@ -64,13 +64,12 @@ still low.
      8. Force Feedback
      9. Save States and NVRAM
     10. Game-Specific Comments and Tips
-    11. Merging Split ROM Sets
-    12. The Configuration File
-    13. Index of Command Line Options
-    14. Index of Configuration File Settings
-    15. Compiling the Source Code
-    16. Contact Information
-    17. Acknowledgments
+    11. The Configuration File
+    12. Index of Command Line Options
+    13. Index of Configuration File Settings
+    14. Compiling the Source Code
+    15. Contact Information
+    16. Acknowledgments
     
 
 =======================
@@ -807,38 +806,7 @@ and, in the 'Game Assignments' menu, performing the following sequence:
 
 
 ==============================
-  11. Merging Split ROM Sets
-==============================
-
-ROMs that are split into parent and child sets (eg., 'Scud Race Plus', whose
-parent ROM set is 'Scud Race') must be combined into a single ZIP file.  ROM
-files from the parent set that have the same IC numbers (usually the file 
-extension but sometimes the number in the file name itself) as child ROMs
-should be deleted, otherwise Supermodel may choose to load the parent game. 
-
-For example, 'Scud Race Plus' is normally distributed containing only the
-following files:
-
-    epr-20092a.17
-    epr-20093a.18
-    epr-20094a.19
-    epr-20095a.20
-    epr-20096a.21
-    mpr-20097.13
-    mpr-20098.14
-    mpr-20099.15
-    mpr-20100.16
-    mpr-20101.24
-    
-To merge with the parent ROM set, copy over all files from 'Scud Race' except
-those with extension numbers 17-21, 13-16, and 24.  Some 'Scud Race Plus' ROM
-sets may have 'mpr-20101.23' instead of 'mpr-20101.24'.  They are the same file
-and in both cases should replace the file with extension 24 from 'Scud Race'
-('mpr-19671.24').
-
-
-==============================
-  12. The Configuration File
+  11. The Configuration File
 ==============================
 
 Supermodel reads configuration settings from 'Supermodel.ini' located in the
@@ -1116,7 +1084,7 @@ option '-input-system=rawinput' and the input mappings configured for each gun.
 
 
 =====================================
-  13. Index of Command Line Options
+  12. Index of Command Line Options
 =====================================
 
 All valid command line settings are listed here, ordered by category.  Defaults
@@ -1290,7 +1258,7 @@ not.  All options are case sensitive.
 
 
 ============================================
-  14. Index of Configuration File Settings
+  13. Index of Configuration File Settings
 ============================================
 
 All valid configuration file settings are listed here, ordered by category.
@@ -1860,7 +1828,7 @@ All settings are case sensitive.
     
 
 =================================
-  15. Compiling the Source Code
+  14. Compiling the Source Code
 =================================
 
 First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
@@ -1894,7 +1862,7 @@ When everything is ready, rename the appropriate Makefile to 'Makefile' and run
 
 
 ===========================
-  16. Contact Information
+  15. Contact Information
 ===========================
 
 The official Supermodel web site is:
@@ -1915,7 +1883,7 @@ We ask that you remain mindful of the following courtesies:
 
 
 =======================
-  17. Acknowledgments
+  16. Acknowledgments
 =======================
 
 Numerous people contributed their precious time and energy to this project.

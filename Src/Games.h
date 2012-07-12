@@ -67,6 +67,7 @@ struct GameInfo
 {
 	// Game information
 	const char		id[10];			// 9-character game identifier (also serves as zip archive file name)
+	const char		*parent;		// parent game identifier
 	const char		*title;			// complete game title
 	const char		*mfgName;		// name of manufacturer
 	unsigned		year;			// year released (in decimal)

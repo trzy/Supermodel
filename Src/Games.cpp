@@ -38,6 +38,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Sega Bass Fishing
 	{
 		"bass",
+		NULL,
 		"Sega Bass Fishing",
 		"Sega",
 		1997,
@@ -105,6 +106,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Daytona USA 2 (Revision A)
 	{
 		"daytona2",
+		NULL,
 		"Daytona USA 2 Battle on the Edge",
 		"Sega",
 		1998,
@@ -188,6 +190,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Daytona USA 2 Power Edition
 	{
 		"dayto2pe",
+		NULL,
 		"Daytona USA 2 Power Edition",
 		"Sega",
 		1998,
@@ -271,6 +274,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Dirt Devils (Revision A)
 	{
 		"dirtdvls",
+		NULL,
 		"Dirt Devils",
 		"Sega",
 		1998,
@@ -333,6 +337,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Dirt Devils (Alt)(Revision A)
 	{
 		"dirtdvlsa",
+		"dirtdvls",
 		"Dirt Devils (Alt.)",
 		"Sega",
 		1998,
@@ -395,6 +400,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Emergency Call Ambulance
 	{
 		"eca",
+		NULL,
 		"Emergency Call Ambulance",
 		"Sega",
 		1999,
@@ -464,6 +470,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Emergency Call Ambulance (Export)
 	{
 		"ecax",
+		"eca",
 		"Emergency Call Ambulance (Export)",
 		"Sega",
 		1999,
@@ -533,6 +540,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Fighting Vipers 2 (Revision A)
 	{
 		"fvipers2",
+		NULL,
 		"Fighting Vipers 2",
 		"Sega",
 		1998,
@@ -608,6 +616,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Get Bass
 	{
 		"getbass",
+		NULL,
 		"Get Bass",
 		"Sega",
 		1997,
@@ -675,6 +684,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Harley-Davidson & L.A. Riders (Revision A)
 	{
 		"harley",
+		NULL,
 		"Harley-Davidson & L.A. Riders",
 		"Sega",
 		1997,
@@ -744,6 +754,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Harley-Davidson & L.A. Riders (Revision B)
 	{
 		"harleyb",
+		"harley",
 		"Harley-Davidson & L.A. Riders (Revision B)",
 		"Sega",
 		1997,
@@ -813,6 +824,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// L.A. Machineguns
 	{
 		"lamachin",
+		NULL,
 		"L.A. Machineguns",
 		"Sega",
 		1998,
@@ -882,6 +894,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Le Mans 24
 	{
 		"lemans24",
+		NULL,
 		"Le Mans 24",
 		"Sega",
 		1997,
@@ -949,6 +962,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// The Lost World
 	{
 		"lostwsga",
+		NULL,
 		"The Lost World",
 		"Sega",
 		1997,
@@ -1022,6 +1036,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Magical Truck Adventure
 	{
 		"magtruck",
+		NULL,
 		"Magical Truck Adventure",
 		"Sega",
 		1998,
@@ -1079,6 +1094,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// The Ocean Hunter
 	{
 		"oceanhun",
+		NULL,
 		"The Ocean Hunter",
 		"Sega",
 		1998,
@@ -1148,6 +1164,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Scud Race (Australia)
 	{
 		"scud",
+		NULL,
 		"Scud Race (Australia)",
 		"Sega",
 		1996,
@@ -1223,6 +1240,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Scud Race (Export)
 	{
 		"scuda",
+		"scud",
 		"Scud Race (Export)",
 		"Sega",
 		1996,
@@ -1298,6 +1316,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Scud Race (Japan)
 	{
 		"scudj",
+		"scud",
 		"Scud Race (Japan)",
 		"Sega",
 		1996,
@@ -1373,6 +1392,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Scud Race Plus (Revision A)
 	{
 		"scudp",
+		"scud",
 		"Scud Race Plus",
 		"Sega",
 		1997,
@@ -1454,6 +1474,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Ski Champ
 	{
 		"skichamp",
+		NULL,
 		"Ski Champ",
 		"Sega",
 		1998,
@@ -1527,6 +1548,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Spikeout Final Edition (disabled because this is a bad dump according to MAME)
 	{
 		"spikeofe",
+		NULL,
 		"Spikeout Final Edition",
 		"Sega",
 		1999,
@@ -1607,6 +1629,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Spikeout (Revision C)
 	{
 		"spikeout",
+		NULL,
 		"Spikeout",
 		"Sega",
 		1998,
@@ -1687,6 +1710,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Sega Rally 2
 	{
 		"srally2",
+		NULL,
 		"Sega Rally 2",
 		"Sega",
 		1998,
@@ -1762,6 +1786,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Sega Rally 2 DX
 	{
 		"srally2x",
+		NULL,
 		"Sega Rally 2 DX",
 		"Sega",
 		1998,
@@ -1832,6 +1857,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Star Wars Trilogy (Revision A)
 	{
 		"swtrilgy",
+		NULL,
 		"Star Wars Trilogy (Revision A)",
 		"Sega, LucasArts",
 		1998,
@@ -1904,6 +1930,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Star Wars Trilogy
 	{
 		"swtrilgya",
+		"swtrilgy",
 		"Star Wars Trilogy",
 		"Sega, LucasArts",
 		1998,
@@ -1976,6 +2003,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Fighter 3 (Revision C)
 	{
 		"vf3",
+		NULL,
 		"Virtua Fighter 3",
 		"Sega",
 		1996,
@@ -2049,6 +2077,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Fighter 3 (Revision A)
 	{
 		"vf3a",
+		"vf3",
 		"Virtua Fighter 3 (Revision A)",
 		"Sega",
 		1996,
@@ -2122,6 +2151,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Fighter 3 Team Battle
 	{
 		"vf3tb",
+		"vf3",
 		"Virtua Fighter 3 Team Battle",
 		"Sega",
 		1996,
@@ -2195,6 +2225,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtual On: Oratorio Tangram (Revision B)
 	{
 		"von2",
+		NULL,
 		"Virtual On: Oratorio Tangram",
 		"Sega",
 		1998,
@@ -2270,6 +2301,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtual On: Oratorio Tangram (Version 5.4g)
 	{
 		"von254g",
+		"von2",
 		"Virtual On: Oratorio Tangram (Version 5.4g)",
 		"Sega",
 		1998,
@@ -2345,6 +2377,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 (Step 2.0)
 	{
 		"vs2",
+		NULL,
 		"Virtua Striker 2 (Step 2.0)",
 		"Sega",
 		1997,
@@ -2418,6 +2451,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 (Step 1.5)
 	{
 		"vs215",
+		"vs2",
 		"Virtua Striker 2 (Step 1.5)",
 		"Sega",
 		1997,
@@ -2491,6 +2525,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '98 (Step 2.0)
 	{
 		"vs298",
+		NULL,
 		"Virtua Striker 2 '98 (Step 2.0)",
 		"Sega",
 		1998,
@@ -2564,6 +2599,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '98 (Step 1.5)
 	{
 		"vs29815",
+		"vs298",
 		"Virtua Striker 2 '98 (Step 1.5)",
 		"Sega",
 		1998,
@@ -2637,6 +2673,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '99
 	{
 		"vs299",
+		"vs2v991",
 		"Virtua Striker 2 '99",
 		"Sega",
 		1999,
@@ -2710,6 +2747,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '99 (Revision A)
 	{
 		"vs299a",
+		"vs2v991",
 		"Virtua Striker 2 '99 (Revision A)",
 		"Sega",
 		1999,
@@ -2783,6 +2821,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '99 (Revision B)
 	{
 		"vs299b",
+		"vs2v991",
 		"Virtua Striker 2 '99 (Revision B)",
 		"Sega",
 		1999,
@@ -2856,6 +2895,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Virtua Striker 2 '99.1 (Revision B)
 	{
 		"vs2v991",
+		NULL,
 		"Virtua Striker 2 '99.1",
 		"Sega",
 		1999,
@@ -2929,6 +2969,7 @@ const struct GameInfo	g_Model3GameList[] =
 	// Terminate list
 	{
 		"",
+		NULL,
 		NULL,
 		NULL,
 		0,

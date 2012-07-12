@@ -689,6 +689,8 @@ namespace Debugger
 			else if (mappedIO == NULL)
 				return;
 		}
+		if (m_break)
+			WaitCommand(HaltUntil);
 	}
 
 	inline void CCPUDebug::CheckWrite(UINT32 addr, unsigned dataSize, UINT64 data)
@@ -735,6 +737,8 @@ namespace Debugger
 			}
 			else if (mappedIO == NULL)
 				return;
+			if (m_break)
+				WaitCommand(HaltUntil);
 		}
 	}
 
@@ -777,6 +781,8 @@ namespace Debugger
 		CWatch *watch = (CWatch*)m_memWatchTable->Get(addr);
 		if (watch != NULL && watch->CheckRead(addr, dataSize, data))
 			MemWatchTriggered(watch, addr, dataSize, data, true);
+		if (m_break)
+			WaitCommand(HaltUntil);
 	}
 
 	inline void CCPUDebug::CheckRead16(UINT32 addr, UINT16 data)
@@ -820,9 +826,10 @@ namespace Debugger
 		CWatch *watch = (CWatch*)m_memWatchTable->Get(addr);
 		if (watch != NULL && watch->CheckWrite(addr, dataSize, data))
 			MemWatchTriggered(watch, addr, dataSize, data, false);
+		if (m_break)
+			WaitCommand(HaltUntil);
 	}
 
-	inline void CCPUDebug::CheckWrite16(UINT32 addr, UINT16 data)
 	{
 		if ((addr&m_mem16AndMask) == m_mem16AndMask && (addr&m_mem16OrMask) == 0)
 			CheckWrite(addr, 2, data);
