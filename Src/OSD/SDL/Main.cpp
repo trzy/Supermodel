@@ -683,6 +683,22 @@ static void DrawCrosshair(float x, float y, float r, float g, float b)
 	glVertex2f(x+dist+height, y+(base/2.0f)*a);
 }
 
+static void PrintGLError(GLenum error)
+{
+	switch (error)
+	{
+	case GL_INVALID_ENUM:		printf("invalid enum\n"); break;
+	case GL_INVALID_VALUE:		printf("invalid value\n"); break;
+	case GL_INVALID_OPERATION:	printf("invalid operation\n"); break;
+	case GL_STACK_OVERFLOW:		printf("stack overflow\n"); break;
+	case GL_STACK_UNDERFLOW:	printf("stack underflow\n"); break;
+	case GL_OUT_OF_MEMORY:		printf("out of memory\n"); break;
+	case GL_TABLE_TOO_LARGE:	printf("table too large\n"); break;
+	case GL_NO_ERROR:			break;
+	default:					printf("unknown error\n"); break;
+	}
+}
+
 static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 {
 	float	x[2], y[2];
@@ -692,6 +708,7 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 		return;
 		
 	// Set up the viewport and orthogonal projection
+	glUseProgram(0);		// no shaders
 	glViewport(xOffset, yOffset, xRes, yRes);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -700,8 +717,8 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 	glLoadIdentity();
 	glDisable(GL_TEXTURE_2D);	// no texture mapping
 	glDisable(GL_BLEND);		// no blending
-	glDisable(GL_DEPTH_TEST);	// no Z-buffering needed
-	glUseProgram(NULL);			// no shaders
+	glDisable(GL_DEPTH_TEST);	// no Z-buffering needed	
+	glDisable(GL_LIGHTING);
 	
 	// Convert gun coordinates to viewspace coordinates
 	x[0] = (float) Inputs->gunX[0]->value;
@@ -711,13 +728,15 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 	GunToViewCoords(&x[0], &y[0]);
 	GunToViewCoords(&x[1], &y[1]);
 	
-	// Draw visible crosshairs
+	// Draw visible crosshairs	
 	glBegin(GL_TRIANGLES);
 	if ((showCrosshairs & 1) && !Inputs->trigger[0]->offscreenValue)	// Player 1
 		DrawCrosshair(x[0], y[0], 1.0f, 0.0f, 0.0f);
-	if ((showCrosshairs & 2) && !Inputs->trigger[1]->offscreenValue)	// Player 2
+	if ((showCrosshairs & 2) && !Inputs->trigger[1]->offscreenValue)	// Player 2	
 		DrawCrosshair(x[1], y[1], 0.0f, 1.0f, 0.0f);
-	glEnd();		
+	glEnd();
+	
+	//PrintGLError(glGetError());
 }
 
 	

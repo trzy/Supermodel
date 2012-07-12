@@ -1470,6 +1470,88 @@ const struct GameInfo	g_Model3GameList[] =
 			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
 		}
 	},
+	
+	// Scud Race Plus (No Revision -- original? Requires MPC106...)
+	{
+		"scudp1",
+		"scud",
+		"Scud Race Plus (First Version?)",
+		"Sega",
+		1997,
+		0x15,
+		0x200000,	// 2 MB of fixed CROM
+		true,		// 64 MB of banked CROM (Mirror)
+		0x2000000,	// 32 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		1,			// DSB1 MPEG board
+		true,		// drive board
+
+		{
+			// Fixed CROM (mirroring behavior here is special and handled manually by CModel3)
+			{ "CROM",	false,	"epr-20095",	0x44467BC1,	0x80000,	2,	0x0600000,	8,	true },
+			{ "CROM",	false,	"epr-20094",	0x299B6257,	0x80000,	2,	0x0600002,	8,	true },
+			{ "CROM",	false,	"epr-20093",	0x9A85C611,	0x80000,	2,	0x0600004,	8,	true },
+			{ "CROM",	false,	"epr-20092",	0x6F9161C1,	0x80000,	2,	0x0600006,	8,	true },
+
+			// Banked CROM0
+			{ "CROMxx",	false,	"mpr-19661.04",	0x8E3FD241,	0x400000,	2,	0x0000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19660.03",	0xD999C935,	0x400000,	2,	0x0000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19659.02",	0xC47E7002,	0x400000,	2,	0x0000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19658.01",	0xD523235C,	0x400000,	2,	0x0000006,	8,	true },
+
+			// Banked CROM1
+			{ "CROMxx",	false,	"mpr-19665.08",	0xF97C78F9,	0x400000,	2,	0x1000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19664.07",	0xB9D11294,	0x400000,	2,	0x1000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19663.06",	0xF6AF1CA4,	0x400000,	2,	0x1000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19662.05",	0x3C700EFF,	0x400000,	2,	0x1000006,	8,	true },
+
+			// Banked CROM2
+			{ "CROMxx",	false,	"mpr-19669.12",	0xCDC43C61,	0x400000,	2,	0x2000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19668.11",	0x0B4DD8D5,	0x400000,	2,	0x2000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19667.10",	0xA8676799,	0x400000,	2,	0x2000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19666.09",	0xB53DC97F,	0x400000,	2,	0x2000006,	8,	true },
+
+			// Banked CROM3
+			{ "CROMxx",	false,	"mpr-20100.16",	0xC99E2C01,	0x400000,	2,	0x3000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-20099.15",	0xFC9BD7D9,	0x400000,	2,	0x3000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-20098.14",	0x8355FA41,	0x400000,	2,	0x3000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-20097.13",	0x269A9DBE,	0x400000,	2,	0x3000006,	8,	true },
+
+			// Video ROM
+			{ "VROM",	false,	"mpr-19672.26",	0x588C29FD,	0x200000,	2,	0,		32,	false },
+			{ "VROM",	false,	"mpr-19673.27",	0x156ABAA9,	0x200000,	2,	2,		32,	false },
+			{ "VROM",	false,	"mpr-19674.28",	0xC7B0F98C,	0x200000,	2,	4,		32,	false },
+			{ "VROM",	false,	"mpr-19675.29",	0xFF113396,	0x200000,	2,	6,		32,	false },
+			{ "VROM",	false,	"mpr-19676.30",	0xFD852EAD,	0x200000,	2,	8,		32,	false },
+			{ "VROM",	false,	"mpr-19677.31",	0xC6AC0347,	0x200000,	2,	10,		32,	false },
+			{ "VROM",	false,	"mpr-19678.32",	0xB8819CFE,	0x200000,	2,	12,		32,	false },
+			{ "VROM",	false,	"mpr-19679.33",	0xE126C3E3,	0x200000,	2,	14,		32,	false },
+			{ "VROM",	false,	"mpr-19680.34",	0x00EA5CEF,	0x200000,	2,	16,		32,	false },
+			{ "VROM",	false,	"mpr-19681.35",	0xC949325F,	0x200000,	2,	18,		32,	false },
+			{ "VROM",	false,	"mpr-19682.36",	0xCE5CA065,	0x200000,	2,	20,		32,	false },
+			{ "VROM",	false,	"mpr-19683.37",	0xE5856419,	0x200000,	2,	22,		32,	false },
+			{ "VROM",	false,	"mpr-19684.38",	0x56F6EC97,	0x200000,	2,	24,		32,	false },
+			{ "VROM",	false,	"mpr-19685.39",	0x42B49304,	0x200000,	2,	26,		32,	false },
+			{ "VROM",	false,	"mpr-19686.40",	0x84EED592,	0x200000,	2,	28,		32,	false },
+			{ "VROM",	false,	"mpr-19687.41",	0x776CE694,	0x200000,	2,	30,		32,	false },
+
+			// Sound ROMs
+			{ "SndProg",	false,	"epr-20096a.21",0x0FEF288B,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19670.22",	0xBD31CC06,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-20101.24",	0x66D1E31F,	0x400000,	2,	0x400000,	2,	true },
+			{ "DSBProg",	false,	"epr-19612.2",	0x13978FD4,	0x20000,	2,	0,			2,	false },
+			{ "DSBMPEG",	false,	"mpr-19603.57",	0xB1B1765F,	0x200000,	2,	0x000000,	2,	false },
+			{ "DSBMPEG",	false,	"mpr-19604.58",	0x6AC85B49,	0x200000,	2,	0x200000,	2,	false },
+			{ "DSBMPEG",	false,	"mpr-19605.59",	0xBEC891EB,	0x200000,	2,	0x400000,	2,	false },
+			{ "DSBMPEG",	false,	"mpr-19606.60",	0xADAD46B2,	0x200000,	2,	0x600000,	2,	false },
+			
+			// Drive Board ROM
+			{ "DriveBd",	true,	"epr-19338a.bin", 0xC9FAC464, 0x10000, 2, 0, 2, false },
+
+			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
+		}
+	},
 
 	// Ski Champ
 	{

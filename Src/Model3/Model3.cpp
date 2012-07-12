@@ -26,9 +26,12 @@
  *
  * To-Do List
  * ----------
+ *  - Save state format has changed slightly. No longer need dmaUnknownRegister
+ *    in Real3D.cpp. PowerPC timing variables have changed. Before 0.3a
+ *    release, important to change format version #.
  *	- ROM sets should probably be handled with a class that manages ROM
  *	  loading, the game list, as well as ROM patching
- *	- Wrap up CPU emulation inside a class (hah!)
+ *	- Wrap up CPU emulation inside a class.
  *	- Update the to-do list! I forgot lots of other stuff here :)
  *
  * PowerPC Address Map (may be slightly out of date/incomplete)
@@ -1983,15 +1986,40 @@ void CModel3::RunMainBoardFrame(void)
 	UINT32 start = CThread::GetTicks();
 
 	// Compute display and VBlank timings
-	unsigned frameCycles = g_Config.GetPowerPCFrequency()*1000000/60;
-	unsigned vblCycles   = (unsigned) ((float) frameCycles * 2.5f/100.0f);	// 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
+	unsigned ppcCycles   = g_Config.GetPowerPCFrequency() * 1000000;
+	unsigned frameCycles = ppcCycles / 60;
+	unsigned vblCycles   = (unsigned)((float) frameCycles * 2.5f/100.0f);	// 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
 	unsigned dispCycles  = frameCycles - vblCycles;
 	
+	// Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
+	// registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are 
+	// too slow otherwise).  Other games appear to not be affected by this ratio so much as their running speed depends more on the timing of
+	// the Real3D status bit below.
+	ppc_set_timer_ratio(ppc_get_bus_freq_multipler() * 2 * ppcCycles / ppc_get_cycles_per_sec());
+	
+	// Compute timing of the Real3D status bit.  This value directly affects the speed at which all the games except Virtua Stiker 2 run.
+	// Currently it is not known exactly what this bit represents nor why such wildly varying values are needed for the different step models.
+	// The values below were arrived at by trial and error and clearly more investigation is required.  If it turns out that the status bit is
+	// connected to the end of VBlank then the code below should be removed and the timing handled via GPU.VBlankEnd() instead.  
+	unsigned statusCycles;
+	if (Game->step >= 0x20)
+	{
+		// For some reason, Fighting Vipers 2 and Daytona USA 2 require completely different timing to the rest of the step 2.x games
+		if (!strcmp(Game->id, "daytona2") || (Game->step == 0x20 && !strcmp(Game->id, "fvipers2")))
+			statusCycles = (unsigned)((float)frameCycles * 24.0f/100.0f);
+		else
+			statusCycles = (unsigned)((float)frameCycles * 9.12f/100.0f);
+	}
+	else if (Game->step == 0x15)
+		statusCycles = (unsigned)((float)frameCycles * 4.8f/100.0f);
+	else
+		statusCycles = (unsigned)((float)frameCycles * 48.0f/100.0f);
+
 	// VBlank
 	if (gpusReady)
 	{
 		TileGen.BeginVBlank();
-		GPU.BeginVBlank();
+		GPU.BeginVBlank(statusCycles);
 		IRQ.Assert(0x02);
 		ppc_execute(vblCycles);
 		//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
@@ -2020,7 +2048,8 @@ void CModel3::RunMainBoardFrame(void)
 			ppc_execute(200);	// give PowerPC time to acknowledge IRQ
 			IRQ.Deassert(0x40);
 			ppc_execute(200);	// acknowledge that IRQ was deasserted (TODO: is this really needed?)
-			
+			dispCycles -= 400;
+
 			++irqCount;
 			if (irqCount > 128)
 			{
@@ -2640,15 +2669,7 @@ void CModel3::Reset(void)
 // Apply patches to games
 void CModel3::Patch(void)
 {
-	if (!strcmp(Game->id, "vf3") || !strcmp(Game->id, "vf3a"))
-	{
-		// Base offset of program in CROM: 0x710000
-		//*(UINT32 *) &crom[0x713C7C] = 0x60000000;	// this patch may not be needed anymore (find out why)
-		*(UINT32 *) &crom[0x713E54] = 0x60000000;	// affects timing but prevents game from coining up -- investigate this carefully
-		//*(UINT32 *) &crom[0x7125B0] = 0x60000000;	// this patch may not be needed anymore (find out why)
-		//*(UINT32 *) &crom[0x7125D0] = 0x60000000;	// this patch may not be needed anymore (find out why)
-	}
-	else if (!strcmp(Game->id, "lemans24"))
+	if (!strcmp(Game->id, "lemans24"))
 	{
 		// Base offset of program in CROM: 6473C0
 		*(UINT32 *) &crom[0x6D8C4C] = 0x00000002;	// comm. mode: 00=master, 01=slave, 02=satellite
@@ -2656,54 +2677,8 @@ void CModel3::Patch(void)
 		*(UINT32 *) &crom[0x73EB5C] = 0x60000000;
 		*(UINT32 *) &crom[0x73EDD0] = 0x60000000;
 		*(UINT32 *) &crom[0x73EDC4] = 0x60000000;
-		//*(UINT32 *) &crom[0x6473C0+0xF8BD0] = 0x60000000;	// waiting for something from network card, called at F8CD8
-		//*(UINT32 *) &crom[0x6473C0+0xF8B80] = 0x60000000;	// "", called at 0xF8D90		
-	}
-	else if (!strcmp(Game->id, "scud"))
-	{
-		// Base offset of program in CROM: 0x710000
-		*(UINT32 *) &crom[0x712734] = 0x60000000;	// skips some ridiculously slow delay loop during boot-up
-		*(UINT32 *) &crom[0x71AEBC] = 0x60000000;	// waiting for some flag in RAM that never gets modified (IRQ problem? try emulating VBL on Real3D)
-		*(UINT32 *) &crom[0x712268] = 0x60000000;	// this corrects the boot-up menu (but why?)
-		crom[0x787B36^3] = 0x00;          			// Link ID: 00=single, 01=master, 02=slave (can bypass network board error)
-		*(UINT32 *) &crom[0x71277C] = 0x60000000;	// seems to allow the game to start
-		*(UINT32 *) &crom[0x74072C] = 0x60000000; 	// ... ditto
 		
-		//*(UINT32 *)&crom[0x799DE8] = 0x00050208;   // debug menu
-	}
-	else if (!strcmp(Game->id, "scuda"))
-	{
-		*(UINT32 *) &crom[0x712734] = 0x60000000;	// skips some ridiculously slow delay loop during boot-up
-	}
-	else if (!strcmp(Game->id, "scudj"))
-	{
-		*(UINT32 *) &crom[0x7126C8] = 0x60000000;	// skips some ridiculously slow delay loop during boot-up
-	}
-	else if (!strcmp(Game->id, "scudp"))
-	{
-		/*
-		 * RAM program structure:
-		 * 
-		 * 1540: 	Reset vector transfers control here. Effective start of
-		 *			program. On error, game often resets here.
-		 * 14844:	Appears to be beginning of the actual boot-up process.
-		 */
-		
-		// Base offset of program in CROM: 710000
-		// *(UINT32 *) &crom[0x713724] = 0x60000000;
-		// *(UINT32 *) &crom[0x713744] = 0x60000000;
-		// *(UINT32 *) &crom[0x741f48] = 0x60000000;
-		
-		*(UINT32 *) &crom[0x741f68] = 0x60000000;
-		*(UINT32 *) &crom[0x7126B8] = 0x60000000;	// waits for something in RAM
-
-		crom[0x7C62B2^3] = 0x00;	// link ID is copied to 0x10011E, set it to single
-	}
-	else if (!strcmp(Game->id, "von2"))
-	{
-        *(UINT32 *) &crom[0x1B0] = 0x7C631A78;		// eliminate annoyingly long delay loop
-        *(UINT32 *) &crom[0x1B4] = 0x60000000;		// ""
-  	}
+	}	
   	else if (!strcmp(Game->id, "lostwsga"))
   	{
   		*(UINT32 *) &crom[0x7374f4] = 0x38840004;	// an actual bug in the game code
@@ -2739,134 +2714,43 @@ void CModel3::Patch(void)
   		*(UINT32 *) &crom[0x68468c] = 0x60000000;	// protection device
   		*(UINT32 *) &crom[0x6063c4] = 0x60000000;	// needed to allow levels to load
 		*(UINT32 *) &crom[0x616434] = 0x60000000;	// prevents PPC from executing invalid code (MMU?)
-		*(UINT32 *) &crom[0x69f4e4] = 0x60000000;	// ""
-		*(UINT32 *) &crom[0x600000+0x4C744] = 0x60000000;	// decrementer loop?
+		*(UINT32 *) &crom[0x69f4e4] = 0x60000000;	// ""		
 	}
 	else if (!strcmp(Game->id, "dayto2pe"))
 	{
-		*(UINT32 *) &crom[0x606784] = 0x60000000;
+		//*(UINT32 *) &crom[0x606784] = 0x60000000;
 		*(UINT32 *) &crom[0x69A3FC] = 0x60000000;		// MAME says: jump to encrypted code
-		*(UINT32 *) &crom[0x618B28] = 0x60000000;		// MAME says: jump to encrypted code
-		*(UINT32 *) &crom[0x64CA34] = 0x60000000;		// decrementer 
+		*(UINT32 *) &crom[0x618B28] = 0x60000000;		// MAME says: jump to encrypted code		
 	}
-	else if (!strcmp(Game->id, "fvipers2"))
-  	{
-		/*
-		 * Game code is copied to RAM in a non-trivial fashion (it may be 
-		 * compressed) just prior to the following sequence of code, which then
-		 * transfers control to the RAM program:
-		 *
-  		 * FFF0153C: 3C200070 li   r1,0x00700000
-		 * FFF01540: 3C60FF80 li   r3,0xFF800000
-		 * FFF01544: 38800000 li   r4,0x00000000
-		 * FFF01548: 48000751 bl   0xFFF01C98
-		 * FFF0154C: 7C7F42A6 mfspr        r3,pvr
-		 * FFF01550: 90600080 stw  r3,0x00000080
-		 * FFF01554: 92E00084 stw  r23,0x00000084
-		 * FFF01558: 38600100 li   r3,0x00000100
-		 * FFF0155C: 7C6803A6 mtspr        lr,r3
-		 * FFF01560: 4E800020 bclr 0x14,0
-		 *
-		 * In order to patch the necessary portions of the RAM program, we must
-		 * insert a routine that executes after the program is loaded. There is
-		 * ample room in the vector table between 0xFFF00004 and 0xFFF000FC.
-		 * The patching routine must terminate with a "bclr 0x14,0" to jump to
-		 * the RAM program.
-		 */
-		*(UINT32 *) &crom[0xFFF01560-0xFF800000] = 0x4BF00006;					// ba 		0xFFF00004
-		*(UINT32 *) &crom[0xFFF00004-0xFF800000] = (31<<26)|(316<<1);			// xor 		r0,r0,r0		; R0 = 0
-		*(UINT32 *) &crom[0xFFF00008-0xFF800000] = (15<<26)|(2<<21)|0x6000;		// addis	r2,0,0x6000		; R2 = nop
-		*(UINT32 *) &crom[0xFFF0000C-0xFF800000] = (24<<26)|(1<<16)|0xA2E8;		// ori 		r1,r0,0xA2E8	; [A2E8] <- nop	(decrementer loop)
-		*(UINT32 *) &crom[0xFFF00010-0xFF800000] = (36<<26)|(2<<21)|(1<<16);	// stw 		r2,0(r1)
-		*(UINT32 *) &crom[0xFFF00014-0xFF800000] = 0x4E800020;					// bclr		0x14,0			; return to RAM code
-
-		/* // Security board patch for Andy
-		*(UINT32 *) &crom[0xFFF01560-0xFF800000] = 0x4BF00006;							// ba 		0xFFF00004
-		*(UINT32 *) &crom[0xFFF00004-0xFF800000] = (31<<26)|(316<<1);					// xor 		r0,r0,r0		; R0 = 0
-		*(UINT32 *) &crom[0xFFF00008-0xFF800000] = (15<<26)|(2<<21)|0x3860;				// addis	r2,0,0x3860		; R2 = "li r3,0xFFFFFFFF"
-		*(UINT32 *) &crom[0xFFF0000C-0xFF800000] = (24<<26)|(2<<21)|(2<<16)|0xFFFF;		// ori 		r2,r2,0xFFFF
-		*(UINT32 *) &crom[0xFFF00010-0xFF800000] = (24<<26)|(1<<16)|0x9CF8;				// ori 		r1,r0,0x9CF8	; [9CF8] <- set return value to "success"
-		*(UINT32 *) &crom[0xFFF00014-0xFF800000] = (36<<26)|(2<<21)|(1<<16);			// stw 		r2,0(r1)
-		*(UINT32 *) &crom[0xFFF00018-0xFF800000] = (15<<26)|(2<<21)|0x4800;				// addis	r2,0,0x4800		; R2 = "ba 0x9D40"        
-		*(UINT32 *) &crom[0xFFF0001C-0xFF800000] = (24<<26)|(2<<21)|(2<<16)|0x9D42;		// ori 		r2,r2,0xFFFF
-		*(UINT32 *) &crom[0xFFF00020-0xFF800000] = (24<<26)|(1<<16)|0x9CFC;				// ori 		r1,r0,0x9CFC	; [9CFC] <- jump to end of security board routine
-		*(UINT32 *) &crom[0xFFF00024-0xFF800000] = (36<<26)|(2<<21)|(1<<16);			// stw 		r2,0(r1)
-		*(UINT32 *) &crom[0xFFF00028-0xFF800000] = 0x4E800020;							// bclr		0x14,0			; return to RAM code
-		*/		
-
-		// NOTE: At 32714, a test is made that determines the message: ONE PROCESSOR DETECTED, TWO "", etc.
-  	}
   	else if (!strcmp(Game->id, "harley"))
   	{
   		*(UINT32 *) &crom[0x50E8D4] = 0x60000000;
 		*(UINT32 *) &crom[0x50E8F4] = 0x60000000;
 		*(UINT32 *) &crom[0x50FB84] = 0x60000000;
-  		
-  		*(UINT32 *) &crom[0x4F736C] = 0x60000000;
-		*(UINT32 *) &crom[0x4F738C] = 0x60000000;
   	}
   	else if (!strcmp(Game->id, "harleyb"))
   	{
   		*(UINT32 *) &crom[0x50ECB4] = 0x60000000;
 		*(UINT32 *) &crom[0x50ECD4] = 0x60000000;
 		*(UINT32 *) &crom[0x50FF64] = 0x60000000;
-  		
-  		*(UINT32 *) &crom[0x4F774C] = 0x60000000;
-		*(UINT32 *) &crom[0x4F776C] = 0x60000000;
-  	}
-  	else if (!strcmp(Game->id, "oceanhun"))
-  	{
-  		// Base address of program in CROM: 588FD8-108FD8=480000
-  		//*(UINT32 *) &crom[0x480000+0x108FE0] = 0x60000000;	// bad DMA copies from CROM
-  		//*(UINT32 *) &crom[0x480000+0x112020] = 0x60000000;	// reads from invalid addresses (due to CROM?)
-  		*(UINT32 *) &crom[0x480000+0xF995C] = 0x60000000;	// decrementer
   	}
   	else if (!strcmp(Game->id, "swtrilgy"))
   	{
   		*(UINT32 *)	&crom[0xF0E48] = 0x60000000;
-		*(UINT32 *)	&crom[0x043DC] = 0x48000090;
+		*(UINT32 *)	&crom[0x043DC] = 0x48000090;	// related to joystick feedback
 		*(UINT32 *)	&crom[0x029A0] = 0x60000000;
 		*(UINT32 *)	&crom[0x02A0C] = 0x60000000;
   	}
   	else if (!strcmp(Game->id, "swtrilgya"))
   	{
   		*(UINT32 *) &crom[0xF6DD0] = 0x60000000;	// from MAME
-  		
-  		//*(UINT32 *) &crom[0xF1128] = 0x60000000;	// these bypass required delay loops and break game timing
-  		//*(UINT32 *) &crom[0xF10E0] = 0x60000000;
   	}
   	else if (!strcmp(Game->id, "eca") || !strcmp(Game->id, "ecax"))
   	{
+
 		*(UINT32 *) &crom[0x535580] = 0x60000000;
 		*(UINT32 *) &crom[0x5023B4] = 0x60000000;
 		*(UINT32 *) &crom[0x5023D4] = 0x60000000;
-		
-		*(UINT32 *) &crom[0x535560] = 0x60000000;	// decrementer loop
-	}
-	else if (!strcmp(Game->id, "spikeout"))
-	{
-		/*
-		 * Decrementer loop at 0x31994 seems to work until a few frames into
-		 * the attract mode and game, at which point a very large value is
-		 * loaded into the decrementer and locks up the CPU (the usual
-		 * decrementer problem). "Insert Coin" keeps flashing because it is
-		 * managed via an IRQ, evidently.
-		 *
-		 * 0x00031994: 0x7C9602A6	mfspr	r4,dec
-		 * 0x00031998: 0x2C040000	cmpi	cr0,0,r4,0x0000
-		 * 0x0003199C: 0x41A0FFF8	bt	cr0[lt],0x00031994
-		 */
-		
-		*(UINT32 *) &crom[0x600000+0x3199C] = 0x60000000;
-	}
-	else if (!strcmp(Game->id, "spikeofe"))
-	{
-		*(UINT32 *) &crom[0x600000+0x36F2C] = 0x60000000;	// decrementer loop (see Spikeout)
-	}
-	else if (!strcmp(Game->id, "skichamp"))
-	{
-		// Base address of program in CROM: 0x480000
-		*(UINT32 *) &crom[0x480000+0x96B9C] = 0x60000000;	// decrementer loop
 	}
 }
 
@@ -3036,14 +2920,17 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 		PPCConfig.pvr = PPC_MODEL_603E;	// 100 MHz
 		PPCConfig.bus_frequency = BUS_FREQUENCY_66MHZ;
 		PPCConfig.bus_frequency_multiplier = 0x15;	// 1.5X multiplier
-		PCIBridge.SetModel(0x105);		// MPC105
+		if (!strcmp(Game->id, "scudp1"))	// some Step 1.x games use MPC106
+			PCIBridge.SetModel(0x106);
+		else
+			PCIBridge.SetModel(0x105);		// MPC105
 	}
 	else if (Game->step == 0x10)	// Step 1.0
 	{
 		PPCConfig.pvr = PPC_MODEL_603R;	// 66 MHz
 		PPCConfig.bus_frequency = BUS_FREQUENCY_66MHZ;
 		PPCConfig.bus_frequency_multiplier = 0x10;	// 1X multiplier
-		if (!strcmp(Game->id, "bass") || !strcmp(Game->id, "getbass"))	// some Step 1.0 games use MPC106
+		if (!strcmp(Game->id, "bass") || !strcmp(Game->id, "getbass"))	// some Step 1.x games use MPC106
 			PCIBridge.SetModel(0x106);
 		else
 			PCIBridge.SetModel(0x105);	// MPC105
@@ -3055,7 +2942,7 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 
 	ppc_init(&PPCConfig);
 	ppc_attach_bus(this);
-	
+
 	PPCFetchRegions[0].start = 0;	
 	PPCFetchRegions[0].end = 0x007FFFFF;
 	PPCFetchRegions[0].ptr = (UINT32 *) ram;

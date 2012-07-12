@@ -80,7 +80,7 @@ public:
 	 *
 	 * Must be called before the VBlank starts.
 	 */
-	void BeginVBlank(void);
+	void BeginVBlank(int statusCycles);
 	
 	/*
 	 * EndVBlank(void)
@@ -446,7 +446,7 @@ private:
 	bool    commandPortWrittenRO;       // Read-only copy of flag
 	
 	// Status and command registers
-	UINT32	status;
+	UINT64      statusChange;
 	
 	// JTAG Test Access Port
 	UINT64		tapCurrentInstruction;	// latched IR (not always equal to IR)

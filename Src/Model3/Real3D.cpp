@@ -136,15 +136,17 @@ void CReal3D::LoadState(CBlockFile *SaveState)
  Rendering
 ******************************************************************************/
 
-void CReal3D::BeginVBlank(void)
+void CReal3D::BeginVBlank(int statusCycles)
 {
-	status |= 2;	// VBlank bit
+	// Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
+	// and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
+	// access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
+	statusChange = ppc_total_cycles() + statusCycles;
 }
 
 void CReal3D::EndVBlank(void)
 {
 	error = false;	// clear error (just needs to be done once per frame)
-	status &= ~2;
 }
 
 UINT32 CReal3D::SyncSnapshots(void)
@@ -358,8 +360,9 @@ void CReal3D::WriteDMARegister32(unsigned reg, UINT32 data)
 		}
 		else if ((data&0x80000000))
 		{
-			dmaUnknownReg ^= 0xFFFFFFFF;
-			dmaData = dmaUnknownReg;
+			//dmaUnknownReg ^= 0xFFFFFFFF;
+			//dmaData = dmaUnknownReg;			
+			dmaData = (ppc_total_cycles() >= statusChange ? 0x0 : 0xFFFFFFFF); // Not sure yet if it is just bit 2 as per ReadRegister above
 		}
 		break;
 	case 0x14:	// ?
@@ -886,7 +889,10 @@ UINT32 CReal3D::ReadRegister(unsigned reg)
 {
 	DebugLog("Real3D: Read reg %X\n", reg);
 	if (reg == 0)
+	{
+		UINT32 status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x2);
 		return 0xFFFFFFFD|status;
+	}
 	else
 		return 0xFFFFFFFF;
 }
@@ -945,7 +951,6 @@ void CReal3D::Reset(void)
 	queuedUploadTexturesRO.clear();
 
 	fifoIdx = 0;
-	status = 0;
 	vromTextureAddr = 0;
 	vromTextureHeader = 0;
 	tapState = 0;

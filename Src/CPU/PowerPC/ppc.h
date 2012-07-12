@@ -352,6 +352,11 @@ extern void ppc_reset(void);
 extern void ppc_shutdown(void);
 extern void ppc_init(const PPC_CONFIG *config);		// must be called second!
 extern void ppc_set_fetch(PPC_FETCH_REGION * fetch);
+extern UINT64 ppc_total_cycles(void);
+extern int ppc_get_cycles_per_sec(void);
+extern int ppc_get_bus_freq_multipler(void);
+extern int ppc_get_timer_ratio(void);
+extern void ppc_set_timer_ratio(int ratio);
 
 // These have been added to support the new Supermodel
 extern void ppc_attach_bus(class CBus *BusPtr);		// must be called first!
@@ -367,6 +372,7 @@ extern UINT32 ppc_read_sr(unsigned num);
 // These have been added to support the Supermodel debugger
 extern void ppc_attach_debugger(class Debugger::CPPCDebug *PPCDebugPtr);
 extern void ppc_detach_debugger();
+#endif  // SUPERMODEL_DEBUGGER
 extern void ppc_set_pc(UINT32 pc);
 extern UINT8 ppc_get_cr(unsigned num);
 extern void ppc_set_cr(unsigned num, UINT8 val);
@@ -375,6 +381,4 @@ extern void ppc_set_fpr(unsigned num, double val);
 extern void ppc_write_spr(unsigned spr, UINT32 val);
 extern void ppc_write_sr(unsigned num, UINT32 val);
 extern UINT32 ppc_read_msr();
-#endif  // SUPERMODEL_DEBUGGER
-
 #endif	// INCLUDED_PPC_H

@@ -239,7 +239,7 @@ typedef struct {
 	int interrupt_pending;
 	int external_int;
 
-	UINT64 tb;			/* 56-bit timebase register */
+	UINT64 tb;		/* 56-bit timebase register */
 
 	int (*irq_callback)(int irqline);
 
@@ -247,11 +247,25 @@ typedef struct {
 	PPC_FETCH_REGION	* fetch;
 
 	// STUFF added for the 6xx series
-	UINT32 dec, dec_frac;
+	UINT32 dec;
 	UINT32 fpscr;
 
 	FPR	fpr[32];
 	UINT32 sr[16];
+
+	// Timing related
+	int timer_ratio;
+	UINT32 timer_frac;
+	int tb_base_icount;
+	int dec_base_icount;
+	int dec_trigger_cycle;
+	
+	// Cycle related
+	UINT64 total_cycles;
+	int icount;
+	int cur_cycles;
+	int bus_freq_multiplier;
+	int cycles_per_second;
 
 #if HAS_PPC603
 	int is603;
@@ -271,11 +285,6 @@ typedef struct {
 
 
 
-static int ppc_icount;
-static int ppc_tb_base_icount;
-static int ppc_dec_base_icount;
-static int ppc_dec_trigger_cycle;
-static int bus_freq_multiplier = 1;
 static PPC_REGS ppc;
 static UINT32 ppc_rotate_mask[32][32];
 
@@ -424,53 +433,57 @@ INLINE UINT32 check_condition_code(UINT32 bo, UINT32 bi)
 
 INLINE UINT64 ppc_read_timebase(void)
 {
-	int cycles = ppc_tb_base_icount - ppc_icount;
+	int cycles = ppc.tb_base_icount - ppc.icount;
 
-	// timebase is incremented once every four core clock cycles, so adjust the cycles accordingly
-	return ppc.tb + (cycles / 4);
+	// Timebase is incremented according to timer ratio, so adjust value accordingly
+	return ppc.tb + (cycles / ppc.timer_ratio);
 }
 
 INLINE void ppc_write_timebase_l(UINT32 tbl)
 {
-	ppc_tb_base_icount = ppc_icount;
+	UINT64 tb = ppc_read_timebase();
 
-	ppc.tb &= ~0xffffffff;
-	ppc.tb |= tbl;
+	ppc.tb_base_icount = ppc.icount + ((ppc.tb_base_icount - ppc.icount) % ppc.timer_ratio);
+
+	ppc.tb = (tb&~0xffffffff)|tbl;
 }
 
 INLINE void ppc_write_timebase_h(UINT32 tbh)
 {
-	ppc_tb_base_icount = ppc_icount;
+	UINT64 tb = ppc_read_timebase();
 
-	ppc.tb &= 0xffffffff;
-	ppc.tb |= (UINT64)(tbh) << 32;
+	ppc.tb_base_icount = ppc.icount + ((ppc.tb_base_icount - ppc.icount) % ppc.timer_ratio);
+	
+	ppc.tb = (tb&0xffffffff)|((UINT64)(tbh) << 32);
 }
 
 INLINE UINT32 read_decrementer(void)
 {
-	int cycles = ppc_dec_base_icount - ppc_icount;
+	int cycles = ppc.dec_base_icount - ppc.icount;
 
-	// decrementer is decremented once every four bus clock cycles, so adjust the cycles accordingly
-	return DEC - (cycles / (bus_freq_multiplier * 2));
+	// Decrementer is decremented at same rate as timebase, so adjust value accordingly
+	return DEC - (cycles / ppc.timer_ratio);
 }
 
 INLINE void write_decrementer(UINT32 value)
 {
-	ppc_dec_base_icount = ppc_icount + (ppc_dec_base_icount - ppc_icount) % (bus_freq_multiplier * 2);
+	if (((value&0x80000000) && !(read_decrementer()&0x80000000)))
+	{
+		/* trigger interrupt */
+		ppc.interrupt_pending |= 0x2;
+		ppc603_check_interrupts();
+	}
 
+	ppc.dec_base_icount = ppc.icount + ((ppc.dec_base_icount - ppc.icount) % ppc.timer_ratio);
+	
 	DEC = value;
 
-	// check if decrementer exception occurs during execution
-	if ((UINT32)(DEC - (ppc_icount / (bus_freq_multiplier * 2))) > (UINT32)(DEC))
-	{
-		ppc_dec_trigger_cycle = ((ppc_icount / (bus_freq_multiplier * 2)) - DEC) * 4;
-	}
+	// Check if decrementer exception occurs during execution (exception occurs after decrementer
+	// has passed through zero)
+	if ((UINT32)(ppc.dec_base_icount / ppc.timer_ratio) > DEC)
+		ppc.dec_trigger_cycle = ppc.dec_base_icount - ((1 + DEC) * ppc.timer_ratio);
 	else
-	{
-		ppc_dec_trigger_cycle = 0x7fffffff;
-	}
-
-//	printf("DEC = %08X at %08X\n", value, ppc.pc);
+		ppc.dec_trigger_cycle = 0x7fffffff;
 }
 
 /*********************************************************************/
@@ -491,12 +504,6 @@ INLINE void ppc_set_spr(int spr, UINT32 value)
 		case SPR_PVR:		return;
 			
 		case SPR603E_DEC:
-			if(((value & 0x80000000) && !(DEC & 0x80000000)) || value == 0)
-			{
-				/* trigger interrupt */
-				ppc.interrupt_pending |= 0x2;
-				ppc603_check_interrupts();
-			}
 			write_decrementer(value);
 			return;
 
@@ -821,13 +828,29 @@ void ppc_init(const PPC_CONFIG *config)
 
 	multiplier = (float)((config->bus_frequency_multiplier >> 4) & 0xf) +
 				 (float)(config->bus_frequency_multiplier & 0xf) / 10.0f;
-	bus_freq_multiplier = (int)(multiplier * 2);
+	ppc.bus_freq_multiplier = (int)(multiplier * 2);
 
+	// tb and dec are incremented every four bus cycles, so calculate default timer ratio
+	ppc.timer_ratio = 2 * ppc.bus_freq_multiplier;  
+	
+	switch (config->bus_frequency)
+	{
+		case BUS_FREQUENCY_16MHZ: ppc.cycles_per_second = multiplier * 16000000; break;
+		case BUS_FREQUENCY_20MHZ: ppc.cycles_per_second = multiplier * 20000000; break;
+		case BUS_FREQUENCY_25MHZ: ppc.cycles_per_second = multiplier * 25000000; break;
+		case BUS_FREQUENCY_33MHZ: ppc.cycles_per_second = multiplier * 33000000; break;
+		case BUS_FREQUENCY_40MHZ: ppc.cycles_per_second = multiplier * 40000000; break;
+		case BUS_FREQUENCY_50MHZ: ppc.cycles_per_second = multiplier * 50000000; break;
+		case BUS_FREQUENCY_60MHZ: ppc.cycles_per_second = multiplier * 60000000; break;
+		case BUS_FREQUENCY_66MHZ: ppc.cycles_per_second = multiplier * 66000000; break;
+		case BUS_FREQUENCY_75MHZ: ppc.cycles_per_second = multiplier * 75000000; break;
+	}
+	
 	switch(config->pvr)
 	{
-		case PPC_MODEL_603E:	pll_config = mpc603e_pll_config[bus_freq_multiplier-1][config->bus_frequency]; break;
-		case PPC_MODEL_603EV:	pll_config = mpc603ev_pll_config[bus_freq_multiplier-1][config->bus_frequency]; break;
-		case PPC_MODEL_603R:	pll_config = mpc603r_pll_config[bus_freq_multiplier-1][config->bus_frequency]; break;
+		case PPC_MODEL_603E:	pll_config = mpc603e_pll_config[ppc.bus_freq_multiplier-1][config->bus_frequency]; break;
+		case PPC_MODEL_603EV:	pll_config = mpc603ev_pll_config[ppc.bus_freq_multiplier-1][config->bus_frequency]; break;
+		case PPC_MODEL_603R:	pll_config = mpc603r_pll_config[ppc.bus_freq_multiplier-1][config->bus_frequency]; break;
 		default: break;
 	}
 
@@ -861,6 +884,31 @@ void ppc_set_fetch(PPC_FETCH_REGION * fetch)
 	ppc.fetch = fetch;
 }
 
+UINT64 ppc_total_cycles(void)
+{
+	return ppc.total_cycles + (UINT64)(ppc.cur_cycles - ppc.icount);
+}
+
+int ppc_get_cycles_per_sec()
+{
+	return ppc.cycles_per_second;
+}
+
+int ppc_get_bus_freq_multipler()
+{
+	return ppc.bus_freq_multiplier;
+}
+
+void ppc_set_timer_ratio(int ratio)
+{
+	ppc.timer_ratio = ratio;
+}
+
+int ppc_get_timer_ratio()
+{
+	return ppc.timer_ratio;
+}
+
 /******************************************************************************
  Supermodel Interface
 ******************************************************************************/
@@ -874,11 +922,10 @@ void ppc_save_state(CBlockFile *SaveState)
 {
 	SaveState->NewBlock("PowerPC", __FILE__);
 	
-	// Timer and decrementer
-	SaveState->Write(&ppc_icount, sizeof(ppc_icount));
-	SaveState->Write(&ppc_tb_base_icount, sizeof(ppc_tb_base_icount));
-	SaveState->Write(&ppc_dec_base_icount, sizeof(ppc_dec_base_icount));
-	SaveState->Write(&ppc_dec_trigger_cycle, sizeof(ppc_dec_trigger_cycle));
+	// Cycle counting
+	SaveState->Write(&ppc.icount, sizeof(ppc.icount));
+	SaveState->Write(&ppc.cur_cycles, sizeof(ppc.cur_cycles));
+	SaveState->Write(&ppc.total_cycles, sizeof(ppc.total_cycles));
 	
 	// Registers
 	SaveState->Write(ppc.r, sizeof(ppc.r));
@@ -939,7 +986,7 @@ void ppc_save_state(CBlockFile *SaveState)
 	SaveState->Write(&ppc.tb, sizeof(ppc.tb));
 	
 	SaveState->Write(&ppc.dec, sizeof(ppc.dec));
-	SaveState->Write(&ppc.dec_frac, sizeof(ppc.dec_frac));
+	SaveState->Write(&ppc.timer_frac, sizeof(ppc.timer_frac));
 	SaveState->Write(&ppc.fpscr, sizeof(ppc.fpscr));
 	
 	SaveState->Write(ppc.fpr, sizeof(ppc.fpr));
@@ -955,10 +1002,9 @@ void ppc_load_state(CBlockFile *SaveState)
 	}
 	
 	// Timer and decrementer
-	SaveState->Read(&ppc_icount, sizeof(ppc_icount));
-	SaveState->Read(&ppc_tb_base_icount, sizeof(ppc_tb_base_icount));
-	SaveState->Read(&ppc_dec_base_icount, sizeof(ppc_dec_base_icount));
-	SaveState->Read(&ppc_dec_trigger_cycle, sizeof(ppc_dec_trigger_cycle));
+	SaveState->Read(&ppc.icount, sizeof(ppc.icount));
+	SaveState->Read(&ppc.cur_cycles, sizeof(ppc.cur_cycles));
+	SaveState->Read(&ppc.total_cycles, sizeof(ppc.total_cycles));
 	
 	// Registers
 	SaveState->Read(ppc.r, sizeof(ppc.r));
@@ -1019,7 +1065,7 @@ void ppc_load_state(CBlockFile *SaveState)
 	SaveState->Read(&ppc.tb, sizeof(ppc.tb));
 	
 	SaveState->Read(&ppc.dec, sizeof(ppc.dec));
-	SaveState->Read(&ppc.dec_frac, sizeof(ppc.dec_frac));
+	SaveState->Read(&ppc.timer_frac, sizeof(ppc.timer_frac));
 	SaveState->Read(&ppc.fpscr, sizeof(ppc.fpscr));
 	
 	SaveState->Read(ppc.fpr, sizeof(ppc.fpr));
@@ -1071,6 +1117,7 @@ void ppc_detach_debugger()
 	Bus = PPCDebug->DetachBus(); 
 	PPCDebug = NULL;
 }
+#endif // SUPERMODEL_DEBUGGER
 
 void ppc_set_pc(UINT32 pc)
 {
@@ -1113,4 +1160,3 @@ UINT32 ppc_read_msr()
 {
 	return ppc_get_msr();
 }
-#endif // SUPERMODEL_DEBUGGER

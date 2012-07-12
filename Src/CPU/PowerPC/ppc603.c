@@ -247,25 +247,30 @@ void ppc_reset(void)
 	ppc.hid0 = 1;
 
 	ppc.interrupt_pending = 0;
+
+	ppc.tb = 0;
+	ppc.timer_frac = 0;
+	DEC = 0xffffffff;
+	ppc.total_cycles = 0;
+	ppc.cur_cycles = 0;
+	ppc.icount = 0;
 }
 
 int ppc_execute(int cycles)
 {
 	UINT32 opcode;
-	
-	ppc_icount = cycles;
-	ppc_tb_base_icount = cycles;
-	ppc_dec_base_icount = cycles + ppc.dec_frac;
 
-	// check if decrementer exception occurs during execution
-	if ((UINT32)(DEC - (cycles / (bus_freq_multiplier * 2))) > (UINT32)(DEC))
-	{
-		ppc_dec_trigger_cycle = ((cycles / (bus_freq_multiplier * 2)) - DEC) * 4;
-	}
+	ppc.cur_cycles = cycles;
+	ppc.icount = cycles;
+	ppc.tb_base_icount = cycles + ppc.timer_frac;
+	ppc.dec_base_icount = cycles + ppc.timer_frac;
+
+	// Check if decrementer exception occurs during execution (exception occurs after decrementer
+	// has passed through zero)
+	if ((UINT32)(ppc.dec_base_icount / ppc.timer_ratio) > DEC)
+		ppc.dec_trigger_cycle = ppc.dec_base_icount - ((1 + DEC) * ppc.timer_ratio);
 	else
-	{
-		ppc_dec_trigger_cycle = 0x7fffffff;
-	}
+		ppc.dec_trigger_cycle = 0x7fffffff;
 
 	ppc_change_pc(ppc.npc);
 
@@ -276,8 +281,6 @@ int ppc_execute(int cycles)
 		DisassemblePowerPC(opcode, ppc.npc, string1, string2, true);
 		printf("%08X: %s %s\n", ppc.npc, string1, string2);
 	}*/
-//	printf("trigger cycle %d (%08X)\n", ppc_dec_trigger_cycle, ppc_dec_trigger_cycle);
-//	printf("tb = %08X %08X\n", (UINT32)(ppc.tb >> 32), (UINT32)(ppc.tb));
 
 	ppc603_check_interrupts();
 
@@ -286,7 +289,7 @@ int ppc_execute(int cycles)
 		PPCDebug->CPUActive();
 #endif // SUPERMODEL_DEBUGGER
 
-	while( ppc_icount > 0 && !ppc.fatalError)
+	while( ppc.icount > 0 && !ppc.fatalError)
 	{
 		ppc.pc = ppc.npc;
 		
@@ -319,14 +322,10 @@ int ppc_execute(int cycles)
 			default:	optable[opcode >> 26](opcode); break;
 		}
 
-		ppc_icount--;
+		ppc.icount--;
 		
-		// Updating TB four times per core cycle fixes VF3 timing  but breaks other games (Daytona 2 too fast, Spikeout has some geometry flickering)
-		//ppc.tb += 4;
-
-		if(ppc_icount == ppc_dec_trigger_cycle)
+		if (ppc.icount == ppc.dec_trigger_cycle)
 		{
-//			printf("dec int at %d\n", ppc_icount);
 			ppc.interrupt_pending |= 0x2;
 			ppc603_check_interrupts();
 		}
@@ -339,17 +338,11 @@ int ppc_execute(int cycles)
 		PPCDebug->CPUInactive();
 #endif // SUPERMODEL_DEBUGGER
 
-	// update timebase
-	// timebase is incremented once every four core clock cycles, so adjust the cycles accordingly
-	// NOTE: updating at the end of the time slice breaks things that try to wait on TBL. Performing
-	// the update inside the execution loop fixes VF3 and allows many decrementer patches to be 
-	// removed but it adversely affects Spikeout and other games.
-	ppc.tb += ((ppc_tb_base_icount - ppc_icount) / 4);
-
-	// update decrementer
-	ppc.dec_frac = ((ppc_dec_base_icount - ppc_icount) % (bus_freq_multiplier * 2));
-	DEC -= ((ppc_dec_base_icount - ppc_icount) / (bus_freq_multiplier * 2));
-
+	// Update timebase and decrementer.  Both are updated at same rate as specified by timer_ratio.
+	ppc.timer_frac = ((ppc.tb_base_icount - ppc.icount) % ppc.timer_ratio);
+	ppc.tb += ((ppc.tb_base_icount - ppc.icount) / ppc.timer_ratio);
+	DEC -= ((ppc.dec_base_icount - ppc.icount) / ppc.timer_ratio);
+	
 	/*
 	{
 		char string1[200];
@@ -360,5 +353,9 @@ int ppc_execute(int cycles)
 	}
 	*/
 
-	return cycles - ppc_icount;
+	int executed = cycles - ppc.icount;
+	ppc.total_cycles += executed;
+	ppc.cur_cycles = 0;
+	ppc.icount = 0;
+	return executed;
 }

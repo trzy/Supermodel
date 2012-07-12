@@ -2221,7 +2221,7 @@ static void ppc_fctiwx(UINT32 op)
 	}
 	else if(FPR(b).fd < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;
+		FPR(t).id = 0x80000000;		
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2255,7 +2255,7 @@ static void ppc_fctiwzx(UINT32 op)
 
     if(r > (INT64)((INT32)0x7fffffff))
 	{
-		FPR(t).id = 0x7fffffff;
+		FPR(t).id = 0x7fffffff;		
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2263,7 +2263,7 @@ static void ppc_fctiwzx(UINT32 op)
 	}
 	else if(r < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;
+		FPR(t).id = 0x80000000;		
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2368,8 +2368,8 @@ static void ppc_frsqrtex(UINT32 op)
 
     SET_VXSNAN_1(FPR(b));
 
-	FPR(t).fd = 1.0 / sqrt(FPR(b).fd);	/* verify this */
-
+	FPR(t).fd = 1.0 / sqrt(FPR(b).fd);	/* verify this */		
+    
     set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
@@ -2745,7 +2745,7 @@ static void ppc_fmaddsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
-	FPR(t).fd = (float)((FPR(a).fd * FPR(c).fd) + FPR(b).fd);
+	FPR(t).fd = (float)((FPR(a).fd * FPR(c).fd) + FPR(b).fd);	
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
