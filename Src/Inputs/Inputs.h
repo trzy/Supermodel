@@ -94,6 +94,7 @@ public:
 	CSwitchInput    *uiExit;
 	CSwitchInput    *uiReset;
 	CSwitchInput    *uiPause;
+	CSwitchInput    *uiFullScreen;
 	CSwitchInput    *uiSaveState;
 	CSwitchInput    *uiChangeSlot;
 	CSwitchInput    *uiLoadState;

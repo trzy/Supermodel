@@ -41,11 +41,13 @@ uniform vec4		spotEllipse;		// spotlight ellipse position: .x=X position (screen
 uniform vec2		spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
 uniform vec3		spotColor;			// spotlight RGB color
 uniform vec3		lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
+uniform float		mapSize;			// texture map size (2048,4096,6144 etc)
 
 // Inputs from vertex shader 
 varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
 varying vec4		fsTexParams;	// .x=texture enable (if 1, else 0), .y=use transparency (if > 0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
 varying float		fsTexFormat;	// T1RGB5 contour texture (if > 0)
+varying float		fsTexMap;		// texture map number
 varying float		fsTransLevel;	// translucence level, 0.0 (transparent) to 1.0 (opaque)
 varying vec3		fsLightIntensity;	// lighting intensity 
 varying float		fsSpecularTerm;	// specular highlight
@@ -91,7 +93,7 @@ vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEna
 	glTexCoord = (	mirror*(texSize-clampedCoord) +
 					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
 					texOffset
-				 ) / 2048.0;
+				 ) / mapSize;
 	return glTexCoord;
 }
 
@@ -140,38 +142,38 @@ void main(void)
 		uv_top = WrapTexelCoords(uv_top,vec4(fsSubTexture.xy,fsSubTexture.xy),vec4(fsSubTexture.zw,fsSubTexture.zw), vec4(fsTexParams.zw,fsTexParams.zw));
 		uv_bot = WrapTexelCoords(uv_bot,vec4(fsSubTexture.xy,fsSubTexture.xy),vec4(fsSubTexture.zw,fsSubTexture.zw), vec4(fsTexParams.zw,fsTexParams.zw));
 
-		// Fetch the texels from the texture map that corresponds to the current texture format
-		if (fsTexFormat < 0.5f)	{
+		// Fetch the texels from the given texture map
+		if (fsTexMap < 0.5f)	{
 			c[0]=texture2D(textureMap0, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap0, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap0, uv_top.xy);       // top-left
 			c[3]=texture2D(textureMap0, uv_top.zw);       // top-right
-		} else if (fsTexFormat < 1.5f) {
+		} else if (fsTexMap < 1.5f) {
             c[0]=texture2D(textureMap1, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap1, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap1, uv_top.xy);       // top-left
 			c[3]=texture2D(textureMap1, uv_top.zw);       // top-right
-		} else if (fsTexFormat < 2.5f) {
+		} else if (fsTexMap < 2.5f) {
             c[0]=texture2D(textureMap2, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap2, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap2, uv_top.xy);       // top-left
 			c[3]=texture2D(textureMap2, uv_top.zw);       // top-right
-		} else if (fsTexFormat < 3.5f) {
+		} else if (fsTexMap < 3.5f) {
             c[0]=texture2D(textureMap3, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap3, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap3, uv_top.xy);       // top-left
 			c[3]=texture2D(textureMap3, uv_top.zw);       // top-right
-		} else if (fsTexFormat < 4.5f) {
+		} else if (fsTexMap < 4.5f) {
             c[0]=texture2D(textureMap4, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap4, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap4, uv_top.xy);       // top-left
 			c[3]=texture2D(textureMap4, uv_top.zw);       // top-right
-		} else if (fsTexFormat < 5.5f) {
+		} else if (fsTexMap < 5.5f) {
             c[0]=texture2D(textureMap5, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap5, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap5, uv_top.xy);       // top-left
 			c[3]=texture2D(textureMap5, uv_top.zw);       // top-right
-		} else if (fsTexFormat < 6.5f) {
+		} else if (fsTexMap < 6.5f) {
 			c[0]=texture2D(textureMap6, uv_bot.xy);       // bottom-left (base texel)
 			c[1]=texture2D(textureMap6, uv_bot.zw);       // bottom-right
 			c[2]=texture2D(textureMap6, uv_top.xy);       // top-left

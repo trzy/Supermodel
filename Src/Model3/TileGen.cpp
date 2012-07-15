@@ -369,7 +369,7 @@ void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 		// We only have a mechanism to recompute both palettes simultaneously.
 		// These regs are often written together in the same frame. To avoid
 		// needlessly recomputing both palettes twice, we defer the operation.
-		if (regs[reg] != data)	// only if changed
+		if (regs[reg/4] != data)	// only if changed
 			recomputePalettes = true;
 		break;
 	case 0x10:	// IRQ acknowledge

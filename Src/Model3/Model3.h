@@ -269,6 +269,8 @@ public:
 	 */
 	void AttachInputs(CInputs *InputsPtr);
 	
+	void AttachOutputs(COutputs *OutputsPtr);
+
 	/*
 	 * Init(void):
 	 *
@@ -380,6 +382,9 @@ private:
 	
 	// Game inputs
 	CInputs     *Inputs;
+
+	// Game outputs
+	COutputs    *Outputs;
 		 
 	// Input registers (game controls)
 	UINT8		inputBank;

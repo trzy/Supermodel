@@ -68,6 +68,7 @@ public:
 	 */
 	bool	Get(string SectionName, string SettingName, int& value);
 	bool	Get(string SectionName, string SettingName, unsigned& value);
+	bool	Get(string SectionName, string SettingName, bool& value);
 	bool	Get(string SectionName, string SettingName, string& String);
 	
 	/*

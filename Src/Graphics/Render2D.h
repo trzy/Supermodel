@@ -160,7 +160,7 @@ private:
 	GLuint   	texID[2];					// IDs for the 2 layer textures (top and bottom)
 	unsigned	xPixels, yPixels;			// display surface resolution
 	unsigned	xOffs, yOffs;				// offset
-	unsigned	totalXPixels, totalYPixels;	// totay display surface resolution
+	unsigned	totalXPixels, totalYPixels;	// total display surface resolution
 	
 	// Shader programs and input data locations
 	GLuint	shaderProgram;	// shader program object

@@ -221,12 +221,19 @@ bool CDriveBoard::Init(const UINT8 *romPtr)
 	return OKAY;
 }
 
-void CDriveBoard::AttachInputs(CInputs *InputsPtr, unsigned gameInputFlags)
+void CDriveBoard::AttachInputs(CInputs *inputs, unsigned gameInputFlags)
 {
-	m_inputs = InputsPtr;
+	m_inputs = inputs;
 	m_inputFlags = gameInputFlags;
 
 	DebugLog("DriveBoard attached inputs\n");
+}
+
+void CDriveBoard::AttachOutputs(COutputs *outputs)
+{
+	m_outputs = outputs;
+
+	DebugLog("DriveBoard attached outputs\n");
 }
 
 void CDriveBoard::Reset(void)
@@ -814,7 +821,7 @@ void CDriveBoard::SendVibrate(UINT8 val)
 }
 
 CDriveBoard::CDriveBoard() : m_attached(false), m_tmpDisabled(false), m_simulated(false),
-	m_rom(NULL), m_ram(NULL), m_inputs(NULL), m_dip1(0xCF), m_dip2(0xFF)
+	m_rom(NULL), m_ram(NULL), m_inputs(NULL), m_outputs(NULL), m_dip1(0xCF), m_dip2(0xFF)
 {
 	DebugLog("Built Drive Board\n");
 }
@@ -828,6 +835,7 @@ CDriveBoard::~CDriveBoard(void)
 	}
 	m_rom = NULL;
 	m_inputs = NULL;
+	m_outputs = NULL;
 
 	DebugLog("Destroyed Drive Board\n");
 }

@@ -46,8 +46,10 @@ public:
 	unsigned	xRes, yRes;		// X and Y resolution, in pixels
 	bool 		fullScreen;		// Full screen mode (if true)
 	bool		wideScreen;		// Wide screen hack
+	bool        vsync;          // Enable v-sync
 	bool 		throttle;		// 60 Hz frame limiting
 	bool		showFPS;		// Show frame rate
+	unsigned    crosshairs;     // For game guns: 0 = no crosshairs, 1 = player 1 only, 2 = player 2 only, 3 = both players
 	bool		flipStereo;		// Flip stereo channels
 
 #ifdef SUPERMODEL_DEBUGGER
@@ -101,6 +103,34 @@ public:
 	{
 		return inputSystem.c_str();
 	}
+
+	// Outputs
+	inline void SetOutputs(const char *outputsName)
+	{
+		if (outputsName == NULL)
+		{
+			outputs = "none";
+			return;
+		}
+
+		if (stricmp(outputsName, "none")
+#ifdef SUPERMODEL_WIN32
+			&& stricmp(outputsName, "win")
+#endif
+			)
+		{
+			ErrorLog("Unknown outputs '%s', defaulting to None.", outputsName);
+			outputs = "none";
+			return;
+		}
+
+		outputs = outputsName;
+	}
+
+	inline const char *GetOutputs(void)
+	{
+		return outputs.c_str();
+	}
 		
 	// Defaults
 	COSDConfig(void)
@@ -109,8 +139,10 @@ public:
 		yRes = 384;
 		fullScreen = false;
 		wideScreen = false;
+		vsync = true;
 		throttle = true;
 		showFPS = false;
+		crosshairs = 0;
 		flipStereo = false;
 #ifdef SUPERMODEL_DEBUGGER
 		disableDebugger = false;
@@ -128,10 +160,12 @@ public:
 #else
 		inputSystem = "sdl";
 #endif
+		outputs = "none";
 	}
 	
 private:
 	string	inputSystem;
+	string  outputs;
 };
 
 

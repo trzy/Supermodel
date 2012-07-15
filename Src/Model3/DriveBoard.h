@@ -180,10 +180,12 @@ public:
 	 * position).
 	 *
 	 * Parameters:
-	 *		InputsPtr		Pointer to the input object.
+	 *		inputs			Pointer to the input object.
 	 *		gameInputFlags	The current game's input flags.
 	 */
-	void AttachInputs(CInputs *InputsPtr, unsigned gameInputFlags);
+	void AttachInputs(CInputs *inputs, unsigned gameInputFlags);
+
+	void AttachOutputs(COutputs *outputs);
 
 	/*
 	 * Reset(void):
@@ -273,6 +275,8 @@ private:
 
 	CInputs *m_inputs;      
 	unsigned m_inputFlags;
+
+	COutputs *m_outputs;
 	
 	// Emulation state
 	bool m_initialized;     // True if drive board has finished initialization

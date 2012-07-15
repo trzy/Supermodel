@@ -474,6 +474,18 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
 			DriveBoard.Write(data);
 		break;
 
+	case 0x14:  // Lamp outputs (Daytona/Scud Race/Sega Rally/Le Mans 24)
+		if (NULL != Outputs) // TODO - check gameInputs
+		{
+			Outputs->SetValue(OutputLampStart, !!(data&0x04));
+			Outputs->SetValue(OutputLampView1, !!(data&0x08));
+			Outputs->SetValue(OutputLampView2, !!(data&0x10));
+			Outputs->SetValue(OutputLampView3, !!(data&0x20));
+			Outputs->SetValue(OutputLampView4, !!(data&0x40));
+			Outputs->SetValue(OutputLampLeader, !!(data&0x80));
+		}
+		break;
+
 	case 0x24:	// Serial FIFO 1
 		switch (data)	// Command
 		{
@@ -3028,9 +3040,21 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 	Inputs = InputsPtr;
 
 	if (DriveBoard.IsAttached())
-		DriveBoard.AttachInputs(InputsPtr, Game->inputFlags);
+		DriveBoard.AttachInputs(Inputs, Game->inputFlags);
 
 	DebugLog("Model 3 attached inputs\n");
+}
+
+void CModel3::AttachOutputs(COutputs *OutputsPtr)
+{
+	Outputs = OutputsPtr;
+	Outputs->SetGame(Game);
+	Outputs->Attached();
+
+	if (DriveBoard.IsAttached())
+		DriveBoard.AttachOutputs(Outputs);
+
+	DebugLog("Model 3 attached outputs\n");
 }
 
 // Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
@@ -3097,6 +3121,8 @@ CModel3::CModel3(void)
 	
 	// Various uninitialized pointers
 	Game = NULL;
+	Inputs = NULL;
+	Outputs = NULL;
 	ram = NULL;
 	crom = NULL;
 	vrom = NULL;
@@ -3162,6 +3188,8 @@ CModel3::~CModel3(void)
 	}
 	
 	Game = NULL;
+	Inputs = NULL;
+	Outputs = NULL;
 	ram = NULL;
 	crom = NULL;
 	vrom = NULL;

@@ -53,6 +53,7 @@
 #include "SDLInputSystem.h"
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
+#include "WinOutputs.h"
 #endif
 
 
@@ -123,44 +124,13 @@ unsigned	xOffset, yOffset;		// offset of renderer output within OpenGL viewport
 unsigned 	xRes, yRes;				// renderer output resolution (can be smaller than GL viewport)
 unsigned	totalXRes, totalYRes;	// total resolution (the whole GL viewport)
 
-/*
- * CreateGLScreen():
- *
- * Creates an OpenGL display surface of the requested size. xOffset and yOffset
- * are used to return a display surface offset (for OpenGL viewport commands)
- * because the actual drawing area may need to be adjusted to preserve the 
- * Model 3 aspect ratio. The new resolution will be passed back as well -- both
- * the adjusted viewable area resolution and the total resolution.
- *
- * NOTE: keepAspectRatio should always be true. It has not yet been tested with
- * the wide screen hack.
- */
-static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
 	const SDL_VideoInfo	*VideoInfo;
-	GLenum				err;
-	float				model3Ratio, ratio;
-	float				xRes, yRes;
+	float				 model3Ratio, ratio;
+	float				 xRes, yRes;
 	
-	// Initialize video subsystem
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
-    	return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
-    
-    // Important GL attributes
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE,5);	// need at least RGB555 for Model 3 textures
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,5);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,5);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,16);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-
-  	// Set video mode
-  	if (SDL_SetVideoMode(*xResPtr,*yResPtr,0,SDL_OPENGL|(fullScreen?SDL_FULLSCREEN|SDL_HWSURFACE:0)) == NULL)
-  	{
-    	ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
-    	return FAIL;
-  	}
-  	
-  	// What resolution did we actually get?
+	// What resolution did we actually get?
   	VideoInfo = SDL_GetVideoInfo();
   	*totalXResPtr = VideoInfo->current_w;
   	*totalYResPtr = VideoInfo->current_h;
@@ -187,17 +157,6 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
   		*xOffsetPtr += (VideoInfo->current_w - *xResPtr)/2;
   	if (*yResPtr < VideoInfo->current_h)
   		*yOffsetPtr += (VideoInfo->current_h - *yResPtr)/2;
-  	
-  	// Create window caption
-  	SDL_WM_SetCaption(caption,NULL);
-  	
-  	// Initialize GLEW, allowing us to use features beyond OpenGL 1.2
-	err = glewInit();
-	if (GLEW_OK != err)
-	{
-		ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
-		return FAIL;
-	}
   	
   	// OpenGL initialization
  	glViewport(0,0,*xResPtr,*yResPtr);
@@ -233,8 +192,75 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
  			glScissor(*xOffsetPtr, *yOffsetPtr, *xResPtr, *yResPtr);
  		}
  	}
- 	 	
-	return 0;
+	return OKAY;
+}
+
+/*
+ * CreateGLScreen():
+ *
+ * Creates an OpenGL display surface of the requested size. xOffset and yOffset
+ * are used to return a display surface offset (for OpenGL viewport commands)
+ * because the actual drawing area may need to be adjusted to preserve the 
+ * Model 3 aspect ratio. The new resolution will be passed back as well -- both
+ * the adjusted viewable area resolution and the total resolution.
+ *
+ * NOTE: keepAspectRatio should always be true. It has not yet been tested with
+ * the wide screen hack.
+ */
+static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+{
+	GLenum err;
+	
+	// Initialize video subsystem
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
+    	return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
+    
+    // Important GL attributes
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE,5);	// need at least RGB555 for Model 3 textures
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,5);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,5);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,16);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+
+  	// Set vsync
+	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, (g_Config.vsync ? 1 : 0));
+
+	// Set video mode
+  	if (SDL_SetVideoMode(*xResPtr,*yResPtr,0,SDL_OPENGL|(fullScreen?SDL_FULLSCREEN|SDL_HWSURFACE:0)) == NULL)
+  	{
+    	ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
+    	return FAIL;
+  	}
+  	
+  	// Create window caption
+  	SDL_WM_SetCaption(caption,NULL);
+  	
+  	// Initialize GLEW, allowing us to use features beyond OpenGL 1.2
+	err = glewInit();
+	if (GLEW_OK != err)
+	{
+		ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
+		return FAIL;
+	}
+  	
+	return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
+}
+
+static bool ResizeGLScreen(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+{
+	const SDL_VideoInfo	*VideoInfo;
+	GLenum				err;
+	float				model3Ratio, ratio;
+	float				xRes, yRes;
+	
+	// Set video mode
+  	if (SDL_SetVideoMode(*xResPtr,*yResPtr,0,SDL_OPENGL|(fullScreen?SDL_FULLSCREEN|SDL_HWSURFACE:0)) == NULL)
+  	{
+    	ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
+    	return FAIL;
+  	}
+  	
+  	return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
 }
 
 /*
@@ -294,6 +320,10 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
 	if (infoLog)	InfoLog("  Maximum Vertex Uniforms: %d", value);
 	else			printf("  Maximum Vertex Uniforms: %d\n", value);
 	
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &value);
+	if (infoLog)	InfoLog("Maximum Texture Img Units: %d", value);
+	else			printf("Maximum Texture Img Units: %d\n", value);
+
 	if (printExtensions)
 	{
 		str = glGetString(GL_EXTENSIONS);
@@ -378,10 +408,8 @@ static void ApplySettings(CINIFile *INI, const char *section)
 	string		String;
 	
 	// Model 3
-	if (OKAY == INI->Get(section, "MultiThreaded", x))
-		g_Config.multiThreaded = x ? true : false;
-	if (OKAY == INI->Get(section, "GPUMultiThreaded", x))
-		g_Config.gpuMultiThreaded = x ? true : false;
+	INI->Get(section, "MultiThreaded", g_Config.multiThreaded);
+	INI->Get(section, "GPUMultiThreaded", g_Config.gpuMultiThreaded);
 	if (OKAY == INI->Get(section, "PowerPCFrequency", x))
 		g_Config.SetPowerPCFrequency(x);
 	
@@ -396,32 +424,25 @@ static void ApplySettings(CINIFile *INI, const char *section)
 		g_Config.SetMusicVolume(x);
 	if (OKAY == INI->Get(section, "Balance", y))
 		g_Config.SetSCSPBalance(y);
-	if (OKAY == INI->Get(section, "EmulateSound", x))
-		g_Config.emulateSound = x ? true : false;
-	if (OKAY == INI->Get(section, "EmulateDSB", x))
-		g_Config.emulateDSB = x ? true : false;
+	INI->Get(section, "EmulateSound", g_Config.emulateSound);
+	INI->Get(section, "EmulateDSB", g_Config.emulateDSB);
 
 	// Drive board
 #ifdef SUPERMODEL_WIN32
-	if (OKAY == INI->Get(section, "ForceFeedback", x))
-		g_Config.forceFeedback = x ? true : false;
+	INI->Get(section, "ForceFeedback", g_Config.forceFeedback);
 #endif // SUPERMODEL_WIN32
 	
 	// OSD
 	INI->Get(section, "XResolution", g_Config.xRes);
 	INI->Get(section, "YResolution", g_Config.yRes);
-	if (OKAY == INI->Get(section, "FullScreen", x))
-		g_Config.fullScreen = x ? true : false;
-	if (OKAY == INI->Get(section, "WideScreen", x))
-		g_Config.wideScreen = x ? true : false;
-	if (OKAY == INI->Get(section, "MultiTexture", x))
-		g_Config.multiTexture = x ? true : false;
-	if (OKAY == INI->Get(section, "Throttle", x))
-		g_Config.throttle = x ? true : false;
-	if (OKAY == INI->Get(section, "ShowFrameRate", x))
-		g_Config.showFPS = x ? true : false;
-	if (OKAY == INI->Get(section, "FlipStereo", x))
-		g_Config.flipStereo = x ? true : false;
+	INI->Get(section, "FullScreen", g_Config.fullScreen);
+	INI->Get(section, "WideScreen", g_Config.wideScreen);
+	INI->Get(section, "MultiTexture", g_Config.multiTexture);
+	INI->Get(section, "VSync", g_Config.vsync);
+	INI->Get(section, "Throttle", g_Config.throttle);
+	INI->Get(section, "ShowFrameRate", g_Config.showFPS);
+	INI->Get(section, "Crosshairs", g_Config.crosshairs);
+	INI->Get(section, "FlipStereo", g_Config.flipStereo);
 
 #ifdef SUPERMODEL_WIN32
 	// DirectInput ForceFeedback
@@ -462,13 +483,16 @@ static void LogConfig(void)
 	InfoLog("\tYResolution                   = %d", g_Config.yRes);
 	InfoLog("\tFullScreen                    = %d", g_Config.fullScreen);
 	InfoLog("\tWideScreen                    = %d", g_Config.wideScreen);
+	InfoLog("\tVSync                         = %d", g_Config.vsync);
 	InfoLog("\tMultiTexture                  = %d", g_Config.multiTexture);
 	InfoLog("\tThrottle                      = %d", g_Config.throttle);
 	InfoLog("\tShowFrameRate                 = %d", g_Config.showFPS);
+	InfoLog("\tCrosshairs                    = %d", g_Config.crosshairs);
 #ifdef SUPERMODEL_DEBUGGER
 	InfoLog("\tDisableDebugger               = %d", g_Config.disableDebugger);
 #endif
 	InfoLog("\tInputSystem                   = %s", g_Config.GetInputSystem());
+	InfoLog("\tOutputs                       = %s", g_Config.GetOutputs());
 	InfoLog("\tFlipStereo                    = %d", g_Config.flipStereo);
 	
 #ifdef SUPERMODEL_WIN32
@@ -699,12 +723,12 @@ static void PrintGLError(GLenum error)
 	}
 }
 
-static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
+static void UpdateCrosshairs(CInputs *Inputs, unsigned crosshairs)
 {
 	float	x[2], y[2];
 	
-	showCrosshairs &= 3;
-	if (!showCrosshairs)
+	crosshairs &= 3;
+	if (!crosshairs)
 		return;
 		
 	// Set up the viewport and orthogonal projection
@@ -730,9 +754,9 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 	
 	// Draw visible crosshairs	
 	glBegin(GL_TRIANGLES);
-	if ((showCrosshairs & 1) && !Inputs->trigger[0]->offscreenValue)	// Player 1
+	if ((crosshairs & 1) && !Inputs->trigger[0]->offscreenValue)	// Player 1
 		DrawCrosshair(x[0], y[0], 1.0f, 0.0f, 0.0f);
-	if ((showCrosshairs & 2) && !Inputs->trigger[1]->offscreenValue)	// Player 2	
+	if ((crosshairs & 2) && !Inputs->trigger[1]->offscreenValue)	// Player 2
 		DrawCrosshair(x[1], y[1], 0.0f, 1.0f, 0.0f);
 	glEnd();
 	
@@ -745,7 +769,6 @@ static void UpdateCrosshairs(CInputs *Inputs, unsigned showCrosshairs)
 ******************************************************************************/
 
 static CInputs *videoInputs = NULL;
-static unsigned videoShowCrosshairs = 0; // bit 1: player 1 crosshair, bit 0: player 2
 
 bool BeginFrameVideo()
 {
@@ -756,7 +779,7 @@ void EndFrameVideo()
 {
 	// Show crosshairs for light gun games
 	if (videoInputs)
-		UpdateCrosshairs(videoInputs, videoShowCrosshairs);
+		UpdateCrosshairs(videoInputs, g_Config.crosshairs);
 
 	// Swap the buffers
 	SDL_GL_SwapBuffers();
@@ -768,11 +791,11 @@ void EndFrameVideo()
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
+int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, COutputs *Outputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
 {
 	CLogger *oldLogger;
 #else
-int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
+int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile *CmdLine)
 {				  
 	CModel3			*Model3 = new CModel3();
 #endif // SUPERMODEL_DEBUGGER
@@ -818,16 +841,16 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 	Inputs->GetInputSystem()->SetMouseVisibility(!g_Config.fullScreen);
 	gameHasLightguns = !!(Model3->GetGameInfo()->inputFlags & (GAME_INPUT_GUN1|GAME_INPUT_GUN2));
 	if (gameHasLightguns)
-	{
 		videoInputs = Inputs;
-		if (g_Config.fullScreen && gameHasLightguns)
-			videoShowCrosshairs = 1; // show player 1 cursor only by default (TODO: add an IsMapped() member to CInput to allow testing for both lightguns)
-	}
 	else
 		videoInputs = NULL;
 
 	// Attach the inputs to the emulator
 	Model3->AttachInputs(Inputs);
+
+	// Attach the outputs to the emulator
+	if (Outputs != NULL)
+		Model3->AttachOutputs(Outputs);
 	
 	// Initialize the renderer
 	if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -938,6 +961,38 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 				SetAudioEnabled(true);
 				SDL_WM_SetCaption(baseTitleStr,NULL);
 			}
+			
+			// Send paused value as output
+			if (Outputs != NULL)
+				Outputs->SetValue(OutputPause, paused);
+		}
+		else if (Inputs->uiFullScreen->Pressed())
+		{
+			// Toggle emulator fullscreen
+			g_Config.fullScreen = !g_Config.fullScreen;
+
+			// Delete renderers and recreate them afterwards since GL context will most likely be lost when switching from/to fullscreen
+			delete Render2D;
+			delete Render3D;
+			Render2D = NULL;
+			Render3D = NULL;
+			
+			// Resize screen
+			totalXRes = xRes = g_Config.xRes;
+  			totalYRes = yRes = g_Config.yRes;
+			if (OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,true,g_Config.fullScreen))
+				goto QuitError;
+
+			// Recreate renderers and attach to the emulator
+			Render2D = new CRender2D();
+			Render3D = new CRender3D();
+			if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+				goto QuitError;
+			if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+				goto QuitError;
+			Model3->AttachRenderers(Render2D,Render3D);
+		
+			Inputs->GetInputSystem()->SetMouseVisibility(!g_Config.fullScreen);	
 		}
 		else if (Inputs->uiSaveState->Pressed())
 		{
@@ -1059,8 +1114,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
 		}
 		else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
  		{
-			videoShowCrosshairs++;
-			switch ((videoShowCrosshairs&3))
+			g_Config.crosshairs++;
+			switch (g_Config.crosshairs&3)
 			{
 			case 0:	puts("Crosshairs disabled."); 				break;
 			case 3:	puts("Crosshairs enabled.");				break;
@@ -1099,7 +1154,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, CINIFile *CmdLine)
  			++fpsFramesElapsed;
 			if((currentFPSTicks-prevFPSTicks) >= 1000)	// update FPS every 1 second (each tick is 1 ms)
 			{
-				sprintf(titleStr, "%s - %1.1f FPS%s", baseTitleStr, (float)fpsFramesElapsed*(float)(currentFPSTicks-prevFPSTicks)/1000.0f, paused ? " (Paused)" : "");
+				sprintf(titleStr, "%s - %1.1f FPS%s", baseTitleStr, (float)fpsFramesElapsed/((float)(currentFPSTicks-prevFPSTicks)/1000.0f), paused ? " (Paused)" : "");
 				SDL_WM_SetCaption(titleStr,NULL);
 				prevFPSTicks = currentFPSTicks;			// reset tick count
 				fpsFramesElapsed = 0;					// reset frame count
@@ -1285,10 +1340,12 @@ static void Help(void)
 	puts("    -window                Windowed mode [Default]");
 	puts("    -fullscreen            Full screen mode");
 	puts("    -wide-screen           Expand 3D field of view to screen width");
-	puts("    -multi-texture         Use 8 texture maps for accurate decoding [Default]");
-	puts("    -no-multi-texture      Decode to a single texture map");
+	puts("    -multi-texture         Use 8 texture maps for decoding");
+	puts("    -no-multi-texture      Decode to a single texture map [Default]");
 	puts("    -no-throttle           Disable 60 Hz frame rate lock");
 	puts("    -show-fps              Display frame rate in window title bar");
+	puts("    -crosshairs=<n>        Crosshairs configuration for gun games:");
+	puts("                            0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
 	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
 	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
 	puts("    -print-gl-info         Print OpenGL driver information and quit");
@@ -1308,6 +1365,7 @@ static void Help(void)
 	puts("    -config-inputs         Configure keyboards, mice, and game controllers");
 #ifdef SUPERMODEL_WIN32
 	printf("    -input-system=<s>      Input system [Default: %s]\n", g_Config.GetInputSystem());
+	printf("    -outputs=<s>           Outputs [Default: %s]\n", g_Config.GetOutputs());
 #endif
 	puts("    -print-inputs          Prints current input configuration");
 	puts("");
@@ -1353,6 +1411,7 @@ int main(int argc, char **argv)
 	int			cmdEnterDebugger=false;
 #endif // SUPERMODEL_DEBUGGER
 	char		*inputSystem = NULL;	// use default input system
+	char        *outputs = NULL;
 	unsigned	n;
 	int			m;
 	UINT32		addr;
@@ -1482,8 +1541,12 @@ int main(int argc, char **argv)
 			
 			ret = sscanf(&argv[i][4],"=%d,%d",&x,&y);
 			if (ret != 2)
-				ErrorLog("'-res' requires both a width and a height.");
-			else
+			{
+				ret = sscanf(&argv[i][4],"=%dx%d",&x,&y);
+				if (ret != 2)
+					ErrorLog("'-res' requires both a width and a height.");
+			}
+			if (ret == 2)
 			{
 				CmdLine.Set("Global", "XResolution", x);
 				CmdLine.Set("Global", "YResolution", y);
@@ -1514,6 +1577,16 @@ int main(int argc, char **argv)
 			n = 0;
 			CmdLine.Set("Global", "MultiTexture", n);
 		}
+		else if (!strcmp(argv[i],"-vsync"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "VSync", n);
+		}
+		else if (!strcmp(argv[i],"-no-vsync"))
+		{
+			n = 0;
+			CmdLine.Set("Global", "VSync", n);
+		}
 		else if (!strcmp(argv[i],"-no-throttle"))
 		{
 			n = 0;
@@ -1523,6 +1596,16 @@ int main(int argc, char **argv)
 		{
 			n = 1;
 			CmdLine.Set("Global", "ShowFrameRate", n);
+		}
+		else if (!strncmp(argv[i],"-crosshairs",11))
+		{
+			unsigned	x;
+			
+			ret = sscanf(&argv[i][11],"=%d",&x);
+			if (ret != 1 || x > 3)
+				ErrorLog("'-crosshairs' requires a number 0-3");
+			else
+				CmdLine.Set("Global", "Crosshairs", x);
 		}
 		else if (!strncmp(argv[i],"-vert-shader",12))
 		{
@@ -1557,6 +1640,17 @@ int main(int argc, char **argv)
 				ErrorLog("'-input-system' requires an input system name.");
 			else
 				inputSystem = &argv[i][14];
+		}
+		else if (!strncmp(argv[i],"-outputs", 8)) // this setting is not written to the config file!
+		{
+			if (argv[i][8] == '\0')
+				ErrorLog("'-outputs' requires an outputs name.");
+			else if (argv[i][8] != '=')
+				ErrorLog("Ignoring unrecognized option: %s", argv[i]);
+			else if (argv[i][9] == '\0')
+				ErrorLog("'-outputs' requires an outputs name.");
+			else
+				outputs = &argv[i][9];
 		}
 #endif	// SUPERMODEL_WIN32
 		else if (!strcmp(argv[i],"-print-inputs"))
@@ -1602,6 +1696,7 @@ int main(int argc, char **argv)
 	// Create input system (default is SDL) and debugger
 	CInputSystem *InputSystem = NULL;
 	CInputs *Inputs = NULL;
+	COutputs *Outputs = NULL;
 	int exitCode = 0;
 #ifdef SUPERMODEL_DEBUGGER
 	CModel3 *Model3 = NULL;
@@ -1647,6 +1742,29 @@ int main(int argc, char **argv)
 		Inputs->PrintInputs(NULL);
 		InputSystem->PrintSettings();
 	}
+
+	// Create outputs	
+#ifdef SUPERMODEL_WIN32
+	g_Config.SetOutputs(outputs);
+	if (stricmp(g_Config.GetOutputs(), "none") == 0)
+		Outputs = NULL;
+	else if (stricmp(g_Config.GetOutputs(), "win") == 0)
+		Outputs = new CWinOutputs();
+	else
+	{
+		ErrorLog("Unknown outputs: %s\n", g_Config.GetOutputs());
+		exitCode = 1;
+		goto Exit;
+	}
+#endif // SUPERMODEL_WIN32
+
+	// Initialize outputs
+	if (Outputs != NULL && !Outputs->Initialize())
+	{
+		ErrorLog("Unable to initialize outputs.\n");
+		exitCode = 1;
+		goto Exit;
+	}
 	
 	// From this point onwards, a ROM set is needed
 	if (fileIdx == 0)
@@ -1675,13 +1793,13 @@ int main(int argc, char **argv)
 			Debugger->ForceBreak(true);
 	}
 	// Fire up Supermodel with debugger
-	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Debugger,&CmdLine);
+	exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Outputs,Debugger,&CmdLine);
 	if (Debugger != NULL)
 		delete Debugger;
 	delete Model3;
 #else
 	// Fire up Supermodel
-	exitCode = Supermodel(argv[fileIdx],Inputs,&CmdLine);
+	exitCode = Supermodel(argv[fileIdx],Inputs,Outputs,&CmdLine);
 #endif // SUPERMODEL_DEBUGGER
 
 Exit:
@@ -1689,6 +1807,8 @@ Exit:
 		delete Inputs;
 	if (InputSystem != NULL)
 		delete InputSystem;
+	if (Outputs != NULL)
+		delete Outputs;
 	SDL_Quit();
 	
 	if (exitCode)

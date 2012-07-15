@@ -39,6 +39,7 @@ uniform vec3	spotColor;			// spotlight RGB color
 attribute vec4	subTexture;		// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
 attribute vec4	texParams;		// .x=texture enable (if 1, else 0), .y=use transparency (if >=0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
 attribute float	texFormat;		// T1RGB5 contour texture (if > 0)
+attribute float texMap;         // texture map number
 attribute float	transLevel;		// translucence level, 0.0 (transparent) to 1.0 (opaque). if less than 1.0, replace alpha value
 attribute float	lightEnable;	// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
 attribute float	shininess;		// specular shininess (if >= 0.0) or disable specular lighting (negative)
@@ -48,6 +49,7 @@ attribute float	fogIntensity;	// fog intensity (1.0, full fog effect, 0.0, no fo
 varying vec4	fsSubTexture;
 varying vec4	fsTexParams;
 varying float	fsTexFormat;
+varying float	fsTexMap;
 varying float	fsTransLevel;
 varying vec3	fsLightIntensity;	// total light intensity for this vertex
 varying float	fsSpecularTerm;		// specular light term (additive)
@@ -158,7 +160,7 @@ void main(void)
   			//vec3 R = normalize(2.0*dot(sunVector,viewNormal)*viewNormal - sunVector);
   			//vec3 V = normalize(-viewVertex);
   			//float s = max(2.0,64.0-shininess);
-  			//fsSpecularTerm = pow(max(dot(R,V),0),s);
+  			//fsSpecularTerm = pow(max(dot(R,V),0.0),s);
   		}
 	}
 	
@@ -175,4 +177,5 @@ void main(void)
 	fsTexParams = texParams;
 	fsTransLevel = transLevel;
 	fsTexFormat = texFormat;
+	fsTexMap = texMap;
 }

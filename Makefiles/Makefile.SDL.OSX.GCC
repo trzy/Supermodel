@@ -97,6 +97,7 @@ OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Config.o $(OBJ_DIR)/I
 	$(OBJ_DIR)/IRQ.o $(OBJ_DIR)/53C810.o $(OBJ_DIR)/PCI.o $(OBJ_DIR)/RTC72421.o $(OBJ_DIR)/DriveBoard.o \
 	$(OBJ_DIR)/MPC10x.o $(OBJ_DIR)/Input.o $(OBJ_DIR)/Inputs.o $(OBJ_DIR)/InputSource.o $(OBJ_DIR)/InputSystem.o \
 	$(OBJ_DIR)/InputTypes.o $(OBJ_DIR)/MultiInputSource.o $(OBJ_DIR)/SDLInputSystem.o \
+	$(OBJ_DIR)/Outputs.o \
 	$(OBJ_DIR)/amp_audio.o $(OBJ_DIR)/amp_dump.o $(OBJ_DIR)/amp_getbits.o $(OBJ_DIR)/amp_getdata.o $(OBJ_DIR)/amp_huffman.o \
 	$(OBJ_DIR)/amp_layer2.o $(OBJ_DIR)/amp_layer3.o $(OBJ_DIR)/amp_misc2.o $(OBJ_DIR)/amp_position.o $(OBJ_DIR)/amp_transform.o \
 	$(OBJ_DIR)/amp_util.o $(OBJ_DIR)/SDLMain_tmpl.o
@@ -195,6 +196,9 @@ $(OBJ_DIR)/%.o: Src/Inputs/%.cpp Src/Inputs/%.h $(HEADERS)
 $(OBJ_DIR)/%.o: Src/Sound/%.cpp Src/Sound/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
+$(OBJ_DIR)/%.o:	Src/OSD/%.cpp Src/OSD/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
 $(OBJ_DIR)/%.o:	Src/OSD/SDL/%.cpp $(HEADERS)
 	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 	

@@ -185,6 +185,26 @@ struct ModelCache
 	DisplayList	*ListTail[2];	// current tail node for each state
 };
 
+struct TexSheet
+{
+	unsigned sheetNum;
+	unsigned mapNum;
+	unsigned xOffset;
+	unsigned yOffset;
+
+	/*
+	 * Texture Format Buffer
+	 *
+	 * Records the format that a texture (at a given location within the
+	 * texture sheet) is currently stored in. A negative value indicates the
+	 * texture has not been accessed and converted yet and non-negative values
+	 * correspond to the texture format bits in the polygon headers. They can
+	 * be used to determine whether a texture needs to be updated.
+	 */
+	int	 texWidth[2048/32][2048/32];
+	int	 texHeight[2048/32][2048/32];
+	INT8 texFormat[2048/32][2048/32];
+};
 
 /******************************************************************************
  CRender3D Classes
@@ -200,15 +220,17 @@ class CRender3DConfig
 public:
 	string 		vertexShaderFile;	// path to vertex shader or "" to use internal shader
 	string 		fragmentShaderFile;	// fragment shader
-	unsigned	maxTexUnits;       	// maximum number of texture units to use (1-9)
+	unsigned	maxTexMaps;       	// maximum number of texture maps to use (1-9)
+	unsigned    maxTexMapExtent;    // maximum extent of texture maps (where num of tex sheets per map = extent ^ 2)
 	bool		multiTexture;		// if enabled and no external fragment shader, select internal shader w/ multiple texture sheet support
 
 	// Defaults
 	CRender3DConfig(void)
 	{
 		// strings will be clear to begin with
-		maxTexUnits = 9;
-		multiTexture = true;
+		maxTexMaps = 9;
+		maxTexMapExtent = 4;
+		multiTexture = false;
 	}
 };
 
@@ -412,26 +434,30 @@ private:
 	unsigned 	totalXRes, totalYRes;
 	
 	// Texture details
-	unsigned    numTexUnits;        // number of texture units
-	int         fmtToTexUnit[8];    // mapping from Model3 texture format to texture unit
-	unsigned    numTexIDs;          // number of 2048x2048 texture sheets (maximum 8, one for each Model3 texture format)
-	GLuint		texIDs[8];          // texture IDs of texture sheets
+	static int	defaultFmtToTexSheetNum[8];  // default mapping from Model3 texture format to texture sheet	
+	unsigned    numTexMaps;                  // total number of texture maps
+	GLuint		texMapIDs[9];                // GL texture IDs of texture maps
+	unsigned    numTexSheets;                // total number of texture sheets
+	TexSheet   *texSheets;                   // texture sheet objects
+	TexSheet   *fmtToTexSheet[8];            // final mapping from Model3 texture format to texture sheet
 	
 	// Shader programs and input data locations
 	GLuint	shaderProgram;			// shader program object
 	GLuint	vertexShader;			// vertex shader handle
 	GLuint	fragmentShader;			// fragment shader
-	GLint   textureMapLoc;          // location of "textureMap" uniform (default combined sheet for all Model3 textures formats)
-	GLint	textureMapLocs[8];		// location of "textureMap[0-7]" uniforms (one sheet per Model3 texture format)
+	GLint   textureMapLoc;          // location of "textureMap" uniform (if available)
+	GLint	textureMapLocs[8];		// location of "textureMap[0-7]" uniforms (if available)
 	GLint	modelViewMatrixLoc;		// uniform
 	GLint	projectionMatrixLoc;	// uniform
 	GLint	lightingLoc;			// uniform
+	GLint   mapSizeLoc;             // uniform
 	GLint	spotEllipseLoc;			// uniform
 	GLint	spotRangeLoc;			// uniform
 	GLint	spotColorLoc;			// uniform
 	GLint	subTextureLoc;			// attribute
 	GLint	texParamsLoc;			// attribute
 	GLint	texFormatLoc;			// attribute
+	GLint   texMapLoc;              // attribute
 	GLint	transLevelLoc;			// attribute
 	GLint	lightEnableLoc;			// attribute
 	GLint	shininessLoc;			// attribute
@@ -440,19 +466,6 @@ private:
 	// Model caching
 	ModelCache	VROMCache;	// VROM (static) models
 	ModelCache	PolyCache;	// polygon RAM (dynamic) models
-
-	/*
-	 * Texture Format Buffer
-	 *
-	 * Records the format that a texture (at a given location within the
-	 * texture sheet) is currently stored in. A negative value indicates the
-	 * texture has not been accessed and converted yet and non-negative values
-	 * correspond to the texture format bits in the polygon headers. They can
-	 * be used to determine whether a texture needs to be updated.
-	 */
-	int		textureWidth[8][2048/32][2048/32];
-	int		textureHeight[8][2048/32][2048/32];
-	INT8    textureFormat[8][2048/32][2048/32];
 	
 	/*
  	 * Texture Decode Buffer

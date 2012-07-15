@@ -1117,6 +1117,17 @@ void ppc_detach_debugger()
 	Bus = PPCDebug->DetachBus(); 
 	PPCDebug = NULL;
 }
+
+void ppc_break()
+{
+	if (PPCDebug != NULL)
+		PPCDebug->ForceBreak(true);
+}
+#else  // SUPERMODEL_DEBUGGER
+void ppc_break()
+{	
+	//
+}
 #endif // SUPERMODEL_DEBUGGER
 
 void ppc_set_pc(UINT32 pc)
@@ -1148,7 +1159,7 @@ void ppc_set_fpr(unsigned num, double val)
 
 void ppc_write_spr(unsigned spr, UINT32 val)
 {
-	// TODO
+	ppc_set_spr(spr, val);
 }
 
 void ppc_write_sr(unsigned num, UINT32 val)

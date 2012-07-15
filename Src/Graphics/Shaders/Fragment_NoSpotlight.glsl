@@ -36,6 +36,7 @@ uniform sampler2D	textureMap;		// complete texture map, 2048x2048 texels
 uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
 uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
 uniform vec3	spotColor;			// spotlight RGB color
+uniform float		mapSize;		// texture map size (2048,4096,6144 etc)
 
 // Inputs from vertex shader 
 varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
@@ -85,12 +86,12 @@ vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEna
 	glTexCoord = (	mirror*(texSize-clampedCoord) +
 					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
 					texOffset
-				 ) / 2048.0;
+				 ) / mapSize;
 /*
 	glTexCoord = (	mirror*(texSize-vec4(1.0,1.0,1.0,1.0)-clampedCoord) +
 					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
 					texOffset
-				 ) / 2048.0;
+				 ) / mapSize;
 */
 	return glTexCoord;
 }

@@ -104,6 +104,7 @@
 #include "OSD/Thread.h"
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
+#include "OSD/Outputs.h"
 
 
 /******************************************************************************

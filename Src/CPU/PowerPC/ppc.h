@@ -373,6 +373,7 @@ extern UINT32 ppc_read_sr(unsigned num);
 extern void ppc_attach_debugger(class Debugger::CPPCDebug *PPCDebugPtr);
 extern void ppc_detach_debugger();
 #endif  // SUPERMODEL_DEBUGGER
+extern void ppc_break();
 extern void ppc_set_pc(UINT32 pc);
 extern UINT8 ppc_get_cr(unsigned num);
 extern void ppc_set_cr(unsigned num, UINT8 val);

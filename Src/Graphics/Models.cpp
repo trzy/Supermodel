@@ -73,7 +73,8 @@
 #define VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP		21	// texture parameters: U wrap mode: ==1 mirrored repeat, ==0 normal repeat
 #define VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP		22	// "" V wrap mode ""
 #define VBO_VERTEX_OFFSET_TEXFORMAT				23	// texture format 0-7 (also ==0 indicates contour texture - see also texParams.trans)
-#define VBO_VERTEX_SIZE							24	// total size (may include padding for alignment)
+#define VBO_VERTEX_OFFSET_TEXMAP                24  // texture map number
+#define VBO_VERTEX_SIZE							25	// total size (may include padding for alignment)
 
 
 /******************************************************************************
@@ -156,13 +157,14 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 	glNormalPointer(GL_FLOAT, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_NX*sizeof(GLfloat))); 
 	glTexCoordPointer(2, GL_FLOAT, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_U*sizeof(GLfloat)));
 	glColorPointer(3, GL_FLOAT, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_R*sizeof(GLfloat)));
-	glVertexAttribPointer(subTextureLoc, 4, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXTURE_X*sizeof(GLfloat)));
-	glVertexAttribPointer(texParamsLoc, 4, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXPARAMS_EN*sizeof(GLfloat)));
-	glVertexAttribPointer(texFormatLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXFORMAT*sizeof(GLfloat)));
-	glVertexAttribPointer(transLevelLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TRANSLUCENCE*sizeof(GLfloat)));
-	glVertexAttribPointer(lightEnableLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_LIGHTENABLE*sizeof(GLfloat)));
-	glVertexAttribPointer(shininessLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_SHININESS*sizeof(GLfloat)));
-	glVertexAttribPointer(fogIntensityLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_FOGINTENSITY*sizeof(GLfloat)));
+	if (subTextureLoc != -1)   glVertexAttribPointer(subTextureLoc, 4, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXTURE_X*sizeof(GLfloat)));
+	if (texParamsLoc != -1)    glVertexAttribPointer(texParamsLoc, 4, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXPARAMS_EN*sizeof(GLfloat)));
+	if (texFormatLoc != -1)    glVertexAttribPointer(texFormatLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXFORMAT*sizeof(GLfloat)));
+	if (texMapLoc != -1)       glVertexAttribPointer(texMapLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TEXMAP*sizeof(GLfloat)));
+	if (transLevelLoc != -1)   glVertexAttribPointer(transLevelLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TRANSLUCENCE*sizeof(GLfloat)));
+	if (lightEnableLoc != -1)  glVertexAttribPointer(lightEnableLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_LIGHTENABLE*sizeof(GLfloat)));
+	if (shininessLoc != -1)    glVertexAttribPointer(shininessLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_SHININESS*sizeof(GLfloat)));
+	if (fogIntensityLoc != -1) glVertexAttribPointer(fogIntensityLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_FOGINTENSITY*sizeof(GLfloat)));
 	
 	// Set up state
 	if (state == POLY_STATE_ALPHA)
@@ -185,14 +187,14 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 			{
 				if (!D->next->isViewport)
 				{
-					glUniform3fv(lightingLoc, 2, D->Data.Viewport.lightingParams);
-					glUniformMatrix4fv(projectionMatrixLoc, 1, GL_FALSE, D->Data.Viewport.projectionMatrix);
+					if (lightingLoc != -1)         glUniform3fv(lightingLoc, 2, D->Data.Viewport.lightingParams);
+					if (projectionMatrixLoc != -1) glUniformMatrix4fv(projectionMatrixLoc, 1, GL_FALSE, D->Data.Viewport.projectionMatrix);
        				glFogf(GL_FOG_DENSITY, D->Data.Viewport.fogParams[3]);
        				glFogf(GL_FOG_START, D->Data.Viewport.fogParams[4]);
        				glFogfv(GL_FOG_COLOR, &(D->Data.Viewport.fogParams[0]));
-       				glUniform4fv(spotEllipseLoc, 1, D->Data.Viewport.spotEllipse);
-       				glUniform2fv(spotRangeLoc, 1, D->Data.Viewport.spotRange);
-       				glUniform3fv(spotColorLoc, 1, D->Data.Viewport.spotColor);
+       				if (spotEllipseLoc != -1)      glUniform4fv(spotEllipseLoc, 1, D->Data.Viewport.spotEllipse);
+       				if (spotRangeLoc != -1)        glUniform2fv(spotRangeLoc, 1, D->Data.Viewport.spotRange);
+       				if (spotColorLoc != -1)        glUniform3fv(spotColorLoc, 1, D->Data.Viewport.spotColor);
        				glViewport(D->Data.Viewport.x, D->Data.Viewport.y, D->Data.Viewport.width, D->Data.Viewport.height);
        			}
        		}
@@ -210,7 +212,8 @@ void CRender3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 	       			glFrontFace(D->Data.Model.frontFace);
 	       	}
        			
-			glUniformMatrix4fv(modelViewMatrixLoc, 1, GL_FALSE, D->Data.Model.modelViewMatrix);
+			if (modelViewMatrixLoc != -1)
+				glUniformMatrix4fv(modelViewMatrixLoc, 1, GL_FALSE, D->Data.Model.modelViewMatrix);
 			glDrawArrays(GL_TRIANGLES, D->Data.Model.index, D->Data.Model.numVerts);
 			
 			if (D->Data.Model.frontFace == -GL_CW)
@@ -363,6 +366,7 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	GLfloat		r, g, b;
 	GLfloat		translucence, fogIntensity, texWidth, texHeight, texBaseX, texBaseY, contourProcessing;
 	unsigned	baseIdx, texFormat, texEnable, lightEnable, modulate, colorIdx;
+	TexSheet   *texSheet;
 	int			s, texPage, shininess;
 	
 	// Texture selection
@@ -371,9 +375,10 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	texWidth 	= (GLfloat) (32<<((P->header[3]>>3)&7));
     texHeight	= (GLfloat) (32<<((P->header[3]>>0)&7));
     texPage		= (P->header[4]&0x40) ? 1024 : 0;	// treat texture page as Y coordinate
-    texBaseX 	= (GLfloat) (32*(((P->header[4]&0x1F)<<1)|((P->header[5]>>7)&1))) + texOffsetXY[0];
-	texBaseY 	= (GLfloat) (32*(P->header[5]&0x1F)+texPage) + texOffsetXY[1];
-	
+    texSheet    = fmtToTexSheet[texFormat];         // get X&Y offset of texture sheet within texture map
+	texBaseX 	= (GLfloat) (texSheet->xOffset + (((32*(((P->header[4]&0x1F)<<1)|((P->header[5]>>7)&1))) + (int)texOffsetXY[0])&2047));
+	texBaseY 	= (GLfloat) (texSheet->yOffset + (((32*(P->header[5]&0x1F)+texPage) + (int)texOffsetXY[1])&2047));
+		
 	/*
 	 * Lighting and Color Modulation:
 	 *
@@ -389,7 +394,7 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	// Material color
 	if ((P->header[1]&2) == 0)
 	{
-		colorIdx = (P->header[4]>>20)&0x7FF;
+		colorIdx = ((P->header[4]>>20)&0x7FF) - 1;
 		b = (GLfloat) (polyRAM[0x400+colorIdx]&0xFF) * (1.0f/255.0f);
 		g = (GLfloat) ((polyRAM[0x400+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
 		r = (GLfloat) ((polyRAM[0x400+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
@@ -499,6 +504,7 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP] = (P->header[2]&2) ? 1.0f : 0.0f;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP] = (P->header[2]&1) ? 1.0f : 0.0f;
 	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXFORMAT] = (float)texFormat;
+	Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TEXMAP] = (float)texSheet->mapNum;
 
 	Cache->curVertIdx[s]++;
 	Cache->vboCurOffset += VBO_VERTEX_SIZE*sizeof(GLfloat);
@@ -968,6 +974,8 @@ bool CRender3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts,
 
 void CRender3D::DestroyModelCache(ModelCache *Cache)
 {
+	glDeleteBuffers(1, &(Cache->vboID));
+
 	for (int i = 0; i < 2; i++)
 	{
 		if (Cache->verts[i] != NULL)

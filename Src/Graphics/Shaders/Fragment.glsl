@@ -1,4 +1,4 @@
- /**
+/**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
  ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
@@ -29,15 +29,17 @@
 
 // Global uniforms
 uniform sampler2D	textureMap;		// complete texture map, 2048x2048 texels
-uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-uniform vec3	spotColor;			// spotlight RGB color
-uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
+uniform vec4		spotEllipse;	// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
+uniform vec2		spotRange;		// spotlight Z range: .x=start (viewspace coordinates), .y=limit
+uniform vec3		spotColor;		// spotlight RGB color
+uniform vec3		lighting[2];	// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
+uniform float		mapSize;		// texture map size (2048,4096,6144 etc)
 
 // Inputs from vertex shader 
 varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
 varying vec4		fsTexParams;	// .x=texture enable (if 1, else 0), .y=use transparency (if > 0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
 varying float		fsTexFormat;	// T1RGB5 contour texture (if > 0)
+varying float		fsTexMap;		// texture map number
 varying float		fsTransLevel;	// translucence level, 0.0 (transparent) to 1.0 (opaque)
 varying vec3		fsLightIntensity;	// lighting intensity 
 varying float		fsSpecularTerm;	// specular highlight
@@ -83,7 +85,7 @@ vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEna
 	glTexCoord = (	mirror*(texSize-clampedCoord) +
 					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
 					texOffset
-				 ) / 2048.0;
+				 ) / mapSize;
 	return glTexCoord;
 }
 
@@ -167,7 +169,7 @@ void main(void)
 		}
 		
 		// If contour texture and not discarded, force alpha to 1.0 because will later be modified by polygon translucency
-		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture map
+		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture
 			fragColor.a = 1.0;
 	}
 

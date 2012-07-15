@@ -184,6 +184,19 @@
  Texture Management 
 ******************************************************************************/
 
+// Default mapping from Model3 texture format to texture sheet.
+// Currently this is just a simple 1-to-1 mapping but if/when more formats get added, sheets will start to get reused.
+int CRender3D::defaultFmtToTexSheetNum[] = {
+		0, // Fmt 0  -> 0
+		1, //     1  -> 1
+		2, //     2  -> 2
+		3, //     3  -> 3
+		4, //     4  -> 4
+		5, //     5  -> 5
+		6, //     6  -> 6
+		7  //     7  -> 7
+	};
+
 void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 {
 	int		xi, yi, i;
@@ -201,12 +214,11 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 		return;
 	}
 	
-	// Map Model3 format to texture unit and texture unit to texture sheet number
-	unsigned texUnit = fmtToTexUnit[format];
-	unsigned texNum = texUnit % numTexIDs; // there may be less texture sheets than texture units (due to lack of video memory)
+	// Map Model3 format to texture sheet
+	TexSheet *texSheet = fmtToTexSheet[format];
 	
-	// Check to see if ALL texture tiles have been properly decoded on current texture sheet
-	if ((textureFormat[texNum][y/32][x/32]==format) && (textureWidth[texNum][y/32][x/32]>=width) && (textureHeight[texNum][y/32][x/32]>=height))
+	// Check to see if ALL texture tiles have been properly decoded on texture sheet
+	if ((texSheet->texFormat[y/32][x/32] == format) && (texSheet->texWidth[y/32][x/32] >= width) && (texSheet->texHeight[y/32][x/32] >= height))
 		return;
 
 	//printf("Decoding texture format %u: %u x %u @ (%u, %u) sheet %u\n", format, width, height, x, y, texNum);
@@ -385,22 +397,22 @@ void CRender3D::DecodeTexture(int format, int x, int y, int width, int height)
 		break;
 	}
 		
-	// Upload the texture
+	// Upload texture to correct position within texture map
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glActiveTexture(GL_TEXTURE0 + texUnit);	// activate correct texture unit
-	glBindTexture(GL_TEXTURE_2D, texIDs[texNum]); // bind correct texture sheet
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_FLOAT, textureBuffer);
+	glActiveTexture(GL_TEXTURE0 + texSheet->mapNum);           // activate correct texture unit
+	glBindTexture(GL_TEXTURE_2D, texMapIDs[texSheet->mapNum]); // bind correct texture map
+	glTexSubImage2D(GL_TEXTURE_2D, 0, texSheet->xOffset + x, texSheet->yOffset + y, width, height, GL_RGBA, GL_FLOAT, textureBuffer);
 	
-	// Mark as decoded
-	textureFormat[texNum][y/32][x/32] = format;
-	textureWidth[texNum][y/32][x/32] = width;
-	textureHeight[texNum][y/32][x/32] = height;
+	// Mark texture as decoded
+	texSheet->texFormat[y/32][x/32] = format;
+	texSheet->texWidth[y/32][x/32] = width;
+	texSheet->texHeight[y/32][x/32] = height;
 }
 
 // Signals that new textures have been uploaded. Flushes model caches. Be careful not to exceed bounds!
 void CRender3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned height)
 {
-	unsigned	texNum, xi, yi;
+	unsigned	texSheet, xi, yi;
 	
 	// Make everything red
 #ifdef DEBUG
@@ -414,15 +426,15 @@ void CRender3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned 
 #endif
 
 	// Update all texture sheets
-	for (texNum = 0; texNum < numTexIDs; texNum++)
+	for (texSheet = 0; texSheet < numTexSheets; texSheet++)
 	{
 		for (xi = x/32; xi < (x+width)/32; xi++)
 		{
 			for (yi = y/32; yi < (y+height)/32; yi++)
 			{
-				textureFormat[texNum][yi][xi] = -1;
-				textureWidth[texNum][yi][xi] = -1;
-				textureHeight[texNum][yi][xi] = -1;
+				texSheets[texSheet].texFormat[yi][xi] = -1;
+				texSheets[texSheet].texWidth[yi][xi] = -1;
+				texSheets[texSheet].texHeight[yi][xi] = -1;
 			}
 		}
 	}
@@ -566,6 +578,39 @@ void CRender3D::InitMatrixStack(UINT32 matrixBaseAddr)
  Complete scene database traversal and rendering.
 ******************************************************************************/
 
+static bool IsDynamicModel(const UINT32 *data, UINT32 modelAddr)
+{
+	if (data == NULL)
+		return false;
+
+	// Models in polygon RAM are always dynamic
+	if (modelAddr < 0x100000)
+		return true;
+	
+	// VROM models are only dynamic if they reference polygon RAM via color palette indices
+	bool done;
+	do
+	{
+		// Check if polygon has color palette reference, if so polygon is dynamic and can return here
+		if ((data[1]&2) == 0)
+			return true;
+		if (data[6] == 0)
+			break;
+		// Get number of vertices
+		unsigned numVerts = (data[0]&0x40 ? 4 : 3);
+		// Deduct number of reused verts
+		if (data[0]&1) numVerts--;
+		if (data[0]&2) numVerts--;
+		if (data[0]&4) numVerts--;
+		if (data[0]&8) numVerts--;
+		done = data[1]&4;
+		// Skip header and vertices to next polygon
+		data += 7 + numVerts * 4;
+	}
+	while (!done);
+	return false;
+}
+
 /*
  * DrawModel():
  *
@@ -591,7 +636,7 @@ bool CRender3D::DrawModel(UINT32 modelAddr)
 	model = TranslateModelAddress(modelAddr);
 	
 	// Determine whether model is in polygon RAM or VROM
-	if (modelAddr < 0x100000)
+	if (IsDynamicModel(model, modelAddr))
 		Cache = &PolyCache;
 	else
 		Cache = &VROMCache;
@@ -974,13 +1019,11 @@ void CRender3D::RenderFrame(void)
 	
 	// Bind Real3D shader program and texture maps
 	glUseProgram(shaderProgram);
-	for (unsigned fmt = 0; fmt < 8; fmt++)
+	for (unsigned mapNum = 0; mapNum < numTexMaps; mapNum++)
 	{
 		// Map Model3 format to texture unit and texture unit to texture sheet number
-		unsigned texUnit = fmtToTexUnit[fmt];
-		unsigned texNum = texUnit % numTexIDs; // there may be less texture sheets than texture units (due to lack of video memory)
-		glActiveTexture(GL_TEXTURE0 + texUnit);	// activate correct texture unit
-		glBindTexture(GL_TEXTURE_2D, texIDs[texNum]); // bind correct texture sheet
+		glActiveTexture(GL_TEXTURE0 + mapNum);	         // activate correct texture unit
+		glBindTexture(GL_TEXTURE_2D, texMapIDs[mapNum]); // bind correct texture sheet
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// fragment shader performs its own interpolation
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	}
@@ -990,13 +1033,14 @@ void CRender3D::RenderFrame(void)
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableVertexAttribArray(subTextureLoc);
-	glEnableVertexAttribArray(texParamsLoc);
-	glEnableVertexAttribArray(texFormatLoc);
-	glEnableVertexAttribArray(transLevelLoc);
-	glEnableVertexAttribArray(lightEnableLoc);
-	glEnableVertexAttribArray(shininessLoc);
-	glEnableVertexAttribArray(fogIntensityLoc);
+	if (subTextureLoc != -1)   glEnableVertexAttribArray(subTextureLoc);
+	if (texParamsLoc != -1)    glEnableVertexAttribArray(texParamsLoc);
+	if (texFormatLoc != -1)    glEnableVertexAttribArray(texFormatLoc);
+	if (texMapLoc != -1)       glEnableVertexAttribArray(texMapLoc);
+	if (transLevelLoc != -1)   glEnableVertexAttribArray(transLevelLoc);
+	if (lightEnableLoc != -1)  glEnableVertexAttribArray(lightEnableLoc);
+	if (shininessLoc != -1)    glEnableVertexAttribArray(shininessLoc);
+	if (fogIntensityLoc != -1) glEnableVertexAttribArray(fogIntensityLoc);
 	
 	// Draw
 	//ClearModelCache(&VROMCache);	// debug
@@ -1016,13 +1060,14 @@ void CRender3D::RenderFrame(void)
 	glFrontFace(GL_CW);	// restore front face
 	
 	// Disable VBO client states
-	glDisableVertexAttribArray(fogIntensityLoc);
-	glDisableVertexAttribArray(shininessLoc);
-	glDisableVertexAttribArray(lightEnableLoc);
-	glDisableVertexAttribArray(transLevelLoc);
-	glDisableVertexAttribArray(texFormatLoc);
-	glDisableVertexAttribArray(texParamsLoc);
-	glDisableVertexAttribArray(subTextureLoc);
+	if (fogIntensityLoc != -1)  glDisableVertexAttribArray(fogIntensityLoc);
+	if (shininessLoc != -1)     glDisableVertexAttribArray(shininessLoc);
+	if (lightEnableLoc != -1)   glDisableVertexAttribArray(lightEnableLoc);
+	if (transLevelLoc != -1)    glDisableVertexAttribArray(transLevelLoc);
+	if (texMapLoc != -1)        glDisableVertexAttribArray(texMapLoc);
+	if (texFormatLoc != -1)     glDisableVertexAttribArray(texFormatLoc);
+	if (texParamsLoc != -1)     glDisableVertexAttribArray(texParamsLoc);
+	if (subTextureLoc != -1)    glDisableVertexAttribArray(subTextureLoc);
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
@@ -1088,7 +1133,7 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	// Create model caches and VBOs
 	if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false))
 		return FAIL;
-	if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x400000/4, NUM_DISPLAY_LIST_ITEMS, true))
+	if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, true))
 		return FAIL;
 
 	// Initialize lighting parameters (updated as viewports are traversed)
@@ -1107,95 +1152,149 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     totalXRes = totalXResParam;
     totalYRes = totalYResParam;
 
-	// Query max number of texture units supported by video card to use as upper limit
+	// Get ideal number of texture sheets required by default mapping from Model3 texture format to texture sheet
+	unsigned idealTexSheets = 0;
+	for (unsigned fmt = 0; fmt < 8; fmt++)
+	{
+		int sheetNum = defaultFmtToTexSheetNum[fmt];
+		idealTexSheets = max<int>(idealTexSheets, sheetNum + 1);
+	}	
+
+	// Get upper limit for number of texture maps to use from max number of texture units supported by video card
 	GLint glMaxTexUnits;
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glMaxTexUnits);
-	unsigned maxTexUnits = max<int>(1, min<int>(g_Config.maxTexUnits, glMaxTexUnits));
+	unsigned maxTexMaps = max<int>(1, min<int>(g_Config.maxTexMaps, glMaxTexUnits));
 	
-	// Load shaders. Use multi-sheet shader if requested and possible.
+	// Get upper limit for extent of texture maps to use from max texture size supported by video card
+	GLint maxTexSize;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+	unsigned mapExtent = max<int>(1, min<unsigned>(g_Config.maxTexMapExtent, maxTexSize / 2048));
+	unsigned mapSize = 2048 * mapExtent;
+	while (mapExtent > 1)
+	{
+		if ((mapExtent - 1) * (mapExtent - 1) < idealTexSheets)
+		{
+			// Use a GL proxy texture to double check max texture size returned above
+			glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGBA8, mapSize, mapSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, NULL);
+			GLint glTexWidth;
+			glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &glTexWidth);
+			if (glTexWidth == mapSize)
+				break;
+		}
+		mapExtent--;
+		mapSize -= 2048;
+	}
+
+	// Load shaders, using multi-sheet shader if requested.
 	const char *vsFile = g_Config.vertexShaderFile.size() ? g_Config.vertexShaderFile.c_str() : NULL;
 	const char *fsFile = g_Config.fragmentShaderFile.size() ? g_Config.fragmentShaderFile.c_str() : NULL;
-	const char *fragmentShaderSource = fragmentShaderSingleSheetSource;	// single texture shader
-	if (g_Config.multiTexture)
-	{ 
-		if (maxTexUnits >= 8)	// can we use the multi-sheet shader?
-			fragmentShaderSource = fragmentShaderMultiSheetSource;
-		else
-			ErrorLog("Your system has too few texture units. Reverting to single texture shader.");
-	}
+	const char *fragmentShaderSource = (g_Config.multiTexture ? fragmentShaderMultiSheetSource : fragmentShaderSingleSheetSource); // single texture shader
 	if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,vsFile,fsFile,vertexShaderSource,fragmentShaderSource))
 		return FAIL;
 	
 	// Try locating default "textureMap" uniform in shader program
 	glUseProgram(shaderProgram); // bind program
 	textureMapLoc = glGetUniformLocation(shaderProgram, "textureMap");
-	unsigned unitCount = 0;
+	
+	// If exists, bind to first texture unit
+	unsigned mapCount = 0;
 	if (textureMapLoc != -1)
-	{
-		// If exists, then bind to first texture unit
-		unsigned texUnit = unitCount % maxTexUnits;
-		glUniform1i(textureMapLoc, texUnit++);
-		unitCount++;
-	}
+		glUniform1i(textureMapLoc, mapCount++);
 	
 	// Try locating "textureMap[0-7]" uniforms in shader program
-	for (unsigned fmt = 0; fmt < 8; fmt++)
+	for (unsigned mapNum = 0; mapNum < 8 && mapCount < maxTexMaps; mapNum++)
 	{
 		char uniformName[12];
-		sprintf(uniformName, "textureMap%u", fmt);
-		textureMapLocs[fmt] = glGetUniformLocation(shaderProgram, uniformName);	
-		if (textureMapLocs[fmt] != -1)
-		{
-			// If exists, then bind to next texture unit
-			unsigned texUnit = unitCount % maxTexUnits;
-			glUniform1i(textureMapLocs[fmt], texUnit);
-			fmtToTexUnit[fmt] = texUnit;
-			unitCount++;
-		}
-		else
-		{
-			// Otherwise bind to first texture unit by default
-			fmtToTexUnit[fmt] = 0;
-		}
+		sprintf(uniformName, "textureMap%u", mapNum);
+		textureMapLocs[mapNum] = glGetUniformLocation(shaderProgram, uniformName);	
+		// If exist, bind to remaining texture units
+		if (textureMapLocs[mapNum] != -1)
+			glUniform1i(textureMapLocs[mapNum], mapCount++);
 	}
-	numTexUnits = min<int>(unitCount, maxTexUnits);
-
-	// Check located at least one uniform to bind to a texture unit
-	if (numTexUnits == 0)
+	
+	// Check sucessully located at least one "textureMap" uniform in shader program
+	if (mapCount == 0)
 		return ErrorLog("Fragment shader must contain at least one 'textureMap' uniform.");
-	InfoLog("Located and bound %u uniform(s) in GL shader script to %u texture unit(s).", numTexUnits, unitCount);
+	InfoLog("Located and bound %u 'textureMap' uniform(s) in fragment shader.", mapCount);
 
-	// Now try creating texture sheets, one for each texture unit (memory permitting)
-	numTexIDs = numTexUnits;
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glGenTextures(numTexIDs, texIDs);
-	for (unsigned texNum = 0; texNum < numTexIDs; texNum++)
+	// Readjust map extent so as to utilise as many texture maps found in shader program as possible
+	while (mapExtent > 1 && mapCount * (mapExtent - 1) * (mapExtent - 1) >= idealTexSheets)
 	{
-		glActiveTexture(GL_TEXTURE0 + texNum); // activate correct texture unit
-		glBindTexture(GL_TEXTURE_2D, texIDs[texNum]); // bind correct texture sheet
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// fragment shader performs its own interpolation
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2048, 2048, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, 0);
-		if (glGetError() != GL_NO_ERROR)
+		mapExtent--;
+		mapSize -= 2048;
+	}
+	
+	// Create required number of GL textures for texture maps, decreasing map extent if memory is insufficent
+	unsigned sheetsPerMap = mapExtent * mapExtent;
+	while (true)
+	{
+		numTexMaps = min<unsigned>(mapCount, 1 + (idealTexSheets - 1) / sheetsPerMap);
+
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glGenTextures(numTexMaps, texMapIDs);
+		bool okay = true;
+		for (unsigned mapNum = 0; mapNum < numTexMaps; mapNum++)
 		{
-			// Probably ran out of video memory, so don't try creating any more texture sheets
-			numTexIDs = texNum;
-			glGetError(); // clear error flag
-			break;
+			glActiveTexture(GL_TEXTURE0 + mapNum); // activate correct texture unit
+			glBindTexture(GL_TEXTURE_2D, texMapIDs[mapNum]); // bind correct texture sheet
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);	// fragment shader performs its own interpolation
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mapSize, mapSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, 0);
+			if (glGetError() != GL_NO_ERROR)
+			{
+				// Ran out of video memory or texture size is too large
+				numTexMaps = mapNum;
+				okay = false;
+				break;
+			}
 		}
+		if (okay || mapExtent == 1)
+			break;
+
+		// Delete textures, decrease extent and try again
+		glDeleteTextures(numTexMaps, texMapIDs);		
+		mapExtent--;
+		mapSize -= 2048;
+		sheetsPerMap = mapExtent * mapExtent;
+	}
+	
+	// Check successfully created at least one texture map
+	if (numTexMaps == 0)
+		return ErrorLog("OpenGL was unable to provide any 2048x2048-texel texture maps.");
+	InfoLog("Created %u %ux%u-texel GL texture map(s).", numTexMaps, mapSize, mapSize);
+
+	// Create texture sheet objects and assign them to texture maps
+	numTexSheets = min<unsigned>(numTexMaps * sheetsPerMap, idealTexSheets);
+	texSheets = new(std::nothrow) TexSheet[numTexSheets];
+	if (texSheets == NULL)
+		return ErrorLog("Unable to assign memory for %u texture sheet objects.", numTexSheets);
+	for (unsigned sheetNum = 0; sheetNum < numTexSheets; sheetNum++)
+	{
+		unsigned mapNum = sheetNum / sheetsPerMap;
+		unsigned posInMap = sheetNum % sheetsPerMap;
+		texSheets[sheetNum].sheetNum = sheetNum;
+		texSheets[sheetNum].mapNum = mapNum;
+		texSheets[sheetNum].xOffset = 2048 * (posInMap % mapExtent);
+		texSheets[sheetNum].yOffset = 2048 * (posInMap / mapExtent);
 	}
 
-	// Check created at least one texture sheet
-	if (numTexIDs == 0)
-		return ErrorLog("OpenGL was unable to provide any 2048x2048-texel texture maps.");
-	InfoLog("Created %u 2048x2048-texel GL texture map(s)", numTexIDs);
+	// Assign Model3 texture formats to texture sheets (cannot just use default mapping as may have ended up with fewer
+	// texture sheets than anticipated)
+	for (unsigned fmt = 0; fmt < 8; fmt++)
+	{
+		int sheetNum = defaultFmtToTexSheetNum[fmt] % numTexSheets; 
+		fmtToTexSheet[fmt] = &texSheets[sheetNum];
+	}
+
+	InfoLog("Mapped %u Model3 texture formats to %u texture sheet(s) in %u %ux%u-texel texture map(s).", 8, numTexSheets, numTexMaps, mapSize, mapSize);
 
 	// Get location of the rest of the uniforms
 	modelViewMatrixLoc = glGetUniformLocation(shaderProgram,"modelViewMatrix");
 	projectionMatrixLoc = glGetUniformLocation(shaderProgram,"projectionMatrix");
 	lightingLoc = glGetUniformLocation(shaderProgram, "lighting");
+	mapSizeLoc = glGetUniformLocation(shaderProgram, "mapSize");
 	spotEllipseLoc = glGetUniformLocation(shaderProgram, "spotEllipse");
 	spotRangeLoc = glGetUniformLocation(shaderProgram, "spotRange");
 	spotColorLoc = glGetUniformLocation(shaderProgram, "spotColor");
@@ -1204,11 +1303,16 @@ bool CRender3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	subTextureLoc = glGetAttribLocation(shaderProgram,"subTexture");
 	texParamsLoc = glGetAttribLocation(shaderProgram,"texParams");
 	texFormatLoc = glGetAttribLocation(shaderProgram,"texFormat");
+	texMapLoc = glGetAttribLocation(shaderProgram,"texMap");
 	transLevelLoc = glGetAttribLocation(shaderProgram,"transLevel");
 	lightEnableLoc = glGetAttribLocation(shaderProgram,"lightEnable");
 	shininessLoc = glGetAttribLocation(shaderProgram,"shininess");
 	fogIntensityLoc = glGetAttribLocation(shaderProgram,"fogIntensity");
 	
+	// Set map size
+	if (mapSizeLoc != -1)
+		glUniform1f(mapSizeLoc, (GLfloat)mapSize);
+
 	// Additional OpenGL stuff
 	glFrontFace(GL_CW);		// polygons are uploaded w/ clockwise winding
 	glCullFace(GL_BACK);
@@ -1233,6 +1337,7 @@ CRender3D::CRender3D(void)
 	vrom = NULL;
 	textureRAM = NULL;
 	textureBuffer = NULL;
+	texSheets = NULL;
 	
 	// Clear model cache pointers so we can safely destroy them if init fails
 	for (int i = 0; i < 2; i++)
@@ -1259,7 +1364,7 @@ CRender3D::~CRender3D(void)
 	DestroyShaderProgram(shaderProgram,vertexShader,fragmentShader);
 	if (glBindBuffer != NULL)	// we may have failed earlier due to lack of OpenGL 2.0 functions	
 		glBindBuffer(GL_ARRAY_BUFFER, 0);	// disable VBOs by binding to 0
-	glDeleteTextures(numTexIDs, texIDs);
+	glDeleteTextures(numTexMaps, texMapIDs);
 	
 	DestroyModelCache(&VROMCache);
 	DestroyModelCache(&PolyCache);
@@ -1270,6 +1375,9 @@ CRender3D::~CRender3D(void)
 	vrom = NULL;
 	textureRAM = NULL;
 	
+	if (texSheets != NULL)
+		delete [] texSheets;
+
 	if (textureBuffer != NULL)
 		delete [] textureBuffer;
 	textureBuffer = NULL;

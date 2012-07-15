@@ -87,7 +87,7 @@ SDL_INCLUDEPATH = Libraries\SDL-1.2.14\include
 # ZLib
 #
 ZLIB_LIBPATH = Libraries\zlib-1.2.4\lib-$(ARCH)-MT
-ZLIB_INCLUDEPATH = Libraries\zlib-1.2.4\include
+ZLIB_INCLUDEPATH = Libraries\zlib-1.2.4
 
 #
 # DirectX
@@ -124,7 +124,7 @@ CPPFLAGS = $(COMPILER_FLAGS) /TP /EHsc
 LFLAGS = /MACHINE:$(ARCH) $(ARCH_LIBS) /LIBPATH:"$(SDL_LIBPATH)" /LIBPATH:"$(ZLIB_LIBPATH)" /LIBPATH:"$(DIRECTX_LIBPATH)" /OUT:"$(OUTFILE)" \
 	/MANIFEST:NO /SUBSYSTEM:CONSOLE /NOLOGO /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /LTCG /DEBUG
 OBJ_LIBS = kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib \
-	odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib
+	odbc32.lib odbccp32.lib OpenGL32.lib GLu32.lib SDL.lib SDLmain.lib zlib.lib dinput8.lib dxguid.lib WbemUuid.lib 
 
 #
 # Build options...
@@ -153,6 +153,7 @@ OBJ = $(OBJ_DIR)/PPCDisasm.obj $(OBJ_DIR)/Games.obj $(OBJ_DIR)/Config.obj $(OBJ_
 	$(OBJ_DIR)/IRQ.obj $(OBJ_DIR)/53C810.obj $(OBJ_DIR)/PCI.obj $(OBJ_DIR)/RTC72421.obj $(OBJ_DIR)/DriveBoard.obj \
 	$(OBJ_DIR)/MPC10x.obj $(OBJ_DIR)/Input.obj $(OBJ_DIR)/Inputs.obj $(OBJ_DIR)/InputSource.obj $(OBJ_DIR)/InputSystem.obj \
 	$(OBJ_DIR)/InputTypes.obj $(OBJ_DIR)/MultiInputSource.obj $(OBJ_DIR)/SDLInputSystem.obj $(OBJ_DIR)/DirectInputSystem.obj \
+	$(OBJ_DIR)/Outputs.obj $(OBJ_DIR)/WinOutputs.obj \
 	$(OBJ_DIR)/amp_audio.obj $(OBJ_DIR)/amp_dump.obj $(OBJ_DIR)/amp_getbits.obj $(OBJ_DIR)/amp_getdata.obj $(OBJ_DIR)/amp_huffman.obj \
 	$(OBJ_DIR)/amp_layer2.obj $(OBJ_DIR)/amp_layer3.obj $(OBJ_DIR)/amp_misc2.obj $(OBJ_DIR)/amp_position.obj $(OBJ_DIR)/amp_transform.obj \
 	$(OBJ_DIR)/amp_util.obj
@@ -263,6 +264,9 @@ $(OBJ_DIR)/%.obj:	Src/CPU/Z80/%.cpp Src/CPU/Z80/%.h $(HEADERS)
 $(OBJ_DIR)/%.obj:	Src/Inputs/%.cpp Src/Inputs/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 			
+$(OBJ_DIR)/%.obj:	Src/OSD/%.cpp Src/OSD/%.h $(HEADERS)
+	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
+	
 $(OBJ_DIR)/%.obj:	Src/OSD/SDL/%.cpp Src/OSD/SDL/%.h $(HEADERS)
 	$(CC) $< $(CPPFLAGS) /Fo$(OBJ_DIR)/$(*F).obj
 	

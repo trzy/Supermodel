@@ -357,5 +357,7 @@ int ppc_execute(int cycles)
 	ppc.total_cycles += executed;
 	ppc.cur_cycles = 0;
 	ppc.icount = 0;
+	ppc.tb_base_icount = 0;
+    ppc.dec_base_icount = 0;
 	return executed;
 }

@@ -320,6 +320,17 @@ bool CINIFile::Get(string SectionName, string SettingName, unsigned& value)
 	return OKAY;
 }
 
+bool CINIFile::Get(string SectionName, string SettingName, bool& value)
+{
+	int intVal;
+	if (Get(SectionName, SettingName, intVal) == FAIL)
+		return FAIL;
+
+	value = (bool)intVal;
+
+	return OKAY;
+}
+
 // Obtains a string setting, if it exists, otherwise does nothing.
 bool CINIFile::Get(string SectionName, string SettingName, string& String)
 {
