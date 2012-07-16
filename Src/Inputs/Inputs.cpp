@@ -585,7 +585,7 @@ void CInputs::CalibrateJoystick(int joyNum)
 		if (!joyDetails->hasAxis[axisNum])
 			continue;
 		axisNumList.push_back(axisNum);
-		printf(" %u: %s\n", axisNumList.size(), joyDetails->axisName[axisNum]);
+		printf(" %u: %s\n", (unsigned) axisNumList.size(), joyDetails->axisName[axisNum]);
 	}
 	printf(" 0: Unsure - help me choose...\n");
 	

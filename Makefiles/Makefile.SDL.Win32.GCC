@@ -219,6 +219,9 @@ $(OBJ_DIR)/%.o:	Src/CPU/Z80/%.cpp
 $(OBJ_DIR)/%.o:	Src/Inputs/%.cpp
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 			
+$(OBJ_DIR)/%.o:	Src/OSD/%.cpp
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
 $(OBJ_DIR)/%.o:	Src/OSD/SDL/%.cpp
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 

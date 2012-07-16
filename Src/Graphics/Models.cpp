@@ -394,7 +394,7 @@ void CRender3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 	// Material color
 	if ((P->header[1]&2) == 0)
 	{
-		colorIdx = ((P->header[4]>>20)&0x7FF) - 1;
+		colorIdx = ((P->header[4]>>20)&0x7FF) - 0;
 		b = (GLfloat) (polyRAM[0x400+colorIdx]&0xFF) * (1.0f/255.0f);
 		g = (GLfloat) ((polyRAM[0x400+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
 		r = (GLfloat) ((polyRAM[0x400+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
