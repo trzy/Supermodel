@@ -361,7 +361,7 @@ private:
 	void    RunDriveBoardFrame(void);                  // Runs drive board for a frame
 
 	bool    StartThreads(void);                        // Starts all threads
-	void    StopThreads(void);                         // Stops all threads
+	bool    StopThreads(void);                         // Stops all threads
 	void    DeleteThreadObjects(void);                 // Deletes all threads and synchronization objects
 
 	static int StartMainBoardThread(void *data);       // Callback to start PPC main board thread
@@ -371,11 +371,11 @@ private:
 
 	static void AudioCallback(void *data);             // Audio buffer callback
 	
-	void    WakeSoundBoardThread(void);	               // Used by audio callback to wake sound board thread when not sync'd with PPC thread
-	void    RunMainBoardThread(void);                  // Runs PPC main board thread (sync'd in step with render thread)
-	void    RunSoundBoardThread(void);                 // Runs sound board thread (unsync'd with render thread, ie at full speed)
-	void    RunSoundBoardThreadSyncd(void);            // Runs sound board thread (sync'd in step with render thread)
-	void    RunDriveBoardThread(void);                 // Runs drive board thread (sync'd in step with render thread)
+	bool    WakeSoundBoardThread(void);	               // Used by audio callback to wake sound board thread (when not sync'd with render thread)
+	int     RunMainBoardThread(void);                  // Runs PPC main board thread (sync'd in step with render thread)
+	int     RunSoundBoardThread(void);                 // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
+	int     RunSoundBoardThreadSyncd(void);            // Runs sound board thread (sync'd in step with render thread)
+	int     RunDriveBoardThread(void);                 // Runs drive board thread (sync'd in step with render thread)
 	
 	// Game and hardware information
 	const struct GameInfo	*Game;
@@ -421,7 +421,8 @@ private:
 	// Multiple threading
 	bool        gpusReady;           // True if GPUs are ready to render
 	bool        startedThreads;      // True if threads have been created and started
-	bool        pausedThreads;       // True if threads are currently paused
+	bool        pauseThreads;        // True if threads should pause
+	bool        stopThreads;         // True if threads should stop
 	bool        syncSndBrdThread;    // True if sound board thread should be sync'd in step with render thread
 	CThread     *ppcBrdThread;       // PPC main board thread
 	CThread     *sndBrdThread;       // Sound board thread
@@ -430,6 +431,7 @@ private:
 	bool        ppcBrdThreadDone;    // Flag to indicate PPC main board thread has finished processing
 	bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
 	bool        sndBrdThreadDone;    // Flag to indicate sound board thread has finished processing
+	bool        sndBrdWakeNotify;    // Flag to indicate that sound board thread has been woken by audio callback (when not sync'd with render thread)
 	bool        drvBrdThreadRunning; // Flag to indicate drive board thread is currently processing
 	bool        drvBrdThreadDone;    // Flag to indicate drive board thread has finished processing
 

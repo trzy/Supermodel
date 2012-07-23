@@ -2169,6 +2169,10 @@ bool CModel3::StartThreads(void)
 	if (notifySync == NULL)
 		goto ThreadError;
 
+	// Reset thread flags
+	pauseThreads = false;
+	stopThreads = false;
+
 	// Create PPC main board thread, if multi-threading GPU
 	if (g_Config.gpuMultiThreaded)
 	{
@@ -2216,8 +2220,8 @@ bool CModel3::PauseThreads(void)
 	if (!notifyLock->Lock())
 		goto ThreadError;
 
-	// Wait for all threads to finish their processing
-	pausedThreads = true;
+	// Let threads know that they should pause and wait for all of them to do so
+	pauseThreads = true;
 	while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
 	{
 		if (!notifySync->Wait(notifyLock))
@@ -2245,7 +2249,7 @@ bool CModel3::ResumeThreads(void)
 		goto ThreadError;
 
 	// Let all threads know that they can continue running
-	pausedThreads = false;
+	pauseThreads = false;
 
 	// Leave notify critical section
 	if (!notifyLock->Unlock())
@@ -2258,26 +2262,73 @@ ThreadError:
 	return false;
 }
 
-void CModel3::StopThreads(void)
+bool CModel3::StopThreads(void)
 {
 	if (!startedThreads)
-		return;
+		return true;
 
 	// If sound board thread is unsync'd then remove audio callback
 	if (!syncSndBrdThread)
 		SetAudioCallback(NULL, NULL);
 	
-	// Pause threads so that can safely delete thread objects
-	PauseThreads();
+	// Enter notify critical section
+	if (!notifyLock->Lock())
+		goto ThreadError;
+
+	// Let threads know that they should pause and wait for all of them to do so
+	pauseThreads = true;
+	while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
+	{
+		if (!notifySync->Wait(notifyLock))
+			goto ThreadError;
+	}
+
+	// Now let threads know that they should exit
+	stopThreads = true;
+
+	// Leave notify critical section
+	if (!notifyLock->Unlock())
+		goto ThreadError;
 	
+	// Resume each thread in turn and wait for them to exit
+	if (ppcBrdThread != NULL)
+	{
+		if (ppcBrdThreadSync->Post())
+			ppcBrdThread->Wait();
+	}
+	if (sndBrdThread != NULL)
+	{
+		if (syncSndBrdThread)
+		{
+			if (sndBrdThreadSync->Post())
+				sndBrdThread->Wait();
+		}
+		else
+		{
+			if (WakeSoundBoardThread())
+				sndBrdThread->Wait();
+		}
+	}
+	if (drvBrdThread != NULL)
+	{
+		if (drvBrdThreadSync->Post())
+			drvBrdThread->Wait();
+	}
+
+	// Delete all thread and synchronization objects
 	DeleteThreadObjects();
 	startedThreads = false;
+	return true;
+
+ThreadError:
+	ErrorLog("Threading error in CModel3::StopThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+	g_Config.multiThreaded = false;
+	return false;
 }
 
 void CModel3::DeleteThreadObjects(void)
 {
-	// Delete (which in turn kills) PPC main board, sound board and drive board threads
-	// Note that can do so here safely because threads will always be waiting on their semaphores when this method is called
+	// Delete PPC main board, sound board and drive board threads
 	if (ppcBrdThread != NULL)
 	{
 		delete ppcBrdThread;
@@ -2347,40 +2398,37 @@ int CModel3::StartMainBoardThread(void *data)
 {
 	// Call method on CModel3 to run PPC main board thread
 	CModel3 *model3 = (CModel3*)data;
-	model3->RunMainBoardThread();
-	return 0;
+	return model3->RunMainBoardThread();
 }
 
 int CModel3::StartSoundBoardThread(void *data)
 {
 	// Call method on CModel3 to run sound board thread (unsync'd)
 	CModel3 *model3 = (CModel3*)data;
-	model3->RunSoundBoardThread();
-	return 0;
+	return model3->RunSoundBoardThread();
 }
 
 int CModel3::StartSoundBoardThreadSyncd(void *data)
 {
 	// Call method on CModel3 to run sound board thread (sync'd)
 	CModel3 *model3 = (CModel3*)data;
-	model3->RunSoundBoardThreadSyncd();
-	return 0;
+	return model3->RunSoundBoardThreadSyncd();
 }
 
 int CModel3::StartDriveBoardThread(void *data)
 {
 	// Call method on CModel3 to run drive board thread
 	CModel3 *model3 = (CModel3*)data;
-	model3->RunDriveBoardThread();
-	return 0;
+	return model3->RunDriveBoardThread();
 }
 
-void CModel3::RunMainBoardThread(void)
+int CModel3::RunMainBoardThread(void)
 {
 	for (;;)
 	{
 		bool wait = true;
-		while (wait)
+		bool exit = false;
+		while (wait && !exit)
 		{
 			// Wait on PPC main board thread semaphore
 			if (!ppcBrdThreadSync->Wait())
@@ -2390,8 +2438,10 @@ void CModel3::RunMainBoardThread(void)
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			// Check threads not paused
-			if (!pausedThreads)
+			// Check threads are not being stopped or paused
+			if (stopThreads)
+				exit = true;
+			else if (!pauseThreads)
 			{
 				wait = false;
 				ppcBrdThreadRunning = true;
@@ -2401,6 +2451,8 @@ void CModel3::RunMainBoardThread(void)
 			if (!notifyLock->Unlock())
 				goto ThreadError;
 		}
+		if (exit)
+			return 0;
 
 		// Process a single frame for PPC main board
 		RunMainBoardFrame();
@@ -2423,6 +2475,7 @@ void CModel3::RunMainBoardThread(void)
 ThreadError:
 	ErrorLog("Threading error in RunMainBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
+	return 1;
 }
 
 void CModel3::AudioCallback(void *data)
@@ -2432,40 +2485,47 @@ void CModel3::AudioCallback(void *data)
 	model3->WakeSoundBoardThread();
 }
 
-void CModel3::WakeSoundBoardThread(void)
+bool CModel3::WakeSoundBoardThread(void)
 {
 	// Enter sound board notify critical section
 	if (!sndBrdNotifyLock->Lock())
 		goto ThreadError;
 
 	// Signal to sound board thread that it should start processing again
+	sndBrdWakeNotify = true;
 	if (!sndBrdNotifySync->Signal())
 		goto ThreadError;
 
 	// Exit sound board notify critical section
 	if (!sndBrdNotifyLock->Unlock())
 		goto ThreadError;
-	return;
+	return true;
 
 ThreadError:
 	ErrorLog("Threading error in WakeSoundBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
+	return false;
 }
 
-void CModel3::RunSoundBoardThread(void)
+int CModel3::RunSoundBoardThread(void)
 {
 	for (;;)
 	{
 		bool wait = true;
-		while (wait)
+		bool exit = false;
+		while (wait && !exit)
 		{
 			// Enter sound board notify critical section
 			if (!sndBrdNotifyLock->Lock())
 				goto ThreadError;
 
 			// Wait for notification from audio callback
-			if (!sndBrdNotifySync->Wait(sndBrdNotifyLock))
-				goto ThreadError;
+			while (!sndBrdWakeNotify)
+			{
+				if (!sndBrdNotifySync->Wait(sndBrdNotifyLock))
+					goto ThreadError;
+			}
+			sndBrdWakeNotify = false;
 
 			// Exit sound board notify critical section
 			if (!sndBrdNotifyLock->Unlock())
@@ -2475,8 +2535,10 @@ void CModel3::RunSoundBoardThread(void)
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			// Check threads not paused
-			if (!pausedThreads)
+			// Check threads are not being stopped or paused
+			if (stopThreads)
+				exit = true;
+			else if (!pauseThreads)
 			{
 				wait = false;
 				sndBrdThreadRunning = true;
@@ -2486,8 +2548,10 @@ void CModel3::RunSoundBoardThread(void)
 			if (!notifyLock->Unlock())
 				goto ThreadError;
 		}
+		if (exit)
+			return 0;
 
-		// Keep processing frames until paused or audio buffer is full
+		// Keep processing frames until pausing or audio buffer is full
 		while (true)
 		{
 			// Enter main notify critical section
@@ -2495,7 +2559,7 @@ void CModel3::RunSoundBoardThread(void)
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			paused = pausedThreads;
+			paused = pauseThreads;
 				
 			// Leave main notify critical section
 			if (!notifyLock->Unlock())
@@ -2524,14 +2588,16 @@ void CModel3::RunSoundBoardThread(void)
 ThreadError:
 	ErrorLog("Threading error in RunSoundBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
+	return 1;
 }
 
-void CModel3::RunSoundBoardThreadSyncd(void)
+int CModel3::RunSoundBoardThreadSyncd(void)
 {
 	for (;;)
 	{
 		bool wait = true;
-		while (wait)
+		bool exit = false;
+		while (wait && !exit)
 		{
 			// Wait on sound board thread semaphore
 			if (!sndBrdThreadSync->Wait())
@@ -2541,8 +2607,10 @@ void CModel3::RunSoundBoardThreadSyncd(void)
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			// Check threads not paused
-			if (!pausedThreads)
+			// Check threads are not being stopped or paused
+			if (stopThreads)
+				exit = true;
+			else if (!pauseThreads)
 			{
 				wait = false;
 				sndBrdThreadRunning = true;
@@ -2552,6 +2620,8 @@ void CModel3::RunSoundBoardThreadSyncd(void)
 			if (!notifyLock->Unlock())
 				goto ThreadError;
 		}
+		if (exit)
+			return 0;
 
 		// Process a single frame for sound board
 		RunSoundBoardFrame();
@@ -2574,14 +2644,16 @@ void CModel3::RunSoundBoardThreadSyncd(void)
 ThreadError:
 	ErrorLog("Threading error in RunSoundBoardThreadSyncd: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
+	return 1;
 }
 
-void CModel3::RunDriveBoardThread(void)
+int CModel3::RunDriveBoardThread(void)
 {
 	for (;;)
 	{
-		bool wait = true;
-		while (wait)
+		bool wait = true;	
+		bool exit = false;
+		while (wait && !exit)
 		{
 			// Wait on drive board thread semaphore
 			if (!drvBrdThreadSync->Wait())
@@ -2591,8 +2663,10 @@ void CModel3::RunDriveBoardThread(void)
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			// Check threads not paused
-			if (!pausedThreads)
+			// Check threads are not being stopped or paused
+			if (stopThreads)
+				exit = true;
+			else if (!pauseThreads)
 			{
 				wait = false;
 				drvBrdThreadRunning = true;
@@ -2602,6 +2676,8 @@ void CModel3::RunDriveBoardThread(void)
 			if (!notifyLock->Unlock())
 				goto ThreadError;
 		}
+		if (exit)
+			return 0;
 
 		// Process a single frame for drive board
 		RunDriveBoardFrame();
@@ -2624,6 +2700,7 @@ void CModel3::RunDriveBoardThread(void)
 ThreadError:
 	ErrorLog("Threading error in RunDriveBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
 	g_Config.multiThreaded = false;
+	return 1;
 }
 
 void CModel3::Reset(void)
@@ -3139,7 +3216,8 @@ CModel3::CModel3(void)
 	securityPtr = 0;
 	
 	startedThreads = false;
-	pausedThreads = false;
+	pauseThreads = false;
+	stopThreads = false;
 	ppcBrdThread = NULL;
 	sndBrdThread = NULL; 
 	drvBrdThread = NULL;
