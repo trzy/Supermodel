@@ -2488,6 +2488,7 @@ void CModel3::AudioCallback(void *data)
 bool CModel3::WakeSoundBoardThread(void)
 {
 	// Enter sound board notify critical section
+	bool wake;
 	if (!sndBrdNotifyLock->Lock())
 		goto ThreadError;
 
@@ -2496,7 +2497,7 @@ bool CModel3::WakeSoundBoardThread(void)
 		goto ThreadError;
 
 	// See if sound board thread is currently running
-	bool wake = !sndBrdThreadRunning;
+	wake = !sndBrdThreadRunning;
 	
 	// Leave main notify critical section
 	if (!notifyLock->Unlock())
@@ -2570,10 +2571,11 @@ int CModel3::RunSoundBoardThread(void)
 		while (true)
 		{
 			// Enter main notify critical section
+			bool paused;
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			bool paused = pauseThreads;
+			paused = pauseThreads;
 				
 			// Leave main notify critical section
 			if (!notifyLock->Unlock())
