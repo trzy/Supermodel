@@ -2491,15 +2491,30 @@ bool CModel3::WakeSoundBoardThread(void)
 	if (!sndBrdNotifyLock->Lock())
 		goto ThreadError;
 
-	// Signal to sound board thread that it should start processing again
-	sndBrdWakeNotify = true;
-	if (!sndBrdNotifySync->Signal())
+	// Enter main notify critical section
+	if (!notifyLock->Lock())
 		goto ThreadError;
 
-	// Exit sound board notify critical section
+	// See if sound board thread is currently running
+	bool wake = !sndBrdThreadRunning;
+	
+	// Leave main notify critical section
+	if (!notifyLock->Unlock())
+		goto ThreadError;
+	
+	// Only send wake notification to sound board thread if it was not running
+	if (wake)
+	{
+		// Signal to sound board thread that it should start processing again
+		sndBrdWakeNotify = true;
+		if (!sndBrdNotifySync->Signal())
+			goto ThreadError;
+	}
+
+	// Leave sound board notify critical section
 	if (!sndBrdNotifyLock->Unlock())
 		goto ThreadError;
-	return true;
+	return wake;
 
 ThreadError:
 	ErrorLog("Threading error in WakeSoundBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
@@ -2526,10 +2541,6 @@ int CModel3::RunSoundBoardThread(void)
 					goto ThreadError;
 			}
 			sndBrdWakeNotify = false;
-
-			// Exit sound board notify critical section
-			if (!sndBrdNotifyLock->Unlock())
-				goto ThreadError;
 	
 			// Enter main notify critical section
 			if (!notifyLock->Lock())
@@ -2547,6 +2558,10 @@ int CModel3::RunSoundBoardThread(void)
 			// Leave main notify critical section
 			if (!notifyLock->Unlock())
 				goto ThreadError;
+
+			// Leave sound board notify critical section
+			if (!sndBrdNotifyLock->Unlock())
+				goto ThreadError;			
 		}
 		if (exit)
 			return 0;
@@ -2555,11 +2570,10 @@ int CModel3::RunSoundBoardThread(void)
 		while (true)
 		{
 			// Enter main notify critical section
-			bool paused;
 			if (!notifyLock->Lock())
 				goto ThreadError;
 
-			paused = pauseThreads;
+			bool paused = pauseThreads;
 				
 			// Leave main notify critical section
 			if (!notifyLock->Unlock())
