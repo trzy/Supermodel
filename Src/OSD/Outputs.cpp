@@ -27,7 +27,7 @@
 
 const char *COutputs::s_outputNames[] =
 	{ 
-		"Pause",
+		"pause",
 		"LampStart", 
 		"LampView1",
 		"LampView2",
