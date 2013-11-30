@@ -122,8 +122,8 @@ void CAxisInput::Poll()
 		else
 		{ 
 			value = m_offVal;
-			if (m_posInput != NULL) value += (int)(m_posInput->ValueAsFraction() * (double)(m_offVal - m_maxVal));
-			if (m_negInput != NULL) value -= (int)(m_negInput->ValueAsFraction() * (double)(m_minVal - m_offVal));
+			if (m_posInput != NULL) value -= (int)(m_posInput->ValueAsFraction() * (double)(m_offVal - m_maxVal));
+			if (m_negInput != NULL) value += (int)(m_negInput->ValueAsFraction() * (double)(m_minVal - m_offVal));
 		}
 	}
 	else if (m_source != NULL && m_source->GetValueAsAnalog(intValue, m_minVal, m_offVal, m_maxVal))

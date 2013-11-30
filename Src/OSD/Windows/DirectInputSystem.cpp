@@ -1961,11 +1961,6 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 	}
 }
 
-void CDirectInputSystem::Wait(int ms)
-{
-	Sleep(ms);
-}
-
 bool CDirectInputSystem::ConfigMouseCentered()
 {
 	// When checking if mouse centered, use system cursor rather than raw values (otherwise user's mouse movements won't match up

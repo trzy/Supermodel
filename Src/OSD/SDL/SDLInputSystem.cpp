@@ -348,11 +348,6 @@ bool CSDLInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeed
 	return false;
 }
 
-void CSDLInputSystem::Wait(int ms)
-{
-	SDL_Delay(ms);
-}
-
 int CSDLInputSystem::GetNumKeyboards()
 {
 	// Return ANY_KEYBOARD as SDL 1.2 cannot handle multiple keyboards

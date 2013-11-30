@@ -91,13 +91,19 @@ const char* CInput::GetInputGroup()
 		case GAME_INPUT_SPIKEOUT:		 return "Spikeout Buttons";
 		case GAME_INPUT_SOCCER:          return "Virtua Striker Buttons";
 		case GAME_INPUT_VEHICLE:         return "Racing Game Steering Controls";
-		case GAME_INPUT_SHIFT4:          return "Racing Game Gear Shift";
-		case GAME_INPUT_VR:              return "Racing Game VR View Buttons";
-		case GAME_INPUT_RALLY:           return "Miscellaneous Driving Game Buttons";
+		case GAME_INPUT_SHIFT4:          return "Racing Game Gear 4-Way Shift";
+		case GAME_INPUT_SHIFTUPDOWN:     return "Racing Game Gear Up/Down Shift";
+		case GAME_INPUT_VR4:             return "Racing Game 4 VR View Buttons";
+		case GAME_INPUT_VIEWCHANGE:      return "Racing Game View Change";
+		case GAME_INPUT_HANDBRAKE:       return "Racing Game Handbrake";
+		case GAME_INPUT_HARLEY:          return "Harley Davidson Controls";
 		case GAME_INPUT_TWIN_JOYSTICKS:  return "Virtual On Controls";
 		case GAME_INPUT_ANALOG_JOYSTICK: return "Analog Joystick";
 		case GAME_INPUT_GUN1:            // Fall through to below
-		case GAME_INPUT_GUN2:            return "Lightguns";
+		case GAME_INPUT_GUN2:            return "Light Guns";
+		case GAME_INPUT_ANALOG_GUN1:     // Fall through to below
+		case GAME_INPUT_ANALOG_GUN2:     return "Analog Guns";
+		case GAME_INPUT_SKI:             return "Ski Controls";
 		default:                         return "Misc";
 	}
 }

@@ -22,12 +22,28 @@
 /*
  * Model3.h
  * 
- * Header file defining the CModel3, CModel3Config, and CModel3Inputs classes.
+ * Header file defining the CModel3 and CModel3Config classes.
  */
 
 #ifndef INCLUDED_MODEL3_H
 #define INCLUDED_MODEL3_H
 
+
+/*
+ * FrameTimings
+ *
+ * Timings within a frame, for debugging purposes
+ */
+struct FrameTimings
+{
+	UINT32 ppcTicks;
+	UINT32 syncSize;
+	UINT32 syncTicks;
+	UINT32 renderTicks;
+	UINT32 sndTicks;
+	UINT32 drvTicks;
+	UINT32 frameTicks;
+};
 
 /*
  * CModel3Config:
@@ -328,6 +344,13 @@ public:
 	void DumpTimings(void);
 
 	/*
+	 * GetTimings(void):
+	 *
+	 * Returns timings for the most recent frame, for debugging purposes.
+	 */
+	FrameTimings GetTimings(void);
+
+	/*
 	 * CModel3(void):
 	 * ~CModel3(void):
 	 *
@@ -444,6 +467,9 @@ private:
 	CMutex      *notifyLock;
 	CCondVar    *notifySync;	
 	
+	// Frame timings
+	FrameTimings timings;
+	
 	// Other devices
 	CIRQ		IRQ;		// Model 3 IRQ controller
 	CMPC10x		PCIBridge;	// MPC10x PCI/bridge/memory controller
@@ -456,15 +482,6 @@ private:
 	CSoundBoard	SoundBoard;	// Sound board
 	CDSB		*DSB;		// Digital Sound Board (type determined dynamically at load time)
 	CDriveBoard DriveBoard; // Drive board
-
-	// Frame timings
-	UINT32 ppcTicks;
-	UINT32 syncSize;
-	UINT32 syncTicks;
-	UINT32 renderTicks;
-	UINT32 sndTicks;
-	UINT32 drvTicks;
-	UINT32 frameTicks;
 };
 
 

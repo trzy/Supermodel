@@ -37,21 +37,27 @@
 ******************************************************************************/
 
 // Input flags
-#define GAME_INPUT_COMMON		0x0001	// game has common controls
-#define GAME_INPUT_VEHICLE		0x0002	// game has vehicle controls
-#define GAME_INPUT_JOYSTICK1	0x0004	// game has joystick 1 
-#define GAME_INPUT_JOYSTICK2	0x0008	// game has joystick 2
-#define GAME_INPUT_FIGHTING		0x0010	// game has fighting game controls
-#define GAME_INPUT_VR			0x0020	// game has VR view buttons
-#define GAME_INPUT_RALLY		0x0040	// game has rally car controls
-#define GAME_INPUT_GUN1			0x0080	// game has gun 1
-#define GAME_INPUT_GUN2			0x0100	// game has gun 2
-#define GAME_INPUT_SHIFT4		0x0200	// game has 4-speed shifter
-#define GAME_INPUT_ANALOG_JOYSTICK	0x0400	// game has analog joystick
-#define GAME_INPUT_TWIN_JOYSTICKS	0x0800	// game has twin joysticks
-#define GAME_INPUT_SOCCER		0x1000	// game has soccer controls
-#define GAME_INPUT_SPIKEOUT		0x2000	// game has Spikeout buttons
-#define GAME_INPUT_ALL			0x3FFF
+#define GAME_INPUT_COMMON			0x00001	// game has common controls
+#define GAME_INPUT_VEHICLE			0x00002	// game has vehicle controls
+#define GAME_INPUT_JOYSTICK1		0x00004	// game has joystick 1 
+#define GAME_INPUT_JOYSTICK2		0x00008	// game has joystick 2
+#define GAME_INPUT_FIGHTING			0x00010	// game has fighting game controls
+#define GAME_INPUT_VR4				0x00020	// game has four VR view buttons
+#define GAME_INPUT_VIEWCHANGE		0x00040 // game has single view change button
+#define GAME_INPUT_SHIFT4			0x00080	// game has 4-speed shifter
+#define GAME_INPUT_SHIFTUPDOWN      0x00100 // game has up/down shifter
+#define GAME_INPUT_HANDBRAKE		0x00200	// game has handbrake
+#define GAME_INPUT_HARLEY           0x00400 // game has Harley Davidson controls
+#define GAME_INPUT_GUN1				0x00800	// game has light gun 1
+#define GAME_INPUT_GUN2				0x01000	// game has light gun 2
+#define GAME_INPUT_ANALOG_JOYSTICK	0x02000	// game has analog joystick
+#define GAME_INPUT_TWIN_JOYSTICKS	0x04000	// game has twin joysticks
+#define GAME_INPUT_SOCCER	  		0x08000	// game has soccer controls
+#define GAME_INPUT_SPIKEOUT			0x10000	// game has Spikeout buttons
+#define GAME_INPUT_ANALOG_GUN1		0x20000	// game has analog gun 1
+#define GAME_INPUT_ANALOG_GUN2		0x40000	// game has analog gun 2
+#define GAME_INPUT_SKI				0x80000 // game has ski controls
+#define GAME_INPUT_ALL				0xFFFFF
 
 
 /******************************************************************************

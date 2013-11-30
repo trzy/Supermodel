@@ -148,12 +148,20 @@ public:
 	// VR view buttons: VR1 Red, VR2 Blue, VR3 Yellow, VR4 Green
 	CSwitchInput    *vr[4];
  
+	// Up/down gear shift
+	CSwitchInput    *gearShiftUp;
+	CSwitchInput    *gearShiftDown;
+	
 	// 4-speed gear shift
 	CGearShift4Input *gearShift4;
 
 	// Rally controls
 	CSwitchInput	*viewChange;
 	CSwitchInput	*handBrake;
+
+	// Harley Davidson controls
+	CAnalogInput    *rearBrake;
+	CSwitchInput	*musicSelect;
 
 	// Twin joysticks (individually mapped version; 1 = left stick, 2 = right stick)
 	CSwitchInput	*twinJoyLeft1;
@@ -182,13 +190,30 @@ public:
 	// Analog joystick
 	CAxisInput      *analogJoyX;
 	CAxisInput      *analogJoyY;
-	CSwitchInput	*analogJoyTrigger;
-	CSwitchInput	*analogJoyEvent;
+	CSwitchInput	*analogJoyTrigger1;
+	CSwitchInput	*analogJoyTrigger2;
+	CSwitchInput	*analogJoyEvent1;
+	CSwitchInput	*analogJoyEvent2;
 
-	// Gun controls (players 1 and 2)
+	// Light gun controls (players 1 and 2)
 	CAxisInput      *gunX[2];
 	CAxisInput      *gunY[2];
 	CTriggerInput   *trigger[2];
+	
+	// Analog gun controls (players 1 and 2)
+	CAxisInput      *analogGunX[2];
+	CAxisInput      *analogGunY[2];
+	CSwitchInput    *analogTriggerLeft[2];
+	CSwitchInput    *analogTriggerRight[2];
+
+	// Ski Champ controls
+	CAxisInput      *skiX;
+	CAxisInput      *skiY;
+	CSwitchInput	*skiPollLeft;
+	CSwitchInput	*skiPollRight;
+	CSwitchInput	*skiSelect1;
+	CSwitchInput	*skiSelect2;
+	CSwitchInput	*skiSelect3;
 	
 	/*
 	 * Creates a set of inputs with the given input system.

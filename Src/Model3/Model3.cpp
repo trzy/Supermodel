@@ -228,11 +228,28 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 			data &= ~(Inputs->test[1]->value<<7);	    // Test B
 			data = (data&0xDF)|(EEPROM.Read()<<5);	// bank 1 contains EEPROM data bit
 		}
+
+		if ((Game->inputFlags&GAME_INPUT_SKI))
+		{
+			if ((inputBank&1) == 0)
+			{
+				data &= ~(Inputs->skiPollLeft->value<<5);
+				data &= ~(Inputs->skiSelect1->value<<6);
+				data &= ~(Inputs->skiSelect2->value<<7);
+				data &= ~(Inputs->skiSelect3->value<<4);
+			}
+		}
+
 		return data;
 
 	case 0x08:	// game-specific inputs
 
 		data = 0xFF;
+
+		if ((Game->inputFlags&GAME_INPUT_SKI))
+		{
+			data &= ~(Inputs->skiPollRight->value<<0);
+		}
 
 		if ((Game->inputFlags&GAME_INPUT_JOYSTICK1))
 		{
@@ -265,12 +282,21 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 			data &= ~(Inputs->shoot[0]->value<<1);		    // P1 Shoot
 		}
 
-		if ((Game->inputFlags&GAME_INPUT_VR))
+		if ((Game->inputFlags&GAME_INPUT_VR4))
 		{
 			data &= ~(Inputs->vr[0]->value<<0);		        // VR1 Red
 			data &= ~(Inputs->vr[1]->value<<1);		        // VR2 Blue
 			data &= ~(Inputs->vr[2]->value<<2);		        // VR3 Yellow
 			data &= ~(Inputs->vr[3]->value<<3);		        // VR4 Green
+		}
+	
+		if ((Game->inputFlags&GAME_INPUT_VIEWCHANGE))
+		{
+			// Harley is wired slightly differently
+			if ((Game->inputFlags&GAME_INPUT_HARLEY))
+				data &= ~(Inputs->viewChange->value<<1);	// View change
+			else
+				data &= ~(Inputs->viewChange->value<<0);	// View change
 		}
 		
 		if ((Game->inputFlags&GAME_INPUT_SHIFT4))
@@ -284,20 +310,41 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 			else if (Inputs->gearShift4->value == 3)	    // Shift 3
 				data &= ~0x10;
 		}
-		
-		if ((Game->inputFlags&GAME_INPUT_RALLY))
+
+		if ((Game->inputFlags&GAME_INPUT_SHIFTUPDOWN))
 		{
-			data &= ~(Inputs->viewChange->value<<0);	    // View change
-			data &= ~(Inputs->handBrake->value<<1);	        // Hand brake
+			// Harley is wired slightly differently
+			if ((Game->inputFlags&GAME_INPUT_HARLEY))
+			{
+				if (Inputs->gearShiftUp->value)				// Shift up 
+					data &= ~0x60;
+				else if (Inputs->gearShiftDown->value)		// Shift down
+					data &= ~0x50;
+			}
+			else
+			{
+				if (Inputs->gearShiftUp->value)				// Shift up
+					data &= ~0x50;
+				else if (Inputs->gearShiftDown->value)		// Shift down
+					data &= ~0x60;
+			}
 		}
+		
+		if ((Game->inputFlags&GAME_INPUT_HANDBRAKE))
+			data &= ~(Inputs->handBrake->value<<1);	        // Hand brake
+		
+		if ((Game->inputFlags&GAME_INPUT_HARLEY))
+			data &= ~(Inputs->musicSelect->value<<0);	    // Music select
 		
 		if ((Game->inputFlags&GAME_INPUT_GUN1))
 			data &= ~(Inputs->trigger[0]->value<<0);		// P1 Trigger
 		
 		if ((Game->inputFlags&GAME_INPUT_ANALOG_JOYSTICK))
 		{
-			data &= ~(Inputs->analogJoyTrigger->value<<5);	// Trigger
-			data &= ~(Inputs->analogJoyEvent->value<<0);	// Event Button
+			data &= ~(Inputs->analogJoyTrigger1->value<<5);	// Trigger 1
+			data &= ~(Inputs->analogJoyTrigger2->value<<4);	// Trigger 2
+			data &= ~(Inputs->analogJoyEvent1->value<<0);	// Event Button 1
+			data &= ~(Inputs->analogJoyEvent2->value<<1);	// Event Button 2
 		}
 		
 		if ((Game->inputFlags&GAME_INPUT_TWIN_JOYSTICKS))	// First twin joystick
@@ -354,6 +401,12 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 				data &= ~0x80;
 			else if (Inputs->twinJoyCrouch->value)
 				data &= ~0x40;
+		}
+
+		if ((Game->inputFlags&GAME_INPUT_ANALOG_GUN1))
+		{
+			data &= ~(Inputs->analogTriggerLeft[0]->value<<0);
+			data &= ~(Inputs->analogTriggerRight[0]->value<<1);
 		}
 
 		return data;
@@ -421,6 +474,12 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 		if ((Game->inputFlags&GAME_INPUT_GUN2))
 			data &= ~(Inputs->trigger[1]->value<<0);        // P2 Trigger
 		
+		if ((Game->inputFlags&GAME_INPUT_ANALOG_GUN2))
+		{
+			data &= ~(Inputs->analogTriggerLeft[1]->value<<0);
+			data &= ~(Inputs->analogTriggerRight[1]->value<<1);
+		}
+		
 		return data;
 
 	case 0x2C:	// Serial FIFO 1
@@ -441,11 +500,28 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 			adc[0] = (UINT8)Inputs->steering->value;
 			adc[1] = (UINT8)Inputs->accelerator->value;
 			adc[2] = (UINT8)Inputs->brake->value;
+			if ((Game->inputFlags&GAME_INPUT_HARLEY))
+				adc[3] = (UINT8)Inputs->rearBrake->value;
 		}
+
 		if ((Game->inputFlags&GAME_INPUT_ANALOG_JOYSTICK))
 		{
 			adc[0] = (UINT8)Inputs->analogJoyY->value;
 			adc[1] = (UINT8)Inputs->analogJoyX->value;
+		}
+
+		if ((Game->inputFlags&GAME_INPUT_ANALOG_GUN1)||(Game->inputFlags&GAME_INPUT_ANALOG_GUN2))
+		{	
+			adc[0] = (UINT8)Inputs->analogGunX[0]->value;
+			adc[2] = (UINT8)Inputs->analogGunY[0]->value;
+			adc[1] = (UINT8)Inputs->analogGunX[1]->value;
+			adc[3] = (UINT8)Inputs->analogGunY[1]->value;
+		}
+		
+		if ((Game->inputFlags&GAME_INPUT_SKI))
+		{
+			adc[0] = (UINT8)Inputs->skiY->value;
+			adc[1] = (UINT8)Inputs->skiX->value;
 		}
 			
 		// Read out appropriate channel
@@ -1984,7 +2060,7 @@ void CModel3::RunFrame(void)
 			RunDriveBoardFrame();
 	}
 
-	frameTicks = CThread::GetTicks() - start;
+	timings.frameTicks = CThread::GetTicks() - start;
 
 	return;
 
@@ -2023,7 +2099,7 @@ void CModel3::RunMainBoardFrame(void)
 			statusCycles = (unsigned)((float)frameCycles * 9.12f/100.0f);
 	}
 	else if (Game->step == 0x15)
-		statusCycles = (unsigned)((float)frameCycles * 4.8f/100.0f);
+		statusCycles = (unsigned)((float)frameCycles * 5.5f/100.0f);
 	else
 		statusCycles = (unsigned)((float)frameCycles * 48.0f/100.0f);
 
@@ -2082,17 +2158,17 @@ void CModel3::RunMainBoardFrame(void)
 	ppc_execute(dispCycles);
 	//printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 
-	ppcTicks = CThread::GetTicks() - start;
+	timings.ppcTicks = CThread::GetTicks() - start;
 }
 
 void CModel3::SyncGPUs(void)
 {
 	UINT32 start = CThread::GetTicks();
 
-	syncSize = GPU.SyncSnapshots() + TileGen.SyncSnapshots();
+	timings.syncSize = GPU.SyncSnapshots() + TileGen.SyncSnapshots();
 	gpusReady = true;
 
-	syncTicks = CThread::GetTicks() - start;
+	timings.syncTicks = CThread::GetTicks() - start;
 }
 
 void CModel3::RenderFrame(void)
@@ -2112,7 +2188,7 @@ void CModel3::RenderFrame(void)
 
 	EndFrameVideo();
 
-	renderTicks = CThread::GetTicks() - start;
+	timings.renderTicks = CThread::GetTicks() - start;
 }
 
 bool CModel3::RunSoundBoardFrame(void)
@@ -2121,7 +2197,7 @@ bool CModel3::RunSoundBoardFrame(void)
 
 	bool bufferFull = SoundBoard.RunFrame();
 
-	sndTicks = CThread::GetTicks() - start;
+	timings.sndTicks = CThread::GetTicks() - start;
 
 	return bufferFull;
 }
@@ -2132,7 +2208,7 @@ void CModel3::RunDriveBoardFrame(void)
 
 	DriveBoard.RunFrame();
 
-	drvTicks = CThread::GetTicks() - start;
+	timings.drvTicks = CThread::GetTicks() - start;
 }
 
 bool CModel3::StartThreads(void)
@@ -2386,12 +2462,18 @@ void CModel3::DeleteThreadObjects(void)
 void CModel3::DumpTimings(void)
 {
 	printf("PPC:%3ums%c render:%3ums%c sync:%4uK%c%3ums%c snd:%3ums%c drv:%3ums%c frame:%3ums%c\n",
-		ppcTicks, (ppcTicks > renderTicks ? '!' : ','),
-		renderTicks, (renderTicks > ppcTicks ? '!' : ','), 
-		syncSize / 1024, (syncSize / 1024 > 128 ? '!' : ','), syncTicks, (syncTicks > 1 ? '!' : ','),
-		sndTicks, (sndTicks > 10 ? '!' : ','),
-		drvTicks, (drvTicks > 10 ? '!' : ','),
-		frameTicks, (frameTicks > 16 ? '!' : ' '));
+		timings.ppcTicks, (timings.ppcTicks > timings.renderTicks ? '!' : ','),
+		timings.renderTicks, (timings.renderTicks > timings.ppcTicks ? '!' : ','), 
+		timings.syncSize / 1024, (timings.syncSize / 1024 > 128 ? '!' : ','), 
+		timings.syncTicks, (timings.syncTicks > 1 ? '!' : ','),
+		timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
+		timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
+		timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
+}
+
+FrameTimings CModel3::GetTimings(void)
+{
+	return timings;
 }
 
 int CModel3::StartMainBoardThread(void *data)
@@ -2755,13 +2837,14 @@ void CModel3::Reset(void)
 		DriveBoard.Reset();
 
 	gpusReady = false;
-	ppcTicks = 0;
-	syncSize = 0;
-	syncTicks = 0;
-	renderTicks = 0;
-	sndTicks = 0;
-	drvTicks = 0;
-	frameTicks = 0;
+
+	timings.ppcTicks = 0;
+	timings.syncSize = 0;
+	timings.syncTicks = 0;
+	timings.renderTicks = 0;
+	timings.sndTicks = 0;
+	timings.drvTicks = 0;
+	timings.frameTicks = 0;
 	
 	DebugLog("Model 3 reset\n");
 }
@@ -2782,7 +2865,6 @@ void CModel3::Patch(void)
 		*(UINT32 *) &crom[0x73EB5C] = 0x60000000;
 		*(UINT32 *) &crom[0x73EDD0] = 0x60000000;
 		*(UINT32 *) &crom[0x73EDC4] = 0x60000000;
-		
 	}	
   	else if (!strcmp(Game->id, "lostwsga"))
   	{
@@ -2852,7 +2934,6 @@ void CModel3::Patch(void)
   	}
   	else if (!strcmp(Game->id, "eca") || !strcmp(Game->id, "ecax"))
   	{
-
 		*(UINT32 *) &crom[0x535580] = 0x60000000;
 		*(UINT32 *) &crom[0x5023B4] = 0x60000000;
 		*(UINT32 *) &crom[0x5023D4] = 0x60000000;

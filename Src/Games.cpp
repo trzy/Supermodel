@@ -115,7 +115,7 @@ const struct GameInfo	g_Model3GameList[] =
 		false,	// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		2,		// DSB2 MPEG board
 		true,	// drive board
 
@@ -199,7 +199,7 @@ const struct GameInfo	g_Model3GameList[] =
 		false,	// 64 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		2,		// DSB2 MPEG board
 		true,	// drive board
 
@@ -283,7 +283,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 32 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0xC00000,	// 12 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_RALLY,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFTUPDOWN|GAME_INPUT_HANDBRAKE|GAME_INPUT_VIEWCHANGE,
 		0,		// no MPEG board
 		false,		// no drive board
 
@@ -346,7 +346,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 32 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0xC00000,	// 12 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_RALLY,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFTUPDOWN|GAME_INPUT_HANDBRAKE|GAME_INPUT_VIEWCHANGE,
 		0,		// no MPEG board
 		false,	// no drive board
 
@@ -409,7 +409,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_RALLY,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFTUPDOWN|GAME_INPUT_VIEWCHANGE,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -479,7 +479,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_RALLY,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFTUPDOWN|GAME_INPUT_VIEWCHANGE,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -693,7 +693,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 40 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFTUPDOWN|GAME_INPUT_HARLEY|GAME_INPUT_VIEWCHANGE,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -763,7 +763,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 40 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFTUPDOWN|GAME_INPUT_HARLEY|GAME_INPUT_VIEWCHANGE,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -833,7 +833,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_JOYSTICK,
+		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_GUN1|GAME_INPUT_ANALOG_GUN2,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -903,7 +903,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x2000000,	// 32 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,	// for now, Shift Up/Down mapped to Shift 3/4
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR4|GAME_INPUT_SHIFTUPDOWN,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -1103,7 +1103,7 @@ const struct GameInfo	g_Model3GameList[] =
 		false,	// 96 MB of banked CROM (do not mirror)
 		0x4000000,	// 64 MB of VROM
 		0x1000000,	// 16 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_JOYSTICK,
+		GAME_INPUT_COMMON|GAME_INPUT_ANALOG_GUN1|GAME_INPUT_ANALOG_GUN2,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -1173,7 +1173,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x2000000,	// 32 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		1,			// DSB1 MPEG board
 		true,		// drive board
 
@@ -1249,7 +1249,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x2000000,	// 32 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		1,			// DSB1 MPEG board
 		true,		// drive board
 
@@ -1325,7 +1325,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x2000000,	// 32 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		1,			// DSB1 MPEG board
 		true,		// drive board
 
@@ -1401,7 +1401,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 64 MB of banked CROM (Mirror)
 		0x2000000,	// 32 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		1,			// DSB1 MPEG board
 		true,		// drive board
 
@@ -1483,7 +1483,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 64 MB of banked CROM (Mirror)
 		0x2000000,	// 32 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_VR|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_VR4,
 		1,			// DSB1 MPEG board
 		true,		// drive board
 
@@ -1565,7 +1565,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 64 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+		GAME_INPUT_COMMON|GAME_INPUT_SKI,
 		0,			// no MPEG board
 		false,		// no drive board
 
@@ -1801,7 +1801,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_RALLY|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_HANDBRAKE|GAME_INPUT_VIEWCHANGE,
 		2,			// DSB2 MPEG board
 		true,		// drive board
 
@@ -1877,7 +1877,7 @@ const struct GameInfo	g_Model3GameList[] =
 		true,		// 48 MB of banked CROM (Mirror)
 		0x4000000,	// 64 MB of VROM
 		0x800000,	// 8 MB of sample ROMs
-		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_RALLY|GAME_INPUT_SHIFT4,
+		GAME_INPUT_COMMON|GAME_INPUT_VEHICLE|GAME_INPUT_SHIFT4|GAME_INPUT_HANDBRAKE|GAME_INPUT_VIEWCHANGE,
 		0,			// no MPEG board
 		true,		// drive board
 

@@ -110,8 +110,6 @@ protected:
 
 	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
-	void Wait(int ms);
-
 public:
 	/*
 	 * Constructs an SDL input system.

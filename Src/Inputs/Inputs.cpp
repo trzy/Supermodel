@@ -108,30 +108,36 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	CAnalogInput *steeringLeft  = AddAnalogInput("SteeringLeft",  "Steer Left",  GAME_INPUT_VEHICLE, "NONE");
 	CAnalogInput *steeringRight = AddAnalogInput("SteeringRight", "Steer Right", GAME_INPUT_VEHICLE, "NONE");
 	
-	steering           = AddAxisInput  ("Steering",    "Full Steering",     GAME_INPUT_VEHICLE, "NONE", steeringLeft, steeringRight);
-	accelerator        = AddAnalogInput("Accelerator", "Accelerator Pedal", GAME_INPUT_VEHICLE, "NONE");
-	brake              = AddAnalogInput("Brake",       "Brake Pedal",       GAME_INPUT_VEHICLE, "NONE");
+	steering           = AddAxisInput  ("Steering",      "Full Steering",           GAME_INPUT_VEHICLE, "NONE", steeringLeft, steeringRight);
+	accelerator        = AddAnalogInput("Accelerator",   "Accelerator Pedal",       GAME_INPUT_VEHICLE, "NONE");
+	brake              = AddAnalogInput("Brake",         "Brake Pedal/Front Brake", GAME_INPUT_VEHICLE, "NONE");
+	gearShiftUp        = AddSwitchInput("GearShiftUp",   "Shift Up",                GAME_INPUT_VEHICLE, "NONE");
+	gearShiftDown      = AddSwitchInput("GearShiftDown", "Shift Down",              GAME_INPUT_VEHICLE, "NONE");
 	
 	// Racing Game Gear Shift
-	CSwitchInput *shift1    = AddSwitchInput("GearShift1",    "Shift 1/Up",   GAME_INPUT_SHIFT4, "NONE");
-	CSwitchInput *shift2    = AddSwitchInput("GearShift2",    "Shift 2/Down", GAME_INPUT_SHIFT4, "NONE");
-	CSwitchInput *shift3    = AddSwitchInput("GearShift3",    "Shift 3",      GAME_INPUT_SHIFT4, "NONE");
-	CSwitchInput *shift4    = AddSwitchInput("GearShift4",    "Shift 4",      GAME_INPUT_SHIFT4, "NONE");
-	CSwitchInput *shiftN    = AddSwitchInput("GearShiftN",    "Shift Neutral",GAME_INPUT_SHIFT4, "NONE");
-	CSwitchInput *shiftUp   = AddSwitchInput("GearShiftUp",   "Shift Up",     GAME_INPUT_SHIFT4, "NONE");
-	CSwitchInput *shiftDown = AddSwitchInput("GearShiftDown", "Shift Down",   GAME_INPUT_SHIFT4, "NONE");
+	CSwitchInput *shift1 = AddSwitchInput("GearShift1", "Shift 1",       GAME_INPUT_SHIFT4,  "NONE");
+	CSwitchInput *shift2 = AddSwitchInput("GearShift2", "Shift 2",       GAME_INPUT_SHIFT4,  "NONE");
+	CSwitchInput *shift3 = AddSwitchInput("GearShift3", "Shift 3",       GAME_INPUT_SHIFT4,  "NONE");
+	CSwitchInput *shift4 = AddSwitchInput("GearShift4", "Shift 4",       GAME_INPUT_SHIFT4,  "NONE");
+	CSwitchInput *shiftN = AddSwitchInput("GearShiftN", "Shift Neutral", GAME_INPUT_SHIFT4,  "NONE");
+	
+	gearShift4         = AddGearShift4Input("GearShift", "Gear Shift", GAME_INPUT_SHIFT4,  shift1, shift2, shift3, shift4, shiftN, gearShiftUp, gearShiftDown);
+	
+	// Racing Game 4 VR View Buttons
+	vr[0]              = AddSwitchInput("VR1", "VR1", GAME_INPUT_VR4, "NONE");
+	vr[1]              = AddSwitchInput("VR2", "VR2", GAME_INPUT_VR4, "NONE");
+	vr[2]              = AddSwitchInput("VR3", "VR3", GAME_INPUT_VR4, "NONE");
+	vr[3]              = AddSwitchInput("VR4", "VR4", GAME_INPUT_VR4, "NONE");
 
-	gearShift4         = AddGearShift4Input("GearShift", "Gear Shift", GAME_INPUT_SHIFT4, shift1, shift2, shift3, shift4, shiftN, shiftUp, shiftDown);
-
-	// Racing Game VR View Buttons
-	vr[0]              = AddSwitchInput("VR1", "VR1", GAME_INPUT_VR, "NONE");
-	vr[1]              = AddSwitchInput("VR2", "VR2", GAME_INPUT_VR, "NONE");
-	vr[2]              = AddSwitchInput("VR3", "VR3", GAME_INPUT_VR, "NONE");
-	vr[3]              = AddSwitchInput("VR4", "VR4", GAME_INPUT_VR, "NONE");
-
-	// Sega Rally Buttons
-	viewChange         = AddSwitchInput("ViewChange", "View Change", GAME_INPUT_RALLY, "NONE");
-	handBrake          = AddSwitchInput("HandBrake",  "Hand Brake",  GAME_INPUT_RALLY, "NONE");
+	// Racing Game Single View Change Button
+	viewChange         = AddSwitchInput("ViewChange", "View Change", GAME_INPUT_VIEWCHANGE, "NONE");
+	
+	// Racing Game Handbrake
+	handBrake          = AddSwitchInput("HandBrake",  "Hand Brake",  GAME_INPUT_HANDBRAKE, "NONE");
+	
+	// Harley Davidson Controls
+	rearBrake          = AddAnalogInput("RearBrake",   "Rear Brake",      GAME_INPUT_HARLEY, "NONE");
+	musicSelect        = AddSwitchInput("MusicSelect", "Music Selection", GAME_INPUT_HARLEY, "NONE");
 
 	// Virtual On Controls
 	twinJoyTurnLeft    = AddSwitchInput("TwinJoyTurnLeft",    "Macro Turn Left",    	GAME_INPUT_TWIN_JOYSTICKS, "NONE");
@@ -161,12 +167,14 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	CAnalogInput *analogJoyUp    = AddAnalogInput("AnalogJoyUp",    "Analog Up",    GAME_INPUT_ANALOG_JOYSTICK, "NONE");
 	CAnalogInput *analogJoyDown  = AddAnalogInput("AnalogJoyDown",  "Analog Down",  GAME_INPUT_ANALOG_JOYSTICK, "NONE");
 	
-	analogJoyX         = AddAxisInput  ("AnalogJoyX",       "Analog X-Axis",  GAME_INPUT_ANALOG_JOYSTICK, "NONE", analogJoyLeft, analogJoyRight);
-	analogJoyY         = AddAxisInput  ("AnalogJoyY",       "Analog Y-Axis",  GAME_INPUT_ANALOG_JOYSTICK, "NONE", analogJoyUp,   analogJoyDown);
-	analogJoyTrigger   = AddSwitchInput("AnalogJoyTrigger", "Trigger Button", GAME_INPUT_ANALOG_JOYSTICK, "NONE");
-	analogJoyEvent     = AddSwitchInput("AnalogJoyEvent",   "Event Button",   GAME_INPUT_ANALOG_JOYSTICK, "NONE");
+	analogJoyX         = AddAxisInput  ("AnalogJoyX",        "Analog X-Axis",    GAME_INPUT_ANALOG_JOYSTICK, "NONE", analogJoyLeft, analogJoyRight);
+	analogJoyY         = AddAxisInput  ("AnalogJoyY",        "Analog Y-Axis",    GAME_INPUT_ANALOG_JOYSTICK, "NONE", analogJoyUp,   analogJoyDown);
+	analogJoyTrigger1  = AddSwitchInput("AnalogJoyTrigger",  "Trigger Button 1", GAME_INPUT_ANALOG_JOYSTICK, "NONE");
+	analogJoyTrigger2  = AddSwitchInput("AnalogJoyTrigger2", "Trigger Button 2", GAME_INPUT_ANALOG_JOYSTICK, "NONE");
+	analogJoyEvent1    = AddSwitchInput("AnalogJoyEvent",    "Event Button 1",   GAME_INPUT_ANALOG_JOYSTICK, "NONE");
+	analogJoyEvent2    = AddSwitchInput("AnalogJoyEvent2",   "Event Button 2",   GAME_INPUT_ANALOG_JOYSTICK, "NONE");
 
-	// Lightguns
+	// Light guns
 	CAnalogInput *gun1Left  = AddAnalogInput("GunLeft",  "P1 Gun Left",  GAME_INPUT_GUN1, "NONE");
 	CAnalogInput *gun1Right = AddAnalogInput("GunRight", "P1 Gun Right", GAME_INPUT_GUN1, "NONE");
 	CAnalogInput *gun1Up    = AddAnalogInput("GunUp",    "P1 Gun Up",    GAME_INPUT_GUN1, "NONE");
@@ -192,6 +200,43 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	CSwitchInput *gun2Offscreen = AddSwitchInput("Offscreen2", "P2 Point Off-screen", GAME_INPUT_GUN2, "NONE");
 
 	trigger[1]         = AddTriggerInput("AutoTrigger2", "P2 Auto Trigger", GAME_INPUT_GUN2, gun2Trigger, gun2Offscreen);
+
+	// Analog guns
+	CAnalogInput *analogGun1Left  = AddAnalogInput("AnalogGunLeft",  "P1 Analog Gun Left",  GAME_INPUT_ANALOG_GUN1, "NONE");
+	CAnalogInput *analogGun1Right = AddAnalogInput("AnalogGunRight", "P1 Analog Gun Right", GAME_INPUT_ANALOG_GUN1, "NONE");
+	CAnalogInput *analogGun1Up    = AddAnalogInput("AnalogGunUp",    "P1 Analog Gun Up",    GAME_INPUT_ANALOG_GUN1, "NONE");
+	CAnalogInput *analogGun1Down  = AddAnalogInput("AnalogGunDown",  "P1 Analog Gun Down",  GAME_INPUT_ANALOG_GUN1, "NONE");
+
+	analogGunX[0] = AddAxisInput("AnalogGunX", "P1 Analog Gun X-Axis", GAME_INPUT_ANALOG_GUN1, "NONE", analogGun1Left, analogGun1Right, 0, 0x80, 0xFF);
+	analogGunY[0] = AddAxisInput("AnalogGunY", "P1 Analog Gun Y-Axis", GAME_INPUT_ANALOG_GUN1, "NONE", analogGun1Up,   analogGun1Down,  0xFF, 0x80, 0);
+
+	analogTriggerLeft[0]  = AddSwitchInput("AnalogTriggerLeft",  "P1 Analog Gun Left Trigger",  GAME_INPUT_ANALOG_GUN1, "NONE");
+	analogTriggerRight[0] = AddSwitchInput("AnalogTriggerRight", "P1 Analog Gun Right Trigger", GAME_INPUT_ANALOG_GUN1, "NONE");
+
+	CAnalogInput *analogGun2Left  = AddAnalogInput("AnalogGunLeft2",  "P2 Analog Gun Left",  GAME_INPUT_ANALOG_GUN2, "NONE");
+	CAnalogInput *analogGun2Right = AddAnalogInput("AnalogGunRight2", "P2 Analog Gun Right", GAME_INPUT_ANALOG_GUN2, "NONE");
+	CAnalogInput *analogGun2Up    = AddAnalogInput("AnalogGunUp2",    "P2 Analog Gun Up",    GAME_INPUT_ANALOG_GUN2, "NONE");
+	CAnalogInput *analogGun2Down  = AddAnalogInput("AnalogGunDown2",  "P2 Analog Gun Down",  GAME_INPUT_ANALOG_GUN2, "NONE");
+
+	analogGunX[1] = AddAxisInput("AnalogGunX2", "P2 Analog Gun X-Axis", GAME_INPUT_ANALOG_GUN2, "NONE", analogGun2Left, analogGun2Right, 0, 0x80, 0xFF);
+	analogGunY[1] = AddAxisInput("AnalogGunY2", "P2 Analog Gun Y-Axis", GAME_INPUT_ANALOG_GUN2, "NONE", analogGun2Up,   analogGun2Down,  0xFF, 0x80, 0);
+
+	analogTriggerLeft[1]  = AddSwitchInput("AnalogTriggerLeft2",  "P2 Analog Gun Left Trigger",  GAME_INPUT_ANALOG_GUN2, "NONE");
+	analogTriggerRight[1] = AddSwitchInput("AnalogTriggerRight2", "P2 Analog Gun Right Trigger", GAME_INPUT_ANALOG_GUN2, "NONE");
+
+	// Ski controls
+	CAnalogInput *skiLeft  = AddAnalogInput("SkiLeft",  "Ski Champ Left",  GAME_INPUT_SKI, "NONE");
+	CAnalogInput *skiRight = AddAnalogInput("SkiRight", "Ski Champ Right", GAME_INPUT_SKI, "NONE");
+	CAnalogInput *skiUp    = AddAnalogInput("SkiUp",    "Ski Champ Up",    GAME_INPUT_SKI, "NONE");
+	CAnalogInput *skiDown  = AddAnalogInput("SkiDown",  "Ski Champ Down",  GAME_INPUT_SKI, "NONE");
+
+	skiX          = AddAxisInput  ("SkiX",         "Ski Champ X-Axis",     GAME_INPUT_SKI, "NONE", skiLeft, skiRight, 0xFF, 0x80, 0);
+	skiY          = AddAxisInput  ("SkiY",         "Ski Champ Y-Axis",     GAME_INPUT_SKI, "NONE", skiUp,   skiDown);
+	skiPollLeft   = AddSwitchInput("SkiPollLeft",  "Ski Champ Poll Left",  GAME_INPUT_SKI, "NONE");
+	skiPollRight  = AddSwitchInput("SkiPollRight", "Ski Champ Poll Right", GAME_INPUT_SKI, "NONE");
+	skiSelect1    = AddSwitchInput("SkiSelect1",   "Ski Champ Select 1",   GAME_INPUT_SKI, "NONE");
+	skiSelect2    = AddSwitchInput("SkiSelect2",   "Ski Champ Select 2",   GAME_INPUT_SKI, "NONE");
+	skiSelect3    = AddSwitchInput("SkiSelect3",   "Ski Champ Select 3",   GAME_INPUT_SKI, "NONE");
 }
 
 CInputs::~CInputs()

@@ -1709,7 +1709,7 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 			{
 				if (!Poll())
 					goto Cancelled;
-				Wait(1000/60);
+				CThread::Sleep(1000/60);
 			}
 			goto Cancelled;
 		}
@@ -1744,7 +1744,7 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
 		}
 
 		// Don't poll continuously
-		Wait(1000/60);
+		CThread::Sleep(1000/60);
 	}
 
 	// Copy mapping to buffer and return
@@ -1833,7 +1833,7 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 			{
 				if (!Poll())
 					goto Cancelled;
-				Wait(1000/60);
+				CThread::Sleep(1000/60);
 			}
 			goto Cancelled;
 		}
@@ -1846,7 +1846,7 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 			{
 				if (!Poll())
 					goto Cancelled;
-				Wait(1000/60);
+				CThread::Sleep(1000/60);
 			}
 			break;
 		}
@@ -1878,7 +1878,7 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 		}
 
 		// Don't poll continuously
-		Wait(1000/60);
+		CThread::Sleep(1000/60);
 	}
 
 	maxRange = 0;
@@ -2026,7 +2026,7 @@ Repeat:
 				{
 					if (!Poll())
 						goto Cancelled;
-					Wait(1000/60);
+					CThread::Sleep(1000/60);
 				}
 				goto Cancelled;
 			}
@@ -2045,7 +2045,7 @@ Repeat:
 			}
 
 			// Don't poll continuously
-			Wait(1000/60);
+			CThread::Sleep(1000/60);
 		}
 
 		printf("Done\n\n");

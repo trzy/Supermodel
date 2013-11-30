@@ -213,8 +213,6 @@ protected:
 	
 	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
-	void Wait(int ms);
-
 	bool ConfigMouseCentered();
 
 	CInputSource *CreateAnyMouseSource(EMousePart msePart);

@@ -690,11 +690,6 @@ protected:
 	 */
 	virtual bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd) = 0;
 
-	/*
-	 * Waits for the given time in milliseconds
-	 */
-	virtual void Wait(int ms) = 0;
-
 	//
 	// Virtual methods subclass can override if required
 	//
