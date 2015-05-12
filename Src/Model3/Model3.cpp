@@ -725,7 +725,9 @@ UINT32 CModel3::ReadSecurity(unsigned reg)
 			data = (spikeoutSecurity[securityPtr++] << 16);
 			securityPtr %= (sizeof(spikeoutSecurity)/sizeof(UINT16));
 		}
-		else if (!strcmp(Game->id, "vs298"))
+		else if (!strcmp(Game->id, "vs298") || 
+			     !strcmp(Game->id, "vs2v991") || !strcmp(Game->id, "vs299") || 
+				 !strcmp(Game->id, "vs299a") || !strcmp(Game->id, "vs299b"))
 		{
 			data = (vs298Security[securityPtr++] << 16);
 			securityPtr %= (sizeof(vs298Security)/sizeof(UINT16));
@@ -2870,7 +2872,8 @@ void CModel3::Patch(void)
   	{
   		*(UINT32 *) &crom[0x7374f4] = 0x38840004;	// an actual bug in the game code
   	}
-  	else if (!strcmp(Game->id, "vs215"))
+  	else if (!strcmp(Game->id, "vs215") || 
+		     !strcmp(Game->id, "vs215o") || !strcmp(Game->id, "vs29815"))
   	{
   		// VS215 is a modification of VS2 that runs on Step 1.5 hardware. I
   		// suspect the code here is trying to detect the system type but am too

@@ -2604,6 +2604,80 @@ const struct GameInfo	g_Model3GameList[] =
 		}
 	},
 
+	// Virtua Striker 2 (Step 1.5, older)
+	{
+		"vs215o",
+		"vs2",
+		"Virtua Striker 2 (Step 1.5, older)",
+		"Sega",
+		1997,
+		0x15,
+		0x200000,	// 2 MB of fixed CROM
+		true,		// 64 MB of banked CROM (Mirror)
+		0x2000000,	// 32 MB of VROM
+		0x800000,	// 8 MB of sample ROMs
+		GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1|GAME_INPUT_JOYSTICK2|GAME_INPUT_SOCCER,
+		0,			// no MPEG board
+		false,		// no drive board
+
+		{
+			// Fixed CROM
+			{ "CROM",	false,	"epr-19803.20",	0x1E55A5B8,	0x80000,	2,	0x0600000,	8,	true },
+			{ "CROM",	false,	"epr-19804.19",	0xBBACA578,	0x80000,	2,	0x0600002,	8,	true },
+			{ "CROM",	false,	"epr-19805.18",	0xD9E40606,	0x80000,	2,	0x0600004,	8,	true },
+			{ "CROM",	false,	"epr-19806.17",	0x95E1B970,	0x80000,	2,	0x0600006,	8,	true },
+
+			// Banked CROM0
+			{ "CROMxx",	false,	"mpr-19772.4",	0x6DB7B9D0,	0x400000,	2,	0x0000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19771.3",	0x189C510F,	0x400000,	2,	0x0000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19770.2",	0x91F690B0,	0x400000,	2,	0x0000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19769.1",	0xDC020031,	0x400000,	2,	0x0000006,	8,	true },
+
+			// Banked CROM1
+			{ "CROMxx",	false,	"mpr-19776.8",	0x5B31C7C1,	0x400000,	2,	0x1000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19775.7",	0xA6B32BD9,	0x400000,	2,	0x1000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19774.6",	0x1D61D287,	0x400000,	2,	0x1000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19773.5",	0x4E381AE7,	0x400000,	2,	0x1000006,	8,	true },
+
+			// Banked CROM2
+			{ "CROMxx",	false,	"mpr-19780.12",	0x38508791,	0x400000,	2,	0x2000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19779.11",	0x2242B21B,	0x400000,	2,	0x2000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19778.10",	0x2192B189,	0x400000,	2,	0x2000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19777.9",	0xC8F216A6,	0x400000,	2,	0x2000006,	8,	true },
+
+			// Banked CROM3
+			{ "CROMxx",	false,	"mpr-19784.16",	0xA1CC70BE,	0x400000,	2,	0x3000000,	8,	true },
+			{ "CROMxx",	false,	"mpr-19783.15",	0x47C3D726,	0x400000,	2,	0x3000002,	8,	true },
+			{ "CROMxx",	false,	"mpr-19782.14",	0x43B43EEF,	0x400000,	2,	0x3000004,	8,	true },
+			{ "CROMxx",	false,	"mpr-19781.13",	0x783213F4,	0x400000,	2,	0x3000006,	8,	true },
+
+			// Video ROM
+			{ "VROM",	false,	"mpr-19787.26",	0x856CC4AD,	0x200000,	2,	0,		32,	false },
+			{ "VROM",	false,	"mpr-19788.27",	0x72EF970A,	0x200000,	2,	2,		32,	false },
+			{ "VROM",	false,	"mpr-19789.28",	0x076ADD9A,	0x200000,	2,	4,		32,	false },
+			{ "VROM",	false,	"mpr-19790.29",	0x74CE238C,	0x200000,	2,	6,		32,	false },
+			{ "VROM",	false,	"mpr-19791.30",	0x75A98F96,	0x200000,	2,	8,		32,	false },
+			{ "VROM",	false,	"mpr-19792.31",	0x85C81633,	0x200000,	2,	10,		32,	false },
+			{ "VROM",	false,	"mpr-19793.32",	0x7F288CC4,	0x200000,	2,	12,		32,	false },
+			{ "VROM",	false,	"mpr-19794.33",	0xE0C1C370,	0x200000,	2,	14,		32,	false },
+			{ "VROM",	false,	"mpr-19795.34",	0x90989B20,	0x200000,	2,	16,		32,	false },
+			{ "VROM",	false,	"mpr-19796.35",	0x5D1AAB8D,	0x200000,	2,	18,		32,	false },
+			{ "VROM",	false,	"mpr-19797.36",	0xF5EDC891,	0x200000,	2,	20,		32,	false },
+			{ "VROM",	false,	"mpr-19798.37",	0xAE2DA90F,	0x200000,	2,	22,		32,	false },
+			{ "VROM",	false,	"mpr-19799.38",	0x92B18AD7,	0x200000,	2,	24,		32,	false },
+			{ "VROM",	false,	"mpr-19800.39",	0x4A57B16C,	0x200000,	2,	26,		32,	false },
+			{ "VROM",	false,	"mpr-19801.40",	0xBEB79A00,	0x200000,	2,	28,		32,	false },
+			{ "VROM",	false,	"mpr-19802.41",	0xF2C3A7B7,	0x200000,	2,	30,		32,	false },
+
+			// Sound ROMs
+			{ "SndProg",	false,	"epr-19807.21",	0x9641CBAF,	0x80000,	2,	0,			2,	true },
+			{ "Samples",	false,	"mpr-19785.22",	0xE7D190E3,	0x400000,	2,	0x000000,	2,	true },
+			{ "Samples",	false,	"mpr-19786.24",	0xB08D889B,	0x400000,	2,	0x400000,	2,	true },
+
+			{ NULL, false, NULL, 0, 0, 0, 0, 0, false }
+		}
+	},
+
 	// Virtua Striker 2 '98 (Step 2.0)
 	{
 		"vs298",
