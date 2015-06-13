@@ -223,7 +223,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		ErrorLog("Could not open '%s'.", zipFile);
 		return NULL;
 	}
-		
+
 	// First pass: scan every file and determine the game
 	err = unzGoToFirstFile(zf);
 	if (UNZ_OK != err)
@@ -236,14 +236,14 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		// Identify the file we're looking at
 		err = unzGetCurrentFileInfo(zf, &fileInfo, NULL, 0, NULL, 0, NULL, 0);
 		if (err != UNZ_OK)
-			continue;			
+			continue;
 		if (OKAY != FindROMByCRC(&CurGame, &romIdx, GameList, Game, fileInfo.crc))
 			continue;
-		
+
 		// If the ROM appears in multiple games, do not use it to identify the game!
 		if (!ROMIsUnique(GameList, fileInfo.crc))
 			continue;
-			
+
 		// We have a unique ROM used by a single game; identify that game
 		if (Game == NULL)	// this is the first game we've identified within the ZIP
 		{
@@ -264,6 +264,13 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		}
 	}
 	
+	if (Game == NULL)
+	{
+	  ErrorLog("No Model 3 games found in '%s'.", zipFile);
+		unzClose(zf);		
+		return NULL;
+	}
+
 	if (CurGame->parent)
 	{
 		// Create parent zip file name
@@ -288,6 +295,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		if (NULL == zfp)
 		{
 			ErrorLog("Parent ROM set '%s' is missing.", zipFileParent.c_str());
+			unzClose(zf);
 			return NULL;
 		}
 	}
@@ -297,6 +305,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 	if (UNZ_OK != err)
 	{
 		ErrorLog("Unable to read the contents of '%s' (code %X)", zipFile, err);
+		unzClose(zf);
 		return NULL;
 	}
 	memset(romsFound, 0, sizeof(romsFound));	// here, romsFound[] indicates which ROMs were found in the ZIP file for the game
@@ -320,6 +329,7 @@ const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const st
 		if (UNZ_OK != err)
 		{
 			ErrorLog("Unable to read the contents of '%s' (code %X)", zipFileParent.c_str(), err);
+			unzClose(zf);
 			return NULL;
 		}
 		for (; err != UNZ_END_OF_LIST_OF_FILE; err = unzGoToNextFile(zfp))
