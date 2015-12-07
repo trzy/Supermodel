@@ -119,7 +119,8 @@ namespace Debugger
 
 		// SPR registers
 		AddInt32Register   ("ctr",  srGroup, SPR_LR,   GetSPR, SetSPR);
-		AddStatus32Register("xer",  srGroup, SPR_XER,  "SOC", GetSPR, SetSPR);
+		AddInt32Register   ("xer",  srGroup, SPR_XER,  GetSPR, SetSPR);
+		//AddStatus32Register("xer",  srGroup, SPR_XER,  "SOC", GetSPR, SetSPR);  //TODO: bit mapping is wrong
 		AddInt32Register   ("srr0", srGroup, SPR_SRR0, GetSPR, SetSPR);
 		AddInt32Register   ("srr1", srGroup, SPR_SRR1, GetSPR, SetSPR);
 		// etc...
@@ -128,7 +129,7 @@ namespace Debugger
 		for (unsigned id = 0; id < 8; id++)
 		{
 			sprintf(m_crNames[id], "cr%u", id);
-			AddStatus8Register(m_crNames[id], crGroup, id, "O=><", GetCR, SetCR);
+			AddStatus8Register(m_crNames[id], crGroup, id, "<>=O", GetCR, SetCR);
 		}
 		//AddStatus16Register("fpscr", "Condition Registers", PPCSPECIAL_FPSCR, "FEVOUZX789ABCRI 0123", GetSpecial, SetSpecial);
 		
