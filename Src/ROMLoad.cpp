@@ -30,6 +30,73 @@
 #include "Supermodel.h"
 #include "Pkgs/unzip.h"
 
+static bool isPowerOfTwo(long x)
+{
+  while (((x & 1) == 0) && x > 1) // while x is even and > 1
+    x >>= 1;
+  return (x == 1);
+}
+
+// Sega Bass Fishing
+static struct GameInfo cromInfo =
+{
+	"crom.bin",
+	NULL,
+	"Custom CROM Image",
+	"Bart Trzynadlowski",
+	2015,
+	0x10,
+	0,        // size of CROM image (filled in at run time)
+	false,	  // no need to mirror anything
+	0,        // no VROM
+	0,	      // no sample ROMs
+	GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1,
+	0,			  // no MPEG board
+	false,		// no drive board
+	{
+		{ NULL,	false, NULL, 0, 0, 0, 0, 0, false }
+	}
+};
+
+static GameInfo * LoadCROMDirect(const struct ROMMap *Map, const char *file)
+{
+  FILE *fp = fopen(file, "rb");
+  if (!fp)
+  {
+    ErrorLog("Could not open '%s'.", file);
+    return NULL;
+  }
+  fseek(fp, 0, SEEK_END);
+	long fileSize = ftell(fp);
+	rewind(fp);
+	if (fileSize > 0x800000)
+  {
+    ErrorLog("CROM image exceeds 8MB.");
+    fclose(fp);
+    return NULL;
+  }
+  if (!isPowerOfTwo(fileSize))
+  {
+    ErrorLog("CROM image size is not a power of 2.");
+    fclose(fp);
+    return NULL;
+  }
+  const struct ROMMap *CROM = 0;
+  while (Map->region && strcmp(Map->region, "CROM"))
+    ++Map;
+  if (!Map->region)
+  {
+    ErrorLog("Internal error: No CROM region in ROM map!");
+    fclose(fp);
+    return NULL;
+  }
+  // Read file into upper part of CROM region
+  fread(Map->ptr + 0x800000 - fileSize, sizeof(UINT8), fileSize, fp);
+  fclose(fp);
+  // Return fake game info structure
+  cromInfo.cromSize = fileSize;
+  return &cromInfo;
+}
 
 /*
  * CopyRegion(dest, destOffset, destSize, src, srcSize):
@@ -46,6 +113,8 @@
  */
 void CopyRegion(UINT8 *dest, unsigned destOffset, unsigned destSize, UINT8 *src, unsigned srcSize)
 {
+  if (!destSize || !srcSize)
+    return;
 	while (destOffset < destSize)
 	{
 		// If we'll overrun the destination, trim the copy length
@@ -204,6 +273,9 @@ static bool LoadROM(UINT8 *buf, unsigned bufSize, const struct ROMMap *Map, cons
  */
 const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const struct GameInfo *GameList, const char *zipFile, bool loadAll)
 {
+  if (!strcmp(zipFile, "crom.bin"))
+    return LoadCROMDirect(Map, zipFile);
+
 	unzFile					zf, zfp = NULL;
 	unz_file_info			fileInfo;
 	const struct GameInfo	*Game = NULL;
