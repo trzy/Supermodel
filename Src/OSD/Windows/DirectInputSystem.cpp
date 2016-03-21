@@ -29,6 +29,8 @@
 #include "DirectInputSystem.h"
 #include "Supermodel.h"
 
+#include <algorithm>
+
 #include <wbemidl.h>
 #include <oleauto.h>
 
@@ -476,7 +478,7 @@ bool CDirectInputSystem::GetRegString(HKEY regKey, const char *regPath, string &
 	
 	// Retrieve the actual data
 	char data[MAX_PATH];
-	dataLen = min<DWORD>(MAX_PATH - 1, dataLen);
+	dataLen = std::min<DWORD>(MAX_PATH - 1, dataLen);
 	result = RegQueryValueEx(regKey, regPath, NULL, NULL, (LPBYTE)data, &dataLen);
 	if (result != ERROR_SUCCESS)
 		return false;
@@ -629,7 +631,7 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 					UINT nLength;
 					if (m_getRIDevInfoPtr(device.hDevice, RIDI_DEVICENAME, NULL, &nLength) != 0)
 						continue;
-					nLength = min<int>(MAX_NAME_LENGTH, nLength);
+					nLength = std::min<int>(MAX_NAME_LENGTH, nLength);
 					char name[MAX_NAME_LENGTH];
 					if (m_getRIDevInfoPtr(device.hDevice, RIDI_DEVICENAME, name, &nLength) == -1)
 						continue;
@@ -1168,7 +1170,7 @@ void CDirectInputSystem::OpenJoysticks()
 				continue;
 			}
 			// DInput returns name as Unicode, convert to ASCII
-			int len = min<int>(MAX_NAME_LENGTH, (int)wcslen(didps.wsz) + 1);
+			int len = std::min<int>(MAX_NAME_LENGTH, (int)wcslen(didps.wsz) + 1);
 			WideCharToMultiByte(CP_ACP, 0, didps.wsz, len, joyDetails.name, len, NULL, NULL);
 			joyDetails.name[MAX_NAME_LENGTH - 1] = '\0';
 			joyDetails.numPOVs = devCaps.dwPOVs;
@@ -1842,8 +1844,8 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		}
 
 		// Combine vibration speeds from both constant force effect and vibration effect and set motors in action
-		vibration.wLeftMotorSpeed = min<WORD>(pInfo->xiConstForceLeft + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
-		vibration.wRightMotorSpeed = min<WORD>(pInfo->xiConstForceRight + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
+		vibration.wLeftMotorSpeed = std::min<WORD>(pInfo->xiConstForceLeft + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
+		vibration.wRightMotorSpeed = std::min<WORD>(pInfo->xiConstForceRight + pInfo->xiVibrateBoth, XI_VIBRATE_MAX);
 		return SUCCEEDED(hr = m_xiSetStatePtr(pInfo->xInputNum, &vibration));
 	}
 	else
@@ -1891,14 +1893,14 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					if (g_Config.dInputConstForceRightMax == 0)
 						return false;
 					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceRightMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
-					dicf.lMagnitude = max<LONG>(lFFMag, -DI_EFFECTS_MAX);
+					dicf.lMagnitude = std::max<LONG>(lFFMag, -DI_EFFECTS_MAX);
 				}
 				else
 				{
 					if (g_Config.dInputConstForceLeftMax == 0)
 						return false;
 					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceLeftMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
-					dicf.lMagnitude = min<LONG>(lFFMag, DI_EFFECTS_MAX);
+					dicf.lMagnitude = std::min<LONG>(lFFMag, DI_EFFECTS_MAX);
 				}
 
 				eff.cbTypeSpecificParams = sizeof(DICONSTANTFORCE);
@@ -1911,8 +1913,8 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					return false;
 				lFFMag = (LONG)(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE));
 				dic.lOffset = 0;
-				dic.lPositiveCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
-				dic.lNegativeCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
+				dic.lPositiveCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
+				dic.lNegativeCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
 				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
 				dic.lDeadBand = (LONG)(0.05 * DI_FFNOMINALMAX);
@@ -1927,8 +1929,8 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					return false;
 				lFFMag = (LONG)(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE));
 				dic.lOffset = 0;
-				dic.lPositiveCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
-				dic.lNegativeCoefficient = max<LONG>(0, min<LONG>(lFFMag, DI_EFFECTS_MAX));
+				dic.lPositiveCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
+				dic.lNegativeCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
 				dic.dwPositiveSaturation = DI_FFNOMINALMAX;
 				dic.dwNegativeSaturation = DI_FFNOMINALMAX;
 				dic.lDeadBand = 0;
@@ -1942,7 +1944,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				if (g_Config.dInputVibrateMax == 0)
 					return false;
 				dFFMag = (DWORD)(ffCmd.force * (float)(g_Config.dInputVibrateMax * DI_EFFECTS_SCALE));
-				dip.dwMagnitude = max<DWORD>(0, min<DWORD>(dFFMag, DI_EFFECTS_MAX));
+				dip.dwMagnitude = std::max<DWORD>(0, std::min<DWORD>(dFFMag, DI_EFFECTS_MAX));
 				dip.lOffset = 0;
                 dip.dwPhase = 0;
                 dip.dwPeriod = (DWORD)(0.05 * DI_SECONDS); // 1/20th second
