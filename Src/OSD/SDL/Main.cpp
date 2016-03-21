@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
@@ -28,6 +28,7 @@
  * -------------------------
  * - Add UI keys for balance setting? 
  * - 5.1 audio support?
+ * - Stretch video option
  *
  * Compile-Time Options
  * --------------------
@@ -216,10 +217,10 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
     	return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
     
     // Important GL attributes
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE,5);	// need at least RGB555 for Model 3 textures
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,5);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,5);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,16);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
 
   	// Set vsync
@@ -350,6 +351,87 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
 	else			printf("\n");
 }
 
+static void PrintBAT(unsigned regu, unsigned regl)
+{
+#ifdef DEBUG
+  UINT32 batu = ppc_read_spr(regu);
+  UINT32 batl = ppc_read_spr(regl);
+  UINT32 bepi = batu >> (31 - 14);
+  UINT32 bl = (batu >> (31 - 29)) & 0x7ff;
+  bool vs = batu & 2;
+  bool vp = batu & 1;
+  UINT32 brpn = batl >> (31 - 14);
+  UINT32 wimg = (batl >> (31 - 28)) & 0xf;
+  UINT32 pp = batl & 3;
+  UINT32 size = (bl + 1) * 128 * 1024;
+  UINT32 ea_base = bepi << (31 - 14);
+  UINT32 ea_limit = ea_base + size - 1;
+  UINT32 pa_base = brpn << (31 - 14);
+  UINT32 pa_limit = pa_base + size - 1;  
+  printf("%08X-%08X -> %08X-%08X ", ea_base, ea_limit, pa_base, pa_limit);
+  printf("%c%c%c%c ", (wimg&8)?'W':'-', (wimg&4)?'I':'-', (wimg&2)?'M':'-', (wimg&1)?'G':'-');
+  printf("PP=");
+  if (pp == 0)
+    printf("NA");
+  else if (pp == 2)
+    printf("RW");
+  else
+    printf("RO");
+  printf(" Vs=%d Vp=%d", vs, vp);
+#endif
+}
+
+static void DumpPPCRegisters(CBus *bus)
+{
+#ifdef DEBUG
+	for (int i = 0; i < 32; i += 4)
+        printf("R%d=%08X\tR%d=%08X\tR%d=%08X\tR%d=%08X\n",
+        i + 0, ppc_get_gpr(i + 0),
+        i + 1, ppc_get_gpr(i + 1),
+        i + 2, ppc_get_gpr(i + 2),
+        i + 3, ppc_get_gpr(i + 3));
+	printf("PC =%08X\n", ppc_get_pc());
+	printf("LR =%08X\n", ppc_get_lr());
+	printf("DBAT0U=%08X\tIBAT0U=%08X\n", ppc_read_spr(SPR603E_DBAT0U), ppc_read_spr(SPR603E_IBAT0U));
+	printf("DBAT0L=%08X\tIBAT0L=%08X\n", ppc_read_spr(SPR603E_DBAT0L), ppc_read_spr(SPR603E_IBAT0L));
+	printf("DBAT1U=%08X\tIBAT1U=%08X\n", ppc_read_spr(SPR603E_DBAT1U), ppc_read_spr(SPR603E_IBAT1U));
+	printf("DBAT1L=%08X\tIBAT1L=%08X\n", ppc_read_spr(SPR603E_DBAT1L), ppc_read_spr(SPR603E_IBAT1L));
+	printf("DBAT2U=%08X\tIBAT2U=%08X\n", ppc_read_spr(SPR603E_DBAT2U), ppc_read_spr(SPR603E_IBAT2U));
+	printf("DBAT2L=%08X\tIBAT2L=%08X\n", ppc_read_spr(SPR603E_DBAT2L), ppc_read_spr(SPR603E_IBAT2L));
+	printf("DBAT3U=%08X\tIBAT3U=%08X\n", ppc_read_spr(SPR603E_DBAT3U), ppc_read_spr(SPR603E_IBAT3U));
+	printf("DBAT3L=%08X\tIBAT3L=%08X\n", ppc_read_spr(SPR603E_DBAT3L), ppc_read_spr(SPR603E_IBAT3L));
+	for (int i = 0; i < 10; i++)
+		printf("SR%d =%08X VSID=%06X\n", i, ppc_read_sr(i), ppc_read_sr(i) & 0x00ffffff);
+	for (int i = 10; i < 16; i++)
+		printf("SR%d=%08X VSID=%06X\n", i, ppc_read_sr(i), ppc_read_sr(i) & 0x00ffffff);
+	printf("SDR1=%08X\n", ppc_read_spr(SPR603E_SDR1));
+	printf("\n");
+	printf("DBAT0: "); PrintBAT(SPR603E_DBAT0U, SPR603E_DBAT0L); printf("\n");
+	printf("DBAT1: "); PrintBAT(SPR603E_DBAT1U, SPR603E_DBAT1L); printf("\n");
+	printf("DBAT2: "); PrintBAT(SPR603E_DBAT2U, SPR603E_DBAT2L); printf("\n");
+	printf("DBAT3: "); PrintBAT(SPR603E_DBAT3U, SPR603E_DBAT3L); printf("\n");
+	printf("IBAT0: "); PrintBAT(SPR603E_IBAT0U, SPR603E_IBAT0L); printf("\n");
+	printf("IBAT1: "); PrintBAT(SPR603E_IBAT1U, SPR603E_IBAT1L); printf("\n");
+	printf("IBAT2: "); PrintBAT(SPR603E_IBAT2U, SPR603E_IBAT2L); printf("\n");
+	printf("IBAT3: "); PrintBAT(SPR603E_IBAT3U, SPR603E_IBAT3L); printf("\n");
+	printf("\n");
+	/*
+	printf("First PTEG:\n");
+	UINT32 ptab = ppc_read_spr(SPR603E_SDR1) & 0xffff0000;
+	for (int i = 0; i < 65536/8; i++)
+	{
+	  UINT64 pte = bus->Read64(ptab + i*8);
+	  UINT32 vsid = (pte >> (32 + (31 - 24))) & 0x00ffffff;
+	  UINT32 rpn = pte & 0xfffff000;
+	  int wimg = (pte >> 3) & 0xf;
+	  bool v = pte & 0x8000000000000000ULL;
+	  printf("  %d: %016llX V=%d VSID=%06X RPN=%08X WIMG=%c%c%c%c\n", i, pte, v, vsid, rpn, (wimg&8)?'W':'-', (wimg&4)?'I':'-', (wimg&2)?'M':'-', (wimg&1)?'G':'-');
+  }
+  */
+	
+#endif
+}
+
 /******************************************************************************
  Configuration
  
@@ -433,6 +515,7 @@ static void ApplySettings(CINIFile *INI, const char *section)
 #endif // SUPERMODEL_WIN32
 	
 	// OSD
+	INI->Get(section, "New3DEngine", g_Config.new3DEngine);
 	INI->Get(section, "XResolution", g_Config.xRes);
 	INI->Get(section, "YResolution", g_Config.yRes);
 	INI->Get(section, "FullScreen", g_Config.fullScreen);
@@ -479,6 +562,7 @@ static void LogConfig(void)
 	InfoLog("Program settings:");
 	
 	// COSDConfig
+	InfoLog("\tNew3DEngine                   = %d", g_Config.new3DEngine);
 	InfoLog("\tXResolution                   = %d", g_Config.xRes);
 	InfoLog("\tYResolution                   = %d", g_Config.yRes);
 	InfoLog("\tFullScreen                    = %d", g_Config.fullScreen);
@@ -528,7 +612,7 @@ static void LogConfig(void)
 	InfoLog("\tForceFeedback                 = %d", g_Config.forceFeedback);
 #endif
 
-	// CRender3DConfig
+	// CLegacy3DConfig
 	InfoLog("\tVertexShader                  = %s", g_Config.vertexShaderFile.c_str());
 	InfoLog("\tFragmentShader                = %s", g_Config.fragmentShaderFile.c_str());
 
@@ -800,8 +884,8 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
 	CModel3			*Model3 = new CModel3();
 #endif // SUPERMODEL_DEBUGGER
 	char			baseTitleStr[128], titleStr[128];
-	CRender2D		*Render2D = new CRender2D();
-	CRender3D		*Render3D = new CRender3D();
+	CRender2D		*Render2D;
+	IRender3D		*Render3D;
 	unsigned		prevFPSTicks, currentFPSTicks, currentTicks, targetTicks, startTicks;
 	unsigned		fpsFramesElapsed, framesElapsed;
 	bool			gameHasLightguns = false;
@@ -852,7 +936,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
 	if (Outputs != NULL)
 		Model3->AttachOutputs(Outputs);
 	
-	// Initialize the renderer
+	// Initialize the renderers
+	Render2D = new CRender2D();
+	Render3D = g_Config.new3DEngine ? ((IRender3D *) new New3D::CNew3D()) : ((IRender3D *) new Legacy3D::CLegacy3D());
 	if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
 		goto QuitError;
 	if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -985,7 +1071,7 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
 
 			// Recreate renderers and attach to the emulator
 			Render2D = new CRender2D();
-			Render3D = new CRender3D();
+			Render3D = g_Config.new3DEngine ? ((IRender3D *) new New3D::CNew3D()) : ((IRender3D *) new Legacy3D::CLegacy3D());
 			if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
 				goto QuitError;
 			if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -1204,33 +1290,6 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
 	delete Render2D;
 	delete Render3D;
 	
-	// Dump PowerPC registers
-#ifdef DEBUG
-	for (int i = 0; i < 32; i += 4)
-        printf("R%d=%08X\tR%d=%08X\tR%d=%08X\tR%d=%08X\n",
-        i + 0, ppc_get_gpr(i + 0),
-        i + 1, ppc_get_gpr(i + 1),
-        i + 2, ppc_get_gpr(i + 2),
-        i + 3, ppc_get_gpr(i + 3));
-	printf("PC =%08X\n", ppc_get_pc());
-  	printf("LR =%08X\n", ppc_get_lr());
-	/*
-	printf("DBAT0U=%08X\tIBAT0U=%08X\n", ppc_read_spr(SPR603E_DBAT0U), ppc_read_spr(SPR603E_IBAT0U));
-	printf("DBAT0L=%08X\tIBAT0L=%08X\n", ppc_read_spr(SPR603E_DBAT0L), ppc_read_spr(SPR603E_IBAT0L));
-	printf("DBAT1U=%08X\tIBAT1U=%08X\n", ppc_read_spr(SPR603E_DBAT1U), ppc_read_spr(SPR603E_IBAT1U));
-	printf("DBAT1L=%08X\tIBAT1L=%08X\n", ppc_read_spr(SPR603E_DBAT1L), ppc_read_spr(SPR603E_IBAT1L));
-	printf("DBAT2U=%08X\tIBAT2U=%08X\n", ppc_read_spr(SPR603E_DBAT2U), ppc_read_spr(SPR603E_IBAT2U));
-	printf("DBAT2L=%08X\tIBAT2L=%08X\n", ppc_read_spr(SPR603E_DBAT2L), ppc_read_spr(SPR603E_IBAT2L));
-	printf("DBAT3U=%08X\tIBAT3U=%08X\n", ppc_read_spr(SPR603E_DBAT3U), ppc_read_spr(SPR603E_IBAT3U));
-	printf("DBAT3L=%08X\tIBAT3L=%08X\n", ppc_read_spr(SPR603E_DBAT3L), ppc_read_spr(SPR603E_IBAT3L));
-	for (int i = 0; i < 10; i++)
-		printf("SR%d =%08X\n", i, ppc_read_sr(i));
-	for (int i = 10; i < 16; i++)
-		printf("SR%d=%08X\n", i, ppc_read_sr(i));
-	printf("SDR1=%08X\n", ppc_read_spr(SPR603E_SDR1));
-	*/
-#endif
-	
 	return 0;
 
 	// Quit with an error
@@ -1316,7 +1375,7 @@ static int DisassembleCROM(const char *zipFile, UINT32 addr, unsigned n)
 static void Title(void)
 {
 	puts("Supermodel: A Sega Model 3 Arcade Emulator (Version "SUPERMODEL_VERSION")");
-	puts("Copyright (C) 2011-2012 by Bart Trzynadlowski and Nik Henson\n");
+	puts("Copyright 2011-2016 by Bart Trzynadlowski and Nik Henson\n");
 }
 
 // Print usage information
@@ -1326,7 +1385,7 @@ static void Help(void)
 	puts("ROM set must be a valid ZIP file containing a single game.");
 	puts("");
 	puts("General Options:");
-	puts("    -?, -h                 Print this help text");
+	puts("    -?, -h, -help, --help  Print this help text");
 	puts("    -print-games           List supported games and quit");
 	puts("");
 	puts("Core Options:");
@@ -1346,8 +1405,10 @@ static void Help(void)
 	puts("    -show-fps              Display frame rate in window title bar");
 	puts("    -crosshairs=<n>        Crosshairs configuration for gun games:");
 	puts("                            0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
-	puts("    -vert-shader=<file>    Load 3D vertex shader from external file");
-	puts("    -frag-shader=<file>    Load 3D fragment shader from external file");
+	puts("    -legacy3d              Legacy 3D engine [Default]");
+	puts("    -new3d                 New 3D engine by Ian Curtis");
+	puts("    -vert-shader=<file>    Load vertex shader from file (legacy 3D engine)");
+	puts("    -frag-shader=<file>    Load fragment shader from file (legacy 3D engine)");
 	puts("    -print-gl-info         Print OpenGL driver information and quit");
 	puts("");
 	puts("Audio Options:");
@@ -1371,7 +1432,7 @@ static void Help(void)
 	puts("");
 #ifdef SUPERMODEL_DEBUGGER
 	puts("Debug Options:");
-	puts("    -disable-debugger	     Completely disable debugger functionality");
+	puts("    -disable-debugger      Completely disable debugger functionality");
 	puts("    -enter-debugger        Enter debugger at start of emulation");
 	puts("    -dis=<addr>[,n]        Disassemble PowerPC code from CROM");
 	puts("");
@@ -1449,7 +1510,17 @@ int main(int argc, char **argv)
 	CmdLine.SetDefaultSectionName("Global");	// command line settings are global-level
 	for (i = 1; i < argc; i++)
 	{
-		if (!strcmp(argv[i],"-h") || !strcmp(argv[i],"-?"))
+		if (!strcmp(argv[i],"-new3d"))
+		{
+			n = 1;
+			CmdLine.Set("Global", "New3DEngine", n);
+		}
+		else if (!strcmp(argv[i],"-legacy3d"))
+	  {
+	    n = 0;
+	    CmdLine.Set("Global", "New3DEngine", n);
+	  }
+		else if (!strcmp(argv[i],"-h") || !strcmp(argv[i],"-?") || !strcmp(argv[i],"-help") || !strcmp(argv[i],"--help"))
 		{
 			Help();
 			return 0;

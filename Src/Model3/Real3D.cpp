@@ -107,6 +107,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
 	}
 	
 	SaveState->Read(memoryPool, MEM_POOL_SIZE_RW);
+
 	// If multi-threaded, update read-only snapshots too
 	if (g_Config.gpuMultiThreaded)
 		UpdateSnapshots(true);
@@ -706,7 +707,6 @@ void CReal3D::UploadTexture(UINT32 header, UINT16 *texData)
 	unsigned	x, y, page, width, height, bytesPerTexel,
 				mipYPos, mipWidth, mipHeight, mipNum, mipX, mipY;
 	
-	
 	// Position: texture RAM is arranged as 2 2048x1024 texel sheets
 	x = 32*(header&0x3F);
 	y = 32*((header>>7)&0x1F);
@@ -855,7 +855,7 @@ void CReal3D::WriteTexturePort(unsigned reg, UINT32 data)
 	case 0x8:	// VROM texture length (also used to trigger uploads)
 	case 0x14:
 		UploadTexture(vromTextureHeader,(UINT16 *)&vrom[vromTextureAddr&0xFFFFFF]);
-		//printf("texture upload: addr=%08X\n", vromTextureAddr);
+    //printf("texture upload: addr=%08X\n", vromTextureAddr);
 		break;
 	default:
 		DebugLog("Real3D texture port write: %X=%08X\n", reg, data);
@@ -969,7 +969,7 @@ void CReal3D::Reset(void)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
-void CReal3D::AttachRenderer(CRender3D *Render3DPtr)
+void CReal3D::AttachRenderer(IRender3D *Render3DPtr)
 {
 	Render3D = Render3DPtr;
 

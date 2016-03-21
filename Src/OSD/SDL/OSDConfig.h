@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -43,6 +43,7 @@ using namespace std;
 class COSDConfig
 {
 public:
+	bool		new3DEngine;	// New 3D engine
 	unsigned	xRes, yRes;		// X and Y resolution, in pixels
 	bool 		fullScreen;		// Full screen mode (if true)
 	bool		wideScreen;		// Wide screen hack
@@ -135,6 +136,7 @@ public:
 	// Defaults
 	COSDConfig(void)
 	{
+		new3DEngine = false;
 		xRes = 496;
 		yRes = 384;
 		fullScreen = false;

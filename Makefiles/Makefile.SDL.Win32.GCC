@@ -38,7 +38,7 @@ BITS = 64
 #
 # Include console-based debugger in emulator ('yes' or 'no')
 #
-ENABLE_DEBUGGER = no
+ENABLE_DEBUGGER = yes
 
 
 ###############################################################################
@@ -46,6 +46,11 @@ ENABLE_DEBUGGER = no
 #
 # Edit these paths as necessary.
 ###############################################################################
+
+#
+# Boost 1.55
+#
+BOOST_INCLUDEPATH = /mingw64/boost_1_55_0
 
 #
 # SDL
@@ -90,11 +95,11 @@ OUTFILE = $(BIN_DIR)\Supermodel.exe
 CC = gcc
 CXX = g++
 LD = g++
-COMPILER_FLAGS = -I$(SDL_INCLUDEPATH) -ISrc/ -ISrc/OSD/ -ISrc/OSD/SDL/ -ISrc/OSD/Windows/ -c -Wall -O3 -DSUPERMODEL_WIN32 -DGLEW_STATIC 
+COMPILER_FLAGS = -I$(SDL_INCLUDEPATH) -ISrc/ -ISrc/OSD/ -ISrc/OSD/SDL/ -ISrc/OSD/Windows/ -c -Wall -DSUPERMODEL_WIN32 -DGLEW_STATIC -O3
 CFLAGS = $(COMPILER_FLAGS)
-CPPFLAGS = $(COMPILER_FLAGS)
+CPPFLAGS = $(COMPILER_FLAGS) -I$(BOOST_INCLUDEPATH) -std=c++11
 #LFLAGS = -s -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lz -l:$(WINSDK_LIBPATH)/WbemUuid.lib
-LFLAGS = -s -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lz -l:$(WINSDK_LIBPATH)/WbemUuid.lib
+LFLAGS = -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lz -l:$(WINSDK_LIBPATH)/WbemUuid.lib -s
 
 #
 # Build options...
@@ -115,7 +120,9 @@ endif
 #
 OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Config.o $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/ROMLoad.o $(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o \
-	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Render3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o $(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
+	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Legacy3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o \
+	$(OBJ_DIR)/New3D.o $(OBJ_DIR)/Mat4.o $(OBJ_DIR)/Model.o $(OBJ_DIR)/PolyHeader.o $(OBJ_DIR)/Texture.o $(OBJ_DIR)/TextureSheet.o $(OBJ_DIR)/VBO.o $(OBJ_DIR)/Vec.o $(OBJ_DIR)/R3DShader.o \
+	$(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
 	$(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/Audio.o $(OBJ_DIR)/Thread.o $(OBJ_DIR)/SoundBoard.o \
 	$(OBJ_DIR)/SCSP.o $(OBJ_DIR)/SCSPDSP.o $(OBJ_DIR)/68K.o $(OBJ_DIR)/m68kcpu.o $(OBJ_DIR)/m68kopnz.o $(OBJ_DIR)/m68kopdm.o \
 	$(OBJ_DIR)/m68kopac.o $(OBJ_DIR)/m68kops.o $(OBJ_DIR)/DSB.o $(OBJ_DIR)/Z80.o \
@@ -142,6 +149,10 @@ endif
 #
 all:	$(BIN_DIR) $(OBJ_DIR) $(OBJ)
 	$(LD) $(LFLAGS)
+
+ppcd: $(BIN_DIR) $(OBJ_DIR)
+	$(CXX) Src/CPU/PowerPC/PPCDisasm.cpp $(CPPFLAGS) -DSTANDALONE -o $(OBJ_DIR)/ppcd.o
+	$(LD) -o $(BIN_DIR)/ppcd.exe -mconsole $(OBJ_DIR)/ppcd.o
 
 $(BIN_DIR):
 	mkdir $(BIN_DIR)
@@ -195,7 +206,13 @@ $(OBJ_DIR)/%.o:	Src/%.cpp
 $(OBJ_DIR)/%.o:	Src/Model3/%.cpp
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
-$(OBJ_DIR)/%.o:	Src/Graphics/%.cpp Src/Graphics/Shaders2D.h Src/Graphics/Shaders3D.h
+$(OBJ_DIR)/%.o:	Src/Graphics/%.cpp Src/Graphics/Shaders2D.h
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
+$(OBJ_DIR)/%.o:	Src/Graphics/Legacy3D/%.cpp Src/Graphics/Legacy3D/Shaders3D.h
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/Graphics/New3D/%.cpp Src/Graphics/New3D/%.h
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
 $(OBJ_DIR)/%.o:	Src/Sound/%.cpp

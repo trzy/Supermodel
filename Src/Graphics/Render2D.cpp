@@ -710,7 +710,7 @@ void CRender2D::BeginFrame(void)
 
 // Top layers
 void CRender2D::EndFrame(void)
-{	
+{
 	// Display top surface
 	Setup2D(false, false);
 	glEnable(GL_BLEND);

@@ -319,7 +319,7 @@ public:
 	void Reset(void);
 	
 	/*
-	 * AttachRenderer(render2DPtr):
+	 * AttachRenderer(render3DPtr):
 	 *
 	 * Attaches a 3D renderer for the Real3D to use. This function will
 	 * immediately pass along the information that a CRender3D object needs to
@@ -328,7 +328,7 @@ public:
 	 * Parameters:
 	 *		Render3DPtr		Pointer to a 3D renderer object.
 	 */
-	void AttachRenderer(CRender3D *Render3DPtr);
+	void AttachRenderer(IRender3D *Render3DPtr);
 	
 	/*
 	 * SetStep(stepID):
@@ -388,7 +388,7 @@ private:
 	UINT32		UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty);
 
 	// Renderer attached to the Real3D
-	CRender3D	*Render3D;
+	IRender3D	*Render3D;
 	
 	// Data passed from Model 3 object
 	const UINT32	*vrom;	// Video ROM
