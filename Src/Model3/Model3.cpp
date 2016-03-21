@@ -1374,6 +1374,9 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
 void CModel3::Write32(UINT32 addr, UINT32 data)
 {
+  // Debugging VF3 missing stage textures
+  //if ((addr == 0xb4000)) printf("B4000 written @ pc=%08x lr=%08x\n", ppc_get_pc(), ppc_get_lr());
+
 	if ((addr&3))
 	{
 		Write16(addr+0,data>>16);
@@ -1516,7 +1519,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 	case 0xF1:
 		if (addr < 0xF1120000)
 		{
-			// Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
+ 			// Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
 			data = FLIPENDIAN32(data);
 			TileGen.WriteRAM(addr&0x1FFFFF,data);
 			break;
@@ -1729,7 +1732,7 @@ UINT32 CModel3::Read32(UINT32 addr)
 
 UINT64 CModel3::Read64(UINT32 addr)
 {
-    UINT64  data;
+  UINT64  data;
 
 	data = Read32(addr+0);
 	data <<= 32;
@@ -3206,7 +3209,7 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
 	return OKAY;
 }
 
-void CModel3::AttachRenderers(CRender2D *Render2DPtr, CRender3D *Render3DPtr)
+void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr)
 {
 	TileGen.AttachRenderer(Render2DPtr);
 	GPU.AttachRenderer(Render3DPtr);

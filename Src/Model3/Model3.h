@@ -273,7 +273,7 @@ public:
 	 *		Render2DPtr		Pointer to a tile renderer object.
 	 *		Render3DPtr		Same as above but for a 3D renderer.
 	 */
-	void AttachRenderers(CRender2D *Render2DPtr, CRender3D *Render3DPtr);
+	void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr);
 	
 	/*
 	 * AttachInputs(InputsPtr):
