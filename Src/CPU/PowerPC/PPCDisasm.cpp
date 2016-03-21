@@ -30,6 +30,7 @@
  * not sure whether any other kinds of instructions need checking.
  */
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #ifdef STANDALONE
@@ -37,7 +38,7 @@
 #endif
 #include "Supermodel.h"
 
-#define DISASM_VERSION  "1.0"
+#define DISASM_VERSION  "1.1"
 
 
 /******************************************************************************
@@ -91,11 +92,11 @@
  * These macros generate instruction words with their associated fields filled
  * in with the passed value.
  */
-#define D_OP(op)    ((op & 0x3f) << 26)
-#define D_XO(xo)    ((xo & 0x3ff) << 1)
-#define D_RT(r)     ((r & 0x1f) << (31 - 10))
-#define D_RA(r)		((r & 0x1f) << (31 - 15))
-#define D_UIMM(u)	(u & 0xffff)
+#define D_OP(op)  ((uint32_t(op) & 0x3f) << 26)
+#define D_XO(xo)  ((uint32_t(xo) & 0x3ff) << 1)
+#define D_RT(r)   ((uint32_t(r) & 0x1f) << (31 - 10))
+#define D_RA(r)   ((uint32_t(r) & 0x1f) << (31 - 15))
+#define D_UIMM(u) (uint32_t(u) & 0xffff)
 
 /*
  * Macros to Get Field Values
@@ -212,12 +213,12 @@ enum
  */
 typedef struct
 {
-    char    	*mnem;  // mnemonic
-    UINT32  	match;  // bit pattern of instruction after it has been masked
-    UINT32  	mask;   // mask of variable fields (AND with ~mask to compare w/
-                    	// bit pattern to determine a match)
-    int     	format; // operand format
-    unsigned	flags;  // flags
+    const char  *mnem;  // mnemonic
+    uint32_t    match;  // bit pattern of instruction after it has been masked
+    uint32_t    mask;   // mask of variable fields (AND with ~mask to compare w/
+                        // bit pattern to determine a match)
+    int         format; // operand format
+    unsigned    flags;  // flags
 } IDESCR;
 
 /*
@@ -435,7 +436,7 @@ static const IDESCR itab[] =
  *
  * Use an index of BI&3 into this table to obtain the CR field bit name.
  */
-static char *crbit[] = { "lt", "gt", "eq", "so" };
+static const char *crbit[] = { "lt", "gt", "eq", "so" };
 
 /*
  * SPR():
@@ -445,7 +446,7 @@ static char *crbit[] = { "lt", "gt", "eq", "so" };
  */
 static void SPR(char *dest, unsigned spr_field)
 {
-    unsigned	spr;
+    unsigned  spr;
 
     /*
      * Construct the SPR number -- SPR field is 2 5-bit fields
@@ -527,13 +528,13 @@ static void SPR(char *dest, unsigned spr_field)
  * Predecodes the SIMM field for us. If do_unsigned, it is printed as an
  * unsigned 32-bit integer.
  */
-static void DecodeSigned16(char *outbuf, UINT32 op, bool do_unsigned)
+static void DecodeSigned16(char *outbuf, uint32_t op, bool do_unsigned)
 {
     INT16   s;
 
     s = G_SIMM(op);
     if (do_unsigned)    // sign extend to unsigned 32-bits
-        sprintf(outbuf, "0x%04X", (UINT32) s);
+        sprintf(outbuf, "0x%04X", (uint32_t) s);
     else                // print as signed 16 bits
     {
         if (s < 0)
@@ -548,9 +549,9 @@ static void DecodeSigned16(char *outbuf, UINT32 op, bool do_unsigned)
  *
  * Generate a mask from bit MB through ME (PPC-style backwards bit numbering.)
  */
-static UINT32 Mask(unsigned mb, unsigned me)
+static uint32_t Mask(unsigned mb, unsigned me)
 {
-	UINT32	i, mask;
+  uint32_t  i, mask;
 
     mb &= 31;
     me &= 31;
@@ -574,11 +575,11 @@ static UINT32 Mask(unsigned mb, unsigned me)
  * Perform checks on the instruction as required by the flags. Returns 1 if
  * the instruction failed.
  */
-static bool Check(UINT32 op, unsigned flags)
+static bool Check(uint32_t op, unsigned flags)
 {
-    unsigned	nb, rt, ra;
+    unsigned  nb, rt, ra;
 
-    if (!flags) return OKAY;	// nothing to check for!
+    if (!flags) return OKAY;  // nothing to check for!
 
     rt = G_RT(op);
     ra = G_RA(op);
@@ -626,7 +627,7 @@ static bool Check(UINT32 op, unsigned flags)
             return FAIL;
     }
 
-    return OKAY;	// passed checks
+    return OKAY;  // passed checks
 }
 
 /*
@@ -635,9 +636,9 @@ static bool Check(UINT32 op, unsigned flags)
  * Handles all simplified instruction forms. Returns 1 if one was decoded,
  * otherwise 0 to indicate disassembly should carry on as normal.
  */
-static bool Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *oprs)
+static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, char *oprs)
 {
-    UINT32  value, disp;
+    uint32_t  value, disp;
 
     value = G_SIMM(op); // value is fully sign-extended SIMM field
     if (value & 0x8000)
@@ -718,13 +719,13 @@ static bool Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *
         if (G_SH(op) == 0)      // rlwinm[.] rA,rT,0,MB,ME -> and[.] rA,rT,MASK
         {
             strcat(mnem, "and");
-        	if (op & M_RC) strcat(mnem, ".");
+          if (op & M_RC) strcat(mnem, ".");
             sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), value);
         }
         else                    // rlwinm[.] rA,rT,SH,MASK
         {
             strcat(mnem, "rlwinm");
-        	if (op & M_RC) strcat(mnem, ".");
+          if (op & M_RC) strcat(mnem, ".");
             sprintf(oprs, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
         }
     }
@@ -776,11 +777,11 @@ static bool Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *
         strcat(mnem, "subc");
         if (op & M_OE) strcat(mnem, "o");
         if (op & M_RC) strcat(mnem, ".");
-		sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
+    sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
     }
     else
         return 0;   // no match
-	return 1;
+  return 1;
 }
 
 /*
@@ -807,12 +808,11 @@ static bool Simplified(UINT32 op, UINT32 vpc, char *signed16, char *mnem, char *
  *      Zero if successful, non-zero if the instruction was unrecognized or
  *      had an invalid form (see note above in function description.)
  */ 
-bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
+bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
                         bool simplify)
 {
     char    signed16[12];
-    UINT32  disp;
-    int     i;
+    uint32_t  disp;
 
     mnem[0] = '\0'; // so we can use strcat()
     oprs[0] = '\0';
@@ -837,7 +837,7 @@ bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
      * Search for the instruction in the list and print it if there's a match
      */
 
-    for (i = 0; i < sizeof(itab) / sizeof(IDESCR); i++)
+    for (size_t i = 0; i < sizeof(itab) / sizeof(IDESCR); i++)
     {
         if ((op & ~itab[i].mask) == itab[i].match)  // check for match
         {
@@ -974,7 +974,7 @@ bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
                 if (G_RA(op))
                     sprintf(oprs, "r%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
                 else
-                    sprintf(oprs, "r%d,0x%08X", G_RT(op), (UINT32) ((INT16) G_D(op)));
+                    sprintf(oprs, "r%d,0x%08X", G_RT(op), (uint32_t) ((INT16) G_D(op)));
                 break;
 
             case F_RT_D_RA:
@@ -985,7 +985,7 @@ bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
                 if (G_RA(op))
                     sprintf(oprs, "f%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
                 else
-                    sprintf(oprs, "f%d,0x%08X", G_RT(op), (UINT32) ((INT16) G_D(op)));
+                    sprintf(oprs, "f%d,0x%08X", G_RT(op), (uint32_t) ((INT16) G_D(op)));
                 break;
 
             case F_FRT_D_RA:
@@ -1097,7 +1097,7 @@ bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
         }
     }
 
-    return FAIL;	// no match found
+    return FAIL;  // no match found
 }
 
 
@@ -1111,7 +1111,7 @@ bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
 
 static void PrintUsage(void)
 {
-    puts("ppcd Version "DISASM_VERSION" by Bart Trzynadlowski: PowerPC 603e Disassembler");
+    puts("ppcd Version " DISASM_VERSION " by Bart Trzynadlowski: PowerPC 603e Disassembler");
     puts("Usage:    ppcd <file> [options]");
     puts("Options:  -?,-h       Show this help text");
     puts("          -s <offset> Start offset (hexadecimal)");
@@ -1131,13 +1131,13 @@ static void PrintUsage(void)
  */
 int main(int argc, char **argv)
 {
-    char    	mnem[16], oprs[48];
-    FILE    	*fp;
-    UINT8   	*buffer;
-    unsigned	i, fsize, start = 0, len, org, file = 0;
-    UINT32  	op;
-    bool    	len_specified = 0, org_specified = 0, little = 0, simple = 1;
-    char    	*c;
+    char      mnem[16], oprs[48];
+    FILE      *fp;
+    uint8_t   *buffer;
+    unsigned  i, fsize, start = 0, len, org, file = 0;
+    uint32_t    op;
+    bool      len_specified = 0, org_specified = 0, little = 0, simple = 1;
+    char      *c;
 
 
     if (argc <= 1)
@@ -1208,13 +1208,13 @@ int main(int argc, char **argv)
     fsize = ftell(fp);
     rewind(fp);
 
-    if ((buffer = (UINT8 *) calloc(fsize, sizeof(UINT8))) == NULL)
+    if ((buffer = (uint8_t *) calloc(fsize, sizeof(uint8_t))) == NULL)
     {              
         fprintf(stderr, "ppcd: not enough memory to load input file: %s, %lu bytes\n", argv[file], (unsigned long) fsize);
         fclose(fp);
         exit(1);
     }
-    fread(buffer, sizeof(UINT8), fsize, fp);
+    fread(buffer, sizeof(uint8_t), fsize, fp);
     fclose(fp);
 
     if (!len_specified)
