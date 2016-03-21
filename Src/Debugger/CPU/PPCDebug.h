@@ -33,6 +33,7 @@
 
 #define PPCSPECIAL_LR 0
 #define PPCSPECIAL_FPSCR 1
+#define PPCSPECIAL_MSR 2
 
 namespace Debugger
 {

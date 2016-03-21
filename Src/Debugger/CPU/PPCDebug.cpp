@@ -48,6 +48,7 @@ namespace Debugger
 		{
 			case PPCSPECIAL_LR:    return ::ppc_get_lr();
 			case PPCSPECIAL_FPSCR: return 0; // TODO
+		  case PPCSPECIAL_MSR:   return ::ppc_read_msr();
 			default:               return 0;
 		}
 	}
@@ -118,11 +119,18 @@ namespace Debugger
 		AddAddrRegister("lr", srGroup, PPCSPECIAL_LR, GetSpecialReg, SetSpecialReg);
 
 		// SPR registers
-		AddInt32Register   ("ctr",  srGroup, SPR_LR,   GetSPR, SetSPR);
-		AddInt32Register   ("xer",  srGroup, SPR_XER,  GetSPR, SetSPR);
+		AddInt32Register   ("ctr",  srGroup, SPR_LR,         GetSPR, SetSPR);
+		AddInt32Register   ("xer",  srGroup, SPR_XER,        GetSPR, SetSPR);
 		//AddStatus32Register("xer",  srGroup, SPR_XER,  "SOC", GetSPR, SetSPR);  //TODO: bit mapping is wrong
-		AddInt32Register   ("srr0", srGroup, SPR_SRR0, GetSPR, SetSPR);
-		AddInt32Register   ("srr1", srGroup, SPR_SRR1, GetSPR, SetSPR);
+		AddInt32Register   ("srr0", srGroup, SPR_SRR0,       GetSPR, SetSPR);
+		AddInt32Register   ("srr1", srGroup, SPR_SRR1,       GetSPR, SetSPR);
+		AddInt32Register   ("msr",  srGroup, PPCSPECIAL_MSR, GetSpecialReg, SetSpecialReg);
+		AddInt32Register   ("sdr1", srGroup, SPR603E_SDR1,   GetSPR, SetSPR);
+		AddInt32Register   ("imiss",srGroup, SPR603E_IMISS,  GetSPR, SetSPR);
+		AddInt32Register   ("dmiss",srGroup, SPR603E_DMISS,  GetSPR, SetSPR);
+		AddInt32Register   ("hid0", srGroup, SPR603E_HID0,   GetSPR, SetSPR);
+		AddInt32Register   ("hid1", srGroup, SPR603E_HID1,   GetSPR, SetSPR);
+		
 		// etc...
 		
 		// Condition registers
