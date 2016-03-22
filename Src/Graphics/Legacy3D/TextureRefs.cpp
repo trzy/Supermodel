@@ -206,7 +206,7 @@ bool CTextureRefs::UpdateHashCapacity(unsigned capacity)
 	m_hashEntries = new(std::nothrow) HashEntry*[capacity];
 	if (!m_hashEntries)
 		return false;
-	memset(m_hashEntries, NULL, capacity * sizeof(HashEntry*));
+	memset(m_hashEntries, 0, capacity * sizeof(HashEntry*));
 	if (oldEntries)
 	{
 		// Redistribute entries into new entries array

@@ -1,4 +1,4 @@
-/**
+ /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
  ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
