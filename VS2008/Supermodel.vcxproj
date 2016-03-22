@@ -1,0 +1,604 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B114BBD9-8AEA-4DAE-B367-A66A804CB3DD}</ProjectGuid>
+    <RootNamespace>Supermodel</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>12.0.30501.0</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <EmbedManifest>true</EmbedManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(TargetDir)\Config"
+mkdir "$(TargetDir)\NVRAM"
+mkdir "$(TargetDir)\Saves"
+xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
+xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(TargetDir)\Config"
+mkdir "$(TargetDir)\NVRAM"
+mkdir "$(TargetDir)\Saves"
+xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
+xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(TargetDir)\Config"
+mkdir "$(TargetDir)\NVRAM"
+mkdir "$(TargetDir)\Saves"
+xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
+xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
+
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Full</Optimization>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
+      <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(TargetDir)\Config"
+mkdir "$(TargetDir)\NVRAM"
+mkdir "$(TargetDir)\Saves"
+xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
+xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="Musashi68K\Musashi68K.vcxproj">
+      <Project>{1248cf7c-b122-461c-9624-196aefae5046}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="SDLmain\SDLmain.vcxproj">
+      <Project>{da956fd3-e142-46f2-9dd5-c78bebb56b7a}</Project>
+      <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="SDL\SDL.vcxproj">
+      <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
+      <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="ZLib\ZLib.vcxproj">
+      <Project>{248d61e0-2e9b-4c73-8839-a31fbcb7d109}</Project>
+      <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Src\BlockFile.cpp" />
+    <ClCompile Include="..\Src\Config.cpp" />
+    <ClCompile Include="..\Src\CPU\68K\68K.cpp" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kcpu.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kdasm.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopac.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopdm.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopnz.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kops.c" />
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68k_in.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Turbo68K\Make68K.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\PowerPC\ppc.cpp" />
+    <ClCompile Include="..\Src\CPU\PowerPC\ppc603.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\PowerPC\PPCDisasm.cpp" />
+    <ClCompile Include="..\Src\CPU\PowerPC\ppc_ops.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\Z80\Z80.cpp" />
+    <ClCompile Include="..\Src\Debugger\AddressTable.cpp" />
+    <ClCompile Include="..\Src\Debugger\Breakpoint.cpp" />
+    <ClCompile Include="..\Src\Debugger\CodeAnalyser.cpp" />
+    <ClCompile Include="..\Src\Debugger\ConsoleDebugger.cpp" />
+    <ClCompile Include="..\Src\Debugger\CPUDebug.cpp" />
+    <ClCompile Include="..\Src\Debugger\CPU\68KDebug.cpp" />
+    <ClCompile Include="..\Src\Debugger\CPU\Musashi68KDebug.cpp" />
+    <ClCompile Include="..\Src\Debugger\CPU\PPCDebug.cpp" />
+    <ClCompile Include="..\Src\Debugger\CPU\Turbo68KDebug.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPU\Z80Debug.cpp" />
+    <ClCompile Include="..\Src\Debugger\Debugger.cpp" />
+    <ClCompile Include="..\Src\Debugger\Exception.cpp" />
+    <ClCompile Include="..\Src\Debugger\Interrupt.cpp" />
+    <ClCompile Include="..\Src\Debugger\IO.cpp" />
+    <ClCompile Include="..\Src\Debugger\Label.cpp" />
+    <ClCompile Include="..\Src\Debugger\Register.cpp" />
+    <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
+    <ClCompile Include="..\Src\Debugger\Watch.cpp" />
+    <ClCompile Include="..\Src\Games.cpp" />
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp" />
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp" />
+    <ClCompile Include="..\Src\Graphics\Legacy3D\TextureRefs.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\Mat4.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\Model.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\TextureSheet.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
+    <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
+    <ClCompile Include="..\Src\Graphics\Shader.cpp" />
+    <ClCompile Include="..\Src\INIFile.cpp" />
+    <ClCompile Include="..\Src\Inputs\Input.cpp" />
+    <ClCompile Include="..\Src\Inputs\Inputs.cpp" />
+    <ClCompile Include="..\Src\Inputs\InputSource.cpp" />
+    <ClCompile Include="..\Src\Inputs\InputSystem.cpp" />
+    <ClCompile Include="..\Src\Inputs\InputTypes.cpp" />
+    <ClCompile Include="..\Src\Inputs\MultiInputSource.cpp" />
+    <ClCompile Include="..\Src\Model3\53C810.cpp" />
+    <ClCompile Include="..\Src\Model3\53C810Disasm.cpp" />
+    <ClCompile Include="..\Src\Model3\93C46.cpp" />
+    <ClCompile Include="..\Src\Model3\DriveBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\DSB.cpp" />
+    <ClCompile Include="..\Src\Model3\IRQ.cpp" />
+    <ClCompile Include="..\Src\Model3\Model3.cpp" />
+    <ClCompile Include="..\Src\Model3\MPC10x.cpp" />
+    <ClCompile Include="..\Src\Model3\PCI.cpp" />
+    <ClCompile Include="..\Src\Model3\Real3D.cpp" />
+    <ClCompile Include="..\Src\Model3\RTC72421.cpp" />
+    <ClCompile Include="..\Src\Model3\SoundBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\TileGen.cpp" />
+    <ClCompile Include="..\Src\OSD\Outputs.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\Audio.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\Main.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\SDLInputSystem.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\Thread.cpp" />
+    <ClCompile Include="..\Src\OSD\Windows\DirectInputSystem.cpp" />
+    <ClCompile Include="..\Src\OSD\Windows\WinOutputs.cpp" />
+    <ClCompile Include="..\Src\Pkgs\glew.c">
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExceptionHandling>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ExceptionHandling>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\ioapi.c">
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExceptionHandling>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ExceptionHandling>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\unzip.c">
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ExceptionHandling>
+      <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ExceptionHandling>
+    </ClCompile>
+    <ClCompile Include="..\Src\ROMLoad.cpp" />
+    <ClCompile Include="..\Src\Sound\MPEG\audio.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\dump.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\getbits.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\getdata.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\huffman.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\layer2.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\layer3.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\misc2.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\position.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\transform.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\util.cpp">
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\SCSP.cpp" />
+    <ClCompile Include="..\Src\Sound\SCSPDSP.cpp" />
+    <ClCompile Include="..\Src\Sound\SCSPLFO.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Config\Supermodel.ini" />
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.OSX.GCC">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.UNIX.GCC">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.Win32.GCC">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.Win32.MSVC">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CustomBuild>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment.glsl" />
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment2D.glsl" />
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_Flat.glsl" />
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_MultiSheet.glsl" />
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_NoSpotlight.glsl" />
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex.glsl" />
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex2D.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\Docs\LICENSE.txt" />
+    <Text Include="..\Docs\README.txt" />
+    <CustomBuild Include="..\Src\Debugger\ReadMe.txt">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Src\BlockFile.h" />
+    <ClInclude Include="..\Src\Config.h" />
+    <ClInclude Include="..\Src\CPU\68K\68K.h" />
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68k.h" />
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kconf.h" />
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kcpu.h" />
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kops.h" />
+    <ClInclude Include="..\Src\CPU\68K\Turbo68K\Turbo68K.h" />
+    <ClInclude Include="..\Src\CPU\Bus.h" />
+    <ClInclude Include="..\Src\CPU\PowerPC\ppc.h" />
+    <ClInclude Include="..\Src\CPU\PowerPC\PPCDisasm.h" />
+    <ClInclude Include="..\Src\CPU\PowerPC\ppc_ops.h" />
+    <ClInclude Include="..\Src\CPU\Z80\Z80.h" />
+    <ClInclude Include="..\Src\Debugger\AddressTable.h" />
+    <ClInclude Include="..\Src\Debugger\Breakpoint.h" />
+    <ClInclude Include="..\Src\Debugger\CodeAnalyser.h" />
+    <ClInclude Include="..\Src\Debugger\ConsoleDebugger.h" />
+    <ClInclude Include="..\Src\Debugger\CPUDebug.h" />
+    <ClInclude Include="..\Src\Debugger\CPU\68KDebug.h" />
+    <ClInclude Include="..\Src\Debugger\CPU\Musashi68KDebug.h" />
+    <ClInclude Include="..\Src\Debugger\CPU\PPCDebug.h" />
+    <ClInclude Include="..\Src\Debugger\CPU\Turbo68KDebug.h" />
+    <ClInclude Include="..\Src\Debugger\CPU\Z80Debug.h" />
+    <ClInclude Include="..\Src\Debugger\Debugger.h" />
+    <ClInclude Include="..\Src\Debugger\Exception.h" />
+    <ClInclude Include="..\Src\Debugger\Interrupt.h" />
+    <ClInclude Include="..\Src\Debugger\IO.h" />
+    <ClInclude Include="..\Src\Debugger\Label.h" />
+    <ClInclude Include="..\Src\Debugger\Register.h" />
+    <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
+    <ClInclude Include="..\Src\Debugger\Watch.h" />
+    <ClInclude Include="..\Src\Games.h" />
+    <ClInclude Include="..\Src\Graphics\IRender3D.h" />
+    <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />
+    <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h" />
+    <ClInclude Include="..\Src\Graphics\Legacy3D\TextureRefs.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\Mat4.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\Model.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\New3D.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\Texture.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\VBO.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\Vec.h" />
+    <ClInclude Include="..\Src\Graphics\Render2D.h" />
+    <ClInclude Include="..\Src\Graphics\Shader.h" />
+    <ClInclude Include="..\Src\Graphics\Shaders2D.h" />
+    <ClInclude Include="..\Src\INIFile.h" />
+    <ClInclude Include="..\Src\Inputs\Input.h" />
+    <ClInclude Include="..\Src\Inputs\Inputs.h" />
+    <ClInclude Include="..\Src\Inputs\InputSource.h" />
+    <ClInclude Include="..\Src\Inputs\InputSystem.h" />
+    <ClInclude Include="..\Src\Inputs\InputTypes.h" />
+    <ClInclude Include="..\Src\Inputs\MultiInputSource.h" />
+    <ClInclude Include="..\Src\Model3\53C810.h" />
+    <ClInclude Include="..\Src\Model3\93C46.h" />
+    <ClInclude Include="..\Src\Model3\DriveBoard.h" />
+    <ClInclude Include="..\Src\Model3\DSB.h" />
+    <ClInclude Include="..\Src\Model3\IRQ.h" />
+    <ClInclude Include="..\Src\Model3\Model3.h" />
+    <ClInclude Include="..\Src\Model3\MPC10x.h" />
+    <ClInclude Include="..\Src\Model3\PCI.h" />
+    <ClInclude Include="..\Src\Model3\Real3D.h" />
+    <ClInclude Include="..\Src\Model3\RTC72421.h" />
+    <ClInclude Include="..\Src\Model3\SoundBoard.h" />
+    <ClInclude Include="..\Src\Model3\TileGen.h" />
+    <ClInclude Include="..\Src\OSD\Audio.h" />
+    <ClInclude Include="..\Src\OSD\Logger.h" />
+    <ClInclude Include="..\Src\OSD\Outputs.h" />
+    <ClInclude Include="..\Src\OSD\SDL\OSDConfig.h" />
+    <ClInclude Include="..\Src\OSD\SDL\SDLInputSystem.h" />
+    <ClInclude Include="..\Src\OSD\SDL\Types.h" />
+    <ClInclude Include="..\Src\OSD\Thread.h" />
+    <ClInclude Include="..\Src\OSD\Video.h" />
+    <ClInclude Include="..\Src\OSD\Windows\DirectInputSystem.h" />
+    <ClInclude Include="..\Src\OSD\Windows\WinOutputs.h" />
+    <ClInclude Include="..\Src\Pkgs\glew.h" />
+    <ClInclude Include="..\Src\Pkgs\glxew.h" />
+    <ClInclude Include="..\Src\Pkgs\ioapi.h" />
+    <ClInclude Include="..\Src\Pkgs\unzip.h" />
+    <ClInclude Include="..\Src\Pkgs\wglew.h" />
+    <ClInclude Include="..\Src\ROMLoad.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\amp.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\audio.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\config.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\dump.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\formats.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\getbits.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\getdata.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\huffman.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\layer2.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\layer3.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\misc2.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\MPEG.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\position.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\proto.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\rtbuf.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\transform.h" />
+    <ClInclude Include="..\Src\Sound\SCSP.h" />
+    <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
+    <ClInclude Include="..\Src\Supermodel.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

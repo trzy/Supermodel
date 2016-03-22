@@ -1,0 +1,784 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\CPU">
+      <UniqueIdentifier>{98c8898a-186a-4900-98dd-f6a434bbb13b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CPU\PowerPC">
+      <UniqueIdentifier>{0cd4ef9d-77d4-48b3-95b5-761ed9a698d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CPU\68K">
+      <UniqueIdentifier>{b3b79a61-ca2c-4222-84be-8315d0ed6d20}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CPU\68K\Musashi">
+      <UniqueIdentifier>{6fab31bc-3503-4749-bbd9-47e14ec68378}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CPU\68K\Turbo68K">
+      <UniqueIdentifier>{96e413ec-f801-4f0d-94e6-c113e94a19ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\CPU\Z80">
+      <UniqueIdentifier>{edd2a4ee-ba57-4029-98d7-88da14c95c9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Graphics">
+      <UniqueIdentifier>{b69ed4ac-0efc-4bde-b635-f3189c446da9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Model3">
+      <UniqueIdentifier>{fc713f3d-dc7a-4c27-b8e4-f76dbd314c4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\OSD">
+      <UniqueIdentifier>{cf1a006e-89b1-4f05-86a3-54c98dc3218e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\OSD\SDL">
+      <UniqueIdentifier>{48241026-3be5-46c7-bab5-30bd37a0751f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\OSD\Windows">
+      <UniqueIdentifier>{0d058e19-aca1-4862-adfe-4939c0c75cee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Pkgs">
+      <UniqueIdentifier>{f7d02fd7-0959-4ec3-8b11-6b2661285106}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Inputs">
+      <UniqueIdentifier>{b25a2e6d-9203-44af-8b6f-da7646e0c9f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound">
+      <UniqueIdentifier>{8b2daadd-117a-470f-ab9c-970c873afbf5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Sound\MPEG">
+      <UniqueIdentifier>{4cb6c582-0200-48d2-a07e-fc4a49b0b77d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Debugger">
+      <UniqueIdentifier>{1b22e070-6f15-4bcc-b26a-27d55f514777}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Debugger\CPU">
+      <UniqueIdentifier>{d359c5eb-2689-41ab-8f6f-531137f73fff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Makefiles">
+      <UniqueIdentifier>{6aa677db-f679-4516-8211-b0055064e9e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Config">
+      <UniqueIdentifier>{2c844c65-7f14-4836-b2d4-e68de381924b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Docs">
+      <UniqueIdentifier>{7015b35f-f407-495c-868b-e6e1a1907c7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Header Files\CPU">
+      <UniqueIdentifier>{2b2e479b-4368-4ce1-b556-2d2cca8d3263}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CPU\PowerPC">
+      <UniqueIdentifier>{37354415-42e6-49f2-a1b5-f86d0c6885fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CPU\68K">
+      <UniqueIdentifier>{5d098d97-6ed2-40c5-9e99-aed7294174ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CPU\68K\Turbo68K">
+      <UniqueIdentifier>{aae78ad2-b9a5-445a-bd65-d5bd017b5140}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CPU\68K\Musashi">
+      <UniqueIdentifier>{b3eb0314-e074-4dcc-a55d-a5804eec0f36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\CPU\Z80">
+      <UniqueIdentifier>{47d68a08-5fdb-401e-acfe-dcd74024109d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Graphics">
+      <UniqueIdentifier>{85c9ee09-8692-436b-bd9e-b5367ba10049}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Model3">
+      <UniqueIdentifier>{3bb53185-168c-4301-b77a-9c7371fe7f68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\OSD">
+      <UniqueIdentifier>{6b46b30d-8a24-4616-b13b-d195cec9efa9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\OSD\SDL">
+      <UniqueIdentifier>{967d6d51-efd0-410b-9b7d-a0ad1fddc8ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\OSD\Windows">
+      <UniqueIdentifier>{41709c55-01a8-4d08-b80e-b021e6d3b831}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Pkgs">
+      <UniqueIdentifier>{647e7c9a-417f-4e4f-8313-1f891e1d8e9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Inputs">
+      <UniqueIdentifier>{f622c6c5-950a-4c79-a079-1363ca1dce72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Sound">
+      <UniqueIdentifier>{7a26ef17-350c-4548-8395-5db08bcaa6f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Sound\MPEG">
+      <UniqueIdentifier>{3c244066-c201-4539-86bb-8469c5e017ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Debugger">
+      <UniqueIdentifier>{a5ab3099-e617-4db7-92d8-eec4b169aad4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Debugger\CPU">
+      <UniqueIdentifier>{06181ce5-ef91-4531-aa9f-f8578558c1f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Graphics\New3D">
+      <UniqueIdentifier>{e3781a4f-f36a-4d2e-a9b1-d957c0e0d63e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Graphics\Legacy3D">
+      <UniqueIdentifier>{53927af6-94d3-4559-810b-ba9eccf286e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Graphics\Legacy3D\Shaders">
+      <UniqueIdentifier>{411177af-bbe6-491c-8fc7-417f00934228}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Src\BlockFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Games.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\INIFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\ROMLoad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\PowerPC\ppc.cpp">
+      <Filter>Source Files\CPU\PowerPC</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\PowerPC\ppc603.c">
+      <Filter>Source Files\CPU\PowerPC</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\PowerPC\ppc_ops.c">
+      <Filter>Source Files\CPU\PowerPC</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\PowerPC\PPCDisasm.cpp">
+      <Filter>Source Files\CPU\PowerPC</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\68K.cpp">
+      <Filter>Source Files\CPU\68K</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68k_in.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kcpu.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kdasm.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopac.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopdm.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kopnz.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Musashi\m68kops.c">
+      <Filter>Source Files\CPU\68K\Musashi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\68K\Turbo68K\Make68K.c">
+      <Filter>Source Files\CPU\68K\Turbo68K</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\Z80\Z80.cpp">
+      <Filter>Source Files\CPU\Z80</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\53C810.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\53C810Disasm.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\93C46.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\DSB.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\IRQ.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\Model3.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\MPC10x.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\PCI.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\Real3D.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\RTC72421.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\SoundBoard.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\TileGen.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\Outputs.cpp">
+      <Filter>Source Files\OSD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\Audio.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\Main.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\SDLInputSystem.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\Thread.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\Windows\DirectInputSystem.cpp">
+      <Filter>Source Files\OSD\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\Windows\WinOutputs.cpp">
+      <Filter>Source Files\OSD\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\glew.c">
+      <Filter>Source Files\Pkgs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\ioapi.c">
+      <Filter>Source Files\Pkgs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\unzip.c">
+      <Filter>Source Files\Pkgs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Inputs\Input.cpp">
+      <Filter>Source Files\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Inputs\Inputs.cpp">
+      <Filter>Source Files\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Inputs\InputSource.cpp">
+      <Filter>Source Files\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Inputs\InputSystem.cpp">
+      <Filter>Source Files\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Inputs\InputTypes.cpp">
+      <Filter>Source Files\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Inputs\MultiInputSource.cpp">
+      <Filter>Source Files\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\SCSP.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\SCSPDSP.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\SCSPLFO.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\audio.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\dump.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\getbits.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\getdata.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\huffman.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\layer2.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\layer3.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\misc2.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\position.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\transform.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\util.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\AddressTable.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Breakpoint.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CodeAnalyser.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\ConsoleDebugger.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPUDebug.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Debugger.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Exception.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Interrupt.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\IO.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Label.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Register.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\Watch.cpp">
+      <Filter>Source Files\Debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPU\68KDebug.cpp">
+      <Filter>Source Files\Debugger\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPU\Musashi68KDebug.cpp">
+      <Filter>Source Files\Debugger\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPU\PPCDebug.cpp">
+      <Filter>Source Files\Debugger\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPU\Turbo68KDebug.cpp">
+      <Filter>Source Files\Debugger\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\CPU\Z80Debug.cpp">
+      <Filter>Source Files\Debugger\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Mat4.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Model.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\TextureSheet.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\TextureRefs.cpp">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Render2D.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Shader.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
+      <Filter>Source Files\CPU\68K\Turbo68K</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Config\Supermodel.ini">
+      <Filter>Source Files\Config</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_Flat.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_MultiSheet.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_NoSpotlight.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment2D.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+    <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex2D.glsl">
+      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\Docs\LICENSE.txt">
+      <Filter>Source Files\Docs</Filter>
+    </Text>
+    <Text Include="..\Docs\README.txt">
+      <Filter>Source Files\Docs</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Src\BlockFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Games.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\INIFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\ROMLoad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Supermodel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\Bus.h">
+      <Filter>Header Files\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\PowerPC\ppc.h">
+      <Filter>Header Files\CPU\PowerPC</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\PowerPC\ppc_ops.h">
+      <Filter>Header Files\CPU\PowerPC</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\PowerPC\PPCDisasm.h">
+      <Filter>Header Files\CPU\PowerPC</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\68K\68K.h">
+      <Filter>Header Files\CPU\68K</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\68K\Turbo68K\Turbo68K.h">
+      <Filter>Header Files\CPU\68K\Turbo68K</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68k.h">
+      <Filter>Header Files\CPU\68K\Musashi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kconf.h">
+      <Filter>Header Files\CPU\68K\Musashi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kcpu.h">
+      <Filter>Header Files\CPU\68K\Musashi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\68K\Musashi\m68kops.h">
+      <Filter>Header Files\CPU\68K\Musashi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\Z80\Z80.h">
+      <Filter>Header Files\CPU\Z80</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Render2D.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Shader.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Shaders2D.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\53C810.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\93C46.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DSB.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\IRQ.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\Model3.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\MPC10x.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\PCI.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\Real3D.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\RTC72421.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\SoundBoard.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\TileGen.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Audio.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Logger.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Outputs.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Thread.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Video.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\OSDConfig.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\SDLInputSystem.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\Types.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Windows\DirectInputSystem.h">
+      <Filter>Header Files\OSD\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\Windows\WinOutputs.h">
+      <Filter>Header Files\OSD\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\glew.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\glxew.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\ioapi.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\unzip.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\wglew.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Inputs\Input.h">
+      <Filter>Header Files\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Inputs\Inputs.h">
+      <Filter>Header Files\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Inputs\InputSource.h">
+      <Filter>Header Files\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Inputs\InputSystem.h">
+      <Filter>Header Files\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Inputs\InputTypes.h">
+      <Filter>Header Files\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Inputs\MultiInputSource.h">
+      <Filter>Header Files\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\SCSP.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\SCSPDSP.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\amp.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\audio.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\config.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\dump.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\formats.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\getbits.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\getdata.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\huffman.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\layer2.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\layer3.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\misc2.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\MPEG.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\position.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\proto.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\rtbuf.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\transform.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\AddressTable.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Breakpoint.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CodeAnalyser.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\ConsoleDebugger.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CPUDebug.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Debugger.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Exception.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Interrupt.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\IO.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Label.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Register.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\Watch.h">
+      <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CPU\68KDebug.h">
+      <Filter>Header Files\Debugger\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CPU\Musashi68KDebug.h">
+      <Filter>Header Files\Debugger\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CPU\PPCDebug.h">
+      <Filter>Header Files\Debugger\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CPU\Turbo68KDebug.h">
+      <Filter>Header Files\Debugger\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\CPU\Z80Debug.h">
+      <Filter>Header Files\Debugger\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Mat4.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Model.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\New3D.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Texture.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\VBO.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Vec.h">
+      <Filter>Source Files\Graphics\New3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Legacy3D\TextureRefs.h">
+      <Filter>Source Files\Graphics\Legacy3D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\IRender3D.h">
+      <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\Src\Debugger\ReadMe.txt">
+      <Filter>Source Files\Debugger</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.OSX.GCC">
+      <Filter>Source Files\Makefiles</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.UNIX.GCC">
+      <Filter>Source Files\Makefiles</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.Win32.GCC">
+      <Filter>Source Files\Makefiles</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Makefiles\Makefile.SDL.Win32.MSVC">
+      <Filter>Source Files\Makefiles</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>
