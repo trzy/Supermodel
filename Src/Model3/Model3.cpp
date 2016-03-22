@@ -2981,7 +2981,6 @@ static void Reverse32(UINT8 *buf, unsigned size)
 static void ReadCROMDirectly(UINT8 *crom, char *fileName[4], unsigned combinedSize)
 {
 	FILE	*fp[4] = { NULL, NULL, NULL, NULL };
-	long	size[4];
 	
 	// Open all files
 	for (int i = 0; i < 4; i++)

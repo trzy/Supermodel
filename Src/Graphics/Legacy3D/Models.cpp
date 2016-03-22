@@ -753,7 +753,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
     bool validPoly = (P.header[0] & 0x300) != 0x300;
     
     // Obtain basic polygon parameters
-    done = P.header[1]&4; // last polygon?
+	done = P.header[1] & 4 > 0; // last polygon?
     P.numVerts = (P.header[0]&0x40)?4:3;
 
     // Texture data

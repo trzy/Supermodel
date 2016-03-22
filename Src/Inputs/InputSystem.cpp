@@ -1896,7 +1896,7 @@ bool CInputSystem::DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const 
 	}
 
 	if (maxRange > 3000)
-		printf("Detected\n", joyDetails->axisName[axisNum]);
+		printf("Detected %i\n", (int)joyDetails->axisName[axisNum]);
 	else
 	{
 		cancelled = true;

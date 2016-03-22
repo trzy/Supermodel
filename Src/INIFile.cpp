@@ -326,7 +326,7 @@ bool CINIFile::Get(string SectionName, string SettingName, bool& value)
   if (Get(SectionName, SettingName, intVal) == FAIL)
     return FAIL;
 
-  value = (bool)intVal;
+  value = intVal > 0;
 
   return OKAY;
 }

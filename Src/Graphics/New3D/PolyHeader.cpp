@@ -299,18 +299,18 @@ UINT64 PolyHeader::Hash(int textureXOffset, int textureYOffset)
 {
 	UINT64 hash = 0;
 
-	hash |= (header[2] & 3);					// bits 0-1 uv mirror bits
-	hash |= ((header[3] >> 0) & 7) << 2;		// bits 2-4 tex height
-	hash |= ((header[3] >> 3) & 7) << 5;		// bits 5-7 tex width
-	hash |= X(textureXOffset) << 8;				// bits 8-17 x offset
-	hash |= Y(textureYOffset) << 18;			// bits 18-27 y offset
-	hash |= TexFormat() << 28;					// bits 28-30 tex format
-	hash |= (UINT64)TexEnabled() << 31;			// bits 31 textures enabled
-	hash |= (UINT64)LightEnabled() << 32;		// bits 32 light enabled
-	hash |= (UINT64)DoubleSided() << 33;		// bits 33 double sided
-	hash |= (UINT64)AlphaTest() << 34;			// bits 34 contour processing
-	hash |= (UINT64)PolyAlpha() << 35;			// bits 35 poly alpha processing
-	hash |= (UINT64)TextureAlpha() << 36;		// bits 35 poly alpha processing
+	hash |= (header[2] & 3);						// bits 0-1 uv mirror bits
+	hash |= (UINT64)((header[3] >> 0) & 7) << 2;	// bits 2-4 tex height
+	hash |= (UINT64)((header[3] >> 3) & 7) << 5;	// bits 5-7 tex width
+	hash |= (UINT64)X(textureXOffset) << 8;			// bits 8-17 x offset
+	hash |= (UINT64)Y(textureYOffset) << 18;		// bits 18-27 y offset
+	hash |= (UINT64)TexFormat() << 28;				// bits 28-30 tex format
+	hash |= (UINT64)TexEnabled() << 31;				// bits 31 textures enabled
+	hash |= (UINT64)LightEnabled() << 32;			// bits 32 light enabled
+	hash |= (UINT64)DoubleSided() << 33;			// bits 33 double sided
+	hash |= (UINT64)AlphaTest() << 34;				// bits 34 contour processing
+	hash |= (UINT64)PolyAlpha() << 35;				// bits 35 poly alpha processing
+	hash |= (UINT64)TextureAlpha() << 36;			// bits 35 poly alpha processing
 
 	//to do add the rest of the states
 

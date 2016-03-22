@@ -372,7 +372,7 @@ void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, c
 void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal)
 {
 	// Determine the layer color depth (4 or 8-bit pixels)
-	bool is4Bit = regs[0x20/4] & (1<<(12+layerNum));
+	bool is4Bit = (regs[0x20 / 4] & (1 << (12 + layerNum))) > 0;
 	
 	// Compute offsets due to vertical scrolling
 	int 		 vScroll    = (regs[0x60/4+layerNum]>>16)&0x1FF;
@@ -551,7 +551,7 @@ bool CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 		
 		// Load horizontal full-screen scroll values and scroll mode
 		hFullScroll[i]    = regs[0x60/4+i]&0x3FF;
-		lineScrollMode[i] = regs[0x60/4+i]&0x8000;
+		lineScrollMode[i] = (regs[0x60 / 4 + i] & 0x8000)>0;
 	}
 	
 	/*

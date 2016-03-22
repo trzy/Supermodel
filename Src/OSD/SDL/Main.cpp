@@ -249,11 +249,6 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
 
 static bool ResizeGLScreen(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
-	const SDL_VideoInfo	*VideoInfo;
-	GLenum				err;
-	float				model3Ratio, ratio;
-	float				xRes, yRes;
-	
 	// Set video mode
   	if (SDL_SetVideoMode(*xResPtr,*yResPtr,0,SDL_OPENGL|(fullScreen?SDL_FULLSCREEN|SDL_HWSURFACE:0)) == NULL)
   	{

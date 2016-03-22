@@ -581,7 +581,7 @@ static bool IsDynamicModel(const UINT32 *data)
     unsigned numVerts = (data[0]&0x40 ? 4 : 3);
     // Deduct number of reused verts
     numVerts -= sharedVerts[data[0]&0xf];
-    done = data[1]&4;
+	done = data[1] & 4 > 0;
     // Skip header and vertices to next polygon
     data += 7 + numVerts * 4;
   }
