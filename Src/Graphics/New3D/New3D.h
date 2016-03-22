@@ -169,9 +169,7 @@ private:
 	void CacheModel(Model *m, const UINT32 *data);
 	void CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
 
-	enum class AlphaType{ none, poly, texture };
 	void RenderScene(int priority, bool alpha);
-	bool ClockWiseWinding();	// calculate winding with current matrix
 	float Determinant3x3(const float m[16]);
 
 	/*

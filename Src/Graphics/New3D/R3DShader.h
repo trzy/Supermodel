@@ -11,33 +11,43 @@ class R3DShader
 public:
 	R3DShader();
 
-	bool LoadShader(const char* vertexShader = nullptr, const char* fragmentShader = nullptr);
-	void SetMeshUniforms(const Mesh* m);
-	void SetViewportUniforms(const Viewport *vp);
-	void Start();
-	void SetShader(bool enable = true);
+	bool LoadShader				(const char* vertexShader = nullptr, const char* fragmentShader = nullptr);
+	void SetMeshUniforms		(const Mesh* m);
+	void SetModelStates			(const Model* model);
+	void SetViewportUniforms	(const Viewport *vp);
+	void Start					();
+	void SetShader				(bool enable = true);
 
 private:
 
+	// shader IDs
 	GLuint m_shaderProgram;
 	GLuint m_vertexShader;
 	GLuint m_fragmentShader;
 
-	// mesh uniform data
+	// mesh uniform locations
 	GLint m_locTexture;
 	GLint m_locTextureEnabled;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
 
-	bool m_textured;
-	bool m_textureAlpha;	// use alpha in texture
-	bool m_alphaTest;		// discard fragment based on alpha (ogl does this with fixed function)
-	float m_fogIntensity;
-	bool m_doubleSided;
+	// cached mesh values
+	bool	m_textured;
+	bool	m_textureAlpha;		// use alpha in texture
+	bool	m_alphaTest;		// discard fragment based on alpha (ogl does this with fixed function)
+	float	m_fogIntensity;
+	bool	m_doubleSided;
+	bool	m_lightEnabled;
 
-	bool m_dirty;
+	// cached model values
+	enum class MatDet { notset, negative, positive, zero };
+	MatDet m_matDet;
 
-	// viewport uniform data
+	// are our cache values dirty
+	bool	m_dirtyMesh;
+	bool	m_dirtyModel;
+
+	// viewport uniform locations
 	GLint m_locFogIntensity;
 	GLint m_locFogDensity;
 	GLint m_locFogStart;

@@ -83,25 +83,26 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 	for (auto &n : m_nodes) {
 
-		if (n.viewport.priority != priority) {
+		if (n.viewport.priority != priority || n.models.empty()) {
 			continue;
 		}
 
-		glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(n.viewport.projectionMatrix);
+		glViewport		(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
+		glMatrixMode	(GL_PROJECTION);
+		glLoadMatrixf	(n.viewport.projectionMatrix);
+		glMatrixMode	(GL_MODELVIEW);
 
 		m_r3dShader.SetViewportUniforms(&n.viewport);
 
 		for (auto &m : n.models) {
 
+			bool matrixLoaded = false;
+
 			if (m.meshes.empty()) {
 				continue;
 			}
 
-			glMatrixMode(GL_MODELVIEW);
-			glLoadMatrixf(m.modelMat);
+			m_r3dShader.SetModelStates(&m);
 
 			for (auto &mesh : m.meshes) {
 
@@ -114,6 +115,11 @@ void CNew3D::RenderScene(int priority, bool alpha)
 					if (mesh.textureAlpha || mesh.polyAlpha) {
 						continue;
 					}
+				}
+
+				if (!matrixLoaded) {
+					glLoadMatrixf(m.modelMat);
+					matrixLoaded = true;		// do this here to stop loading matrices we don't need. Ie when rendering non transparent etc
 				}
 				
 				if (mesh.texture) {
@@ -243,6 +249,9 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	for (int i = 0; i < 16; i++) {
 		m->modelMat[i] = m_modelMat.currentMatrix[i];
 	}
+
+	//calculate determinant
+	m->determinant = Determinant3x3(m_modelMat);
 
 	CacheModel(m, modelAddress);
 
@@ -706,15 +715,13 @@ void CNew3D::CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
 	Poly		p;
 	V3::Vec3	normal;
 	float		dotProd;
-	float		zFlip;
 	bool		clockWise;
 	//====================
 
 	V3::createNormal(r3dPoly.v[0].pos, r3dPoly.v[1].pos, r3dPoly.v[2].pos, normal);
 
 	dotProd		= V3::dotProduct(normal, r3dPoly.faceNormal);
-	zFlip		= -1.0f*m_matrixBasePtr[0x5];					// coordinate system m13 component
-	clockWise	= (zFlip*dotProd >= 0.0);
+	clockWise	= dotProd >= 0.0;
 
 	if (clockWise) {
 		p.p1 = r3dPoly.v[0];
@@ -931,8 +938,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 	}
 
-	bool cw = ClockWiseWinding();
-
 	//sorted the data, now copy to main data structures
 
 	// we know how many meshes we have so reserve appropriate space
@@ -951,69 +956,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		//copy the temp mesh into the model structure
 		//this will lose the associated vertex data, which is now copied to the main buffer anyway
 		m->meshes.push_back(it.second);
-	}
-}
-
-// Macro to generate column-major (OpenGL) index from y,x subscripts
-#define CMINDEX(y,x)	(x*4+y)
-
-// 3x3 matrix used (upper-left of m[])
-static void MultMat3Vec3(GLfloat out[3], GLfloat m[4 * 4], GLfloat v[3])
-{
-	out[0] = m[CMINDEX(0, 0)] * v[0] + m[CMINDEX(0, 1)] * v[1] + m[CMINDEX(0, 2)] * v[2];
-	out[1] = m[CMINDEX(1, 0)] * v[0] + m[CMINDEX(1, 1)] * v[1] + m[CMINDEX(1, 2)] * v[2];
-	out[2] = m[CMINDEX(2, 0)] * v[0] + m[CMINDEX(2, 1)] * v[1] + m[CMINDEX(2, 2)] * v[2];
-}
-
-static GLfloat Sign(GLfloat x)
-{
-	if (x > 0.0f)
-		return 1.0f;
-	else if (x < 0.0f)
-		return -1.0f;
-	return 0.0f;
-}
-
-// Inverts and transposes a 3x3 matrix (upper-left of the 4x4), returning a 
-// 4x4 matrix with the extra components undefined (do not use them!)
-static void InvertTransposeMat3(GLfloat out[4 * 4], GLfloat m[4 * 4])
-{
-	GLfloat	invDet;
-	GLfloat	a00 = m[CMINDEX(0, 0)], a01 = m[CMINDEX(0, 1)], a02 = m[CMINDEX(0, 2)];
-	GLfloat	a10 = m[CMINDEX(1, 0)], a11 = m[CMINDEX(1, 1)], a12 = m[CMINDEX(1, 2)];
-	GLfloat	a20 = m[CMINDEX(2, 0)], a21 = m[CMINDEX(2, 1)], a22 = m[CMINDEX(2, 2)];
-
-	invDet = 1.0f / (a00*(a22*a11 - a21*a12) - a10*(a22*a01 - a21*a02) + a20*(a12*a01 - a11*a02));
-	out[CMINDEX(0, 0)] = invDet*(a22*a11 - a21*a12);		out[CMINDEX(1, 0)] = invDet*(-(a22*a01 - a21*a02));	out[CMINDEX(2, 0)] = invDet*(a12*a01 - a11*a02);
-	out[CMINDEX(0, 1)] = invDet*(-(a22*a10 - a20*a12));	out[CMINDEX(1, 1)] = invDet*(a22*a00 - a20*a02);		out[CMINDEX(2, 1)] = invDet*(-(a12*a00 - a10*a02));
-	out[CMINDEX(0, 2)] = invDet*(a21*a10 - a20*a11);		out[CMINDEX(1, 2)] = invDet*(-(a21*a00 - a20*a01));	out[CMINDEX(2, 2)] = invDet*(a11*a00 - a10*a01);
-}
-
-bool CNew3D::ClockWiseWinding()
-{
-	GLfloat	x[3] = { 1.0f, 0.0f, 0.0f };
-	GLfloat	y[3] = { 0.0f, 1.0f, 0.0f };
-	GLfloat z[3] = { 0.0f, 0.0f, -1.0f*m_matrixBasePtr[0x5] };
-	GLfloat	m[4 * 4];
-	GLfloat	xT[3], yT[3], zT[3], pT[3];
-
-	InvertTransposeMat3(m, m_modelMat.currentMatrix);
-	MultMat3Vec3(xT, m_modelMat.currentMatrix, x);
-	MultMat3Vec3(yT, m_modelMat.currentMatrix, y);
-	MultMat3Vec3(zT, m, z);
-	V3::crossProduct(pT, xT, yT);
-
-	float s = Sign(zT[2] * pT[2]);
-
-	if (s < 0.0f) {
-		return false;
-	}
-	else if (s > 0.0f) {
-		return true;
-	}
-	else {
-		int debugbreak = 0;
-		return false;
 	}
 }
 

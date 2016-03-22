@@ -143,8 +143,12 @@ void R3DShader::Start()
 	m_textureAlpha	= false;		// use alpha in texture
 	m_alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	m_doubleSided	= false;
+	m_lightEnabled	= false;
 
-	m_dirty			= true;			// dirty means all the above are dirty, ie first run
+	m_matDet = MatDet::notset;
+
+	m_dirtyMesh		= true;			// dirty means all the above are dirty, ie first run
+	m_dirtyModel	= true;
 }
 
 bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
@@ -206,58 +210,100 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		return;			// sanity check
 	}
 
-	if (m_dirty) {
+	if (m_dirtyMesh) {
 		glUniform1i(m_locTexture, 0);
 	}
 
-	if (m_dirty || m->textured != m_textured) {
+	if (m_dirtyMesh || m->textured != m_textured) {
 		glUniform1i(m_locTextureEnabled, m->textured);
 		m_textured = m->textured;
 	}
 
-	if (m_dirty || m->alphaTest != m_alphaTest) {
+	if (m_dirtyMesh || m->alphaTest != m_alphaTest) {
 		glUniform1i(m_locAlphaTest, m->alphaTest);
 		m_alphaTest = m->alphaTest;
 	}
 
-	if (m_dirty || m->textureAlpha != m_textureAlpha) {
+	if (m_dirtyMesh || m->textureAlpha != m_textureAlpha) {
 		glUniform1i(m_locTextureAlpha, m->textureAlpha);
 		m_textureAlpha = m->textureAlpha;
 	}
 
-	if (m_dirty || m->fogIntensity != m_fogIntensity) {
+	if (m_dirtyMesh || m->fogIntensity != m_fogIntensity) {
 		glUniform1f(m_locFogIntensity, m->fogIntensity);
 		m_fogIntensity = m->fogIntensity;
 	}
 
-	glUniform1i(m_locLightEnable, m->lighting);
-	glUniform1f(m_locShininess, 1);
+	if (m_dirtyMesh || m->lighting != m_lightEnabled) {
+		glUniform1i(m_locLightEnable, m->lighting);
+		m_lightEnabled = m->lighting;
+	}
 
-	// technically not uniforms
-	if (m_dirty || m->doubleSided != m_doubleSided) {
-		m_doubleSided = m->doubleSided;
-		if (m_doubleSided) {
-			glDisable(GL_CULL_FACE);
-		}
-		else {
-			glEnable(GL_CULL_FACE);
+	//glUniform1f(m_locShininess, 1);
+
+	if (m_matDet!=MatDet::zero) {
+
+		if (m_dirtyMesh || m->doubleSided != m_doubleSided) {
+
+			m_doubleSided = m->doubleSided;
+
+			if (m_doubleSided) {
+				glDisable(GL_CULL_FACE);
+			}
+			else {
+				glEnable(GL_CULL_FACE);
+			}
 		}
 	}
 
-	m_dirty = false;
+
+	m_dirtyMesh = false;
 }
 
 void R3DShader::SetViewportUniforms(const Viewport *vp)
 {	
 	//didn't bother caching these, they don't get frequently called anyway
-	glUniform1f(m_locFogDensity, vp->fogParams[3]);
-	glUniform1f(m_locFogStart, vp->fogParams[4]);
+	glUniform1f	(m_locFogDensity, vp->fogParams[3]);
+	glUniform1f	(m_locFogStart, vp->fogParams[4]);
 	glUniform3fv(m_locFogColour, 1, vp->fogParams);
 
 	glUniform3fv(m_locLighting, 2, vp->lightingParams);
 	glUniform4fv(m_locSpotEllipse, 1, vp->spotEllipse);
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
+}
+
+void R3DShader::SetModelStates(const Model* model)
+{
+	//==========
+	MatDet test;
+	//==========
+
+	if (model->determinant < 0)			{ test = MatDet::negative; }
+	else if (model->determinant > 0)	{ test = MatDet::positive; }
+	else if (model->determinant == 0)	{ test = MatDet::zero; }
+
+	if (m_dirtyModel || m_matDet!=test) {
+
+		switch (test) {
+		case MatDet::negative:
+			glCullFace(GL_FRONT);
+			glEnable(GL_CULL_FACE);
+			m_doubleSided = false;
+			break;
+		case MatDet::positive:
+			glCullFace(GL_BACK);
+			glEnable(GL_CULL_FACE);
+			m_doubleSided = false;
+			break;
+		default:
+			glDisable(GL_CULL_FACE);
+			m_doubleSided = true;		// basically drawing on both sides now
+		}
+	}
+
+	m_matDet		= test;
+	m_dirtyModel	= false;
 }
 
 } // New3D

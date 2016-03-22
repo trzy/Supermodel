@@ -69,8 +69,7 @@ struct Model
 
 	//matrices
 	float modelMat[16];
-
-
+	float determinant;				// we check if the determinant of the matrix is negative, if it is, the matrix will swap the axis order
 
 	// misc
 	int lutIdx = 0;
