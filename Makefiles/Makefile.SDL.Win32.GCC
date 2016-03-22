@@ -38,7 +38,7 @@ BITS = 64
 #
 # Include console-based debugger in emulator ('yes' or 'no')
 #
-ENABLE_DEBUGGER = yes
+ENABLE_DEBUGGER = no
 
 
 ###############################################################################
@@ -98,7 +98,6 @@ LD = g++
 COMPILER_FLAGS = -I$(SDL_INCLUDEPATH) -ISrc/ -ISrc/OSD/ -ISrc/OSD/SDL/ -ISrc/OSD/Windows/ -c -Wall -DSUPERMODEL_WIN32 -DGLEW_STATIC -O3
 CFLAGS = $(COMPILER_FLAGS)
 CPPFLAGS = $(COMPILER_FLAGS) -I$(BOOST_INCLUDEPATH) -std=c++11
-#LFLAGS = -s -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lz -l:$(WINSDK_LIBPATH)/WbemUuid.lib
 LFLAGS = -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lz -l:$(WINSDK_LIBPATH)/WbemUuid.lib -s
 
 #
@@ -209,7 +208,10 @@ $(OBJ_DIR)/%.o:	Src/Model3/%.cpp
 $(OBJ_DIR)/%.o:	Src/Graphics/%.cpp Src/Graphics/Shaders2D.h
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 	
-$(OBJ_DIR)/%.o:	Src/Graphics/Legacy3D/%.cpp Src/Graphics/Legacy3D/Shaders3D.h
+$(OBJ_DIR)/%.o:	Src/Graphics/Legacy3D/%.cpp Src/Graphics/Legacy3D/%.h Src/Graphics/Legacy3D/Shaders3D.h
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
+$(OBJ_DIR)/%.o:	Src/Graphics/Legacy3D/%.cpp
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
 $(OBJ_DIR)/%.o:	Src/Graphics/New3D/%.cpp Src/Graphics/New3D/%.h
