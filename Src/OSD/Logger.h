@@ -30,6 +30,7 @@
 #define INCLUDED_LOGGER_H
 
 #include "Types.h"
+#include "Version.h"
 #include <cstdio>
 #include <cstdarg>
 #include <cstring>
@@ -191,9 +192,9 @@ public:
 	void ClearLogs(void)
 	{
 #ifdef DEBUG
-		ClearLog(m_debugLogFile, "Supermodel v"SUPERMODEL_VERSION" Debug Log");
+		ClearLog(m_debugLogFile, "Supermodel v" SUPERMODEL_VERSION " Debug Log");
 #endif // DEBUG
-		ClearLog(m_errorLogFile, "Supermodel v"SUPERMODEL_VERSION" Error Log");	
+		ClearLog(m_errorLogFile, "Supermodel v" SUPERMODEL_VERSION " Error Log");	
 	}
 	
 	/*
