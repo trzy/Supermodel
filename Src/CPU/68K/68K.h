@@ -280,8 +280,6 @@ extern void M68KSetContext(M68KCtx *Src);
 #define DBG68K_REG_A6 17
 #define DBG68K_REG_A7 18
 
-static int lastCycles = 0;
-
 /*
  * M68KGetRegister(ctx, reg):
  *

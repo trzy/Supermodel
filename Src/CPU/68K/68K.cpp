@@ -46,15 +46,18 @@
 ******************************************************************************/
 
 // Bus
-static CBus	*Bus = NULL;
+static CBus	*s_Bus = NULL;
 
 #ifdef SUPERMODEL_DEBUGGER
 // Debugger
-static CMusashi68KDebug *Debug = NULL;
+static CMusashi68KDebug *s_Debug =  NULL;
 #endif
 
 // IRQ callback
 static int	(*IRQAck)(int nIRQ) = NULL;
+
+// Cycles remaining in timeslice
+static int s_lastCycles;
 
 
 /******************************************************************************
@@ -227,18 +230,18 @@ void M68KSetIRQ(int irqLevel)
 int M68KRun(int numCycles)
 {
 #ifdef SUPERMODEL_DEBUGGER
-	if (Debug != NULL)
+	if (s_Debug != NULL)
 	{
-		Debug->CPUActive();
-		lastCycles += numCycles;
+		s_Debug->CPUActive();
+		s_lastCycles += numCycles;
 	}
 #endif // SUPERMODEL_DEBUGGER
 	int doneCycles = m68k_execute(numCycles);
 #ifdef SUPERMODEL_DEBUGGER
-	if (Debug != NULL)
+	if (s_Debug != NULL)
 	{
-		Debug->CPUInactive();
-		lastCycles -= m68k_cycles_remaining();
+		s_Debug->CPUInactive();
+		s_lastCycles -= m68k_cycles_remaining();
 	}
 #endif // SUPERMODEL_DEBUGGER
 	return doneCycles;
@@ -248,7 +251,7 @@ void M68KReset(void)
 {
 	m68k_pulse_reset();
 #ifdef SUPERMODEL_DEBUGGER
-	lastCycles = 0;
+	s_lastCycles = 0;
 #endif
 	DebugLog("68K reset\n");
 }
@@ -262,7 +265,7 @@ void M68KSetIRQCallback(int (*F)(int nIRQ))
 
 void M68KAttachBus(CBus *BusPtr)
 {
-	Bus = BusPtr;
+	s_Bus = BusPtr;
 	DebugLog("Attached bus to 68K\n");
 }
 
@@ -271,9 +274,9 @@ void M68KAttachBus(CBus *BusPtr)
 void M68KGetContext(M68KCtx *Dest)
 {
 	Dest->IRQAck = IRQAck;
-	Dest->Bus = Bus;
+	Dest->Bus = s_Bus;
 #ifdef SUPERMODEL_DEBUGGER
-	Dest->Debug = Debug;
+	Dest->Debug = s_Debug;
 #endif // SUPERMODEL_DEBUGGER
 	m68k_get_context(&(Dest->musashiCtx));
 }
@@ -281,9 +284,9 @@ void M68KGetContext(M68KCtx *Dest)
 void M68KSetContext(M68KCtx *Src)
 {
 	IRQAck = Src->IRQAck;
-	Bus = Src->Bus;
+	s_Bus = Src->Bus;
 #ifdef SUPERMODEL_DEBUGGER
-	Debug = Src->Debug;
+	s_Debug = Src->Debug;
 #endif // SUPERMODEL_DEBUGGER
 	m68k_set_context(&(Src->musashiCtx));
 }
@@ -295,9 +298,9 @@ bool M68KInit(void)
 	m68k_init();
 	m68k_set_cpu_type(M68K_CPU_TYPE_68000);
 	m68k_set_int_ack_callback(M68KIRQCallback);
-	Bus = NULL;
+	s_Bus = NULL;
 #ifdef SUPERMODEL_DEBUGGER
-	Debug = NULL;
+	s_Debug = NULL;
 #endif // SUPERMODEL_DEBUGGER
 	DebugLog("Initialized 68K\n");
 	return OKAY;
@@ -370,12 +373,12 @@ extern "C" {
 #ifdef SUPERMODEL_DEBUGGER
 void M68KDebugCallback()
 {
-	if (Debug != NULL)
+	if (s_Debug != NULL)
 	{
 		UINT32 pc = m68k_get_reg(NULL, M68K_REG_PC);
-		UINT32 opcode = Bus->Read16(pc);
-		Debug->CPUExecute(pc, opcode, lastCycles - m68k_cycles_remaining());
-		lastCycles = m68k_cycles_remaining();
+		UINT32 opcode = s_Bus->Read16(pc);
+		s_Debug->CPUExecute(pc, opcode, s_lastCycles - m68k_cycles_remaining());
+		s_lastCycles = m68k_cycles_remaining();
 	}
 }
 #endif // SUPERMODEL_DEBUGGER
@@ -383,10 +386,10 @@ void M68KDebugCallback()
 int M68KIRQCallback(int nIRQ)
 {
 #ifdef SUPERMODEL_DEBUGGER
-	if (Debug != NULL)
+	if (s_Debug != NULL)
 	{
-		Debug->CPUException(25);
-		Debug->CPUInterrupt(nIRQ - 1);
+		s_Debug->CPUException(25);
+		s_Debug->CPUInterrupt(nIRQ - 1);
 	}
 #endif // SUPERMODEL_DEBUGGER
 	if (NULL == IRQAck)	// no handler, use default behavior
@@ -400,47 +403,47 @@ int M68KIRQCallback(int nIRQ)
 
 unsigned int FASTCALL M68KFetch8(unsigned int a)
 {
-	return Bus->Read8(a);
+	return s_Bus->Read8(a);
 }
 
 unsigned int FASTCALL M68KFetch16(unsigned int a)
 {
-	return Bus->Read16(a);
+	return s_Bus->Read16(a);
 }
 
 unsigned int FASTCALL M68KFetch32(unsigned int a)
 {
-	return Bus->Read32(a);
+	return s_Bus->Read32(a);
 }
 
 unsigned int FASTCALL M68KRead8(unsigned int a)
 {
-	return Bus->Read8(a);
+	return s_Bus->Read8(a);
 }
 
 unsigned int FASTCALL M68KRead16(unsigned int a)
 {
-	return Bus->Read16(a);
+	return s_Bus->Read16(a);
 }
 
 unsigned int FASTCALL M68KRead32(unsigned int a)
 {
-	return Bus->Read32(a);
+	return s_Bus->Read32(a);
 }
 
 void FASTCALL M68KWrite8(unsigned int a, unsigned int d)
 {
-	Bus->Write8(a, d);
+	s_Bus->Write8(a, d);
 }
 
 void FASTCALL M68KWrite16(unsigned int a, unsigned int d)
 {
-	Bus->Write16(a, d);
+	s_Bus->Write16(a, d);
 }
 
 void FASTCALL M68KWrite32(unsigned int a, unsigned int d)
 {
-	Bus->Write32(a, d);
+	s_Bus->Write32(a, d);
 }
 
 }	// extern "C"
