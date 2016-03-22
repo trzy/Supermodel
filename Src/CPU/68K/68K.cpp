@@ -50,7 +50,7 @@ static CBus	*s_Bus = NULL;
 
 #ifdef SUPERMODEL_DEBUGGER
 // Debugger
-static CMusashi68KDebug *s_Debug =  NULL;
+static CMusashi68KDebug *s_Debug = NULL;
 #endif
 
 // IRQ callback
