@@ -36,6 +36,7 @@
 #endif
 
 #include <cmath>
+#include <algorithm>
 
 // Model3 audio output is 44.1KHz 2-channel sound and frame rate is 60fps
 #define SAMPLE_RATE 44100
@@ -256,7 +257,7 @@ bool OpenAudio()
 	// Create audio buffer
 	audioBufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;
 	int minBufferSize = 3 * BYTES_PER_FRAME;
-	audioBufferSize = max<int>(minBufferSize, audioBufferSize);
+	audioBufferSize = std::max<int>(minBufferSize, audioBufferSize);
 	audioBuffer = new(std::nothrow) INT8[audioBufferSize];
 	if (audioBuffer == NULL)
 	{

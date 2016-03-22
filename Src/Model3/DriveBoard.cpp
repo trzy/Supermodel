@@ -32,6 +32,7 @@
 
 #include <cstdio>
 #include <cmath>
+#include <algorithm>
 
 #define RAM_SIZE 0x2000	// Z80 RAM
 
@@ -456,13 +457,13 @@ void CDriveBoard::EmulateFrame(void)
 {
 	// Assuming Z80 runs @ 4.0MHz and NMI triggers @ 60.0KHz
 	// TODO - find out if Z80 frequency is correct and exact frequency of NMI interrupts (just guesswork at the moment!)
-	int cycles     = 4.0 * 1000000 / 60;
+	int cycles     = (int)(4.0 * 1000000 / 60);
 	int loopCycles = 10000;
 	while (cycles > 0)
 	{
 		if (m_allowInterrupts)
 			m_z80.TriggerNMI();
-		cycles -= m_z80.Run(min<int>(loopCycles, cycles));
+		cycles -= m_z80.Run(std::min<int>(loopCycles, cycles));
 	}
 }
 
