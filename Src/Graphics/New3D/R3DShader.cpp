@@ -279,6 +279,8 @@ void R3DShader::SetModelStates(const Model* model)
 	MatDet test;
 	//==========
 
+	test = MatDet::notset;		// happens for bad matrices with NaN
+
 	if (model->determinant < 0)			{ test = MatDet::negative; }
 	else if (model->determinant > 0)	{ test = MatDet::positive; }
 	else if (model->determinant == 0)	{ test = MatDet::zero; }
