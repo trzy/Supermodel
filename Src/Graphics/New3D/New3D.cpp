@@ -615,7 +615,7 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		vp->width	= m_totalXRes;
 		vp->height	= (GLint)((float)vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Perspective(fovYDegrees, (GLfloat)vp->width / (GLfloat)vp->height, 0.125f, 1000*128);	// use actual full screen ratio to get proper X FOV
+		vp->projectionMatrix.Perspective(fovYDegrees, (GLfloat)vp->width / (GLfloat)vp->height, 0.1f, 1e5);	// use actual full screen ratio to get proper X FOV
 	}
 	else
 	{
