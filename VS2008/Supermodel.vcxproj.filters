@@ -6,128 +6,125 @@
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="Source Files\CPU">
-      <UniqueIdentifier>{98c8898a-186a-4900-98dd-f6a434bbb13b}</UniqueIdentifier>
+      <UniqueIdentifier>{716e7bd4-2cd7-4bf1-8d46-99e5447fe781}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CPU\PowerPC">
-      <UniqueIdentifier>{0cd4ef9d-77d4-48b3-95b5-761ed9a698d0}</UniqueIdentifier>
+      <UniqueIdentifier>{5b7aa050-a050-4271-ba54-8bafe77ecc52}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CPU\68K">
-      <UniqueIdentifier>{b3b79a61-ca2c-4222-84be-8315d0ed6d20}</UniqueIdentifier>
+      <UniqueIdentifier>{7c4ab7e8-1911-46a0-8303-0e0c2b5a8992}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CPU\68K\Musashi">
-      <UniqueIdentifier>{6fab31bc-3503-4749-bbd9-47e14ec68378}</UniqueIdentifier>
+      <UniqueIdentifier>{f8bdc7a0-3568-438b-9219-4ff5f852c9be}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CPU\68K\Turbo68K">
-      <UniqueIdentifier>{96e413ec-f801-4f0d-94e6-c113e94a19ff}</UniqueIdentifier>
+      <UniqueIdentifier>{fc1a9c78-7900-45ec-acd1-3c78a71a63b0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\CPU\Z80">
-      <UniqueIdentifier>{edd2a4ee-ba57-4029-98d7-88da14c95c9e}</UniqueIdentifier>
+      <UniqueIdentifier>{80014733-535d-48f1-b5de-8339ec2f8641}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Graphics">
-      <UniqueIdentifier>{b69ed4ac-0efc-4bde-b635-f3189c446da9}</UniqueIdentifier>
+      <UniqueIdentifier>{c65d0c2f-5e69-4fe0-8b64-46c0a32470eb}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Model3">
-      <UniqueIdentifier>{fc713f3d-dc7a-4c27-b8e4-f76dbd314c4d}</UniqueIdentifier>
+      <UniqueIdentifier>{9113f873-c745-44ac-860a-dcf12d177f5b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\OSD">
-      <UniqueIdentifier>{cf1a006e-89b1-4f05-86a3-54c98dc3218e}</UniqueIdentifier>
+      <UniqueIdentifier>{ae989a55-7782-48d6-9397-2684c7611e23}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\OSD\SDL">
-      <UniqueIdentifier>{48241026-3be5-46c7-bab5-30bd37a0751f}</UniqueIdentifier>
+      <UniqueIdentifier>{2516aec9-10a4-4816-a580-949fea0f96d7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\OSD\Windows">
-      <UniqueIdentifier>{0d058e19-aca1-4862-adfe-4939c0c75cee}</UniqueIdentifier>
+      <UniqueIdentifier>{2f84f9e7-faf7-44fd-b592-fb7554ea8536}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Pkgs">
-      <UniqueIdentifier>{f7d02fd7-0959-4ec3-8b11-6b2661285106}</UniqueIdentifier>
+      <UniqueIdentifier>{35c6878b-761b-4f4f-becc-b2205dfcee6a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Inputs">
-      <UniqueIdentifier>{b25a2e6d-9203-44af-8b6f-da7646e0c9f4}</UniqueIdentifier>
+      <UniqueIdentifier>{a3992b46-68bc-4ae7-86e3-0349cfea1453}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Sound">
-      <UniqueIdentifier>{8b2daadd-117a-470f-ab9c-970c873afbf5}</UniqueIdentifier>
+      <UniqueIdentifier>{a39fba30-6e23-4591-a1d2-8058cf23bd87}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Sound\MPEG">
-      <UniqueIdentifier>{4cb6c582-0200-48d2-a07e-fc4a49b0b77d}</UniqueIdentifier>
+      <UniqueIdentifier>{06dd9d6f-d5af-4bf6-af65-defc3b124516}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Debugger">
-      <UniqueIdentifier>{1b22e070-6f15-4bcc-b26a-27d55f514777}</UniqueIdentifier>
+      <UniqueIdentifier>{a5006e1b-c633-464f-b47a-bf164f6e36fa}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Debugger\CPU">
-      <UniqueIdentifier>{d359c5eb-2689-41ab-8f6f-531137f73fff}</UniqueIdentifier>
+      <UniqueIdentifier>{d1903ed6-5792-49e7-8ecd-dca859cadf20}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Makefiles">
-      <UniqueIdentifier>{6aa677db-f679-4516-8211-b0055064e9e2}</UniqueIdentifier>
+      <UniqueIdentifier>{02f1be5d-5fef-484e-a0e1-54c9d1b76af5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Config">
-      <UniqueIdentifier>{2c844c65-7f14-4836-b2d4-e68de381924b}</UniqueIdentifier>
+      <UniqueIdentifier>{c8fbae68-16ff-4305-bd88-452e1d91704a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Docs">
-      <UniqueIdentifier>{7015b35f-f407-495c-868b-e6e1a1907c7a}</UniqueIdentifier>
+      <UniqueIdentifier>{1e84796b-88ed-4dda-80cd-9f3620fa660b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="Header Files\CPU">
-      <UniqueIdentifier>{2b2e479b-4368-4ce1-b556-2d2cca8d3263}</UniqueIdentifier>
+      <UniqueIdentifier>{18cd0331-f192-4379-b43b-11cc11acc6b0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\CPU\PowerPC">
-      <UniqueIdentifier>{37354415-42e6-49f2-a1b5-f86d0c6885fe}</UniqueIdentifier>
+      <UniqueIdentifier>{d545e14f-c1e8-4120-9b4d-e01aa20edc0d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\CPU\68K">
-      <UniqueIdentifier>{5d098d97-6ed2-40c5-9e99-aed7294174ad}</UniqueIdentifier>
+      <UniqueIdentifier>{fdb23bd9-e2f7-4e01-bc6b-60653fc200bf}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\CPU\68K\Turbo68K">
-      <UniqueIdentifier>{aae78ad2-b9a5-445a-bd65-d5bd017b5140}</UniqueIdentifier>
+      <UniqueIdentifier>{89683745-5b0d-46dd-827a-25c5ab3e8607}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\CPU\68K\Musashi">
-      <UniqueIdentifier>{b3eb0314-e074-4dcc-a55d-a5804eec0f36}</UniqueIdentifier>
+      <UniqueIdentifier>{7be2c7f7-461b-43aa-a06e-23327aae2b58}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\CPU\Z80">
-      <UniqueIdentifier>{47d68a08-5fdb-401e-acfe-dcd74024109d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Graphics">
-      <UniqueIdentifier>{85c9ee09-8692-436b-bd9e-b5367ba10049}</UniqueIdentifier>
+      <UniqueIdentifier>{889bfb3f-0590-40cc-b241-68cd808bd78d}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Model3">
-      <UniqueIdentifier>{3bb53185-168c-4301-b77a-9c7371fe7f68}</UniqueIdentifier>
+      <UniqueIdentifier>{5f55bf72-6938-4887-b78c-58b29e674985}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\OSD">
-      <UniqueIdentifier>{6b46b30d-8a24-4616-b13b-d195cec9efa9}</UniqueIdentifier>
+      <UniqueIdentifier>{4340a810-7e55-471b-8ac0-0deb48f54a0c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\OSD\SDL">
-      <UniqueIdentifier>{967d6d51-efd0-410b-9b7d-a0ad1fddc8ee}</UniqueIdentifier>
+      <UniqueIdentifier>{041ed025-007f-4d62-bd34-6bd9fcb2781f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\OSD\Windows">
-      <UniqueIdentifier>{41709c55-01a8-4d08-b80e-b021e6d3b831}</UniqueIdentifier>
+      <UniqueIdentifier>{e963f77a-7472-48b4-a6a1-343f6aa39262}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Pkgs">
-      <UniqueIdentifier>{647e7c9a-417f-4e4f-8313-1f891e1d8e9a}</UniqueIdentifier>
+      <UniqueIdentifier>{da61a14e-79ce-4c63-9eee-cc521f7e3547}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Inputs">
-      <UniqueIdentifier>{f622c6c5-950a-4c79-a079-1363ca1dce72}</UniqueIdentifier>
+      <UniqueIdentifier>{1be82a82-43c3-4450-bbb1-b35bfb634cf0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Sound">
-      <UniqueIdentifier>{7a26ef17-350c-4548-8395-5db08bcaa6f1}</UniqueIdentifier>
+      <UniqueIdentifier>{8978ff40-460d-40f4-a292-5c19d23efeb0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Sound\MPEG">
-      <UniqueIdentifier>{3c244066-c201-4539-86bb-8469c5e017ad}</UniqueIdentifier>
+      <UniqueIdentifier>{0ad02311-aa1b-49ec-a7a0-c3d651366e02}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Debugger">
-      <UniqueIdentifier>{a5ab3099-e617-4db7-92d8-eec4b169aad4}</UniqueIdentifier>
+      <UniqueIdentifier>{0bbc6c75-e21a-4e7b-a146-63c9b5b9204b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Debugger\CPU">
-      <UniqueIdentifier>{06181ce5-ef91-4531-aa9f-f8578558c1f7}</UniqueIdentifier>
+      <UniqueIdentifier>{5ca8c9ec-6a88-4aef-a947-cbf724f1c932}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Graphics\New3D">
-      <UniqueIdentifier>{e3781a4f-f36a-4d2e-a9b1-d957c0e0d63e}</UniqueIdentifier>
+    <Filter Include="Source Files\Graphics\Legacy">
+      <UniqueIdentifier>{2d4b1b91-8639-4dec-8371-8e9df61552ca}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Graphics\Legacy3D">
-      <UniqueIdentifier>{53927af6-94d3-4559-810b-ba9eccf286e0}</UniqueIdentifier>
+    <Filter Include="Source Files\Graphics\New">
+      <UniqueIdentifier>{997b8f53-16c1-4835-a1b3-7fac0aa21e61}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Graphics\Legacy3D\Shaders">
-      <UniqueIdentifier>{411177af-bbe6-491c-8fc7-417f00934228}</UniqueIdentifier>
+    <Filter Include="Source Files\Graphics\Legacy\Shaders">
+      <UniqueIdentifier>{446becc7-6a22-4dee-9f22-14eeeff2638e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -371,50 +368,50 @@
     <ClCompile Include="..\Src\Debugger\CPU\Z80Debug.cpp">
       <Filter>Source Files\Debugger\CPU</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\Mat4.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\Model.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\TextureSheet.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Graphics\Legacy3D\TextureRefs.cpp">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Graphics\Render2D.cpp">
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Graphics\Shader.cpp">
       <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Legacy3D\TextureRefs.cpp">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Mat4.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Model.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\TextureSheet.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -427,25 +424,25 @@
       <Filter>Source Files\Config</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_Flat.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_MultiSheet.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment_NoSpotlight.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment2D.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Vertex2D.glsl">
-      <Filter>Source Files\Graphics\Legacy3D\Shaders</Filter>
+      <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -507,15 +504,6 @@
     </ClInclude>
     <ClInclude Include="..\Src\CPU\Z80\Z80.h">
       <Filter>Header Files\CPU\Z80</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Render2D.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Shader.h">
-      <Filter>Header Files\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Shaders2D.h">
-      <Filter>Header Files\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\53C810.h">
       <Filter>Header Files\Model3</Filter>
@@ -724,44 +712,53 @@
     <ClInclude Include="..\Src\Debugger\CPU\Z80Debug.h">
       <Filter>Header Files\Debugger\CPU</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\Mat4.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\Model.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\New3D.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\Texture.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\VBO.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\New3D\Vec.h">
-      <Filter>Source Files\Graphics\New3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Graphics\Legacy3D\TextureRefs.h">
-      <Filter>Source Files\Graphics\Legacy3D</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Graphics\IRender3D.h">
       <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Render2D.h">
+      <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Shader.h">
+      <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Shaders2D.h">
+      <Filter>Source Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Legacy3D\TextureRefs.h">
+      <Filter>Source Files\Graphics\Legacy</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Mat4.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Model.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\New3D.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Texture.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\VBO.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\Vec.h">
+      <Filter>Source Files\Graphics\New</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

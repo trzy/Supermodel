@@ -171,6 +171,7 @@ private:
 
 	void RenderScene(int priority, bool alpha);
 	float Determinant3x3(const float m[16]);
+	bool IsDynamicModel(UINT32 *data);		// check if the model has a colour palette
 
 	/*
 	* Data
@@ -205,6 +206,7 @@ private:
 	std::vector<Poly> m_polyBuffer;	// we actually hold the vertex data here, one buffer to send to opengl, instead of 2000+ small ones.
 
 	VBO m_vboDynamic;				// dynamic data from poly ram, rom polys can go in a different buffer
+	VBO m_vboStatic;				// for ROM models
 
 	R3DShader m_r3dShader;
 	int m_currentVPPriority;

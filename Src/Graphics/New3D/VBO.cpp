@@ -4,8 +4,10 @@ namespace New3D {
 
 VBO::VBO()
 {
-	m_id = 0;
-	m_target = 0;
+	m_id		= 0;
+	m_target	= 0;
+	m_capacity	= 0;
+	m_size		= 0;
 }
 
 void VBO::Create(GLenum target, GLenum usage, GLsizeiptr size, const void* data)
@@ -14,7 +16,9 @@ void VBO::Create(GLenum target, GLenum usage, GLsizeiptr size, const void* data)
 	glBindBuffer(target, m_id);						// activate vbo id to use
 	glBufferData(target, size, data, usage);		// upload data to video card
 
-	m_target = target;
+	m_target	= target;
+	m_capacity	= size;
+	m_size		= 0;
 
 	Bind(false);		// unbind
 }
@@ -24,12 +28,32 @@ void VBO::BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data)
 	glBufferSubData(m_target, offset, size, data);
 }
 
+bool VBO::AppendData(GLsizeiptr size, const GLvoid* data)
+{
+	if (m_size + size >= m_capacity) {
+		return false;
+	}
+
+	BufferSubData(m_size, size, data);
+
+	m_size += size;
+
+	return true;
+}
+
+void VBO::Reset()
+{
+	m_size = 0;
+}
+
 void VBO::Destroy()
 {
 	if (m_id) {
 		glDeleteBuffers(1, &m_id);
-		m_id = 0;
-		m_target = 0;
+		m_id		= 0;
+		m_target	= 0;
+		m_capacity	= 0;
+		m_size		= 0;
 	}
 }
 
@@ -41,6 +65,16 @@ void VBO::Bind(bool enable)
 	else {
 		glBindBuffer(m_target, 0);
 	}
+}
+
+int VBO::GetSize()
+{
+	return m_size;
+}
+
+int VBO::GetCapacity()
+{
+	return m_capacity;
 }
 
 } // New3D

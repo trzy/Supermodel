@@ -97,15 +97,9 @@ int	PolyHeader::NumVerts()
 
 int PolyHeader::NumSharedVerts()
 {
-	int num = 0;
+	int sharedVerts[] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
-	for (int i = 0; i < 4; i++) {
-		if (SharedVertex(i)) {
-			num++;
-		}
-	}
-
-	return num;
+	return sharedVerts[header[0] & 0xf];
 }
 
 bool PolyHeader::SharedVertex(int vertex)

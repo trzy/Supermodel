@@ -51,6 +51,7 @@ void CNew3D::SetStep(int stepID)
 	}
 
 	m_vboDynamic.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(Poly)* 100000);	// allocate space for 100k polys ~ 10meg
+	//m_vboStatic.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, 0x80000);					// 64meg buffer
 }
 
 bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
@@ -614,7 +615,7 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		vp->width	= m_totalXRes;
 		vp->height	= (GLint)((float)vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Perspective(fovYDegrees, (GLfloat)vp->width / (GLfloat)vp->height, 0.1f, 1e5);	// use actual full screen ratio to get proper X FOV
+		vp->projectionMatrix.Perspective(fovYDegrees, (GLfloat)vp->width / (GLfloat)vp->height, 0.125f, 1000*128);	// use actual full screen ratio to get proper X FOV
 	}
 	else
 	{
@@ -972,6 +973,29 @@ float CNew3D::Determinant3x3(const float m[16]) {
 	*/
 
 	return m[0] * ((m[5] * m[10]) - (m[6] * m[9])) - m[4] * ((m[1] * m[10]) - (m[2] * m[9])) + m[8] * ((m[1] * m[6]) - (m[2] * m[5]));
+}
+
+bool CNew3D::IsDynamicModel(UINT32 *data)
+{
+	if (data == NULL) {
+		return false;
+	}
+
+	PolyHeader p(data);
+
+	do {
+
+		if ((p.header[1] & 2) == 0) {		// model has rgb colour palette 
+			return true;
+		}
+
+		if (p.header[6] == 0) {
+			break;
+		}
+
+	} while (p.NextPoly());
+
+	return false;
 }
 
 } // New3D
