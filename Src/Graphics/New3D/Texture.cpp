@@ -42,8 +42,14 @@ void Texture::BindTexture()
 
 void Texture::GetCoordinates(UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut)
 {
-	uOut = ((uIn*uvScale)+0.0f) / m_width;
-	vOut = ((vIn*uvScale)+0.0f) / m_height;
+	uOut = (uIn*uvScale) / m_width;
+	vOut = (vIn*uvScale) / m_height;
+}
+
+void Texture::GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut)
+{
+	uOut = (uIn*uvScale) / width;
+	vOut = (vIn*uvScale) / height;
 }
 
 void Texture::SetWrapMode(bool mirrorU, bool mirrorV)

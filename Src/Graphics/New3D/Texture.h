@@ -23,6 +23,8 @@ public:
 	void	GetDetails		(int& x, int&y, int& width, int& height, int& format);
 	void	SetWrapMode		(bool mirrorU, bool mirrorV);
 
+	static void GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
+
 private:
 
 	void Reset();

@@ -172,6 +172,8 @@ private:
 	void RenderScene(int priority, bool alpha);
 	float Determinant3x3(const float m[16]);
 	bool IsDynamicModel(UINT32 *data);		// check if the model has a colour palette
+	bool IsVROMModel(UINT32 modelAddr);
+
 
 	/*
 	* Data
@@ -199,14 +201,15 @@ private:
 
 	TextureSheet	m_texSheet;
 	NodeAttributes	m_nodeAttribs;
-	Mat4			m_modelMat;		// current modelview matrix
+	Mat4			m_modelMat;				// current modelview matrix
 	int				m_listDepth;
 
-	std::vector<Node> m_nodes;		// build the scene
-	std::vector<Poly> m_polyBuffer;	// we actually hold the vertex data here, one buffer to send to opengl, instead of 2000+ small ones.
+	std::vector<Node> m_nodes;				// this represents the entire render frame
+	std::vector<Poly> m_polyBufferRam;		// dynamic polys
+	std::vector<Poly> m_polyBufferRom;		// rom polys
+	std::unordered_map<UINT32, std::shared_ptr<std::vector<Mesh>>> m_romMap;	// a hash table for all the ROM models. The meshes don't have model matrices or tex offsets yet
 
-	VBO m_vboDynamic;				// dynamic data from poly ram, rom polys can go in a different buffer
-	VBO m_vboStatic;				// for ROM models
+	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
 
 	R3DShader m_r3dShader;
 	int m_currentVPPriority;

@@ -4,6 +4,9 @@
 #include "Vec.h"
 #include <cmath>  // needed by gcc
 
+#define MAX_RAM_POLYS 100000	
+#define MAX_ROM_POLYS 500000
+
 #ifndef M_PI
 #define M_PI 3.14159265359
 #endif
@@ -21,7 +24,7 @@ CNew3D::CNew3D()
 
 CNew3D::~CNew3D()
 {
-	m_vboDynamic.Destroy();
+	m_vbo.Destroy();
 }
 
 void CNew3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullingRAMHiPtr, const UINT32 *polyRAMPtr, const UINT32 *vromPtr, const UINT16 *textureRAMPtr)
@@ -50,8 +53,7 @@ void CNew3D::SetStep(int stepID)
 		m_vertexFactor = (1.0f / 128.0f);		// 17.7
 	}
 
-	m_vboDynamic.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(Poly)* 100000);	// allocate space for 100k polys ~ 10meg
-	//m_vboStatic.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, 0x80000);					// 64meg buffer
+	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(Poly) * (MAX_RAM_POLYS + MAX_ROM_POLYS));
 }
 
 bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
@@ -99,13 +101,13 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 			bool matrixLoaded = false;
 
-			if (m.meshes.empty()) {
+			if (m.meshes->empty()) {
 				continue;
 			}
 
 			m_r3dShader.SetModelStates(&m);
 
-			for (auto &mesh : m.meshes) {
+			for (auto &mesh : *m.meshes) {
 
 				if (alpha) {
 					if (!mesh.textureAlpha && !mesh.polyAlpha) {
@@ -123,9 +125,12 @@ void CNew3D::RenderScene(int priority, bool alpha)
 					matrixLoaded = true;		// do this here to stop loading matrices we don't need. Ie when rendering non transparent etc
 				}
 				
-				if (mesh.texture) {
-					mesh.texture->BindTexture();
-					mesh.texture->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+				if (mesh.textured) {
+					auto tex = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, mesh.x + m.textureOffsetX, mesh.y + m.textureOffsetY, mesh.width, mesh.height);
+					if (tex) {
+						tex->BindTexture();
+						tex->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+					}
 				}
 				
 				m_r3dShader.SetMeshUniforms(&mesh);
@@ -141,7 +146,7 @@ void CNew3D::RenderScene(int priority, bool alpha)
 void CNew3D::RenderFrame(void)
 {
 	// release any resources from last frame
-	m_polyBuffer.clear();	// clear dyanmic model memory buffer
+	m_polyBufferRam.clear();	// clear dyanmic model memory buffer
 	m_nodes.clear();		// memory will grow during the object life time, that's fine, no need to shrink to fit
 	m_modelMat.Release();	// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
@@ -156,9 +161,29 @@ void CNew3D::RenderFrame(void)
 		RenderViewport(0x800000, pri);		// build model structure
 	}
 
-	m_vboDynamic.Bind(true);
-	m_vboDynamic.BufferSubData(0, m_polyBuffer.size()*sizeof(Poly), m_polyBuffer.data());	// upload all the data to GPU in one go
+	m_vbo.Bind(true);
+	m_vbo.BufferSubData(MAX_ROM_POLYS*sizeof(Poly), m_polyBufferRam.size()*sizeof(Poly), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
 
+	if (m_polyBufferRom.size()) {
+
+		// sync rom memory with vbo
+		int romBytes	= (int)m_polyBufferRom.size() * sizeof(Poly);
+		int vboBytes	= m_vbo.GetSize();
+		int size		= romBytes - vboBytes;
+
+		if (size) {
+			//check we haven't blown up the memory buffers
+			//we will lose rom models for 1 frame is this happens, not the end of the world, as probably won't ever happen anyway
+			if (m_polyBufferRom.size() >= MAX_ROM_POLYS) {
+				m_polyBufferRom.clear();
+				m_vbo.Reset();
+			}
+			else {
+				m_vbo.AppendData(size, &m_polyBufferRom[vboBytes / sizeof(Poly)]);
+			}
+		}
+	}
+	
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -179,7 +204,7 @@ void CNew3D::RenderFrame(void)
 	}
 
 	m_r3dShader.SetShader(false);		// unbind shader
-	m_vboDynamic.Bind(false);
+	m_vbo.Bind(false);
 
 	glDisable(GL_CULL_FACE);
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -232,7 +257,8 @@ const UINT32* CNew3D::TranslateModelAddress(UINT32 modelAddr)
 
 bool CNew3D::DrawModel(UINT32 modelAddr)
 {
-	const UINT32	*modelAddress;
+	const UINT32*	modelAddress;
+	bool			cached = false;
 	Model*			m;
 
 	modelAddress = TranslateModelAddress(modelAddr);
@@ -240,13 +266,28 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	// create a new model to push onto the vector
 	m_nodes.back().models.emplace_back(Model());
 
-	// get the pointer to the last element in the array
+	// get the last model in the array
 	m = &m_nodes.back().models.back();
 
-	// copy lutidx - wtf is this
-	m->lutIdx = modelAddr & 0xFFFFFF;
+	if (IsVROMModel(modelAddr) && !IsDynamicModel((UINT32*)modelAddress)) {
 
-	// copy model matrix
+		// try to find meshes in the rom cache
+
+		if (m_romMap.count(modelAddr)) {
+			m->meshes = m_romMap[modelAddr];
+			cached = true;
+		}
+		else {
+			m->meshes = std::make_shared<std::vector<Mesh>>();
+			m->dynamic = false;
+			m_romMap[modelAddr] = m->meshes;		// store meshes in our rom map here
+		}
+	}
+	else {
+		m->meshes = std::make_shared<std::vector<Mesh>>();
+	}
+
+	// copy current model matrix
 	for (int i = 0; i < 16; i++) {
 		m->modelMat[i] = m_modelMat.currentMatrix[i];
 	}
@@ -254,7 +295,13 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	//calculate determinant
 	m->determinant = Determinant3x3(m_modelMat);
 
-	CacheModel(m, modelAddress);
+	// update texture offsets
+	m->textureOffsetX = m_nodeAttribs.currentTexOffsetX;
+	m->textureOffsetY = m_nodeAttribs.currentTexOffsetY;
+
+	if (!cached) {
+		CacheModel(m, modelAddress);
+	}
 
 	return true;
 }
@@ -763,7 +810,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	UINT64			lastHash	= -1;
 	SortingMesh*	currentMesh = nullptr;
 	
-	std::shared_ptr<Texture> tex;
 	std::map<UINT64, SortingMesh> sMap;
 
 	if (data == NULL)
@@ -800,7 +846,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		data += 7;	// data will now point to first vertex
 
 		// create a hash value based on poly attributes -todo add more attributes
-		auto hash = ph.Hash(m_nodeAttribs.currentTexOffsetX, m_nodeAttribs.currentTexOffsetY);
+		auto hash = ph.Hash();
 
 		if (hash != lastHash && validPoly) {
 
@@ -815,17 +861,11 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 				//copy attributes
 				currentMesh->doubleSided	= ph.DoubleSided();
-				currentMesh->mirrorU		= ph.TexUMirror();
-				currentMesh->mirrorV		= ph.TexVMirror();
 				currentMesh->textured		= ph.TexEnabled();
 				currentMesh->alphaTest		= ph.AlphaTest();
 				currentMesh->textureAlpha	= ph.TextureAlpha();
 				currentMesh->polyAlpha		= ph.PolyAlpha();
 				currentMesh->lighting		= ph.LightEnabled();
-
-				if (ph.header[6] & 0x10000) {
-					currentMesh->testBit = true;
-				}
 
 				if (!ph.Luminous()) {
 					currentMesh->fogIntensity = 1.0f;
@@ -835,18 +875,17 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				}
 
 				if (ph.TexEnabled()) {
-					currentMesh->texture = m_texSheet.BindTexture(m_textureRAM, ph.TexFormat(), ph.TexUMirror(), ph.TexVMirror(), ph.X(m_nodeAttribs.currentTexOffsetX), ph.Y(m_nodeAttribs.currentTexOffsetY), ph.TexWidth(), ph.TexHeight());
+					currentMesh->format		= ph.TexFormat();
+					currentMesh->x			= ph.X();
+					currentMesh->y			= ph.Y();
+					currentMesh->width		= ph.TexWidth();
+					currentMesh->height		= ph.TexHeight();
+					currentMesh->mirrorU	= ph.TexUMirror();
+					currentMesh->mirrorV	= ph.TexVMirror();
 				}
 			}
 
 			currentMesh = &sMap[hash];
-
-			if (ph.TexEnabled()) {
-				tex = currentMesh->texture;
-			}
-			else {
-				tex = nullptr;
-			}
 		}
 
 		if (validPoly) {
@@ -917,8 +956,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			float texU, texV = 0;
 
 			// tex coords
-			if (tex) {
-				tex->GetCoordinates((UINT16)(it >> 16), (UINT16)(it & 0xFFFF), uvScale, texU, texV);
+			if (validPoly && currentMesh->textured) {
+				Texture::GetCoordinates(currentMesh->width, currentMesh->height, (UINT16)(it >> 16), (UINT16)(it & 0xFFFF), uvScale, texU, texV);
 			}
 
 			p.v[j].texcoords[0] = texU;
@@ -942,21 +981,31 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	//sorted the data, now copy to main data structures
 
 	// we know how many meshes we have so reserve appropriate space
-	m->meshes.reserve(sMap.size());
+	m->meshes->reserve(sMap.size());
 
 	for (auto& it : sMap) {
 
-		// calculate VBO values for current mesh
-		it.second.vboOffset		= m_polyBuffer.size();
-		it.second.triangleCount = it.second.polys.size();
-		//it.second.clockWise		= cw;
+		if (m->dynamic) {
 
-		// copy poly data to main buffer
-		m_polyBuffer.insert(m_polyBuffer.end(), it.second.polys.begin(), it.second.polys.end());
+			// calculate VBO values for current mesh
+			it.second.vboOffset		= m_polyBufferRam.size() + MAX_ROM_POLYS;
+			it.second.triangleCount = it.second.polys.size();
+
+			// copy poly data to main buffer
+			m_polyBufferRam.insert(m_polyBufferRam.end(), it.second.polys.begin(), it.second.polys.end());
+		}
+		else {
+			// calculate VBO values for current mesh
+			it.second.vboOffset		= m_polyBufferRom.size();
+			it.second.triangleCount = it.second.polys.size();
+
+			// copy poly data to main buffer
+			m_polyBufferRom.insert(m_polyBufferRom.end(), it.second.polys.begin(), it.second.polys.end());
+		}
 
 		//copy the temp mesh into the model structure
 		//this will lose the associated vertex data, which is now copied to the main buffer anyway
-		m->meshes.push_back(it.second);
+		m->meshes->push_back(it.second);
 	}
 }
 
@@ -996,6 +1045,11 @@ bool CNew3D::IsDynamicModel(UINT32 *data)
 	} while (p.NextPoly());
 
 	return false;
+}
+
+bool CNew3D::IsVROMModel(UINT32 modelAddr)
+{
+	return modelAddr >= 0x100000;
 }
 
 } // New3D

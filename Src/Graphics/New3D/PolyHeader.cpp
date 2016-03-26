@@ -190,18 +190,18 @@ int	PolyHeader::Page()
 // header 5
 //
 
-int PolyHeader::X(int textureXOffset)
+int PolyHeader::X()
 {
 	//====
 	int x;
 	//====
 
-	x = (32 * (((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 1))) + textureXOffset;
+	x = (32 * (((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 1)));
 	x &= 2047;
 	return x;
 }
 
-int PolyHeader::Y(int textureYOffset)
+int PolyHeader::Y()
 {
 	//=======
 	int y;
@@ -215,7 +215,7 @@ int PolyHeader::Y(int textureYOffset)
 		page = 0;
 	}
 
-	y = (32 * (header[5] & 0x1F) + page) + textureYOffset;	// if we hit 2nd page add 1024 to y coordinate
+	y = (32 * (header[5] & 0x1F) + page);	// if we hit 2nd page add 1024 to y coordinate
 	y &= 2047;
 
 	return y;
@@ -289,15 +289,15 @@ float PolyHeader::LightModifier()
 // misc
 //
 
-UINT64 PolyHeader::Hash(int textureXOffset, int textureYOffset)
+UINT64 PolyHeader::Hash()
 {
 	UINT64 hash = 0;
 
 	hash |= (header[2] & 3);						// bits 0-1 uv mirror bits
 	hash |= (UINT64)((header[3] >> 0) & 7) << 2;	// bits 2-4 tex height
 	hash |= (UINT64)((header[3] >> 3) & 7) << 5;	// bits 5-7 tex width
-	hash |= (UINT64)X(textureXOffset) << 8;			// bits 8-17 x offset
-	hash |= (UINT64)Y(textureYOffset) << 18;		// bits 18-27 y offset
+	hash |= (UINT64)X() << 8;						// bits 8-17 x offset
+	hash |= (UINT64)Y() << 18;						// bits 18-27 y offset
 	hash |= (UINT64)TexFormat() << 28;				// bits 28-30 tex format
 	hash |= (UINT64)TexEnabled() << 31;				// bits 31 textures enabled
 	hash |= (UINT64)LightEnabled() << 32;			// bits 32 light enabled

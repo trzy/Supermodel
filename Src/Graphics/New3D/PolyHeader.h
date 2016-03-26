@@ -108,8 +108,8 @@ public:
 	int		Page();
 
 	// header 5
-	int		X(int textureXOffset);
-	int		Y(int textureYOffset);
+	int		X();
+	int		Y();
 
 	//header 6
 	int		TexFormat();
@@ -126,7 +126,7 @@ public:
 	float	LightModifier();
 
 	// misc
-	UINT64	Hash(int textureXOffset, int textureYOffset);		// make a unique hash for sorting by state
+	UINT64	Hash();		// make a unique hash for sorting by state
 
 
 	//=============

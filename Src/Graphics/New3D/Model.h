@@ -35,7 +35,10 @@ struct R3DPoly
 
 struct Mesh
 {
-	std::shared_ptr<Texture> texture;
+	// texture
+	int format, x, y, width, height = 0;
+	bool mirrorU = false;
+	bool mirrorV = false;
 
 	// attributes
 	bool doubleSided	= false;
@@ -49,10 +52,6 @@ struct Mesh
 
 	float fogIntensity = 1.0f;
 
-	// texture
-	bool mirrorU		= false;
-	bool mirrorV		= false;
-
 	// opengl resources
 	int vboOffset		= 0;			// this will be calculated later
 	int triangleCount	= 0;
@@ -65,14 +64,18 @@ struct SortingMesh : public Mesh		// This struct temporarily holds the model dat
 
 struct Model
 {
-	std::vector<Mesh> meshes;
+	std::shared_ptr<std::vector<Mesh>> meshes;	// this reason why this is a shared ptr to an array, is that multiple models might use the same meshes
+
+	//which memory are we in
+	bool dynamic = true;
+
+	// texture offsets for model
+	int textureOffsetX = 0;
+	int textureOffsetY = 0;
 
 	//matrices
 	float modelMat[16];
 	float determinant;				// we check if the determinant of the matrix is negative, if it is, the matrix will swap the axis order
-
-	// misc
-	int lutIdx = 0;
 };
 
 struct Viewport

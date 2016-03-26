@@ -30,6 +30,10 @@ void VBO::BufferSubData(GLintptr offset, GLsizeiptr size, const GLvoid* data)
 
 bool VBO::AppendData(GLsizeiptr size, const GLvoid* data)
 {
+	if (size == 0 || !data) {
+		return true;	// nothing to do
+	}
+
 	if (m_size + size >= m_capacity) {
 		return false;
 	}
