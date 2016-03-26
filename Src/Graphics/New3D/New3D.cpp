@@ -176,6 +176,7 @@ void CNew3D::RenderFrame(void)
 			//we will lose rom models for 1 frame is this happens, not the end of the world, as probably won't ever happen anyway
 			if (m_polyBufferRom.size() >= MAX_ROM_POLYS) {
 				m_polyBufferRom.clear();
+				m_romMap.clear();
 				m_vbo.Reset();
 			}
 			else {
