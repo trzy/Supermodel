@@ -184,7 +184,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 				scratch[i++] = texel;
 				scratch[i++] = texel;
 				scratch[i++] = texel;
-				scratch[i++] = 255;
+				scratch[i++] = (texel==255 ? 0 : 255);
 			}
 		}
 		break;
@@ -199,7 +199,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 				scratch[i++] = texel;
 				scratch[i++] = texel;
 				scratch[i++] = texel;
-				scratch[i++] = 255;
+				scratch[i++] = (texel == 255 ? 0 : 255);
 			}
 		}
 		break;
