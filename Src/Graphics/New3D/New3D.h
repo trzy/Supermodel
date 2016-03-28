@@ -36,6 +36,7 @@
 #include "Mat4.h"
 #include "R3DShader.h"
 #include "VBO.h"
+#include "R3DData.h"
 
 namespace New3D {
 

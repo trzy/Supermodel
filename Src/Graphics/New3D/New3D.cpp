@@ -648,6 +648,8 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	vpHeight	= (vpnode[0x14] >> 18) & 0x3FFF;	// height (14.2)
 	matrixBase	= vpnode[0x16] & 0xFFFFFF;			// matrix base address
 
+	LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
+
 	// Field of view and clipping
 	vpTopAngle	= (float)asin(*(float *)&vpnode[0x0E]);	// FOV Y upper half-angle (radians)
 	vpBotAngle	= (float)asin(*(float *)&vpnode[0x12]);	// FOV Y lower half-angle
