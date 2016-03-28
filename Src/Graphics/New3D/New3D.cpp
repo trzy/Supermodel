@@ -274,15 +274,17 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 
 		// try to find meshes in the rom cache
 
+
 		if (m_romMap.count(modelAddr)) {
 			m->meshes = m_romMap[modelAddr];
 			cached = true;
 		}
 		else {
 			m->meshes = std::make_shared<std::vector<Mesh>>();
-			m->dynamic = false;
 			m_romMap[modelAddr] = m->meshes;		// store meshes in our rom map here
 		}
+
+		m->dynamic = false;
 	}
 	else {
 		m->meshes = std::make_shared<std::vector<Mesh>>();
@@ -644,7 +646,7 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	vpY			= (vpnode[0x1A] >> 20) & 0xFFF;		// viewport Y (12.4)
 	vpWidth		= (vpnode[0x14] & 0xFFFF) >> 2;		// width (14.2)
 	vpHeight	= (vpnode[0x14] >> 18) & 0x3FFF;	// height (14.2)
-	matrixBase	= vpnode[0x16] & 0xFFFFFF;		// matrix base address
+	matrixBase	= vpnode[0x16] & 0xFFFFFF;			// matrix base address
 
 	// Field of view and clipping
 	vpTopAngle	= (float)asin(*(float *)&vpnode[0x0E]);	// FOV Y upper half-angle (radians)
