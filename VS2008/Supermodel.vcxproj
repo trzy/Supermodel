@@ -534,6 +534,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Graphics\New3D\Model.h" />
     <ClInclude Include="..\Src\Graphics\New3D\New3D.h" />
     <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DData.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Texture.h" />
     <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h" />
