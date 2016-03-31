@@ -604,7 +604,6 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	int				curPri;
 	int				vpX, vpY, vpWidth, vpHeight;
 	int				spotColorIdx;
-	GLfloat			vpTopAngle, vpBotAngle, fovYDegrees;
 	GLfloat			scrollFog, scrollAtt;
 	Viewport*		vp;
 
@@ -642,32 +641,41 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	vp->priority = pri;
 
 	// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-	vpX			= (vpnode[0x1A] & 0xFFFF) >> 4;		// viewport X (12.4 fixed point)
-	vpY			= (vpnode[0x1A] >> 20) & 0xFFF;		// viewport Y (12.4)
-	vpWidth		= (vpnode[0x14] & 0xFFFF) >> 2;		// width (14.2)
-	vpHeight	= (vpnode[0x14] >> 18) & 0x3FFF;	// height (14.2)
-	matrixBase	= vpnode[0x16] & 0xFFFFFF;			// matrix base address
+	vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
+	vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
+	vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
+	vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
+	matrixBase	= vpnode[0x16] & 0xFFFFFF;								// matrix base address
 
 	LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
 
-	// Field of view and clipping
-	vpTopAngle	= (float)asin(*(float *)&vpnode[0x0E]);	// FOV Y upper half-angle (radians)
-	vpBotAngle	= (float)asin(*(float *)&vpnode[0x12]);	// FOV Y lower half-angle
-	fovYDegrees	= (vpTopAngle + vpBotAngle)*(float)(180.0 / 3.14159265358979323846);
+	float angle_left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
+	float angle_right	=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
+	float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
+	float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
 
-	// TO-DO: investigate clipping planes
+	float near	= 0.1f;
+	float far	= 1e5;
 
-	//if (g_Config.wideScreen && (vpX == 0) && (vpWidth >= 495) && (vpY == 0) && (vpHeight >= 383))		// only expand viewports that occupy whole screen
-	//if (0)
+	float l = near * tanf(angle_left);
+	float r = near * tanf(angle_right);
+	float t = near * tanf(angle_top);
+	float b = near * tanf(angle_bottom);
+
+	// TO-DO: investigate clipping near/far planes
+
 	if ((vpX == 0) && (vpWidth >= 495) && (vpY == 0) && (vpHeight >= 383))
 	{
-		// Wide screen hack only modifies X axis and not the Y FOV
+		float windowAR		= (float)m_totalXRes / (float)m_totalYRes;
+		float originalAR	= 496 / 384.f;
+		float correction	= windowAR / originalAR;	// expand horizontal frustum planes
+
 		vp->x		= 0;
 		vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
 		vp->height	= (GLint)((float)vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Perspective(fovYDegrees, (GLfloat)vp->width / (GLfloat)vp->height, 0.1f, 1e5);	// use actual full screen ratio to get proper X FOV
+		vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
 	}
 	else
 	{
@@ -676,7 +684,7 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		vp->width	= (GLint)((float)vpWidth*m_xRatio);
 		vp->height	= (GLint)((float)vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Perspective(fovYDegrees, (GLfloat)vpWidth / (GLfloat)vpHeight, 0.1f, 1e5);		// use Model 3 viewport ratio
+		vp->projectionMatrix.Frustum(l, r, b, t, near, far);
 	}
 
 	// Lighting (note that sun vector points toward sun -- away from vertex)
