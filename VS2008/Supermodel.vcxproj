@@ -333,6 +333,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Model3\53C810.cpp" />
     <ClCompile Include="..\Src\Model3\53C810Disasm.cpp" />
     <ClCompile Include="..\Src\Model3\93C46.cpp" />
+    <ClCompile Include="..\Src\Model3\Crypto.cpp" />
     <ClCompile Include="..\Src\Model3\DriveBoard.cpp" />
     <ClCompile Include="..\Src\Model3\DSB.cpp" />
     <ClCompile Include="..\Src\Model3\IRQ.cpp" />
@@ -443,6 +444,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\Src\Util\Format.cpp" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -552,6 +554,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Inputs\MultiInputSource.h" />
     <ClInclude Include="..\Src\Model3\53C810.h" />
     <ClInclude Include="..\Src\Model3\93C46.h" />
+    <ClInclude Include="..\Src\Model3\Crypto.h" />
     <ClInclude Include="..\Src\Model3\DriveBoard.h" />
     <ClInclude Include="..\Src\Model3\DSB.h" />
     <ClInclude Include="..\Src\Model3\IRQ.h" />
@@ -597,6 +600,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Sound\SCSP.h" />
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />
+    <ClInclude Include="..\Src\Util\Format.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
