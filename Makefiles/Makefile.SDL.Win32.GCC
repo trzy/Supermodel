@@ -57,7 +57,8 @@ BOOST_INCLUDEPATH = /mingw64/boost_1_55_0
 #
 ifeq ($(strip $(BITS)),64)
 	SDL_LIBPATH = /mingw64/lib64 
-	SDL_INCLUDEPATH = /mingw64/x86_64-w64-mingw32/include/SDL
+	#SDL_INCLUDEPATH = /mingw64/x86_64-w64-mingw32/include/SDL
+	SDL_INCLUDEPATH = /mingw64/SDL-1.2.15/include
 else
 	SDL_LIBPATH = /mingw/lib 
 	SDL_INCLUDEPATH = /mingw/include/SDL
@@ -68,6 +69,7 @@ endif
 #
 ifeq ($(strip $(BITS)),64)
 	WINSDK_LIBPATH = /Program\ Files/Microsoft\ SDKs/Windows/v7.0/Lib/x64
+	#WINSDK_LIBPATH = /Program\ Files\ (x86)/Windows\ Kits/10/Lib/10.0.10586.0/um/x64
 else
 	WINSDK_LIBPATH = /Program\ Files/Microsoft\ SDKs/Windows/v7.0/Lib
 endif
@@ -98,7 +100,7 @@ LD = g++
 COMPILER_FLAGS = -I$(SDL_INCLUDEPATH) -ISrc/ -ISrc/OSD/ -ISrc/OSD/SDL/ -ISrc/OSD/Windows/ -c -Wall -DSUPERMODEL_WIN32 -DGLEW_STATIC -O3
 CFLAGS = $(COMPILER_FLAGS)
 CPPFLAGS = $(COMPILER_FLAGS) -I$(BOOST_INCLUDEPATH) -std=c++11
-LFLAGS = -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lz -l:$(WINSDK_LIBPATH)/WbemUuid.lib -s
+LFLAGS = -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz -s #-l:$(WINSDK_LIBPATH)/WbemUuid.lib -s
 
 #
 # Build options...
@@ -131,7 +133,9 @@ OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Config.o $(OBJ_DIR)/I
 	$(OBJ_DIR)/Outputs.o $(OBJ_DIR)/WinOutputs.o \
 	$(OBJ_DIR)/amp_audio.o $(OBJ_DIR)/amp_dump.o $(OBJ_DIR)/amp_getbits.o $(OBJ_DIR)/amp_getdata.o $(OBJ_DIR)/amp_huffman.o \
 	$(OBJ_DIR)/amp_layer2.o $(OBJ_DIR)/amp_layer3.o $(OBJ_DIR)/amp_misc2.o $(OBJ_DIR)/amp_position.o $(OBJ_DIR)/amp_transform.o \
-	$(OBJ_DIR)/amp_util.o
+	$(OBJ_DIR)/amp_util.o \
+	$(OBJ_DIR)/Crypto.o \
+	$(OBJ_DIR)/Format.o
 
 
 # If built-in debugger enabled, include all debugging classes
@@ -249,6 +253,9 @@ $(OBJ_DIR)/%.o:	Src/OSD/Windows/%.cpp
 
 $(OBJ_DIR)/%.o:	Src/Pkgs/%.c
 	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
+	
+$(OBJ_DIR)/%.o:	Src/Util/%.cpp Src/Util/%.h
+	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
 #
 # AMP MPEG decoder library
