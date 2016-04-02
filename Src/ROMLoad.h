@@ -28,6 +28,8 @@
 #ifndef INCLUDED_ROMLOAD_H
 #define INCLUDED_ROMLOAD_H
 
+#include <cstdint>
+
 
 /******************************************************************************
  Data Structures
@@ -40,20 +42,20 @@
  */
 struct ROMInfo
 {
-	// Function
-	const char	*region;	// ROM region identifier (used as a key to search ROMMap)
-	bool		optional;	// whether needs to be present or not
-	
-	// Information used to identify files
-	const char	*fileName;	// file name
-	UINT32		crc;		// CRC-32 checksum (same as zip format)
-	unsigned	fileSize;	// file size in bytes (must be the same as all other ROMs with same region ID)
-	
-	// Interleaving information
-	unsigned	groupSize;	// number of consecutive bytes to fetch each time (groupSize%2 must = 0, must be consistent for region)
-	unsigned	offset;		// starting offset within ROM region
-	unsigned	stride;		// number of bytes to skip before loading next group of bytes from file (must be >= groupSize)
-	bool		byteSwap;	// swap every pair of bytes if true
+  // Function
+  const char  *region;    // ROM region identifier (used as a key to search ROMMap)
+  bool        optional;   // whether needs to be present or not
+  
+  // Information used to identify files
+  const char  *fileName;  // file name
+  uint32_t    crc;        // CRC-32 checksum (same as zip format)
+  unsigned    fileSize;   // file size in bytes (must be the same as all other ROMs with same region ID)
+  
+  // Interleaving information
+  unsigned    groupSize;  // number of consecutive bytes to fetch each time (groupSize%2 must = 0, must be consistent for region)
+  unsigned    offset;     // starting offset within ROM region
+  unsigned    stride;     // number of bytes to skip before loading next group of bytes from file (must be >= groupSize)
+  bool        byteSwap;   // swap every pair of bytes if true
 };
 
 /*
@@ -68,8 +70,8 @@ struct ROMInfo
  */
 struct ROMMap
 {
-	const char	*region;	// ROM region identifier
-	UINT8		*ptr;		// pointer to memory region
+  const char  *region;  // ROM region identifier
+  uint8_t     *ptr;     // pointer to memory region
 };
 
 
@@ -84,13 +86,13 @@ struct ROMMap
  * filled.
  *
  * Parameters:
- *		dest		Destination region.
- *		destOffset	Offset within destination to begin mirroring to.
- *		destSize	Size in bytes of destination region.
- *		src			Source region to copy from.
- *		srcSize		Size of region to copy from.
+ *    dest        Destination region.
+ *    destOffset  Offset within destination to begin mirroring to.
+ *    destSize    Size in bytes of destination region.
+ *    src         Source region to copy from.
+ *    srcSize     Size of region to copy from.
  */
-extern void CopyRegion(UINT8 *dest, unsigned destOffset, unsigned destSize, UINT8 *src, unsigned srcSize);
+extern void CopyRegion(uint8_t *dest, unsigned destOffset, unsigned destSize, uint8_t *src, unsigned srcSize);
 
 /*
  * LoadROMSetFromZIPFile(Map, GameList, zipFile):
@@ -100,20 +102,19 @@ extern void CopyRegion(UINT8 *dest, unsigned destOffset, unsigned destSize, UINT
  * but the first detected game will be ignored.
  *
  * Parameters:
- *		Map			A list of pointers to the memory buffers for each ROM 
- *					region.
- *		GameList	List of all supported games and their ROMs.
- *		zipFile		ZIP file to load from.
- *		loadAll		If true, will check to ensure all ROMs were loaded.
- *					Otherwise, omits this check and loads only specified 
- *					regions.
+ *    Map       A list of pointers to the memory buffers for each ROM 
+ *              region.
+ *    GameList  List of all supported games and their ROMs.
+ *    zipFile   ZIP file to load from.
+ *    loadAll   If true, will check to ensure all ROMs were loaded.
+ *              Otherwise, omits this check and loads only specified 
+ *              regions.
  *
  * Returns:
- *		Pointer to GameInfo struct for loaded game if successful, NULL 
- *		otherwise. Prints errors.
+ *    Pointer to GameInfo struct for loaded game if successful, NULL 
+ *    otherwise. Prints errors.
  */
-extern const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const struct GameInfo *GameList, const char *zipFile,
-													 bool loadAll);
+extern const struct GameInfo * LoadROMSetFromZIPFile(const struct ROMMap *Map, const struct GameInfo *GameList, const char *zipFile, bool loadAll);
 
 
-#endif	// INCLUDED_ROMLOAD_H
+#endif  // INCLUDED_ROMLOAD_H

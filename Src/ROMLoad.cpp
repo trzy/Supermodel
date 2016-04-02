@@ -30,14 +30,13 @@
 #include "Supermodel.h"
 #include "Pkgs/unzip.h"
 
-static bool isPowerOfTwo(long x)
+static bool IsPowerOfTwo(long x)
 {
   while (((x & 1) == 0) && x > 1) // while x is even and > 1
     x >>= 1;
   return (x == 1);
 }
 
-// Sega Bass Fishing
 static struct GameInfo cromInfo =
 {
   "crom.bin",
@@ -53,6 +52,7 @@ static struct GameInfo cromInfo =
   GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1,
   0,        // no MPEG board
   false,    // no drive board
+  0,        // no security board
   {
     { NULL, false, NULL, 0, 0, 0, 0, 0, false }
   }
@@ -75,7 +75,7 @@ static GameInfo * LoadCROMDirect(const struct ROMMap *Map, const char *file)
     fclose(fp);
     return NULL;
   }
-  if (!isPowerOfTwo(fileSize))
+  if (!IsPowerOfTwo(fileSize))
   {
     ErrorLog("CROM image size is not a power of 2.");
     fclose(fp);
