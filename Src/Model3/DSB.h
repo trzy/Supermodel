@@ -220,6 +220,10 @@ public:
 	 *		OKAY if successful, otherwise FAIL. 
 	 */
 	virtual bool	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
+	
+	virtual ~CDSB()
+	{
+	}
 };
 
 
