@@ -647,6 +647,14 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
 	matrixBase	= vpnode[0x16] & 0xFFFFFF;								// matrix base address
 
+	if (vpX) {
+		vpX += 2;
+	}
+
+	if (vpY) {
+		vpY += 2;
+	}
+
 	LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
 
 	float angle_left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);

@@ -35,7 +35,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Y coordinate(2.22 fixed poin
 0x03: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed point)
 -------- -------- -------- --xxx---		Texture width(in 8 - pixel tiles)
--------- -------- -------- ---- - xxx	Texture height(in 8 - pixel tiles)
+-------- -------- -------- -----xxx		Texture height(in 8 - pixel tiles)
 
 0x04: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Color(RGB888)
