@@ -614,6 +614,10 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		return;
 	}
 
+	if (vpnode[0] & 0x20) {
+		return;		//viewport disabled
+	}
+
 	curPri		= (vpnode[0x00] >> 3) & 3;	// viewport priority
 	nextAddr	= vpnode[0x01] & 0xFFFFFF;	// next viewport
 	nodeAddr	= vpnode[0x02];				// scene database node pointer
@@ -950,10 +954,10 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[j].normal[2] = p.faceNormal[2] + (GLfloat)(INT8)(iz & 0xFF);
 
 			if ((ph.header[1] & 2) == 0) {
-				UINT32 colorIdx = ((ph.header[4] >> 20) & 0x7FF);
-				p.v[j].color[0] = (m_polyRAM[0x400 + colorIdx] & 0xFF);
+				UINT32 colorIdx = ((ph.header[4] >> 8) & 0x7FF);
+				p.v[j].color[2] = (m_polyRAM[0x400 + colorIdx] & 0xFF);
 				p.v[j].color[1] = (m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF;
-				p.v[j].color[2] = (m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF;
+				p.v[j].color[0] = (m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF;
 			}
 			else if (ph.FixedShading()) {
 				UINT8 shade = ph.ShadeValue();
