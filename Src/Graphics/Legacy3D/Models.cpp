@@ -441,11 +441,24 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     b = (GLfloat) ((P->header[4]>>8)&0xFF) * (1.0f/255.0f);
   }
 
-  // Determine modulation settings
+  /*
+   * Modulation Override?
+   *
+   * Some observations:
+   *
+   * 1. When texturing is disabled, the polygon color is definitely used.
+   * 2. When texturing is enabled and lighting is disabled, the polygon color
+   *    is apparently sometimes not used. Using r=g=b=1 looks much better 
+   *    for Scud Race waterfalls, totem poles, tunnel lights (beginner day
+   *    stage), terminal ceiling (beginner night).
+   * 3. When texturing is enabled and lighting is disabled, the polygon color
+   *    must in some cases be used: Star Wars Trilogy lightsabers, lasers, and
+   *    HUD elements.
+   */
   if (texEnable)
   {
-    //if (!lightEnable|| !modulate)
-    if (!modulate)
+    //if (!lightEnable|| !modulate)   // this fixes scud waterfalls, totem poles, beginner day tunnel lights, airport terminal ceiling, but breaks swtrilgy
+    if (!modulate)                    // this works with swtrilgy
       r = g = b = 1.0f;
   }
 
