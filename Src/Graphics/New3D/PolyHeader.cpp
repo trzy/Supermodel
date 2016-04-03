@@ -232,7 +232,7 @@ int	PolyHeader::TexFormat()
 
 bool PolyHeader::TexEnabled()
 {
-	return (header[6] & 0x04000000) > 0;
+	return (header[6] & 0x400) > 0;
 }
 
 bool PolyHeader::LightEnabled()
