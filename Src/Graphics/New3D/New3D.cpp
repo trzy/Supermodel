@@ -614,10 +614,6 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		return;
 	}
 
-	if (vpnode[0] & 0x20) {
-		return;		//viewport disabled
-	}
-
 	curPri		= (vpnode[0x00] >> 3) & 3;	// viewport priority
 	nextAddr	= vpnode[0x01] & 0xFFFFFF;	// next viewport
 	nodeAddr	= vpnode[0x02];				// scene database node pointer
