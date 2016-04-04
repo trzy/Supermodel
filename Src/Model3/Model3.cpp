@@ -3056,7 +3056,8 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
   printf("    Developer:      %s\n", Game->mfgName);
   printf("    Year:           %d\n", Game->year);
   printf("    Step:           %d.%d\n", (Game->step>>4)&0xF, Game->step&0xF);
-  printf("    Extra Hardware: %s\n", Util::Format(", ").Join(extraHw).str().c_str());
+  if (!extraHw.empty())
+    printf("    Extra Hardware: %s\n", Util::Format(", ").Join(extraHw).str().c_str());
   printf("\n");
   
   return OKAY;
