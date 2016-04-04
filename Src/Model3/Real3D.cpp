@@ -41,8 +41,8 @@
  *   The render currently cannot cope with this.
  */
 
-#include <cstring>
 #include "Supermodel.h"
+#include <cstring>
 
 // Macros that divide memory regions into pages and mark them as dirty when they are written to
 #define PAGE_WIDTH 12
@@ -51,23 +51,23 @@
 #define MARK_DIRTY(dirtyArray, addr) dirtyArray[addr>>(PAGE_WIDTH+3)] |= 1<<((addr>>PAGE_WIDTH)&7)
 
 // Offsets of memory regions within Real3D memory pool
-#define OFFSET_8C			0x0000000	// 4 MB, culling RAM low (at 0x8C000000)
-#define OFFSET_8E			0x0400000	// 1 MB, culling RAM high (at 0x8E000000)
-#define OFFSET_98			0x0500000	// 4 MB, polygon RAM (at 0x98000000)
-#define OFFSET_TEXRAM		0x0900000	// 8 MB, texture RAM
-#define OFFSET_TEXFIFO		0x1100000	// 1 MB, texture FIFO
+#define OFFSET_8C           0x0000000 // 4 MB, culling RAM low (at 0x8C000000)
+#define OFFSET_8E           0x0400000 // 1 MB, culling RAM high (at 0x8E000000)
+#define OFFSET_98           0x0500000 // 4 MB, polygon RAM (at 0x98000000)
+#define OFFSET_TEXRAM       0x0900000 // 8 MB, texture RAM
+#define OFFSET_TEXFIFO      0x1100000 // 1 MB, texture FIFO
 #define MEM_POOL_SIZE_RW    (0x400000+0x100000+0x400000+0x800000+0x100000)
-#define OFFSET_8C_RO		0x1200000	// 4 MB, culling RAM low (at 0x8C000000)  [read-only snapshot]
-#define OFFSET_8E_RO		0x1600000	// 1 MB, culling RAM high (at 0x8E000000) [read-only snapshot]
-#define OFFSET_98_RO		0x1700000	// 4 MB, polygon RAM (at 0x98000000)      [read-only snapshot]
-#define OFFSET_TEXRAM_RO	0x1B00000	// 8 MB, texture RAM                      [read-only snapshot]
+#define OFFSET_8C_RO        0x1200000 // 4 MB, culling RAM low (at 0x8C000000)  [read-only snapshot]
+#define OFFSET_8E_RO        0x1600000 // 1 MB, culling RAM high (at 0x8E000000) [read-only snapshot]
+#define OFFSET_98_RO        0x1700000 // 4 MB, polygon RAM (at 0x98000000)      [read-only snapshot]
+#define OFFSET_TEXRAM_RO    0x1B00000 // 8 MB, texture RAM                      [read-only snapshot]
 #define MEM_POOL_SIZE_RO    (0x400000+0x100000+0x400000+0x800000)
 #define OFFSET_8C_DIRTY     0x2300000
 #define OFFSET_8E_DIRTY     (OFFSET_8C_DIRTY+DIRTY_SIZE(0x400000))
 #define OFFSET_98_DIRTY     (OFFSET_8E_DIRTY+DIRTY_SIZE(0x100000))
 #define OFFSET_TEXRAM_DIRTY (OFFSET_98_DIRTY+DIRTY_SIZE(0x400000))
 #define MEM_POOL_SIZE_DIRTY (DIRTY_SIZE(MEM_POOL_SIZE_RO))
-#define MEMORY_POOL_SIZE	(MEM_POOL_SIZE_RW+MEM_POOL_SIZE_RO+MEM_POOL_SIZE_DIRTY)
+#define MEMORY_POOL_SIZE  (MEM_POOL_SIZE_RW+MEM_POOL_SIZE_RO+MEM_POOL_SIZE_DIRTY)
 
 /******************************************************************************
  Save States
@@ -75,61 +75,61 @@
 
 void CReal3D::SaveState(CBlockFile *SaveState)
 {
-	SaveState->NewBlock("Real3D", __FILE__);
-	
-	SaveState->Write(memoryPool, MEM_POOL_SIZE_RW); // Don't write out read-only snapshots or dirty page arrays
-	SaveState->Write(&fifoIdx, sizeof(fifoIdx));
-	SaveState->Write(&vromTextureAddr, sizeof(vromTextureAddr));
-	SaveState->Write(&vromTextureHeader, sizeof(vromTextureHeader));
-	
-	SaveState->Write(&dmaSrc, sizeof(dmaSrc));
-	SaveState->Write(&dmaDest, sizeof(dmaDest));
-	SaveState->Write(&dmaLength, sizeof(dmaLength));
-	SaveState->Write(&dmaData, sizeof(dmaData));
-	SaveState->Write(&dmaUnknownReg, sizeof(dmaUnknownReg));
-	SaveState->Write(&dmaStatus, sizeof(dmaStatus));
-	SaveState->Write(&dmaConfig, sizeof(dmaConfig));
-	
-	SaveState->Write(&tapCurrentInstruction, sizeof(tapCurrentInstruction));
-	SaveState->Write(&tapIR, sizeof(tapIR));
-	SaveState->Write(tapID, sizeof(tapID));
-	SaveState->Write(&tapIDSize, sizeof(tapIDSize));
-	SaveState->Write(&tapTDO, sizeof(tapTDO));
-	SaveState->Write(&tapState, sizeof(tapState));
+  SaveState->NewBlock("Real3D", __FILE__);
+  
+  SaveState->Write(memoryPool, MEM_POOL_SIZE_RW); // Don't write out read-only snapshots or dirty page arrays
+  SaveState->Write(&fifoIdx, sizeof(fifoIdx));
+  SaveState->Write(&vromTextureAddr, sizeof(vromTextureAddr));
+  SaveState->Write(&vromTextureHeader, sizeof(vromTextureHeader));
+  
+  SaveState->Write(&dmaSrc, sizeof(dmaSrc));
+  SaveState->Write(&dmaDest, sizeof(dmaDest));
+  SaveState->Write(&dmaLength, sizeof(dmaLength));
+  SaveState->Write(&dmaData, sizeof(dmaData));
+  SaveState->Write(&dmaUnknownReg, sizeof(dmaUnknownReg));
+  SaveState->Write(&dmaStatus, sizeof(dmaStatus));
+  SaveState->Write(&dmaConfig, sizeof(dmaConfig));
+  
+  SaveState->Write(&tapCurrentInstruction, sizeof(tapCurrentInstruction));
+  SaveState->Write(&tapIR, sizeof(tapIR));
+  SaveState->Write(tapID, sizeof(tapID));
+  SaveState->Write(&tapIDSize, sizeof(tapIDSize));
+  SaveState->Write(&tapTDO, sizeof(tapTDO));
+  SaveState->Write(&tapState, sizeof(tapState));
 }
 
 void CReal3D::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("Real3D"))
-	{
-		ErrorLog("Unable to load Real3D GPU state. Save state file is corrupt.");
-		return;
-	}
-	
-	SaveState->Read(memoryPool, MEM_POOL_SIZE_RW);
+  if (OKAY != SaveState->FindBlock("Real3D"))
+  {
+    ErrorLog("Unable to load Real3D GPU state. Save state file is corrupt.");
+    return;
+  }
+  
+  SaveState->Read(memoryPool, MEM_POOL_SIZE_RW);
 
-	// If multi-threaded, update read-only snapshots too
-	if (g_Config.gpuMultiThreaded)
-		UpdateSnapshots(true);
-	Render3D->UploadTextures(0, 0, 2048, 2048);
-	SaveState->Read(&fifoIdx, sizeof(fifoIdx));
-	SaveState->Read(&vromTextureAddr, sizeof(vromTextureAddr));
-	SaveState->Read(&vromTextureHeader, sizeof(vromTextureHeader));
-	
-	SaveState->Read(&dmaSrc, sizeof(dmaSrc));
-	SaveState->Read(&dmaDest, sizeof(dmaDest));
-	SaveState->Read(&dmaLength, sizeof(dmaLength));
-	SaveState->Read(&dmaData, sizeof(dmaData));
-	SaveState->Read(&dmaUnknownReg, sizeof(dmaUnknownReg));
-	SaveState->Read(&dmaStatus, sizeof(dmaStatus));
-	SaveState->Read(&dmaConfig, sizeof(dmaConfig));
-	
-	SaveState->Read(&tapCurrentInstruction, sizeof(tapCurrentInstruction));
-	SaveState->Read(&tapIR, sizeof(tapIR));
-	SaveState->Read(tapID, sizeof(tapID));
-	SaveState->Read(&tapIDSize, sizeof(tapIDSize));
-	SaveState->Read(&tapTDO, sizeof(tapTDO));
-	SaveState->Read(&tapState, sizeof(tapState));
+  // If multi-threaded, update read-only snapshots too
+  if (g_Config.gpuMultiThreaded)
+    UpdateSnapshots(true);
+  Render3D->UploadTextures(0, 0, 2048, 2048);
+  SaveState->Read(&fifoIdx, sizeof(fifoIdx));
+  SaveState->Read(&vromTextureAddr, sizeof(vromTextureAddr));
+  SaveState->Read(&vromTextureHeader, sizeof(vromTextureHeader));
+  
+  SaveState->Read(&dmaSrc, sizeof(dmaSrc));
+  SaveState->Read(&dmaDest, sizeof(dmaDest));
+  SaveState->Read(&dmaLength, sizeof(dmaLength));
+  SaveState->Read(&dmaData, sizeof(dmaData));
+  SaveState->Read(&dmaUnknownReg, sizeof(dmaUnknownReg));
+  SaveState->Read(&dmaStatus, sizeof(dmaStatus));
+  SaveState->Read(&dmaConfig, sizeof(dmaConfig));
+  
+  SaveState->Read(&tapCurrentInstruction, sizeof(tapCurrentInstruction));
+  SaveState->Read(&tapIR, sizeof(tapIR));
+  SaveState->Read(tapID, sizeof(tapID));
+  SaveState->Read(&tapIDSize, sizeof(tapIDSize));
+  SaveState->Read(&tapTDO, sizeof(tapTDO));
+  SaveState->Read(&tapState, sizeof(tapState));
 }
 
 
@@ -139,112 +139,112 @@ void CReal3D::LoadState(CBlockFile *SaveState)
 
 void CReal3D::BeginVBlank(int statusCycles)
 {
-	// Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
-	// and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
-	// access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
-	statusChange = ppc_total_cycles() + statusCycles;
+  // Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
+  // and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
+  // access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
+  statusChange = ppc_total_cycles() + statusCycles;
 }
 
 void CReal3D::EndVBlank(void)
 {
-	error = false;	// clear error (just needs to be done once per frame)
+  error = false;  // clear error (just needs to be done once per frame)
 }
 
-UINT32 CReal3D::SyncSnapshots(void)
+uint32_t CReal3D::SyncSnapshots(void)
 {
-	// Update read-only copy of command port flag
-	commandPortWrittenRO = commandPortWritten;
-	commandPortWritten = false;
+  // Update read-only copy of command port flag
+  commandPortWrittenRO = commandPortWritten;
+  commandPortWritten = false;
 
-	if (!g_Config.gpuMultiThreaded)
-		return 0;
+  if (!g_Config.gpuMultiThreaded)
+    return 0;
 
-	// Update read-only queue
-	queuedUploadTexturesRO = queuedUploadTextures;
-	queuedUploadTextures.clear();
+  // Update read-only queue
+  queuedUploadTexturesRO = queuedUploadTextures;
+  queuedUploadTextures.clear();
 
-	// Update read-only snapshots
-	return UpdateSnapshots(false);
+  // Update read-only snapshots
+  return UpdateSnapshots(false);
 }
 
-UINT32 CReal3D::UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty)
+uint32_t CReal3D::UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, unsigned size, uint8_t *dirty)
 {
-	unsigned dirtySize = DIRTY_SIZE(size);
-	if (copyWhole)
-	{
-		// If updating whole region, then just copy all data in one go
-		memcpy(dst, src, size);
-		memset(dirty, 0, dirtySize);
-		return size;
-	}
-	else
-	{
-		// Otherwise, loop through dirty pages array to find out what needs to be updated and copy only those parts
-		UINT32 copied = 0;
-		UINT8 *pSrc = src;
-		UINT8 *pDst = dst;
-		for (unsigned i = 0; i < dirtySize; i++)
-		{
-			UINT8 d = dirty[i];
-			if (d)
-			{
-				for (unsigned j = 0; j < 8; j++)
-				{
-					if (d&1)
-					{
-						// If not at very end of region, then copy an extra 4 bytes to allow for a possible 32-bit overlap
-						UINT32 toCopy = (i < dirtySize - 1 || j < 7 ? PAGE_SIZE + 4 : PAGE_SIZE);
-						memcpy(pDst, pSrc, toCopy);
-						copied += toCopy;
-					}
-					d >>= 1;
-					pSrc += PAGE_SIZE;	
-					pDst += PAGE_SIZE;
-				}
-				dirty[i] = 0;
-			}
-			else
-			{
-				pSrc += 8 * PAGE_SIZE;	
-				pDst += 8 * PAGE_SIZE;
-			}
-		}
-		return copied;
-	}
+  unsigned dirtySize = DIRTY_SIZE(size);
+  if (copyWhole)
+  {
+    // If updating whole region, then just copy all data in one go
+    memcpy(dst, src, size);
+    memset(dirty, 0, dirtySize);
+    return size;
+  }
+  else
+  {
+    // Otherwise, loop through dirty pages array to find out what needs to be updated and copy only those parts
+    uint32_t copied = 0;
+    uint8_t *pSrc = src;
+    uint8_t *pDst = dst;
+    for (unsigned i = 0; i < dirtySize; i++)
+    {
+      uint8_t d = dirty[i];
+      if (d)
+      {
+        for (unsigned j = 0; j < 8; j++)
+        {
+          if (d&1)
+          {
+            // If not at very end of region, then copy an extra 4 bytes to allow for a possible 32-bit overlap
+            uint32_t toCopy = (i < dirtySize - 1 || j < 7 ? PAGE_SIZE + 4 : PAGE_SIZE);
+            memcpy(pDst, pSrc, toCopy);
+            copied += toCopy;
+          }
+          d >>= 1;
+          pSrc += PAGE_SIZE;  
+          pDst += PAGE_SIZE;
+        }
+        dirty[i] = 0;
+      }
+      else
+      {
+        pSrc += 8 * PAGE_SIZE;  
+        pDst += 8 * PAGE_SIZE;
+      }
+    }
+    return copied;
+  }
 }
 
-UINT32 CReal3D::UpdateSnapshots(bool copyWhole)
+uint32_t CReal3D::UpdateSnapshots(bool copyWhole)
 {
-	// Update all memory region snapshots
-	UINT32 cullLoCopied  = UpdateSnapshot(copyWhole, (UINT8*)cullingRAMLo, (UINT8*)cullingRAMLoRO, 0x400000, cullingRAMLoDirty);
-	UINT32 cullHiCopied  = UpdateSnapshot(copyWhole, (UINT8*)cullingRAMHi, (UINT8*)cullingRAMHiRO, 0x100000, cullingRAMHiDirty);
-	UINT32 polyCopied    = UpdateSnapshot(copyWhole, (UINT8*)polyRAM,      (UINT8*)polyRAMRO,      0x400000, polyRAMDirty);
-	UINT32 textureCopied = UpdateSnapshot(copyWhole, (UINT8*)textureRAM,   (UINT8*)textureRAMRO,   0x800000, textureRAMDirty);
-	//printf("Read3D copied - cullLo:%4uK, cullHi:%4uK, poly:%4uK, texture:%4uK\n", cullLoCopied / 1024, cullHiCopied / 1024, polyCopied / 1024, textureCopied / 1024);
-	return cullLoCopied + cullHiCopied + polyCopied + textureCopied;
+  // Update all memory region snapshots
+  uint32_t cullLoCopied  = UpdateSnapshot(copyWhole, (uint8_t*)cullingRAMLo, (uint8_t*)cullingRAMLoRO, 0x400000, cullingRAMLoDirty);
+  uint32_t cullHiCopied  = UpdateSnapshot(copyWhole, (uint8_t*)cullingRAMHi, (uint8_t*)cullingRAMHiRO, 0x100000, cullingRAMHiDirty);
+  uint32_t polyCopied    = UpdateSnapshot(copyWhole, (uint8_t*)polyRAM,      (uint8_t*)polyRAMRO,      0x400000, polyRAMDirty);
+  uint32_t textureCopied = UpdateSnapshot(copyWhole, (uint8_t*)textureRAM,   (uint8_t*)textureRAMRO,   0x800000, textureRAMDirty);
+  //printf("Read3D copied - cullLo:%4uK, cullHi:%4uK, poly:%4uK, texture:%4uK\n", cullLoCopied / 1024, cullHiCopied / 1024, polyCopied / 1024, textureCopied / 1024);
+  return cullLoCopied + cullHiCopied + polyCopied + textureCopied;
 }
 
 void CReal3D::BeginFrame(void)
 {
-	// If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
-	if (g_Config.gpuMultiThreaded)
-	{
-		for (vector<QueuedUploadTextures>::iterator it = queuedUploadTexturesRO.begin(), end = queuedUploadTexturesRO.end(); it != end; it++)
-			Render3D->UploadTextures(it->x, it->y, it->width, it->height);
-	}
+  // If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
+  if (g_Config.gpuMultiThreaded)
+  {
+    for (vector<QueuedUploadTextures>::iterator it = queuedUploadTexturesRO.begin(), end = queuedUploadTexturesRO.end(); it != end; it++)
+      Render3D->UploadTextures(it->x, it->y, it->width, it->height);
+  }
 
-	Render3D->BeginFrame();
+  Render3D->BeginFrame();
 }
 
 void CReal3D::RenderFrame(void)
 {
-	//if (commandPortWrittenRO)
-		Render3D->RenderFrame();
+  //if (commandPortWrittenRO)
+    Render3D->RenderFrame();
 }
 
 void CReal3D::EndFrame(void)
 {
-	Render3D->EndFrame();
+  Render3D->EndFrame();
 }
 
 /******************************************************************************
@@ -255,125 +255,125 @@ void CReal3D::EndFrame(void)
  +---+---+---+---+---+---+---+---+
  |BUS|???|???|???|???|???|???|IRQ|
  +---+---+---+---+---+---+---+---+
- 	BUS:	Busy (see von2 0x18A104) if 1.
- 	IRQ:	IRQ pending.
+  BUS:  Busy (see von2 0x18A104) if 1.
+  IRQ:  IRQ pending.
 ******************************************************************************/
 
 void CReal3D::DMACopy(void)
 {
-	DebugLog("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");
-	//printf("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");	
-	if ((dmaConfig&0x80))	// reverse bytes
+  DebugLog("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");
+  //printf("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":""); 
+  if ((dmaConfig&0x80)) // reverse bytes
+  {
+    while (dmaLength != 0)
     {
-        while (dmaLength != 0)
-        {
-        	UINT32	data = Bus->Read32(dmaSrc);
-            Bus->Write32(dmaDest, FLIPENDIAN32(data));
-            dmaSrc += 4;
-            dmaDest += 4;
-            --dmaLength;
-        }
+      uint32_t  data = Bus->Read32(dmaSrc);
+      Bus->Write32(dmaDest, FLIPENDIAN32(data));
+      dmaSrc += 4;
+      dmaDest += 4;
+      --dmaLength;
     }
-    else
+  }
+  else
+  {
+    while (dmaLength != 0)
     {
-        while (dmaLength != 0)
-        {
-            Bus->Write32(dmaDest, Bus->Read32(dmaSrc));
-            dmaSrc += 4;
-            dmaDest += 4;
-            --dmaLength;
-        }
+      Bus->Write32(dmaDest, Bus->Read32(dmaSrc));
+      dmaSrc += 4;
+      dmaDest += 4;
+      --dmaLength;
     }
+  }
 }
 
-UINT8 CReal3D::ReadDMARegister8(unsigned reg)
+uint8_t CReal3D::ReadDMARegister8(unsigned reg)
 {
-	switch (reg)
-	{
-	case 0xC:	// status
-		return dmaStatus;
-	case 0xE:	// configuration
-		return	dmaConfig;
-	default:
-		break;
-	}
-	
-	DebugLog("Real3D: ReadDMARegister8: reg=%X\n", reg);
-	return 0;
+  switch (reg)
+  {
+  case 0xC: // status
+    return dmaStatus;
+  case 0xE: // configuration
+    return  dmaConfig;
+  default:
+    break;
+  }
+  
+  DebugLog("Real3D: ReadDMARegister8: reg=%X\n", reg);
+  return 0;
 }
 
-void CReal3D::WriteDMARegister8(unsigned reg, UINT8 data)
+void CReal3D::WriteDMARegister8(unsigned reg, uint8_t data)
 {
-	switch (reg)
-	{
-	case 0xD:	// IRQ acknowledge
-		if ((data&1))
-		{
-			dmaStatus &= ~1;
-			IRQ->Deassert(dmaIRQ);
-		}
-		break;
-	case 0xE:	// configuration
-		dmaConfig = data;
-		break;
-	default:
-		DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
-		break;
-	}
-	//DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
+  switch (reg)
+  {
+  case 0xD: // IRQ acknowledge
+    if ((data&1))
+    {
+      dmaStatus &= ~1;
+      IRQ->Deassert(dmaIRQ);
+    }
+    break;
+  case 0xE: // configuration
+    dmaConfig = data;
+    break;
+  default:
+    DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
+    break;
+  }
+  //DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
 }
 
-UINT32 CReal3D::ReadDMARegister32(unsigned reg)
+uint32_t CReal3D::ReadDMARegister32(unsigned reg)
 {
-	switch (reg)
-	{
-	case 0x14:	// command result
-		return dmaData;
-	default:
-		break;
-	}
-	
-	DebugLog("Real3D: ReadDMARegister32: reg=%X\n", reg);
-	return 0;
+  switch (reg)
+  {
+  case 0x14:  // command result
+    return dmaData;
+  default:
+    break;
+  }
+  
+  DebugLog("Real3D: ReadDMARegister32: reg=%X\n", reg);
+  return 0;
 }
 
-void CReal3D::WriteDMARegister32(unsigned reg, UINT32 data)
+void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
 {
-	switch (reg)
-	{
-	case 0x00:	// DMA source address
-		dmaSrc = data;
-		break;
-	case 0x04:	// DMA destination address
-		dmaDest = data;
-		break;
-	case 0x08:	// DMA length
-		dmaLength = data;
-		DMACopy();
-		dmaStatus |= 1;
-		IRQ->Assert(dmaIRQ);
-		break;
-	case 0x10:	// command register
-		if ((data&0x20000000))
-		{
-			dmaData = 0x16C311DB;	// Virtual On 2 expects this from DMA
-			DebugLog("Real3D: DMA ID command issued (ATTENTION: make sure we're returning the correct value), PC=%08X, LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-		}
-		else if ((data&0x80000000))
-		{
-			//dmaUnknownReg ^= 0xFFFFFFFF;
-			//dmaData = dmaUnknownReg;			
-			dmaData = (ppc_total_cycles() >= statusChange ? 0x0 : 0xFFFFFFFF); // Not sure yet if it is just bit 2 as per ReadRegister above
-		}
-		break;
-	case 0x14:	// ?
-		dmaData = 0xFFFFFFFF;
-		break;
-	default:
-		DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
-		break;
-	}
-	//DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
+  switch (reg)
+  {
+  case 0x00:  // DMA source address
+    dmaSrc = data;
+    break;
+  case 0x04:  // DMA destination address
+    dmaDest = data;
+    break;
+  case 0x08:  // DMA length
+    dmaLength = data;
+    DMACopy();
+    dmaStatus |= 1;
+    IRQ->Assert(dmaIRQ);
+    break;
+  case 0x10:  // command register
+    if ((data&0x20000000))
+    {
+      dmaData = 0x16C311DB; // Virtual On 2 expects this from DMA
+      DebugLog("Real3D: DMA ID command issued (ATTENTION: make sure we're returning the correct value), PC=%08X, LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+    }
+    else if ((data&0x80000000))
+    {
+      //dmaUnknownReg ^= 0xFFFFFFFF;
+      //dmaData = dmaUnknownReg;      
+      dmaData = (ppc_total_cycles() >= statusChange ? 0x0 : 0xFFFFFFFF); // Not sure yet if it is just bit 2 as per ReadRegister above
+    }
+    break;
+  case 0x14:  // ?
+    dmaData = 0xFFFFFFFF;
+    break;
+  default:
+    DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
+    break;
+  }
+  //DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
 }
 
 /******************************************************************************
@@ -382,40 +382,37 @@ void CReal3D::WriteDMARegister32(unsigned reg, UINT32 data)
  What I term as "IDs" here are really boundary scan values.
 ******************************************************************************/
 
-static const int	tapFSM[][2] = 	// finite state machine, each state can lead to 2 next states
-					{
-						{  1,  0 },  // 0  Test-Logic/Reset
-						{  1,  2 },  // 1  Run-Test/Idle
-						{  3,  9 },  // 2  Select-DR-Scan
-						{  4,  5 },  // 3  Capture-DR
-						{  4,  5 },  // 4  Shift-DR
-						{  6,  8 },  // 5  Exit1-DR
-						{  6,  7 },  // 6  Pause-DR
-						{  4,  8 },  // 7  Exit2-DR
-						{  1,  2 },  // 8  Update-DR
-						{ 10,  0 },  // 9  Select-IR-Scan
-						{ 11, 12 },  // 10 Capture-IR
-						{ 11, 12 },  // 11 Shift-IR
-						{ 13, 15 },  // 12 Exit1-IR
-						{ 13, 14 },  // 13 Pause-IR
-						{ 11, 15 },  // 14 Exit2-IR
-						{  1,  2 }   // 15 Update-IR
-					};
-					
+static const int tapFSM[][2] =  // finite state machine, each state can lead to 2 next states
+{
+  {  1,  0 },  // 0  Test-Logic/Reset
+  {  1,  2 },  // 1  Run-Test/Idle
+  {  3,  9 },  // 2  Select-DR-Scan
+  {  4,  5 },  // 3  Capture-DR
+  {  4,  5 },  // 4  Shift-DR
+  {  6,  8 },  // 5  Exit1-DR
+  {  6,  7 },  // 6  Pause-DR
+  {  4,  8 },  // 7  Exit2-DR
+  {  1,  2 },  // 8  Update-DR
+  { 10,  0 },  // 9  Select-IR-Scan
+  { 11, 12 },  // 10 Capture-IR
+  { 11, 12 },  // 11 Shift-IR
+  { 13, 15 },  // 12 Exit1-IR
+  { 13, 14 },  // 13 Pause-IR
+  { 11, 15 },  // 14 Exit2-IR
+  {  1,  2 }   // 15 Update-IR
+};
+          
 /*
  * InsertBit():
  *
  * Inserts a bit into an arbitrarily long bit field. Bit 0 is assumed to be
  * the MSB of the first byte in the buffer.
  */
-void CReal3D::InsertBit(UINT8 *buf, unsigned bitNum, unsigned bit)
+void CReal3D::InsertBit(uint8_t *buf, unsigned bitNum, unsigned bit)
 {
-    unsigned	bitInByte;
-
-    bitInByte = 7 - (bitNum & 7);
-
-    buf[bitNum / 8] &= ~(1 << bitInByte);
-    buf[bitNum / 8] |= (bit << bitInByte);
+  unsigned bitInByte = 7 - (bitNum & 7);
+  buf[bitNum / 8] &= ~(1 << bitInByte);
+  buf[bitNum / 8] |= (bit << bitInByte);
 }
 
 /*
@@ -423,12 +420,10 @@ void CReal3D::InsertBit(UINT8 *buf, unsigned bitNum, unsigned bit)
  *
  * Inserts a 32-bit ID code into the ID bit field.
  */
-void CReal3D::InsertID(UINT32 id, unsigned startBit)
+void CReal3D::InsertID(uint32_t id, unsigned startBit)
 {
-    int	i;
-
-    for (i = 31; i >= 0; i--)
-        InsertBit(tapID, startBit++, (id >> i) & 1);
+  for (int i = 31; i >= 0; i--)
+    InsertBit(tapID, startBit++, (id >> i) & 1);
 }
 
 /*
@@ -438,137 +433,121 @@ void CReal3D::InsertID(UINT32 id, unsigned startBit)
  * the number of bits must be specified. The bit shifted out of the LSB is
  * returned.
  */
-unsigned CReal3D::Shift(UINT8 *data, unsigned numBits)
+unsigned CReal3D::Shift(uint8_t *data, unsigned numBits)
 {
-    unsigned	i;
-    unsigned	shiftOut, shiftIn;
+  // This loop takes care of all the fully-filled bytes
+  unsigned shiftIn = 0;
+  unsigned shiftOut = 0;
+  size_t i;
+  for (i = 0; i < numBits / 8; i++)
+  {
+    shiftOut = data[i] & 1;
+    data[i] >>= 1;
+    data[i] |= (shiftIn << 7);
+    shiftIn = shiftOut;   // carry over to next element's MSB
+  }
 
-	// This loop takes care of all the fully-filled bytes
-    shiftIn = 0;
-	shiftOut = 0;
-    for (i = 0; i < numBits / 8; i++)
-    {
-        shiftOut = data[i] & 1;
-        data[i] >>= 1;
-        data[i] |= (shiftIn << 7);
-        shiftIn = shiftOut;   // carry over to next element's MSB
-    }
+  // Take care of the last partial byte (if there is one)
+  if ((numBits & 7) != 0)
+  {
+    shiftOut = (data[i] >> (8 - (numBits & 7))) & 1;
+    data[i] >>= 1;
+    data[i] |= (shiftIn << 7);
+  }
 
-	// Take care of the last partial byte (if there is one)
-    if ((numBits & 7) != 0)
-    {
-        shiftOut = (data[i] >> (8 - (numBits & 7))) & 1;
-        data[i] >>= 1;
-        data[i] |= (shiftIn << 7);
-    }
-
-    return shiftOut;
+  return shiftOut;
 }
 
 unsigned CReal3D::ReadTAP(void)
 {
-    return tapTDO;
+  return tapTDO;
 }
 
 void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
 {
-    if (!tck)
-        return;
+  if (!tck)
+    return;
 
-    // Go to next state
-    tapState = tapFSM[tapState][tms];
-
-    switch (tapState)
+  // Go to next state
+  tapState = tapFSM[tapState][tms];
+  switch (tapState)
+  {
+  case 3:     // Capture-DR
+    /*
+     * Read ASIC IDs.
+     *
+     * The ID Sequence is:
+     *  - Jupiter
+     *  - Mercury
+     *  - Venus
+     *  - Earth
+     *  - Mars
+     *  - Mars (again)
+     *
+     * Note that different Model 3 steps have different chip
+     * revisions, hence the different IDs returned below.
+     *
+     * On Step 1.5 and 1.0, instruction 0x0C631F8C7FFE is used to retrieve
+     * the ID codes but Step 2.0 is a little weirder. It seems to use this
+     * and either the state of the TAP after reset or other instructions
+     * to read the IDs as well. This can be emulated in one of 2 ways:
+     * Ignore the instruction and always load up the data or load the
+     * data on TAP reset and when the instruction is issued.
+     */
+    if (step == 0x10)
     {
-    case 3:     // Capture-DR
-    	//printf("TAP: Capture-DR\n");
-    	//bit = 0;
-
-        /*
-         * Read ASIC IDs.
-         *
-         * The ID Sequence is:
-         *  - Jupiter
-         *  - Mercury
-         *  - Venus
-         *  - Earth
-         *  - Mars
-         *  - Mars (again)
-         *
-         * Note that different Model 3 steps have different chip
-         * revisions, hence the different IDs returned below.
-         *
-         * On Step 1.5 and 1.0, instruction 0x0C631F8C7FFE is used to retrieve
-         * the ID codes but Step 2.0 is a little weirder. It seems to use this
-         * and either the state of the TAP after reset or other instructions
-         * to read the IDs as well. This can be emulated in one of 2 ways:
-         * Ignore the instruction and always load up the data or load the
-         * data on TAP reset and when the instruction is issued.
-         */
-        if (step == 0x10)
-        {
-            InsertID(0x116C7057, 1 + 0 * 32);
-            InsertID(0x216C3057, 1 + 1 * 32);
-            InsertID(0x116C4057, 1 + 2 * 32);
-            InsertID(0x216C5057, 1 + 3 * 32);
-            InsertID(0x116C6057, 1 + 4 * 32 + 1);
-            InsertID(0x116C6057, 1 + 5 * 32 + 1);
-        }
-        else if (step == 0x15)
-        {
-            InsertID(0x316C7057, 1 + 0 * 32);
-            InsertID(0x316C3057, 1 + 1 * 32);
-            InsertID(0x216C4057, 1 + 2 * 32);	// Lost World may to use 0x016C4057
-            InsertID(0x316C5057, 1 + 3 * 32);
-            InsertID(0x216C6057, 1 + 4 * 32 + 1);
-            InsertID(0x216C6057, 1 + 5 * 32 + 1);
-        }
-        else if (step >= 0x20)
-        {
-            InsertID(0x416C7057, 1 + 0 * 32);
-            InsertID(0x416C3057, 1 + 1 * 32);
-            InsertID(0x316C4057, 1 + 2 * 32);	// skichamp at PC=A89F4, this value causes "NO DAUGHTER BOARD" message
-            InsertID(0x416C5057, 1 + 3 * 32);
-            InsertID(0x316C6057, 1 + 4 * 32 + 1);
-            InsertID(0x316C6057, 1 + 5 * 32 + 1);
-        }
-
-        break;
-
-    case 4:     // Shift-DR
-
-        tapTDO = Shift(tapID, tapIDSize);
-        //printf("TAP: Shift-DR Bit %d\n", bit++);
-        break;
-
-    case 10:    // Capture-IR
-
-		// Load lower 2 bits with 01 as per IEEE 1149.1-1990
-        tapIR = 1;
-        break;
-
-    case 11:    // Shift-IR
-
-		// Shift IR towards output and load in new data from TDI
-        tapTDO = tapIR & 1;   // shift LSB to output
-        tapIR >>= 1;
-        tapIR |= ((UINT64) tdi << 45);
-        break;
-
-    case 15:    // Update-IR
-
-		/*
-         * Latch IR (technically, this should occur on the falling edge of
-         * TCK)
-         */
-        tapIR &= 0x3FFFFFFFFFFFULL;
-        tapCurrentInstruction = tapIR;
-        //printf("TAP: Update-IR %XLL\n", tapCurrentInstruction);
-        break;
-
-    default:
-        break;
+      InsertID(0x116C7057, 1 + 0 * 32);
+      InsertID(0x216C3057, 1 + 1 * 32);
+      InsertID(0x116C4057, 1 + 2 * 32);
+      InsertID(0x216C5057, 1 + 3 * 32);
+      InsertID(0x116C6057, 1 + 4 * 32 + 1);
+      InsertID(0x116C6057, 1 + 5 * 32 + 1);
     }
+    else if (step == 0x15)
+    {
+      InsertID(0x316C7057, 1 + 0 * 32);
+      InsertID(0x316C3057, 1 + 1 * 32);
+      InsertID(0x216C4057, 1 + 2 * 32); // Lost World may to use 0x016C4057
+      InsertID(0x316C5057, 1 + 3 * 32);
+      InsertID(0x216C6057, 1 + 4 * 32 + 1);
+      InsertID(0x216C6057, 1 + 5 * 32 + 1);
+    }
+    else if (step >= 0x20)
+    {
+      InsertID(0x416C7057, 1 + 0 * 32);
+      InsertID(0x416C3057, 1 + 1 * 32);
+      InsertID(0x316C4057, 1 + 2 * 32); // skichamp at PC=A89F4, this value causes "NO DAUGHTER BOARD" message
+      InsertID(0x416C5057, 1 + 3 * 32);
+      InsertID(0x316C6057, 1 + 4 * 32 + 1);
+      InsertID(0x316C6057, 1 + 5 * 32 + 1);
+    }
+    break;
+  case 4:     // Shift-DR
+    tapTDO = Shift(tapID, tapIDSize);
+    //printf("TAP: Shift-DR Bit %d\n", bit++);
+    break;
+  case 10:    // Capture-IR
+    // Load lower 2 bits with 01 as per IEEE 1149.1-1990
+    tapIR = 1;
+    break;
+  case 11:    // Shift-IR
+    // Shift IR towards output and load in new data from TDI
+    tapTDO = tapIR & 1;   // shift LSB to output
+    tapIR >>= 1;
+    tapIR |= ((uint64_t) tdi << 45);
+    break;
+  case 15:    // Update-IR
+    /*
+     * Latch IR (technically, this should occur on the falling edge of
+     * TCK)
+     */
+    tapIR &= 0x3FFFFFFFFFFFULL;
+    tapCurrentInstruction = tapIR;
+    //printf("TAP: Update-IR %XLL\n", tapCurrentInstruction);
+    break;
+  default:
+    break;
+  }
 }
 
 
@@ -579,32 +558,32 @@ void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
 // Mipmap coordinates for each reduction level (within a single 2048x1024 page)
 static const int mipXBase[11] =
 { 
-	1024,	// 1024/2
-	1536, 	// 512/2
-	1792, 	// 256/2
-	1920, 	// ...
-	1984, 
-	2016, 
-	2032, 
-	2040, 
-	2044, 
-	2046, 
-	2047 
+  1024, // 1024/2
+  1536, // 512/2
+  1792, // 256/2
+  1920, // ...
+  1984, 
+  2016, 
+  2032, 
+  2040, 
+  2044, 
+  2046, 
+  2047 
 };
 
 static const int mipYBase[11] =
 {
-	512, 
-	768, 
-	896, 
-	960, 
-	992, 
-	1008,
-	1016, 
-	1020, 
-	1022, 
-	1023, 
-	0 
+  512, 
+  768, 
+  896, 
+  960, 
+  992, 
+  1008,
+  1016, 
+  1020, 
+  1022, 
+  1023, 
+  0 
 };
 
 // Mipmap reduction factors
@@ -613,178 +592,192 @@ static const int mipDivisor[9] = { 2, 4, 8, 16, 32, 64, 128, 256, 512 };
 // Table of texel offsets corresponding to an 8x8 texel texture tile
 static const unsigned decode[64] =
 {
-	 0, 1, 4, 5, 8, 9,12,13,
-	 2, 3, 6, 7,10,11,14,15,
-	16,17,20,21,24,25,28,29,
-	18,19,22,23,26,27,30,31,
-	32,33,36,37,40,41,44,45,
-	34,35,38,39,42,43,46,47,
-	48,49,52,53,56,57,60,61,
-	50,51,54,55,58,59,62,63
+   0, 1, 4, 5, 8, 9,12,13,
+   2, 3, 6, 7,10,11,14,15,
+  16,17,20,21,24,25,28,29,
+  18,19,22,23,26,27,30,31,
+  32,33,36,37,40,41,44,45,
+  34,35,38,39,42,43,46,47,
+  48,49,52,53,56,57,60,61,
+  50,51,54,55,58,59,62,63
 };
 
-void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, UINT16 *texData, unsigned bytesPerTexel)
+static void StoreTexelByte(uint16_t *texel, size_t byteSelect, uint8_t byte)
 {
-	unsigned	x, y, xx, yy, destOffset;
-	
-	if (bytesPerTexel == 2)	// 16-bit textures
-	{
-		// Outer 2 loops: 8x8 tiles
-		for (y = yPos; y < (yPos+height); y += 8)
-		{
-			for (x = xPos; x < (xPos+width); x += 8)
-			{
-				// Inner 2 loops: 8x8 texels for the current tile
-				destOffset = y*2048+x;
-				for (yy = 0; yy < 8; yy++)
-				{
-					for (xx = 0; xx < 8; xx++)
-					{	
-						if (g_Config.gpuMultiThreaded)
-							MARK_DIRTY(textureRAMDirty, destOffset * 2);
-						textureRAM[destOffset++] = texData[decode[(yy*8+xx)^1]];
-					}
+  if ((byteSelect & 1)) // write to LSB
+    *texel = (*texel & 0xFF00) | byte;
+  if ((byteSelect & 2)) // write to MSB
+    *texel = (*texel & 0x00FF) | (uint16_t(byte) << 8);
+}   
 
-					destOffset += 2048-8;	// next line
-				}
-				texData += 8*8;	// next tile
-			}
-		}
-	}
-	else					// 8-bit textures
-	{
-		/*
-		 * 8-bit textures appear to be unpacked into 16-bit words in the
-		 * texture RAM. Oddly, the rows of the decoding table seem to be
-		 * swapped.
-		 */
-		 
-		// Outer 2 loops: 8x8 tiles
-		for (y = yPos; y < (yPos+height); y += 8)
-		{
-			for (x = xPos; x < (xPos+width); x += 8)
-			{
-				// Inner 2 loops: 8x8 texels for the current tile
-				destOffset = y*2048+x;
-				for (yy = 0; yy < 8; yy++)
-				{
-					for (xx = 0; xx < 8; xx += 2)
-					{
-						if (g_Config.gpuMultiThreaded)
-							MARK_DIRTY(textureRAMDirty, destOffset * 2);
-						textureRAM[destOffset++] = texData[decode[(yy^1)*8+((xx+0)^1)]/2]>>8;
-						if (g_Config.gpuMultiThreaded)
-							MARK_DIRTY(textureRAMDirty, destOffset * 2);
-						textureRAM[destOffset++] = texData[decode[(yy^1)*8+((xx+1)^1)]/2]&0xFF;
+void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, uint16_t *texData, uint32_t header)
+{
+  if ((header & 0x00800000))  // 16-bit textures
+  {
+    // Outer 2 loops: 8x8 tiles
+    for (size_t y = yPos; y < (yPos+height); y += 8)
+    {
+      for (size_t x = xPos; x < (xPos+width); x += 8)
+      {
+        // Inner 2 loops: 8x8 texels for the current tile
+        size_t destOffset = y*2048+x;
+        for (size_t yy = 0; yy < 8; yy++)
+        {
+          for (size_t xx = 0; xx < 8; xx++)
+          { 
+            if (g_Config.gpuMultiThreaded)
+              MARK_DIRTY(textureRAMDirty, destOffset * 2);
+            textureRAM[destOffset++] = texData[decode[(yy*8+xx)^1]];
+          }
 
-					}
-					destOffset += 2048-8;
-				}
-				texData += 8*8/2;	// next tile
-			}
-		}
-	}
+          destOffset += 2048-8; // next line
+        }
+        texData += 8*8; // next tile
+      }
+    }
+  }
+  else  // 8-bit textures
+  {
+    /*
+     * 8-bit textures appear to be unpacked into 16-bit words in the
+     * texture RAM. Oddly, the rows of the decoding table seem to be
+     * swapped.
+     */
 
-	// Signal to renderer that textures have changed
-	// TO-DO: mipmaps? What if a game writes non-mipmap textures to mipmap area?
-	if (g_Config.gpuMultiThreaded)
-	{
-		// If multi-threaded, then queue calls to UploadTextures for render thread to perform at beginning of next frame
-		QueuedUploadTextures upl;
-		upl.x = xPos;
-		upl.y = yPos;
-		upl.width = width;
-		upl.height = height;
-		queuedUploadTextures.push_back(upl);
-	}
-	else
-		Render3D->UploadTextures(xPos, yPos, width, height);
+    size_t byteSelect = (header>>21)&3; // which byte to unpack to
+    if (byteSelect == 3)  // write to both?
+      DebugLog("Observed 8-bit texture with byte_select=3!");
+  
+    // Outer 2 loops: 8x8 tiles
+    for (size_t y = yPos; y < (yPos+height); y += 8)
+    {
+      for (size_t x = xPos; x < (xPos+width); x += 8)
+      {
+        // Inner 2 loops: 8x8 texels for the current tile
+        size_t destOffset = y*2048+x;
+        for (size_t yy = 0; yy < 8; yy++)
+        {
+          for (size_t xx = 0; xx < 8; xx += 2)
+          {
+            uint8_t byte1 = texData[decode[(yy^1)*8+((xx+0)^1)]/2]>>8;
+            uint8_t byte2 = texData[decode[(yy^1)*8+((xx+1)^1)]/2]&0xFF;
+            if (g_Config.gpuMultiThreaded)
+              MARK_DIRTY(textureRAMDirty, destOffset * 2);
+            StoreTexelByte(&textureRAM[destOffset], byteSelect, byte1);
+            ++destOffset;
+            if (g_Config.gpuMultiThreaded)
+              MARK_DIRTY(textureRAMDirty, destOffset * 2);
+            StoreTexelByte(&textureRAM[destOffset], byteSelect, byte2);
+            ++destOffset;
+          }
+          destOffset += 2048-8;
+        }
+        texData += 8*8/2; // next tile
+      }
+    }
+  }
+
+  // Signal to renderer that textures have changed
+  // TO-DO: mipmaps? What if a game writes non-mipmap textures to mipmap area?
+  if (g_Config.gpuMultiThreaded)
+  {
+    // If multi-threaded, then queue calls to UploadTextures for render thread to perform at beginning of next frame
+    QueuedUploadTextures upl;
+    upl.x = xPos;
+    upl.y = yPos;
+    upl.width = width;
+    upl.height = height;
+    queuedUploadTextures.push_back(upl);
+  }
+  else
+    Render3D->UploadTextures(xPos, yPos, width, height);
 }
 
 // Texture data will be in little endian format
-void CReal3D::UploadTexture(UINT32 header, UINT16 *texData)
+void CReal3D::UploadTexture(uint32_t header, uint16_t *texData)
 {
-	unsigned	x, y, page, width, height, bytesPerTexel,
-				mipYPos, mipWidth, mipHeight, mipNum, mipX, mipY;
-	
-	// Position: texture RAM is arranged as 2 2048x1024 texel sheets
-	x = 32*(header&0x3F);
-	y = 32*((header>>7)&0x1F);
-	page = (header>>20)&1;
-	y += page*1024;	// treat page as additional Y bit (one 2048x2048 sheet)
-	
-	// Texture size and bit depth
-	width	= 32<<((header>>14)&7);
-	height	= 32<<((header>>17)&7);
-	if ((header&0x00800000))	// 16 bits per texel
-		bytesPerTexel = 2;
-	else						// 8 bits
-	{
-		bytesPerTexel = 1;
-		//printf("8-bit textures!\n");
-	}
-	
-	// Mipmaps
-	mipYPos = 32*((header>>7)&0x1F);
-	
-	// Process texture data
-	DebugLog("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
-	//printf("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
-	switch ((header>>24)&0x0F)
-	{
-	case 0x00:	// texture w/ mipmaps
-		StoreTexture(x, y, width, height, texData, bytesPerTexel);
-		mipWidth = width;
-		mipHeight = height;
-		mipNum = 0;
+  // Position: texture RAM is arranged as 2 2048x1024 texel sheets
+  size_t x = 32*(header&0x3F);
+  size_t y = 32*((header>>7)&0x1F);
+  size_t page = (header>>20)&1;
+  y += page*1024; // treat page as additional Y bit (one 2048x2048 sheet)
+  
+  // Texture size and bit depth
+  size_t width = 32<<((header>>14)&7);
+  size_t height  = 32<<((header>>17)&7);
+  size_t bytesPerTexel;
+  if ((header&0x00800000))  // 16 bits per texel
+    bytesPerTexel = 2;
+  else            // 8 bits
+  {
+    bytesPerTexel = 1;
+    //printf("8-bit textures!\n");
+  }
+  
+  // Mipmaps
+  size_t mipYPos = 32*((header>>7)&0x1F);
+  
+  // Process texture data
+  DebugLog("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
+  //printf("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
+  switch ((header>>24)&0x0F)
+  {
+  case 0x00:  // texture w/ mipmaps
+  {
+    StoreTexture(x, y, width, height, texData, header);
+    size_t mipWidth = width;
+    size_t mipHeight = height;
+    size_t mipNum = 0;
 
-		while((mipHeight>8) && (mipWidth>8))
-		{
-			if (bytesPerTexel == 1)
-				texData += (mipWidth*mipHeight)/2;
-			else
-				texData += (mipWidth*mipHeight);
-			mipWidth /= 2;
-			mipHeight /= 2;
-			mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
-			mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
-			if(page)
-				mipY += 1024;
-			mipNum++;
-			StoreTexture(mipX, mipY, mipWidth, mipHeight, (UINT16 *) texData, bytesPerTexel);
-		}
-
-		break;
-	case 0x01:	// texture w/out mipmaps
-		StoreTexture(x, y, width, height, texData, bytesPerTexel);
-		break;
-	case 0x02:	// mipmaps only
-		mipWidth = width;
-		mipHeight = height;
-		mipNum = 0;
-		while((mipHeight>8) && (mipWidth>8))
-		{
-			mipWidth /= 2;
-			mipHeight /= 2;
-			mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
-			mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
-			if(page)
-				mipY += 1024;
-			mipNum++;
-			StoreTexture(mipX, mipY, mipWidth, mipHeight, texData, bytesPerTexel);
-			if (bytesPerTexel == 1)
-				texData += (mipWidth*mipHeight)/2;
-			else
-				texData += (mipWidth*mipHeight);
-		}
-		break;
-	case 0x80:	// MAME thinks these might be a gamma table
-		//break;
-	default:	// unknown
-		DebugLog("Unknown texture format %02X\n", header>>24);
-		//printf("unknown texture format %02X\n", header>>24);
-		break;
-	}
+    while((mipHeight>8) && (mipWidth>8))
+    {
+      if (bytesPerTexel == 1)
+        texData += (mipWidth*mipHeight)/2;
+      else
+        texData += (mipWidth*mipHeight);
+      mipWidth /= 2;
+      mipHeight /= 2;
+      size_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
+      size_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
+      if(page)
+        mipY += 1024;
+      mipNum++;
+      StoreTexture(mipX, mipY, mipWidth, mipHeight, (uint16_t *) texData, header);
+    }
+    break;
+  }
+  case 0x01:  // texture w/out mipmaps
+    StoreTexture(x, y, width, height, texData, header);
+    break;
+  case 0x02:  // mipmaps only
+  {
+    size_t mipWidth = width;
+    size_t mipHeight = height;
+    size_t mipNum = 0;
+    while((mipHeight>8) && (mipWidth>8))
+    {
+      mipWidth /= 2;
+      mipHeight /= 2;
+      size_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
+      size_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
+      if(page)
+        mipY += 1024;
+      mipNum++;
+      StoreTexture(mipX, mipY, mipWidth, mipHeight, texData, header);
+      if (bytesPerTexel == 1)
+        texData += (mipWidth*mipHeight)/2;
+      else
+        texData += (mipWidth*mipHeight);
+    }
+    break;
+  }
+  case 0x80:  // MAME thinks these might be a gamma table
+    //break;
+  default:  // unknown
+    DebugLog("Unknown texture format %02X\n", header>>24);
+    //printf("unknown texture format %02X\n", header>>24);
+    break;
+  }
 }
 
 
@@ -794,174 +787,170 @@ void CReal3D::UploadTexture(UINT32 header, UINT16 *texData)
 
 void CReal3D::Flush(void)
 {
-	unsigned	i, size;
-	UINT32		header;
-	
-	commandPortWritten = true;
-	
-	DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
-	
-	// Upload textures (if any)
-	if (fifoIdx > 0)
-	{
-		for (i = 0; i < fifoIdx; )
-		{
-			size = 2+textureFIFO[i+0]/2;
-			size /= 4;
-			header = textureFIFO[i+1];		// texture information header
-			
-			// Spikeout seems to be uploading 0 length textures
-			if (0 == size)
-			{
-				DebugLog("Real3D: 0-length texture upload @ PC=%08X (%08X %08X %08X)\n", ppc_get_pc(), textureFIFO[i+0], textureFIFO[i+1], textureFIFO[i+2]);
-				break;
-			}
-			
-			UploadTexture(header,(UINT16 *)&textureFIFO[i+2]);
-			DebugLog("Real3D: Texture upload completed: %X bytes (%X)\n", size*4, textureFIFO[i+0]);
-			i += size;
-		}
-	}
-	
-	// Reset texture FIFO
-	fifoIdx = 0;
+  commandPortWritten = true;  
+  DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
+  
+  // Upload textures (if any)
+  if (fifoIdx > 0)
+  {
+    for (size_t i = 0; i < fifoIdx; )
+    {
+      size_t size = 2+textureFIFO[i+0]/2;
+      size /= 4;
+      uint32_t header = textureFIFO[i+1]; // texture information header
+      
+      // Spikeout seems to be uploading 0 length textures
+      if (0 == size)
+      {
+        DebugLog("Real3D: 0-length texture upload @ PC=%08X (%08X %08X %08X)\n", ppc_get_pc(), textureFIFO[i+0], textureFIFO[i+1], textureFIFO[i+2]);
+        break;
+      }
+      
+      UploadTexture(header,(uint16_t *)&textureFIFO[i+2]);
+      DebugLog("Real3D: Texture upload completed: %X bytes (%X)\n", size*4, textureFIFO[i+0]);
+      i += size;
+    }
+  }
+  
+  // Reset texture FIFO
+  fifoIdx = 0;
 }
 
-void CReal3D::WriteTextureFIFO(UINT32 data)
+void CReal3D::WriteTextureFIFO(uint32_t data)
 {
-	if (fifoIdx >= (0x100000/4))
-	{
-		if (!error)
-			ErrorLog("Overflow in Real3D texture FIFO!");
-		error = true;
-	}
-	else
-		textureFIFO[fifoIdx++] = data;
+  if (fifoIdx >= (0x100000/4))
+  {
+    if (!error)
+      ErrorLog("Overflow in Real3D texture FIFO!");
+    error = true;
+  }
+  else
+    textureFIFO[fifoIdx++] = data;
 }
 
-void CReal3D::WriteTexturePort(unsigned reg, UINT32 data)
+void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
 {
-	//printf("Texture Port: %X=%08X\n", reg, data);
-	switch (reg)
-	{
-	case 0x0:	// VROM texture address
-	case 0xC:
-		vromTextureAddr = data;
-		break;
-	case 0x4:	// VROM texture header
-	case 0x10:
-		vromTextureHeader = data;
-		break;
-	case 0x8:	// VROM texture length (also used to trigger uploads)
-	case 0x14:
-		UploadTexture(vromTextureHeader,(UINT16 *)&vrom[vromTextureAddr&0xFFFFFF]);
+  //printf("Texture Port: %X=%08X\n", reg, data);
+  switch (reg)
+  {
+  case 0x0: // VROM texture address
+  case 0xC:
+    vromTextureAddr = data;
+    break;
+  case 0x4: // VROM texture header
+  case 0x10:
+    vromTextureHeader = data;
+    break;
+  case 0x8: // VROM texture length (also used to trigger uploads)
+  case 0x14:
+    UploadTexture(vromTextureHeader,(uint16_t *)&vrom[vromTextureAddr&0xFFFFFF]);
     //printf("texture upload: addr=%08X\n", vromTextureAddr);
-		break;
-	default:
-		DebugLog("Real3D texture port write: %X=%08X\n", reg, data);
-		break;
-	}
+    break;
+  default:
+    DebugLog("Real3D texture port write: %X=%08X\n", reg, data);
+    break;
+  }
 }
 
-void CReal3D::WriteLowCullingRAM(UINT32 addr, UINT32 data)
+void CReal3D::WriteLowCullingRAM(uint32_t addr, uint32_t data)
 {
-	if (g_Config.gpuMultiThreaded)
-		MARK_DIRTY(cullingRAMLoDirty, addr);
-	cullingRAMLo[addr/4] = data;
+  if (g_Config.gpuMultiThreaded)
+    MARK_DIRTY(cullingRAMLoDirty, addr);
+  cullingRAMLo[addr/4] = data;
 }
 
-void CReal3D::WriteHighCullingRAM(UINT32 addr, UINT32 data)
+void CReal3D::WriteHighCullingRAM(uint32_t addr, uint32_t data)
 {
-	if (g_Config.gpuMultiThreaded)
-		MARK_DIRTY(cullingRAMHiDirty, addr);
-	cullingRAMHi[addr/4] = data;
+  if (g_Config.gpuMultiThreaded)
+    MARK_DIRTY(cullingRAMHiDirty, addr);
+  cullingRAMHi[addr/4] = data;
 }
 
-void CReal3D::WritePolygonRAM(UINT32 addr, UINT32 data)
+void CReal3D::WritePolygonRAM(uint32_t addr, uint32_t data)
 {
-	if (g_Config.gpuMultiThreaded)
-		MARK_DIRTY(polyRAMDirty, addr);
-	polyRAM[addr/4] = data;
+  if (g_Config.gpuMultiThreaded)
+    MARK_DIRTY(polyRAMDirty, addr);
+  polyRAM[addr/4] = data;
 }
 
 // Registers seem to range from 0x00 to around 0x3C but they are not understood
-UINT32 CReal3D::ReadRegister(unsigned reg)
+uint32_t CReal3D::ReadRegister(unsigned reg)
 {
-	DebugLog("Real3D: Read reg %X\n", reg);
-	if (reg == 0)
-	{
-		UINT32 status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x2);
-		return 0xFFFFFFFD|status;
-	}
-	else
-		return 0xFFFFFFFF;
+  DebugLog("Real3D: Read reg %X\n", reg);
+  if (reg == 0)
+  {
+    uint32_t status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x2);
+    return 0xFFFFFFFD|status;
+  }
+  else
+    return 0xFFFFFFFF;
 }
 
-UINT32 CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
+uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
 {
-	UINT32	d;
-	
-	if ((bits==8))
-	{
-		DebugLog("Real3D: %d-bit PCI read request for reg=%02X\n", bits, reg);
-		return 0;
-	}
-	
-	// This is a little endian device, must return little endian words
-	switch (reg)
-	{
-	case 0x00:	// Device ID and Vendor ID
-		d = FLIPENDIAN32(pciID);
-		switch (bits)
-		{
-		case 8:
-			d >>= (3-offset)*8;	// offset will be 0-3; select appropriate byte
-			d &= 0xFF;
-			break;
-		case 16:
-			d >>= (2-offset)*8;	// offset will be 0 or 2 only; select either high or low word
-			d &= 0xFFFF;
-			break;
-		default:
-			break;
-		}
-		DebugLog("Real3D: PCI ID read. Returning %X (%d-bits). PC=%08X, LR=%08X\n", d, bits, ppc_get_pc(), ppc_get_lr());
-		return d;
-	default:
-		DebugLog("Real3D: PCI read request for reg=%02X (%d-bit)\n", reg, bits);
-		break;
-	}
+  uint32_t  d;
+  
+  if ((bits==8))
+  {
+    DebugLog("Real3D: %d-bit PCI read request for reg=%02X\n", bits, reg);
+    return 0;
+  }
+  
+  // This is a little endian device, must return little endian words
+  switch (reg)
+  {
+  case 0x00:  // Device ID and Vendor ID
+    d = FLIPENDIAN32(pciID);
+    switch (bits)
+    {
+    case 8:
+      d >>= (3-offset)*8; // offset will be 0-3; select appropriate byte
+      d &= 0xFF;
+      break;
+    case 16:
+      d >>= (2-offset)*8; // offset will be 0 or 2 only; select either high or low word
+      d &= 0xFFFF;
+      break;
+    default:
+      break;
+    }
+    DebugLog("Real3D: PCI ID read. Returning %X (%d-bits). PC=%08X, LR=%08X\n", d, bits, ppc_get_pc(), ppc_get_lr());
+    return d;
+  default:
+    DebugLog("Real3D: PCI read request for reg=%02X (%d-bit)\n", reg, bits);
+    break;
+  }
 
-	return 0;
+  return 0;
 }
-	
-void CReal3D::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data)
+  
+void CReal3D::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, uint32_t data)
 {
-	DebugLog("Real3D: PCI %d-bit write request for reg=%02X, data=%08X\n", bits, reg, data);
+  DebugLog("Real3D: PCI %d-bit write request for reg=%02X, data=%08X\n", bits, reg, data);
 }
-	
+  
 void CReal3D::Reset(void)
 {
-	error = false;
-	
-	commandPortWritten = false;
-	commandPortWrittenRO = false;
+  error = false;
+  
+  commandPortWritten = false;
+  commandPortWrittenRO = false;
 
-	queuedUploadTextures.clear();
-	queuedUploadTexturesRO.clear();
+  queuedUploadTextures.clear();
+  queuedUploadTexturesRO.clear();
 
-	fifoIdx = 0;
-	vromTextureAddr = 0;
-	vromTextureHeader = 0;
-	tapState = 0;
-	tapIDSize = 197;
-	dmaStatus = 0;
-	dmaUnknownReg = 0;
-	
-	unsigned memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
-	memset(memoryPool, 0, memSize);
+  fifoIdx = 0;
+  vromTextureAddr = 0;
+  vromTextureHeader = 0;
+  tapState = 0;
+  tapIDSize = 197;
+  dmaStatus = 0;
+  dmaUnknownReg = 0;
+  
+  unsigned memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  memset(memoryPool, 0, memSize);
 
-	DebugLog("Real3D reset\n");
+  DebugLog("Real3D reset\n");
 }
 
 
@@ -971,100 +960,100 @@ void CReal3D::Reset(void)
 
 void CReal3D::AttachRenderer(IRender3D *Render3DPtr)
 {
-	Render3D = Render3DPtr;
+  Render3D = Render3DPtr;
 
-	// If multi-threaded, attach read-only snapshots to renderer instead of real ones
-	if (g_Config.gpuMultiThreaded)
-		Render3D->AttachMemory(cullingRAMLoRO, cullingRAMHiRO, polyRAMRO, vrom, textureRAMRO);
-	else
-		Render3D->AttachMemory(cullingRAMLo, cullingRAMHi, polyRAM, vrom, textureRAM);
+  // If multi-threaded, attach read-only snapshots to renderer instead of real ones
+  if (g_Config.gpuMultiThreaded)
+    Render3D->AttachMemory(cullingRAMLoRO, cullingRAMHiRO, polyRAMRO, vrom, textureRAMRO);
+  else
+    Render3D->AttachMemory(cullingRAMLo, cullingRAMHi, polyRAM, vrom, textureRAM);
 
-	Render3D->SetStep(step);
+  Render3D->SetStep(step);
 
-	DebugLog("Real3D attached a Render3D object\n");
+  DebugLog("Real3D attached a Render3D object\n");
 }
 
 void CReal3D::SetStep(int stepID)
 {
-	step = stepID;
-	if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
-	{
-		DebugLog("Real3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
-		step = 0x10;
-	}
-	
-	// Set PCI ID
-	if (step < 0x20)			
-		pciID = 0x16C311DB;	// vendor 0x11DB = Sega
-	else
-		pciID = 0x178611DB;
-		
-	// Pass to renderer
-	if (Render3D != NULL)
-		Render3D->SetStep(step);
-		
-	DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
+  step = stepID;
+  if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
+  {
+    DebugLog("Real3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
+    step = 0x10;
+  }
+  
+  // Set PCI ID
+  if (step < 0x20)      
+    pciID = 0x16C311DB; // vendor 0x11DB = Sega
+  else
+    pciID = 0x178611DB;
+    
+  // Pass to renderer
+  if (Render3D != NULL)
+    Render3D->SetStep(step);
+    
+  DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 
-bool CReal3D::Init(const UINT8 *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
+bool CReal3D::Init(const uint8_t *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
-	unsigned memSize   = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
-	float	 memSizeMB = (float)memSize/(float)0x100000;
+  size_t memSize   = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  float  memSizeMB = (float)memSize/(float)0x100000;
 
-	// IRQ and bus objects
-	Bus = BusObjectPtr; 
-	IRQ = IRQObjectPtr;
-	dmaIRQ = dmaIRQBit;
-		
-	// Allocate all Real3D RAM regions
-	memoryPool = new(std::nothrow) UINT8[memSize];
-	if (NULL == memoryPool)
-		return ErrorLog("Insufficient memory for Real3D object (needs %1.1f MB).", memSizeMB);
-	
-	// Set up main pointers
-	cullingRAMLo = (UINT32 *) &memoryPool[OFFSET_8C];
-	cullingRAMHi = (UINT32 *) &memoryPool[OFFSET_8E];
-	polyRAM = (UINT32 *) &memoryPool[OFFSET_98];
-	textureRAM = (UINT16 *) &memoryPool[OFFSET_TEXRAM];
-	textureFIFO = (UINT32 *) &memoryPool[OFFSET_TEXFIFO];
+  // IRQ and bus objects
+  Bus = BusObjectPtr; 
+  IRQ = IRQObjectPtr;
+  dmaIRQ = dmaIRQBit;
+    
+  // Allocate all Real3D RAM regions
+  memoryPool = new(std::nothrow) uint8_t[memSize];
+  if (NULL == memoryPool)
+    return ErrorLog("Insufficient memory for Real3D object (needs %1.1f MB).", memSizeMB);
+  
+  // Set up main pointers
+  cullingRAMLo = (uint32_t *) &memoryPool[OFFSET_8C];
+  cullingRAMHi = (uint32_t *) &memoryPool[OFFSET_8E];
+  polyRAM = (uint32_t *) &memoryPool[OFFSET_98];
+  textureRAM = (uint16_t *) &memoryPool[OFFSET_TEXRAM];
+  textureFIFO = (uint32_t *) &memoryPool[OFFSET_TEXFIFO];
 
-	// If multi-threaded, set up pointers for read-only snapshots and dirty page arrays too
-	if (g_Config.gpuMultiThreaded)
-	{
-		cullingRAMLoRO = (UINT32 *) &memoryPool[OFFSET_8C_RO];
-		cullingRAMHiRO = (UINT32 *) &memoryPool[OFFSET_8E_RO];
-		polyRAMRO = (UINT32 *) &memoryPool[OFFSET_98_RO];
-		textureRAMRO = (UINT16 *) &memoryPool[OFFSET_TEXRAM_RO];
-		cullingRAMLoDirty = (UINT8 *) &memoryPool[OFFSET_8C_DIRTY];
-		cullingRAMHiDirty = (UINT8 *) &memoryPool[OFFSET_8E_DIRTY];
-		polyRAMDirty = (UINT8 *) &memoryPool[OFFSET_98_DIRTY];
-		textureRAMDirty = (UINT8 *) &memoryPool[OFFSET_TEXRAM_DIRTY];
-	}
-	
-	// VROM pointer passed to us
-	vrom = (UINT32 *) vromPtr;
-	
-	DebugLog("Initialized Real3D (allocated %1.1f MB)\n", memSizeMB);
-	return OKAY;
+  // If multi-threaded, set up pointers for read-only snapshots and dirty page arrays too
+  if (g_Config.gpuMultiThreaded)
+  {
+    cullingRAMLoRO = (uint32_t *) &memoryPool[OFFSET_8C_RO];
+    cullingRAMHiRO = (uint32_t *) &memoryPool[OFFSET_8E_RO];
+    polyRAMRO = (uint32_t *) &memoryPool[OFFSET_98_RO];
+    textureRAMRO = (uint16_t *) &memoryPool[OFFSET_TEXRAM_RO];
+    cullingRAMLoDirty = (uint8_t *) &memoryPool[OFFSET_8C_DIRTY];
+    cullingRAMHiDirty = (uint8_t *) &memoryPool[OFFSET_8E_DIRTY];
+    polyRAMDirty = (uint8_t *) &memoryPool[OFFSET_98_DIRTY];
+    textureRAMDirty = (uint8_t *) &memoryPool[OFFSET_TEXRAM_DIRTY];
+  }
+  
+  // VROM pointer passed to us
+  vrom = (uint32_t *) vromPtr;
+  
+  DebugLog("Initialized Real3D (allocated %1.1f MB)\n", memSizeMB);
+  return OKAY;
 }
 
 CReal3D::CReal3D(void)
-{	
-	Render3D = NULL;
-	memoryPool = NULL;
-	cullingRAMLo = NULL;
-	cullingRAMHi = NULL;
-	polyRAM = NULL;
-	textureRAM = NULL;
-	textureFIFO = NULL;
-	vrom = NULL;
-	error = false;
-	fifoIdx = 0;
-	vromTextureAddr = 0;
-	vromTextureHeader = 0;
-	tapState = 0;
-	tapIDSize = 197;
-	DebugLog("Built Real3D\n");
+{ 
+  Render3D = NULL;
+  memoryPool = NULL;
+  cullingRAMLo = NULL;
+  cullingRAMHi = NULL;
+  polyRAM = NULL;
+  textureRAM = NULL;
+  textureFIFO = NULL;
+  vrom = NULL;
+  error = false;
+  fifoIdx = 0;
+  vromTextureAddr = 0;
+  vromTextureHeader = 0;
+  tapState = 0;
+  tapIDSize = 197;
+  DebugLog("Built Real3D\n");
 }
 
 /*
@@ -1073,59 +1062,59 @@ CReal3D::CReal3D(void)
  * Destructor.
  */
 CReal3D::~CReal3D(void)
-{	
-	// Dump memory
+{ 
+  // Dump memory
 #if 0
-	FILE	*fp;
-	fp = fopen("8c000000", "wb");
-	if (NULL != fp)
-	{
-		fwrite(cullingRAMLo, sizeof(UINT8), 0x400000, fp);
-		fclose(fp);
-		printf("dumped %s\n", "8c000000");
-	}
-	else
-		printf("unable to dump %s\n", "8c000000");
-	fp = fopen("8e000000", "wb");
-	if (NULL != fp)
-	{
-		fwrite(cullingRAMHi, sizeof(UINT8), 0x100000, fp);
-		fclose(fp);
-		printf("dumped %s\n", "8e000000");
-	}
-	else
-		printf("unable to dump %s\n", "8e000000");
-	fp = fopen("98000000", "wb");
-	if (NULL != fp)
-	{
-		fwrite(polyRAM, sizeof(UINT8), 0x400000, fp);
-		fclose(fp);
-		printf("dumped %s\n", "98000000");
-	}
-	else
-		printf("unable to dump %s\n", "98000000");
-	fp = fopen("texram", "wb");
-	if (NULL != fp)
-	{
-		fwrite(textureRAM, sizeof(UINT8), 0x800000, fp);
-		fclose(fp);
-		printf("dumped %s\n", "texram");
-	}
-	else
-		printf("unable to dump %s\n", "texram");
+  FILE  *fp;
+  fp = fopen("8c000000", "wb");
+  if (NULL != fp)
+  {
+    fwrite(cullingRAMLo, sizeof(uint8_t), 0x400000, fp);
+    fclose(fp);
+    printf("dumped %s\n", "8c000000");
+  }
+  else
+    printf("unable to dump %s\n", "8c000000");
+  fp = fopen("8e000000", "wb");
+  if (NULL != fp)
+  {
+    fwrite(cullingRAMHi, sizeof(uint8_t), 0x100000, fp);
+    fclose(fp);
+    printf("dumped %s\n", "8e000000");
+  }
+  else
+    printf("unable to dump %s\n", "8e000000");
+  fp = fopen("98000000", "wb");
+  if (NULL != fp)
+  {
+    fwrite(polyRAM, sizeof(uint8_t), 0x400000, fp);
+    fclose(fp);
+    printf("dumped %s\n", "98000000");
+  }
+  else
+    printf("unable to dump %s\n", "98000000");
+  fp = fopen("texram", "wb");
+  if (NULL != fp)
+  {
+    fwrite(textureRAM, sizeof(uint8_t), 0x800000, fp);
+    fclose(fp);
+    printf("dumped %s\n", "texram");
+  }
+  else
+    printf("unable to dump %s\n", "texram");
 #endif
 
-	Render3D = NULL;
-	if (memoryPool != NULL)
-	{
-		delete [] memoryPool;
-		memoryPool = NULL;
-	}
-	cullingRAMLo = NULL;
-	cullingRAMHi = NULL;
-	polyRAM = NULL;
-	textureRAM = NULL;
-	textureFIFO = NULL;
-	vrom = NULL;
-	DebugLog("Destroyed Real3D\n");
+  Render3D = NULL;
+  if (memoryPool != NULL)
+  {
+    delete [] memoryPool;
+    memoryPool = NULL;
+  }
+  cullingRAMLo = NULL;
+  cullingRAMHi = NULL;
+  polyRAM = NULL;
+  textureRAM = NULL;
+  textureFIFO = NULL;
+  vrom = NULL;
+  DebugLog("Destroyed Real3D\n");
 }
