@@ -1,7 +1,7 @@
 #ifndef _MODEL_H_
 #define _MODEL_H_
 
-#include "types.h"
+#include "Types.h"
 #include <vector>
 #include <unordered_map>
 #include <map>
