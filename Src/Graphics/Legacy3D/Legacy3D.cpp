@@ -36,6 +36,16 @@
  * 2. Move stuff into vertex shader (vision by 2048? Subtract of 0.5,0.5 for bilinear filtering?)
  * 3. Just one call to BufferSubData rather than 2
  *    
+ * Viewports
+ * ---------
+ *
+ * Ville Linde passed along the following information:
+ *  
+ *    - Bit 0x20 of viewport word 0 disables the viewport when set, according
+ *      to Scud Race's secret menu. Not yet known whether any game uses this.
+ *    - Bits 0x300 of word 0 constitute the viewport number (0-3). Not sure how
+ *      this relates to the priority bits (0x18).
+ *
  * Spotlight
  * ---------
  *
