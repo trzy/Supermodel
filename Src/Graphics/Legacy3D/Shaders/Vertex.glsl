@@ -129,7 +129,7 @@ void main(void)
 		sunFactor = max(dot(sunVector,viewNormal),0.0);
 		
 		// Total light intensity: sum of all components
-		fsLightIntensity *= (sunFactor*lighting[1].x+lighting[1].y);
+		fsLightIntensity *= min(1.0,(sunFactor*lighting[1].x+lighting[1].y));
 		
 		/*
 		 * Specular Lighting

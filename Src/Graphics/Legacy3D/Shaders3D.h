@@ -164,7 +164,7 @@ static const char vertexShaderSource[] =
 "\t\tsunFactor = max(dot(sunVector,viewNormal),0.0);\n"
 "\t\t\n"
 "\t\t// Total light intensity: sum of all components\n"
-"\t\tfsLightIntensity *= (sunFactor*lighting[1].x+lighting[1].y);\n"
+"\t\tfsLightIntensity *= min(1.0,(sunFactor*lighting[1].x+lighting[1].y));\n"
 "\t\t\n"
 "\t\t/*\n"
 "\t\t * Specular Lighting\n"
