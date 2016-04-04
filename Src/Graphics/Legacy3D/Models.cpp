@@ -361,7 +361,8 @@ void CLegacy3D::ClearDisplayList(ModelCache *Cache)
 void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, float normFlip)
 {
   // Texture selection
-  unsigned  texEnable = P->header[6]&0x04000000;
+unsigned texEnable = P->header[6]&0x400;
+//  unsigned  texEnable = P->header[6]&0x04000000;
   unsigned  texFormat = (P->header[6]>>7)&7;
   GLfloat   texWidth  = (GLfloat) (32<<((P->header[3]>>3)&7));
   GLfloat   texHeight = (GLfloat) (32<<((P->header[3]>>0)&7));
@@ -410,8 +411,6 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
    */
    
   unsigned lightEnable  = !(P->header[6]&0x00010000);
-  unsigned modulate     = !(P->header[4]&0x80); // makes traffic lights blink in Daytona and works best in Sega Rally 2
-  //unsigned modulate     = P->header[3]&0x80;  // seems to work better overall (TODO: are header[3]&0x80 and header[4]&0x80 ever both set?)
   
   // Material color
   GLfloat r = 1.0;
@@ -425,14 +424,7 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     b = (GLfloat) (polyRAM[base+colorIdx]&0xFF) * (1.0f/255.0f);
     g = (GLfloat) ((polyRAM[base+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
     r = (GLfloat) ((polyRAM[base+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
-    //modulate=true;
   }
-  /*
-  else if ((P->header[6] & 0x02000000))
-  {
-    r = g = b = (GLfloat) ((P->header[6]>>26)&0x1f) * (1.0f/31.0f);
-  } 
-  */
   else
   {
     // Colors are 8-bit (almost certainly true, see Star Wars)
@@ -440,25 +432,62 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     g = (GLfloat) ((P->header[4]>>16)&0xFF) * (1.0f/255.0f);
     b = (GLfloat) ((P->header[4]>>8)&0xFF) * (1.0f/255.0f);
   }
+  
+  //GLfloat intensity = ((P->header[6]>>26)&0x1f) * (1.0/31.0f);  // intensity controlled by header[6]&0x02000000 ?
 
   /*
-   * Modulation Override?
+   * Color Modulation Observations
+   * -----------------------------
    *
-   * Some observations:
+   * Scud Race:
+   *  - Skybox, airport terminal, aquarium tunnel: lighting disabled, textures enabled, RGB colors.
+   *  - Waterfalls: lighting disabled, textures enabled, palettized colors.
+   *  - Traffic lights: lighting disabled, textures enabled, palettized colors.
    *
-   * 1. When texturing is disabled, the polygon color is definitely used.
-   * 2. When texturing is enabled and lighting is disabled, the polygon color
-   *    is apparently sometimes not used. Using r=g=b=1 looks much better 
-   *    for Scud Race waterfalls, totem poles, tunnel lights (beginner day
-   *    stage), terminal ceiling (beginner night).
-   * 3. When texturing is enabled and lighting is disabled, the polygon color
-   *    must in some cases be used: Star Wars Trilogy lightsabers, lasers, and
-   *    HUD elements.
+   * Daytona 2:
+   *  - Skybox, right (but not left) barrier under overpass on freeway spiral 
+   *    ramp: lighting disabled, textures enabled, RGB colors.
+   *  - Traffic lights (course start): lighting disabled, textures enabled, palettized colors.
+   *  - Traffic lights (expert course in city): lighting disabled, textures enabled, RGB colors.
+   *  - MODULATION FOR TEXTURED POLYGONS ALWAYS WORKS (no discernable case where it should be 
+   *    disabled).
+   *
+   * Sega Rally 2:
+   *  - Selection menu: lighting disabled, textures enabled, RGB colors -- MODULATION REQUIRED.
+   *  - Skybox, trees: lighting disabled, textures enabled, RGB colors.
+   *  - Cones: lighting enabled, textures disabled, RGB colors.
+   *  - MODULATE=!(header[4]&0x80) WORKS
+   *
+   * Star Wars Trilogy:
+   *  - HUD elements, lightsabers: lighting disabled, textures disabled, RGB colors.
+   *
+   * LA Machineguns:
+   *  - Some (but not all!) scenery: lighting disabled.
+   *  - Some scenergy: textures disabled.
+   *  - Street (Last Vegas): palettized colors.
+   *  - STREET MUST BE MODULATED, MOST SCENERY DOES NOT (MODULATE=!(header[4]&0x80) WORKS)
+   *
+   * Evidence seems to support the existence of a modulation setting that can
+   * enable/disable modulation. No single bit that works for all games has been
+   * identified but the best candidate is:
+   *
+   *  modulate = !(header[4]&0x80)  Step 2.x
+   *  modulate = header[3]&0x80     Step 1.x
+   *
+   * But unfortunately, this still fails on most Scud Race geometry. It only
+   * works for waterfalls. Totem poles and other items which lack lighting,
+   * fail. Perhaps on Step 1.x, disabling lighting automatically disables 
+   * modulation? For now, we use this as a hack.
+   *
+   * BUGS:
+   *  - Fighting Vipers 2 shadows are not black anymore.
+   *  - More to follow...
    */
+  unsigned modulate = (step >= 0x20) ? !(P->header[4]&0x80) : (P->header[3]&0x80 && lightEnable);
   if (texEnable)
   {
-    //if (!lightEnable|| !modulate)   // this fixes scud waterfalls, totem poles, beginner day tunnel lights, airport terminal ceiling, but breaks swtrilgy
-    if (!modulate)                    // this works with swtrilgy
+    // When textures enabled, modulation can apparently be disabled
+    if (!modulate)
       r = g = b = 1.0f;
   }
 
