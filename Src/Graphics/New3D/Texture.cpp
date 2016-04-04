@@ -140,7 +140,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 		}
 		break;
 
-	case 3:	// Interleaved A4L4 (high byte)
+	case 3:	// 8-bit, A4L4 (high byte)
 		for (yi = y; yi < (y + height); yi++)
 		{
 			for (xi = x; xi < (x + width); xi++)
@@ -156,14 +156,14 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 		}
 		break;
 
-	case 4: // 8-bit, L4A4
+	case 4: // 8-bit, L4A4 (high byte)
 
 		for (yi = y; yi < (y + height); yi++)
 		{
 			for (xi = x; xi < (x + width); xi++)
 			{
-				texel = src[yi * 2048 + xi] & 0xFF;
-				c = ((texel >> 4) & 0xF) * 17;	// seems to work better in Lost World (raptor shadows)
+				texel = src[yi * 2048 + xi] >> 8;
+				c = ((texel >> 4) & 0xF) * 17;
 				a = (texel & 0xF) * 17;
 				scratch[i++] = c;
 				scratch[i++] = c;
@@ -178,9 +178,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 		{
 			for (xi = x; xi < (x + width); xi++)
 			{
-				// Interpret as 8-bit grayscale
 				texel = src[yi * 2048 + xi] & 0xFF;
-
 				scratch[i++] = texel;
 				scratch[i++] = texel;
 				scratch[i++] = texel;
@@ -195,7 +193,6 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 			for (xi = x; xi < (x + width); xi++)
 			{
 				texel = src[yi * 2048 + xi] >> 8;
-
 				scratch[i++] = texel;
 				scratch[i++] = texel;
 				scratch[i++] = texel;
