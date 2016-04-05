@@ -1407,8 +1407,9 @@ static void Help(void)
 	puts("    -print-gl-info         Print OpenGL driver information and quit");
 	puts("");
 	puts("Audio Options:");
-	puts("    -sound-volume=<vol>    Volume of sound effects in % [Default: 100]");
-	puts("    -music-volume=<vol>    Volume of MPEG music in % [Default: 100]");
+  puts("    -sound-volume=<vol>    Volume of SCSP-generated sound in %, applies only");
+  puts("                           when Digital Sound Board is present [Default: 100]");
+	puts("    -music-volume=<vol>    Digital Sound Board volume in % [Default: 100]");
 	puts("    -balance=<bal>         Relative front/rear balance in % [Default: 0]");
 	puts("    -flip-stereo           Swap left and right audio channels");
 	puts("    -no-sound              Disable sound board emulation (sound effects)");
