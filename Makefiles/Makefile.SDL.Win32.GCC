@@ -255,7 +255,7 @@ $(OBJ_DIR)/%.o:	Src/Pkgs/%.c
 	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
 	
 $(OBJ_DIR)/%.o:	Src/Util/%.cpp Src/Util/%.h
-	$(CC) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
 #
 # AMP MPEG decoder library

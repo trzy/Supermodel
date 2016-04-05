@@ -1,6 +1,5 @@
-#include <windows.h>
 #include "Vec.h"
-#include <Math.h>
+#include <math.h>
 
 namespace New3D {
 
