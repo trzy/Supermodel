@@ -569,16 +569,8 @@ void CNew3D::InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat)
 	m[CMINDEX(2, 0)] =-1.0; m[CMINDEX(2, 1)] = 0.0;	m[CMINDEX(2, 2)] = 0.0;	m[CMINDEX(2, 3)] = 0.0;
 	m[CMINDEX(3, 0)] = 0.0;	m[CMINDEX(3, 1)] = 0.0;	m[CMINDEX(3, 2)] = 0.0;	m[CMINDEX(3, 3)] = 1.0;
 
-	if (m_step > 0x10) {
-		mat.LoadMatrix(m);
-	}
-	else {
-		// Scaling seems to help w/ Step 1.0's extremely large coordinates
-		GLfloat s = 1.0f / 2048.0f;	// this will fuck up normals
-		mat.LoadIdentity();
-		mat.Scale(s, s, s);
-		mat.MultMatrix(m);
-	}
+
+	mat.LoadMatrix(m);
 
 	// Set matrix base address and apply matrix #0 (coordinate system matrix)
 	m_matrixBasePtr = (float *)TranslateCullingAddress(matrixBaseAddr);
@@ -662,8 +654,12 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
 	float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
 
-	float near	= 0.1f;
-	float far	= 1e5;
+	float near = 0.25f;
+	float far = 2e6;
+
+	if (m_step == 0x10) {
+		near = 8;
+	}
 
 	float l = near * tanf(angle_left);
 	float r = near * tanf(angle_right);
