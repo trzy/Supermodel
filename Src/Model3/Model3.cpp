@@ -874,6 +874,8 @@ UINT8 CModel3::Read8(UINT32 addr)
     case 0x08:
       if ((addr & 0xF) == 4)  // MIDI control port
         return 0x03;          // magtruck country check
+      else
+        return 0;
       break;
 
     // System registers
@@ -1342,7 +1344,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     break;
 
   // Real3D texture port
-  case 0x90:  // 90000000-90000018
+  case 0x90:  // 90000000-90??????
     GPU.WriteTexturePort(addr&0xFF,FLIPENDIAN32(data));
     break;
 
