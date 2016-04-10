@@ -376,7 +376,7 @@ static void PrintBAT(unsigned regu, unsigned regl)
 #endif
 }
 
-static void DumpPPCRegisters(CBus *bus)
+static void DumpPPCRegisters(IBus *bus)
 {
 #ifdef DEBUG
 	for (int i = 0; i < 32; i += 4)
@@ -960,12 +960,11 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
 	startTicks = prevFPSTicks;
 	while (!quit)
 	{
-		// Check if paused
-		if (!paused)
-		{
-			// If not, run one frame
-			Model3->RunFrame();
-		}
+		// Render if paused, otherwise run a frame
+		if (paused)
+		  Model3->RenderFrame();
+	  else
+	    Model3->RunFrame();
 		
 		// Poll the inputs
 		if (!Inputs->Poll(Model3->GetGameInfo(), xOffset, yOffset, xRes, yRes))

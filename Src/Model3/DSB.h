@@ -158,7 +158,7 @@ private:
  * Abstract base class defining the common interface for both DSB board types.
  */
  
-class CDSB: public CBus
+class CDSB: public IBus
 {
 public:
 	/*

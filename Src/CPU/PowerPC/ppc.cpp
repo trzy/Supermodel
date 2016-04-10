@@ -39,7 +39,7 @@ typedef unsigned int	UINT;
 #define INLINE	inline
 
 // Model 3 context provides read/write handlers
-static class CBus	*Bus = NULL;	// pointer to Model 3 bus object (for access handlers)
+static class IBus	*Bus = NULL;	// pointer to Model 3 bus object (for access handlers)
 
 #ifdef SUPERMODEL_DEBUGGER
 // Pointer to current PPC debugger (if any)
@@ -913,7 +913,7 @@ int ppc_get_timer_ratio()
  Supermodel Interface
 ******************************************************************************/
 
-void ppc_attach_bus(CBus *BusPtr)
+void ppc_attach_bus(IBus *BusPtr)
 {
 	Bus = BusPtr;
 }

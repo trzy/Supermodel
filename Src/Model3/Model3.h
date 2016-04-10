@@ -28,6 +28,7 @@
 #ifndef INCLUDED_MODEL3_H
 #define INCLUDED_MODEL3_H
 
+#include "Model3/IEmulator.h"
 #include "Model3/Crypto.h"
 
 /*
@@ -89,166 +90,46 @@ private:
  *
  * A complete Model 3 system.
  *
- * Inherits CBus in order to pass the address space handlers to devices that
+ * Inherits IBus in order to pass the address space handlers to devices that
  * may need them (CPU, DMA, etc.)
  *
  * NOTE: Currently NOT re-entrant due to a non-OOP PowerPC core. Do NOT create
  * create more than one CModel3 object!
  */
-class CModel3: public CBus, public CPCIDevice
+class CModel3: public IEmulator, public IBus, public IPCIDevice
 {
 public:
-  /*
-   * ReadPCIConfigSpace(device, reg, bits, offset):
-   *
-   * Handles unknown PCI devices. See CPCIDevice definition for more details.
-   *
-   * Parameters:
-   *    device  Device number.
-   *    reg     Register number.
-   *    bits    Bit width of access (8, 16, or 32 only).;
-   *    offset  Byte offset within register, aligned to the specified bit
-   *            width, and offset from the 32-bit aligned base of the
-   *            register number.
-   *
-   * Returns:
-   *    Register data.
-   */
+  // IEmulator interface
+  bool PauseThreads(void);
+  bool ResumeThreads(void);
+  void SaveState(CBlockFile *SaveState);
+  void LoadState(CBlockFile *SaveState);
+  void SaveNVRAM(CBlockFile *NVRAM);
+  void LoadNVRAM(CBlockFile *NVRAM);
+  void ClearNVRAM(void);
+  void RunFrame(void);
+  void RenderFrame(void);
+  void Reset(void);
+  const struct GameInfo * GetGameInfo(void);
+  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr);
+  void AttachInputs(CInputs *InputsPtr);  
+  void AttachOutputs(COutputs *OutputsPtr);
+  bool Init(void);
+
+  // IPCIDevice interface
   UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
-  
-  /*
-   * WritePCIConfigSpace(device, reg, bits, offset, data):
-   *
-   * Handles unknown PCI devices. See CPCIDevice definition for more details.
-   *
-   * Parameters:
-   *    device  Device number.
-   *    reg     Register number.
-   *    bits    Bit width of access (8, 16, or 32 only).
-   *    offset  Byte offset within register, aligned to the specified bit
-   *            width, and offset from the 32-bit aligned base of the
-   *            register number.
-   *    data    Data.
-   */
   void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, UINT32 data);
 
-  /*
-   * Read8(addr):
-   * Read16(addr):
-   * Read32(addr):
-   * Read64(addr):
-   *
-   * Read a byte, 16-bit half word, 32-bit word, or 64-bit double word from 
-   * the PowerPC address space. This implements the PowerPC address bus. Note
-   * that it is big endian, so when accessing from a little endian device,
-   * the byte order must be manually reversed.
-   *
-   * Parameters:
-   *    addr  Address to read.
-   *
-   * Returns:
-   *    Data at the address.
-   */
+  // IBus interface
   UINT8 Read8(UINT32 addr);
   UINT16 Read16(UINT32 addr);
   UINT32 Read32(UINT32 addr);
   UINT64 Read64(UINT32 addr);
-  
-  /*
-   * Write8(addr, data):
-   * Write16(addr, data):
-   * Write32(addr, data):
-   * Write64(addr, data):
-   *
-   * Write a byte, half word, word, or double word to the PowerPC address
-   * space. Note that everything is stored in big endian form, so when
-   * accessing with a little endian device, the byte order must be manually
-   * reversed.
-   *
-   * Parameters:
-   *    addr  Address to write.
-   *    data  Data to write.
-   */
   void Write8(UINT32 addr, UINT8 data);
   void Write16(UINT32 addr, UINT16 data);
   void Write32(UINT32 addr, UINT32 data);
   void Write64(UINT32 addr, UINT64 data);
-  
-  /*
-   * SaveState(SaveState):
-   *
-   * Saves an image of the current state. Must never be called while emulator
-   * is running (inside RunFrame()).
-   *
-   * Parameters:
-   *    SaveState   Block file to save state information to.
-   */
-  void SaveState(CBlockFile *SaveState);
-
-  /*
-   * LoadState(SaveState):
-   *
-   * Loads and resumes execution from a state image. Modifies data that may
-   * be used by multiple threads -- use with caution and ensure threads are
-   * not accessing data that will be touched, this can be done by calling
-   * PauseThreads beforehand. Must never be called while emulator is running
-   * (inside RunFrame()).
-   *
-   * Parameters:
-   *    SaveState   Block file to load state information from.
-   */
-  void LoadState(CBlockFile *SaveState);
-  
-  /*
-   * SaveNVRAM(NVRAM):
-   *
-   * Saves an image of the current NVRAM state.
-   *
-   * Parameters:
-   *    NVRAM   Block file to save NVRAM to.
-   */
-  void SaveNVRAM(CBlockFile *NVRAM);
-
-  /*
-   * LoadNVRAM(NVRAM):
-   *
-   * Loads an NVRAM image.
-   *
-   * Parameters:
-   *    NVRAM   Block file to load NVRAM state from.
-   */
-  void LoadNVRAM(CBlockFile *NVRAM);
-  
-  /*
-   * ClearNVRAM(void):
-   *
-   * Clears all NVRAM (backup RAM and EEPROM).
-   */
-  void ClearNVRAM(void);
-  
-  /*
-   * RunFrame(void):
-   *
-   * Runs one frame (assuming 60 Hz video refresh rate).
-   */
-  void RunFrame(void);
-
-  /*
-   * Reset(void):
-   *
-   * Resets the system. Does not modify non-volatile memory.
-   */
-  void Reset(void);
-  
-  /* 
-   * GetGameInfo(void):
-   *
-   * Returns:
-   *    A pointer to the presently loaded game's information structure (or
-   *    NULL if no ROM set has yet been loaded).
-   */
-  const struct GameInfo * GetGameInfo(void);
-  
+    
   /*
    * LoadROMSet(GameList, zipFile):
    *
@@ -264,44 +145,7 @@ public:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
   bool LoadROMSet(const struct GameInfo *GameList, const char *zipFile);
-  
-  /*
-   * AttachRenderers(Render2DPtr, Render3DPtr):
-   *
-   * Attaches the renderers to the appropriate device objects.
-   *
-   * Parameters:
-   *    Render2DPtr   Pointer to a tile renderer object.
-   *    Render3DPtr   Same as above but for a 3D renderer.
-   */
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr);
-  
-  /*
-   * AttachInputs(InputsPtr):
-   *
-   * Attaches OSD-managed inputs.
-   *
-   * Parameters:
-   *    InputsPtr Pointer to the object containing input states.
-   */
-  void AttachInputs(CInputs *InputsPtr);
-  
-  void AttachOutputs(COutputs *OutputsPtr);
 
-  /*
-   * Init(void):
-   *
-   * One-time initialization of the context. Must be called prior to all
-   * other members. Allocates memory and initializes device states.
-   *
-   * NOTE: Command line settings will not have been applied here yet.
-   *
-   * Returns:
-   *    OKAY is successful, otherwise FAILED if a non-recoverable error
-   *    occurred. Prints own error messages.
-   */
-  bool Init(void);
-  
   /*
    * GetSoundBoard(void):
    * 
@@ -321,21 +165,6 @@ public:
    *    Pointer to CDriveBoard object.
    */
   CDriveBoard *GetDriveBoard(void);
-
-  /*
-   * PauseThreads(void):
-   *
-   * Flags that any running threads should pause and waits for them to do so.
-   * Should be used before invoking any method that accesses the internal state, eg LoadState or SaveState.
-   */
-  bool PauseThreads(void);
-
-  /*
-   * ResumeThreads(void):
-   *
-   * Flags that any paused threads should resume running.
-   */
-  bool ResumeThreads(void);
 
   /*
    * DumpTimings(void):
@@ -381,7 +210,6 @@ private:
 
   void RunMainBoardFrame(void);                       // Runs PPC main board for a frame
   void SyncGPUs(void);                                // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
-  void RenderFrame(void);                             // Renders current frame
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
 

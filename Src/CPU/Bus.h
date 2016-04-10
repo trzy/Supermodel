@@ -22,7 +22,7 @@
 /*
  * Bus.h
  * 
- * Header file for the CBus abstract base class.
+ * Header file for the IBus abstract base class.
  */
 
 #ifndef INCLUDED_BUS_H
@@ -30,15 +30,15 @@
 
 
 /*
- * CBus:
+ * IBus:
  *
- * An abstract base class for an address bus. Defines handlers for 8-, 16-,
- * 32-, and 64-bit random access. Endianness should depend on the application.
+ * An interface for an address bus. Defines handlers for 8-, 16-, 32-, and 64-
+ * bit random access. Endianness should depend on the application.
  *
  * Two buses are supported: a memory bus and an IO bus. All addresses are 32
  * bits.
  */
-class CBus
+class IBus
 {
 public:
 	/*

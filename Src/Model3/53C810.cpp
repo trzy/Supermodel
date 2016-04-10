@@ -122,7 +122,8 @@ static bool SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
   // Not implemented: illegal instruction interrupt when src and dest are not aligned the same way
 
   DebugLog("53C810: Move Memory %08X -> %08X, %X\n", src, dest, numBytes);
-    
+  //if (dest==0x94000000)printf("53C810: Move Memory %08X -> %08X, %X\n", src, dest, numBytes);    
+
   // Perform a 32-bit copy if possible
   for (i = 0; i < (numBytes/4); i++)
   {
@@ -477,7 +478,7 @@ void C53C810::Reset(void)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
-void C53C810::Init(CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit)
+void C53C810::Init(IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit)
 {
   Ctx.Bus = BusObjectPtr; 
   Ctx.IRQ = IRQObjectPtr;

@@ -72,7 +72,7 @@ typedef struct SM68KCtx
 {
 public:
 	m68ki_cpu_core	musashiCtx;		// CPU context
-	CBus			*Bus;			// memory handlers
+	IBus			*Bus;			// memory handlers
 	int				(*IRQAck)(int);	// IRQ acknowledge callback
 #ifdef SUPERMODEL_DEBUGGER
 	CMusashi68KDebug *Debug;        // holds debugger (if attached)
@@ -215,7 +215,7 @@ extern void M68KReset(void);
 extern void M68KSetIRQCallback(int (*F)(int));
 
 /*
- * M68KAttachBus(CBus *BusPtr):
+ * M68KAttachBus(IBus *BusPtr):
  *
  * Attaches a bus object to the 68K, which will be used to perform all address
  * space accesses. The 8, 16, and 32-bit read and write handlers are used.
@@ -225,7 +225,7 @@ extern void M68KSetIRQCallback(int (*F)(int));
  * Parameters:
  *		BusPtr	Pointer to bus object to use for all address space accesses.
  */
-extern void M68KAttachBus(CBus *BusPtr);
+extern void M68KAttachBus(IBus *BusPtr);
 
 /*
  * M68KInit():

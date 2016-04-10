@@ -359,7 +359,7 @@ extern int ppc_get_timer_ratio(void);
 extern void ppc_set_timer_ratio(int ratio);
 
 // These have been added to support the new Supermodel
-extern void ppc_attach_bus(class CBus *BusPtr);		// must be called first!
+extern void ppc_attach_bus(class IBus *BusPtr);		// must be called first!
 extern void ppc_save_state(class CBlockFile *SaveState);
 extern void ppc_load_state(class CBlockFile *SaveState);
 extern UINT32 ppc_get_gpr(unsigned num);

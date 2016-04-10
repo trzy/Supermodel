@@ -52,7 +52,7 @@ public:
 /*
  * CDriveBoard
  */
-class CDriveBoard : public CBus
+class CDriveBoard : public IBus
 {
 public:
 	/*

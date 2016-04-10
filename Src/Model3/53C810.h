@@ -54,7 +54,7 @@ struct NCR53C810Context
 	bool	halt;		// set true if halted by interrupt instruction
 	
 	// Big endian bus object for DMA memory access and instruction fetching
-	CBus	*Bus;
+	IBus	*Bus;
 	
 	// IRQ handling
 	CIRQ		*IRQ;		// IRQ controller
@@ -66,7 +66,7 @@ struct NCR53C810Context
  *
  * NCR 53C810 SCSI controller device.
  */
-class C53C810: public CPCIDevice
+class C53C810: public IPCIDevice
 {
 public:
 	/*
@@ -172,7 +172,7 @@ public:
 	 *		scsiIRQBit		IRQ identifier bit to pass along to IRQ controller
 	 *						when asserting interrupts.
 	 */
-	void Init(CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit);
+	void Init(IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit);
 	 
 	/*
 	 * C53C810(void):

@@ -22,13 +22,13 @@
 /*
  * PCI.h
  * 
- * Header file for PCI bus and device emulation. Defines the CPCIDevice and
+ * Header file for PCI bus and device emulation. Defines the IPCIDevice and
  * CPCIBus classes.
  *
  * References
  * ----------
  * 1. "MPC106 PCI/Bridge/Memory Controller User's Manual" (MPC106UM/D Rev.1) 
- *    Sec.7.4.5 describes the PCI configuration space header, which CPCIDevice-
+ *    Sec.7.4.5 describes the PCI configuration space header, which IPCIDevice-
  *    derived classes are supposed to implement.
  */
 
@@ -41,12 +41,12 @@ using namespace std;
 
 
 /*
- * CPCIDevice:
+ * IPCIDevice:
  *
  * An abstract base class for PCI devices. Devices can inherit this class to 
  * provide PCI configuration space access handlers.
  */
-class CPCIDevice
+class IPCIDevice
 {
 public:
 	/*
@@ -154,7 +154,7 @@ public:
  	 *		device				PCI ID of the device being attached.
  	 *		DeviceObjectPtr		Pointer to the device object.
  	 */
- 	void AttachDevice(unsigned device, CPCIDevice *DeviceObjectPtr);
+ 	void AttachDevice(unsigned device, IPCIDevice *DeviceObjectPtr);
  	 
 	/*
 	 * Init(void):
@@ -179,7 +179,7 @@ private:
 	struct DeviceObjectLink
 	{
 		unsigned	device;
-		CPCIDevice	*DeviceObject;
+		IPCIDevice	*DeviceObject;
 	};
 	
 	// An array of device objects

@@ -23,9 +23,9 @@
  * PCI.cpp
  * 
  * PCI bus and device emulation. Implementation of the CPCIBus class.
- * CPCIDevice is just a base class from which others are derived. Only the 
+ * IPCIDevice is just a base class from which others are derived. Only the 
  * transfer of PCI register data is emulated. Device functionality is 
- * handled by device objects (derived from CPCIDevice).
+ * handled by device objects (derived from IPCIDevice).
  *
  * TO-DO List:
  * -----------
@@ -112,7 +112,7 @@ void CPCIBus::Reset(void)
  * Attaches a device to the PCI bus. This means it is added to a list of 
  * devices to scan when handling PCI configuration space requests.
  */
-void CPCIBus::AttachDevice(unsigned device, CPCIDevice *DeviceObjectPtr)
+void CPCIBus::AttachDevice(unsigned device, IPCIDevice *DeviceObjectPtr)
 {
 	struct DeviceObjectLink	D;
 	

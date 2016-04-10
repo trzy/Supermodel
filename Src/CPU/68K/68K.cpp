@@ -46,7 +46,7 @@
 ******************************************************************************/
 
 // Bus
-static CBus	*s_Bus = NULL;
+static IBus	*s_Bus = NULL;
 
 #ifdef SUPERMODEL_DEBUGGER
 // Debugger
@@ -263,7 +263,7 @@ void M68KSetIRQCallback(int (*F)(int nIRQ))
 	IRQAck = F;
 }
 
-void M68KAttachBus(CBus *BusPtr)
+void M68KAttachBus(IBus *BusPtr)
 {
 	s_Bus = BusPtr;
 	DebugLog("Attached bus to 68K\n");

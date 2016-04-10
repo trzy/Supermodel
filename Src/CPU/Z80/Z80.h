@@ -277,7 +277,7 @@ public:
    *    INTF    Pointer to callback function. The function accepts a
    *            a pointer to the Z80 object that received the interrupt.
    */
-  void Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80));
+  void Init(IBus *BusPtr, int (*INTF)(CZ80 *Z80));
 
 #ifdef SUPERMODEL_DEBUGGER
   /*
@@ -323,7 +323,7 @@ private:
   int     af_sel;   // active AF
   
   // Memory and IO bus
-  CBus  *Bus;
+  IBus  *Bus;
   
   // Interrupts
   bool  nmiTrigger;

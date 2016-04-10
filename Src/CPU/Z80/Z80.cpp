@@ -3972,7 +3972,7 @@ void CZ80::LoadState(CBlockFile *StateFile, const char *name)
   StateFile->Read(&intLine, sizeof(intLine));
 }
 
-void CZ80::Init(CBus *BusPtr, int (*INTF)(CZ80 *Z80))
+void CZ80::Init(IBus *BusPtr, int (*INTF)(CZ80 *Z80))
 {
   Bus = BusPtr;
   INTCallback = INTF;

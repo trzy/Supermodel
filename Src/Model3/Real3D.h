@@ -54,7 +54,7 @@ struct QueuedUploadTextures
  * rasterization and matrix transformations are carried out by the graphics
  * engine.
  */
-class CReal3D: public CPCIDevice
+class CReal3D: public IPCIDevice
 {
 public:
   /*
@@ -366,7 +366,7 @@ public:
    *    OKAY if successful otherwise FAIL (not enough memory). Prints own
    *    errors.
    */
-  bool Init(const uint8_t *vromPtr, CBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
+  bool Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
    
   /*
    * CReal3D(void):
@@ -427,7 +427,7 @@ private:
   vector<QueuedUploadTextures> queuedUploadTexturesRO;  // Read-only copy of queue
   
   // Big endian bus object for DMA memory access
-  CBus  *Bus;
+  IBus  *Bus;
   
   // IRQ handling
   CIRQ    *IRQ;   // IRQ controller
