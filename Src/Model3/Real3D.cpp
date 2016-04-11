@@ -807,7 +807,7 @@ void CReal3D::Flush(void)
         DebugLog("Real3D: 0-length texture upload @ PC=%08X (%08X %08X %08X)\n", ppc_get_pc(), textureFIFO[i+0], textureFIFO[i+1], textureFIFO[i+2]);
         break;
       }
-      
+
       UploadTexture(header,(uint16_t *)&textureFIFO[i+2]);
       DebugLog("Real3D: Texture upload completed: %X bytes (%X)\n", size*4, textureFIFO[i+0]);
       i += size;
@@ -832,15 +832,30 @@ void CReal3D::WriteTextureFIFO(uint32_t data)
 
 void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
 {
-  if (m_vromTextureFIFOIdx == 2)
+  if (step == 0x10)
   {
-    uint32_t addr = m_vromTextureFIFO[0];
-    uint32_t header = m_vromTextureFIFO[1];
-    UploadTexture(header, (const uint16_t *) &vrom[addr & 0xFFFFFF]);
-    m_vromTextureFIFOIdx = 0;
+    uint32_t addr = data & 0xFFFFFF;
+    uint32_t num_words = (2+vrom[addr+0]/2) / 4;
+    if (!num_words)
+    {
+      DebugLog("Real3D: 0-length VROM texture upload @ PC=%08X (%08X)\n", ppc_get_pc(), data);
+      return;
+    }
+    for (size_t i = 0; i < num_words; i++)
+      WriteTextureFIFO(vrom[(addr + i) & 0xFFFFFF]);
   }
   else
-    m_vromTextureFIFO[m_vromTextureFIFOIdx++] = data;
+  {
+    if (m_vromTextureFIFOIdx == 2)
+    {
+      uint32_t addr = m_vromTextureFIFO[0];
+      uint32_t header = m_vromTextureFIFO[1];
+      UploadTexture(header, (const uint16_t *) &vrom[addr & 0xFFFFFF]);
+      m_vromTextureFIFOIdx = 0;
+    }
+    else
+      m_vromTextureFIFO[m_vromTextureFIFOIdx++] = data;
+  }
 }
 
 void CReal3D::WriteLowCullingRAM(uint32_t addr, uint32_t data)
