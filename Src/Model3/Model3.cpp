@@ -873,7 +873,7 @@ UINT8 CModel3::Read8(UINT32 addr)
     // Sound Board
     case 0x08:
       if ((addr & 0xF) == 4)  // MIDI control port
-        return 0x03;          // magtruck country check
+        return 0x83;          // magtruck country check
       else
         return 0;
       break;
