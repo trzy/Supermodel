@@ -40,14 +40,14 @@ namespace Debugger
 	/*
 	 * CCPUDebug implementation for the PowerPC PPC603 emulator.
 	 */
-	class CPPCDebug : public CCPUDebug, public ::CBus
+	class CPPCDebug : public CCPUDebug, public ::IBus
 	{
 	private:
 		char m_crNames[32][5];
 		char m_gprNames[32][4];
 		char m_fprNames[32][4];
 
-		::CBus *m_bus;
+		::IBus *m_bus;
 
 		UINT8 m_irqState;
 
@@ -60,11 +60,11 @@ namespace Debugger
 
 		void AttachToCPU();
 
-		::CBus *AttachBus(::CBus *bus);
+		::IBus *AttachBus(::IBus *bus);
 
 		void DetachFromCPU();
 
-		::CBus *DetachBus();
+		::IBus *DetachBus();
 
 		void CheckException(UINT16 exCode);
 
@@ -94,7 +94,7 @@ namespace Debugger
 
 		bool GetHandlerAddr(CInterrupt *in, UINT32 &handlerAddr);
 
-		// CBus methods
+		// IBus methods
 		
 		UINT8 Read8(UINT32 addr);
 

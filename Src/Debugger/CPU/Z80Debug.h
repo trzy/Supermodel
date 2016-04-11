@@ -38,7 +38,7 @@ namespace Debugger
 	/*
 	 * CCPUDebug implementation for the Zilog Z80 emulator.
 	 */
-	class CZ80Debug : public CCPUDebug, public ::CBus
+	class CZ80Debug : public CCPUDebug, public ::IBus
 	{
 	private:
 		static UINT8 ReadReg8(CCPUDebug *cpu, unsigned reg8);
@@ -50,7 +50,7 @@ namespace Debugger
 		static bool WriteReg16(CCPUDebug *cpu, unsigned reg16, UINT16 value);
 
 		CZ80 *m_z80;
-		::CBus *m_bus;
+		::IBus *m_bus;
 
 		char m_vecIds[256][5];
 		char m_vecNames[256][22];
@@ -65,11 +65,11 @@ namespace Debugger
 
 		void AttachToCPU();
 
-		::CBus *AttachBus(::CBus *bus);
+		::IBus *AttachBus(::IBus *bus);
 
 		void DetachFromCPU();
 		
-		::CBus *DetachBus();
+		::IBus *DetachBus();
 
 		UINT32 GetResetAddr();
 
@@ -103,7 +103,7 @@ namespace Debugger
 
 		bool GetHandlerAddr(CInterrupt *in, UINT32 &handlerAddr);
 
-		// CBus methods
+		// IBus methods
 		
 		UINT8 Read8(UINT32 addr);
 

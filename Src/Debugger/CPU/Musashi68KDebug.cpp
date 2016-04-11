@@ -158,7 +158,7 @@
 		}
 	}
 
-	// CBus methods
+	// IBus methods
 
 	UINT8 CMusashi68KDebug::Read8(UINT32 addr)
 	{

@@ -39,7 +39,7 @@ using namespace Debugger;
 	/*
 	 * CCPUDebug implementation for the Musashi Motorola 68000 emulator.
 	 */
-	class CMusashi68KDebug : public C68KDebug, public ::CBus
+	class CMusashi68KDebug : public C68KDebug, public ::IBus
 	{
 	private:
 		static UINT32 GetReg(CCPUDebug *cpu, unsigned id);
@@ -51,7 +51,7 @@ using namespace Debugger;
 
 		M68KCtx m_savedCtx;
 
-		::CBus *m_bus;
+		::IBus *m_bus;
 
 		void SetM68KContext();
 
@@ -85,7 +85,7 @@ using namespace Debugger;
 
 		bool WriteMem(UINT32 addr, unsigned dataSize, UINT64 data);
 
-		// CBus methods
+		// IBus methods
 		
 		UINT8 Read8(UINT32 addr);
 

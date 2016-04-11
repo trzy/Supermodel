@@ -301,7 +301,7 @@ namespace Debugger
 		m_z80->AttachDebugger(this);
 	}
 
-	::CBus *CZ80Debug::AttachBus(::CBus *bus)
+	::IBus *CZ80Debug::AttachBus(::IBus *bus)
 	{
 		m_bus = bus;
 		return this;
@@ -312,9 +312,9 @@ namespace Debugger
 		m_z80->DetachDebugger();
 	}
 
-	::CBus *CZ80Debug::DetachBus()
+	::IBus *CZ80Debug::DetachBus()
 	{
-		::CBus *bus = m_bus;
+		::IBus *bus = m_bus;
 		m_bus = NULL;
 		return bus;
 	}
@@ -695,7 +695,7 @@ namespace Debugger
 		return true;
 	}
 
-	// CBus methods
+	// IBus methods
 
 	UINT8 CZ80Debug::Read8(UINT32 addr)
 	{

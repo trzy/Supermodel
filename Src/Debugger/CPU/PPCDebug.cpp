@@ -175,7 +175,7 @@ namespace Debugger
 		::ppc_attach_debugger(this);
 	}
 
-	::CBus *CPPCDebug::AttachBus(::CBus *bus)
+	::IBus *CPPCDebug::AttachBus(::IBus *bus)
 	{
 		m_bus = bus;
 		return this;
@@ -186,9 +186,9 @@ namespace Debugger
 		::ppc_detach_debugger();
 	}
 
-	::CBus *CPPCDebug::DetachBus()
+	::IBus *CPPCDebug::DetachBus()
 	{
-		::CBus *bus = m_bus;
+		::IBus *bus = m_bus;
 		m_bus = NULL;
 		return bus;
 	}
@@ -496,7 +496,7 @@ namespace Debugger
 		return true;
 	}
 
-	// CBus methods
+	// IBus methods
 
 	UINT8 CPPCDebug::Read8(UINT32 addr)
 	{
