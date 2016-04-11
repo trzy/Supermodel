@@ -407,8 +407,8 @@ private:
   uint16_t  *textureRAM;        // 8MB of internal texture RAM
   uint32_t  *textureFIFO;       // 1MB texture FIFO at 0x94000000
   uint32_t  fifoIdx;            // index into texture FIFO
-  uint32_t  m_vromTextureFIFO[2] = { 0, 0 };
-  uint32_t  m_vromTextureFIFOIdx = 0;
+  uint32_t  m_vromTextureFIFO[2];
+  uint32_t  m_vromTextureFIFOIdx;
   
   // Read-only snapshots
   uint32_t  *cullingRAMLoRO;    // 4MB of culling RAM at 8C000000 [read-only snapshot]

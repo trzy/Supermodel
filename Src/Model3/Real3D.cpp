@@ -1057,6 +1057,9 @@ CReal3D::CReal3D(void)
   fifoIdx = 0;
   tapState = 0;
   tapIDSize = 197;
+  m_vromTextureFIFO[0] = 0;
+  m_vromTextureFIFO[1] = 0;
+  m_vromTextureFIFOIdx = 0;
   DebugLog("Built Real3D\n");
 }
 
