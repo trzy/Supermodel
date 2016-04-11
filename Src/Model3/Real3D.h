@@ -431,7 +431,7 @@ private:
   
   // IRQ handling
   CIRQ    *IRQ;   // IRQ controller
-  size_t  dmaIRQ; // IRQ bit to use when calling IRQ handler
+  uint32_t  dmaIRQ; // IRQ bit to use when calling IRQ handler
   
   // DMA device
   uint32_t  dmaSrc;

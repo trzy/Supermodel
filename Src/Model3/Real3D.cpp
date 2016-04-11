@@ -440,7 +440,7 @@ unsigned CReal3D::Shift(uint8_t *data, unsigned numBits)
   // This loop takes care of all the fully-filled bytes
   unsigned shiftIn = 0;
   unsigned shiftOut = 0;
-  size_t i;
+  uint32_t i;
   for (i = 0; i < numBits / 8; i++)
   {
     shiftOut = data[i] & 1;
@@ -604,7 +604,7 @@ static const unsigned decode[64] =
   50,51,54,55,58,59,62,63
 };
 
-static void StoreTexelByte(uint16_t *texel, size_t byteSelect, uint8_t byte)
+static void StoreTexelByte(uint16_t *texel, uint32_t byteSelect, uint8_t byte)
 {
   if ((byteSelect & 1)) // write to LSB
     *texel = (*texel & 0xFF00) | byte;
@@ -617,15 +617,15 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
   if ((header & 0x00800000))  // 16-bit textures
   {
     // Outer 2 loops: 8x8 tiles
-    for (size_t y = yPos; y < (yPos+height); y += 8)
+    for (uint32_t y = yPos; y < (yPos+height); y += 8)
     {
-      for (size_t x = xPos; x < (xPos+width); x += 8)
+      for (uint32_t x = xPos; x < (xPos+width); x += 8)
       {
         // Inner 2 loops: 8x8 texels for the current tile
-        size_t destOffset = y*2048+x;
-        for (size_t yy = 0; yy < 8; yy++)
+        uint32_t destOffset = y*2048+x;
+        for (uint32_t yy = 0; yy < 8; yy++)
         {
-          for (size_t xx = 0; xx < 8; xx++)
+          for (uint32_t xx = 0; xx < 8; xx++)
           { 
             if (g_Config.gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
@@ -646,20 +646,20 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
      * swapped.
      */
 
-    size_t byteSelect = (header>>21)&3; // which byte to unpack to
+    uint32_t byteSelect = (header>>21)&3; // which byte to unpack to
     if (byteSelect == 3)  // write to both?
       DebugLog("Observed 8-bit texture with byte_select=3!");
   
     // Outer 2 loops: 8x8 tiles
-    for (size_t y = yPos; y < (yPos+height); y += 8)
+    for (uint32_t y = yPos; y < (yPos+height); y += 8)
     {
-      for (size_t x = xPos; x < (xPos+width); x += 8)
+      for (uint32_t x = xPos; x < (xPos+width); x += 8)
       {
         // Inner 2 loops: 8x8 texels for the current tile
-        size_t destOffset = y*2048+x;
-        for (size_t yy = 0; yy < 8; yy++)
+        uint32_t destOffset = y*2048+x;
+        for (uint32_t yy = 0; yy < 8; yy++)
         {
-          for (size_t xx = 0; xx < 8; xx += 2)
+          for (uint32_t xx = 0; xx < 8; xx += 2)
           {
             uint8_t byte1 = texData[decode[(yy^1)*8+((xx+0)^1)]/2]>>8;
             uint8_t byte2 = texData[decode[(yy^1)*8+((xx+1)^1)]/2]&0xFF;
@@ -699,15 +699,15 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
 void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
 {
   // Position: texture RAM is arranged as 2 2048x1024 texel sheets
-  size_t x = 32*(header&0x3F);
-  size_t y = 32*((header>>7)&0x1F);
-  size_t page = (header>>20)&1;
+  uint32_t x = 32*(header&0x3F);
+  uint32_t y = 32*((header>>7)&0x1F);
+  uint32_t page = (header>>20)&1;
   y += page*1024; // treat page as additional Y bit (one 2048x2048 sheet)
   
   // Texture size and bit depth
-  size_t width = 32<<((header>>14)&7);
-  size_t height  = 32<<((header>>17)&7);
-  size_t bytesPerTexel;
+  uint32_t width = 32<<((header>>14)&7);
+  uint32_t height  = 32<<((header>>17)&7);
+  uint32_t bytesPerTexel;
   if ((header&0x00800000))  // 16 bits per texel
     bytesPerTexel = 2;
   else            // 8 bits
@@ -717,7 +717,7 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
   }
   
   // Mipmaps
-  size_t mipYPos = 32*((header>>7)&0x1F);
+  uint32_t mipYPos = 32*((header>>7)&0x1F);
   
   // Process texture data
   DebugLog("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
@@ -727,9 +727,9 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
   case 0x00:  // texture w/ mipmaps
   {
     StoreTexture(x, y, width, height, texData, header);
-    size_t mipWidth = width;
-    size_t mipHeight = height;
-    size_t mipNum = 0;
+    uint32_t mipWidth = width;
+    uint32_t mipHeight = height;
+    uint32_t mipNum = 0;
 
     while((mipHeight>8) && (mipWidth>8))
     {
@@ -739,8 +739,8 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
         texData += (mipWidth*mipHeight);
       mipWidth /= 2;
       mipHeight /= 2;
-      size_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
-      size_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
+      uint32_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
+      uint32_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
       if(page)
         mipY += 1024;
       mipNum++;
@@ -753,15 +753,15 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
     break;
   case 0x02:  // mipmaps only
   {
-    size_t mipWidth = width;
-    size_t mipHeight = height;
-    size_t mipNum = 0;
+    uint32_t mipWidth = width;
+    uint32_t mipHeight = height;
+    uint32_t mipNum = 0;
     while((mipHeight>8) && (mipWidth>8))
     {
       mipWidth /= 2;
       mipHeight /= 2;
-      size_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
-      size_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
+      uint32_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
+      uint32_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
       if(page)
         mipY += 1024;
       mipNum++;
@@ -795,9 +795,9 @@ void CReal3D::Flush(void)
   // Upload textures (if any)
   if (fifoIdx > 0)
   {
-    for (size_t i = 0; i < fifoIdx; )
+    for (uint32_t i = 0; i < fifoIdx; )
     {
-      size_t size = 2+textureFIFO[i+0]/2;
+      uint32_t size = 2+textureFIFO[i+0]/2;
       size /= 4;
       uint32_t header = textureFIFO[i+1]; // texture information header
       
@@ -841,7 +841,7 @@ void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
       DebugLog("Real3D: 0-length VROM texture upload @ PC=%08X (%08X)\n", ppc_get_pc(), data);
       return;
     }
-    for (size_t i = 0; i < num_words; i++)
+    for (uint32_t i = 0; i < num_words; i++)
       WriteTextureFIFO(vrom[(addr + i) & 0xFFFFFF]);
   }
   else
@@ -1003,7 +1003,7 @@ void CReal3D::SetStep(int stepID)
 
 bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
-  size_t memSize   = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  uint32_t memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   float  memSizeMB = (float)memSize/(float)0x100000;
 
   // IRQ and bus objects
