@@ -383,8 +383,8 @@ private:
   void      InsertBit(uint8_t *buf, unsigned bitNum, unsigned bit);
   void      InsertID(uint32_t id, unsigned startBit);
   unsigned  Shift(uint8_t *data, unsigned numBits);
-  void      StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, uint16_t *texData, uint32_t header);
-  void      UploadTexture(uint32_t header, uint16_t *texData);
+  void      StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header);
+  void      UploadTexture(uint32_t header, const uint16_t *texData);
   uint32_t  UpdateSnapshots(bool copyWhole);
   uint32_t  UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, unsigned size, uint8_t *dirty);
 
@@ -406,9 +406,9 @@ private:
   uint32_t  *polyRAM;           // 4MB of polygon RAM at 98000000
   uint16_t  *textureRAM;        // 8MB of internal texture RAM
   uint32_t  *textureFIFO;       // 1MB texture FIFO at 0x94000000
-  size_t    fifoIdx;            // index into texture FIFO
-  uint32_t  vromTextureAddr;    // VROM texture port address data
-  uint32_t  vromTextureHeader;  // VROM texture port header data
+  uint32_t  fifoIdx;            // index into texture FIFO
+  uint32_t  m_vromTextureFIFO[2] = { 0, 0 };
+  uint32_t  m_vromTextureFIFOIdx = 0;
   
   // Read-only snapshots
   uint32_t  *cullingRAMLoRO;    // 4MB of culling RAM at 8C000000 [read-only snapshot]

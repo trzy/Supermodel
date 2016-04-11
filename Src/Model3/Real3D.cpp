@@ -79,8 +79,7 @@ void CReal3D::SaveState(CBlockFile *SaveState)
   
   SaveState->Write(memoryPool, MEM_POOL_SIZE_RW); // Don't write out read-only snapshots or dirty page arrays
   SaveState->Write(&fifoIdx, sizeof(fifoIdx));
-  SaveState->Write(&vromTextureAddr, sizeof(vromTextureAddr));
-  SaveState->Write(&vromTextureHeader, sizeof(vromTextureHeader));
+  SaveState->Write(m_vromTextureFIFO, sizeof(m_vromTextureFIFO));
   
   SaveState->Write(&dmaSrc, sizeof(dmaSrc));
   SaveState->Write(&dmaDest, sizeof(dmaDest));
@@ -96,6 +95,8 @@ void CReal3D::SaveState(CBlockFile *SaveState)
   SaveState->Write(&tapIDSize, sizeof(tapIDSize));
   SaveState->Write(&tapTDO, sizeof(tapTDO));
   SaveState->Write(&tapState, sizeof(tapState));
+
+  SaveState->Write(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
 }
 
 void CReal3D::LoadState(CBlockFile *SaveState)
@@ -113,8 +114,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
     UpdateSnapshots(true);
   Render3D->UploadTextures(0, 0, 2048, 2048);
   SaveState->Read(&fifoIdx, sizeof(fifoIdx));
-  SaveState->Read(&vromTextureAddr, sizeof(vromTextureAddr));
-  SaveState->Read(&vromTextureHeader, sizeof(vromTextureHeader));
+  SaveState->Read(&m_vromTextureFIFO, sizeof(m_vromTextureFIFO));
   
   SaveState->Read(&dmaSrc, sizeof(dmaSrc));
   SaveState->Read(&dmaDest, sizeof(dmaDest));
@@ -130,6 +130,8 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&tapIDSize, sizeof(tapIDSize));
   SaveState->Read(&tapTDO, sizeof(tapTDO));
   SaveState->Read(&tapState, sizeof(tapState));
+
+  SaveState->Read(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
 }
 
 
@@ -610,7 +612,7 @@ static void StoreTexelByte(uint16_t *texel, size_t byteSelect, uint8_t byte)
     *texel = (*texel & 0x00FF) | (uint16_t(byte) << 8);
 }   
 
-void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, uint16_t *texData, uint32_t header)
+void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header)
 {
   if ((header & 0x00800000))  // 16-bit textures
   {
@@ -694,7 +696,7 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
 }
 
 // Texture data will be in little endian format
-void CReal3D::UploadTexture(uint32_t header, uint16_t *texData)
+void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
 {
   // Position: texture RAM is arranged as 2 2048x1024 texel sheets
   size_t x = 32*(header&0x3F);
@@ -830,26 +832,15 @@ void CReal3D::WriteTextureFIFO(uint32_t data)
 
 void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
 {
-  //printf("Texture Port: %X=%08X\n", reg, data);
-  switch (reg)
+  if (m_vromTextureFIFOIdx == 2)
   {
-  case 0x0: // VROM texture address
-  case 0xC:
-    vromTextureAddr = data;
-    break;
-  case 0x4: // VROM texture header
-  case 0x10:
-    vromTextureHeader = data;
-    break;
-  case 0x8: // VROM texture length (also used to trigger uploads)
-  case 0x14:
-    UploadTexture(vromTextureHeader,(uint16_t *)&vrom[vromTextureAddr&0xFFFFFF]);
-    //printf("texture upload: addr=%08X\n", vromTextureAddr);
-    break;
-  default:
-    DebugLog("Real3D texture port write: %X=%08X\n", reg, data);
-    break;
+    uint32_t addr = m_vromTextureFIFO[0];
+    uint32_t header = m_vromTextureFIFO[1];
+    UploadTexture(header, (const uint16_t *) &vrom[addr & 0xFFFFFF]);
+    m_vromTextureFIFOIdx = 0;
   }
+  else
+    m_vromTextureFIFO[m_vromTextureFIFOIdx++] = data;
 }
 
 void CReal3D::WriteLowCullingRAM(uint32_t addr, uint32_t data)
@@ -940,8 +931,7 @@ void CReal3D::Reset(void)
   queuedUploadTexturesRO.clear();
 
   fifoIdx = 0;
-  vromTextureAddr = 0;
-  vromTextureHeader = 0;
+  m_vromTextureFIFOIdx = 0;
   tapState = 0;
   tapIDSize = 197;
   dmaStatus = 0;
@@ -949,6 +939,7 @@ void CReal3D::Reset(void)
   
   unsigned memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   memset(memoryPool, 0, memSize);
+  memset(m_vromTextureFIFO, 0, sizeof(m_vromTextureFIFO));
 
   DebugLog("Real3D reset\n");
 }
@@ -1049,8 +1040,6 @@ CReal3D::CReal3D(void)
   vrom = NULL;
   error = false;
   fifoIdx = 0;
-  vromTextureAddr = 0;
-  vromTextureHeader = 0;
   tapState = 0;
   tapIDSize = 197;
   DebugLog("Built Real3D\n");
