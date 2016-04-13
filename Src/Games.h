@@ -37,27 +37,28 @@
 ******************************************************************************/
 
 // Input flags
-#define GAME_INPUT_COMMON           0x00001 // game has common controls
-#define GAME_INPUT_VEHICLE          0x00002 // game has vehicle controls
-#define GAME_INPUT_JOYSTICK1        0x00004 // game has joystick 1 
-#define GAME_INPUT_JOYSTICK2        0x00008 // game has joystick 2
-#define GAME_INPUT_FIGHTING         0x00010 // game has fighting game controls
-#define GAME_INPUT_VR4              0x00020 // game has four VR view buttons
-#define GAME_INPUT_VIEWCHANGE       0x00040 // game has single view change button
-#define GAME_INPUT_SHIFT4           0x00080 // game has 4-speed shifter
-#define GAME_INPUT_SHIFTUPDOWN      0x00100 // game has up/down shifter
-#define GAME_INPUT_HANDBRAKE        0x00200 // game has handbrake
-#define GAME_INPUT_HARLEY           0x00400 // game has Harley Davidson controls
-#define GAME_INPUT_GUN1             0x00800 // game has light gun 1
-#define GAME_INPUT_GUN2             0x01000 // game has light gun 2
-#define GAME_INPUT_ANALOG_JOYSTICK  0x02000 // game has analog joystick
-#define GAME_INPUT_TWIN_JOYSTICKS   0x04000 // game has twin joysticks
-#define GAME_INPUT_SOCCER           0x08000 // game has soccer controls
-#define GAME_INPUT_SPIKEOUT         0x10000 // game has Spikeout buttons
-#define GAME_INPUT_ANALOG_GUN1      0x20000 // game has analog gun 1
-#define GAME_INPUT_ANALOG_GUN2      0x40000 // game has analog gun 2
-#define GAME_INPUT_SKI              0x80000 // game has ski controls
-#define GAME_INPUT_ALL              0xFFFFF
+#define GAME_INPUT_COMMON           0x000000001 // game has common controls
+#define GAME_INPUT_VEHICLE          0x000000002 // game has vehicle controls
+#define GAME_INPUT_JOYSTICK1        0x000000004 // game has joystick 1 
+#define GAME_INPUT_JOYSTICK2        0x000000008 // game has joystick 2
+#define GAME_INPUT_FIGHTING         0x000000010 // game has fighting game controls
+#define GAME_INPUT_VR4              0x000000020 // game has four VR view buttons
+#define GAME_INPUT_VIEWCHANGE       0x000000040 // game has single view change button
+#define GAME_INPUT_SHIFT4           0x000000080 // game has 4-speed shifter
+#define GAME_INPUT_SHIFTUPDOWN      0x000000100 // game has up/down shifter
+#define GAME_INPUT_HANDBRAKE        0x000000200 // game has handbrake
+#define GAME_INPUT_HARLEY           0x000000400 // game has Harley Davidson controls
+#define GAME_INPUT_GUN1             0x000000800 // game has light gun 1
+#define GAME_INPUT_GUN2             0x000001000 // game has light gun 2
+#define GAME_INPUT_ANALOG_JOYSTICK  0x000002000 // game has analog joystick
+#define GAME_INPUT_TWIN_JOYSTICKS   0x000004000 // game has twin joysticks
+#define GAME_INPUT_SOCCER           0x000008000 // game has soccer controls
+#define GAME_INPUT_SPIKEOUT         0x000010000 // game has Spikeout buttons
+#define GAME_INPUT_ANALOG_GUN1      0x000020000 // game has analog gun 1
+#define GAME_INPUT_ANALOG_GUN2      0x000040000 // game has analog gun 2
+#define GAME_INPUT_SKI              0x000080000 // game has ski controls
+#define GAME_INPUT_MAGTRUCK         0x000100000 // game has magical truck controls
+#define GAME_INPUT_ALL              0x0001FFFFF
 
 
 /******************************************************************************
@@ -78,11 +79,11 @@ struct GameInfo
   const char  *mfgName;       // name of manufacturer
   unsigned    year;           // year released (in decimal)
   int         step;           // Model 3 hardware stepping: 0x10 = 1.0, 0x15 = 1.5, 0x20 = 2.0, 0x21 = 2.1
-  unsigned    cromSize;       // size of fixed CROM (up to 8 MB)
+  uint32_t    cromSize;       // size of fixed CROM (up to 8 MB)
   bool        mirrorLow64MB;  // mirror low 64 MB of banked CROM space to upper 64 MB
-  unsigned    vromSize;       // size of video ROMs (32 or 64 MB; if 32 MB, will have to be mirrored)
-  unsigned    sampleSize;     // size of sample ROMS (8 or 16 MB; if 8 MB, will have to be mirrored)
-  unsigned    inputFlags;     // game input types
+  uint32_t    vromSize;       // size of video ROMs (32 or 64 MB; if 32 MB, will have to be mirrored)
+  uint32_t    sampleSize;     // size of sample ROMS (8 or 16 MB; if 8 MB, will have to be mirrored)
+  uint32_t    inputFlags;     // game input types
   int         mpegBoard;      // MPEG music board type: 0 = none, 1 = DSB1 (Z80), 2 = DSB2 (68K).
   bool        driveBoard;     // drive board (supported if true)
   uint32_t    encryptionKey;  // security board encryption device key (or 0 if not applicable)

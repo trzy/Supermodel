@@ -424,6 +424,9 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->analogTriggerRight[0]->value<<1);
     }
 
+    if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
+      data &= ~(Inputs->magicalPedal1->value << 0);
+
     return data;
 
   case 0x0C:  // game-specific inputs
@@ -494,6 +497,9 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->analogTriggerLeft[1]->value<<0);
       data &= ~(Inputs->analogTriggerRight[1]->value<<1);
     }
+
+    if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
+      data &= ~(Inputs->magicalPedal2->value << 0);
     
     return data;
 
@@ -537,6 +543,12 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     {
       adc[0] = (UINT8)Inputs->skiY->value;
       adc[1] = (UINT8)Inputs->skiX->value;
+    }
+
+    if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
+    {
+      adc[0] = uint8_t(Inputs->magicalLever1->value);
+      adc[1] = uint8_t(Inputs->magicalLever2->value);
     }
       
     // Read out appropriate channel

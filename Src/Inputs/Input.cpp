@@ -104,6 +104,7 @@ const char* CInput::GetInputGroup()
 		case GAME_INPUT_ANALOG_GUN1:     // Fall through to below
 		case GAME_INPUT_ANALOG_GUN2:     return "Analog Guns";
 		case GAME_INPUT_SKI:             return "Ski Controls";
+		case GAME_INPUT_MAGTRUCK:        return "Magical Truck Controls";
 		default:                         return "Misc";
 	}
 }

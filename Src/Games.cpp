@@ -1059,7 +1059,7 @@ const struct GameInfo g_Model3GameList[] =
     true,       // 16 MB of banked CROM (Mirror)
     0x4000000,  // 64 MB of VROM
     0x1000000,  // 16 MB of sample ROMs
-    GAME_INPUT_COMMON|GAME_INPUT_VEHICLE,
+    GAME_INPUT_COMMON|GAME_INPUT_MAGTRUCK,
     0,          // no MPEG board
     false,      // no drive board
     0x29266e45, // securiry board encryption key

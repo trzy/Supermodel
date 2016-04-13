@@ -237,6 +237,17 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	skiSelect1    = AddSwitchInput("SkiSelect1",   "Ski Champ Select 1",   GAME_INPUT_SKI, "NONE");
 	skiSelect2    = AddSwitchInput("SkiSelect2",   "Ski Champ Select 2",   GAME_INPUT_SKI, "NONE");
 	skiSelect3    = AddSwitchInput("SkiSelect3",   "Ski Champ Select 3",   GAME_INPUT_SKI, "NONE");
+
+	// Magical truck controls
+	CAnalogInput *magicalLeverUp1   = AddAnalogInput("MagicalLeverUp1",   "P1 Magical Lever Up",    GAME_INPUT_MAGTRUCK, "NONE");
+	CAnalogInput *magicalLeverDown1 = AddAnalogInput("MagicalLeverDown1", "P1 Magical Lever Down",  GAME_INPUT_MAGTRUCK, "NONE");
+	CAnalogInput *magicalLeverUp2   = AddAnalogInput("MagicalLeverUp2",   "P2 Magical Lever Up",    GAME_INPUT_MAGTRUCK, "NONE");
+  CAnalogInput *magicalLeverDown2 = AddAnalogInput("MagicalLeverDown2", "P2 Magical Lever Down",  GAME_INPUT_MAGTRUCK, "NONE");
+  
+  magicalLever1 = AddAxisInput(   "MagicalLever1", "P1 Magical Lever Full Analog",  GAME_INPUT_MAGTRUCK, "NONE", magicalLeverUp1, magicalLeverDown1, 0xFF, 0x80, 0);
+  magicalLever2 = AddAxisInput(   "MagicalLever2", "P2 Magical Lever Full Analog",  GAME_INPUT_MAGTRUCK, "NONE", magicalLeverUp2, magicalLeverDown2, 0xFF, 0x80, 0);
+  magicalPedal1 = AddSwitchInput( "MagicalPedal1", "P1 Magical Pedal",              GAME_INPUT_MAGTRUCK, "NONE");
+  magicalPedal2 = AddSwitchInput( "MagicalPedal2", "P2 Magical Pedal",              GAME_INPUT_MAGTRUCK, "NONE");
 }
 
 CInputs::~CInputs()
