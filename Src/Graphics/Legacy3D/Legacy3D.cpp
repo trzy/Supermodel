@@ -276,34 +276,24 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
     {
       for (int xi = x; xi < (x+width); xi++)
       {
-        /*
-        UINT16 texel = textureRAM[yi*2048+xi];
-        c = (GLfloat) (texel&0xFF) * (1.0f/255.0f);
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = 1.0;
-        */
         // Interpret as 8-bit grayscale
-        UINT16 texel = textureRAM[yi*2048+xi];
+        uint16_t texel = textureRAM[yi*2048+xi] & 0xFF;
         GLfloat c = texel * (1.0f/255.0f);
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
-        textureBuffer[i++] = 1.0f;
+        textureBuffer[i++] = (texel == 0xFF) ? 0. : 1.;
       }
     }
     break;
-  case 4: // 8-bit, L4A4
+  case 4: // 8-bit L4A4 (high byte)
     for (int yi = y; yi < (y+height); yi++)
     {
       for (int xi = x; xi < (x+width); xi++)
       {
-        UINT16 texel = textureRAM[yi*2048+xi];
-        //GLfloat c = (~texel&0x0F) * (1.0f/15.0f);
-        //GLfloat a = ((texel>>4)&0xF) * (1.0f/15.0f);
-        GLfloat c = ((texel>>4)&0xF) * (1.0f/15.0f);  // seems to work better in Lost World (raptor shadows)
-        GLfloat a = (texel&0xF) * (1.0f/15.0f);
+        uint16_t texel = textureRAM[yi*2048+xi] >> 8;
+        GLfloat c = (texel >> 4) * (1.0f/15.0f);
+        GLfloat a = (texel & 0xF) * (1.0f/15.0f);
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
@@ -311,61 +301,28 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
       }
     }
     break;
-  case 6: // 8-bit grayscale? (How does this differ from format 5? Alpha values?)
+  case 6: // 8-bit grayscale
     for (int yi = y; yi < (y+height); yi++)
     {
       for (int xi = x; xi < (x+width); xi++)
       {
-        /*
-        UINT16 texel = textureRAM[yi*2048+xi];
-        GLfloat c = ((texel>>4)&0xF) * (1.0f/15.0f);
-        GLfloat a = (texel&0xF) * (1.0f/15.0f);
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = a;
-        */
-        UINT16 texel = textureRAM[yi*2048+xi]&0xFF;
+        uint16_t texel = textureRAM[yi*2048+xi] >> 8;
         GLfloat c = texel * (1.0f/255.0f);
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
-        textureBuffer[i++] = 1.0f;
+        textureBuffer[i++] = (texel == 0xFF) ? 0. : 1.;
       }
     }
     break;
-  case 2: // Unknown (all 16 bits appear present in Daytona 2, but only lower 8 bits in Le Mans 24)
+  case 2: // 8-bit L4A4 (low byte)
     for (int yi = y; yi < (y+height); yi++)
     {
       for (int xi = x; xi < (x+width); xi++)
       {
-        UINT16 texel = textureRAM[yi*2048+xi];
-        GLfloat a = ((texel>>4)&0xF) * (1.0f/15.0f);  
-        GLfloat c = (texel&0xF) * (1.0f/15.0f);
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = a;
-        //printf("%04X\n", textureRAM[yi*2048+xi]);       
-        /*        
-        UINT16 texel = textureRAM[yi*2048+xi]&0xFF;
-        GLfloat c = texel * (1.0f/255.0f);
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = c;
-        textureBuffer[i++] = 1.0f;
-        */
-      }
-    }
-    break;
-  case 3: // Interleaved A4L4 (high byte)
-    for (int yi = y; yi < (y+height); yi++)
-    {
-      for (int xi = x; xi < (x+width); xi++)
-      {
-        UINT16 texel = textureRAM[yi*2048+xi]>>8;
-        GLfloat c = (texel&0xF) * (1.0f/15.0f);
-        GLfloat a = (texel>>4) * (1.0f/15.0f);
+        uint16_t texel = textureRAM[yi*2048+xi] & 0xFF;
+        GLfloat c = (texel >> 4) * (1.0f/15.0f);
+        GLfloat a = (texel & 0xF) * (1.0f/15.0f);
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
@@ -373,15 +330,29 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
       }
     }
     break;
-  case 1: // Interleaved A4L4 (low byte)
+  case 3: // 8-bit A4L4 (high byte)
     for (int yi = y; yi < (y+height); yi++)
     {
       for (int xi = x; xi < (x+width); xi++)
       {
-        // Interpret as A4L4
-        UINT16 texel = textureRAM[yi*2048+xi]&0xFF;
-        GLfloat c = (texel&0xF) * (1.0f/15.0f);
-        GLfloat a = (texel>>4) * (1.0f/15.0f);
+        uint16_t texel = textureRAM[yi*2048+xi] >> 8;
+        GLfloat c = (texel & 0xF) * (1.0f/15.0f);
+        GLfloat a = (texel >> 4) * (1.0f/15.0f);
+        textureBuffer[i++] = c;
+        textureBuffer[i++] = c;
+        textureBuffer[i++] = c;
+        textureBuffer[i++] = a;
+      }
+    }
+    break;
+  case 1: // 8-bit A4L4 (low byte)
+    for (int yi = y; yi < (y+height); yi++)
+    {
+      for (int xi = x; xi < (x+width); xi++)
+      {
+        uint16_t texel = textureRAM[yi*2048+xi] & 0xFF;
+        GLfloat c = (texel & 0xF) * (1.0f/15.0f);
+        GLfloat a = (texel >> 4) * (1.0f/15.0f);
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
@@ -611,7 +582,7 @@ static bool IsDynamicModel(const UINT32 *data)
  * for each unique texOffset.
  */
 bool CLegacy3D::DrawModel(UINT32 modelAddr)
-{
+{  
   //if (modelAddr==0x7FFF00)  // Fighting Vipers (this is not polygon data!)
   //  return;
   if (modelAddr == 0x200000)  // Virtual On 2 (during boot-up, causes slow-down)
@@ -685,6 +656,7 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
     --stackDepth;
     return;
   }
+
 //printf("%08x NODE %d\n", addr, stackDepth);
 //for (int i = 0; i < 8; i++)
 //  printf("  %08x\n", node[i]);
@@ -739,7 +711,7 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   }
   else
     DescendNodePtr(node1Ptr);
-    
+
   // Proceed to second link
   glPopMatrix();
   if ((node[0x00] & 0x07) != 0x06)  // seems to indicate second link is invalid (fixes circular references)
@@ -986,7 +958,6 @@ void CLegacy3D::RenderFrame(void)
 {
   // Begin frame
   ClearErrors();  // must be cleared each frame
-  //printf("BEGIN FRAME\n");
   
   // Z buffering (Z buffer is cleared by display list viewport nodes)
   glDepthFunc(GL_LESS);
@@ -1018,7 +989,7 @@ void CLegacy3D::RenderFrame(void)
   if (fogIntensityLoc != -1) glEnableVertexAttribArray(fogIntensityLoc);
   
   // Draw
-  //ClearModelCache(&VROMCache);  // debug
+  //ClearModelCache(&VROMCache);  // only enable this for debugging
   ClearModelCache(&PolyCache);
   for (int pri = 0; pri <= 3; pri++)
   {
@@ -1055,7 +1026,7 @@ void CLegacy3D::EndFrame(void)
 
 void CLegacy3D::BeginFrame(void)
 {
-//printf("--- BEGIN FRAME ---\n");
+  //printf("--- BEGIN FRAME ---\n");
 }
 
 
