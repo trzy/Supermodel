@@ -422,7 +422,7 @@ void CNew3D::DescendPointerList(UINT32 addr)
 {
 	const UINT32*	list;
 	UINT32			nodeAddr;
-	int				listEnd;
+	int				index;
 
 	if (m_listDepth > 2) {	// several Step 2.1 games require this safeguard
 		return;
@@ -437,49 +437,39 @@ void CNew3D::DescendPointerList(UINT32 addr)
 	m_listDepth++;
 
 	// Traverse the list forward and print it out
-	listEnd = 0;
+	index = 0;
 
-	while (1)
-	{
-		if ((list[listEnd] & 0x02000000)) {	// end of list (?)
-			break;
+	while (true) {
+
+		if (list[index] & 0x01000000) {
+			break;	// empty list
 		}
 
-		if ((list[listEnd] == 0) || (((list[listEnd]) >> 24) != 0)) {
-			listEnd--;	// back up to last valid list element
-			break;
+		nodeAddr = list[index] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
+
+		DescendCullingNode(nodeAddr);
+
+		if (list[index] & 0x02000000) {
+			break;	// list end
 		}
 
-		listEnd++;
+		index++;
 	}
-
-	for (int i = 0; i <= listEnd; i++) {
-
-		nodeAddr = list[i] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
-
-		if (!(list[i] & 0x01000000)) {	//Fighting Vipers
-
-			if ((nodeAddr != 0) && (nodeAddr != 0x800800)) {
-				DescendCullingNode(nodeAddr);
-			}
-		}
-	}
-
 
 	/*
 	// Traverse the list backward and descend into each pointer
-	while (listEnd >= 0)
+	while (index >= 0)
 	{
-		nodeAddr = list[listEnd] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
+		nodeAddr = list[index] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
 
-		if (!(list[listEnd] & 0x01000000)) {	//Fighting Vipers
+		if (!(list[index] & 0x01000000)) {	//Fighting Vipers
 			
 			if ((nodeAddr != 0) && (nodeAddr != 0x800800)) {
 				DescendCullingNode(nodeAddr);
 			}
 		}
 
-		listEnd--;
+		index--;
 	}
 	*/
 
