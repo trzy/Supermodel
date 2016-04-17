@@ -282,7 +282,7 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
-        textureBuffer[i++] = (texel == 0xFF) ? 0. : 1.;
+        textureBuffer[i++] = (texel == 0xFF) ? 0.f : 1.f;
       }
     }
     break;
@@ -311,7 +311,7 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
         textureBuffer[i++] = c;
-        textureBuffer[i++] = (texel == 0xFF) ? 0. : 1.;
+        textureBuffer[i++] = (texel == 0xFF) ? 0.f : 1.f;
       }
     }
     break;
