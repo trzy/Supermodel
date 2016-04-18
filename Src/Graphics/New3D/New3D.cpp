@@ -332,6 +332,11 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	node2Ptr		= node[0x08 - m_offset];
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 
+	// seems to indicate second link is invalid (fixes circular references)
+	if ((node[0x00] & 0x07) != 0x06) {
+		DescendNodePtr(node2Ptr);
+	}
+
 	x = *(float *)&node[0x04 - m_offset];	// magic numbers everywhere !
 	y = *(float *)&node[0x05 - m_offset];
 	z = *(float *)&node[0x06 - m_offset];
@@ -383,11 +388,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// Proceed to second link
 	m_modelMat.PopMatrix();
-
-	// seems to indicate second link is invalid (fixes circular references)
-	if ((node[0x00] & 0x07) != 0x06) {
-		DescendNodePtr(node2Ptr);
-	}
 
 	// Restore old texture offsets
 	m_nodeAttribs.Pop();
