@@ -203,7 +203,6 @@ private:
 	TextureSheet	m_texSheet;
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
-	int				m_listDepth;
 
 	std::vector<Node> m_nodes;				// this represents the entire render frame
 	std::vector<Poly> m_polyBufferRam;		// dynamic polys

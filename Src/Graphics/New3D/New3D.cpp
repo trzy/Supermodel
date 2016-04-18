@@ -405,7 +405,7 @@ void CNew3D::DescendNodePtr(UINT32 nodeAddr)
 	case 0x00:	// culling node
 		DescendCullingNode(nodeAddr & 0xFFFFFF);
 		break;
-	case 0x01:	// model (perhaps bit 1 is a flag in this case?)
+	case 0x01:	// model (perhaps bit 2 is a flag in this case?)
 	case 0x03:
 		DrawModel(nodeAddr & 0xFFFFFF);
 		break;
@@ -424,19 +424,12 @@ void CNew3D::DescendPointerList(UINT32 addr)
 	UINT32			nodeAddr;
 	int				index;
 
-	if (m_listDepth > 2) {	// several Step 2.1 games require this safeguard
-		return;
-	}
-
 	list = TranslateCullingAddress(addr);
 
 	if (NULL == list) {
 		return;
 	}
 
-	m_listDepth++;
-
-	// Traverse the list forward and print it out
 	index = 0;
 
 	while (true) {
@@ -455,25 +448,6 @@ void CNew3D::DescendPointerList(UINT32 addr)
 
 		index++;
 	}
-
-	/*
-	// Traverse the list backward and descend into each pointer
-	while (index >= 0)
-	{
-		nodeAddr = list[index] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
-
-		if (!(list[index] & 0x01000000)) {	//Fighting Vipers
-			
-			if ((nodeAddr != 0) && (nodeAddr != 0x800800)) {
-				DescendCullingNode(nodeAddr);
-			}
-		}
-
-		index--;
-	}
-	*/
-
-	m_listDepth--;
 }
 
 
@@ -757,8 +731,6 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		if ((m13>1.05) || (m13<0.95))
 			return;
 	}
-
-	m_listDepth = 0;
 
 	// Descend down the node link: Use recursive traversal
 	DescendNodePtr(nodeAddr);
