@@ -157,10 +157,8 @@ void CNew3D::RenderFrame(void)
 	glEnable		(GL_CULL_FACE);
 	glFrontFace		(GL_CW);
 
-	for (int pri = 0; pri <= 3; pri++) {
-		RenderViewport(0x800000, pri);		// build model structure
-	}
-
+	RenderViewport(0x800000);		// build model structure
+	
 	m_vbo.Bind(true);
 	m_vbo.BufferSubData(MAX_ROM_POLYS*sizeof(Poly), m_polyBufferRam.size()*sizeof(Poly), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
 
@@ -386,7 +384,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		DescendNodePtr(node1Ptr);
 	}
 
-	// Proceed to second link
 	m_modelMat.PopMatrix();
 
 	// Restore old texture offsets
@@ -542,7 +539,7 @@ void CNew3D::InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat)
 }
 
 // Draws viewports of the given priority
-void CNew3D::RenderViewport(UINT32 addr, int pri)
+void CNew3D::RenderViewport(UINT32 addr)
 {
 	GLfloat	color[8][3] =	// RGB1 translation
 	{
@@ -570,22 +567,13 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 		return;
 	}
 
-	curPri		= (vpnode[0x00] >> 3) & 3;	// viewport priority
-	nextAddr	= vpnode[0x01] & 0xFFFFFF;	// next viewport
-	nodeAddr	= vpnode[0x02];				// scene database node pointer
-
-	// Recursively process next viewport
 	if (vpnode[0x01] == 0) {				// memory probably hasn't been set up yet, abort
 		return;
 	}
-	if (vpnode[0x01] != 0x01000000) {
-		RenderViewport(vpnode[0x01], pri);
-	}
 
-	// If the priority doesn't match, do not process
-	if (curPri != pri) {
-		return;
-	}
+	curPri		= (vpnode[0x00] >> 3) & 3;	// viewport priority
+	nextAddr	= vpnode[0x01] & 0xFFFFFF;	// next viewport
+	nodeAddr	= vpnode[0x02];				// scene database node pointer
 
 	// create node object 
 	m_nodes.emplace_back(Node());
@@ -594,7 +582,7 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 	// get pointer to its viewport
 	vp = &m_nodes.back().viewport;
 
-	vp->priority = pri;
+	vp->priority = curPri;
 
 	// Fetch viewport parameters (TO-DO: would rounding make a difference?)
 	vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
@@ -734,6 +722,11 @@ void CNew3D::RenderViewport(UINT32 addr, int pri)
 
 	// Descend down the node link: Use recursive traversal
 	DescendNodePtr(nodeAddr);
+
+	// render next viewport
+	if (vpnode[0x01] != 0x01000000) {
+		RenderViewport(vpnode[0x01]);
+	}
 }
 
 void CNew3D::CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray)

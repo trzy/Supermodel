@@ -164,7 +164,7 @@ private:
 	void DescendCullingNode(UINT32 addr);
 	void DescendPointerList(UINT32 addr);
 	void DescendNodePtr(UINT32 nodeAddr);
-	void RenderViewport(UINT32 addr, int pri);
+	void RenderViewport(UINT32 addr);
 
 	// building the scene
 	void CacheModel(Model *m, const UINT32 *data);
