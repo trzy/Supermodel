@@ -3,7 +3,7 @@
 
 namespace New3D {
 
-static char *vertexShaderBasic =
+static const char *vertexShaderBasic =
 
 // uniforms
 "uniform float	fogIntensity;\n"
@@ -31,7 +31,7 @@ static char *vertexShaderBasic =
 	"gl_Position	= gl_ModelViewProjectionMatrix * gl_Vertex;\n"
 "}\n";
 
-static char *fragmentShaderBasic =
+static const char *fragmentShaderBasic =
 
 "uniform sampler2D tex;\n"
 "uniform int	textureEnabled;\n"
@@ -59,18 +59,16 @@ static char *fragmentShaderBasic =
 
 	"texData = vec4(1.0, 1.0, 1.0, 1.0);\n"
 
-	"if(textureEnabled==1) {\n"
+	// Done this way because some older GPUs have difficulty with nested if-
+	// statements (e.g., NVS 300)
+	"if (textureEnabled == 1) {\n"
 		"texData = texture2D( tex, gl_TexCoord[0].st);\n"
-
-		"if (alphaTest==1) {\n"			// does it make any sense to do this later?
-			"if (texData.a < (8.0/16.0)) {\n"
-				"discard;\n"
-			"}\n"
-		"}\n"
-
-		"if (textureAlpha == 0) {\n"
-			"texData.a = 1.0;\n"
-		"}\n"
+	"}\n"
+	"if (textureEnabled == 1 && alphaTest == 1 && texData.a < (8.0/16.0)) {\n"
+		"discard;\n"
+	"}\n"
+	"if (textureEnabled == 1 && textureAlpha == 0) {\n"
+		"texData.a = 1.0;\n"
 	"}\n"
 
 	"colData =  gl_Color;\n"
