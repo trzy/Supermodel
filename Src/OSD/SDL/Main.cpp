@@ -615,18 +615,16 @@ static void LogConfig(void)
  Different subsystems output their own blocks.
 ******************************************************************************/
 
-#define STATE_FILE_VERSION  1 // save state file version
-#define NVRAM_FILE_VERSION  0 // NVRAM file version
-
-static unsigned saveSlot = 0; // save state slot #
+static const int STATE_FILE_VERSION = 2;  // save state file version
+static const int NVRAM_FILE_VERSION = 0;  // NVRAM file version
+static unsigned s_saveSlot = 0;           // save state slot #
 
 static void SaveState(CModel3 *Model3)
 {
   CBlockFile  SaveState;
-  char    filePath[24];
-  int     fileVersion = STATE_FILE_VERSION;
   
-  sprintf(filePath, "Saves/%s.st%d", Model3->GetGameInfo()->id, saveSlot);
+  char filePath[24];
+  sprintf(filePath, "Saves/%s.st%d", Model3->GetGameInfo()->id, s_saveSlot);
   if (OKAY != SaveState.Create(filePath, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save state to '%s'.", filePath);
@@ -634,6 +632,7 @@ static void SaveState(CModel3 *Model3)
   }
   
   // Write file format version and ROM set ID to header block 
+  int32_t fileVersion = STATE_FILE_VERSION;
   SaveState.Write(&fileVersion, sizeof(fileVersion));
   SaveState.Write(Model3->GetGameInfo()->id, strlen(Model3->GetGameInfo()->id)+1);
   
@@ -647,11 +646,10 @@ static void SaveState(CModel3 *Model3)
 static void LoadState(CModel3 *Model3)
 {
   CBlockFile  SaveState;
-  char    filePath[24];
-  int     fileVersion;
   
   // Generate file path
-  sprintf(filePath, "Saves/%s.st%d", Model3->GetGameInfo()->id, saveSlot);
+  char filePath[24];
+  sprintf(filePath, "Saves/%s.st%d", Model3->GetGameInfo()->id, s_saveSlot);
   
   // Open and check to make sure format is correct
   if (OKAY != SaveState.Load(filePath))
@@ -666,6 +664,7 @@ static void LoadState(CModel3 *Model3)
     return;
   }
   
+  int32_t fileVersion;
   SaveState.Read(&fileVersion, sizeof(fileVersion));
   if (fileVersion != STATE_FILE_VERSION)
   {
@@ -683,9 +682,8 @@ static void LoadState(CModel3 *Model3)
 static void SaveNVRAM(CModel3 *Model3)
 {
   CBlockFile  NVRAM;
-  char    filePath[24];
-  int     fileVersion = NVRAM_FILE_VERSION;
   
+  char filePath[24];
   sprintf(filePath, "NVRAM/%s.nv", Model3->GetGameInfo()->id);
   if (OKAY != NVRAM.Create(filePath, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
   {
@@ -694,6 +692,7 @@ static void SaveNVRAM(CModel3 *Model3)
   }
   
   // Write file format version and ROM set ID to header block 
+  int32_t fileVersion = NVRAM_FILE_VERSION;
   NVRAM.Write(&fileVersion, sizeof(fileVersion));
   NVRAM.Write(Model3->GetGameInfo()->id, strlen(Model3->GetGameInfo()->id)+1);
   
@@ -706,10 +705,9 @@ static void SaveNVRAM(CModel3 *Model3)
 static void LoadNVRAM(CModel3 *Model3)
 {
   CBlockFile  NVRAM;
-  char    filePath[24];
-  int     fileVersion;
   
   // Generate file path
+  char filePath[24];
   sprintf(filePath, "NVRAM/%s.nv", Model3->GetGameInfo()->id);
   
   // Open and check to make sure format is correct
@@ -725,6 +723,7 @@ static void LoadNVRAM(CModel3 *Model3)
     return;
   }
   
+  int32_t fileVersion;
   NVRAM.Read(&fileVersion, sizeof(fileVersion));
   if (fileVersion != NVRAM_FILE_VERSION)
   {
@@ -1085,9 +1084,9 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
     else if (Inputs->uiChangeSlot->Pressed())
     {
       // Change save slot
-      ++saveSlot;
-      saveSlot %= 10; // clamp to [0,9]
-      printf("Save slot: %d\n", saveSlot);
+      ++s_saveSlot;
+      s_saveSlot %= 10; // clamp to [0,9]
+      printf("Save slot: %d\n", s_saveSlot);
     }
     else if (Inputs->uiLoadState->Pressed())
     {
