@@ -619,7 +619,7 @@ static const int STATE_FILE_VERSION = 2;  // save state file version
 static const int NVRAM_FILE_VERSION = 0;  // NVRAM file version
 static unsigned s_saveSlot = 0;           // save state slot #
 
-static void SaveState(CModel3 *Model3)
+static void SaveState(IEmulator *Model3)
 {
   CBlockFile  SaveState;
   
@@ -643,7 +643,7 @@ static void SaveState(CModel3 *Model3)
   DebugLog("Saved state to '%s'.\n", filePath);
 }
 
-static void LoadState(CModel3 *Model3)
+static void LoadState(IEmulator *Model3)
 {
   CBlockFile  SaveState;
   
@@ -679,7 +679,7 @@ static void LoadState(CModel3 *Model3)
   DebugLog("Loaded state from '%s'.\n", filePath);
 }
 
-static void SaveNVRAM(CModel3 *Model3)
+static void SaveNVRAM(IEmulator *Model3)
 {
   CBlockFile  NVRAM;
   
@@ -702,7 +702,7 @@ static void SaveNVRAM(CModel3 *Model3)
   DebugLog("Saved NVRAM to '%s'.\n", filePath);
 }
 
-static void LoadNVRAM(CModel3 *Model3)
+static void LoadNVRAM(IEmulator *Model3)
 {
   CBlockFile  NVRAM;
   
@@ -857,12 +857,11 @@ void EndFrameVideo()
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const char *zipFile, CModel3 *Model3, CInputs *Inputs, COutputs *Outputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
+int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
 {
 #else
-int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile *CmdLine)
+int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, CINIFile *CmdLine)
 {         
-  CModel3 *Model3 = new CModel3();
 #endif // SUPERMODEL_DEBUGGER
   unsigned  prevFPSTicks;
   unsigned  startTicks;
@@ -1244,7 +1243,11 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
     }
 
     if (dumpTimings && !paused)
-      Model3->DumpTimings();
+    {
+      CModel3 *M = dynamic_cast<CModel3 *>(Model3);
+      if (M)
+        M->DumpTimings();
+    }
   }
 
   // Make sure all threads are paused before shutting down
@@ -1265,20 +1268,14 @@ int Supermodel(const char *zipFile, CInputs *Inputs, COutputs *Outputs, CINIFile
   // Close audio
   CloseAudio();
 
-  // Shut down
-#ifndef SUPERMODEL_DEBUGGER
-  delete Model3;
-#endif // SUPERMODEL_DEBUGGER
+  // Shut down renderers
   delete Render2D;
   delete Render3D;
-  
+
   return 0;
 
   // Quit with an error
 QuitError:
-#ifndef SUPERMODEL_DEBUGGER
-  delete Model3;
-#endif // SUPERMODEL_DEBUGGER
   delete Render2D;
   delete Render3D;
   return 1;
@@ -1750,13 +1747,15 @@ int main(int argc, char **argv)
     return 1;
   }
   
+  // Create Model 3 emulator
+  IEmulator *Model3 = new CModel3();
+  
   // Create input system (default is SDL) and debugger
   CInputSystem *InputSystem = NULL;
   CInputs *Inputs = NULL;
   COutputs *Outputs = NULL;
   int exitCode = 0;
 #ifdef SUPERMODEL_DEBUGGER
-  CModel3 *Model3 = NULL;
   Debugger::CSupermodelDebugger *Debugger = NULL;
 #endif // SUPERMODEL_DEBUGGER
 
@@ -1839,8 +1838,6 @@ int main(int argc, char **argv)
   }
 
 #ifdef SUPERMODEL_DEBUGGER
-  // Create Model3
-  Model3 = new CModel3();
   // Create Supermodel debugger unless debugging is disabled
   if (!g_Config.disableDebugger)
   {
@@ -1850,14 +1847,14 @@ int main(int argc, char **argv)
       Debugger->ForceBreak(true);
   }
   // Fire up Supermodel with debugger
-  exitCode = Supermodel(argv[fileIdx],Model3,Inputs,Outputs,Debugger,&CmdLine);
+  exitCode = Supermodel(argv[fileIdx], Model3, Inputs, Outputs, Debugger, &CmdLine);
   if (Debugger != NULL)
     delete Debugger;
-  delete Model3;
 #else
   // Fire up Supermodel
-  exitCode = Supermodel(argv[fileIdx],Inputs,Outputs,&CmdLine);
+  exitCode = Supermodel(argv[fileIdx], Model3, Inputs, Outputs, &CmdLine);
 #endif // SUPERMODEL_DEBUGGER
+  delete Model3;
 
 Exit:
   if (Inputs != NULL)
