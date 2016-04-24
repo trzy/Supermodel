@@ -57,6 +57,10 @@
 #include "WinOutputs.h"
 #endif
 
+#ifdef DEBUG
+#include "Model3/Model3GraphicsState.h"
+#endif
+
 
 /******************************************************************************
  Error and Debug Logging
@@ -1487,21 +1491,12 @@ int main(int argc, char **argv)
   bool cmdPrintInputs = false;
   bool cmdConfigInputs = false;
   bool cmdDis = false;
+  std::string gfxStatePath;
   CINIFile CmdLine; // not associated with any files, only holds command line options
   CmdLine.SetDefaultSectionName("Global");  // command line settings are global-level
   for (int i = 1; i < argc; i++)
   {
-    if (!strcmp(argv[i], "-new3d"))
-    {
-      unsigned n = 1;
-      CmdLine.Set("Global", "New3DEngine", n);
-    }
-    else if (!strcmp(argv[i], "-legacy3d"))
-    {
-      unsigned n = 0;
-      CmdLine.Set("Global", "New3DEngine", n);
-    }
-    else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-?") || !strcmp(argv[i], "-help") || !strcmp(argv[i], "--help"))
+    if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-?") || !strcmp(argv[i], "-help") || !strcmp(argv[i], "--help"))
     {
       Help();
       return 0;
@@ -1661,6 +1656,16 @@ int main(int argc, char **argv)
       else
         CmdLine.Set("Global", "Crosshairs", x);
     }
+    else if (!strcmp(argv[i], "-new3d"))
+    {
+      unsigned n = 1;
+      CmdLine.Set("Global", "New3DEngine", n);
+    }
+    else if (!strcmp(argv[i], "-legacy3d"))
+    {
+      unsigned n = 0;
+      CmdLine.Set("Global", "New3DEngine", n);
+    }
     else if (!strncmp(argv[i], "-vert-shader", 12))
     {
       if (argv[i][12] == '\0')
@@ -1729,6 +1734,19 @@ int main(int argc, char **argv)
       PrintGLInfo(true, false, false);
       return 0;
     }
+#ifdef DEBUG
+    else if (!strncmp(argv[i], "-gfx-state", 10))
+    {
+      if (argv[i][10] == '\0')
+        ErrorLog("'-gfx-state' requires a file path.");
+      else if (argv[i][10] != '=')
+        ErrorLog("Ignoring unrecognized option: %s", argv[i]);
+      else if (argv[i][10] == '\0')
+        ErrorLog("'-gfx-state' requires a file path.");
+      else
+        gfxStatePath.assign(&argv[i][11]);
+    }
+#endif
     else if (argv[i][0] == '-')
       ErrorLog("Ignoring unrecognized option: %s", argv[i]);
     else
@@ -1748,7 +1766,11 @@ int main(int argc, char **argv)
   }
   
   // Create Model 3 emulator
+#ifdef DEBUG
+  IEmulator *Model3 = gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3()) : static_cast<IEmulator *>(new CModel3GraphicsState(gfxStatePath));
+#else
   IEmulator *Model3 = new CModel3();
+#endif
   
   // Create input system (default is SDL) and debugger
   CInputSystem *InputSystem = NULL;
