@@ -879,9 +879,9 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
       P.Vert[j].x = (GLfloat) (((INT32)ix)>>8) * vertexFactor;
       P.Vert[j].y = (GLfloat) (((INT32)iy)>>8) * vertexFactor;
       P.Vert[j].z = (GLfloat) (((INT32)iz)>>8) * vertexFactor;
-      P.Vert[j].n[0] = P.n[0]+(GLfloat)(INT8)(ix&0xFF); // vertex normals are offset from polygon normal
-      P.Vert[j].n[1] = P.n[1]+(GLfloat)(INT8)(iy&0xFF);
-      P.Vert[j].n[2] = P.n[2]+(GLfloat)(INT8)(iz&0xFF);
+      P.Vert[j].n[0] = (GLfloat)(INT8)(ix&0xFF);
+      P.Vert[j].n[1] = (GLfloat)(INT8)(iy&0xFF);
+      P.Vert[j].n[2] = (GLfloat)(INT8)(iz&0xFF);
       P.Vert[j].u = (GLfloat) ((UINT16)(it>>16)) * uvScale; // TO-DO: might these be signed?
       P.Vert[j].v = (GLfloat) ((UINT16)(it&0xFFFF)) * uvScale;
       data += 4;
