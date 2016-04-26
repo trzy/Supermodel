@@ -896,9 +896,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[j].pos[1] = (GLfloat)(((INT32)iy) >> 8) * m_vertexFactor;
 			p.v[j].pos[2] = (GLfloat)(((INT32)iz) >> 8) * m_vertexFactor;
 
-			p.v[j].normal[0] = p.faceNormal[0] + (GLfloat)(INT8)(ix & 0xFF);	// vertex normals are offset from polygon normal - we can normalise them in the shader
-			p.v[j].normal[1] = p.faceNormal[1] + (GLfloat)(INT8)(iy & 0xFF);
-			p.v[j].normal[2] = p.faceNormal[2] + (GLfloat)(INT8)(iz & 0xFF);
+			p.v[j].normal[0] = (INT8)(ix & 0xFF) / 128.f;
+			p.v[j].normal[1] = (INT8)(iy & 0xFF) / 128.f;
+			p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
 
 			if ((ph.header[1] & 2) == 0) {
 				UINT32 colorIdx = ((ph.header[4] >> 8) & 0x7FF);
@@ -906,8 +906,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].color[1] = (m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF;
 				p.v[j].color[0] = (m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF;
 			}
-			else if (ph.FixedShading()) {
-				UINT8 shade = ph.ShadeValue();
+			else if (0 /* fixed shading bit as of yet unknown */) {
+				UINT8 shade = (UINT8)((ix & 0xFF) + 128);
 				p.v[j].color[0] = shade;
 				p.v[j].color[1] = shade;
 				p.v[j].color[2] = shade;

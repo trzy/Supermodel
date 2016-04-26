@@ -118,7 +118,6 @@ public:
 	bool	AlphaTest();
 	UINT8	Transparency();			// 0-255
 	bool	FixedShading();
-	UINT8	ShadeValue();
 	bool	PolyAlpha();
 	bool	TextureAlpha();
 	bool	StencilPoly();

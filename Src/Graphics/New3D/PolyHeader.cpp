@@ -255,11 +255,6 @@ bool PolyHeader::FixedShading()
 	return (header[6] & 0x2000000) > 0;
 }
 
-UINT8 PolyHeader::ShadeValue()
-{
-	return (UINT8)(((header[6] >> 26) & 0x1F) * (255.f / 0x1F));
-}
-
 bool PolyHeader::PolyAlpha()
 {
 	return (header[6] & 0x00800000) == 0;
