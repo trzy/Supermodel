@@ -30,7 +30,7 @@
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  * 0 | S | S | S | S | S | S |ID?|ID?|ID?|ID?| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID|   |   | SC|TYP|   |   |LNK|LNK|LNK|LNK|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 1 | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X |   |TCF|   |   |   |END|COL|   |
+ * 1 | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X |   |TCF|   |DBL|   |END|COL|   |
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  * 2 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |   |   |   |   |   |   |RPX|RPY|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
@@ -52,6 +52,7 @@
  *  Y   Normal Y              
  *  Z   Normal Z              
  *  TCF Tex. Coord. Format    0 = 13.3 unsigned fixed-point, 1 = unsigned 16 bits
+ *  DBL Double-sided          0 = Single-sided polygon, 1 = Double-sided
  *  END Model End             1 = Last polygon in model
  *  COL Polygon Color Format  0 = Palette-based (P, Q), 1 = RGB
  *  RPX Texture X Repeat      0 = Wrap, 1 = Mirror
