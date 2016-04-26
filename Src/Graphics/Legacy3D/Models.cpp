@@ -24,10 +24,56 @@
  *
  * Model parsing, caching, and drawing.
  *
+ * Polygon header bits:
+ *
+ *    31  30  29  28  27  26  25  24  23  22  21  20  19  18  17  16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 0 | S | S | S | S | S | S |ID?|ID?|ID?|ID?| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID|   |   | SC|TYP|   |   |LNK|LNK|LNK|LNK|
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 1 | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X |   |TCF|   |   |   |END|COL|   |
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 2 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |   |   |   |   |   |   |RPX|RPY|
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 3 | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z |   |   |TXW|TXW|TXW|TXH|TXH|TXH|
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 4 |?/R|P/R|P/R|P/R|P/R|P/R|P/R|P/R|P/G|P/G|P/G|P/G|?/G|Q/G|Q/G|Q/G|Q/B|Q/B|Q/B|Q/B|Q/B|Q/B|Q/B|Q/B|   | TP|   | TX| TX| TX| TX| TX|
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 5 |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | TX|   |   | TY| TY| TY| TY| TY|
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ * 6 |TRN|   |   |   |   |   |   |   |OPQ| TL| TL| TL| TL| TL|   |LUM|FOG|FOG|FOG|FOG|FOG|TEN|TFM|TFM|TFM|   |   |   |   |   |   |   |
+ *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+ *
+ *  S   6-bit Field           Unknown purpose
+ *  ID  Identification        A numerical identifier of unknown purpose that increments for each polygon in the model
+ *  SC  6-bit Field Control   Related to the 6-bit field
+ *  TYP Polygon Type          0 = Triangle, 1 = Quad
+ *  LNK Link                  Strip link information
+ *  X   Normal X              Lighting normal X component (2.22 fixed-point)
+ *  Y   Normal Y              
+ *  Z   Normal Z              
+ *  TCF Tex. Coord. Format    0 = 13.3 unsigned fixed-point, 1 = unsigned 16 bits
+ *  END Model End             1 = Last polygon in model
+ *  COL Polygon Color Format  0 = Palette-based (P, Q), 1 = RGB
+ *  RPX Texture X Repeat      0 = Wrap, 1 = Mirror
+ *  RPY Texture Y Repeat      
+ *  TXW Texture Width         000 = 32, 001 = 64, 010 = 128, 011 = 256, 100 = 512
+ *  TXH Texture Height        
+ *  R   Red                   Red component of untextured polygon color
+ *  G   Green                 
+ *  B   Blue                  
+ *  TP  Texture Page          0 = First 2048x1024 page, 1 = Second page
+ *  TX  Texture X             Texture X position within page in units of 32 pixels
+ *  TY  Texture Y             Texture Y position within page in units of 32 pixels
+ *  TRN Transparency          0 = No transparency, 1 = Process A1RGB5 pixels with A set as transparent (does it affect RGBA4 textures?)
+ *  TEN Texture Enable        0 = Do not texture, 1 = Texture
+ *  OPQ Opaque                0 = Polygon is translucent (32 levels of transparency), 1 = Polygon is opaque
+ *  TL  Transparency Level    32 levels of transparency
+ *  LUM Luminous              0 = Lighting enabled, 1 = Lighting disabled (luminous)
+ *  FOG Fog Attenuation       Effect of fog on luminous polygons (0 = full fog effect, 31 = no fog). "SetLightModifier()" in API docs.
+ *  TFM Texture Format
+ *
  * TO-DO List:
  * -----------
- * - If vertex normals aren't offset from polygon normals, would that improve
- *   specular lighting?
  * - More should be predecoded into the polygon structures, so that things like
  *   texture base coordinates are not re-decoded in two different places!
  */
@@ -361,8 +407,7 @@ void CLegacy3D::ClearDisplayList(ModelCache *Cache)
 void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, float normFlip)
 {
   // Texture selection
-unsigned texEnable = P->header[6]&0x400;
-//  unsigned  texEnable = P->header[6]&0x04000000;
+  unsigned  texEnable = P->header[6]&0x400;
   unsigned  texFormat = (P->header[6]>>7)&7;
   GLfloat   texWidth  = (GLfloat) (32<<((P->header[3]>>3)&7));
   GLfloat   texHeight = (GLfloat) (32<<((P->header[3]>>0)&7));
