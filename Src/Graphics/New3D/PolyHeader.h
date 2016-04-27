@@ -39,10 +39,10 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed poin
 
 0x04: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Color(RGB888)
+-------- -------- -------- x-------		Color disabled
 -------- -------- -------- -x------		Texture page
--------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
--------- -------- -------- x-------		?
 -------- -------- -------- --x-----		?
+-------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
 
 0x05 : 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Specular color ?
@@ -105,6 +105,7 @@ public:
 
 	//header 4
 	void	Color(UINT8& r, UINT8& g, UINT8& b);
+	bool	ColorDisabled();
 	int		Page();
 
 	// header 5

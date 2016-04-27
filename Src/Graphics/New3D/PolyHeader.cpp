@@ -181,6 +181,11 @@ void PolyHeader::Color(UINT8& r, UINT8& g, UINT8& b)
 	b = (header[4] >> 8) & 0xFF;
 }
 
+bool PolyHeader::ColorDisabled()
+{
+	return (header[4] & 0x80) > 0;
+}
+
 int	PolyHeader::Page()
 {
 	return (header[4] & 0x40) >> 6;
@@ -262,7 +267,7 @@ bool PolyHeader::PolyAlpha()
 
 bool PolyHeader::TextureAlpha()
 {
-	return (header[6] & 0x1);
+	return (header[6] & 0x3) > 0;
 }
 
 bool PolyHeader::StencilPoly()

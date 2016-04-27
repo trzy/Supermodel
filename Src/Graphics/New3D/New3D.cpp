@@ -913,9 +913,16 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].color[2] = shade;
 			}
 			else {
-				p.v[j].color[0] = (ph.header[4] >> 24);
-				p.v[j].color[1] = (ph.header[4] >> 16) & 0xFF;
-				p.v[j].color[2] = (ph.header[4] >> 8) & 0xFF;
+				if (ph.ColorDisabled()) {		// no colours were set
+					p.v[j].color[0] = 255;
+					p.v[j].color[1] = 255;
+					p.v[j].color[2] = 255;
+				}
+				else {
+					p.v[j].color[0] = (ph.header[4] >> 24);
+					p.v[j].color[1] = (ph.header[4] >> 16) & 0xFF;
+					p.v[j].color[2] = (ph.header[4] >> 8) & 0xFF;
+				}
 			}
 
 			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
