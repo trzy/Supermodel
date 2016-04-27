@@ -84,7 +84,7 @@ static const char s_polyAnalysisHTMLEpilogue[] =
   "          var td = $('<td></td>');\n"
   "          if (g_unknown_bits[word] & mask)\n"
   "            td.addClass('selectable').click(getOnClickHandler(table, td, word, mask));\n"
-  "          else"
+  "          else\n"
   "            td.addClass('nonselectable');\n"
   "          tr.append(td);\n"
   "        }\n"
