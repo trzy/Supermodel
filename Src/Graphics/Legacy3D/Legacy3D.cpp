@@ -162,6 +162,11 @@
 #include <cmath>
 #include <cstdint>
 
+#ifdef DEBUG
+extern bool g_forceFlushModels;
+#endif
+
+
 namespace Legacy3D {
 
 // Microsoft doesn't provide isnan() and isinf()
@@ -989,7 +994,10 @@ void CLegacy3D::RenderFrame(void)
   if (fogIntensityLoc != -1) glEnableVertexAttribArray(fogIntensityLoc);
   
   // Draw
-  //ClearModelCache(&VROMCache);  // only enable this for debugging
+#ifdef DEBUG
+  if (g_forceFlushModels)
+    ClearModelCache(&VROMCache);
+#endif
   ClearModelCache(&PolyCache);
   for (int pri = 0; pri <= 3; pri++)
   {

@@ -83,6 +83,12 @@
 #include <cstring>
 #include "Supermodel.h"
 
+#ifdef DEBUG
+extern int g_testPolyHeaderIdx;
+extern uint32_t g_testPolyHeaderMask;
+#endif
+
+
 namespace Legacy3D {
 
 /******************************************************************************
@@ -545,32 +551,6 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   if (!(P->header[0]&0x80) || (shininess == 0)) // bit 0x80 seems to enable specular lighting
     shininess = -1; // disable
 
-#if 0 
-  if (texFormat==5)//texFormat==6||texFormat==2)
-  {
-    //printf("%03X\n", P->header[4]>>8);
-    //texEnable=0;
-    g=b=1.0;
-    r=1.0f;
-  }
-#endif
-#if 0
-  int testWord = 0;
-  int testBit = 7;
-  //if ((P->header[testWord]&(1<<testBit)))
-  if (((P->header[0]>>24) & 0x3) != 0)
-  //if (!((P->header[0]>>26) & 0x3F) && (P->header[0]&0x80))
-  {
-    texEnable = 0;
-    r=b=0;
-    g=1.0f;
-    g = ((P->header[0]>>26)&0x3F) * (1.0f/64.0f);
-    //if (!lightEnable)
-    //  b=1.0f;
-    lightEnable=0;
-  }
-#endif
-
   // Determine whether polygon is translucent
   GLfloat translucence = (GLfloat) ((P->header[6]>>18)&0x1F) * (1.0f/31.0f);
   if ((P->header[6]&0x00800000))  // if set, polygon is opaque
@@ -594,6 +574,24 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     ((texFormat==1) && (P->header[6]&2)) ||     // A4L4 interleaved (these formats are not being interpreted correctly, see Scud Race clock tower)
     ((texFormat==3) && (P->header[6]&4)))     // A4L4 interleaved
     contourProcessing = 1.0f;
+
+#ifdef DEBUG
+  if (g_testPolyHeaderIdx >= 0)
+  {
+    if ((P->header[g_testPolyHeaderIdx] & g_testPolyHeaderMask))
+    {
+      r = 0.;
+      g = 1.;
+      b = 0.;
+      lightEnable = 0;
+      texEnable = 0;
+      contourProcessing = 0.;
+      fogIntensity = 0.;
+      translucence = 1.;
+      shininess = -1;
+    }
+  }
+#endif
 
   // Store to local vertex buffer
   size_t s = P->state;

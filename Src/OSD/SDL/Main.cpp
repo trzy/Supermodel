@@ -43,6 +43,8 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdarg>
+#include <memory>
+#include <vector>
 #include "Pkgs/glew.h"
 #ifdef SUPERMODEL_OSX
 #include <SDL/SDL.h>
@@ -51,14 +53,11 @@
 #endif
 
 #include "Supermodel.h"
+#include "Util/Format.h"
 #include "SDLInputSystem.h"
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
 #include "WinOutputs.h"
-#endif
-
-#ifdef DEBUG
-#include "Model3/Model3GraphicsState.h"
 #endif
 
 
@@ -411,6 +410,88 @@ static void DumpPPCRegisters(IBus *bus)
   }
   */
 }
+#endif
+
+
+/******************************************************************************
+ Render State Analysis
+******************************************************************************/
+
+#ifdef DEBUG
+
+#include "Model3/Model3GraphicsState.h"
+#include "Util/BMPFile.h"
+#include "OSD/SDL/PolyAnalysis.h"
+
+static void SaveFrameBuffer(const std::string &file)
+{
+  std::shared_ptr<uint8_t> pixels(new uint8_t[totalXRes*totalYRes*4], std::default_delete<uint8_t[]>());
+  glReadPixels(0, 0, totalXRes, totalYRes, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
+  Util::WriteRGBA8SurfaceToBMP(file, pixels.get(), totalXRes, totalYRes, true);
+}
+
+bool g_forceFlushModels = false;
+int g_testPolyHeaderIdx = -1;
+uint32_t g_testPolyHeaderMask = 0;
+static std::string s_gfxStatePath;
+  
+static std::string GetFileBaseName(const std::string &file)
+{
+  std::string base = file;
+  size_t pos = file.find_last_of('/');
+  if (pos != std::string::npos)
+    base = file.substr(pos + 1);
+  pos = file.find_last_of('\\');
+  if (pos != std::string::npos)
+    base = file.substr(pos + 1);
+  return base;
+}
+
+static void TestPolygonHeaderBits(IEmulator *Emu)
+{
+  const static std::vector<uint32_t> unknownPolyBits
+  {
+    0x000003b0, // not sure about specular
+    0x000000a9,
+    0x000000fc,
+    0x000000c0,
+    0x000000a0,
+    0xffffff60,
+    0xff8200ff  // not sure about contour and luminous
+  };
+  // Render separate image for each unknown bit
+  g_forceFlushModels = true;
+  for (int idx = 0; idx < 7; idx++)
+  {
+    for (int bit = 0; bit < 32; bit++)
+    {
+      uint32_t mask = 1 << bit;
+      g_testPolyHeaderIdx = idx;
+      g_testPolyHeaderMask = mask;
+      if ((unknownPolyBits[idx] & mask))
+      {
+        Emu->RenderFrame();
+        std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        SaveFrameBuffer(file);
+      }
+    }
+  }
+  // Generate the HTML GUI
+  std::string file = Util::Format() << "Analysis/_" << GetFileBaseName(s_gfxStatePath) << ".html";
+  std::ofstream fs(file);  
+  if (!fs.good())
+    ErrorLog("Unable to open '%s' for writing.", file.c_str());
+  else
+  {
+    std::string contents = s_polyAnalysisHTMLPrologue;
+    contents += "    var g_file_base_name = '" + GetFileBaseName(s_gfxStatePath) + "';\n";  
+    contents += "    var g_unknown_bits = [" + std::string(Util::Format(",").Join(unknownPolyBits)) + "];\n";
+    contents += s_polyAnalysisHTMLEpilogue;
+    fs << contents;
+    printf("Produced %s\n", file.c_str());
+  }
+}
+
 #endif
 
 
@@ -951,6 +1032,13 @@ int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs
   quit = false;
   paused = false;
   dumpTimings = false;
+#ifdef DEBUG
+  if (dynamic_cast<CModel3GraphicsState *>(Model3))
+  {
+    TestPolygonHeaderBits(Model3);
+    quit = true;
+  }
+#endif
   while (!quit)
   {
     // Render if paused, otherwise run a frame
@@ -1491,7 +1579,6 @@ int main(int argc, char **argv)
   bool cmdPrintInputs = false;
   bool cmdConfigInputs = false;
   bool cmdDis = false;
-  std::string gfxStatePath;
   CINIFile CmdLine; // not associated with any files, only holds command line options
   CmdLine.SetDefaultSectionName("Global");  // command line settings are global-level
   for (int i = 1; i < argc; i++)
@@ -1744,7 +1831,7 @@ int main(int argc, char **argv)
       else if (argv[i][10] == '\0')
         ErrorLog("'-gfx-state' requires a file path.");
       else
-        gfxStatePath.assign(&argv[i][11]);
+        s_gfxStatePath.assign(&argv[i][11]);
     }
 #endif
     else if (argv[i][0] == '-')
@@ -1767,7 +1854,7 @@ int main(int argc, char **argv)
   
   // Create Model 3 emulator
 #ifdef DEBUG
-  IEmulator *Model3 = gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3()) : static_cast<IEmulator *>(new CModel3GraphicsState(gfxStatePath));
+  IEmulator *Model3 = s_gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3()) : static_cast<IEmulator *>(new CModel3GraphicsState(s_gfxStatePath));
 #else
   IEmulator *Model3 = new CModel3();
 #endif
