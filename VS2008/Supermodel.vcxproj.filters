@@ -425,6 +425,9 @@
     <ClCompile Include="..\Src\Util\Format.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Util\BMPFile.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -779,6 +782,9 @@
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Util\Format.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Util\BMPFile.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
   </ItemGroup>
