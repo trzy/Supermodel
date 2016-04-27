@@ -15,12 +15,14 @@ namespace Util
     uint16_t reserved2;
     uint32_t bitmap_offset;
     BMPHeader(uint32_t _file_size, uint32_t _bitmap_offset)
-      : id{ 'B', 'M' },
-        file_size(_file_size),
+      : file_size(_file_size),
         reserved1(0),
         reserved2(0),
         bitmap_offset(_bitmap_offset)
-    {}  
+    {
+	  id[0] = 'B';
+	  id[1] = 'M';
+	}  
   };
   
   struct BMPInfoHeader
