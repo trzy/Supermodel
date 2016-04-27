@@ -23,7 +23,7 @@ static const char *vertexShaderBasic =
 	"viewVertex		= vec3(gl_ModelViewMatrix * gl_Vertex);\n"
 	"fsViewNormal	= normalize(gl_NormalMatrix*gl_Normal);\n"
 	"float z		= length(viewVertex);\n"
-	"fsFogFactor	= clamp(1.0 - fogIntensity*(fogStart + z*fogDensity), 0.0, 1.0);\n"
+	"fsFogFactor	= clamp(fogIntensity*(fogStart + z*fogDensity), 0.0, 1.0);\n"
 	"fsViewZ		= -viewVertex.z;\n"	// convert Z from GL->Real3D convention (want +Z to be further into screen)
 
 	"gl_FrontColor	= gl_Color;\n"
@@ -121,7 +121,7 @@ static const char *fragmentShaderBasic =
 	"finalData.rgb += vec3(fsSpecularTerm, fsSpecularTerm, fsSpecularTerm);\n"
 	*/
 
-	"finalData.rgb = mix(fogColour, finalData.rgb, fsFogFactor);\n"
+	"finalData.rgb = mix(finalData.rgb, fogColour, fsFogFactor);\n"
 
 	"gl_FragColor = finalData;\n"
 "}\n";
