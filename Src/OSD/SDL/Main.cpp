@@ -457,7 +457,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
     0x000000c0,
     0x000000a0,
     0xffffff60,
-    0xff8200ff  // not sure about contour and luminous
+    0xff0300ff  // not sure about contour and luminous
   };
   // Render separate image for each unknown bit
   g_forceFlushModels = true;
@@ -490,7 +490,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
     contents += "    var g_unknown_bits = [" + std::string(Util::Format(",").Join(unknownPolyBits)) + "];\n";
     contents += s_polyAnalysisHTMLEpilogue;
     fs << contents;
-    printf("Produced %s\n", file.c_str());
+    printf("Produced: %s\n", file.c_str());
   }
 }
 
