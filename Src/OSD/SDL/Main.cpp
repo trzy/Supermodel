@@ -459,6 +459,11 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
     0xffffff60,
     0xff0300ff  // not sure about contour and luminous
   };
+
+  GLint readBuffer;
+  glGetIntegerv(GL_READ_BUFFER, &readBuffer);
+  glReadBuffer(GL_FRONT);
+
   // Render separate image for each unknown bit
   g_forceFlushModels = true;
   for (int idx = 0; idx < 7; idx++)
@@ -471,13 +476,14 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
-        SDL_GL_SwapBuffers(); // swap the buffer second time to get back rendered frame
         std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
-        SDL_GL_SwapBuffers(); // show some visual feedback
       }
     }
   }
+
+  glReadBuffer(readBuffer);
+
   // Generate the HTML GUI
   std::string file = Util::Format() << "Analysis/_" << GetFileBaseName(s_gfxStatePath) << ".html";
   std::ofstream fs(file);  
