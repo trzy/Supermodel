@@ -471,8 +471,10 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
+        SDL_GL_SwapBuffers(); // swap the buffer second time to get back rendered frame
         std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
+        SDL_GL_SwapBuffers(); // show some visual feedback
       }
     }
   }
