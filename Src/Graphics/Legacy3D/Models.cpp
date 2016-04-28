@@ -535,6 +535,7 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
    *  - Fighting Vipers 2 shadows are not black anymore.
    *  - More to follow...
    */
+
   unsigned modulate = (step >= 0x20) ? !(P->header[4]&0x80) : (P->header[3]&0x80 && lightEnable);
   if (texEnable)
   {
@@ -542,6 +543,23 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     if (!modulate)
       r = g = b = 1.0f;
   }
+
+/*
+  int modulate = 0;//((P->header[5]>>22) & 1);
+  int fixedShading = ((P->header[5]>>23) & 1);
+  if (texEnable)
+  {
+    if (!modulate)
+      r = g = b = 1.0f;
+  }
+  if (fixedShading)
+  {
+    lightEnable = 0;
+    r = V->intensity;
+    g = V->intensity;
+    b = V->intensity;
+  }
+*/
 
   // Specular shininess
   int shininess = (P->header[0]>>26)&0x3F;
@@ -928,6 +946,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
       P.Vert[j].n[2] = (GLfloat)(INT8)(iz&0xFF);
       P.Vert[j].u = (GLfloat) ((UINT16)(it>>16)) * uvScale; // TO-DO: might these be signed?
       P.Vert[j].v = (GLfloat) ((UINT16)(it&0xFFFF)) * uvScale;
+      P.Vert[j].intensity = GLfloat((255 - (ix & 0xFF))) / 255.0;
       data += 4;
       
       // Normalize the vertex normal

@@ -50,9 +50,10 @@ enum POLY_STATE
 
 struct Vertex
 {
-	GLfloat	x,y,z;	// vertex
-	GLfloat	n[3];	// normal X, Y, Z
-	GLfloat	u,v;	// texture U, V coordinates (in texels, relative to selected texture)
+	GLfloat	x,y,z;	    // vertex
+	GLfloat	n[3];	      // normal X, Y, Z
+	GLfloat	u,v;	      // texture U, V coordinates (in texels, relative to selected texture)
+	GLfloat intensity;  // shading intensity (if using per-vertex fixed shading)
 };
 
 struct Poly
