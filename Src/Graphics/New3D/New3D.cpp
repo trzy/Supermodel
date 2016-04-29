@@ -906,12 +906,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].color[1] = (m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF;
 				p.v[j].color[0] = (m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF;
 			}
-			else if (0 /* fixed shading bit as of yet unknown */) {
-				UINT8 shade = (UINT8)((ix & 0xFF) + 128);
-				p.v[j].color[0] = shade;
-				p.v[j].color[1] = shade;
-				p.v[j].color[2] = shade;
-			}
 			else {
 				if (ph.ColorDisabled()) {		// no colours were set
 					p.v[j].color[0] = 255;
@@ -923,6 +917,14 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					p.v[j].color[1] = (ph.header[4] >> 16) & 0xFF;
 					p.v[j].color[2] = (ph.header[4] >> 8) & 0xFF;
 				}
+			}
+
+			if (ph.FixedShading() && ph.LightEnabled()) {
+				float shade = ((ix & 0xFF) + 128) / 255.f;
+				UINT8 colour = (UINT8)(p.v[j].color[0] * shade);	// green & blue values seem not to be valid
+				p.v[j].color[0] = colour;
+				p.v[j].color[1] = colour;
+				p.v[j].color[2] = colour;
 			}
 
 			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque

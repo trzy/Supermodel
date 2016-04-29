@@ -21,10 +21,11 @@ x------- -------- -------- --------		Specular enable
 0x01: 
 xxxxxxxx xxxxxxxx xxxxxxxx--------		Polygon normal X coordinate(2.22 fixed point)
 -------- -------- -------- -x------		UV scale (0 = 13.3, 1 = 16.0)
+-------- -------- -------- --x-----		Fixed shading (seems to only be enabled if lighting is enabled)
 -------- -------- -------- ---x----		1 = Double-sided polygon
 -------- -------- -------- -----x--		If set, this is the last polygon
 -------- -------- -------- ------x-		Poly color, 1 = RGB, 0 = color table
--------- -------- -------- x-x-x--x		?
+-------- -------- -------- x---x--x		?
 
 0x02: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Y coordinate(2.22 fixed point)
@@ -41,8 +42,8 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed poin
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Color(RGB888)
 -------- -------- -------- x-------		Color disabled
 -------- -------- -------- -x------		Texture page
--------- -------- -------- --x-----		?
 -------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
+-------- -------- -------- --x-----		?
 
 0x05 : 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Specular color ?
@@ -94,6 +95,7 @@ public:
 	bool	DoubleSided();
 	bool	LastPoly();
 	bool	PolyColor();	// if false uses LUT from ram
+	bool	FixedShading();
 
 	//header 2
 	bool	TexUMirror();
@@ -118,7 +120,6 @@ public:
 	bool	LightEnabled();
 	bool	AlphaTest();
 	UINT8	Transparency();			// 0-255
-	bool	FixedShading();
 	bool	PolyAlpha();
 	bool	TextureAlpha();
 	bool	StencilPoly();

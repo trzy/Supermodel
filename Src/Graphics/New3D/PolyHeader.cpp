@@ -144,6 +144,11 @@ bool PolyHeader::PolyColor()
 	return (header[1] & 2) > 0;
 }
 
+bool PolyHeader::FixedShading()
+{
+	return (header[1] & 0x20) > 0;
+}
+
 //
 // header 2
 //
@@ -253,11 +258,6 @@ bool PolyHeader::AlphaTest()
 UINT8 PolyHeader::Transparency()
 {
 	return (UINT8)(((header[6] >> 18) & 0x1F)  * 255.f / 0x1F);	
-}
-
-bool PolyHeader::FixedShading()
-{
-	return (header[6] & 0x2000000) > 0;
 }
 
 bool PolyHeader::PolyAlpha()
