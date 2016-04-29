@@ -26,6 +26,9 @@
  *
  * To Do Before Next Release
  * -------------------------
+ * - Check to make sure save states use explicitly-sized types for 32/64-bit
+ *   compatibility (i.e., size_t, int, etc. not allowed).
+ * - Make sure quitting while paused works.
  * - Add UI keys for balance setting? 
  * - 5.1 audio support?
  * - Stretch video option
