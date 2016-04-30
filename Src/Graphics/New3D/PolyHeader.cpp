@@ -267,7 +267,7 @@ bool PolyHeader::PolyAlpha()
 
 bool PolyHeader::TextureAlpha()
 {
-	return (header[6] & 0x3) > 0;
+	return (header[6] & 0x7) > 0;
 }
 
 bool PolyHeader::StencilPoly()
