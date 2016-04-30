@@ -920,11 +920,10 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 
 			if (ph.FixedShading() && ph.LightEnabled()) {
-				float shade = ((ix & 0xFF) + 128) / 255.f;
-				UINT8 colour = (UINT8)(p.v[j].color[0] * shade);	// green & blue values seem not to be valid
-				p.v[j].color[0] = colour;
-				p.v[j].color[1] = colour;
-				p.v[j].color[2] = colour;
+				float shade	= ((ix+128) & 0xFF) / 255.f;
+				p.v[j].color[0] = (UINT8)(p.v[j].color[0] * shade);
+				p.v[j].color[1] = (UINT8)(p.v[j].color[1] * shade);
+				p.v[j].color[2] = (UINT8)(p.v[j].color[2] * shade);
 			}
 
 			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
