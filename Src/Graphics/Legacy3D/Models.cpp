@@ -484,8 +484,6 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     g = (GLfloat) ((P->header[4]>>16)&0xFF) * (1.0f/255.0f);
     b = (GLfloat) ((P->header[4]>>8)&0xFF) * (1.0f/255.0f);
   }
-  
-  //GLfloat intensity = ((P->header[6]>>26)&0x1f) * (1.0/31.0f);  // intensity controlled by header[6]&0x02000000 ?
 
   /*
    * Color Modulation Observations
@@ -546,30 +544,21 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
 */
 
   /*
-   * Fixed per-vertex shading appears to only be active in LA Machineguns for
-   * polygons where bits 0x20 and 0x08 of word 1 are set to 1 and 0,
-   * respectively. Confirmed in both Scud Race and LA Machineguns that such
-   * polygons contain 0's in normal Y and Z component.
-   *
-   * Fixed shading appears to multiply the polygon color, else LA Machineguns
-   * enemy target reticles and Sega Rally 2 dust trails are mis-colored.
-   *
-   * This code is still not correct for Scud Race, although it illuminates the
-   * expert stage bridge battlements. 
-   *
-   * To-do: What is the significance of the two fixed shading bits? What are
-   * other possible settings for them? What if lighting already disabled?
+   * When fixed shading is enabled, header[1] & 0x08 == 0 (always?) Perhaps
+   * some combination of these two bits also selects between smooth and flat
+   * shading when fixed shading is off? Should check to see if 0x08 is the 
+   * flat shading bit.
    */
   int modulate = !(P->header[4] & 0x80);
-  int fixedShading = (P->header[1] & 0x20) && !(P->header[1] & 0x08);
+  int fixedShading = (P->header[1] & 0x20);// && !(P->header[1] & 0x08);
   if (texEnable)
   {
     if (!modulate)
       r = g = b = 1.0f;
   }
-  if (fixedShading)
+  if (fixedShading && lightEnable)
   {
-    lightEnable = 0;
+    //lightEnable = 0;  // is this needed?
     r *= V->intensity;
     g *= V->intensity;
     b *= V->intensity;
@@ -960,7 +949,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
       P.Vert[j].n[2] = (GLfloat)(INT8)(iz&0xFF);
       P.Vert[j].u = (GLfloat) ((UINT16)(it>>16)) * uvScale; // TO-DO: might these be signed?
       P.Vert[j].v = (GLfloat) ((UINT16)(it&0xFFFF)) * uvScale;
-      P.Vert[j].intensity = GLfloat((255 - (ix & 0xFF))) / 255.0;
+      P.Vert[j].intensity = GLfloat((ix + 128) & 0xFF) / 255.0; // signed (-0.5 -> black, +0.5 -> white)
       //if ((P.header[1] & 0x20) && !(P.header[1] & 0x08))
       //  printf("%02x %02x %02x\n", ix&0xff, iy&0xff, iz&0xff);
       data += 4;
