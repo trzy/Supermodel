@@ -837,7 +837,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->alphaTest		= ph.AlphaTest();
 				currentMesh->textureAlpha	= ph.TextureAlpha();
 				currentMesh->polyAlpha		= ph.PolyAlpha();
-				currentMesh->lighting		= ph.LightEnabled();
+				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
 
 				if (!ph.Luminous()) {
 					currentMesh->fogIntensity = 1.0f;
