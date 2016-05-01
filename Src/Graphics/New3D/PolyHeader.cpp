@@ -168,11 +168,24 @@ bool PolyHeader::TexVMirror()
 
 int	PolyHeader::TexWidth()
 {
-	return 32 << ((header[3] >> 3) & 7);
+	UINT32 w = (header[3] >> 3) & 7;
+
+	if (w >= 6) {
+		w = 0;
+	}
+
+	return 32 << w;
 }
+
 int	PolyHeader::TexHeight()
 {
-	return 32 << ((header[3] >> 0) & 7);
+	UINT32 h = (header[3] >> 0) & 7;
+
+	if (h >= 6) {
+		h = 0;	
+	}
+
+	return 32 << h;
 }
 
 //
