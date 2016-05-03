@@ -571,6 +571,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 		return;
 	}
 
+	if (vpnode[0]&0x20) {
+		goto next;							// skip this viewport	
+	}
+
 	curPri		= (vpnode[0x00] >> 3) & 3;	// viewport priority
 	nextAddr	= vpnode[0x01] & 0xFFFFFF;	// next viewport
 	nodeAddr	= vpnode[0x02];				// scene database node pointer
@@ -722,6 +726,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 	// Descend down the node link: Use recursive traversal
 	DescendNodePtr(nodeAddr);
+
+next:
 
 	// render next viewport
 	if (vpnode[0x01] != 0x01000000) {
