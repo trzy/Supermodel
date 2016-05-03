@@ -42,6 +42,7 @@
  */
 
 #include "Supermodel.h"
+#include "Util/BMPFile.h"
 #include <cstring>
 
 // Macros that divide memory regions into pages and mark them as dirty when they are written to
@@ -1109,6 +1110,7 @@ CReal3D::~CReal3D(void)
   }
   else
     printf("unable to dump %s\n", "texram");
+  Util::WriteSurfaceToBMP<Util::A1RGB5>("textures.bmp", reinterpret_cast<uint8_t *>(textureRAM), 2048, 2048, false);
 #endif
 
   Render3D = NULL;

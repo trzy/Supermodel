@@ -430,7 +430,7 @@ static void SaveFrameBuffer(const std::string &file)
 {
   std::shared_ptr<uint8_t> pixels(new uint8_t[totalXRes*totalYRes*4], std::default_delete<uint8_t[]>());
   glReadPixels(0, 0, totalXRes, totalYRes, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
-  Util::WriteRGBA8SurfaceToBMP(file, pixels.get(), totalXRes, totalYRes, true);
+  Util::WriteSurfaceToBMP<Util::RGBA8>(file, pixels.get(), totalXRes, totalYRes, true);
 }
 
 bool g_forceFlushModels = false;
