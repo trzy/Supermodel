@@ -1911,7 +1911,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
   SaveState->Read(&midiCtrlPort, sizeof(midiCtrlPort));
   int32_t securityFirstRead;
   SaveState->Write(&securityFirstRead, sizeof(securityFirstRead));
-  m_securityFirstRead = securityFirstRead;
+  m_securityFirstRead = securityFirstRead != 0;
   
   // All devices...
   GPU.LoadState(SaveState);

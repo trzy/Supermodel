@@ -74,7 +74,7 @@ namespace Util
 
   struct RGBA8
   {
-    static constexpr const unsigned bytes_per_pixel = 4;
+    static const unsigned bytes_per_pixel = 4;
     static inline uint8_t GetRed(const uint8_t *pixel)
     {
       return pixel[0];
@@ -95,7 +95,7 @@ namespace Util
 
   struct A1RGB5
   {
-    static constexpr const unsigned bytes_per_pixel = 2;
+    static const unsigned bytes_per_pixel = 2;
     static inline uint8_t GetRed(const uint8_t *pixel)
     {
       return uint8_t((255.0f / 31.0f) * float((*reinterpret_cast<const uint16_t *>(pixel) >> 10) & 0x1f));

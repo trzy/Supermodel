@@ -949,7 +949,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
       P.Vert[j].n[2] = (GLfloat)(INT8)(iz&0xFF);
       P.Vert[j].u = (GLfloat) ((UINT16)(it>>16)) * uvScale; // TO-DO: might these be signed?
       P.Vert[j].v = (GLfloat) ((UINT16)(it&0xFFFF)) * uvScale;
-      P.Vert[j].intensity = GLfloat((ix + 128) & 0xFF) / 255.0; // signed (-0.5 -> black, +0.5 -> white)
+      P.Vert[j].intensity = GLfloat((ix + 128) & 0xFF) / 255.0f; // signed (-0.5 -> black, +0.5 -> white)
       //if ((P.header[1] & 0x20) && !(P.header[1] & 0x08))
       //  printf("%02x %02x %02x\n", ix&0xff, iy&0xff, iz&0xff);
       data += 4;
