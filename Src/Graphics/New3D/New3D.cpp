@@ -134,10 +134,9 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 					if (mesh.microTexture) {
 						glActiveTexture(GL_TEXTURE1);
-						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, true, true, 0, 1024, 128, 128);
+						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, false, false, 0, 1024, 128, 128);
 						if (tex2) {
 							tex2->BindTexture();
-							tex2->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
 						}
 						glActiveTexture(GL_TEXTURE0);
 					}
