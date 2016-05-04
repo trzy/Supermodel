@@ -227,8 +227,6 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 	}
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);	// rgba is always 4 byte aligned
-	glActiveTexture(GL_TEXTURE0);           // activate correct texture unit
-
 	glGenTextures(1, &m_textureID);
 	glBindTexture(GL_TEXTURE_2D, m_textureID);
 
