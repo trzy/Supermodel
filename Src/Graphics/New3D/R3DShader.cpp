@@ -33,14 +33,17 @@ static const char *vertexShaderBasic =
 
 static const char *fragmentShaderBasic =
 
-"uniform sampler2D tex;\n"
+"uniform sampler2D tex1;\n"			// base tex
+"uniform sampler2D tex2;\n"			// micro tex (optional)
+
 "uniform int	textureEnabled;\n"
+"uniform int	microTexture;\n"
 "uniform int	alphaTest;\n"
 "uniform int	textureAlpha;\n"
 "uniform vec3	fogColour;\n"
 "uniform vec4	spotEllipse;\n"		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-"uniform vec2	spotRange;\n"			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-"uniform vec3	spotColor;\n"			// spotlight RGB color
+"uniform vec2	spotRange;\n"		// spotlight Z range: .x=start (viewspace coordinates), .y=limit
+"uniform vec3	spotColor;\n"		// spotlight RGB color
 "uniform vec3	lighting[2];\n"		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
 "uniform int	lightEnable;\n"		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
 "uniform float	shininess;\n"		// specular shininess (if >= 0.0) or disable specular lighting (negative)
@@ -53,27 +56,37 @@ static const char *fragmentShaderBasic =
 
 "void main()\n"
 "{\n"
-	"vec4 texData;\n"
+	"vec4 tex1Data;\n"
+	
 	"vec4 colData;\n"
 	"vec4 finalData;\n"
 
-	"texData = vec4(1.0, 1.0, 1.0, 1.0);\n"
+	"tex1Data = vec4(1.0, 1.0, 1.0, 1.0);\n"
 
-	// Done this way because some older GPUs have difficulty with nested if-
-	// statements (e.g., NVS 300)
-	"if (textureEnabled == 1) {\n"
-		"texData = texture2D( tex, gl_TexCoord[0].st);\n"
-	"}\n"
-	"if (textureEnabled == 1 && alphaTest == 1 && texData.a < (8.0/16.0)) {\n"
-		"discard;\n"
-	"}\n"
-	"if (textureEnabled == 1 && textureAlpha == 0) {\n"
-		"texData.a = 1.0;\n"
+	"if(textureEnabled==1) {\n"
+
+		"tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
+
+		"if (microTexture==1) {\n"
+			"vec4 tex2Data	= texture2D( tex2, gl_TexCoord[0].st*4);\n"
+
+			"tex1Data = (tex1Data+tex2Data)/2.0;\n"
+		"}\n"
+
+		"if (alphaTest==1) {\n"			// does it make any sense to do this later?
+			"if (tex1Data.a < (8.0/16.0)) {\n"
+				"discard;\n"
+			"}\n"
+		"}\n"
+
+		"if (textureAlpha == 0) {\n"
+			"tex1Data.a = 1.0;\n"
+		"}\n"
 	"}\n"
 
 	"colData =  gl_Color;\n"
 
-	"finalData = texData * colData;\n"
+	"finalData = tex1Data * colData;\n"
 	"if (finalData.a < (1.0/16.0)) {\n"		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
 		"discard;\n"
 	"}\n"
@@ -137,7 +150,8 @@ R3DShader::R3DShader()
 
 void R3DShader::Start()
 {
-	m_textured		= false;
+	m_textured1		= false;
+	m_textured2		= false;
 	m_textureAlpha	= false;		// use alpha in texture
 	m_alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	m_doubleSided	= false;
@@ -171,8 +185,10 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, nullptr, nullptr, vShader, fShader);
 
-	m_locTexture		= glGetUniformLocation(m_shaderProgram, "tex");
-	m_locTextureEnabled	= glGetUniformLocation(m_shaderProgram, "textureEnabled");
+	m_locTexture1		= glGetUniformLocation(m_shaderProgram, "tex1");
+	m_locTexture2		= glGetUniformLocation(m_shaderProgram, "tex2");
+	m_locTexture1Enabled= glGetUniformLocation(m_shaderProgram, "textureEnabled");
+	m_locTexture2Enabled= glGetUniformLocation(m_shaderProgram, "microTexture");
 	m_locTextureAlpha	= glGetUniformLocation(m_shaderProgram, "textureAlpha");
 	m_locAlphaTest		= glGetUniformLocation(m_shaderProgram, "alphaTest");
 
@@ -209,12 +225,18 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	}
 
 	if (m_dirtyMesh) {
-		glUniform1i(m_locTexture, 0);
+		glUniform1i(m_locTexture1, 0);
+		glUniform1i(m_locTexture2, 1);
 	}
 
-	if (m_dirtyMesh || m->textured != m_textured) {
-		glUniform1i(m_locTextureEnabled, m->textured);
-		m_textured = m->textured;
+	if (m_dirtyMesh || m->textured != m_textured1) {
+		glUniform1i(m_locTexture1Enabled, m->textured);
+		m_textured1 = m->textured;
+	}
+
+	if (m_dirtyMesh || m->microTexture != m_textured2) {
+		glUniform1i(m_locTexture2Enabled, m->microTexture);
+		m_textured2 = m->microTexture;
 	}
 
 	if (m_dirtyMesh || m->alphaTest != m_alphaTest) {

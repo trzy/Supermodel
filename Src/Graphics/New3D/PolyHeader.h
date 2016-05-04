@@ -29,9 +29,10 @@ xxxxxxxx xxxxxxxx xxxxxxxx--------		Polygon normal X coordinate(2.22 fixed point
 
 0x02: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Y coordinate(2.22 fixed point)
+-------- -------- -------- ---x----		Microtexture (aka multitexture)
 -------- -------- -------- ------x-		Texture U mirror enable
 -------- -------- -------- -------x		Texture V mirror enable
--------- -------- -------- xxxxxx--		H/W also supports texture clamp/mirror, so guessing some of these bits must be that
+-------- -------- -------- xxx-xx--		I think first 3 bits might be microtex number 0-7, next 2 maybe UV un-smooth wrap
 
 0x03: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed point)
@@ -100,6 +101,7 @@ public:
 	//header 2
 	bool	TexUMirror();
 	bool	TexVMirror();
+	bool	MicroTexture();
 
 	// header 3
 	int		TexWidth();

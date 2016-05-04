@@ -126,10 +126,20 @@ void CNew3D::RenderScene(int priority, bool alpha)
 				}
 				
 				if (mesh.textured) {
-					auto tex = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, mesh.x + m.textureOffsetX, mesh.y + m.textureOffsetY, mesh.width, mesh.height);
-					if (tex) {
-						tex->BindTexture();
-						tex->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+					auto tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, mesh.x + m.textureOffsetX, mesh.y + m.textureOffsetY, mesh.width, mesh.height);
+					if (tex1) {
+						tex1->BindTexture();
+						tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+					}
+
+					if (mesh.microTexture) {
+						glActiveTexture(GL_TEXTURE1);
+						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, true, true, 0, 1024, 128, 128);
+						if (tex2) {
+							tex2->BindTexture();
+							tex2->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+						}
+						glActiveTexture(GL_TEXTURE0);
 					}
 				}
 				
@@ -853,13 +863,14 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				}
 
 				if (ph.TexEnabled()) {
-					currentMesh->format		= ph.TexFormat();
-					currentMesh->x			= ph.X();
-					currentMesh->y			= ph.Y();
-					currentMesh->width		= ph.TexWidth();
-					currentMesh->height		= ph.TexHeight();
-					currentMesh->mirrorU	= ph.TexUMirror();
-					currentMesh->mirrorV	= ph.TexVMirror();
+					currentMesh->format			= ph.TexFormat();
+					currentMesh->x				= ph.X();
+					currentMesh->y				= ph.Y();
+					currentMesh->width			= ph.TexWidth();
+					currentMesh->height			= ph.TexHeight();
+					currentMesh->mirrorU		= ph.TexUMirror();
+					currentMesh->mirrorV		= ph.TexVMirror();
+					currentMesh->microTexture	= ph.MicroTexture();
 				}
 			}
 

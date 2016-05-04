@@ -26,13 +26,16 @@ private:
 	GLuint m_fragmentShader;
 
 	// mesh uniform locations
-	GLint m_locTexture;
-	GLint m_locTextureEnabled;
+	GLint m_locTexture1;
+	GLint m_locTexture2;
+	GLint m_locTexture1Enabled;
+	GLint m_locTexture2Enabled;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
 
 	// cached mesh values
-	bool	m_textured;
+	bool	m_textured1;
+	bool	m_textured2;
 	bool	m_textureAlpha;		// use alpha in texture
 	bool	m_alphaTest;		// discard fragment based on alpha (ogl does this with fixed function)
 	float	m_fogIntensity;

@@ -163,6 +163,11 @@ bool PolyHeader::TexVMirror()
 	return (header[2] & 1) > 0;
 }
 
+bool PolyHeader::MicroTexture()
+{
+	return (header[2] & 0x10) > 0;
+}
+
 //
 // header 3
 

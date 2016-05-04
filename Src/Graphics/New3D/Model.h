@@ -37,6 +37,7 @@ struct Mesh
 {
 	// texture
 	int format, x, y, width, height = 0;
+	bool microTexture = false;
 	bool mirrorU = false;
 	bool mirrorV = false;
 
@@ -47,7 +48,6 @@ struct Mesh
 	bool textureAlpha	= false;		// use alpha in texture
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	bool lighting		= false;
-	bool testBit		= false;
 	bool clockWise		= true;			// we need to check if the matrix will change the winding
 
 	float fogIntensity = 1.0f;
