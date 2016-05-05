@@ -550,8 +550,8 @@ void CNew3D::InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat)
 // Draws viewports of the given priority
 void CNew3D::RenderViewport(UINT32 addr)
 {
-	GLfloat	color[8][3] =	// RGB1 translation
-	{
+	static const GLfloat	color[8][3] =
+	{											// RGB1 color translation
 		{ 0.0, 0.0, 0.0 },	// off
 		{ 0.0, 0.0, 1.0 },	// blue
 		{ 0.0, 1.0, 0.0 },	// green
@@ -559,184 +559,172 @@ void CNew3D::RenderViewport(UINT32 addr)
 		{ 1.0, 0.0, 0.0 }, 	// red
 		{ 1.0, 0.0, 1.0 },	// purple
 		{ 1.0, 1.0, 0.0 },	// yellow
-		{ 1.0, 1.0, 1.0 }	// white
+		{ 1.0, 1.0, 1.0 }		// white
 	};
-	const UINT32	*vpnode;
-	UINT32			nextAddr, nodeAddr, matrixBase;
-	int				curPri;
-	int				vpX, vpY, vpWidth, vpHeight;
-	int				spotColorIdx;
-	GLfloat			scrollFog, scrollAtt;
-	Viewport*		vp;
 
 	// Translate address and obtain pointer
-	vpnode = TranslateCullingAddress(addr);
+	const uint32_t *vpnode = TranslateCullingAddress(addr);
 
 	if (NULL == vpnode) {
 		return;
 	}
 
-	if (vpnode[0x01] == 0) {				// memory probably hasn't been set up yet, abort
+	if (vpnode[0x01] == 0) {		// memory probably hasn't been set up yet, abort
 		return;
 	}
 
-	if (vpnode[0]&0x20) {
-		goto next;							// skip this viewport	
+	if (!(vpnode[0] & 0x20)) {	// only if viewport enabled
+		uint32_t curPri	= (vpnode[0x00] >> 3) & 3;		// viewport priority
+		uint32_t nodeAddr	= vpnode[0x02];							// scene database node pointer
+
+		// create node object 
+		m_nodes.emplace_back(Node());
+		m_nodes.back().models.reserve(2048);			// create space for models
+
+		// get pointer to its viewport
+		Viewport *vp = &m_nodes.back().viewport;
+
+		vp->priority = curPri;
+
+		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
+		int vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
+		int vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
+		int vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
+		int vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
+		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;								// matrix base address
+
+		if (vpX) {
+			vpX += 2;
+		}
+
+		if (vpY) {
+			vpY += 2;
+		}
+
+		LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
+
+		float angle_left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
+		float angle_right	=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
+		float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
+		float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
+
+		float near = 0.25f;
+		float far = 2e6;
+
+		if (m_step == 0x10) {
+			near = 8;
+		}
+
+		float l = near * tanf(angle_left);
+		float r = near * tanf(angle_right);
+		float t = near * tanf(angle_top);
+		float b = near * tanf(angle_bottom);
+
+		// TO-DO: investigate clipping near/far planes
+
+		if ((vpX == 0) && (vpWidth >= 495) && (vpY == 0) && (vpHeight >= 383))
+		{
+			float windowAR		= (float)m_totalXRes / (float)m_totalYRes;
+			float originalAR	= 496 / 384.f;
+			float correction	= windowAR / originalAR;	// expand horizontal frustum planes
+
+			vp->x		= 0;
+			vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
+			vp->width	= m_totalXRes;
+			vp->height	= (GLint)((float)vpHeight*m_yRatio);
+
+			vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
+		}
+		else
+		{
+			vp->x		= m_xOffs + (GLint)((float)vpX*m_xRatio);
+			vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
+			vp->width	= (GLint)((float)vpWidth*m_xRatio);
+			vp->height	= (GLint)((float)vpHeight*m_yRatio);
+
+			vp->projectionMatrix.Frustum(l, r, b, t, near, far);
+		}
+
+		// Lighting (note that sun vector points toward sun -- away from vertex)
+		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
+		vp->lightingParams[1] = *(float *)&vpnode[0x06];								// sun Y
+		vp->lightingParams[2] = *(float *)&vpnode[0x04];								// sun Z
+		vp->lightingParams[3] = *(float *)&vpnode[0x07];								// sun intensity
+		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
+		vp->lightingParams[5] = 0.0;	// reserved
+
+		// Spotlight
+		int spotColorIdx = (vpnode[0x20] >> 11) & 7;		// spotlight color index
+		vp->spotEllipse[0] = (float)((vpnode[0x1E] >> 3) & 0x1FFF);	// spotlight X position (fractional component?)
+		vp->spotEllipse[1] = (float)((vpnode[0x1D] >> 3) & 0x1FFF);	// spotlight Y
+		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);	// spotlight X size (16-bit? May have fractional component below bit 16)
+		vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);	// spotlight Y size
+
+		vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);		// spotlight start
+		vp->spotRange[1] = *(float *)&vpnode[0x1F];				// spotlight extent
+		vp->spotColor[0] = color[spotColorIdx][0];				// spotlight color
+		vp->spotColor[1] = color[spotColorIdx][1];
+		vp->spotColor[2] = color[spotColorIdx][2];
+
+		// Spotlight is applied on a per pixel basis, must scale its position and size to screen
+		vp->spotEllipse[1] = 384.0f - vp->spotEllipse[1];
+		vp->spotRange[1] += vp->spotRange[0];	// limit
+		vp->spotEllipse[2] = 496.0f / sqrt(vp->spotEllipse[2]);	// spotlight appears to be specified in terms of physical resolution (unconfirmed)
+		vp->spotEllipse[3] = 384.0f / sqrt(vp->spotEllipse[3]);
+
+		// Scale the spotlight to the OpenGL viewport
+		vp->spotEllipse[0] = vp->spotEllipse[0] * m_xRatio + m_xOffs;
+		vp->spotEllipse[1] = vp->spotEllipse[1] * m_yRatio + m_yOffs;
+		vp->spotEllipse[2] *= m_xRatio;
+		vp->spotEllipse[3] *= m_yRatio;
+
+		// Fog
+		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog color R
+		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (1.0f / 255.0f);	// fog color G
+		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (1.0f / 255.0f);	// fog color B
+		vp->fogParams[3] = *(float *)&vpnode[0x23];									// fog density
+		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
+
+		
+		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3]) || std::isinf(vp->fogParams[4]) || std::isnan(vp->fogParams[4])) {	// Star Wars Trilogy
+			vp->fogParams[3] = vp->fogParams[4] = 0.0f;
+		}
+
+		// Unknown light/fog parameters
+		// float scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);	// scroll fog
+		// float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
+
+		// Clear texture offsets before proceeding
+		m_nodeAttribs.Reset();
+
+		// Set up coordinate system and base matrix
+		InitMatrixStack(matrixBase, m_modelMat);
+
+		// Safeguard: weird coordinate system matrices usually indicate scenes that will choke the renderer
+		if (NULL != m_matrixBasePtr)
+		{
+			float	m21, m32, m13;
+
+			// Get the three elements that are usually set and see if their magnitudes are 1
+			m21 = m_matrixBasePtr[6];
+			m32 = m_matrixBasePtr[10];
+			m13 = m_matrixBasePtr[5];
+
+			m21 *= m21;
+			m32 *= m32;
+			m13 *= m13;
+
+			if ((m21>1.05) || (m21<0.95))
+				return;
+			if ((m32>1.05) || (m32<0.95))
+				return;
+			if ((m13>1.05) || (m13<0.95))
+				return;
+		}
+
+		// Descend down the node link: Use recursive traversal
+		DescendNodePtr(nodeAddr);
 	}
-
-	curPri		= (vpnode[0x00] >> 3) & 3;	// viewport priority
-	nextAddr	= vpnode[0x01] & 0xFFFFFF;	// next viewport
-	nodeAddr	= vpnode[0x02];				// scene database node pointer
-
-	// create node object 
-	m_nodes.emplace_back(Node());
-	m_nodes.back().models.reserve(2048);			// create space for models
-
-	// get pointer to its viewport
-	vp = &m_nodes.back().viewport;
-
-	vp->priority = curPri;
-
-	// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-	vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
-	vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
-	vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
-	vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
-	matrixBase	= vpnode[0x16] & 0xFFFFFF;								// matrix base address
-
-	if (vpX) {
-		vpX += 2;
-	}
-
-	if (vpY) {
-		vpY += 2;
-	}
-
-	LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
-
-	float angle_left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
-	float angle_right	=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
-	float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
-	float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
-
-	float near = 0.25f;
-	float far = 2e6;
-
-	if (m_step == 0x10) {
-		near = 8;
-	}
-
-	float l = near * tanf(angle_left);
-	float r = near * tanf(angle_right);
-	float t = near * tanf(angle_top);
-	float b = near * tanf(angle_bottom);
-
-	// TO-DO: investigate clipping near/far planes
-
-	if ((vpX == 0) && (vpWidth >= 495) && (vpY == 0) && (vpHeight >= 383))
-	{
-		float windowAR		= (float)m_totalXRes / (float)m_totalYRes;
-		float originalAR	= 496 / 384.f;
-		float correction	= windowAR / originalAR;	// expand horizontal frustum planes
-
-		vp->x		= 0;
-		vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
-		vp->width	= m_totalXRes;
-		vp->height	= (GLint)((float)vpHeight*m_yRatio);
-
-		vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
-	}
-	else
-	{
-		vp->x		= m_xOffs + (GLint)((float)vpX*m_xRatio);
-		vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
-		vp->width	= (GLint)((float)vpWidth*m_xRatio);
-		vp->height	= (GLint)((float)vpHeight*m_yRatio);
-
-		vp->projectionMatrix.Frustum(l, r, b, t, near, far);
-	}
-
-	// Lighting (note that sun vector points toward sun -- away from vertex)
-	vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
-	vp->lightingParams[1] = *(float *)&vpnode[0x06];								// sun Y
-	vp->lightingParams[2] = *(float *)&vpnode[0x04];								// sun Z
-	vp->lightingParams[3] = *(float *)&vpnode[0x07];								// sun intensity
-	vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
-	vp->lightingParams[5] = 0.0;	// reserved
-
-	// Spotlight
-	spotColorIdx = (vpnode[0x20] >> 11) & 7;					// spotlight color index
-	vp->spotEllipse[0] = (float)((vpnode[0x1E] >> 3) & 0x1FFF);	// spotlight X position (fractional component?)
-	vp->spotEllipse[1] = (float)((vpnode[0x1D] >> 3) & 0x1FFF);	// spotlight Y
-	vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);	// spotlight X size (16-bit? May have fractional component below bit 16)
-	vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);	// spotlight Y size
-
-	vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);		// spotlight start
-	vp->spotRange[1] = *(float *)&vpnode[0x1F];				// spotlight extent
-	vp->spotColor[0] = color[spotColorIdx][0];				// spotlight color
-	vp->spotColor[1] = color[spotColorIdx][1];
-	vp->spotColor[2] = color[spotColorIdx][2];
-
-	// Spotlight is applied on a per pixel basis, must scale its position and size to screen
-	vp->spotEllipse[1] = 384.0f - vp->spotEllipse[1];
-	vp->spotRange[1] += vp->spotRange[0];	// limit
-	vp->spotEllipse[2] = 496.0f / sqrt(vp->spotEllipse[2]);	// spotlight appears to be specified in terms of physical resolution (unconfirmed)
-	vp->spotEllipse[3] = 384.0f / sqrt(vp->spotEllipse[3]);
-
-	// Scale the spotlight to the OpenGL viewport
-	vp->spotEllipse[0] = vp->spotEllipse[0] * m_xRatio + m_xOffs;
-	vp->spotEllipse[1] = vp->spotEllipse[1] * m_yRatio + m_yOffs;
-	vp->spotEllipse[2] *= m_xRatio;
-	vp->spotEllipse[3] *= m_yRatio;
-
-	// Fog
-	vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog color R
-	vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (1.0f / 255.0f);	// fog color G
-	vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (1.0f / 255.0f);	// fog color B
-	vp->fogParams[3] = *(float *)&vpnode[0x23];									// fog density
-	vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
-
-	
-	if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3]) || std::isinf(vp->fogParams[4]) || std::isnan(vp->fogParams[4])) {	// Star Wars Trilogy
-		vp->fogParams[3] = vp->fogParams[4] = 0.0f;
-	}
-
-	// Unknown light/fog parameters
-	scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);	// scroll fog
-	scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
-
-	// Clear texture offsets before proceeding
-	m_nodeAttribs.Reset();
-
-	// Set up coordinate system and base matrix
-	InitMatrixStack(matrixBase, m_modelMat);
-
-	// Safeguard: weird coordinate system matrices usually indicate scenes that will choke the renderer
-	if (NULL != m_matrixBasePtr)
-	{
-		float	m21, m32, m13;
-
-		// Get the three elements that are usually set and see if their magnitudes are 1
-		m21 = m_matrixBasePtr[6];
-		m32 = m_matrixBasePtr[10];
-		m13 = m_matrixBasePtr[5];
-
-		m21 *= m21;
-		m32 *= m32;
-		m13 *= m13;
-
-		if ((m21>1.05) || (m21<0.95))
-			return;
-		if ((m32>1.05) || (m32<0.95))
-			return;
-		if ((m13>1.05) || (m13<0.95))
-			return;
-	}
-
-	// Descend down the node link: Use recursive traversal
-	DescendNodePtr(nodeAddr);
-
-next:
 
 	// render next viewport
 	if (vpnode[0x01] != 0x01000000) {
