@@ -899,6 +899,13 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 		}
 
+		// if we have flat shading, we can't re-use normals from shared vertices
+		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
+			p.v[i].normal[0] = p.faceNormal[0];
+			p.v[i].normal[1] = p.faceNormal[1];
+			p.v[i].normal[2] = p.faceNormal[2];
+		}
+
 		for (; j < p.number; j++)	// remaining vertices are new and defined here
 		{
 			// Fetch vertices
@@ -912,15 +919,11 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[j].pos[1] = (GLfloat)(((INT32)iy) >> 8) * m_vertexFactor;
 			p.v[j].pos[2] = (GLfloat)(((INT32)iz) >> 8) * m_vertexFactor;
 
+			// Per vertex normals
 			if (ph.SmoothShading()) {
 				p.v[j].normal[0] = (INT8)(ix & 0xFF) / 128.f;
 				p.v[j].normal[1] = (INT8)(iy & 0xFF) / 128.f;
 				p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
-			}
-			else {
-				p.v[j].normal[0] = p.faceNormal[0];
-				p.v[j].normal[1] = p.faceNormal[1];
-				p.v[j].normal[2] = p.faceNormal[2];
 			}
 
 			if ((ph.header[1] & 2) == 0) {
