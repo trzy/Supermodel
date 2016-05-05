@@ -23,16 +23,17 @@ xxxxxxxx xxxxxxxx xxxxxxxx--------		Polygon normal X coordinate(2.22 fixed point
 -------- -------- -------- -x------		UV scale (0 = 13.3, 1 = 16.0)
 -------- -------- -------- --x-----		Fixed shading (seems to only be enabled if lighting is enabled)
 -------- -------- -------- ---x----		1 = Double-sided polygon
+-------- -------- -------- ----x---		1 = smooth shading, 0 = flat shading
 -------- -------- -------- -----x--		If set, this is the last polygon
 -------- -------- -------- ------x-		Poly color, 1 = RGB, 0 = color table
--------- -------- -------- x---x--x		?
+-------- -------- -------- x------x		?
 
 0x02: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Y coordinate(2.22 fixed point)
 -------- -------- -------- ---x----		Microtexture (aka multitexture)
 -------- -------- -------- ------x-		Texture U mirror enable
 -------- -------- -------- -------x		Texture V mirror enable
--------- -------- -------- xxx-xx--		I think first 3 bits might be microtex number 0-7, next 2 maybe UV un-smooth wrap
+-------- -------- -------- xxx-xx--		?
 
 0x03: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed point)
@@ -97,6 +98,7 @@ public:
 	bool	LastPoly();
 	bool	PolyColor();	// if false uses LUT from ram
 	bool	FixedShading();
+	bool	SmoothShading();
 
 	//header 2
 	bool	TexUMirror();

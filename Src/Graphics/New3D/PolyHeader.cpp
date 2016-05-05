@@ -149,6 +149,11 @@ bool PolyHeader::FixedShading()
 	return (header[1] & 0x20) > 0;
 }
 
+bool PolyHeader::SmoothShading()
+{
+	return (header[1] & 0x8) > 0;
+}
+
 //
 // header 2
 //

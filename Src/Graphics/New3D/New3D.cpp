@@ -869,7 +869,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					currentMesh->height			= ph.TexHeight();
 					currentMesh->mirrorU		= ph.TexUMirror();
 					currentMesh->mirrorV		= ph.TexVMirror();
-					currentMesh->microTexture	= ph.MicroTexture();
+					currentMesh->microTexture = ph.MicroTexture();
 				}
 			}
 
@@ -912,9 +912,16 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[j].pos[1] = (GLfloat)(((INT32)iy) >> 8) * m_vertexFactor;
 			p.v[j].pos[2] = (GLfloat)(((INT32)iz) >> 8) * m_vertexFactor;
 
-			p.v[j].normal[0] = (INT8)(ix & 0xFF) / 128.f;
-			p.v[j].normal[1] = (INT8)(iy & 0xFF) / 128.f;
-			p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
+			if (ph.SmoothShading()) {
+				p.v[j].normal[0] = (INT8)(ix & 0xFF) / 128.f;
+				p.v[j].normal[1] = (INT8)(iy & 0xFF) / 128.f;
+				p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
+			}
+			else {
+				p.v[j].normal[0] = p.faceNormal[0];
+				p.v[j].normal[1] = p.faceNormal[1];
+				p.v[j].normal[2] = p.faceNormal[2];
+			}
 
 			if ((ph.header[1] & 2) == 0) {
 				UINT32 colorIdx = ((ph.header[4] >> 8) & 0x7FF);
@@ -940,7 +947,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].color[0] = (UINT8)(p.v[j].color[0] * shade);
 				p.v[j].color[1] = (UINT8)(p.v[j].color[1] * shade);
 				p.v[j].color[2] = (UINT8)(p.v[j].color[2] * shade);
-			}
+			}			
 
 			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
 				p.v[j].color[3] = 255;
