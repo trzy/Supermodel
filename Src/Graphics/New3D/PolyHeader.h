@@ -7,36 +7,42 @@ namespace New3D {
 Polygon Data
 
 0x00:
-x------- -------- -------- --------		Specular enable
--xxxxx-- -------- -------- --------		?
-------xx xxxxxxxx xxxxxx-- --------		Polygon number (not always present)
--------- -------- ------xx --------		Possibly disable z and colour writing
+xxxxxx-- -------- -------- --------		Specular
+------x- -------- -------- --------		Clockwise winding
+-------x xxxxxxxx xxxxxx-- --------		Polygon number (not always present)
+-------- -------- ------xx --------		Discard polys
+-------- -------- -------- x-------		Enable specular
 -------- -------- -------- -x------		0 = Triangle, 1 = Quad
+-------- -------- -------- --x-----		Poly is points
+-------- -------- -------- ---x----		Smoothing ?
 -------- -------- -------- ----x---		Vertex 3 shared from previous polygon
 -------- -------- -------- -----x--		Vertex 2 shared from previous polygon
 -------- -------- -------- ------x-		Vertex 1 shared from previous polygon
 -------- -------- -------- -------x		Vertex 0 shared from previous polygon
--------- -------- -------- x-xx----		?
 
 0x01: 
 xxxxxxxx xxxxxxxx xxxxxxxx--------		Polygon normal X coordinate(2.22 fixed point)
+-------- -------- -------- x-------		Edge on translucency (i guess anti-aliasing) 
 -------- -------- -------- -x------		UV scale (0 = 13.3, 1 = 16.0)
 -------- -------- -------- --x-----		Fixed shading (seems to only be enabled if lighting is enabled)
 -------- -------- -------- ---x----		1 = Double-sided polygon
 -------- -------- -------- ----x---		1 = smooth shading, 0 = flat shading
 -------- -------- -------- -----x--		If set, this is the last polygon
 -------- -------- -------- ------x-		Poly color, 1 = RGB, 0 = color table
--------- -------- -------- x------x		?
+-------- -------- -------- -------x		No los return ?
 
 0x02: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Y coordinate(2.22 fixed point)
--------- -------- -------- ---x----		Microtexture (aka multitexture)
+-------- -------- -------- xxx-----		Microtexture texture number 0-7
+-------- -------- -------- ---x----		Microtexture enabled
+-------- -------- -------- ----xx--		Microtexture min lod
 -------- -------- -------- ------x-		Texture U mirror enable
 -------- -------- -------- -------x		Texture V mirror enable
--------- -------- -------- xxx-xx--		?
 
 0x03: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed point)
+-------- -------- -------- x-------		X wrap smoothing
+-------- -------- -------- -x------		Y wrap smoothing
 -------- -------- -------- --xxx---		Texture width(in 8 - pixel tiles)
 -------- -------- -------- -----xxx		Texture height(in 8 - pixel tiles)
 
@@ -55,9 +61,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Specular color ?
 
 0x06: 
 x------- -------- -------- --------		Alpha testing / contour
--xxxxx-- -------- -------- --------		Fixed shading ?
-------x- -------- -------- --------		Enable fixed shading ?
--------x -------- -------- --------		Possible stencil
+-xxxxxxx -------- -------- --------		Translator map offset?
 -------- x------- -------- --------		1 = disable transparency ?
 -------- -xxxxx-- -------- --------		Polygon translucency(0 = fully transparent)
 -------- -------x -------- --------		1 = disable lighting
@@ -84,7 +88,9 @@ public:
 	int		NumTrianglesTotal();
 
 	//header 0
-	bool	Specular();
+	bool	SpecularEnabled();
+	float	SpecularValue();
+	bool	Clockwise();
 	int		PolyNumber();
 	bool	Disabled();		// z & colour disabled
 	int		NumVerts();

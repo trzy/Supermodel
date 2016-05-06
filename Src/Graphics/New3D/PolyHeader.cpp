@@ -71,9 +71,19 @@ int	PolyHeader::NumTrianglesTotal()
 //  header 0
 //
 
-bool PolyHeader::Specular()
+bool PolyHeader::SpecularEnabled()
 {
-	return (header[0] & 0x800000000) > 0;
+	return (header[0] & 0x80) > 0;
+}
+
+float PolyHeader::SpecularValue()
+{
+	return (header[0] >> 26) / 64.f;
+}
+
+bool PolyHeader::Clockwise()
+{
+	return (header[0] & 0x2000000) > 0;
 }
 
 int PolyHeader::PolyNumber() 
