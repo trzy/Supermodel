@@ -42,138 +42,138 @@
 class CRender2D
 {
 public:
-	/*
-	 * BeginFrame(void):
-	 *
-	 * Prepare to render a new frame. Must be called once per frame prior to
-	 * drawing anything.
-	 */
-	void BeginFrame(void);
-	
-	/*
-	 * EndFrame(void):
-	 *
-	 * Signals the end of rendering for this frame. Must be called last during
-	 * the frame.
-	 */
-	void EndFrame(void);
-	 
-	/*
-	 * WriteVRAM(addr, data):
-	 *
-	 * Indicates what will be written next to the tile generator's RAM. The
-	 * VRAM address must not have yet been updated, to allow the renderer to
-	 * check for changes. Data is accepted in the same form as the tile 
-	 * generator: the MSB is what was written to addr+3. This function is 
-	 * intended to facilitate on-the-fly decoding of tiles and palette data.
-	 *
-	 * Parameters:
-	 *		addr	Address in tile generator RAM. Caller must ensure it is 
-	 *				clamped to the range 0x000000 to 0x11FFFF because this
-	 *				function does not.
-	 *		data	The data to write.
-	 */
-	void WriteVRAM(unsigned addr, UINT32 data);
-	
-	/*
-	 * AttachRegisters(regPtr):
-	 *
-	 * Attaches tile generator registers. This must be done prior to any 
-	 * rendering otherwise the program may crash with an access violation.
-	 *
-	 * Parameters:
-	 *		regPtr	Pointer to the base of the tile generator registers. There
-	 *				are assumed to be 64 in all.
-	 */
-	void AttachRegisters(const UINT32 *regPtr);
-	
-	/*
-	 * AttachPalette(palPtr):
-	 *
-	 * Attaches tile generator palettes. This must be done prior to any
-	 * rendering.
-	 *
-	 * Parameters:
-	 *		palPtr	Pointer to two palettes. The first is for layers A/A' and
-	 *				the second is for B/B'.
-	 */
-	void AttachPalette(const UINT32 *palPtr[2]);
+  /*
+   * BeginFrame(void):
+   *
+   * Prepare to render a new frame. Must be called once per frame prior to
+   * drawing anything.
+   */
+  void BeginFrame(void);
+  
+  /*
+   * EndFrame(void):
+   *
+   * Signals the end of rendering for this frame. Must be called last during
+   * the frame.
+   */
+  void EndFrame(void);
+   
+  /*
+   * WriteVRAM(addr, data):
+   *
+   * Indicates what will be written next to the tile generator's RAM. The
+   * VRAM address must not have yet been updated, to allow the renderer to
+   * check for changes. Data is accepted in the same form as the tile 
+   * generator: the MSB is what was written to addr+3. This function is 
+   * intended to facilitate on-the-fly decoding of tiles and palette data.
+   *
+   * Parameters:
+   *    addr  Address in tile generator RAM. Caller must ensure it is 
+   *          clamped to the range 0x000000 to 0x11FFFF because this
+   *          function does not.
+   *    data  The data to write.
+   */
+  void WriteVRAM(unsigned addr, uint32_t data);
+  
+  /*
+   * AttachRegisters(regPtr):
+   *
+   * Attaches tile generator registers. This must be done prior to any 
+   * rendering otherwise the program may crash with an access violation.
+   *
+   * Parameters:
+   *    regPtr  Pointer to the base of the tile generator registers. There
+   *        are assumed to be 64 in all.
+   */
+  void AttachRegisters(const uint32_t *regPtr);
+  
+  /*
+   * AttachPalette(palPtr):
+   *
+   * Attaches tile generator palettes. This must be done prior to any
+   * rendering.
+   *
+   * Parameters:
+   *    palPtr  Pointer to two palettes. The first is for layers A/A' and
+   *        the second is for B/B'.
+   */
+  void AttachPalette(const uint32_t *palPtr[2]);
 
-	/*
-	 * AttachVRAM(vramPtr):
-	 *
-	 * Attaches tile generator RAM. This must be done prior to any rendering
-	 * otherwise the program may crash with an access violation.
-	 *
-	 * Parameters:
-	 *		vramPtr		Pointer to the base of the tile generator RAM (0x120000
-	 *					bytes). VRAM is assumed to be in little endian format.
-	 */
-	void AttachVRAM(const UINT8 *vramPtr);
+  /*
+   * AttachVRAM(vramPtr):
+   *
+   * Attaches tile generator RAM. This must be done prior to any rendering
+   * otherwise the program may crash with an access violation.
+   *
+   * Parameters:
+   *    vramPtr   Pointer to the base of the tile generator RAM (0x120000
+   *              bytes). VRAM is assumed to be in little endian format.
+   */
+  void AttachVRAM(const uint8_t *vramPtr);
 
-	/*
-	 * Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);
-	 *
-	 * One-time initialization of the context. Must be called before any other
-	 * members (meaning it should be called even before being attached to any
-	 * other objects that want to use it).
-	 *
-	 * Parameters:
-	 *		xOffset		X offset of the viewable area within OpenGL display 
-	 *                  surface, in pixels.
-	 *		yOffset		Y offset.
-	 *		xRes		Horizontal resolution of the viewable area.
-	 *		yRes		Vertical resolution.
-	 *		totalXRes	Horizontal resolution of the complete display area.
-	 *		totalYRes	Vertical resolution.
-	 *
-	 * Returns:
-	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
-	 *		occurred. Prints own error messages.
-	 */
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
-	 
-	/*
-	 * CRender2D(void):
-	 * ~CRender2D(void):
-	 *
-	 * Constructor and destructor.
-	 */
-	CRender2D(void);
-	~CRender2D(void);
-	
+  /*
+   * Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);
+   *
+   * One-time initialization of the context. Must be called before any other
+   * members (meaning it should be called even before being attached to any
+   * other objects that want to use it).
+   *
+   * Parameters:
+   *    xOffset   X offset of the viewable area within OpenGL display 
+   *              surface, in pixels.
+   *    yOffset   Y offset.
+   *    xRes      Horizontal resolution of the viewable area.
+   *    yRes      Vertical resolution.
+   *    totalXRes Horizontal resolution of the complete display area.
+   *    totalYRes Vertical resolution.
+   *
+   * Returns:
+   *    OKAY is successful, otherwise FAILED if a non-recoverable error
+   *    occurred. Prints own error messages.
+   */
+  bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
+   
+  /*
+   * CRender2D(void):
+   * ~CRender2D(void):
+   *
+   * Constructor and destructor.
+   */
+  CRender2D(void);
+  ~CRender2D(void);
+  
 private:
-	// Private member functions
-	void DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal);
-	void DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal);
-	void DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal);
-	bool DrawTilemaps(UINT32 *destBottom, UINT32 *destTop);
-	void DisplaySurface(int surface, GLfloat z);
-	void Setup2D(bool isBottom, bool clearAll);
-			
-	// Data received from tile generator device object
-	const UINT32	*vram;
-	const UINT32    *pal[2];	// palettes for A/A' and B/B'
-	const UINT32	*regs;
-	
-	// OpenGL data
-	GLuint   	texID[2];					// IDs for the 2 layer textures (top and bottom)
-	unsigned	xPixels, yPixels;			// display surface resolution
-	unsigned	xOffs, yOffs;				// offset
-	unsigned	totalXPixels, totalYPixels;	// total display surface resolution
-	
-	// Shader programs and input data locations
-	GLuint	shaderProgram;	// shader program object
-	GLuint	vertexShader;	// vertex shader handle
-	GLuint	fragmentShader;	// fragment shader
-	GLuint	textureMapLoc;	// location of "textureMap" uniform
+  // Private member functions
+  bool DrawTilemaps(uint32_t *destBottom, uint32_t *destTop);
+  void DisplaySurface(int surface, GLfloat z);
+  void Setup2D(bool isBottom, bool clearAll);
+      
+  // Data received from tile generator device object
+  const uint32_t *m_vram;
+  const uint32_t *m_palette[2]; // palettes for A/A' and B/B'
+  const uint32_t *m_regs;
+  
+  // OpenGL data
+  bool      m_npot = false;   // NPOT texture support
+  GLuint    m_texID[2];       // IDs for the 2 layer textures (top and bottom)
+  unsigned  m_xPixels = 496;  // display surface resolution
+  unsigned  m_yPixels = 384;  // ...
+  unsigned  m_xOffset = 0;    // offset
+  unsigned  m_yOffset = 0;
+  unsigned  m_totalXPixels;   // total display surface resolution
+  unsigned  m_totalYPixels;
+  
+  // Shader programs and input data locations
+  GLuint m_shaderProgram;   // shader program object
+  GLuint m_vertexShader;    // vertex shader handle
+  GLuint m_fragmentShader;  // fragment shader
+  GLuint m_textureMapLoc;   // location of "textureMap" uniform
 
-	// Buffers
-	UINT8	*memoryPool;	// all memory is allocated here
-	UINT32	*surfTop;		// 512x384x32bpp pixel surface for top layers
-	UINT32	*surfBottom;	// bottom layers
-	UINT32	*lineBuffer[4];	// 512 32bpp pixel line buffers for layer composition
+  // Buffers
+  uint8_t   *m_memoryPool = 0;    // all memory is allocated here
+  uint32_t  *m_topSurface = 0;    // 512x384x32bpp pixel surface for top layers
+  uint32_t  *m_bottomSurface = 0; // bottom layers
 };
 
 
-#endif	// INCLUDED_RENDER2D_H
+#endif  // INCLUDED_RENDER2D_H

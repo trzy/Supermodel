@@ -55,20 +55,20 @@
  * is 32 bits wide and little endian. Only those registers relevant to 
  * rendering are listed here (see CTileGen for others).
  *
- *		Offset:		Description:
+ *    Offset:   Description:
  *
- *		0x20		Layer configuration
- *		0x40		Layer A/A' color offset
- *		0x44		Layer B/B' color offset
- *		0x60		Layer A scroll
- *		0x64		Layer A' scroll
- *		0x68		Layer B scroll
- *		0x6C		Layer B' scroll
+ *    0x20    Layer configuration
+ *    0x40    Layer A/A' color offset
+ *    0x44    Layer B/B' color offset
+ *    0x60    Layer A scroll
+ *    0x64    Layer A' scroll
+ *    0x68    Layer B scroll
+ *    0x6C    Layer B' scroll
  *
  * Layer configuration is formatted as:
  *
- *		31                                     0
- *		 ???? ???? ???? ???? pqrs tuvw ???? ????
+ *    31                                     0
+ *     ???? ???? ???? ???? pqrs tuvw ???? ????
  *
  * Bits 'pqrs' control the color depth of layers B', B, A', and A, 
  * respectively. If set, the layer's pattern data is encoded as 4 bits,
@@ -84,17 +84,17 @@
  * values, and the stencil mask, which determines which of each pair of layers
  * is displayed on a given line and column.
  *
- *		00000-F5FFF		Tile pattern data
- * 		F6000-F63FF		Layer A horizontal scroll table (512 lines)
- *		F6400-F67FF		Layer A' horizontal scroll table	
- *		F6800-F6BFF		Layer B horizontal scroll table
- *		F6C00-F6FFF		Layer B' horizontal scroll table
- *		F7000-F77FF		Mask table (assuming 4 bytes per line, 512 lines)
- *		F7800-F7FFF		?
- *		F8000-F9FFF		Layer A name table
- *		FA000-FBFFF		Layer A' name table
- *		FC000-FDFFF		Layer B name table
- *		FE000-FFFFF		Layer B' name table
+ *    00000-F5FFF   Tile pattern data
+ *    F6000-F63FF   Layer A horizontal scroll table (512 lines)
+ *    F6400-F67FF   Layer A' horizontal scroll table  
+ *    F6800-F6BFF   Layer B horizontal scroll table
+ *    F6C00-F6FFF   Layer B' horizontal scroll table
+ *    F7000-F77FF   Mask table (assuming 4 bytes per line, 512 lines)
+ *    F7800-F7FFF   ?
+ *    F8000-F9FFF   Layer A name table
+ *    FA000-FBFFF   Layer A' name table
+ *    FC000-FDFFF   Layer B name table
+ *    FE000-FFFFF   Layer B' name table
  *
  * Tiles may actually address the entire 1 MB space, although in practice,
  * that would conflict with the other fixed memory regions.
@@ -105,8 +105,8 @@
  * The palette stores 32768 colors. Each entry is a little endian 32-bit word.
  * The upper 16 bits are unused and the lower 16 bits contain the color:
  *
- *		15                 0
- *		 tbbb bbgg gggr rrrr
+ *    15                 0
+ *     tbbb bbgg gggr rrrr
  *
  * The 't' bit is for transparency. When set, pixels of that color are
  * transparent, unless they are the bottom-most layer.
@@ -129,8 +129,8 @@
  *
  * The format of a name table entry in 4-bit color mode is:
  *
- *		15                 0
- *		 jkpp pppp pppp iiii
+ *    15                 0
+ *     jkpp pppp pppp iiii
  *
  * The pattern index is '0ppp pppp pppi iiij'. Multiplying by 32 yields the
  * offset in VRAM at which the tile pattern data is stored. Note that the MSB 
@@ -141,36 +141,36 @@
  * The 4-bit pattern data is stored as 8 32-bit words. Each word stores a row
  * of 8 pixels:
  *
- *		31                                     0
- *		 aaaa bbbb cccc dddd eeee ffff gggg hhhh
+ *    31                                     0
+ *     aaaa bbbb cccc dddd eeee ffff gggg hhhh
  *
  * 'a' is the left-most pixel data. These 4-bit values are combined with bits
  * from the name table to form a palette index, which determines the final
  * color. For example, for pixel 'a', the 15-bit color index is:
- *		
+ *    
  *      14                0
- *		 kpp pppp pppp aaaa
+ *     kpp pppp pppp aaaa
  *
  * Note that index bits are re-used to form the palette index, meaning that
  * the pattern address partly determines the color.
  *
  * In 8-bit color mode, the name table entry looks like:
  *
- *		15                 0
- *		 ?ppp pppp iiii iiii
+ *    15                 0
+ *     ?ppp pppp iiii iiii
  *
  * The low 15 'p' and 'i' bits together form the pattern index, which must be 
  * multiplied by 64 to get the offset. The pattern data now consists of 16 32-
  * bit words, each containing four 8-bit pixels:
  *
- *		31                                     0
- *		 aaaa aaaa bbbb bbbb cccc cccc dddd dddd
+ *    31                                     0
+ *     aaaa aaaa bbbb bbbb cccc cccc dddd dddd
  *
  * 'a' is the left-most pixel. Each line is therefore comprised of two 32-bit
  * words. The palette index for pixel 'a' is now formed from:
  *
- *		14                0
- *		 ppp pppp aaaa aaaa
+ *    14                0
+ *     ppp pppp aaaa aaaa
  *
  * Stencil Mask 
  * ------------
@@ -191,16 +191,17 @@
  *
  * Each mask entry is a little endian 32-bit word. The high 16 bits control
  * A/A' and the low 16 bits control B/B'. Each word controls an entire line
- * (32 pixels per bit, 512 pixels per 16-bit line mask). If a bit is set to 1,
- * the pixel from the primary layer is used, otherwise the alternate layer is
+ * (32 pixels per bit, 512 pixels per 16-bit line mask, where the first 16
+ * pixels are allocated to the overscan region.) If a bit is set to 1, the
+ * pixel from the primary layer is used, otherwise the alternate layer is
  * used when the mask is 0. It is important to remember that the layers may
  * have been scrolled independently. The mask operates on the final resultant
  * two pixels that are determined for each location.
  *
  * Example of a line mask:
  *
- *		31                  15                 0
- *		 0111 0000 0000 1111 0000 0000 1111 1111
+ *    31                  15                 0
+ *     0111 0000 0000 1111 0000 0000 1111 1111
  *
  * These settings would display layer A' for the first 32 pixels of the line,
  * followed by layer A for the next 96 pixels, A' for the subsequent 256 
@@ -209,6 +210,10 @@
  *
  * The stencil mask does not affect layer priorities, which are managed 
  * separately regardless of mask settings.
+ *
+ * The formula for mapping a screen pixel (0-495) to stencil bit mask is:
+ *
+ *    bit = 1 << (15 - ((x + 16) / 32))
  *
  * Scrolling
  * ---------
@@ -221,14 +226,14 @@
  *
  * The scroll registers are laid out as:
  *
- *		31                                     0
- *		 v??? ???y yyyy yyyy h??? ??xx xxxx xxxx
+ *    31                                     0
+ *     e??? ???y yyyy yyyy h??? ??xx xxxx xxxx
  *
- * The 'y' bits comprise a vertical scroll value in pixels. The 'x' bits form a
- * horizontal scroll value. If 'h' is set, then the VRAM table (line-by-line 
- * scrolling) is used, otherwise the 'x' values are applied to every line. The
- * meaning of 'v' is unknown. It is also possible that the scroll values use
- * more or less bits, but probably no more than 1.
+ * The 'e' bit enables the layer when set. The 'y' bits comprise a vertical 
+ * scroll value in pixels. The 'x' bits form a horizontal scroll value. If 'h'
+ * is set, then the VRAM table (line-by-line scrolling) is used, otherwise the
+ * 'x' values are applied to every line. It is also possible that the scroll 
+ * values use more or less bits, but probably no more than 1.
  *
  * Each line must be wrapped back to the beginning of the same line. Likewise,
  * vertical scrolling wraps around back to the top of the tilemap.
@@ -257,8 +262,8 @@
  * World), etc. The current best guess is that the two registers control each
  * pair (A/A' and B/B') of layers. The format appears to be:
  *
- *		31                                     0
- *		 ???? ???? rrrr rrrr gggg gggg bbbb bbbb
+ *    31                                     0
+ *     ???? ???? rrrr rrrr gggg gggg bbbb bbbb
  *
  * Where 'r', 'g', and 'b' appear to be signed 8-bit color offsets. Because
  * they exceed the color resolution of the palette, they must be scaled
@@ -271,7 +276,7 @@
 #include <cstring>
 #include "Pkgs/glew.h"
 #include "Supermodel.h"
-#include "Graphics/Shaders2D.h"	// fragment and vertex shaders
+#include "Graphics/Shaders2D.h" // fragment and vertex shaders
 
 
 /******************************************************************************
@@ -279,358 +284,226 @@
 ******************************************************************************/
 
 // Shader program files (for use in development builds only)
-#define VERTEX_2D_SHADER_FILE	"Src/Graphics/Vertex2D.glsl"
-#define FRAGMENT_2D_SHADER_FILE	"Src/Graphics/Fragment2D.glsl"
-
-
-/******************************************************************************
- Tile Drawing Functions
-******************************************************************************/
-
-// Draw 4-bit tile line, no clipping performed
-void CRender2D::DrawTileLine4BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal)
-{
-    unsigned	tileOffset;	// offset of tile pattern within VRAM
-    unsigned	palette;   	// color palette bits obtained from tile
-    UINT32  	pattern;    // 8 pattern pixels fetched at once
-
-	// Tile pattern offset: each tile occupies 32 bytes when using 4-bit pixels
-    tileOffset = ((tile&0x3FFF)<<1) | ((tile>>15)&1);
-    tileOffset *= 32;
-    tileOffset /= 4;	// VRAM is a UINT32 array
-
-	// Upper color bits; the lower 4 bits come from the tile pattern
-	palette = tile&0x7FF0;
-    
-    // Draw 8 pixels
-    pattern = vram[tileOffset+tileLine];
-    *buf++ = pal[((pattern>>28)&0xF) | palette];
-    *buf++ = pal[((pattern>>24)&0xF) | palette];
-    *buf++ = pal[((pattern>>20)&0xF) | palette];
-    *buf++ = pal[((pattern>>16)&0xF) | palette];
-    *buf++ = pal[((pattern>>12)&0xF) | palette];
-    *buf++ = pal[((pattern>>8)&0xF) | palette];
-    *buf++ = pal[((pattern>>4)&0xF) | palette];
-    *buf++ = pal[((pattern>>0)&0xF) | palette];
-}
-
-// Draw 8-bit tile line, no clipping performed
-void CRender2D::DrawTileLine8BitNoClip(UINT32 *buf, UINT16 tile, int tileLine, const UINT32 *pal)
-{
-    unsigned	tileOffset;	// offset of tile pattern within VRAM
-    unsigned	palette;   	// color palette bits obtained from tile
-    UINT32  	pattern;    // 4 pattern pixels fetched at once
-
-	tileLine *= 2;	// 8-bit pixels, each line is two words
-	
-	// Tile pattern offset: each tile occupies 64 bytes when using 8-bit pixels
-    tileOffset = tile&0x3FFF;
-    tileOffset *= 64;
-    tileOffset /= 4;
-
-	// Upper color bits
-	palette = tile&0x7F00;
-    
-    // Draw 4 pixels at a time
-    pattern = vram[tileOffset+tileLine];
-    *buf++ = pal[((pattern>>24)&0xFF) | palette];
-    *buf++ = pal[((pattern>>16)&0xFF) | palette];
-    *buf++ = pal[((pattern>>8)&0xFF) | palette];
-    *buf++ = pal[((pattern>>0)&0xFF) | palette];
-    pattern = vram[tileOffset+tileLine+1];
-    *buf++ = pal[((pattern>>24)&0xFF) | palette];
-    *buf++ = pal[((pattern>>16)&0xFF) | palette];
-    *buf++ = pal[((pattern>>8)&0xFF) | palette];
-    *buf++ = pal[((pattern>>0)&0xFF) | palette];
-}
+#define VERTEX_2D_SHADER_FILE "Src/Graphics/Vertex2D.glsl"
+#define FRAGMENT_2D_SHADER_FILE "Src/Graphics/Fragment2D.glsl"
 
 
 /******************************************************************************
  Layer Rendering
+
+ This code is quite slow and badly needs to be optimized. Dirty rectangles
+ should be implemented first and tile pre-decoding second.
 ******************************************************************************/
 
-/*
- * DrawLine():
- *
- * Draws a single scanline of single layer. Vertical (but not horizontal)
- * scrolling is applied here.
- *
- * Parametes:
- *		dest				Destination of 512-pixel output buffer to draw to.
- *		layerNum			Layer number:
- *								0 = Layer A		(@ 0xF8000)
- *								1 = Layer A'	(@ 0xFA000)
- *								2 = Layer B		(@ 0xFC000)
- *								3 = Layer B'	(@ 0xFE000)
- *		y					Line number (0-495).
- *		nameTableBase		Pointer to VRAM name table (see above addresses) 
- *							for this layer.
- *		hScrollTable		Pointer to the line-by-line horizontal scroll value
- *							table for this layer.
- *		pal					Palette to draw with.
- */
-void CRender2D::DrawLine(UINT32 *dest, int layerNum, int y, const UINT16 *nameTableBase, const UINT32 *pal)
+template <int bits, bool alphaTest, bool clip>
+static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, int patternLine, const uint32_t *vram, const uint32_t *palette, uint16_t mask)
 {
-	// Determine the layer color depth (4 or 8-bit pixels)
-	bool is4Bit = (regs[0x20 / 4] & (1 << (12 + layerNum))) > 0;
-	
-	// Compute offsets due to vertical scrolling
-	int 		 vScroll    = (regs[0x60/4+layerNum]>>16)&0x1FF;
-	const UINT16 *nameTable = &nameTableBase[(64*((y+vScroll)/8)) & 0xFFF];	// clamp to 64x64=0x1000
-	int          vOffset    = (y+vScroll)&7;	// vertical pixel offset within 8x8 tile
-	
-	// Render 512 pixels (64 tiles) w/out any horizontal scrolling or masking
-	if (is4Bit)
-	{
-		for (int tx = 0; tx < 64; tx += 4)
-		{
-			// Little endian: offsets 0,1,2,3 become 1,0,3,2
-			DrawTileLine4BitNoClip(dest, nameTable[1], vOffset, pal);	dest += 8;
-			DrawTileLine4BitNoClip(dest, nameTable[0], vOffset, pal);	dest += 8;
-			DrawTileLine4BitNoClip(dest, nameTable[3], vOffset, pal);	dest += 8;
-			DrawTileLine4BitNoClip(dest, nameTable[2], vOffset, pal);	dest += 8;
-			nameTable += 4;	// next set of 4 tiles
-		}
-	}
-	else
-	{
-		for (int tx = 0; tx < 64; tx += 4)
-		{
-			DrawTileLine8BitNoClip(dest, nameTable[1], vOffset, pal);	dest += 8;
-			DrawTileLine8BitNoClip(dest, nameTable[0], vOffset, pal);	dest += 8;
-			DrawTileLine8BitNoClip(dest, nameTable[3], vOffset, pal);	dest += 8;
-			DrawTileLine8BitNoClip(dest, nameTable[2], vOffset, pal);	dest += 8;
-			nameTable += 4;
-		}
-	}				
+  static_assert(bits == 4 || bits == 8, "Tiles are either 4- or 8-bit");
+
+  // For 8-bit pixels, each line of tile pattern is two words
+  if (bits == 8)
+    patternLine *= 2;
+
+  // Compute offset of pattern for this line
+  int patternOffset;
+  if (bits == 4)
+  {
+    patternOffset = ((tile & 0x3FFF) << 1) | ((tile >> 15) & 1);
+    patternOffset *= 32;
+    patternOffset /= 4;
+  }
+  else
+  {
+    patternOffset = tile & 0x3FFF;
+    patternOffset *= 64;
+    patternOffset /= 4;
+  } 
+
+  // Name table entry provides high color bits
+  uint32_t colorHi = tile & ((bits == 4) ? 0x7FF0 : 0x7F00);
+
+  // Draw
+  if (bits == 4)
+  {
+    uint32_t pattern = vram[patternOffset + patternLine];
+    for (int p = 7; p >= 0; p--)
+    {
+      if (!clip || (clip && pixelOffset >= 0 && pixelOffset < 496))
+      {
+        uint16_t maskTest = 1 << (15-((pixelOffset+16)/32));  // first 16 pixels in stencil mask are overscan
+        bool visible = (mask & maskTest) != 0;
+        uint32_t pixel = palette[((pattern >> (p*4)) & 0xF) | colorHi];
+        if (alphaTest)
+        {
+          if (visible && (pixel >> 24) != 0)  // only draw opaque pixels
+            line[pixelOffset] = pixel;
+        }
+        else
+        {
+          if (visible)
+            line[pixelOffset] = pixel;
+          else
+            line[pixelOffset] = 0;
+        }
+      }
+      ++pixelOffset;
+    }
+  }
+  else
+  {
+    for (int i = 0; i < 2; i++) // 4 pixels per word
+    {
+      uint32_t pattern = vram[patternOffset + patternLine + i];
+      for (int p = 3; p >= 0; p--)
+      {
+        if (!clip || (clip && pixelOffset >= 0 && pixelOffset < 496))
+        {
+          uint16_t maskTest = 1 << (15-((pixelOffset+16)/32));
+          bool visible = (mask & maskTest) != 0;
+          uint32_t pixel = palette[((pattern >> (p*8)) & 0xFF) | colorHi];
+          if (alphaTest)
+          {
+            if (visible && (pixel >> 24) != 0)
+              line[pixelOffset] = pixel;
+          }
+          else
+          {
+            if (visible)
+              line[pixelOffset] = pixel;
+            else
+              line[pixelOffset] = 0;  // transparent
+          }
+        }
+        ++pixelOffset;
+      }
+    }
+  }
 }
 
-// Mix in the appropriate layer (add on top of current contents) with horizontal scrolling under control of the stencil mask
-static void MixLine(UINT32 *dest, const UINT32 *src, int layerNum, int y, bool isBottom, const UINT16 *hScrollTable, const UINT16 *maskTableLine, int hFullScroll, bool lineScrollMode)
+static inline void ClearLayer(uint32_t *pixels)
 {
-	// Determine horizontal scroll values
-	int hScroll;
-	if (lineScrollMode)
-		hScroll = hScrollTable[y];
-	else
-		hScroll = hFullScroll;
-		
-	// Get correct mask table entry
-	if (layerNum < 2)	// little endian: layers A and A' use second word in each pair
-		++maskTableLine;
-		
-	// Figure out what mask bit should be to mix in this layer
-	UINT16 doCopy;
-	if ((layerNum & 1))		// layers 1 and 3 are A' and B': alternates
-		doCopy = 0x0000;	// if mask is clear, copy alternate layer
-	else
-		doCopy = 0x8000;	// copy primary layer when mask is set
-			
-	// Mix first 60 tiles (4 at a time)
-	UINT16 mask = *maskTableLine;	// mask for this line (each bit covers 4 tiles)
-	int    i    = hScroll&511;		// line index (where to copy from)
-	if (isBottom)
-	{
-		/*
-		 * Bottom layers can be copied in without worrying about transparency 
-		 * but we must write blank values when layer is not showing.
-		 */
-		for (int tx = 0; tx < 60; tx += 4)
-		{
-			// Only copy pixels if the mask bit is appropriate for this layer type
-			if ((mask&0x8000) == doCopy)
-			{
-				if (i <= (512-32))	// safe to use memcpy for fast blit?
-				{
-					memcpy(dest, &src[i], 32*sizeof(UINT32));
-					i += 32;
-					dest += 32;
-				}
-				else				// slow copy, wrap line boundary
-				{
-					for (int k = 0; k < 32; k++)
-					{
-						i &= 511;
-						*dest++ = src[i++];
-					}
-				}
-			}
-			else
-			{
-				// Write blank pixels
-				memset(dest, 0, 32*sizeof(UINT32));
-				i += 32;
-				i &= 511;	// wrap line boundaries
-				dest += 32;
-			}
-			
-			mask <<= 1;
-		}
-		
-		// Mix last two tiles
-		if ((mask&0x8000) == doCopy)
-		{
-			for (int k = 0; k < 16; k++)
-			{
-				i &= 511;
-				*dest++ = src[i++];
-			}
-		}
-		else	// clear
-		{
-			for (int k = 0; k < 16; k++)
-			{
-				i &= 511;
-				*dest++ = 0;
-			}
-		}
-	}
-	else
-	{
-		/* 
-		 * Subsequent layers must test for transparency while mixing.
-		 */
-		for (int tx = 0; tx < 60; tx += 4)
-		{
-			if ((mask&0x8000) == doCopy)
-			{
-				UINT32	p;
-				for (int k = 0; k < 32; k++)
-				{
-					i &= 511;
-					p = src[i++];
-					if ((p>>24) != 0)	// opaque pixel, put it down
-						*dest = p;
-					dest++;
-				}
-			}
-			else
-			{
-				i += 32;
-				i &= 511;
-				dest += 32;
-			}
-				
-			mask <<= 1;
-		}
-		
-		if ((mask&0x8000) == doCopy)
-		{
-			UINT32	p;
-			for (int k = 0; k < 16; k++)
-			{
-				i &= 511;
-				p = src[i++];
-				if ((p>>24) != 0)
-					*dest = p;
-				dest++;
-			}
-		}
-	}
+  memset(pixels, 0, 496*384*sizeof(uint32_t));
 }
 
-// Returns true if there is no bottom layer (requiring the color buffer to be cleared)
-bool CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
+template <int bits, bool alphaTest>
+static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, const uint32_t *regs, const uint32_t *palette)
 {
-	/*
-	 * Precompute data needed for each layer
-	 */
-	const UINT16 	*nameTableBase[4];
-	const UINT16	*hScrollTable[4];
-	const UINT16 	*maskTableLine = (UINT16 *) &vram[0xF7000/4];	// start at line 0
-	int				hFullScroll[4];
-	bool			lineScrollMode[4];
-	
-	for (int i = 0; i < 4; i++)	// 0=A, 1=A', 2=B, 3=B'
-	{
-		// Base of name table
-		nameTableBase[i] = (UINT16 *) &vram[(0xF8000+i*0x2000)/4];
-		
-		// Horizontal line scroll tables
-		hScrollTable[i] = (UINT16 *) &vram[(0xF6000+i*0x400)/4];
-		
-		// Load horizontal full-screen scroll values and scroll mode
-		hFullScroll[i]    = regs[0x60/4+i]&0x3FF;
-		lineScrollMode[i] = (regs[0x60 / 4 + i] & 0x8000)>0;
-	}
-	
-	/*
-	 * Precompute layer mixing order 
-	 */
-	UINT32 			*dest[4];
-	const UINT32	*src[4];
-	int				sortedLayerNum[4];
-	bool			sortedIsBottom[4];
-	const UINT16	*sortedHScrollTable[4];
-	int				sortedHFullScroll[4];
-	bool			sortedLineScrollMode[4];
-	bool			noBottom;	// when true, no layer assigned to bottom surface
-	
-	switch ((regs[0x20/4]>>8)&0xF)
-	{
-	case 0x5:	// top: A, B, A'?	bottom: B'
-		noBottom = false;
-		dest[0]=destBottom; src[0]=lineBuffer[3]; sortedLayerNum[0]=3; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[3]; sortedHFullScroll[0]=hFullScroll[3]; sortedLineScrollMode[0]=lineScrollMode[3];
-		dest[1]=destTop;    src[1]=lineBuffer[2]; sortedLayerNum[1]=2; sortedIsBottom[1]=true;  sortedHScrollTable[1] = hScrollTable[2]; sortedHFullScroll[1]=hFullScroll[2]; sortedLineScrollMode[1]=lineScrollMode[2];
-		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
-		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
-		break;
-	case 0x9:	// ? all layers on top but relative order unknown (Spikeout Final Edition, after first boss)
-		noBottom = true;
-		dest[0]=destTop;    src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[3];
-		dest[1]=destTop;    src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[2];
-		dest[2]=destTop;    src[2]=lineBuffer[1]; sortedLayerNum[2]=1; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[1]; sortedHFullScroll[2]=hFullScroll[1]; sortedLineScrollMode[2]=lineScrollMode[1];
-		dest[3]=destTop;    src[3]=lineBuffer[0]; sortedLayerNum[3]=0; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[0]; sortedHFullScroll[3]=hFullScroll[0]; sortedLineScrollMode[3]=lineScrollMode[0];
-		break;
-	case 0xF:	// all on top
-		noBottom = true;
-		dest[0]=destTop;    src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[2];
-		dest[1]=destTop;    src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[3];
-		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=false; sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
-		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
-		break;
-	case 0x7:	// top: A, B	bottom: A'?, B'
-		noBottom = false;
-		dest[0]=destBottom; src[0]=lineBuffer[3]; sortedLayerNum[0]=3; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[3]; sortedHFullScroll[0]=hFullScroll[3]; sortedLineScrollMode[0]=lineScrollMode[3];
-		dest[1]=destBottom; src[1]=lineBuffer[1]; sortedLayerNum[1]=1; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[1]; sortedHFullScroll[1]=hFullScroll[1]; sortedLineScrollMode[1]=lineScrollMode[1];
-		dest[2]=destTop;    src[2]=lineBuffer[2]; sortedLayerNum[2]=2; sortedIsBottom[2]=true;  sortedHScrollTable[2] = hScrollTable[2]; sortedHFullScroll[2]=hFullScroll[2]; sortedLineScrollMode[2]=lineScrollMode[2];
-		dest[3]=destTop;    src[3]=lineBuffer[0]; sortedLayerNum[3]=0; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[0]; sortedHFullScroll[3]=hFullScroll[0]; sortedLineScrollMode[3]=lineScrollMode[0];
-		break;
-	default:	// unknown, use A and A' on top, B and B' on the bottom
-		noBottom = false;
-		dest[0]=destBottom; src[0]=lineBuffer[2]; sortedLayerNum[0]=2; sortedIsBottom[0]=true;  sortedHScrollTable[0] = hScrollTable[2]; sortedHFullScroll[0]=hFullScroll[2]; sortedLineScrollMode[0]=lineScrollMode[2];
-		dest[1]=destBottom; src[1]=lineBuffer[3]; sortedLayerNum[1]=3; sortedIsBottom[1]=false; sortedHScrollTable[1] = hScrollTable[3]; sortedHFullScroll[1]=hFullScroll[3]; sortedLineScrollMode[1]=lineScrollMode[3];
-		dest[2]=destTop;    src[2]=lineBuffer[0]; sortedLayerNum[2]=0; sortedIsBottom[2]=true;  sortedHScrollTable[2] = hScrollTable[0]; sortedHFullScroll[2]=hFullScroll[0]; sortedLineScrollMode[2]=lineScrollMode[0];
-		dest[3]=destTop;    src[3]=lineBuffer[1]; sortedLayerNum[3]=1; sortedIsBottom[3]=false; sortedHScrollTable[3] = hScrollTable[1]; sortedHFullScroll[3]=hFullScroll[1]; sortedLineScrollMode[3]=lineScrollMode[1];
-		break;
-	}
-	
-	/*
-	 * Render and mix each line
-	 */
-	for (int y = 0; y < 384; y++)
-	{
-		// Draw one scanline from each layer
-		DrawLine(lineBuffer[0], 0, y, nameTableBase[0], pal[0]);
-		DrawLine(lineBuffer[1], 1, y, nameTableBase[1], pal[0]);
-		DrawLine(lineBuffer[2], 2, y, nameTableBase[2], pal[1]);
-		DrawLine(lineBuffer[3], 3, y, nameTableBase[3], pal[1]);
-						
-		// Mix the layers in the correct order
-		for (int i = 0; i < 4; i++)
-		{
-			MixLine(dest[i], src[i], sortedLayerNum[i], y, sortedIsBottom[i], sortedHScrollTable[i], maskTableLine, sortedHFullScroll[i], sortedLineScrollMode[i]);				
-			dest[i] += 496;	// next line
-		}
-	
-		// Next line in mask table
-		maskTableLine += 2;
-	}
-	
-	// Indicate whether color buffer must be cleared because no bottom layer
-	return noBottom;
+  const uint16_t *nameTableBase = (const uint16_t *) &vram[(0xF8000 + layerNum * 0x2000) / 4];
+  const uint16_t *hScrollTable = (const uint16_t *) &vram[(0xF6000 + layerNum * 0x400) / 4];
+  bool lineScrollMode = (regs[0x60/4 + layerNum] & 0x8000) != 0;
+  int hFullScroll = regs[0x60/4 + layerNum] & 0x3FF;
+  int vScroll = (regs[0x60/4 + layerNum] >> 16) & 0x1FF;
+
+  const uint16_t  *maskTable = (const uint16_t *) &vram[0xF7000 / 4];
+  if (layerNum < 2) // little endian: layers A and A' use second word in each pair
+    maskTable += 1;
+
+  // If mask bit is clear, alternate layer is shown. We want to test for non-
+  // zero, so we flip the mask when drawing alternate layers (layers 1 and 3).
+  const uint16_t maskPolarity = (layerNum & 1) ? 0xFFFF : 0x0000;
+      
+  uint32_t *line = pixels;
+
+  for (int y = 0; y < 384; y++)
+  {
+    int hScroll = lineScrollMode ? hScrollTable[y] : hFullScroll;
+    int hTile = hScroll / 8;
+    int hFine = hScroll & 7;        // horizontal pixel offset within tile line
+    int vFine = (y + vScroll) & 7;  // vertical pixel offset within 8x8 tile
+    const uint16_t *nameTable = &nameTableBase[(64 * ((y + vScroll) / 8)) & 0xFFF]; // clamp to 64x64 = 0x1000
+    uint16_t mask = *maskTable ^ maskPolarity;  // each bit covers 32 pixels
+
+    int pixelOffset = -hFine;
+    int extraTile = (hFine != 0) ? 1 : 0; // h-scrolling requires part of 63rd tile
+
+    int tx = 0;
+    DrawTileLine<bits, alphaTest, true>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
+    ++hTile;
+    pixelOffset += 8;
+    for (tx = 1; tx < (62 - 1 + extraTile); tx++)
+    {
+      DrawTileLine<bits, alphaTest, false>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
+      ++hTile;
+      pixelOffset += 8;
+    }
+    DrawTileLine<bits, alphaTest, true>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
+    ++hTile;
+    pixelOffset += 8;
+
+    // Advance one line
+    maskTable += 2;
+    line += 496;
+  }
 }
-		
+
+bool CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *pixelsTop)
+{
+  unsigned priority = (m_regs[0x20/4] >> 8) & 0xF;
+  
+  // Render bottom layers
+  bool nothingDrawn = true;
+  for (int layerNum = 3; layerNum >= 0; layerNum--)
+  {
+    bool is4Bit = (m_regs[0x20/4] & (1 << (12 + layerNum))) != 0;
+    bool enabled = (m_regs[0x60/4 + layerNum] & 0x80000000) != 0;
+    bool selected = (priority & (1 << layerNum)) == 0;
+    if (enabled && selected)
+    {
+      if (nothingDrawn)
+      {
+        if (is4Bit)
+          DrawLayer<4, false>(pixelsBottom, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+        else
+          DrawLayer<8, false>(pixelsBottom, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+      }
+      else
+      {
+        if (is4Bit)
+          DrawLayer<4, true>(pixelsBottom, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+        else
+          DrawLayer<8, true>(pixelsBottom, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+      }
+      nothingDrawn = false;
+    }
+  }
+
+  if (nothingDrawn)
+    ClearLayer(pixelsBottom);
+
+  // Render top layers
+  nothingDrawn = true;
+  for (int layerNum = 3; layerNum >= 0; layerNum--)
+  {
+    bool is4Bit = (m_regs[0x20/4] & (1 << (12 + layerNum))) != 0;
+    bool enabled = (m_regs[0x60/4 + layerNum] & 0x80000000) != 0;
+    bool selected = (priority & (1 << layerNum)) != 0;
+    if (enabled && selected)
+    {
+      if (nothingDrawn)
+      {
+        if (is4Bit)
+          DrawLayer<4, false>(pixelsTop, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+        else
+          DrawLayer<8, false>(pixelsTop, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+      }
+      else
+      {
+        if (is4Bit)
+          DrawLayer<4, true>(pixelsTop, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+        else
+          DrawLayer<8, true>(pixelsTop, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
+      }
+      nothingDrawn = false;
+    }
+  }
+  
+  if (nothingDrawn)
+    ClearLayer(pixelsTop);
+
+  // Indicate whether color buffer must be cleared because of no bottom layer
+  return nothingDrawn;
+}
+
 
 /******************************************************************************
  Frame Display Functions
@@ -638,83 +511,85 @@ bool CRender2D::DrawTilemaps(UINT32 *destBottom, UINT32 *destTop)
 
 // Draws a surface to the screen (0 is top and 1 is bottom)
 void CRender2D::DisplaySurface(int surface, GLfloat z)
-{	
-	// Draw the surface
-	glActiveTexture(GL_TEXTURE0);	// texture unit 0
-	glBindTexture(GL_TEXTURE_2D, texID[surface]);
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0f/512.0f, 0.0f);          	glVertex3f(0.0f, 0.0f, z);
-    glTexCoord2f(496.0f/512.0f, 0.0f);         	glVertex3f(1.0f, 0.0f, z);
-    glTexCoord2f(496.0f/512.0f, 384.0f/512.0f);	glVertex3f(1.0f, 1.0f, z);
-    glTexCoord2f(0.0f/512.0f, 384.0f/512.0f);   glVertex3f(0.0f, 1.0f, z);
-    glEnd();
+{ 
+  // Draw the surface
+  float width = m_npot ? 1.0f : (496.0f / 512.0f);
+  float height = m_npot ? 1.0f : (384.0f / 512.0f);
+  glActiveTexture(GL_TEXTURE0); // texture unit 0
+  glBindTexture(GL_TEXTURE_2D, m_texID[surface]);
+  glBegin(GL_QUADS);
+  glTexCoord2f(0.0f, 0.0f);     glVertex3f(0.0f, 0.0f, z);
+  glTexCoord2f(width, 0.0f);    glVertex3f(1.0f, 0.0f, z);
+  glTexCoord2f(width, height);  glVertex3f(1.0f, 1.0f, z);
+  glTexCoord2f(0.0f, height);   glVertex3f(0.0f, 1.0f, z);
+  glEnd();
 }
 
 // Set up viewport and OpenGL state for 2D rendering (sets up blending function but disables blending)
 void CRender2D::Setup2D(bool isBottom, bool clearAll)
 {
-	// Enable texture mapping and blending
-	glEnable(GL_TEXTURE_2D);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);	// alpha of 1.0 is opaque, 0 is transparent
-	glDisable(GL_BLEND);
+  // Enable texture mapping and blending
+  glEnable(GL_TEXTURE_2D);
+  glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // alpha of 1.0 is opaque, 0 is transparent
+  glDisable(GL_BLEND);
 
-	// Disable Z-buffering
-	glDisable(GL_DEPTH_TEST);
-	
-	// Shader program
-	glUseProgram(shaderProgram);
-	
-	// Clear everything if requested or just overscan areas for wide screen mode
-	if (clearAll)
-	{
-		glClearColor(0.0, 0.0, 0.0, 0.0);
-		glViewport(0, 0, totalXPixels, totalYPixels);
-		glClear(GL_COLOR_BUFFER_BIT);
-	}
-	else if (isBottom && g_Config.wideScreen)
-	{
-		// For now, clear w/ black (may want to use color 0 later)
-		glClearColor(0.0, 0.0, 0.0, 0.0);
-		glViewport(0, 0, xOffs, totalYPixels);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glViewport(xOffs+xPixels, 0, totalXPixels, totalYPixels);
-		glClear(GL_COLOR_BUFFER_BIT);
-	}
+  // Disable Z-buffering
+  glDisable(GL_DEPTH_TEST);
+  
+  // Shader program
+  glUseProgram(m_shaderProgram);
+  
+  // Clear everything if requested or just overscan areas for wide screen mode
+  if (clearAll)
+  {
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glViewport(0, 0, m_totalXPixels, m_totalYPixels);
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
+  else if (isBottom && g_Config.wideScreen)
+  {
+    // For now, clear w/ black (may want to use color 0 later)
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glViewport(0, 0, m_xOffset, m_totalYPixels);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glViewport(m_xOffset + m_xPixels, 0, m_totalXPixels, m_totalYPixels);
+    glClear(GL_COLOR_BUFFER_BIT);
+  }
 
-	// Set up the viewport and orthogonal projection
-	glViewport(xOffs, yOffs, xPixels, yPixels);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-    gluOrtho2D(0.0, 1.0, 1.0, 0.0);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+  // Set up the viewport and orthogonal projection
+  glViewport(m_xOffset, m_yOffset, m_xPixels, m_yPixels);
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  gluOrtho2D(0.0, 1.0, 1.0, 0.0);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
 }
 
 // Bottom layers
 void CRender2D::BeginFrame(void)
 {
-	// Update all layers
-	bool clear = DrawTilemaps(surfBottom, surfTop);
-	glActiveTexture(GL_TEXTURE0);	// texture unit 0
-	glBindTexture(GL_TEXTURE_2D, texID[0]);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfTop);	
-	glBindTexture(GL_TEXTURE_2D, texID[1]);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, surfBottom);	
-	
-	// Display bottom surface
-	Setup2D(true, clear);
-	if (!clear)
-		DisplaySurface(1, 0.0);
+  // Update all layers
+  bool clear = DrawTilemaps(m_bottomSurface, m_topSurface);
+  glActiveTexture(GL_TEXTURE0); // texture unit 0
+  glBindTexture(GL_TEXTURE_2D, m_texID[0]);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_topSurface);
+  glBindTexture(GL_TEXTURE_2D, m_texID[1]);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_bottomSurface);
+  
+  // Display bottom surface
+  Setup2D(true, clear);
+  if (!clear)
+    DisplaySurface(1, 0.0);
 }
 
 // Top layers
 void CRender2D::EndFrame(void)
 {
-	// Display top surface
-	Setup2D(false, false);
-	glEnable(GL_BLEND);
-	DisplaySurface(0, -0.5);
+  // Display top surface
+  Setup2D(false, false);
+  glEnable(GL_BLEND);
+  DisplaySurface(0, -0.5);
 }
 
 
@@ -723,7 +598,7 @@ void CRender2D::EndFrame(void)
 ******************************************************************************/
 
 // Deprecated
-void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
+void CRender2D::WriteVRAM(unsigned addr, uint32_t data)
 {
 }
 
@@ -732,117 +607,101 @@ void CRender2D::WriteVRAM(unsigned addr, UINT32 data)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
-void CRender2D::AttachRegisters(const UINT32 *regPtr)
+void CRender2D::AttachRegisters(const uint32_t *regPtr)
 {
-	regs = regPtr;
-	DebugLog("Render2D attached registers\n");
+  m_regs = regPtr;
+  DebugLog("Render2D attached registers\n");
 }
 
-void CRender2D::AttachPalette(const UINT32 *palPtr[2])
+void CRender2D::AttachPalette(const uint32_t *palPtr[2])
 {
-	pal[0] = palPtr[0];
-	pal[1] = palPtr[1];
-	DebugLog("Render2D attached palette\n");
+  m_palette[0] = palPtr[0];
+  m_palette[1] = palPtr[1];
+  DebugLog("Render2D attached palette\n");
 }
 
-void CRender2D::AttachVRAM(const UINT8 *vramPtr)
+void CRender2D::AttachVRAM(const uint8_t *vramPtr)
 {
-	vram = (UINT32 *) vramPtr;
-	DebugLog("Render2D attached VRAM\n");
+  m_vram = (uint32_t *) vramPtr;
+  DebugLog("Render2D attached VRAM\n");
 }
 
 // Memory pool and offsets within it
-#define MEMORY_POOL_SIZE		(2*512*384*4 + 4*512*4)
-#define OFFSET_TOP_SURFACE		0				// 512*384*4 bytes
-#define OFFSET_BOTTOM_SURFACE	(512*384*4) 	// 512*384*4
-#define OFFSET_LINE_BUFFERS		(2*512*384*4)	// 4*512*4 (4 lines)
+#define MEMORY_POOL_SIZE      (2*512*384*4)
+#define OFFSET_TOP_SURFACE    0             // 512*384*4 bytes
+#define OFFSET_BOTTOM_SURFACE (512*384*4)   // 512*384*4
 
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes)
 {
-	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
-	
-	// Load shaders
-	if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,NULL,NULL,vertexShaderSource,fragmentShaderSource))
-		return FAIL;
-	
-	// Get locations of the uniforms
-	glUseProgram(shaderProgram);	// bind program
-	textureMapLoc = glGetUniformLocation(shaderProgram, "textureMap");
-	glUniform1i(textureMapLoc,0);	// attach it to texture unit 0
-	
-	// Allocate memory for layer surfaces
-	memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
-	if (NULL == memoryPool)
-		return ErrorLog("Insufficient memory for tilemap surfaces (need %1.1f MB).", memSizeMB);	
-	memset(memoryPool,0,MEMORY_POOL_SIZE);	// clear textures
-	
-	// Set up pointers to memory regions
-	surfTop    	  = (UINT32 *) &memoryPool[OFFSET_TOP_SURFACE];
-	surfBottom 	  = (UINT32 *) &memoryPool[OFFSET_BOTTOM_SURFACE];
-	for (int i = 0; i < 4; i++)
-		lineBuffer[i] = (UINT32 *) &memoryPool[OFFSET_LINE_BUFFERS + i*512*4];
-	
-	// Resolution
-	xPixels = xRes;
-	yPixels = yRes;
-	xOffs = xOffset;
-	yOffs = yOffset;
-	totalXPixels = totalXRes;
-	totalYPixels = totalYRes;
-			
-	// Create textures
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glGenTextures(2, texID);
-    for (int i = 0; i < 2; i++)
-    {
-		glActiveTexture(GL_TEXTURE0);	// texture unit 0
-        glBindTexture(GL_TEXTURE_2D, texID[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, surfTop);
-        if (glGetError() != GL_NO_ERROR)
-        	return ErrorLog("OpenGL was unable to provide 512x512-texel texture maps for tilemap layers.");
-    }
+  // Load shaders
+  if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, 0, 0, s_vertexShaderSource, s_fragmentShaderSource))
+    return FAIL;
+  
+  // Get locations of the uniforms
+  glUseProgram(m_shaderProgram);    // bind program
+  m_textureMapLoc = glGetUniformLocation(m_shaderProgram, "textureMap");
+  glUniform1i(m_textureMapLoc, 0);  // attach it to texture unit 0
+  
+  // Allocate memory for layer surfaces
+  m_memoryPool = new(std::nothrow) uint8_t[MEMORY_POOL_SIZE];
+  if (NULL == m_memoryPool)
+    return ErrorLog("Insufficient memory for tilemap surfaces (need %1.1f MB).", float(MEMORY_POOL_SIZE) / 0x100000);
+  memset(m_memoryPool, 0, MEMORY_POOL_SIZE);  // clear textures
+  
+  // Set up pointers to memory regions
+  m_topSurface    = (uint32_t *) &m_memoryPool[OFFSET_TOP_SURFACE];
+  m_bottomSurface = (uint32_t *) &m_memoryPool[OFFSET_BOTTOM_SURFACE];
+  
+  // Resolution
+  m_xPixels = xRes;
+  m_yPixels = yRes;
+  m_xOffset = xOffset;
+  m_yOffset = yOffset;
+  m_totalXPixels = totalXRes;
+  m_totalYPixels = totalYRes;
 
-	DebugLog("Render2D initialized (allocated %1.1f MB)\n", memSizeMB);
-	return OKAY;
+  // Create textures
+  m_npot = glewIsSupported("GL_ARB_texture_non_power_of_two") != 0;
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glGenTextures(2, m_texID);
+  for (int i = 0; i < 2; i++)
+  {
+    glActiveTexture(GL_TEXTURE0); // texture unit 0
+    glBindTexture(GL_TEXTURE_2D, m_texID[i]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    int width = m_npot ? 496 : 512;
+    int height = m_npot ? 384 : 512;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_topSurface);
+    if (glGetError() != GL_NO_ERROR)
+      return ErrorLog("OpenGL was unable to provide %dx%d-texel texture maps for tilemap layers.", width, height);
+  }
+
+  DebugLog("Render2D initialized (allocated %1.1f MB)\n", float(MEMORY_POOL_SIZE) / 0x100000);
+  return OKAY;
 }
 
 CRender2D::CRender2D(void)
 {
-	xPixels = 496;
-	yPixels = 384;
-	xOffs = 0;
-	yOffs = 0;
-	
-	memoryPool = NULL;
-	vram = NULL;
-	surfTop = NULL;
-	surfBottom = NULL;
-	for (int i = 0; i < 4; i++)
-		lineBuffer[i] = NULL;
-	
-	DebugLog("Built Render2D\n");
+  DebugLog("Built Render2D\n");
 }
 
 CRender2D::~CRender2D(void)
 {
-	DestroyShaderProgram(shaderProgram,vertexShader,fragmentShader);
-	glDeleteTextures(2, texID);
-	
-	if (memoryPool != NULL)
-	{
-		delete [] memoryPool;
-		memoryPool = NULL;
-	}
-	
-	vram = NULL;
-	surfTop = NULL;
-	surfBottom = NULL;
-	for (int i = 0; i < 4; i++)
-		lineBuffer[i] = NULL;
+  DestroyShaderProgram(m_shaderProgram, m_vertexShader, m_fragmentShader);
+  glDeleteTextures(2, m_texID);
+  
+  if (m_memoryPool)
+  {
+    delete [] m_memoryPool;
+    m_memoryPool = 0;
+  }
+  
+  m_vram = 0;
+  m_topSurface = 0;
+  m_bottomSurface = 0;
 
-	DebugLog("Destroyed Render2D\n");
+  DebugLog("Destroyed Render2D\n");
 }

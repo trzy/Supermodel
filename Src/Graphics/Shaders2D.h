@@ -29,7 +29,7 @@
 #define INCLUDED_SHADERS2D_H
 
 // Vertex shader
-static const char vertexShaderSource[] =
+static const char s_vertexShaderSource[] =
 {
 "/**\n"
 " ** Supermodel\n"
@@ -68,7 +68,7 @@ static const char vertexShaderSource[] =
 };
 
 // Fragment shader
-static const char fragmentShaderSource[] = 
+static const char s_fragmentShaderSource[] = 
 {
 "/**\n"
 " ** Supermodel\n"
