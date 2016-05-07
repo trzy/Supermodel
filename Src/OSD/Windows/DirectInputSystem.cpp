@@ -1589,7 +1589,7 @@ bool CDirectInputSystem::InitializeSystem()
 			m_useXInput = false;
 
 		if (!m_useXInput)
-			ErrorLog("Unable to initialize XInput API (library hooks are not available) - switching to DirectInput.\n");
+			ErrorLog("Unable to initialize XInput API (" XINPUT_DLL_A " not found) - switching to DirectInput.\n");
 	}
 
 	// Dynamically create DirectInput8 via COM, rather than statically linking to dinput8.dll
