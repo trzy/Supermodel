@@ -208,6 +208,16 @@ int	PolyHeader::TexHeight()
 	return 32 << h;
 }
 
+bool PolyHeader::TexSmoothU()
+{
+	return (header[3] & 0x80) > 0;
+}
+
+bool PolyHeader::TexSmoothV()
+{
+	return (header[3] & 0x40) > 0;
+}
+
 //
 // header 4
 //

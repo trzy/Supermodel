@@ -114,6 +114,8 @@ public:
 	// header 3
 	int		TexWidth();
 	int		TexHeight();
+	bool	TexSmoothU();
+	bool	TexSmoothV();
 
 	//header 4
 	void	Color(UINT8& r, UINT8& g, UINT8& b);
