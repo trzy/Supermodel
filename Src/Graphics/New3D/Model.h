@@ -30,6 +30,7 @@ struct R3DPoly
 {
 	Vertex v[4];			// just easier to have them as an array
 	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
+	float faceColour[4];	// per face colour
 	int number = 4;
 };
 

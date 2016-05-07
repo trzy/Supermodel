@@ -168,7 +168,7 @@ private:
 
 	// building the scene
 	void CacheModel(Model *m, const UINT32 *data);
-	void CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
+	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
 
 	void RenderScene(int priority, bool alpha);
 	float Determinant3x3(const float m[16]);

@@ -732,7 +732,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 	}
 }
 
-void CNew3D::CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
+void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
 {
 	//====================
 	Poly		p;
@@ -756,6 +756,13 @@ void CNew3D::CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
 		p.p2 = r3dPoly.v[1];
 		p.p3 = r3dPoly.v[0];
 	}
+
+	//multiply face attributes with vertex attributes if required
+	for (int i = 0; i < 4; i++) {
+		p.p1.color[i] = (UINT8)(p.p1.color[i] * r3dPoly.faceColour[i]);
+		p.p2.color[i] = (UINT8)(p.p2.color[i] * r3dPoly.faceColour[i]);
+		p.p3.color[i] = (UINT8)(p.p3.color[i] * r3dPoly.faceColour[i]);
+	}
 	
 	polyArray.emplace_back(p);
 
@@ -770,6 +777,13 @@ void CNew3D::CopyVertexData(R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
 			p.p1 = r3dPoly.v[0];
 			p.p2 = r3dPoly.v[3];
 			p.p3 = r3dPoly.v[2];
+		}
+
+		//multiply face attributes with vertex attributes if required
+		for (int i = 0; i < 4; i++) {
+			p.p1.color[i] = (UINT8)(p.p1.color[i] * r3dPoly.faceColour[i]);
+			p.p2.color[i] = (UINT8)(p.p2.color[i] * r3dPoly.faceColour[i]);
+			p.p3.color[i] = (UINT8)(p.p3.color[i] * r3dPoly.faceColour[i]);
 		}
 
 		polyArray.emplace_back(p);
@@ -887,6 +901,37 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 		}
 
+		// copy face attributes
+
+		for (i = 0; i < p.number; i++) {
+
+			if ((ph.header[1] & 2) == 0) {
+				UINT32 colorIdx = (ph.header[4] >> 8) & 0x7FF;
+				p.faceColour[2] = (m_polyRAM[0x400 + colorIdx] & 0xFF) / 255.f;
+				p.faceColour[1] = ((m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF) / 255.f;
+				p.faceColour[0] = ((m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF) / 255.f;
+			}
+			else {
+				if (ph.ColorDisabled()) {		// no colours were set
+					p.faceColour[0] = 1.0f;
+					p.faceColour[1] = 1.0f;
+					p.faceColour[2] = 1.0f;
+				}
+				else {
+					p.faceColour[0] = ((ph.header[4] >> 24)) / 255.f;
+					p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF) / 255.f;
+					p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF) / 255.f;
+				}
+			}
+
+			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
+				p.faceColour[3] = 1.0f;
+			}
+			else {
+				p.faceColour[3] = ph.Transparency() / 255.f;
+			}
+		}
+
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
 			p.v[i].normal[0] = p.faceNormal[0];
@@ -894,7 +939,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[i].normal[2] = p.faceNormal[2];
 		}
 
-		for (; j < p.number; j++)	// remaining vertices are new and defined here
+		// remaining vertices are new and defined here
+		for (; j < p.number; j++)	
 		{
 			// Fetch vertices
 			UINT32 ix = data[0];
@@ -914,37 +960,18 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
 			}
 
-			if ((ph.header[1] & 2) == 0) {
-				UINT32 colorIdx = ((ph.header[4] >> 8) & 0x7FF);
-				p.v[j].color[2] = (m_polyRAM[0x400 + colorIdx] & 0xFF);
-				p.v[j].color[1] = (m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF;
-				p.v[j].color[0] = (m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF;
-			}
-			else {
-				if (ph.ColorDisabled()) {		// no colours were set
-					p.v[j].color[0] = 255;
-					p.v[j].color[1] = 255;
-					p.v[j].color[2] = 255;
-				}
-				else {
-					p.v[j].color[0] = (ph.header[4] >> 24);
-					p.v[j].color[1] = (ph.header[4] >> 16) & 0xFF;
-					p.v[j].color[2] = (ph.header[4] >> 8) & 0xFF;
-				}
-			}
-
 			if (ph.FixedShading() && ph.LightEnabled()) {
-				float shade	= ((ix+128) & 0xFF) / 255.f;
-				p.v[j].color[0] = (UINT8)(p.v[j].color[0] * shade);
-				p.v[j].color[1] = (UINT8)(p.v[j].color[1] * shade);
-				p.v[j].color[2] = (UINT8)(p.v[j].color[2] * shade);
-			}			
-
-			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
+				UINT8 shade = (UINT8)((ix + 128) & 0xFF);
+				p.v[j].color[0] = shade;	// hardware doesn't really have per vertex colours, only per poly
+				p.v[j].color[1] = shade;
+				p.v[j].color[2] = shade;
 				p.v[j].color[3] = 255;
 			}
 			else {
-				p.v[j].color[3] = ph.Transparency();
+				p.v[j].color[0] = 255;
+				p.v[j].color[1] = 255;
+				p.v[j].color[2] = 255;
+				p.v[j].color[3] = 255;
 			}
 
 			float texU, texV = 0;
