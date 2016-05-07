@@ -903,35 +903,32 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		// copy face attributes
 
-		for (i = 0; i < p.number; i++) {
-
-			if ((ph.header[1] & 2) == 0) {
-				UINT32 colorIdx = (ph.header[4] >> 8) & 0x7FF;
-				p.faceColour[2] = (m_polyRAM[0x400 + colorIdx] & 0xFF) / 255.f;
-				p.faceColour[1] = ((m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF) / 255.f;
-				p.faceColour[0] = ((m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF) / 255.f;
+		if ((ph.header[1] & 2) == 0) {
+			UINT32 colorIdx = (ph.header[4] >> 8) & 0x7FF;
+			p.faceColour[2] = (m_polyRAM[0x400 + colorIdx] & 0xFF) / 255.f;
+			p.faceColour[1] = ((m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF) / 255.f;
+			p.faceColour[0] = ((m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF) / 255.f;
+		}
+		else {
+			if (ph.ColorDisabled()) {		// no colours were set
+				p.faceColour[0] = 1.0f;
+				p.faceColour[1] = 1.0f;
+				p.faceColour[2] = 1.0f;
 			}
 			else {
-				if (ph.ColorDisabled()) {		// no colours were set
-					p.faceColour[0] = 1.0f;
-					p.faceColour[1] = 1.0f;
-					p.faceColour[2] = 1.0f;
-				}
-				else {
-					p.faceColour[0] = ((ph.header[4] >> 24)) / 255.f;
-					p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF) / 255.f;
-					p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF) / 255.f;
-				}
-			}
-
-			if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
-				p.faceColour[3] = 1.0f;
-			}
-			else {
-				p.faceColour[3] = ph.Transparency() / 255.f;
+				p.faceColour[0] = ((ph.header[4] >> 24)) / 255.f;
+				p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF) / 255.f;
+				p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF) / 255.f;
 			}
 		}
 
+		if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
+			p.faceColour[3] = 1.0f;
+		}
+		else {
+			p.faceColour[3] = ph.Transparency() / 255.f;
+		}
+		
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
 			p.v[i].normal[0] = p.faceNormal[0];
