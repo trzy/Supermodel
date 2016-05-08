@@ -49,6 +49,31 @@ public:
    * drawing anything.
    */
   void BeginFrame(void);
+
+  /*
+   * PreRenderFrame(void):
+   *
+   * Draws the all top layers (above 3D graphics) and bottom layers (below 3D
+   * graphics) but does not yet display them. May send data to the GPU.
+   */
+  void PreRenderFrame(void);
+
+  /*
+   * RenderFrameBottom(void):
+   *
+   * Overwrites the color buffer with bottom surface that was pre-rendered by
+   * the last call to PreRenderFrame().
+   */
+  void RenderFrameBottom(void);
+
+  /*
+   * RenderFrameTop(void):
+   *
+   * Draws the top surface (if it exists) that was pre-rendered by the last 
+   * call to PreRenderFrame(). Previously drawn graphics layers will be visible
+   * through transparent regions.
+   */
+  void RenderFrameTop(void);
   
   /*
    * EndFrame(void):
@@ -144,7 +169,7 @@ public:
   
 private:
   // Private member functions
-  bool DrawTilemaps(uint32_t *destBottom, uint32_t *destTop);
+  std::pair<bool, bool> DrawTilemaps(uint32_t *destBottom, uint32_t *destTop);
   void DisplaySurface(int surface, GLfloat z);
   void Setup2D(bool isBottom, bool clearAll);
       
@@ -168,6 +193,9 @@ private:
   GLuint m_vertexShader;    // vertex shader handle
   GLuint m_fragmentShader;  // fragment shader
   GLuint m_textureMapLoc;   // location of "textureMap" uniform
+
+  // PreRenderFrame() tracks which surfaces exist in current frame
+  std::pair<bool, bool> m_surfaces_present = std::pair<bool, bool>(false, false);
 
   // Buffers
   uint8_t   *m_memoryPool = 0;    // all memory is allocated here

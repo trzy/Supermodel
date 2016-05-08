@@ -2139,7 +2139,10 @@ void CModel3::RenderFrame(void)
     // Render frame
     TileGen.BeginFrame();
     GPU.BeginFrame();
+    TileGen.PreRenderFrame();
+    TileGen.RenderFrameBottom();
     GPU.RenderFrame();
+    TileGen.RenderFrameTop();
     GPU.EndFrame();
     TileGen.EndFrame();
   }

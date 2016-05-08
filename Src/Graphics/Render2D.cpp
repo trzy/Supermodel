@@ -28,7 +28,6 @@
  * ----------
  * - Is there a better way to handle the overscan regions in wide screen mode? 
  *   Is clearing two thin viewports better than one big clear?
- * - Layer priorities in Spikeout attract mode might not be totally correct.
  * - Are v-scroll values 9 or 10 bits? (Does it matter?) Lost World seems to
  *   have some scrolling issues.
  * - A proper shut-down function is needed! OpenGL might not be available when
@@ -72,8 +71,12 @@
  *
  * Bits 'pqrs' control the color depth of layers B', B, A', and A, 
  * respectively. If set, the layer's pattern data is encoded as 4 bits,
- * otherwise the pixels are 8 bits. Bits 'tuvw' form a 4-bit priority code. The
- * other bits are unused or unknown.
+ * otherwise the pixels are 8 bits. 
+ *
+ * Bits 'tuvw' control priority for layers B', B, A', and A, respectively,
+ * which is also the relative ordering of the layers from bottom to top. For
+ * each layer, if its bit is clear, it will be drawn below the 3D layer,
+ * otherwise it is drawn on top.
  *
  * The remaining registers are described where appropriate further below.
  *
@@ -416,16 +419,19 @@ static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, cons
     int pixelOffset = -hFine;
     int extraTile = (hFine != 0) ? 1 : 0; // h-scrolling requires part of 63rd tile
 
+    // First tile may be clipped
     int tx = 0;
     DrawTileLine<bits, alphaTest, true>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
     ++hTile;
     pixelOffset += 8;
+    // Middle tiles will not be clipped
     for (tx = 1; tx < (62 - 1 + extraTile); tx++)
     {
       DrawTileLine<bits, alphaTest, false>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
       ++hTile;
       pixelOffset += 8;
     }
+    // Last tile may be clipped
     DrawTileLine<bits, alphaTest, true>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
     ++hTile;
     pixelOffset += 8;
@@ -436,20 +442,22 @@ static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, cons
   }
 }
 
-bool CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *pixelsTop)
+std::pair<bool, bool> CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *pixelsTop)
 {
   unsigned priority = (m_regs[0x20/4] >> 8) & 0xF;
   
   // Render bottom layers
-  bool nothingDrawn = true;
-  for (int layerNum = 3; layerNum >= 0; layerNum--)
+  bool noBottomSurface = true;
+  static const int bottomOrder[4] = { 3, 2, 1, 0 };
+  for (int i = 0; i < 4; i++)
   {
+    int layerNum = bottomOrder[i];
     bool is4Bit = (m_regs[0x20/4] & (1 << (12 + layerNum))) != 0;
     bool enabled = (m_regs[0x60/4 + layerNum] & 0x80000000) != 0;
     bool selected = (priority & (1 << layerNum)) == 0;
     if (enabled && selected)
     {
-      if (nothingDrawn)
+      if (noBottomSurface)
       {
         if (is4Bit)
           DrawLayer<4, false>(pixelsBottom, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
@@ -463,23 +471,25 @@ bool CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *pixelsTop)
         else
           DrawLayer<8, true>(pixelsBottom, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
       }
-      nothingDrawn = false;
+      noBottomSurface = false;
     }
   }
 
-  if (nothingDrawn)
-    ClearLayer(pixelsBottom);
-
   // Render top layers
-  nothingDrawn = true;
-  for (int layerNum = 3; layerNum >= 0; layerNum--)
+  // NOTE: layer ordering is different according to MAME (which has 3, 2, 0, 1
+  // for top layer). Until I see evidence that this is correct and not a typo,
+  // I will assume consistent layer ordering.
+  bool noTopSurface = true;
+  static const int topOrder[4] = { 3, 2, 1, 0 };
+  for (int i = 0; i < 4; i++)
   {
+    int layerNum = topOrder[i];
     bool is4Bit = (m_regs[0x20/4] & (1 << (12 + layerNum))) != 0;
     bool enabled = (m_regs[0x60/4 + layerNum] & 0x80000000) != 0;
     bool selected = (priority & (1 << layerNum)) != 0;
     if (enabled && selected)
     {
-      if (nothingDrawn)
+      if (noTopSurface)
       {
         if (is4Bit)
           DrawLayer<4, false>(pixelsTop, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
@@ -493,15 +503,12 @@ bool CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *pixelsTop)
         else
           DrawLayer<8, true>(pixelsTop, layerNum, m_vram, m_regs, m_palette[layerNum / 2]);
       }
-      nothingDrawn = false;
+      noTopSurface = false;
     }
   }
-  
-  if (nothingDrawn)
-    ClearLayer(pixelsTop);
 
-  // Indicate whether color buffer must be cleared because of no bottom layer
-  return nothingDrawn;
+  // Indicate whether top and bottom surfaces have to be rendered
+  return std::pair<bool, bool>(!noTopSurface, !noBottomSurface);
 }
 
 
@@ -566,30 +573,48 @@ void CRender2D::Setup2D(bool isBottom, bool clearAll)
   glLoadIdentity();
 }
 
-// Bottom layers
 void CRender2D::BeginFrame(void)
 {
+}
+
+void CRender2D::PreRenderFrame(void)
+{
   // Update all layers
-  bool clear = DrawTilemaps(m_bottomSurface, m_topSurface);
+  m_surfaces_present = DrawTilemaps(m_bottomSurface, m_topSurface);
   glActiveTexture(GL_TEXTURE0); // texture unit 0
-  glBindTexture(GL_TEXTURE_2D, m_texID[0]);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_topSurface);
-  glBindTexture(GL_TEXTURE_2D, m_texID[1]);
-  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_bottomSurface);
-  
-  // Display bottom surface
-  Setup2D(true, clear);
-  if (!clear)
+  if (m_surfaces_present.first)
+  {
+    glBindTexture(GL_TEXTURE_2D, m_texID[0]);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_topSurface);
+  }
+  if (m_surfaces_present.second)
+  {
+    glBindTexture(GL_TEXTURE_2D, m_texID[1]);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_bottomSurface);
+  }
+}
+
+void CRender2D::RenderFrameBottom(void)
+{
+  // Display bottom surface if anything was drawn there, else clear everything
+  Setup2D(true, m_surfaces_present.second == false);
+  if (m_surfaces_present.second)
     DisplaySurface(1, 0.0);
 }
 
-// Top layers
+void CRender2D::RenderFrameTop(void)
+{
+  // Display top surface only if it exists
+  if (m_surfaces_present.first)
+  {
+    Setup2D(false, false);
+    glEnable(GL_BLEND);
+    DisplaySurface(0, -0.5);
+  }
+}
+
 void CRender2D::EndFrame(void)
 {
-  // Display top surface
-  Setup2D(false, false);
-  glEnable(GL_BLEND);
-  DisplaySurface(0, -0.5);
 }
 
 

@@ -88,9 +88,42 @@ public:
 	 *
 	 * Prepares to render a new frame.  Must be called once per frame prior to
 	 * drawing anything and must only access read-only snapshots and variables
-     * since it may be running in a separate thread.
+   * since it may be running in a separate thread.
+   *
+   * Invokes the underlying 2D renderer.
 	 */
 	void BeginFrame(void);
+
+  /*
+   * PreRenderFrame(void):
+   *
+   * Draws the all top layers (above 3D graphics) and bottom layers (below 3D
+   * graphics) but does not yet display them. May send data to the GPU.
+   *
+   * Invokes the equivalent method in the underlying 2D renderer.
+   */
+  void PreRenderFrame(void);
+
+  /*
+   * RenderFrameBottom(void):
+   *
+   * Overwrites the color buffer with bottom surface that was pre-rendered by
+   * the last call to PreRenderFrame().
+   *
+   * Invokes the equivalent method in the underlying 2D renderer.
+   */
+  void RenderFrameBottom(void);
+
+  /*
+   * RenderFrameTop(void):
+   *
+   * Draws the top surface (if it exists) that was pre-rendered by the last 
+   * call to PreRenderFrame(). Previously drawn graphics layers will be visible
+   * through transparent regions.
+   *
+   * Invokes the equivalent method in the underlying 2D renderer.
+   */
+  void RenderFrameTop(void);
 
 	/*
 	 * EndFrame(void):
@@ -98,6 +131,8 @@ public:
 	 * Signals the end of rendering for this frame.  Must be called last during
 	 * the frame and must only access read-only snapshots and variables since it
 	 * may be running in a separate thread.
+	 *
+	 * Invokes the equivalent method in the underlying 2D renderer.
 	 */
 	void EndFrame(void);
 

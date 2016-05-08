@@ -243,6 +243,21 @@ void CTileGen::BeginFrame(void)
 	Render2D->BeginFrame();
 }
 
+void CTileGen::PreRenderFrame(void)
+{
+  Render2D->PreRenderFrame();
+}
+
+void CTileGen::RenderFrameBottom(void)
+{
+  Render2D->RenderFrameBottom();
+}
+
+void CTileGen::RenderFrameTop(void)
+{
+  Render2D->RenderFrameTop();
+}
+
 void CTileGen::EndFrame(void)
 {
 	Render2D->EndFrame();
