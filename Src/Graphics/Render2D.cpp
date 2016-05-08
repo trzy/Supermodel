@@ -26,6 +26,11 @@
  *
  * To-Do List
  * ----------
+ * - Is there a universal solution to the 'ROLLING START' scrolling bug (Scud
+ *   Race) and the scrolling text during Magical Truck Adventure's attract
+ *   mode? To fix Scud Race, either the stencil mask or the h-scroll value must
+ *   be shifted by 16 pixels. Magical Truck Adventure is similar but opposite.
+ *   Perhaps this is a function of timing registers accessed via JTAG?
  * - Is there a better way to handle the overscan regions in wide screen mode? 
  *   Is clearing two thin viewports better than one big clear?
  * - Are v-scroll values 9 or 10 bits? (Does it matter?) Lost World seems to
@@ -187,10 +192,7 @@
  * The mask table is a bit field organized into 512 (or 384?) lines with each
  * bit controlling four columns (32 pixels). The mask does not appear to be
  * affected by scrolling -- that is, it does not scroll with the underlying
- * tiles, which do so independently. The mask remains fixed. Caveat: a bug in
- * Scud Race's 'ROLLING START' animation may indicate this is either not 
- * strictly true or that the upper-left corner of the mask needs to be adjusted
- * slightly. This bug has not been investigated thoroughly yet.
+ * tiles, which do so independently. The mask remains fixed.
  *
  * Each mask entry is a little endian 32-bit word. The high 16 bits control
  * A/A' and the low 16 bits control B/B'. Each word controls an entire line
@@ -213,10 +215,6 @@
  *
  * The stencil mask does not affect layer priorities, which are managed 
  * separately regardless of mask settings.
- *
- * The formula for mapping a screen pixel (0-495) to stencil bit mask is:
- *
- *    bit = 1 << (15 - ((x + 16) / 32))
  *
  * Scrolling
  * ---------
@@ -333,7 +331,7 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
     {
       if (!clip || (clip && pixelOffset >= 0 && pixelOffset < 496))
       {
-        uint16_t maskTest = 1 << (15-((pixelOffset+16)/32));  // first 16 pixels in stencil mask are overscan
+        uint16_t maskTest = 1 << (15-((pixelOffset+0)/32));
         bool visible = (mask & maskTest) != 0;
         uint32_t pixel = palette[((pattern >> (p*4)) & 0xF) | colorHi];
         if (alphaTest)
@@ -361,7 +359,7 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
       {
         if (!clip || (clip && pixelOffset >= 0 && pixelOffset < 496))
         {
-          uint16_t maskTest = 1 << (15-((pixelOffset+16)/32));
+          uint16_t maskTest = 1 << (15-((pixelOffset+0)/32));
           bool visible = (mask & maskTest) != 0;
           uint32_t pixel = palette[((pattern >> (p*8)) & 0xFF) | colorHi];
           if (alphaTest)
@@ -409,7 +407,7 @@ static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, cons
 
   for (int y = 0; y < 384; y++)
   {
-    int hScroll = lineScrollMode ? hScrollTable[y] : hFullScroll;
+    int hScroll = (lineScrollMode ? hScrollTable[y] : hFullScroll) & 0x1FF;
     int hTile = hScroll / 8;
     int hFine = hScroll & 7;        // horizontal pixel offset within tile line
     int vFine = (y + vScroll) & 7;  // vertical pixel offset within 8x8 tile
