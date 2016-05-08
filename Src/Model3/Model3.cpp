@@ -1119,13 +1119,15 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // Tile generator
   case 0xF1:
-    if (addr==0xF1180000) // fixes 2D graphics (TO-DO: integrate register reads into TileGen.cpp)
-      return 0;   
-
     // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
     if (addr < 0xF1120000)
     {
       data = TileGen.ReadRAM(addr&0x1FFFFF);
+      return FLIPENDIAN32(data);
+    }
+    else if ((addr>=0xF1180000) && (addr<0xF1180100))
+    {
+      data = TileGen.ReadRegister(addr & 0xFF);
       return FLIPENDIAN32(data);
     }
 

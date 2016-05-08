@@ -365,12 +365,19 @@ void CTileGen::WritePalette(unsigned color, UINT32 data)
 	pal[1][color] = AddColorOffset(r, g, b, a, regs[0x44/4]);	// B/B'
 }
 
+UINT32 CTileGen::ReadRegister(unsigned reg)
+{
+  reg &= 0xFF;
+  return regs[reg/4];
+}
+
 void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 {
 	reg &= 0xFF;
 		
 	switch (reg)
 	{
+  case 0x00:
 	case 0x08:
 	case 0x0C:
 	case 0x20:

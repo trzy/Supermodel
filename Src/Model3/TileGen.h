@@ -169,10 +169,24 @@ public:
 	void WriteRAM(unsigned addr, UINT32 data);
 	
 	/*
+	 * ReadRegister(reg):
+	 *
+	 * Reads 32 bits of data from a (little endian) register. If a big endian
+	 * device is reading, the word must be flipped.
+	 *
+	 * Parameters:
+	 *		reg		Aligned (32 bits) register offset (0x00-0xFC).
+	 *
+	 * Returns:
+	 *    Data read as little endian from the register.
+	 */
+	UINT32 ReadRegister(unsigned reg);
+
+	/*
 	 * WriteRegister(reg, data):
 	 *
 	 * Writes 32 bits of data to a (little endian) register. If a big endian
-	 * device is writing, th word must be flipped.
+	 * device is writing, the word must be flipped.
 	 *
 	 * Parameters:
 	 *		reg		Aligned (32 bits) register offset (0x00-0xFC).
