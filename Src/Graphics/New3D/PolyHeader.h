@@ -51,13 +51,11 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Color(RGB888)
 -------- -------- -------- x-------		Color disabled
 -------- -------- -------- -x------		Texture page
 -------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
--------- -------- -------- --x-----		?
 
 0x05 : 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Specular color ?
 -------- -------- -------- x-------		Low bit of texture U coordinate
 -------- -------- -------- ---xxxxx		Low 5 bits of texture V coordinate
--------- -------- -------- -xx-----		?
 
 0x06: 
 x------- -------- -------- --------		Alpha testing / contour

@@ -3,6 +3,7 @@
 #include "Texture.h"
 #include "Vec.h"
 #include <cmath>  // needed by gcc
+#include <algorithm>
 
 #define MAX_RAM_POLYS 100000	
 #define MAX_ROM_POLYS 500000
@@ -790,6 +791,38 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 	}
 }
 
+// non smooth texturing on the pro-1000 seems to sample like gl_nearest
+// ie not outside of the texture coordinates, but with bilinear filtering
+// this is about as close as we can emulate in hardware
+// if we don't do this with gl_repeat enabled, it will wrap around and sample the 
+// other side of the texture which produces ugly seems
+void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
+{
+	for (int i = 0; i < 2; i++) {
+
+		float min =  FLT_MAX;
+		float max = -FLT_MAX;
+
+		if (!offset[i]) continue;
+
+		for (int j = 0; j < r3dPoly.number; j++) {
+			min = std::min(r3dPoly.v[j].texcoords[i], min);
+			max = std::max(r3dPoly.v[j].texcoords[i], max);
+		}
+
+		for (int j = 0; j < r3dPoly.number && min != max; j++) {
+
+			if (r3dPoly.v[j].texcoords[i] == min) {
+				r3dPoly.v[j].texcoords[i] += offset[i];
+			}
+
+			if (r3dPoly.v[j].texcoords[i] == max) {
+				r3dPoly.v[j].texcoords[i] -= offset[i];
+			}
+		}
+	}
+}
+
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
 	Vertex			prev[4];
@@ -871,7 +904,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					currentMesh->height			= ph.TexHeight();
 					currentMesh->mirrorU		= ph.TexUMirror();
 					currentMesh->mirrorV		= ph.TexVMirror();
-					currentMesh->microTexture = ph.MicroTexture();
+					currentMesh->microTexture	= ph.MicroTexture();
 				}
 			}
 
@@ -984,6 +1017,24 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			data += 4;
 		}
 
+		// check if we need to modify the texture coordinates
+		{
+			float offset[2] = { 0 };
+
+			if (ph.TexEnabled()) {
+
+				if (!ph.TexSmoothU() && !ph.TexUMirror()) {
+					offset[0] = 0.5f / ph.TexWidth();	// half texel
+				}
+
+				if (!ph.TexSmoothV() && !ph.TexVMirror()) {
+					offset[1] = 0.5f / ph.TexHeight();	// half texel
+				}
+
+				OffsetTexCoords(p, offset);
+			}
+		}
+
 		// Copy current vertices into previous vertex array
 		for (i = 0; i < 4 && validPoly; i++) {
 			prev[i] = p.v[i];
@@ -1071,3 +1122,4 @@ bool CNew3D::IsVROMModel(UINT32 modelAddr)
 }
 
 } // New3D
+

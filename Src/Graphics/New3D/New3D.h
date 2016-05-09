@@ -169,6 +169,7 @@ private:
 	// building the scene
 	void CacheModel(Model *m, const UINT32 *data);
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
+	void OffsetTexCoords(R3DPoly& r3dPoly, float offset[2]);
 
 	void RenderScene(int priority, bool alpha);
 	float Determinant3x3(const float m[16]);
