@@ -4,6 +4,7 @@
 #include "Vec.h"
 #include <cmath>  // needed by gcc
 #include <algorithm>
+#include <limits>
 
 #define MAX_RAM_POLYS 100000	
 #define MAX_ROM_POLYS 500000
@@ -800,8 +801,8 @@ void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
 {
 	for (int i = 0; i < 2; i++) {
 
-		float min =  FLT_MAX;
-		float max = -FLT_MAX;
+		float min =  std::numeric_limits<float>::max();
+		float max = -std::numeric_limits<float>::max();
 
 		if (!offset[i]) continue;
 
