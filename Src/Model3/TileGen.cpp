@@ -396,6 +396,8 @@ void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 		break;
 	case 0x10:	// IRQ acknowledge
 		IRQ->Deassert(data&0xFF);
+		// MAME believes only lower 4 bits should be cleared
+		//IRQ->Deassert(data & 0x0F);
 		break;
 	default:
 		DebugLog("Tile Generator reg %02X = %08X\n", reg, data);

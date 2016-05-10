@@ -813,8 +813,18 @@ void CModel3::WriteSystemRegister(unsigned reg, UINT8 data)
     DebugLog("IRQ ENABLE=%02X\n", data);
     break;
   case 0x18:  // IRQ acknowledge
-    DebugLog("IRQ SETTING! %02X=%02X\n", reg, data);
+  {
+    // MAME: Clear bits are ack. Reverse order from other IRQ regs.
+    //uint8_t ack = 0;
+    //for (int bit = 0; bit < 8; bit++)
+    //{
+    //  if (!(data & (1 << bit)))
+    //    ack |= (1 << (7-bit));
+    //}
+    //IRQ.Deassert(ack);
+    DebugLog("IRQ ACK? %02X=%02X\n", reg, data);
     break;
+  }
   case 0x0C:  // JTAG Test Access Port
     GPU.WriteTAP((data>>6)&1,(data>>2)&1,(data>>5)&1,(data>>7)&1);  // TCK, TMS, TDI, TRST
     break;
@@ -2116,6 +2126,12 @@ void CModel3::RunMainBoardFrame(void)
 
   // Run the PowerPC for the active display part of the frame
   ppc_execute(dispCycles);
+  // MAME believes 0x0C should occur on every scanline 
+  //for (int i = 0; i < 384; i++)
+  //{
+  //  ppc_execute(dispCycles / 384);
+  //  IRQ.Assert(0x0C);
+  //}
   //printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
 
   timings.ppcTicks = CThread::GetTicks() - start;
