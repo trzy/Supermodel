@@ -829,7 +829,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	Vertex			prev[4];
 	PolyHeader		ph;
 	int				numPolys	= 0;
-	bool			done		= false;
 	UINT64			lastHash	= -1;
 	SortingMesh*	currentMesh = nullptr;
 	
@@ -903,7 +902,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		lastHash = hash;		
 
 		// Obtain basic polygon parameters
-		done		= ph.LastPoly();
 		p.number	= ph.NumVerts();
 		uvScale		= ph.UVScale();
 
