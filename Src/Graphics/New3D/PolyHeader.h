@@ -91,7 +91,7 @@ public:
 	float	SpecularValue();
 	bool	Clockwise();
 	int		PolyNumber();
-	bool	Disabled();		// z & colour disabled
+	bool	Disabled();
 	int		NumVerts();
 	int		NumSharedVerts();
 	bool	SharedVertex(int vertex);

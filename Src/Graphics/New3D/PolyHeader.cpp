@@ -93,7 +93,7 @@ int PolyHeader::PolyNumber()
 
 bool PolyHeader::Disabled()
 {
-	if ((header[0] & 0x100) && (header[0] & 0x200)) {	// assuming these two bits mean z and colour writes are disabled
+	if ((header[0] & 0x100) && (header[0] & 0x200)) {
 		return true;
 	}
 

@@ -842,36 +842,24 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	int numTriangles = ph.NumTrianglesTotal();
 
 	// Cache all polygons
-	while (!done)
-	{
+	do {
+
 		R3DPoly		p;					// current polygon
 		GLfloat		uvScale;
 		int			i, j;
-		bool		validPoly = true;
-
-		ph = data;
 
 		if (ph.header[6] == 0) {
 			break;
 		}
 
-		if ((ph.header[0] & 0x100) && (ph.header[0] & 0x200)) {	// assuming these two bits mean z and colour writes are disabled
-			validPoly = false;
+		if (ph.Disabled() || !numPolys && (ph.NumSharedVerts() != 0)) {
+			continue;
 		}
-		else {
-			if (!numPolys && (ph.NumSharedVerts() != 0)) {			// sharing vertices, but we haven't started the model yet
-				printf("incomplete data\n");
-				validPoly = false;
-			}
-		}
-
-		// Set current header pointer (header is 7 words)
-		data += 7;	// data will now point to first vertex
 
 		// create a hash value based on poly attributes -todo add more attributes
 		auto hash = ph.Hash();
 
-		if (hash != lastHash && validPoly) {
+		if (hash != lastHash) {
 
 			if (sMap.count(hash) == 0) {
 
@@ -883,7 +871,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->polys.reserve(numTriangles);
 
 				//copy attributes
-				currentMesh->doubleSided	= ph.DoubleSided();
+				currentMesh->doubleSided	= false;			// we will double up polys
 				currentMesh->textured		= ph.TexEnabled();
 				currentMesh->alphaTest		= ph.AlphaTest();
 				currentMesh->textureAlpha	= ph.TextureAlpha();
@@ -912,9 +900,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			currentMesh = &sMap[hash];
 		}
 
-		if (validPoly) {
-			lastHash = hash;
-		}
+		lastHash = hash;		
 
 		// Obtain basic polygon parameters
 		done		= ph.LastPoly();
@@ -970,14 +956,16 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[i].normal[2] = p.faceNormal[2];
 		}
 
+		UINT32* vData = ph.StartOfData();	// vertex data starts here
+
 		// remaining vertices are new and defined here
 		for (; j < p.number; j++)	
 		{
 			// Fetch vertices
-			UINT32 ix = data[0];
-			UINT32 iy = data[1];
-			UINT32 iz = data[2];
-			UINT32 it = data[3];
+			UINT32 ix = vData[0];
+			UINT32 iy = vData[1];
+			UINT32 iz = vData[2];
+			UINT32 it = vData[3];
 
 			// Decode vertices
 			p.v[j].pos[0] = (GLfloat)(((INT32)ix) >> 8) * m_vertexFactor;
@@ -1008,14 +996,14 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			float texU, texV = 0;
 
 			// tex coords
-			if (validPoly && currentMesh->textured) {
+			if (currentMesh->textured) {
 				Texture::GetCoordinates(currentMesh->width, currentMesh->height, (UINT16)(it >> 16), (UINT16)(it & 0xFFFF), uvScale, texU, texV);
 			}
 
 			p.v[j].texcoords[0] = texU;
 			p.v[j].texcoords[1] = texV;
 
-			data += 4;
+			vData += 4;
 		}
 
 		// check if we need to modify the texture coordinates
@@ -1036,17 +1024,31 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 		}
 
-		// Copy current vertices into previous vertex array
-		for (i = 0; i < 4 && validPoly; i++) {
-			prev[i] = p.v[i];
+		// check if we need double up vertices for two sided lighting
+		if (ph.DoubleSided()) {
+
+			R3DPoly tempP = p;
+
+			// flip normals
+			V3::inverse(tempP.faceNormal);
+
+			for (int i = 0; i < tempP.number; i++) {
+				V3::inverse(tempP.v[i].normal);
+			}
+
+			CopyVertexData(tempP, currentMesh->polys);
 		}
 
 		// Copy this polygon into the model buffer
-		if (validPoly) {
-			CopyVertexData(p, currentMesh->polys);
-			numPolys++;
+		CopyVertexData(p, currentMesh->polys);
+		numPolys++;
+		
+		// Copy current vertices into previous vertex array
+		for (i = 0; i < 4; i++) {
+			prev[i] = p.v[i];
 		}
-	}
+
+	} while (ph.NextPoly());
 
 	//sorted the data, now copy to main data structures
 
