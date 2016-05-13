@@ -341,6 +341,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	node2Ptr		= node[0x08 - m_offset];
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 
+	short extent = node[9 - m_offset] >> 16;
+
 	// seems to indicate second link is invalid (fixes circular references)
 	if ((node[0x00] & 0x07) != 0x06) {
 		DescendNodePtr(node2Ptr);
@@ -561,7 +563,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		{ 1.0, 0.0, 0.0 }, 	// red
 		{ 1.0, 0.0, 1.0 },	// purple
 		{ 1.0, 1.0, 0.0 },	// yellow
-		{ 1.0, 1.0, 1.0 }		// white
+		{ 1.0, 1.0, 1.0 }	// white
 	};
 
 	// Translate address and obtain pointer
@@ -593,7 +595,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		int vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
 		int vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
 		int vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
-		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;								// matrix base address
+		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
 		if (vpX) {
 			vpX += 2;
@@ -656,7 +658,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[5] = 0.0;	// reserved
 
 		// Spotlight
-		int spotColorIdx = (vpnode[0x20] >> 11) & 7;		// spotlight color index
+		int spotColorIdx = (vpnode[0x20] >> 11) & 7;			// spotlight color index
 		vp->spotEllipse[0] = (float)((vpnode[0x1E] >> 3) & 0x1FFF);	// spotlight X position (fractional component?)
 		vp->spotEllipse[1] = (float)((vpnode[0x1D] >> 3) & 0x1FFF);	// spotlight Y
 		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);	// spotlight X size (16-bit? May have fractional component below bit 16)
@@ -877,12 +879,15 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->polyAlpha		= ph.PolyAlpha();
 				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
 
+				/*
 				if (!ph.Luminous()) {
 					currentMesh->fogIntensity = 1.0f;
 				}
 				else {
 					currentMesh->fogIntensity = ph.LightModifier();
-				}
+				}*/
+
+				currentMesh->fogIntensity = 1.0;
 
 				if (ph.TexEnabled()) {
 					currentMesh->format			= ph.TexFormat();
