@@ -632,8 +632,6 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
          *    to Colosseum, all expect modulation to be on. Palette vs. RGB
          *    polygon color seems to make no difference.
          */
-
-        // TODO: check color table address?
         modulate = true;
       }
       else
