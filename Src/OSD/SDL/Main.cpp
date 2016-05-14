@@ -454,13 +454,13 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
 {
   const static std::vector<uint32_t> unknownPolyBits
   {
-    0x000003b0, // not sure about specular
-    0x000000a9,
+    0x000003b0,
+    0x000000ab, // actual color
     0x000000fc,
     0x000000c0,
     0x000000a0,
     0xffffff60,
-    0xff0300ff  // not sure about contour and luminous
+    0xff0300ff  // contour, luminous, etc.
   };
 
   GLint readBuffer;
