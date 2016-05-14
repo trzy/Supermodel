@@ -661,6 +661,13 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
     --stackDepth;
     return;
   }
+  
+  // Set color table address, if one is specified
+  if ((node[0x00] & 0x04))
+  {
+    m_colorTableAddr = ((node[0x03-offset] >> 19) << 0) | ((node[0x07-offset] >> 28) << 13) | ((node[0x08-offset] >> 25) << 17);
+    m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
+  }
 
 //printf("%08x NODE %d\n", addr, stackDepth);
 //for (int i = 0; i < 8; i++)
@@ -990,6 +997,7 @@ void CLegacy3D::RenderFrame(void)
   if (texMapLoc != -1)       glEnableVertexAttribArray(texMapLoc);
   if (transLevelLoc != -1)   glEnableVertexAttribArray(transLevelLoc);
   if (lightEnableLoc != -1)  glEnableVertexAttribArray(lightEnableLoc);
+  if (specularLoc != -1)     glEnableVertexAttribArray(specularLoc);
   if (shininessLoc != -1)    glEnableVertexAttribArray(shininessLoc);
   if (fogIntensityLoc != -1) glEnableVertexAttribArray(fogIntensityLoc);
   
@@ -1016,6 +1024,7 @@ void CLegacy3D::RenderFrame(void)
   // Disable VBO client states
   if (fogIntensityLoc != -1)  glDisableVertexAttribArray(fogIntensityLoc);
   if (shininessLoc != -1)     glDisableVertexAttribArray(shininessLoc);
+  if (specularLoc != -1)      glDisableVertexAttribArray(specularLoc);
   if (lightEnableLoc != -1)   glDisableVertexAttribArray(lightEnableLoc);
   if (transLevelLoc != -1)    glDisableVertexAttribArray(transLevelLoc);
   if (texMapLoc != -1)        glDisableVertexAttribArray(texMapLoc);
@@ -1261,6 +1270,7 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   texMapLoc = glGetAttribLocation(shaderProgram,"texMap");
   transLevelLoc = glGetAttribLocation(shaderProgram,"transLevel");
   lightEnableLoc = glGetAttribLocation(shaderProgram,"lightEnable");
+  specularLoc = glGetAttribLocation(shaderProgram,"specular");
   shininessLoc = glGetAttribLocation(shaderProgram,"shininess");
   fogIntensityLoc = glGetAttribLocation(shaderProgram,"fogIntensity");
   

@@ -59,7 +59,7 @@ struct Vertex
 struct Poly
 {
 	Vertex			Vert[4];
-	GLfloat			n[3];		// polygon normal (used for backface culling)
+	GLfloat			n[3];		// polygon normal (used for backface culling and flat shading)
 	POLY_STATE		state;		// alpha or normal?
 	unsigned		numVerts;	// triangle (3) or quad (4)
 	const UINT32	*header;	// pointer to Real3D 7-word polygon header
@@ -425,13 +425,12 @@ private:
 	GLint	viewportX, viewportY;
 	GLint	viewportWidth, viewportHeight;
 	
-	// Scene graph stack
-	int		listDepth;	// how many lists have we recursed into
-	int		stackDepth;	// for debugging and error handling purposes
-	
-	// Texture offset (during scene graph processing)
-	GLfloat	texOffsetXY[2];	// decoded X, Y offsets
-	UINT16	texOffset;		// raw texture offset data as it appears in culling node
+	// Scene graph processing
+	int		listDepth;	        // how many lists have we recursed into
+	int		stackDepth;	        // for debugging and error handling purposes
+	GLfloat	texOffsetXY[2];	  // decoded texture X, Y offsets
+	UINT16	texOffset;		    // raw texture offset data as it appears in culling node
+	UINT32  m_colorTableAddr = 0x400; // address of color table in polygon RAM
 	
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	GLfloat		xRatio, yRatio;
@@ -465,6 +464,7 @@ private:
 	GLint   texMapLoc;              // attribute
 	GLint	transLevelLoc;			// attribute
 	GLint	lightEnableLoc;			// attribute
+	GLint	specularLoc;			// attribute
 	GLint	shininessLoc;			// attribute
 	GLint	fogIntensityLoc;		// attribute
 	

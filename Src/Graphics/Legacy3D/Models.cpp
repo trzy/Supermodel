@@ -112,21 +112,22 @@ namespace Legacy3D {
 #define VBO_VERTEX_OFFSET_B               8   // color and material B
 #define VBO_VERTEX_OFFSET_TRANSLUCENCE    9   // translucence level (0.0 fully transparent, 1.0 opaque)
 #define VBO_VERTEX_OFFSET_LIGHTENABLE     10  // lighting enabled (0.0 luminous, 1.0 light enabled)
-#define VBO_VERTEX_OFFSET_SHININESS       11  // shininess (if negative, disables specular lighting)
-#define VBO_VERTEX_OFFSET_FOGINTENSITY    12  // fog intensity (0.0 no fog applied, 1.0 all fog applied)
-#define VBO_VERTEX_OFFSET_U               13  // texture U coordinate (in texels, relative to sub-texture)
-#define VBO_VERTEX_OFFSET_V               14  // texture V coordinate
-#define VBO_VERTEX_OFFSET_TEXTURE_X       15  // sub-texture parameters, X (position in overall texture map, in texels)
-#define VBO_VERTEX_OFFSET_TEXTURE_Y       16  // "" Y ""
-#define VBO_VERTEX_OFFSET_TEXTURE_W       17  // sub-texture parameters, width of texture in texels
-#define VBO_VERTEX_OFFSET_TEXTURE_H       18  // "" height of texture in texels
-#define VBO_VERTEX_OFFSET_TEXPARAMS_EN    19  // texture parameter: ==1 texturing enabled, ==0 disabled (per-polygon)
-#define VBO_VERTEX_OFFSET_TEXPARAMS_TRANS 20  // texture parameter: >=0 use transparency bit, <0 no transparency (per-polygon)
-#define VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP 21  // texture parameters: U wrap mode: ==1 mirrored repeat, ==0 normal repeat
-#define VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP 22  // "" V wrap mode ""
-#define VBO_VERTEX_OFFSET_TEXFORMAT       23  // texture format 0-7 (also ==0 indicates contour texture - see also texParams.trans)
-#define VBO_VERTEX_OFFSET_TEXMAP          24  // texture map number
-#define VBO_VERTEX_SIZE                   25  // total size (may include padding for alignment)
+#define VBO_VERTEX_OFFSET_SPECULAR        11  // specular coefficient (0.0 if disabled)
+#define VBO_VERTEX_OFFSET_SHININESS       12  // shininess (specular power)
+#define VBO_VERTEX_OFFSET_FOGINTENSITY    13  // fog intensity (0.0 no fog applied, 1.0 all fog applied)
+#define VBO_VERTEX_OFFSET_U               14  // texture U coordinate (in texels, relative to sub-texture)
+#define VBO_VERTEX_OFFSET_V               15  // texture V coordinate
+#define VBO_VERTEX_OFFSET_TEXTURE_X       16  // sub-texture parameters, X (position in overall texture map, in texels)
+#define VBO_VERTEX_OFFSET_TEXTURE_Y       17  // "" Y ""
+#define VBO_VERTEX_OFFSET_TEXTURE_W       18  // sub-texture parameters, width of texture in texels
+#define VBO_VERTEX_OFFSET_TEXTURE_H       19  // "" height of texture in texels
+#define VBO_VERTEX_OFFSET_TEXPARAMS_EN    20  // texture parameter: ==1 texturing enabled, ==0 disabled (per-polygon)
+#define VBO_VERTEX_OFFSET_TEXPARAMS_TRANS 21  // texture parameter: >=0 use transparency bit, <0 no transparency (per-polygon)
+#define VBO_VERTEX_OFFSET_TEXPARAMS_UWRAP 22  // texture parameters: U wrap mode: ==1 mirrored repeat, ==0 normal repeat
+#define VBO_VERTEX_OFFSET_TEXPARAMS_VWRAP 23  // "" V wrap mode ""
+#define VBO_VERTEX_OFFSET_TEXFORMAT       24  // texture format 0-7 (also ==0 indicates contour texture - see also texParams.trans)
+#define VBO_VERTEX_OFFSET_TEXMAP          25  // texture map number
+#define VBO_VERTEX_SIZE                   26  // total size (may include padding for alignment)
 
 
 /******************************************************************************
@@ -216,6 +217,7 @@ void CLegacy3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
   if (transLevelLoc != -1)   glVertexAttribPointer(transLevelLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_TRANSLUCENCE*sizeof(GLfloat)));
   if (lightEnableLoc != -1)  glVertexAttribPointer(lightEnableLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_LIGHTENABLE*sizeof(GLfloat)));
   if (shininessLoc != -1)    glVertexAttribPointer(shininessLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_SHININESS*sizeof(GLfloat)));
+  if (specularLoc != -1)     glVertexAttribPointer(specularLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_SPECULAR*sizeof(GLfloat)));
   if (fogIntensityLoc != -1) glVertexAttribPointer(fogIntensityLoc, 1, GL_FLOAT, GL_FALSE, VBO_VERTEX_SIZE*sizeof(GLfloat), (GLvoid *) (VBO_VERTEX_OFFSET_FOGINTENSITY*sizeof(GLfloat)));
   
   // Set up state
@@ -470,12 +472,11 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   GLfloat b = 1.0;
   if ((P->header[1]&2) == 0)
   {
-    size_t base     = 0x400;
-    //size_t colorIdx = ((P->header[4]>>20)&0x7FF) - 0;  // works for Scud
+    //size_t sensorColorIdx = ((P->header[4]>>20)&0x7FF) - 0;  // works for Scud
     size_t colorIdx = ((P->header[4]>>8)&0x7FF) - 0;   // works for Daytona2 lights and Scud
-    b = (GLfloat) (polyRAM[base+colorIdx]&0xFF) * (1.0f/255.0f);
-    g = (GLfloat) ((polyRAM[base+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
-    r = (GLfloat) ((polyRAM[base+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
+    b = (GLfloat) (polyRAM[m_colorTableAddr+colorIdx]&0xFF) * (1.0f/255.0f);
+    g = (GLfloat) ((polyRAM[m_colorTableAddr+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
+    r = (GLfloat) ((polyRAM[m_colorTableAddr+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
   }
   else
   {
@@ -486,6 +487,10 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   }
 
   /*
+   * These observations are somewhat out of date now that we know the polygon
+   * header layout from the Pro-1000 SDK. However, there are some important
+   * regressions to keep an eye out for.
+   *
    * Color Modulation Observations
    * -----------------------------
    *
@@ -533,44 +538,149 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
    *  - Fighting Vipers 2 shadows are not black anymore.
    *  - More to follow...
    */
-/*
-  unsigned modulate = (step >= 0x20) ? !(P->header[4]&0x80) : (P->header[3]&0x80 && lightEnable);
-  if (texEnable)
-  {
-    // When textures enabled, modulation can apparently be disabled
-    if (!modulate)
-      r = g = b = 1.0f;
-  }
-*/
 
-  /*
-   * When fixed shading is enabled, header[1] & 0x08 == 0 (always?) Perhaps
-   * some combination of these two bits also selects between smooth and flat
-   * shading when fixed shading is off? Should check to see if 0x08 is the 
-   * flat shading bit.
-   */
-  int modulate = !(P->header[4] & 0x80);
-  int fixedShading = (P->header[1] & 0x20);// && !(P->header[1] & 0x08);
-  if (texEnable)
+  // Shading bits
+  int fixedShading = (P->header[1] & 0x20);
+  int smoothShading = (P->header[1] & 0x08);
+    
+  // Color modulation here means multiplication of texel by polygon color
+  int modulate = true;
+  
+  // Source of normal vector depends on shading mode
+  float nx = 0.0f;
+  float ny = 0.0f;
+  float nz = 0.0f;
+  
+  float intensity = 1.0f;
+  
+  // Lighting/shading modes
+  if (lightEnable)
   {
-    if (!modulate)
-      r = g = b = 1.0f;
+    if (smoothShading)
+    {
+      // Vertex normals present: smooth shading only. Fixed shading never
+      // observed to be enabled with light and smooth shading in any game.
+      nx = V->n[0];
+      ny = V->n[1];
+      nz = V->n[2];
+      modulate = true;
+    }
+    else
+    {
+      // Vertex normals absent: fixed or flat shading only
+      if (fixedShading)
+      {
+        // LA Machineguns Vegas street pulsating color effect requires modulation
+        intensity = V->intensity;
+        lightEnable = 0;  // this breaks Yosemite level of LA Machineguns but fixes Scud castle
+        modulate = true;
+      }
+      else
+      {
+        // Flat shading occurs rarely. It can be observed in LA Machineguns (LA
+        // mission, parking lot). A fixed shading intensity seems to be provided
+        // but is presumably unused.
+        nx = P->n[0];
+        ny = P->n[1];
+        nz = P->n[2];
+        modulate = true;
+      }
+    }
   }
-  if (fixedShading && lightEnable)
+  else
   {
-    //lightEnable = 0;  // is this needed?
-    r *= V->intensity;
-    g *= V->intensity;
-    b *= V->intensity;
+    // Here things get tricky...
+    if (smoothShading)
+    {
+      /*
+       * Vertex normals don't matter because lighting is disabled.
+       * So does the smooth shading bit convey any meaning?
+       *
+       * Cases of interest:
+       *
+       *  - Sega Rally 2: menu has lightEnable = 0, smoothShading = 1,
+       *    fixedShading = 0. Color modulation must occur.
+       *  - LA Machineguns: this setting occurs for enemy blue flames and
+       *    flashing missile warheads. Only the latter require modulation. Blue
+       *    flames look wrong if either fixed shading or modulation is applied.
+       *    However, this is inconclusive because these and most other polygons
+       *    in the game have the "translator map" feature enabled. Perhaps this
+       *    compensates somehow?
+       *  - LA Machineguns is the primary reason for disabling modulation
+       *    whenever tranlator map is enabled.
+       */
+      modulate = true;
+    }
+    else
+    {
+      if (fixedShading)
+      {
+        /*
+         * Fixed intensities are sometimes observed in the normal area (e.g., 
+         * normal=0x3f,0,0, which cannot be a vertex normal because magnitude <
+         * 1) but often, all three components are just 0, indicating that fixed
+         * shading is indeed unused here.
+         *
+         * This is one of the most problematic settings:
+         *
+         *  - Scud Race waterfalls, totem poles (near waterfalls at check-
+         *    point), orange guard rail lamps, sky, and beginner level tunnels
+         *    all look correct with color modulation disabled. Fixed shading
+         *    and polygon color values are simply too dark and there does not
+         *    appear to be a plausible combination of the two that works.
+         *  - Scud Race blinking traffic signals, blue arrow signs at entrance
+         *    to Colosseum, all expect modulation to be on. Palette vs. RGB
+         *    polygon color seems to make no difference.
+         */
+
+        // TODO: check color table address?
+        modulate = true;
+      }
+      else
+      {
+        /*
+         * No vertex normals or intensity. Almost never happens. Only a single,
+         * untextured HUD triangle uses this mode in Scud Race.
+        */
+        modulate = true;
+      }
+    }
   }
 
+  // Translator map probably affects shading. Used extensively in LA 
+  // Machineguns. Here, we disable it to fix that game, otherwise polygon
+  // colors and modulation make everything too dark.
+  // TODO: search for translator map by looking for 128*4 byte block xfers? May
+  // be in VROM, though...
+  if ((P->header[4] & 0x80))
+    modulate = false;
+  
+  // Untextured polygons always use polygon color. Make sure we pass it to
+  // shader!
+  if (!texEnable)
+    modulate = true;
+
+  // This removes the effect of polygon color
+  if (!modulate)
+  {
+    r = 1.0f;
+    g = 1.0f;
+    b = 1.0f;
+  }
+  
+  // Assemble final shading color and intensity
+  r *= intensity;
+  g *= intensity;
+  b *= intensity;
+    
   // Specular shininess
-  int shininess = (P->header[0]>>26)&0x3F;
-  //shininess = (P->header[0]>>28)&0xF;
-  //if (shininess)
-  //  printf("%X\n", shininess);
-  if (!(P->header[0]&0x80) || (shininess == 0)) // bit 0x80 seems to enable specular lighting
-    shininess = -1; // disable
+  GLfloat specularCoefficient = (GLfloat) ((P->header[0]>>26) & 0x3F) * (1.0f/63.0f);
+  int shininess = (P->header[6] >> 5) & 3;
+  if (!(P->header[0]&0x80)) //|| (shininess == 0)) // bit 0x80 seems to enable specular lighting
+  {
+    specularCoefficient = 0.; // disable
+    shininess = -1;
+  }
 
   // Determine whether polygon is translucent
   GLfloat translucence = (GLfloat) ((P->header[6]>>18)&0x1F) * (1.0f/31.0f);
@@ -626,12 +736,13 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_B] = b;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_TRANSLUCENCE] = translucence;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_LIGHTENABLE] = lightEnable ? 1.0f : 0.0f;
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_SPECULAR] = specularCoefficient;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_SHININESS] = (GLfloat) shininess;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_FOGINTENSITY] = fogIntensity;
   
-  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NX] = V->n[0]*normFlip;
-  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NY] = V->n[1]*normFlip;
-  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NZ] = V->n[2]*normFlip; 
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NX] = fixedShading ? 0. : nx*normFlip;
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NY] = fixedShading ? 0. : ny*normFlip;
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NZ] = fixedShading ? 0. : nz*normFlip; 
   
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_U] = V->u;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_V] = V->v;
@@ -678,9 +789,9 @@ bool CLegacy3D::InsertPolygon(ModelCache *Cache, const Poly *P)
    * to do with using the correct Z convention to identify a vector pointing
    * toward or away from the screen.
    */
- GLfloat v1[3];
- GLfloat v2[3];
- GLfloat n[3];
+  GLfloat v1[3];
+  GLfloat v2[3];
+  GLfloat n[3];
   v1[0] = P->Vert[0].x-P->Vert[1].x;
   v1[1] = P->Vert[0].y-P->Vert[1].y;
   v1[2] = P->Vert[0].z-P->Vert[1].z;
@@ -850,7 +961,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
     Poly P;     // current polygon
     P.header = data;
     data += 7;  // data will now point to first vertex
-    if (P.header[6]==0)// || P.header[0]==0)
+    if (P.header[6]==0)
       break;
 
     // Sega Rally 2: dust trails often have polygons with seemingly invalid
@@ -860,11 +971,11 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
     bool validPoly = (P.header[0] & 0x300) != 0x300;
     
     // Obtain basic polygon parameters
-	done = (P.header[1] & 4) > 0; // last polygon?
+	  done = (P.header[1] & 4) > 0; // last polygon?
     P.numVerts = (P.header[0]&0x40)?4:3;
 
     // Texture data
-    int     texEnable = P.header[6]&0x04000000;
+    int     texEnable = P.header[6]&0x400;
     int     texFormat = (P.header[6]>>7)&7;
     int     texWidth  = (32<<((P.header[3]>>3)&7));
     int     texHeight = (32<<((P.header[3]>>0)&7));
@@ -947,11 +1058,15 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
       P.Vert[j].n[0] = (GLfloat)(INT8)(ix&0xFF);
       P.Vert[j].n[1] = (GLfloat)(INT8)(iy&0xFF);
       P.Vert[j].n[2] = (GLfloat)(INT8)(iz&0xFF);
-      P.Vert[j].u = (GLfloat) ((UINT16)(it>>16)) * uvScale; // TO-DO: might these be signed?
+      P.Vert[j].u = (GLfloat) ((UINT16)(it>>16)) * uvScale;
       P.Vert[j].v = (GLfloat) ((UINT16)(it&0xFFFF)) * uvScale;
       P.Vert[j].intensity = GLfloat((ix + 128) & 0xFF) / 255.0f; // signed (-0.5 -> black, +0.5 -> white)
-      //if ((P.header[1] & 0x20) && !(P.header[1] & 0x08))
-      //  printf("%02x %02x %02x\n", ix&0xff, iy&0xff, iz&0xff);
+      //P.Vert[j].intensity_7u = GLfloat(ix & 0x7F) / 127.0f;
+      //if ((P.header[1] & 0x20) && j == 0)
+      //if (!(P.header[1] & 0x20) && !(P.header[1] & 0x08) && !(P.header[6] & 0x10000))
+      //{
+      //  printf("%06X: le=%d fx=%d sm=%d %02x %02x %02x\tcolor=%06x (%s)\tambient=%1.2f\n", lutIdx, !!!(P.header[6] & 0x10000), !!(P.header[1] & 0x20), !!(P.header[1] & 0x08), ix&0xff, iy&0xff, iz&0xff, P.header[4]>>8, (P.header[1]&2) ? "rgb" : "pal", lightingParams[4]);
+      //}
       data += 4;
       
       // Normalize the vertex normal
