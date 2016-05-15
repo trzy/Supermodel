@@ -48,9 +48,15 @@ struct Mesh
 	bool polyAlpha		= false;		// specified in the rgba colour
 	bool textureAlpha	= false;		// use alpha in texture
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
-	bool lighting		= false;
 	bool clockWise		= true;			// we need to check if the matrix will change the winding
 
+	// lighting
+	bool lighting		= false;
+	bool specular		= false;
+	float shininess		= 0;
+	float specularCoefficient = 0;
+	
+	// fog
 	float fogIntensity = 1.0f;
 
 	// opengl resources

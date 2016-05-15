@@ -78,7 +78,7 @@ bool PolyHeader::SpecularEnabled()
 
 float PolyHeader::SpecularValue()
 {
-	return (header[0] >> 26) / 64.f;
+	return (header[0] >> 26) / 63.f;					// 63 matches decompiled lib value
 }
 
 bool PolyHeader::Clockwise()
@@ -277,6 +277,11 @@ int PolyHeader::Y()
 //
 // header 6
 //
+
+float PolyHeader::Shininess()
+{
+	return ((header[6] >> 5) & 3) / 3.0f;
+}
 
 int	PolyHeader::TexFormat()
 {

@@ -878,6 +878,14 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->textureAlpha	= ph.TextureAlpha();
 				currentMesh->polyAlpha		= ph.PolyAlpha();
 				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+				
+				if (currentMesh->lighting) {
+					if (ph.SpecularEnabled()) {
+						currentMesh->specular = true;
+						currentMesh->shininess = 0;// ph.Shininess();
+						currentMesh->specularCoefficient = 0; // ph.SpecularValue();
+					}
+				}
 
 				/*
 				if (!ph.Luminous()) {

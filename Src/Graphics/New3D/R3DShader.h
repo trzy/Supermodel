@@ -41,6 +41,8 @@ private:
 	float	m_fogIntensity;
 	bool	m_doubleSided;
 	bool	m_lightEnabled;
+	float	m_shininess;
+	float	m_specularCoefficient;
 
 	// cached model values
 	enum class MatDet { notset, negative, positive, zero };
@@ -60,6 +62,7 @@ private:
 	GLint m_locLighting;
 	GLint m_locLightEnable;
 	GLint m_locShininess;
+	GLint m_locSpecCoefficient;
 	GLint m_locSpotEllipse;
 	GLint m_locSpotRange;
 	GLint m_locSpotColor;

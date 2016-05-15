@@ -13,18 +13,15 @@ static const char *vertexShaderBasic =
 //outputs to fragment shader
 "varying float	fsFogFactor;\n"
 "varying float	fsSpecularTerm;\n"		// specular light term (additive)
-"varying float	fsViewZ;\n"
+"varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
 
 "void main(void)\n"
 "{\n"
-	"vec3	viewVertex;\n"
-
-	"viewVertex		= vec3(gl_ModelViewMatrix * gl_Vertex);\n"
-	"fsViewNormal	= normalize(gl_NormalMatrix*gl_Normal);\n"
-	"float z		= length(viewVertex);\n"
-	"fsFogFactor	= clamp(fogIntensity*(fogStart + z*fogDensity), 0.0, 1.0);\n"
-	"fsViewZ		= -viewVertex.z;\n"	// convert Z from GL->Real3D convention (want +Z to be further into screen)
+	"fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);\n"
+	"fsViewNormal	= normalize(gl_NormalMatrix  *gl_Normal);\n"
+	"float z		= length(fsViewVertex);\n"
+	"fsFogFactor	= clamp(fogIntensity*(fogStart + z * fogDensity), 0.0, 1.0);\n"
 
 	"gl_FrontColor	= gl_Color;\n"
 	"gl_TexCoord[0]	= gl_MultiTexCoord0;\n"
@@ -41,23 +38,23 @@ static const char *fragmentShaderBasic =
 "uniform int	alphaTest;\n"
 "uniform int	textureAlpha;\n"
 "uniform vec3	fogColour;\n"
-"uniform vec4	spotEllipse;\n"		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-"uniform vec2	spotRange;\n"		// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-"uniform vec3	spotColor;\n"		// spotlight RGB color
-"uniform vec3	lighting[2];\n"		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
-"uniform int	lightEnable;\n"		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
-"uniform float	shininess;\n"		// specular shininess (if >= 0.0) or disable specular lighting (negative)
+"uniform vec4	spotEllipse;\n"			// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
+"uniform vec2	spotRange;\n"			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
+"uniform vec3	spotColor;\n"			// spotlight RGB color
+"uniform vec3	lighting[2];\n"			// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
+"uniform int	lightEnable;\n"			// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
+"uniform float	specularCoefficient;\n"	// specular coefficient
+"uniform float	shininess;\n"			// specular shininess
 
 //interpolated inputs from vertex shader
 "varying float	fsFogFactor;\n"
 "varying float	fsSpecularTerm;\n"		// specular light term (additive)
-"varying float	fsViewZ;\n"
+"varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
 
 "void main()\n"
 "{\n"
 	"vec4 tex1Data;\n"
-	
 	"vec4 colData;\n"
 	"vec4 finalData;\n"
 
@@ -68,8 +65,7 @@ static const char *fragmentShaderBasic =
 		"tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
 		"if (microTexture==1) {\n"
-			"vec4 tex2Data	= texture2D( tex2, gl_TexCoord[0].st*4);\n"
-
+			"vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * 4.0);\n"
 			"tex1Data = (tex1Data+tex2Data)/2.0;\n"
 		"}\n"
 
@@ -84,17 +80,17 @@ static const char *fragmentShaderBasic =
 		"}\n"
 	"}\n"
 
-	"colData =  gl_Color;\n"
+	"colData = gl_Color;\n"
 
 	"finalData = tex1Data * colData;\n"
 	"if (finalData.a < (1.0/16.0)) {\n"		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
 		"discard;\n"
 	"}\n"
 
-	"vec3 lightIntensity;\n"
-
+	
 	"if (lightEnable==1)\n"
 	"{\n"
+		"vec3	lightIntensity;\n"
 		"vec3	sunVector;\n"		// sun lighting vector (as reflecting away from vertex)
 		"float	sunFactor;\n"		// sun light projection along vertex normal (0.0 to 1.0)
 
@@ -104,15 +100,22 @@ static const char *fragmentShaderBasic =
 		// Compute diffuse factor for sunlight
 		"sunFactor = max(dot(sunVector, fsViewNormal), 0.0);\n"
 
-		// Total light intensity: sum of all components
-		"lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"
+		// Total light intensity: sum of all components 
+		"lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"	// ambient + diffuse
 		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
-	"}\n"
-	"else {\n"
-			"lightIntensity = vec3(1.0,1.0,1.0);\n"
-	"}\n"
 
-	"finalData.rgb *= lightIntensity;\n"
+		"finalData.rgb *= lightIntensity;\n"
+
+		"if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
+
+			"vec3 v = normalize(-fsViewVertex);\n"
+			"vec3 h = normalize(sunVector + v);\n"	// halfway vector
+
+			"float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
+
+			"finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
+		"}\n"
+	"}\n"
 
 	/*
 	"vec2	ellipse;\n"
@@ -130,8 +133,6 @@ static const char *fragmentShaderBasic =
 		"lightIntensity = fsLightIntensity;\n"
 	"}\n"
 
-	"finalData.rgb *= lightIntensity;\n"
-	"finalData.rgb += vec3(fsSpecularTerm, fsSpecularTerm, fsSpecularTerm);\n"
 	*/
 
 	"finalData.rgb = mix(finalData.rgb, fogColour, fsFogFactor);\n"
@@ -156,6 +157,9 @@ void R3DShader::Start()
 	m_alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	m_doubleSided	= false;
 	m_lightEnabled	= false;
+
+	m_shininess = 0;
+	m_specularCoefficient = 0;
 
 	m_matDet = MatDet::notset;
 
@@ -200,6 +204,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locLighting		= glGetUniformLocation(m_shaderProgram, "lighting");
 	m_locLightEnable	= glGetUniformLocation(m_shaderProgram, "lightEnable");
 	m_locShininess		= glGetUniformLocation(m_shaderProgram, "shininess");
+	m_locSpecCoefficient= glGetUniformLocation(m_shaderProgram, "specularCoefficient");
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 	m_locSpotRange		= glGetUniformLocation(m_shaderProgram, "spotRange");
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
@@ -259,7 +264,15 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_lightEnabled = m->lighting;
 	}
 
-	//glUniform1f(m_locShininess, 1);
+	if (m_dirtyMesh || m->shininess != m_shininess) {
+		glUniform1f(m_locShininess, (m->shininess + 1) * 4);
+		m_shininess = m->shininess;
+	}
+
+	if (m_dirtyMesh || m->specularCoefficient != m_specularCoefficient) {
+		glUniform1f(m_locSpecCoefficient, m->specularCoefficient);
+		m_specularCoefficient = m->specularCoefficient;
+	}
 
 	if (m_matDet!=MatDet::zero) {
 
