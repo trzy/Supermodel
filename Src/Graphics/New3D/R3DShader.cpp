@@ -21,7 +21,7 @@ static const char *vertexShaderBasic =
 	"fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);\n"
 	"fsViewNormal	= normalize(gl_NormalMatrix  *gl_Normal);\n"
 	"float z		= length(fsViewVertex);\n"
-	"fsFogFactor	= fogIntensity * clamp((z-fogStart) * fogDensity, 0.0, 1.0);\n"
+	"fsFogFactor	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);\n"
 
 	"gl_FrontColor	= gl_Color;\n"
 	"gl_TexCoord[0]	= gl_MultiTexCoord0;\n"
@@ -304,6 +304,8 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniform4fv(m_locSpotEllipse, 1, vp->spotEllipse);
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
+
+	printf("fog %f %f %f %f %f\n", vp->fogParams[0], vp->fogParams[1], vp->fogParams[2], vp->fogParams[3], vp->fogParams[4]);
 }
 
 void R3DShader::SetModelStates(const Model* model)
