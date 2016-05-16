@@ -330,7 +330,7 @@ bool PolyHeader::Luminous()
 
 float PolyHeader::LightModifier()
 {
-	return (float)((header[6] >> 11) & 0x1F) * (1.0f / 31.0f);
+	return ((header[6] >> 11) & 0x1F) * (1.0f / 16.0f);
 }
 
 //

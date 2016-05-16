@@ -886,16 +886,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 						currentMesh->specularCoefficient = 0; // ph.SpecularValue();
 					}
 				}
-
-				/*
-				if (!ph.Luminous()) {
-					currentMesh->fogIntensity = 1.0f;
-				}
-				else {
-					currentMesh->fogIntensity = ph.LightModifier();
-				}*/
-
-				currentMesh->fogIntensity = 1.0;
+	
+				currentMesh->fogIntensity = ph.LightModifier();
 
 				if (ph.TexEnabled()) {
 					currentMesh->format			= ph.TexFormat();
