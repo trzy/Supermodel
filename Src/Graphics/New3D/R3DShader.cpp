@@ -21,7 +21,7 @@ static const char *vertexShaderBasic =
 	"fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);\n"
 	"fsViewNormal	= normalize(gl_NormalMatrix  *gl_Normal);\n"
 	"float z		= length(fsViewVertex);\n"
-	"fsFogFactor	= clamp(fogIntensity*(fogStart + z * fogDensity), 0.0, 1.0);\n"
+	"fsFogFactor	= fogIntensity * clamp((z-fogStart) * fogDensity, 0.0, 1.0);\n"
 
 	"gl_FrontColor	= gl_Color;\n"
 	"gl_TexCoord[0]	= gl_MultiTexCoord0;\n"
