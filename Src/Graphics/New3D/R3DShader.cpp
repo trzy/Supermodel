@@ -304,8 +304,6 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniform4fv(m_locSpotEllipse, 1, vp->spotEllipse);
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
-
-	printf("fog %f %f %f %f %f\n", vp->fogParams[0], vp->fogParams[1], vp->fogParams[2], vp->fogParams[3], vp->fogParams[4]);
 }
 
 void R3DShader::SetModelStates(const Model* model)
