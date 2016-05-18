@@ -200,6 +200,7 @@ private:
 
 	// Real3D Base Matrix Pointer
 	const float	*m_matrixBasePtr;
+	UINT32 m_colorTableAddr = 0x400;		// address of color table in polygon RAM
 
 	TextureSheet	m_texSheet;
 	NodeAttributes	m_nodeAttribs;
@@ -211,9 +212,7 @@ private:
 	std::unordered_map<UINT32, std::shared_ptr<std::vector<Mesh>>> m_romMap;	// a hash table for all the ROM models. The meshes don't have model matrices or tex offsets yet
 
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
-
 	R3DShader m_r3dShader;
-	int m_currentVPPriority;
 };
 
 } // New3D

@@ -348,6 +348,11 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		DescendNodePtr(node2Ptr);
 	}
 
+	if ((node[0x00] & 0x04)) {
+		m_colorTableAddr = ((node[0x03 - m_offset] >> 19) << 0) | ((node[0x07 - m_offset] >> 28) << 13) | ((node[0x08 - m_offset] >> 25) << 17);
+		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
+	}
+
 	x = *(float *)&node[0x04 - m_offset];	// magic numbers everywhere !
 	y = *(float *)&node[0x05 - m_offset];
 	z = *(float *)&node[0x06 - m_offset];
@@ -695,8 +700,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		}
 
 		// Unknown light/fog parameters
-		// float scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);	// scroll fog
-		// float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
+		float scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);	// scroll fog
+		float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
 
 		// Clear texture offsets before proceeding
 		m_nodeAttribs.Reset();
@@ -928,9 +933,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		if ((ph.header[1] & 2) == 0) {
 			UINT32 colorIdx = (ph.header[4] >> 8) & 0x7FF;
-			p.faceColour[2] = (m_polyRAM[0x400 + colorIdx] & 0xFF) / 255.f;
-			p.faceColour[1] = ((m_polyRAM[0x400 + colorIdx] >> 8) & 0xFF) / 255.f;
-			p.faceColour[0] = ((m_polyRAM[0x400 + colorIdx] >> 16) & 0xFF) / 255.f;
+			p.faceColour[2] = (m_polyRAM[m_colorTableAddr + colorIdx] & 0xFF) / 255.f;
+			p.faceColour[1] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 8) & 0xFF) / 255.f;
+			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF) / 255.f;
 		}
 		else {
 			if (ph.ColorDisabled()) {		// no colours were set
