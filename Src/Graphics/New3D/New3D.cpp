@@ -322,7 +322,7 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 void CNew3D::DescendCullingNode(UINT32 addr)
 {
 	const UINT32	*node, *lodTable;
-	UINT32			matrixOffset, node1Ptr, node2Ptr;
+	UINT32			matrixOffset, child1Ptr, sibling2Ptr;
 	float			x, y, z;
 	int				tx, ty;
 
@@ -337,15 +337,16 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	}
 
 	// Extract known fields
-	node1Ptr		= node[0x07 - m_offset];
-	node2Ptr		= node[0x08 - m_offset];
+	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
+	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 
 	short extent = node[9 - m_offset] >> 16;
 
-	// seems to indicate second link is invalid (fixes circular references)
-	if ((node[0x00] & 0x07) != 0x06) {
-		DescendNodePtr(node2Ptr);
+	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
+		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
+			DescendCullingNode(sibling2Ptr);				// no need to mask bit, would already be zero
+		}
 	}
 
 	if ((node[0x00] & 0x04)) {
@@ -353,7 +354,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
 	}
 
-	x = *(float *)&node[0x04 - m_offset];	// magic numbers everywhere !
+	x = *(float *)&node[0x04 - m_offset];
 	y = *(float *)&node[0x05 - m_offset];
 	z = *(float *)&node[0x06 - m_offset];
 
@@ -387,7 +388,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	// Descend down first link
 	if ((node[0x00] & 0x08))	// 4-element LOD table
 	{
-		lodTable = TranslateCullingAddress(node1Ptr);
+		lodTable = TranslateCullingAddress(child1Ptr);
 
 		if (NULL != lodTable) {
 			if ((node[0x03 - m_offset] & 0x20000000)) {
@@ -399,7 +400,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		}
 	}
 	else {
-		DescendNodePtr(node1Ptr);
+		DescendNodePtr(child1Ptr);
 	}
 
 	m_modelMat.PopMatrix();
@@ -428,7 +429,6 @@ void CNew3D::DescendNodePtr(UINT32 nodeAddr)
 		DescendPointerList(nodeAddr & 0xFFFFFF);
 		break;
 	default:
-		//printf("ATTENTION: Unknown pointer format: %08X\n\n", nodeAddr);
 		break;
 	}
 }
