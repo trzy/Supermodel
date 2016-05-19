@@ -31,9 +31,11 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 	index = ToIndex(x, y);
 
-	if (m_texMap[format&TEXTURE_DEBUG_MASK].count(index) == 0) {
+	auto range = m_texMap[format&TEXTURE_DEBUG_MASK].equal_range(index);
 
-		//no textures at this position or format so add it to the map
+	if (range.first == range.second) {	
+
+		// nothing found so create a new texture 
 
 		std::shared_ptr<Texture> t(new Texture());
 		m_texMap[format&TEXTURE_DEBUG_MASK].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
@@ -41,10 +43,8 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 		return t;
 	}
 	else {
-		//scan for duplicates
-		//only texture width/height and wrap modes can change here. Since key is based on x/y pos, and each map is a separate format
 
-		auto range = m_texMap[format&TEXTURE_DEBUG_MASK].equal_range(index);
+		// iterate to try and find a match
 
 		for (auto it = range.first; it != range.second; ++it) {
 
@@ -57,10 +57,11 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 			}
 		}
 
+		// nothing found so create a new entry
+
 		std::shared_ptr<Texture> t(new Texture());
 		m_texMap[format&TEXTURE_DEBUG_MASK].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
 		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
-
 		return t;
 	}
 }

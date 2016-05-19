@@ -2,7 +2,7 @@
 #include "PolyHeader.h"
 #include "Texture.h"
 #include "Vec.h"
-#include <cmath>  // needed by gcc
+#include <cmath>
 #include <algorithm>
 #include <limits>
 
@@ -283,9 +283,9 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 
 		// try to find meshes in the rom cache
 
+		m->meshes = m_romMap[modelAddr];	// will create an entry with a null pointer if empty
 
-		if (m_romMap.count(modelAddr)) {
-			m->meshes = m_romMap[modelAddr];
+		if (m->meshes) {
 			cached = true;
 		}
 		else {
