@@ -9,9 +9,6 @@
 
 namespace New3D {
 
-#define REAL_SHEET_WIDTH	2048
-#define REAL_SHEET_HEIGHT	2048
-
 class TextureSheet
 {
 public:

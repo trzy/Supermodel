@@ -215,7 +215,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 		break;
 
 		//
-		// 4 bit texture types - all luminance textures (no alpha), only seem to be enabled when contour is enabled
+		// 4 bit texture types - all luminance textures (no alpha), only seem to be enabled when contour is enabled ( white = contour value )
 		//
 
 	case 8: // low byte, low nibble
