@@ -738,9 +738,9 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_SHININESS] = (GLfloat) shininess;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_FOGINTENSITY] = fogIntensity;
   
-  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NX] = fixedShading ? 0. : nx*normFlip;
-  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NY] = fixedShading ? 0. : ny*normFlip;
-  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NZ] = fixedShading ? 0. : nz*normFlip; 
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NX] = fixedShading ? 0.f : nx*normFlip;
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NY] = fixedShading ? 0.f : ny*normFlip;
+  Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_NZ] = fixedShading ? 0.f : nz*normFlip; 
   
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_U] = V->u;
   Cache->verts[s][baseIdx + VBO_VERTEX_OFFSET_V] = V->v;

@@ -895,7 +895,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->fogIntensity = ph.LightModifier();
 
 				if (ph.TexEnabled()) {
-					currentMesh->format			= ph.TexFormat();
+					currentMesh->format			= m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
 					currentMesh->x				= ph.X();
 					currentMesh->y				= ph.Y();
 					currentMesh->width			= ph.TexWidth();

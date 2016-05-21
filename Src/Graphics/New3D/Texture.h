@@ -6,9 +6,6 @@
 
 namespace New3D {
   
-#define TEXTURE_DEBUG		0x8
-#define TEXTURE_DEBUG_MASK	0x7
-
 class Texture
 {
 public:

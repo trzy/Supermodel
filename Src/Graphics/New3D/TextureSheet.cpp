@@ -31,14 +31,14 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 	index = ToIndex(x, y);
 
-	auto range = m_texMap[format&TEXTURE_DEBUG_MASK].equal_range(index);
+	auto range = m_texMap[format].equal_range(index);
 
 	if (range.first == range.second) {	
 
 		// nothing found so create a new texture 
 
 		std::shared_ptr<Texture> t(new Texture());
-		m_texMap[format&TEXTURE_DEBUG_MASK].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
+		m_texMap[format].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
 		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
 		return t;
 	}
@@ -60,7 +60,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 		// nothing found so create a new entry
 
 		std::shared_ptr<Texture> t(new Texture());
-		m_texMap[format&TEXTURE_DEBUG_MASK].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
+		m_texMap[format].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
 		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
 		return t;
 	}
@@ -68,7 +68,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 void TextureSheet::Release()
 {
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 12; i++) {
 		m_texMap[i].clear();
 	}
 }
@@ -92,13 +92,31 @@ void TextureSheet::Invalidate(int x, int y, int width, int height)
 
 		int index = ToIndex(x + ((i%sWidth) * 32), y + ((i / sWidth) * 32));
 
-		for (int j = 0; j<8; j++) {
+		for (int j = 0; j<12; j++) {
 
 			if (m_texMap[j].count(index) > 0) {
 
 				m_texMap[j].erase(index);
 			}
 		}
+	}
+}
+
+int	TextureSheet::GetTexFormat(int originalFormat, bool contour)
+{
+	if (!contour) {
+		return originalFormat;	// the same
+	}
+
+	switch (originalFormat)
+	{
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+		return originalFormat + 7;		// these formats are identical to 1-4, except they lose the 4 bit alpha part when contour is enabled
+	default:
+		return originalFormat;
 	}
 }
 

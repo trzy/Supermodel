@@ -81,7 +81,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 
 	switch (format)
 	{
-	default:	// Debug texture, use TEXTURE_DEBUG mask
+	default:	// Debug texture
 		for (yi = y; yi < (y + height); yi++)
 		{
 			for (xi = x; xi < (x + width); xi++)
@@ -213,10 +213,73 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 			}
 		}
 		break;
+
+		//
+		// 4 bit texture types - all luminance textures (no alpha), only seem to be enabled when contour is enabled
+		//
+
+	case 8: // low byte, low nibble
+		for (yi = y; yi < (y + height); yi++)
+		{
+			for (xi = x; xi < (x + width); xi++)
+			{
+				texel = src[yi * 2048 + xi] & 0xFF;
+				c = (texel & 0xF) * 17;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = (c == 255 ? 0 : 255);
+			}
+		}
+		break;
+
+	case 9:	// low byte, high nibble
+		for (yi = y; yi < (y + height); yi++)
+		{
+			for (xi = x; xi < (x + width); xi++)
+			{
+				texel = src[yi * 2048 + xi] & 0xFF;
+				c = ((texel >> 4) & 0xF) * 17;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = (c == 255 ? 0 : 255);
+			}
+		}
+		break;
+
+	case 10:	// high byte, low nibble
+		for (yi = y; yi < (y + height); yi++)
+		{
+			for (xi = x; xi < (x + width); xi++)
+			{
+				texel = src[yi * 2048 + xi] >> 8;
+				c = (texel & 0xF) * 17;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = (c == 255 ? 0 : 255);
+			}
+		}
+		break;
+
+	case 11: // high byte, high nibble
+
+		for (yi = y; yi < (y + height); yi++)
+		{
+			for (xi = x; xi < (x + width); xi++)
+			{
+				texel = src[yi * 2048 + xi] >> 8;
+				c = ((texel >> 4) & 0xF) * 17;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = c;
+				scratch[i++] = (c == 255 ? 0 : 255);
+			}
+		}
+		break;
 	}
 
-	//remove debug mask
-	format &= 7;
 
 	GLfloat maxAnistrophy;
 
