@@ -896,6 +896,11 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 				if (ph.TexEnabled()) {
 					currentMesh->format			= m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
+
+					if (currentMesh->format == 7) {
+						currentMesh-> alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
+					}
+
 					currentMesh->x				= ph.X();
 					currentMesh->y				= ph.Y();
 					currentMesh->width			= ph.TexWidth();
