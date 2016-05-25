@@ -686,10 +686,8 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   if ((P->header[6]&0x00800000))  // if set, polygon is opaque
     translucence = 1.0f;
     
-  // Fog intensity (for luminous polygons)
-  GLfloat fogIntensity = (GLfloat) ((P->header[6]>>11)&0x1F) * (1.0f/31.0f);
-  if (!(P->header[6]&0x00010000)) // if not luminous, always use full fog intensity
-    fogIntensity = 1.0f;
+  // Fog intensity (apparently used for both luminous and shaded polygons)
+  GLfloat fogIntensity = (GLfloat) ((P->header[6]>>11)&0x1F) * (1.0f/15.0f);  // only 4 bits seem to actually be used?
 
   /*
    * Contour processing. Any alpha value sufficiently close to 0 seems to

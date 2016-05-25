@@ -194,7 +194,7 @@ void main(void)
 	
 	// Fog
 	float z = length(viewVertex);
-	fsFogFactor = clamp(1.0-fogIntensity*(gl_Fog.start+z*gl_Fog.density), 0.0, 1.0);
+	fsFogFactor = fogIntensity*clamp(gl_Fog.start+z*gl_Fog.density, 0.0, 1.0);
 
 	// Pass viewspace Z coordinate (for spotlight)
 	fsViewZ = -viewVertex.z;	// convert Z from GL->Real3D convention (want +Z to be further into screen)

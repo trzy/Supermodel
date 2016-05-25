@@ -186,8 +186,8 @@ void main(void)
 	// Translucency (modulates existing alpha channel for RGBA4 texels)
 	fragColor.a *= fsTransLevel;
 
-	// Apply fog under the control of fog factor setting from polygon header
-	fragColor.rgb = mix(gl_Fog.color.rgb, fragColor.rgb, fsFogFactor);
+	// Apply fog
+	fragColor.rgb = mix(fragColor.rgb, gl_Fog.color.rgb, fsFogFactor);
 
 	// Store final color
 	gl_FragColor = fragColor;
