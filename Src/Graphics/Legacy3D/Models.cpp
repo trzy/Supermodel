@@ -673,7 +673,8 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     
   // Specular shininess
   GLfloat specularCoefficient = (GLfloat) ((P->header[0]>>26) & 0x3F) * (1.0f/63.0f);
-  int shininess = (P->header[6] >> 5) & 3;
+  int shinyBits = (P->header[6] >> 5) & 3;
+  float shininess = pow(2.0, 1+shinyBits);
   if (!(P->header[0]&0x80)) //|| (shininess == 0)) // bit 0x80 seems to enable specular lighting
   {
     specularCoefficient = 0.; // disable
@@ -689,7 +690,7 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   GLfloat fogIntensity = (GLfloat) ((P->header[6]>>11)&0x1F) * (1.0f/31.0f);
   if (!(P->header[6]&0x00010000)) // if not luminous, always use full fog intensity
     fogIntensity = 1.0f;
-    
+
   /*
    * Contour processing. Any alpha value sufficiently close to 0 seems to
    * cause pixels to be discarded entirely on Model 3 (no modification of the

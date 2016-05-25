@@ -42,7 +42,8 @@ attribute float	texFormat;		// T1RGB5 contour texture (if > 0)
 attribute float texMap;         // texture map number
 attribute float	transLevel;		// translucence level, 0.0 (transparent) to 1.0 (opaque). if less than 1.0, replace alpha value
 attribute float	lightEnable;	// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
-attribute float	shininess;		// specular shininess (if >= 0.0) or disable specular lighting (negative)
+attribute float	specular;		  // specular coefficient (0.0 if disabled)
+attribute float	shininess;		// specular shininess
 attribute float	fogIntensity;	// fog intensity (1.0, full fog effect, 0.0, no fog) 
 
 // Custom outputs to fragment shader
@@ -145,11 +146,38 @@ void main(void)
   		if (shininess >= 0.0)
   		{
   			// Standard specular lighting equation
+        if (sunFactor > 0.0)
+        {
+          vec3 V = normalize(-viewVertex);
+  			  vec3 H = normalize(sunVector+V);	// halfway vector
+  			  fsSpecularTerm = specular*pow(max(dot(viewNormal,H),0.0),shininess);
+  			  
+  			  // Phong formula
+  			  // vec3 R = normalize(2.0*dot(sunVector,viewNormal)*viewNormal - sunVector);
+  			  // vec3 V = normalize(-viewVertex);
+  			  // fsSpecularTerm = lighting[1].x * specular * pow(max(dot(R,V),0.0),4.);
+  			  
+  			  //
+  			  // This looks decent in Scud Race attract mode. It is directionally
+  			  // correct (highlights appear in the right places under the same
+  			  // conditions as the actual game). In game play, it no longer works.
+  			  // This is loosely based on the Model 2 formula, which is:
+  			  //
+  			  //    s = 2*dot(light, normal)*normal.z - light.z
+  			  //
+  			  // float dot1 = dot(sunVector, viewNormal);
+  			  // float s = dot1*viewNormal.z;
+  			  // fsSpecularTerm =specular * pow(max(s, 0.0), 2.);
+  			  //
+        }
+
+  			/*
   			vec3 V = normalize(-viewVertex);
   			vec3 H = normalize(sunVector+V);	// halfway vector
   			float s = max(10.0,64.0-shininess);	// seems to look nice, but probably not correct
   			fsSpecularTerm = pow(max(dot(viewNormal,H),0.0),s);
   			if (sunFactor <= 0.0) fsSpecularTerm = 0.0;
+  			*/
   			
   			// Faster approximation  			
   			//float temp = max(dot(viewNormal,H),0.0);
