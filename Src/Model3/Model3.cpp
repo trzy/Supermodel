@@ -2894,8 +2894,6 @@ void CModel3::Patch(void)
     *(UINT32 *) &crom[0x50E8D4] = 0x60000000;
     *(UINT32 *) &crom[0x50E8F4] = 0x60000000;
     *(UINT32 *) &crom[0x50FB84] = 0x60000000;
-    *(UINT32 *) &crom[0x4F736C] = 0x60000000; //
-    *(UINT32 *) &crom[0x4F738C] = 0x60000000;
   }
   else if (!strcmp(Game->id, "harleyb"))
   {
