@@ -102,6 +102,18 @@ static const char *fragmentShaderBasic =
 
 		// Total light intensity: sum of all components 
 		"lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"	// ambient + diffuse
+
+		"vec2	ellipse;\n"
+		"float	insideSpot;\n"
+
+		// Compute spotlight and apply lighting
+		"ellipse	= (gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw;\n"
+		"insideSpot = dot(ellipse, ellipse);\n"
+
+		"if ((insideSpot <= 1.0) && (-fsViewVertex.z >= spotRange.x)) {\n"
+			"lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
+		"}\n"
+
 		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
 
 		"finalData.rgb *= lightIntensity;\n"
@@ -117,23 +129,6 @@ static const char *fragmentShaderBasic =
 		"}\n"
 	"}\n"
 
-	/*
-	"vec2	ellipse;\n"
-	"vec3	lightIntensity;\n"
-	"float	insideSpot;\n"
-
-	// Compute spotlight and apply lighting
-	"ellipse	= (gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw;\n"
-	"insideSpot = dot(ellipse, ellipse);\n"
-
-	"if ((insideSpot <= 1.0) && (fsViewZ >= spotRange.x) && (fsViewZ<spotRange.y)) {\n"
-		"lightIntensity = fsLightIntensity + (1.0 - insideSpot)*spotColor;\n"
-	"}\n"
-	"else {\n"
-		"lightIntensity = fsLightIntensity;\n"
-	"}\n"
-
-	*/
 
 	"finalData.rgb = mix(finalData.rgb, fogColour, fsFogFactor);\n"
 
