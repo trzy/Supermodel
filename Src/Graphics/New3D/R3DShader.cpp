@@ -103,6 +103,8 @@ static const char *fragmentShaderBasic =
 		// Total light intensity: sum of all components 
 		"lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"	// ambient + diffuse
 
+		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
+
 		"vec2	ellipse;\n"
 		"float	insideSpot;\n"
 
@@ -114,8 +116,7 @@ static const char *fragmentShaderBasic =
 			"lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
 		"}\n"
 
-		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
-
+	
 		"finalData.rgb *= lightIntensity;\n"
 
 		"if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
