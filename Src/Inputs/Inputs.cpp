@@ -244,10 +244,30 @@ CInputs::CInputs(CInputSystem *system) : m_system(system)
 	CAnalogInput *magicalLeverUp2   = AddAnalogInput("MagicalLeverUp2",   "P2 Magical Lever Up",    GAME_INPUT_MAGTRUCK, "NONE");
   CAnalogInput *magicalLeverDown2 = AddAnalogInput("MagicalLeverDown2", "P2 Magical Lever Down",  GAME_INPUT_MAGTRUCK, "NONE");
   
-  magicalLever1 = AddAxisInput(   "MagicalLever1", "P1 Magical Lever Full Analog",  GAME_INPUT_MAGTRUCK, "NONE", magicalLeverUp1, magicalLeverDown1, 0xFF, 0x80, 0);
-  magicalLever2 = AddAxisInput(   "MagicalLever2", "P2 Magical Lever Full Analog",  GAME_INPUT_MAGTRUCK, "NONE", magicalLeverUp2, magicalLeverDown2, 0xFF, 0x80, 0);
-  magicalPedal1 = AddSwitchInput( "MagicalPedal1", "P1 Magical Pedal",              GAME_INPUT_MAGTRUCK, "NONE");
-  magicalPedal2 = AddSwitchInput( "MagicalPedal2", "P2 Magical Pedal",              GAME_INPUT_MAGTRUCK, "NONE");
+  magicalLever1 = AddAxisInput(   "MagicalLever1", "P1 Magical Lever",  GAME_INPUT_MAGTRUCK, "NONE", magicalLeverUp1, magicalLeverDown1, 0xFF, 0x80, 0);
+  magicalLever2 = AddAxisInput(   "MagicalLever2", "P2 Magical Lever",  GAME_INPUT_MAGTRUCK, "NONE", magicalLeverUp2, magicalLeverDown2, 0xFF, 0x80, 0);
+  magicalPedal1 = AddSwitchInput( "MagicalPedal1", "P1 Magical Pedal",  GAME_INPUT_MAGTRUCK, "NONE");
+  magicalPedal2 = AddSwitchInput( "MagicalPedal2", "P2 Magical Pedal",  GAME_INPUT_MAGTRUCK, "NONE");
+
+  // Sega Bass Fishing controls
+  CAnalogInput *fishingRodLeft    = AddAnalogInput("FishingRodLeft",    "Rod Left",     GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingRodRight   = AddAnalogInput("FishingRodRight",   "Rod Right",    GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingRodUp      = AddAnalogInput("FishingRodUp",      "Rod Up",       GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingRodDown    = AddAnalogInput("FishingRodDown",    "Rod Down",     GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingReelFaster = AddAnalogInput("FishingReelFaster", "Reel Faster",  GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingReelSlower = AddAnalogInput("FishingReelSlower", "Reel Slower",  GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingStickLeft  = AddAnalogInput("FishingStickLeft",  "Stick Left",   GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingStickRight = AddAnalogInput("FishingStickRight", "Stick Right",  GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingStickUp    = AddAnalogInput("FishingStickUp",    "Stick Up",     GAME_INPUT_FISHING, "NONE");
+  CAnalogInput *fishingStickDown  = AddAnalogInput("FishingStickDown",  "Stick Down",   GAME_INPUT_FISHING, "NONE");
+
+  fishingRodX   = AddAxisInput(   "FishingRodX",    "Rod X-Axis",     GAME_INPUT_FISHING, "NONE", fishingRodLeft, fishingRodRight, 0, 0x80, 0xFF);
+  fishingRodY   = AddAxisInput(   "FishingRodY",    "Rod Y-Axis",     GAME_INPUT_FISHING, "NONE", fishingRodUp, fishingRodDown, 0xFF, 0x80, 0);
+  fishingReel   = AddAxisInput(   "FishingReel",    "Reel Speed",     GAME_INPUT_FISHING, "NONE", fishingReelSlower, fishingReelFaster, 0, 0x80, 0xFF);
+  fishingStickX = AddAxisInput(   "FishingStickX",  "Stick X-Axis",   GAME_INPUT_FISHING, "NONE", fishingStickLeft, fishingStickRight, 0, 0x80, 0xFF);
+  fishingStickY = AddAxisInput(   "FishingStickY",  "Stick Y-Axis",   GAME_INPUT_FISHING, "NONE", fishingStickUp, fishingStickDown, 0xFF, 0x80, 0);
+  fishingCast   = AddSwitchInput( "FishingCast",    "Cast",           GAME_INPUT_FISHING, "NONE");
+  fishingSelect = AddSwitchInput( "FishingSelect",  "Select",         GAME_INPUT_FISHING, "NONE");
 }
 
 CInputs::~CInputs()

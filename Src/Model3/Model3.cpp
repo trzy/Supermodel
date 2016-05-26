@@ -427,6 +427,11 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
       data &= ~(Inputs->magicalPedal1->value << 0);
 
+    if ((Game->inputFlags & GAME_INPUT_FISHING))
+    {
+      data &= ~(Inputs->fishingCast->value << 0);
+      data &= ~(Inputs->fishingSelect->value << 1);
+    }
     return data;
 
   case 0x0C:  // game-specific inputs
@@ -500,7 +505,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
       data &= ~(Inputs->magicalPedal2->value << 0);
-    
+
     return data;
 
   case 0x2C:  // Serial FIFO 1
@@ -551,6 +556,15 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[1] = uint8_t(Inputs->magicalLever2->value);
     }
       
+    if ((Game->inputFlags & GAME_INPUT_FISHING))
+    {
+      adc[0] = uint8_t(Inputs->fishingRodY->value);
+      adc[1] = uint8_t(Inputs->fishingRodX->value);
+      adc[3] = uint8_t(Inputs->fishingReel->value);
+      adc[5] = uint8_t(Inputs->fishingStickX->value);
+      adc[4] = uint8_t(Inputs->fishingStickY->value);
+    }
+
     // Read out appropriate channel
     data = adc[adcChannel&7];
     ++adcChannel;
@@ -1382,6 +1396,11 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     GPU.WritePolygonRAM(addr&0x3FFFFF,FLIPENDIAN32(data));
     break;
 
+  // Real3D configuration registers
+  case 0x9C:  // 9Cxxxxxx
+    //printf("%08X=%08X\n", addr, data);  //TODO: flip endian?
+    break;
+
   // Real3D DMA
   case 0xC2:  // C2000000-C2000100
     GPU.WriteDMARegister32(addr&0xFF,FLIPENDIAN32(data));
@@ -1515,6 +1534,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
   // Unknown
   default:
   Unknown32:
+    //printf("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     DebugLog("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     break;
   }
@@ -2874,6 +2894,8 @@ void CModel3::Patch(void)
     *(UINT32 *) &crom[0x50E8D4] = 0x60000000;
     *(UINT32 *) &crom[0x50E8F4] = 0x60000000;
     *(UINT32 *) &crom[0x50FB84] = 0x60000000;
+    *(UINT32 *) &crom[0x4F736C] = 0x60000000; //
+    *(UINT32 *) &crom[0x4F738C] = 0x60000000;
   }
   else if (!strcmp(Game->id, "harleyb"))
   {
@@ -3229,8 +3251,8 @@ CModel3::CModel3(void)
   DebugLog("Built Model 3\n");
 }
 
-/*
 // Dumps a memory region to a file for debugging purposes
+/*
 static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bool reverse16)
 {
   FILE *fp = fopen(file, "wb");

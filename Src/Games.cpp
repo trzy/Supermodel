@@ -47,7 +47,7 @@ const struct GameInfo g_Model3GameList[] =
     true,       // 48 MB of banked CROM (Mirror)
     0x2000000,  // 32 MB of VROM
     0x800000,   // 8 MB of sample ROMs
-    GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1,
+    GAME_INPUT_COMMON|GAME_INPUT_FISHING,
     0,          // no MPEG board
     false,      // no drive board,
     0,          // no security board
@@ -633,7 +633,7 @@ const struct GameInfo g_Model3GameList[] =
     true,       // 48 MB of banked CROM (Mirror)
     0x2000000,  // 32 MB of VROM
     0x800000,   // 8 MB of sample ROMs
-    GAME_INPUT_COMMON|GAME_INPUT_JOYSTICK1,
+    GAME_INPUT_COMMON|GAME_INPUT_FISHING,
     0,          // no MPEG board
     false,      // no drive board
     0,          // no security board

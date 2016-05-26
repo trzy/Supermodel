@@ -220,6 +220,15 @@ public:
   CAxisInput    *magicalLever2;
   CSwitchInput  *magicalPedal1;
   CSwitchInput  *magicalPedal2;
+
+  // Sega Bass Fishing controls
+  CAxisInput    *fishingRodX;
+  CAxisInput    *fishingRodY;
+  CAxisInput    *fishingReel;
+  CAxisInput    *fishingStickX;
+  CAxisInput    *fishingStickY;
+  CSwitchInput  *fishingCast;
+  CSwitchInput  *fishingSelect;
   
   /*
    * Creates a set of inputs with the given input system.

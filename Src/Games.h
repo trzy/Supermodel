@@ -58,7 +58,8 @@
 #define GAME_INPUT_ANALOG_GUN2      0x000040000 // game has analog gun 2
 #define GAME_INPUT_SKI              0x000080000 // game has ski controls
 #define GAME_INPUT_MAGTRUCK         0x000100000 // game has magical truck controls
-#define GAME_INPUT_ALL              0x0001FFFFF
+#define GAME_INPUT_FISHING          0x000200000 // game has fishing controls
+#define GAME_INPUT_ALL              0x0003FFFFF
 
 
 /******************************************************************************
