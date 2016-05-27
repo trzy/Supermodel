@@ -310,7 +310,7 @@ bool PolyHeader::AlphaTest()
 
 UINT8 PolyHeader::Transparency()
 {
-	return (UINT8)(((header[6] >> 18) & 0x1F)  * 255.f / 0x1F);	
+	return (UINT8)((((header[6] >> 18) & 0x3F) * 255) / 32.f);	
 }
 
 bool PolyHeader::PolyAlpha()

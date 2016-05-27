@@ -961,13 +961,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 		}
 
-		if ((ph.header[6] & 0x00800000)) {	// if set, polygon is opaque
-			p.faceColour[3] = 1.0f;
-		}
-		else {
-			p.faceColour[3] = ph.Transparency() / 255.f;
-		}
-		
+		p.faceColour[3] = ph.Transparency() / 255.f;
+				
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
 			p.v[i].normal[0] = p.faceNormal[0];

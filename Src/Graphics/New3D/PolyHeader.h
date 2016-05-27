@@ -60,8 +60,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Specular color ?
 0x06: 
 x------- -------- -------- --------		Alpha testing / contour
 -xxxxxxx -------- -------- --------		Translator map offset?
--------- x------- -------- --------		1 = disable transparency
--------- -xxxxx-- -------- --------		Polygon translucency (0 = fully transparent)
+-------- xxxxxx-- -------- --------		Polygon transparency 0-32
 -------- ------x- -------- --------		Translucency pattern select (stipple alpha) - not sure if used?
 -------- -------x -------- --------		1 = disable lighting
 -------- -------- xxxxx--- --------		Polygon light modifier(Amount that a luminous polygon will burn through fog. Valid range is 0.0 to 1.0. 0.0 is completely fogged; 1.0 has no fog.)
