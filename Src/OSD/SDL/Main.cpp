@@ -222,6 +222,7 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
+  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
 
   // Set vsync

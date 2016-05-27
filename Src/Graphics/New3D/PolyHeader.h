@@ -126,6 +126,7 @@ public:
 	int		Y();
 
 	//header 6
+	bool	Layered();
 	float	Shininess();
 	int		TexFormat();
 	bool	TexEnabled();

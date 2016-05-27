@@ -278,6 +278,11 @@ int PolyHeader::Y()
 // header 6
 //
 
+bool PolyHeader::Layered()
+{
+	return (header[6] & 0x8) > 0;
+}
+
 float PolyHeader::Shininess()
 {
 	return ((header[6] >> 5) & 3) / 3.0f;

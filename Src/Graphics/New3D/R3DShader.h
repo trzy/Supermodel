@@ -43,6 +43,7 @@ private:
 	bool	m_lightEnabled;
 	float	m_shininess;
 	float	m_specularCoefficient;
+	bool	m_layered;
 
 	// cached model values
 	enum class MatDet { notset, negative, positive, zero };

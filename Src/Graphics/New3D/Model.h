@@ -49,6 +49,7 @@ struct Mesh
 	bool textureAlpha	= false;		// use alpha in texture
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	bool clockWise		= true;			// we need to check if the matrix will change the winding
+	bool layered		= false;		// stencil poly
 
 	// lighting
 	bool lighting		= false;

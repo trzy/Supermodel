@@ -152,6 +152,7 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
+	glDisable(GL_STENCIL_TEST);
 }
 
 void CNew3D::RenderFrame(void)
@@ -167,6 +168,10 @@ void CNew3D::RenderFrame(void)
 	glActiveTexture	(GL_TEXTURE0);
 	glEnable		(GL_CULL_FACE);
 	glFrontFace		(GL_CW);
+
+	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
+	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
+	glStencilMask	(0xFF);
 
 	RenderViewport(0x800000);		// build model structure
 	
@@ -208,7 +213,7 @@ void CNew3D::RenderFrame(void)
 	m_r3dShader.SetShader(true);
 
 	for (int pri = 0; pri <= 3; pri++) {
-		glClear		(GL_DEPTH_BUFFER_BIT);
+		glClear		(GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 		RenderScene	(pri, false);
 		RenderScene	(pri, true);
 	}
@@ -883,6 +888,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->textureAlpha	= ph.TextureAlpha();
 				currentMesh->polyAlpha		= ph.PolyAlpha();
 				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+				currentMesh->layered		= ph.Layered();
 				
 				if (currentMesh->lighting) {
 					if (ph.SpecularEnabled()) {

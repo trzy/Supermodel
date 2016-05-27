@@ -153,6 +153,7 @@ void R3DShader::Start()
 	m_alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	m_doubleSided	= false;
 	m_lightEnabled	= false;
+	m_layered		= false;
 
 	m_shininess = 0;
 	m_specularCoefficient = 0;
@@ -268,6 +269,16 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->specularCoefficient != m_specularCoefficient) {
 		glUniform1f(m_locSpecCoefficient, m->specularCoefficient);
 		m_specularCoefficient = m->specularCoefficient;
+	}
+
+	if (m_dirtyMesh || m->layered != m_layered) {
+		m_layered = m->layered;
+		if (m_layered) {
+			glEnable(GL_STENCIL_TEST);
+		}
+		else {
+			glDisable(GL_STENCIL_TEST);
+		}
 	}
 
 	if (m_matDet!=MatDet::zero) {
