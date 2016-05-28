@@ -828,10 +828,10 @@ void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
 		bool fractMin;
 		bool fractMax;
 		
-		fTemp		= modf(min, &iTemp);
+		fTemp		= std::modf(min, &iTemp);
 		fractMin	= fTemp > 0;
 
-		fTemp		= modf(max, &iTemp);
+		fTemp		= std::modf(max, &iTemp);
 		fractMax	= fTemp > 0;
 
 		for (int j = 0; j < r3dPoly.number && min != max; j++) {
