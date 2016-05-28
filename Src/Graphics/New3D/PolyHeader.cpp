@@ -229,6 +229,16 @@ void PolyHeader::Color(UINT8& r, UINT8& g, UINT8& b)
 	b = (header[4] >> 8) & 0xFF;
 }
 
+int PolyHeader::ColorIndex()
+{
+	return (header[4] >> 8) & 0xFFF;
+}
+
+int PolyHeader::SensorColorIndex()
+{
+	return (header[4] >> 20) & 0xFFF;
+}
+
 bool PolyHeader::ColorDisabled()
 {
 	return (header[4] & 0x80) > 0;

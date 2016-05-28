@@ -117,6 +117,8 @@ public:
 
 	//header 4
 	void	Color(UINT8& r, UINT8& g, UINT8& b);
+	int		ColorIndex();
+	int		SensorColorIndex();
 	bool	ColorDisabled();
 	int		Page();
 

@@ -958,7 +958,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		// copy face attributes
 
 		if ((ph.header[1] & 2) == 0) {
-			UINT32 colorIdx = (ph.header[4] >> 8) & 0x7FF;
+			int colorIdx = ph.ColorIndex();
 			p.faceColour[2] = (m_polyRAM[m_colorTableAddr + colorIdx] & 0xFF) / 255.f;
 			p.faceColour[1] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 8) & 0xFF) / 255.f;
 			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF) / 255.f;
