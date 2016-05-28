@@ -38,7 +38,7 @@
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  * 4 |S/R|S/R|S/R|S/R|S/R|S/R|S/R|S/R|S/G|S/G|S/G|S/G|I/G|I/G|I/G|I/G|I/B|I/B|I/B|I/B|I/B|I/B|I/B|I/B|MAP| TP|TX?| TX| TX| TX| TX| TX|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 5 |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | TX|TY?|TY?| TY| TY| TY| TY| TY|
+ * 5 |TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP|TNP| TX|TY?|TY?| TY| TY| TY| TY| TY|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  * 6 |TRN|MOF|MOF|MOF|MOF|MOF|MOF|MOF|OPQ| TL| TL| TL| TL| TL|PAT|LUM|FOG|FOG|FOG|FOG|FOG|TEN|TFM|TFM|TFM|SHI|SHI|HIP|LAY|TLM|TLM|TLM|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
@@ -82,6 +82,7 @@
  *  TP  Even Bank Select          Texture page: 0 = First 2048x1024 page, 1 = Second page
  *  TX  Texture X                 Texture X position within page in units of 32 pixels
  *  TY  Texture Y                 Texture Y position within page in units of 32 pixels
+ *  TNP Texture NP                ?
  *  TRN Contour Texture Enable    0 = No transparency, 1 = Process A1RGB5 pixels with A set as transparent (note: affects other alpha formats, too)
  *  MOF Translator Map Offset     ?
  *  OPQ Opaque                    0 = Polygon is translucent (32 levels of transparency), 1 = Polygon is opaque
