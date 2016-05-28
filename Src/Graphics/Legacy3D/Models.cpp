@@ -511,8 +511,8 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   GLfloat b = 1.0;
   if ((P->header[1]&2) == 0)
   {
-    //size_t sensorColorIdx = ((P->header[4]>>20)&0x7FF);
-    size_t colorIdx = ((P->header[4]>>8)&0x7FF);
+    //size_t sensorColorIdx = ((P->header[4]>>20)&0xFFF);
+    size_t colorIdx = ((P->header[4]>>8)&0xFFF);
     b = (GLfloat) (polyRAM[m_colorTableAddr+colorIdx]&0xFF) * (1.0f/255.0f);
     g = (GLfloat) ((polyRAM[m_colorTableAddr+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
     r = (GLfloat) ((polyRAM[m_colorTableAddr+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
