@@ -47,13 +47,13 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed poin
 -------- -------- -------- -----xxx		Texture height(in 8 - pixel tiles)
 
 0x04: 
-xxxxxxxx xxxxxxxx xxxxxxxx --------		Color(RGB888)
--------- -------- -------- x-------		Color disabled
+xxxxxxxx xxxxxxxx xxxxxxxx --------		Color (RGB888 or two 12-bit indexes, sensor color and color)
+-------- -------- -------- x-------		Translator map enable ? (treated as color modulation disabled)
 -------- -------- -------- -x------		Texture page
 -------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
 
 0x05 : 
-xxxxxxxx xxxxxxxx xxxxxxxx --------		Specular color ?
+xxxxxxxx xxxxxxxx xxxxxxxx --------		Texture NP ?
 -------- -------- -------- x-------		Low bit of texture U coordinate
 -------- -------- -------- ---xxxxx		Low 5 bits of texture V coordinate
 

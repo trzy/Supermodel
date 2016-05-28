@@ -28,50 +28,73 @@
  *
  *    31  30  29  28  27  26  25  24  23  22  21  20  19  18  17  16  15  14  13  12  11  10   9   8   7   6   5   4   3   2   1   0
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 0 | S | S | S | S | S | S |ID?|ID?|ID?|ID?| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID|   |   | SC|TYP|   |   |LNK|LNK|LNK|LNK|
+ * 0 | S | S | S | S | S | S | CW| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID| ID|DS1|DS2| SE|TYP|PNT|SMO|LNK|LNK|LNK|LNK|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 1 | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X |   |TCF|   |DBL|   |END|COL|   |
+ * 1 | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X | X |EDG|TAS|FIX|DBL|SMT|END|COL|LOS|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 2 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |   |   |   |   |   |   |RPX|RPY|
+ * 2 | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |MTX|MTX|MTX|MTE|MLD|MLD|TXM|TYM|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 3 | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z |   |   |TXW|TXW|TXW|TXH|TXH|TXH|
+ * 3 | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z | Z |TXS|TYS|TXW|TXW|TXW|TXH|TXH|TXH|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 4 |?/R|P/R|P/R|P/R|P/R|P/R|P/R|P/R|P/G|P/G|P/G|P/G|?/G|Q/G|Q/G|Q/G|Q/B|Q/B|Q/B|Q/B|Q/B|Q/B|Q/B|Q/B|   | TP|   | TX| TX| TX| TX| TX|
+ * 4 |S/R|S/R|S/R|S/R|S/R|S/R|S/R|S/R|S/G|S/G|S/G|S/G|I/G|I/G|I/G|I/G|I/B|I/B|I/B|I/B|I/B|I/B|I/B|I/B|MAP| TP|TX?| TX| TX| TX| TX| TX|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 5 |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | TX|   |   | TY| TY| TY| TY| TY|
+ * 5 |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   | TX|TY?|TY?| TY| TY| TY| TY| TY|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
- * 6 |TRN|   |   |   |   |   |   |   |OPQ| TL| TL| TL| TL| TL|   |LUM|FOG|FOG|FOG|FOG|FOG|TEN|TFM|TFM|TFM|   |   |   |   |   |   |   |
+ * 6 |TRN|MOF|MOF|MOF|MOF|MOF|MOF|MOF|OPQ| TL| TL| TL| TL| TL|PAT|LUM|FOG|FOG|FOG|FOG|FOG|TEN|TFM|TFM|TFM|SHI|SHI|HIP|LAY|TLM|TLM|TLM|
  *   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
  *
- *  S   6-bit Field           Unknown purpose
- *  ID  Identification        A numerical identifier of unknown purpose that increments for each polygon in the model
- *  SC  6-bit Field Control   Related to the 6-bit field
- *  TYP Polygon Type          0 = Triangle, 1 = Quad
- *  LNK Link                  Strip link information
- *  X   Normal X              Lighting normal X component (2.22 fixed-point)
- *  Y   Normal Y              
- *  Z   Normal Z              
- *  TCF Tex. Coord. Format    0 = 13.3 unsigned fixed-point, 1 = unsigned 16 bits
- *  DBL Double-sided          0 = Single-sided polygon, 1 = Double-sided
- *  END Model End             1 = Last polygon in model
- *  COL Polygon Color Format  0 = Palette-based (P, Q), 1 = RGB
- *  RPX Texture X Repeat      0 = Wrap, 1 = Mirror
- *  RPY Texture Y Repeat      
- *  TXW Texture Width         000 = 32, 001 = 64, 010 = 128, 011 = 256, 100 = 512
- *  TXH Texture Height        
- *  R   Red                   Red component of untextured polygon color
- *  G   Green                 
- *  B   Blue                  
- *  TP  Texture Page          0 = First 2048x1024 page, 1 = Second page
- *  TX  Texture X             Texture X position within page in units of 32 pixels
- *  TY  Texture Y             Texture Y position within page in units of 32 pixels
- *  TRN Transparency          0 = No transparency, 1 = Process A1RGB5 pixels with A set as transparent (does it affect RGBA4 textures?)
- *  TEN Texture Enable        0 = Do not texture, 1 = Texture
- *  OPQ Opaque                0 = Polygon is translucent (32 levels of transparency), 1 = Polygon is opaque
- *  TL  Transparency Level    32 levels of transparency
- *  LUM Luminous              0 = Lighting enabled, 1 = Lighting disabled (luminous)
- *  FOG Fog Attenuation       Effect of fog on luminous polygons (0 = full fog effect, 31 = no fog). "SetLightModifier()" in API docs.
- *  TFM Texture Format
+ *  S   Specular                  Specular coefficient
+ *  CW  Clockwise                 Clockwise data
+ *  ID  Node Identifier           A numerical identifier that increments for each polygon in the model
+ *  DS1 Discard 1                 Indicates polygon is invalid and must be discarded
+ *  DS2 Discard 2                 Indicates polygon is invalid and must be discarded
+ *  SE  Enable specular           Enable specular lighting
+ *  TYP Vertex Count (Type)       0 = Triangle, 1 = Quad
+ *  PNT Polygon is Points         ?
+ *  SMO Smoothing                 ?
+ *  LNK Link                      Strip link information
+ *  X   Normal X                  Lighting normal X component (2.22 fixed-point)
+ *  Y   Normal Y                  
+ *  Z   Normal Z                  
+ *  EDG Edge On Translucency      ?
+ *  TAS Texture Address Scale     Texture coordinate format: 0 = 13.3 unsigned fixed-point, 1 = unsigned 16 bits
+ *  FIX Fixed Shading             0 = Vertex normals are present, 1 = Vertex normal X contains fixed shading intensity
+ *  DBL Double-sided              0 = Single-sided polygon, 1 = Double-sided
+ *  SMT Smooth Shading            0 = Flat shading (use polygon normal), 1 = Smooth shading (use vertex normals)
+ *  END Last polygon              1 = Last polygon in model
+ *  COL Actual Color              Polygon color format: 0 = Color table index (S, I), 1 = RGB
+ *  LOS No LOS Return             ?
+ *  MTX Microtexture Map Select   
+ *  MTE Microtexture Enable       0 = No microtexture, 1 = Microtexture enabled
+ *  MLD Microtexture Min LOD      ?
+ *  TXM X Mirror                  Texture repeat mode: 0 = Wrap, 1 = Mirror
+ *  TYM Y Mirror                  
+ *  TXS X Wrap Smoothing          0 = No wrap smoothing, 1 = Affects texture sampling across wrapped boundary
+ *  TYS Y Wrap Smoothing          
+ *  TXW Map Size X                Texture map size: 000 = 32, 001 = 64, 010 = 128, 011 = 256, 100 = 512
+ *  TXH Map Size Y                
+ *  S   Sensor color index        Color table index when using sensor colors (unknown how to enable)
+ *  I   Color index               Color table index for non-sensor color mode
+ *  R   Red                     
+ *  G   Green                   
+ *  B   Blue                    
+ *  MAP Translator Map Select     ?
+ *  TP  Even Bank Select          Texture page: 0 = First 2048x1024 page, 1 = Second page
+ *  TX  Texture X                 Texture X position within page in units of 32 pixels
+ *  TY  Texture Y                 Texture Y position within page in units of 32 pixels
+ *  TRN Contour Texture Enable    0 = No transparency, 1 = Process A1RGB5 pixels with A set as transparent (note: affects other alpha formats, too)
+ *  MOF Translator Map Offset     ?
+ *  OPQ Opaque                    0 = Polygon is translucent (32 levels of transparency), 1 = Polygon is opaque
+ *  TL  Transparency Level        32 levels of transparency
+ *  PAT Tanslucency Pattern Select
+ *  LUM Luminous Feature          0 = Lighting enabled, 1 = Lighting disabled (luminous)
+ *  FOG Light Modifier            Effect of fog on luminous polygons (0 = full fog effect, 31 = no fog)
+ *  TEN Enable Texture Modulation 0 = Do not texture, 1 = Texture
+ *  TFM Texture Mode              Texture format          
+ *  SHI Shininess                 
+ *  HIP High Priority             1 = High priority polygon (drawn on top of all polygons in viewport w/out Z testing?)
+ *  LAY Layered Polygon           1 = Layered polygon (some sort of stencil processing)
+ *  TLM Translucency Mode         ?
  *
  * TO-DO List:
  * -----------
