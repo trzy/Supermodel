@@ -230,6 +230,8 @@ void CLegacy3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
   {
     glDisable(GL_BLEND);
   }
+  bool stencilEnabled = false;
+  glDisable(GL_STENCIL_TEST);
   
   // Draw if there are items in the list
   const DisplayList *D = Cache->ListHead[state];
@@ -255,24 +257,34 @@ void CLegacy3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
     }
     else
     {
-      if (D->Data.Model.frontFace == -GL_CW)  // no backface culling (all normals have lost their Z component)
-        glDisable(GL_CULL_FACE);
-      else                  // use appropriate winding convention
+      const DisplayList::ModelInstance &Model = D->Data.Model;
+      if (stencilEnabled != Model.useStencil)
       {
+        if (Model.useStencil)
+          glEnable(GL_STENCIL_TEST);
+        else
+          glDisable(GL_STENCIL_TEST);
+        stencilEnabled = Model.useStencil;
+      }
+      if (Model.frontFace == -GL_CW)
+      {
+        // No backface culling (all normals have lost their Z component)
+        glDisable(GL_CULL_FACE);
+      }
+      else
+      {
+        // Use appropriate winding convention
         GLint frontFace;
         glGetIntegerv(GL_FRONT_FACE, &frontFace);
-        if (frontFace != D->Data.Model.frontFace)
-          glFrontFace(D->Data.Model.frontFace);
+        if (frontFace != Model.frontFace)
+          glFrontFace(Model.frontFace);
       }
-            
       if (modelViewMatrixLoc != -1)
-        glUniformMatrix4fv(modelViewMatrixLoc, 1, GL_FALSE, D->Data.Model.modelViewMatrix);
-      glDrawArrays(GL_TRIANGLES, D->Data.Model.index, D->Data.Model.numVerts);
-      
-      if (D->Data.Model.frontFace == -GL_CW)
-            glEnable(GL_CULL_FACE);
+        glUniformMatrix4fv(modelViewMatrixLoc, 1, GL_FALSE, Model.modelViewMatrix);
+      glDrawArrays(GL_TRIANGLES, Model.index, Model.numVerts);
+      if (Model.frontFace == -GL_CW)
+        glEnable(GL_CULL_FACE);
     }
-    
     D = D->next;
   }
 }
@@ -317,6 +329,9 @@ bool CLegacy3D::AppendDisplayList(ModelCache *Cache, bool isViewport, const stru
       // Point to VBO for current model and state
       Cache->List[lm].Data.Model.index = Model->index[i];
       Cache->List[lm].Data.Model.numVerts = Model->numVerts[i];
+
+      // Misc. parameters
+      Cache->List[lm].Data.Model.useStencil = Model->useStencil;
       
       // Copy modelview matrix
       glGetFloatv(GL_MODELVIEW_MATRIX, Cache->List[lm].Data.Model.modelViewMatrix);
@@ -472,15 +487,14 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   GLfloat b = 1.0;
   if ((P->header[1]&2) == 0)
   {
-    //size_t sensorColorIdx = ((P->header[4]>>20)&0x7FF) - 0;  // works for Scud
-    size_t colorIdx = ((P->header[4]>>8)&0x7FF) - 0;   // works for Daytona2 lights and Scud
+    //size_t sensorColorIdx = ((P->header[4]>>20)&0x7FF);
+    size_t colorIdx = ((P->header[4]>>8)&0x7FF);
     b = (GLfloat) (polyRAM[m_colorTableAddr+colorIdx]&0xFF) * (1.0f/255.0f);
     g = (GLfloat) ((polyRAM[m_colorTableAddr+colorIdx]>>8)&0xFF) * (1.0f/255.0f);
     r = (GLfloat) ((polyRAM[m_colorTableAddr+colorIdx]>>16)&0xFF) * (1.0f/255.0f);
   }
   else
   {
-    // Colors are 8-bit (almost certainly true, see Star Wars)
     r = (GLfloat) (P->header[4]>>24) * (1.0f/255.0f);
     g = (GLfloat) ((P->header[4]>>16)&0xFF) * (1.0f/255.0f);
     b = (GLfloat) ((P->header[4]>>8)&0xFF) * (1.0f/255.0f);
@@ -892,7 +906,7 @@ struct VBORef *CLegacy3D::BeginModel(ModelCache *Cache)
 }
 
 // Uploads all vertices from the local vertex buffer to the VBO, sets up the VBO reference, updates the LUT
-void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UINT16 texOffset)
+void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UINT16 texOffset, bool useStencil)
 {
   int m = Cache->numModels++;
 
@@ -916,6 +930,9 @@ void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UI
   // Texture offset of this model state
   Model->texOffset = texOffset;
   
+  // Should we use stencil?
+  Model->useStencil = useStencil;
+  
   // Update the LUT and link up to any existing model that already exists here
   if (Cache->lut[lutIdx] >= 0)  // another texture offset state already cached
     Model->nextTexOffset = &(Cache->Models[Cache->lut[lutIdx]]);
@@ -936,10 +953,6 @@ void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UI
 
 struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOffset, const UINT32 *data)
 {
-  // Sega Rally 2 bad models
-  //if (lutIdx == 0x27a1  || lutIdx == 0x21e0)
-  //  return FAIL;
-    
   if (data == NULL)
     return NULL;
     
@@ -951,6 +964,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
   // Cache all polygons
   Vertex    Prev[4];  // previous vertices
   int       numPolys = 0;
+  bool      useStencil = true;
   bool      done = false;
   while (!done)
   {    
@@ -982,9 +996,10 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
     GLfloat uvScale   = (P.header[1]&0x40)?1.0f:(1.0f/8.0f);
     
     // Determine whether this is an alpha polygon (TODO: when testing textures, test if texturing enabled? Might not matter)
-    if (((P.header[6]&0x00800000)==0) ||  // translucent polygon
-      (texFormat==7) ||         // RGBA4 texture
-      (texFormat==4))           // A4L4 texture
+    int isTranslucent = (P.header[6] & 0x00800000) == 0;
+    if (isTranslucent ||
+      (texFormat==7) ||   // RGBA4 texture
+      (texFormat==4))     // A4L4 texture
       P.state = POLY_STATE_ALPHA;
     else
       P.state = POLY_STATE_NORMAL;
@@ -1003,6 +1018,18 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
         P.state = POLY_STATE_NORMAL;
     } 
       
+    // Layered polygons are implemented with a stencil buffer. Here, we also
+    // include a hack to detect likely shadow polygons. When not implemented as
+    // layered polygons, games use translucent polygons (which on the actual
+    // hardware are implemented with stipple) without texturing or lighting.
+    // Usually they are also black with the annoying exception of Spikeout.
+    // TODO: If this hack is too permissive and breaks anything, we should make
+    // it a config option.
+    int isLayered = P.header[6] & 0x8;
+    int isLightDisabled = P.header[6] & 0x00010000;
+    bool isProbablyShadow = isLightDisabled && isTranslucent && !texEnable;
+    useStencil &= (isLayered || isProbablyShadow);
+    
     // Decode the texture
     if (texEnable)
     {
@@ -1038,15 +1065,6 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
       UINT32 iy = data[1];
       UINT32 iz = data[2];
       UINT32 it = data[3];
-      
-      /*
-      // Check for bad vertices (Sega Rally 2)
-      if (((ix>>28)==7) || ((iy>>28)==7) || ((iz>>28)==7))
-      {
-        //printf("%X ix=%08X, iy=%08X, iz=%08X\n", lutIdx, ix, iy, iz);
-        goto StopDecoding;
-      }
-      */
       
       // Decode vertices
       P.Vert[j].x = (GLfloat) (((INT32)ix)>>8) * vertexFactor;
@@ -1087,7 +1105,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
   }
   
   // Finish model and enter it into the LUT
-  EndModel(Cache,Model,lutIdx,texOffset);
+  EndModel(Cache, Model, lutIdx, texOffset, useStencil);
   return Model;
 }
 

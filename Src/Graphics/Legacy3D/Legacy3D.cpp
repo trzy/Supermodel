@@ -974,7 +974,13 @@ void CLegacy3D::RenderFrame(void)
   // Z buffering (Z buffer is cleared by display list viewport nodes)
   glDepthFunc(GL_LESS);
   glEnable(GL_DEPTH_TEST);
-  
+
+  // Stencil buffering
+  glStencilFunc(GL_EQUAL, 0, 0xFF);       // stencil test passes if stencil buffer value is 0
+  glStencilOp(GL_KEEP, GL_INCR, GL_INCR); // if the stencil test passes, increment value in stencil buffer
+  glStencilMask(0xFF);
+  glDisable(GL_STENCIL_TEST);             // enabled only for select models
+
   // Bind Real3D shader program and texture maps
   glUseProgram(shaderProgram);
   for (unsigned mapNum = 0; mapNum < numTexMaps; mapNum++)
@@ -1009,7 +1015,7 @@ void CLegacy3D::RenderFrame(void)
   ClearModelCache(&PolyCache);
   for (int pri = 0; pri <= 3; pri++)
   {
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     //ClearModelCache(&PolyCache);
     ClearDisplayList(&PolyCache);
     ClearDisplayList(&VROMCache);
@@ -1019,7 +1025,8 @@ void CLegacy3D::RenderFrame(void)
     DrawDisplayList(&VROMCache, POLY_STATE_ALPHA);
     DrawDisplayList(&PolyCache, POLY_STATE_ALPHA);
   }
-  glFrontFace(GL_CW); // restore front face
+  glFrontFace(GL_CW);         // restore front face
+  glDisable(GL_STENCIL_TEST); // make sure this is turned off
   
   // Disable VBO client states
   if (fogIntensityLoc != -1)  glDisableVertexAttribArray(fogIntensityLoc);

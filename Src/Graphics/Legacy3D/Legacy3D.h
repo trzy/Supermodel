@@ -36,9 +36,6 @@ namespace Legacy3D {
 
 /******************************************************************************
  Internal Definitions and Data Structures
- 
- NOTE: These should probably be moved inside the Legacy3D namespace at some
- point.
 ******************************************************************************/
 
 // Model caches sort models by alpha (translucency) state
@@ -71,18 +68,26 @@ struct Poly
  * Reference to model polygons stored in a VBO. Each reference has two sets of
  * vertices: normal and alpha. Copies of the model with different texture
  * offsets applied are searchable via the linked list of texture offset states.
+ *
+ * Technically, a model may contain a mix of layered and non-layered polygons
+ * but we can't support that level of granularity in the current engine. The 
+ * useStencil flag is set only when all polygons in a model are layered, and
+ * also may be set when we detect that a polygon is likely to be used as a
+ * shadow. On the actual hardware, these are not stenciled but are most likely
+ * implemented with stipple masks. We cheat here to make shadows look nicer.
  */
 
 struct VBORef
 {
-	unsigned		index[2];		// index of model polygons in VBO
-	unsigned		numVerts[2];	// number of vertices
-	unsigned		lutIdx;			// LUT index associated with this model (for fast LUT clearing)
+	unsigned index[2];		// index of model polygons in VBO
+	unsigned numVerts[2]; // number of vertices
+	unsigned lutIdx;      // LUT index associated with this model (for fast LUT clearing)
 	
 	struct VBORef	*nextTexOffset;	// linked list of models with different texture offset states
-	UINT16			texOffset;		// texture offset data for this model
+	UINT16 texOffset;		          // texture offset data for this model
+	bool useStencil;              // whether to draw with stencil mask ("layered" polygons)
 	
-	CTextureRefs	texRefs;		// unique texture references contained in this model
+	CTextureRefs texRefs; // unique texture references contained in this model
 	
 	/*
 	 * Clear():
@@ -96,6 +101,7 @@ struct VBORef
 		lutIdx = 0;
 		texOffset = 0;
 		nextTexOffset = NULL;
+		useStencil = false;
 		for (int i = 0; i < 2; i++)
 		{
 			index[i] = 0;
@@ -107,34 +113,36 @@ struct VBORef
 // Display list items: model instances and viewport settings
 struct DisplayList
 {
-	bool		isViewport;				// if true, this is a viewport node
+	// Viewport instance data
+	struct ViewportInstance
+	{
+		GLfloat	projectionMatrix[4*4];	// projection matrix
+		GLfloat	lightingParams[6];		  // lighting parameters (see RenderViewport() and vertex shader)
+		GLfloat	spotEllipse[4];			    // spotlight ellipse (see RenderViewport())
+		GLfloat	spotRange[2];			      // Z range
+		GLfloat	spotColor[3];			      // color
+		GLfloat fogParams[5];			      // fog parameters (...)
+		GLint		x, y;					          // viewport coordinates (scaled and in OpenGL format)
+		GLint		width, height;			    // viewport dimensions (scaled for display surface size)
+	};
 	
+	// Model instance data
+	struct ModelInstance
+	{
+		GLfloat		modelViewMatrix[4*4]; // model-view matrix
+		unsigned	index;					      // index in VBO
+		unsigned	numVerts;				      // number of vertices
+		GLint		  frontFace;				    // GL_CW (default), GL_CCW, or -GL_CW to indicate no culling
+		bool      useStencil;           // draw with stencil testing
+	};
+
+  bool isViewport;    // if true, this is a viewport node
 	union
 	{
-		// Viewport data
-		struct
-		{
-			GLfloat		projectionMatrix[4*4];	// projection matrix
-			GLfloat		lightingParams[6];		// lighting parameters (see RenderViewport() and vertex shader)
-			GLfloat		spotEllipse[4];			// spotlight ellipse (see RenderViewport())
-			GLfloat		spotRange[2];			// Z range
-			GLfloat		spotColor[3];			// color
-			GLfloat		fogParams[5];			// fog parameters (...)
-			GLint		x, y;					// viewport coordinates (scaled and in OpenGL format)
-			GLint		width, height;			// viewport dimensions (scaled for display surface size)
-		} Viewport;
-		
-		// Model data
-		struct
-		{
-			GLfloat		modelViewMatrix[4*4];	// model-view matrix
-			unsigned	index;					// index in VBO
-			unsigned	numVerts;				// number of vertices
-			GLint		frontFace;				// GL_CW (default), GL_CCW, or -GL_CW to indicate no culling
-		} Model;
+	  ModelInstance     Model;
+	  ViewportInstance  Viewport;
 	} Data;
-			
-	DisplayList	*next;					// next display list item with the same state (alpha or non-alpha)
+	DisplayList	*next;  // next display list item with the same state (alpha or non-alpha)
 };
 
 /*
@@ -368,7 +376,7 @@ private:
 	bool 			InsertPolygon(ModelCache *cache, const Poly *p);
 	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
 	struct VBORef	*BeginModel(ModelCache *cache);
-	void			EndModel(ModelCache *cache, struct VBORef *Model, int lutIdx, UINT16 texOffset);
+	void			EndModel(ModelCache *cache, struct VBORef *Model, int lutIdx, UINT16 texOffset, bool useStencil);
 	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 texOffset, const UINT32 *data);
 	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
 	void 			ClearModelCache(ModelCache *cache);
