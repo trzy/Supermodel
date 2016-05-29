@@ -692,7 +692,7 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   if (!offset)  // Step 1.5+
   {
     int tx = 32*((node[0x02]>>7)&0x3F);
-    int ty = 32*(node[0x02]&0x3F) + ((node[0x02]&0x4000)?1024:0); // TODO: 5 or 6 bits for Y coord?
+    int ty = 32*(node[0x02]&0x1F) + ((node[0x02]&0x4000)?1024:0); // 5 bits for Y coordinate, else Sega Rally 2 initials decal breaks
     if ((node[0x02]&0x8000))  // apply texture offsets, else retain current ones
     {
       texOffsetXY[0] = (GLfloat) tx;
@@ -836,6 +836,10 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri)
     return;
   if (nextAddr != 0x01000000)
     RenderViewport(nextAddr, pri);
+
+  // Skip disabled viewports
+  //if ((vpnode[0] & 0x20) != 0)
+  //  return;
 
   // If the priority doesn't match, do not process
   int curPri = (vpnode[0x00] >> 3) & 3; // viewport priority

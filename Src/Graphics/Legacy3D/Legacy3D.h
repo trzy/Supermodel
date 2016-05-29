@@ -373,6 +373,8 @@ private:
 	void 			DrawDisplayList(ModelCache *Cache, POLY_STATE state);
 	bool 			AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model);
 	void 			ClearDisplayList(ModelCache *Cache);
+	int       GetTextureBaseX(const Poly *P) const;
+	int       GetTextureBaseY(const Poly *P) const;
 	bool 			InsertPolygon(ModelCache *cache, const Poly *p);
 	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
 	struct VBORef	*BeginModel(ModelCache *cache);

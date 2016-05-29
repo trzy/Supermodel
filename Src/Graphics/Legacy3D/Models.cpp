@@ -451,6 +451,19 @@ void CLegacy3D::ClearDisplayList(ModelCache *Cache)
  Vertices are copied in batches sorted by state when the model is complete.
 ******************************************************************************/
 
+int CLegacy3D::GetTextureBaseX(const Poly *P) const
+{
+  int x = ((P->header[4] & 0x1F) << 1) | ((P->header[5] >> 7) & 1);
+  return (32 * x + int(texOffsetXY[0])) & 2047;
+}
+
+int CLegacy3D::GetTextureBaseY(const Poly *P) const
+{
+  int texPage = (P->header[4] & 0x40) << 4; // 1024 or 0 
+  int y = P->header[5] & 0x1F;
+  return (32 * y + texPage + int(texOffsetXY[1])) & 2047;
+}
+
 // Inserts a vertex into the local vertex buffer, incrementing both the local and VBO pointers. The normal is scaled by normFlip.
 void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, float normFlip)
 {
@@ -459,11 +472,10 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   unsigned  texFormat = (P->header[6]>>7)&7;
   GLfloat   texWidth  = (GLfloat) (32<<((P->header[3]>>3)&7));
   GLfloat   texHeight = (GLfloat) (32<<((P->header[3]>>0)&7));
-  int       texPage   = (P->header[4]&0x40) ? 1024 : 0; // treat texture page as Y coordinate
-  TexSheet  *texSheet = fmtToTexSheet[texFormat];       // get X&Y offset of texture sheet within texture map
-  GLfloat   texBaseX  = (GLfloat) (texSheet->xOffset + (((32*(((P->header[4]&0x1F)<<1)|((P->header[5]>>7)&1))) + (int)texOffsetXY[0])&2047));
-  GLfloat   texBaseY  = (GLfloat) (texSheet->yOffset + (((32*(P->header[5]&0x1F)+texPage) + (int)texOffsetXY[1])&2047));
-    
+  TexSheet  *texSheet = fmtToTexSheet[texFormat]; // get X, Y offset of texture sheet within texture map
+  GLfloat   texBaseX = texSheet->xOffset + GetTextureBaseX(P);
+  GLfloat   texBaseY = texSheet->yOffset + GetTextureBaseY(P);
+
   /*
    * Lighting and Color Modulation:
    *
@@ -1010,13 +1022,12 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
     P.numVerts = (P.header[0]&0x40)?4:3;
 
     // Texture data
-    int     texEnable = P.header[6]&0x400;
-    int     texFormat = (P.header[6]>>7)&7;
-    int     texWidth  = (32<<((P.header[3]>>3)&7));
-    int     texHeight = (32<<((P.header[3]>>0)&7));
-    int     texPage   = (P.header[4]&0x40) ? 1024 : 0;  // treat texture page as Y coordinate
-    int     texBaseX  = ((32*(((P.header[4]&0x1F)<<1)|((P.header[5]>>7)&1))) + (int)texOffsetXY[0]) & 2047;
-    int     texBaseY  = ((32*(P.header[5]&0x1F)+texPage) + (int)texOffsetXY[1]) & 2047;
+    int texEnable = P.header[6]&0x400;
+    int texFormat = (P.header[6]>>7)&7;
+    int texWidth  = (32<<((P.header[3]>>3)&7));
+    int texHeight = (32<<((P.header[3]>>0)&7));
+    int texBaseX = GetTextureBaseX(&P);
+    int texBaseY = GetTextureBaseY(&P);    
     GLfloat uvScale   = (P.header[1]&0x40)?1.0f:(1.0f/8.0f);
     
     // Determine whether this is an alpha polygon (TODO: when testing textures, test if texturing enabled? Might not matter)
