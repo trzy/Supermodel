@@ -83,9 +83,9 @@ struct VBORef
 	unsigned numVerts[2]; // number of vertices
 	unsigned lutIdx;      // LUT index associated with this model (for fast LUT clearing)
 	
-	struct VBORef	*nextTexOffset;	// linked list of models with different texture offset states
-	UINT16 texOffset;		          // texture offset data for this model
-	bool useStencil;              // whether to draw with stencil mask ("layered" polygons)
+	VBORef *nextTextureOffsetState; // linked list of models with different texture offset states
+	uint16_t textureOffsetState;    // texture offset data for this model
+	bool useStencil;                // whether to draw with stencil mask ("layered" polygons)
 	
 	CTextureRefs texRefs; // unique texture references contained in this model
 	
@@ -99,8 +99,8 @@ struct VBORef
 	{
 		texRefs.Clear();
 		lutIdx = 0;
-		texOffset = 0;
-		nextTexOffset = NULL;
+		textureOffsetState = 0;
+		nextTextureOffsetState = NULL;
 		useStencil = false;
 		for (int i = 0; i < 2; i++)
 		{
@@ -378,9 +378,9 @@ private:
 	bool 			InsertPolygon(ModelCache *cache, const Poly *p);
 	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
 	struct VBORef	*BeginModel(ModelCache *cache);
-	void			EndModel(ModelCache *cache, struct VBORef *Model, int lutIdx, UINT16 texOffset, bool useStencil);
-	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 texOffset, const UINT32 *data);
-	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 texOffset);
+	void			EndModel(ModelCache *cache, struct VBORef *Model, int lutIdx, UINT16 textureOffsetState, bool useStencil);
+	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 textureOffsetState, const UINT32 *data);
+	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 textureOffsetState);
 	void 			ClearModelCache(ModelCache *cache);
 	bool 			CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, bool isDynamic);
 	void 			DestroyModelCache(ModelCache *cache);
@@ -438,8 +438,25 @@ private:
 	// Scene graph processing
 	int		listDepth;	        // how many lists have we recursed into
 	int		stackDepth;	        // for debugging and error handling purposes
-	GLfloat	texOffsetXY[2];	  // decoded texture X, Y offsets
-	UINT16	texOffset;		    // raw texture offset data as it appears in culling node
+	struct TextureOffset
+	{
+	  int x;          // x offset
+	  int y;          // y offset (wraps within 2048x1023 texel bank)
+	  int switchBank; // 0: use bank from polygon header, 1024: swap banks
+	  uint16_t state; // x, y, and bank states compromise a unique key
+	  TextureOffset(uint32_t data)
+	    : x(32 * ((data >> 7) & 0x7F)),
+	      y(32 * (data & 0x7F)),
+	      switchBank((data & 0x4000) >> 4),
+	      state(data & 0x7FFF)
+	  {}
+	  TextureOffset()
+	    : x(0),
+	      y(0),
+	      switchBank(false),
+	      state(0)
+	  {}
+	} m_textureOffset;
 	UINT32  m_colorTableAddr = 0x400; // address of color table in polygon RAM
 	
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets

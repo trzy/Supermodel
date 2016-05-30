@@ -583,8 +583,7 @@ static bool IsDynamicModel(const UINT32 *data)
  * made to salvage the situation if this occurs, so if DrawModel() returns
  * FAIL, it is a serious matter and rendering should be aborted for the frame.
  *
- * The current texture offset state, texOffset, is also used. Models are cached
- * for each unique texOffset.
+ * Models are cached for each unique culling node texture offset state.
  */
 bool CLegacy3D::DrawModel(UINT32 modelAddr)
 {  
@@ -599,12 +598,12 @@ bool CLegacy3D::DrawModel(UINT32 modelAddr)
     
   // Look up the model in the LUT and cache it if necessary
   int lutIdx = modelAddr&0xFFFFFF;
-  struct VBORef *ModelRef = LookUpModel(Cache, lutIdx, texOffset);
+  struct VBORef *ModelRef = LookUpModel(Cache, lutIdx, m_textureOffset.state);
   if (NULL == ModelRef && Cache == &VROMCache)
   {
     // If the model was a VROM model, it may be dynamic, so we need to try
     // another lookup in the dynamic cache
-    ModelRef = LookUpModel(&PolyCache, lutIdx, texOffset);
+    ModelRef = LookUpModel(&PolyCache, lutIdx, m_textureOffset.state);
     if (ModelRef != NULL)
       Cache = &PolyCache;
   }
@@ -617,7 +616,7 @@ bool CLegacy3D::DrawModel(UINT32 modelAddr)
     // afterwards)
     if (Cache == &VROMCache && IsDynamicModel(model))
       Cache = &PolyCache;
-    ModelRef = CacheModel(Cache, lutIdx, texOffset, model);
+    ModelRef = CacheModel(Cache, lutIdx, m_textureOffset.state, model);
     if (NULL == ModelRef)
     {
       // Model could not be cached. Render what we have so far and try again.
@@ -629,7 +628,7 @@ bool CLegacy3D::DrawModel(UINT32 modelAddr)
       ClearModelCache(&PolyCache);
       
       // Try caching again...
-      ModelRef = CacheModel(Cache, lutIdx, texOffset, model);
+      ModelRef = CacheModel(Cache, lutIdx, m_textureOffset.state, model);
       if (NULL == ModelRef)
         return ErrorUnableToCacheModel(modelAddr);  // nothing we can do :(
     }
@@ -686,20 +685,11 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   const float z             = *(float *) &node[0x06-offset];
   
   // Texture offset?
-  const float oldTexOffsetX = texOffsetXY[0]; // save old offsets
-  const float oldTexOffsetY = texOffsetXY[1];
-  const UINT16 oldTexOffset = texOffset;
+  TextureOffset oldTextureOffset = m_textureOffset; // save old offsets
   if (!offset)  // Step 1.5+
   {
-    int tx = 32*((node[0x02]>>7)&0x3F);
-    int ty = 32*(node[0x02]&0x1F) + ((node[0x02]&0x4000)?1024:0); // 5 bits for Y coordinate, else Sega Rally 2 initials decal breaks
-    if ((node[0x02]&0x8000))  // apply texture offsets, else retain current ones
-    {
-      texOffsetXY[0] = (GLfloat) tx;
-      texOffsetXY[1] = (GLfloat) ty;
-      texOffset = node[0x02]&0x7FFF;
-      //printf("Tex Offset: %d, %d (%08X %08X)\n", tx, ty, node[0x02], node1Ptr);
-    }
+    if ((node[0x02] & 0x8000))  // apply texture offset, else retain current ones
+      m_textureOffset = TextureOffset(node[0x02]);
   }
   
   // Apply matrix and translation
@@ -731,9 +721,7 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   --stackDepth;
   
   // Restore old texture offsets
-  texOffsetXY[0] = oldTexOffsetX;
-  texOffsetXY[1] = oldTexOffsetY;
-  texOffset = oldTexOffset;
+  m_textureOffset = oldTextureOffset;
 }
 
 // A list of pointers. MAME assumes that these may only point to culling nodes.
@@ -929,9 +917,7 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri)
   //printf("Fog: R=%02X G=%02X B=%02X density=%g (%X) %d start=%g\n", ((vpnode[0x22]>>16)&0xFF), ((vpnode[0x22]>>8)&0xFF), ((vpnode[0x22]>>0)&0xFF), fogParams[3], vpnode[0x23], (fogParams[3]==fogParams[3]), fogParams[4]);
   
   // Clear texture offsets before proceeding
-  texOffsetXY[0] = 0.0;
-  texOffsetXY[1] = 0.0;
-  texOffset = 0x0000;
+  m_textureOffset = TextureOffset();
   
   // Set up coordinate system and base matrix
   UINT32 matrixBase = vpnode[0x16] & 0xFFFFFF;

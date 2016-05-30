@@ -453,15 +453,15 @@ void CLegacy3D::ClearDisplayList(ModelCache *Cache)
 
 int CLegacy3D::GetTextureBaseX(const Poly *P) const
 {
-  int x = ((P->header[4] & 0x1F) << 1) | ((P->header[5] >> 7) & 1);
-  return (32 * x + int(texOffsetXY[0])) & 2047;
+  int x = 32 * (((P->header[4] & 0x7F) << 1) | ((P->header[5] >> 7) & 1));
+  return (x + m_textureOffset.x) & 2047;
 }
 
 int CLegacy3D::GetTextureBaseY(const Poly *P) const
 {
-  int texPage = (P->header[4] & 0x40) << 4; // 1024 or 0 
-  int y = P->header[5] & 0x1F;
-  return (32 * y + texPage + int(texOffsetXY[1])) & 2047;
+  int y = 32 * (P->header[5] & 0x7F);
+  int bank = (P->header[4] & 0x40) << 4;
+  return ((y + m_textureOffset.y) & 1023) + (bank ^ m_textureOffset.switchBank);
 }
 
 // Inserts a vertex into the local vertex buffer, incrementing both the local and VBO pointers. The normal is scaled by normFlip.
@@ -942,7 +942,7 @@ struct VBORef *CLegacy3D::BeginModel(ModelCache *Cache)
 }
 
 // Uploads all vertices from the local vertex buffer to the VBO, sets up the VBO reference, updates the LUT
-void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UINT16 texOffset, bool useStencil)
+void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UINT16 textureOffsetState, bool useStencil)
 {
   int m = Cache->numModels++;
 
@@ -964,14 +964,14 @@ void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UI
   Model->lutIdx = lutIdx;
   
   // Texture offset of this model state
-  Model->texOffset = texOffset;
+  Model->textureOffsetState = textureOffsetState;
   
   // Should we use stencil?
   Model->useStencil = useStencil;
   
   // Update the LUT and link up to any existing model that already exists here
   if (Cache->lut[lutIdx] >= 0)  // another texture offset state already cached
-    Model->nextTexOffset = &(Cache->Models[Cache->lut[lutIdx]]);
+    Model->nextTextureOffsetState = &(Cache->Models[Cache->lut[lutIdx]]);
   Cache->lut[lutIdx] = m;
 }
 
@@ -987,7 +987,7 @@ void CLegacy3D::EndModel(ModelCache *Cache, struct VBORef *Model, int lutIdx, UI
  * successful.
  */
 
-struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOffset, const UINT32 *data)
+struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 textureOffsetState, const UINT32 *data)
 {
   if (data == NULL)
     return NULL;
@@ -1140,7 +1140,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
   }
   
   // Finish model and enter it into the LUT
-  EndModel(Cache, Model, lutIdx, texOffset, useStencil);
+  EndModel(Cache, Model, lutIdx, textureOffsetState, useStencil);
   return Model;
 }
 
@@ -1153,7 +1153,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 texOf
  * Look up a model. Use this to determine if a model needs to be cached
  * (returns NULL if so).
  */
-struct VBORef *CLegacy3D::LookUpModel(ModelCache *Cache, int lutIdx, UINT16 texOffset)
+struct VBORef *CLegacy3D::LookUpModel(ModelCache *Cache, int lutIdx, UINT16 textureOffsetState)
 {
   int m = Cache->lut[lutIdx];
   
@@ -1162,9 +1162,9 @@ struct VBORef *CLegacy3D::LookUpModel(ModelCache *Cache, int lutIdx, UINT16 texO
     return NULL;
   
   // Has the specified texture offset been cached?
-  for (struct VBORef *Model = &(Cache->Models[m]); Model != NULL; Model = Model->nextTexOffset)
+  for (struct VBORef *Model = &(Cache->Models[m]); Model != NULL; Model = Model->nextTextureOffsetState)
   {
-    if (Model->texOffset == texOffset)
+    if (Model->textureOffsetState == textureOffsetState)
       return Model;
   }
   
