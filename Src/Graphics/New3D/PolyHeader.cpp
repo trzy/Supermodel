@@ -320,6 +320,10 @@ bool PolyHeader::AlphaTest()
 
 UINT8 PolyHeader::Transparency()
 {
+	if (header[6] & 0x800000) {		// check top bit to see if its 1. Star wars is writing 1 for opaque, but the rest of the bits are garbage and are ignored
+		return 255;					// without this check we get overflow. In the SDK, values are explicitly clamped to 0-32.
+	}
+
 	return (UINT8)((((header[6] >> 18) & 0x3F) * 255) / 32.f);	
 }
 
