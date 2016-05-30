@@ -80,6 +80,7 @@ struct Model
 	// texture offsets for model
 	int textureOffsetX = 0;
 	int textureOffsetY = 0;
+	int page = 0;
 
 	//matrices
 	float modelMat[16];
@@ -112,7 +113,7 @@ public:
 
 	int currentTexOffsetX;
 	int currentTexOffsetY;
-	int currentTexOffset;		// raw value
+	int page;
 
 private:
 
@@ -120,7 +121,7 @@ private:
 	{
 		int texOffsetX;
 		int texOffsetY;
-		int texOffset;
+		int page;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };

@@ -176,6 +176,8 @@ private:
 	bool IsDynamicModel(UINT32 *data);		// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
 
+	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);
+
 
 	/*
 	* Data

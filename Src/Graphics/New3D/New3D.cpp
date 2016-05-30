@@ -128,7 +128,11 @@ void CNew3D::RenderScene(int priority, bool alpha)
 				}
 				
 				if (mesh.textured) {
-					auto tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, mesh.x + m.textureOffsetX, mesh.y + m.textureOffsetY, mesh.width, mesh.height);
+
+					int x, y;
+					CalcTexOffset(m.textureOffsetX, m.textureOffsetY, m.page, mesh.x, mesh.y, x, y);
+
+					auto tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, x, y, mesh.width, mesh.height);
 					if (tex1) {
 						tex1->BindTexture();
 						tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
@@ -315,6 +319,7 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	// update texture offsets
 	m->textureOffsetX = m_nodeAttribs.currentTexOffsetX;
 	m->textureOffsetY = m_nodeAttribs.currentTexOffsetY;
+	m->page = m_nodeAttribs.page;
 
 	if (!cached) {
 		CacheModel(m, modelAddress);
@@ -368,13 +373,13 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	if (!m_offset)	// Step 1.5+
 	{
 		tx = 32 * ((node[0x02] >> 7) & 0x3F);
-		ty = 32 * (node[0x02] & 0x3F) + ((node[0x02] & 0x4000) ? 1024 : 0);	// TODO: 5 or 6 bits for Y coord?
+		ty = 32 * (node[0x02] & 0x1F);
 
 		// apply texture offsets, else retain current ones
 		if ((node[0x02] & 0x8000))	{
 			m_nodeAttribs.currentTexOffsetX = tx;
 			m_nodeAttribs.currentTexOffsetY = ty;
-			m_nodeAttribs.currentTexOffset	= node[0x02] & 0x7FFF;
+			m_nodeAttribs.page = (node[0x02] & 0x4000) >> 14;
 		}
 	}
 
@@ -1151,6 +1156,23 @@ bool CNew3D::IsDynamicModel(UINT32 *data)
 bool CNew3D::IsVROMModel(UINT32 modelAddr)
 {
 	return modelAddr >= 0x100000;
+}
+
+void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY)
+{
+	newX = (x + offX) & 2047;	// wrap around 2048, shouldn't be required
+
+	int oldPage = y / 1024;
+
+	y -= (oldPage * 1024);	// remove page from tex y
+
+	// calc newY with wrap around, wraps around in the same sheet, not into another memory sheet
+
+	newY = (y + offY) & 1023;
+
+	// add page to Y
+
+	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
 } // New3D
