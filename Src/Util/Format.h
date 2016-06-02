@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cstdint>
+#include <vector>
 
 namespace Util
 {
@@ -42,7 +43,30 @@ namespace Util
       }
       return *this;
     }
-    
+
+    std::vector<std::string> Split(char separator)
+    {
+      // Very inefficient: lots of intermediate string copies!
+      std::string str = m_stream.str();
+      const char *start = str.c_str();
+      const char *end = start;
+      std::vector<std::string> parts;
+      do
+      {
+        if (*end == separator || !*end)
+        {
+          size_t len = end - start;
+          if (len)
+            parts.emplace_back(start, len);
+          else
+            parts.emplace_back();
+          start = end + 1;
+        }
+        ++end;
+      } while (end[-1]);
+      return parts;
+    }
+
     Format(const std::string &str)
       : m_stream(str)
     {
