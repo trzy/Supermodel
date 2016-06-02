@@ -1485,6 +1485,8 @@ static void Help(void)
   puts("    -multi-texture         Use 8 texture maps for decoding");
   puts("    -no-multi-texture      Decode to a single texture map [Default]");
   puts("    -no-throttle           Disable 60 Hz frame rate lock");
+  puts("    -vsync                 Lock to vertical refresh rate [Default]");
+  puts("    -no-vsync              Do not lock to vertical refresh rate");
   puts("    -show-fps              Display frame rate in window title bar");
   puts("    -crosshairs=<n>        Crosshairs configuration for gun games:");
   puts("                            0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
@@ -1548,7 +1550,7 @@ static void PrintGameList(void)
  */
 int main(int argc, char **argv)
 {
-  
+
 #ifdef SUPERMODEL_DEBUGGER
   bool      cmdEnterDebugger = false;
 #endif // SUPERMODEL_DEBUGGER
