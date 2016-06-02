@@ -136,7 +136,6 @@ public:
 	UINT8	Transparency();			// 0-255
 	bool	PolyAlpha();
 	bool	TextureAlpha();
-	bool	StencilPoly();
 	bool	Luminous();
 	float	LightModifier();
 

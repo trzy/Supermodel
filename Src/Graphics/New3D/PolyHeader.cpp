@@ -337,11 +337,6 @@ bool PolyHeader::TextureAlpha()
 	return (header[6] & 0x7) > 0;
 }
 
-bool PolyHeader::StencilPoly()
-{
-	return (header[6] & 1000000) > 0;
-}
-
 bool PolyHeader::Luminous()
 {
 	return (header[6] & 0x00010000) > 0;
