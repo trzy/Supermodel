@@ -187,6 +187,8 @@ private:
 
 	HRESULT CreateJoystickEffect(LPDIRECTINPUTDEVICE8 di8Joystick, int axisNum, ForceFeedbackCmd ffCmd, LPDIRECTINPUTEFFECT *di8Effect);
 
+	void LoadXInputDLL();
+
 protected:
 	/*
 	 * Initializes the DirectInput input system.

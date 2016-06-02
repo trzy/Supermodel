@@ -27,8 +27,10 @@
  */
 
 #include "DirectInputSystem.h"
+#include "Util/Format.h"
 #include "Supermodel.h"
 
+#include <array>
 #include <algorithm>
 
 #include <wbemidl.h>
@@ -38,27 +40,12 @@
 #include <SDL_syswm.h>
 
 /*
- * MinGW compatibility: the XInput.h distributed with MinGW is missing these
- * definitions. I've copied them from the Microsoft DirectX SDK. If a proper
- * header file appears, this hack should be removed.
+ * There seem to be three versions of XInput floating around, all of which
+ * ought to provide the functionality we need. We try them all in sequence,
+ * in order of newest/most feature-laden first.
  */
-#if !defined(XINPUT_DLL_A)
-
-#ifndef XINPUT_USE_9_1_0
-#define XINPUT_DLL_A  "xinput1_3.dll"
-#define XINPUT_DLL_W L"xinput1_3.dll"
-#else
-#define XINPUT_DLL_A  "xinput9_1_0.dll"
-#define XINPUT_DLL_W L"xinput9_1_0.dll"
-#endif
-#ifdef UNICODE
-    #define XINPUT_DLL XINPUT_DLL_W
-#else
-    #define XINPUT_DLL XINPUT_DLL_A
-#endif 
-
-#endif	// XINPUT_DLL_A
-
+static std::array<const char *, 3> s_xinput_dlls = { TEXT("xinput1_4.dll"), TEXT("xinput1_3.dll"), TEXT("xinput9_1_0.dll") };
+static std::array<const char *, 3> s_xinput_dlls_a = { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" };
 
 // TODO - need to double check these all correct and see if can fill in any missing codes (although most just don't exist)
 DIKeyMapStruct CDirectInputSystem::s_keyMap[] = 
@@ -1541,6 +1528,33 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	return S_OK;
 }
 
+void CDirectInputSystem::LoadXInputDLL()
+{
+  // Try each of the XInput DLLs
+  HMODULE xInput = NULL;
+  for (auto filename: s_xinput_dlls)
+  {
+    xInput = LoadLibrary(filename);
+    if (xInput != NULL)
+      break;
+  }
+  if (xInput != NULL)
+  {
+	  m_xiGetCapabilitiesPtr = (XInputGetCapabilitiesPtr)GetProcAddress(xInput, "XInputGetCapabilities");
+		m_xiGetStatePtr = (XInputGetStatePtr)GetProcAddress(xInput, "XInputGetState");
+		m_xiSetStatePtr = (XInputSetStatePtr)GetProcAddress(xInput, "XInputSetState");
+		m_useXInput = m_xiGetCapabilitiesPtr != NULL && m_xiGetStatePtr != NULL && m_xiSetStatePtr != NULL;
+	}
+	else
+		m_useXInput = false;
+
+	if (!m_useXInput)
+  {
+    ErrorLog("XInput not found. Tried: %s.", Util::Format(", ").Join(s_xinput_dlls_a).str().c_str());
+    ErrorLog("Falling back on DirectInput.");
+  }
+}
+
 bool CDirectInputSystem::InitializeSystem()
 {
 	if (m_useRawInput)
@@ -1577,19 +1591,8 @@ bool CDirectInputSystem::InitializeSystem()
 	if (m_useXInput)
 	{
 		// Dynamically load XInput API
-		HMODULE xInput = LoadLibrary(TEXT(XINPUT_DLL_A));
-		if (xInput != NULL)
-		{
-			m_xiGetCapabilitiesPtr = (XInputGetCapabilitiesPtr)GetProcAddress(xInput, "XInputGetCapabilities");
-			m_xiGetStatePtr = (XInputGetStatePtr)GetProcAddress(xInput, "XInputGetState");
-			m_xiSetStatePtr = (XInputSetStatePtr)GetProcAddress(xInput, "XInputSetState");
-			m_useXInput = m_xiGetCapabilitiesPtr != NULL && m_xiGetStatePtr != NULL && m_xiSetStatePtr != NULL;
-		}
-		else
-			m_useXInput = false;
-
-		if (!m_useXInput)
-			ErrorLog("Unable to initialize XInput API (" XINPUT_DLL_A " not found) - switching to DirectInput.\n");
+		LoadXInputDLL();//LoadLibrary(TEXT(XINPUT_DLL_A));
+		
 	}
 
 	// Dynamically create DirectInput8 via COM, rather than statically linking to dinput8.dll
