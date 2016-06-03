@@ -178,6 +178,9 @@ private:
 
 	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);
 
+	UINT32 ConvertProFloat(UINT32 a1);			// return float in hex or integer format
+	UINT32 Convert16BitProFloat(UINT32 a1);
+	float ToFloat(UINT32 a1);					// integer float to actual IEEE 754 float			
 
 	/*
 	* Data

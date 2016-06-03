@@ -351,7 +351,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 
-	short extent = node[9 - m_offset] >> 16;
+	float test = ToFloat(Convert16BitProFloat(node[9 - m_offset] >> 16));
 
 	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
 		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
@@ -1173,6 +1173,25 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 	// add page to Y
 
 	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
+}
+
+UINT32 CNew3D::ConvertProFloat(UINT32 a1)
+{
+	int exponent = ((a1 & 0x7E000000) >> 25) + 127;
+
+	int mantissa = (a1 & 0x1FFFFFF) >> 2;
+
+	return (a1 & 0x80000000) | (exponent << 23) | mantissa;
+}
+
+UINT32 CNew3D::Convert16BitProFloat(UINT32 a1)
+{
+	return ConvertProFloat(a1 << 15);
+}
+
+float CNew3D::ToFloat(UINT32 a1)
+{
+	return *(float*)(&a1);
 }
 
 } // New3D
