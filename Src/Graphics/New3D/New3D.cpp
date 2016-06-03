@@ -1177,8 +1177,16 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 
 UINT32 CNew3D::ConvertProFloat(UINT32 a1)
 {
-	int exponent = ((a1 & 0x7E000000) >> 25) + 127;
+	int exponent = (a1 & 0x7E000000) >> 25;
 
+	if (exponent <= 31) {	// positive
+		exponent += 127;
+	}
+	else {					// negative exponent
+		exponent -= 64;
+		exponent += 127;
+	}
+	
 	int mantissa = (a1 & 0x1FFFFFF) >> 2;
 
 	return (a1 & 0x80000000) | (exponent << 23) | mantissa;
