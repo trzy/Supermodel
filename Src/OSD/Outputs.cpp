@@ -33,7 +33,9 @@ const char *COutputs::s_outputNames[] =
 		"LampView2",
 		"LampView3",
 		"LampView4",
-		"LampLeader"
+		"LampLeader",
+		"RawDrive",
+		"RawLamps"
 	};
 
 const char *COutputs::GetOutputName(EOutputs output)

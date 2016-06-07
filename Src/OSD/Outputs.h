@@ -41,10 +41,12 @@ enum EOutputs
 	OutputLampView2,
 	OutputLampView3,
 	OutputLampView4,
-	OutputLampLeader
+	OutputLampLeader,
+	OutputRawDrive,
+	OutputRawLamps
 };
 
-#define NUM_OUTPUTS 7
+#define NUM_OUTPUTS 9
 
 struct GameInfo;
 

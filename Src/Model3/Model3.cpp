@@ -589,6 +589,8 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
   case 0x10:  // Drive board
     if (DriveBoard.IsAttached())
       DriveBoard.Write(data);
+    if (NULL != Outputs) // TODO - check gameInputs
+      Outputs->SetValue(OutputRawDrive, data);
     break;
 
   case 0x14:  // Lamp outputs (Daytona/Scud Race/Sega Rally/Le Mans 24)
@@ -600,6 +602,7 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
       Outputs->SetValue(OutputLampView3, !!(data&0x20));
       Outputs->SetValue(OutputLampView4, !!(data&0x40));
       Outputs->SetValue(OutputLampLeader, !!(data&0x80));
+      Outputs->SetValue(OutputRawLamps, data);
     }
     break;
 
