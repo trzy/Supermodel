@@ -325,4 +325,13 @@ void Texture::GetDetails(int& x, int&y, int& width, int& height, int& format)
 	format = m_format;
 }
 
+bool Texture::Compare(int x, int y, int width, int height, int format)
+{
+	if (m_x == x && m_y == y && m_width == width && m_height == height && m_format == format) {
+		return true;
+	}
+
+	return false;
+}
+
 } // New3D

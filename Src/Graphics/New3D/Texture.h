@@ -19,6 +19,7 @@ public:
 	void	GetCoordinates	(UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
 	void	GetDetails		(int& x, int&y, int& width, int& height, int& format);
 	void	SetWrapMode		(bool mirrorU, bool mirrorV);
+	bool	Compare			(int x, int y, int width, int height, int format);
 
 	static void GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
 

@@ -92,6 +92,8 @@ void CNew3D::RenderScene(int priority, bool alpha)
 			continue;
 		}
 
+		std::shared_ptr<Texture> tex1;
+
 		glViewport		(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
 		glMatrixMode	(GL_PROJECTION);
 		glLoadMatrixf	(n.viewport.projectionMatrix);
@@ -132,10 +134,15 @@ void CNew3D::RenderScene(int priority, bool alpha)
 					int x, y;
 					CalcTexOffset(m.textureOffsetX, m.textureOffsetY, m.page, mesh.x, mesh.y, x, y);
 
-					auto tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, x, y, mesh.width, mesh.height);
-					if (tex1) {
-						tex1->BindTexture();
-						tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+					if (tex1 && tex1->Compare(x, y, mesh.width, mesh.height, mesh.format)) {
+						tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);	
+					}
+					else {
+						tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, x, y, mesh.width, mesh.height);
+						if (tex1) {
+							tex1->BindTexture();
+							tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
+						}
 					}
 
 					if (mesh.microTexture) {
