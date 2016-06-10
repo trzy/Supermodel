@@ -6,7 +6,7 @@ NodeAttributes::NodeAttributes()
 {
 	currentTexOffsetX = 0;
 	currentTexOffsetY = 0;
-	page = 0;
+	currentPage = 0;
 }
 
 bool NodeAttributes::Push()
@@ -20,7 +20,7 @@ bool NodeAttributes::Push()
 		return false;
 	}
 
-	na.page = page;
+	na.page = currentPage;
 	na.texOffsetX = currentTexOffsetX;
 	na.texOffsetY = currentTexOffsetY;
 
@@ -35,9 +35,11 @@ bool NodeAttributes::Pop()
 		return false;	// check for underflow
 	}
 
-	page = m_vecAttribs.back().page;
-	currentTexOffsetX = m_vecAttribs.back().texOffsetX;
-	currentTexOffsetY = m_vecAttribs.back().texOffsetY;
+	auto last = &m_vecAttribs.back();
+
+	currentPage = last->page;
+	currentTexOffsetX = last->texOffsetX;
+	currentTexOffsetY = last->texOffsetY;
 
 	m_vecAttribs.pop_back();
 
@@ -51,7 +53,7 @@ bool NodeAttributes::StackLimit()
 
 void NodeAttributes::Reset()
 {
-	page = 0;
+	currentPage = 0;
 	currentTexOffsetX = 0;
 	currentTexOffsetY = 0;
 	m_vecAttribs.clear();

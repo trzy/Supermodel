@@ -319,7 +319,7 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	// update texture offsets
 	m->textureOffsetX = m_nodeAttribs.currentTexOffsetX;
 	m->textureOffsetY = m_nodeAttribs.currentTexOffsetY;
-	m->page = m_nodeAttribs.page;
+	m->page = m_nodeAttribs.currentPage;
 
 	if (!cached) {
 		CacheModel(m, modelAddress);
@@ -379,7 +379,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		if ((node[0x02] & 0x8000))	{
 			m_nodeAttribs.currentTexOffsetX = tx;
 			m_nodeAttribs.currentTexOffsetY = ty;
-			m_nodeAttribs.page = (node[0x02] & 0x4000) >> 14;
+			m_nodeAttribs.currentPage = (node[0x02] & 0x4000) >> 14;
 		}
 	}
 

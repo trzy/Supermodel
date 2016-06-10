@@ -113,7 +113,7 @@ public:
 
 	int currentTexOffsetX;
 	int currentTexOffsetY;
-	int page;
+	int currentPage;
 
 private:
 
