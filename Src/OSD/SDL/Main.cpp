@@ -956,6 +956,7 @@ void EndFrameVideo()
 #ifdef SUPERMODEL_DEBUGGER
 int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, Debugger::CDebugger *Debugger, CINIFile *CmdLine)
 {
+  CLogger *oldLogger = 0;
 #else
 int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, CINIFile *CmdLine)
 {         
@@ -1028,7 +1029,7 @@ int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs
   
 #ifdef SUPERMODEL_DEBUGGER
   // If debugger was supplied, set it as logger and attach it to system
-  CLogger *oldLogger = GetLogger();
+  oldLogger = GetLogger();
   if (Debugger != NULL)
   {
     SetLogger(Debugger);
@@ -1964,7 +1965,7 @@ int main(int argc, char **argv)
   // Create Supermodel debugger unless debugging is disabled
   if (!g_Config.disableDebugger)
   {
-    Debugger = new Debugger::CSupermodelDebugger(Model3, Inputs, &Logger);
+    Debugger = new Debugger::CSupermodelDebugger(dynamic_cast<CModel3 *>(Model3), Inputs, &Logger);
     // If -enter-debugger option was set force debugger to break straightaway
     if (cmdEnterDebugger)
       Debugger->ForceBreak(true);
