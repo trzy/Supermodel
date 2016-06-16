@@ -37,6 +37,8 @@
 #include "R3DShader.h"
 #include "VBO.h"
 #include "R3DData.h"
+#include "Plane.h"
+#include "Vec.h"
 
 namespace New3D {
 
@@ -218,6 +220,19 @@ private:
 
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
 	R3DShader m_r3dShader;
+
+	Plane m_planes[6];
+
+	struct BBox
+	{
+		V4::Vec4 points[8];
+	};
+
+	void CalcFrustumPlanes	(Plane p[6], const float* matrix);
+	void CalcBox			(float distance, BBox& box);
+	void TransformBox		(const float *m, BBox& box);
+	void MultVec			(const float matrix[16], const float in[4], float out[4]);
+	Clip ClipBox			(BBox& box, Plane planes[6]);
 };
 
 } // New3D

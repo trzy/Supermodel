@@ -4,9 +4,10 @@ namespace New3D {
 
 NodeAttributes::NodeAttributes()
 {
-	currentTexOffsetX = 0;
-	currentTexOffsetY = 0;
-	currentPage = 0;
+	currentTexOffsetX	= 0;
+	currentTexOffsetY	= 0;
+	currentPage			= 0;
+	currentClipStatus	= Clip::INTERCEPT;
 }
 
 bool NodeAttributes::Push()
@@ -20,9 +21,10 @@ bool NodeAttributes::Push()
 		return false;
 	}
 
-	na.page = currentPage;
-	na.texOffsetX = currentTexOffsetX;
-	na.texOffsetY = currentTexOffsetY;
+	na.page			= currentPage;
+	na.texOffsetX	= currentTexOffsetX;
+	na.texOffsetY	= currentTexOffsetY;
+	na.clip			= currentClipStatus;
 
 	m_vecAttribs.push_back(na);
 
@@ -37,9 +39,10 @@ bool NodeAttributes::Pop()
 
 	auto last = &m_vecAttribs.back();
 
-	currentPage = last->page;
-	currentTexOffsetX = last->texOffsetX;
-	currentTexOffsetY = last->texOffsetY;
+	currentPage			= last->page;
+	currentTexOffsetX	= last->texOffsetX;
+	currentTexOffsetY	= last->texOffsetY;
+	currentClipStatus	= last->clip;
 
 	m_vecAttribs.pop_back();
 
@@ -53,9 +56,11 @@ bool NodeAttributes::StackLimit()
 
 void NodeAttributes::Reset()
 {
-	currentPage = 0;
-	currentTexOffsetX = 0;
-	currentTexOffsetY = 0;
+	currentPage			= 0;
+	currentTexOffsetX	= 0;
+	currentTexOffsetY	= 0;
+	currentClipStatus	= Clip::INTERCEPT;
+
 	m_vecAttribs.clear();
 }
 

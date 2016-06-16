@@ -32,6 +32,11 @@ namespace V3
 	bool	cmp				(const Vec3 a, const Vec3 b);
 	void	clamp			(Vec3 a, float _min, float _max);
 }
+
+namespace V4
+{
+	typedef float Vec4[4];
+}
 } // New3D
 
 #endif

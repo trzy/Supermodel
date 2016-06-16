@@ -473,8 +473,8 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   GLfloat   texWidth  = (GLfloat) (32<<((P->header[3]>>3)&7));
   GLfloat   texHeight = (GLfloat) (32<<((P->header[3]>>0)&7));
   TexSheet  *texSheet = fmtToTexSheet[texFormat]; // get X, Y offset of texture sheet within texture map
-  GLfloat   texBaseX = texSheet->xOffset + GetTextureBaseX(P);
-  GLfloat   texBaseY = texSheet->yOffset + GetTextureBaseY(P);
+  GLfloat   texBaseX = (GLfloat)(texSheet->xOffset + GetTextureBaseX(P));
+  GLfloat   texBaseY = (GLfloat)(texSheet->yOffset + GetTextureBaseY(P));
 
   /*
    * Lighting and Color Modulation:

@@ -342,6 +342,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	UINT32			matrixOffset, child1Ptr, sibling2Ptr;
 	float			x, y, z;
 	int				tx, ty;
+	BBox			bbox;
 
 	if (m_nodeAttribs.StackLimit()) {
 		return;
@@ -357,8 +358,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
 	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
-
-	float test = ToFloat(Convert16BitProFloat(node[9 - m_offset] >> 16));
 
 	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
 		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
@@ -400,24 +399,38 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	// multiply matrix, if specified
 	else if (matrixOffset) {
 		MultMatrix(matrixOffset,m_modelMat);
-	}		
+	}
 
-	// Descend down first link
-	if ((node[0x00] & 0x08))	// 4-element LOD table
-	{
-		lodTable = TranslateCullingAddress(child1Ptr);
+	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
-		if (NULL != lodTable) {
-			if ((node[0x03 - m_offset] & 0x20000000)) {
-				DescendCullingNode(lodTable[0] & 0xFFFFFF);
-			}
-			else {
-				DrawModel(lodTable[0] & 0xFFFFFF);	//TODO
+		float distance = ToFloat(Convert16BitProFloat(node[9 - m_offset] & 0xFFFF));
+
+		CalcBox(distance, bbox);
+		TransformBox(m_modelMat, bbox);
+
+		m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
+	}
+
+	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE) {
+
+		// Descend down first link
+		if ((node[0x00] & 0x08))	// 4-element LOD table
+		{
+			lodTable = TranslateCullingAddress(child1Ptr);
+
+			if (NULL != lodTable) {
+				if ((node[0x03 - m_offset] & 0x20000000)) {
+					DescendCullingNode(lodTable[0] & 0xFFFFFF);
+				}
+				else {
+					DrawModel(lodTable[0] & 0xFFFFFF);	//TODO
+				}
 			}
 		}
-	}
-	else {
-		DescendNodePtr(child1Ptr);
+		else {
+			DescendNodePtr(child1Ptr);
+		}
+
 	}
 
 	m_modelMat.PopMatrix();
@@ -670,6 +683,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 			vp->projectionMatrix.Frustum(l, r, b, t, near, far);
 		}
+
+		// calculate frustum planes
+		CalcFrustumPlanes(m_planes, vp->projectionMatrix);
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
 		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
@@ -1207,6 +1223,166 @@ UINT32 CNew3D::Convert16BitProFloat(UINT32 a1)
 float CNew3D::ToFloat(UINT32 a1)
 {
 	return *(float*)(&a1);
+}
+
+void CNew3D::CalcFrustumPlanes(Plane p[6], const float* matrix)
+{
+	// Left Plane
+	p[0].a = matrix[3] + matrix[0];
+	p[0].b = matrix[7] + matrix[4];
+	p[0].c = matrix[11] + matrix[8];
+	p[0].d = matrix[15] + matrix[12];
+	p[0].Normalise();
+
+	// Right Plane
+	p[1].a = matrix[3] - matrix[0];
+	p[1].b = matrix[7] - matrix[4];
+	p[1].c = matrix[11] - matrix[8];
+	p[1].d = matrix[15] - matrix[12];
+	p[1].Normalise();
+
+	// Bottom Plane
+	p[2].a = matrix[3] + matrix[1];
+	p[2].b = matrix[7] + matrix[5];
+	p[2].c = matrix[11] + matrix[9];
+	p[2].d = matrix[15] + matrix[13];
+	p[2].Normalise();
+
+	// Top Plane
+	p[3].a = matrix[3] - matrix[1];
+	p[3].b = matrix[7] - matrix[5];
+	p[3].c = matrix[11] - matrix[9];
+	p[3].d = matrix[15] - matrix[13];
+	p[3].Normalise();
+
+	// Near Plane
+	p[4].a = matrix[3] + matrix[2];
+	p[4].b = matrix[7] + matrix[6];
+	p[4].c = matrix[11] + matrix[10];
+	p[4].d = matrix[15] + matrix[14];
+	p[4].Normalise();
+
+	// Far Plane
+	p[5].a = matrix[3] - matrix[2];
+	p[5].b = matrix[7] - matrix[6];
+	p[5].c = matrix[11] - matrix[10];
+	p[5].d = matrix[15] - matrix[14];
+	p[5].Normalise();
+}
+
+void CNew3D::CalcBox(float distance, BBox& box)
+{
+	//bottom left front
+	box.points[0][0] = -distance;
+	box.points[0][1] = -distance;
+	box.points[0][2] = distance;
+	box.points[0][3] = 1;
+
+	//bottom left back
+	box.points[1][0] = -distance;
+	box.points[1][1] = -distance;
+	box.points[1][2] = -distance;
+	box.points[1][3] = 1;
+
+	//bottom right back
+	box.points[2][0] = distance;
+	box.points[2][1] = -distance;
+	box.points[2][2] = -distance;
+	box.points[2][3] = 1;
+
+	//bottom right front
+	box.points[3][0] = distance;
+	box.points[3][1] = -distance;
+	box.points[3][2] = distance;
+	box.points[3][3] = 1;
+
+	//top left front
+	box.points[4][0] = -distance;
+	box.points[4][1] = distance;
+	box.points[4][2] = distance;
+	box.points[4][3] = 1;
+
+	//top left back
+	box.points[5][0] = -distance;
+	box.points[5][1] = distance;
+	box.points[5][2] = -distance;
+	box.points[5][3] = 1;
+
+	//top right back
+	box.points[6][0] = distance;
+	box.points[6][1] = distance;
+	box.points[6][2] = -distance;
+	box.points[6][3] = 1;
+
+	//top right front
+	box.points[7][0] = distance;
+	box.points[7][1] = distance;
+	box.points[7][2] = distance;
+	box.points[7][3] = 1;
+}
+
+void CNew3D::MultVec(const float matrix[16], const float in[4], float out[4]) 
+{
+	for (int i = 0; i < 4; i++) {
+		out[i] =
+			in[0] * matrix[0 * 4 + i] +
+			in[1] * matrix[1 * 4 + i] +
+			in[2] * matrix[2 * 4 + i] +
+			in[3] * matrix[3 * 4 + i];
+	}
+}
+
+void CNew3D::TransformBox(const float *m, BBox& box)
+{
+	for (int i = 0; i < 8; i++) {
+		float v[4];
+		MultVec(m, box.points[i], v);
+		box.points[i][0] = v[0];
+		box.points[i][1] = v[1];
+		box.points[i][2] = v[2];
+	}
+}
+
+Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
+{
+	int count = 0;
+
+	for (int i = 0; i < 8; i++) {
+
+		int temp = 0;
+
+		for (int j = 0; j < 6; j++) {
+			if (planes[j].DistanceToPoint(box.points[i]) >= 0) {
+				temp++;
+			}
+		}
+
+		if (temp == 6) count++;		// point is inside all 6 frustum planes
+	}
+
+	if (count == 8)	return Clip::INSIDE;
+	if (count > 0)	return Clip::INTERCEPT;
+	
+	//if we got here all points are outside of the view frustum
+	//check for all points being side same of any plane, means box outside of view
+
+	for (int i = 0; i < 6; i++) {
+
+		int temp = 0;
+
+		for (int j = 0; j < 8; j++) {
+			if (planes[i].DistanceToPoint(box.points[j]) >= 0) {
+				float distance = planes[i].DistanceToPoint(box.points[j]);
+				temp++;
+			}
+		}
+
+		if (temp == 0) return Clip::OUTSIDE;
+	}
+
+	//if we got here, box is traversing view frustum
+
+	return Clip::INTERCEPT;
 }
 
 } // New3D

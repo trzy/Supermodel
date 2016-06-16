@@ -100,6 +100,8 @@ struct Viewport
 	int		priority;
 };
 
+enum class Clip { INSIDE, OUTSIDE, INTERCEPT };
+
 class NodeAttributes
 {
 public:
@@ -114,6 +116,7 @@ public:
 	int currentTexOffsetX;
 	int currentTexOffsetY;
 	int currentPage;
+	Clip currentClipStatus;
 
 private:
 
@@ -122,6 +125,7 @@ private:
 		int texOffsetX;
 		int texOffsetY;
 		int page;
+		Clip clip;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };
