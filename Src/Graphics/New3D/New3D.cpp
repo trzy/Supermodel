@@ -931,7 +931,10 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh->textureAlpha	= ph.TextureAlpha();
 				currentMesh->polyAlpha		= ph.PolyAlpha();
 				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
-				currentMesh->layered		= ph.Layered();
+
+				if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
+					currentMesh->layered = true;
+				}
 				
 				if (currentMesh->lighting) {
 					if (ph.SpecularEnabled()) {
