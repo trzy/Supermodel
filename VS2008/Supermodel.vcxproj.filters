@@ -425,6 +425,9 @@
     <ClCompile Include="..\Src\Util\Format.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\R3DFloat.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -785,6 +788,9 @@
       <Filter>Header Files\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\Plane.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\R3DFloat.h">
       <Filter>Source Files\Graphics\New</Filter>
     </ClInclude>
   </ItemGroup>

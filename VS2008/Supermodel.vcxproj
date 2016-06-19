@@ -316,6 +316,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Graphics\New3D\Model.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\R3DFloat.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\TextureSheet.cpp" />
@@ -538,6 +539,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Graphics\New3D\Plane.h" />
     <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DData.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DFloat.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Texture.h" />
     <ClInclude Include="..\Src\Graphics\New3D\TextureSheet.h" />

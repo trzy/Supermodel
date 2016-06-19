@@ -5,6 +5,7 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include "R3DFloat.h"
 
 #define MAX_RAM_POLYS 100000	
 #define MAX_ROM_POLYS 500000
@@ -403,7 +404,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
-		float distance = ToFloat(Convert16BitProFloat(node[9 - m_offset] & 0xFFFF));
+		float distance = R3DFloat::GetFloat16(node[9 - m_offset] & 0xFFFF);
 
 		CalcBox(distance, bbox);
 		TransformBox(m_modelMat, bbox);
@@ -577,7 +578,6 @@ void CNew3D::InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat)
 	m[CMINDEX(1, 0)] = 0.0;	m[CMINDEX(1, 1)] = 0.0;	m[CMINDEX(1, 2)] =-1.0; m[CMINDEX(1, 3)] = 0.0;
 	m[CMINDEX(2, 0)] =-1.0; m[CMINDEX(2, 1)] = 0.0;	m[CMINDEX(2, 2)] = 0.0;	m[CMINDEX(2, 3)] = 0.0;
 	m[CMINDEX(3, 0)] = 0.0;	m[CMINDEX(3, 1)] = 0.0;	m[CMINDEX(3, 2)] = 0.0;	m[CMINDEX(3, 3)] = 1.0;
-
 
 	mat.LoadMatrix(m);
 
@@ -1196,33 +1196,6 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 	// add page to Y
 
 	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
-}
-
-UINT32 CNew3D::ConvertProFloat(UINT32 a1)
-{
-	int exponent = (a1 & 0x7E000000) >> 25;
-
-	if (exponent <= 31) {	// positive
-		exponent += 127;
-	}
-	else {					// negative exponent
-		exponent -= 64;
-		exponent += 127;
-	}
-	
-	int mantissa = (a1 & 0x1FFFFFF) >> 2;
-
-	return (a1 & 0x80000000) | (exponent << 23) | mantissa;
-}
-
-UINT32 CNew3D::Convert16BitProFloat(UINT32 a1)
-{
-	return ConvertProFloat(a1 << 15);
-}
-
-float CNew3D::ToFloat(UINT32 a1)
-{
-	return *(float*)(&a1);
 }
 
 void CNew3D::CalcFrustumPlanes(Plane p[6], const float* matrix)
