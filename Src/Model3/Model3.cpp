@@ -2857,7 +2857,11 @@ void CModel3::Reset(void)
 // Apply patches to games
 void CModel3::Patch(void)
 {
-  if (!strcmp(Game->id, "lemans24"))
+  if (!strcmp(Game->id, "scudp"))
+  {
+    // Base offset of program in CROM: 0x710000
+  }
+  else if (!strcmp(Game->id, "lemans24"))
   {
     // Base offset of program in CROM: 6473C0
     *(UINT32 *) &crom[0x6D8C4C] = 0x00000002; // comm. mode: 00=master, 01=slave, 02=satellite
