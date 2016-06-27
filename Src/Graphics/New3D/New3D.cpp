@@ -727,6 +727,21 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[3] = *(float *)&vpnode[0x23];									// fog density
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
 
+		{
+			//test fog paramaters
+			float lightFogColour[3];
+			int fogColourIdx;
+
+			fogColourIdx = (vpnode[0x20] >> 8) & 7;
+
+			lightFogColour[0] = color[fogColourIdx][0];
+			lightFogColour[1] = color[fogColourIdx][1];
+			lightFogColour[2] = color[fogColourIdx][2];
+
+			float fogAttenuation = ((vpnode[0x24] >> 16) & 0xFF) / 255.f;
+			float fogAmbient	 = ((vpnode[0x25] >> 16) & 0xFF) / 255.f;
+			int debug = 0;
+		}
 		
 		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3]) || std::isinf(vp->fogParams[4]) || std::isnan(vp->fogParams[4])) {	// Star Wars Trilogy
 			vp->fogParams[3] = vp->fogParams[4] = 0.0f;
