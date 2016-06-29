@@ -696,15 +696,20 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[5] = 0.0;	// reserved
 
 		// Spotlight
-		int spotColorIdx = (vpnode[0x20] >> 11) & 7;			// spotlight color index
-		vp->spotEllipse[0] = (float)((vpnode[0x1E] >> 3) & 0x1FFF);	// spotlight X position (fractional component?)
-		vp->spotEllipse[1] = (float)((vpnode[0x1D] >> 3) & 0x1FFF);	// spotlight Y
-		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);	// spotlight X size (16-bit? May have fractional component below bit 16)
-		vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);	// spotlight Y size
+		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
+		vp->spotEllipse[0] = (float)((vpnode[0x1E] >> 3) & 0x1FFF);						// spotlight X position (fractional component?)
+		vp->spotEllipse[1] = (float)((vpnode[0x1D] >> 3) & 0x1FFF);						// spotlight Y
+		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);					// spotlight X size (16-bit? May have fractional component below bit 16)
+		vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);					// spotlight Y size
 
-		vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);		// spotlight start
-		vp->spotRange[1] = *(float *)&vpnode[0x1F];				// spotlight extent
-		vp->spotColor[0] = color[spotColorIdx][0];				// spotlight color
+		vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);							// spotlight start
+		vp->spotRange[1] = *(float *)&vpnode[0x1F];										// spotlight extent
+
+		if (vp->spotRange[1] == 0) {													// if light extent = 0 light is effectively disabled
+			spotColorIdx = 0;															
+		}
+
+		vp->spotColor[0] = color[spotColorIdx][0];										// spotlight color
 		vp->spotColor[1] = color[spotColorIdx][1];
 		vp->spotColor[2] = color[spotColorIdx][2];
 
