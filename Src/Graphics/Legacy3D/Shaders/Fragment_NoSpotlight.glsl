@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
  **
@@ -20,31 +20,30 @@
  **/
  
 /*
- * Fragment_NoSpotlight.glsl
+ * Fragment.glsl
  *
- * Fragment shader for 3D rendering. Spotlight effect removed. Fixes fragment
- * shader link errors on older ATI Radeon GPUs.
- *
- * To load external fragment shaders, use the -frag-shader=<file> option when
- * starting Supermodel.
+ * Fragment shader for 3D rendering.
  */
 
 #version 120
 
 // Global uniforms
 uniform sampler2D	textureMap;		// complete texture map, 2048x2048 texels
-uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-uniform vec3	spotColor;			// spotlight RGB color
+uniform vec4		spotEllipse;	// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
+uniform vec2		spotRange;		// spotlight Z range: .x=start (viewspace coordinates), .y=limit
+uniform vec3		spotColor;		// spotlight RGB color
+uniform vec3		lighting[2];	// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
 uniform float		mapSize;		// texture map size (2048,4096,6144 etc)
 
 // Inputs from vertex shader 
 varying vec4		fsSubTexture;	// .x=texture X, .y=texture Y, .z=texture width, .w=texture height (all in texels)
 varying vec4		fsTexParams;	// .x=texture enable (if 1, else 0), .y=use transparency (if > 0), .z=U wrap mode (1=mirror, 0=repeat), .w=V wrap mode
-varying float		fsTexFormat;	// .x=T1RGB5 contour texture (if > 0)
+varying float		fsTexFormat;	// T1RGB5 contour texture (if > 0)
+varying float		fsTexMap;		// texture map number
 varying float		fsTransLevel;	// translucence level, 0.0 (transparent) to 1.0 (opaque)
 varying vec3		fsLightIntensity;	// lighting intensity 
-varying float		fsFogFactor;		// fog factor
+varying float		fsSpecularTerm;	// specular highlight
+varying float		fsFogFactor;	// fog factor
 varying float		fsViewZ;		// Z distance to fragment from viewpoint at origin
 
 /*
@@ -87,12 +86,6 @@ vec4 WrapTexelCoords(vec4 texCoord, vec4 texOffset, vec4 texSize, vec4 mirrorEna
 					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
 					texOffset
 				 ) / mapSize;
-/*
-	glTexCoord = (	mirror*(texSize-vec4(1.0,1.0,1.0,1.0)-clampedCoord) +
-					(vec4(1.0,1.0,1.0,1.0)-mirror)*clampedCoord +
-					texOffset
-				 ) / mapSize;
-*/
 	return glTexCoord;
 }
 
@@ -110,10 +103,11 @@ void main(void)
 	vec2	ellipse;
 	vec3	lightIntensity;
 	float	insideSpot;
+	int		x;
 	
 	// Get polygon color for untextured polygons (textured polygons will overwrite)
 	if (fsTexParams.x < 0.5)
-		fragColor = gl_Color;
+		fragColor = gl_Color;		
 	else
 	// Textured polygons: set fragment color to texel value
 	{			
@@ -175,27 +169,27 @@ void main(void)
 		}
 		
 		// If contour texture and not discarded, force alpha to 1.0 because will later be modified by polygon translucency
-		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture map
+		if (fsTexFormat < 0.5)		// contour (T1RGB5) texture
 			fragColor.a = 1.0;
 	}
 
 	// Compute spotlight and apply lighting
-	/***
+	/*
 	ellipse = (gl_FragCoord.xy-spotEllipse.xy)/spotEllipse.zw;
 	insideSpot = dot(ellipse,ellipse);
 	if ((insideSpot <= 1.0) &&  (fsViewZ>=spotRange.x) && (fsViewZ<spotRange.y))
 		lightIntensity = fsLightIntensity+(1.0-insideSpot)*spotColor;
 	else
 		lightIntensity = fsLightIntensity;
-	fragColor.rgb *= lightIntensity;
-	***/
+  */
 	fragColor.rgb *= fsLightIntensity;
-
+	fragColor.rgb += vec3(fsSpecularTerm,fsSpecularTerm,fsSpecularTerm);
+	
 	// Translucency (modulates existing alpha channel for RGBA4 texels)
 	fragColor.a *= fsTransLevel;
 
-	// Apply fog under the control of fog factor setting from polygon header
-	fragColor.rgb = mix(gl_Fog.color.rgb, fragColor.rgb, fsFogFactor );
+	// Apply fog
+	fragColor.rgb = mix(fragColor.rgb, gl_Fog.color.rgb, fsFogFactor);
 
 	// Store final color
 	gl_FragColor = fragColor;
