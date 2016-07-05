@@ -84,10 +84,11 @@ namespace Util
     }
   };
   
-  const std::string Hex(uint32_t n, size_t num_digits);
-  const std::string Hex(uint32_t n);
-  const std::string Hex(uint16_t n);
-  const std::string Hex(uint8_t n);
+  std::string TrimWhiteSpace(const std::string &str);
+  std::string Hex(uint32_t n, size_t num_digits);
+  std::string Hex(uint32_t n);
+  std::string Hex(uint16_t n);
+  std::string Hex(uint8_t n);
 } // Util
 
 #endif  // INCLUDED_FORMAT_H

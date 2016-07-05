@@ -239,8 +239,8 @@ private:
 /******************************************************************************
  Log Functions
  
- Message logging interface. All messages are passed by the OSD layer to the
- currently active logger object.
+ Message logging interface. All messages are passed to the currently active 
+ logger object.
 ******************************************************************************/
 
 /*

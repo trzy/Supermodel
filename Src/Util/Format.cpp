@@ -1,10 +1,33 @@
 #include "Util/Format.h"
+#include <cctype>
 
 namespace Util
 {
+  std::string TrimWhiteSpace(const std::string &str)
+  {
+    if (str.empty())
+      return std::string();
+    size_t first = 0;
+    for (; first < str.length(); ++first)
+    {
+      if (!isspace(str[first]))
+        break;
+    }
+    if (first >= str.length())
+      return std::string();
+    size_t last = str.length() - 1;
+    for (; last > first; --last)
+    {
+      if (!isspace(str[last]))
+        break;
+    }
+    ++last;
+    return std::string(str.c_str() + first, last - first);
+  }
+
   static const char hex_digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
-  const std::string Hex(uint32_t n, size_t num_digits)
+  std::string Hex(uint32_t n, size_t num_digits)
   {
     Util::Format f;
     f << "0x";
@@ -16,17 +39,17 @@ namespace Util
     return f;
   }
 
-  const std::string Hex(uint32_t n)
+  std::string Hex(uint32_t n)
   {
     return Hex(n, 8);
   }
   
-  const std::string Hex(uint16_t n)
+  std::string Hex(uint16_t n)
   {
     return Hex(n, 4);
   }
   
-  const std::string Hex(uint8_t n)
+  std::string Hex(uint8_t n)
   {
     return Hex(n, 2);
   }

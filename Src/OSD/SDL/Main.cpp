@@ -63,58 +63,9 @@
 #include "WinOutputs.h"
 #endif
 
-
-/******************************************************************************
- Error and Debug Logging
-******************************************************************************/
-
 // Log file names
 #define DEBUG_LOG_FILE  "debug.log"
 #define ERROR_LOG_FILE  "error.log"
-
-// Logger object is used to redirect log messages appropriately
-static CLogger *s_Logger = NULL;
-
-CLogger *GetLogger()
-{
-  return s_Logger;
-}
-
-void SetLogger(CLogger *Logger)
-{
-  s_Logger = Logger;
-}
-
-void DebugLog(const char *fmt, ...)
-{
-  if (s_Logger == NULL)
-    return;
-  va_list vl;
-  va_start(vl, fmt);
-  s_Logger->DebugLog(fmt, vl);
-  va_end(vl);
-}
-
-void InfoLog(const char *fmt, ...)
-{
-  if (s_Logger == NULL)
-    return;
-  va_list vl;
-  va_start(vl, fmt);
-  s_Logger->InfoLog(fmt, vl);
-  va_end(vl);
-}
-
-bool ErrorLog(const char *fmt, ...)
-{
-  if (s_Logger == NULL)
-    return FAIL;
-  va_list vl;
-  va_start(vl, fmt);
-  s_Logger->ErrorLog(fmt, vl);
-  va_end(vl);
-  return FAIL;
-}
 
 
 /******************************************************************************
@@ -1549,9 +1500,9 @@ static void PrintGameList(void)
  *
  * Program entry point.
  */
+
 int main(int argc, char **argv)
 {
-
 #ifdef SUPERMODEL_DEBUGGER
   bool      cmdEnterDebugger = false;
 #endif // SUPERMODEL_DEBUGGER
