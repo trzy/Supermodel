@@ -21,7 +21,7 @@ namespace Util
       Ptr_t m_first_child;
       Ptr_t m_last_child;
       std::map<std::string, Ptr_t> m_children;
-      const std::string m_key;
+      const std::string m_key;  // this cannot be changed (maps depend on it)
       std::string m_value;
       static Node s_empty_node; // key, value, and children must always be empty
 
@@ -186,6 +186,9 @@ namespace Util
       const Node &operator[](const std::string &path) const;
       const Node &Get(const std::string &path) const;
       void Print(size_t indent_level = 0) const;
+      //TODO: this API is confusing. Create() -> Add() and add a Set() which
+      //      modifies existing settings if they exist (INI semantics should 
+      //      use this).
       Node &Create(const std::string &key);
       Node &Create(const std::string &key, const std::string &value);
       Node(const std::string &key);
@@ -194,7 +197,10 @@ namespace Util
       ~Node();
     };
     
+    //TODO: CreateEmpty() should take a key that defaults to blank
     Node::Ptr_t CreateEmpty();
+    Node::Ptr_t FromXML(const std::string &text);
+    Node::Ptr_t FromXMLFile(const std::string &filename);
     Node::Ptr_t FromINIFile(const std::string &filename);
     Node::Ptr_t MergeINISections(const Node &x, const Node &y);
     void WriteINIFile(const std::string &filename, const Node &config, const std::string &header_comment);

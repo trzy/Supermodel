@@ -136,7 +136,8 @@ OBJ = $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o \
 	$(OBJ_DIR)/amp_layer2.o $(OBJ_DIR)/amp_layer3.o $(OBJ_DIR)/amp_misc2.o $(OBJ_DIR)/amp_position.o $(OBJ_DIR)/amp_transform.o \
 	$(OBJ_DIR)/amp_util.o \
 	$(OBJ_DIR)/Crypto.o \
-	$(OBJ_DIR)/Logger.o
+	$(OBJ_DIR)/Logger.o \
+	$(OBJ_DIR)/tinyxml2.o
 
 
 # If built-in debugger enabled, include all debugging classes
@@ -158,9 +159,9 @@ ppcd: $(BIN_DIR) $(OBJ_DIR)
 	$(CXX) Src/CPU/PowerPC/PPCDisasm.cpp $(CPPFLAGS) -DSTANDALONE -o $(OBJ_DIR)/ppcd.o
 	$(LD) -o $(BIN_DIR)/ppcd.exe -mconsole $(OBJ_DIR)/ppcd.o
 
-tests: $(BIN_DIR) $(OBJ_DIR) $(OBJ) Src/Util/Test_Config.cpp
+tests: $(BIN_DIR) $(OBJ_DIR) $(OBJ) Src/Util/Test_Config.cpp Src/Pkgs/tinyxml2.cpp
 	$(CXX) Src/Util/Test_Config.cpp $(CPPFLAGS) -o $(OBJ_DIR)/Test_Config.o
-	$(LD) -o $(BIN_DIR)/test_config.exe -mconsole $(OBJ_DIR)/Test_Config.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/Logger.o
+	$(LD) -o $(BIN_DIR)/test_config.exe -mconsole $(OBJ_DIR)/Test_Config.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/Logger.o $(OBJ_DIR)/tinyxml2.o
 
 $(BIN_DIR):
 	mkdir $(BIN_DIR)
@@ -259,6 +260,9 @@ $(OBJ_DIR)/%.o:	Src/OSD/Windows/%.cpp
 $(OBJ_DIR)/%.o:	Src/Pkgs/%.c
 	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
 	
+$(OBJ_DIR)/%.o:	Src/Pkgs/%.cpp Src/Pkgs/%.h
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
 $(OBJ_DIR)/%.o:	Src/Util/%.cpp Src/Util/%.h
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 

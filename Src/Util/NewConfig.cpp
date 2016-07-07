@@ -67,8 +67,10 @@
 
 #include "Util/NewConfig.h"
 #include "OSD/Logger.h"
+#include "Pkgs/tinyxml2.h"
 #include <algorithm>
 #include <fstream>
+#include <queue>
 #include <iostream>
 
 namespace Util
@@ -198,6 +200,66 @@ namespace Util
       return std::shared_ptr<Node>(new Node());
     }
 
+    static void PopulateFromXML(Util::Config::Node::Ptr_t &config, const tinyxml2::XMLDocument &xml)
+    {
+      using namespace tinyxml2;
+      std::queue<std::pair<const XMLElement *, Util::Config::Node *>> q;
+
+      // Push the top level of the XML tree
+      for (const XMLElement *e = xml.RootElement(); e != 0; e = e->NextSiblingElement())
+        q.push( { e, config.get() } );
+
+      // Process the elements in order, pushing subsequent levels along with the
+      // config nodes to add them to
+      while (!q.empty())
+      {
+        const XMLElement *element = q.front().first;
+        Util::Config::Node *parent_node = q.front().second;
+        q.pop();
+
+        // Create a config entry for this XML element
+        Util::Config::Node *node = &parent_node->Create(element->Name(), element->GetText() ? std::string(element->GetText()) : std::string());
+
+        // Create entries for each attribute
+        for (const XMLAttribute *a = element->FirstAttribute(); a != 0; a = a->Next())
+          node->Create(a->Name(), a->Value());
+
+        // Push all child elements
+        for (const XMLElement *e = element->FirstChildElement(); e != 0; e = e->NextSiblingElement())
+          q.push( { e, node } );
+      }
+    }
+
+    Node::Ptr_t FromXML(const std::string &text)
+    {
+      Node::Ptr_t config = std::make_shared<Util::Config::Node>("xml");
+      using namespace tinyxml2;
+      XMLDocument xml;
+      auto ret = xml.Parse(text.c_str());
+      if (ret != XML_SUCCESS)
+      {
+        ErrorLog("Failed to parse XML (%s).", xml.ErrorName());
+        return CreateEmpty();
+      }
+      PopulateFromXML(config, xml);
+      return config;
+    }
+
+    Node::Ptr_t FromXMLFile(const std::string &filename)
+    {
+      Node::Ptr_t config = std::make_shared<Util::Config::Node>("xml");
+      using namespace tinyxml2;
+      XMLDocument xml;
+      auto ret = xml.LoadFile(filename.c_str());
+      if (ret != XML_SUCCESS)
+      {
+        ErrorLog("Failed to parse %s (%s).", filename.c_str(), xml.ErrorName());
+        return CreateEmpty();
+      }
+      PopulateFromXML(config, xml);
+      return config;
+    }
+
     static std::string StripComment(const std::string &line)
     {
       // Find first semicolon not enclosed in ""
@@ -309,6 +371,9 @@ namespace Util
      * - Nodes from x and y with children are ignored as per INI semantics.
      *   The presence of children indicates a section, not a setting.
      * - Settings from y override settings in x if already present.
+     * - If multiple settings with the same key are present in either of the
+     *   source configs (which technically violates INI semantics), the last
+     *   ends up being used.
      * - x's key is retained.
      */
     Node::Ptr_t MergeINISections(const Node &x, const Node &y)
@@ -318,8 +383,16 @@ namespace Util
       // First copy settings from section x
       for (auto it = x.begin(); it != x.end(); ++it)
       {
+        auto &key = it->Key();
+        auto &value = it->Value();
         if (it->IsLeaf())
-          merged.Create(it->Key(), it->Value());
+        {
+          // INI semantics: take care to only create a single setting per key
+          if (merged[key].Empty())
+            merged.Create(key, value);
+          else
+            merged.Get(key).SetValue(value);
+        }
       }
       // Merge in settings from section y
       for (auto it = y.begin(); it != y.end(); ++it)
