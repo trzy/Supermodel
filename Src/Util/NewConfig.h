@@ -186,11 +186,11 @@ namespace Util
       const Node &operator[](const std::string &path) const;
       const Node &Get(const std::string &path) const;
       void Print(size_t indent_level = 0) const;
-      //TODO: this API is confusing. Create() -> Add() and add a Set() which
-      //      modifies existing settings if they exist (INI semantics should 
-      //      use this).
-      Node &Create(const std::string &key);
-      Node &Create(const std::string &key, const std::string &value);
+      std::string ToString(size_t indent_level = 0) const;
+      //TODO: Add() needs to accept and correctly handle nested keys (e.g., "foo/bar/baz")
+      Node &Add(const std::string &key);
+      Node &Add(const std::string &key, const std::string &value);
+      void Set(const std::string &key, const std::string &value);
       Node(const std::string &key);
       Node(const std::string &key, const std::string &value);
       Node(const Node &that);

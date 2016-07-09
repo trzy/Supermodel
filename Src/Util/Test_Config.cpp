@@ -1,8 +1,18 @@
 #include "Util/NewConfig.h"
 #include <iostream>
 
+static void PrintTestResults(std::vector<std::pair<std::string, bool>> results)
+{
+  std::cout << "TEST RESULTS" << std::endl;
+  std::cout << "------------" << std::endl;
+  for (auto v: results)
+    std::cout << v.first << ": " << (v.second ? "passed" : "FAILED") << std::endl;
+}
+
 int main()
 {
+  std::vector<std::pair<std::string, bool>> test_results;
+
   /*
    * Creates a config tree corresponding to the following:
    *
@@ -21,41 +31,44 @@ int main()
    *  </game>
    */
   Util::Config::Node::Ptr_t root = std::make_shared<Util::Config::Node>("global");
-  auto &game = root->Create("game");
-  game.Create("name", "scud");
-  auto &roms = game.Create("roms");
-  auto &crom1 = roms.Create("crom");
-  crom1.Create("name", "foo.bin");
-  crom1.Create("offset", "0");
-  auto &crom2 = roms.Create("crom");
-  crom2.Create("name", "bar.bin");
-  crom2.Create("offset", "2");
+  auto &game = root->Add("game");
+  game.Add("name", "scud");
+  auto &roms = game.Add("roms");
+  auto &crom1 = roms.Add("crom");
+  crom1.Add("name", "foo.bin");
+  crom1.Add("offset", "0");
+  auto &crom2 = roms.Add("crom");
+  crom2.Add("name", "bar.bin");
+  crom2.Add("offset", "2");
   
   const char *expected_output =
-    "global  children={ game }              \n"
-    "  game  children={ name roms }         \n"
-    "    name=scud  children={ }            \n"
-    "    roms  children={ crom }            \n"
-    "      crom  children={ name offset }   \n"
-    "        name=foo.bin  children={ }     \n"
-    "        offset=0  children={ }         \n"
-    "      crom  children={ name offset }   \n"
-    "        name=bar.bin  children={ }     \n"
-    "        offset=2  children={ }         \n";
+    "global  children={ game }\n"
+    "  game  children={ name roms }\n"
+    "    name=scud  children={ }\n"
+    "    roms  children={ crom }\n"
+    "      crom  children={ name offset }\n"
+    "        name=foo.bin  children={ }\n"
+    "        offset=0  children={ }\n"
+    "      crom  children={ name offset }\n"
+    "        name=bar.bin  children={ }\n"
+    "        offset=2  children={ }\n";
   std::cout << "Expected output:" << std::endl << std::endl << expected_output << std::endl;
   std::cout << "Actual config tree:" << std::endl << std::endl;
   root->Print();
   std::cout << std::endl;
+  test_results.push_back({ "Manual Creation", root->ToString() == expected_output });
 
   // Expect second crom: bar.bin
   auto &global = *root;
   std::cout << "game/roms/crom/name=" << global["game/roms/crom/name"].Value() << " (expected: bar.bin)" << std::endl << std::endl;
+  test_results.push_back({ "Lookup", global["game/roms/crom/name"].Value() == "bar.bin" });
     
   // Make a copy
   std::cout << "Copy:" << std::endl << std::endl;
   Util::Config::Node::Ptr_t copy = std::make_shared<Util::Config::Node>(*root);
   copy->Print();
   std::cout << std::endl;
+  test_results.push_back({ "Copy", copy->ToString() == root->ToString() });
     
   // Parse from XML
   const char *xml =
@@ -76,55 +89,58 @@ int main()
     "  </roms>                                                                      \n"
     "</game>                                                                        \n";
   const char *expected_xml_config_tree =
-    "xml  children={ game }                                 \n"
-    "  game  children={ name roms }                         \n"
-    "    name=scud  children={ }                            \n"
-    "    roms  children={ region }                          \n"
-    "      region  children={ byte_swap file name stride }  \n"
-    "        name=crom  children={ }                        \n"
-    "        stride=8  children={ }                         \n"
-    "        byte_swap=true  children={ }                   \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=0  children={ }                       \n"
-    "          name=epr-19734.20  children={ }              \n"
-    "          crc32=0xBE897336  children={ }               \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=2  children={ }                       \n"
-    "          name=epr-19733.19  children={ }              \n"
-    "          crc32=0x6565E29A  children={ }               \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=4  children={ }                       \n"
-    "          name=epr-19732.18  children={ }              \n"
-    "          crc32=0x23E864BB  children={ }               \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=6  children={ }                       \n"
-    "          name=epr-19731.17  children={ }              \n"
-    "          crc32=0x3EE6447E  children={ }               \n"
-    "      region  children={ byte_swap file name stride }  \n"
-    "        name=banked_crom  children={ }                 \n"
-    "        stride=8  children={ }                         \n"
-    "        byte_swap=true  children={ }                   \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=0x0000000  children={ }               \n"
-    "          name=mpr-20364.4  children={ }               \n"
-    "          crc32=0xA2A68EF2  children={ }               \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=0x0000002  children={ }               \n"
-    "          name=mpr-20363.3  children={ }               \n"
-    "          crc32=0x3E3CC6FF  children={ }               \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=0x0000004  children={ }               \n"
-    "          name=mpr-20362.2  children={ }               \n"
-    "          crc32=0xF7E60DFD  children={ }               \n"
-    "        file  children={ crc32 name offset }           \n"
-    "          offset=0x0000006  children={ }               \n"
-    "          name=mpr-20361.1  children={ }               \n"
-    "          crc32=0xDDB66C2F  children={ }               \n";
+    "xml  children={ game }\n"
+    "  game  children={ name roms }\n"
+    "    name=scud  children={ }\n"
+    "    roms  children={ region }\n"
+    "      region  children={ byte_swap file name stride }\n"
+    "        name=crom  children={ }\n"
+    "        stride=8  children={ }\n"
+    "        byte_swap=true  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=0  children={ }\n"
+    "          name=epr-19734.20  children={ }\n"
+    "          crc32=0xBE897336  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=2  children={ }\n"
+    "          name=epr-19733.19  children={ }\n"
+    "          crc32=0x6565E29A  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=4  children={ }\n"
+    "          name=epr-19732.18  children={ }\n"
+    "          crc32=0x23E864BB  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=6  children={ }\n"
+    "          name=epr-19731.17  children={ }\n"
+    "          crc32=0x3EE6447E  children={ }\n"
+    "      region  children={ byte_swap file name stride }\n"
+    "        name=banked_crom  children={ }\n"
+    "        stride=8  children={ }\n"
+    "        byte_swap=true  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=0x0000000  children={ }\n"
+    "          name=mpr-20364.4  children={ }\n"
+    "          crc32=0xA2A68EF2  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=0x0000002  children={ }\n"
+    "          name=mpr-20363.3  children={ }\n"
+    "          crc32=0x3E3CC6FF  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=0x0000004  children={ }\n"
+    "          name=mpr-20362.2  children={ }\n"
+    "          crc32=0xF7E60DFD  children={ }\n"
+    "        file  children={ crc32 name offset }\n"
+    "          offset=0x0000006  children={ }\n"
+    "          name=mpr-20361.1  children={ }\n"
+    "          crc32=0xDDB66C2F  children={ }\n";
   std::cout << "Expected output:" << std::endl << std::endl << expected_xml_config_tree << std::endl;
   std::cout << "Actual config tree:" << std::endl << std::endl;
   Util::Config::Node::Ptr_t xml_config = Util::Config::FromXML(xml);
   xml_config->Print();
   std::cout << std::endl;
+  test_results.push_back({ "XML", xml_config->ToString() == expected_xml_config_tree });
+  
+  PrintTestResults(test_results);
   return 0;
 }
   

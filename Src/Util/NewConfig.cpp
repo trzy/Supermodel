@@ -95,6 +95,7 @@ namespace Util
 
     Node &Node::Get(const std::string &path)
     {
+      // This is probably dangerous and we should just have a non-const []
       return const_cast<Node &>(operator[](path));
     }
 
@@ -103,32 +104,48 @@ namespace Util
       return operator[](path);
     }
 
-    void Node::Print(size_t indent_level) const
+    std::string Node::ToString(size_t indent_level) const
     {
-      std::fill_n(std::ostream_iterator<char>(std::cout), 2 * indent_level, ' ');
-      std::cout << m_key;
+      std::ostringstream os;
+      std::fill_n(std::ostream_iterator<char>(os), 2 * indent_level, ' ');
+      os << m_key;
       if (m_value.length())
-        std::cout << '=' << m_value;
-      std::cout << "  children={";
+        os << '=' << m_value;
+      os << "  children={";
       for (auto v: m_children)
-        std::cout << ' ' << v.first;
-      std::cout << " }" << std::endl;
+        os << ' ' << v.first;
+      os << " }" << std::endl;
       for (Ptr_t child = m_first_child; child; child = child->m_next_sibling)
-        child->Print(indent_level + 1);
+        os << child->ToString(indent_level + 1);
+      return os.str();
     }
 
-    Node &Node::Create(const std::string &key)
+    void Node::Print(size_t indent_level) const
+    {
+      std::cout << ToString(indent_level);
+    }
+
+    Node &Node::Add(const std::string &key)
     {
       Ptr_t node = std::make_shared<Node>(key);
       AddChild(node);
       return *node;
     }
 
-    Node &Node::Create(const std::string &key, const std::string &value)
+    Node &Node::Add(const std::string &key, const std::string &value)
     {
       Ptr_t node = std::make_shared<Node>(key, value);
       AddChild(node);
       return *node;
+    }
+    
+    void Node::Set(const std::string &key, const std::string &value)
+    {
+      Node &node = Get(key);
+      if (node.Empty())
+        Add(key, value);
+      else
+        node.SetValue(value);
     }
 
     // Adds a newly-created node (which, among other things, implies no
@@ -218,11 +235,11 @@ namespace Util
         q.pop();
 
         // Create a config entry for this XML element
-        Util::Config::Node *node = &parent_node->Create(element->Name(), element->GetText() ? std::string(element->GetText()) : std::string());
+        Util::Config::Node *node = &parent_node->Add(element->Name(), element->GetText() ? std::string(element->GetText()) : std::string());
 
         // Create entries for each attribute
         for (const XMLAttribute *a = element->FirstAttribute(); a != 0; a = a->Next())
-          node->Create(a->Name(), a->Value());
+          node->Add(a->Name(), a->Value());
 
         // Push all child elements
         for (const XMLElement *e = element->FirstChildElement(); e != 0; e = e->NextSiblingElement())
@@ -304,7 +321,7 @@ namespace Util
       // In INI files, we do not allow multiple settings with the same key. If
       // a setting is specified multiple times, previous ones are overwritten.
       if (current_section[lvalue].Empty())
-        current_section.Create(lvalue, rvalue);
+        current_section.Add(lvalue, rvalue);
       else
         current_section.Get(lvalue).SetValue(rvalue);
     }
@@ -347,7 +364,7 @@ namespace Util
               current_section = &global;
             else if (global[section].Empty())
             {
-              Node &new_section = global.Create(section);
+              Node &new_section = global.Add(section);
               current_section = &new_section;
             }
             else
@@ -388,10 +405,13 @@ namespace Util
         if (it->IsLeaf())
         {
           // INI semantics: take care to only create a single setting per key
+          merged.Set(key, value);
+          /*
           if (merged[key].Empty())
-            merged.Create(key, value);
+            merged.Add(key, value);
           else
             merged.Get(key).SetValue(value);
+          */
         }
       }
       // Merge in settings from section y
@@ -401,10 +421,13 @@ namespace Util
         auto &value = it->Value();
         if (it->IsLeaf())
         {
+          merged.Set(key, value);
+          /*
           if (merged[key].Empty())
-            merged.Create(key, value);
+            merged.Add(key, value);
           else
             merged.Get(key).SetValue(value);
+          */
         }
       }
       return merged_ptr;
