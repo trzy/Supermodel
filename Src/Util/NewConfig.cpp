@@ -125,20 +125,26 @@ namespace Util
       std::cout << ToString(indent_level);
     }
 
-    Node &Node::Add(const std::string &key)
+    Node &Node::Add(const std::string &path, const std::string &value)
     {
-      Ptr_t node = std::make_shared<Node>(key);
-      AddChild(node);
+      std::vector<std::string> keys = Util::Format(path).Split('/');
+      Node *parent = this;
+      Ptr_t node;
+      for (size_t i = 0; i < keys.size(); i++)
+      {
+        // Create node at this level
+        node = std::make_shared<Node>(keys[i]);
+        // The leaf node gets the value
+        if (i == keys.size() - 1)
+          node->SetValue(value);
+        // Attach node to parent and move down to next nesting level: last
+        // created node is new parent
+        AddChild(*parent, node);
+        parent = node.get();
+      }
       return *node;
     }
 
-    Node &Node::Add(const std::string &key, const std::string &value)
-    {
-      Ptr_t node = std::make_shared<Node>(key, value);
-      AddChild(node);
-      return *node;
-    }
-    
     void Node::Set(const std::string &key, const std::string &value)
     {
       Node &node = Get(key);
@@ -150,19 +156,19 @@ namespace Util
 
     // Adds a newly-created node (which, among other things, implies no
     // children) as a child 
-    void Node::AddChild(Ptr_t &node)
+    void Node::AddChild(Node &parent, Ptr_t &node)
     {
-      if (!m_last_child)
+      if (!parent.m_last_child)
       {
-        m_first_child = node;
-        m_last_child = node;
+        parent.m_first_child = node;
+        parent.m_last_child = node;
       }
       else
       {
-        m_last_child->m_next_sibling = node;
-        m_last_child = node;
+        parent.m_last_child->m_next_sibling = node;
+        parent.m_last_child = node;
       }    
-      m_children[node->m_key] = node;
+      parent.m_children[node->m_key] = node;
     }
 
     /*
@@ -203,7 +209,7 @@ namespace Util
       for (Ptr_t child = that.m_first_child; child; child = child->m_next_sibling)
       {
         Ptr_t copied_child = std::make_shared<Node>(*child);
-        AddChild(copied_child);
+        AddChild(*this, copied_child);
       }
     }
 

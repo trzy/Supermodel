@@ -25,7 +25,7 @@ namespace Util
       std::string m_value;
       static Node s_empty_node; // key, value, and children must always be empty
 
-      void AddChild(Ptr_t &node);
+      void AddChild(Node &parent, Ptr_t &node);
       Node();                   // prohibit accidental/unintentional creation of blank nodes
       friend Ptr_t CreateEmpty();
 
@@ -187,9 +187,7 @@ namespace Util
       const Node &Get(const std::string &path) const;
       void Print(size_t indent_level = 0) const;
       std::string ToString(size_t indent_level = 0) const;
-      //TODO: Add() needs to accept and correctly handle nested keys (e.g., "foo/bar/baz")
-      Node &Add(const std::string &key);
-      Node &Add(const std::string &key, const std::string &value);
+      Node &Add(const std::string &key, const std::string &value = "");
       void Set(const std::string &key, const std::string &value);
       Node(const std::string &key);
       Node(const std::string &key, const std::string &value);

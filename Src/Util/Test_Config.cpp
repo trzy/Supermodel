@@ -56,7 +56,7 @@ int main()
   std::cout << "Actual config tree:" << std::endl << std::endl;
   root->Print();
   std::cout << std::endl;
-  test_results.push_back({ "Manual Creation", root->ToString() == expected_output });
+  test_results.push_back({ "Manual", root->ToString() == expected_output });
 
   // Expect second crom: bar.bin
   auto &global = *root;
@@ -139,6 +139,26 @@ int main()
   xml_config->Print();
   std::cout << std::endl;
   test_results.push_back({ "XML", xml_config->ToString() == expected_xml_config_tree });
+  
+  // Create a nested key
+  {
+    Util::Config::Node::Ptr_t config = Util::Config::CreateEmpty();
+    config->Add("foo/bar/baz", "bart");
+    config->Print();
+    std::cout << std::endl;
+    test_results.push_back({ "Nested key 1", config->Get("foo/bar/baz").Value() == "bart" });
+    config->Get("foo/bar/baz").Set("x", "xx");
+    config->Get("foo/bar/baz").Set("y/z", "zz");
+    config->Print();
+    std::cout << std::endl;
+    test_results.push_back({ "Nested key 2", config->Get("foo/bar/baz/x").Value() == "xx" });
+    test_results.push_back({ "Nested key 3", config->Get("foo/bar/baz/y/z").Value() == "zz" });
+    config->Add("a/b/c");
+    config->Get("a/b/c").SetValue("d");
+    config->Print();
+    std::cout << std::endl;
+    test_results.push_back({ "Nested key 4", config->Get("a/b/c").Value() == "d" });
+  }
   
   PrintTestResults(test_results);
   return 0;
