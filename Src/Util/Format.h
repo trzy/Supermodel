@@ -76,6 +76,8 @@ namespace Util
     {
     }
   private:
+    //TODO: write own buffer implementation to more easily support ToLower() et
+    //      al as methods of Util::Format
     std::stringstream m_stream;
       
     void clear()
@@ -84,6 +86,7 @@ namespace Util
     }
   };
   
+  std::string ToLower(const std::string &str);
   std::string TrimWhiteSpace(const std::string &str);
   std::string Hex(uint32_t n, size_t num_digits);
   std::string Hex(uint32_t n);

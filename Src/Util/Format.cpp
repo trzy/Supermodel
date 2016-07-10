@@ -1,8 +1,16 @@
 #include "Util/Format.h"
+#include <algorithm>
 #include <cctype>
 
 namespace Util
 {
+  std::string ToLower(const std::string &str)
+  {
+    std::string tmp(str);
+    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+    return tmp;
+  }
+
   std::string TrimWhiteSpace(const std::string &str)
   {
     if (str.empty())
