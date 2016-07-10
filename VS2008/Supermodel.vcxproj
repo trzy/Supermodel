@@ -345,6 +345,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Model3\RTC72421.cpp" />
     <ClCompile Include="..\Src\Model3\SoundBoard.cpp" />
     <ClCompile Include="..\Src\Model3\TileGen.cpp" />
+    <ClCompile Include="..\Src\OSD\Logger.cpp" />
     <ClCompile Include="..\Src\OSD\Outputs.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Audio.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Main.cpp" />
@@ -364,6 +365,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ExceptionHandling>
     </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\tinyxml2.cpp" />
     <ClCompile Include="..\Src\Pkgs\unzip.c">
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </ExceptionHandling>
@@ -581,6 +583,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Pkgs\glew.h" />
     <ClInclude Include="..\Src\Pkgs\glxew.h" />
     <ClInclude Include="..\Src\Pkgs\ioapi.h" />
+    <ClInclude Include="..\Src\Pkgs\tinyxml2.h" />
     <ClInclude Include="..\Src\Pkgs\unzip.h" />
     <ClInclude Include="..\Src\Pkgs\wglew.h" />
     <ClInclude Include="..\Src\ROMLoad.h" />

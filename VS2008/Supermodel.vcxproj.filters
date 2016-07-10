@@ -428,6 +428,12 @@
     <ClCompile Include="..\Src\Graphics\New3D\R3DFloat.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\tinyxml2.cpp">
+      <Filter>Source Files\Pkgs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\Logger.cpp">
+      <Filter>Source Files\OSD</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -792,6 +798,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\R3DFloat.h">
       <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\tinyxml2.h">
+      <Filter>Header Files\Pkgs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
