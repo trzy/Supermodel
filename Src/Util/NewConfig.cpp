@@ -71,6 +71,7 @@
 #include <algorithm>
 #include <fstream>
 #include <queue>
+#include <cstdlib>
 #include <iostream>
 
 namespace Util
@@ -79,6 +80,13 @@ namespace Util
   {
     Node Node::s_empty_node;
 
+    uint64_t Node::ValueAsUnsigned() const
+    {
+      if (m_value.find("0x") == 0 || m_value.find("0X") == 0)
+        return strtoull(m_value.c_str() + 2, 0, 16);
+      return strtoull(m_value.c_str(), 0, 10);
+    }
+ 
     const Node &Node::operator[](const std::string &path) const
     {
       const Node *e = this;
@@ -170,18 +178,6 @@ namespace Util
       }    
       parent.m_children[node->m_key] = node;
     }
-
-    /*
-    void Node::Clear()
-    {
-      m_next_sibling.reset();
-      m_first_child.reset();
-      m_last_child.reset();
-      m_children.clear();
-      m_key.clear();
-      m_value.clear();
-    }
-    */
 
     Node::Node()
     {
@@ -301,14 +297,12 @@ namespace Util
       size_t idx_equals = line.find_first_of('=');
       if (idx_equals == std::string::npos)
       {
-        //std::cerr << filename << ':' << line_num << ": Syntax error. No '=' found." << std::endl;
         ErrorLog("%s:%d: Syntax error. No '=' found.", filename.c_str(), line_num);
         return;
       }
       std::string lvalue(TrimWhiteSpace(std::string(line.begin(), line.begin() + idx_equals)));
       if (lvalue.empty())
       {
-        //std::cerr << filename << ':' << line_num << ": Syntax error. Setting name missing before '='." << std::endl;
         ErrorLog("%s:%d: Syntax error. Setting name missing before '='.", filename.c_str(), line_num);
         return;
       }
@@ -321,7 +315,6 @@ namespace Util
         rvalue = std::string(rvalue.begin() + idx_first_quote + 1, rvalue.begin() + idx_last_quote);
       if (std::count(rvalue.begin(), rvalue.end(), '\"') != 0)
       {
-        //std::cerr << filename << ':' << line_num << ": Warning: Extraneous quotes present on line." << std::endl;
         ErrorLog("%s:%d: Warning: Extraneous quotes present on line.", filename.c_str(), line_num);
       }
       // In INI files, we do not allow multiple settings with the same key. If
@@ -412,12 +405,6 @@ namespace Util
         {
           // INI semantics: take care to only create a single setting per key
           merged.Set(key, value);
-          /*
-          if (merged[key].Empty())
-            merged.Add(key, value);
-          else
-            merged.Get(key).SetValue(value);
-          */
         }
       }
       // Merge in settings from section y
@@ -428,12 +415,6 @@ namespace Util
         if (it->IsLeaf())
         {
           merged.Set(key, value);
-          /*
-          if (merged[key].Empty())
-            merged.Add(key, value);
-          else
-            merged.Get(key).SetValue(value);
-          */
         }
       }
       return merged_ptr;

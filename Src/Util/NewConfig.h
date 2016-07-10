@@ -161,6 +161,8 @@ namespace Util
         return m_value;
       }
 
+      uint64_t ValueAsUnsigned() const;
+
       inline void SetValue(const std::string &value)
       {
         if (this != &s_empty_node)  // not allowed to modify empty node
@@ -170,6 +172,11 @@ namespace Util
       inline bool Empty() const
       {
         return m_key.empty();
+      }
+      
+      inline bool Exists() const
+      {
+        return !Empty();
       }
 
       inline bool IsLeaf() const
