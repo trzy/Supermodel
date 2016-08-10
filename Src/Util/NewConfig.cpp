@@ -80,13 +80,37 @@ namespace Util
   {
     Node Node::s_empty_node;
 
+    bool Node::ValueAsBool() const
+    {
+      const char *value = m_value.c_str();
+      if (!value || !stricmp(value, "false") || !stricmp(value, "off") || !stricmp(value, "no"))
+        return false;
+      else if (!stricmp(value, "true") || !stricmp(value, "on") || !stricmp(value, "yes"))
+        return true;
+      return bool(ValueAsUnsigned());
+    }
+
+    bool Node::ValueAsBoolWithDefault(bool default_value) const
+    {
+      if (this == &s_empty_node)
+        return default_value;
+      return ValueAsBool();
+    }
+
     uint64_t Node::ValueAsUnsigned() const
     {
       if (m_value.find("0x") == 0 || m_value.find("0X") == 0)
         return strtoull(m_value.c_str() + 2, 0, 16);
       return strtoull(m_value.c_str(), 0, 10);
     }
- 
+
+    uint64_t Node::ValueAsUnsignedWithDefault(uint64_t default_value) const
+    {
+      if (this == &s_empty_node)
+        return default_value;
+      return ValueAsUnsigned();
+    }
+
     const Node &Node::operator[](const std::string &path) const
     {
       const Node *e = this;

@@ -161,7 +161,10 @@ namespace Util
         return m_value;
       }
 
+      bool ValueAsBool() const;
+      bool ValueAsBoolWithDefault(bool default_value) const;
       uint64_t ValueAsUnsigned() const;
+      uint64_t ValueAsUnsignedWithDefault(uint64_t default_value) const;
 
       inline void SetValue(const std::string &value)
       {
