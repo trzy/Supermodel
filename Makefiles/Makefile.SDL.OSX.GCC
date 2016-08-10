@@ -105,6 +105,7 @@ OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Config.o $(OBJ_DIR)/I
 	$(OBJ_DIR)/amp_util.o \
 	$(OBJ_DIR)/Crypto.o \
 	$(OBJ_DIR)/Format.o \
+	$(OBJ_DIR)/Logger.o \
 	$(OBJ_DIR)/SDLMain_tmpl.o
 
 # If built-in debugger enabled, include all debugging classes
