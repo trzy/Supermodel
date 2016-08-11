@@ -8,6 +8,7 @@
 
 struct Game
 {
+  std::string name;
   std::string title;
   std::string version;
   std::string manufacturer;
@@ -18,8 +19,14 @@ struct Game
   {
     std::shared_ptr<uint8_t> data;
     size_t size = 0;
+    void CopyTo(uint8_t *dest, size_t dest_size) const;
   };
   std::map<std::string, ROM> roms;
+  ROM get_rom(const std::string &region) const
+  {
+    auto it = roms.find(region);
+    return it == roms.end() ? ROM() : it->second;
+  }
 };
 
 //TODO: move to separate GameLoader.cpp
@@ -69,13 +76,10 @@ private:
   bool LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::Ptr_t &file);
   bool LoadRegion(Game::ROM *buffer, const GameLoader::Region::Ptr_t &region);
   bool LoadROMs(std::map<std::string, Game::ROM> *roms, const std::string &game_name);
+  bool LoadDefinitionXML(const std::string &filename);
 
 public:
-  GameLoader()
-  {
-  }
-
-  bool LoadDefinitionXML(const std::string &filename);
+  GameLoader(const Util::Config::Node &config);
   bool Load(Game *game, const std::string &zipfilename);
 };
 

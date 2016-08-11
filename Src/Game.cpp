@@ -6,6 +6,14 @@
 
 #include <iostream>
 
+void Game::ROM::CopyTo(uint8_t *dest, size_t dest_size) const
+{
+  if (!data || !size || !dest || !dest_size)
+    return;
+  size_t bytes_to_copy = std::min(size, dest_size);
+  const uint8_t *src = data.get();
+  memcpy(dest, src, bytes_to_copy);
+}
 
 bool GameLoader::MissingAttrib(const GameLoader &loader, const Util::Config::Node &node, const std::string &attribute)
 {
@@ -50,11 +58,12 @@ GameLoader::Region::Ptr_t GameLoader::Region::Create(const GameLoader &loader, c
 
 static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
 {
+  game->name = game_node["name"].Value();
   game->title = game_node["identity/title"].Value();
   game->version = game_node["identity/version"].Value();
   game->manufacturer = game_node["identity/manufacturer"].Value();
   game->year = game_node["identity/year"].ValueAsUnsigned();
-  game->stepping = game_node["identity/stepping"].Value();
+  game->stepping = game_node["hardware/stepping"].Value();
 }
 
 bool GameLoader::ParseXML(const Util::Config::Node::ConstPtr_t &xml)
@@ -274,7 +283,7 @@ bool GameLoader::LoadRegion(Game::ROM *buffer, const GameLoader::Region::Ptr_t &
     }
   }
   if (region->byte_swap)
-    Util::ByteSwap(buffer->data.get(), buffer->size);
+    Util::FlipEndian16(buffer->data.get(), buffer->size);
   return error;
 }
 
@@ -376,4 +385,9 @@ bool GameLoader::Load(Game *game, const std::string &zipfilename)
     *game = Game();
   unzClose(m_zf);
   return error;
+}
+
+GameLoader::GameLoader(const Util::Config::Node &config)
+{
+  LoadDefinitionXML(config["GameXMLFile"].Value());
 }

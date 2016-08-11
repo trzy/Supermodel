@@ -157,7 +157,7 @@ namespace Util
 
       const inline std::string &Value() const
       {
-        //TODO: if empty node, throw exception?
+        //TODO: if empty node, throw exception? Use ValueWithDefault() otherwise.
         return m_value;
       }
 
@@ -206,6 +206,7 @@ namespace Util
     };
     
     //TODO: CreateEmpty() should take a key that defaults to blank
+    //TODO: define deep-copy assignment operator and get rid of Ptr_t and ConstPtr_t
     Node::Ptr_t CreateEmpty();
     Node::Ptr_t FromXML(const std::string &text);
     Node::Ptr_t FromXMLFile(const std::string &filename);

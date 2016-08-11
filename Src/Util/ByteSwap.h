@@ -6,7 +6,8 @@
 
 namespace Util
 {
-  void ByteSwap(uint8_t *buffer, size_t size);
+  void FlipEndian16(uint8_t *buffer, size_t size);
+  void FlipEndian32(uint8_t *buffer, size_t size);
 } // Util
 
 #endif  // INCLUDED_BYTESWAP_H
