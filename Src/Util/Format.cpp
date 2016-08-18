@@ -4,6 +4,12 @@
 
 namespace Util
 {
+  std::ostream &operator<<(std::ostream &os, const Format &format)
+  {
+    format.Write(os);
+    return os;
+  }
+
   std::string ToLower(const std::string &str)
   {
     std::string tmp(str);
