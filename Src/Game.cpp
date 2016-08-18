@@ -64,6 +64,43 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->manufacturer = game_node["identity/manufacturer"].Value();
   game->year = game_node["identity/year"].ValueAsUnsigned();
   game->stepping = game_node["hardware/stepping"].Value();
+  game->mpeg_board = game_node["hardware/mpeg_board"].Value();
+  game->encryption_key = game_node["hardware/encryption_key"].ValueAsUnsigned();
+  std::map<std::string, uint32_t> input_flags
+  {
+    { "common",           Game::INPUT_COMMON },
+    { "vehicle",          Game::INPUT_VEHICLE },
+    { "joystick1",        Game::INPUT_JOYSTICK1 },
+    { "joystick2",        Game::INPUT_JOYSTICK2 },
+    { "fighting",         Game::INPUT_FIGHTING },
+    { "vr4",              Game::INPUT_VR4 },
+    { "viewchange",       Game::INPUT_VIEWCHANGE },
+    { "shift4",           Game::INPUT_SHIFT4 },
+    { "shiftupdown",      Game::INPUT_SHIFTUPDOWN },
+    { "handbrake",        Game::INPUT_HANDBRAKE },
+    { "harley",           Game::INPUT_HARLEY },
+    { "gun1",             Game::INPUT_GUN1 },
+    { "gun2",             Game::INPUT_GUN2 },
+    { "analog_joystick",  Game::INPUT_ANALOG_JOYSTICK },
+    { "twin_joysticks",   Game::INPUT_TWIN_JOYSTICKS },
+    { "soccer",           Game::INPUT_SOCCER },
+    { "spikeout",         Game::INPUT_SPIKEOUT },
+    { "analog_gun1",      Game::INPUT_ANALOG_GUN1 },
+    { "analog_gun2",      Game::INPUT_ANALOG_GUN2 },
+    { "ski",              Game::INPUT_SKI },
+    { "magtruck",         Game::INPUT_MAGTRUCK },
+    { "fishing",          Game::INPUT_FISHING }
+  };
+  for (auto &node: game_node["hardware/inputs"])
+  //for (auto it = game_node["hardware/inputs"].begin(); it != game_node["hardware/inputs"].end(); ++it)
+  {
+    //auto &node = *it;
+    if (node.Key() == "input" && node["type"].Exists())
+    {
+      const std::string input_type = node["type"].Value();
+      game->inputs |= input_flags[input_type];
+    }
+  }
 }
 
 bool GameLoader::ParseXML(const Util::Config::Node::ConstPtr_t &xml)
