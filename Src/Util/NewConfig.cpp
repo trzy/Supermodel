@@ -203,29 +203,13 @@ namespace Util
       parent.m_children[node->m_key] = node;
     }
 
-    Node::Node()
+    void Node::DeepCopy(const Node &that)
     {
-      //std::cout << "Created " << "<null>" << " (" << this << ")" << std::endl;
-    }
-
-    Node::Node(const std::string &key)
-      : m_key(key)
-    {
-      //std::cout << "Created " << key << " (" << this << ")" << std::endl;
-    }
-
-    Node::Node(const std::string &key, const std::string &value)
-      : m_key(key),
-        m_value(value)
-    {
-      //std::cout << "Created " << key << '=' << value << " (" << this << ")" << std::endl;
-    }
-
-    // Deep copy
-    Node::Node(const Node &that)
-      : m_key(that.m_key),
-        m_value(that.m_value)
-    {
+      if (this == &that)
+        return;
+      Destroy();
+      *const_cast<std::string *>(&m_key) = that.m_key;
+      m_value = that.m_value;
       for (Ptr_t child = that.m_first_child; child; child = child->m_next_sibling)
       {
         Ptr_t copied_child = std::make_shared<Node>(*child);
@@ -233,9 +217,40 @@ namespace Util
       }
     }
 
+    Node &Node::operator=(const Node &rhs)
+    {
+      DeepCopy(rhs);
+      return *this;
+    }
+
+    Node::Node()
+    {
+      //std::cout << "<<< Created " << "<null>" << " (" << this << ")" << std::endl;
+    }
+
+    Node::Node(const std::string &key)
+      : m_key(key)
+    {
+      //std::cout << "<<< Created " << key << " (" << this << ")" << std::endl;
+    }
+
+    Node::Node(const std::string &key, const std::string &value)
+      : m_key(key),
+        m_value(value)
+    {
+      //std::cout << "<<< Created " << key << '=' << value << " (" << this << ")" << std::endl;
+    }
+
+    Node::Node(const Node &that)
+      : m_key(that.m_key),
+        m_value(that.m_value)
+    {
+      DeepCopy(that);
+    }
+
     Node::~Node()
     {
-      //std::cout << "Destroyed " << m_key << " (" << this << ")" << std::endl;
+      //std::cout << ">>> Destroyed " << m_key << " (" << this << ")" << std::endl;
     }
 
     Node::Ptr_t CreateEmpty()

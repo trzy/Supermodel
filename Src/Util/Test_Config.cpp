@@ -63,13 +63,26 @@ int main()
   std::cout << "game/roms/crom/name=" << global["game/roms/crom/name"].Value() << " (expected: bar.bin)" << std::endl << std::endl;
   test_results.push_back({ "Lookup", global["game/roms/crom/name"].Value() == "bar.bin" });
     
-  // Make a copy
-  std::cout << "Copy:" << std::endl << std::endl;
+  // Make a copy using copy constructor
+  std::cout << "Copy constructed:" << std::endl << std::endl;
   Util::Config::Node::Ptr_t copy = std::make_shared<Util::Config::Node>(*root);
   copy->Print();
   std::cout << std::endl;
-  test_results.push_back({ "Copy", copy->ToString() == root->ToString() });
-    
+  test_results.push_back({ "Copy constructed", copy->ToString() == root->ToString() });
+  
+  // Make a copy using assignment operator
+  std::cout << "Copy by assignment:" << std::endl << std::endl;
+  Util::Config::Node copy2("foo", "bar");
+  copy2.Add("x/y/z", "test");
+  copy2.Add("dummy", "value");
+  std::cout << "Initially set to:" << std::endl;
+  copy2.Print();
+  copy2 = *root;
+  std::cout << "Copy of \"global\":" << std::endl;
+  copy2.Print();
+  std::cout << std::endl;
+  test_results.push_back({ "Copy by assignment", copy2.ToString() == root->ToString() });
+
   // Parse from XML
   const char *xml =
     "<game name=\"scud\">                                                           \n"

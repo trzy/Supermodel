@@ -25,7 +25,17 @@ namespace Util
       std::string m_value;
       static Node s_empty_node; // key, value, and children must always be empty
 
+      void Destroy()
+      {
+        m_next_sibling.reset();
+        m_first_child.reset();
+        m_last_child.reset();
+        m_children.clear();
+        m_value.clear();
+      }
+
       void AddChild(Node &parent, Ptr_t &node);
+      void DeepCopy(const Node &that);
       Node();                   // prohibit accidental/unintentional creation of blank nodes
       friend Ptr_t CreateEmpty();
 
@@ -199,6 +209,7 @@ namespace Util
       std::string ToString(size_t indent_level = 0) const;
       Node &Add(const std::string &key, const std::string &value = "");
       void Set(const std::string &key, const std::string &value);
+      Node &operator=(const Node &rhs);
       Node(const std::string &key);
       Node(const std::string &key, const std::string &value);
       Node(const Node &that);
