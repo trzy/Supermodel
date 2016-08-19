@@ -36,6 +36,7 @@ namespace Util
 
       void AddChild(Node &parent, Ptr_t &node);
       void DeepCopy(const Node &that);
+      void Swap(Node &rhs);
       Node();                   // prohibit accidental/unintentional creation of blank nodes
       friend Ptr_t CreateEmpty();
 
@@ -210,9 +211,11 @@ namespace Util
       Node &Add(const std::string &key, const std::string &value = "");
       void Set(const std::string &key, const std::string &value);
       Node &operator=(const Node &rhs);
+      Node &operator=(Node &&rhs);
       Node(const std::string &key);
       Node(const std::string &key, const std::string &value);
       Node(const Node &that);
+      Node(Node &&that);
       ~Node();
     };
     

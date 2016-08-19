@@ -217,9 +217,25 @@ namespace Util
       }
     }
 
+    void Node::Swap(Node &rhs)
+    {
+      m_next_sibling.swap(rhs.m_next_sibling);
+      m_first_child.swap(rhs.m_first_child);
+      m_last_child.swap(rhs.m_last_child);
+      m_children.swap(rhs.m_children);
+     const_cast<std::string *>(&m_key)->swap(*const_cast<std::string *>(&rhs.m_key));
+      m_value.swap(rhs.m_value); 
+    }
+
     Node &Node::operator=(const Node &rhs)
     {
       DeepCopy(rhs);
+      return *this;
+    }
+
+    Node &Node::operator=(Node &&rhs)
+    {
+      Swap(rhs);
       return *this;
     }
 
@@ -248,11 +264,17 @@ namespace Util
       DeepCopy(that);
     }
 
+    Node::Node(Node &&that)
+    {
+      Swap(that);
+    }
+
     Node::~Node()
     {
       //std::cout << ">>> Destroyed " << m_key << " (" << this << ")" << std::endl;
     }
 
+    // An explicit function so that users don't accidentally create empty nodes
     Node::Ptr_t CreateEmpty()
     {
       return std::shared_ptr<Node>(new Node());

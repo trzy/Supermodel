@@ -70,7 +70,7 @@ int main()
   std::cout << std::endl;
   test_results.push_back({ "Copy constructed", copy->ToString() == root->ToString() });
   
-  // Make a copy using assignment operator
+  // Make a deep copy using assignment operator
   std::cout << "Copy by assignment:" << std::endl << std::endl;
   Util::Config::Node copy2("foo", "bar");
   copy2.Add("x/y/z", "test");
