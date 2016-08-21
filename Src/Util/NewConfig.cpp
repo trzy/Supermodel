@@ -1,15 +1,41 @@
 /*
  * Config Tree
- * -----------
+ * ===========
+ *
+ * Accessing Hierarchical Nodes
+ * ----------------------------
  *
  * A hierarchical data structure supporting arbitrary nesting. Each node
  * (Config::Node) has a key and either a value or children (in fact, it may
- * have both, but this does not make semantic sense and so the config tree 
+ * have both, but this rarely makes semantic sense and so the config tree 
  * builders take care not to allow it).
  *
- * All values are simply strings for now. They may have defaults, which are 
- * actually supplied by the caller and returned when a queried node cannot be
- * found.
+ * Nesting is denoted with the '/' separator. For example:
+ *
+ *    1. node.ValueAs<int>()
+ *    2. node["foo"]
+ *    3. node["foo"].ValueAs<int>()
+ *    4. node["foo/bar"]
+ *
+ * [1] accesses the value of the node (more on this below). [2] accesses the
+ * a child node with key "foo". [3] accesses the value of the child node "foo".
+ * [4] accesses child "bar" of child "foo", and so forth.
+ * 
+ * Similar to map semantics, the operator [] never fails. If the node does not
+ * exist, it creates a dummy "missing" node that is retained as a hidden child.
+ * This node will have an empty value, which cannot be accessed, except using 
+ * the ValueAsDefault<> method. This scheme exists to simplify lookup code for
+ * keys known at compile time, the logic being that any "missing" key should
+ * could just as well have been there in the first place, thus making the added
+ * memory usage negligible. For example, it easily allows values with defaults
+ * to be expressed as:
+ *
+ *    config["foo/bar"].ValueAsDefault<std::string>("default_value")
+ *
+ * If the lookups are not known at compile time (e.g., are driven by the
+ * program user or external data), it is safer to use Get() and TryGet(), which
+ * can throw and return nullptr, respectively, and avoid wasting memory with
+ * dummy nodes.
  *
  * Nodes at the same nesting level (siblings) are strung together in a
  * linked list. Parents also maintain pointers to the first and last of their
@@ -22,15 +48,51 @@
  *
  * Example:
  *
- *  <game name="scud">
- *  <roms>
- *    <crom name="foo.bin" offset=0/>
- *    <crom name="bar.bin" offset=2/>
- *  </roms>
+ *    <game name="scud">
+ *    <roms>
+ *      <crom name="foo.bin" offset=0/>
+ *      <crom name="bar.bin" offset=2/>
+ *    </roms>
  *
- * config["game/roms"].Value()              <-- should return nothing
- * config["game/roms/crom/offset"].Value()  <-- "2", the second <crom> tag
- * config["game/roms"].begin()              <-- iterate over two <crom> tags
+ *    1. config["game/roms"].ValueAs<std::string>()
+ *    2. config["game/roms/crom/offset"].ValueAs<int>()
+ *    3. config["game/roms"].begin()
+ *
+ * [1] will either throw an exception or return an empty string (depending on
+ * how the XML was translated to a config tree), [2] will return 2 (the second
+ * "crom" tag), and [3] can be used to iterate over both "crom" tags in order.
+ *
+ * Values
+ * ------
+ *
+ * To check whether or not a value is defined, use the Exists() and Empty()
+ * methods.
+ *
+ * Values are stored in a special container and can be virtually anything.
+ * However, it is recommended that only PODs and std::string be used. Arrays
+ * and pointers will probably not behave as expected and should be avoided.
+ * Trees build from files have all values loaded as std::strings. The types can
+ * be changed by subsequent re-assignments or by manually building a tree.
+ *
+ * To access a value of a given known type, T, use:
+ *
+ *    node.Value<T>()
+ *
+ * Conversions as supported but are implemented via serialization and de-
+ * serialization using sstream. Most "sane" conversions will work as expected.
+ * When a conversion to T is desired, or if the stored value type is not 
+ * precisely known, use:
+ *
+ *    node.ValueAs<T>()
+ *
+ * These functions will throw an exception if the value is not defined at all
+ * or if the node does not exist (i.e., a "missing" node from a failed lookup).
+ * An alternative that is guaranteed to succeed is:
+ *
+ *    node.ValueAsDefault<T>(default_value)
+ *
+ * If the value or node does not exist, default_value is returned, otherwise
+ * the stored value is returned with conversion (if needed) to type T.
  *
  * INI Semantics
  * -------------
@@ -51,64 +113,48 @@
  * INI files contain zero or more sections followed by zero or more settings
  * each.
  *
- *  Setting0 = 100
- *  [ Global ]
- *  Setting1 = 200
- *  [ Section1 ]
- *  SettingA = 1      ; this is a comment
- *  SettingB = foo
- *  [ Section2 ]
- *  SettingX = bar
- *  SettingZ = "baz"  ; quotes are optional and are stripped off during parsing
+ *    Setting0 = 100
+ *    [ Global ]
+ *    Setting1 = 200
+ *    [ Section1 ]
+ *    SettingA = 1      ; this is a comment
+ *    SettingB = foo
+ *    [ Section2 ]
+ *    SettingX = bar
+ *    SettingZ = "baz"  ; quotes are optional and are stripped off during parsing
  *
  * Any setting not explicitly part of a section is assigned to the "Global"
  * section. For example, Setting0 and Setting1 above are both part of "Global".
+ *
+ * TODO
+ * ----
+ * - Define our own exceptions?
  */
 
 #include "Util/NewConfig.h"
-#include "OSD/Logger.h"
-#include "Pkgs/tinyxml2.h"
-#include <algorithm>
-#include <fstream>
-#include <queue>
-#include <cstdlib>
-#include <iostream>
 
 namespace Util
 {
   namespace Config
   {
-    Node Node::s_empty_node;
-
-    bool Node::ValueAsBool() const
+    void Node::CheckEmptyOrMissing() const
     {
-      const char *value = m_value.c_str();
-      if (!value || !stricmp(value, "false") || !stricmp(value, "off") || !stricmp(value, "no"))
-        return false;
-      else if (!stricmp(value, "true") || !stricmp(value, "on") || !stricmp(value, "yes"))
-        return true;
-      return bool(ValueAsUnsigned());
+      if (m_missing)
+        throw std::range_error(Util::Format() << "Node \"" << m_key << "\" does not exist");
+      if (Empty() && !m_missing)
+        throw std::logic_error(Util::Format() << "Node \"" << m_key << "\" has no value" );
     }
 
-    bool Node::ValueAsBoolWithDefault(bool default_value) const
+    const Node &Node::MissingNode(const std::string &key) const
     {
-      if (this == &s_empty_node)
-        return default_value;
-      return ValueAsBool();
-    }
-
-    uint64_t Node::ValueAsUnsigned() const
-    {
-      if (m_value.find("0x") == 0 || m_value.find("0X") == 0)
-        return strtoull(m_value.c_str() + 2, 0, 16);
-      return strtoull(m_value.c_str(), 0, 10);
-    }
-
-    uint64_t Node::ValueAsUnsignedWithDefault(uint64_t default_value) const
-    {
-      if (this == &s_empty_node)
-        return default_value;
-      return ValueAsUnsigned();
+      auto it = m_missing_nodes.find(key);
+      if (it == m_missing_nodes.end())
+      {
+        auto result = m_missing_nodes.emplace(key, key);
+        result.first->second.m_missing = true; // mark this node as missing
+        return result.first->second;
+      }
+      return it->second;
     }
 
     const Node &Node::operator[](const std::string &path) const
@@ -119,7 +165,7 @@ namespace Util
       {
         auto it = e->m_children.find(key);
         if (it == e->m_children.end())
-          return s_empty_node;
+          return e->MissingNode(key);
         e = it->second.get();
       }
       return *e;
@@ -127,68 +173,72 @@ namespace Util
 
     Node &Node::Get(const std::string &path)
     {
-      // This is probably dangerous and we should just have a non-const []
-      return const_cast<Node &>(operator[](path));
+      Node *node = TryGet(path);
+      if (!node)
+        throw std::range_error(Util::Format() << "Node \"" << path << "\" does not exist");
+      return *node;
     }
 
     const Node &Node::Get(const std::string &path) const
     {
-      return operator[](path);
+      const Node *node = TryGet(path);
+      if (!node)
+        throw std::range_error(Util::Format() << "Node \"" << path << "\" does not exist");
+      return *node;
+    }
+
+    Node *Node::TryGet(const std::string &path)
+    {
+      Node *e = this;
+      std::vector<std::string> keys = Util::Format(path).Split('/');
+      for (auto &key: keys)
+      {
+        auto it = e->m_children.find(key);
+        if (it == e->m_children.end())
+          return nullptr;
+        e = it->second.get();
+      }
+      return e;
+    }
+
+    const Node *Node::TryGet(const std::string &path) const
+    {
+      const Node *e = this;
+      std::vector<std::string> keys = Util::Format(path).Split('/');
+      for (auto &key: keys)
+      {
+        auto it = e->m_children.find(key);
+        if (it == e->m_children.end())
+          return nullptr;
+        e = it->second.get();
+      }
+      return e;
+    }
+
+    void Node::Serialize(std::ostream *os, size_t indent_level) const
+    {
+      std::fill_n(std::ostream_iterator<char>(*os), 2 * indent_level, ' ');
+      *os << m_key << "=\"";
+      if (Exists())
+        m_value->Serialize(os);
+      *os << "\"  children={";
+      for (auto v: m_children)
+        *os << ' ' << v.first;
+      *os << " }" << std::endl;
+      for (ptr_t child = m_first_child; child; child = child->m_next_sibling)
+        child->Serialize(os, indent_level + 1);
     }
 
     std::string Node::ToString(size_t indent_level) const
     {
       std::ostringstream os;
-      std::fill_n(std::ostream_iterator<char>(os), 2 * indent_level, ' ');
-      os << m_key;
-      if (m_value.length())
-        os << '=' << m_value;
-      os << "  children={";
-      for (auto v: m_children)
-        os << ' ' << v.first;
-      os << " }" << std::endl;
-      for (Ptr_t child = m_first_child; child; child = child->m_next_sibling)
-        os << child->ToString(indent_level + 1);
+      Serialize(&os, indent_level);
       return os.str();
-    }
-
-    void Node::Print(size_t indent_level) const
-    {
-      std::cout << ToString(indent_level);
-    }
-
-    Node &Node::Add(const std::string &path, const std::string &value)
-    {
-      std::vector<std::string> keys = Util::Format(path).Split('/');
-      Node *parent = this;
-      Ptr_t node;
-      for (size_t i = 0; i < keys.size(); i++)
-      {
-        // Create node at this level
-        node = std::make_shared<Node>(keys[i]);
-        // The leaf node gets the value
-        if (i == keys.size() - 1)
-          node->SetValue(value);
-        // Attach node to parent and move down to next nesting level: last
-        // created node is new parent
-        AddChild(*parent, node);
-        parent = node.get();
-      }
-      return *node;
-    }
-
-    void Node::Set(const std::string &key, const std::string &value)
-    {
-      Node &node = Get(key);
-      if (node.Empty())
-        Add(key, value);
-      else
-        node.SetValue(value);
     }
 
     // Adds a newly-created node (which, among other things, implies no
     // children) as a child 
-    void Node::AddChild(Node &parent, Ptr_t &node)
+    void Node::AddChild(Node &parent, ptr_t &node)
     {
       if (!parent.m_last_child)
       {
@@ -209,10 +259,11 @@ namespace Util
         return;
       Destroy();
       *const_cast<std::string *>(&m_key) = that.m_key;
-      m_value = that.m_value;
-      for (Ptr_t child = that.m_first_child; child; child = child->m_next_sibling)
+      if (that.m_value)
+        m_value = that.m_value->MakeCopy();
+      for (ptr_t child = that.m_first_child; child; child = child->m_next_sibling)
       {
-        Ptr_t copied_child = std::make_shared<Node>(*child);
+        ptr_t copied_child = std::make_shared<Node>(*child);
         AddChild(*this, copied_child);
       }
     }
@@ -240,26 +291,27 @@ namespace Util
     }
 
     Node::Node()
+      : m_key("config"),  // a default key value
+        m_value(nullptr)  // this node is empty
     {
       //std::cout << "<<< Created " << "<null>" << " (" << this << ")" << std::endl;
     }
 
     Node::Node(const std::string &key)
-      : m_key(key)
+      : m_key(key),
+        m_value(nullptr)  // this node is empty
     {
       //std::cout << "<<< Created " << key << " (" << this << ")" << std::endl;
     }
 
     Node::Node(const std::string &key, const std::string &value)
       : m_key(key),
-        m_value(value)
+        m_value(std::make_shared<ValueInstance<std::string>>(value))
     {
       //std::cout << "<<< Created " << key << '=' << value << " (" << this << ")" << std::endl;
     }
 
     Node::Node(const Node &that)
-      : m_key(that.m_key),
-        m_value(that.m_value)
     {
       DeepCopy(that);
     }
@@ -273,244 +325,5 @@ namespace Util
     {
       //std::cout << ">>> Destroyed " << m_key << " (" << this << ")" << std::endl;
     }
-
-    // An explicit function so that users don't accidentally create empty nodes
-    Node::Ptr_t CreateEmpty()
-    {
-      return std::shared_ptr<Node>(new Node());
-    }
-
-    static void PopulateFromXML(Util::Config::Node::Ptr_t &config, const tinyxml2::XMLDocument &xml)
-    {
-      using namespace tinyxml2;
-      std::queue<std::pair<const XMLElement *, Util::Config::Node *>> q;
-
-      // Push the top level of the XML tree
-      for (const XMLElement *e = xml.RootElement(); e != 0; e = e->NextSiblingElement())
-        q.push( { e, config.get() } );
-
-      // Process the elements in order, pushing subsequent levels along with the
-      // config nodes to add them to
-      while (!q.empty())
-      {
-        const XMLElement *element = q.front().first;
-        Util::Config::Node *parent_node = q.front().second;
-        q.pop();
-
-        // Create a config entry for this XML element
-        Util::Config::Node *node = &parent_node->Add(element->Name(), element->GetText() ? std::string(element->GetText()) : std::string());
-
-        // Create entries for each attribute
-        for (const XMLAttribute *a = element->FirstAttribute(); a != 0; a = a->Next())
-          node->Add(a->Name(), a->Value());
-
-        // Push all child elements
-        for (const XMLElement *e = element->FirstChildElement(); e != 0; e = e->NextSiblingElement())
-          q.push( { e, node } );
-      }
-    }
-
-    Node::Ptr_t FromXML(const std::string &text)
-    {
-      Node::Ptr_t config = std::make_shared<Util::Config::Node>("xml");
-      using namespace tinyxml2;
-      XMLDocument xml;
-      auto ret = xml.Parse(text.c_str());
-      if (ret != XML_SUCCESS)
-      {
-        ErrorLog("Failed to parse XML (%s).", xml.ErrorName());
-        return CreateEmpty();
-      }
-      PopulateFromXML(config, xml);
-      return config;
-    }
-
-    Node::Ptr_t FromXMLFile(const std::string &filename)
-    {
-      Node::Ptr_t config = std::make_shared<Util::Config::Node>("xml");
-      using namespace tinyxml2;
-      XMLDocument xml;
-      auto ret = xml.LoadFile(filename.c_str());
-      if (ret != XML_SUCCESS)
-      {
-        ErrorLog("Failed to parse %s (%s).", filename.c_str(), xml.ErrorName());
-        return CreateEmpty();
-      }
-      PopulateFromXML(config, xml);
-      return config;
-    }
-
-    static std::string StripComment(const std::string &line)
-    {
-      // Find first semicolon not enclosed in ""
-      bool inside_quotes = false;
-      for (auto it = line.begin(); it != line.end(); ++it)
-      {
-        inside_quotes ^= (*it == '\"');
-        if (!inside_quotes && *it == ';')
-          return std::string(line.begin(), it);
-      }
-      return line;
-    }
-
-    static void ParseAssignment(Node &current_section, const std::string &filename, size_t line_num, const std::string &line)
-    {
-      size_t idx_equals = line.find_first_of('=');
-      if (idx_equals == std::string::npos)
-      {
-        ErrorLog("%s:%d: Syntax error. No '=' found.", filename.c_str(), line_num);
-        return;
-      }
-      std::string lvalue(TrimWhiteSpace(std::string(line.begin(), line.begin() + idx_equals)));
-      if (lvalue.empty())
-      {
-        ErrorLog("%s:%d: Syntax error. Setting name missing before '='.", filename.c_str(), line_num);
-        return;
-      }
-      // Get rvalue, which is allowed to be empty and strip off quotes if they
-      // exist. Only a single pair of quotes encasing the rvalue are permitted.
-      std::string rvalue(TrimWhiteSpace(std::string(line.begin() + idx_equals + 1, line.end())));
-      size_t idx_first_quote = rvalue.find_first_of('\"');
-      size_t idx_last_quote = rvalue.find_last_of('\"');
-      if (idx_first_quote == 0 && idx_last_quote == (rvalue.length() - 1) && idx_first_quote != idx_last_quote)
-        rvalue = std::string(rvalue.begin() + idx_first_quote + 1, rvalue.begin() + idx_last_quote);
-      if (std::count(rvalue.begin(), rvalue.end(), '\"') != 0)
-      {
-        ErrorLog("%s:%d: Warning: Extraneous quotes present on line.", filename.c_str(), line_num);
-      }
-      // In INI files, we do not allow multiple settings with the same key. If
-      // a setting is specified multiple times, previous ones are overwritten.
-      if (current_section[lvalue].Empty())
-        current_section.Add(lvalue, rvalue);
-      else
-        current_section.Get(lvalue).SetValue(rvalue);
-    }
-          
-    Node::Ptr_t FromINIFile(const std::string &filename)
-    {
-      std::ifstream file;
-      file.open(filename);
-      if (file.fail())
-      {
-        ErrorLog("Unable to open '%s'. Configuration will not be loaded.", filename.c_str());
-        return CreateEmpty();
-      }
-
-      Node::Ptr_t global_ptr = std::make_shared<Node>("Global");  // the root is also the "Global" section
-      Node &global = *global_ptr;
-      Node *current_section = &global;
-
-      size_t line_num = 1;
-      while (!file.eof())
-      {
-        if (file.fail())
-        {
-          ErrorLog("%s:%d: File read error. Configuration will be incomplete.");
-          return CreateEmpty();
-        }
-
-        std::string line;
-        std::getline(file, line);
-        line = StripComment(line);
-        line = TrimWhiteSpace(line);
-
-        if (!line.empty())
-        {
-          if (*line.begin() == '[' && *line.rbegin() == ']')
-          {
-            // Check if section exists else create a new one
-            std::string section(TrimWhiteSpace(std::string(line.begin() + 1, line.begin() + line.length() - 1)));
-            if (section.empty() || section == "Global") // empty section names (e.g., "[]") assigned to "[ Global ]"
-              current_section = &global;
-            else if (global[section].Empty())
-            {
-              Node &new_section = global.Add(section);
-              current_section = &new_section;
-            }
-            else
-              current_section = &global.Get(section);
-          }
-          else
-          {
-            ParseAssignment(*current_section, filename, line_num, line);
-          }
-        }
-
-        line_num++;
-      }
-
-      return global_ptr;
-    }
-    
-    /*
-     * Produces a new INI section by merging two existing sections.
-     *
-     * - Nodes from x and y with children are ignored as per INI semantics.
-     *   The presence of children indicates a section, not a setting.
-     * - Settings from y override settings in x if already present.
-     * - If multiple settings with the same key are present in either of the
-     *   source configs (which technically violates INI semantics), the last
-     *   ends up being used.
-     * - x's key is retained.
-     */
-    Node::Ptr_t MergeINISections(const Node &x, const Node &y)
-    {
-      Node::Ptr_t merged_ptr = std::make_shared<Node>(x.Key()); // result has same key as x
-      Node &merged = *merged_ptr;
-      // First copy settings from section x
-      for (auto it = x.begin(); it != x.end(); ++it)
-      {
-        auto &key = it->Key();
-        auto &value = it->Value();
-        if (it->IsLeaf())
-        {
-          // INI semantics: take care to only create a single setting per key
-          merged.Set(key, value);
-        }
-      }
-      // Merge in settings from section y
-      for (auto it = y.begin(); it != y.end(); ++it)
-      {
-        auto &key = it->Key();
-        auto &value = it->Value();
-        if (it->IsLeaf())
-        {
-          merged.Set(key, value);
-        }
-      }
-      return merged_ptr;
-    }
-
-    static void WriteSection(std::ofstream &file, const Node &section)
-    {
-      file << "[ " << section.Key() << " ]" << std::endl;
-      file << std::endl;
-      for (auto it = section.begin(); it != section.end(); ++it)
-      {
-        if (it->IsLeaf())
-          file << it->Key() << " = \"" << it->Value() << "\"" << std::endl;
-      }
-      file << std::endl << std::endl;
-    }
-
-    void WriteINIFile(const std::string &filename, const Node &config, const std::string &header_comment)
-    {
-      std::ofstream file;
-      file.open(filename);
-      if (file.fail())
-      {
-        ErrorLog("Unable to write to '%s'. Configuration will not be saved.");
-        return;
-      }
-      if (!header_comment.empty())
-        file << header_comment << std::endl << std::endl;
-      WriteSection(file, config);
-      for (auto it = config.begin(); it != config.end(); ++it)
-      {
-        if (it->HasChildren())
-          WriteSection(file, *it);
-      }
-    }
   } // Config
 } // Util
-

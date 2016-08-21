@@ -1,10 +1,11 @@
 #ifndef INCLUDED_UTIL_CONFIG_H
 #define INCLUDED_UTIL_CONFIG_H
 
-#include "Util/Format.h"
+#include "Util/GenericValue.h"
 #include <map>
 #include <memory>
 #include <iterator>
+#include <exception>
 
 namespace Util
 {
@@ -12,33 +13,33 @@ namespace Util
   {
     class Node
     {
-    public:
-      typedef std::shared_ptr<Node> Ptr_t;
-      typedef std::shared_ptr<const Node> ConstPtr_t;
-
     private:
-      Ptr_t m_next_sibling;
-      Ptr_t m_first_child;
-      Ptr_t m_last_child;
-      std::map<std::string, Ptr_t> m_children;
-      const std::string m_key;  // this cannot be changed (maps depend on it)
-      std::string m_value;
-      static Node s_empty_node; // key, value, and children must always be empty
+      typedef std::shared_ptr<Node> ptr_t;
+      typedef std::shared_ptr<const Node> const_ptr_t;
+      const std::string m_key;                // this cannot be changed (maps depend on it)
+      std::shared_ptr<GenericValue> m_value;  // null pointer marks this node as an invalid, empty node
+      ptr_t m_next_sibling;
+      ptr_t m_first_child;
+      ptr_t m_last_child;
+      std::map<std::string, ptr_t> m_children;
+      mutable std::map<std::string, Node> m_missing_nodes;  // missing nodes from failed queries (must also be empty)
+      bool m_missing = false;
 
       void Destroy()
       {
+        m_value.reset();
         m_next_sibling.reset();
         m_first_child.reset();
         m_last_child.reset();
         m_children.clear();
-        m_value.clear();
       }
 
-      void AddChild(Node &parent, Ptr_t &node);
+      void CheckEmptyOrMissing() const;
+      const Node &MissingNode(const std::string &key) const;
+      void AddChild(Node &parent, ptr_t &node);
       void DeepCopy(const Node &that);
       void Swap(Node &rhs);
-      Node();                   // prohibit accidental/unintentional creation of blank nodes
-      friend Ptr_t CreateEmpty();
+      Node(); // prohibit accidental/unintentional creation of empty nodes
 
     public:
       class const_iterator;
@@ -46,10 +47,10 @@ namespace Util
       class iterator: public std::iterator<std::forward_iterator_tag, Node>
       {
       private:
-        Ptr_t m_node;
+        ptr_t m_node;
         friend class const_iterator;    
       public:
-        inline iterator(Ptr_t node = Ptr_t())
+        inline iterator(ptr_t node = ptr_t())
           : m_node(node)
         {}
         inline iterator(const iterator &it)
@@ -72,7 +73,7 @@ namespace Util
         {
           return *m_node;
         }
-        inline Ptr_t operator->() const
+        inline ptr_t operator->() const
         {
           return m_node;
         }
@@ -89,12 +90,12 @@ namespace Util
       class const_iterator: public std::iterator<std::forward_iterator_tag, const Node>
       {
       private:
-        ConstPtr_t m_node;
+        const_ptr_t m_node;
       public:
-        inline const_iterator(ConstPtr_t node = ConstPtr_t())
+        inline const_iterator(const_ptr_t node = const_ptr_t())
           : m_node(node)
         {}
-        inline const_iterator(Ptr_t node = Ptr_t())
+        inline const_iterator(ptr_t node = ptr_t())
           : m_node(std::const_pointer_cast<const Node>(node))
         {}
         inline const_iterator(const const_iterator &it)
@@ -120,7 +121,7 @@ namespace Util
         {
           return *m_node;
         }
-        inline ConstPtr_t operator->() const
+        inline const_ptr_t operator->() const
         {
           return m_node;
         }
@@ -159,57 +160,135 @@ namespace Util
         return m_key;
       }
 
-      const inline std::string &ValueWithDefault(const std::string &default_value) const
+      inline std::shared_ptr<GenericValue> GetValue() const
       {
-        if (this == &s_empty_node)
+        return m_value;
+      }
+
+      inline void SetValue(const std::shared_ptr<GenericValue> &value)
+      {
+        m_value = value;
+      }
+
+      template <typename T>
+      const T &Value() const
+      {
+        CheckEmptyOrMissing();
+        return m_value->Value<T>();
+      }
+
+      template <typename T>
+      T ValueAs() const
+      {
+        CheckEmptyOrMissing();
+        return m_value->ValueAs<T>();
+      }
+
+      template <typename T>
+      T ValueAsDefault(const T &default_value) const
+      {
+        if (Empty())
           return default_value;
-        return m_value;
+        return m_value->ValueAs<T>();
       }
 
-      const inline std::string &Value() const
+      // Set value of this node
+      template <typename T>
+      inline void SetValue(const T &value)
       {
-        //TODO: if empty node, throw exception? Use ValueWithDefault() otherwise.
-        return m_value;
+        if (!m_missing)
+        {
+          if (!Empty() && m_value->Is<T>())
+            m_value->Set(value);
+          else
+            m_value = std::make_shared<ValueInstance<T>>(value);
+        }
+        else
+          throw std::range_error(Util::Format() << "Node \"" << m_key << "\" does not exist");
       }
 
-      bool ValueAsBool() const;
-      bool ValueAsBoolWithDefault(bool default_value) const;
-      uint64_t ValueAsUnsigned() const;
-      uint64_t ValueAsUnsignedWithDefault(uint64_t default_value) const;
-
-      inline void SetValue(const std::string &value)
+      // char* is a troublesome case because we want to convert it to std::string
+      inline void SetValue(const char *value)
       {
-        if (this != &s_empty_node)  // not allowed to modify empty node
-          m_value = value;
+        SetValue<std::string>(value);
       }
 
-      inline bool Empty() const
+      // Add a child node
+      template <typename T>
+      Node &Add(const std::string &path, const T &value)
       {
-        return m_key.empty();
+        std::vector<std::string> keys = Util::Format(path).Split('/');
+        Node *parent = this;
+        ptr_t node;
+        for (size_t i = 0; i < keys.size(); i++)
+        {
+          // Create node at this level
+          node = std::make_shared<Node>(keys[i]);
+          // The leaf node gets the value
+          if (i == keys.size() - 1)
+            node->SetValue(value);
+          // Attach node to parent and move down to next nesting level: last
+          // created node is new parent
+          AddChild(*parent, node);
+          parent = node.get();
+        }
+        return *node;
       }
       
+      Node &Add(const std::string &path)
+      {
+        return Add(path, std::string());
+      }
+
+      // Set the value of the matching child node if it exists, else add new
+      template <typename T>
+      void Set(const std::string &key, const T &value)
+      {
+        Node *node = TryGet(key);
+        if (node)
+          node->SetValue(value);
+        else
+          Add(key, value);
+      }
+
+      // True if value is empty (does not exist)
+      inline bool Empty() const
+      {
+        return !m_value;
+      }
+      
+      // True if value exists (is not empty)
       inline bool Exists() const
       {
         return !Empty();
       }
 
+      // True if no keys under this node
       inline bool IsLeaf() const
       {
         return m_children.empty();
       }
 
+      // True if this node has keys
       inline bool HasChildren() const
       {
         return !IsLeaf();
       }
 
-      Node &Get(const std::string &path);
+      // Always succeeds -- failed lookups permanently create an empty node.
+      // Use with caution. Intended for hard-coded lookups.
       const Node &operator[](const std::string &path) const;
+        
+      // These throw if the node is missing
+      Node &Get(const std::string &path);
       const Node &Get(const std::string &path) const;
-      void Print(size_t indent_level = 0) const;
+        
+      // This returns nullptr if node is missing
+      Node *TryGet(const std::string &path);
+      const Node *TryGet(const std::string &path) const;
+
+      void Serialize(std::ostream *os, size_t indent_level = 0) const;
       std::string ToString(size_t indent_level = 0) const;
-      Node &Add(const std::string &key, const std::string &value = "");
-      void Set(const std::string &key, const std::string &value);
       Node &operator=(const Node &rhs);
       Node &operator=(Node &&rhs);
       Node(const std::string &key);
@@ -218,15 +297,6 @@ namespace Util
       Node(Node &&that);
       ~Node();
     };
-    
-    //TODO: CreateEmpty() should take a key that defaults to blank
-    //TODO: define deep-copy assignment operator and get rid of Ptr_t and ConstPtr_t
-    Node::Ptr_t CreateEmpty();
-    Node::Ptr_t FromXML(const std::string &text);
-    Node::Ptr_t FromXMLFile(const std::string &filename);
-    Node::Ptr_t FromINIFile(const std::string &filename);
-    Node::Ptr_t MergeINISections(const Node &x, const Node &y);
-    void WriteINIFile(const std::string &filename, const Node &config, const std::string &header_comment);
   } // Config
 } // Util
 
