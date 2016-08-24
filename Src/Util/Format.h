@@ -31,7 +31,8 @@ namespace Util
 
     void Write(std::ostream &os) const
     {
-      os << m_stream.rdbuf();
+      if (m_stream.rdbuf()->in_avail())
+        os << m_stream.rdbuf();
     }
 
     template <typename T>
@@ -98,6 +99,8 @@ namespace Util
   std::string Hex(uint32_t n);
   std::string Hex(uint16_t n);
   std::string Hex(uint8_t n);
+
+  int Stricmp(const char *s1, const char *s2);
 } // Util
 
 

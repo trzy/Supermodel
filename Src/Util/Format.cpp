@@ -67,4 +67,18 @@ namespace Util
   {
     return Hex(n, 2);
   }
+
+  int Stricmp(const char *s1, const char *s2)
+  {
+    int cmp;
+    char c1;
+    char c2;
+    do
+    {
+      c1 = *s1++;
+      c2 = *s2++;
+      cmp = unsigned(tolower(c1)) - unsigned(tolower(c2));
+    } while ((cmp == 0) && (c1 != '\0') && (c2 != '\0'));
+    return cmp;
+  }
 } // Util
