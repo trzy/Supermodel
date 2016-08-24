@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "OSD/Logger.h"
 #include "Util/NewConfig.h"
+#include "Util/ConfigBuilders.h"
 #include "Util/ByteSwap.h"
 #include <algorithm>
 
@@ -25,15 +26,15 @@ bool GameLoader::MissingAttrib(const GameLoader &loader, const Util::Config::Nod
   return false;
 }
 
-GameLoader::File::Ptr_t GameLoader::File::Create(const GameLoader &loader, const Util::Config::Node &file_node)
+GameLoader::File::ptr_t GameLoader::File::Create(const GameLoader &loader, const Util::Config::Node &file_node)
 {
   if (GameLoader::MissingAttrib(loader, file_node, "name") | GameLoader::MissingAttrib(loader, file_node, "offset"))
-    return Ptr_t();
-  Ptr_t file = std::make_shared<File>();
-  file->offset = file_node["offset"].ValueAsUnsigned();
-  file->filename = Util::ToLower(file_node["name"].Value());
+    return ptr_t();
+  ptr_t file = std::make_shared<File>();
+  file->offset = file_node["offset"].ValueAs<uint32_t>();
+  file->filename = Util::ToLower(file_node["name"].ValueAs<std::string>());
   file->has_crc32 = file_node["crc32"].Exists();
-  file->crc32 = file->has_crc32 ? file_node["crc32"].ValueAsUnsigned() : 0;
+  file->crc32 = file->has_crc32 ? file_node["crc32"].ValueAs<uint32_t>() : 0;
   return file;
 }
 
@@ -44,28 +45,28 @@ bool GameLoader::File::Matches(const std::string &filename_to_match, uint32_t cr
   return Util::ToLower(filename_to_match) == filename;
 }
 
-GameLoader::Region::Ptr_t GameLoader::Region::Create(const GameLoader &loader, const Util::Config::Node &region_node)
+GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, const Util::Config::Node &region_node)
 {
   if (GameLoader::MissingAttrib(loader, region_node, "name") | MissingAttrib(loader, region_node, "stride") | GameLoader::MissingAttrib(loader, region_node, "chunk_size"))
-    return Ptr_t();
-  Ptr_t region = std::make_shared<Region>();
-  region->region_name = region_node["name"].Value();
-  region->stride = region_node["stride"].ValueAsUnsigned();
-  region->chunk_size = region_node["chunk_size"].ValueAsUnsigned();
-  region->byte_swap = region_node["byte_swap"].ValueAsBoolWithDefault(false);
+    return ptr_t();
+  ptr_t region = std::make_shared<Region>();
+  region->region_name = region_node["name"].Value<std::string>();
+  region->stride = region_node["stride"].ValueAs<size_t>();
+  region->chunk_size = region_node["chunk_size"].ValueAs<size_t>();
+  region->byte_swap = region_node["byte_swap"].ValueAsDefault<bool>(false);
   return region;
 }
 
 static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
 {
-  game->name = game_node["name"].Value();
-  game->title = game_node["identity/title"].Value();
-  game->version = game_node["identity/version"].Value();
-  game->manufacturer = game_node["identity/manufacturer"].Value();
-  game->year = game_node["identity/year"].ValueAsUnsigned();
-  game->stepping = game_node["hardware/stepping"].Value();
-  game->mpeg_board = game_node["hardware/mpeg_board"].Value();
-  game->encryption_key = game_node["hardware/encryption_key"].ValueAsUnsigned();
+  game->name = game_node["name"].ValueAs<std::string>();
+  game->title = game_node["identity/title"].ValueAsDefault<std::string>("Unknown");
+  game->version = game_node["identity/version"].ValueAsDefault<std::string>("");
+  game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
+  game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
+  game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
+  game->mpeg_board = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>("");
+  game->encryption_key = game_node["hardware/encryption_key"].ValueAsDefault<uint32_t>(0);
   std::map<std::string, uint32_t> input_flags
   {
     { "common",           Game::INPUT_COMMON },
@@ -92,20 +93,18 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
     { "fishing",          Game::INPUT_FISHING }
   };
   for (auto &node: game_node["hardware/inputs"])
-  //for (auto it = game_node["hardware/inputs"].begin(); it != game_node["hardware/inputs"].end(); ++it)
   {
-    //auto &node = *it;
     if (node.Key() == "input" && node["type"].Exists())
     {
-      const std::string input_type = node["type"].Value();
+      const std::string input_type = node["type"].ValueAs<std::string>();
       game->inputs |= input_flags[input_type];
     }
   }
 }
 
-bool GameLoader::ParseXML(const Util::Config::Node::ConstPtr_t &xml)
+bool GameLoader::ParseXML(const Util::Config::Node &xml)
 {
-  for (auto it = xml->begin(); it != xml->end(); ++it)
+  for (auto it = xml.begin(); it != xml.end(); ++it)
   {
     // Game node
     auto &game_node = *it;
@@ -117,7 +116,7 @@ bool GameLoader::ParseXML(const Util::Config::Node::ConstPtr_t &xml)
       //ErrorLog("%s: Ignoring <game> tag with missing 'name' attribute.", m_xml_filename.c_str());
       continue;
     }
-    std::string game_name = game_node["name"].Value();
+    std::string game_name = game_node["name"].ValueAs<std::string>();
     if (m_regions_by_game.find(game_name) != m_regions_by_game.end())
     {
       ErrorLog("%s: Ignoring redefinition of game '%s'.", m_xml_filename.c_str(), game_name.c_str());
@@ -138,7 +137,7 @@ bool GameLoader::ParseXML(const Util::Config::Node::ConstPtr_t &xml)
         auto &region_node = *it;
         if (region_node.Key() != "region")
           continue;
-        Region::Ptr_t region = Region::Create(*this, region_node);
+        Region::ptr_t region = Region::Create(*this, region_node);
         if (!region)
           continue;
         if (regions_by_name.find(region->region_name) != regions_by_name.end())
@@ -154,7 +153,7 @@ bool GameLoader::ParseXML(const Util::Config::Node::ConstPtr_t &xml)
           auto &file_node = *it;
           if (file_node.Key() != "file")
             continue;
-          File::Ptr_t file = File::Create(*this, file_node);
+          File::ptr_t file = File::Create(*this, file_node);
           if (!file)
             continue;
           // Ensure file offset not defined multiple times. We allow the same
@@ -199,10 +198,10 @@ std::set<std::string> GameLoader::IdentifyGamesFileBelongsTo(const std::string &
     auto &regions_by_name = v_game.second;
     for (auto &v_region: regions_by_name)
     {
-      Region::Ptr_t region = v_region.second;
+      Region::ptr_t region = v_region.second;
       for (auto &v_file: region->files_by_offset)
       {
-        File::Ptr_t file = v_file.second;
+        File::ptr_t file = v_file.second;
         if (file->Matches(filename, crc32))
           games.insert(game_name);
       }
@@ -211,7 +210,7 @@ std::set<std::string> GameLoader::IdentifyGamesFileBelongsTo(const std::string &
   return games;
 }
 
-const unz_file_info *GameLoader::LookupZippedFile(const File::Ptr_t &file) const
+const unz_file_info *GameLoader::LookupZippedFile(const File::ptr_t &file) const
 {
   if (file->has_crc32)
   {
@@ -228,7 +227,7 @@ const unz_file_info *GameLoader::LookupZippedFile(const File::Ptr_t &file) const
   return 0;
 }
 
-bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Region::Ptr_t &region) const
+bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Region::ptr_t &region) const
 {
   // Files in region need not be loaded contiguously. To find region size,
   // use maximum end_addr = offset + stride * (num_chunks - 1) + chunk_size.
@@ -260,7 +259,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
   return error;
 }
 
-bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::Ptr_t &file)
+bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file)
 {
   unz_file_info info;
   for (int err = unzGoToFirstFile(m_zf); err == UNZ_OK; err = unzGoToNextFile(m_zf))
@@ -299,7 +298,7 @@ bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_s
   return true;
 }
 
-bool GameLoader::LoadRegion(Game::ROM *buffer, const GameLoader::Region::Ptr_t &region)
+bool GameLoader::LoadRegion(Game::ROM *buffer, const GameLoader::Region::ptr_t &region)
 {
   bool error = false;
   for (auto &v_file: region->files_by_offset)
@@ -342,7 +341,6 @@ bool GameLoader::LoadROMs(std::map<std::string, Game::ROM> *roms, const std::str
       error |= true;
     else
     {
-      std::cout << region->region_name << " -> " << Util::Hex(region_size) << std::endl;
       auto &buffer = (*roms)[region->region_name];
       buffer.size = region_size;
       buffer.data.reset(new uint8_t[region_size], std::default_delete<uint8_t[]>());
@@ -355,7 +353,9 @@ bool GameLoader::LoadROMs(std::map<std::string, Game::ROM> *roms, const std::str
 bool GameLoader::LoadDefinitionXML(const std::string &filename)
 {
   m_xml_filename = filename;
-  Util::Config::Node::ConstPtr_t xml = std::const_pointer_cast<const Util::Config::Node>(Util::Config::FromXMLFile(filename));
+  Util::Config::Node xml("xml");
+  if (Util::Config::FromXMLFile(&xml, filename))
+    return true;
   return ParseXML(xml);
 }
 
@@ -426,5 +426,5 @@ bool GameLoader::Load(Game *game, const std::string &zipfilename)
 
 GameLoader::GameLoader(const Util::Config::Node &config)
 {
-  LoadDefinitionXML(config["GameXMLFile"].Value());
+  LoadDefinitionXML(config["GameXMLFile"].ValueAs<std::string>());
 }
