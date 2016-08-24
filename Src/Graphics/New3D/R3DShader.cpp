@@ -54,86 +54,90 @@ static const char *fragmentShaderBasic =
 
 "void main()\n"
 "{\n"
-	"vec4 tex1Data;\n"
-	"vec4 colData;\n"
-	"vec4 finalData;\n"
+  "vec4 tex1Data;\n"
+  "vec4 colData;\n"
+  "vec4 finalData;\n"
 
-	"tex1Data = vec4(1.0, 1.0, 1.0, 1.0);\n"
+  "bool discardFragment = false;\n"
 
-	"if(textureEnabled==1) {\n"
+  "tex1Data = vec4(1.0, 1.0, 1.0, 1.0);\n"
 
-		"tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
+  "if(textureEnabled==1) {\n"
 
-		"if (microTexture==1) {\n"
-			"vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * 4.0);\n"
-			"tex1Data = (tex1Data+tex2Data)/2.0;\n"
-		"}\n"
+    "tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
-		"if (alphaTest==1) {\n"			// does it make any sense to do this later?
-			"if (tex1Data.a < (8.0/16.0)) {\n"
-				"discard;\n"
-			"}\n"
-		"}\n"
+    "if (microTexture==1) {\n"
+      "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * 4.0);\n"
+      "tex1Data = (tex1Data+tex2Data)/2.0;\n"
+    "}\n"
 
-		"if (textureAlpha == 0) {\n"
-			"tex1Data.a = 1.0;\n"
-		"}\n"
-	"}\n"
+    "if (alphaTest==1) {\n"         // does it make any sense to do this later?
+      "if (tex1Data.a < (8.0/16.0)) {\n"
+        "discardFragment = true;\n"
+      "}\n"
+    "}\n"
 
-	"colData = gl_Color;\n"
+    "if (textureAlpha == 0) {\n"
+      "tex1Data.a = 1.0;\n"
+    "}\n"
+  "}\n"
 
-	"finalData = tex1Data * colData;\n"
-	"if (finalData.a < (1.0/16.0)) {\n"		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
-		"discard;\n"
-	"}\n"
+  "colData = gl_Color;\n"
 
-	
-	"if (lightEnable==1)\n"
-	"{\n"
-		"vec3	lightIntensity;\n"
-		"vec3	sunVector;\n"		// sun lighting vector (as reflecting away from vertex)
-		"float	sunFactor;\n"		// sun light projection along vertex normal (0.0 to 1.0)
+  "finalData = tex1Data * colData;\n"
+  "if (finalData.a < (1.0/16.0)) {\n"      // basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
+    "discardFragment = true;\n"
+  "}\n"
 
-		// Real3D -> OpenGL view space convention (TO-DO: do this outside of shader)
-		"sunVector = lighting[0] * vec3(1.0, -1.0, -1.0);\n"
+  "if (discardFragment) {\n"
+    "discard;\n"
+  "}\n"
+   
+  "if (lightEnable==1) {\n"
+    "vec3   lightIntensity;\n"
+    "vec3   sunVector;\n"     // sun lighting vector (as reflecting away from vertex)
+    "float   sunFactor;\n"    // sun light projection along vertex normal (0.0 to 1.0)
 
-		// Compute diffuse factor for sunlight
-		"sunFactor = max(dot(sunVector, fsViewNormal), 0.0);\n"
+    // Real3D -> OpenGL view space convention (TO-DO: do this outside of shader)
+    "sunVector = lighting[0] * vec3(1.0, -1.0, -1.0);\n"
 
-		// Total light intensity: sum of all components 
-		"lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"	// ambient + diffuse
+    // Compute diffuse factor for sunlight
+    "sunFactor = max(dot(sunVector, fsViewNormal), 0.0);\n"
 
-		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
+    // Total light intensity: sum of all components 
+    "lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"   // ambient + diffuse
 
-		"vec2	ellipse;\n"
-		"float	insideSpot;\n"
+    "lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
 
-		// Compute spotlight and apply lighting
-		"ellipse	= (gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw;\n"
-		"insideSpot = dot(ellipse, ellipse);\n"
+    "vec2   ellipse;\n"
+    "float   insideSpot;\n"
 
-		"if ((insideSpot <= 1.0) && (-fsViewVertex.z >= spotRange.x)) {\n"
-			"lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
-		"}\n"
+    // Compute spotlight and apply lighting
+    "ellipse   = (gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw;\n"
+    "insideSpot = dot(ellipse, ellipse);\n"
 
-	
-		"finalData.rgb *= lightIntensity;\n"
+    "if ((insideSpot <= 1.0) && (-fsViewVertex.z >= spotRange.x)) {\n"
+      "lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
+    "}\n"
 
-		"if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
+   
+    "finalData.rgb *= lightIntensity;\n"
 
-			"vec3 v = normalize(-fsViewVertex);\n"
-			"vec3 h = normalize(sunVector + v);\n"	// halfway vector
+    "if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
 
-			"float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
+      "vec3 v = normalize(-fsViewVertex);\n"
+      "vec3 h = normalize(sunVector + v);\n"   // halfway vector
 
-			"finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
-		"}\n"
-	"}\n"
+      "float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
+
+      "finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
+    "}\n"
+  "}\n"
 
 
-	"finalData.rgb = mix(finalData.rgb, fogColour, fsFogFactor);\n"
+  "finalData.rgb = mix(finalData.rgb, fogColour, fsFogFactor);\n"
 
-	"gl_FragColor = finalData;\n"
+  "gl_FragColor = finalData;\n"
 "}\n";
 
 R3DShader::R3DShader()
