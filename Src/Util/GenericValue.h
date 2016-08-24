@@ -7,9 +7,80 @@
 #include <sstream>
 #include <stdexcept>
 #include <memory>
+#include <cctype>
 
 namespace Util
 {
+  namespace detail
+  {
+    // Support for hexadecimal conversion for 16-bit or greater integers.
+    // Cannot distinguish chars from 8-bit integers, so unsupported there.
+    template <typename T>
+    struct IntegerEncodableAsHex
+    {
+      static constexpr const bool value = std::is_integral<T>::value && sizeof(T) >= 2 && sizeof(T) <= 8;
+    };
+
+    // This case should never actually be called
+    template <typename T>
+    static typename std::enable_if<!IntegerEncodableAsHex<T>::value, T>::type ParseInteger(const std::string &str)
+    {
+      return T();
+    }
+
+    // This case will be generated for hex encodable integers and executed
+    template <typename T>
+    static typename std::enable_if<IntegerEncodableAsHex<T>::value, T>::type ParseInteger(const std::string &str)
+    {
+      T tmp = 0;
+      if (str.find_first_of("0x") == 0 || str.find_first_of("-0x") == 0 || str.find_first_of("+0x") == 0)
+      {
+        bool negative = str[0] == '-';
+        size_t start_at = 2 + ((negative || str[0] == '+') ? 1 : 0);
+        for (size_t i = start_at; i < str.size(); i++)
+        {
+          tmp *= 16;
+          char c = str[i];
+          if (isdigit(c))
+            tmp |= (c - '0');
+          else if (isupper(c))
+            tmp |= (c - 'A' + 10);
+          else if (islower(c))
+            tmp |= (c - 'a' + 10);
+        }
+        if (negative)
+          tmp *= -1;
+        return tmp;
+      }
+      std::stringstream ss;
+      ss << str;
+      ss >> tmp;
+      return tmp;
+    }
+
+    // This case should never actually be called
+    template <typename T>
+    inline T ParseBool(const std::string &str)
+    {
+      return T();
+    }
+
+    // This case will be generated for bools
+    template <>
+    inline bool ParseBool<bool>(const std::string &str)
+    {
+      if (!Util::Stricmp(str.c_str(), "true") || !Util::Stricmp(str.c_str(), "on") || !Util::Stricmp(str.c_str(), "yes"))
+        return true;
+      if (!Util::Stricmp(str.c_str(), "false") || !Util::Stricmp(str.c_str(), "off") || !Util::Stricmp(str.c_str(), "no"))
+        return false;
+      bool tmp;
+      std::stringstream ss;
+      ss << str;
+      ss >> tmp;
+      return tmp;
+    }    
+  }
+
   class GenericValue
   {
   private:
@@ -38,6 +109,10 @@ namespace Util
     {
       if (m_type == std::type_index(typeid(T)))
         return *reinterpret_cast<const T *>(GetData());
+      if (m_type == std::type_index(typeid(std::string)) && detail::IntegerEncodableAsHex<T>::value)
+        return detail::ParseInteger<T>(Value<std::string>()); // special case string -> integer conversion
+      if (m_type == std::type_index(typeid(std::string)) && std::type_index(typeid(T)) == std::type_index(typeid(bool)))
+        return detail::ParseBool<T>(Value<std::string>());    // special case string -> bool conversion
       std::stringstream ss;
       Serialize(&ss);
       T tmp;
