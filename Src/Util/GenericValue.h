@@ -33,14 +33,20 @@ namespace Util
     static typename std::enable_if<IntegerEncodableAsHex<T>::value, T>::type ParseInteger(const std::string &str)
     {
       T tmp = 0;
-      if (str.find_first_of("0x") == 0 || str.find_first_of("-0x") == 0 || str.find_first_of("+0x") == 0)
+      if (str.length() >= 3 && (
+          (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))  ||
+          ((str[0] == '-' || str[0] == '+') && (str[1] == '0' && (str[2] == 'x' || str[2] == 'X')))
+        ))
       {
         bool negative = str[0] == '-';
         size_t start_at = 2 + ((negative || str[0] == '+') ? 1 : 0);
-        for (size_t i = start_at; i < str.size(); i++)
+        size_t i;
+        for (i = start_at; i < str.size(); i++)
         {
           tmp *= 16;
           char c = str[i];
+          if (!isxdigit(c)) // not a hex digit, abort
+            goto not_hex;
           if (isdigit(c))
             tmp |= (c - '0');
           else if (isupper(c))
@@ -48,10 +54,13 @@ namespace Util
           else if (islower(c))
             tmp |= (c - 'a' + 10);
         }
+        if (i == start_at)  // no digits parsed
+          goto not_hex;
         if (negative)
           tmp *= -1;
         return tmp;
       }
+    not_hex:
       std::stringstream ss;
       ss << str;
       ss >> tmp;
