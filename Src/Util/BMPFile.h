@@ -113,7 +113,28 @@ namespace Util
       return uint8_t((255.0f / 1.0f) * float((*reinterpret_cast<const uint16_t *>(pixel) >> 15) & 0x1));
     }
   };
-  
+
+  struct RGBA4
+  {
+    static const unsigned bytes_per_pixel = 2;
+    static inline uint8_t GetRed(const uint8_t *pixel)
+    {
+      return uint8_t((255.0f / 15.0f) * float((*reinterpret_cast<const uint16_t *>(pixel) >> 12) & 0xf));
+    }
+    static inline uint8_t GetGreen(const uint8_t *pixel)
+    {
+      return uint8_t((255.0f / 15.0f) * float((*reinterpret_cast<const uint16_t *>(pixel) >> 8) & 0xf));
+    }
+    static inline uint8_t GetBlue(const uint8_t *pixel)
+    {
+      return uint8_t((255.0f / 15.0f) * float((*reinterpret_cast<const uint16_t *>(pixel) >> 4) & 0xf));
+    }
+    static inline uint8_t GetAlpha(const uint8_t *pixel)
+    {
+      return uint8_t((255.0f / 15.0f) * float((*reinterpret_cast<const uint16_t *>(pixel) >> 0) & 0xf));
+    }
+  };
+
   template <class SurfaceFormat>
   static bool WriteSurfaceToBMP(const std::string &file_name, const uint8_t *pixels, int32_t width, int32_t height, bool flip_vertical)
   {
