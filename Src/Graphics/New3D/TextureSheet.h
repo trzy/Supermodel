@@ -18,6 +18,7 @@ public:
 	void						Invalidate		(int x, int y, int width, int height); // release parts of the memory
 	void						Release			();		// release all texture objects and memory
 	int							GetTexFormat	(int originalFormat, bool contour);
+	void						GetMicrotexPos	(int basePage, int id, int& x, int& y);
 
 private:
 

@@ -147,8 +147,11 @@ void CNew3D::RenderScene(int priority, bool alpha)
 					}
 
 					if (mesh.microTexture) {
+
+						int mX, mY;
 						glActiveTexture(GL_TEXTURE1);
-						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, false, false, 0, 1024, 128, 128);
+						m_texSheet.GetMicrotexPos(y / 1024, mesh.microTextureID, mX, mY);
+						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, false, false, mX, mY, 128, 128);
 						if (tex2) {
 							tex2->BindTexture();
 						}
@@ -980,6 +983,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					currentMesh->mirrorU		= ph.TexUMirror();
 					currentMesh->mirrorV		= ph.TexVMirror();
 					currentMesh->microTexture	= ph.MicroTexture();
+					currentMesh->microTextureID = ph.MicroTextureID();
 				}
 			}
 

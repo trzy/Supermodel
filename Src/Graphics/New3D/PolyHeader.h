@@ -14,7 +14,7 @@ xxxxxx-- -------- -------- --------		Specular
 -------- -------- -------- x-------		Enable specular
 -------- -------- -------- -x------		0 = Triangle, 1 = Quad
 -------- -------- -------- --x-----		Poly is points
--------- -------- -------- ---x----		Smoothing ?
+-------- -------- -------- ---x----		Anti-aliasing
 -------- -------- -------- ----x---		Vertex 3 shared from previous polygon
 -------- -------- -------- -----x--		Vertex 2 shared from previous polygon
 -------- -------- -------- ------x-		Vertex 1 shared from previous polygon
@@ -108,6 +108,7 @@ public:
 	bool	TexUMirror();
 	bool	TexVMirror();
 	bool	MicroTexture();
+	int		MicroTextureID();
 
 	// header 3
 	int		TexWidth();

@@ -39,6 +39,7 @@ struct Mesh
 	// texture
 	int format, x, y, width, height = 0;
 	bool microTexture = false;
+	int microTextureID = 0;
 	bool mirrorU = false;
 	bool mirrorV = false;
 
