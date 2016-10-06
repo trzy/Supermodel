@@ -221,7 +221,7 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
   
   if ((x+width)>2048 || (y+height)>2048)
     return;
-  if (width > 512 || height > 512)
+  if (width > 1024 || height > 1024)
   {
     //ErrorLog("Encountered a texture that is too large (%d,%d,%d,%d)", x, y, width, height);
     return;

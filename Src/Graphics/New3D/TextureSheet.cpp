@@ -22,11 +22,11 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 	y &= 2047;
 
 	if ((x + width) > 2048 || (y + height) > 2048) {
-		return 0;
+		return nullptr;
 	}
 
-	if (width > 512 || height > 512) {
-		return 0;
+	if (width > 1024 || height > 1024) {	// sanity checking
+		return nullptr;
 	}
 
 	index = ToIndex(x, y);
