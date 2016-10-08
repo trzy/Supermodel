@@ -732,7 +732,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog color R
 		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (1.0f / 255.0f);	// fog color G
 		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (1.0f / 255.0f);	// fog color B
-		vp->fogParams[3] = *(float *)&vpnode[0x23];									// fog density
+		vp->fogParams[3] = std::abs(*(float *)&vpnode[0x23]);						// fog density	- ocean hunter uses negative values, but looks the same
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
 
 		{
@@ -758,6 +758,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// Unknown light/fog parameters
 		float scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);	// scroll fog
 		float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
+
+		printf("scroll fog scroll %f attentioatn %f ---- %f %f %f %f\n", scrollFog, scrollAtt, vp->fogParams[0], vp->fogParams[1], vp->fogParams[2], vp->fogParams[3], vp->fogParams[4]);
 
 		// Clear texture offsets before proceeding
 		m_nodeAttribs.Reset();
