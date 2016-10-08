@@ -1085,7 +1085,7 @@ void CLegacy3D::SetStep(int stepID)
 bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
 {
   // Allocate memory for texture buffer
-  textureBuffer = new(std::nothrow) GLfloat[512*512*4];
+  textureBuffer = new(std::nothrow) GLfloat[1024*1024*4];
   if (NULL == textureBuffer)
     return ErrorLog("Insufficient memory for texture decode buffer.");
     
