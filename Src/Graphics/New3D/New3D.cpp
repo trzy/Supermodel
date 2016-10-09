@@ -83,14 +83,17 @@ void CNew3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned hei
 
 void CNew3D::DrawScrollFog()
 {
-	for (auto &n : m_nodes) {
+	for (int i = 0; i < 4; i++) {
 
-		if (n.viewport.scrollFog > 0) {
+		for (auto &n : m_nodes) {
 
-			float *rgb = n.viewport.fogParams;
-			m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+			if (n.viewport.scrollFog > 0 && n.viewport.priority==i) {
 
-			return;	// only allowed once per frame?
+				float *rgb = n.viewport.fogParams;
+				m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+
+				return;	// only allowed once per frame?
+			}
 		}
 	}
 }
