@@ -39,6 +39,7 @@
 #include "R3DData.h"
 #include "Plane.h"
 #include "Vec.h"
+#include "R3DScrollFog.h"
 
 namespace New3D {
 
@@ -177,6 +178,7 @@ private:
 	float Determinant3x3(const float m[16]);
 	bool IsDynamicModel(UINT32 *data);		// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
+	void DrawScrollFog();
 
 	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);	
 
@@ -216,6 +218,7 @@ private:
 
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
 	R3DShader m_r3dShader;
+	R3DScrollFog m_r3dScrollFog;
 
 	Plane m_planes[6];
 

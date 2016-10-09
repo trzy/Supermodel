@@ -81,6 +81,20 @@ void CNew3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned hei
 	m_texSheet.Invalidate(x, y, width, height);
 }
 
+void CNew3D::DrawScrollFog()
+{
+	for (auto &n : m_nodes) {
+
+		if (n.viewport.scrollFog > 0) {
+
+			float *rgb = n.viewport.fogParams;
+			m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+
+			return;	// only allowed once per frame?
+		}
+	}
+}
+
 void CNew3D::RenderScene(int priority, bool alpha)
 {
 	if (alpha) {
@@ -178,6 +192,10 @@ void CNew3D::RenderFrame(void)
 	m_modelMat.Release();	// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
 
+	RenderViewport(0x800000);					// build model structure
+
+	DrawScrollFog();							// fog layer if applicable must be drawn here
+
 	glDepthFunc		(GL_LEQUAL);
 	glEnable		(GL_DEPTH_TEST);
 	glActiveTexture	(GL_TEXTURE0);
@@ -185,10 +203,8 @@ void CNew3D::RenderFrame(void)
 	glFrontFace		(GL_CW);
 
 	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
-	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
+	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);		// if the stencil test passes, we incriment the value
 	glStencilMask	(0xFF);
-
-	RenderViewport(0x800000);		// build model structure
 	
 	m_vbo.Bind(true);
 	m_vbo.BufferSubData(MAX_ROM_POLYS*sizeof(Poly), m_polyBufferRam.size()*sizeof(Poly), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
@@ -224,7 +240,7 @@ void CNew3D::RenderFrame(void)
 	glNormalPointer		(GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 	glTexCoordPointer	(2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
 	glColorPointer		(4, GL_UNSIGNED_BYTE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-	
+
 	m_r3dShader.SetShader(true);
 
 	for (int pri = 0; pri <= 3; pri++) {
