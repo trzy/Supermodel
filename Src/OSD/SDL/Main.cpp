@@ -899,6 +899,15 @@ void EndFrameVideo()
   SDL_GL_SwapBuffers();
 }
 
+static void SuperSleep(UINT32 time)
+{
+	UINT32 start = SDL_GetTicks();
+	UINT32 tics  = start;
+
+	while (start + time > tics) {
+		tics = SDL_GetTicks();
+	}
+}
 
 /******************************************************************************
  Main Program Loop
@@ -913,9 +922,7 @@ int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs
 {         
 #endif // SUPERMODEL_DEBUGGER
   unsigned  prevFPSTicks;
-  unsigned  startTicks;
 	unsigned  fpsFramesElapsed;
-	unsigned  framesElapsed;
 	bool      gameHasLightguns = false;
 	bool      quit = false;
 	bool      paused = false;
@@ -990,9 +997,7 @@ int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs
 
   // Emulate!
   fpsFramesElapsed = 0;
-  framesElapsed = 0;
   prevFPSTicks = SDL_GetTicks();
-  startTicks = prevFPSTicks;
   quit = false;
   paused = false;
   dumpTimings = false;
@@ -1005,6 +1010,8 @@ int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs
 #endif
   while (!quit)
   {
+	  auto startTime = SDL_GetTicks();
+
     // Render if paused, otherwise run a frame
     if (paused)
       Model3->RenderFrame();
@@ -1287,15 +1294,13 @@ int Supermodel(const char *zipFile, IEmulator *Model3, CInputs *Inputs, COutputs
     
     if (paused || g_Config.throttle)
     {
-      ++framesElapsed;
-      unsigned targetTicks = startTicks + (unsigned) ((float)framesElapsed * 1000.0f/60.0f);
-      if (currentTicks <= targetTicks)  // add a delay until we reach the next (target) frame time
-        SDL_Delay(targetTicks - currentTicks);
-      else                // begin a new frame
-      {
-        framesElapsed = 0;
-        startTicks = currentTicks;
-      }
+        UINT32 endTime		= SDL_GetTicks();
+        UINT32 diff			= endTime - startTime;
+        UINT32 frameTime	= (UINT32)(1000 / 60.f);		// 60 fps, we could roll with 57.5? that would be a jerk fest on 60hz screens though
+
+        if (diff < frameTime) {
+            SuperSleep(frameTime - diff);
+        }
     }
 
     if (dumpTimings && !paused)
