@@ -242,7 +242,7 @@ void CNew3D::RenderFrame(void)
 	glVertexPointer		(3, GL_FLOAT, sizeof(Vertex), 0);
 	glNormalPointer		(GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 	glTexCoordPointer	(2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
-	glColorPointer		(4, GL_UNSIGNED_BYTE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+	glColorPointer		(4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, color));
 
 	m_r3dShader.SetShader(true);
 
@@ -844,9 +844,9 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 
 	//multiply face attributes with vertex attributes if required
 	for (int i = 0; i < 4; i++) {
-		p.p1.color[i] = (UINT8)(p.p1.color[i] * r3dPoly.faceColour[i]);
-		p.p2.color[i] = (UINT8)(p.p2.color[i] * r3dPoly.faceColour[i]);
-		p.p3.color[i] = (UINT8)(p.p3.color[i] * r3dPoly.faceColour[i]);
+		p.p1.color[i] = p.p1.color[i] * r3dPoly.faceColour[i];
+		p.p2.color[i] = p.p2.color[i] * r3dPoly.faceColour[i];
+		p.p3.color[i] = p.p3.color[i] * r3dPoly.faceColour[i];
 	}
 	
 	polyArray.emplace_back(p);
@@ -866,9 +866,9 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 
 		//multiply face attributes with vertex attributes if required
 		for (int i = 0; i < 4; i++) {
-			p.p1.color[i] = (UINT8)(p.p1.color[i] * r3dPoly.faceColour[i]);
-			p.p2.color[i] = (UINT8)(p.p2.color[i] * r3dPoly.faceColour[i]);
-			p.p3.color[i] = (UINT8)(p.p3.color[i] * r3dPoly.faceColour[i]);
+			p.p1.color[i] = p.p1.color[i] * r3dPoly.faceColour[i];
+			p.p2.color[i] = p.p2.color[i] * r3dPoly.faceColour[i];
+			p.p3.color[i] = p.p3.color[i] * r3dPoly.faceColour[i];
 		}
 
 		polyArray.emplace_back(p);
@@ -1083,18 +1083,19 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
 			}
 
-			if (ph.FixedShading() && ph.LightEnabled()) {
-				UINT8 shade = (UINT8)((ix + 128) & 0xFF);
-				p.v[j].color[0] = shade;	// hardware doesn't really have per vertex colours, only per poly
+			if (ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading()) {		// fixed shading seems to be disabled if actual normals are set
+				float offset = !ph.LightEnabled() ? 1.f : 0.f;						// if lighting is disabled colour seems to be an offset 
+				float shade = (((ix + 128) & 0xFF) / 255.f) + offset;
+				p.v[j].color[0] = shade;											// hardware doesn't really have per vertex colours, only per poly
 				p.v[j].color[1] = shade;
 				p.v[j].color[2] = shade;
-				p.v[j].color[3] = 255;
+				p.v[j].color[3] = 1;
 			}
 			else {
-				p.v[j].color[0] = 255;
-				p.v[j].color[1] = 255;
-				p.v[j].color[2] = 255;
-				p.v[j].color[3] = 255;
+				p.v[j].color[0] = 1;
+				p.v[j].color[1] = 1;
+				p.v[j].color[2] = 1;
+				p.v[j].color[3] = 1;
 			}
 
 			float texU, texV = 0;

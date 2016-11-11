@@ -15,6 +15,7 @@ static const char *vertexShaderBasic =
 "varying float	fsSpecularTerm;\n"		// specular light term (additive)
 "varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
+"varying vec4   fsColor;\n"
 
 "void main(void)\n"
 "{\n"
@@ -23,7 +24,7 @@ static const char *vertexShaderBasic =
 	"float z		= length(fsViewVertex);\n"
 	"fsFogFactor	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);\n"
 
-	"gl_FrontColor	= gl_Color;\n"
+	"fsColor    	= gl_Color;\n"
 	"gl_TexCoord[0]	= gl_MultiTexCoord0;\n"
 	"gl_Position	= gl_ModelViewProjectionMatrix * gl_Vertex;\n"
 "}\n";
@@ -51,6 +52,7 @@ static const char *fragmentShaderBasic =
 "varying float	fsSpecularTerm;\n"		// specular light term (additive)
 "varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
+"varying vec4   fsColor;\n"
 
 "void main()\n"
 "{\n"
@@ -82,7 +84,7 @@ static const char *fragmentShaderBasic =
     "}\n"
   "}\n"
 
-  "colData = gl_Color;\n"
+  "colData = fsColor;\n"
 
   "finalData = tex1Data * colData;\n"
   "if (finalData.a < (1.0/16.0)) {\n"      // basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
@@ -120,17 +122,18 @@ static const char *fragmentShaderBasic =
       "lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
     "}\n"
 
-   
     "finalData.rgb *= lightIntensity;\n"
 
     "if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
 
-      "vec3 v = normalize(-fsViewVertex);\n"
-      "vec3 h = normalize(sunVector + v);\n"   // halfway vector
+	  "float nDotL = max(dot(fsViewNormal,sunVector),0.0);\n"
 
-      "float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
+      "finalData.rgb += vec3(specularCoefficient * pow(nDotL,shininess));\n"
 
-      "finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
+	  //"vec3 v = normalize(-fsViewVertex);\n"
+	  //"vec3 h = normalize(sunVector + v);\n"   // halfway vector
+	  //"float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
+	  //"finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
     "}\n"
   "}\n"
 
