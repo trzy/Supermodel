@@ -320,6 +320,7 @@ static inline UINT32 AddColorOffset(UINT8 r, UINT8 g, UINT8 b, UINT8 a, UINT32 o
 	 * value might have to be multiplied by 2. That is assumed here. In either 
 	 * case, the signed addition should be saturated.
 	 */
+
 	ib = (INT32) (INT8)((offsetReg>>16)&0xFF);
 	ig = (INT32) (INT8)((offsetReg>>8)&0xFF);
 	ir = (INT32) (INT8)((offsetReg>>0)&0xFF);
@@ -356,11 +357,11 @@ void CTileGen::WritePalette(unsigned color, UINT32 data)
     	r = g = b = 0;
 	else
     {
-    	b = (data>>7)&0xF8;
-        g = (data>>2)&0xF8;
-        r = (data<<3)&0xF8;
+		b = (((data >> 10) & 0x1F) * 255) / 31;
+		g = (((data >> 5) & 0x1F) * 255) / 31;
+		r = ((data & 0x1F) * 255) / 31;
 	}
-	
+
 	pal[0][color] = AddColorOffset(r, g, b, a, regs[0x40/4]);	// A/A'
 	pal[1][color] = AddColorOffset(r, g, b, a, regs[0x44/4]);	// B/B'
 }
