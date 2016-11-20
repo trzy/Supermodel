@@ -232,8 +232,12 @@ void CReal3D::BeginFrame(void)
   // If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
   if (g_Config.gpuMultiThreaded)
   {
-    for (vector<QueuedUploadTextures>::iterator it = queuedUploadTexturesRO.begin(), end = queuedUploadTexturesRO.end(); it != end; it++)
-      Render3D->UploadTextures(it->x, it->y, it->width, it->height);
+	for (const auto &it : queuedUploadTexturesRO) {
+      Render3D->UploadTextures(it.x, it.y, it.width, it.height);
+	}
+
+	// done syncing data
+	queuedUploadTexturesRO.clear();
   }
 
   Render3D->BeginFrame();
