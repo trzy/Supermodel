@@ -78,6 +78,12 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 
 void CNew3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned height)
 {
+	if (x >= 1024) {
+		if (y >= 512 && y < 1024 || y >= 1536 && y < 2048) {
+			return;
+		}
+	}
+
 	m_texSheet.Invalidate(x, y, width, height);
 }
 
