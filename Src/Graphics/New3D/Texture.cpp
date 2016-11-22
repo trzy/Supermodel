@@ -334,4 +334,19 @@ bool Texture::Compare(int x, int y, int width, int height, int format)
 	return false;
 }
 
+bool Texture::CheckMapPos(int ax1, int ax2, int ay1, int ay2)
+{
+	int bx1 = m_x;
+	int bx2 = m_x + m_width;
+	int by1 = m_y;
+	int by2 = m_y + m_height;
+
+	if (ax1<bx2 && ax2>bx1 &&
+		ay1<by2 && ay2>by1) {
+		return true;			// rectangles overlap
+	}
+
+	return false;
+}
+
 } // New3D

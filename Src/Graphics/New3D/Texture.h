@@ -20,6 +20,7 @@ public:
 	void	GetDetails		(int& x, int&y, int& width, int& height, int& format);
 	void	SetWrapMode		(bool mirrorU, bool mirrorV);
 	bool	Compare			(int x, int y, int width, int height, int format);
+	bool	CheckMapPos		(int ax1, int ax2, int ay1, int ay2);				//check to see if textures overlap
 
 	static void GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
 

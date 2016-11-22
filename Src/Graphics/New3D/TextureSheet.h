@@ -23,6 +23,7 @@ public:
 private:
 
 	int ToIndex(int x, int y);
+	void CropTile(int oldX, int oldY, int &newX, int &newY, int &newWidth, int &newHeight);
 
 	std::unordered_multimap<int, std::shared_ptr<Texture>> m_texMap[12];
 

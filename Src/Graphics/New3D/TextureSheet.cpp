@@ -75,30 +75,85 @@ void TextureSheet::Release()
 
 void TextureSheet::Invalidate(int x, int y, int width, int height)
 {
-	//==========
+	//============
+	int newX;
+	int newY;
+	int newWidth;
+	int newHeight;
 	int count;
 	int sWidth;		// sample width
 	int sHeight;	// sample height
-	//==========
+	//============
 
-	// since the smallest sized texture is 32x32 pixels?
-	// we can invalidate 32x32 tiles over the width/height of the area
+	if (width <= 512) {
+		newX = (x + width) - 512;
+		newWidth = 512;
+	}
+	else {
+		newX = x;
+		newWidth = width;
+	}
+	
+	if (height <= 512) {
+		newY = (y + height) - 512;
+		newHeight = 512;
+	}
+	else {
+		newY = y;
+		newHeight = height;
+	}
 
-	sWidth	= width / 32;
-	sHeight	= height / 32;
+	CropTile(x, y, newX, newY, newWidth, newHeight);
+
+	sWidth	= newWidth / 32;
+	sHeight = newHeight / 32;
 	count	= sWidth * sHeight;
 
 	for (int i = 0; i < count; i++) {
 
-		int index = ToIndex(x + ((i%sWidth) * 32), y + ((i / sWidth) * 32));
+		int posX	= newX + ((i%sWidth) * 32);
+		int posY	= newY + ((i / sWidth) * 32);
+		int index	= ToIndex(posX, posY);
 
-		for (int j = 0; j<12; j++) {
-
-			if (m_texMap[j].count(index) > 0) {
-
+		if (posX >= x && posY >= y) {				// invalidate this area of memory
+			for (int j = 0; j < 12; j++) {
 				m_texMap[j].erase(index);
 			}
 		}
+		else {										// check for overlapping data tiles and invalidate as necessary
+
+			for (int j = 0; j < 12; j++) {
+
+				auto range = m_texMap[j].equal_range(index);
+
+				for (auto it = range.first; it != range.second; ++it) {
+
+					if (it->second->CheckMapPos(x, x + width, y, y + height)) {
+						m_texMap[j].erase(index);
+						break;
+					}
+
+				}
+			}
+		}
+	}
+}
+
+void TextureSheet::CropTile(int oldX, int oldY, int &newX, int &newY, int &newWidth, int &newHeight)
+{
+	if (newX < 0) {
+		newWidth += newX;
+		newX = 0;
+	}
+
+	if (newY < 0) {
+		newHeight += newY;
+		newY = 0;
+	}
+
+	if (oldY >= 1024 && newY < 1024) {		// gone into next memory page, limitation of our flat model
+		newHeight -= 1024 - newY;
+		newY = 1024;
 	}
 }
 
