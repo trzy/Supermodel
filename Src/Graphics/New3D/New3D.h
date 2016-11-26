@@ -220,18 +220,18 @@ private:
 	R3DShader m_r3dShader;
 	R3DScrollFog m_r3dScrollFog;
 
-	Plane m_planes[5];
+	Plane m_planes[6];
 
 	struct BBox
 	{
 		V4::Vec4 points[8];
 	};
 
-	void CalcFrustumPlanes	(Plane p[5], const float* vpNode);
+	void CalcFrustumPlanes	(Plane p[6], const float* matrix);
 	void CalcBox			(float distance, BBox& box);
 	void TransformBox		(const float *m, BBox& box);
 	void MultVec			(const float matrix[16], const float in[4], float out[4]);
-	Clip ClipBox			(BBox& box, Plane planes[5]);
+	Clip ClipBox			(BBox& box, Plane planes[6]);
 };
 
 } // New3D

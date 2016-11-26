@@ -713,7 +713,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		}
 
 		// calculate frustum planes
-		CalcFrustumPlanes(m_planes, (float *)&vpnode[12]);
+		CalcFrustumPlanes(m_planes, vp->projectionMatrix);
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
 		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
@@ -1252,37 +1252,49 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
-void CNew3D::CalcFrustumPlanes(Plane p[6], const float* vpNodeData)
+void CNew3D::CalcFrustumPlanes(Plane p[6], const float* matrix)
 {
 	// Left Plane
-	p[0].a = vpNodeData[1];
-	p[0].b = 0;
-	p[0].c = -vpNodeData[0];
-	p[0].d = 0;
+	p[0].a = matrix[3] + matrix[0];
+	p[0].b = matrix[7] + matrix[4];
+	p[0].c = matrix[11] + matrix[8];
+	p[0].d = matrix[15] + matrix[12];
+	p[0].Normalise();
 
 	// Right Plane
-	p[1].a = vpNodeData[5];
-	p[1].b = 0;
-	p[1].c = -vpNodeData[4];
-	p[1].d = 0;
+	p[1].a = matrix[3] - matrix[0];
+	p[1].b = matrix[7] - matrix[4];
+	p[1].c = matrix[11] - matrix[8];
+	p[1].d = matrix[15] - matrix[12];
+	p[1].Normalise();
 
 	// Bottom Plane
-	p[2].a = 0;
-	p[2].b = -vpNodeData[7];
-	p[2].c = -vpNodeData[6];
-	p[2].d = 0;
+	p[2].a = matrix[3] + matrix[1];
+	p[2].b = matrix[7] + matrix[5];
+	p[2].c = matrix[11] + matrix[9];
+	p[2].d = matrix[15] + matrix[13];
+	p[2].Normalise();
 
 	// Top Plane
-	p[3].a = 0;
-	p[3].b = -vpNodeData[3];
-	p[3].c = -vpNodeData[2];
-	p[3].d = 0;
+	p[3].a = matrix[3] - matrix[1];
+	p[3].b = matrix[7] - matrix[5];
+	p[3].c = matrix[11] - matrix[9];
+	p[3].d = matrix[15] - matrix[13];
+	p[3].Normalise();
 
 	// Near Plane
-	p[4].a = 0;
-	p[4].b = 0;
-	p[4].c = -1;
-	p[4].d = 0;
+	p[4].a = matrix[3] + matrix[2];
+	p[4].b = matrix[7] + matrix[6];
+	p[4].c = matrix[11] + matrix[10];
+	p[4].d = matrix[15] + matrix[14];
+	p[4].Normalise();
+
+	// Far Plane
+	p[5].a = matrix[3] - matrix[2];
+	p[5].b = matrix[7] - matrix[6];
+	p[5].c = matrix[11] - matrix[10];
+	p[5].d = matrix[15] - matrix[14];
+	p[5].Normalise();
 }
 
 void CNew3D::CalcBox(float distance, BBox& box)
@@ -1358,7 +1370,7 @@ void CNew3D::TransformBox(const float *m, BBox& box)
 	}
 }
 
-Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
+Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 {
 	int count = 0;
 
@@ -1366,13 +1378,13 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
 
 		int temp = 0;
 
-		for (int j = 0; j < 5; j++) {
+		for (int j = 0; j < 6; j++) {
 			if (planes[j].DistanceToPoint(box.points[i]) >= 0) {
 				temp++;
 			}
 		}
 
-		if (temp == 5) count++;		// point is inside all 6 frustum planes
+		if (temp == 6) count++;		// point is inside all 6 frustum planes
 	}
 
 	if (count == 8)	return Clip::INSIDE;
@@ -1381,7 +1393,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
 	//if we got here all points are outside of the view frustum
 	//check for all points being side same of any plane, means box outside of view
 
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 6; i++) {
 
 		int temp = 0;
 
