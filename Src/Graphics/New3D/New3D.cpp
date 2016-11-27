@@ -432,12 +432,21 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
-		float distance = R3DFloat::GetFloat16(node[9 - m_offset] & 0xFFFF);
+		//================
+		UINT16	hDistance;
+		float	fDistance;
+		//================
 
-		CalcBox(distance, bbox);
-		TransformBox(m_modelMat, bbox);
+		hDistance = node[9 - m_offset] & 0xFFFF;
+		fDistance = R3DFloat::GetFloat16(node[9 - m_offset] & 0xFFFF);
 
-		m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
+		if (hDistance != R3DFloat::Pro16BitMax) {
+
+			CalcBox(fDistance, bbox);
+			TransformBox(m_modelMat, bbox);
+
+			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
+		}
 	}
 
 	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE) {
