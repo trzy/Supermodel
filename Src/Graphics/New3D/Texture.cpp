@@ -99,10 +99,10 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 		{
 			for (xi = x; xi < (x + width); xi++)
 			{
-				scratch[i++] = (GLubyte)(((src[yi * 2048 + xi] >> 10) & 0x1F) * 255.f / 0x1F);	// R
-				scratch[i++] = (GLubyte)(((src[yi * 2048 + xi] >> 5) & 0x1F) * 255.f / 0x1F);	// G
-				scratch[i++] = (GLubyte)(((src[yi * 2048 + xi] >> 0) & 0x1F) * 255.f / 0x1F);	// B
-				scratch[i++] = ((src[yi * 2048 + xi] & 0x8000) ? 0 : 255);						// T
+				scratch[i++] = ((src[yi * 2048 + xi] >> 10) & 0x1F) * 255 / 0x1F;	// R
+				scratch[i++] = ((src[yi * 2048 + xi] >> 5 ) & 0x1F) * 255 / 0x1F;	// G
+				scratch[i++] = ((src[yi * 2048 + xi] >> 0 ) & 0x1F) * 255 / 0x1F;	// B
+				scratch[i++] = ((src[yi * 2048 + xi] & 0x8000) ? 0 : 255);			// T
 			}
 		}
 		break;

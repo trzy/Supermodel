@@ -438,7 +438,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		//================
 
 		hDistance = node[9 - m_offset] & 0xFFFF;
-		fDistance = R3DFloat::GetFloat16(node[9 - m_offset] & 0xFFFF);
+		fDistance = R3DFloat::GetFloat16(hDistance);
 
 		if (hDistance != R3DFloat::Pro16BitMax) {
 
