@@ -381,11 +381,6 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
   }
 }
 
-static inline void ClearLayer(uint32_t *pixels)
-{
-  memset(pixels, 0, 496*384*sizeof(uint32_t));
-}
-
 template <int bits, bool alphaTest>
 static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, const uint32_t *regs, const uint32_t *palette)
 {
@@ -515,27 +510,22 @@ std::pair<bool, bool> CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *
 ******************************************************************************/
 
 // Draws a surface to the screen (0 is top and 1 is bottom)
-void CRender2D::DisplaySurface(int surface, GLfloat z)
+void CRender2D::DisplaySurface(int surface)
 { 
   // Draw the surface
-  float width = m_npot ? 1.0f : (496.0f / 512.0f);
-  float height = m_npot ? 1.0f : (384.0f / 512.0f);
   glActiveTexture(GL_TEXTURE0); // texture unit 0
   glBindTexture(GL_TEXTURE_2D, m_texID[surface]);
   glBegin(GL_QUADS);
-  glTexCoord2f(0.0f, 0.0f);     glVertex3f(0.0f, 0.0f, z);
-  glTexCoord2f(width, 0.0f);    glVertex3f(1.0f, 0.0f, z);
-  glTexCoord2f(width, height);  glVertex3f(1.0f, 1.0f, z);
-  glTexCoord2f(0.0f, height);   glVertex3f(0.0f, 1.0f, z);
+  glTexCoord2f(0.0f, 0.0f);  glVertex2f(0.0f, 0.0f);
+  glTexCoord2f(1.0f, 0.0f);  glVertex2f(1.0f, 0.0f);
+  glTexCoord2f(1.0f, 1.0f);  glVertex2f(1.0f, 1.0f);
+  glTexCoord2f(0.0f, 1.0f);  glVertex2f(0.0f, 1.0f);
   glEnd();
 }
 
 // Set up viewport and OpenGL state for 2D rendering (sets up blending function but disables blending)
 void CRender2D::Setup2D(bool isBottom, bool clearAll)
 {
-  // Enable texture mapping and blending
-  glEnable(GL_TEXTURE_2D);
-  glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // alpha of 1.0 is opaque, 0 is transparent
   glDisable(GL_BLEND);
 
@@ -566,7 +556,7 @@ void CRender2D::Setup2D(bool isBottom, bool clearAll)
   glViewport(m_xOffset, m_yOffset, m_xPixels, m_yPixels);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(0.0, 1.0, 1.0, 0.0);
+  glOrtho(0.0, 1.0, 1.0, 0.0, 1.0, -1.0);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 }
@@ -597,7 +587,7 @@ void CRender2D::RenderFrameBottom(void)
   // Display bottom surface if anything was drawn there, else clear everything
   Setup2D(true, m_surfaces_present.second == false);
   if (m_surfaces_present.second)
-    DisplaySurface(1, 0.0);
+    DisplaySurface(1);
 }
 
 void CRender2D::RenderFrameTop(void)
@@ -607,7 +597,7 @@ void CRender2D::RenderFrameTop(void)
   {
     Setup2D(false, false);
     glEnable(GL_BLEND);
-    DisplaySurface(0, -0.5);
+    DisplaySurface(0);
   }
 }
 
@@ -684,22 +674,17 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   m_totalYPixels = totalYRes;
 
   // Create textures
-  m_npot = glewIsSupported("GL_ARB_texture_non_power_of_two") != 0;
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glActiveTexture(GL_TEXTURE0); // texture unit 0
   glGenTextures(2, m_texID);
+
   for (int i = 0; i < 2; i++)
   {
-    glActiveTexture(GL_TEXTURE0); // texture unit 0
     glBindTexture(GL_TEXTURE_2D, m_texID[i]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    int width = m_npot ? 496 : 512;
-    int height = m_npot ? 384 : 512;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_topSurface);
-    if (glGetError() != GL_NO_ERROR)
-      return ErrorLog("OpenGL was unable to provide %dx%d-texel texture maps for tilemap layers.", width, height);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 496, 384, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   }
 
   DebugLog("Render2D initialized (allocated %1.1f MB)\n", float(MEMORY_POOL_SIZE) / 0x100000);

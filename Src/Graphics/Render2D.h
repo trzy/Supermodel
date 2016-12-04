@@ -170,7 +170,7 @@ public:
 private:
   // Private member functions
   std::pair<bool, bool> DrawTilemaps(uint32_t *destBottom, uint32_t *destTop);
-  void DisplaySurface(int surface, GLfloat z);
+  void DisplaySurface(int surface);
   void Setup2D(bool isBottom, bool clearAll);
       
   // Data received from tile generator device object
@@ -179,7 +179,6 @@ private:
   const uint32_t *m_regs;
   
   // OpenGL data
-  bool      m_npot = false;   // NPOT texture support
   GLuint    m_texID[2];       // IDs for the 2 layer textures (top and bottom)
   unsigned  m_xPixels = 496;  // display surface resolution
   unsigned  m_yPixels = 384;  // ...
