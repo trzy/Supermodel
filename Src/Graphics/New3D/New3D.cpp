@@ -93,12 +93,15 @@ void CNew3D::DrawScrollFog()
 
 		for (auto &n : m_nodes) {
 
-			if (n.viewport.scrollFog > 0 && n.viewport.priority==i) {
+			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
 
-				float *rgb = n.viewport.fogParams;
-				m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+				if (n.viewport.fogParams[3] || n.viewport.fogParams[4]) {	// check we some fog values set density or start
 
-				return;	// only allowed once per frame?
+					float *rgb = n.viewport.fogParams;
+					m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+
+					return;	// only allowed once per frame?
+				}
 			}
 		}
 	}
