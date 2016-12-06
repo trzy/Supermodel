@@ -170,6 +170,7 @@ private:
 	void RenderViewport(UINT32 addr);
 
 	// building the scene
+	void SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph);
 	void CacheModel(Model *m, const UINT32 *data);
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
 	void OffsetTexCoords(R3DPoly& r3dPoly, float offset[2]);

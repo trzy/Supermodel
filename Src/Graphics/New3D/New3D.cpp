@@ -940,6 +940,48 @@ void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
 	}
 }
 
+void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
+{
+	//copy attributes
+	currentMesh->doubleSided	= false;			// we will double up polys
+	currentMesh->textured		= ph.TexEnabled();
+	currentMesh->alphaTest		= ph.AlphaTest();
+	currentMesh->textureAlpha	= ph.TextureAlpha();
+	currentMesh->polyAlpha		= ph.PolyAlpha();
+	currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+
+	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
+		currentMesh->layered = true;
+	}
+
+	if (currentMesh->lighting) {
+		if (ph.SpecularEnabled()) {
+			currentMesh->specular = true;
+			currentMesh->shininess = 0;// ph.Shininess();
+			currentMesh->specularCoefficient = 0; // ph.SpecularValue();
+		}
+	}
+
+	currentMesh->fogIntensity = ph.LightModifier();
+
+	if (ph.TexEnabled()) {
+		currentMesh->format = m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
+
+		if (currentMesh->format == 7) {
+			currentMesh->alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
+		}
+
+		currentMesh->x				= ph.X();
+		currentMesh->y				= ph.Y();
+		currentMesh->width			= ph.TexWidth();
+		currentMesh->height			= ph.TexHeight();
+		currentMesh->mirrorU		= ph.TexUMirror();
+		currentMesh->mirrorV		= ph.TexVMirror();
+		currentMesh->microTexture	= ph.MicroTexture();
+		currentMesh->microTextureID	= ph.MicroTextureID();
+	}
+}
+
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
 	Vertex			prev[4];
@@ -985,44 +1027,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				//make space for our vertices
 				currentMesh->polys.reserve(numTriangles);
 
-				//copy attributes
-				currentMesh->doubleSided	= false;			// we will double up polys
-				currentMesh->textured		= ph.TexEnabled();
-				currentMesh->alphaTest		= ph.AlphaTest();
-				currentMesh->textureAlpha	= ph.TextureAlpha();
-				currentMesh->polyAlpha		= ph.PolyAlpha();
-				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
-
-				if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
-					currentMesh->layered = true;
-				}
-				
-				if (currentMesh->lighting) {
-					if (ph.SpecularEnabled()) {
-						currentMesh->specular = true;
-						currentMesh->shininess = 0;// ph.Shininess();
-						currentMesh->specularCoefficient = 0; // ph.SpecularValue();
-					}
-				}
-	
-				currentMesh->fogIntensity = ph.LightModifier();
-
-				if (ph.TexEnabled()) {
-					currentMesh->format			= m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
-
-					if (currentMesh->format == 7) {
-						currentMesh-> alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
-					}
-
-					currentMesh->x				= ph.X();
-					currentMesh->y				= ph.Y();
-					currentMesh->width			= ph.TexWidth();
-					currentMesh->height			= ph.TexHeight();
-					currentMesh->mirrorU		= ph.TexUMirror();
-					currentMesh->mirrorV		= ph.TexVMirror();
-					currentMesh->microTexture	= ph.MicroTexture();
-					currentMesh->microTextureID = ph.MicroTextureID();
-				}
+				//set mesh values
+				SetMeshValues(currentMesh, ph);
 			}
 
 			currentMesh = &sMap[hash];
