@@ -1,5 +1,4 @@
 ﻿#include "New3D.h"
-#include "PolyHeader.h"
 #include "Texture.h"
 #include "Vec.h"
 #include <cmath>
@@ -985,6 +984,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
 	Vertex			prev[4];
+	UINT16			prevTexCoords[4][2];
 	PolyHeader		ph;
 	int				numPolys	= 0;
 	UINT64			lastHash	= -1;
@@ -1002,7 +1002,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	do {
 
 		R3DPoly		p;					// current polygon
-		GLfloat		uvScale;
+		float		uvScale;
 		int			i, j;
 
 		if (ph.header[6] == 0) {
@@ -1034,8 +1034,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			currentMesh = &sMap[hash];
 		}
 
-		lastHash = hash;		
-
 		// Obtain basic polygon parameters
 		p.number	= ph.NumVerts();
 		uvScale		= ph.UVScale();
@@ -1050,9 +1048,19 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			if (ph.SharedVertex(i))
 			{
 				p.v[j] = prev[i];
-				++j;
+
+				//check if we need to recalc tex coords - will only happen if tex tiles are different + sharing vertices
+				if (hash != lastHash) {
+					if (currentMesh->textured) {
+						Texture::GetCoordinates(currentMesh->width, currentMesh->height, prevTexCoords[i][0], prevTexCoords[i][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
+					}
+				}
+
+				j++;
 			}
 		}
+
+		lastHash = hash;
 
 		// copy face attributes
 
@@ -1131,6 +1139,10 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 			p.v[j].texcoords[0] = texU;
 			p.v[j].texcoords[1] = texV;
+
+			//cache un-normalised tex coordinates
+			prevTexCoords[j][0] = (UINT16)(it >> 16);
+			prevTexCoords[j][1] = (UINT16)(it & 0xFFFF);
 
 			vData += 4;
 		}

@@ -40,6 +40,7 @@
 #include "Plane.h"
 #include "Vec.h"
 #include "R3DScrollFog.h"
+#include "PolyHeader.h"
 
 namespace New3D {
 
