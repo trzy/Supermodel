@@ -1,4 +1,5 @@
 ﻿#include "New3D.h"
+#include "PolyHeader.h"
 #include "Texture.h"
 #include "Vec.h"
 #include <cmath>
@@ -77,33 +78,7 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 
 void CNew3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned height)
 {
-	if (x >= 1024) {
-		if (y >= 512 && y < 1024 || y >= 1536 && y < 2048) {
-			return;
-		}
-	}
-
 	m_texSheet.Invalidate(x, y, width, height);
-}
-
-void CNew3D::DrawScrollFog()
-{
-	for (int i = 0; i < 4; i++) {
-
-		for (auto &n : m_nodes) {
-
-			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
-
-				if (n.viewport.fogParams[3] || n.viewport.fogParams[4]) {	// check we some fog values set density or start
-
-					float *rgb = n.viewport.fogParams;
-					m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
-
-					return;	// only allowed once per frame?
-				}
-			}
-		}
-	}
 }
 
 void CNew3D::RenderScene(int priority, bool alpha)
@@ -203,9 +178,7 @@ void CNew3D::RenderFrame(void)
 	m_modelMat.Release();	// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
 
-	RenderViewport(0x800000);					// build model structure
-
-	DrawScrollFog();							// fog layer if applicable must be drawn here
+	memset(layerMax, 0, sizeof(UINT32) * 4);
 
 	glDepthFunc		(GL_LEQUAL);
 	glEnable		(GL_DEPTH_TEST);
@@ -214,8 +187,10 @@ void CNew3D::RenderFrame(void)
 	glFrontFace		(GL_CW);
 
 	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
-	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);		// if the stencil test passes, we incriment the value
+	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
 	glStencilMask	(0xFF);
+
+	RenderViewport(0x800000);		// build model structure
 	
 	m_vbo.Bind(true);
 	m_vbo.BufferSubData(MAX_ROM_POLYS*sizeof(Poly), m_polyBufferRam.size()*sizeof(Poly), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
@@ -250,8 +225,8 @@ void CNew3D::RenderFrame(void)
 	glVertexPointer		(3, GL_FLOAT, sizeof(Vertex), 0);
 	glNormalPointer		(GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 	glTexCoordPointer	(2, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
-	glColorPointer		(4, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, color));
-
+	glColorPointer		(4, GL_UNSIGNED_BYTE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+	
 	m_r3dShader.SetShader(true);
 
 	for (int pri = 0; pri <= 3; pri++) {
@@ -268,6 +243,8 @@ void CNew3D::RenderFrame(void)
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
+
+	printf("layer max %f %f %f %f\n", layerMax[0], layerMax[1], layerMax[2], layerMax[3]);
 }
 
 void CNew3D::BeginFrame(void)
@@ -434,20 +411,21 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
-		//================
-		UINT16	hDistance;
-		float	fDistance;
-		//================
+		float distance = R3DFloat::GetFloat16(node[9 - m_offset] & 0xFFFF);
 
-		hDistance = node[9 - m_offset] & 0xFFFF;
-		fDistance = R3DFloat::GetFloat16(hDistance);
+		auto test = node[9 - m_offset] & 0xFFFF;
 
-		if (hDistance != R3DFloat::Pro16BitMax) {
+		CalcBox(distance, bbox);
+		TransformBox(m_modelMat, bbox);
 
-			CalcBox(fDistance, bbox);
-			TransformBox(m_modelMat, bbox);
+		m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
 
-			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
+		if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && test != 0x7fff) {
+
+			for (int i = 0; i < 8; i++) {
+				layerMax[cLayer] = std::max(layerMax[cLayer], std::abs(bbox.points[i][2]));
+			}
+
 		}
 	}
 
@@ -664,6 +642,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		vp->priority = curPri;
 
+		cLayer = curPri;
+
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
 		int vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
 		int vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
@@ -686,12 +666,16 @@ void CNew3D::RenderViewport(UINT32 addr)
 		float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
 		float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
 
-		float near = 0.25f;
-		float far = 2e6;
+		float near = 10.5f;
+		float far = 1e6;
+		//float far = 13696.f;
 
 		if (m_step == 0x10) {
 			near = 8;
 		}
+
+		//near = 5.02f;
+		//far = 20000;
 
 		float l = near * tanf(angle_left);
 		float r = near * tanf(angle_right);
@@ -768,10 +752,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog color R
 		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (1.0f / 255.0f);	// fog color G
 		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (1.0f / 255.0f);	// fog color B
-		vp->fogParams[3] = std::abs(*(float *)&vpnode[0x23]);						// fog density	- ocean hunter uses negative values, but looks the same
+		vp->fogParams[3] = *(float *)&vpnode[0x23];									// fog density
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
-
-		vp->scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);				// scroll fog
 
 		{
 			//test fog paramaters
@@ -794,6 +776,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		}
 
 		// Unknown light/fog parameters
+		float scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);	// scroll fog
 		float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
 
 		// Clear texture offsets before proceeding
@@ -861,9 +844,9 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 
 	//multiply face attributes with vertex attributes if required
 	for (int i = 0; i < 4; i++) {
-		p.p1.color[i] = p.p1.color[i] * r3dPoly.faceColour[i];
-		p.p2.color[i] = p.p2.color[i] * r3dPoly.faceColour[i];
-		p.p3.color[i] = p.p3.color[i] * r3dPoly.faceColour[i];
+		p.p1.color[i] = (UINT8)(p.p1.color[i] * r3dPoly.faceColour[i]);
+		p.p2.color[i] = (UINT8)(p.p2.color[i] * r3dPoly.faceColour[i]);
+		p.p3.color[i] = (UINT8)(p.p3.color[i] * r3dPoly.faceColour[i]);
 	}
 	
 	polyArray.emplace_back(p);
@@ -883,9 +866,9 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 
 		//multiply face attributes with vertex attributes if required
 		for (int i = 0; i < 4; i++) {
-			p.p1.color[i] = p.p1.color[i] * r3dPoly.faceColour[i];
-			p.p2.color[i] = p.p2.color[i] * r3dPoly.faceColour[i];
-			p.p3.color[i] = p.p3.color[i] * r3dPoly.faceColour[i];
+			p.p1.color[i] = (UINT8)(p.p1.color[i] * r3dPoly.faceColour[i]);
+			p.p2.color[i] = (UINT8)(p.p2.color[i] * r3dPoly.faceColour[i]);
+			p.p3.color[i] = (UINT8)(p.p3.color[i] * r3dPoly.faceColour[i]);
 		}
 
 		polyArray.emplace_back(p);
@@ -939,60 +922,9 @@ void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
 	}
 }
 
-void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
-{
-	//copy attributes
-	currentMesh->doubleSided	= false;			// we will double up polys
-	currentMesh->textured		= ph.TexEnabled();
-	currentMesh->alphaTest		= ph.AlphaTest();
-	currentMesh->textureAlpha	= ph.TextureAlpha();
-	currentMesh->polyAlpha		= ph.PolyAlpha();
-	currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
-
-	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
-		currentMesh->layered = true;
-	}
-
-	if (currentMesh->lighting) {
-		if (ph.SpecularEnabled()) {
-			currentMesh->specular = true;
-			currentMesh->shininess = 0;// ph.Shininess();
-			currentMesh->specularCoefficient = 0; // ph.SpecularValue();
-		}
-	}
-
-	currentMesh->fogIntensity = ph.LightModifier();
-
-	if (currentMesh->textured) {
-
-		currentMesh->format = m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
-
-		if (currentMesh->format == 7) {
-			currentMesh->alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
-		}
-
-		currentMesh->x				= ph.X();
-		currentMesh->y				= ph.Y();
-		currentMesh->width			= ph.TexWidth();
-		currentMesh->height			= ph.TexHeight();
-		currentMesh->mirrorU		= ph.TexUMirror();
-		currentMesh->mirrorV		= ph.TexVMirror();
-		currentMesh->microTexture	= ph.MicroTexture();
-
-		if (currentMesh->microTexture) {
-
-			float microTexScale[] = { 4, 2, 1, 0.5f };
-
-			currentMesh->microTextureID = ph.MicroTextureID();
-			currentMesh->microTextureScale = microTexScale[ph.MicroTextureMinLOD()];
-		}
-	}
-}
-
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
 	Vertex			prev[4];
-	UINT16			prevTexCoords[4][2];
 	PolyHeader		ph;
 	int				numPolys	= 0;
 	UINT64			lastHash	= -1;
@@ -1010,7 +942,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	do {
 
 		R3DPoly		p;					// current polygon
-		float		uvScale;
+		GLfloat		uvScale;
 		int			i, j;
 
 		if (ph.header[6] == 0) {
@@ -1035,12 +967,50 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				//make space for our vertices
 				currentMesh->polys.reserve(numTriangles);
 
-				//set mesh values
-				SetMeshValues(currentMesh, ph);
+				//copy attributes
+				currentMesh->doubleSided	= false;			// we will double up polys
+				currentMesh->textured		= ph.TexEnabled();
+				currentMesh->alphaTest		= ph.AlphaTest();
+				currentMesh->textureAlpha	= ph.TextureAlpha();
+				currentMesh->polyAlpha		= ph.PolyAlpha();
+				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+
+				if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
+					currentMesh->layered = true;
+				}
+				
+				if (currentMesh->lighting) {
+					if (ph.SpecularEnabled()) {
+						currentMesh->specular = true;
+						currentMesh->shininess = 0;// ph.Shininess();
+						currentMesh->specularCoefficient = 0; // ph.SpecularValue();
+					}
+				}
+	
+				currentMesh->fogIntensity = ph.LightModifier();
+
+				if (ph.TexEnabled()) {
+					currentMesh->format			= m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
+
+					if (currentMesh->format == 7) {
+						currentMesh-> alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
+					}
+
+					currentMesh->x				= ph.X();
+					currentMesh->y				= ph.Y();
+					currentMesh->width			= ph.TexWidth();
+					currentMesh->height			= ph.TexHeight();
+					currentMesh->mirrorU		= ph.TexUMirror();
+					currentMesh->mirrorV		= ph.TexVMirror();
+					currentMesh->microTexture	= ph.MicroTexture();
+					currentMesh->microTextureID = ph.MicroTextureID();
+				}
 			}
 
 			currentMesh = &sMap[hash];
 		}
+
+		lastHash = hash;		
 
 		// Obtain basic polygon parameters
 		p.number	= ph.NumVerts();
@@ -1056,19 +1026,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			if (ph.SharedVertex(i))
 			{
 				p.v[j] = prev[i];
-
-				//check if we need to recalc tex coords - will only happen if tex tiles are different + sharing vertices
-				if (hash != lastHash) {
-					if (currentMesh->textured) {
-						Texture::GetCoordinates(currentMesh->width, currentMesh->height, prevTexCoords[i][0], prevTexCoords[i][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
-					}
-				}
-
-				j++;
+				++j;
 			}
 		}
-
-		lastHash = hash;
 
 		// copy face attributes
 
@@ -1091,13 +1051,13 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 		}
 
-		p.faceColour[3] = ph.Transparency() / 255.f;
-
-		if (ph.MicroTexture()) {
-			p.faceColour[0] = 1.0f;
-			p.faceColour[1] = 1.0f;
-			p.faceColour[2] = 1.0f;
+		if (cLayer == 3) {
+			p.faceColour[0] = 1;
+			p.faceColour[1] = 0;
+			p.faceColour[2] = 0;
 		}
+
+		p.faceColour[3] = ph.Transparency() / 255.f;
 				
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
@@ -1129,19 +1089,18 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
 			}
 
-			if (ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading()) {		// fixed shading seems to be disabled if actual normals are set
-				float offset = !ph.LightEnabled() ? 1.f : 0.f;						// if lighting is disabled colour seems to be an offset 
-				float shade = (((ix + 128) & 0xFF) / 255.f) + offset;
-				p.v[j].color[0] = shade;											// hardware doesn't really have per vertex colours, only per poly
+			if (ph.FixedShading() && ph.LightEnabled()) {
+				UINT8 shade = (UINT8)((ix + 128) & 0xFF);
+				p.v[j].color[0] = shade;	// hardware doesn't really have per vertex colours, only per poly
 				p.v[j].color[1] = shade;
 				p.v[j].color[2] = shade;
-				p.v[j].color[3] = 1;
+				p.v[j].color[3] = 255;
 			}
 			else {
-				p.v[j].color[0] = 1;
-				p.v[j].color[1] = 1;
-				p.v[j].color[2] = 1;
-				p.v[j].color[3] = 1;
+				p.v[j].color[0] = 255;
+				p.v[j].color[1] = 255;
+				p.v[j].color[2] = 255;
+				p.v[j].color[3] = 255;
 			}
 
 			float texU, texV = 0;
@@ -1153,10 +1112,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 			p.v[j].texcoords[0] = texU;
 			p.v[j].texcoords[1] = texV;
-
-			//cache un-normalised tex coordinates
-			prevTexCoords[j][0] = (UINT16)(it >> 16);
-			prevTexCoords[j][1] = (UINT16)(it & 0xFFFF);
 
 			vData += 4;
 		}

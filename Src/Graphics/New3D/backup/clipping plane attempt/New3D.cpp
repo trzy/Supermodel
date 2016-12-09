@@ -1,4 +1,5 @@
 ﻿#include "New3D.h"
+#include "PolyHeader.h"
 #include "Texture.h"
 #include "Vec.h"
 #include <cmath>
@@ -92,15 +93,12 @@ void CNew3D::DrawScrollFog()
 
 		for (auto &n : m_nodes) {
 
-			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
+			if (n.viewport.scrollFog > 0 && n.viewport.priority==i) {
 
-				if (n.viewport.fogParams[3] || n.viewport.fogParams[4]) {	// check we some fog values set density or start
+				float *rgb = n.viewport.fogParams;
+				m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
 
-					float *rgb = n.viewport.fogParams;
-					m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
-
-					return;	// only allowed once per frame?
-				}
+				return;	// only allowed once per frame?
 			}
 		}
 	}
@@ -197,6 +195,12 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 void CNew3D::RenderFrame(void)
 {
+	// reset our min/max near/far planes
+	for (int i = 0; i < 4; i++) {
+		m_nfPair[i].nearVal = std::numeric_limits<float>::max();
+		m_nfPair[i].farVal = 0;
+	}
+
 	// release any resources from last frame
 	m_polyBufferRam.clear();	// clear dyanmic model memory buffer
 	m_nodes.clear();		// memory will grow during the object life time, that's fine, no need to shrink to fit
@@ -204,7 +208,7 @@ void CNew3D::RenderFrame(void)
 	m_nodeAttribs.Reset();
 
 	RenderViewport(0x800000);					// build model structure
-
+	CalcViewports();							// calculate derived frustum paramaters
 	DrawScrollFog();							// fog layer if applicable must be drawn here
 
 	glDepthFunc		(GL_LEQUAL);
@@ -268,6 +272,11 @@ void CNew3D::RenderFrame(void)
 	glDisableClientState(GL_NORMAL_ARRAY);
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_COLOR_ARRAY);
+
+	for (int i = 0; i < 4; i++) {
+		printf("index %i - pair %f %f\n", i, m_nfPair[i].nearVal, m_nfPair[i].farVal);
+	}
+	printf("\n");
 }
 
 void CNew3D::BeginFrame(void)
@@ -432,23 +441,19 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		MultMatrix(matrixOffset,m_modelMat);
 	}
 
-	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
+	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE && !(node[0] & 0x1) && !(node[0] & 0x4)) {	// and not root node and not colour table
 
-		//================
-		UINT16	hDistance;
-		float	fDistance;
-		//================
+		float distance = R3DFloat::GetFloat16(node[9 - m_offset] & 0xFFFF);
 
-		hDistance = node[9 - m_offset] & 0xFFFF;
-		fDistance = R3DFloat::GetFloat16(hDistance);
-
-		if (hDistance != R3DFloat::Pro16BitMax) {
-
-			CalcBox(fDistance, bbox);
-			TransformBox(m_modelMat, bbox);
-
-			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
+		if (distance > 1e-7) {	// seems to be some 16bit float min value which probably says no values here, im guessing
+			m_nfPair[m_currentPriority].nearVal = std::min(distance, m_nfPair[m_currentPriority].nearVal);	
 		}
+
+		CalcBox(distance, bbox);
+		TransformBox(m_modelMat, bbox);
+		GetBBMaxZ(m_nfPair[m_currentPriority].farVal, bbox);
+
+		m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
 	}
 
 	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE) {
@@ -652,8 +657,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 	}
 
 	if (!(vpnode[0] & 0x20)) {	// only if viewport enabled
-		uint32_t curPri	= (vpnode[0x00] >> 3) & 3;		// viewport priority
-		uint32_t nodeAddr	= vpnode[0x02];							// scene database node pointer
+
+		uint32_t nodeAddr	= vpnode[0x02];				// scene database node pointer
+		uint32_t matrixBase = vpnode[0x16] & 0xFFFFFF;	// matrix base address
 
 		// create node object 
 		m_nodes.emplace_back(Node());
@@ -662,69 +668,32 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// get pointer to its viewport
 		Viewport *vp = &m_nodes.back().viewport;
 
-		vp->priority = curPri;
+		vp->priority = (vpnode[0x00] >> 3) & 3;			// viewport priority
+		m_currentPriority = vp->priority;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-		int vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
-		int vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
-		int vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
-		int vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
-		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
+		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
+		vp->vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
+		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
+		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
 
-		if (vpX) {
-			vpX += 2;
+		if (vp->vpX) {
+			vp->vpX += 2;	// bit of a hack but seems to work
 		}
 
-		if (vpY) {
-			vpY += 2;
+		if (vp->vpY) {
+			vp->vpY += 2;
 		}
 
 		LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
 
-		float angle_left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
-		float angle_right	=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
-		float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
-		float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
-
-		float near = 0.25f;
-		float far = 2e6;
-
-		if (m_step == 0x10) {
-			near = 8;
-		}
-
-		float l = near * tanf(angle_left);
-		float r = near * tanf(angle_right);
-		float t = near * tanf(angle_top);
-		float b = near * tanf(angle_bottom);
-
-		// TO-DO: investigate clipping near/far planes
-
-		if ((vpX == 0) && (vpWidth >= 495) && (vpY == 0) && (vpHeight >= 383))
-		{
-			float windowAR		= (float)m_totalXRes / (float)m_totalYRes;
-			float originalAR	= 496 / 384.f;
-			float correction	= windowAR / originalAR;	// expand horizontal frustum planes
-
-			vp->x		= 0;
-			vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
-			vp->width	= m_totalXRes;
-			vp->height	= (GLint)((float)vpHeight*m_yRatio);
-
-			vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
-		}
-		else
-		{
-			vp->x		= m_xOffs + (GLint)((float)vpX*m_xRatio);
-			vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
-			vp->width	= (GLint)((float)vpWidth*m_xRatio);
-			vp->height	= (GLint)((float)vpHeight*m_yRatio);
-
-			vp->projectionMatrix.Frustum(l, r, b, t, near, far);
-		}
+		vp->left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
+		vp->right	=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
+		vp->top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
+		vp->bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
 
 		// calculate frustum planes
-		CalcFrustumPlanes(m_planes, vp->projectionMatrix);
+		CalcFrustumPlanes(m_planes, (float *)&vpnode[12]);
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
 		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
@@ -745,7 +714,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotRange[1] = *(float *)&vpnode[0x1F];										// spotlight extent
 
 		if (vp->spotRange[1] == 0) {													// if light extent = 0 light is effectively disabled
-			spotColorIdx = 0;															
+			spotColorIdx = 0;
 		}
 
 		vp->spotColor[0] = color[spotColorIdx][0];										// spotlight color
@@ -785,10 +754,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 			lightFogColour[2] = color[fogColourIdx][2];
 
 			float fogAttenuation = ((vpnode[0x24] >> 16) & 0xFF) / 255.f;
-			float fogAmbient	 = ((vpnode[0x25] >> 16) & 0xFF) / 255.f;
+			float fogAmbient = ((vpnode[0x25] >> 16) & 0xFF) / 255.f;
 			int debug = 0;
 		}
-		
+
 		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3]) || std::isinf(vp->fogParams[4]) || std::isnan(vp->fogParams[4])) {	// Star Wars Trilogy
 			vp->fogParams[3] = vp->fogParams[4] = 0.0f;
 		}
@@ -816,11 +785,11 @@ void CNew3D::RenderViewport(UINT32 addr)
 			m32 *= m32;
 			m13 *= m13;
 
-			if ((m21>1.05) || (m21<0.95))
+			if ((m21 > 1.05) || (m21 < 0.95))
 				return;
-			if ((m32>1.05) || (m32<0.95))
+			if ((m32 > 1.05) || (m32 < 0.95))
 				return;
-			if ((m13>1.05) || (m13<0.95))
+			if ((m13 > 1.05) || (m13 < 0.95))
 				return;
 		}
 
@@ -939,60 +908,9 @@ void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
 	}
 }
 
-void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
-{
-	//copy attributes
-	currentMesh->doubleSided	= false;			// we will double up polys
-	currentMesh->textured		= ph.TexEnabled();
-	currentMesh->alphaTest		= ph.AlphaTest();
-	currentMesh->textureAlpha	= ph.TextureAlpha();
-	currentMesh->polyAlpha		= ph.PolyAlpha();
-	currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
-
-	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
-		currentMesh->layered = true;
-	}
-
-	if (currentMesh->lighting) {
-		if (ph.SpecularEnabled()) {
-			currentMesh->specular = true;
-			currentMesh->shininess = 0;// ph.Shininess();
-			currentMesh->specularCoefficient = 0; // ph.SpecularValue();
-		}
-	}
-
-	currentMesh->fogIntensity = ph.LightModifier();
-
-	if (currentMesh->textured) {
-
-		currentMesh->format = m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
-
-		if (currentMesh->format == 7) {
-			currentMesh->alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
-		}
-
-		currentMesh->x				= ph.X();
-		currentMesh->y				= ph.Y();
-		currentMesh->width			= ph.TexWidth();
-		currentMesh->height			= ph.TexHeight();
-		currentMesh->mirrorU		= ph.TexUMirror();
-		currentMesh->mirrorV		= ph.TexVMirror();
-		currentMesh->microTexture	= ph.MicroTexture();
-
-		if (currentMesh->microTexture) {
-
-			float microTexScale[] = { 4, 2, 1, 0.5f };
-
-			currentMesh->microTextureID = ph.MicroTextureID();
-			currentMesh->microTextureScale = microTexScale[ph.MicroTextureMinLOD()];
-		}
-	}
-}
-
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
 	Vertex			prev[4];
-	UINT16			prevTexCoords[4][2];
 	PolyHeader		ph;
 	int				numPolys	= 0;
 	UINT64			lastHash	= -1;
@@ -1010,7 +928,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	do {
 
 		R3DPoly		p;					// current polygon
-		float		uvScale;
+		GLfloat		uvScale;
 		int			i, j;
 
 		if (ph.header[6] == 0) {
@@ -1035,12 +953,50 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				//make space for our vertices
 				currentMesh->polys.reserve(numTriangles);
 
-				//set mesh values
-				SetMeshValues(currentMesh, ph);
+				//copy attributes
+				currentMesh->doubleSided	= false;			// we will double up polys
+				currentMesh->textured		= ph.TexEnabled();
+				currentMesh->alphaTest		= ph.AlphaTest();
+				currentMesh->textureAlpha	= ph.TextureAlpha();
+				currentMesh->polyAlpha		= ph.PolyAlpha();
+				currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+
+				if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
+					currentMesh->layered = true;
+				}
+				
+				if (currentMesh->lighting) {
+					if (ph.SpecularEnabled()) {
+						currentMesh->specular = true;
+						currentMesh->shininess = 0;// ph.Shininess();
+						currentMesh->specularCoefficient = 0; // ph.SpecularValue();
+					}
+				}
+	
+				currentMesh->fogIntensity = ph.LightModifier();
+
+				if (ph.TexEnabled()) {
+					currentMesh->format			= m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
+
+					if (currentMesh->format == 7) {
+						currentMesh-> alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
+					}
+
+					currentMesh->x				= ph.X();
+					currentMesh->y				= ph.Y();
+					currentMesh->width			= ph.TexWidth();
+					currentMesh->height			= ph.TexHeight();
+					currentMesh->mirrorU		= ph.TexUMirror();
+					currentMesh->mirrorV		= ph.TexVMirror();
+					currentMesh->microTexture	= ph.MicroTexture();
+					currentMesh->microTextureID = ph.MicroTextureID();
+				}
 			}
 
 			currentMesh = &sMap[hash];
 		}
+
+		lastHash = hash;		
 
 		// Obtain basic polygon parameters
 		p.number	= ph.NumVerts();
@@ -1056,19 +1012,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			if (ph.SharedVertex(i))
 			{
 				p.v[j] = prev[i];
-
-				//check if we need to recalc tex coords - will only happen if tex tiles are different + sharing vertices
-				if (hash != lastHash) {
-					if (currentMesh->textured) {
-						Texture::GetCoordinates(currentMesh->width, currentMesh->height, prevTexCoords[i][0], prevTexCoords[i][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
-					}
-				}
-
-				j++;
+				++j;
 			}
 		}
-
-		lastHash = hash;
 
 		// copy face attributes
 
@@ -1092,12 +1038,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		p.faceColour[3] = ph.Transparency() / 255.f;
-
-		if (ph.MicroTexture()) {
-			p.faceColour[0] = 1.0f;
-			p.faceColour[1] = 1.0f;
-			p.faceColour[2] = 1.0f;
-		}
 				
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
@@ -1153,10 +1093,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 			p.v[j].texcoords[0] = texU;
 			p.v[j].texcoords[1] = texV;
-
-			//cache un-normalised tex coordinates
-			prevTexCoords[j][0] = (UINT16)(it >> 16);
-			prevTexCoords[j][1] = (UINT16)(it & 0xFFFF);
 
 			vData += 4;
 		}
@@ -1296,49 +1232,37 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
-void CNew3D::CalcFrustumPlanes(Plane p[6], const float* matrix)
+void CNew3D::CalcFrustumPlanes(Plane p[5], const float *vpNodeData)
 {
 	// Left Plane
-	p[0].a = matrix[3] + matrix[0];
-	p[0].b = matrix[7] + matrix[4];
-	p[0].c = matrix[11] + matrix[8];
-	p[0].d = matrix[15] + matrix[12];
-	p[0].Normalise();
-
-	// Right Plane
-	p[1].a = matrix[3] - matrix[0];
-	p[1].b = matrix[7] - matrix[4];
-	p[1].c = matrix[11] - matrix[8];
-	p[1].d = matrix[15] - matrix[12];
-	p[1].Normalise();
-
-	// Bottom Plane
-	p[2].a = matrix[3] + matrix[1];
-	p[2].b = matrix[7] + matrix[5];
-	p[2].c = matrix[11] + matrix[9];
-	p[2].d = matrix[15] + matrix[13];
-	p[2].Normalise();
+	p[0].a = vpNodeData[1];
+	p[0].b = 0;
+	p[0].c = -vpNodeData[0];
+	p[0].d = 0;
 
 	// Top Plane
-	p[3].a = matrix[3] - matrix[1];
-	p[3].b = matrix[7] - matrix[5];
-	p[3].c = matrix[11] - matrix[9];
-	p[3].d = matrix[15] - matrix[13];
-	p[3].Normalise();
+	p[1].a = 0;
+	p[1].b = vpNodeData[3];
+	p[1].c = -vpNodeData[2];
+	p[1].d = 0;
+
+	// Right Plane
+	p[2].a = vpNodeData[5];
+	p[2].b = 0;
+	p[2].c = -vpNodeData[4];
+	p[2].d = 0;
+
+	// Bottom Plane
+	p[3].a = 0;
+	p[3].b = vpNodeData[7];
+	p[3].c = -vpNodeData[6];
+	p[3].d = 0;
 
 	// Near Plane
-	p[4].a = matrix[3] + matrix[2];
-	p[4].b = matrix[7] + matrix[6];
-	p[4].c = matrix[11] + matrix[10];
-	p[4].d = matrix[15] + matrix[14];
-	p[4].Normalise();
-
-	// Far Plane
-	p[5].a = matrix[3] - matrix[2];
-	p[5].b = matrix[7] - matrix[6];
-	p[5].c = matrix[11] - matrix[10];
-	p[5].d = matrix[15] - matrix[14];
-	p[5].Normalise();
+	p[4].a = 0;
+	p[4].b = 0;
+	p[4].c = -1;
+	p[4].d = 0;
 }
 
 void CNew3D::CalcBox(float distance, BBox& box)
@@ -1422,13 +1346,13 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 
 		int temp = 0;
 
-		for (int j = 0; j < 6; j++) {
+		for (int j = 0; j < 5; j++) {
 			if (planes[j].DistanceToPoint(box.points[i]) >= 0) {
 				temp++;
 			}
 		}
 
-		if (temp == 6) count++;		// point is inside all 6 frustum planes
+		if (temp == 5) count++;		// point is inside all 6 frustum planes
 	}
 
 	if (count == 8)	return Clip::INSIDE;
@@ -1437,7 +1361,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 	//if we got here all points are outside of the view frustum
 	//check for all points being side same of any plane, means box outside of view
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 5; i++) {
 
 		int temp = 0;
 
@@ -1454,6 +1378,53 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 	//if we got here, box is traversing view frustum
 
 	return Clip::INTERCEPT;
+}
+
+void CNew3D::GetBBMaxZ(float &compare, BBox &box)
+{
+	for (int i = 0; i < 8; i++) {
+		compare = std::max(compare, std::abs(box.points[i][2]));
+	}
+}
+
+void CNew3D::CalcViewports()
+{
+	for (auto &n : m_nodes) {
+
+		auto *vp = &n.viewport;
+
+		float near	= m_nfPair[vp->priority].nearVal * 0.5f;
+		float far	= m_nfPair[vp->priority].farVal;
+		
+		float l = near * tanf(vp->left);
+		float r = near * tanf(vp->right);
+		float t = near * tanf(vp->top);
+		float b = near * tanf(vp->bottom);
+
+		if ((vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383))
+		{
+			float windowAR = (float)m_totalXRes / (float)m_totalYRes;
+			float originalAR = 496 / 384.f;
+			float correction = windowAR / originalAR;	// expand horizontal frustum planes
+
+			vp->x = 0;
+			vp->y = m_yOffs + (GLint)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+			vp->width = m_totalXRes;
+			vp->height = (GLint)((float)vp->vpHeight*m_yRatio);
+
+			vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
+		}
+		else
+		{
+			vp->x = m_xOffs + (GLint)((float)vp->vpX*m_xRatio);
+			vp->y = m_yOffs + (GLint)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+			vp->width = (GLint)((float)vp->vpWidth*m_xRatio);
+			vp->height = (GLint)((float)vp->vpHeight*m_yRatio);
+
+			vp->projectionMatrix.Frustum(l, r, b, t, near, far);
+		}
+
+	}
 }
 
 } // New3D

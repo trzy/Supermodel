@@ -109,6 +109,7 @@ public:
 	bool	TexVMirror();
 	bool	MicroTexture();
 	int		MicroTextureID();
+	int		MicroTextureMinLOD();	// basically how many times it repeats compared to the base texture (i assume)
 
 	// header 3
 	int		TexWidth();

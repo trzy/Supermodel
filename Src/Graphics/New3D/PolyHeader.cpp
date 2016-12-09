@@ -185,7 +185,12 @@ bool PolyHeader::MicroTexture()
 
 int	PolyHeader::MicroTextureID()
 {
-	return (header[2] >> 5) & 3;
+	return (header[2] >> 5) & 7;
+}
+
+int	PolyHeader::MicroTextureMinLOD()
+{
+	return (header[2] >> 2) & 3;
 }
 
 //

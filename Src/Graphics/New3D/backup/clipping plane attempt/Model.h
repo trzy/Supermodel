@@ -38,13 +38,10 @@ struct Mesh
 {
 	// texture
 	int format, x, y, width, height = 0;
+	bool microTexture = false;
+	int microTextureID = 0;
 	bool mirrorU = false;
 	bool mirrorV = false;
-
-	// microtexture
-	bool	microTexture		= false;
-	int		microTextureID		= 0;
-	float	microTextureScale	= 0;
 
 	// attributes
 	bool doubleSided	= false;
@@ -93,15 +90,18 @@ struct Model
 
 struct Viewport
 {
-	Mat4	projectionMatrix;		// projection matrix
-	float	lightingParams[6];		// lighting parameters (see RenderViewport() and vertex shader)
-	float	spotEllipse[4];			// spotlight ellipse (see RenderViewport())
-	float	spotRange[2];			// Z range
-	float	spotColor[3];			// color
-	float	fogParams[5];			// fog parameters (...)
-	float	scrollFog;				// a transparency value that determines if fog is blended over the bottom 2D layer
-	int		x, y;					// viewport coordinates (scaled and in OpenGL format)
-	int		width, height;			// viewport dimensions (scaled for display surface size)
+	int		vpX, vpY, vpWidth, vpHeight;// real3d viewport paramaters
+	float	left, right, bottom, top;	// angles for projection matrix - near/far calculated later
+
+	Mat4	projectionMatrix;			// projection matrix
+	float	lightingParams[6];			// lighting parameters (see RenderViewport() and vertex shader)
+	float	spotEllipse[4];				// spotlight ellipse (see RenderViewport())
+	float	spotRange[2];				// Z range
+	float	spotColor[3];				// color
+	float	fogParams[5];				// fog parameters (...)
+	float	scrollFog;					// a transparency value that determines if fog is blended over the bottom 2D layer
+	int		x, y;						// viewport coordinates (scaled and in OpenGL format)
+	int		width, height;				// viewport dimensions (scaled for display surface size)
 	int		priority;
 };
 

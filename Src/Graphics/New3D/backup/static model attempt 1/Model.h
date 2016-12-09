@@ -1,7 +1,7 @@
 #ifndef _MODEL_H_
 #define _MODEL_H_
 
-#include "Types.h"
+#include "types.h"
 #include <vector>
 #include <unordered_map>
 #include <map>
@@ -16,7 +16,7 @@ struct Vertex
 	float pos[3];
 	float normal[3];
 	float texcoords[2];
-	float color[4];			//rgba
+	UINT8 color[4];			//rgba
 };
 
 struct Poly		// our polys are always 3 triangles, unlike the real h/w
@@ -30,21 +30,15 @@ struct R3DPoly
 {
 	Vertex v[4];			// just easier to have them as an array
 	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
-	float faceColour[4];	// per face colour
 	int number = 4;
 };
 
 struct Mesh
 {
 	// texture
-	int format, x, y, width, height = 0;
+	int format, x, y, width, height;
 	bool mirrorU = false;
 	bool mirrorV = false;
-
-	// microtexture
-	bool	microTexture		= false;
-	int		microTextureID		= 0;
-	float	microTextureScale	= 0;
 
 	// attributes
 	bool doubleSided	= false;
@@ -52,16 +46,10 @@ struct Mesh
 	bool polyAlpha		= false;		// specified in the rgba colour
 	bool textureAlpha	= false;		// use alpha in texture
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
-	bool clockWise		= true;			// we need to check if the matrix will change the winding
-	bool layered		= false;		// stencil poly
-
-	// lighting
 	bool lighting		= false;
-	bool specular		= false;
-	float shininess		= 0;
-	float specularCoefficient = 0;
-	
-	// fog
+	bool testBit		= false;
+	bool clockWise		= true;			// we need to check if the matrix will change the winding
+
 	float fogIntensity = 1.0f;
 
 	// opengl resources
@@ -76,15 +64,9 @@ struct SortingMesh : public Mesh		// This struct temporarily holds the model dat
 
 struct Model
 {
-	std::shared_ptr<std::vector<Mesh>> meshes;	// this reason why this is a shared ptr to an array, is that multiple models might use the same meshes
+	std::vector<Mesh> meshes;
 
-	//which memory are we in
 	bool dynamic = true;
-
-	// texture offsets for model
-	int textureOffsetX = 0;
-	int textureOffsetY = 0;
-	int page = 0;
 
 	//matrices
 	float modelMat[16];
@@ -99,13 +81,10 @@ struct Viewport
 	float	spotRange[2];			// Z range
 	float	spotColor[3];			// color
 	float	fogParams[5];			// fog parameters (...)
-	float	scrollFog;				// a transparency value that determines if fog is blended over the bottom 2D layer
 	int		x, y;					// viewport coordinates (scaled and in OpenGL format)
 	int		width, height;			// viewport dimensions (scaled for display surface size)
 	int		priority;
 };
-
-enum class Clip { INSIDE, OUTSIDE, INTERCEPT };
 
 class NodeAttributes
 {
@@ -120,8 +99,7 @@ public:
 
 	int currentTexOffsetX;
 	int currentTexOffsetY;
-	int currentPage;
-	Clip currentClipStatus;
+	int currentTexOffset;		// raw value
 
 private:
 
@@ -129,8 +107,7 @@ private:
 	{
 		int texOffsetX;
 		int texOffsetY;
-		int page;
-		Clip clip;
+		int texOffset;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };
@@ -138,7 +115,7 @@ private:
 struct Node
 {
 	Viewport viewport;
-	std::vector<Model> models;
+	std::vector<std::shared_ptr<Model>> models;
 };
 
 } // New3D

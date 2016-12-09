@@ -15,7 +15,6 @@ static const char *vertexShaderBasic =
 "varying float	fsSpecularTerm;\n"		// specular light term (additive)
 "varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
-"varying vec4   fsColor;\n"
 
 "void main(void)\n"
 "{\n"
@@ -24,7 +23,7 @@ static const char *vertexShaderBasic =
 	"float z		= length(fsViewVertex);\n"
 	"fsFogFactor	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);\n"
 
-	"fsColor    	= gl_Color;\n"
+	"gl_FrontColor	= gl_Color;\n"
 	"gl_TexCoord[0]	= gl_MultiTexCoord0;\n"
 	"gl_Position	= gl_ModelViewProjectionMatrix * gl_Vertex;\n"
 "}\n";
@@ -36,7 +35,6 @@ static const char *fragmentShaderBasic =
 
 "uniform int	textureEnabled;\n"
 "uniform int	microTexture;\n"
-"uniform float	microTextureScale;\n"
 "uniform int	alphaTest;\n"
 "uniform int	textureAlpha;\n"
 "uniform vec3	fogColour;\n"
@@ -53,7 +51,6 @@ static const char *fragmentShaderBasic =
 "varying float	fsSpecularTerm;\n"		// specular light term (additive)
 "varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
-"varying vec4   fsColor;\n"
 
 "void main()\n"
 "{\n"
@@ -70,7 +67,7 @@ static const char *fragmentShaderBasic =
     "tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
     "if (microTexture==1) {\n"
-      "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * microTextureScale);\n"
+      "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * 4.0);\n"
       "tex1Data = (tex1Data+tex2Data)/2.0;\n"
     "}\n"
 
@@ -85,7 +82,7 @@ static const char *fragmentShaderBasic =
     "}\n"
   "}\n"
 
-  "colData = fsColor;\n"
+  "colData = gl_Color;\n"
 
   "finalData = tex1Data * colData;\n"
   "if (finalData.a < (1.0/16.0)) {\n"      // basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
@@ -123,18 +120,17 @@ static const char *fragmentShaderBasic =
       "lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
     "}\n"
 
+   
     "finalData.rgb *= lightIntensity;\n"
 
     "if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
 
-	  "float nDotL = max(dot(fsViewNormal,sunVector),0.0);\n"
+      "vec3 v = normalize(-fsViewVertex);\n"
+      "vec3 h = normalize(sunVector + v);\n"   // halfway vector
 
-      "finalData.rgb += vec3(specularCoefficient * pow(nDotL,shininess));\n"
+      "float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
 
-	  //"vec3 v = normalize(-fsViewVertex);\n"
-	  //"vec3 h = normalize(sunVector + v);\n"   // halfway vector
-	  //"float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
-	  //"finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
+      "finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
     "}\n"
   "}\n"
 
@@ -165,7 +161,6 @@ void R3DShader::Start()
 
 	m_shininess = 0;
 	m_specularCoefficient = 0;
-	m_microTexScale = 0;
 
 	m_matDet = MatDet::notset;
 
@@ -201,7 +196,6 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locTexture2Enabled= glGetUniformLocation(m_shaderProgram, "microTexture");
 	m_locTextureAlpha	= glGetUniformLocation(m_shaderProgram, "textureAlpha");
 	m_locAlphaTest		= glGetUniformLocation(m_shaderProgram, "alphaTest");
-	m_locMicroTexScale	= glGetUniformLocation(m_shaderProgram, "microTextureScale");
 
 	m_locFogIntensity	= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity		= glGetUniformLocation(m_shaderProgram, "fogDensity");
@@ -249,11 +243,6 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->microTexture != m_textured2) {
 		glUniform1i(m_locTexture2Enabled, m->microTexture);
 		m_textured2 = m->microTexture;
-	}
-
-	if (m_dirtyMesh || m->microTextureScale != m_microTexScale) {
-		glUniform1f(m_locMicroTexScale, m->microTextureScale);
-		m_microTexScale = m->microTextureScale;
 	}
 
 	if (m_dirtyMesh || m->alphaTest != m_alphaTest) {
@@ -306,7 +295,7 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 				glDisable(GL_CULL_FACE);
 			}
 			else {
-				glEnable(GL_CULL_FACE);
+				//glEnable(GL_CULL_FACE);
 			}
 		}
 	}
@@ -345,12 +334,12 @@ void R3DShader::SetModelStates(const Model* model)
 		switch (test) {
 		case MatDet::negative:
 			glCullFace(GL_FRONT);
-			glEnable(GL_CULL_FACE);
+			//glEnable(GL_CULL_FACE);
 			m_doubleSided = false;
 			break;
 		case MatDet::positive:
 			glCullFace(GL_BACK);
-			glEnable(GL_CULL_FACE);
+			//glEnable(GL_CULL_FACE);
 			m_doubleSided = false;
 			break;
 		default:
