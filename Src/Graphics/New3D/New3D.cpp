@@ -9,10 +9,6 @@
 #define MAX_RAM_POLYS 100000	
 #define MAX_ROM_POLYS 500000
 
-#ifndef M_PI
-#define M_PI 3.14159265359
-#endif
-
 namespace New3D {
 
 CNew3D::CNew3D()
@@ -94,13 +90,13 @@ void CNew3D::DrawScrollFog()
 
 			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
 
-				if (n.viewport.fogParams[3] || n.viewport.fogParams[4]) {	// check we some fog values set density or start
+				float *rgb = n.viewport.fogParams;
+				m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+				return;
+			}
 
-					float *rgb = n.viewport.fogParams;
-					m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
-
-					return;	// only allowed once per frame?
-				}
+			if (n.viewport.priority == i) {
+				break;		// we only want to check the first viewport from each priority level
 			}
 		}
 	}
