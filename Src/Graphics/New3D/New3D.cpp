@@ -1088,12 +1088,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		p.faceColour[3] = ph.Transparency() / 255.f;
-
-		if (ph.MicroTexture()) {
-			p.faceColour[0] = 1.0f;
-			p.faceColour[1] = 1.0f;
-			p.faceColour[2] = 1.0f;
-		}
 				
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
