@@ -988,6 +988,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
 	Vertex			prev[4];
+	UINT16			texCoords[4][2];
 	UINT16			prevTexCoords[4][2];
 	PolyHeader		ph;
 	int				numPolys	= 0;
@@ -1053,10 +1054,13 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			{
 				p.v[j] = prev[i];
 
+				texCoords[j][0] = prevTexCoords[i][0];
+				texCoords[j][1] = prevTexCoords[i][1];
+
 				//check if we need to recalc tex coords - will only happen if tex tiles are different + sharing vertices
 				if (hash != lastHash) {
 					if (currentMesh->textured) {
-						Texture::GetCoordinates(currentMesh->width, currentMesh->height, prevTexCoords[i][0], prevTexCoords[i][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
+						Texture::GetCoordinates(currentMesh->width, currentMesh->height, texCoords[j][0], texCoords[j][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
 					}
 				}
 
@@ -1145,8 +1149,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[j].texcoords[1] = texV;
 
 			//cache un-normalised tex coordinates
-			prevTexCoords[j][0] = (UINT16)(it >> 16);
-			prevTexCoords[j][1] = (UINT16)(it & 0xFFFF);
+			texCoords[j][0] = (UINT16)(it >> 16);
+			texCoords[j][1] = (UINT16)(it & 0xFFFF);
 
 			vData += 4;
 		}
@@ -1191,6 +1195,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		// Copy current vertices into previous vertex array
 		for (i = 0; i < 4; i++) {
 			prev[i] = p.v[i];
+			prevTexCoords[i][0] = texCoords[i][0];
+			prevTexCoords[i][1] = texCoords[i][1];
 		}
 
 	} while (ph.NextPoly());
