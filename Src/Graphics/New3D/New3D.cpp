@@ -91,6 +91,7 @@ void CNew3D::DrawScrollFog()
 			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
 
 				float *rgb = n.viewport.fogParams;
+				glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
 				m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
 				return;
 			}
@@ -769,6 +770,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		vp->scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);				// scroll fog
 
+		// Unknown light/fog parameters
+		float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);			// scroll attenuation
+
 		{
 			//test fog paramaters
 			float lightFogColour[3];
@@ -788,9 +792,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3]) || std::isinf(vp->fogParams[4]) || std::isnan(vp->fogParams[4])) {	// Star Wars Trilogy
 			vp->fogParams[3] = vp->fogParams[4] = 0.0f;
 		}
-
-		// Unknown light/fog parameters
-		float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);	// scroll attenuation
 
 		// Clear texture offsets before proceeding
 		m_nodeAttribs.Reset();
