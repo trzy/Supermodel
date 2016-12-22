@@ -1293,7 +1293,7 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
-void CNew3D::CalcFrustumPlanes(Plane p[6], const float* matrix)
+void CNew3D::CalcFrustumPlanes(Plane p[4], const float* matrix)
 {
 	// Left Plane
 	p[0].a = matrix[3] + matrix[0];

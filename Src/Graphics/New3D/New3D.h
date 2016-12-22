@@ -229,11 +229,11 @@ private:
 		V4::Vec4 points[8];
 	};
 
-	void CalcFrustumPlanes	(Plane p[6], const float* matrix);
+	void CalcFrustumPlanes	(Plane p[4], const float* matrix);
 	void CalcBox			(float distance, BBox& box);
 	void TransformBox		(const float *m, BBox& box);
 	void MultVec			(const float matrix[16], const float in[4], float out[4]);
-	Clip ClipBox			(BBox& box, Plane planes[6]);
+	Clip ClipBox			(BBox& box, Plane planes[4]);
 };
 
 } // New3D
