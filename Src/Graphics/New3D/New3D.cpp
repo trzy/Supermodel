@@ -1322,20 +1322,6 @@ void CNew3D::CalcFrustumPlanes(Plane p[6], const float* matrix)
 	p[3].c = matrix[11] - matrix[9];
 	p[3].d = matrix[15] - matrix[13];
 	p[3].Normalise();
-
-	// Near Plane
-	p[4].a = matrix[3] + matrix[2];
-	p[4].b = matrix[7] + matrix[6];
-	p[4].c = matrix[11] + matrix[10];
-	p[4].d = matrix[15] + matrix[14];
-	p[4].Normalise();
-
-	// Far Plane
-	p[5].a = matrix[3] - matrix[2];
-	p[5].b = matrix[7] - matrix[6];
-	p[5].c = matrix[11] - matrix[10];
-	p[5].d = matrix[15] - matrix[14];
-	p[5].Normalise();
 }
 
 void CNew3D::CalcBox(float distance, BBox& box)
@@ -1411,7 +1397,7 @@ void CNew3D::TransformBox(const float *m, BBox& box)
 	}
 }
 
-Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
+Clip CNew3D::ClipBox(BBox& box, Plane planes[4])
 {
 	int count = 0;
 
@@ -1419,13 +1405,13 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 
 		int temp = 0;
 
-		for (int j = 0; j < 6; j++) {
+		for (int j = 0; j < 4; j++) {
 			if (planes[j].DistanceToPoint(box.points[i]) >= 0) {
 				temp++;
 			}
 		}
 
-		if (temp == 6) count++;		// point is inside all 6 frustum planes
+		if (temp == 4) count++;		// point is inside all 4 frustum planes
 	}
 
 	if (count == 8)	return Clip::INSIDE;
@@ -1434,7 +1420,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 	//if we got here all points are outside of the view frustum
 	//check for all points being side same of any plane, means box outside of view
 
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < 4; i++) {
 
 		int temp = 0;
 
@@ -1445,7 +1431,9 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[6])
 			}
 		}
 
-		if (temp == 0) return Clip::OUTSIDE;
+		if (temp == 0) {
+			return Clip::OUTSIDE;
+		}
 	}
 
 	//if we got here, box is traversing view frustum

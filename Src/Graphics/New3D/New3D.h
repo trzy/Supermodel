@@ -222,7 +222,7 @@ private:
 	R3DShader m_r3dShader;
 	R3DScrollFog m_r3dScrollFog;
 
-	Plane m_planes[6];
+	Plane m_planes[4];
 
 	struct BBox
 	{
