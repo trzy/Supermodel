@@ -105,7 +105,7 @@ struct Viewport
 	int		priority;
 };
 
-enum class Clip { INSIDE, OUTSIDE, INTERCEPT };
+enum class Clip { INSIDE, OUTSIDE, INTERCEPT, NOT_SET };
 
 class NodeAttributes
 {

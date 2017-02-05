@@ -446,6 +446,9 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
 		}
+		else {
+			m_nodeAttribs.currentClipStatus = Clip::NOT_SET;
+		}
 	}
 
 	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE) {
