@@ -117,6 +117,8 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 		std::shared_ptr<Texture> tex1;
 
+		CalcViewport(&n.viewport, std::abs(m_nfPairs[priority].zNear*0.95f), std::abs(m_nfPairs[priority].zFar*1.05f));	// make planes 5% bigger
+
 		glViewport		(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
 		glMatrixMode	(GL_PROJECTION);
 		glLoadMatrixf	(n.viewport.projectionMatrix);
@@ -194,10 +196,15 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 void CNew3D::RenderFrame(void)
 {
+	for (int i = 0; i < 4; i++) {
+		m_nfPairs[i].zNear = -std::numeric_limits<float>::max();
+		m_nfPairs[i].zFar  =  std::numeric_limits<float>::max();
+	}
+
 	// release any resources from last frame
-	m_polyBufferRam.clear();	// clear dyanmic model memory buffer
-	m_nodes.clear();		// memory will grow during the object life time, that's fine, no need to shrink to fit
-	m_modelMat.Release();	// would hope we wouldn't need this but no harm in checking
+	m_polyBufferRam.clear();		// clear dyanmic model memory buffer
+	m_nodes.clear();				// memory will grow during the object life time, that's fine, no need to shrink to fit
+	m_modelMat.Release();			// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
 
 	RenderViewport(0x800000);					// build model structure
@@ -360,6 +367,10 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 		CacheModel(m, modelAddress);
 	}
 
+	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
+		ClipModel(m);	// not storing clipped values, only working out the Z range
+	}
+
 	return true;
 }
 
@@ -445,6 +456,10 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 			TransformBox(m_modelMat, bbox);
 
 			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
+
+			if (m_nodeAttribs.currentClipStatus == Clip::INSIDE) {
+				CalcBoxExtents(bbox);
+			}
 		}
 		else {
 			m_nodeAttribs.currentClipStatus = Clip::NOT_SET;
@@ -652,79 +667,47 @@ void CNew3D::RenderViewport(UINT32 addr)
 	}
 
 	if (!(vpnode[0] & 0x20)) {	// only if viewport enabled
-		uint32_t curPri	= (vpnode[0x00] >> 3) & 3;		// viewport priority
-		uint32_t nodeAddr	= vpnode[0x02];							// scene database node pointer
+		uint32_t curPri		= (vpnode[0x00] >> 3) & 3;		// viewport priority
+		uint32_t nodeAddr	= vpnode[0x02];					// scene database node pointer
 
 		// create node object 
 		m_nodes.emplace_back(Node());
-		m_nodes.back().models.reserve(2048);			// create space for models
+		m_nodes.back().models.reserve(2048);				// create space for models
 
 		// get pointer to its viewport
 		Viewport *vp = &m_nodes.back().viewport;
 
 		vp->priority = curPri;
+		m_currentPriority = curPri;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-		int vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
-		int vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
-		int vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
-		int vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
+		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
+		vp->vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
+		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
+		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
+
 		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
-		if (vpX) {
-			vpX += 2;
+		if (vp->vpX) {
+			vp->vpX += 2;
 		}
 
-		if (vpY) {
-			vpY += 2;
+		if (vp->vpY) {
+			vp->vpY += 2;
 		}
 
 		LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
 
-		float angle_left	= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
-		float angle_right	=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
-		float angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
-		float angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
+		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
+		vp->angle_right		=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
+		vp->angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
+		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
 
-		float near = 0.25f;
-		float far = 2e6;
-
-		if (m_step == 0x10) {
-			near = 8;
-		}
-
-		float l = near * tanf(angle_left);
-		float r = near * tanf(angle_right);
-		float t = near * tanf(angle_top);
-		float b = near * tanf(angle_bottom);
-
-		// TO-DO: investigate clipping near/far planes
-
-		if ((vpX == 0) && (vpWidth >= 495) && (vpY == 0) && (vpHeight >= 383))
-		{
-			float windowAR		= (float)m_totalXRes / (float)m_totalYRes;
-			float originalAR	= 496 / 384.f;
-			float correction	= windowAR / originalAR;	// expand horizontal frustum planes
-
-			vp->x		= 0;
-			vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
-			vp->width	= m_totalXRes;
-			vp->height	= (GLint)((float)vpHeight*m_yRatio);
-
-			vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
-		}
-		else
-		{
-			vp->x		= m_xOffs + (GLint)((float)vpX*m_xRatio);
-			vp->y		= m_yOffs + (GLint)((float)(384 - (vpY + vpHeight))*m_yRatio);
-			vp->width	= (GLint)((float)vpWidth*m_xRatio);
-			vp->height	= (GLint)((float)vpHeight*m_yRatio);
-
-			vp->projectionMatrix.Frustum(l, r, b, t, near, far);
-		}
+		// calculate the frustum shape, near/far pair are dummy values
+		CalcViewport(vp, 1, 1000);
 
 		// calculate frustum planes
-		CalcFrustumPlanes(m_planes, vp->projectionMatrix);
+		CalcFrustumPlanes(m_planes, vp->projectionMatrix);	// we need to calc a 'projection matrix' to get the correct frustum planes for clipping
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
 		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
@@ -1442,6 +1425,167 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[4])
 	//if we got here, box is traversing view frustum
 
 	return Clip::INTERCEPT;
+}
+
+void CNew3D::CalcBoxExtents(const BBox& box)
+{
+	for (int i = 0; i < 8; i++) {
+		if (box.points[i][2] < 0) {
+			m_nfPairs[m_currentPriority].zNear = std::max(box.points[i][2], m_nfPairs[m_currentPriority].zNear);
+			m_nfPairs[m_currentPriority].zFar  = std::min(box.points[i][2], m_nfPairs[m_currentPriority].zFar);
+		}
+	}
+}
+
+void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[4])
+{
+	//============
+	ClipPoly temp;
+	ClipPoly *in;
+	ClipPoly *out;
+	//============
+
+	in = &clipPoly;
+	out = &temp;
+
+	for (int i = 0; i < 4; i++) {
+
+		//=================
+		bool	currentIn;
+		bool	nextIn;
+		float	currentDot;
+		float	nextDot;
+		//=================
+
+		currentDot	= planes[i].DotProduct(in->list[0].pos);
+		currentIn	= (currentDot + planes[i].d) >= 0;
+
+		for (int j = 0; j < in->count; j++) {
+
+			if (currentIn) {
+				out->list[out->count] = in->list[j];
+				out->count++;
+			}
+
+			int nextIndex = j + 1;
+			if (nextIndex >= in->count) {
+				nextIndex = 0;
+			}
+
+			nextDot = planes[i].DotProduct(in->list[nextIndex].pos);
+			nextIn	= (nextDot + planes[i].d) >= 0;
+
+			// we have an intersection
+			if (currentIn != nextIn) {
+
+				float u = (currentDot + planes[i].d) / (currentDot - nextDot);
+
+				float* p1 = in->list[j].pos;
+				float* p2 = in->list[nextIndex].pos;
+
+				out->list[out->count].pos[0] = p1[0] + ((p2[0] - p1[0]) * u);
+				out->list[out->count].pos[1] = p1[1] + ((p2[1] - p1[1]) * u);
+				out->list[out->count].pos[2] = p1[2] + ((p2[2] - p1[2]) * u);
+				out->count++;
+			}
+
+			currentDot = nextDot;
+			currentIn = nextIn;
+		}
+
+		std::swap(in, out);
+		out->count = 0;
+	}
+}
+
+void CNew3D::ClipModel(const Model *m)
+{
+	//================
+	ClipPoly clipPoly;
+	std::vector<Poly> *polys;
+	int offset;
+	//================
+
+	if (m->dynamic) {
+		polys = &m_polyBufferRam;
+		offset = MAX_ROM_POLYS;
+	}
+	else {
+		polys = &m_polyBufferRom;
+		offset = 0;
+	}
+
+	for (const auto &mesh : *m->meshes) {
+
+		int start = mesh.vboOffset - offset;
+		
+		for (int i = 0; i < mesh.triangleCount; i++) {
+
+			//==================================
+			Poly& poly = (*polys)[start + i];
+			float in[4], out[4];
+			//==================================
+
+			memcpy(in, poly.p1.pos, sizeof(float) * 3);
+			in[3] = 1;
+			MultVec(m->modelMat, in, out);
+			memcpy(clipPoly.list[0].pos, out, sizeof(float) * 3);
+
+			memcpy(in, poly.p2.pos, sizeof(float) * 3);
+			in[3] = 1;
+			MultVec(m->modelMat, in, out);
+			memcpy(clipPoly.list[1].pos, out, sizeof(float) * 3);
+
+			memcpy(in, poly.p3.pos, sizeof(float) * 3);
+			in[3] = 1;
+			MultVec(m->modelMat, in, out);
+			memcpy(clipPoly.list[2].pos, out, sizeof(float) * 3);
+
+			clipPoly.count = 3;
+
+			ClipPolygon(clipPoly, m_planes);
+
+			for (int j = 0; j < clipPoly.count; j++) {
+				if (clipPoly.list[j].pos[2] < 0) {
+					m_nfPairs[m_currentPriority].zNear = std::max(clipPoly.list[j].pos[2], m_nfPairs[m_currentPriority].zNear);
+					m_nfPairs[m_currentPriority].zFar  = std::min(clipPoly.list[j].pos[2], m_nfPairs[m_currentPriority].zFar);
+				}
+			}
+		}
+	}
+}
+
+void CNew3D::CalcViewport(Viewport* vp, float near, float far)
+{
+	float l = near * tanf(vp->angle_left);	// we need to calc the shape of the projection frustum for culling
+	float r = near * tanf(vp->angle_right);
+	float t = near * tanf(vp->angle_top);
+	float b = near * tanf(vp->angle_bottom);
+
+	vp->projectionMatrix.LoadIdentity();	// reset matrix
+
+	if ((vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
+
+		float windowAR = (float)m_totalXRes / (float)m_totalYRes;
+		float originalAR = 496 / 384.f;
+		float correction = windowAR / originalAR;	// expand horizontal frustum planes
+
+		vp->x		= 0;
+		vp->y		= m_yOffs + (int)((384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->width	= m_totalXRes;
+		vp->height = (int)(vp->vpHeight*m_yRatio);
+
+		vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
+	}
+	else {
+
+		vp->x		= m_xOffs + (int)(vp->vpX*m_xRatio);
+		vp->y		= m_yOffs + (int)((384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->width	= (int)(vp->vpWidth*m_xRatio);
+		vp->height	= (int)(vp->vpHeight*m_yRatio);
+
+		vp->projectionMatrix.Frustum(l, r, b, t, near, far);
+	}
 }
 
 } // New3D

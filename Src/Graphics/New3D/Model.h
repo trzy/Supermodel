@@ -11,6 +11,17 @@
 
 namespace New3D {
 
+struct ClipVertex
+{
+	float pos[3];
+};
+
+struct ClipPoly
+{
+	ClipVertex list[12];		// what's the max number we can hit for a triangle + 4 planes?
+	int count = 0;
+};
+
 struct Vertex
 {
 	float pos[3];
@@ -93,7 +104,17 @@ struct Model
 
 struct Viewport
 {
-	Mat4	projectionMatrix;		// projection matrix
+	int		vpX;					// these are the original hardware values
+	int		vpY;
+	int		vpWidth;
+	int		vpHeight;
+	float	angle_left;
+	float	angle_right;
+	float	angle_top;
+	float	angle_bottom;
+
+	Mat4	projectionMatrix;		// projection matrix, we will calc this later when we have scene near/far vals
+
 	float	lightingParams[6];		// lighting parameters (see RenderViewport() and vertex shader)
 	float	spotEllipse[4];			// spotlight ellipse (see RenderViewport())
 	float	spotRange[2];			// Z range

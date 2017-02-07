@@ -18,6 +18,10 @@ struct Plane
 	float DistanceToPoint(const float v[3]) {
 		return a*v[0] + b*v[1] + c*v[2] + d;
 	}
+
+	float DotProduct(const float v[3]) {
+		return a*v[0] + b*v[1] + c*v[2];
+	}
 };
 
 #endif
