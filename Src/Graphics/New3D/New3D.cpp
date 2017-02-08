@@ -1557,6 +1557,10 @@ void CNew3D::ClipModel(const Model *m)
 
 void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 {
+	if (near < far / 1000000) {
+		near = far / 1000000;				// if we get really close to zero somehow, we will have almost no depth precision
+	}
+
 	float l = near * tanf(vp->angle_left);	// we need to calc the shape of the projection frustum for culling
 	float r = near * tanf(vp->angle_right);
 	float t = near * tanf(vp->angle_top);
