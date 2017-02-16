@@ -249,7 +249,7 @@ int PolyHeader::SensorColorIndex()
 	return (header[4] >> 20) & 0xFFF;
 }
 
-bool PolyHeader::ColorDisabled()
+bool PolyHeader::TranslatorMap()
 {
 	return (header[4] & 0x80) > 0;
 }

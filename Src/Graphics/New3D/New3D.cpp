@@ -419,7 +419,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	{
 		tx = 32 * ((node[0x02] >> 7) & 0x3F);
 		ty = 32 * (node[0x02] & 0x1F);
-
 		// apply texture offsets, else retain current ones
 		if ((node[0x02] & 0x8000))	{
 			m_nodeAttribs.currentTexOffsetX = tx;
@@ -1066,15 +1065,15 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF) / 255.f;
 		}
 		else {
-			if (ph.ColorDisabled()) {		// no colours were set
-				p.faceColour[0] = 1.0f;
-				p.faceColour[1] = 1.0f;
-				p.faceColour[2] = 1.0f;
-			}
-			else {
-				p.faceColour[0] = ((ph.header[4] >> 24)) / 255.f;
-				p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF) / 255.f;
-				p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF) / 255.f;
+
+			p.faceColour[0] = ((ph.header[4] >> 24)) / 255.f;
+			p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF) / 255.f;
+			p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF) / 255.f;
+
+			if (ph.TranslatorMap()) {
+				p.faceColour[0] *= 15.9375f;	// not using 16, as 16x16=256 not 255 and that would overflow (potentially)
+				p.faceColour[1] *= 15.9375f;
+				p.faceColour[2] *= 15.9375f;
 			}
 		}
 

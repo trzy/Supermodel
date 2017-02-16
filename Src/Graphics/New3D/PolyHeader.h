@@ -48,7 +48,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed poin
 
 0x04: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Color (RGB888 or two 12-bit indexes, sensor color and color)
--------- -------- -------- x-------		Translator map enable ? (treated as color modulation disabled)
+-------- -------- -------- x-------		Translator map enable ? (Seems to be some 4/5bit colour format. Max observed value=16)
 -------- -------- -------- -x------		Texture page
 -------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
 
@@ -121,7 +121,7 @@ public:
 	void	Color(UINT8& r, UINT8& g, UINT8& b);
 	int		ColorIndex();
 	int		SensorColorIndex();
-	bool	ColorDisabled();
+	bool	TranslatorMap();
 	int		Page();
 
 	// header 5
