@@ -130,6 +130,7 @@ public:
 
 	//header 6
 	bool	Layered();
+	bool	HighPriority();
 	float	Shininess();
 	int		TexFormat();
 	bool	TexEnabled();

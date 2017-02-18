@@ -357,6 +357,11 @@ float PolyHeader::LightModifier()
 	return ((header[6] >> 11) & 0x1F) * (1.0f / 16.0f);
 }
 
+bool PolyHeader::HighPriority()
+{
+	return (header[6] & 0x10) > 0;
+}
+
 //
 // misc
 //
