@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include <string.h>
 #include "R3DFloat.h"
 
 #define MAX_RAM_POLYS 100000	
@@ -103,8 +104,10 @@ void CNew3D::DrawScrollFog()
 	}
 }
 
-void CNew3D::RenderScene(int priority, bool alpha)
+bool CNew3D::RenderScene(int priority, bool renderOverlay, bool alpha)
 {
+	bool hasOverlay = false;		// (high priority polys)
+
 	if (alpha) {
 		glEnable(GL_BLEND);
 	}
@@ -138,16 +141,12 @@ void CNew3D::RenderScene(int priority, bool alpha)
 
 			for (auto &mesh : *m.meshes) {
 
-				if (alpha) {
-					if (!mesh.textureAlpha && !mesh.polyAlpha) {
-						continue;
-					}
+				if (mesh.highPriority) {
+					hasOverlay = true;
 				}
-				else {
-					if (mesh.textureAlpha || mesh.polyAlpha) {
-						continue;
-					}
-				}
+
+				if (!mesh.Render(alpha)) continue;
+				if (mesh.highPriority != renderOverlay) continue;
 
 				if (!matrixLoaded) {
 					glLoadMatrixf(m.modelMat);
@@ -192,6 +191,8 @@ void CNew3D::RenderScene(int priority, bool alpha)
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
 	glDisable(GL_STENCIL_TEST);
+
+	return hasOverlay;
 }
 
 void CNew3D::RenderFrame(void)
@@ -259,9 +260,24 @@ void CNew3D::RenderFrame(void)
 	m_r3dShader.SetShader(true);
 
 	for (int pri = 0; pri <= 3; pri++) {
+
+		//==============
+		bool hasOverlay;
+		//==============
+
+		glViewport	(0, 0, m_totalXRes, m_totalYRes);		// clear whole viewport
 		glClear		(GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
-		RenderScene	(pri, false);
-		RenderScene	(pri, true);
+
+		hasOverlay = RenderScene(pri, false, false);
+		hasOverlay = RenderScene(pri, false, true);
+
+		if (hasOverlay) {
+			//clear depth buffer and render high priority polys
+			glViewport(0, 0, m_totalXRes, m_totalYRes);		// clear whole viewport
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			RenderScene(pri, true, false);
+			RenderScene(pri, true, true);
+		}
 	}
 
 	m_r3dShader.SetShader(false);		// unbind shader
@@ -828,7 +844,7 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 	V3::createNormal(r3dPoly.v[0].pos, r3dPoly.v[1].pos, r3dPoly.v[2].pos, normal);
 
 	dotProd		= V3::dotProduct(normal, r3dPoly.faceNormal);
-	clockWise	= dotProd >= 0.0;
+	clockWise	= dotProd >= 0;
 
 	if (clockWise) {
 		p.p1 = r3dPoly.v[0];
@@ -930,6 +946,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->textureAlpha	= ph.TextureAlpha();
 	currentMesh->polyAlpha		= ph.PolyAlpha();
 	currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+	currentMesh->highPriority	= ph.HighPriority();
 
 	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
 		currentMesh->layered = true;

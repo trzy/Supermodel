@@ -176,9 +176,9 @@ private:
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
 	void OffsetTexCoords(R3DPoly& r3dPoly, float offset[2]);
 
-	void RenderScene(int priority, bool alpha);
+	bool RenderScene(int priority, bool renderOverlay, bool alpha);		// returns if has overlay plane
 	float Determinant3x3(const float m[16]);
-	bool IsDynamicModel(UINT32 *data);		// check if the model has a colour palette
+	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
 	void DrawScrollFog();
 

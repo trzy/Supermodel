@@ -381,8 +381,9 @@ UINT64 PolyHeader::Hash()
 	hash |= (UINT64)DoubleSided() << 33;			// bits 33 double sided
 	hash |= (UINT64)AlphaTest() << 34;				// bits 34 contour processing
 	hash |= (UINT64)PolyAlpha() << 35;				// bits 35 poly alpha processing
-	hash |= (UINT64)TextureAlpha() << 36;			// bits 35 texture alpha processing
-	hash |= (UINT64)MicroTexture() << 37;			// bits 36 microtexture enable
+	hash |= (UINT64)TextureAlpha() << 36;			// bits 36 texture alpha processing
+	hash |= (UINT64)MicroTexture() << 37;			// bits 37 microtexture enable
+	hash |= (UINT64)HighPriority() << 38;			// bits 38 high priority enable
 
 	//to do add the rest of the states
 

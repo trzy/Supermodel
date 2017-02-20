@@ -47,6 +47,23 @@ struct R3DPoly
 
 struct Mesh
 {
+	//helper funcs
+	bool Render(bool alpha) 
+	{
+		if (alpha) {
+			if (!textureAlpha && !polyAlpha) {
+				return false;
+			}
+		}
+		else {
+			if (textureAlpha || polyAlpha) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	// texture
 	int format, x, y, width, height = 0;
 	bool mirrorU = false;
@@ -65,6 +82,7 @@ struct Mesh
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	bool clockWise		= true;			// we need to check if the matrix will change the winding
 	bool layered		= false;		// stencil poly
+	bool highPriority	= false;		// rendered over the top
 
 	// lighting
 	bool lighting		= false;
