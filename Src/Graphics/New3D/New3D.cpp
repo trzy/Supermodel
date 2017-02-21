@@ -868,6 +868,11 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 
 	if (r3dPoly.number == 4) {
 
+		V3::createNormal(r3dPoly.v[0].pos, r3dPoly.v[2].pos, r3dPoly.v[3].pos, normal);
+
+		dotProd		= V3::dotProduct(normal, r3dPoly.faceNormal);
+		clockWise	= dotProd >= 0;
+
 		if (clockWise) {
 			p.p1 = r3dPoly.v[0];
 			p.p2 = r3dPoly.v[2];
