@@ -718,6 +718,20 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
 		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
 
+		// I don't really know what these paramaters are for. They are derived from the view angles somehow.
+		// In the sdk it's they are someting like (1/tan(left)-tan(right)) * tan(left)
+		// But we know when left=right the value is always 0.5. Any other value and we have off-axis projection
+		// My theory is, the h/w is using these values set actually set the projection matrix angles
+		// The above vpnode[12], vpnode[13] actually work as a normal vector for the clipping planes (used for culling)
+		// I think in lost world and dirt devils, there is a missmatch between the computed plane normals, and the view angles
+		if (*(float *)&vpnode[0xa] == 0.5f) {
+			vp->angle_bottom = -vp->angle_top;
+		}
+
+		if (*(float *)&vpnode[0xb] == 0.5f) {
+			vp->angle_right = -vp->angle_left;
+		}
+
 		// calculate the frustum shape, near/far pair are dummy values
 		CalcViewport(vp, 1, 1000);
 
