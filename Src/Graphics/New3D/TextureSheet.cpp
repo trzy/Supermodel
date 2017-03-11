@@ -177,8 +177,8 @@ int	TextureSheet::GetTexFormat(int originalFormat, bool contour)
 
 void TextureSheet::GetMicrotexPos(int basePage, int id, int& x, int& y)
 {
-	int xCoords[8] = { 0, 128, 0, 128, 0, 128, 0, 128 };
-	int yCoords[8] = { 0, 0, 128, 128, 0, 0, 128, 128 };
+	int xCoords[8] = { 0, 0, 128, 128, 0, 0, 128, 128 };
+	int yCoords[8] = { 0, 128, 0, 128, 256, 384, 256, 384 };
 
 	// i'm assuming .. the micro texture map is always on the other memory bank to the base texture
 	// this logic works for all our current games
