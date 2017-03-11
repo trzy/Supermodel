@@ -187,7 +187,7 @@ void TextureSheet::GetMicrotexPos(int basePage, int id, int& x, int& y)
 	basePage = (basePage + 1) & 1;	// wrap around base page
 
 	x = xCoords[id];
-	y = xCoords[id] + (basePage * 1024);
+	y = yCoords[id] + (basePage * 1024);
 }
 
 } // New3D
