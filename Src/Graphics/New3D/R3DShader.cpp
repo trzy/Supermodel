@@ -70,7 +70,9 @@ static const char *fragmentShaderBasic =
     "tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
     "if (microTexture==1) {\n"
-      "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * microTextureScale);\n"
+	  "vec2 scale    = textureSize(tex1, 0)/256.0;\n"		//technically glsl 1.3 .. no one should care hopefully
+      "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * scale * microTextureScale);\n"
+
       "tex1Data = (tex1Data+tex2Data)/2.0;\n"
     "}\n"
 
