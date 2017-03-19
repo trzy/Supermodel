@@ -186,6 +186,7 @@ private:
   unsigned  m_yOffset = 0;
   unsigned  m_totalXPixels;   // total display surface resolution
   unsigned  m_totalYPixels;
+  unsigned  m_correction = 0;
   
   // Shader programs and input data locations
   GLuint m_shaderProgram;   // shader program object

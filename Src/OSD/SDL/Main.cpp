@@ -135,15 +135,21 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   // Write back resolution parameters
   *xResPtr = (unsigned) xRes;
   *yResPtr = (unsigned) yRes;
+
+  UINT32 correction = (UINT32)(((yRes / 384.f) * 2) + 0.5f);
+
+  glEnable(GL_SCISSOR_TEST);
   
   // Scissor box (to clip visible area)
   if (!g_Config.wideScreen)
   {
     if (VideoInfo->current_w > int(*xResPtr) || VideoInfo->current_h > int(*yResPtr))
     {
-      glEnable(GL_SCISSOR_TEST);
-      glScissor(*xOffsetPtr, *yOffsetPtr, *xResPtr, *yResPtr);
+	  glScissor(*xOffsetPtr + correction, *yOffsetPtr + correction, *xResPtr - (correction*2), *yResPtr - (correction*2));
     }
+  }
+  else {
+	glScissor(0, correction, *totalXResPtr, *totalYResPtr - (correction * 2));
   }
   return OKAY;
 }

@@ -703,14 +703,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
-		if (vp->vpX) {
-			vp->vpX += 2;
-		}
-
-		if (vp->vpY) {
-			vp->vpY += 2;
-		}
-
 		LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
 
 		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);

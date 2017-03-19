@@ -536,24 +536,15 @@ void CRender2D::Setup2D(bool isBottom, bool clearAll)
   glUseProgram(m_shaderProgram);
   
   // Clear everything if requested or just overscan areas for wide screen mode
-  if (clearAll)
+  if (clearAll || isBottom)
   {
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glViewport(0, 0, m_totalXPixels, m_totalYPixels);
     glClear(GL_COLOR_BUFFER_BIT);
   }
-  else if (isBottom && g_Config.wideScreen)
-  {
-    // For now, clear w/ black (may want to use color 0 later)
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glViewport(0, 0, m_xOffset, m_totalYPixels);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glViewport(m_xOffset + m_xPixels, 0, m_totalXPixels, m_totalYPixels);
-    glClear(GL_COLOR_BUFFER_BIT);
-  }
 
   // Set up the viewport and orthogonal projection
-  glViewport(m_xOffset, m_yOffset, m_xPixels, m_yPixels);
+  glViewport(m_xOffset - m_correction, m_yOffset + m_correction, m_xPixels, m_yPixels);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0.0, 1.0, 1.0, 0.0, 1.0, -1.0);
@@ -672,6 +663,7 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   m_yOffset = yOffset;
   m_totalXPixels = totalXRes;
   m_totalYPixels = totalYRes;
+  m_correction = (UINT32)(((yRes / 384.f) * 2) + 0.5f);		// for some reason the 2d layer is 2 pixels off the 3D
 
   // Create textures
   glActiveTexture(GL_TEXTURE0); // texture unit 0
