@@ -1,81 +1,159 @@
-<game name="scud">
+<game name="dayto2pe">
   <identity>
-    <title>Scud Race</title>
-    <version>Australian</version>
+    <title>Daytona 2 Power Edition</title>
     <manufacturer>Sega</manufacturer>
-    <year>1996</year>
+    <year>1998</year>
   </identity>
   <hardware>
     <platform>Sega Model 3</platform>
-    <stepping>1.5</stepping>
-    <mpeg_board>DSB1</mpeg_board>
+    <stepping>2.1</stepping>
+    <mpeg_board>DSB2</mpeg_board>
     <inputs>
       <input type="common" />
       <input type="vehicle" />
       <input type="shift4" />
       <input type="vr4" />
     </inputs>
+    <encryption_key>0x29222CC4</encryption_key>
   </hardware>
   <roms>
     <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-      <file offset="0" name="epr-19734.20" crc32="0xBE897336" />
-      <file offset="2" name="epr-19733.19" crc32="0x6565E29A" />
-      <file offset="4" name="epr-19732.18" crc32="0x23E864BB" />
-      <file offset="6" name="epr-19731.17" crc32="0x3EE6447E" />
+      <file offset="0" name="epr-21181.20" crc32="0xBF0007ED" />
+      <file offset="2" name="epr-21180.19" crc32="0x6E7B98ED" />
+      <file offset="4" name="epr-21179.18" crc32="0xD5FFB4D6" />
+      <file offset="6" name="epr-21178.17" crc32="0x230BF8AC" />
     </region>
     <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
       <!-- CROM0 -->
-      <file offset="0x0000000" name="mpr-19661.04" crc32="0x8E3FD241" />
-      <file offset="0x0000002" name="mpr-19660.03" crc32="0xD999C935" />
-      <file offset="0x0000004" name="mpr-19659.02" crc32="0xC47E7002" />
-      <file offset="0x0000006" name="mpr-19658.01" crc32="0xD523235C" />
+      <file offset="0x0000000" name="mpr-21185.4" crc32="0xB6D5D2A1" />
+      <file offset="0x0000002" name="mpr-21184.3" crc32="0x25616403" />
+      <file offset="0x0000004" name="mpr-21183.2" crc32="0xB4B44805" />
+      <file offset="0x0000006" name="mpr-21182.1" crc32="0xBA8E667F" />
       <!-- CROM1 -->
-      <file offset="0x1000000" name="mpr-19665.08" crc32="0xF97C78F9" />
-      <file offset="0x1000002" name="mpr-19664.07" crc32="0xB9D11294" />
-      <file offset="0x1000004" name="mpr-19663.06" crc32="0xF6AF1CA4" />
-      <file offset="0x1000006" name="mpr-19662.05" crc32="0x3C700EFF" />
+      <file offset="0x2000000" name="mpr-21189.8" crc32="0xCB439C45" />
+      <file offset="0x2000002" name="mpr-21188.7" crc32="0x753FC2A5" />
+      <file offset="0x2000004" name="mpr-21187.6" crc32="0x3BD14EE6" />
+      <file offset="0x2000006" name="mpr-21186.5" crc32="0xA6128662" />
       <!-- CROM2 -->
-      <file offset="0x2000000" name="mpr-19669.12" crc32="0xCDC43C61" />
-      <file offset="0x2000002" name="mpr-19668.11" crc32="0x0B4DD8D5" />
-      <file offset="0x2000004" name="mpr-19667.10" crc32="0xA8676799" />
-      <file offset="0x2000006" name="mpr-19666.09" crc32="0xB53DC97F" />
+      <file offset="0x4000000" name="mpr-21193.12" crc32="0x4638FEF4" />
+      <file offset="0x4000002" name="mpr-21192.11" crc32="0x60CBB1FA" />
+      <file offset="0x4000004" name="mpr-21191.10" crc32="0xA2BDCFE0" />
+      <file offset="0x4000006" name="mpr-21190.9"  crc32="0x984D56EB" />
+      <!-- CROM3 -->                                                    
+      <file offset="0x6000000" name="mpr-21197.16" crc32="0x04015247" />
+      <file offset="0x6000002" name="mpr-21196.15" crc32="0x0AB46DB5" />
+      <file offset="0x6000004" name="mpr-21195.14" crc32="0x7F39761C" />
+      <file offset="0x6000006" name="mpr-21194.13" crc32="0x12C7A414" />
     </region>
     <region name="vrom" stride="32" chunk_size="2">
-      <file offset="0"  name="mpr-19672.26" crc32="0x588C29FD" />
-      <file offset="2"  name="mpr-19673.27" crc32="0x156ABAA9" />
-      <file offset="4"  name="mpr-19674.28" crc32="0xC7B0F98C" />
-      <file offset="6"  name="mpr-19675.29" crc32="0xFF113396" />
-      <file offset="8"  name="mpr-19676.30" crc32="0xFD852EAD" />
-      <file offset="10" name="mpr-19677.31" crc32="0xC6AC0347" />
-      <file offset="12" name="mpr-19678.32" crc32="0xB8819CFE" />
-      <file offset="14" name="mpr-19679.33" crc32="0xE126C3E3" />
-      <file offset="16" name="mpr-19680.34" crc32="0x00EA5CEF" />
-      <file offset="18" name="mpr-19681.35" crc32="0xC949325F" />
-      <file offset="20" name="mpr-19682.36" crc32="0xCE5CA065" />
-      <file offset="22" name="mpr-19683.37" crc32="0xE5856419" />
-      <file offset="24" name="mpr-19684.38" crc32="0x56F6EC97" />
-      <file offset="26" name="mpr-19685.39" crc32="0x42B49304" />
-      <file offset="28" name="mpr-19686.40" crc32="0x84EED592" />
-      <file offset="30" name="mpr-19687.41" crc32="0x776CE694" />
+      <file offset="0"  name="mpr-21198.26" crc32="0x42EC9ED4" />
+      <file offset="2"  name="mpr-21199.27" crc32="0xFA28088C" />
+      <file offset="4"  name="mpr-21200.28" crc32="0xFBB5AA1D" />
+      <file offset="6"  name="mpr-21201.29" crc32="0xE6B13469" />
+      <file offset="8"  name="mpr-21202.30" crc32="0xE6B4C2BE" />
+      <file offset="10" name="mpr-21203.31" crc32="0x32D08D33" />
+      <file offset="12" name="mpr-21204.32" crc32="0xEF18FE0A" />
+      <file offset="14" name="mpr-21205.33" crc32="0x4687BEA6" />
+      <file offset="16" name="mpr-21206.34" crc32="0xEC2D6884" />
+      <file offset="18" name="mpr-21207.35" crc32="0xEEAA510B" />
+      <file offset="20" name="mpr-21208.36" crc32="0xB222FEF0" />
+      <file offset="22" name="mpr-21209.37" crc32="0x170A28CE" />
+      <file offset="24" name="mpr-21210.38" crc32="0x460CEFE0" />
+      <file offset="26" name="mpr-21211.39" crc32="0xC84759CE" />
+      <file offset="28" name="mpr-21212.40" crc32="0x6F8A75E0" />
+      <file offset="30" name="mpr-21213.41" crc32="0xDE75BEC6" />
     </region>
     <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
-      <file offset="0" name="epr-19692.21" crc32="0xA94F5521" />
+      <file offset="0" name="epr-21325.21" crc32="0x004AD6AD" />
     </region>
     <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
-      <file offset="0x000000" name="mpr-19670.22" crc32="0xBD31CC06" />
-      <file offset="0x400000" name="mpr-19671.24" crc32="0x8E8526AB" />
+      <file offset="0x000000" name="mpr-21285.22" crc32="0x7CDCA6AC" />
+      <file offset="0x400000" name="mpr-21287.24" crc32="0x06B66F17" />
+      <file offset="0x800000" name="mpr-21286.23" crc32="0x7CDCA6AC" />
+      <file offset="0xC00000" name="mpr-21288.25" crc32="0x06B66F17" />
     </region>
-    <region name="mpeg_program" stride="1" chunk_size="1">
-      <file offset="0" name="epr-19612.2" crc32="0x13978FD4" />
+    <region name="mpeg_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-20886.ic2" crc32="0x65B05F98" />
     </region>
     <region name="mpeg_music" stride="1" chunk_size="1">
-      <file offset="0x000000" name="mpr-19603.57" crc32="0xB1B1765F" />
-      <file offset="0x200000" name="mpr-19604.58" crc32="0x6AC85B49" />
-      <file offset="0x400000" name="mpr-19605.59" crc32="0xBEC891EB" />
-      <file offset="0x600000" name="mpr-19606.60" crc32="0xADAD46B2" />
+      <file offset="0x000000" name="mpr-20887.ic18" crc32="0xA0757684" />
+      <file offset="0x400000" name="mpr-20888.ic20" crc32="0xB495FE65" />
+      <file offset="0x800000" name="mpr-20889.ic22" crc32="0x18EEC79E" />
+      <file offset="0xC00000" name="mpr-20890.ic24" crc32="0xAAC96FA2" />
     </region>
     <region name="driveboard_program" stride="1" chunk_size="1">
-      <file offset="0" name="epr-19338a.bin" crc32="0xC9FAC464" />
+      <file offset="0" name="epr-20985.bin" crc32="0xB139481D" />
+    </region>
+  </roms>
+</game>
+
+<game name="eca">
+  <identity>
+    <title>Emergency Call Ambulance</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1999</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shiftupdown" />
+      <input type="viewchange" />
+    </inputs>
+    <encryption_key>0x2923aa91</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr22898.20" crc32="0xEFB96701" />
+      <file offset="2" name="epr22897.19" crc32="0x9755DD8C" />
+      <file offset="4" name="epr22896.18" crc32="0x0FF828A8" />
+      <file offset="6" name="epr22895.17" crc32="0x07DF16A0" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr22873.4" crc32="0xDD406330" />
+      <file offset="0x0000002" name="mpr22872.3" crc32="0x4FDE63A1" />
+      <file offset="0x0000004" name="mpr22871.2" crc32="0xCF5BB5B5" />
+      <file offset="0x0000006" name="mpr22870.1" crc32="0x52054043" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr22877.8" crc32="0xE53B8764" />
+      <file offset="0x1000002" name="mpr22876.7" crc32="0xA7561249" />
+      <file offset="0x1000004" name="mpr22875.6" crc32="0x1BB5C018" />
+      <file offset="0x1000006" name="mpr22874.5" crc32="0x5E990497" />
+      <!-- CROM2 -->
+      <file offset="0x3000000" name="mpr22885.16" crc32="0x3525B46D" />
+      <file offset="0x3000002" name="mpr22884.15" crc32="0x254C3B63" />
+      <file offset="0x3000004" name="mpr22883.14" crc32="0x86D90148" />
+      <file offset="0x3000006" name="mpr22882.13" crc32="0xB161416F" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr22854.26" crc32="0x97A23D16" />
+      <file offset="2"  name="mpr22855.27" crc32="0x7249CDC9" />
+      <file offset="4"  name="mpr22856.28" crc32="0x9C0D1D1B" />
+      <file offset="6"  name="mpr22857.29" crc32="0x44E6CE2B" />
+      <file offset="8"  name="mpr22858.30" crc32="0x0AF40AAE" />
+      <file offset="10" name="mpr22859.31" crc32="0xC64F0158" />
+      <file offset="12" name="mpr22860.32" crc32="0x053AF14B" />
+      <file offset="14" name="mpr22861.33" crc32="0xD26343DA" />
+      <file offset="16" name="mpr22862.34" crc32="0x38347C14" />
+      <file offset="18" name="mpr22863.35" crc32="0x28B558E6" />
+      <file offset="20" name="mpr22864.36" crc32="0x31ED02F6" />
+      <file offset="22" name="mpr22865.37" crc32="0x3E3A211A" />
+      <file offset="24" name="mpr22866.38" crc32="0xA863A3C8" />
+      <file offset="26" name="mpr22867.39" crc32="0x1CE6C7B2" />
+      <file offset="28" name="mpr22868.40" crc32="0x2DB40CF8" />
+      <file offset="30" name="mpr22869.41" crc32="0xC6D62634" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr22886.21" crc32="0x374EC1C6" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr22887.22" crc32="0x7D04A867" />
+      <file offset="0x400000" name="mpr22889.24" crc32="0x4F9BA45D" />
+      <file offset="0x800000" name="mpr22888.23" crc32="0x018FCF22" />
+      <file offset="0xC00000" name="mpr22890.25" crc32="0xB638BD7C" />
     </region>
   </roms>
 </game>
@@ -146,6 +224,443 @@
       <file offset="0x400000" name="mpr21465.24" crc32="0x1A62D925" />
       <file offset="0x800000" name="mpr21464.23" crc32="0x8230C1DE" />
       <file offset="0xC00000" name="mpr21466.25" crc32="0xCA20359E" />
+    </region>
+  </roms>
+</game>
+
+<game name="lostwsga">
+  <identity>
+    <title>The Lost World</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="gun1" />
+      <input type="gun2" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-19936.20" crc32="0x2F1CA664" />
+      <file offset="2" name="epr-19937.19" crc32="0x9DBF5712" />
+      <file offset="4" name="epr-19938.18" crc32="0x38AFE27A" />
+      <file offset="6" name="epr-19939.17" crc32="0x8788B939" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-19921.4" crc32="0x9AF3227F" />
+      <file offset="0x0000002" name="mpr-19920.3" crc32="0x8DF33574" />
+      <file offset="0x0000004" name="mpr-19919.2" crc32="0xFF119949" />
+      <file offset="0x0000006" name="mpr-19918.1" crc32="0x95B690E9" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-19925.8" crc32="0xCFA4BB49" />
+      <file offset="0x1000002" name="mpr-19924.7" crc32="0x4EE3DDC5" />
+      <file offset="0x1000004" name="mpr-19923.6" crc32="0xED515CB2" />
+      <file offset="0x1000006" name="mpr-19922.5" crc32="0x4DFD7FC6" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-19929.12" crc32="0x16491F63" />
+      <file offset="0x2000002" name="mpr-19928.11" crc32="0x9AFD5D4A" />
+      <file offset="0x2000004" name="mpr-19927.10" crc32="0x0C96EF11" />
+      <file offset="0x2000006" name="mpr-19926.9"  crc32="0x05A232E0" />
+      <!-- CROM3 -->
+      <file offset="0x3000000" name="mpr-19933.16" crc32="0x8E2ACD3B" />
+      <file offset="0x3000002" name="mpr-19932.15" crc32="0x04389385" />
+      <file offset="0x3000004" name="mpr-19931.14" crc32="0x448A5007" />
+      <file offset="0x3000006" name="mpr-19930.13" crc32="0xB598C2F2" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-19902.26" crc32="0x178BD471" />
+      <file offset="2"  name="mpr-19903.27" crc32="0xFE575871" />
+      <file offset="4"  name="mpr-19904.28" crc32="0x57971D7D" />
+      <file offset="6"  name="mpr-19905.29" crc32="0x6FA122EE" />
+      <file offset="8"  name="mpr-19906.30" crc32="0xA5B16DD9" />
+      <file offset="10" name="mpr-19907.31" crc32="0x84A425CD" />
+      <file offset="12" name="mpr-19908.32" crc32="0x7702AA7C" />
+      <file offset="14" name="mpr-19909.33" crc32="0x8FCA65F9" />
+      <file offset="16" name="mpr-19910.34" crc32="0x1EF585E2" />
+      <file offset="18" name="mpr-19911.35" crc32="0xCA26A48D" />
+      <file offset="20" name="mpr-19912.36" crc32="0xFFE000E0" />
+      <file offset="22" name="mpr-19913.37" crc32="0xC003049E" />
+      <file offset="24" name="mpr-19914.38" crc32="0x3C21A953" />
+      <file offset="26" name="mpr-19915.39" crc32="0xFD0F2A2B" />
+      <file offset="28" name="mpr-19916.40" crc32="0x10B0C52E" />
+      <file offset="30" name="mpr-19917.41" crc32="0x3035833B" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-19940.21" crc32="0xB06FFE5F" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr19934.22" crc32="0xC7D8E194" />
+      <file offset="0x400000" name="mpr19935.24" crc32="0x91C1B618" />
+    </region>
+  </roms>
+</game>
+
+<game name="magtruck">
+  <identity>
+    <title>Magical Truck Adventure</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="magtruck" />
+    </inputs>
+    <encryption_key>0x29266e45</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr21434.20" crc32="0xE028D7CA" />
+      <file offset="2" name="epr21436.19" crc32="0x22BCBCA3" />
+      <file offset="4" name="epr21433.18" crc32="0x60AA9D76" />
+      <file offset="6" name="epr21435.17" crc32="0x9B169446" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr21426.4" crc32="0xCE77E26E" />
+      <file offset="0x0000002" name="mpr21425.3" crc32="0xAD235849" />
+      <file offset="0x0000004" name="mpr21424.2" crc32="0x25358FDF" />
+      <file offset="0x0000006" name="mpr21423.1" crc32="0x4EE0060A" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr21407.26" crc32="0x3FFB416C" />
+      <file offset="2"  name="mpr21408.27" crc32="0x3E00A7EF" />
+      <file offset="4"  name="mpr21409.28" crc32="0xA4673BBF" />
+      <file offset="6"  name="mpr21410.29" crc32="0xC9F43B4A" />
+      <file offset="8"  name="mpr21411.30" crc32="0xF14957C7" />
+      <file offset="10" name="mpr21412.31" crc32="0xEC24091F" />
+      <file offset="12" name="mpr21413.32" crc32="0xEA9049E0" />
+      <file offset="14" name="mpr21414.33" crc32="0x79BC5FFD" />
+      <file offset="16" name="mpr21415.34" crc32="0xF96FE7A2" />
+      <file offset="18" name="mpr21416.35" crc32="0x84A08B3E" />
+      <file offset="20" name="mpr21417.36" crc32="0x6094975C" />
+      <file offset="22" name="mpr21418.37" crc32="0x7BB868BA" />
+      <file offset="24" name="mpr21419.38" crc32="0xBE7325C2" />
+      <file offset="26" name="mpr21420.39" crc32="0x8B577E7B" />
+      <file offset="28" name="mpr21421.40" crc32="0x71E4E9FC" />
+      <file offset="30" name="mpr21422.41" crc32="0xFECA77A5" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr21438.21" crc32="0x6815AF9E" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr21427.22" crc32="0x884566F6" />
+      <file offset="0x400000" name="mpr21428.24" crc32="0x162D1E43" />
+      <file offset="0x800000" name="mpr21431.23" crc32="0x0EF8F7BB" />
+      <file offset="0xC00000" name="mpr21432.25" crc32="0x59C0F6DF" />
+    </region>
+  </roms>
+</game>
+
+<game name="oceanhun">
+  <identity>
+    <title>The Ocean Hunter</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="analog_gun1" />
+      <input type="analog_gun2" />
+    </inputs>     
+    <encryption_key>0x292B6A01</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr21114.17" crc32="0x58D985f1" />
+      <file offset="2" name="epr21115.18" crc32="0x69E31E85" />
+      <file offset="4" name="epr21116.19" crc32="0x0BB9C107" />
+      <file offset="6" name="epr21117.20" crc32="0x3ADFCB9D" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM1 -->
+      <file offset="0x2000000" name="mpr21082.5" crc32="0x2B7224D3" />
+      <file offset="0x2000002" name="mpr21083.6" crc32="0xC1C6B554" />
+      <file offset="0x2000004" name="mpr21084.7" crc32="0xFDEC6A23" />
+      <file offset="0x2000006" name="mpr21085.8" crc32="0x5056AD33" />
+      <!-- CROM2 -->
+      <file offset="0x4000000" name="mpr21089.12" crc32="0x2E8F88BD" />
+      <file offset="0x4000002" name="mpr21088.11" crc32="0x7ED71C8C" />
+      <file offset="0x4000004" name="mpr21087.10" crc32="0xCFF28641" />
+      <file offset="0x4000006" name="mpr21086.9"  crc32="0x3F12E1D0" />
+      <!-- CROM3 -->
+      <file offset="0x6000000" name="mpr21093.16" crc32="0xBDFBF357" />
+      <file offset="0x6000002" name="mpr21092.15" crc32="0x5B1CED40" />
+      <file offset="0x6000004" name="mpr21091.14" crc32="0x10671951" />
+      <file offset="0x6000006" name="mpr21090.13" crc32="0x749D7979" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr21098.26" crc32="0x91E71855" />
+      <file offset="2"  name="mpr21099.27" crc32="0x308A2768" />
+      <file offset="4"  name="mpr21100.28" crc32="0x5149B286" />
+      <file offset="6"  name="mpr21101.29" crc32="0xE9ED4250" />
+      <file offset="8"  name="mpr21102.30" crc32="0x06C6D4FC" />
+      <file offset="10" name="mpr21103.31" crc32="0x17C4B27A" />
+      <file offset="12" name="mpr21104.32" crc32="0xF6F80FFB" />
+      <file offset="14" name="mpr21105.33" crc32="0x99BDB52B" />
+      <file offset="16" name="mpr21106.34" crc32="0xAD2B7981" />
+      <file offset="18" name="mpr21107.35" crc32="0xE108FF62" />
+      <file offset="20" name="mpr21108.36" crc32="0xCDDC7A6E" />
+      <file offset="22" name="mpr21109.37" crc32="0x92D6141D" />
+      <file offset="24" name="mpr21110.38" crc32="0x4D6E3148" />
+      <file offset="26" name="mpr21111.39" crc32="0x0A046D7A" />
+      <file offset="28" name="mpr21112.40" crc32="0x9AFD9FEB" />
+      <file offset="30" name="mpr21113.41" crc32="0x864BF325" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr21118.21" crc32="0x598C00F0" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr21094.22" crc32="0xC262B80A" />
+      <file offset="0x400000" name="mpr21096.24" crc32="0x0A0021A0" />
+      <file offset="0x800000" name="mpr21095.23" crc32="0x16D27A0A" />
+      <file offset="0xC00000" name="mpr21097.25" crc32="0x0D8033FC" />
+    </region>
+  </roms>
+</game>
+
+<game name="scud">
+  <identity>
+    <title>Scud Race</title>
+    <version>Australian</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1996</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <mpeg_board>DSB1</mpeg_board>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shift4" />
+      <input type="vr4" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-19734.20" crc32="0xBE897336" />
+      <file offset="2" name="epr-19733.19" crc32="0x6565E29A" />
+      <file offset="4" name="epr-19732.18" crc32="0x23E864BB" />
+      <file offset="6" name="epr-19731.17" crc32="0x3EE6447E" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-19661.04" crc32="0x8E3FD241" />
+      <file offset="0x0000002" name="mpr-19660.03" crc32="0xD999C935" />
+      <file offset="0x0000004" name="mpr-19659.02" crc32="0xC47E7002" />
+      <file offset="0x0000006" name="mpr-19658.01" crc32="0xD523235C" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-19665.08" crc32="0xF97C78F9" />
+      <file offset="0x1000002" name="mpr-19664.07" crc32="0xB9D11294" />
+      <file offset="0x1000004" name="mpr-19663.06" crc32="0xF6AF1CA4" />
+      <file offset="0x1000006" name="mpr-19662.05" crc32="0x3C700EFF" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-19669.12" crc32="0xCDC43C61" />
+      <file offset="0x2000002" name="mpr-19668.11" crc32="0x0B4DD8D5" />
+      <file offset="0x2000004" name="mpr-19667.10" crc32="0xA8676799" />
+      <file offset="0x2000006" name="mpr-19666.09" crc32="0xB53DC97F" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-19672.26" crc32="0x588C29FD" />
+      <file offset="2"  name="mpr-19673.27" crc32="0x156ABAA9" />
+      <file offset="4"  name="mpr-19674.28" crc32="0xC7B0F98C" />
+      <file offset="6"  name="mpr-19675.29" crc32="0xFF113396" />
+      <file offset="8"  name="mpr-19676.30" crc32="0xFD852EAD" />
+      <file offset="10" name="mpr-19677.31" crc32="0xC6AC0347" />
+      <file offset="12" name="mpr-19678.32" crc32="0xB8819CFE" />
+      <file offset="14" name="mpr-19679.33" crc32="0xE126C3E3" />
+      <file offset="16" name="mpr-19680.34" crc32="0x00EA5CEF" />
+      <file offset="18" name="mpr-19681.35" crc32="0xC949325F" />
+      <file offset="20" name="mpr-19682.36" crc32="0xCE5CA065" />
+      <file offset="22" name="mpr-19683.37" crc32="0xE5856419" />
+      <file offset="24" name="mpr-19684.38" crc32="0x56F6EC97" />
+      <file offset="26" name="mpr-19685.39" crc32="0x42B49304" />
+      <file offset="28" name="mpr-19686.40" crc32="0x84EED592" />
+      <file offset="30" name="mpr-19687.41" crc32="0x776CE694" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-19692.21" crc32="0xA94F5521" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-19670.22" crc32="0xBD31CC06" />
+      <file offset="0x400000" name="mpr-19671.24" crc32="0x8E8526AB" />
+    </region>
+    <region name="mpeg_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-19612.2" crc32="0x13978FD4" />
+    </region>
+    <region name="mpeg_music" stride="1" chunk_size="1">
+      <file offset="0x000000" name="mpr-19603.57" crc32="0xB1B1765F" />
+      <file offset="0x200000" name="mpr-19604.58" crc32="0x6AC85B49" />
+      <file offset="0x400000" name="mpr-19605.59" crc32="0xBEC891EB" />
+      <file offset="0x600000" name="mpr-19606.60" crc32="0xADAD46B2" />
+    </region>
+    <region name="driveboard_program" stride="1" chunk_size="1">
+      <file offset="0" name="epr-19338a.bin" crc32="0xC9FAC464" />
+    </region>
+  </roms>
+</game>
+
+<game name="swtrilgy">
+  <identity>
+    <title>Star Wars Trilogy</title>
+    <version>Revision A</version>
+    <manufacturer>Sega, LucasArts</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <mpeg_board>DSB2</mpeg_board>
+    <inputs>
+      <input type="common" />
+      <input type="analog_joystick" />
+    </inputs>
+    <encryption_key>0x31272A01</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-21382a.20" crc32="0x69BAF117" />
+      <file offset="2" name="epr-21381a.19" crc32="0x2DD34E28" />
+      <file offset="4" name="epr-21380a.18" crc32="0x780FB4E7" />
+      <file offset="6" name="epr-21379a.17" crc32="0x24DC1555" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-21342.04" crc32="0x339525CE" />
+      <file offset="0x0000002" name="mpr-21341.03" crc32="0xB2A269E4" />
+      <file offset="0x0000004" name="mpr-21340.02" crc32="0xAD36040E" />
+      <file offset="0x0000006" name="mpr-21339.01" crc32="0xC0CE5037" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-21346.08" crc32="0xC8733594" />
+      <file offset="0x1000002" name="mpr-21345.07" crc32="0x6C183A21" />
+      <file offset="0x1000004" name="mpr-21344.06" crc32="0x87453D76" />
+      <file offset="0x1000006" name="mpr-21343.05" crc32="0x12552D07" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-21350.12" crc32="0x486195E7" />
+      <file offset="0x2000002" name="mpr-21349.11" crc32="0x3D39454B" />
+      <file offset="0x2000004" name="mpr-21348.10" crc32="0x1F7CC5F5" />
+      <file offset="0x2000006" name="mpr-21347.09" crc32="0xECB6B934" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-21359.26" crc32="0x34EF4122" />
+      <file offset="2"  name="mpr-21360.27" crc32="0x2882B95E" />
+      <file offset="4"  name="mpr-21361.28" crc32="0x9B61C3C1" />
+      <file offset="6"  name="mpr-21362.29" crc32="0x01A92169" />
+      <file offset="8"  name="mpr-21363.30" crc32="0xE7D18FED" />
+      <file offset="10" name="mpr-21364.31" crc32="0xCB6A5468" />
+      <file offset="12" name="mpr-21365.32" crc32="0xAD5449D8" />
+      <file offset="14" name="mpr-21366.33" crc32="0xDEFB6B95" />
+      <file offset="16" name="mpr-21367.34" crc32="0xDFD51029" />
+      <file offset="18" name="mpr-21368.35" crc32="0xAE90FD21" />
+      <file offset="20" name="mpr-21369.36" crc32="0xBF17EEB4" />
+      <file offset="22" name="mpr-21370.37" crc32="0x2321592A" />
+      <file offset="24" name="mpr-21371.38" crc32="0xA68782FD" />
+      <file offset="26" name="mpr-21372.39" crc32="0xFC3F4E8B" />
+      <file offset="28" name="mpr-21373.40" crc32="0xB76AD261" />
+      <file offset="30" name="mpr-21374.41" crc32="0xAE6C4D28" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-21383.21" crc32="0x544D1E28" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-21355.22" crc32="0xC1B2D326" />
+      <file offset="0x400000" name="mpr-21357.24" crc32="0x02703FAB" />
+    </region>
+    <region name="mpeg_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="ep21384.2" crc32="0x12FA4780" />
+    </region>
+    <region name="mpeg_music" stride="1" chunk_size="1">
+      <file offset="0x000000" name="mp21375.18" crc32="0x735157A9" />
+      <file offset="0x400000" name="mp21376.20" crc32="0xE635F81E" />
+      <file offset="0x800000" name="mp21377.22" crc32="0x720621F8" />
+      <file offset="0xC00000" name="mp21378.24" crc32="0x1FCF715E" />
+    </region>
+    <!-- Drive board ROM not dumped? 
+      <region name="driveboard_program" stride="1" chunk_size="1">
+      </region>
+    -->
+  </roms>
+</game>
+
+<game name="vf3">
+  <identity>
+    <title>Virtua Fighter 3</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1996</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="fighting" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-19230c.20" crc32="0x736A9431" />
+      <file offset="2" name="epr-19229c.19" crc32="0x731B6B78" />
+      <file offset="4" name="epr-19228c.18" crc32="0x9C5727E2" />
+      <file offset="6" name="epr-19227c.17" crc32="0xA7DF4D75" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-19196.4" crc32="0xF386B850" />
+      <file offset="0x0000002" name="mpr-19195.3" crc32="0xBD5E27A3" />
+      <file offset="0x0000004" name="mpr-19194.2" crc32="0x66254702" />
+      <file offset="0x0000006" name="mpr-19193.1" crc32="0x7BAB33D2" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-19200.8" crc32="0x74941091" />
+      <file offset="0x1000002" name="mpr-19199.7" crc32="0x9F80D6FE" />
+      <file offset="0x1000004" name="mpr-19198.6" crc32="0xD8EE5032" />
+      <file offset="0x1000006" name="mpr-19197.5" crc32="0xA22D76C9" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-19204.12" crc32="0x2F93310A" />
+      <file offset="0x2000002" name="mpr-19203.11" crc32="0x0AFA6334" />
+      <file offset="0x2000004" name="mpr-19202.10" crc32="0xAAA086C6" />
+      <file offset="0x2000006" name="mpr-19201.9"  crc32="0x7C4A8C31" />
+      <!-- CROM3 -->
+      <file offset="0x3000000" name="mpr-19208.16" crc32="0x08F30F71" />
+      <file offset="0x3000002" name="mpr-19207.15" crc32="0x2CE1612D" />
+      <file offset="0x3000004" name="mpr-19206.14" crc32="0x71A98D73" />
+      <file offset="0x3000006" name="mpr-19205.13" crc32="0x199C328E" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-19211.26" crc32="0x9C8F5DF1" />
+      <file offset="2"  name="mpr-19212.27" crc32="0x75036234" />
+      <file offset="4"  name="mpr-19213.28" crc32="0x67B123CF" />
+      <file offset="6"  name="mpr-19214.29" crc32="0xA6F5576B" />
+      <file offset="8"  name="mpr-19215.30" crc32="0xC6FD9F0D" />
+      <file offset="10" name="mpr-19216.31" crc32="0x201BB1ED" />
+      <file offset="12" name="mpr-19217.32" crc32="0x4DADD41A" />
+      <file offset="14" name="mpr-19218.33" crc32="0xCFF91953" />
+      <file offset="16" name="mpr-19219.34" crc32="0xC610D521" />
+      <file offset="18" name="mpr-19220.35" crc32="0xE62924D0" />
+      <file offset="20" name="mpr-19221.36" crc32="0x24F83E3C" />
+      <file offset="22" name="mpr-19222.37" crc32="0x61A6AA7D" />
+      <file offset="24" name="mpr-19223.38" crc32="0x1A8C1980" />
+      <file offset="26" name="mpr-19224.39" crc32="0x0A79A1BD" />
+      <file offset="28" name="mpr-19225.40" crc32="0x91A985EB" />
+      <file offset="30" name="mpr-19226.41" crc32="0x00091722" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr19231.21" crc32="0xB416FE96" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-19209.22" crc32="0x3715E38C" />
+      <file offset="0x400000" name="mpr-19210.24" crc32="0xC03D6502" />
     </region>
   </roms>
 </game>
