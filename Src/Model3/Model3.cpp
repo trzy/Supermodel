@@ -858,18 +858,11 @@ void CModel3::WriteSystemRegister(unsigned reg, UINT8 data)
 
 
 /******************************************************************************
- Optimized Address Space Access Handlers
+ Address Space Access Handlers
  
- Although I have not yet profiled the code, these ought to be more optimal,
- especially if the compiler can generate jump tables.
-
  NOTE: Testing of some of the address ranges is not strict enough, especially
- for the MPC10x. Write32() handles the MPC10x most correctly. For now, 
- accesses outside of the handled ranges have not been observed. Use the DEBUG
- version of these handlers for validation of new games.
+ for the MPC10x. Write32() handles the MPC10x most correctly.
 ******************************************************************************/
-
-#ifndef DEBUG
 
 /*
  * CModel3::Read8(addr):
@@ -934,6 +927,15 @@ UINT8 CModel3::Read8(UINT32 addr)
       break;
     }
 
+    break;
+
+  // Tile generator
+  case 0xF1:
+    if (addr < 0xF1120000)
+    {
+      // Tile generator accesses its RAM as little endian, no adjustment needed here
+      return TileGen.ReadRAM8(addr&0x1FFFFF);
+    }
     break;
 
   // 53C810 SCSI
@@ -1022,6 +1024,16 @@ UINT16 CModel3::Read16(UINT32 addr)
       break;
     }
 
+    break;
+
+  // Tile generator
+  case 0xF1:
+    if (addr < 0xF1120000)
+    {
+      // Tile generator accesses its RAM as little endian, no adjustment needed here
+      uint16_t data = TileGen.ReadRAM16(addr&0x1FFFFF);
+      return FLIPENDIAN16(data);
+    }
     break;
 
   // Unknown
@@ -1149,7 +1161,7 @@ UINT32 CModel3::Read32(UINT32 addr)
     // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
     if (addr < 0xF1120000)
     {
-      data = TileGen.ReadRAM(addr&0x1FFFFF);
+      data = TileGen.ReadRAM32(addr&0x1FFFFF);
       return FLIPENDIAN32(data);
     }
     else if ((addr>=0xF1180000) && (addr<0xF1180100))
@@ -1262,6 +1274,16 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     DebugLog("PC=%08X\twrite8 : %08X=%02X\n", ppc_get_pc(), addr, data);    
     break;
 
+  // Tile generator
+  case 0xF1:
+    if (addr < 0xF1120000)
+    {
+      // Tile generator accesses its RAM as little endian, no adjustment needed here
+      TileGen.WriteRAM8(addr&0x1FFFFF, data);
+      break;
+    }
+    goto Unknown8;
+
   // MPC105/106
   case 0xF8:
     PCIBridge.WriteRegister(addr&0xFF,data);
@@ -1333,6 +1355,15 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     DebugLog("PC=%08X\twrite16 : %08X=%04X\n", ppc_get_pc(), addr, data);   
     break;
 
+  // Tile generator
+  case 0xF1:
+    if (addr < 0xF1120000)
+    {
+      // Tile generator accesses its RAM as little endian, no adjustment needed here
+      TileGen.WriteRAM16(addr&0x1FFFFF, FLIPENDIAN16(data));
+    }
+    goto Unknown16;
+    
   // MPC105/106
   case 0xF8:
     // Write in big endian order, like a real PowerPC
@@ -1342,6 +1373,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
   // Unknown
   default:
+  Unknown16:
     DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
     break;
   }
@@ -1349,9 +1381,6 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
 void CModel3::Write32(UINT32 addr, UINT32 data)
 {
-  // Debugging VF3 missing stage textures
-  //if ((addr == 0xb4000)) printf("B4000 written @ pc=%08x lr=%08x\n", ppc_get_pc(), ppc_get_lr());
-
   if ((addr&3))
   {
     Write16(addr+0,data>>16);
@@ -1502,7 +1531,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     {
       // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
       data = FLIPENDIAN32(data);
-      TileGen.WriteRAM(addr&0x1FFFFF,data);
+      TileGen.WriteRAM32(addr&0x1FFFFF,data);
       break;
     }
     else if ((addr>=0xF1180000) && (addr<0xF1180100))
@@ -1548,344 +1577,6 @@ void CModel3::Write64(UINT32 addr, UINT64 data)
     Write32(addr+0, (UINT32) (data>>32));
     Write32(addr+4, (UINT32) data);
 }
-
-#endif
-
-
-/******************************************************************************
- Debug Mode (Strict) Address Space Access Handlers
- 
- Enabled only if DEBUG is defined. These perform stricter checks than the
- "optimized" handlers but may be slower.
-******************************************************************************/
-
-#ifdef DEBUG
-
-/*
- * CModel3::Read8(addr):
- * CModel3::Read16(addr):
- * CModel3::Read32(addr):
- * CModel3::Read64(addr):
- *
- * Read handlers.
- */
-UINT8 CModel3::Read8(UINT32 addr)
-{
-  if (addr<0x00800000)
-    return ram[addr^3];
-  else if ((addr>=0xFF000000) && (addr<0xFF800000))
-    return cromBank[(addr&0x7FFFFF)^3];
-  else if (addr>=0xFF800000)
-    return crom[(addr&0x7FFFFF)^3];
-  else if ((addr>=0xC2000000) && (addr<0xC2000100))
-    return GPU.ReadDMARegister8(addr&0xFF);
-  else if (((addr>=0xF0040000) && (addr<0xF0040040)) || ((addr>=0xFE040000) && (addr<0xFE040040)))
-    return ReadInputs(addr&0x3F);
-  else if (((addr>=0xF0080000) && (addr<=0xF0080007)) || ((addr>=0xFE080000) && (addr<=0xFE080007)))
-  {
-    if ((addr&0xF) == 4)  // MIDI control port
-      return 0xFF;
-  }
-  else if (((addr>=0xF00C0000) && (addr<0xF00DFFFF)) || ((addr>=0xFE0C0000) && (addr<0xFE0DFFFF)))
-    return backupRAM[(addr&0x1FFFF)^3];
-  else if (((addr>=0xF0100000) && (addr<0xF0100040)) || ((addr>=0xFE100000) && (addr<0xFE100040)))
-    return ReadSystemRegister(addr&0x3F);
-  else if (((addr>=0xF0140000) && (addr<0xF0140040)) || ((addr>=0xFE140000) && (addr<0xFE140040)))
-  {
-    if ((addr&3)==1)  // battery voltage test
-      return 0x03;
-    else if ((addr&3)==0)
-      return RTC.ReadRegister((addr>>2)&0xF);
-    return 0;
-  }
-  else if (((addr>=0xF9000000) && (addr<0xF9000100)) || ((addr>=0xC1000000) && (addr<0xC1000100)) || ((Game->step==0x10) && ((addr>=0xC0000000) && (addr<0xC0000100))))
-    return SCSI.ReadRegister(addr&0xFF);
-    
-  DebugLog("PC=%08X\tread8 : %08X\n", ppc_get_pc(), addr);
-  return 0xFF;
-}
-
-UINT16 CModel3::Read16(UINT32 addr)
-{
-  UINT16  data;
-  
-  if ((addr&1))
-  {
-    data =  Read8(addr+0)<<8;
-    data |= Read8(addr+1);
-    return data;
-  }
-    
-  if (addr<0x00800000)
-    return *(UINT16 *) &ram[addr^2];
-  else if ((addr>=0xFF000000) && (addr<0xFF800000))
-    return *(UINT16 *) &cromBank[(addr&0x7FFFFF)^2];
-  else if (addr>=0xFF800000)
-    return *(UINT16 *) &crom[(addr&0x7FFFFF)^2];
-  else if (((addr>=0xF00C0000) && (addr<0xF00DFFFF)) || ((addr>=0xFE0C0000) && (addr<0xFE0DFFFF)))
-    return *(UINT16 *) &backupRAM[(addr&0x1FFFF)^2];
-  else if ((addr>=0xF0C00CF8) && (addr<0xF0C00D00)) // MPC105
-    return PCIBridge.ReadPCIConfigData(16,addr&3);
-  else if ((addr>=0xFEE00000) && (addr<0xFEF00000)) // MPC106
-    return PCIBridge.ReadPCIConfigData(16,addr&3);
-
-  DebugLog("PC=%08X\tread16: %08X\n", ppc_get_pc(), addr);
-  return 0xFFFF;
-}
-
-UINT32 CModel3::Read32(UINT32 addr)
-{
-  UINT32  data;
-      
-  if ((addr&3))
-  {
-    data =  Read16(addr+0)<<16;
-    data |= Read16(addr+2);
-    return data;
-  }
-
-  if (addr<0x00800000)
-    return *(UINT32 *) &ram[addr];
-  else if ((addr>=0xFF000000) && (addr<0xFF800000))
-    return *(UINT32 *) &cromBank[(addr&0x7FFFFF)];
-  else if (addr>=0xFF800000)
-    return *(UINT32 *) &crom[(addr&0x7FFFFF)];
-  else if ((addr>=0x84000000) && (addr<0x8400003F))
-    return GPU.ReadRegister(addr&0x3F);
-  else if ((addr>=0xC2000000) && (addr<0xC2000100))
-  {
-    data = GPU.ReadDMARegister32(addr&0xFF);
-    return FLIPENDIAN32(data);
-  }
-  else if (((addr>=0xF0040000) && (addr<0xF0040040)) || ((addr>=0xFE040000) && (addr<0xFE040040)))
-  {
-    data =  ReadInputs((addr&0x3F)+0) << 24;
-    data |= ReadInputs((addr&0x3F)+1) << 16;
-    data |= ReadInputs((addr&0x3F)+2) << 8;
-    data |= ReadInputs((addr&0x3F)+3) << 0;
-    return data;
-  }
-  else if (((addr>=0xF00C0000) && (addr<0xF00DFFFF)) || ((addr>=0xFE0C0000) && (addr<0xFE0DFFFF)))
-    return *(UINT32 *) &backupRAM[(addr&0x1FFFF)];
-  else if (((addr>=0xF0100000) && (addr<0xF0100040)) || ((addr>=0xFE100000) && (addr<0xFE100040)))
-  {
-    data =  ReadSystemRegister((addr&0x3F)+0) << 24;
-    data |= ReadSystemRegister((addr&0x3F)+1) << 16;
-    data |= ReadSystemRegister((addr&0x3F)+2) << 8;
-    data |= ReadSystemRegister((addr&0x3F)+3) << 0;
-    return data;
-  }
-  else if ((addr>=0xF0C00CF8) && (addr<0xF0C00D00)) // MPC105
-    return PCIBridge.ReadPCIConfigData(32,0);
-  else if ((addr>=0xFEE00000) && (addr<0xFEF00000)) // MPC106
-    return PCIBridge.ReadPCIConfigData(32,0);
-  else if (((addr>=0xF0140000) && (addr<0xF0140040)) || ((addr>=0xFE140000) && (addr<0xFE140040)))
-  {
-    data = (RTC.ReadRegister((addr>>2)&0xF) << 24);
-    data |= 0x00030000; // set these bits to pass battery voltage test
-    return data;
-  }
-  else if (((addr>=0xF0180000) && (addr<0xF019FFFF)) || ((addr>=0xFE180000) && (addr<0xFE19FFFF)))
-    return *(UINT32 *) &securityRAM[(addr&0x1FFFF)];  // so far, only 32-bit access observed, so we use little endian access
-  else if (((addr>=0xF01A0000) && (addr<0xF01A003F)) || ((addr>=0xFE1A0000) && (addr<0xFE1A003F)))
-    return ReadSecurity(addr&0x3F);
-  else if ((addr>=0xF1000000) && (addr<0xF1120000))
-  {
-    // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
-    data = TileGen.ReadRAM(addr&0x1FFFFF);
-    return FLIPENDIAN32(data);
-  }
-  else if (((addr>=0xF9000000) && (addr<0xF9000100)) || ((addr>=0xC1000000) && (addr<0xC1000100)) || ((Game->step==0x10) && ((addr>=0xC0000000) && (addr<0xC0000100))))
-  {
-    data =  (SCSI.ReadRegister((addr+0)&0xFF) << 24);
-    data |= (SCSI.ReadRegister((addr+1)&0xFF) << 16);
-    data |= (SCSI.ReadRegister((addr+2)&0xFF) << 8);
-    data |= (SCSI.ReadRegister((addr+3)&0xFF) << 0);
-    return data;
-  }
-  
-  // FIXES 2D GRAPHICS (to-do: integrate this into tilegen.cpp)
-  if (addr==0xF1180000)
-    return 0;
-    
-  DebugLog("PC=%08X\tread32: %08X\n", ppc_get_pc(), addr);
-  return 0xFFFFFFFF;
-}
-
-UINT64 CModel3::Read64(UINT32 addr)
-{
-  UINT64  data;
-
-  data = Read32(addr+0);
-  data <<= 32;
-  data |= Read32(addr+4);
-
-  return data;
-}
-
-/*
- * CModel3::Write8(addr, data):
- * CModel3::Write16(addr, data):
- * CModel3::Write32(addr, data):
- * CModel3::Write64(addr, data):
- *
- * Write handlers.
- */
-void CModel3::Write8(UINT32 addr, UINT8 data)
-{   
-  if (addr<0x00800000)
-    ram[addr^3] = data;
-  else if ((addr>=0xC2000000) && (addr<0xC2000100))
-    GPU.WriteDMARegister8(addr&0xFF,data);
-  else if (((addr>=0xF0040000) && (addr<0xF0040040)) || ((addr>=0xFE040000) && (addr<0xFE040040)))
-    WriteInputs(addr&0x3F,data);
-  else if (((addr>=0xF0080000) && (addr<=0xF0080007)) || ((addr>=0xFE080000) && (addr<=0xFE080007)))
-  {
-      if ((addr&0xF) == 0)    // MIDI data port
-        SoundBoard.WriteMIDIPort(data);
-      else if ((addr&0xF) == 4) // MIDI control port
-        midiCtrlPort = data;
-  }
-  else if (((addr>=0xF00C0000) && (addr<0xF00E0000)) || ((addr>=0xFE0C0000) && (addr<0xFE0E0000)))
-    backupRAM[(addr&0x1FFFF)^3] = data;
-  else if (((addr>=0xF0100000) && (addr<0xF0100040)) || ((addr>=0xFE100000) && (addr<0xFE100040)))
-    WriteSystemRegister(addr&0x3F,data);
-  else if (((addr>=0xF0140000) && (addr<0xF0140040)) || ((addr>=0xFE140000) && (addr<0xFE140040)))
-  {
-    if ((addr&3)==0)
-      RTC.WriteRegister((addr>>2)&0xF,data);
-  }
-  else if ((addr>=0xF8FFF000) && (addr<0xF8FFF100))
-    PCIBridge.WriteRegister(addr&0xFF,data);
-  else if (((addr>=0xF9000000) && (addr<0xF9000100)) || ((addr>=0xC1000000) && (addr<0xC1000100)) || ((Game->step==0x10) && ((addr>=0xC0000000) && (addr<0xC0000100))))
-    SCSI.WriteRegister(addr&0xFF,data);
-  else
-  {
-    DebugLog("PC=%08X\twrite8 : %08X=%02X\n", ppc_get_pc(), addr, data);
-    //printf("PC=%08X\twrite8 : %08X=%02X\n", ppc_get_pc(), addr, data);
-  }
-}
-
-void CModel3::Write16(UINT32 addr, UINT16 data)
-{
-  if ((addr&1))
-  {
-    Write8(addr+0,data>>8);
-    Write8(addr+1,data&0xFF);
-    return;
-  }
-  
-  if (addr<0x00800000)
-    *(UINT16 *) &ram[addr^2] = data;
-  else if (((addr>=0xF00C0000) && (addr<0xF00E0000)) || ((addr>=0xFE0C0000) && (addr<0xFE0E0000)))
-    *(UINT16 *) &backupRAM[(addr&0x1FFFF)^2] = data;
-  else if ((addr>=0xF0C00CF8) && (addr<0xF0C00D00))
-    PCIBridge.WritePCIConfigData(16,addr&2,data);
-  else if ((addr>=0xF8FFF000) && (addr<0xF8FFF100))
-  {
-    // Write in big endian order, like a real PowerPC
-    PCIBridge.WriteRegister((addr&0xFF)+0,data>>8);
-    PCIBridge.WriteRegister((addr&0xFF)+1,data&0xFF);
-  }
-  else
-  {
-    DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
-    //printf("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
-  }
-}
-
-void CModel3::Write32(UINT32 addr, UINT32 data)
-{   
-  if ((addr&3))
-  {
-    Write16(addr+0,data>>16);
-    Write16(addr+2,data);
-    return;
-  }
-
-  if (addr<0x00800000)
-    *(UINT32 *) &ram[addr] = data;
-  else if ((addr>=0x88000000) && (addr<0x88000008))
-    GPU.Flush();
-  else if ((addr>=0x8C000000) && (addr<0x8C400000))
-    GPU.WriteLowCullingRAM(addr&0x3FFFFF,FLIPENDIAN32(data));
-  else if ((addr>=0x8E000000) && (addr<0x8E100000))
-    GPU.WriteHighCullingRAM(addr&0xFFFFF,FLIPENDIAN32(data));
-  else if ((addr>=0x90000000) && (addr<0x90000018))
-    GPU.WriteTexturePort(addr&0xFF,FLIPENDIAN32(data));
-  else if ((addr>=0x94000000) && (addr<0x94100000))
-    GPU.WriteTextureFIFO(FLIPENDIAN32(data));
-  else if ((addr>=0x98000000) && (addr<0x98400000))
-    GPU.WritePolygonRAM(addr&0x3FFFFF,FLIPENDIAN32(data));
-  else if ((addr>=0xC2000000) && (addr<0xC2000100))
-    GPU.WriteDMARegister32(addr&0xFF,FLIPENDIAN32(data));
-  else if (((addr>=0xF0040000) && (addr<0xF0040040)) || ((addr>=0xFE040000) && (addr<0xFE040040)))
-  {
-    WriteInputs((addr&0x3F)+0,(data>>24)&0xFF);
-    WriteInputs((addr&0x3F)+1,(data>>16)&0xFF);
-    WriteInputs((addr&0x3F)+2,(data>>8)&0xFF);
-    WriteInputs((addr&0x3F)+3,(data>>0)&0xFF);
-  }
-  else if (((addr>=0xF00C0000) && (addr<0xF00E0000)) || ((addr>=0xFE0C0000) && (addr<0xFE0E0000)))
-    *(UINT32 *) &backupRAM[(addr&0x1FFFF)] = data;
-  else if ((addr>=0xF0800CF8) && (addr<0xF0800D00)) // MPC105
-    PCIBridge.WritePCIConfigAddress(data);
-  else if ((addr>=0xF0C00CF8) && (addr<0xF0C00D00)) // MPC105
-    PCIBridge.WritePCIConfigData(32,0,data);
-  else if ((addr>=0xFEC00000) && (addr<0xFEE00000)) // MPC106
-    PCIBridge.WritePCIConfigAddress(data);
-  else if ((addr>=0xFEE00000) && (addr<0xFEF00000)) // MPC106
-    PCIBridge.WritePCIConfigData(32,0,data);
-  else if (((addr>=0xF0100000) && (addr<0xF0100040)) || ((addr>=0xFE100000) && (addr<0xFE100040)))
-  {
-    WriteSystemRegister((addr&0x3F)+0,(data>>24)&0xFF);
-    WriteSystemRegister((addr&0x3F)+1,(data>>16)&0xFF);
-    WriteSystemRegister((addr&0x3F)+2,(data>>8)&0xFF);
-    WriteSystemRegister((addr&0x3F)+3,(data>>0)&0xFF);
-  }
-  else if (((addr>=0xF0140000) && (addr<0xF0140040)) || ((addr>=0xFE140000) && (addr<0xFE140040)))
-    RTC.WriteRegister((addr>>2)&0xF,data);
-  else if (((addr>=0xF0180000) && (addr<0xF019FFFF)) || ((addr>=0xFE180000) && (addr<0xFE19FFFF)))
-    *(UINT32 *) &securityRAM[(addr&0x1FFFF)] = data;  // so far, only 32-bit access observed, so just store little endian
-  else if (((addr>=0xF01A0000) && (addr<0xF01A003F)) || ((addr>=0xFE1A0000) && (addr<0xFE1A003F)))
-    WriteSecurity(addr&0x3F,data);
-  else if ((addr>=0xF1000000) && (addr<0xF1120000))
-  {
-    // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
-    data = FLIPENDIAN32(data);
-    TileGen.WriteRAM(addr&0x1FFFFF,data);
-  }
-  else if ((addr>=0xF1180000) && (addr<0xF1180100))
-    TileGen.WriteRegister(addr&0xFF,FLIPENDIAN32(data));
-  else if ((addr>=0xF8FFF000) && (addr<0xF8FFF100))
-  {
-    // Write in big endian order, like a real PowerPC
-    PCIBridge.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
-    PCIBridge.WriteRegister((addr&0xFF)+1,(data>>16)&0xFF);
-    PCIBridge.WriteRegister((addr&0xFF)+2,(data>>8)&0xFF);
-    PCIBridge.WriteRegister((addr&0xFF)+3,data&0xFF);
-  }
-  else if (((addr>=0xF9000000) && (addr<0xF9000100)) || ((addr>=0xC1000000) && (addr<0xC1000100)) || ((Game->step==0x10) && ((addr>=0xC0000000) && (addr<0xC0000100))))
-  { 
-    SCSI.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
-    SCSI.WriteRegister((addr&0xFF)+1,(data>>16)&0xFF);
-    SCSI.WriteRegister((addr&0xFF)+2,(data>>8)&0xFF);
-    SCSI.WriteRegister((addr&0xFF)+3,data&0xFF);
-  }
-  else
-  {
-    //printf("%08X=%08X\n", addr, data);
-    DebugLog("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
-  }
-}
-
-void CModel3::Write64(UINT32 addr, UINT64 data)
-{
-    Write32(addr+0, (UINT32) (data>>32));
-    Write32(addr+4, (UINT32) data);
-}
-
-#endif
 
  
 /******************************************************************************

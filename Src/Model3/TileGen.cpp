@@ -103,7 +103,7 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 		UINT32 data;
 	
 		SaveState->Read(&data, sizeof(data));
-		WriteRAM(i, data);
+		WriteRAM32(i, data);
 	}	
 	SaveState->Read(regs, sizeof(regs));
 	
@@ -267,12 +267,12 @@ void CTileGen::EndFrame(void)
  Emulation Functions
 ******************************************************************************/
 
-UINT32 CTileGen::ReadRAM(unsigned addr)
+UINT32 CTileGen::ReadRAM32(unsigned addr)
 {
 	return *(UINT32 *) &vram[addr];
 }
 
-void CTileGen::WriteRAM(unsigned addr, UINT32 data)
+void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 {
 	if (g_Config.gpuMultiThreaded)
 		MARK_DIRTY(vramDirty, addr);
@@ -294,6 +294,38 @@ void CTileGen::WriteRAM(unsigned addr, UINT32 data)
 		// Both palettes will be modified simultaneously
         WritePalette(color, data);
     }
+}
+
+//TODO: 8- and 16-bit handlers have not been thoroughly tested
+uint8_t CTileGen::ReadRAM8(unsigned addr)
+{
+  return vram[addr];
+}
+
+void CTileGen::WriteRAM8(unsigned addr, uint8_t data)
+{
+  uint32_t tmp = ReadRAM32(addr & ~3);
+  size_t shift = (addr & 3) * 8;
+  uint32_t mask = 0xff << shift;
+  tmp &= ~mask;
+  tmp |= uint32_t(data) << shift;
+  WriteRAM32(addr & ~3, tmp);
+}
+
+// Star Wars Trilogy uses this
+uint16_t CTileGen::ReadRAM16(unsigned addr)
+{
+  return *((uint16_t *) &vram[addr]);
+}
+
+void CTileGen::WriteRAM16(unsigned addr, uint16_t data)
+{
+  uint32_t tmp = ReadRAM32(addr & ~1);
+  size_t shift = (addr & 1) * 16;
+  uint32_t mask = 0xffff << shift;
+  tmp &= ~mask;
+  tmp |= uint32_t(data) << shift;
+  WriteRAM32(addr & ~1, tmp);
 }
 
 void CTileGen::InitPalette(void)

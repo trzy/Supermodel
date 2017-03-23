@@ -137,11 +137,13 @@ public:
 	void EndFrame(void);
 
 	/*
-	 * ReadRAM(addr):
+	 * ReadRAM8(addr):
+	 * ReadRAM16(addr):
+	 * ReadRAM32(addr):
 	 *
 	 * Reads the tile generator's little endian RAM (the word is returned with
 	 * the MSB read from addr+3). If a big endian device is reading (PowerPC),
-	 * the result must be manually flipped.
+	 * the result must be manually adjusted.
 	 *
 	 * Parameters:
 	 *		addr	Address in tile generator RAM. Caller must ensure it is 
@@ -149,16 +151,20 @@ public:
 	 *				function does not.
 	 *
 	 * Returns:
-	 *		A 32-bit word read as little endian from the RAM address.
+	 *		Data from the RAM address.
 	 */
-	UINT32 ReadRAM(unsigned addr);
+	uint8_t ReadRAM8(unsigned addr);
+	uint16_t ReadRAM16(unsigned addr);
+	uint32_t ReadRAM32(unsigned addr);
 	
 	/*
-	 * WriteRAM(addr, data):
+	 * WriteRAM8(addr, data):
+	 * WriteRAM16(addr, data):
+	 * WriteRAM32(addr, data):
 	 *
 	 * Writes to the tile generator's little endian RAM (the word's MSB is
-	 * written to addr+3). If a big endian device is writing, the word must be
-	 * flipped manually before passing it to this function.
+	 * written to addr+3). If a big endian device is writing, the address and
+	 * data must be adjusted manually before passing it to this function.
 	 *
 	 * Parameters:
 	 *		addr	Address in tile generator RAM. Caller must ensure it is 
@@ -166,7 +172,9 @@ public:
 	 *				function does not.
 	 *		data	The data to write.
 	 */
-	void WriteRAM(unsigned addr, UINT32 data);
+	void WriteRAM8(unsigned addr, uint8_t data);
+	void WriteRAM16(unsigned addr, uint16_t data);
+	void WriteRAM32(unsigned addr, uint32_t data);
 	
 	/*
 	 * ReadRegister(reg):
