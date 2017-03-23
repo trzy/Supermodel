@@ -305,7 +305,7 @@ uint8_t CTileGen::ReadRAM8(unsigned addr)
 void CTileGen::WriteRAM8(unsigned addr, uint8_t data)
 {
   uint32_t tmp = ReadRAM32(addr & ~3);
-  size_t shift = (addr & 3) * 8;
+  uint32_t shift = (addr & 3) * 8;
   uint32_t mask = 0xff << shift;
   tmp &= ~mask;
   tmp |= uint32_t(data) << shift;
@@ -321,7 +321,7 @@ uint16_t CTileGen::ReadRAM16(unsigned addr)
 void CTileGen::WriteRAM16(unsigned addr, uint16_t data)
 {
   uint32_t tmp = ReadRAM32(addr & ~1);
-  size_t shift = (addr & 1) * 16;
+  uint32_t shift = (addr & 1) * 16;
   uint32_t mask = 0xffff << shift;
   tmp &= ~mask;
   tmp |= uint32_t(data) << shift;
