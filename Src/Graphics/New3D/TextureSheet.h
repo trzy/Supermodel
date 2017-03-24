@@ -25,7 +25,7 @@ private:
 	int ToIndex(int x, int y);
 	void CropTile(int oldX, int oldY, int &newX, int &newY, int &newWidth, int &newHeight);
 
-	std::unordered_multimap<int, std::shared_ptr<Texture>> m_texMap[12];
+	std::unordered_multimap<int, std::shared_ptr<Texture>> m_texMap;
 
 	// the key for the above maps is the x/y position in the 2048x2048 texture
 	// array of 8 planes for each texture type

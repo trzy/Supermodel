@@ -31,14 +31,14 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 	index = ToIndex(x, y);
 
-	auto range = m_texMap[format].equal_range(index);
+	auto range = m_texMap.equal_range(index);
 
 	if (range.first == range.second) {	
 
 		// nothing found so create a new texture 
 
 		std::shared_ptr<Texture> t(new Texture());
-		m_texMap[format].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
+		m_texMap.insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
 		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
 		return t;
 	}
@@ -52,7 +52,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 			it->second->GetDetails(x2, y2, width2, height2, format2);
 
-			if (width == width2 && height == height2) {
+			if (width == width2 && height == height2 && format == format2) {
 				return it->second;
 			}
 		}
@@ -60,7 +60,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 		// nothing found so create a new entry
 
 		std::shared_ptr<Texture> t(new Texture());
-		m_texMap[format].insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
+		m_texMap.insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
 		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
 		return t;
 	}
@@ -68,9 +68,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 void TextureSheet::Release()
 {
-	for (int i = 0; i < 12; i++) {
-		m_texMap[i].clear();
-	}
+	m_texMap.clear();
 }
 
 void TextureSheet::Invalidate(int x, int y, int width, int height)
@@ -116,23 +114,17 @@ void TextureSheet::Invalidate(int x, int y, int width, int height)
 		int index	= ToIndex(posX, posY);
 
 		if (posX >= x && posY >= y) {				// invalidate this area of memory
-			for (int j = 0; j < 12; j++) {
-				m_texMap[j].erase(index);
-			}
+			m_texMap.erase(index);
 		}
 		else {										// check for overlapping data tiles and invalidate as necessary
 
-			for (int j = 0; j < 12; j++) {
+			auto range = m_texMap.equal_range(index);
 
-				auto range = m_texMap[j].equal_range(index);
+			for (auto it = range.first; it != range.second; ++it) {
 
-				for (auto it = range.first; it != range.second; ++it) {
-
-					if (it->second->CheckMapPos(x, x + width, y, y + height)) {
-						m_texMap[j].erase(index);
-						break;
-					}
-
+				if (it->second->CheckMapPos(x, x + width, y, y + height)) {
+					m_texMap.erase(index);
+					break;
 				}
 			}
 		}
