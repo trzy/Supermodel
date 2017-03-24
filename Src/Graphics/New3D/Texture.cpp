@@ -1,6 +1,7 @@
 #include "Texture.h"
 #include <stdio.h>
 #include <math.h>
+#include <algorithm>
 
 namespace New3D {
 
@@ -294,7 +295,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 
 	y -= (page * 1024);	// remove page from tex y
 	
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; width >= 8 && height >= 8; i++) {
 
 		int xPos = mipXBase[i] + (x / mipDivisor[i]);
 		int yPos = mipYBase[i] + (y / mipDivisor[i]);
@@ -358,8 +359,17 @@ void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x,
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnistrophy);
+
+	int maxD = std::min(width, height);
+	int count = 0;
+
+	while (maxD > 8) {
+		maxD /= 2;
+		count++;
+	}
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 5);		// 0-5 (real3d only uses 6 possible mipmap levels)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, count);		// 0-5 (real3d only uses 6 possible mipmap levels)
 
 	m_x = x;
 	m_y = y;
