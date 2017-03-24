@@ -158,6 +158,81 @@
   </roms>
 </game>
 
+<game name="fvipers2">
+  <identity>
+    <title>Fighting Vipers 2</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="fighting" />
+    </inputs>
+    <encryption_key>0x29260e96</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20599a.20" crc32="0x9DF02AB9" />
+      <file offset="2" name="epr-20598a.19" crc32="0x87BD070F" />
+      <file offset="4" name="epr-20597a.18" crc32="0x6FCEE322" />
+      <file offset="6" name="epr-20596a.17" crc32="0x969AB801" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-20563.4" crc32="0x999848AC" />
+      <file offset="0x0000002" name="mpr-20562.3" crc32="0x96E4942E" />
+      <file offset="0x0000004" name="mpr-20561.2" crc32="0x38A0F112" />
+      <file offset="0x0000006" name="mpr-20560.1" crc32="0xB0F6584D" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-20567.8" crc32="0x80F4EBA7" />
+      <file offset="0x1000002" name="mpr-20566.7" crc32="0x2901883B" />
+      <file offset="0x1000004" name="mpr-20565.6" crc32="0xD6BBE638" />
+      <file offset="0x1000006" name="mpr-20564.5" crc32="0xBE69FCA0" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-20571.12" crc32="0x40B459AF" />
+      <file offset="0x2000002" name="mpr-20570.11" crc32="0x2C0D91FC" />
+      <file offset="0x2000004" name="mpr-20569.10" crc32="0x136C014F" />
+      <file offset="0x2000006" name="mpr-20568.9"  crc32="0xFF23CF1C" />
+      <!-- CROM3 -->
+      <file offset="0x3000000" name="mpr-20575.16" crc32="0xEBC99D8A" />
+      <file offset="0x3000002" name="mpr-20574.15" crc32="0x68567771" />
+      <file offset="0x3000004" name="mpr-20573.14" crc32="0xE0DEE793" />
+      <file offset="0x3000006" name="mpr-20572.13" crc32="0xD4A41A0B" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-20580.26" crc32="0x6D42775E" />
+      <file offset="2"  name="mpr-20581.27" crc32="0xAC9EEC04" />
+      <file offset="4"  name="mpr-20582.28" crc32="0xB202F7BD" />
+      <file offset="6"  name="mpr-20583.29" crc32="0x0D6D508A" />
+      <file offset="8"  name="mpr-20584.30" crc32="0xECCF4DE6" />
+      <file offset="10" name="mpr-20585.31" crc32="0xB383F4E5" />
+      <file offset="12" name="mpr-20586.32" crc32="0xE7CD5DFB" />
+      <file offset="14" name="mpr-20587.33" crc32="0xE2B2ABE1" />
+      <file offset="16" name="mpr-20588.34" crc32="0x84F4162D" />
+      <file offset="18" name="mpr-20589.35" crc32="0x4E653D02" />
+      <file offset="20" name="mpr-20590.36" crc32="0x527049BE" />
+      <file offset="22" name="mpr-20591.37" crc32="0x3BE20243" />
+      <file offset="24" name="mpr-20592.38" crc32="0xD7985B28" />
+      <file offset="26" name="mpr-20593.39" crc32="0xE670C4D3" />
+      <file offset="28" name="mpr-20594.40" crc32="0x35578240" />
+      <file offset="30" name="mpr-20595.41" crc32="0x1D4A2CAD" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-20600a.21" crc32="0xF0E7DB7E" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-20576" crc32="0x1EEB540B" />
+      <file offset="0x400000" name="mpr-20578" crc32="0xD222F2D4" />
+      <file offset="0x800000" name="mpr-20577" crc32="0x3B236187" />
+      <file offset="0xC00000" name="mpr-20579" crc32="0x08788436" />
+    </region>
+  </roms>
+</game>
+
 <game name="lamachin">
   <identity>
     <title>L.A. Machineguns: Rise of the Machines</title>
