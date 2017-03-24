@@ -65,17 +65,11 @@ void Texture::SetWrapMode(bool mirrorU, bool mirrorV)
 	}
 }
 
-UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
+void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height)
 {
 	int		xi, yi, i;
 	GLubyte	texel;
 	GLubyte	c, a;
-
-	if (!src || !scratch) {
-		return 0;		// sanity checking
-	}
-
-	DeleteTexture();	// free any existing texture
 
 	i = 0;
 
@@ -100,8 +94,8 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 			for (xi = x; xi < (x + width); xi++)
 			{
 				scratch[i++] = ((src[yi * 2048 + xi] >> 10) & 0x1F) * 255 / 0x1F;	// R
-				scratch[i++] = ((src[yi * 2048 + xi] >> 5 ) & 0x1F) * 255 / 0x1F;	// G
-				scratch[i++] = ((src[yi * 2048 + xi] >> 0 ) & 0x1F) * 255 / 0x1F;	// B
+				scratch[i++] = ((src[yi * 2048 + xi] >> 5) & 0x1F) * 255 / 0x1F;	// G
+				scratch[i++] = ((src[yi * 2048 + xi] >> 0) & 0x1F) * 255 / 0x1F;	// B
 				scratch[i++] = ((src[yi * 2048 + xi] & 0x8000) ? 0 : 255);			// T
 			}
 		}
@@ -182,7 +176,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 				scratch[i++] = texel;
 				scratch[i++] = texel;
 				scratch[i++] = texel;
-				scratch[i++] = (texel==255 ? 0 : 255);
+				scratch[i++] = (texel == 255 ? 0 : 255);
 			}
 		}
 		break;
@@ -280,38 +274,36 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 		break;
 	}
 
+	glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scratch);
+}
 
-	GLfloat maxAnistrophy;
+UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
+{
+	const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+	const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+	const int mipDivisor[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
 
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnistrophy);
-
-	if (maxAnistrophy > 8) {
-		maxAnistrophy = 8.0f;	//anymore than 8 can get expensive for little gain
+	if (!src || !scratch) {
+		return 0;		// sanity checking
 	}
 
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);	// rgba is always 4 byte aligned
-	glGenTextures(1, &m_textureID);
-	glBindTexture(GL_TEXTURE_2D, m_textureID);
+	DeleteTexture();	// free any existing texture
+	CreateTextureObject(format, mirrorU, mirrorV, x, y, width, height);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mirrorU ? GL_MIRRORED_REPEAT : GL_REPEAT);	//todo this in shaders?
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mirrorV ? GL_MIRRORED_REPEAT : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnistrophy);
-	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scratch);
+	int page = y / 1024;
 
-	// assuming successful we can copy details
+	y -= (page * 1024);	// remove page from tex y
+	
+	for (int i = 0; i < 6; i++) {
 
-	m_x = x;
-	m_y = y;
-	m_width = width;
-	m_height = height;
-	m_format = format;
-	m_mirrorU = mirrorU;
-	m_mirrorV = mirrorV;
+		int xPos = mipXBase[i] + (x / mipDivisor[i]);
+		int yPos = mipYBase[i] + (y / mipDivisor[i]);
 
-	printf("create format %i x: %i y: %i width: %i height: %i\n", format, x, y, width, height);
+		UploadTextureMip(i, src, scratch, format, xPos, yPos + (page * 1024), width, height);
+
+		width /= 2;
+		height /= 2;
+	}
 
 	return m_textureID;
 }
@@ -347,6 +339,37 @@ bool Texture::CheckMapPos(int ax1, int ax2, int ay1, int ay2)
 	}
 
 	return false;
+}
+
+void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
+{
+	GLfloat maxAnistrophy;
+	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnistrophy);
+
+	if (maxAnistrophy > 8) {
+		maxAnistrophy = 8.0f;	//anymore than 8 can get expensive for little gain
+	}
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);	// rgba is always 4 byte aligned
+	glGenTextures(1, &m_textureID);
+	glBindTexture(GL_TEXTURE_2D, m_textureID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mirrorU ? GL_MIRRORED_REPEAT : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mirrorV ? GL_MIRRORED_REPEAT : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnistrophy);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 5);		// 0-5 (real3d only uses 6 possible mipmap levels)
+
+	m_x = x;
+	m_y = y;
+	m_width = width;
+	m_height = height;
+	m_format = format;
+	m_mirrorU = mirrorU;
+	m_mirrorV = mirrorV;
+
+	printf("create format %i x: %i y: %i width: %i height: %i\n", format, x, y, width, height);
 }
 
 } // New3D

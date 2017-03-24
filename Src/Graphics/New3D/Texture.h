@@ -26,6 +26,8 @@ public:
 
 private:
 
+	void CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height);
+	void UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height);
 	void Reset();
 
 	int m_x;
