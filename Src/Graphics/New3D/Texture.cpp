@@ -360,11 +360,11 @@ void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x,
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnistrophy);
 
-	int maxD = std::min(width, height);
+	int minD = std::min(width, height);
 	int count = 0;
 
-	while (maxD > 8) {
-		maxD /= 2;
+	while (minD > 8) {
+		minD /= 2;
 		count++;
 	}
 
