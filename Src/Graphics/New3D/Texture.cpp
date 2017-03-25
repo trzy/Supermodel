@@ -369,7 +369,7 @@ void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x,
 	}
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, count);		// 0-5 (real3d only uses 6 possible mipmap levels)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, count);
 
 	m_x = x;
 	m_y = y;

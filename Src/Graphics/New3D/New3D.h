@@ -83,7 +83,7 @@ public:
 	*		width	Width of texture data in texels.
 	*		height	Height.
 	*/
-	void UploadTextures(unsigned x, unsigned y, unsigned width, unsigned height);
+	void UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height);
 
 	/*
 	* AttachMemory(cullingRAMLoPtr, cullingRAMHiPtr, polyRAMPtr, vromPtr,

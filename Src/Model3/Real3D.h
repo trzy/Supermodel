@@ -40,6 +40,7 @@
  */
 struct QueuedUploadTextures
 {
+  unsigned level;	// mipmap level of the texture, saves calculating this later
   unsigned x;
   unsigned y;
   unsigned width;
@@ -383,7 +384,7 @@ private:
   void      InsertBit(uint8_t *buf, unsigned bitNum, unsigned bit);
   void      InsertID(uint32_t id, unsigned startBit);
   unsigned  Shift(uint8_t *data, unsigned numBits);
-  void      StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header);
+  void      StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header);
   void      UploadTexture(uint32_t header, const uint16_t *texData);
   uint32_t  UpdateSnapshots(bool copyWhole);
   uint32_t  UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, unsigned size, uint8_t *dirty);

@@ -72,15 +72,27 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	return OKAY;	// OKAY ? wtf ..
 }
 
-void CNew3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned height)
+void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
 {
-	if (x >= 1024) {
-		if (y >= 512 && y < 1024 || y >= 1536 && y < 2048) {
-			return;
-		}
-	}
+	if (level == 0) {
+		m_texSheet.Invalidate(x, y, width, height);		// base textures only
+	} 
+	else if (level == 1) {
+		// we want to work out what the base level is, and invalidate the entire texture
+		// the mipmap data in some cases is being sent later
 
-	m_texSheet.Invalidate(x, y, width, height);
+		int page = y / 1024;
+		y -= (page * 1024);	// remove page from tex y
+
+		int xPos = (x - 1024) * 2;
+		int yPos = (y - 512) * 2;
+
+		yPos += page * 1024;
+		width *= 2;
+		height *= 2;
+
+		m_texSheet.Invalidate(xPos, yPos, width, height);
+	}
 }
 
 void CNew3D::DrawScrollFog()

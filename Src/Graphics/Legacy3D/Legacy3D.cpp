@@ -380,7 +380,7 @@ void CLegacy3D::DecodeTexture(int format, int x, int y, int width, int height)
 }
 
 // Signals that new textures have been uploaded. Flushes model caches. Be careful not to exceed bounds!
-void CLegacy3D::UploadTextures(unsigned x, unsigned y, unsigned width, unsigned height)
+void CLegacy3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
 {
 #ifdef DEBUG
   // Make everything red
@@ -1285,7 +1285,7 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   glLoadIdentity();
 
   // Mark all textures as dirty
-  UploadTextures(0,0,2048,2048);
+  UploadTextures(0, 0, 0, 2048, 2048);
 
   DebugLog("Legacy3D initialized\n");
   return OKAY;

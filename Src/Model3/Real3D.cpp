@@ -113,7 +113,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   // If multi-threaded, update read-only snapshots too
   if (g_Config.gpuMultiThreaded)
     UpdateSnapshots(true);
-  Render3D->UploadTextures(0, 0, 2048, 2048);
+  Render3D->UploadTextures(0, 0, 0, 2048, 2048);
   SaveState->Read(&fifoIdx, sizeof(fifoIdx));
   SaveState->Read(&m_vromTextureFIFO, sizeof(m_vromTextureFIFO));
   
@@ -233,7 +233,7 @@ void CReal3D::BeginFrame(void)
   if (g_Config.gpuMultiThreaded)
   {
 	for (const auto &it : queuedUploadTexturesRO) {
-      Render3D->UploadTextures(it.x, it.y, it.width, it.height);
+      Render3D->UploadTextures(it.level, it.x, it.y, it.width, it.height);
 	}
 
 	// done syncing data
@@ -617,7 +617,7 @@ static void StoreTexelByte(uint16_t *texel, uint32_t byteSelect, uint8_t byte)
     *texel = (*texel & 0x00FF) | (uint16_t(byte) << 8);
 }   
 
-void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header)
+void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header)
 {
   if ((header & 0x00800000))  // 16-bit textures
   {
@@ -690,6 +690,7 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
   {
     // If multi-threaded, then queue calls to UploadTextures for render thread to perform at beginning of next frame
     QueuedUploadTextures upl;
+	upl.level = level;
     upl.x = xPos;
     upl.y = yPos;
     upl.width = width;
@@ -697,7 +698,7 @@ void CReal3D::StoreTexture(unsigned xPos, unsigned yPos, unsigned width, unsigne
     queuedUploadTextures.push_back(upl);
   }
   else
-    Render3D->UploadTextures(xPos, yPos, width, height);
+    Render3D->UploadTextures(level, xPos, yPos, width, height);
 }
 
 // Texture data will be in little endian format
@@ -731,7 +732,7 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
   {
   case 0x00:  // texture w/ mipmaps
   {
-    StoreTexture(x, y, width, height, texData, header);
+    StoreTexture(0, x, y, width, height, texData, header);
     uint32_t mipWidth = width;
     uint32_t mipHeight = height;
     uint32_t mipNum = 0;
@@ -749,12 +750,12 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
       if(page)
         mipY += 1024;
       mipNum++;
-      StoreTexture(mipX, mipY, mipWidth, mipHeight, (uint16_t *) texData, header);
+	  StoreTexture(mipNum, mipX, mipY, mipWidth, mipHeight, (uint16_t *)texData, header);
     }
     break;
   }
   case 0x01:  // texture w/out mipmaps
-    StoreTexture(x, y, width, height, texData, header);
+    StoreTexture(0, x, y, width, height, texData, header);
     break;
   case 0x02:  // mipmaps only
   {
@@ -770,7 +771,7 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
       if(page)
         mipY += 1024;
       mipNum++;
-      StoreTexture(mipX, mipY, mipWidth, mipHeight, texData, header);
+	  StoreTexture(mipNum, mipX, mipY, mipWidth, mipHeight, texData, header);
       if (bytesPerTexel == 1)
         texData += (mipWidth*mipHeight)/2;
       else
