@@ -69,8 +69,8 @@
     <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
       <file offset="0x000000" name="mpr-21285.22" crc32="0x7CDCA6AC" />
       <file offset="0x400000" name="mpr-21287.24" crc32="0x06B66F17" />
-      <file offset="0x800000" name="mpr-21286.23" crc32="0x7CDCA6AC" />
-      <file offset="0xC00000" name="mpr-21288.25" crc32="0x06B66F17" />
+      <file offset="0x800000" name="mpr-21286.23" crc32="0x749DFEF0" />
+      <file offset="0xC00000" name="mpr-21288.25" crc32="0x14BEE38E" />
     </region>
     <region name="mpeg_program" stride="1" chunk_size="1" byte_swap="true">
       <file offset="0" name="epr-20886.ic2" crc32="0x65B05F98" />
