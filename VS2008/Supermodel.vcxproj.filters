@@ -137,9 +137,6 @@
     <ClCompile Include="..\Src\BlockFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Config.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Games.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -437,6 +434,18 @@
     <ClCompile Include="..\Src\Graphics\New3D\R3DScrollFog.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Util\NewConfig.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Util\ConfigBuilders.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Util\ByteSwap.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\GameLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -479,9 +488,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Src\BlockFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Games.h">
@@ -807,6 +813,21 @@
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\R3DScrollFog.h">
       <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Util\NewConfig.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Util\GenericValue.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Util\ByteSwap.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Util\ConfigBuilders.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\GameLoader.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

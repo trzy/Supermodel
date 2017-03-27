@@ -244,7 +244,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Src\BlockFile.cpp" />
-    <ClCompile Include="..\Src\Config.cpp" />
     <ClCompile Include="..\Src\CPU\68K\68K.cpp" />
     <ClCompile Include="..\Src\CPU\68K\Musashi\m68kcpu.c" />
     <ClCompile Include="..\Src\CPU\68K\Musashi\m68kdasm.c">
@@ -307,6 +306,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Debugger\Register.cpp" />
     <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
     <ClCompile Include="..\Src\Debugger\Watch.cpp" />
+    <ClCompile Include="..\Src\GameLoader.cpp" />
     <ClCompile Include="..\Src\Games.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
@@ -448,7 +448,10 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\Src\Util\ByteSwap.cpp" />
+    <ClCompile Include="..\Src\Util\ConfigBuilders.cpp" />
     <ClCompile Include="..\Src\Util\Format.cpp" />
+    <ClCompile Include="..\Src\Util\NewConfig.cpp" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -501,7 +504,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Src\BlockFile.h" />
-    <ClInclude Include="..\Src\Config.h" />
     <ClInclude Include="..\Src\CPU\68K\68K.h" />
     <ClInclude Include="..\Src\CPU\68K\Musashi\m68k.h" />
     <ClInclude Include="..\Src\CPU\68K\Musashi\m68kconf.h" />
@@ -531,6 +533,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Debugger\Register.h" />
     <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
     <ClInclude Include="..\Src\Debugger\Watch.h" />
+    <ClInclude Include="..\Src\GameLoader.h" />
     <ClInclude Include="..\Src\Games.h" />
     <ClInclude Include="..\Src\Graphics\IRender3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />
@@ -609,7 +612,11 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />
     <ClInclude Include="..\Src\Util\BMPFile.h" />
+    <ClInclude Include="..\Src\Util\ByteSwap.h" />
+    <ClInclude Include="..\Src\Util\ConfigBuilders.h" />
     <ClInclude Include="..\Src\Util\Format.h" />
+    <ClInclude Include="..\Src\Util\GenericValue.h" />
+    <ClInclude Include="..\Src\Util\NewConfig.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

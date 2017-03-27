@@ -56,6 +56,7 @@
 #include <cstdarg>
 #include <memory>
 #include <vector>
+#include <algorithm>
 #include "Pkgs/glew.h"
 #ifdef SUPERMODEL_OSX
 #include <SDL/SDL.h>

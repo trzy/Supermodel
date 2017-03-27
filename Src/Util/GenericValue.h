@@ -29,7 +29,7 @@ namespace Util
     template <typename T>
     struct IntegerEncodableAsHex
     {
-      static constexpr const bool value = std::is_integral<T>::value && sizeof(T) >= 2 && sizeof(T) <= 8;
+      static const bool value = std::is_integral<T>::value && sizeof(T) >= 2 && sizeof(T) <= 8;
     };
 
     // This case should never actually be called
