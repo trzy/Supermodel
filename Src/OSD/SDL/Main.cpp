@@ -1003,7 +1003,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Increase music volume by 10%
       if (!Model3->GetGame().mpeg_board.empty())
       {
-        int vol = std::min(200, s_runtime_config["MusicVolume"].ValueAs<int>() + 10);
+        int vol = (std::min)(200, s_runtime_config["MusicVolume"].ValueAs<int>() + 10);
         s_runtime_config.Get("MusicVolume").SetValue(vol);
         printf("Music volume: %d%%", vol);
         if (200 == vol)
@@ -1019,7 +1019,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Decrease music volume by 10%
       if (!Model3->GetGame().mpeg_board.empty())
       {
-        int vol = std::max(0, s_runtime_config["MusicVolume"].ValueAs<int>() - 10);
+        int vol = (std::max)(0, s_runtime_config["MusicVolume"].ValueAs<int>() - 10);
         s_runtime_config.Get("MusicVolume").SetValue(vol);
         printf("Music volume: %d%%", vol);
         if (0 == vol)
@@ -1033,7 +1033,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     else if (Inputs->uiSoundVolUp->Pressed())
     {
       // Increase sound volume by 10%
-      int vol = std::min(200, s_runtime_config["SoundVolume"].ValueAs<int>() + 10);
+	  int vol = (std::min)(200, s_runtime_config["SoundVolume"].ValueAs<int>() + 10);
       s_runtime_config.Get("SoundVolume").SetValue(vol);
       printf("Sound volume: %d%%", vol);
       if (200 == vol)
@@ -1044,7 +1044,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     else if (Inputs->uiSoundVolDown->Pressed())
     {
       // Decrease sound volume by 10%
-      int vol = std::max(0, s_runtime_config["SoundVolume"].ValueAs<int>() - 10);
+      int vol = (std::max)(0, s_runtime_config["SoundVolume"].ValueAs<int>() - 10);
       s_runtime_config.Get("SoundVolume").SetValue(vol);
       printf("Sound volume: %d%%", vol);
       if (0 == vol)
