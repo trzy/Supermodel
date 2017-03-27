@@ -31,6 +31,7 @@
 
 #include "Graphics/IRender3D.h"
 #include "Pkgs/glew.h"
+#include "Util/NewConfig.h"
 
 namespace Legacy3D {
 
@@ -224,30 +225,6 @@ struct TexSheet
 ******************************************************************************/
 
 /*
- * CLegacy3DConfig:
- *
- * Settings used by CLegacy3D.
- */
-class CLegacy3DConfig
-{
-public:
-	string 		vertexShaderFile;	// path to vertex shader or "" to use internal shader
-	string 		fragmentShaderFile;	// fragment shader
-	unsigned	maxTexMaps;       	// maximum number of texture maps to use (1-9)
-	unsigned    maxTexMapExtent;    // maximum extent of texture maps (where num of tex sheets per map = extent ^ 2)
-	bool		multiTexture;		// if enabled and no external fragment shader, select internal shader w/ multiple texture sheet support
-
-	// Defaults
-	CLegacy3DConfig(void)
-	{
-		// strings will be clear to begin with
-		maxTexMaps = 9;
-		maxTexMapExtent = 4;
-		multiTexture = false;
-	}
-};
-
-/*
  * CLegacy3D:
  *
  * 3D renderer. Lots of work to do here :)
@@ -314,17 +291,17 @@ public:
 					  const UINT32 *vromPtr, const UINT16 *textureRAMPtr);
 
 	/*
-	 * SetStep(stepID):
+	 * SetStepping(stepping):
 	 *
 	 * Sets the Model 3 hardware stepping, which also determines the Real3D
 	 * functionality. The default is Step 1.0. This should be called prior to 
 	 * any other emulation functions and after Init().
 	 *
 	 * Parameters:
-	 *		stepID	0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0,
-	 *				or 0x21 for Step 2.1. Anything else defaults to 1.0.
+	 *    stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
+	 *              0x21 for Step 2.1. Anything else defaults to 1.0.
 	 */
-	void SetStep(int stepID);
+	void SetStepping(int stepping);
 	
 	/*
 	 * Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes):
@@ -355,16 +332,19 @@ public:
 	 * CLegacy3D(void):
 	 * ~CLegacy3D(void):
 	 *
+	 * Parameters:
+	 *    config  Configuration object.
+	 *
 	 * Constructor and destructor.
 	 */
-	CLegacy3D(void);
+	CLegacy3D(const Util::Config::Node &config);
 	~CLegacy3D(void);
 
 private:
 	/*
 	 * Private Members
 	 */
-	
+
 	// Real3D address translation
 	const UINT32 *TranslateCullingAddress(UINT32 addr);
 	const UINT32 *TranslateModelAddress(UINT32 addr);
@@ -397,7 +377,7 @@ private:
 	void DescendCullingNode(UINT32 addr);
 	void DescendPointerList(UINT32 addr);
 	void DescendNodePtr(UINT32 nodeAddr);
-	void RenderViewport(UINT32 addr, int pri);
+	void RenderViewport(UINT32 addr, int pri, bool wideScreen);
 	
 	// In-frame error reporting
 	bool ErrorLocalVertexOverflow(void);
@@ -407,6 +387,8 @@ private:
 	/*
 	 * Data
 	 */
+  
+  const Util::Config::Node &m_config;
 	
 	// Stepping
 	int		step;

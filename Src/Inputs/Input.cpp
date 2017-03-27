@@ -83,29 +83,29 @@ const char* CInput::GetInputGroup()
 {
 	switch (gameFlags)
 	{
-		case GAME_INPUT_UI:              return "User Interface Controls";
-		case GAME_INPUT_COMMON:          return "Common Controls";
-		case GAME_INPUT_JOYSTICK1:       // Fall through to below
-		case GAME_INPUT_JOYSTICK2:       return "4-Way Joysticks";
-		case GAME_INPUT_FIGHTING:        return "Fighting Game Buttons";
-		case GAME_INPUT_SPIKEOUT:		 return "Spikeout Buttons";
-		case GAME_INPUT_SOCCER:          return "Virtua Striker Buttons";
-		case GAME_INPUT_VEHICLE:         return "Racing Game Steering Controls";
-		case GAME_INPUT_SHIFT4:          return "Racing Game Gear 4-Way Shift";
-		case GAME_INPUT_SHIFTUPDOWN:     return "Racing Game Gear Up/Down Shift";
-		case GAME_INPUT_VR4:             return "Racing Game 4 VR View Buttons";
-		case GAME_INPUT_VIEWCHANGE:      return "Racing Game View Change";
-		case GAME_INPUT_HANDBRAKE:       return "Racing Game Handbrake";
-		case GAME_INPUT_HARLEY:          return "Harley Davidson Controls";
-		case GAME_INPUT_TWIN_JOYSTICKS:  return "Virtual On Controls";
-		case GAME_INPUT_ANALOG_JOYSTICK: return "Analog Joystick";
-		case GAME_INPUT_GUN1:            // Fall through to below
-		case GAME_INPUT_GUN2:            return "Light Guns";
-		case GAME_INPUT_ANALOG_GUN1:     // Fall through to below
-		case GAME_INPUT_ANALOG_GUN2:     return "Analog Guns";
-		case GAME_INPUT_SKI:             return "Ski Controls";
-		case GAME_INPUT_MAGTRUCK:        return "Magical Truck Controls";
-	  case GAME_INPUT_FISHING:         return "Fishing Controls";
+		case Game::INPUT_UI:              return "User Interface Controls";
+		case Game::INPUT_COMMON:          return "Common Controls";
+		case Game::INPUT_JOYSTICK1:       // Fall through to below
+		case Game::INPUT_JOYSTICK2:       return "4-Way Joysticks";
+		case Game::INPUT_FIGHTING:        return "Fighting Game Buttons";
+		case Game::INPUT_SPIKEOUT:		 return "Spikeout Buttons";
+		case Game::INPUT_SOCCER:          return "Virtua Striker Buttons";
+		case Game::INPUT_VEHICLE:         return "Racing Game Steering Controls";
+		case Game::INPUT_SHIFT4:          return "Racing Game Gear 4-Way Shift";
+		case Game::INPUT_SHIFTUPDOWN:     return "Racing Game Gear Up/Down Shift";
+		case Game::INPUT_VR4:             return "Racing Game 4 VR View Buttons";
+		case Game::INPUT_VIEWCHANGE:      return "Racing Game View Change";
+		case Game::INPUT_HANDBRAKE:       return "Racing Game Handbrake";
+		case Game::INPUT_HARLEY:          return "Harley Davidson Controls";
+		case Game::INPUT_TWIN_JOYSTICKS:  return "Virtual On Controls";
+		case Game::INPUT_ANALOG_JOYSTICK: return "Analog Joystick";
+		case Game::INPUT_GUN1:            // Fall through to below
+		case Game::INPUT_GUN2:            return "Light Guns";
+		case Game::INPUT_ANALOG_GUN1:     // Fall through to below
+		case Game::INPUT_ANALOG_GUN2:     return "Analog Guns";
+		case Game::INPUT_SKI:             return "Ski Controls";
+		case Game::INPUT_MAGTRUCK:        return "Magical Truck Controls";
+	  case Game::INPUT_FISHING:         return "Fishing Controls";
 		default:                         return "Misc";
 	}
 }
@@ -145,6 +145,38 @@ void CInput::AppendMapping(const char *mapping)
 void CInput::ResetToDefaultMapping()
 {
 	SetMapping(m_defaultMapping);
+}
+
+void CInput::LoadFromConfig(const Util::Config::Node &config)
+{
+	// See if input is configurable
+	if (IsConfigurable())
+	{
+		// If so, check INI file for mapping string
+		string key("Input");
+		key.append(id);
+		string mapping;
+		auto *node = config.TryGet(key);
+		if (node)
+		{
+			// If found, then set mapping string
+			mapping = node->ValueAs<std::string>();
+			SetMapping(mapping.c_str());
+			return;
+		}
+	}
+
+	// If input has not been configured, then force recreation of source anyway since input system settings may have changed 
+	CreateSource();
+}
+
+void CInput::StoreToConfig(Util::Config::Node *config)
+{
+	if (!IsConfigurable())
+		return;
+	string key("Input");
+	key.append(id);
+  config->Set(key, m_mapping);
 }
 
 void CInput::ReadFromINIFile(CINIFile *ini, const char *section)

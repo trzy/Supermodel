@@ -35,9 +35,9 @@ void CNew3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullingRA
 	m_textureRAM	= textureRAMPtr;
 }
 
-void CNew3D::SetStep(int stepID)
+void CNew3D::SetStepping(int stepping)
 {
-	m_step = stepID;
+	m_step = stepping;
 
 	if ((m_step != 0x10) && (m_step != 0x15) && (m_step != 0x20) && (m_step != 0x21)) {
 		m_step = 0x10;

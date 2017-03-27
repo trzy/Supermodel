@@ -38,7 +38,7 @@ BITS = 64
 #
 # Include console-based debugger in emulator ('yes' or 'no')
 #
-ENABLE_DEBUGGER = no
+ENABLE_DEBUGGER = yes
 
 
 ###############################################################################
@@ -58,7 +58,7 @@ BOOST_INCLUDEPATH = /mingw64/boost_1_55_0
 ifeq ($(strip $(BITS)),64)
 	SDL_LIBPATH = /mingw64/lib64 
 	#SDL_INCLUDEPATH = /mingw64/x86_64-w64-mingw32/include/SDL
-	SDL_INCLUDEPATH = /mingw64/SDL-1.2.15/include
+	SDL_INCLUDEPATH = c:\tdm-gcc-64\include\SDL
 else
 	SDL_LIBPATH = /mingw/lib 
 	SDL_INCLUDEPATH = /mingw/include/SDL
@@ -100,7 +100,7 @@ LD = g++
 COMPILER_FLAGS = -I$(SDL_INCLUDEPATH) -ISrc/ -ISrc/OSD/ -ISrc/OSD/SDL/ -ISrc/OSD/Windows/ -c -Wall -DSUPERMODEL_WIN32 -DGLEW_STATIC -O3
 CFLAGS = $(COMPILER_FLAGS)
 CPPFLAGS = $(COMPILER_FLAGS) -I$(BOOST_INCLUDEPATH) -std=c++11
-LFLAGS = -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz -s #-l:$(WINSDK_LIBPATH)/WbemUuid.lib -s
+LFLAGS = -o $(OUTFILE) $(OBJ) -L$(SDL_LIBPATH) -lmingw32 -lSDLmain -lSDL -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz -s # -l:$(WINSDK_LIBPATH)/WbemUuid.lib -s
 
 #
 # Build options...
@@ -119,11 +119,11 @@ endif
 #
 # Objects and Dependencies
 #
-OBJ = $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o \
-  $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/Config.o $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
+OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/Games.o $(OBJ_DIR)/INIFile.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/ROMLoad.o $(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o \
 	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Legacy3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o \
 	$(OBJ_DIR)/New3D.o $(OBJ_DIR)/Mat4.o $(OBJ_DIR)/Model.o $(OBJ_DIR)/PolyHeader.o $(OBJ_DIR)/Texture.o $(OBJ_DIR)/TextureSheet.o $(OBJ_DIR)/VBO.o $(OBJ_DIR)/Vec.o $(OBJ_DIR)/R3DShader.o $(OBJ_DIR)/R3DFloat.o \
+	$(OBJ_DIR)/R3DScrollFog.o \
 	$(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
 	$(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/Audio.o $(OBJ_DIR)/Thread.o $(OBJ_DIR)/SoundBoard.o \
 	$(OBJ_DIR)/SCSP.o $(OBJ_DIR)/SCSPDSP.o $(OBJ_DIR)/68K.o $(OBJ_DIR)/m68kcpu.o $(OBJ_DIR)/m68kopnz.o $(OBJ_DIR)/m68kopdm.o \
@@ -137,7 +137,8 @@ OBJ = $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o \
 	$(OBJ_DIR)/amp_util.o \
 	$(OBJ_DIR)/Crypto.o \
 	$(OBJ_DIR)/Logger.o \
-	$(OBJ_DIR)/tinyxml2.o
+	$(OBJ_DIR)/tinyxml2.o \
+	$(OBJ_DIR)/ByteSwap.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/ConfigBuilders.o $(OBJ_DIR)/GameLoader.o
 
 
 # If built-in debugger enabled, include all debugging classes
@@ -159,9 +160,9 @@ ppcd: $(BIN_DIR) $(OBJ_DIR)
 	$(CXX) Src/CPU/PowerPC/PPCDisasm.cpp $(CPPFLAGS) -DSTANDALONE -o $(OBJ_DIR)/ppcd.o
 	$(LD) -o $(BIN_DIR)/ppcd.exe -mconsole $(OBJ_DIR)/ppcd.o
 
-tests: $(BIN_DIR) $(OBJ_DIR) $(OBJ) Src/Util/Test_Config.cpp Src/Pkgs/tinyxml2.cpp
+tests: $(BIN_DIR) $(OBJ_DIR) $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/ConfigBuilders.o Src/Util/Test_Config.cpp Src/Pkgs/tinyxml2.cpp
 	$(CXX) Src/Util/Test_Config.cpp $(CPPFLAGS) -o $(OBJ_DIR)/Test_Config.o
-	$(LD) -o $(BIN_DIR)/test_config.exe -mconsole $(OBJ_DIR)/Test_Config.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/Logger.o $(OBJ_DIR)/tinyxml2.o
+	$(LD) -o $(BIN_DIR)/test_config.exe -mconsole $(OBJ_DIR)/Test_Config.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/ConfigBuilders.o $(OBJ_DIR)/Logger.o $(OBJ_DIR)/tinyxml2.o
 
 $(BIN_DIR):
 	mkdir $(BIN_DIR)

@@ -428,8 +428,9 @@ const char *CDirectInputSystem::ConstructName(bool useRawInput, bool useXInput)
 		return (useXInput ? "Xinput" : "DirectInput");
 }
 
-CDirectInputSystem::CDirectInputSystem(bool useRawInput, bool useXInput) : 
+CDirectInputSystem::CDirectInputSystem(const Util::Config::Node &config, bool useRawInput, bool useXInput) : 
 	CInputSystem(ConstructName(useRawInput, useXInput)),
+	m_config(config),
 	m_useRawInput(useRawInput), m_useXInput(useXInput), m_enableFFeedback(true),
 	m_initializedCOM(false), m_activated(false), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
 	m_getRIDevListPtr(NULL), m_getRIDevInfoPtr(NULL), m_regRIDevsPtr(NULL), m_getRIDataPtr(NULL),
@@ -1791,13 +1792,15 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				break;
 
 			case FFConstantForce:
+		  {
 				// Check if constant force effect is disabled
-				if (g_Config.xInputConstForceMax == 0)
+				unsigned xInputConstForceMax = m_config["XInputConstForceMax"].ValueAs<unsigned>();
+				if (xInputConstForceMax == 0)
 					return false;
 				// Constant force effect is mapped to either left or right vibration motor depending on its direction
 				negForce = ffCmd.force < 0.0f;
 				absForce = (negForce ? -ffCmd.force : ffCmd.force);
-				threshold = (float)g_Config.xInputConstForceThreshold / 100.0f;
+				threshold = (float)m_config["XInputConstForceThreshold"].ValueAs<unsigned>() / 100.0f;
 				// Check if constant force effect is being stopped or is below threshold 
 				if (absForce == 0.0f || absForce < threshold)
 				{
@@ -1808,25 +1811,27 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				else if (negForce)
 				{
 					// If force is negative (to left), set left motor vibrating
-					pInfo->xiConstForceLeft = (WORD)(absForce * (float)(g_Config.xInputConstForceMax * XI_VIBRATE_SCALE));
+					pInfo->xiConstForceLeft = (WORD)(absForce * (float)(xInputConstForceMax * XI_VIBRATE_SCALE));
 					pInfo->xiConstForceRight = 0;
 				}
 				else
 				{
 					// If force positive (to right), set right motor vibrating
 					pInfo->xiConstForceLeft = 0;
-					pInfo->xiConstForceRight = (WORD)(absForce * (float)(g_Config.xInputConstForceMax * XI_VIBRATE_SCALE));
+					pInfo->xiConstForceRight = (WORD)(absForce * (float)(xInputConstForceMax * XI_VIBRATE_SCALE));
 				}
 				break;
-
+      }
 			case FFSelfCenter:
 			case FFFriction:
 				// Self center and friction effects are not mapped
 				return false;
 
 			case FFVibrate:
-				// Check if vibration effect is disabled
-				if (g_Config.xInputVibrateMax == 0)
+			{
+		  	// Check if vibration effect is disabled
+				unsigned xInputVibrateMax = m_config["XInputVibrateMax"].ValueAs<unsigned>();
+				if (xInputVibrateMax == 0)
 					return false;
 				// Check if vibration effect is being stopped
 				if (ffCmd.force == 0.0f)
@@ -1837,10 +1842,10 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				else
 				{
 					// Otherwise, set both motors vibrating
-					pInfo->xiVibrateBoth = (WORD)(ffCmd.force * (float)(g_Config.xInputVibrateMax * XI_VIBRATE_SCALE));
+					pInfo->xiVibrateBoth = (WORD)(ffCmd.force * (float)(xInputVibrateMax * XI_VIBRATE_SCALE));
 				}
 				break;
-
+      }
 			default:
 				// Unknown feedback command
 				return false;
@@ -1893,16 +1898,18 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				//printf("FFConstantForce %0.2f\n", 100.0f * ffCmd.force);
 				if (ffCmd.force >= 0.0f)
 				{
-					if (g_Config.dInputConstForceRightMax == 0)
+				  unsigned dInputConstForceRightMax = m_config["DirectInputConstForceRightMax"].ValueAs<unsigned>();
+					if (dInputConstForceRightMax == 0)
 						return false;
-					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceRightMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
+					lFFMag = (LONG)(-ffCmd.force * (float)(dInputConstForceRightMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
 					dicf.lMagnitude = std::max<LONG>(lFFMag, -DI_EFFECTS_MAX);
 				}
 				else
 				{
-					if (g_Config.dInputConstForceLeftMax == 0)
+				  unsigned dInputConstForceLeftMax = m_config["DirectInputConstForceLeftMax"].ValueAs<unsigned>();
+					if (dInputConstForceLeftMax == 0)
 						return false;
-					lFFMag = (LONG)(-ffCmd.force * (float)(g_Config.dInputConstForceLeftMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
+					lFFMag = (LONG)(-ffCmd.force * (float)(dInputConstForceLeftMax * DI_EFFECTS_SCALE)); // Invert sign for DirectInput effect
 					dicf.lMagnitude = std::min<LONG>(lFFMag, DI_EFFECTS_MAX);
 				}
 
@@ -1911,10 +1918,12 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				break;
 
 			case FFSelfCenter:
+			{
+				unsigned dInputSelfCenterMax = m_config["DirectInputSelfCenterMax"].ValueAs<unsigned>();
 				//printf("FFSelfCenter %0.2f\n", 100.0f * ffCmd.force);
-				if (g_Config.dInputSelfCenterMax == 0)
+				if (dInputSelfCenterMax == 0)
 					return false;
-				lFFMag = (LONG)(ffCmd.force * (float)(g_Config.dInputSelfCenterMax * DI_EFFECTS_SCALE));
+				lFFMag = (LONG)(ffCmd.force * (float)(dInputSelfCenterMax * DI_EFFECTS_SCALE));
 				dic.lOffset = 0;
 				dic.lPositiveCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
 				dic.lNegativeCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
@@ -1925,12 +1934,14 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				eff.cbTypeSpecificParams = sizeof(DICONDITION);
 				eff.lpvTypeSpecificParams = &dic;
 				break;
-
+      }
 			case FFFriction:
+		  {
+		    unsigned dInputFrictionMax = m_config["DirectInputFrictionMax"].ValueAs<unsigned>();
 				//printf("FFFriction %0.2f\n", 100.0f * ffCmd.force);
-				if (g_Config.dInputFrictionMax == 0)
+				if (dInputFrictionMax == 0)
 					return false;
-				lFFMag = (LONG)(ffCmd.force * (float)(g_Config.dInputFrictionMax * DI_EFFECTS_SCALE));
+				lFFMag = (LONG)(ffCmd.force * (float)(dInputFrictionMax * DI_EFFECTS_SCALE));
 				dic.lOffset = 0;
 				dic.lPositiveCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
 				dic.lNegativeCoefficient = std::max<LONG>(0, std::min<LONG>(lFFMag, DI_EFFECTS_MAX));
@@ -1941,12 +1952,14 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				eff.cbTypeSpecificParams = sizeof(DICONDITION);
 				eff.lpvTypeSpecificParams = &dic;
 				break;
-
+      }
 			case FFVibrate:
+			{
+			  unsigned dInputVibrateMax = m_config["DirectInputVibrateMax"].ValueAs<unsigned>();
 				//printf("FFVibrate %0.2f\n", 100.0f * ffCmd.force);
-				if (g_Config.dInputVibrateMax == 0)
+				if (dInputVibrateMax == 0)
 					return false;
-				dFFMag = (DWORD)(ffCmd.force * (float)(g_Config.dInputVibrateMax * DI_EFFECTS_SCALE));
+				dFFMag = (DWORD)(ffCmd.force * (float)(dInputVibrateMax * DI_EFFECTS_SCALE));
 				dip.dwMagnitude = std::max<DWORD>(0, std::min<DWORD>(dFFMag, DI_EFFECTS_MAX));
 				dip.lOffset = 0;
                 dip.dwPhase = 0;
@@ -1955,7 +1968,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				eff.cbTypeSpecificParams = sizeof(DIPERIODIC);
 				eff.lpvTypeSpecificParams = &dip;
 				break;
-
+      }
 			default:
 				// Unknown feedback command
 				return false;

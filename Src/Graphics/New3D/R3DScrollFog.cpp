@@ -80,7 +80,7 @@ void R3DScrollFog::DrawScrollFog(float r, float g, float b, float a)
 
 void R3DScrollFog::AllocResources()
 {
-	bool success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, nullptr, nullptr, vertexShaderFog, fragmentShaderFog);
+	bool success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, std::string(), std::string(), vertexShaderFog, fragmentShaderFog);
 
 	m_locMVP		= glGetUniformLocation(m_shaderProgram, "mvp");
 	m_locFogColour	= glGetUniformLocation(m_shaderProgram, "fogColour");

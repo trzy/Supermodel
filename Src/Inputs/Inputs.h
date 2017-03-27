@@ -29,6 +29,7 @@
 #define INCLUDED_INPUTS_H
 
 #include "Types.h"
+#include "Util/NewConfig.h"
 
 #include <vector>
 using namespace std;
@@ -41,7 +42,7 @@ class CSwitchInput;
 class CGearShift4Input;
 class CTriggerInput;
 class CINIFile;
-struct GameInfo;
+struct Game;
 
 /*
  * Represents the collection of Model3 inputs.
@@ -266,27 +267,29 @@ public:
   bool Initialize();
 
   /*
-   * Reads the input mapping assignments from the given INI file.
+   * Loads the input mapping assignments from the given config object.
    */
+  void LoadFromConfig(const Util::Config::Node &config);
   void ReadFromINIFile(CINIFile *ini, const char *section);
 
   /*
-   * Writes the current input mapping assignments to the given INI file.
+   * Stores the current input mapping assignments to the given config object.
    */
+  void StoreToConfig(Util::Config::Node *config);
   void WriteToINIFile(CINIFile *ini, const char *section);
 
   /*
    * Configures the current input mapping assignments for the given game, or all inputs if game is NULL, by asking the user for input.
    * Returns true if the inputs were configured okay or false if the user exited without requesting to save changes.
    */
-  bool ConfigureInputs(const GameInfo *game);
+  bool ConfigureInputs(const Game *game);
   
   /*
    * Configures the current input mapping assignments for the given game, or all inputs if game is NULL, by asking the user for input.
    * Takes display geometry if this has not been set previously by a call to Poll().
    * Returns true if the inputs were configured okay or false if the user exited without requesting to save changes.
    */
-  bool ConfigureInputs(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
+  bool ConfigureInputs(const Game *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
 
   void CalibrateJoysticks();
 
@@ -295,18 +298,18 @@ public:
   /*
    * Prints to stdout the current input mapping assignments for the given game, or all inputs if game is NULL.
    */
-  void PrintInputs(const GameInfo *game);
+  void PrintInputs(const Game *game);
 
   /*
    * Polls (updates) the inputs for the given game, or all inputs if game is NULL, updating their values from their respective input sources.
    * First the input system is polled (CInputSystem.Poll()) and then each input is polled (CInput.Poll()).
    */
-  bool Poll(const GameInfo *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
+  bool Poll(const Game *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
 
   /*
    * Prints the current values of the inputs for the given game, or all inputs if game is NULL, to stdout for debugging purposes.
    */
-  void DumpState(const GameInfo *game);
+  void DumpState(const Game *game);
 };
 
 #endif  // INCLUDED_INPUTS_H

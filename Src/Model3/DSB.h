@@ -33,83 +33,7 @@
 
 #include "Types.h"
 #include "CPU/Bus.h"
-
-
-/******************************************************************************
- Configuration
- 
- Because DSB code mixes both the sound board SCSP and MPEG audio together, both
- volume settings are stored here (for now). 
-******************************************************************************/
-
-/*
- * CDSBConfig:
- *
- * Settings used by CDSB.
- */
-class CDSBConfig
-{
-public:
-	bool	emulateDSB;	// DSB emulation (enabled if true)
-	
-	// Sound (SCSP) volume (0-200, 100 being full amplitude)
-	inline void SetSoundVolume(int vol)
-	{
-		if (vol > 200)
-		{
-			ErrorLog("Sound volume cannot exceed 200%%; setting to 100%%.\n");
-			vol = 100;
-		}
-		
-		if (vol < 0)
-		{
-			ErrorLog("Sound volume cannot be negative; setting to 0%%.\n");
-			vol = 0;
-		}
-		
-		soundVol = (unsigned) vol;
-	}
-	
-	inline unsigned GetSoundVolume(void)
-	{
-		return soundVol;
-	}
-	
-	// Music (DSB MPEG) volume (0-200)
-	inline void SetMusicVolume(int vol)
-	{
-		if (vol > 200)
-		{
-			ErrorLog("Music volume cannot exceed 200%%; setting to 100%%.\n");
-			vol = 100;
-		}
-		
-		if (vol < 0)
-		{
-			ErrorLog("Music volume cannot be negative; setting to 0%%.\n");
-			vol = 0;
-		}
-		
-		musicVol = (unsigned) vol;
-	}
-	
-	inline unsigned GetMusicVolume(void)
-	{
-		return musicVol;
-	}
-	
-	// Defaults
-	CDSBConfig(void)
-	{
-		emulateDSB = true;
-		soundVol = 100;
-		musicVol = 100;
-	}
-	
-private:
-	unsigned soundVol;
-	unsigned musicVol;
-};
+#include "Util/NewConfig.h"
 
 
 /******************************************************************************
@@ -142,7 +66,12 @@ class CDSBResampler
 public:
 	int		UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *inR, UINT8 volumeL, UINT8 volumeR, int sizeOut, int sizeIn, int outRate, int inRate);
 	void	Reset(void);
+	CDSBResampler(const Util::Config::Node &config)
+	  : m_config(config)
+  {
+  }
 private:
+	const Util::Config::Node &m_config;
 	int	nFrac;
 	int	pFrac;
 };
@@ -261,10 +190,12 @@ public:
 	CZ80 *GetZ80(void);
 
 	// Constructor and destructor
-	CDSB1(void);
+	CDSB1(const Util::Config::Node &config);
 	~CDSB1(void);
 	
 private:
+  const Util::Config::Node &m_config;
+
 	// Resampler
 	CDSBResampler	Resampler;
 	int				retainedSamples;	// how many MPEG samples carried over from previous frame
@@ -336,10 +267,12 @@ public:
 	M68KCtx *GetM68K(void);
 
 	// Constructor and destructor
-	CDSB2(void);
+	CDSB2(const Util::Config::Node &config);
 	~CDSB2(void);
 	
 private:
+	const Util::Config::Node &m_config;
+
 	// Private helper functions
 	void	WriteMPEGFIFO(UINT8 byte);
 	

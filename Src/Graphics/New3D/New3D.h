@@ -104,17 +104,17 @@ public:
 		const UINT32 *vromPtr, const UINT16 *textureRAMPtr);
 
 	/*
-	* SetStep(stepID):
+	* SetStepping(stepping):
 	*
 	* Sets the Model 3 hardware stepping, which also determines the Real3D
 	* functionality. The default is Step 1.0. This should be called prior to
 	* any other emulation functions and after Init().
 	*
 	* Parameters:
-	*		stepID	0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0,
-	*				or 0x21 for Step 2.1. Anything else defaults to 1.0.
+	*   stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
+	*             0x21 for Step 2.1. Anything else defaults to 1.0.
 	*/
-	void SetStep(int stepID);
+	void SetStepping(int stepping);
 
 	/*
 	* Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes):

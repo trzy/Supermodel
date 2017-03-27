@@ -514,7 +514,7 @@ namespace Debugger
 		}
 		else if (CheckToken(token, "caip", "configallinputs"))		// configallinputs
 		{
-			m_inputs->ConfigureInputs(m_model3->GetGameInfo());
+			m_inputs->ConfigureInputs(&m_model3->GetGame());
 			return false;
 		}
 		//
@@ -544,7 +544,7 @@ namespace Debugger
 
 	bool CSupermodelDebugger::InputIsValid(::CInput *input)
 	{
-		return input->IsUIInput() || (input->gameFlags & m_model3->GetGameInfo()->inputFlags);
+		return input->IsUIInput() || (input->gameFlags & m_model3->GetGame().inputs);
 	}
 
 	void CSupermodelDebugger::ListInputs()
@@ -599,14 +599,14 @@ namespace Debugger
 		CConsoleDebugger::Attached();
 
 		char fileName[25];
-		sprintf(fileName, "Debug/%s.ds", m_model3->GetGameInfo()->id);
+		sprintf(fileName, "Debug/%s.ds", m_model3->GetGame().name.c_str());
 		LoadState(fileName);
 	}
 
 	void CSupermodelDebugger::Detaching()
 	{
 		char fileName[25];
-		sprintf(fileName, "Debug/%s.ds", m_model3->GetGameInfo()->id);
+		sprintf(fileName, "Debug/%s.ds", m_model3->GetGame().name.c_str());
 		SaveState(fileName);
 		
 		CConsoleDebugger::Detaching();

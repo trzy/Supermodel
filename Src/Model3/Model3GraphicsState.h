@@ -90,11 +90,18 @@ public:
     }
   }
 
-  const struct GameInfo * GetGameInfo(void)
+  const Game &GetGame(void)
   {
     return m_game;
   }
 
+  bool LoadGame(const Game &game)
+  {
+    //TODO: write me
+    return FAIL;
+  }
+
+  //TODO: replicate this logic in LoadGame()
   bool LoadROMSet(const struct GameInfo *gameList, const char *zipFile)
   {
     // Load ROM

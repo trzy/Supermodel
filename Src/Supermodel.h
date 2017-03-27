@@ -97,9 +97,6 @@
 // Error logging interface
 #include "OSD/Logger.h"
 
-// OSD configuration
-#include "OSDConfig.h"	// located in OSD/<port>/ directory
-
 // OSD Interfaces
 #include "OSD/Thread.h"
 #include "OSD/Audio.h"
@@ -154,7 +151,6 @@
 #include "Model3/DSB.h"
 #include "Model3/DriveBoard.h"
 #include "Model3/Model3.h"
-#include "Config.h"
 
 
 /******************************************************************************

@@ -108,6 +108,8 @@ typedef /*WINUSERAPI*/ DWORD (WINAPI *XInputSetStatePtr)(IN DWORD dwUserIndex, I
 class CDirectInputSystem : public CInputSystem
 {
 private:
+  const Util::Config::Node &m_config;
+
 	// Lookup table to map key names to DirectInput keycodes and Virtual keycodes
 	static DIKeyMapStruct s_keyMap[];
 
@@ -232,7 +234,7 @@ public:
 	 * to the same shared axis and so cannot be distinguished when pressed together.
 	 * If enableFFeedback is true then force feedback is enabled (for those joysticks which are force feedback capable).
 	 */
-	CDirectInputSystem(bool useRawInput, bool useXInput);
+	CDirectInputSystem(const Util::Config::Node &config, bool useRawInput, bool useXInput);
 
 	~CDirectInputSystem();
 

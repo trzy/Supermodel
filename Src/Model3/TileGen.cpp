@@ -111,7 +111,7 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 	RecomputePalettes();
 	
 	// If multi-threaded, update read-only snapshots too
-	if (g_Config.gpuMultiThreaded)
+	if (m_gpuMultiThreaded)
 		UpdateSnapshots(true);
 }
 
@@ -144,7 +144,7 @@ void CTileGen::EndVBlank(void)
 void CTileGen::RecomputePalettes(void)
 {
 	// Writing the colors forces palettes to be computed
-	if (g_Config.gpuMultiThreaded)
+	if (m_gpuMultiThreaded)
 	{
 		for (unsigned colorAddr = 0; colorAddr < 32768*4; colorAddr += 4 )
 		{
@@ -169,7 +169,7 @@ UINT32 CTileGen::SyncSnapshots(void)
 		recomputePalettes = false;
 	}
 	
-	if (!g_Config.gpuMultiThreaded)
+	if (!m_gpuMultiThreaded)
 		return 0;
 	
 	// Update read-only snapshots
@@ -274,7 +274,7 @@ UINT32 CTileGen::ReadRAM32(unsigned addr)
 
 void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 {
-	if (g_Config.gpuMultiThreaded)
+	if (m_gpuMultiThreaded)
 		MARK_DIRTY(vramDirty, addr);
 	*(UINT32 *) &vram[addr] = data;
 		
@@ -285,7 +285,7 @@ void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 		unsigned color = addr/4;	// color index
 		
 		// Same address in both palettes must be marked dirty
-		if (g_Config.gpuMultiThreaded)
+		if (m_gpuMultiThreaded)
 		{
 			MARK_DIRTY(palDirty[0], addr);
 			MARK_DIRTY(palDirty[1], addr);
@@ -333,7 +333,7 @@ void CTileGen::InitPalette(void)
 	for (int i = 0; i < 0x20000/4; i++)
 	{
 		WritePalette(i, *(UINT32 *) &vram[0x100000 + i*4]);
-		if (g_Config.gpuMultiThreaded)
+		if (m_gpuMultiThreaded)
 		{
 			palRO[0][i] = pal[0][i];
 			palRO[1][i] = pal[1][i];
@@ -444,7 +444,7 @@ void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 
 void CTileGen::Reset(void)
 {
-	unsigned memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+	unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
 	memset(memoryPool, 0, memSize);
 	memset(regs, 0, sizeof(regs));
 	memset(regsRO, 0, sizeof(regsRO));
@@ -465,7 +465,7 @@ void CTileGen::AttachRenderer(CRender2D *Render2DPtr)
 	Render2D = Render2DPtr;
 
 	// If multi-threaded, attach read-only snapshots to renderer instead of real ones
-	if (g_Config.gpuMultiThreaded)
+	if (m_gpuMultiThreaded)
 	{
 		Render2D->AttachVRAM(vramRO);
 		Render2D->AttachPalette((const UINT32 **)palRO);
@@ -484,7 +484,7 @@ void CTileGen::AttachRenderer(CRender2D *Render2DPtr)
 
 bool CTileGen::Init(CIRQ *IRQObjectPtr)
 {
-	unsigned memSize   = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+	unsigned memSize   = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
 	float	 memSizeMB = (float)memSize/(float)0x100000;
 	
 	// Allocate all memory for all TileGen RAM regions
@@ -498,7 +498,7 @@ bool CTileGen::Init(CIRQ *IRQObjectPtr)
 	pal[1] = (UINT32 *) &memoryPool[OFFSET_PAL_B];
 
 	// If multi-threaded, set up pointers for read-only snapshots and dirty page arrays too
-	if (g_Config.gpuMultiThreaded)
+	if (m_gpuMultiThreaded)
 	{
 		vramRO = (UINT8 *) &memoryPool[OFFSET_VRAM_RO];
 		palRO[0] = (UINT32 *) &memoryPool[OFFSET_PAL_RO_A];
@@ -515,7 +515,9 @@ bool CTileGen::Init(CIRQ *IRQObjectPtr)
 	return OKAY;
 }
 
-CTileGen::CTileGen(void)
+CTileGen::CTileGen(const Util::Config::Node &config)
+  : m_config(config),
+    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>())
 {
 	IRQ = NULL;
 	memoryPool = NULL;

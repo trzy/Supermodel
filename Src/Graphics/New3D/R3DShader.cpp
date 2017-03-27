@@ -195,7 +195,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 		fShader = fragmentShaderBasic;
 	}
 
-	success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, nullptr, nullptr, vShader, fShader);
+	success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, std::string(), std::string(), vShader, fShader);
 
 	m_locTexture1		= glGetUniformLocation(m_shaderProgram, "tex1");
 	m_locTexture2		= glGetUniformLocation(m_shaderProgram, "tex2");

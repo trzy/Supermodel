@@ -67,12 +67,12 @@ COutputs::~COutputs()
 	//
 }
 
-const GameInfo *COutputs::GetGame() const
+const Game &COutputs::GetGame() const
 {
 	return m_game;
 }
 
-void COutputs::SetGame(const GameInfo *game)
+void COutputs::SetGame(const Game &game)
 {
 	m_game = game;
 }

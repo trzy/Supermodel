@@ -799,7 +799,7 @@ void CLegacy3D::DescendNodePtr(UINT32 nodeAddr)
 }
 
 // Draws viewports of the given priority
-void CLegacy3D::RenderViewport(UINT32 addr, int pri)
+void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
 {
   static const GLfloat color[8][3] = {
     { 0.0, 0.0, 0.0 },    // off
@@ -823,7 +823,7 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri)
   if (nextAddr == 0)  // memory probably hasn't been set up yet, abort
     return;
   if (nextAddr != 0x01000000)
-    RenderViewport(nextAddr, pri);
+    RenderViewport(nextAddr, pri, wideScreen);
 
   // Skip disabled viewports
   //if ((vpnode[0] & 0x20) != 0)
@@ -849,7 +849,7 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri)
   // Set up viewport and projection (TO-DO: near and far clipping)
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  if (g_Config.wideScreen && (vpX==0) && (vpWidth>=495) && (vpY==0) && (vpHeight >= 383))   // only expand viewports that occupy whole screen
+  if (wideScreen && (vpX==0) && (vpWidth>=495) && (vpY==0) && (vpHeight >= 383))  // only expand viewports that occupy whole screen
   {
     // Wide screen hack only modifies X axis and not the Y FOV
     viewportX      = 0;
@@ -958,6 +958,8 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri)
 
 void CLegacy3D::RenderFrame(void)
 {
+  bool wideScreen = m_config["WideScreen"].ValueAs<bool>();
+
   // Begin frame
   ClearErrors();  // must be cleared each frame
   
@@ -1009,7 +1011,7 @@ void CLegacy3D::RenderFrame(void)
     //ClearModelCache(&PolyCache);
     ClearDisplayList(&PolyCache);
     ClearDisplayList(&VROMCache);
-    RenderViewport(0x800000,pri);
+    RenderViewport(0x800000,pri,wideScreen);
     DrawDisplayList(&VROMCache, POLY_STATE_NORMAL);
     DrawDisplayList(&PolyCache, POLY_STATE_NORMAL);
     DrawDisplayList(&VROMCache, POLY_STATE_ALPHA);
@@ -1058,9 +1060,9 @@ void CLegacy3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullin
   DebugLog("Legacy3D attached Real3D memory regions\n");
 }
 
-void CLegacy3D::SetStep(int stepID)
+void CLegacy3D::SetStepping(int stepping)
 {
-  step = stepID;
+  step = stepping;
   
   if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
   {
@@ -1124,12 +1126,12 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   // Get upper limit for number of texture maps to use from max number of texture units supported by video card
   GLint glMaxTexUnits;
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glMaxTexUnits);
-  int maxTexMaps = std::max<int>(1, std::min<int>(g_Config.maxTexMaps, glMaxTexUnits));
+  int maxTexMaps = std::max<int>(1, std::min<int>(m_config["MaxTexMaps"].ValueAsDefault<int>(9), glMaxTexUnits));
   
   // Get upper limit for extent of texture maps to use from max texture size supported by video card
   GLint maxTexSize;
   glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
-  int mapExtent = std::max<int>(1, std::min<unsigned>(g_Config.maxTexMapExtent, maxTexSize / 2048));
+  int mapExtent = std::max<int>(1, std::min<unsigned>(m_config["MaxTexMapExtent"].ValueAsDefault<int>(4), maxTexSize / 2048));
   int mapSize = 2048 * mapExtent;
   while (mapExtent > 1)
   {
@@ -1147,10 +1149,8 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   }
 
   // Load shaders, using multi-sheet shader if requested.
-  const char *vsFile = g_Config.vertexShaderFile.size() ? g_Config.vertexShaderFile.c_str() : NULL;
-  const char *fsFile = g_Config.fragmentShaderFile.size() ? g_Config.fragmentShaderFile.c_str() : NULL;
-  const char *fragmentShaderSource = (g_Config.multiTexture ? fragmentShaderMultiSheetSource : fragmentShaderSingleSheetSource); // single texture shader
-  if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,vsFile,fsFile,vertexShaderSource,fragmentShaderSource))
+  const char *fragmentShaderSource = (m_config["MultiTexture"].ValueAs<bool>() ? fragmentShaderMultiSheetSource : fragmentShaderSingleSheetSource); // single texture shader
+  if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,m_config["VertexShader"].ValueAs<std::string>(),m_config["FragmentShader"].ValueAs<std::string>(),vertexShaderSource,fragmentShaderSource))
     return FAIL;
   
   // Try locating default "textureMap" uniform in shader program
@@ -1291,7 +1291,8 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   return OKAY;
 }
 
-CLegacy3D::CLegacy3D(void)
+CLegacy3D::CLegacy3D(const Util::Config::Node &config)
+  : m_config(config)
 { 
   cullingRAMLo = NULL;
   cullingRAMHi = NULL;

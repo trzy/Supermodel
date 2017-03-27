@@ -30,7 +30,8 @@
 #define INCLUDED_IEMULATOR_H
 
 class CBlockFile;
-struct GameInfo;
+struct Game;
+struct ROMSet;
 class CRender2D;
 class IRender3D;
 class CInputs;
@@ -116,31 +117,30 @@ public:
    * Resets the system. Does not modify non-volatile memory.
    */
   virtual void Reset(void) = 0;
-  
+
   /* 
-   * GetGameInfo(void):
+   * GetGame(void):
    *
    * Returns:
-   *    A pointer to the presently loaded game's information structure (or
-   *    NULL if no ROM set has yet been loaded).
+   *    A reference to the presently loaded game's information structure (which
+   *    will be blank if no game has yet been loaded).
    */
-  virtual const struct GameInfo * GetGameInfo(void) = 0;
-  
+  virtual const Game &GetGame(void) const = 0;
+
   /*
-   * LoadROMSet(GameList, zipFile):
+   * LoadGame(game, rom_set):
    *
-   * Loads a complete ROM set from the specified ZIP archive.
+   * Loads a game, copying in the provided ROMs and setting the hardware
+   * stepping.
    *
-   * NOTE: Command line settings will not have been applied here yet.
-   *
-   * Parameters:
-   *    GameList  List of all supported games and their ROMs.
-   *    zipFile   ZIP file to load from.
+    * Parameters:
+   *    game      Game information.
+   *    rom_set   ROMs.
    *
    * Returns:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
-  virtual bool LoadROMSet(const struct GameInfo *GameList, const char *zipFile) = 0;
+  virtual bool LoadGame(const Game &game, const ROMSet &rom_set) = 0;
   
   /*
    * AttachRenderers(Render2DPtr, Render3DPtr):

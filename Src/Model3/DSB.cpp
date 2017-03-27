@@ -144,8 +144,8 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 	INT32	v[2], musicVol, soundVol;
 	
 	// Obtain program volume settings and convert to 24.8 fixed point (0-200 -> 0x00-0x200)
-	musicVol = g_Config.GetMusicVolume();
-	soundVol = g_Config.GetSoundVolume();
+	musicVol = m_config["MusicVolume"].ValueAs<int>();
+	soundVol = m_config["SoundVolume"].ValueAs<int>();
 	musicVol = (INT32) ((float) 0x100 * (float) musicVol / 100.0f);
 	soundVol = (INT32) ((float) 0x100 * (float) soundVol / 100.0f);
 	
@@ -426,7 +426,7 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 	int		cycles;
 	UINT8	v;
 	
-	if (!g_Config.emulateDSB)
+	if (!m_config["EmulateDSB"].ValueAs<bool>())
 	{
 		// DSB code applies SCSP volume, too, so we must still mix
 		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
@@ -603,7 +603,9 @@ CZ80 *CDSB1::GetZ80(void)
 	return &Z80;
 }
 
-CDSB1::CDSB1(void)
+CDSB1::CDSB1(const Util::Config::Node &config)
+  : m_config(config),
+    Resampler(config)
 {
 	progROM = NULL;
 	mpegROM = NULL;
@@ -981,7 +983,7 @@ void CDSB2::SendCommand(UINT8 data)
 
 void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 {
-	if (!g_Config.emulateDSB)
+	if (!m_config["EmulateDSB"].ValueAs<bool>())
 	{
 		// DSB code applies SCSP volume, too, so we must still mix
 		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
@@ -1184,7 +1186,9 @@ M68KCtx *CDSB2::GetM68K(void)
 	return &M68K;
 }
 
-CDSB2::CDSB2(void)
+CDSB2::CDSB2(const Util::Config::Node &config)
+  : m_config(config),
+    Resampler(config)
 {
 	progROM = NULL;
 	mpegROM = NULL;

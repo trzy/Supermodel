@@ -338,7 +338,7 @@ void CSoundBoard::WriteMIDIPort(UINT8 data)
 bool CSoundBoard::RunFrame(void)
 {
 	// Run sound board first to generate SCSP audio
-	if (g_Config.emulateSound)
+	if (m_config["EmulateSound"].ValueAs<bool>())
 	{
 		M68KSetContext(&M68K);
 		SCSP_Update();
@@ -355,7 +355,7 @@ bool CSoundBoard::RunFrame(void)
 		DSB->RunFrame(audioL, audioR);
 
 	// Output the audio buffers
-	bool bufferFull = OutputAudio(44100/60, audioL, audioR);
+	bool bufferFull = OutputAudio(44100/60, audioL, audioR, m_config["FlipStereo"].ValueAs<bool>());
 
 #ifdef SUPERMODEL_LOG_AUDIO
 	// Output to binary file
@@ -478,7 +478,7 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	// Initialize SCSPs
 	SCSP_SetBuffers(audioL, audioR, 44100/60);
 	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback);
-	if (OKAY != SCSP_Init(2))
+	if (OKAY != SCSP_Init(m_config, 2))
 		return FAIL;
 	SCSP_SetRAM(0, ram1);
 	SCSP_SetRAM(1, ram2);
@@ -503,7 +503,8 @@ CDSB *CSoundBoard::GetDSB(void)
 	return DSB;
 }
 
-CSoundBoard::CSoundBoard(void)
+CSoundBoard::CSoundBoard(const Util::Config::Node &config)
+  : m_config(config)
 {
 	DSB = NULL;
 	memoryPool = NULL;

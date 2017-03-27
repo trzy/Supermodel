@@ -334,17 +334,17 @@ public:
   void AttachRenderer(IRender3D *Render3DPtr);
   
   /*
-   * SetStep(stepID):
+   * SetStepping(stepping):
    *
    * Sets the Model 3 hardware stepping, which also determines the Real3D
    * functionality. The default is Step 1.0. This should be called prior to 
    * any other emulation functions and after Init().
    *
    * Parameters:
-   *    stepID  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0,
-   *            or 0x21 for Step 2.1. Anything else defaults to 1.0.
+   *    stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
+   *              0x21 for Step 2.1. Anything else defaults to 1.0.
    */
-  void SetStep(int stepID);
+  void SetStepping(int stepping);
   
   /*
    * Init(vromPtr, BusObjectPtr, IRQObjectPtr, dmaIRQBit):
@@ -370,12 +370,16 @@ public:
   bool Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
    
   /*
-   * CReal3D(void):
+   * CReal3D(config):
    * ~CReal3D(void):
    *
    * Constructor and destructor.
+   *
+   * Paramters:
+   *    config  Run-time configuration. The reference should be held because
+   *            this changes at run-time.
    */
-  CReal3D(void);
+  CReal3D(const Util::Config::Node &config);
   ~CReal3D(void);
   
 private:
@@ -388,6 +392,10 @@ private:
   void      UploadTexture(uint32_t header, const uint16_t *texData);
   uint32_t  UpdateSnapshots(bool copyWhole);
   uint32_t  UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, unsigned size, uint8_t *dirty);
+
+  // Config 
+  const Util::Config::Node &m_config;
+  const bool                m_gpuMultiThreaded;
 
   // Renderer attached to the Real3D
   IRender3D *Render3D;

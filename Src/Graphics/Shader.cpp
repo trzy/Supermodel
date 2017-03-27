@@ -82,7 +82,7 @@ static char *LoadShaderSource(const char *file)
 	return buf;
 }
 
-bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const char *vsFile, const char *fsFile, const char *vsString, const char *fsString)
+bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, std::string vsFile, std::string fsFile, const char *vsString, const char *fsString)
 {
 	char		infoLog[2048];
 	const char	*vsSource, *fsSource;	// source code
@@ -91,12 +91,12 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	bool		ret = OKAY;
 	
 	// Load shaders from files if specified
-	if (vsFile != NULL)
-		vsSource = LoadShaderSource(vsFile);
+	if (!vsFile.empty())
+		vsSource = LoadShaderSource(vsFile.c_str());
 	else
 		vsSource = vsString;
-	if (fsFile != NULL)
-		fsSource = LoadShaderSource(fsFile);
+	if (!fsFile.empty())
+		fsSource = LoadShaderSource(fsFile.c_str());
 	else
 		fsSource = fsString;
 	if (vsSource == NULL || fsSource == NULL)
@@ -161,9 +161,9 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 
 	// Clean up and quit 
 Quit:
-	if ((vsSource != NULL) && (vsFile != NULL))	// loaded from file, must delete
+	if ((vsSource != NULL) && !vsFile.empty())	// loaded from file, must delete
 		delete [] vsSource;
-	if ((fsSource != NULL) && (fsFile != NULL))	// ""
+	if ((fsSource != NULL) && !fsFile.empty())	// ""
 		delete [] fsSource;
 	return ret;
 }

@@ -35,17 +35,28 @@
  Output Functions
 ******************************************************************************/
 
-void CBlockFile::ReadString(char *str, unsigned strLen, unsigned maxLen)
+void CBlockFile::ReadString(std::string *str, uint32_t length)
 {
   if (NULL == fp)
     return;
-  if (strLen>maxLen)
-    strLen = maxLen;
-  fread(str, sizeof(char), strLen, fp);
-  str[strLen] = '\0';
+  str->clear();
+  //TODO: use fstream to get rid of this ugly hack
+  bool keep_loading = true;
+  for (size_t i = 0; i < length; i++)
+  {
+    char c;
+    fread(&c, sizeof(char), 1, fp);
+    if (keep_loading)
+    {
+      if (!c)
+        keep_loading = false;
+      else
+        *str += c;
+    }
+  }
 }
 
-unsigned CBlockFile::ReadBytes(void *data, unsigned numBytes)
+unsigned CBlockFile::ReadBytes(void *data, uint32_t numBytes)
 {
   if (NULL == fp)
     return 0;
@@ -90,7 +101,7 @@ void CBlockFile::WriteDWord(uint32_t data)
   UpdateBlockSize();
 }
 
-void CBlockFile::WriteBytes(const void *data, unsigned numBytes)
+void CBlockFile::WriteBytes(const void *data, uint32_t numBytes)
 {
   if (NULL == fp)
     return;
@@ -98,24 +109,11 @@ void CBlockFile::WriteBytes(const void *data, unsigned numBytes)
   UpdateBlockSize();
 }
 
-void CBlockFile::WriteBlockHeader(const char *name, const char *comment)
+void CBlockFile::WriteBlockHeader(const std::string &name, const std::string &comment)
 {
-  unsigned  nameLen, commentLen;
-  const char  nullComment[1] = {'\0'};
-
   if (NULL == fp)
     return;
-    
-  if (comment == NULL)
-    comment = nullComment;
-    
-  nameLen = strlen(name);
-  commentLen = strlen(comment);
-  if (nameLen > 1024)
-    nameLen = 1024;
-  if (commentLen > 1024)
-    commentLen = 1024;
-
+  
   // Record current block starting position
   blockStartPos = ftell(fp);
 
@@ -123,12 +121,10 @@ void CBlockFile::WriteBlockHeader(const char *name, const char *comment)
   WriteDWord(0);  // will be automatically updated as we write the file
   
   // Write name and comment lengths
-  WriteDWord(nameLen+1);
-  WriteDWord(commentLen+1);
-  WriteBytes(name, nameLen);
-  WriteByte(0);
-  WriteBytes(comment, commentLen);
-  WriteByte(0);
+  WriteDWord(name.size() + 1);
+  WriteDWord(comment.size() + 1);
+  Write(name);
+  Write(comment);
   
   // Record the start of the current data section
   dataStartPos = ftell(fp);
@@ -151,66 +147,74 @@ void CBlockFile::WriteBlockHeader(const char *name, const char *comment)
  data     ...     Raw data (blockLength - total header size).
 ******************************************************************************/
 
-unsigned CBlockFile::Read(void *data, unsigned numBytes)
+unsigned CBlockFile::Read(void *data, uint32_t numBytes)
 {
   if (mode == 'r')
     return ReadBytes(data, numBytes);
   return 0;
 }
 
-void CBlockFile::Write(const void *data, unsigned numBytes)
+void CBlockFile::Write(const void *data, uint32_t numBytes)
 {
   if (mode == 'w')
     WriteBytes(data, numBytes);
 }
 
-void CBlockFile::NewBlock(const char *name, const char *comment)
+void CBlockFile::Write(const std::string &str)
+{
+  if (mode == 'w')
+    WriteBytes(str.c_str(), str.length() + 1);
+}
+
+void CBlockFile::NewBlock(const std::string &name, const std::string &comment)
 {
   if (mode == 'w')
     WriteBlockHeader(name, comment);
 }
 
-bool CBlockFile::FindBlock(const char *name)
+bool CBlockFile::FindBlock(const std::string &name)
 {
-  long int  curPos = 0;
-  unsigned  blockLen, nameLen, commentLen;
-  
   if (mode != 'r')
     return FAIL;
     
   fseek(fp, 0, SEEK_SET);
   
+  long int  curPos = 0;
   while (curPos < fileSize)
   {
     blockStartPos = curPos;
     
     // Read header
-    curPos += ReadDWord(&blockLen);
-    curPos += ReadDWord(&nameLen);
-    curPos += ReadDWord(&commentLen);
-    ReadString(strBuf,nameLen,1025);
+    uint32_t block_length;
+    uint32_t name_length;
+    uint32_t comment_length;
+    curPos += ReadDWord(&block_length);
+    curPos += ReadDWord(&name_length);
+    curPos += ReadDWord(&comment_length);
+    std::string block_name;
+    ReadString(&block_name, name_length);
     
     // Is this the block we want?
-    if (!strcmp(strBuf,name))
+    if (block_name == name)
     {
-      fseek(fp, blockStartPos+12+nameLen+commentLen, SEEK_SET); // move to beginning of data
+      fseek(fp, blockStartPos + 12 + name_length + comment_length, SEEK_SET); // move to beginning of data
       dataStartPos = ftell(fp);
       return OKAY;
     }
     
     // Move to next block
-    fseek(fp, blockStartPos+blockLen, SEEK_SET);
-    curPos = blockStartPos+blockLen;
-    if (blockLen == 0)  // this would never advance
+    fseek(fp, blockStartPos + block_length, SEEK_SET);
+    curPos = blockStartPos + block_length;
+    if (block_length == 0)  // this would never advance
       break;
   }
   
   return FAIL;
 }
 
-bool CBlockFile::Create(const char *file, const char *headerName, const char *comment)
+bool CBlockFile::Create(const std::string &file, const std::string &headerName, const std::string &comment)
 {
-  fp = fopen(file, "wb");
+  fp = fopen(file.c_str(), "wb");
   if (NULL == fp)
     return FAIL;
   mode = 'w';
@@ -218,9 +222,9 @@ bool CBlockFile::Create(const char *file, const char *headerName, const char *co
   return OKAY;
 }
   
-bool CBlockFile::Load(const char *file)
+bool CBlockFile::Load(const std::string &file)
 {
-  fp = fopen(file, "rb");
+  fp = fopen(file.c_str(), "rb");
   if (NULL == fp)
     return FAIL;
   mode = 'r';

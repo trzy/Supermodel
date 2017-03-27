@@ -57,6 +57,9 @@
 #include <cmath>
 #include "Sound/SCSPDSP.h"
 
+static const Util::Config::Node *s_config = 0;
+static bool s_multiThreaded = false;
+
 //#define NEWSCSP
 //#define RB_VOLUME
 
@@ -552,8 +555,11 @@ void SCSP_StopSlot(_SLOT *slot,int keyoff)
 
 #define log2(n) (log((float) n)/log((float) 2))
 
-bool SCSP_Init(int n)
+bool SCSP_Init(const Util::Config::Node &config, int n)
 {
+	s_config = &config;
+	s_multiThreaded = config["MultiThreaded"].ValueAs<bool>();
+
 	if(n==2)
 	{
 		SCSP=SCSPs+1;
@@ -928,7 +934,7 @@ void SCSP_UpdateRegR(int reg)
 				/*
 				 * MIDI FIFO critical section!
 				 */
-				if (g_Config.multiThreaded)
+				if (s_multiThreaded)
 					MIDILock->Lock();
 					
 				v|=MidiStack[MidiR];
@@ -943,7 +949,7 @@ void SCSP_UpdateRegR(int reg)
 				MidiInFill--;
 				SCSP->data[0x5/2]=v;
 				
-				if (g_Config.multiThreaded)
+				if (s_multiThreaded)
 					MIDILock->Unlock();
 			}
 			break;
@@ -1770,7 +1776,12 @@ void SCSP_DoMasterSamples(int nsamples)
 	 * When one SCSP is fully attenuated, the other's samples will be multiplied
 	 * by 2.
 	 */
-	float balance = (float) g_Config.GetSCSPBalance() / 100.0f;
+	float balance = (float) s_config->Get("Balance").ValueAs<float>();
+	if (balance < -100.0f)
+	  balance = -100.0f;
+  else if (balance > 100.0f)
+    balance = 100.0f;
+  balance /= 100.0f;
 	float masterBalance = 1.0f+balance;
 	float slaveBalance = 1.0f-balance;
 
@@ -1935,7 +1946,7 @@ void SCSP_MidiIn(BYTE val)
 	/*
 	 * MIDI FIFO critical section
 	 */
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Lock();
 		
 	//DebugLog("Midi Buffer push %02X",val);
@@ -1945,7 +1956,7 @@ void SCSP_MidiIn(BYTE val)
 	//Int68kCB(IrqMidi);
 //	SCSP.data[0x20/2]|=0x8;
 
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Unlock();
 }
 
@@ -1954,7 +1965,7 @@ void SCSP_MidiOutW(BYTE val)
 	/*
 	 * MIDI FIFO critical section
 	 */
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Lock();
 
 	//printf("68K: MIDI out\n");
@@ -1963,7 +1974,7 @@ void SCSP_MidiOutW(BYTE val)
 	MidiOutW&=7;
 	++MidiOutFill;
 	
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Unlock();
 }
 
@@ -1978,7 +1989,7 @@ unsigned char SCSP_MidiOutR()
 	/*
 	 * MIDI FIFO critical section
 	 */
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Lock();
 
 	val=MidiStack[MidiOutR++];
@@ -1986,7 +1997,7 @@ unsigned char SCSP_MidiOutR()
 	MidiOutR&=7;
 	--MidiOutFill;
 	
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Unlock();
 		
 	return val;
@@ -1999,12 +2010,12 @@ unsigned char SCSP_MidiOutFill()
 	/*
 	 * MIDI FIFO critical section
 	 */
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Lock();
 
 	v = MidiOutFill;
 	
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Unlock();
 	
 	return v;
@@ -2017,12 +2028,12 @@ unsigned char SCSP_MidiInFill()
 	/*
 	 * MIDI FIFO critical section
 	 */
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Lock();
 
 	v = MidiInFill;
 	
-	if (g_Config.multiThreaded)
+	if (s_multiThreaded)
 		MIDILock->Unlock();
 	
 	return v;

@@ -57,7 +57,7 @@ public:
    *    Number of bytes read. If not the same as numBytes, an error
    *    occurred.
    */
-  unsigned Read(void *data, unsigned numBytes);
+  unsigned Read(void *data, uint32_t numBytes);
   
   /*
    * FindBlock(name):
@@ -71,7 +71,7 @@ public:
    * Returns:
    *    OKAY if found, FAIL if unable to locate.
    */
-  bool FindBlock(const char *name);
+  bool FindBlock(const std::string &name);
   
   /*
    * Write(data, numBytes):
@@ -83,7 +83,18 @@ public:
    *    data      Data to write.
    *    numBytes  Number of bytes to write.
    */
-  void Write(const void *data, unsigned numBytes);
+  void Write(const void *data, uint32_t numBytes);
+
+  /*
+   * Write(str):
+   *
+   * Outputs string (including null terminator) at the current file pointer
+   * position. Updates the block header appropriately.
+   *
+   * Parameters:
+   *    str   String to write.
+   */
+  void Write(const std::string &str);
 
   /*
    * NewBlock(name, comment):
@@ -95,7 +106,7 @@ public:
    *    name      Block name. Must be unique and not NULL.
    *    comment   Comment string to embed in the block header.
    */
-  void NewBlock(const char *title, const char *comment);
+  void NewBlock(const std::string &title, const std::string &comment);
 
   /*
    * Create(file, headerName, comment):
@@ -113,7 +124,7 @@ public:
    * Returns:
      *    OKAY if successfully opened, otherwise FAIL.
    */
-  bool Create(const char *file, const char *headerName, const char *comment);
+  bool Create(const std::string &file, const std::string &headerName, const std::string &comment);
 
   /*
    * Load(file):
@@ -129,7 +140,7 @@ public:
    *    subsequent operations will be silently ignored (reads will return
    *    0's). Write commands will be ignored.
    */
-  bool Load(const char *file);
+  bool Load(const std::string &file);
 
   /*
    * Close(void):
@@ -149,17 +160,16 @@ public:
 
 private:
   // Helper functions
-  void      ReadString(char *str, unsigned strLen, unsigned maxLen);
-  unsigned  ReadBytes(void *data, unsigned numBytes);
+  void      ReadString(std::string *str, uint32_t length);
+  unsigned  ReadBytes(void *data, uint32_t numBytes);
   unsigned  ReadDWord(uint32_t *data);
   void      UpdateBlockSize(void);
   void      WriteByte(uint8_t data);
   void      WriteDWord(uint32_t data);
-  void      WriteBytes(const void *data, unsigned numBytes);
-  void      WriteBlockHeader(const char *name, const char *comment);
+  void      WriteBytes(const void *data, uint32_t numBytes);
+  void      WriteBlockHeader(const std::string &name, const std::string &comment);
 
   // File state data
-  char      strBuf[1026];   // buffers up to a 1024-character string, its terminator, and an extra terminator (just in case)
   FILE      *fp;
   int       mode;           // 'r' for read, 'w' for write
   long int  fileSize;       // size of file in bytes

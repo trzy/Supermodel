@@ -238,12 +238,16 @@ public:
 	bool Init(CIRQ *IRQObjectPtr);
 	 
 	/*
-	 * CTileGen(void):
+	 * CTileGen(config):
 	 * ~CTileGen(void):
 	 *
 	 * Constructor and destructor.
+	 *
+   * Paramters:
+   *    config  Run-time configuration. The reference should be held because
+   *            this changes at run-time.
 	 */
-	CTileGen(void);
+	CTileGen(const Util::Config::Node &config);
 	~CTileGen(void);
 	
 private:
@@ -253,7 +257,10 @@ private:
 	void		WritePalette(unsigned color, UINT32 data);
 	UINT32		UpdateSnapshots(bool copyWhole);
 	UINT32		UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty);
-	
+
+  const Util::Config::Node &m_config;
+  const bool m_gpuMultiThreaded;
+
 	CIRQ		*IRQ;		// IRQ controller the tile generator is attached to
 	CRender2D	*Render2D;	// 2D renderer the tile generator is attached to
 	

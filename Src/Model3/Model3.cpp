@@ -202,10 +202,13 @@
 #include <cstdlib>
 #include <cstring>
 #include "Supermodel.h"
+#include "Game.h"
+#include "ROMSet.h"
 #include "Util/Format.h"
+#include "Util/ByteSwap.h"
 #include <functional>
 #include <set>
-#include <sstream>
+#include <iostream>
 
 /******************************************************************************
  Model 3 Inputs
@@ -244,7 +247,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data = (data&0xDF)|(EEPROM.Read()<<5);    // bank 1 contains EEPROM data bit
     }
 
-    if ((Game->inputFlags&GAME_INPUT_SKI))
+    if ((m_game.inputs & Game::INPUT_SKI))
     {
       if ((inputBank&1) == 0)
       {
@@ -261,12 +264,12 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     data = 0xFF;
 
-    if ((Game->inputFlags&GAME_INPUT_SKI))
+    if ((m_game.inputs & Game::INPUT_SKI))
     {
       data &= ~(Inputs->skiPollRight->value<<0);
     }
 
-    if ((Game->inputFlags&GAME_INPUT_JOYSTICK1))
+    if ((m_game.inputs & Game::INPUT_JOYSTICK1))
     {
       data &= ~(Inputs->up[0]->value<<5);     // P1 Up
       data &= ~(Inputs->down[0]->value<<4);   // P1 Down
@@ -274,7 +277,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->right[0]->value<<6);  // P1 Right
     }
 
-    if ((Game->inputFlags&GAME_INPUT_FIGHTING))
+    if ((m_game.inputs & Game::INPUT_FIGHTING))
     {
       data &= ~(Inputs->escape[0]->value<<3); // P1 Escape
       data &= ~(Inputs->guard[0]->value<<2);  // P1 Guard
@@ -282,7 +285,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->punch[0]->value<<0);  // P1 Punch
     }
     
-    if ((Game->inputFlags&GAME_INPUT_SPIKEOUT))
+    if ((m_game.inputs & Game::INPUT_SPIKEOUT))
     {
       data &= ~(Inputs->shift->value<<2);     // Shift
       data &= ~(Inputs->beat->value<<0);      // Beat
@@ -290,14 +293,14 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->jump->value<<3);      // Jump
     }
     
-    if ((Game->inputFlags&GAME_INPUT_SOCCER))
+    if ((m_game.inputs & Game::INPUT_SOCCER))
     {
       data &= ~(Inputs->shortPass[0]->value<<2);  // P1 Short Pass
       data &= ~(Inputs->longPass[0]->value<<0);   // P1 Long Pass
       data &= ~(Inputs->shoot[0]->value<<1);      // P1 Shoot
     }
 
-    if ((Game->inputFlags&GAME_INPUT_VR4))
+    if ((m_game.inputs & Game::INPUT_VR4))
     {
       data &= ~(Inputs->vr[0]->value<<0); // VR1 Red
       data &= ~(Inputs->vr[1]->value<<1); // VR2 Blue
@@ -305,16 +308,16 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->vr[3]->value<<3); // VR4 Green
     }
   
-    if ((Game->inputFlags&GAME_INPUT_VIEWCHANGE))
+    if ((m_game.inputs & Game::INPUT_VIEWCHANGE))
     {
       // Harley is wired slightly differently
-      if ((Game->inputFlags&GAME_INPUT_HARLEY))
+      if ((m_game.inputs & Game::INPUT_HARLEY))
         data &= ~(Inputs->viewChange->value<<1);  // View change
       else
         data &= ~(Inputs->viewChange->value<<0);  // View change
     }
     
-    if ((Game->inputFlags&GAME_INPUT_SHIFT4))
+    if ((m_game.inputs & Game::INPUT_SHIFT4))
     {
       if (Inputs->gearShift4->value == 2)       // Shift 2
         data &= ~0x60;
@@ -326,10 +329,10 @@ UINT8 CModel3::ReadInputs(unsigned reg)
         data &= ~0x10;
     }
 
-    if ((Game->inputFlags&GAME_INPUT_SHIFTUPDOWN))
+    if ((m_game.inputs & Game::INPUT_SHIFTUPDOWN))
     {
       // Harley is wired slightly differently
-      if ((Game->inputFlags&GAME_INPUT_HARLEY))
+      if ((m_game.inputs & Game::INPUT_HARLEY))
       {
         if (Inputs->gearShiftUp->value)         // Shift up 
           data &= ~0x60;
@@ -345,16 +348,16 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       }
     }
     
-    if ((Game->inputFlags&GAME_INPUT_HANDBRAKE))
+    if ((m_game.inputs & Game::INPUT_HANDBRAKE))
       data &= ~(Inputs->handBrake->value<<1);   // Hand brake
     
-    if ((Game->inputFlags&GAME_INPUT_HARLEY))
+    if ((m_game.inputs & Game::INPUT_HARLEY))
       data &= ~(Inputs->musicSelect->value<<0); // Music select
     
-    if ((Game->inputFlags&GAME_INPUT_GUN1))
+    if ((m_game.inputs & Game::INPUT_GUN1))
       data &= ~(Inputs->trigger[0]->value<<0);  // P1 Trigger
     
-    if ((Game->inputFlags&GAME_INPUT_ANALOG_JOYSTICK))
+    if ((m_game.inputs & Game::INPUT_ANALOG_JOYSTICK))
     {
       data &= ~(Inputs->analogJoyTrigger1->value<<5); // Trigger 1
       data &= ~(Inputs->analogJoyTrigger2->value<<4); // Trigger 2
@@ -362,7 +365,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->analogJoyEvent2->value<<1);   // Event Button 2
     }
     
-    if ((Game->inputFlags&GAME_INPUT_TWIN_JOYSTICKS)) // First twin joystick
+    if ((m_game.inputs & Game::INPUT_TWIN_JOYSTICKS)) // First twin joystick
     {
       /*
        * Process left joystick inputs first
@@ -418,16 +421,16 @@ UINT8 CModel3::ReadInputs(unsigned reg)
         data &= ~0x40;
     }
 
-    if ((Game->inputFlags&GAME_INPUT_ANALOG_GUN1))
+    if ((m_game.inputs & Game::INPUT_ANALOG_GUN1))
     {
       data &= ~(Inputs->analogTriggerLeft[0]->value<<0);
       data &= ~(Inputs->analogTriggerRight[0]->value<<1);
     }
 
-    if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
+    if ((m_game.inputs & Game::INPUT_MAGTRUCK))
       data &= ~(Inputs->magicalPedal1->value << 0);
 
-    if ((Game->inputFlags & GAME_INPUT_FISHING))
+    if ((m_game.inputs & Game::INPUT_FISHING))
     {
       data &= ~(Inputs->fishingCast->value << 0);
       data &= ~(Inputs->fishingSelect->value << 1);
@@ -441,7 +444,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     if (DriveBoard.IsAttached())
       data = DriveBoard.Read();
     
-    if ((Game->inputFlags&GAME_INPUT_JOYSTICK2))
+    if ((m_game.inputs & Game::INPUT_JOYSTICK2))
     {
       data &= ~(Inputs->up[1]->value<<5);     // P2 Up
       data &= ~(Inputs->down[1]->value<<4);   // P2 Down
@@ -449,7 +452,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->right[1]->value<<6);  // P2 Right
     }
 
-    if ((Game->inputFlags&GAME_INPUT_FIGHTING))
+    if ((m_game.inputs & Game::INPUT_FIGHTING))
     {
       data &= ~(Inputs->escape[1]->value<<3); // P2 Escape
       data &= ~(Inputs->guard[1]->value<<2);  // P2 Guard
@@ -457,14 +460,14 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       data &= ~(Inputs->punch[1]->value<<0);  // P2 Punch
     }
     
-    if ((Game->inputFlags&GAME_INPUT_SOCCER))
+    if ((m_game.inputs & Game::INPUT_SOCCER))
     {
       data &= ~(Inputs->shortPass[1]->value<<2);  // P2 Short Pass
       data &= ~(Inputs->longPass[1]->value<<0);   // P2 Long Pass
       data &= ~(Inputs->shoot[1]->value<<1);      // P2 Shoot
     }
     
-    if ((Game->inputFlags&GAME_INPUT_TWIN_JOYSTICKS)) // Second twin joystick (see register 0x08 for comments)
+    if ((m_game.inputs & Game::INPUT_TWIN_JOYSTICKS)) // Second twin joystick (see register 0x08 for comments)
     {
             
       data &= ~(Inputs->twinJoyShot2->value<<0);
@@ -494,16 +497,16 @@ UINT8 CModel3::ReadInputs(unsigned reg)
         data &= ~0x80;
     }
     
-    if ((Game->inputFlags&GAME_INPUT_GUN2))
+    if ((m_game.inputs & Game::INPUT_GUN2))
       data &= ~(Inputs->trigger[1]->value<<0);  // P2 Trigger
     
-    if ((Game->inputFlags&GAME_INPUT_ANALOG_GUN2))
+    if ((m_game.inputs & Game::INPUT_ANALOG_GUN2))
     {
       data &= ~(Inputs->analogTriggerLeft[1]->value<<0);
       data &= ~(Inputs->analogTriggerRight[1]->value<<1);
     }
 
-    if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
+    if ((m_game.inputs & Game::INPUT_MAGTRUCK))
       data &= ~(Inputs->magicalPedal2->value << 0);
 
     return data;
@@ -521,22 +524,22 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     // Load ADC channels with input data
     memset(adc, 0, sizeof(adc));
-    if ((Game->inputFlags&GAME_INPUT_VEHICLE))
+    if ((m_game.inputs & Game::INPUT_VEHICLE))
     {
       adc[0] = (UINT8)Inputs->steering->value;
       adc[1] = (UINT8)Inputs->accelerator->value;
       adc[2] = (UINT8)Inputs->brake->value;
-      if ((Game->inputFlags&GAME_INPUT_HARLEY))
+      if ((m_game.inputs & Game::INPUT_HARLEY))
         adc[3] = (UINT8)Inputs->rearBrake->value;
     }
 
-    if ((Game->inputFlags&GAME_INPUT_ANALOG_JOYSTICK))
+    if ((m_game.inputs & Game::INPUT_ANALOG_JOYSTICK))
     {
       adc[0] = (UINT8)Inputs->analogJoyY->value;
       adc[1] = (UINT8)Inputs->analogJoyX->value;
     }
 
-    if ((Game->inputFlags&GAME_INPUT_ANALOG_GUN1)||(Game->inputFlags&GAME_INPUT_ANALOG_GUN2))
+    if ((m_game.inputs & Game::INPUT_ANALOG_GUN1)||(m_game.inputs & Game::INPUT_ANALOG_GUN2))
     { 
       adc[0] = (UINT8)Inputs->analogGunX[0]->value;
       adc[2] = (UINT8)Inputs->analogGunY[0]->value;
@@ -544,19 +547,19 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[3] = (UINT8)Inputs->analogGunY[1]->value;
     }
     
-    if ((Game->inputFlags&GAME_INPUT_SKI))
+    if ((m_game.inputs & Game::INPUT_SKI))
     {
       adc[0] = (UINT8)Inputs->skiY->value;
       adc[1] = (UINT8)Inputs->skiX->value;
     }
 
-    if ((Game->inputFlags & GAME_INPUT_MAGTRUCK))
+    if ((m_game.inputs & Game::INPUT_MAGTRUCK))
     {
       adc[0] = uint8_t(Inputs->magicalLever1->value);
       adc[1] = uint8_t(Inputs->magicalLever2->value);
     }
       
-    if ((Game->inputFlags & GAME_INPUT_FISHING))
+    if ((m_game.inputs & Game::INPUT_FISHING))
     {
       adc[0] = uint8_t(Inputs->fishingRodY->value);
       adc[1] = uint8_t(Inputs->fishingRodX->value);
@@ -615,7 +618,7 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
     case 0x87:    // Read light gun register
       serialFIFO1 = 0;  // clear serial FIFO 1
       serialFIFO2 = 0;
-      if ((Game->inputFlags&GAME_INPUT_GUN1||Game->inputFlags&GAME_INPUT_GUN2))
+      if ((m_game.inputs & Game::INPUT_GUN1||m_game.inputs & Game::INPUT_GUN2))
       {
         switch (gunReg)
         {
@@ -940,7 +943,7 @@ UINT8 CModel3::Read8(UINT32 addr)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
-    if (Game->step != 0x10)
+    if (m_game.stepping != "1.0")
       break;
   case 0xF9:
   case 0xC1:
@@ -1174,7 +1177,7 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
-    if (Game->step != 0x10) // check for Step 1.0
+    if (m_game.stepping != "1.0") // check for Step 1.0
       break;
   case 0xF9:
   case 0xC1:
@@ -1291,7 +1294,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
-    if (Game->step != 0x10)
+    if (m_game.stepping != "1.0")
       goto Unknown8;
   case 0xF9:
   case 0xC1:
@@ -1553,7 +1556,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
   // 53C810 SCSI
   case 0xC0:  // step 1.0 only
-    if (Game->step != 0x10)
+    if (m_game.stepping != "1.0")
       goto Unknown32;
   case 0xF9:
   case 0xC1:
@@ -1687,20 +1690,20 @@ void CModel3::RunFrame(void)
   UINT32 start = CThread::GetTicks();
 
   // See if currently running multi-threaded
-  if (g_Config.multiThreaded)
+  if (m_multiThreaded)
   {
     // If so, check all threads are up and running
     if (!StartThreads())
       goto ThreadError;
 
     // Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd) and drive board (if attached) so they can process a frame
-    if ((g_Config.gpuMultiThreaded && !ppcBrdThreadSync->Post()) || 
-        (syncSndBrdThread          && !sndBrdThreadSync->Post()) || 
-        (DriveBoard.IsAttached()   && !drvBrdThreadSync->Post()))
+    if ((m_gpuMultiThreaded       && !ppcBrdThreadSync->Post()) || 
+        (syncSndBrdThread         && !sndBrdThreadSync->Post()) || 
+        (DriveBoard.IsAttached()  && !drvBrdThreadSync->Post()))
       goto ThreadError;
 
     // If not multi-threading GPU, then run PPC main board for a frame and sync GPUs now in this thread
-    if (!g_Config.gpuMultiThreaded)
+    if (!m_gpuMultiThreaded)
     {
       RunMainBoardFrame();
       SyncGPUs();
@@ -1714,9 +1717,9 @@ void CModel3::RunFrame(void)
       goto ThreadError;
 
     // Wait for PPC main board, sound board and drive board threads to finish their work (if they are running and haven't finished already)
-    while ((g_Config.gpuMultiThreaded && !ppcBrdThreadDone) || 
-           (syncSndBrdThread          && !sndBrdThreadDone) || 
-           (DriveBoard.IsAttached()   && !drvBrdThreadDone))
+    while ((m_gpuMultiThreaded      && !ppcBrdThreadDone) || 
+           (syncSndBrdThread        && !sndBrdThreadDone) || 
+           (DriveBoard.IsAttached() && !drvBrdThreadDone))
     {
       if (!notifySync->Wait(notifyLock))
         goto ThreadError;
@@ -1730,7 +1733,7 @@ void CModel3::RunFrame(void)
       goto ThreadError;
 
     // If multi-threading GPU, then sync GPUs last while PPC main board thread is waiting
-    if (g_Config.gpuMultiThreaded)
+    if (m_gpuMultiThreaded)
       SyncGPUs();
   }
   else
@@ -1750,7 +1753,7 @@ void CModel3::RunFrame(void)
 
 ThreadError:
   ErrorLog("Threading error in CModel3::RunFrame: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
 }
 
 void CModel3::RunMainBoardFrame(void)
@@ -1758,7 +1761,7 @@ void CModel3::RunMainBoardFrame(void)
   UINT32 start = CThread::GetTicks();
 
   // Compute display and VBlank timings
-  unsigned ppcCycles   = g_Config.GetPowerPCFrequency() * 1000000;
+  unsigned ppcCycles   = m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
   unsigned frameCycles = ppcCycles / 60;
   unsigned vblCycles   = (unsigned)((float) frameCycles * 2.5f/100.0f); // 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
   unsigned dispCycles  = frameCycles - vblCycles;
@@ -1774,15 +1777,15 @@ void CModel3::RunMainBoardFrame(void)
   // The values below were arrived at by trial and error and clearly more investigation is required.  If it turns out that the status bit is
   // connected to the end of VBlank then the code below should be removed and the timing handled via GPU.VBlankEnd() instead.  
   unsigned statusCycles;
-  if (Game->step >= 0x20)
+  if (m_game.stepping == "2.0" || m_game.stepping == "2.1")
   {
     // For some reason, Fighting Vipers 2 and Daytona USA 2 require completely different timing to the rest of the step 2.x games
-    if (!strcmp(Game->id, "daytona2") || (Game->step == 0x20 && !strcmp(Game->id, "fvipers2")))
+    if (m_game.name == "daytona2" || (m_game.stepping == "2.0" && m_game.name == "fvipers2"))
       statusCycles = (unsigned)((float)frameCycles * 24.0f/100.0f);
     else
       statusCycles = (unsigned)((float)frameCycles * 9.12f/100.0f);
   }
-  else if (Game->step == 0x15)
+  else if (m_game.stepping == "1.5")
     statusCycles = (unsigned)((float)frameCycles * 5.5f/100.0f);
   else
     statusCycles = (unsigned)((float)frameCycles * 48.0f/100.0f);
@@ -1905,7 +1908,7 @@ bool CModel3::StartThreads(void)
     return true;
       
   // Create synchronization objects
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
   {
     ppcBrdThreadSync = CThread::CreateSemaphore(0);
     if (ppcBrdThreadSync == NULL)
@@ -1938,7 +1941,7 @@ bool CModel3::StartThreads(void)
   stopThreads = false;
 
   // Create PPC main board thread, if multi-threading GPU
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
   {
     ppcBrdThread = CThread::CreateThread(StartMainBoardThread, this);
     if (ppcBrdThread == NULL)
@@ -1971,7 +1974,7 @@ bool CModel3::StartThreads(void)
 ThreadError:
   ErrorLog("Unable to create threads and/or synchronization objects: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
   DeleteThreadObjects();
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return false;
 }
 
@@ -1999,7 +2002,7 @@ bool CModel3::PauseThreads(void)
 
 ThreadError:
   ErrorLog("Threading error in CModel3::PauseThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return false;
 }
 
@@ -2022,7 +2025,7 @@ bool CModel3::ResumeThreads(void)
 
 ThreadError:
   ErrorLog("Threading error in CModel3::ResumeThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return false;
 }
 
@@ -2086,7 +2089,7 @@ bool CModel3::StopThreads(void)
 
 ThreadError:
   ErrorLog("Threading error in CModel3::StopThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return false;
 }
 
@@ -2244,7 +2247,7 @@ int CModel3::RunMainBoardThread(void)
 
 ThreadError:
   ErrorLog("Threading error in RunMainBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return 1;
 }
 
@@ -2289,7 +2292,7 @@ bool CModel3::WakeSoundBoardThread(void)
 
 ThreadError:
   ErrorLog("Threading error in WakeSoundBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return false;
 }
 
@@ -2373,7 +2376,7 @@ int CModel3::RunSoundBoardThread(void)
 
 ThreadError:
   ErrorLog("Threading error in RunSoundBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return 1;
 }
 
@@ -2429,7 +2432,7 @@ int CModel3::RunSoundBoardThreadSyncd(void)
 
 ThreadError:
   ErrorLog("Threading error in RunSoundBoardThreadSyncd: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return 1;
 }
 
@@ -2485,7 +2488,7 @@ int CModel3::RunDriveBoardThread(void)
 
 ThreadError:
   ErrorLog("Threading error in RunDriveBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  g_Config.multiThreaded = false;
+  m_multiThreaded = false;
   return 1;
 }
 
@@ -2546,13 +2549,13 @@ void CModel3::Reset(void)
 ******************************************************************************/
 
 // Apply patches to games
-void CModel3::Patch(void)
+static void Patch(uint8_t *crom, const Game &game)
 {
-  if (!strcmp(Game->id, "scudp"))
+  if (game.name == "scudp")
   {
     // Base offset of program in CROM: 0x710000
   }
-  else if (!strcmp(Game->id, "lemans24"))
+  else if (game.name == "lemans24")
   {
     // Base offset of program in CROM: 6473C0
     *(UINT32 *) &crom[0x6D8C4C] = 0x00000002; // comm. mode: 00=master, 01=slave, 02=satellite
@@ -2561,18 +2564,18 @@ void CModel3::Patch(void)
     *(UINT32 *) &crom[0x73EDD0] = 0x60000000;
     *(UINT32 *) &crom[0x73EDC4] = 0x60000000;
   } 
-  else if (!strcmp(Game->id, "lostwsga"))
+  else if (game.name == "lostwsga")
   {
     *(UINT32 *) &crom[0x7374f4] = 0x38840004; // an actual bug in the game code
   }
-  else if (!strcmp(Game->id, "vs215") || !strcmp(Game->id, "vs215o") || !strcmp(Game->id, "vs29815"))
+  else if (game.name == "vs215" || game.name == "vs215o" || game.name == "vs29815")
   {
     // VS215 is a modification of VS2 that runs on Step 1.5 hardware. I
     // suspect the code here is trying to detect the system type but am too
     // lazy to figure it out right now.
     *(UINT32 *) &crom[0x7001A8] = 0x48000000+(0xFFF01630-0xFFF001A8); // force a jump to FFF01630
   }
-  else if (!strcmp(Game->id, "vs298"))
+  else if (game.name == "vs298")
   {
     // Base offset of program in CROM: 600000
     // Inexplicably, at PC=AFC1C, a call is made to FC78, which is right in the middle of some
@@ -2581,36 +2584,36 @@ void CModel3::Patch(void)
     // Or, 300138 needs to be written with a non-zero value, it is loaded from EEPROM but is 0.
     *(UINT32 *) &crom[0x6AFC1C] = 0x60000000;
   }
-  else if (!strcmp(Game->id, "srally2"))
+  else if (game.name == "srally2")
   {
     *(UINT32 *) &crom[0x7C0C4] = 0x60000000;
     *(UINT32 *) &crom[0x7C0C8] = 0x60000000;
     *(UINT32 *) &crom[0x7C0CC] = 0x60000000;
   }
-  else if (!strcmp(Game->id, "harley"))
+  else if (game.name == "harley")
   {
     *(UINT32 *) &crom[0x50E8D4] = 0x60000000;
     *(UINT32 *) &crom[0x50E8F4] = 0x60000000;
     *(UINT32 *) &crom[0x50FB84] = 0x60000000;
   }
-  else if (!strcmp(Game->id, "harleyb"))
+  else if (game.name == "harleyb")
   {
     *(UINT32 *) &crom[0x50ECB4] = 0x60000000;
     *(UINT32 *) &crom[0x50ECD4] = 0x60000000;
     *(UINT32 *) &crom[0x50FF64] = 0x60000000;
   }
-  else if (!strcmp(Game->id, "swtrilgy"))
+  else if (game.name == "swtrilgy")
   {
     *(UINT32 *) &crom[0xF0E48] = 0x60000000;
     *(UINT32 *) &crom[0x043DC] = 0x48000090;  // related to joystick feedback
     *(UINT32 *) &crom[0x029A0] = 0x60000000;
     *(UINT32 *) &crom[0x02A0C] = 0x60000000;
   }
-  else if (!strcmp(Game->id, "swtrilgya"))
+  else if (game.name == "swtrilgya")
   {
     *(UINT32 *) &crom[0xF6DD0] = 0x60000000;  // from MAME
   }
-  else if (!strcmp(Game->id, "eca") || !strcmp(Game->id, "ecax"))
+  else if (game.name == "eca" || game.name == "ecax")
   {
     *(UINT32 *) &crom[0x535580] = 0x60000000;
     //*(UINT32 *) &crom[0x5023B4] = 0x60000000;
@@ -2660,89 +2663,98 @@ static void Reverse32(uint8_t *buf, size_t size)
 // 64-bit magic number used to detect loading of optional ROMs
 #define MAGIC_NUMBER  0x4C444D5245505553ULL
 
-const struct GameInfo * CModel3::GetGameInfo(void)
+const Game &CModel3::GetGame() const
 {
-  return Game;
+  return m_game;
 }
   
 // Stepping-dependent parameters (MPC10x type, etc.) are initialized here
-bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
+bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 {
-  struct ROMMap Map[] =
+  m_game = Game();
+ 
+  /*
+   * Copy in ROM data with mirroring as necessary for the following cases:
+   *
+   *  - VROM: 64MB. If <= 32MB, mirror to high 32MB.
+   *  - Banked CROM: 128MB. If <= 64MB, mirror to high 64MB.
+   *  - Fixed CROM: 8MB. If < 8MB, loaded only in high part of space and low
+   *    part is a mirror of (banked) CROM0.
+   *  - Sample ROM: 16MB. If <= 8MB, mirror to high 8MB.
+   *
+   * ROMs are released after being loaded.
+   */
+  if (rom_set.get_rom("vrom").size <= 32*0x100000)
   {
-    { "CROM",     crom },
-    { "CROMxx",   &crom[0x800000] },  
-    { "VROM",     vrom },
-    { "SndProg",  soundROM },
-    { "Samples",  sampleROM },
-    { "DSBProg",  dsbROM },
-    { "DSBMPEG",  mpegROM },
-    { "DriveBd",  driveROM },
-    { NULL, NULL }
-  };
-  PPC_CONFIG  PPCConfig;
-  
-  // Magic numbers to detect if optional ROMs are loaded
-  *(UINT64 *) driveROM = MAGIC_NUMBER;
-  
-  // Load game
-  Game = LoadROMSetFromZIPFile(Map, GameList, zipFile, true);
-  if (NULL == Game)
-    return ErrorLog("Failed to load ROM set."); 
-  
-  // Perform mirroring as necessary 
-  if (Game->vromSize < 0x4000000)   // VROM is actually 64 MB
-    CopyRegion(vrom, Game->vromSize, 0x4000000, vrom, Game->vromSize);
-  if (Game->cromSize < 0x800000)    // low part of fixed CROM region contains CROM0
-    CopyRegion(crom, 0, 0x800000-Game->cromSize, &crom[0x800000], 0x800000);
-  if (Game->mirrorLow64MB)          // for games w/ 64 MB or less banked CROM, mirror to upper 128 MB
-    CopyRegion(&crom[0x800000], 0x4000000, 0x8000000, &crom[0x800000], 0x4000000);
-  if (Game->sampleSize < 0x1000000) // if less than 16 MB of sample ROMs, mirror
-    CopyRegion(sampleROM, 0x800000, 0x1000000, sampleROM, 0x800000);
-    
-  // Byte reverse the PowerPC ROMs (convert to little endian words)
-  Reverse32(crom, 0x800000+0x8000000);
-  
-  // Byte swap sound board 68K ROMs (convert to little endian words)
-  Reverse16(soundROM, 0x80000);
-  Reverse16(sampleROM, 0x1000000);
-    
-  // Initialize CPU and configure hardware (CPU speed is set in Init())
-  if (Game->step >= 0x20)     // Step 2.0+
-  {
-    PPCConfig.pvr = PPC_MODEL_603R; // 166 MHz
-    PPCConfig.bus_frequency = BUS_FREQUENCY_66MHZ;
-    PPCConfig.bus_frequency_multiplier = 0x25;  // 2.5X multiplier
-    PCIBridge.SetModel(0x106);      // MPC106
-  } 
-  else if (Game->step == 0x15)  // Step 1.5
-  {
-    PPCConfig.pvr = PPC_MODEL_603E;   // 100 MHz
-    PPCConfig.bus_frequency = BUS_FREQUENCY_66MHZ;
-    PPCConfig.bus_frequency_multiplier = 0x15;  // 1.5X multiplier
-    if (!strcmp(Game->id, "scudp1"))  // some Step 1.x games use MPC106
-      PCIBridge.SetModel(0x106);
-    else
-      PCIBridge.SetModel(0x105);    // MPC105
-  }
-  else if (Game->step == 0x10)  // Step 1.0
-  {
-    PPCConfig.pvr = PPC_MODEL_603R; // 66 MHz
-    PPCConfig.bus_frequency = BUS_FREQUENCY_66MHZ;
-    PPCConfig.bus_frequency_multiplier = 0x10;  // 1X multiplier
-    if (!strcmp(Game->id, "bass") || !strcmp(Game->id, "getbass"))  // some Step 1.x games use MPC106
-      PCIBridge.SetModel(0x106);
-    else
-      PCIBridge.SetModel(0x105);  // MPC105
+    rom_set.get_rom("vrom").CopyTo(&vrom[0], 32*100000);
+    rom_set.get_rom("vrom").CopyTo(&vrom[32*0x100000], 32*0x100000);
   }
   else
-    return ErrorLog("Game uses an unrecognized stepping (%d.%d), cannot configure Model 3.", (Game->step>>4)&0xF, Game->step&0xF);
+    rom_set.get_rom("vrom").CopyTo(vrom, 64*0x100000);
+  if (rom_set.get_rom("banked_crom").size <= 64*0x100000)
+  {
+    rom_set.get_rom("banked_crom").CopyTo(&crom[8*0x100000 + 0], 64*0x100000);
+    rom_set.get_rom("banked_crom").CopyTo(&crom[8*0x100000 + 64*0x100000], 64*0x100000);
+  }
+  else
+    rom_set.get_rom("banked_crom").CopyTo(&crom[8*0x100000 + 0], 128*0x100000);
+  size_t crom_size = rom_set.get_rom("crom").size;
+  rom_set.get_rom("crom").CopyTo(&crom[8*0x100000 - crom_size], crom_size);
+  if (crom_size < 8*0x100000)
+    rom_set.get_rom("banked_crom").CopyTo(&crom[0], 8*0x100000 - crom_size);
+  if (rom_set.get_rom("sound_samples").size <= 8*0x100000)
+  {
+    rom_set.get_rom("sound_samples").CopyTo(&sampleROM[0], 8*0x100000);
+    rom_set.get_rom("sound_samples").CopyTo(&sampleROM[8*0x100000], 8*0x100000);
+  }
+  else
+    rom_set.get_rom("sound_samples").CopyTo(sampleROM, 16*0x100000);
+  rom_set.get_rom("sound_program").CopyTo(soundROM, 512*1024);
+  rom_set.get_rom("mpeg_program").CopyTo(dsbROM, 128*1024);
+  rom_set.get_rom("mpeg_music").CopyTo(mpegROM, 16*0x100000);
+  rom_set.get_rom("driveboard_program").CopyTo(driveROM, 64*1024);
+    
+  // Convert PowerPC and 68K ROMs to little endian words 
+  Util::FlipEndian32(crom, 8*0x100000 + 128*0x100000);
+  Util::FlipEndian16(soundROM, 512*1024);
+  Util::FlipEndian16(sampleROM, 16*0x100000);
 
-  GPU.SetStep(Game->step);
-
-  ppc_init(&PPCConfig);
+  // Initialize CPU
+  PPC_CONFIG  ppc_config;
+  if (game.stepping == "2.0" || game.stepping == "2.1")
+  {
+    ppc_config.pvr = PPC_MODEL_603R;   // 166 MHz
+    ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
+    ppc_config.bus_frequency_multiplier = 0x25; // 2.5X multiplier
+    PCIBridge.SetModel(0x106);        // MPC106
+  } 
+  else if (game.stepping == "1.5")
+  {
+    ppc_config.pvr = PPC_MODEL_603E;   // 100 MHz
+    ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
+    ppc_config.bus_frequency_multiplier = 0x15; // 1.5X multiplier
+    if (game.name == "scudp1")
+      PCIBridge.SetModel(0x106);      // some Step 1.x games use MPC106
+    else
+      PCIBridge.SetModel(0x105);      // MPC105
+  }
+  else if (game.stepping == "1.0")
+  {
+    ppc_config.pvr = PPC_MODEL_603R;   // 66 MHz
+    ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
+    ppc_config.bus_frequency_multiplier = 0x10; // 1X multiplier
+    if (game.name == "bass" || game.name == "getbass")
+      PCIBridge.SetModel(0x106);      // some Step 1.x games use MPC106
+    else
+      PCIBridge.SetModel(0x105);      // MPC105
+  }
+  else
+  {
+    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", game.stepping.c_str());
+    return FAIL;
+  }
+  ppc_init(&ppc_config);
   ppc_attach_bus(this);
-
   PPCFetchRegions[0].start = 0; 
   PPCFetchRegions[0].end = 0x007FFFFF;
   PPCFetchRegions[0].ptr = (UINT32 *) ram;
@@ -2752,67 +2764,71 @@ bool CModel3::LoadROMSet(const struct GameInfo *GameList, const char *zipFile)
   PPCFetchRegions[2].start = 0;
   PPCFetchRegions[2].end = 0;
   PPCFetchRegions[2].ptr = NULL;
-  
   ppc_set_fetch(PPCFetchRegions);
   
-  // DSB board (if present)
-  if (Game->mpegBoard == 1)       // Z80 board, do not byte swap program ROM
+  // Initialize Real3D 
+  int stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
+  GPU.SetStepping(stepping);
+  
+  // MPEG board (if present)
+  if (rom_set.get_rom("mpeg_program").size)
   {
-    DSB = new(std::nothrow) CDSB1();
-    if (NULL == DSB)
-      return ErrorLog("Insufficient memory for Digital Sound Board object.");
-    if (OKAY != DSB->Init(dsbROM,mpegROM))
-      return FAIL;
-  }
-  else if (Game->mpegBoard == 2)  // 68K board
-  {
-    Reverse16(dsbROM, 0x20000);   // byte swap program ROM
-    DSB = new(std::nothrow) CDSB2();
-    if (NULL == DSB)
-      return ErrorLog("Insufficient memory for Digital Sound Board object.");
-    if (OKAY != DSB->Init(dsbROM,mpegROM))
+    if (game.mpeg_board == "DSB1")
+    {
+      DSB = new(std::nothrow) CDSB1(m_config);
+      if (NULL == DSB)
+        return ErrorLog("Insufficient memory for Digital Sound Board object."); 
+    }
+    else if (game.mpeg_board == "DSB2")
+    {
+      Util::FlipEndian16(dsbROM, 128*1024); // 68K program needs to be byte swapped
+      DSB = new(std::nothrow) CDSB2(m_config);
+      if (NULL == DSB)
+        return ErrorLog("Insufficient memory for Digital Sound Board object."); 
+    }
+    else if (game.mpeg_board.empty())
+      ErrorLog("No MPEG board type defined in game XML for MPEG ROMs.");
+    else
+      ErrorLog("Unknown MPEG board type '%s'. Only 'DSB1' and 'DSB2' are supported.", game.mpeg_board.c_str());
+    if (DSB && OKAY != DSB->Init(dsbROM, mpegROM))
       return FAIL;
   }
   SoundBoard.AttachDSB(DSB);
   
   // Drive board (if present)
-  if (Game->driveBoard)
+  if (rom_set.get_rom("driveboard_program").size)
   {
-    // Was the optional drive board ROM loaded?
-    if (MAGIC_NUMBER != *(UINT64 *) driveROM) // magic number overwritten by ROM
-    {
-      if (DriveBoard.Init(driveROM))
-        return FAIL;
-    }
-    else
-      DriveBoard.Init(NULL);
+    if (DriveBoard.Init(driveROM))
+      return FAIL;
   }
   else
-    DriveBoard.Init(NULL);  // disable
+    DriveBoard.Init(NULL);
 
   // Security board encryption device
-  m_cryptoDevice.Init(Game->encryptionKey, std::bind(&CModel3::ReadSecurityRAM, this, std::placeholders::_1));
+  m_cryptoDevice.Init(game.encryption_key, std::bind(&CModel3::ReadSecurityRAM, this, std::placeholders::_1));
   
   // Apply ROM patches
-  Patch();
+  //TODO: place these in XML
+  Patch(crom, game);
   
   // Print game information
-  std::set<std::string> extraHw;
-  if (Game->mpegBoard)
-    extraHw.insert(Util::Format() << "Digital Sound Board (Type " << Game->mpegBoard << ")");
-  if (Game->driveBoard)
-    extraHw.insert("Drive Board");
-  if (Game->encryptionKey)
-    extraHw.insert("Security Board");
-  printf("    Title:          %s\n", Game->title);
-  printf("    ROM Set:        %s\n", Game->id);
-  printf("    Developer:      %s\n", Game->mfgName);
-  printf("    Year:           %d\n", Game->year);
-  printf("    Step:           %d.%d\n", (Game->step>>4)&0xF, Game->step&0xF);
-  if (!extraHw.empty())
-    printf("    Extra Hardware: %s\n", Util::Format(", ").Join(extraHw).str().c_str());
-  printf("\n");
+  std::set<std::string> extra_hw;
+  if (DSB)
+    extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << game.mpeg_board << ")");
+  if (rom_set.get_rom("driveboard_program").size)
+    extra_hw.insert("Drive Board");
+  if (game.encryption_key)
+    extra_hw.insert("Security Board");
+  std::cout << "    Title:          " << game.title << std::endl;
+  std::cout << "    ROM Set:        " << game.name << std::endl;
+  std::cout << "    Developer:      " << game.manufacturer << std::endl;
+  std::cout << "    Year:           " << game.year << std::endl;
+  std::cout << "    Stepping:       " << game.stepping << std::endl;
+  if (!extra_hw.empty())
+    std::cout << "    Extra Hardware: " << Util::Format(", ").Join(extra_hw) << std::endl;
+  std::cout << std::endl;
   
+  m_game = game;
   return OKAY;
 }
 
@@ -2827,7 +2843,7 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
   Inputs = InputsPtr;
 
   if (DriveBoard.IsAttached())
-    DriveBoard.AttachInputs(Inputs, Game->inputFlags);
+    DriveBoard.AttachInputs(Inputs, m_game.inputs);
 
   DebugLog("Model 3 attached inputs\n");
 }
@@ -2835,7 +2851,7 @@ void CModel3::AttachInputs(CInputs *InputsPtr)
 void CModel3::AttachOutputs(COutputs *OutputsPtr)
 {
   Outputs = OutputsPtr;
-  Outputs->SetGame(Game);
+  Outputs->SetGame(m_game);
   Outputs->Attached();
 
   if (DriveBoard.IsAttached())
@@ -2853,6 +2869,7 @@ bool CModel3::Init(void)
   memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
   if (NULL == memoryPool)
     return ErrorLog("Insufficient memory for Model 3 object (needs %1.1f MB).", memSizeMB);
+  memset(memoryPool, 0, MEMORY_POOL_SIZE);
     
   // Set up pointers
   ram = &memoryPool[OFFSET_RAM];
@@ -2901,13 +2918,19 @@ CDriveBoard *CModel3::GetDriveBoard(void)
   return &DriveBoard;
 }
 
-CModel3::CModel3(void)
+CModel3::CModel3(const Util::Config::Node &config)
+  : m_config(config),
+    m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
+    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    TileGen(config),
+    GPU(config),
+    SoundBoard(config),
+    DriveBoard(config)
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
   
   // Various uninitialized pointers
-  Game = NULL;
   Inputs = NULL;
   Outputs = NULL;
   ram = NULL;
@@ -2995,7 +3018,6 @@ CModel3::~CModel3(void)
     DSB = NULL;
   }
   
-  Game = NULL;
   Inputs = NULL;
   Outputs = NULL;
   ram = NULL;

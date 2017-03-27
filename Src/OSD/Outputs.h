@@ -28,6 +28,8 @@
 #ifndef INCLUDED_OUTPUTS_H
 #define INCLUDED_OUTPUTS_H
 
+#include "Game.h"
+
 /*
  * EOutputs enumeration of all available outputs.
  * Currently just contains the outputs for the driving games - more will need to be added for the other games.
@@ -47,8 +49,6 @@ enum EOutputs
 };
 
 #define NUM_OUTPUTS 9
-
-struct GameInfo;
 
 class COutputs
 {
@@ -95,14 +95,14 @@ public:
 	 *
 	 * Returns the currently running game.
 	 */
-	const GameInfo *GetGame() const;
+	const Game &GetGame() const;
 
 	/*
 	 * SetGame(game):
 	 *
 	 * Sets the currently running game.
 	 */
-	void SetGame(const GameInfo *game);
+	void SetGame(const Game &game);
 
 	/*
 	 * GetValue(output):
@@ -137,7 +137,7 @@ protected:
 private:
 	static const char* s_outputNames[]; // Static array of output names
 
-	const GameInfo *m_game;       // Currently running game
+	Game m_game;                  // Currently running game
 	bool m_first[NUM_OUTPUTS];    // For each output, true if an initial value has been set
 	UINT8 m_values[NUM_OUTPUTS];  // Current value of each output
 };

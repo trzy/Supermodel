@@ -221,23 +221,19 @@ LRESULT CWinOutputs::UnregisterClient(HWND hwnd, LPARAM id)
 LRESULT CWinOutputs::SendIdString(HWND hwnd, LPARAM id)
 {
 	// Id 0 is the name of the game
-	const char *name;
+	std::string name;
 	if (id == 0)
-		name = GetGame()->id;
+		name = GetGame().name;
 	else
-		name = MapIdToName(id);
+		name = MapIdToName(id) ? MapIdToName(id) : "";
 	
-	// NULL name is an empty string
-	if (name == NULL)
-		name = "";
-
 	// Allocate memory for message
-	int dataLen = sizeof(CopyDataIdString) + strlen(name);
+	int dataLen = sizeof(CopyDataIdString) + name.length();
 	CopyDataIdString *data = (CopyDataIdString*)new(nothrow) UINT8[dataLen];
 	if (!data)
 		return 1;
 	data->id = id;
-	strcpy(data->string, name);
+	strcpy(data->string, name.c_str());
 
 	// Reply by using SendMessage with WM_COPYDATA
 	COPYDATASTRUCT copyData;

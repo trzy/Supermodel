@@ -638,7 +638,7 @@ void CRender2D::AttachVRAM(const uint8_t *vramPtr)
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes)
 {
   // Load shaders
-  if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, 0, 0, s_vertexShaderSource, s_fragmentShaderSource))
+  if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, std::string(), std::string(), s_vertexShaderSource, s_fragmentShaderSource))
     return FAIL;
   
   // Get locations of the uniforms

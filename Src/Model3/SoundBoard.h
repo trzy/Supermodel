@@ -34,50 +34,6 @@
 #include "OSD/Thread.h"
 
 /*
- * CSoundBoardConfig:
- *
- * Settings used by CSoundBoard.
- */
-class CSoundBoardConfig
-{
-public:
-	bool	emulateSound;	// sound board emulation (enabled if true)
-	
-	// Master/slave SCSP relative balance (-100-100, with 100 meaning master volume doubled, slave silenced)
-	inline void SetSCSPBalance(int bal)
-	{
-		if (bal > 100)
-		{
-			ErrorLog("Front/rear balance cannot exceed 100%%; setting to 100%%.\n");
-			bal = 100;
-		}
-		
-		if (bal < -100)
-		{
-			ErrorLog("Front/rear balance cannot be less than -100%%; setting to -100%%.\n");
-			bal = -100;
-		}
-		
-		scspBalance = bal;
-	}
-	
-	inline int GetSCSPBalance(void)
-	{
-		return scspBalance;
-	}
-	
-	// Defaults
-	CSoundBoardConfig(void)
-	{
-		emulateSound = true;
-		scspBalance = 0;
-	}
-	
-private:
-	int	scspBalance;
-};
-
-/*
  * CSoundBoard:
  *
  * Model 3 sound board (68K CPU + 2 x SCSP).
@@ -211,18 +167,25 @@ public:
 	bool Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
 
 	/*
-	 * CSoundBoard(void):
+	 * CSoundBoard(config):
 	 * ~CSoundBoard(void):
 	 *
 	 * Constructor and destructor.
+	 *
+   * Paramters:
+   *    config  Run-time configuration. The reference should be held because
+   *            this changes at run-time.
 	 */
-	CSoundBoard(void);
+	CSoundBoard(const Util::Config::Node &config);
 	~CSoundBoard(void);
 	
 private:
 	// Private helper functions
 	void		UpdateROMBanks(void);
 	
+	// Config
+	const Util::Config::Node &m_config;
+
 	// Digital Sound Board
 	CDSB		*DSB;
 	

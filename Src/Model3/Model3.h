@@ -30,6 +30,7 @@
 
 #include "Model3/IEmulator.h"
 #include "Model3/Crypto.h"
+#include "Util/NewConfig.h"
 
 /*
  * FrameTimings
@@ -45,44 +46,6 @@ struct FrameTimings
   UINT32 sndTicks;
   UINT32 drvTicks;
   UINT32 frameTicks;
-};
-
-/*
- * CModel3Config:
- *
- * Settings used by CModel3.
- */
-class CModel3Config
-{
-public:
-  bool multiThreaded;    // Multi-threaded (enabled if true)
-  bool gpuMultiThreaded; // Multi-threaded rendering (enabled if true)
-  
-  // PowerPC clock frequency in MHz (minimum: 1 MHz)
-  inline void SetPowerPCFrequency(unsigned f)
-  {
-    if ((f<1) || (f>1000))
-    {
-      ErrorLog("PowerPC frequency must be between 1 and 1000 MHz; setting to 50 MHz.");
-      f = 50;
-    }   
-    ppcFrequency = f*1000000;
-  }
-  inline unsigned GetPowerPCFrequency(void)
-  {
-    return ppcFrequency/1000000;
-  }
-  
-  // Defaults
-  CModel3Config(void)
-  {
-    multiThreaded = true;       // enable by default
-    gpuMultiThreaded = true;    // enable by default
-    ppcFrequency = 50*1000000;  // 50 MHz
-  }
-  
-private:
-  unsigned ppcFrequency;  // in Hz
 };
 
 /*
@@ -110,7 +73,7 @@ public:
   void RunFrame(void);
   void RenderFrame(void);
   void Reset(void);
-  const struct GameInfo * GetGameInfo(void);
+  const Game &GetGame(void) const;
   void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr);
   void AttachInputs(CInputs *InputsPtr);  
   void AttachOutputs(COutputs *OutputsPtr);
@@ -131,20 +94,19 @@ public:
   void Write64(UINT32 addr, UINT64 data);
     
   /*
-   * LoadROMSet(GameList, zipFile):
+   * LoadGame(game, rom_set):
    *
-   * Loads a complete ROM set from the specified ZIP archive.
-   *
-   * NOTE: Command line settings will not have been applied here yet.
+   * Loads a game, copying in the provided ROMs and setting the hardware
+   * stepping.
    *
    * Parameters:
-   *    GameList  List of all supported games and their ROMs.
-   *    zipFile   ZIP file to load from.
+   *    game      Game information.
+   *    rom_set   ROMs.
    *
    * Returns:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
-  bool LoadROMSet(const struct GameInfo *GameList, const char *zipFile);
+  bool LoadGame(const Game &game, const ROMSet &rom_set);
 
   /*
    * GetSoundBoard(void):
@@ -181,15 +143,19 @@ public:
   FrameTimings GetTimings(void);
 
   /*
-   * CModel3(void):
+   * CModel3(config):
    * ~CModel3(void):
    *
    * Constructor and destructor for Model 3 class. Constructor performs a 
    * bare-bones initialization of object; does not perform any memory 
    * allocation or any actions that can fail. The destructor will deallocate
    * memory and free resources used by the object (and its child objects).
+   *
+   * Paramters:
+   *    config  Run-time configuration. The reference should be held because
+   *            this changes at run-time.
    */
-  CModel3(void);
+  CModel3(const Util::Config::Node &config);
   ~CModel3(void);
 
   /*
@@ -206,7 +172,6 @@ private:
   void      SetCROMBank(unsigned idx);
   UINT8     ReadSystemRegister(unsigned reg);
   void      WriteSystemRegister(unsigned reg, UINT8 data);
-  void      Patch(void);
 
   void RunMainBoardFrame(void);                       // Runs PPC main board for a frame
   void SyncGPUs(void);                                // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
@@ -230,8 +195,13 @@ private:
   int     RunSoundBoardThreadSyncd(void);             // Runs sound board thread (sync'd in step with render thread)
   int     RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
   
+  // Runtime configuration
+  const Util::Config::Node &m_config;
+  bool m_multiThreaded;
+  bool m_gpuMultiThreaded;
+
   // Game and hardware information
-  const struct GameInfo *Game;
+  Game m_game;
   
   // Game inputs and outputs
   CInputs   *Inputs;

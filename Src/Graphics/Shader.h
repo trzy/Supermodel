@@ -29,6 +29,7 @@
 #define INCLUDED_SHADER_H
 
 #include "Pkgs/glew.h"
+#include <string>
 
 /*
  * LoadShaderProgram(shaderProgramPtr, vertexShaderPtr, fragmentShaderPtr, 
@@ -52,8 +53,8 @@
  *		OKAY is successfully loaded, otherwise FAIL. Prints own error messages.
  */
 extern bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, 
-							  GLuint *fragmentShaderPtr, const char *vsFile, 
-							  const char *fsFile, const char *vsString,
+							  GLuint *fragmentShaderPtr, std::string vsFile, 
+							  std::string fsFile, const char *vsString,
 							  const char *fsString);
 
 /*

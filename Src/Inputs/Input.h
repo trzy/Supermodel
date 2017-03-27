@@ -23,20 +23,19 @@
  * Input.h
  *
  * Header file for base input class, CInput, defining an input source. Also
- * defines GAME_INPUT_UI.
+ * defines Game::INPUT_UI.
  */
  
 #ifndef INCLUDED_INPUT_H
 #define INCLUDED_INPUT_H
 
 #include "Types.h"
+#include "Game.h"
+#include "Util/NewConfig.h"
 
 class CInputSource;
 class CInputSystem;
 class CINIFile;
-
-// Special game input flag for UI controls
-#define GAME_INPUT_UI 0
 
 // Flags for inputs
 #define INPUT_FLAGS_SWITCH  0x0001
@@ -152,13 +151,15 @@ public:
 	void ResetToDefaultMapping();
 	
 	/*
-	 * Reads the input's mapping(s) from the given INI file, as well as any other settings.
+	 * Loads the input's mapping(s) from the given config object, as well as any other settings.
 	 */
+	virtual void LoadFromConfig(const Util::Config::Node &config);
 	virtual void ReadFromINIFile(CINIFile *ini, const char *section);
 
 	/*
-	 * Writes the current input mapping(s) to the given INI file, as well as any other settings.
+	 * Stores the current input mapping(s) to the given config object, as well as any other settings.
 	 */
+	virtual void StoreToConfig(Util::Config::Node *config);
 	virtual void WriteToINIFile(CINIFile *ini, const char *section);
 
 	void InputSystemChanged();
@@ -207,13 +208,13 @@ public:
 
 inline bool CInput::IsUIInput()
 {
-	return gameFlags == GAME_INPUT_UI;
+	return gameFlags == Game::INPUT_UI;
 }
 
 inline bool CInput::IsConfigurable()
 {
 	// All inputs except UI and virtual ones can be configured by the user
-	return (gameFlags != GAME_INPUT_UI) && !(flags & INPUT_FLAGS_VIRTUAL);
+	return (gameFlags != Game::INPUT_UI) && !(flags & INPUT_FLAGS_VIRTUAL);
 }
 
 inline bool CInput::IsVirtual()

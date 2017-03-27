@@ -111,7 +111,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(memoryPool, MEM_POOL_SIZE_RW);
 
   // If multi-threaded, update read-only snapshots too
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
     UpdateSnapshots(true);
   Render3D->UploadTextures(0, 0, 0, 2048, 2048);
   SaveState->Read(&fifoIdx, sizeof(fifoIdx));
@@ -159,7 +159,7 @@ uint32_t CReal3D::SyncSnapshots(void)
   commandPortWrittenRO = commandPortWritten;
   commandPortWritten = false;
 
-  if (!g_Config.gpuMultiThreaded)
+  if (!m_gpuMultiThreaded)
     return 0;
 
   // Update read-only queue
@@ -230,7 +230,7 @@ uint32_t CReal3D::UpdateSnapshots(bool copyWhole)
 void CReal3D::BeginFrame(void)
 {
   // If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
   {
 	for (const auto &it : queuedUploadTexturesRO) {
       Render3D->UploadTextures(it.level, it.x, it.y, it.width, it.height);
@@ -632,7 +632,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
         {
           for (uint32_t xx = 0; xx < 8; xx++)
           { 
-            if (g_Config.gpuMultiThreaded)
+            if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
             textureRAM[destOffset++] = texData[decode[(yy*8+xx)^1]];
           }
@@ -668,11 +668,11 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
           {
             uint8_t byte1 = texData[decode[(yy^1)*8+((xx+0)^1)]/2]>>8;
             uint8_t byte2 = texData[decode[(yy^1)*8+((xx+1)^1)]/2]&0xFF;
-            if (g_Config.gpuMultiThreaded)
+            if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
             StoreTexelByte(&textureRAM[destOffset], byteSelect, byte1);
             ++destOffset;
-            if (g_Config.gpuMultiThreaded)
+            if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
             StoreTexelByte(&textureRAM[destOffset], byteSelect, byte2);
             ++destOffset;
@@ -686,7 +686,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
 
   // Signal to renderer that textures have changed
   // TO-DO: mipmaps? What if a game writes non-mipmap textures to mipmap area?
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
   {
     // If multi-threaded, then queue calls to UploadTextures for render thread to perform at beginning of next frame
     QueuedUploadTextures upl;
@@ -866,21 +866,21 @@ void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
 
 void CReal3D::WriteLowCullingRAM(uint32_t addr, uint32_t data)
 {
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
     MARK_DIRTY(cullingRAMLoDirty, addr);
   cullingRAMLo[addr/4] = data;
 }
 
 void CReal3D::WriteHighCullingRAM(uint32_t addr, uint32_t data)
 {
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
     MARK_DIRTY(cullingRAMHiDirty, addr);
   cullingRAMHi[addr/4] = data;
 }
 
 void CReal3D::WritePolygonRAM(uint32_t addr, uint32_t data)
 {
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
     MARK_DIRTY(polyRAMDirty, addr);
   polyRAM[addr/4] = data;
 }
@@ -958,7 +958,7 @@ void CReal3D::Reset(void)
   dmaStatus = 0;
   dmaUnknownReg = 0;
   
-  unsigned memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   memset(memoryPool, 0, memSize);
   memset(m_vromTextureFIFO, 0, sizeof(m_vromTextureFIFO));
 
@@ -974,20 +974,20 @@ void CReal3D::AttachRenderer(IRender3D *Render3DPtr)
 {
   Render3D = Render3DPtr;
 
-  // If multi-threaded, attach read-only snapshots to renderer instead of real ones
-  if (g_Config.gpuMultiThreaded)
+  // If mult-threaded, attach read-only snapshots to renderer instead of real ones
+  if (m_gpuMultiThreaded)
     Render3D->AttachMemory(cullingRAMLoRO, cullingRAMHiRO, polyRAMRO, vrom, textureRAMRO);
   else
     Render3D->AttachMemory(cullingRAMLo, cullingRAMHi, polyRAM, vrom, textureRAM);
 
-  Render3D->SetStep(step);
+  Render3D->SetStepping(step);
 
   DebugLog("Real3D attached a Render3D object\n");
 }
 
-void CReal3D::SetStep(int stepID)
+void CReal3D::SetStepping(int stepping)
 {
-  step = stepID;
+  step = stepping;
   if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
   {
     DebugLog("Real3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
@@ -1002,14 +1002,14 @@ void CReal3D::SetStep(int stepID)
     
   // Pass to renderer
   if (Render3D != NULL)
-    Render3D->SetStep(step);
+    Render3D->SetStepping(step);
     
   DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 
 bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
-  uint32_t memSize = (g_Config.gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  uint32_t memSize = (m_config["GPUMultiThreaded"].ValueAs<bool>() ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   float  memSizeMB = (float)memSize/(float)0x100000;
 
   // IRQ and bus objects
@@ -1030,7 +1030,7 @@ bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPt
   textureFIFO = (uint32_t *) &memoryPool[OFFSET_TEXFIFO];
 
   // If multi-threaded, set up pointers for read-only snapshots and dirty page arrays too
-  if (g_Config.gpuMultiThreaded)
+  if (m_gpuMultiThreaded)
   {
     cullingRAMLoRO = (uint32_t *) &memoryPool[OFFSET_8C_RO];
     cullingRAMHiRO = (uint32_t *) &memoryPool[OFFSET_8E_RO];
@@ -1049,7 +1049,9 @@ bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPt
   return OKAY;
 }
 
-CReal3D::CReal3D(void)
+CReal3D::CReal3D(const Util::Config::Node &config)
+  : m_config(config),
+    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>())
 { 
   Render3D = NULL;
   memoryPool = NULL;
@@ -1117,6 +1119,7 @@ CReal3D::~CReal3D(void)
     printf("unable to dump %s\n", "texram");
   Util::WriteSurfaceToBMP<Util::A1RGB5>("textures.bmp", reinterpret_cast<uint8_t *>(textureRAM), 2048, 2048, false);
 #endif
+Util::WriteSurfaceToBMP<Util::A1RGB5>("textures.bmp", reinterpret_cast<uint8_t *>(textureRAM), 2048, 2048, false);
 
   Render3D = NULL;
   if (memoryPool != NULL)

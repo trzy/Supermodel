@@ -182,7 +182,13 @@ SDLKeyMapStruct CSDLInputSystem::s_keyMap[] =
 	{ "UNDO",					SDLK_UNDO }
 };
 
-CSDLInputSystem::CSDLInputSystem() : CInputSystem("SDL"), m_keyState(NULL), m_mouseX(0), m_mouseY(0), m_mouseZ(0), m_mouseButtons(0)
+CSDLInputSystem::CSDLInputSystem() 
+  : CInputSystem("SDL"),
+    m_keyState(NULL),
+    m_mouseX(0),
+    m_mouseY(0),
+    m_mouseZ(0),
+    m_mouseButtons(0)
 {
 	//
 }

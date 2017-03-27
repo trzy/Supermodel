@@ -190,7 +190,7 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 		callback(callbackData);
 }
 
-static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, void *dest)
+static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, void *dest, bool flipStereo)
 {
 	INT16 *p = (INT16*)dest;
 	
@@ -198,7 +198,7 @@ static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuff
 	for (unsigned i = 0; i < numSamples; i++)
 		*p++ = leftBuffer[i] + rightBuffer[i];	// TODO: these should probably be clipped! 
 #else
-	if (g_Config.flipStereo)	// swap left and right channels
+	if (flipStereo) // swap left and right channels
 	{
 		for (unsigned i = 0; i < numSamples; i++)
 		{
@@ -280,7 +280,7 @@ bool OpenAudio()
 	return OKAY;
 }
 
-bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
+bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, bool flipStereo)
 {
 	//printf("OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
 	//	numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
@@ -295,7 +295,7 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer)
 
 	// Mix together left and right channels into single chunk of data
 	INT16 mixBuffer[NUM_CHANNELS * SAMPLES_PER_FRAME];
-	MixChannels(numSamples, leftBuffer, rightBuffer, mixBuffer);
+	MixChannels(numSamples, leftBuffer, rightBuffer, mixBuffer, flipStereo);
 	
 	// Lock SDL audio callback so that it doesn't interfere with following code
 	SDL_LockAudio();
