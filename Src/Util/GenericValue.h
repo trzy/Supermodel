@@ -1,3 +1,14 @@
+/*
+ * TODO:
+ * -----
+ * - ParseInteger() should be optimized. It is frequently used throughout the
+ *   code base at run-time.
+ * - Possible optimization: cache last ValueAs<T> conversion. Return this when
+ *   available and when value is Set(), mark dirty. This may require memory
+ *   allocation or, alternatively, we could do this only for data types of size
+ *   <= 8.
+ */
+
 #ifndef INCLUDED_UTIL_GENERICVALUE_H
 #define INCLUDED_UTIL_GENERICVALUE_H
 
