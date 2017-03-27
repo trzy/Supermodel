@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <algorithm>
 
 // Holds a single ROM region
 struct ROM
