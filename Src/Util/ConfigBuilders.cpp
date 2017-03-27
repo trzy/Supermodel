@@ -208,7 +208,7 @@ namespace Util
       for (auto it = section.begin(); it != section.end(); ++it)
       {
         if (it->IsLeaf()) //TODO: check if value exists?
-          file << it->Key() << " = \"" << it->ValueAs<std::string>() << "\"" << std::endl;
+          file << it->Key() << " = " << it->ValueAs<std::string>() << std::endl;
       }
       file << std::endl << std::endl;
     }
@@ -230,6 +230,8 @@ namespace Util
         if (it->HasChildren())
           WriteSection(file, *it);
       }
+      printf("Configuration successfully saved to '%s'.\n", filename.c_str());
+      InfoLog("Configuration successfully saved to '%s'.", filename.c_str());
     } 
   }
 }
