@@ -92,10 +92,13 @@ namespace Util
       private:
         const_ptr_t m_node;
       public:
-        inline const_iterator(const_ptr_t node = const_ptr_t())
+        inline const_iterator()
+		  : m_node(const_ptr_t())
+        {}
+        inline const_iterator(const_ptr_t node)
           : m_node(node)
         {}
-        inline const_iterator(ptr_t node = ptr_t())
+        inline const_iterator(ptr_t node)
           : m_node(std::const_pointer_cast<const Node>(node))
         {}
         inline const_iterator(const const_iterator &it)
@@ -113,7 +116,7 @@ namespace Util
         inline const_iterator operator++(int)
         {
           // Postfix increment
-          iterator current(*this);
+          //iterator current(*this);	//unreferenced local variable
           m_node = m_node->m_next_sibling;
           return *this;
         }
