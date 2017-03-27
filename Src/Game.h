@@ -7,6 +7,7 @@
 struct Game
 {
   std::string name;
+  std::string parent;
   std::string title;
   std::string version;
   std::string manufacturer;

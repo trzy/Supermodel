@@ -7,6 +7,94 @@
 
 #include <iostream>
 
+bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename) const
+{
+  zip->zipfilename = zipfilename;
+  zip->zf = unzOpen(zipfilename.c_str());
+  if (NULL == zip->zf)
+  {
+    ErrorLog("Could not open '%s'.", zipfilename.c_str());
+    return true;
+  }
+  
+  // Identify all files in zip archive
+  int err = UNZ_OK;
+  for (err = unzGoToFirstFile(zip->zf); err == UNZ_OK; err = unzGoToNextFile(zip->zf))
+  {
+    unz_file_info file_info;
+    char filename_buffer[256];
+    if (UNZ_OK != unzGetCurrentFileInfo(zip->zf, &file_info, filename_buffer, sizeof(filename_buffer), NULL, 0, NULL, 0))
+      continue;
+    zip->files_by_crc[file_info.crc].filename = filename_buffer;
+    zip->files_by_crc[file_info.crc].uncompressed_size = file_info.uncompressed_size;
+    zip->files_by_crc[file_info.crc].crc32 = file_info.crc;
+  }
+
+  if (err != UNZ_END_OF_LIST_OF_FILE)
+  {
+    ErrorLog("Unable to read the contents of '%s' (code 0x%x).", zipfilename.c_str(), err);
+    return true;
+  }
+  return false;
+}
+
+bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip)
+{
+  // Locate file
+  const ZippedFile *zipped_file = LookupFile(file, zip);
+  if (!zipped_file)
+    return true;
+  if (UNZ_OK != unzLocateFile(zip.zf, zipped_file->filename.c_str(), 2))
+  {
+    ErrorLog("Unable to locate '%s' in '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zip.zipfilename.c_str());
+    return true;
+  }
+  
+  // Read it in
+  if (UNZ_OK != unzOpenCurrentFile(zip.zf))
+  {
+    ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zip.zipfilename.c_str());
+    return true;
+  }
+  *file_size = zipped_file->uncompressed_size;
+  buffer->reset(new uint8_t[*file_size], std::default_delete<uint8_t[]>());
+  ZPOS64_T bytes_read = unzReadCurrentFile(zip.zf, buffer->get(), *file_size);
+  if (bytes_read != *file_size)
+  {
+    ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zip.zipfilename.c_str());
+    unzCloseCurrentFile(zip.zf);
+    return true;
+  }
+  
+  // And close it
+  if (UNZ_CRCERROR == unzCloseCurrentFile(zip.zf))
+    ErrorLog("CRC error reading '%s' from '%s'. File may be corrupt.", zipped_file->filename.c_str(), zip.zipfilename.c_str());
+  return false;
+}
+
+const GameLoader::ZippedFile *GameLoader::LookupFile(const File::ptr_t &file, const ZipArchive &zip) const
+{
+  if (file->has_crc32)
+  {
+    auto it = zip.files_by_crc.find(file->crc32);
+    if (it == zip.files_by_crc.end())
+    {
+      ErrorLog("'%s' with CRC32 0x%08x not found in '%s'.", file->filename.c_str(), file->crc32, zip.zipfilename.c_str());
+      return nullptr;
+    }
+    return &it->second;
+  }
+  
+  // Try to lookup by name
+  for (auto &v: zip.files_by_crc)
+  {
+    if (Util::ToLower(v.second.filename) == file->filename)
+      return &v.second;
+  }
+  ErrorLog("'%s' not found in '%s'.", file->filename.c_str(), zip.zipfilename.c_str());
+  return nullptr;
+}
+
 bool GameLoader::MissingAttrib(const GameLoader &loader, const Util::Config::Node &node, const std::string &attribute)
 {
   if (node[attribute].Empty())
@@ -51,6 +139,7 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
 static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
 {
   game->name = game_node["name"].ValueAs<std::string>();
+  game->parent = game_node["parent"].ValueAsDefault<std::string>(std::string());
   game->title = game_node["identity/title"].ValueAsDefault<std::string>("Unknown");
   game->version = game_node["identity/version"].ValueAsDefault<std::string>("");
   game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
@@ -116,50 +205,49 @@ bool GameLoader::ParseXML(const Util::Config::Node &xml)
     RegionsByName_t &regions_by_name = m_regions_by_game[game_name];
     PopulateGameInfo(&m_game_info_by_game[game_name], game_node);
 
-    for (auto it = game_node.begin(); it != game_node.end(); ++it)
+    for (auto &roms_node: game_node)
     {
-      auto &roms_node = *it;
       if (roms_node.Key() != "roms")
         continue;
 
-      // Regions defined uniquely per game
-      for (auto it = roms_node.begin(); it != roms_node.end(); ++it)
+      /*
+       * Regions define contiguous memory areas that individual ROM files are
+       * loaded into. It is possible to have multiple region tags identifying
+       * the same region. They will be aggregated. This is useful for parent
+       * and child ROM sets, which each may need to define the same region,
+       * with the child set loading in different files to overwrite the parent
+       * set.
+       */
+      for (auto &region_node: roms_node)
       {
-        auto &region_node = *it;
         if (region_node.Key() != "region")
           continue;
-        Region::ptr_t region = Region::Create(*this, region_node);
+        
+        // Look up region structure or create new one if needed
+        std::string region_name = region_node["name"].Value<std::string>();
+        auto it = regions_by_name.find(region_name);
+        Region::ptr_t region = (it != regions_by_name.end()) ? it->second : Region::Create(*this, region_node);
         if (!region)
           continue;
-        if (regions_by_name.find(region->region_name) != regions_by_name.end())
-        {
-          ErrorLog("%s: Ignoring redefinition of region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
-          continue;
-        }
-        Region::FilesByOffset_t &files_by_offset = region->files_by_offset;
 
-        // Files defined uniquely per region
-        for (auto it = region_node.begin(); it != region_node.end(); ++it)
+        /*
+         * Files are defined by the offset they are loaded at. Normally, there
+         * should be one file per offset but parent/child ROM sets will violate
+         * this, and so it is allowed.
+         */
+        std::vector<File::ptr_t> &files = region->files;
+        for (auto &file_node: region_node)
         {
-          auto &file_node = *it;
           if (file_node.Key() != "file")
             continue;
           File::ptr_t file = File::Create(*this, file_node);
           if (!file)
             continue;
-          // Ensure file offset not defined multiple times. We allow the same
-          // file to be reused, however (e.g., a blank file loaded at multiple
-          // offsets).
-          if (files_by_offset.find(file->offset) != files_by_offset.end())
-          {
-            ErrorLog("%s: Ignoring redefinition of offset 0x%x in region '%s' of '%s'.", m_xml_filename.c_str(), file->offset, region->region_name.c_str(), game_name.c_str());
-            continue;
-          }
-          files_by_offset[file->offset] = file;
+          files.push_back(file);
         }
         
         // Check to ensure that some files were defined in the region
-        if (files_by_offset.empty())
+        if (files.empty())
           ErrorLog("%s: No files defined in region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
         else
           regions_by_name[region->region_name] = region;
@@ -190,9 +278,8 @@ std::set<std::string> GameLoader::IdentifyGamesFileBelongsTo(const std::string &
     for (auto &v_region: regions_by_name)
     {
       Region::ptr_t region = v_region.second;
-      for (auto &v_file: region->files_by_offset)
+      for (auto file: region->files)
       {
-        File::ptr_t file = v_file.second;
         if (file->Matches(filename, crc32))
           games.insert(game_name);
       }
@@ -201,45 +288,45 @@ std::set<std::string> GameLoader::IdentifyGamesFileBelongsTo(const std::string &
   return games;
 }
 
-const unz_file_info *GameLoader::LookupZippedFile(const File::ptr_t &file) const
+std::vector<std::string> GameLoader::IdentifyGamesInZipArchive(const ZipArchive &zip) const
 {
-  if (file->has_crc32)
+  std::map<std::string, size_t> files_per_game;
+  std::set<std::string> all_games_found;
+  for (auto &v: zip.files_by_crc)
   {
-    auto it = m_zip_info_by_crc32.find(file->crc32);
-    if (it != m_zip_info_by_crc32.end())
-      return &it->second;
-    ErrorLog("'%s' with CRC32 0x%08x not found in '%s'.", file->filename.c_str(), file->crc32, m_zipfilename.c_str());
-    return 0;
+    std::set<std::string> games = IdentifyGamesFileBelongsTo(v.second.filename, v.first);
+    all_games_found.insert(games.begin(), games.end());
+    for (auto &game: games)
+    {
+      files_per_game[game]++;
+    }
   }
-  auto it = m_zip_info_by_filename.find(file->filename);
-  if (it != m_zip_info_by_filename.end())
-    return &it->second;
-  ErrorLog("'%s' not found in '%s'.", file->filename.c_str(), m_zipfilename.c_str());
-  return 0;
+  std::vector<std::string> sorted_games_found(all_games_found.begin(), all_games_found.end());
+  std::sort(sorted_games_found.begin(), sorted_games_found.end(),
+    [&files_per_game](const std::string &a, const std::string &b)
+    {
+      return files_per_game[a] < files_per_game[b];
+    });
+  return sorted_games_found;
 }
 
-bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Region::ptr_t &region) const
+bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const
 {
   // Files in region need not be loaded contiguously. To find region size,
   // use maximum end_addr = offset + stride * (num_chunks - 1) + chunk_size.
   std::vector<uint32_t> end_addr;
   bool error = false;
-  for (auto &v_file: region->files_by_offset)
+  for (auto file: region->files)
   {
-    auto &file = v_file.second;
-    const unz_file_info *info = LookupZippedFile(file);
-    if (info)
+    const ZippedFile *zipped_file = LookupFile(file, zip);
+    if (zipped_file)
     {
-      if (info->uncompressed_size % region->chunk_size != 0)
+      if (zipped_file->uncompressed_size % region->chunk_size != 0)
       {
-        std::string filename = file->filename;
-        auto it = m_filename_by_crc32.find(info->crc);
-        if (it != m_filename_by_crc32.end())
-          filename = it->second;
-        ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", filename.c_str(), m_zipfilename.c_str(), region->chunk_size);
+        ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", zipped_file->filename.c_str(), zip.zipfilename.c_str(), region->chunk_size);
         error = true;
       }
-      uint32_t num_chunks = info->uncompressed_size / region->chunk_size;
+      uint32_t num_chunks = zipped_file->uncompressed_size / region->chunk_size;
       end_addr.push_back(file->offset + region->stride * (num_chunks - 1) + region->chunk_size);
     }
     else
@@ -250,54 +337,14 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
   return error;
 }
 
-bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file)
-{
-  unz_file_info info;
-  for (int err = unzGoToFirstFile(m_zf); err == UNZ_OK; err = unzGoToNextFile(m_zf))
-  {
-    char current_filename[256];
-    if (UNZ_OK != unzGetCurrentFileInfo(m_zf, &info, current_filename, sizeof(current_filename), NULL, 0, NULL, 0))
-      continue;
-    if (file->Matches(current_filename, info.crc))
-    {
-      // Found file, load it!
-      err = unzOpenCurrentFile(m_zf);
-      if (UNZ_OK != err)
-      {
-        ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", current_filename, m_zipfilename.c_str());
-        return true;
-      }
-      *file_size = info.uncompressed_size;
-      buffer->reset(new uint8_t[*file_size], std::default_delete<uint8_t[]>());
-      ZPOS64_T bytes_read = unzReadCurrentFile(m_zf, buffer->get(), *file_size);
-      if (bytes_read != *file_size)
-      {
-        ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", current_filename, m_zipfilename.c_str());
-        unzCloseCurrentFile(m_zf);
-        return true;
-      }
-      err = unzCloseCurrentFile(m_zf);
-      if (UNZ_CRCERROR == err)
-        ErrorLog("CRC error reading '%s' from '%s'. File may be corrupt.", current_filename, m_zipfilename.c_str());
-      return false;
-    }
-  }
-  if (file->has_crc32)
-    ErrorLog("'%s' with CRC32 0x%08x not found in '%s'.", file->filename.c_str(), file->crc32, m_zipfilename.c_str());
-  else
-    ErrorLog("'%s' not found in '%s'.", file->filename.c_str(), m_zipfilename.c_str());
-  return true;
-}
-
-bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region)
+bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, const ZipArchive &zip)
 {
   bool error = false;
-  for (auto &v_file: region->files_by_offset)
+  for (auto &file: region->files)
   {
-    auto &file = v_file.second;
     std::shared_ptr<uint8_t> tmp;
     size_t file_size;
-    error |= LoadZippedFile(&tmp, &file_size, file);
+    error |= LoadZippedFile(&tmp, &file_size, file, zip);
     if (!error)
     {
       size_t num_chunks = file_size / region->chunk_size;
@@ -314,12 +361,12 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region)
   return error;
 }
 
-bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name)
+bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive &zip)
 {
   auto it = m_regions_by_game.find(game_name);
   if (it == m_regions_by_game.end())
   {
-    ErrorLog("Game '%s' not found in '%s'.", game_name.c_str(), m_zipfilename.c_str());
+    ErrorLog("Game '%s' not found in '%s'.", game_name.c_str(), zip.zipfilename.c_str());
     return true;
   }
   bool error = false;
@@ -328,14 +375,14 @@ bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name)
   {
     auto &region = v_region.second;
     uint32_t region_size = 0;
-    if (ComputeRegionSize(&region_size, region))
+    if (ComputeRegionSize(&region_size, region, zip))
       error |= true;
     else
     {
       auto &rom = rom_set->rom_by_region[region->region_name];
       rom.size = region_size;
       rom.data.reset(new uint8_t[region_size], std::default_delete<uint8_t[]>());
-      error |= LoadRegion(&rom, region);
+      error |= LoadRegion(&rom, region, zip);
     }
   }
   return error;
@@ -353,65 +400,25 @@ bool GameLoader::LoadDefinitionXML(const std::string &filename)
 bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename)
 {
   *game = Game();
-  m_zf = NULL;
-  m_filename_by_crc32.clear();
-  m_zip_info_by_filename.clear();
-  m_zip_info_by_crc32.clear();
-
-  m_zipfilename = zipfilename;
-  m_zf = unzOpen(zipfilename.c_str());
-  if (NULL == m_zf)
-  {
-    ErrorLog("Could not open '%s'.", zipfilename.c_str());
+  
+  // Load the zip file and identify all games in it
+  ZipArchive zip;
+  if (LoadZipArchive(&zip, zipfilename))
     return true;
-  }
-
-  // Identify all files in zip archive
-  int err = UNZ_OK;
-  for (err = unzGoToFirstFile(m_zf); err == UNZ_OK; err = unzGoToNextFile(m_zf))
-  {
-    unz_file_info file_info;
-    char filename_buffer[256];
-    if (UNZ_OK != unzGetCurrentFileInfo(m_zf, &file_info, filename_buffer, sizeof(filename_buffer), NULL, 0, NULL, 0))
-      continue;
-    std::string filename = Util::ToLower(filename_buffer);
-    m_zip_info_by_filename[filename] = file_info;
-    m_zip_info_by_crc32[file_info.crc] = file_info;
-    m_filename_by_crc32[file_info.crc] = filename;
-  }
-  if (err != UNZ_END_OF_LIST_OF_FILE)
-  {
-    ErrorLog("Unable to read the contents of '%s' (code 0x%x).", zipfilename.c_str(), err);
-    return true;
-  }
-
-  // Which game is this?
-  std::map<std::string, size_t> files_per_game;
-  std::set<std::string> all_games_found;
-  using value_type = std::pair<std::string, size_t>;
-  for (auto &v: m_filename_by_crc32)
-  {
-    std::set<std::string> games = IdentifyGamesFileBelongsTo(v.second, v.first);
-    all_games_found.insert(games.begin(), games.end());
-    for (auto &game: games)
-      files_per_game[game]++;
-  }
-  auto v = std::max_element(files_per_game.begin(), files_per_game.end(), [](const value_type &v1, const value_type &v2) { return v1.second < v2.second; });
-  if (v == files_per_game.end())
+  std::vector<std::string> games_found = IdentifyGamesInZipArchive(zip);
+  if (games_found.empty())
   {
     ErrorLog("No valid Model 3 ROMs found in '%s'.", zipfilename.c_str());
     return true;
   }
-  std::string game_name = v->first;
-  if (files_per_game.size() != 1)
-    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(all_games_found)).c_str(), game_name.c_str());
+  else if (games_found.size() > 1)
+    ErrorLog("Files for multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), games_found[0].c_str());
 
-  // Load it
-  *game = m_game_info_by_game[game_name];
-  bool error = LoadROMs(rom_set, game_name);
+  // Load the top game by file count
+  *game = m_game_info_by_game[games_found[0]];
+  bool error = LoadROMs(rom_set, games_found[0], zip);
   if (error)
     *game = Game();
-  unzClose(m_zf);
   return error;
 }
 
