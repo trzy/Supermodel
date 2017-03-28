@@ -33,6 +33,7 @@ private:
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
 	GLint m_locMicroTexScale;
+	GLint m_locBaseTexSize;
 
 	// cached mesh values
 	bool	m_textured1;
@@ -46,6 +47,7 @@ private:
 	float	m_specularCoefficient;
 	bool	m_layered;
 	float	m_microTexScale;
+	float	m_baseTexSize[2];
 
 	// cached model values
 	enum class MatDet { notset, negative, positive, zero };

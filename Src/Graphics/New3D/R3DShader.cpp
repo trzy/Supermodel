@@ -37,6 +37,7 @@ static const char *fragmentShaderBasic =
 "uniform int	textureEnabled;\n"
 "uniform int	microTexture;\n"
 "uniform float	microTextureScale;\n"
+"uniform vec2   baseTexSize;\n"
 "uniform int	alphaTest;\n"
 "uniform int	textureAlpha;\n"
 "uniform vec3	fogColour;\n"
@@ -70,7 +71,7 @@ static const char *fragmentShaderBasic =
     "tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
     "if (microTexture==1) {\n"
-	  "vec2 scale    = textureSize(tex1, 0)/256.0;\n"		//technically glsl 1.3 .. no one should care hopefully
+	  "vec2 scale    = baseTexSize/256.0;\n"
       "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * scale * microTextureScale);\n"
 
       "tex1Data = (tex1Data+tex2Data)/2.0;\n"
@@ -165,6 +166,9 @@ void R3DShader::Start()
 	m_lightEnabled	= false;
 	m_layered		= false;
 
+	m_baseTexSize[0] = 0;
+	m_baseTexSize[1] = 0;
+
 	m_shininess = 0;
 	m_specularCoefficient = 0;
 	m_microTexScale = 0;
@@ -204,6 +208,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locTextureAlpha	= glGetUniformLocation(m_shaderProgram, "textureAlpha");
 	m_locAlphaTest		= glGetUniformLocation(m_shaderProgram, "alphaTest");
 	m_locMicroTexScale	= glGetUniformLocation(m_shaderProgram, "microTextureScale");
+	m_locBaseTexSize	= glGetUniformLocation(m_shaderProgram, "baseTexSize");
 
 	m_locFogIntensity	= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity		= glGetUniformLocation(m_shaderProgram, "fogDensity");
@@ -256,6 +261,12 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->microTextureScale != m_microTexScale) {
 		glUniform1f(m_locMicroTexScale, m->microTextureScale);
 		m_microTexScale = m->microTextureScale;
+	}
+
+	if (m_dirtyMesh || m->microTexture && (m_baseTexSize[0] != m->width || m_baseTexSize[1] != m->height)) {
+		m_baseTexSize[0] = (float)m->width;
+		m_baseTexSize[1] = (float)m->height;
+		glUniform2fv(m_locBaseTexSize, 1, m_baseTexSize);
 	}
 
 	if (m_dirtyMesh || m->alphaTest != m_alphaTest) {
