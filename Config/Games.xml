@@ -577,7 +577,7 @@
       <file offset="0x000000" name="mpr-19670.22" crc32="0xBD31CC06" />
       <file offset="0x400000" name="mpr-19671.24" crc32="0x8E8526AB" />
     </region>
-    <region name="mpeg_program" stride="1" chunk_size="1" byte_swap="true">
+    <region name="mpeg_program" stride="1" chunk_size="1">
       <file offset="0" name="epr-19612.2" crc32="0x13978FD4" />
     </region>
     <region name="mpeg_music" stride="1" chunk_size="1">
