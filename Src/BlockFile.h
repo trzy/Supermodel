@@ -29,6 +29,7 @@
 #define INCLUDED_BLOCKFILE_H
 
 #include <cstdint>
+#include <string>
 
 /*
  * CBlockFile:
