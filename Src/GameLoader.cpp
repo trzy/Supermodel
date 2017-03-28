@@ -326,7 +326,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
         ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", zipped_file->filename.c_str(), zip.zipfilename.c_str(), region->chunk_size);
         error = true;
       }
-      uint32_t num_chunks = zipped_file->uncompressed_size / region->chunk_size;
+	  uint32_t num_chunks = (uint32_t)(zipped_file->uncompressed_size / region->chunk_size);
       end_addr.push_back(file->offset + region->stride * (num_chunks - 1) + region->chunk_size);
     }
     else

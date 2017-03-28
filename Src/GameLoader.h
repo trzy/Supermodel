@@ -46,7 +46,7 @@ private:
   struct ZippedFile
   {
     std::string filename;
-    uint64_t uncompressed_size;
+    size_t uncompressed_size;
     uint32_t crc32;
   };
 
