@@ -305,7 +305,7 @@ std::vector<std::string> GameLoader::IdentifyGamesInZipArchive(const ZipArchive 
   std::sort(sorted_games_found.begin(), sorted_games_found.end(),
     [&files_per_game](const std::string &a, const std::string &b)
     {
-      return files_per_game[a] < files_per_game[b];
+      return files_per_game[a] > files_per_game[b]; // sort descending order
     });
   return sorted_games_found;
 }
