@@ -1,3 +1,10 @@
+/*
+ * TODO: 
+ * -----
+ * - If no complete game found, print missing files (because this error is very
+ *   confusing).
+ */
+
 #include "GameLoader.h"
 #include "OSD/Logger.h"
 #include "Util/NewConfig.h"
@@ -268,46 +275,44 @@ bool GameLoader::ParseXML(const Util::Config::Node &xml)
   return false;
 }
 
-std::set<std::string> GameLoader::IdentifyGamesFileBelongsTo(const std::string &filename, uint32_t crc32) const
+std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArchive &zip) const
 {
-  std::set<std::string> games;
-  for (auto &v_game: m_regions_by_game)
+  std::set<std::string> complete_games;
+  std::map<std::string, std::set<File::ptr_t>> files_required_per_game;
+  std::map<std::string, std::set<File::ptr_t>> files_found_per_game;
+
+  // Determine which files each game requires and which files are present in
+  // the zip archive for each game
+  for (auto &v1: m_regions_by_game)
   {
-    const std::string &game_name = v_game.first;
-    auto &regions_by_name = v_game.second;
-    for (auto &v_region: regions_by_name)
+    const std::string &game_name = v1.first;
+    auto &regions_by_name = v1.second;
+    for (auto &v2: regions_by_name)
     {
-      Region::ptr_t region = v_region.second;
+      Region::ptr_t region = v2.second;
       for (auto file: region->files)
       {
-        if (file->Matches(filename, crc32))
-          games.insert(game_name);
+        // Add each file to the set of required files per game
+        files_required_per_game[game_name].insert(file);
+        // Check file in ROM definition against all files in zip
+        for (auto &v3: zip.files_by_crc)
+        {
+          const std::string &filename = v3.second.filename;
+          uint32_t crc32 = v3.first;
+          if (file->Matches(filename, crc32))
+            files_found_per_game[game_name].insert(file);
+        }
       }
     }
   }
-  return games;
-}
 
-std::vector<std::string> GameLoader::IdentifyGamesInZipArchive(const ZipArchive &zip) const
-{
-  std::map<std::string, size_t> files_per_game;
-  std::set<std::string> all_games_found;
-  for (auto &v: zip.files_by_crc)
+  // Determine whether we have any complete ROM sets in this zip archive
+  for (auto &v: files_found_per_game)
   {
-    std::set<std::string> games = IdentifyGamesFileBelongsTo(v.second.filename, v.first);
-    all_games_found.insert(games.begin(), games.end());
-    for (auto &game: games)
-    {
-      files_per_game[game]++;
-    }
+    if (v.second == files_required_per_game[v.first])
+      complete_games.insert(v.first);
   }
-  std::vector<std::string> sorted_games_found(all_games_found.begin(), all_games_found.end());
-  std::sort(sorted_games_found.begin(), sorted_games_found.end(),
-    [&files_per_game](const std::string &a, const std::string &b)
-    {
-      return files_per_game[a] > files_per_game[b]; // sort descending order
-    });
-  return sorted_games_found;
+  return complete_games;
 }
 
 bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const
@@ -326,7 +331,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
         ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", zipped_file->filename.c_str(), zip.zipfilename.c_str(), region->chunk_size);
         error = true;
       }
-	  uint32_t num_chunks = (uint32_t)(zipped_file->uncompressed_size / region->chunk_size);
+	    uint32_t num_chunks = (uint32_t)(zipped_file->uncompressed_size / region->chunk_size);
       end_addr.push_back(file->offset + region->stride * (num_chunks - 1) + region->chunk_size);
     }
     else
@@ -335,6 +340,17 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
   if (!error)
     *region_size = *std::max_element(end_addr.begin(), end_addr.end());
   return error;
+}
+
+// We need to preserve the absolute offsets in order for byte swapping to work
+// properly when chunk size is 1
+static void CopyBytes(uint8_t *dest_base, size_t dest_offset, const uint8_t *src_base, size_t src_offset, size_t size, bool byte_swap)
+{
+  size_t swap = byte_swap ? 1 : 0;
+  for (size_t i = 0; i < size; i++)
+  {
+    dest_base[(dest_offset + i) ^ swap] = src_base[src_offset + i];
+  }
 }
 
 bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, const ZipArchive &zip)
@@ -350,41 +366,103 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
       size_t num_chunks = file_size / region->chunk_size;
       for (size_t i = 0; i < num_chunks; i++)
       {
-        uint8_t *dest = rom->data.get() + file->offset + i * region->stride;
-        uint8_t *src = tmp.get() + i * region->chunk_size;
-        memcpy(dest, src, region->chunk_size);
+        /*
+         * We have to check bounds because LoadROMs() may attempt to load
+         * regions whose size was computed incorrectly because a file was
+         * missing. 
+         *
+         * It is also possible for ROM memory not to have been allocated at
+         * all in such a case, hence the check for that.
+         */
+        size_t dest_offset = file->offset + i * region->stride;
+        size_t src_offset = i * region->chunk_size;
+        size_t bytes_to_copy = region->chunk_size;
+        if ((dest_offset + bytes_to_copy) > rom->size || (src_offset + bytes_to_copy) > file_size)
+        {
+          ErrorLog("ROM region '%s' could not be created or loaded.", region->region_name.c_str());
+          error |= true;
+          break;
+        }
+        if (!rom->data.get() || !tmp.get())
+        {
+          ErrorLog("ROM region '%s' could not be created or loaded.", region->region_name.c_str());
+          error |= true;
+          break;
+        }
+        CopyBytes(rom->data.get(), dest_offset, tmp.get(), src_offset, region->chunk_size, region->byte_swap);
       }
     }
   }
-  if (region->byte_swap)
-    Util::FlipEndian16(rom->data.get(), rom->size);
   return error;
 }
 
-bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive &zip)
+bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive *zip, const std::string &parent_name, const ZipArchive *parent_zip)
 {
+  // First pass: scan child set and create ROM structures (but without 
+  // allocating data)
   auto it = m_regions_by_game.find(game_name);
   if (it == m_regions_by_game.end())
   {
-    ErrorLog("Game '%s' not found in '%s'.", game_name.c_str(), zip.zipfilename.c_str());
+    ErrorLog("Game '%s' not found in '%s'.", game_name.c_str(), zip->zipfilename.c_str());
     return true;
   }
+  auto *regions_by_name = &it->second;
   bool error = false;
-  auto &regions_by_name = it->second;
-  for (auto &v_region: regions_by_name)
+  for (auto &v: *regions_by_name)
   {
-    auto &region = v_region.second;
+    auto &region = v.second;
     uint32_t region_size = 0;
-    if (ComputeRegionSize(&region_size, region, zip))
+    if (ComputeRegionSize(&region_size, region, *zip))
       error |= true;
     else
     {
       auto &rom = rom_set->rom_by_region[region->region_name];
-      rom.size = region_size;
-      rom.data.reset(new uint8_t[region_size], std::default_delete<uint8_t[]>());
-      error |= LoadRegion(&rom, region, zip);
+      rom.size = region_size; // get size only
+      rom.data = nullptr;     // don't allocate yet
     }
   }
+    
+  // Second pass: scan parent set and create ROMs or resize existing ones.
+  // Memory is allocated here and parent ROMs are loaded.
+  if (parent_zip)
+  {
+    it = m_regions_by_game.find(parent_name);
+    if (it == m_regions_by_game.end())
+    {
+      ErrorLog("Parent game '%s' not found in '%s'.", parent_name.c_str(), parent_zip->zipfilename.c_str());
+      return true;
+    }
+    regions_by_name = &it->second;
+    for (auto &v: *regions_by_name)
+    {
+      auto &region = v.second;
+      uint32_t region_size = 0;
+      if (ComputeRegionSize(&region_size, region, *parent_zip))
+        error |= true;
+      else
+      {
+        // Caution: if region size computation fails above, ROM buffer will not
+        // be allocated here!
+        auto &rom = rom_set->rom_by_region[region->region_name];
+        rom.size = std::max(rom.size, size_t(region_size));
+        rom.data.reset(new uint8_t[rom.size], std::default_delete<uint8_t[]>());
+        error |= LoadRegion(&rom, region, *parent_zip);
+      }
+    }
+  }
+  
+  // Third pass: load child ROMs atop existing parent ROMs. If there is no
+  // parent, memory is allocated here.
+  regions_by_name = &(m_regions_by_game.find(game_name)->second);
+  for (auto &v: *regions_by_name)
+  {
+    auto &region = v.second;
+    auto &rom = rom_set->rom_by_region[region->region_name];
+    if (!rom.data)  // not yet allocated
+      rom.data.reset(new uint8_t[rom.size], std::default_delete<uint8_t[]>());
+    error |= LoadRegion(&rom, region, *zip);
+  }
+  
   return error;
 }
 
@@ -397,6 +475,27 @@ bool GameLoader::LoadDefinitionXML(const std::string &filename)
   return ParseXML(xml);
 }
 
+std::string StripFilename(const std::string &filepath)
+{
+  // Search for last '/' or '\', if any
+  size_t last_slash = std::string::npos;
+  for (size_t i = filepath.length() - 1; i < filepath.length(); i--)
+  {
+    if (filepath[i] == '/' || filepath[i] =='\\')
+    {
+      last_slash = i;
+      break;
+    }
+  }
+  
+  // If none found, there is directory component here
+  if (last_slash == std::string::npos)
+    return "";
+
+  // Otherwise, strip everything after the slash
+  return std::string(filepath, 0, last_slash + 1);
+}
+
 bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename)
 {
   *game = Game();
@@ -405,18 +504,40 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
   ZipArchive zip;
   if (LoadZipArchive(&zip, zipfilename))
     return true;
-  std::vector<std::string> games_found = IdentifyGamesInZipArchive(zip);
+  std::set<std::string> games_found = IdentifyCompleteGamesInZipArchive(zip);
   if (games_found.empty())
   {
-    ErrorLog("No valid Model 3 ROMs found in '%s'.", zipfilename.c_str());
+    ErrorLog("No complete Model 3 games found in '%s'.", zipfilename.c_str());
     return true;
   }
   else if (games_found.size() > 1)
-    ErrorLog("Files for multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), games_found[0].c_str());
+    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), games_found.begin()->c_str());
 
-  // Load the top game by file count
-  *game = m_game_info_by_game[games_found[0]];
-  bool error = LoadROMs(rom_set, games_found[0], zip);
+  // Pick the first game in the first zip file
+  *game = m_game_info_by_game[*games_found.begin()];
+  
+  // If there is a parent ROM set, determine where it is 1) contained in the
+  // same zip file or 2) try loading it from the same directory
+  ZipArchive zip2;
+  ZipArchive *parent_zip = nullptr;
+  if (!game->parent.empty())
+  {
+    if (games_found.count(game->parent) > 0)
+      parent_zip = &zip;
+    else
+    {
+      std::string parent_zipfilename = StripFilename(zipfilename) + game->parent + ".zip";
+      if (LoadZipArchive(&zip2, parent_zipfilename))
+      {
+        ErrorLog("Could not load parent ROM set of '%s' from '%s'.", game->name, parent_zipfilename);
+        return true;
+      }
+      parent_zip = &zip2;
+    }
+  }
+
+  // Load
+  bool error = LoadROMs(rom_set, game->name, &zip, game->parent, parent_zip);
   if (error)
     *game = Game();
   return error;

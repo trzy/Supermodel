@@ -68,11 +68,10 @@ private:
   const ZippedFile *LookupFile(const File::ptr_t &file, const ZipArchive &zip) const;
   static bool MissingAttrib(const GameLoader &loader, const Util::Config::Node &node, const std::string &attribute);
   bool ParseXML(const Util::Config::Node &xml);
-  std::set<std::string> IdentifyGamesFileBelongsTo(const std::string &filename, uint32_t crc32) const;
-  std::vector<std::string> IdentifyGamesInZipArchive(const ZipArchive &zip) const;
+  std::set<std::string> IdentifyCompleteGamesInZipArchive(const ZipArchive &zip) const;
   bool ComputeRegionSize(uint32_t *region_size, const Region::ptr_t &region, const ZipArchive &zip) const;
   bool LoadRegion(ROM *buffer, const GameLoader::Region::ptr_t &region, const ZipArchive &zip);
-  bool LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive &zip);
+  bool LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive *zip, const std::string &parent_name, const ZipArchive *parent_zip);
   bool LoadDefinitionXML(const std::string &filename);
 
 public:
