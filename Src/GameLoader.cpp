@@ -3,6 +3,10 @@
  * -----
  * - If no complete game found, print missing files (because this error is very
  *   confusing).
+ * - Print error if parent ROM set also has parent defined.
+ * - Special case parent and child in same zip (when multiple complete games, 
+     and selected is parent, look for child, else if child is chosen, look for
+     parent
  */
 
 #include "GameLoader.h"
@@ -280,6 +284,7 @@ std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArc
   std::set<std::string> complete_games;
   std::map<std::string, std::set<File::ptr_t>> files_required_per_game;
   std::map<std::string, std::set<File::ptr_t>> files_found_per_game;
+  std::map<std::string, std::set<File::ptr_t>> files_missing_per_game; // only for those games which are at least partially present
 
   // Determine which files each game requires and which files are present in
   // the zip archive for each game
@@ -303,6 +308,28 @@ std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArc
             files_found_per_game[game_name].insert(file);
         }
       }
+    }
+  }
+
+  // Of those games for which any files were found, find the missing files
+  for (auto &v: files_found_per_game)
+  {
+      auto &files_found = v.second;
+      auto &files_required = files_required_per_game[v.first];
+      auto &files_missing = files_missing_per_game[v.first];
+      std::set_difference(
+        files_required.begin(), files_required.end(),
+        files_found.begin(), files_found.end(),
+        std::inserter(files_missing, files_missing.end()),
+        [](File::ptr_t a, File::ptr_t b) { return a->filename < b->filename; });
+  }
+
+  // Print missing files
+  for (auto &v: files_missing_per_game)
+  {
+    for (auto &file: v.second)
+    {
+      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zip.zipfilename.c_str(), v.first.c_str());
     }
   }
 
