@@ -276,6 +276,15 @@ bool GameLoader::ParseXML(const Util::Config::Node &xml)
   return false;
 }
 
+bool GameLoader::LoadDefinitionXML(const std::string &filename)
+{
+  m_xml_filename = filename;
+  Util::Config::Node xml("xml");
+  if (Util::Config::FromXMLFile(&xml, filename))
+    return true;
+  return ParseXML(xml);
+}
+
 std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArchive &zip) const
 {
   std::set<std::string> complete_games;
@@ -490,15 +499,6 @@ bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const Z
   return error;
 }
 
-bool GameLoader::LoadDefinitionXML(const std::string &filename)
-{
-  m_xml_filename = filename;
-  Util::Config::Node xml("xml");
-  if (Util::Config::FromXMLFile(&xml, filename))
-    return true;
-  return ParseXML(xml);
-}
-
 std::string StripFilename(const std::string &filepath)
 {
   // Search for last '/' or '\', if any
@@ -520,6 +520,36 @@ std::string StripFilename(const std::string &filepath)
   return std::string(filepath, 0, last_slash + 1);
 }
 
+// A heuristic is used that favors child sets with present parent 
+std::string GameLoader::ChooseGame(const std::set<std::string> &games_found) const
+{
+  // Identify children sets and parent sets
+  std::set<std::string> parents;
+  std::set<std::string> children;
+  for (auto &game_name: games_found)
+  {
+    auto it = m_game_info_by_game.find(game_name);
+    const Game &game = it->second;
+    if (game.parent.empty())
+      parents.insert(game_name);
+    else
+      children.insert(game_name);
+  }
+  
+  // Find the first child set whose parent is also present
+  for (auto &child: children)
+  {
+    auto it = m_game_info_by_game.find(child);
+    const Game &game = it->second;
+    const std::string &parent = game.parent;
+    if (parents.count(parent) > 0)
+      return child;
+  }
+  
+  // Otherwise, just grab whatever is first
+  return *games_found.begin();
+}
+
 bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename)
 {
   *game = Game();
@@ -534,11 +564,14 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
     ErrorLog("No complete Model 3 games found in '%s'.", zipfilename.c_str());
     return true;
   }
-  else if (games_found.size() > 1)
-    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), games_found.begin()->c_str());
 
-  // Pick the first game in the first zip file
-  *game = m_game_info_by_game[*games_found.begin()];
+  // Pick the game to load (if there are multiple games present)
+  std::string chosen_game = ChooseGame(games_found);
+  if (games_found.size() > 1)
+    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), chosen_game.c_str());
+
+  // Return game information to caller
+  *game = m_game_info_by_game[chosen_game];
   
   // If there is a parent ROM set, determine where it is 1) contained in the
   // same zip file or 2) try loading it from the same directory
