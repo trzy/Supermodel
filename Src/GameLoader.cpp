@@ -1,11 +1,3 @@
-/*
- * TODO: 
- * -----
- * - Special case parent and child in same zip (when multiple complete games, 
-     and selected is parent, look for child, else if child is chosen, look for
-     parent
- */
-
 #include "GameLoader.h"
 #include "OSD/Logger.h"
 #include "Util/NewConfig.h"
