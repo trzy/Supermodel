@@ -1,9 +1,6 @@
 /*
  * TODO: 
  * -----
- * - If no complete game found, print missing files (because this error is very
- *   confusing).
- * - Print error if parent ROM set also has parent defined.
  * - Special case parent and child in same zip (when multiple complete games, 
      and selected is parent, look for child, else if child is chosen, look for
      parent
@@ -556,11 +553,19 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
       std::string parent_zipfilename = StripFilename(zipfilename) + game->parent + ".zip";
       if (LoadZipArchive(&zip2, parent_zipfilename))
       {
-        ErrorLog("Could not load parent ROM set of '%s' from '%s'.", game->name, parent_zipfilename);
+        ErrorLog("Could not load parent ROM set of '%s' from '%s'.", game->name.c_str(), parent_zipfilename.c_str());
         return true;
       }
       parent_zip = &zip2;
     }
+  }
+  
+  // Sanity check: a parent set should not itself have a parent
+  if (!game->parent.empty())
+  {
+    auto it = m_game_info_by_game.find(game->parent);
+    if (it != m_game_info_by_game.end() && !it->second.parent.empty())
+      ErrorLog("Parent ROM set '%s' also has parent defined in '%s', which is invalid and ignored.", game->parent.c_str(), m_xml_filename.c_str());
   }
 
   // Load
