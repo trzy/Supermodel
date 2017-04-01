@@ -73,7 +73,8 @@ private:
   bool ComputeRegionSize(uint32_t *region_size, const Region::ptr_t &region, const ZipArchive &zip) const;
   bool LoadRegion(ROM *buffer, const GameLoader::Region::ptr_t &region, const ZipArchive &zip);
   bool LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive *zip, const std::string &parent_name, const ZipArchive *parent_zip);
-  std::string ChooseGame(const std::set<std::string> &games_found) const;
+  std::string ChooseGame(const std::set<std::string> &games_found, const std::string &zipfilename) const;
+  static bool CompareFilesByName(const File::ptr_t &a,const File::ptr_t &b);
 
 public:
   GameLoader(const std::string &xml_file);

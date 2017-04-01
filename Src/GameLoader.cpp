@@ -4,7 +4,6 @@
 #include "Util/ConfigBuilders.h"
 #include "Util/ByteSwap.h"
 #include <algorithm>
-
 #include <iostream>
 
 bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename) const
@@ -35,6 +34,7 @@ bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename)
     ErrorLog("Unable to read the contents of '%s' (code 0x%x).", zipfilename.c_str(), err);
     return true;
   }
+  InfoLog("Opened %s.", zipfilename.c_str());
   return false;
 }
 
@@ -277,6 +277,11 @@ bool GameLoader::LoadDefinitionXML(const std::string &filename)
   return ParseXML(xml);
 }
 
+bool GameLoader::CompareFilesByName(const File::ptr_t &a, const File::ptr_t &b)
+{
+  return a->filename < b->filename;
+}
+
 std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArchive &zip) const
 {
   std::set<std::string> complete_games;
@@ -310,16 +315,23 @@ std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArc
   }
 
   // Of those games for which any files were found, find the missing files
+  auto compare = [](const File::ptr_t &a, const File::ptr_t &b) { return a->filename < b->filename; };
   for (auto &v: files_found_per_game)
   {
       auto &files_found = v.second;
       auto &files_required = files_required_per_game[v.first];
       auto &files_missing = files_missing_per_game[v.first];
+      // Need to sort by filename for set_difference to work
+      std::vector<File::ptr_t> files_found_v(files_found.begin(), files_found.end());
+      std::vector<File::ptr_t> files_required_v(files_required.begin(), files_required.end());
+      std::sort(files_found_v.begin(), files_found_v.end(), compare);
+      std::sort(files_required_v.begin(), files_required_v.end(), compare);
+      // Use set difference to find missing files
       std::set_difference(
         files_required.begin(), files_required.end(),
         files_found.begin(), files_found.end(),
         std::inserter(files_missing, files_missing.end()),
-        [](File::ptr_t a, File::ptr_t b) { return a->filename < b->filename; });
+        compare);
   }
 
   // Print missing files
@@ -327,8 +339,10 @@ std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArc
   {
     for (auto &file: v.second)
     {
-      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zip.zipfilename.c_str(), v.first.c_str());
+      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zip.zipfilename.c_str(), v.first.c_str());   
     }
+    if (v.second.size() > 0)
+      ErrorLog("Ignoring game '%s' in '%s' because it is missing files.", v.first.c_str(), zip.zipfilename.c_str());
   }
 
   // Determine whether we have any complete ROM sets in this zip archive
@@ -513,7 +527,7 @@ std::string StripFilename(const std::string &filepath)
 }
 
 // A heuristic is used that favors child sets with present parent 
-std::string GameLoader::ChooseGame(const std::set<std::string> &games_found) const
+std::string GameLoader::ChooseGame(const std::set<std::string> &games_found, const std::string &zipfilename) const
 {
   // Identify children sets and parent sets
   std::set<std::string> parents;
@@ -535,11 +549,18 @@ std::string GameLoader::ChooseGame(const std::set<std::string> &games_found) con
     const Game &game = it->second;
     const std::string &parent = game.parent;
     if (parents.count(parent) > 0)
+    {
+      if (games_found.size() > 2) // warn if more than just parent/child present
+        ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), child.c_str());
       return child;
+    }
   }
   
   // Otherwise, just grab whatever is first
-  return *games_found.begin();
+  std::string chosen_game = *games_found.begin();
+  if (games_found.size() > 1)
+    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), chosen_game.c_str());
+  return chosen_game;
 }
 
 bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename)
@@ -558,9 +579,7 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
   }
 
   // Pick the game to load (if there are multiple games present)
-  std::string chosen_game = ChooseGame(games_found);
-  if (games_found.size() > 1)
-    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), chosen_game.c_str());
+  std::string chosen_game = ChooseGame(games_found, zipfilename);
 
   // Return game information to caller
   *game = m_game_info_by_game[chosen_game];
@@ -578,7 +597,7 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
       std::string parent_zipfilename = StripFilename(zipfilename) + game->parent + ".zip";
       if (LoadZipArchive(&zip2, parent_zipfilename))
       {
-        ErrorLog("Could not load parent ROM set of '%s' from '%s'.", game->name.c_str(), parent_zipfilename.c_str());
+        ErrorLog("Expected to find parent ROM set of '%s' at '%s'.", game->name.c_str(), parent_zipfilename.c_str());
         return true;
       }
       parent_zip = &zip2;
