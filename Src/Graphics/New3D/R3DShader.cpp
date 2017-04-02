@@ -12,7 +12,6 @@ static const char *vertexShaderBasic =
 
 //outputs to fragment shader
 "varying float	fsFogFactor;\n"
-"varying float	fsSpecularTerm;\n"		// specular light term (additive)
 "varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
 "varying vec4   fsColor;\n"
@@ -44,14 +43,16 @@ static const char *fragmentShaderBasic =
 "uniform vec4	spotEllipse;\n"			// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
 "uniform vec2	spotRange;\n"			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
 "uniform vec3	spotColor;\n"			// spotlight RGB color
+"uniform vec3	spotFogColor;\n"		// spotlight RGB color on fog
 "uniform vec3	lighting[2];\n"			// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
 "uniform int	lightEnable;\n"			// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
 "uniform float	specularCoefficient;\n"	// specular coefficient
 "uniform float	shininess;\n"			// specular shininess
+"uniform float	fogAttenuation;\n"
+"uniform float	fogAmbient;\n"
 
 //interpolated inputs from vertex shader
 "varying float	fsFogFactor;\n"
-"varying float	fsSpecularTerm;\n"		// specular light term (additive)
 "varying vec3	fsViewVertex;\n"
 "varying vec3	fsViewNormal;\n"		// per vertex normal vector
 "varying vec4   fsColor;\n"
@@ -61,8 +62,11 @@ static const char *fragmentShaderBasic =
   "vec4 tex1Data;\n"
   "vec4 colData;\n"
   "vec4 finalData;\n"
+  "vec4 fogData;\n"
 
   "bool discardFragment = false;\n"
+
+  "fogData = vec4(fogColour.rgb * fogAmbient, fsFogFactor);\n"
 
   "tex1Data = vec4(1.0, 1.0, 1.0, 1.0);\n"
 
@@ -71,7 +75,7 @@ static const char *fragmentShaderBasic =
     "tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
     "if (microTexture==1) {\n"
-	  "vec2 scale    = baseTexSize/256.0;\n"
+      "vec2 scale    = baseTexSize/256.0;\n"
       "vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * scale * microTextureScale);\n"
 
       "tex1Data = (tex1Data+tex2Data)/2.0;\n"
@@ -98,11 +102,17 @@ static const char *fragmentShaderBasic =
   "if (discardFragment) {\n"
     "discard;\n"
   "}\n"
-   
+
+  "float ellipse;\n"
+  "ellipse = length((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw);\n"
+  "ellipse = pow(ellipse, 2.0);\n"  // decay rate = square of distance from center
+  "ellipse = 1.0 - ellipse;\n"      // invert
+  "ellipse = max(0.0, ellipse);\n"  // clamp
+
   "if (lightEnable==1) {\n"
     "vec3   lightIntensity;\n"
     "vec3   sunVector;\n"     // sun lighting vector (as reflecting away from vertex)
-    "float   sunFactor;\n"    // sun light projection along vertex normal (0.0 to 1.0)
+    "float  sunFactor;\n"     // sun light projection along vertex normal (0.0 to 1.0)
 
     // Real3D -> OpenGL view space convention (TO-DO: do this outside of shader)
     "sunVector = lighting[0] * vec3(1.0, -1.0, -1.0);\n"
@@ -115,34 +125,37 @@ static const char *fragmentShaderBasic =
 
     "lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
 
-    "vec2   ellipse;\n"
-    "float   insideSpot;\n"
-
     // Compute spotlight and apply lighting
-    "ellipse   = (gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw;\n"
-    "insideSpot = dot(ellipse, ellipse);\n"
+    "float enable, range, d;\n"
+    "float inv_r = 1.0 / spotEllipse.z;\n" // slope of decay function
 
-    "if ((insideSpot <= 1.0) && (-fsViewVertex.z >= spotRange.x)) {\n"
-      "lightIntensity.rgb += (1.0 - insideSpot)*spotColor;\n"
-    "}\n"
+    "d = spotRange.x + spotRange.y + fsViewVertex.z;\n"
+    "enable = step(spotRange.x + min(spotRange.y, 0.0), -fsViewVertex.z);\n"
+
+    // inverse-linear falloff
+    // Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
+    // y = 1 / (d/r + 1)^2
+    "range = 1.0 / pow(min(0.0, d * inv_r) - 1.0, 2.0);\n"
+    "range = clamp(range, 0.0, 1.0);\n"
+    "range *= enable;\n"
+
+    "float lobeEffect = range * ellipse;\n"
+
+    "lightIntensity.rgb += spotColor*lobeEffect;\n"
 
     "finalData.rgb *= lightIntensity;\n"
 
     "if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
-
-	  "float nDotL = max(dot(fsViewNormal,sunVector),0.0);\n"
-
+      "float nDotL = max(dot(fsViewNormal,sunVector),0.0);\n"
       "finalData.rgb += vec3(specularCoefficient * pow(nDotL,shininess));\n"
-
-	  //"vec3 v = normalize(-fsViewVertex);\n"
-	  //"vec3 h = normalize(sunVector + v);\n"   // halfway vector
-	  //"float NdotHV = max(dot(fsViewNormal,h),0.0);\n"
-	  //"finalData.rgb += vec3(specularCoefficient * pow(NdotHV,shininess));\n"
     "}\n"
   "}\n"
 
+  // Spotlight on fog
+  "vec3 lSpotFogColor = spotFogColor * ellipse * fogColour.rgb;\n"
 
-  "finalData.rgb = mix(finalData.rgb, fogColour, fsFogFactor);\n"
+  // Fog & spotlight applied
+  "finalData.rgb = mix(finalData.rgb, lSpotFogColor * fogAttenuation + fogData.rgb, fogData.a);\n"
 
   "gl_FragColor = finalData;\n"
 "}\n";
@@ -214,6 +227,8 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locFogDensity		= glGetUniformLocation(m_shaderProgram, "fogDensity");
 	m_locFogStart		= glGetUniformLocation(m_shaderProgram, "fogStart");
 	m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
+	m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");
+	m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
 
 	m_locLighting		= glGetUniformLocation(m_shaderProgram, "lighting");
 	m_locLightEnable	= glGetUniformLocation(m_shaderProgram, "lightEnable");
@@ -222,6 +237,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 	m_locSpotRange		= glGetUniformLocation(m_shaderProgram, "spotRange");
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
+	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 
 	return success;
 }
@@ -334,11 +350,14 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniform1f	(m_locFogDensity, vp->fogParams[3]);
 	glUniform1f	(m_locFogStart, vp->fogParams[4]);
 	glUniform3fv(m_locFogColour, 1, vp->fogParams);
+	glUniform1f	(m_locFogAttenuation, vp->fogParams[5]);
+	glUniform1f	(m_locFogAmbient, vp->fogParams[6]);
 
 	glUniform3fv(m_locLighting, 2, vp->lightingParams);
 	glUniform4fv(m_locSpotEllipse, 1, vp->spotEllipse);
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
+	glUniform3fv(m_locSpotFogColor, 1, vp->spotFogColor);
 }
 
 void R3DShader::SetModelStates(const Model* model)

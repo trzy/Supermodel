@@ -15,11 +15,43 @@ static const char *vertexShaderFog =
 
 static const char *fragmentShaderFog =
 
-	"uniform vec4 fogColour;\n"
+	"uniform float	fogAttenuation;\n"
+	"uniform float	fogAmbient;\n"
+	"uniform vec4	fogColour;\n"
+	"uniform vec3	spotFogColor;\n"
+	"uniform vec4	spotEllipse;\n"
+
+	// Spotlight on fog
+	"float	ellipse;\n"
+	"vec2	position, size;\n"
+	"vec3	lSpotFogColor;\n"
+
+	// Scroll fog
+	"float	lfogAttenuation;\n"
+	"vec3	lFogColor;\n"
+	"vec4	scrollFog;\n"
 
 	"void main()\n"
 	"{\n"
-	    "gl_FragColor = fogColour;\n"
+		// Scroll fog base color
+		"lFogColor = fogColour.rgb * fogAmbient;\n"
+
+		// Spotlight on fog (area) 
+		"position = spotEllipse.xy;\n"
+		"size = spotEllipse.zw;\n"
+		"ellipse = length((gl_FragCoord.xy - position) / size);\n"
+		"ellipse = pow(ellipse, 2.0);\n"			// decay rate = square of distance from center
+		"ellipse = 1.0 - ellipse;\n"				// invert
+		"ellipse = max(0.0, ellipse);\n"			// clamp
+
+		// Spotlight on fog (color)
+		"lSpotFogColor = mix(spotFogColor * ellipse * fogColour.rgb, vec3(0.0), fogAttenuation);\n"
+
+		// Scroll fog density
+		"scrollFog = vec4(lFogColor + lSpotFogColor, fogColour.a);\n"
+
+		// Final Color
+		"gl_FragColor = scrollFog;\n"
 	"}\n";
 
 
@@ -47,7 +79,7 @@ R3DScrollFog::~R3DScrollFog()
 	DeallocResources();
 }
 
-void R3DScrollFog::DrawScrollFog(float r, float g, float b, float a)
+void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient, float *spotRGB, float *spotEllipse)
 {
 	//=======
 	Mat4 mvp;
@@ -63,7 +95,11 @@ void R3DScrollFog::DrawScrollFog(float r, float g, float b, float a)
 
 	m_vbo.Bind			(true);
 	glUseProgram		(m_shaderProgram);
-	glUniform4f			(m_locFogColour, r, g, b, a);
+	glUniform4f			(m_locFogColour, rgba[0], rgba[1], rgba[2], rgba[3]);
+	glUniform1f			(m_locFogAttenuation, attenuation);
+	glUniform1f			(m_locFogAmbient, ambient);
+	glUniform3f			(m_locSpotFogColor, spotRGB[0], spotRGB[1], spotRGB[2]);
+	glUniform4f			(m_locSpotEllipse, spotEllipse[0], spotEllipse[1], spotEllipse[2], spotEllipse[3]);
 	glUniformMatrix4fv	(m_locMVP, 1, GL_FALSE, mvp);
 
 	glEnableClientState	(GL_VERTEX_ARRAY);
@@ -82,8 +118,12 @@ void R3DScrollFog::AllocResources()
 {
 	bool success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, std::string(), std::string(), vertexShaderFog, fragmentShaderFog);
 
-	m_locMVP		= glGetUniformLocation(m_shaderProgram, "mvp");
-	m_locFogColour	= glGetUniformLocation(m_shaderProgram, "fogColour");
+	m_locMVP			= glGetUniformLocation(m_shaderProgram, "mvp");
+	m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
+	m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");
+	m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
+	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
+	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 
 	m_vbo.Create(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(SFTriangle) * (2), m_triangles);
 }

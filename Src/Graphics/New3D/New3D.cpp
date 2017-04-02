@@ -97,15 +97,24 @@ void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned wid
 
 void CNew3D::DrawScrollFog()
 {
+
+	// the logic for this is still not quite right
+	// the sroll fog value seems to be set with multiple viewports.. currently unknown which one to use
+
 	for (int i = 0; i < 4; i++) {
 
 		for (auto &n : m_nodes) {
 
 			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
 
-				float *rgb = n.viewport.fogParams;
+				float rgba[4]		= {n.viewport.fogParams[0], n.viewport.fogParams[1], n.viewport.fogParams[2], n.viewport.scrollFog};
+				float attenuation	= n.viewport.scrollAtt; // Seems to pass the wrong values!
+				float ambient		= n.viewport.fogParams[6];
+				float *spotRGB		= n.viewport.spotFogColor;
+				float *spotEllipse	= n.viewport.spotEllipse;
+
 				glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
-				m_r3dScrollFog.DrawScrollFog(rgb[0], rgb[1], rgb[2], n.viewport.scrollFog);
+				m_r3dScrollFog.DrawScrollFog(rgba, attenuation, ambient, spotRGB, spotEllipse);
 				return;
 			}
 
@@ -752,27 +761,36 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
-		vp->spotEllipse[0] = (float)((vpnode[0x1E] >> 3) & 0x1FFF);						// spotlight X position (fractional component?)
-		vp->spotEllipse[1] = (float)((vpnode[0x1D] >> 3) & 0x1FFF);						// spotlight Y
-		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);					// spotlight X size (16-bit? May have fractional component below bit 16)
+		int spotFogColorIdx = (vpnode[0x20] >> 8) & 7;									// spotlight on fog color index
+		vp->spotEllipse[0] = (float)(INT16)(vpnode[0x1E] & 0xFFFF) / 8.0f;				// spotlight X position (13.3 fixed point)
+		vp->spotEllipse[1] = (float)(INT16)(vpnode[0x1D] & 0xFFFF) / 8.0f;				// spotlight Y
+		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);					// spotlight X size (16-bit)
 		vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);					// spotlight Y size
 
 		vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);							// spotlight start
 		vp->spotRange[1] = *(float *)&vpnode[0x1F];										// spotlight extent
 
-		if (vp->spotRange[1] == 0) {													// if light extent = 0 light is effectively disabled
-			spotColorIdx = 0;															
-		}
+		// Star Wars Trilogy needs this
+		vp->spotRange[0] = std::min(vp->spotRange[0], std::numeric_limits<float>::max());
+		vp->spotRange[0] = std::max(vp->spotRange[0], std::numeric_limits<float>::lowest());
 
 		vp->spotColor[0] = color[spotColorIdx][0];										// spotlight color
 		vp->spotColor[1] = color[spotColorIdx][1];
 		vp->spotColor[2] = color[spotColorIdx][2];
 
-		// Spotlight is applied on a per pixel basis, must scale its position and size to screen
-		vp->spotEllipse[1] = 384.0f - vp->spotEllipse[1];
-		vp->spotRange[1] += vp->spotRange[0];	// limit
-		vp->spotEllipse[2] = 496.0f / sqrt(vp->spotEllipse[2]);	// spotlight appears to be specified in terms of physical resolution (unconfirmed)
-		vp->spotEllipse[3] = 384.0f / sqrt(vp->spotEllipse[3]);
+		vp->spotFogColor[0] = color[spotFogColorIdx][0];								// spotlight color on fog
+		vp->spotFogColor[1] = color[spotFogColorIdx][1];
+		vp->spotFogColor[2] = color[spotFogColorIdx][2];
+
+		// spotlight is specified in terms of physical resolution
+		vp->spotEllipse[1] = 384.0f - vp->spotEllipse[1];								// flip Y position
+
+		// Avoid division by zero
+		vp->spotEllipse[2] = std::max(1.0f, vp->spotEllipse[2]);
+		vp->spotEllipse[3] = std::max(1.0f, vp->spotEllipse[3]);
+
+		vp->spotEllipse[2] = std::roundf(2047.0f / vp->spotEllipse[2]);
+		vp->spotEllipse[3] = std::roundf(2047.0f / vp->spotEllipse[3]);
 
 		// Scale the spotlight to the OpenGL viewport
 		vp->spotEllipse[0] = vp->spotEllipse[0] * m_xRatio + m_xOffs;
@@ -787,30 +805,16 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[3] = std::abs(*(float *)&vpnode[0x23]);						// fog density	- ocean hunter uses negative values, but looks the same
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
 
+		// Avoid Infinite and NaN values for Star Wars Trilogy
+		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3])) {
+			for (int i = 0; i < 7; i++) vp->fogParams[i] = 0.0f;
+		}
+
+		vp->fogParams[5] = (float)((vpnode[0x24] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog attenuation
+		vp->fogParams[6] = (float)((vpnode[0x25] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog ambient
+
 		vp->scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);				// scroll fog
-
-		// Unknown light/fog parameters
-		float scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);			// scroll attenuation
-
-		{
-			//test fog paramaters
-			float lightFogColour[3];
-			int fogColourIdx;
-
-			fogColourIdx = (vpnode[0x20] >> 8) & 7;
-
-			lightFogColour[0] = color[fogColourIdx][0];
-			lightFogColour[1] = color[fogColourIdx][1];
-			lightFogColour[2] = color[fogColourIdx][2];
-
-			float fogAttenuation = ((vpnode[0x24] >> 16) & 0xFF) / 255.f;
-			float fogAmbient	 = ((vpnode[0x25] >> 16) & 0xFF) / 255.f;
-			int debug = 0;
-		}
-		
-		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3]) || std::isinf(vp->fogParams[4]) || std::isnan(vp->fogParams[4])) {	// Star Wars Trilogy
-			vp->fogParams[3] = vp->fogParams[4] = 0.0f;
-		}
+		vp->scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);				// scroll attenuation
 
 		// Clear texture offsets before proceeding
 		m_nodeAttribs.Reset();

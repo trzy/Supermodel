@@ -62,6 +62,8 @@ private:
 	GLint m_locFogDensity;
 	GLint m_locFogStart;
 	GLint m_locFogColour;
+	GLint m_locFogAttenuation;
+	GLint m_locFogAmbient;
 
 	// lighting
 	GLint m_locLighting;
@@ -71,6 +73,7 @@ private:
 	GLint m_locSpotEllipse;
 	GLint m_locSpotRange;
 	GLint m_locSpotColor;
+	GLint m_locSpotFogColor;
 };
 
 } // New3D

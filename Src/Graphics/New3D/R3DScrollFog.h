@@ -12,7 +12,7 @@ public:
 	R3DScrollFog();
 	~R3DScrollFog();
 
-	void DrawScrollFog(float r, float g, float b, float a);
+	void DrawScrollFog(float rbga[4], float attenuation, float ambient, float *spotRGB, float *spotEllipse);
 
 private:
 
@@ -45,6 +45,10 @@ private:
 
 	GLuint m_locFogColour;
 	GLuint m_locMVP;
+	GLuint m_locFogAttenuation;
+	GLuint m_locFogAmbient;
+	GLuint m_locSpotFogColor;
+	GLuint m_locSpotEllipse;
 
 	VBO m_vbo;
 };
