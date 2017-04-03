@@ -3,27 +3,31 @@
 #include "Util/NewConfig.h"
 #include "Util/ConfigBuilders.h"
 #include "Util/ByteSwap.h"
+#include "Util/Format.h"
 #include <algorithm>
 #include <iostream>
 
 bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename) const
 {
-  zip->zipfilename = zipfilename;
-  zip->zf = unzOpen(zipfilename.c_str());
-  if (NULL == zip->zf)
+  unzFile zf = unzOpen(zipfilename.c_str());
+  if (NULL == zf)
   {
     ErrorLog("Could not open '%s'.", zipfilename.c_str());
     return true;
   }
+  zip->zipfilenames.push_back(zipfilename);
+  zip->zfs.push_back(zf);
   
   // Identify all files in zip archive
   int err = UNZ_OK;
-  for (err = unzGoToFirstFile(zip->zf); err == UNZ_OK; err = unzGoToNextFile(zip->zf))
+  for (err = unzGoToFirstFile(zf); err == UNZ_OK; err = unzGoToNextFile(zf))
   {
     unz_file_info file_info;
     char filename_buffer[256];
-    if (UNZ_OK != unzGetCurrentFileInfo(zip->zf, &file_info, filename_buffer, sizeof(filename_buffer), NULL, 0, NULL, 0))
+    if (UNZ_OK != unzGetCurrentFileInfo(zf, &file_info, filename_buffer, sizeof(filename_buffer), NULL, 0, NULL, 0))
       continue;
+    zip->files_by_crc[file_info.crc].zf = zf;
+    zip->files_by_crc[file_info.crc].zipfilename = filename_buffer;
     zip->files_by_crc[file_info.crc].filename = filename_buffer;
     zip->files_by_crc[file_info.crc].uncompressed_size = file_info.uncompressed_size;
     zip->files_by_crc[file_info.crc].crc32 = file_info.crc;
@@ -38,37 +42,20 @@ bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename)
   return false;
 }
 
-bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip)
+bool GameLoader::FileExistsInZipArchive(const File::ptr_t &file, const ZipArchive &zip) const
 {
-  // Locate file
-  const ZippedFile *zipped_file = LookupFile(file, zip);
-  if (!zipped_file)
-    return true;
-  if (UNZ_OK != unzLocateFile(zip.zf, zipped_file->filename.c_str(), 2))
+  if (file->has_crc32)
   {
-    ErrorLog("Unable to locate '%s' in '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zip.zipfilename.c_str());
-    return true;
+    auto it = zip.files_by_crc.find(file->crc32);
+    return it != zip.files_by_crc.end();
   }
   
-  // Read it in
-  if (UNZ_OK != unzOpenCurrentFile(zip.zf))
+  // Try to lookup by name
+  for (auto &v: zip.files_by_crc)
   {
-    ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zip.zipfilename.c_str());
-    return true;
+    if (Util::ToLower(v.second.filename) == file->filename)
+      return true;
   }
-  *file_size = zipped_file->uncompressed_size;
-  buffer->reset(new uint8_t[*file_size], std::default_delete<uint8_t[]>());
-  ZPOS64_T bytes_read = unzReadCurrentFile(zip.zf, buffer->get(), *file_size);
-  if (bytes_read != *file_size)
-  {
-    ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zip.zipfilename.c_str());
-    unzCloseCurrentFile(zip.zf);
-    return true;
-  }
-  
-  // And close it
-  if (UNZ_CRCERROR == unzCloseCurrentFile(zip.zf))
-    ErrorLog("CRC error reading '%s' from '%s'. File may be corrupt.", zipped_file->filename.c_str(), zip.zipfilename.c_str());
   return false;
 }
 
@@ -79,7 +66,10 @@ const GameLoader::ZippedFile *GameLoader::LookupFile(const File::ptr_t &file, co
     auto it = zip.files_by_crc.find(file->crc32);
     if (it == zip.files_by_crc.end())
     {
-      ErrorLog("'%s' with CRC32 0x%08x not found in '%s'.", file->filename.c_str(), file->crc32, zip.zipfilename.c_str());
+      if (zip.zfs.size() == 1)
+        ErrorLog("'%s' with CRC32 0x%08x not found in '%s'.", file->filename.c_str(), file->crc32, zip.zipfilenames[0].c_str());
+      else
+        ErrorLog("'%s' with CRC32 0x%08x not found in '%s'.", file->filename.c_str(), file->crc32, Util::Format("', '").Join(zip.zipfilenames).str().c_str());
       return nullptr;
     }
     return &it->second;
@@ -91,8 +81,45 @@ const GameLoader::ZippedFile *GameLoader::LookupFile(const File::ptr_t &file, co
     if (Util::ToLower(v.second.filename) == file->filename)
       return &v.second;
   }
-  ErrorLog("'%s' not found in '%s'.", file->filename.c_str(), zip.zipfilename.c_str());
+  if (zip.zfs.size() == 1)
+    ErrorLog("'%s' not found in '%s'.", file->filename.c_str(), zip.zipfilenames[0].c_str());
+  else
+    ErrorLog("'%s' not found in '%s'.", file->filename.c_str(), Util::Format("', '").Join(zip.zipfilenames).str().c_str());
   return nullptr;
+}
+
+bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip) const
+{
+  // Locate file
+  const ZippedFile *zipped_file = LookupFile(file, zip);
+  if (!zipped_file)
+    return true;
+  if (UNZ_OK != unzLocateFile(zipped_file->zf, zipped_file->filename.c_str(), 2))
+  {
+    ErrorLog("Unable to locate '%s' in '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
+    return true;
+  }
+  
+  // Read it in
+  if (UNZ_OK != unzOpenCurrentFile(zipped_file->zf))
+  {
+    ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
+    return true;
+  }
+  *file_size = zipped_file->uncompressed_size;
+  buffer->reset(new uint8_t[*file_size], std::default_delete<uint8_t[]>());
+  ZPOS64_T bytes_read = unzReadCurrentFile(zipped_file->zf, buffer->get(), *file_size);
+  if (bytes_read != *file_size)
+  {
+    ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
+    unzCloseCurrentFile(zipped_file->zf);
+    return true;
+  }
+  
+  // And close it
+  if (UNZ_CRCERROR == unzCloseCurrentFile(zipped_file->zf))
+    ErrorLog("CRC error reading '%s' from '%s'. File may be corrupt.", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
+  return false;
 }
 
 bool GameLoader::MissingAttrib(const GameLoader &loader, const Util::Config::Node &node, const std::string &attribute)
@@ -124,6 +151,11 @@ bool GameLoader::File::Matches(const std::string &filename_to_match, uint32_t cr
   return Util::ToLower(filename_to_match) == filename;
 }
 
+bool GameLoader::File::operator==(const File &rhs) const
+{
+  return Matches(rhs.filename, rhs.crc32);
+}
+
 GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, const Util::Config::Node &region_node)
 {
   if (GameLoader::MissingAttrib(loader, region_node, "name") | MissingAttrib(loader, region_node, "stride") | GameLoader::MissingAttrib(loader, region_node, "chunk_size"))
@@ -134,6 +166,24 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
   region->chunk_size = region_node["chunk_size"].ValueAs<size_t>();
   region->byte_swap = region_node["byte_swap"].ValueAsDefault<bool>(false);
   return region;
+}
+
+bool GameLoader::Region::AttribsMatch(const ptr_t &other) const
+{
+  return stride == other->stride && chunk_size == other->chunk_size && byte_swap == other->byte_swap;
+}
+
+bool GameLoader::Region::FindFileIndexByOffset(size_t *idx, uint32_t offset) const
+{
+  for (size_t i = 0; i < files.size(); i++)
+  {
+    if (files[i]->offset == offset)
+    {
+      *idx = i;
+      return true;
+    }
+  }
+  return false;
 }
 
 static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
@@ -182,7 +232,7 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   }
 }
 
-bool GameLoader::ParseXML(const Util::Config::Node &xml)
+bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
 {
   for (auto it = xml.begin(); it != xml.end(); ++it)
   {
@@ -268,6 +318,116 @@ bool GameLoader::ParseXML(const Util::Config::Node &xml)
   return false;
 }
 
+static bool IsChildSet(const Game &game)
+{
+  return game.parent.length() > 0;
+}
+
+bool GameLoader::MergeChildrenWithParents()
+{
+  bool error = false;
+
+  for (auto &v1: m_regions_by_game)
+  {
+    auto &game = m_game_info_by_game[v1.first];
+    if (!IsChildSet(game))  // we want child sets
+      continue;
+
+    auto &child_regions = v1.second;
+    auto &parent_regions = m_regions_by_game[game.parent];
+    
+    // Rebuild child regions by copying over all parent regions first, then
+    // merge in files from equivalent child regions
+    RegionsByName_t new_regions;
+    for (auto &v2: parent_regions)
+    {
+      // Copy over parent region (shallow copy is sufficient, vector of files
+      // will be copied over correctly)
+      auto &region_name = v2.first;
+      new_regions[region_name] = std::make_shared<Region>(*v2.second);
+      auto &new_region = new_regions[region_name];
+      
+      // Replace equivalent files from child in parent region, appending any
+      // new ones
+      if (child_regions.find(region_name) != child_regions.end())
+      {
+        auto &child_region = child_regions[region_name];
+        if (!new_region->AttribsMatch(child_region))
+        {
+          ErrorLog("%s: Attributes of region '%s' in parent '%s' and child '%s' do not match.", m_xml_filename.c_str(), region_name.c_str(), game.parent.c_str(), game.name.c_str());
+          error = true;
+        }
+        for (size_t i = 0; i < child_region->files.size(); i++)
+        {
+          size_t idx;
+          if (new_region->FindFileIndexByOffset(&idx, child_region->files[i]->offset))
+            new_region->files[idx] = child_region->files[i];
+          else
+            new_region->files.push_back(child_region->files[i]);
+        }
+      }
+    }
+    
+    // Simply append any region in child that does *not* exist in parent
+    for (auto &v2: child_regions)
+    {
+      if (new_regions.find(v2.first) == new_regions.end())
+      {
+        // Since these are pointers anyway, just insert directly
+        new_regions[v2.first] = v2.second;
+      }
+    }
+    
+    // Save the final result
+    m_regions_by_merged_game[v1.first] = new_regions;
+  }
+  
+  return error;
+}
+
+void GameLoader::LogROMDefinition(const std::string &game_name, const RegionsByName_t &regions_by_name) const
+{
+  InfoLog("%s:", game_name.c_str());
+  for (auto &v2: regions_by_name)
+  {
+    InfoLog("  %s: stride=%zu, chunk size=%zu, byte swap=%d", v2.first.c_str(), v2.second->stride, v2.second->chunk_size, v2.second->byte_swap ? 1 : 0);
+    for (auto &file: v2.second->files)
+    {
+      InfoLog("    %s, crc32=0x%08x, offset=0x%08x", file->filename.c_str(), file->crc32, file->offset);
+    }
+  }
+}
+
+bool GameLoader::ParseXML(const Util::Config::Node &xml)
+{
+  if (LoadGamesFromXML(xml))
+    return true;
+
+  // More than one level of parents not allowed
+  bool error = false;
+  std::set<std::string> parents_with_parents;
+  for (auto &v: m_game_info_by_game)
+  {
+    if (IsChildSet(v.second))
+    {
+      if (IsChildSet(m_game_info_by_game[v.second.parent]))
+      {
+        parents_with_parents.insert(v.second.parent);
+        error = true;
+      }
+    }
+  }
+  for (auto &game_name: parents_with_parents)
+  {
+    ErrorLog("%s: Parent ROM set '%s' also has parent defined, which is not allowed.", m_xml_filename.c_str(), game_name.c_str());
+  }
+
+  if (MergeChildrenWithParents())
+    return true;
+
+  return error;
+}
+
 bool GameLoader::LoadDefinitionXML(const std::string &filename)
 {
   m_xml_filename = filename;
@@ -277,21 +437,32 @@ bool GameLoader::LoadDefinitionXML(const std::string &filename)
   return ParseXML(xml);
 }
 
-bool GameLoader::CompareFilesByName(const File::ptr_t &a, const File::ptr_t &b)
+void GameLoader::FindEquivalentFiles(std::set<File::ptr_t> *equivalent_files, const std::set<File::ptr_t> &a, const std::set<File::ptr_t> &b)
 {
-  return a->filename < b->filename;
+  // Copy files that are equivalent between a and b from a (doesn't matter
+  // which we actually use) to output
+  for (auto &file1: a)
+  {
+    for (auto &file2: b)
+    {
+      if (*file1 == *file2)
+        equivalent_files->insert(file1);
+    }
+  }
 }
 
-std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArchive &zip) const
+void GameLoader::IdentifyGamesInZipArchive(
+  std::set<std::string> *complete_games,
+  std::map<std::string, std::set<File::ptr_t>> *files_missing_by_game,
+  const ZipArchive &zip,
+  const std::map<std::string, RegionsByName_t> &regions_by_game) const
 {
-  std::set<std::string> complete_games;
-  std::map<std::string, std::set<File::ptr_t>> files_required_per_game;
-  std::map<std::string, std::set<File::ptr_t>> files_found_per_game;
-  std::map<std::string, std::set<File::ptr_t>> files_missing_per_game; // only for those games which are at least partially present
+  std::map<std::string, std::set<File::ptr_t>> files_required_by_game;
+  std::map<std::string, std::set<File::ptr_t>> files_found_by_game;
 
   // Determine which files each game requires and which files are present in
-  // the zip archive for each game
-  for (auto &v1: m_regions_by_game)
+  // the zip archive
+  for (auto &v1: regions_by_game)
   {
     const std::string &game_name = v1.first;
     auto &regions_by_name = v1.second;
@@ -301,57 +472,165 @@ std::set<std::string> GameLoader::IdentifyCompleteGamesInZipArchive(const ZipArc
       for (auto file: region->files)
       {
         // Add each file to the set of required files per game
-        files_required_per_game[game_name].insert(file);
+        files_required_by_game[game_name].insert(file);
         // Check file in ROM definition against all files in zip
-        for (auto &v3: zip.files_by_crc)
-        {
-          const std::string &filename = v3.second.filename;
-          uint32_t crc32 = v3.first;
-          if (file->Matches(filename, crc32))
-            files_found_per_game[game_name].insert(file);
-        }
+        if (FileExistsInZipArchive(file, zip))
+          files_found_by_game[game_name].insert(file);
       }
     }
   }
-
-  // Of those games for which any files were found, find the missing files
-  auto compare = [](const File::ptr_t &a, const File::ptr_t &b) { return a->filename < b->filename; };
-  for (auto &v: files_found_per_game)
+  
+  /*
+   * Corner case: some child ROM sets legitimately share files, which can fool
+   * us into thinking two games are partially present. Need to remove the one
+   * that is not really there by detecting case when only overlapping files
+   * exist (the ROM set with more present files is the intended one).
+   */
+  std::vector<std::string> to_remove;
+  for (auto &v1: files_found_by_game)
   {
-      auto &files_found = v.second;
-      auto &files_required = files_required_per_game[v.first];
-      auto &files_missing = files_missing_per_game[v.first];
-      // Need to sort by filename for set_difference to work
-      std::vector<File::ptr_t> files_found_v(files_found.begin(), files_found.end());
-      std::vector<File::ptr_t> files_required_v(files_required.begin(), files_required.end());
-      std::sort(files_found_v.begin(), files_found_v.end(), compare);
-      std::sort(files_required_v.begin(), files_required_v.end(), compare);
-      // Use set difference to find missing files
-      std::set_difference(
-        files_required.begin(), files_required.end(),
-        files_found.begin(), files_found.end(),
-        std::inserter(files_missing, files_missing.end()),
-        compare);
+    auto &game1_name = v1.first;
+    auto &game1_files = v1.second;
+    for (auto &v2: files_found_by_game)
+    {
+      auto &game2_name = v2.first;
+      auto &game2_files = v2.second;
+      if (game1_name == game2_name)
+        continue;
+      std::set<File::ptr_t> equivalent_files;
+      FindEquivalentFiles(&equivalent_files, game1_files, game2_files);
+      /*
+       * If the these two games have a different number of files in the zip
+       * archive, but one consists only of the overlapping files, we can safely
+       * conclude that these files represent only the game with the larger 
+       * number of files present. Otherwise, if only the overlapping files are
+       * present for both, we have a genuine ambiguity and hence do nothing.
+       */
+      if (game1_files.size() != game2_files.size() && equivalent_files.size() == game2_files.size())
+        to_remove.push_back(game2_name);
+    }
   }
+  for (auto &game_name: to_remove)
+  {
+    files_found_by_game.erase(game_name);
+  }
+  
+  // Find the missing files for each game we found in the zip archive, then use
+  // this to determine whether the complete game exists
+  auto compare = [](const File::ptr_t &a, const File::ptr_t &b) { return a->filename < b->filename; };
+  for (auto &v: files_found_by_game)
+  {
+    auto &files_found = v.second;
+    auto &files_required = files_required_by_game[v.first];
+    auto &files_missing = (*files_missing_by_game)[v.first];
+    // Need to sort by filename for set_difference to work
+    std::vector<File::ptr_t> files_found_v(files_found.begin(), files_found.end());
+    std::vector<File::ptr_t> files_required_v(files_required.begin(), files_required.end());
+    std::sort(files_found_v.begin(), files_found_v.end(), compare);
+    std::sort(files_required_v.begin(), files_required_v.end(), compare);
+    // Use set difference to find missing files
+    std::set_difference(
+      files_required_v.begin(), files_required_v.end(),
+      files_found_v.begin(), files_found_v.end(),
+      std::inserter(files_missing, files_missing.end()),
+      compare);
+    // Is the whole game present?
+    if (files_found == files_required)
+      complete_games->insert(v.first);
+    // Clean up: if no files missing, don't want empty entry in map
+    if (files_missing.empty())
+      files_missing_by_game->erase(v.first);
+  }
+}
 
-  // Print missing files
-  for (auto &v: files_missing_per_game)
+void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_parent_roms, const ZipArchive &zip, const std::string &zipfilename) const
+{
+  chosen_game->clear();
+  *missing_parent_roms = false;
+
+  // Find complete unmerged games (those that do not need to be merged with a
+  // parent). This will pick up child-only ROMs, too, which we prune out later.
+  std::set<std::string> complete_games;
+  std::map<std::string, std::set<File::ptr_t>> files_missing_by_game;
+  IdentifyGamesInZipArchive(&complete_games, &files_missing_by_game, zip, m_regions_by_game);
+  
+  // Find complete, merged games
+  std::set<std::string> complete_merged_games;
+  std::map<std::string, std::set<File::ptr_t>> files_missing_by_merged_game;
+  IdentifyGamesInZipArchive(&complete_merged_games, &files_missing_by_merged_game, zip, m_regions_by_merged_game);
+  
+  /*
+   * Find incomplete child games by sorting child games out from the unmerged
+   * games results and pruning out complete merged games. Don't care about
+   * missing files because they are not neccessarily an error for these games.
+   * If one ends up being chosen, we would try to load from a second, parent
+   * ROM set.
+   */
+  std::set<std::string> incomplete_child_games;
+  for (auto &v: m_game_info_by_game)
+  {
+    auto &game_name = v.first;
+    if (IsChildSet(v.second))
+    {
+      if (complete_games.count(game_name) || files_missing_by_game.find(game_name) != files_missing_by_game.end())
+      {
+        incomplete_child_games.insert(game_name);
+        complete_games.erase(game_name);
+        files_missing_by_game.erase(game_name);
+      }
+    }
+  }
+  for (auto &game_name: complete_merged_games)
+  {
+    incomplete_child_games.erase(game_name);
+  }
+  
+  // Complete merged games take highest precedence
+  for (auto &game_name: complete_merged_games)
+  {
+    const std::string &parent = m_game_info_by_game.find(game_name)->second.parent;
+    // Complete merged game will be used, so ignore the parent entirely
+    complete_games.erase(parent);
+    // Complete merged sets will often have some parent ROMs missing (those
+    // replaced by the child games). This is not an error, so remove parents of
+    // complete merged games from missing file list.
+    files_missing_by_game.erase(parent);
+  }
+  
+  // Any remaining incomplete games from the unmerged set are legitimate errors
+  for (auto &v: files_missing_by_game)
   {
     for (auto &file: v.second)
     {
-      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zip.zipfilename.c_str(), v.first.c_str());   
+      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zipfilename.c_str(), v.first.c_str());   
     }
-    if (v.second.size() > 0)
-      ErrorLog("Ignoring game '%s' in '%s' because it is missing files.", v.first.c_str(), zip.zipfilename.c_str());
+    ErrorLog("Ignoring game '%s' in '%s' because it is missing files.", v.first.c_str(), zipfilename.c_str());
   }
-
-  // Determine whether we have any complete ROM sets in this zip archive
-  for (auto &v: files_found_per_game)
+  
+  // Choose game: complete merged game > incomplete child game > complete
+  // unmerged game
+  if (!complete_merged_games.empty())
+    chosen_game->assign(*complete_merged_games.begin());
+  else if (!incomplete_child_games.empty())
   {
-    if (v.second == files_required_per_game[v.first])
-      complete_games.insert(v.first);
+    // TODO: could use scoring to pick game with most files?
+    chosen_game->assign(*incomplete_child_games.begin());
+    *missing_parent_roms = true;  // try to find missing files in parent ROM zip file
   }
-  return complete_games;
+  else if (!complete_games.empty())
+    chosen_game->assign(*complete_games.begin());
+  else
+  {
+    ErrorLog("No complete Model 3 games found in '%s'.", zipfilename.c_str());
+    return;
+  }
+  
+  // Print out which game we chose from valid candidates in the zip file
+  std::set<std::string> candidates(complete_games);
+  candidates.insert(complete_merged_games.begin(), complete_merged_games.end());
+  candidates.insert(incomplete_child_games.begin(), incomplete_child_games.end());
+  if (candidates.size() > 1)
+    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), Util::Format(", ").Join(candidates).str().c_str(), chosen_game->c_str());
 }
 
 bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const
@@ -367,7 +646,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
     {
       if (zipped_file->uncompressed_size % region->chunk_size != 0)
       {
-        ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", zipped_file->filename.c_str(), zip.zipfilename.c_str(), region->chunk_size);
+        ErrorLog("File '%s' in '%s' is not sized in %d-byte chunks.", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str(), region->chunk_size);
         error = true;
       }
 	    uint32_t num_chunks = (uint32_t)(zipped_file->uncompressed_size / region->chunk_size);
@@ -383,7 +662,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
 
 // We need to preserve the absolute offsets in order for byte swapping to work
 // properly when chunk size is 1
-static void CopyBytes(uint8_t *dest_base, size_t dest_offset, const uint8_t *src_base, size_t src_offset, size_t size, bool byte_swap)
+static inline void CopyBytes(uint8_t *dest_base, size_t dest_offset, const uint8_t *src_base, size_t src_offset, size_t size, bool byte_swap)
 {
   size_t swap = byte_swap ? 1 : 0;
   for (size_t i = 0; i < size; i++)
@@ -392,7 +671,7 @@ static void CopyBytes(uint8_t *dest_base, size_t dest_offset, const uint8_t *src
   }
 }
 
-bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, const ZipArchive &zip)
+bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const
 {
   bool error = false;
   for (auto &file: region->files)
@@ -402,106 +681,56 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
     error |= LoadZippedFile(&tmp, &file_size, file, zip);
     if (!error)
     {
-      size_t num_chunks = file_size / region->chunk_size;
-      for (size_t i = 0; i < num_chunks; i++)
+      uint8_t *dest = rom->data.get();
+      uint8_t *src = tmp.get();
+      if (region->chunk_size == region->stride)
       {
-        /*
-         * We have to check bounds because LoadROMs() may attempt to load
-         * regions whose size was computed incorrectly because a file was
-         * missing. 
-         *
-         * It is also possible for ROM memory not to have been allocated at
-         * all in such a case, hence the check for that.
-         */
-        size_t dest_offset = file->offset + i * region->stride;
-        size_t src_offset = i * region->chunk_size;
-        size_t bytes_to_copy = region->chunk_size;
-        if ((dest_offset + bytes_to_copy) > rom->size || (src_offset + bytes_to_copy) > file_size)
+        memcpy(dest + file->offset, src, file_size);
+        if (region->byte_swap)
+          Util::FlipEndian16(dest + file->offset, file_size);
+      }
+      else
+      {
+        size_t num_chunks = file_size / region->chunk_size;
+        size_t dest_offset = file->offset;
+        size_t src_offset = 0;
+        for (size_t i = 0; i < num_chunks; i++)
         {
-          ErrorLog("ROM region '%s' could not be created or loaded.", region->region_name.c_str());
-          error |= true;
-          break;
+          CopyBytes(dest, dest_offset, src, src_offset, region->chunk_size, region->byte_swap);
+          dest_offset += region->stride;
+          src_offset += region->chunk_size;
         }
-        if (!rom->data.get() || !tmp.get())
-        {
-          ErrorLog("ROM region '%s' could not be created or loaded.", region->region_name.c_str());
-          error |= true;
-          break;
-        }
-        CopyBytes(rom->data.get(), dest_offset, tmp.get(), src_offset, region->chunk_size, region->byte_swap);
       }
     }
   }
   return error;
 }
 
-bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive *zip, const std::string &parent_name, const ZipArchive *parent_zip)
+bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive &zip) const
 {
-  // First pass: scan child set and create ROM structures (but without 
-  // allocating data)
-  auto it = m_regions_by_game.find(game_name);
-  if (it == m_regions_by_game.end())
+  auto it = m_game_info_by_game.find(game_name);
+  if (it == m_game_info_by_game.end())
   {
-    ErrorLog("Game '%s' not found in '%s'.", game_name.c_str(), zip->zipfilename.c_str());
+    ErrorLog("Cannot load unknown game '%s'. Is it defined in '%s'?", game_name.c_str(), m_xml_filename.c_str());
     return true;
   }
-  auto *regions_by_name = &it->second;
+  auto &regions_by_name = IsChildSet(it->second) ? m_regions_by_merged_game.find(game_name)->second : m_regions_by_game.find(game_name)->second;
+  LogROMDefinition(game_name, regions_by_name);
   bool error = false;
-  for (auto &v: *regions_by_name)
+  for (auto &v: regions_by_name)
   {
     auto &region = v.second;
     uint32_t region_size = 0;
-    if (ComputeRegionSize(&region_size, region, *zip))
+    if (ComputeRegionSize(&region_size, region, zip))
       error |= true;
     else
     {
       auto &rom = rom_set->rom_by_region[region->region_name];
-      rom.size = region_size; // get size only
-      rom.data = nullptr;     // don't allocate yet
+      rom.data.reset(new uint8_t[region_size], std::default_delete<uint8_t[]>());
+      rom.size = region_size;
+      error |= LoadRegion(&rom, region, zip);
     }
-  }
-    
-  // Second pass: scan parent set and create ROMs or resize existing ones.
-  // Memory is allocated here and parent ROMs are loaded.
-  if (parent_zip)
-  {
-    it = m_regions_by_game.find(parent_name);
-    if (it == m_regions_by_game.end())
-    {
-      ErrorLog("Parent game '%s' not found in '%s'.", parent_name.c_str(), parent_zip->zipfilename.c_str());
-      return true;
-    }
-    regions_by_name = &it->second;
-    for (auto &v: *regions_by_name)
-    {
-      auto &region = v.second;
-      uint32_t region_size = 0;
-      if (ComputeRegionSize(&region_size, region, *parent_zip))
-        error |= true;
-      else
-      {
-        // Caution: if region size computation fails above, ROM buffer will not
-        // be allocated here!
-        auto &rom = rom_set->rom_by_region[region->region_name];
-        rom.size = std::max(rom.size, size_t(region_size));
-        rom.data.reset(new uint8_t[rom.size], std::default_delete<uint8_t[]>());
-        error |= LoadRegion(&rom, region, *parent_zip);
-      }
-    }
-  }
-  
-  // Third pass: load child ROMs atop existing parent ROMs. If there is no
-  // parent, memory is allocated here.
-  regions_by_name = &(m_regions_by_game.find(game_name)->second);
-  for (auto &v: *regions_by_name)
-  {
-    auto &region = v.second;
-    auto &rom = rom_set->rom_by_region[region->region_name];
-    if (!rom.data)  // not yet allocated
-      rom.data.reset(new uint8_t[rom.size], std::default_delete<uint8_t[]>());
-    error |= LoadRegion(&rom, region, *zip);
-  }
-  
+  }  
   return error;
 }
 
@@ -526,94 +755,38 @@ std::string StripFilename(const std::string &filepath)
   return std::string(filepath, 0, last_slash + 1);
 }
 
-// A heuristic is used that favors child sets with present parent 
-std::string GameLoader::ChooseGame(const std::set<std::string> &games_found, const std::string &zipfilename) const
-{
-  // Identify children sets and parent sets
-  std::set<std::string> parents;
-  std::set<std::string> children;
-  for (auto &game_name: games_found)
-  {
-    auto it = m_game_info_by_game.find(game_name);
-    const Game &game = it->second;
-    if (game.parent.empty())
-      parents.insert(game_name);
-    else
-      children.insert(game_name);
-  }
-  
-  // Find the first child set whose parent is also present
-  for (auto &child: children)
-  {
-    auto it = m_game_info_by_game.find(child);
-    const Game &game = it->second;
-    const std::string &parent = game.parent;
-    if (parents.count(parent) > 0)
-    {
-      if (games_found.size() > 2) // warn if more than just parent/child present
-        ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), child.c_str());
-      return child;
-    }
-  }
-  
-  // Otherwise, just grab whatever is first
-  std::string chosen_game = *games_found.begin();
-  if (games_found.size() > 1)
-    ErrorLog("Multiple games found in '%s' (%s). Loading '%s'.", zipfilename.c_str(), std::string(Util::Format(", ").Join(games_found)).c_str(), chosen_game.c_str());
-  return chosen_game;
-}
-
-bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename)
+bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename) const
 {
   *game = Game();
   
-  // Load the zip file and identify all games in it
+  // Read the zip contents
   ZipArchive zip;
   if (LoadZipArchive(&zip, zipfilename))
     return true;
-  std::set<std::string> games_found = IdentifyCompleteGamesInZipArchive(zip);
-  if (games_found.empty())
-  {
-    ErrorLog("No complete Model 3 games found in '%s'.", zipfilename.c_str());
+  
+  // Pick the game to load (there could be multiple ROM sets in a zip file)
+  std::string chosen_game;
+  bool missing_parent_roms = false;
+  ChooseGameInZipArchive(&chosen_game, &missing_parent_roms, zip, zipfilename);
+  if (chosen_game.empty())
     return true;
-  }
-
-  // Pick the game to load (if there are multiple games present)
-  std::string chosen_game = ChooseGame(games_found, zipfilename);
 
   // Return game information to caller
-  *game = m_game_info_by_game[chosen_game];
+  *game = m_game_info_by_game.find(chosen_game)->second;
   
-  // If there is a parent ROM set, determine where it is 1) contained in the
-  // same zip file or 2) try loading it from the same directory
-  ZipArchive zip2;
-  ZipArchive *parent_zip = nullptr;
-  if (!game->parent.empty())
+  // Bring in additional parent ROM set if needed
+  if (missing_parent_roms)
   {
-    if (games_found.count(game->parent) > 0)
-      parent_zip = &zip;
-    else
+    std::string parent_zipfilename = StripFilename(zipfilename) + game->parent + ".zip";
+    if (LoadZipArchive(&zip, parent_zipfilename))
     {
-      std::string parent_zipfilename = StripFilename(zipfilename) + game->parent + ".zip";
-      if (LoadZipArchive(&zip2, parent_zipfilename))
-      {
-        ErrorLog("Expected to find parent ROM set of '%s' at '%s'.", game->name.c_str(), parent_zipfilename.c_str());
-        return true;
-      }
-      parent_zip = &zip2;
+      ErrorLog("Expected to find parent ROM set of '%s' at '%s'.", game->name.c_str(), parent_zipfilename.c_str());
+      return true;
     }
   }
-  
-  // Sanity check: a parent set should not itself have a parent
-  if (!game->parent.empty())
-  {
-    auto it = m_game_info_by_game.find(game->parent);
-    if (it != m_game_info_by_game.end() && !it->second.parent.empty())
-      ErrorLog("Parent ROM set '%s' also has parent defined in '%s', which is invalid and ignored.", game->parent.c_str(), m_xml_filename.c_str());
-  }
 
-  // Load
-  bool error = LoadROMs(rom_set, game->name, &zip, game->parent, parent_zip);
+  // Load 
+  bool error = LoadROMs(rom_set, game->name, zip);
   if (error)
     *game = Game();
   return error;
