@@ -5,6 +5,7 @@
 #include "Util/ByteSwap.h"
 #include "Util/Format.h"
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 
 bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename) const
