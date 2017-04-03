@@ -663,12 +663,11 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
 
 // We need to preserve the absolute offsets in order for byte swapping to work
 // properly when chunk size is 1
-static inline void CopyBytes(uint8_t *dest_base, size_t dest_offset, const uint8_t *src_base, size_t src_offset, size_t size, bool byte_swap)
+static inline void CopyBytes(uint8_t *dest_base, uint32_t dest_offset, const uint8_t *src_base, uint32_t src_offset, uint32_t size, uint32_t byte_swap)
 {
-  size_t swap = byte_swap ? 1 : 0;
-  for (size_t i = 0; i < size; i++)
+  for (uint32_t i = 0; i < size; i++)
   {
-    dest_base[(dest_offset + i) ^ swap] = src_base[src_offset + i];
+    dest_base[(dest_offset + i) ^ byte_swap] = src_base[src_offset + i];
   }
 }
 
@@ -692,14 +691,17 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
       }
       else
       {
-        size_t num_chunks = file_size / region->chunk_size;
-        size_t dest_offset = file->offset;
-        size_t src_offset = 0;
-        for (size_t i = 0; i < num_chunks; i++)
+        uint32_t num_chunks = (uint32_t)file_size / region->chunk_size;
+		uint32_t dest_offset = file->offset;
+		uint32_t src_offset = 0;
+		uint32_t chunk_size = (uint32_t)region->chunk_size;		// cache these as pointer dereferencing cripples performance in a tight loop
+		uint32_t stride = (uint32_t)region->stride;
+		uint32_t byte_swap = region->byte_swap;
+		for (uint32_t i = 0; i < num_chunks; i++)
         {
-          CopyBytes(dest, dest_offset, src, src_offset, region->chunk_size, region->byte_swap);
-          dest_offset += region->stride;
-          src_offset += region->chunk_size;
+          CopyBytes(dest, dest_offset, src, src_offset, chunk_size, byte_swap);
+          dest_offset += stride;
+          src_offset += chunk_size;
         }
       }
     }
