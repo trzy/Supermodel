@@ -29,7 +29,10 @@
 #ifndef INCLUDED_MODEL3GRAPHICSSTATE_H
 #define INCLUDED_MODEL3GRAPHICSSTATE_H
 
+#include "Util/NewConfig.h"
 #include "Model3/IEmulator.h"
+#include "Game.h"
+#include "ROMSet.h"
 
 /*
  * CModel3GraphicsState:
@@ -39,34 +42,34 @@
 class CModel3GraphicsState: public IEmulator, public IBus
 {
 public:
-  void SaveState(CBlockFile *SaveState)
+  void SaveState(CBlockFile *SaveState) override
   {
   }
   
-  void LoadState(CBlockFile *SaveState)
+  void LoadState(CBlockFile *SaveState) override
   {
     m_real3D.LoadState(SaveState);
     m_tileGen.LoadState(SaveState);
   }
 
-  void SaveNVRAM(CBlockFile *NVRAM)
+  void SaveNVRAM(CBlockFile *NVRAM) override
   {
   }
 
-  void LoadNVRAM(CBlockFile *NVRAM)
+  void LoadNVRAM(CBlockFile *NVRAM) override
   {
   }
 
-  void ClearNVRAM(void)
+  void ClearNVRAM(void) override
   {
   }
 
-  void RunFrame(void)
+  void RunFrame(void) override
   {
     RenderFrame();
   }
 
-  void RenderFrame(void)
+  void RenderFrame(void) override
   {
     BeginFrameVideo();
     m_tileGen.BeginFrame();
@@ -77,7 +80,7 @@ public:
     EndFrameVideo();
   }
 
-  void Reset(void)
+  void Reset(void) override
   {
     // Load state
     CBlockFile SaveState;
@@ -90,50 +93,41 @@ public:
     }
   }
 
-  const Game &GetGame(void)
+  const Game &GetGame(void) const override
   {
     return m_game;
   }
 
-  bool LoadGame(const Game &game)
+  bool LoadGame(const Game &game, const ROMSet &rom_set) override
   {
-    //TODO: write me
-    return FAIL;
-  }
-
-  //TODO: replicate this logic in LoadGame()
-  bool LoadROMSet(const struct GameInfo *gameList, const char *zipFile)
-  {
-    // Load ROM
-    struct ROMMap map[] =
+    m_game = game;
+    if (rom_set.get_rom("vrom").size <= 32*0x100000)
     {
-      { "VROM", m_vrom.get() },
-      { NULL, NULL }
-    };
-    m_game = LoadROMSetFromZIPFile(map, gameList, zipFile, false);
-    if (NULL == m_game)
-      return ErrorLog("Failed to load ROM set."); 
-    if (m_game->vromSize < 0x4000000)   // VROM is actually 64 MB
-      CopyRegion(m_vrom.get(), m_game->vromSize, 0x4000000, m_vrom.get(), m_game->vromSize);
-    m_real3D.SetStep(m_game->step);
+      rom_set.get_rom("vrom").CopyTo(&m_vrom.get()[0], 32*100000);
+      rom_set.get_rom("vrom").CopyTo(&m_vrom.get()[32*0x100000], 32*0x100000);
+    }
+    else
+      rom_set.get_rom("vrom").CopyTo(m_vrom.get(), 64*0x100000);
+    int stepping = ((m_game.stepping[0] - '0') << 4) | (m_game.stepping[2] - '0');
+    m_real3D.SetStepping(stepping);
     return OKAY;
   }
 
-  void AttachRenderers(CRender2D *render2D, IRender3D *render3D)
+  void AttachRenderers(CRender2D *render2D, IRender3D *render3D) override
   {
     m_tileGen.AttachRenderer(render2D);
     m_real3D.AttachRenderer(render3D);
   }
 
-  void AttachInputs(CInputs *InputsPtr)
+  void AttachInputs(CInputs *InputsPtr) override
   {
   }
 
-  void AttachOutputs(COutputs *OutputsPtr)
+  void AttachOutputs(COutputs *OutputsPtr) override
   {
   }
 
-  bool Init(void)
+  bool Init(void) override
   {
     m_vrom.reset(new uint8_t[64*1024*1024], std::default_delete<uint8_t[]>());
     m_irq.Init();
@@ -144,18 +138,20 @@ public:
     return OKAY;
   }
 
-  bool PauseThreads(void)
+  bool PauseThreads(void) override
   {
     return true;
   }
 
-  bool ResumeThreads(void)
+  bool ResumeThreads(void) override
   {
     return true;
   }
 
-  CModel3GraphicsState(const std::string &filePath)
-    : m_stateFilePath(filePath)
+  CModel3GraphicsState(const Util::Config::Node &config, const std::string &filePath)
+    : m_stateFilePath(filePath),
+      m_tileGen(config),
+      m_real3D(config)
   {
   }
 
@@ -166,7 +162,7 @@ public:
 private:
   const std::string         m_stateFilePath;
   std::shared_ptr<uint8_t>  m_vrom;
-  const struct GameInfo     *m_game;
+  Game                      m_game;
   CIRQ                      m_irq;
   CTileGen                  m_tileGen;
   CReal3D                   m_real3D;

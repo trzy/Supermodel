@@ -1,4 +1,3 @@
-//TODO: collapse constructor, Init() and LoadROMSet().
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.

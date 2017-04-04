@@ -1500,7 +1500,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
         cmd_line.enter_debugger = true;
 #endif
 #ifdef DEBUG
-      else if (arg == "-gfx-state")
+      else if (arg == "-gfx-state" || arg.find("-gfx-state=") == 0)
       {
         std::vector<std::string> parts = Util::Format(arg).Split('=');
         if (parts.size() != 2)
@@ -1603,7 +1603,7 @@ int main(int argc, char **argv)
   
   // Create Model 3 emulator
 #ifdef DEBUG
-  IEmulator *Model3 = s_gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3(s_runtime_config)) : static_cast<IEmulator *>(new CModel3GraphicsState(s_gfxStatePath));
+  IEmulator *Model3 = s_gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3(s_runtime_config)) : static_cast<IEmulator *>(new CModel3GraphicsState(s_runtime_config, s_gfxStatePath));
 #else
   IEmulator *Model3 = new CModel3(s_runtime_config);
 #endif
