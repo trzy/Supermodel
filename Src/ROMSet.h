@@ -5,6 +5,7 @@
 #include <string>
 #include <map>
 #include <algorithm>
+#include <cstring>
 
 // Holds a single ROM region
 struct ROM
