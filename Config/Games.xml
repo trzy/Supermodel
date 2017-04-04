@@ -1,6 +1,5 @@
 <!--
   TODO:
-    - Add remaining games :P
     - ROM patches should be placed here
 -->
 
@@ -160,6 +159,32 @@
   </roms>
 </game>
 
+<game name="bassdx" parent="bass">
+  <parent>bass</parent>
+  <identity>
+    <title>Sega Bass Fishing</title>
+    <version>Deluxe</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="fishing" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20837.20" crc32="0x66FC2084" />
+      <file offset="2" name="epr-20836.19" crc32="0xF8E8EF57" />
+      <file offset="4" name="epr-20835.18" crc32="0xF8F19BB2" />
+      <file offset="6" name="epr-20834.17" crc32="0x17F466A6" />
+    </region>
+  </roms>
+</game>
+
 <game name="dayto2pe">
   <identity>
     <title>Daytona USA 2 Power Edition</title>
@@ -252,7 +277,7 @@
 <game name="dirtdvls">
   <identity>
     <title>Dirt Devils</title>
-    <version>Revision A</version>
+    <version>Export, Revision A</version>
     <manufacturer>Sega</manufacturer>
     <year>1998</year>
   </identity>
@@ -313,6 +338,36 @@
       <file offset="0x000000" name="mpr-21031.22" crc32="0x32F6B23A" />
       <file offset="0x400000" name="mpr-21033.24" crc32="0x253D3C70" />
       <file offset="0x800000" name="mpr-21032.23" crc32="0x3D3FF407" />
+    </region>
+  </roms>
+</game>
+
+<game name="dirtdvlsa" parent="dirtdvls">
+  <identity>
+    <title>Dirt Devils</title>
+    <version>Australia, Revision A</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <mpeg_board>DSB2</mpeg_board>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shiftupdown" />
+      <input type="handbrake" />
+      <input type="viewchange" />
+    </inputs>
+    <encryption_key>0x29290f17</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-21061a" crc32="0x755CA612" />
+      <file offset="2" name="epr-21060a" crc32="0x5EBE2816" />
+      <file offset="4" name="epr-21059a" crc32="0xF31A2AA4" />
+      <file offset="6" name="epr-21058a" crc32="0x4D7FDC8D" />
     </region>
   </roms>
 </game>
@@ -463,9 +518,37 @@
   </roms>
 </game>
 
+<game name="getbass" parent="bass">
+  <identity>
+    <title>Get Bass</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="fishing" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20312.20" crc32="0x9D8B8B58" />
+      <file offset="2" name="epr-20311.19" crc32="0xF721050D" />
+      <file offset="4" name="epr-20310.18" crc32="0x4EFCDDC9" />
+      <file offset="6" name="epr-20309.17" crc32="0xA42E1033" />
+    </region>
+      <region name="driveboard_program" stride="1" chunk_size="1">
+      <file offset="0" name="epr-20690.ic11" crc32="0xB7DA201D" />
+      </region>
+  </roms>
+</game>
+
 <game name="harley">
   <identity>
     <title>Harley-Davidson & L.A. Riders</title>
+    <version>Revision B</version>
     <manufacturer>Sega</manufacturer>
     <year>1997</year>
   </identity>
@@ -530,6 +613,34 @@
       <file offset="0x400000" name="mpr-20375.24" crc32="0x906ACE86" />
       <file offset="0x800000" name="mpr-20374.23" crc32="0xFCF6EA21" />
       <file offset="0xC00000" name="mpr-20376.25" crc32="0xDEEED366" />
+    </region>
+  </roms>
+</game>
+
+<game name="harleya" parent="harley">
+  <identity>
+    <title>Harley-Davidson & L.A. Riders</title>
+    <version>Revision A</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shiftupdown" />
+      <input type="harley" />
+      <input type="viewchange" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20396a.20" crc32="0x16B0106B" />
+      <file offset="2" name="epr-20395a.19" crc32="0x761F4976" />
+      <file offset="4" name="epr-20394a.18" crc32="0xCE29E2B6" />
+      <file offset="6" name="epr-20393a.17" crc32="0xB5646556" />
     </region>
   </roms>
 </game>
@@ -983,7 +1094,74 @@
   </roms>
 </game>
 
-<game name="scudp" parent="scud">
+<game name="scudj" parent="scud">
+  <identity>
+    <title>Scud Race</title>
+    <version>Japan</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1996</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <mpeg_board>DSB1</mpeg_board>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shift4" />
+      <input type="vr4" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-19607.20a" crc32="0x24301A12" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-19589.4" crc32="0x5482238F" />
+      <file offset="0x0000002" name="mpr-19590.3" crc32="0xA5CD4718" />
+      <file offset="0x0000004" name="mpr-19591.2" crc32="0x48E1AAFF" />
+      <file offset="0x0000006" name="mpr-19592.1" crc32="0xD9003B6F" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-19593.8" crc32="0x21E48FF8" />
+      <file offset="0x1000002" name="mpr-19594.7" crc32="0x654C26B0" />
+      <file offset="0x1000004" name="mpr-19595.6" crc32="0xD06FD9D6" />
+      <file offset="0x1000006" name="mpr-19596.5" crc32="0x5672E3F4" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-19597.12" crc32="0x4D0FFE60" />
+      <file offset="0x2000002" name="mpr-19598.11" crc32="0xA081592E" />
+      <file offset="0x2000004" name="mpr-19599.10" crc32="0x65C1D33C" />
+      <file offset="0x2000006" name="mpr-19600.9"  crc32="0xA25DA127" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-19574.26" crc32="0x9BE8F314" />
+      <file offset="2"  name="mpr-19573.27" crc32="0x57B61D65" />
+      <file offset="4"  name="mpr-19576.28" crc32="0x85F9B587" />
+      <file offset="6"  name="mpr-19575.29" crc32="0xDAB11C34" />
+      <file offset="8"  name="mpr-19578.30" crc32="0xAE882C42" />
+      <file offset="10" name="mpr-19577.31" crc32="0x36A1FE5D" />
+      <file offset="12" name="mpr-19580.32" crc32="0x62503CEE" />
+      <file offset="14" name="mpr-19579.33" crc32="0xAF9698D0" />
+      <file offset="16" name="mpr-19582.34" crc32="0xC8B9CF1A" />
+      <file offset="18" name="mpr-19581.35" crc32="0x8863C2D7" />
+      <file offset="20" name="mpr-19584.36" crc32="0x256B056C" />
+      <file offset="22" name="mpr-19583.37" crc32="0xC22CB5AA" />
+      <file offset="24" name="mpr-19586.38" crc32="0xAC37163E" />
+      <file offset="26" name="mpr-19585.39" crc32="0xE2598012" />
+      <file offset="28" name="mpr-19588.40" crc32="0x42E20AE9" />
+      <file offset="30" name="mpr-19587.41" crc32="0xC288C910" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-19611a.21" crc32="0x9D4A34F6" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-19601.22" crc32="0xBA350FCC" />
+      <file offset="0x400000" name="mpr-19602.24" crc32="0xA92231C1" />
+    </region>
+  </roms>
+</game>
+
+<game name="scudplus" parent="scud">
   <identity>
     <title>Scud Race Plus</title>
     <version>Revision A</version>
@@ -1020,6 +1198,49 @@
     </region>
     <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
       <file offset="0x400000" name="mpr-20101.24" crc32="0x66D1E31F" />
+    </region>
+  </roms>
+</game>
+
+<game name="scudplusa" parent="scud">
+  <identity>
+    <title>Scud Race Plus</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <mpeg_board>DSB1</mpeg_board>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shift4" />
+      <input type="vr4" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20095.20" crc32="0x44467BC1" />
+      <file offset="2" name="epr-20094.19" crc32="0x299B6257" />
+      <file offset="4" name="epr-20093.18" crc32="0x9A85C611 " />
+      <file offset="6" name="epr-20092.17" crc32="0x6F9161C1" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+     <!-- CROM3 -->
+      <file offset="0x3000000" name="mpr-20100.16" crc32="0xC99E2C01" />
+      <file offset="0x3000002" name="mpr-20099.15" crc32="0xFC9BD7D9" />
+      <file offset="0x3000004" name="mpr-20098.14" crc32="0x8355FA41" />
+      <file offset="0x3000006" name="mpr-20097.13" crc32="0x269A9DBE" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-20096a.21" crc32="0x0FEF288B" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x400000" name="mpr-20101.24" crc32="0x66D1E31F" />
+    </region>
+    <region name="driveboard_program" stride="1" chunk_size="1">
+      <file offset="0" name="epr-19338.bin" crc32="0xDBF88DE6" />
     </region>
   </roms>
 </game>
@@ -1348,6 +1569,78 @@
   </roms>
 </game>
 
+<game name="srally2x" parent="srally2">
+  <identity>
+    <title>Sega Rally 2</title>
+    <version>Deluxe</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.0</stepping>
+    <mpeg_board>DSB2</mpeg_board>
+    <inputs>
+      <input type="common" />
+      <input type="vehicle" />
+      <input type="shift4" />
+      <input type="handbrake" />
+      <input type="viewchange" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20505.20" crc32="0xC24A5097" />
+      <file offset="2" name="epr-20504.19" crc32="0x30BBC46D" />
+      <file offset="4" name="epr-20503.18" crc32="0x6E238B3D" />
+      <file offset="6" name="epr-20502.17" crc32="0xAF16846D" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-20475.4" crc32="0xD0F059EE" />
+      <file offset="0x0000002" name="mpr-20474.3" crc32="0x66CB4C8E" />
+      <file offset="0x0000004" name="mpr-20473.2" crc32="0xDD8E3131" />
+      <file offset="0x0000006" name="mpr-20472.1" crc32="0xDB8D6A00" />
+      <!-- CROM1 -->
+      <file offset="0x1000000" name="mpr-20479.8" crc32="0x82EC5488" />
+      <file offset="0x1000002" name="mpr-20478.7" crc32="0x5DFD59F7" />
+      <file offset="0x1000004" name="mpr-20477.6" crc32="0x0B5AC3AD" />
+      <file offset="0x1000006" name="mpr-20476.5" crc32="0xCC97D758" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-20483.12" crc32="0x7D487F3A" />
+      <file offset="0x2000002" name="mpr-20482.11" crc32="0xD21668D1" />
+      <file offset="0x2000004" name="mpr-20481.10" crc32="0x42ACC4F9" />
+      <file offset="0x2000006" name="mpr-20480.9"  crc32="0x1E486A2E" />
+    </region>
+    <region name="vrom" stride="32" chunk_size="2">
+      <file offset="0"  name="mpr-20486.26" crc32="0xDAB1F70F" />
+      <file offset="2"  name="mpr-20487.27" crc32="0xFFB38774" />
+      <file offset="4"  name="mpr-20488.28" crc32="0x0C25A1FB" />
+      <file offset="6"  name="mpr-20489.29" crc32="0x6E8A911A" />
+      <file offset="8"  name="mpr-20490.30" crc32="0x93DA0363" />
+      <file offset="10" name="mpr-20491.31" crc32="0xC4808E7A" />
+      <file offset="12" name="mpr-20492.32" crc32="0xD1B27B2B" />
+      <file offset="14" name="mpr-20493.33" crc32="0xE43CC6AF" />
+      <file offset="16" name="mpr-20494.34" crc32="0xB997B531" />
+      <file offset="18" name="mpr-20495.35" crc32="0x72480F09" />
+      <file offset="20" name="mpr-20496.36" crc32="0x96F6D3A8" />
+      <file offset="22" name="mpr-20497.37" crc32="0x7DC700A3" />
+      <file offset="24" name="mpr-20498.38" crc32="0x4E844081" />
+      <file offset="26" name="mpr-20499.39" crc32="0x09D9C7D1" />
+      <file offset="28" name="mpr-20500.40" crc32="0x3766FD87" />
+      <file offset="30" name="mpr-20501.41" crc32="0x741DA4AC" />
+    </region>
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-20506.21" crc32="0x855AF67B" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-20484.22" crc32="0x8AC3FBC4" />
+      <file offset="0x400000" name="mpr-20485.24" crc32="0xCFD8C19B" />
+    </region>
+  </roms>
+</game>
+
+
 <game name="swtrilgy">
   <identity>
     <title>Star Wars Trilogy</title>
@@ -1433,6 +1726,7 @@
 <game name="vf3">
   <identity>
     <title>Virtua Fighter 3</title>
+    <version>Revision C</version>
     <manufacturer>Sega</manufacturer>
     <year>1996</year>
   </identity>
@@ -1498,6 +1792,64 @@
     <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
       <file offset="0x000000" name="mpr-19209.22" crc32="0x3715E38C" />
       <file offset="0x400000" name="mpr-19210.24" crc32="0xC03D6502" />
+    </region>
+  </roms>
+</game>
+
+<game name="vf3a" parent="vf3">
+  <identity>
+    <title>Virtua Fighter 3</title>
+    <version>Revision A</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1996</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="fighting" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr19230a.20" crc32="0x4DFF78ED" />
+      <file offset="2" name="epr19229a.19" crc32="0x5F1404B8" />
+      <file offset="4" name="epr19228a.18" crc32="0x82F17AB5" />
+      <file offset="6" name="epr19227a.17" crc32="0x7139931A" />
+    </region>
+  </roms>
+</game>
+
+<game name="vf3tb" parent="vf3">
+  <identity>
+    <title>Virtua Fighter 3 Team Battle</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1996</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="fighting" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20129.20" crc32="0x0DB897CE" />
+      <file offset="2" name="epr-20128.19" crc32="0xFFBDBDC5" />
+      <file offset="4" name="epr-20127.18" crc32="0x5C0F694B" />
+      <file offset="6" name="epr-20126.17" crc32="0x27ECD3B0" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-20133.4" crc32="0x3D9B5171" />
+      <file offset="0x0000002" name="mpr-20132.3" crc32="0xF7557474" />
+      <file offset="0x0000004" name="mpr-20131.2" crc32="0x51FA69F1" />
+      <file offset="0x0000006" name="mpr-20130.1" crc32="0x40640446" />
     </region>
   </roms>
 </game>
@@ -1576,6 +1928,58 @@
     </region>
   </roms>
 </game>
+
+<game name="von2a" parent="von2">
+  <identity>
+    <title>Virtual On: Oratorio Tangram</title>
+    <version>Revision A</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="twin_joysticks" />
+    </inputs>
+    <encryption_key>0x292a0e97</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20686a.20" crc32="0x63E17BF5" />
+      <file offset="2" name="epr-20685a.19" crc32="0xDC07C404" />
+      <file offset="4" name="epr-20684a.18" crc32="0xC84F7F23" />
+      <file offset="6" name="epr-20683a.17" crc32="0x16B202E9" />
+    </region>
+  </roms>
+</game>
+
+<game name="von254g" parent="von2">
+  <identity>
+    <title>Virtual On: Oratorio Tangram</title>
+    <version>Version 5.4g</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.0</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="twin_joysticks" />
+    </inputs>
+    <encryption_key>0x292a0e97</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-21791.20" crc32="0xD0BB3CA3" />
+      <file offset="2" name="epr-21790.19" crc32="0x2AE1EFD3" />
+      <file offset="4" name="epr-21789.18" crc32="0x3069108F" />
+      <file offset="6" name="epr-21788.17" crc32="0x97066BCF" />
+    </region>
+  </roms>
+</game>
   
 <game name="vs2">
   <identity>
@@ -1650,8 +2054,61 @@
   </roms>
 </game>
 
-<!-- TODO: vs2 is the parent -->
-<game name="vs298">
+<game name="vs215" parent="vs2">
+  <identity>
+    <title>Virtua Striker 2</title>
+    <version>Step 1.5</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="joystick2" />
+      <input type="soccer" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-19897.20" crc32="0x25A722A9" />
+      <file offset="2" name="epr-19898.19" crc32="0x4389D9CE" />
+      <file offset="4" name="epr-19899.18" crc32="0x8CC2BE9F" />
+      <file offset="6" name="epr-19900.17" crc32="0x8FB6045D" />
+    </region>
+  </roms>
+</game>
+
+<game name="vs215o" parent="vs2">
+  <identity>
+    <title>Virtua Striker 2</title>
+    <version>Step 1.5, Japan</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1997</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="joystick2" />
+      <input type="soccer" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-19803.20" crc32="0x1E55A5B8" />
+      <file offset="2" name="epr-19804.19" crc32="0xBBACA578" />
+      <file offset="4" name="epr-19805.18" crc32="0xD9E40606" />
+      <file offset="6" name="epr-19806.17" crc32="0x95E1B970" />
+    </region>
+  </roms>
+</game>
+
+<game name="vs298" parent="vs2">
   <identity>
     <title>Virtua Striker 2 '98</title>
     <manufacturer>Sega</manufacturer>
@@ -1681,11 +2138,6 @@
       <file offset="0x0000002" name="mpr-19893.3" crc32="0x5C83DCAA" />
       <file offset="0x0000004" name="mpr-19892.2" crc32="0x8E5D3FE7" />
       <file offset="0x0000006" name="mpr-19891.1" crc32="0x9ECB0B39" />
-      <!-- CROM1 -->
-      <file offset="0x1000000" name="mpr-19776.8" crc32="0x5B31C7C1" />
-      <file offset="0x1000002" name="mpr-19775.7" crc32="0xA6B32BD9" />
-      <file offset="0x1000004" name="mpr-19774.6" crc32="0x1D61D287" />
-      <file offset="0x1000006" name="mpr-19773.5" crc32="0x4E381AE7" />
       <!-- CROM2 -->
       <file offset="0x2000000" name="mpr-20898.12" crc32="0x94040D37" />
       <file offset="0x2000002" name="mpr-20897.11" crc32="0xC5CF067A" />
@@ -1697,23 +2149,56 @@
       <file offset="0x3000004" name="mpr-20900.14" crc32="0x7A38B571" />
       <file offset="0x3000006" name="mpr-20899.13" crc32="0x65422425" />
     </region>
-    <region name="vrom" stride="32" chunk_size="2">
-      <file offset="0"  name="mpr-19787.26" crc32="0x856CC4AD" />
-      <file offset="2"  name="mpr-19788.27" crc32="0x72EF970A" />
-      <file offset="4"  name="mpr-19789.28" crc32="0x076ADD9A" />
-      <file offset="6"  name="mpr-19790.29" crc32="0x74CE238C" />
-      <file offset="8"  name="mpr-19791.30" crc32="0x75A98F96" />
-      <file offset="10" name="mpr-19792.31" crc32="0x85C81633" />
-      <file offset="12" name="mpr-19793.32" crc32="0x7F288CC4" />
-      <file offset="14" name="mpr-19794.33" crc32="0xE0C1C370" />
-      <file offset="16" name="mpr-19795.34" crc32="0x90989B20" />
-      <file offset="18" name="mpr-19796.35" crc32="0x5D1AAB8D" />
-      <file offset="20" name="mpr-19797.36" crc32="0xF5EDC891" />
-      <file offset="22" name="mpr-19798.37" crc32="0xAE2DA90F" />
-      <file offset="24" name="mpr-19799.38" crc32="0x92B18AD7" />
-      <file offset="26" name="mpr-19800.39" crc32="0x4A57B16C" />
-      <file offset="28" name="mpr-19801.40" crc32="0xBEB79A00" />
-      <file offset="30" name="mpr-19802.41" crc32="0xF2C3A7B7" />
+    <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0" name="epr-20921.21" crc32="0x30F032A7" />
+    </region>
+    <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+      <file offset="0x000000" name="mpr-20903.22" crc32="0xE343E131" />
+      <file offset="0x400000" name="mpr-20904.24" crc32="0x21A91B84" />
+    </region>
+  </roms>
+</game>
+
+<game name="vs29815" parent="vs2">
+  <identity>
+    <title>Virtua Striker 2 '98</title>
+    <version>Step 1.5</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1998</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="joystick2" />
+      <input type="soccer" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-20912.20" crc32="0xCD2C0538" />
+      <file offset="2" name="epr-20911.19" crc32="0xACB8FD97" />
+      <file offset="4" name="epr-20910.18" crc32="0xDC75A2E3" />
+      <file offset="6" name="epr-20909.17" crc32="0x3DFF0D7E" />
+    </region>
+    <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+      <!-- CROM0 -->
+      <file offset="0x0000000" name="mpr-19894.4" crc32="0x09C065CC" />
+      <file offset="0x0000002" name="mpr-19893.3" crc32="0x5C83DCAA" />
+      <file offset="0x0000004" name="mpr-19892.2" crc32="0x8E5D3FE7" />
+      <file offset="0x0000006" name="mpr-19891.1" crc32="0x9ECB0B39" />
+      <!-- CROM2 -->
+      <file offset="0x2000000" name="mpr-20898.12" crc32="0x94040D37" />
+      <file offset="0x2000002" name="mpr-20897.11" crc32="0xC5CF067A" />
+      <file offset="0x2000004" name="mpr-20896.10" crc32="0xBF1CBD5E" />
+      <file offset="0x2000006" name="mpr-20895.9"  crc32="0x9B51CBF5" />
+      <!-- CROM3 -->
+      <file offset="0x3000000" name="mpr-20902.16" crc32="0xF4D3FF3A" />
+      <file offset="0x3000002" name="mpr-20901.15" crc32="0x3492DDC8" />
+      <file offset="0x3000004" name="mpr-20900.14" crc32="0x7A38B571" />
+      <file offset="0x3000006" name="mpr-20899.13" crc32="0x65422425" />
     </region>
     <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
       <file offset="0" name="epr-20921.21" crc32="0x30F032A7" />
@@ -1728,6 +2213,7 @@
 <game name="vs2v991">
   <identity>
     <title>Virtua Striker 2 '99.1</title>
+    <version>Revision B, Japan</version>
     <manufacturer>Sega</manufacturer>
     <year>1999</year>
   </identity>
@@ -1795,6 +2281,88 @@
     <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
       <file offset="0x000000" name="mpr-21513.22" crc32="0xCCA1CC00" />
       <file offset="0x400000" name="mpr-21514.24" crc32="0x6CEDD292" />
+    </region>
+  </roms>
+</game>
+
+<game name="vs29915" parent="vs2v991">
+  <identity>
+    <title>Virtua Striker 2 '99</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1999</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>1.5</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="joystick2" />
+      <input type="soccer" />
+    </inputs>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-21534.20" crc32="0xD49AE219" />
+      <file offset="2" name="epr-21533.19" crc32="0xEA728471" />
+      <file offset="4" name="epr-21532.18" crc32="0x314447F8" />
+      <file offset="6" name="epr-21531.17" crc32="0xEC45015C" />
+    </region>
+  </roms>
+</game>
+
+<game name="vs299" parent="vs2v991">
+  <parent>vs2v991</parent>
+  <identity>
+    <title>Virtua Striker 2 '99</title>
+    <manufacturer>Sega</manufacturer>
+    <year>1999</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="joystick2" />
+      <input type="soccer" />
+    </inputs>
+    <encryption_key>0x29222ac8</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-21538.20" crc32="0x02DF6AC8" />
+      <file offset="2" name="epr-21537.19" crc32="0xFB37DC16" />
+      <file offset="4" name="epr-21536.18" crc32="0x9AF2B0D5" />
+      <file offset="6" name="epr-21535.17" crc32="0x976A00BF" />
+    </region>
+  </roms>
+</game>
+
+<game name="vs299a" parent="vs2v991">
+  <identity>
+    <title>Virtua Striker 2 '99</title>
+    <version>Revision A</version>
+    <manufacturer>Sega</manufacturer>
+    <year>1999</year>
+  </identity>
+  <hardware>
+    <platform>Sega Model 3</platform>
+    <stepping>2.1</stepping>
+    <inputs>
+      <input type="common" />
+      <input type="joystick1" />
+      <input type="joystick2" />
+      <input type="soccer" />
+    </inputs>
+    <encryption_key>0x29222ac8</encryption_key>
+  </hardware>
+  <roms>
+    <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+      <file offset="0" name="epr-21538a.20" crc32="0x42BEBA70" />
+      <file offset="2" name="epr-21537a.19" crc32="0xF72A8F2F" />
+      <file offset="4" name="epr-21536a.18" crc32="0x95D49D6E" />
+      <file offset="6" name="epr-21535a.17" crc32="0x8E4EC341" />
     </region>
   </roms>
 </game>
