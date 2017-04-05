@@ -37,7 +37,7 @@ static const char *fragmentShaderR3D =
 "uniform bool	microTexture;\n"
 "uniform float	microTextureScale;\n"
 "uniform vec2   baseTexSize;\n"
-"uniform bool   texureInverted;\n"
+"uniform bool   textureInverted;\n"
 "uniform bool	alphaTest;\n"
 "uniform bool	textureAlpha;\n"
 "uniform vec3	fogColour;\n"
@@ -62,7 +62,7 @@ static const char *fragmentShaderR3D =
 "{\n"
 	"vec4 tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
 
-	"if(texureInverted) {\n"
+	"if(textureInverted) {\n"
 		"tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);\n"
 	"}\n"
 
@@ -226,7 +226,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locAlphaTest		= glGetUniformLocation(m_shaderProgram, "alphaTest");
 	m_locMicroTexScale	= glGetUniformLocation(m_shaderProgram, "microTextureScale");
 	m_locBaseTexSize	= glGetUniformLocation(m_shaderProgram, "baseTexSize");
-	m_locTextureInverted= glGetUniformLocation(m_shaderProgram, "texureInverted");
+	m_locTextureInverted= glGetUniformLocation(m_shaderProgram, "textureInverted");
 
 	m_locFogIntensity	= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity		= glGetUniformLocation(m_shaderProgram, "fogDensity");
