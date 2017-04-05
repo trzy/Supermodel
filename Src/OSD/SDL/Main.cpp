@@ -785,7 +785,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Hide mouse if fullscreen, enable crosshairs for gun games
   Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
-  gameHasLightguns = !!(game.inputs & (GAME_INPUT_GUN1|GAME_INPUT_GUN2));
+  gameHasLightguns = !!(game.inputs & (Game::INPUT_GUN1|Game::INPUT_GUN2));
   if (gameHasLightguns)
     videoInputs = Inputs;
   else
