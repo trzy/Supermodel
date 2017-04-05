@@ -182,24 +182,21 @@ CTriggerInput::CTriggerInput(const char *inputId, const char *inputLabel, unsign
 	//
 }
 
-void CTriggerInput::ReadFromINIFile(CINIFile *ini, const char *section)
+void CTriggerInput::LoadFromConfig(const Util::Config::Node &config)
 {
-	CInput::ReadFromINIFile(ini, section);
-
-	string key("Input");
-	key.append(id);
-	unsigned autoTrigger;
-	if (ini->Get(section, key, autoTrigger) == OKAY)
-		m_autoTrigger = !!autoTrigger;
+  string key("Input");
+  key.append(id);
+  unsigned autoTrigger;
+  auto *node = config.TryGet(key);
+  if (node)
+    m_autoTrigger = !!node->ValueAs<unsigned>();
 }
 
-void CTriggerInput::WriteToINIFile(CINIFile *ini, const char *section)
+void CTriggerInput::StoreToConfig(Util::Config::Node *config)
 {
-	CInput::WriteToINIFile(ini, section);
-
-	string key("Input");
-	key.append(id);
-	ini->Set(section, key, (unsigned)m_autoTrigger);
+  string key("Input");
+  key.append(id);
+  config->Set(key, (unsigned) m_autoTrigger);
 }
 
 void CTriggerInput::Poll()

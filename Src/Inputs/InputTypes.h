@@ -159,9 +159,9 @@ public:
 	CTriggerInput(const char *inputId, const char *inputLabel, unsigned inputGameFlags, CSwitchInput *triggerInput, CSwitchInput *offscreenInput,
 		UINT16 offVal = 0x00, UINT16 onVal = 0x01);
 
-	void ReadFromINIFile(CINIFile *ini, const char *section);
+	void LoadFromConfig(const Util::Config::Node &config);
 
-	void WriteToINIFile(CINIFile *ini, const char *section);
+	void StoreToConfig(Util::Config::Node *config);
 
 	/*
 	 * Polls (updates) the input, updating its trigger value and offscreen value from the switch inputs

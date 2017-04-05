@@ -41,7 +41,6 @@ class CAxisInput;
 class CSwitchInput;
 class CGearShift4Input;
 class CTriggerInput;
-class CINIFile;
 struct Game;
 
 /*
@@ -270,13 +269,11 @@ public:
    * Loads the input mapping assignments from the given config object.
    */
   void LoadFromConfig(const Util::Config::Node &config);
-  void ReadFromINIFile(CINIFile *ini, const char *section);
-
+  
   /*
    * Stores the current input mapping assignments to the given config object.
    */
   void StoreToConfig(Util::Config::Node *config);
-  void WriteToINIFile(CINIFile *ini, const char *section);
 
   /*
    * Configures the current input mapping assignments for the given game, or all inputs if game is NULL, by asking the user for input.

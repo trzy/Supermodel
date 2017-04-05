@@ -35,7 +35,6 @@
 
 class CInputSource;
 class CInputSystem;
-class CINIFile;
 
 // Flags for inputs
 #define INPUT_FLAGS_SWITCH  0x0001
@@ -154,13 +153,11 @@ public:
 	 * Loads the input's mapping(s) from the given config object, as well as any other settings.
 	 */
 	virtual void LoadFromConfig(const Util::Config::Node &config);
-	virtual void ReadFromINIFile(CINIFile *ini, const char *section);
 
 	/*
 	 * Stores the current input mapping(s) to the given config object, as well as any other settings.
 	 */
 	virtual void StoreToConfig(Util::Config::Node *config);
-	virtual void WriteToINIFile(CINIFile *ini, const char *section);
 
 	void InputSystemChanged();
 

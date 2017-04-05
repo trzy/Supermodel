@@ -1115,39 +1115,6 @@ void CInputSystem::StoreKeySettings(Util::Config::Node *config, KeySettings *set
     config->Set(baseKey + "DecaySpeed", settings->decaySpeed);
 }
 
-KeySettings *CInputSystem::ReadKeySettings(CINIFile *ini, const char *section, int kbdNum)
-{
-  // Get common key settings and create new key settings based on that
-  KeySettings *common = (kbdNum != ANY_KEYBOARD ? GetKeySettings(ANY_KEYBOARD, true) : &m_defKeySettings);
-  KeySettings *settings = new KeySettings(*common);
-  settings->kbdNum = kbdNum;
-
-  // Read settings from ini file
-  string baseKey("InputKey");
-  if (kbdNum != ANY_KEYBOARD)
-    baseKey.append(IntToString(kbdNum + 1));
-  bool read = false;
-  read |= ini->Get(section, baseKey + "Sensitivity", settings->sensitivity) == OKAY;
-  read |= ini->Get(section, baseKey + "DecaySpeed", settings->decaySpeed) == OKAY;
-  if (read)
-    return settings;
-  delete settings;
-  return NULL;
-}
-
-void CInputSystem::WriteKeySettings(CINIFile *ini, const char *section, KeySettings *settings)
-{
-  // Get common key settings
-  KeySettings *common = (settings->kbdNum != ANY_KEYBOARD ? GetKeySettings(ANY_KEYBOARD, true) : &m_defKeySettings);
-
-  // Write to ini file any settings that are different to common settings
-  string baseKey("InputKey");
-  if (settings->kbdNum != ANY_KEYBOARD)
-    baseKey.append(IntToString(settings->kbdNum + 1));
-  if (settings->sensitivity != common->sensitivity) ini->Set(section, baseKey + "Sensitivity", settings->sensitivity);
-  if (settings->decaySpeed != common->decaySpeed) ini->Set(section, baseKey + "DecaySpeed", settings->decaySpeed);
-}
-
 void CInputSystem::PrintMouseSettings(int mseNum, MouseSettings *settings)
 {
   for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
@@ -1195,42 +1162,6 @@ void CInputSystem::StoreMouseSettings(Util::Config::Node *config, MouseSettings 
   {
     if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
       config->Set(baseKey + s_axisIds[axisNum] + "DeadZone", settings->deadZones[axisNum]);
-  }
-}
-
-MouseSettings *CInputSystem::ReadMouseSettings(CINIFile *ini, const char *section, int mseNum)
-{
-  // Get common mouse settings and create new mouse settings based on that
-  MouseSettings *common = (mseNum != ANY_MOUSE ? GetMouseSettings(ANY_MOUSE, true) : &m_defMseSettings);
-  MouseSettings *settings = new MouseSettings(*common);
-  settings->mseNum = mseNum;
-
-  // Read settings from ini file
-  string baseKey("InputMouse");
-  if (mseNum != ANY_MOUSE)
-    baseKey.append(IntToString(mseNum + 1));
-  bool read = false;
-  for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
-    read |= ini->Get(section, baseKey + s_axisIds[axisNum] + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
-  if (read)
-    return settings;
-  delete settings;
-  return NULL;
-}
-
-void CInputSystem::WriteMouseSettings(CINIFile *ini, const char *section, MouseSettings *settings)
-{
-  // Get common mouse settings
-  MouseSettings *common = (settings->mseNum != ANY_MOUSE ? GetMouseSettings(ANY_MOUSE, true) : &m_defMseSettings);
-  
-  // Write to ini file any settings that are different to common/default settings
-  string baseKey("InputMouse");
-  if (settings->mseNum != ANY_MOUSE)
-    baseKey.append(IntToString(settings->mseNum + 1));
-  for (int axisNum = 0; axisNum < NUM_MOUSE_AXES; axisNum++)
-  {
-    if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
-      ini->Set(section, baseKey + s_axisIds[axisNum] + "DeadZone", settings->deadZones[axisNum]);
   }
 }
 
@@ -1324,58 +1255,6 @@ void CInputSystem::StoreJoySettings(Util::Config::Node *config, JoySettings *set
       config->Set(baseKey + axisId + "DeadZone", settings->deadZones[axisNum]);
     if (settings->saturations[axisNum] != common->saturations[axisNum]) 
       config->Set(baseKey + axisId + "Saturation", settings->saturations[axisNum]);
-  }
-}
-
-JoySettings *CInputSystem::ReadJoySettings(CINIFile *ini, const char *section, int joyNum)
-{
-  // Get common/default joystick settings and create new joystick settings based on that
-  JoySettings *common = (joyNum != ANY_JOYSTICK ? GetJoySettings(ANY_JOYSTICK, true) : &m_defJoySettings);
-  JoySettings *settings = new JoySettings(*common);
-  settings->joyNum = joyNum;
-
-  // Read settings from ini file
-  string baseKey("InputJoy");
-  if (joyNum != ANY_JOYSTICK)
-    baseKey.append(IntToString(joyNum + 1));
-  bool read = false;
-  for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
-  {
-    const char *axisId = s_axisIds[axisNum];
-    read |= ini->Get(section, baseKey + axisId + "MinVal", settings->axisMinVals[axisNum]) == OKAY; 
-    read |= ini->Get(section, baseKey + axisId + "OffVal", settings->axisOffVals[axisNum]) == OKAY; 
-    read |= ini->Get(section, baseKey + axisId + "MaxVal", settings->axisMaxVals[axisNum]) == OKAY; 
-    read |= ini->Get(section, baseKey + axisId + "DeadZone", settings->deadZones[axisNum]) == OKAY; 
-    read |= ini->Get(section, baseKey + axisId + "Saturation", settings->saturations[axisNum]) == OKAY; 
-  }
-  if (read)
-    return settings;
-  delete settings;
-  return NULL;
-}
-
-void CInputSystem::WriteJoySettings(CINIFile *ini, const char *section, JoySettings *settings)
-{
-  // Get common/default joystick settings
-  JoySettings *common = (settings->joyNum != ANY_JOYSTICK ? GetJoySettings(ANY_JOYSTICK, true) : &m_defJoySettings);
-
-  // Write to ini file any settings that are different to common/default settings
-  string baseKey("InputJoy");
-  if (settings->joyNum != ANY_JOYSTICK)
-    baseKey.append(IntToString(settings->joyNum + 1));
-  for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
-  {
-    const char *axisId = s_axisIds[axisNum];
-    if (settings->axisMinVals[axisNum] != common->axisMinVals[axisNum]) 
-      ini->Set(section, baseKey + axisId + "MinVal", settings->axisMinVals[axisNum]);
-    if (settings->axisOffVals[axisNum] != common->axisOffVals[axisNum]) 
-      ini->Set(section, baseKey + axisId + "OffVal", settings->axisOffVals[axisNum]);
-    if (settings->axisMaxVals[axisNum] != common->axisMaxVals[axisNum])
-      ini->Set(section, baseKey + axisId + "MaxVal", settings->axisMaxVals[axisNum]);
-    if (settings->deadZones[axisNum] != common->deadZones[axisNum]) 
-      ini->Set(section, baseKey + axisId + "DeadZone", settings->deadZones[axisNum]);
-    if (settings->saturations[axisNum] != common->saturations[axisNum]) 
-      ini->Set(section, baseKey + axisId + "Saturation", settings->saturations[axisNum]);
   }
 }
 
@@ -1842,60 +1721,6 @@ void CInputSystem::StoreToConfig(Util::Config::Node *config)
   // Write all joystick settings
   for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); it++)
     StoreJoySettings(config, *it);
-}
-
-void CInputSystem::ReadFromINIFile(CINIFile *ini, const char *section)
-{
-  ClearSettings();
-  ClearSourceCache();
-
-  // Read all key settings for attached keyboards
-  KeySettings *keySettings = ReadKeySettings(ini, section, ANY_KEYBOARD);
-  if (keySettings != NULL)
-    m_keySettings.push_back(keySettings);
-  for (int kbdNum = 0; kbdNum < m_numKbds; kbdNum++)
-  {
-    keySettings = ReadKeySettings(ini, section, kbdNum);
-    if (keySettings != NULL)
-      m_keySettings.push_back(keySettings);
-  }
-
-  // Read all mouse settings for attached mice
-  MouseSettings *mseSettings = ReadMouseSettings(ini, section, ANY_MOUSE);
-  if (mseSettings != NULL)
-    m_mseSettings.push_back(mseSettings);
-  for (int mseNum = 0; mseNum < m_numMice; mseNum++)
-  {
-    mseSettings = ReadMouseSettings(ini, section, mseNum);
-    if (mseSettings != NULL)
-      m_mseSettings.push_back(mseSettings);
-  }
-
-  // Read all joystick settings for attached joysticks
-  JoySettings *joySettings = ReadJoySettings(ini, section, ANY_JOYSTICK);
-  if (joySettings != NULL)
-    m_joySettings.push_back(joySettings);
-  for (int joyNum = 0; joyNum < m_numJoys; joyNum++)
-  {
-    joySettings = ReadJoySettings(ini, section, joyNum);
-    if (joySettings != NULL)
-      m_joySettings.push_back(joySettings);
-  }
-}
-
-void CInputSystem::WriteToINIFile(CINIFile *ini, const char *section)
-{
-  // Write all key settings
-  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); it++)
-    WriteKeySettings(ini, section, *it);
-
-  // Write all mouse settings
-  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); it++)
-    WriteMouseSettings(ini, section, *it);
-
-  // Write all joystick settings
-  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); it++)
-    WriteJoySettings(ini, section, *it);
 }
 
 bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly, unsigned readFlags, const char *escapeMapping)

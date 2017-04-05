@@ -179,36 +179,6 @@ void CInput::StoreToConfig(Util::Config::Node *config)
   config->Set(key, m_mapping);
 }
 
-void CInput::ReadFromINIFile(CINIFile *ini, const char *section)
-{
-	// See if input is configurable
-	if (IsConfigurable())
-	{
-		// If so, check INI file for mapping string
-		string key("Input");
-		key.append(id);
-		string mapping;
-		if (ini->Get(section, key, mapping) == OKAY)
-		{
-			// If found, then set mapping string
-			SetMapping(mapping.c_str());
-			return;
-		}
-	}
-
-	// If input has not been configured, then force recreation of source anyway since input system settings may have changed 
-	CreateSource();
-}
-
-void CInput::WriteToINIFile(CINIFile *ini, const char *section)
-{
-	if (!IsConfigurable())
-		return;
-	string key("Input");
-	key.append(id);
-	ini->Set(section, key, m_mapping);
-}
-
 void CInput::InputSystemChanged()
 {
 	// If input system or its settings have changed, then force recreation of source

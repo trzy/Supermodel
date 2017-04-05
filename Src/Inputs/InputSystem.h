@@ -39,7 +39,6 @@ using namespace std;
 
 class CInput;
 class CInputSource;
-class CINIFile;
 
 #define MAX_NAME_LENGTH 255
 
@@ -480,13 +479,11 @@ private:
    * Returns NULL if no relevant settings were found in the INI file.
    */
   KeySettings *LoadKeySettings(const Util::Config::Node &config, int kbdNum);
-  KeySettings *ReadKeySettings(CINIFile *ini, const char *section, int kbdNum);
-
+  
   /*
    * Writes the given key settings to an INI file, only writing out settings that are different to their defaults.
    */
   void StoreKeySettings(Util::Config::Node *config, KeySettings *settings);
-  void WriteKeySettings(CINIFile *ini, const char *section, KeySettings *settings);
 
   /*
    * Prints the given mouse settings to stdout.
@@ -498,13 +495,11 @@ private:
    * Returns NULL if no relevant settings were found in the config object.
    */
   MouseSettings *LoadMouseSettings(const Util::Config::Node &config, int mseNum);
-  MouseSettings *ReadMouseSettings(CINIFile *ini, const char *section, int mseNum);
 
   /*
    * Stores the given mouse settings to a config object, only storing settings that differ from their defaults.
    */
   void StoreMouseSettings(Util::Config::Node *config, MouseSettings *settings);
-  void WriteMouseSettings(CINIFile *ini, const char *section, MouseSettings *settings);
   
   /*
    * Prints the given joystick settings to stdout.
@@ -516,13 +511,11 @@ private:
    * Returns NULL if no relevant settings were found in the config object.
    */
   JoySettings *LoadJoySettings(const Util::Config::Node &config, int joyNum);
-  JoySettings *ReadJoySettings(CINIFile *ini, const char *section, int joyNum);
 
   /*
    * Stores the given joystick settings to a config object, only storing settings that differ from their defaults.
    */
   void StoreJoySettings(Util::Config::Node *config, JoySettings *settings);
-  void WriteJoySettings(CINIFile *ini, const char *section, JoySettings *settings);
 
 protected:
   // Current display geometry
@@ -806,13 +799,11 @@ public:
    * Reads all keyboard, mouse and joystick settings (and any additional system-specific additional settings) from the given config object.
    */
   virtual void LoadFromConfig(const Util::Config::Node &config);
-  virtual void ReadFromINIFile(CINIFile *ini, const char *section);
 
   /*
    * Stores all keyboard, mouse and joystick settings (and any additional system-specific settings) to the given config object.
    */
   virtual void StoreToConfig(Util::Config::Node *config);
-  virtual void WriteToINIFile(CINIFile *ini, const char *section);
 
   /*
    * Returns the current key settings for given keyboard number, or common settings if ANY_KEYBOARD specified.
