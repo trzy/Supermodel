@@ -1220,7 +1220,10 @@ static void PrintGameList(const std::string &xml_file, const std::map<std::strin
     printf("    %s", game.name.c_str());
     for (int i = game.name.length(); i < 9; i++)  // pad for alignment (no game ID should be more than 9 letters)
       printf(" ");
-    printf("       %s\n", game.title.c_str());
+    if (!game.version.empty())
+      printf("       %s (%s)\n", game.title.c_str(), game.version.c_str());
+    else
+      printf("       %s\n", game.title.c_str());
   }
 }
 

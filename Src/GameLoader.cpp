@@ -237,79 +237,84 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
 {
   for (auto it = xml.begin(); it != xml.end(); ++it)
   {
-    // Game node
-    auto &game_node = *it;
-    if (game_node.Key() != "game")
+    // Root games node
+    auto &root_node = *it;
+    if (root_node.Key() != "games")
       continue;
-    if (game_node["name"].Empty())
+    for (auto &game_node: root_node)
     {
-      //TODO: associate line numbers in config
-      //ErrorLog("%s: Ignoring <game> tag with missing 'name' attribute.", m_xml_filename.c_str());
-      continue;
-    }
-    std::string game_name = game_node["name"].ValueAs<std::string>();
-    if (m_regions_by_game.find(game_name) != m_regions_by_game.end())
-    {
-      ErrorLog("%s: Ignoring redefinition of game '%s'.", m_xml_filename.c_str(), game_name.c_str());
-      continue;
-    }
-    RegionsByName_t &regions_by_name = m_regions_by_game[game_name];
-    PopulateGameInfo(&m_game_info_by_game[game_name], game_node);
-
-    for (auto &roms_node: game_node)
-    {
-      if (roms_node.Key() != "roms")
+      // Game node
+      if (game_node.Key() != "game")
         continue;
-
-      /*
-       * Regions define contiguous memory areas that individual ROM files are
-       * loaded into. It is possible to have multiple region tags identifying
-       * the same region. They will be aggregated. This is useful for parent
-       * and child ROM sets, which each may need to define the same region,
-       * with the child set loading in different files to overwrite the parent
-       * set.
-       */
-      for (auto &region_node: roms_node)
+      if (game_node["name"].Empty())
       {
-        if (region_node.Key() != "region")
-          continue;
-        
-        // Look up region structure or create new one if needed
-        std::string region_name = region_node["name"].Value<std::string>();
-        auto it = regions_by_name.find(region_name);
-        Region::ptr_t region = (it != regions_by_name.end()) ? it->second : Region::Create(*this, region_node);
-        if (!region)
+        //TODO: associate line numbers in config
+        //ErrorLog("%s: Ignoring <game> tag with missing 'name' attribute.", m_xml_filename.c_str());
+        continue;
+      }
+      std::string game_name = game_node["name"].ValueAs<std::string>();
+      if (m_regions_by_game.find(game_name) != m_regions_by_game.end())
+      {
+        ErrorLog("%s: Ignoring redefinition of game '%s'.", m_xml_filename.c_str(), game_name.c_str());
+        continue;
+      }
+      RegionsByName_t &regions_by_name = m_regions_by_game[game_name];
+      PopulateGameInfo(&m_game_info_by_game[game_name], game_node);
+
+      for (auto &roms_node: game_node)
+      {
+        if (roms_node.Key() != "roms")
           continue;
 
         /*
-         * Files are defined by the offset they are loaded at. Normally, there
-         * should be one file per offset but parent/child ROM sets will violate
-         * this, and so it is allowed.
+         * Regions define contiguous memory areas that individual ROM files are
+         * loaded into. It is possible to have multiple region tags identifying
+         * the same region. They will be aggregated. This is useful for parent
+         * and child ROM sets, which each may need to define the same region,
+         * with the child set loading in different files to overwrite the parent
+         * set.
          */
-        std::vector<File::ptr_t> &files = region->files;
-        for (auto &file_node: region_node)
+        for (auto &region_node: roms_node)
         {
-          if (file_node.Key() != "file")
+          if (region_node.Key() != "region")
             continue;
-          File::ptr_t file = File::Create(*this, file_node);
-          if (!file)
+          
+          // Look up region structure or create new one if needed
+          std::string region_name = region_node["name"].Value<std::string>();
+          auto it = regions_by_name.find(region_name);
+          Region::ptr_t region = (it != regions_by_name.end()) ? it->second : Region::Create(*this, region_node);
+          if (!region)
             continue;
-          files.push_back(file);
+
+          /*
+           * Files are defined by the offset they are loaded at. Normally, there
+           * should be one file per offset but parent/child ROM sets will violate
+           * this, and so it is allowed.
+           */
+          std::vector<File::ptr_t> &files = region->files;
+          for (auto &file_node: region_node)
+          {
+            if (file_node.Key() != "file")
+              continue;
+            File::ptr_t file = File::Create(*this, file_node);
+            if (!file)
+              continue;
+            files.push_back(file);
+          }
+          
+          // Check to ensure that some files were defined in the region
+          if (files.empty())
+            ErrorLog("%s: No files defined in region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
+          else
+            regions_by_name[region->region_name] = region;
         }
-        
-        // Check to ensure that some files were defined in the region
-        if (files.empty())
-          ErrorLog("%s: No files defined in region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
-        else
-          regions_by_name[region->region_name] = region;
       }
+      
+      // Check to ensure that some ROM regions were defined for the game
+      if (regions_by_name.empty())
+        ErrorLog("%s: No ROM regions defined for '%s'.", m_xml_filename.c_str(), game_name.c_str());
     }
-    
-    // Check to ensure that some ROM regions were defined for the game
-    if (regions_by_name.empty())
-      ErrorLog("%s: No ROM regions defined for '%s'.", m_xml_filename.c_str(), game_name.c_str());
   }
-  
   // Check to ensure some games were defined
   if (m_regions_by_game.empty())
   {

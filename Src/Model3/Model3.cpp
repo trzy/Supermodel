@@ -2551,7 +2551,7 @@ void CModel3::Reset(void)
 // Apply patches to games
 static void Patch(uint8_t *crom, const Game &game)
 {
-  if (game.name == "scudp")
+  if (game.name == "scudplus" || game.name == "scudplusa") // No patching?
   {
     // Base offset of program in CROM: 0x710000
   }
@@ -2568,7 +2568,7 @@ static void Patch(uint8_t *crom, const Game &game)
   {
     *(UINT32 *) &crom[0x7374f4] = 0x38840004; // an actual bug in the game code
   }
-  else if (game.name == "vs215" || game.name == "vs215o" || game.name == "vs29815")
+  else if (game.name == "vs215" || game.name == "vs215o" || game.name == "vs29815" || game.name == "vs29915")
   {
     // VS215 is a modification of VS2 that runs on Step 1.5 hardware. I
     // suspect the code here is trying to detect the system type but am too
@@ -2590,13 +2590,13 @@ static void Patch(uint8_t *crom, const Game &game)
     *(UINT32 *) &crom[0x7C0C8] = 0x60000000;
     *(UINT32 *) &crom[0x7C0CC] = 0x60000000;
   }
-  else if (game.name == "harley")
+  else if (game.name == "harleya")
   {
     *(UINT32 *) &crom[0x50E8D4] = 0x60000000;
     *(UINT32 *) &crom[0x50E8F4] = 0x60000000;
     *(UINT32 *) &crom[0x50FB84] = 0x60000000;
   }
-  else if (game.name == "harleyb")
+  else if (game.name == "harley")
   {
     *(UINT32 *) &crom[0x50ECB4] = 0x60000000;
     *(UINT32 *) &crom[0x50ECD4] = 0x60000000;
@@ -2613,7 +2613,7 @@ static void Patch(uint8_t *crom, const Game &game)
   {
     *(UINT32 *) &crom[0xF6DD0] = 0x60000000;  // from MAME
   }
-  else if (game.name == "eca" || game.name == "ecax")
+  else if (game.name == "eca" || game.name == "ecau")
   {
     *(UINT32 *) &crom[0x535580] = 0x60000000;
     //*(UINT32 *) &crom[0x5023B4] = 0x60000000;
@@ -2819,7 +2819,10 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
     extra_hw.insert("Drive Board");
   if (game.encryption_key)
     extra_hw.insert("Security Board");
-  std::cout << "    Title:          " << game.title << std::endl;
+  if (!game.version.empty())
+    std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
+  else
+    std::cout << "    Title:          " << game.title << std::endl;
   std::cout << "    ROM Set:        " << game.name << std::endl;
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
