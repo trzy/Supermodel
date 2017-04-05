@@ -307,7 +307,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
     <ClCompile Include="..\Src\Debugger\Watch.cpp" />
     <ClCompile Include="..\Src\GameLoader.cpp" />
-    <ClCompile Include="..\Src\Games.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp" />
@@ -325,7 +324,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
     <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
     <ClCompile Include="..\Src\Graphics\Shader.cpp" />
-    <ClCompile Include="..\Src\INIFile.cpp" />
     <ClCompile Include="..\Src\Inputs\Input.cpp" />
     <ClCompile Include="..\Src\Inputs\Inputs.cpp" />
     <ClCompile Include="..\Src\Inputs\InputSource.cpp" />
@@ -373,7 +371,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ExceptionHandling>
     </ClCompile>
-    <ClCompile Include="..\Src\ROMLoad.cpp" />
     <ClCompile Include="..\Src\Sound\MPEG\audio.cpp">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
@@ -534,7 +531,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
     <ClInclude Include="..\Src\Debugger\Watch.h" />
     <ClInclude Include="..\Src\GameLoader.h" />
-    <ClInclude Include="..\Src\Games.h" />
     <ClInclude Include="..\Src\Graphics\IRender3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h" />
@@ -555,7 +551,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Graphics\Render2D.h" />
     <ClInclude Include="..\Src\Graphics\Shader.h" />
     <ClInclude Include="..\Src\Graphics\Shaders2D.h" />
-    <ClInclude Include="..\Src\INIFile.h" />
     <ClInclude Include="..\Src\Inputs\Input.h" />
     <ClInclude Include="..\Src\Inputs\Inputs.h" />
     <ClInclude Include="..\Src\Inputs\InputSource.h" />
@@ -591,7 +586,6 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Pkgs\tinyxml2.h" />
     <ClInclude Include="..\Src\Pkgs\unzip.h" />
     <ClInclude Include="..\Src\Pkgs\wglew.h" />
-    <ClInclude Include="..\Src\ROMLoad.h" />
     <ClInclude Include="..\Src\Sound\MPEG\amp.h" />
     <ClInclude Include="..\Src\Sound\MPEG\audio.h" />
     <ClInclude Include="..\Src\Sound\MPEG\config.h" />

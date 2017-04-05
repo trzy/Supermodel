@@ -141,6 +141,7 @@ public:
 	bool	TextureAlpha();
 	bool	Luminous();
 	float	LightModifier();
+	int		TranslatorMapOffset();
 
 	// misc
 	UINT64	Hash();		// make a unique hash for sorting by state

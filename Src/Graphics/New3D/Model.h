@@ -68,6 +68,7 @@ struct Mesh
 	int format, x, y, width, height = 0;
 	bool mirrorU = false;
 	bool mirrorV = false;
+	bool inverted = false;
 
 	// microtexture
 	bool	microTexture		= false;

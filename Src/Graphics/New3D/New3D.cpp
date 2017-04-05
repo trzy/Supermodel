@@ -1004,6 +1004,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 		currentMesh->mirrorU		= ph.TexUMirror();
 		currentMesh->mirrorV		= ph.TexVMirror();
 		currentMesh->microTexture	= ph.MicroTexture();
+		currentMesh->inverted		= ph.TranslatorMapOffset() == 2;
 
 		if (currentMesh->microTexture) {
 

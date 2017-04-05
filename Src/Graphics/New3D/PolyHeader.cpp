@@ -362,6 +362,11 @@ bool PolyHeader::HighPriority()
 	return (header[6] & 0x10) > 0;
 }
 
+int	PolyHeader::TranslatorMapOffset()
+{
+	return (header[6] >> 24) & 0x7f;
+}
+
 //
 // misc
 //

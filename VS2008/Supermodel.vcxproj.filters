@@ -137,15 +137,6 @@
     <ClCompile Include="..\Src\BlockFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Games.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\INIFile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\ROMLoad.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\CPU\PowerPC\ppc.cpp">
       <Filter>Source Files\CPU\PowerPC</Filter>
     </ClCompile>
@@ -488,15 +479,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Src\BlockFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Games.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\INIFile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\ROMLoad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Supermodel.h">
