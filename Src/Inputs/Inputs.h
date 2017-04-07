@@ -224,7 +224,7 @@ public:
   // Sega Bass Fishing controls
   CAxisInput    *fishingRodX;
   CAxisInput    *fishingRodY;
-  CAxisInput    *fishingReel;
+  CAnalogInput  *fishingReel;
   CAxisInput    *fishingStickX;
   CAxisInput    *fishingStickY;
   CSwitchInput  *fishingCast;

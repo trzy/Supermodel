@@ -28,7 +28,6 @@
 
 #include "Supermodel.h"
 #include "Game.h"
-
 #include <stdarg.h>
 #include <vector>
 #include <string>
@@ -49,10 +48,10 @@ CInputs::CInputs(CInputSystem *system)
 	uiSaveState        = AddSwitchInput("UISaveState",        "Save State",            Game::INPUT_UI, "KEY_F5");
 	uiChangeSlot       = AddSwitchInput("UIChangeSlot",       "Change Save Slot",      Game::INPUT_UI, "KEY_F6");
 	uiLoadState        = AddSwitchInput("UILoadState",        "Load State",            Game::INPUT_UI, "KEY_F7");
-	uiMusicVolUp	   = AddSwitchInput("UIMusicVolUp",		  "Increase Music Volume", Game::INPUT_UI, "KEY_F10");
-	uiMusicVolDown	   = AddSwitchInput("UIMusicVolDown",	  "Decrease Music Volume", Game::INPUT_UI, "KEY_F9");
-	uiSoundVolUp	   = AddSwitchInput("UISoundVolUp",		  "Increase Sound Volume", Game::INPUT_UI, "KEY_F12");
-	uiSoundVolDown	   = AddSwitchInput("UISoundVolDown",	  "Decrease Sound Volume", Game::INPUT_UI, "KEY_F11");
+	uiMusicVolUp	     = AddSwitchInput("UIMusicVolUp",		    "Increase Music Volume", Game::INPUT_UI, "KEY_F10");
+	uiMusicVolDown	   = AddSwitchInput("UIMusicVolDown",	    "Decrease Music Volume", Game::INPUT_UI, "KEY_F9");
+	uiSoundVolUp	     = AddSwitchInput("UISoundVolUp",		    "Increase Sound Volume", Game::INPUT_UI, "KEY_F12");
+	uiSoundVolDown	   = AddSwitchInput("UISoundVolDown",	    "Decrease Sound Volume", Game::INPUT_UI, "KEY_F11");
 	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           Game::INPUT_UI, "KEY_ALT+KEY_N");
 	uiSelectCrosshairs = AddSwitchInput("UISelectCrosshairs", "Select Crosshairs",     Game::INPUT_UI, "KEY_ALT+KEY_I");
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", Game::INPUT_UI, "KEY_ALT+KEY_T");
@@ -150,14 +149,14 @@ CInputs::CInputs(CInputSystem *system)
 	twinJoyStrafeRight = AddSwitchInput("TwinJoyStrafeRight", "Macro Strafe Right", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyJump        = AddSwitchInput("TwinJoyJump",        "Macro Jump",         	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyCrouch      = AddSwitchInput("TwinJoyCrouch",      "Macro Crouch",       	Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	twinJoyLeft1	   = AddSwitchInput("TwinJoyLeft1",       "Left Joystick Left", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	twinJoyLeft2	   = AddSwitchInput("TwinJoyLeft2",       "Right Joystick Left",	Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	twinJoyRight1	   = AddSwitchInput("TwinJoyRight1",      "Left Joystick Right", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	twinJoyRight2	   = AddSwitchInput("TwinJoyRight2",      "Right Joystick Right", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyLeft1	     = AddSwitchInput("TwinJoyLeft1",       "Left Joystick Left", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyLeft2	     = AddSwitchInput("TwinJoyLeft2",       "Right Joystick Left",	Game::INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyRight1	     = AddSwitchInput("TwinJoyRight1",      "Left Joystick Right", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyRight2	     = AddSwitchInput("TwinJoyRight2",      "Right Joystick Right", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyUp1	   	   = AddSwitchInput("TwinJoyUp1",         "Left Joystick Up", 		Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyUp2	   	   = AddSwitchInput("TwinJoyUp2",         "Right Joystick Up", 		Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	twinJoyDown1	   = AddSwitchInput("TwinJoyDown1",       "Left Joystick Down", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	twinJoyDown2	   = AddSwitchInput("TwinJoyDown2",       "Right Joystick Down", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyDown1	     = AddSwitchInput("TwinJoyDown1",       "Left Joystick Down", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
+	twinJoyDown2	     = AddSwitchInput("TwinJoyDown2",       "Right Joystick Down", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyShot1       = AddSwitchInput("TwinJoyShot1",       "Left Shot Trigger",  	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyShot2       = AddSwitchInput("TwinJoyShot2",       "Right Shot Trigger", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyTurbo1      = AddSwitchInput("TwinJoyTurbo1",      "Left Turbo",         	Game::INPUT_TWIN_JOYSTICKS, "NONE");
@@ -256,18 +255,16 @@ CInputs::CInputs(CInputSystem *system)
   CAnalogInput *fishingRodRight   = AddAnalogInput("FishingRodRight",   "Rod Right",    Game::INPUT_FISHING, "NONE");
   CAnalogInput *fishingRodUp      = AddAnalogInput("FishingRodUp",      "Rod Up",       Game::INPUT_FISHING, "NONE");
   CAnalogInput *fishingRodDown    = AddAnalogInput("FishingRodDown",    "Rod Down",     Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingReelFaster = AddAnalogInput("FishingReelFaster", "Reel Faster",  Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingReelSlower = AddAnalogInput("FishingReelSlower", "Reel Slower",  Game::INPUT_FISHING, "NONE");
   CAnalogInput *fishingStickLeft  = AddAnalogInput("FishingStickLeft",  "Stick Left",   Game::INPUT_FISHING, "NONE");
   CAnalogInput *fishingStickRight = AddAnalogInput("FishingStickRight", "Stick Right",  Game::INPUT_FISHING, "NONE");
   CAnalogInput *fishingStickUp    = AddAnalogInput("FishingStickUp",    "Stick Up",     Game::INPUT_FISHING, "NONE");
   CAnalogInput *fishingStickDown  = AddAnalogInput("FishingStickDown",  "Stick Down",   Game::INPUT_FISHING, "NONE");
 
   fishingRodX   = AddAxisInput(   "FishingRodX",    "Rod X-Axis",     Game::INPUT_FISHING, "NONE", fishingRodLeft, fishingRodRight, 0, 0x80, 0xFF);
-  fishingRodY   = AddAxisInput(   "FishingRodY",    "Rod Y-Axis",     Game::INPUT_FISHING, "NONE", fishingRodUp, fishingRodDown, 0xFF, 0x80, 0);
-  fishingReel   = AddAxisInput(   "FishingReel",    "Reel Speed",     Game::INPUT_FISHING, "NONE", fishingReelSlower, fishingReelFaster, 0, 0x80, 0xFF);
+  fishingRodY   = AddAxisInput(   "FishingRodY",    "Rod Y-Axis",     Game::INPUT_FISHING, "NONE", fishingRodUp, fishingRodDown, 0, 0x80, 0xFF);
+  fishingReel   = AddAnalogInput( "FishingReel",    "Reel Speed",     Game::INPUT_FISHING, "NONE");
   fishingStickX = AddAxisInput(   "FishingStickX",  "Stick X-Axis",   Game::INPUT_FISHING, "NONE", fishingStickLeft, fishingStickRight, 0, 0x80, 0xFF);
-  fishingStickY = AddAxisInput(   "FishingStickY",  "Stick Y-Axis",   Game::INPUT_FISHING, "NONE", fishingStickUp, fishingStickDown, 0xFF, 0x80, 0);
+  fishingStickY = AddAxisInput(   "FishingStickY",  "Stick Y-Axis",   Game::INPUT_FISHING, "NONE", fishingStickUp, fishingStickDown, 0, 0x80, 0xFF);
   fishingCast   = AddSwitchInput( "FishingCast",    "Cast",           Game::INPUT_FISHING, "NONE");
   fishingSelect = AddSwitchInput( "FishingSelect",  "Select",         Game::INPUT_FISHING, "NONE");
 }
