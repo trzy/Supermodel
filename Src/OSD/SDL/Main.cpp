@@ -401,6 +401,7 @@ static void DumpPPCRegisters(IBus *bus)
 #include "Model3/Model3GraphicsState.h"
 #include "Util/BMPFile.h"
 #include "OSD/SDL/PolyAnalysis.h"
+#include <fstream> 
 
 static void SaveFrameBuffer(const std::string &file)
 {
@@ -430,7 +431,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
 {
   const static std::vector<uint32_t> unknownPolyBits
   {
-    0x000003b0,
+    0xffffffff,
     0x000000ab, // actual color
     0x000000fc,
     0x000000c0,
