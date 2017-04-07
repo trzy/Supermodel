@@ -335,9 +335,9 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       if ((m_game.inputs & Game::INPUT_HARLEY))
       {
         if (Inputs->gearShiftUp->value)         // Shift up 
-          data &= ~0x60;
+          data &= ~0x20;
         else if (Inputs->gearShiftDown->value)  // Shift down
-          data &= ~0x50;
+          data &= ~0x10;
       }
       else
       {
