@@ -1,6 +1,12 @@
 <!--
-  TODO:
-    - ROM patches should be placed here
+  Supermodel
+  A Sega Model 3 Arcade Emulator.
+  Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+  
+  Games.xml
+  
+  This file defines ROM sets and is required in order to recognize and properly
+  load them. Do not modify this unless you really know what you're doing!
 -->
 <games>
   <game name="bass">
@@ -420,6 +426,10 @@
       <encryption_key>0x2923aa91</encryption_key>
     </hardware>
     <roms>
+      <patches>
+        <!-- Skips over cabinet network error (not required, but speeds up boot) -->
+        <patch region="crom" bits="32" offset="0x4a45e4" value="0x60000000" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-22906.20" crc32="0x7F6426FC" />
         <file offset="2" name="epr-22905.19" crc32="0x9755DD8C" />
@@ -533,6 +543,10 @@
       <encryption_key>0x2923aa91</encryption_key>
     </hardware>
     <roms>
+      <patches>
+        <!-- Skips over cabinet network error (not required, but speeds up boot) -->
+        <patch region="crom" bits="32" offset="0x4a45e4" value="0x60000000" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-22898.20" crc32="0xEFB96701" />
         <file offset="6" name="epr-22895.17" crc32="0x07DF16A0" />
@@ -806,6 +820,14 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- Base offset of program in CROM space: 0x6473c0 (0x473c0 in the ROM) -->
+        <patch region="crom" bits="32" offset="0x0D8C4C" value="0x00000002" />  <!-- comm. mode: 00=master, 01=slave, 02=satellite -->
+        <patch region="crom" bits="32" offset="0x13FE38" value="0x38840004" />  <!-- an actual bug in the game code -->
+        <patch region="crom" bits="32" offset="0x13EB5C" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x13EDD0" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x13EDC4" value="0x60000000" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19890b.20" crc32="0x9C16C3CC" />
         <file offset="2" name="epr-19889b.19" crc32="0xD1F7E44C" />
@@ -1589,6 +1611,11 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <patch region="crom" bits="32" offset="0x7c0c4" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x7c0c8" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x7c0cc" value="0x60000000" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20635.20" crc32="0x7937473F" />
         <file offset="2" name="epr-20634.19" crc32="0x45A09245" />
@@ -1743,6 +1770,16 @@
       <encryption_key>0x31272A01</encryption_key>
     </hardware>
     <roms>
+      <patches>
+        <patch region="crom" bits="32" offset="0xf0e48" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x043dc" value="0x48000090" /> <!-- related to joystick feedback -->
+        <patch region="crom" bits="32" offset="0x029a0" value="0x60000000" /> <!-- skip force feedback setup? -->
+        <patch region="crom" bits="32" offset="0x02a0c" value="0x60000000" />
+        <!-- Additional patches from MAME for test menu -->
+        <patch region="crom" bits="32" offset="0xf776c" value="0x60000000" /> <!-- unemulated JTAG stuff -->
+        <patch region="crom" bits="32" offset="0xf7770" value="0x60000000" /> <!-- "" -->
+        <patch region="crom" bits="32" offset="0xf7774" value="0x60000000" /> <!-- "" -->
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21382a.20" crc32="0x69BAF117" />
         <file offset="2" name="epr-21381a.19" crc32="0x2DD34E28" />
@@ -1825,6 +1862,9 @@
       <encryption_key>0x31272A01</encryption_key>
     </hardware>
     <roms>
+      <patches>
+        <patch region="crom" bits="32" offset="0xf6dd0" value="0x60000000" /> <!-- from MAME -->
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21382.20" crc32="0x0B9C44A0" />
         <file offset="2" name="epr-21381.19" crc32="0xBB5757BF" />
@@ -2214,6 +2254,16 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!--
+          VS215 is a modification of VS2 that runs on Step 1.5 boards. I
+          suspect the code here is trying to detect the system type.
+          
+          The patch branches to 0xFFF01630: 
+            0x48000000 + (0xFFF01630 - 0xFFF001A8) = 0x48001488
+        -->
+        <patch region="crom" bits="32" offset="0x1001a8" value="0x48001488" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19897.20" crc32="0x25A722A9" />
         <file offset="2" name="epr-19898.19" crc32="0x4389D9CE" />
@@ -2241,6 +2291,10 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- See note in VS215 -->
+        <patch region="crom" bits="32" offset="0x1001a8" value="0x48001488" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19803.20" crc32="0x1E55A5B8" />
         <file offset="2" name="epr-19804.19" crc32="0xBBACA578" />
@@ -2269,6 +2323,18 @@
       <encryption_key>0x29234e96</encryption_key>
     </hardware>
     <roms>
+      <patches>
+        <!-- 
+          Offset of program relative to CROM base: 0x600000 (0x200000 in the 
+          ROM itself). Inexplicably, at PC=AFC1C, a call is made to FC78, which
+          is right in the middle of some totally unrelated initialization code 
+          (ASIC checks). This causes an invalid pointer to be fetched. Perhaps
+          FC78 should be overwritten with other program data by then? Why is it
+          not? Or, 300138 needs to be written with a non-zero value, it is
+          loaded from EEPROM but is 0.
+        -->
+        <patch region="crom" bits="32" offset="0x2afc1c" value="0x60000000" />  <!-- 0x6afc1c from base of CROM -->
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20920.20" crc32="0x428D05FC" />
         <file offset="2" name="epr-20919.19" crc32="0x7A0713D2" />
@@ -2343,6 +2409,10 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- See note in VS215 -->
+        <patch region="crom" bits="32" offset="0x1001a8" value="0x48001488" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20912.20" crc32="0xCD2C0538" />
         <file offset="2" name="epr-20911.19" crc32="0xACB8FD97" />
@@ -2472,6 +2542,10 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- See note in VS215 -->
+        <patch region="crom" bits="32" offset="0x1001a8" value="0x48001488" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21534.20" crc32="0xD49AE219" />
         <file offset="2" name="epr-21533.19" crc32="0xEA728471" />
