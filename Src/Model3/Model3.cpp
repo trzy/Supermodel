@@ -2548,104 +2548,6 @@ void CModel3::Reset(void)
  Initialization, Shutdown, and ROM Management
 ******************************************************************************/
 
-// Apply patches to games
-static void Patch(uint8_t *crom, const Game &game)
-{
-  if (game.name == "scudplus" || game.name == "scudplusa") // No patching?
-  {
-    // Base offset of program in CROM: 0x710000
-  }
-  else if (game.name == "lemans24")
-  {
-    // Base offset of program in CROM: 6473C0
-    *(UINT32 *) &crom[0x6D8C4C] = 0x00000002; // comm. mode: 00=master, 01=slave, 02=satellite
-    *(UINT32 *) &crom[0x73FE38] = 0x38840004; // an actual bug in the game code
-    *(UINT32 *) &crom[0x73EB5C] = 0x60000000;
-    *(UINT32 *) &crom[0x73EDD0] = 0x60000000;
-    *(UINT32 *) &crom[0x73EDC4] = 0x60000000;
-  } 
-  else if (game.name == "lostwsga")
-  {
-    *(UINT32 *) &crom[0x7374f4] = 0x38840004; // an actual bug in the game code
-  }
-  else if (game.name == "vs215" || game.name == "vs215o" || game.name == "vs29815" || game.name == "vs29915")
-  {
-    // VS215 is a modification of VS2 that runs on Step 1.5 hardware. I
-    // suspect the code here is trying to detect the system type but am too
-    // lazy to figure it out right now.
-    *(UINT32 *) &crom[0x7001A8] = 0x48000000+(0xFFF01630-0xFFF001A8); // force a jump to FFF01630
-  }
-  else if (game.name == "vs298")
-  {
-    // Base offset of program in CROM: 600000
-    // Inexplicably, at PC=AFC1C, a call is made to FC78, which is right in the middle of some
-    // totally unrelated initialization code (ASIC checks). This causes an invalid pointer to be fetched. 
-    // Perhaps FC78 should be overwritten with other program data by then? Why is it not?
-    // Or, 300138 needs to be written with a non-zero value, it is loaded from EEPROM but is 0.
-    *(UINT32 *) &crom[0x6AFC1C] = 0x60000000;
-  }
-  else if (game.name == "srally2")
-  {
-    *(UINT32 *) &crom[0x7C0C4] = 0x60000000;
-    *(UINT32 *) &crom[0x7C0C8] = 0x60000000;
-    *(UINT32 *) &crom[0x7C0CC] = 0x60000000;
-  }
-  else if (game.name == "harleya")
-  {
-    *(UINT32 *) &crom[0x50E8D4] = 0x60000000;
-    *(UINT32 *) &crom[0x50E8F4] = 0x60000000;
-    *(UINT32 *) &crom[0x50FB84] = 0x60000000;
-  }
-  else if (game.name == "harley")
-  {
-    *(UINT32 *) &crom[0x50ECB4] = 0x60000000;
-    *(UINT32 *) &crom[0x50ECD4] = 0x60000000;
-    *(UINT32 *) &crom[0x50FF64] = 0x60000000;
-  }
-  else if (game.name == "swtrilgy")
-  {
-    *(UINT32 *) &crom[0xF0E48] = 0x60000000;
-    *(UINT32 *) &crom[0x043DC] = 0x48000090;  // related to joystick feedback
-    *(UINT32 *) &crom[0x029A0] = 0x60000000;
-    *(UINT32 *) &crom[0x02A0C] = 0x60000000;
-  }
-  else if (game.name == "swtrilgya")
-  {
-    *(UINT32 *) &crom[0xF6DD0] = 0x60000000;  // from MAME
-  }
-  else if (game.name == "eca" || game.name == "ecau")
-  {
-    *(UINT32 *) &crom[0x535580] = 0x60000000;
-    //*(UINT32 *) &crom[0x5023B4] = 0x60000000;
-    //*(UINT32 *) &crom[0x5023D4] = 0x60000000;
-  }
-}
-
-// Reverses all aligned 16-bit words, thereby switching their endianness (assumes buffer size is divisible by 2)
-static void Reverse16(uint8_t *buf, size_t size)
-{
-  for (size_t i = 0; i < size; i += 2)
-  {
-    uint8_t tmp = buf[i+0];
-    buf[i+0] = buf[i+1];
-    buf[i+1] = tmp;
-  }
-}
-
-// Reverses all aligned 32-bit words, thereby switching their endianness (assumes buffer size is divisible by 4)
-static void Reverse32(uint8_t *buf, size_t size)
-{
-  for (size_t i = 0; i < size; i += 4)
-  {
-    uint8_t tmp1 = buf[i+0];
-    uint8_t tmp2 = buf[i+1];
-    buf[i+0] = buf[i+3];
-    buf[i+1] = buf[i+2];
-    buf[i+2] = tmp2;
-    buf[i+3] = tmp1;
-  }
-}
-
 // Offsets of memory regions within Model 3's pool
 #define OFFSET_RAM          0         // 8 MB
 #define OFFSET_CROM         0x800000  // 8 MB (fixed CROM)
@@ -2681,8 +2583,6 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
    *  - Fixed CROM: 8MB. If < 8MB, loaded only in high part of space and low
    *    part is a mirror of (banked) CROM0.
    *  - Sample ROM: 16MB. If <= 8MB, mirror to high 8MB.
-   *
-   * ROMs are released after being loaded.
    */
   if (rom_set.get_rom("vrom").size <= 32*0x100000)
   {
@@ -2806,10 +2706,6 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 
   // Security board encryption device
   m_cryptoDevice.Init(game.encryption_key, std::bind(&CModel3::ReadSecurityRAM, this, std::placeholders::_1));
-  
-  // Apply ROM patches
-  //TODO: place these in XML
-  Patch(crom, game);
   
   // Print game information
   std::set<std::string> extra_hw;

@@ -138,7 +138,7 @@ OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/Crypto.o \
 	$(OBJ_DIR)/Logger.o \
 	$(OBJ_DIR)/tinyxml2.o \
-	$(OBJ_DIR)/ByteSwap.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/ConfigBuilders.o $(OBJ_DIR)/GameLoader.o
+	$(OBJ_DIR)/ByteSwap.o $(OBJ_DIR)/Format.o $(OBJ_DIR)/NewConfig.o $(OBJ_DIR)/ConfigBuilders.o $(OBJ_DIR)/GameLoader.o $(OBJ_DIR)/ROMSet.o
 
 
 # If built-in debugger enabled, include all debugging classes

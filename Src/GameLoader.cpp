@@ -259,6 +259,7 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
         continue;
       }
       RegionsByName_t &regions_by_name = m_regions_by_game[game_name];
+      PatchesByRegion_t &patches_by_region = m_patches_by_game[game_name];
       PopulateGameInfo(&m_game_info_by_game[game_name], game_node);
 
       for (auto &roms_node: game_node)
@@ -307,6 +308,30 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
             ErrorLog("%s: No files defined in region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
           else
             regions_by_name[region->region_name] = region;
+        }
+        
+        // ROM patches, if any
+        for (auto &patches_node: roms_node)
+        {
+          if (patches_node.Key() != "patches")
+            continue;
+          
+          for (auto &patch_node: patches_node)
+          {
+            if (MissingAttrib(*this, patch_node, "region") ||
+                MissingAttrib(*this, patch_node, "bits") ||
+                MissingAttrib(*this, patch_node, "offset") || 
+                MissingAttrib(*this, patch_node, "value"))
+              continue;
+            std::string region = patch_node["region"].ValueAs<std::string>();
+            unsigned bits = patch_node["bits"].ValueAs<unsigned>();
+            uint32_t offset = patch_node["offset"].ValueAs<uint32_t>();
+            uint64_t value = patch_node["value"].ValueAs<uint64_t>();
+            if (bits != 8 && bits != 16 && bits != 32 && bits != 64)
+              ErrorLog("%s: Ignoring ROM patch in '%s' with invalid bit length. Must be 8, 16, 32, or 64!", m_xml_filename.c_str(), game_name.c_str());
+            else
+              patches_by_region[region].push_back(ROM::BigEndianPatch(offset, value, bits));
+          }
         }
       }
       
@@ -439,7 +464,10 @@ bool GameLoader::LoadDefinitionXML(const std::string &filename)
   m_xml_filename = filename;
   Util::Config::Node xml("xml");
   if (Util::Config::FromXMLFile(&xml, filename))
+  {
+    ErrorLog("Game and ROM set definitions could not be loaded! ROMs will not be detected.");
     return true;
+  }
   return ParseXML(xml);
 }
 
@@ -722,6 +750,8 @@ bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const Z
     ErrorLog("Cannot load unknown game '%s'. Is it defined in '%s'?", game_name.c_str(), m_xml_filename.c_str());
     return true;
   }
+
+  // Load up the ROMs
   auto &regions_by_name = IsChildSet(it->second) ? m_regions_by_merged_game.find(game_name)->second : m_regions_by_game.find(game_name)->second;
   LogROMDefinition(game_name, regions_by_name);
   bool error = false;
@@ -733,12 +763,25 @@ bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const Z
       error |= true;
     else
     {
+      // Load up the ROM region
       auto &rom = rom_set->rom_by_region[region->region_name];
       rom.data.reset(new uint8_t[region_size], std::default_delete<uint8_t[]>());
       rom.size = region_size;
       error |= LoadRegion(&rom, region, zip);
     }
-  }  
+  }
+  
+  // Attach the patches and do some more error checking here
+  auto &patches_by_region = m_patches_by_game.find(game_name)->second;
+  for (auto &v: patches_by_region)
+  {
+    auto &region_name = v.first;
+    auto &patches = v.second;
+    if (regions_by_name.find(region_name) == regions_by_name.end())
+      ErrorLog("%s: Ignoring ROM patch for undefined region '%s' in '%s'.", m_xml_filename.c_str(), region_name.c_str(), game_name.c_str());
+    else if (rom_set->rom_by_region.find(region_name) != rom_set->rom_by_region.end())
+      rom_set->rom_by_region[region_name].patches = patches;
+  }
   return error;
 }
 

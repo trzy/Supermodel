@@ -38,7 +38,13 @@ private:
     bool FindFileIndexByOffset(size_t *idx, uint32_t offset) const;
   };
   
-  std::map<std::string, Game> m_game_info_by_game;  // ROMs not loaded here
+  // Game information from XML
+  std::map<std::string, Game> m_game_info_by_game;
+
+  // ROM patches by game and by region. Cannot place into Region because child
+  // sets do not inherit parent patches, which may complicate merging.
+  typedef std::map<std::string, std::vector<ROM::BigEndianPatch>> PatchesByRegion_t;
+  std::map<std::string, PatchesByRegion_t> m_patches_by_game;
   
   // Parsed XML
   typedef std::map<std::string, Region::ptr_t> RegionsByName_t;
@@ -46,7 +52,7 @@ private:
   std::map<std::string, RegionsByName_t> m_regions_by_merged_game;  // only child sets merged w/ parents
   std::string m_xml_filename;
   
-  // Zip file info
+  // Single compressed file inside of a zip archive
   struct ZippedFile
   {
     unzFile zf = nullptr;
@@ -56,6 +62,7 @@ private:
     uint32_t crc32 = 0;
   };
 
+  // Multiple zip archives
   struct ZipArchive
   {
     std::vector<std::string> zipfilenames;
