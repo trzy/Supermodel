@@ -1,6 +1,7 @@
 #include "ROMSet.h"
 #include "OSD/Logger.h"
 #include <cstring>
+#include <algorithm>
 
 void ROM::CopyTo(uint8_t *dest, size_t dest_size, bool apply_patches ) const
 {

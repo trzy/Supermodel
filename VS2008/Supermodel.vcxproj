@@ -371,6 +371,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ExceptionHandling>
     </ClCompile>
+    <ClCompile Include="..\Src\ROMSet.cpp" />
     <ClCompile Include="..\Src\Sound\MPEG\audio.cpp">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
@@ -586,6 +587,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Pkgs\tinyxml2.h" />
     <ClInclude Include="..\Src\Pkgs\unzip.h" />
     <ClInclude Include="..\Src\Pkgs\wglew.h" />
+    <ClInclude Include="..\Src\ROMSet.h" />
     <ClInclude Include="..\Src\Sound\MPEG\amp.h" />
     <ClInclude Include="..\Src\Sound\MPEG\audio.h" />
     <ClInclude Include="..\Src\Sound\MPEG\config.h" />
