@@ -1309,6 +1309,7 @@ static void Help(void)
   puts("General Options:");
   puts("    -?, -h, -help, --help  Print this help text");
   puts("    -print-games           List supported games and quit");
+  printf("    -game-xml-file=<file>  ROM set definition file [Default: %s]\n", s_gameXMLFilePath);
   puts("");
   puts("Core Options:");
   printf("    -ppc-frequency=<freq>  PowerPC frequency in MHz [Default: %d]\n", defaultConfig["PowerPCFrequency"].ValueAs<unsigned>());
