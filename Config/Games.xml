@@ -824,9 +824,6 @@
         <!-- Base offset of program in CROM space: 0x6473c0 (0x473c0 in the ROM) -->
         <patch region="crom" bits="32" offset="0x0D8C4C" value="0x00000002" />  <!-- comm. mode: 00=master, 01=slave, 02=satellite -->
         <patch region="crom" bits="32" offset="0x13FE38" value="0x38840004" />  <!-- an actual bug in the game code -->
-        <patch region="crom" bits="32" offset="0x13EB5C" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x13EDD0" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x13EDC4" value="0x60000000" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19890b.20" crc32="0x9C16C3CC" />
