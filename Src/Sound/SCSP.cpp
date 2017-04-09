@@ -1815,7 +1815,9 @@ void SCSP_DoMasterSamples(int nsamples)
 				unsigned short Enc=((TL(slot))<<0x0)|((DIPAN(slot))<<0x8)|((ef)<<0xd);
 				*/
 #ifdef USEDSP
-				SCSPDSP_SetSample(&SCSPs[0].DSP,/*sample>>5*/(sample*LPANTABLE[(Enc|0xE0)&0xFFE0])>>(SHIFT+3)/*>>SHIFT*/,ISEL(slot),IMXL(slot));
+				// Spindizzi's fix for the VF3 cave stage
+				//SCSPDSP_SetSample(&SCSPs[0].DSP,/*sample>>5*/(sample*LPANTABLE[(Enc|0xE0)&0xFFE0])>>(SHIFT+3)/*>>SHIFT*/,ISEL(slot),IMXL(slot));
+				SCSPDSP_SetSample(&SCSPs[0].DSP,/*sample>>5*/(sample*LPANTABLE[(Enc|0xE0)/*&0xFFE0*/])>>(SHIFT+3)/*>>SHIFT*/,ISEL(slot),IMXL(slot));
 #endif
 
 #ifdef RB_VOLUME
