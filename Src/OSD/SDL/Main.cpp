@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
  **
  ** This file is part of Supermodel.
  **
@@ -1297,7 +1297,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2011-2016 by Bart Trzynadlowski and Nik Henson\n");
+  puts("Copyright 2011-2017 by Bart Trzynadlowski, Nik Henson, and Ian Curtis\n");
 }
 
 static void Help(void)
@@ -1368,7 +1368,7 @@ struct ParsedCommandLine
 {
   Util::Config::Node config = Util::Config::Node("CommandLine");
   std::vector<std::string> rom_files;
-  bool show_help = false;
+  bool print_help = false;
   bool print_games = false;
   bool print_gl_info = false;
   bool config_inputs = false;
@@ -1470,7 +1470,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
       }
       // Fell through -- handle special cases
       if (arg == "-?" || arg == "-h" || arg == "-help" || arg == "--help")
-        cmd_line.show_help = true;
+        cmd_line.print_help = true;
       else if (arg == "-print-games")
         cmd_line.print_games = true;
       else if (arg == "-res" || arg.find("-res=") == 0)
@@ -1553,7 +1553,12 @@ int main(int argc, char **argv)
   
   // Load config and parse command line
   auto cmd_line = ParseCommandLine(argc, argv);
-   if (cmd_line.print_gl_info)
+  if (cmd_line.print_help)
+  {
+    Help();
+    return 0;
+  }
+  if (cmd_line.print_gl_info)
   {
     PrintGLInfo(true, false, false);
     return 0;
