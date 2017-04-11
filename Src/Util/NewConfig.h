@@ -216,7 +216,9 @@ namespace Util
         SetValue<std::string>(value);
       }
 
-      // Add a child node
+      // Add a child node. Multiple nodes of the same key may be added but only
+      // when specified as leaves. For example, adding "foo/bar" twice will 
+      // result in one "foo" with two "bar" children.
       template <typename T>
       Node &Add(const std::string &path, const T &value)
       {
@@ -225,19 +227,29 @@ namespace Util
         ptr_t node;
         for (size_t i = 0; i < keys.size(); i++)
         {
-          // Create node at this level
-          node = std::make_shared<Node>(keys[i]);
-          // The leaf node gets the value
-          if (i == keys.size() - 1)
-            node->SetValue(value);
-          // Attach node to parent and move down to next nesting level: last
-          // created node is new parent
-          AddChild(*parent, node);
-          parent = node.get();
+          bool leaf = i == keys.size() - 1;
+          auto it = parent->m_children.find(keys[i]);
+          if (leaf || it == parent->m_children.end())
+          {
+            // Create node at this level
+            node = std::make_shared<Node>(keys[i]);
+            // The leaf node gets the value
+            if (leaf)
+              node->SetValue(value);
+            // Attach node to parent and move down to next nesting level: last
+            // created node is new parent
+            AddChild(*parent, node);
+            parent = node.get();
+          }
+          else
+          {
+            // Descend deeper...
+            parent = it->second.get();
+          }
         }
         return *node;
       }
-      
+
       Node &Add(const std::string &path)
       {
         return Add(path, std::string());

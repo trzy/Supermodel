@@ -128,6 +128,10 @@
  *
  * TODO
  * ----
+ * - TryGet() can be made quicker by attempting a direct lookup first. We never
+ *   add keys with '/' in them (they are split up into nested nodes). Most
+ *   lookups are likely to be leaf level, so a direct lookup should be possible
+ *   first and, if it fails, the key can be retried as a nested path.
  * - Define our own exceptions?
  */
 
