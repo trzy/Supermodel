@@ -186,7 +186,6 @@ void CTriggerInput::LoadFromConfig(const Util::Config::Node &config)
 {
   string key("Input");
   key.append(id);
-  unsigned autoTrigger;
   auto *node = config.TryGet(key);
   if (node)
     m_autoTrigger = !!node->ValueAs<unsigned>();
