@@ -390,6 +390,15 @@ private:
   
   const Util::Config::Node &m_config;
 	
+#ifdef DEBUG
+	// Debug
+	int m_debugHighlightPolyHeaderIdx = -1;
+	uint32_t m_debugHighlightPolyHeaderMask = 0;
+	int m_debugHighlightCullingNodeIdx = -1;
+	uint32_t m_debugHighlightCullingNodeMask = 0;
+	bool m_debugHighlightAll = false;
+#endif
+	
 	// Stepping
 	int		step;
 	int		offset;			// offset to subtract for words 3 and higher of culling nodes

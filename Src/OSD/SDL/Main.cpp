@@ -410,9 +410,6 @@ static void SaveFrameBuffer(const std::string &file)
   Util::WriteSurfaceToBMP<Util::RGBA8>(file, pixels.get(), totalXRes, totalYRes, true);
 }
 
-bool g_forceFlushModels = false;
-int g_testPolyHeaderIdx = -1;
-uint32_t g_testPolyHeaderMask = 0;
 static std::string s_gfxStatePath;
   
 static std::string GetFileBaseName(const std::string &file)
@@ -439,24 +436,54 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
     0xffffff60,
     0xff0300ff  // contour, luminous, etc.
   };
+  
+  const std::vector<uint32_t> unknownCullingNodeBits
+  {
+    0xffffffff,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00000000
+  };
 
   GLint readBuffer;
   glGetIntegerv(GL_READ_BUFFER, &readBuffer);
   glReadBuffer(GL_FRONT);
 
   // Render separate image for each unknown bit
-  g_forceFlushModels = true;
+  s_runtime_config.Set("Debug/ForceFlushModels", true);
   for (int idx = 0; idx < 7; idx++)
   {
     for (int bit = 0; bit < 32; bit++)
     {
       uint32_t mask = 1 << bit;
-      g_testPolyHeaderIdx = idx;
-      g_testPolyHeaderMask = mask;
+      s_runtime_config.Set("Debug/HighlightPolyHeaderIdx", idx);
+      s_runtime_config.Set("Debug/HighlightPolyHeaderMask", mask);
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        SaveFrameBuffer(file);
+      }
+    }
+  }
+  
+  for (int idx = 0; idx < 10; idx++)
+  {
+    for (int bit = 0; bit < 32; bit++)
+    {
+      uint32_t mask = 1 << bit;
+      s_runtime_config.Set("Debug/HighlightCullingNodeIdx", idx);
+      s_runtime_config.Set("Debug/HighlightCullingNodeMask", mask);
+      if ((unknownCullingNodeBits[idx] & mask))
+      {
+        Emu->RenderFrame();
+        std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -473,7 +500,8 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
   {
     std::string contents = s_polyAnalysisHTMLPrologue;
     contents += "    var g_file_base_name = '" + GetFileBaseName(s_gfxStatePath) + "';\n";  
-    contents += "    var g_unknown_bits = [" + std::string(Util::Format(",").Join(unknownPolyBits)) + "];\n";
+    contents += "    var g_unknown_poly_bits = [" + std::string(Util::Format(",").Join(unknownPolyBits)) + "];\n";
+    contents += "    var g_unknown_culling_bits = [" + std::string(Util::Format(",").Join(unknownCullingNodeBits)) + "];\n";
     contents += s_polyAnalysisHTMLEpilogue;
     fs << contents;
     printf("Produced: %s\n", file.c_str());

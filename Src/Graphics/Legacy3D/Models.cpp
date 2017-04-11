@@ -754,9 +754,9 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
     contourProcessing = 1.0f;
 
 #ifdef DEBUG
-  if (g_testPolyHeaderIdx >= 0)
+  if (m_debugHighlightPolyHeaderIdx >= 0 || m_debugHighlightAll)
   {
-    if ((P->header[g_testPolyHeaderIdx] & g_testPolyHeaderMask))
+    if ((P->header[m_debugHighlightPolyHeaderIdx] & m_debugHighlightPolyHeaderMask) || m_debugHighlightAll)
     {
       r = 0.;
       g = 1.;

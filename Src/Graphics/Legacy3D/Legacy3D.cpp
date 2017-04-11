@@ -162,11 +162,6 @@
 #include <cmath>
 #include <cstdint>
 
-#ifdef DEBUG
-extern bool g_forceFlushModels;
-#endif
-
-
 namespace Legacy3D {
 
 // Microsoft doesn't provide isnan() and isinf()
@@ -668,9 +663,13 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
     m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
   }
 
-//printf("%08x NODE %d\n", addr, stackDepth);
-//for (int i = 0; i < 8; i++)
-//  printf("  %08x\n", node[i]);
+#ifdef DEBUG
+  bool oldDebugHighlightAll = m_debugHighlightAll;
+  m_debugHighlightAll = (m_debugHighlightCullingNodeIdx >= 0) && (node[m_debugHighlightCullingNodeIdx] & m_debugHighlightCullingNodeMask) != 0;
+#endif
+  //printf("%08x NODE %d\n", addr, stackDepth);
+  //for (int i = 0; i < 8; i++)
+  //  printf("  %08x\n", node[i]);
 
   // Debug: texture offset? (NOTE: offsets 1 and 2 don't exist on step 1.0)
   //if (node[0x02]&0xFFFF)
@@ -716,6 +715,9 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
 
   // Proceed to second link
   glPopMatrix();
+#ifdef DEBUG
+  m_debugHighlightAll = oldDebugHighlightAll;
+#endif
   if ((node[0x00] & 0x07) != 0x06)  // seems to indicate second link is invalid (fixes circular references)
     DescendNodePtr(node2Ptr);
   --stackDepth;
@@ -1001,7 +1003,11 @@ void CLegacy3D::RenderFrame(void)
   
   // Draw
 #ifdef DEBUG
-  if (g_forceFlushModels)
+  m_debugHighlightPolyHeaderIdx = m_config["Debug/HighlightPolyHeaderIdx"].ValueAsDefault<int>(-1);
+  m_debugHighlightPolyHeaderMask = m_config["Debug/HighlightPolyHeaderMask"].ValueAsDefault<uint32_t>(0);
+  m_debugHighlightCullingNodeIdx = m_config["Debug/HighlightCullingNodeIdx"].ValueAsDefault<int>(-1);
+  m_debugHighlightCullingNodeMask = m_config["Debug/HighlightCullingNodeMask"].ValueAsDefault<uint32_t>(0);
+  if (m_config["Debug/ForceFlushModels"].ValueAsDefault<bool>(false))
     ClearModelCache(&VROMCache);
 #endif
   ClearModelCache(&PolyCache);
