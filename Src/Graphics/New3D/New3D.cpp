@@ -419,6 +419,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	float			x, y, z;
 	int				tx, ty;
 	BBox			bbox;
+	UINT16			hDistance;
+	float			fDistance;
 
 	if (m_nodeAttribs.StackLimit()) {
 		return;
@@ -476,15 +478,10 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		MultMatrix(matrixOffset,m_modelMat);
 	}
 
+	hDistance = node[9 - m_offset] & 0xFFFF;
+	fDistance = R3DFloat::GetFloat16(hDistance);
+
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
-
-		//================
-		UINT16	hDistance;
-		float	fDistance;
-		//================
-
-		hDistance = node[9 - m_offset] & 0xFFFF;
-		fDistance = R3DFloat::GetFloat16(hDistance);
 
 		if (hDistance != R3DFloat::Pro16BitMax) {
 
@@ -502,7 +499,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		}
 	}
 
-	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE) {
+	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && fDistance > R3DFloat::Pro16BitFltMin) {
 
 		// Descend down first link
 		if ((node[0x00] & 0x08))	// 4-element LOD table
