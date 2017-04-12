@@ -177,6 +177,30 @@ int main()
     std::cout << std::endl;
     test_results.push_back({ "Nested key 4", config["a/b/c"].Value<std::string>() == "d" });
   }
+  
+  // Multiple Set() calls should only create duplicates of the leaf node
+  {
+    const char *expected_config =
+      "global=\"\"  children={ a foo x }\n"
+      "  foo=\"\"  children={ bar }\n"
+      "    bar=\"\"  children={ }\n"
+      "    bar=\"\"  children={ }\n"
+      "  x=\"\"  children={ }\n"
+      "  x=\"\"  children={ }\n"
+      "  a=\"\"  children={ b }\n"
+      "    b=\"\"  children={ c }\n"
+      "      c=\"\"  children={ }\n"
+      "      c=\"\"  children={ }\n";
+    Util::Config::Node config("global");
+    config.Add("foo/bar");
+    config.Add("foo/bar");
+    config.Add("x");
+    config.Add("x");
+    config.Add("a/b/c");
+    config.Add("a/b/c");
+    config.Serialize(&std::cout);
+    test_results.push_back({ "Duplicate leaf nodes", config.ToString() == expected_config });
+  }
 
   PrintTestResults(test_results);
   return 0;
