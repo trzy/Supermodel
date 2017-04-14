@@ -756,6 +756,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
 
+		vp->lightingParams[3] = std::max(0.f, std::min(vp->lightingParams[3], 1.0f));	// clamp sun values
+		vp->lightingParams[4] = std::max(0.f, std::min(vp->lightingParams[4], 1.0f));	// std::clamp would be easier but c++17 .. sigh.
+
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
 		int spotFogColorIdx = (vpnode[0x20] >> 8) & 7;									// spotlight on fog color index
