@@ -1022,7 +1022,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	UINT16			texCoords[4][2];
 	UINT16			prevTexCoords[4][2];
 	PolyHeader		ph;
-	int				numPolys	= 0;
 	UINT64			lastHash	= -1;
 	SortingMesh*	currentMesh = nullptr;
 	
@@ -1043,10 +1042,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		if (ph.header[6] == 0) {
 			break;
-		}
-
-		if (ph.Disabled() || !numPolys && (ph.NumSharedVerts() != 0)) {
-			continue;
 		}
 
 		// create a hash value based on poly attributes -todo add more attributes
@@ -1205,7 +1200,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		// check if we need double up vertices for two sided lighting
-		if (ph.DoubleSided()) {
+		if (ph.DoubleSided() && !ph.Disabled()) {
 
 			R3DPoly tempP = p;
 
@@ -1220,8 +1215,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		// Copy this polygon into the model buffer
-		CopyVertexData(p, currentMesh->polys);
-		numPolys++;
+		if (!ph.Disabled()) {
+			CopyVertexData(p, currentMesh->polys);
+		}
 		
 		// Copy current vertices into previous vertex array
 		for (i = 0; i < 4; i++) {
