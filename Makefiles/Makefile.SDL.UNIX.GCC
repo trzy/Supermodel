@@ -73,9 +73,9 @@ OUTFILE = $(BIN_DIR)/Supermodel
 CC = gcc
 LD = gcc
 COMPILER_FLAGS = $(SDL_CFLAGS) -ISrc/ -ISrc/OSD/SDL/ -ISrc/Pkgs/ -c -Wall -O3
-CFLAGS = $(COMPILER_FLAGS)
-CPPFLAGS = $(COMPILER_FLAGS) -I$(BOOST_INCLUDEPATH) -std=c++11
-LFLAGS = -o $(OUTFILE) $(SDL_LIBFLAGS) -lGL -lGLU -lz -lm -lstdc++
+CFLAGS += $(COMPILER_FLAGS)
+CPPFLAGS += $(CXXFLAGS) $(COMPILER_FLAGS) -std=c++11
+LFLAGS += -o $(OUTFILE) $(SDL_LIBFLAGS) -lGL -lGLU -lz -lm -lstdc++
 
 #
 # Build options...
@@ -94,11 +94,11 @@ endif
 #
 # Objects and Dependencies
 #
-HEADERS = Src/Supermodel.h Src/Games.h Src/OSD/SDL/Types.h
+HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
 OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o \
 	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Legacy3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o \
-	$(OBJ_DIR)/New3D.o $(OBJ_DIR)/Mat4.o $(OBJ_DIR)/Model.o $(OBJ_DIR)/PolyHeader.o $(OBJ_DIR)/Texture.o $(OBJ_DIR)/TextureSheet.o $(OBJ_DIR)/VBO.o $(OBJ_DIR)/Vec.o $(OBJ_DIR)/R3DShader.o $(OBJ_DIR)/R3DFloat.o \
+	$(OBJ_DIR)/New3D.o $(OBJ_DIR)/Mat4.o $(OBJ_DIR)/Model.o $(OBJ_DIR)/PolyHeader.o $(OBJ_DIR)/Texture.o $(OBJ_DIR)/TextureSheet.o $(OBJ_DIR)/VBO.o $(OBJ_DIR)/Vec.o $(OBJ_DIR)/R3DShader.o $(OBJ_DIR)/R3DFloat.o $(OBJ_DIR)/R3DScrollFog.o \
 	$(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
 	$(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/Audio.o $(OBJ_DIR)/Thread.o $(OBJ_DIR)/SoundBoard.o \
 	$(OBJ_DIR)/SCSP.o $(OBJ_DIR)/SCSPDSP.o $(OBJ_DIR)/68K.o $(OBJ_DIR)/m68kcpu.o $(OBJ_DIR)/m68kopnz.o $(OBJ_DIR)/m68kopdm.o \
@@ -112,7 +112,13 @@ OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/amp_util.o \
 	$(OBJ_DIR)/Crypto.o \
 	$(OBJ_DIR)/Logger.o \
-	$(OBJ_DIR)/Format.o
+	$(OBJ_DIR)/Format.o \
+	$(OBJ_DIR)/NewConfig.o \
+	$(OBJ_DIR)/ByteSwap.o \
+	$(OBJ_DIR)/ConfigBuilders.o \
+	$(OBJ_DIR)/GameLoader.o \
+	$(OBJ_DIR)/tinyxml2.o \
+	$(OBJ_DIR)/ROMSet.o
 
 # If built-in debugger enabled, include all debugging classes
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
@@ -219,7 +225,10 @@ $(OBJ_DIR)/%.o:	Src/OSD/Windows/%.cpp
 
 $(OBJ_DIR)/%.o:	Src/Pkgs/%.c
 	$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/$(*F).o
-	
+
+$(OBJ_DIR)/%.o:	Src/Pkgs/%.cpp
+	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
+
 $(OBJ_DIR)/%.o:	Src/Util/%.cpp Src/Util/%.h
 	$(CXX) $< $(CPPFLAGS) -o $(OBJ_DIR)/$(*F).o
 
