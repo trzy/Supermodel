@@ -1118,6 +1118,10 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		p.faceColour[3] = ph.Transparency() / 255.f;
+
+		if (ph.Discard1() && !ph.Discard2()) {
+			p.faceColour[3] *= 0.5f;
+		}
 				
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
@@ -1200,7 +1204,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		// check if we need double up vertices for two sided lighting
-		if (ph.DoubleSided() && !ph.Disabled()) {
+		if (ph.DoubleSided() && !ph.Discard()) {
 
 			R3DPoly tempP = p;
 
@@ -1215,7 +1219,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		// Copy this polygon into the model buffer
-		if (!ph.Disabled()) {
+		if (!ph.Discard()) {
 			CopyVertexData(p, currentMesh->polys);
 		}
 		

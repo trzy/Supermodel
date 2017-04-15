@@ -10,7 +10,7 @@ Polygon Data
 xxxxxx-- -------- -------- --------		Specular
 ------x- -------- -------- --------		Clockwise winding
 -------x xxxxxxxx xxxxxx-- --------		Polygon number (not always present)
--------- -------- ------xx --------		Discard polys
+-------- -------- ------xx --------		Discard
 -------- -------- -------- x-------		Enable specular
 -------- -------- -------- -x------		0 = Triangle, 1 = Quad
 -------- -------- -------- --x-----		Poly is points
@@ -90,7 +90,9 @@ public:
 	float	SpecularValue();
 	bool	Clockwise();
 	int		PolyNumber();
-	bool	Disabled();
+	bool	Discard();				// both bits
+	bool	Discard1();				// bit 1 only
+	bool	Discard2();				// bit 2 only
 	int		NumVerts();
 	int		NumSharedVerts();
 	bool	SharedVertex(int vertex);
@@ -100,7 +102,7 @@ public:
 	float	UVScale();
 	bool	DoubleSided();
 	bool	LastPoly();
-	bool	PolyColor();	// if false uses LUT from ram
+	bool	PolyColor();			// if false uses LUT from ram
 	bool	FixedShading();
 	bool	SmoothShading();
 

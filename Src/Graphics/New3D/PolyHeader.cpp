@@ -91,13 +91,23 @@ int PolyHeader::PolyNumber()
 	return (header[0] & 0x000FFFC00) >> 10;				// not all programs pass this, instead they are set to 0
 }
 
-bool PolyHeader::Disabled()
+bool PolyHeader::Discard()
 {
 	if ((header[0] & 0x100) && (header[0] & 0x200)) {
 		return true;
 	}
 
 	return false;
+}
+
+bool PolyHeader::Discard1()
+{
+	return (header[0] & 0x200) > 0;
+}
+
+bool PolyHeader::Discard2()
+{
+	return (header[0] & 0x100) > 0;
 }
 
 int	PolyHeader::NumVerts() 
