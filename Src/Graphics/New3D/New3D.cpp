@@ -419,8 +419,11 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	float			x, y, z;
 	int				tx, ty;
 	BBox			bbox;
-	UINT16			hDistance;
-	float			fDistance;
+	UINT16			uCullRadius;
+	float			fCullRadius;
+	UINT16			uBlendRadius;
+	float			fBlendRadius;
+	UINT8			lodTablePointer;
 
 	if (m_nodeAttribs.StackLimit()) {
 		return;
@@ -436,6 +439,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
 	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
+	lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
 
 	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
 		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
@@ -478,14 +482,17 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		MultMatrix(matrixOffset,m_modelMat);
 	}
 
-	hDistance = node[9 - m_offset] & 0xFFFF;
-	fDistance = R3DFloat::GetFloat16(hDistance);
+	uCullRadius = node[9 - m_offset] & 0xFFFF;
+	fCullRadius = R3DFloat::GetFloat16(uCullRadius);
+
+	uBlendRadius = node[9 - m_offset] >> 16;
+	fBlendRadius = R3DFloat::GetFloat16(uBlendRadius);
 
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
-		if (hDistance != R3DFloat::Pro16BitMax) {
+		if (uCullRadius != R3DFloat::Pro16BitMax) {
 
-			CalcBox(fDistance, bbox);
+			CalcBox(fCullRadius, bbox);
 			TransformBox(m_modelMat, bbox);
 
 			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
@@ -499,7 +506,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		}
 	}
 
-	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && fDistance > R3DFloat::Pro16BitFltMin) {
+	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && fCullRadius > R3DFloat::Pro16BitFltMin) {
 
 		// Descend down first link
 		if ((node[0x00] & 0x08))	// 4-element LOD table
@@ -721,7 +728,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
-		LODBlendTable* tableTest = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
+		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
 
 		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
 		vp->angle_right		=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);

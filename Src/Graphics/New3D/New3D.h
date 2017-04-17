@@ -208,6 +208,7 @@ private:
 	// Real3D Base Matrix Pointer
 	const float	*m_matrixBasePtr;
 	UINT32 m_colorTableAddr = 0x400;		// address of color table in polygon RAM
+	LODBlendTable* m_LODBlendTable;
 
 	TextureSheet	m_texSheet;
 	NodeAttributes	m_nodeAttribs;
