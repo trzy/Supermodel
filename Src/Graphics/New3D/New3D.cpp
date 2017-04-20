@@ -1149,9 +1149,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			UINT32 it = vData[3];
 
 			// Decode vertices
-			p.v[j].pos[0] = (GLfloat)(((INT32)ix) >> 8) * m_vertexFactor;
-			p.v[j].pos[1] = (GLfloat)(((INT32)iy) >> 8) * m_vertexFactor;
-			p.v[j].pos[2] = (GLfloat)(((INT32)iz) >> 8) * m_vertexFactor;
+			p.v[j].pos[0] = (((INT32)ix) >> 8) * m_vertexFactor;
+			p.v[j].pos[1] = (((INT32)iy) >> 8) * m_vertexFactor;
+			p.v[j].pos[2] = (((INT32)iz) >> 8) * m_vertexFactor;
 
 			// Per vertex normals
 			if (ph.SmoothShading()) {
