@@ -210,8 +210,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, bool alpha)
 	}
 
 	glDisable(GL_BLEND);
-	glDepthMask(GL_TRUE);
-	glDisable(GL_STENCIL_TEST);
 
 	return hasOverlay;
 }
@@ -235,6 +233,7 @@ void CNew3D::RenderFrame(void)
 
 	glDepthFunc		(GL_LEQUAL);
 	glEnable		(GL_DEPTH_TEST);
+	glDepthMask		(GL_TRUE);
 	glActiveTexture	(GL_TEXTURE0);
 	glEnable		(GL_CULL_FACE);
 	glFrontFace		(GL_CW);
@@ -304,6 +303,7 @@ void CNew3D::RenderFrame(void)
 	m_r3dShader.SetShader(false);		// unbind shader
 	m_vbo.Bind(false);
 
+	glDisable(GL_STENCIL_TEST);
 	glDisable(GL_CULL_FACE);
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
