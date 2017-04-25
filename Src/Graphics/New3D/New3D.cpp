@@ -416,8 +416,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 {
 	const UINT32	*node, *lodTable;
 	UINT32			matrixOffset, child1Ptr, sibling2Ptr;
-	float			x, y, z;
-	int				tx, ty;
 	BBox			bbox;
 	UINT16			uCullRadius;
 	float			fCullRadius;
@@ -452,19 +450,14 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
 	}
 
-	x = *(float *)&node[0x04 - m_offset];
-	y = *(float *)&node[0x05 - m_offset];
-	z = *(float *)&node[0x06 - m_offset];
-
 	m_nodeAttribs.Push();	// save current attribs
 
-	if (!m_offset)	// Step 1.5+
-	{
-		tx = 32 * ((node[0x02] >> 7) & 0x3F);
-		ty = 32 * (node[0x02] & 0x1F);
+	if (!m_offset) {		// Step 1.5+
 		// apply texture offsets, else retain current ones
 		if ((node[0x02] & 0x8000))	{
-			m_nodeAttribs.currentTexOffsetX = tx;
+			int tx = 32 * ((node[0x02] >> 7) & 0x3F);
+			int ty = 32 * (node[0x02] & 0x1F);
+			m_nodeAttribs.currentTexOffsetX	= tx;
 			m_nodeAttribs.currentTexOffsetY = ty;
 			m_nodeAttribs.currentPage = (node[0x02] & 0x4000) >> 14;
 		}
@@ -475,6 +468,9 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// apply translation vector
 	if ((node[0x00] & 0x10)) {
+		float x = *(float *)&node[0x04 - m_offset];
+		float y = *(float *)&node[0x05 - m_offset];
+		float z = *(float *)&node[0x06 - m_offset];
 		m_modelMat.Translate(x, y, z);
 	}
 	// multiply matrix, if specified
@@ -1611,6 +1607,8 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 	if (near < far / 1000000) {
 		near = far / 1000000;				// if we get really close to zero somehow, we will have almost no depth precision
 	}
+
+	near = 5.f;
 
 	float l = near * tanf(vp->angle_left);	// we need to calc the shape of the projection frustum for culling
 	float r = near * tanf(vp->angle_right);
