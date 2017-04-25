@@ -1608,8 +1608,6 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 		near = far / 1000000;				// if we get really close to zero somehow, we will have almost no depth precision
 	}
 
-	near = 5.f;
-
 	float l = near * tanf(vp->angle_left);	// we need to calc the shape of the projection frustum for culling
 	float r = near * tanf(vp->angle_right);
 	float t = near * tanf(vp->angle_top);
