@@ -97,30 +97,36 @@ void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned wid
 
 void CNew3D::DrawScrollFog()
 {
+	// ths is my best guess at the logic based upon what games are doing
+	//
+	// ocean hunter		- every viewport has scroll fog values set. Must start with lowest priority layers as the higher ones sometimes are garbage
+	// scud race		- first viewports in priority layer missing scroll values. The latter ones all contain valid scroll values.
+	// daytona			- doesn't seem to use scroll fog at all. Will set scroll values for the first viewports, the end ones contain no scroll values
+	// vf3				- first viewport only has it set. But set with highest select value ?? Rest of the viewports in priority layer contain a lower select value
+	// sega bassfishing	- first viewport in priority 1 sets scroll value. The rest all contain the wrong value + a higher select value ..
 
-	// the logic for this is still not quite right
-	// the sroll fog value seems to be set with multiple viewports.. currently unknown which one to use
+	// known bug (vf3)	- if you complete the game on a stage that has fogging, that fogging gets carried over into the credits. I did a binary diff on the viewport, it's never updated from the previous stage, neither is the data it's pointing at. Either a game or emulation bug.
 
 	for (int i = 0; i < 4; i++) {
 
+		Viewport *vp = nullptr;
+
 		for (auto &n : m_nodes) {
 
-			if (n.viewport.scrollFog > 0 && n.viewport.priority == i) {	
-
-				float rgba[4]		= {n.viewport.fogParams[0], n.viewport.fogParams[1], n.viewport.fogParams[2], n.viewport.scrollFog};
-				float attenuation	= n.viewport.scrollAtt; // Seems to pass the wrong values!
-				float ambient		= n.viewport.fogParams[6];
-				float *spotRGB		= n.viewport.spotFogColor;
-				float *spotEllipse	= n.viewport.spotEllipse;
-
-				glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
-				m_r3dScrollFog.DrawScrollFog(rgba, attenuation, ambient, spotRGB, spotEllipse);
-				return;
-			}
-
 			if (n.viewport.priority == i) {
-				break;		// we only want to check the first viewport from each priority level
+				if (!vp || n.viewport.select == vp->select) {
+					vp = &n.viewport;		// grab the last viewport with the same select value ??
+				}
 			}
+		}
+
+		if (vp && vp->scrollFog) {
+
+			float rgba[4] = { vp->fogParams[0], vp->fogParams[1], vp->fogParams[2], vp->scrollFog };
+
+			glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
+			m_r3dScrollFog.DrawScrollFog(rgba, vp->scrollAtt, vp->fogParams[6], vp->spotFogColor, vp->spotEllipse);
+			return;
 		}
 	}
 }
@@ -703,8 +709,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 	}
 
 	if (!(vpnode[0] & 0x20)) {	// only if viewport enabled
-		uint32_t curPri		= (vpnode[0x00] >> 3) & 3;		// viewport priority
-		uint32_t nodeAddr	= vpnode[0x02];					// scene database node pointer
 
 		// create node object 
 		m_nodes.emplace_back(Node());
@@ -713,8 +717,11 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// get pointer to its viewport
 		Viewport *vp = &m_nodes.back().viewport;
 
-		vp->priority = curPri;
-		m_currentPriority = curPri;
+		vp->priority	= (vpnode[0] >> 3) & 0x3;
+		vp->select		= (vpnode[0] >> 8) & 0x3;
+		vp->number		= (vpnode[0] >> 10);
+
+		m_currentPriority = vp->priority;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
 		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
@@ -724,7 +731,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
-		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17]);
+		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17] & 0xFFFFFF);
 
 		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
 		vp->angle_right		=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
@@ -734,7 +741,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// I don't really know what these paramaters are for. They are derived from the view angles somehow.
 		// In the sdk it's they are someting like (1/tan(left)-tan(right)) * tan(left)
 		// But we know when left=right the value is always 0.5. Any other value and we have off-axis projection
-		// My theory is, the h/w is using these values set actually set the projection matrix angles
+		// My theory is, the h/w is using these values to actually set the frustum planes angles
 		// The above vpnode[12], vpnode[13] actually work as a normal vector for the clipping planes (used for culling)
 		// I think in lost world and dirt devils, there is a missmatch between the computed plane normals, and the view angles
 		if (*(float *)&vpnode[0xa] == 0.5f) {
@@ -848,7 +855,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		}
 
 		// Descend down the node link: Use recursive traversal
-		DescendNodePtr(nodeAddr);
+		DescendNodePtr(vpnode[0x02]);
 	}
 
 	// render next viewport

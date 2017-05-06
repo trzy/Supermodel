@@ -141,8 +141,10 @@ struct Viewport
 	float	scrollFog;				// a transparency value that determines if fog is blended over the bottom 2D layer
 	int		x, y;					// viewport coordinates (scaled and in OpenGL format)
 	int		width, height;			// viewport dimensions (scaled for display surface size)
-	int		priority;
-	float	spotFogColor[3];			// spotlight color on fog
+	int		priority;				// priority
+	int		select;					// viewport select?
+	int		number;					// viewport number
+	float	spotFogColor[3];		// spotlight color on fog
 	float	scrollAtt;
 };
 
