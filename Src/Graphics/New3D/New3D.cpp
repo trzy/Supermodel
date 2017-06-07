@@ -104,7 +104,7 @@ void CNew3D::DrawScrollFog()
 	// daytona			- doesn't seem to use scroll fog at all. Will set scroll values for the first viewports, the end ones contain no scroll values
 	// vf3				- first viewport only has it set. But set with highest select value ?? Rest of the viewports in priority layer contain a lower select value
 	// sega bassfishing	- first viewport in priority 1 sets scroll value. The rest all contain the wrong value + a higher select value ..
-	// spikeout final	- 2nd viewport has scroll values set, none of the others do. It also uses the highest select value
+	// spikeout final	- 2nd viewport in the priority layer has scroll values set, none of the others do. It also uses the highest select value
 
 	// known bug (vf3)	- if you complete the game on a stage that has fogging, that fogging gets carried over into the credits. I did a binary diff on the viewport, it's never updated from the previous stage, neither is the data it's pointing at. Either a game or emulation bug.
 
