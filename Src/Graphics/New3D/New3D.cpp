@@ -1168,8 +1168,21 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			}
 
 			if (ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading()) {		// fixed shading seems to be disabled if actual normals are set
-				float offset = !ph.LightEnabled() ? 1.f : 0.f;						// if lighting is disabled colour seems to be an offset 
-				float shade = (((ix + 128) & 0xFF) / 255.f) + offset;
+
+				//===========
+				float shade;
+				float offset; 				// if lighting is disabled colour seems to be an offset 
+				//===========
+
+				offset = !ph.LightEnabled() ? 1.f : 0.f;
+
+				if (m_step > 0x15 && !ph.TranslatorMap()) {							// star wars seems to treat the values as unsigned. This logic is guess work
+					shade = ((ix & 0xFF) / 255.f) + offset;
+				}
+				else {
+					shade = (((ix + 128) & 0xFF) / 255.f) + offset;					// dirt devils and mag truck, black seems to come out at 50% brightness instead. Still unknown exactly what effects this
+				}
+
 				p.v[j].color[0] = shade;											// hardware doesn't really have per vertex colours, only per poly
 				p.v[j].color[1] = shade;
 				p.v[j].color[2] = shade;
