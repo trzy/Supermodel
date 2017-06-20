@@ -19,7 +19,6 @@ void Texture::DeleteTexture()
 {
 	if (m_textureID) {
 		glDeleteTextures(1, &m_textureID);
-		printf("-----> deleting %i %i %i %i %i\n", m_format, m_x, m_y, m_width, m_height);
 		Reset();
 	}
 }
@@ -378,8 +377,6 @@ void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x,
 	m_format = format;
 	m_mirrorU = mirrorU;
 	m_mirrorV = mirrorV;
-
-	printf("create format %i x: %i y: %i width: %i height: %i\n", format, x, y, width, height);
 }
 
 } // New3D
