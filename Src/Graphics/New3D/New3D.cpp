@@ -1180,11 +1180,11 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					shade = ((ix & 0x7F) / 127.f);									// this matches the sdk (values are from 0-127 only) and the intensity is clamped to to 0-1						
 
 					if (m_vpAmbient > 0) {
-						shade = (shade + 1) / 2;									// Viewport ambient seems to effect fixed shading somehow. Technically vp ambient can change dynamically, but not an issue in practise. If it was we would need this logic in shader
+						shade = (shade + 1) / 2;									// Viewport ambient seems to effect fixed shading. Technically vp ambient can change dynamically, but not an issue in practise. If it was we would need this logic in shader
 					}
 				}
 				else {
-					shade = (((ix + 128) & 0xFF) / 255.f) + offset;					// dirt devils and mag truck, black seems to come out at 50% brightness instead. Still unknown exactly what effects this
+					shade = (((ix + 128) & 0xFF) / 255.f);							// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
 				}
 
 				shade += offset;
