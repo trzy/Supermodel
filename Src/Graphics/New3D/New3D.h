@@ -213,6 +213,7 @@ private:
 	TextureSheet	m_texSheet;
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
+	float			m_vpAmbient;			// cached value
 
 	std::vector<Node> m_nodes;				// this represents the entire render frame
 	std::vector<Poly> m_polyBufferRam;		// dynamic polys

@@ -766,13 +766,12 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
 		vp->lightingParams[1] = *(float *)&vpnode[0x06];								// sun Y
 		vp->lightingParams[2] = *(float *)&vpnode[0x04];								// sun Z
-		vp->lightingParams[3] = *(float *)&vpnode[0x07];								// sun intensity
+		vp->lightingParams[3] = std::max(0.f, std::min(*(float *)&vpnode[0x07], 1.0f));	// sun intensity (clamp to 0-1)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
 
-		vp->lightingParams[3] = std::max(0.f, std::min(vp->lightingParams[3], 1.0f));	// clamp sun values
-		vp->lightingParams[4] = std::max(0.f, std::min(vp->lightingParams[4], 1.0f));	// std::clamp would be easier but c++17 .. sigh.
-
+		m_vpAmbient = vp->lightingParams[4];											// cache this
+		
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
 		int spotFogColorIdx = (vpnode[0x20] >> 8) & 7;									// spotlight on fog color index
@@ -1176,12 +1175,19 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 				offset = !ph.LightEnabled() ? 1.f : 0.f;
 
-				if (m_step > 0x15 && !ph.TranslatorMap()) {							// star wars seems to treat the values as unsigned. This logic is guess work
-					shade = ((ix & 0xFF) / 255.f) + offset;
+				if (m_step <=  0x15) {	
+					
+					shade = ((ix & 0x7F) / 127.f);									// this matches the sdk (values are from 0-127 only) and the intensity is clamped to to 0-1						
+
+					if (m_vpAmbient > 0) {
+						shade = (shade + 1) / 2;									// Viewport ambient seems to effect fixed shading somehow. Technically vp ambient can change dynamically, but not an issue in practise. If it was we would need this logic in shader
+					}
 				}
 				else {
 					shade = (((ix + 128) & 0xFF) / 255.f) + offset;					// dirt devils and mag truck, black seems to come out at 50% brightness instead. Still unknown exactly what effects this
 				}
+
+				shade += offset;
 
 				p.v[j].color[0] = shade;											// hardware doesn't really have per vertex colours, only per poly
 				p.v[j].color[1] = shade;
