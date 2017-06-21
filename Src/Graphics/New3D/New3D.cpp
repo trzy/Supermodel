@@ -1184,7 +1184,12 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					}
 				}
 				else {
-					shade = (((ix + 128) & 0xFF) / 255.f);							// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
+					if (ph.SpecularEnabled()) {
+						shade = (ix & 0xFF) / 255.f;								// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
+					}
+					else {
+						shade = (((ix + 128) & 0xFF) / 255.f);						// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
+					}
 				}
 
 				shade += offset;
