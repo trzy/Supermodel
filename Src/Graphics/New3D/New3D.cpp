@@ -763,9 +763,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 		CalcFrustumPlanes(m_planes, vp->projectionMatrix);	// we need to calc a 'projection matrix' to get the correct frustum planes for clipping
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
-		vp->lightingParams[0] = *(float *)&vpnode[0x05];								// sun X
-		vp->lightingParams[1] = *(float *)&vpnode[0x06];								// sun Y
-		vp->lightingParams[2] = *(float *)&vpnode[0x04];								// sun Z
+		vp->lightingParams[0] =  *(float *)&vpnode[0x05];								// sun X
+		vp->lightingParams[1] = -*(float *)&vpnode[0x06];								// sun Y (- to convert to ogl cordinate system)
+		vp->lightingParams[2] = -*(float *)&vpnode[0x04];								// sun Z (- to convert to ogl cordinate system)
 		vp->lightingParams[3] = std::max(0.f, std::min(*(float *)&vpnode[0x07], 1.0f));	// sun intensity (clamp to 0-1)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
@@ -1186,9 +1186,12 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				else {
 					if (ph.SpecularEnabled()) {
 						shade = (ix & 0xFF) / 255.f;								// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
+						shade += m_vpAmbient;
+						shade = std::min(shade, 1.0f);
 					}
 					else {
 						shade = (((ix + 128) & 0xFF) / 255.f);						// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
+						shade = std::max(1 - m_vpAmbient, shade);
 					}
 				}
 

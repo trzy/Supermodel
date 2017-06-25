@@ -117,8 +117,8 @@ static const char *fragmentShaderR3D =
 		"vec3   sunVector;\n"     // sun lighting vector (as reflecting away from vertex)
 		"float  sunFactor;\n"     // sun light projection along vertex normal (0.0 to 1.0)
 
-		// Real3D -> OpenGL view space convention (TO-DO: do this outside of shader)
-		"sunVector = lighting[0] * vec3(1.0, -1.0, -1.0);\n"
+		// Sun angle
+		"sunVector = lighting[0];\n"
 
 		// Compute diffuse factor for sunlight
 		"sunFactor = max(dot(sunVector, fsViewNormal), 0.0);\n"
