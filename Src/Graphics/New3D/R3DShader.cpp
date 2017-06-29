@@ -124,7 +124,7 @@ static const char *fragmentShaderR3D =
 		"sunFactor = max(dot(sunVector, fsViewNormal), 0.0);\n"
 
 		// Total light intensity: sum of all components 
-		"lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);\n"   // ambient + diffuse
+		"lightIntensity = vec3(sunFactor*lighting[1].x + min(lighting[1].y,0.75));\n"   // diffuse + ambient (clamped to max 0.75)
 
 		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
 
