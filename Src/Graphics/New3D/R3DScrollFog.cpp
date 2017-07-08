@@ -4,55 +4,59 @@
 
 namespace New3D {
 
-static const char *vertexShaderFog =
+static const char *vertexShaderFog = R"glsl(
 
-	"uniform mat4 mvp;\n"
+uniform mat4 mvp;
 
-	"void main(void)\n"
-	"{\n"
-	    "gl_Position = mvp * gl_Vertex;\n"
-	"}\n";
+void main(void)
+{
+	gl_Position = mvp * gl_Vertex;
+};
 
-static const char *fragmentShaderFog =
+)glsl";
 
-	"uniform float	fogAttenuation;\n"
-	"uniform float	fogAmbient;\n"
-	"uniform vec4	fogColour;\n"
-	"uniform vec3	spotFogColor;\n"
-	"uniform vec4	spotEllipse;\n"
+static const char *fragmentShaderFog = R"glsl(
 
-	// Spotlight on fog
-	"float	ellipse;\n"
-	"vec2	position, size;\n"
-	"vec3	lSpotFogColor;\n"
+uniform float	fogAttenuation;
+uniform float	fogAmbient;
+uniform vec4	fogColour;
+uniform vec3	spotFogColor;
+uniform vec4	spotEllipse;
 
-	// Scroll fog
-	"float	lfogAttenuation;\n"
-	"vec3	lFogColor;\n"
-	"vec4	scrollFog;\n"
+// Spotlight on fog
+float	ellipse;
+vec2	position, size;
+vec3	lSpotFogColor;
 
-	"void main()\n"
-	"{\n"
-		// Scroll fog base color
-		"lFogColor = fogColour.rgb * fogAmbient;\n"
+// Scroll fog
+float	lfogAttenuation;
+vec3	lFogColor;
+vec4	scrollFog;
 
-		// Spotlight on fog (area) 
-		"position = spotEllipse.xy;\n"
-		"size = spotEllipse.zw;\n"
-		"ellipse = length((gl_FragCoord.xy - position) / size);\n"
-		"ellipse = pow(ellipse, 2.0);\n"			// decay rate = square of distance from center
-		"ellipse = 1.0 - ellipse;\n"				// invert
-		"ellipse = max(0.0, ellipse);\n"			// clamp
+void main()
+{
+	// Scroll fog base color
+	lFogColor = fogColour.rgb * fogAmbient;
 
-		// Spotlight on fog (color)
-		"lSpotFogColor = mix(spotFogColor * ellipse * fogColour.rgb, vec3(0.0), fogAttenuation);\n"
+	// Spotlight on fog (area) 
+	position = spotEllipse.xy;
+	size = spotEllipse.zw;
+	ellipse = length((gl_FragCoord.xy - position) / size);
+	ellipse = pow(ellipse, 2.0);			// decay rate = square of distance from center
+	ellipse = 1.0 - ellipse;				// invert
+	ellipse = max(0.0, ellipse);			// clamp
 
-		// Scroll fog density
-		"scrollFog = vec4(lFogColor + lSpotFogColor, fogColour.a);\n"
+	// Spotlight on fog (color)
+	lSpotFogColor = mix(spotFogColor * ellipse * fogColour.rgb, vec3(0.0), fogAttenuation);
 
-		// Final Color
-		"gl_FragColor = scrollFog;\n"
-	"}\n";
+	// Scroll fog density
+	scrollFog = vec4(lFogColor + lSpotFogColor, fogColour.a);
+
+	// Final Color
+	gl_FragColor = scrollFog;
+};
+
+)glsl";
 
 
 R3DScrollFog::R3DScrollFog()

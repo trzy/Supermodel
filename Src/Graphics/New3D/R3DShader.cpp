@@ -3,165 +3,167 @@
 
 namespace New3D {
 
-static const char *vertexShaderR3D =
+static const char *vertexShaderR3D = R"glsl(
 
 // uniforms
-"uniform float	fogIntensity;\n"
-"uniform float	fogDensity;\n"
-"uniform float	fogStart;\n"
+uniform float	fogIntensity;
+uniform float	fogDensity;
+uniform float	fogStart;
 
 //outputs to fragment shader
-"varying float	fsFogFactor;\n"
-"varying vec3	fsViewVertex;\n"
-"varying vec3	fsViewNormal;\n"		// per vertex normal vector
-"varying vec4   fsColor;\n"
+varying float	fsFogFactor;
+varying vec3	fsViewVertex;
+varying vec3	fsViewNormal;		// per vertex normal vector
+varying vec4	fsColor;
 
-"void main(void)\n"
-"{\n"
-	"fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);\n"
-	"fsViewNormal	= normalize(gl_NormalMatrix  *gl_Normal);\n"
-	"float z		= length(fsViewVertex);\n"
-	"fsFogFactor	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);\n"
+void main(void)
+{
+	fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);
+	fsViewNormal	= normalize(gl_NormalMatrix * gl_Normal);
+	float z			= length(fsViewVertex);
+	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
-	"fsColor    	= gl_Color;\n"
-	"gl_TexCoord[0]	= gl_MultiTexCoord0;\n"
-	"gl_Position	= gl_ModelViewProjectionMatrix * gl_Vertex;\n"
-"}\n";
+	fsColor    		= gl_Color;
+	gl_TexCoord[0]	= gl_MultiTexCoord0;
+	gl_Position		= gl_ModelViewProjectionMatrix * gl_Vertex;
+}
+)glsl";
 
-static const char *fragmentShaderR3D =
+static const char *fragmentShaderR3D = R"glsl(
 
-"uniform sampler2D tex1;\n"			// base tex
-"uniform sampler2D tex2;\n"			// micro tex (optional)
+uniform sampler2D tex1;			// base tex
+uniform sampler2D tex2;			// micro tex (optional)
 
-"uniform bool	textureEnabled;\n"
-"uniform bool	microTexture;\n"
-"uniform float	microTextureScale;\n"
-"uniform vec2   baseTexSize;\n"
-"uniform bool   textureInverted;\n"
-"uniform bool	alphaTest;\n"
-"uniform bool	textureAlpha;\n"
-"uniform vec3	fogColour;\n"
-"uniform vec4	spotEllipse;\n"			// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
-"uniform vec2	spotRange;\n"			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
-"uniform vec3	spotColor;\n"			// spotlight RGB color
-"uniform vec3	spotFogColor;\n"		// spotlight RGB color on fog
-"uniform vec3	lighting[2];\n"			// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
-"uniform bool	lightEnable;\n"			// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
-"uniform float	specularCoefficient;\n"	// specular coefficient
-"uniform float	shininess;\n"			// specular shininess
-"uniform float	fogAttenuation;\n"
-"uniform float	fogAmbient;\n"
+uniform bool	textureEnabled;
+uniform bool	microTexture;
+uniform float	microTextureScale;
+uniform vec2	baseTexSize;
+uniform bool	textureInverted;
+uniform bool	alphaTest;
+uniform bool	textureAlpha;
+uniform vec3	fogColour;
+uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
+uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
+uniform vec3	spotColor;			// spotlight RGB color
+uniform vec3	spotFogColor;		// spotlight RGB color on fog
+uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
+uniform bool	lightEnable;		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
+uniform float	specularCoefficient;// specular coefficient
+uniform float	shininess;			// specular shininess
+uniform float	fogAttenuation;
+uniform float	fogAmbient;
 
 //interpolated inputs from vertex shader
-"varying float	fsFogFactor;\n"
-"varying vec3	fsViewVertex;\n"
-"varying vec3	fsViewNormal;\n"		// per vertex normal vector
-"varying vec4   fsColor;\n"
+varying float	fsFogFactor;
+varying vec3	fsViewVertex;
+varying vec3	fsViewNormal;		// per vertex normal vector
+varying vec4   fsColor;
 
-"vec4 GetTextureValue()\n"
-"{\n"
-	"vec4 tex1Data = texture2D( tex1, gl_TexCoord[0].st);\n"
+vec4 GetTextureValue()
+{
+	vec4 tex1Data = texture2D( tex1, gl_TexCoord[0].st);
 
-	"if(textureInverted) {\n"
-		"tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);\n"
-	"}\n"
+	if(textureInverted) {
+		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
+	}
 
-	"if (microTexture) {\n"
-		"vec2 scale    = baseTexSize/256.0;\n"
-		"vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * scale * microTextureScale);\n"
-		"tex1Data = (tex1Data+tex2Data)/2.0;\n"
-	"}\n"
+	if (microTexture) {
+		vec2 scale    = baseTexSize/256.0;
+		vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * scale * microTextureScale);
+		tex1Data = (tex1Data+tex2Data)/2.0;
+	}
 
-	"if (alphaTest) {\n"
-		"if (tex1Data.a < (8.0/16.0)) {\n"
-			"discard;\n"
-		"}\n"
-	"}\n"
+	if (alphaTest) {
+		if (tex1Data.a < (8.0/16.0)) {
+			discard;
+		}
+	}
 
-	"if (textureAlpha == false) {\n"
-		"tex1Data.a = 1.0;\n"
-	"}\n"
+	if (textureAlpha == false) {
+		tex1Data.a = 1.0;
+	}
 
-	"return tex1Data;\n"
-"}"
+	return tex1Data;
+}
 
-"void main()\n"
-"{\n"
-	"vec4 tex1Data;\n"
-	"vec4 colData;\n"
-	"vec4 finalData;\n"
-	"vec4 fogData;\n"
+void main()
+{
+	vec4 tex1Data;
+	vec4 colData;
+	vec4 finalData;
+	vec4 fogData;
 
-	"fogData = vec4(fogColour.rgb * fogAmbient, fsFogFactor);\n"
-	"tex1Data = vec4(1.0, 1.0, 1.0, 1.0);\n"
+	fogData = vec4(fogColour.rgb * fogAmbient, fsFogFactor);
+	tex1Data = vec4(1.0, 1.0, 1.0, 1.0);
 
-	"if(textureEnabled) {\n"
-		"tex1Data = GetTextureValue();\n"
-	"}\n"
+	if(textureEnabled) {
+		tex1Data = GetTextureValue();
+	}
 
-	"colData = fsColor;\n"
-	"finalData = tex1Data * colData;\n"
+	colData = fsColor;
+	finalData = tex1Data * colData;
 
-	"if (finalData.a < (1.0/16.0)) {\n"      // basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
-		"discard;\n"
-	"}\n"
+	if (finalData.a < (1.0/16.0)) {      // basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
+		discard;
+	}
 
-	"float ellipse;\n"
-	"ellipse = length((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw);\n"
-	"ellipse = pow(ellipse, 2.0);\n"  // decay rate = square of distance from center
-	"ellipse = 1.0 - ellipse;\n"      // invert
-	"ellipse = max(0.0, ellipse);\n"  // clamp
+	float ellipse;
+	ellipse = length((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw);
+	ellipse = pow(ellipse, 2.0);  // decay rate = square of distance from center
+	ellipse = 1.0 - ellipse;      // invert
+	ellipse = max(0.0, ellipse);  // clamp
 
-	"if (lightEnable) {\n"
-		"vec3   lightIntensity;\n"
-		"vec3   sunVector;\n"     // sun lighting vector (as reflecting away from vertex)
-		"float  sunFactor;\n"     // sun light projection along vertex normal (0.0 to 1.0)
+	if (lightEnable) {
+		vec3   lightIntensity;
+		vec3   sunVector;     // sun lighting vector (as reflecting away from vertex)
+		float  sunFactor;     // sun light projection along vertex normal (0.0 to 1.0)
 
 		// Sun angle
-		"sunVector = lighting[0];\n"
+		sunVector = lighting[0];
 
 		// Compute diffuse factor for sunlight
-		"sunFactor = max(dot(sunVector, fsViewNormal), 0.0);\n"
+		sunFactor = max(dot(sunVector, fsViewNormal), 0.0);
 
 		// Total light intensity: sum of all components 
-		"lightIntensity = vec3(sunFactor*lighting[1].x + min(lighting[1].y,0.75));\n"   // diffuse + ambient (clamped to max 0.75)
+		lightIntensity = vec3(sunFactor*lighting[1].x + min(lighting[1].y,0.75));   // diffuse + ambient (clamped to max 0.75)
 
-		"lightIntensity = clamp(lightIntensity,0.0,1.0);\n"
+		lightIntensity = clamp(lightIntensity,0.0,1.0);
 
 		// Compute spotlight and apply lighting
-		"float enable, range, d;\n"
-		"float inv_r = 1.0 / spotEllipse.z;\n" // slope of decay function
+		float enable, range, d;
+		float inv_r = 1.0 / spotEllipse.z; // slope of decay function
 
-		"d = spotRange.x + spotRange.y + fsViewVertex.z;\n"
-		"enable = step(spotRange.x + min(spotRange.y, 0.0), -fsViewVertex.z);\n"
+		d = spotRange.x + spotRange.y + fsViewVertex.z;
+		enable = step(spotRange.x + min(spotRange.y, 0.0), -fsViewVertex.z);
 
 		// inverse-linear falloff
 		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
 		// y = 1 / (d/r + 1)^2
-		"range = 1.0 / pow(min(0.0, d * inv_r) - 1.0, 2.0);\n"
-		"range = clamp(range, 0.0, 1.0);\n"
-		"range *= enable;\n"
+		range = 1.0 / pow(min(0.0, d * inv_r) - 1.0, 2.0);
+		range = clamp(range, 0.0, 1.0);
+		range *= enable;
 
-		"float lobeEffect = range * ellipse;\n"
+		float lobeEffect = range * ellipse;
 
-		"lightIntensity.rgb += spotColor*lobeEffect;\n"
+		lightIntensity.rgb += spotColor*lobeEffect;
 
-		"finalData.rgb *= lightIntensity;\n"
+		finalData.rgb *= lightIntensity;
 
-		"if (sunFactor > 0.0 && specularCoefficient > 0.0) {\n"
-		  "float nDotL = max(dot(fsViewNormal,sunVector),0.0);\n"
-		  "finalData.rgb += vec3(specularCoefficient * pow(nDotL,shininess));\n"
-		"}\n"
-	"}\n"
+		if (sunFactor > 0.0 && specularCoefficient > 0.0) {
+		  float nDotL = max(dot(fsViewNormal,sunVector),0.0);
+		  finalData.rgb += vec3(specularCoefficient * pow(nDotL,shininess));
+		}
+	}
 
 	// Spotlight on fog
-	"vec3 lSpotFogColor = spotFogColor * ellipse * fogColour.rgb;\n"
+	vec3 lSpotFogColor = spotFogColor * ellipse * fogColour.rgb;
 
 	 // Fog & spotlight applied
-	"finalData.rgb = mix(finalData.rgb, lSpotFogColor * fogAttenuation + fogData.rgb, fogData.a);\n"
+	finalData.rgb = mix(finalData.rgb, lSpotFogColor * fogAttenuation + fogData.rgb, fogData.a);
 
-	"gl_FragColor = finalData;\n"
-"}\n";
+	gl_FragColor = finalData;
+}
+)glsl";
 
 R3DShader::R3DShader()
 {
