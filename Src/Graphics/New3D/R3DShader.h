@@ -70,6 +70,7 @@ private:
 	// lighting
 	GLint m_locLighting;
 	GLint m_locLightEnable;
+	GLint m_locLightClamp;
 	GLint m_locShininess;
 	GLint m_locSpecCoefficient;
 	GLint m_locSpotEllipse;

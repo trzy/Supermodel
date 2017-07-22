@@ -134,6 +134,7 @@ struct Viewport
 	Mat4	projectionMatrix;		// projection matrix, we will calc this later when we have scene near/far vals
 
 	float	lightingParams[6];		// lighting parameters (see RenderViewport() and vertex shader)
+	bool	lightClamp;				// unknown how this is set
 	float	spotEllipse[4];			// spotlight ellipse (see RenderViewport())
 	float	spotRange[2];			// Z range
 	float	spotColor[3];			// color

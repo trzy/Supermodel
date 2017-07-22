@@ -34,13 +34,16 @@ static const char *fragmentShaderR3D = R"glsl(
 uniform sampler2D tex1;			// base tex
 uniform sampler2D tex2;			// micro tex (optional)
 
+// texturing
 uniform bool	textureEnabled;
 uniform bool	microTexture;
 uniform float	microTextureScale;
 uniform vec2	baseTexSize;
 uniform bool	textureInverted;
-uniform bool	alphaTest;
 uniform bool	textureAlpha;
+uniform bool	alphaTest;
+
+// general
 uniform vec3	fogColour;
 uniform vec4	spotEllipse;		// spotlight ellipse position: .x=X position (screen coordinates), .y=Y position, .z=half-width, .w=half-height)
 uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates), .y=limit
@@ -48,6 +51,7 @@ uniform vec3	spotColor;			// spotlight RGB color
 uniform vec3	spotFogColor;		// spotlight RGB color on fog
 uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
 uniform bool	lightEnable;		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
+uniform bool	lightClamp;			// not used by daytona and la machine guns
 uniform float	specularCoefficient;// specular coefficient
 uniform float	shininess;			// specular shininess
 uniform float	fogAttenuation;
@@ -57,7 +61,7 @@ uniform float	fogAmbient;
 varying float	fsFogFactor;
 varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
-varying vec4   fsColor;
+varying vec4	fsColor;
 
 vec4 GetTextureValue()
 {
@@ -122,10 +126,15 @@ void main()
 		sunVector = lighting[0];
 
 		// Compute diffuse factor for sunlight
-		sunFactor = max(dot(sunVector, fsViewNormal), 0.0);
+		sunFactor = dot(sunVector, fsViewNormal);
+
+		// Optional clamping
+		if(lightClamp) {
+			sunFactor = max(sunFactor,0.0);
+		}
 
 		// Total light intensity: sum of all components 
-		lightIntensity = vec3(sunFactor*lighting[1].x + min(lighting[1].y,0.75));   // diffuse + ambient (clamped to max 0.75)
+		lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);   // diffuse + ambient
 
 		lightIntensity = clamp(lightIntensity,0.0,1.0);
 
@@ -239,6 +248,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	m_locLighting		= glGetUniformLocation(m_shaderProgram, "lighting");
 	m_locLightEnable	= glGetUniformLocation(m_shaderProgram, "lightEnable");
+	m_locLightClamp		= glGetUniformLocation(m_shaderProgram, "lightClamp");
 	m_locShininess		= glGetUniformLocation(m_shaderProgram, "shininess");
 	m_locSpecCoefficient= glGetUniformLocation(m_shaderProgram, "specularCoefficient");
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
@@ -366,6 +376,7 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniform1f	(m_locFogAmbient, vp->fogParams[6]);
 
 	glUniform3fv(m_locLighting, 2, vp->lightingParams);
+	glUniform1i(m_locLightClamp, vp->lightClamp);
 	glUniform4fv(m_locSpotEllipse, 1, vp->spotEllipse);
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
