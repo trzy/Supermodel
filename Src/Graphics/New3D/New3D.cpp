@@ -409,6 +409,7 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	m->textureOffsetX = m_nodeAttribs.currentTexOffsetX;
 	m->textureOffsetY = m_nodeAttribs.currentTexOffsetY;
 	m->page = m_nodeAttribs.currentPage;
+	m->scale = m_nodeAttribs.currentModelScale;
 
 	if (!cached) {
 		CacheModel(m, modelAddress);
@@ -463,6 +464,12 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	m_nodeAttribs.Push();	// save current attribs
 
 	if (!m_offset) {		// Step 1.5+
+		
+		float modelScale = *(float *)&node[1];
+		if (modelScale) {
+			m_nodeAttribs.currentModelScale = modelScale;
+		}
+
 		// apply texture offsets, else retain current ones
 		if ((node[0x02] & 0x8000))	{
 			int tx = 32 * ((node[0x02] >> 7) & 0x3F);
@@ -477,7 +484,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	m_modelMat.PushMatrix();
 
 	// apply translation vector
-	if ((node[0x00] & 0x10)) {
+	if (node[0x00] & 0x10) {
 		float x = *(float *)&node[0x04 - m_offset];
 		float y = *(float *)&node[0x05 - m_offset];
 		float z = *(float *)&node[0x06 - m_offset];

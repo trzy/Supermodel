@@ -9,6 +9,7 @@ static const char *vertexShaderR3D = R"glsl(
 uniform float	fogIntensity;
 uniform float	fogDensity;
 uniform float	fogStart;
+uniform float	modelScale;
 
 //outputs to fragment shader
 varying float	fsFogFactor;
@@ -19,7 +20,7 @@ varying vec4	fsColor;
 void main(void)
 {
 	fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);
-	fsViewNormal	= normalize(gl_NormalMatrix * gl_Normal);
+	fsViewNormal	= (mat3(gl_ModelViewMatrix) * gl_Normal) / modelScale;
 	float z			= length(fsViewVertex);
 	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
@@ -193,6 +194,7 @@ void R3DShader::Start()
 	m_lightEnabled		= false;
 	m_layered			= false;
 	m_textureInverted	= false;
+	m_modelScale		= 1.0f;
 
 	m_baseTexSize[0] = 0;
 	m_baseTexSize[1] = 0;
@@ -255,6 +257,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpotRange		= glGetUniformLocation(m_shaderProgram, "spotRange");
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
+	m_locModelScale		= glGetUniformLocation(m_shaderProgram, "modelScale");
 
 	return success;
 }
@@ -412,6 +415,11 @@ void R3DShader::SetModelStates(const Model* model)
 			glDisable(GL_CULL_FACE);
 			m_doubleSided = true;		// basically drawing on both sides now
 		}
+	}
+
+	if (m_dirtyModel || model->scale != m_modelScale) {
+		glUniform1f(m_locModelScale, model->scale);
+		m_modelScale = model->scale;
 	}
 
 	m_matDet		= test;

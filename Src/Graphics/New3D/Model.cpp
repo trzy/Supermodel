@@ -8,6 +8,7 @@ NodeAttributes::NodeAttributes()
 	currentTexOffsetY	= 0;
 	currentPage			= 0;
 	currentClipStatus	= Clip::INTERCEPT;
+	currentModelScale	= 1.0f;
 }
 
 bool NodeAttributes::Push()
@@ -25,8 +26,9 @@ bool NodeAttributes::Push()
 	na.texOffsetX	= currentTexOffsetX;
 	na.texOffsetY	= currentTexOffsetY;
 	na.clip			= currentClipStatus;
+	na.modelScale	= currentModelScale;
 
-	m_vecAttribs.push_back(na);
+	m_vecAttribs.emplace_back(na);
 
 	return true;
 }
@@ -37,12 +39,13 @@ bool NodeAttributes::Pop()
 		return false;	// check for underflow
 	}
 
-	auto last = &m_vecAttribs.back();
+	auto &last = m_vecAttribs.back();
 
-	currentPage			= last->page;
-	currentTexOffsetX	= last->texOffsetX;
-	currentTexOffsetY	= last->texOffsetY;
-	currentClipStatus	= last->clip;
+	currentPage			= last.page;
+	currentTexOffsetX	= last.texOffsetX;
+	currentTexOffsetY	= last.texOffsetY;
+	currentClipStatus	= last.clip;
+	currentModelScale	= last.modelScale;
 
 	m_vecAttribs.pop_back();
 
@@ -60,6 +63,7 @@ void NodeAttributes::Reset()
 	currentTexOffsetX	= 0;
 	currentTexOffsetY	= 0;
 	currentClipStatus	= Clip::INTERCEPT;
+	currentModelScale	= 1.0f;
 
 	m_vecAttribs.clear();
 }

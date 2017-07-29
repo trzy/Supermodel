@@ -53,7 +53,8 @@ private:
 
 	// cached model values
 	enum class MatDet { notset, negative, positive, zero };
-	MatDet m_matDet;
+	MatDet	m_matDet;
+	float	m_modelScale;
 
 	// are our cache values dirty
 	bool	m_dirtyMesh;
@@ -67,7 +68,7 @@ private:
 	GLint m_locFogAttenuation;
 	GLint m_locFogAmbient;
 
-	// lighting
+	// lighting / other
 	GLint m_locLighting;
 	GLint m_locLightEnable;
 	GLint m_locLightClamp;
@@ -77,6 +78,9 @@ private:
 	GLint m_locSpotRange;
 	GLint m_locSpotColor;
 	GLint m_locSpotFogColor;
+
+	// model uniforms
+	GLint m_locModelScale;
 };
 
 } // New3D

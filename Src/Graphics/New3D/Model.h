@@ -118,6 +118,9 @@ struct Model
 	//matrices
 	float modelMat[16];
 	float determinant;				// we check if the determinant of the matrix is negative, if it is, the matrix will swap the axis order
+
+	//model scale step 1.5+
+	float scale = 1.0f;
 };
 
 struct Viewport
@@ -166,6 +169,7 @@ public:
 	int currentTexOffsetY;
 	int currentPage;
 	Clip currentClipStatus;
+	float currentModelScale;
 
 private:
 
@@ -175,6 +179,7 @@ private:
 		int texOffsetY;
 		int page;
 		Clip clip;
+		float modelScale;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };
