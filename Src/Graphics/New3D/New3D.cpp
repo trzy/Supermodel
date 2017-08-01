@@ -466,7 +466,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	if (!m_offset) {		// Step 1.5+
 		
 		float modelScale = *(float *)&node[1];
-		if (modelScale) {
+		if (modelScale > std::numeric_limits<float>::min()) {
 			m_nodeAttribs.currentModelScale = modelScale;
 		}
 
