@@ -71,7 +71,8 @@ private:
 	// lighting / other
 	GLint m_locLighting;
 	GLint m_locLightEnable;
-	GLint m_locLightClamp;
+	GLint m_locSunClamp;
+	GLint m_locIntensityClamp;
 	GLint m_locShininess;
 	GLint m_locSpecCoefficient;
 	GLint m_locSpotEllipse;

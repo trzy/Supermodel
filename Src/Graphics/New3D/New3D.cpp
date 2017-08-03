@@ -777,7 +777,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
 
-		vp->lightClamp = true;		//TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
+		vp->sunClamp = true;		//TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
+		vp->intensityClamp = true;	//TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
 
 		m_vpAmbient = vp->lightingParams[4];											// cache this
 		

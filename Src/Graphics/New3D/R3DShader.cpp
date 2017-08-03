@@ -52,7 +52,8 @@ uniform vec3	spotColor;			// spotlight RGB color
 uniform vec3	spotFogColor;		// spotlight RGB color on fog
 uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
 uniform bool	lightEnable;		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
-uniform bool	lightClamp;			// not used by daytona and la machine guns
+uniform bool	sunClamp;			// not used by daytona and la machine guns
+uniform bool	intensityClamp;		// some games such as daytona and 
 uniform float	specularCoefficient;// specular coefficient
 uniform float	shininess;			// specular shininess
 uniform float	fogAttenuation;
@@ -129,15 +130,21 @@ void main()
 		// Compute diffuse factor for sunlight
 		sunFactor = dot(sunVector, fsViewNormal);
 
-		// Optional clamping
-		if(lightClamp) {
+		// Optional clamping, value is allowed to be negative
+		if(sunClamp) {
 			sunFactor = max(sunFactor,0.0);
 		}
 
 		// Total light intensity: sum of all components 
 		lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);   // diffuse + ambient
 
-		lightIntensity = clamp(lightIntensity,0.0,1.0);
+		// Need a minimum clamp
+		lightIntensity = max(lightIntensity,0.0);
+
+		// Upper clamp is optional, so games will drive brightness beyond 100%
+		if(intensityClamp) {
+			lightIntensity = min(lightIntensity,1.0);
+		}
 
 		// Compute spotlight and apply lighting
 		float enable, range, d;
@@ -250,7 +257,8 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	m_locLighting		= glGetUniformLocation(m_shaderProgram, "lighting");
 	m_locLightEnable	= glGetUniformLocation(m_shaderProgram, "lightEnable");
-	m_locLightClamp		= glGetUniformLocation(m_shaderProgram, "lightClamp");
+	m_locSunClamp		= glGetUniformLocation(m_shaderProgram, "sunClamp");
+	m_locIntensityClamp = glGetUniformLocation(m_shaderProgram, "intensityClamp");
 	m_locShininess		= glGetUniformLocation(m_shaderProgram, "shininess");
 	m_locSpecCoefficient= glGetUniformLocation(m_shaderProgram, "specularCoefficient");
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
@@ -379,7 +387,8 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniform1f	(m_locFogAmbient, vp->fogParams[6]);
 
 	glUniform3fv(m_locLighting, 2, vp->lightingParams);
-	glUniform1i(m_locLightClamp, vp->lightClamp);
+	glUniform1i (m_locSunClamp, vp->sunClamp);
+	glUniform1i (m_locIntensityClamp, vp->intensityClamp);
 	glUniform4fv(m_locSpotEllipse, 1, vp->spotEllipse);
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
