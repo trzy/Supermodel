@@ -141,7 +141,7 @@ void main()
 		// Need a minimum clamp
 		lightIntensity = max(lightIntensity,0.0);
 
-		// Upper clamp is optional, so games will drive brightness beyond 100%
+		// Upper clamp is optional, some games will drive brightness beyond 100%
 		if(intensityClamp) {
 			lightIntensity = min(lightIntensity,1.0);
 		}
