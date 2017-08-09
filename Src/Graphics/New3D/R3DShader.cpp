@@ -5,6 +5,8 @@ namespace New3D {
 
 static const char *vertexShaderR3D = R"glsl(
 
+#version 120
+
 // uniforms
 uniform float	fogIntensity;
 uniform float	fogDensity;
@@ -31,6 +33,8 @@ void main(void)
 )glsl";
 
 static const char *fragmentShaderR3D = R"glsl(
+
+#version 120
 
 uniform sampler2D tex1;			// base tex
 uniform sampler2D tex2;			// micro tex (optional)
