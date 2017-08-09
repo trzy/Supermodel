@@ -88,7 +88,7 @@ struct Mesh
 	bool lighting		= false;
 	bool specular		= false;
 	float shininess		= 0;
-	float specularCoefficient = 0;
+	float specularValue = 0;
 	
 	// fog
 	float fogIntensity = 1.0f;

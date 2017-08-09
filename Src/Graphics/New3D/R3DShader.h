@@ -45,12 +45,14 @@ private:
 	bool	m_doubleSided;
 	bool	m_lightEnabled;
 	float	m_shininess;
-	float	m_specularCoefficient;
+	float	m_specularValue;
+	bool	m_specularEnabled;
+
 	bool	m_layered;
 	float	m_microTexScale;
 	float	m_baseTexSize[2];
 	bool	m_textureInverted;
-
+	
 	// cached model values
 	enum class MatDet { notset, negative, positive, zero };
 	MatDet	m_matDet;
@@ -70,16 +72,18 @@ private:
 
 	// lighting / other
 	GLint m_locLighting;
-	GLint m_locLightEnable;
+	GLint m_locLightEnabled;
 	GLint m_locSunClamp;
 	GLint m_locIntensityClamp;
 	GLint m_locShininess;
-	GLint m_locSpecCoefficient;
+	GLint m_locSpecularValue;
+	GLint m_locSpecularEnabled;
+
 	GLint m_locSpotEllipse;
 	GLint m_locSpotRange;
 	GLint m_locSpotColor;
 	GLint m_locSpotFogColor;
-
+	
 	// model uniforms
 	GLint m_locModelScale;
 };

@@ -1441,6 +1441,9 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     GPU.WriteDMARegister32(addr&0xFF,FLIPENDIAN32(data));
     break;
 
+  case 0x70:
+	  printf("rar\n");
+
   // Various
   case 0xF0:
   case 0xFE:  // mirror

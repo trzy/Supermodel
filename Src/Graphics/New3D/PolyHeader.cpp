@@ -315,7 +315,7 @@ bool PolyHeader::Layered()
 
 float PolyHeader::Shininess()
 {
-	return ((header[6] >> 5) & 3) / 3.0f;
+	return (float)((header[6] >> 5) & 3);	// input sdk values are float 0-1 output are int 0-3
 }
 
 int	PolyHeader::TexFormat()
@@ -399,6 +399,8 @@ UINT64 PolyHeader::Hash()
 	hash |= (UINT64)TextureAlpha() << 36;			// bits 36 texture alpha processing
 	hash |= (UINT64)MicroTexture() << 37;			// bits 37 microtexture enable
 	hash |= (UINT64)HighPriority() << 38;			// bits 38 high priority enable
+	hash |= (UINT64)SpecularEnabled() << 39;		// bits 39 enable specular reflection
+	hash |= (UINT64)SmoothShading() << 40;			// bits 40 smooth shading
 
 	//to do add the rest of the states
 

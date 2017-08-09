@@ -777,8 +777,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
 
-		vp->sunClamp = true;		//TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
-		vp->intensityClamp = true;	//TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
+		vp->sunClamp = 1;						// TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
+		vp->intensityClamp = (m_step == 0x10);	// just step 1.0 ?
 
 		m_vpAmbient = vp->lightingParams[4];											// cache this
 		
@@ -1002,13 +1002,9 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 		currentMesh->layered = true;
 	}
 
-	if (currentMesh->lighting) {
-		if (ph.SpecularEnabled()) {
-			currentMesh->specular = true;
-			currentMesh->shininess = 0;// ph.Shininess();
-			currentMesh->specularCoefficient = 0; // ph.SpecularValue();
-		}
-	}
+	currentMesh->specular = ph.SpecularEnabled();
+	currentMesh->shininess = ph.Shininess();
+	currentMesh->specularValue = ph.SpecularValue();
 
 	currentMesh->fogIntensity = ph.LightModifier();
 

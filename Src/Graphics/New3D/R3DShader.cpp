@@ -11,7 +11,7 @@ uniform float	fogDensity;
 uniform float	fogStart;
 uniform float	modelScale;
 
-//outputs to fragment shader
+// outputs to fragment shader
 varying float	fsFogFactor;
 varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
@@ -51,10 +51,11 @@ uniform vec2	spotRange;			// spotlight Z range: .x=start (viewspace coordinates)
 uniform vec3	spotColor;			// spotlight RGB color
 uniform vec3	spotFogColor;		// spotlight RGB color on fog
 uniform vec3	lighting[2];		// lighting state (lighting[0] = sun direction, lighting[1].x,y = diffuse, ambient intensities from 0-1.0)
-uniform bool	lightEnable;		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
+uniform bool	lightEnabled;		// lighting enabled (1.0) or luminous (0.0), drawn at full intensity
 uniform bool	sunClamp;			// not used by daytona and la machine guns
 uniform bool	intensityClamp;		// some games such as daytona and 
-uniform float	specularCoefficient;// specular coefficient
+uniform bool	specularEnabled;	// specular enabled
+uniform float	specularValue;		// specular coefficient
 uniform float	shininess;			// specular shininess
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
@@ -119,7 +120,7 @@ void main()
 	ellipse = 1.0 - ellipse;      // invert
 	ellipse = max(0.0, ellipse);  // clamp
 
-	if (lightEnable) {
+	if (lightEnabled) {
 		vec3   lightIntensity;
 		vec3   sunVector;     // sun lighting vector (as reflecting away from vertex)
 		float  sunFactor;     // sun light projection along vertex normal (0.0 to 1.0)
@@ -130,6 +131,9 @@ void main()
 		// Compute diffuse factor for sunlight
 		sunFactor = dot(sunVector, fsViewNormal);
 
+		// Clamp ceil, fix for upscaled models without "modelScale" defined
+		sunFactor = clamp(sunFactor,-1.0,1.0);
+
 		// Optional clamping, value is allowed to be negative
 		if(sunClamp) {
 			sunFactor = max(sunFactor,0.0);
@@ -138,10 +142,7 @@ void main()
 		// Total light intensity: sum of all components 
 		lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);   // diffuse + ambient
 
-		// Need a minimum clamp
-		lightIntensity = max(lightIntensity,0.0);
-
-		// Upper clamp is optional, some games will drive brightness beyond 100%
+		// Upper clamp is optional, step 1.5+ games will drive brightness beyond 100%
 		if(intensityClamp) {
 			lightIntensity = min(lightIntensity,1.0);
 		}
@@ -166,11 +167,37 @@ void main()
 
 		finalData.rgb *= lightIntensity;
 
-		if (sunFactor > 0.0 && specularCoefficient > 0.0) {
-		  float nDotL = max(dot(fsViewNormal,sunVector),0.0);
-		  finalData.rgb += vec3(specularCoefficient * pow(nDotL,shininess));
+		if (specularEnabled) {
+
+			float exponent, NdotL, specularFactor;
+			vec4 biasIndex, expIndex, multIndex;
+
+			// Always clamp floor to zero, we don't want deep black areas
+			NdotL = max(0.0,sunFactor);
+
+			expIndex = vec4(8.0, 16.0, 32.0, 64.0);
+			multIndex = vec4(2.0, 2.0, 3.0, 4.0);
+			biasIndex = vec4(0.95, 0.95, 1.05, 1.0);
+			exponent = expIndex[int(shininess)] / biasIndex[int(shininess)];
+
+			specularFactor = pow(NdotL, exponent);
+			specularFactor *= multIndex[int(shininess)];
+			specularFactor *= biasIndex[int(shininess)];
+			
+			specularFactor *= specularValue;
+			specularFactor *= lighting[1].x;
+
+			if (colData.a < 1.0) {
+				/// Specular hi-light affects translucent polygons alpha channel ///
+				finalData.a = max(finalData.a, specularFactor);
+			}
+
+			finalData.rgb += vec3(specularFactor);
 		}
 	}
+
+	// Final clamp: we need it for proper shading in dimmed light and dark ambients
+	finalData.rgb = min(finalData.rgb, vec3(1.0));
 
 	// Spotlight on fog
 	vec3 lSpotFogColor = spotFogColor * ellipse * fogColour.rgb;
@@ -199,16 +226,16 @@ void R3DShader::Start()
 	m_alphaTest			= false;		// discard fragment based on alpha (ogl does this with fixed function)
 	m_doubleSided		= false;
 	m_lightEnabled		= false;
+	m_specularEnabled	= false;
 	m_layered			= false;
 	m_textureInverted	= false;
 	m_modelScale		= 1.0f;
+	m_shininess			= 0;
+	m_specularValue		= 0;
+	m_microTexScale		= 0;
 
 	m_baseTexSize[0] = 0;
 	m_baseTexSize[1] = 0;
-
-	m_shininess = 0;
-	m_specularCoefficient = 0;
-	m_microTexScale = 0;
 
 	m_matDet = MatDet::notset;
 
@@ -256,16 +283,19 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
 
 	m_locLighting		= glGetUniformLocation(m_shaderProgram, "lighting");
-	m_locLightEnable	= glGetUniformLocation(m_shaderProgram, "lightEnable");
+	m_locLightEnabled	= glGetUniformLocation(m_shaderProgram, "lightEnabled");
 	m_locSunClamp		= glGetUniformLocation(m_shaderProgram, "sunClamp");
 	m_locIntensityClamp = glGetUniformLocation(m_shaderProgram, "intensityClamp");
 	m_locShininess		= glGetUniformLocation(m_shaderProgram, "shininess");
-	m_locSpecCoefficient= glGetUniformLocation(m_shaderProgram, "specularCoefficient");
+	m_locSpecularValue	= glGetUniformLocation(m_shaderProgram, "specularValue");
+	m_locSpecularEnabled= glGetUniformLocation(m_shaderProgram, "specularEnabled");
+
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 	m_locSpotRange		= glGetUniformLocation(m_shaderProgram, "spotRange");
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locModelScale		= glGetUniformLocation(m_shaderProgram, "modelScale");
+	
 
 	return success;
 }
@@ -334,18 +364,23 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	}
 
 	if (m_dirtyMesh || m->lighting != m_lightEnabled) {
-		glUniform1i(m_locLightEnable, m->lighting);
+		glUniform1i(m_locLightEnabled, m->lighting);
 		m_lightEnabled = m->lighting;
 	}
 
 	if (m_dirtyMesh || m->shininess != m_shininess) {
-		glUniform1f(m_locShininess, (m->shininess + 1) * 4);
+		glUniform1f(m_locShininess, m->shininess);
 		m_shininess = m->shininess;
 	}
 
-	if (m_dirtyMesh || m->specularCoefficient != m_specularCoefficient) {
-		glUniform1f(m_locSpecCoefficient, m->specularCoefficient);
-		m_specularCoefficient = m->specularCoefficient;
+	if (m_dirtyMesh || m->specular != m_specularEnabled) {
+		glUniform1i(m_locSpecularEnabled, m->specular);
+		m_specularEnabled = m->specular;
+	}
+
+	if (m_dirtyMesh || m->specularValue != m_specularValue) {
+		glUniform1f(m_locSpecularValue, m->specularValue);
+		m_specularValue = m->specularValue;
 	}
 
 	if (m_dirtyMesh || m->layered != m_layered) {
