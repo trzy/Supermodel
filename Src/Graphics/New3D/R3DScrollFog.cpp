@@ -7,10 +7,11 @@ namespace New3D {
 static const char *vertexShaderFog = R"glsl(
 
 uniform mat4 mvp;
+attribute vec3 inVertex; 
 
 void main(void)
 {
-	gl_Position = mvp * gl_Vertex;
+	gl_Position = mvp * vec4(inVertex,1.0);
 };
 
 )glsl";
@@ -106,10 +107,10 @@ void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient
 	glUniform4f			(m_locSpotEllipse, spotEllipse[0], spotEllipse[1], spotEllipse[2], spotEllipse[3]);
 	glUniformMatrix4fv	(m_locMVP, 1, GL_FALSE, mvp);
 
-	glEnableClientState	(GL_VERTEX_ARRAY);
-	glVertexPointer		(3, GL_FLOAT, sizeof(SFVertex), 0);
-	glDrawArrays		(GL_TRIANGLES, 0, 6);
-	glDisableClientState(GL_VERTEX_ARRAY);
+	glEnableVertexAttribArray	(0);
+	glVertexAttribPointer		(0, 3, GL_FLOAT, GL_FALSE, sizeof(SFVertex), 0);
+	glDrawArrays				(GL_TRIANGLES, 0, 6);
+	glDisableVertexAttribArray	(0);
 
 	glUseProgram		(0);
 	m_vbo.Bind			(false);
@@ -128,6 +129,8 @@ void R3DScrollFog::AllocResources()
 	m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
+
+	glBindAttribLocation(m_shaderProgram, 0, "inVertex");
 
 	m_vbo.Create(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(SFTriangle) * (2), m_triangles);
 }

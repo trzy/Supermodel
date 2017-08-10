@@ -13,22 +13,29 @@ uniform float	fogDensity;
 uniform float	fogStart;
 uniform float	modelScale;
 
+// attributes
+attribute vec3 inVertex;
+attribute vec3 inNormal;
+attribute vec2 inTexCoord;
+attribute vec4 inColour; 
+
 // outputs to fragment shader
 varying float	fsFogFactor;
 varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
+varying vec2	fsTexCoord;
 varying vec4	fsColor;
 
 void main(void)
 {
-	fsViewVertex	= vec3(gl_ModelViewMatrix * gl_Vertex);
-	fsViewNormal	= (mat3(gl_ModelViewMatrix) * gl_Normal) / modelScale;
+	fsViewVertex	= vec3(gl_ModelViewMatrix * vec4(inVertex,1.0));
+	fsViewNormal	= (mat3(gl_ModelViewMatrix) * inNormal) / modelScale;
 	float z			= length(fsViewVertex);
 	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
-	fsColor    		= gl_Color;
-	gl_TexCoord[0]	= gl_MultiTexCoord0;
-	gl_Position		= gl_ModelViewProjectionMatrix * gl_Vertex;
+	fsColor    		= inColour;
+	fsTexCoord		= inTexCoord;
+	gl_Position		= gl_ModelViewProjectionMatrix * vec4(inVertex,1.0);
 }
 )glsl";
 
@@ -69,10 +76,11 @@ varying float	fsFogFactor;
 varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec4	fsColor;
+varying vec2	fsTexCoord;
 
 vec4 GetTextureValue()
 {
-	vec4 tex1Data = texture2D( tex1, gl_TexCoord[0].st);
+	vec4 tex1Data = texture2D( tex1, fsTexCoord.st);
 
 	if(textureInverted) {
 		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
@@ -80,7 +88,7 @@ vec4 GetTextureValue()
 
 	if (microTexture) {
 		vec2 scale    = baseTexSize/256.0;
-		vec4 tex2Data = texture2D( tex2, gl_TexCoord[0].st * scale * microTextureScale);
+		vec4 tex2Data = texture2D( tex2, fsTexCoord.st * scale * microTextureScale);
 		tex1Data = (tex1Data+tex2Data)/2.0;
 	}
 
@@ -299,8 +307,12 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locModelScale		= glGetUniformLocation(m_shaderProgram, "modelScale");
-	
 
+	glBindAttribLocation(m_shaderProgram, 0, "inVertex");
+	glBindAttribLocation(m_shaderProgram, 1, "inNormal");
+	glBindAttribLocation(m_shaderProgram, 2, "inTexCoord");
+	glBindAttribLocation(m_shaderProgram, 3, "inColour");
+	
 	return success;
 }
 
