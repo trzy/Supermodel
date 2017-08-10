@@ -1293,7 +1293,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("ForceFeedback", false);
 #endif
   // Platform-specific/UI 
-  config.Set("New3DEngine", false);
+  config.Set("New3DEngine", true);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
   config.Set("FullScreen", false);
