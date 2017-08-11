@@ -12,12 +12,13 @@ class R3DShader
 public:
 	R3DShader(const Util::Config::Node &config);
 
-	bool LoadShader				(const char* vertexShader = nullptr, const char* fragmentShader = nullptr);
-	void SetMeshUniforms		(const Mesh* m);
-	void SetModelStates			(const Model* model);
-	void SetViewportUniforms	(const Viewport *vp);
-	void Start					();
-	void SetShader				(bool enable = true);
+	bool	LoadShader			(const char* vertexShader = nullptr, const char* fragmentShader = nullptr);
+	void	SetMeshUniforms		(const Mesh* m);
+	void	SetModelStates		(const Model* model);
+	void	SetViewportUniforms	(const Viewport *vp);
+	void	Start				();
+	void	SetShader			(bool enable = true);
+	GLint	GetVertexAttribPos	(const char* attrib);
 
 private:
 

@@ -46,12 +46,15 @@ private:
 	GLuint m_vertexShader;
 	GLuint m_fragmentShader;
 
-	GLuint m_locFogColour;
-	GLuint m_locMVP;
-	GLuint m_locFogAttenuation;
-	GLuint m_locFogAmbient;
-	GLuint m_locSpotFogColor;
-	GLuint m_locSpotEllipse;
+	GLint m_locFogColour;
+	GLint m_locMVP;
+	GLint m_locFogAttenuation;
+	GLint m_locFogAmbient;
+	GLint m_locSpotFogColor;
+	GLint m_locSpotEllipse;
+
+	// vertex attrib locs
+	GLint m_locInVertex;
 
 	VBO m_vbo;
 };

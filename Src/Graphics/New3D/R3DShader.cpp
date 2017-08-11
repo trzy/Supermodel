@@ -308,13 +308,13 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locModelScale		= glGetUniformLocation(m_shaderProgram, "modelScale");
-
-	glBindAttribLocation(m_shaderProgram, 0, "inVertex");
-	glBindAttribLocation(m_shaderProgram, 1, "inNormal");
-	glBindAttribLocation(m_shaderProgram, 2, "inTexCoord");
-	glBindAttribLocation(m_shaderProgram, 3, "inColour");
 	
 	return success;
+}
+
+GLint R3DShader::GetVertexAttribPos(const char* attrib)
+{
+	return glGetAttribLocation(m_shaderProgram, attrib);	// probably should cache this but only called 1x per frame anyway
 }
 
 void R3DShader::SetShader(bool enable)

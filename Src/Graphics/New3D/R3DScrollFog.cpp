@@ -109,7 +109,7 @@ void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient
 	glUniformMatrix4fv	(m_locMVP, 1, GL_FALSE, mvp);
 
 	glEnableVertexAttribArray	(0);
-	glVertexAttribPointer		(0, 3, GL_FLOAT, GL_FALSE, sizeof(SFVertex), 0);
+	glVertexAttribPointer		(m_locInVertex, 3, GL_FLOAT, GL_FALSE, sizeof(SFVertex), 0);
 	glDrawArrays				(GL_TRIANGLES, 0, 6);
 	glDisableVertexAttribArray	(0);
 
@@ -131,7 +131,7 @@ void R3DScrollFog::AllocResources()
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 
-	glBindAttribLocation(m_shaderProgram, 0, "inVertex");
+	m_locInVertex		= glGetAttribLocation(m_shaderProgram, "inVertex");
 
 	m_vbo.Create(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(SFTriangle) * (2), m_triangles);
 }
