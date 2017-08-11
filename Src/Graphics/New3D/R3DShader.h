@@ -2,6 +2,7 @@
 #define _R3DSHADER_H_
 
 #include "Pkgs/glew.h"
+#include "Util/NewConfig.h"
 #include "Model.h"
 
 namespace New3D {
@@ -9,7 +10,7 @@ namespace New3D {
 class R3DShader
 {
 public:
-	R3DShader();
+	R3DShader(const Util::Config::Node &config);
 
 	bool LoadShader				(const char* vertexShader = nullptr, const char* fragmentShader = nullptr);
 	void SetMeshUniforms		(const Mesh* m);
@@ -19,6 +20,9 @@ public:
 	void SetShader				(bool enable = true);
 
 private:
+
+	// run-time config
+	const Util::Config::Node &m_config;
 
 	// shader IDs
 	GLuint m_shaderProgram;

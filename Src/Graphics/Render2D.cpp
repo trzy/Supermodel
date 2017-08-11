@@ -638,7 +638,7 @@ void CRender2D::AttachVRAM(const uint8_t *vramPtr)
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes)
 {
   // Load shaders
-  if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, std::string(), std::string(), s_vertexShaderSource, s_fragmentShaderSource))
+  if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, m_config["VertexShader2D"].ValueAs<std::string>(), m_config["FragmentShader2D"].ValueAs<std::string>(), s_vertexShaderSource, s_fragmentShaderSource))
     return FAIL;
   
   // Get locations of the uniforms
@@ -683,7 +683,8 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   return OKAY;
 }
 
-CRender2D::CRender2D(void)
+CRender2D::CRender2D(const Util::Config::Node &config)
+  : m_config(config)
 {
   DebugLog("Built Render2D\n");
 }

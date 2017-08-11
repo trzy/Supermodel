@@ -828,8 +828,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     Model3->AttachOutputs(Outputs);
   
   // Initialize the renderers
-  CRender2D *Render2D = new CRender2D();
-  IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D()) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+  CRender2D *Render2D = new CRender2D(s_runtime_config);
+  IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
   if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
     goto QuitError;
   if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -970,8 +970,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
-      Render2D = new CRender2D();
-      Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D()) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+      Render2D = new CRender2D(s_runtime_config);
+      Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
       if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
         goto QuitError;
       if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -1277,10 +1277,14 @@ static Util::Config::Node DefaultConfig()
   config.Set("MultiThreaded", true);
   config.Set("GPUMultiThreaded", true);
   config.Set("PowerPCFrequency", "50");
-  // CLegacy3D
+  // 2D and 3D graphics engines
   config.Set("MultiTexture", false);
   config.Set("VertexShader", "");
   config.Set("FragmentShader", "");
+  config.Set("VertexShaderFog", "");
+  config.Set("FragmentShaderFog", "");
+  config.Set("VertexShader2D", "");
+  config.Set("FragmentShader2D", "");
   // CSoundBoard
   config.Set("EmulateSound", true);
   config.Set("Balance", false);
@@ -1335,59 +1339,63 @@ static void Help(void)
   puts("ROM set must be a valid ZIP file containing a single game.");
   puts("");
   puts("General Options:");
-  puts("    -?, -h, -help, --help  Print this help text");
-  puts("    -print-games           List supported games and quit");
-  printf("    -game-xml-file=<file>  ROM set definition file [Default: %s]\n", s_gameXMLFilePath);
+  puts("  -?, -h, -help, --help   Print this help text");
+  puts("  -print-games            List supported games and quit");
+  printf("  -game-xml-file=<file>   ROM set definition file [Default: %s]\n", s_gameXMLFilePath);
   puts("");
   puts("Core Options:");
-  printf("    -ppc-frequency=<freq>  PowerPC frequency in MHz [Default: %d]\n", defaultConfig["PowerPCFrequency"].ValueAs<unsigned>());
-  puts("    -no-threads            Disable multi-threading entirely");
-  puts("    -gpu-multi-threaded    Run graphics rendering in separate thread [Default]");
-  puts("    -no-gpu-thread         Run graphics rendering in main thread");
+  printf("  -ppc-frequency=<freq>   PowerPC frequency in MHz [Default: %d]\n", defaultConfig["PowerPCFrequency"].ValueAs<unsigned>());
+  puts("  -no-threads             Disable multi-threading entirely");
+  puts("  -gpu-multi-threaded     Run graphics rendering in separate thread [Default]");
+  puts("  -no-gpu-thread          Run graphics rendering in main thread");
   puts("");
   puts("Video Options:");
-  puts("    -res=<x>,<y>           Resolution [Default: 496,384]");
-  puts("    -window                Windowed mode [Default]");
-  puts("    -fullscreen            Full screen mode");
-  puts("    -wide-screen           Expand 3D field of view to screen width");
-  puts("    -multi-texture         Use 8 texture maps for decoding");
-  puts("    -no-multi-texture      Decode to a single texture map [Default]");
-  puts("    -no-throttle           Disable 60 Hz frame rate lock");
-  puts("    -vsync                 Lock to vertical refresh rate [Default]");
-  puts("    -no-vsync              Do not lock to vertical refresh rate");
-  puts("    -show-fps              Display frame rate in window title bar");
-  puts("    -crosshairs=<n>        Crosshairs configuration for gun games:");
-  puts("                            0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
-  puts("    -legacy3d              Legacy 3D engine [Default]");
-  puts("    -new3d                 New 3D engine by Ian Curtis");
-  puts("    -vert-shader=<file>    Load vertex shader from file (legacy 3D engine)");
-  puts("    -frag-shader=<file>    Load fragment shader from file (legacy 3D engine)");
-  puts("    -print-gl-info         Print OpenGL driver information and quit");
+  puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
+  puts("  -window                 Windowed mode [Default]");
+  puts("  -fullscreen             Full screen mode");
+  puts("  -wide-screen            Expand 3D field of view to screen width");
+  puts("  -no-throttle            Disable 60 Hz frame rate lock");
+  puts("  -vsync                  Lock to vertical refresh rate [Default]");
+  puts("  -no-vsync               Do not lock to vertical refresh rate");
+  puts("  -show-fps               Display frame rate in window title bar");
+  puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
+  puts("                           0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
+  puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
+  puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
+  puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
+  puts("  -no-multi-texture       Decode to single texture (legacy engine) [Default]");
+  puts("  -vert-shader=<file>     Load Real3D vertex shader for 3D rendering");
+  puts("  -frag-shader=<file>     Load Real3D fragment shader for 3D rendering");
+  puts("  -vert-shader-fog=<file> Load Real3D scroll fog vertex shader (new engine)");
+  puts("  -frag-shader-fog=<file> Load Real3D scroll fog fragment shader (new engine)");
+  puts("  -vert-shader-2d=<file>  Load tile map vertex shader");
+  puts("  -frag-shader-2d=<file>  Load tile map fragment shader");
+  puts("  -print-gl-info          Print OpenGL driver information and quit");
   puts("");
   puts("Audio Options:");
-  puts("    -sound-volume=<vol>    Volume of SCSP-generated sound in %, applies only");
-  puts("                           when Digital Sound Board is present [Default: 100]");
-  puts("    -music-volume=<vol>    Digital Sound Board volume in % [Default: 100]");
-  puts("    -balance=<bal>         Relative front/rear balance in % [Default: 0]");
-  puts("    -flip-stereo           Swap left and right audio channels");
-  puts("    -no-sound              Disable sound board emulation (sound effects)");
-  puts("    -no-dsb                Disable Digital Sound Board (MPEG music)");
+  puts("  -sound-volume=<vol>     Volume of SCSP-generated sound in %, applies only");
+  puts("                          when Digital Sound Board is present [Default: 100]");
+  puts("  -music-volume=<vol>     Digital Sound Board volume in % [Default: 100]");
+  puts("  -balance=<bal>          Relative front/rear balance in % [Default: 0]");
+  puts("  -flip-stereo            Swap left and right audio channels");
+  puts("  -no-sound               Disable sound board emulation (sound effects)");
+  puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
   puts("");
   puts("Input Options:");
 #ifdef SUPERMODEL_WIN32
-  puts("    -force-feedback        Enable force feedback (DirectInput, XInput)");
+  puts("  -force-feedback         Enable force feedback (DirectInput, XInput)");
 #endif
-  puts("    -config-inputs         Configure keyboards, mice, and game controllers");
+  puts("  -config-inputs          Configure keyboards, mice, and game controllers");
 #ifdef SUPERMODEL_WIN32
-  printf("    -input-system=<s>      Input system [Default: %s]\n", defaultConfig["InputSystem"].ValueAs<std::string>().c_str());
-  printf("    -outputs=<s>           Outputs [Default: %s]\n", defaultConfig["Outputs"].ValueAs<std::string>().c_str());
+  printf("  -input-system=<s>       Input system [Default: %s]\n", defaultConfig["InputSystem"].ValueAs<std::string>().c_str());
+  printf("  -outputs=<s>            Outputs [Default: %s]\n", defaultConfig["Outputs"].ValueAs<std::string>().c_str());
 #endif
-  puts("    -print-inputs          Prints current input configuration");
+  puts("  -print-inputs           Prints current input configuration");
   puts("");
 #ifdef SUPERMODEL_DEBUGGER
   puts("Debug Options:");
-  puts("    -disable-debugger      Completely disable debugger functionality");
-  puts("    -enter-debugger        Enter debugger at start of emulation");
+  puts("  -disable-debugger       Completely disable debugger functionality");
+  puts("  -enter-debugger         Enter debugger at start of emulation");
   puts("");
 #endif // SUPERMODEL_DEBUGGER
 }
@@ -1418,6 +1426,10 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-crosshairs",            "Crosshairs"              },
     { "-vert-shader",           "VertexShader"            },
     { "-frag-shader",           "FragmentShader"          },
+    { "-vert-shader-fog",       "VertexShaderFog"         },
+    { "-frag-shader-fog",       "FragmentShaderFog"       },
+    { "-vert-shader-2d",        "VertexShader2D"          },
+    { "-frag-shader-2d",        "FragmentShader2D"        },
     { "-sound-volume",          "SoundVolume"             },
     { "-music-volume",          "MusicVolume"             },
     { "-balance",               "Balance"                 },

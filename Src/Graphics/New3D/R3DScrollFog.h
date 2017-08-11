@@ -1,6 +1,7 @@
 #ifndef _R3DSCROLLFOG_H_
 #define _R3DSCROLLFOG_H_
 
+#include "Util/NewConfig.h"
 #include "VBO.h"
 
 namespace New3D {
@@ -9,7 +10,7 @@ class R3DScrollFog
 {
 public:
 
-	R3DScrollFog();
+	R3DScrollFog(const Util::Config::Node &config);
 	~R3DScrollFog();
 
 	void DrawScrollFog(float rbga[4], float attenuation, float ambient, float *spotRGB, float *spotEllipse);
@@ -18,6 +19,8 @@ private:
 
 	void AllocResources();
 	void DeallocResources();
+
+  const Util::Config::Node &m_config;
 
 	struct SFVertex
 	{

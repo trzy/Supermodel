@@ -12,7 +12,9 @@
 
 namespace New3D {
 
-CNew3D::CNew3D()
+CNew3D::CNew3D(const Util::Config::Node &config)
+  : m_r3dShader(config),
+    m_r3dScrollFog(config)
 {
 	m_cullingRAMLo	= nullptr;
 	m_cullingRAMHi	= nullptr;

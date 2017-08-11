@@ -29,6 +29,7 @@
 #define INCLUDED_RENDER2D_H
 
 #include "Pkgs/glew.h"
+#include "Util/NewConfig.h"
 
 
 /*
@@ -159,12 +160,15 @@ public:
   bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
    
   /*
-   * CRender2D(void):
+   * CRender2D(config):
    * ~CRender2D(void):
    *
    * Constructor and destructor.
+   *
+   * Parameters:
+   *    config  Run-time configuration.
    */
-  CRender2D(void);
+  CRender2D(const Util::Config::Node &config);
   ~CRender2D(void);
   
 private:
@@ -173,6 +177,9 @@ private:
   void DisplaySurface(int surface);
   void Setup2D(bool isBottom, bool clearAll);
       
+  // Run-time configuration
+  const Util::Config::Node &m_config;
+
   // Data received from tile generator device object
   const uint32_t *m_vram;
   const uint32_t *m_palette[2]; // palettes for A/A' and B/B'

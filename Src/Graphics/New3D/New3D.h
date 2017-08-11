@@ -142,12 +142,15 @@ public:
 	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
 
 	/*
-	* CRender3D(void):
+	* CRender3D(config):
 	* ~CRender3D(void):
 	*
 	* Constructor and destructor.
+	*
+	* Parameters:
+	*   config  Run-time configuration.
 	*/
-	CNew3D(void);
+	CNew3D(const Util::Config::Node &config);
 	~CNew3D(void);
 
 private:
