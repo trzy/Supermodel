@@ -26,7 +26,8 @@ struct Vertex
 	float pos[3];
 	float normal[3];
 	float texcoords[2];
-	float color[4];			//rgba
+	UINT8 color[4];
+	UINT8 fixedShade[4];
 };
 
 struct Poly		// our polys are always 3 triangles, unlike the real h/w
@@ -40,7 +41,7 @@ struct R3DPoly
 {
 	Vertex v[4];			// just easier to have them as an array
 	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
-	float faceColour[4];	// per face colour
+	UINT8 faceColour[4];	// per face colour
 	int number = 4;
 };
 
@@ -85,6 +86,7 @@ struct Mesh
 	bool highPriority	= false;		// rendered over the top
 
 	// lighting
+	bool fixedShading	= false;
 	bool lighting		= false;
 	bool specular		= false;
 	float shininess		= 0;
@@ -151,6 +153,8 @@ struct Viewport
 	int		number;					// viewport number
 	float	spotFogColor[3];		// spotlight color on fog
 	float	scrollAtt;
+
+	int		hardwareStep;			// not really a viewport param but will do here
 };
 
 enum class Clip { INSIDE, OUTSIDE, INTERCEPT, NOT_SET };

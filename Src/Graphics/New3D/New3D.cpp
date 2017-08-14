@@ -282,12 +282,14 @@ void CNew3D::RenderFrame(void)
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
 	glEnableVertexAttribArray(3);
+	glEnableVertexAttribArray(4);
 
 	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),   3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),   3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),   4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
 
 	m_r3dShader.SetShader(true);
 
@@ -321,6 +323,7 @@ void CNew3D::RenderFrame(void)
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 	glDisableVertexAttribArray(3);
+	glDisableVertexAttribArray(4);
 }
 
 void CNew3D::BeginFrame(void)
@@ -779,10 +782,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
 
-		vp->sunClamp = 1;						// TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
-		vp->intensityClamp = (m_step == 0x10);	// just step 1.0 ?
-
-		m_vpAmbient = vp->lightingParams[4];											// cache this
+		vp->sunClamp		= 1;					// TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
+		vp->intensityClamp	= (m_step == 0x10);		// just step 1.0 ?
+		vp->hardwareStep	= m_step;
 		
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
@@ -904,11 +906,11 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 		p.p3 = r3dPoly.v[0];
 	}
 
-	//multiply face attributes with vertex attributes if required
+	// Copy face colour to vertices
 	for (int i = 0; i < 4; i++) {
-		p.p1.color[i] = p.p1.color[i] * r3dPoly.faceColour[i];
-		p.p2.color[i] = p.p2.color[i] * r3dPoly.faceColour[i];
-		p.p3.color[i] = p.p3.color[i] * r3dPoly.faceColour[i];
+		p.p1.color[i] = r3dPoly.faceColour[i];
+		p.p2.color[i] = r3dPoly.faceColour[i];
+		p.p3.color[i] = r3dPoly.faceColour[i];
 	}
 	
 	polyArray.emplace_back(p);
@@ -931,11 +933,11 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray
 			p.p3 = r3dPoly.v[2];
 		}
 
-		//multiply face attributes with vertex attributes if required
+		// Copy face colour to vertices
 		for (int i = 0; i < 4; i++) {
-			p.p1.color[i] = p.p1.color[i] * r3dPoly.faceColour[i];
-			p.p2.color[i] = p.p2.color[i] * r3dPoly.faceColour[i];
-			p.p3.color[i] = p.p3.color[i] * r3dPoly.faceColour[i];
+			p.p1.color[i] = r3dPoly.faceColour[i];
+			p.p2.color[i] = r3dPoly.faceColour[i];
+			p.p3.color[i] = r3dPoly.faceColour[i];
 		}
 
 		polyArray.emplace_back(p);
@@ -997,7 +999,8 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->alphaTest		= ph.AlphaTest();
 	currentMesh->textureAlpha	= ph.TextureAlpha();
 	currentMesh->polyAlpha		= ph.PolyAlpha();
-	currentMesh->lighting		= ph.LightEnabled() && !ph.FixedShading();
+	currentMesh->lighting		= ph.LightEnabled();
+	currentMesh->fixedShading	= ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading();
 	currentMesh->highPriority	= ph.HighPriority();
 
 	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
@@ -1119,29 +1122,29 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		// copy face attributes
 
-		if ((ph.header[1] & 2) == 0) {
+		if (!ph.PolyColor()) {
 			int colorIdx = ph.ColorIndex();
-			p.faceColour[2] = (m_polyRAM[m_colorTableAddr + colorIdx] & 0xFF) / 255.f;
-			p.faceColour[1] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 8) & 0xFF) / 255.f;
-			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF) / 255.f;
+			p.faceColour[2] = (m_polyRAM[m_colorTableAddr + colorIdx] & 0xFF);
+			p.faceColour[1] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 8) & 0xFF);
+			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF);
 		}
 		else {
 
-			p.faceColour[0] = ((ph.header[4] >> 24)) / 255.f;
-			p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF) / 255.f;
-			p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF) / 255.f;
+			p.faceColour[0] = ((ph.header[4] >> 24));
+			p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF);
+			p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF);
 
 			if (ph.TranslatorMap()) {
-				p.faceColour[0] *= 15.9375f;	// not using 16, as 16x16=256 not 255 and that would overflow (potentially)
-				p.faceColour[1] *= 15.9375f;
-				p.faceColour[2] *= 15.9375f;
+				p.faceColour[0] = (p.faceColour[0] * 255) / 16;		// When the translator map is enabled, max colour seems
+				p.faceColour[1] = (p.faceColour[1] * 255) / 16;		// to be 16. Scaling these up gives the correct colours.
+				p.faceColour[2] = (p.faceColour[2] * 255) / 16;		// Not sure why didn't allow 32 colours with 4 bits?
 			}
 		}
 
-		p.faceColour[3] = ph.Transparency() / 255.f;
+		p.faceColour[3] = ph.Transparency();
 
 		if (ph.Discard1() && !ph.Discard2()) {
-			p.faceColour[3] *= 0.5f;
+			p.faceColour[3] /= 2;
 		}
 				
 		// if we have flat shading, we can't re-use normals from shared vertices
@@ -1176,42 +1179,32 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 			if (ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading()) {		// fixed shading seems to be disabled if actual normals are set
 
-				//===========
-				float shade;
-				float offset; 				// if lighting is disabled colour seems to be an offset 
-				//===========
-
-				offset = !ph.LightEnabled() ? 1.f : 0.f;
+				//==========
+				UINT8 shade;
+				//==========
 
 				if (m_step <=  0x15) {	
-					
-					shade = ((ix & 0x7F) / 127.f);									// this matches the sdk (values are from 0-127 only) and the intensity is clamped to to 0-1						
-
-					if (m_vpAmbient > 0) {
-						shade = (shade + 1) / 2;									// Viewport ambient seems to effect fixed shading. Technically vp ambient can change dynamically, but not an issue in practise. If it was we would need this logic in shader
-					}
+					shade = ((ix & 0x7F) * 255) / 127;					// this matches the sdk (values are from 0-127 only) and the intensity is clamped to to 0-1						
 				}
 				else {
 					if (ph.SpecularEnabled()) {
-						shade = (ix & 0xFF) / 255.f;								// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
+						shade = ix & 0xFF;								// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
 					}
 					else {
-						shade = (((ix + 128) & 0xFF) / 255.f);						// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
+						shade = (ix + 128) & 0xFF;						// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
 					}
 				}
 
-				shade += offset;
-
-				p.v[j].color[0] = shade;											// hardware doesn't really have per vertex colours, only per poly
-				p.v[j].color[1] = shade;
-				p.v[j].color[2] = shade;
-				p.v[j].color[3] = 1;
+				p.v[j].fixedShade[0] = shade;							// hardware doesn't really have per vertex colours, only per poly
+				p.v[j].fixedShade[1] = shade;
+				p.v[j].fixedShade[2] = shade;
+				p.v[j].fixedShade[3] = 255;
 			}
 			else {
-				p.v[j].color[0] = 1;
-				p.v[j].color[1] = 1;
-				p.v[j].color[2] = 1;
-				p.v[j].color[3] = 1;
+				p.v[j].fixedShade[0] = 255;
+				p.v[j].fixedShade[1] = 255;
+				p.v[j].fixedShade[2] = 255;
+				p.v[j].fixedShade[3] = 255;
 			}
 
 			float texU, texV = 0;

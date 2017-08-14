@@ -12,12 +12,17 @@ uniform float	fogIntensity;
 uniform float	fogDensity;
 uniform float	fogStart;
 uniform float	modelScale;
+uniform int		hardwareStep;
+uniform vec3	lighting[2];		// also used in fragment shader
+uniform bool	lightEnabled;		// also used in fragment shader
+uniform bool	fixedShading;		// also used in fragment shader
 
 // attributes
 attribute vec3 inVertex;
 attribute vec3 inNormal;
 attribute vec2 inTexCoord;
-attribute vec4 inColour; 
+attribute vec4 inColour;
+attribute vec4 inFixedShade;
 
 // outputs to fragment shader
 varying float	fsFogFactor;
@@ -26,6 +31,27 @@ varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec2	fsTexCoord;
 varying vec4	fsColor;
 
+vec4 GetVertexColour()
+{
+	vec4 polyColour = inColour;
+
+	if(fixedShading) {
+		if(hardwareStep==0x15) {
+			if(!lightEnabled) {
+				polyColour += inFixedShade;	// + vp ambient??
+			}
+			else {
+				polyColour *= (inFixedShade + lighting[1].y);	// fixed shade value + viewport ambient
+			}
+		}
+		else {
+			polyColour *= inFixedShade;		//todo work out what ambient does. Probably a min clamp or 1-min clamp for signed values
+		}
+	}
+
+	return polyColour;
+}
+
 void main(void)
 {
 	fsViewVertex	= vec3(gl_ModelViewMatrix * vec4(inVertex,1.0));
@@ -33,7 +59,7 @@ void main(void)
 	float z			= length(fsViewVertex);
 	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
-	fsColor    		= inColour;
+	fsColor    		= GetVertexColour();
 	fsTexCoord		= inTexCoord;
 	gl_Position		= gl_ModelViewProjectionMatrix * vec4(inVertex,1.0);
 }
@@ -70,6 +96,7 @@ uniform float	specularValue;		// specular coefficient
 uniform float	shininess;			// specular shininess
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
+uniform bool	fixedShading;
 
 //interpolated inputs from vertex shader
 varying float	fsFogFactor;
@@ -132,7 +159,7 @@ void main()
 	ellipse = 1.0 - ellipse;      // invert
 	ellipse = max(0.0, ellipse);  // clamp
 
-	if (lightEnabled) {
+	if (lightEnabled && !fixedShading) {
 		vec3   lightIntensity;
 		vec3   sunVector;     // sun lighting vector (as reflecting away from vertex)
 		float  sunFactor;     // sun light projection along vertex normal (0.0 to 1.0)
@@ -242,6 +269,7 @@ void R3DShader::Start()
 	m_specularEnabled	= false;
 	m_layered			= false;
 	m_textureInverted	= false;
+	m_fixedShading		= false;
 	m_modelScale		= 1.0f;
 	m_shininess			= 0;
 	m_specularValue		= 0;
@@ -302,12 +330,15 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locShininess		= glGetUniformLocation(m_shaderProgram, "shininess");
 	m_locSpecularValue	= glGetUniformLocation(m_shaderProgram, "specularValue");
 	m_locSpecularEnabled= glGetUniformLocation(m_shaderProgram, "specularEnabled");
+	m_locFixedShading	= glGetUniformLocation(m_shaderProgram, "fixedShading");
 
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 	m_locSpotRange		= glGetUniformLocation(m_shaderProgram, "spotRange");
 	m_locSpotColor		= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locModelScale		= glGetUniformLocation(m_shaderProgram, "modelScale");
+
+	m_locHardwareStep	= glGetUniformLocation(m_shaderProgram, "hardwareStep");
 	
 	return success;
 }
@@ -400,6 +431,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_specularValue = m->specularValue;
 	}
 
+	if (m_dirtyMesh || m->fixedShading != m_fixedShading) {
+		glUniform1i(m_locFixedShading, m->fixedShading);
+		m_fixedShading = m->fixedShading;
+	}
+
 	if (m_dirtyMesh || m->layered != m_layered) {
 		m_layered = m->layered;
 		if (m_layered) {
@@ -445,6 +481,8 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniform2fv(m_locSpotRange, 1, vp->spotRange);
 	glUniform3fv(m_locSpotColor, 1, vp->spotColor);
 	glUniform3fv(m_locSpotFogColor, 1, vp->spotFogColor);
+
+	glUniform1i (m_locHardwareStep, vp->hardwareStep);
 }
 
 void R3DShader::SetModelStates(const Model* model)

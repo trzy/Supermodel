@@ -52,6 +52,7 @@ private:
 	float	m_shininess;
 	float	m_specularValue;
 	bool	m_specularEnabled;
+	bool	m_fixedShading;
 
 	bool	m_layered;
 	float	m_microTexScale;
@@ -83,6 +84,7 @@ private:
 	GLint m_locShininess;
 	GLint m_locSpecularValue;
 	GLint m_locSpecularEnabled;
+	GLint m_locFixedShading;
 
 	GLint m_locSpotEllipse;
 	GLint m_locSpotRange;
@@ -91,6 +93,9 @@ private:
 	
 	// model uniforms
 	GLint m_locModelScale;
+
+	// global uniforms
+	GLint m_locHardwareStep;
 };
 
 } // New3D

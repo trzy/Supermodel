@@ -344,7 +344,7 @@ UINT8 PolyHeader::Transparency()
 		return 255;					// without this check we get overflow. In the SDK, values are explicitly clamped to 0-32.
 	}
 
-	return (UINT8)((((header[6] >> 18) & 0x3F) * 255) / 32.f);	
+	return (((header[6] >> 18) & 0x3F) * 255) / 32;	
 }
 
 bool PolyHeader::PolyAlpha()
