@@ -22,7 +22,7 @@ attribute vec3 inVertex;
 attribute vec3 inNormal;
 attribute vec2 inTexCoord;
 attribute vec4 inColour;
-attribute vec4 inFixedShade;
+attribute vec3 inFixedShade;
 
 // outputs to fragment shader
 varying float	fsFogFactor;
@@ -38,14 +38,14 @@ vec4 GetVertexColour()
 	if(fixedShading) {
 		if(hardwareStep==0x15) {
 			if(!lightEnabled) {
-				polyColour += inFixedShade;	// + vp ambient??
+				polyColour.rgb += inFixedShade;	// + vp ambient??
 			}
 			else {
-				polyColour *= (inFixedShade + lighting[1].y);	// fixed shade value + viewport ambient
+				polyColour.rgb *= (inFixedShade + lighting[1].y);	// fixed shade value + viewport ambient
 			}
 		}
 		else {
-			polyColour *= inFixedShade;		//todo work out what ambient does. Probably a min clamp or 1-min clamp for signed values
+			polyColour.rgb *= inFixedShade;		//todo work out what ambient does. Probably a min clamp or 1-min clamp for signed values
 		}
 	}
 
