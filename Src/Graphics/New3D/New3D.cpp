@@ -289,7 +289,7 @@ void CNew3D::RenderFrame(void)
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	1, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
 
 	m_r3dShader.SetShader(true);
 
@@ -1195,16 +1195,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 					}
 				}
 
-				p.v[j].fixedShade[0] = shade;							// hardware doesn't really have per vertex colours, only per poly
-				p.v[j].fixedShade[1] = shade;
-				p.v[j].fixedShade[2] = shade;
-				p.v[j].fixedShade[3] = 255;
-			}
-			else {
-				p.v[j].fixedShade[0] = 255;
-				p.v[j].fixedShade[1] = 255;
-				p.v[j].fixedShade[2] = 255;
-				p.v[j].fixedShade[3] = 255;
+				p.v[j].fixedShade = shade;								// hardware doesn't really have per vertex colours, only per poly
 			}
 
 			float texU, texV = 0;

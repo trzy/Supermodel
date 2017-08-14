@@ -18,11 +18,11 @@ uniform bool	lightEnabled;		// also used in fragment shader
 uniform bool	fixedShading;		// also used in fragment shader
 
 // attributes
-attribute vec3 inVertex;
-attribute vec3 inNormal;
-attribute vec2 inTexCoord;
-attribute vec4 inColour;
-attribute vec3 inFixedShade;
+attribute vec3	inVertex;
+attribute vec3	inNormal;
+attribute vec2	inTexCoord;
+attribute vec4	inColour;
+attribute float	inFixedShade;
 
 // outputs to fragment shader
 varying float	fsFogFactor;

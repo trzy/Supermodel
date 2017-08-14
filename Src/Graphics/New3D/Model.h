@@ -27,7 +27,7 @@ struct Vertex
 	float normal[3];
 	float texcoords[2];
 	UINT8 color[4];
-	UINT8 fixedShade[4];
+	UINT8 fixedShade;
 };
 
 struct Poly		// our polys are always 3 triangles, unlike the real h/w
