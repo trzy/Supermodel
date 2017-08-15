@@ -150,7 +150,7 @@ public:
 	* Parameters:
 	*   config  Run-time configuration.
 	*/
-	CNew3D(const Util::Config::Node &config);
+	CNew3D(const Util::Config::Node &config, std::string gameName);
 	~CNew3D(void);
 
 private:
@@ -190,6 +190,9 @@ private:
 	/*
 	* Data
 	*/
+
+	// Misc
+	std::string m_gameName;
 
 	// Stepping
 	int		m_step;

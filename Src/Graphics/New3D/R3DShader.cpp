@@ -16,6 +16,7 @@ uniform int		hardwareStep;
 uniform vec3	lighting[2];		// also used in fragment shader
 uniform bool	lightEnabled;		// also used in fragment shader
 uniform bool	fixedShading;		// also used in fragment shader
+uniform bool	sunClamp;			// also used in fragment shader
 
 // attributes
 attribute vec3	inVertex;
@@ -36,16 +37,17 @@ vec4 GetVertexColour()
 	vec4 polyColour = inColour;
 
 	if(fixedShading) {
-		if(hardwareStep==0x15) {
-			if(lightEnabled) {
-				polyColour.rgb *= (inFixedShade + lighting[1].y);	// per vertex brightness + ambient
-			}
-			else {
-				polyColour.rgb += lighting[1].y;					// this is similar to above but basically a flat shaded version. So poly colour + ambient
-			}
+
+		float lightAmbient = lighting[1].y;
+		if(!sunClamp) {
+			lightAmbient = 0;	// guess work here. La machine guns is the only game to use this light model. Black is black in this game, it's not effected by ambient
+		}
+
+		if(lightEnabled) {
+			polyColour.rgb *= (inFixedShade + lightAmbient);	// per vertex brightness + ambient
 		}
 		else {
-			polyColour.rgb *= inFixedShade;		//todo work out what ambient does. Probably a min clamp or 1-min clamp for signed values
+			polyColour.rgb += lightAmbient;						// this is similar to above but basically a flat shaded version. So poly colour + ambient
 		}
 	}
 

@@ -12,9 +12,10 @@
 
 namespace New3D {
 
-CNew3D::CNew3D(const Util::Config::Node &config)
+CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
   : m_r3dShader(config),
-    m_r3dScrollFog(config)
+    m_r3dScrollFog(config),
+	m_gameName(gameName)
 {
 	m_cullingRAMLo	= nullptr;
 	m_cullingRAMHi	= nullptr;
@@ -781,8 +782,16 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[3] = std::max(0.f, std::min(*(float *)&vpnode[0x07], 1.0f));	// sun intensity (clamp to 0-1)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
+		
+		// this is a hack because we haven't yet found in memory where these are set
+		// these two games use a slightly different light model to the test of the games
+		if (m_gameName == "lamachin" || m_gameName == "dayto2pe") {
+			vp->sunClamp = false;
+		}
+		else {
+			vp->sunClamp = true;
+		}
 
-		vp->sunClamp		= 1;					// TODO work out how this is passed, doesn't appear to be in the viewport .. or in the model data
 		vp->intensityClamp	= (m_step == 0x10);		// just step 1.0 ?
 		vp->hardwareStep	= m_step;
 		
