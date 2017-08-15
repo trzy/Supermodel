@@ -37,11 +37,11 @@ vec4 GetVertexColour()
 
 	if(fixedShading) {
 		if(hardwareStep==0x15) {
-			if(!lightEnabled) {
-				polyColour.rgb += inFixedShade;	// + vp ambient??
+			if(lightEnabled) {
+				polyColour.rgb *= (inFixedShade + lighting[1].y);	// per vertex brightness + ambient
 			}
 			else {
-				polyColour.rgb *= (inFixedShade + lighting[1].y);	// fixed shade value + viewport ambient
+				polyColour.rgb += lighting[1].y;					// this is similar to above but basically a flat shaded version. So poly colour + ambient
 			}
 		}
 		else {
