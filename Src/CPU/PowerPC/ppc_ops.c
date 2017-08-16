@@ -2521,7 +2521,7 @@ static void ppc_mcrfs(UINT32 op)
 			ppc.fpscr &= ~0x00080000;
 			break;
 		case 5:		// VXSOFT, VXSQRT, VXCVI
-			ppc.fpscr &= ~0x00000e00;
+			ppc.fpscr &= ~0x00000700;
 			break;
 		default:
 			break;
