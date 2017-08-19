@@ -12,7 +12,7 @@ namespace New3D {
 
 struct ClipVertex
 {
-	float pos[3];
+	float pos[4];
 };
 
 struct ClipPoly
@@ -23,12 +23,11 @@ struct ClipPoly
 
 struct Vertex
 {
-	float pos[3];
+	float pos[4];
 	float normal[3];
 	float texcoords[2];
 	UINT8 color[4];
-	UINT8 fixedShade;
-	UINT8 padding[3];
+	float fixedShade;
 };
 
 struct Poly		// our polys are always 3 triangles, unlike the real h/w

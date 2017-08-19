@@ -12,14 +12,9 @@ uniform float	fogIntensity;
 uniform float	fogDensity;
 uniform float	fogStart;
 uniform float	modelScale;
-uniform int		hardwareStep;
-uniform vec3	lighting[2];		// also used in fragment shader
-uniform bool	lightEnabled;		// also used in fragment shader
-uniform bool	fixedShading;		// also used in fragment shader
-uniform bool	sunClamp;			// also used in fragment shader
 
 // attributes
-attribute vec3	inVertex;
+attribute vec4	inVertex;
 attribute vec3	inNormal;
 attribute vec2	inTexCoord;
 attribute vec4	inColour;
@@ -31,39 +26,19 @@ varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec2	fsTexCoord;
 varying vec4	fsColor;
-
-vec4 GetVertexColour()
-{
-	vec4 polyColour = inColour;
-
-	if(fixedShading) {
-
-		float lightAmbient = lighting[1].y;
-		if(!sunClamp) {
-			lightAmbient = 0;	// guess work here. La machine guns is the only game to use this light model. Black is black in this game, it's not effected by ambient
-		}
-
-		if(lightEnabled) {
-			polyColour.rgb *= (inFixedShade + lightAmbient);	// per vertex brightness + ambient
-		}
-		else {
-			polyColour.rgb += lightAmbient;						// this is similar to above but basically a flat shaded version. So poly colour + ambient
-		}
-	}
-
-	return polyColour;
-}
+varying float	fsFixedShade;
 
 void main(void)
 {
-	fsViewVertex	= vec3(gl_ModelViewMatrix * vec4(inVertex,1.0));
+	fsViewVertex	= vec3(gl_ModelViewMatrix * inVertex);
 	fsViewNormal	= (mat3(gl_ModelViewMatrix) * inNormal) / modelScale;
 	float z			= length(fsViewVertex);
 	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
-	fsColor    		= GetVertexColour();
+	fsColor    		= inColour;
 	fsTexCoord		= inTexCoord;
-	gl_Position		= gl_ModelViewProjectionMatrix * vec4(inVertex,1.0);
+	fsFixedShade	= inFixedShade;
+	gl_Position		= gl_ModelViewProjectionMatrix * inVertex;
 }
 )glsl";
 
@@ -99,6 +74,7 @@ uniform float	shininess;			// specular shininess
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
 uniform bool	fixedShading;
+uniform int		hardwareStep;
 
 //interpolated inputs from vertex shader
 varying float	fsFogFactor;
@@ -106,6 +82,7 @@ varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec4	fsColor;
 varying vec2	fsTexCoord;
+varying float	fsFixedShade;
 
 vec4 GetTextureValue()
 {
@@ -134,6 +111,17 @@ vec4 GetTextureValue()
 	return tex1Data;
 }
 
+void Step15Lighting(inout vec4 colour)
+{
+	// on step 1.5 these polys seem to be effected by vpAmbient
+	// logic is not completely understood
+	if(hardwareStep==0x15) {
+		if(!lightEnabled && fixedShading) {
+			colour.rgb += lighting[1].y;	// + vpAmbient
+		}
+	}
+}
+
 void main()
 {
 	vec4 tex1Data;
@@ -149,9 +137,10 @@ void main()
 	}
 
 	colData = fsColor;
+	Step15Lighting(colData);			// no-op for step 2.0	
 	finalData = tex1Data * colData;
 
-	if (finalData.a < (1.0/16.0)) {      // basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
+	if (finalData.a < (1.0/16.0)) {		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
 		discard;
 	}
 
@@ -161,7 +150,7 @@ void main()
 	ellipse = 1.0 - ellipse;      // invert
 	ellipse = max(0.0, ellipse);  // clamp
 
-	if (lightEnabled && !fixedShading) {
+	if (lightEnabled) {
 		vec3   lightIntensity;
 		vec3   sunVector;     // sun lighting vector (as reflecting away from vertex)
 		float  sunFactor;     // sun light projection along vertex normal (0.0 to 1.0)
@@ -170,7 +159,12 @@ void main()
 		sunVector = lighting[0];
 
 		// Compute diffuse factor for sunlight
-		sunFactor = dot(sunVector, fsViewNormal);
+		if(fixedShading) {
+			sunFactor = fsFixedShade;
+		}
+		else {
+			sunFactor = dot(sunVector, fsViewNormal);
+		}
 
 		// Clamp ceil, fix for upscaled models without "modelScale" defined
 		sunFactor = clamp(sunFactor,-1.0,1.0);
@@ -208,7 +202,8 @@ void main()
 
 		finalData.rgb *= lightIntensity;
 
-		if (specularEnabled) {
+		// for now assume fixed shading doesn't work with specular
+		if (specularEnabled && !fixedShading) {
 
 			float exponent, NdotL, specularFactor;
 			vec4 biasIndex, expIndex, multIndex;

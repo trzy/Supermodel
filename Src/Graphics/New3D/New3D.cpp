@@ -10,6 +10,8 @@
 #define MAX_RAM_POLYS 100000	
 #define MAX_ROM_POLYS 500000
 
+#define BYTE_TO_FLOAT(B)	((2.0f * (B) + 1.0f) * (1.0F/255.0f))
+
 namespace New3D {
 
 CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
@@ -286,11 +288,11 @@ void CNew3D::RenderFrame(void)
 	glEnableVertexAttribArray(4);
 
 	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
 
 	m_r3dShader.SetShader(true);
 
@@ -784,8 +786,11 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[5] = 0.0;	// reserved
 		
 		// this is a hack because we haven't yet found in memory where these are set
-		// these two games use a slightly different light model to the test of the games
-		if (m_gameName == "lamachin" || m_gameName == "dayto2pe") {
+		if (m_gameName == "dayto2pe"||
+			m_gameName == "lamachin"|| 
+			m_gameName == "von2"	||
+			m_gameName == "von254g"	||
+			m_gameName == "von2a") {
 			vp->sunClamp = false;
 		}
 		else {
@@ -1178,33 +1183,29 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[j].pos[0] = (((INT32)ix) >> 8) * m_vertexFactor;
 			p.v[j].pos[1] = (((INT32)iy) >> 8) * m_vertexFactor;
 			p.v[j].pos[2] = (((INT32)iz) >> 8) * m_vertexFactor;
+			p.v[j].pos[3] = 1.0f;
 
 			// Per vertex normals
 			if (ph.SmoothShading()) {
-				p.v[j].normal[0] = (INT8)(ix & 0xFF) / 128.f;
-				p.v[j].normal[1] = (INT8)(iy & 0xFF) / 128.f;
-				p.v[j].normal[2] = (INT8)(iz & 0xFF) / 128.f;
+				p.v[j].normal[0] = BYTE_TO_FLOAT((INT8)(ix & 0xFF));
+				p.v[j].normal[1] = BYTE_TO_FLOAT((INT8)(iy & 0xFF));
+				p.v[j].normal[2] = BYTE_TO_FLOAT((INT8)(iz & 0xFF));
 			}
 
 			if (ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading()) {		// fixed shading seems to be disabled if actual normals are set
 
 				//==========
-				UINT8 shade;
+				float shade;
 				//==========
 
-				if (m_step <=  0x15) {	
-					shade = ((ix & 0x7F) * 255) / 127;					// this matches the sdk (values are from 0-127 only) and the intensity is clamped to to 0-1						
+				if (ph.SpecularEnabled()) {
+					shade = (ix & 0xFF) / 255.f;									// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
 				}
 				else {
-					if (ph.SpecularEnabled()) {
-						shade = ix & 0xFF;								// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
-					}
-					else {
-						shade = (ix + 128) & 0xFF;						// Step 2+ uses signed or unsigned values for lighting 0-255. Todo finish this logic
-					}
+					shade = BYTE_TO_FLOAT((INT8)(ix & 0xFF));
 				}
-
-				p.v[j].fixedShade = shade;								// hardware doesn't really have per vertex colours, only per poly
+				
+				p.v[j].fixedShade = shade;
 			}
 
 			float texU, texV = 0;
@@ -1606,23 +1607,11 @@ void CNew3D::ClipModel(const Model *m)
 
 			//==================================
 			Poly& poly = (*polys)[start + i];
-			float in[4], out[4];
 			//==================================
 
-			memcpy(in, poly.p1.pos, sizeof(float) * 3);
-			in[3] = 1;
-			MultVec(m->modelMat, in, out);
-			memcpy(clipPoly.list[0].pos, out, sizeof(float) * 3);
-
-			memcpy(in, poly.p2.pos, sizeof(float) * 3);
-			in[3] = 1;
-			MultVec(m->modelMat, in, out);
-			memcpy(clipPoly.list[1].pos, out, sizeof(float) * 3);
-
-			memcpy(in, poly.p3.pos, sizeof(float) * 3);
-			in[3] = 1;
-			MultVec(m->modelMat, in, out);
-			memcpy(clipPoly.list[2].pos, out, sizeof(float) * 3);
+			MultVec(m->modelMat, poly.p1.pos, clipPoly.list[0].pos);
+			MultVec(m->modelMat, poly.p2.pos, clipPoly.list[1].pos);
+			MultVec(m->modelMat, poly.p3.pos, clipPoly.list[2].pos);
 
 			clipPoly.count = 3;
 
