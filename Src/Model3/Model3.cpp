@@ -2877,9 +2877,9 @@ static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bo
   if (NULL != fp)
   {
     if (reverse32)
-      Reverse32(buf, size);
+      Util::FlipEndian32(buf, size);
     else if (reverse16)
-      Reverse16(buf, size);
+      Util::FlipEndian16(buf, size);
     fwrite(buf, sizeof(UINT8), size, fp);
     fclose(fp);
     printf("dumped %s\n", file);
@@ -2891,15 +2891,13 @@ static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bo
 
 CModel3::~CModel3(void)
 {
-  /*
   // Debug: dump some files
   //Dump("ram", ram, 0x800000, true, false);
   //Dump("vrom", vrom, 0x4000000, true, false);
-  Dump("crom", crom, 0x800000, true, false);
+  //Dump("crom", crom, 0x800000, true, false);
   //Dump("bankedCrom", &crom[0x800000], 0x7000000, true, false);
   //Dump("soundROM", soundROM, 0x80000, false, true);
-  //Dump("sampleROM", sampleROM, 0x800000, false, true);
-  */
+  //Dump("sampleROM", sampleROM, 0x800000, false, true); 
   
   // Stop all threads
   StopThreads();
