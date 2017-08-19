@@ -1695,6 +1695,18 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- 
+          Base offset of program in CROM space: 0 (lines up perfectly with RAM
+          offsets). The game gets stuck in a region of code that appears to 
+          wait on some exception to occur. It also appears to access the 
+          tilegen space, indicating that this is perhaps related to frame
+          timing and IRQs (pure speculation; I haven't really looked at it).
+          Multiple places can be patched out -- another one that works is
+          0x66ae0. 
+        -->
+        <patch region="crom" bits="32" offset="0x66aa8" value="0x60000000" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20505.20" crc32="0xC24A5097" />
         <file offset="2" name="epr-20504.19" crc32="0x30BBC46D" />
