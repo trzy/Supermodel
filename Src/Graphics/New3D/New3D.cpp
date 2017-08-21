@@ -1226,24 +1226,22 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		// check if we need to modify the texture coordinates
-		{
+		if (ph.TexEnabled()) {
+
 			float offset[2] = { 0 };
 
-			if (ph.TexEnabled()) {
-
-				if (!ph.TexSmoothU() && !ph.TexUMirror()) {
-					offset[0] = 0.5f / ph.TexWidth();	// half texel
-				}
-
-				if (!ph.TexSmoothV() && !ph.TexVMirror()) {
-					offset[1] = 0.5f / ph.TexHeight();	// half texel
-				}
-
-				OffsetTexCoords(p, offset);
+			if (!ph.TexSmoothU() && !ph.TexUMirror()) {
+				offset[0] = 0.5f / ph.TexWidth();	// half texel
 			}
+
+			if (!ph.TexSmoothV() && !ph.TexVMirror()) {
+				offset[1] = 0.5f / ph.TexHeight();	// half texel
+			}
+
+			OffsetTexCoords(p, offset);
 		}
 
-		// check if we need double up vertices for two sided lighting
+		// check if we need to double up vertices for two sided lighting
 		if (ph.DoubleSided() && !ph.Discard()) {
 
 			R3DPoly tempP = p;
