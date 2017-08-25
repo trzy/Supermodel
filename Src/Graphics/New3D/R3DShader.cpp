@@ -117,7 +117,7 @@ void Step15Lighting(inout vec4 colour)
 	// logic is not completely understood
 	if(hardwareStep==0x15) {
 		if(!lightEnabled && fixedShading) {
-			colour.rgb += lighting[1].y;	// + vpAmbient
+			colour.rgb *= (fsFixedShade+lighting[1].x) + lighting[1].y;
 		}
 	}
 }
