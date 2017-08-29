@@ -30,6 +30,8 @@
  *    in Real3D.cpp and security board-related variable was added to Model 3 
  *    state. PowerPC timing variables have changed. Before 0.3a release,
  *    important to change format version #.
+ *  - Remove FLIPENDIAN32() macros and have little endian devices flip data
+ *    around themselves. Bus standard should be big endian.
  *  - ROM sets should probably be handled with a class that manages ROM
  *    loading, the game list, as well as ROM patching
  *  - Wrap up CPU emulation inside a class.
@@ -833,18 +835,9 @@ void CModel3::WriteSystemRegister(unsigned reg, UINT8 data)
     DebugLog("IRQ ENABLE=%02X\n", data);
     break;
   case 0x18:  // IRQ acknowledge
-  {
-    // MAME: Clear bits are ack. Reverse order from other IRQ regs.
-    //uint8_t ack = 0;
-    //for (int bit = 0; bit < 8; bit++)
-    //{
-    //  if (!(data & (1 << bit)))
-    //    ack |= (1 << (7-bit));
-    //}
-    //IRQ.Deassert(ack);
+    IRQ.Deassert(data);
     DebugLog("IRQ ACK? %02X=%02X\n", reg, data);
     break;
-  }
   case 0x0C:  // JTAG Test Access Port
     GPU.WriteTAP((data>>6)&1,(data>>2)&1,(data>>5)&1,(data>>7)&1);  // TCK, TMS, TDI, TRST
     break;
@@ -1075,7 +1068,8 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // Real3D registers
   case 0x84:
-    return GPU.ReadRegister(addr&0x3F);
+    data = GPU.ReadRegister(addr&0x3F);
+    return FLIPENDIAN32(data);
     
   // Real3D DMA
   case 0xC2:

@@ -145,7 +145,7 @@ void CReal3D::BeginVBlank(int statusCycles)
   // Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
   // and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
   // access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
-  statusChange = ppc_total_cycles() + statusCycles;
+  statusChange = ppc_total_cycles() + statusCycles; 
 }
 
 void CReal3D::EndVBlank(void)
@@ -254,134 +254,6 @@ void CReal3D::EndFrame(void)
   Render3D->EndFrame();
 }
 
-/******************************************************************************
- DMA Device
- 
- Register 0xC:
- -------------
- +---+---+---+---+---+---+---+---+
- |BUS|???|???|???|???|???|???|IRQ|
- +---+---+---+---+---+---+---+---+
-  BUS:  Busy (see von2 0x18A104) if 1.
-  IRQ:  IRQ pending.
-******************************************************************************/
-
-void CReal3D::DMACopy(void)
-{
-  DebugLog("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");
-  //printf("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":""); 
-  if ((dmaConfig&0x80)) // reverse bytes
-  {
-    while (dmaLength != 0)
-    {
-      uint32_t  data = Bus->Read32(dmaSrc);
-      Bus->Write32(dmaDest, FLIPENDIAN32(data));
-      dmaSrc += 4;
-      dmaDest += 4;
-      --dmaLength;
-    }
-  }
-  else
-  {
-    while (dmaLength != 0)
-    {
-      Bus->Write32(dmaDest, Bus->Read32(dmaSrc));
-      dmaSrc += 4;
-      dmaDest += 4;
-      --dmaLength;
-    }
-  }
-}
-
-uint8_t CReal3D::ReadDMARegister8(unsigned reg)
-{
-  switch (reg)
-  {
-  case 0xC: // status
-    return dmaStatus;
-  case 0xE: // configuration
-    return  dmaConfig;
-  default:
-    break;
-  }
-  
-  DebugLog("Real3D: ReadDMARegister8: reg=%X\n", reg);
-  return 0;
-}
-
-void CReal3D::WriteDMARegister8(unsigned reg, uint8_t data)
-{
-  switch (reg)
-  {
-  case 0xD: // IRQ acknowledge
-    if ((data&1))
-    {
-      dmaStatus &= ~1;
-      IRQ->Deassert(dmaIRQ);
-    }
-    break;
-  case 0xE: // configuration
-    dmaConfig = data;
-    break;
-  default:
-    DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
-    break;
-  }
-  //DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
-}
-
-uint32_t CReal3D::ReadDMARegister32(unsigned reg)
-{
-  switch (reg)
-  {
-  case 0x14:  // command result
-    return dmaData;
-  default:
-    break;
-  }
-  
-  DebugLog("Real3D: ReadDMARegister32: reg=%X\n", reg);
-  return 0;
-}
-
-void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
-{
-  switch (reg)
-  {
-  case 0x00:  // DMA source address
-    dmaSrc = data;
-    break;
-  case 0x04:  // DMA destination address
-    dmaDest = data;
-    break;
-  case 0x08:  // DMA length
-    dmaLength = data;
-    DMACopy();
-    dmaStatus |= 1;
-    IRQ->Assert(dmaIRQ);
-    break;
-  case 0x10:  // command register
-    if ((data&0x20000000))
-    {
-      dmaData = 0x16C311DB; // Virtual On 2 expects this from DMA
-      DebugLog("Real3D: DMA ID command issued (ATTENTION: make sure we're returning the correct value), PC=%08X, LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-    }
-    else if ((data&0x80000000))
-    {
-      //dmaUnknownReg ^= 0xFFFFFFFF;
-      //dmaData = dmaUnknownReg;      
-      dmaData = (ppc_total_cycles() >= statusChange ? 0x0 : 0xFFFFFFFF); // Not sure yet if it is just bit 2 as per ReadRegister above
-    }
-    break;
-  case 0x14:  // ?
-    dmaData = 0xFFFFFFFF;
-    break;
-  default:
-    DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
-    break;
-  }
-  //DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
-}
 
 /******************************************************************************
  JTAG Test Access Port Simulation
@@ -790,6 +662,133 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
 
 
 /******************************************************************************
+ DMA Device
+ 
+ Register 0xC:
+ -------------
+ +---+---+---+---+---+---+---+---+
+ |BUS|???|???|???|???|???|???|IRQ|
+ +---+---+---+---+---+---+---+---+
+  BUS:  Busy (see von2 0x18A104) if 1.
+  IRQ:  IRQ pending.
+******************************************************************************/
+
+void CReal3D::DMACopy(void)
+{
+  DebugLog("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");
+  //printf("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":""); 
+  if ((dmaConfig&0x80)) // reverse bytes
+  {
+    while (dmaLength != 0)
+    {
+      uint32_t  data = Bus->Read32(dmaSrc);
+      Bus->Write32(dmaDest, FLIPENDIAN32(data));
+      dmaSrc += 4;
+      dmaDest += 4;
+      --dmaLength;
+    }
+  }
+  else
+  {
+    while (dmaLength != 0)
+    {
+      Bus->Write32(dmaDest, Bus->Read32(dmaSrc));
+      dmaSrc += 4;
+      dmaDest += 4;
+      --dmaLength;
+    }
+  }
+}
+
+uint8_t CReal3D::ReadDMARegister8(unsigned reg)
+{
+  switch (reg)
+  {
+  case 0xC: // status
+    return dmaStatus;
+  case 0xE: // configuration
+    return  dmaConfig;
+  default:
+    break;
+  }
+  
+  DebugLog("Real3D: ReadDMARegister8: reg=%X\n", reg);
+  return 0;
+}
+
+void CReal3D::WriteDMARegister8(unsigned reg, uint8_t data)
+{
+  switch (reg)
+  {
+  case 0xD: // IRQ acknowledge
+    if ((data&1))
+    {
+      dmaStatus &= ~1;
+      IRQ->Deassert(dmaIRQ);
+    }
+    break;
+  case 0xE: // configuration
+    dmaConfig = data;
+    break;
+  default:
+    DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
+    break;
+  }
+  //DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
+}
+
+uint32_t CReal3D::ReadDMARegister32(unsigned reg)
+{
+  switch (reg)
+  {
+  case 0x14:  // command result
+    return dmaData;
+  default:
+    break;
+  }
+  
+  DebugLog("Real3D: ReadDMARegister32: reg=%X\n", reg);
+  return 0;
+}
+
+void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
+{
+  switch (reg)
+  {
+  case 0x00:  // DMA source address
+    dmaSrc = data;
+    break;
+  case 0x04:  // DMA destination address
+    dmaDest = data;
+    break;
+  case 0x08:  // DMA length
+    dmaLength = data;
+    DMACopy();
+    dmaStatus |= 1;
+    IRQ->Assert(dmaIRQ);
+    break;
+  case 0x10:  // command register
+    if ((data&0x20000000))
+    {
+      dmaData = 0x16C311DB; // Virtual On 2 expects this from DMA
+      DebugLog("Real3D: DMA ID command issued (ATTENTION: make sure we're returning the correct value), PC=%08X, LR=%08X\n", ppc_get_pc(), ppc_get_lr());
+    }
+    else if ((data&0x80000000))
+    {
+      dmaData = ReadRegister(data & 0x3F);
+    }
+    break;
+  case 0x14:  // ?
+    dmaData = 0xFFFFFFFF;
+    break;
+  default:
+    DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
+    break;
+  }
+  //DebugLog("Real3D: WriteDMARegister32: reg=%X, data=%08X\n", reg, data);
+}
+
+/******************************************************************************
  Basic Emulation Functions, Registers, Memory, and Texture FIFO
 ******************************************************************************/
 
@@ -891,13 +890,15 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
   DebugLog("Real3D: Read reg %X\n", reg);
   if (reg == 0)
   {
-    uint32_t status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x2);
-    return 0xFFFFFFFD|status;
+    uint32_t status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x02000000);
+    return 0xFDFFFFFF|status;
   }
   else
     return 0xFFFFFFFF;
 }
 
+// TODO: This returns data in the way that the PowerPC bus expects. Other functions in CReal3D should
+// return data this way.
 uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
 {
   uint32_t  d;
