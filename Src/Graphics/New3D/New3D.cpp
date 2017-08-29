@@ -242,19 +242,19 @@ void CNew3D::RenderFrame(void)
 	m_modelMat.Release();			// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
 
-	RenderViewport(0x800000);					// build model structure
+	RenderViewport(0x800000);						// build model structure
 
-	DrawScrollFog();							// fog layer if applicable must be drawn here
+	DrawScrollFog();								// fog layer if applicable must be drawn here
 
 	glDepthFunc		(GL_LEQUAL);
 	glEnable		(GL_DEPTH_TEST);
 	glDepthMask		(GL_TRUE);
 	glActiveTexture	(GL_TEXTURE0);
-	glEnable		(GL_CULL_FACE);
+	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader					
 	glFrontFace		(GL_CW);
 
 	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
-	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);		// if the stencil test passes, we incriment the value
+	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
 	glStencilMask	(0xFF);
 	
 	m_vbo.Bind(true);
@@ -286,12 +286,14 @@ void CNew3D::RenderFrame(void)
 	glEnableVertexAttribArray(2);
 	glEnableVertexAttribArray(3);
 	glEnableVertexAttribArray(4);
+	glEnableVertexAttribArray(5);
 
 	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"),	3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, faceNormal));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
 
 	m_r3dShader.SetShader(true);
@@ -321,12 +323,13 @@ void CNew3D::RenderFrame(void)
 	m_vbo.Bind(false);
 
 	glDisable(GL_STENCIL_TEST);
-	glDisable(GL_CULL_FACE);
+
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 	glDisableVertexAttribArray(3);
 	glDisableVertexAttribArray(4);
+	glDisableVertexAttribArray(5);
 }
 
 void CNew3D::BeginFrame(void)
@@ -409,9 +412,6 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	for (int i = 0; i < 16; i++) {
 		m->modelMat[i] = m_modelMat.currentMatrix[i];
 	}
-
-	//calculate determinant
-	m->determinant = Determinant3x3(m_modelMat);
 
 	// update texture offsets
 	m->textureOffsetX = m_nodeAttribs.currentTexOffsetX;
@@ -897,61 +897,46 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
 {
-	//====================
-	Poly		p;
-	V3::Vec3	normal;
-	float		dotProd;
-	bool		clockWise;
-	//====================
+	Poly p;
 
-	V3::createNormal(r3dPoly.v[0].pos, r3dPoly.v[1].pos, r3dPoly.v[2].pos, normal);
-
-	dotProd		= V3::dotProduct(normal, r3dPoly.faceNormal);
-	clockWise	= dotProd >= 0;
-
-	if (clockWise) {
-		p.p1 = r3dPoly.v[0];
-		p.p2 = r3dPoly.v[1];
-		p.p3 = r3dPoly.v[2];
-	}
-	else {
-		p.p1 = r3dPoly.v[2];
-		p.p2 = r3dPoly.v[1];
-		p.p3 = r3dPoly.v[0];
-	}
-
+	p.p1 = r3dPoly.v[0];
+	p.p2 = r3dPoly.v[1];
+	p.p3 = r3dPoly.v[2];
+	
 	// Copy face colour to vertices
 	for (int i = 0; i < 4; i++) {
 		p.p1.color[i] = r3dPoly.faceColour[i];
 		p.p2.color[i] = r3dPoly.faceColour[i];
 		p.p3.color[i] = r3dPoly.faceColour[i];
 	}
+
+	// Copy face normal
+	for (int i = 0; i < 3; i++) {
+		p.p1.faceNormal[i] = r3dPoly.faceNormal[i];
+		p.p2.faceNormal[i] = r3dPoly.faceNormal[i];
+		p.p3.faceNormal[i] = r3dPoly.faceNormal[i];
+	}
 	
 	polyArray.emplace_back(p);
 
 	if (r3dPoly.number == 4) {
 
-		V3::createNormal(r3dPoly.v[0].pos, r3dPoly.v[2].pos, r3dPoly.v[3].pos, normal);
-
-		dotProd		= V3::dotProduct(normal, r3dPoly.faceNormal);
-		clockWise	= dotProd >= 0;
-
-		if (clockWise) {
-			p.p1 = r3dPoly.v[0];
-			p.p2 = r3dPoly.v[2];
-			p.p3 = r3dPoly.v[3];
-		}
-		else {
-			p.p1 = r3dPoly.v[0];
-			p.p2 = r3dPoly.v[3];
-			p.p3 = r3dPoly.v[2];
-		}
-
+		p.p1 = r3dPoly.v[0];
+		p.p2 = r3dPoly.v[2];
+		p.p3 = r3dPoly.v[3];
+		
 		// Copy face colour to vertices
 		for (int i = 0; i < 4; i++) {
 			p.p1.color[i] = r3dPoly.faceColour[i];
 			p.p2.color[i] = r3dPoly.faceColour[i];
 			p.p3.color[i] = r3dPoly.faceColour[i];
+		}
+
+		// Copy face normal
+		for (int i = 0; i < 3; i++) {
+			p.p1.faceNormal[i] = r3dPoly.faceNormal[i];
+			p.p2.faceNormal[i] = r3dPoly.faceNormal[i];
+			p.p3.faceNormal[i] = r3dPoly.faceNormal[i];
 		}
 
 		polyArray.emplace_back(p);

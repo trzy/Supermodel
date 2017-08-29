@@ -18,6 +18,7 @@ attribute vec4	inVertex;
 attribute vec3	inNormal;
 attribute vec2	inTexCoord;
 attribute vec4	inColour;
+attribute vec3	inFaceNormal;		// used to emulate r3d culling 
 attribute float	inFixedShade;
 
 // outputs to fragment shader
@@ -26,7 +27,17 @@ varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec2	fsTexCoord;
 varying vec4	fsColor;
+varying float	fsDiscard;			// can't have varying bool (glsl spec)
 varying float	fsFixedShade;
+
+float CalcBackFace(in vec3 viewVertex)
+{
+	vec3 vt = viewVertex - vec3(0.0);
+	vec3 vn = (mat3(gl_ModelViewMatrix) * inFaceNormal);
+
+	// dot product of face normal with view direction
+	return dot(vt, vn);
+}
 
 void main(void)
 {
@@ -35,6 +46,7 @@ void main(void)
 	float z			= length(fsViewVertex);
 	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
+	fsDiscard		= CalcBackFace(fsViewVertex);
 	fsColor    		= inColour;
 	fsTexCoord		= inTexCoord;
 	fsFixedShade	= inFixedShade;
@@ -82,6 +94,7 @@ varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec4	fsColor;
 varying vec2	fsTexCoord;
+varying float	fsDiscard;
 varying float	fsFixedShade;
 
 vec4 GetTextureValue()
@@ -128,6 +141,10 @@ void main()
 	vec4 colData;
 	vec4 finalData;
 	vec4 fogData;
+
+	if(fsDiscard>0) {
+		discard;		//emulate back face culling here
+	}
 
 	fogData = vec4(fogColour.rgb * fogAmbient, fsFogFactor);
 	tex1Data = vec4(1.0, 1.0, 1.0, 1.0);
@@ -261,7 +278,6 @@ void R3DShader::Start()
 	m_textured2			= false;
 	m_textureAlpha		= false;		// use alpha in texture
 	m_alphaTest			= false;		// discard fragment based on alpha (ogl does this with fixed function)
-	m_doubleSided		= false;
 	m_lightEnabled		= false;
 	m_specularEnabled	= false;
 	m_layered			= false;
@@ -274,8 +290,6 @@ void R3DShader::Start()
 
 	m_baseTexSize[0] = 0;
 	m_baseTexSize[1] = 0;
-
-	m_matDet = MatDet::notset;
 
 	m_dirtyMesh		= true;			// dirty means all the above are dirty, ie first run
 	m_dirtyModel	= true;
@@ -443,22 +457,6 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		}
 	}
 
-	if (m_matDet!=MatDet::zero) {
-
-		if (m_dirtyMesh || m->doubleSided != m_doubleSided) {
-
-			m_doubleSided = m->doubleSided;
-
-			if (m_doubleSided) {
-				glDisable(GL_CULL_FACE);
-			}
-			else {
-				glEnable(GL_CULL_FACE);
-			}
-		}
-	}
-
-
 	m_dirtyMesh = false;
 }
 
@@ -484,42 +482,12 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 
 void R3DShader::SetModelStates(const Model* model)
 {
-	//==========
-	MatDet test;
-	//==========
-
-	test = MatDet::notset;		// happens for bad matrices with NaN
-
-	if (model->determinant < 0)			{ test = MatDet::negative; }
-	else if (model->determinant > 0)	{ test = MatDet::positive; }
-	else if (model->determinant == 0)	{ test = MatDet::zero; }
-
-	if (m_dirtyModel || m_matDet!=test) {
-
-		switch (test) {
-		case MatDet::negative:
-			glCullFace(GL_FRONT);
-			glEnable(GL_CULL_FACE);
-			m_doubleSided = false;
-			break;
-		case MatDet::positive:
-			glCullFace(GL_BACK);
-			glEnable(GL_CULL_FACE);
-			m_doubleSided = false;
-			break;
-		default:
-			glDisable(GL_CULL_FACE);
-			m_doubleSided = true;		// basically drawing on both sides now
-		}
-	}
-
 	if (m_dirtyModel || model->scale != m_modelScale) {
 		glUniform1f(m_locModelScale, model->scale);
 		m_modelScale = model->scale;
 	}
 
-	m_matDet		= test;
-	m_dirtyModel	= false;
+	m_dirtyModel = false;
 }
 
 } // New3D

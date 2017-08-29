@@ -27,6 +27,7 @@ struct Vertex
 	float normal[3];
 	float texcoords[2];
 	UINT8 color[4];
+	float faceNormal[3];
 	float fixedShade;
 };
 
@@ -119,7 +120,6 @@ struct Model
 
 	//matrices
 	float modelMat[16];
-	float determinant;				// we check if the determinant of the matrix is negative, if it is, the matrix will swap the axis order
 
 	//model scale step 1.5+
 	float scale = 1.0f;

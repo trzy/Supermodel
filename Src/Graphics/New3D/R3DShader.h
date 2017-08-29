@@ -47,7 +47,6 @@ private:
 	bool	m_textureAlpha;		// use alpha in texture
 	bool	m_alphaTest;		// discard fragment based on alpha (ogl does this with fixed function)
 	float	m_fogIntensity;
-	bool	m_doubleSided;
 	bool	m_lightEnabled;
 	float	m_shininess;
 	float	m_specularValue;
@@ -60,8 +59,6 @@ private:
 	bool	m_textureInverted;
 	
 	// cached model values
-	enum class MatDet { notset, negative, positive, zero };
-	MatDet	m_matDet;
 	float	m_modelScale;
 
 	// are our cache values dirty
