@@ -289,12 +289,12 @@ void CNew3D::RenderFrame(void)
 	glEnableVertexAttribArray(5);
 
 	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		4, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoords));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"),	3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, faceNormal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	1, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, fixedShade));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"),	3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
 
 	m_r3dShader.SetShader(true);
 
@@ -897,49 +897,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
 {
-	Poly p;
-
-	p.p1 = r3dPoly.v[0];
-	p.p2 = r3dPoly.v[1];
-	p.p3 = r3dPoly.v[2];
-	
-	// Copy face colour to vertices
-	for (int i = 0; i < 4; i++) {
-		p.p1.color[i] = r3dPoly.faceColour[i];
-		p.p2.color[i] = r3dPoly.faceColour[i];
-		p.p3.color[i] = r3dPoly.faceColour[i];
-	}
-
-	// Copy face normal
-	for (int i = 0; i < 3; i++) {
-		p.p1.faceNormal[i] = r3dPoly.faceNormal[i];
-		p.p2.faceNormal[i] = r3dPoly.faceNormal[i];
-		p.p3.faceNormal[i] = r3dPoly.faceNormal[i];
-	}
-	
-	polyArray.emplace_back(p);
+	polyArray.emplace_back(Poly(true,r3dPoly));			// create object directly in array without temporary copy
 
 	if (r3dPoly.number == 4) {
-
-		p.p1 = r3dPoly.v[0];
-		p.p2 = r3dPoly.v[2];
-		p.p3 = r3dPoly.v[3];
-		
-		// Copy face colour to vertices
-		for (int i = 0; i < 4; i++) {
-			p.p1.color[i] = r3dPoly.faceColour[i];
-			p.p2.color[i] = r3dPoly.faceColour[i];
-			p.p3.color[i] = r3dPoly.faceColour[i];
-		}
-
-		// Copy face normal
-		for (int i = 0; i < 3; i++) {
-			p.p1.faceNormal[i] = r3dPoly.faceNormal[i];
-			p.p2.faceNormal[i] = r3dPoly.faceNormal[i];
-			p.p3.faceNormal[i] = r3dPoly.faceNormal[i];
-		}
-
-		polyArray.emplace_back(p);
+		polyArray.emplace_back(Poly(false, r3dPoly));	// copy second triangle
 	}
 }
 

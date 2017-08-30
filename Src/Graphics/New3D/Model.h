@@ -21,21 +21,24 @@ struct ClipPoly
 	int count = 0;
 };
 
-struct Vertex
+struct Vertex					// half vertex
 {
 	float pos[4];
 	float normal[3];
 	float texcoords[2];
-	UINT8 color[4];
-	float faceNormal[3];
 	float fixedShade;
 };
 
-struct Poly		// our polys are always 3 triangles, unlike the real h/w
+struct FVertex : Vertex			// full vertex including face attributes
 {
-	Vertex p1;
-	Vertex p2;
-	Vertex p3;
+	float faceNormal[3];
+	UINT8 faceColour[4];
+
+	FVertex& operator=(const Vertex& vertex) 
+	{
+		memcpy(this, &vertex, sizeof(Vertex));
+		return *this;
+	}
 };
 
 struct R3DPoly
@@ -44,6 +47,42 @@ struct R3DPoly
 	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
 	UINT8 faceColour[4];	// per face colour
 	int number = 4;
+};
+
+struct Poly						// our polys are always 3 triangles, unlike the real h/w
+{
+	Poly() {};	// default
+
+	Poly(bool firstTriangle, const R3DPoly& r3dPoly) {
+
+		if (firstTriangle) {
+			p1 = r3dPoly.v[0];
+			p2 = r3dPoly.v[1];
+			p3 = r3dPoly.v[2];
+		}
+		else {
+			p1 = r3dPoly.v[0];
+			p2 = r3dPoly.v[2];
+			p3 = r3dPoly.v[3];
+		}
+
+		// copy face attributes
+		for (int i = 0; i < 4; i++) {
+			p1.faceColour[i] = r3dPoly.faceColour[i];
+			p2.faceColour[i] = r3dPoly.faceColour[i];
+			p3.faceColour[i] = r3dPoly.faceColour[i];
+		}
+
+		for (int i = 0; i < 3; i++) {
+			p1.faceNormal[i] = r3dPoly.faceNormal[i];
+			p2.faceNormal[i] = r3dPoly.faceNormal[i];
+			p3.faceNormal[i] = r3dPoly.faceNormal[i];
+		}
+	}
+
+	FVertex p1;
+	FVertex p2;
+	FVertex p3;
 };
 
 struct Mesh

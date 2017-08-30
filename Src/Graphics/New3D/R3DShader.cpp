@@ -142,7 +142,7 @@ void main()
 	vec4 finalData;
 	vec4 fogData;
 
-	if(fsDiscard>0) {
+	if(fsDiscard>=0) {
 		discard;		//emulate back face culling here
 	}
 
