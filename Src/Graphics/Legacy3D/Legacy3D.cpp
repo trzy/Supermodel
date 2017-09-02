@@ -1297,6 +1297,10 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   return OKAY;
 }
 
+void CLegacy3D::SetSunClamp(bool enable)
+{
+}
+
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
   : m_config(config)
 { 

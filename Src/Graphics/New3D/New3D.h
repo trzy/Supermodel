@@ -142,6 +142,16 @@ public:
 	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
 
 	/*
+	* SetSunClamp(bool enable);
+	*
+	* Sets or unsets the clamped light model
+	*
+	* Parameters:
+	*		enable	Set clamp mode
+	*/
+	void SetSunClamp(bool enable);
+
+	/*
 	* CRender3D(config):
 	* ~CRender3D(void):
 	*
@@ -193,6 +203,7 @@ private:
 
 	// Misc
 	std::string m_gameName;
+	bool m_sunClamp;
 
 	// Stepping
 	int		m_step;

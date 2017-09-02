@@ -327,6 +327,16 @@ public:
 	 *		destructor is called. Prints own error messages.
 	 */
 	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
+
+	/*
+	* SetSunClamp(bool enable);
+	*
+	* Sets or unsets the clamped light model
+	*
+	* Parameters:
+	*		enable	Set clamp mode
+	*/
+	void SetSunClamp(bool enable);
 	 
 	/*
 	 * CLegacy3D(void):

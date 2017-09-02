@@ -24,6 +24,7 @@ CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
 	m_polyRAM		= nullptr;
 	m_vrom			= nullptr;
 	m_textureRAM	= nullptr;
+	m_sunClamp		= true;
 }
 
 CNew3D::~CNew3D()
@@ -791,12 +792,13 @@ void CNew3D::RenderViewport(UINT32 addr)
 			m_gameName == "von2"	||
 			m_gameName == "von254g"	||
 			m_gameName == "von2a") {
-			vp->sunClamp = false;
+			m_sunClamp = false;
 		}
 		else {
-			vp->sunClamp = true;
+			m_sunClamp = true;
 		}
 
+		vp->sunClamp		= m_sunClamp;
 		vp->intensityClamp	= (m_step == 0x10);		// just step 1.0 ?
 		vp->hardwareStep	= m_step;
 		
@@ -1606,6 +1608,11 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 
 		vp->projectionMatrix.Frustum(l, r, b, t, near, far);
 	}
+}
+
+void CNew3D::SetSunClamp(bool enable)
+{
+	m_sunClamp = enable;
 }
 
 } // New3D
