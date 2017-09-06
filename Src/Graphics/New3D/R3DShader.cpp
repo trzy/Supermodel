@@ -43,7 +43,7 @@ void main(void)
 {
 	fsViewVertex	= vec3(gl_ModelViewMatrix * inVertex);
 	fsViewNormal	= (mat3(gl_ModelViewMatrix) * inNormal) / modelScale;
-	float z			= length(fsViewVertex);
+	float z			= -fsViewVertex.z;
 	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
 	fsDiscard		= CalcBackFace(fsViewVertex);
