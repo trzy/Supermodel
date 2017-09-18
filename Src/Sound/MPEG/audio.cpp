@@ -190,7 +190,7 @@ void initialise_decoder(void)
  */
 void initialise_globals(void)
 {
-	append=data=nch=0; 
+	append=::data=nch=0; 
         f_bdirty=TRUE;
         bclean_bytes=0;
 

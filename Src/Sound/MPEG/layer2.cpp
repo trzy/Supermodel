@@ -74,7 +74,7 @@ int hsize,fs,mean_frame_size;
 
 	/* layers 1 and 2 do not have a 'bit reservoir'
 	 */
-	append=data=0;
+	append=::data=0;
 
 	fillbfr(mean_frame_size + header->padding_bit - hsize);
 

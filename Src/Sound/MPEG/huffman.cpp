@@ -47,12 +47,12 @@ static inline unsigned int viewbits(int n)
 {
 unsigned int pos,ret_value;
 
-        pos = data >> 3;
+        pos = ::data >> 3;
         ret_value = buffer[pos] << 24 |
                     buffer[pos+1] << 16 |
                     buffer[pos+2] << 8 |
                     buffer[pos+3];
-        ret_value <<= data & 7;
+        ret_value <<= ::data & 7;
         ret_value >>= 32 - n;
 
         return ret_value;
@@ -60,8 +60,8 @@ unsigned int pos,ret_value;
 
 static inline void sackbits(int n)
 {
-        data += n;
-        data &= 8*BUFFER_SIZE-1;
+        ::data += n;
+        ::data &= 8*BUFFER_SIZE-1;
 }
 
 /* huffman_decode() is supposed to be faster now
@@ -228,8 +228,8 @@ int big_value = info->big_values[gr][ch] << 1;
 	/*  set position to start of the next gr/ch
 	 */
  	if (cnt != info->part2_3_length[gr][ch] - ssize ) {
- 		data-=cnt-(info->part2_3_length[gr][ch] - ssize);
- 		data&= 8*BUFFER_SIZE - 1;
+ 		::data-=cnt-(info->part2_3_length[gr][ch] - ssize);
+ 		::data&= 8*BUFFER_SIZE - 1;
  	}
 	if (l<576) non_zero[ch]=l;
 	else non_zero[ch]=576;
