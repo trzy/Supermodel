@@ -8,7 +8,6 @@ int main(int argc, char **argv)
   
   Util::BitRegister reg;
   
-  
   // Test
   reg.SetZeros(1);
   expected.push_back("0");
@@ -209,7 +208,52 @@ int main(int argc, char **argv)
   reg.Insert(29, "0110");
   expected.push_back("00000000000000101001001000110011");
   results.push_back(reg.ToBinaryString());
+  
+  // Test hex printing
+  reg.SetOnes(1);
+  expected.push_back("0x1");
+  results.push_back(reg.ToHexString());
+  
+  reg.SetZeros(1);
+  expected.push_back("0x0");
+  results.push_back(reg.ToHexString());
+    
+  reg.SetZeros(2);
+  expected.push_back("0x0");
+  results.push_back(reg.ToHexString());
+    
+  reg.SetZeros(3);
+  expected.push_back("0x0");
+  results.push_back(reg.ToHexString());
+  
+  reg.SetZeros(4);
+  expected.push_back("0x0");
+  results.push_back(reg.ToHexString());
+    
+  reg.SetZeros(5);
+  expected.push_back("0x00");
+  results.push_back(reg.ToHexString());
 
+  reg.Set("11001");
+  expected.push_back("0x19");
+  results.push_back(reg.ToHexString());
+    
+  reg.Set("111001");
+  expected.push_back("0x39");
+  results.push_back(reg.ToHexString());
+  
+  reg.Set("1111001");
+  expected.push_back("0x79");
+  results.push_back(reg.ToHexString());
+  
+  reg.Set("01111001");
+  expected.push_back("0x79");
+  results.push_back(reg.ToHexString());
+    
+  reg.Set("101111001");
+  expected.push_back("0x179");
+  results.push_back(reg.ToHexString());
+  
   // Check results
   size_t num_failed = 0;
   for (size_t i = 0; i < expected.size(); i++)

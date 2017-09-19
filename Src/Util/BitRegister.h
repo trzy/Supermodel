@@ -41,11 +41,14 @@ namespace Util
     void Set(const std::string &value);
     void SetZeros(size_t count);
     void SetOnes(size_t count);
-    void SetNoBitValue(uint8_t bit);
     void Reset();
     
+    // Configuration state
+    void SetNoBitValue(uint8_t bit);
+
     // String serialization
     std::string ToBinaryString() const;
+    std::string ToHexString() const;
     friend std::ostream &operator<<(std::ostream &os, const BitRegister &reg);
 
   private:

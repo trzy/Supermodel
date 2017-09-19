@@ -208,6 +208,39 @@ namespace Util
     return out;
   }
   
+  std::string BitRegister::ToHexString() const
+  {
+    const char digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+    if (Empty())
+      return std::string("");
+    size_t partial = Size() & 3;
+    size_t num_digits = Size() / 4 + (partial != 0 ? 1 : 0);
+    std::string out(num_digits + 2, '0');
+    out[0] = '0';
+    out[1] = 'x';
+    size_t idx = 0;
+    size_t digit_idx = 2;
+    size_t digit = 0;
+    if (partial != 0)
+    {
+      for (idx = 0; idx < partial; idx++)
+      {
+        digit <<= 1;
+        digit |= m_bits[idx];
+      }
+      out[digit_idx++] = digits[digit];
+    }
+    while (idx < Size())
+    {
+      digit  = m_bits[idx++] << 3;
+      digit |= m_bits[idx++] << 2;
+      digit |= m_bits[idx++] << 1;
+      digit |= m_bits[idx++] << 0;
+      out[digit_idx++] = digits[digit];
+    }
+    return out;
+  }
+
   std::ostream &operator<<(std::ostream &os, const BitRegister &reg)
   {
     if (reg.Empty())
@@ -215,14 +248,7 @@ namespace Util
       os << "[ empty ]";
       return os;
     }
-    char *buf = new char[reg.Size() + 1];
-    buf[reg.Size()] = 0;
-    for (size_t i = 0; i < reg.Size(); i++)
-    {
-      buf[i] = reg.m_bits[i] == 0 ? '0' : '1';
-    }
-    os << "[ " << reg.Size() << ": " << buf << " ]";
-    delete [] buf;
+    os << "[ " << reg.Size() << ": " << reg.ToHexString() << " ]";
     return os;
   }
 } // Util
