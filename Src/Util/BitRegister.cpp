@@ -104,6 +104,9 @@ namespace Util
   // preserve vector size
   void BitRegister::ShiftRight(size_t count)
   {
+    if (Empty())
+      return;
+
     if (count < m_bits.size())
     {
       // Shift over bits to the right
@@ -118,6 +121,9 @@ namespace Util
   // preserve vector size
   void BitRegister::ShiftLeft(size_t count)
   {
+    if (Empty())
+      return;
+
     if (count < m_bits.size())
     {
       // Shift over bits to the left
@@ -132,6 +138,9 @@ namespace Util
   // preserve vector size
   uint8_t BitRegister::ShiftOutRight(uint8_t bit)
   {
+    if (Empty())
+      return m_no_data;
+
     uint8_t ejected = GetRightMost();
     ShiftRight(1);
     m_bits[0] = !!bit;
@@ -142,6 +151,9 @@ namespace Util
   // preserve vector size
   uint8_t BitRegister::ShiftOutLeft(uint8_t bit)
   {
+    if (Empty())
+      return m_no_data;
+
     uint8_t ejected = GetLeftMost();
     ShiftLeft(1);
     m_bits[m_bits.size() - 1] = !!bit;
