@@ -95,7 +95,8 @@ namespace Util
   std::ostream &operator<<(std::ostream &os, const Format &format);
   std::string ToLower(const std::string &str);
   std::string TrimWhiteSpace(const std::string &str);
-  std::string Hex(uint32_t n, size_t num_digits);
+  std::string Hex(uint64_t n, size_t num_digits);
+  std::string Hex(uint64_t n);
   std::string Hex(uint32_t n);
   std::string Hex(uint16_t n);
   std::string Hex(uint8_t n);
