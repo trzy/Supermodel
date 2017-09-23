@@ -89,17 +89,17 @@ int main(int argc, char **argv)
   reg.Reset();
   reg.Set("110010101");
   expected.push_back("1");
-  results.push_back(reg.ShiftOutRight() == 1 ? "1" : "0");
+  results.push_back(reg.RemoveFromRight() == 1 ? "1" : "0");
   expected.push_back("11001010");
   results.push_back(reg.ToBinaryString());
   
   expected.push_back("0");
-  results.push_back(reg.ShiftOutRight() == 1 ? "1" : "0");
+  results.push_back(reg.RemoveFromRight() == 1 ? "1" : "0");
   expected.push_back("1100101");
   results.push_back(reg.ToBinaryString());
   
   expected.push_back("1");
-  results.push_back(reg.ShiftOutRight() == 1 ? "1" : "0");
+  results.push_back(reg.RemoveFromRight() == 1 ? "1" : "0");
   expected.push_back("110010");
   results.push_back(reg.ToBinaryString());
   
@@ -107,28 +107,28 @@ int main(int argc, char **argv)
   reg.Reset();
   reg.Set("110010101");
   expected.push_back("1");
-  results.push_back(reg.ShiftOutLeft() == 1 ? "1" : "0");
+  results.push_back(reg.RemoveFromLeft() == 1 ? "1" : "0");
   expected.push_back("10010101");
   results.push_back(reg.ToBinaryString());
   
   expected.push_back("1");
-  results.push_back(reg.ShiftOutLeft() == 1 ? "1" : "0");
+  results.push_back(reg.RemoveFromLeft() == 1 ? "1" : "0");
   expected.push_back("0010101");
   results.push_back(reg.ToBinaryString());
   
   expected.push_back("0");
-  results.push_back(reg.ShiftOutLeft() == 1 ? "1" : "0");
+  results.push_back(reg.RemoveFromLeft() == 1 ? "1" : "0");
   expected.push_back("010101");
   results.push_back(reg.ToBinaryString());
   
   // Test
   reg.Reset();
   reg.Set("0x12345");
-  reg.ShiftOutLeft(1);
+  reg.RemoveFromLeft(1);
   expected.push_back("0010010001101000101");
   results.push_back(reg.ToBinaryString());
   
-  reg.ShiftOutLeft(2);
+  reg.RemoveFromLeft(2);
   expected.push_back("10010001101000101");
   results.push_back(reg.ToBinaryString());
   
@@ -146,11 +146,11 @@ int main(int argc, char **argv)
   // Test
   reg.Reset();
   reg.Set("0x12345");
-  reg.ShiftOutRight(1);
+  reg.RemoveFromRight(1);
   expected.push_back("0001001000110100010");
   results.push_back(reg.ToBinaryString());
   
-  reg.ShiftOutRight(2);
+  reg.RemoveFromRight(2);
   expected.push_back("00010010001101000");
   results.push_back(reg.ToBinaryString());
   
@@ -167,26 +167,26 @@ int main(int argc, char **argv)
   
   // Test
   reg.Reset();
-  reg.ShiftInRight(1);
-  reg.ShiftInRight(1);
-  reg.ShiftInRight(0);
-  reg.ShiftInRight(1);
-  reg.ShiftInRight(0);
+  reg.AddToRight(1);
+  reg.AddToRight(1);
+  reg.AddToRight(0);
+  reg.AddToRight(1);
+  reg.AddToRight(0);
   expected.push_back("11010");
   results.push_back(reg.ToBinaryString());
   
   // Test
   reg.Reset();
-  reg.ShiftInRight(1);
-  reg.ShiftInRight(1);
-  reg.ShiftInRight(0);
-  reg.ShiftInRight(1);
-  reg.ShiftInRight(0);
-  reg.ShiftOutRight();
+  reg.AddToRight(1);
+  reg.AddToRight(1);
+  reg.AddToRight(0);
+  reg.AddToRight(1);
+  reg.AddToRight(0);
+  reg.RemoveFromRight();
   expected.push_back("1101");
   results.push_back(reg.ToBinaryString());
   
-  reg.ShiftOutLeft();
+  reg.RemoveFromLeft();
   expected.push_back("101");
   results.push_back(reg.ToBinaryString());
   

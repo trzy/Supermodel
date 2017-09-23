@@ -21,12 +21,12 @@ namespace Util
     }
 
     // Functions that grow/shrink the bit register
-    void ShiftInRight(uint8_t bit);
-    void ShiftInLeft(uint8_t bit);
-    uint8_t ShiftOutLeft();
-    void ShiftOutLeft(size_t count);
-    uint8_t ShiftOutRight();
-    void ShiftOutRight(size_t count);
+    void AddToRight(uint8_t bit);
+    void AddToLeft(uint8_t bit);
+    uint8_t RemoveFromLeft();
+    void RemoveFromLeft(size_t count);
+    uint8_t RemoveFromRight();
+    void RemoveFromRight(size_t count);
     
     // Functions that preserve the current register size, shifting in the "no
     // data" value as needed
@@ -50,6 +50,11 @@ namespace Util
     std::string ToBinaryString() const;
     std::string ToHexString() const;
     friend std::ostream &operator<<(std::ostream &os, const BitRegister &reg);
+      
+    // Constructors
+    BitRegister();
+    BitRegister(size_t count);
+    BitRegister(size_t count, uint8_t bit);
 
   private:
     /*

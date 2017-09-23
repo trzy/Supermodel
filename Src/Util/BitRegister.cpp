@@ -43,13 +43,13 @@ namespace Util
   }
  
   // Shift a bit into the right side, growing the vector by 1
-  void BitRegister::ShiftInRight(uint8_t bit)
+  void BitRegister::AddToRight(uint8_t bit)
   {
     m_bits.push_back(!!bit);
   }
   
   // Shift a bit into the left side, growing the vector by 1
-  void BitRegister::ShiftInLeft(uint8_t bit)
+  void BitRegister::AddToLeft(uint8_t bit)
   {
     m_bits.push_back(0);
     ShiftRight(1);
@@ -57,15 +57,15 @@ namespace Util
   }
 
   // Shift left by 1, returning ejected bit (shrinks vector)
-  uint8_t BitRegister::ShiftOutLeft()
+  uint8_t BitRegister::RemoveFromLeft()
   {
     uint8_t ejected = GetLeftMost();
-    ShiftOutLeft(1);
+    RemoveFromLeft(1);
     return ejected;
   }
   
   // Shift left and lose bits (shrinks vector)
-  void BitRegister::ShiftOutLeft(size_t count)
+  void BitRegister::RemoveFromLeft(size_t count)
   {
     if (count >= m_bits.size())
     {
@@ -80,15 +80,15 @@ namespace Util
   }
   
   // Shift right by 1, returning ejected bit (shrinks vector)
-  uint8_t BitRegister::ShiftOutRight()
+  uint8_t BitRegister::RemoveFromRight()
   {
     uint8_t ejected = GetRightMost();
-    ShiftOutRight(1);
+    RemoveFromRight(1);
     return ejected;
   }
 
   // Shift right and lose bits (shrinks vector)
-  void BitRegister::ShiftOutRight(size_t count)
+  void BitRegister::RemoveFromRight(size_t count)
   {
     // Shifting right means we lose lower bits (which are higher in the
     // vector), which means we just trim the vector from the right side
@@ -250,5 +250,22 @@ namespace Util
     }
     os << "[ " << reg.Size() << ": " << reg.ToHexString() << " ]";
     return os;
+  }
+  
+  BitRegister::BitRegister()
+  {
+  }
+
+  BitRegister::BitRegister(size_t count)
+  {
+    SetZeros(count);
+  }
+  
+  BitRegister::BitRegister(size_t count, uint8_t bit)
+  {
+    if (bit == 0)
+      SetZeros(count);
+    else
+      SetOnes(count);
   }
 } // Util
