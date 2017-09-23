@@ -33,6 +33,11 @@ namespace Util
     void ShiftRight(size_t count);
     void ShiftLeft(size_t count);
     
+    // Functions that preserve the register size, shifting a bit in one side
+    // and ejecting one out the other
+    uint8_t ShiftOutRight(uint8_t bit);
+    uint8_t ShiftOutLeft(uint8_t bit);
+    
     // Functions that insert bits, clipped against current register size
     void SetBit(size_t bitPos, uint8_t value);
     void Insert(size_t bitPos, const std::string &value);

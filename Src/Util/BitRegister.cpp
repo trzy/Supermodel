@@ -127,6 +127,26 @@ namespace Util
     // Fill in the right with "no data"
     memset(m_bits.data() + m_bits.size() - count, m_no_data, count);
   }
+  
+  // Shift right and eject right-most bit, shifting new bit into left side to
+  // preserve vector size
+  uint8_t BitRegister::ShiftOutRight(uint8_t bit)
+  {
+    uint8_t ejected = GetRightMost();
+    ShiftRight(1);
+    m_bits[0] = !!bit;
+    return ejected;
+  }
+  
+  // Shift left and eject left-most bit, shifting new bit into right side to
+  // preserve vector size
+  uint8_t BitRegister::ShiftOutLeft(uint8_t bit)
+  {
+    uint8_t ejected = GetLeftMost();
+    ShiftLeft(1);
+    m_bits[m_bits.size() - 1] = !!bit;
+    return ejected;
+  }
 
   void BitRegister::Reset()
   {
