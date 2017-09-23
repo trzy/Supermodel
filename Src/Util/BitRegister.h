@@ -41,6 +41,10 @@ namespace Util
     // Functions that insert bits, clipped against current register size
     void SetBit(size_t bitPos, uint8_t value);
     void Insert(size_t bitPos, const std::string &value);
+
+    // Functions that reset the contents but not the size of the register
+    void SetZeros();
+    void SetOnes();
     
     // Functions that reset the contents (and size) of the register
     void Set(const std::string &value);

@@ -210,12 +210,26 @@ namespace Util
     Insert(0, value);
   }
 
+  void BitRegister::SetZeros()
+  {
+    if (Empty())
+      return;
+    memset(m_bits.data(), 0, m_bits.size());
+  }
+
   void BitRegister::SetZeros(size_t count)
   {
     m_bits.resize(count);
     memset(m_bits.data(), 0, count);
   }
   
+  void BitRegister::SetOnes()
+  {
+    if (Empty())
+      return;
+    memset(m_bits.data(), 1, m_bits.size());
+  }
+
   void BitRegister::SetOnes(size_t count)
   {
     m_bits.resize(count);
