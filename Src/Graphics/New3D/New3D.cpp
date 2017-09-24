@@ -786,18 +786,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
 		vp->lightingParams[5] = 0.0;	// reserved
 		
-		// this is a hack because we haven't yet found in memory where these are set
-		if (m_gameName == "dayto2pe"||
-			m_gameName == "lamachin"|| 
-			m_gameName == "von2"	||
-			m_gameName == "von254g"	||
-			m_gameName == "von2a") {
-			m_sunClamp = false;
-		}
-		else {
-			m_sunClamp = true;
-		}
-
 		vp->sunClamp		= m_sunClamp;
 		vp->intensityClamp	= (m_step == 0x10);		// just step 1.0 ?
 		vp->hardwareStep	= m_step;

@@ -97,7 +97,7 @@ endif
 HEADERS = Src/Supermodel.h Src/OSD/SDL/Types.h
 OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/unzip.o $(OBJ_DIR)/ioapi.o $(OBJ_DIR)/Error.o $(OBJ_DIR)/glew.o $(OBJ_DIR)/Shader.o \
-	$(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Legacy3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o \
+	$(OBJ_DIR)/JTAG.o $(OBJ_DIR)/Real3D.o $(OBJ_DIR)/Legacy3D.o $(OBJ_DIR)/Models.o $(OBJ_DIR)/TextureRefs.o \
 	$(OBJ_DIR)/New3D.o $(OBJ_DIR)/Mat4.o $(OBJ_DIR)/Model.o $(OBJ_DIR)/PolyHeader.o $(OBJ_DIR)/Texture.o $(OBJ_DIR)/TextureSheet.o $(OBJ_DIR)/VBO.o $(OBJ_DIR)/Vec.o $(OBJ_DIR)/R3DShader.o $(OBJ_DIR)/R3DFloat.o $(OBJ_DIR)/R3DScrollFog.o \
 	$(OBJ_DIR)/Render2D.o $(OBJ_DIR)/TileGen.o \
 	$(OBJ_DIR)/Model3.o $(OBJ_DIR)/ppc.o $(OBJ_DIR)/Main.o $(OBJ_DIR)/Audio.o $(OBJ_DIR)/Thread.o $(OBJ_DIR)/SoundBoard.o \
@@ -118,7 +118,8 @@ OBJ = $(OBJ_DIR)/PPCDisasm.o $(OBJ_DIR)/BlockFile.o $(OBJ_DIR)/93C46.o \
 	$(OBJ_DIR)/ConfigBuilders.o \
 	$(OBJ_DIR)/GameLoader.o \
 	$(OBJ_DIR)/tinyxml2.o \
-	$(OBJ_DIR)/ROMSet.o
+	$(OBJ_DIR)/ROMSet.o \
+	$(OBJ_DIR)/BitRegister.o
 
 # If built-in debugger enabled, include all debugging classes
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)

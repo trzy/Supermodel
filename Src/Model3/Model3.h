@@ -29,6 +29,7 @@
 #define INCLUDED_MODEL3_H
 
 #include "Model3/IEmulator.h"
+#include "Model3/JTAG.h"
 #include "Model3/Crypto.h"
 #include "Util/NewConfig.h"
 
@@ -282,6 +283,7 @@ private:
   CDSB        *DSB;           // Digital Sound Board (type determined dynamically at load time)
   CDriveBoard DriveBoard;     // Drive board
   CCrypto     m_cryptoDevice; // Encryption device
+  CJTAG       m_jtag;         // JTAG interface
 };
 
 

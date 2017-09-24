@@ -30,6 +30,7 @@
 #define INCLUDED_REAL3D_H
 
 #include <cstdint>
+#include <map>
 
 /* 
  * QueuedUploadTextures:
@@ -58,6 +59,21 @@ struct QueuedUploadTextures
 class CReal3D: public IPCIDevice
 {
 public:
+  /*
+   * ASIC Names
+   *
+   * These were determined from Virtual On, which prints them out if any of the
+   * ID codes are incorrect. ID codes depend on stepping.
+   */
+  enum ASIC
+  {
+    Mercury,
+    Venus,
+    Earth,
+    Mars,
+    Jupiter
+  };
+
   /*
    * SaveState(SaveState):
    *
@@ -240,30 +256,18 @@ public:
   void WritePolygonRAM(uint32_t addr, uint32_t data);
   
   /*
-   * ReadTAP(void):
+   * WriteJTAGRegister(instruction, data):
    *
-   * Reads the JTAG Test Access Port.
-   *
-   * Returns:
-   *    The TDO bit (either 1 or 0).
-   */
-  unsigned ReadTAP(void);
-  
-  /*
-   * void WriteTAP(tck, tms, tdi, trst):
-   *
-   * Writes to the JTAG TAP. State changes only occur on the rising edge of 
-   * the clock (tck = 1). Each of the inputs is a single bit only and must be
-   * either 0 or 1, or the code will fail.
+   * Write to an internal register using the JTAG interface. This is intended
+   * to be called from the JTAG emulation for instructions that are known to
+   * poke the internal state of Real3D ASICs.
    *
    * Parameters:
-   *      tck   Clock.
-   *      tms   Test mode select.
-   *      tdi   Serial data input. Must be 0 or 1 only!
-   *      trst  Reset.
+   *    instruction   Value of the JTAG instruction register.
+   *    data          Data written.
    */
-  void WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst);
-    
+  void WriteJTAGRegister(uint64_t instruction, uint64_t data);
+
   /*
    * ReadRegister(reg):
    *
@@ -333,6 +337,20 @@ public:
    */
   void AttachRenderer(IRender3D *Render3DPtr);
   
+  /*
+   * GetASICIDCodes(asic):
+   *
+   * Obtain ASIC ID code for the specified ASIC under the currently configured
+   * hardware stepping.
+   *
+   * Parameters:
+   *    asic  ASIC ID.
+   *
+   * Returns:
+   *    The ASIC ID code. Undefined for invalid ASIC ID.
+   */
+  uint32_t GetASICIDCode(ASIC asic) const;
+
   /*
    * SetStepping(stepping):
    *
@@ -456,15 +474,12 @@ private:
   bool  commandPortWrittenRO; // Read-only copy of flag
   
   // Status and command registers
-  uint64_t  statusChange;
+  uint32_t m_pingPong;
+  uint64_t statusChange;
   
-  // JTAG Test Access Port
-  uint64_t  tapCurrentInstruction;  // latched IR (not always equal to IR)
-  uint64_t  tapIR;                  // instruction register (46 bits)
-  uint8_t   tapID[32];              // ASIC ID code data buffer
-  unsigned  tapIDSize;              // size of ID data in bits
-  unsigned  tapTDO;                 // bit shifted out to TDO
-  unsigned  tapState;               // current state
+  // Internal ASIC state
+  std::map<ASIC, uint32_t> m_asicID;
+  uint64_t m_internalRenderConfig[2] = { 0, 0 };
 };
 
 

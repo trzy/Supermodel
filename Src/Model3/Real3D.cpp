@@ -42,6 +42,7 @@
  */
 
 #include "Supermodel.h"
+#include "Model3/JTAG.h"
 #include "Util/BMPFile.h"
 #include <cstring>
 
@@ -70,6 +71,9 @@
 #define MEM_POOL_SIZE_DIRTY (DIRTY_SIZE(MEM_POOL_SIZE_RO))
 #define MEMORY_POOL_SIZE  (MEM_POOL_SIZE_RW+MEM_POOL_SIZE_RO+MEM_POOL_SIZE_DIRTY)
 
+static void UpdateRenderConfig(IRender3D *Render3D, uint64_t internalRenderConfig[]);
+
+
 /******************************************************************************
  Save States
 ******************************************************************************/
@@ -90,12 +94,15 @@ void CReal3D::SaveState(CBlockFile *SaveState)
   SaveState->Write(&dmaStatus, sizeof(dmaStatus));
   SaveState->Write(&dmaConfig, sizeof(dmaConfig));
   
-  SaveState->Write(&tapCurrentInstruction, sizeof(tapCurrentInstruction));
-  SaveState->Write(&tapIR, sizeof(tapIR));
-  SaveState->Write(tapID, sizeof(tapID));
-  SaveState->Write(&tapIDSize, sizeof(tapIDSize));
-  SaveState->Write(&tapTDO, sizeof(tapTDO));
-  SaveState->Write(&tapState, sizeof(tapState));
+  // These used to be occupied by JTAG state
+  SaveState->Write(m_internalRenderConfig, sizeof(m_internalRenderConfig));
+  SaveState->Write(commandPortWritten);
+  SaveState->Write(&m_pingPong, sizeof(m_pingPong));
+  for (int i = 0; i < 39; i++)
+  {
+    uint8_t nul = 0;
+    SaveState->Write(&nul, sizeof(uint8_t));
+  }
 
   SaveState->Write(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
 }
@@ -125,12 +132,15 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&dmaStatus, sizeof(dmaStatus));
   SaveState->Read(&dmaConfig, sizeof(dmaConfig));
   
-  SaveState->Read(&tapCurrentInstruction, sizeof(tapCurrentInstruction));
-  SaveState->Read(&tapIR, sizeof(tapIR));
-  SaveState->Read(tapID, sizeof(tapID));
-  SaveState->Read(&tapIDSize, sizeof(tapIDSize));
-  SaveState->Read(&tapTDO, sizeof(tapTDO));
-  SaveState->Read(&tapState, sizeof(tapState));
+  SaveState->Read(m_internalRenderConfig, sizeof(m_internalRenderConfig));
+  UpdateRenderConfig(Render3D, m_internalRenderConfig);
+  SaveState->Read(&commandPortWritten);
+  SaveState->Read(&m_pingPong, sizeof(m_pingPong));
+  for (int i = 0; i < 39; i++)
+  {
+    uint8_t nul;
+    SaveState->Read(&nul, sizeof(uint8_t));
+  }
 
   SaveState->Read(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
 }
@@ -140,12 +150,28 @@ void CReal3D::LoadState(CBlockFile *SaveState)
  Rendering
 ******************************************************************************/
 
+static void UpdateRenderConfig(IRender3D *Render3D, uint64_t internalRenderConfig[])
+{
+  bool noSunClamp = (internalRenderConfig[0] & 0x800000) != 0 && (internalRenderConfig[1] & 0x400000) != 0;
+  Render3D->SetSunClamp(!noSunClamp);
+}
+
 void CReal3D::BeginVBlank(int statusCycles)
 {
+#ifndef NEW_FRAME_TIMING
   // Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
   // and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
   // access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
-  statusChange = ppc_total_cycles() + statusCycles; 
+  statusChange = ppc_total_cycles() + statusCycles;
+#else
+  // Buffers are swapped at a specific point in the frame if a flush (command
+  // port write) was performed
+  if (commandPortWritten)
+  {
+    m_pingPong ^= 0x02000000;
+    commandPortWritten = false;
+  }
+#endif
 }
 
 void CReal3D::EndVBlank(void)
@@ -157,7 +183,9 @@ uint32_t CReal3D::SyncSnapshots(void)
 {
   // Update read-only copy of command port flag
   commandPortWrittenRO = commandPortWritten;
+#ifndef NEW_FRAME_TIMING
   commandPortWritten = false;
+#endif
 
   if (!m_gpuMultiThreaded)
     return 0;
@@ -252,181 +280,6 @@ void CReal3D::RenderFrame(void)
 void CReal3D::EndFrame(void)
 {
   Render3D->EndFrame();
-}
-
-
-/******************************************************************************
- JTAG Test Access Port Simulation
- 
- What I term as "IDs" here are really boundary scan values.
-******************************************************************************/
-
-static const int tapFSM[][2] =  // finite state machine, each state can lead to 2 next states
-{
-  {  1,  0 },  // 0  Test-Logic/Reset
-  {  1,  2 },  // 1  Run-Test/Idle
-  {  3,  9 },  // 2  Select-DR-Scan
-  {  4,  5 },  // 3  Capture-DR
-  {  4,  5 },  // 4  Shift-DR
-  {  6,  8 },  // 5  Exit1-DR
-  {  6,  7 },  // 6  Pause-DR
-  {  4,  8 },  // 7  Exit2-DR
-  {  1,  2 },  // 8  Update-DR
-  { 10,  0 },  // 9  Select-IR-Scan
-  { 11, 12 },  // 10 Capture-IR
-  { 11, 12 },  // 11 Shift-IR
-  { 13, 15 },  // 12 Exit1-IR
-  { 13, 14 },  // 13 Pause-IR
-  { 11, 15 },  // 14 Exit2-IR
-  {  1,  2 }   // 15 Update-IR
-};
-          
-/*
- * InsertBit():
- *
- * Inserts a bit into an arbitrarily long bit field. Bit 0 is assumed to be
- * the MSB of the first byte in the buffer.
- */
-void CReal3D::InsertBit(uint8_t *buf, unsigned bitNum, unsigned bit)
-{
-  unsigned bitInByte = 7 - (bitNum & 7);
-  buf[bitNum / 8] &= ~(1 << bitInByte);
-  buf[bitNum / 8] |= (bit << bitInByte);
-}
-
-/*
- * InsertID():
- *
- * Inserts a 32-bit ID code into the ID bit field.
- */
-void CReal3D::InsertID(uint32_t id, unsigned startBit)
-{
-  for (int i = 31; i >= 0; i--)
-    InsertBit(tapID, startBit++, (id >> i) & 1);
-}
-
-/*
- * Shift():
- *
- * Shifts the data buffer right (towards LSB at byte 0) by 1 bit. The size of
- * the number of bits must be specified. The bit shifted out of the LSB is
- * returned.
- */
-unsigned CReal3D::Shift(uint8_t *data, unsigned numBits)
-{
-  // This loop takes care of all the fully-filled bytes
-  unsigned shiftIn = 0;
-  unsigned shiftOut = 0;
-  uint32_t i;
-  for (i = 0; i < numBits / 8; i++)
-  {
-    shiftOut = data[i] & 1;
-    data[i] >>= 1;
-    data[i] |= (shiftIn << 7);
-    shiftIn = shiftOut;   // carry over to next element's MSB
-  }
-
-  // Take care of the last partial byte (if there is one)
-  if ((numBits & 7) != 0)
-  {
-    shiftOut = (data[i] >> (8 - (numBits & 7))) & 1;
-    data[i] >>= 1;
-    data[i] |= (shiftIn << 7);
-  }
-
-  return shiftOut;
-}
-
-unsigned CReal3D::ReadTAP(void)
-{
-  return tapTDO;
-}
-
-void CReal3D::WriteTAP(unsigned tck, unsigned tms, unsigned tdi, unsigned trst)
-{
-  if (!tck)
-    return;
-
-  // Go to next state
-  tapState = tapFSM[tapState][tms];
-  switch (tapState)
-  {
-  case 3:     // Capture-DR
-    /*
-     * Read ASIC IDs.
-     *
-     * The ID Sequence is:
-     *  - Jupiter
-     *  - Mercury
-     *  - Venus
-     *  - Earth
-     *  - Mars
-     *  - Mars (again)
-     *
-     * Note that different Model 3 steps have different chip
-     * revisions, hence the different IDs returned below.
-     *
-     * On Step 1.5 and 1.0, instruction 0x0C631F8C7FFE is used to retrieve
-     * the ID codes but Step 2.0 is a little weirder. It seems to use this
-     * and either the state of the TAP after reset or other instructions
-     * to read the IDs as well. This can be emulated in one of 2 ways:
-     * Ignore the instruction and always load up the data or load the
-     * data on TAP reset and when the instruction is issued.
-     */
-    if (step == 0x10)
-    {
-      InsertID(0x116C7057, 1 + 0 * 32);
-      InsertID(0x216C3057, 1 + 1 * 32);
-      InsertID(0x116C4057, 1 + 2 * 32);
-      InsertID(0x216C5057, 1 + 3 * 32);
-      InsertID(0x116C6057, 1 + 4 * 32 + 1);
-      InsertID(0x116C6057, 1 + 5 * 32 + 1);
-    }
-    else if (step == 0x15)
-    {
-      InsertID(0x316C7057, 1 + 0 * 32);
-      InsertID(0x316C3057, 1 + 1 * 32);
-      InsertID(0x216C4057, 1 + 2 * 32); // Lost World may to use 0x016C4057
-      InsertID(0x316C5057, 1 + 3 * 32);
-      InsertID(0x216C6057, 1 + 4 * 32 + 1);
-      InsertID(0x216C6057, 1 + 5 * 32 + 1);
-    }
-    else if (step >= 0x20)
-    {
-      InsertID(0x416C7057, 1 + 0 * 32);
-      InsertID(0x416C3057, 1 + 1 * 32);
-      InsertID(0x316C4057, 1 + 2 * 32); // skichamp at PC=A89F4, this value causes "NO DAUGHTER BOARD" message
-      InsertID(0x416C5057, 1 + 3 * 32);
-      InsertID(0x316C6057, 1 + 4 * 32 + 1);
-      InsertID(0x316C6057, 1 + 5 * 32 + 1);
-    }
-    break;
-  case 4:     // Shift-DR
-    tapTDO = Shift(tapID, tapIDSize);
-    //printf("TAP: Shift-DR Bit %d\n", bit++);
-    break;
-  case 10:    // Capture-IR
-    // Load lower 2 bits with 01 as per IEEE 1149.1-1990
-    tapIR = 1;
-    break;
-  case 11:    // Shift-IR
-    // Shift IR towards output and load in new data from TDI
-    tapTDO = tapIR & 1;   // shift LSB to output
-    tapIR >>= 1;
-    tapIR |= ((uint64_t) tdi << 45);
-    break;
-  case 15:    // Update-IR
-    /*
-     * Latch IR (technically, this should occur on the falling edge of
-     * TCK)
-     */
-    tapIR &= 0x3FFFFFFFFFFFULL;
-    tapCurrentInstruction = tapIR;
-    //printf("TAP: Update-IR %XLL\n", tapCurrentInstruction);
-    break;
-  default:
-    break;
-  }
 }
 
 
@@ -600,7 +453,7 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
   // Process texture data
   DebugLog("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
   //printf("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
-  switch ((header>>24)&0x0F)
+  switch ((header>>24)&0xFF)
   {
   case 0x00:  // texture w/ mipmaps
   {
@@ -652,7 +505,14 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
     break;
   }
   case 0x80:  // MAME thinks these might be a gamma table
-    //break;
+    /*
+    printf("Special texture format 0x80:\n");
+    for (int i = 0; i < 32*32; i++)
+    {
+      printf("  %02x=%02x\n", i, texData[i]);
+    }
+    */
+    break;
   default:  // unknown
     DebugLog("Unknown texture format %02X\n", header>>24);
     //printf("unknown texture format %02X\n", header>>24);
@@ -884,17 +744,30 @@ void CReal3D::WritePolygonRAM(uint32_t addr, uint32_t data)
   polyRAM[addr/4] = data;
 }
 
+// Internal registers accessible via JTAG port
+void CReal3D::WriteJTAGRegister(uint64_t instruction, uint64_t data)
+{
+  if (instruction == CJTAG::Instruction::SetReal3DRenderConfig0)
+    m_internalRenderConfig[0] = data;
+  else if (instruction == CJTAG::Instruction::SetReal3DRenderConfig1)
+    m_internalRenderConfig[1] = data;
+  UpdateRenderConfig(Render3D, m_internalRenderConfig);
+}
+
 // Registers seem to range from 0x00 to around 0x3C but they are not understood
 uint32_t CReal3D::ReadRegister(unsigned reg)
 {
   DebugLog("Real3D: Read reg %X\n", reg);
   if (reg == 0)
   {
+#ifndef NEW_FRAME_TIMING
     uint32_t status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x02000000);
-    return 0xFDFFFFFF|status;
+    return 0xfdffffff | status;
+#else
+    return 0xfdffffff | m_pingPong;
+#endif
   }
-  else
-    return 0xFFFFFFFF;
+  return 0xffffffff;
 }
 
 // TODO: This returns data in the way that the PowerPC bus expects. Other functions in CReal3D should
@@ -946,6 +819,7 @@ void CReal3D::Reset(void)
 {
   error = false;
   
+  m_pingPong = 0;
   commandPortWritten = false;
   commandPortWrittenRO = false;
 
@@ -954,14 +828,13 @@ void CReal3D::Reset(void)
 
   fifoIdx = 0;
   m_vromTextureFIFOIdx = 0;
-  tapState = 0;
-  tapIDSize = 197;
   dmaStatus = 0;
   dmaUnknownReg = 0;
   
   unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   memset(memoryPool, 0, memSize);
   memset(m_vromTextureFIFO, 0, sizeof(m_vromTextureFIFO));
+  memset(m_internalRenderConfig, 0, sizeof(m_internalRenderConfig));
 
   DebugLog("Real3D reset\n");
 }
@@ -986,6 +859,12 @@ void CReal3D::AttachRenderer(IRender3D *Render3DPtr)
   DebugLog("Real3D attached a Render3D object\n");
 }
 
+uint32_t CReal3D::GetASICIDCode(ASIC asic) const
+{
+  auto it = m_asicID.find(asic);
+  return it == m_asicID.end() ? 0 : it->second;
+}
+
 void CReal3D::SetStepping(int stepping)
 {
   step = stepping;
@@ -1005,6 +884,42 @@ void CReal3D::SetStepping(int stepping)
   if (Render3D != NULL)
     Render3D->SetStepping(step);
     
+  // Set ASIC ID codes
+  m_asicID.clear();
+  if (step == 0x10)
+  {
+    m_asicID =
+    {
+      { ASIC::Mercury,  0x216c3057 },
+      { ASIC::Venus,    0x116c4057 },
+      { ASIC::Earth,    0x216c5057 },
+      { ASIC::Mars,     0x116c6057 },
+      { ASIC::Jupiter,  0x116c7057 }
+    };
+  }
+  else if (step == 0x15)
+  {
+    m_asicID =
+    {
+      { ASIC::Mercury,  0x316c3057 },
+      { ASIC::Venus,    0x216c4057 },
+      { ASIC::Earth,    0x316c5057 },
+      { ASIC::Mars,     0x216c6057 },
+      { ASIC::Jupiter,  0x316c7057 }
+    };
+  }
+  else if (step >= 0x20)
+  {
+    m_asicID =
+    {
+      { ASIC::Mercury,  0x416c3057 },
+      { ASIC::Venus,    0x316c4057 }, // skichamp @ pc=0xa89f4, this value causes 'NO DAUGHTER BOARD' message
+      { ASIC::Earth,    0x416c5057 },
+      { ASIC::Mars,     0x316c6057 },
+      { ASIC::Jupiter,  0x416c7057 }
+    };
+  }
+
   DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 
@@ -1064,8 +979,6 @@ CReal3D::CReal3D(const Util::Config::Node &config)
   vrom = NULL;
   error = false;
   fifoIdx = 0;
-  tapState = 0;
-  tapIDSize = 197;
   m_vromTextureFIFO[0] = 0;
   m_vromTextureFIFO[1] = 0;
   m_vromTextureFIFOIdx = 0;
