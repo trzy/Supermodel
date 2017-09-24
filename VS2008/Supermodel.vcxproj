@@ -337,6 +337,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Model3\DriveBoard.cpp" />
     <ClCompile Include="..\Src\Model3\DSB.cpp" />
     <ClCompile Include="..\Src\Model3\IRQ.cpp" />
+    <ClCompile Include="..\Src\Model3\JTAG.cpp" />
     <ClCompile Include="..\Src\Model3\Model3.cpp" />
     <ClCompile Include="..\Src\Model3\MPC10x.cpp" />
     <ClCompile Include="..\Src\Model3\PCI.cpp" />
@@ -446,6 +447,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\Src\Util\BitRegister.cpp" />
     <ClCompile Include="..\Src\Util\ByteSwap.cpp" />
     <ClCompile Include="..\Src\Util\ConfigBuilders.cpp" />
     <ClCompile Include="..\Src\Util\Format.cpp" />
@@ -564,6 +566,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Model3\DriveBoard.h" />
     <ClInclude Include="..\Src\Model3\DSB.h" />
     <ClInclude Include="..\Src\Model3\IRQ.h" />
+    <ClInclude Include="..\Src\Model3\JTAG.h" />
     <ClInclude Include="..\Src\Model3\Model3.h" />
     <ClInclude Include="..\Src\Model3\MPC10x.h" />
     <ClInclude Include="..\Src\Model3\PCI.h" />

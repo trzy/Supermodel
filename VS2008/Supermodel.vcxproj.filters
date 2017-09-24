@@ -440,6 +440,12 @@
     <ClCompile Include="..\Src\ROMSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Util\BitRegister.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\JTAG.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -816,6 +822,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\ROMSet.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\JTAG.h">
+      <Filter>Header Files\Model3</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
