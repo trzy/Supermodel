@@ -610,6 +610,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Sound\SCSP.h" />
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />
+    <ClInclude Include="..\Src\Util\BitRegister.h" />
     <ClInclude Include="..\Src\Util\BMPFile.h" />
     <ClInclude Include="..\Src\Util\ByteSwap.h" />
     <ClInclude Include="..\Src\Util\ConfigBuilders.h" />

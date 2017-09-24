@@ -826,6 +826,9 @@
     <ClInclude Include="..\Src\Model3\JTAG.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\Util\BitRegister.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Src\Debugger\ReadMe.txt">
