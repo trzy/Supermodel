@@ -28,6 +28,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdint>
 #include "Supermodel.h"
 
 
@@ -154,10 +155,25 @@ unsigned CBlockFile::Read(void *data, uint32_t numBytes)
   return 0;
 }
 
+unsigned CBlockFile::Read(bool *value)
+{
+  uint8_t byte;
+  unsigned numBytes = Read(&byte, sizeof(byte));
+  if (numBytes >  0)
+    *value = byte != 0;
+  return numBytes;
+}
+
 void CBlockFile::Write(const void *data, uint32_t numBytes)
 {
   if (mode == 'w')
     WriteBytes(data, numBytes);
+}
+
+void CBlockFile::Write(bool value)
+{
+  uint8_t byte = value ? 1 : 0;
+  Write(&byte, sizeof(byte));
 }
 
 void CBlockFile::Write(const std::string &str)

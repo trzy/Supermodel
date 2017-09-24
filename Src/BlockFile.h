@@ -61,6 +61,19 @@ public:
   unsigned Read(void *data, uint32_t numBytes);
   
   /*
+   * Read(value):
+   *
+   * Reads a bool value from the current file position.
+   *
+   * Parameters:
+   *    value   Bool to read to.
+   *
+   * Returns:
+   *    Number of bytes read. If not 1, an error occurred.
+   */
+  unsigned Read(bool *value);
+  
+  /*
    * FindBlock(name):
    *
    * Scans the file for a block with the given name string. When it is found,
@@ -74,6 +87,17 @@ public:
    */
   bool FindBlock(const std::string &name);
   
+  /*
+   * Write(value):
+   *
+   * Outputs a bool value at the current file pointer position as a byte with
+   * value either 0 or 1. Updates the block header appropriately.
+   *
+   * Parameters:
+   *    value     A boolean value to write.
+   */
+  void Write(bool value);
+
   /*
    * Write(data, numBytes):
    *
