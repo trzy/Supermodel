@@ -479,7 +479,7 @@ private:
   
   // Internal ASIC state
   std::map<ASIC, uint32_t> m_asicID;
-  uint64_t m_internalRenderConfig[2] = { 0, 0 };
+  uint64_t m_internalRenderConfig[2];
 };
 
 

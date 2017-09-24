@@ -982,6 +982,8 @@ CReal3D::CReal3D(const Util::Config::Node &config)
   m_vromTextureFIFO[0] = 0;
   m_vromTextureFIFO[1] = 0;
   m_vromTextureFIFOIdx = 0;
+  m_internalRenderConfig[0] = 0;
+  m_internalRenderConfig[1] = 0;
   DebugLog("Built Real3D\n");
 }
 
