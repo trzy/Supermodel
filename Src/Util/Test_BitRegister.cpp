@@ -292,6 +292,15 @@ int main(int argc, char **argv)
   expected.push_back("0x179");
   results.push_back(reg.ToHexString());
   
+  // Test
+  reg.Set("0x12345678");
+  expected.push_back("ok");
+  results.push_back(reg.GetBits() == 0x12345678 ? "ok" : "bad");
+  expected.push_back("ok");
+  results.push_back(reg.GetBits(0, 8) == 0x12 ? "ok" : "bad");
+  expected.push_back("ok");
+  results.push_back(reg.GetBits(26, 6) == 0x38 ? "ok" : "bad");
+
   // Check results
   size_t num_failed = 0;
   for (size_t i = 0; i < expected.size(); i++)

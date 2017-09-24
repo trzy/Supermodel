@@ -4,12 +4,12 @@
 
 namespace Util
 {
-  uint8_t BitRegister::GetLeftMost() const
+  uint8_t BitRegister::GetLeftmost() const
   {
     return m_bits.empty() ? m_no_data : m_bits.front();
   }
   
-  uint8_t BitRegister::GetRightMost() const
+  uint8_t BitRegister::GetRightmost() const
   {
     return m_bits.empty() ? m_no_data : m_bits.back();
   }
@@ -42,6 +42,36 @@ namespace Util
     return value.length() - startPos;
   }
  
+  uint8_t BitRegister::GetBit(size_t pos) const
+  {
+    if (pos < Size())
+      return m_bits[pos];
+    return m_no_data;
+  }
+
+  // Convert entire bit vector into a 64-bit integer. If bit register is larger
+  // than 64 bits, only least significant bits will be present.
+  uint64_t BitRegister::GetBits() const
+  {
+    return GetBits(0, Size());
+  }
+  
+  // Convert a subset of the bit vector into a 64-bit integer. If the data does
+  // not fit into 64 bits, only the least significant (rightmost) bits. Result
+  // undefined if range falls outside of vector.
+  uint64_t BitRegister::GetBits(size_t from, size_t count) const
+  {
+    uint64_t value = 0;
+    if (from + count > Size())
+      return value;
+    for (size_t i = from; i < from + count; i++)
+    {
+      value <<= 1;
+      value |= GetBit(i);
+    }
+    return value;
+  }
+    
   // Shift a bit into the right side, growing the vector by 1
   void BitRegister::AddToRight(uint8_t bit)
   {
@@ -59,7 +89,7 @@ namespace Util
   // Shift left by 1, returning ejected bit (shrinks vector)
   uint8_t BitRegister::RemoveFromLeft()
   {
-    uint8_t ejected = GetLeftMost();
+    uint8_t ejected = GetLeftmost();
     RemoveFromLeft(1);
     return ejected;
   }
@@ -82,7 +112,7 @@ namespace Util
   // Shift right by 1, returning ejected bit (shrinks vector)
   uint8_t BitRegister::RemoveFromRight()
   {
-    uint8_t ejected = GetRightMost();
+    uint8_t ejected = GetRightmost();
     RemoveFromRight(1);
     return ejected;
   }
@@ -100,7 +130,7 @@ namespace Util
     m_bits.resize(m_bits.size() - count);
   }
   
-  // Shift right and lose right-most bits, shifting in new bits from left to
+  // Shift right and lose Rightmost bits, shifting in new bits from left to
   // preserve vector size
   void BitRegister::ShiftRight(size_t count)
   {
@@ -134,14 +164,14 @@ namespace Util
     memset(m_bits.data() + m_bits.size() - count, m_no_data, count);
   }
   
-  // Shift right and eject right-most bit, shifting new bit into left side to
+  // Shift right and eject Rightmost bit, shifting new bit into left side to
   // preserve vector size
   uint8_t BitRegister::ShiftOutRight(uint8_t bit)
   {
     if (Empty())
       return m_no_data;
 
-    uint8_t ejected = GetRightMost();
+    uint8_t ejected = GetRightmost();
     ShiftRight(1);
     m_bits[0] = !!bit;
     return ejected;
@@ -154,7 +184,7 @@ namespace Util
     if (Empty())
       return m_no_data;
 
-    uint8_t ejected = GetLeftMost();
+    uint8_t ejected = GetLeftmost();
     ShiftLeft(1);
     m_bits[m_bits.size() - 1] = !!bit;
     return ejected;

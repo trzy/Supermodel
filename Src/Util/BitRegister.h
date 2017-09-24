@@ -20,6 +20,11 @@ namespace Util
       return m_bits.size();
     }
 
+    // Functions that return all or part of the bit register as an integer
+    uint8_t GetBit(size_t pos) const;
+    uint64_t GetBits() const;
+    uint64_t GetBits(size_t from, size_t count) const;
+    
     // Functions that grow/shrink the bit register
     void AddToRight(uint8_t bit);
     void AddToLeft(uint8_t bit);
@@ -74,16 +79,17 @@ namespace Util
      * <-- left --  | 1 | 0 | 1 | 1 | ... | 1 | -- right -->
      *              +---+---+---+---+-...-+---+
      *
-     * "Left" means lower indices in the array. To remain flexible and agnostic
-     * about MSB vs. LSB and bit numbers, all functions are explicit about 
-     * whether they are shifting in/out of the left/right side. It is up to the
-     * user to establish a consistent convention according to their use case.
+     * "Left" means lower indices in the array and bits are numbered left to
+     * right (leftmost bit is bit 0). Insertions of values into the bit vector
+     * place the MSB in a lower bit number than successive bits. For example,
+     * insertion of the 8-bit value 0xe2 at bit position 2 places the MSB (1)
+     * in bit 2, 0 in bit 3, 1 in bit 4, 0 in bit 5, etc.
      */
     std::vector<uint8_t> m_bits;
     uint8_t m_no_data = 0;  // by default, assume non-existent bits are 0
       
-    uint8_t GetLeftMost() const;
-    uint8_t GetRightMost() const;
+    uint8_t GetLeftmost() const;
+    uint8_t GetRightmost() const;
     static size_t HexStart(const std::string &value);
     static size_t BinStart(const std::string &value);
     static size_t CountBitsHex(const std::string &value, size_t startPos);
