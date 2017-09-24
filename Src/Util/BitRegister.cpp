@@ -1,6 +1,7 @@
 #include "Util/BitRegister.h"
 #include <cstring>
 #include <cctype>
+#include <string>
 
 namespace Util
 {
