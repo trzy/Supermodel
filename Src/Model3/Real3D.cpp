@@ -888,7 +888,7 @@ void CReal3D::SetStepping(int stepping)
   m_asicID.clear();
   if (step == 0x10)
   {
-    m_asicID =
+    m_asicID = decltype(m_asicID)
     {
       { ASIC::Mercury,  0x216c3057 },
       { ASIC::Venus,    0x116c4057 },
@@ -899,7 +899,7 @@ void CReal3D::SetStepping(int stepping)
   }
   else if (step == 0x15)
   {
-    m_asicID =
+    m_asicID = decltype(m_asicID)
     {
       { ASIC::Mercury,  0x316c3057 },
       { ASIC::Venus,    0x216c4057 },
@@ -910,7 +910,7 @@ void CReal3D::SetStepping(int stepping)
   }
   else if (step >= 0x20)
   {
-    m_asicID =
+    m_asicID = decltype(m_asicID)
     {
       { ASIC::Mercury,  0x416c3057 },
       { ASIC::Venus,    0x316c4057 }, // skichamp @ pc=0xa89f4, this value causes 'NO DAUGHTER BOARD' message
