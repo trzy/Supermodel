@@ -90,6 +90,7 @@ static void LoadBitRegister(CBlockFile *SaveState, Util::BitRegister *reg)
   char *str = new char[size];
   SaveState->Read(str, size);
   reg->Set(str);
+  delete [] str;
 }
 
 void CJTAG::SaveState(CBlockFile *SaveState)
