@@ -73,6 +73,7 @@ private:
   };
   
   static const State s_fsm[][2];
+  static const char *s_state[];
 
   CReal3D &m_real3D;
   Util::BitRegister m_instructionShiftReg;

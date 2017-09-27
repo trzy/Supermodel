@@ -56,7 +56,7 @@ const CJTAG::State CJTAG::s_fsm[][2] =
   { RunTestIdle,  SelectDRScan }    // 15 Update-IR
 };
 
-static const char *s_state[] =
+const char *CJTAG::s_state[] =
 {
   "Test-Logic/Reset",
   "Run-Test/Idle",
