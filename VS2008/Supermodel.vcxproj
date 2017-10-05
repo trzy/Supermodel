@@ -373,12 +373,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       </ExceptionHandling>
     </ClCompile>
     <ClCompile Include="..\Src\ROMSet.cpp" />
-    <ClCompile Include="..\Src\Sound\MPEG\audio.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\amp_audio.cpp" />
     <ClCompile Include="..\Src\Sound\MPEG\dump.cpp">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
@@ -592,7 +587,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Pkgs\wglew.h" />
     <ClInclude Include="..\Src\ROMSet.h" />
     <ClInclude Include="..\Src\Sound\MPEG\amp.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\audio.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\amp_audio.h" />
     <ClInclude Include="..\Src\Sound\MPEG\config.h" />
     <ClInclude Include="..\Src\Sound\MPEG\dump.h" />
     <ClInclude Include="..\Src\Sound\MPEG\formats.h" />

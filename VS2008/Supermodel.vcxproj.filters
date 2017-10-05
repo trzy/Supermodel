@@ -275,9 +275,6 @@
     <ClCompile Include="..\Src\Sound\SCSPLFO.cpp">
       <Filter>Source Files\Sound</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\audio.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Sound\MPEG\dump.cpp">
       <Filter>Source Files\Sound\MPEG</Filter>
     </ClCompile>
@@ -445,6 +442,9 @@
     </ClCompile>
     <ClCompile Include="..\Src\Model3\JTAG.cpp">
       <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\amp_audio.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -632,9 +632,6 @@
       <Filter>Header Files\Sound</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Sound\MPEG\amp.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\audio.h">
       <Filter>Header Files\Sound\MPEG</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Sound\MPEG\config.h">
@@ -828,6 +825,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\Util\BitRegister.h">
       <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\amp_audio.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
