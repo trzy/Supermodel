@@ -406,6 +406,36 @@
       </region>
     </roms>
   </game>
+  
+  <game name="dirtdvlsj" parent="dirtdvls">
+    <identity>
+      <title>Dirt Devils</title>
+      <version>Japan, Revision A</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1998</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <mpeg_board>DSB2</mpeg_board>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shiftupdown" />
+        <input type="handbrake" />
+        <input type="viewchange" />
+      </inputs>
+      <encryption_key>0x29290f17</encryption_key>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21053a.20" crc32="0xADE1826F" />
+        <file offset="2" name="epr-21052a.19" crc32="0xC37E5ADB" />
+        <file offset="4" name="epr-21051a.18" crc32="0x84F72AA2" />
+        <file offset="6" name="epr-21050a.17" crc32="0x37204FE6" />
+      </region>
+    </roms>
+  </game>
 
   <game name="eca">
     <identity>
@@ -1763,7 +1793,7 @@
 
   <game name="swtrilgy">
     <identity>
-      <title>Star Wars Trilogy</title>
+      <title>Star Wars Trilogy Arcade</title>
       <version>Revision A</version>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
@@ -1856,7 +1886,7 @@
 
   <game name="swtrilgya" parent="swtrilgy">
     <identity>
-      <title>Star Wars Trilogy</title>
+      <title>Star Wars Trilogy Arcade</title>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
     </identity>
