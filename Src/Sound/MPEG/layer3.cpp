@@ -35,7 +35,7 @@
  * Last modified by: 
  */
 #include "amp.h"
-#include "audio.h"
+#include "amp_audio.h"
 #include "dump.h"
 #include "getbits.h"
 #include "getdata.h"

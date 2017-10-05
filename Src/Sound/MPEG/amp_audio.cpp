@@ -44,7 +44,7 @@
 #include "amp.h"
 
 #define AUDIO
-#include "audio.h"
+#include "amp_audio.h"
 #include "formats.h"
 #include "getbits.h"
 #include "huffman.h"

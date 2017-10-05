@@ -35,7 +35,7 @@
  * Last modified by: tomislav uzelac Mar  8 97
  */
 #include <stdlib.h>
-#include "audio.h"
+#include "amp_audio.h"
 #include "getbits.h"
 
 #define HUFFMAN

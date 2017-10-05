@@ -44,7 +44,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "audio.h"
+#include "amp_audio.h"
 
 struct debugFlags_t debugFlags;
 

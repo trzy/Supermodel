@@ -1,0 +1,112 @@
+##
+## Supermodel
+## A Sega Model 3 Arcade Emulator.
+## Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+##
+## This file is part of Supermodel.
+##
+## Supermodel is free software: you can redistribute it and/or modify it under
+## the terms of the GNU General Public License as published by the Free 
+## Software Foundation, either version 3 of the License, or (at your option)
+## any later version.
+##
+## Supermodel is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+## more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+#
+# Makefile.Win32
+#
+# Makefile for Windows systems using gcc and the standard Command Prompt.
+#
+
+
+###############################################################################
+# Build Options
+###############################################################################
+
+#
+# Bitness of build ('32' or '64')
+#
+BITS = 64
+
+#
+# Include console-based debugger in emulator ('yes' or 'no')
+#
+ENABLE_DEBUGGER = no
+
+
+###############################################################################
+# Platform Configuration
+#
+# Edit library and include paths as needed.
+###############################################################################
+
+#
+# Toolchain
+#
+CC_64 = gcc
+CXX_64 = g++
+LD_64 = g++
+CC_32 = gcc
+CXX_32 = g++
+LD_32 = g++
+
+
+#
+# SDL
+#
+
+SDL_INCLUDE_DIR_64 = c:\tdm-gcc-64\include\SDL
+SDL_LIB_DIR_64 = c:\tdm-gcc-64\lib
+SDL_INCLUDE_DIR_32 =
+SDL_LIB_DIR_32 =
+
+#
+#	MinGW/Windows-specific
+#
+
+PLATFORM_CFLAGS_64 = -DSUPERMODEL_WIN32
+PLATFORM_LDFLAGS_64 = -lmingw32 -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz
+PLATFORM_CFLAGS_32 = -DSUPERMODEL_WIN32
+PLATFORM_LDFLAGS_32 = -lmingw32 -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz
+
+
+###############################################################################
+# Core Makefile
+###############################################################################
+
+ifeq ($(strip $(BITS)),64)
+	CC = $(CC_64)
+	CXX = $(CXX_64)
+	LD = $(LD_64)
+	PLATFORM_CFLAGS = $(PLATFORM_CFLAGS_64)
+	PLATFORM_LDFLAGS = $(PLATFORM_LDFLAGS_64)
+	SDL_LDFLAGS = -L$(SDL_LIB_DIR_64) -lSDLmain -lSDL
+	SDL_CFLAGS = -I$(SDL_INCLUDE_DIR_64)
+else
+	CC = $(CC_32)
+	CXX = $(CXX_32)
+	LD = $(LD_32)
+	PLATFORM_CFLAGS = $(PLATFORM_CFLAGS_32)
+	PLATFORM_LDFLAGS = $(PLATFORM_LDFLAGS_32)
+	SDL_LDFLAGS = -L$(SDL_LIB_DIR_32) -lSDLmain -lSDL 
+	SDL_CFLAGS = -I$(SDL_INCLUDE_DIR_32)
+endif
+
+MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe
+
+include Makefiles/Makefile.inc
+
+clean:	 
+	del $(OUTFILE)
+	del $(OBJ_DIR)\*.d
+	del $(OBJ_DIR)\*.o
+	del $(OBJ_DIR)\*.c
+	del $(OBJ_DIR)\*.h
+	del $(OBJ_DIR)\*.exe

@@ -37,7 +37,7 @@
 //#include <unistd.h>
 #include <string.h>
 
-#include "audio.h"
+#include "amp_audio.h"
 #include "getbits.h"
 
 #define DUMP

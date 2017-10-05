@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "amp.h"
-#include "audio.h"
+#include "amp_audio.h"
 #include "formats.h"
 #include "rtbuf.h"
 

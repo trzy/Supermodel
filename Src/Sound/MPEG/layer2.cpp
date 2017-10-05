@@ -35,7 +35,7 @@
  * merged with amp, May 19 1997
  */
 #include "amp.h"
-#include "audio.h"
+#include "amp_audio.h"
 #include "getbits.h"
 #include "transform.h"
 

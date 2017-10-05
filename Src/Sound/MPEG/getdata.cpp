@@ -35,7 +35,7 @@
  * Last modified by: tomislav uzelac  Feb 27 1997
  */
 #include "amp.h"
-#include "audio.h"
+#include "amp_audio.h"
 #include "getbits.h"
 #include "huffman.h"
 
