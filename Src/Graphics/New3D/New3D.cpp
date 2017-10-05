@@ -801,10 +801,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);							// spotlight start
 		vp->spotRange[1] = *(float *)&vpnode[0x1F];										// spotlight extent
 
-		// Star Wars Trilogy needs this
-		vp->spotRange[0] = std::min(vp->spotRange[0], std::numeric_limits<float>::max());
-		vp->spotRange[0] = std::max(vp->spotRange[0], std::numeric_limits<float>::lowest());
-
 		vp->spotColor[0] = color[spotColorIdx][0];										// spotlight color
 		vp->spotColor[1] = color[spotColorIdx][1];
 		vp->spotColor[2] = color[spotColorIdx][2];

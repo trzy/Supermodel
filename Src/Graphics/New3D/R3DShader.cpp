@@ -167,6 +167,34 @@ void main()
 	ellipse = 1.0 - ellipse;      // invert
 	ellipse = max(0.0, ellipse);  // clamp
 
+	// Compute spotlight and apply lighting
+	float enable, absExtent, d, inv_r, range;
+
+	// start of spotlight
+	enable = step(spotRange.x, -fsViewVertex.z);
+
+	if (spotRange.y == 0.0) {
+		range = 0.0;
+	}
+	else {
+		absExtent = abs(spotRange.y);
+
+		d = spotRange.x + absExtent + fsViewVertex.z;
+		d = min(d, 0.0);
+
+		// slope of decay function
+		inv_r = 1.0 / (1.0 + absExtent);
+
+		// inverse-linear falloff
+		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
+		// y = 1 / (d/r + 1)^2
+		range = 1.0 / pow(d * inv_r - 1.0, 2.0);
+		range *= enable;
+	}
+
+	float lobeEffect = range * ellipse;
+	float lobeFogEffect = enable * ellipse;
+
 	if (lightEnabled) {
 		vec3   lightIntensity;
 		vec3   sunVector;     // sun lighting vector (as reflecting away from vertex)
@@ -198,22 +226,6 @@ void main()
 		if(intensityClamp) {
 			lightIntensity = min(lightIntensity,1.0);
 		}
-
-		// Compute spotlight and apply lighting
-		float enable, range, d;
-		float inv_r = 1.0 / spotEllipse.z; // slope of decay function
-
-		d = spotRange.x + spotRange.y + fsViewVertex.z;
-		enable = step(spotRange.x + min(spotRange.y, 0.0), -fsViewVertex.z);
-
-		// inverse-linear falloff
-		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
-		// y = 1 / (d/r + 1)^2
-		range = 1.0 / pow(min(0.0, d * inv_r) - 1.0, 2.0);
-		range = clamp(range, 0.0, 1.0);
-		range *= enable;
-
-		float lobeEffect = range * ellipse;
 
 		lightIntensity.rgb += spotColor*lobeEffect;
 
@@ -253,10 +265,10 @@ void main()
 	finalData.rgb = min(finalData.rgb, vec3(1.0));
 
 	// Spotlight on fog
-	vec3 lSpotFogColor = spotFogColor * ellipse * fogColour.rgb;
+	vec3 lSpotFogColor = spotFogColor * fogAttenuation * fogColour.rgb * lobeFogEffect;
 
 	 // Fog & spotlight applied
-	finalData.rgb = mix(finalData.rgb, lSpotFogColor * fogAttenuation + fogData.rgb, fogData.a);
+	finalData.rgb = mix(finalData.rgb, fogData.rgb + lSpotFogColor, fogData.a);
 
 	gl_FragColor = finalData;
 }
