@@ -15,9 +15,9 @@
 namespace New3D {
 
 CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
-  : m_r3dShader(config),
-    m_r3dScrollFog(config),
-	m_gameName(gameName)
+	: m_r3dShader(config),
+	  m_r3dScrollFog(config),
+	  m_gameName(gameName)
 {
 	m_cullingRAMLo	= nullptr;
 	m_cullingRAMHi	= nullptr;
@@ -25,6 +25,10 @@ CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
 	m_vrom			= nullptr;
 	m_textureRAM	= nullptr;
 	m_sunClamp		= true;
+	m_shadeIsSigned = true;
+
+	// Fall-back mechanism for games with patched (not working) JTAG
+	if (m_gameName == "swtrilgy") m_shadeIsSigned = false;
 }
 
 CNew3D::~CNew3D()
@@ -1130,7 +1134,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				float shade;
 				//==========
 
-				if (ph.SpecularEnabled()) {
+				if (!m_shadeIsSigned) {
 					shade = (ix & 0xFF) / 255.f;									// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
 				}
 				else {
@@ -1599,5 +1603,9 @@ void CNew3D::SetSunClamp(bool enable)
 	m_sunClamp = enable;
 }
 
-} // New3D
+void CNew3D::SetSignedShade(bool enable)
+{
+	m_shadeIsSigned = enable;
+}
 
+} // New3D

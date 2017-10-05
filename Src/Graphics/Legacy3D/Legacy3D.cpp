@@ -1301,6 +1301,10 @@ void CLegacy3D::SetSunClamp(bool enable)
 {
 }
 
+void CLegacy3D::SetSignedShade(bool enable)
+{
+}
+
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
   : m_config(config)
 { 

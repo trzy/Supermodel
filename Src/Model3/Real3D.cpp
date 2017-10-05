@@ -153,7 +153,9 @@ void CReal3D::LoadState(CBlockFile *SaveState)
 static void UpdateRenderConfig(IRender3D *Render3D, uint64_t internalRenderConfig[])
 {
   bool noSunClamp = (internalRenderConfig[0] & 0x800000) != 0 && (internalRenderConfig[1] & 0x400000) != 0;
+  bool shadeIsSigned = (internalRenderConfig[0] & 0x1) == 0;
   Render3D->SetSunClamp(!noSunClamp);
+  Render3D->SetSignedShade(shadeIsSigned);
 }
 
 void CReal3D::BeginVBlank(int statusCycles)

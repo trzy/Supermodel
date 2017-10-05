@@ -19,7 +19,8 @@ public:
   virtual void SetStepping(int stepping) = 0;
   virtual bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes) = 0;
   virtual void SetSunClamp(bool enable) = 0;
-  
+  virtual void SetSignedShade(bool enable) = 0;
+
   virtual ~IRender3D()
   {
   }

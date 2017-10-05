@@ -152,6 +152,16 @@ public:
 	void SetSunClamp(bool enable);
 
 	/*
+	* SetSignedShade(bool enable);
+	*
+	* Sets the sign-ness of fixed shading value
+	*
+	* Parameters:
+	*		enable	Fixed shading is expressed as signed value
+	*/
+	void SetSignedShade(bool enable);
+
+	/*
 	* CRender3D(config):
 	* ~CRender3D(void):
 	*
@@ -203,7 +213,10 @@ private:
 
 	// Misc
 	std::string m_gameName;
+
+	// GPU configuration
 	bool m_sunClamp;
+	bool m_shadeIsSigned;
 
 	// Stepping
 	int		m_step;
