@@ -57,7 +57,6 @@ CC_32 = gcc
 CXX_32 = g++
 LD_32 = g++
 
-
 #
 # SDL
 #
@@ -68,7 +67,7 @@ SDL_INCLUDE_DIR_32 =
 SDL_LIB_DIR_32 =
 
 #
-#	MinGW/Windows-specific
+# MinGW/Windows-specific
 #
 
 PLATFORM_CFLAGS_64 = -DSUPERMODEL_WIN32
@@ -99,12 +98,16 @@ else
 	SDL_CFLAGS = -I$(SDL_INCLUDE_DIR_32)
 endif
 
+PLATFORM_SRC_FILES = \
+	Src/OSD/Windows/DirectInputSystem.cpp \
+	Src/OSD/Windows/WinOutputs.cpp
+
 MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe
 
 include Makefiles/Makefile.inc
 
 clean:	 
-	del $(OUTFILE)
+	del $(BIN_DIR)\$(OUTFILE).exe
 	del $(OBJ_DIR)\*.d
 	del $(OBJ_DIR)\*.o
 	del $(OBJ_DIR)\*.c

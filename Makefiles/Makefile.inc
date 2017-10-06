@@ -87,9 +87,7 @@ SRC_FILES = \
 	Src/Inputs/InputTypes.cpp \
 	Src/Inputs/MultiInputSource.cpp \
 	Src/OSD/SDL/SDLInputSystem.cpp \
-	Src/OSD/Windows/DirectInputSystem.cpp \
 	Src/OSD/Outputs.cpp \
-	Src/OSD/Windows/WinOutputs.cpp \
 	Src/Sound/MPEG/amp_audio.cpp \
 	Src/Sound/MPEG/dump.cpp \
 	Src/Sound/MPEG/getbits.cpp \
@@ -109,7 +107,8 @@ SRC_FILES = \
 	Src/Util/ConfigBuilders.cpp \
 	Src/GameLoader.cpp \
 	Src/Pkgs/tinyxml2.cpp \
-	Src/ROMSet.cpp
+	Src/ROMSet.cpp \
+	$(PLATFORM_SRC_FILES)
 	
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 	SRC_FILES += \
@@ -148,12 +147,15 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 ifeq ($(strip $(BITS)),64)
 	OBJ_DIR = obj64
 	BIN_DIR = bin64
-else
+else ifeq ($(strip $(BITS)),32)
 	OBJ_DIR = obj32
 	BIN_DIR = bin32
+else
+	OBJ_DIR = obj
+	BIN_DIR = bin
 endif
 
-OUTFILE = $(BIN_DIR)\Supermodel.exe
+OUTFILE = Supermodel
 
 
 ###############################################################################
@@ -163,7 +165,7 @@ OUTFILE = $(BIN_DIR)\Supermodel.exe
 CPPFLAGS = $(addprefix -I,$(INCLUDE_DIRS)) -DGLEW_STATIC -O3 #-DNEW_FRAME_TIMING
 CFLAGS = $(SDL_CFLAGS) $(PLATFORM_CFLAGS) $(CPPFLAGS) -c -Wall -O3
 CXXFLAGS = $(CFLAGS) -std=c++11
-LDFLAGS = -o $(OUTFILE) $(PLATFORM_LDFLAGS) $(SDL_LDFLAGS) -s
+LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) $(SDL_LDFLAGS) -s
 
 # If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
 ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
@@ -181,7 +183,7 @@ endif
 # and thinks the default target is just one of the object files.
 #
 all: $(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
-	$(info Linking Supermodel     : $(OUTFILE))
+	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE))
 	@$(LD) $(OBJ_FILES) $(LDFLAGS)
 
 $(BIN_DIR):
