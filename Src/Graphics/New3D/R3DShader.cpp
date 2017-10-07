@@ -232,7 +232,7 @@ void main()
 		finalData.rgb *= lightIntensity;
 
 		// for now assume fixed shading doesn't work with specular
-		if (specularEnabled && !fixedShading) {
+		if (specularEnabled) {
 
 			float exponent, NdotL, specularFactor;
 			vec4 biasIndex, expIndex, multIndex;
