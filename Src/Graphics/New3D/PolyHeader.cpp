@@ -402,8 +402,14 @@ UINT64 PolyHeader::Hash()
 	hash |= (UINT64)SpecularEnabled() << 39;			// bits 39 enable specular reflection
 	hash |= (UINT64)SmoothShading() << 40;				// bits 40 smooth shading
 	hash |= (UINT64)((header[6] >> 11) & 0x1F) << 41;	// bits 41-45 light modifier
-
-	//to do add the rest of the states
+	hash |= (UINT64)FixedShading() << 46;				// bits 46 fixed shading
+	hash |= (UINT64)TranslatorMap() << 47;				// bits 47 translator map
+	hash |= (UINT64)Layered() << 48;					// bits 48 layered texture
+	hash |= (UINT64)(header[0] >> 26) << 49;			// bits 49-54 specular coefficient (opacity)
+	hash |= (UINT64)((header[6] >> 5) & 3) << 55;		// bits 55-56 specular exponent
+	hash |= (UINT64)MicroTextureID() << 57;				// bits 57-59 Microtexture texture number 0-7
+	hash |= (UINT64)MicroTextureMinLOD() << 60;			// bits 60-61 Microtexture min lod index
+	hash |= (UINT64)((header[3] >> 6) & 3) << 62;		// bits 62-63 uv smooth bits
 
 	return hash;
 }
