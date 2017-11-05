@@ -124,13 +124,19 @@ vec4 GetTextureValue()
 	return tex1Data;
 }
 
-void Step15Lighting(inout vec4 colour)
+void Step15Luminous(inout vec4 colour)
 {
-	// on step 1.5 these polys seem to be effected by vpAmbient
-	// logic is not completely understood
+	// luminous polys seem to behave very differently on step 1.5 hardware
+	// when fixed shading is enabled the colour is modulated by the vp ambient + fixed shade value
+	// when disabled it appears to be multiplied by 1.5, presumably to allow a higher range
 	if(hardwareStep==0x15) {
-		if(!lightEnabled && fixedShading) {
-			colour.rgb *= (fsFixedShade+lighting[1].x) + lighting[1].y;
+		if(!lightEnabled && textureEnabled) {
+			if(fixedShading) {
+				colour.rgb *= 1.0 + fsFixedShade + lighting[1].y;
+			}
+			else {
+				colour.rgb *= vec3(1.5);
+			}
 		}
 	}
 }
@@ -154,7 +160,7 @@ void main()
 	}
 
 	colData = fsColor;
-	Step15Lighting(colData);			// no-op for step 2.0	
+	Step15Luminous(colData);			// no-op for step 2.0+	
 	finalData = tex1Data * colData;
 
 	if (finalData.a < (1.0/16.0)) {		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
