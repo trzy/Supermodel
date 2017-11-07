@@ -950,7 +950,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->textureAlpha	= ph.TextureAlpha();
 	currentMesh->polyAlpha		= ph.PolyAlpha();
 	currentMesh->lighting		= ph.LightEnabled();
-	currentMesh->fixedShading	= ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading();
+	currentMesh->fixedShading	= ph.FixedShading() && !ph.SmoothShading();
 	currentMesh->highPriority	= ph.HighPriority();
 
 	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
@@ -1128,14 +1128,14 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].normal[2] = BYTE_TO_FLOAT((INT8)(iz & 0xFF));
 			}
 
-			if (ph.FixedShading() && ph.TexEnabled() && !ph.SmoothShading()) {		// fixed shading seems to be disabled if actual normals are set
+			if (ph.FixedShading() && !ph.SmoothShading()) {			// fixed shading seems to be disabled if actual normals are set
 
 				//==========
 				float shade;
 				//==========
 
 				if (!m_shadeIsSigned) {
-					shade = (ix & 0xFF) / 255.f;									// Star wars is the only game to use unsigned fixed shaded values. It's also the only game to set the specular flag on these polys
+					shade = (ix & 0xFF) / 255.f;
 				}
 				else {
 					shade = BYTE_TO_FLOAT((INT8)(ix & 0xFF));
