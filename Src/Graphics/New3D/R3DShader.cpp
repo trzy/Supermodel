@@ -44,7 +44,7 @@ void main(void)
 	fsViewVertex	= vec3(gl_ModelViewMatrix * inVertex);
 	fsViewNormal	= (mat3(gl_ModelViewMatrix) * inNormal) / modelScale;
 	float z			= -fsViewVertex.z;
-	fsFogFactor		= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
+	fsFogFactor		= fogIntensity * (fogStart + z * fogDensity);
 
 	fsDiscard		= CalcBackFace(fsViewVertex);
 	fsColor    		= inColour;
@@ -152,7 +152,7 @@ void main()
 		discard;		//emulate back face culling here
 	}
 
-	fogData = vec4(fogColour.rgb * fogAmbient, fsFogFactor);
+	fogData = vec4(fogColour.rgb * fogAmbient, clamp(fsFogFactor,0.0,1.0));
 	tex1Data = vec4(1.0, 1.0, 1.0, 1.0);
 
 	if(textureEnabled) {
