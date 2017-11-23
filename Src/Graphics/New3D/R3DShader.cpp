@@ -8,9 +8,6 @@ static const char *vertexShaderR3D = R"glsl(
 #version 120
 
 // uniforms
-uniform float	fogIntensity;
-uniform float	fogDensity;
-uniform float	fogStart;
 uniform float	modelScale;
 
 // attributes
@@ -22,7 +19,6 @@ attribute vec3	inFaceNormal;		// used to emulate r3d culling
 attribute float	inFixedShade;
 
 // outputs to fragment shader
-varying float	fsFogFactor;
 varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec2	fsTexCoord;
@@ -43,9 +39,6 @@ void main(void)
 {
 	fsViewVertex	= vec3(gl_ModelViewMatrix * inVertex);
 	fsViewNormal	= (mat3(gl_ModelViewMatrix) * inNormal) / modelScale;
-	float z			= -fsViewVertex.z;
-	fsFogFactor		= fogIntensity * (fogStart + z * fogDensity);
-
 	fsDiscard		= CalcBackFace(fsViewVertex);
 	fsColor    		= inColour;
 	fsTexCoord		= inTexCoord;
@@ -83,6 +76,9 @@ uniform bool	intensityClamp;		// some games such as daytona and
 uniform bool	specularEnabled;	// specular enabled
 uniform float	specularValue;		// specular coefficient
 uniform float	shininess;			// specular shininess
+uniform float	fogIntensity;
+uniform float	fogDensity;
+uniform float	fogStart;
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
 uniform bool	fixedShading;
@@ -141,6 +137,14 @@ void Step15Luminous(inout vec4 colour)
 	}
 }
 
+float CalcFog()
+{
+	float z		= -fsViewVertex.z;
+	float fog	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
+
+	return fog;
+}
+
 void main()
 {
 	vec4 tex1Data;
@@ -152,7 +156,7 @@ void main()
 		discard;		//emulate back face culling here
 	}
 
-	fogData = vec4(fogColour.rgb * fogAmbient, clamp(fsFogFactor,0.0,1.0));
+	fogData = vec4(fogColour.rgb * fogAmbient, CalcFog());
 	tex1Data = vec4(1.0, 1.0, 1.0, 1.0);
 
 	if(textureEnabled) {
