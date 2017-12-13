@@ -21,10 +21,6 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 	x &= 2047;
 	y &= 2047;
 
-	if ((x + width) > 2048 || (y + height) > 2048) {
-		return nullptr;
-	}
-
 	if (width > 1024 || height > 1024) {	// sanity checking
 		return nullptr;
 	}

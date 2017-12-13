@@ -68,17 +68,29 @@ void Texture::SetWrapMode(bool mirrorU, bool mirrorV)
 void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height)
 {
 	int		xi, yi, i;
+	int		subWidth, subHeight;
 	GLubyte	texel;
 	GLubyte	c, a;
-
+	
 	i = 0;
+
+	subWidth = width;
+	subHeight = height;
+
+	if (subWidth + x > 2048) {
+		subWidth = 2048 - x;
+	}
+
+	if (subHeight + y > 2048) {
+		subHeight = 2048 - y;
+	}
 
 	switch (format)
 	{
 	default:	// Debug texture
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				scratch[i++] = 255;	// R
 				scratch[i++] = 0;	// G
@@ -89,9 +101,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 0:	// T1RGB5 <- correct
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				scratch[i++] = ((src[yi * 2048 + xi] >> 10) & 0x1F) * 255 / 0x1F;	// R
 				scratch[i++] = ((src[yi * 2048 + xi] >> 5) & 0x1F) * 255 / 0x1F;	// G
@@ -102,9 +114,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 1:	// Interleaved A4L4 (low byte)
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				// Interpret as A4L4
 				texel = src[yi * 2048 + xi] & 0xFF;
@@ -119,9 +131,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 2:	// luminance alpha texture <- this one is correct
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] & 0xFF;
 				c = ((texel >> 4) & 0xF) * 17;
@@ -135,9 +147,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 3:	// 8-bit, A4L4 (high byte)
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] >> 8;
 				c = (texel & 0xF) * 17;
@@ -152,9 +164,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 
 	case 4: // 8-bit, L4A4 (high byte)
 
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] >> 8;
 				c = ((texel >> 4) & 0xF) * 17;
@@ -168,9 +180,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 5:	// 8-bit grayscale
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] & 0xFF;
 				scratch[i++] = texel;
@@ -182,9 +194,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 6:	// 8-bit grayscale <-- this one is correct
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] >> 8;
 				scratch[i++] = texel;
@@ -196,9 +208,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 7:	// RGBA4
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				scratch[i++] = ((src[yi * 2048 + xi] >> 12) & 0xF) * 17;// R
 				scratch[i++] = ((src[yi * 2048 + xi] >> 8) & 0xF) * 17;	// G
@@ -213,9 +225,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		//
 
 	case 8: // low byte, low nibble
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] & 0xFF;
 				c = (texel & 0xF) * 17;
@@ -228,9 +240,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 9:	// low byte, high nibble
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] & 0xFF;
 				c = ((texel >> 4) & 0xF) * 17;
@@ -243,9 +255,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 
 	case 10:	// high byte, low nibble
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] >> 8;
 				c = (texel & 0xF) * 17;
@@ -259,9 +271,9 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 
 	case 11: // high byte, high nibble
 
-		for (yi = y; yi < (y + height); yi++)
+		for (yi = y; yi < (y + subHeight); yi++)
 		{
-			for (xi = x; xi < (x + width); xi++)
+			for (xi = x; xi < (x + subWidth); xi++)
 			{
 				texel = src[yi * 2048 + xi] >> 8;
 				c = ((texel >> 4) & 0xF) * 17;
@@ -274,14 +286,15 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 		break;
 	}
 
-	glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scratch);
+	glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, subWidth, subHeight, GL_RGBA, GL_UNSIGNED_BYTE, scratch);
 }
 
 UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
 {
 	const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
 	const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
-	const int mipDivisor[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
+	const int mipDivisor[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
 
 	if (!src || !scratch) {
 		return 0;		// sanity checking
