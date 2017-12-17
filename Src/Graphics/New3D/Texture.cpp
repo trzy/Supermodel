@@ -306,8 +306,8 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 	int page = y / 1024;
 
 	y -= (page * 1024);	// remove page from tex y
-	
-	for (int i = 0; width >= 8 && height >= 8; i++) {
+
+	for (int i = 0; width > 0 && height > 0; i++) {
 
 		int xPos = mipXBase[i] + (x / mipDivisor[i]);
 		int yPos = mipYBase[i] + (y / mipDivisor[i]);
@@ -375,7 +375,7 @@ void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x,
 	int minD = std::min(width, height);
 	int count = 0;
 
-	while (minD > 8) {
+	while (minD > 1) {
 		minD /= 2;
 		count++;
 	}

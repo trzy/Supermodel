@@ -45,6 +45,7 @@
 #include "Model3/JTAG.h"
 #include "Util/BMPFile.h"
 #include <cstring>
+#include <algorithm>
 
 // Macros that divide memory regions into pages and mark them as dirty when they are written to
 #define PAGE_WIDTH 12
@@ -262,12 +263,12 @@ void CReal3D::BeginFrame(void)
   // If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
   if (m_gpuMultiThreaded)
   {
-	for (const auto &it : queuedUploadTexturesRO) {
+  for (const auto &it : queuedUploadTexturesRO) {
       Render3D->UploadTextures(it.level, it.x, it.y, it.width, it.height);
-	}
+  }
 
-	// done syncing data
-	queuedUploadTexturesRO.clear();
+  // done syncing data
+  queuedUploadTexturesRO.clear();
   }
 
   Render3D->BeginFrame();
@@ -290,83 +291,106 @@ void CReal3D::EndFrame(void)
 ******************************************************************************/
 
 // Mipmap coordinates for each reduction level (within a single 2048x1024 page)
-static const int mipXBase[11] =
-{ 
-  1024, // 1024/2
-  1536, // 512/2
-  1792, // 256/2
-  1920, // ...
-  1984, 
-  2016, 
-  2032, 
-  2040, 
-  2044, 
-  2046, 
-  2047 
+
+const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+const int mipDivisor[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
+
+// Tables of texel offsets corresponding to an NxN texel texture tile
+
+static const unsigned decode8x8[64] =
+{
+   1, 0, 5, 4, 9, 8,13,12,
+   3, 2, 7, 6,11,10,15,14,
+  17,16,21,20,25,24,29,28,
+  19,18,23,22,27,26,31,30,
+  33,32,37,36,41,40,45,44,
+  35,34,39,38,43,42,47,46,
+  49,48,53,52,57,56,61,60,
+  51,50,55,54,59,58,63,62
 };
 
-static const int mipYBase[11] =
+static const unsigned decode8x4[32] =
 {
-  512, 
-  768, 
-  896, 
-  960, 
-  992, 
-  1008,
-  1016, 
-  1020, 
-  1022, 
-  1023, 
-  0 
+   1, 0, 5, 4,
+   3, 2, 7, 6,
+   9, 8,13,12,
+  11,10,15,14,
+  17,16,21,20,
+  19,18,23,22,
+  25,24,29,28,
+  27,26,31,30
 };
 
-// Mipmap reduction factors
-static const int mipDivisor[9] = { 2, 4, 8, 16, 32, 64, 128, 256, 512 };
-
-// Table of texel offsets corresponding to an 8x8 texel texture tile
-static const unsigned decode[64] =
+static const unsigned decode8x2[16] =
 {
-   0, 1, 4, 5, 8, 9,12,13,
-   2, 3, 6, 7,10,11,14,15,
-  16,17,20,21,24,25,28,29,
-  18,19,22,23,26,27,30,31,
-  32,33,36,37,40,41,44,45,
-  34,35,38,39,42,43,46,47,
-  48,49,52,53,56,57,60,61,
-  50,51,54,55,58,59,62,63
+   1, 0,
+   3, 2,
+   5, 4,
+   7, 6,
+   9, 8,
+  11, 10,
+  13, 12,
+  15, 14
 };
 
-static void StoreTexelByte(uint16_t *texel, uint32_t byteSelect, uint8_t byte)
+static const unsigned decode8x1[8] =
 {
-  if ((byteSelect & 1)) // write to LSB
+  1,
+  3,
+  0,
+  2,
+  5,
+  7,
+  4,
+  6
+};
+
+static void StoreTexelByte(uint16_t *texel, bool writeLSB, bool writeMSB, uint8_t byte)
+{
+  if (writeLSB) // write to least significant byte
     *texel = (*texel & 0xFF00) | byte;
-  if ((byteSelect & 2)) // write to MSB
+  if (writeMSB) // write to most significant byte
     *texel = (*texel & 0x00FF) | (uint16_t(byte) << 8);
-}   
+}
 
-void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, uint32_t header)
+void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, bool sixteenBit, bool writeLSB, bool writeMSB, uint32_t &texDataOffset)
 {
-  if ((header & 0x00800000))  // 16-bit textures
+  uint32_t tileX = std::min(8u, width);
+  uint32_t tileY = std::min(8u, height);
+
+  texDataOffset = 0;
+
+  if (sixteenBit)  // 16-bit textures
   {
-    // Outer 2 loops: 8x8 tiles
-    for (uint32_t y = yPos; y < (yPos+height); y += 8)
+    // Outer 2 loops: NxN tiles
+    for (uint32_t y = yPos; y < (yPos + height); y += tileY)
     {
-      for (uint32_t x = xPos; x < (xPos+width); x += 8)
+      for (uint32_t x = xPos; x < (xPos + width); x += tileX)
       {
-        // Inner 2 loops: 8x8 texels for the current tile
-        uint32_t destOffset = y*2048+x;
-        for (uint32_t yy = 0; yy < 8; yy++)
+        // Inner 2 loops: NxN texels for the current tile
+        uint32_t destOffset = y * 2048 + x;
+        for (uint32_t yy = 0; yy < tileY; yy++)
         {
-          for (uint32_t xx = 0; xx < 8; xx++)
+          for (uint32_t xx = 0; xx < tileX; xx++)
           { 
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
-            textureRAM[destOffset++] = texData[decode[(yy*8+xx)^1]];
+            if (tileX == 1) texData -= tileY;
+            if (tileY == 1) texData -= tileX;
+            if (tileX == 8)
+              textureRAM[destOffset++] = texData[decode8x8[yy * tileX + xx]];
+            else if (tileX == 4)
+              textureRAM[destOffset++] = texData[decode8x4[yy * tileX + xx]];
+            else if (tileX == 2)
+              textureRAM[destOffset++] = texData[decode8x2[yy * tileX + xx]];
+            else if (tileX == 1)
+              textureRAM[destOffset++] = texData[decode8x1[yy * tileX + xx]];
+            texDataOffset++;
           }
-
-          destOffset += 2048-8; // next line
+          destOffset += 2048 - tileX; // next line
         }
-        texData += 8*8; // next tile
+        texData += tileY * tileX; // next tile
       }
     }
   }
@@ -378,35 +402,53 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
      * swapped.
      */
 
-    uint32_t byteSelect = (header>>21)&3; // which byte to unpack to
-    if (byteSelect == 3)  // write to both?
+    if (writeLSB && writeMSB)  // write to both?
       DebugLog("Observed 8-bit texture with byte_select=3!");
-  
-    // Outer 2 loops: 8x8 tiles
-    for (uint32_t y = yPos; y < (yPos+height); y += 8)
+
+    // Outer 2 loops: NxN tiles
+    uint8_t byte1, byte2;
+    for (uint32_t y = yPos; y < (yPos + height); y += tileY)
     {
-      for (uint32_t x = xPos; x < (xPos+width); x += 8)
+      for (uint32_t x = xPos; x < (xPos + width); x += tileX)
       {
-        // Inner 2 loops: 8x8 texels for the current tile
-        uint32_t destOffset = y*2048+x;
-        for (uint32_t yy = 0; yy < 8; yy++)
+        // Inner 2 loops: NxN texels for the current tile
+        uint32_t destOffset = y * 2048 + x;
+        for (uint32_t yy = 0; yy < tileY; yy++)
         {
-          for (uint32_t xx = 0; xx < 8; xx += 2)
+          for (uint32_t xx = 0; xx < tileX; xx += 2)
           {
-            uint8_t byte1 = texData[decode[(yy^1)*8+((xx+0)^1)]/2]>>8;
-            uint8_t byte2 = texData[decode[(yy^1)*8+((xx+1)^1)]/2]&0xFF;
+            if (tileX == 1) texData -= std::max(1u, tileY / 2);
+            if (tileY == 1) texData -= std::max(1u, tileX / 2);
+            if (tileX == 8) {
+              byte1 = texData[decode8x8[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
+              byte2 = texData[decode8x8[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
+            }
+            if (tileX == 4) {
+              byte1 = texData[decode8x4[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
+              byte2 = texData[decode8x4[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
+            }
+            if (tileX == 2) {
+              byte1 = texData[decode8x2[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
+              byte2 = texData[decode8x2[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
+            }
+            if (tileX == 1) {
+              byte1 = texData[decode8x1[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
+              byte2 = texData[decode8x1[(yy^1) * tileX + ((xx + 0)^1)] / 2] & 0xFF;
+            }
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
-            StoreTexelByte(&textureRAM[destOffset], byteSelect, byte1);
+            StoreTexelByte(&textureRAM[destOffset], writeLSB, writeMSB, byte1);
             ++destOffset;
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
-            StoreTexelByte(&textureRAM[destOffset], byteSelect, byte2);
+            StoreTexelByte(&textureRAM[destOffset], writeLSB, writeMSB, byte2);
             ++destOffset;
           }
-          destOffset += 2048-8;
+          destOffset += 2048 - tileX; // next line
         }
-        texData += 8*8/2; // next tile
+        uint32_t offset = std::max(1u, (tileY * tileX) / 2);
+        texData += offset; // next tile
+        texDataOffset += offset; // next tile
       }
     }
   }
@@ -417,7 +459,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
   {
     // If multi-threaded, then queue calls to UploadTextures for render thread to perform at beginning of next frame
     QueuedUploadTextures upl;
-	upl.level = level;
+    upl.level = level;
     upl.x = xPos;
     upl.y = yPos;
     upl.width = width;
@@ -428,96 +470,66 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
     Render3D->UploadTextures(level, xPos, yPos, width, height);
 }
 
+/*
+Texture header:
+-------- -------- -------- --xxxxxx X-position
+-------- -------- ----xxxx x------- Y-position
+-------- -------x xx------ -------- Width
+-------- ----xxx- -------- -------- Height
+-------- ---x---- -------- -------- Texture page
+-------- --x----- -------- -------- Write 8-bit data to the lower byte of texel
+-------- -x------ -------- -------- Write 8-bit data to the upper byte of texel
+-------- x------- -------- -------- Bitdepth, 0 = 8-bit, 1 = 16-bit
+xxxxxxxx -------- -------- -------- Texture type:
+                                      0x00 = texture with mipmaps
+                                      0x01 = texture without mipmaps
+                                      0x02 = only mipmaps
+                                      0x80 = possibly gamma table
+*/
+
 // Texture data will be in little endian format
 void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
 {
   // Position: texture RAM is arranged as 2 2048x1024 texel sheets
-  uint32_t x = 32*(header&0x3F);
-  uint32_t y = 32*((header>>7)&0x1F);
-  uint32_t page = (header>>20)&1;
-  y += page*1024; // treat page as additional Y bit (one 2048x2048 sheet)
-  
-  // Texture size and bit depth
-  uint32_t width = 32<<((header>>14)&7);
-  uint32_t height  = 32<<((header>>17)&7);
-  uint32_t bytesPerTexel;
-  if ((header&0x00800000))  // 16 bits per texel
-    bytesPerTexel = 2;
-  else            // 8 bits
-  {
-    bytesPerTexel = 1;
-    //printf("8-bit textures!\n");
-  }
-  
-  // Mipmaps
-  uint32_t mipYPos = 32*((header>>7)&0x1F);
-  
-  // Process texture data
-  DebugLog("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
-  //printf("Real3D: Texture upload: pos=(%d,%d) size=(%d,%d), %d-bit\n", x, y, width, height, bytesPerTexel*8);
-  switch ((header>>24)&0xFF)
+  uint32_t x              = 32 * (header & 0x3F);
+  uint32_t y              = 32 * ((header >> 7) & 0x1F);
+  uint32_t page           = (header >> 20) & 1;
+  uint32_t width          = 32 << ((header >> 14) & 7);
+  uint32_t height         = 32 << ((header >> 17) & 7);
+  uint32_t type           = (header >> 24) & 0xFF;
+  bool     sixteenBit     = (header >> 23) & 0x1;
+  bool     writeUpperByte = (header >> 22) & 0x1;
+  bool     writeLowerByte = (header >> 21) & 0x1;
+  uint32_t offset         = 0;
+
+  switch (type)
   {
   case 0x00:  // texture w/ mipmaps
-  {
-    StoreTexture(0, x, y, width, height, texData, header);
-    uint32_t mipWidth = width;
-    uint32_t mipHeight = height;
-    uint32_t mipNum = 0;
-
-    while((mipHeight>8) && (mipWidth>8))
-    {
-      if (bytesPerTexel == 1)
-        texData += (mipWidth*mipHeight)/2;
-      else
-        texData += (mipWidth*mipHeight);
-      mipWidth /= 2;
-      mipHeight /= 2;
-      uint32_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
-      uint32_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
-      if(page)
-        mipY += 1024;
-      mipNum++;
-	  StoreTexture(mipNum, mipX, mipY, mipWidth, mipHeight, (uint16_t *)texData, header);
-    }
-    break;
-  }
   case 0x01:  // texture w/out mipmaps
-    StoreTexture(0, x, y, width, height, texData, header);
-    break;
+    StoreTexture(0, x, y + (page * 1024), width, height, texData, sixteenBit, writeLowerByte, writeUpperByte, offset);
+    texData += offset;
+    if (type == 0x01) {
+      break;
+    }
   case 0x02:  // mipmaps only
   {
-    uint32_t mipWidth = width;
-    uint32_t mipHeight = height;
-    uint32_t mipNum = 0;
-    while((mipHeight>8) && (mipWidth>8))
-    {
-      mipWidth /= 2;
-      mipHeight /= 2;
-      uint32_t mipX = mipXBase[mipNum] + (x / mipDivisor[mipNum]);
-      uint32_t mipY = mipYBase[mipNum] + (mipYPos / mipDivisor[mipNum]);
-      if(page)
-        mipY += 1024;
-      mipNum++;
-	  StoreTexture(mipNum, mipX, mipY, mipWidth, mipHeight, texData, header);
-      if (bytesPerTexel == 1)
-        texData += (mipWidth*mipHeight)/2;
-      else
-        texData += (mipWidth*mipHeight);
+    for (int i = 1; width > 0 && height > 0; i++) {
+
+      int xPos = mipXBase[i] + (x / mipDivisor[i]);
+      int yPos = mipYBase[i] + (y / mipDivisor[i]);
+
+      width /= 2;
+      height /= 2;
+
+      StoreTexture(i, xPos, yPos + (page * 1024), width, height, texData, sixteenBit, writeLowerByte, writeUpperByte, offset);
+      texData += offset;
     }
     break;
   }
-  case 0x80:  // MAME thinks these might be a gamma table
-    /*
-    printf("Special texture format 0x80:\n");
-    for (int i = 0; i < 32*32; i++)
-    {
-      printf("  %02x=%02x\n", i, texData[i]);
-    }
-    */
+  case 0x80:  // MAME thinks these might be a gamma table (vf3 uploads this as the first texture)
     break;
   default:  // unknown
-    DebugLog("Unknown texture format %02X\n", header>>24);
-    //printf("unknown texture format %02X\n", header>>24);
+    DebugLog("Unknown texture format %02X\n", type);
     break;
   }
 }
@@ -997,7 +1009,7 @@ CReal3D::CReal3D(const Util::Config::Node &config)
 CReal3D::~CReal3D(void)
 { 
   // Dump memory
-#if 0
+#if 1
   FILE  *fp;
   fp = fopen("8c000000", "wb");
   if (NULL != fp)
