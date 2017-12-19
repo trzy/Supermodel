@@ -1009,7 +1009,7 @@ CReal3D::CReal3D(const Util::Config::Node &config)
 CReal3D::~CReal3D(void)
 { 
   // Dump memory
-#if 1
+#if 0
   FILE  *fp;
   fp = fopen("8c000000", "wb");
   if (NULL != fp)
