@@ -432,8 +432,8 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
               byte2 = texData[decode8x2[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
             }
             if (tileX == 1) {
-              byte1 = texData[decode8x1[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
-              byte2 = texData[decode8x1[(yy^1) * tileX + ((xx + 0)^1)] / 2] & 0xFF;
+              byte1 = texData[decode8x1[(yy^1)] / 2] >> 8;
+              byte2 = texData[decode8x1[(yy^1)] / 2] & 0xFF;
             }
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
