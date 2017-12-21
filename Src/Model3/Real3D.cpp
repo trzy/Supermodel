@@ -346,14 +346,6 @@ static const unsigned decode8x1[8] =
   6
 };
 
-static void StoreTexelByte(uint16_t *texel, bool writeLSB, bool writeMSB, uint8_t byte)
-{
-  if (writeLSB) // write to least significant byte
-    *texel = (*texel & 0xFF00) | byte;
-  if (writeMSB) // write to most significant byte
-    *texel = (*texel & 0x00FF) | (uint16_t(byte) << 8);
-}
-
 void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, bool sixteenBit, bool writeLSB, bool writeMSB, uint32_t &texDataOffset)
 {
   uint32_t tileX = std::min(8u, width);
@@ -406,7 +398,9 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
       DebugLog("Observed 8-bit texture with byte_select=3!");
 
     // Outer 2 loops: NxN tiles
-    uint8_t byte1, byte2;
+    const uint8_t byteSelect = (uint8_t)writeLSB | ((uint8_t)writeMSB << 1);
+    uint16_t tempData;
+    const uint16_t byteMask[4] = {0xFFFF, 0xFF00, 0x00FF, 0x0000};
     for (uint32_t y = yPos; y < (yPos + height); y += tileY)
     {
       for (uint32_t x = xPos; x < (xPos + width); x += tileX)
@@ -415,34 +409,29 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
         uint32_t destOffset = y * 2048 + x;
         for (uint32_t yy = 0; yy < tileY; yy++)
         {
-          for (uint32_t xx = 0; xx < tileX; xx += 2)
+          for (uint32_t xx = 0; xx < tileX; xx++)
           {
-            if (tileX == 1) texData -= std::max(1u, tileY / 2);
-            if (tileY == 1) texData -= std::max(1u, tileX / 2);
-            if (tileX == 8) {
-              byte1 = texData[decode8x8[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
-              byte2 = texData[decode8x8[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
+            if (writeLSB | writeMSB) {
+              if (m_gpuMultiThreaded)
+                MARK_DIRTY(textureRAMDirty, destOffset * 2);
+              textureRAM[destOffset] &= byteMask[byteSelect];
+              const uint8_t shift = (8 * ((xx & 1) ^ 1));
+              const uint8_t index = (yy ^ 1) * tileX + (xx ^ 1) - (tileX & 1);
+              if (tileX == 1) texData -= tileY;
+              if (tileY == 1) texData -= tileX;
+              if (tileX == 8)
+                tempData = (texData[decode8x8[index] / 2] >> shift) & 0xFF;
+              else if (tileX == 4)
+                tempData = (texData[decode8x4[index] / 2] >> shift) & 0xFF;
+              else if (tileX == 2)
+                tempData = (texData[decode8x2[index] / 2] >> shift) & 0xFF;
+              else if (tileX == 1)
+                tempData = (texData[decode8x1[index] / 2] >> shift) & 0xFF;
+              tempData |= tempData << 8;
+              tempData &= byteMask[byteSelect] ^ 0xFFFF;
+              textureRAM[destOffset] |= tempData;
             }
-            if (tileX == 4) {
-              byte1 = texData[decode8x4[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
-              byte2 = texData[decode8x4[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
-            }
-            if (tileX == 2) {
-              byte1 = texData[decode8x2[(yy^1) * tileX + ((xx + 0)^1)] / 2] >> 8;
-              byte2 = texData[decode8x2[(yy^1) * tileX + ((xx + 1)^1)] / 2] & 0xFF;
-            }
-            if (tileX == 1) {
-              byte1 = texData[decode8x1[(yy^1)] / 2] >> 8;
-              byte2 = texData[decode8x1[(yy^1)] / 2] & 0xFF;
-            }
-            if (m_gpuMultiThreaded)
-              MARK_DIRTY(textureRAMDirty, destOffset * 2);
-            StoreTexelByte(&textureRAM[destOffset], writeLSB, writeMSB, byte1);
-            ++destOffset;
-            if (m_gpuMultiThreaded)
-              MARK_DIRTY(textureRAMDirty, destOffset * 2);
-            StoreTexelByte(&textureRAM[destOffset], writeLSB, writeMSB, byte2);
-            ++destOffset;
+            destOffset++;
           }
           destOffset += 2048 - tileX; // next line
         }
