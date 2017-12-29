@@ -22,7 +22,6 @@ namespace SMUDP
 		std::vector<UINT8> m_data;
 		SOCKET		m_socket;
 		HANDLE		m_readEvent;
-		HANDLE		m_exitEvent;
 		WinSockWrap	m_winSockWrap;
 	};
 }
