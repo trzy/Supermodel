@@ -132,6 +132,12 @@
     <Filter Include="Source Files\Util">
       <UniqueIdentifier>{ea54ba9d-b27d-48e1-b576-fd245fd4d6c3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Network">
+      <UniqueIdentifier>{5a9e8f32-b937-4026-86c3-485581ae15c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Network">
+      <UniqueIdentifier>{284c6ebd-9a90-4283-9ee6-ea097974c8f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Src\BlockFile.cpp">
@@ -445,6 +451,15 @@
     </ClCompile>
     <ClCompile Include="..\Src\Sound\MPEG\amp_audio.cpp">
       <Filter>Source Files\Sound\MPEG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Network\UDPReceive.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Network\UDPSend.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Network\WinSockWrap.cpp">
+      <Filter>Source Files\Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -828,6 +843,18 @@
     </ClInclude>
     <ClInclude Include="..\Src\Sound\MPEG\amp_audio.h">
       <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Network\UDPPacket.h">
+      <Filter>Header Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Network\UDPReceive.h">
+      <Filter>Header Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Network\UDPSend.h">
+      <Filter>Header Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Network\WinSockWrap.h">
+      <Filter>Header Files\Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

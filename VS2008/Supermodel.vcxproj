@@ -345,6 +345,9 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Model3\RTC72421.cpp" />
     <ClCompile Include="..\Src\Model3\SoundBoard.cpp" />
     <ClCompile Include="..\Src\Model3\TileGen.cpp" />
+    <ClCompile Include="..\Src\Network\UDPReceive.cpp" />
+    <ClCompile Include="..\Src\Network\UDPSend.cpp" />
+    <ClCompile Include="..\Src\Network\WinSockWrap.cpp" />
     <ClCompile Include="..\Src\OSD\Logger.cpp" />
     <ClCompile Include="..\Src\OSD\Outputs.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Audio.cpp" />
@@ -569,6 +572,10 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Model3\RTC72421.h" />
     <ClInclude Include="..\Src\Model3\SoundBoard.h" />
     <ClInclude Include="..\Src\Model3\TileGen.h" />
+    <ClInclude Include="..\Src\Network\UDPPacket.h" />
+    <ClInclude Include="..\Src\Network\UDPReceive.h" />
+    <ClInclude Include="..\Src\Network\UDPSend.h" />
+    <ClInclude Include="..\Src\Network\WinSockWrap.h" />
     <ClInclude Include="..\Src\OSD\Audio.h" />
     <ClInclude Include="..\Src\OSD\Logger.h" />
     <ClInclude Include="..\Src\OSD\Outputs.h" />
