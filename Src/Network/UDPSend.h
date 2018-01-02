@@ -3,6 +3,8 @@
 
 #include "UDPPacket.h"
 #include "WinSockWrap.h"
+#include <vector>
+#include <thread>
 
 namespace SMUDP
 {
@@ -12,7 +14,8 @@ namespace SMUDP
 		UDPSend();
 		~UDPSend();
 
-		bool Send(const char* address, int port, int length, const void *data, int timeout);
+		bool Send(const char* address, int port, int length, const void *data, int timeout);		// blocking
+		bool SendAsync(const char* address, int port, int length, const void *data, int timeout);	// no blocking call
 
 	private:
 
@@ -23,6 +26,18 @@ namespace SMUDP
 		SOCKET m_socket;
 		HANDLE m_event;
 		WinSockWrap m_winsockWrap;
+
+		// async
+		void SendThread();
+
+		HANDLE m_exitEvent;
+		HANDLE m_dataReady;
+		HANDLE m_sendComplete;
+		int m_port;
+		int m_timeout;
+		std::string m_address;
+		std::vector<UINT8> m_data;
+		std::thread m_sendThread;
 	};
 }
 

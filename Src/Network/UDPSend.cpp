@@ -9,16 +9,64 @@ namespace SMUDP
 
 UDPSend::UDPSend()
 {
-	m_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);		// create the socket
-	m_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_socket		= socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);		// create the socket
+	m_event			= CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_exitEvent		= CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_dataReady		= CreateEvent(NULL, FALSE, FALSE, NULL);			
+	m_sendComplete	= CreateEvent(NULL, FALSE, TRUE, NULL);			// start off ready
+
+	m_sendThread = std::thread(&UDPSend::SendThread, this);
 
 	WSAEventSelect(m_socket, m_event, FD_READ | FD_WRITE);
 }
 
 UDPSend::~UDPSend()
 {
+	SetEvent(m_exitEvent);		// trigger thread to exit
+	m_sendThread.join();		// block until thread has exited
+	CloseHandle(m_exitEvent);	// clean up the rest of the resources
+	CloseHandle(m_dataReady);
+	CloseHandle(m_sendComplete);
+
 	closesocket(m_socket);
 	CloseHandle(m_event);
+}
+
+bool UDPSend::SendAsync(const char* address, int port, int length, const void *data, int timeout)
+{
+	WaitForSingleObject(m_sendComplete, INFINITE);	// block until previous sends have completed, don't want overlapping
+
+	m_data.clear();
+	m_data.insert(m_data.end(), (UINT8*)data, (UINT8*)data + length);
+
+	m_address	= address;
+	m_port		= port;
+	m_timeout	= timeout;
+
+	SetEvent(m_dataReady);
+
+	return true;
+}
+
+void UDPSend::SendThread()
+{
+	HANDLE events[2];
+
+	events[0] = m_exitEvent;
+	events[1] = m_dataReady;
+
+	while (true) {
+
+		auto result = WaitForMultipleObjects(_countof(events), events, FALSE, INFINITE);
+
+		if (result == WAIT_OBJECT_0) {					// exit event triggered
+			break;	
+		}
+		else if (result == (WAIT_OBJECT_0 + 1)) {		// data ready
+			Send(m_address.c_str(), m_port, (int)m_data.size(), m_data.data(), m_timeout);
+			SetEvent(m_sendComplete);
+		}
+	}
 }
 
 bool UDPSend::Send(const char* ip, int port, int length, const void *data, int timeout)
