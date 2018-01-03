@@ -6,14 +6,14 @@ namespace SMUDP
 	struct Packet
 	{
 
-		static const UINT32 BUFFER_SIZE = 1460;
+		static const UINT32 BUFFER_SIZE_UDP = 1460;
 
 		UINT32 crc;
 		UINT16 currentID;
 		UINT16 totalIDs;
 		UINT16 flags;
 		UINT16 length;
-		UCHAR  data[1460];
+		UCHAR  data[BUFFER_SIZE_UDP];
 
 		Packet() {
 			Init();

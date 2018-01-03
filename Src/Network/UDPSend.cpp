@@ -85,8 +85,8 @@ bool UDPSend::Send(const char* ip, int port, int length, const void *data, int t
 
 		packet.flags = 0;	// reset the flags (not used currently)
 
-		if (length > packet.BUFFER_SIZE) {
-			packet.length = packet.BUFFER_SIZE;
+		if (length > packet.BUFFER_SIZE_UDP) {
+			packet.length = packet.BUFFER_SIZE_UDP;
 		}
 		else {
 			packet.length = length;
