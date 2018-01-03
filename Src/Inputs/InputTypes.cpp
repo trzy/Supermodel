@@ -184,7 +184,7 @@ CTriggerInput::CTriggerInput(const char *inputId, const char *inputLabel, unsign
 
 void CTriggerInput::LoadFromConfig(const Util::Config::Node &config)
 {
-  string key("Input");
+  std::string key("Input");
   key.append(id);
   auto *node = config.TryGet(key);
   if (node)
@@ -193,7 +193,7 @@ void CTriggerInput::LoadFromConfig(const Util::Config::Node &config)
 
 void CTriggerInput::StoreToConfig(Util::Config::Node *config)
 {
-  string key("Input");
+  std::string key("Input");
   key.append(id);
   config->Set(key, (unsigned) m_autoTrigger);
 }

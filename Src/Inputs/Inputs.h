@@ -30,9 +30,7 @@
 
 #include "Types.h"
 #include "Util/NewConfig.h"
-
 #include <vector>
-using namespace std;
 
 class CInputSystem;
 class CInput;
@@ -53,7 +51,7 @@ private:
   CInputSystem *m_system;
 
   // Vector of all created inputs
-  vector<CInput*> m_inputs;
+  std::vector<CInput*> m_inputs;
 
   /*
    * Adds a switch input (eg button) to this collection.

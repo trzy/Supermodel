@@ -37,9 +37,6 @@
 
 #include <vector>
 
-using namespace std;
-
-
 /*
  * IPCIDevice:
  *
@@ -183,7 +180,7 @@ private:
 	};
 	
 	// An array of device objects
-	vector<struct DeviceObjectLink>	DeviceVector;
+	std::vector<struct DeviceObjectLink> DeviceVector;
 };
 
 

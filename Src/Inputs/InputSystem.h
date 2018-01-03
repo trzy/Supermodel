@@ -32,8 +32,6 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-using namespace std;
-
 #include "MultiInputSource.h"
 #include "Util/NewConfig.h"
 
@@ -355,9 +353,9 @@ private:
   JoySettings m_defJoySettings;
 
   // Current key, mouse and joystick settings for attached keyboards, mice and joysticks
-  vector<KeySettings*> m_keySettings;
-  vector<MouseSettings*> m_mseSettings;
-  vector<JoySettings*> m_joySettings;
+  std::vector<KeySettings*> m_keySettings;
+  std::vector<MouseSettings*> m_mseSettings;
+  std::vector<JoySettings*> m_joySettings;
 
   // Empty input source
   CMultiInputSource *m_emptySource;
@@ -399,46 +397,46 @@ private:
    */
   CInputSource *GetJoySource(int joyNum, EJoyPart joyPart);
 
-  void CheckAllSources(unsigned readFlags, bool fullAxisOnly, bool &mseCentered, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
+  void CheckAllSources(unsigned readFlags, bool fullAxisOnly, bool &mseCentered, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
   /*
    * Finds any currently activated key sources for the given keyboard number (or all keyboards if ANY_KEYBOARD supplied)
    * and adds them to the sources vector, aswell as constructing the corresponding mapping(s) in the given string.
    * If fullAxisOnly is true, then only sources that represent a full axis range (eg MouseXAxis) are considered.
    */
-  void CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
+  void CheckKeySources(int kbdNum, bool fullAxisOnly, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
   /*
    * Finds any currently activated mouse sources for the given mouse number (or all mice if ANY_MOUSE supplied)
    * and adds them to the sources vector, aswell as constructing the corresponding mapping(s) in the given string.
    * If fullAxisOnly is true, then only sources that represent a full axis range (eg MouseXAxis) are considered.
    */
-  void CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCentered, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
+  void CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCentered, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
   /*
    * Finds any currently activated joystick sources for the given joystick number (or all joysticks if ANY_JOYSTICK supplied)
    * and adds them to the sources vector, aswell as constructing the corresponding mapping(s) in the given string.
    * If fullAxisOnly is true, then only sources that represent a full axis range (eg MouseXAxis) are considered.
    */
-  void CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputSource*> &sources, string &mapping, vector<CInputSource*> &badSources);
+  void CheckJoySources(int joyNum, bool fullAxisOnly, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
-  bool ParseInt(string str, int &num);
+  bool ParseInt(std::string str, int &num);
 
-  string IntToString(int num);
+  std::string IntToString(int num);
 
-  bool EqualsIgnoreCase(string str1, const char *str2);
+  bool EqualsIgnoreCase(std::string str1, const char *str2);
 
-  bool StartsWithIgnoreCase(string str1, const char *str2);
+  bool StartsWithIgnoreCase(std::string str1, const char *str2);
 
   /*
    * Returns true if the given string represents a valid key name.
    */
-  bool IsValidKeyName(string str);
+  bool IsValidKeyName(std::string str);
 
   /*
    * Returns the EMousePart with the given mapping name or MouseUnknown if not found.
    */
-  EMousePart LookupMousePart(string str);
+  EMousePart LookupMousePart(std::string str);
 
   /*
    * Returns the mapping name for the given EMousePart.
@@ -448,26 +446,26 @@ private:
   /*
    * Returns the EJoyPart with the given mapping name or JoyUnknown if not found.
    */
-  EJoyPart LookupJoyPart(string str);
+  EJoyPart LookupJoyPart(std::string str);
 
   /*
    * Returns the mapping name for the given EJoyPart.
    */
   const char *LookupName(EJoyPart joyPart);
 
-  size_t ParseDevMapping(string str, const char *devType, int &devNum);
+  size_t ParseDevMapping(std::string str, const char *devType, int &devNum);
 
   /*
    * Parses the given mapping string, possibly representing more than one mapping, and returns an input source for it or NULL if the 
    * mapping is invalid.
    * If fullAxisOnly is true, then only mappings that represent a full axis range (eg MouseXAxis) are parsed.
    */
-  CInputSource* ParseMultiSource(string str, bool fullAxisOnly, bool isOr);
+  CInputSource* ParseMultiSource(std::string str, bool fullAxisOnly, bool isOr);
 
   /*
    * Parses the given single mapping string and returns an input source for it, or NULL if non exists.
    */
-  CInputSource* ParseSingleSource(string str);
+  CInputSource* ParseSingleSource(std::string str);
 
   /*
    * Prints the given key settings to stdout.

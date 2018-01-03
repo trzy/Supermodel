@@ -30,9 +30,8 @@
 #define INCLUDED_MULTIINPUTSOURCE_H
 
 #include "InputSource.h"
-
 #include <vector>
-using namespace std;
+
 
 /*
  * Represents a collection of input sources and combines their values into a single value.
@@ -56,7 +55,7 @@ public:
 	/*
 	 * Returns the combined source type of the given vector of sources.
 	 */ 
-	static ESourceType GetCombinedType(vector<CInputSource*> &sources);
+	static ESourceType GetCombinedType(std::vector<CInputSource*> &sources);
 
 	/*
 	 * Constructs an 'empty' source (ie one which is always 'off').
@@ -69,7 +68,7 @@ public:
 	 * switch inputs must be active for this input to have a value (which will be the value of the first non-switch input in the list,
 	 * or the first switch input if there are none).
 	 */
-	CMultiInputSource(bool isOr, vector<CInputSource*> &sources);
+	CMultiInputSource(bool isOr, std::vector<CInputSource*> &sources);
 
 	~CMultiInputSource();
 	

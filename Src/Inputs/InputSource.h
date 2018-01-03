@@ -29,7 +29,6 @@
 #define INCLUDED_INPUTSOURCE_H
 
 #include <string>
-using namespace std;
 
 class CInputSystem;
 struct ForceFeedbackCmd;

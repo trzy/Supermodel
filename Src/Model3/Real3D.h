@@ -451,8 +451,8 @@ private:
   uint8_t   *textureRAMDirty;
 
   // Queued texture uploads
-  vector<QueuedUploadTextures> queuedUploadTextures;
-  vector<QueuedUploadTextures> queuedUploadTexturesRO;  // Read-only copy of queue
+  std::vector<QueuedUploadTextures> queuedUploadTextures;
+  std::vector<QueuedUploadTextures> queuedUploadTexturesRO;  // Read-only copy of queue
   
   // Big endian bus object for DMA memory access
   IBus  *Bus;

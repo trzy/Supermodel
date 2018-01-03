@@ -153,9 +153,9 @@ void CInput::LoadFromConfig(const Util::Config::Node &config)
 	if (IsConfigurable())
 	{
 		// If so, check INI file for mapping string
-		string key("Input");
+		std::string key("Input");
 		key.append(id);
-		string mapping;
+		std::string mapping;
 		auto *node = config.TryGet(key);
 		if (node)
 		{
@@ -174,7 +174,7 @@ void CInput::StoreToConfig(Util::Config::Node *config)
 {
 	if (!IsConfigurable())
 		return;
-	string key("Input");
+	std::string key("Input");
 	key.append(id);
   config->Set(key, m_mapping);
 }

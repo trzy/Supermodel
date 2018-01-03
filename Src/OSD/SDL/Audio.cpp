@@ -268,7 +268,7 @@ bool OpenAudio()
 	
 	// Set initial play position to be beginning of buffer and initial write position to be half-way into buffer
 	playPos = 0;
-	writePos = min<int>(audioBufferSize - BYTES_PER_FRAME, (BYTES_PER_FRAME + audioBufferSize) / 2);
+	writePos = std::min<int>(audioBufferSize - BYTES_PER_FRAME, (BYTES_PER_FRAME + audioBufferSize) / 2);
 	writeWrapped = false;
 
 	// Reset counters
