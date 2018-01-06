@@ -90,6 +90,14 @@
 	#define DPRINTF(a, ...)
 #endif
 
+#ifndef SAFE_DELETE
+	#define SAFE_DELETE(p) delete (p); (p) = NULL;
+#endif
+
+#ifndef SAFE_ARRAY_DELETE
+	#define SAFE_ARRAY_DELETE(x) delete[] x; x = NULL;
+#endif
+
 using namespace SMUDP;
 
 static int(*Runnet68kCB)(int cycles);
@@ -1225,6 +1233,8 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 {
 	memoryPool	= NULL;
+	bank		= NULL;
+	ct			= NULL;
 	netRAM		= NULL;
 	netBuffer	= NULL;
 	Buffer		= NULL;
@@ -1232,7 +1242,6 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 	CommRAM		= NULL;
 	ioreg		= NULL;
 	ctrlrw		= NULL;
-	bank		= NULL;
 
 	CodeReady	= false;
 	test_irq	= 0;
@@ -1242,32 +1251,18 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 
 CNetBoard::~CNetBoard(void)
 {
-	if (memoryPool != NULL)
-	{
-		delete[] memoryPool;
-		memoryPool = NULL;
-	}
+	SAFE_ARRAY_DELETE(memoryPool);
+	SAFE_ARRAY_DELETE(bank);
+	SAFE_ARRAY_DELETE(ct);
 
-	netRAM = NULL;
-	netBuffer = NULL;
-	Buffer = NULL;
-	RAM = NULL;
-	CommRAM = NULL;
-	ioreg = NULL;
-	ctrlrw = NULL;
-
-	if (bank != NULL)
-	{
-		delete bank;
-		bank = NULL;
-	}
-
-	if (ct != NULL)
-	{
-		delete ct;
-		ct = NULL;
-	}
-	
+	netRAM		= NULL;
+	netBuffer	= NULL;
+	Buffer		= NULL;
+	RAM			= NULL;
+	CommRAM		= NULL;
+	ioreg		= NULL;
+	ctrlrw		= NULL;
+		
 	/*if (int5 == true)
 	{
 		int5 = false;
@@ -1289,9 +1284,6 @@ bool CNetBoard::RunFrame(void)
 	{
 		return true;
 	}
-	
-	
-	
 	
 	M68KSetContext(&M68K);
 	

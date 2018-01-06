@@ -54,7 +54,6 @@ private:
 	UINT8		*ioreg;
 	UINT8		*ctrlrw;
 	UINT8		*Buffer;
-	UINT8		*Buffer2;
 	UINT8		*RAM;
 	UINT8		*ct;
 
