@@ -6,12 +6,9 @@
 #include "OSD/Thread.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
 #include <thread>
 #include "UDPSend.h"
 #include "UDPReceive.h"
-
-//using namespace SMUDP;
 
 //#define NET_BUF_SIZE 32800 // 16384 not enough
 
@@ -27,13 +24,10 @@ public:
 	void Write16(UINT32 addr, UINT16 data);
 	void Write32(UINT32 addr, UINT32 data);
 
-
 	void SaveState(CBlockFile *SaveState);
-
 	void LoadState(CBlockFile *SaveState);
 
 	bool RunFrame(void);
-
 	void Reset(void);
 
 	// Returns a reference to the 68K CPU context
@@ -43,7 +37,6 @@ public:
 
 	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
 	
-
 	CNetBoard(const Util::Config::Node &config);
 	~CNetBoard(void);
 
@@ -84,12 +77,10 @@ private:
 	// only for some tests
 	UINT8 *bank;
 	UINT8 *bank2;
-	UINT8		test_irq;
+	UINT8 test_irq;
 
 	std::thread interrupt5;
 	bool int5;
-
-
 };
 
 void Net_SetCB(int(*Run68k)(int cycles), void(*Int68k)(int irq));
