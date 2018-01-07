@@ -461,6 +461,9 @@
     <ClCompile Include="..\Src\Network\WinSockWrap.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Network\NetBoard.cpp">
+      <Filter>Source Files\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -854,6 +857,9 @@
       <Filter>Header Files\Network</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Network\WinSockWrap.h">
+      <Filter>Header Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Network\NetBoard.h">
       <Filter>Header Files\Network</Filter>
     </ClInclude>
   </ItemGroup>

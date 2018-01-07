@@ -348,8 +348,8 @@ static const unsigned decode8x1[8] =
 
 void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, bool sixteenBit, bool writeLSB, bool writeMSB, uint32_t &texDataOffset)
 {
-  uint32_t tileX = std::min(8u, width);
-  uint32_t tileY = std::min(8u, height);
+  uint32_t tileX = (std::min)(8u, width);
+  uint32_t tileY = (std::min)(8u, height);
 
   texDataOffset = 0;
 
@@ -435,7 +435,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
           }
           destOffset += 2048 - tileX; // next line
         }
-        uint32_t offset = std::max(1u, (tileY * tileX) / 2);
+        uint32_t offset = (std::max)(1u, (tileY * tileX) / 2);
         texData += offset; // next tile
         texDataOffset += offset; // next tile
       }

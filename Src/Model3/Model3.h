@@ -46,6 +46,9 @@ struct FrameTimings
   UINT32 renderTicks;
   UINT32 sndTicks;
   UINT32 drvTicks;
+#ifdef NET_BOARD
+  UINT32 netTicks;
+#endif
   UINT32 frameTicks;
 };
 
@@ -129,6 +132,18 @@ public:
    */
   CDriveBoard *GetDriveBoard(void);
 
+#ifdef NET_BOARD
+  /*
+  * GetNetBoard(void):
+  *
+  * Returns a reference to the net board.
+
+  * Returns:
+  *    Pointer to CNetBoard object.
+  */
+  CNetBoard * GetNetBoard(void);
+#endif
+
   /*
    * DumpTimings(void):
    *
@@ -178,6 +193,9 @@ private:
   void SyncGPUs(void);                                // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
+#ifdef NET_BOARD
+  void RunNetBoardFrame(void);						  // Runs net board for a frame
+#endif
 
   bool    StartThreads(void);                         // Starts all threads
   bool    StopThreads(void);                          // Stops all threads
@@ -195,7 +213,7 @@ private:
   int     RunSoundBoardThread(void);                  // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
   int     RunSoundBoardThreadSyncd(void);             // Runs sound board thread (sync'd in step with render thread)
   int     RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
-  
+
   // Runtime configuration
   const Util::Config::Node &m_config;
   bool m_multiThreaded;
@@ -229,7 +247,12 @@ private:
   UINT8   *backupRAM;   // 128 KB Backup RAM (battery backed)
   UINT8   *securityRAM; // 128 KB Security Board RAM
   UINT8   *driveROM;    // 32 KB drive board ROM (Z80 program) (optional)
-  
+#ifdef NET_BOARD
+  UINT8   *netRAM;		// 128KB RAM
+  UINT8	  *netBuffer;	// 128KB buffer
+  UINT8	  *commRAM;		// 64 kB or more ??
+#endif
+
   // Banked CROM
   UINT8     *cromBank;    // currently mapped in CROM bank
   unsigned  cromBankReg;  // the CROM bank register 
@@ -284,6 +307,10 @@ private:
   CDriveBoard DriveBoard;     // Drive board
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
+#ifdef NET_BOARD
+  CNetBoard   NetBoard;		  // Net board
+#endif
+
 };
 
 

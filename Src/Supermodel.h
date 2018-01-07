@@ -27,7 +27,9 @@
  
 #ifndef INCLUDED_SUPERMODEL_H
 #define INCLUDED_SUPERMODEL_H
-
+#ifdef NET_BOARD
+#include "Winsock2.h" // force include winsock2 before windows.h because conflict with winsock1
+#endif
 // Used throughout Supermodel
 #include <cstdio>
 #include <cstdlib>
@@ -147,6 +149,9 @@
 #include "Model3/SoundBoard.h"
 #include "Model3/DSB.h"
 #include "Model3/DriveBoard.h"
+#ifdef NET_BOARD
+#include "Network/NetBoard.h"
+#endif
 #include "Model3/Model3.h"
 
 

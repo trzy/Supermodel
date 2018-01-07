@@ -881,75 +881,120 @@ UINT8 CModel3::Read8(UINT32 addr)
     return ram[addr^3];
   
   // Other
-  switch ((addr>>24))
+  switch ((addr >> 24))
   {
-  // CROM
+	  // CROM
   case 0xFF:
-    if (addr < 0xFF800000)
-      return cromBank[(addr&0x7FFFFF)^3];
-    else
-      return crom[(addr&0x7FFFFF)^3];
+	  if (addr < 0xFF800000)
+		  return cromBank[(addr & 0x7FFFFF) ^ 3];
+	  else
+		  return crom[(addr & 0x7FFFFF) ^ 3];
 
-  // Real3D DMA
+	  // Real3D DMA
   case 0xC2:
-    return GPU.ReadDMARegister8(addr&0xFF);
+	  return GPU.ReadDMARegister8(addr & 0xFF);
 
-  // Various
+	  // Various
   case 0xF0:
   case 0xFE:  // mirror
-    
-    switch ((addr>>16)&0xFF)
-    {
-    // Inputs
-    case 0x04:
-      return ReadInputs(addr&0x3F);
-    
-    // Sound Board
-    case 0x08:
-      if ((addr & 0xF) == 4)  // MIDI control port
-        return 0x83;          // magtruck country check
-      else
-        return 0;
-      break;
 
-    // System registers
-    case 0x10:    
-      return ReadSystemRegister(addr&0x3F);
+	  switch ((addr >> 16) & 0xFF)
+	  {
+		  // Inputs
+	  case 0x04:
+		  return ReadInputs(addr & 0x3F);
 
-    // RTC    
-    case 0x14:
-      if ((addr&3)==1)  // battery voltage test
-        return 0x03;
-      else if ((addr&3)==0)
-        return RTC.ReadRegister((addr>>2)&0xF);
-      return 0;
+		  // Sound Board
+	  case 0x08:
+		  if ((addr & 0xF) == 4)  // MIDI control port
+			  return 0x83;          // magtruck country check
+		  else
+			  return 0;
+		  break;
 
-    // Unknown
-    default:
-      break;
-    }
+		  // System registers
+	  case 0x10:
+		  return ReadSystemRegister(addr & 0x3F);
 
-    break;
+		  // RTC    
+	  case 0x14:
+		  if ((addr & 3) == 1)  // battery voltage test
+			  return 0x03;
+		  else if ((addr & 3) == 0)
+			  return RTC.ReadRegister((addr >> 2) & 0xF);
+		  return 0;
 
-  // Tile generator
+		  // Unknown
+	  default:
+		  //printf("CMODEL3 : unknown R8 mirror : %x\n", addr >> 16);
+		  break;
+	  }
+
+	  break;
+
+	  // Tile generator
   case 0xF1:
-    if (addr < 0xF1120000)
-    {
-      // Tile generator accesses its RAM as little endian, no adjustment needed here
-      return TileGen.ReadRAM8(addr&0x1FFFFF);
-    }
-    break;
+	  if (addr < 0xF1120000)
+	  {
+		  // Tile generator accesses its RAM as little endian, no adjustment needed here
+		  return TileGen.ReadRAM8(addr & 0x1FFFFF);
+	  }
+	  break;
 
-  // 53C810 SCSI
+	  // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
-    if (m_game.stepping != "1.0")
-      break;
+#ifndef NET_BOARD
+	if (m_game.stepping != "1.0")
+	  {
+		  //printf("Model3 : Read8 %x\n", addr);
+		  break;
+	  }
+#endif
+#ifdef NET_BOARD
+	switch ((addr & 0x3ffff) >> 16)
+	{
+	case 0:
+		//printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
+		return netBuffer[(addr & 0xFFFF)];
+		
+	case 1: // ioreg 32bits access in 16bits environment
+		if (addr > 0xc00101ff)
+		{
+			printf("R8 ATTENTION OUT OF RANGE\n");
+			MessageBox(NULL, "Out of Range", NULL, MB_OK);
+		}
+		printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
+		return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
+
+	case 2:
+	case 3:
+		if (addr > 0xc002ffff)
+		{
+			printf("R8 ATTENTION OUT OF RANGE\n");
+			MessageBox(NULL, "Out of Range", NULL, MB_OK);
+		}
+		//printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
+		return netRAM[((addr & 0x1FFFF) / 2)];
+	/*case 3:
+		//printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
+		return netRAM[((addr & 0x1FFFF) / 2)];*/
+	
+	default:
+		printf("R8 ATTENTION OUT OF RANGE\n");
+		MessageBox(NULL, "Out of Range", NULL, MB_OK);
+		break;
+	}
+
+#endif
   case 0xF9:
   case 0xC1:
     return SCSI.ReadRegister(addr&0xFF);
 
   // Unknown  
   default:
+#ifdef NET_BOARD
+	  printf("CMODEL3 : unknown R8 : %x\n", addr >> 24);
+#endif
     break;
   }
 
@@ -1023,6 +1068,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 
     // Unknown
     default:
+		//printf("CMODEL3 : unknown R16 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1038,8 +1084,28 @@ UINT16 CModel3::Read16(UINT32 addr)
     }
     break;
 
+#ifdef NET_BOARD
+  case 0xc0: // spikeout call this
+  {
+	  UINT16 result;
+	  switch ((addr & 0x3ffff) >> 16)
+	  {
+	  case 0:
+		  printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
+		  result = *(UINT16 *)&netBuffer[(addr & 0xFFFF)];
+		  return FLIPENDIAN16(result); // result
+	  default:
+		  printf("CMODEL3 : unknown R16 : %x (C0)\n", addr);
+		  break;
+	  }
+  }
+#endif
   // Unknown
   default:
+#ifdef NET_BOARD
+	  printf("CMODEL3 : unknown R16 : %x (%x)\n", addr, addr >> 24);
+	  MessageBox(NULL, "CMODEL3 : Unknown R16", NULL, MB_OK);
+#endif
     break;
   }
 
@@ -1154,6 +1220,7 @@ UINT32 CModel3::Read32(UINT32 addr)
     
     // Unknown
     default:
+    //printf("CModel 3 unknown R32 mirror %x", (addr >> 16) & 0xFF);
       break;
     }
 
@@ -1177,8 +1244,61 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
+#ifndef NET_BOARD
     if (m_game.stepping != "1.0") // check for Step 1.0
       break;
+#endif
+#ifdef NET_BOARD
+    if (m_game.stepping != "1.0") // check for Step 1.0
+    {
+      UINT32 result;
+      
+      switch ((addr & 0x3ffff) >> 16)
+      {
+      case 0:
+        //printf("R32 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0xFFFF)]));
+        result = *(UINT32 *)&netBuffer[(addr & 0xFFFF)];
+        return FLIPENDIAN32(result); // result
+
+      case 1: // ioreg 32bits access to 16bits range
+        //printf("R32 ioreg @%x=%x\n", (addr & 0x1FF), FLIPENDIAN32(*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]));
+        if (addr > 0xc00101ff)
+        {
+          printf("R32 ATTENTION OUT OF RANGE\n");
+        }
+
+        UINT32 test;
+        test = (*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
+        if (((FLIPENDIAN32(test) & 0x00ff0000) != 0x00900000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00a00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00b00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00800000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00f00000)) 
+        {
+          printf("R32 ioreg @%x=%04x\n", (addr /*& 0x1FF*/), FLIPENDIAN32(test) >> 16);
+        }
+        result = (*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]) & 0x0000ffff;
+        return FLIPENDIAN32(result);
+
+      case 2:
+      case 3:
+        //printf("R32 netram @%x=%x\n", (addr & 0x1FFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0x1FFFF)]));
+
+        if (addr > 0xc002ffff)
+        {
+          printf("R32 ATTENTION OUT OF RANGE\n");
+        }
+
+        result = (*(UINT32 *)&netRAM[((addr & 0x1FFFF) / 2)]) & 0x0000ffff;
+        return FLIPENDIAN32(result); // result
+      /*case 3:
+        //printf("R32 netram @%x=%x\n", (addr & 0x1FFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0x1FFFF)]));
+        result = (*(UINT32 *)&netRAM[((addr & 0x1FFFF) / 2)]) & 0x0000ffff;
+        return FLIPENDIAN32(result); // result*/
+
+      default:
+        printf("R32 ATTENTION OUT OF RANGE\n");
+        break;
+      }
+
+    }
+#endif
   case 0xF9:
   case 0xC1:
     data =  (SCSI.ReadRegister((addr+0)&0xFF) << 24);
@@ -1189,6 +1309,9 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // Unknown
   default:
+#ifdef NET_BOARD
+	  printf("CMODEL3 : unknown R32 : %x\n", addr >> 24);
+#endif
     break;
   }
 
@@ -1203,7 +1326,7 @@ UINT64 CModel3::Read64(UINT32 addr)
   data = Read32(addr+0);
   data <<= 32;
   data |= Read32(addr+4);
-
+  //printf("read64 %x = %x\n",addr,data);
   return data;
 }
 
@@ -1271,6 +1394,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     
     // Unknown
     default:
+    //printf("CMODEL3 : unknown W8 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1285,7 +1409,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       TileGen.WriteRAM8(addr&0x1FFFFF, data);
       break;
     }
-    goto Unknown8;
+  goto Unknown8;
 
   // MPC105/106
   case 0xF8:
@@ -1294,8 +1418,62 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
+#ifndef NET_BOARD
     if (m_game.stepping != "1.0")
       goto Unknown8;
+#endif
+#ifdef NET_BOARD
+    if (m_game.stepping != "1.0")
+    {
+      printf("CModel 3 : write8 %x<-%x\n", addr, data);
+
+      switch ((addr & 0x3ffff) >> 16)
+      {
+      case 0:
+        //printf("W8 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
+        *(UINT8 *)&netBuffer[(addr & 0xFFFF)] = data;
+        break;
+
+      case 1: // ioreg 32bits access to 16bits range
+        if (addr > 0xc00101ff)
+        {
+          printf("W8 ATTENTION OUT OF RANGE\n");
+        }
+
+        printf("W8 ioreg @%x<-%x\n", (addr & 0x1FF), data);
+        *(UINT8 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = data;
+        break;
+
+      case 2:
+      case 3:
+        if (addr > 0xc002ffff)
+        {
+          printf("W8 ATTENTION OUT OF RANGE\n");
+        }
+
+        //printf("W8 netram @%x<-%x\n", (addr & 0x1FFFF), data);
+        *(UINT8 *)&netRAM[(addr & 0x1FFFF)/2] = data;
+        break;
+      /*case 3:
+        //printf("W8 netram @%x<-%x\n", (addr & 0x1FFFF), data);
+        *(UINT8 *)&netRAM[(addr & 0x1FFFF) / 2] = data;
+        break;*/
+
+      default:
+        printf("W8 ATTENTION OUT OF RANGE\n");
+        break;
+      }
+      
+      if ((*(UINT8 *)&netBuffer[(0xc00100c0 & 0x3FFFF)] == 0xff) && NetBoard.CodeReady == false) // c0=180/2
+      {
+        printf("Network code copy ending\n");
+        NetBoard.CodeReady = true;
+        NetBoard.Reset();
+      }
+
+      break;
+    }
+#endif
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister(addr&0xFF,data);
@@ -1304,6 +1482,9 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
   // Unknown:
   default:
   Unknown8:
+#ifdef NET_BOARD
+    //printf("CMODEL3 : unknown W8 : %x\n", addr >> 24); // harleyb unknown 0xF1
+#endif
     DebugLog("PC=%08X\twrite8 : %08X=%02X\n", ppc_get_pc(), addr, data);
     break;
   }
@@ -1352,6 +1533,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
     // Unknown
     default:
+    //printf("CMODEL3 : unknown W16 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1377,6 +1559,9 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
   // Unknown
   default:
   Unknown16:
+#ifdef NET_BOARD
+	  printf("CMODEL3 : unknown W16 : %x\n", addr >> 24);
+#endif
     DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
     break;
   }
@@ -1472,7 +1657,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       break;
 
     // MPC105/106
-    case 0xC0: case 0xD0: case 0xE0: 
+	case 0xC0: case 0xD0: case 0xE0:
     case 0xC1: case 0xD1: case 0xE1: 
     case 0xC2: case 0xD2: case 0xE2: 
     case 0xC3: case 0xD3: case 0xE3: 
@@ -1519,9 +1704,10 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     case 0x1A:
       WriteSecurity(addr&0x3F,data);
       break;
-    
+  
     // Unknown
     default:
+    //printf("CMODEL3 : unknown W32 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1556,8 +1742,60 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
   // 53C810 SCSI
   case 0xC0:  // step 1.0 only
+#ifndef NET_BOARD
     if (m_game.stepping != "1.0")
-      goto Unknown32;
+    goto Unknown32;
+#endif
+#ifdef NET_BOARD
+    if (m_game.stepping != "1.0") // assuming there is no scsi card for step>1.0 because same address for network card (right or wrong ??)
+    {
+      switch ((addr & 0x3ffff) >> 16)
+      {
+      case 0:
+        //printf("W32 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
+        *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN32(data);
+        break;
+
+      case 1: // ioreg 32bits access to 16bits range
+        if (addr > 0xc00101ff)
+        {
+          printf("W32 ATTENTION OUT OF RANGE\n");
+        }
+
+        printf("W32 ioreg @%x<-%04x\n", (addr /*& 0x1FF*/), data>>16);
+        *(UINT16 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = FLIPENDIAN16(data >> 16);
+        break;
+
+      case 2:
+      case 3:
+        if (addr > 0xc002ffff)
+        {
+          printf("W32 ATTENTION OUT OF RANGE\n");
+        }
+
+        //printf("W32 netram @%x<-%x\n", (addr & 0x1FFFF), data);
+        *(UINT16 *)&netRAM[((addr & 0x1FFFF) / 2)] = FLIPENDIAN16(data >> 16);
+        break;
+      /*case 3:
+        //printf("W32 netram @%x<-%x\n", (addr & 0x1FFFF), data);
+        *(UINT16 *)&netRAM[((addr & 0x1FFFF) / 2)] = FLIPENDIAN16(data >> 16);
+        break;*/
+      default:
+        printf("W32 ATTENTION OUT OF RANGE\n");
+        break;
+      }
+
+      if ((*(UINT16 *)&netBuffer[(0xc0010088 & 0x3FFFF)] == FLIPENDIAN16(0x0080)) && NetBoard.CodeReady == false) // 88=110/2
+      {
+        printf("Network code copy ending\n");
+        NetBoard.CodeReady = true;
+        NetBoard.Reset();
+      }
+
+      break;
+    }
+    break;
+#endif
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
@@ -1569,6 +1807,9 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
   // Unknown
   default:
   Unknown32:
+#ifdef NET_BOARD
+    printf("CMODEL3 : unknown W32 : %x (%x) data=%d\n", addr,addr >> 24,data);
+#endif
     //printf("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     DebugLog("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     break;
@@ -1577,7 +1818,8 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
 void CModel3::Write64(UINT32 addr, UINT64 data)
 {
-    Write32(addr+0, (UINT32) (data>>32));
+	//printf("write64 %x <- %x\n", addr, data);
+	Write32(addr+0, (UINT32) (data>>32));
     Write32(addr+4, (UINT32) data);
 }
 
@@ -1729,7 +1971,7 @@ void CModel3::RunFrame(void)
     ppcBrdThreadDone = false;
     sndBrdThreadDone = false;
     drvBrdThreadDone = false;
-    
+
     // Leave notify wait critical section
     if (!notifyLock->Unlock())
       goto ThreadError;
@@ -1737,6 +1979,9 @@ void CModel3::RunFrame(void)
     // If multi-threading GPU, then sync GPUs last while PPC main board thread is waiting
     if (m_gpuMultiThreaded)
       SyncGPUs();
+	
+	/*if (NetBoard.IsAttached())
+		RunNetBoardFrame();*/
   }
   else
   {
@@ -1747,6 +1992,20 @@ void CModel3::RunFrame(void)
     RunSoundBoardFrame();
     if (DriveBoard.IsAttached())
       RunDriveBoardFrame();
+#ifdef NET_BOARD
+	if (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()) && ((*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFFFF) || (netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFF) || (*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0x0001)) && (NetBoard.CodeReady == true))
+	{
+		// ppc irq network needed ? no effect, is it really active ? 
+		RunNetBoardFrame();
+		IRQ.Assert(0x10);
+		ppc_execute(200); // give PowerPC time to acknowledge IRQ
+		//RunNetBoardFrame();
+		IRQ.Deassert(0x10);
+		ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
+		//RunNetBoardFrame();
+		
+	}
+#endif	
   }
 
   timings.frameTicks = CThread::GetTicks() - start;
@@ -2035,6 +2294,13 @@ void CModel3::RunDriveBoardFrame(void)
   timings.drvTicks = CThread::GetTicks() - start;
 }
 
+#ifdef NET_BOARD
+void CModel3::RunNetBoardFrame(void)
+{
+	NetBoard.RunFrame();
+}
+#endif
+
 bool CModel3::StartThreads(void)
 {
   if (startedThreads)
@@ -2099,7 +2365,9 @@ bool CModel3::StartThreads(void)
 
   // Set audio callback if sound board thread is unsync'd
   if (!syncSndBrdThread)
-    SetAudioCallback(AudioCallback, this);
+  {
+	  SetAudioCallback(AudioCallback, this);
+  }
   
   startedThreads = true;
   return true;
@@ -2245,6 +2513,7 @@ void CModel3::DeleteThreadObjects(void)
     drvBrdThread = NULL;
   }
 
+
   // Delete synchronization objects
   if (ppcBrdThreadSync != NULL)
   {
@@ -2261,6 +2530,8 @@ void CModel3::DeleteThreadObjects(void)
     delete drvBrdThreadSync;
     drvBrdThreadSync = NULL;
   }
+
+
   if (sndBrdNotifyLock != NULL)
   {
     delete sndBrdNotifyLock;
@@ -2292,6 +2563,9 @@ void CModel3::DumpTimings(void)
     timings.syncTicks, (timings.syncTicks > 1 ? '!' : ','),
     timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
     timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
+#ifdef NET_BOARD
+	timings.netTicks, (timings.netTicks > 10 ? '!' : ','),
+#endif
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
 
@@ -2327,6 +2601,7 @@ int CModel3::StartDriveBoardThread(void *data)
   CModel3 *model3 = (CModel3*)data;
   return model3->RunDriveBoardThread();
 }
+
 
 int CModel3::RunMainBoardThread(void)
 {
@@ -2625,6 +2900,8 @@ ThreadError:
   return 1;
 }
 
+
+
 void CModel3::Reset(void)
 {
   // Clear memory (but do not modify backup RAM!)
@@ -2661,7 +2938,7 @@ void CModel3::Reset(void)
 
   if (DriveBoard.IsAttached())
     DriveBoard.Reset();
-    
+
   m_cryptoDevice.Reset();
 
   gpusReady = false;
@@ -2672,6 +2949,10 @@ void CModel3::Reset(void)
   timings.renderTicks = 0;
   timings.sndTicks = 0;
   timings.drvTicks = 0;
+#ifdef NET_BOARD
+  timings.netTicks = 0;
+  NetBoard.CodeReady = false;
+#endif
   timings.frameTicks = 0;
   
   DebugLog("Model 3 reset\n");
@@ -2694,8 +2975,15 @@ void CModel3::Reset(void)
 #define OFFSET_DSBPROGROM   0xE0C0000 // 128 KB (DSB program)
 #define OFFSET_DSBMPEGROM   0xE0E0000 // 16 MB (DSB MPEG data -- Z80 version only uses 8MB)
 #define OFFSET_DRIVEROM     0xF0E0000 // 64 KB
+#ifndef NET_BOARD
 #define MEMORY_POOL_SIZE    (0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000)
-
+#endif
+#ifdef NET_BOARD
+#define OFFSET_NETBUFFER	0xC000000 // not really 128kb (64kb buffer 0000-ffff + i/o 10000-101ff)
+#define OFFSET_NETRAM	    0xC020000 // 128 KB (c0020000-c003ffff)
+#define MEMORY_POOL_SIZE    (0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000 + 0x40000)
+							//8MB		8MB			128MB		64MB		128KB		128KB	512KB		16MB		128KB	16MB		64KB		256KB
+#endif
 // 64-bit magic number used to detect loading of optional ROMs
 #define MAGIC_NUMBER  0x4C444D5245505553ULL
 
@@ -2828,7 +3116,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
       return FAIL;
   }
   SoundBoard.AttachDSB(DSB);
-  
+
   // Drive board (if present)
   if (rom_set.get_rom("driveboard_program").size)
   {
@@ -2915,6 +3203,10 @@ bool CModel3::Init(void)
   backupRAM = &memoryPool[OFFSET_BACKUPRAM];
   securityRAM = &memoryPool[OFFSET_SECURITYRAM];
   driveROM = &memoryPool[OFFSET_DRIVEROM];
+#ifdef NET_BOARD
+  netRAM = &memoryPool[OFFSET_NETRAM];
+  netBuffer = &memoryPool[OFFSET_NETBUFFER];
+#endif
   SetCROMBank(0xFF);
   
   // Initialize other devices (PowerPC, DSB, and security board initialized after ROMs loaded)
@@ -2930,7 +3222,11 @@ bool CModel3::Init(void)
     return FAIL;
   if (OKAY != SoundBoard.Init(soundROM,sampleROM))
     return FAIL;
-    
+#ifdef NET_BOARD
+  if (OKAY != NetBoard.Init(netRAM, netBuffer))
+	return FAIL;
+#endif
+  
   PCIBridge.AttachPCIBus(&PCIBus);
   PCIBus.AttachDevice(13,&GPU);
   PCIBus.AttachDevice(14,&SCSI);
@@ -2943,13 +3239,20 @@ bool CModel3::Init(void)
 
 CSoundBoard *CModel3::GetSoundBoard(void)
 {
-  return &SoundBoard;
+	return &SoundBoard;
 }
  
 CDriveBoard *CModel3::GetDriveBoard(void)
 {
   return &DriveBoard;
 }
+
+#ifdef NET_BOARD
+CNetBoard *CModel3::GetNetBoard(void)
+{
+	return &NetBoard;
+}
+#endif
 
 CModel3::CModel3(const Util::Config::Node &config)
   : m_config(config),
@@ -2959,7 +3262,11 @@ CModel3::CModel3(const Util::Config::Node &config)
     GPU(config),
     SoundBoard(config),
     DriveBoard(config),
-    m_jtag(GPU)
+	m_jtag(GPU),
+#ifdef NET_BOARD
+	NetBoard(config)
+#endif
+
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
@@ -2977,7 +3284,11 @@ CModel3::CModel3(const Util::Config::Node &config)
   cromBank = NULL;
   backupRAM = NULL;
   securityRAM = NULL;
-  
+#ifdef NET_BOARD
+  netRAM = NULL;
+  netBuffer = NULL;
+#endif
+
   DSB = NULL;
   
   securityPtr = 0;
@@ -2988,16 +3299,19 @@ CModel3::CModel3(const Util::Config::Node &config)
   ppcBrdThread = NULL;
   sndBrdThread = NULL; 
   drvBrdThread = NULL;
+  
   ppcBrdThreadRunning = false;
   ppcBrdThreadDone = false;
   sndBrdThreadRunning = false;
   sndBrdThreadDone = false;
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
+  
   syncSndBrdThread = false;
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;
+  
   notifyLock = NULL;
   notifySync = NULL;
   
@@ -3049,7 +3363,8 @@ CModel3::~CModel3(void)
     delete DSB;
     DSB = NULL;
   }
-  
+
+
   Inputs = NULL;
   Outputs = NULL;
   ram = NULL;
@@ -3062,6 +3377,10 @@ CModel3::~CModel3(void)
   cromBank = NULL;
   backupRAM = NULL;
   securityRAM = NULL;
-  
+#ifdef NET_BOARD
+  netRAM = NULL;
+  netBuffer = NULL;
+#endif
+
   DebugLog("Destroyed Model 3\n");
 }

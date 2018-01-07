@@ -48,7 +48,7 @@
  * - SUPERMODEL_DEBUGGER: Enable the debugger.
  * - DEBUG: Debug mode (use with caution, produces large logs of game behavior)
  */
- 
+
 #include <new>
 #include <cmath>
 #include <cstdio>
@@ -1319,6 +1319,10 @@ static Util::Config::Node DefaultConfig()
   config.Set("XInputConstForceThreshold", "30");
   config.Set("XInputConstForceMax", "100");
   config.Set("XInputVibrateMax", "100");
+#ifdef NET_BOARD
+  // NetBoard
+  config.Set("EmulateNet", false);
+#endif
 #else
   config.Set("InputSystem", "sdl");
 #endif
@@ -1381,6 +1385,12 @@ static void Help(void)
   puts("  -no-sound               Disable sound board emulation (sound effects)");
   puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
   puts("");
+#ifdef NET_BOARD
+  puts("Net Options:");
+  puts("  -no-net                 Disable net board emulation (default)");
+  puts("  -net                    Enable net board emulation (not working ATM - need -no-threads)");
+  puts("");
+#endif
   puts("Input Options:");
 #ifdef SUPERMODEL_WIN32
   puts("  -force-feedback         Enable force feedback (DirectInput, XInput)");
@@ -1462,6 +1472,10 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-sound",            { "EmulateSound",     false } },
     { "-dsb",                 { "EmulateDSB",       true } },
     { "-no-dsb",              { "EmulateDSB",       false } },
+#ifdef NET_BOARD
+	{ "-net",				  { "EmulateNet",       true } },
+	{ "-no-net",			  { "EmulateNet",       false } },
+#endif
 #ifdef SUPERMODEL_WIN32
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },

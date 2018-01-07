@@ -79,6 +79,9 @@ namespace Debugger
 		static CCPUDebug *CreateDSBCPUDebug(::CModel3 *model3);
 
 		static CCPUDebug *CreateDriveBoardCPUDebug(::CModel3 *model3);
+#ifdef NET_BOARD
+		static CCPUDebug *CreateNetBoardCPUDebug(::CModel3 *model3);
+#endif
 
 		CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger);
 

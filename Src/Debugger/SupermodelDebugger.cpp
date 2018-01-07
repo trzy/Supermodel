@@ -66,7 +66,13 @@ namespace Debugger
 		cpu->AddRegion(0x90000000, 0x9000000B, false, false, "Real3D VROM Texture Port");
 		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
 		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
+#ifndef NET_BOARD
 		cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI (Step 1.x)");
+#endif
+#ifdef NET_BOARD
+		cpu->AddRegion(0xC0000000, 0xC001FFFF, false, false, "Network Buffer");
+		cpu->AddRegion(0xC0020000, 0xC003FFFF, false, false, "Network RAM");
+#endif
 		cpu->AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI (Step 1.x) (Lost World expects it here)");
 		cpu->AddRegion(0xC2000000, 0xC20000FF, false, false, "Real3D DMA (Step 2.x)");
 		cpu->AddRegion(0xF0040000, 0xF004003F, false, false, "Input (Controls) Registers");
@@ -293,6 +299,30 @@ namespace Debugger
 		return cpu;
 	}
 
+#ifdef NET_BOARD
+	CCPUDebug *CSupermodelDebugger::CreateNetBoardCPUDebug(::CModel3 * model3)
+	{
+		CNetBoard *netBrd = model3->GetNetBoard();
+		if (!netBrd->IsAttached())
+			return NULL;
+		CMusashi68KDebug *cpu = new CMusashi68KDebug("NET68K", netBrd->GetM68K());
+
+		// Regions
+		cpu->AddRegion(0x000000, 0x01ffff, false, false, "Net buffer");
+		cpu->AddRegion(0x020000, 0x03ffff, true, false, "Net RAM");
+		cpu->AddRegion(0x040000, 0x0401ff, false, false, "Net 1"); // ??? size unknown
+		cpu->AddRegion(0x080000, 0x0bffff, false, false, "Net 2"); // commram ???
+		cpu->AddRegion(0x0c0000, 0x0c01ff, false, false, "Net 3"); // ??? size unknown
+
+		const char *NetReg = "NetBoard Control Registers";
+		cpu->AddMappedIO(0x010110, 4, "Reg 1", NetReg);
+		cpu->AddMappedIO(0x010114, 4, "Reg 2", NetReg);
+		cpu->AddMappedIO(0x010180, 4, "Reg 3", NetReg);
+
+		return cpu;
+	}
+#endif
+
 	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger) : 
 		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger), 
 		m_loadEmuState(false), m_saveEmuState(false), m_resetEmu(false)
@@ -319,6 +349,13 @@ namespace Debugger
 		// Add drive board CPU (if attached)
 		cpu = CreateDriveBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
+
+#ifdef NET_BOARD
+		// Add net board CPU (if attached)
+		cpu = CreateNetBoardCPUDebug(m_model3);
+		if (cpu) AddCPU(cpu);
+#endif
+
 	}
 
 	void CSupermodelDebugger::WaitCommand(CCPUDebug *cpu)
