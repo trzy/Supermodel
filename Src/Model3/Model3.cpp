@@ -3262,11 +3262,10 @@ CModel3::CModel3(const Util::Config::Node &config)
     GPU(config),
     SoundBoard(config),
     DriveBoard(config),
-	m_jtag(GPU),
 #ifdef NET_BOARD
-	NetBoard(config)
+	NetBoard(config),
 #endif
-
+	m_jtag(GPU)
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
