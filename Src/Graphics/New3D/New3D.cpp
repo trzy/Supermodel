@@ -757,26 +757,30 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17] & 0xFFFFFF);
 
-		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);
-		vp->angle_right		=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);
-		vp->angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);
-		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);
+		/*
+		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);	// These values work out as the normals for the clipping planes.
+		vp->angle_right		=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);	// Sometimes these values (dirt devils,lost world) are totally wrong
+		vp->angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);	// and don't work for the frustum values exactly.
+		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);	// Perhaps they are just used for culling and not rendering.
+		*/
 
-		// I don't really know what these paramaters are for. They are derived from the view angles somehow.
-		// In the sdk it's they are someting like (1/tan(left)-tan(right)) * tan(left)
-		// But we know when left=right the value is always 0.5. Any other value and we have off-axis projection
-		// My theory is, the h/w is using these values to actually set the frustum planes angles
-		// The above vpnode[12], vpnode[13] actually work as a normal vector for the clipping planes (used for culling)
-		// I think in lost world and dirt devils, there is a missmatch between the computed plane normals, and the view angles
-		if (*(float *)&vpnode[0xa] == 0.5f) {
-			vp->angle_bottom = -vp->angle_top;
-		}
+		float cv = *(float *)&vpnode[0x8];	// 1/tan(left-right)
+		float cw = *(float *)&vpnode[0x9];	// 1/tan(top-bottom)
+		float io = *(float *)&vpnode[0xa];	// top / bottom (ratio) - ish
+		float jo = *(float *)&vpnode[0xb];	// left / right (ratio)
 
-		if (*(float *)&vpnode[0xb] == 0.5f) {
-			vp->angle_right = -vp->angle_left;
-		}
+		float left		= (1.0f / cv) * (0.0f - jo);
+		float right		= (1.0f / cv) * (1.0f - jo);
+		float bottom	= (1.0f / cw) * (0.0f - io);
+		float top		= (1.0f / cw) * (1.0f - io);
+
+		vp->angle_left		= std::atan(left);		// probably could skip atan
+		vp->angle_right		= std::atan(right);
+		vp->angle_bottom	= std::atan(bottom);
+		vp->angle_top		= std::atan(top);
 
 		// calculate the frustum shape, near/far pair are dummy values
+
 		CalcViewport(vp, 1, 1000);
 
 		// calculate frustum planes
