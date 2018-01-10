@@ -757,10 +757,12 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17] & 0xFFFFFF);
 
+		/*
 		vp->angle_left		= -atan2(*(float *)&vpnode[12],  *(float *)&vpnode[13]);	// These values work out as the normals for the clipping planes.
 		vp->angle_right		=  atan2(*(float *)&vpnode[16], -*(float *)&vpnode[17]);	// Sometimes these values (dirt devils,lost world) are totally wrong
 		vp->angle_top		=  atan2(*(float *)&vpnode[14],  *(float *)&vpnode[15]);	// and don't work for the frustum values exactly.
 		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);	// Perhaps they are just used for culling and not rendering.
+		*/
 
 		float cv = *(float *)&vpnode[0x8];	// 1/tan(left-right)
 		float cw = *(float *)&vpnode[0x9];	// 1/tan(top-bottom)
