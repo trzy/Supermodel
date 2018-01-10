@@ -764,20 +764,15 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);	// Perhaps they are just used for culling and not rendering.
 		*/
 
-		float cv = *(float *)&vpnode[0x8];	// 1/tan(left-right)
-		float cw = *(float *)&vpnode[0x9];	// 1/tan(top-bottom)
+		float cv = *(float *)&vpnode[0x8];	// 1/(left-right)
+		float cw = *(float *)&vpnode[0x9];	// 1/(top-bottom)
 		float io = *(float *)&vpnode[0xa];	// top / bottom (ratio) - ish
 		float jo = *(float *)&vpnode[0xb];	// left / right (ratio)
 
-		float left		= (1.0f / cv) * (0.0f - jo);
-		float right		= (1.0f / cv) * (1.0f - jo);
-		float bottom	= (1.0f / cw) * -(1.0f - io);
-		float top		= (1.0f / cw) * -(0.0f - io);
-
-		vp->angle_left		= std::atan(left);		// probably could skip atan
-		vp->angle_right		= std::atan(right);
-		vp->angle_bottom	= std::atan(bottom);
-		vp->angle_top		= std::atan(top);
+		vp->angle_left		= (1.0f / cv) * (0.0f - jo);
+		vp->angle_right		= (1.0f / cv) * (1.0f - jo);
+		vp->angle_bottom	= (1.0f / cw) * -(1.0f - io);
+		vp->angle_top		= (1.0f / cw) * -(0.0f - io);
 
 		// calculate the frustum shape, near/far pair are dummy values
 
@@ -1571,10 +1566,10 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 		near = far / 1000000;				// if we get really close to zero somehow, we will have almost no depth precision
 	}
 
-	float l = near * tanf(vp->angle_left);	// we need to calc the shape of the projection frustum for culling
-	float r = near * tanf(vp->angle_right);
-	float t = near * tanf(vp->angle_top);
-	float b = near * tanf(vp->angle_bottom);
+	float l = near * vp->angle_left;	// we need to calc the shape of the projection frustum for culling
+	float r = near * vp->angle_right;
+	float t = near * vp->angle_top;
+	float b = near * vp->angle_bottom;
 
 	vp->projectionMatrix.LoadIdentity();	// reset matrix
 
