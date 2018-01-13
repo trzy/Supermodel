@@ -1732,7 +1732,7 @@
           wait on some exception to occur. It also appears to access the 
           tilegen space, indicating that this is perhaps related to frame
           timing and IRQs (pure speculation; I haven't really looked at it).
-          Multiple places can be patched out -- another one that works is
+          Multiple places can be patched out - another one that works is
           0x66ae0. 
         -->
         <patch region="crom" bits="32" offset="0x66aa8" value="0x60000000" />
