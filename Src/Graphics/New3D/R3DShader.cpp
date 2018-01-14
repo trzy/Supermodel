@@ -102,8 +102,8 @@ vec4 GetTextureValue()
 	}
 
 	if (microTexture) {
-		vec2 scale    = baseTexSize/256.0;
-		vec4 tex2Data = texture2D( tex2, fsTexCoord.st * scale * microTextureScale);
+		vec2 scale    = baseTexSize / ( 128.0 / microTextureScale );
+		vec4 tex2Data = texture2D( tex2, fsTexCoord.st * scale);
 		tex1Data = (tex1Data+tex2Data)/2.0;
 	}
 

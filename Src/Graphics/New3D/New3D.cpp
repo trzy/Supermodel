@@ -981,7 +981,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 		if (currentMesh->microTexture) {
 
-			float microTexScale[] = { 4, 8, 16, 32 };
+			float microTexScale[] = { 2, 4, 8, 16 };
 
 			currentMesh->microTextureID = ph.MicroTextureID();
 			currentMesh->microTextureScale = microTexScale[ph.MicroTextureMinLOD()];
