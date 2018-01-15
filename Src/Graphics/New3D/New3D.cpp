@@ -828,6 +828,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotEllipse[2] *= m_xRatio;
 		vp->spotEllipse[3] *= m_yRatio;
 
+		// Line of sight position
+		vp->losPosX = (int)(((vpnode[0x1c] & 0xFFFF) / 16.0f) + 0.5f);					// x position
+		vp->losPosY = (int)(((vpnode[0x1c] >> 16) / 16.0f) + 0.5f);						// y position 0 starts from the top
+
 		// Fog
 		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog color R
 		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (1.0f / 255.0f);	// fog color G

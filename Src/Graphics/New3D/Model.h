@@ -186,6 +186,7 @@ struct Viewport
 	float	spotColor[3];			// color
 	float	fogParams[7];			// fog parameters (...)
 	float	scrollFog;				// a transparency value that determines if fog is blended over the bottom 2D layer
+	int		losPosX, losPosY;		// line of sight position
 	int		x, y;					// viewport coordinates (scaled and in OpenGL format)
 	int		width, height;			// viewport dimensions (scaled for display surface size)
 	int		priority;				// priority
