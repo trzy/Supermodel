@@ -31,7 +31,6 @@
 #include <stdarg.h>
 #include <vector>
 #include <algorithm>
-using namespace std;
 
 #include "Types.h"
 
@@ -160,7 +159,7 @@ namespace Debugger
 		virtual void Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl) = 0;
 
 	public:
-		vector<CCPUDebug*> cpus;
+		std::vector<CCPUDebug*> cpus;
 
 		UINT64 frameCount;
 

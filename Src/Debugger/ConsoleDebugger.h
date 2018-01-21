@@ -130,13 +130,13 @@ namespace Debugger
 
 		void ListLabels(bool customLabels, ELabelFlags autoLabelFlags);
 
-		void GetAllMemWatches(vector<CWatch*> &watches);
+		void GetAllMemWatches(std::vector<CWatch*> &watches);
 
 		int GetIndexOfMemWatch(CWatch *watch);
 
 		void ListMemWatches();
 
-		void GetAllPortWatches(vector<CWatch*> &watches);
+		void GetAllPortWatches(std::vector<CWatch*> &watches);
 
 		int GetIndexOfPortWatch(CWatch *watch);
 

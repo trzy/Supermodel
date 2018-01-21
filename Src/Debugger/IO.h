@@ -78,7 +78,7 @@ namespace Debugger
 
 		CCountWatch *AddCountWatch(bool trigInput, bool trigOutput, unsigned count);
 
-		CMatchWatch *AddMatchWatch(bool trigInput, bool trigOutput, vector<UINT64> &dataSeq);
+		CMatchWatch *AddMatchWatch(bool trigInput, bool trigOutput, std::vector<UINT64> &dataSeq);
 
 		CPrintWatch *AddPrintWatch(bool trigInput, bool trigOutput);
 

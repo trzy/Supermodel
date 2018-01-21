@@ -31,7 +31,6 @@
 
 #include <vector>
 #include <algorithm>
-using namespace std;
 
 #define TABLE_WIDTH 16
 #define TABLE_SIZE (1 << TABLE_WIDTH)

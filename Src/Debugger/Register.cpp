@@ -297,7 +297,7 @@ namespace Debugger
 	{
 		if (index >= dataWidth)
 			exit(1);
-		numBits = max<unsigned>(numBits, index);
+		numBits = std::max<unsigned>(numBits, index);
 		return m_bitChrs[index];
 	}
 

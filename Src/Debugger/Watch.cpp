@@ -29,8 +29,9 @@
 #include "Debugger.h"
 #include "IO.h"
 #include "Watch.h"
-
 #include <string>
+
+using namespace std;
 
 namespace Debugger
 {

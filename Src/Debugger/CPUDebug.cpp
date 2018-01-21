@@ -32,6 +32,8 @@
 #include <cctype>
 #include <string>
 
+using namespace std;
+
 namespace Debugger
 {
 	CCPUDebug::CCPUDebug(const char *cpuType, const char *cpuName,

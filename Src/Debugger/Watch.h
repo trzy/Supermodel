@@ -31,7 +31,6 @@
 #include "Types.h"
 
 #include <vector>
-using namespace std;
 
 namespace Debugger
 {
@@ -128,9 +127,9 @@ namespace Debugger
 		unsigned m_counter;
 
 	public:
-		CMatchWatch(CCPUDebug *wCPU, UINT32 wAddr, unsigned wSize, bool wTrigRead, bool wTrigWrite, vector<UINT64> &dataSeq);
+		CMatchWatch(CCPUDebug *wCPU, UINT32 wAddr, unsigned wSize, bool wTrigRead, bool wTrigWrite, std::vector<UINT64> &dataSeq);
 
-		CMatchWatch(CCPUDebug *wCPU, CIO *wIO, bool wTrigInput, bool wTrigOutput, vector<UINT64> &dataSeq);
+		CMatchWatch(CCPUDebug *wCPU, CIO *wIO, bool wTrigInput, bool wTrigOutput, std::vector<UINT64> &dataSeq);
 
 		~CMatchWatch();
 

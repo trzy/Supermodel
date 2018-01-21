@@ -31,6 +31,8 @@
 #include <cctype>
 #include <string>
 
+using namespace std;
+
 namespace Debugger
 {
 	unsigned CDebugger::GetDataSize(UINT64 data)

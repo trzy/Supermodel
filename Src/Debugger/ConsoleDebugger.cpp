@@ -33,6 +33,8 @@
 #include <cctype>
 #include <string>
 
+using namespace std;
+
 namespace Debugger
 {
 	CConsoleDebugger::CConsoleDebugger() : CDebugger(), 
@@ -1605,7 +1607,7 @@ namespace Debugger
 			Print("General:\n");
 			Print(fmt, "p",      "print[.<size>=v]",       "<expr> [(h)ex|hexdo(l)lar|hex(p)osth|(d)ecimal|(b)inary]");
 			Print(fmt, "cfg",	 "configure",			   "<options...>");
-			Print(fmt, "ls",     "loststate",              "<filename>");
+			Print(fmt, "ls",     "loadstate",              "<filename>");
 			Print(fmt, "ss",     "savestate",              "<filename>");
 			Print(fmt, "h",      "help",                   "");
 			Print(fmt, "x",      "exit",                   "");
@@ -1680,7 +1682,9 @@ namespace Debugger
 		else
 		{
 			pos++;
-			if (pos == '\0')
+			// BEGIN
+			if (*pos == '\0')
+			// END
 				return false;
 			strncpy(modifier, pos, modSize);
 			modifier[modSize] = '\0';
@@ -2441,7 +2445,7 @@ namespace Debugger
 			// In the absence of code analyser, try to align code with current PC address
 			if (m_cpu->instrCount > 0 && pc >= start && pc <= end)
 			{
-				unsigned count = m_cpu->instrCount;
+				UINT64 count = m_cpu->instrCount;
 				while (start < end && count-- > 0)
 				{	
 					bool okay = false;

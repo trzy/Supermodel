@@ -32,6 +32,8 @@
 #include <cctype>
 #include <string>
 
+using namespace std;
+
 namespace Debugger
 {
 	CEntryPoint::CEntryPoint(const CEntryPoint &other) : addr(other.addr), autoFlag(other.autoFlag)

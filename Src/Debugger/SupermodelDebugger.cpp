@@ -599,11 +599,11 @@ namespace Debugger
 			if (!InputIsValid(input))
 				continue;
 
-			idAndLabelWidth = max<size_t>(idAndLabelWidth, strlen(input->id) + strlen(input->label) + 3);
+			idAndLabelWidth = std::max<size_t>(idAndLabelWidth, strlen(input->id) + strlen(input->label) + 3);
 			if (!input->IsVirtual())
-				mappingWidth = max<size_t>(mappingWidth, strlen(input->GetMapping()));
+				mappingWidth = std::max<size_t>(mappingWidth, strlen(input->GetMapping()));
 		}
-		mappingWidth = min<size_t>(mappingWidth, 20);
+		mappingWidth = std::min<size_t>(mappingWidth, 20);
 		
 		// Print labels, mappings and values for each input
 		const char *groupLabel = NULL;

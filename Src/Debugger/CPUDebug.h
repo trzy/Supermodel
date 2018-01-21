@@ -30,10 +30,8 @@
 #include <stdio.h>
 #include <vector>
 #include <algorithm>
-using namespace std;
 
 #include "Types.h"
-
 #include "CodeAnalyser.h"
 #include "AddressTable.h"
 #include "Breakpoint.h"
@@ -220,18 +218,18 @@ namespace Debugger
 		UINT32 pc;
 		UINT32 opcode;
 
-		vector<CRegister*> regs;
-		vector<CException*> exceps;
-		vector<CInterrupt*> inters;
-		vector<CIO*> ios;
+		std::vector<CRegister*> regs;
+		std::vector<CException*> exceps;
+		std::vector<CInterrupt*> inters;
+		std::vector<CIO*> ios;
 		// TODO - should use map<UINT32,T*> for T=CRegion,CLabel&CComment so that look-ups via address are faster
-		vector<CRegion*> regions;
-		vector<CLabel*> labels;
-		vector<CComment*> comments;
-		vector<CWatch*> memWatches;
-		vector<CWatch*> ioWatches;
-		vector<CBreakpoint*> bps;
-		vector<CRegMonitor*> regMons;
+		std::vector<CRegion*> regions;
+		std::vector<CLabel*> labels;
+		std::vector<CComment*> comments;
+		std::vector<CWatch*> memWatches;
+		std::vector<CWatch*> ioWatches;
+		std::vector<CBreakpoint*> bps;
+		std::vector<CRegMonitor*> regMons;
 
 		virtual ~CCPUDebug();
 
@@ -489,7 +487,7 @@ namespace Debugger
 
 		CCountWatch *AddCountMemWatch(UINT32 addr, UINT32 size, bool trigRead, bool trigWrite, unsigned count);
 
-		CMatchWatch *AddMatchMemWatch(UINT32 addr, UINT32 size, bool trigRead, bool trigWrite, vector<UINT64> &dataSeq);
+		CMatchWatch *AddMatchMemWatch(UINT32 addr, UINT32 size, bool trigRead, bool trigWrite, std::vector<UINT64> &dataSeq);
 
 		CPrintWatch *AddPrintMemWatch(UINT32 addr, UINT32 size, bool trigRead, bool trigWrite);
 

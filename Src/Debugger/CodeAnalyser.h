@@ -32,10 +32,8 @@
 #include <map>
 #include <set>
 #include <algorithm>
-using namespace std;
 
 #include "Types.h"
-
 #include "Debugger.h"
 #include "AddressTable.h"
 
@@ -136,26 +134,26 @@ namespace Debugger
 	friend class CCodeAnalyser;
 
 	private:
-		vector<CEntryPoint> m_entryPoints;
-		vector<UINT32> m_unseenEntryAddrs;
-		vector<bool> m_seenIndices;
-		vector<bool> m_validIndices;
-		map<UINT32,CAutoLabel*> m_autoLabelsMap;
+		std::vector<CEntryPoint> m_entryPoints;
+		std::vector<UINT32> m_unseenEntryAddrs;
+		std::vector<bool> m_seenIndices;
+		std::vector<bool> m_validIndices;
+		std::map<UINT32,CAutoLabel*> m_autoLabelsMap;
 
 		unsigned m_acquired;
 
 		CCodeAnalysis(CCodeAnalyser *aAnalyser);
 
-		CCodeAnalysis(CCodeAnalyser *aAnalyser, unsigned aTotalIndices, vector<CEntryPoint> &entryPoints, vector<UINT32> &m_unseenEntryAddrs);
+		CCodeAnalysis(CCodeAnalyser *aAnalyser, unsigned aTotalIndices, std::vector<CEntryPoint> &entryPoints, std::vector<UINT32> &m_unseenEntryAddrs);
 
-		CCodeAnalysis(CCodeAnalysis *oldAnalysis, vector<CEntryPoint> &entryPoints, vector<UINT32> &m_unseenEntryAddrs);
+		CCodeAnalysis(CCodeAnalysis *oldAnalysis, std::vector<CEntryPoint> &entryPoints, std::vector<UINT32> &m_unseenEntryAddrs);
 
 		void FinishAnalysis();
 
 	public:
 		CCodeAnalyser *analyser;
-		set<unsigned> validIndexSet;
-		vector<CAutoLabel*> autoLabels;
+		std::set<unsigned> validIndexSet;
+		std::vector<CAutoLabel*> autoLabels;
 		
 		~CCodeAnalysis();
 
@@ -179,7 +177,7 @@ namespace Debugger
 
 		CAutoLabel *GetAutoLabel(const char *subLabel);
 
-		vector<CAutoLabel*> GetAutoLabels(ELabelFlags flag);
+		std::vector<CAutoLabel*> GetAutoLabels(ELabelFlags flag);
 	};
 
 	/*
@@ -194,23 +192,23 @@ namespace Debugger
 	class CCodeAnalyser
 	{	
 	private:
-		vector<CRegion*> m_codeRegions;
-		vector<unsigned> m_indexBounds;
+		std::vector<CRegion*> m_codeRegions;
+		std::vector<unsigned> m_indexBounds;
 
-		vector<UINT32> m_customEntryAddrs;
+		std::vector<UINT32> m_customEntryAddrs;
 
 		bool m_abortAnalysis;
 
-		void CheckEntryPoints(vector<CEntryPoint> &entryPoints, vector<UINT32> &unseenEntryAddrs, vector<CEntryPoint> &prevPoints,
+		void CheckEntryPoints(std::vector<CEntryPoint> &entryPoints, std::vector<UINT32> &unseenEntryAddrs, std::vector<CEntryPoint> &prevPoints,
 			bool &needsAnalysis, bool &reanalyse);
 		
-		void GatherEntryPoints(vector<CEntryPoint> &entryPoints, vector<UINT32> &unseenEntryAddrs, bool &reanalyse);
+		void GatherEntryPoints(std::vector<CEntryPoint> &entryPoints, std::vector<UINT32> &unseenEntryAddrs, bool &reanalyse);
 
-		void AddEntryPoint(vector<CEntryPoint> &entryPoints, UINT32 addr, ELabelFlags autoFlag, const char *autoLabel);
+		void AddEntryPoint(std::vector<CEntryPoint> &entryPoints, UINT32 addr, ELabelFlags autoFlag, const char *autoLabel);
 
-		void AnalyseCode(vector<bool> &seenIndices, vector<bool> &validIndices, set<unsigned> &validIndexSet, map<UINT32,CAutoLabel*> &autoLabelsMap, UINT32 addr);
+		void AnalyseCode(std::vector<bool> &seenIndices, std::vector<bool> &validIndices, std::set<unsigned> &validIndexSet, std::map<UINT32, CAutoLabel*> &autoLabelsMap, UINT32 addr);
 
-		void AddFlagToAddr(map<UINT32,CAutoLabel*> &autoLabelsMap, UINT32 addr, ELabelFlags autoFlag, const char *autoLabel);
+		void AddFlagToAddr(std::map<UINT32, CAutoLabel*> &autoLabelsMap, UINT32 addr, ELabelFlags autoFlag, const char *autoLabel);
 
 	public:
 		CCPUDebug *cpu;

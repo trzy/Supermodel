@@ -70,7 +70,7 @@ namespace Debugger
 		return cWatch;
 	}
 
-	CMatchWatch *CIO::AddMatchWatch(bool trigInput, bool trigOutput, vector<UINT64> &dataSeq)
+	CMatchWatch *CIO::AddMatchWatch(bool trigInput, bool trigOutput, std::vector<UINT64> &dataSeq)
 	{
 		CMatchWatch *mWatch = new CMatchWatch(cpu, this, trigInput, trigOutput, dataSeq);
 		cpu->AddWatch(mWatch);
