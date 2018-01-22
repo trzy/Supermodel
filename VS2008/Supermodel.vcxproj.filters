@@ -335,9 +335,6 @@
     <ClCompile Include="..\Src\Debugger\Interrupt.cpp">
       <Filter>Source Files\Debugger</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Debugger\IO.cpp">
-      <Filter>Source Files\Debugger</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Debugger\Label.cpp">
       <Filter>Source Files\Debugger</Filter>
     </ClCompile>
@@ -463,6 +460,9 @@
     </ClCompile>
     <ClCompile Include="..\Src\Network\NetBoard.cpp">
       <Filter>Source Files\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Debugger\DebuggerIO.cpp">
+      <Filter>Source Files\Debugger</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -718,9 +718,6 @@
     <ClInclude Include="..\Src\Debugger\Interrupt.h">
       <Filter>Header Files\Debugger</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Debugger\IO.h">
-      <Filter>Header Files\Debugger</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Debugger\Label.h">
       <Filter>Header Files\Debugger</Filter>
     </ClInclude>
@@ -861,6 +858,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\Network\NetBoard.h">
       <Filter>Header Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Debugger\DebuggerIO.h">
+      <Filter>Header Files\Debugger</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

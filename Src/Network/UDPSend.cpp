@@ -4,6 +4,12 @@
 #include <WS2tcpip.h>
 #include <stdio.h>
 
+#ifdef __GNUC__
+extern "C" {
+	WINSOCK_API_LINKAGE  INT WSAAPI inet_pton(INT Family, PCSTR pszAddrString, PVOID pAddrBuf);
+}
+#endif
+
 namespace SMUDP
 {
 

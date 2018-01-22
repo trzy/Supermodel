@@ -30,10 +30,7 @@
 # Build Options
 ###############################################################################
 
-#
-# Include console-based debugger in emulator ('yes' or 'no')
-#
-ENABLE_DEBUGGER = no
+DELETE = rm -d -r -f
 
 
 ###############################################################################
@@ -54,24 +51,23 @@ LD = gcc
 #
 
 SDL_CFLAGS = `sdl-config --cflags`
-SDL_LDFLAGS = `sdl-config --libs`
+SDL_LIBS = `sdl-config --libs`
 
 #
 #	UNIX-specific
 #
 
-PLATFORM_CFLAGS =
-PLATFORM_LDFLAGS = -lGL -lGLU -lz -lm -lstdc++
+PLATFORM_CFLAGS = $(SDL_CFLAGS)
+PLATFORM_LDFLAGS = $(SDL_LIBS) -lGL -lGLU -lz -lm -lstdc++
 
 
 ###############################################################################
 # Core Makefile
 ###############################################################################
 
-MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake
-
 include Makefiles/Makefile.inc
 
-clean:	 
-	rm $(OUTFILE)
-	rm -f $(OBJ_DIR)/*
+clean:
+	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)$(DELETE) $(BIN_DIR)
+	$(SILENT)$(DELETE) $(OBJ_DIR)

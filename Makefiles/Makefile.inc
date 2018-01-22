@@ -27,6 +27,55 @@
 
 
 ###############################################################################
+# Build Options
+###############################################################################
+
+#
+# Verbose progression
+#
+VERBOSE =
+ifneq ($(filter $(strip $(VERBOSE)),0 1),$(strip $(VERBOSE)))
+	override VERBOSE =
+endif
+SILENT = @
+ifeq ($(strip $(VERBOSE)),1)
+	SILENT =
+endif
+
+#
+# Enable render state analyser for the legacy 3D engine (will slow down emulation!)
+#
+DEBUG =
+ifneq ($(filter $(strip $(DEBUG)),0 1),$(strip $(DEBUG)))
+	override DEBUG =
+endif
+
+#
+# Enable support for Model3 Net Board emulation
+#
+NET_BOARD =
+ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
+	override NET_BOARD =
+endif
+
+#
+# Enable Bart's new (experimental) Real3D frame timing
+#
+NEW_FRAME_TIMING =
+ifneq ($(filter $(strip $(NEW_FRAME_TIMING)),0 1),$(strip $(NEW_FRAME_TIMING)))
+	override NEW_FRAME_TIMING =
+endif
+
+#
+# Include console-based debugger in emulator ('yes' or 'no')
+#
+ENABLE_DEBUGGER =
+ifneq ($(filter $(strip $(ENABLE_DEBUGGER)),0 1),$(strip $(ENABLE_DEBUGGER)))
+	override ENABLE_DEBUGGER =
+endif
+
+
+###############################################################################
 # Source Files
 ###############################################################################
 
@@ -109,11 +158,19 @@ SRC_FILES = \
 	Src/Pkgs/tinyxml2.cpp \
 	Src/ROMSet.cpp \
 	$(PLATFORM_SRC_FILES)
-	
-ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
+
+ifeq ($(strip $(NET_BOARD)),1)
+	SRC_FILES += \
+		Src/Network/UDPReceive.cpp \
+		Src/Network/UDPSend.cpp \
+		Src/Network/WinSockWrap.cpp \
+		Src/Network/NetBoard.cpp
+endif
+
+ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SRC_FILES += \
 		Src/Debugger/Debugger.cpp \
-		Src/Debug/ConsoleDebugger.cpp \
+		Src/Debugger/ConsoleDebugger.cpp \
 		Src/Debugger/SupermodelDebugger.cpp \
 		Src/Debugger/CPUDebug.cpp \
 		Src/Debugger/AddressTable.cpp \
@@ -121,7 +178,7 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 		Src/Debugger/CodeAnalyser.cpp \
 		Src/Debugger/Exception.cpp \
 		Src/Debugger/Interrupt.cpp \
-		Src/Debugger/IO.cpp \
+		Src/Debugger/DebuggerIO.cpp \
 		Src/Debugger/Label.cpp \
 		Src/Debugger/Register.cpp \
 		Src/Debugger/Watch.cpp \
@@ -131,7 +188,10 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
 		Src/Debugger/CPU/Z80Debug.cpp
 endif
 
-OBJ_FILES = $(foreach file,$(SRC_FILES),$(OBJ_DIR)/$(basename $(notdir $(file))).o)
+#
+# Sorted-path compile order
+#
+OBJ_FILES = $(foreach file,$(sort $(SRC_FILES)),$(OBJ_DIR)/$(basename $(notdir $(file))).o)
 
 #
 # Deduce include directories from the source file list. The sort function 
@@ -144,32 +204,49 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # Output Locations
 ###############################################################################
 
-ifeq ($(strip $(BITS)),64)
-	OBJ_DIR = obj64
-	BIN_DIR = bin64
-else ifeq ($(strip $(BITS)),32)
-	OBJ_DIR = obj32
-	BIN_DIR = bin32
-else
-	OBJ_DIR = obj
-	BIN_DIR = bin
-endif
+OBJ_DIR = obj$(strip $(BITS))
+BIN_DIR = bin$(strip $(BITS))
 
-OUTFILE = Supermodel
+OUTFILE = supermodel
+MUSASHI_OUTFILE = m68kmake
 
 
 ###############################################################################
 # Compiler Flags
 ###############################################################################
 
-CPPFLAGS = $(addprefix -I,$(INCLUDE_DIRS)) -DGLEW_STATIC -O3 #-DNEW_FRAME_TIMING
-CFLAGS = $(SDL_CFLAGS) $(PLATFORM_CFLAGS) $(CPPFLAGS) -c -Wall -O3
-CXXFLAGS = $(CFLAGS) -std=c++11
-LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) $(SDL_LDFLAGS) -s
+ARCH = -march=native -mfpmath=sse
+BUILD_CFLAGS =
+OPT = -O3
+#WARN = -Wall
+WARN = -w
+CSTD = -std=iso9899:2011
+CXXSTD = -std=c++11
+
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC
+
+CFLAGS = $(COMMON_CFLAGS) $(CSTD)
+CXXFLAGS = $(PLATFORM_CFLAGS) $(COMMON_CFLAGS) $(BUILD_CFLAGS) $(CXXSTD)
+LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
+
+# If render state analyser is enabled, need to define DEBUG
+ifeq ($(strip $(DEBUG)),1)
+	BUILD_CFLAGS += -DDEBUG
+endif
+
+# If Net Board support is enabled, need to define NET_BOARD
+ifeq ($(strip $(NET_BOARD)),1)
+	BUILD_CFLAGS += -DNET_BOARD
+endif
+
+# If Bart's new frame timing is enabled, need to define NEW_FRAME_TIMING
+ifeq ($(strip $(NEW_FRAME_TIMING)),1)
+	BUILD_CFLAGS += -DNEW_FRAME_TIMING
+endif
 
 # If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
-ifeq ($(strip $(ENABLE_DEBUGGER)),yes)
-	PLATFORM_CFLAGS += -DSUPERMODEL_DEBUGGER
+ifeq ($(strip $(ENABLE_DEBUGGER)),1)
+	BUILD_CFLAGS += -DSUPERMODEL_DEBUGGER
 endif
 
 
@@ -182,17 +259,21 @@ endif
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
 #
-all: $(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
+all:	$(BIN_DIR)/$(OUTFILE)
+
+$(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
+	$(info --------------------------------------------------------------------------------)
 	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE))
-	@$(LD) $(OBJ_FILES) $(LDFLAGS)
+	$(SILENT)$(LD) $(OBJ_FILES) $(LDFLAGS)
+	$(info --------------------------------------------------------------------------------)
 
 $(BIN_DIR):
 	$(info Creating directory     : $(BIN_DIR))
-	@mkdir $(BIN_DIR) 
+	$(SILENT)mkdir $(BIN_DIR) 
 
 $(OBJ_DIR):
 	$(info Creating directory     : $(OBJ_DIR))
-	@mkdir $(OBJ_DIR)
+	$(SILENT)mkdir $(OBJ_DIR)
 
 
 ###############################################################################
@@ -219,15 +300,16 @@ VPATH = $(INCLUDE_DIRS)
 #
 $(OBJ_DIR)/%.o:	%.cpp
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)
-	@$(CXX) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS) $< > $(OBJ_DIR)/$(*F).d
+	$(SILENT)$(CXX) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
-	@$(CXX) $(CXXFLAGS) $< -o $@
+	$(SILENT)$(CXX) $(CXXFLAGS) $< -o $@
 
 $(OBJ_DIR)/%.o:	%.c
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)
-	@$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CPPFLAGS) $< > $(OBJ_DIR)/$(*F).d
+	$(SILENT)$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CFLAGS) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
-	@$(CC) $(CFLAGS) $< -o $@
+	$(SILENT)$(CC) $(CFLAGS) $< -o $@
+
 
 #
 # Musashi 68K emulator
@@ -237,34 +319,37 @@ $(OBJ_DIR)/%.o:	%.c
 #
 
 MUSASHI_CFLAGS = -ISrc/CPU/68K/Musashi -I$(OBJ_DIR) -DINLINE="static inline" -Wno-unused-variable
-MUSASHI_LDFLAGS = -o $(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o
+MUSASHI_LDFLAGS = -o $(OBJ_DIR)/$(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o -s
 
-$(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c
+$(OBJ_DIR)/$(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c
+	$(info --------------------------------------------------------------------------------)
 	$(info Compiling              : $< -> $(OBJ_DIR)/m68kmake.o)
-	@$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/m68kmake.o
+	$(SILENT)$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/m68kmake.o
 	$(info Linking                : $(MUSASHI_OUTFILE))
-	@$(LD) $(MUSASHI_LDFLAGS)
-	
-$(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+	$(SILENT)$(LD) $(MUSASHI_LDFLAGS)
+
+$(OBJ_DIR)/m68kops.h:	$(OBJ_DIR)/$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c
 	$(info Generating 68K emulator: $@)
-	@$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
-	
+	$(SILENT)$(OBJ_DIR)/$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
+
+$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(OBJ_DIR)/m68kops.h
+
 $(OBJ_DIR)/m68kcpu.o:	Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
-	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
+	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
 
-$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h  $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
-	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h  $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
-	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h  $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
-	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h  $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
-	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@

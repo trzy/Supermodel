@@ -38,7 +38,7 @@
 #include "Debugger.h"
 #include "Exception.h"
 #include "Interrupt.h"
-#include "IO.h"
+#include "DebuggerIO.h"
 #include "Register.h"
 #include "Watch.h"
 

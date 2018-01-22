@@ -30,10 +30,7 @@
 # Build Options
 ###############################################################################
 
-#
-# Include console-based debugger in emulator ('yes' or 'no')
-#
-ENABLE_DEBUGGER = no
+DELETE = rm -d -r -f
 
 
 ###############################################################################
@@ -54,24 +51,23 @@ LD = gcc
 #
 
 SDL_CFLAGS =
-SDL_LDFLAGS = -framework SDL -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
+SDL_LIBS = -framework SDL -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
 
 #
 #	OSX-specific
 #
 
-PLATFORM_CFLAGS = -DSUPERMODEL_OSX -DUSE_FILE32API -F/Library/Frameworks/
-PLATFORM_LDFLAGS = -lz -lm -lstdc++ -F/Library/Frameworks/
+PLATFORM_CFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -DUSE_FILE32API -F/Library/Frameworks/
+PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/Library/Frameworks/
 
 
 ###############################################################################
 # Core Makefile
 ###############################################################################
 
-MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake
-
 include Makefiles/Makefile.inc
 
 clean:	 
-	rm $(OUTFILE)
-	rm -f $(OBJ_DIR)/*
+	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)$(DELETE) $(BIN_DIR)
+	$(SILENT)$(DELETE) $(OBJ_DIR)

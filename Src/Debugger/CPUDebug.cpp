@@ -25,6 +25,7 @@
 
 #ifdef SUPERMODEL_DEBUGGER
 
+#include "Supermodel.h"
 #include "CPUDebug.h"
 #include "CodeAnalyser.h"
 #include "Label.h"

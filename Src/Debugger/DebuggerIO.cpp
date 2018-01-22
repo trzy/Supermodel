@@ -26,7 +26,7 @@
 #ifdef SUPERMODEL_DEBUGGER
 
 #include "CPUDebug.h"
-#include "IO.h"
+#include "DebuggerIO.h"
 #include "Watch.h"
 
 namespace Debugger

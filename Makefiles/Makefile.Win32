@@ -34,11 +34,28 @@
 # Bitness of build ('32' or '64')
 #
 BITS = 64
+# First check if we're under MSYS2 or not, and then get bitness of CPU
+ifeq ($(strip $(MSYSTEM)),)
+	ifeq ($(findstring 64,$(strip $(PROCESSOR_ARCHITECTURE))),)
+		BITS = 32
+	endif
+else
+	ifeq ($(findstring 32,$(strip $(MSYSTEM_CARCH))),32)
+		BITS = 32
+	endif
+endif
+# Safety check: can be only '32' or '64' otherwise defaults to '64'
+ifneq ($(filter $(strip $(BITS)),32 64),$(strip $(BITS)))
+	override BITS = 64
+endif
 
 #
-# Include console-based debugger in emulator ('yes' or 'no')
+# Use Bash or Windows Prompt shell commands?
 #
-ENABLE_DEBUGGER = no
+DELETE = rm -d -r -f
+ifeq ($(strip $(MSYSTEM)),)
+	DELETE = rmdir /s /q
+endif
 
 
 ###############################################################################
@@ -48,68 +65,63 @@ ENABLE_DEBUGGER = no
 ###############################################################################
 
 #
+# Build environment
+#
+
+# Leave empty if 'mingwXX' folder is located on the root filesystem
+MINGW_ROOT =
+
+# 'mingw64' or 'mingw32' for respectively 64 or 32 bits builds.
+# MSYS2 uses that scheme, customize it if necessary
+MINGW_BASE = mingw$(strip $(BITS))
+
+# The resulting 'mingwXX' base name for includes and libs
+MINGW_DIR = $(strip $(MINGW_ROOT))/$(strip $(MINGW_BASE))
+
+#
 # Toolchain
 #
-CC_64 = gcc
-CXX_64 = g++
-LD_64 = g++
-CC_32 = gcc
-CXX_32 = g++
-LD_32 = g++
+
+CC = gcc
+CXX = g++
+LD = g++
 
 #
 # SDL
 #
+#
+# (At least for SDL) The linked libs order is fundamental for a successful compiling!
+# https://stackoverflow.com/questions/24596596/sdl-doesnt-compile-in-native-enviroment
+# http://www.cplusplus.com/forum/beginner/110753/
+#
 
-SDL_INCLUDE_DIR_64 = c:\tdm-gcc-64\include\SDL
-SDL_LIB_DIR_64 = c:\tdm-gcc-64\lib
-SDL_INCLUDE_DIR_32 =
-SDL_LIB_DIR_32 =
+SDL_INCLUDE_DIR = $(MINGW_DIR)/include/SDL
+SDL_LIB_DIR = $(MINGW_DIR)/lib
+SDL_LIBS = -lmingw32 -static-libgcc -static-libstdc++ -lSDLmain -lSDL -liconv -lm -luser32 -lgdi32 -lwinmm -ldxguid
+SDL_CFLAGS = -D_GNU_SOURCE=1 -Dmain=SDL_main
 
 #
 # MinGW/Windows-specific
 #
 
-PLATFORM_CFLAGS_64 = -DSUPERMODEL_WIN32
-PLATFORM_LDFLAGS_64 = -lmingw32 -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz
-PLATFORM_CFLAGS_32 = -DSUPERMODEL_WIN32
-PLATFORM_LDFLAGS_32 = -lmingw32 -lopengl32 -lglu32 -ldinput8 -ldxguid -lole32 -loleaut32 -lwbemuuid -lz
+PLATFORM_INCLUDE_DIR = $(SDL_INCLUDE_DIR) $(MINGW_DIR)/include
+PLATFORM_LIB_DIR = $(SDL_LIB_DIR)
+PLATFORM_LIBS = -ldinput8 -lglew32 -lglu32 -lole32 -loleaut32 -lopengl32 -lwbemuuid -lws2_32 -lz
+PLATFORM_CFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
+PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL_LIBS) $(PLATFORM_LIBS)
 
 
 ###############################################################################
 # Core Makefile
 ###############################################################################
 
-ifeq ($(strip $(BITS)),64)
-	CC = $(CC_64)
-	CXX = $(CXX_64)
-	LD = $(LD_64)
-	PLATFORM_CFLAGS = $(PLATFORM_CFLAGS_64)
-	PLATFORM_LDFLAGS = $(PLATFORM_LDFLAGS_64)
-	SDL_LDFLAGS = -L$(SDL_LIB_DIR_64) -lSDLmain -lSDL
-	SDL_CFLAGS = -I$(SDL_INCLUDE_DIR_64)
-else
-	CC = $(CC_32)
-	CXX = $(CXX_32)
-	LD = $(LD_32)
-	PLATFORM_CFLAGS = $(PLATFORM_CFLAGS_32)
-	PLATFORM_LDFLAGS = $(PLATFORM_LDFLAGS_32)
-	SDL_LDFLAGS = -L$(SDL_LIB_DIR_32) -lSDLmain -lSDL 
-	SDL_CFLAGS = -I$(SDL_INCLUDE_DIR_32)
-endif
-
 PLATFORM_SRC_FILES = \
 	Src/OSD/Windows/DirectInputSystem.cpp \
 	Src/OSD/Windows/WinOutputs.cpp
 
-MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe
-
 include Makefiles/Makefile.inc
 
 clean:	 
-	del $(BIN_DIR)\$(OUTFILE).exe
-	del $(OBJ_DIR)\*.d
-	del $(OBJ_DIR)\*.o
-	del $(OBJ_DIR)\*.c
-	del $(OBJ_DIR)\*.h
-	del $(OBJ_DIR)\*.exe
+	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)$(DELETE) $(BIN_DIR)
+	$(SILENT)$(DELETE) $(OBJ_DIR)

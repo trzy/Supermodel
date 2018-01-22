@@ -27,7 +27,7 @@
 
 #include "CPUDebug.h"
 #include "Debugger.h"
-#include "IO.h"
+#include "DebuggerIO.h"
 #include "Watch.h"
 #include <string>
 

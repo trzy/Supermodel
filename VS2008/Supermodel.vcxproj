@@ -301,7 +301,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Debugger\Debugger.cpp" />
     <ClCompile Include="..\Src\Debugger\Exception.cpp" />
     <ClCompile Include="..\Src\Debugger\Interrupt.cpp" />
-    <ClCompile Include="..\Src\Debugger\IO.cpp" />
+    <ClCompile Include="..\Src\Debugger\DebuggerIO.cpp" />
     <ClCompile Include="..\Src\Debugger\Label.cpp" />
     <ClCompile Include="..\Src\Debugger\Register.cpp" />
     <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
@@ -527,7 +527,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Debugger\Debugger.h" />
     <ClInclude Include="..\Src\Debugger\Exception.h" />
     <ClInclude Include="..\Src\Debugger\Interrupt.h" />
-    <ClInclude Include="..\Src\Debugger\IO.h" />
+    <ClInclude Include="..\Src\Debugger\DebuggerIO.h" />
     <ClInclude Include="..\Src\Debugger\Label.h" />
     <ClInclude Include="..\Src\Debugger\Register.h" />
     <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
