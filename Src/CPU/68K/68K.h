@@ -45,7 +45,9 @@
 //#endif
 
 #ifdef SUPERMODEL_DEBUGGER
-class CMusashi68KDebug;
+namespace Debugger {
+	class CMusashi68KDebug;
+}
 #endif // SUPERMODEL_DEBUGGER
 
 /******************************************************************************
@@ -75,7 +77,7 @@ public:
 	IBus			*Bus;			// memory handlers
 	int				(*IRQAck)(int);	// IRQ acknowledge callback
 #ifdef SUPERMODEL_DEBUGGER
-	CMusashi68KDebug *Debug;        // holds debugger (if attached)
+	Debugger::CMusashi68KDebug *Debug;        // holds debugger (if attached)
 #endif // SUPERMODEL_DEBUGGER
 
 	SM68KCtx(void)
@@ -93,7 +95,7 @@ public:
 		Bus = NULL;
 		IRQAck = NULL;
 	}
-} M68KCtx;
+} M68KCtx;;
 
 
 /******************************************************************************

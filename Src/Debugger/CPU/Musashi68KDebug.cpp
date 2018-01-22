@@ -30,8 +30,8 @@
 #include <cctype>
 #include <string>
 
-//namespace Debugger
-//{
+namespace Debugger
+{
 	UINT32 CMusashi68KDebug::GetReg(CCPUDebug *cpu, unsigned id)
 	{
 		CMusashi68KDebug *m68K = (CMusashi68KDebug*)cpu;
@@ -198,6 +198,6 @@
 		m_bus->Write32(addr, data);
 		CheckWrite32(addr, data);
 	}
-//}
+}
 
 #endif  // SUPERMODEL_DEBUGGER

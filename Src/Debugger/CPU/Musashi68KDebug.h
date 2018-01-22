@@ -32,10 +32,9 @@
 #include "CPU/68K/68K.h"
 #include "Types.h"
 
-using namespace Debugger;
 // TODO - can't get this namespace to work with 68K.h for some reason - strange Visual Studio errors
-//namespace Debugger
-//{
+namespace Debugger
+{
 	/*
 	 * CCPUDebug implementation for the Musashi Motorola 68000 emulator.
 	 */
@@ -53,11 +52,25 @@ using namespace Debugger;
 
 		::IBus *m_bus;
 
-		void SetM68KContext();
+		// Inlined methods
 
-		void UpdateM68KContext(M68KCtx *ctx);
+		void CMusashi68KDebug::SetM68KContext()
+		{
+			M68KGetContext(&m_savedCtx);
+			if (m_savedCtx.Debug != this)
+				M68KSetContext(m_ctx);
+		}
 
-		void RestoreM68KContext();
+		void CMusashi68KDebug::UpdateM68KContext(M68KCtx *ctx)
+		{
+			m_ctx = ctx;
+		}
+
+		void CMusashi68KDebug::RestoreM68KContext()
+		{
+			if (m_savedCtx.Debug != this)
+				M68KSetContext(&m_savedCtx);
+		}
 
 	protected:
 		UINT32 GetSP();
@@ -99,27 +112,7 @@ using namespace Debugger;
 
 		void Write32(UINT32 addr, UINT32 data);
 	};
-
-	// Inlined methods
-
-	inline void CMusashi68KDebug::SetM68KContext()
-	{
-		M68KGetContext(&m_savedCtx);
-		if (m_savedCtx.Debug != this)
-			M68KSetContext(m_ctx);
-	}
-
-	inline void CMusashi68KDebug::UpdateM68KContext(M68KCtx *ctx)
-	{
-		m_ctx = ctx;
-	}
-
-	inline void CMusashi68KDebug::RestoreM68KContext()
-	{
-		if (m_savedCtx.Debug != this)
-			M68KSetContext(&m_savedCtx);	
-	}
-//}
+}
 
 #endif	// INCLUDED_MUSASHI68KDEBUG_H
 #endif  // SUPERMODEL_DEBUGGER
