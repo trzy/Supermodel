@@ -54,19 +54,19 @@ namespace Debugger
 
 		// Inlined methods
 
-		void CMusashi68KDebug::SetM68KContext()
+		void SetM68KContext()
 		{
 			M68KGetContext(&m_savedCtx);
 			if (m_savedCtx.Debug != this)
 				M68KSetContext(m_ctx);
 		}
 
-		void CMusashi68KDebug::UpdateM68KContext(M68KCtx *ctx)
+		void UpdateM68KContext(M68KCtx *ctx)
 		{
 			m_ctx = ctx;
 		}
 
-		void CMusashi68KDebug::RestoreM68KContext()
+		void RestoreM68KContext()
 		{
 			if (m_savedCtx.Debug != this)
 				M68KSetContext(&m_savedCtx);
