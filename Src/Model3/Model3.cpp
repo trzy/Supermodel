@@ -944,47 +944,50 @@ UINT8 CModel3::Read8(UINT32 addr)
 	  // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
 #ifndef NET_BOARD
-	if (m_game.stepping != "1.0")
+	  if (m_game.stepping != "1.0")
 	  {
 		  //printf("Model3 : Read8 %x\n", addr);
 		  break;
 	  }
 #endif
 #ifdef NET_BOARD
-	switch ((addr & 0x3ffff) >> 16)
-	{
-	case 0:
-		//printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
-		return netBuffer[(addr & 0xFFFF)];
-		
-	case 1: // ioreg 32bits access in 16bits environment
-		if (addr > 0xc00101ff)
-		{
-			printf("R8 ATTENTION OUT OF RANGE\n");
-			MessageBox(NULL, "Out of Range", NULL, MB_OK);
-		}
-		printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
-		return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
+	  if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // check for Step 1.0
+	  {
+		  switch ((addr & 0x3ffff) >> 16)
+		  {
+		  case 0:
+			  //printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
+			  return netBuffer[(addr & 0xFFFF)];
 
-	case 2:
-	case 3:
-		if (addr > 0xc002ffff)
-		{
-			printf("R8 ATTENTION OUT OF RANGE\n");
-			MessageBox(NULL, "Out of Range", NULL, MB_OK);
-		}
-		//printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
-		return netRAM[((addr & 0x1FFFF) / 2)];
-	/*case 3:
-		//printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
-		return netRAM[((addr & 0x1FFFF) / 2)];*/
-	
-	default:
-		printf("R8 ATTENTION OUT OF RANGE\n");
-		MessageBox(NULL, "Out of Range", NULL, MB_OK);
-		break;
-	}
+		  case 1: // ioreg 32bits access in 16bits environment
+			  if (addr > 0xc00101ff)
+			  {
+				  printf("R8 ATTENTION OUT OF RANGE\n");
+				  MessageBox(NULL, "Out of Range", NULL, MB_OK);
+			  }
+			  printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
+			  return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
 
+		  case 2:
+		  case 3:
+			  if (addr > 0xc002ffff)
+			  {
+				  printf("R8 ATTENTION OUT OF RANGE\n");
+				  MessageBox(NULL, "Out of Range", NULL, MB_OK);
+			  }
+			  //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
+			  return netRAM[((addr & 0x1FFFF) / 2)];
+			  /*case 3:
+				  //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
+				  return netRAM[((addr & 0x1FFFF) / 2)];*/
+
+		  default:
+			  printf("R8 ATTENTION OUT OF RANGE\n");
+			  MessageBox(NULL, "Out of Range", NULL, MB_OK);
+			  break;
+		  }
+	  }
+	  break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1086,6 +1089,8 @@ UINT16 CModel3::Read16(UINT32 addr)
 
 #ifdef NET_BOARD
   case 0xc0: // spikeout call this
+			 // interresting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
+			 // sort of sync ack ? who writes this 16b value ?
   {
 	  UINT16 result;
 	  switch ((addr & 0x3ffff) >> 16)
@@ -1249,7 +1254,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       break;
 #endif
 #ifdef NET_BOARD
-    if (m_game.stepping != "1.0") // check for Step 1.0
+    if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // check for Step 1.0
     {
       UINT32 result;
       
@@ -1298,6 +1303,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
+	break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1423,7 +1429,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       goto Unknown8;
 #endif
 #ifdef NET_BOARD
-    if (m_game.stepping != "1.0")
+    if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>())))
     {
       printf("CModel 3 : write8 %x<-%x\n", addr, data);
 
@@ -1473,6 +1479,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
+	break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1556,14 +1563,30 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     PCIBridge.WriteRegister((addr&0xFF)+1,data&0xFF);
     break;
 
-  // Unknown
+#ifdef NET_BOARD
+  case 0xC0: // skichamp only
+			 //printf("CModel 3 : write16 %x<-%x\n", addr, data);
+
+	  switch ((addr & 0x3ffff) >> 16)
+	  {
+	  case 0:
+		  //printf("W16 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
+		  *(UINT16 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN16(data);
+		  break;
+
+	  default:
+		  printf("CMODEL3 : unknown W16 : %x\n", addr >> 24);
+		  break;
+	  }
+
+	  break;
+#endif
+
+	  // Unknown
   default:
   Unknown16:
-#ifdef NET_BOARD
-	  printf("CMODEL3 : unknown W16 : %x\n", addr >> 24);
-#endif
-    DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
-    break;
+	  DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
+	  break;
   }
 } 
 
@@ -1747,7 +1770,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     goto Unknown32;
 #endif
 #ifdef NET_BOARD
-    if (m_game.stepping != "1.0") // assuming there is no scsi card for step>1.0 because same address for network card (right or wrong ??)
+    if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // assuming there is no scsi card for step>1.0 because same address for network card (right or wrong ??)
     {
       switch ((addr & 0x3ffff) >> 16)
       {
