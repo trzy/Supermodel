@@ -204,6 +204,7 @@ UINT8 CNetBoard::Read8(UINT32 a)
 		{
 		case 0x11: // ioreg[c0011]
 			DPRINTF("Netboard R8\tioreg[%x]=%x\t\treceive result status\n", a & 0xff, ioreg[a & 0xff]);
+			//return 0x5; /////////////////////////////////// pure hack for spikofe - must have the pure hack spikeout enable too ///////////////////////////////////////////////////////
 			return ioreg[a&0xff]; 
 			break;
 
@@ -889,6 +890,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 frame 
 			ioreg[a & 0xff] = d;
+			//CommRAM[4] = d; /////////////////////////////////// pure hack for spikeout /////////////////////////////////////////////////////////////////////////////////////////////
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
