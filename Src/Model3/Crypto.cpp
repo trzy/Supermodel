@@ -846,7 +846,7 @@ void CCrypto::enc_fill()
 	//assert(buffer_pos == BUFFER_SIZE);
 	for(int i = 0; i != BUFFER_SIZE; i+=2) {
 		UINT16 val = get_decrypted_16();
-		buffer[i] = val;
+		buffer[i] = val & 0xFF;
 		buffer[i+1] = val >> 8;
 		block_pos+=2;
 
@@ -945,7 +945,7 @@ int CCrypto::get_compressed_bit()
 	{
 		buffer_bit2 = 0;
 		buffer2a = get_decrypted_16();
-		buffer2[0] = buffer2a;
+		buffer2[0] = buffer2a & 0xFF;
 		buffer2[1] = buffer2a >> 8;
 	//  block_pos+=2;
 		buffer_pos = 0;
