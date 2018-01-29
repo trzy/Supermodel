@@ -1333,7 +1333,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2011-2017 by Bart Trzynadlowski, Nik Henson, and Ian Curtis\n");
+  puts("Copyright 2011-2018 by Bart Trzynadlowski, Nik Henson, Ian Curtis, Harry Tuttle and Spindizzi\n");
 }
 
 static void Help(void)

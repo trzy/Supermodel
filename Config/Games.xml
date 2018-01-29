@@ -918,8 +918,8 @@
       <stepping>1.5</stepping>
       <inputs>
         <input type="common" />
-        <input type="gun1" />
-        <input type="gun2" />
+        <input type="analog_gun1" />
+        <input type="analog_gun2" />
       </inputs>
     </hardware>
     <roms>

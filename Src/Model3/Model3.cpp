@@ -520,7 +520,12 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     return serialFIFO2;
     
   case 0x34:  // Serial FIFO full/empty flags
-    return 0x0C;  
+    if (m_game.inputs & (Game::INPUT_GUN1 | Game::INPUT_GUN2)) {
+      return 0x0C;
+    }
+    else {
+      return 0;
+    }
     
   case 0x3C:  // ADC
 
@@ -541,12 +546,19 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[1] = (UINT8)Inputs->analogJoyX->value;
     }
 
-    if ((m_game.inputs & Game::INPUT_ANALOG_GUN1)||(m_game.inputs & Game::INPUT_ANALOG_GUN2))
+    if (m_game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2))
     { 
       adc[0] = (UINT8)Inputs->analogGunX[0]->value;
       adc[2] = (UINT8)Inputs->analogGunY[0]->value;
       adc[1] = (UINT8)Inputs->analogGunX[1]->value;
       adc[3] = (UINT8)Inputs->analogGunY[1]->value;
+
+      if (m_game.name == "lostwsga") {						// to do, not a string compare
+        adc[0] =       (UINT8)Inputs->analogGunX[0]->value;	// order is different for some reason in lost world
+        adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value;	// why are values inverted? is this the wrong place to fix this
+        adc[2] =       (UINT8)Inputs->analogGunX[1]->value;
+        adc[3] = 255 - (UINT8)Inputs->analogGunY[1]->value;
+	  }
     }
     
     if ((m_game.inputs & Game::INPUT_SKI))
@@ -850,7 +862,7 @@ void CModel3::WriteSystemRegister(unsigned reg, UINT8 data)
   case 0x0D:
   case 0x0E:
   case 0x0F:
-  case 0x1C:  // LED control?
+  case 0x1C:  // LED control
     break;
   default:
     //DebugLog("System register %02X=%02X\n", reg, data);
