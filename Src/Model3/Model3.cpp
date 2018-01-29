@@ -553,12 +553,12 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[1] = (UINT8)Inputs->analogGunX[1]->value;
       adc[3] = (UINT8)Inputs->analogGunY[1]->value;
 
-      if (m_game.name == "lostwsga") {						// to do, not a string compare
-        adc[0] =       (UINT8)Inputs->analogGunX[0]->value;	// order is different for some reason in lost world
-        adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value;	// why are values inverted? is this the wrong place to fix this
+      if (m_game.name == "lostwsga") {                      // to do, not a string compare
+        adc[0] =       (UINT8)Inputs->analogGunX[0]->value; // order is different for some reason in lost world
+        adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value; // why are values inverted? is this the wrong place to fix this
         adc[2] =       (UINT8)Inputs->analogGunX[1]->value;
         adc[3] = 255 - (UINT8)Inputs->analogGunY[1]->value;
-	  }
+      }
     }
     
     if ((m_game.inputs & Game::INPUT_SKI))
