@@ -1108,7 +1108,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 	  switch ((addr & 0x3ffff) >> 16)
 	  {
 	  case 0:
-		  printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
+		  //printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
 		  result = *(UINT16 *)&netBuffer[(addr & 0xFFFF)];
 		  return FLIPENDIAN16(result); // result
 	  default:
@@ -1275,7 +1275,8 @@ UINT32 CModel3::Read32(UINT32 addr)
       case 0:
         //printf("R32 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0xFFFF)]));
         result = *(UINT32 *)&netBuffer[(addr & 0xFFFF)];
-        return FLIPENDIAN32(result); // result
+		return _rotl(FLIPENDIAN32(result), 16);
+        //return FLIPENDIAN32(result); // result
 
       case 1: // ioreg 32bits access to 16bits range
         //printf("R32 ioreg @%x=%x\n", (addr & 0x1FF), FLIPENDIAN32(*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]));
@@ -1443,7 +1444,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 #ifdef NET_BOARD
     if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>())))
     {
-      printf("CModel 3 : write8 %x<-%x\n", addr, data);
+      //printf("CModel 3 : write8 %x<-%x\n", addr, data);
 
       switch ((addr & 0x3ffff) >> 16)
       {
@@ -1788,7 +1789,8 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       {
       case 0:
         //printf("W32 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
-        *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN32(data);
+        //*(UINT32 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN32(data);
+		*(UINT32 *)&netBuffer[(addr & 0xFFFF)] = _rotl(FLIPENDIAN32(data), 16);
         break;
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1819,6 +1821,13 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
         printf("W32 ATTENTION OUT OF RANGE\n");
         break;
       }
+
+	  if ((*(UINT16 *)&netBuffer[(0xc00100c0 & 0x3FFFF)] == FLIPENDIAN16(0x0000)) && NetBoard.CodeReady == true) // c0=180/2 // reset net when reboot - not perfect, I think memory must be cleared
+	  {
+		  printf("Network pause\n");
+		  NetBoard.CodeReady = false;
+		  NetBoard.Reset();
+	  }
 
       if ((*(UINT16 *)&netBuffer[(0xc0010088 & 0x3FFFF)] == FLIPENDIAN16(0x0080)) && NetBoard.CodeReady == false) // 88=110/2
       {
@@ -2030,15 +2039,16 @@ void CModel3::RunFrame(void)
 #ifdef NET_BOARD
 	if (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()) && ((*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFFFF) || (netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFF) || (*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0x0001)) && (NetBoard.CodeReady == true))
 	{
-		// ppc irq network needed ? no effect, is it really active ? 
-		RunNetBoardFrame();
+		// ppc irq network needed ? no effect, is it really active/needed ? 
+		//RunNetBoardFrame();
 		IRQ.Assert(0x10);
 		ppc_execute(200); // give PowerPC time to acknowledge IRQ
 		//RunNetBoardFrame();
 		IRQ.Deassert(0x10);
 		ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
-		//RunNetBoardFrame();
-		
+		RunNetBoardFrame();
+		// Hum hum, if runnetboardframe is called at 1st place or between ppc irq assert/deassert, spikout freezes just after the gate with net error
+		// if runnetboardframe is called after ppc irq assert/deassert, spikout works
 	}
 #endif	
   }
@@ -3185,6 +3195,9 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   std::cout << std::endl;
   
   m_game = game;
+#ifdef NET_BOARD
+  NetBoard.GetGame(m_game);
+#endif
   return OKAY;
 }
 

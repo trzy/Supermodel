@@ -37,6 +37,8 @@ public:
 
 	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
 	
+	void GetGame(Game);
+
 	CNetBoard(const Util::Config::Node &config);
 	~CNetBoard(void);
 
@@ -72,6 +74,9 @@ private:
 
 	SMUDP::UDPSend udpSend;
 	SMUDP::UDPReceive udpReceive;
+
+	//game info
+	Game Gameinfo;
 
 	// only for some tests
 	UINT8 *bank;

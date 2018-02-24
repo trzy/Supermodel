@@ -205,6 +205,7 @@ UINT8 CNetBoard::Read8(UINT32 a)
 		case 0x11: // ioreg[c0011]
 			DPRINTF("Netboard R8\tioreg[%x]=%x\t\treceive result status\n", a & 0xff, ioreg[a & 0xff]);
 			//return 0x5; /////////////////////////////////// pure hack for spikofe - must have the pure hack spikeout enable too ///////////////////////////////////////////////////////
+			if (Gameinfo.name.compare("spikeofe") == 0) return 0x5;
 			return ioreg[a&0xff]; 
 			break;
 
@@ -592,16 +593,25 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			switch (d & 0xff)
 			{
 			case 0x80:
-				#ifdef NET_DEBUG
-				printf("\nreceiving : \n");
-				#endif		
+				DPRINTF("\nreceiving : \n");
+	
 				//if (recv_offset > 0x1000)
 				if (recv_size < 0x0019) // must find a better condition
 				{
-					auto recv_data = udpReceive.ReadData(5000);
-					printf("-> nb recu : %x\n", recv_data.size());
+					//auto recv_data = udpReceive.ReadData(5000);
+					//printf("-> nb recu : %x\n", recv_data.size());
+					//memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
+					//DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
+					UINT16 s = 0;
+					std::vector <uint8_t> recv_data;
+					do
+					{
+						recv_data = udpReceive.ReadData(500);
+						DPRINTF("-> nb recu : %x\n", recv_data.size());
+						s = recv_data.size();
+						DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
+					} while (s == 0);
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
-					DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
 				}
 				else
 				{
@@ -617,10 +627,10 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					}
 					recv_offset = (recv_offset << 8) | (recv_offset >> 8);
 
-					DPRINTF("receive enable off=%x size=%x slot=%x\n", recv_offset, recv_size, slot);
+					//printf("receive enable off=%x size=%x slot=%x\n", recv_offset, recv_size, slot);
 
 					auto recv_data = udpReceive.ReadData(5000);
-					printf("-> nb recu : %x\n", recv_data.size());
+					DPRINTF("-> nb recu : %x\n", recv_data.size());
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 				}
 
@@ -682,7 +692,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x19: // ioreg[c0019]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\ttransmit result status\n");
+			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\ttransmit result status\n", a & 0xff, d);
 			break;
 
 			// 1b 1d = send part
@@ -711,10 +721,19 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					send_size = (send_size << 4) | ((send_size >> 8) & 0x000f);
 					send_size = send_size & 0x0fff;
 
-					if (slot == 0) slot = (recv_size >> 12) & 0x0f; // cheat hack for harley,skichamp, and dirt in the same time
-
-					if (slot != 0)
+					//if (slot == 0) slot = (recv_size >> 12) & 0x0f; // cheat hack for harley,skichamp, and dirt in the same time
+					//if (Gameinfo.name.compare("dirtdvls")!=0) slot = (recv_size >> 12) & 0x0f;
+					//if (Gameinfo.name.find("dirtdvls") == std::string::npos) slot = (recv_size >> 12) & 0x0f;
+					//if (slot != 0)
+					//if ((slot != 0) && (((recv_size >> 12) & 0x0f) == 0)) // if dirt, warning may be lemans,von2 too (test name game ?)
+					//if (Gameinfo.name.compare("dirtdvls") == 0) // dirtdvls up to 4 players
+					if (Gameinfo.name.find("dirtdvls") != std::string::npos) // dirtdvls up to 4 players
 					{
+						send_size = send_size * slot * (CommRAM[0x0002] - 1); // dirtdvls CommRAM[0x0002] = number of machine
+					}
+					else
+					{
+						if (slot == 0) slot = (recv_size >> 12) & 0x0f; // for harley,skichamp
 						send_size = send_size * slot;
 					}
 					send_offset = (send_offset << 8) | (send_offset >> 8);
@@ -888,15 +907,16 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
-		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 frame 
+		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 trame 
 			ioreg[a & 0xff] = d;
 			//CommRAM[4] = d; /////////////////////////////////// pure hack for spikeout /////////////////////////////////////////////////////////////////////////////////////////////
+			if (Gameinfo.name.compare("spikeout") == 0 || Gameinfo.name.compare("spikeofe") == 0) CommRAM[4] = d;
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x8a: // ioreg[c008a]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);	
+			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x8b: // ioreg[c008b]
@@ -1061,7 +1081,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 			DPRINTF("d = %x \n",d);
 
 			M68KSetIRQ(4); // network error if removed
-			M68KRun(1000); // 1000 is enought
+			M68KRun(1000); // 1000 is enough
 			M68KSetIRQ(2); // oui sinon pas de trame, pas de cycle sinon crash	
 			break;
 
@@ -1324,7 +1344,6 @@ bool CNetBoard::RunFrame(void)
 	M68KSetIRQ(5);
 	M68KRun((4000000 / 60));
 
-
 	M68KGetContext(&M68K);
 
 	return true;
@@ -1368,5 +1387,8 @@ bool CNetBoard::IsAttached(void)
 	return m_attached;
 }
 
-
+void CNetBoard::GetGame(Game gameinfo)
+{
+	Gameinfo = gameinfo;
+}
 
