@@ -999,7 +999,7 @@ UINT8 CModel3::Read8(UINT32 addr)
 			  break;
 		  }
 	  }
-	  break;
+	  else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1316,7 +1316,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-	break;
+	else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1492,7 +1492,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-	break;
+	else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1838,7 +1838,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-    break;
+	else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
