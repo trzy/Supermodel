@@ -232,12 +232,12 @@ void main()
 		// Total light intensity: sum of all components 
 		lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);   // diffuse + ambient
 
+		lightIntensity.rgb += spotColor*lobeEffect;
+
 		// Upper clamp is optional, step 1.5+ games will drive brightness beyond 100%
 		if(intensityClamp) {
 			lightIntensity = min(lightIntensity,1.0);
 		}
-
-		lightIntensity.rgb += spotColor*lobeEffect;
 
 		finalData.rgb *= lightIntensity;
 
