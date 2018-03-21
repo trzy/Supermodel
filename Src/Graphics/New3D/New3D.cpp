@@ -1608,6 +1608,8 @@ void CNew3D::SetSunClamp(bool enable)
 
 void CNew3D::SetSignedShade(bool enable)
 {
+	if (m_gameName == "swtrilgy") return;		// jtag has been patched out in star wars - todo fix this
+
 	m_shadeIsSigned = enable;
 }
 
