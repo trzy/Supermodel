@@ -552,12 +552,13 @@ static void SaveState(IEmulator *Model3)
   DebugLog("Saved state to '%s'.\n", file_path.c_str());
 }
 
-static void LoadState(IEmulator *Model3)
+static void LoadState(IEmulator *Model3, std::string file_path = std::string())
 {
   CBlockFile  SaveState;
   
   // Generate file path
-  std::string file_path = Util::Format() << "Saves/" << Model3->GetGame().name << ".st" << s_saveSlot;
+  if (file_path.empty())
+    file_path = Util::Format() << "Saves/" << Model3->GetGame().name << ".st" << s_saveSlot;
   
   // Open and check to make sure format is correct
   if (OKAY != SaveState.Load(file_path))
@@ -779,12 +780,13 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs)
 {         
 #endif // SUPERMODEL_DEBUGGER
-  unsigned  prevFPSTicks;
-  unsigned  fpsFramesElapsed;
-  bool      gameHasLightguns = false;
-  bool      quit = false;
-  bool      paused = false;
-  bool      dumpTimings = false;
+  std::string initialState = s_runtime_config["InitStateFile"].ValueAs<std::string>();
+  unsigned    prevFPSTicks;
+  unsigned    fpsFramesElapsed;
+  bool        gameHasLightguns = false;
+  bool        quit = false;
+  bool        paused = false;
+  bool        dumpTimings = false;
 
   // Initialize and load ROMs
   if (OKAY != Model3->Init())
@@ -838,6 +840,10 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Reset emulator
   Model3->Reset();
+  
+  // Load initial save state if requested
+  if (initialState.length() > 0)
+    LoadState(Model3, initialState);
   
 #ifdef SUPERMODEL_DEBUGGER
   // If debugger was supplied, set it as logger and attach it to system
@@ -1273,6 +1279,7 @@ static Util::Config::Node DefaultConfig()
 {
   Util::Config::Node config("Global");
   config.Set("GameXMLFile", s_gameXMLFilePath);
+  config.Set("InitStateFile", "");
   // CModel3
   config.Set("MultiThreaded", true);
   config.Set("GPUMultiThreaded", true);
@@ -1352,6 +1359,7 @@ static void Help(void)
   puts("  -no-threads             Disable multi-threading entirely");
   puts("  -gpu-multi-threaded     Run graphics rendering in separate thread [Default]");
   puts("  -no-gpu-thread          Run graphics rendering in main thread");
+  puts("  -load-state=<file>      Load save state after starting");
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
@@ -1432,6 +1440,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
   const std::map<std::string, std::string> valued_options
   { // -option=value
     { "-game-xml-file",         "GameXMLFile"             },
+    { "-load-state",            "InitStateFile"           },
     { "-ppc-frequency",         "PowerPCFrequency"        },
     { "-crosshairs",            "Crosshairs"              },
     { "-vert-shader",           "VertexShader"            },
