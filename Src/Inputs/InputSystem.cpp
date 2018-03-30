@@ -332,14 +332,14 @@ JoyPartsStruct CInputSystem::s_joyParts[] =
   { "AXIS7_NEG",     JoyS1AxisNeg },
 
   // Slider 2 (Axis 8)
-  { "SLIDER2",       JoyS1Axis },
-  { "SLIDER2_INV",   JoyS1AxisInv },
-  { "SLIDER2_POS",   JoyS1AxisPos },
-  { "SLIDER2_NEG",   JoyS1AxisNeg },
-  { "AXIS8",         JoyS1Axis },
-  { "AXIS8_INV",     JoyS1AxisInv },
-  { "AXIS8_POS",     JoyS1AxisPos },
-  { "AXIS8_NEG",     JoyS1AxisNeg },
+  { "SLIDER2",       JoyS2Axis },
+  { "SLIDER2_INV",   JoyS2AxisInv },
+  { "SLIDER2_POS",   JoyS2AxisPos },
+  { "SLIDER2_NEG",   JoyS2AxisNeg },
+  { "AXIS8",         JoyS2Axis },
+  { "AXIS8_INV",     JoyS2AxisInv },
+  { "AXIS8_POS",     JoyS2AxisPos },
+  { "AXIS8_NEG",     JoyS2AxisNeg },
 
   // POV Hat 1
   { "POV1_UP",       JoyPOV0Up },
