@@ -16,8 +16,8 @@ public:
 	void Rotate					(float angle, float x, float y, float z);
 	void Scale					(float x, float y, float z);
 	void Frustum				(float left, float right, float bottom, float top, float nearVal, float farVal);
-	void Ortho					(float left, float right, float bottom, float top, float nearVal, float farVal);
 	void Perspective			(float fovy, float aspect, float zNear, float zFar);
+	void Ortho					(float left, float right, float bottom, float top, float nearVal, float farVal);
 	void MultMatrix				(const float *m);
 	void LoadMatrix				(const float *m);
 	void LoadTransposeMatrix	(const float *m);
@@ -26,9 +26,11 @@ public:
 	void PopMatrix				();
 	void Release				();
 
-	operator const float*		() { return currentMatrix; }
-
+	operator float*				()       { return currentMatrix; }
+	operator const float*		() const { return currentMatrix; }
+	
 	float currentMatrix[16];
+
 private:
 
 	void MultiMatrices			(const float a[16], const float b[16], float r[16]);

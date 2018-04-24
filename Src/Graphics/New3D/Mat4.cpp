@@ -1,6 +1,5 @@
 #include "Mat4.h"
-#define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
 #include <utility>
 
 #ifndef M_PI
@@ -24,8 +23,8 @@ void Mat4::LoadIdentity()
 	m[3] = 0; m[7] = 0; m[11] = 0; m[15] = 1;
 }
 
-void Mat4::MultiMatrices(const float a[16], const float b[16], float r[16]) {
-
+void Mat4::MultiMatrices(const float a[16], const float b[16], float r[16]) 
+{
 #define A(row,col)  a[(col<<2)+row]
 #define B(row,col)  b[(col<<2)+row]
 #define P(row,col)  r[(col<<2)+row]
@@ -44,21 +43,18 @@ void Mat4::MultiMatrices(const float a[16], const float b[16], float r[16]) {
 #undef p
 }
 
-void Mat4::Copy(const float in[16], float out[16]) {
-
+void Mat4::Copy(const float in[16], float out[16])
+{
 	for (int i = 0; i<16; i++) {
 		out[i] = in[i];
 	}
 }
 
-void Mat4::Translate(float x, float y, float z) {
-
-	//=============
+void Mat4::Translate(float x, float y, float z) 
+{
+	//==========
 	float m[16];
-	float cur[16];
-	//=============
-
-	Mat4::Copy(currentMatrix, cur);
+	//==========
 
 	m[0] = 1;
 	m[1] = 0;
@@ -80,17 +76,14 @@ void Mat4::Translate(float x, float y, float z) {
 	m[14] = z;
 	m[15] = 1;
 
-	Mat4::MultiMatrices(cur, m, currentMatrix);
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Scale(float x, float y, float z) {
-
-	//=============
+void Mat4::Scale(float x, float y, float z) 
+{
+	//==========
 	float m[16];
-	float cur[16];
-	//=============
-
-	Mat4::Copy(currentMatrix, cur);
+	//==========
 
 	m[0] = x;
 	m[1] = 0;
@@ -112,19 +105,16 @@ void Mat4::Scale(float x, float y, float z) {
 	m[14] = 0;
 	m[15] = 1;
 
-	Mat4::MultiMatrices(cur, m, currentMatrix);
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Rotate(float angle, float x, float y, float z) {
-
-	//============
+void Mat4::Rotate(float angle, float x, float y, float z) 
+{
+	//===========
 	float c;
 	float s;
 	float m[16];
-	float cur[16];
 	//===========
-
-	Mat4::Copy(currentMatrix, cur);
 
 	// normalise vector first
 	{
@@ -132,15 +122,15 @@ void Mat4::Rotate(float angle, float x, float y, float z) {
 		float len;
 		//========
 
-		len = sqrt(x * x + y * y + z * z);
+		len = std::sqrt(x * x + y * y + z * z);
 		
 		x /= len;
 		y /= len;
 		z /= len;
 	}
 
-	c = cos(angle*3.14159265f / 180.0f);
-	s = sin(angle*3.14159265f / 180.0f);
+	c = std::cos(angle*3.14159265f / 180.0f);
+	s = std::sin(angle*3.14159265f / 180.0f);
 
 	m[0] = (x*x) * (1 - c) + c;
 	m[1] = (y*x) * (1 - c) + (z*s);
@@ -162,18 +152,15 @@ void Mat4::Rotate(float angle, float x, float y, float z) {
 	m[14] = 0;
 	m[15] = 1;
 
-	Mat4::MultiMatrices(cur, m, currentMatrix);
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal) {
-
+void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal) 
+{
 	//=====================
 	float m[16];
-	float cur[16];
 	float x, y, a, b, c, d;
 	//=====================
-
-	Mat4::Copy(currentMatrix, cur);
 
 	x = (2.0F*nearVal) / (right - left);
 	y = (2.0F*nearVal) / (top - bottom);
@@ -202,7 +189,7 @@ void Mat4::Frustum(float left, float right, float bottom, float top, float nearV
 	m[14] = d;
 	m[15] = 0;
 
-	Mat4::MultiMatrices(cur, m, currentMatrix);
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
 void Mat4::Perspective(float fovy, float aspect, float zNear, float zFar)
@@ -222,11 +209,8 @@ void Mat4::Ortho(float left, float right, float bottom, float top, float nearVal
 {
 	//================
 	float m[16];
-	float cur[16];
 	float tx, ty, tz;
 	//================
-
-	Mat4::Copy(currentMatrix, cur);
 
 	tx = -(right + left) / (right - left);
 	ty = -(top + bottom) / (top - bottom);
@@ -252,11 +236,11 @@ void Mat4::Ortho(float left, float right, float bottom, float top, float nearVal
 	m[14] = tz;
 	m[15] = 1;
 
-	Mat4::MultiMatrices(cur, m, currentMatrix);
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Transpose(float m[16]) {
-
+void Mat4::Transpose(float m[16]) 
+{
 	std::swap(m[1], m[4]);
 	std::swap(m[2], m[8]);
 	std::swap(m[3], m[12]);
@@ -271,12 +255,7 @@ void Mat4::MultMatrix(const float *m)
 		return;
 	}
 
-	//============
-	float cur[16];
-	//============
-
-	Mat4::Copy(currentMatrix, cur);
-	Mat4::MultiMatrices(cur, m, currentMatrix);
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
 void Mat4::LoadMatrix(const float *m)
@@ -294,13 +273,8 @@ void Mat4::LoadTransposeMatrix(const float *m)
 		return;
 	}
 
-	//=============
-	float copy[16];
-	//=============
-
-	Mat4::Copy(m, copy);
-	Mat4::Transpose(copy);
-	Mat4::LoadMatrix(copy);
+	Mat4::LoadMatrix(m);
+	Mat4::Transpose(currentMatrix);
 }
 
 void Mat4::MultTransposeMatrix(const float *m)
@@ -350,4 +324,4 @@ void Mat4::Release()
 	m_vMat4.clear();
 }
 
-} // New3D
+}// New3D
