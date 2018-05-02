@@ -97,7 +97,7 @@ struct Mesh
 			}
 		}
 		else {
-			if (textureAlpha || polyAlpha) {
+			if (polyAlpha) {
 				return false;
 			}
 		}

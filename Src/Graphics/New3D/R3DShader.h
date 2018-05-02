@@ -19,6 +19,7 @@ public:
 	void	Start				();
 	void	SetShader			(bool enable = true);
 	GLint	GetVertexAttribPos	(const char* attrib);
+	void	DiscardAlpha		(bool discard);				// use to remove alpha from texture alpha only polys for 1st pass
 
 private:
 
@@ -93,6 +94,7 @@ private:
 
 	// global uniforms
 	GLint m_locHardwareStep;
+	GLint m_locDiscardAlpha;
 };
 
 } // New3D

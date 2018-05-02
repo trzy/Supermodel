@@ -62,6 +62,7 @@ uniform vec2	baseTexSize;
 uniform bool	textureInverted;
 uniform bool	textureAlpha;
 uniform bool	alphaTest;
+uniform bool	discardAlpha;
 
 // general
 uniform vec3	fogColour;
@@ -109,6 +110,12 @@ vec4 GetTextureValue()
 
 	if (alphaTest) {
 		if (tex1Data.a < (8.0/16.0)) {
+			discard;
+		}
+	}
+
+	if(discardAlpha && textureAlpha) {
+		if (tex1Data.a < 1.0) {
 			discard;
 		}
 	}
@@ -372,6 +379,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locModelScale		= glGetUniformLocation(m_shaderProgram, "modelScale");
 
 	m_locHardwareStep	= glGetUniformLocation(m_shaderProgram, "hardwareStep");
+	m_locDiscardAlpha	= glGetUniformLocation(m_shaderProgram, "discardAlpha");
 	
 	return success;
 }
@@ -386,6 +394,7 @@ void R3DShader::SetShader(bool enable)
 	if (enable) {
 		glUseProgram(m_shaderProgram);
 		Start();
+		DiscardAlpha(false);	// need some default
 	}
 	else {
 		glUseProgram(0);
@@ -510,6 +519,11 @@ void R3DShader::SetModelStates(const Model* model)
 	}
 
 	m_dirtyModel = false;
+}
+
+void R3DShader::DiscardAlpha(bool discard)
+{
+	glUniform1i(m_locDiscardAlpha, discard);
 }
 
 } // New3D

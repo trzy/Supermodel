@@ -312,14 +312,18 @@ void CNew3D::RenderFrame(void)
 		glViewport	(0, 0, m_totalXRes, m_totalYRes);		// clear whole viewport
 		glClear		(GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
+		m_r3dShader.DiscardAlpha(true);						// chuck out alpha pixels in texture alpha only polys
 		hasOverlay = RenderScene(pri, false, false);
+		m_r3dShader.DiscardAlpha(false);
 		hasOverlay = RenderScene(pri, false, true);
 
 		if (hasOverlay) {
 			//clear depth buffer and render high priority polys
 			glViewport(0, 0, m_totalXRes, m_totalYRes);		// clear whole viewport
 			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			m_r3dShader.DiscardAlpha(true);
 			RenderScene(pri, true, false);
+			m_r3dShader.DiscardAlpha(false);
 			RenderScene(pri, true, true);
 		}
 	}
