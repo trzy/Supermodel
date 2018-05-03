@@ -119,7 +119,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
     if (yRes < (xRes/model3Ratio))
       xRes = yRes*model3Ratio;
     if (xRes < (yRes*model3Ratio))
-    yRes = xRes/model3Ratio;
+      yRes = xRes/model3Ratio;
   }
     
   // Center the visible area 
@@ -804,7 +804,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
   totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
   sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());
-  if (OKAY != CreateGLScreen(baseTitleStr, &xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, true, s_runtime_config["FullScreen"].ValueAs<bool>()))
+  bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
+  bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
+  if (OKAY != CreateGLScreen(baseTitleStr, &xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
     return 1;
 
   // Info log GL information 
@@ -972,12 +974,14 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Resize screen
       totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
       totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
-      if (OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,true,s_runtime_config["FullScreen"].ValueAs<bool>()))
+      bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
+      bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
+      if (OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretch,fullscreen))
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
       Render2D = new CRender2D(s_runtime_config);
-	  Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+    Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
       if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
         goto QuitError;
       if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -1068,7 +1072,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     else if (Inputs->uiSoundVolUp->Pressed())
     {
       // Increase sound volume by 10%
-	  int vol = (std::min)(200, s_runtime_config["SoundVolume"].ValueAs<int>() + 10);
+    int vol = (std::min)(200, s_runtime_config["SoundVolume"].ValueAs<int>() + 10);
       s_runtime_config.Get("SoundVolume").SetValue(vol);
       printf("Sound volume: %d%%", vol);
       if (200 == vol)
@@ -1309,6 +1313,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("YResolution", "384");
   config.Set("FullScreen", false);
   config.Set("WideScreen", false);
+  config.Set("Stretch", false);
   config.Set("VSync", true);
   config.Set("Throttle", true);
   config.Set("ShowFrameRate", false);
@@ -1340,7 +1345,8 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2011-2018 by Bart Trzynadlowski, Nik Henson, Ian Curtis, Harry Tuttle and Spindizzi\n");
+  puts("Copyright 2011-2018 by Bart Trzynadlowski, Nik Henson, Ian Curtis,");
+  puts("                       Harry Tuttle, and Spindizzi\n");
 }
 
 static void Help(void)
@@ -1366,6 +1372,7 @@ static void Help(void)
   puts("  -window                 Windowed mode [Default]");
   puts("  -fullscreen             Full screen mode");
   puts("  -wide-screen            Expand 3D field of view to screen width");
+  puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
   puts("  -no-throttle            Disable 60 Hz frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
   puts("  -no-vsync               Do not lock to vertical refresh rate");
@@ -1465,6 +1472,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-fullscreen",          { "FullScreen",       true } },
     { "-no-wide-screen",      { "WideScreen",       false } },
     { "-wide-screen",         { "WideScreen",       true } },
+    { "-stretch",             { "Stretch",          true } },
+    { "-no-stretch",          { "Stretch",          false } },
     { "-no-multi-texture",    { "MultiTexture",     false } },
     { "-multi-texture",       { "MultiTexture",     true } },
     { "-throttle",            { "Throttle",         true } },
@@ -1482,8 +1491,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-dsb",                 { "EmulateDSB",       true } },
     { "-no-dsb",              { "EmulateDSB",       false } },
 #ifdef NET_BOARD
-	{ "-net",				  { "EmulateNet",       true } },
-	{ "-no-net",			  { "EmulateNet",       false } },
+  { "-net",                   { "EmulateNet",       true } },
+  { "-no-net",                { "EmulateNet",       false } },
 #endif
 #ifdef SUPERMODEL_WIN32
     { "-no-force-feedback",   { "ForceFeedback",    false } },

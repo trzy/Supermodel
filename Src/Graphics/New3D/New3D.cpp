@@ -72,6 +72,8 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	m_yRatio	= yRes / 384.0f;
 	m_xOffs		= xOffset;
 	m_yOffs		= yOffset;
+	m_xRes    = xRes;
+	m_yRes    = yRes;
 	m_totalXRes	= totalXResParam;
 	m_totalYRes = totalYResParam;
 
@@ -1583,9 +1585,32 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 
 	if ((vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
 
+		/*
+		 * Compute aspect ratio correction factor. "Window" refers to the full GL
+		 * viewport (i.e., totalXRes x totalYRes). "Viewable area" is the effective
+		 * Model 3 screen (xRes x yRes). In non-wide-screen, non-stretch mode, this
+		 * is intended to replicate the 496x384 display and may in general be 
+		 * smaller than the window. The rest of the window appears to have a
+		 * border, which is created by a scissor box.
+		 *
+		 * In wide-screen mode, we want to expand the frustum horizontally to fill
+		 * the window. We want the aspect ratio to be correct. To accomplish this,
+		 * the viewable area is set *the same* as in non-wide-screen mode (e.g.,
+		 * often smaller than the window) but glScissor() is set by the OSD layer's
+		 * screen setup code to reveal the entire window.
+		 *
+		 * In stretch mode, the window and viewable area are both set the same,
+		 * which means there will be no aspect ratio correction and the display
+		 * will stretch to fill the entire window while keeping the view frustum
+		 * the same as a 496x384 Model 3 display. The display will be distorted.
+		 */
 		float windowAR = (float)m_totalXRes / (float)m_totalYRes;
-		float originalAR = 496 / 384.f;
-		float correction = windowAR / originalAR;	// expand horizontal frustum planes
+    float viewableAreaAR = (float)m_xRes / (float)m_yRes;
+		
+		// Will expand horizontal frustum planes only in non-stretch mode (wide-
+		// screen and non-wide-screen modes have identical resolution parameters
+		// and only their scissor box differs)
+		float correction = windowAR / viewableAreaAR;
 
 		vp->x		= 0;
 		vp->y		= m_yOffs + (int)((384 - (vp->vpY + vp->vpHeight))*m_yRatio);

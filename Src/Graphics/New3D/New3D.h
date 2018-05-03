@@ -233,7 +233,8 @@ private:
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	float		m_xRatio, m_yRatio;
 	unsigned	m_xOffs, m_yOffs;
-	unsigned 	m_totalXRes, m_totalYRes;
+	unsigned	m_xRes, m_yRes;           // resolution of Model 3's 496x384 display area within the window
+	unsigned 	m_totalXRes, m_totalYRes; // total OpenGL window resolution
 
 	// Real3D Base Matrix Pointer
 	const float	*m_matrixBasePtr;
