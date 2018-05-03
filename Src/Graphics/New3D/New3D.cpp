@@ -469,12 +469,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 	lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
 
-	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
-		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
-			DescendCullingNode(sibling2Ptr);				// no need to mask bit, would already be zero
-		}
-	}
-
 	if ((node[0x00] & 0x04)) {
 		m_colorTableAddr = ((node[0x03 - m_offset] >> 19) << 0) | ((node[0x07 - m_offset] >> 28) << 13) | ((node[0x08 - m_offset] >> 25) << 17);
 		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
@@ -564,6 +558,13 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// Restore old texture offsets
 	m_nodeAttribs.Pop();
+
+	// parse siblings 
+	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
+		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
+			DescendCullingNode(sibling2Ptr);				// no need to mask bit, would already be zero
+		}
+	}
 }
 
 void CNew3D::DescendNodePtr(UINT32 nodeAddr)
