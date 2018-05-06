@@ -191,7 +191,7 @@ endif
 #
 # Sorted-path compile order
 #
-OBJ_FILES = $(foreach file,$(sort $(SRC_FILES)),$(OBJ_DIR)/$(basename $(notdir $(file))).o)
+OBJ_FILES = $(foreach file,$(SRC_FILES),$(OBJ_DIR)/$(basename $(notdir $(file))).o)
 
 #
 # Deduce include directories from the source file list. The sort function 
@@ -208,7 +208,6 @@ OBJ_DIR = obj$(strip $(BITS))
 BIN_DIR = bin$(strip $(BITS))
 
 OUTFILE = supermodel
-MUSASHI_OUTFILE = m68kmake
 
 
 ###############################################################################
@@ -218,8 +217,7 @@ MUSASHI_OUTFILE = m68kmake
 ARCH = -march=native -mfpmath=sse
 BUILD_CFLAGS =
 OPT = -O3
-#WARN = -Wall
-WARN = -w
+WARN = -Wall
 CSTD = -std=iso9899:2011
 CXXSTD = -std=c++11
 
@@ -317,39 +315,40 @@ $(OBJ_DIR)/%.o:	%.c
 # All generated source files are emitted to the object directory. For MSVC,
 # INLINE must be redefined as "static __inline", which is the syntax in C mode.
 #
+# The .exe suffix is absolutely required for native Windows non-MSYS builds! 
+#
 
+MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe # do not remove the .exe suffix!
 MUSASHI_CFLAGS = -ISrc/CPU/68K/Musashi -I$(OBJ_DIR) -DINLINE="static inline" -Wno-unused-variable
-MUSASHI_LDFLAGS = -o $(OBJ_DIR)/$(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o -s
+MUSASHI_LDFLAGS = -o $(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o -s
 
-$(OBJ_DIR)/$(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c
+$(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c
 	$(info --------------------------------------------------------------------------------)
 	$(info Compiling              : $< -> $(OBJ_DIR)/m68kmake.o)
 	$(SILENT)$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/m68kmake.o
 	$(info Linking                : $(MUSASHI_OUTFILE))
 	$(SILENT)$(LD) $(MUSASHI_LDFLAGS)
 
-$(OBJ_DIR)/m68kops.h:	$(OBJ_DIR)/$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c
+$(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Generating 68K emulator: $@)
-	$(SILENT)$(OBJ_DIR)/$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
-
-$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(OBJ_DIR)/m68kops.h
-
+	@$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
+	
 $(OBJ_DIR)/m68kcpu.o:	Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
-	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
+	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
 
-$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
 	$(info Compiling              : $< -> $@)
-	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
 	$(info Compiling              : $< -> $@)
-	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
 	$(info Compiling              : $< -> $@)
-	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
 	$(info Compiling              : $< -> $@)
-	$(SILENT)$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
+	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@

@@ -24,26 +24,42 @@
 #
 # Makefile for Windows systems using gcc and the standard Command Prompt.
 #
+# Set variables in the "Configuration" section as required by your system
+# configuration.
+#
 
 
 ###############################################################################
-# Build Options
+# Configuration
+#
+# Edit as necessary. Some users may need to edit the "Platform Configuration"
+# section as well, namely SDL_LIBS and PLATFORM_LIBS.
 ###############################################################################
 
 #
 # Bitness of build ('32' or '64')
 #
 BITS = 64
-# First check if we're under MSYS2 or not, and then get bitness of CPU
-ifeq ($(strip $(MSYSTEM)),)
-	ifeq ($(findstring 64,$(strip $(PROCESSOR_ARCHITECTURE))),)
-		BITS = 32
-	endif
-else
-	ifeq ($(findstring 32,$(strip $(MSYSTEM_CARCH))),32)
-		BITS = 32
-	endif
-endif
+
+#
+# Path to SDL
+#
+SDL_INCLUDE_DIR = c:/tdm-gcc-64/include/SDL
+SDL_LIB_DIR = c:/tdm-gcc-64/lib
+
+#
+# Toolchain
+#
+
+CC = gcc
+CXX = g++
+LD = g++
+
+
+###############################################################################
+# Platform Configuration
+###############################################################################
+
 # Safety check: can be only '32' or '64' otherwise defaults to '64'
 ifneq ($(filter $(strip $(BITS)),32 64),$(strip $(BITS)))
 	override BITS = 64
@@ -57,35 +73,6 @@ ifeq ($(strip $(MSYSTEM)),)
 	DELETE = rmdir /s /q
 endif
 
-
-###############################################################################
-# Platform Configuration
-#
-# Edit library and include paths as needed.
-###############################################################################
-
-#
-# Build environment
-#
-
-# Leave empty if 'mingwXX' folder is located on the root filesystem
-MINGW_ROOT =
-
-# 'mingw64' or 'mingw32' for respectively 64 or 32 bits builds.
-# MSYS2 uses that scheme, customize it if necessary
-MINGW_BASE = mingw$(strip $(BITS))
-
-# The resulting 'mingwXX' base name for includes and libs
-MINGW_DIR = $(strip $(MINGW_ROOT))/$(strip $(MINGW_BASE))
-
-#
-# Toolchain
-#
-
-CC = gcc
-CXX = g++
-LD = g++
-
 #
 # SDL
 #
@@ -94,19 +81,16 @@ LD = g++
 # https://stackoverflow.com/questions/24596596/sdl-doesnt-compile-in-native-enviroment
 # http://www.cplusplus.com/forum/beginner/110753/
 #
-
-SDL_INCLUDE_DIR = $(MINGW_DIR)/include/SDL
-SDL_LIB_DIR = $(MINGW_DIR)/lib
-SDL_LIBS = -lmingw32 -static-libgcc -static-libstdc++ -lSDLmain -lSDL -liconv -lm -luser32 -lgdi32 -lwinmm -ldxguid
+SDL_LIBS = -lmingw32 -static-libgcc -static-libstdc++ -lSDLmain -lSDL -lm -luser32 -lgdi32 -lwinmm -ldxguid
 SDL_CFLAGS = -D_GNU_SOURCE=1 -Dmain=SDL_main
 
 #
 # MinGW/Windows-specific
 #
 
-PLATFORM_INCLUDE_DIR = $(SDL_INCLUDE_DIR) $(MINGW_DIR)/include
+PLATFORM_INCLUDE_DIR = $(SDL_INCLUDE_DIR)
 PLATFORM_LIB_DIR = $(SDL_LIB_DIR)
-PLATFORM_LIBS = -ldinput8 -lglew32 -lglu32 -lole32 -loleaut32 -lopengl32 -lwbemuuid -lws2_32 -lz
+PLATFORM_LIBS = -ldinput8 -lglu32 -lole32 -loleaut32 -lopengl32 -lwbemuuid -lws2_32 -lz
 PLATFORM_CFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
 PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL_LIBS) $(PLATFORM_LIBS)
 
@@ -122,6 +106,6 @@ PLATFORM_SRC_FILES = \
 include Makefiles/Makefile.inc
 
 clean:	 
-	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)echo Cleaning up $(BIN_DIR) and $(OBJ_DIR)...
 	$(SILENT)$(DELETE) $(BIN_DIR)
 	$(SILENT)$(DELETE) $(OBJ_DIR)
