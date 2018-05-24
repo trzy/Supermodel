@@ -144,6 +144,7 @@ public:
 	bool	Luminous();
 	float	LightModifier();
 	int		TranslatorMapOffset();
+	bool	TranslucencyPatternSelect();
 
 	// misc
 	UINT64	Hash();		// make a unique hash for sorting by state

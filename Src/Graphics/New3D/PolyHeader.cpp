@@ -377,6 +377,11 @@ int	PolyHeader::TranslatorMapOffset()
 	return (header[6] >> 24) & 0x7f;
 }
 
+bool PolyHeader::TranslucencyPatternSelect()
+{
+	return (header[6] & 0x10000) > 0;
+}
+
 //
 // misc
 //
