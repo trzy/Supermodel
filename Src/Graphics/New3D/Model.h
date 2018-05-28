@@ -125,6 +125,7 @@ struct Mesh
 	bool clockWise		= true;			// we need to check if the matrix will change the winding
 	bool layered		= false;		// stencil poly
 	bool highPriority	= false;		// rendered over the top
+	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1
 
 	// lighting
 	bool fixedShading	= false;

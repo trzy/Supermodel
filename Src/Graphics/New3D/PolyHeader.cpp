@@ -383,38 +383,26 @@ bool PolyHeader::TranslucencyPatternSelect()
 }
 
 //
-// misc
+// hashing
 //
 
 UINT64 PolyHeader::Hash()
 {
 	UINT64 hash = 0;
 
-	hash |= (header[2] & 3);							// bits 0-1 uv mirror bits
-	hash |= (UINT64)((header[3] >> 0) & 7) << 2;		// bits 2-4 tex height
-	hash |= (UINT64)((header[3] >> 3) & 7) << 5;		// bits 5-7 tex width
-	hash |= (UINT64)X() << 8;							// bits 8-17 x offset
-	hash |= (UINT64)Y() << 18;							// bits 18-27 y offset
-	hash |= (UINT64)TexFormat() << 28;					// bits 28-30 tex format
-	hash |= (UINT64)TexEnabled() << 31;					// bits 31 textures enabled
-	hash |= (UINT64)LightEnabled() << 32;				// bits 32 light enabled
-	hash |= (UINT64)DoubleSided() << 33;				// bits 33 double sided
-	hash |= (UINT64)AlphaTest() << 34;					// bits 34 contour processing
-	hash |= (UINT64)PolyAlpha() << 35;					// bits 35 poly alpha processing
-	hash |= (UINT64)TextureAlpha() << 36;				// bits 36 texture alpha processing
-	hash |= (UINT64)MicroTexture() << 37;				// bits 37 microtexture enable
-	hash |= (UINT64)HighPriority() << 38;				// bits 38 high priority enable
-	hash |= (UINT64)SpecularEnabled() << 39;			// bits 39 enable specular reflection
-	hash |= (UINT64)SmoothShading() << 40;				// bits 40 smooth shading
-	hash |= (UINT64)((header[6] >> 11) & 0x1F) << 41;	// bits 41-45 light modifier
-	hash |= (UINT64)FixedShading() << 46;				// bits 46 fixed shading
-	hash |= (UINT64)TranslatorMap() << 47;				// bits 47 translator map
-	hash |= (UINT64)Layered() << 48;					// bits 48 layered texture
-	hash |= (UINT64)(header[0] >> 26) << 49;			// bits 49-54 specular coefficient (opacity)
-	hash |= (UINT64)((header[6] >> 5) & 3) << 55;		// bits 55-56 specular exponent
-	hash |= (UINT64)MicroTextureID() << 57;				// bits 57-59 Microtexture texture number 0-7
-	hash |= (UINT64)MicroTextureMinLOD() << 60;			// bits 60-61 Microtexture min lod index
-	hash |= (UINT64)((header[3] >> 6) & 3) << 62;		// bits 62-63 uv smooth bits
+	hash |= (UINT64)(header[3] & 0xFF);											// bits 0-7 tex width / height / uv smooth
+	hash |= (UINT64)(((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 1)) << 8;	// bits 8-13 x offset
+	hash |= (UINT64)header[5] & 0x1F << 14;										// bits 14-18 y offset
+	hash |= (UINT64)Page() << 19;												// bits 19 page
+	hash |= (UINT64)DoubleSided() << 20;										// bits 20 double sided
+	hash |= (UINT64)AlphaTest() << 21;											// bits 21 contour processing
+	hash |= (UINT64)PolyAlpha() << 22;											// bits 22 poly alpha processing
+	hash |= (UINT64)(header[2] & 0xFF) << 23;									// bits 23-30 microtexture / uv mirror
+	hash |= (UINT64)SpecularEnabled() << 31;									// bits 31 enable specular reflection
+	hash |= (UINT64)SmoothShading() << 32;										// bits 32 smooth shading
+	hash |= (UINT64)FixedShading() << 33;										// bits 33 fixed shading
+	hash |= (UINT64)(header[0] >> 26) << 34;									// bits 34-39 specular coefficient (opacity)
+	hash |= (UINT64)(header[6] & 0x3FFFF) << 40;								// bits 40-57 Translucency pattern select / disable lighting / Polygon light modifier / Texture enable / Texture format / Shininess / High priority / Layered polygon / Translucency mode
 
 	return hash;
 }

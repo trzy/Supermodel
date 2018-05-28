@@ -962,6 +962,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->lighting		= ph.LightEnabled();
 	currentMesh->fixedShading	= ph.FixedShading() && !ph.SmoothShading();
 	currentMesh->highPriority	= ph.HighPriority();
+	currentMesh->transSelect	= ph.TranslucencyPatternSelect();
 
 	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
 		currentMesh->layered = true;
