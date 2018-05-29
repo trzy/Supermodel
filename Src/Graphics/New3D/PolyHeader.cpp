@@ -392,7 +392,7 @@ UINT64 PolyHeader::Hash()
 
 	hash |= (UINT64)(header[3] & 0xFF);											// bits 0-7 tex width / height / uv smooth
 	hash |= (UINT64)(((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 1)) << 8;	// bits 8-13 x offset
-	hash |= (UINT64)header[5] & 0x1F << 14;										// bits 14-18 y offset
+	hash |= (UINT64)(header[5] & 0x1F) << 14;									// bits 14-18 y offset
 	hash |= (UINT64)Page() << 19;												// bits 19 page
 	hash |= (UINT64)DoubleSided() << 20;										// bits 20 double sided
 	hash |= (UINT64)AlphaTest() << 21;											// bits 21 contour processing
