@@ -464,6 +464,12 @@
     <ClCompile Include="..\Src\Debugger\DebuggerIO.cpp">
       <Filter>Source Files\Debugger</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\R3DFrameBuffers.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\New3D\GLSLShader.cpp">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -861,6 +867,12 @@
     </ClInclude>
     <ClInclude Include="..\Src\Debugger\DebuggerIO.h">
       <Filter>Header Files\Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\R3DFrameBuffers.h">
+      <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\GLSLShader.h">
+      <Filter>Source Files\Graphics\New</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

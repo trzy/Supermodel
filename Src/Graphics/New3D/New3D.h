@@ -1,3 +1,4 @@
+
 /**
 ** Supermodel
 ** A Sega Model 3 Arcade Emulator.
@@ -41,6 +42,7 @@
 #include "Vec.h"
 #include "R3DScrollFog.h"
 #include "PolyHeader.h"
+#include "R3DFrameBuffers.h"
 
 namespace New3D {
 
@@ -199,11 +201,14 @@ private:
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
 	void OffsetTexCoords(R3DPoly& r3dPoly, float offset[2]);
 
-	bool RenderScene(int priority, bool renderOverlay, bool alpha);		// returns if has overlay plane
+	bool RenderScene(int priority, bool renderOverlay, Layer layer);		// returns if has overlay plane
 	float Determinant3x3(const float m[16]);
 	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
 	void DrawScrollFog();
+	bool SkipLayer(int layer);
+	void SetRenderStates();
+	void DisableRenderStates();
 
 	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);	
 
@@ -253,6 +258,7 @@ private:
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
 	R3DShader m_r3dShader;
 	R3DScrollFog m_r3dScrollFog;
+	R3DFrameBuffers m_r3dFrameBuffers;
 
 	Plane m_planes[4];
 

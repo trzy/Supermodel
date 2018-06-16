@@ -114,9 +114,16 @@ vec4 GetTextureValue()
 		}
 	}
 
-	if(discardAlpha && textureAlpha) {
-		if (tex1Data.a < 1.0) {
-			discard;
+	if(textureAlpha) {
+		if(discardAlpha) {					// opaque 1st pass
+			if (tex1Data.a < 1.0) {
+				discard;
+			}
+		}
+		else {								// transparent 2nd pass
+			if ((tex1Data.a * fsColor.a) >= 1.0) {
+				discard;
+			}
 		}
 	}
 

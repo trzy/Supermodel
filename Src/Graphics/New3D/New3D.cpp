@@ -79,6 +79,8 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 
 	m_r3dShader.LoadShader();
 
+	m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
+
 	glUseProgram(0);
 
 	return OKAY;	// OKAY ? wtf ..
@@ -147,13 +149,9 @@ void CNew3D::DrawScrollFog()
 	}
 }
 
-bool CNew3D::RenderScene(int priority, bool renderOverlay, bool alpha)
+bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 {
 	bool hasOverlay = false;		// (high priority polys)
-
-	if (alpha) {
-		glEnable(GL_BLEND);
-	}
 
 	for (auto &n : m_nodes) {
 
@@ -188,7 +186,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, bool alpha)
 					hasOverlay = true;
 				}
 
-				if (!mesh.Render(alpha)) continue;
+				if (!mesh.Render(layer)) continue;
 				if (mesh.highPriority != renderOverlay) continue;
 
 				if (!matrixLoaded) {
@@ -236,6 +234,65 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, bool alpha)
 	return hasOverlay;
 }
 
+bool CNew3D::SkipLayer(int layer)
+{
+	for (const auto &n : m_nodes) {
+		if (n.viewport.priority == layer) {
+			if (n.models.size()) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+void CNew3D::SetRenderStates()
+{
+	m_vbo.Bind(true);
+	m_r3dShader.SetShader(true);
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glEnableVertexAttribArray(3);
+	glEnableVertexAttribArray(4);
+	glEnableVertexAttribArray(5);
+
+	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
+
+	glDepthFunc		(GL_LESS);
+	glEnable		(GL_DEPTH_TEST);
+	glDepthMask		(GL_TRUE);
+	glActiveTexture	(GL_TEXTURE0);
+	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader					
+
+	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
+	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
+	glStencilMask	(0xFF);
+}
+
+void CNew3D::DisableRenderStates()
+{
+	m_vbo.Bind(false);
+	m_r3dShader.SetShader(false);
+
+	glDisable(GL_STENCIL_TEST);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+	glDisableVertexAttribArray(3);
+	glDisableVertexAttribArray(4);
+	glDisableVertexAttribArray(5);
+}
+
 void CNew3D::RenderFrame(void)
 {
 	for (int i = 0; i < 4; i++) {
@@ -252,17 +309,6 @@ void CNew3D::RenderFrame(void)
 	RenderViewport(0x800000);						// build model structure
 
 	DrawScrollFog();								// fog layer if applicable must be drawn here
-
-	glDepthFunc		(GL_LEQUAL);
-	glEnable		(GL_DEPTH_TEST);
-	glDepthMask		(GL_TRUE);
-	glActiveTexture	(GL_TEXTURE0);
-	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader					
-	glFrontFace		(GL_CW);
-
-	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
-	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
-	glStencilMask	(0xFF);
 	
 	m_vbo.Bind(true);
 	m_vbo.BufferSubData(MAX_ROM_POLYS*sizeof(Poly), m_polyBufferRam.size()*sizeof(Poly), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
@@ -287,23 +333,6 @@ void CNew3D::RenderFrame(void)
 			}
 		}
 	}
-	
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-	glEnableVertexAttribArray(3);
-	glEnableVertexAttribArray(4);
-	glEnableVertexAttribArray(5);
-
-	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"),		4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"),		3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"),		2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"),		4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"),	3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"),	1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
-
-	m_r3dShader.SetShader(true);
 
 	for (int pri = 0; pri <= 3; pri++) {
 
@@ -311,36 +340,37 @@ void CNew3D::RenderFrame(void)
 		bool hasOverlay;
 		//==============
 
-		glViewport	(0, 0, m_totalXRes, m_totalYRes);		// clear whole viewport
-		glClear		(GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+		if (SkipLayer(pri)) continue;
 
-		m_r3dShader.DiscardAlpha(true);						// chuck out alpha pixels in texture alpha only polys
-		hasOverlay = RenderScene(pri, false, false);
-		m_r3dShader.DiscardAlpha(false);
-		hasOverlay = RenderScene(pri, false, true);
+		for (int i = 0; i < 2; i++) {
 
-		if (hasOverlay) {
-			//clear depth buffer and render high priority polys
-			glViewport(0, 0, m_totalXRes, m_totalYRes);		// clear whole viewport
-			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			m_r3dShader.DiscardAlpha(true);
-			RenderScene(pri, true, false);
-			m_r3dShader.DiscardAlpha(false);
-			RenderScene(pri, true, true);
+			bool renderOverlay = (i == 1);
+
+			m_r3dFrameBuffers.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+			SetRenderStates();
+
+			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
+			m_r3dFrameBuffers.SetFBO(Layer::colour);
+			hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
+
+			m_r3dShader.DiscardAlpha(false);					// render only translucent pixels
+			m_r3dFrameBuffers.StoreDepth();						// save depth buffer for 1st trans pass
+			m_r3dFrameBuffers.SetFBO(Layer::trans1);
+			RenderScene(pri, renderOverlay, Layer::trans1);
+
+			m_r3dFrameBuffers.RestoreDepth();					// restore depth buffer, trans layers don't seem to depth test against each other
+			m_r3dFrameBuffers.SetFBO(Layer::trans2);
+			RenderScene(pri, renderOverlay, Layer::trans2);
+
+			DisableRenderStates();
+			m_r3dFrameBuffers.Draw();							// draw current layer to back buffer
+
+			if (!hasOverlay) break;								// no high priority polys						
 		}
 	}
 
-	m_r3dShader.SetShader(false);		// unbind shader
-	m_vbo.Bind(false);
-
-	glDisable(GL_STENCIL_TEST);
-
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-	glDisableVertexAttribArray(3);
-	glDisableVertexAttribArray(4);
-	glDisableVertexAttribArray(5);
+	m_r3dFrameBuffers.DisableFBO();		// draw to back buffer normally
 }
 
 void CNew3D::BeginFrame(void)
@@ -469,6 +499,13 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 	lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
 
+	// parse siblings 
+	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
+		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
+			DescendCullingNode(sibling2Ptr);				// no need to mask bit, would already be zero
+		}
+	}
+
 	if ((node[0x00] & 0x04)) {
 		m_colorTableAddr = ((node[0x03 - m_offset] >> 19) << 0) | ((node[0x07 - m_offset] >> 28) << 13) | ((node[0x08 - m_offset] >> 25) << 17);
 		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
@@ -558,13 +595,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// Restore old texture offsets
 	m_nodeAttribs.Pop();
-
-	// parse siblings 
-	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
-		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
-			DescendCullingNode(sibling2Ptr);				// no need to mask bit, would already be zero
-		}
-	}
 }
 
 void CNew3D::DescendNodePtr(UINT32 nodeAddr)
@@ -954,7 +984,6 @@ void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
 void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 {
 	//copy attributes
-	currentMesh->doubleSided	= false;			// we will double up polys
 	currentMesh->textured		= ph.TexEnabled();
 	currentMesh->alphaTest		= ph.AlphaTest();
 	currentMesh->textureAlpha	= ph.TextureAlpha();
@@ -963,16 +992,11 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->fixedShading	= ph.FixedShading() && !ph.SmoothShading();
 	currentMesh->highPriority	= ph.HighPriority();
 	currentMesh->transLSelect	= ph.TranslucencyPatternSelect();
-
-	if (ph.Layered() || (!ph.TexEnabled() && ph.PolyAlpha())) {
-		currentMesh->layered = true;
-	}
-
-	currentMesh->specular = ph.SpecularEnabled();
-	currentMesh->shininess = ph.Shininess();
-	currentMesh->specularValue = ph.SpecularValue();
-
-	currentMesh->fogIntensity = ph.LightModifier();
+	currentMesh->layered		= ph.Layered();
+	currentMesh->specular		= ph.SpecularEnabled();
+	currentMesh->shininess		= ph.Shininess();
+	currentMesh->specularValue	= ph.SpecularValue();
+	currentMesh->fogIntensity	= ph.LightModifier();
 
 	if (currentMesh->textured) {
 
@@ -1107,7 +1131,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		if (ph.Discard1() && !ph.Discard2()) {
 			p.faceColour[3] /= 2;
 		}
-				
+
 		// if we have flat shading, we can't re-use normals from shared vertices
 		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
 			p.v[i].normal[0] = p.faceNormal[0];
@@ -1607,7 +1631,7 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 		 * the same as a 496x384 Model 3 display. The display will be distorted.
 		 */
 		float windowAR = (float)m_totalXRes / (float)m_totalYRes;
-    float viewableAreaAR = (float)m_xRes / (float)m_yRes;
+		float viewableAreaAR = (float)m_xRes / (float)m_yRes;
 		
 		// Will expand horizontal frustum planes only in non-stretch mode (wide-
 		// screen and non-wide-screen modes have identical resolution parameters

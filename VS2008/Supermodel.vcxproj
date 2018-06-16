@@ -311,11 +311,13 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\TextureRefs.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\GLSLShader.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Mat4.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Model.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\New3D.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\PolyHeader.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DFloat.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\R3DFrameBuffers.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DScrollFog.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Texture.cpp" />
@@ -537,6 +539,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\TextureRefs.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\GLSLShader.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Mat4.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Model.h" />
     <ClInclude Include="..\Src\Graphics\New3D\New3D.h" />
@@ -544,6 +547,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Graphics\New3D\PolyHeader.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DData.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DFloat.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DFrameBuffers.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DScrollFog.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Texture.h" />

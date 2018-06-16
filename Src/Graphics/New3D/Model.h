@@ -86,20 +86,32 @@ struct Poly						// our polys are always 3 triangles, unlike the real h/w
 	FVertex p3;
 };
 
+enum class Layer { colour, trans1, trans2, all, none };
+
 struct Mesh
 {
 	//helper funcs
-	bool Render(bool alpha) 
+	bool Render(Layer layer)
 	{
-		if (alpha) {
-			if (!textureAlpha && !polyAlpha) {
-				return false;
-			}
-		}
-		else {
+		switch (layer)
+		{
+		case Layer::colour:
 			if (polyAlpha) {
 				return false;
 			}
+			break;
+		case Layer::trans1:
+			if (!textureAlpha && !polyAlpha || transLSelect) {
+				return false;
+			}
+			break;
+		case Layer::trans2:
+			if (!textureAlpha && !polyAlpha || !transLSelect) {
+				return false;
+			}
+			break;
+		default:					// not using these types
+			return false;
 		}
 
 		return true;
@@ -117,7 +129,6 @@ struct Mesh
 	float	microTextureScale	= 0;
 
 	// attributes
-	bool doubleSided	= false;
 	bool textured		= false;
 	bool polyAlpha		= false;		// specified in the rgba colour
 	bool textureAlpha	= false;		// use alpha in texture
