@@ -267,7 +267,7 @@ void CNew3D::SetRenderStates()
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
 
-	glDepthFunc		(GL_LESS);
+	glDepthFunc		(GL_LEQUAL);
 	glEnable		(GL_DEPTH_TEST);
 	glDepthMask		(GL_TRUE);
 	glActiveTexture	(GL_TEXTURE0);
@@ -353,6 +353,8 @@ void CNew3D::RenderFrame(void)
 			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
 			m_r3dFrameBuffers.SetFBO(Layer::colour);
 			hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
+
+			glDepthFunc(GL_LESS);								// alpha polys seem to use gl_less (ocean hunter)
 
 			m_r3dShader.DiscardAlpha(false);					// render only translucent pixels
 			m_r3dFrameBuffers.StoreDepth();						// save depth buffer for 1st trans pass
