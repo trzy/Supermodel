@@ -159,7 +159,7 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-	GLenum buffers[] = { GL_COLOR_ATTACHMENT0 + (int)layer };
+	GLenum buffers[] = { GL_COLOR_ATTACHMENT0 + (GLenum)layer };
 	glDrawBuffers(countof(buffers), buffers);
 	m_lastLayer = layer;
 }
@@ -199,7 +199,7 @@ void R3DFrameBuffers::AllocShaderBase()
 	{
 		fsTexCoord = inTexCoord;
 		gl_Position = vec4(inVertex,1.0);
-	};
+	}
 
 	)glsl";
 
@@ -214,7 +214,7 @@ void R3DFrameBuffers::AllocShaderBase()
 		vec4 colBase = texture2D( tex1, fsTexCoord);
 		if(colBase.a < 1.0) discard;
 		gl_FragColor = colBase;
-	};
+	}
 
 	)glsl";
 
@@ -239,7 +239,7 @@ void R3DFrameBuffers::AllocShaderTrans()
 	{
 		fsTexCoord = inTexCoord;
 		gl_Position = vec4(inVertex,1.0);
-	};
+	}
 
 	)glsl";
 
@@ -263,7 +263,7 @@ void R3DFrameBuffers::AllocShaderTrans()
 		}
 		
 		gl_FragColor = colTrans1;
-	};
+	}
 
 	)glsl";
 

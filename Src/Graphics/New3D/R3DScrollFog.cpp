@@ -12,7 +12,7 @@ attribute vec3 inVertex;
 void main(void)
 {
 	gl_Position = mvp * vec4(inVertex,1.0);
-};
+}
 
 )glsl";
 
@@ -55,7 +55,7 @@ void main()
 
 	// Final Color
 	gl_FragColor = scrollFog;
-};
+}
 
 )glsl";
 
