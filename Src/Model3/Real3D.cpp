@@ -263,12 +263,12 @@ void CReal3D::BeginFrame(void)
   // If multi-threaded, perform now any queued texture uploads to renderer before rendering begins
   if (m_gpuMultiThreaded)
   {
-  for (const auto &it : queuedUploadTexturesRO) {
+    for (const auto &it : queuedUploadTexturesRO) {
       Render3D->UploadTextures(it.level, it.x, it.y, it.width, it.height);
-  }
+    }
 
-  // done syncing data
-  queuedUploadTexturesRO.clear();
+    // done syncing data
+    queuedUploadTexturesRO.clear();
   }
 
   Render3D->BeginFrame();
@@ -631,9 +631,9 @@ void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
     IRQ->Assert(dmaIRQ);
     break;
   case 0x10:  // command register
-    if ((data&0x20000000))
+    if ((data&0x20000000)) // DMA ID command
     {
-      dmaData = 0x16C311DB; // Virtual On 2 expects this from DMA
+      dmaData = pciID;
       DebugLog("Real3D: DMA ID command issued (ATTENTION: make sure we're returning the correct value), PC=%08X, LR=%08X\n", ppc_get_pc(), ppc_get_lr());
     }
     else if ((data&0x80000000))
@@ -659,7 +659,7 @@ void CReal3D::Flush(void)
 {
   commandPortWritten = true;  
   DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
-  
+
   // Upload textures (if any)
   if (fifoIdx > 0)
   {
@@ -668,7 +668,7 @@ void CReal3D::Flush(void)
       uint32_t size = 2+textureFIFO[i+0]/2;
       size /= 4;
       uint32_t header = textureFIFO[i+1]; // texture information header
-      
+
       // Spikeout seems to be uploading 0 length textures
       if (0 == size)
       {
@@ -678,10 +678,11 @@ void CReal3D::Flush(void)
 
       UploadTexture(header,(uint16_t *)&textureFIFO[i+2]);
       DebugLog("Real3D: Texture upload completed: %X bytes (%X)\n", size*4, textureFIFO[i+0]);
+
       i += size;
     }
   }
-  
+
   // Reset texture FIFO
   fifoIdx = 0;
 }
@@ -868,7 +869,8 @@ uint32_t CReal3D::GetASICIDCode(ASIC asic) const
   return it == m_asicID.end() ? 0 : it->second;
 }
 
-void CReal3D::SetStepping(int stepping)
+void CReal3D::SetStepping(int stepping, bool step20_with_old_real3d)
+
 {
   step = stepping;
   if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
@@ -876,9 +878,11 @@ void CReal3D::SetStepping(int stepping)
     DebugLog("Real3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
     step = 0x10;
   }
-  
+
   // Set PCI ID
-  if (step < 0x20)      
+  // Some step 2+ games need the older PCI ID (obvious symptom:
+  // vbl is enabled briefly then disabled so the game hangs)
+  if ((step < 0x20) || step20_with_old_real3d)      
     pciID = 0x16C311DB; // vendor 0x11DB = Sega
   else
     pciID = 0x178611DB;

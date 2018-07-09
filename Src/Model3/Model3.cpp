@@ -526,7 +526,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     else {
       return 0;
     }
-    
+
   case 0x3C:  // ADC
 
     // Load ADC channels with input data
@@ -895,111 +895,113 @@ UINT8 CModel3::Read8(UINT32 addr)
   // Other
   switch ((addr >> 24))
   {
-	  // CROM
+  // CROM
   case 0xFF:
-	  if (addr < 0xFF800000)
-		  return cromBank[(addr & 0x7FFFFF) ^ 3];
-	  else
-		  return crom[(addr & 0x7FFFFF) ^ 3];
+    if (addr < 0xFF800000)
+      return cromBank[(addr & 0x7FFFFF) ^ 3];
+    else
+      return crom[(addr & 0x7FFFFF) ^ 3];
 
-	  // Real3D DMA
+  // Real3D DMA
   case 0xC2:
-	  return GPU.ReadDMARegister8(addr & 0xFF);
+    return GPU.ReadDMARegister8(addr & 0xFF);
 
-	  // Various
+  // Various
   case 0xF0:
   case 0xFE:  // mirror
 
-	  switch ((addr >> 16) & 0xFF)
-	  {
-		  // Inputs
-	  case 0x04:
-		  return ReadInputs(addr & 0x3F);
+    switch ((addr >> 16) & 0xFF)
+    {
+    // Inputs
+    case 0x04:
+      return ReadInputs(addr & 0x3F);
 
-		  // Sound Board
-	  case 0x08:
-		  if ((addr & 0xF) == 4)  // MIDI control port
-			  return 0x83;          // magtruck country check
-		  else
-			  return 0;
-		  break;
+    // Sound Board
+    case 0x08:
+      if ((addr & 0xF) == 4)  // MIDI control port
 
-		  // System registers
-	  case 0x10:
-		  return ReadSystemRegister(addr & 0x3F);
+        return 0x83;          // magtruck country check
 
-		  // RTC    
-	  case 0x14:
-		  if ((addr & 3) == 1)  // battery voltage test
-			  return 0x03;
-		  else if ((addr & 3) == 0)
-			  return RTC.ReadRegister((addr >> 2) & 0xF);
-		  return 0;
+      else
+        return 0;
+      break;
 
-		  // Unknown
-	  default:
-		  //printf("CMODEL3 : unknown R8 mirror : %x\n", addr >> 16);
-		  break;
-	  }
+    // System registers
+    case 0x10:    
+      return ReadSystemRegister(addr & 0x3F);
 
-	  break;
+    // RTC    
+    case 0x14:
+      if ((addr & 3) == 1)  // battery voltage test
+        return 0x03;
+      else if ((addr & 3) == 0)
+        return RTC.ReadRegister((addr >> 2) & 0xF);
+      return 0;
 
-	  // Tile generator
+    // Unknown
+    default:
+      //printf("CMODEL3 : unknown R8 mirror : %x\n", addr >> 16);
+      break;
+    }
+
+    break;
+
+  // Tile generator
   case 0xF1:
-	  if (addr < 0xF1120000)
-	  {
-		  // Tile generator accesses its RAM as little endian, no adjustment needed here
-		  return TileGen.ReadRAM8(addr & 0x1FFFFF);
-	  }
-	  break;
+    if (addr < 0xF1120000)
+    {
+      // Tile generator accesses its RAM as little endian, no adjustment needed here
+      return TileGen.ReadRAM8(addr & 0x1FFFFF);
+    }
+    break;
 
-	  // 53C810 SCSI
+  // 53C810 SCSI
   case 0xC0:  // only on Step 1.0
 #ifndef NET_BOARD
-	  if (m_game.stepping != "1.0")
-	  {
-		  //printf("Model3 : Read8 %x\n", addr);
-		  break;
-	  }
+    if (m_game.stepping != "1.0")
+    {
+      //printf("Model3 : Read8 %x\n", addr);
+      break;
+    }
 #endif
 #ifdef NET_BOARD
-	  if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // check for Step 1.0
-	  {
-		  switch ((addr & 0x3ffff) >> 16)
-		  {
-		  case 0:
-			  //printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
-			  return netBuffer[(addr & 0xFFFF)];
+  if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // check for Step 1.0
+  {
+    switch ((addr & 0x3ffff) >> 16)
+    {
+    case 0:
+      //printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
+      return netBuffer[(addr & 0xFFFF)];
+      
+    case 1: // ioreg 32bits access in 16bits environment
+      if (addr > 0xc00101ff)
+      {
+        printf("R8 ATTENTION OUT OF RANGE\n");
+        MessageBox(NULL, "Out of Range", NULL, MB_OK);
+      }
+      printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
+      return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
 
-		  case 1: // ioreg 32bits access in 16bits environment
-			  if (addr > 0xc00101ff)
-			  {
-				  printf("R8 ATTENTION OUT OF RANGE\n");
-				  MessageBox(NULL, "Out of Range", NULL, MB_OK);
-			  }
-			  printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
-			  return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
-
-		  case 2:
-		  case 3:
-			  if (addr > 0xc002ffff)
-			  {
-				  printf("R8 ATTENTION OUT OF RANGE\n");
-				  MessageBox(NULL, "Out of Range", NULL, MB_OK);
-			  }
-			  //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
-			  return netRAM[((addr & 0x1FFFF) / 2)];
-			  /*case 3:
-				  //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
-				  return netRAM[((addr & 0x1FFFF) / 2)];*/
-
-		  default:
-			  printf("R8 ATTENTION OUT OF RANGE\n");
-			  MessageBox(NULL, "Out of Range", NULL, MB_OK);
-			  break;
-		  }
-	  }
-	  else if (m_game.stepping != "1.0") break;
+    case 2:
+    case 3:
+      if (addr > 0xc002ffff)
+      {
+        printf("R8 ATTENTION OUT OF RANGE\n");
+        MessageBox(NULL, "Out of Range", NULL, MB_OK);
+      }
+      //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
+      return netRAM[((addr & 0x1FFFF) / 2)];
+    /*case 3:
+      //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
+      return netRAM[((addr & 0x1FFFF) / 2)];*/
+    
+    default:
+      printf("R8 ATTENTION OUT OF RANGE\n");
+      MessageBox(NULL, "Out of Range", NULL, MB_OK);
+      break;
+    }
+  }
+  else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1008,7 +1010,7 @@ UINT8 CModel3::Read8(UINT32 addr)
   // Unknown  
   default:
 #ifdef NET_BOARD
-	  printf("CMODEL3 : unknown R8 : %x\n", addr >> 24);
+    printf("CMODEL3 : unknown R8 : %x\n", addr >> 24);
 #endif
     break;
   }
@@ -1083,7 +1085,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 
     // Unknown
     default:
-		//printf("CMODEL3 : unknown R16 mirror : %x\n", addr >> 16);
+      //printf("CMODEL3 : unknown R16 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1101,27 +1103,27 @@ UINT16 CModel3::Read16(UINT32 addr)
 
 #ifdef NET_BOARD
   case 0xc0: // spikeout call this
-			 // interresting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
-			 // sort of sync ack ? who writes this 16b value ?
+  // interresting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
+  // sort of sync ack ? who writes this 16b value ?
   {
-	  UINT16 result;
-	  switch ((addr & 0x3ffff) >> 16)
-	  {
-	  case 0:
-		  //printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
-		  result = *(UINT16 *)&netBuffer[(addr & 0xFFFF)];
-		  return FLIPENDIAN16(result); // result
-	  default:
-		  printf("CMODEL3 : unknown R16 : %x (C0)\n", addr);
-		  break;
-	  }
+    UINT16 result;
+    switch ((addr & 0x3ffff) >> 16)
+    {
+    case 0:
+      //printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
+      result = *(UINT16 *)&netBuffer[(addr & 0xFFFF)];
+      return FLIPENDIAN16(result); // result
+    default:
+      printf("CMODEL3 : unknown R16 : %x (C0)\n", addr);
+      break;
+    }
   }
 #endif
   // Unknown
   default:
 #ifdef NET_BOARD
-	  printf("CMODEL3 : unknown R16 : %x (%x)\n", addr, addr >> 24);
-	  MessageBox(NULL, "CMODEL3 : Unknown R16", NULL, MB_OK);
+    printf("CMODEL3 : unknown R16 : %x (%x)\n", addr, addr >> 24);
+    MessageBox(NULL, "CMODEL3 : Unknown R16", NULL, MB_OK);
 #endif
     break;
   }
@@ -1237,7 +1239,7 @@ UINT32 CModel3::Read32(UINT32 addr)
     
     // Unknown
     default:
-    //printf("CModel 3 unknown R32 mirror %x", (addr >> 16) & 0xFF);
+      //printf("CModel 3 unknown R32 mirror %x", (addr >> 16) & 0xFF);
       break;
     }
 
@@ -1275,7 +1277,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       case 0:
         //printf("R32 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0xFFFF)]));
         result = *(UINT32 *)&netBuffer[(addr & 0xFFFF)];
-		return _rotl(FLIPENDIAN32(result), 16);
+        return _rotl(FLIPENDIAN32(result), 16);
         //return FLIPENDIAN32(result); // result
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1316,7 +1318,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-	else if (m_game.stepping != "1.0") break;
+    else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1329,7 +1331,7 @@ UINT32 CModel3::Read32(UINT32 addr)
   // Unknown
   default:
 #ifdef NET_BOARD
-	  printf("CMODEL3 : unknown R32 : %x\n", addr >> 24);
+    printf("CMODEL3 : unknown R32 : %x\n", addr >> 24);
 #endif
     break;
   }
@@ -1413,7 +1415,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     
     // Unknown
     default:
-    //printf("CMODEL3 : unknown W8 mirror : %x\n", addr >> 16);
+      //printf("CMODEL3 : unknown W8 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1428,7 +1430,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       TileGen.WriteRAM8(addr&0x1FFFFF, data);
       break;
     }
-  goto Unknown8;
+    goto Unknown8;
 
   // MPC105/106
   case 0xF8:
@@ -1492,7 +1494,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-	else if (m_game.stepping != "1.0") break;
+    else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1553,7 +1555,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
     // Unknown
     default:
-    //printf("CMODEL3 : unknown W16 mirror : %x\n", addr >> 16);
+      //printf("CMODEL3 : unknown W16 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1578,28 +1580,29 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
 
 #ifdef NET_BOARD
   case 0xC0: // skichamp only
-			 //printf("CModel 3 : write16 %x<-%x\n", addr, data);
+    //printf("CModel 3 : write16 %x<-%x\n", addr, data);
 
-	  switch ((addr & 0x3ffff) >> 16)
-	  {
-	  case 0:
-		  //printf("W16 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
-		  *(UINT16 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN16(data);
-		  break;
 
-	  default:
-		  printf("CMODEL3 : unknown W16 : %x\n", addr >> 24);
-		  break;
-	  }
+    switch ((addr & 0x3ffff) >> 16)
+    {
+    case 0:
+      //printf("W16 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
+      *(UINT16 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN16(data);
+      break;
 
-	  break;
+    default:
+      //printf("CMODEL3 : unknown W16 : %x\n", addr >> 24);
+      break;
+    }
+
+    break;
 #endif
 
-	  // Unknown
+  // Unknown
   default:
   Unknown16:
-	  DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
-	  break;
+    DebugLog("PC=%08X\twrite16: %08X=%04X\n", ppc_get_pc(), addr, data);
+    break;
   }
 } 
 
@@ -1693,22 +1696,22 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       break;
 
     // MPC105/106
-	case 0xC0: case 0xD0: case 0xE0:
-    case 0xC1: case 0xD1: case 0xE1: 
-    case 0xC2: case 0xD2: case 0xE2: 
-    case 0xC3: case 0xD3: case 0xE3: 
-    case 0xC4: case 0xD4: case 0xE4: 
-    case 0xC5: case 0xD5: case 0xE5: 
-    case 0xC6: case 0xD6: case 0xE6: 
-    case 0xC7: case 0xD7: case 0xE7: 
-    case 0xC8: case 0xD8: case 0xE8: 
-    case 0xC9: case 0xD9: case 0xE9: 
-    case 0xCA: case 0xDA: case 0xEA: 
-    case 0xCB: case 0xDB: case 0xEB: 
-    case 0xCC: case 0xDC: case 0xEC: 
-    case 0xCD: case 0xDD: case 0xED: 
-    case 0xCE: case 0xDE: case 0xEE: 
-    case 0xCF: case 0xDF: case 0xEF: 
+    case 0xC0: case 0xD0: case 0xE0:
+    case 0xC1: case 0xD1: case 0xE1:
+    case 0xC2: case 0xD2: case 0xE2:
+    case 0xC3: case 0xD3: case 0xE3:
+    case 0xC4: case 0xD4: case 0xE4:
+    case 0xC5: case 0xD5: case 0xE5:
+    case 0xC6: case 0xD6: case 0xE6:
+    case 0xC7: case 0xD7: case 0xE7:
+    case 0xC8: case 0xD8: case 0xE8:
+    case 0xC9: case 0xD9: case 0xE9:
+    case 0xCA: case 0xDA: case 0xEA:
+    case 0xCB: case 0xDB: case 0xEB:
+    case 0xCC: case 0xDC: case 0xEC:
+    case 0xCD: case 0xDD: case 0xED:
+    case 0xCE: case 0xDE: case 0xEE:
+    case 0xCF: case 0xDF: case 0xEF:
       if ((addr>=0xF0C00CF8) && (addr<0xF0C00D00))    // MPC105
         PCIBridge.WritePCIConfigData(32,0,data);
       else if ((addr>=0xFEC00000) && (addr<0xFEE00000)) // MPC106
@@ -1740,10 +1743,10 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     case 0x1A:
       WriteSecurity(addr&0x3F,data);
       break;
-  
+
     // Unknown
     default:
-    //printf("CMODEL3 : unknown W32 mirror : %x\n", addr >> 16);
+      //printf("CMODEL3 : unknown W32 mirror : %x\n", addr >> 16);
       break;
     }
 
@@ -1780,7 +1783,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
   case 0xC0:  // step 1.0 only
 #ifndef NET_BOARD
     if (m_game.stepping != "1.0")
-    goto Unknown32;
+      goto Unknown32;
 #endif
 #ifdef NET_BOARD
     if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // assuming there is no scsi card for step>1.0 because same address for network card (right or wrong ??)
@@ -1790,7 +1793,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       case 0:
         //printf("W32 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
         //*(UINT32 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN32(data);
-		*(UINT32 *)&netBuffer[(addr & 0xFFFF)] = _rotl(FLIPENDIAN32(data), 16);
+        *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = _rotl(FLIPENDIAN32(data), 16);
         break;
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1822,12 +1825,12 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
         break;
       }
 
-	  if ((*(UINT16 *)&netBuffer[(0xc00100c0 & 0x3FFFF)] == FLIPENDIAN16(0x0000)) && NetBoard.CodeReady == true) // c0=180/2 // reset net when reboot - not perfect, I think memory must be cleared
-	  {
-		  printf("Network pause\n");
-		  NetBoard.CodeReady = false;
-		  NetBoard.Reset();
-	  }
+      if ((*(UINT16 *)&netBuffer[(0xc00100c0 & 0x3FFFF)] == FLIPENDIAN16(0x0000)) && NetBoard.CodeReady == true) // c0=180/2 // reset net when reboot - not perfect, I think memory must be cleared
+      {
+        printf("Network pause\n");
+        NetBoard.CodeReady = false;
+        NetBoard.Reset();
+      }
 
       if ((*(UINT16 *)&netBuffer[(0xc0010088 & 0x3FFFF)] == FLIPENDIAN16(0x0080)) && NetBoard.CodeReady == false) // 88=110/2
       {
@@ -1838,7 +1841,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-	else if (m_game.stepping != "1.0") break;
+    else if (m_game.stepping != "1.0") break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1862,8 +1865,8 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
 void CModel3::Write64(UINT32 addr, UINT64 data)
 {
-	//printf("write64 %x <- %x\n", addr, data);
-	Write32(addr+0, (UINT32) (data>>32));
+    //printf("write64 %x <- %x\n", addr, data);
+    Write32(addr+0, (UINT32) (data>>32));
     Write32(addr+4, (UINT32) data);
 }
 
@@ -2023,9 +2026,9 @@ void CModel3::RunFrame(void)
     // If multi-threading GPU, then sync GPUs last while PPC main board thread is waiting
     if (m_gpuMultiThreaded)
       SyncGPUs();
-	
-	/*if (NetBoard.IsAttached())
-		RunNetBoardFrame();*/
+
+    /*if (NetBoard.IsAttached())
+      RunNetBoardFrame();*/
   }
   else
   {
@@ -2037,20 +2040,20 @@ void CModel3::RunFrame(void)
     if (DriveBoard.IsAttached())
       RunDriveBoardFrame();
 #ifdef NET_BOARD
-	if (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()) && ((*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFFFF) || (netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFF) || (*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0x0001)) && (NetBoard.CodeReady == true))
-	{
-		// ppc irq network needed ? no effect, is it really active/needed ? 
-		//RunNetBoardFrame();
-		IRQ.Assert(0x10);
-		ppc_execute(200); // give PowerPC time to acknowledge IRQ
-		//RunNetBoardFrame();
-		IRQ.Deassert(0x10);
-		ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
-		RunNetBoardFrame();
-		// Hum hum, if runnetboardframe is called at 1st place or between ppc irq assert/deassert, spikout freezes just after the gate with net error
-		// if runnetboardframe is called after ppc irq assert/deassert, spikout works
-	}
-#endif	
+    if (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()) && ((*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFFFF) || (netBuffer[(0xc00100C0 & 0x3FFFF)] == 0xFF) || (*(UINT16 *)&netBuffer[(0xc00100C0 & 0x3FFFF)] == 0x0001)) && (NetBoard.CodeReady == true))
+    {
+      // ppc irq network needed ? no effect, is it really active/needed ? 
+      //RunNetBoardFrame();
+      IRQ.Assert(0x10);
+      ppc_execute(200); // give PowerPC time to acknowledge IRQ
+      //RunNetBoardFrame();
+      IRQ.Deassert(0x10);
+      ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
+      RunNetBoardFrame();
+      // Hum hum, if runnetboardframe is called at 1st place or between ppc irq assert/deassert, spikout freezes just after the gate with net error
+      // if runnetboardframe is called after ppc irq assert/deassert, spikout works
+    }
+#endif
   }
 
   timings.frameTicks = CThread::GetTicks() - start;
@@ -2342,7 +2345,7 @@ void CModel3::RunDriveBoardFrame(void)
 #ifdef NET_BOARD
 void CModel3::RunNetBoardFrame(void)
 {
-	NetBoard.RunFrame();
+  NetBoard.RunFrame();
 }
 #endif
 
@@ -2411,7 +2414,7 @@ bool CModel3::StartThreads(void)
   // Set audio callback if sound board thread is unsync'd
   if (!syncSndBrdThread)
   {
-	  SetAudioCallback(AudioCallback, this);
+    SetAudioCallback(AudioCallback, this);
   }
   
   startedThreads = true;
@@ -2609,7 +2612,7 @@ void CModel3::DumpTimings(void)
     timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
     timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
 #ifdef NET_BOARD
-	timings.netTicks, (timings.netTicks > 10 ? '!' : ','),
+  timings.netTicks, (timings.netTicks > 10 ? '!' : ','),
 #endif
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
@@ -2646,7 +2649,6 @@ int CModel3::StartDriveBoardThread(void *data)
   CModel3 *model3 = (CModel3*)data;
   return model3->RunDriveBoardThread();
 }
-
 
 int CModel3::RunMainBoardThread(void)
 {
@@ -2945,8 +2947,6 @@ ThreadError:
   return 1;
 }
 
-
-
 void CModel3::Reset(void)
 {
   // Clear memory (but do not modify backup RAM!)
@@ -3024,8 +3024,8 @@ void CModel3::Reset(void)
 #define MEMORY_POOL_SIZE    (0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000)
 #endif
 #ifdef NET_BOARD
-#define OFFSET_NETBUFFER	0xC000000 // not really 128kb (64kb buffer 0000-ffff + i/o 10000-101ff)
-#define OFFSET_NETRAM	    0xC020000 // 128 KB (c0020000-c003ffff)
+#define OFFSET_NETBUFFER    0xC000000 // not really 128kb (64kb buffer 0000-ffff + i/o 10000-101ff)
+#define OFFSET_NETRAM       0xC020000 // 128 KB (c0020000-c003ffff)
 #define MEMORY_POOL_SIZE    (0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000 + 0x40000)
 							//8MB		8MB			128MB		64MB		128KB		128KB	512KB		16MB		128KB	16MB		64KB		256KB
 #endif
@@ -3080,7 +3080,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   rom_set.get_rom("mpeg_program").CopyTo(dsbROM, 128*1024);
   rom_set.get_rom("mpeg_music").CopyTo(mpegROM, 16*0x100000);
   rom_set.get_rom("driveboard_program").CopyTo(driveROM, 64*1024);
-    
+
   // Convert PowerPC and 68K ROMs to little endian words 
   Util::FlipEndian32(crom, 8*0x100000 + 128*0x100000);
   Util::FlipEndian16(soundROM, 512*1024);
@@ -3100,7 +3100,10 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
     ppc_config.pvr = PPC_MODEL_603E;   // 100 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x15; // 1.5X multiplier
-    if (game.name == "scudp1")
+    if (game.name == "scudplusa"
+     || game.name == "vs215" || game.name == "vs215o"
+     || game.name == "vs29815" || game.name == "vs29915"
+    )
       PCIBridge.SetModel(0x106);      // some Step 1.x games use MPC106
     else
       PCIBridge.SetModel(0x105);      // MPC105
@@ -3110,7 +3113,8 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
     ppc_config.pvr = PPC_MODEL_603R;   // 66 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x10; // 1X multiplier
-    if (game.name == "bass" || game.name == "getbass")
+    if (game.name == "bass" || game.name == "bassdx" || game.name == "getbass")
+
       PCIBridge.SetModel(0x106);      // some Step 1.x games use MPC106
     else
       PCIBridge.SetModel(0x105);      // MPC105
@@ -3135,7 +3139,17 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   
   // Initialize Real3D 
   int stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  GPU.SetStepping(stepping);
+  // Some step 2+ games need the older PCI ID (obvious symptom:
+  // vbl is enabled briefly then disabled so the game hangs)
+  bool step20_with_old_real3d;
+  if (game.name == "von2" || game.name == "von2a" || game.name == "von254g"
+   || game.name == "dirtdvls" || game.name == "dirtdvlsa" || game.name == "dirtdvlsj"
+   || game.name == "magtruck" || game.name == "lamachin"
+  )
+    step20_with_old_real3d = true;
+  else
+    step20_with_old_real3d = false;
+  GPU.SetStepping(stepping, step20_with_old_real3d);
   
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)
@@ -3272,9 +3286,9 @@ bool CModel3::Init(void)
     return FAIL;
 #ifdef NET_BOARD
   if (OKAY != NetBoard.Init(netRAM, netBuffer))
-	return FAIL;
+  return FAIL;
 #endif
-  
+
   PCIBridge.AttachPCIBus(&PCIBus);
   PCIBus.AttachDevice(13,&GPU);
   PCIBus.AttachDevice(14,&SCSI);
@@ -3287,7 +3301,7 @@ bool CModel3::Init(void)
 
 CSoundBoard *CModel3::GetSoundBoard(void)
 {
-	return &SoundBoard;
+  return &SoundBoard;
 }
  
 CDriveBoard *CModel3::GetDriveBoard(void)
@@ -3298,7 +3312,7 @@ CDriveBoard *CModel3::GetDriveBoard(void)
 #ifdef NET_BOARD
 CNetBoard *CModel3::GetNetBoard(void)
 {
-	return &NetBoard;
+  return &NetBoard;
 }
 #endif
 
@@ -3311,9 +3325,9 @@ CModel3::CModel3(const Util::Config::Node &config)
     SoundBoard(config),
     DriveBoard(config),
 #ifdef NET_BOARD
-	NetBoard(config),
+    NetBoard(config),
 #endif
-	m_jtag(GPU)
+    m_jtag(GPU)
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
@@ -3337,31 +3351,31 @@ CModel3::CModel3(const Util::Config::Node &config)
 #endif
 
   DSB = NULL;
-  
+
   securityPtr = 0;
-  
+
   startedThreads = false;
   pauseThreads = false;
   stopThreads = false;
   ppcBrdThread = NULL;
   sndBrdThread = NULL; 
   drvBrdThread = NULL;
-  
+
   ppcBrdThreadRunning = false;
   ppcBrdThreadDone = false;
   sndBrdThreadRunning = false;
   sndBrdThreadDone = false;
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
-  
+
   syncSndBrdThread = false;
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;
-  
+
   notifyLock = NULL;
   notifySync = NULL;
-  
+
   DebugLog("Built Model 3\n");
 }
 
@@ -3410,7 +3424,6 @@ CModel3::~CModel3(void)
     delete DSB;
     DSB = NULL;
   }
-
 
   Inputs = NULL;
   Outputs = NULL;

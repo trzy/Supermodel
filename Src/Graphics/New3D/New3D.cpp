@@ -26,9 +26,6 @@ CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
 	m_textureRAM	= nullptr;
 	m_sunClamp		= true;
 	m_shadeIsSigned = true;
-
-	// Fall-back mechanism for games with patched (not working) JTAG
-	if (m_gameName == "swtrilgy") m_shadeIsSigned = false;
 }
 
 CNew3D::~CNew3D()
@@ -1665,8 +1662,6 @@ void CNew3D::SetSunClamp(bool enable)
 
 void CNew3D::SetSignedShade(bool enable)
 {
-	if (m_gameName == "swtrilgy") return;		// jtag has been patched out in star wars - todo fix this
-
 	m_shadeIsSigned = enable;
 }
 

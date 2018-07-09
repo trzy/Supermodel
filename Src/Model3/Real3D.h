@@ -362,7 +362,8 @@ public:
    *    stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
    *              0x21 for Step 2.1. Anything else defaults to 1.0.
    */
-  void SetStepping(int stepping);
+  void SetStepping(int stepping, bool step20_with_old_real3d);
+
   
   /*
    * Init(vromPtr, BusObjectPtr, IRQObjectPtr, dmaIRQBit):
