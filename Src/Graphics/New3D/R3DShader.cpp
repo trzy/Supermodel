@@ -86,7 +86,6 @@ uniform bool	fixedShading;
 uniform int		hardwareStep;
 
 //interpolated inputs from vertex shader
-varying float	fsFogFactor;
 varying vec3	fsViewVertex;
 varying vec3	fsViewNormal;		// per vertex normal vector
 varying vec4	fsColor;
