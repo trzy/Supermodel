@@ -250,6 +250,9 @@ private:
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
 
+	Vertex			m_prev[4];				// these are class variables because sega bass fishing starts meshes with shared vertices from the previous one
+	UINT16			m_prevTexCoords[4][2];	// basically relying on undefined behavour
+
 	std::vector<Node> m_nodes;				// this represents the entire render frame
 	std::vector<Poly> m_polyBufferRam;		// dynamic polys
 	std::vector<Poly> m_polyBufferRom;		// rom polys

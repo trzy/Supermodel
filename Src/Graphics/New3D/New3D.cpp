@@ -1026,9 +1026,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
-	Vertex			prev[4];
 	UINT16			texCoords[4][2];
-	UINT16			prevTexCoords[4][2];
 	PolyHeader		ph;
 	UINT64			lastHash	= -1;
 	SortingMesh*	currentMesh = nullptr;
@@ -1086,10 +1084,10 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		{
 			if (ph.SharedVertex(i))
 			{
-				p.v[j] = prev[i];
+				p.v[j] = m_prev[i];
 
-				texCoords[j][0] = prevTexCoords[i][0];
-				texCoords[j][1] = prevTexCoords[i][1];
+				texCoords[j][0] = m_prevTexCoords[i][0];
+				texCoords[j][1] = m_prevTexCoords[i][1];
 
 				//check if we need to recalc tex coords - will only happen if tex tiles are different + sharing vertices
 				if (hash != lastHash) {
@@ -1178,7 +1176,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				p.v[j].fixedShade = shade;
 			}
 
-			float texU, texV = 0;
+			float texU = 0;
+			float texV = 0;
 
 			// tex coords
 			if (currentMesh->textured) {
@@ -1233,9 +1232,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		
 		// Copy current vertices into previous vertex array
 		for (i = 0; i < 4; i++) {
-			prev[i] = p.v[i];
-			prevTexCoords[i][0] = texCoords[i][0];
-			prevTexCoords[i][1] = texCoords[i][1];
+			m_prev[i] = p.v[i];
+			m_prevTexCoords[i][0] = texCoords[i][0];
+			m_prevTexCoords[i][1] = texCoords[i][1];
 		}
 
 	} while (ph.NextPoly());
