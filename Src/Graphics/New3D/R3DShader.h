@@ -23,12 +23,16 @@ public:
 
 private:
 
+	void PrintShaderResult(GLuint shader);
+	void PrintProgramResult(GLuint program);
+
 	// run-time config
 	const Util::Config::Node &m_config;
 
 	// shader IDs
 	GLuint m_shaderProgram;
 	GLuint m_vertexShader;
+	GLuint m_geoShader;
 	GLuint m_fragmentShader;
 
 	// mesh uniform locations
@@ -58,7 +62,7 @@ private:
 	float	m_microTexScale;
 	float	m_baseTexSize[2];
 	bool	m_textureInverted;
-	
+
 	// cached model values
 	float	m_modelScale;
 
@@ -73,6 +77,7 @@ private:
 	GLint m_locFogColour;
 	GLint m_locFogAttenuation;
 	GLint m_locFogAmbient;
+	GLint m_locProjMat;
 
 	// lighting / other
 	GLint m_locLighting;
@@ -88,14 +93,16 @@ private:
 	GLint m_locSpotRange;
 	GLint m_locSpotColor;
 	GLint m_locSpotFogColor;
-	
+
 	// model uniforms
 	GLint m_locModelScale;
+	GLint m_locModelMat;
 
 	// global uniforms
 	GLint m_locHardwareStep;
 	GLint m_locDiscardAlpha;
 };
+
 
 } // New3D
 

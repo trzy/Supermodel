@@ -22,12 +22,43 @@ struct ClipPoly
 	int count = 0;
 };
 
+
 struct Vertex					// half vertex
 {
 	float pos[4];
 	float normal[3];
 	float texcoords[2];
 	float fixedShade;
+
+	static bool Equal(const Vertex& p1, const Vertex& p2)
+	{
+		if (p1.pos[0] == p2.pos[0] &&
+			p1.pos[1] == p2.pos[1] &&
+			p1.pos[2] == p2.pos[2])
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	static void Average(const Vertex& p1, const Vertex& p2, Vertex& p3)
+	{
+		p3.pos[3] = 1.0f;	//always 1
+		p3.fixedShade = (p1.fixedShade + p2.fixedShade) / 2.0f;
+
+		for (int i = 0; i < 3; i++)	{ p3.pos[i] = (p1.pos[i] + p2.pos[i]) / 2.0f; }
+		for (int i = 0; i < 3; i++)	{ p3.normal[i] = (p1.normal[i] + p2.normal[i]) / 2.0f; }
+		for (int i = 0; i < 2; i++)	{ p3.texcoords[i] = (p1.texcoords[i] + p2.texcoords[i]) / 2.0f; }
+	}
+};
+
+struct R3DPoly
+{
+	Vertex v[4];			// just easier to have them as an array
+	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
+	UINT8 faceColour[4];	// per face colour
+	int number = 4;
 };
 
 struct FVertex : Vertex			// full vertex including face attributes
@@ -40,50 +71,31 @@ struct FVertex : Vertex			// full vertex including face attributes
 		memcpy(this, &vertex, sizeof(Vertex));
 		return *this;
 	}
-};
 
-struct R3DPoly
-{
-	Vertex v[4];			// just easier to have them as an array
-	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
-	UINT8 faceColour[4];	// per face colour
-	int number = 4;
-};
+	FVertex() {}
+	FVertex(const R3DPoly& r3dPoly, int index) 
+	{
+		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
+		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
 
-struct Poly						// our polys are always 3 triangles, unlike the real h/w
-{
-	Poly() {};	// default
-
-	Poly(bool firstTriangle, const R3DPoly& r3dPoly) {
-
-		if (firstTriangle) {
-			p1 = r3dPoly.v[0];
-			p2 = r3dPoly.v[1];
-			p3 = r3dPoly.v[2];
-		}
-		else {
-			p1 = r3dPoly.v[0];
-			p2 = r3dPoly.v[2];
-			p3 = r3dPoly.v[3];
-		}
-
-		// copy face attributes
-		for (int i = 0; i < 4; i++) {
-			p1.faceColour[i] = r3dPoly.faceColour[i];
-			p2.faceColour[i] = r3dPoly.faceColour[i];
-			p3.faceColour[i] = r3dPoly.faceColour[i];
-		}
-
-		for (int i = 0; i < 3; i++) {
-			p1.faceNormal[i] = r3dPoly.faceNormal[i];
-			p2.faceNormal[i] = r3dPoly.faceNormal[i];
-			p3.faceNormal[i] = r3dPoly.faceNormal[i];
-		}
+		*this = r3dPoly.v[index];
 	}
 
-	FVertex p1;
-	FVertex p2;
-	FVertex p3;
+	FVertex(const R3DPoly& r3dPoly, int index1, int index2)		// average of 2 points
+	{
+		Vertex::Average(r3dPoly.v[index1], r3dPoly.v[index2], *this);
+
+		// copy face attributes
+		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
+		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
+	}
+
+	static void Average(const FVertex& p1, const FVertex& p2, FVertex& p3)
+	{
+		Vertex::Average(p1, p2, p3);
+		for (int i = 0; i < 4; i++) { p3.faceColour[i] = p1.faceColour[i]; }
+		for (int i = 0; i < 3; i++) { p3.faceNormal[i] = p1.faceNormal[i]; }
+	}
 };
 
 enum class Layer { colour, trans1, trans2, all, none };
@@ -150,12 +162,12 @@ struct Mesh
 
 	// opengl resources
 	int vboOffset		= 0;			// this will be calculated later
-	int triangleCount	= 0;
+	int vertexCount		= 0;			// /3 for triangles /4 for quads
 };
 
 struct SortingMesh : public Mesh		// This struct temporarily holds the model data, before it gets copied to the main buffer
 {
-	std::vector<Poly> polys;
+	std::vector<FVertex> verts;
 };
 
 struct Model

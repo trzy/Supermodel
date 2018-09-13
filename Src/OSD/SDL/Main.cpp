@@ -304,6 +304,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
         else           printf("                             %s\n", strLocal);
       }
     }
+	free(strLocal);
   }
   if (infoLog)  InfoLog("");
   else      printf("\n");
@@ -1333,6 +1334,7 @@ static Util::Config::Node DefaultConfig()
 #endif
   // Platform-specific/UI 
   config.Set("New3DEngine", true);
+  config.Set("QuadRendering", false);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
   config.Set("FullScreen", false);
@@ -1507,6 +1509,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-show-fps",            { "ShowFrameRate",    true } },
     { "-no-fps",              { "ShowFrameRate",    false } },
     { "-new3d",               { "New3DEngine",      true } },
+	{ "-quad-rendering",      { "QuadRendering",    true } },
     { "-legacy3d",            { "New3DEngine",      false } },
     { "-no-flip-stereo",      { "FlipStereo",       false } },
     { "-flip-stereo",         { "FlipStereo",       true } },

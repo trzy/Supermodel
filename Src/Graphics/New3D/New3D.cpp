@@ -7,8 +7,8 @@
 #include <string.h>
 #include "R3DFloat.h"
 
-#define MAX_RAM_POLYS 100000	
-#define MAX_ROM_POLYS 500000
+#define MAX_RAM_VERTS 300000	
+#define MAX_ROM_VERTS 1500000
 
 #define BYTE_TO_FLOAT(B)	((2.0f * (B) + 1.0f) * (1.0F/255.0f))
 
@@ -26,6 +26,13 @@ CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
 	m_textureRAM	= nullptr;
 	m_sunClamp		= true;
 	m_shadeIsSigned = true;
+	m_numPolyVerts	= 3;			
+	m_primType		= GL_TRIANGLES;
+
+	if (config["QuadRendering"].ValueAs<bool>()) {
+		m_numPolyVerts	= 4;
+		m_primType		= GL_LINES_ADJACENCY;
+	}
 }
 
 CNew3D::~CNew3D()
@@ -59,7 +66,7 @@ void CNew3D::SetStepping(int stepping)
 		m_vertexFactor = (1.0f / 128.0f);		// 17.7
 	}
 
-	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(Poly) * (MAX_RAM_POLYS + MAX_ROM_POLYS));
+	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(FVertex) * (MAX_RAM_VERTS + MAX_ROM_VERTS));
 }
 
 bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
@@ -159,11 +166,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 		std::shared_ptr<Texture> tex1;
 
 		CalcViewport(&n.viewport, std::abs(m_nfPairs[priority].zNear*0.95f), std::abs(m_nfPairs[priority].zFar*1.05f));	// make planes 5% bigger
-
-		glViewport		(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
-		glMatrixMode	(GL_PROJECTION);
-		glLoadMatrixf	(n.viewport.projectionMatrix);
-		glMatrixMode	(GL_MODELVIEW);
+		glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
 
 		m_r3dShader.SetViewportUniforms(&n.viewport);
 
@@ -221,7 +224,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 				}
 				
 				m_r3dShader.SetMeshUniforms(&mesh);
-				glDrawArrays(GL_TRIANGLES, mesh.vboOffset*3, mesh.triangleCount*3);			// times 3 to convert triangles to vertices
+				glDrawArrays(m_primType, mesh.vboOffset, mesh.vertexCount);
 			}
 		}
 	}
@@ -308,25 +311,25 @@ void CNew3D::RenderFrame(void)
 	DrawScrollFog();								// fog layer if applicable must be drawn here
 	
 	m_vbo.Bind(true);
-	m_vbo.BufferSubData(MAX_ROM_POLYS*sizeof(Poly), m_polyBufferRam.size()*sizeof(Poly), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
+	m_vbo.BufferSubData(MAX_ROM_VERTS*sizeof(FVertex), m_polyBufferRam.size()*sizeof(FVertex), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
 
 	if (m_polyBufferRom.size()) {
 
 		// sync rom memory with vbo
-		int romBytes	= (int)m_polyBufferRom.size() * sizeof(Poly);
+		int romBytes	= (int)m_polyBufferRom.size() * sizeof(FVertex);
 		int vboBytes	= m_vbo.GetSize();
 		int size		= romBytes - vboBytes;
 
 		if (size) {
 			//check we haven't blown up the memory buffers
 			//we will lose rom models for 1 frame is this happens, not the end of the world, as probably won't ever happen anyway
-			if (m_polyBufferRom.size() >= MAX_ROM_POLYS) {
+			if (m_polyBufferRom.size() >= MAX_ROM_VERTS) {
 				m_polyBufferRom.clear();
 				m_romMap.clear();
 				m_vbo.Reset();
 			}
 			else {
-				m_vbo.AppendData(size, &m_polyBufferRom[vboBytes / sizeof(Poly)]);
+				m_vbo.AppendData(size, &m_polyBufferRom[vboBytes / sizeof(FVertex)]);
 			}
 		}
 	}
@@ -423,7 +426,7 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	modelAddress = TranslateModelAddress(modelAddr);
 
 	// create a new model to push onto the vector
-	m_nodes.back().models.emplace_back(Model());
+	m_nodes.back().models.emplace_back();
 
 	// get the last model in the array
 	m = &m_nodes.back().models.back();
@@ -811,7 +814,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->angle_top		= (1.0f / cw) * -(0.0f - io);
 
 		// calculate the frustum shape, near/far pair are dummy values
-
 		CalcViewport(vp, 1, 1000);
 
 		// calculate frustum planes
@@ -924,12 +926,46 @@ void CNew3D::RenderViewport(UINT32 addr)
 	}
 }
 
-void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray)
+void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray)
 {
-	polyArray.emplace_back(Poly(true,r3dPoly));			// create object directly in array without temporary copy
+	if (m_numPolyVerts==4) {
+		if (r3dPoly.number == 4) {
+			vertexArray.emplace_back(r3dPoly, 0);		// construct directly inside container without copy
+			vertexArray.emplace_back(r3dPoly, 1);
+			vertexArray.emplace_back(r3dPoly, 2);
+			vertexArray.emplace_back(r3dPoly, 3);
 
-	if (r3dPoly.number == 4) {
-		polyArray.emplace_back(Poly(false, r3dPoly));	// copy second triangle
+			// check for identical points (ie forced triangle) and replace with average point
+			// if we don't do this our quad code falls apart
+			FVertex* v = (&vertexArray.back()) - 3;
+
+			for (int i = 0; i < 4; i++) {
+
+				int next1 = (i + 1) % 4;
+				int next2 = (i + 2) % 4;
+
+				if (FVertex::Equal(v[i], v[next1])) {
+					FVertex::Average(v[i], v[next1], v[next2]);
+				}
+			}
+		}
+		else {
+			vertexArray.emplace_back(r3dPoly, 0);	
+			vertexArray.emplace_back(r3dPoly, 1);
+			vertexArray.emplace_back(r3dPoly, 2);
+			vertexArray.emplace_back(r3dPoly, 0, 2);	// last point is an average of 0 and 2
+		}
+	}
+	else {
+		vertexArray.emplace_back(r3dPoly, 0);
+		vertexArray.emplace_back(r3dPoly, 1);
+		vertexArray.emplace_back(r3dPoly, 2);
+
+		if (r3dPoly.number == 4) {
+			vertexArray.emplace_back(r3dPoly, 0);
+			vertexArray.emplace_back(r3dPoly, 2);
+			vertexArray.emplace_back(r3dPoly, 3);
+		}
 	}
 }
 
@@ -1062,7 +1098,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				currentMesh = &sMap[hash];
 
 				//make space for our vertices
-				currentMesh->polys.reserve(numTriangles);
+				currentMesh->verts.reserve(numTriangles * 3);
 
 				//set mesh values
 				SetMeshValues(currentMesh, ph);
@@ -1222,12 +1258,12 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				V3::inverse(tempP.v[i].normal);
 			}
 
-			CopyVertexData(tempP, currentMesh->polys);
+			CopyVertexData(tempP, currentMesh->verts);
 		}
 
 		// Copy this polygon into the model buffer
 		if (!ph.Discard()) {
-			CopyVertexData(p, currentMesh->polys);
+			CopyVertexData(p, currentMesh->verts);
 		}
 		
 		// Copy current vertices into previous vertex array
@@ -1249,40 +1285,25 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		if (m->dynamic) {
 
 			// calculate VBO values for current mesh
-			it.second.vboOffset		= m_polyBufferRam.size() + MAX_ROM_POLYS;
-			it.second.triangleCount = it.second.polys.size();
+			it.second.vboOffset		= (int)m_polyBufferRam.size() + MAX_ROM_VERTS;
+			it.second.vertexCount	= (int)it.second.verts.size();
 
 			// copy poly data to main buffer
-			m_polyBufferRam.insert(m_polyBufferRam.end(), it.second.polys.begin(), it.second.polys.end());
+			m_polyBufferRam.insert(m_polyBufferRam.end(), it.second.verts.begin(), it.second.verts.end());
 		}
 		else {
 			// calculate VBO values for current mesh
-			it.second.vboOffset		= m_polyBufferRom.size();
-			it.second.triangleCount = it.second.polys.size();
+			it.second.vboOffset		= (int)m_polyBufferRom.size();
+			it.second.vertexCount	= (int)it.second.verts.size();
 
 			// copy poly data to main buffer
-			m_polyBufferRom.insert(m_polyBufferRom.end(), it.second.polys.begin(), it.second.polys.end());
+			m_polyBufferRom.insert(m_polyBufferRom.end(), it.second.verts.begin(), it.second.verts.end());
 		}
 
 		//copy the temp mesh into the model structure
 		//this will lose the associated vertex data, which is now copied to the main buffer anyway
 		m->meshes->push_back(it.second);
 	}
-}
-
-float CNew3D::Determinant3x3(const float m[16]) {
-
-	/*
-		| A B C |
-	M = | D E F |
-		| G H I |
-
-	then the determinant is calculated as follows:
-
-	det M = A * (EI - HF) - B * (DI - GF) + C * (DH - GE)
-	*/
-
-	return m[0] * ((m[5] * m[10]) - (m[6] * m[9])) - m[4] * ((m[1] * m[10]) - (m[2] * m[9])) + m[8] * ((m[1] * m[6]) - (m[2] * m[5]));
 }
 
 bool CNew3D::IsDynamicModel(UINT32 *data)
@@ -1551,18 +1572,18 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[4])
 
 void CNew3D::ClipModel(const Model *m)
 {
-	//================
-	ClipPoly clipPoly;
-	std::vector<Poly> *polys;
-	int offset;
-	//================
+	//===============================
+	ClipPoly				clipPoly;
+	std::vector<FVertex>*	vertices;
+	int						offset;
+	//===============================
 
 	if (m->dynamic) {
-		polys = &m_polyBufferRam;
-		offset = MAX_ROM_POLYS;
+		vertices = &m_polyBufferRam;
+		offset = MAX_ROM_VERTS;
 	}
 	else {
-		polys = &m_polyBufferRom;
+		vertices = &m_polyBufferRom;
 		offset = 0;
 	}
 
@@ -1570,17 +1591,13 @@ void CNew3D::ClipModel(const Model *m)
 
 		int start = mesh.vboOffset - offset;
 		
-		for (int i = 0; i < mesh.triangleCount; i++) {
+		for (int i = 0; i < mesh.vertexCount; i += m_numPolyVerts) {							// inc to next poly
 
-			//==================================
-			Poly& poly = (*polys)[start + i];
-			//==================================
+			for (int j = 0; j < m_numPolyVerts; j++) {
+				MultVec(m->modelMat, (*vertices)[start + i + j].pos, clipPoly.list[j].pos);		// copy all 3 of 4  our transformed vertices into our clip poly struct
+			}
 
-			MultVec(m->modelMat, poly.p1.pos, clipPoly.list[0].pos);
-			MultVec(m->modelMat, poly.p2.pos, clipPoly.list[1].pos);
-			MultVec(m->modelMat, poly.p3.pos, clipPoly.list[2].pos);
-
-			clipPoly.count = 3;
+			clipPoly.count = m_numPolyVerts;
 
 			ClipPolygon(clipPoly, m_planes);
 

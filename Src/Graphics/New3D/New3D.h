@@ -198,11 +198,10 @@ private:
 	// building the scene
 	void SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph);
 	void CacheModel(Model *m, const UINT32 *data);
-	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<Poly>& polyArray);
+	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray);
 	void OffsetTexCoords(R3DPoly& r3dPoly, float offset[2]);
 
 	bool RenderScene(int priority, bool renderOverlay, Layer layer);		// returns if has overlay plane
-	float Determinant3x3(const float m[16]);
 	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
 	void DrawScrollFog();
@@ -218,6 +217,8 @@ private:
 
 	// Misc
 	std::string m_gameName;
+	int m_numPolyVerts;
+	GLenum m_primType;
 
 	// GPU configuration
 	bool m_sunClamp;
@@ -253,9 +254,9 @@ private:
 	Vertex			m_prev[4];				// these are class variables because sega bass fishing starts meshes with shared vertices from the previous one
 	UINT16			m_prevTexCoords[4][2];	// basically relying on undefined behavour
 
-	std::vector<Node> m_nodes;				// this represents the entire render frame
-	std::vector<Poly> m_polyBufferRam;		// dynamic polys
-	std::vector<Poly> m_polyBufferRom;		// rom polys
+	std::vector<Node>	 m_nodes;				// this represents the entire render frame
+	std::vector<FVertex> m_polyBufferRam;		// dynamic polys
+	std::vector<FVertex> m_polyBufferRom;		// rom polys
 	std::unordered_map<UINT32, std::shared_ptr<std::vector<Mesh>>> m_romMap;	// a hash table for all the ROM models. The meshes don't have model matrices or tex offsets yet
 
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
