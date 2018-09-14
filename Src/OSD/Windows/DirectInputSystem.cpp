@@ -1576,7 +1576,7 @@ bool CDirectInputSystem::InitializeSystem()
 		if (m_useRawInput)
 		{
 			// Get screen resolution (needed for absolute mouse devices)
-			DEVMODEA settings;
+			DEVMODEA settings = { 0 };
 			if (!EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &settings))
 			{
 				ErrorLog("Unable to read current display settings\n");

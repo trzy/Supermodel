@@ -609,7 +609,7 @@ bool CInputs::ConfigureInputs(const Game *game, unsigned dispX, unsigned dispY, 
 
 void CInputs::CalibrateJoysticks()
 {
-	unsigned numJoys = m_system->GetNumJoysticks();
+	int numJoys = m_system->GetNumJoysticks();
 	if (numJoys == 0 || numJoys == ANY_JOYSTICK)
 		puts("No joysticks attached to calibrate!");
 	else
@@ -617,10 +617,10 @@ void CInputs::CalibrateJoysticks()
 		puts("Choose joystick to calibrate (or press Esc to cancel):");
 		if (numJoys > 10)
 			numJoys = 10;
-		for (int joyNum = 0; joyNum < numJoys; joyNum++)
+		for (int i = 0; i < numJoys; i++)
 		{
-			const JoyDetails *joyDetails = m_system->GetJoyDetails(joyNum);
-			unsigned dispNum = (joyNum == 9 ? 0 : joyNum + 1);
+			const JoyDetails *joyDetails = m_system->GetJoyDetails(i);
+			unsigned dispNum = (i == 9 ? 0 : i + 1);
 			printf(" %u: %s\n", dispNum, joyDetails->name);
 		}
 
@@ -632,7 +632,7 @@ void CInputs::CalibrateJoysticks()
 			char c = mapping[4];
 			if (!isdigit(c))
 				continue;
-			unsigned joyNum = c - '0';
+			int joyNum = c - '0';
 			joyNum = (joyNum == 0 ? 9 : joyNum - 1);
 			if (joyNum >= numJoys)
 				continue;

@@ -1406,6 +1406,7 @@ static void Help(void)
   puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
   puts("                           0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
+  puts("  -quad-rendering         Enable proper quad rendering");
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
   puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
   puts("  -no-multi-texture       Decode to single texture (legacy engine) [Default]");

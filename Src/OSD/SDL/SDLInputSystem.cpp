@@ -369,7 +369,7 @@ int CSDLInputSystem::GetNumMice()
 int CSDLInputSystem::GetNumJoysticks()
 {
 	// Return number of joysticks found
-	return m_joysticks.size();
+	return (int)m_joysticks.size();
 }
 
 const KeyDetails *CSDLInputSystem::GetKeyDetails(int kbdNum)
