@@ -178,8 +178,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 				continue;
 			}
 
-			m_r3dShader.SetModelStates(&m);
-
 			for (auto &mesh : *m.meshes) {
 
 				if (mesh.highPriority) {
@@ -190,7 +188,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 				if (mesh.highPriority != renderOverlay) continue;
 
 				if (!matrixLoaded) {
-					glLoadMatrixf(m.modelMat);
+					m_r3dShader.SetModelStates(&m);
 					matrixLoaded = true;		// do this here to stop loading matrices we don't need. Ie when rendering non transparent etc
 				}
 				
