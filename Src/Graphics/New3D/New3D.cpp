@@ -1482,7 +1482,6 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[4])
 
 		for (int j = 0; j < 8; j++) {
 			if (planes[i].DistanceToPoint(box.points[j]) >= 0) {
-				float distance = planes[i].DistanceToPoint(box.points[j]);
 				temp++;
 			}
 		}
