@@ -926,6 +926,13 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray)
 {
+	// both lemans 24 and dirt devils are rendering some totally transparent polys as the first object in each viewport
+	// in dirt devils it's parallel to the camera so is completel invisible, but breaks our depth calculation
+	// in lemans 24 its a sort of diamond shape, but never leaves a hole in the transparent geometry so must be being skipped by the h/w
+	if (r3dPoly.faceColour[3] == 0) {
+		return;
+	}
+
 	if (m_numPolyVerts==4) {
 		if (r3dPoly.number == 4) {
 			vertexArray.emplace_back(r3dPoly, 0);		// construct directly inside container without copy
