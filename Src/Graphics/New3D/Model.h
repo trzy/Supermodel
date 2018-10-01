@@ -113,12 +113,12 @@ struct Mesh
 			}
 			break;
 		case Layer::trans1:
-			if (!textureAlpha && !polyAlpha || transLSelect) {
+			if ((!textureAlpha && !polyAlpha) || transLSelect) {
 				return false;
 			}
 			break;
 		case Layer::trans2:
-			if (!textureAlpha && !polyAlpha || !transLSelect) {
+			if ((!textureAlpha && !polyAlpha) || !transLSelect) {
 				return false;
 			}
 			break;

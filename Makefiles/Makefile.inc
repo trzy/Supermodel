@@ -94,6 +94,8 @@ SRC_FILES = \
 	Src/Graphics/Legacy3D/Legacy3D.cpp \
 	Src/Graphics/Legacy3D/Models.cpp \
 	Src/Graphics/Legacy3D/TextureRefs.cpp \
+	Src/Graphics/New3D/GLSLShader.cpp \
+	Src/Graphics/New3D/R3DFrameBuffers.cpp \
 	Src/Graphics/New3D/New3D.cpp \
 	Src/Graphics/New3D/Mat4.cpp \
 	Src/Graphics/New3D/Model.cpp \
