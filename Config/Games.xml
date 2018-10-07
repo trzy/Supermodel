@@ -850,7 +850,11 @@
       </inputs>
     </hardware>
     <roms>
-      <!-- Base offset of program in CROM space: 0x6473c0 (0x0473c0 in the ROM) -->
+      <patches>
+        <!-- Base offset of program in CROM space: 0x6473c0 (0x473c0 in the ROM) -->
+        <patch region="crom" bits="32" offset="0x0D8C4C" value="0x00000002" />  <!-- comm. mode: 00=master, 01=slave, 02=satellite -->
+        <patch region="crom" bits="32" offset="0x13FE38" value="0x38840004" />  <!-- an actual bug in the game code -->
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19890b.20" crc32="0x9C16C3CC" />
         <file offset="2" name="epr-19889b.19" crc32="0xD1F7E44C" />
@@ -2345,6 +2349,18 @@
       <encryption_key>0x29234e96</encryption_key>
     </hardware>
     <roms>
+    	<patches>
+        <!-- 
+          Offset of program relative to CROM base: 0x600000 (0x200000 in the 
+          ROM itself). Inexplicably, at PC=AFC1C, a call is made to FC78, which
+          is right in the middle of some totally unrelated initialization code 
+          (ASIC checks). This causes an invalid pointer to be fetched. Perhaps
+          FC78 should be overwritten with other program data by then? Why is it
+          not? Or, 300138 needs to be written with a non-zero value, it is
+          loaded from EEPROM but is 0.
+        -->
+        <patch region="crom" bits="32" offset="0x2afc1c" value="0x60000000" />  <!-- 0x6afc1c from base of CROM -->
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20920.20" crc32="0x428D05FC" />
         <file offset="2" name="epr-20919.19" crc32="0x7A0713D2" />
