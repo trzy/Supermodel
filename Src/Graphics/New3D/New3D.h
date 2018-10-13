@@ -199,7 +199,6 @@ private:
 	void SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph);
 	void CacheModel(Model *m, const UINT32 *data);
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray);
-	void OffsetTexCoords(R3DPoly& r3dPoly, float offset[2]);
 
 	bool RenderScene(int priority, bool renderOverlay, Layer layer);		// returns if has overlay plane
 	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette

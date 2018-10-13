@@ -13,12 +13,11 @@ public:
 	Texture();
 	~Texture();
 
-	UINT32	UploadTexture	(const UINT16* src, UINT8* scratch, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height);
+	UINT32	UploadTexture	(const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height);
 	void	DeleteTexture	();
 	void	BindTexture		();
 	void	GetCoordinates	(UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
 	void	GetDetails		(int& x, int&y, int& width, int& height, int& format);
-	void	SetWrapMode		(bool mirrorU, bool mirrorV);
 	bool	Compare			(int x, int y, int width, int height, int format);
 	bool	CheckMapPos		(int ax1, int ax2, int ay1, int ay2);				//check to see if textures overlap
 
@@ -26,7 +25,7 @@ public:
 
 private:
 
-	void CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height);
+	void CreateTextureObject(int format, int x, int y, int width, int height);
 	void UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height);
 	void Reset();
 
@@ -35,8 +34,6 @@ private:
 	int m_width;
 	int m_height;
 	int m_format;
-	bool m_mirrorU;
-	bool m_mirrorV;
 	GLuint m_textureID;
 };
 

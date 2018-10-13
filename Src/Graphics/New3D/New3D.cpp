@@ -198,13 +198,12 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 					CalcTexOffset(m.textureOffsetX, m.textureOffsetY, m.page, mesh.x, mesh.y, x, y);
 
 					if (tex1 && tex1->Compare(x, y, mesh.width, mesh.height, mesh.format)) {
-						tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);	
+						// texture already bound
 					}
 					else {
-						tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, mesh.mirrorU, mesh.mirrorV, x, y, mesh.width, mesh.height);
+						tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, x, y, mesh.width, mesh.height);
 						if (tex1) {
 							tex1->BindTexture();
-							tex1->SetWrapMode(mesh.mirrorU, mesh.mirrorV);
 						}
 					}
 
@@ -213,7 +212,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 						int mX, mY;
 						glActiveTexture(GL_TEXTURE1);
 						m_texSheet.GetMicrotexPos(y / 1024, mesh.microTextureID, mX, mY);
-						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, false, false, mX, mY, 128, 128);
+						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, mX, mY, 128, 128);
 						if (tex2) {
 							tex2->BindTexture();
 						}
@@ -371,6 +370,7 @@ void CNew3D::RenderFrame(void)
 	}
 
 	m_r3dFrameBuffers.DisableFBO();		// draw to back buffer normally
+
 }
 
 void CNew3D::BeginFrame(void)
@@ -974,53 +974,6 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 	}
 }
 
-// non smooth texturing on the pro-1000 seems to sample like gl_nearest
-// ie not outside of the texture coordinates, but with bilinear filtering
-// this is about as close as we can emulate in hardware
-// if we don't do this with gl_repeat enabled, it will wrap around and sample the 
-// other side of the texture which produces ugly seems
-void CNew3D::OffsetTexCoords(R3DPoly& r3dPoly, float offset[2])
-{
-	for (int i = 0; i < 2; i++) {
-
-		float min =  std::numeric_limits<float>::max();
-		float max = -std::numeric_limits<float>::max();
-
-		if (!offset[i]) continue;
-
-		for (int j = 0; j < r3dPoly.number; j++) {
-			min = std::min(r3dPoly.v[j].texcoords[i], min);
-			max = std::max(r3dPoly.v[j].texcoords[i], max);
-		}
-
-		float fTemp;
-		float iTemp;
-		bool fractMin;
-		bool fractMax;
-		
-		fTemp		= std::modf(min, &iTemp);
-		fractMin	= fTemp > 0;
-
-		fTemp		= std::modf(max, &iTemp);
-		fractMax	= fTemp > 0;
-
-		for (int j = 0; j < r3dPoly.number && min != max; j++) {
-
-			if (!fractMin) {
-				if (r3dPoly.v[j].texcoords[i] == min) {
-					r3dPoly.v[j].texcoords[i] += offset[i];
-				}
-			}
-
-			if (!fractMax) {
-				if (r3dPoly.v[j].texcoords[i] == max) {
-					r3dPoly.v[j].texcoords[i] -= offset[i];
-				}
-			}
-		}
-	}
-}
-
 void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 {
 	//copy attributes
@@ -1050,10 +1003,31 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 		currentMesh->y				= ph.Y();
 		currentMesh->width			= ph.TexWidth();
 		currentMesh->height			= ph.TexHeight();
-		currentMesh->mirrorU		= ph.TexUMirror();
-		currentMesh->mirrorV		= ph.TexVMirror();
 		currentMesh->microTexture	= ph.MicroTexture();
 		currentMesh->inverted		= ph.TranslatorMapOffset() == 2;
+
+		{
+			bool smoothU = ph.TexSmoothU();
+			bool smoothV = ph.TexSmoothU();
+
+			if (ph.TexUMirror()) {
+				if (smoothU)	currentMesh->wrapModeU = Mesh::TexWrapMode::mirror;
+				else			currentMesh->wrapModeU = Mesh::TexWrapMode::mirrorClamp;
+			}
+			else {
+				if (smoothU)	currentMesh->wrapModeU = Mesh::TexWrapMode::repeat;
+				else			currentMesh->wrapModeU = Mesh::TexWrapMode::repeatClamp;
+			}
+
+			if (ph.TexVMirror()) {
+				if (smoothV)	currentMesh->wrapModeV = Mesh::TexWrapMode::mirror;
+				else			currentMesh->wrapModeV = Mesh::TexWrapMode::mirrorClamp;
+			}
+			else {
+				if (smoothV)	currentMesh->wrapModeV = Mesh::TexWrapMode::repeat;
+				else			currentMesh->wrapModeV = Mesh::TexWrapMode::repeatClamp;
+			}
+		}
 
 		if (currentMesh->microTexture) {
 
@@ -1233,22 +1207,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			texCoords[j][1] = (UINT16)(it & 0xFFFF);
 
 			vData += 4;
-		}
-
-		// check if we need to modify the texture coordinates
-		if (ph.TexEnabled()) {
-
-			float offset[2] = { 0 };
-
-			if (!ph.TexSmoothU() && !ph.TexUMirror()) {
-				offset[0] = 0.5f / ph.TexWidth();	// half texel
-			}
-
-			if (!ph.TexSmoothV() && !ph.TexVMirror()) {
-				offset[1] = 0.5f / ph.TexHeight();	// half texel
-			}
-
-			OffsetTexCoords(p, offset);
 		}
 
 		// check if we need to double up vertices for two sided lighting

@@ -12,7 +12,7 @@ int TextureSheet::ToIndex(int x, int y)
 	return (y * 2048) + x;
 }
 
-std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
+std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format, int x, int y, int width, int height)
 {
 	//========
 	int	index;
@@ -35,7 +35,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 		std::shared_ptr<Texture> t(new Texture());
 		m_texMap.insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
-		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
+		t->UploadTexture(src, m_temp.data(), format, x, y, width, height);
 		return t;
 	}
 	else {
@@ -57,7 +57,7 @@ std::shared_ptr<Texture> TextureSheet::BindTexture(const UINT16* src, int format
 
 		std::shared_ptr<Texture> t(new Texture());
 		m_texMap.insert(std::pair<int, std::shared_ptr<Texture>>(index, t));
-		t->UploadTexture(src, m_temp.data(), format, mirrorU, mirrorV, x, y, width, height);
+		t->UploadTexture(src, m_temp.data(), format, x, y, width, height);
 		return t;
 	}
 }

@@ -157,6 +157,7 @@ uniform bool	textureInverted;
 uniform bool	textureAlpha;
 uniform bool	alphaTest;
 uniform bool	discardAlpha;
+uniform ivec2	textureWrapMode;
 
 // general
 uniform vec3	fogColour;
@@ -321,9 +322,116 @@ void QuadraticInterpolation()
 	gl_FragDepth = depth;
 }
 
+float mip_map_level(in vec2 texture_coordinate) // in texel units
+{
+    vec2  dx_vtc        = dFdx(texture_coordinate);
+    vec2  dy_vtc        = dFdy(texture_coordinate);
+    float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
+    float mml = 0.5 * log2(delta_max_sqr);
+    return max( 0, mml );
+}
+
+float LinearTexLocations(int wrapMode, float size, float u, out float u0, out float u1)
+{
+	float texelSize		= 1.0 / size;
+	float halfTexelSize	= 0.5 / size;
+
+	if(wrapMode==0) {							// repeat
+		u	= (u * size) - 0.5;
+		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u0	= fract(u0);
+		u1	= u0 + texelSize;
+		u1	= fract(u1);
+
+		return fract(u);						// return weight
+	}
+	else if(wrapMode==1) {						// repeat + clamp
+		u	= fract(u);							// must force into 0-1 to start
+		u	= (u * size) - 0.5;
+		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u1	= u0 + texelSize;
+
+		if(u0 <  0.0)	u0 = 0.0;
+		if(u1 >= 1.0)	u1 = 1.0 - halfTexelSize;
+		
+		return fract(u);						// return weight
+	}
+	else {										// mirror + mirror clamp - both are the same since the edge pixels are repeated anyway
+
+		float odd = floor(mod(u, 2.0));			// odd values are mirrored
+
+		if(odd > 0.0) {
+			u = 1.0 - fract(u);
+		}
+		else {
+			u = fract(u);
+		}
+
+		u	= (u * size) - 0.5;
+		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u1	= u0 + texelSize;
+
+		if(u0 <  0.0)	u0 = 0.0;
+		if(u1 >= 1.0)	u1 = 1.0 - halfTexelSize;
+		
+		return fract(u);						// return weight
+	}
+}
+
+vec4 texBiLinear(sampler2D texSampler, float level, ivec2 wrapMode, vec2 texSize, vec2 texCoord)
+{
+	float tx[2], ty[2];
+	float a = LinearTexLocations(wrapMode.s, texSize.x, texCoord.x, tx[0], tx[1]);
+	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
+	
+	vec4 p0q0 = textureLod(texSampler, vec2(tx[0],ty[0]), level);
+    vec4 p1q0 = textureLod(texSampler, vec2(tx[1],ty[0]), level);
+    vec4 p0q1 = textureLod(texSampler, vec2(tx[0],ty[1]), level);
+    vec4 p1q1 = textureLod(texSampler, vec2(tx[1],ty[1]), level);
+
+	if(alphaTest) {
+		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
+		if(p0q0.a > p0q1.a)		{ p0q1.rgb = p0q0.rgb; }
+
+		if(p1q0.a > p0q0.a)		{ p0q0.rgb = p1q0.rgb; }
+		if(p1q0.a > p1q1.a)		{ p1q1.rgb = p1q0.rgb; }
+
+		if(p0q1.a > p0q0.a)		{ p0q0.rgb = p0q1.rgb; }
+		if(p0q1.a > p1q1.a)		{ p1q1.rgb = p0q1.rgb; }
+
+		if(p1q1.a > p0q1.a)		{ p0q1.rgb = p1q1.rgb; }
+		if(p1q1.a > p1q0.a)		{ p1q0.rgb = p1q1.rgb; }
+	}
+
+	// Interpolation in X direction.
+    vec4 pInterp_q0 = mix( p0q0, p1q0, a ); // Interpolates top row in X direction.
+    vec4 pInterp_q1 = mix( p0q1, p1q1, a ); // Interpolates bottom row in X direction.
+
+    return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
+}
+
+vec4 textureR3D(sampler2D texSampler, ivec2 wrapMode, vec2 texSize, vec2 texCoord)
+{
+	float numLevels = floor(log2(min(texSize.x, texSize.y)));				// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
+	float fLevel	= min(mip_map_level(texCoord * texSize), numLevels);
+
+	if(alphaTest) fLevel *= 0.5;
+	else fLevel *= 0.8;
+
+	float iLevel = floor(fLevel);						// value as an 'int'
+
+	vec2 texSize0 = texSize / pow(2, iLevel);
+	vec2 texSize1 = texSize / pow(2, iLevel+1.0);
+
+	vec4 texLevel0 = texBiLinear(texSampler, iLevel, wrapMode, texSize0, texCoord);
+	vec4 texLevel1 = texBiLinear(texSampler, iLevel+1.0, wrapMode, texSize1, texCoord);
+
+	return mix(texLevel0, texLevel1, fract(fLevel));	// linear blend between our mipmap levels
+}
+
 vec4 GetTextureValue()
 {
-	vec4 tex1Data = texture2D( tex1, fsTexCoord.st);
+	vec4 tex1Data = textureR3D(tex1, textureWrapMode, baseTexSize, fsTexCoord);
 
 	if(textureInverted) {
 		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
@@ -331,12 +439,12 @@ vec4 GetTextureValue()
 
 	if (microTexture) {
 		vec2 scale    = (baseTexSize / 128.0) * microTextureScale;
-		vec4 tex2Data = texture2D( tex2, fsTexCoord.st * scale);
+		vec4 tex2Data = textureR3D( tex2, ivec2(0), vec2(128.0), fsTexCoord.st * scale);
 		tex1Data = (tex1Data+tex2Data)/2.0;
 	}
 
 	if (alphaTest) {
-		if (tex1Data.a < (8.0/16.0)) {
+		if (tex1Data.a < (32.0/255.0)) {
 			discard;
 		}
 	}

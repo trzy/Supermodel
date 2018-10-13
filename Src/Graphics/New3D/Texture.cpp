@@ -31,8 +31,6 @@ void Texture::Reset()
 	m_height = 0;
 	m_format = 0;
 	m_textureID = 0;
-	m_mirrorU = false;
-	m_mirrorV = false;
 }
 
 void Texture::BindTexture()
@@ -50,19 +48,6 @@ void Texture::GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, floa
 {
 	uOut = (uIn*uvScale) / width;
 	vOut = (vIn*uvScale) / height;
-}
-
-void Texture::SetWrapMode(bool mirrorU, bool mirrorV)
-{
-	if (mirrorU != m_mirrorU) {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mirrorU ? GL_MIRRORED_REPEAT : GL_REPEAT);
-		m_mirrorU = mirrorU;
-	}
-
-	if (mirrorV != m_mirrorV) {
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mirrorV ? GL_MIRRORED_REPEAT : GL_REPEAT);
-		m_mirrorV = mirrorV;
-	}
 }
 
 void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height)
@@ -290,7 +275,7 @@ void Texture::UploadTextureMip(int level, const UINT16* src, UINT8* scratch, int
 	glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, subWidth, subHeight, GL_RGBA, GL_UNSIGNED_BYTE, scratch);
 }
 
-UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
+UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, int x, int y, int width, int height)
 {
 	const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
 	const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
@@ -301,7 +286,7 @@ UINT32 Texture::UploadTexture(const UINT16* src, UINT8* scratch, int format, boo
 	}
 
 	DeleteTexture();	// free any existing texture
-	CreateTextureObject(format, mirrorU, mirrorV, x, y, width, height);
+	CreateTextureObject(format, x, y, width, height);
 
 	int page = y / 1024;
 
@@ -354,23 +339,15 @@ bool Texture::CheckMapPos(int ax1, int ax2, int ay1, int ay2)
 	return false;
 }
 
-void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height)
+void Texture::CreateTextureObject(int format, int x, int y, int width, int height)
 {
-	GLfloat maxAnistrophy;
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnistrophy);
-
-	if (maxAnistrophy > 8) {
-		maxAnistrophy = 8.0f;	//anymore than 8 can get expensive for little gain
-	}
-
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);	// rgba is always 4 byte aligned
 	glGenTextures(1, &m_textureID);
 	glBindTexture(GL_TEXTURE_2D, m_textureID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mirrorU ? GL_MIRRORED_REPEAT : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mirrorV ? GL_MIRRORED_REPEAT : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnistrophy);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
 	int minD = std::min(width, height);
 	int count = 0;
@@ -388,8 +365,6 @@ void Texture::CreateTextureObject(int format, bool mirrorU, bool mirrorV, int x,
 	m_width = width;
 	m_height = height;
 	m_format = format;
-	m_mirrorU = mirrorU;
-	m_mirrorV = mirrorV;
 }
 
 } // New3D

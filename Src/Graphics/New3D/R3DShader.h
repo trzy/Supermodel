@@ -45,6 +45,7 @@ private:
 	GLint m_locMicroTexScale;
 	GLint m_locBaseTexSize;
 	GLint m_locTextureInverted;
+	GLint m_locTexWrapMode;
 
 	// cached mesh values
 	bool	m_textured1;
@@ -61,6 +62,7 @@ private:
 	bool	m_layered;
 	float	m_microTexScale;
 	float	m_baseTexSize[2];
+	int		m_texWrapMode[2];
 	bool	m_textureInverted;
 
 	// cached model values

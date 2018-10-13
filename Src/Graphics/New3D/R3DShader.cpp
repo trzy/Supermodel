@@ -37,6 +37,9 @@ void R3DShader::Start()
 	m_baseTexSize[0]	= 0;
 	m_baseTexSize[1]	= 0;
 
+	m_texWrapMode[0]	= 0;
+	m_texWrapMode[1]	= 0;
+
 	m_dirtyMesh			= true;			// dirty means all the above are dirty, ie first run
 	m_dirtyModel		= true;
 }
@@ -91,6 +94,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locMicroTexScale		= glGetUniformLocation(m_shaderProgram, "microTextureScale");
 	m_locBaseTexSize		= glGetUniformLocation(m_shaderProgram, "baseTexSize");
 	m_locTextureInverted	= glGetUniformLocation(m_shaderProgram, "textureInverted");
+	m_locTexWrapMode		= glGetUniformLocation(m_shaderProgram, "textureWrapMode");
 
 	m_locFogIntensity		= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity			= glGetUniformLocation(m_shaderProgram, "fogDensity");
@@ -166,7 +170,7 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_microTexScale = m->microTextureScale;
 	}
 
-	if (m_dirtyMesh || m->microTexture && (m_baseTexSize[0] != m->width || m_baseTexSize[1] != m->height)) {
+	if (m_dirtyMesh || (m_baseTexSize[0] != m->width || m_baseTexSize[1] != m->height)) {
 		m_baseTexSize[0] = (float)m->width;
 		m_baseTexSize[1] = (float)m->height;
 		glUniform2fv(m_locBaseTexSize, 1, m_baseTexSize);
@@ -215,6 +219,12 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->fixedShading != m_fixedShading) {
 		glUniform1i(m_locFixedShading, m->fixedShading);
 		m_fixedShading = m->fixedShading;
+	}
+
+	if (m_dirtyMesh || m->wrapModeU != m_texWrapMode[0] || m->wrapModeV != m_texWrapMode[1]) {
+		m_texWrapMode[0] = m->wrapModeU;
+		m_texWrapMode[1] = m->wrapModeV;
+		glUniform2iv(m_locTexWrapMode, 1, m_texWrapMode);
 	}
 
 	if (m_dirtyMesh || m->layered != m_layered) {

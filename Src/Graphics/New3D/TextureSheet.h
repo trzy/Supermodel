@@ -14,7 +14,7 @@ class TextureSheet
 public:
 	TextureSheet();
 
-	std::shared_ptr<Texture>	BindTexture		(const UINT16* src, int format, bool mirrorU, bool mirrorV, int x, int y, int width, int height);
+	std::shared_ptr<Texture>	BindTexture		(const UINT16* src, int format, int x, int y, int width, int height);
 	void						Invalidate		(int x, int y, int width, int height); // release parts of the memory
 	void						Release			();		// release all texture objects and memory
 	int							GetTexFormat	(int originalFormat, bool contour);

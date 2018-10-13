@@ -129,10 +129,12 @@ struct Mesh
 		return true;
 	}
 
+	enum TexWrapMode : int { repeat = 0, repeatClamp, mirror, mirrorClamp };
+
 	// texture
 	int format, x, y, width, height = 0;
-	bool mirrorU = false;
-	bool mirrorV = false;
+	TexWrapMode wrapModeU;
+	TexWrapMode wrapModeV;
 	bool inverted = false;
 
 	// microtexture
@@ -145,7 +147,6 @@ struct Mesh
 	bool polyAlpha		= false;		// specified in the rgba colour
 	bool textureAlpha	= false;		// use alpha in texture
 	bool alphaTest		= false;		// discard fragment based on alpha (ogl does this with fixed function)
-	bool clockWise		= true;			// we need to check if the matrix will change the winding
 	bool layered		= false;		// stencil poly
 	bool highPriority	= false;		// rendered over the top
 	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1
