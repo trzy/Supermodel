@@ -1008,7 +1008,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 		{
 			bool smoothU = ph.TexSmoothU();
-			bool smoothV = ph.TexSmoothU();
+			bool smoothV = ph.TexSmoothV();
 
 			if (ph.TexUMirror()) {
 				if (smoothU)	currentMesh->wrapModeU = Mesh::TexWrapMode::mirror;
