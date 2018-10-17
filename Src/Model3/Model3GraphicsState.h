@@ -109,7 +109,7 @@ public:
     else
       rom_set.get_rom("vrom").CopyTo(m_vrom.get(), 64*0x100000);
     int stepping = ((m_game.stepping[0] - '0') << 4) | (m_game.stepping[2] - '0');
-    m_real3D.SetStepping(stepping);
+    m_real3D.SetStepping(stepping, false);
     return OKAY;
   }
 
