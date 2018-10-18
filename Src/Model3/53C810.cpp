@@ -419,15 +419,15 @@ UINT32 C53C810::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits,
   switch (reg)
   {
   case 0x00:  // Device ID and Vendor ID
-    d = 0x00011000; // 0x1000 = LSI Logic
+    d = FLIPENDIAN32(0x00011000); // 0x1000 = LSI Logic, 0x0001 = 53c810a
     switch (bits)
     {
     case 8:
-      d >>= (3-offset)*8; // offset will be 0-3; select appropriate byte
+      d >>= (3-offset)*8;         // offset will be 0-3; select appropriate byte
       d &= 0xFF;
       break;
     case 16:
-      d >>= (2-offset)*8; // offset will be 0 or 2 only; select either high or low word
+      d >>= (2-offset)*8;         // offset will be 0 or 2 only; select either high or low word
       d &= 0xFFFF;
       break;
     default:
