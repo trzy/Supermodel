@@ -349,6 +349,16 @@ public:
 	void SetSignedShade(bool enable);
 
 	/*
+	* GetLosValue(int layer);
+	*
+	* Gets the line of sight value for the priority layer
+	*
+	* Parameters:
+	*		layer	Priority layer to read from
+	*/
+	float GetLosValue(int layer);
+
+	/*
 	 * CLegacy3D(void):
 	 * ~CLegacy3D(void):
 	 *

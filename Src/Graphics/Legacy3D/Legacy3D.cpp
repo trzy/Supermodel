@@ -1305,6 +1305,11 @@ void CLegacy3D::SetSignedShade(bool enable)
 {
 }
 
+float CLegacy3D::GetLosValue(int layer)
+{
+	return 0.0f;
+}
+
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
   : m_config(config)
 { 

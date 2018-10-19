@@ -174,6 +174,11 @@ bool PolyHeader::SmoothShading()
 	return (header[1] & 0x8) > 0;
 }
 
+bool PolyHeader::NoLosReturn()
+{
+	return (header[1] & 0x1) > 0;
+}
+
 //
 // header 2
 //

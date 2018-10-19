@@ -771,6 +771,20 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
     return 0xfdffffff | m_pingPong;
 #endif
   }
+
+  else if (reg >= 20 && reg<=32) {	// line of sight registers
+
+	int index = (reg - 20) / 4;
+	float val = Render3D->GetLosValue(index);
+
+	if (val) {
+		//val = 1.0f / val;		// test program indicate z values are 1 over
+		return 0xffffffff;		// infinity
+	}
+
+	return *(uint32_t*)(&val);
+  }
+
   return 0xffffffff;
 }
 

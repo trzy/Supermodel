@@ -164,6 +164,16 @@ public:
 	void SetSignedShade(bool enable);
 
 	/*
+	* GetLosValue(int layer);
+	*
+	* Gets the line of sight value for the priority layer
+	*
+	* Parameters:
+	*		layer	Priority layer to read from
+	*/
+	float GetLosValue(int layer);
+
+	/*
 	* CRender3D(config):
 	* ~CRender3D(void):
 	*
@@ -207,6 +217,8 @@ private:
 	bool SkipLayer(int layer);
 	void SetRenderStates();
 	void DisableRenderStates();
+	void TranslateLosPosition(int inX, int inY, int& outX, int& outY);
+	bool ProcessLos(int priority);
 
 	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);	
 
@@ -249,6 +261,8 @@ private:
 	TextureSheet	m_texSheet;
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
+
+	float			m_lineOfSight[4];
 
 	Vertex			m_prev[4];				// these are class variables because sega bass fishing starts meshes with shared vertices from the previous one
 	UINT16			m_prevTexCoords[4][2];	// basically relying on undefined behavour

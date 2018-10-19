@@ -297,6 +297,10 @@ void CNew3D::RenderFrame(void)
 		m_nfPairs[i].zFar  =  std::numeric_limits<float>::max();
 	}
 
+	for (int i = 0; i < 4; i++) {
+		m_lineOfSight[i] = 0;
+	}
+
 	// release any resources from last frame
 	m_polyBufferRam.clear();		// clear dyanmic model memory buffer
 	m_nodes.clear();				// memory will grow during the object life time, that's fine, no need to shrink to fit
@@ -351,6 +355,10 @@ void CNew3D::RenderFrame(void)
 			m_r3dFrameBuffers.SetFBO(Layer::colour);
 			hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
 
+			if (!renderOverlay && ProcessLos(pri)) {
+				ProcessLos(pri);
+			}
+			
 			glDepthFunc(GL_LESS);								// alpha polys seem to use gl_less (ocean hunter)
 
 			m_r3dShader.DiscardAlpha(false);					// render only translucent pixels
@@ -370,7 +378,6 @@ void CNew3D::RenderFrame(void)
 	}
 
 	m_r3dFrameBuffers.DisableFBO();		// draw to back buffer normally
-
 }
 
 void CNew3D::BeginFrame(void)
@@ -1010,6 +1017,11 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 			bool smoothU = ph.TexSmoothU();
 			bool smoothV = ph.TexSmoothV();
 
+			if (ph.AlphaTest()) {
+				smoothU = false;	// smooth wrap makes no sense for alpha tested polys with pixel dilate
+				smoothV = false;
+			}
+
 			if (ph.TexUMirror()) {
 				if (smoothU)	currentMesh->wrapModeU = Mesh::TexWrapMode::mirror;
 				else			currentMesh->wrapModeU = Mesh::TexWrapMode::mirrorClamp;
@@ -1641,6 +1653,51 @@ void CNew3D::SetSunClamp(bool enable)
 void CNew3D::SetSignedShade(bool enable)
 {
 	m_shadeIsSigned = enable;
+}
+
+float CNew3D::GetLosValue(int layer)
+{
+	return m_lineOfSight[layer];
+}
+
+void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY)
+{
+	// remap real3d 496x384 to our new viewport
+	inY = 384 - inY;
+
+	outX = m_xOffs + int(inX * m_xRatio);
+	outY = m_yOffs + int(inY * m_yRatio);
+}
+
+bool CNew3D::ProcessLos(int priority)
+{
+	for (const auto &n : m_nodes) {
+		if (n.viewport.priority == priority) {
+			if (n.viewport.losPosX || n.viewport.losPosY) {
+
+				int losX, losY;
+				TranslateLosPosition(n.viewport.losPosX, n.viewport.losPosY, losX, losY);
+
+				float depth;
+				glReadPixels(losX, losY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+
+				if (depth < 0.99f || depth == 1.0f) {		// kinda guess work but when depth = 1, haven't drawn anything, when 0.99~ drawing sky somewhere far
+					return false;
+				}
+
+				depth = 2.0f * depth - 1.0f;
+
+				float zNear = m_nfPairs[priority].zNear;
+				float zFar	= m_nfPairs[priority].zFar;
+				float zVal	= 2.0f * zNear * zFar / (zFar + zNear - depth * (zFar - zNear));
+
+				m_lineOfSight[priority] = zVal;
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 } // New3D
