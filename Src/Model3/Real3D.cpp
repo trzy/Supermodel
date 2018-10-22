@@ -1056,7 +1056,6 @@ CReal3D::~CReal3D(void)
     printf("unable to dump %s\n", "texram");
   Util::WriteSurfaceToBMP<Util::A1RGB5>("textures.bmp", reinterpret_cast<uint8_t *>(textureRAM), 2048, 2048, false);
 #endif
-Util::WriteSurfaceToBMP<Util::A1RGB5>("textures.bmp", reinterpret_cast<uint8_t *>(textureRAM), 2048, 2048, false);
 
   Render3D = NULL;
   if (memoryPool != NULL)
