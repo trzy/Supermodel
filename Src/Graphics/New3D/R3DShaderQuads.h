@@ -438,9 +438,16 @@ vec4 GetTextureValue()
 	}
 
 	if (microTexture) {
-		vec2 scale    = (baseTexSize / 128.0) * microTextureScale;
-		vec4 tex2Data = textureR3D( tex2, ivec2(0), vec2(128.0), fsTexCoord.st * scale);
-		tex1Data = (tex1Data+tex2Data)/2.0;
+		vec2 scale			= (baseTexSize / 128.0) * microTextureScale;
+		vec4 tex2Data		= textureR3D( tex2, ivec2(0), vec2(128.0), fsTexCoord * scale);
+
+		float lod			= mip_map_level(fsTexCoord * scale * vec2(128.0));
+
+		float blendFactor	= max(lod - 1.5, 0.0);			// bias -1.5
+		blendFactor			= min(blendFactor, 1.0);		// clamp to max value 1
+		blendFactor			= (blendFactor + 1.0) / 2.0;	// 0.5 - 1 range
+
+		tex1Data			= mix(tex2Data, tex1Data, blendFactor);
 	}
 
 	if (alphaTest) {
