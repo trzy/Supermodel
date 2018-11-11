@@ -583,6 +583,36 @@
       </region>
     </roms>
   </game>
+  
+  <game name="ecaj" parent="eca">
+    <identity>
+      <title>Emergency Call Ambulance</title>
+      <version>Japan</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1999</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shiftupdown" />
+        <input type="viewchange" />
+      </inputs>
+      <encryption_key>0x2923aa91</encryption_key>
+    </hardware>
+    <roms>
+      <patches>
+        <!-- Skips over cabinet network error -->
+        <patch region="crom" bits="32" offset="0x4a45e4" value="0x60000000" />
+      </patches>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-22894.20" crc32="0xCDE48C5D" />
+        <file offset="6" name="epr-22891.17" crc32="0x823A251C" />
+      </region>
+    </roms>
+  </game>
 
   <game name="fvipers2">
     <identity>
@@ -657,6 +687,34 @@
         <file offset="0x400000" name="mpr-20578" crc32="0xD222F2D4" />
         <file offset="0x800000" name="mpr-20577" crc32="0x3B236187" />
         <file offset="0xC00000" name="mpr-20579" crc32="0x08788436" />
+      </region>
+    </roms>
+  </game>
+  
+  <game name="fvipers2o" parent="fvipers2">
+    <identity>
+      <title>Fighting Vipers 2</title>
+      <version>?</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1998</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.0</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
+        <input type="fighting" />
+      </inputs>
+      <encryption_key>0x29260e96</encryption_key>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-20599.20" crc32="0x69A0009D" />
+        <file offset="2" name="epr-20598.19" crc32="0x71EC5183" />
+        <file offset="4" name="epr-20597.18" crc32="0x4279DE19" />
+        <file offset="6" name="epr-20596.17" crc32="0xA311B4AF" />
       </region>
     </roms>
   </game>
@@ -1913,6 +1971,73 @@
       </region>
     </roms>
   </game>
+  
+  <game name="swtrilgyp" parent="swtrilgy">
+    <identity>
+      <title>Star Wars Trilogy Arcade</title>
+      <manufacturer>Sega, LucasArts</manufacturer>
+      <year>1998</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <mpeg_board>DSB2</mpeg_board>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+      </inputs>
+      <encryption_key>0x31272A01</encryption_key>
+    </hardware>
+    <roms>
+      <patches>
+        <!-- skip force feedback lever check -->
+        <patch region="crom" bits="32" offset="0x87db8" value="0x60000000" /> <!-- from MAME -->
+      </patches>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-crom0.20" crc32="0xDA7D49FA" />
+        <file offset="2" name="epr-crom1.19" crc32="0x322B67A5" />
+        <file offset="4" name="epr-crom2.18" crc32="0xE4147534" />
+        <file offset="6" name="epr-crom3.17" crc32="0x84734E94" />
+      </region>
+      <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+        <!-- CROM0 -->
+        <file offset="0x0000000" name="epr-crom00.04" crc32="0xDC0D974D" />
+        <file offset="0x0000002" name="epr-crom01.03" crc32="0x4D13685D" />
+        <file offset="0x0000004" name="epr-crom02.02" crc32="0x1D69C716" />
+        <file offset="0x0000006" name="epr-crom03.01" crc32="0x0DDF1F80" />
+        <!-- CROM1 -->
+        <file offset="0x1000000" name="epr-crom10.08" crc32="0x7AC2DFE6" />
+        <file offset="0x1000002" name="epr-crom11.07" crc32="0xA04F3B5E" />
+        <file offset="0x1000004" name="epr-crom12.06" crc32="0xFE2F392E" />
+        <file offset="0x1000006" name="epr-crom13.05" crc32="0xEAD1D983" />
+      </region>
+      <region name="vrom" stride="32" chunk_size="2">
+        <file offset="0"  name="epr-vrom01.26" crc32="0x750287BB" />
+        <file offset="2"  name="epr-vrom00.27" crc32="0xAC5D8DE5" />
+        <file offset="4"  name="epr-vrom03.28" crc32="0x9FC09636" />
+        <file offset="6"  name="epr-vrom02.29" crc32="0x34190386" />
+        <file offset="8"  name="epr-vrom05.30" crc32="0x2C941427" />
+        <file offset="10" name="epr-vrom04.31" crc32="0xEE0733E2" />
+        <file offset="12" name="epr-vrom07.32" crc32="0x50B9F673" />
+        <file offset="14" name="epr-vrom06.33" crc32="0xD1C345C6" />
+        <file offset="16" name="epr-vrom11.34" crc32="0x39FE8657" />
+        <file offset="18" name="epr-vrom10.35" crc32="0xFD18CB56" />
+        <file offset="20" name="epr-vrom13.36" crc32="0xF6EFE50D" />
+        <file offset="22" name="epr-vrom12.37" crc32="0x6E4AC064" />
+        <file offset="24" name="epr-vrom15.38" crc32="0xCED63C05" />
+        <file offset="26" name="epr-vrom14.39" crc32="0x2BD25533" />
+        <file offset="28" name="epr-vrom17.40" crc32="0x4F23DE3E" />
+        <file offset="30" name="epr-vrom16.41" crc32="0x14F9785E" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+        <file offset="0" name="epr-srom0.21" crc32="0x2BB06489" />
+      </region>
+      <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+        <file offset="0x000000" name="epr-srom1.22" crc32="0x0E52E2EC" />
+        <file offset="0x400000" name="epr-srom3.24" crc32="0x841ED823" />
+      </region>
+    </roms>
+  </game>
 
   <game name="vf3">
     <identity>
@@ -2198,6 +2323,32 @@
         <file offset="2" name="epr-20685a.19" crc32="0xDC07C404" />
         <file offset="4" name="epr-20684a.18" crc32="0xC84F7F23" />
         <file offset="6" name="epr-20683a.17" crc32="0x16B202E9" />
+      </region>
+    </roms>
+  </game>
+  
+  <game name="von2o" parent="von2">
+    <identity>
+      <title>Virtual On 2: Oratorio Tangram</title>
+      <version>?</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1998</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.0</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="twin_joysticks" />
+      </inputs>
+      <encryption_key>0x292a0e97</encryption_key>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-20686.20" crc32="0xE1B0FF65" />
+        <file offset="2" name="epr-20685.19" crc32="0x0664C568" />
+        <file offset="4" name="epr-20684.18" crc32="0x5D40FEDB" />
+        <file offset="6" name="epr-20683.17" crc32="0xBB21AEA7" />
       </region>
     </roms>
   </game>
