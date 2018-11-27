@@ -315,7 +315,7 @@ void QuadraticInterpolation()
 		depth			= ((vertex.z / vertex.w) + 1.0) / 2.0;
 	}
 	else {
-		vertex			= projMat * vec4(fsViewVertex,1.0);
+		vertex.z		= (projMat[2][2] * fsViewVertex.z) + projMat[3][2];		// standard projMat * vertex - but just using Z components
 		depth			= ((vertex.z * interp_oneOverW) + 1.0) / 2.0;
 	}
 
