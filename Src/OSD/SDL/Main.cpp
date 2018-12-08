@@ -138,13 +138,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   glClearDepth(1.0);
   glDepthFunc(GL_LESS);
   glEnable(GL_DEPTH_TEST);
-  glShadeModel(GL_SMOOTH);
-  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
   glDisable(GL_CULL_FACE);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(90.0,(GLfloat)xRes/(GLfloat)yRes,0.1,1e5);
-  glMatrixMode(GL_MODELVIEW);
   
   // Clear both buffers to ensure a black border
   for (int i = 0; i < 2; i++)
