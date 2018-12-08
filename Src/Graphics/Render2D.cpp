@@ -524,7 +524,7 @@ void CRender2D::DisplaySurface(int surface)
 }
 
 // Set up viewport and OpenGL state for 2D rendering (sets up blending function but disables blending)
-void CRender2D::Setup2D(bool isBottom, bool clearAll)
+void CRender2D::Setup2D(bool isBottom)
 {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  // alpha of 1.0 is opaque, 0 is transparent
   glDisable(GL_BLEND);
@@ -536,11 +536,13 @@ void CRender2D::Setup2D(bool isBottom, bool clearAll)
   glUseProgram(m_shaderProgram);
   
   // Clear everything if requested or just overscan areas for wide screen mode
-  if (clearAll || isBottom)
+  if (isBottom)
   {
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glViewport(0, 0, m_totalXPixels, m_totalYPixels);
-    glClear(GL_COLOR_BUFFER_BIT);
+	glDisable(GL_SCISSOR_TEST);							// scissor is enabled to fix the 2d/3d miss match problem
+    glClear(GL_COLOR_BUFFER_BIT);						// we want to clear outside the scissored areas so must disable it
+	glEnable(GL_SCISSOR_TEST);
   }
 
   // Set up the viewport and orthogonal projection
@@ -576,7 +578,7 @@ void CRender2D::PreRenderFrame(void)
 void CRender2D::RenderFrameBottom(void)
 {
   // Display bottom surface if anything was drawn there, else clear everything
-  Setup2D(true, m_surfaces_present.second == false);
+  Setup2D(true);
   if (m_surfaces_present.second)
     DisplaySurface(1);
 }
@@ -586,7 +588,7 @@ void CRender2D::RenderFrameTop(void)
   // Display top surface only if it exists
   if (m_surfaces_present.first)
   {
-    Setup2D(false, false);
+    Setup2D(false);
     glEnable(GL_BLEND);
     DisplaySurface(0);
   }

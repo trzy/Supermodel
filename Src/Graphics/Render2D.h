@@ -175,7 +175,7 @@ private:
   // Private member functions
   std::pair<bool, bool> DrawTilemaps(uint32_t *destBottom, uint32_t *destTop);
   void DisplaySurface(int surface);
-  void Setup2D(bool isBottom, bool clearAll);
+  void Setup2D(bool isBottom);
       
   // Run-time configuration
   const Util::Config::Node &m_config;
