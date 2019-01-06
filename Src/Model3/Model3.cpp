@@ -553,7 +553,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[1] = (UINT8)Inputs->analogGunX[1]->value;
       adc[3] = (UINT8)Inputs->analogGunY[1]->value;
 
-      if (m_game.name == "lostwsga") {                      // to do, not a string compare
+	  if (m_game.name == "lostwsga" || m_game.name == "lostwsgo") { // to do, not a string compare
         adc[0] =       (UINT8)Inputs->analogGunX[0]->value; // order is different for some reason in lost world
         adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value; // why are values inverted? is this the wrong place to fix this
         adc[2] =       (UINT8)Inputs->analogGunX[1]->value;
@@ -2219,9 +2219,12 @@ void CModel3::RunMainBoardFrame(void)
   if (m_game.stepping == "2.0" || m_game.stepping == "2.1")
   {
     // For some reason, Fighting Vipers 2 and Daytona USA 2 require completely different timing to the rest of the step 2.x games
-    if (m_game.name == "daytona2" || (m_game.stepping == "2.0" && m_game.name == "fvipers2"))
+    if (m_game.name == "daytona2" || (m_game.stepping == "2.0" && (m_game.name == "fvipers2" || m_game.name == "fvipers2o")))
       statusCycles = (unsigned)((float)frameCycles * 24.0f/100.0f);
-    else
+	// Spindizzi notes : this little hack timing allow srally2x to run full speed (for test purpose only)
+	else if (m_game.name == "srally2x") // need ppc=100 also (edit ini or add option in command line)
+	  statusCycles = (unsigned)((float)frameCycles * 48.0f / 100.0f);
+	else
       statusCycles = (unsigned)((float)frameCycles * 9.12f/100.0f);
   }
   else if (m_game.stepping == "1.5")
@@ -3142,8 +3145,8 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   // Some step 2+ games need the older PCI ID (obvious symptom:
   // vbl is enabled briefly then disabled so the game hangs)
   bool step20_with_old_real3d;
-  if (game.name == "von2" || game.name == "von2a" || game.name == "von254g"
-   || game.name == "dirtdvls" || game.name == "dirtdvlsa" || game.name == "dirtdvlsj"
+  if (game.name == "von2" || game.name == "von2a" || game.name == "von254g" || game.name == "von2o"
+   || game.name == "dirtdvls" || game.name == "dirtdvlsa" || game.name == "dirtdvlsj" || game.name == "dirtdvlsg"
    || game.name == "magtruck" || game.name == "lamachin"
   )
     step20_with_old_real3d = true;
