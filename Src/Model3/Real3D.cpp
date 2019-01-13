@@ -883,7 +883,7 @@ uint32_t CReal3D::GetASICIDCode(ASIC asic) const
   return it == m_asicID.end() ? 0 : it->second;
 }
 
-void CReal3D::SetStepping(int stepping, bool step20_with_old_real3d)
+void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
 
 {
   step = stepping;
@@ -894,12 +894,7 @@ void CReal3D::SetStepping(int stepping, bool step20_with_old_real3d)
   }
 
   // Set PCI ID
-  // Some step 2+ games need the older PCI ID (obvious symptom:
-  // vbl is enabled briefly then disabled so the game hangs)
-  if ((step < 0x20) || step20_with_old_real3d)      
-    pciID = 0x16C311DB; // vendor 0x11DB = Sega
-  else
-    pciID = 0x178611DB;
+  pciID = pciIDValue;
     
   // Pass to renderer
   if (Render3D != NULL)

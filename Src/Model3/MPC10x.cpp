@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2019 Bart Trzynadlowski, Nik Henson, Ian Curtis
  **
  ** This file is part of Supermodel.
  **
@@ -317,6 +317,16 @@ void CMPC10x::SetModel(int modelNum)
 	}
 	
 	DebugLog("MPC10x set to MPC%X\n", model);
+}
+
+/*
+ * CMPC10x::GetModel():
+ *
+ * Returns the model number.
+ */
+int CMPC10x::GetModel() const
+{
+  return model;
 }
 
 /*

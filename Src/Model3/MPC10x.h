@@ -146,6 +146,14 @@ public:
 	 *					to MPC105 if unrecognized.
 	 */
 	void SetModel(int modelNum);
+
+  /*
+   * GetModel(void):
+   *
+   * Returns:
+   *    The PCI bridge model number, either 0x105 or 0x106.
+   */
+  int GetModel() const; 
 	 
 	/*
 	 * Init(void):

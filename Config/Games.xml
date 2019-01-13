@@ -19,6 +19,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="fishing" />
@@ -86,6 +87,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="fishing" />
@@ -110,6 +112,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="fishing" />
@@ -141,6 +144,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -320,6 +324,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -392,6 +397,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -426,6 +432,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -460,6 +467,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -686,6 +694,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -763,6 +772,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -891,6 +901,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="analog_gun1" />
@@ -1150,6 +1161,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="magtruck" />
@@ -1508,6 +1520,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2078,10 +2091,14 @@
       <year>1998</year>
     </identity>
     <hardware>
+      <!--
+        To get this running at full speed, set PowerPC frequency to 100 MHz on
+        command line or in INI file.
+      -->
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
-      <!-- Spindizzi notes : Add mpeg soundboard -->
       <mpeg_board>DSB2</mpeg_board>
+      <real3d_status_bit_set_percent_of_frame>48</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2544,6 +2561,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2619,6 +2637,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2645,6 +2664,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2671,6 +2691,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2771,6 +2792,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2798,6 +2820,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2912,6 +2935,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -3041,6 +3065,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
         <input type="joystick1" />

@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2019 Bart Trzynadlowski, Nik Henson, Ian Curtis
  **
  ** This file is part of Supermodel.
  **
@@ -553,12 +553,20 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[1] = (UINT8)Inputs->analogGunX[1]->value;
       adc[3] = (UINT8)Inputs->analogGunY[1]->value;
 
-	  if (m_game.name == "lostwsga" || m_game.name == "lostwsgo") { // to do, not a string compare
+  	  /*
+  	  // Unclear why this is necessary or how to cleanly fix it, so I'm
+  	  // disabling it but leaving it here for future reference. The proper fix is
+  	  // probably to allow users to define inverted controls for this game only,
+  	  // which means the input system must support loading per-game config (not
+  	  // all analog_gun games require axis inversion to be playable).
+	    if (m_game.name == "lostwsga" || m_game.name == "lostwsgo")
+	    { // to do, not a string compare
         adc[0] =       (UINT8)Inputs->analogGunX[0]->value; // order is different for some reason in lost world
         adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value; // why are values inverted? is this the wrong place to fix this
         adc[2] =       (UINT8)Inputs->analogGunX[1]->value;
         adc[3] = 255 - (UINT8)Inputs->analogGunY[1]->value;
       }
+      */
     }
     
     if ((m_game.inputs & Game::INPUT_SKI))
@@ -2205,32 +2213,29 @@ void CModel3::RunMainBoardFrame(void)
   unsigned vblCycles   = (unsigned)((float) frameCycles * 2.5f/100.0f); // 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
   unsigned dispCycles  = frameCycles - vblCycles;
   
-  // Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
-  // registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are 
-  // too slow otherwise).  Other games appear to not be affected by this ratio so much as their running speed depends more on the timing of
-  // the Real3D status bit below.
-  ppc_set_timer_ratio(ppc_get_bus_freq_multipler() * 2 * ppcCycles / ppc_get_cycles_per_sec());
+  // For some reason, some Step 2.x games require completely different timings. The defaults can be overriden in the ROM set XML file.
+  float real3DStatusBitSetAsPercentOfFrame = m_game.real3d_status_bit_set_percent_of_frame;
+  if (real3DStatusBitSetAsPercentOfFrame <= 0)
+  {
+    if (m_game.stepping == "2.0" || m_game.stepping == "2.1")
+      real3DStatusBitSetAsPercentOfFrame = 9.12f;
+    else if (m_game.stepping == "1.5")
+      real3DStatusBitSetAsPercentOfFrame = 5.5f;
+    else
+      real3DStatusBitSetAsPercentOfFrame = 48.0f;
+  }
   
   // Compute timing of the Real3D status bit.  This value directly affects the speed at which all the games except Virtua Stiker 2 run.
   // Currently it is not known exactly what this bit represents nor why such wildly varying values are needed for the different step models.
   // The values below were arrived at by trial and error and clearly more investigation is required.  If it turns out that the status bit is
   // connected to the end of VBlank then the code below should be removed and the timing handled via GPU.VBlankEnd() instead.  
-  unsigned statusCycles;
-  if (m_game.stepping == "2.0" || m_game.stepping == "2.1")
-  {
-    // For some reason, Fighting Vipers 2 and Daytona USA 2 require completely different timing to the rest of the step 2.x games
-    if (m_game.name == "daytona2" || (m_game.stepping == "2.0" && (m_game.name == "fvipers2" || m_game.name == "fvipers2o")))
-      statusCycles = (unsigned)((float)frameCycles * 24.0f/100.0f);
-	// Spindizzi notes : this little hack timing allow srally2x to run full speed (for test purpose only)
-	else if (m_game.name == "srally2x") // need ppc=100 also (edit ini or add option in command line)
-	  statusCycles = (unsigned)((float)frameCycles * 48.0f / 100.0f);
-	else
-      statusCycles = (unsigned)((float)frameCycles * 9.12f/100.0f);
-  }
-  else if (m_game.stepping == "1.5")
-    statusCycles = (unsigned)((float)frameCycles * 5.5f/100.0f);
-  else
-    statusCycles = (unsigned)((float)frameCycles * 48.0f/100.0f);
+  unsigned statusCycles = (unsigned) ((float) frameCycles * (real3DStatusBitSetAsPercentOfFrame * 1e-2f));  
+  
+  // Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
+  // registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are 
+  // too slow otherwise).  Other games appear to not be affected by this ratio so much as their running speed depends more on the timing of
+  // the Real3D status bit below.
+  ppc_set_timer_ratio(ppc_get_bus_freq_multipler() * 2 * ppcCycles / ppc_get_cycles_per_sec());
 
   // VBlank
   if (gpusReady)
@@ -3089,44 +3094,46 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   Util::FlipEndian16(soundROM, 512*1024);
   Util::FlipEndian16(sampleROM, 16*0x100000);
 
-  // Initialize CPU
+  // Configure CPU and PCI bridge
   PPC_CONFIG  ppc_config;
   if (game.stepping == "2.0" || game.stepping == "2.1")
   {
-    ppc_config.pvr = PPC_MODEL_603R;   // 166 MHz
+    ppc_config.pvr = PPC_MODEL_603R;  // 166 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x25; // 2.5X multiplier
     PCIBridge.SetModel(0x106);        // MPC106
   } 
   else if (game.stepping == "1.5")
   {
-    ppc_config.pvr = PPC_MODEL_603E;   // 100 MHz
+    ppc_config.pvr = PPC_MODEL_603E;  // 100 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x15; // 1.5X multiplier
-    if (game.name == "scudplusa"
-     || game.name == "vs215" || game.name == "vs215o"
-     || game.name == "vs29815" || game.name == "vs29915"
-    )
-      PCIBridge.SetModel(0x106);      // some Step 1.x games use MPC106
-    else
-      PCIBridge.SetModel(0x105);      // MPC105
+    PCIBridge.SetModel(0x105);        // MPC105
   }
   else if (game.stepping == "1.0")
   {
-    ppc_config.pvr = PPC_MODEL_603R;   // 66 MHz
+    ppc_config.pvr = PPC_MODEL_603R;  // 66 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x10; // 1X multiplier
-    if (game.name == "bass" || game.name == "bassdx" || game.name == "getbass")
-
-      PCIBridge.SetModel(0x106);      // some Step 1.x games use MPC106
-    else
-      PCIBridge.SetModel(0x105);      // MPC105
+    PCIBridge.SetModel(0x105);        // MPC105
   }
   else
   {
     ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", game.stepping.c_str());
     return FAIL;
   }
+  
+  if (!game.pci_bridge.empty())
+  {
+    if (game.pci_bridge == "MPC105")
+      PCIBridge.SetModel(0x105);
+    else if (game.pci_bridge == "MPC106")
+      PCIBridge.SetModel(0x106);
+    else
+      ErrorLog("Unknown PCI bridge specified in ROM set definition file (%s). Defaulting to MPC%X.", game.pci_bridge.c_str(), PCIBridge.GetModel());
+  }
+  
+  // Initialize CPU
   ppc_init(&ppc_config);
   ppc_attach_bus(this);
   PPCFetchRegions[0].start = 0; 
@@ -3142,17 +3149,12 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   
   // Initialize Real3D 
   int stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  // Some step 2+ games need the older PCI ID (obvious symptom:
-  // vbl is enabled briefly then disabled so the game hangs)
-  bool step20_with_old_real3d;
-  if (game.name == "von2" || game.name == "von2a" || game.name == "von254g" || game.name == "von2o"
-   || game.name == "dirtdvls" || game.name == "dirtdvlsa" || game.name == "dirtdvlsj" || game.name == "dirtdvlsg"
-   || game.name == "magtruck" || game.name == "lamachin"
-  )
-    step20_with_old_real3d = true;
-  else
-    step20_with_old_real3d = false;
-  GPU.SetStepping(stepping, step20_with_old_real3d);
+  uint32_t real3DPCIID = game.real3d_pci_id;
+  if (0 == real3DPCIID)
+  {
+    real3DPCIID = stepping >= 0x20 ? CReal3D::PCIID::Step2x : CReal3D::PCIID::Step1x;
+  }
+  GPU.SetStepping(stepping, real3DPCIID);
   
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)

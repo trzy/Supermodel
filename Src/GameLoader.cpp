@@ -197,6 +197,9 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
   game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
   game->mpeg_board = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>("");
+  game->pci_bridge = game_node["hardware/pci_bridge"].ValueAsDefault<std::string>("");
+  game->real3d_pci_id = game_node["hardware/real3d_pci_id"].ValueAsDefault<uint32_t>(0);
+  game->real3d_status_bit_set_percent_of_frame = game_node["hardware/real3d_status_bit_set_percent_of_frame"].ValueAsDefault<float>(0);
   game->encryption_key = game_node["hardware/encryption_key"].ValueAsDefault<uint32_t>(0);
   std::map<std::string, uint32_t> input_flags
   {

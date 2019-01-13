@@ -60,6 +60,22 @@ class CReal3D: public IPCIDevice
 {
 public:
   /*
+   * PCI IDs
+   *
+   * The CReal3D object must be configured with the desired ID. Some Step 2.x
+   * appear to defy this and expect the 1.x ID. The symptom of this is that 
+   * VBL is enabled briefly then disabled. This should be investigated further.
+   * Perhaps a different ASIC's PCI ID is being read in these situations?
+   *
+   * The vendor ID code 0x11db is Sega's.
+   */
+  enum PCIID: uint32_t
+  {
+    Step1x = 0x16C311DB,  // Step 1.x
+    Step2x = 0x178611DB   // Step 2.x
+  };
+
+  /*
    * ASIC Names
    *
    * These were determined from Virtual On, which prints them out if any of the
@@ -352,17 +368,22 @@ public:
   uint32_t GetASICIDCode(ASIC asic) const;
 
   /*
-   * SetStepping(stepping):
+   * SetStepping(stepping, pciIDValue):
    *
    * Sets the Model 3 hardware stepping, which also determines the Real3D
    * functionality. The default is Step 1.0. This should be called prior to 
    * any other emulation functions and after Init().
    *
    * Parameters:
-   *    stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
-   *              0x21 for Step 2.1. Anything else defaults to 1.0.
+   *    stepping    0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
+   *                0x21 for Step 2.1. Anything else defaults to 1.0.
+   *    pciIDValue  The PCI ID code to return. This should be one of the PCIID
+   *                enum values otherwise games may fail to boot. Although the
+   *                PCI ID depends on stepping, there are a few games that
+   *                have to be explicitly configured with an older ID code,
+   *                which is why this parameter is exposed.
    */
-  void SetStepping(int stepping, bool step20_with_old_real3d);
+  void SetStepping(int stepping, uint32_t pciIDValue);
 
   
   /*
