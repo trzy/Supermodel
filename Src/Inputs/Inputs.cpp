@@ -418,16 +418,16 @@ void CInputs::StoreToConfig(Util::Config::Node *config)
 		(*it)->StoreToConfig(config);
 }
 
-bool CInputs::ConfigureInputs(const Game *game)
+bool CInputs::ConfigureInputs(const Game &game)
 {
 	m_system->UngrabMouse();
 
 	// Print header and help message
 	uint32_t gameFlags;
-	if (game)
+	if (!game.name.empty())
 	{
-		PrintHeader("Configure Inputs for %s", game->title.c_str());
-		gameFlags = game->inputs;
+		PrintHeader("Configure Inputs for '%s'", game.title.c_str());
+		gameFlags = game.inputs;
 	}
 	else
 	{
@@ -599,7 +599,7 @@ Finish:
 	return !cancelled;
 }
 
-bool CInputs::ConfigureInputs(const Game *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH)
+bool CInputs::ConfigureInputs(const Game &game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH)
 {
 	// Let the input system know the display geometry
 	m_system->SetDisplayGeom(dispX, dispY, dispW, dispH);

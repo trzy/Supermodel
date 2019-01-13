@@ -178,7 +178,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
  * NOTE: keepAspectRatio should always be true. It has not yet been tested with
  * the wide screen hack.
  */
-static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+static bool CreateGLScreen(const std::string &caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
   GLenum err;
   
@@ -205,7 +205,7 @@ static bool CreateGLScreen(const char *caption, unsigned *xOffsetPtr, unsigned *
   }
     
   // Create window caption
-  SDL_WM_SetCaption(caption,NULL);
+  SDL_WM_SetCaption(caption.c_str(),NULL);
     
   // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
   err = glewInit();
@@ -1227,7 +1227,7 @@ static const char s_configFilePath[] = { "Config/Supermodel.ini" };
 static const char s_gameXMLFilePath[] = { "Config/Games.xml" };
 
 // Create and configure inputs
-static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *config, bool configure)
+static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
 {
   static const char configFileComment[] = {
     ";\n"
@@ -1235,22 +1235,39 @@ static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *config, bool co
     ";\n"
   };
   
-  Inputs->LoadFromConfig(*config);
+  Inputs->LoadFromConfig(*runtimeConfig);
     
   // If the user wants to configure the inputs, do that now
   if (configure)
   {
+    // Extract the relevant INI section (which will be the global section if no
+    // game was specified, otherwise the game's node) in the file config, which
+    // will be written back to disk
+    Util::Config::Node *fileConfigRoot = game.name.empty() ? fileConfig : fileConfig->TryGet(game.name);
+    if (fileConfigRoot == nullptr)
+    {
+      fileConfigRoot = &fileConfig->Add(game.name);
+    }
+    
     // Open an SDL window 
     unsigned xOffset, yOffset, xRes=496, yRes=384;
-    if (OKAY != CreateGLScreen("Supermodel - Configuring Inputs...", &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+    std::string title("Supermodel - ");
+    if (game.name.empty())
+      title.append("Configuring Default Inputs...");
+    else
+      title.append(Util::Format() << "Configuring Inputs for: " << game.title);
+    if (OKAY != CreateGLScreen(title, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
       return (bool) ErrorLog("Unable to start SDL to configure inputs.\n");
     
     // Configure the inputs
-    if (Inputs->ConfigureInputs(NULL, xOffset, yOffset, xRes, yRes))
+    if (Inputs->ConfigureInputs(game, xOffset, yOffset, xRes, yRes))
     {
       // Write input configuration and input system settings to config file
-      Inputs->StoreToConfig(config);
-      Util::Config::WriteINIFile(s_configFilePath, *config, configFileComment);
+      Inputs->StoreToConfig(fileConfigRoot);
+      Util::Config::WriteINIFile(s_configFilePath, *fileConfig, configFileComment);
+        
+      // Also save to runtime configuration in case we proceed and play
+      Inputs->StoreToConfig(runtimeConfig);
     }
     else
       puts("Configuration aborted...");
@@ -1672,8 +1689,8 @@ int main(int argc, char **argv)
   Game game;
   ROMSet rom_set;
   Util::Config::Node fileConfig("Global");
-  Util::Config::Node fileConfigWithDefaults("Global");
   {
+    Util::Config::Node fileConfigWithDefaults("Global");
     Util::Config::Node config3("Global");
     Util::Config::Node config4("Global");
     Util::Config::FromINIFile(&fileConfig, s_configFilePath);
@@ -1722,18 +1739,16 @@ int main(int argc, char **argv)
 #endif // SUPERMODEL_DEBUGGER
 
   // Create input system
-  // NOTE: fileConfigWithDefaults is passed so that the global section is used
-  // for input settings with default values populated
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
   if (selectedInputSystem == "sdl")
     InputSystem = new CSDLInputSystem();
 #ifdef SUPERMODEL_WIN32
   else if (selectedInputSystem == "dinput")
-    InputSystem = new CDirectInputSystem(fileConfigWithDefaults, false, false);
+    InputSystem = new CDirectInputSystem(s_runtime_config, false, false);
   else if (selectedInputSystem == "xinput")
-    InputSystem = new CDirectInputSystem(fileConfigWithDefaults, false, true);
+    InputSystem = new CDirectInputSystem(s_runtime_config, false, true);
   else if (selectedInputSystem == "rawinput")
-    InputSystem = new CDirectInputSystem(fileConfigWithDefaults, true, false);
+    InputSystem = new CDirectInputSystem(s_runtime_config, true, false);
 #endif // SUPERMODEL_WIN32
   else
   {
@@ -1754,7 +1769,7 @@ int main(int argc, char **argv)
   // NOTE: fileConfig is passed so that the global section is used for input settings
   // and because this function may write out a new config file, which must preserve
   // all sections. We don't want to pollute the output with built-in defaults.
-  if (ConfigureInputs(Inputs, &fileConfig, cmd_line.config_inputs))
+  if (ConfigureInputs(Inputs, &fileConfig, &s_runtime_config, game, cmd_line.config_inputs))
   {
     exitCode = 1;
     goto Exit;

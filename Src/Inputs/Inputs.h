@@ -277,14 +277,14 @@ public:
    * Configures the current input mapping assignments for the given game, or all inputs if game is NULL, by asking the user for input.
    * Returns true if the inputs were configured okay or false if the user exited without requesting to save changes.
    */
-  bool ConfigureInputs(const Game *game);
+  bool ConfigureInputs(const Game &game);
   
   /*
    * Configures the current input mapping assignments for the given game, or all inputs if game is NULL, by asking the user for input.
    * Takes display geometry if this has not been set previously by a call to Poll().
    * Returns true if the inputs were configured okay or false if the user exited without requesting to save changes.
    */
-  bool ConfigureInputs(const Game *game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
+  bool ConfigureInputs(const Game &game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
 
   void CalibrateJoysticks();
 
