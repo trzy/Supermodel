@@ -89,7 +89,7 @@ float area(vec2 a, vec2 b)
 
 void main(void)
 {
-	if(gs_in[0].discardPoly>=0) {
+	if(gs_in[0].discardPoly > 0) {
 		return;					//emulate back face culling here (all vertices in poly have same value)
 	}
 
