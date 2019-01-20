@@ -126,6 +126,17 @@
  * Any setting not explicitly part of a section is assigned to the "Global"
  * section. For example, Setting0 and Setting1 above are both part of "Global".
  *
+ * Multiple sections can be specified like so:
+ *
+ *    [ Section1, Section2, Section3 ]
+ *    SettingX = foo
+ *    [ Section4, , Section5 ]
+ *    SettingX = bar
+ *
+ * In this example, SettingX will be set to "foo" in Section1, Section2, and 
+ * Section3. It will be set to "bar" in Section4, Section5, and the "Global"
+ * section because of the unnamed element.
+ *
  * TODO
  * ----
  * - TryGet() can be made quicker by attempting a direct lookup first. We never

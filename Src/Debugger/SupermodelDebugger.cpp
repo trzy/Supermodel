@@ -551,7 +551,7 @@ namespace Debugger
 		}
 		else if (CheckToken(token, "caip", "configallinputs"))		// configallinputs
 		{
-			m_inputs->ConfigureInputs(&m_model3->GetGame());
+			m_inputs->ConfigureInputs(m_model3->GetGame());
 			return false;
 		}
 		//
