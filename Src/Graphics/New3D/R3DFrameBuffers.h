@@ -14,15 +14,16 @@ public:
 	R3DFrameBuffers();
 	~R3DFrameBuffers();
 
-	void	Draw();		// draw and composite the transparent layers
-
+	void	Draw();					// draw and composite the transparent layers
+	void	CompositeBaseLayer();
+	void	CompositeAlphaLayer();
+	void	DrawOverTransLayers();	// opaque pixels in next priority layer need to wipe trans pixels
+	
 	bool	CreateFBO(int width, int height);
 	void	DestroyFBO();
 
 	void	BindTexture(Layer layer);
 	void	SetFBO(Layer layer);
-	void	DisableFBO();
-	void	Clear(GLbitfield mask);
 	void	StoreDepth();
 	void	RestoreDepth();
 
@@ -47,6 +48,7 @@ private:
 	GLuint	CreateTexture(int width, int height);
 	void	AllocShaderTrans();
 	void	AllocShaderBase();
+	void	AllocShaderWipe();
 
 	void	DrawBaseLayer();
 	void	DrawAlphaLayer();
@@ -63,6 +65,7 @@ private:
 	// shaders
 	GLSLShader m_shaderBase;
 	GLSLShader m_shaderTrans;
+	GLSLShader m_shaderWipe;
 
 	// vertices for fbo
 	VBO m_vbo;

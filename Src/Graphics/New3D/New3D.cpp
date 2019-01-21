@@ -226,8 +226,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 		}
 	}
 
-	glDisable(GL_BLEND);
-
 	return hasOverlay;
 }
 
@@ -268,7 +266,8 @@ void CNew3D::SetRenderStates()
 	glEnable		(GL_DEPTH_TEST);
 	glDepthMask		(GL_TRUE);
 	glActiveTexture	(GL_TEXTURE0);
-	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader					
+	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader		
+	glDisable		(GL_BLEND);
 
 	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
 	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
@@ -308,7 +307,6 @@ void CNew3D::RenderFrame(void)
 	m_nodeAttribs.Reset();
 
 	RenderViewport(0x800000);						// build model structure
-
 	DrawScrollFog();								// fog layer if applicable must be drawn here
 	
 	m_vbo.Bind(true);
@@ -335,6 +333,9 @@ void CNew3D::RenderFrame(void)
 		}
 	}
 
+	m_r3dFrameBuffers.SetFBO(Layer::trans12);
+	glClear(GL_COLOR_BUFFER_BIT);					// wipe both trans layers
+
 	for (int pri = 0; pri <= 3; pri++) {
 
 		//==============
@@ -347,8 +348,9 @@ void CNew3D::RenderFrame(void)
 
 			bool renderOverlay = (i == 1);
 
-			m_r3dFrameBuffers.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
+			m_r3dFrameBuffers.SetFBO(Layer::colour);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			
 			SetRenderStates();
 
 			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
@@ -358,26 +360,32 @@ void CNew3D::RenderFrame(void)
 			if (!renderOverlay && ProcessLos(pri)) {
 				ProcessLos(pri);
 			}
+
+			DisableRenderStates();
+
+			m_r3dFrameBuffers.DrawOverTransLayers();			// mask trans layer with opaque pixels
+			m_r3dFrameBuffers.CompositeBaseLayer();				// copy opaque pixels to back buffer
+
+			SetRenderStates();
 			
 			glDepthFunc(GL_LESS);								// alpha polys seem to use gl_less (ocean hunter)
 
-			m_r3dShader.DiscardAlpha(false);					// render only translucent pixels
-			m_r3dFrameBuffers.StoreDepth();						// save depth buffer for 1st trans pass
-			m_r3dFrameBuffers.SetFBO(Layer::trans1);
-			RenderScene(pri, renderOverlay, Layer::trans1);
+			m_r3dShader.DiscardAlpha		(false);			// render only translucent pixels
+			m_r3dFrameBuffers.StoreDepth	();					// save depth buffer for 1st trans pass
+			m_r3dFrameBuffers.SetFBO		(Layer::trans1);
+			RenderScene						(pri, renderOverlay, Layer::trans1);
 
-			m_r3dFrameBuffers.RestoreDepth();					// restore depth buffer, trans layers don't seem to depth test against each other
-			m_r3dFrameBuffers.SetFBO(Layer::trans2);
-			RenderScene(pri, renderOverlay, Layer::trans2);
+			m_r3dFrameBuffers.RestoreDepth	();					// restore depth buffer, trans layers don't seem to depth test against each other
+			m_r3dFrameBuffers.SetFBO		(Layer::trans2);
+			RenderScene						(pri, renderOverlay, Layer::trans2);
 
 			DisableRenderStates();
-			m_r3dFrameBuffers.Draw();							// draw current layer to back buffer
 
 			if (!hasOverlay) break;								// no high priority polys						
 		}
 	}
 
-	m_r3dFrameBuffers.DisableFBO();		// draw to back buffer normally
+	m_r3dFrameBuffers.CompositeAlphaLayer();
 }
 
 void CNew3D::BeginFrame(void)

@@ -4,6 +4,8 @@
 #include "Pkgs/glew.h"
 #include "Util/NewConfig.h"
 #include "Model.h"
+#include <map>
+#include <string>
 
 namespace New3D {
 
@@ -18,7 +20,7 @@ public:
 	void	SetViewportUniforms	(const Viewport *vp);
 	void	Start				();
 	void	SetShader			(bool enable = true);
-	GLint	GetVertexAttribPos	(const char* attrib);
+	GLint	GetVertexAttribPos	(const std::string& attrib);
 	void	DiscardAlpha		(bool discard);				// use to remove alpha from texture alpha only polys for 1st pass
 
 private:
@@ -103,6 +105,10 @@ private:
 	// global uniforms
 	GLint m_locHardwareStep;
 	GLint m_locDiscardAlpha;
+
+	// vertex attribute position cache
+	std::map<std::string, GLint> m_vertexLocCache;
+
 };
 
 

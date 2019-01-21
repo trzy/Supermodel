@@ -98,7 +98,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 	}
 };
 
-enum class Layer { colour, trans1, trans2, all, none };
+enum class Layer { colour, trans1, trans2, trans12 /*both 1&2*/, all, none };
 
 struct Mesh
 {

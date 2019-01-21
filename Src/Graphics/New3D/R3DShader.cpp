@@ -127,9 +127,14 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	return true;
 }
 
-GLint R3DShader::GetVertexAttribPos(const char* attrib)
+GLint R3DShader::GetVertexAttribPos(const std::string& attrib)
 {
-	return glGetAttribLocation(m_shaderProgram, attrib);	// probably should cache this but only called 1x per frame anyway
+	if (m_vertexLocCache.count(attrib)==0) {
+		auto pos = glGetAttribLocation(m_shaderProgram, attrib.c_str());
+		m_vertexLocCache[attrib] = pos;
+	}
+
+	return m_vertexLocCache[attrib];
 }
 
 void R3DShader::SetShader(bool enable)

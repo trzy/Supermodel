@@ -22,6 +22,7 @@ R3DFrameBuffers::R3DFrameBuffers()
 
 	AllocShaderTrans();
 	AllocShaderBase();
+	AllocShaderWipe();
 
 	FBVertex vertices[4];
 	vertices[0].Set(-1,-1, 0, 0);
@@ -36,6 +37,8 @@ R3DFrameBuffers::~R3DFrameBuffers()
 {
 	DestroyFBO();
 	m_shaderTrans.UnloadShaders();
+	m_shaderBase.UnloadShaders();
+	m_shaderWipe.UnloadShaders();
 	m_vbo.Destroy();
 }
 
@@ -158,30 +161,40 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 		return;
 	}
 
-	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-	GLenum buffers[] = { GL_COLOR_ATTACHMENT0 + (GLenum)layer };
-	glDrawBuffers(countof(buffers), buffers);
-	m_lastLayer = layer;
-}
-
-void R3DFrameBuffers::DisableFBO()
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glDrawBuffer(GL_BACK);
-	m_lastLayer = Layer::none;
-}
-
-void R3DFrameBuffers::Clear(GLbitfield mask)
-{
-	if (m_lastLayer != Layer::all) {
-		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);		// bind frame buffer
+	switch (layer)
+	{
+	case Layer::colour:
+	case Layer::trans1:
+	case Layer::trans2:
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
+		GLenum buffers[] = { GL_COLOR_ATTACHMENT0 + (GLenum)layer };
+		glDrawBuffers(countof(buffers), buffers);
+		break;
+	}
+	case Layer::trans12:
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
+		GLenum buffers[] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+		glDrawBuffers(countof(buffers), buffers);
+		break;
+	}
+	case Layer::all:
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 		glDrawBuffers(countof(buffers), buffers);
+		break;
+	}
+	case Layer::none:
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDrawBuffer(GL_BACK);
+		break;
+	}
 	}
 
-	glViewport(0, 0, m_width, m_height);
-	glClear(mask);
-	m_lastLayer = Layer::all;
+	m_lastLayer = layer;
 }
 
 void R3DFrameBuffers::AllocShaderBase()
@@ -276,12 +289,59 @@ void R3DFrameBuffers::AllocShaderTrans()
 	m_shaderTrans.attribLoc[1] = m_shaderTrans.GetAttributeLocation("inTexCoord");
 }
 
+void R3DFrameBuffers::AllocShaderWipe()
+{
+	const char *vertexShader = R"glsl(
+
+	// inputs
+	attribute vec3 inVertex; 
+	attribute vec2 inTexCoord;
+
+	// outputs
+	varying vec2 fsTexCoord;
+
+	void main(void)
+	{
+		fsTexCoord = inTexCoord;
+		gl_Position = vec4(inVertex,1.0);
+	}
+
+	)glsl";
+
+	const char *fragmentShader = R"glsl(
+
+	uniform sampler2D texColor;				// base colour layer
+	varying vec2 fsTexCoord;
+
+	void main()
+	{
+		vec4 colBase = texture2D( texColor, fsTexCoord);
+
+		if(colBase == 0.0) {
+			discard;						// no colour pixels have been written
+		}
+
+		gl_FragData[0] = vec4(0.0);			// wipe these parts of the alpha buffer
+		gl_FragData[1] = vec4(0.0);			// since they have been overwritten by the next priority layer
+	}
+
+	)glsl";
+
+	m_shaderWipe.LoadShaders(vertexShader, fragmentShader);
+
+	m_shaderWipe.uniformLoc[0] = m_shaderTrans.GetUniformLocation("texColor");
+
+	m_shaderWipe.attribLoc[0] = m_shaderTrans.GetAttributeLocation("inVertex");
+	m_shaderWipe.attribLoc[1] = m_shaderTrans.GetAttributeLocation("inTexCoord");
+}
+
 void R3DFrameBuffers::Draw()
 {
-	DisableFBO	();									// make sure to draw on the back buffer
+	SetFBO		(Layer::none);						// make sure to draw on the back buffer
 	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
 	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
 	glDisable	(GL_CULL_FACE);
+	glDisable	(GL_BLEND);
 
 	for (int i = 0; i < countof(m_texIDs); i++) {	// bind our textures to correct texture units
 		glActiveTexture(GL_TEXTURE0 + i);
@@ -300,6 +360,84 @@ void R3DFrameBuffers::Draw()
 
 	glDisable		(GL_BLEND);
 	m_vbo.Bind		(false);
+}
+
+void R3DFrameBuffers::CompositeBaseLayer()
+{
+	SetFBO(Layer::none);							// make sure to draw on the back buffer
+	glViewport(0, 0, m_width, m_height);			// cover the entire screen
+	glDisable(GL_DEPTH_TEST);						// disable depth testing / writing
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+
+	for (int i = 0; i < countof(m_texIDs); i++) {	// bind our textures to correct texture units
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	m_vbo.Bind(true);
+
+	DrawBaseLayer();
+
+	m_vbo.Bind(false);
+}
+
+void R3DFrameBuffers::CompositeAlphaLayer()
+{
+	SetFBO(Layer::none);							// make sure to draw on the back buffer
+	glViewport(0, 0, m_width, m_height);			// cover the entire screen
+	glDisable(GL_DEPTH_TEST);						// disable depth testing / writing
+	glDisable(GL_CULL_FACE);
+
+	for (int i = 0; i < countof(m_texIDs); i++) {	// bind our textures to correct texture units
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	m_vbo.Bind(true);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+
+	DrawAlphaLayer();
+
+	glDisable(GL_BLEND);
+	m_vbo.Bind(false);
+}
+
+void R3DFrameBuffers::DrawOverTransLayers()
+{
+	SetFBO(Layer::trans12);							// need to write to both layers
+
+	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
+	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
+	glDisable	(GL_CULL_FACE);
+	glDisable	(GL_BLEND);
+
+	glActiveTexture	(GL_TEXTURE0);
+	glBindTexture	(GL_TEXTURE_2D, m_texIDs[0]);
+
+	m_vbo.Bind(true);
+
+	m_shaderWipe.EnableShader();
+	glUniform1i(m_shaderWipe.uniformLoc[0], 0);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+
+		glVertexAttribPointer(m_shaderWipe.attribLoc[0], 3, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, verts));
+		glVertexAttribPointer(m_shaderWipe.attribLoc[1], 2, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, texCoords));
+
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+
+	m_shaderWipe.DisableShader();
+
+	m_vbo.Bind(false);
 }
 
 void R3DFrameBuffers::DrawBaseLayer()
