@@ -317,7 +317,7 @@ void R3DFrameBuffers::AllocShaderWipe()
 	{
 		vec4 colBase = texture2D( texColor, fsTexCoord);
 
-		if(colBase == 0.0) {
+		if(colBase.a == 0.0) {
 			discard;						// no colour pixels have been written
 		}
 
