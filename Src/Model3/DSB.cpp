@@ -780,15 +780,23 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			//mixer_set_stereo_pan(0, MIXER_PAN_RIGHT, MIXER_PAN_LEFT);
 			mpegState = ST_IDLE;
 			break;
-		/*
+		
 		case ST_GOTA0:
 			// ch 0 mono
-			mixer_set_stereo_volume(0, 0, 255);
-			printf("ch 0 mono\n");
-			mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
+			//mixer_set_stereo_volume(0, 0, 255);
+			//printf("ch 0 mono\n");
+			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
+
+			if (byte == 0) {
+				audioChannel = AudioChannel::stereo;
+			}
+			else {
+				audioChannel = AudioChannel::channel0;
+			}
+
 			mpegState = ST_IDLE;
 			break;
-		*/
+		
 		case ST_GOTA4:	// dayto2pe plays advertise tune from this state by writing 0x75
 			mpegState = ST_IDLE;
 			if (byte == 0x75)
@@ -810,10 +818,21 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			//printf("ch 1 mono\n");
 			//mixer_set_stereo_volume(0, 255, 0);
 			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
+			if (byte == 0) {
+				audioChannel = AudioChannel::stereo;
+			}
+			else {
+				audioChannel = AudioChannel::channel1;
+			}
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB4:
 			mpegState = ST_IDLE;
+			if (byte == 0x96)
+			{
+				MPEG_StopPlaying();
+				playing = 0;
+			}
 			break;
 		case ST_GOTB5:
 			mpegState = ST_IDLE;
@@ -831,19 +850,30 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		 * when only setting two (in-game)
 		 */
 		case ST_GOTB6:	// rear left(?) volume
+			volume[0] = byte;
+			mpegState = ST_IDLE;
+			break;
 		case ST_GOTB0:	// left volume
 			volume[0] = byte;
 			//printf("Set L Volume: %02X\n", byte);
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTA7:	// rear right(?) volume
+			volume[1] = byte;
+			mpegState = ST_IDLE;
+			break;
 		case ST_GOTA1:	// right volume
-		case ST_GOTA0:
+			volume[1] = byte;
+			mpegState = ST_IDLE;
+			break;
+		/*case ST_GOTA0:
 			volume[1] = byte;
 			//printf("Set R Volume: %02X\n", byte);
 			mpegState = ST_IDLE;
-			break;
+			break;*/
 		case ST_GOTB2:
+			mpegState = ST_IDLE;
+			break;
 		case ST_GOTA3:
 			mpegState = ST_IDLE;
 			break;
@@ -1016,7 +1046,23 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	// Decode MPEG for this frame
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
-	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
+	//retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
+	switch (audioChannel)
+	{
+	case AudioChannel::stereo:
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+		break;
+	case AudioChannel::channel0:
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegR, mpegR, volume[0], volume[0], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+		break;
+	case AudioChannel::channel1:
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegL, volume[1], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+		break;
+	default:
+		//retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+		break;
+	}
+
 }
 
 void CDSB2::Reset(void)
@@ -1172,6 +1218,7 @@ bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 	M68KAttachBus(this);
 	M68KSetIRQCallback(NULL);	// use default behavior (autovector, clear interrupt)
 	M68KGetContext(&M68K);
+
 	
 	// MPEG decoder
 	if (OKAY != MPEG_Init())

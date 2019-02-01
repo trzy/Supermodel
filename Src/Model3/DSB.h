@@ -308,6 +308,9 @@ private:
 	
 	// M68K CPU
 	M68KCtx	M68K;
+
+	enum class AudioChannel { stereo, channel0, channel1 };
+	AudioChannel audioChannel = AudioChannel::stereo;
 };
 
 
