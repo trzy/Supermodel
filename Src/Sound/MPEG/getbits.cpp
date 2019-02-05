@@ -99,14 +99,18 @@ int m1fread(unsigned char *buf, int size1, int size2, void *f)
 			// if past the end, do the xfer in 2 pieces
 			if ((total + offset) > end)
 			{
-				memcpy(buf, fstart + offset, end-offset);
-				buf += (end-offset);
-				total -= (end-offset);
+				int temp = end - offset;				// this part could be removed
+				if (temp > 0)							// since music lenght
+				{										//
+					memcpy(buf, fstart + offset, temp);	// always multiple
+					buf += temp;						// of 0x240
+					total -= temp;						// I let this as is in case	
+				}										//
+				
+				offset = 0;
+				fstart = lstart;
+				end = lend;
 			}
-
-			fstart = lstart;
-			offset = 0;
-			end = lend;
 		}
 	}
 
