@@ -778,6 +778,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			// default to full stereo
 			//mixer_set_stereo_volume(0, 255, 255);
 			//mixer_set_stereo_pan(0, MIXER_PAN_RIGHT, MIXER_PAN_LEFT);
+			stereo = StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
 		
@@ -786,14 +787,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			//mixer_set_stereo_volume(0, 0, 255);
 			//printf("ch 0 mono\n");
 			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
-
-			if (byte == 0) {
-				audioChannel = AudioChannel::stereo;
-			}
-			else {
-				audioChannel = AudioChannel::channel0;
-			}
-
+			stereo = (byte != 0x00) ? StereoMode::MonoRight : StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
 		
@@ -818,12 +812,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			//printf("ch 1 mono\n");
 			//mixer_set_stereo_volume(0, 255, 0);
 			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
-			if (byte == 0) {
-				audioChannel = AudioChannel::stereo;
-			}
-			else {
-				audioChannel = AudioChannel::channel1;
-			}
+			stereo = (byte != 0x00) ? StereoMode::MonoLeft : StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB4:
@@ -1046,23 +1035,26 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	// Decode MPEG for this frame
 	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
 	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
-	//retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
-	switch (audioChannel)
+	
+	INT16 *leftChannelSource = nullptr;
+	INT16 *rightChannelSource = nullptr;
+	switch (stereo)
 	{
-	case AudioChannel::stereo:
-		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
-		break;
-	case AudioChannel::channel0:
-		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegR, mpegR, volume[0], volume[0], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
-		break;
-	case AudioChannel::channel1:
-		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegL, volume[1], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
-		break;
 	default:
-		//retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+	case StereoMode::Stereo:
+		leftChannelSource = mpegL;
+		rightChannelSource = mpegR;
+		break;
+	case StereoMode::MonoLeft:
+		leftChannelSource = mpegL;
+		rightChannelSource = mpegL;
+		break;
+	case StereoMode::MonoRight:
+		leftChannelSource = mpegR;
+		rightChannelSource = mpegR;
 		break;
 	}
-
+  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
 }
 
 void CDSB2::Reset(void)
@@ -1080,6 +1072,7 @@ void CDSB2::Reset(void)
 	playing = 0;
 	volume[0] = 0xFF;	// set to max volume in case we miss the volume commands
 	volume[1] = 0xFF;
+	stereo = StereoMode::Stereo;
 	
 	// Even if DSB emulation is disabled, must reset to establish valid Z80 state
 	M68KSetContext(&M68K);
@@ -1122,6 +1115,7 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 	StateFile->Write(&mpegEnd, sizeof(mpegEnd));
 	StateFile->Write(&playing, sizeof(playing));
 	StateFile->Write(volume, sizeof(volume));
+	StateFile->Write(&stereo, sizeof(stereo));
 	
 	// 68K CPU state
 	M68KSetContext(&M68K);
@@ -1163,6 +1157,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	StateFile->Read(&mpegEnd, sizeof(mpegEnd));
 	StateFile->Read(&playing, sizeof(playing));
 	StateFile->Read(volume, sizeof(volume));
+	StateFile->Read(&stereo, sizeof(stereo));
 	
 	M68KSetContext(&M68K);
 	M68KLoadState(StateFile, "DSB2 68K");

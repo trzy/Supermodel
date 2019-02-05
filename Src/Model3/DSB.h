@@ -200,7 +200,7 @@ private:
 	CDSBResampler	Resampler;
 	int				retainedSamples;	// how many MPEG samples carried over from previous frame
 	
-	// MPEG decode buffers (48KHz, 1/60th second + 2 extra padding samples)
+  // MPEG decode buffers (48KHz, 1/60th second + 2 extra padding samples)
 	INT16	*mpegL, *mpegR;
 	
 	// DSB memory
@@ -233,7 +233,7 @@ private:
 	UINT8	status;
 	UINT8	cmdLatch;
 	UINT8	volume;		// 0x00-0x7F
-	UINT8	stereo;
+	UINT8 stereo;
 	
 	// Z80 CPU
 	CZ80	Z80;
@@ -283,6 +283,14 @@ private:
 	// MPEG decode buffers (48KHz, 1/60th second + 2 extra padding samples)
 	INT16	*mpegL, *mpegR;
 	
+	// Stereo mode (do not change values because they are used in save states!)
+  enum StereoMode: uint8_t
+  {
+    Stereo = 0,     // both channels
+    MonoLeft = 1,   // mono, using left stream as source data
+    MonoRight = 2   // mono, using right stream as source data
+  };
+	
 	// DSB memory
 	const UINT8	*progROM;		// 68K program ROM (passed in from parent object)
 	const UINT8	*mpegROM;		// MPEG music ROM
@@ -299,6 +307,7 @@ private:
 	int 	mpegState;
 	int 	mpegStart, mpegEnd, playing;
 	UINT8	volume[2];		// left, right volume (0x00-0xFF)
+	StereoMode stereo;
 	
 	// Settings of currently playing stream (may not match the playback register variables above)
 	UINT32	usingLoopStart;	// what was last set by MPEG_SetLoop() or MPEG_PlayMemory()
@@ -308,9 +317,6 @@ private:
 	
 	// M68K CPU
 	M68KCtx	M68K;
-
-	enum class AudioChannel { stereo, channel0, channel1 };
-	AudioChannel audioChannel = AudioChannel::stereo;
 };
 
 
