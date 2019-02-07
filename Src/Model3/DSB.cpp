@@ -1038,23 +1038,30 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	
 	INT16 *leftChannelSource = nullptr;
 	INT16 *rightChannelSource = nullptr;
+	UINT8 volL=0, volR=0;
 	switch (stereo)
 	{
 	default:
 	case StereoMode::Stereo:
 		leftChannelSource = mpegL;
 		rightChannelSource = mpegR;
+		volL = volume[0];
+		volR = volume[1];
 		break;
 	case StereoMode::MonoLeft:
 		leftChannelSource = mpegL;
 		rightChannelSource = mpegL;
+		volL = volume[1];
+		volR = volume[1];
 		break;
 	case StereoMode::MonoRight:
 		leftChannelSource = mpegR;
 		rightChannelSource = mpegR;
+		volL = volume[0];
+		volR = volume[0];
 		break;
 	}
-  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
+  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, 44100/60, 32000/60+2, 44100, 32000);
 }
 
 void CDSB2::Reset(void)
