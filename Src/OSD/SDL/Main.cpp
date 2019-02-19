@@ -1,7 +1,8 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+ ** Copyright 2011-2019 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+ **                     Harry Tuttle, and Spindizzi
  **
  ** This file is part of Supermodel.
  **
@@ -28,7 +29,6 @@
  * -------------------------
  * - Thoroughly test config system (do overrides work as expected? XInput
  *   force settings?)
- * - Make sure fragment and vertex shaders are configurable for 3D (and 2D?)
  * - Remove all occurrences of "using namespace std" from Nik's code.
  * - Standardize variable naming (recently introduced vars_like_this should be
  *   converted back to varsLikeThis).
@@ -39,7 +39,6 @@
  * - Make sure quitting while paused works.
  * - Add UI keys for balance setting? 
  * - 5.1 audio support?
- * - Stretch video option
  *
  * Compile-Time Options
  * --------------------
@@ -1110,6 +1109,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       else
         printf("\n");
     }
+#ifdef SUPERMODEL_DEBUGGER
     else if (Inputs->uiDumpInpState->Pressed())
     {
       // Dump input states
@@ -1119,6 +1119,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     {
       dumpTimings = !dumpTimings;
     }
+#endif
     else if (Inputs->uiSelectCrosshairs->Pressed() && gameHasLightguns)
     {
       int crosshairs = (s_runtime_config["Crosshairs"].ValueAs<unsigned>() + 1) & 3;
@@ -1679,7 +1680,7 @@ int main(int argc, char **argv)
 #endif
   bool print_games = cmd_line.print_games;
   bool rom_specified = !cmd_line.rom_files.empty();
-  if (!rom_specified && !print_games && !cmd_line.config_inputs)
+  if (!rom_specified && !print_games && !cmd_line.config_inputs && !cmd_line.print_inputs)
   {
     ErrorLog("No ROM file specified."); 
     return 0;
