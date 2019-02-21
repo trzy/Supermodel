@@ -281,36 +281,6 @@
     <ClCompile Include="..\Src\Sound\SCSPLFO.cpp">
       <Filter>Source Files\Sound</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\dump.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\getbits.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\getdata.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\huffman.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\layer2.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\layer3.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\misc2.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\position.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\transform.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\util.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Debugger\AddressTable.cpp">
       <Filter>Source Files\Debugger</Filter>
     </ClCompile>
@@ -446,9 +416,6 @@
     <ClCompile Include="..\Src\Model3\JTAG.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\amp_audio.cpp">
-      <Filter>Source Files\Sound\MPEG</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Network\UDPReceive.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
@@ -469,6 +436,9 @@
     </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\GLSLShader.cpp">
       <Filter>Source Files\Graphics\New</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\MpegAudio.cpp">
+      <Filter>Source Files\Sound\MPEG</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -655,51 +625,6 @@
     <ClInclude Include="..\Src\Sound\SCSPDSP.h">
       <Filter>Header Files\Sound</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\amp.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\config.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\dump.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\formats.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\getbits.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\getdata.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\huffman.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\layer2.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\layer3.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\misc2.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\MPEG.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\position.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\proto.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\rtbuf.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\transform.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Debugger\AddressTable.h">
       <Filter>Header Files\Debugger</Filter>
     </ClInclude>
@@ -847,9 +772,6 @@
     <ClInclude Include="..\Src\Util\BitRegister.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Sound\MPEG\amp_audio.h">
-      <Filter>Header Files\Sound\MPEG</Filter>
-    </ClInclude>
     <ClInclude Include="..\Src\Network\UDPPacket.h">
       <Filter>Header Files\Network</Filter>
     </ClInclude>
@@ -879,6 +801,12 @@
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h">
       <Filter>Source Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MPEG\MpegAudio.h">
+      <Filter>Header Files\Sound\MPEG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\minimp3.h">
+      <Filter>Header Files\Pkgs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

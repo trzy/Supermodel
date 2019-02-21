@@ -379,67 +379,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       </ExceptionHandling>
     </ClCompile>
     <ClCompile Include="..\Src\ROMSet.cpp" />
-    <ClCompile Include="..\Src\Sound\MPEG\amp_audio.cpp" />
-    <ClCompile Include="..\Src\Sound\MPEG\dump.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\getbits.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\getdata.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\huffman.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\layer2.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\layer3.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\misc2.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\position.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\transform.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
-    <ClCompile Include="..\Src\Sound\MPEG\util.cpp">
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)amp_%(Filename).obj</ObjectFileName>
-    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MPEG\MpegAudio.cpp" />
     <ClCompile Include="..\Src\Sound\SCSP.cpp" />
     <ClCompile Include="..\Src\Sound\SCSPDSP.cpp" />
     <ClCompile Include="..\Src\Sound\SCSPLFO.cpp">
@@ -597,26 +537,12 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClInclude Include="..\Src\Pkgs\glew.h" />
     <ClInclude Include="..\Src\Pkgs\glxew.h" />
     <ClInclude Include="..\Src\Pkgs\ioapi.h" />
+    <ClInclude Include="..\Src\Pkgs\minimp3.h" />
     <ClInclude Include="..\Src\Pkgs\tinyxml2.h" />
     <ClInclude Include="..\Src\Pkgs\unzip.h" />
     <ClInclude Include="..\Src\Pkgs\wglew.h" />
     <ClInclude Include="..\Src\ROMSet.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\amp.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\amp_audio.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\config.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\dump.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\formats.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\getbits.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\getdata.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\huffman.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\layer2.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\layer3.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\misc2.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\MPEG.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\position.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\proto.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\rtbuf.h" />
-    <ClInclude Include="..\Src\Sound\MPEG\transform.h" />
+    <ClInclude Include="..\Src\Sound\MPEG\MpegAudio.h" />
     <ClInclude Include="..\Src\Sound\SCSP.h" />
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />

@@ -233,7 +233,7 @@ private:
 	UINT8	status;
 	UINT8	cmdLatch;
 	UINT8	volume;		// 0x00-0x7F
-	UINT8 stereo;
+	UINT8	stereo;
 	
 	// Z80 CPU
 	CZ80	Z80;
@@ -284,12 +284,12 @@ private:
 	INT16	*mpegL, *mpegR;
 	
 	// Stereo mode (do not change values because they are used in save states!)
-  enum StereoMode: uint8_t
-  {
-    Stereo = 0,     // both channels
-    MonoLeft = 1,   // mono, using left stream as source data
-    MonoRight = 2   // mono, using right stream as source data
-  };
+	enum class StereoMode: uint8_t
+	{
+		Stereo = 0,     // both channels
+		MonoLeft = 1,   // mono, using left stream as source data
+		MonoRight = 2   // mono, using right stream as source data
+	};
 	
 	// DSB memory
 	const UINT8	*progROM;		// 68K program ROM (passed in from parent object)

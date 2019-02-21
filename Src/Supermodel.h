@@ -145,7 +145,6 @@
 #include "Model3/TileGen.h"
 #include "Model3/Real3D.h"
 #include "Sound/SCSP.h"
-#include "Sound/MPEG/MPEG.h"
 #include "Model3/SoundBoard.h"
 #include "Model3/DSB.h"
 #include "Model3/DriveBoard.h"

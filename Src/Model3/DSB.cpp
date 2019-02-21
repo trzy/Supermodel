@@ -39,7 +39,7 @@
  */
 
 #include "Supermodel.h"
-
+#include "Sound/MPEG/MpegAudio.h"
 
 /******************************************************************************
  Resampler
@@ -230,30 +230,32 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 
 		if (data == 0)	// stop
 		{
-			MPEG_StopPlaying();
+			MpegDec::Stop();
 			return;
 		}
 
 		if (data == 1)	// play without loop
 		{
 			//printf("====> Playing %06X (mpegEnd=%06X)\n", mpegStart, mpegEnd);
-			MPEG_SetLoop(NULL, 0);
-			usingLoopStart = 0;		// save the settings of the MPEG currently playing
-			usingLoopEnd = 0;
-			usingMPEGStart = mpegStart;
-			usingMPEGEnd = mpegEnd;
-			MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
+
+			usingLoopStart	= 0;		// save the settings of the MPEG currently playing
+			usingLoopEnd	= 0;
+			usingMPEGStart	= mpegStart;
+			usingMPEGEnd	= mpegEnd;
+
+			MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
 			return;
 		}
 
 		if (data == 2)	// play with loop (NOTE: I don't think this actually loops b/c MPEG_PlayMemory() clears lstart)
 		{
 			//printf("====> Playing w/ loop %06X (mpegEnd=%06X, loopStart=%06X, loopEnd=%06X)\n", mpegStart, mpegEnd, loopStart, loopEnd);
-			usingLoopStart = 0;		// MPEG_PlayMemory() clears these settings and Z80 will set them up later
-			usingLoopEnd = 0;
-			usingMPEGStart = mpegStart;
-			usingMPEGEnd = mpegEnd;
-			MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
+			usingLoopStart	= 0;		// MPEG_PlayMemory() clears these settings and Z80 will set them up later
+			usingLoopEnd	= 0;
+			usingMPEGStart	= mpegStart;
+			usingMPEGEnd	= mpegEnd;
+
+			MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);		// assume not looped for now
 			return;
 		}
 		break;
@@ -284,15 +286,15 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			// SWA: if loop end is zero, it means "keep previous end marker"
 			if (loopEnd == 0)
 			{
-				usingLoopStart = loopStart;
-				usingLoopEnd = mpegEnd-loopStart;
-				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+				usingLoopStart	= loopStart;
+				usingLoopEnd	= mpegEnd-loopStart;
+				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
 			}
 			else
 			{
-				usingLoopStart = loopStart;
-				usingLoopEnd = loopEnd-loopStart;
-				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+				usingLoopStart	= loopStart;
+				usingLoopEnd	= loopEnd-loopStart;
+				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
 			}
 		}
 			
@@ -319,11 +321,11 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 		}
 		else
 		{
-			loopEnd = endLatch;
+			loopEnd			= endLatch;
+			usingLoopStart	= loopStart;
+			usingLoopEnd	= loopEnd-loopStart;
+			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
 			//printf("loopEnd = %08X\n", loopEnd);
-			usingLoopStart = loopStart;
-			usingLoopEnd = loopEnd-loopStart;
-			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
 		}
 		break;		
 		
@@ -347,22 +349,22 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 
 UINT8 CDSB1::IORead8(UINT32 addr)
 {
-	int	progress, end;
+	int	progress;
 	
 	switch ((addr&0xFF))
 	{
 	case 0xE2:	// MPEG position, high byte
-		MPEG_GetPlayPosition(&progress, &end);
+		progress = MpegDec::GetPosition();
 		progress += mpegStart;	// byte address currently playing
 		return (progress>>16)&0xFF;
 		
 	case 0xE3:	// MPEG position, middle byte
-		MPEG_GetPlayPosition(&progress, &end);
+		progress = MpegDec::GetPosition();
 		progress += mpegStart;
 		return (progress>>8)&0xFF;
 		
 	case 0xE4:	// MPEG position, low byte
-		MPEG_GetPlayPosition(&progress, &end);
+		progress = MpegDec::GetPosition();
 		progress += mpegStart;
 		return progress&0xFF;
 		
@@ -452,14 +454,13 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 	v = (UINT8) ((float) 255.0f * (float) volume /127.0f);
 	
 	// Decode MPEG for this frame
-	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
-	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
+	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
 	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, 44100/60, 32000/60+2, 44100, 32000);
 }
 
 void CDSB1::Reset(void)
 {
-	MPEG_StopPlaying();
+	MpegDec::Stop();
 	Resampler.Reset();
 	retainedSamples = 0;
 	
@@ -478,17 +479,16 @@ void CDSB1::Reset(void)
 
 void CDSB1::SaveState(CBlockFile *StateFile)
 {
-	int		i, j;
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 	
 	StateFile->NewBlock("DSB1", __FILE__);
 	
 	// MPEG playback state
-	isPlaying = (UINT8) MPEG_IsPlaying();
-	MPEG_GetPlayPosition(&i, &j);
-	playOffset = (UINT32) i;	// in case sizeof(int) != sizeof(INT32)
-	endOffset = (UINT32) j;
+	isPlaying	= (UINT8)MpegDec::IsLoaded();
+	playOffset	= (UINT32)MpegDec::GetPosition();
+	endOffset	= 0;
+
 	StateFile->Write(&isPlaying, sizeof(isPlaying));
 	StateFile->Write(&playOffset, sizeof(playOffset));
 	StateFile->Write(&endOffset, sizeof(endOffset));
@@ -553,13 +553,17 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
-		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
-		if (usingLoopEnd != 0)	// only if looping was actually enabled
-			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
-		MPEG_SetPlayPosition(playOffset, endOffset);
+		MpegDec::SetMemory(&mpegROM[usingMPEGStart], usingMPEGEnd - usingMPEGStart, false);
+
+		if (usingLoopEnd != 0) {	// only if looping was actually enabled
+			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+		}
+
+		MpegDec::SetPosition(playOffset);
 	}
-	else
-		MPEG_StopPlaying();
+	else {
+		MpegDec::Stop();
+	}
 }
 
 // Offsets of memory regions within DSB1's pool
@@ -590,9 +594,6 @@ bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 	// Initialize Z80 CPU
 	Z80.Init(this, Z80IRQCallback);
 	
-	// MPEG decoder
-	if (OKAY != MPEG_Init())
-		return ErrorLog("Insufficient memory to initialize MPEG decoder.");
 	retainedSamples = 0;
 		
 	return OKAY;
@@ -607,31 +608,36 @@ CDSB1::CDSB1(const Util::Config::Node &config)
   : m_config(config),
     Resampler(config)
 {
-	progROM = NULL;
-	mpegROM = NULL;
-	memoryPool = NULL;
-	ram = NULL;
-	mpegL = NULL;
-	mpegR = NULL;
+	progROM		= NULL;
+	mpegROM		= NULL;
+	memoryPool	= NULL;
+	ram			= NULL;
+	mpegL		= NULL;
+	mpegR		= NULL;
+
+	// must init these otherwise we end up trying to read illegal addresses
+	mpegStart	= 0;
+	mpegEnd		= 0;
+	mpegState	= 0;
+	loopStart	= 0;
+	loopEnd		= 0;
 	
 	DebugLog("Built DSB1 Board\n");
 }
 
 CDSB1::~CDSB1(void)
 {	
-	MPEG_Shutdown();
-	
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
 		memoryPool = NULL;
 	}
 	
-	progROM = NULL;
-	mpegROM = NULL;
-	ram = NULL;
-	mpegL = NULL;
-	mpegR = NULL;
+	progROM	= NULL;
+	mpegROM	= NULL;
+	ram		= NULL;
+	mpegL	= NULL;
+	mpegR	= NULL;
 	
 	DebugLog("Destroyed DSB1 Board\n");
 }
@@ -703,19 +709,20 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			else if (byte == 0x74 || byte == 0x75)	// "start play"
 			{
-				usingLoopStart = 0;
-				usingLoopEnd = 0;
-				usingMPEGStart = mpegStart;
-				usingMPEGEnd = mpegEnd;
-				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				//printf("playing %X\n", mpegStart);
-				mpegState = ST_IDLE;
-				playing = 1;
+				usingLoopStart	= 0;
+				usingLoopEnd	= 0;
+				usingMPEGStart	= mpegStart;
+				usingMPEGEnd	= mpegEnd;
+				playing			= 1;
+
+				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+
+				mpegState = ST_IDLE;	
 			}
 
 			else if (byte == 0x84 || byte == 0x85)
 			{
-				MPEG_StopPlaying();
+				MpegDec::Stop();
 				playing = 0;
 			}
 
@@ -752,13 +759,11 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			if (playing)
 			{
-				//printf("Setting loop point to %x\n", mpegStart);
-				usingLoopStart = mpegStart;
-				usingLoopEnd = mpegEnd-mpegStart;
-				MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
+				usingLoopStart	= mpegStart;
+				usingLoopEnd	= mpegEnd - mpegStart;
+				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
 			}
 
-			//printf("mpegStart=%x\n", mpegStart);
 			break;
 		case ST_GOT24:
 			mpegEnd &= 0x00FFFF; 
@@ -773,21 +778,13 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		case ST_24_1:
 			mpegEnd &= 0xFFFF00;
 			mpegEnd |= (byte);
-			//printf("mpegEnd=%x\n", mpegEnd);
 
-			// default to full stereo
-			//mixer_set_stereo_volume(0, 255, 255);
-			//mixer_set_stereo_pan(0, MIXER_PAN_RIGHT, MIXER_PAN_LEFT);
 			stereo = StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
 		
 		case ST_GOTA0:
-			// ch 0 mono
-			//mixer_set_stereo_volume(0, 0, 255);
-			//printf("ch 0 mono\n");
-			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
-			stereo = (byte != 0x00) ? StereoMode::MonoRight : StereoMode::Stereo;
+			stereo = (byte != 0x00) ? StereoMode::MonoLeft : StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
 		
@@ -795,31 +792,26 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			mpegState = ST_IDLE;
 			if (byte == 0x75)
 			{
-				usingLoopStart = 0;
-				usingLoopEnd = 0;
-				usingMPEGStart = mpegStart;
-				usingMPEGEnd = mpegEnd;
-				MPEG_PlayMemory((const char *) &mpegROM[mpegStart], mpegEnd-mpegStart);
-				//printf("playing %X (from st_gota4)\n", mpegStart);
-				playing = 1;
+				usingLoopStart	= 0;
+				usingLoopEnd	= 0;
+				usingMPEGStart	= mpegStart;
+				usingMPEGEnd	= mpegEnd;
+				playing			= 1;
+				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
 			}
 			break;
 		case ST_GOTA5:
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB1:
-			// ch 1 mono
-			//printf("ch 1 mono\n");
-			//mixer_set_stereo_volume(0, 255, 0);
-			//mixer_set_stereo_pan(0, MIXER_PAN_CENTER, MIXER_PAN_CENTER);
-			stereo = (byte != 0x00) ? StereoMode::MonoLeft : StereoMode::Stereo;
+			stereo = (byte != 0x00) ? StereoMode::MonoRight : StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
 		case ST_GOTB4:
 			mpegState = ST_IDLE;
 			if (byte == 0x96)
 			{
-				MPEG_StopPlaying();
+				MpegDec::Stop();
 				playing = 0;
 			}
 			break;
@@ -1033,12 +1025,12 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	M68KGetContext(&M68K);
 	
 	// Decode MPEG for this frame
-	INT16 *mpegFill[2] = { &mpegL[retainedSamples], &mpegR[retainedSamples] };
-	MPEG_Decode(mpegFill, 32000/60-retainedSamples+2);
+	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
 	
 	INT16 *leftChannelSource = nullptr;
 	INT16 *rightChannelSource = nullptr;
 	UINT8 volL=0, volR=0;
+
 	switch (stereo)
 	{
 	default:
@@ -1051,22 +1043,23 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 	case StereoMode::MonoLeft:
 		leftChannelSource = mpegL;
 		rightChannelSource = mpegL;
-		volL = volume[1];
-		volR = volume[1];
+		volL = volume[0];
+		volR = volume[0];
 		break;
 	case StereoMode::MonoRight:
 		leftChannelSource = mpegR;
 		rightChannelSource = mpegR;
-		volL = volume[0];
-		volR = volume[0];
+		volL = volume[1];
+		volR = volume[1];
 		break;
 	}
-  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, 44100/60, 32000/60+2, 44100, 32000);
+
+	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, 44100/60, 32000/60+2, 44100, 32000);
 }
 
 void CDSB2::Reset(void)
 {
-	MPEG_StopPlaying();
+	MpegDec::Stop();
 	Resampler.Reset();
 	retainedSamples = 0;
 	
@@ -1092,17 +1085,16 @@ void CDSB2::Reset(void)
 
 void CDSB2::SaveState(CBlockFile *StateFile)
 {
-	int		i, j;
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 	
 	StateFile->NewBlock("DSB2", __FILE__);
 	
 	// MPEG playback state
-	isPlaying = (UINT8) MPEG_IsPlaying();
-	MPEG_GetPlayPosition(&i, &j);
-	playOffset = (UINT32) i;	// in case sizeof(int) != sizeof(INT32)
-	endOffset = (UINT32) j;
+	isPlaying	= (UINT8)MpegDec::IsLoaded();
+	playOffset	= (UINT32)MpegDec::GetPosition();
+	endOffset	= 0;
+
 	StateFile->Write(&isPlaying, sizeof(isPlaying));
 	StateFile->Write(&playOffset, sizeof(playOffset));
 	StateFile->Write(&endOffset, sizeof(endOffset));
@@ -1173,13 +1165,17 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
-		MPEG_PlayMemory((const char *) &mpegROM[usingMPEGStart], usingMPEGEnd-usingMPEGStart);
-		if (usingLoopEnd != 0)	// only if looping was actually enabled
-			MPEG_SetLoop((const char *) &mpegROM[usingLoopStart], usingLoopEnd);
-		MPEG_SetPlayPosition(playOffset, endOffset);
+		MpegDec::SetMemory(&mpegROM[usingMPEGStart], usingMPEGEnd - usingMPEGStart, false);
+
+		if (usingLoopEnd != 0) {		// only if looping was actually enabled
+			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+		}
+
+		MpegDec::SetPosition(playOffset);
 	}
-	else
-		MPEG_StopPlaying();
+	else {
+		MpegDec::Stop();
+	}
 		
 	//DEBUG
 	//printf("DSB2 PC=%06X\n", M68KGetPC());
@@ -1197,7 +1193,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 
 bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
-	float	memSizeMB = (float)DSB2_MEMORY_POOL_SIZE/(float)0x100000;
+	float memSizeMB = (float)DSB2_MEMORY_POOL_SIZE/(float)0x100000;
 	
 	// Receive ROM
 	progROM = progROMPtr;
@@ -1221,10 +1217,6 @@ bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 	M68KSetIRQCallback(NULL);	// use default behavior (autovector, clear interrupt)
 	M68KGetContext(&M68K);
 
-	
-	// MPEG decoder
-	if (OKAY != MPEG_Init())
-		return ErrorLog("Insufficient memory to initialize MPEG decoder.");
 	retainedSamples = 0;
 		
 	return OKAY;
@@ -1239,31 +1231,35 @@ CDSB2::CDSB2(const Util::Config::Node &config)
   : m_config(config),
     Resampler(config)
 {
-	progROM = NULL;
-	mpegROM = NULL;
-	memoryPool = NULL;
-	ram = NULL;
-	mpegL = NULL;
-	mpegR = NULL;
+	progROM		= NULL;
+	mpegROM		= NULL;
+	memoryPool	= NULL;
+	ram			= NULL;
+	mpegL		= NULL;
+	mpegR		= NULL;
+
+	cmdLatch	= 0;
+	mpegState	= 0;
+	mpegStart	= 0;
+	mpegEnd		= 0;
+	playing		= 0;
 
 	DebugLog("Built DSB2 Board\n");
 }
 
 CDSB2::~CDSB2(void)
 {	
-	MPEG_Shutdown();
-	
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
 		memoryPool = NULL;
 	}
 	
-	progROM = NULL;
-	mpegROM = NULL;
-	ram = NULL;
-	mpegL = NULL;
-	mpegR = NULL;
+	progROM	= NULL;
+	mpegROM	= NULL;
+	ram		= NULL;
+	mpegL	= NULL;
+	mpegR	= NULL;
 	
 	DebugLog("Destroyed DSB2 Board\n");
 }
