@@ -139,17 +139,7 @@ SRC_FILES = \
 	Src/Inputs/MultiInputSource.cpp \
 	Src/OSD/SDL/SDLInputSystem.cpp \
 	Src/OSD/Outputs.cpp \
-	Src/Sound/MPEG/amp_audio.cpp \
-	Src/Sound/MPEG/dump.cpp \
-	Src/Sound/MPEG/getbits.cpp \
-	Src/Sound/MPEG/getdata.cpp \
-	Src/Sound/MPEG/huffman.cpp \
-	Src/Sound/MPEG/layer2.cpp \
-	Src/Sound/MPEG/layer3.cpp \
-	Src/Sound/MPEG/misc2.cpp \
-	Src/Sound/MPEG/position.cpp \
-	Src/Sound/MPEG/transform.cpp \
-	Src/Sound/MPEG/util.cpp \
+	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \
 	Src/OSD/Logger.cpp \
 	Src/Util/Format.cpp \
