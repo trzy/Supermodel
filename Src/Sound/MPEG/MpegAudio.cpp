@@ -7,7 +7,7 @@ struct Decoder
 	mp3dec_t			mp3d;
 	mp3dec_frame_info_t	info;
 	const uint8_t*		buffer;
-	size_t				size, pos;
+	int					size, pos;
 	bool				loop;
 	bool				stopped;
 	int					numSamples;
@@ -32,11 +32,17 @@ void MpegDec::SetMemory(const uint8_t *data, int length, bool loop)
 
 void MpegDec::UpdateMemory(const uint8_t* data, int length, bool loop)
 {
-	auto pos = dec.buffer + dec.pos;
+	int diff;
+	if (data > dec.buffer) {
+		diff = (int)(data - dec.buffer);
+	}
+	else {
+		diff = -(int)(dec.buffer - data);
+	}
 
 	dec.buffer	= data;
 	dec.size	= length;
-	dec.pos		= pos - dec.buffer;		// update position relative to our new start location
+	dec.pos		= dec.pos - diff;		// update position relative to our new start location
 	dec.loop	= loop;
 }
 
