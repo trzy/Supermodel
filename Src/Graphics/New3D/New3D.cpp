@@ -619,16 +619,15 @@ void CNew3D::DescendNodePtr(UINT32 nodeAddr)
 		return;
 	}
 
-	switch ((nodeAddr >> 24) & 0xFF)	// pointer type encoded in upper 8 bits
+	switch ((nodeAddr >> 24) & 0x5)		// pointer type encoded in upper 8 bits
 	{
-	case 0x00:	// culling node
+	case 0x00:
 		DescendCullingNode(nodeAddr & 0xFFFFFF);
 		break;
-	case 0x01:	// model (perhaps bit 2 is a flag in this case?)
-	case 0x03:
+	case 0x01:
 		DrawModel(nodeAddr & 0xFFFFFF);
 		break;
-	case 0x04:	// pointer list
+	case 0x04:
 		DescendPointerList(nodeAddr & 0xFFFFFF);
 		break;
 	default:
@@ -907,30 +906,11 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// Set up coordinate system and base matrix
 		InitMatrixStack(matrixBase, m_modelMat);
 
-		// Safeguard: weird coordinate system matrices usually indicate scenes that will choke the renderer
-		if (NULL != m_matrixBasePtr)
-		{
-			float	m21, m32, m13;
-
-			// Get the three elements that are usually set and see if their magnitudes are 1
-			m21 = m_matrixBasePtr[6];
-			m32 = m_matrixBasePtr[10];
-			m13 = m_matrixBasePtr[5];
-
-			m21 *= m21;
-			m32 *= m32;
-			m13 *= m13;
-
-			if ((m21>1.05) || (m21<0.95))
-				return;
-			if ((m32>1.05) || (m32<0.95))
-				return;
-			if ((m13>1.05) || (m13<0.95))
-				return;
+		// Descend down the node link. Need to start with a culling node because that defines our culling radius.
+		auto childptr = vpnode[0x02];
+		if (((childptr >> 24) & 0x5) == 0) {
+			DescendNodePtr(vpnode[0x02]);
 		}
-
-		// Descend down the node link: Use recursive traversal
-		DescendNodePtr(vpnode[0x02]);
 	}
 
 	// render next viewport
