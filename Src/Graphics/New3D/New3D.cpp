@@ -489,6 +489,8 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 // Descends into a 10-word culling node
 void CNew3D::DescendCullingNode(UINT32 addr)
 {
+	enum class NodeType { undefined = -1, viewport = 0, rootNode = 1, cullingNode = 2 };
+
 	const UINT32	*node, *lodTable;
 	UINT32			matrixOffset, child1Ptr, sibling2Ptr;
 	BBox			bbox;
@@ -497,6 +499,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	UINT16			uBlendRadius;
 	float			fBlendRadius;
 	UINT8			lodTablePointer;
+	NodeType		nodeType;
 
 	if (m_nodeAttribs.StackLimit()) {
 		return;
@@ -509,10 +512,16 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	}
 
 	// Extract known fields
+	nodeType		= (NodeType)(node[0x00] & 3);
 	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
 	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
 	lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
+
+	// check our node type
+	if (nodeType == NodeType::viewport) {
+		return;												// viewport nodes aren't rendered
+	}
 
 	// parse siblings 
 	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
