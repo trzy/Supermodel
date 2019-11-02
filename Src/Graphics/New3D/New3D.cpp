@@ -1584,6 +1584,10 @@ void CNew3D::ClipModel(const Model *m)
 
 void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 {
+	if (far > 1e30) {
+		far = near * 1000000;				// fix for ocean hunter which passes some FLT_MAX for a few matrices. HW must have some safe guard for these
+	}
+
 	if (near < far / 1000000) {
 		near = far / 1000000;				// if we get really close to zero somehow, we will have almost no depth precision
 	}
