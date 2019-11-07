@@ -161,20 +161,11 @@ static void UpdateRenderConfig(IRender3D *Render3D, uint64_t internalRenderConfi
 
 void CReal3D::BeginVBlank(int statusCycles)
 {
-#ifndef NEW_FRAME_TIMING
   // Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
   // and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
   // access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
-  statusChange = ppc_total_cycles() + statusCycles;
-#else
-  // Buffers are swapped at a specific point in the frame if a flush (command
-  // port write) was performed
-  if (commandPortWritten)
-  {
-    m_pingPong ^= 0x02000000;
-    commandPortWritten = false;
-  }
-#endif
+	statusChange = ppc_total_cycles() + statusCycles;
+	m_evenFrame = !m_evenFrame;
 }
 
 void CReal3D::EndVBlank(void)
@@ -186,9 +177,7 @@ uint32_t CReal3D::SyncSnapshots(void)
 {
   // Update read-only copy of command port flag
   commandPortWrittenRO = commandPortWritten;
-#ifndef NEW_FRAME_TIMING
   commandPortWritten = false;
-#endif
 
   if (!m_gpuMultiThreaded)
     return 0;
@@ -758,18 +747,22 @@ void CReal3D::WriteJTAGRegister(uint64_t instruction, uint64_t data)
   UpdateRenderConfig(Render3D, m_internalRenderConfig);
 }
 
-// Registers seem to range from 0x00 to around 0x3C but they are not understood
+// Registers correspond to the Stat_Pckt in the Real3d sdk
 uint32_t CReal3D::ReadRegister(unsigned reg)
 {
   DebugLog("Real3D: Read reg %X\n", reg);
   if (reg == 0)
   {
-#ifndef NEW_FRAME_TIMING
-    uint32_t status = (ppc_total_cycles() >= statusChange ? 0x0 : 0x02000000);
-    return 0xfdffffff | status;
-#else
-    return 0xfdffffff | m_pingPong;
-#endif
+	  uint32_t ping_pong;
+
+	  if (m_evenFrame) {
+			ping_pong = (ppc_total_cycles() >= statusChange ? 0x0 : 0x02000000);
+	  }
+	  else {
+			ping_pong = (ppc_total_cycles() >= statusChange ? 0x02000000 : 0x0);
+	  }
+
+		return 0xfdffffff | ping_pong;
   }
 
   else if (reg >= 20 && reg<=32) {	// line of sight registers

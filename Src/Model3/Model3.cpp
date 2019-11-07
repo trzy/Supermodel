@@ -2073,234 +2073,88 @@ ThreadError:
   m_multiThreaded = false;
 }
 
-#ifdef NEW_FRAME_TIMING
 void CModel3::RunMainBoardFrame(void)
 {
-  if (!gpusReady)
-    return;
-  
-  UINT32 start = CThread::GetTicks();
+	UINT32 start = CThread::GetTicks();
 
-  /*
-   * Display timing is assumed to be driven by the System 24 tile generator
-   * chip. Charles MacDonald's notes state:
-   *
-   *    656 pixels per scanline:
-   *    
-   *     69 pixels from /HSYNC high to /BLANK high (left border)
-   *    496 pixels from /BLANK high to /BLANK low (active display)
-   *     43 pixels from /BLANK low to /HSYNC low (right border)
-   *     48 pixels from /HSYNC low to /HSYNC high (horizontal sync. pulse)
-   *    
-   *    424 scanlines per frame:
-   *    
-   *     25 scanlines from /VSYNC high to /BLANK high (top border)
-   *    384 scanlines from /BLANK high to /BLANK low (active display)
-   *     11 scanlines from /BLANK low to /VSYNC low (bottom border)
-   *      4 scanlines from /VSYNC low to /VSYNC high (vertical sync. pulse)
-   *    
-   *    The pixel clock is 16 MHz, giving an effetive frame rate of 57.52
-   *    frames per second.
-   */
-  float ppcCycles             = m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1e6;
-  float frameRate             = 60;                 // actually, 57.52 Hz
-  float frameCycles           = ppcCycles / frameRate;
-  float lineCycles            = frameCycles / 424;  // 424 scanlines per tile generator frame
-  unsigned topBorderLines     = 25;
-  unsigned activeLines        = 384;
-  unsigned bottomBorderLines  = 11;
-  unsigned vblLines           = 4;
-  
-  /*
-   * Scale PPC timer ratio according to speed at which the PowerPC is being 
-   * emulated so that the observed running frequency of the PPC timer registers
-   * is more or less correct.  This is needed to get the Virtua Striker 2 
-   * series of games running at the right speed (they are too slow otherwise).
-   * Other games appear to not be affected by this ratio so much as their
-   * running speed depends more on the timing of the Real3D status bit below.
-   */
-  ppc_set_timer_ratio(ppc_get_bus_freq_multipler() * 2 * ppcCycles / ppc_get_cycles_per_sec());
-  
-  /*
-   * Active frame + bottom border. We treat this as one large chunk save for
-   * the sound IRQs, which we attempt to process first.
-   *
-   * Sound:
-   *
-   * Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
-   * which are used to send MIDI commands. Often games will write 0x27, send
-   * a series of commands, and write 0x06 to stop. Other games, like Star
-   * Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
-   * by writing 0x37 and will disable/enable interrupts to control command
-   * output.
-   */
-  
-  unsigned remainingCycles = unsigned(activeLines * lineCycles);
-  unsigned irqCount = 0;
-  while ((midiCtrlPort & 0x20)) // 0x27 triggers IRQ sequence, 0x06 stops it
-  {
-    // Don't waste time firing MIDI interrupts if game has disabled them
-    if ((IRQ.ReadIRQEnable()&0x40) == 0)
-      break;
-      
-    // Process MIDI interrupt
-    IRQ.Assert(0x40);
-    ppc_execute(200); // give PowerPC time to acknowledge IRQ
-    IRQ.Deassert(0x40);
-    ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
-    remainingCycles -= 400;
+	// Compute display and VBlank timings
+	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
+	unsigned frameCycles	= ppcCycles / 60;
+	unsigned gapCycles		= (unsigned)((float)frameCycles * 2.5f / 100.0f);	// we need a gap between asserting irq2 & irq 0x40
+	unsigned offsetCycles = (unsigned)((float)frameCycles * 33.f / 100.0f);
+	unsigned dispCycles		= frameCycles - gapCycles - offsetCycles;
+	unsigned statusCycles = (unsigned)((float)frameCycles * (0.001f));
 
-    ++irqCount;
-    if (irqCount > 128)
-    {
-      //printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-      break;
-    }
-  }
-  ppc_execute(remainingCycles/2);
-  GPU.BeginVBlank(0); // TODO: if this actually occurs before VBL, need to rename this function
-  ppc_execute(remainingCycles/2);  
-  ppc_execute(bottomBorderLines * lineCycles);
-  
-  /*
-   * VBlank period
-   */
-  TileGen.BeginVBlank();
-  //GPU.BeginVBlank(0); //TODO: remove this parameter
-  IRQ.Assert(0x02);
-  ppc_execute(vblLines * lineCycles);
-  IRQ.Deassert(0x02); // unnecessary because manually cleared, also probably self-clears within 1 line
-  GPU.EndVBlank();
-  TileGen.EndVBlank();
-  
-  /*
-   * Top border/end of previous frame's VBlank: assuming here (without
-   * sufficient evidence) that IRQ 1 is end-of-VBL. It's certainly triggered
-   * once per frame, like IRQ 2, according to code I ran on a real board.
-   *
-   * We execute a number of miscellaneous, unknown IRQs on the last line of the
-   * top border, again without any proper justification other than to space
-   * them apart from known IRQs. Games will be doing most of their processing
-   * post-VBL (during the border and active display phases), so it seems like a
-   * good time to raise IRQs.
-   */
-   
-  // One line for IRQ 1, assuming this is some VBL-related signal
-  IRQ.Assert(0x01);
-  ppc_execute(1 * lineCycles);
-  IRQ.Deassert(0x01);
-  
-  // The bulk of the border lines
-  ppc_execute ((topBorderLines - 2) * lineCycles);
-  
-  // Reserve one line for miscellaneous IRQs
-  IRQ.Assert(0x0C);
-  ppc_execute(1 * lineCycles);
-  IRQ.Deassert(0x0C);
+	// we think a frame looks like this on the model 2
+	//                         66% of frame
+	// [irq2------------------ping_pong_flips------]
+	//
+	// Games will start writing a new frame at the ping_pong time. It could be the buffer swaps here.
+	// Need more h/w testing to confirm.
+	// What we are doing here is asserting IRQ2 at 33% of the frame, and treating the ping_pong flip as the front/back buffer swap
+	// This way the data for the correct frames, ends up in the right frames!
 
-  timings.ppcTicks = CThread::GetTicks() - start;
+	// Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
+	// registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are 
+	// too slow otherwise).  Other games appear to not be affected by this ratio so much as their running speed depends more on the timing of
+	// the Real3D status bit below.
+	ppc_set_timer_ratio(ppc_get_bus_freq_multipler() * 2 * ppcCycles / ppc_get_cycles_per_sec());
+
+	// VBlank
+	if (gpusReady)
+	{
+		TileGen.BeginVBlank();
+		GPU.BeginVBlank(statusCycles);	// Games poll the ping_pong at startup. Values aren't 100% accurate so we stretch the frame a bit to ensure writes happen in the correct frame
+
+		ppc_execute(offsetCycles);
+		IRQ.Assert(0x02);								// start at 33% of the frame
+		ppc_execute(gapCycles);					// need a gap between asserting irqs
+
+		/*
+		* Sound:
+		*
+		* Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
+		* which are used to send MIDI commands. Often games will write 0x27, send
+		* a series of commands, and write 0x06 to stop. Other games, like Star
+		* Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
+		* by writing 0x37 and will disable/enable interrupts to control command
+		* output.
+		*/
+		//printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
+		int irqCount = 0;
+		while ((midiCtrlPort & 0x20))
+			//while (midiCtrlPort == 0x27)  // 27 triggers IRQ sequence, 06 stops it
+		{
+			// Don't waste time firing MIDI interrupts if game has disabled them
+			if ((IRQ.ReadIRQEnable() & 0x40) == 0)
+				break;
+
+			// Process MIDI interrupt
+			IRQ.Assert(0x40);
+			ppc_execute(200); // give PowerPC time to acknowledge IR
+			IRQ.Deassert(0x40);
+			ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
+			dispCycles -= 400;
+
+			++irqCount;
+			if (irqCount > 128)
+			{
+				break;
+			}
+		}
+
+		IRQ.Assert(0x0D);
+
+		// End VBlank
+		GPU.EndVBlank();
+		TileGen.EndVBlank();
+	}
+
+	// Run the PowerPC for the active display part of the frame
+	ppc_execute(dispCycles);
+
+	timings.ppcTicks = CThread::GetTicks() - start;
 }
-#endif
-
-#ifndef NEW_FRAME_TIMING
-void CModel3::RunMainBoardFrame(void)
-{
-  UINT32 start = CThread::GetTicks();
-
-  // Compute display and VBlank timings
-  unsigned ppcCycles   = m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
-  unsigned frameCycles = ppcCycles / 60;
-  unsigned vblCycles   = (unsigned)((float) frameCycles * 2.5f/100.0f); // 2.5% vblank (ridiculously short and wrong but bigger values cause flicker in Daytona)
-  unsigned dispCycles  = frameCycles - vblCycles;
-  
-  // For some reason, some Step 2.x games require completely different timings. The defaults can be overriden in the ROM set XML file.
-  float real3DStatusBitSetAsPercentOfFrame = m_game.real3d_status_bit_set_percent_of_frame;
-  if (real3DStatusBitSetAsPercentOfFrame <= 0)
-  {
-    if (m_game.stepping == "2.0" || m_game.stepping == "2.1")
-      real3DStatusBitSetAsPercentOfFrame = 9.12f;
-    else if (m_game.stepping == "1.5")
-      real3DStatusBitSetAsPercentOfFrame = 5.5f;
-    else
-      real3DStatusBitSetAsPercentOfFrame = 48.0f;
-  }
-  
-  // Compute timing of the Real3D status bit.  This value directly affects the speed at which all the games except Virtua Stiker 2 run.
-  // Currently it is not known exactly what this bit represents nor why such wildly varying values are needed for the different step models.
-  // The values below were arrived at by trial and error and clearly more investigation is required.  If it turns out that the status bit is
-  // connected to the end of VBlank then the code below should be removed and the timing handled via GPU.VBlankEnd() instead.  
-  unsigned statusCycles = (unsigned) ((float) frameCycles * (real3DStatusBitSetAsPercentOfFrame * 1e-2f));  
-  
-  // Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
-  // registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are 
-  // too slow otherwise).  Other games appear to not be affected by this ratio so much as their running speed depends more on the timing of
-  // the Real3D status bit below.
-  ppc_set_timer_ratio(ppc_get_bus_freq_multipler() * 2 * ppcCycles / ppc_get_cycles_per_sec());
-
-  // VBlank
-  if (gpusReady)
-  {
-    TileGen.BeginVBlank();
-    GPU.BeginVBlank(statusCycles);
-    IRQ.Assert(0x02);
-    ppc_execute(vblCycles);
-    //printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-  
-    /*
-     * Sound:
-     *
-     * Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
-     * which are used to send MIDI commands. Often games will write 0x27, send
-     * a series of commands, and write 0x06 to stop. Other games, like Star
-     * Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
-     * by writing 0x37 and will disable/enable interrupts to control command
-     * output.
-     */
-    //printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-    int irqCount = 0;
-    while ((midiCtrlPort&0x20))
-    //while (midiCtrlPort == 0x27)  // 27 triggers IRQ sequence, 06 stops it
-    {
-      // Don't waste time firing MIDI interrupts if game has disabled them
-      if ((IRQ.ReadIRQEnable()&0x40) == 0)
-        break;
-        
-      // Process MIDI interrupt
-      IRQ.Assert(0x40);
-      ppc_execute(200); // give PowerPC time to acknowledge IRQ
-      IRQ.Deassert(0x40);
-      ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
-      dispCycles -= 400;
-
-      ++irqCount;
-      if (irqCount > 128)
-      {
-        //printf("\tMIDI FIFO OVERFLOW! (IRQEn=%02X, IRQPend=%02X)\n", IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-        break;
-      }
-    }
-    //printf("\t-- END --\n");
-    //printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-    
-    // End VBlank
-    GPU.EndVBlank();
-    TileGen.EndVBlank();
-    IRQ.Assert(0x0D);
-  }
-
-  // Run the PowerPC for the active display part of the frame
-  ppc_execute(dispCycles);
-  // MAME believes 0x0C should occur on every scanline 
-  //for (int i = 0; i < 384; i++)
-  //{
-  //  ppc_execute(dispCycles / 384);
-  //  IRQ.Assert(0x0C);
-  //}
-  //printf("PC=%08X LR=%08X\n", ppc_get_pc(), ppc_get_lr());
-
-  timings.ppcTicks = CThread::GetTicks() - start;
-}
-#endif
 
 void CModel3::SyncGPUs(void)
 {

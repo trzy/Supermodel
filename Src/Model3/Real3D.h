@@ -495,7 +495,8 @@ private:
   
   // Status and command registers
   uint32_t m_pingPong;
-  uint64_t statusChange;
+  uint64_t statusChange = 0;
+  bool m_evenFrame = false;
   
   // Internal ASIC state
   std::map<ASIC, uint32_t> m_asicID;
