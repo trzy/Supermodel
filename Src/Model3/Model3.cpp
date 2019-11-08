@@ -553,20 +553,18 @@ UINT8 CModel3::ReadInputs(unsigned reg)
       adc[1] = (UINT8)Inputs->analogGunX[1]->value;
       adc[3] = (UINT8)Inputs->analogGunY[1]->value;
 
-  	  /*
   	  // Unclear why this is necessary or how to cleanly fix it, so I'm
   	  // disabling it but leaving it here for future reference. The proper fix is
   	  // probably to allow users to define inverted controls for this game only,
   	  // which means the input system must support loading per-game config (not
   	  // all analog_gun games require axis inversion to be playable).
-	    if (m_game.name == "lostwsga" || m_game.name == "lostwsgo")
-	    { // to do, not a string compare
+	  if (m_game.name == "lostwsga" || m_game.name == "lostwsgo")
+	  { // to do, not a string compare
         adc[0] =       (UINT8)Inputs->analogGunX[0]->value; // order is different for some reason in lost world
         adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value; // why are values inverted? is this the wrong place to fix this
         adc[2] =       (UINT8)Inputs->analogGunX[1]->value;
         adc[3] = 255 - (UINT8)Inputs->analogGunY[1]->value;
       }
-      */
     }
     
     if ((m_game.inputs & Game::INPUT_SKI))
@@ -2083,7 +2081,7 @@ void CModel3::RunMainBoardFrame(void)
 	unsigned gapCycles		= (unsigned)((float)frameCycles * 2.5f / 100.0f);	// we need a gap between asserting irq2 & irq 0x40
 	unsigned offsetCycles = (unsigned)((float)frameCycles * 33.f / 100.0f);
 	unsigned dispCycles		= frameCycles - gapCycles - offsetCycles;
-	unsigned statusCycles = (unsigned)((float)frameCycles * (0.001f));
+	unsigned statusCycles = (unsigned)((float)frameCycles * (0.005f));
 
 	// we think a frame looks like this on the model 2
 	//                         66% of frame
