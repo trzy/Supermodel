@@ -1323,7 +1323,7 @@ void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX
 	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
-void CNew3D::CalcFrustumPlanes(Plane p[4], const float* matrix)
+void CNew3D::CalcFrustumPlanes(Plane p[5], const float* matrix)
 {
 	// Left Plane
 	p[0].a = matrix[3] + matrix[0];
@@ -1352,6 +1352,12 @@ void CNew3D::CalcFrustumPlanes(Plane p[4], const float* matrix)
 	p[3].c = matrix[11] - matrix[9];
 	p[3].d = matrix[15] - matrix[13];
 	p[3].Normalise();
+
+	// Front Plane
+	p[4].a = 0;
+	p[4].b = 0;
+	p[4].c = -1;
+	p[4].d =0;
 }
 
 void CNew3D::CalcBox(float distance, BBox& box)
@@ -1427,7 +1433,7 @@ void CNew3D::TransformBox(const float *m, BBox& box)
 	}
 }
 
-Clip CNew3D::ClipBox(BBox& box, Plane planes[4])
+Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
 {
 	int count = 0;
 
@@ -1435,13 +1441,13 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[4])
 
 		int temp = 0;
 
-		for (int j = 0; j < 4; j++) {
+		for (int j = 0; j < 5; j++) {
 			if (planes[j].DistanceToPoint(box.points[i]) >= 0) {
 				temp++;
 			}
 		}
 
-		if (temp == 4) count++;		// point is inside all 4 frustum planes
+		if (temp == 5) count++;		// point is inside all 4 frustum planes
 	}
 
 	if (count == 8)	return Clip::INSIDE;
@@ -1450,7 +1456,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[4])
 	//if we got here all points are outside of the view frustum
 	//check for all points being side same of any plane, means box outside of view
 
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 5; i++) {
 
 		int temp = 0;
 
@@ -1480,7 +1486,7 @@ void CNew3D::CalcBoxExtents(const BBox& box)
 	}
 }
 
-void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[4])
+void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[5])
 {
 	//============
 	ClipPoly temp;
@@ -1491,7 +1497,7 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[4])
 	in = &clipPoly;
 	out = &temp;
 
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 5; i++) {
 
 		//=================
 		bool	currentIn;
@@ -1502,6 +1508,7 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[4])
 
 		currentDot	= planes[i].DotProduct(in->list[0].pos);
 		currentIn	= (currentDot + planes[i].d) >= 0;
+		out->count	= 0;
 
 		for (int j = 0; j < in->count; j++) {
 
@@ -1537,7 +1544,6 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[4])
 		}
 
 		std::swap(in, out);
-		out->count = 0;
 	}
 }
 
