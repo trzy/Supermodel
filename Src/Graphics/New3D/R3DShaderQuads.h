@@ -3,7 +3,7 @@
 
 static const char *vertexShaderR3DQuads = R"glsl(
 
-#version 410 core
+#version 450 core
 
 // uniforms
 uniform float	modelScale;
@@ -53,7 +53,7 @@ void main(void)
 
 static const char *geometryShaderR3DQuads = R"glsl(
 
-#version 410 core
+#version 450 core
 
 layout (lines_adjacency) in;
 layout (triangle_strip, max_vertices = 4) out;
@@ -143,7 +143,7 @@ void main(void)
 
 static const char *fragmentShaderR3DQuads = R"glsl(
 
-#version 410 core
+#version 450 core
 
 uniform sampler2D tex1;			// base tex
 uniform sampler2D tex2;			// micro tex (optional)
@@ -277,7 +277,9 @@ void QuadraticInterpolation()
 		}
 	}
 	if (abs(lambdaSignCount) != 4) {
-		discard;		// need to revisit this
+		if(!gl_HelperInvocation) {
+			discard;		// need to revisit this
+		}
 	}
 
 	float interp_oneOverW = 0;
