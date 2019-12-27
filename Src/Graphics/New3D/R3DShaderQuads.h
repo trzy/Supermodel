@@ -82,7 +82,7 @@ out GS_OUT
 	flat vec4	color;
 } gs_out;
 
-float area(vec2 a, vec2 b)
+double area(dvec2 a, dvec2 b)
 {
 	return a.x*b.y - a.y*b.x;
 }
@@ -124,13 +124,15 @@ void main(void)
 		//
 		int reorder[4] = int[]( 1, 0, 2, 3 );
 		int ii = reorder[i];
+		dvec2 vector[4];
 
 		for (j=0; j<4; j++) {
-			gs_out.v[j] = v[j] - v[ii];
+			vector[j] = dvec2(v[j]) - dvec2(v[ii]);
+			gs_out.v[j] = vec2(vector[j]);			
 		}
 		for (j=0; j<4; j++) {
 			j_next = (j+1) % 4;
-			gs_out.area[j] = area(gs_out.v[j], gs_out.v[j_next]);
+			gs_out.area[j] = float(area(vector[j], vector[j_next]));
 		}
 
 		gl_Position = gl_in[ii].gl_Position;
@@ -276,9 +278,9 @@ void QuadraticInterpolation()
 			}
 		}
 	}
-	if (abs(lambdaSignCount) != 4) {
+	if (lambdaSignCount != 4) {
 		if(!gl_HelperInvocation) {
-			discard;		// need to revisit this
+			discard;
 		}
 	}
 
