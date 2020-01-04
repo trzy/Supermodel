@@ -165,7 +165,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 
 		std::shared_ptr<Texture> tex1;
 
-		CalcViewport(&n.viewport, std::abs(m_nfPairs[priority].zNear*0.95f), std::abs(m_nfPairs[priority].zFar*1.05f));	// make planes 5% bigger
+		CalcViewport(&n.viewport, std::abs(m_nfPairs[priority].zNear*0.96f), std::abs(m_nfPairs[priority].zFar*1.05f));	// make planes 5% bigger
 		glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
 
 		m_r3dShader.SetViewportUniforms(&n.viewport);
