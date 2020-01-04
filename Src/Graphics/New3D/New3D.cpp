@@ -1497,7 +1497,7 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[5])
 	in = &clipPoly;
 	out = &temp;
 
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 4; i++) {
 
 		//=================
 		bool	currentIn;
