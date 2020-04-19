@@ -1,3 +1,9 @@
+#
+# TODO: MacOS port is probably broken. Someone with MacOS needs to figure out
+# how to compile with SDL2.
+#
+
+
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
@@ -51,7 +57,7 @@ LD = gcc
 #
 
 SDL_CFLAGS =
-SDL_LIBS = -framework SDL -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
+SDL_LIBS = -framework SDL2 -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
 
 #
 #	OSX-specific

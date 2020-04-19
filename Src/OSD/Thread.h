@@ -28,6 +28,8 @@
 #ifndef INCLUDED_THREADS_H
 #define INCLUDED_THREADS_H
 
+#include <string>
+
 class CSemaphore;
 class CMutex;
 class CCondVar;
@@ -42,9 +44,10 @@ typedef int (*ThreadStart)(void *startParam);
 class CThread
 {
 private:
+  const std::string m_name;
 	void *m_impl;
 
-	CThread(void *impl);
+	CThread(const std::string &name, void *impl);
 
 public:
 	/*
@@ -62,11 +65,11 @@ public:
 	static UINT32 GetTicks();
 	
 	/*
-     * CreateThread
+   * CreateThread
 	 *
 	 * Creates a new thread with the given ThreadStart callback and start parameter.  The thread starts running immediately.
 	 */
-	static CThread *CreateThread(ThreadStart start, void *startParam);
+	static CThread *CreateThread(const std::string &name, ThreadStart start, void *startParam);
 
 	/* 
 	 * CreateSemaphore
@@ -102,18 +105,18 @@ public:
 	~CThread();
 
 	/*
+	 * GetName
+	 *
+	 * Returns the name of this thread.
+	 */
+  const std::string &GetName() const;
+
+	/*
 	 * GetId
 	 *
 	 * Returns the id of this thread.
 	 */
 	UINT32 GetId();
-
-	/*
-	 * Kill
-	 *
-	 * Kills this thread.
-	 */
-	void Kill();
 
 	/*
 	 * Wait

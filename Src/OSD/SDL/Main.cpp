@@ -92,6 +92,8 @@ static Util::Config::Node s_runtime_config("Global");
  Display Management
 ******************************************************************************/
 
+static SDL_Window *s_window = nullptr;
+
 /*
  * Position and size of rectangular region within OpenGL display to render to.
  * Unlike the config tree, these end up containing the actual resolution (and
@@ -105,9 +107,11 @@ static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewpo
 static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
   // What resolution did we actually get?
-  const SDL_VideoInfo *VideoInfo = SDL_GetVideoInfo();
-  *totalXResPtr = VideoInfo->current_w;
-  *totalYResPtr = VideoInfo->current_h;
+  int actualWidth;
+  int actualHeight;
+  SDL_GetWindowSize(s_window, &actualWidth, &actualHeight);
+  *totalXResPtr = actualWidth;
+  *totalYResPtr = actualHeight;
   
   // If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
   float xRes = float(*xResPtr);
@@ -126,10 +130,10 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   *yOffsetPtr = (*yResPtr - (unsigned) yRes)/2;
   
   // If the desired resolution is smaller than what we got, re-center again
-  if (int(*xResPtr) < VideoInfo->current_w)
-    *xOffsetPtr += (VideoInfo->current_w - *xResPtr)/2;
-  if (int(*yResPtr) < VideoInfo->current_h)
-    *yOffsetPtr += (VideoInfo->current_h - *yResPtr)/2;
+  if (int(*xResPtr) < actualWidth)
+    *xOffsetPtr += (actualWidth - *xResPtr)/2;
+  if (int(*yResPtr) < actualHeight)
+    *yOffsetPtr += (actualHeight - *yResPtr)/2;
   
   // OpenGL initialization
   glViewport(0,0,*xResPtr,*yResPtr);
@@ -143,7 +147,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   for (int i = 0; i < 2; i++)
   {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    SDL_GL_SwapBuffers();
+    SDL_GL_SwapWindow(s_window);
   }
   
   // Write back resolution parameters
@@ -159,7 +163,8 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   {
     glScissor(0, correction, *totalXResPtr, *totalYResPtr - (correction * 2));
   }
-  else {
+  else
+  {
     glScissor(*xOffsetPtr + correction, *yOffsetPtr + correction, *xResPtr - (correction * 2), *yResPtr - (correction * 2));
   }
   return OKAY;
@@ -177,12 +182,20 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
  * NOTE: keepAspectRatio should always be true. It has not yet been tested with
  * the wide screen hack.
  */
-static bool CreateGLScreen(const std::string &caption, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+static bool CreateGLScreen(const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
   GLenum err;
   
+  // Call only once per program session (this is because of issues with
+  // DirectInput when the window is destroyed and a new one created). Use
+  // ResizeGLScreen() to change resolutions instead.
+  if (s_window != nullptr)
+  {
+    return ErrorLog("Internal error: CreateGLScreen() called more than once");
+  }
+
   // Initialize video subsystem
-  if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
+  if (SDL_Init(SDL_INIT_VIDEO) != 0)
     return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
     
   // Important GL attributes
@@ -192,19 +205,33 @@ static bool CreateGLScreen(const std::string &caption, unsigned *xOffsetPtr, uns
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-
-  // Set vsync
-  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, s_runtime_config["VSync"].ValueAsDefault<bool>(false) ? 1 : 0);
-
+  
   // Set video mode
-  if (SDL_SetVideoMode(*xResPtr,*yResPtr,0,SDL_OPENGL|(fullScreen?SDL_FULLSCREEN|SDL_HWSURFACE:0)) == NULL)
+  s_window = SDL_CreateWindow(caption.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, *xResPtr, *yResPtr, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | (fullScreen ? SDL_WINDOW_FULLSCREEN : 0));
+  if (nullptr == s_window)
   {
     ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
     return FAIL;
   }
-    
-  // Create window caption
-  SDL_WM_SetCaption(caption.c_str(),NULL);
+  
+  if (focusWindow)
+  {
+    SDL_RaiseWindow(s_window);
+  }
+  
+  // Create OpenGL context
+  SDL_GLContext context = SDL_GL_CreateContext(s_window);
+  if (nullptr == context)
+  {
+    ErrorLog("Unable to create OpenGL context: %s\n", SDL_GetError());
+    return FAIL;
+  }
+
+  // Set vsync
+  SDL_GL_SetSwapInterval(s_runtime_config["VSync"].ValueAsDefault<bool>(false) ? 1 : 0);
+  
+  // Set the context as the current window context
+  SDL_GL_MakeCurrent(s_window, context);
     
   // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
   err = glewInit();
@@ -217,12 +244,21 @@ static bool CreateGLScreen(const std::string &caption, unsigned *xOffsetPtr, uns
   return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
 }
 
+static void DestroyGLScreen()
+{
+  if (s_window != nullptr)
+  {
+    SDL_GL_DeleteContext(SDL_GL_GetCurrentContext());
+    SDL_DestroyWindow(s_window);
+  }
+}
+
 static bool ResizeGLScreen(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
-  // Set video mode
-  if (SDL_SetVideoMode(*xResPtr,*yResPtr,0,SDL_OPENGL|(fullScreen?SDL_FULLSCREEN|SDL_HWSURFACE:0)) == NULL)
+  // Set full screen mode
+  if (SDL_SetWindowFullscreen(s_window, fullScreen ? SDL_WINDOW_FULLSCREEN : 0) < 0)
   {
-    ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
+    ErrorLog("Unable to enter %s mode: %s\n", fullScreen ? "fullscreen" : "windowed", SDL_GetError());
     return FAIL;
   }
     
@@ -240,7 +276,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
   unsigned xOffset, yOffset, xRes=496, yRes=384, totalXRes, totalYRes;  
   if (createScreen)
   {
-    if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...", &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+    if (OKAY != CreateGLScreen("Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
     {
       ErrorLog("Unable to query OpenGL.\n");
       return;
@@ -771,7 +807,7 @@ void EndFrameVideo()
     UpdateCrosshairs(currentInputs, videoInputs, s_runtime_config["Crosshairs"].ValueAs<unsigned>());
 
   // Swap the buffers
-  SDL_GL_SwapBuffers();
+  SDL_GL_SwapWindow(s_window);
 }
 
 static void SuperSleep(UINT32 time)
@@ -814,15 +850,16 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Load NVRAM
   LoadNVRAM(Model3);
     
-  // Start up SDL and open a GL window
+  // Set the video mode
   char baseTitleStr[128];
   char titleStr[128];
   totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
   totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
   sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());
+  SDL_SetWindowTitle(s_window, baseTitleStr);
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
   bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
-  if (OKAY != CreateGLScreen(baseTitleStr, &xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
+  if (OKAY != ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
     return 1;
 
   // Info log GL information 
@@ -965,13 +1002,13 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
         Model3->PauseThreads();
         SetAudioEnabled(false);
         sprintf(titleStr, "%s (Paused)", baseTitleStr);
-        SDL_WM_SetCaption(titleStr,NULL);
+        SDL_SetWindowTitle(s_window, titleStr);
       }
       else
       {
         Model3->ResumeThreads();
         SetAudioEnabled(true);
-        SDL_WM_SetCaption(baseTitleStr,NULL);
+        SDL_SetWindowTitle(s_window, baseTitleStr);
       }
       
       // Send paused value as output
@@ -999,7 +1036,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
       // Recreate renderers and attach to the emulator
       Render2D = new CRender2D(s_runtime_config);
-    Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+      Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
       if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
         goto QuitError;
       if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
@@ -1156,14 +1193,13 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     
     // Frame rate and limiting
     unsigned currentFPSTicks = SDL_GetTicks();
-    unsigned currentTicks = currentFPSTicks;
     if (s_runtime_config["ShowFrameRate"].ValueAs<bool>())
     {
       ++fpsFramesElapsed;
       if((currentFPSTicks-prevFPSTicks) >= 1000)  // update FPS every 1 second (each tick is 1 ms)
       {
         sprintf(titleStr, "%s - %1.1f FPS%s", baseTitleStr, (float)fpsFramesElapsed/((float)(currentFPSTicks-prevFPSTicks)/1000.0f), paused ? " (Paused)" : "");
-        SDL_WM_SetCaption(titleStr,NULL);
+        SDL_SetWindowTitle(s_window, titleStr);
         prevFPSTicks = currentFPSTicks;     // reset tick count
         fpsFramesElapsed = 0;         // reset frame count
       }
@@ -1241,6 +1277,13 @@ static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Uti
   // If the user wants to configure the inputs, do that now
   if (configure)
   {
+    std::string title("Supermodel - ");
+    if (game.name.empty())
+      title.append("Configuring Default Inputs...");
+    else
+      title.append(Util::Format() << "Configuring Inputs for: " << game.title);
+    SDL_SetWindowTitle(s_window, title.c_str());
+
     // Extract the relevant INI section (which will be the global section if no
     // game was specified, otherwise the game's node) in the file config, which
     // will be written back to disk
@@ -1249,17 +1292,7 @@ static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Uti
     {
       fileConfigRoot = &fileConfig->Add(game.name);
     }
-    
-    // Open an SDL window 
-    unsigned xOffset, yOffset, xRes=496, yRes=384;
-    std::string title("Supermodel - ");
-    if (game.name.empty())
-      title.append("Configuring Default Inputs...");
-    else
-      title.append(Util::Format() << "Configuring Inputs for: " << game.title);
-    if (OKAY != CreateGLScreen(title, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
-      return (bool) ErrorLog("Unable to start SDL to configure inputs.\n");
-    
+        
     // Configure the inputs
     if (Inputs->ConfigureInputs(game, xOffset, yOffset, xRes, yRes))
     {
@@ -1672,6 +1705,7 @@ int main(int argc, char **argv)
   }
   if (cmd_line.print_gl_info)
   {
+    // We must exit after this because CreateGLScreen() is used
     PrintGLInfo(true, false, false);
     return 0;
   }
@@ -1715,6 +1749,7 @@ int main(int argc, char **argv)
     Util::Config::MergeINISections(&s_runtime_config, config4, cmd_line.config);  // apply command line overrides once more
   }
   LogConfig(s_runtime_config);
+  std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
 
   // Initialize SDL (individual subsystems get initialized later)
   if (SDL_Init(0) != 0)
@@ -1722,34 +1757,43 @@ int main(int argc, char **argv)
     ErrorLog("Unable to initialize SDL: %s\n", SDL_GetError());
     return 1;
   }
-  
-  // Create Model 3 emulator
-#ifdef DEBUG
-  IEmulator *Model3 = s_gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3(s_runtime_config)) : static_cast<IEmulator *>(new CModel3GraphicsState(s_runtime_config, s_gfxStatePath));
-#else
-  IEmulator *Model3 = new CModel3(s_runtime_config);
-#endif
-  
-  // Create input system (default is SDL) and debugger
-  CInputSystem *InputSystem = NULL;
-  CInputs *Inputs = NULL;
-  COutputs *Outputs = NULL;
+
+  // Begin initializing various subsystems...  
   int exitCode = 0;
+  IEmulator *Model3 = nullptr;
+  CInputSystem *InputSystem = nullptr;
+  CInputs *Inputs = nullptr;
+  COutputs *Outputs = nullptr;
 #ifdef SUPERMODEL_DEBUGGER
   Debugger::CSupermodelDebugger *Debugger = NULL;
 #endif // SUPERMODEL_DEBUGGER
+  
+  // Create a window
+  xRes = 496;
+  yRes = 384;
+  if (OKAY != CreateGLScreen("Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  {
+    exitCode = 1;
+    goto Exit;
+  }
+  
+  // Create Model 3 emulator
+#ifdef DEBUG
+  Model3 = s_gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3(s_runtime_config)) : static_cast<IEmulator *>(new CModel3GraphicsState(s_runtime_config, s_gfxStatePath));
+#else
+  Model3 = new CModel3(s_runtime_config);
+#endif
 
   // Create input system
-  std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
   if (selectedInputSystem == "sdl")
     InputSystem = new CSDLInputSystem();
 #ifdef SUPERMODEL_WIN32
   else if (selectedInputSystem == "dinput")
-    InputSystem = new CDirectInputSystem(s_runtime_config, false, false);
+    InputSystem = new CDirectInputSystem(s_runtime_config, s_window, false, false);
   else if (selectedInputSystem == "xinput")
-    InputSystem = new CDirectInputSystem(s_runtime_config, false, true);
+    InputSystem = new CDirectInputSystem(s_runtime_config, s_window, false, true);
   else if (selectedInputSystem == "rawinput")
-    InputSystem = new CDirectInputSystem(s_runtime_config, true, false);
+    InputSystem = new CDirectInputSystem(s_runtime_config, s_window, true, false);
 #endif // SUPERMODEL_WIN32
   else
   {
@@ -1836,6 +1880,7 @@ Exit:
     delete InputSystem;
   if (Outputs != NULL)
     delete Outputs;
+  DestroyGLScreen();
   SDL_Quit();
   
   if (exitCode)

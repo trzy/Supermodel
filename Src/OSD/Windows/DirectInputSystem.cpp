@@ -428,11 +428,11 @@ const char *CDirectInputSystem::ConstructName(bool useRawInput, bool useXInput)
 		return (useXInput ? "Xinput" : "DirectInput");
 }
 
-CDirectInputSystem::CDirectInputSystem(const Util::Config::Node &config, bool useRawInput, bool useXInput) : 
+CDirectInputSystem::CDirectInputSystem(const Util::Config::Node &config, SDL_Window *window, bool useRawInput, bool useXInput) : 
 	CInputSystem(ConstructName(useRawInput, useXInput)),
 	m_config(config),
 	m_useRawInput(useRawInput), m_useXInput(useXInput), m_enableFFeedback(true),
-	m_initializedCOM(false), m_activated(false), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
+	m_initializedCOM(false), m_activated(false), m_window(window), m_hwnd(NULL), m_screenW(0), m_screenH(0), 
 	m_getRIDevListPtr(NULL), m_getRIDevInfoPtr(NULL), m_regRIDevsPtr(NULL), m_getRIDataPtr(NULL),
 	m_xiGetCapabilitiesPtr(NULL), m_xiGetStatePtr(NULL), m_xiSetStatePtr(NULL), m_di8(NULL), m_di8Keyboard(NULL), m_di8Mouse(NULL)
 {
@@ -2050,9 +2050,11 @@ bool CDirectInputSystem::Poll()
 	{
 		// If not, then get Window handle of SDL window
 		SDL_SysWMinfo info;
-        SDL_VERSION(&info.version);
-        if (SDL_GetWMInfo(&info)) 
-			m_hwnd = info.window;
+    SDL_VERSION(&info.version);
+    if (SDL_GetWindowWMInfo(m_window, &info))
+    {
+  			m_hwnd = info.info.win.window;
+    }
 		
 		// Tell SDL to pass on all Windows events
 		// Removed - see below
@@ -2100,6 +2102,17 @@ bool CDirectInputSystem::Poll()
 			// Propagate all messages to default (SDL) handlers
 			DispatchMessage(&msg);
 		}
+	}
+
+	// SDL2: I'm not sure how the SDL1.x code was detecting quit events but in
+  // SDL2, it seems that we want to explicitly run SDL_PollEvent() after we
+  // have peeked at the message queue ourselves (above).
+	// Wait or poll for event from SDL
+	SDL_Event e;
+	while (SDL_PollEvent(&e))
+	{
+		if (e.type == SDL_QUIT)
+			return false;	
 	}
 
 	// Poll keyboards, mice and joysticks

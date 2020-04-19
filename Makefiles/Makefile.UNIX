@@ -50,15 +50,15 @@ LD = gcc
 # SDL
 #
 
-SDL_CFLAGS = `sdl-config --cflags`
-SDL_LIBS = `sdl-config --libs`
+SDL2_CFLAGS = `sdl2-config --cflags`
+SDL2_LIBS = `sdl2-config --libs`
 
 #
 #	UNIX-specific
 #
 
-PLATFORM_CFLAGS = $(SDL_CFLAGS)
-PLATFORM_LDFLAGS = $(SDL_LIBS) -lGL -lGLU -lz -lm -lstdc++
+PLATFORM_CFLAGS = $(SDL2_CFLAGS)
+PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++
 
 
 ###############################################################################

@@ -33,7 +33,7 @@
 # Configuration
 #
 # Edit as necessary. Some users may need to edit the "Platform Configuration"
-# section as well, namely SDL_LIBS and PLATFORM_LIBS.
+# section as well, namely SDL2_LIBS and PLATFORM_LIBS.
 ###############################################################################
 
 #
@@ -42,10 +42,10 @@
 BITS = 64
 
 #
-# Path to SDL
+# Path to SDL2
 #
-SDL_INCLUDE_DIR = C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/include/SDL
-SDL_LIB_DIR = C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib
+SDL2_INCLUDE_DIR = c:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include/SDL2
+SDL2_LIB_DIR = c:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/lib
 
 #
 # Toolchain
@@ -74,25 +74,20 @@ ifeq ($(strip $(MSYSTEM)),)
 endif
 
 #
-# SDL
+# SDL2
 #
-#
-# (At least for SDL) The linked libs order is fundamental for a successful compiling!
-# https://stackoverflow.com/questions/24596596/sdl-doesnt-compile-in-native-enviroment
-# http://www.cplusplus.com/forum/beginner/110753/
-#
-SDL_LIBS = -lmingw32 -static-libgcc -static-libstdc++ -lSDLmain -lSDL -lm -luser32 -lgdi32 -lwinmm -ldxguid
-SDL_CFLAGS = -D_GNU_SOURCE=1 -Dmain=SDL_main
+SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lversion -lsetupapi
+SDL2_CFLAGS = 
 
 #
 # MinGW/Windows-specific
 #
 
-PLATFORM_INCLUDE_DIR = $(SDL_INCLUDE_DIR)
-PLATFORM_LIB_DIR = $(SDL_LIB_DIR)
+PLATFORM_INCLUDE_DIR = $(SDL2_INCLUDE_DIR)
+PLATFORM_LIB_DIR = $(SDL2_LIB_DIR)
 PLATFORM_LIBS = -ldinput8 -lglu32 -lole32 -loleaut32 -lopengl32 -lwbemuuid -lws2_32 -lz
-PLATFORM_CFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
-PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL_LIBS) $(PLATFORM_LIBS)
+PLATFORM_CFLAGS = $(SDL2_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
+PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM_LIBS)
 
 
 ###############################################################################

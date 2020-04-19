@@ -45,12 +45,12 @@ UINT32 CThread::GetTicks()
 	return SDL_GetTicks();
 }
 
-CThread *CThread::CreateThread(ThreadStart start, void *startParam)
+CThread *CThread::CreateThread(const std::string &name, ThreadStart start, void *startParam)
 {
-	SDL_Thread *impl = SDL_CreateThread(start, startParam);
+	SDL_Thread *impl = SDL_CreateThread(start, name.c_str(), startParam);
 	if (impl == NULL)
 		return NULL;
-	return new CThread(impl);
+	return new CThread(name, impl);
 }
 
 CSemaphore *CThread::CreateSemaphore(UINT32 initVal)
@@ -82,26 +82,31 @@ const char *CThread::GetLastError()
 	return SDL_GetError();
 }
 
-CThread::CThread(void *impl) : m_impl(impl)
+CThread::CThread(const std::string &name, void *impl)
+  : m_name(name),
+    m_impl(impl)
+    
 {
 	//
 }
 
 CThread::~CThread()
 {
-	Kill();
+  // User should have called Wait() before thread object is destroyed
+  if (nullptr != m_impl)
+  {
+    ErrorLog("Runaway thread error. A thread was not properly halted: %s\n", GetName()); 
+  }
+}
+
+const std::string &CThread::GetName() const
+{
+  return m_name;
 }
 
 UINT32 CThread::GetId()
 {
 	return SDL_GetThreadID((SDL_Thread*)m_impl);
-}
-
-void CThread::Kill()
-{
-	if (m_impl != NULL)
-		SDL_KillThread((SDL_Thread*)m_impl);
-	m_impl = NULL;
 }
 
 int CThread::Wait()

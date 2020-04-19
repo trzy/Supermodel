@@ -46,7 +46,7 @@ using namespace std;
 struct SDLKeyMapStruct
 {
 	const char *keyName;
-	SDLKey sdlKey;
+	SDL_Scancode sdlKey;
 };
 
 /*
@@ -65,7 +65,7 @@ private:
 	vector<JoyDetails> m_joyDetails;
 
 	// Current key state obtained from SDL
-	Uint8 *m_keyState;
+	const Uint8 *m_keyState;
 
 	// Current mouse state obtained from SDL
 	int m_mouseX;

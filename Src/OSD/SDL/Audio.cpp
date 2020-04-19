@@ -217,6 +217,7 @@ static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuff
 #endif	// NUM_CHANNELS
 }
 
+/*
 static void LogAudioInfo(SDL_AudioSpec *fmt)
 {
 	InfoLog("Audio device information:");
@@ -225,6 +226,7 @@ static void LogAudioInfo(SDL_AudioSpec *fmt)
 	InfoLog("Sample Format: %d", fmt->format);
 	InfoLog("");
 }
+*/
 
 bool OpenAudio()
 {
@@ -241,18 +243,9 @@ bool OpenAudio()
 	fmt.samples = playSamples;
 	fmt.callback = PlayCallback;
 	
-	// Try opening SDL audio output with that specification
-	SDL_AudioSpec obtained;
-	if (SDL_OpenAudio(&fmt, &obtained) < 0)
+	// Force SDL to use the format we requested; it will convert if necessary
+	if (SDL_OpenAudio(&fmt, nullptr) < 0)
 		return ErrorLog("Unable to open 44.1KHz 2-channel audio with SDL: %s\n", SDL_GetError());
-	LogAudioInfo(&obtained);
-		
-	// Check if obtained format is what we really requested
-	if ((obtained.freq!=fmt.freq) || (obtained.channels!=fmt.channels) || (obtained.format!=fmt.format))
-		ErrorLog("Incompatible audio settings (44.1KHz, 16-bit required). Check drivers!\n");
-		
-	// Check what buffer sample size was actually obtained, and use that
-	playSamples = obtained.samples;
 
 	// Create audio buffer
 	audioBufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;

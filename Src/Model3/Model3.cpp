@@ -2250,23 +2250,23 @@ bool CModel3::StartThreads(void)
   // Create PPC main board thread, if multi-threading GPU
   if (m_gpuMultiThreaded)
   {
-    ppcBrdThread = CThread::CreateThread(StartMainBoardThread, this);
+    ppcBrdThread = CThread::CreateThread("MainBoard", StartMainBoardThread, this);
     if (ppcBrdThread == NULL)
       goto ThreadError;
   }
 
   // Create sound board thread (sync'd or unsync'd)
   if (syncSndBrdThread)
-    sndBrdThread = CThread::CreateThread(StartSoundBoardThreadSyncd, this);
+    sndBrdThread = CThread::CreateThread("SoundBoardSync", StartSoundBoardThreadSyncd, this);
   else
-    sndBrdThread = CThread::CreateThread(StartSoundBoardThread, this);
+    sndBrdThread = CThread::CreateThread("SoundBoardNoSync", StartSoundBoardThread, this);
   if (sndBrdThread == NULL)
     goto ThreadError;
 
   // Create drive board thread, if drive board is attached
   if (DriveBoard.IsAttached())
   {
-    drvBrdThread = CThread::CreateThread(StartDriveBoardThread, this);
+    drvBrdThread = CThread::CreateThread("DriveBoard", StartDriveBoardThread, this);
     if (drvBrdThread == NULL)
       goto ThreadError;
   }
@@ -3237,7 +3237,7 @@ CModel3::CModel3(const Util::Config::Node &config)
 }
 
 // Dumps a memory region to a file for debugging purposes
-/*
+#if 0
 static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bool reverse16)
 {
   FILE *fp = fopen(file, "wb");
@@ -3254,7 +3254,7 @@ static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bo
   else
     printf("unable to dump %s\n", file);
 }
-*/
+#endif
 
 CModel3::~CModel3(void)
 {
