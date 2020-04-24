@@ -857,6 +857,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
   sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());
   SDL_SetWindowTitle(s_window, baseTitleStr);
+  SDL_SetWindowSize(s_window, totalXRes, totalYRes);
+  SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
   bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
   if (OKAY != ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
