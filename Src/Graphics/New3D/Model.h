@@ -150,6 +150,7 @@ struct Mesh
 	bool layered		= false;		// stencil poly
 	bool highPriority	= false;		// rendered over the top
 	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1
+	bool translatorMap	= false;		// colours are multiplied by 16
 
 	// lighting
 	bool fixedShading	= false;

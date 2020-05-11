@@ -29,6 +29,7 @@ void R3DShader::Start()
 	m_layered			= false;
 	m_textureInverted	= false;
 	m_fixedShading		= false;
+	m_translatorMap		= false;
 	m_modelScale		= 1.0f;
 	m_shininess			= 0;
 	m_specularValue		= 0;
@@ -111,6 +112,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpecularValue		= glGetUniformLocation(m_shaderProgram, "specularValue");
 	m_locSpecularEnabled	= glGetUniformLocation(m_shaderProgram, "specularEnabled");
 	m_locFixedShading		= glGetUniformLocation(m_shaderProgram, "fixedShading");
+	m_locTranslatorMap		= glGetUniformLocation(m_shaderProgram, "translatorMap");
 
 	m_locSpotEllipse		= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 	m_locSpotRange			= glGetUniformLocation(m_shaderProgram, "spotRange");
@@ -224,6 +226,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->fixedShading != m_fixedShading) {
 		glUniform1i(m_locFixedShading, m->fixedShading);
 		m_fixedShading = m->fixedShading;
+	}
+
+	if (m_dirtyMesh || m->translatorMap != m_translatorMap) {
+		glUniform1i(m_locTranslatorMap, m->translatorMap);
+		m_translatorMap = m->translatorMap;
 	}
 
 	if (m_dirtyMesh || m->wrapModeU != m_texWrapMode[0] || m->wrapModeV != m_texWrapMode[1]) {

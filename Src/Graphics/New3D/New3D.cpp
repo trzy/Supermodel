@@ -994,6 +994,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->shininess		= ph.Shininess();
 	currentMesh->specularValue	= ph.SpecularValue();
 	currentMesh->fogIntensity	= ph.LightModifier();
+	currentMesh->translatorMap	= ph.TranslatorMap();
 
 	if (currentMesh->textured) {
 
@@ -1135,16 +1136,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF);
 		}
 		else {
-
 			p.faceColour[0] = ((ph.header[4] >> 24));
 			p.faceColour[1] = ((ph.header[4] >> 16) & 0xFF);
 			p.faceColour[2] = ((ph.header[4] >> 8) & 0xFF);
-
-			if (ph.TranslatorMap()) {
-				p.faceColour[0] = std::min((p.faceColour[0] * 255) / 16, 255);		// When the translator map is enabled, max colour seems to be 16. Why not 4 bits?
-				p.faceColour[1] = std::min((p.faceColour[1] * 255) / 16, 255);		// We clamp the result because virtua on will overflow for only the smoke effects
-				p.faceColour[2] = std::min((p.faceColour[2] * 255) / 16, 255);		// It's passing 33 instead of a max of 16.
-			}
 		}
 
 		p.faceColour[3] = ph.Transparency();

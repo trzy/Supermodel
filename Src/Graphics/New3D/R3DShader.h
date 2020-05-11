@@ -48,6 +48,7 @@ private:
 	GLint m_locBaseTexSize;
 	GLint m_locTextureInverted;
 	GLint m_locTexWrapMode;
+	GLint m_locTranslatorMap;
 
 	// cached mesh values
 	bool	m_textured1;
@@ -60,6 +61,7 @@ private:
 	float	m_specularValue;
 	bool	m_specularEnabled;
 	bool	m_fixedShading;
+	bool	m_translatorMap;
 
 	bool	m_layered;
 	float	m_microTexScale;

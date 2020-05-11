@@ -398,16 +398,16 @@ UINT64 PolyHeader::Hash()
 	hash |= (UINT64)(header[3] & 0xFF);											// bits 0-7 tex width / height / uv smooth
 	hash |= (UINT64)(((header[4] & 0x1F) << 1) | ((header[5] >> 7) & 1)) << 8;	// bits 8-13 x offset
 	hash |= (UINT64)(header[5] & 0x1F) << 14;									// bits 14-18 y offset
-	hash |= (UINT64)Page() << 19;												// bits 19 page
-	hash |= (UINT64)DoubleSided() << 20;										// bits 20 double sided
-	hash |= (UINT64)AlphaTest() << 21;											// bits 21 contour processing
-	hash |= (UINT64)PolyAlpha() << 22;											// bits 22 poly alpha processing
-	hash |= (UINT64)(header[2] & 0xFF) << 23;									// bits 23-30 microtexture / uv mirror
-	hash |= (UINT64)SpecularEnabled() << 31;									// bits 31 enable specular reflection
-	hash |= (UINT64)SmoothShading() << 32;										// bits 32 smooth shading
-	hash |= (UINT64)FixedShading() << 33;										// bits 33 fixed shading
-	hash |= (UINT64)(header[0] >> 26) << 34;									// bits 34-39 specular coefficient (opacity)
-	hash |= (UINT64)(header[6] & 0x3FFFF) << 40;								// bits 40-57 Translucency pattern select / disable lighting / Polygon light modifier / Texture enable / Texture format / Shininess / High priority / Layered polygon / Translucency mode
+	hash |= (UINT64)((header[4] & 0xC0) >> 6) << 19;							// bits 19-20 page / translatormap
+	hash |= (UINT64)DoubleSided() << 21;										// bits 21 double sided
+	hash |= (UINT64)AlphaTest() << 22;											// bits 22 contour processing
+	hash |= (UINT64)PolyAlpha() << 23;											// bits 23 poly alpha processing
+	hash |= (UINT64)(header[2] & 0xFF) << 24;									// bits 24-31 microtexture / uv mirror
+	hash |= (UINT64)SpecularEnabled() << 32;									// bits 32 enable specular reflection
+	hash |= (UINT64)SmoothShading() << 33;										// bits 33 smooth shading
+	hash |= (UINT64)FixedShading() << 34;										// bits 34 fixed shading
+	hash |= (UINT64)(header[0] >> 26) << 35;									// bits 35-40 specular coefficient (opacity)
+	hash |= (UINT64)(header[6] & 0x3FFFF) << 41;								// bits 41-58 Translucency pattern select / disable lighting / Polygon light modifier / Texture enable / Texture format / Shininess / High priority / Layered polygon / Translucency mode
 
 	return hash;
 }

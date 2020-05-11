@@ -9,6 +9,7 @@ static const char *vertexShaderR3D = R"glsl(
 uniform float	modelScale;
 uniform mat4	modelMat;
 uniform mat4	projMat;
+uniform bool	translatorMap;
 
 // attributes
 attribute vec4	inVertex;
@@ -26,6 +27,17 @@ varying vec4	fsColor;
 varying float	fsDiscard;			// can't have varying bool (glsl spec)
 varying float	fsFixedShade;
 
+vec4 GetColour(vec4 colour)
+{
+	vec4 c = colour;
+
+	if(translatorMap) {
+		c.rgb *= 16.0;
+	}
+
+	return c;
+}
+
 float CalcBackFace(in vec3 viewVertex)
 {
 	vec3 vt = viewVertex - vec3(0.0);
@@ -40,7 +52,7 @@ void main(void)
 	fsViewVertex	= vec3(modelMat * inVertex);
 	fsViewNormal	= (mat3(modelMat) * inNormal) / modelScale;
 	fsDiscard		= CalcBackFace(fsViewVertex);
-	fsColor    		= inColour;
+	fsColor    		= GetColour(inColour);
 	fsTexCoord		= inTexCoord;
 	fsFixedShade	= inFixedShade;
 	gl_Position		= projMat * modelMat * inVertex;
