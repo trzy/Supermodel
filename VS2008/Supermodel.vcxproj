@@ -22,28 +22,29 @@
     <ProjectGuid>{B114BBD9-8AEA-4DAE-B367-A66A804CB3DD}</ProjectGuid>
     <RootNamespace>Supermodel</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -67,23 +68,23 @@
     <_ProjectFileVersion>12.0.30501.0</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
@@ -92,7 +93,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -110,13 +111,11 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>mkdir "$(TargetDir)\Config"
-mkdir "$(TargetDir)\NVRAM"
-mkdir "$(TargetDir)\Saves"
-xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
-xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
-</Command>
+      <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
+if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
+if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -125,7 +124,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -143,20 +142,18 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>mkdir "$(TargetDir)\Config"
-mkdir "$(TargetDir)\NVRAM"
-mkdir "$(TargetDir)\Saves"
-xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
-xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
-</Command>
+      <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
+if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
+if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -175,14 +172,11 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>mkdir "$(TargetDir)\Config"
-mkdir "$(TargetDir)\NVRAM"
-mkdir "$(TargetDir)\Saves"
-xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
-xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
-
-</Command>
+      <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
+if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
+if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -192,7 +186,7 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL-1.2.14\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -212,13 +206,11 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>mkdir "$(TargetDir)\Config"
-mkdir "$(TargetDir)\NVRAM"
-mkdir "$(TargetDir)\Saves"
-xcopy /D /Y "$(ProjectDir)\..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)\..\Config\*" "$(TargetDir)\Config"
-xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDir)"
-</Command>
+      <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
+if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
+if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -228,13 +220,9 @@ xcopy /D /Y "$(ProjectDir)\SDL\$(Platform)\$(Configuration)\SDL.dll" "$(TargetDi
     </ProjectReference>
     <ProjectReference Include="SDLmain\SDLmain.vcxproj">
       <Project>{da956fd3-e142-46f2-9dd5-c78bebb56b7a}</Project>
-      <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
-      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="SDL\SDL.vcxproj">
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
-      <CopyLocalSatelliteAssemblies>true</CopyLocalSatelliteAssemblies>
-      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="ZLib\ZLib.vcxproj">
       <Project>{248d61e0-2e9b-4c73-8839-a31fbcb7d109}</Project>
