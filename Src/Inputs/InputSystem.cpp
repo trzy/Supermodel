@@ -2090,7 +2090,7 @@ Repeat:
       {
         if (firstOut)
           puts("");
-        printf(" [value: %d, min: %d, %max: %d]\n", joyVal, minVal, maxVal);
+        printf(" [value: %d, min: %d, max: %d]\n", joyVal, minVal, maxVal);
         firstOut = false;
       }
 
