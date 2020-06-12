@@ -309,6 +309,7 @@ private:
   CJTAG       m_jtag;         // JTAG interface
 #ifdef NET_BOARD
   CNetBoard   NetBoard;		  // Net board
+  bool		m_runNetBoard;
 #endif
 
 };

@@ -971,7 +971,7 @@ UINT8 CModel3::Read8(UINT32 addr)
     }
 #endif
 #ifdef NET_BOARD
-  if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // check for Step 1.0
+  if (m_runNetBoard)
   {
     switch ((addr & 0x3ffff) >> 16)
     {
@@ -1274,7 +1274,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       break;
 #endif
 #ifdef NET_BOARD
-    if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // check for Step 1.0
+    if (m_runNetBoard)
     {
       UINT32 result;
       
@@ -1450,7 +1450,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       goto Unknown8;
 #endif
 #ifdef NET_BOARD
-    if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>())))
+    if (m_runNetBoard)
     {
       //printf("CModel 3 : write8 %x<-%x\n", addr, data);
 
@@ -1792,7 +1792,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       goto Unknown32;
 #endif
 #ifdef NET_BOARD
-    if (m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()))) // assuming there is no scsi card for step>1.0 because same address for network card (right or wrong ??)
+    if (m_runNetBoard)
     {
       switch ((addr & 0x3ffff) >> 16)
       {
@@ -2472,7 +2472,7 @@ void CModel3::DumpTimings(void)
     timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
     timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
 #ifdef NET_BOARD
-  timings.netTicks, (timings.netTicks > 10 ? '!' : ','),
+  timings.netTicks, (timings.netTicks > 10 ? '!' : ','),		// TODO fix this line 'printf' : too many arguments passed for format string
 #endif
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
@@ -3125,6 +3125,7 @@ bool CModel3::Init(void)
 #ifdef NET_BOARD
   netRAM = &memoryPool[OFFSET_NETRAM];
   netBuffer = &memoryPool[OFFSET_NETBUFFER];
+  m_runNetBoard = m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()));
 #endif
   SetCROMBank(0xFF);
   
