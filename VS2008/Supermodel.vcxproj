@@ -93,8 +93,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -124,8 +124,8 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -153,8 +153,8 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader />
@@ -186,8 +186,8 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -220,6 +220,9 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     </ProjectReference>
     <ProjectReference Include="SDLmain\SDLmain.vcxproj">
       <Project>{da956fd3-e142-46f2-9dd5-c78bebb56b7a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="SDLnet\SDL_net.vcxproj">
+      <Project>{8ab3504f-5e58-4910-afe8-7a1e595ac3f4}</Project>
     </ProjectReference>
     <ProjectReference Include="SDL\SDL.vcxproj">
       <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
@@ -336,6 +339,8 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\Model3\SoundBoard.cpp" />
     <ClCompile Include="..\Src\Model3\TileGen.cpp" />
     <ClCompile Include="..\Src\Network\NetBoard.cpp" />
+    <ClCompile Include="..\Src\Network\TCPReceive.cpp" />
+    <ClCompile Include="..\Src\Network\TCPSend.cpp" />
     <ClCompile Include="..\Src\Network\UDPReceive.cpp" />
     <ClCompile Include="..\Src\Network\UDPSend.cpp" />
     <ClCompile Include="..\Src\Network\WinSockWrap.cpp" />
@@ -508,6 +513,8 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Model3\SoundBoard.h" />
     <ClInclude Include="..\Src\Model3\TileGen.h" />
     <ClInclude Include="..\Src\Network\NetBoard.h" />
+    <ClInclude Include="..\Src\Network\TCPReceive.h" />
+    <ClInclude Include="..\Src\Network\TCPSend.h" />
     <ClInclude Include="..\Src\Network\UDPPacket.h" />
     <ClInclude Include="..\Src\Network\UDPReceive.h" />
     <ClInclude Include="..\Src\Network\UDPSend.h" />
