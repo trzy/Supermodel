@@ -78,7 +78,7 @@ const char *CJTAG::s_state[] =
 
 static void SaveBitRegister(CBlockFile *SaveState, const Util::BitRegister &reg)
 {
-  uint16_t size = reg.Size() + 1; // include null terminator
+  uint16_t size = (uint16_t)reg.Size() + 1; // include null terminator
   SaveState->Write(&size, sizeof(size));
   SaveState->Write(reg.ToBinaryString());
 }

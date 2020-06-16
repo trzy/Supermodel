@@ -1,11 +1,17 @@
 #include "TCPSend.h"
 
+#if defined(_DEBUG)
+#include <stdio.h>
+#define DPRINTF printf
+#else
+#define DPRINTF(a, ...)
+#endif
+
 static const int RETRY_COUNT = 10;			// shrugs
 
 TCPSend::TCPSend(std::string& ip, int port) :
 	m_ip(ip),
 	m_port(port),
-	m_tryCount(0),
 	m_socket(nullptr)
 {
 	SDLNet_Init();
@@ -23,18 +29,13 @@ TCPSend::~TCPSend()
 
 bool TCPSend::Send(const void * data, int length)
 {
-	printf("trying to send data %i\n", length);
-	// If we aren't connected make a connection
-	if (!Connected()) {
-		Connect();
-		printf("trying to connect\n");
-	}
-
 	// If we failed bail out
 	if (!Connected()) {
-		printf("not connected\n");
+		DPRINTF("Not connected\n");
 		return false;
 	}
+
+	DPRINTF("Sending %i bytes\n", length);
 
 	if (!length) {
 		return true;		// 0 sized packet will blow our connex
@@ -50,7 +51,7 @@ bool TCPSend::Send(const void * data, int length)
 		m_socket = nullptr;
 	}
 
-	return false;
+	return true;
 }
 
 bool TCPSend::Connected()
@@ -58,12 +59,8 @@ bool TCPSend::Connected()
 	return m_socket != 0;
 }
 
-void TCPSend::Connect()
+bool TCPSend::Connect()
 {
-	if (m_tryCount >= RETRY_COUNT) {
-		return;					// already tried and failed so bail out. We do this as instances might load diff times
-	}
-
 	IPaddress ip;
 	int result = SDLNet_ResolveHost(&ip, m_ip.c_str(), m_port);
 
@@ -71,5 +68,5 @@ void TCPSend::Connect()
 		m_socket = SDLNet_TCP_Open(&ip);
 	}
 
-	m_tryCount++;
+	return Connected();
 }

@@ -416,15 +416,6 @@
     <ClCompile Include="..\Src\Model3\JTAG.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Network\UDPReceive.cpp">
-      <Filter>Source Files\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Network\UDPSend.cpp">
-      <Filter>Source Files\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Network\WinSockWrap.cpp">
-      <Filter>Source Files\Network</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Network\NetBoard.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
@@ -777,18 +768,6 @@
     </ClInclude>
     <ClInclude Include="..\Src\Util\BitRegister.h">
       <Filter>Header Files\Util</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Network\UDPPacket.h">
-      <Filter>Header Files\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Network\UDPReceive.h">
-      <Filter>Header Files\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Network\UDPSend.h">
-      <Filter>Header Files\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Network\WinSockWrap.h">
-      <Filter>Header Files\Network</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Network\NetBoard.h">
       <Filter>Header Files\Network</Filter>

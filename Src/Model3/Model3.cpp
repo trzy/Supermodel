@@ -2471,9 +2471,6 @@ void CModel3::DumpTimings(void)
     timings.syncTicks, (timings.syncTicks > 1 ? '!' : ','),
     timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
     timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
-#ifdef NET_BOARD
-  timings.netTicks, (timings.netTicks > 10 ? '!' : ','),		// TODO fix this line 'printf' : too many arguments passed for format string
-#endif
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
 
@@ -3125,7 +3122,6 @@ bool CModel3::Init(void)
 #ifdef NET_BOARD
   netRAM = &memoryPool[OFFSET_NETRAM];
   netBuffer = &memoryPool[OFFSET_NETBUFFER];
-  m_runNetBoard = m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()));
 #endif
   SetCROMBank(0xFF);
   
@@ -3143,8 +3139,11 @@ bool CModel3::Init(void)
   if (OKAY != SoundBoard.Init(soundROM,sampleROM))
     return FAIL;
 #ifdef NET_BOARD
-  if (OKAY != NetBoard.Init(netRAM, netBuffer))
-  return FAIL;
+  if (OKAY != NetBoard.Init(netRAM, netBuffer)) {
+    return FAIL;
+  }
+
+  m_runNetBoard = m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()));
 #endif
 
   PCIBridge.AttachPCIBus(&PCIBus);

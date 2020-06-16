@@ -3,6 +3,13 @@
 
 using namespace std::chrono_literals;
 
+#if defined(_DEBUG)
+#include <stdio.h>
+#define DPRINTF printf
+#else
+#define DPRINTF(a, ...)
+#endif
+
 TCPReceive::TCPReceive(int port) :
 	m_listenSocket(nullptr),
 	m_receiveSocket(nullptr)
@@ -45,7 +52,7 @@ TCPReceive::~TCPReceive()
 std::vector<char>& TCPReceive::Receive()
 {
 	if (!m_receiveSocket) {
-		printf("return here because no socket\n");
+		DPRINTF("Can't receive because no socket.\n");
 		m_recBuffer.clear();
 		return m_recBuffer;
 	}
@@ -54,7 +61,7 @@ std::vector<char>& TCPReceive::Receive()
 	int result = 0;
 
 	result = SDLNet_TCP_Recv(m_receiveSocket, &size, sizeof(int));
-	printf("received %i\n", result);
+	DPRINTF("Received %i bytes\n", result);
 	if (result <= 0) {
 		SDLNet_TCP_Close(m_receiveSocket);
 		m_receiveSocket = nullptr;
@@ -66,7 +73,7 @@ std::vector<char>& TCPReceive::Receive()
 	while (size) {
 
 		result = SDLNet_TCP_Recv(m_receiveSocket, m_recBuffer.data() + (m_recBuffer.size() - size), size);
-		printf("received %i\n", result);
+		DPRINTF("Received %i bytes\n", result);
 		if (result <= 0) {
 			SDLNet_TCP_Close(m_receiveSocket);
 			m_receiveSocket = nullptr;
@@ -90,7 +97,7 @@ void TCPReceive::ListenFunc()
 
 		if (socket) {
 			m_receiveSocket = socket;
-			printf("accepted a connectio\n");
+			DPRINTF("Accepted connection.\n");
 		}
 		
 	}

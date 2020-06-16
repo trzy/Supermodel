@@ -6,7 +6,7 @@
 // Irq implementation check, timer for irq5 or at every frame? Where to put irq2 (mame says at every register writes), irq4, irq6.
 // check all, lol :)
 // obsolete : ring network code is blocking, this cause the program to not responding when quit because it enter in receive fonction
-//		this also leads to a forcing synchro between cabs, not acting like a real hardware 
+//		this also leads to a forcing synchro between cabs, not acting like a real hardware
 // Changing to Ian's udp code. It is non blocking. Now the sync between instance could not be get each time (bug), because 1st data may be not the sync (thread vs sequential code) as the old blocking recv
 // ---> setting pause, moving window make lost connection now and bug the game
 // ---> crash when quit. Assumption : may be supermodel close while udp thread running ?
@@ -76,9 +76,8 @@
 #include "NetBoard.h"
 #include "Util/Format.h"
 #include "Util/ByteSwap.h"
-#include <thread>
-#include "UDPSend.h"
-#include "UDPReceive.h"
+#include "TCPSend.h"
+#include "TCPReceive.h"
 
 // few macros to make debugging a bit less painful
 // if NET_DEBUG is defined, printf works normally, otherwise it's compiled to nothing (ie removed)
@@ -97,8 +96,6 @@
 #ifndef SAFE_ARRAY_DELETE
 	#define SAFE_ARRAY_DELETE(x) delete[] x; x = NULL;
 #endif
-
-using namespace SMUDP;
 
 static int(*Runnet68kCB)(int cycles);
 static void(*Intnet68kCB)(int irq);
@@ -148,7 +145,7 @@ UINT8 CNetBoard::Read8(UINT32 a)
 	{
 	case 0x0:
 		//printf("Netboard R8\tRAM[%x]=%x\n", a,RAM[a]);
-		if (a > 0x0ffff) 
+		if (a > 0x0ffff)
 		{
 			printf("OUT OF RANGE RAM[%x]\n", a);
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
@@ -167,7 +164,7 @@ UINT8 CNetBoard::Read8(UINT32 a)
 		switch (a & 0xff)
 		{
 		case 0x0:
-			DPRINTF("Netboard R8\tctrlrw[%x]=%x\tcommbank = %x\n", a & 0xff, ctrlrw[a & 0xff], commbank);	
+			DPRINTF("Netboard R8\tctrlrw[%x]=%x\tcommbank = %x\n", a & 0xff, ctrlrw[a & 0xff], commbank);
 			return ctrlrw[a&0xff];//commbank;
 			break;
 
@@ -199,14 +196,14 @@ UINT8 CNetBoard::Read8(UINT32 a)
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 			//MessageBeep(MB_ICONWARNING);
 		}
-		
+
 		switch (a & 0xff)
 		{
 		case 0x11: // ioreg[c0011]
 			DPRINTF("Netboard R8\tioreg[%x]=%x\t\treceive result status\n", a & 0xff, ioreg[a & 0xff]);
 			//return 0x5; /////////////////////////////////// pure hack for spikofe - must have the pure hack spikeout enable too ///////////////////////////////////////////////////////
 			if (Gameinfo.name.compare("spikeofe") == 0) return 0x5;
-			return ioreg[a&0xff]; 
+			return ioreg[a&0xff];
 			break;
 
 		case 0x19: // ioreg[c0019]
@@ -278,7 +275,7 @@ UINT16 CNetBoard::Read16(UINT32 a)
 			//MessageBeep(MB_ICONWARNING);
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 		}
-				
+
 		switch (a & 0xff)
 		{
 		case 0x0:
@@ -316,7 +313,7 @@ UINT16 CNetBoard::Read16(UINT32 a)
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 			//MessageBeep(MB_ICONWARNING);
 		}
-				
+
 		switch (a & 0xff)
 		{
 		case 0x88: // ioreg[c0088]
@@ -420,7 +417,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 	switch ((a >> 16) & 0xF)
 	{
 	case 0x0:
-		//printf("Netboard Write8 (0x0) \tRAM[%x] <- %x\n", a, d); 
+		//printf("Netboard Write8 (0x0) \tRAM[%x] <- %x\n", a, d);
 		if (a > 0x0ffff)
 		{
 			printf("OUT OF RANGE RAM[%x]\n", a);
@@ -472,7 +469,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			break;
 
 		}
-		
+
 		break;
 
 	case 0x8: // dirt devils
@@ -513,11 +510,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			ioreg[a & 0xff] = d;
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
-		
+
 		/*case 0x15: // 0x00 0x01 0x80 // ioreg[c0015]
 			ioreg[a & 0xff] = d;
 			printf("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
-			
+
 			if ((d & 0xFF) != 0x80)
 			{
 				if ((d & 0xFF) == 0x01)
@@ -547,7 +544,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			{
 				printf("receive enable off=%x size=%x\n", recv_offset, recv_size);
 				printf("receiving : ");
-				
+
 				recv_size = recv_size & 0x7fff;
 
 				receive2(CommRAM + recv_offset, recv_size, recv_offset);
@@ -585,7 +582,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			// 15 and 17 = receive part
 			// master starts with 1b 15 17 (set id node) 1d
 			// slave follow with 15 17 then (set id node) 1b 1d
-			
+
 		case 0x15: // 0x00 0x01 0x80 // ioreg[c0015]
 			ioreg[a & 0xff] = d;
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
@@ -594,7 +591,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			{
 			case 0x80:
 				DPRINTF("\nreceiving : \n");
-	
+
 				//if (recv_offset > 0x1000)
 				if (recv_size < 0x0019) // must find a better condition
 				{
@@ -602,15 +599,10 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					//printf("-> nb recu : %x\n", recv_data.size());
 					//memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 					//DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
-					UINT16 s = 0;
-					std::vector <uint8_t> recv_data;
-					do
-					{
-						recv_data = udpReceive.ReadData(500);
-						DPRINTF("-> nb recu : %x\n", recv_data.size());
-						s = recv_data.size();
-						DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
-					} while (s == 0);
+
+
+					DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
+					auto &recv_data = netr->Receive();
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 				}
 				else
@@ -629,7 +621,8 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 					//printf("receive enable off=%x size=%x slot=%x\n", recv_offset, recv_size, slot);
 
-					auto recv_data = udpReceive.ReadData(5000);
+					//auto recv_data = udpReceive.ReadData(5000);
+					auto &recv_data = netr->Receive();
 					DPRINTF("-> nb recu : %x\n", recv_data.size());
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 				}
@@ -701,14 +694,15 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		case 0x1b: // 0x80 // ioreg[c001b]
 			ioreg[a & 0xff] = d;
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\t\n", a & 0xff, d);
-	
+
 			switch (d & 0xff)
 			{
 			case 0x80:
 				//if (send_offset > 0x1000)
 				if (send_size < 0x0011)	// must find a better condition
 				{
-					udpSend.SendAsync(addr_out.data(), port_out, send_size, (const char*)CommRAM + send_offset, 1000);
+					//udpSend.SendAsync(addr_out.data(), port_out, send_size, (const char*)CommRAM + send_offset, 1000);
+					nets->Send((const char*)CommRAM + send_offset, send_size);
 
 					DPRINTF("send enable off=%x size=%x\n", send_offset, send_size);
 				}
@@ -738,7 +732,8 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					}
 					send_offset = (send_offset << 8) | (send_offset >> 8);
 
-					udpSend.SendAsync(addr_out.data(), port_out, send_size, (const char*)CommRAM + send_offset, 1000);
+					//udpSend.SendAsync(addr_out.data(), port_out, send_size, (const char*)CommRAM + send_offset, 1000);
+					nets->Send((const char*)CommRAM + send_offset, send_size);
 
 					DPRINTF("send enable off=%x size=%x slot=%x\n", send_offset, send_size, slot);
 				}
@@ -761,11 +756,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 				printf("\n");
 				#endif
 				break;
-				
+
 			case 0x00:
 				DPRINTF("??? transmit disable\n");
 				break;
-			
+
 			default:
 				printf("1b : other value %x\n", d & 0xff);
 				break;
@@ -779,7 +774,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			switch (d & 0xff)
 			{
 			case 0x8c:
-				M68KSetIRQ(6); //obligatoire (pas de irq4, pas de ack, pas de cycle) irq4 : harley master other board not ready or... 
+				M68KSetIRQ(6); //obligatoire (pas de irq4, pas de ack, pas de cycle) irq4 : harley master other board not ready or...
 				M68KRun(10000);
 				break;
 
@@ -797,7 +792,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			ioreg[a & 0xff] = d;
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
-		
+
 		case 0x2f: // 0x00 or 0x00->0x40->0x00 or 0x82// ioreg[c002f]
 			ioreg[a & 0xff] = d;
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
@@ -907,7 +902,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
-		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 trame 
+		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 trame
 			ioreg[a & 0xff] = d;
 			//CommRAM[4] = d; /////////////////////////////////// pure hack for spikeout /////////////////////////////////////////////////////////////////////////////////////////////
 			if (Gameinfo.name.compare("spikeout") == 0 || Gameinfo.name.compare("spikeofe") == 0) CommRAM[4] = d;
@@ -938,7 +933,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 	default:
 		printf("NetBoard 68K: Unknown W8 (%x) %06X<-%02X\n", (a >> 16) & 0xF, a, d);
-		MessageBox(NULL, "Unknown W8", NULL, MB_OK); 
+		MessageBox(NULL, "Unknown W8", NULL, MB_OK);
 		//MessageBeep(MB_ICONWARNING);
 		break;
 	}
@@ -958,7 +953,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		}
 		*(UINT16 *)&RAM[a] = d;
 		break;
-	
+
 	case 0x4:
 		//printf("Netboard W16\tctrlrw[%x] <- %x\t", a&0xff, d);
 		if ((a & 0xfff) > 0xff)
@@ -993,7 +988,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		case 0x40:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
 			DPRINTF("Netboard W16\tctrlrw[%x] <- %x\t\tIRQ 5 ack\n", a & 0xff, d);
-	
+
 			NetIRQAck(5);
 			M68KSetIRQ(4);  // ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 			//M68KRun(10000);
@@ -1002,7 +997,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
 			*(UINT8 *)&ioreg[0] = *(UINT8 *)&ioreg[0] | 0x01; // Do I force this myself or is it automatic, need investigation, bad init way actually ?
 			DPRINTF("Netboard W16\tctrlrw[%x] <-%x\t\tIRQ 2 ack\n", a & 0xff, d);
-	
+
 			NetIRQAck(2);
 			//NetIRQAck(0);
 			break;
@@ -1033,7 +1028,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		if ((a & 0x3ffff) > 0xffff)
 		{
 			printf("OUT OF RANGE CommRAM[%x]\n", a);
-			MessageBox(NULL, "Out of Range", NULL, MB_OK); 
+			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 			//MessageBeep(MB_ICONWARNING);
 		}
 		*(UINT16 *)&CommRAM[a & 0xffff] = d;
@@ -1047,18 +1042,18 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 			//MessageBeep(MB_ICONWARNING);
 		}
-		
+
 		switch (a & 0xff)
 		{
 		case 0x88: // ioreg[c0088]
 			// register value change, do I made something special here ????
-			if (d == 0) 
+			if (d == 0)
 			{
 				*(UINT16 *)&ioreg[a & 0xff] = d;
 				DPRINTF("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
 			}
-			
-			if (d == 1) 
+
+			if (d == 1)
 			{
 				*(UINT16 *)&ioreg[a & 0xff] = d;
 				DPRINTF("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
@@ -1070,19 +1065,19 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 				DPRINTF("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
 			}
 
-			if (d > 2) 
+			if (d > 2)
 			{
 				DPRINTF("d=%x\n", d);
 				*(UINT16 *)&ioreg[a & 0xff] = d;
 				//MessageBox(NULL, "d > 1", NULL, MB_OK);
 				//MessageBeep(MB_ICONWARNING);
 			}
-			
+
 			DPRINTF("d = %x \n",d);
 
 			M68KSetIRQ(4); // network error if removed
 			M68KRun(1000); // 1000 is enough
-			M68KSetIRQ(2); // oui sinon pas de trame, pas de cycle sinon crash	
+			M68KSetIRQ(2); // oui sinon pas de trame, pas de cycle sinon crash
 			break;
 
 		case 0x8a: // ioreg[c008a]
@@ -1098,13 +1093,13 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 			break;
 
 		}
-		//M68KSetIRQ(2); // oui sinon pas de trame, pas de cycle sinon crash	
+		//M68KSetIRQ(2); // oui sinon pas de trame, pas de cycle sinon crash
 		//M68KRun(40000);
 		break;
 
 	default:
 		printf("NetBoard 68K: Unknown W16 (%x) %06X<-%04X\n", (a >> 16) & 0xF,a, d);
-		MessageBox(NULL, "Unknown W16", NULL, MB_OK); 
+		MessageBox(NULL, "Unknown W16", NULL, MB_OK);
 		//MessageBeep(MB_ICONWARNING);
 		break;
 	}
@@ -1168,7 +1163,7 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 
 	default:
 		printf("NetBoard 68K: Unknown W32 (%x) %08X<-%08X\n", (a >> 16) & 0xF,a, d);
-		MessageBox(NULL, "Unknown W32", NULL, MB_OK); 
+		MessageBox(NULL, "Unknown W32", NULL, MB_OK);
 		//MessageBeep(MB_ICONWARNING);
 		break;
 	}
@@ -1227,10 +1222,10 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	Buffer = CommRAM; // for swap test
 
 	ioreg = netBuffer + 0x10000;
-	
+
 	ctrlrw = ct;
 
-	printf("Init netboard netbuffer=%x netram=%x CommRAM=%x ioreg=%x ctrlrw=%x bank=%x\n", netBuffer, netRAM, CommRAM, ioreg, ctrlrw,bank);
+	printf("Init netboard\n");
 
 
 	// Initialize 68K core
@@ -1247,7 +1242,15 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	port_in = m_config["port_in"].ValueAs<unsigned>();
 	port_out = m_config["port_out"].ValueAs<unsigned>();
 	addr_out = m_config["addr_out"].ValueAs<std::string>();
-	udpReceive.Bind(port_in);
+
+	nets = std::make_unique<TCPSend>(addr_out, port_out);
+	netr = std::make_unique<TCPReceive>(port_in);
+
+	while (!nets->Connect()) {
+		printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
+	}
+
+	printf("Successfully connected.\n");
 
 	return OKAY;
 }
@@ -1284,7 +1287,7 @@ CNetBoard::~CNetBoard(void)
 	CommRAM		= NULL;
 	ioreg		= NULL;
 	ctrlrw		= NULL;
-		
+
 	/*if (int5 == true)
 	{
 		int5 = false;
@@ -1306,16 +1309,16 @@ bool CNetBoard::RunFrame(void)
 	{
 		return true;
 	}
-	
+
 	M68KSetContext(&M68K);
-	
+
 	/*if (int5 == false)
 	{
 		int5 = true;
 		interrupt5 = std::thread([this] { inter5(); });
 	}*/
 
-	
+
 	M68KSetIRQ(5); // apparently, must be called every xx milli secondes or every frames or 3-4 in a frame
 	/*if (test_irq == 0 || test_irq<2)
 	{
@@ -1330,12 +1333,12 @@ bool CNetBoard::RunFrame(void)
 
 	M68KRun((4000000 / 60)); // original
 	//M68KRun((4000000 / 60)*3); // 12Mhz
-	
+
 	//printf("NetBoard PC=%06X\n", M68KGetPC());
 
 	//M68KSetIRQ(6);
 	//M68KRun(10000);
-	
+
 	// 3 times more avoid network error canceled on certain games (certainly due to irq5 that would be calling 3-4 times in a frame)
 	M68KSetIRQ(5);
 	M68KRun((4000000 / 60));
@@ -1352,14 +1355,14 @@ bool CNetBoard::RunFrame(void)
 void CNetBoard::Reset(void)
 {
 	/*********************************************************************************************/
-	
+
 	commbank = 0;
 	recv_offset=0;
 	recv_size=0;
 	send_offset=0;
 	send_size=0;
-	
-	
+
+
 	// uncomment to dump network memory for analyse with IDA or 68k disasm
 	/*FILE *test;
 	Util::FlipEndian16(netRAM, 0x8000); //flip endian for IDA dump only
@@ -1368,13 +1371,13 @@ void CNetBoard::Reset(void)
 	fclose(test);
 	Util::FlipEndian16(netRAM, 0x8000);*/
 
-	
+
 	M68KSetContext(&M68K);
 	printf("RESET NetBoard PC=%06X\n", M68KGetPC());
 	M68KReset();
 
 	M68KGetContext(&M68K);
-	
+
 }
 
 M68KCtx * CNetBoard::GetM68K(void)
