@@ -1246,11 +1246,12 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	nets = std::make_unique<TCPSend>(addr_out, port_out);
 	netr = std::make_unique<TCPReceive>(port_in);
 
-	while (!nets->Connect()) {
-		printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
+	if (m_config["EmulateNet"].ValueAs<bool>()) {
+		while (!nets->Connect()) {
+			printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
+		}
+		printf("Successfully connected.\n");
 	}
-
-	printf("Successfully connected.\n");
 
 	return OKAY;
 }
