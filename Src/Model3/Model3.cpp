@@ -2865,30 +2865,6 @@ void CModel3::Reset(void)
  Initialization, Shutdown, and ROM Management
 ******************************************************************************/
 
-// Offsets of memory regions within Model 3's pool
-#define OFFSET_RAM          0         // 8 MB
-#define OFFSET_CROM         0x800000  // 8 MB (fixed CROM)
-#define OFFSET_CROMxx       0x1000000 // 128 MB (banked CROM0-3 must follow fixed CROM)
-#define OFFSET_VROM         0x9000000 // 64 MB
-#define OFFSET_BACKUPRAM    0xD000000 // 128 KB
-#define OFFSET_SECURITYRAM  0xD020000 // 128 KB
-#define OFFSET_SOUNDROM     0xD040000 // 512 KB (68K sound board program)
-#define OFFSET_SAMPLEROM    0xD0C0000 // 16 MB (sound board samples)
-#define OFFSET_DSBPROGROM   0xE0C0000 // 128 KB (DSB program)
-#define OFFSET_DSBMPEGROM   0xE0E0000 // 16 MB (DSB MPEG data -- Z80 version only uses 8MB)
-#define OFFSET_DRIVEROM     0xF0E0000 // 64 KB
-#ifndef NET_BOARD
-#define MEMORY_POOL_SIZE    (0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000)
-#endif
-#ifdef NET_BOARD
-#define OFFSET_NETBUFFER    0xC000000 // not really 128kb (64kb buffer 0000-ffff + i/o 10000-101ff)
-#define OFFSET_NETRAM       0xC020000 // 128 KB (c0020000-c003ffff)
-#define MEMORY_POOL_SIZE    (0x800000 + 0x800000 + 0x8000000 + 0x4000000 + 0x20000 + 0x20000 + 0x80000 + 0x1000000 + 0x20000 + 0x1000000 + 0x10000 + 0x40000)
-							//8MB		8MB			128MB		64MB		128KB		128KB	512KB		16MB		128KB	16MB		64KB		256KB
-#endif
-// 64-bit magic number used to detect loading of optional ROMs
-#define MAGIC_NUMBER  0x4C444D5245505553ULL
-
 const Game &CModel3::GetGame() const
 {
   return m_game;
@@ -3097,32 +3073,67 @@ void CModel3::AttachOutputs(COutputs *OutputsPtr)
   DebugLog("Model 3 attached outputs\n");
 }
 
+const static int RAM_SIZE			= 0x800000;		//8MB
+const static int CROM_SIZE			= 0x800000;		//8MB
+const static int CROMxx_SIZE		= 0x8000000;	//128MB
+const static int VROM_SIZE			= 0x4000000;	//64MB
+const static int BACKUPRAM_SIZE		= 0x20000;		//128KB
+const static int SECURITYRAM_SIZE	= 0x20000;		//128KB
+const static int SOUNDROM_SIZE		= 0x80000;		//512KB
+const static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
+const static int DSBPROGROM_SIZE	= 0x20000;		//128KB
+const static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
+const static int DRIVEROM_SIZE		= 0x10000;		//64KB
+const static int NETBUFFER_SIZE		= 0x20000;		//128KB
+const static int NETRAM_SIZE		= 0x20000;		//128KB
+
+const static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
+                                        CROMxx_SIZE + VROM_SIZE +
+                                        BACKUPRAM_SIZE + SECURITYRAM_SIZE +
+                                        SOUNDROM_SIZE + SAMPLEROM_SIZE +
+                                        DSBPROGROM_SIZE + DSBMPEGROM_SIZE +
+                                        DRIVEROM_SIZE + NETBUFFER_SIZE +
+                                        NETRAM_SIZE;
+
+const static int RAM_OFFSET			= 0;
+const static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
+const static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
+const static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
+const static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
+const static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
+const static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
+const static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
+const static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
+const static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
+const static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
+const static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
+const static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
+
 // Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
 bool CModel3::Init(void)
-{
-  float memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
-  
+{ 
+  float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
+
   // Allocate all memory for ROMs and PPC RAM
-  memoryPool = new(std::nothrow) UINT8[MEMORY_POOL_SIZE];
+  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
   if (NULL == memoryPool)
     return ErrorLog("Insufficient memory for Model 3 object (needs %1.1f MB).", memSizeMB);
-  memset(memoryPool, 0, MEMORY_POOL_SIZE);
+  memset(memoryPool, 0, MEM_POOL_SIZE);
     
   // Set up pointers
-  ram = &memoryPool[OFFSET_RAM];
-  crom = &memoryPool[OFFSET_CROM];
-  vrom = &memoryPool[OFFSET_VROM];
-  soundROM = &memoryPool[OFFSET_SOUNDROM];
-  sampleROM = &memoryPool[OFFSET_SAMPLEROM];
-  dsbROM = &memoryPool[OFFSET_DSBPROGROM];
-  mpegROM = &memoryPool[OFFSET_DSBMPEGROM];
-  backupRAM = &memoryPool[OFFSET_BACKUPRAM];
-  securityRAM = &memoryPool[OFFSET_SECURITYRAM];
-  driveROM = &memoryPool[OFFSET_DRIVEROM];
-#ifdef NET_BOARD
-  netRAM = &memoryPool[OFFSET_NETRAM];
-  netBuffer = &memoryPool[OFFSET_NETBUFFER];
-#endif
+  ram = &memoryPool[RAM_OFFSET];
+  crom = &memoryPool[CROM_OFFSET];
+  vrom = &memoryPool[VROM_OFFSET];
+  soundROM = &memoryPool[SOUNDROM_OFFSET];
+  sampleROM = &memoryPool[SAMPLEROM_OFFSET];
+  dsbROM = &memoryPool[DSBPROGROM_OFFSET];
+  mpegROM = &memoryPool[DSBMPEGROM_OFFSET];
+  backupRAM = &memoryPool[BACKUPRAM_OFFSET];
+  securityRAM = &memoryPool[SECURITYRAM_OFFSET];
+  driveROM = &memoryPool[DRIVEROM_OFFSET];
+  netRAM = &memoryPool[NETRAM_OFFSET];
+  netBuffer = &memoryPool[NETBUFFER_OFFSET];
+
   SetCROMBank(0xFF);
   
   // Initialize other devices (PowerPC, DSB, and security board initialized after ROMs loaded)
@@ -3202,10 +3213,8 @@ CModel3::CModel3(const Util::Config::Node &config)
   cromBank = NULL;
   backupRAM = NULL;
   securityRAM = NULL;
-#ifdef NET_BOARD
   netRAM = NULL;
   netBuffer = NULL;
-#endif
 
   DSB = NULL;
 
@@ -3294,10 +3303,8 @@ CModel3::~CModel3(void)
   cromBank = NULL;
   backupRAM = NULL;
   securityRAM = NULL;
-#ifdef NET_BOARD
   netRAM = NULL;
   netBuffer = NULL;
-#endif
 
   DebugLog("Destroyed Model 3\n");
 }
