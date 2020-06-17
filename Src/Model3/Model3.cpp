@@ -1283,7 +1283,8 @@ UINT32 CModel3::Read32(UINT32 addr)
       case 0:
         //printf("R32 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0xFFFF)]));
         result = *(UINT32 *)&netBuffer[(addr & 0xFFFF)];
-        return _rotl(FLIPENDIAN32(result), 16);
+        result = FLIPENDIAN32(result);
+        return ((result << 16) | (result >> 16));
         //return FLIPENDIAN32(result); // result
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1794,12 +1795,14 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 #ifdef NET_BOARD
     if (m_runNetBoard)
     {
+      UINT32 temp;
       switch ((addr & 0x3ffff) >> 16)
       {
       case 0:
         //printf("W32 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
         //*(UINT32 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN32(data);
-        *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = _rotl(FLIPENDIAN32(data), 16);
+        temp = FLIPENDIAN32(data);
+        *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = (temp << 16) | (temp >> 16);
         break;
 
       case 1: // ioreg 32bits access to 16bits range
