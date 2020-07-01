@@ -835,15 +835,15 @@ void ppc_init(const PPC_CONFIG *config)
 	
 	switch (config->bus_frequency)
 	{
-		case BUS_FREQUENCY_16MHZ: ppc.cycles_per_second = multiplier * 16000000; break;
-		case BUS_FREQUENCY_20MHZ: ppc.cycles_per_second = multiplier * 20000000; break;
-		case BUS_FREQUENCY_25MHZ: ppc.cycles_per_second = multiplier * 25000000; break;
-		case BUS_FREQUENCY_33MHZ: ppc.cycles_per_second = multiplier * 33000000; break;
-		case BUS_FREQUENCY_40MHZ: ppc.cycles_per_second = multiplier * 40000000; break;
-		case BUS_FREQUENCY_50MHZ: ppc.cycles_per_second = multiplier * 50000000; break;
-		case BUS_FREQUENCY_60MHZ: ppc.cycles_per_second = multiplier * 60000000; break;
-		case BUS_FREQUENCY_66MHZ: ppc.cycles_per_second = multiplier * 66000000; break;
-		case BUS_FREQUENCY_75MHZ: ppc.cycles_per_second = multiplier * 75000000; break;
+		case BUS_FREQUENCY_16MHZ: ppc.cycles_per_second = (int)(multiplier * 16000000); break;
+		case BUS_FREQUENCY_20MHZ: ppc.cycles_per_second = (int)(multiplier * 20000000); break;
+		case BUS_FREQUENCY_25MHZ: ppc.cycles_per_second = (int)(multiplier * 25000000); break;
+		case BUS_FREQUENCY_33MHZ: ppc.cycles_per_second = (int)(multiplier * 33000000); break;
+		case BUS_FREQUENCY_40MHZ: ppc.cycles_per_second = (int)(multiplier * 40000000); break;
+		case BUS_FREQUENCY_50MHZ: ppc.cycles_per_second = (int)(multiplier * 50000000); break;
+		case BUS_FREQUENCY_60MHZ: ppc.cycles_per_second = (int)(multiplier * 60000000); break;
+		case BUS_FREQUENCY_66MHZ: ppc.cycles_per_second = (int)(multiplier * 66000000); break;
+		case BUS_FREQUENCY_75MHZ: ppc.cycles_per_second = (int)(multiplier * 75000000); break;
 	}
 	
 	switch(config->pvr)
