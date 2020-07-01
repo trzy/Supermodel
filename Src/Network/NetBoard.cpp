@@ -78,6 +78,7 @@
 #include "Util/ByteSwap.h"
 #include "TCPSend.h"
 #include "TCPReceive.h"
+#include <algorithm>
 
 // few macros to make debugging a bit less painful
 // if NET_DEBUG is defined, printf works normally, otherwise it's compiled to nothing (ie removed)
@@ -1178,7 +1179,11 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 {
 	netRAM = netRAMPtr;
 	netBuffer = netBufferPtr;
-	m_attached = true;
+
+	std::string netboard_present = Gameinfo.netboard_present;
+	std::transform(netboard_present.begin(), netboard_present.end(), netboard_present.begin(), ::tolower);
+	m_attached = (netboard_present.compare("true") == 0) ? true : false;
+
 	test_irq = 0;
 
 	// Allocate all memory for RAM
@@ -1246,7 +1251,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	nets = std::make_unique<TCPSend>(addr_out, port_out);
 	netr = std::make_unique<TCPReceive>(port_in);
 
-	if (m_config["EmulateNet"].ValueAs<bool>()) {
+	if (m_config["EmulateNet"].ValueAs<bool>() && m_attached) {
 		while (!nets->Connect()) {
 			printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
 		}

@@ -211,6 +211,7 @@
 #include <functional>
 #include <set>
 #include <iostream>
+#include <algorithm>
 
 /******************************************************************************
  Model 3 Inputs
@@ -1864,7 +1865,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
   default:
   Unknown32:
 #ifdef NET_BOARD
-    printf("CMODEL3 : unknown W32 : %x (%x) data=%d\n", addr,addr >> 24,data);
+      if (m_runNetBoard) printf("CMODEL3 : unknown W32 : %x (%x) data=%d\n", addr,addr >> 24,data);
 #endif
     //printf("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     DebugLog("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
@@ -3023,12 +3024,17 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   
   // Print game information
   std::set<std::string> extra_hw;
+  std::string netboard_present = game.netboard_present;
+  std::transform(netboard_present.begin(), netboard_present.end(), netboard_present.begin(), ::tolower);
+
   if (DSB)
     extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << game.mpeg_board << ")");
   if (rom_set.get_rom("driveboard_program").size)
     extra_hw.insert("Drive Board");
   if (game.encryption_key)
     extra_hw.insert("Security Board");
+  if (netboard_present.compare("true")==0)
+      extra_hw.insert("Net Board");
   if (!game.version.empty())
     std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
   else
@@ -3044,6 +3050,12 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   m_game = game;
 #ifdef NET_BOARD
   NetBoard.GetGame(m_game);
+  if (OKAY != NetBoard.Init(netRAM, netBuffer))
+  {
+      return FAIL;
+  }
+
+  m_runNetBoard = m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()));
 #endif
   return OKAY;
 }
@@ -3152,13 +3164,6 @@ bool CModel3::Init(void)
     return FAIL;
   if (OKAY != SoundBoard.Init(soundROM,sampleROM))
     return FAIL;
-#ifdef NET_BOARD
-  if (OKAY != NetBoard.Init(netRAM, netBuffer)) {
-    return FAIL;
-  }
-
-  m_runNetBoard = m_game.stepping != "1.0" && (NetBoard.IsAttached() && (m_config["EmulateNet"].ValueAs<bool>()));
-#endif
 
   PCIBridge.AttachPCIBus(&PCIBus);
   PCIBus.AttachDevice(13,&GPU);

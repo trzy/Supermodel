@@ -146,6 +146,7 @@
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -236,6 +237,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -315,6 +317,7 @@
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -388,6 +391,7 @@
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -419,6 +423,7 @@
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -450,6 +455,7 @@
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -767,6 +773,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -839,6 +846,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -939,6 +947,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -1260,6 +1269,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -1346,6 +1356,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -1374,6 +1385,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -1444,6 +1456,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -1489,6 +1502,7 @@
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
       <pci_bridge>MPC106</pci_bridge>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -1532,6 +1546,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="ski" />
@@ -1605,6 +1620,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -1691,6 +1707,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -1777,6 +1794,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2419,6 +2437,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2495,6 +2514,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2522,6 +2542,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
@@ -2549,6 +2570,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
       <inputs>
         <input type="common" />
         <input type="twin_joysticks" />
