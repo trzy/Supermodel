@@ -58,7 +58,7 @@ SDL2_LIBS = `sdl2-config --libs`
 #
 
 PLATFORM_CFLAGS = $(SDL2_CFLAGS)
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++
+PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net
 
 
 ###############################################################################

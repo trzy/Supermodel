@@ -46,6 +46,8 @@ BITS = 64
 #
 SDL2_INCLUDE_DIR = c:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include/SDL2
 SDL2_LIB_DIR = c:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/lib
+#SDL2_INCLUDE_DIR = $(MINGW)/include/SDL2
+#SDL2_LIB_DIR = $(MINGW)/lib
 
 #
 # Toolchain
@@ -76,7 +78,7 @@ endif
 #
 # SDL2
 #
-SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lversion -lsetupapi
+SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lversion -lsetupapi -lsdl2_net -liphlpapi
 SDL2_CFLAGS = 
 
 #

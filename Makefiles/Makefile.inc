@@ -153,9 +153,8 @@ SRC_FILES = \
 
 ifeq ($(strip $(NET_BOARD)),1)
 	SRC_FILES += \
-		Src/Network/UDPReceive.cpp \
-		Src/Network/UDPSend.cpp \
-		Src/Network/WinSockWrap.cpp \
+		Src/Network/TCPReceive.cpp \
+		Src/Network/TCPSend.cpp \
 		Src/Network/NetBoard.cpp
 endif
 
@@ -211,7 +210,7 @@ BUILD_CFLAGS =
 OPT = -O3
 WARN = -Wall
 CSTD = -std=iso9899:2011
-CXXSTD = -std=c++11
+CXXSTD = -std=c++14
 
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC
 
