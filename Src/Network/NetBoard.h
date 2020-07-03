@@ -4,8 +4,6 @@
 #include "Types.h"
 #include "CPU/Bus.h"
 #include "OSD/Thread.h"
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <memory>
 #include "TCPSend.h"
 #include "TCPReceive.h"

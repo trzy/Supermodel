@@ -27,7 +27,7 @@
  
 #ifndef INCLUDED_SUPERMODEL_H
 #define INCLUDED_SUPERMODEL_H
-#ifdef NET_BOARD
+#if (defined NET_BOARD && defined _WIN32)
 #include "Winsock2.h" // force include winsock2 before windows.h because conflict with winsock1
 #endif
 // Used throughout Supermodel

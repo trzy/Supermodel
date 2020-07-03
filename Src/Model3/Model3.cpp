@@ -984,9 +984,9 @@ UINT8 CModel3::Read8(UINT32 addr)
       if (addr > 0xc00101ff)
       {
         printf("R8 ATTENTION OUT OF RANGE\n");
-        MessageBox(NULL, "Out of Range", NULL, MB_OK);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
       }
-      printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
+      //printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
       return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
 
     case 2:
@@ -994,7 +994,7 @@ UINT8 CModel3::Read8(UINT32 addr)
       if (addr > 0xc002ffff)
       {
         printf("R8 ATTENTION OUT OF RANGE\n");
-        MessageBox(NULL, "Out of Range", NULL, MB_OK);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
       }
       //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
       return netRAM[((addr & 0x1FFFF) / 2)];
@@ -1004,7 +1004,7 @@ UINT8 CModel3::Read8(UINT32 addr)
     
     default:
       printf("R8 ATTENTION OUT OF RANGE\n");
-      MessageBox(NULL, "Out of Range", NULL, MB_OK);
+      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
       break;
     }
   }
@@ -1130,7 +1130,7 @@ UINT16 CModel3::Read16(UINT32 addr)
   default:
 #ifdef NET_BOARD
     printf("CMODEL3 : unknown R16 : %x (%x)\n", addr, addr >> 24);
-    MessageBox(NULL, "CMODEL3 : Unknown R16", NULL, MB_OK);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "CMODEL3 : Unknown R16", NULL);
 #endif
     break;
   }
@@ -1297,10 +1297,10 @@ UINT32 CModel3::Read32(UINT32 addr)
 
         UINT32 test;
         test = (*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
-        if (((FLIPENDIAN32(test) & 0x00ff0000) != 0x00900000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00a00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00b00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00800000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00f00000)) 
+        /*if (((FLIPENDIAN32(test) & 0x00ff0000) != 0x00900000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00a00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00b00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00800000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00f00000)) 
         {
-          printf("R32 ioreg @%x=%04x\n", (addr /*& 0x1FF*/), FLIPENDIAN32(test) >> 16);
-        }
+          printf("R32 ioreg @%x=%04x\n", (addr), FLIPENDIAN32(test) >> 16);
+        }*/
         result = (*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]) & 0x0000ffff;
         return FLIPENDIAN32(result);
 
@@ -1469,7 +1469,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
           printf("W8 ATTENTION OUT OF RANGE\n");
         }
 
-        printf("W8 ioreg @%x<-%x\n", (addr & 0x1FF), data);
+        //printf("W8 ioreg @%x<-%x\n", (addr & 0x1FF), data);
         *(UINT8 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = data;
         break;
 
@@ -1812,7 +1812,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
           printf("W32 ATTENTION OUT OF RANGE\n");
         }
 
-        printf("W32 ioreg @%x<-%04x\n", (addr /*& 0x1FF*/), data>>16);
+        //printf("W32 ioreg @%x<-%04x\n", (addr /*& 0x1FF*/), data>>16);
         *(UINT16 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = FLIPENDIAN16(data >> 16);
         break;
 
