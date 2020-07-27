@@ -29,8 +29,8 @@
  * - Implement multiple keyboard and mouse support.
  */
 
-#include "SDLInputSystem.h"
 #include "Supermodel.h"
+#include "SDLInputSystem.h"
 
 #include <vector>
 using namespace std;
@@ -387,7 +387,7 @@ bool CSDLInputSystem::Poll()
 	  default:
 	    break;
 		case SDL_QUIT:
-			return false; 
+			return false;
 		case SDL_MOUSEWHEEL:
 			if (e.button.y > 0)
 			{

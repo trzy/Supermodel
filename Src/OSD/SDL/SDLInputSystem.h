@@ -6,7 +6,7 @@
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,10 +18,10 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * SDLInputSystem.h
- * 
+ *
  * Header file for SDL input system.
  */
 
@@ -31,12 +31,7 @@
 #include "Types.h"
 #include "Inputs/InputSource.h"
 #include "Inputs/InputSystem.h"
-
-#ifdef SUPERMODEL_OSX
-#include <SDL/SDL.h>
-#else
-#include <SDL.h>
-#endif
+#include "SDLIncludes.h"
 
 #include <vector>
 using namespace std;
@@ -74,7 +69,7 @@ private:
 	short m_mouseWheelDir;
 	Uint8 m_mouseButtons;
 
-	/* 
+	/*
 	 * Opens all attached joysticks.
 	 */
 	void OpenJoysticks();
@@ -97,7 +92,7 @@ protected:
 	bool IsKeyPressed(int kbdNum, int keyIndex);
 
 	int GetMouseAxisValue(int mseNum, int axisNum);
-	
+
 	int GetMouseWheelDir(int mseNum);
 
 	bool IsMouseButPressed(int mseNum, int butNum);
@@ -118,10 +113,10 @@ public:
 
 	~CSDLInputSystem();
 
-	int GetNumKeyboards();	
+	int GetNumKeyboards();
 
 	int GetNumMice();
-	
+
 	int GetNumJoysticks();
 
 	const KeyDetails *GetKeyDetails(int kbdNum);

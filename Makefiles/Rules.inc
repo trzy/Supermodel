@@ -1,12 +1,13 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+## Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+##                     Harry Tuttle, and Spindizzi
 ##
 ## This file is part of Supermodel.
 ##
 ## Supermodel is free software: you can redistribute it and/or modify it under
-## the terms of the GNU General Public License as published by the Free 
+## the terms of the GNU General Public License as published by the Free
 ## Software Foundation, either version 3 of the License, or (at your option)
 ## any later version.
 ##
@@ -20,59 +21,10 @@
 ##
 
 #
-# Makefile.inc
+# Rules.inc
 #
-# Core GNU Makefile, included by all (platform-specific) top-level Makefiles.
+# Build rules, included by all (platform-specific) top-level Makefiles.
 #
-
-
-###############################################################################
-# Build Options
-###############################################################################
-
-#
-# Verbose progression
-#
-VERBOSE =
-ifneq ($(filter $(strip $(VERBOSE)),0 1),$(strip $(VERBOSE)))
-	override VERBOSE =
-endif
-SILENT = @
-ifeq ($(strip $(VERBOSE)),1)
-	SILENT =
-endif
-
-#
-# Enable render state analyser for the legacy 3D engine (will slow down emulation!)
-#
-DEBUG =
-ifneq ($(filter $(strip $(DEBUG)),0 1),$(strip $(DEBUG)))
-	override DEBUG =
-endif
-
-#
-# Enable support for Model3 Net Board emulation
-#
-NET_BOARD =
-ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
-	override NET_BOARD =
-endif
-
-#
-# Enable Bart's new (experimental) Real3D frame timing
-#
-NEW_FRAME_TIMING =
-ifneq ($(filter $(strip $(NEW_FRAME_TIMING)),0 1),$(strip $(NEW_FRAME_TIMING)))
-	override NEW_FRAME_TIMING =
-endif
-
-#
-# Include console-based debugger in emulator ('yes' or 'no')
-#
-ENABLE_DEBUGGER =
-ifneq ($(filter $(strip $(ENABLE_DEBUGGER)),0 1),$(strip $(ENABLE_DEBUGGER)))
-	override ENABLE_DEBUGGER =
-endif
 
 
 ###############################################################################
@@ -185,7 +137,7 @@ endif
 OBJ_FILES = $(foreach file,$(SRC_FILES),$(OBJ_DIR)/$(basename $(notdir $(file))).o)
 
 #
-# Deduce include directories from the source file list. The sort function 
+# Deduce include directories from the source file list. The sort function
 # removes duplicates and is used to construct a set.
 #
 INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
@@ -243,7 +195,7 @@ endif
 # Targets
 ###############################################################################
 
-# 
+#
 # Default target: build Supermodel binary. Must be specified *before* the auto-
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
@@ -258,7 +210,7 @@ $(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
 
 $(BIN_DIR):
 	$(info Creating directory     : $(BIN_DIR))
-	$(SILENT)mkdir $(BIN_DIR) 
+	$(SILENT)mkdir $(BIN_DIR)
 
 $(OBJ_DIR):
 	$(info Creating directory     : $(OBJ_DIR))
@@ -306,7 +258,7 @@ $(OBJ_DIR)/%.o:	%.c
 # All generated source files are emitted to the object directory. For MSVC,
 # INLINE must be redefined as "static __inline", which is the syntax in C mode.
 #
-# The .exe suffix is absolutely required for native Windows non-MSYS builds! 
+# The .exe suffix is absolutely required for native Windows non-MSYS builds!
 #
 
 MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe # do not remove the .exe suffix!
@@ -323,23 +275,23 @@ $(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c
 $(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Generating 68K emulator: $@)
 	@$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
-	
+
 $(OBJ_DIR)/m68kcpu.o:	Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
 
-$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) 
+$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@

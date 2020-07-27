@@ -21,9 +21,9 @@
 ##
 
 #
-# Makefile.UNIX
+# Options.inc
 #
-# Makefile for UNIX/Linux systems.
+# Build options.
 #
 
 
@@ -31,49 +31,46 @@
 # Build Options
 ###############################################################################
 
-DELETE = rm -d -r -f
-
-
-###############################################################################
-# Platform Configuration
 #
-# Edit library and include paths as needed.
-###############################################################################
-
+# Verbose progression
 #
-# Must be included first
-#
-include Makefiles/Options.inc
+VERBOSE =
+ifneq ($(filter $(strip $(VERBOSE)),0 1),$(strip $(VERBOSE)))
+	override VERBOSE =
+endif
+SILENT = @
+ifeq ($(strip $(VERBOSE)),1)
+	SILENT =
+endif
 
 #
-# Toolchain
+# Enable render state analyser for the legacy 3D engine (will slow down emulation!)
 #
-CC = gcc
-CXX = g++
-LD = gcc
-
-#
-# SDL
-#
-
-SDL2_CFLAGS = `sdl2-config --cflags`
-SDL2_LIBS = `sdl2-config --libs`
+DEBUG =
+ifneq ($(filter $(strip $(DEBUG)),0 1),$(strip $(DEBUG)))
+	override DEBUG =
+endif
 
 #
-#	UNIX-specific
+# Enable support for Model3 Net Board emulation
 #
+NET_BOARD =
+ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
+	override NET_BOARD =
+endif
 
-PLATFORM_CFLAGS = $(SDL2_CFLAGS)
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net
+#
+# Enable Bart's new (experimental) Real3D frame timing
+#
+NEW_FRAME_TIMING =
+ifneq ($(filter $(strip $(NEW_FRAME_TIMING)),0 1),$(strip $(NEW_FRAME_TIMING)))
+	override NEW_FRAME_TIMING =
+endif
 
-
-###############################################################################
-# Core Makefile
-###############################################################################
-
-include Makefiles/Rules.inc
-
-clean:
-	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
-	$(SILENT)$(DELETE) $(BIN_DIR)
-	$(SILENT)$(DELETE) $(OBJ_DIR)
+#
+# Include console-based debugger in emulator ('yes' or 'no')
+#
+ENABLE_DEBUGGER =
+ifneq ($(filter $(strip $(ENABLE_DEBUGGER)),0 1),$(strip $(ENABLE_DEBUGGER)))
+	override ENABLE_DEBUGGER =
+endif

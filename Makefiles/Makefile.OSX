@@ -1,18 +1,13 @@
-#
-# TODO: MacOS port is probably broken. Someone with MacOS needs to figure out
-# how to compile with SDL2.
-#
-
-
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+## Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+##                     Harry Tuttle, and Spindizzi
 ##
 ## This file is part of Supermodel.
 ##
 ## Supermodel is free software: you can redistribute it and/or modify it under
-## the terms of the GNU General Public License as published by the Free 
+## the terms of the GNU General Public License as published by the Free
 ## Software Foundation, either version 3 of the License, or (at your option)
 ## any later version.
 ##
@@ -28,7 +23,7 @@
 #
 # Makefile.OSX
 #
-# Makefile for Mac OS X systems using gcc.
+# Makefile for Mac OS X systems using clang.
 #
 
 
@@ -46,11 +41,16 @@ DELETE = rm -d -r -f
 ###############################################################################
 
 #
+# Must be included first
+#
+include Makefiles/Options.inc
+
+#
 # Toolchain
 #
-CC = gcc
-CXX = g++
-LD = gcc
+CC = clang
+CXX = clang
+LD = clang
 
 #
 # SDL
@@ -58,12 +58,15 @@ LD = gcc
 
 SDL_CFLAGS =
 SDL_LIBS = -framework SDL2 -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
+ifeq ($(strip $(NET_BOARD)),1)
+	SDL_LIBS += -framework SDL2_net
+endif
 
 #
 #	OSX-specific
 #
 
-PLATFORM_CFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -DUSE_FILE32API -F/Library/Frameworks/
+PLATFORM_CFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -F/Library/Frameworks/
 PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/Library/Frameworks/
 
 
@@ -71,9 +74,9 @@ PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/Library/Frameworks/
 # Core Makefile
 ###############################################################################
 
-include Makefiles/Makefile.inc
+include Makefiles/Rules.inc
 
-clean:	 
+clean:
 	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
 	$(SILENT)$(DELETE) $(BIN_DIR)
 	$(SILENT)$(DELETE) $(OBJ_DIR)

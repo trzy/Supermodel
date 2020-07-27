@@ -2,7 +2,7 @@
 #define _TCPSEND_H_
 
 #include <string>
-#include "SDL_net.h"
+#include "SDLIncludes.h"
 
 class TCPSend
 {

@@ -4,7 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <vector>
-#include "SDL_net.h"
+#include "SDLIncludes.h"
 
 class TCPReceive
 {

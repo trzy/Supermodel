@@ -18,7 +18,7 @@ bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename)
   }
   zip->zipfilenames.push_back(zipfilename);
   zip->zfs.push_back(zf);
-  
+
   // Identify all files in zip archive
   int err = UNZ_OK;
   for (err = unzGoToFirstFile(zf); err == UNZ_OK; err = unzGoToNextFile(zf))
@@ -50,7 +50,7 @@ bool GameLoader::FileExistsInZipArchive(const File::ptr_t &file, const ZipArchiv
     auto it = zip.files_by_crc.find(file->crc32);
     return it != zip.files_by_crc.end();
   }
-  
+
   // Try to lookup by name
   for (auto &v: zip.files_by_crc)
   {
@@ -75,7 +75,7 @@ const GameLoader::ZippedFile *GameLoader::LookupFile(const File::ptr_t &file, co
     }
     return &it->second;
   }
-  
+
   // Try to lookup by name
   for (auto &v: zip.files_by_crc)
   {
@@ -100,7 +100,7 @@ bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_s
     ErrorLog("Unable to locate '%s' in '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
     return true;
   }
-  
+
   // Read it in
   if (UNZ_OK != unzOpenCurrentFile(zipped_file->zf))
   {
@@ -109,14 +109,14 @@ bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_s
   }
   *file_size = zipped_file->uncompressed_size;
   buffer->reset(new uint8_t[*file_size], std::default_delete<uint8_t[]>());
-  ZPOS64_T bytes_read = unzReadCurrentFile(zipped_file->zf, buffer->get(), *file_size);
+  size_t bytes_read = (size_t) unzReadCurrentFile(zipped_file->zf, buffer->get(), *file_size);
   if (bytes_read != *file_size)
   {
     ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
     unzCloseCurrentFile(zipped_file->zf);
     return true;
   }
-  
+
   // And close it
   if (UNZ_CRCERROR == unzCloseCurrentFile(zipped_file->zf))
     ErrorLog("CRC error reading '%s' from '%s'. File may be corrupt.", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
@@ -284,7 +284,7 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
         {
           if (region_node.Key() != "region")
             continue;
-          
+
           // Look up region structure or create new one if needed
           std::string region_name = region_node["name"].Value<std::string>();
           auto it = regions_by_name.find(region_name);
@@ -307,25 +307,25 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
               continue;
             files.push_back(file);
           }
-          
+
           // Check to ensure that some files were defined in the region
           if (files.empty())
             ErrorLog("%s: No files defined in region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
           else
             regions_by_name[region->region_name] = region;
         }
-        
+
         // ROM patches, if any
         for (auto &patches_node: roms_node)
         {
           if (patches_node.Key() != "patches")
             continue;
-          
+
           for (auto &patch_node: patches_node)
           {
             if (MissingAttrib(*this, patch_node, "region") ||
                 MissingAttrib(*this, patch_node, "bits") ||
-                MissingAttrib(*this, patch_node, "offset") || 
+                MissingAttrib(*this, patch_node, "offset") ||
                 MissingAttrib(*this, patch_node, "value"))
               continue;
             std::string region = patch_node["region"].ValueAs<std::string>();
@@ -339,7 +339,7 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
           }
         }
       }
-      
+
       // Check to ensure that some ROM regions were defined for the game
       if (regions_by_name.empty())
         ErrorLog("%s: No ROM regions defined for '%s'.", m_xml_filename.c_str(), game_name.c_str());
@@ -371,7 +371,7 @@ bool GameLoader::MergeChildrenWithParents()
 
     auto &child_regions = v1.second;
     auto &parent_regions = m_regions_by_game[game.parent];
-    
+
     // Rebuild child regions by copying over all parent regions first, then
     // merge in files from equivalent child regions
     RegionsByName_t new_regions;
@@ -382,7 +382,7 @@ bool GameLoader::MergeChildrenWithParents()
       auto &region_name = v2.first;
       new_regions[region_name] = std::make_shared<Region>(*v2.second);
       auto &new_region = new_regions[region_name];
-      
+
       // Replace equivalent files from child in parent region, appending any
       // new ones
       if (child_regions.find(region_name) != child_regions.end())
@@ -403,7 +403,7 @@ bool GameLoader::MergeChildrenWithParents()
         }
       }
     }
-    
+
     // Simply append any region in child that does *not* exist in parent
     for (auto &v2: child_regions)
     {
@@ -413,11 +413,11 @@ bool GameLoader::MergeChildrenWithParents()
         new_regions[v2.first] = v2.second;
       }
     }
-    
+
     // Save the final result
     m_regions_by_merged_game[v1.first] = new_regions;
   }
-  
+
   return error;
 }
 
@@ -518,7 +518,7 @@ void GameLoader::IdentifyGamesInZipArchive(
       }
     }
   }
-  
+
   /*
    * Corner case: some child ROM sets legitimately share files, which can fool
    * us into thinking two games are partially present. Need to remove the one
@@ -541,7 +541,7 @@ void GameLoader::IdentifyGamesInZipArchive(
       /*
        * If the these two games have a different number of files in the zip
        * archive, but one consists only of the overlapping files, we can safely
-       * conclude that these files represent only the game with the larger 
+       * conclude that these files represent only the game with the larger
        * number of files present. Otherwise, if only the overlapping files are
        * present for both, we have a genuine ambiguity and hence do nothing.
        */
@@ -553,7 +553,7 @@ void GameLoader::IdentifyGamesInZipArchive(
   {
     files_found_by_game.erase(game_name);
   }
-  
+
   // Find the missing files for each game we found in the zip archive, then use
   // this to determine whether the complete game exists
   auto compare = [](const File::ptr_t &a, const File::ptr_t &b) { return a->filename < b->filename; };
@@ -592,12 +592,12 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
   std::set<std::string> complete_games;
   std::map<std::string, std::set<File::ptr_t>> files_missing_by_game;
   IdentifyGamesInZipArchive(&complete_games, &files_missing_by_game, zip, m_regions_by_game);
-  
+
   // Find complete, merged games
   std::set<std::string> complete_merged_games;
   std::map<std::string, std::set<File::ptr_t>> files_missing_by_merged_game;
   IdentifyGamesInZipArchive(&complete_merged_games, &files_missing_by_merged_game, zip, m_regions_by_merged_game);
-  
+
   /*
    * Find incomplete child games by sorting child games out from the unmerged
    * games results and pruning out complete merged games. Don't care about
@@ -623,7 +623,7 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
   {
     incomplete_child_games.erase(game_name);
   }
-  
+
   // Complete merged games take highest precedence
   for (auto &game_name: complete_merged_games)
   {
@@ -635,17 +635,17 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
     // complete merged games from missing file list.
     files_missing_by_game.erase(parent);
   }
-  
+
   // Any remaining incomplete games from the unmerged set are legitimate errors
   for (auto &v: files_missing_by_game)
   {
     for (auto &file: v.second)
     {
-      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zipfilename.c_str(), v.first.c_str());   
+      ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zipfilename.c_str(), v.first.c_str());
     }
     ErrorLog("Ignoring game '%s' in '%s' because it is missing files.", v.first.c_str(), zipfilename.c_str());
   }
-  
+
   // Choose game: complete merged game > incomplete child game > complete
   // unmerged game
   if (!complete_merged_games.empty())
@@ -663,7 +663,7 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
     ErrorLog("No complete Model 3 games found in '%s'.", zipfilename.c_str());
     return;
   }
-  
+
   // Print out which game we chose from valid candidates in the zip file
   std::set<std::string> candidates(complete_games);
   candidates.insert(complete_merged_games.begin(), complete_merged_games.end());
@@ -775,7 +775,7 @@ bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const Z
       error |= LoadRegion(&rom, region, zip);
     }
   }
-  
+
   // Attach the patches and do some more error checking here
   auto &patches_by_region = m_patches_by_game.find(game_name)->second;
   for (auto &v: patches_by_region)
@@ -802,7 +802,7 @@ std::string StripFilename(const std::string &filepath)
       break;
     }
   }
-  
+
   // If none found, there is directory component here
   if (last_slash == std::string::npos)
     return "";
@@ -814,12 +814,12 @@ std::string StripFilename(const std::string &filepath)
 bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilename) const
 {
   *game = Game();
-  
+
   // Read the zip contents
   ZipArchive zip;
   if (LoadZipArchive(&zip, zipfilename))
     return true;
-  
+
   // Pick the game to load (there could be multiple ROM sets in a zip file)
   std::string chosen_game;
   bool missing_parent_roms = false;
@@ -829,7 +829,7 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
 
   // Return game information to caller
   *game = m_game_info_by_game.find(chosen_game)->second;
-  
+
   // Bring in additional parent ROM set if needed
   if (missing_parent_roms)
   {
@@ -841,7 +841,7 @@ bool GameLoader::Load(Game *game, ROMSet *rom_set, const std::string &zipfilenam
     }
   }
 
-  // Load 
+  // Load
   bool error = LoadROMs(rom_set, game->name, zip);
   if (error)
     *game = Game();

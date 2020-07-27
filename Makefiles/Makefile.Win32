@@ -1,12 +1,13 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+## Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+##                     Harry Tuttle, and Spindizzi
 ##
 ## This file is part of Supermodel.
 ##
 ## Supermodel is free software: you can redistribute it and/or modify it under
-## the terms of the GNU General Public License as published by the Free 
+## the terms of the GNU General Public License as published by the Free
 ## Software Foundation, either version 3 of the License, or (at your option)
 ## any later version.
 ##
@@ -37,6 +38,11 @@
 ###############################################################################
 
 #
+# Must be included first
+#
+include Makefiles/Options.inc
+
+#
 # Bitness of build ('32' or '64')
 #
 BITS = 64
@@ -44,15 +50,12 @@ BITS = 64
 #
 # Path to SDL2
 #
-SDL2_INCLUDE_DIR = c:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include/SDL2
-SDL2_LIB_DIR = c:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/lib
-#SDL2_INCLUDE_DIR = $(MINGW)/include/SDL2
-#SDL2_LIB_DIR = $(MINGW)/lib
+SDL2_INCLUDE_DIR = C:\TDM-GCC-64\x86_64-w64-mingw32\include\SDL2
+SDL2_LIB_DIR = C:\TDM-GCC-64\x86_64-w64-mingw32\lib
 
 #
 # Toolchain
 #
-
 CC = gcc
 CXX = g++
 LD = g++
@@ -78,8 +81,11 @@ endif
 #
 # SDL2
 #
-SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lversion -lsetupapi -lsdl2_net -liphlpapi
-SDL2_CFLAGS = 
+SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lversion -lsetupapi -liphlpapi
+SDL2_CFLAGS =
+ifeq ($(strip $(NET_BOARD)),1)
+	SDL2_LIBS += -lSDL2_net
+endif
 
 #
 # MinGW/Windows-specific
@@ -100,9 +106,9 @@ PLATFORM_SRC_FILES = \
 	Src/OSD/Windows/DirectInputSystem.cpp \
 	Src/OSD/Windows/WinOutputs.cpp
 
-include Makefiles/Makefile.inc
+include Makefiles/Rules.inc
 
-clean:	 
+clean:
 	$(SILENT)echo Cleaning up $(BIN_DIR) and $(OBJ_DIR)...
 	$(SILENT)$(DELETE) $(BIN_DIR)
 	$(SILENT)$(DELETE) $(OBJ_DIR)

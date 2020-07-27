@@ -6,7 +6,7 @@
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,22 +18,15 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Audio.cpp
- * 
+ *
  * SDL audio playback. Implements the OSD audio interface.
  */
 
 #include "Supermodel.h"
-
-#ifdef SUPERMODEL_OSX
-#include <SDL/SDL.h>
-#include <SDL/SDL_audio.h>
-#else
-#include <SDL.h>
-#include <SDL_audio.h>
-#endif
+#include "SDLIncludes.h"
 
 #include <cmath>
 #include <algorithm>
@@ -45,7 +38,7 @@
 
 #define BYTES_PER_SAMPLE (NUM_CHANNELS * sizeof(INT16))
 #define SAMPLES_PER_FRAME (SAMPLE_RATE / SUPERMODEL_FPS)
-#define BYTES_PER_FRAME (SAMPLES_PER_FRAME * BYTES_PER_SAMPLE) 
+#define BYTES_PER_FRAME (SAMPLES_PER_FRAME * BYTES_PER_SAMPLE)
 
 #define MAX_LATENCY 100
 
@@ -87,9 +80,9 @@ void SetAudioEnabled(bool newEnabled)
 
 static void PlayCallback(void *data, Uint8 *stream, int len)
 {
-	//printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n", 
+	//printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
 	//	len, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
-	
+
 	// Get current write position and adjust it if write has wrapped but play position has not
 	UINT32 adjWritePos = writePos;
 	if (writeWrapped)
@@ -102,7 +95,7 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 
 		//printf("Audio buffer under-run #%u in PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
 		//	underRuns, len, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
-		
+
 		// See what action to take on under-run
 		if (underRunLoop)
 		{
@@ -113,7 +106,7 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 			if (playPos >= audioBufferSize)
 				// If so, wrap it around to beginning again (but keep write wrapped flag as before)
 				playPos -= audioBufferSize;
-			else 
+			else
 				// Otherwise, set write wrapped flag as will now appear as if write has wrapped but play position has not
 				writeWrapped = true;
 		}
@@ -124,7 +117,7 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 			return;
 		}
 	}
-	
+
 	INT8* src1;
 	INT8* src2;
 	UINT32 len1;
@@ -153,7 +146,7 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 	{
 		// If so, copy play region into audio output stream
 		memcpy(stream, src1, len1);
-		
+
 		// Also, if not looping on under-runs then blank region out
 		if (!underRunLoop)
 			memset(src1, 0, len1);
@@ -193,10 +186,10 @@ static void PlayCallback(void *data, Uint8 *stream, int len)
 static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, void *dest, bool flipStereo)
 {
 	INT16 *p = (INT16*)dest;
-	
+
 #if (NUM_CHANNELS == 1)
 	for (unsigned i = 0; i < numSamples; i++)
-		*p++ = leftBuffer[i] + rightBuffer[i];	// TODO: these should probably be clipped! 
+		*p++ = leftBuffer[i] + rightBuffer[i];	// TODO: these should probably be clipped!
 #else
 	if (flipStereo) // swap left and right channels
 	{
@@ -242,7 +235,7 @@ bool OpenAudio()
 	fmt.format = AUDIO_S16SYS;
 	fmt.samples = playSamples;
 	fmt.callback = PlayCallback;
-	
+
 	// Force SDL to use the format we requested; it will convert if necessary
 	if (SDL_OpenAudio(&fmt, nullptr) < 0)
 		return ErrorLog("Unable to open 44.1KHz 2-channel audio with SDL: %s\n", SDL_GetError());
@@ -255,10 +248,10 @@ bool OpenAudio()
 	if (audioBuffer == NULL)
 	{
 		float audioBufMB = (float)audioBufferSize / (float)0x100000;
-		return ErrorLog("Insufficient memory for audio latency buffer (need %1.1f MB).", audioBufMB);	
+		return ErrorLog("Insufficient memory for audio latency buffer (need %1.1f MB).", audioBufMB);
 	}
 	memset(audioBuffer, 0, sizeof(INT8) * audioBufferSize);
-	
+
 	// Set initial play position to be beginning of buffer and initial write position to be half-way into buffer
 	playPos = 0;
 	writePos = std::min<int>(audioBufferSize - BYTES_PER_FRAME, (BYTES_PER_FRAME + audioBufferSize) / 2);
@@ -289,16 +282,16 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, boo
 	// Mix together left and right channels into single chunk of data
 	INT16 mixBuffer[NUM_CHANNELS * SAMPLES_PER_FRAME];
 	MixChannels(numSamples, leftBuffer, rightBuffer, mixBuffer, flipStereo);
-	
+
 	// Lock SDL audio callback so that it doesn't interfere with following code
 	SDL_LockAudio();
-	
+
 	// Calculate number of bytes for current sound chunk
 	UINT32 numBytes = numSamples * BYTES_PER_SAMPLE;
-	
+
 	// Get end of current play region (writing must occur past this point)
 	UINT32 playEndPos = playPos + BYTES_PER_FRAME;
-	
+
 	// Undo any wrap-around of the write position that may have occured to create following ordering: playPos < playEndPos < writePos
 	if (playEndPos > writePos && writeWrapped)
 		writePos += audioBufferSize;
@@ -310,18 +303,18 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, boo
 
 		//printf("Audio buffer under-run #%u in OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u, numBytes = %u]\n",
 		//	underRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
-		
+
 		// See what action to take on under-run
 		if (underRunLoop)
 		{
 			// If loop, then move play position back to beginning of data in buffer
 			playPos = writePos + numBytes + BYTES_PER_FRAME;
-			
+
 			// Check if play position has moved past end of buffer
 			if (playPos >= audioBufferSize)
 				// If so, wrap it around to beginning again (but keep write wrapped flag as before)
 				playPos -= audioBufferSize;
-			else 
+			else
 			{
 				// Otherwise, set write wrapped flag as will now appear as if write has wrapped but play position has not
 				writeWrapped = true;
@@ -341,7 +334,7 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, boo
 
 	// Check if write position has caught up with play region and now overlaps it (ie buffer over-run)
 	bool overRun = writePos + numBytes > playPos + audioBufferSize;
-	
+
 	bool bufferFull = writePos + 2 * BYTES_PER_FRAME > playPos + audioBufferSize;
 
 	// Move write position back to within buffer
@@ -355,7 +348,7 @@ bool OutputAudio(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuffer, boo
 
 		//printf("Audio buffer over-run #%u in OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u, numBytes = %u]\n",
 		//	overRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
-		
+
 		bufferFull = true;
 
 		// Discard current chunk of data
