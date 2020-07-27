@@ -1553,6 +1553,10 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- remove driveboard error -->
+        <patch region="crom" bits="32" offset="0x4d06f4" value="0x41860030" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20355.20" crc32="0x7A784E67" />
         <file offset="2" name="epr-20354.18" crc32="0xACA62BF8" />
