@@ -281,6 +281,10 @@ void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 	// Update palette if required
 	if (addr >= 0x100000)
     {
+		if (data >> 16) {
+			int debug = 0;
+		}
+
 		addr -= 0x100000;
 		unsigned color = addr/4;	// color index
 		

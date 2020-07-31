@@ -28,7 +28,7 @@
 #ifndef INCLUDED_SHADER_H
 #define INCLUDED_SHADER_H
 
-#include "Pkgs/glew.h"
+#include <GL/glew.h>
 #include <string>
 
 /*

@@ -56,7 +56,7 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
-#include "Pkgs/glew.h"
+#include <GL/glew.h>
 
 #include "Supermodel.h"
 #include "Util/Format.h"

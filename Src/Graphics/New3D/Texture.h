@@ -2,7 +2,7 @@
 #define _TEXTURE_H_
 
 #include "Types.h"
-#include "Pkgs/glew.h"	//arg
+#include <GL/glew.h>
 
 namespace New3D {
   

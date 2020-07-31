@@ -275,7 +275,7 @@
  */
 
 #include <cstring>
-#include "Pkgs/glew.h"
+#include <GL/glew.h>
 #include "Supermodel.h"
 #include "Graphics/Shaders2D.h" // fragment and vertex shaders
 
@@ -300,6 +300,7 @@ template <int bits, bool alphaTest, bool clip>
 static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, int patternLine, const uint32_t *vram, const uint32_t *palette, uint16_t mask)
 {
   static_assert(bits == 4 || bits == 8, "Tiles are either 4- or 8-bit");
+
 
   // For 8-bit pixels, each line of tile pattern is two words
   if (bits == 8)

@@ -29,7 +29,7 @@
 #ifndef INCLUDED_NEW3D_H
 #define INCLUDED_NEW3D_H
 
-#include "Pkgs/glew.h"
+#include <GL/glew.h>
 #include "Types.h"
 #include "TextureSheet.h"
 #include "Graphics/IRender3D.h"

@@ -1,7 +1,7 @@
 #ifndef _GLSLSHADER_H_
 #define _GLSLSHADER_H_
 
-#include "Pkgs/glew.h"
+#include <GL/glew.h>
 
 class GLSLShader {
 
