@@ -301,7 +301,6 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
 {
   static_assert(bits == 4 || bits == 8, "Tiles are either 4- or 8-bit");
 
-
   // For 8-bit pixels, each line of tile pattern is two words
   if (bits == 8)
     patternLine *= 2;
