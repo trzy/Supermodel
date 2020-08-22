@@ -2454,7 +2454,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x41:      /* OUT (C),B */
       cycles -= cycleTables[2][0x41];
-      OUTPUT(lreg(BC), BC);
+      OUTPUT(lreg(BC), hreg(BC));
       break;
     case 0x42:      /* SBC HL,BC */
       cycles -= cycleTables[2][0x42];
@@ -2505,7 +2505,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x49:      /* OUT (C),C */
       cycles -= cycleTables[2][0x49];
-      OUTPUT(lreg(BC), BC);
+      OUTPUT(lreg(BC), lreg(BC));
       break;
     case 0x4A:      /* ADC HL,BC */
       cycles -= cycleTables[2][0x4A];
@@ -2544,7 +2544,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x51:      /* OUT (C),D */
       cycles -= cycleTables[2][0x51];
-      OUTPUT(lreg(BC), DE);
+      OUTPUT(lreg(BC), hreg(DE));
       break;
     case 0x52:      /* SBC HL,DE */
       cycles -= cycleTables[2][0x52];
@@ -2582,7 +2582,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x59:      /* OUT (C),E */
       cycles -= cycleTables[2][0x59];
-      OUTPUT(lreg(BC), DE);
+      OUTPUT(lreg(BC), lreg(DE));
       break;
     case 0x5A:      /* ADC HL,DE */
       cycles -= cycleTables[2][0x5A];
@@ -2620,7 +2620,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x61:      /* OUT (C),H */
       cycles -= cycleTables[2][0x61];
-      OUTPUT(lreg(BC), HL);
+      OUTPUT(lreg(BC), hreg(HL));
       break;
     case 0x62:      /* SBC HL,HL */
       cycles -= cycleTables[2][0x62];
@@ -2658,7 +2658,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x69:      /* OUT (C),L */
       cycles -= cycleTables[2][0x69];
-      OUTPUT(lreg(BC), HL);
+      OUTPUT(lreg(BC), lreg(HL));
       break;
     case 0x6A:      /* ADC HL,HL */
       cycles -= cycleTables[2][0x6A];
@@ -2726,7 +2726,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x79:      /* OUT (C),A */
       cycles -= cycleTables[2][0x79];
-      OUTPUT(lreg(BC), AF);
+      OUTPUT(lreg(BC), hreg(AF));
       break;
     case 0x7A:      /* ADC HL,SP */
       cycles -= cycleTables[2][0x7A];
