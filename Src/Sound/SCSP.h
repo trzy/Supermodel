@@ -24,7 +24,7 @@
  * 
  * Header file defining for SCSP emulation.
  */
-
+#define MAX_SCSP	2
 #ifndef INCLUDED_SCSP_H
 #define INCLUDED_SCSP_H
 

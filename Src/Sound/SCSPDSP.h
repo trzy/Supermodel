@@ -38,6 +38,7 @@ struct _SCSPDSP
 {
 //Config
 	UINT16 *SCSPRAM;
+	UINT32 SCSPRAM_LENGTH;
 	unsigned int RBP;	//Ring buf pointer
 	unsigned int RBL;	//Delay ram (Ring buffer) size in words
 

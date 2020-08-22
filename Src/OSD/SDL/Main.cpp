@@ -1371,6 +1371,8 @@ static Util::Config::Node DefaultConfig()
   config.Set("EmulateDSB", true);
   config.Set("SoundVolume", "100");
   config.Set("MusicVolume", "100");
+  // Other sound options
+  config.Set("LegacySoundDSP", false); // New config option for games that do not play correctly with MAME's SCSP sound core.
   // CDriveBoard
 #ifdef SUPERMODEL_WIN32
   config.Set("ForceFeedback", false);
@@ -1469,6 +1471,8 @@ static void Help(void)
   puts("  -flip-stereo            Swap left and right audio channels");
   puts("  -no-sound               Disable sound board emulation (sound effects)");
   puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
+  puts("  -legacy-sound           Enable ElSemi's legacy SCSP DSP emulator from 0.2a. Recommended for Sega Rally 2 as engine sound does not work with MAME's implementation.");
+  puts("  -no-legacy-sound        Disable ElSemi's legacy SCSP DSP emulator and use MAME's implementation instead");
   puts("");
 #ifdef NET_BOARD
   puts("Net Options:");
