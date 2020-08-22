@@ -574,24 +574,28 @@
       <encryption_key>0x2923aa91</encryption_key>
     </hardware>
     <roms>
+    	<patches>
+        <!-- Skips over cabinet network error -->
+        <patch region="crom" bits="32" offset="0x4a2b7c" value="0x60000000" />
+      </patches>
       <!-- Hand written SEGA labels in this form:  TITLE: QQ  ROM NO: IC17  CHECK SUM: 551B  9/12-'99 -->
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="qq.ic20" crc32="0xB12FE61C" />
-        <file offset="2" name="qq.ic19" crc32="0xCA02F571" /> <!-- BAD_DUMP -->
-        <file offset="4" name="qq.ic18" crc32="0xE33DA02F" /> <!-- BAD_DUMP -->
-        <file offset="6" name="qq.ic17" crc32="0x1DB889E0" /> <!-- BAD_DUMP -->
+        <file offset="2" name="qq.ic19" crc32="0xA646C7E5" />
+        <file offset="4" name="qq.ic18" crc32="0x17B0BB2C" />
+        <file offset="6" name="qq.ic17" crc32="0x420B5EB8" />
       </region>
       <!-- Hand written SEGA labels in this form:  TITLE: QQ  ROM NO: IC13  CHECK SUM: 6B84  9/12-'99 -->
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM3 -->
-        <file offset="0x3000000" name="qq.ic16" crc32="0x3525B46D" />
-        <file offset="0x3000002" name="qq.ic15" crc32="0x6EE8AF07" /> <!-- BAD_DUMP -->
-        <file offset="0x3000004" name="qq.ic14" crc32="0x678B9C2C" /> <!-- BAD_DUMP -->
-        <file offset="0x3000006" name="qq.ic13" crc32="0x75413A76" /> <!-- BAD_DUMP -->
+        <file offset="0x3000000" name="qq.ic16" crc32="0x3634F178" />
+        <file offset="0x3000002" name="qq.ic15" crc32="0x91C5A2A1" />
+        <file offset="0x3000004" name="qq.ic14" crc32="0xB41DB79B" />
+        <file offset="0x3000006" name="qq.ic13" crc32="0xBF3ACA1B" />
       </region>
       <!-- Hand written SEGA labels in this form:  TITLE: QQ  ROM NO: IC21  CHECK SUM: 0994  9/12-'99 -->
       <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
-        <file offset="0" name="qq.ic21" crc32="0xD8496BCA" /> <!-- BAD_DUMP -->
+        <file offset="0" name="qq.ic21" crc32="0x0C55CA5F" />
       </region>
     </roms>
   </game>
