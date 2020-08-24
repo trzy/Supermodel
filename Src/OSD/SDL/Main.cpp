@@ -1472,7 +1472,7 @@ static void Help(void)
   puts("  -no-sound               Disable sound board emulation (sound effects)");
   puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
   puts("  -legacy-sound           Enable ElSemi's legacy SCSP DSP emulator from 0.2a. Recommended for Sega Rally 2 as engine sound does not work with MAME's implementation.");
-  puts("  -no-legacy-sound        Disable ElSemi's legacy SCSP DSP emulator and use MAME's implementation instead");
+  puts("  -no-legacy-sound        Disable ElSemi's legacy SCSP DSP emulator and use MAME's implementation instead (default)");
   puts("");
 #ifdef NET_BOARD
   puts("Net Options:");
@@ -1565,6 +1565,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-sound",            { "EmulateSound",     false } },
     { "-dsb",                 { "EmulateDSB",       true } },
     { "-no-dsb",              { "EmulateDSB",       false } },
+    { "-legacy-sound",        { "LegacySoundDSP",   true } },
+    { "-no-legacy-sound",     { "LegacySoundDSP",   false } },
 #ifdef NET_BOARD
   { "-net",                   { "EmulateNet",       true } },
   { "-no-net",                { "EmulateNet",       false } },
