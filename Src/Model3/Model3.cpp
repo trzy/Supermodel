@@ -435,8 +435,18 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     if ((m_game.inputs & Game::INPUT_FISHING))
     {
-      data &= ~(Inputs->fishingCast->value << 0);
-      data &= ~(Inputs->fishingSelect->value << 1);
+      if (m_game.name == "getbass")
+      {
+        // get bass fishing
+        data &= ~(!Inputs->fishingCast->value << 4);
+        data &= ~(!Inputs->fishingSelect->value << 5);
+      }
+      else
+      {
+        // bass fishing
+        data &= ~(Inputs->fishingCast->value << 0);
+        data &= ~(Inputs->fishingSelect->value << 1);
+      }
     }
     return data;
 
@@ -514,6 +524,10 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     return data;
 
+  case 0x18: // swtrilgy and getbass. Remove IO board error on getbass. Not sure, but may be related to device feedback ?
+      data = 0x01;
+      return data;
+
   case 0x2C:  // Serial FIFO 1
     return serialFIFO1;
     
@@ -584,6 +598,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     {
       adc[0] = uint8_t(Inputs->fishingRodY->value);
       adc[1] = uint8_t(Inputs->fishingRodX->value);
+      adc[2] = uint8_t(Inputs->fishingTension->value); // get bass fishing only : Tension Sensor ?
       adc[3] = uint8_t(Inputs->fishingReel->value);
       adc[5] = uint8_t(Inputs->fishingStickX->value);
       adc[4] = uint8_t(Inputs->fishingStickY->value);

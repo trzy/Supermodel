@@ -268,6 +268,7 @@ CInputs::CInputs(CInputSystem *system)
   fishingStickY = AddAxisInput(   "FishingStickY",  "Stick Y-Axis",   Game::INPUT_FISHING, "NONE", fishingStickUp, fishingStickDown, 0, 0x80, 0xFF);
   fishingCast   = AddSwitchInput( "FishingCast",    "Cast",           Game::INPUT_FISHING, "NONE");
   fishingSelect = AddSwitchInput( "FishingSelect",  "Select",         Game::INPUT_FISHING, "NONE");
+  fishingTension = AddAnalogInput("FishingTension", "Tension",	      Game::INPUT_FISHING, "NONE"); // getbass only
 }
 
 CInputs::~CInputs()

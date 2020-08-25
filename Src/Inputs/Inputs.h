@@ -227,7 +227,8 @@ public:
   CAxisInput    *fishingStickY;
   CSwitchInput  *fishingCast;
   CSwitchInput  *fishingSelect;
-  
+  CAnalogInput  *fishingTension;
+
   /*
    * Creates a set of inputs with the given input system.
    */
