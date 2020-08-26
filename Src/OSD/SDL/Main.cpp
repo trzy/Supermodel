@@ -1471,8 +1471,8 @@ static void Help(void)
   puts("  -flip-stereo            Swap left and right audio channels");
   puts("  -no-sound               Disable sound board emulation (sound effects)");
   puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
-  puts("  -legacy-sound           Enable ElSemi's legacy SCSP DSP emulator from 0.2a. Recommended for Sega Rally 2 as engine sound does not work with MAME's implementation.");
-  puts("  -no-legacy-sound        Disable ElSemi's legacy SCSP DSP emulator and use MAME's implementation instead (default)");
+  puts("  -new-scsp               New SCSP engine based on MAME [Default]");
+  puts("  -legacy-scsp            Legacy SCSP engine by ElSemi");
   puts("");
 #ifdef NET_BOARD
   puts("Net Options:");
@@ -1557,7 +1557,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-show-fps",            { "ShowFrameRate",    true } },
     { "-no-fps",              { "ShowFrameRate",    false } },
     { "-new3d",               { "New3DEngine",      true } },
-	{ "-quad-rendering",      { "QuadRendering",    true } },
+	  { "-quad-rendering",      { "QuadRendering",    true } },
     { "-legacy3d",            { "New3DEngine",      false } },
     { "-no-flip-stereo",      { "FlipStereo",       false } },
     { "-flip-stereo",         { "FlipStereo",       true } },
@@ -1565,8 +1565,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-sound",            { "EmulateSound",     false } },
     { "-dsb",                 { "EmulateDSB",       true } },
     { "-no-dsb",              { "EmulateDSB",       false } },
-    { "-legacy-sound",        { "LegacySoundDSP",   true } },
-    { "-no-legacy-sound",     { "LegacySoundDSP",   false } },
+    { "-legacy-scsp",         { "LegacySoundDSP",   true } },
+    { "-new-scsp",            { "LegacySoundDSP",   false } },
 #ifdef NET_BOARD
   { "-net",                   { "EmulateNet",       true } },
   { "-no-net",                { "EmulateNet",       false } },
