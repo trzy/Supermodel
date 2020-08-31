@@ -6,7 +6,7 @@
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -42,7 +42,7 @@ namespace Debugger
 
 	static char s_mSlotStr[32][20];
 	static char s_sSlotStr[32][20];
-		
+
 	CCPUDebug *CSupermodelDebugger::CreateMainBoardCPUDebug(::CModel3 *model3)
 	{
 		CPPCDebug *cpu = new CPPCDebug("MainPPC");
@@ -254,12 +254,12 @@ namespace Debugger
 	{
 		CSoundBoard *sndBrd = model3->GetSoundBoard();
 		CDSB *dsb = sndBrd->GetDSB();
-		
+
 		CDSB1 *dsb1 = dynamic_cast<CDSB1*>(dsb);
 		if (dsb1 != NULL)
 		{
 			CZ80Debug *cpu = new CZ80Debug("DSBZ80", dsb1->GetZ80());
-			
+
 			// Regions
 			cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
 			cpu->AddRegion(0x8000, 0xFFFF, false, false, "RAM");
@@ -267,12 +267,12 @@ namespace Debugger
 			// TODO - rename some I/O ports
 			return cpu;
 		}
-		
+
 		CDSB2 *dsb2 = dynamic_cast<CDSB2*>(dsb);
 		if (dsb2 != NULL)
 		{
 			CMusashi68KDebug *cpu = new CMusashi68KDebug("DSB68K", dsb2->GetM68K());
-			
+
 			// Regions
 			cpu->AddRegion(0x000000, 0x020000, true,  true,  "ROM");
 			cpu->AddRegion(0xF00000, 0xF10000, false, false, "RAM");
@@ -290,7 +290,7 @@ namespace Debugger
 		if (!drvBrd->IsAttached())
 			return NULL;
 		CZ80Debug *cpu = new CZ80Debug("DrvZ80", drvBrd->GetZ80());
-		
+
 		// Regions
 		cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
 		cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
@@ -323,8 +323,8 @@ namespace Debugger
 	}
 #endif
 
-	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, ::CLogger *logger) : 
-		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger), 
+	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, std::shared_ptr<CLogger> logger) :
+		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger),
 		m_loadEmuState(false), m_saveEmuState(false), m_resetEmu(false)
 	{
 		//
@@ -337,7 +337,7 @@ namespace Debugger
 		// Add main board CPU
 		cpu = CreateMainBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
-		
+
 		// Add sound board CPU (if attached)
 		cpu = CreateSoundBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
@@ -345,7 +345,7 @@ namespace Debugger
 		// Add sound daughter board CPU (if attached)
 		cpu = CreateDSBCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
-		
+
 		// Add drive board CPU (if attached)
 		cpu = CreateDriveBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
@@ -533,7 +533,7 @@ namespace Debugger
 				append = false;
 			else if (CheckToken(token, "a", "append"))
 				append = true;
-			else 
+			else
 			{
 				Print("Enter a valid mode (s)et or (a)ppend.\n");
 				return false;
@@ -541,7 +541,7 @@ namespace Debugger
 
 			Print("Configure input %s [%s]: %s...", input->label, input->GetMapping(), (append ? "Appending" : "Setting"));
 			fflush(stdout);	// required on terminals that use buffering
-	
+
 			// Configure the input
 			if (input->Configure(append, "KEY_ESCAPE"))
 				Print(" %s\n", input->GetMapping());
@@ -572,11 +572,11 @@ namespace Debugger
 			Print(fmt, "sip",    "setinput",               "(<id>|<label>) <mapping>");
 			Print(fmt, "rip",    "resetinput",             "(<id>|<label>)");
 			Print(fmt, "cip",    "configinput",            "(<id>|<label>) [(s)et|(a)ppend]");
-			Print(fmt, "caip",   "configallinputs",        "");   
+			Print(fmt, "caip",   "configallinputs",        "");
 			return false;
 		}
 		else
-			return CConsoleDebugger::ProcessToken(token, cmd);		
+			return CConsoleDebugger::ProcessToken(token, cmd);
 	}
 
 	bool CSupermodelDebugger::InputIsValid(::CInput *input)
@@ -604,7 +604,7 @@ namespace Debugger
 				mappingWidth = std::max<size_t>(mappingWidth, strlen(input->GetMapping()));
 		}
 		mappingWidth = std::min<size_t>(mappingWidth, 20);
-		
+
 		// Print labels, mappings and values for each input
 		const char *groupLabel = NULL;
 		char idAndLabel[255];
@@ -645,13 +645,13 @@ namespace Debugger
 		char fileName[25];
 		sprintf(fileName, "Debug/%s.ds", m_model3->GetGame().name.c_str());
 		SaveState(fileName);
-		
+
 		CConsoleDebugger::Detaching();
 	}
 
 	bool CSupermodelDebugger::LoadModel3State(const char *fileName)
 	{
-		// Open file and find header 
+		// Open file and find header
 		CBlockFile state;
 		if (state.Load(fileName) != OKAY)
 			return false;
@@ -713,7 +713,7 @@ namespace Debugger
 		else
 			CConsoleDebugger::DebugLog(fmt, vl);
 	}
-		
+
 	void CSupermodelDebugger::InfoLog(const char *fmt, va_list vl)
 	{
 		// Use the supplied logger, if any
@@ -722,7 +722,7 @@ namespace Debugger
 		else
 			CConsoleDebugger::InfoLog(fmt, vl);
 	}
-	
+
 	void CSupermodelDebugger::ErrorLog(const char *fmt, va_list vl)
 	{
 		// Use the supplied logger, if any
