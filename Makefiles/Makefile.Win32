@@ -50,8 +50,8 @@ BITS = 64
 #
 # Path to SDL2
 #
-SDL2_INCLUDE_DIR = C:\TDM-GCC-64\x86_64-w64-mingw32\include\SDL2
-SDL2_LIB_DIR = C:\TDM-GCC-64\x86_64-w64-mingw32\lib
+SDL2_INCLUDE_DIR = \msys64\mingw64\include\SDL2 #C:\TDM-GCC-64\x86_64-w64-mingw32\include\SDL2
+SDL2_LIB_DIR = \msys64\mingw64\lib     #C:\TDM-GCC-64\x86_64-w64-mingw32\lib
 
 #
 # Toolchain
@@ -81,7 +81,7 @@ endif
 #
 # SDL2
 #
-SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -luser32 -lgdi32 -lwinmm -limm32 -lversion -lsetupapi -liphlpapi
+SDL2_LIBS =  -lmingw32 -lSDL2main -lSDL2 -Wl,--no-undefined -ldxerr8 -ldinput8 -lshell32 -lsetupapi -ladvapi32 -luuid -lversion -loleaut32 -lole32 -limm32 -lwinmm -lgdi32 -luser32 -lm -pipe
 SDL2_CFLAGS =
 ifeq ($(strip $(NET_BOARD)),1)
 	SDL2_LIBS += -lSDL2_net
@@ -94,7 +94,7 @@ endif
 PLATFORM_INCLUDE_DIR = $(SDL2_INCLUDE_DIR)
 PLATFORM_LIB_DIR = $(SDL2_LIB_DIR)
 PLATFORM_LIBS = -ldinput8 -lglu32 -lole32 -loleaut32 -lopengl32 -lwbemuuid -lws2_32 -lz
-PLATFORM_CFLAGS = $(SDL2_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
+PLATFORM_CFLAGS = $(SDL2_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR))) -O2
 PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM_LIBS)
 
 
