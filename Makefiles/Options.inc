@@ -60,14 +60,6 @@ ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
 endif
 
 #
-# Enable Bart's new (experimental) Real3D frame timing
-#
-NEW_FRAME_TIMING =
-ifneq ($(filter $(strip $(NEW_FRAME_TIMING)),0 1),$(strip $(NEW_FRAME_TIMING)))
-	override NEW_FRAME_TIMING =
-endif
-
-#
 # Include console-based debugger in emulator ('yes' or 'no')
 #
 ENABLE_DEBUGGER =
