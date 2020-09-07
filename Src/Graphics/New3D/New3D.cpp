@@ -115,7 +115,7 @@ void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned wid
 
 void CNew3D::DrawScrollFog()
 {
-	// ths is my best guess at the logic based upon what games are doing
+	// this is my best guess at the logic based upon what games are doing
 	//
 	// ocean hunter		- every viewport has scroll fog values set. Must start with lowest priority layers as the higher ones sometimes are garbage
 	// scud race		- first viewports in priority layer missing scroll values. The latter ones all contain valid scroll values.
@@ -124,31 +124,44 @@ void CNew3D::DrawScrollFog()
 	// sega bassfishing	- first viewport in priority 1 sets scroll value. The rest all contain the wrong value + a higher select value ..
 	// spikeout final	- 2nd viewport in the priority layer has scroll values set, none of the others do. It also uses the highest select value
 
-	// known bug (vf3)	- if you complete the game on a stage that has fogging, that fogging gets carried over into the credits. I did a binary diff on the viewport, it's never updated from the previous stage, neither is the data it's pointing at. Either a game or emulation bug.
+	float rgba[4];
 
 	for (int i = 0; i < 4; i++) {
-
-		Viewport *vp = nullptr;
-
 		for (auto &n : m_nodes) {
-
 			if (n.viewport.priority == i) {
-				if (!vp && n.viewport.scrollFog) {
-					vp = &n.viewport;		// only start grabbing viewports if there is a scroll value
-				}
-				else if(vp && n.viewport.select == vp->select) {
-					vp = &n.viewport;		// grab the last viewport with the same select value ??
+				if (n.viewport.scrollFog) {
+					rgba[0] = n.viewport.fogParams[0];
+					rgba[1] = n.viewport.fogParams[1];
+					rgba[2] = n.viewport.fogParams[2];
+					rgba[3] = n.viewport.scrollFog;
+					goto CheckScroll;
 				}
 			}
 		}
+	}
 
-		if (vp && vp->scrollFog) {
+	return;
 
-			float rgba[4] = { vp->fogParams[0], vp->fogParams[1], vp->fogParams[2], vp->scrollFog };
+CheckScroll:
 
-			glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
-			m_r3dScrollFog.DrawScrollFog(rgba, vp->scrollAtt, vp->fogParams[6], vp->spotFogColor, vp->spotEllipse);
-			return;
+	for (int i = 0; i < 4; i++) {
+		for (auto &n : m_nodes) {
+			if (n.viewport.priority == i) {
+
+				//if we have a fog density value
+				if (n.viewport.fogParams[3]) {
+
+					if (rgba[0] == n.viewport.fogParams[0] &&
+						rgba[1] == n.viewport.fogParams[1] &&
+						rgba[2] == n.viewport.fogParams[2]) {
+
+						glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
+						m_r3dScrollFog.DrawScrollFog(rgba, n.viewport.scrollAtt, n.viewport.fogParams[6], n.viewport.spotFogColor, n.viewport.spotEllipse);
+						return;
+					}
+				}
+
+			}
 		}
 	}
 }
@@ -781,14 +794,14 @@ void CNew3D::RenderViewport(UINT32 addr)
 		{ 1.0, 1.0, 1.0 }	// white
 	};
 
+	if ((addr & 0x00FFFFFF) == 0) {
+		return;
+	}
+
 	// Translate address and obtain pointer
 	const uint32_t *vpnode = TranslateCullingAddress(addr);
 
 	if (NULL == vpnode) {
-		return;
-	}
-
-	if (vpnode[0x01] == 0) {		// memory probably hasn't been set up yet, abort
 		return;
 	}
 
@@ -804,7 +817,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->priority	= (vpnode[0] >> 3) & 0x3;
 		vp->select		= (vpnode[0] >> 8) & 0x3;
 		vp->number		= (vpnode[0] >> 10);
-
 		m_currentPriority = vp->priority;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
