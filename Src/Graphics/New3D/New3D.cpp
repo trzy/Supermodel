@@ -155,7 +155,7 @@ CheckScroll:
 						rgba[1] == n.viewport.fogParams[1] &&
 						rgba[2] == n.viewport.fogParams[2]) {
 
-						glViewport(0, 0, m_totalXRes, m_totalYRes);		// fill the whole viewport
+						glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
 						m_r3dScrollFog.DrawScrollFog(rgba, n.viewport.scrollAtt, n.viewport.fogParams[6], n.viewport.spotFogColor, n.viewport.spotEllipse);
 						return;
 					}
