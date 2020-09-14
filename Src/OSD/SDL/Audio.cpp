@@ -23,6 +23,11 @@
  * Audio.cpp
  *
  * SDL audio playback. Implements the OSD audio interface.
+ *
+ * Buffer sizes and read/write positions must be sample-aligned. A sample is 
+ * defined to encompass both channels so for, e.g., 16-bit audio as used here,
+ * a sample is 4 bytes. Static assertions are employed to ensure that the
+ * initial set up of the buffer is correct.
  */
 
 #include "Supermodel.h"
@@ -43,10 +48,10 @@
 #define MAX_LATENCY 100
 
 static bool enabled = true;         // True if sound output is enabled
-static unsigned latency = 20;       // Audio latency to use (ie size of audio buffer) as percentage of max buffer size
-static bool underRunLoop = true;    // True if should loop back to beginning of buffer on under-run, otherwise sound is just skipped
+static constexpr unsigned latency = 20;       // Audio latency to use (ie size of audio buffer) as percentage of max buffer size
+static constexpr bool underRunLoop = true;    // True if should loop back to beginning of buffer on under-run, otherwise sound is just skipped
 
-static unsigned playSamples = 512;  // Size (in samples) of callback play buffer
+static constexpr unsigned playSamples = 512;  // Size (in samples) of callback play buffer
 
 static UINT32 audioBufferSize = 0;  // Size (in bytes) of audio buffer
 static INT8	*audioBuffer = NULL;    // Audio buffer
@@ -195,16 +200,16 @@ static void MixChannels(unsigned numSamples, INT16 *leftBuffer, INT16 *rightBuff
 	{
 		for (unsigned i = 0; i < numSamples; i++)
 		{
-			*p++ = leftBuffer[i];
 			*p++ = rightBuffer[i];
+			*p++ = leftBuffer[i];
 		}
 	}
-	else						// stereo as God intended!
+	else						// correct stereo
 	{
 		for (unsigned i = 0; i < numSamples; i++)
 		{
-			*p++ = rightBuffer[i];
 			*p++ = leftBuffer[i];
+			*p++ = rightBuffer[i];
 		}
 	}
 #endif	// NUM_CHANNELS
@@ -241,7 +246,10 @@ bool OpenAudio()
 		return ErrorLog("Unable to open 44.1KHz 2-channel audio with SDL: %s\n", SDL_GetError());
 
 	// Create audio buffer
-	audioBufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;
+	const constexpr uint32_t bufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;
+	static_assert(bufferSize % BYTES_PER_SAMPLE == 0);  // must be an integer multiple of the sample size
+	audioBufferSize = bufferSize;
+	
 	int minBufferSize = 3 * BYTES_PER_FRAME;
 	audioBufferSize = std::max<int>(minBufferSize, audioBufferSize);
 	audioBuffer = new(std::nothrow) INT8[audioBufferSize];
@@ -254,7 +262,13 @@ bool OpenAudio()
 
 	// Set initial play position to be beginning of buffer and initial write position to be half-way into buffer
 	playPos = 0;
-	writePos = std::min<int>(audioBufferSize - BYTES_PER_FRAME, (BYTES_PER_FRAME + audioBufferSize) / 2);
+	const constexpr uint32_t endOfBuffer = bufferSize - BYTES_PER_FRAME;
+	const constexpr uint32_t midpointAfterFirstFrameUnaligned = BYTES_PER_FRAME + (bufferSize - BYTES_PER_FRAME) / 2;
+	const constexpr uint32_t extraPaddingNeeded = (BYTES_PER_SAMPLE - midpointAfterFirstFrameUnaligned % BYTES_PER_SAMPLE) % BYTES_PER_SAMPLE;
+	const constexpr uint32_t midpointAfterFirstFrame = midpointAfterFirstFrameUnaligned + extraPaddingNeeded;
+	static_assert(endOfBuffer % BYTES_PER_SAMPLE == 0);             // make sure we are aligned to a sample boundary otherwise underrun/overrun adjustment will end up shifting playback by one channel causing stereo to flip
+	static_assert(midpointAfterFirstFrame % BYTES_PER_SAMPLE == 0);
+	writePos = std::min<int>(endOfBuffer, midpointAfterFirstFrame);
 	writeWrapped = false;
 
 	// Reset counters
