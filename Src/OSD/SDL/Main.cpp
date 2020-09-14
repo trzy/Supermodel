@@ -1362,7 +1362,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("FragmentShader2D", "");
   // CSoundBoard
   config.Set("EmulateSound", true);
-  config.Set("Balance", false);
+  config.Set("Balance", "0");
   // CDSB
   config.Set("EmulateDSB", true);
   config.Set("SoundVolume", "100");
