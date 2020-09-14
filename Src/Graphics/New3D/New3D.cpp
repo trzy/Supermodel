@@ -966,7 +966,8 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 				int next2 = (i + 2) % 4;
 
 				if (FVertex::Equal(v[i], v[next1])) {
-					FVertex::Average(v[i], v[next1], v[next2]);
+					FVertex::Average(v[next1], v[next2], v[next1]);
+					break;
 				}
 			}
 		}
