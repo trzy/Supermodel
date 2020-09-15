@@ -246,8 +246,8 @@ bool OpenAudio()
 		return ErrorLog("Unable to open 44.1KHz 2-channel audio with SDL: %s\n", SDL_GetError());
 
 	// Create audio buffer
-	const constexpr uint32_t bufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;
-	static_assert(bufferSize % BYTES_PER_SAMPLE == 0);  // must be an integer multiple of the sample size
+	constexpr uint32_t bufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * latency / MAX_LATENCY;
+	static_assert(bufferSize % BYTES_PER_SAMPLE == 0, "must be an integer multiple of the sample size"); 
 	audioBufferSize = bufferSize;
 	
 	int minBufferSize = 3 * BYTES_PER_FRAME;
@@ -262,12 +262,12 @@ bool OpenAudio()
 
 	// Set initial play position to be beginning of buffer and initial write position to be half-way into buffer
 	playPos = 0;
-	const constexpr uint32_t endOfBuffer = bufferSize - BYTES_PER_FRAME;
-	const constexpr uint32_t midpointAfterFirstFrameUnaligned = BYTES_PER_FRAME + (bufferSize - BYTES_PER_FRAME) / 2;
-	const constexpr uint32_t extraPaddingNeeded = (BYTES_PER_SAMPLE - midpointAfterFirstFrameUnaligned % BYTES_PER_SAMPLE) % BYTES_PER_SAMPLE;
-	const constexpr uint32_t midpointAfterFirstFrame = midpointAfterFirstFrameUnaligned + extraPaddingNeeded;
-	static_assert(endOfBuffer % BYTES_PER_SAMPLE == 0);             // make sure we are aligned to a sample boundary otherwise underrun/overrun adjustment will end up shifting playback by one channel causing stereo to flip
-	static_assert(midpointAfterFirstFrame % BYTES_PER_SAMPLE == 0);
+	constexpr uint32_t endOfBuffer = bufferSize - BYTES_PER_FRAME;
+	constexpr uint32_t midpointAfterFirstFrameUnaligned = BYTES_PER_FRAME + (bufferSize - BYTES_PER_FRAME) / 2;
+	constexpr uint32_t extraPaddingNeeded = (BYTES_PER_SAMPLE - midpointAfterFirstFrameUnaligned % BYTES_PER_SAMPLE) % BYTES_PER_SAMPLE;
+	constexpr uint32_t midpointAfterFirstFrame = midpointAfterFirstFrameUnaligned + extraPaddingNeeded;
+	static_assert(endOfBuffer % BYTES_PER_SAMPLE == 0, "make sure we are aligned to a sample boundary otherwise underrun/overrun adjustment will end up shifting playback by one channel causing stereo to flip");
+	static_assert(midpointAfterFirstFrame % BYTES_PER_SAMPLE == 0,"error");
 	writePos = std::min<int>(endOfBuffer, midpointAfterFirstFrame);
 	writeWrapped = false;
 
