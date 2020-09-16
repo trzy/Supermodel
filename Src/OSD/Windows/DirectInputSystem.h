@@ -42,7 +42,6 @@
 #include <functional>
 
 #include <vector>
-using namespace std;
 
 #define NUM_DI_KEYS (sizeof(s_keyMap) / sizeof(DIKeyMapStruct))
 
@@ -137,16 +136,16 @@ private:
 	GetRawInputDataPtr m_getRIDataPtr;
 	
 	// Keyboard, mouse and joystick details
-	vector<KeyDetails> m_keyDetails;
-	vector<MouseDetails> m_mseDetails;
-	vector<JoyDetails> m_joyDetails;
+	std::vector<KeyDetails> m_keyDetails;
+	std::vector<MouseDetails> m_mseDetails;
+	std::vector<JoyDetails> m_joyDetails;
 	
 	// RawInput keyboard and mice handles and states
-	vector<HANDLE> m_rawKeyboards;
-	vector<bool*> m_rawKeyStates;
-	vector<HANDLE> m_rawMice;
+	std::vector<HANDLE> m_rawKeyboards;
+	std::vector<bool*> m_rawKeyStates;
+	std::vector<HANDLE> m_rawMice;
 	RawMseState m_combRawMseState;
-	vector<RawMseState> m_rawMseStates;
+	std::vector<RawMseState> m_rawMseStates;
 
 	// Function pointers for XInput API
 	XInputGetCapabilitiesPtr m_xiGetCapabilitiesPtr;
@@ -157,17 +156,17 @@ private:
 	LPDIRECTINPUT8 m_di8;
 	LPDIRECTINPUTDEVICE8 m_di8Keyboard;
 	LPDIRECTINPUTDEVICE8 m_di8Mouse;	
-	vector<LPDIRECTINPUTDEVICE8> m_di8Joysticks;
+	std::vector<LPDIRECTINPUTDEVICE8> m_di8Joysticks;
 	
 	// DirectInput keyboard and mouse states
 	BYTE m_diKeyState[256];
 	DIMseState m_diMseState;
 	
 	// DirectInput joystick infos and states
-	vector<DIJoyInfo> m_diJoyInfos;
-	vector<DIJOYSTATE2> m_diJoyStates;
+	std::vector<DIJoyInfo> m_diJoyInfos;
+	std::vector<DIJOYSTATE2> m_diJoyStates;
 
-	bool GetRegString(HKEY regKey, const char *regPath, string &str);
+	bool GetRegString(HKEY regKey, const char *regPath, std::string &str);
 
 	bool GetRegDeviceName(const char *rawDevName, char *name);
 

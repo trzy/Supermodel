@@ -34,7 +34,6 @@
 #include "SDLIncludes.h"
 
 #include <vector>
-using namespace std;
 
 #define NUM_SDL_KEYS (sizeof(s_keyMap) / sizeof(SDLKeyMapStruct))
 
@@ -54,10 +53,10 @@ private:
 	static SDLKeyMapStruct s_keyMap[];
 
 	// Vector to keep track of attached joysticks
-	vector<SDL_Joystick*> m_joysticks;
+	std::vector<SDL_Joystick*> m_joysticks;
 
 	// Vector of joystick details
-	vector<JoyDetails> m_joyDetails;
+	std::vector<JoyDetails> m_joyDetails;
 
 	// Current key state obtained from SDL
 	const Uint8 *m_keyState;

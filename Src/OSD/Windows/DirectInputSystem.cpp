@@ -300,7 +300,7 @@ Finish:
 
 struct DIEnumDevsContext
 {
-	vector<DIJoyInfo> *infos;
+	std::vector<DIJoyInfo> *infos;
 	bool useXInput;
 };
 
@@ -456,7 +456,7 @@ CDirectInputSystem::~CDirectInputSystem()
 	}
 }
 
-bool CDirectInputSystem::GetRegString(HKEY regKey, const char *regPath, string &str)
+bool CDirectInputSystem::GetRegString(HKEY regKey, const char *regPath, std::string &str)
 {
 	// Query to get the length
 	DWORD dataLen;
@@ -480,14 +480,14 @@ bool CDirectInputSystem::GetRegDeviceName(const char *rawDevName, char *name)
 	// Check raw device string is in form that can be handled and remove initial 4-char sequence
 	// For XP this is: \??\TypeID#HardwareID#InstanceID#{DevicesClasses-id}
 	// For Vista/Win7 64bit this is: \\?\TypeID#HardwareID#InstanceID#{DevicesClasses-id}
-	string devNameStr(rawDevName);
-	if (devNameStr.find("\\??\\") != string::npos || devNameStr.find("\\\\?\\") != string::npos)
+	std::string devNameStr(rawDevName);
+	if (devNameStr.find("\\??\\") != std::string::npos || devNameStr.find("\\\\?\\") != std::string::npos)
 		devNameStr.erase(0, 4);
 	else 
 		return false;
 
 	// Append raw device string to base registry path and convert all #'s to \ in the process
-	string regPath = "SYSTEM\\CurrentControlSet\\Enum\\" + devNameStr;
+	std::string regPath = "SYSTEM\\CurrentControlSet\\Enum\\" + devNameStr;
 	for (size_t i = 0; i < regPath.size(); i++)
 	{
 		if (regPath[i] == '#')
@@ -496,7 +496,7 @@ bool CDirectInputSystem::GetRegDeviceName(const char *rawDevName, char *name)
 
 	// Remove part after last \ in path
 	size_t last = regPath.rfind('\\');
-	if (last != string::npos)
+	if (last != std::string::npos)
 		regPath = regPath.erase(last);
 
 	// Try and open registry key with this path
@@ -505,10 +505,10 @@ bool CDirectInputSystem::GetRegDeviceName(const char *rawDevName, char *name)
 	if (result != ERROR_SUCCESS)
 		return false;
 
-	string parentIdStr;
+	std::string parentIdStr;
 
 	// Fetch device description from registry, if it exists, and use that for name
-	string regStr;
+	std::string regStr;
 	if (GetRegString(regKey, "DeviceDesc", regStr))
 		goto Found;
 
@@ -516,12 +516,12 @@ bool CDirectInputSystem::GetRegDeviceName(const char *rawDevName, char *name)
 	RegCloseKey(regKey);
 
 	// Check it is HID device
-	if (devNameStr.find("HID") == string::npos)
+	if (devNameStr.find("HID") == std::string::npos)
 		return false;
 
 	// Get parent id, from after last \ in name
 	last = regPath.rfind('\\');
-	if (last == regPath.size() - 1 || last == string::npos)
+	if (last == regPath.size() - 1 || last == std::string::npos)
 		return false;
 	parentIdStr = regPath.substr(last + 1);
 
@@ -560,7 +560,7 @@ bool CDirectInputSystem::GetRegDeviceName(const char *rawDevName, char *name)
 						continue;
 
 					// Get parent id prefix and see if it matches
-					string finalParentIdStr;
+					std::string finalParentIdStr;
 					if (GetRegString(finalRegKey, "ParentIdPrefix", finalParentIdStr) && parentIdStr.compare(0, finalParentIdStr.size(), finalParentIdStr) == 0)
 					{
 						// Get device description, if it exists, and use that for name
@@ -588,7 +588,7 @@ bool CDirectInputSystem::GetRegDeviceName(const char *rawDevName, char *name)
 Found:
 	// If found device description, name will be from final colon
 	last = regStr.rfind(';');
-	if (last == regStr.size() - 1 || last == string::npos)
+	if (last == regStr.size() - 1 || last == std::string::npos)
 		last = 0;
 	else 
 		last++;
@@ -781,7 +781,7 @@ void CDirectInputSystem::PollKeyboardsAndMice()
 	if (m_useRawInput)
 	{
 		// For RawInput, only thing to do is update wheelDir from wheelData for each mouse state.  Everything else is updated via WM events.
-		for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
+		for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
 		{
 			if (it->wheelDelta != 0)
 			{
@@ -875,7 +875,7 @@ void CDirectInputSystem::CloseKeyboardsAndMice()
 		}
 
 		// Delete storage for keyboards
-		for (vector<bool*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); it++)
+		for (std::vector<bool*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); it++)
 			delete[] *it;
 		m_keyDetails.clear();
 		m_rawKeyboards.clear();
@@ -915,7 +915,7 @@ void CDirectInputSystem::ResetMice()
 		m_combRawMseState.x = p.x;
 		m_combRawMseState.y = p.y;
 		m_combRawMseState.z = 0;
-		for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
+		for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
 		{
 			it->x = p.x;
 			it->y = p.y;
@@ -1057,7 +1057,7 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 				}
 
 				m_combRawMseState.buttons = 0;
-				for (vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
+				for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
 					m_combRawMseState.buttons |= it->buttons;
 			}
 		}
@@ -1080,7 +1080,7 @@ void CDirectInputSystem::OpenJoysticks()
 	// Loop through those found
 	int joyNum = 0;
 	int xNum = 0;
-	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
 	{
 		joyNum++;
 
@@ -1293,7 +1293,7 @@ void CDirectInputSystem::ActivateJoysticks()
 {
 	// Set DirectInput cooperative level of joysticks
 	unsigned joyNum = 0;
-	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
 	{
 		if (!it->isXInput)
 		{	
@@ -1313,7 +1313,7 @@ void CDirectInputSystem::PollJoysticks()
 {
 	// Get current joystick states from XInput and DirectInput
 	int i = 0;
-	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
 	{
 		LPDIJOYSTATE2 pJoyState = &m_diJoyStates[i++];
 
@@ -1394,7 +1394,7 @@ void CDirectInputSystem::PollJoysticks()
 void CDirectInputSystem::CloseJoysticks()
 {
 	// Release any DirectInput force feedback effects that were created
-	for (vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
 	{
 		for (unsigned axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 		{
@@ -1410,7 +1410,7 @@ void CDirectInputSystem::CloseJoysticks()
 	}
 
 	// Release each DirectInput joystick
-	for (vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it != m_di8Joysticks.end(); it++)
+	for (std::vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it != m_di8Joysticks.end(); it++)
 	{
 		(*it)->Unacquire();
 		(*it)->Release();
