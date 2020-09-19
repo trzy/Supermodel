@@ -425,9 +425,9 @@ void Screenshot()
 {
     // Make a screenshot
     char file[128];
-    string info = "Screenshot created: ";
-    time_t now = time(0);
-    tm* ltm = localtime(&now);
+    std::string info = "Screenshot created: ";
+    time_t now = std::time(nullptr);
+    tm* ltm = std::localtime(&now);
 
     sprintf(file, "Screenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
 
