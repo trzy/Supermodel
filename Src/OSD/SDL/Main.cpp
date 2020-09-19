@@ -71,6 +71,7 @@
 #include "SDLIncludes.h"
 
 #include <iostream>
+#include "Util/BMPFile.h"
 
 
 /******************************************************************************
@@ -413,6 +414,27 @@ static void DumpPPCRegisters(IBus *bus)
 }
 #endif
 
+static void SaveFrameBuffer(const std::string& file)
+{
+    std::shared_ptr<uint8_t> pixels(new uint8_t[totalXRes * totalYRes * 4], std::default_delete<uint8_t[]>());
+    glReadPixels(0, 0, totalXRes, totalYRes, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
+    Util::WriteSurfaceToBMP<Util::RGBA8>(file, pixels.get(), totalXRes, totalYRes, true);
+}
+
+void Screenshot()
+{
+    // Make a screenshot
+    char file[128];
+    string info = "Screenshot created: ";
+    time_t now = time(0);
+    tm* ltm = localtime(&now);
+
+    sprintf(file, "Screenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+
+    info += file;
+    puts(info.c_str());
+    SaveFrameBuffer(file);
+}
 
 /******************************************************************************
  Render State Analysis
@@ -421,16 +443,8 @@ static void DumpPPCRegisters(IBus *bus)
 #ifdef DEBUG
 
 #include "Model3/Model3GraphicsState.h"
-#include "Util/BMPFile.h"
 #include "OSD/SDL/PolyAnalysis.h"
 #include <fstream>
-
-static void SaveFrameBuffer(const std::string &file)
-{
-  std::shared_ptr<uint8_t> pixels(new uint8_t[totalXRes*totalYRes*4], std::default_delete<uint8_t[]>());
-  glReadPixels(0, 0, totalXRes, totalYRes, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
-  Util::WriteSurfaceToBMP<Util::RGBA8>(file, pixels.get(), totalXRes, totalYRes, true);
-}
 
 static std::string s_gfxStatePath;
 
@@ -1174,6 +1188,11 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Toggle frame limiting
       s_runtime_config.Get("Throttle").SetValue(!s_runtime_config["Throttle"].ValueAs<bool>());
       printf("Frame limiting: %s\n", s_runtime_config["Throttle"].ValueAs<bool>() ? "On" : "Off");
+    }
+    else if (Inputs->uiScreenshot->Pressed())
+    {
+      // Make a screenshot
+      Screenshot();
     }
 #ifdef SUPERMODEL_DEBUGGER
       else if (Debugger != NULL && Inputs->uiEnterDebugger->Pressed())

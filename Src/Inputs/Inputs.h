@@ -105,6 +105,7 @@ public:
   CSwitchInput  *uiToggleFrLimit;
   CSwitchInput  *uiDumpInpState;
   CSwitchInput  *uiDumpTimings;
+  CSwitchInput  *uiScreenshot;
 #ifdef SUPERMODEL_DEBUGGER
   CSwitchInput  *uiEnterDebugger;
 #endif

@@ -58,6 +58,7 @@ CInputs::CInputs(CInputSystem *system)
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", Game::INPUT_UI, "KEY_ALT+KEY_T");
 	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      Game::INPUT_UI, "KEY_ALT+KEY_U");
 	uiDumpTimings      = AddSwitchInput("UIDumpTimings",      "Dump Frame Timings",    Game::INPUT_UI, "KEY_ALT+KEY_O");
+	uiScreenshot       = AddSwitchInput("UIScreenShot",	      "Screenshot",            Game::INPUT_UI, "KEY_ALT+KEY_S");
 #ifdef SUPERMODEL_DEBUGGER
 	uiEnterDebugger    = AddSwitchInput("UIEnterDebugger",    "Enter Debugger",        Game::INPUT_UI, "KEY_ALT+KEY_B");
 #endif
