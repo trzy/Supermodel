@@ -166,13 +166,14 @@ SDLKeyMapStruct CSDLInputSystem::s_keyMap[] =
   { "UNDO",           SDL_SCANCODE_UNDO }
 };
 
-CSDLInputSystem::CSDLInputSystem()
+CSDLInputSystem::CSDLInputSystem(const Util::Config::Node& config)
   : CInputSystem("SDL"),
     m_keyState(nullptr),
     m_mouseX(0),
     m_mouseY(0),
     m_mouseZ(0),
-    m_mouseButtons(0)
+    m_mouseButtons(0),
+    m_config(config)
 {
   //
 }
@@ -186,8 +187,12 @@ void CSDLInputSystem::OpenJoysticks()
 {
   // Open all available joysticks
   int numJoys = SDL_NumJoysticks();
+  int numHapticAxes = 0;
+  int possibleEffect = 0;
+
   for (int joyNum = 0; joyNum < numJoys; joyNum++)
   {
+    numHapticAxes = 0;
     SDL_Joystick *joystick = SDL_JoystickOpen(joyNum);
     if (joystick == nullptr)
     {
@@ -197,23 +202,165 @@ void CSDLInputSystem::OpenJoysticks()
 
     // Gather joystick details (name, num POVs & buttons and which axes are available)
     JoyDetails joyDetails;
+    hapticInfo hapticDatas;
     const char *pName = SDL_JoystickName(joystick);
     strncpy(joyDetails.name, pName, MAX_NAME_LENGTH);
     joyDetails.name[MAX_NAME_LENGTH] = '\0';
     joyDetails.numAxes = SDL_JoystickNumAxes(joystick);
+
+    if (SDL_JoystickIsHaptic(joystick))
+        joyDetails.hasFFeedback = true;
+    else
+        joyDetails.hasFFeedback = false;
+
+    if (joyDetails.hasFFeedback)
+    {
+      hapticDatas.SDLhaptic = SDL_HapticOpenFromJoystick(joystick);
+
+      if (hapticDatas.SDLhaptic == NULL)
+      {
+        ErrorLog("Unable to obtain haptic interface for joystick %s. Force feedback will be disabled for this joystick.", joyDetails.name);
+        joyDetails.hasFFeedback = false;
+        numHapticAxes = 0;
+      }
+      else
+      {
+        numHapticAxes = SDL_HapticNumAxes(hapticDatas.SDLhaptic);
+
+        // depending device, SDL_HapticNumAxes return wrong number of ffb axes (bug on device driver on windows or other ?)
+        // ie : saitek cyborg evo force joystick returns 3 ffb axes instead of 2 ffb axes, this leads to unable to create effects on this device
+        // generally, none of commercial ffb products have more than 2 ffb axes
+        // in this case, we need to force the correct number of ffb axes by adding manually a new sdl2 function
+        // see https://forums.libsdl.org/viewtopic.php?t=5195
+        // enabled this code if you have a saitek cyborg evo force or if you find another device that return wrong number of ffb axis
+        // don't forget to edit sdl2 source code in Supermodel project
+//#define HAPTIC_MOD
+#if (defined _WIN32 && defined HAPTIC_MOD)
+        if (numHapticAxes > 2)
+        {
+          DebugLog("Joystick : %s return more than 2 ffb axes, need sdl2 addon SDL_HapticSetAxes() to bypass\n", SDL_HapticName(joyNum));
+          if (strcmp(joyDetails.name, "Saitek Cyborg Evo Force") == 0) // remove if any other particular case
+            SDL_HapticSetAxes(hapticDatas.SDLhaptic, 2);   // /!\ function manually added to SDL2 project
+        }
+#endif
+
+
+        // sdl2 bug on linux only ?
+        // SDL_HapticNumAxes() : on win it reports good number of haptic axe, on linux 18.04 it reports always 2 haptic axes (bad) whatever the device
+        // file : SDL2-2.0.10\src\haptic\linux\SDL_syshaptic.c
+        // function : static int SDL_SYS_HapticOpenFromFD(SDL_Haptic * haptic, int fd)
+        // haptic->naxes = 2;          // Hardcoded for now, not sure if it's possible to find out. <- note from the sdl2 devs
+#ifndef _WIN32
+        if (!HasBasicForce(hapticDatas.SDLhaptic)) numHapticAxes = 0;
+#endif
+        DebugLog("joy num %d haptic num axe %d name : %s\n", joyNum, numHapticAxes, SDL_HapticName(joyNum));
+      }
+    }
+
     for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
     {
       joyDetails.hasAxis[axisNum] = joyDetails.numAxes > axisNum;
-      joyDetails.axisHasFF[axisNum] = false; // SDL 1.2 does not support force feedback
+      if (numHapticAxes > 0 && joyDetails.hasAxis[axisNum]) // unable to know which axes have ffb
+        joyDetails.axisHasFF[axisNum] = true;
+      else
+        joyDetails.axisHasFF[axisNum] = false;
+
       char *axisName = joyDetails.axisName[axisNum];
-      strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum)); // SDL 1.2 does not support axis names
+      strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
     }
     joyDetails.numPOVs = SDL_JoystickNumHats(joystick);
     joyDetails.numButtons = SDL_JoystickNumButtons(joystick);
-    joyDetails.hasFFeedback = false; // SDL 1.2 does not support force feedback
+
+    if (joyDetails.hasFFeedback && hapticDatas.SDLhaptic != NULL && numHapticAxes > 0) // not a pad but wheel or joystick
+    {
+      SDL_HapticSetAutocenter(hapticDatas.SDLhaptic, 0);
+      SDL_HapticSetGain(hapticDatas.SDLhaptic, 100);
+
+      possibleEffect = SDL_HapticQuery(hapticDatas.SDLhaptic);
+
+      // constant effect
+      if (possibleEffect & SDL_HAPTIC_CONSTANT)
+      {
+        SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+        eff.type = SDL_HAPTIC_CONSTANT;
+        eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+        eff.constant.direction.dir[0] = 0;
+        eff.constant.length = 30;
+        eff.constant.delay = 0;
+        eff.constant.level = 0;
+        hapticDatas.effectConstantForceID = SDL_HapticNewEffect(hapticDatas.SDLhaptic, &eff);;
+        if (hapticDatas.effectConstantForceID < 0)
+          ErrorLog("Unable to create constant force effect for joystick %s (joy id=%d). Constant force will not be applied.", joyDetails.name, joyNum + 1);
+      }
+
+      // vibration effect
+      if (possibleEffect & SDL_HAPTIC_SINE)
+      {
+        SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+        eff.type = SDL_HAPTIC_SINE;
+        eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+        eff.constant.length = 500;
+        eff.constant.delay = 0;
+        eff.periodic.period = 50;
+        eff.periodic.magnitude = 0;
+        hapticDatas.effectVibrationID = SDL_HapticNewEffect(hapticDatas.SDLhaptic, &eff);
+        if (hapticDatas.effectVibrationID < 0)
+          ErrorLog("Unable to create vibration effect for joystick %s (joy id=%d). Vibration will not be applied.", joyDetails.name, joyNum + 1);
+      }
+
+      // spring effect
+      if (possibleEffect & SDL_HAPTIC_SPRING)
+      {
+        SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+        eff.type = SDL_HAPTIC_SPRING;
+        eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+        eff.condition.delay = 0;
+        eff.condition.length = SDL_HAPTIC_INFINITY;
+        eff.condition.left_sat[0] = 0xFFFF;
+        eff.condition.right_sat[0] = 0xFFFF;
+        eff.condition.left_coeff[0] = 0;
+        eff.condition.right_coeff[0] = 0;
+        hapticDatas.effectSpringForceID = SDL_HapticNewEffect(hapticDatas.SDLhaptic, &eff);
+        if (hapticDatas.effectSpringForceID < 0)
+          ErrorLog("Unable to create spring force effect for joystick %s (joy id=%d). Spring force will not be applied.", joyDetails.name, joyNum + 1);
+      }
+
+      // friction effect
+      if (possibleEffect & SDL_HAPTIC_FRICTION)
+      {
+        SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+        eff.type = SDL_HAPTIC_FRICTION;
+        eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+        eff.condition.delay = 0;
+        eff.condition.length = SDL_HAPTIC_INFINITY;
+        eff.condition.left_sat[0] = 0xFFFF;
+        eff.condition.right_sat[0] = 0xFFFF;
+        eff.condition.left_coeff[0] = 0;
+        eff.condition.right_coeff[0] = 0;
+        hapticDatas.effectFrictionForceID = SDL_HapticNewEffect(hapticDatas.SDLhaptic, &eff);
+        if (hapticDatas.effectFrictionForceID < 0)
+          ErrorLog("Unable to create friction force effect for joystick %s (joy id=%d). Friction force will not be applied.", joyDetails.name, joyNum + 1);
+      }
+    }
+
+    if (joyDetails.hasFFeedback && hapticDatas.SDLhaptic != NULL && numHapticAxes == 0) // pad with rumble. Note : SDL_HapticRumbleSupported() is not enough to detect rumble pad only because joystick or wheel may have also rumble
+    {
+      if (SDL_HapticRumbleInit(hapticDatas.SDLhaptic) < 0)
+      {
+        ErrorLog("Unable to create rumble effect for pad %s (pad id=%d). Rumble will not be applied.SDL_HapticRumbleInit failed : %s", joyDetails.name, joyNum + 1, SDL_GetError());
+        joyDetails.axisHasFF[AXIS_X] = false;
+        joyDetails.axisHasFF[AXIS_Y] = false;
+      }
+      else
+      {
+        joyDetails.axisHasFF[AXIS_X] = true; // Force feedback simulated on X axis sticks (fake)
+        joyDetails.axisHasFF[AXIS_Y] = true; // Force feedback simulated on Y axis sticks (fake)
+      }
+    }
 
     m_joysticks.push_back(joystick);
     m_joyDetails.push_back(joyDetails);
+    m_SDLHapticDatas.push_back(hapticDatas);
   }
 }
 
@@ -222,18 +369,33 @@ void CSDLInputSystem::CloseJoysticks()
   // Close all previously opened joysticks
   for (size_t i = 0; i < m_joysticks.size(); i++)
   {
+    JoyDetails joyDetails = m_joyDetails[i];
+    if (joyDetails.hasFFeedback)
+    {
+      if (m_SDLHapticDatas[i].effectConstantForceID >= 0)
+        SDL_HapticDestroyEffect(m_SDLHapticDatas[i].SDLhaptic, m_SDLHapticDatas[i].effectConstantForceID);
+      if (m_SDLHapticDatas[i].effectVibrationID >= 0)
+        SDL_HapticDestroyEffect(m_SDLHapticDatas[i].SDLhaptic, m_SDLHapticDatas[i].effectVibrationID);
+      if (m_SDLHapticDatas[i].effectSpringForceID >= 0)
+        SDL_HapticDestroyEffect(m_SDLHapticDatas[i].SDLhaptic, m_SDLHapticDatas[i].effectSpringForceID);
+      if (m_SDLHapticDatas[i].effectFrictionForceID >= 0)
+        SDL_HapticDestroyEffect(m_SDLHapticDatas[i].SDLhaptic, m_SDLHapticDatas[i].effectFrictionForceID);
+
+      SDL_HapticClose(m_SDLHapticDatas[i].SDLhaptic);
+    }
     SDL_Joystick *joystick = m_joysticks[i];
     SDL_JoystickClose(joystick);
   }
 
   m_joysticks.clear();
   m_joyDetails.clear();
+  m_SDLHapticDatas.clear();
 }
 
 bool CSDLInputSystem::InitializeSystem()
 {
   // Make sure joystick subsystem is initialized and joystick events are enabled
-  if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != 0)
+  if (SDL_InitSubSystem(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) != 0)
   {
     ErrorLog("Unable to initialize SDL joystick subsystem (%s).\n", SDL_GetError());
 
@@ -334,8 +496,48 @@ bool CSDLInputSystem::IsJoyButPressed(int joyNum, int butNum)
 
 bool CSDLInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd)
 {
-  // SDL 1.2 does not support force feedback
-  return false;
+  switch (ffCmd.id)
+  {
+    case FFStop:
+      StopAllEffect(joyNum);
+      break;
+
+    case FFConstantForce:
+      sdlConstForceMax = m_config["SDLConstForceMax"].ValueAs<unsigned>();
+      if (sdlConstForceMax == 0)
+        return false;
+      // note sr2 centering val=0.047244 and val=0.062992 alternatively (const value)
+      //          max val between -1 to 1 (left right)
+      if (ffCmd.force == 0.0f)
+        StopConstanteforce(joyNum);
+      else if (ffCmd.force > 0.0f)
+        ConstantForceEffect(ffCmd.force * (float)(sdlConstForceMax / 100.0f), -1, 100, joyNum);
+      else if (ffCmd.force < 0.0f)
+        ConstantForceEffect(-ffCmd.force * (float)(sdlConstForceMax / 100.0f), 1, 100, joyNum);
+      break;
+
+    case FFSelfCenter:
+      sdlSelfCenterMax = m_config["SDLSelfCenterMax"].ValueAs<unsigned>();
+      if (sdlSelfCenterMax == 0)
+        return false;
+      SpringForceEffect(ffCmd.force * (float)(sdlSelfCenterMax / 100.0f), joyNum);
+      break;
+
+    case FFFriction:
+      sdlFrictionMax = m_config["SDLFrictionMax"].ValueAs<unsigned>();
+      if (sdlFrictionMax == 0)
+        return false;
+      FrictionForceEffect(ffCmd.force * (float)(sdlFrictionMax / 100.0f), joyNum);
+      break;
+
+    case FFVibrate:
+      sdlVibrateMax = m_config["SDLVibrateMax"].ValueAs<unsigned>();
+      if (sdlVibrateMax == 0)
+        return false;
+      VibrationEffect(ffCmd.force * (float)(sdlVibrateMax / 100.0f), joyNum);
+      break;
+    }
+    return true;
 }
 
 int CSDLInputSystem::GetNumKeyboards()
@@ -417,4 +619,210 @@ bool CSDLInputSystem::Poll()
 void CSDLInputSystem::SetMouseVisibility(bool visible)
 {
   SDL_ShowCursor(visible ? SDL_ENABLE : SDL_DISABLE);
+}
+
+void CSDLInputSystem::StopAllEffect(int joyNum)
+{
+  StopConstanteforce(joyNum);
+  StopVibrationforce(joyNum);
+  StopSpringforce(joyNum);
+  StopFrictionforce(joyNum);
+}
+
+void CSDLInputSystem::StopConstanteforce(int joyNum)
+{
+  // stop constante effect or rumble constant effect
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_CONSTANT;
+  eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.constant.direction.dir[0] = 0;
+  eff.constant.length = 30;
+  eff.constant.delay = 0;
+  eff.constant.level = 0;
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectConstantForceID, &eff);
+  }
+  else
+  {
+    SDL_HapticRumbleStop(m_SDLHapticDatas[joyNum].SDLhaptic);
+  }
+}
+
+void CSDLInputSystem::StopVibrationforce(int joyNum)
+{
+  // stop vibration-rumble effect
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_SINE;
+  eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.constant.length = 500;
+  eff.constant.delay = 0;
+  eff.periodic.period = 50;
+  eff.periodic.magnitude = 0;
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectVibrationID, &eff);
+  }
+  else
+  {
+    SDL_HapticRumbleStop(m_SDLHapticDatas[joyNum].SDLhaptic);
+  }
+
+}
+
+void CSDLInputSystem::StopSpringforce(int joyNum)
+{
+  // stop spring effect
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_SPRING;
+  eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.condition.delay = 0;
+  eff.condition.length = SDL_HAPTIC_INFINITY;
+  eff.condition.left_sat[0] = 0xFFFF;
+  eff.condition.right_sat[0] = 0xFFFF;
+  eff.condition.left_coeff[0] = 0;
+  eff.condition.right_coeff[0] = 0;
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectSpringForceID, &eff);
+  }
+
+}
+
+void CSDLInputSystem::StopFrictionforce(int joyNum)
+{
+  // stop friction effect
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_FRICTION;
+  eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.condition.delay = 0;
+  eff.condition.length = SDL_HAPTIC_INFINITY;
+  eff.condition.left_sat[0] = 0xFFFF;
+  eff.condition.right_sat[0] = 0xFFFF;
+  eff.condition.left_coeff[0] = 0;
+  eff.condition.right_coeff[0] = 0;
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectFrictionForceID, &eff);
+  }
+
+}
+
+void CSDLInputSystem::VibrationEffect(float strength, int joyNum)
+{
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_SINE;
+  eff.constant.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.periodic.delay = 0;
+  eff.periodic.length = SDL_HAPTIC_INFINITY;
+  eff.periodic.period = 50;
+  eff.periodic.magnitude = (int)(strength * INT16_MAX);
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectVibrationID, &eff);
+
+    SDL_HapticRunEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectVibrationID, 1);
+  }
+  else
+  {
+    if (strength != 0.0f)
+      SDL_HapticRumblePlay(m_SDLHapticDatas[joyNum].SDLhaptic, strength, 0);
+    else
+      SDL_HapticRumbleStop(m_SDLHapticDatas[joyNum].SDLhaptic);
+  }
+
+}
+
+void CSDLInputSystem::ConstantForceEffect(float force, int dir, int length, int joyNum)
+{
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_CONSTANT;
+  eff.constant.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.constant.direction.dir[0] = 0; // in cartesian mode dir on x set 0 on y set 1
+  eff.constant.length = length;
+  eff.constant.level = (int)(dir * (force * INT16_MAX));
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectConstantForceID, &eff);
+
+    SDL_HapticRunEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectConstantForceID, 1);
+  }
+  else
+  {
+    if (force != 0.0f)
+      SDL_HapticRumblePlay(m_SDLHapticDatas[joyNum].SDLhaptic, force, 200);
+    else
+      SDL_HapticRumbleStop(m_SDLHapticDatas[joyNum].SDLhaptic);
+  }
+
+}
+
+void CSDLInputSystem::SpringForceEffect(float force, int joyNum)
+{
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+
+  eff.type = SDL_HAPTIC_SPRING;
+  eff.constant.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.condition.delay = 0;
+  eff.condition.length = SDL_HAPTIC_INFINITY;
+  eff.condition.left_sat[0] = 0xffff;
+  eff.condition.right_sat[0] = 0xffff;
+  eff.condition.left_coeff[0] = (int)(force * INT16_MAX);
+  eff.condition.right_coeff[0] = (int)(force * INT16_MAX);
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectSpringForceID, &eff);
+
+    SDL_HapticRunEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectSpringForceID, 1);
+  }
+
+}
+
+void CSDLInputSystem::FrictionForceEffect(float force, int joyNum)
+{
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+
+  eff.type = SDL_HAPTIC_FRICTION;
+  eff.constant.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.condition.delay = 0;
+  eff.condition.length = SDL_HAPTIC_INFINITY;
+  eff.condition.left_sat[0] = 0xffff;
+  eff.condition.right_sat[0] = 0xffff;
+  eff.condition.left_coeff[0] = (int)(force * INT16_MAX);
+  eff.condition.right_coeff[0] = (int)(force * INT16_MAX);
+
+  if (SDL_HapticEffectSupported(m_SDLHapticDatas[joyNum].SDLhaptic, &eff))
+  {
+    SDL_HapticUpdateEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectFrictionForceID, &eff);
+
+    SDL_HapticRunEffect(m_SDLHapticDatas[joyNum].SDLhaptic, m_SDLHapticDatas[joyNum].effectFrictionForceID, 1);
+  }
+
+}
+
+// due to the sdl2 SDL_HapticNumAxes() bug in linux (always return 2 in linux)
+// test if haptic controller has the most basic constant force effect
+// if it has -> ffb wheel or ffb joystick
+// if it hasn't -> pad
+bool CSDLInputSystem::HasBasicForce(SDL_Haptic* hap)
+{
+  SDL_memset(&eff, 0, sizeof(SDL_HapticEffect));
+  eff.type = SDL_HAPTIC_CONSTANT;
+  eff.periodic.direction.type = SDL_HAPTIC_CARTESIAN;
+  eff.constant.direction.dir[0] = 0;
+  eff.constant.length = 30;
+  eff.constant.delay = 0;
+  eff.constant.level = 0;
+
+  if (SDL_HapticEffectSupported(hap, &eff))
+    return true;
+  else
+    return false;
 }

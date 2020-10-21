@@ -49,6 +49,8 @@ struct SDLKeyMapStruct
 class CSDLInputSystem : public CInputSystem
 {
 private:
+	const Util::Config::Node& m_config;
+
 	// Lookup table to map key names to SDLKeys
 	static SDLKeyMapStruct s_keyMap[];
 
@@ -67,6 +69,22 @@ private:
 	int m_mouseZ;
 	short m_mouseWheelDir;
 	Uint8 m_mouseButtons;
+
+	// SDL2 ffb
+	SDL_HapticEffect eff;
+	unsigned sdlConstForceMax;
+	unsigned sdlSelfCenterMax;
+	unsigned sdlFrictionMax;
+	unsigned sdlVibrateMax;
+	struct hapticInfo
+	{
+		SDL_Haptic* SDLhaptic = NULL;
+		int effectConstantForceID = -1;
+		int effectVibrationID = -1;
+		int effectSpringForceID = -1;
+		int effectFrictionForceID = -1;
+	};
+	std::vector<hapticInfo> m_SDLHapticDatas;
 
 	/*
 	 * Opens all attached joysticks.
@@ -104,11 +122,31 @@ protected:
 
 	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
+	void StopAllEffect(int joyNum);
+
+	void StopConstanteforce(int joyNum);
+
+	void StopVibrationforce(int joyNum);
+
+	void StopSpringforce(int joyNum);
+
+	void StopFrictionforce(int joyNum);
+
+	void VibrationEffect(float strength, int joyNum);
+
+	void ConstantForceEffect(float force, int dir, int length, int joyNum);
+
+	void SpringForceEffect(float force, int joyNum);
+
+	void FrictionForceEffect(float force, int joyNum);
+
+	bool HasBasicForce(SDL_Haptic* hap);
+
 public:
 	/*
 	 * Constructs an SDL input system.
 	 */
-	CSDLInputSystem();
+	CSDLInputSystem(const Util::Config::Node& config);
 
 	~CSDLInputSystem();
 

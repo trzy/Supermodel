@@ -1389,9 +1389,7 @@ static Util::Config::Node DefaultConfig()
   // Other sound options
   config.Set("LegacySoundDSP", false); // New config option for games that do not play correctly with MAME's SCSP sound core.
   // CDriveBoard
-#ifdef SUPERMODEL_WIN32
   config.Set("ForceFeedback", false);
-#endif
   // Platform-specific/UI
   config.Set("New3DEngine", true);
   config.Set("QuadRendering", false);
@@ -1417,12 +1415,22 @@ static Util::Config::Node DefaultConfig()
   config.Set("XInputConstForceThreshold", "30");
   config.Set("XInputConstForceMax", "100");
   config.Set("XInputVibrateMax", "100");
+  // SDL ForceFeedback
+  config.Set("SDLConstForceMax", "100");
+  config.Set("SDLSelfCenterMax", "100");
+  config.Set("SDLFrictionMax", "100");
+  config.Set("SDLVibrateMax", "100");
 #ifdef NET_BOARD
   // NetBoard
   config.Set("EmulateNet", false);
 #endif
 #else
   config.Set("InputSystem", "sdl");
+  // SDL ForceFeedback
+  config.Set("SDLConstForceMax", "100");
+  config.Set("SDLSelfCenterMax", "100");
+  config.Set("SDLFrictionMax", "100");
+  config.Set("SDLVibrateMax", "100");
 #endif
   config.Set("Outputs", "none");
   return config;
@@ -1498,9 +1506,7 @@ static void Help(void)
   puts("");
 #endif
   puts("Input Options:");
-#ifdef SUPERMODEL_WIN32
   puts("  -force-feedback         Enable force feedback (DirectInput, XInput)");
-#endif
   puts("  -config-inputs          Configure keyboards, mice, and game controllers");
 #ifdef SUPERMODEL_WIN32
   printf("  -input-system=<s>       Input system [Default: %s]\n", defaultConfig["InputSystem"].ValueAs<std::string>().c_str());
@@ -1599,10 +1605,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-net",                 { "EmulateNet",       true } },
     { "-no-net",              { "EmulateNet",       false } },
 #endif
-#ifdef SUPERMODEL_WIN32
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },
-#endif
 
   };
   for (int i = 1; i < argc; i++)
@@ -1841,7 +1845,7 @@ int main(int argc, char **argv)
 
   // Create input system
   if (selectedInputSystem == "sdl")
-    InputSystem = new CSDLInputSystem();
+    InputSystem = new CSDLInputSystem(s_runtime_config);
 #ifdef SUPERMODEL_WIN32
   else if (selectedInputSystem == "dinput")
     InputSystem = new CDirectInputSystem(s_runtime_config, s_window, false, false);

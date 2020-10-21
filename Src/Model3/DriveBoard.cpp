@@ -276,12 +276,8 @@ void CDriveBoard::Reset(void)
 
   m_z80.Reset();  // always reset to provide a valid Z80 state
   
-#ifdef SUPERMODEL_WIN32
   if (!m_config["ForceFeedback"].ValueAsDefault<bool>(false))
     m_attached = false;
-#else
-  m_attached = false;
-#endif
 
   // Stop any effects that may still be playing
   if (m_attached)
