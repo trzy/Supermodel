@@ -254,8 +254,10 @@ void CDriveBoard::Reset(void)
   m_adcPortRead = 0;
   m_adcPortBit = 0;
   m_port42Out = 0;
+  m_port45Out = 0;
   m_port46Out = 0;
   m_prev42Out = 0;
+  m_prev45Out = 0;
   m_prev46Out = 0;
 
   m_initState = 0;
@@ -266,6 +268,7 @@ void CDriveBoard::Reset(void)
   m_uncenterVal2 = 0;
 
   m_lastConstForce = 0;
+  m_lastConstForceY = 0;
   m_lastSelfCenter = 0;
   m_lastFriction = 0;
   m_lastVibrate = 0;
@@ -496,32 +499,29 @@ UINT8 CDriveBoard::IORead8(UINT32 portNum)
   UINT8 adcVal;
   switch (portNum)
   {
-    case 32: // DIP 1 value
+    case 0x20: // DIP 1 value
       return m_dip1;
-    case 33: // DIP 2 value
+    case 0x21: // DIP 2 value
       return m_dip2;
-    case 36: // ADC channel 1 - not connected
-    case 37: // ADC channel 2 - steering wheel position (0x00 = full left, 0x80 = center, 0xFF = full right)
-    case 38: // ADC channel 3 - cockpit bank position (deluxe cabinets) (0x00 = full left, 0x80 = center, 0xFF = full right)
-    case 39: // ADC channel 4 - not connected
+    case 0x24: // ADC channel 1 - Y analog axis for joystick
+    case 0x25: // ADC channel 2 - steering wheel position (0x00 = full left, 0x80 = center, 0xFF = full right) and X analog axis for joystick
+    case 0x26: // ADC channel 3 - cockpit bank position (deluxe cabinets) (0x00 = full left, 0x80 = center, 0xFF = full right)
+    case 0x27: // ADC channel 4 - not connected
       if (portNum == m_adcPortRead && m_adcPortBit-- > 0)
       {
         switch (portNum)
         {
-          case 36: // Not connected
-            adcVal = 0x00;
+          case 0x24: // Y analog axis for joystick
+            adcVal = ReadADCChannel1();
             break;
-          case 37: // Steering wheel for twin racing cabinets - TODO - check actual range of steering, suspect it is not really 0x00-0xFF
-            if (m_initialized)
-              adcVal = (UINT8)m_inputs->steering->value;
-            else
-              adcVal = 0x80; // If not initialized, return 0x80 so that wheel centering test does not fail
+          case 0x25: // Steering wheel for twin racing cabinets - TODO - check actual range of steering, suspect it is not really 0x00-0xFF
+            adcVal = ReadADCChannel2();
             break;
-          case 38: // Cockpit bank position for deluxe racing cabinets
-            adcVal = 0x80;
+          case 0x26: // Cockpit bank position for deluxe racing cabinets
+            adcVal = ReadADCChannel3();
             break;
-          case 39: // Not connected
-            adcVal = 0x00;
+          case 0x27: // Not connected
+            adcVal = ReadADCChannel4();
             break;
           default:
 #ifdef DEBUG            
@@ -538,9 +538,9 @@ UINT8 CDriveBoard::IORead8(UINT32 portNum)
 #endif
         return 0xFF;
       }
-    case 40: // PPC command
+    case 0x28: // PPC command
       return m_dataSent;
-    case 44: // Encoder error reporting (kept at 0x00 for no error)
+    case 0x2c: // Encoder error reporting (kept at 0x00 for no error)
       // Bit 1 0  
       //     0 0 = encoder okay, no error
       //     0 1 = encoder error 1 - overcurrent error
@@ -559,55 +559,66 @@ void CDriveBoard::IOWrite8(UINT32 portNum, UINT8 data)
 {
   switch (portNum)
   {
-    case 16: // Unsure? - single byte 0x03 sent at initialization, then occasionally writes 0x07 & 0xFA to port
+    case 0x10: // Unsure? - single byte 0x03 sent at initialization, then occasionally writes 0x07 & 0xFA to port
       return;
-    case 17: // Interrupt control
+    case 0x11: // Interrupt control
       if (data == 0x57)
         m_allowInterrupts = true;
       else if (data == 0x53) // Strictly speaking 0x53 then 0x04
         m_allowInterrupts = false;
       return;
-    case 28: // Unsure? - two bytes 0xFF, 0xFF sent at initialization only
-    case 29: // Unsure? - two bytes 0x0F, 0x17 sent at initialization only
-    case 30: // Unsure? - same as port 28
-    case 31: // Unsure? - same as port 31
+    case 0x1c: // Unsure? - two bytes 0xFF, 0xFF sent at initialization only
+    case 0x1d: // Unsure? - two bytes 0x0F, 0x17 sent at initialization only
+    case 0x1e: // Unsure? - same as port 28
+    case 0x1f: // Unsure? - same as port 31
       return;
-    case 32: // Left digit of 7-segment display 1
+    case 0x20: // Left digit of 7-segment display 1
       m_seg1Digit1 = data;
       return;
-    case 33: // Right digit of 7-segment display 1
+    case 0x21: // Right digit of 7-segment display 1
       m_seg1Digit2 = data;
       return;
-    case 34: // Left digit of 7-segment display 2
+    case 0x22: // Left digit of 7-segment display 2
       m_seg2Digit1 = data;
       return;
-    case 35: // Right digit of 7-segment display 2
+    case 0x23: // Right digit of 7-segment display 2
       m_seg2Digit2 = data;
       return;
-    case 36: // ADC channel 1 control
-    case 37: // ADC channel 2 control
-    case 38: // ADC channel 3 control
-    case 39: // ADC channel 4 control
+    case 0x24: // ADC channel 1 control
+    case 0x25: // ADC channel 2 control
+    case 0x26: // ADC channel 3 control
+    case 0x27: // ADC channel 4 control
       m_adcPortRead = portNum;
       m_adcPortBit = 8;
       return;
-    case 41: // Reply for PPC
+    case 0x29: // Reply for PPC
       m_dataReceived = data;
-      if (data == 0xCC)
+      if ((data == 0xCC && m_boardType == Wheel) || (data==0xCB && m_boardType == Joystick))
         m_initialized = true;
       return;
-    case 42: // Encoder motor data
+    case 0x2a: // Encoder motor data (x axis)
       m_port42Out = data;
-      ProcessEncoderCmd();
+      switch (m_boardType)
+      {
+        case Wheel:
+          ProcessEncoderCmd();
+          break;
+        case Joystick:
+          ProcessEncoderCmdJoystick();
+          break;
+      }
       return;
-    case 45: // Clutch/lamp control (deluxe cabinets)
+    case 0x2d: // Clutch/lamp control (deluxe cabinets) ( or y axis)
+      m_port45Out = data;
+      if (m_boardType==Joystick)
+        ProcessEncoderCmdJoystick();
       return;
-    case 46: // Encoder motor control
+    case 0x2e: // Encoder motor control
       m_port46Out = data;
       return;
-    case 240: // Unsure? - single byte 0xBB sent at initialization only
+    case 0xf0: // Unsure? - single byte 0xBB sent at initialization only
       return;
-    case 241: // Unsure? - single byte 0x4E sent regularly - some sort of watchdog?
+    case 0xf1: // Unsure? - single byte 0x4E sent regularly - some sort of watchdog?
       return;
     default:
 #ifdef DEBUG
@@ -719,18 +730,148 @@ void CDriveBoard::ProcessEncoderCmd(void)
   }
 }
 
+void CDriveBoard::ProcessEncoderCmdJoystick(void)
+{
+  if (m_prev42Out != m_port42Out || m_prev46Out != m_port46Out || m_prev45Out != m_port45Out)
+  {
+    switch (m_port46Out)
+    {
+      case 0xEE:
+      // Apply constant force
+
+        if (m_port42Out > 0x7f) // X
+        {
+          SendConstantForce(2 * (m_port42Out - 0x7f));
+        }
+        else if (m_port42Out < 0x7f)
+        {
+          SendConstantForce(2 * (m_port42Out - 0x7f));
+        }
+        else
+        {
+          SendConstantForce(0);
+        }
+
+        if (m_port45Out > 0x7f) // Y
+        {
+          SendConstantForceY(-2 * (m_port45Out - 0x7f));
+        }
+        else if (m_port45Out < 0x7f)
+        {
+          SendConstantForceY(-2 * (m_port45Out - 0x7f));
+        }
+        else
+        {
+          SendConstantForceY(0);
+        }
+
+        if (m_port42Out == 0x7f && m_port45Out == 0x81)
+        {
+          SendSelfCenter(255);
+        }
+        else SendSelfCenter(0);
+
+        break;
+
+        case 0xFF:
+        // Stop all effects
+        if (m_port42Out == 0 || m_port45Out == 0)
+          SendStopAll();
+        break;
+
+        case 0xcc: // init
+        //42[0B] / 45[0A]
+        //42[0B] / 45[0B]
+        //42[FF] / 45[0B]
+        //42[FF] / 45[FF]
+        break;
+
+        case 0xdd: // init
+        // 42[FF] / 45[00]
+        // 42[FF] / 45[FF]
+
+        // 42[0A] / 45[00]
+        // 42[0A] / 45[0A]
+        break;
+
+        case 0xce:
+        // 42[7F] / 45[08]
+        // 42[7F] / 45[09]
+        // 42[7F] / 45[0A]
+        // 42[7F] / 45[0B]
+        // 42[7F] / 45[81]
+        if (m_port42Out == 0x7f && m_port45Out != 0x81) // X
+        {
+          SendConstantForce(2 * m_port45Out);
+        }
+
+        if (m_port42Out == 0x7f && m_port45Out == 0x81)
+        {
+          SendSelfCenter(255);
+        }
+        break;
+
+        case 0xec:
+        // 42[09] / 45[81]
+        // 42[2A] / 45[81]
+        // 42[1B] / 45[81]
+        // 42[7F] / 45[81]
+        if (m_port45Out == 0x81 && m_port42Out != 0x7f) // Y
+        {
+          SendConstantForceY(2 * m_port42Out);
+        }
+
+        if (m_port42Out == 0x7f && m_port45Out == 0x81)
+        {
+          SendSelfCenter(255);
+        }
+        break;
+
+        case 0x00: // init
+        // 42[FF] / 45[00]
+        // 42[FF] / 45[FF]
+        break;
+
+        case 0x99: // init
+        // 42[B0] / 45[B0]
+        // 42[80] / 45[B0]
+        // 42[80] / 45[80]
+        break;
+
+        default:
+        //printf("Unknown = 46 [%02X] / 42 [%02X] / 45 [%02X]\n", m_port46Out, m_port42Out, m_port45Out);
+        break;
+    }
+
+    m_prev42Out = m_port42Out;
+    m_prev46Out = m_port46Out;
+    m_prev45Out = m_port45Out;
+  }
+}
+
 void CDriveBoard::SendStopAll(void)
 {
   //printf(">> Stop All Effects\n");
 
   ForceFeedbackCmd ffCmd;
   ffCmd.id = FFStop;
-  m_inputs->steering->SendForceFeedbackCmd(ffCmd);
 
+  switch (m_boardType)
+  {
+  case Wheel:
+    m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+    break;
+  case Joystick:
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+    m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+    break;
+  }
+  
   m_lastConstForce = 0;
   m_lastSelfCenter = 0;
   m_lastFriction   = 0;
   m_lastVibrate    = 0;
+  m_lastConstForceY = 0;
 }
 
 void CDriveBoard::SendConstantForce(INT8 val)
@@ -759,9 +900,30 @@ void CDriveBoard::SendConstantForce(INT8 val)
   ForceFeedbackCmd ffCmd;
   ffCmd.id = FFConstantForce;     
   ffCmd.force = (float)val / (val >= 0 ? 127.0f : 128.0f);
-  m_inputs->steering->SendForceFeedbackCmd(ffCmd);
-
+  
+  switch (m_boardType)
+  {
+  case Wheel:
+    m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+    break;
+  case Joystick:
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+    break;
+  }
+  
   m_lastConstForce = val;
+}
+
+void CDriveBoard::SendConstantForceY(INT8 val)
+{
+  if (val == m_lastConstForceY)
+    return;
+
+  ForceFeedbackCmd ffCmd;
+  ffCmd.id = FFConstantForce;
+  ffCmd.force = (float)val / (val >= 0 ? 127.0f : 128.0f);
+  m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+  m_lastConstForceY = val;
 }
 
 void CDriveBoard::SendSelfCenter(UINT8 val)
@@ -778,10 +940,21 @@ void CDriveBoard::SendSelfCenter(UINT8 val)
   ForceFeedbackCmd ffCmd;
   ffCmd.id = FFSelfCenter;
   ffCmd.force = (float)val / 255.0f;
-  m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+
+  switch (m_boardType)
+  {
+  case Wheel:
+    m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+    break;
+  case Joystick:
+    m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
+    m_inputs->analogJoyY->SendForceFeedbackCmd(ffCmd);
+    break;
+  }
 
   m_lastSelfCenter = val;
 }
+
 
 void CDriveBoard::SendFriction(UINT8 val)
 {
@@ -819,6 +992,59 @@ void CDriveBoard::SendVibrate(UINT8 val)
   m_inputs->steering->SendForceFeedbackCmd(ffCmd);
 
   m_lastVibrate = val;
+}
+
+uint8_t CDriveBoard::ReadADCChannel1()
+{
+  switch (m_boardType)
+  {
+    case Wheel:
+      return 0x00;
+      break;
+    case Joystick:
+      if (m_initialized)
+        return (UINT8)m_inputs->analogJoyY->value;
+      else
+        return 0x80; // If not initialized, return 0x80 so that ffb centering test does not fail
+      break;
+  }
+}
+
+uint8_t CDriveBoard::ReadADCChannel2()
+{
+  switch (m_boardType)
+  {
+    case Wheel:
+      if (m_initialized)
+        return (UINT8)m_inputs->steering->value;
+      else
+        return 0x80; // If not initialized, return 0x80 so that wheel centering test does not fail
+      break;
+    case Joystick:
+      if (m_initialized)
+        return (UINT8)m_inputs->analogJoyX->value;
+      else
+        return 0x80; // If not initialized, return 0x80 so that ffb centering test does not fail
+      break;
+    }
+}
+
+uint8_t CDriveBoard::ReadADCChannel3()
+{
+    return 0x80;
+}
+
+uint8_t CDriveBoard::ReadADCChannel4()
+{
+    switch (m_boardType)
+    {
+    case Wheel:
+      return 0x00;
+      break;
+    case Joystick:
+      return 0x80;
+      break;
+    }
 }
 
 CDriveBoard::CDriveBoard(const Util::Config::Node &config) 

@@ -2932,6 +2932,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   rom_set.get_rom("mpeg_program").CopyTo(dsbROM, 128*1024);
   rom_set.get_rom("mpeg_music").CopyTo(mpegROM, 16*0x100000);
   rom_set.get_rom("driveboard_program").CopyTo(driveROM, 64*1024);
+  rom_set.get_rom("ffb_program").CopyTo(driveROM, 64 * 1024);
 
   // Convert PowerPC and 68K ROMs to little endian words 
   Util::FlipEndian32(crom, 8*0x100000 + 128*0x100000);
@@ -3030,6 +3031,15 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   {
     if (DriveBoard.Init(driveROM))
       return FAIL;
+    else
+      DriveBoard.m_boardType = DriveBoard.Wheel;
+  }
+  else if (rom_set.get_rom("ffb_program").size)
+  {
+    if (DriveBoard.Init(driveROM))
+      return FAIL;
+    else
+      DriveBoard.m_boardType = DriveBoard.Joystick;
   }
   else
     DriveBoard.Init(NULL);
@@ -3046,10 +3056,12 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
     extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << game.mpeg_board << ")");
   if (rom_set.get_rom("driveboard_program").size)
     extra_hw.insert("Drive Board");
+  if (rom_set.get_rom("ffb_program").size)
+    extra_hw.insert("Joystick FFB Board");
   if (game.encryption_key)
     extra_hw.insert("Security Board");
   if (netboard_present.compare("true")==0)
-      extra_hw.insert("Net Board");
+    extra_hw.insert("Net Board");
   if (!game.version.empty())
     std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
   else

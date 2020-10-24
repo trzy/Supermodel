@@ -36,6 +36,14 @@
 class CDriveBoard : public IBus
 {
 public:
+  enum BoardType
+  {
+    Wheel=0,
+    Joystick
+  };
+  
+  BoardType m_boardType;
+
   /*
    * IsAttached(void):
    *
@@ -244,7 +252,7 @@ public:
    */
   void Write8(UINT32 addr, UINT8 data);
   void IOWrite8(UINT32 portNum, UINT8 data);
-  
+
 private:
   const Util::Config::Node &m_config;
   bool m_attached;    // True if drive board is attached
@@ -281,9 +289,11 @@ private:
 
   UINT8 m_port42Out;      // Last value sent to Z80 I/O port 42 (encoder motor data)
   UINT8 m_port46Out;      // Last value sent to Z80 I/O port 46 (encoder motor control)
+  UINT8 m_port45Out;      // Last value sent to Z80 I/O port 42 (up-down motor data)
 
   UINT8 m_prev42Out;      // Previous value sent to Z80 I/O port 42
   UINT8 m_prev46Out;      // Previous value sent to Z80 I/O port 46
+  UINT8 m_prev45Out;      // Previous value sent to Z80 I/O port 45 (up-down)
 
   UINT8 m_uncenterVal1;   // First part of pending uncenter command
   UINT8 m_uncenterVal2;   // Second part of pending uncenter command
@@ -299,6 +309,7 @@ private:
 
   // Feedback state
   INT8 m_lastConstForce;  // Last constant force command sent
+  INT8 m_lastConstForceY;  // Last constant force command sent y axis
   UINT8 m_lastSelfCenter; // Last self center command sent
   UINT8 m_lastFriction;   // Last friction command sent
   UINT8 m_lastVibrate;    // Last vibrate command sent
@@ -313,15 +324,27 @@ private:
 
   void ProcessEncoderCmd(void);
 
+  void ProcessEncoderCmdJoystick(void);
+
   void SendStopAll(void);
 
   void SendConstantForce(INT8 val);
+
+  void SendConstantForceY(INT8 val);
 
   void SendSelfCenter(UINT8 val);
 
   void SendFriction(UINT8 val);
 
   void SendVibrate(UINT8 val);
+
+  uint8_t ReadADCChannel1();
+
+  uint8_t ReadADCChannel2();
+
+  uint8_t ReadADCChannel3();
+
+  uint8_t ReadADCChannel4();
 };
 
 #endif  // INCLUDED_DRIVEBOARD_H
