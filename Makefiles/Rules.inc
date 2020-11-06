@@ -28,6 +28,64 @@
 
 
 ###############################################################################
+# Output Locations
+###############################################################################
+
+OBJ_DIR = obj$(strip $(BITS))
+BIN_DIR = bin$(strip $(BITS))
+
+OUTFILE = supermodel
+
+
+###############################################################################
+# Compiler Flags
+###############################################################################
+
+#
+# Construct Supermodel build options
+#
+SUPERMODEL_BUILD_FLAGS = 
+
+# If render state analyser is enabled, need to define DEBUG
+ifeq ($(strip $(DEBUG)),1)
+	SUPERMODEL_BUILD_FLAGS += -DDEBUG
+endif
+
+# If Net Board support is enabled, need to define NET_BOARD
+ifeq ($(strip $(NET_BOARD)),1)
+	SUPERMODEL_BUILD_FLAGS += -DNET_BOARD
+endif
+
+# If Bart's new frame timing is enabled, need to define NEW_FRAME_TIMING
+ifeq ($(strip $(NEW_FRAME_TIMING)),1)
+	SUPERMODEL_BUILD_FLAGS += -DNEW_FRAME_TIMING
+endif
+
+# If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
+ifeq ($(strip $(ENABLE_DEBUGGER)),1)
+	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
+endif
+
+# 
+# Compiler options
+#
+ARCH = 
+OPT = -Ofast
+WARN = -Wall
+CSTD = -std=iso9899:2011
+CXXSTD = -std=c++14
+
+
+#
+# Construct the compiler (C and C++) and linker flags
+#
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
+CFLAGS = $(COMMON_CFLAGS) $(CSTD)
+CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
+LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
+
+
+###############################################################################
 # Source Files
 ###############################################################################
 
@@ -141,54 +199,6 @@ OBJ_FILES = $(foreach file,$(SRC_FILES),$(OBJ_DIR)/$(basename $(notdir $(file)))
 # removes duplicates and is used to construct a set.
 #
 INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
-
-
-###############################################################################
-# Output Locations
-###############################################################################
-
-OBJ_DIR = obj$(strip $(BITS))
-BIN_DIR = bin$(strip $(BITS))
-
-OUTFILE = supermodel
-
-
-###############################################################################
-# Compiler Flags
-###############################################################################
-
-ARCH = -march=native -mfpmath=sse
-BUILD_CFLAGS =
-OPT = -O3
-WARN = -Wall
-CSTD = -std=iso9899:2011
-CXXSTD = -std=c++14
-
-COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC
-
-CFLAGS = $(COMMON_CFLAGS) $(CSTD)
-CXXFLAGS = $(PLATFORM_CFLAGS) $(COMMON_CFLAGS) $(BUILD_CFLAGS) $(CXXSTD)
-LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
-
-# If render state analyser is enabled, need to define DEBUG
-ifeq ($(strip $(DEBUG)),1)
-	BUILD_CFLAGS += -DDEBUG
-endif
-
-# If Net Board support is enabled, need to define NET_BOARD
-ifeq ($(strip $(NET_BOARD)),1)
-	BUILD_CFLAGS += -DNET_BOARD
-endif
-
-# If Bart's new frame timing is enabled, need to define NEW_FRAME_TIMING
-ifeq ($(strip $(NEW_FRAME_TIMING)),1)
-	BUILD_CFLAGS += -DNEW_FRAME_TIMING
-endif
-
-# If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
-ifeq ($(strip $(ENABLE_DEBUGGER)),1)
-	BUILD_CFLAGS += -DSUPERMODEL_DEBUGGER
-endif
 
 
 ###############################################################################

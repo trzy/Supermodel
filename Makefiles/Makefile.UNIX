@@ -63,7 +63,7 @@ SDL2_LIBS = `sdl2-config --libs`
 #	UNIX-specific
 #
 
-PLATFORM_CFLAGS = $(SDL2_CFLAGS)
+PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -Ofast
 PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net
 
 
