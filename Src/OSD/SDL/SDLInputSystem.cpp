@@ -511,9 +511,9 @@ bool CSDLInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeed
       if (ffCmd.force == 0.0f)
         StopConstanteforce(joyNum);
       else if (ffCmd.force > 0.0f)
-        ConstantForceEffect(ffCmd.force * (float)(sdlConstForceMax / 100.0f), -1, 100, joyNum);
+        ConstantForceEffect(ffCmd.force * (float)(sdlConstForceMax / 100.0f), -1, SDL_HAPTIC_INFINITY, joyNum);
       else if (ffCmd.force < 0.0f)
-        ConstantForceEffect(-ffCmd.force * (float)(sdlConstForceMax / 100.0f), 1, 100, joyNum);
+        ConstantForceEffect(-ffCmd.force * (float)(sdlConstForceMax / 100.0f), 1, SDL_HAPTIC_INFINITY, joyNum);
       break;
 
     case FFSelfCenter:
