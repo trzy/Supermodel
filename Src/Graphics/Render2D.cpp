@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,11 +18,11 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Render2D.cpp
  *
- * Implementation of the CRender2D class: OpenGL tile generator graphics. 
+ * Implementation of the CRender2D class: OpenGL tile generator graphics.
  *
  * To-Do List
  * ----------
@@ -31,7 +31,7 @@
  *   mode? To fix Scud Race, either the stencil mask or the h-scroll value must
  *   be shifted by 16 pixels. Magical Truck Adventure is similar but opposite.
  *   Perhaps this is a function of timing registers accessed via JTAG?
- * - Is there a better way to handle the overscan regions in wide screen mode? 
+ * - Is there a better way to handle the overscan regions in wide screen mode?
  *   Is clearing two thin viewports better than one big clear?
  * - Are v-scroll values 9 or 10 bits? (Does it matter?) Lost World seems to
  *   have some scrolling issues.
@@ -43,20 +43,20 @@
  *
  * Model 3's medium resolution tile generator hardware appears to be derived
  * from the Model 2 and System 24 chipset, but is much simpler. It consists of
- * four 64x64 tile layers, comprised of 8x8 pixel tiles, with configurable 
- * priorities. There may be additional features but so far, no known Model 3 
+ * four 64x64 tile layers, comprised of 8x8 pixel tiles, with configurable
+ * priorities. There may be additional features but so far, no known Model 3
  * games use them.
  *
- * VRAM is comprised of 1 MB for tile data and an additional 128 KB for the 
+ * VRAM is comprised of 1 MB for tile data and an additional 128 KB for the
  * palette (each color occupies 32 bits). The four tilemap layers are referred
- * to as: A (0), A' (1), B (2), and B' (3). Palette RAM may be located on a 
+ * to as: A (0), A' (1), B (2), and B' (3). Palette RAM may be located on a
  * separate RAM IC.
  *
  * Registers
  * ---------
  *
  * Registers are listed by their byte offset in the PowerPC address space. Each
- * is 32 bits wide and little endian. Only those registers relevant to 
+ * is 32 bits wide and little endian. Only those registers relevant to
  * rendering are listed here (see CTileGen for others).
  *
  *    Offset:   Description:
@@ -74,9 +74,9 @@
  *    31                                     0
  *     ???? ???? ???? ???? pqrs tuvw ???? ????
  *
- * Bits 'pqrs' control the color depth of layers B', B, A', and A, 
+ * Bits 'pqrs' control the color depth of layers B', B, A', and A,
  * respectively. If set, the layer's pattern data is encoded as 4 bits,
- * otherwise the pixels are 8 bits. 
+ * otherwise the pixels are 8 bits.
  *
  * Bits 'tuvw' control priority for layers B', B, A', and A, respectively,
  * which is also the relative ordering of the layers from bottom to top. For
@@ -94,7 +94,7 @@
  *
  *    00000-F5FFF   Tile pattern data
  *    F6000-F63FF   Layer A horizontal scroll table (512 lines)
- *    F6400-F67FF   Layer A' horizontal scroll table  
+ *    F6400-F67FF   Layer A' horizontal scroll table
  *    F6800-F6BFF   Layer B horizontal scroll table
  *    F6C00-F6FFF   Layer B' horizontal scroll table
  *    F7000-F77FF   Mask table (assuming 4 bytes per line, 512 lines)
@@ -106,7 +106,7 @@
  *
  * Tiles may actually address the entire 1 MB space, although in practice,
  * that would conflict with the other fixed memory regions.
- * 
+ *
  * Palette
  * -------
  *
@@ -123,16 +123,16 @@
  * ----------------------------------
  *
  * The name table is a 64x64 array of 16-bit words serving as indices for tile
- * pattern data and the palette. The first 64 words correspond to the first 
+ * pattern data and the palette. The first 64 words correspond to the first
  * row of tiles, the next 64 to the second row, etc. Although 64x64 entries
  * describes a 512x512 pixel screen, only the upper-left 62x48 tiles are
- * visible when the vertical and horizontal scroll values are 0. Scrolling 
+ * visible when the vertical and horizontal scroll values are 0. Scrolling
  * moves the 496x384 pixel 'window' around, with individual wrapping of the
  * two axes.
  *
- * The data is actually arranged in 32-bit chunks in little endian format, so 
- * that tiles 0, 1, 2, and 3 will be stored as 1, 0, 3, 2. Fetching two name 
- * table entries as a single 32-bit word places the left tile in the high 16 
+ * The data is actually arranged in 32-bit chunks in little endian format, so
+ * that tiles 0, 1, 2, and 3 will be stored as 1, 0, 3, 2. Fetching two name
+ * table entries as a single 32-bit word places the left tile in the high 16
  * bits and the right tile in the low 16 bits.
  *
  * The format of a name table entry in 4-bit color mode is:
@@ -141,9 +141,9 @@
  *     jkpp pppp pppp iiii
  *
  * The pattern index is '0ppp pppp pppi iiij'. Multiplying by 32 yields the
- * offset in VRAM at which the tile pattern data is stored. Note that the MSB 
- * of the name table entry becomes the LSB of the pattern index. This allows 
- * for 32768 4-bit tile patterns, each occupying 32 bytes, which means the 
+ * offset in VRAM at which the tile pattern data is stored. Note that the MSB
+ * of the name table entry becomes the LSB of the pattern index. This allows
+ * for 32768 4-bit tile patterns, each occupying 32 bytes, which means the
  * whole 1 MB VRAM space can be addressed.
  *
  * The 4-bit pattern data is stored as 8 32-bit words. Each word stores a row
@@ -155,7 +155,7 @@
  * 'a' is the left-most pixel data. These 4-bit values are combined with bits
  * from the name table to form a palette index, which determines the final
  * color. For example, for pixel 'a', the 15-bit color index is:
- *    
+ *
  *      14                0
  *     kpp pppp pppp aaaa
  *
@@ -167,7 +167,7 @@
  *    15                 0
  *     ?ppp pppp iiii iiii
  *
- * The low 15 'p' and 'i' bits together form the pattern index, which must be 
+ * The low 15 'p' and 'i' bits together form the pattern index, which must be
  * multiplied by 64 to get the offset. The pattern data now consists of 16 32-
  * bit words, each containing four 8-bit pixels:
  *
@@ -180,7 +180,7 @@
  *    14                0
  *     ppp pppp aaaa aaaa
  *
- * Stencil Mask 
+ * Stencil Mask
  * ------------
  *
  * For any pixel position, there are in fact only two visible layers, despite
@@ -209,11 +209,11 @@
  *     0111 0000 0000 1111 0000 0000 1111 1111
  *
  * These settings would display layer A' for the first 32 pixels of the line,
- * followed by layer A for the next 96 pixels, A' for the subsequent 256 
+ * followed by layer A for the next 96 pixels, A' for the subsequent 256
  * pixels, and A for the final 128 pixels. The first 256 pixels of the line
  * would display layer B' and the second 256 pixels would be from layer B.
  *
- * The stencil mask does not affect layer priorities, which are managed 
+ * The stencil mask does not affect layer priorities, which are managed
  * separately regardless of mask settings.
  *
  * Scrolling
@@ -223,17 +223,17 @@
  * values are stored in the appropriate scroll register and horizontal scroll
  * values can be sourced either from the register (in which case the entire
  * layer will be scrolled uniformly) or from a table in VRAM (which contains
- * independent values for each line). 
+ * independent values for each line).
  *
  * The scroll registers are laid out as:
  *
  *    31                                     0
  *     e??? ???y yyyy yyyy h??? ??xx xxxx xxxx
  *
- * The 'e' bit enables the layer when set. The 'y' bits comprise a vertical 
+ * The 'e' bit enables the layer when set. The 'y' bits comprise a vertical
  * scroll value in pixels. The 'x' bits form a horizontal scroll value. If 'h'
  * is set, then the VRAM table (line-by-line scrolling) is used, otherwise the
- * 'x' values are applied to every line. It is also possible that the scroll 
+ * 'x' values are applied to every line. It is also possible that the scroll
  * values use more or less bits, but probably no more than 1.
  *
  * Each line must be wrapped back to the beginning of the same line. Likewise,
@@ -242,7 +242,7 @@
  * The horizontal scroll table is a series of 16-bit little endian words, one
  * for each line beginning at 0. It appears all the values can be used for
  * scrolling (no control bits have been observed). The number of bits actually
- * used by the hardware is irrelevant -- wrapping has the effect of making 
+ * used by the hardware is irrelevant -- wrapping has the effect of making
  * higher order bits unimportant.
  *
  * Layer Priorities
@@ -318,7 +318,7 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
     patternOffset = tile & 0x3FFF;
     patternOffset *= 64;
     patternOffset /= 4;
-  } 
+  }
 
   // Name table entry provides high color bits
   uint32_t colorHi = tile & ((bits == 4) ? 0x7FF0 : 0x7F00);
@@ -397,7 +397,7 @@ static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, cons
   // If mask bit is clear, alternate layer is shown. We want to test for non-
   // zero, so we flip the mask when drawing alternate layers (layers 1 and 3).
   const uint16_t maskPolarity = (layerNum & 1) ? 0xFFFF : 0x0000;
-      
+
   uint32_t *line = pixels;
 
   for (int y = 0; y < 384; y++)
@@ -438,7 +438,7 @@ static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, cons
 std::pair<bool, bool> CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *pixelsTop)
 {
   unsigned priority = (m_regs[0x20/4] >> 8) & 0xF;
-  
+
   // Render bottom layers
   bool noBottomSurface = true;
   static const int bottomOrder[4] = { 3, 2, 1, 0 };
@@ -511,7 +511,7 @@ std::pair<bool, bool> CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *
 
 // Draws a surface to the screen (0 is top and 1 is bottom)
 void CRender2D::DisplaySurface(int surface)
-{ 
+{
   // Draw the surface
   glActiveTexture(GL_TEXTURE0); // texture unit 0
   glBindTexture(GL_TEXTURE_2D, m_texID[surface]);
@@ -531,22 +531,26 @@ void CRender2D::Setup2D(bool isBottom)
 
   // Disable Z-buffering
   glDisable(GL_DEPTH_TEST);
-  
+
   // Shader program
   glUseProgram(m_shaderProgram);
-  
+
   // Clear everything if requested or just overscan areas for wide screen mode
   if (isBottom)
   {
     glClearColor(0.0, 0.0, 0.0, 0.0);
     glViewport(0, 0, m_totalXPixels, m_totalYPixels);
-	glDisable(GL_SCISSOR_TEST);							// scissor is enabled to fix the 2d/3d miss match problem
+	  glDisable(GL_SCISSOR_TEST);							// scissor is enabled to fix the 2d/3d miss match problem
     glClear(GL_COLOR_BUFFER_BIT);						// we want to clear outside the scissored areas so must disable it
-	glEnable(GL_SCISSOR_TEST);
+	  glEnable(GL_SCISSOR_TEST);
   }
 
   // Set up the viewport and orthogonal projection
-  glViewport(m_xOffset - m_correction, m_yOffset + m_correction, m_xPixels, m_yPixels);
+  bool stretchBottom = m_config["WideBackground"].ValueAs<bool>() && isBottom;
+  if (!stretchBottom)
+  {
+    glViewport(m_xOffset - m_correction, m_yOffset + m_correction, m_xPixels, m_yPixels); //Preserve aspect ratio of tile layer by constraining and centering viewport
+  }
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0.0, 1.0, 1.0, 0.0, 1.0, -1.0);
@@ -642,22 +646,22 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   // Load shaders
   if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, m_config["VertexShader2D"].ValueAs<std::string>(), m_config["FragmentShader2D"].ValueAs<std::string>(), s_vertexShaderSource, s_fragmentShaderSource))
     return FAIL;
-  
+
   // Get locations of the uniforms
   glUseProgram(m_shaderProgram);    // bind program
   m_textureMapLoc = glGetUniformLocation(m_shaderProgram, "textureMap");
   glUniform1i(m_textureMapLoc, 0);  // attach it to texture unit 0
-  
+
   // Allocate memory for layer surfaces
   m_memoryPool = new(std::nothrow) uint8_t[MEMORY_POOL_SIZE];
   if (NULL == m_memoryPool)
     return ErrorLog("Insufficient memory for tilemap surfaces (need %1.1f MB).", float(MEMORY_POOL_SIZE) / 0x100000);
   memset(m_memoryPool, 0, MEMORY_POOL_SIZE);  // clear textures
-  
+
   // Set up pointers to memory regions
   m_topSurface    = (uint32_t *) &m_memoryPool[OFFSET_TOP_SURFACE];
   m_bottomSurface = (uint32_t *) &m_memoryPool[OFFSET_BOTTOM_SURFACE];
-  
+
   // Resolution
   m_xPixels = xRes;
   m_yPixels = yRes;
@@ -695,13 +699,13 @@ CRender2D::~CRender2D(void)
 {
   DestroyShaderProgram(m_shaderProgram, m_vertexShader, m_fragmentShader);
   glDeleteTextures(2, m_texID);
-  
+
   if (m_memoryPool)
   {
     delete [] m_memoryPool;
     m_memoryPool = 0;
   }
-  
+
   m_vram = 0;
   m_topSurface = 0;
   m_bottomSurface = 0;

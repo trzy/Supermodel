@@ -1398,6 +1398,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("FullScreen", false);
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
+  config.Set("WideBackground", false);
   config.Set("VSync", true);
   config.Set("Throttle", true);
   config.Set("ShowFrameRate", false);
@@ -1468,6 +1469,8 @@ static void Help(void)
   puts("  -window                 Windowed mode [Default]");
   puts("  -fullscreen             Full screen mode");
   puts("  -wide-screen            Expand 3D field of view to screen width");
+  puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
+  puts("                          background layer to screen width");
   puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
   puts("  -no-throttle            Disable 60 Hz frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
@@ -1582,6 +1585,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-wide-screen",         { "WideScreen",       true } },
     { "-stretch",             { "Stretch",          true } },
     { "-no-stretch",          { "Stretch",          false } },
+    { "-wide-bg",             { "WideBackground",   true } },
+    { "-no-wide-bg",          { "WideBackground",   false } },
     { "-no-multi-texture",    { "MultiTexture",     false } },
     { "-multi-texture",       { "MultiTexture",     true } },
     { "-throttle",            { "Throttle",         true } },
