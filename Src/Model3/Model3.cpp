@@ -197,6 +197,16 @@
  *  - Region menu can be accessed by entering test mode, holding start, and
  *    pressing: green, green, blue, yellow, red, yellow, blue 
  *   (VR4,4,2,3,1,3,2).
+ * 
+ * magtruck:
+ *    Found a way to unlock region in Magical truck
+ *    If Midi data port returns 0, magtruck is locked to japan region
+ *    if Midi data port returns 1, magtruck region can be changed to export, usa, australian
+ *    We decided to make a rom patch instead of introducing a specific config to allow the region to be set
+ *    Reminder : to change region in magtruck, use the region menu code
+ *               enter Service menu with Test, then Start P1, Start P1, Service, Start P1, Service, Test (default keys : 6 then 1 1 5 1 5 6)
+ *    note : rom patch is active by default, comment the patch in games.xml if you want Japan region
+ * 
  */
 
 #include <new>
@@ -940,12 +950,15 @@ UINT8 CModel3::Read8(UINT32 addr)
 
     // Sound Board
     case 0x08:
-      if ((addr & 0xF) == 4)  // MIDI control port
-
-        return 0x83;          // magtruck country check
-
-      else
+      switch (addr & 0xf)
+      {
+      case 0x0:         // MIDI data port
+        return 0x00;    // Something to do with region locked in magtruck (0=locked, 1=unlocked). /!\ no effect if rom patch is activated!
+      case 0x4:         // MIDI control port
+        return 0x83;    // magtruck country check
+      default:
         return 0;
+      }
       break;
 
     // System registers

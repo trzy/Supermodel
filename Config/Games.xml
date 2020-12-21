@@ -1148,6 +1148,10 @@
       <encryption_key>0x29266e45</encryption_key>
     </hardware>
     <roms>
+      <patches>
+        <!-- Enable Region change (remove the patch to return to Japan region) -->
+        <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21434.20" crc32="0xE028D7CA" />
         <file offset="2" name="epr-21436.19" crc32="0x22BCBCA3" />
