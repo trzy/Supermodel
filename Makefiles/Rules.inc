@@ -44,7 +44,7 @@ OUTFILE = supermodel
 #
 # Construct Supermodel build options
 #
-SUPERMODEL_BUILD_FLAGS = 
+SUPERMODEL_BUILD_FLAGS =
 
 # If render state analyser is enabled, need to define DEBUG
 ifeq ($(strip $(DEBUG)),1)
@@ -66,10 +66,10 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
 endif
 
-# 
+#
 # Compiler options
 #
-ARCH = 
+ARCH =
 OPT = -Ofast
 WARN = -Wall
 CSTD = -std=iso9899:2011
@@ -211,6 +211,17 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # and thinks the default target is just one of the object files.
 #
 all:	$(BIN_DIR)/$(OUTFILE)
+
+#
+# Release target: used only to create official builds stamped with the SVN
+# version number.
+#
+release: set_version clean all
+set_version:
+	$(eval VERSION = 0.3a-svn-$(shell svnversion --no-newline))
+	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
+	$(info Building Supermodel Version $(VERSION))
+
 
 $(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
