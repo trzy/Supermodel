@@ -213,15 +213,24 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 all:	$(BIN_DIR)/$(OUTFILE)
 
 #
-# Release target: used only to create official builds stamped with the SVN
-# version number.
+# Release targets: used only to create official builds stamped with the SVN
+# version number. Double-colon rules should force ordered execution.
+# The automated build script relies on these -- don't modify their output!
 #
-release: set_version clean all
+.PHONY: set_version
+.PHONY: print_message
+.PHONY: version
+release:: set_version
+release:: print_message
+release:: clean
+release:: all
 set_version:
 	$(eval VERSION = 0.3a-svn-$(shell svnversion --no-newline))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
+print_message:
 	$(info Building Supermodel Version $(VERSION))
-
+version: set_version
+	@echo $(VERSION)
 
 $(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
