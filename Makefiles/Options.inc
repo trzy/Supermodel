@@ -54,7 +54,7 @@ endif
 #
 # Enable support for Model3 Net Board emulation
 #
-NET_BOARD =
+NET_BOARD = 1
 ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
 	override NET_BOARD =
 endif

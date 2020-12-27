@@ -70,7 +70,7 @@ endif
 # Compiler options
 #
 ARCH =
-OPT = -Ofast
+OPT = -O3
 WARN = -Wall
 CSTD = -std=iso9899:2011
 CXXSTD = -std=c++14
