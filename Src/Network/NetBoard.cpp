@@ -1,3 +1,25 @@
+/**
+ ** Supermodel
+ ** A Sega Model 3 Arcade Emulator.
+ ** Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+ **                     Harry Tuttle, and Spindizzi
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 // todo:
 // 68k context mixing (important if we don't want to use -no-threads)
 // memory mapping correct ? seems to be good now
@@ -81,11 +103,11 @@
 #include <algorithm>
 
 // few macros to make debugging a bit less painful
-// if NET_DEBUG is defined, printf works normally, otherwise it's compiled to nothing (ie removed)
+// if NET_DEBUG is defined, DebugLog works normally, otherwise it's compiled to nothing (ie removed)
 
 #if defined(NET_DEBUG)
 	#include <stdio.h>
-	#define DPRINTF printf
+	#define DPRINTF DebugLog
 #else
 	#define DPRINTF(a, ...)
 #endif
@@ -145,30 +167,30 @@ UINT8 CNetBoard::Read8(UINT32 a)
 	switch ((a >> 16) & 0xF)
 	{
 	case 0x0:
-		//printf("Netboard R8\tRAM[%x]=%x\n", a,RAM[a]);
+		//DebugLog("Netboard R8\tRAM[%x]=%x\n", a,RAM[a]);
 		if (a > 0x0ffff)
 		{
-			printf("OUT OF RANGE RAM[%x]\n", a);
+			DebugLog("OUT OF RANGE RAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		return RAM[a];
 
 	case 0x4:
-		//printf("Netboard R8\tctrlrw[%x]=%x\n", a&0xff, ctrlrw[a&0xff]);
+		//DebugLog("Netboard R8\tctrlrw[%x]=%x\n", a&0xff, ctrlrw[a&0xff]);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ctrlrw[%x]\n", a);
+			DebugLog("OUT OF RANGE ctrlrw[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		switch (a & 0xff)
 		{
 		case 0x0:
-			DPRINTF("Netboard R8\tctrlrw[%x]=%x\tcommbank = %x\n", a & 0xff, ctrlrw[a & 0xff], commbank);
+			DebugLog("Netboard R8\tctrlrw[%x]=%x\tcommbank = %x\n", a & 0xff, ctrlrw[a & 0xff], commbank);
 			return ctrlrw[a&0xff];//commbank;
 			break;
 
 		default:
-			printf("unknown 400(%x)\n", a & 0xff);
+			DebugLog("unknown 400(%x)\n", a & 0xff);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R8 CTRLRW", NULL);
 			return ctrlrw[a&0xff];
 			break;
@@ -177,58 +199,58 @@ UINT8 CNetBoard::Read8(UINT32 a)
 		//return ctrlrw[a];
 
 	case 0x8: // dirt devils
-		//if(((a&0xffff) > 0 && (a&0xffff) < 0xff) || ((a&0xffff) > 0xefff && (a&0xffff) < 0xffff)) printf("Netboard R8\tCommRAM[%x]=%x\n", a & 0xffff, CommRAM[a & 0xffff]);
+		//if(((a&0xffff) > 0 && (a&0xffff) < 0xff) || ((a&0xffff) > 0xefff && (a&0xffff) < 0xffff)) DebugLog("Netboard R8\tCommRAM[%x]=%x\n", a & 0xffff, CommRAM[a & 0xffff]);
 		if ((a & 0x3ffff) > 0xffff)
 		{
-			printf("OUT OF RANGE CommRAM[%x]\n", a);
+			DebugLog("OUT OF RANGE CommRAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		return CommRAM[a & 0xffff];
 
 	case 0xc: // dirt devils
-		//printf("Netboard R8\tioreg[%x]=%x\t\t", a&0xff, ioreg[a&0xff]);
+		//DebugLog("Netboard R8\tioreg[%x]=%x\t\t", a&0xff, ioreg[a&0xff]);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ioreg[%x]\n", a);
+			DebugLog("OUT OF RANGE ioreg[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
 		switch (a & 0xff)
 		{
 		case 0x11: // ioreg[c0011]
-			DPRINTF("Netboard R8\tioreg[%x]=%x\t\treceive result status\n", a & 0xff, ioreg[a & 0xff]);
+			DebugLog("Netboard R8\tioreg[%x]=%x\t\treceive result status\n", a & 0xff, ioreg[a & 0xff]);
 			//return 0x5; /////////////////////////////////// pure hack for spikofe - must have the pure hack spikeout enable too ///////////////////////////////////////////////////////
 			if (Gameinfo.name.compare("spikeofe") == 0) return 0x5;
 			return ioreg[a&0xff];
 			break;
 
 		case 0x19: // ioreg[c0019]
-			DPRINTF("Netboard R8\tioreg[%x]=%x\t\ttransmit result status\n", a & 0xff, ioreg[a & 0xff]);
+			DebugLog("Netboard R8\tioreg[%x]=%x\t\ttransmit result status\n", a & 0xff, ioreg[a & 0xff]);
 			return ioreg[a&0xff];
 			break;
 
 		case 0x81: // ioreg[c0081]
-			DPRINTF("Netboard R8\tioreg[%x]=%x\t\n", a & 0xff, ioreg[a & 0xff]);
+			DebugLog("Netboard R8\tioreg[%x]=%x\t\n", a & 0xff, ioreg[a & 0xff]);
 			return ioreg[a&0xff];
 			break;
 
 		case 0x83: // ioreg[c0083]
-			DPRINTF("Netboard R8\tioreg[%x]=%x\t\tirq status\n", a & 0xff, ioreg[a & 0xff]);
+			DebugLog("Netboard R8\tioreg[%x]=%x\t\tirq status\n", a & 0xff, ioreg[a & 0xff]);
 			return ioreg[a&0xff];
 			break;
 
 		case 0x89: // ioreg[c0089]
-			DPRINTF("Netboard R8\tioreg[%x]=%x\t\n", a & 0xff, ioreg[a & 0xff]);
+			DebugLog("Netboard R8\tioreg[%x]=%x\t\n", a & 0xff, ioreg[a & 0xff]);
 			return ioreg[a&0xff];
 			break;
 
 		case 0x8a: // ioreg[c008a]
-			DPRINTF("Netboard R8\tioreg[%x]=%x\t\n", a & 0xff, ioreg[a & 0xff]);
+			DebugLog("Netboard R8\tioreg[%x]=%x\t\n", a & 0xff, ioreg[a & 0xff]);
 			return ioreg[a & 0xff];
 			break;
 
 		default:
-			printf("unknown c00(%x)\n", a & 0xff);
+			DebugLog("unknown c00(%x)\n", a & 0xff);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R8 IOREG", NULL);
 			return ioreg[a&0xff];
 			break;
@@ -237,7 +259,7 @@ UINT8 CNetBoard::Read8(UINT32 a)
 
 
 	default:
-		printf("NetBoard 68K: Unknown R8 (%02X) addr=%x\n", (a >> 16) & 0xF,a&0x0fffff);
+		DebugLog("NetBoard 68K: Unknown R8 (%02X) addr=%x\n", (a >> 16) & 0xF,a&0x0fffff);
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R8", NULL);
 		break;
 	}
@@ -251,20 +273,20 @@ UINT16 CNetBoard::Read16(UINT32 a)
 	switch ((a >> 16) & 0xF)
 	{
 	case 0x0:
-		//printf("Netboard Read16 (0x0) \tRAM[%x]=%x\n",a, *(UINT16 *)&RAM[a]);
+		//DebugLog("Netboard Read16 (0x0) \tRAM[%x]=%x\n",a, *(UINT16 *)&RAM[a]);
 		if (a > 0x0ffff)
 		{
-			printf("OUT OF RANGE RAM[%x]\n", a);
+			DebugLog("OUT OF RANGE RAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		result = *(UINT16 *)&RAM[a];
 		return result;
 
 	case 0x4: // dirt devils
-		//printf("Netboard R16\tctrlrw[%x] = %x\t", a&0xff, *(UINT16 *)&ctrlrw[a&0xff]);
+		//DebugLog("Netboard R16\tctrlrw[%x] = %x\t", a&0xff, *(UINT16 *)&ctrlrw[a&0xff]);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ctrlrw[%x]\n", a);
+			DebugLog("OUT OF RANGE ctrlrw[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -272,13 +294,13 @@ UINT16 CNetBoard::Read16(UINT32 a)
 		{
 		case 0x0:
 			result = *(UINT16 *)&ctrlrw[a & 0xff];
-			//printf("Netboard R16\tctrlrw[%x] = %x\t\tcommbank = %x\n", a & 0xff, *(UINT16 *)&ctrlrw[a & 0xff],commbank & 1);
+			//DebugLog("Netboard R16\tctrlrw[%x] = %x\t\tcommbank = %x\n", a & 0xff, *(UINT16 *)&ctrlrw[a & 0xff],commbank & 1);
 			return result; // commbank;
 			break;
 
 		default:
 			result = *(UINT16 *)&ctrlrw[a & 0xff];
-			printf("unknown 400(%x)\n", a & 0xff);
+			DebugLog("unknown 400(%x)\n", a & 0xff);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R16 CTRLRW", NULL);
 			return result;
 			break;
@@ -286,20 +308,20 @@ UINT16 CNetBoard::Read16(UINT32 a)
 		}
 
 	case 0x8: // dirt devils
-		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) printf("Netboard R16\tCommRAM[%x] = %x\n", a & 0xffff, *(UINT16 *)&CommRAM[a & 0xffff]);
+		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) DebugLog("Netboard R16\tCommRAM[%x] = %x\n", a & 0xffff, *(UINT16 *)&CommRAM[a & 0xffff]);
 		if ((a & 0x3ffff) > 0xffff)
 		{
-			printf("OUT OF RANGE CommRAM[%x]\n", a);
+			DebugLog("OUT OF RANGE CommRAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		result = *(UINT16 *)&CommRAM[a & 0xffff];
 		return result;
 
 	case 0xc:
-		//printf("Netboard Read16 (0xc) \tioreg[%x] = %x\t", a&0xff, *(UINT16 *)&ioreg[a&0xff]);
+		//DebugLog("Netboard Read16 (0xc) \tioreg[%x] = %x\t", a&0xff, *(UINT16 *)&ioreg[a&0xff]);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ioreg[%x]\n", a);
+			DebugLog("OUT OF RANGE ioreg[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -307,23 +329,23 @@ UINT16 CNetBoard::Read16(UINT32 a)
 		{
 		case 0x88: // ioreg[c0088]
 			result = *(UINT16 *)&ioreg[a & 0xff];
-			DPRINTF("Netboard R16\tioreg[%x] = %x\n", a & 0xff, *(UINT16 *)&ioreg[a & 0xff]);
+			DebugLog("Netboard R16\tioreg[%x] = %x\n", a & 0xff, *(UINT16 *)&ioreg[a & 0xff]);
 			return result;
 
 		case 0x8a: // ioreg[c008a]
 			result = *(UINT16 *)&ioreg[a & 0xff];
-			DPRINTF("Netboard R16\tioreg[%x] = %x\n", a & 0xff, *(UINT16 *)&ioreg[a & 0xff]);
+			DebugLog("Netboard R16\tioreg[%x] = %x\n", a & 0xff, *(UINT16 *)&ioreg[a & 0xff]);
 			return result;
 
 		default:
 			result = *(UINT16 *)&ioreg[a & 0xff];
-			printf("unknown c00(%x)\n", a & 0xff);
+			DebugLog("unknown c00(%x)\n", a & 0xff);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R16 IOREG", NULL);
 			return result;
 		}
 
 	default:
-		printf("NetBoard 68K: Unknown R16 %02X addr=%x\n", (a >> 16) & 0xF,a&0x0fffff);
+		DebugLog("NetBoard 68K: Unknown R16 %02X addr=%x\n", (a >> 16) & 0xF,a&0x0fffff);
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R16", NULL);
 		break;
 	}
@@ -342,10 +364,10 @@ UINT32 CNetBoard::Read32(UINT32 a)
 		lo = *(UINT16 *)&RAM[a + 2];
 		if (a > 0x0ffff)
 		{
-			printf("OUT OF RANGE RAM[%x]\n", a);
+			DebugLog("OUT OF RANGE RAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
-		//printf("Netboard R32\tRAM[%x]=%x\n", a,(hi << 16) | lo);
+		//DebugLog("Netboard R32\tRAM[%x]=%x\n", a,(hi << 16) | lo);
 		result = (hi << 16) | lo;
 		return result;
 
@@ -354,10 +376,10 @@ UINT32 CNetBoard::Read32(UINT32 a)
 		lo = *(UINT16 *)&ctrlrw[a + 2];
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ctrlrw[%x]\n", a);
+			DebugLog("OUT OF RANGE ctrlrw[%x]\n", a);
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 		}
-		printf("Netboard R32\tctrlrw[%x]=%x\n", a, (hi << 16) | lo);
+		DebugLog("Netboard R32\tctrlrw[%x]=%x\n", a, (hi << 16) | lo);
 		result = (hi << 16) | lo;
 		return result;*/
 
@@ -366,10 +388,10 @@ UINT32 CNetBoard::Read32(UINT32 a)
 		lo = *(UINT16 *)&CommRAM[(a & 0xffff) + 2];
 		if ((a & 0x3ffff) > 0xffff)
 		{
-			printf("OUT OF RANGE CommRAM[%x]\n", a);
+			DebugLog("OUT OF RANGE CommRAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
-		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) printf("Netboard R32\tCommRAM[%x] = %x\n", a & 0xffff, (hi << 16) | lo);
+		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) DebugLog("Netboard R32\tCommRAM[%x] = %x\n", a & 0xffff, (hi << 16) | lo);
 		result = (hi << 16) | lo;
 		return result;
 
@@ -378,15 +400,15 @@ UINT32 CNetBoard::Read32(UINT32 a)
 		lo = *(UINT16 *)&ioreg[a + 2];
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ioreg[%x]\n", a);
+			DebugLog("OUT OF RANGE ioreg[%x]\n", a);
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 		}
-		printf("Netboard R32\tioreg[%x]=%x\n", a, (hi << 16) | lo);
+		DebugLog("Netboard R32\tioreg[%x]=%x\n", a, (hi << 16) | lo);
 		result = (hi << 16) | lo;
 		return result;*/
 
 	default:
-		printf("NetBoard 68K: Unknown R32 (%02X) a=%x\n", (a >> 16) & 0xF, a & 0xffff);
+		DebugLog("NetBoard 68K: Unknown R32 (%02X) a=%x\n", (a >> 16) & 0xF, a & 0xffff);
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown R32", NULL);
 		break;
 	}
@@ -399,20 +421,20 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 	switch ((a >> 16) & 0xF)
 	{
 	case 0x0:
-		//printf("Netboard Write8 (0x0) \tRAM[%x] <- %x\n", a, d);
+		//DebugLog("Netboard Write8 (0x0) \tRAM[%x] <- %x\n", a, d);
 		if (a > 0x0ffff)
 		{
-			printf("OUT OF RANGE RAM[%x]\n", a);
+			DebugLog("OUT OF RANGE RAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		RAM[a] = d;
 		break;
 
 	case 0x4:
-		//printf("Netboard W8\tctrlrw[%x] <- %x\t", a&0xff, d);
+		//DebugLog("Netboard W8\tctrlrw[%x] <- %x\t", a&0xff, d);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ctrlrw[%x]\n", a);
+			DebugLog("OUT OF RANGE ctrlrw[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -420,7 +442,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		{
 		case 0x40:
 			ctrlrw[a & 0xff] = d;
-			DPRINTF("Netboard W8\tctrlrw[%x] <- %x\tIRQ 5 ack\n", a & 0xff, d);
+			DebugLog("Netboard W8\tctrlrw[%x] <- %x\tIRQ 5 ack\n", a & 0xff, d);
 			NetIRQAck(5);
 			//NetIRQAck(0);
 			M68KSetIRQ(4); // dirtdvls needs ????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -430,7 +452,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		case 0xa0:
 			ctrlrw[a & 0xff] = d;
 			ioreg[0] = ioreg[0] | 0x01; // Do I force this myself or is it automatic, need investigation, bad init way actually ?
-			DPRINTF("Netboard W8\tctrlrw[%x] <- %x\tIRQ 2 ack\n", a & 0xff, d);
+			DebugLog("Netboard W8\tctrlrw[%x] <- %x\tIRQ 2 ack\n", a & 0xff, d);
 			NetIRQAck(2);
 			//NetIRQAck(0);
 			//M68KRun(10000);
@@ -438,11 +460,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x80:
 			ctrlrw[a & 0xff] = d;
-			//DPRINTF("Netboard W8\tctrlrw[%x] <- %x\tleds <- %x\n", a & 0xff, d,d);
+			//DebugLog("Netboard W8\tctrlrw[%x] <- %x\tleds <- %x\n", a & 0xff, d,d);
 			break;
 
 		default:
-			printf("unknown 400(%x)\n", a & 0xff);
+			DebugLog("unknown 400(%x)\n", a & 0xff);
 			ctrlrw[a & 0xff] = d;
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W8 CTRLRW", NULL);
 			break;
@@ -452,20 +474,20 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		break;
 
 	case 0x8: // dirt devils
-		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) printf("Netboard W8\tCommRAM[%x] <- %x\n", a & 0xffff, d);
+		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) DebugLog("Netboard W8\tCommRAM[%x] <- %x\n", a & 0xffff, d);
 		if ((a & 0x3ffff) > 0xffff)
 		{
-			printf("OUT OF RANGE CommRAM[%x]\n", a);
+			DebugLog("OUT OF RANGE CommRAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		CommRAM[a & 0xffff] = d;
 		break;
 
 	case 0xc: // dirt devils
-		//printf("Netboard Write8 (0xc) \tioreg[%x] <- %x\t", a&0xff, d);
+		//DebugLog("Netboard Write8 (0xc) \tioreg[%x] <- %x\t", a&0xff, d);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ioreg[%x]\n", a);
+			DebugLog("OUT OF RANGE ioreg[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -474,40 +496,40 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		case 0x01: // ioreg[c0001]
 			ioreg[a & 0xff] = d;
 			#ifdef NET_DEBUG
-			printf("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			#endif
 			break;
 
 		case 0x03: // ioreg[c0003]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x05: // ioreg[c0005]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		/*case 0x15: // 0x00 0x01 0x80 // ioreg[c0015]
 			ioreg[a & 0xff] = d;
-			printf("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
 
 			if ((d & 0xFF) != 0x80)
 			{
 				if ((d & 0xFF) == 0x01)
 				{
-					printf("Irq 6 ack\n");
+					DebugLog("Irq 6 ack\n");
 					NetIRQAck(6);
 					//NetIRQAck(0);
 				}
 				else
 				{
-					printf("\n");
+					DebugLog("\n");
 				}
 			}
 			else
 			{
-				printf("data receive enable ???\n");
+				DebugLog("data receive enable ???\n");
 				//M68KSetIRQ(6); // irq6 ici reset dirt a la fin de la synchro
 				//M68KRun(10000);
 			}
@@ -516,11 +538,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		case 0x17: // 0x00 0x8c // ioreg[c0017]
 			ioreg[a & 0xff] = d;
 			//M68KSetIRQ(6); // si irq6 ici, reset master a la fin de la synchro
-			printf("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
 			if ((d & 0xFF) == 0x8C)
 			{
-				printf("receive enable off=%x size=%x\n", recv_offset, recv_size);
-				printf("receiving : ");
+				DebugLog("receive enable off=%x size=%x\n", recv_offset, recv_size);
+				DebugLog("receiving : ");
 
 				recv_size = recv_size & 0x7fff;
 
@@ -531,24 +553,24 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 				{
 					for (int i = 0; i < 100; i++)
 					{
-						printf("%x ", CommRAM[recv_offset + i]);
+						DebugLog("%x ", CommRAM[recv_offset + i]);
 					}
 				}
 				else
 				{
 					for (int i = 0; i < recv_size; i++)
 					{
-						printf("%x ", CommRAM[recv_offset + i]);
+						DebugLog("%x ", CommRAM[recv_offset + i]);
 					}
 				}
-				printf("\n");
+				DebugLog("\n");
 
 				M68KSetIRQ(6); // no carrier error if removed
 				//M68KRun(10000); // obligatoire, warning 500 cycles not enough // pas obligatoire si 3*call dans le netrunframe ???
 			}
 			else
 			{
-				printf("??? receive disable\n");
+				DebugLog("??? receive disable\n");
 				//M68KSetIRQ(6);
 
 			}
@@ -562,29 +584,29 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x15: // 0x00 0x01 0x80 // ioreg[c0015]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
 
 			switch (d & 0xff)
 			{
 			case 0x80:
-				DPRINTF("\nreceiving : \n");
+				DebugLog("\nreceiving : \n");
 
 				//if (recv_offset > 0x1000)
 				if (recv_size < 0x0019) // must find a better condition
 				{
 					//auto recv_data = udpReceive.ReadData(5000);
-					//printf("-> nb recu : %x\n", recv_data.size());
+					//DebugLog("-> nb recu : %x\n", recv_data.size());
 					//memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
-					//DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
+					//DebugLog("receive enable off=%x size=%x\n", recv_offset, recv_size);
 
 
-					DPRINTF("receive enable off=%x size=%x\n", recv_offset, recv_size);
+					DebugLog("receive enable off=%x size=%x\n", recv_offset, recv_size);
 					auto &recv_data = netr->Receive();
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 				}
 				else
 				{
-					DPRINTF("receive enable original value off=%x size=%x\n", recv_offset, recv_size);
+					DebugLog("receive enable original value off=%x size=%x\n", recv_offset, recv_size);
 
 					slot = (recv_size >> 12) & 0x0f;
 					recv_size = recv_size & 0x0fff;
@@ -596,11 +618,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					}
 					recv_offset = (recv_offset << 8) | (recv_offset >> 8);
 
-					//printf("receive enable off=%x size=%x slot=%x\n", recv_offset, recv_size, slot);
+					//DebugLog("receive enable off=%x size=%x slot=%x\n", recv_offset, recv_size, slot);
 
 					//auto recv_data = udpReceive.ReadData(5000);
 					auto &recv_data = netr->Receive();
-					DPRINTF("-> nb recu : %x\n", recv_data.size());
+					DebugLog("-> nb recu : %x\n", recv_data.size());
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 				}
 
@@ -609,51 +631,51 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 				{
 					for (int i = 0; i < 100; i++)
 					{
-						printf("%x ", CommRAM[recv_offset + i]);
+						DebugLog("%x ", CommRAM[recv_offset + i]);
 					}
 				}
 				else
 				{
 					for (int i = 0; i < recv_size; i++)
 					{
-						printf("%x ", CommRAM[recv_offset + i]);
+						DebugLog("%x ", CommRAM[recv_offset + i]);
 					}
 				}
-				printf("\n");
+				DebugLog("\n");
 				#endif
 				break;
 
 			case 0x00:
-				DPRINTF("??? receive disable\n");
+				DebugLog("??? receive disable\n");
 				break;
 
 			case 0x01:
-				DPRINTF("Irq 6 ack\n");
+				DebugLog("Irq 6 ack\n");
 				NetIRQAck(6);
 				break;
 
 			default:
-				printf("15 : other value %x\n", d & 0xff);
+				DebugLog("15 : other value %x\n", d & 0xff);
 				break;
 			}
 			break;
 
 		case 0x17: // 0x00 0x8c // ioreg[c0017]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\t\t", a & 0xff, d);
 
 			switch (d & 0xff)
 			{
 			case 0x8c:
-				DPRINTF("data receive enable\n");
+				DebugLog("data receive enable\n");
 				M68KSetIRQ(6);
 				M68KRun(6000); // 6000 enough
 				break;
 			case 0x00:
-				DPRINTF("??? data receive disable\n");
+				DebugLog("??? data receive disable\n");
 				break;
 			default:
-				printf("17 : other value %x\n",d & 0xff);
+				DebugLog("17 : other value %x\n",d & 0xff);
 				break;
 
 			}
@@ -662,7 +684,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x19: // ioreg[c0019]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\ttransmit result status\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\t\ttransmit result status\n", a & 0xff, d);
 			break;
 
 			// 1b 1d = send part
@@ -670,7 +692,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x1b: // 0x80 // ioreg[c001b]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\t\t\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\t\t\n", a & 0xff, d);
 
 			switch (d & 0xff)
 			{
@@ -681,11 +703,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					//udpSend.SendAsync(addr_out.data(), port_out, send_size, (const char*)CommRAM + send_offset, 1000);
 					nets->Send((const char*)CommRAM + send_offset, send_size);
 
-					DPRINTF("send enable off=%x size=%x\n", send_offset, send_size);
+					DebugLog("send enable off=%x size=%x\n", send_offset, send_size);
 				}
 				else
 				{
-					DPRINTF("send enable original value off=%x size=%x\n", send_offset, send_size);
+					DebugLog("send enable original value off=%x size=%x\n", send_offset, send_size);
 
 					slot = (send_size >> 12) & 0x0f;
 					send_size = send_size & 0x0fff;
@@ -712,41 +734,41 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 					//udpSend.SendAsync(addr_out.data(), port_out, send_size, (const char*)CommRAM + send_offset, 1000);
 					nets->Send((const char*)CommRAM + send_offset, send_size);
 
-					DPRINTF("send enable off=%x size=%x slot=%x\n", send_offset, send_size, slot);
+					DebugLog("send enable off=%x size=%x slot=%x\n", send_offset, send_size, slot);
 				}
 				#ifdef NET_DEBUG
-				printf("transmitting : ");
+				DebugLog("transmitting : ");
 				if (send_size > 50) //too big for print, so...
 				{
 					for (int i = 0; i < 100; i++)
 					{
-						printf("%x ", CommRAM[send_offset + i]);
+						DebugLog("%x ", CommRAM[send_offset + i]);
 					}
 				}
 				else
 				{
 					for (int i = 0; i < send_size; i++)
 					{
-						printf("%x ", CommRAM[send_offset + i]);
+						DebugLog("%x ", CommRAM[send_offset + i]);
 					}
 				}
-				printf("\n");
+				DebugLog("\n");
 				#endif
 				break;
 
 			case 0x00:
-				DPRINTF("??? transmit disable\n");
+				DebugLog("??? transmit disable\n");
 				break;
 
 			default:
-				printf("1b : other value %x\n", d & 0xff);
+				DebugLog("1b : other value %x\n", d & 0xff);
 				break;
 			}
 			break;
 
 		case 0x1d: // 0x8c // ioreg[c001d]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 
 			switch (d & 0xff)
 			{
@@ -759,7 +781,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 				break;
 
 			default:
-				printf("1d : other value %x\n", d & 0xff);
+				DebugLog("1d : other value %x\n", d & 0xff);
 				break;
 			}
 			break;
@@ -767,12 +789,12 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 		case 0x29: // ioreg[c0029]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x2f: // 0x00 or 0x00->0x40->0x00 or 0x82// ioreg[c002f]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 
 			/*if ((d & 0xff) == 0x00)
 			{
@@ -782,11 +804,11 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 
 			if ((d & 0xff) == 0x40)
 			{
-				DPRINTF("********************************* trigger something ????\n");
+				DebugLog("********************************* trigger something ????\n");
 			}
 			if ((d & 0xff) == 0x82)
 			{
-				DPRINTF("********************************* trigger something number 2 ????\n");
+				DebugLog("********************************* trigger something number 2 ????\n");
 			}
 
 			break;
@@ -795,109 +817,109 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			ioreg[a & 0xff] = d;
 			recv_offset = (recv_offset >> 8) | (d << 8 );
 
-			//printf("recv off = %x\n",recv_offset);
-			DPRINTF("recv off = %x\n", d);
+			//DebugLog("recv off = %x\n",recv_offset);
+			DebugLog("recv off = %x\n", d);
 			break;
 
 		case 0x43: // ioreg[c0043]
 			ioreg[a & 0xff] = d;
 			recv_size = (recv_size >> 8) | (d << 8);
-			DPRINTF("recv size = %x\n", d);
+			DebugLog("recv size = %x\n", d);
 			break;
 
 		case 0x45: // ioreg[c0045]
 			ioreg[a & 0xff] = d;
 			send_offset = (send_offset >> 8) | (d << 8);
-			//printf("send off = %x\n", send_offset);
-			DPRINTF("send off = %x\n", d);
+			//DebugLog("send off = %x\n", send_offset);
+			DebugLog("send off = %x\n", d);
 			break;
 
 		case 0x47: // ioreg[c0047]
 			ioreg[a & 0xff] = d;
 			send_size = (send_size >> 8) | (d << 8);
-			//printf("send size = %x\n", send_size);
-			DPRINTF("send size = %x\n", d);
+			//DebugLog("send size = %x\n", send_size);
+			DebugLog("send size = %x\n", d);
 			break;
 
 		case 0x51: //0x04 0x18 // ioreg[c0051]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x55: // ioreg[c0055]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x57: // 0x04->0x09 // ioreg[c0057]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x59: // ioreg[c0059]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x5b: // ioreg[c005b]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x5d: // ioreg[c005d]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x5f: // ioreg[c005f]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x81: // ioreg[c0081]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x83: // 0x35 once and after 0x00 always // ioreg[c0083] // just apres le ioreg[83]=0 on a ppc R32 ioreg[114] et R32 ioreg[110] et apres ack irq5
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x85: // ioreg[c0085]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x87: // ioreg[c0087]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x88: // ioreg[c0088]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 trame
 			ioreg[a & 0xff] = d;
 			//CommRAM[4] = d; /////////////////////////////////// pure hack for spikeout /////////////////////////////////////////////////////////////////////////////////////////////
 			if (Gameinfo.name.compare("spikeout") == 0 || Gameinfo.name.compare("spikeofe") == 0) CommRAM[4] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x8a: // ioreg[c008a]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		case 0x8b: // ioreg[c008b]
 			ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
+			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
 		default:
-			printf("unknown c00(%x)\n", a & 0xff);
+			DebugLog("unknown c00(%x)\n", a & 0xff);
 			ioreg[a & 0xff] = d;
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W8 IOREG", NULL);
 			break;
@@ -908,7 +930,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		break;
 
 	default:
-		printf("NetBoard 68K: Unknown W8 (%x) %06X<-%02X\n", (a >> 16) & 0xF, a, d);
+		DebugLog("NetBoard 68K: Unknown W8 (%x) %06X<-%02X\n", (a >> 16) & 0xF, a, d);
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W8", NULL);
 		break;
 	}
@@ -919,20 +941,20 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 	switch ((a >> 16) & 0xF)
 	{
 	case 0x0:
-		//printf("Netboard Write16 (0x0) \tRAM[%x] <- %x\n", a, d);
+		//DebugLog("Netboard Write16 (0x0) \tRAM[%x] <- %x\n", a, d);
 		if (a > 0x0ffff)
 		{
-			printf("OUT OF RANGE RAM[%x]\n", a);
+			DebugLog("OUT OF RANGE RAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		*(UINT16 *)&RAM[a] = d;
 		break;
 
 	case 0x4:
-		//printf("Netboard W16\tctrlrw[%x] <- %x\t", a&0xff, d);
+		//DebugLog("Netboard W16\tctrlrw[%x] <- %x\t", a&0xff, d);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ctrlrw[%x]\n", a);
+			DebugLog("OUT OF RANGE ctrlrw[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -941,7 +963,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		case 0x00:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
 			commbank = d;
-			DPRINTF("Netboard W16\tctrlrw[%x] <- %x\t\tCommBank <- %x\n", a & 0xff, d,commbank & 1);
+			DebugLog("Netboard W16\tctrlrw[%x] <- %x\t\tCommBank <- %x\n", a & 0xff, d,commbank & 1);
 
 			// sans swap ca avance, avec ca bloque pour scud
 			//CommRAM = Buffer + ((commbank & 1) ? 0x10000 : 0); //swap
@@ -960,7 +982,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 			break;
 		case 0x40:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
-			DPRINTF("Netboard W16\tctrlrw[%x] <- %x\t\tIRQ 5 ack\n", a & 0xff, d);
+			DebugLog("Netboard W16\tctrlrw[%x] <- %x\t\tIRQ 5 ack\n", a & 0xff, d);
 
 			NetIRQAck(5);
 			M68KSetIRQ(4);  // ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -969,26 +991,26 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		case 0xa0:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
 			*(UINT8 *)&ioreg[0] = *(UINT8 *)&ioreg[0] | 0x01; // Do I force this myself or is it automatic, need investigation, bad init way actually ?
-			DPRINTF("Netboard W16\tctrlrw[%x] <-%x\t\tIRQ 2 ack\n", a & 0xff, d);
+			DebugLog("Netboard W16\tctrlrw[%x] <-%x\t\tIRQ 2 ack\n", a & 0xff, d);
 
 			NetIRQAck(2);
 			//NetIRQAck(0);
 			break;
 		case 0x80:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
-			//DPRINTF("Netboard W16\tctrlrw[%x] <-%x\tleds <- %x\n",a & 0xff, d,d);
+			//DebugLog("Netboard W16\tctrlrw[%x] <-%x\tleds <- %x\n",a & 0xff, d,d);
 			break;
 		case 0xc0:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
-			DPRINTF("Netboard W16\tctrlrw[%x] <-%x\tNode ID <- %x\n", a & 0xff, d, d);
+			DebugLog("Netboard W16\tctrlrw[%x] <-%x\tNode ID <- %x\n", a & 0xff, d, d);
 			break;
 		case 0xe0:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
-			DPRINTF("Netboard W16\tctrlrw[%x] <-%x\t\treceive complete <- %x\n", a & 0xff, d, d);
+			DebugLog("Netboard W16\tctrlrw[%x] <-%x\t\treceive complete <- %x\n", a & 0xff, d, d);
 			break;
 		default:
 			*(UINT16 *)&ctrlrw[a & 0xff] = d;
-			printf("unknown 400(%x)\n", a & 0xff);
+			DebugLog("unknown 400(%x)\n", a & 0xff);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W16 CTRLRW", NULL);
 			break;
 
@@ -996,20 +1018,20 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		break;
 
 	case 0x8: // dirt devils
-		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) printf("Netboard W16\tCommRAM[%x] <- %x\n", a & 0xffff, d);
+		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) DebugLog("Netboard W16\tCommRAM[%x] <- %x\n", a & 0xffff, d);
 		if ((a & 0x3ffff) > 0xffff)
 		{
-			printf("OUT OF RANGE CommRAM[%x]\n", a);
+			DebugLog("OUT OF RANGE CommRAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		*(UINT16 *)&CommRAM[a & 0xffff] = d;
 		break;
 
 	case 0xc:
-		//printf("Netboard W16\tioreg[%x] <- %x\t", a&0xff, d);
+		//DebugLog("Netboard W16\tioreg[%x] <- %x\t", a&0xff, d);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ioreg[%x]\n", a);
+			DebugLog("OUT OF RANGE ioreg[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -1020,29 +1042,29 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 			if (d == 0)
 			{
 				*(UINT16 *)&ioreg[a & 0xff] = d;
-				DPRINTF("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
+				DebugLog("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
 			}
 
 			if (d == 1)
 			{
 				*(UINT16 *)&ioreg[a & 0xff] = d;
-				DPRINTF("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
+				DebugLog("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
 			}
 
 			if (d == 2)
 			{
 				*(UINT16 *)&ioreg[a & 0xff] = d;
-				DPRINTF("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
+				DebugLog("Netboard W16\tioreg[%x] <- %x\t\t", a & 0xff, d);
 			}
 
 			if (d > 2)
 			{
-				DPRINTF("d=%x\n", d);
+				DebugLog("d=%x\n", d);
 				*(UINT16 *)&ioreg[a & 0xff] = d;
 				//MessageBox(NULL, "d > 1", NULL, MB_OK);
 			}
 
-			DPRINTF("d = %x \n",d);
+			DebugLog("d = %x \n",d);
 
 			M68KSetIRQ(4); // network error if removed
 			M68KRun(1000); // 1000 is enough
@@ -1051,12 +1073,12 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 
 		case 0x8a: // ioreg[c008a]
 			*(UINT16 *)&ioreg[a & 0xff] = d;
-			DPRINTF("Netboard W16\tioreg[%x] <- %x\t", a & 0xff, d);
-			DPRINTF("d = %x\n",d);
+			DebugLog("Netboard W16\tioreg[%x] <- %x\t", a & 0xff, d);
+			DebugLog("d = %x\n",d);
 			break;
 
 		default:
-			printf("unknown c00(%x)\n", a & 0xff);
+			DebugLog("unknown c00(%x)\n", a & 0xff);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W16 IOREG", NULL);
 			break;
 
@@ -1066,7 +1088,7 @@ void CNetBoard::Write16(UINT32 a, UINT16 d)
 		break;
 
 	default:
-		printf("NetBoard 68K: Unknown W16 (%x) %06X<-%04X\n", (a >> 16) & 0xF,a, d);
+		DebugLog("NetBoard 68K: Unknown W16 (%x) %06X<-%04X\n", (a >> 16) & 0xF,a, d);
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W16", NULL);
 		break;
 	}
@@ -1077,10 +1099,10 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 	switch ((a >> 16) & 0xF)
 	{
 	case 0x0:
-		//printf("Netboard Write32 (0x0) \tRAM[%x] <- %x\n", a, d);
+		//DebugLog("Netboard Write32 (0x0) \tRAM[%x] <- %x\n", a, d);
 		if (a > 0x0ffff)
 		{
-			printf("OUT OF RANGE RAM[%x]\n", a);
+			DebugLog("OUT OF RANGE RAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 		*(UINT16 *)&RAM[a] = (d >> 16);
@@ -1088,10 +1110,10 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 		break;
 
 	/*case 0x4: // not used
-		printf("Netboard W32\tctrlrw[%x] <- %x\n", a, d);
+		DebugLog("Netboard W32\tctrlrw[%x] <- %x\n", a, d);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ctrlrw[%x]\n", a);
+			DebugLog("OUT OF RANGE ctrlrw[%x]\n", a);
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 		}
 		*(UINT16 *)&ctrlrw[a] = (d >> 16);
@@ -1099,10 +1121,10 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 		break;*/
 
 	case 0x8: // dirt devils
-		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) printf("Netboard W32\tCommRAM[%x] <- %x\n", a & 0xffff, d);
+		//if (((a & 0xffff) > 0 && (a & 0xffff) < 0xff) || ((a & 0xffff) > 0xefff && (a & 0xffff) < 0xffff)) DebugLog("Netboard W32\tCommRAM[%x] <- %x\n", a & 0xffff, d);
 		if ((a & 0x3ffff) > 0xffff)
 		{
-			printf("OUT OF RANGE CommRAM[%x]\n", a);
+			DebugLog("OUT OF RANGE CommRAM[%x]\n", a);
 			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
 		}
 
@@ -1111,10 +1133,10 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 		break;
 
 	/*case 0xc: // not used
-		printf("Netboard W32\tioreg[%x] <- %x\n", a, d);
+		DebugLog("Netboard W32\tioreg[%x] <- %x\n", a, d);
 		if ((a & 0xfff) > 0xff)
 		{
-			printf("OUT OF RANGE ioreg[%x]\n", a);
+			DebugLog("OUT OF RANGE ioreg[%x]\n", a);
 			MessageBox(NULL, "Out of Range", NULL, MB_OK);
 		}
 		*(UINT16 *)&ioreg[a] = (d >> 16);
@@ -1125,7 +1147,7 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 		break;*/
 
 	default:
-		printf("NetBoard 68K: Unknown W32 (%x) %08X<-%08X\n", (a >> 16) & 0xF,a, d);
+		DebugLog("NetBoard 68K: Unknown W32 (%x) %08X<-%08X\n", (a >> 16) & 0xF,a, d);
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Unknown W32", NULL);
 		break;
 	}
@@ -1152,7 +1174,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 
 	if (NULL == memoryPool)
 	{
-		printf("error mem\n");
+		DebugLog("error mem\n");
 		return ErrorLog("Insufficient memory for net board");
 	}
 	memset(memoryPool, 0, MEMORY_POOL_SIZE);
@@ -1170,7 +1192,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	/*bank = new UINT8[0x10000];
 	if(NULL == bank)
 	{
-		printf("error mem bank\n");
+		DebugLog("error mem bank\n");
 		return ErrorLog("Insufficient memory for net board");
 	}
 	memset(bank, 0, 0x10000);*/
@@ -1179,7 +1201,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	ct = new UINT8[0x100];
 	if (NULL == ct)
 	{
-		printf("error mem ct\n");
+		DebugLog("error mem ct\n");
 		return ErrorLog("Insufficient memory for net board ct");
 	}
 	memset(ct, 0, 0x100);
@@ -1191,7 +1213,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 
 	ctrlrw = ct;
 
-	printf("Init netboard\n");
+	DebugLog("Init netboard\n");
 
 
 	// Initialize 68K core
@@ -1214,9 +1236,9 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 
 	if (m_config["EmulateNet"].ValueAs<bool>() && m_attached) {
 		while (!nets->Connect()) {
-			printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
+			DebugLog("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
 		}
-		printf("Successfully connected.\n");
+		DebugLog("Successfully connected.\n");
 	}
 
 	return OKAY;
@@ -1301,7 +1323,7 @@ bool CNetBoard::RunFrame(void)
 	M68KRun((4000000 / 60)); // original
 	//M68KRun((4000000 / 60)*3); // 12Mhz
 
-	//printf("NetBoard PC=%06X\n", M68KGetPC());
+	//DebugLog("NetBoard PC=%06X\n", M68KGetPC());
 
 	//M68KSetIRQ(6);
 	//M68KRun(10000);
@@ -1340,7 +1362,7 @@ void CNetBoard::Reset(void)
 
 
 	M68KSetContext(&M68K);
-	printf("RESET NetBoard PC=%06X\n", M68KGetPC());
+	DebugLog("RESET NetBoard PC=%06X\n", M68KGetPC());
 	M68KReset();
 
 	M68KGetContext(&M68K);
