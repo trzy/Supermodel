@@ -205,7 +205,14 @@ bool CDriveBoard::Init(const UINT8 *romPtr)
   // Check have a valid ROM
   m_attached = (m_rom != NULL);
   if (!m_attached)
-    return OKAY;
+  {
+      if (m_boardType == SkiPad)
+      {
+          m_attached = true;
+          m_simulated = true;
+      }
+      return OKAY;
+  }
 
   // Allocate memory for RAM
   m_ram = new (std::nothrow) UINT8[RAM_SIZE];
@@ -274,7 +281,8 @@ void CDriveBoard::Reset(void)
   m_lastVibrate = 0;
 
   // Configure options (cannot be done in Init() because command line settings weren't yet parsed)
-  m_simulated = false;  //TODO: make this run-time configurable when simulation mode is supported
+  if(m_boardType != SkiPad)
+    m_simulated = false;  //TODO: make this run-time configurable when simulation mode is supported
   SetSteeringStrength(m_config["SteeringStrength"].ValueAsDefault<unsigned>(5));
 
   m_z80.Reset();  // always reset to provide a valid Z80 state
@@ -354,11 +362,69 @@ void CDriveBoard::SimulateWrite(UINT8 cmd)
   // TODO - implement for Sega Rally 2
   UINT8 type = cmd>>4;
   UINT8 val = cmd&0xF;
-  switch (type)
+
+  // Ski Champ vibration pad
+  if (m_boardType == SkiPad)
   {
+    switch (type)
+    {
+    case 0x00: // nothing to do ?
+        break;
+    case 0x01: // full stop ?
+      if (val == 0)
+        SendVibrate(0);
+        break;
+    case 0x04:
+      SendVibrate(val*0x11);
+      break;
+    case 0x08:
+      if (val == 0x08)
+      {
+        // test driveboard passed ?
+      }
+      break;
+    case 0x0A: // only when test in service menu
+      switch (val)
+      {
+        case 3: // clutch
+          break;
+        case 5: // motor test
+          SendVibrate(val * 0x11);
+          break;
+        case 6: // end motor test
+          SendVibrate(0);
+          break;
+      }
+      break;
+    case 0x0C: // game state or reset driveboard ?
+      switch (val)
+      {
+        case 1:
+          // in game
+          break;
+        case 2:
+          // game ready
+          break;
+        case 3:
+          // test mode
+          break;
+      }
+      break;
+    case 0x0D: // 0xD0-DF Set read mode
+      m_readMode = val & 0x7;
+      break;
+    default:
+      //printf("Skipad unknown command %02X , val= %02X\n",type,val);
+      break;
+    }
+  }
+  else
+  {
+    switch (type)
+    {
     case 0: // 0x00-0F Play sequence
       /* TODO */
-      break;   
+      break;
     case 1: // 0x10-1F Set centering strength
       if (val == 0)
         // Disable auto-centering
@@ -383,22 +449,22 @@ void CDriveBoard::SimulateWrite(UINT8 cmd)
         SendVibrate(0);
       else
         // Enable uncentering (0x1 = weakest, 0xF = strongest)
-        SendVibrate(val * 0x11); 
+        SendVibrate(val * 0x11);
       break;
     case 4: // 0x40-4F Play power-slide sequence
       /* TODO */
       break;
     case 5: // 0x50-5F Rotate wheel right
-      SendConstantForce((val + 1) * 0x5);  
-      break;   
+      SendConstantForce((val + 1) * 0x5);
+      break;
     case 6: // 0x60-6F Rotate wheel left
-      SendConstantForce(-(val + 1) * 0x5); 
-      break;   
+      SendConstantForce(-(val + 1) * 0x5);
+      break;
     case 7: // 0x70-7F Set steering parameters
-      /* TODO */               
+      /* TODO */
       break;
     case 8: // 0x80-8F Test Mode
-      switch (val&0x7)
+      switch (val & 0x7)
       {
         case 0:  SendStopAll();                             break;  // 0x80 Stop motor
         case 1:  SendConstantForce(20);                     break;  // 0x81 Roll wheel right
@@ -427,10 +493,10 @@ void CDriveBoard::SimulateWrite(UINT8 cmd)
         m_initState = 0;
       }
       else
-        m_boardMode = val;      
+        m_boardMode = val;
       break;
     case 0xD: // 0xD0-DF Set read mode
-      m_readMode = val&0x7;      
+      m_readMode = val & 0x7;
       break;
     case 0xE: // 0xE0-EF Invalid command
       /* Ignore */
@@ -438,7 +504,8 @@ void CDriveBoard::SimulateWrite(UINT8 cmd)
     case 0xF: // 0xF0-FF Echo test
       m_echoVal = val;
       break;
-  } 
+    }
+  }
 }
 
 void CDriveBoard::RunFrame(void)

@@ -39,7 +39,8 @@ public:
   enum BoardType
   {
     Wheel=0,
-    Joystick
+    Joystick,
+    SkiPad
   };
   
   BoardType m_boardType;

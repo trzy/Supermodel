@@ -233,7 +233,6 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 {
   UINT8 adc[8];
   UINT8 data;
-  
   reg &= 0x3F;
   switch (reg)
   {
@@ -531,6 +530,14 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     if ((m_game.inputs & Game::INPUT_MAGTRUCK))
       data &= ~(Inputs->magicalPedal2->value << 0);
+
+    if ((m_game.inputs & Game::INPUT_SKI))
+    {
+      data = 0xff;
+      // foot sensor Left=0xf0 Right=0x0f Both=0xff
+      // rumble skipad is tested here at boot. The rom is patched to avoid driveboard error
+      // note : there is no driveboard error if sensor value slide slowly from 0x80 to 0xff then set to 0xff when test passed (tested with assigning an axis to this value)
+    }
 
     return data;
 
@@ -3053,6 +3060,11 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
       return FAIL;
     else
       DriveBoard.m_boardType = DriveBoard.Joystick;
+  }
+  else if (game.name == "skichamp")
+  {
+      DriveBoard.m_boardType = DriveBoard.SkiPad;
+      DriveBoard.Init(NULL); // no external driveboard rom for skichamp, we need to simulate it
   }
   else
     DriveBoard.Init(NULL);
