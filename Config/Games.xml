@@ -2225,14 +2225,17 @@
     </hardware>
     <roms>
       <patches>
-        <!-- skip force feedback lever check -->
-        <!--<patch region="crom" bits="32" offset="0x87db8" value="0x60000000" /> --> <!-- from MAME -->
-        <!-- Spindizzi notes : mimic patch from Bart's patch in swtrilgy to prevent game to be slow-->
-        <!-- instead of patch we can make hack timing in code -->
-        <patch region="crom" bits="32" offset="0x04184" value="0x480000AC" />
+        <!-- obsolete patches -->
+        <!-- 0x87db8 = 0x60000000 patch from Mame -->
+        <!-- 0x04184 = 0x480000AC no more needed if ffb lever rom loaded -->
+        <!-- 0x8391c = 0x60000000 no more needed if ffb lever rom loaded -->
+        <!-- related to force feedback setup -->
         <patch region="crom" bits="32" offset="0x0292c" value="0x60000000" />
         <patch region="crom" bits="32" offset="0x02998" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x8391c" value="0x60000000" />
+        <!-- unemulated JTAG stuff : enable service menu -->
+        <patch region="crom" bits="32" offset="0x886e0" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x886e4" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x886e8" value="0x60000000" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-crom0.20" crc32="0xDA7D49FA" />
