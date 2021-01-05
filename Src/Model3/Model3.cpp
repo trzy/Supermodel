@@ -444,17 +444,17 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     if ((m_game.inputs & Game::INPUT_FISHING))
     {
-      if (m_game.name == "getbass")
-      {
-        // get bass fishing
-        data &= ~(!Inputs->fishingCast->value << 4);
-        data &= ~(!Inputs->fishingSelect->value << 5);
-      }
-      else
+      if (m_game.name == "getbassur")
       {
         // bass fishing
         data &= ~(Inputs->fishingCast->value << 0);
         data &= ~(Inputs->fishingSelect->value << 1);
+      }
+      else
+      {
+        // get bass fishing
+        data &= ~(!Inputs->fishingCast->value << 4);
+        data &= ~(!Inputs->fishingSelect->value << 5);
       }
     }
     return data;
