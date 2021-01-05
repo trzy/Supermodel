@@ -9,10 +9,10 @@
   load them. Do not modify this unless you really know what you're doing!
 -->
 <games>
-  <game name="bass">
+  <game name="bassdx">
     <identity>
       <title>Sega Bass Fishing</title>
-      <version>Japan</version>
+      <version>USA, Deluxe</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -27,10 +27,10 @@
     </hardware>
     <roms>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-20646.20" crc32="0xD740AE06" />
-        <file offset="2" name="epr-20645.19" crc32="0x8EEFA2B0" />
-        <file offset="4" name="epr-20644.18" crc32="0xC28DB2B6" />
-        <file offset="6" name="epr-20643.17" crc32="0xDAF02716" />
+        <file offset="0" name="epr-20786.20" crc32="0xB7C7CFFB" />
+        <file offset="2" name="epr-20785.19" crc32="0xF390076D" />
+        <file offset="4" name="epr-20784.18" crc32="0xBE8047D9" />
+        <file offset="6" name="epr-20783.17" crc32="0x3AD976F9" />
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM0 -->
@@ -77,9 +77,9 @@
     </roms>
   </game>
 
-  <game name="bassdx" parent="bass">
+  <game name="getbassdx" parent="bassdx">
     <identity>
-      <title>Sega Bass Fishing</title>
+      <title>Get Bass: Sega Bass Fishing</title>
       <version>Japan, Deluxe</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
@@ -103,10 +103,36 @@
     </roms>
   </game>
 
-  <game name="getbass" parent="bass">
+  <game name="getbassur" parent="bassdx">
     <identity>
-      <title>Get Bass</title>
-	  <version>?</version>
+      <title>Get Bass: Sega Bass Fishing</title>
+      <version>Japan, Upright</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1997</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>1.0</stepping>
+      <pci_bridge>MPC106</pci_bridge>
+      <inputs>
+        <input type="common" />
+        <input type="fishing" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-20646.20" crc32="0xD740AE06" />
+        <file offset="2" name="epr-20645.19" crc32="0x8EEFA2B0" />
+        <file offset="4" name="epr-20644.18" crc32="0xC28DB2B6" />
+        <file offset="6" name="epr-20643.17" crc32="0xDAF02716" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="getbass" parent="bassdx">
+    <identity>
+      <title>Get Bass: Sega Bass Fishing</title>
+	  <version>Japan, Standard</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -137,7 +163,7 @@
   <game name="daytona2">
     <identity>
       <title>Daytona USA 2 - Battle on the Edge</title>
-      <version>Revision A</version>
+      <version>Japan, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -229,7 +255,7 @@
   <game name="dayto2pe" parent="daytona2">
     <identity>
       <title>Daytona USA 2 - Power Edition</title>
-	  <version>?</version>
+	  <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -379,7 +405,39 @@
     </roms>
   </game>
 
-  <game name="dirtdvlsa" parent="dirtdvls">
+  <game name="dirtdvlsu" parent="dirtdvls">
+    <identity>
+      <title>Dirt Devils</title>
+      <version>USA, Revision A</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1998</year>
+    </identity>
+  <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <mpeg_board>DSB2</mpeg_board>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <netboard>true</netboard>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shiftupdown" />
+        <input type="handbrake" />
+        <input type="viewchange" />
+      </inputs>
+      <encryption_key>0x29290f17</encryption_key>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21057a.20" crc32="0x36065989" />
+        <file offset="2" name="epr-21056a.19" crc32="0xB7C18B60" />
+        <file offset="4" name="epr-21055a.18" crc32="0x539B3D7F" />
+        <file offset="6" name="epr-21054a.17" crc32="0xE9717FC6" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="dirtdvlsau" parent="dirtdvls">
     <identity>
       <title>Dirt Devils</title>
       <version>Australia, Revision A</version>
@@ -446,7 +504,7 @@
   <game name="dirtdvlsg" parent="dirtdvls">
     <identity>
       <title>Dirt Devils</title>
-      <version>German</version>
+      <version>Export, Ver. G?</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -625,6 +683,8 @@
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-22898.20" crc32="0xEFB96701" />
+        <!-- file offset="2" name="epr-22897.19" crc32="0x9755DD8C" - same data as EPR-22905 in EAC -->
+        <!-- file offset="4" name="epr-22896.18" crc32="0x0FF828A8" - same data as EPR-22904 in EAC -->
         <file offset="6" name="epr-22895.17" crc32="0x07DF16A0" />
       </region>
     </roms>
@@ -655,6 +715,8 @@
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-22894.20" crc32="0xCDE48C5D" />
+        <!-- file offset="2" name="epr-22893.19" crc32="0x9755DD8C" - same data as EPR-22905 in EAC -->
+        <!-- file offset="4" name="epr-22892.18" crc32="0x0FF828A8" - same data as EPR-22904 in EAC -->
         <file offset="6" name="epr-22891.17" crc32="0x823A251C" />
       </region>
     </roms>
@@ -944,7 +1006,7 @@
   <game name="lemans24">
     <identity>
       <title>Le Mans 24</title>
-      <version>Revision B</version>
+      <version>Japan, Revision B</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -1101,10 +1163,11 @@
     </roms>
   </game>
 
-  <game name="lostwsgo" parent="lostwsga">
+  <game name="lostwsgp" parent="lostwsga">
     <identity>
       <title>The Lost World</title>
-      <version>Original Revision</version>
+      <!-- build 1997/06/24, location test or preview version, about half of game is available, Stage 3-2 ends with "Coming Soon?" -->
+      <version>Location Test</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -1198,7 +1261,7 @@
   <game name="oceanhun">
     <identity>
       <title>The Ocean Hunter</title>
-	  <version>?</version>
+	  <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1269,7 +1332,7 @@
   <game name="scud">
     <identity>
       <title>Scud Race</title>
-      <version>Australia, Twin</version>
+      <version>Export, Twin/DX</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -1286,15 +1349,11 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!-- Secret debug menu -->
-        <patch region="crom" bits="32" offset="0x199DE8" value="0x00050208" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-19734.20" crc32="0xBE897336" />
-        <file offset="2" name="epr-19733.19" crc32="0x6565E29A" />
-        <file offset="4" name="epr-19732.18" crc32="0x23E864BB" />
-        <file offset="6" name="epr-19731.17" crc32="0x3EE6447E" />
+        <file offset="0" name="epr-19691.20" crc32="0x83523B89" />
+        <file offset="2" name="epr-19690.19" crc32="0x25F007FE" />
+        <file offset="4" name="epr-19689.18" crc32="0xCBCE6D62" />
+        <file offset="6" name="epr-19688.17" crc32="0xA4C85103" />
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM0 -->
@@ -1353,10 +1412,10 @@
     </roms>
   </game>
 
-  <game name="scuda" parent="scud">
+  <game name="scudau" parent="scud">
     <identity>
       <title>Scud Race</title>
-      <version>Export, Twin</version>
+      <version>Australia, Twin/DX</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -1373,19 +1432,23 @@
       </inputs>
     </hardware>
     <roms>
+      <patches>
+        <!-- Secret debug menu -->
+        <patch region="crom" bits="32" offset="0x199DE8" value="0x00050208" />
+      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-19691.20" crc32="0x83523B89" />
-        <file offset="2" name="epr-19690.19" crc32="0x25F007FE" />
-        <file offset="4" name="epr-19689.18" crc32="0xCBCE6D62" />
-        <file offset="6" name="epr-19688.17" crc32="0xA4C85103" />
+        <file offset="0" name="epr-19734.20" crc32="0xBE897336" />
+        <file offset="2" name="epr-19733.19" crc32="0x6565E29A" />
+        <file offset="4" name="epr-19732.18" crc32="0x23E864BB" />
+        <file offset="6" name="epr-19731.17" crc32="0x3EE6447E" />
       </region>
     </roms>
   </game>
 
-  <game name="scudj" parent="scud">
+  <game name="scuddx" parent="scud">
     <identity>
       <title>Scud Race</title>
-      <version>Japan, Deluxe</version>
+      <version>Export, Deluxe</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -1456,7 +1519,7 @@
   <game name="scudplus" parent="scud">
     <identity>
       <title>Scud Race Plus</title>
-      <version>Revision A</version>
+      <version>Export, Twin/DX, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -1501,7 +1564,7 @@
   <game name="scudplusa" parent="scud">
     <identity>
       <title>Scud Race Plus</title>
-	  <version>?</version>
+	  <version>Export, Twin/DX</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -1624,7 +1687,7 @@
   <game name="spikeofe">
     <identity>
       <title>Spikeout Final Edition</title>
-	  <version>?</version>
+	  <version>Export</version>
       <manufacturer>Sega</manufacturer>
       <year>1999</year>
     </identity>
@@ -1711,7 +1774,7 @@
   <game name="spikeout">
     <identity>
       <title>Spikeout</title>
-      <version>Revision C</version>
+      <version>Export, Revision C</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1798,7 +1861,7 @@
   <game name="srally2">
     <identity>
       <title>Sega Rally 2</title>
-	  <version>?</version>
+	  <version>Export</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1906,7 +1969,7 @@
     </hardware>
     <roms>
     	<patches>
-        <!-- Spindizzi notes : Not working ATM - Need correct patches or jtag stuffs -->
+        <!-- Spindizzi notes : Not working ATM - Need correct patches for jtag stuffs -->
         <!-- Test 1 -->
         <!--
         <patch region="crom" bits="32" offset="0x5bebc" value="0x60000000" />
@@ -1960,7 +2023,7 @@
     </hardware>
     <roms>
     	<patches>
-        <!-- Spindizzi notes : Not working ATM - Need correct patches or jtag stuffs -->
+        <!-- Spindizzi notes : Not working ATM - Need correct patches for jtag stuffs -->
         <!-- Test 1 -->
         <!--
         <patch region="crom" bits="32" offset="0x3ba44" value="0x60000000" />
@@ -1973,18 +2036,24 @@
         -->
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="ic20.20" crc32="0xA904227D" />
-        <file offset="2" name="ic19.19" crc32="0xB486BB74" />
-        <file offset="4" name="ic18.18" crc32="0xAC1053F8" />
-        <file offset="6" name="ic17.17" crc32="0xE71D3F2D" />
+        <file offset="0" name="prog0.20" crc32="0xA904227D" />
+        <file offset="2" name="prog1.19" crc32="0xB486BB74" />
+        <file offset="4" name="prog2.18" crc32="0xAC1053F8" />
+        <file offset="6" name="prog3.17" crc32="0xE71D3F2D" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+        <file offset="0" name="ic21.21" crc32="0x82A4EB2E" />
+      </region>
+      <region name="mpeg_program" stride="1" chunk_size="1" byte_swap="true">
+        <file offset="0" name="ic2.2" crc32="0x61C3F8BC" />
       </region>
     </roms>
   </game>
   
-  <game name="srally2x" parent="srally2">
+  <game name="srally2dx" parent="srally2">
     <identity>
       <title>Sega Rally 2</title>
-      <version>Deluxe</version>
+      <version>Export, Deluxe</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -2072,7 +2141,7 @@
   <game name="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
-      <version>Revision A</version>
+      <version>Export, Revision A</version>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
     </identity>
@@ -2168,7 +2237,7 @@
   <game name="swtrilgya" parent="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
-	  <version>?</version>
+	  <version>Export</version>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
     </identity>
@@ -2209,7 +2278,7 @@
   <game name="swtrilgyp" parent="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
-	  <version>?</version>
+	  <version>Location Test, 16.09.98</version>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
     </identity>
