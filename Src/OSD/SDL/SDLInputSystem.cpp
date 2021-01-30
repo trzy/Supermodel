@@ -755,7 +755,8 @@ void CSDLInputSystem::ConstantForceEffect(float force, int dir, int length, int 
   }
   else
   {
-    if (force != 0.0f)
+    float threshold = (float)m_config["SDLConstForceThreshold"].ValueAs<unsigned>() / 100.0f;
+    if (force != 0.0f && force > threshold)
       SDL_HapticRumblePlay(m_SDLHapticDatas[joyNum].SDLhaptic, force, 200);
     else
       SDL_HapticRumbleStop(m_SDLHapticDatas[joyNum].SDLhaptic);

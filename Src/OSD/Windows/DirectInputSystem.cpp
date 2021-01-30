@@ -1792,7 +1792,8 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 				break;
 
 			case FFConstantForce:
-		  {
+		  { 
+				bool bothMotorVib = m_config["XInputStereoVibration"].ValueAs<bool>();
 				// Check if constant force effect is disabled
 				unsigned xInputConstForceMax = m_config["XInputConstForceMax"].ValueAs<unsigned>();
 				if (xInputConstForceMax == 0)
@@ -1807,6 +1808,11 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 					// If so, stop vibration due to force effect
 					pInfo->xiConstForceLeft = 0;
 					pInfo->xiConstForceRight = 0;
+					pInfo->xiVibrateBoth = 0;
+				}
+				else if (bothMotorVib)
+				{
+					pInfo->xiVibrateBoth = (WORD)(absForce * (float)(xInputConstForceMax * XI_VIBRATE_SCALE));
 				}
 				else if (negForce)
 				{
