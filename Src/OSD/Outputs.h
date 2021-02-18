@@ -45,10 +45,15 @@ enum EOutputs
 	OutputLampView4,
 	OutputLampLeader,
 	OutputRawDrive,
-	OutputRawLamps
+	OutputRawLamps,
+	OutputBill1,
+	OutputBill2,
+	OutputBill3,
+	OutputBill4,
+	OutputBill5
 };
 
-#define NUM_OUTPUTS 9
+#define NUM_OUTPUTS 14
 
 class COutputs
 {

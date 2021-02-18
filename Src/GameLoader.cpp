@@ -166,6 +166,7 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
   region->stride = region_node["stride"].ValueAs<size_t>();
   region->chunk_size = region_node["chunk_size"].ValueAs<size_t>();
   region->byte_swap = region_node["byte_swap"].ValueAsDefault<bool>(false);
+  region->required = region_node["required"].ValueAsDefault<bool>(true);
   return region;
 }
 
@@ -236,6 +237,16 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
       game->inputs |= input_flags[input_type];
     }
   }
+
+  std::map<std::string, Game::DriveBoardType> drive_board_types
+  {
+    { "Wheel",      Game::DRIVE_BOARD_WHEEL },
+    { "Joystick",   Game::DRIVE_BOARD_JOYSTICK },
+    { "Ski",        Game::DRIVE_BOARD_SKI },
+    { "Billboard",  Game::DRIVE_BOARD_BILLBOARD}
+  };
+  std::string drive_board_type = game_node["hardware/drive_board"].ValueAsDefault<std::string>(std::string());
+  game->driveboard_type = drive_board_types[drive_board_type];
 }
 
 bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
@@ -500,7 +511,8 @@ void GameLoader::IdentifyGamesInZipArchive(
   std::map<std::string, std::set<File::ptr_t>> files_found_by_game;
 
   // Determine which files each game requires and which files are present in
-  // the zip archive
+  // the zip archive. Files belonging to optional regions cannot be used to
+  // identify games.
   for (auto &v1: regions_by_game)
   {
     const std::string &game_name = v1.first;
@@ -508,6 +520,8 @@ void GameLoader::IdentifyGamesInZipArchive(
     for (auto &v2: regions_by_name)
     {
       Region::ptr_t region = v2.second;
+      if (!region->required)
+        continue;
       for (auto file: region->files)
       {
         // Add each file to the set of required files per game
@@ -764,15 +778,31 @@ bool GameLoader::LoadROMs(ROMSet *rom_set, const std::string &game_name, const Z
   {
     auto &region = v.second;
     uint32_t region_size = 0;
+    bool error_loading_region = false;
+
+    // Attempt to load the region
     if (ComputeRegionSize(&region_size, region, zip))
-      error |= true;
+      error_loading_region = true;
     else
     {
       // Load up the ROM region
       auto &rom = rom_set->rom_by_region[region->region_name];
       rom.data.reset(new uint8_t[region_size], std::default_delete<uint8_t[]>());
       rom.size = region_size;
-      error |= LoadRegion(&rom, region, zip);
+      error_loading_region = LoadRegion(&rom, region, zip);
+    }
+
+    if (error_loading_region && !region->required)
+    {
+      // Failed to load the region but it wasn't required anyway, so remove it
+      // and proceed
+      rom_set->rom_by_region.erase(region->region_name);
+      ErrorLog("Optional ROM region '%s' in '%s' could not be loaded.", region->region_name.c_str(), game_name.c_str());
+    }
+    else
+    {
+      // Proceed normally: accumulate errors
+      error |= error_loading_region;
     }
   }
 

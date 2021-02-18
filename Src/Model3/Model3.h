@@ -1,12 +1,13 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2021 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+ **                     Harry Tuttle, and Spindizzi
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,10 +19,10 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Model3.h
- * 
+ *
  * Header file defining the CModel3 and CModel3Config classes.
  */
 
@@ -79,7 +80,7 @@ public:
   void Reset(void);
   const Game &GetGame(void) const;
   void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr);
-  void AttachInputs(CInputs *InputsPtr);  
+  void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
   bool Init(void);
 
@@ -96,7 +97,7 @@ public:
   void Write16(UINT32 addr, UINT16 data);
   void Write32(UINT32 addr, UINT32 data);
   void Write64(UINT32 addr, UINT64 data);
-    
+
   /*
    * LoadGame(game, rom_set):
    *
@@ -114,7 +115,7 @@ public:
 
   /*
    * GetSoundBoard(void):
-   * 
+   *
    * Returns a reference to the sound board.
    *
    * Returns:
@@ -162,8 +163,8 @@ public:
    * CModel3(config):
    * ~CModel3(void):
    *
-   * Constructor and destructor for Model 3 class. Constructor performs a 
-   * bare-bones initialization of object; does not perform any memory 
+   * Constructor and destructor for Model 3 class. Constructor performs a
+   * bare-bones initialization of object; does not perform any memory
    * allocation or any actions that can fail. The destructor will deallocate
    * memory and free resources used by the object (and its child objects).
    *
@@ -207,7 +208,7 @@ private:
   static int StartDriveBoardThread(void *data);       // Callback to start drive board thread
 
   static void AudioCallback(void *data);              // Audio buffer callback
-  
+
   bool    WakeSoundBoardThread(void);                 // Used by audio callback to wake sound board thread (when not sync'd with render thread)
   int     RunMainBoardThread(void);                   // Runs PPC main board thread (sync'd in step with render thread)
   int     RunSoundBoardThread(void);                  // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
@@ -221,20 +222,20 @@ private:
 
   // Game and hardware information
   Game m_game;
-  
+
   // Game inputs and outputs
   CInputs   *Inputs;
   COutputs  *Outputs;
-     
+
   // Input registers (game controls)
   UINT8   inputBank;
   UINT8   serialFIFO1, serialFIFO2;
   UINT8   gunReg;
   int     adcChannel;
-  
+
   // MIDI port
   UINT8   midiCtrlPort; // controls MIDI (SCSP) IRQ behavior
-  
+
   // Emulated core Model 3 memory regions
   UINT8   *memoryPool;  // single allocated region for all ROM and system RAM
   UINT8   *ram;         // 8 MB PowerPC RAM
@@ -252,12 +253,12 @@ private:
 
   // Banked CROM
   UINT8     *cromBank;    // currently mapped in CROM bank
-  unsigned  cromBankReg;  // the CROM bank register 
-  
+  unsigned  cromBankReg;  // the CROM bank register
+
   // Security device
   bool      m_securityFirstRead = true;
   unsigned  securityPtr;  // pointer to current offset in security data
-  
+
   // PowerPC
   PPC_FETCH_REGION  PPCFetchRegions[3];
 
@@ -285,11 +286,11 @@ private:
   CCondVar    *sndBrdNotifySync;
   CSemaphore  *drvBrdThreadSync;
   CMutex      *notifyLock;
-  CCondVar    *notifySync;  
-  
+  CCondVar    *notifySync;
+
   // Frame timings
   FrameTimings timings;
-  
+
   // Other devices
   CIRQ        IRQ;            // Model 3 IRQ controller
   CMPC10x     PCIBridge;      // MPC10x PCI/bridge/memory controller
@@ -301,7 +302,7 @@ private:
   CReal3D     GPU;            // Real3D graphics hardware
   CSoundBoard SoundBoard;     // Sound board
   CDSB        *DSB;           // Digital Sound Board (type determined dynamically at load time)
-  CDriveBoard DriveBoard;     // Drive board
+  CDriveBoard *DriveBoard;    // Drive board
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
 #ifdef NET_BOARD

@@ -147,7 +147,11 @@
 #include "Sound/SCSP.h"
 #include "Model3/SoundBoard.h"
 #include "Model3/DSB.h"
-#include "Model3/DriveBoard.h"
+#include "Model3/DriveBoard/DriveBoard.h"
+#include "Model3/DriveBoard/WheelBoard.h"
+#include "Model3/DriveBoard/JoystickBoard.h"
+#include "Model3/DriveBoard/SkiBoard.h"
+#include "Model3/DriveBoard/BillBoard.h"
 #ifdef NET_BOARD
 #include "Network/NetBoard.h"
 #endif

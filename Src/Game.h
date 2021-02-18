@@ -25,7 +25,7 @@ struct Game
     INPUT_UI              = 0,          // special code reserved for Supermodel UI inputs
     INPUT_COMMON          = 0x00000001, // common controls (coins, service, test)
     INPUT_VEHICLE         = 0x00000002, // vehicle controls
-    INPUT_JOYSTICK1       = 0x00000004, // joystick 1 
+    INPUT_JOYSTICK1       = 0x00000004, // joystick 1
     INPUT_JOYSTICK2       = 0x00000008, // joystick 2
     INPUT_FIGHTING        = 0x00000010, // fighting game controls
     INPUT_VR4             = 0x00000020, // four VR view buttons
@@ -48,6 +48,16 @@ struct Game
     INPUT_ALL             = 0x003FFFFF
   };
   uint32_t inputs = 0;
+
+  enum DriveBoardType
+  {
+    DRIVE_BOARD_NONE = 0,
+    DRIVE_BOARD_WHEEL,
+    DRIVE_BOARD_JOYSTICK,
+    DRIVE_BOARD_SKI,
+    DRIVE_BOARD_BILLBOARD
+  };
+  DriveBoardType driveboard_type = DriveBoardType::DRIVE_BOARD_NONE;
 };
 
 #endif  // INCLUDED_GAME_H

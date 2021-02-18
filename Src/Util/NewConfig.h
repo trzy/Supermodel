@@ -44,11 +44,11 @@ namespace Util
     public:
       class const_iterator;
 
-      class iterator: public std::iterator<std::forward_iterator_tag, Node>
+      class iterator
       {
       private:
         ptr_t m_node;
-        friend class const_iterator;    
+        friend class const_iterator;
       public:
         inline iterator(ptr_t node = ptr_t())
           : m_node(node)
@@ -87,7 +87,7 @@ namespace Util
         }
       };
 
-      class const_iterator: public std::iterator<std::forward_iterator_tag, const Node>
+      class const_iterator
       {
       private:
         const_ptr_t m_node;
@@ -147,7 +147,7 @@ namespace Util
       {
         return iterator();
       }
-      
+
       inline const_iterator begin() const
       {
         return iterator(m_first_child);
@@ -217,7 +217,7 @@ namespace Util
       }
 
       // Add a child node. Multiple nodes of the same key may be added but only
-      // when specified as leaves. For example, adding "foo/bar" twice will 
+      // when specified as leaves. For example, adding "foo/bar" twice will
       // result in one "foo" with two "bar" children.
       template <typename T>
       Node &Add(const std::string &path, const T &value)
@@ -271,7 +271,7 @@ namespace Util
       {
         return !m_value;
       }
-      
+
       // True if value exists (is not empty)
       inline bool Exists() const
       {
@@ -293,11 +293,11 @@ namespace Util
       // Always succeeds -- failed lookups permanently create an empty node.
       // Use with caution. Intended for hard-coded lookups.
       const Node &operator[](const std::string &path) const;
-        
+
       // These throw if the node is missing
       Node &Get(const std::string &path);
       const Node &Get(const std::string &path) const;
-        
+
       // This returns nullptr if node is missing
       Node *TryGet(const std::string &path);
       const Node *TryGet(const std::string &path) const;

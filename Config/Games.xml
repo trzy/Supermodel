@@ -2,9 +2,9 @@
   Supermodel
   A Sega Model 3 Arcade Emulator.
   Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
-  
+
   Games.xml
-  
+
   This file defines ROM sets and is required in order to recognize and properly
   load them. Do not modify this unless you really know what you're doing!
 -->
@@ -171,6 +171,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <netboard>true</netboard>
       <inputs>
@@ -246,7 +247,7 @@
         <file offset="0x800000" name="mpr-20889.ic22" crc32="0x18EEC79E" />
         <file offset="0xC00000" name="mpr-20890.ic24" crc32="0xAAC96FA2" />
       </region>
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-20985.bin" crc32="0xB139481D" />
       </region>
     </roms>
@@ -263,6 +264,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -295,7 +297,7 @@
         <file offset="0x4000002" name="mpr-21192.11" crc32="0x60CBB1FA" />
         <file offset="0x4000004" name="mpr-21191.10" crc32="0xA2BDCFE0" />
         <file offset="0x4000006" name="mpr-21190.9"  crc32="0x984D56EB" />
-        <!-- CROM3 -->                                                    
+        <!-- CROM3 -->
         <file offset="0x6000000" name="mpr-21197.16" crc32="0x04015247" />
         <file offset="0x6000002" name="mpr-21196.15" crc32="0x0AB46DB5" />
         <file offset="0x6000004" name="mpr-21195.14" crc32="0x7F39761C" />
@@ -342,6 +344,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -399,7 +402,7 @@
         <file offset="0x800000" name="mpr-21032.23" crc32="0x3D3FF407" />
       </region>
       <!-- Spindizzi notes : apparently it uses the same rom from scud race-->
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-19338a.bin" crc32="0xC9FAC464" />
       </region>
     </roms>
@@ -416,6 +419,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -448,6 +452,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -468,7 +473,7 @@
       </region>
     </roms>
   </game>
-  
+
   <game name="dirtdvlsj" parent="dirtdvls">
     <identity>
       <title>Dirt Devils</title>
@@ -480,6 +485,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -512,6 +518,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -543,6 +550,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -607,7 +615,7 @@
         <file offset="0xC00000" name="mpr-22890.25" crc32="0xB638BD7C" />
       </region>
       <!-- Spindizzi notes : apparently it uses the same rom from scud race-->
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-19338a.bin" crc32="0xC9FAC464" />
       </region>
     </roms>
@@ -623,6 +631,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -668,6 +677,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -689,7 +699,7 @@
       </region>
     </roms>
   </game>
-  
+
   <game name="ecaj" parent="eca">
     <identity>
       <title>Emergency Call Ambulance</title>
@@ -700,6 +710,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -732,6 +743,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
@@ -797,9 +809,12 @@
         <file offset="0x800000" name="mpr-20577" crc32="0x3B236187" />
         <file offset="0xC00000" name="mpr-20579" crc32="0x08788436" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
-  
+
   <game name="fvipers2o" parent="fvipers2">
     <identity>
       <title>Fighting Vipers 2</title>
@@ -1013,6 +1028,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1077,7 +1093,7 @@
       </region>
       <!-- Spindizzi notes : original Driveboard from model2 hardware -->
       <!-- Not working ATM - Commands don't correspond -->
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-18261.bin" crc32="0x0C7FAC58" />
       <!-- Driveboard program from scud - Can be a replacement from original model2 z80 program -->
       <!-- I think Model3 driveboard hardware acts exactly like Model2 driveboard hardware (same irq, same memory mapping, same commands etc...)  -->
@@ -1272,7 +1288,7 @@
         <input type="common" />
         <input type="analog_gun1" />
         <input type="analog_gun2" />
-      </inputs>     
+      </inputs>
       <encryption_key>0x292B6A01</encryption_key>
     </hardware>
     <roms>
@@ -1340,6 +1356,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1406,7 +1423,7 @@
         <file offset="0x400000" name="mpr-19605.59" crc32="0xBEC891EB" />
         <file offset="0x600000" name="mpr-19606.60" crc32="0xADAD46B2" />
       </region>
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-19338a.bin" crc32="0xC9FAC464" />
       </region>
     </roms>
@@ -1423,6 +1440,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1456,6 +1474,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1527,6 +1546,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1555,7 +1575,7 @@
       <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
         <file offset="0x400000" name="mpr-20101.24" crc32="0x66D1E31F" />
       </region>
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-19338.bin" crc32="0xDBF88DE6" />
       </region>
     </roms>
@@ -1572,6 +1592,7 @@
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <pci_bridge>MPC106</pci_bridge>
       <netboard>true</netboard>
       <inputs>
@@ -1601,7 +1622,7 @@
       <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
         <file offset="0x400000" name="mpr-20101.24" crc32="0x66D1E31F" />
       </region>
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-19338.bin" crc32="0xDBF88DE6" />
       </region>
     </roms>
@@ -1617,6 +1638,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Ski</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1650,7 +1672,7 @@
         <file offset="0x2000002" name="mpr-20328.11" crc32="0x5FA5E9F5" />
         <file offset="0x2000004" name="mpr-20327.10" crc32="0xF55F51B2" />
         <file offset="0x2000006" name="mpr-20326.9"  crc32="0xB63E1CB4" />
-        <!-- CROM3 -->                                                   
+        <!-- CROM3 -->
         <file offset="0x3000000" name="mpr-20333.16" crc32="0x76B8E0FA" />
         <file offset="0x3000002" name="mpr-20332.15" crc32="0x500DB1EE" />
         <file offset="0x3000004" name="mpr-20331.14" crc32="0xC4C45FB1" />
@@ -1869,6 +1891,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
       <inputs>
         <input type="common" />
@@ -1942,7 +1965,7 @@
         <file offset="0x800000" name="mpr-20639.59" crc32="0xF6603B7B" />
         <file offset="0xC00000" name="mpr-20640.60" crc32="0x9EEA07B7" />
       </region>
-      <region name="driveboard_program" stride="1" chunk_size="1">
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-20512.bin" crc32="0xCF64350D" />
       </region>
     </roms>
@@ -1959,6 +1982,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2001,7 +2025,7 @@
       </region>
     </roms>
   </game>
-  
+
   <game name="srally2pa" parent="srally2">
     <identity>
       <title>Sega Rally 2</title>
@@ -2013,6 +2037,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2049,7 +2074,7 @@
       </region>
     </roms>
   </game>
-  
+
   <game name="srally2dx" parent="srally2">
     <identity>
       <title>Sega Rally 2</title>
@@ -2065,6 +2090,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Wheel</drive_board>
       <real3d_status_bit_set_percent_of_frame>48</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
@@ -2076,14 +2102,14 @@
     </hardware>
     <roms>
       <patches>
-        <!-- 
+        <!--
           Base offset of program in CROM space: 0 (lines up perfectly with RAM
-          offsets). The game gets stuck in a region of code that appears to 
-          wait on some exception to occur. It also appears to access the 
+          offsets). The game gets stuck in a region of code that appears to
+          wait on some exception to occur. It also appears to access the
           tilegen space, indicating that this is perhaps related to frame
           timing and IRQs (pure speculation; I haven't really looked at it).
           Multiple places can be patched out - another one that works is
-          0x66ae0. 
+          0x66ae0.
         -->
         <patch region="crom" bits="32" offset="0x66aa8" value="0x60000000" />
       </patches>
@@ -2149,6 +2175,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Joystick</drive_board>
       <inputs>
         <input type="common" />
         <input type="analog_joystick" />
@@ -2226,11 +2253,11 @@
         <file offset="0xC00000" name="mpr-21378.24" crc32="0x1FCF715E" />
       </region>
       <!-- Force feedback controller prg -->
-      
-      <region name="ffb_program" stride="1" chunk_size="1">
+
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-21119.ic8" crc32="0x65082B14" />
       </region>
-      
+
     </roms>
   </game>
 
@@ -2245,6 +2272,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Joystick</drive_board>
       <inputs>
         <input type="common" />
         <input type="analog_joystick" />
@@ -2274,7 +2302,7 @@
       </region>
     </roms>
   </game>
-  
+
   <game name="swtrilgyp" parent="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
@@ -2286,6 +2314,7 @@
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
+      <drive_board>Joystick</drive_board>
       <inputs>
         <input type="common" />
         <input type="analog_joystick" />
@@ -2362,6 +2391,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2423,6 +2453,9 @@
         <file offset="0x000000" name="mpr-19209.22" crc32="0x3715E38C" />
         <file offset="0x400000" name="mpr-19210.24" crc32="0xC03D6502" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
 
@@ -2436,6 +2469,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2463,6 +2497,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2490,6 +2525,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.0</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2524,6 +2560,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -2588,6 +2625,9 @@
         <file offset="0x800000" name="mpr-20664.23" crc32="0x89220782" />
         <file offset="0xC00000" name="mpr-20666.25" crc32="0x3ECB2606" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
 
@@ -2601,6 +2641,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -2629,6 +2670,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -2646,7 +2688,7 @@
       </region>
     </roms>
   </game>
-  
+
   <game name="von2o" parent="von2">
     <identity>
       <title>Virtual On 2: Oratorio Tangram</title>
@@ -2657,6 +2699,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <real3d_pci_id>0x16C311DB</real3d_pci_id>
       <netboard>true</netboard>
       <inputs>
@@ -2685,6 +2728,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2746,6 +2790,9 @@
         <file offset="0x000000" name="mpr-19785.22" crc32="0xE7D190E3" />
         <file offset="0x400000" name="mpr-19786.24" crc32="0xB08D889B" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
 
@@ -2759,6 +2806,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <drive_board>Billboard</drive_board>
       <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
@@ -2787,6 +2835,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <drive_board>Billboard</drive_board>
       <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
@@ -2815,6 +2864,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2825,10 +2875,10 @@
     </hardware>
     <roms>
     	<patches>
-        <!-- 
-          Offset of program relative to CROM base: 0x600000 (0x200000 in the 
+        <!--
+          Offset of program relative to CROM base: 0x600000 (0x200000 in the
           ROM itself). Inexplicably, at PC=AFC1C, a call is made to FC78, which
-          is right in the middle of some totally unrelated initialization code 
+          is right in the middle of some totally unrelated initialization code
           (ASIC checks). This causes an invalid pointer to be fetched. Perhaps
           FC78 should be overwritten with other program data by then? Why is it
           not? Or, 300138 needs to be written with a non-zero value, it is
@@ -2889,6 +2939,9 @@
         <file offset="0x000000" name="mpr-20903.22" crc32="0xE343E131" />
         <file offset="0x400000" name="mpr-20904.24" crc32="0x21A91B84" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
 
@@ -2902,6 +2955,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <drive_board>Billboard</drive_board>
       <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
@@ -2930,6 +2984,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2992,6 +3047,9 @@
         <file offset="0x000000" name="mpr-21513.22" crc32="0xCCA1CC00" />
         <file offset="0x400000" name="mpr-21514.24" crc32="0x6CEDD292" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
 
@@ -3005,6 +3063,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -3033,6 +3092,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <drive_board>Billboard</drive_board>
       <pci_bridge>MPC106</pci_bridge>
       <inputs>
         <input type="common" />
@@ -3061,6 +3121,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -3089,6 +3150,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.1</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
