@@ -119,14 +119,14 @@ UINT8 CSkiBoard::SimulateRead(void)
   {
     switch (m_readMode)
     {
-      case 0x0: return m_statusFlags;         // Status flags
+      // Note about Driveboard error :
+      // The value returned by case 0x0 is the error value displayed when error occurs.
+      // In service menu->output test, you will see "foot ctrl clutch" occilating free/lock due to 
+      // the incrementation of m_statusFlags (000x0000 : x=1=lock x=0=free)
+      
+      case 0x0: return m_statusFlags++;       // Status flags - Increment every time to bypass driveboard error
       case 0x1: return m_dip1;                // DIP switch 1 value
-      case 0x2: return m_dip2;                // DIP switch 2 value
-      case 0x3: return m_wheelCenter;         // Wheel center
-      case 0x4: return 0x80;                  // Cockpit banking center
-      case 0x5: return m_inputs->skiX->value; // Wheel position
-      case 0x6: return 0x80;                  // Cockpit banking position
-      case 0x7: return m_echoVal;             // Init status/echo test
+      case 0x4: return 0xFF;                  // Foot sensor Left=0xf0 Right=0x0f Both=0xff
       default:  return 0xFF;
     }
   }
@@ -255,7 +255,6 @@ CSkiBoard::CSkiBoard(const Util::Config::Node& config)
   m_simulated = false;
   m_initialized = false;
   m_dip1 = 0xCF;
-  m_dip2 = 0xFF;
 
   DebugLog("Built Drive Board (ski pad)\n");
 }

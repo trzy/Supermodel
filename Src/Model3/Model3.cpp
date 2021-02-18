@@ -535,14 +535,6 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     if ((m_game.inputs & Game::INPUT_MAGTRUCK))
       data &= ~(Inputs->magicalPedal2->value << 0);
 
-    if ((m_game.inputs & Game::INPUT_SKI))
-    {
-      data = 0xff;
-      // foot sensor Left=0xf0 Right=0x0f Both=0xff
-      // rumble skipad is tested here at boot. The rom is patched to avoid driveboard error
-      // note : there is no driveboard error if sensor value slide slowly from 0x80 to 0xff then set to 0xff when test passed (tested with assigning an axis to this value)
-    }
-
     return data;
 
   case 0x18:         // swtrilgy and getbass. Remove IO board error on getbass. Not sure, but may be related to device feedback ?
