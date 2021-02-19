@@ -138,6 +138,12 @@
     <Filter Include="Source Files\Network">
       <UniqueIdentifier>{284c6ebd-9a90-4283-9ee6-ea097974c8f4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Model3\DriveBoard">
+      <UniqueIdentifier>{2802dddb-302d-494a-9f0a-e37a870a7cc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Model3\DriveBoard">
+      <UniqueIdentifier>{5adb385b-66b5-4aec-9f7c-37a82388f0d2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Src\BlockFile.cpp">
@@ -192,9 +198,6 @@
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Model3\93C46.cpp">
-      <Filter>Source Files\Model3</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Src\Model3\DriveBoard.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Model3\DSB.cpp">
@@ -437,6 +440,21 @@
     <ClCompile Include="..\Src\Network\TCPReceive.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard\BillBoard.cpp">
+      <Filter>Source Files\Model3\DriveBoard</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard\DriveBoard.cpp">
+      <Filter>Source Files\Model3\DriveBoard</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard\JoystickBoard.cpp">
+      <Filter>Source Files\Model3\DriveBoard</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard\SkiBoard.cpp">
+      <Filter>Source Files\Model3\DriveBoard</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard\WheelBoard.cpp">
+      <Filter>Source Files\Model3\DriveBoard</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -521,9 +539,6 @@
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\93C46.h">
-      <Filter>Header Files\Model3</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Model3\DriveBoard.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\DSB.h">
@@ -798,6 +813,21 @@
     </ClInclude>
     <ClInclude Include="..\Src\Network\TCPReceive.h">
       <Filter>Source Files\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard\BillBoard.h">
+      <Filter>Header Files\Model3\DriveBoard</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard\DriveBoard.h">
+      <Filter>Header Files\Model3\DriveBoard</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard\JoystickBoard.h">
+      <Filter>Header Files\Model3\DriveBoard</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard\SkiBoard.h">
+      <Filter>Header Files\Model3\DriveBoard</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard\WheelBoard.h">
+      <Filter>Header Files\Model3\DriveBoard</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

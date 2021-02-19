@@ -327,7 +327,11 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\Model3\53C810Disasm.cpp" />
     <ClCompile Include="..\Src\Model3\93C46.cpp" />
     <ClCompile Include="..\Src\Model3\Crypto.cpp" />
-    <ClCompile Include="..\Src\Model3\DriveBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\DriveBoard\BillBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\DriveBoard\DriveBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\DriveBoard\JoystickBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\DriveBoard\SkiBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\DriveBoard\WheelBoard.cpp" />
     <ClCompile Include="..\Src\Model3\DSB.cpp" />
     <ClCompile Include="..\Src\Model3\IRQ.cpp" />
     <ClCompile Include="..\Src\Model3\JTAG.cpp" />
@@ -498,7 +502,11 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Model3\53C810.h" />
     <ClInclude Include="..\Src\Model3\93C46.h" />
     <ClInclude Include="..\Src\Model3\Crypto.h" />
-    <ClInclude Include="..\Src\Model3\DriveBoard.h" />
+    <ClInclude Include="..\Src\Model3\DriveBoard\BillBoard.h" />
+    <ClInclude Include="..\Src\Model3\DriveBoard\DriveBoard.h" />
+    <ClInclude Include="..\Src\Model3\DriveBoard\JoystickBoard.h" />
+    <ClInclude Include="..\Src\Model3\DriveBoard\SkiBoard.h" />
+    <ClInclude Include="..\Src\Model3\DriveBoard\WheelBoard.h" />
     <ClInclude Include="..\Src\Model3\DSB.h" />
     <ClInclude Include="..\Src\Model3\IRQ.h" />
     <ClInclude Include="..\Src\Model3\JTAG.h" />

@@ -61,7 +61,7 @@
 #define ROM_SIZE 0x9000
 #define RAM_SIZE 0x2000 // Z80 RAM
 
-static_assert(sizeof(bool) == 1); // Save state code relies on this -- we must fix this so that bools are copied to uint8_t explicitly
+static_assert(sizeof(bool) == 1, "bools must be copied to uint8_t"); // Save state code relies on this -- we must fix this so that bools are copied to uint8_t explicitly
 
 void CDriveBoard::SaveState(CBlockFile* SaveState)
 {
@@ -145,7 +145,7 @@ void CDriveBoard::LoadState(CBlockFile* SaveState)
 
 void CDriveBoard::LoadLegacyState(const LegacyDriveBoardState &state, CBlockFile *SaveState)
 {
-  static_assert(RAM_SIZE == sizeof(state.ram));
+  static_assert(RAM_SIZE == sizeof(state.ram),"Ram sizes must match");
   memcpy(m_ram, state.ram, RAM_SIZE);
   m_initialized = state.initialized;
   m_allowInterrupts = state.allowInterrupts;
