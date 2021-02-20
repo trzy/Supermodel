@@ -1,5 +1,5 @@
 #include "Vec.h"
-#include <math.h>
+#include <cmath>
 
 namespace New3D {
 
@@ -115,7 +115,7 @@ float V3::length(const Vec3 v) {
 	//===========
 	
 	length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-	length = sqrt(length);
+	length = std::sqrt(length);
 
 	return length;
 }

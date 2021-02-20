@@ -195,14 +195,14 @@ UINT8 CJoyBoard::SimulateRead(void)
   {
     switch (m_readMode)
     {
-      case 0x0: return m_statusFlags;               // Status flags
-      case 0x1: return m_dip1;                      // DIP switch 1 value
-      case 0x2: return m_dip2;                      // DIP switch 2 value
-      case 0x3: return m_wheelCenter;               // Wheel center
-      case 0x4: return 0x80;                        // Cockpit banking center
-      case 0x5: return m_inputs->analogJoyX->value; // Wheel position
-      case 0x6: return 0x80;                        // Cockpit banking position
-      case 0x7: return m_echoVal;                   // Init status/echo test
+      case 0x0: return m_statusFlags;                      // Status flags
+      case 0x1: return m_dip1;                             // DIP switch 1 value
+      case 0x2: return m_dip2;                             // DIP switch 2 value
+      case 0x3: return m_wheelCenter;                      // Wheel center
+      case 0x4: return 0x80;                               // Cockpit banking center
+      case 0x5: return (UINT8)m_inputs->analogJoyX->value; // Wheel position
+      case 0x6: return 0x80;                               // Cockpit banking position
+      case 0x7: return m_echoVal;                          // Init status/echo test
       default:  return 0xFF;
     }
   }
@@ -276,14 +276,14 @@ void CJoyBoard::SimulateWrite(UINT8 cmd)
     case 8: // 0x80-8F Test Mode
       switch (val & 0x7)
       {
-        case 0:  SendStopAll();                               break;  // 0x80 Stop motor
-        case 1:  SendConstantForce(20);                       break;  // 0x81 Roll wheel right
-        case 2:  SendConstantForce(-20);                      break;  // 0x82 Roll wheel left
-        case 3:  /* Ignore - no clutch */                     break;  // 0x83 Clutch on
-        case 4:  /* Ignore - no clutch */                     break;  // 0x84 Clutch off
-        case 5:  m_wheelCenter = m_inputs->analogJoyX->value; break;  // 0x85 Set wheel center position
-        case 6:  /* Ignore */                                 break;  // 0x86 Set cockpit banking position
-        case 7:  /* Ignore */                                 break;  // 0x87 Lamp on/off
+        case 0:  SendStopAll();                                      break;  // 0x80 Stop motor
+        case 1:  SendConstantForce(20);                              break;  // 0x81 Roll wheel right
+        case 2:  SendConstantForce(-20);                             break;  // 0x82 Roll wheel left
+        case 3:  /* Ignore - no clutch */                            break;  // 0x83 Clutch on
+        case 4:  /* Ignore - no clutch */                            break;  // 0x84 Clutch off
+        case 5:  m_wheelCenter = (UINT8)m_inputs->analogJoyX->value; break;  // 0x85 Set wheel center position
+        case 6:  /* Ignore */                                        break;  // 0x86 Set cockpit banking position
+        case 7:  /* Ignore */                                        break;  // 0x87 Lamp on/off
       }
     case 0x9: // 0x90-9F ??? Don't appear to have any effect with Scud Race ROM
       /* TODO */
