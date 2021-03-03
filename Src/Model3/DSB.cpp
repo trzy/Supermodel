@@ -41,6 +41,7 @@
 
 #include "Supermodel.h"
 #include "Sound/MPEG/MpegAudio.h"
+#include <algorithm>
 
 /******************************************************************************
  Resampler
