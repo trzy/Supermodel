@@ -1,12 +1,13 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2021 Bart Trzynadlowski, Nik Henson, Ian Curtis,
+ **                     Harry Tuttle, and Spindizzi
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,12 +19,12 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * DSB.cpp
- * 
+ *
  * Sega Digital Sound Board (MPEG audio). Implementation of the CDSB1 and CDSB2
- * classes. Based on code donated by R. Belmont. Many Bothans died to bring us 
+ * classes. Based on code donated by R. Belmont. Many Bothans died to bring us
  * this emulation.
  *
  * TODO List
@@ -43,61 +44,61 @@
 
 /******************************************************************************
  Resampler
- 
+
  MPEG Layer 2 audio can be 32, 44.1, or 48 KHz. Here, an up-sampling algorithm
- is provided, which should work for any frequency less than 44.1 KHz and an 
- output frequency of 44.1 KHz. Down-sampling is not yet implemented, but would 
+ is provided, which should work for any frequency less than 44.1 KHz and an
+ output frequency of 44.1 KHz. Down-sampling is not yet implemented, but would
  work in a similar fashion. The chief difference is that the input index would
  sometimes advance by more than one for a single output sample and the
  fractions, nFrac and pFrac, would sometimes exceed 1.0.
- 
+
  Up-Sampling Description
  -----------------------
- 
+
  Linear interpolation is used to up-sample. Not as accurate as the Shannon
  reconstruction equation but it seems to work quite well.
- 
+
  1. Linear Interpolation
- 
+
  Input samples for a given frame (here, this means 1/60Hz, not to be confused
- with an MPEG frame, which is shorter) are numbered 0 ... L-1 (L samples in 
+ with an MPEG frame, which is shorter) are numbered 0 ... L-1 (L samples in
  total). Output samples are 0 ... M-1.
- 
+
  For two adjacent input samples at times p ("previous") and n ("next"), in[p]
  and in[n], and output out[t] at time t, linear interpolation yields:
- 
+
  		out[t] = (n-t)/(n-p) * in[p] + (t-p)/(n-p) * in[n]
- 
+
  Note that (n-p) = 1/fin (fin being the input sampling frequency).
- 
+
  Let pFrac = (n-t)/(n-p) and nFrac = (t-p)/(n-p). As t moves from p to n, pFrac
  moves from 1 to 0 and nFrac from 0 to 1, as we expect.
- 
- If we proceed one output sample at a time, we must add the time difference 
+
+ If we proceed one output sample at a time, we must add the time difference
  between output samples, 1/fout, to t. Call this delta_t. If we divide delta_t
  by (n-p), we can add it directly to nFrac and subtract from pFrac. Therefore:
- 
+
  	delta = (1/fout)/(n-p) = fin/fout
- 	
+
  What happens when nFrac exceeds 1.0 or pFrac goes below 0.0? That can't
  be allowed to happen -- it means that we've actually moved along the line into
  the region between the next set of samples. We use pFrac < 0 as the condition
  to update the input samples.
- 
+
  It so happens that when fin < fout, pFrac and nFrac will never exceed 1.0. So
  there is no need to check or mask the fixed point values when using them to
  interpolate samples.
- 
+
  2. Input Buffer Overflows
- 
+
  For some low sampling rates, particularly those that are a factor of 2 or 4
  smaller, it is possible that the very last sample or two needed from the input
  stream will be beyond the end. Fetching two extra samples (which can introduce
  an update lag of two samples -- imperceptible and inconsequential) fixes this,
  and so we do it.
- 
+
  3. Continuity Between Frames
- 
+
  The very last output sample will typically sit somewhere between two input
  samples. It is wrong to start the next frame by assuming everything is lined
  up again. The first sample of the next frame will often have to be interpol-
@@ -105,17 +106,17 @@
  to see how many input samples remain unprocessed when up-sampling is finished,
  and then copy those to the beginning of the buffer. We then return the number
  of samples so that the buffer update function will know to skip them.
- 
- We also must maintain the state of pFrac and nFrac to resume interpolation 
+
+ We also must maintain the state of pFrac and nFrac to resume interpolation
  correctly. Therefore, these variables are persistent.
- 
+
  4. Fixed Point Arithmetic
- 
+
  Fixed point arithmetic is used to track fractions. For such numbers, the low
  8 bits represent a fraction (0x100 would be 1.0, 0x080 would be 0.5, etc.)
  and the upper bits are the integral portion.
 ******************************************************************************/
- 
+
 void CDSBResampler::Reset(void)
 {
 	// Initial state of fractions (24.8 fixed point)
@@ -142,48 +143,48 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 	int		inIdx = 0;
 	INT32	leftSample, rightSample, leftSoundSample, rightSoundSample;
 	INT32	v[2], musicVol, soundVol;
-	
+
 	// Obtain program volume settings and convert to 24.8 fixed point (0-200 -> 0x00-0x200)
 	musicVol = m_config["MusicVolume"].ValueAs<int>();
 	soundVol = m_config["SoundVolume"].ValueAs<int>();
 	musicVol = (INT32) ((float) 0x100 * (float) musicVol / 100.0f);
 	soundVol = (INT32) ((float) 0x100 * (float) soundVol / 100.0f);
-	
+
 	// Scale volume from 0x00-0xFF -> 0x00-0x100 (24.8 fixed point)
 	v[0] = (INT16) ((float) 0x100 * (float) volumeL / 255.0f);
 	v[1] = (INT16) ((float) 0x100 * (float) volumeR / 255.0f);
-	
+
 	// Up-sample and mix!
 	while (outIdx < sizeOut)
 	{
 		// nFrac, pFrac will never exceed 1.0 (0x100) (only true if delta does not exceed 1)
 		leftSample	= ((int)inL[inIdx]*pFrac+(int)inL[inIdx+1]*nFrac) >> 8;	// left channel
 		rightSample	= ((int)inR[inIdx]*pFrac+(int)inR[inIdx+1]*nFrac) >> 8;	// right channel
-		
+
 		// Apply DSB volume and then overall music volume setting
 		leftSample = (leftSample*v[0]*musicVol) >> 16;		// multiplied by two 24.8 numbers, shift back by 16
 		rightSample = (rightSample*v[0]*musicVol) >> 16;
-		
+
 		// Apply sound volume setting
 		leftSoundSample = (outL[outIdx]*soundVol) >> 8;
 		rightSoundSample = (outR[outIdx]*soundVol) >> 8;
-		
+
 		// Mix and output
 		outL[outIdx] = MixAndClip(leftSoundSample, leftSample);
 		outR[outIdx] = MixAndClip(rightSoundSample, rightSample);
 		outIdx++;
-		
+
 		// Time step
 		pFrac -= delta;
 		nFrac += delta;
-		
+
 		// Time to move to next samples?
 		if (pFrac <= 0)	// when pFrac becomes 0, advance samples, reset pFrac to 1
 		{
 			pFrac += (1<<8);
 			nFrac -= (1<<8);
 			inIdx++;	// advance samples (for upsampling only; downsampling may advance by more than one -- add delta every loop iteration)
-			
+
 		}
 	}
 
@@ -210,7 +211,7 @@ UINT8 CDSB1::Read8(UINT32 addr)
 	// ROM: 0x0000-0x7FFF
 	if (addr < 0x8000)
 		return progROM[addr];
-	
+
 	// RAM: 0x8000-0xFFFF
 	return ram[addr&0x7FFF];
 }
@@ -259,17 +260,17 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			return;
 		}
 		break;
-	
+
 	case 0xE2:	// MPEG start, high byte
 		startLatch &= 0x00FFFF;
 		startLatch |= ((UINT32)data) << 16;
 		break;
-	
+
 	case 0xE3:	// MPEG start, middle byte
 		startLatch &= 0xFF00FF;
 		startLatch |= ((UINT32)data) << 8;
 		break;
-		
+
 	case 0xE4:	// MPEG start, low byte
 		startLatch &= 0xFFFF00;
 		startLatch |= data;
@@ -297,19 +298,19 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
 			}
 		}
-			
+
 		break;
-		
+
 	case 0xE5:	// MPEG end, high byte
 		endLatch &= 0x00FFFF;
 		endLatch |= ((UINT32)data) << 16;
-		break;		
-	
+		break;
+
 	case 0xE6:	// MPEG end, middle byte
 		endLatch &= 0xFF00FF;
 		endLatch |= ((UINT32)data) << 8;
 		break;
-		
+
 	case 0xE7:	// MPEG end, low byte
 		endLatch &= 0xFFFF00;
 		endLatch |= data;
@@ -327,20 +328,20 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
 			//printf("loopEnd = %08X\n", loopEnd);
 		}
-		break;		
-		
+		break;
+
 	case 0xE8:	// MPEG volume
 		volume = 0x7F-data;
 		//printf("Set Volume: %02X\n", volume);
 		break;
-		
+
 	case 0xE9:	// MPEG stereo
 		stereo = data;
 		break;
-		
+
 	case 0xF0:	// command echo back
 		break;
-	
+
 	default:
 		//printf("Z80 Port %02X=%08X\n", addr, data);
 		break;
@@ -350,24 +351,24 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 UINT8 CDSB1::IORead8(UINT32 addr)
 {
 	int	progress;
-	
+
 	switch ((addr&0xFF))
 	{
 	case 0xE2:	// MPEG position, high byte
 		progress = MpegDec::GetPosition();
 		progress += mpegStart;	// byte address currently playing
 		return (progress>>16)&0xFF;
-		
+
 	case 0xE3:	// MPEG position, middle byte
 		progress = MpegDec::GetPosition();
 		progress += mpegStart;
 		return (progress>>8)&0xFF;
-		
+
 	case 0xE4:	// MPEG position, low byte
 		progress = MpegDec::GetPosition();
 		progress += mpegStart;
 		return progress&0xFF;
-		
+
 	case 0xF0:	// Latch
 		UINT8 d;
 		d = fifo[fifoIdxR];	// retrieve next command byte
@@ -376,16 +377,16 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 			fifoIdxR++;
 			fifoIdxR &= 127;
 		}
-		
+
 		if (fifoIdxR == fifoIdxW)	// FIFO empty?
 			status &= ~2;			// yes, indicate no commands left
 		else
 			status |= 2;
-			
+
 		Z80.SetINT(false);	// clear IRQ
 		//printf("Z80: INT cleared, read from FIFO\n");
 		return d;
-		
+
 	case 0xF1:	// Status
 		/*
 		 * Bit 0: Must be 1 for most games.
@@ -394,7 +395,7 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 		 */
 		return status;
 	}
-	
+
 	//printf("Z80 Port Read %02X\n", addr);
 	return 0;
 }
@@ -402,7 +403,7 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 static int Z80IRQCallback(CZ80 *Z80)
 {
 	return 0x38;
-}	
+}
 
 void CDSB1::SendCommand(UINT8 data)
 {
@@ -415,7 +416,7 @@ void CDSB1::SendCommand(UINT8 data)
 	fifo[fifoIdxW++] = data;
 	fifoIdxW &= 127;
 	//printf("Write FIFO: %02X\n", data);
-	
+
 	// Have we caught up to the read pointer?
 #ifdef DEBUG
 	if (fifoIdxW == fifoIdxR)
@@ -427,7 +428,7 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 {
 	int		cycles;
 	UINT8	v;
-	
+
 	if (!m_config["EmulateDSB"].ValueAs<bool>())
 	{
 		// DSB code applies SCSP volume, too, so we must still mix
@@ -436,23 +437,23 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, 44100/60, 32000/60+2, 44100, 32000);
 		return;
 	}
-	
+
 	// While FIFO not empty, fire interrupts, run for up to one frame
-	for (cycles = (4000000/60)/4; (cycles > 0) && (fifoIdxR != fifoIdxW);  )
+	for (cycles = (4000000/60); (cycles > 0) && (fifoIdxR != fifoIdxW);  )
 	{
 		Z80.SetINT(true);	// fire an IRQ to indicate pending command
 		//printf("Z80 INT fired\n");
 		cycles -= Z80.Run(500);
-	}	
-		
+	}
+
 	// Run remaining cycles
 	Z80.Run(cycles);
-	
+
 	//printf("VOLUME=%02X STEREO=%02X\n", volume, stereo);
-	
+
 	// Convert volume from 0x00-0x7F -> 0x00-0xFF
 	v = (UINT8) ((float) 255.0f * (float) volume /127.0f);
-	
+
 	// Decode MPEG for this frame
 	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
 	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, 44100/60, 32000/60+2, 44100, 32000);
@@ -463,15 +464,15 @@ void CDSB1::Reset(void)
 	MpegDec::Stop();
 	Resampler.Reset();
 	retainedSamples = 0;
-	
+
 	memset(fifo, 0, sizeof(fifo));
 	fifoIdxW = fifoIdxR = 0;
-	
+
 	status = 1;
 	mpegState = 0;	// why doesn't RB ever init this?
 	volume = 0x7F;	// full volume
 	usingLoopStart = 0;
-	
+
 	// Even if DSB emulation is disabled, must reset to establish valid Z80 state
 	Z80.Reset();
 	DebugLog("DSB1 Reset\n");
@@ -481,9 +482,9 @@ void CDSB1::SaveState(CBlockFile *StateFile)
 {
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
-	
+
 	StateFile->NewBlock("DSB1", __FILE__);
-	
+
 	// MPEG playback state
 	isPlaying	= (UINT8)MpegDec::IsLoaded();
 	playOffset	= (UINT32)MpegDec::GetPosition();
@@ -496,7 +497,7 @@ void CDSB1::SaveState(CBlockFile *StateFile)
 	StateFile->Write(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Write(&usingLoopStart, sizeof(usingLoopStart));
 	StateFile->Write(&usingLoopEnd, sizeof(usingLoopEnd));
-	
+
 	// MPEG board state
 	StateFile->Write(ram, 0x8000);
 	StateFile->Write(fifo, sizeof(fifo));
@@ -511,7 +512,7 @@ void CDSB1::SaveState(CBlockFile *StateFile)
 	StateFile->Write(&cmdLatch, sizeof(cmdLatch));
 	StateFile->Write(&volume, sizeof(volume));
 	StateFile->Write(&stereo, sizeof(stereo));
-	
+
 	// Z80 CPU state
 	Z80.SaveState(StateFile, "DSB1 Z80");
 }
@@ -520,13 +521,13 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 {
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
-	
+
 	if (OKAY != StateFile->FindBlock("DSB1"))
 	{
 		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupt.");
 		return;
 	}
-	
+
 	StateFile->Read(&isPlaying, sizeof(isPlaying));
 	StateFile->Read(&playOffset, sizeof(playOffset));
 	StateFile->Read(&endOffset, sizeof(endOffset));
@@ -547,9 +548,9 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	StateFile->Read(&cmdLatch, sizeof(cmdLatch));
 	StateFile->Read(&volume, sizeof(volume));
 	StateFile->Read(&stereo, sizeof(stereo));
-	
+
 	Z80.LoadState(StateFile, "DSB1 Z80");
-	
+
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
@@ -575,27 +576,27 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float	memSizeMB = (float)DSB1_MEMORY_POOL_SIZE/(float)0x100000;
-	
+
 	// Receive ROM
 	progROM = progROMPtr;
 	mpegROM = mpegROMPtr;
-	
+
 	// Allocate memory pool
 	memoryPool = new(std::nothrow) UINT8[DSB1_MEMORY_POOL_SIZE];
 	if (NULL == memoryPool)
 		return ErrorLog("Insufficient memory for DSB1 board (needs %1.1f MB).", memSizeMB);
 	memset(memoryPool, 0, DSB1_MEMORY_POOL_SIZE);
-	
+
 	// Set up memory pointers
 	ram = &memoryPool[DSB1_OFFSET_RAM];
 	mpegL = (INT16 *) &memoryPool[DSB1_OFFSET_MPEG_LEFT];
 	mpegR = (INT16 *) &memoryPool[DSB1_OFFSET_MPEG_RIGHT];
-	
+
 	// Initialize Z80 CPU
 	Z80.Init(this, Z80IRQCallback);
-	
+
 	retainedSamples = 0;
-		
+
 	return OKAY;
 }
 
@@ -621,24 +622,24 @@ CDSB1::CDSB1(const Util::Config::Node &config)
 	mpegState	= 0;
 	loopStart	= 0;
 	loopEnd		= 0;
-	
+
 	DebugLog("Built DSB1 Board\n");
 }
 
 CDSB1::~CDSB1(void)
-{	
+{
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
 		memoryPool = NULL;
 	}
-	
+
 	progROM	= NULL;
 	mpegROM	= NULL;
 	ram		= NULL;
 	mpegL	= NULL;
 	mpegR	= NULL;
-	
+
 	DebugLog("Destroyed DSB1 Board\n");
 }
 
@@ -648,7 +649,7 @@ CDSB1::~CDSB1(void)
 ******************************************************************************/
 
 // MPEG state machine
-enum 
+enum
 {
 	ST_IDLE = 0,
 	ST_GOT14,	// start/loop addr
@@ -672,7 +673,7 @@ enum
 	ST_GOTB6
 };
 
-static const char *stateName[] = 
+static const char *stateName[] =
 {
 	"idle",
 	"st_got_14",
@@ -717,7 +718,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
 
-				mpegState = ST_IDLE;	
+				mpegState = ST_IDLE;
 			}
 
 			else if (byte == 0x84 || byte == 0x85)
@@ -766,7 +767,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 
 			break;
 		case ST_GOT24:
-			mpegEnd &= 0x00FFFF; 
+			mpegEnd &= 0x00FFFF;
 			mpegEnd |= (byte<<16);
 			mpegState++;
 			break;
@@ -782,12 +783,12 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			stereo = StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
-		
+
 		case ST_GOTA0:
 			stereo = (byte != 0x00) ? StereoMode::MonoLeft : StereoMode::Stereo;
 			mpegState = ST_IDLE;
 			break;
-		
+
 		case ST_GOTA4:	// dayto2pe plays advertise tune from this state by writing 0x75
 			mpegState = ST_IDLE;
 			if (byte == 0x75)
@@ -818,7 +819,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 		case ST_GOTB5:
 			mpegState = ST_IDLE;
 			break;
-		
+
 		/*
 		 * Speaker Volume:
 		 *
@@ -868,7 +869,7 @@ UINT8 CDSB2::Read8(UINT32 addr)
 	if (addr < (128*1024))
 		return progROM[addr^1];
 
-	if (addr == 0xc00001)	
+	if (addr == 0xc00001)
 	{
 		return cmdLatch;
 	}
@@ -911,7 +912,7 @@ UINT16 CDSB2::Read16(UINT32 addr)
 UINT32 CDSB2::Read32(UINT32 addr)
 {
 	UINT32	hi, lo;
-	
+
 	if (addr < (128*1024))
 	{
 		hi = *(UINT16 *) &progROM[addr];
@@ -937,10 +938,10 @@ void CDSB2::Write8(UINT32 addr, UINT8 data)
 		ram[addr^1] = data;
 		return;
 	}
-	
+
 	if (addr == 0xd00001) return;
 
-	if (addr == 0xe00003) 
+	if (addr == 0xe00003)
 	{
 		WriteMPEGFIFO(data);
 		return;
@@ -983,14 +984,14 @@ void CDSB2::SendCommand(UINT8 data)
 	fifo[fifoIdxW++] = data;
 	fifoIdxW &= 127;
 	//printf("Write FIFO: %02X\n", data);
-	
+
 	// Have we caught up to the read pointer?
 #ifdef DEBUG
 	if (fifoIdxW == fifoIdxR)
 		printf("DSB2 FIFO overflow!\n");
 #endif
 }
-	
+
 
 void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 {
@@ -1005,28 +1006,43 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 
 	M68KSetContext(&M68K);
 	//printf("DSB2 run frame PC=%06X\n", M68KGetPC());
-	
+
 	// While FIFO not empty...
 	while (fifoIdxR != fifoIdxW)
 	{
 		cmdLatch = fifo[fifoIdxR];	// retrieve next command byte
 		fifoIdxR++;
-		fifoIdxR &= 127;	
-		
+		fifoIdxR &= 127;
+
 		M68KSetIRQ(1);	// indicate pending command
 		//printf("68K INT fired\n");
-		M68KRun(500);
-	}	
+		m_totalCyclesElapsed += M68KRun(500);
+	}
 
-	// Per-frame interrupt
-	M68KSetIRQ(2);
-	M68KRun(4000000/60);
-	
+  // gm_matthew made the interesting discovery that IRQ2 may in fact be a timer interrupt
+  // rather than a per-frame interrupt.For Daytona 2 and Sega Rally 2, assuming a value
+  // of 1KHz fixes music fade outs and some timing issues. It is very likely this is a
+  // configurable timer and we should be on the look-out for games which appear to use
+  // different values. It is equally likely that all games share a similar code base and
+  // use 1KHz as the timer rate.
+  while (m_totalCyclesElapsed < m_nextFrameEndCycles)
+  {
+    if (m_totalCyclesElapsed >= m_nextTimerInterruptCycles)
+    {
+      // Fire timer interrupt and schedule next one
+      M68KSetIRQ(2);
+      m_nextTimerInterruptCycles = (m_totalCyclesElapsed + k_timerPeriod) - (m_totalCyclesElapsed + k_timerPeriod) % k_timerPeriod;
+    }
+    int cyclesToRun = (std::min)(m_nextTimerInterruptCycles, m_nextFrameEndCycles) - m_totalCyclesElapsed;
+    m_totalCyclesElapsed += M68KRun(cyclesToRun);
+  }
+  m_nextFrameEndCycles = (m_totalCyclesElapsed + k_framePeriod) - (m_totalCyclesElapsed + k_framePeriod) % k_framePeriod;
+
 	M68KGetContext(&M68K);
-	
+
 	// Decode MPEG for this frame
 	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
-	
+
 	INT16 *leftChannelSource = nullptr;
 	INT16 *rightChannelSource = nullptr;
 	UINT8 volL=0, volR=0;
@@ -1062,10 +1078,10 @@ void CDSB2::Reset(void)
 	MpegDec::Stop();
 	Resampler.Reset();
 	retainedSamples = 0;
-	
+
 	memset(fifo, 0, sizeof(fifo));
 	fifoIdxW = fifoIdxR = 0;
-	
+
 	mpegState = ST_IDLE;
 	mpegStart = 0;
 	mpegEnd = 0;
@@ -1073,13 +1089,17 @@ void CDSB2::Reset(void)
 	volume[0] = 0xFF;	// set to max volume in case we miss the volume commands
 	volume[1] = 0xFF;
 	stereo = StereoMode::Stereo;
-	
+
 	// Even if DSB emulation is disabled, must reset to establish valid Z80 state
 	M68KSetContext(&M68K);
 	M68KReset();
 	//printf("DSB2 PC=%06X\n", M68KGetPC());
 	M68KGetContext(&M68K);
-	
+
+	m_totalCyclesElapsed = 0;
+	m_nextFrameEndCycles = k_framePeriod;
+	m_nextTimerInterruptCycles = k_timerPeriod;
+
 	DebugLog("DSB2 Reset\n");
 }
 
@@ -1087,9 +1107,9 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 {
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
-	
+
 	StateFile->NewBlock("DSB2", __FILE__);
-	
+
 	// MPEG playback state
 	isPlaying	= (UINT8)MpegDec::IsLoaded();
 	playOffset	= (UINT32)MpegDec::GetPosition();
@@ -1102,7 +1122,7 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 	StateFile->Write(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Write(&usingLoopStart, sizeof(usingLoopStart));
 	StateFile->Write(&usingLoopEnd, sizeof(usingLoopEnd));
-	
+
 	// MPEG board state
 	StateFile->Write(ram, 0x20000);
 	StateFile->Write(fifo, sizeof(fifo));
@@ -1115,11 +1135,11 @@ void CDSB2::SaveState(CBlockFile *StateFile)
 	StateFile->Write(&playing, sizeof(playing));
 	StateFile->Write(volume, sizeof(volume));
 	StateFile->Write(&stereo, sizeof(stereo));
-	
+
 	// 68K CPU state
 	M68KSetContext(&M68K);
 	M68KSaveState(StateFile, "DSB2 68K");
-	
+
 	//DEBUG
 	//printf("DSB2 PC=%06X\n", M68KGetPC());
 	//printf("mpegStart=%X, mpegEnd=%X\n", mpegStart, mpegEnd);
@@ -1131,13 +1151,13 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 {
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
-	
+
 	if (OKAY != StateFile->FindBlock("DSB2"))
 	{
 		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupt.");
 		return;
 	}
-	
+
 	StateFile->Read(&isPlaying, sizeof(isPlaying));
 	StateFile->Read(&playOffset, sizeof(playOffset));
 	StateFile->Read(&endOffset, sizeof(endOffset));
@@ -1145,7 +1165,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	StateFile->Read(&usingMPEGEnd, sizeof(usingMPEGEnd));
 	StateFile->Read(&usingLoopStart, sizeof(usingLoopStart));
 	StateFile->Read(&usingLoopEnd, sizeof(usingLoopEnd));
-	
+
 	StateFile->Read(ram, 0x20000);
 	StateFile->Read(fifo, sizeof(fifo));
 	StateFile->Read(&fifoIdxR, sizeof(fifoIdxR));
@@ -1157,11 +1177,17 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	StateFile->Read(&playing, sizeof(playing));
 	StateFile->Read(volume, sizeof(volume));
 	StateFile->Read(&stereo, sizeof(stereo));
-	
+
 	M68KSetContext(&M68K);
 	M68KLoadState(StateFile, "DSB2 68K");
 	M68KGetContext(&M68K);
-	
+
+	// Technically these should be saved/restored rather than being reset but that would mean
+	// the save state format has to be modified and the difference would be imperceptible anyway
+	m_totalCyclesElapsed = 0;
+	m_nextFrameEndCycles = k_framePeriod;
+	m_nextTimerInterruptCycles = k_timerPeriod;
+
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
@@ -1176,13 +1202,13 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	else {
 		MpegDec::Stop();
 	}
-		
+
 	//DEBUG
 	//printf("DSB2 PC=%06X\n", M68KGetPC());
 	//printf("mpegStart=%X, mpegEnd=%X\n", mpegStart, mpegEnd);
 	//printf("usingMPEGStart=%X, usingMPEGEnd=%X\n", usingMPEGStart, usingMPEGEnd);
 	//printf("usingLoopStart=%X, usingLoopEnd=%X\n", usingLoopStart, usingLoopEnd);
-	
+
 }
 
 // Offsets of memory regions within DSB2's pool
@@ -1194,22 +1220,22 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float memSizeMB = (float)DSB2_MEMORY_POOL_SIZE/(float)0x100000;
-	
+
 	// Receive ROM
 	progROM = progROMPtr;
 	mpegROM = mpegROMPtr;
-	
+
 	// Allocate memory pool
 	memoryPool = new(std::nothrow) UINT8[DSB2_MEMORY_POOL_SIZE];
 	if (NULL == memoryPool)
 		return ErrorLog("Insufficient memory for DSB2 board (needs %1.1f MB).", memSizeMB);
 	memset(memoryPool, 0, DSB2_MEMORY_POOL_SIZE);
-	
+
 	// Set up memory pointers
 	ram = &memoryPool[DSB2_OFFSET_RAM];
 	mpegL = (INT16 *) &memoryPool[DSB2_OFFSET_MPEG_LEFT];
 	mpegR = (INT16 *) &memoryPool[DSB2_OFFSET_MPEG_RIGHT];
-	
+
 	// Initialize 68K CPU
 	M68KSetContext(&M68K);
 	M68KInit();
@@ -1218,7 +1244,7 @@ bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 	M68KGetContext(&M68K);
 
 	retainedSamples = 0;
-		
+
 	return OKAY;
 }
 
@@ -1248,18 +1274,18 @@ CDSB2::CDSB2(const Util::Config::Node &config)
 }
 
 CDSB2::~CDSB2(void)
-{	
+{
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
 		memoryPool = NULL;
 	}
-	
+
 	progROM	= NULL;
 	mpegROM	= NULL;
 	ram		= NULL;
 	mpegL	= NULL;
 	mpegR	= NULL;
-	
+
 	DebugLog("Destroyed DSB2 Board\n");
 }
