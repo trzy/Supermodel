@@ -2973,7 +2973,7 @@
   <game name="vs2v991">
     <identity>
       <title>Virtua Striker 2 '99.1</title>
-      <version>Revision B</version>
+      <version>Export, USA, Revision B</version>
       <manufacturer>Sega</manufacturer>
       <year>1999</year>
     </identity>
@@ -3049,68 +3049,10 @@
     </roms>
   </game>
 
-  <game name="vs299" parent="vs2v991">
-    <identity>
-      <title>Virtua Striker 2 '99</title>
-	  <version>?</version>
-      <manufacturer>Sega</manufacturer>
-      <year>1999</year>
-    </identity>
-    <hardware>
-      <platform>Sega Model 3</platform>
-      <stepping>2.1</stepping>
-      <drive_board>Billboard</drive_board>
-      <inputs>
-        <input type="common" />
-        <input type="joystick1" />
-        <input type="joystick2" />
-        <input type="soccer" />
-      </inputs>
-      <encryption_key>0x29222ac8</encryption_key>
-    </hardware>
-    <roms>
-      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21538.20" crc32="0x02DF6AC8" />
-        <file offset="2" name="epr-21537.19" crc32="0xFB37DC16" />
-        <file offset="4" name="epr-21536.18" crc32="0x9AF2B0D5" />
-        <file offset="6" name="epr-21535.17" crc32="0x976A00BF" />
-      </region>
-    </roms>
-  </game>
-
-  <game name="vs29915" parent="vs2v991">
-    <identity>
-      <title>Virtua Striker 2 '99</title>
-      <version>Step 1.5</version>
-      <manufacturer>Sega</manufacturer>
-      <year>1999</year>
-    </identity>
-    <hardware>
-      <platform>Sega Model 3</platform>
-      <stepping>1.5</stepping>
-      <drive_board>Billboard</drive_board>
-      <pci_bridge>MPC106</pci_bridge>
-      <inputs>
-        <input type="common" />
-        <input type="joystick1" />
-        <input type="joystick2" />
-        <input type="soccer" />
-      </inputs>
-    </hardware>
-    <roms>
-      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21534.20" crc32="0xD49AE219" />
-        <file offset="2" name="epr-21533.19" crc32="0xEA728471" />
-        <file offset="4" name="epr-21532.18" crc32="0x314447F8" />
-        <file offset="6" name="epr-21531.17" crc32="0xEC45015C" />
-      </region>
-    </roms>
-  </game>
-
   <game name="vs299a" parent="vs2v991">
     <identity>
       <title>Virtua Striker 2 '99</title>
-      <version>Revision A</version>
+      <version>Export, USA, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1999</year>
     </identity>
@@ -3136,10 +3078,39 @@
     </roms>
   </game>
 
-  <game name="vs299b" parent="vs2v991">
+  <game name="vs299" parent="vs2v991">
     <identity>
       <title>Virtua Striker 2 '99</title>
-      <version>Revision B</version>
+	  <version>Export, USA</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1999</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <drive_board>Billboard</drive_board>
+      <inputs>
+        <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
+        <input type="soccer" />
+      </inputs>
+      <encryption_key>0x29222ac8</encryption_key>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21538.20" crc32="0x02DF6AC8" />
+        <file offset="2" name="epr-21537.19" crc32="0xFB37DC16" />
+        <file offset="4" name="epr-21536.18" crc32="0x9AF2B0D5" />
+        <file offset="6" name="epr-21535.17" crc32="0x976A00BF" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="vs299j" parent="vs2v991">
+    <identity>
+      <title>Virtua Striker 2 '99.1</title>
+      <version>Japan, Revision B</version>
       <manufacturer>Sega</manufacturer>
       <year>1999</year>
     </identity>
@@ -3161,6 +3132,93 @@
         <file offset="2" name="epr-21552b.19" crc32="0xDB31EAF6" />
         <file offset="4" name="epr-21551b.18" crc32="0x0BBC40F7" />
         <file offset="6" name="epr-21550b.17" crc32="0xC508E488" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="vs29915" parent="vs2v991">
+    <identity>
+      <title>Virtua Striker 2 '99.1</title>
+      <version>Step 1.5 Export, USA, Revision B</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1999</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>1.5</stepping>
+      <drive_board>Billboard</drive_board>
+      <pci_bridge>MPC106</pci_bridge>
+      <inputs>
+        <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
+        <input type="soccer" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21534b.20" crc32="0xF38C3E61" />
+        <file offset="2" name="epr-21533b.19" crc32="0x7B1C05A1" />
+        <file offset="4" name="epr-21532b.18" crc32="0xBBEAA8C2" />
+        <file offset="6" name="epr-21531b.17" crc32="0x62DE9DF5" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="vs29915a" parent="vs2v991">
+    <identity>
+      <title>Virtua Striker 2 '99</title>
+      <version>Step 1.5 Export, USA</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1999</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>1.5</stepping>
+      <pci_bridge>MPC106</pci_bridge>
+      <drive_board>Billboard</drive_board>
+      <inputs>
+        <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
+        <input type="soccer" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21534.20" crc32="0xD49AE219" />
+        <file offset="2" name="epr-21533.19" crc32="0xEA728471" />
+        <file offset="4" name="epr-21532.18" crc32="0x314447F8" />
+        <file offset="6" name="epr-21531.17" crc32="0xEC45015C" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="vs29915j" parent="vs2v991">
+    <identity>
+      <title>Virtua Striker 2 '99.1</title>
+      <version>Step 1.5 Japan, Revision B</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1999</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>1.5</stepping>
+      <pci_bridge>MPC106</pci_bridge>
+      <drive_board>Billboard</drive_board>
+      <inputs>
+        <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
+        <input type="soccer" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21549b.20" crc32="0x3A65615D" />
+        <file offset="2" name="epr-21548b.19" crc32="0x6252B9B8" />
+        <file offset="4" name="epr-21547b.18" crc32="0x9B904C47" />
+        <file offset="6" name="epr-21546b.17" crc32="0x712F2017" />
       </region>
     </roms>
   </game>
