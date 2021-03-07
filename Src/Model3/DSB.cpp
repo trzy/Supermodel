@@ -31,8 +31,6 @@
  * ---------
  * - Should MPEG_SetLoop() check for loopEnd==0? This causes crashes. Usually
  *   only occurs when loopStart is also 0, and that can only be checked here.
- * - Volume fade out in Daytona 2 is much too slow. Probably caused by 68K
- *	 timing or interrupts.
  * - Check actual MPEG sample rate. So far, all games seem to use 32 KHz, which
  *   may be a hardware requirement, but if other sampling rates are allowable,
  *   the code here will fail (it is hard coded for 32 KHz).
@@ -996,82 +994,83 @@ void CDSB2::SendCommand(UINT8 data)
 
 void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
 {
-	if (!m_config["EmulateDSB"].ValueAs<bool>())
-	{
-		// DSB code applies SCSP volume, too, so we must still mix
-		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
-		memset(mpegR, 0, (32000/60+2)*sizeof(INT16));
-		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100/60, 32000/60+2, 44100, 32000);
-		return;
-	}
+  if (!m_config["EmulateDSB"].ValueAs<bool>())
+  {
+    // DSB code applies SCSP volume, too, so we must still mix
+    memset(mpegL, 0, (32000 / 60 + 2) * sizeof(INT16));
+    memset(mpegR, 0, (32000 / 60 + 2) * sizeof(INT16));
+    retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+    return;
+  }
 
-	M68KSetContext(&M68K);
-	//printf("DSB2 run frame PC=%06X\n", M68KGetPC());
+  M68KSetContext(&M68K);
+  //printf("DSB2 run frame PC=%06X\n", M68KGetPC());
 
-	// While FIFO not empty...
-	while (fifoIdxR != fifoIdxW)
-	{
-		cmdLatch = fifo[fifoIdxR];	// retrieve next command byte
-		fifoIdxR++;
-		fifoIdxR &= 127;
+  // While FIFO not empty...
+  while (fifoIdxR != fifoIdxW)
+  {
+    cmdLatch = fifo[fifoIdxR];	// retrieve next command byte
+    fifoIdxR++;
+    fifoIdxR &= 127;
 
-		M68KSetIRQ(1);	// indicate pending command
-		//printf("68K INT fired\n");
-		m_totalCyclesElapsed += M68KRun(500);
-	}
+    M68KSetIRQ(1);	// indicate pending command
+    //printf("68K INT fired\n");
+    m_cyclesElapsedThisFrame += M68KRun(500);
+  }
 
-  // gm_matthew made the interesting discovery that IRQ2 may in fact be a timer interrupt
+  // Matthew Daniels made the interesting discovery that IRQ2 may in fact be a timer interrupt
   // rather than a per-frame interrupt.For Daytona 2 and Sega Rally 2, assuming a value
   // of 1KHz fixes music fade outs and some timing issues. It is very likely this is a
   // configurable timer and we should be on the look-out for games which appear to use
   // different values. It is equally likely that all games share a similar code base and
   // use 1KHz as the timer rate.
-  while (m_totalCyclesElapsed < m_nextFrameEndCycles)
+  while (m_cyclesElapsedThisFrame < k_framePeriod)
   {
-    if (m_totalCyclesElapsed >= m_nextTimerInterruptCycles)
+    if (m_cyclesElapsedThisFrame >= m_nextTimerInterruptCycles)
     {
       // Fire timer interrupt and schedule next one
       M68KSetIRQ(2);
-      m_nextTimerInterruptCycles = (m_totalCyclesElapsed + k_timerPeriod) - (m_totalCyclesElapsed + k_timerPeriod) % k_timerPeriod;
+      m_nextTimerInterruptCycles += k_timerPeriod;
     }
-    int cyclesToRun = (std::min)(m_nextTimerInterruptCycles, m_nextFrameEndCycles) - m_totalCyclesElapsed;
-    m_totalCyclesElapsed += M68KRun(cyclesToRun);
+    int cyclesToRun = (std::min)(m_nextTimerInterruptCycles, k_framePeriod) - m_cyclesElapsedThisFrame;
+    m_cyclesElapsedThisFrame += M68KRun(cyclesToRun);
   }
-  m_nextFrameEndCycles = (m_totalCyclesElapsed + k_framePeriod) - (m_totalCyclesElapsed + k_framePeriod) % k_framePeriod;
+  m_cyclesElapsedThisFrame -= k_framePeriod;
+  m_nextTimerInterruptCycles -= k_framePeriod;
 
-	M68KGetContext(&M68K);
+  M68KGetContext(&M68K);
 
-	// Decode MPEG for this frame
-	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
+  // Decode MPEG for this frame
+  MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
 
-	INT16 *leftChannelSource = nullptr;
-	INT16 *rightChannelSource = nullptr;
-	UINT8 volL=0, volR=0;
+  INT16 *leftChannelSource = nullptr;
+  INT16 *rightChannelSource = nullptr;
+  UINT8 volL = 0, volR = 0;
 
-	switch (stereo)
-	{
-	default:
-	case StereoMode::Stereo:
-		leftChannelSource = mpegL;
-		rightChannelSource = mpegR;
-		volL = volume[0];
-		volR = volume[1];
-		break;
-	case StereoMode::MonoLeft:
-		leftChannelSource = mpegL;
-		rightChannelSource = mpegL;
-		volL = volume[0];
-		volR = volume[0];
-		break;
-	case StereoMode::MonoRight:
-		leftChannelSource = mpegR;
-		rightChannelSource = mpegR;
-		volL = volume[1];
-		volR = volume[1];
-		break;
-	}
+  switch (stereo)
+  {
+  default:
+    case StereoMode::Stereo:
+      leftChannelSource = mpegL;
+      rightChannelSource = mpegR;
+      volL = volume[0];
+      volR = volume[1];
+      break;
+    case StereoMode::MonoLeft:
+      leftChannelSource = mpegL;
+      rightChannelSource = mpegL;
+      volL = volume[0];
+      volR = volume[0];
+      break;
+    case StereoMode::MonoRight:
+      leftChannelSource = mpegR;
+      rightChannelSource = mpegR;
+      volL = volume[1];
+      volR = volume[1];
+      break;
+  }
 
-	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, 44100/60, 32000/60+2, 44100, 32000);
+  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, 44100 / 60, 32000 / 60 + 2, 44100, 32000);
 }
 
 void CDSB2::Reset(void)
@@ -1097,8 +1096,7 @@ void CDSB2::Reset(void)
 	//printf("DSB2 PC=%06X\n", M68KGetPC());
 	M68KGetContext(&M68K);
 
-	m_totalCyclesElapsed = 0;
-	m_nextFrameEndCycles = k_framePeriod;
+	m_cyclesElapsedThisFrame = 0;
 	m_nextTimerInterruptCycles = k_timerPeriod;
 
 	DebugLog("DSB2 Reset\n");
@@ -1185,8 +1183,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 
 	// Technically these should be saved/restored rather than being reset but that would mean
 	// the save state format has to be modified and the difference would be imperceptible anyway
-	m_totalCyclesElapsed = 0;
-	m_nextFrameEndCycles = k_framePeriod;
+	m_cyclesElapsedThisFrame = 0;
 	m_nextTimerInterruptCycles = k_timerPeriod;
 
 	// Restart MPEG audio at the appropriate position

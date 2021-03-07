@@ -320,8 +320,7 @@ private:
 	M68KCtx	M68K;
 	static const int k_framePeriod = 4000000/60;
 	static const int k_timerPeriod = 4000000/1000; // 1KHz timer
-	int m_totalCyclesElapsed;
-	int m_nextFrameEndCycles;
+	int m_cyclesElapsedThisFrame;
 	int m_nextTimerInterruptCycles;
 };
 
