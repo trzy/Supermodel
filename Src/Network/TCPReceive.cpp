@@ -35,9 +35,12 @@ using namespace std::chrono_literals;
 
 TCPReceive::TCPReceive(int port) :
 	m_listenSocket(nullptr),
-	m_receiveSocket(nullptr)
+	m_receiveSocket(nullptr),
+	m_socketSet(nullptr)
 {
 	SDLNet_Init();
+
+	m_socketSet = SDLNet_AllocSocketSet(1);
 
 	IPaddress ip;
 	int result = SDLNet_ResolveHost(&ip, nullptr, port);
@@ -69,7 +72,21 @@ TCPReceive::~TCPReceive()
 		m_receiveSocket = nullptr;
 	}
 
+	if (m_socketSet) {
+		SDLNet_FreeSocketSet(m_socketSet);
+		m_socketSet = nullptr;
+	}
+
 	SDLNet_Quit();
+}
+
+bool TCPReceive::CheckDataAvailable(int timeoutMS)
+{
+	if (!m_receiveSocket) {
+		return false;
+	}
+
+	return SDLNet_CheckSockets(m_socketSet, timeoutMS) > 0;
 }
 
 std::vector<char>& TCPReceive::Receive()
@@ -119,7 +136,17 @@ void TCPReceive::ListenFunc()
 		auto socket = SDLNet_TCP_Accept(m_listenSocket);
 
 		if (socket) {
+
+			// remove old socket if required from socket set
+			if (m_receiveSocket) {
+				SDLNet_DelSocket(m_socketSet, (SDLNet_GenericSocket)m_receiveSocket.load());
+			}
+
 			m_receiveSocket = socket;
+
+			SDLNet_AddSocket(m_socketSet, (SDLNet_GenericSocket)socket);
+
+			// add socket to socket set
 			DPRINTF("Accepted connection.\n");
 		}
 

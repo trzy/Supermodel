@@ -98,8 +98,6 @@
 #include "NetBoard.h"
 #include "Util/Format.h"
 #include "Util/ByteSwap.h"
-#include "TCPSend.h"
-#include "TCPReceive.h"
 #include <algorithm>
 
 // few macros to make debugging a bit less painful
@@ -1236,9 +1234,9 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 
 	if (m_config["EmulateNet"].ValueAs<bool>() && m_attached) {
 		while (!nets->Connect()) {
-			DebugLog("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
+			printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
 		}
-		DebugLog("Successfully connected.\n");
+		printf("Successfully connected.\n");
 	}
 
 	return OKAY;

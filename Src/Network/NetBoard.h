@@ -28,6 +28,7 @@
 #include "OSD/Thread.h"
 #include <memory>
 #include "TCPSend.h"
+#include "TCPSendAsync.h"
 #include "TCPReceive.h"
 
 //#define NET_BUF_SIZE 32800 // 16384 not enough

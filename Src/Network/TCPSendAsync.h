@@ -20,33 +20,42 @@
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef _TCPRECEIVE_H_
-#define _TCPRECEIVE_H_
+#ifndef _TCPSENDASYNC_H_
+#define _TCPSENDASYNC_H_
 
-#include <thread>
-#include <atomic>
+#include <string>
 #include <vector>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
+#include <memory>
+#include <thread>
 #include "SDLIncludes.h"
 
-class TCPReceive
+class TCPSendAsync
 {
 public:
-	TCPReceive(int port);
-	~TCPReceive();
+	TCPSendAsync(std::string& ip, int port);
+	~TCPSendAsync();
 
-	bool CheckDataAvailable(int timeoutMS = 0);		// timeoutMS -1 = wait forever until data arrives, 0 = no waiting, 1+ wait time in milliseconds
-	std::vector<char>& Receive();
-
+	bool Send(const void* data, int length);
+	bool Connect();
+	bool Connected();
 private:
 
-	void ListenFunc();
+	void SendThread();
 
-	TCPsocket m_listenSocket;
-	std::atomic<TCPsocket> m_receiveSocket;
-	SDLNet_SocketSet m_socketSet;
-	std::thread m_listenThread;
-	std::atomic_bool m_running;
-	std::vector<char> m_recBuffer;
+	std::string				m_ip;
+	int						m_port;
+	TCPsocket				m_socket;		// sdl socket
+	std::atomic<bool>		m_hasData;
+	std::condition_variable m_cv;
+	std::vector<char>		m_buffer;
+	std::mutex				m_mutex;
+	std::thread				m_sendThread;
+
+	std::vector<std::unique_ptr<char[]>> m_dataBuffers;	// each pointer is to an array of data. First word is the size of the data
+
 };
 
 #endif
