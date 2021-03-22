@@ -1008,7 +1008,7 @@ UINT8 CModel3::Read8(UINT32 addr)
     {
     case 0:
       //printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
-      return netBuffer[(addr & 0xFFFF)];
+      return netBuffer[(addr & 0xFFFF) ^ 2];
 
     case 1: // ioreg 32bits access in 16bits environment
       if (addr > 0xc00101ff)
@@ -1148,7 +1148,7 @@ UINT16 CModel3::Read16(UINT32 addr)
     {
     case 0:
       //printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
-      result = *(UINT16 *)&netBuffer[(addr & 0xFFFF)];
+      result = *(UINT16 *)&netBuffer[(addr & 0xFFFF) ^ 2];
       return FLIPENDIAN16(result); // result
     default:
       printf("CMODEL3 : unknown R16 : %x (C0)\n", addr);
@@ -1490,7 +1490,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       {
       case 0:
         //printf("W8 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
-        *(UINT8 *)&netBuffer[(addr & 0xFFFF)] = data;
+        *(UINT8 *)&netBuffer[(addr & 0xFFFF) ^ 2] = data;
         break;
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1625,7 +1625,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     {
     case 0:
       //printf("W16 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
-      *(UINT16 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN16(data);
+      *(UINT16 *)&netBuffer[(addr & 0xFFFF) ^ 2] = FLIPENDIAN16(data);
       break;
 
     default:
