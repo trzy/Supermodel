@@ -152,3 +152,8 @@ void TCPReceive::ListenFunc()
 
 	}
 }
+
+bool TCPReceive::Connected()
+{
+	return (m_receiveSocket != 0);
+}

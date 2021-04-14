@@ -27,13 +27,14 @@
 #include "CPU/Bus.h"
 #include "OSD/Thread.h"
 #include <memory>
+#include "INetBoard.h"
 #include "TCPSend.h"
 #include "TCPSendAsync.h"
 #include "TCPReceive.h"
 
 //#define NET_BUF_SIZE 32800 // 16384 not enough
 
-class CNetBoard : public IBus
+class CNetBoard : public IBus, public INetBoard
 {
 public:
 
@@ -48,12 +49,13 @@ public:
 	void SaveState(CBlockFile *SaveState);
 	void LoadState(CBlockFile *SaveState);
 
-	bool RunFrame(void);
+	void RunFrame(void);
 	void Reset(void);
 
 	// Returns a reference to the 68K CPU context
 	M68KCtx *GetM68K(void);
 	bool IsAttached(void);
+	bool IsRunning(void);
 	bool CodeReady;
 
 	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);

@@ -30,6 +30,9 @@
 #include "ConsoleDebugger.h"
 #include "CPUDebug.h"
 #include "Label.h"
+#ifdef NET_BOARD
+#include "Network/NetBoard.h"
+#endif // NET_BOARD
 
 #include <cstdio>
 #include <string>
@@ -302,7 +305,9 @@ namespace Debugger
 #ifdef NET_BOARD
 	CCPUDebug *CSupermodelDebugger::CreateNetBoardCPUDebug(::CModel3 * model3)
 	{
-		CNetBoard *netBrd = model3->GetNetBoard();
+		CNetBoard *netBrd = dynamic_cast<CNetBoard*>(model3->GetNetBoard());
+		if (!netBrd)
+			return NULL;
 		if (!netBrd->IsAttached())
 			return NULL;
 		CMusashi68KDebug *cpu = new CMusashi68KDebug("NET68K", netBrd->GetM68K());

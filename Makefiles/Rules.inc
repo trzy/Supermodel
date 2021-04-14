@@ -169,7 +169,8 @@ ifeq ($(strip $(NET_BOARD)),1)
 	SRC_FILES += \
 		Src/Network/TCPReceive.cpp \
 		Src/Network/TCPSend.cpp \
-		Src/Network/NetBoard.cpp
+		Src/Network/NetBoard.cpp \
+		Src/Network/SimNetBoard.cpp
 endif
 
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)

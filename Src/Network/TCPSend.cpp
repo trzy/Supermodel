@@ -60,13 +60,13 @@ bool TCPSend::Send(const void * data, int length)
 
 	DPRINTF("Sending %i bytes\n", length);
 
-	if (!length) {
-		return true;		// 0 sized packet will blow our connex
-	}
-
 	int sent = 0;
 
 	sent = SDLNet_TCP_Send(m_socket, &length, sizeof(int));		// pack the length at the start of transmission.
+
+	if (!length)
+		return true;		// 0 sized packet will blow our connex
+
 	sent = SDLNet_TCP_Send(m_socket, data, length);
 
 	if (sent < length) {

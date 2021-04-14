@@ -152,9 +152,6 @@
 #include "Model3/DriveBoard/JoystickBoard.h"
 #include "Model3/DriveBoard/SkiBoard.h"
 #include "Model3/DriveBoard/BillBoard.h"
-#ifdef NET_BOARD
-#include "Network/NetBoard.h"
-#endif
 #include "Model3/Model3.h"
 
 

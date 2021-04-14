@@ -18,7 +18,7 @@ struct Game
   uint32_t real3d_pci_id = 0;           // overrides default Real3D PCI ID for stepping (0 for default)
   float real3d_status_bit_set_percent_of_frame = 0; // overrides default status bit timing (0 for default)
   uint32_t encryption_key = 0;
-  std::string netboard_present;
+  bool netboard_present;
 
   enum Inputs
   {

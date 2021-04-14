@@ -20,34 +20,28 @@
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#ifndef _TCPRECEIVE_H_
-#define _TCPRECEIVE_H_
+#ifndef INCLUDED_INETBOARD_H
+#define INCLUDED_INETBOARD_H
 
-#include <thread>
-#include <atomic>
-#include <vector>
-#include "SDLIncludes.h"
+#include "Types.h"
+#include "Game.h"
+#include "BlockFile.h"
 
-class TCPReceive
+class INetBoard
 {
 public:
-	TCPReceive(int port);
-	~TCPReceive();
+	virtual void SaveState(CBlockFile* SaveState) = 0;
+	virtual void LoadState(CBlockFile* SaveState) = 0;
 
-	bool CheckDataAvailable(int timeoutMS = 0);		// timeoutMS -1 = wait forever until data arrives, 0 = no waiting, 1+ wait time in milliseconds
-	std::vector<char>& Receive();
-	bool Connected();
+	virtual void RunFrame(void) = 0;
+	virtual void Reset(void) = 0;
 
-private:
+	virtual bool IsAttached(void) = 0;
+	virtual bool IsRunning(void) = 0;
 
-	void ListenFunc();
+	virtual bool Init(UINT8* netRAMPtr, UINT8* netBufferPtr) = 0;
 
-	TCPsocket m_listenSocket;
-	std::atomic<TCPsocket> m_receiveSocket;
-	SDLNet_SocketSet m_socketSet;
-	std::thread m_listenThread;
-	std::atomic_bool m_running;
-	std::vector<char> m_recBuffer;
+	virtual void GetGame(Game) = 0;
 };
 
 #endif

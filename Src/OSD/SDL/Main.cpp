@@ -1425,7 +1425,8 @@ static Util::Config::Node DefaultConfig()
   config.Set("SDLConstForceThreshold", "30");
 #ifdef NET_BOARD
   // NetBoard
-  config.Set("EmulateNet", false);
+  config.Set("Network", false);
+  config.Set("SimulateNet", true);
 #endif
 #else
   config.Set("InputSystem", "sdl");
@@ -1507,8 +1508,10 @@ static void Help(void)
   puts("");
 #ifdef NET_BOARD
   puts("Net Options:");
-  puts("  -no-net                 Disable net board emulation [Default]");
-  puts("  -net                    Enable net board emulation (requires -no-threads)");
+  puts("  -no-net                 Disable net board [Default]");
+  puts("  -net                    Enable net board");
+  puts("  -simulate-netboard      Simulate the net board [Default]");
+  puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
   puts("");
 #endif
   puts("Input Options:");
@@ -1610,8 +1613,10 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-legacy-scsp",         { "LegacySoundDSP",   true } },
     { "-new-scsp",            { "LegacySoundDSP",   false } },
 #ifdef NET_BOARD
-    { "-net",                 { "EmulateNet",       true } },
-    { "-no-net",              { "EmulateNet",       false } },
+    { "-net",                 { "Network",       true } },
+    { "-no-net",              { "Network",       false } },
+    { "-simulate-netboard",   { "SimulateNet",   true } },
+    { "-emulate-netboard",    { "SimulateNet",   false } },
 #endif
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },

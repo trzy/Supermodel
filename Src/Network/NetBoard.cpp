@@ -61,35 +61,35 @@
 // change port/ip you want, I only tested in local on same machine (watch your firewall)
 //
 // add for master
-// EmulateNet=1
-// port_in = 1970
-// port_out = 1971
+// Network=1
+// PortIn = 1970
+// PortOut = 1971
 // addr_out = "127.0.0.1"
 //
 // add for slave
-// EmulateNet=1
-// port_in = 1971
-// port_out = 1970
+// Network=1
+// PortIn = 1971
+// PortOut = 1970
 // addr_out = "127.0.0.1"
 //
 // or in case of 3 cabs
 //
 // add for master
-// EmulateNet=1
-// port_in = 1970
-// port_out = 1971
+// Network=1
+// PortIn = 1970
+// PortOut = 1971
 // addr_out = "127.0.0.1"
 //
 // add for slave1
-// EmulateNet=1
-// port_in = 1971
-// port_out = 1972
+// Network=1
+// PortIn = 1971
+// PortOut = 1972
 // addr_out = "127.0.0.1"
 //
 // add for slave2
-// EmulateNet=1
-// port_in = 1972
-// port_out = 1970
+// Network=1
+// PortIn = 1972
+// PortOut = 1970
 // addr_out = "127.0.0.1"
 
 //#define NET_DEBUG
@@ -1095,9 +1095,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	netRAM = netRAMPtr;
 	netBuffer = netBufferPtr;
 
-	std::string netboard_present = Gameinfo.netboard_present;
-	std::transform(netboard_present.begin(), netboard_present.end(), netboard_present.begin(), ::tolower);
-	m_attached = (netboard_present.compare("true") == 0) ? true : false;
+	m_attached = Gameinfo.netboard_present && m_config["Network"].ValueAs<bool>();
 
 	test_irq = 0;
 
@@ -1159,14 +1157,14 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 
 
 	//netsocks
-	port_in = m_config["port_in"].ValueAs<unsigned>();
-	port_out = m_config["port_out"].ValueAs<unsigned>();
-	addr_out = m_config["addr_out"].ValueAs<std::string>();
+	port_in = m_config["PortIn"].ValueAs<unsigned>();
+	port_out = m_config["PortOut"].ValueAs<unsigned>();
+	addr_out = m_config["AddressOut"].ValueAs<std::string>();
 
 	nets = std::make_unique<TCPSend>(addr_out, port_out);
 	netr = std::make_unique<TCPReceive>(port_in);
 
-	if (m_config["EmulateNet"].ValueAs<bool>() && m_attached) {
+	if (m_config["Network"].ValueAs<bool>() && m_attached) {
 		while (!nets->Connect()) {
 			printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
 		}
@@ -1189,7 +1187,6 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 	ioreg		= NULL;
 	ctrlrw		= NULL;
 
-	CodeReady	= false;
 	test_irq	= 0;
 
 	int5		= false;
@@ -1224,12 +1221,10 @@ void CNetBoard::LoadState(CBlockFile * SaveState)
 {
 }
 
-bool CNetBoard::RunFrame(void)
+void CNetBoard::RunFrame(void)
 {
-	if (!CodeReady)
-	{
-		return true;
-	}
+	if (!IsRunning())
+		return;
 
 	M68KSetContext(&M68K);
 
@@ -1269,8 +1264,6 @@ bool CNetBoard::RunFrame(void)
 	M68KRun((4000000 / 60));
 
 	M68KGetContext(&M68K);
-
-	return true;
 }
 
 void CNetBoard::Reset(void)
@@ -1309,6 +1302,11 @@ M68KCtx * CNetBoard::GetM68K(void)
 bool CNetBoard::IsAttached(void)
 {
 	return m_attached;
+}
+
+bool CNetBoard::IsRunning(void)
+{
+	return m_attached && ((ioreg[0xc0] == 0xff) || (ioreg[0xc0] == 0x01));
 }
 
 void CNetBoard::GetGame(Game gameinfo)

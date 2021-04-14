@@ -343,6 +343,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\Model3\SoundBoard.cpp" />
     <ClCompile Include="..\Src\Model3\TileGen.cpp" />
     <ClCompile Include="..\Src\Network\NetBoard.cpp" />
+    <ClCompile Include="..\Src\Network\SimNetBoard.cpp" />
     <ClCompile Include="..\Src\Network\TCPReceive.cpp" />
     <ClCompile Include="..\Src\Network\TCPSend.cpp" />
     <ClCompile Include="..\Src\OSD\Logger.cpp" />
@@ -517,7 +518,9 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Model3\RTC72421.h" />
     <ClInclude Include="..\Src\Model3\SoundBoard.h" />
     <ClInclude Include="..\Src\Model3\TileGen.h" />
+    <ClInclude Include="..\Src\Network\INetBoard.h" />
     <ClInclude Include="..\Src\Network\NetBoard.h" />
+    <ClInclude Include="..\Src\Network\SimNetBoard.h" />
     <ClInclude Include="..\Src\Network\TCPReceive.h" />
     <ClInclude Include="..\Src\Network\TCPSend.h" />
     <ClInclude Include="..\Src\OSD\Audio.h" />
