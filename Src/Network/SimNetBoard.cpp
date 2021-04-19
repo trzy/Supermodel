@@ -229,6 +229,15 @@ void CSimNetBoard::RunFrame(void)
 				nets->Send(&numMachines, sizeof(numMachines));
 			}
 
+			// if there are no other linked machines, only continue if Supermodel is linked to itself
+			// there might be more than one machine set to master which would cause glitches
+			if ((numMachines == 0) && ((port_in != port_out) || (addr_out.compare("127.0.0.1") != 0)))
+			{
+				ErrorLog("no slave machines detected. Make sure only one machine is set to master!");
+				m_state = State::error;
+				break;
+			}
+
 			m_numMachines = numMachines + 1;
 
 			ioreg16[0x88] = 0;		// supposed to cycle between 0 and 1 (also 2 for Daytona 2); doesn't seem to matter
@@ -408,7 +417,7 @@ void CSimNetBoard::RunFrame(void)
 
 			// if there are no other linked machines, only continue if Supermodel is linked to itself
 			// there might be more than one machine set to master which would cause glitches
-			if ((numMachines.total == 0) && ((port_in != port_out) || !addr_out.compare("127.0.0.1")))
+			if ((numMachines.total == 0) && ((port_in != port_out) || (addr_out.compare("127.0.0.1") != 0)))
 			{
 				ErrorLog("no slave machines detected. Make sure only one machine is set to master!");
 				if (IsGame("dirtdvls"))

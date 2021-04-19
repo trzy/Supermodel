@@ -1504,6 +1504,8 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
         }
 
         //printf("W8 ioreg @%x<-%x\n", (addr & 0x1FF), data);
+        if (((addr & 0x1FF) == 0x180) && (data == 0x00))
+            NetBoard->Reset();
         *(UINT8 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = data;
         break;
 
@@ -1515,8 +1517,6 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
         }
 
         //printf("W8 netram @%x<-%x\n", (addr & 0x1FFFF), data);
-        if (((addr & 0x1FFFF) == 0x180) && (data == 0x00))
-            NetBoard->Reset();
         *(UINT8 *)&netRAM[(addr & 0x1FFFF)/2] = data;
         break;
       /*case 3:
@@ -1842,6 +1842,8 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
         }
 
         //printf("W32 ioreg @%x<-%04x\n", (addr /*& 0x1FF*/), data>>16);
+        if (((addr & 0x1FF) == 0x180) && ((data >> 16) == 0x0000))
+            NetBoard->Reset();
         *(UINT16 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = FLIPENDIAN16(data >> 16);
         break;
 
@@ -1853,8 +1855,6 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
         }
 
         //printf("W32 netram @%x<-%x\n", (addr & 0x1FFFF), data);
-        if (((addr & 0x1FFFF) == 0x180) && ((data >> 16) == 0x0000))
-            NetBoard->Reset();
         *(UINT16 *)&netRAM[((addr & 0x1FFFF) / 2)] = FLIPENDIAN16(data >> 16);
         break;
       /*case 3:
