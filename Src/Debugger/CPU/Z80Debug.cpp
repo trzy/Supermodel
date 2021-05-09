@@ -476,12 +476,14 @@ namespace Debugger
 							}
 							break;
 						case 'j':    // #H
-							tAddr = m_bus->Read8(dAddr++) + (m_bus->Read8(dAddr++)<<8);
+							tAddr = m_bus->Read8(dAddr++);
+							tAddr += m_bus->Read8(dAddr++) << 8;
 							opFlags = GetOpFlags(addr, opcode);
 							FormatJumpAddress(valStr, tAddr, opFlags);
 							break;
 						case 'a':    // #h
-							tAddr = m_bus->Read8(dAddr++) + (m_bus->Read8(dAddr++)<<8);
+							tAddr = m_bus->Read8(dAddr++);
+							tAddr += m_bus->Read8(dAddr++) << 8;
 							FormatAddress(valStr, tAddr, true);
 							break;
 					}
