@@ -981,7 +981,7 @@ void CDSB2::SendCommand(UINT8 data)
 	 * over the course of a frame at once.
 	 */
 	fifo[fifoIdxW++] = data;
-	fifoIdxW &= 127;
+	fifoIdxW &= 255;
 	//printf("Write FIFO: %02X\n", data);
 
 	// Have we caught up to the read pointer?
@@ -1011,7 +1011,7 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
   {
     cmdLatch = fifo[fifoIdxR];	// retrieve next command byte
     fifoIdxR++;
-    fifoIdxR &= 127;
+    fifoIdxR &= 255;
 
     M68KSetIRQ(1);	// indicate pending command
     //printf("68K INT fired\n");

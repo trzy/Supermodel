@@ -299,7 +299,7 @@ private:
 	UINT8		*ram;			// 68K RAM
 
 	// Command FIFO
-	UINT8	fifo[128];
+	UINT8	fifo[256];
 	int		fifoIdxR;		// read position
 	int		fifoIdxW;		// write position
 
