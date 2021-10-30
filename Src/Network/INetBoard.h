@@ -42,6 +42,9 @@ public:
 	virtual bool Init(UINT8* netRAMPtr, UINT8* netBufferPtr) = 0;
 
 	virtual void GetGame(Game) = 0;
+
+	virtual UINT16 ReadIORegister(unsigned reg) = 0;
+	virtual void WriteIORegister(unsigned reg, UINT16 data) = 0;
 };
 
 #endif

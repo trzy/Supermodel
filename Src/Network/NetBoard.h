@@ -56,11 +56,13 @@ public:
 	M68KCtx *GetM68K(void);
 	bool IsAttached(void);
 	bool IsRunning(void);
-	bool CodeReady;
 
 	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
 
 	void GetGame(Game);
+
+	UINT16 ReadIORegister(unsigned reg);
+	void WriteIORegister(unsigned reg, UINT16 data);
 
 	CNetBoard(const Util::Config::Node &config);
 	~CNetBoard(void);
@@ -72,7 +74,7 @@ private:
 	M68KCtx		M68K;
 
 	// Sound board memory
-	UINT8		*netRAM;		// 128Kb RAM (passed in from parent object)
+	UINT8		*netRAM;		// 64Kb RAM (passed in from parent object)
 	UINT8		*netBuffer;		// 128kb (passed in from parent object)
 	UINT8		*memoryPool;	// single allocated region for all net board RAM
 	UINT8		*CommRAM;

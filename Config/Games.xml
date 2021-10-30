@@ -1899,10 +1899,18 @@
     </hardware>
     <roms>
       <patches>
-        <!-- Unemulated JTAG stuff -->
+        <!-- Old patch to bypass JTAG checks, breaks linked mode -->
+        <!--
         <patch region="crom" bits="32" offset="0x7c0c4" value="0x60000000" />
         <patch region="crom" bits="32" offset="0x7c0c8" value="0x60000000" />
         <patch region="crom" bits="32" offset="0x7c0cc" value="0x60000000" />
+        -->
+        <!-- New patch to bypass JTAG checks -->
+        <patch region="crom" bits="32" offset="0x7b348" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x7b568" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x7b6b4" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x7b7b0" value="0x60000000" />
+        <patch region="crom" bits="32" offset="0x7b8a8" value="0x60000000" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20635.20" crc32="0x7937473F" />

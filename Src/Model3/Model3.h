@@ -251,8 +251,8 @@ private:
   UINT8   *backupRAM;   // 128 KB Backup RAM (battery backed)
   UINT8   *securityRAM; // 128 KB Security Board RAM
   UINT8   *driveROM;    // 32 KB drive board ROM (Z80 program) (optional)
-  UINT8   *netRAM;		// 128KB RAM
-  UINT8	  *netBuffer;	// 128KB buffer
+  UINT8   *netRAM;		// 64 KB RAM
+  UINT8	  *netBuffer;	// 128 KB buffer
 
   // Banked CROM
   UINT8     *cromBank;    // currently mapped in CROM bank

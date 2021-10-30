@@ -62,20 +62,22 @@ public:
 
 	void GetGame(Game gameInfo);
 
+	uint16_t ReadIORegister(unsigned reg);
+	void WriteIORegister(unsigned reg, uint16_t data);
+
 private:
 	// Config
 	const Util::Config::Node& m_config;
 
 	uint8_t* RAM = nullptr;
 	uint8_t* CommRAM = nullptr;
-	uint8_t* ioreg = nullptr;
 
 	// netsock
 	uint16_t port_in = 0;
 	uint16_t port_out = 0;
 	std::string addr_out = "";
 	std::thread m_connectThread;
-	std::atomic_bool m_running = false;
+	std::atomic_bool m_quit = false;
 	std::atomic_bool m_connected = false;
 
 	std::unique_ptr<TCPSend> nets = nullptr;
@@ -91,6 +93,11 @@ private:
 	uint16_t m_segmentSize = 0;
 
 	bool m_attached = false;
+	bool m_running = false;
+
+	uint16_t m_IRQ2ack = 0;
+	uint16_t m_status0 = 0;	// ioreg 0x88
+	uint16_t m_status1 = 0;	// ioreg 0x8a
 
 	inline bool IsGame(const char* gameName);
 	void ConnectProc(void);

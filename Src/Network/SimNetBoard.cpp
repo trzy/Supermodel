@@ -28,7 +28,6 @@
  // these make 16-bit read/writes much neater
 #define RAM16 *(uint16_t*)&RAM
 #define CommRAM16 *(uint16_t*)&CommRAM
-#define ioreg16 *(uint16_t*)&ioreg
 
 static const uint64_t netGUID = 0x5bf177da34872;
 
@@ -39,12 +38,11 @@ inline bool CSimNetBoard::IsGame(const char* gameName)
 
 CSimNetBoard::CSimNetBoard(const Util::Config::Node& config) : m_config(config)
 {
-	m_running = true;
 }
 
 CSimNetBoard::~CSimNetBoard(void)
 {
-	m_running = false;
+	m_quit = true;
 
 	if (m_connectThread.joinable())
 		m_connectThread.join();
@@ -64,7 +62,6 @@ bool CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
 {
 	RAM = netRAMPtr;
 	CommRAM = netBufferPtr;
-	ioreg = netBufferPtr + 0x10000;
 
 	m_attached = m_gameInfo.netboard_present && m_config["Network"].ValueAs<bool>();
 
@@ -102,8 +99,8 @@ void CSimNetBoard::RunFrame(void)
 	case State::start:
 		if (!m_connected && !m_connectThread.joinable())
 			m_connectThread = std::thread(&CSimNetBoard::ConnectProc, this);
-		ioreg16[0x88] = 0;
-		ioreg16[0x8a] = IsGame("dirtdvls") ? 0x4004 : 0xe000;
+		m_status0 = 0;
+		m_status1 = IsGame("dirtdvls") ? 0x4004 : 0xe000;
 		m_state = State::init;
 		break;
 
@@ -111,23 +108,23 @@ void CSimNetBoard::RunFrame(void)
 		memset(CommRAM, 0, 0x10000);
 		if (m_gameType == GameType::one)
 		{
-			if (ioreg16[0x88] & 0x8000)				// has main board changed this register?
+			if (m_status0 & 0x8000)				// has main board changed this register?
 			{
-				ioreg[0] |= 0x01;					// simulate IRQ 2 ack
-				if (ioreg16[0x88] == 0xf000)
+				m_IRQ2ack |= 0x01;				// simulate IRQ 2 ack
+				if (m_status0 == 0xf000)
 				{
 					// initialization complete
-					ioreg16[0x8a] = 0;
+					m_status1 = 0;
 					CommRAM16[0x72] = FLIPENDIAN16(0x1); // is this necessary?
 					m_state = State::testing;
 				}
-				ioreg16[0x88] = 0;					// 0 should work for all init subroutines
+				m_status0 = 0;					// 0 should work for all init subroutines
 			}
 		}
 		else
 		{
 			// type 2 performs initialization on its own
-			ioreg16[0x8a] = 0;
+			m_status1 = 0;
 			m_state = State::testing;
 			m_counter = 0;
 		}
@@ -136,7 +133,7 @@ void CSimNetBoard::RunFrame(void)
 	case State::testing:
 		if (m_gameType == GameType::one)
 		{
-			ioreg16[0x88] += 1; // type 1 games require this to be incremented every frame
+			m_status0 += 1; // type 1 games require this to be incremented every frame
 
 			if (!m_connected)
 				break;
@@ -240,8 +237,8 @@ void CSimNetBoard::RunFrame(void)
 
 			m_numMachines = numMachines + 1;
 
-			ioreg16[0x88] = 0;		// supposed to cycle between 0 and 1 (also 2 for Daytona 2); doesn't seem to matter
-			ioreg16[0x8a] = 0x2021 + (numMachines * 0x20) + machineIndex;
+			m_status0 = 0;		// supposed to cycle between 0 and 1 (also 2 for Daytona 2); doesn't seem to matter
+			m_status1 = 0x2021 + (numMachines * 0x20) + machineIndex;
 
 			CommRAM16[0x0] = RAM16[0x400];	// 0 if master, 1 if slave
 			CommRAM16[0x2] = numMachines;
@@ -421,18 +418,18 @@ void CSimNetBoard::RunFrame(void)
 			{
 				ErrorLog("no slave machines detected. Make sure only one machine is set to master!");
 				if (IsGame("dirtdvls"))
-					ioreg16[0x8a] = 0x8085;	// seems like the netboard code writers really liked their CPU model numbers
+					m_status1 = 0x8085;	// seems like the netboard code writers really liked their CPU model numbers
 				m_state = State::error;
 				break;
 			}
 
 			m_numMachines = numMachines.total + 1;
 
-			ioreg16[0x88] = 5;			// probably not necessary
+			m_status0 = 5;			// probably not necessary
 			if (IsGame("dirtdvls"))
-				ioreg16[0x8a] = (numMachines.playable << 4) | machineIndex.playable | 0x7400;
+				m_status1 = (numMachines.playable << 4) | machineIndex.playable | 0x7400;
 			else
-				ioreg16[0x8a] = (numMachines.playable << 8) | machineIndex.playable;
+				m_status1 = (numMachines.playable << 8) | machineIndex.playable;
 
 			CommRAM16[0x0] = RAM16[0x200];	// master/slave/relay status
 			CommRAM16[0x2] = (numMachines.playable << 8) | numMachines.total;
@@ -466,7 +463,7 @@ void CSimNetBoard::RunFrame(void)
 				// link broken - send an "empty" packet to alert other machines
 				nets->Send(nullptr, 0);
 				m_state = State::error;
-				ioreg16[0x8a] = 0x40;		// send "link broken" message to mainboard
+				m_status1 = 0x40;		// send "link broken" message to mainboard
 				break;
 			}
 			memcpy(CommRAM + 0x100 + m_segmentSize, recv_data.data(), recv_data.size());
@@ -485,7 +482,7 @@ void CSimNetBoard::RunFrame(void)
 					nets->Send(nullptr, 0);
 					m_state = State::error;
 					if (m_gameType == GameType::one)
-						ioreg16[0x8a] = 0x40;			// send "link broken" message to mainboard
+						m_status1 = 0x40;			// send "link broken" message to mainboard
 					break;
 				}
 				memcpy(CommRAM + 0x100 + (i + 1) * m_segmentSize, recv_data.data(), recv_data.size());
@@ -509,7 +506,7 @@ void CSimNetBoard::Reset(void)
 		netr->Receive();
 	}
 
-	ioreg[0xc0] = 0;
+	m_running = false;
 	m_state = State::start;
 }
 
@@ -520,7 +517,7 @@ bool CSimNetBoard::IsAttached(void)
 
 bool CSimNetBoard::IsRunning(void)
 {
-	return (ioreg[0xc0] == 0xff) || (ioreg[0xc0] == 0x01);	// there's probably a better way of checking
+	return m_attached && m_running;
 }
 
 void CSimNetBoard::GetGame(Game gameInfo)
@@ -540,14 +537,14 @@ void CSimNetBoard::ConnectProc(void)
 	// wait until TCPSend has connected to the next machine
 	while (!nets->Connect())
 	{
-		if (!m_running)
+		if (m_quit)
 			return;
 	}
 
 	// wait until TCPReceive has accepted a connection from the previous machine
 	while (!netr->Connected())
 	{
-		if (!m_running)
+		if (m_quit)
 			return;
 		std::this_thread::sleep_for(1ms);
 	}
@@ -555,4 +552,46 @@ void CSimNetBoard::ConnectProc(void)
 	printf("Successfully connected.\n");
 
 	m_connected = true;
+}
+
+uint16_t CSimNetBoard::ReadIORegister(unsigned reg)
+{
+	if (!IsRunning())
+		return 0;
+
+	switch (reg)
+	{
+	case 0x00:
+		return m_IRQ2ack;
+	case 0x88:
+		return m_status0;
+	case 0x8a:
+		return m_status1;
+	default:
+		ErrorLog("read from unknown IO register 0x%02x", reg);
+		return 0;
+	}
+}
+
+void CSimNetBoard::WriteIORegister(unsigned reg, uint16_t data)
+{
+	switch (reg)
+	{
+	case 0x00:
+		m_IRQ2ack = data;
+		break;
+	case 0x88:
+		m_status0 = data;
+		break;
+	case 0x8a:
+		m_status1 = data;
+		break;
+	case 0xc0:
+		if (data == 0)
+			Reset();
+		m_running = (data != 0);
+		break;
+	default:
+		ErrorLog("write to unknown IO register 0x%02x", reg);
+	}
 }

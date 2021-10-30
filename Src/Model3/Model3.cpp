@@ -1021,7 +1021,8 @@ UINT8 CModel3::Read8(UINT32 addr)
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
       }
       //printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
-      return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
+      //return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
+      return (UINT8)NetBoard->ReadIORegister((addr & 0x1FF) / 2);
 
     case 2:
     case 3:
@@ -1316,43 +1317,28 @@ UINT32 CModel3::Read32(UINT32 addr)
       switch ((addr & 0x3ffff) >> 16)
       {
       case 0:
-        //printf("R32 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0xFFFF)]));
         result = *(UINT32 *)&netBuffer[(addr & 0xFFFF)];
         result = FLIPENDIAN32(result);
         return ((result << 16) | (result >> 16));
-        //return FLIPENDIAN32(result); // result
 
       case 1: // ioreg 32bits access to 16bits range
-        //printf("R32 ioreg @%x=%x\n", (addr & 0x1FF), FLIPENDIAN32(*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]));
         if (addr > 0xc00101ff)
         {
           printf("R32 ATTENTION OUT OF RANGE\n");
         }
 
-        UINT32 test;
-        test = (*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
-        /*if (((FLIPENDIAN32(test) & 0x00ff0000) != 0x00900000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00a00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00b00000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00800000) && ((FLIPENDIAN32(test) & 0x00ff0000) != 0x00f00000))
-        {
-          printf("R32 ioreg @%x=%04x\n", (addr), FLIPENDIAN32(test) >> 16);
-        }*/
-        result = (*(UINT32 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)]) & 0x0000ffff;
+        result = NetBoard->ReadIORegister((addr & 0x1FF) / 2);
         return FLIPENDIAN32(result);
 
       case 2:
       case 3:
-        //printf("R32 netram @%x=%x\n", (addr & 0x1FFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0x1FFFF)]));
-
-        if (addr > 0xc002ffff)
+        if (addr > 0xc003ffff)
         {
           printf("R32 ATTENTION OUT OF RANGE\n");
         }
 
         result = (*(UINT32 *)&netRAM[((addr & 0x1FFFF) / 2)]) & 0x0000ffff;
         return FLIPENDIAN32(result); // result
-      /*case 3:
-        //printf("R32 netram @%x=%x\n", (addr & 0x1FFFF), FLIPENDIAN32(*(UINT32 *)&netBuffer[(addr & 0x1FFFF)]));
-        result = (*(UINT32 *)&netRAM[((addr & 0x1FFFF) / 2)]) & 0x0000ffff;
-        return FLIPENDIAN32(result); // result*/
 
       default:
         printf("R32 ATTENTION OUT OF RANGE\n");
@@ -1493,7 +1479,6 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       switch ((addr & 0x3ffff) >> 16)
       {
       case 0:
-        //printf("W8 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
         *(UINT8 *)&netBuffer[(addr & 0xFFFF) ^ 2] = data;
         break;
 
@@ -1503,10 +1488,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
           printf("W8 ATTENTION OUT OF RANGE\n");
         }
 
-        //printf("W8 ioreg @%x<-%x\n", (addr & 0x1FF), data);
-        if (((addr & 0x1FF) == 0x180) && (data == 0x00))
-            NetBoard->Reset();
-        *(UINT8 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = data;
+        NetBoard->WriteIORegister((addr & 0x1FF) / 2, data);
         break;
 
       case 2:
@@ -1516,13 +1498,8 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
           printf("W8 ATTENTION OUT OF RANGE\n");
         }
 
-        //printf("W8 netram @%x<-%x\n", (addr & 0x1FFFF), data);
         *(UINT8 *)&netRAM[(addr & 0x1FFFF)/2] = data;
         break;
-      /*case 3:
-        //printf("W8 netram @%x<-%x\n", (addr & 0x1FFFF), data);
-        *(UINT8 *)&netRAM[(addr & 0x1FFFF) / 2] = data;
-        break;*/
 
       default:
         printf("W8 ATTENTION OUT OF RANGE\n");
@@ -1623,7 +1600,6 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     switch ((addr & 0x3ffff) >> 16)
     {
     case 0:
-      //printf("W16 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
       *(UINT16 *)&netBuffer[(addr & 0xFFFF) ^ 2] = FLIPENDIAN16(data);
       break;
 
@@ -1829,8 +1805,6 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       switch ((addr & 0x3ffff) >> 16)
       {
       case 0:
-        //printf("W32 netbuffer @%x<-%x\n", (addr & 0xFFFF), data);
-        //*(UINT32 *)&netBuffer[(addr & 0xFFFF)] = FLIPENDIAN32(data);
         temp = FLIPENDIAN32(data);
         *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = (temp << 16) | (temp >> 16);
         break;
@@ -1841,26 +1815,19 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
           printf("W32 ATTENTION OUT OF RANGE\n");
         }
 
-        //printf("W32 ioreg @%x<-%04x\n", (addr /*& 0x1FF*/), data>>16);
-        if (((addr & 0x1FF) == 0x180) && ((data >> 16) == 0x0000))
-            NetBoard->Reset();
-        *(UINT16 *)&netBuffer[0x10000 + ((addr & 0x1FF) / 2)] = FLIPENDIAN16(data >> 16);
+        NetBoard->WriteIORegister((addr & 0x1FF) / 2, FLIPENDIAN16(data >> 16));
         break;
 
       case 2:
       case 3:
-        if (addr > 0xc002ffff)
+        if (addr > 0xc003ffff)
         {
           printf("W32 ATTENTION OUT OF RANGE\n");
         }
 
-        //printf("W32 netram @%x<-%x\n", (addr & 0x1FFFF), data);
         *(UINT16 *)&netRAM[((addr & 0x1FFFF) / 2)] = FLIPENDIAN16(data >> 16);
         break;
-      /*case 3:
-        //printf("W32 netram @%x<-%x\n", (addr & 0x1FFFF), data);
-        *(UINT16 *)&netRAM[((addr & 0x1FFFF) / 2)] = FLIPENDIAN16(data >> 16);
-        break;*/
+
       default:
         printf("W32 ATTENTION OUT OF RANGE\n");
         break;
@@ -3153,7 +3120,7 @@ const static int DSBPROGROM_SIZE	= 0x20000;		//128KB
 const static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
 const static int DRIVEROM_SIZE		= 0x10000;		//64KB
 const static int NETBUFFER_SIZE		= 0x20000;		//128KB
-const static int NETRAM_SIZE		= 0x20000;		//128KB
+const static int NETRAM_SIZE		= 0x10000;		//64KB
 
 const static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
                                         CROMxx_SIZE + VROM_SIZE +
