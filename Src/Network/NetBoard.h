@@ -61,6 +61,14 @@ public:
 
 	void GetGame(Game);
 
+	UINT8 ReadCommRAM8(unsigned addr);
+	UINT16 ReadCommRAM16(unsigned addr);
+	UINT32 ReadCommRAM32(unsigned addr);
+
+	void WriteCommRAM8(unsigned addr, UINT8 data);
+	void WriteCommRAM16(unsigned addr, UINT16 data);
+	void WriteCommRAM32(unsigned addr, UINT32 data);
+
 	UINT16 ReadIORegister(unsigned reg);
 	void WriteIORegister(unsigned reg, UINT16 data);
 

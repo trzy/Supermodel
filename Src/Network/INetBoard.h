@@ -43,6 +43,14 @@ public:
 
 	virtual void GetGame(Game) = 0;
 
+	virtual UINT8 ReadCommRAM8(unsigned addr) = 0;
+	virtual UINT16 ReadCommRAM16(unsigned addr) = 0;
+	virtual UINT32 ReadCommRAM32(unsigned addr) = 0;
+
+	virtual void WriteCommRAM8(unsigned addr, UINT8 data) = 0;
+	virtual void WriteCommRAM16(unsigned addr, UINT16 data) = 0;
+	virtual void WriteCommRAM32(unsigned addr, UINT32 data) = 0;
+
 	virtual UINT16 ReadIORegister(unsigned reg) = 0;
 	virtual void WriteIORegister(unsigned reg, UINT16 data) = 0;
 };

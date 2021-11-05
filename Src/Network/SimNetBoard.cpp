@@ -61,7 +61,10 @@ void CSimNetBoard::LoadState(CBlockFile* SaveState)
 bool CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
 {
 	RAM = netRAMPtr;
-	CommRAM = netBufferPtr;
+	Buffer = netBufferPtr;
+
+	CommRAM = Buffer;
+	externalCommRAM = Buffer + 0x10000;
 
 	m_attached = m_gameInfo.netboard_present && m_config["Network"].ValueAs<bool>();
 
@@ -105,7 +108,7 @@ void CSimNetBoard::RunFrame(void)
 		break;
 
 	case State::init:
-		memset(CommRAM, 0, 0x10000);
+		memset(CommRAM, 0, 0x20000);
 		if (m_gameType == GameType::one)
 		{
 			if (m_status0 & 0x8000)				// has main board changed this register?
@@ -454,39 +457,36 @@ void CSimNetBoard::RunFrame(void)
 		m_counter++;
 		CommRAM16[0x6] = FLIPENDIAN16(m_counter);
 		
-		if (IsGame("spikeofe"))	// temporary hack for spikeout final edition (avoids comm error)
+		// we only send what we need to; helps cut down on bandwidth
+		// each machine has to receive back its own data (TODO: copy this data manually?)
+		for (int i = 0; i < m_numMachines; i++)
 		{
-			nets->Send(CommRAM + 0x100, m_segmentSize * m_numMachines);
+			nets->Send(CommRAM + 0x100 + i * m_segmentSize, m_segmentSize);
 			auto& recv_data = netr->Receive();
 			if (recv_data.size() == 0)
 			{
 				// link broken - send an "empty" packet to alert other machines
 				nets->Send(nullptr, 0);
 				m_state = State::error;
-				m_status1 = 0x40;		// send "link broken" message to mainboard
+				if (m_gameType == GameType::one)
+					m_status1 = 0x40;			// send "link broken" message to mainboard
 				break;
 			}
-			memcpy(CommRAM + 0x100 + m_segmentSize, recv_data.data(), recv_data.size());
+			memcpy(CommRAM + 0x100 + (i + 1) * m_segmentSize, recv_data.data(), recv_data.size());
+		}
+
+		// swap CommRAM banks
+		if (m_commbank)
+		{
+			m_commbank = false;
+			CommRAM = Buffer;
+			externalCommRAM = Buffer + 0x10000;
 		}
 		else
 		{
-			// we only send what we need to; helps cut down on bandwidth
-			// each machine has to receive back its own data (TODO: copy this data manually?)
-			for (int i = 0; i < m_numMachines; i++)
-			{
-				nets->Send(CommRAM + 0x100 + i * m_segmentSize, m_segmentSize);
-				auto& recv_data = netr->Receive();
-				if (recv_data.size() == 0)
-				{
-					// link broken - send an "empty" packet to alert other machines
-					nets->Send(nullptr, 0);
-					m_state = State::error;
-					if (m_gameType == GameType::one)
-						m_status1 = 0x40;			// send "link broken" message to mainboard
-					break;
-				}
-				memcpy(CommRAM + 0x100 + (i + 1) * m_segmentSize, recv_data.data(), recv_data.size());
-			}
+			m_commbank = true;
+			CommRAM = Buffer + 0x10000;
+			externalCommRAM = Buffer;
 		}
 		
 		break;
@@ -552,6 +552,36 @@ void CSimNetBoard::ConnectProc(void)
 	printf("Successfully connected.\n");
 
 	m_connected = true;
+}
+
+uint8_t CSimNetBoard::ReadCommRAM8(unsigned addr)
+{
+	return externalCommRAM[addr];
+}
+
+uint16_t CSimNetBoard::ReadCommRAM16(unsigned addr)
+{
+	return *(uint16_t*)&externalCommRAM[addr];
+}
+
+uint32_t CSimNetBoard::ReadCommRAM32(unsigned addr)
+{
+	return *(uint32_t*)&externalCommRAM[addr];
+}
+
+void CSimNetBoard::WriteCommRAM8(unsigned addr, uint8_t data)
+{
+	externalCommRAM[addr] = data;
+}
+
+void CSimNetBoard::WriteCommRAM16(unsigned addr, uint16_t data)
+{
+	*(uint16_t*)&externalCommRAM[addr] = data;
+}
+
+void CSimNetBoard::WriteCommRAM32(unsigned addr, uint32_t data)
+{
+	*(uint32_t*)&externalCommRAM[addr] = data;
 }
 
 uint16_t CSimNetBoard::ReadIORegister(unsigned reg)

@@ -1011,8 +1011,7 @@ UINT8 CModel3::Read8(UINT32 addr)
     switch ((addr & 0x3ffff) >> 16)
     {
     case 0:
-      //printf("R8 netbuffer @%x=%x\n", (addr & 0xFFFF), netBuffer[(addr & 0xFFFF)]);
-      return netBuffer[(addr & 0xFFFF) ^ 2];
+      return NetBoard->ReadCommRAM8((addr & 0xFFFF) ^ 2);
 
     case 1: // ioreg 32bits access in 16bits environment
       if (addr > 0xc00101ff)
@@ -1020,22 +1019,11 @@ UINT8 CModel3::Read8(UINT32 addr)
         printf("R8 ATTENTION OUT OF RANGE\n");
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
       }
-      //printf("R8 ioreg @%x=%x\n", (addr & 0x1FF), netBuffer[0x10000 + ((addr & 0x1FF) / 2)]);
-      //return netBuffer[0x10000 + ((addr & 0x1FF) / 2)];
       return (UINT8)NetBoard->ReadIORegister((addr & 0x1FF) / 2);
 
     case 2:
     case 3:
-      if (addr > 0xc002ffff)
-      {
-        printf("R8 ATTENTION OUT OF RANGE\n");
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
-      }
-      //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
       return netRAM[((addr & 0x1FFFF) / 2)];
-    /*case 3:
-      //printf("R8 netram @%x=%x\n", (addr & 0x1FFFF), netRAM[addr & 0x1ffff]);
-      return netRAM[((addr & 0x1FFFF) / 2)];*/
 
     default:
       printf("R8 ATTENTION OUT OF RANGE\n");
@@ -1152,8 +1140,7 @@ UINT16 CModel3::Read16(UINT32 addr)
     switch ((addr & 0x3ffff) >> 16)
     {
     case 0:
-      //printf("R16 netbuffer @%x=%x\n", (addr & 0xFFFF), FLIPENDIAN16(*(UINT16 *)&netBuffer[(addr & 0xFFFF)]));
-      result = *(UINT16 *)&netBuffer[(addr & 0xFFFF) ^ 2];
+      result = NetBoard->ReadCommRAM16((addr & 0xFFFF) ^ 2);
       return FLIPENDIAN16(result); // result
     default:
       printf("CMODEL3 : unknown R16 : %x (C0)\n", addr);
@@ -1317,7 +1304,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       switch ((addr & 0x3ffff) >> 16)
       {
       case 0:
-        result = *(UINT32 *)&netBuffer[(addr & 0xFFFF)];
+        result = NetBoard->ReadCommRAM32(addr & 0xFFFF);
         result = FLIPENDIAN32(result);
         return ((result << 16) | (result >> 16));
 
@@ -1332,11 +1319,6 @@ UINT32 CModel3::Read32(UINT32 addr)
 
       case 2:
       case 3:
-        if (addr > 0xc003ffff)
-        {
-          printf("R32 ATTENTION OUT OF RANGE\n");
-        }
-
         result = (*(UINT32 *)&netRAM[((addr & 0x1FFFF) / 2)]) & 0x0000ffff;
         return FLIPENDIAN32(result); // result
 
@@ -1479,7 +1461,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       switch ((addr & 0x3ffff) >> 16)
       {
       case 0:
-        *(UINT8 *)&netBuffer[(addr & 0xFFFF) ^ 2] = data;
+        NetBoard->WriteCommRAM8((addr & 0xFFFF) ^ 2, data);
         break;
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1493,11 +1475,6 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       case 2:
       case 3:
-        if (addr > 0xc002ffff)
-        {
-          printf("W8 ATTENTION OUT OF RANGE\n");
-        }
-
         *(UINT8 *)&netRAM[(addr & 0x1FFFF)/2] = data;
         break;
 
@@ -1600,7 +1577,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     switch ((addr & 0x3ffff) >> 16)
     {
     case 0:
-      *(UINT16 *)&netBuffer[(addr & 0xFFFF) ^ 2] = FLIPENDIAN16(data);
+      NetBoard->WriteCommRAM16((addr & 0xFFFF) ^ 2, FLIPENDIAN16(data));
       break;
 
     default:
@@ -1806,7 +1783,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       {
       case 0:
         temp = FLIPENDIAN32(data);
-        *(UINT32 *)&netBuffer[(addr & 0xFFFF)] = (temp << 16) | (temp >> 16);
+        NetBoard->WriteCommRAM32(addr & 0xFFFF, (temp << 16) | (temp >> 16));
         break;
 
       case 1: // ioreg 32bits access to 16bits range
@@ -1820,11 +1797,6 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       case 2:
       case 3:
-        if (addr > 0xc003ffff)
-        {
-          printf("W32 ATTENTION OUT OF RANGE\n");
-        }
-
         *(UINT16 *)&netRAM[((addr & 0x1FFFF) / 2)] = FLIPENDIAN16(data >> 16);
         break;
 

@@ -1314,6 +1314,36 @@ void CNetBoard::GetGame(Game gameinfo)
 	Gameinfo = gameinfo;
 }
 
+UINT8 CNetBoard::ReadCommRAM8(unsigned addr)
+{
+	return CommRAM[addr];
+}
+
+UINT16 CNetBoard::ReadCommRAM16(unsigned addr)
+{
+	return *(UINT16*)&CommRAM[addr];
+}
+
+UINT32 CNetBoard::ReadCommRAM32(unsigned addr)
+{
+	return *(UINT32*)&CommRAM[addr];
+}
+
+void CNetBoard::WriteCommRAM8(unsigned addr, UINT8 data)
+{
+	CommRAM[addr] = data;
+}
+
+void CNetBoard::WriteCommRAM16(unsigned addr, UINT16 data)
+{
+	*(UINT16*)&CommRAM[addr] = data;
+}
+
+void CNetBoard::WriteCommRAM32(unsigned addr, UINT32 data)
+{
+	*(UINT32*)&CommRAM[addr] = data;
+}
+
 UINT16 CNetBoard::ReadIORegister(unsigned reg)
 {
 	if (!IsRunning())
