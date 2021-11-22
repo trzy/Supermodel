@@ -26,7 +26,10 @@
   * from this.
   */
 
+#include "Input.h"
+
 #include "Supermodel.h"
+#include "InputSystem.h"
 
 CInput::CInput(const char *inputId, const char *inputLabel, unsigned inputFlags, unsigned inputGameFlags, const char *defaultMapping, UINT16 initValue) : 
 	id(inputId), label(inputLabel), flags(inputFlags), gameFlags(inputGameFlags), m_defaultMapping(defaultMapping), value(initValue), prevValue(initValue),

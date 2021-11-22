@@ -63,13 +63,18 @@ It doesn't sound good at all.
 Anyways credit to R. Belmont and ElSemi for the code, and for being awesome emulation Gods.
 */
 
+#include "SCSP.h"
+
 #include "Supermodel.h"
-#include "Sound/SCSP.h"
+#include "SCSPDSP.h"
+#include "OSD/Thread.h"
+
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
-#include "Sound/SCSPDSP.h"
+
 
 static const Util::Config::Node *s_config = 0;
 static bool s_multiThreaded = false;

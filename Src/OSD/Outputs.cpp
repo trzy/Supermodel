@@ -23,6 +23,8 @@
  * Outputs.cpp
  */
 
+#include "Outputs.h"
+
 #include "Supermodel.h"
 
 const char *COutputs::s_outputNames[] =

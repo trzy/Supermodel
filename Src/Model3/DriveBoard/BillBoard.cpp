@@ -57,6 +57,8 @@
 **
 **/
 
+#include "BillBoard.h"
+
 #include "Supermodel.h"
 
 #include <cstdio>

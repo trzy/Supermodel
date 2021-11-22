@@ -31,6 +31,8 @@
  *   should just be set to 0?
  */
 
+#include "93C46.h"
+
 #include <string.h>
 #include "Supermodel.h"
 

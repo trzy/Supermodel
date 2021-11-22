@@ -1568,33 +1568,33 @@ static void ppc_invalid(UINT32 op)
 */
 
 /*************************OLD
-INLINE int is_nan_double(FPR x)
+inline int is_nan_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
 }
 
-INLINE int is_qnan_double(FPR x)
+inline int is_qnan_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & 0x0007fffffffffff) == 0x000000000000000) &&
 			((x.id & 0x000800000000000) == 0x000800000000000) );
 }
 
-INLINE int is_snan_double(FPR x)
+inline int is_snan_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) &&
 			((x.id & 0x0008000000000000) == DOUBLE_ZERO) );
 }
 
-INLINE int is_infinity_double(FPR x)
+inline int is_infinity_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & DOUBLE_FRAC) == DOUBLE_ZERO) );
 }
 
-INLINE int is_normalized_double(FPR x)
+inline int is_normalized_double(FPR x)
 {
 	UINT64 exp;
 
@@ -1603,18 +1603,18 @@ INLINE int is_normalized_double(FPR x)
 	return (exp >= 1) && (exp <= 2046);
 }
 
-INLINE int is_denormalized_double(FPR x)
+inline int is_denormalized_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == 0) &&
 			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
 }
 
-INLINE int sign_double(FPR x)
+inline int sign_double(FPR x)
 {
 	return ((x.id & DOUBLE_SIGN) != 0);
 }
 
-INLINE INT64 round_to_nearest(FPR f)
+inline INT64 round_to_nearest(FPR f)
 {
 	//return (INT64)(f.fd + 0.5);
 	if (f.fd >= 0)
@@ -1627,18 +1627,18 @@ INLINE INT64 round_to_nearest(FPR f)
 	}
 }
 
-INLINE INT64 round_toward_zero(FPR f)
+inline INT64 round_toward_zero(FPR f)
 {
 	return (INT64)(f.fd);
 }
 
-INLINE INT64 round_toward_positive_infinity(FPR f)
+inline INT64 round_toward_positive_infinity(FPR f)
 {
 	double r = ceil(f.fd);
 	return (INT64)(r);
 }
 
-INLINE INT64 round_toward_negative_infinity(FPR f)
+inline INT64 round_toward_negative_infinity(FPR f)
 {
 	double r = floor(f.fd);
 	return (INT64)(r);
@@ -1647,33 +1647,33 @@ INLINE INT64 round_toward_negative_infinity(FPR f)
 
 
 // New below, based on changes in MAME
-INLINE int is_nan_double(FPR x)
+inline int is_nan_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
 }
 
-INLINE int is_qnan_double(FPR x)
+inline int is_qnan_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & 0x0007fffffffffffULL) == 0x000000000000000ULL) &&
 			((x.id & 0x000800000000000ULL) == 0x000800000000000ULL) );
 }
 
-INLINE int is_snan_double(FPR x)
+inline int is_snan_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) &&
 			((x.id & (0x0008000000000000ULL)) == DOUBLE_ZERO) );
 }
 
-INLINE int is_infinity_double(FPR x)
+inline int is_infinity_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
 			((x.id & DOUBLE_FRAC) == DOUBLE_ZERO) );
 }
 
-INLINE int is_normalized_double(FPR x)
+inline int is_normalized_double(FPR x)
 {
 	UINT64 exp;
 
@@ -1682,18 +1682,18 @@ INLINE int is_normalized_double(FPR x)
 	return (exp >= 1) && (exp <= 2046);
 }
 
-INLINE int is_denormalized_double(FPR x)
+inline int is_denormalized_double(FPR x)
 {
 	return( ((x.id & DOUBLE_EXP) == 0) &&
 			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
 }
 
-INLINE int sign_double(FPR x)
+inline int sign_double(FPR x)
 {
 	return ((x.id & DOUBLE_SIGN) != 0);
 }
 
-INLINE INT64 smround_to_nearest(FPR f)
+inline INT64 smround_to_nearest(FPR f)
 {
 	if (f.fd >= 0)
 	{
@@ -1705,18 +1705,18 @@ INLINE INT64 smround_to_nearest(FPR f)
 	}
 }
 
-INLINE INT64 smround_toward_zero(FPR f)
+inline INT64 smround_toward_zero(FPR f)
 {
 	return (INT64)(f.fd);
 }
 
-INLINE INT64 round_toward_positive_infinity(FPR f)
+inline INT64 round_toward_positive_infinity(FPR f)
 {
 	double r = ceil(f.fd);
 	return (INT64)(r);
 }
 
-INLINE INT64 round_toward_negative_infinity(FPR f)
+inline INT64 round_toward_negative_infinity(FPR f)
 {
 	double r = floor(f.fd);
 	return (INT64)(r);
@@ -1725,7 +1725,7 @@ INLINE INT64 round_toward_negative_infinity(FPR f)
 #define SET_VXSNAN(a, b)    if (is_snan_double(a) || is_snan_double(b)) ppc.fpscr |= 0x80000000
 #define SET_VXSNAN_1(c)     if (is_snan_double(c)) ppc.fpscr |= 0x80000000
 
-INLINE void set_fprf(FPR f)
+inline void set_fprf(FPR f)
 {
 	UINT32 fprf;
 

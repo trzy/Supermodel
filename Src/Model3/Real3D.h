@@ -29,6 +29,12 @@
 #ifndef INCLUDED_REAL3D_H
 #define INCLUDED_REAL3D_H
 
+#include "IRQ.h"
+#include "PCI.h"
+#include "CPU/Bus.h"
+#include "Graphics/IRender3D.h"
+#include "Util/NewConfig.h"
+
 #include <cstdint>
 #include <map>
 

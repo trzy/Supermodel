@@ -33,6 +33,8 @@
  *   the vectors do not run out of memory because so few PCI devices exist.
  */
 
+#include "PCI.h"
+
 #include "Supermodel.h"
 
 

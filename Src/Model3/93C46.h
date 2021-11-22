@@ -28,6 +28,8 @@
 #ifndef INCLUDED_93C46_H
 #define INCLUDED_93C46_H
 
+#include "BlockFile.h"
+#include "Types.h"
 
 /*
  * C93C46:

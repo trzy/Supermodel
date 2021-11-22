@@ -29,10 +29,12 @@
  * Please see Z80.h for a discussion of known inaccuracies.
  */
 
-#include <cstdio> // for NULL
-#include "Supermodel.h"
 #include "Z80.h"  // must include this first to define CZ80
 
+#include <cstdio> // for NULL
+#include "Supermodel.h"
+
+#include "Debugger/CPU/Z80Debug.h"
 
 /******************************************************************************
  Internal Helper Macros

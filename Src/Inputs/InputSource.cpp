@@ -27,7 +27,10 @@
  * values for analog inputs.
  */
 
+#include "InputSource.h"
+
 #include "Supermodel.h"
+#include "Input.h"
 
 #include <vector>
 using namespace std;

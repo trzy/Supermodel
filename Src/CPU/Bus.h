@@ -28,6 +28,7 @@
 #ifndef INCLUDED_BUS_H
 #define INCLUDED_BUS_H
 
+#include "Types.h"
 
 /*
  * IBus:

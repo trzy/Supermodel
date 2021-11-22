@@ -26,6 +26,8 @@
  * all very simple classes.
  */
 
+#include "InputTypes.h"
+
 #include "Supermodel.h"
 
 /*

@@ -66,6 +66,8 @@
  *   endian, pushing the responsibility onto the caller.
  */
 
+#include "MPC10x.h"
+
 #include <cstring>
 #include "Supermodel.h"
 

@@ -26,6 +26,8 @@
  * class.
  */
 
+#include "BlockFile.h"
+
 #include <cstdio>
 #include <cstring>
 #include <cstdint>

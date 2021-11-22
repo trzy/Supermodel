@@ -31,6 +31,8 @@
  * - Writes do nothing yet.
  */
 
+#include "RTC72421.h"
+
 #include <time.h>
 #include "Supermodel.h"
 

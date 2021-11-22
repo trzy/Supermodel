@@ -25,6 +25,8 @@
  * SDL-based implementation of threading primitives.
  */
 
+#include "Thread.h"
+
 #include "Supermodel.h"
 #include "SDLIncludes.h"
 

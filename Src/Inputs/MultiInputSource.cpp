@@ -25,7 +25,10 @@
  * Implementation of CMultiInputSource.
  */
 
+#include "MultiInputSource.h"
+
 #include "Supermodel.h"
+#include "Input.h"
 
 #include <vector>
 using namespace std;

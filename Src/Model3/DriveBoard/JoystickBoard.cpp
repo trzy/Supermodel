@@ -33,6 +33,8 @@
  * NOTE: Simulation does not yet work. Drive board ROMs are required.
  */
 
+#include "JoystickBoard.h"
+
 #include "Supermodel.h"
 
 #include <cstdio>

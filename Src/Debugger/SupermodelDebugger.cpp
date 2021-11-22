@@ -25,14 +25,23 @@
 
 #ifdef SUPERMODEL_DEBUGGER
 
-#include "Supermodel.h"
+#include "SupermodelDebugger.h"
 
+#include "Supermodel.h"
+#include "BlockFile.h"
 #include "ConsoleDebugger.h"
 #include "CPUDebug.h"
 #include "Label.h"
 #ifdef NET_BOARD
 #include "Network/NetBoard.h"
 #endif // NET_BOARD
+#include "CPU/Musashi68KDebug.h"
+#include "CPU/PPCDebug.h"
+#include "CPU/Z80Debug.h"
+#include "Inputs/Input.h"
+#include "Inputs/InputSystem.h"
+#include "Model3/SoundBoard.h"
+#include "OSD/Audio.h"
 
 #include <cstdio>
 #include <string>

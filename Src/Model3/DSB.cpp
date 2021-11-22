@@ -37,6 +37,8 @@
  * - Should we do some bounds checking on the MPEG start/end points?
  */
 
+#include "DSB.h"
+
 #include "Supermodel.h"
 #include "Sound/MPEG/MpegAudio.h"
 #include <algorithm>

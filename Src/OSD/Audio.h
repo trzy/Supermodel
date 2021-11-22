@@ -28,6 +28,8 @@
 #ifndef INCLUDED_AUDIO_H
 #define INCLUDED_AUDIO_H
 
+#include "Types.h"
+
 typedef void (*AudioCallbackFPtr)(void *data);
 
 extern void SetAudioCallback(AudioCallbackFPtr callback, void *data);

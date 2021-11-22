@@ -29,7 +29,10 @@
  * NOTE: Simulation does not yet work. Drive board ROMs are required.
  */
 
+#include "SkiBoard.h"
+
 #include "Supermodel.h"
+#include "Inputs/Input.h"
 
 #include <cstdio>
 #include <cmath>

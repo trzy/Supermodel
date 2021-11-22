@@ -29,6 +29,7 @@
 #ifndef INCLUDED_JOYBOARD_H
 #define INCLUDED_JOYBOARD_H
 
+#include "DriveBoard.h"
 #include "Util/NewConfig.h"
 #include "Game.h"
 

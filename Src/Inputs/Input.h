@@ -29,11 +29,11 @@
 #ifndef INCLUDED_INPUT_H
 #define INCLUDED_INPUT_H
 
+#include "InputSource.h"
 #include "Types.h"
 #include "Game.h"
 #include "Util/NewConfig.h"
 
-class CInputSource;
 class CInputSystem;
 
 // Flags for inputs

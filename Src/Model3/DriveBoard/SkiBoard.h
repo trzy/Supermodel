@@ -29,6 +29,7 @@
 #ifndef INCLUDED_SKIBOARD_H
 #define INCLUDED_SKIBOARD_H
 
+#include "DriveBoard.h"
 #include "Util/NewConfig.h"
 #include "Game.h"
 

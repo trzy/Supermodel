@@ -29,8 +29,9 @@
  * NOTE: Simulation does not yet work. Drive board ROMs are required.
  */
 
-#include "Supermodel.h"
+#include "WheelBoard.h"
 
+#include "Supermodel.h"
 #include <cstdio>
 #include <cmath>
 #include <algorithm>

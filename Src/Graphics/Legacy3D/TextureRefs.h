@@ -28,6 +28,8 @@
 #ifndef INCLUDED_TEXTUREREFS_H
 #define INCLUDED_TEXTUREREFS_H
 
+
+
 namespace Legacy3D {
 
 #define TEXREFS_ARRAY_SIZE 12
@@ -38,7 +40,7 @@ struct HashEntry
 	const unsigned texRef;	// Texture reference as a bitfield
 	HashEntry *nextEntry;   // Next entry with the same hash
   
-	HashEntry(unsigned theTexRef) : texRef(theTexRef), nextEntry(NULL) { }
+	HashEntry(unsigned theTexRef) : texRef(theTexRef), nextEntry(nullptr) { }
 };
 
 class CLegacy3D;

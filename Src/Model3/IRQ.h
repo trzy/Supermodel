@@ -28,6 +28,8 @@
 #ifndef INCLUDED_IRQ_H
 #define INCLUDED_IRQ_H
 
+#include "BlockFile.h"
+#include "Types.h"
 
 /*
  * CIRQ:

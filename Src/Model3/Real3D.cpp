@@ -41,8 +41,11 @@
  *   The render currently cannot cope with this.
  */
 
+#include "Real3D.h"
+
 #include "Supermodel.h"
-#include "Model3/JTAG.h"
+#include "JTAG.h"
+#include "CPU/PowerPC/ppc.h"
 #include "Util/BMPFile.h"
 #include <cstring>
 #include <algorithm>

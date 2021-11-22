@@ -30,7 +30,10 @@
  * to using a hashset to store the texture references, but this requires extra memory allocation.
  */
 
+#include "TextureRefs.h"
+
 #include "Supermodel.h"
+#include "Legacy3D.h"
 
 namespace Legacy3D {
 

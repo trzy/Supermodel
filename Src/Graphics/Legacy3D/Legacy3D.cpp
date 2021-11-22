@@ -156,8 +156,12 @@
  * - Can some of the floating point flag attribs be replaced with ints?
  */
 
+#include "Legacy3D.h"
+
 #include "Supermodel.h"
-#include "Graphics/Legacy3D/Shaders3D.h"  // fragment and vertex shaders
+#include "Shaders3D.h"  // fragment and vertex shaders
+#include "Graphics/Shader.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>

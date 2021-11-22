@@ -30,6 +30,10 @@
 #ifndef INCLUDED_DRIVEBOARD_H
 #define INCLUDED_DRIVEBOARD_H
 
+#include "CPU/Bus.h"
+#include "CPU/Z80/Z80.h"
+#include "Inputs/Inputs.h"
+#include "OSD/Outputs.h"
 #include "Util/NewConfig.h"
 #include "Game.h"
 

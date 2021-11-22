@@ -28,6 +28,8 @@
 #ifndef INCLUDED_MPC10X_H
 #define INCLUDED_MPC10X_H
 
+#include "PCI.h"
+#include "BlockFile.h"
 
 /*
  * CMPC10x:

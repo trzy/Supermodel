@@ -31,7 +31,10 @@
  *   call the PPC core directly, which should not happen in proper OO code.
  */
 
+#include "IRQ.h"
+
 #include "Supermodel.h"
+#include "CPU/PowerPC/ppc.h"
 
 
 /******************************************************************************

@@ -28,6 +28,9 @@
 #ifndef INCLUDED_SCSP_H
 #define INCLUDED_SCSP_H
 
+#include "BlockFile.h"
+#include "Types.h"
+#include "Util/NewConfig.h"
 
 void SCSP_w8(UINT32 addr,UINT8 val);
 void SCSP_w16(UINT32 addr,UINT16 val);

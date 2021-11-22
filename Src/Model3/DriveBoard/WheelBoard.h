@@ -29,6 +29,7 @@
 #ifndef INCLUDED_WHEELBOARD_H
 #define INCLUDED_WHEELBOARD_H
 
+#include "DriveBoard.h"
 #include "Util/NewConfig.h"
 #include "Game.h"
 

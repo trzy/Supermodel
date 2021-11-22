@@ -29,6 +29,7 @@
 #define INCLUDED_OUTPUTS_H
 
 #include "Game.h"
+#include "Types.h"
 
 /*
  * EOutputs enumeration of all available outputs.

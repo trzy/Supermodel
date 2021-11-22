@@ -28,6 +28,8 @@
 #ifndef INCLUDED_TILEGEN_H
 #define INCLUDED_TILEGEN_H
 
+#include "IRQ.h"
+#include "Graphics/Render2D.h"
 
 /*
  * CTileGen:

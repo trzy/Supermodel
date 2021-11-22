@@ -28,17 +28,13 @@
 #ifndef INCLUDED_INPUTS_H
 #define INCLUDED_INPUTS_H
 
+#include "InputTypes.h"
 #include "Types.h"
 #include "Util/NewConfig.h"
 #include <vector>
 
 class CInputSystem;
 class CInput;
-class CAnalogInput;
-class CAxisInput;
-class CSwitchInput;
-class CGearShift4Input;
-class CTriggerInput;
 struct Game;
 
 /*

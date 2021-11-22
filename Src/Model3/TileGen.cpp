@@ -50,6 +50,8 @@
  *   manually reverse the data. This keeps with the convention for VRAM.
  */
 
+#include "TileGen.h"
+
 #include <cstring>
 #include "Supermodel.h"
 

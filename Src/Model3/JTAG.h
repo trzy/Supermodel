@@ -28,6 +28,7 @@
 #ifndef INCLUDED_JTAG_H
 #define INCLUDED_JTAG_H
 
+#include "BlockFile.h"
 #include "Util/BitRegister.h"
 
 class CReal3D;

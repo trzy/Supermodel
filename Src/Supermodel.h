@@ -27,9 +27,7 @@
  
 #ifndef INCLUDED_SUPERMODEL_H
 #define INCLUDED_SUPERMODEL_H
-#if (defined NET_BOARD && defined _WIN32)
-#include "Winsock2.h" // force include winsock2 before windows.h because conflict with winsock1
-#endif
+
 // Used throughout Supermodel
 #include <cstdio>
 #include <cstdlib>
@@ -92,67 +90,9 @@
  */
 #include "Types.h"		// located in OSD/<port>/ directory
 
-/*
- * OSD Header Files
- */
- 
+
 // Error logging interface
 #include "OSD/Logger.h"
-
-// OSD Interfaces
-#include "OSD/Thread.h"
-#include "OSD/Audio.h"
-#include "OSD/Video.h"
-#include "OSD/Outputs.h"
-
-
-/******************************************************************************
- Header Files
- 
- All primary header files for modules used throughout Supermodel are included 
- here, except for external packages and APIs.
-******************************************************************************/
-
-#include "BlockFile.h"
-#include "Graphics/New3D/New3D.h"
-#include "Graphics/Render2D.h"
-#include "Graphics/Legacy3D/TextureRefs.h"
-#include "Graphics/Legacy3D/Legacy3D.h"
-#include "Graphics/Shader.h"
-#ifdef SUPERMODEL_DEBUGGER
-#include "Debugger/SupermodelDebugger.h"
-#include "Debugger/CPU/PPCDebug.h"
-#include "Debugger/CPU/Musashi68KDebug.h"
-#include "Debugger/CPU/Z80Debug.h"
-#endif // SUPERMODEL_DEBUGGER
-#include "CPU/Bus.h"
-#include "CPU/PowerPC/PPCDisasm.h"
-#include "CPU/PowerPC/ppc.h"
-#include "CPU/68K/68K.h"
-#include "CPU/Z80/Z80.h"
-#include "Inputs/Input.h"
-#include "Inputs/Inputs.h"
-#include "Inputs/InputSource.h"
-#include "Inputs/InputSystem.h"
-#include "Inputs/InputTypes.h"
-#include "Inputs/MultiInputSource.h"
-#include "Model3/IRQ.h"
-#include "Model3/PCI.h"
-#include "Model3/53C810.h"
-#include "Model3/MPC10x.h"
-#include "Model3/RTC72421.h"
-#include "Model3/93C46.h"
-#include "Model3/TileGen.h"
-#include "Model3/Real3D.h"
-#include "Sound/SCSP.h"
-#include "Model3/SoundBoard.h"
-#include "Model3/DSB.h"
-#include "Model3/DriveBoard/DriveBoard.h"
-#include "Model3/DriveBoard/WheelBoard.h"
-#include "Model3/DriveBoard/JoystickBoard.h"
-#include "Model3/DriveBoard/SkiBoard.h"
-#include "Model3/DriveBoard/BillBoard.h"
-#include "Model3/Model3.h"
 
 
 /******************************************************************************

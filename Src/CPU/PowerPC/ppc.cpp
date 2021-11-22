@@ -28,15 +28,14 @@
 
 /* IBM/Motorola PowerPC 4xx/6xx Emulator */
 
+#include "ppc.h"
+
 #include <cstring>	// memset()
 #include "Supermodel.h"
-#include "ppc.h"
+#include "CPU/Bus.h"
 
 // Typedefs that Supermodel no longer provides
 typedef unsigned int	UINT;
-
-// C++ should allow this...
-#define INLINE	inline
 
 // Model 3 context provides read/write handlers
 static class IBus	*Bus = NULL;	// pointer to Model 3 bus object (for access handlers)
@@ -318,42 +317,42 @@ static void ppc_change_pc(UINT32 newpc)
 	ppc.fatalError = true;
 }
 
-INLINE UINT8 READ8(UINT32 address)
+inline UINT8 READ8(UINT32 address)
 {
 	return Bus->Read8(address);
 }
 
-INLINE UINT16 READ16(UINT32 address)
+inline UINT16 READ16(UINT32 address)
 {
 	return Bus->Read16(address);
 }
 
-INLINE UINT32 READ32(UINT32 address)
+inline UINT32 READ32(UINT32 address)
 {
 	return Bus->Read32(address);
 }
 
-INLINE UINT64 READ64(UINT32 address)
+inline UINT64 READ64(UINT32 address)
 {
 	return Bus->Read64(address);
 }
 
-INLINE void WRITE8(UINT32 address, UINT8 data)
+inline void WRITE8(UINT32 address, UINT8 data)
 {
 	Bus->Write8(address,data);
 }
 
-INLINE void WRITE16(UINT32 address, UINT16 data)
+inline void WRITE16(UINT32 address, UINT16 data)
 {
 	Bus->Write16(address,data);
 }
 
-INLINE void WRITE32(UINT32 address, UINT32 data)
+inline void WRITE32(UINT32 address, UINT32 data)
 {
 	Bus->Write32(address,data);
 }
 
-INLINE void WRITE64(UINT32 address, UINT64 data)
+inline void WRITE64(UINT32 address, UINT64 data)
 {
 	Bus->Write64(address,data);
 }
@@ -362,7 +361,7 @@ INLINE void WRITE64(UINT32 address, UINT64 data)
 /*********************************************************************/
 
 
-INLINE void SET_CR0(INT32 rd)
+inline void SET_CR0(INT32 rd)
 {
 	if( rd < 0 ) {
 		CR(0) = 0x8;
@@ -376,12 +375,12 @@ INLINE void SET_CR0(INT32 rd)
 		CR(0) |= 0x1;
 }
 
-INLINE void SET_CR1(void)
+inline void SET_CR1(void)
 {
 	CR(1) = (ppc.fpscr >> 28) & 0xf;
 }
 
-INLINE void SET_ADD_OV(UINT32 rd, UINT32 ra, UINT32 rb)
+inline void SET_ADD_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( ADD_OV(rd, ra, rb) )
 		XER |= XER_SO | XER_OV;
@@ -389,7 +388,7 @@ INLINE void SET_ADD_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_OV;
 }
 
-INLINE void SET_SUB_OV(UINT32 rd, UINT32 ra, UINT32 rb)
+inline void SET_SUB_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( SUB_OV(rd, ra, rb) )
 		XER |= XER_SO | XER_OV;
@@ -397,7 +396,7 @@ INLINE void SET_SUB_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_OV;
 }
 
-INLINE void SET_ADD_CA(UINT32 rd, UINT32 ra, UINT32 rb)
+inline void SET_ADD_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( ADD_CA(rd, ra, rb) )
 		XER |= XER_CA;
@@ -405,7 +404,7 @@ INLINE void SET_ADD_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_CA;
 }
 
-INLINE void SET_SUB_CA(UINT32 rd, UINT32 ra, UINT32 rb)
+inline void SET_SUB_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( SUB_CA(rd, ra, rb) )
 		XER |= XER_CA;
@@ -413,7 +412,7 @@ INLINE void SET_SUB_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_CA;
 }
 
-INLINE UINT32 check_condition_code(UINT32 bo, UINT32 bi)
+inline UINT32 check_condition_code(UINT32 bo, UINT32 bi)
 {
 	UINT32 ctr_ok;
 	UINT32 condition_ok;
@@ -431,7 +430,7 @@ INLINE UINT32 check_condition_code(UINT32 bo, UINT32 bi)
 	return ctr_ok && condition_ok;
 }
 
-INLINE UINT64 ppc_read_timebase(void)
+inline UINT64 ppc_read_timebase(void)
 {
 	int cycles = ppc.tb_base_icount - ppc.icount;
 
@@ -439,7 +438,7 @@ INLINE UINT64 ppc_read_timebase(void)
 	return ppc.tb + (cycles / ppc.timer_ratio);
 }
 
-INLINE void ppc_write_timebase_l(UINT32 tbl)
+inline void ppc_write_timebase_l(UINT32 tbl)
 {
 	UINT64 tb = ppc_read_timebase();
 
@@ -448,7 +447,7 @@ INLINE void ppc_write_timebase_l(UINT32 tbl)
 	ppc.tb = (tb&~0xffffffff)|tbl;
 }
 
-INLINE void ppc_write_timebase_h(UINT32 tbh)
+inline void ppc_write_timebase_h(UINT32 tbh)
 {
 	UINT64 tb = ppc_read_timebase();
 
@@ -457,7 +456,7 @@ INLINE void ppc_write_timebase_h(UINT32 tbh)
 	ppc.tb = (tb&0xffffffff)|((UINT64)(tbh) << 32);
 }
 
-INLINE UINT32 read_decrementer(void)
+inline UINT32 read_decrementer(void)
 {
 	int cycles = ppc.dec_base_icount - ppc.icount;
 
@@ -465,7 +464,7 @@ INLINE UINT32 read_decrementer(void)
 	return DEC - (cycles / ppc.timer_ratio);
 }
 
-INLINE void write_decrementer(UINT32 value)
+inline void write_decrementer(UINT32 value)
 {
 	if (((value&0x80000000) && !(read_decrementer()&0x80000000)))
 	{
@@ -488,7 +487,7 @@ INLINE void write_decrementer(UINT32 value)
 
 /*********************************************************************/
 
-INLINE void ppc_set_spr(int spr, UINT32 value)
+inline void ppc_set_spr(int spr, UINT32 value)
 {
 	switch (spr)
 	{
@@ -561,7 +560,7 @@ INLINE void ppc_set_spr(int spr, UINT32 value)
 	ppc.fatalError = true;
 }
 
-INLINE UINT32 ppc_get_spr(int spr)
+inline UINT32 ppc_get_spr(int spr)
 {
 	switch(spr)
 	{
@@ -624,7 +623,7 @@ INLINE UINT32 ppc_get_spr(int spr)
 	return 0;
 }
 
-INLINE void ppc_set_msr(UINT32 value)
+inline void ppc_set_msr(UINT32 value)
 {
 	if( value & (MSR_ILE | MSR_LE) )
 	{
@@ -638,12 +637,12 @@ INLINE void ppc_set_msr(UINT32 value)
 	ppc603_check_interrupts();
 }
 
-INLINE UINT32 ppc_get_msr(void)
+inline UINT32 ppc_get_msr(void)
 {
 	return MSR;
 }
 
-INLINE void ppc_set_cr(UINT32 value)
+inline void ppc_set_cr(UINT32 value)
 {
 	CR(0) = (value >> 28) & 0xf;
 	CR(1) = (value >> 24) & 0xf;
@@ -655,7 +654,7 @@ INLINE void ppc_set_cr(UINT32 value)
 	CR(7) = (value >> 0) & 0xf;
 }
 
-INLINE UINT32 ppc_get_cr(void)
+inline UINT32 ppc_get_cr(void)
 {
 	return CR(0) << 28 | CR(1) << 24 | CR(2) << 20 | CR(3) << 16 | CR(4) << 12 | CR(5) << 8 | CR(6) << 4 | CR(7);
 }

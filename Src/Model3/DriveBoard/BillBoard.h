@@ -29,6 +29,7 @@
 #ifndef INCLUDED_BILLBOARD_H
 #define INCLUDED_BILLBOARD_H
 
+#include "DriveBoard.h"
 #include "Util/NewConfig.h"
 
 /*

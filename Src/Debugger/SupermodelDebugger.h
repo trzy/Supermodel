@@ -28,12 +28,12 @@
 #define INCLUDED_SUPERMODELDEBUGGER_H
 
 #include "ConsoleDebugger.h"
+#include "Model3/Model3.h"
 
 #include <stdarg.h>
 
 #define MODEL3_STATEFILE_VERSION 0
 
-class CModel3;
 class CInputs;
 class CInput;
 

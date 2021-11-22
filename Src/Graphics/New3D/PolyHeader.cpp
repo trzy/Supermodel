@@ -5,7 +5,7 @@ namespace New3D {
 
 PolyHeader::PolyHeader()
 {
-	header = NULL;
+	header = nullptr;
 }
 
 PolyHeader::PolyHeader(UINT32* h) 

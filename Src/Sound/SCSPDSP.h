@@ -29,6 +29,8 @@
 #ifndef INCLUDED_SCSPDSP_H
 #define INCLUDED_SCSPDSP_H
 
+#include "Types.h"
+
 //#define DYNDSP
 #define DYNOPT	1		//set to 1 to enable optimization of recompiler
 

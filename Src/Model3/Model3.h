@@ -29,9 +29,18 @@
 #ifndef INCLUDED_MODEL3_H
 #define INCLUDED_MODEL3_H
 
-#include "Model3/IEmulator.h"
-#include "Model3/JTAG.h"
-#include "Model3/Crypto.h"
+#include "53C810.h"
+#include "93C46.h"
+#include "Crypto.h"
+#include "IEmulator.h"
+#include "JTAG.h"
+#include "MPC10x.h"
+#include "Real3D.h"
+#include "RTC72421.h"
+#include "SoundBoard.h"
+#include "TileGen.h"
+#include "DriveBoard/DriveBoard.h"
+#include "CPU/PowerPC/ppc.h"
 #ifdef NET_BOARD
 #include "Network/INetBoard.h"
 #endif // NET_BOARD

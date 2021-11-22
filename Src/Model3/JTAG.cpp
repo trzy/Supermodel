@@ -30,8 +30,11 @@
  * probably doesn't matter), so we assume IEEE 1149.1-1990 here.
  */
 
+#include "JTAG.h"
+
 #include "Supermodel.h"
-#include "Model3/JTAG.h"
+#include "Real3D.h"
+
 #include <iostream>
 
 // Finite state machine. Each state has two possible next states.

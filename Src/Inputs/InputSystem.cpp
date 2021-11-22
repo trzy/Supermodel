@@ -32,7 +32,11 @@
 // - open up API to allow direct access to keyboard, mouse and joystick values
 // - add GetKey method that is easier to use than reading keyboard with ReadMapping
 
+#include "InputSystem.h"
+
 #include "Supermodel.h"
+#include "Input.h"
+#include "OSD/Thread.h"
 
 #include <cmath>
 #include <string>

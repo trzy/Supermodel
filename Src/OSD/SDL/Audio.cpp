@@ -30,6 +30,8 @@
  * initial set up of the buffer is correct.
  */
 
+#include "Audio.h"
+
 #include "Supermodel.h"
 #include "SDLIncludes.h"
 

@@ -43,9 +43,11 @@
  *
  */
 
+#include "53C810.h"
+
 #include <cstring>
 #include "Supermodel.h"
-
+#include "CPU/PowerPC/ppc.h"
 
 /******************************************************************************
  Save States

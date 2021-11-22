@@ -34,6 +34,8 @@
 
 #include "Types.h"
 #include "CPU/Bus.h"
+#include "CPU/68K/68K.h"
+#include "CPU/Z80/Z80.h"
 #include "Util/NewConfig.h"
 
 

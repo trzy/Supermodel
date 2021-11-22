@@ -106,6 +106,7 @@
 #include <cmath>
 #include <cstring>
 #include "Supermodel.h"
+#include "Legacy3D.h"
 
 #ifdef DEBUG
 extern int g_testPolyHeaderIdx;

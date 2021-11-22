@@ -52,6 +52,8 @@
  *   CDriveBoard::Disable() to update the disabled flag.
  */
 
+#include "DriveBoard.h"
+
 #include "Supermodel.h"
 
 #include <cstdio>

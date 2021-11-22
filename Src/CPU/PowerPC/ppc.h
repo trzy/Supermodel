@@ -28,6 +28,9 @@
 #ifndef INCLUDED_PPC_H
 #define INCLUDED_PPC_H
 
+#include "BlockFile.h"
+#include "Types.h"
+#include "Debugger/CPU/PPCDebug.h"
 
 /******************************************************************************
  Definitions

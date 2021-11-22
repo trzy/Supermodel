@@ -54,7 +54,11 @@
  *		ROM 600000-7FFFFF -> E00000-FFFFFF
  */
 
+#include "SoundBoard.h"
+
 #include "Supermodel.h"
+#include "OSD/Audio.h"
+#include "Sound/SCSP.h"
 
 // DEBUG
 //#define SUPERMODEL_LOG_AUDIO	// define this to log all audio to sound.bin

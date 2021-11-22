@@ -33,9 +33,11 @@
  *   accesses (interrupts pending, halted status, etc.)
  */
 
+#include "68K.h"
+
 #include "Supermodel.h"
 #include "Musashi/m68k.h"	// Musashi 68K core
-
+#include "Debugger/CPU/Musashi68KDebug.h"
 
 /******************************************************************************
  Internal Context

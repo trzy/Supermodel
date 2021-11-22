@@ -27,7 +27,11 @@
  * maintains all individual inputs.
  */
 
+#include "Inputs.h"
+
 #include "Supermodel.h"
+#include "InputSystem.h"
+#include "InputTypes.h"
 #include "Game.h"
 #include <stdarg.h>
 #include <vector>

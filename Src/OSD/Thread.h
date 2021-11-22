@@ -28,6 +28,8 @@
 #ifndef INCLUDED_THREADS_H
 #define INCLUDED_THREADS_H
 
+#include "Types.h"
+
 #include <string>
 
 class CSemaphore;

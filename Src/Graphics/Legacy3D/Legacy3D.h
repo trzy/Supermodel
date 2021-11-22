@@ -29,9 +29,11 @@
 #ifndef INCLUDED_LEGACY3D_H
 #define INCLUDED_LEGACY3D_H
 
+#include "TextureRefs.h"
 #include "Graphics/IRender3D.h"
 #include <GL/glew.h>
 #include "Util/NewConfig.h"
+#include "Types.h"
 
 namespace Legacy3D {
 

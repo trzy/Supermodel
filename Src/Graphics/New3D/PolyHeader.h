@@ -1,6 +1,8 @@
 ﻿#ifndef _POLY_HEADER_H_
 #define _POLY_HEADER_H_
 
+#include "Types.h"
+
 namespace New3D {
 
 /*

@@ -210,17 +210,25 @@
  *
  */
 
+#include "Model3.h"
+
 #include <new>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include "Supermodel.h"
+#include "DriveBoard/BillBoard.h"
+#include "DriveBoard/JoystickBoard.h"
+#include "DriveBoard/SkiBoard.h"
+#include "DriveBoard/WheelBoard.h"
 #include "Game.h"
 #include "ROMSet.h"
 #ifdef NET_BOARD
 #include "Network/NetBoard.h"
 #include "Network/SimNetBoard.h"
 #endif // NET_BOARD
+#include "OSD/Audio.h"
+#include "OSD/Video.h"
 #include "Util/Format.h"
 #include "Util/ByteSwap.h"
 #include <functional>

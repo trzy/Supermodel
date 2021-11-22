@@ -28,6 +28,10 @@
 #ifndef INCLUDED_53C810_H
 #define INCLUDED_53C810_H
 
+#include "IRQ.h"
+#include "PCI.h"
+#include "BlockFile.h"
+#include "CPU/Bus.h"
 
 /*
  * struct NCR53C810Context:

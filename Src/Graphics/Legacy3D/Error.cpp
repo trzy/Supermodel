@@ -32,6 +32,7 @@
  */
 
 #include "Supermodel.h"
+#include "Legacy3D.h"
 
 namespace Legacy3D {
 

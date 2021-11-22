@@ -274,10 +274,14 @@
  * -- one for A/A' and another for B/B'. These are passed to the renderer.
  */
 
+#include "Render2D.h"
+
+#include "Supermodel.h"
+#include "Shader.h"
+#include "Shaders2D.h" // fragment and vertex shaders
+
 #include <cstring>
 #include <GL/glew.h>
-#include "Supermodel.h"
-#include "Graphics/Shaders2D.h" // fragment and vertex shaders
 
 
 /******************************************************************************

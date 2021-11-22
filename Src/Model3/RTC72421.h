@@ -28,6 +28,7 @@
 #ifndef INCLUDED_RTC72421_H
 #define INCLUDED_RTC72421_H
 
+#include "Types.h"
 
 /*
  * CRTC72421:

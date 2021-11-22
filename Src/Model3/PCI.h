@@ -35,6 +35,8 @@
 #ifndef INCLUDED_PCI_H
 #define INCLUDED_PCI_H
 
+#include "Types.h"
+
 #include <vector>
 
 /*

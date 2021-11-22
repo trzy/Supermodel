@@ -29,8 +29,10 @@
  * - Implement multiple keyboard and mouse support.
  */
 
-#include "Supermodel.h"
 #include "SDLInputSystem.h"
+
+#include "Supermodel.h"
+#include "Inputs/Input.h"
 
 #include <vector>
 using namespace std;
