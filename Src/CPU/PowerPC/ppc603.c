@@ -53,7 +53,6 @@ void ppc603_exception(int exception)
 				else
 					ppc.npc = 0x00000000 | 0x0500;
 
-				ppc.interrupt_pending &= ~0x1;
 				ppc_change_pc(ppc.npc);
 			}
 			break;

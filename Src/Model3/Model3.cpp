@@ -840,13 +840,8 @@ void CModel3::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, 
 /******************************************************************************
  Model 3 System Registers
 
- NOTE: Proper IRQ handling requires a "deassert" function in the PowerPC core,
- which the interpreter presently lacks. This is because different modules that
- generate IRQs, like the tilegen, Real3D, and SCSP, should each call
- IRQ.Assert() on their own, which will assert the CPU IRQ line. Right now,
- the CPU processes an interrupt and clears the line by itself, which means that
- if multiple interrupts are asserted simultaneously, depending on the IRQ
- handler code, only one may be processed. Keep an eye on this!
+ NOTE: Different modules that generate IRQs, like the tilegen, Real3D, and
+ SCSP, should each call IRQ.Assert() on their own.
 ******************************************************************************/
 
 // Set the CROM bank index (active low logic)
@@ -2003,16 +1998,7 @@ void CModel3::RunFrame(void)
 
 #ifdef NET_BOARD
     if (NetBoard->IsRunning() && m_config["SimulateNet"].ValueAs<bool>())
-    {
-        // ppc irq network needed ? no effect, is it really active/needed ?
-        IRQ.Assert(0x10);
-        ppc_execute(200); // give PowerPC time to acknowledge IRQ
-        IRQ.Deassert(0x10);
-        ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
         RunNetBoardFrame();
-        // Hum hum, if runnetboardframe is called at 1st place or between ppc irq assert/deassert, spikout freezes just after the gate with net error
-        // if runnetboardframe is called after ppc irq assert/deassert, spikout works
-    }
 #endif
   }
   else
@@ -2026,16 +2012,7 @@ void CModel3::RunFrame(void)
       RunDriveBoardFrame();
 #ifdef NET_BOARD
     if (NetBoard->IsRunning())
-    {
-      // ppc irq network needed ? no effect, is it really active/needed ?
-      IRQ.Assert(0x10);
-      ppc_execute(200); // give PowerPC time to acknowledge IRQ
-      IRQ.Deassert(0x10);
-      ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
       RunNetBoardFrame();
-      // Hum hum, if runnetboardframe is called at 1st place or between ppc irq assert/deassert, spikout freezes just after the gate with net error
-      // if runnetboardframe is called after ppc irq assert/deassert, spikout works
-    }
 #endif
   }
 

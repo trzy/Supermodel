@@ -65,6 +65,7 @@ void C53C810::SaveState(CBlockFile *SaveState)
   SaveState->Write(&Ctx.regDCNTL, sizeof(Ctx.regDCNTL));
   SaveState->Write(&Ctx.regDMODE, sizeof(Ctx.regDMODE));
   SaveState->Write(&Ctx.regDSTAT, sizeof(Ctx.regDSTAT));
+  SaveState->Write(&Ctx.regDIEN, sizeof(Ctx.regDIEN));
   SaveState->Write(&Ctx.regISTAT, sizeof(Ctx.regISTAT));
 }
 
@@ -85,6 +86,7 @@ void C53C810::LoadState(CBlockFile *SaveState)
   SaveState->Read(&Ctx.regDCNTL, sizeof(Ctx.regDCNTL));
   SaveState->Read(&Ctx.regDMODE, sizeof(Ctx.regDMODE));
   SaveState->Read(&Ctx.regDSTAT, sizeof(Ctx.regDSTAT));
+  SaveState->Read(&Ctx.regDIEN, sizeof(Ctx.regDIEN));
   SaveState->Read(&Ctx.regISTAT, sizeof(Ctx.regISTAT));
 }
 
@@ -105,7 +107,8 @@ static bool SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
   Ctx->halt = true;   // halt SCRIPTS execution
   Ctx->regISTAT |= 1; // DMA interrupt pending
   Ctx->regDSTAT |= 4; // SCRIPTS interrupt instruction received
-  Ctx->IRQ->Assert(Ctx->scsiIRQ); 
+  if (Ctx->regDIEN & 4)
+    Ctx->IRQ->Assert(Ctx->scsiIRQ);
   if ((Ctx->regDBC&0x100000)) // INTFLY
     return ErrorLog("53C810 INTFLY instruction not emulated!");
   // DSP not incremented (VF3 relies on this)
@@ -124,7 +127,7 @@ static bool SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
   // Not implemented: illegal instruction interrupt when src and dest are not aligned the same way
 
   DebugLog("53C810: Move Memory %08X -> %08X, %X\n", src, dest, numBytes);
-  //if (dest==0x94000000)printf("53C810: Move Memory %08X -> %08X, %X\n", src, dest, numBytes);    
+  //if (dest==0x94000000)printf("53C810: Move Memory %08X -> %08X, %X\n", src, dest, numBytes);
 
   // Perform a 32-bit copy if possible
   for (i = 0; i < (numBytes/4); i++)
@@ -177,8 +180,11 @@ void C53C810::Run(bool singleStep)
     // Issue IRQ and finish
     Ctx.regISTAT |= 1;            // DMA interrupt pending
     Ctx.regDSTAT |= 8;            // single step interrupt
-    Ctx.IRQ->Assert(Ctx.scsiIRQ); // generate an interrupt
-    DebugLog("53C810: Asserted IRQ\n");
+    if (Ctx.regDIEN & 8)
+    {
+      Ctx.IRQ->Assert(Ctx.scsiIRQ); // generate an interrupt
+      DebugLog("53C810: Asserted IRQ\n");
+    }
   }
   else
   {
@@ -317,6 +323,9 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
   case 0x38:    // DMODE
     Ctx.regDMODE = data;
     break;
+  case 0x39:    // DIEN
+    Ctx.regDIEN = data;
+    break;
   case 0x3B:    // DCNTL
     Ctx.regDCNTL = data;
     if ((Ctx.regDCNTL&0x14) == 0x14)    // single step
@@ -396,8 +405,10 @@ UINT8 C53C810::ReadRegister(unsigned reg)
     return (Ctx.regDSPS>>16)&0xFF;
   case 0x33:    // DSPS 31-24
     return (Ctx.regDSPS>>24)&0xFF;
-  case 0x38:
+  case 0x38:    // DMODE
     return Ctx.regDMODE;
+  case 0x39:    // DIEN
+    return Ctx.regDIEN;
   case 0x3B:    // DCNTL
     return Ctx.regDCNTL;
   default:  // get it from the register file
@@ -469,6 +480,7 @@ void C53C810::Reset(void)
   Ctx.regDCNTL = 0;
   Ctx.regDMODE = 0;
   Ctx.regDSTAT = 0x80;  // DMA FIFO empty
+  Ctx.regDIEN = 0;
   Ctx.regISTAT = 0;
   Ctx.halt = false;
   

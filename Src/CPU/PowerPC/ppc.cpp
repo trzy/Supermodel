@@ -868,9 +868,15 @@ void ppc_shutdown(void)
 
 void ppc_set_irq_line(int irqline)
 {
-	ppc.interrupt_pending |= 0x1;
-	
-	ppc603_check_interrupts();
+	if (irqline)
+	{
+		ppc.interrupt_pending |= 0x1;
+		ppc603_check_interrupts();
+	}
+	else
+	{
+		ppc.interrupt_pending &= ~0x1;
+	}
 }
 
 UINT32 ppc_get_pc(void)

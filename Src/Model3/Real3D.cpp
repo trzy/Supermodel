@@ -619,8 +619,11 @@ void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
   case 0x08:  // DMA length
     dmaLength = data;
     DMACopy();
-    dmaStatus |= 1;
-    IRQ->Assert(dmaIRQ);
+    if (dmaConfig & 1)  // only fire an IRQ if the low bit of dmaConfig is set
+    {
+        dmaStatus |= 1;
+        IRQ->Assert(dmaIRQ);
+    }
     break;
   case 0x10:  // command register
     if ((data&0x20000000)) // DMA ID command

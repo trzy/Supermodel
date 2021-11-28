@@ -69,17 +69,16 @@ void CIRQ::Assert(unsigned irqBits)
 {
 	irqState |= irqBits;
 	if ((irqState&irqEnable))	// low 8 bits are maskable interrupts
-		//ppc_set_irq_line(0);
 		ppc_set_irq_line(1);
 	if ((irqState&(~0xFF)))		// any non-maskable interrupts pending?
-		//ppc_set_irq_line(0);
 		ppc_set_irq_line(1);
 }
 
-//TO-DO: CPU needs to have deassert logic!
 void CIRQ::Deassert(unsigned irqBits)
 {
 	irqState &= ~irqBits;
+	if (!(irqState & irqEnable) && !(irqState & (~0xFF)))
+		ppc_set_irq_line(0);	// if no pending IRQs, deassert CPU IRQ line
 }
 
 void CIRQ::WriteIRQEnable(UINT8 data)
