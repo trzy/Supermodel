@@ -38,6 +38,8 @@
 #include "CPU/Z80/Z80.h"
 #include "Util/NewConfig.h"
 
+#define FIFO_STACK_SIZE			0x100
+#define FIFO_STACK_SIZE_MASK	(FIFO_STACK_SIZE - 1)
 
 /******************************************************************************
  Resampling
@@ -213,7 +215,7 @@ private:
 	UINT8		*ram;			// Z80 RAM
 
 	// Command FIFO
-	UINT8	fifo[128];
+	UINT8	fifo[FIFO_STACK_SIZE];
 	int		fifoIdxR;		// read position
 	int		fifoIdxW;		// write position
 
@@ -301,7 +303,7 @@ private:
 	UINT8		*ram;			// 68K RAM
 
 	// Command FIFO
-	UINT8	fifo[256];
+	UINT8	fifo[FIFO_STACK_SIZE];
 	int		fifoIdxR;		// read position
 	int		fifoIdxW;		// write position
 

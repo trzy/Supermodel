@@ -134,7 +134,7 @@ static DWORD IrqMidi;
 unsigned short MCIEB;
 unsigned short MCIPD;
 
-#define MIDI_STACK_SIZE			128
+#define MIDI_STACK_SIZE			0x100
 #define MIDI_STACK_SIZE_MASK	(MIDI_STACK_SIZE-1)
 
 static BYTE MidiOutStack[16];

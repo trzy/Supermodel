@@ -376,7 +376,7 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 		if (fifoIdxR != fifoIdxW)	// if these are equal, nothing has been written yet (don't advance)
 		{
 			fifoIdxR++;
-			fifoIdxR &= 127;
+			fifoIdxR &= FIFO_STACK_SIZE_MASK;
 		}
 
 		if (fifoIdxR == fifoIdxW)	// FIFO empty?
@@ -415,7 +415,7 @@ void CDSB1::SendCommand(UINT8 data)
 	 * over the course of a frame at once.
 	 */
 	fifo[fifoIdxW++] = data;
-	fifoIdxW &= 127;
+	fifoIdxW &= FIFO_STACK_SIZE_MASK;
 	//printf("Write FIFO: %02X\n", data);
 
 	// Have we caught up to the read pointer?
@@ -983,7 +983,7 @@ void CDSB2::SendCommand(UINT8 data)
 	 * over the course of a frame at once.
 	 */
 	fifo[fifoIdxW++] = data;
-	fifoIdxW &= 255;
+	fifoIdxW &= FIFO_STACK_SIZE_MASK;
 	//printf("Write FIFO: %02X\n", data);
 
 	// Have we caught up to the read pointer?
@@ -1013,7 +1013,7 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
   {
     cmdLatch = fifo[fifoIdxR];	// retrieve next command byte
     fifoIdxR++;
-    fifoIdxR &= 255;
+    fifoIdxR &= FIFO_STACK_SIZE_MASK;
 
     M68KSetIRQ(1);	// indicate pending command
     //printf("68K INT fired\n");
