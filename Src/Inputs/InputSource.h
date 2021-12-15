@@ -30,7 +30,6 @@
 
 #include <string>
 
-class CInputSystem;
 struct ForceFeedbackCmd;
 
 /*
