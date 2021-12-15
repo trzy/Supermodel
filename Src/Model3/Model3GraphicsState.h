@@ -29,10 +29,17 @@
 #ifndef INCLUDED_MODEL3GRAPHICSSTATE_H
 #define INCLUDED_MODEL3GRAPHICSSTATE_H
 
-#include "Util/NewConfig.h"
-#include "Model3/IEmulator.h"
+#include "BlockFile.h"
 #include "Game.h"
 #include "ROMSet.h"
+#include "CPU/Bus.h"
+#include "Model3/IEmulator.h"
+#include "Model3/IRQ.h"
+#include "Model3/Real3D.h"
+#include "Model3/TileGen.h"
+#include "OSD/Logger.h"
+#include "OSD/Video.h"
+#include "Util/NewConfig.h"
 
 /*
  * CModel3GraphicsState:
