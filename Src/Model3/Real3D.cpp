@@ -845,8 +845,14 @@ void CReal3D::Reset(void)
 
   fifoIdx = 0;
   m_vromTextureFIFOIdx = 0;
-  dmaStatus = 0;
+
+  dmaSrc = 0;
+  dmaDest = 0;
+  dmaLength = 0;
+  dmaData = 0;
   dmaUnknownReg = 0;
+  dmaStatus = 0;
+  dmaConfig = 0;
   
   unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   memset(memoryPool, 0, memSize);
