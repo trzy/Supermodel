@@ -754,6 +754,39 @@ void CReal3D::WriteJTAGRegister(uint64_t instruction, uint64_t data)
 }
 
 // Registers correspond to the Stat_Pckt in the Real3d sdk
+
+/*
+Stat Packet
+
+0x00:   xxxx---- -------- -------- --------		spare1
+        ----x--- -------- -------- --------		gp_done
+        -----x-- -------- -------- --------		dp_done
+        ------x- -------- -------- --------		ping_pong
+        -------x -------- -------- --------		update_done
+        -------- x------- -------- --------		rend_done
+        -------- -xxxxxxx xxxxxxxx xxxxxxxx		tot_clks 23bit val (0x7FFFFF). This is a 33.33mhz clock value.
+                                                Think this is the time the GPU takes to process the frame, used by software to
+                                                estimate the frame rate.
+
+0x01:   -------- -------- -------- --------     spare2
+        -------- -xxxxxxx xxxxxxxx xxxxxxxx     vpt0_clks - not sure what this is used for (if anything). It's not used by the SDK
+
+0x02:   -------- -------- -------- --------     spare3
+        -------- -xxxxxxx xxxxxxxx xxxxxxxx     vpt1_clks - not sure what this is used for (if anything). It's not used by the SDK
+
+0x03:   -------- -------- -------- --------     spare4
+        -------- -xxxxxxx xxxxxxxx xxxxxxxx     vpt2_clks - not sure what this is used for (if anything). It's not used by the SDK
+
+0x04:   -------- -------- -------- --------     spare5
+        -------- -xxxxxxx xxxxxxxx xxxxxxxx     vpt3_clks - not sure what this is used for (if anything). It's not used by the SDK
+
+
+0x05:   range0      (float) Line of sight value for priority level 0
+0x06:   range1      (float) Line of sight value for priority level 1
+0x07:   range2      (float) Line of sight value for priority level 2
+0x08:   range3      (float) Line of sight value for priority level 3
+0x09:   ls_cycle    (uint32) Think this is the frame number, don't think it's used by model3, since games never read this far into memory
+*/
 uint32_t CReal3D::ReadRegister(unsigned reg)
 {
   DebugLog("Real3D: Read reg %X\n", reg);
