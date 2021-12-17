@@ -758,13 +758,13 @@ void CReal3D::WriteJTAGRegister(uint64_t instruction, uint64_t data)
 /*
 Stat Packet
 
-0x00:   xxxx---- -------- -------- --------		spare1
-        ----x--- -------- -------- --------		gp_done
-        -----x-- -------- -------- --------		dp_done
-        ------x- -------- -------- --------		ping_pong
-        -------x -------- -------- --------		update_done
-        -------- x------- -------- --------		rend_done
-        -------- -xxxxxxx xxxxxxxx xxxxxxxx		tot_clks 23bit val (0x7FFFFF). This is a 33.33mhz clock value.
+0x00:   xxxx---- -------- -------- --------     spare1
+        ----x--- -------- -------- --------     gp_done
+        -----x-- -------- -------- --------     dp_done
+        ------x- -------- -------- --------     ping_pong
+        -------x -------- -------- --------     update_done
+        -------- x------- -------- --------     rend_done
+        -------- -xxxxxxx xxxxxxxx xxxxxxxx     tot_clks 23bit val (0x7FFFFF). This is a 33.33mhz clock value.
                                                 Think this is the time the GPU takes to process the frame, used by software to
                                                 estimate the frame rate.
 
