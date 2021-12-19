@@ -305,11 +305,11 @@ namespace Util
       void Serialize(std::ostream *os, size_t indent_level = 0) const;
       std::string ToString(size_t indent_level = 0) const;
       Node &operator=(const Node &rhs);
-      Node &operator=(Node &&rhs);
+      Node& operator=(Node&& rhs) noexcept;
       Node(const std::string &key);
       Node(const std::string &key, const std::string &value);
       Node(const Node &that);
-      Node(Node &&that);
+      Node(Node&& that) noexcept;
       ~Node();
     };
   } // Config

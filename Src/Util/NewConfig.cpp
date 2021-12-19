@@ -299,7 +299,7 @@ namespace Util
       return *this;
     }
 
-    Node &Node::operator=(Node &&rhs)
+    Node &Node::operator=(Node &&rhs) noexcept
     {
       Swap(rhs);
       return *this;
@@ -331,7 +331,7 @@ namespace Util
       DeepCopy(that);
     }
 
-    Node::Node(Node &&that)
+    Node::Node(Node &&that) noexcept
     {
       Swap(that);
     }
