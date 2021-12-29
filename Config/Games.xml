@@ -1228,6 +1228,8 @@
     </hardware>
     <roms>
       <patches>
+	    <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
+        <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
         <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
       </patches>
