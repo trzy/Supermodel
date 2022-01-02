@@ -309,8 +309,12 @@ void CNew3D::RenderFrame(void)
 		m_nfPairs[i].zFar  =  std::numeric_limits<float>::max();
 	}
 
-	for (int i = 0; i < 4; i++) {
-		m_lineOfSight[i] = 0;
+	{
+		std::lock_guard<std::mutex> guard(m_losMutex);
+		std::swap(m_losBack, m_losFront);
+		for (int i = 0; i < 4; i++) {
+			m_losBack->value[i] = 0;
+		}
 	}
 
 	// release any resources from last frame
@@ -1671,7 +1675,10 @@ void CNew3D::SetSignedShade(bool enable)
 
 float CNew3D::GetLosValue(int layer)
 {
-	return m_lineOfSight[layer];
+	// we always write to the 'back' buffer, and the software reads from the front
+	// then they get swapped
+	std::lock_guard<std::mutex> guard(m_losMutex);
+	return m_losFront->value[layer];
 }
 
 void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY)
@@ -1705,7 +1712,7 @@ bool CNew3D::ProcessLos(int priority)
 				float zFar	= m_nfPairs[priority].zFar;
 				float zVal	= 2.0f * zNear * zFar / (zFar + zNear - depth * (zFar - zNear));
 
-				m_lineOfSight[priority] = zVal;
+				m_losBack->value[priority] = zVal;
 				return true;
 			}
 		}

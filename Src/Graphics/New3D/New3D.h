@@ -43,6 +43,7 @@
 #include "R3DScrollFog.h"
 #include "PolyHeader.h"
 #include "R3DFrameBuffers.h"
+#include <mutex>
 
 namespace New3D {
 
@@ -262,7 +263,14 @@ private:
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
 
-	float			m_lineOfSight[4];
+	struct LOS
+	{
+		float value[4] = { 0,0,0,0 };		// line of sight value for each priority layer
+	} m_los[2];
+
+	LOS* m_losFront = &m_los[0];			// we need to double buffer this because 3d works in separate thread
+	LOS* m_losBack = &m_los[1];
+	std::mutex m_losMutex;
 
 	Vertex			m_prev[4];				// these are class variables because sega bass fishing starts meshes with shared vertices from the previous one
 	UINT16			m_prevTexCoords[4][2];	// basically relying on undefined behavour
