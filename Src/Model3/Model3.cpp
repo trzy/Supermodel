@@ -2031,7 +2031,7 @@ void CModel3::RunMainBoardFrame(void)
 
 	// Compute display and VBlank timings
 	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
-	unsigned frameCycles	= ppcCycles / 60;
+	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned gapCycles		= (unsigned)((float)frameCycles * 2.5f / 100.0f);	// we need a gap between asserting irq2 & irq 0x40
 	unsigned offsetCycles = (unsigned)((float)frameCycles * 33.f / 100.0f);
 	unsigned dispCycles		= frameCycles - gapCycles - offsetCycles;
