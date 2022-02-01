@@ -1444,6 +1444,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("SDLConstForceThreshold", "30");
 #endif
   config.Set("Outputs", "none");
+  config.Set("DumpTextures", false);
   return config;
 }
 
@@ -1529,8 +1530,9 @@ static void Help(void)
 #endif
   puts("  -print-inputs           Prints current input configuration");
   puts("");
-#ifdef SUPERMODEL_DEBUGGER
   puts("Debug Options:");
+  puts("  -dump-textures          Write textures to bitmap image files on exit");
+#ifdef SUPERMODEL_DEBUGGER
   puts("  -disable-debugger       Completely disable debugger functionality");
   puts("  -enter-debugger         Enter debugger at start of emulation");
   puts("");
@@ -1626,7 +1628,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
 #endif
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },
-
+    { "-dump-textures",       { "DumpTextures",     true } },
   };
   for (int i = 1; i < argc; i++)
   {

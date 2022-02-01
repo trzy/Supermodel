@@ -1087,8 +1087,36 @@ CReal3D::~CReal3D(void)
   }
   else
     printf("unable to dump %s\n", "texram");
-  Util::WriteSurfaceToBMP<Util::A1RGB5>("textures.bmp", reinterpret_cast<uint8_t *>(textureRAM), 2048, 2048, false);
 #endif
+
+  // Dump textures if requested
+  if (m_config["DumpTextures"].ValueAsDefault<bool>(false))
+  {
+    Util::WriteSurfaceToBMP<Util::T1RGB5>("textures_t1rgb5.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as T1RGB5 to 'textures_t1rgb5.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::A4L4Low>("textures_a4l4_lo.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as A4L4 (low) to 'textures_a4l4_lo.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L4A4Low>("textures_l4a4_lo.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L4A4 (low) to 'textures_l4a4_lo.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::A4L4High>("textures_a4l4_hi.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as A4L4 (high) to 'textures_a4l4_hi.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L4A4High>("textures_l4a4_hi.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L4A4 (high) to 'textures_l4a4_hi.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L8Low>("textures_l8_lo.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L8 (low) to 'textures_l8_lo.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L8High>("textures_l8_hi.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L8 (high) to 'textures_l8_hi.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::RGBA4>("textures_rgba4.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as RGBA4 to 'textures_rgba4.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L4Channel0>("textures_l4_0.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L4 (channel 0) to 'textures_l4_0.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L4Channel1>("textures_l4_1.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L4 (channel 1) to 'textures_l4_1.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L4Channel2>("textures_l4_2.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L4 (channel 2) to 'textures_l4_2.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::L4Channel3>("textures_l4_3.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as L4 (channel 3) to 'textures_l4_3.bmp'\n");
+  }
 
   Render3D = NULL;
   if (memoryPool != NULL)
