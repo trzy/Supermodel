@@ -28,9 +28,9 @@ namespace Util
       {
   	  id[0] = 'B';
   	  id[1] = 'M';
-  	}  
+  	}
     };
-    
+
     // BITMAPV4HEADER
     struct BMPInfoHeader
     {
@@ -93,7 +93,7 @@ namespace Util
           gamma_blue(0)
       {}
     };
-    
+
     struct FileHeader
     {
       BMPHeader bmp_header;
@@ -129,6 +129,7 @@ namespace Util
   };
 
   // Texture format 0: TRRR RRGG GGGB BBBB, T = contour bit
+  template <bool EnableContour>
   struct T1RGB5
   {
     static const unsigned bytes_per_pixel = 2;
@@ -146,10 +147,20 @@ namespace Util
     }
     static inline uint8_t GetAlpha(const uint8_t *pixel)
     {
-      bool t = (*reinterpret_cast<const uint16_t*>(pixel) >> 15) & 0x1;
-      return t ? uint8_t(0x00) : uint8_t(0xff); // T-bit indicates transparency
+      if (EnableContour)
+      {
+        bool t = (*reinterpret_cast<const uint16_t*>(pixel) >> 15) & 0x1;
+        return t ? uint8_t(0x00) : uint8_t(0xff); // T-bit indicates transparency
+      }
+      else
+      {
+        return 0xff;  // force opaque
+      }
     }
   };
+
+  using T1RGB5ContourEnabled = struct T1RGB5<true>;
+  using T1RGB5ContourIgnored = struct T1RGB5<false>;
 
   // Texture format 1: xxxx xxxx AAAA LLLL
   struct A4L4Low

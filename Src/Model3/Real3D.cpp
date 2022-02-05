@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,10 +18,10 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Real3D.cpp
- * 
+ *
  * The Model 3's Real3D-based graphics hardware. Based on the Real3D Pro-1000
  * family of image generators.
  *
@@ -29,8 +29,8 @@
  * -------
  * It appears that Step 2.0 returns a different PCI ID depending on whether
  * the PCI configuration space or DMA register are accessed. For example,
- * Virtual On 2 expects 0x178611DB from the PCI configuration header but 
- * 0x16C311DB from the DMA device. 
+ * Virtual On 2 expects 0x178611DB from the PCI configuration header but
+ * 0x16C311DB from the DMA device.
  *
  * To-Do List
  * ----------
@@ -85,11 +85,11 @@ static void UpdateRenderConfig(IRender3D *Render3D, uint64_t internalRenderConfi
 void CReal3D::SaveState(CBlockFile *SaveState)
 {
   SaveState->NewBlock("Real3D", __FILE__);
-  
+
   SaveState->Write(memoryPool, MEM_POOL_SIZE_RW); // Don't write out read-only snapshots or dirty page arrays
   SaveState->Write(&fifoIdx, sizeof(fifoIdx));
   SaveState->Write(m_vromTextureFIFO, sizeof(m_vromTextureFIFO));
-  
+
   SaveState->Write(&dmaSrc, sizeof(dmaSrc));
   SaveState->Write(&dmaDest, sizeof(dmaDest));
   SaveState->Write(&dmaLength, sizeof(dmaLength));
@@ -97,7 +97,7 @@ void CReal3D::SaveState(CBlockFile *SaveState)
   SaveState->Write(&dmaUnknownReg, sizeof(dmaUnknownReg));
   SaveState->Write(&dmaStatus, sizeof(dmaStatus));
   SaveState->Write(&dmaConfig, sizeof(dmaConfig));
-  
+
   // These used to be occupied by JTAG state
   SaveState->Write(m_internalRenderConfig, sizeof(m_internalRenderConfig));
   SaveState->Write(commandPortWritten);
@@ -118,7 +118,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
     ErrorLog("Unable to load Real3D GPU state. Save state file is corrupt.");
     return;
   }
-  
+
   SaveState->Read(memoryPool, MEM_POOL_SIZE_RW);
 
   // If multi-threaded, update read-only snapshots too
@@ -127,7 +127,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   Render3D->UploadTextures(0, 0, 0, 2048, 2048);
   SaveState->Read(&fifoIdx, sizeof(fifoIdx));
   SaveState->Read(&m_vromTextureFIFO, sizeof(m_vromTextureFIFO));
-  
+
   SaveState->Read(&dmaSrc, sizeof(dmaSrc));
   SaveState->Read(&dmaDest, sizeof(dmaDest));
   SaveState->Read(&dmaLength, sizeof(dmaLength));
@@ -135,7 +135,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&dmaUnknownReg, sizeof(dmaUnknownReg));
   SaveState->Read(&dmaStatus, sizeof(dmaStatus));
   SaveState->Read(&dmaConfig, sizeof(dmaConfig));
-  
+
   SaveState->Read(m_internalRenderConfig, sizeof(m_internalRenderConfig));
   UpdateRenderConfig(Render3D, m_internalRenderConfig);
   SaveState->Read(&commandPortWritten);
@@ -224,14 +224,14 @@ uint32_t CReal3D::UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, uns
             copied += toCopy;
           }
           d >>= 1;
-          pSrc += PAGE_SIZE;  
+          pSrc += PAGE_SIZE;
           pDst += PAGE_SIZE;
         }
         dirty[i] = 0;
       }
       else
       {
-        pSrc += 8 * PAGE_SIZE;  
+        pSrc += 8 * PAGE_SIZE;
         pDst += 8 * PAGE_SIZE;
       }
     }
@@ -357,7 +357,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
         for (uint32_t yy = 0; yy < tileY; yy++)
         {
           for (uint32_t xx = 0; xx < tileX; xx++)
-          { 
+          {
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
             if (tileX == 1) texData -= tileY;
@@ -518,7 +518,7 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
 
 /******************************************************************************
  DMA Device
- 
+
  Register 0xC:
  -------------
  +---+---+---+---+---+---+---+---+
@@ -531,7 +531,7 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
 void CReal3D::DMACopy(void)
 {
   DebugLog("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");
-  //printf("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":""); 
+  //printf("Real3D DMA copy (PC=%08X, LR=%08X): %08X -> %08X, %X %s\n", ppc_get_pc(), ppc_get_lr(), dmaSrc, dmaDest, dmaLength*4, (dmaConfig&0x80)?"(byte reversed)":"");
   if ((dmaConfig&0x80)) // reverse bytes
   {
     while (dmaLength != 0)
@@ -566,7 +566,7 @@ uint8_t CReal3D::ReadDMARegister8(unsigned reg)
   default:
     break;
   }
-  
+
   DebugLog("Real3D: ReadDMARegister8: reg=%X\n", reg);
   return 0;
 }
@@ -601,7 +601,7 @@ uint32_t CReal3D::ReadDMARegister32(unsigned reg)
   default:
     break;
   }
-  
+
   DebugLog("Real3D: ReadDMARegister32: reg=%X\n", reg);
   return 0;
 }
@@ -652,7 +652,7 @@ void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
 
 void CReal3D::Flush(void)
 {
-  commandPortWritten = true;  
+  commandPortWritten = true;
   DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
 
   // Upload textures (if any)
@@ -825,13 +825,13 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
 {
   uint32_t  d;
-  
+
   if ((bits==8))
   {
     DebugLog("Real3D: %d-bit PCI read request for reg=%02X\n", bits, reg);
     return 0;
   }
-  
+
   // This is a little endian device, must return little endian words
   switch (reg)
   {
@@ -859,16 +859,16 @@ uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bit
 
   return 0;
 }
-  
+
 void CReal3D::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, uint32_t data)
 {
   DebugLog("Real3D: PCI %d-bit write request for reg=%02X, data=%08X\n", bits, reg, data);
 }
-  
+
 void CReal3D::Reset(void)
 {
   error = false;
-  
+
   m_pingPong = 0;
   commandPortWritten = false;
   commandPortWrittenRO = false;
@@ -886,7 +886,7 @@ void CReal3D::Reset(void)
   dmaUnknownReg = 0;
   dmaStatus = 0;
   dmaConfig = 0;
-  
+
   unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   memset(memoryPool, 0, memSize);
   memset(m_vromTextureFIFO, 0, sizeof(m_vromTextureFIFO));
@@ -933,11 +933,11 @@ void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
 
   // Set PCI ID
   pciID = pciIDValue;
-    
+
   // Pass to renderer
   if (Render3D != NULL)
     Render3D->SetStepping(step);
-    
+
   // Set ASIC ID codes
   m_asicID.clear();
   if (step == 0x10)
@@ -983,15 +983,15 @@ bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPt
   float  memSizeMB = (float)memSize/(float)0x100000;
 
   // IRQ and bus objects
-  Bus = BusObjectPtr; 
+  Bus = BusObjectPtr;
   IRQ = IRQObjectPtr;
   dmaIRQ = dmaIRQBit;
-    
+
   // Allocate all Real3D RAM regions
   memoryPool = new(std::nothrow) uint8_t[memSize];
   if (NULL == memoryPool)
     return ErrorLog("Insufficient memory for Real3D object (needs %1.1f MB).", memSizeMB);
-  
+
   // Set up main pointers
   cullingRAMLo = (uint32_t *) &memoryPool[OFFSET_8C];
   cullingRAMHi = (uint32_t *) &memoryPool[OFFSET_8E];
@@ -1011,10 +1011,10 @@ bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPt
     polyRAMDirty = (uint8_t *) &memoryPool[OFFSET_98_DIRTY];
     textureRAMDirty = (uint8_t *) &memoryPool[OFFSET_TEXRAM_DIRTY];
   }
-  
+
   // VROM pointer passed to us
   vrom = (uint32_t *) vromPtr;
-  
+
   DebugLog("Initialized Real3D (allocated %1.1f MB)\n", memSizeMB);
   return OKAY;
 }
@@ -1022,7 +1022,7 @@ bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPt
 CReal3D::CReal3D(const Util::Config::Node &config)
   : m_config(config),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>())
-{ 
+{
   Render3D = NULL;
   memoryPool = NULL;
   cullingRAMLo = NULL;
@@ -1047,7 +1047,7 @@ CReal3D::CReal3D(const Util::Config::Node &config)
  * Destructor.
  */
 CReal3D::~CReal3D(void)
-{ 
+{
   // Dump memory
 #if 0
   FILE  *fp;
@@ -1092,8 +1092,10 @@ CReal3D::~CReal3D(void)
   // Dump textures if requested
   if (m_config["DumpTextures"].ValueAsDefault<bool>(false))
   {
-    Util::WriteSurfaceToBMP<Util::T1RGB5>("textures_t1rgb5.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
-    printf("Wrote textures as T1RGB5 to 'textures_t1rgb5.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::T1RGB5ContourEnabled>("textures_t1rgb5_contour.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as T1RGB5 (contour bit enabled) to 'textures_t1rgb5_contour.bmp'\n");
+    Util::WriteSurfaceToBMP<Util::T1RGB5ContourIgnored>("textures_t1rgb5_opaque.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
+    printf("Wrote textures as T1RGB5 (contour bit ignored) to 'textures_t1rgb5_opaque.bmp'\n");
     Util::WriteSurfaceToBMP<Util::A4L4Low>("textures_a4l4_lo.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
     printf("Wrote textures as A4L4 (low) to 'textures_a4l4_lo.bmp'\n");
     Util::WriteSurfaceToBMP<Util::L4A4Low>("textures_l4a4_lo.bmp", reinterpret_cast<uint8_t*>(textureRAM), 2048, 2048, false);
