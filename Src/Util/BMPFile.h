@@ -26,9 +26,9 @@ namespace Util
           reserved2(0),
           bitmap_offset(_bitmap_offset)
       {
-  	  id[0] = 'B';
-  	  id[1] = 'M';
-  	}
+  	    id[0] = 'B';
+  	    id[1] = 'M';
+  	  }
     };
 
     // BITMAPV4HEADER
@@ -69,7 +69,7 @@ namespace Util
           num_planes(1),
           bits_per_pixel(32),
           compression_method(3),        // BI_BITFIELDS
-          bitmap_size(_width*_height*3),
+          bitmap_size(_width*_height*4),
           horizontal_resolution(2835),  // 72 dpi
           vertical_resolution(2835),
           num_palette_colors(0),
