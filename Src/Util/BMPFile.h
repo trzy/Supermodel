@@ -159,8 +159,8 @@ namespace Util
     }
   };
 
-  using T1RGB5ContourEnabled = struct T1RGB5<true>;
-  using T1RGB5ContourIgnored = struct T1RGB5<false>;
+using T1RGB5ContourEnabled = T1RGB5<true>;
+using T1RGB5ContourIgnored = T1RGB5<false>;
 
   // Texture format 1: xxxx xxxx AAAA LLLL
   struct A4L4Low
@@ -345,10 +345,10 @@ namespace Util
       }
   };
 
-  using L4Channel0 = struct L4<0>;
-  using L4Channel1 = struct L4<1>;
-  using L4Channel2 = struct L4<2>;
-  using L4Channel3 = struct L4<3>;
+  using L4Channel0 = L4<0>;
+  using L4Channel1 = L4<1>;
+  using L4Channel2 = L4<2>;
+  using L4Channel3 = L4<3>;
 
   template <class SurfaceFormat>
   static bool WriteSurfaceToBMP(const std::string &file_name, const uint8_t *pixels, int32_t width, int32_t height, bool flip_vertical)
