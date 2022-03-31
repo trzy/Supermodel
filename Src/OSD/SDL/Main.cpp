@@ -1433,6 +1433,9 @@ static Util::Config::Node DefaultConfig()
   // NetBoard
   config.Set("Network", false);
   config.Set("SimulateNet", true);
+  config.Set("PortIn", unsigned(1970));
+  config.Set("PortOut", unsigned(1971));
+  config.Set("AddressOut", "127.0.0.1");
 #endif
 #else
   config.Set("InputSystem", "sdl");
