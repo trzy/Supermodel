@@ -203,7 +203,8 @@ private:
 	UINT8	ctrlReg;			// control register: ROM banking
 	
 	// Audio
-	INT16	*audioL, *audioR;	// left and right audio channels (1/60th second, 44.1 KHz)
+	INT16* audioFL, * audioFR;	// left and right front audio channels (1/60th second, 44.1 KHz)
+	INT16* audioRL, * audioRR;	// left and right rear audio channels (1/60th second, 44.1 KHz)
 };
 
 

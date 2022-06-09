@@ -124,6 +124,14 @@ public:
 	 */
 	void SetValue(EOutputs output, UINT8 value);
 
+	/* 
+	 * HasValue(EOutputs output)
+	 *
+	 * Returns if the value has been set at least once, 
+	 * meaning it is used by the game.
+	 */
+	bool HasValue(EOutputs output);
+
 protected:
 	/*
 	 * COutputs():

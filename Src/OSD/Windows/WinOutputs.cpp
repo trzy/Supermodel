@@ -57,6 +57,7 @@ CWinOutputs::~CWinOutputs()
 	// Broadcast a shutdown message
 	if (m_hwnd)
 		PostMessage(HWND_BROADCAST, m_onStop, (WPARAM)m_hwnd, 0);
+	DeleteWindowClass();
 }
 
 bool CWinOutputs::Initialize()
@@ -143,7 +144,19 @@ bool CWinOutputs::CreateWindowClass()
 	
 	return false;
 }
+bool CWinOutputs::DeleteWindowClass()
+{
+	if (!s_createdClass)
+		return true;
 
+	// Register class
+	if (UnregisterClass(OUTPUT_WINDOW_CLASS, GetModuleHandle(NULL))) {
+		s_createdClass = false;
+		return true;
+	}
+
+	return false;
+}
 bool CWinOutputs::AllocateMessageId(UINT &regId, LPCSTR str)
 {
 	regId = RegisterWindowMessage(str);

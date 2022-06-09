@@ -58,16 +58,17 @@
 #include <algorithm>
 #include <GL/glew.h>
 
+#ifdef SUPERMODEL_WIN32
+#include "DirectInputSystem.h"
+#include "WinOutputs.h"
+#endif
+
 #include "Supermodel.h"
 #include "Util/Format.h"
 #include "Util/NewConfig.h"
 #include "Util/ConfigBuilders.h"
 #include "GameLoader.h"
 #include "SDLInputSystem.h"
-#ifdef SUPERMODEL_WIN32
-#include "DirectInputSystem.h"
-#include "WinOutputs.h"
-#endif
 #include "SDLIncludes.h"
 #include "Debugger/SupermodelDebugger.h"
 #include "Graphics/Legacy3D/Legacy3D.h"
@@ -91,7 +92,7 @@ static Util::Config::Node s_runtime_config("Global");
  Display Management
 ******************************************************************************/
 
-static SDL_Window *s_window = nullptr;
+SDL_Window *s_window = nullptr;
 
 /*
  * Position and size of rectangular region within OpenGL display to render to.
@@ -837,7 +838,7 @@ static void SuperSleep(UINT32 time)
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, std::shared_ptr<Debugger::CDebugger> Debugger)
+int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, IScripting* scripting, std::shared_ptr<Debugger::CDebugger> Debugger)
 {
   std::shared_ptr<CLogger> oldLogger;
 #else
@@ -880,7 +881,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   PrintGLInfo(false, true, false);
 
   // Initialize audio system
-  if (OKAY != OpenAudio())
+  SetAudioType(game.audio);
+  if (OKAY != OpenAudio(s_runtime_config))
     return 1;
 
   // Hide mouse if fullscreen, enable crosshairs for gun games
@@ -908,7 +910,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
     goto QuitError;
   Model3->AttachRenderers(Render2D,Render3D);
-
+  
   // Reset emulator
   Model3->Reset();
 
@@ -1388,6 +1390,10 @@ static Util::Config::Node DefaultConfig()
   // CSoundBoard
   config.Set("EmulateSound", true);
   config.Set("Balance", "0");
+  config.Set("BalanceLeftRight", "0");
+  config.Set("BalanceFrontRear", "0");
+  config.Set("NbSoundChannels", "4");
+  config.Set("SoundFreq", "57.6"); // 60.0f? 57.524160f?
   // CDSB
   config.Set("EmulateDSB", true);
   config.Set("SoundVolume", "100");
@@ -1454,8 +1460,8 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2011-2021 by Bart Trzynadlowski, Nik Henson, Ian Curtis,");
-  puts("                       Harry Tuttle, and Spindizzi\n");
+  puts("Copyright 2011-2022 by Bart Trzynadlowski, Nik Henson, Ian Curtis, Harry Tuttle,");
+  puts("                       Spindizzi, gm_mathew and njz3\n");
 }
 
 static void Help(void)
@@ -1510,6 +1516,7 @@ static void Help(void)
   puts("                          when Digital Sound Board is present [Default: 100]");
   puts("  -music-volume=<vol>     Digital Sound Board volume in % [Default: 100]");
   puts("  -balance=<bal>          Relative front/rear balance in % [Default: 0]");
+  puts("  -channels=<c>           Number of sound channels to use on host [Default: 4]");
   puts("  -flip-stereo            Swap left and right audio channels");
   puts("  -no-sound               Disable sound board emulation (sound effects)");
   puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
@@ -1585,6 +1592,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-sound-volume",          "SoundVolume"             },
     { "-music-volume",          "MusicVolume"             },
     { "-balance",               "Balance"                 },
+    { "-channels", 	            "NbSoundChannels"         },
+    { "-soundfreq",             "SoundFreq"               },
     { "-input-system",          "InputSystem"             },
     { "-outputs",               "Outputs"                 },
     { "-log-output",            "LogOutput"               },

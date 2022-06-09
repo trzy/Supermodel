@@ -163,7 +163,7 @@ public:
   virtual void AttachInputs(CInputs *InputsPtr) = 0;
   
   /*
-   * AttachInputs(InputsPtr):
+   * AttachOutputs(InputsPtr):
    *
    * Attaches OSD-managed outputs (cabinet lamps, etc.)
    *

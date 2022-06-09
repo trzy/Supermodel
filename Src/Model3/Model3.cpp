@@ -472,6 +472,11 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     }
     return data;
 
+  case 0x10: // Drive board
+      return OutputRegister[0];
+  case 0x14: // Lamps
+      return OutputRegister[1];
+
   case 0x0C:  // game-specific inputs
 
     data = 0xFF;
@@ -651,9 +656,11 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
     break;
 
   case 0x10:  // Drive board
-    DriveBoard->Write(data);
+    if (DriveBoard->IsAttached())
+      DriveBoard->Write(data);
     if (NULL != Outputs) // TODO - check gameInputs
       Outputs->SetValue(OutputRawDrive, data);
+    OutputRegister[0] = data;
     break;
 
   case 0x14:  // Lamp outputs (Daytona/Scud Race/Sega Rally/Le Mans 24)
@@ -667,6 +674,7 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
       Outputs->SetValue(OutputLampLeader, !!(data&0x80));
       Outputs->SetValue(OutputRawLamps, data);
     }
+    OutputRegister[1] = data;
     break;
 
   case 0x24:  // Serial FIFO 1
@@ -2017,7 +2025,8 @@ void CModel3::RunFrame(void)
   }
 
   timings.frameTicks = CThread::GetTicks() - start;
-
+  // Frame counter
+  timings.frameId++;
   return;
 
 ThreadError:
@@ -2810,7 +2819,8 @@ void CModel3::Reset(void)
   NetBoard->Reset();
 #endif
   timings.frameTicks = 0;
-
+  timings.frameId = 0;
+  
   DebugLog("Model 3 reset\n");
 }
 
@@ -3176,7 +3186,7 @@ INetBoard *CModel3::GetNetBoard(void)
 }
 #endif
 
-CModel3::CModel3(const Util::Config::Node &config)
+CModel3::CModel3(Util::Config::Node &config)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),

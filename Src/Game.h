@@ -14,6 +14,18 @@ struct Game
   unsigned year = 0;
   std::string stepping;
   std::string mpeg_board;
+  enum AudioTypes
+  {
+      MONO = 0,             // Merge DSB+SCSP1+SCSP2 to 1 channel mono
+      STEREO_LR,            // Merge DSP+SCSP1+SCSP2 to 2 channels stereo Left/Right (most common)
+      STEREO_RL,            // Merge DSP+SCSP1+SCSP2 to 2 channels stereo reversed Right/Left
+      QUAD_1_FLR_2_RLR,     // Split DSB+SCSP1 to FrontLeft/FrontRight and SCSP2 to RearLeft/RearRight (Daytona2)
+      QUAD_1_FRL_2_RRL,     // Split DSB+SCSP1 to FrontRight/FrontLeft and SCSP2 to RearRight/RearLeft
+      QUAD_1_RLR_2_FLR,     // Split DSB+SCSP1 to RearLeft/RearRight and SCSP2 to FrontLeft/FrontRight 
+      QUAD_1_RRL_2_FRL,     // Split DSB+SCSP1 to RearRight/RearLeft and SCSP2 to FrontRight/FrontLeft
+      QUAD_1_LR_2_FR_MIX,   // Specific srally2: Split SCSP2 and mix first channel to DSB+SCP11 Front Left/Right and second to Read Left/Right
+  };
+  AudioTypes audio = STEREO_LR;
   std::string pci_bridge;               // overrides default PCI bridge type for stepping (empty string for default)
   uint32_t real3d_pci_id = 0;           // overrides default Real3D PCI ID for stepping (0 for default)
   float real3d_status_bit_set_percent_of_frame = 0; // overrides default status bit timing (0 for default)

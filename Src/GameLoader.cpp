@@ -198,6 +198,20 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
   game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
   game->mpeg_board = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>("");
+  std::map<std::string, Game::AudioTypes> audio_types
+  {
+    { "",                      Game::STEREO_LR }, // default to stereo
+    { "Mono",                  Game::MONO },
+    { "Stereo",                Game::STEREO_LR },
+    { "StereoReversed",        Game::STEREO_RL },
+    { "QuadFrontRear",         Game::QUAD_1_FLR_2_RLR },
+    { "QuadFrontRearReversed", Game::QUAD_1_FRL_2_RRL },
+    { "QuadRearFront",         Game::QUAD_1_RLR_2_FLR },
+    { "QuadRearFrontReversed", Game::QUAD_1_RRL_2_FRL },
+    { "QuadMix",               Game::QUAD_1_LR_2_FR_MIX}
+  };
+  std::string audio_type = game_node["hardware/audio"].ValueAsDefault<std::string>(std::string());
+  game->audio = audio_types[audio_type];
   game->pci_bridge = game_node["hardware/pci_bridge"].ValueAsDefault<std::string>("");
   game->real3d_pci_id = game_node["hardware/real3d_pci_id"].ValueAsDefault<uint32_t>(0);
   game->real3d_status_bit_set_percent_of_frame = game_node["hardware/real3d_status_bit_set_percent_of_frame"].ValueAsDefault<float>(0);

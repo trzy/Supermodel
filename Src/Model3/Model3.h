@@ -63,6 +63,7 @@ struct FrameTimings
   UINT32 netTicks;
 #endif
   UINT32 frameTicks;
+  UINT64 frameId;
 };
 
 /*
@@ -95,6 +96,8 @@ public:
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
   bool Init(void);
+  // For Scripting tweaks
+  Util::Config::Node& GetConfig() { return this->m_config; }
 
   // IPCIDevice interface
   UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
@@ -184,7 +187,7 @@ public:
    *    config  Run-time configuration. The reference should be held because
    *            this changes at run-time.
    */
-  CModel3(const Util::Config::Node &config);
+  CModel3(Util::Config::Node &config);
   ~CModel3(void);
 
   /*
@@ -228,7 +231,7 @@ private:
   int     RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
 
   // Runtime configuration
-  const Util::Config::Node &m_config;
+  Util::Config::Node &m_config;
   bool m_multiThreaded;
   bool m_gpuMultiThreaded;
 
@@ -262,6 +265,7 @@ private:
   UINT8   *driveROM;    // 32 KB drive board ROM (Z80 program) (optional)
   UINT8   *netRAM;		// 64 KB RAM
   UINT8	  *netBuffer;	// 128 KB buffer
+  UINT8   OutputRegister[2];   // Input/output register for driveboard and lamps
 
   // Banked CROM
   UINT8     *cromBank;    // currently mapped in CROM bank
@@ -321,7 +325,6 @@ private:
   INetBoard   *NetBoard;      // Net board
   bool		m_runNetBoard;
 #endif
-
 };
 
 

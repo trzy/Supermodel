@@ -94,6 +94,7 @@ private:
 	 * Registers the window class and sets up OutputWindowProcCallback to process all messages sent to the emulator window. 
 	 */
 	static bool CreateWindowClass();
+	static bool DeleteWindowClass();
 
 	/*
 	 * OutputWindowProcCallback(hwnd, msg, wParam, lParam):
