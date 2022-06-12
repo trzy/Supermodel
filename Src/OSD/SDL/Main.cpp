@@ -823,15 +823,49 @@ void EndFrameVideo()
   SDL_GL_SwapWindow(s_window);
 }
 
-static void SuperSleep(UINT32 time)
-{
-  UINT32 start = SDL_GetTicks();
-  UINT32 tics  = start;
 
-  while (start + time > tics) {
-    tics = SDL_GetTicks();
-  }
+/******************************************************************************
+ Frame Timing
+******************************************************************************/
+
+static uint64_t s_perfCounterFrequency = 0;
+
+static uint64_t GetDesiredRefreshRateMilliHz()
+{
+  // The refresh rate is expressed as mHz (millihertz -- Hz * 1000) in order to
+  // be expressable as an integer. E.g.: 57.524 Hz -> 57524 mHz.
+  float refreshRateHz = std::abs(s_runtime_config["RefreshRate"].ValueAs<float>());
+  uint64_t refreshRateMilliHz = uint64_t(1000.0f * refreshRateHz);
+  return refreshRateMilliHz;
 }
+
+static void SuperSleepUntil(uint64_t target)
+{
+  uint64_t time = SDL_GetPerformanceCounter();
+
+  // If we're ahead of the target, we're done
+  if (time > target)
+  {
+    return;
+  }
+
+  // Compute the whole number of millis to sleep. Because OS sleep is not accurate,
+  // we actually sleep for one less and will spin-wait for the final millisecond.
+  int64_t numWholeMillisToSleep = int64_t((target - time) * 1000 / s_perfCounterFrequency);
+  numWholeMillisToSleep -= 1;
+  if (numWholeMillisToSleep > 0)
+  {
+    SDL_Delay(numWholeMillisToSleep);
+  }
+
+  // Spin until requested time
+  uint64_t now;
+  do
+  {
+    now = SDL_GetPerformanceCounter();
+  } while (now < target);
+}
+
 
 /******************************************************************************
  Main Program Loop
@@ -846,7 +880,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 {
 #endif // SUPERMODEL_DEBUGGER
   std::string initialState = s_runtime_config["InitStateFile"].ValueAs<std::string>();
-  unsigned    prevFPSTicks;
+  uint64_t    prevFPSTicks;
   unsigned    fpsFramesElapsed;
   bool        gameHasLightguns = false;
   bool        quit = false;
@@ -902,6 +936,11 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   if (Outputs != NULL)
     Model3->AttachOutputs(Outputs);
 
+  // Frame timing
+  s_perfCounterFrequency = SDL_GetPerformanceFrequency();
+  uint64_t perfCountPerFrame = s_perfCounterFrequency * 1000 / GetDesiredRefreshRateMilliHz();
+  uint64_t nextTime = 0;
+
   // Initialize the renderers
   CRender2D *Render2D = new CRender2D(s_runtime_config);
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
@@ -910,7 +949,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
     goto QuitError;
   Model3->AttachRenderers(Render2D,Render3D);
-  
+
   // Reset emulator
   Model3->Reset();
 
@@ -930,7 +969,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Emulate!
   fpsFramesElapsed = 0;
-  prevFPSTicks = SDL_GetTicks();
+  prevFPSTicks = SDL_GetPerformanceCounter();
   quit = false;
   paused = false;
   dumpTimings = false;
@@ -943,8 +982,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 #endif
   while (!quit)
   {
-    auto startTime = SDL_GetTicks();
-
     // Render if paused, otherwise run a frame
     if (paused)
       Model3->RenderFrame();
@@ -1211,30 +1248,27 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     }
 #endif // SUPERMODEL_DEBUGGER
 
-
-    // Frame rate and limiting
-    unsigned currentFPSTicks = SDL_GetTicks();
-    if (s_runtime_config["ShowFrameRate"].ValueAs<bool>())
-    {
-      ++fpsFramesElapsed;
-      if((currentFPSTicks-prevFPSTicks) >= 1000)  // update FPS every 1 second (each tick is 1 ms)
-      {
-        sprintf(titleStr, "%s - %1.1f FPS%s", baseTitleStr, (float)fpsFramesElapsed/((float)(currentFPSTicks-prevFPSTicks)/1000.0f), paused ? " (Paused)" : "");
-        SDL_SetWindowTitle(s_window, titleStr);
-        prevFPSTicks = currentFPSTicks;     // reset tick count
-        fpsFramesElapsed = 0;         // reset frame count
-      }
-    }
-
+    // Refresh rate (frame limiting)
     if (paused || s_runtime_config["Throttle"].ValueAs<bool>())
     {
-        UINT32 endTime    = SDL_GetTicks();
-        UINT32 diff     = endTime - startTime;
-        UINT32 frameTime  = (UINT32)(1000 / 60.f);    // 60 fps, we could roll with 57.5? that would be a jerk fest on 60hz screens though
+      SuperSleepUntil(nextTime);
+      nextTime = SDL_GetPerformanceCounter() + perfCountPerFrame;
+    }
 
-        if (diff < frameTime) {
-            SuperSleep(frameTime - diff);
-        }
+    // Measure frame rate
+    uint64_t currentFPSTicks = SDL_GetPerformanceCounter();
+    if (s_runtime_config["ShowFrameRate"].ValueAs<bool>())
+    {
+      fpsFramesElapsed += 1;
+      uint64_t measurementTicks = currentFPSTicks - prevFPSTicks;
+      if (measurementTicks >= s_perfCounterFrequency) // update FPS every 1 second (s_perfCounterFrequency is how many perf ticks in one second)
+      {
+        float fps = float(fpsFramesElapsed) / (float(measurementTicks) / float(s_perfCounterFrequency));
+        sprintf(titleStr, "%s - %1.3f FPS%s", baseTitleStr, fps, paused ? " (Paused)" : "");
+        SDL_SetWindowTitle(s_window, titleStr);
+        prevFPSTicks = currentFPSTicks;   // reset tick count
+        fpsFramesElapsed = 0;             // reset frame count
+      }
     }
 
     if (dumpTimings && !paused)
@@ -1413,6 +1447,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("WideBackground", false);
   config.Set("VSync", true);
   config.Set("Throttle", true);
+  config.Set("RefreshRate", 60.0f);
   config.Set("ShowFrameRate", false);
   config.Set("Crosshairs", int(0));
   config.Set("FlipStereo", false);
@@ -1461,7 +1496,7 @@ static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
   puts("Copyright 2011-2022 by Bart Trzynadlowski, Nik Henson, Ian Curtis, Harry Tuttle,");
-  puts("                       Spindizzi, gm_mathew and njz3\n");
+  puts("                       Spindizzi, gm_mathew, and njz3\n");
 }
 
 static void Help(void)
@@ -1492,9 +1527,10 @@ static void Help(void)
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
   puts("                          background layer to screen width");
   puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
-  puts("  -no-throttle            Disable 60 Hz frame rate lock");
+  puts("  -no-throttle            Disable frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
   puts("  -no-vsync               Do not lock to vertical refresh rate");
+  puts("  -true-hz                Use true Model 3 refresh rate of 57.524 Hz");
   puts("  -show-fps               Display frame rate in window title bar");
   puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
   puts("                          0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
@@ -1714,6 +1750,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
           }
         }
       }
+      else if (arg == "-true-hz")
+        cmd_line.config.Set("RefreshRate", 57.524f);
       else if (arg == "-print-gl-info")
         cmd_line.print_gl_info = true;
       else if (arg == "-config-inputs")
