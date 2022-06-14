@@ -851,7 +851,7 @@ static void SuperSleepUntil(uint64_t target)
 
   // Compute the whole number of millis to sleep. Because OS sleep is not accurate,
   // we actually sleep for one less and will spin-wait for the final millisecond.
-  uint32_t numWholeMillisToSleep = uint32_t((target - time) * 1000 / s_perfCounterFrequency);
+  int32_t numWholeMillisToSleep = int32_t((target - time) * 1000 / s_perfCounterFrequency);
   numWholeMillisToSleep -= 1;
   if (numWholeMillisToSleep > 0)
   {
