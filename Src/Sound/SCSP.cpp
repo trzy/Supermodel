@@ -639,15 +639,15 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 
 	for(int i=0;i<0x400;++i)
 	{
-		float fcent=(double) 1200.0*log2((double)(((double) 1024.0+(double)i)/(double)1024.0));
+		double fcent=(double) 1200.0*log2((double)(((double) 1024.0+(double)i)/(double)1024.0));
 		//float fcent=1.0+(float) i/1024.0;
 		fcent=(double) 44100.0*pow(2.0,fcent/1200.0);
-		FNS_Table[i]=(float) (1<<SHIFT) *fcent;
+		FNS_Table[i]=(UINT32)((float) (1<<SHIFT) *fcent);
 		//FNS_Table[i]=(i>>(10-SHIFT))|(1<<SHIFT);
 		
 	}
 	for (int i = 0; i < 0x400; ++i) {
-		float envDB = ((float)(3 * (i - 0x3ff))) / 32.0;
+		float envDB = ((float)(3 * (i - 0x3ff))) / 32.0f;
 		float scale = (float)(1 << SHIFT);
 		EG_TABLE[i] = (INT32)(pow(10.0, envDB / 20.0)*scale);
 	}
@@ -681,28 +681,28 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 
 		float TL=1.0;
 		float SegaDB=0;
-		if(iTL&0x01) SegaDB-=0.4;
-		if(iTL&0x02) SegaDB-=0.8;
-		if(iTL&0x04) SegaDB-=1.5;
-		if(iTL&0x08) SegaDB-=3;
-		if(iTL&0x10) SegaDB-=6;
-		if(iTL&0x20) SegaDB-=12;
-		if(iTL&0x40) SegaDB-=24;
-		if(iTL&0x80) SegaDB-=48;
+		if(iTL&0x01) SegaDB-=0.4f;
+		if(iTL&0x02) SegaDB-=0.8f;
+		if(iTL&0x04) SegaDB-=1.5f;
+		if(iTL&0x08) SegaDB-=3.0f;
+		if(iTL&0x10) SegaDB-=6.0f;
+		if(iTL&0x20) SegaDB-=12.0f;
+		if(iTL&0x40) SegaDB-=24.0f;
+		if(iTL&0x80) SegaDB-=48.0f;
 
-		TL=pow(10.0,SegaDB/20.0);
+		TL=powf(10.0f,SegaDB/20.0f);
 
 		float PAN=1.0;
 
 		SegaDB=0;
-		if(iPAN&0x1) SegaDB-=3;
-		if(iPAN&0x2) SegaDB-=6;
-		if(iPAN&0x4) SegaDB-=12;
-		if(iPAN&0x8) SegaDB-=24;
+		if(iPAN&0x1) SegaDB-=3.0f;
+		if(iPAN&0x2) SegaDB-=6.0f;
+		if(iPAN&0x4) SegaDB-=12.0f;
+		if(iPAN&0x8) SegaDB-=24.0f;
 
 		if(iPAN==0xf) PAN=0.0;
 		else if(iPAN==0x1f) PAN=0.0;
-		else PAN=pow(10.0,SegaDB/20.0);
+		else PAN=powf(10.0f,SegaDB/20.0f);
 
 		float LPAN,RPAN;
 
@@ -719,7 +719,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 
 		float SDL=1.0;
 		if(iSDL)
-			SDL=pow(10.0,(SDLT[iSDL])/20.0);
+			SDL=powf(10.0f,(SDLT[iSDL])/20.0f);
 		else
 			SDL=0.0;
 
@@ -1545,7 +1545,7 @@ void SCSP_CpuRunScanline()
 
 void SCSP_DoMasterSamples(int nsamples)
 {
-	int slice = 12000000 / (SoundClock*nsamples);	// 68K cycles/sample
+	int slice = (int)(12000000 / (SoundClock*nsamples));	// 68K cycles/sample
 	static int lastdiff = 0;
 
 	/*

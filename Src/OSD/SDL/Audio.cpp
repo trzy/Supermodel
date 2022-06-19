@@ -154,6 +154,18 @@ static INT16 AddAndClampINT16(INT32 x, INT32 y)
     return (INT16)sum;
 }
 
+static INT16 MixINT16(INT32 x, INT32 y)
+{
+    INT32 sum = (x + y)>>1;
+    if (sum > INT16_MAX) {
+        sum = INT16_MAX;
+    }
+    if (sum < INT16_MIN) {
+        sum = INT16_MIN;
+    }
+    return (INT16)sum;
+}
+
 static void PlayCallback(void* data, Uint8* stream, int len)
 {
     //printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
@@ -265,9 +277,9 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
 
     if (nbHostAudioChannels == 1) {
         for (unsigned i = 0; i < numSamples; i++) {
-            INT16 monovalue = AddAndClampINT16(
-                (INT32)(leftFrontBuffer[i] * balanceFactorFrontLeft) + (INT32)(rightFrontBuffer[i] * balanceFactorFrontRight),
-                (INT32)(leftRearBuffer[i] * balanceFactorRearLeft) + (INT32)(rightRearBuffer[i] * balanceFactorRearRight));
+            INT16 monovalue = MixINT16(
+                MixINT16((INT32)(leftFrontBuffer[i] * balanceFactorFrontLeft), (INT32)(rightFrontBuffer[i] * balanceFactorFrontRight)),
+                MixINT16((INT32)(leftRearBuffer[i] * balanceFactorRearLeft), (INT32)(rightRearBuffer[i] * balanceFactorRearRight)));
             *p++ = monovalue;
         }
     } else {
@@ -283,8 +295,8 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
         // Now order channels according to audio type
         if (nbHostAudioChannels == 2) {
             for (unsigned i = 0; i < numSamples; i++) {
-                INT16 leftvalue = AddAndClampINT16((INT32)(leftFrontBuffer[i] * balanceFactorFrontLeft), (INT32)(leftRearBuffer[i] * balanceFactorRearLeft));
-                INT16 rightvalue = AddAndClampINT16((INT32)(rightFrontBuffer[i]*balanceFactorFrontRight), (INT32)(rightRearBuffer[i]*balanceFactorRearRight));
+                INT16 leftvalue = MixINT16((INT32)(leftFrontBuffer[i] * balanceFactorFrontLeft), (INT32)(leftRearBuffer[i] * balanceFactorRearLeft));
+                INT16 rightvalue = MixINT16((INT32)(rightFrontBuffer[i]*balanceFactorFrontRight), (INT32)(rightRearBuffer[i]*balanceFactorRearRight));
                 if (flipStereo) // swap left and right channels
                 {
                     *p++ = rightvalue;
@@ -304,7 +316,7 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
                 // Check game audio type
                 switch (AudioType) {
                 case Game::MONO: {
-                    INT16 monovalue = AddAndClampINT16(AddAndClampINT16(frontLeftValue, frontRightValue), AddAndClampINT16(rearLeftValue, rearRightValue));
+                    INT16 monovalue = MixINT16(MixINT16(frontLeftValue, frontRightValue), MixINT16(rearLeftValue, rearRightValue));
                     *p++ = monovalue;
                     *p++ = monovalue;
                     *p++ = monovalue;
@@ -313,8 +325,8 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
 
                 case Game::STEREO_LR:
                 case Game::STEREO_RL: {
-                    INT16 leftvalue =  AddAndClampINT16(frontLeftValue, frontRightValue);
-                    INT16 rightvalue = AddAndClampINT16(rearLeftValue,  rearRightValue);
+                    INT16 leftvalue =  MixINT16(frontLeftValue, frontRightValue);
+                    INT16 rightvalue = MixINT16(rearLeftValue,  rearRightValue);
                     if (flipStereo) // swap left and right channels
                     {
                         *p++ = rightvalue;
@@ -366,10 +378,10 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
                 case Game::QUAD_1_LR_2_FR_MIX:
                     // Split mix: one goes to left/right, other front/rear (mono)
                     // =>Remix all!
-                    INT16 newfrontLeftValue = AddAndClampINT16(frontLeftValue, rearLeftValue);
-                    INT16 newfrontRightValue = AddAndClampINT16(frontLeftValue, rearRightValue);
-                    INT16 newrearLeftValue = AddAndClampINT16(frontRightValue, rearLeftValue);
-                    INT16 newrearRightValue = AddAndClampINT16(frontRightValue, rearRightValue);
+                    INT16 newfrontLeftValue = MixINT16(frontLeftValue, rearLeftValue);
+                    INT16 newfrontRightValue = MixINT16(frontLeftValue, rearRightValue);
+                    INT16 newrearLeftValue = MixINT16(frontRightValue, rearLeftValue);
+                    INT16 newrearRightValue = MixINT16(frontRightValue, rearRightValue);
 
                     if (flipStereo) // swap left and right channels
                     {

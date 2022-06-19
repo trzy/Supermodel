@@ -41,6 +41,8 @@
 #define FIFO_STACK_SIZE			0x100
 #define FIFO_STACK_SIZE_MASK	(FIFO_STACK_SIZE - 1)
 
+#define NUM_SAMPLES_PER_FRAME   (44100/60)
+
 /******************************************************************************
  Resampling
 

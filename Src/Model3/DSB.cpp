@@ -147,9 +147,7 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 
 	// Obtain program volume settings and convert to 24.8 fixed point (0-200 -> 0x00-0x200)
 	musicVol = m_config["MusicVolume"].ValueAs<int>();
-	soundVol = m_config["SoundVolume"].ValueAs<int>();
 	musicVol = (INT32) ((float) 0x100 * (float) musicVol / 100.0f);
-	soundVol = (INT32) ((float) 0x100 * (float) soundVol / 100.0f);
 
 	// Scale volume from 0x00-0xFF -> 0x00-0x100 (24.8 fixed point)
 	v[0] = (INT16) ((float) 0x100 * (float) volumeL / 255.0f);
@@ -167,8 +165,8 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 		rightSample = (rightSample*v[0]*musicVol) >> 16;
 
 		// Apply sound volume setting
-		leftSoundSample = (outL[outIdx]*soundVol) >> 8;
-		rightSoundSample = (outR[outIdx]*soundVol) >> 8;
+		leftSoundSample = outL[outIdx];
+		rightSoundSample = outR[outIdx];
 
 		// Mix and output
 		outL[outIdx] = MixAndClip(leftSoundSample, leftSample);
@@ -185,7 +183,6 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 			pFrac += (1<<8);
 			nFrac -= (1<<8);
 			inIdx++;	// advance samples (for upsampling only; downsampling may advance by more than one -- add delta every loop iteration)
-
 		}
 	}
 
@@ -435,7 +432,7 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 		// DSB code applies SCSP volume, too, so we must still mix
 		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
 		memset(mpegR, 0, (32000/60+2)*sizeof(INT16));
-		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, 44100/60, 32000/60+2, 44100, 32000);
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, NUM_SAMPLES_PER_FRAME, 32000/60+2, 44100, 32000);
 		return;
 	}
 
@@ -457,7 +454,7 @@ void CDSB1::RunFrame(INT16 *audioL, INT16 *audioR)
 
 	// Decode MPEG for this frame
 	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
-	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, 44100/60, 32000/60+2, 44100, 32000);
+	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, NUM_SAMPLES_PER_FRAME, 32000/60+2, 44100, 32000);
 }
 
 void CDSB1::Reset(void)
@@ -1001,7 +998,7 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
     // DSB code applies SCSP volume, too, so we must still mix
     memset(mpegL, 0, (32000 / 60 + 2) * sizeof(INT16));
     memset(mpegR, 0, (32000 / 60 + 2) * sizeof(INT16));
-    retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+    retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, volume[0], volume[1], NUM_SAMPLES_PER_FRAME, 32000 / 60 + 2, 44100, 32000);
     return;
   }
 
@@ -1072,7 +1069,7 @@ void CDSB2::RunFrame(INT16 *audioL, INT16 *audioR)
       break;
   }
 
-  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, 44100 / 60, 32000 / 60 + 2, 44100, 32000);
+  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, NUM_SAMPLES_PER_FRAME, 32000 / 60 + 2, 44100, 32000);
 }
 
 void CDSB2::Reset(void)

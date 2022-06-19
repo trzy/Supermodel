@@ -1123,6 +1123,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+	  <audio>QuadFrontRear</audio>
       <inputs>
         <input type="common" />
         <input type="analog_gun1" />
@@ -1197,6 +1198,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
+      <audio>QuadFrontRear</audio>
       <inputs>
         <input type="common" />
         <input type="analog_gun1" />

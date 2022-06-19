@@ -859,11 +859,13 @@ static void SuperSleepUntil(uint64_t target)
   }
 
   // Spin until requested time
-  uint64_t now;
+  volatile uint64_t now;
+  int32_t remain;
   do
   {
     now = SDL_GetPerformanceCounter();
-  } while (now < target);
+    remain = int32_t((target - now));
+  } while (remain>0);
 }
 
 
@@ -1251,8 +1253,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     // Refresh rate (frame limiting)
     if (paused || s_runtime_config["Throttle"].ValueAs<bool>())
     {
-      SuperSleepUntil(nextTime);
-      nextTime = SDL_GetPerformanceCounter() + perfCountPerFrame;
+        SuperSleepUntil(nextTime);
+        nextTime = SDL_GetPerformanceCounter() + perfCountPerFrame;
     }
 
     // Measure frame rate
@@ -1729,8 +1731,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
       {
         std::vector<std::string> parts = Util::Format(arg).Split('=');
         if (parts.size() != 2)
-        {
-          ErrorLog("'-res' requires both a width and height (e.g., '-res=496,384').");
+        {ErrorLog("'-res' requires both a width and height (e.g., '-res=496,384').");
           cmd_line.error = true;
         }
         else
