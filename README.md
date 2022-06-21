@@ -6,8 +6,8 @@
 [Supermodel](https://supermodel3.com) emulates Sega's Model 3 arcade platform, allowing you to relive state-of-the-art 3D arcade gaming as it existed from 1996 through 1999. It uses OpenGL, [SDL2](https://libsdl.org), and can run on Windows, Linux, and macOS. It also supports network play on low-latency network connections. The source code is freely available under the terms of the [GNU General Public License](http://www.gnu.org/copyleft/gpl.html).
 
 <p align="center">
-  <img src="Docs/Images/Daytona2_1.gif" height="320" /> <img src="Docs/Images/LAMachin.gif" height="320" />
-  <img src="Docs/Images/StarWars.gif" height="320" /> <img src="Docs/Images/FVipers2.gif" height="320" />
+  <img src="Docs/Images/Daytona2_1.gif" height="250" /> <img src="Docs/Images/LAMachin.gif" height="250" />
+  <img src="Docs/Images/StarWars.gif" height="250" /> <img src="Docs/Images/FVipers2.gif" height="250" />
 </p>
 
 <img src="Docs/Images/Real3D_Logo.png" align="right" height="100"> Model 3 first made its debut in 1996 with Virtua Fighter 3 and Scud Race, and for the subsequent three years boasted the most powerful 3D hardware of any gaming platform. Developed by Real3D, then a Lockheed Martin company, and with a heritage rooted in advanced flight simulator technology, Model 3 featured capabilities that would not appear on PCs for several years. Using an on-board scene graph and geometry processor, it could store, transform, light, and rasterize tens of thousands of polygons per frame at a fluid 60 frames per second.
