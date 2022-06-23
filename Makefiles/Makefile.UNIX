@@ -1,8 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
-##                     Harry Tuttle, and Spindizzi
+## Copyright 2003-2022 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##

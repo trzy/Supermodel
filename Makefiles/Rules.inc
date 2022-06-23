@@ -1,8 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
-##                     Harry Tuttle, and Spindizzi
+## Copyright 2003-2022 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -218,7 +217,7 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 all:	$(BIN_DIR)/$(OUTFILE)
 
 #
-# Release targets: used only to create official builds stamped with the SVN
+# Release targets: used only to create official builds stamped with the Git
 # version number. Double-colon rules should force ordered execution.
 # The automated build script relies on these -- don't modify their output!
 #
@@ -230,7 +229,7 @@ release:: print_message
 release:: clean
 release:: all
 set_version:
-	$(eval VERSION = 0.3a-svn-$(shell svnversion --no-newline))
+	$(eval VERSION = $(subst ',,0.3a-git-$(shell git rev-parse --short HEAD --sq)))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
 print_message:
 	$(info Building Supermodel Version $(VERSION))

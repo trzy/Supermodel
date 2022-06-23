@@ -1,8 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2021 Bart Trzynadlowski, Nik Henson, Ian Curtis,
- **                     Harry Tuttle, and Spindizzi
+ ** Copyright 2003-2022 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -1497,8 +1496,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2011-2022 by Bart Trzynadlowski, Nik Henson, Ian Curtis, Harry Tuttle,");
-  puts("                       Spindizzi, gm_mathew, and njz3\n");
+  puts("Copyright 2003-2022 by The Supermodel Team");
 }
 
 static void Help(void)
