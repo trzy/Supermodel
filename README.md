@@ -1,4 +1,4 @@
-# Supermodel
+# Supermodel: A Sega Model 3 Arcade Emulator
 *Copyright 2003-2022 The Supermodel Team*
 
 ## Overview
