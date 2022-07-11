@@ -45,7 +45,7 @@ void CBlockFile::ReadString(std::string *str, uint32_t length)
   str->clear();
   //TODO: use fstream to get rid of this ugly hack
   bool keep_loading = true;
-  for (size_t i = 0; i < length; i++)
+  for (uint32_t i = 0; i < length; i++)
   {
     char c;
     fread(&c, sizeof(char), 1, fp);

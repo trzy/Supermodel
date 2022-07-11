@@ -156,7 +156,7 @@ namespace Util
     {
       if (m_missing)
         throw std::range_error(Util::Format() << "Node \"" << m_key << "\" does not exist");
-      if (Empty() && !m_missing)
+      if (Empty())
         throw std::logic_error(Util::Format() << "Node \"" << m_key << "\" has no value" );
     }
 

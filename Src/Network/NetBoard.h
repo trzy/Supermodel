@@ -60,7 +60,7 @@ public:
 
 	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
 
-	void GetGame(Game);
+	void GetGame(const Game&);
 
 	UINT8 ReadCommRAM8(unsigned addr);
 	UINT16 ReadCommRAM16(unsigned addr);

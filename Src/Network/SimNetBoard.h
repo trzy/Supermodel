@@ -60,7 +60,7 @@ public:
 	bool IsAttached(void);
 	bool IsRunning(void);
 
-	void GetGame(Game gameInfo);
+	void GetGame(const Game& gameInfo);
 
 	uint8_t ReadCommRAM8(unsigned addr);
 	uint16_t ReadCommRAM16(unsigned addr);

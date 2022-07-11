@@ -979,7 +979,7 @@ void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
 
 bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
-  uint32_t memSize = (m_config["GPUMultiThreaded"].ValueAs<bool>() ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  uint32_t memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   float  memSizeMB = (float)memSize/(float)0x100000;
 
   // IRQ and bus objects

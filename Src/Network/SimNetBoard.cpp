@@ -520,7 +520,7 @@ bool CSimNetBoard::IsRunning(void)
 	return m_attached && m_running;
 }
 
-void CSimNetBoard::GetGame(Game gameInfo)
+void CSimNetBoard::GetGame(const Game& gameInfo)
 {
 	m_gameInfo = gameInfo;
 }

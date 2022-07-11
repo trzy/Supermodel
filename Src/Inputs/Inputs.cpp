@@ -278,7 +278,7 @@ CInputs::CInputs(CInputSystem *system)
 
 CInputs::~CInputs()
 {
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 		delete *it;
 	m_inputs.clear();
 }
@@ -332,7 +332,8 @@ void CInputs::PrintHeader(const char *fmt, ...)
 	va_end(vl);
 
 	puts(header);
-	for (size_t i = 0; i < strlen(header); i++)
+	const size_t hs = strlen(header);
+	for (size_t i = 0; i < hs; i++)
 		putchar('-');
 	printf("\n\n");
 }
@@ -383,7 +384,7 @@ CInput *CInputs::operator[](const unsigned index)
 
 CInput *CInputs::operator[](const char *idOrLabel)
 {
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 	{
 		if (stricmp((*it)->id, idOrLabel) == 0 || stricmp((*it)->label, idOrLabel) == 0)
 			return *it;
@@ -403,7 +404,7 @@ bool CInputs::Initialize()
 		return false;
 	
 	// Initialize all the inputs
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 		(*it)->Initialize(m_system);
 
 	return true;
@@ -413,7 +414,7 @@ void CInputs::LoadFromConfig(const Util::Config::Node &config)
 {
 	m_system->LoadFromConfig(config);
 
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 		(*it)->LoadFromConfig(config);
 }
 
@@ -421,7 +422,7 @@ void CInputs::StoreToConfig(Util::Config::Node *config)
 {
 	m_system->StoreToConfig(config);
 
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 		(*it)->StoreToConfig(config);
 }
 
@@ -446,7 +447,7 @@ bool CInputs::ConfigureInputs(const Game &game)
 	// Get all inputs to be configured
 	vector<CInput*> toConfigure;
 	vector<CInput*>::iterator it;
-	for (it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (it = m_inputs.begin(); it != m_inputs.end(); ++it)
 	{
 		if ((*it)->IsConfigurable() && ((*it)->gameFlags & gameFlags))
 			toConfigure.push_back(*it);
@@ -455,7 +456,7 @@ bool CInputs::ConfigureInputs(const Game &game)
 	// Remember current mappings for each input in case changes need to be undone later
 	vector<string> oldMappings(toConfigure.size());
 	size_t index = 0;
-	for (it = toConfigure.begin(); it != toConfigure.end(); it++)
+	for (it = toConfigure.begin(); it != toConfigure.end(); ++it)
 		oldMappings[index++] = (*it)->GetMapping();
 
 	const char *groupLabel = NULL;
@@ -495,7 +496,7 @@ Redisplay:
 			{
 				// If user pressed aborted input, then undo all changes and finish configuration
 				index = 0;
-				for (it = toConfigure.begin(); it != toConfigure.end(); it++)
+				for (it = toConfigure.begin(); it != toConfigure.end(); ++it)
 				{
 					(*it)->SetMapping(oldMappings[index].c_str());
 					index++;
@@ -697,7 +698,7 @@ void CInputs::CalibrateJoystick(int joyNum)
 		puts("");
 		if (m_system->CalibrateJoystickAxis(joyNum, axisNum))
 		{
-			for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+			for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 				(*it)->InputSystemChanged();
 		}
 		return;
@@ -720,7 +721,7 @@ void CInputs::PrintInputs(const Game *game)
 	}
 
 	const char *groupLabel = NULL;
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 	{
 		if (!(*it)->IsConfigurable() || !((*it)->gameFlags & gameFlags))
 			continue;
@@ -749,7 +750,7 @@ bool CInputs::Poll(const Game *game, unsigned dispX, unsigned dispY, unsigned di
 
 	// Poll all UI inputs and all the inputs used by the current game, or all inputs if game is NULL
 	uint32_t gameFlags = game ? game->inputs : Game::INPUT_ALL;
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 	{
 		if ((*it)->IsUIInput() || ((*it)->gameFlags & gameFlags))
 			(*it)->Poll();
@@ -773,7 +774,7 @@ void CInputs::DumpState(const Game *game)
 	}
 
 	// Loop through the inputs used by the current game, or all inputs if game is NULL, and dump their values to stdout
-	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); it++)
+	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 	{
 		if (!(*it)->IsUIInput() && !((*it)->gameFlags & gameFlags))
 			continue;

@@ -42,7 +42,7 @@ ESourceType CMultiInputSource::GetCombinedType(vector<CInputSource*> &sources)
 	bool allSwitches = true;
 	bool hasFullAxis = false;
 	bool hasHalfAxis = false;
-	for (vector<CInputSource*>::iterator it = sources.begin(); it != sources.end(); it++)
+	for (vector<CInputSource*>::iterator it = sources.begin(); it != sources.end(); ++it)
 	{
 		if ((*it)->type == SourceInvalid)
 			return SourceInvalid;  // An invalid source makes the whole lot invalid

@@ -772,7 +772,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	buffertmpfr=(signed int*) malloc(44100*sizeof(signed int));
 	if (NULL == buffertmpfr)
 	{
-		free(buffertmpfr);
+		free(buffertmpfl);
 		return ErrorLog("Insufficient memory for internal SCSP buffers.");
 	}
 
@@ -781,8 +781,10 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 		return ErrorLog("Insufficient memory for internal SCSP buffers.");
 	buffertmprr=(signed int*)malloc(44100*sizeof(signed int));
 	if (NULL == buffertmprr)
+	{
+		free(buffertmprl);
 		return ErrorLog("Insufficient memory for internal SCSP buffers.");
-
+	}
 
 	memset(buffertmpfl, 0, 44100*sizeof(signed int));
 	memset(buffertmpfr, 0, 44100*sizeof(signed int));
