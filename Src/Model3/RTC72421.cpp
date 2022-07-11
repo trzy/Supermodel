@@ -33,7 +33,7 @@
 
 #include "RTC72421.h"
 
-#include <time.h>
+#include <ctime>
 #include "Supermodel.h"
 
 
@@ -43,11 +43,16 @@
 
 UINT8 CRTC72421::ReadRegister(unsigned reg)
 {
-	time_t 		currentTime;
-	struct tm	*Time;
+	static time_t oldTime{0};
+	time_t currentTime;
+	static struct tm *Time;
 
 	time(&currentTime);
-	Time = localtime(&currentTime);
+	if (currentTime != oldTime)
+	{
+		Time = localtime(&currentTime);
+		oldTime = currentTime;
+	}
 
 	switch (reg&0xF)
 	{
