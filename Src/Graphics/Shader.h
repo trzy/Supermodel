@@ -53,8 +53,8 @@
  *		OKAY is successfully loaded, otherwise FAIL. Prints own error messages.
  */
 extern bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, 
-							  GLuint *fragmentShaderPtr, std::string vsFile, 
-							  std::string fsFile, const char *vsString,
+							  GLuint *fragmentShaderPtr, const std::string& vsFile, 
+							  const std::string& fsFile, const char *vsString,
 							  const char *fsString);
 
 /*
