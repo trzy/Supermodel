@@ -809,7 +809,7 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 	int index = (reg - 20) / 4;
 	float val = Render3D->GetLosValue(index);
 
-	if (val) {
+	if (val != 0.f) {
 		//val = 1.0f / val;		// test program indicate z values are 1 over
 		return 0xffffffff;		// infinity
 	}
@@ -922,7 +922,6 @@ uint32_t CReal3D::GetASICIDCode(ASIC asic) const
 }
 
 void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
-
 {
   step = stepping;
   if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))

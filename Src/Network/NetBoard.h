@@ -104,7 +104,7 @@ private:
 	// netsock
 	UINT16 port_in = 0;
 	UINT16 port_out = 0;
-	std::string addr_out = "";
+	std::string addr_out;
 
 	std::unique_ptr<TCPSend> nets;
 	std::unique_ptr<TCPReceive> netr;

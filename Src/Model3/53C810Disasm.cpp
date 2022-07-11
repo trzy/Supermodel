@@ -29,10 +29,10 @@
  * be decoded incorrectly.
  */
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #ifdef STANDALONE
-#include <stdlib.h>
+#include <cstdlib>
 #endif
 #include "Types.h"
 

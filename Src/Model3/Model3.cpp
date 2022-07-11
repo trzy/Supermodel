@@ -1144,7 +1144,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 
 #ifdef NET_BOARD
   case 0xc0: // spikeout call this
-  // interresting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
+  // interesting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
   // sort of sync ack ? who writes this 16b value ?
   {
     UINT16 result;

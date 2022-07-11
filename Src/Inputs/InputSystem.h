@@ -420,13 +420,13 @@ private:
    */
   void CheckJoySources(int joyNum, bool fullAxisOnly, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
-  bool ParseInt(std::string str, int &num);
+  bool ParseInt(const std::string& str, int &num);
 
   std::string IntToString(int num);
 
-  bool EqualsIgnoreCase(std::string str1, const char *str2);
+  bool EqualsIgnoreCase(const std::string& str1, const char *str2);
 
-  bool StartsWithIgnoreCase(std::string str1, const char *str2);
+  bool StartsWithIgnoreCase(const std::string& str1, const char *str2);
 
   /*
    * Returns true if the given string represents a valid key name.

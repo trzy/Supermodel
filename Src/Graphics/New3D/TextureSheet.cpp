@@ -4,7 +4,7 @@ namespace New3D {
 
 TextureSheet::TextureSheet()
 {
-	m_temp.resize(1024 * 1024 * 4);	// temporay buffer for textures
+	m_temp.resize(1024 * 1024 * 4);	// temporary buffer for textures
 }
 
 int TextureSheet::ToIndex(int x, int y)

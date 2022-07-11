@@ -43,7 +43,7 @@ void main()
 	position = spotEllipse.xy;
 	size = spotEllipse.zw;
 	ellipse = length((gl_FragCoord.xy - position) / size);
-	ellipse = pow(ellipse, 2.0);			// decay rate = square of distance from center
+	ellipse = ellipse * ellipse;			// decay rate = square of distance from center
 	ellipse = 1.0 - ellipse;				// invert
 	ellipse = max(0.0, ellipse);			// clamp
 

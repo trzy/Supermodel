@@ -36,7 +36,7 @@ using namespace std;
 ESourceType CMultiInputSource::GetCombinedType(vector<CInputSource*> &sources)
 {
 	// Check if vector is empty
-	if (sources.size() == 0)
+	if (sources.empty())
 		return SourceEmpty;
 	// Otherwise, see whether all sources are switches, or if have a full- or half-axis present
 	bool allSwitches = true;

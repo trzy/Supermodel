@@ -276,7 +276,7 @@ namespace Util
   std::string BitRegister::ToBinaryString() const
   {
     if (Empty())
-      return std::string("");
+      return std::string();
     std::string out(Size(), '0');
     for (size_t i = 0; i < Size(); i++)
     {
@@ -287,9 +287,9 @@ namespace Util
   
   std::string BitRegister::ToHexString() const
   {
-    const char digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+    static const char digits[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
     if (Empty())
-      return std::string("");
+      return std::string();
     size_t partial = Size() & 3;
     size_t num_digits = Size() / 4 + (partial != 0 ? 1 : 0);
     std::string out(num_digits + 2, '0');

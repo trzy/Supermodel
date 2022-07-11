@@ -724,7 +724,7 @@ void CInputSystem::CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputS
       find(badSources.begin(), badSources.end(), source) == badSources.end())
     {
       // Update mapping string and add source to list
-      if (sources.size() == 0)
+      if (sources.empty())
         mapping.assign("KEY");
       else
         mapping.append("+KEY");
@@ -758,7 +758,7 @@ void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCent
     {
       // Otherwise, update mapping string and add source to list
       const char *partName = LookupName(msePart);
-      if (sources.size() == 0)
+      if (sources.empty())
         mapping.assign("MOUSE");
       else
         mapping.append("+MOUSE");
@@ -787,7 +787,7 @@ void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputS
     {
       // Otherwise, update mapping string and add source to list
       const char *partName = LookupName(joyPart);
-      if (sources.size() == 0)
+      if (sources.empty())
         mapping.assign("JOY");
       else
         mapping.append("+JOY");
@@ -800,7 +800,7 @@ void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputS
   }
 }
 
-bool CInputSystem::ParseInt(string str, int &num)
+bool CInputSystem::ParseInt(const string& str, int &num)
 {
   stringstream ss(str);
   return !(ss >> num).fail();
@@ -813,7 +813,7 @@ string CInputSystem::IntToString(int num)
   return ss.str();
 }
 
-bool CInputSystem::EqualsIgnoreCase(string str1, const char *str2)
+bool CInputSystem::EqualsIgnoreCase(const string& str1, const char *str2)
 {
   for (string::const_iterator ci = str1.begin(); ci < str1.end(); ++ci) 
   {
@@ -824,7 +824,7 @@ bool CInputSystem::EqualsIgnoreCase(string str1, const char *str2)
   return *str2 == '\0';
 }
 
-bool CInputSystem::StartsWithIgnoreCase(string str1, const char *str2)
+bool CInputSystem::StartsWithIgnoreCase(const string& str1, const char *str2)
 {
   for (string::const_iterator ci = str1.begin(); ci < str1.end(); ++ci) 
   {
@@ -1023,7 +1023,7 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
           if (rightSource != NULL)
             sources.push_back(rightSource);
         }
-        if (sources.size() > 0)
+        if (!sources.empty())
           return new CMultiInputSource(true, sources);
       }
       return m_emptySource;
@@ -1772,7 +1772,7 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
     CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, mapping, badSources);
 
     // When some inputs have been activated, keep looping until they have all been released again.
-    if (sources.size() > 0)
+    if (!sources.empty())
     {
       // Check each source is no longer active
       bool active = false;

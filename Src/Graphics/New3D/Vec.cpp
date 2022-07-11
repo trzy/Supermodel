@@ -1,32 +1,8 @@
 #include "Vec.h"
 #include <cmath>
+#include <algorithm>
 
 namespace New3D {
-
-static float fastSqrt(float number) {
-    long i;
-    float x, y;
-    const float f = 1.5F;
-
-    x = number * 0.5F;
-    y  = number;
-    i  = * ( long * ) &y;
-    i  = 0x5f375a86 - ( i >> 1 );
-    y  = * ( float * ) &i;
-    y  = y * ( f - ( x * y * y ) );
-    y  = y * ( f - ( x * y * y ) );
-    return number * y;
-}
-
-static float fastInvSqrt(float x)
-{
-	float xhalf = 0.5f*x;
-	int i = *(int*)&x;			// get bits for floating value
-	i = 0x5f375a86- (i>>1);		// gives initial guess y0
-	x = *(float*)&i;			// convert bits back to float
-	x = x*(1.5f-xhalf*x*x);		// Newton step, repeating increases accuracy
-	return x;
-}
 
 void V3::subtract(const Vec3 a, const Vec3 b, Vec3 out) {
 
@@ -58,7 +34,7 @@ void V3::add(Vec3 a, const Vec3 b) {
 
 void V3::divide(Vec3 a, float number) {
 
-	multiply(a,1/number);
+	multiply(a,1.f/number);
 }
 
 void V3::multiply(Vec3 a, float number) {
@@ -123,13 +99,13 @@ float V3::length(const Vec3 v) {
 void V3::normalise(Vec3 v) {
 
 	//========
-	float len;
+	float inv_len;
 	//========
 
-	len = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-	len = fastInvSqrt(len);
+	inv_len = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+	inv_len = 1.f/std::sqrt(inv_len);
 
-	multiply(v,len);
+	multiply(v,inv_len);
 }
 
 void V3::multiplyAdd(const Vec3 a, float scale, const Vec3 b, Vec3 out) {
@@ -141,9 +117,9 @@ void V3::multiplyAdd(const Vec3 a, float scale, const Vec3 b, Vec3 out) {
 
 void V3::reset(Vec3 v) {
 
-	v[0] = 0;
-	v[1] = 0;
-	v[2] = 0;
+	v[0] = 0.f;
+	v[1] = 0.f;
+	v[2] = 0.f;
 }
 
 void V3::set(Vec3 v, float value) {
@@ -171,7 +147,7 @@ void V3::reflect(const Vec3 a, const Vec3 b, Vec3 out) {
 
 	V3::copy(a,v);
 
-	temp = V3::dotProduct(a,b) * 2;
+	temp = V3::dotProduct(a,b) * 2.f;
 
 	V3::multiply(v,temp);
 	V3::subtract(b,v,out);
@@ -191,16 +167,16 @@ void V3::createNormal(const Vec3 a, const Vec3 b, const Vec3 c, Vec3 outNormal) 
 
 void V3::_max(Vec3 a, const Vec3 compare) {
 
-	if(a[0] < compare[0]) a[0] = compare[0];
-	if(a[1] < compare[1]) a[1] = compare[1];
-	if(a[2] < compare[2]) a[2] = compare[2];
+	a[0] = std::max(compare[0], a[0]);
+	a[1] = std::max(compare[1], a[1]);
+	a[2] = std::max(compare[2], a[2]);
 }
 
 void V3::_min(Vec3 a, const Vec3 compare) {
 
-	if(a[0] > compare[0]) a[0] = compare[0];
-	if(a[1] > compare[1]) a[1] = compare[1];
-	if(a[2] > compare[2]) a[2] = compare[2];
+	a[0] = std::min(compare[0], a[0]);
+	a[1] = std::min(compare[1], a[1]);
+	a[2] = std::min(compare[2], a[2]);
 }
 
 bool V3::cmp(const Vec3 a, float b) {
@@ -223,14 +199,9 @@ bool V3::cmp(const Vec3 a, const Vec3 b) {
 
 void V3::clamp(Vec3 a, float _min, float _max) {
 	
-	if(a[0] < _min) a[0] = _min;
-	if(a[0] > _max) a[0] = _max;
-
-	if(a[1] < _min) a[1] = _min;
-	if(a[1] > _max) a[1] = _max;
-
-	if(a[2] < _min) a[2] = _min;
-	if(a[2] > _max) a[2] = _max;
+	a[0] = std::min(std::max(_min, a[0]), _max);
+	a[1] = std::min(std::max(_min, a[1]), _max);
+	a[2] = std::min(std::max(_min, a[2]), _max);
 }
 
 } // New3D

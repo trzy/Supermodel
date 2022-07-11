@@ -85,7 +85,7 @@ private:
 	// netsock
 	uint16_t port_in = 0;
 	uint16_t port_out = 0;
-	std::string addr_out = "";
+	std::string addr_out;
 	std::thread m_connectThread;
 	std::atomic_bool m_quit = false;
 	std::atomic_bool m_connected = false;

@@ -1444,7 +1444,7 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	DICONSTANTFORCE dicf;
 	DICONDITION dic;
 	DIPERIODIC dip;
-	DIENVELOPE die;
+	//DIENVELOPE die;
 	GUID guid;
 
 	// Set common effects parameters
@@ -1865,7 +1865,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 	else
 	{
 		LPDIRECTINPUTDEVICE8 joystick = m_di8Joysticks[pInfo->dInputNum];
-		
+
 		// See if command is to stop all force feedback, if so send appropriate command
 		if (ffCmd.id == FFStop)
 			return SUCCEEDED(hr = joystick->SendForceFeedbackCommand(DISFFC_STOPALL));
@@ -1878,13 +1878,13 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 			if (FAILED(hr = CreateJoystickEffect(joystick, axisNum, ffCmd, pEffect)))
 				return false;
 		}
-		
+
 		LONG lDirection = 0;
 		DICONSTANTFORCE dicf;
 		DICONDITION dic;
 		DIPERIODIC dip;
-		DIENVELOPE die;
-				
+		//DIENVELOPE die;
+
 		// Set common parameters
 		DIEFFECT eff;
 		memset(&eff, 0, sizeof(eff));
@@ -1894,7 +1894,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		eff.rglDirection = &lDirection;
 		eff.dwStartDelay = 0;
 		eff.lpEnvelope = NULL;
-				
+
 		// Set command specific parameters
 		LONG lFFMag;
 		DWORD dFFMag;

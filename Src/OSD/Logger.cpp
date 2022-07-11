@@ -112,7 +112,7 @@ std::shared_ptr<CLogger> CreateLogger(const Util::Config::Node &config)
   loggers.push_back(std::make_shared<CConsoleErrorLogger>());
 
   // Parse other log outputs
-  std::string logOutputs = config["LogOutput"].ValueAsDefault<std::string>("");
+  std::string logOutputs = config["LogOutput"].ValueAsDefault<std::string>(std::string());
   std::vector<std::string> outputs = Util::Format(logOutputs).Split(',');
 
   std::set<std::string> supportedDestinations { "stdout", "stderr", "syslog" };

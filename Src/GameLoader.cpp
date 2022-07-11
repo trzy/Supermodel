@@ -20,7 +20,7 @@ bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename)
   zip->zfs.push_back(zf);
 
   // Identify all files in zip archive
-  int err = UNZ_OK;
+  int err;
   for (err = unzGoToFirstFile(zf); err == UNZ_OK; err = unzGoToNextFile(zf))
   {
     unz_file_info file_info;
@@ -193,11 +193,11 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->name = game_node["name"].ValueAs<std::string>();
   game->parent = game_node["parent"].ValueAsDefault<std::string>(std::string());
   game->title = game_node["identity/title"].ValueAsDefault<std::string>("Unknown");
-  game->version = game_node["identity/version"].ValueAsDefault<std::string>("");
+  game->version = game_node["identity/version"].ValueAsDefault<std::string>(std::string());
   game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
   game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
-  game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
-  game->mpeg_board = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>("");
+  game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>(std::string());
+  game->mpeg_board = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>(std::string());
   std::map<std::string, Game::AudioTypes> audio_types
   {
     { "",                      Game::STEREO_LR }, // default to stereo
@@ -212,7 +212,7 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   };
   std::string audio_type = game_node["hardware/audio"].ValueAsDefault<std::string>(std::string());
   game->audio = audio_types[audio_type];
-  game->pci_bridge = game_node["hardware/pci_bridge"].ValueAsDefault<std::string>("");
+  game->pci_bridge = game_node["hardware/pci_bridge"].ValueAsDefault<std::string>(std::string());
   game->real3d_pci_id = game_node["hardware/real3d_pci_id"].ValueAsDefault<uint32_t>(0);
   game->real3d_status_bit_set_percent_of_frame = game_node["hardware/real3d_status_bit_set_percent_of_frame"].ValueAsDefault<float>(0);
   game->encryption_key = game_node["hardware/encryption_key"].ValueAsDefault<uint32_t>(0);
@@ -849,7 +849,7 @@ std::string StripFilename(const std::string &filepath)
 
   // If none found, there is directory component here
   if (last_slash == std::string::npos)
-    return "";
+    return std::string();
 
   // Otherwise, strip everything after the slash
   return std::string(filepath, 0, last_slash + 1);
