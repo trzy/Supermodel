@@ -11,7 +11,7 @@ namespace Util
     uint16_t * const buffer16 = (uint16_t*)buffer;
     for (size_t i = 0; i < size/2; i++)
       buffer16[i] = _byteswap_ushort(buffer16[i]);
-#elif 1 // assume GCC
+#elif defined(__GNUC__)
     uint16_t * const buffer16 = (uint16_t*)buffer;
     for (size_t i = 0; i < size/2; i++)
       buffer16[i] = __builtin_bswap16(buffer16[i]);
@@ -31,7 +31,7 @@ namespace Util
     uint32_t * const buffer32 = (uint32_t*)buffer;
     for (size_t i = 0; i < size/4; i++)
       buffer32[i] = _byteswap_ulong(buffer32[i]);
-#elif 1 // assume GCC
+#elif defined(__GNUC__)
     uint32_t * const buffer32 = (uint32_t*)buffer;
     for (size_t i = 0; i < size/4; i++)
       buffer32[i] = __builtin_bswap32(buffer32[i]);

@@ -54,14 +54,14 @@
 // stricmp() is non-standard, apparently...
 #ifdef _MSC_VER	// MS VisualC++
 	#define stricmp	_stricmp
-#else			// assume GCC
+#elif defined(__GNUC__)
 	#define stricmp	strcasecmp
 #endif
 
 // 32-bit rotate left
 #ifdef _MSC_VER // MS VisualC++ - use VS intrinsic function _rotl
 	#define rotl(val, shift) val = _rotl(val, shift)
-#else	        // Otherwise assume GCC which should optimise following to asm
+#elif defined(__GNUC__)	// GCC should optimise following to asm
 	#define rotl(val, shift) val = (val>>shift)|(val<<(32-shift))
 #endif
 
