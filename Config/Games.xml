@@ -585,10 +585,10 @@
         <file offset="0x1000004" name="mpr-22875.6" crc32="0x1BB5C018" />
         <file offset="0x1000006" name="mpr-22874.5" crc32="0x5E990497" />
         <!-- CROM3 -->
-        <file offset="0x3000000" name="mpr-22885.16" crc32="0x3525B46D" />
-        <file offset="0x3000002" name="mpr-22884.15" crc32="0x254C3B63" />
-        <file offset="0x3000004" name="mpr-22883.14" crc32="0x86D90148" />
-        <file offset="0x3000006" name="mpr-22882.13" crc32="0xB161416F" />
+        <file offset="0x3000000" name="epr-22885.16" crc32="0x3525B46D" />
+        <file offset="0x3000002" name="epr-22884.15" crc32="0x254C3B63" />
+        <file offset="0x3000004" name="epr-22883.14" crc32="0x86D90148" />
+        <file offset="0x3000006" name="epr-22882.13" crc32="0xB161416F" />
       </region>
       <region name="vrom" stride="32" chunk_size="2">
         <file offset="0"  name="mpr-22854.26" crc32="0x97A23D16" />
@@ -972,10 +972,10 @@
     </hardware>
     <roms>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21483.17" crc32="0x64DE433F" />
-        <file offset="2" name="epr-21484.18" crc32="0xF68F7703" />
-        <file offset="4" name="epr-21485.19" crc32="0x58102168" />
-        <file offset="6" name="epr-21486.20" crc32="0x940637C2" />
+        <file offset="0" name="epr-21486.20" crc32="0x64DE433F" />
+        <file offset="2" name="epr-21485.19" crc32="0xF68F7703" />
+        <file offset="4" name="epr-21484.18" crc32="0x58102168" />
+        <file offset="6" name="epr-21483.17" crc32="0x940637C2" />
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM0 -->
@@ -990,9 +990,9 @@
         <file offset="0x1000006" name="mpr-21455.5" crc32="0x0B4A3CC5" />
         <!-- CROM2 -->
         <file offset="0x2000000" name="mpr-21462.12" crc32="0x03D22EE8" />
-        <file offset="0x2000002" name="mpr-21462.11" crc32="0x33D8F0DA" />
-        <file offset="0x2000004" name="mpr-21461.10" crc32="0x02268361" />
-        <file offset="0x2000006" name="mpr-21460.9"  crc32="0x71A7B6B3" />
+        <file offset="0x2000002" name="mpr-21461.11" crc32="0x33D8F0DA" />
+        <file offset="0x2000004" name="mpr-21460.10" crc32="0x02268361" />
+        <file offset="0x2000006" name="mpr-21459.9"  crc32="0x71A7B6B3" />
       </region>
       <region name="vrom" stride="32" chunk_size="2">
         <file offset="0"  name="mpr-21467.26" crc32="0x73635100" />
@@ -1101,7 +1101,7 @@
       <!-- Spindizzi notes : original Driveboard from model2 hardware -->
       <!-- Not working ATM - Commands don't correspond -->
       <region name="driveboard_program" stride="1" chunk_size="1" required="false">
-        <file offset="0" name="epr-18261.bin" crc32="0x0C7FAC58" />
+        <file offset="0" name="epr-18261.ic9" crc32="0x0C7FAC58" />
       <!-- Driveboard program from scud - Can be a replacement from original model2 z80 program -->
       <!-- I think Model3 driveboard hardware acts exactly like Model2 driveboard hardware (same irq, same memory mapping, same commands etc...)  -->
       <!-- This is why we can exchange micro program (rom) in Supermodel to have ffb in lemans24 -->
@@ -1938,7 +1938,7 @@
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM0 -->
         <file offset="0x0000000" name="mpr-20605.4" crc32="0x00513401" />
-        <file offset="0x0000002" name="mpr-20605.3" crc32="0x99C5F396" />
+        <file offset="0x0000002" name="mpr-20604.3" crc32="0x99C5F396" />
         <file offset="0x0000004" name="mpr-20603.2" crc32="0xAD0D8EB8" />
         <file offset="0x0000006" name="mpr-20602.1" crc32="0x60CFA72A" />
         <!-- CROM1 -->
@@ -2276,11 +2276,9 @@
         <file offset="0xC00000" name="mpr-21378.24" crc32="0x1FCF715E" />
       </region>
       <!-- Force feedback controller prg -->
-
       <region name="driveboard_program" stride="1" chunk_size="1" required="false">
         <file offset="0" name="epr-21119.ic8" crc32="0x65082B14" />
       </region>
-
     </roms>
   </game>
 
@@ -2917,10 +2915,10 @@
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM0 -->
-        <file offset="0x0000000" name="mpr-19894.4" crc32="0x09C065CC" />
-        <file offset="0x0000002" name="mpr-19893.3" crc32="0x5C83DCAA" />
-        <file offset="0x0000004" name="mpr-19892.2" crc32="0x8E5D3FE7" />
-        <file offset="0x0000006" name="mpr-19891.1" crc32="0x9ECB0B39" />
+        <file offset="0x0000000" name="mpr-20894.4" crc32="0x09C065CC" />
+        <file offset="0x0000002" name="mpr-20893.3" crc32="0x5C83DCAA" />
+        <file offset="0x0000004" name="mpr-20892.2" crc32="0x8E5D3FE7" />
+        <file offset="0x0000006" name="mpr-20891.1" crc32="0x9ECB0B39" />
         <!-- CROM1 -->
         <file offset="0x1000000" name="mpr-19776.8" crc32="0x5B31C7C1" />
         <file offset="0x1000002" name="mpr-19775.7" crc32="0xA6B32BD9" />
@@ -3064,7 +3062,7 @@
         <file offset="30" name="mpr-21530.41" crc32="0x78400D5E" />
       </region>
       <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
-        <file offset="0" name="epr-21539.21" crc32="0xA1D3E00E" />
+        <file offset="0" name="epr-21539a.21" crc32="0xA1D3E00E" />
       </region>
       <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
         <file offset="0x000000" name="mpr-21513.22" crc32="0xCCA1CC00" />
