@@ -332,8 +332,7 @@ void CInputs::PrintHeader(const char *fmt, ...)
 	va_end(vl);
 
 	puts(header);
-	const size_t hs = strlen(header);
-	for (size_t i = 0; i < hs; i++)
+	for (size_t i = 0; i < strlen(header); i++)
 		putchar('-');
 	printf("\n\n");
 }
