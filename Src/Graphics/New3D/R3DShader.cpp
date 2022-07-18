@@ -134,6 +134,7 @@ GLint R3DShader::GetVertexAttribPos(const std::string& attrib)
 	if (m_vertexLocCache.count(attrib)==0) {
 		auto pos = glGetAttribLocation(m_shaderProgram, attrib.c_str());
 		m_vertexLocCache[attrib] = pos;
+		return pos;
 	}
 
 	return m_vertexLocCache[attrib];

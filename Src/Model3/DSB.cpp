@@ -143,7 +143,7 @@ int CDSBResampler::UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *i
 	int		outIdx = 0;
 	int		inIdx = 0;
 	INT32	leftSample, rightSample, leftSoundSample, rightSoundSample;
-	INT32	v[2], musicVol, soundVol;
+	INT32	v[2], musicVol;
 
 	// Obtain program volume settings and convert to 24.8 fixed point (0-200 -> 0x00-0x200)
 	musicVol = m_config["MusicVolume"].ValueAs<int>();

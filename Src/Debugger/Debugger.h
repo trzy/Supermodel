@@ -60,7 +60,7 @@
 #ifndef stricmp
 #ifdef _MSC_VER	// MS VisualC++
 	#define stricmp	_stricmp
-#else           // Assume GC
+#elif defined(__GNUC__)
 	#define stricmp	strcasecmp
 #endif // _MSC_VER
 #endif // stricmp

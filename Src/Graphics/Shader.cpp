@@ -82,7 +82,7 @@ static char *LoadShaderSource(const char *file)
 	return buf;
 }
 
-bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, std::string vsFile, std::string fsFile, const char *vsString, const char *fsString)
+bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const std::string& vsFile, const std::string& fsFile, const char *vsString, const char *fsString)
 {
 	char		infoLog[2048];
 	const char	*vsSource, *fsSource;	// source code

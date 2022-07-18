@@ -781,7 +781,7 @@ void CDirectInputSystem::PollKeyboardsAndMice()
 	if (m_useRawInput)
 	{
 		// For RawInput, only thing to do is update wheelDir from wheelData for each mouse state.  Everything else is updated via WM events.
-		for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
+		for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); ++it)
 		{
 			if (it->wheelDelta != 0)
 			{
@@ -875,7 +875,7 @@ void CDirectInputSystem::CloseKeyboardsAndMice()
 		}
 
 		// Delete storage for keyboards
-		for (std::vector<bool*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); it++)
+		for (std::vector<bool*>::iterator it = m_rawKeyStates.begin(); it != m_rawKeyStates.end(); ++it)
 			delete[] *it;
 		m_keyDetails.clear();
 		m_rawKeyboards.clear();
@@ -915,7 +915,7 @@ void CDirectInputSystem::ResetMice()
 		m_combRawMseState.x = p.x;
 		m_combRawMseState.y = p.y;
 		m_combRawMseState.z = 0;
-		for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
+		for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); ++it)
 		{
 			it->x = p.x;
 			it->y = p.y;
@@ -1057,7 +1057,7 @@ void CDirectInputSystem::ProcessRawInput(HRAWINPUT hInput)
 				}
 
 				m_combRawMseState.buttons = 0;
-				for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); it++)
+				for (std::vector<RawMseState>::iterator it = m_rawMseStates.begin(); it != m_rawMseStates.end(); ++it)
 					m_combRawMseState.buttons |= it->buttons;
 			}
 		}
@@ -1080,7 +1080,7 @@ void CDirectInputSystem::OpenJoysticks()
 	// Loop through those found
 	int joyNum = 0;
 	int xNum = 0;
-	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); ++it)
 	{
 		joyNum++;
 
@@ -1145,7 +1145,7 @@ void CDirectInputSystem::OpenJoysticks()
 			}
 
 			// Gather joystick details (name, num POVs & buttons, which axes are available and whether force feedback is available)
-			DIPROPSTRING didps;
+			DIPROPSTRING didps{};
 			didps.diph.dwSize = sizeof(DIPROPSTRING); 
 			didps.diph.dwHeaderSize = sizeof(DIPROPHEADER); 
 			didps.diph.dwHow = DIPH_DEVICE;
@@ -1293,7 +1293,7 @@ void CDirectInputSystem::ActivateJoysticks()
 {
 	// Set DirectInput cooperative level of joysticks
 	unsigned joyNum = 0;
-	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); ++it)
 	{
 		if (!it->isXInput)
 		{	
@@ -1313,7 +1313,7 @@ void CDirectInputSystem::PollJoysticks()
 {
 	// Get current joystick states from XInput and DirectInput
 	int i = 0;
-	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); ++it)
 	{
 		LPDIJOYSTATE2 pJoyState = &m_diJoyStates[i++];
 
@@ -1394,7 +1394,7 @@ void CDirectInputSystem::PollJoysticks()
 void CDirectInputSystem::CloseJoysticks()
 {
 	// Release any DirectInput force feedback effects that were created
-	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); it++)
+	for (std::vector<DIJoyInfo>::iterator it = m_diJoyInfos.begin(); it != m_diJoyInfos.end(); ++it)
 	{
 		for (unsigned axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++)
 		{
@@ -1410,7 +1410,7 @@ void CDirectInputSystem::CloseJoysticks()
 	}
 
 	// Release each DirectInput joystick
-	for (std::vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it != m_di8Joysticks.end(); it++)
+	for (std::vector<LPDIRECTINPUTDEVICE8>::iterator it = m_di8Joysticks.begin(); it != m_di8Joysticks.end(); ++it)
 	{
 		(*it)->Unacquire();
 		(*it)->Release();
@@ -1444,7 +1444,7 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	DICONSTANTFORCE dicf;
 	DICONDITION dic;
 	DIPERIODIC dip;
-	DIENVELOPE die;
+	//DIENVELOPE die;
 	GUID guid;
 
 	// Set common effects parameters
@@ -1865,7 +1865,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 	else
 	{
 		LPDIRECTINPUTDEVICE8 joystick = m_di8Joysticks[pInfo->dInputNum];
-		
+
 		// See if command is to stop all force feedback, if so send appropriate command
 		if (ffCmd.id == FFStop)
 			return SUCCEEDED(hr = joystick->SendForceFeedbackCommand(DISFFC_STOPALL));
@@ -1878,13 +1878,13 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 			if (FAILED(hr = CreateJoystickEffect(joystick, axisNum, ffCmd, pEffect)))
 				return false;
 		}
-		
+
 		LONG lDirection = 0;
 		DICONSTANTFORCE dicf;
 		DICONDITION dic;
 		DIPERIODIC dip;
-		DIENVELOPE die;
-				
+		//DIENVELOPE die;
+
 		// Set common parameters
 		DIEFFECT eff;
 		memset(&eff, 0, sizeof(eff));
@@ -1894,7 +1894,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		eff.rglDirection = &lDirection;
 		eff.dwStartDelay = 0;
 		eff.lpEnvelope = NULL;
-				
+
 		// Set command specific parameters
 		LONG lFFMag;
 		DWORD dFFMag;

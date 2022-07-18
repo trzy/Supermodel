@@ -3,9 +3,8 @@
 
 #include <vector>
 #include <unordered_map>
-#include <map>
 #include <memory>
-#include <string.h>
+#include <cstring>
 #include "Texture.h"
 #include "Mat4.h"
 
@@ -32,24 +31,19 @@ struct Vertex					// half vertex
 
 	static bool Equal(const Vertex& p1, const Vertex& p2)
 	{
-		if (p1.pos[0] == p2.pos[0] &&
+		return (p1.pos[0] == p2.pos[0] &&
 			p1.pos[1] == p2.pos[1] &&
-			p1.pos[2] == p2.pos[2])
-		{
-			return true;
-		}
-
-		return false;
+			p1.pos[2] == p2.pos[2]);
 	}
 
 	static void Average(const Vertex& p1, const Vertex& p2, Vertex& p3)
 	{
 		p3.pos[3] = 1.0f;	//always 1
-		p3.fixedShade = (p1.fixedShade + p2.fixedShade) / 2.0f;
+		p3.fixedShade = (p1.fixedShade + p2.fixedShade) * 0.5f;
 
-		for (int i = 0; i < 3; i++)	{ p3.pos[i] = (p1.pos[i] + p2.pos[i]) / 2.0f; }
-		for (int i = 0; i < 3; i++)	{ p3.normal[i] = (p1.normal[i] + p2.normal[i]) / 2.0f; }
-		for (int i = 0; i < 2; i++)	{ p3.texcoords[i] = (p1.texcoords[i] + p2.texcoords[i]) / 2.0f; }
+		for (int i = 0; i < 3; i++)	{ p3.pos[i] = (p1.pos[i] + p2.pos[i]) * 0.5f; }
+		for (int i = 0; i < 3; i++)	{ p3.normal[i] = (p1.normal[i] + p2.normal[i]) * 0.5f; }
+		for (int i = 0; i < 2; i++)	{ p3.texcoords[i] = (p1.texcoords[i] + p2.texcoords[i]) * 0.5f; }
 	}
 };
 

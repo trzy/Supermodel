@@ -809,7 +809,7 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 	int index = (reg - 20) / 4;
 	float val = Render3D->GetLosValue(index);
 
-	if (val) {
+	if (val != 0.f) {
 		//val = 1.0f / val;		// test program indicate z values are 1 over
 		return 0xffffffff;		// infinity
 	}
@@ -922,7 +922,6 @@ uint32_t CReal3D::GetASICIDCode(ASIC asic) const
 }
 
 void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
-
 {
   step = stepping;
   if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
@@ -979,7 +978,7 @@ void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
 
 bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
-  uint32_t memSize = (m_config["GPUMultiThreaded"].ValueAs<bool>() ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
+  uint32_t memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   float  memSizeMB = (float)memSize/(float)0x100000;
 
   // IRQ and bus objects

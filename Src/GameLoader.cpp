@@ -20,7 +20,7 @@ bool GameLoader::LoadZipArchive(ZipArchive *zip, const std::string &zipfilename)
   zip->zfs.push_back(zf);
 
   // Identify all files in zip archive
-  int err = UNZ_OK;
+  int err;
   for (err = unzGoToFirstFile(zf); err == UNZ_OK; err = unzGoToNextFile(zf))
   {
     unz_file_info file_info;
@@ -135,7 +135,7 @@ bool GameLoader::MissingAttrib(const GameLoader &loader, const Util::Config::Nod
 
 GameLoader::File::ptr_t GameLoader::File::Create(const GameLoader &loader, const Util::Config::Node &file_node)
 {
-  if (GameLoader::MissingAttrib(loader, file_node, "name") | GameLoader::MissingAttrib(loader, file_node, "offset"))
+  if (GameLoader::MissingAttrib(loader, file_node, "name") | GameLoader::MissingAttrib(loader, file_node, "offset")) // no || to easier detect errors
     return ptr_t();
   ptr_t file = std::make_shared<File>();
   file->offset = file_node["offset"].ValueAs<uint32_t>();
@@ -159,7 +159,7 @@ bool GameLoader::File::operator==(const File &rhs) const
 
 GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, const Util::Config::Node &region_node)
 {
-  if (GameLoader::MissingAttrib(loader, region_node, "name") | MissingAttrib(loader, region_node, "stride") | GameLoader::MissingAttrib(loader, region_node, "chunk_size"))
+  if (GameLoader::MissingAttrib(loader, region_node, "name") | MissingAttrib(loader, region_node, "stride") | GameLoader::MissingAttrib(loader, region_node, "chunk_size")) // no || to easier detect errors
     return ptr_t();
   ptr_t region = std::make_shared<Region>();
   region->region_name = region_node["name"].Value<std::string>();
@@ -191,7 +191,7 @@ bool GameLoader::Region::FindFileIndexByOffset(size_t *idx, uint32_t offset) con
 static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
 {
   game->name = game_node["name"].ValueAs<std::string>();
-  game->parent = game_node["parent"].ValueAsDefault<std::string>(std::string());
+  game->parent = game_node["parent"].ValueAsDefault<std::string>("");
   game->title = game_node["identity/title"].ValueAsDefault<std::string>("Unknown");
   game->version = game_node["identity/version"].ValueAsDefault<std::string>("");
   game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
@@ -210,7 +210,7 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
     { "QuadRearFrontReversed", Game::QUAD_1_RRL_2_FRL },
     { "QuadMix",               Game::QUAD_1_LR_2_FR_MIX}
   };
-  std::string audio_type = game_node["hardware/audio"].ValueAsDefault<std::string>(std::string());
+  std::string audio_type = game_node["hardware/audio"].ValueAsDefault<std::string>("");
   game->audio = audio_types[audio_type];
   game->pci_bridge = game_node["hardware/pci_bridge"].ValueAsDefault<std::string>("");
   game->real3d_pci_id = game_node["hardware/real3d_pci_id"].ValueAsDefault<uint32_t>(0);
@@ -849,7 +849,7 @@ std::string StripFilename(const std::string &filepath)
 
   // If none found, there is directory component here
   if (last_slash == std::string::npos)
-    return "";
+    return std::string();
 
   // Otherwise, strip everything after the slash
   return std::string(filepath, 0, last_slash + 1);

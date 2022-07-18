@@ -686,7 +686,7 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
     case 0x87:    // Read light gun register
       serialFIFO1 = 0;  // clear serial FIFO 1
       serialFIFO2 = 0;
-      if ((m_game.inputs & Game::INPUT_GUN1||m_game.inputs & Game::INPUT_GUN2))
+      if ((m_game.inputs & Game::INPUT_GUN1)||(m_game.inputs & Game::INPUT_GUN2))
       {
         switch (gunReg)
         {
@@ -1144,7 +1144,7 @@ UINT16 CModel3::Read16(UINT32 addr)
 
 #ifdef NET_BOARD
   case 0xc0: // spikeout call this
-  // interresting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
+  // interesting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
   // sort of sync ack ? who writes this 16b value ?
   {
     UINT16 result;
@@ -1906,7 +1906,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
   SaveState->Read(securityRAM, 0x20000);
   SaveState->Read(&midiCtrlPort, sizeof(midiCtrlPort));
   int32_t securityFirstRead;
-  SaveState->Write(&securityFirstRead, sizeof(securityFirstRead));
+  SaveState->Read(&securityFirstRead, sizeof(securityFirstRead));
   m_securityFirstRead = securityFirstRead != 0;
 
   // All devices...

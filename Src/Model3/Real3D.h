@@ -36,7 +36,7 @@
 #include "Util/NewConfig.h"
 
 #include <cstdint>
-#include <map>
+#include <unordered_map>
 
 /* 
  * QueuedUploadTextures:
@@ -505,7 +505,7 @@ private:
   bool m_evenFrame = false;
   
   // Internal ASIC state
-  std::map<ASIC, uint32_t> m_asicID;
+  std::unordered_map<ASIC, uint32_t> m_asicID;
   uint64_t m_internalRenderConfig[2];
 };
 

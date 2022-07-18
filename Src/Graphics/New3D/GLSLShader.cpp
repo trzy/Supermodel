@@ -1,5 +1,5 @@
 #include "GLSLShader.h"
-#include <stdio.h>
+#include <cstdio>
 
 GLSLShader::GLSLShader() {
 
@@ -107,6 +107,3 @@ int GLSLShader::GetAttributeLocation(const char *str)
 {
 	return glGetAttribLocation(m_program, str);
 }
-
-
-

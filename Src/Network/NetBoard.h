@@ -60,7 +60,7 @@ public:
 
 	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
 
-	void GetGame(Game);
+	void GetGame(const Game&);
 
 	UINT8 ReadCommRAM8(unsigned addr);
 	UINT16 ReadCommRAM16(unsigned addr);
@@ -104,7 +104,7 @@ private:
 	// netsock
 	UINT16 port_in = 0;
 	UINT16 port_out = 0;
-	std::string addr_out = "";
+	std::string addr_out;
 
 	std::unique_ptr<TCPSend> nets;
 	std::unique_ptr<TCPReceive> netr;

@@ -724,7 +724,7 @@ void CInputSystem::CheckKeySources(int kbdNum, bool fullAxisOnly, vector<CInputS
       find(badSources.begin(), badSources.end(), source) == badSources.end())
     {
       // Update mapping string and add source to list
-      if (sources.size() == 0)
+      if (sources.empty())
         mapping.assign("KEY");
       else
         mapping.append("+KEY");
@@ -758,7 +758,7 @@ void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCent
     {
       // Otherwise, update mapping string and add source to list
       const char *partName = LookupName(msePart);
-      if (sources.size() == 0)
+      if (sources.empty())
         mapping.assign("MOUSE");
       else
         mapping.append("+MOUSE");
@@ -787,7 +787,7 @@ void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputS
     {
       // Otherwise, update mapping string and add source to list
       const char *partName = LookupName(joyPart);
-      if (sources.size() == 0)
+      if (sources.empty())
         mapping.assign("JOY");
       else
         mapping.append("+JOY");
@@ -800,7 +800,7 @@ void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputS
   }
 }
 
-bool CInputSystem::ParseInt(string str, int &num)
+bool CInputSystem::ParseInt(const string& str, int &num)
 {
   stringstream ss(str);
   return !(ss >> num).fail();
@@ -813,9 +813,9 @@ string CInputSystem::IntToString(int num)
   return ss.str();
 }
 
-bool CInputSystem::EqualsIgnoreCase(string str1, const char *str2)
+bool CInputSystem::EqualsIgnoreCase(const string& str1, const char *str2)
 {
-  for (string::const_iterator ci = str1.begin(); ci < str1.end(); ci++) 
+  for (string::const_iterator ci = str1.begin(); ci < str1.end(); ++ci) 
   {
     if (*str2 == '\0' || tolower(*ci) != tolower(*str2))
       return false;
@@ -824,9 +824,9 @@ bool CInputSystem::EqualsIgnoreCase(string str1, const char *str2)
   return *str2 == '\0';
 }
 
-bool CInputSystem::StartsWithIgnoreCase(string str1, const char *str2)
+bool CInputSystem::StartsWithIgnoreCase(const string& str1, const char *str2)
 {
-  for (string::const_iterator ci = str1.begin(); ci < str1.end(); ci++) 
+  for (string::const_iterator ci = str1.begin(); ci < str1.end(); ++ci) 
   {
     if (*str2 == '\0')
       return true;
@@ -837,7 +837,7 @@ bool CInputSystem::StartsWithIgnoreCase(string str1, const char *str2)
   return *str2 == '\0'; 
 }
 
-bool CInputSystem::IsValidKeyName(string str)
+bool CInputSystem::IsValidKeyName(const string& str)
 {
   for (size_t i = 0; i < NUM_VALID_KEYS; i++)
   {
@@ -847,7 +847,7 @@ bool CInputSystem::IsValidKeyName(string str)
   return false;
 }
 
-EMousePart CInputSystem::LookupMousePart(string str)
+EMousePart CInputSystem::LookupMousePart(const string& str)
 {
   for (int i = 0; s_mseParts[i].id != NULL; i++)
   {
@@ -867,7 +867,7 @@ const char *CInputSystem::LookupName(EMousePart msePart)
   return NULL;
 }
 
-EJoyPart CInputSystem::LookupJoyPart(string str)
+EJoyPart CInputSystem::LookupJoyPart(const string& str)
 {
   for (int i = 0; s_joyParts[i].id != NULL; i++)
   {
@@ -887,7 +887,7 @@ const char *CInputSystem::LookupName(EJoyPart joyPart)
   return NULL;
 }
 
-size_t CInputSystem::ParseDevMapping(string str, const char *devType, int &devNum)
+size_t CInputSystem::ParseDevMapping(const string& str, const char *devType, int &devNum)
 {
   if (!StartsWithIgnoreCase(str, devType))
     return -1;
@@ -913,7 +913,7 @@ size_t CInputSystem::ParseDevMapping(string str, const char *devType, int &devNu
     return -1;
 }
 
-CInputSource* CInputSystem::ParseMultiSource(string str, bool fullAxisOnly, bool isOr)
+CInputSource* CInputSystem::ParseMultiSource(const string& str, bool fullAxisOnly, bool isOr)
 {
   // Check for empty or NONE mapping
   size_t size = str.size();
@@ -1023,7 +1023,7 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
           if (rightSource != NULL)
             sources.push_back(rightSource);
         }
-        if (sources.size() > 0)
+        if (!sources.empty())
           return new CMultiInputSource(true, sources);
       }
       return m_emptySource;
@@ -1265,7 +1265,7 @@ void CInputSystem::StoreJoySettings(Util::Config::Node *config, JoySettings *set
 KeySettings *CInputSystem::GetKeySettings(int kbdNum, bool useDefault)
 {
   KeySettings *common = NULL;
-  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); it++)
+  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); ++it)
   {
     if ((*it)->kbdNum == kbdNum)
       return *it;
@@ -1280,7 +1280,7 @@ KeySettings *CInputSystem::GetKeySettings(int kbdNum, bool useDefault)
 MouseSettings *CInputSystem::GetMouseSettings(int mseNum, bool useDefault)
 {
   MouseSettings *common = NULL;
-  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); it++)
+  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); ++it)
   {
     if ((*it)->mseNum == mseNum)
       return *it;
@@ -1295,7 +1295,7 @@ MouseSettings *CInputSystem::GetMouseSettings(int mseNum, bool useDefault)
 JoySettings *CInputSystem::GetJoySettings(int joyNum, bool useDefault)
 {
   JoySettings *common = NULL;
-  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); it++)
+  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); ++it)
   {
     if ((*it)->joyNum == joyNum)
       return *it;
@@ -1340,7 +1340,7 @@ int CInputSystem::GetButtonNumber(EMousePart msePart)
 
 EMousePart CInputSystem::GetMouseAxis(int axisNum, int axisDir)
 {
-  if (axisNum > 0 || axisNum >= NUM_MOUSE_AXES || axisDir < 0 || axisDir > 3)
+  if (axisNum < 0 || axisNum >= NUM_MOUSE_AXES || axisDir < 0 || axisDir > 3)
     return MouseUnknown;
   return (EMousePart)(MouseXAxis + 4 * axisNum + axisDir);
 }
@@ -1587,17 +1587,17 @@ CInputSource* CInputSystem::ParseSource(const char *mapping, bool fullAxisOnly)
 void CInputSystem::ClearSettings()
 {
   // Delete all key settings
-  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); it++)
+  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); ++it)
     delete *it;
   m_keySettings.clear();
 
   // Delete all mouse settings
-  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); it++)
+  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); ++it)
     delete *it;
   m_mseSettings.clear();
 
   // Delete all joystick settings
-  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); it++)
+  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); ++it)
     delete *it;
   m_joySettings.clear();
 }
@@ -1715,15 +1715,15 @@ void CInputSystem::LoadFromConfig(const Util::Config::Node &config)
 void CInputSystem::StoreToConfig(Util::Config::Node *config)
 {
   // Write all key settings
-  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); it++)
+  for (vector<KeySettings*>::iterator it = m_keySettings.begin(); it != m_keySettings.end(); ++it)
     StoreKeySettings(config, *it);
 
   // Write all mouse settings
-  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); it++)
+  for (vector<MouseSettings*>::iterator it = m_mseSettings.begin(); it != m_mseSettings.end(); ++it)
     StoreMouseSettings(config, *it);
 
   // Write all joystick settings
-  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); it++)
+  for (vector<JoySettings*>::iterator it = m_joySettings.begin(); it != m_joySettings.end(); ++it)
     StoreJoySettings(config, *it);
 }
 
@@ -1772,11 +1772,11 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
     CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, mapping, badSources);
 
     // When some inputs have been activated, keep looping until they have all been released again.
-    if (sources.size() > 0)
+    if (!sources.empty())
     {
       // Check each source is no longer active
       bool active = false;
-      for (vector<CInputSource*>::iterator it = sources.begin(); it != sources.end(); it++)
+      for (vector<CInputSource*>::iterator it = sources.begin(); it != sources.end(); ++it)
       {
         if ((*it)->IsActive())
         {

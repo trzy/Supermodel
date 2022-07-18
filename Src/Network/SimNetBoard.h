@@ -60,7 +60,7 @@ public:
 	bool IsAttached(void);
 	bool IsRunning(void);
 
-	void GetGame(Game gameInfo);
+	void GetGame(const Game& gameInfo);
 
 	uint8_t ReadCommRAM8(unsigned addr);
 	uint16_t ReadCommRAM16(unsigned addr);
@@ -85,7 +85,7 @@ private:
 	// netsock
 	uint16_t port_in = 0;
 	uint16_t port_out = 0;
-	std::string addr_out = "";
+	std::string addr_out;
 	std::thread m_connectThread;
 	std::atomic_bool m_quit = false;
 	std::atomic_bool m_connected = false;

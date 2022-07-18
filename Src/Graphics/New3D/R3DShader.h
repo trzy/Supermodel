@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include "Util/NewConfig.h"
 #include "Model.h"
-#include <map>
+#include <unordered_map>
 #include <string>
 
 namespace New3D {
@@ -109,7 +109,7 @@ private:
 	GLint m_locDiscardAlpha;
 
 	// vertex attribute position cache
-	std::map<std::string, GLint> m_vertexLocCache;
+	std::unordered_map<std::string, GLint> m_vertexLocCache;
 
 };
 

@@ -1309,7 +1309,7 @@ bool CNetBoard::IsRunning(void)
 	return m_attached && (ioreg[0xc0] != 0);
 }
 
-void CNetBoard::GetGame(Game gameinfo)
+void CNetBoard::GetGame(const Game& gameinfo)
 {
 	Gameinfo = gameinfo;
 }

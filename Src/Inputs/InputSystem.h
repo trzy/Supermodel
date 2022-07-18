@@ -420,23 +420,23 @@ private:
    */
   void CheckJoySources(int joyNum, bool fullAxisOnly, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
-  bool ParseInt(std::string str, int &num);
+  bool ParseInt(const std::string& str, int &num);
 
   std::string IntToString(int num);
 
-  bool EqualsIgnoreCase(std::string str1, const char *str2);
+  bool EqualsIgnoreCase(const std::string& str1, const char *str2);
 
-  bool StartsWithIgnoreCase(std::string str1, const char *str2);
+  bool StartsWithIgnoreCase(const std::string& str1, const char *str2);
 
   /*
    * Returns true if the given string represents a valid key name.
    */
-  bool IsValidKeyName(std::string str);
+  bool IsValidKeyName(const std::string& str);
 
   /*
    * Returns the EMousePart with the given mapping name or MouseUnknown if not found.
    */
-  EMousePart LookupMousePart(std::string str);
+  EMousePart LookupMousePart(const std::string& str);
 
   /*
    * Returns the mapping name for the given EMousePart.
@@ -446,21 +446,21 @@ private:
   /*
    * Returns the EJoyPart with the given mapping name or JoyUnknown if not found.
    */
-  EJoyPart LookupJoyPart(std::string str);
+  EJoyPart LookupJoyPart(const std::string& str);
 
   /*
    * Returns the mapping name for the given EJoyPart.
    */
   const char *LookupName(EJoyPart joyPart);
 
-  size_t ParseDevMapping(std::string str, const char *devType, int &devNum);
+  size_t ParseDevMapping(const std::string& str, const char *devType, int &devNum);
 
   /*
    * Parses the given mapping string, possibly representing more than one mapping, and returns an input source for it or NULL if the 
    * mapping is invalid.
    * If fullAxisOnly is true, then only mappings that represent a full axis range (eg MouseXAxis) are parsed.
    */
-  CInputSource* ParseMultiSource(std::string str, bool fullAxisOnly, bool isOr);
+  CInputSource* ParseMultiSource(const std::string& str, bool fullAxisOnly, bool isOr);
 
   /*
    * Parses the given single mapping string and returns an input source for it, or NULL if non exists.

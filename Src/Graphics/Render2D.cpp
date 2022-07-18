@@ -333,23 +333,13 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
     uint32_t pattern = vram[patternOffset + patternLine];
     for (int p = 7; p >= 0; p--)
     {
-      if (!clip || (clip && pixelOffset >= 0 && pixelOffset < 496))
+      if (!clip || (/*pixelOffset >= 0 &&*/ (unsigned int)pixelOffset < 496u)) // the >= 0 check is accounted for, as the cast to uint makes them appear as very large unsigned values
       {
         uint16_t maskTest = 1 << (15-((pixelOffset+0)/32));
         bool visible = (mask & maskTest) != 0;
-        uint32_t pixel = palette[((pattern >> (p*4)) & 0xF) | colorHi];
-        if (alphaTest)
-        {
-          if (visible && (pixel >> 24) != 0)  // only draw opaque pixels
+        uint32_t pixel = visible ? palette[((pattern >> (p*4)) & 0xF) | colorHi] : 0;
+        if (!alphaTest || (visible && (pixel >> 24) != 0))  // only draw opaque pixels
             line[pixelOffset] = pixel;
-        }
-        else
-        {
-          if (visible)
-            line[pixelOffset] = pixel;
-          else
-            line[pixelOffset] = 0;
-        }
       }
       ++pixelOffset;
     }
@@ -361,23 +351,13 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
       uint32_t pattern = vram[patternOffset + patternLine + i];
       for (int p = 3; p >= 0; p--)
       {
-        if (!clip || (clip && pixelOffset >= 0 && pixelOffset < 496))
+        if (!clip || (/*pixelOffset >= 0 &&*/ (unsigned int)pixelOffset < 496u)) // the >= 0 check is accounted for, as the cast to uint makes them appear as very large unsigned values
         {
           uint16_t maskTest = 1 << (15-((pixelOffset+0)/32));
           bool visible = (mask & maskTest) != 0;
-          uint32_t pixel = palette[((pattern >> (p*8)) & 0xFF) | colorHi];
-          if (alphaTest)
-          {
-            if (visible && (pixel >> 24) != 0)
+          uint32_t pixel = visible ? palette[((pattern >> (p*8)) & 0xFF) | colorHi] : 0;
+          if (!alphaTest || (visible && (pixel >> 24) != 0))
               line[pixelOffset] = pixel;
-          }
-          else
-          {
-            if (visible)
-              line[pixelOffset] = pixel;
-            else
-              line[pixelOffset] = 0;  // transparent
-          }
         }
         ++pixelOffset;
       }
@@ -417,12 +397,11 @@ static void DrawLayer(uint32_t *pixels, int layerNum, const uint32_t *vram, cons
     int extraTile = (hFine != 0) ? 1 : 0; // h-scrolling requires part of 63rd tile
 
     // First tile may be clipped
-    int tx = 0;
     DrawTileLine<bits, alphaTest, true>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
     ++hTile;
     pixelOffset += 8;
     // Middle tiles will not be clipped
-    for (tx = 1; tx < (62 - 1 + extraTile); tx++)
+    for (int tx = 1; tx < (62 - 1 + extraTile); tx++)
     {
       DrawTileLine<bits, alphaTest, false>(line, pixelOffset, nameTable[(hTile ^ 1) & 63], vFine, vram, palette, mask);
       ++hTile;

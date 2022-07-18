@@ -33,7 +33,7 @@
 
 #include "93C46.h"
 
-#include <string.h>
+#include <cstring>
 #include "Supermodel.h"
 
 

@@ -41,7 +41,7 @@ public:
 
 	virtual bool Init(UINT8* netRAMPtr, UINT8* netBufferPtr) = 0;
 
-	virtual void GetGame(Game) = 0;
+	virtual void GetGame(const Game&) = 0;
 
 	virtual UINT8 ReadCommRAM8(unsigned addr) = 0;
 	virtual UINT16 ReadCommRAM16(unsigned addr) = 0;

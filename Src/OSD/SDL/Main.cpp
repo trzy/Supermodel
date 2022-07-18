@@ -326,13 +326,14 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
       strcpy(strLocal, (char *) str);
       if (infoLog)  InfoLog("  Supported Extensions     : %s", (strLocal = strtok(strLocal, " \t\n")));
       else           printf("  Supported Extensions     : %s\n", (strLocal = strtok(strLocal, " \t\n")));
-      while ((strLocal = strtok(NULL, " \t\n")) != NULL)
+      char* strLocalTmp = strLocal;
+      while ((strLocalTmp = strtok(NULL, " \t\n")) != NULL)
       {
-        if (infoLog)  InfoLog("                             %s", strLocal);
-        else           printf("                             %s\n", strLocal);
+        if (infoLog)  InfoLog("                             %s", strLocalTmp);
+        else           printf("                             %s\n", strLocalTmp);
       }
     }
-	free(strLocal);
+    free(strLocal);
   }
   if (infoLog)  InfoLog("");
   else      printf("\n");
@@ -1735,7 +1736,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
         else
         {
           unsigned  x, y;
-          if (2 == sscanf(&argv[i][4],"=%d,%d", &x, &y))
+          if (2 == sscanf(&argv[i][4],"=%u,%u", &x, &y))
           {
             std::string xres = Util::Format() << x;
             std::string yres = Util::Format() << y;

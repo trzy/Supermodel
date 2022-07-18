@@ -117,7 +117,7 @@ int	PolyHeader::NumVerts()
 
 int PolyHeader::NumSharedVerts()
 {
-	int sharedVerts[] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
+	static const int sharedVerts[] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4 };
 
 	return sharedVerts[header[0] & 0xf];
 }
@@ -135,9 +135,9 @@ bool PolyHeader::SharedVertex(int vertex)
 
 void PolyHeader::FaceNormal(float n[3]) 
 {
-	n[0] = (float)(((INT32)header[1]) >> 8) * (1.0f / 4194304.0f);
-	n[1] = (float)(((INT32)header[2]) >> 8) * (1.0f / 4194304.0f);
-	n[2] = (float)(((INT32)header[3]) >> 8) * (1.0f / 4194304.0f);
+	n[0] = (float)(((INT32)header[1]) >> 8) * (float)(1.0 / 4194304.0);
+	n[1] = (float)(((INT32)header[2]) >> 8) * (float)(1.0 / 4194304.0);
+	n[2] = (float)(((INT32)header[3]) >> 8) * (float)(1.0 / 4194304.0);
 }
 
 float PolyHeader::UVScale()
