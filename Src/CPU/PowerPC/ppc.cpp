@@ -289,8 +289,6 @@ static UINT32 ppc_rotate_mask[32][32];
 
 static void ppc_change_pc(UINT32 newpc)
 {
-	UINT i;
-
 	if (ppc.cur_fetch.start <= newpc && newpc <= ppc.cur_fetch.end)
 	{
 		ppc.op = &ppc.cur_fetch.ptr[(newpc-ppc.cur_fetch.start)/4];
@@ -298,7 +296,7 @@ static void ppc_change_pc(UINT32 newpc)
 		return;
 	}
 
-	for(i = 0; ppc.fetch[i].ptr != NULL; i++)
+	for(UINT i = 0; ppc.fetch[i].ptr != NULL; i++)
 	{
 		if (ppc.fetch[i].start <= newpc && newpc <= ppc.fetch[i].end)
 		{
@@ -317,42 +315,42 @@ static void ppc_change_pc(UINT32 newpc)
 	ppc.fatalError = true;
 }
 
-inline UINT8 READ8(UINT32 address)
+static inline UINT8 READ8(UINT32 address)
 {
 	return Bus->Read8(address);
 }
 
-inline UINT16 READ16(UINT32 address)
+static inline UINT16 READ16(UINT32 address)
 {
 	return Bus->Read16(address);
 }
 
-inline UINT32 READ32(UINT32 address)
+static inline UINT32 READ32(UINT32 address)
 {
 	return Bus->Read32(address);
 }
 
-inline UINT64 READ64(UINT32 address)
+static inline UINT64 READ64(UINT32 address)
 {
 	return Bus->Read64(address);
 }
 
-inline void WRITE8(UINT32 address, UINT8 data)
+static inline void WRITE8(UINT32 address, UINT8 data)
 {
 	Bus->Write8(address,data);
 }
 
-inline void WRITE16(UINT32 address, UINT16 data)
+static inline void WRITE16(UINT32 address, UINT16 data)
 {
 	Bus->Write16(address,data);
 }
 
-inline void WRITE32(UINT32 address, UINT32 data)
+static inline void WRITE32(UINT32 address, UINT32 data)
 {
 	Bus->Write32(address,data);
 }
 
-inline void WRITE64(UINT32 address, UINT64 data)
+static inline void WRITE64(UINT32 address, UINT64 data)
 {
 	Bus->Write64(address,data);
 }
@@ -361,7 +359,7 @@ inline void WRITE64(UINT32 address, UINT64 data)
 /*********************************************************************/
 
 
-inline void SET_CR0(INT32 rd)
+static inline void SET_CR0(INT32 rd)
 {
 	if( rd < 0 ) {
 		CR(0) = 0x8;
@@ -375,12 +373,12 @@ inline void SET_CR0(INT32 rd)
 		CR(0) |= 0x1;
 }
 
-inline void SET_CR1(void)
+static inline void SET_CR1(void)
 {
 	CR(1) = (ppc.fpscr >> 28) & 0xf;
 }
 
-inline void SET_ADD_OV(UINT32 rd, UINT32 ra, UINT32 rb)
+static inline void SET_ADD_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( ADD_OV(rd, ra, rb) )
 		XER |= XER_SO | XER_OV;
@@ -388,7 +386,7 @@ inline void SET_ADD_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_OV;
 }
 
-inline void SET_SUB_OV(UINT32 rd, UINT32 ra, UINT32 rb)
+static inline void SET_SUB_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( SUB_OV(rd, ra, rb) )
 		XER |= XER_SO | XER_OV;
@@ -396,7 +394,7 @@ inline void SET_SUB_OV(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_OV;
 }
 
-inline void SET_ADD_CA(UINT32 rd, UINT32 ra, UINT32 rb)
+static inline void SET_ADD_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( ADD_CA(rd, ra, rb) )
 		XER |= XER_CA;
@@ -404,7 +402,7 @@ inline void SET_ADD_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_CA;
 }
 
-inline void SET_SUB_CA(UINT32 rd, UINT32 ra, UINT32 rb)
+static inline void SET_SUB_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 {
 	if( SUB_CA(rd, ra, rb) )
 		XER |= XER_CA;
@@ -412,10 +410,8 @@ inline void SET_SUB_CA(UINT32 rd, UINT32 ra, UINT32 rb)
 		XER &= ~XER_CA;
 }
 
-inline UINT32 check_condition_code(UINT32 bo, UINT32 bi)
+static inline UINT32 check_condition_code(UINT32 bo, UINT32 bi)
 {
-	UINT32 ctr_ok;
-	UINT32 condition_ok;
 	UINT32 bo0 = (bo & 0x10) ? 1 : 0;
 	UINT32 bo1 = (bo & 0x08) ? 1 : 0;
 	UINT32 bo2 = (bo & 0x04) ? 1 : 0;
@@ -424,13 +420,13 @@ inline UINT32 check_condition_code(UINT32 bo, UINT32 bi)
 	if( bo2 == 0 )
 		--CTR;
 
-	ctr_ok = bo2 | ((CTR != 0) ^ bo3);
-	condition_ok = bo0 | (CRBIT(bi) ^ (~bo1 & 0x1));
+	UINT32 ctr_ok = bo2 | ((CTR != 0) ^ bo3);
+	UINT32 condition_ok = bo0 | (CRBIT(bi) ^ (bo1 ^ 0x1));
 
-	return ctr_ok && condition_ok;
+	return ctr_ok & condition_ok;
 }
 
-inline UINT64 ppc_read_timebase(void)
+static inline UINT64 ppc_read_timebase(void)
 {
 	int cycles = ppc.tb_base_icount - ppc.icount;
 
@@ -438,7 +434,7 @@ inline UINT64 ppc_read_timebase(void)
 	return ppc.tb + (cycles / ppc.timer_ratio);
 }
 
-inline void ppc_write_timebase_l(UINT32 tbl)
+static inline void ppc_write_timebase_l(UINT32 tbl)
 {
 	UINT64 tb = ppc_read_timebase();
 
@@ -447,7 +443,7 @@ inline void ppc_write_timebase_l(UINT32 tbl)
 	ppc.tb = (tb&~0xffffffff)|tbl;
 }
 
-inline void ppc_write_timebase_h(UINT32 tbh)
+static inline void ppc_write_timebase_h(UINT32 tbh)
 {
 	UINT64 tb = ppc_read_timebase();
 
@@ -456,7 +452,7 @@ inline void ppc_write_timebase_h(UINT32 tbh)
 	ppc.tb = (tb&0xffffffff)|((UINT64)(tbh) << 32);
 }
 
-inline UINT32 read_decrementer(void)
+static inline UINT32 read_decrementer(void)
 {
 	int cycles = ppc.dec_base_icount - ppc.icount;
 
@@ -464,7 +460,7 @@ inline UINT32 read_decrementer(void)
 	return DEC - (cycles / ppc.timer_ratio);
 }
 
-inline void write_decrementer(UINT32 value)
+static inline void write_decrementer(UINT32 value)
 {
 	if (((value&0x80000000) && !(read_decrementer()&0x80000000)))
 	{
@@ -487,7 +483,7 @@ inline void write_decrementer(UINT32 value)
 
 /*********************************************************************/
 
-inline void ppc_set_spr(int spr, UINT32 value)
+static inline void ppc_set_spr(int spr, UINT32 value)
 {
 	switch (spr)
 	{
@@ -560,7 +556,7 @@ inline void ppc_set_spr(int spr, UINT32 value)
 	ppc.fatalError = true;
 }
 
-inline UINT32 ppc_get_spr(int spr)
+static inline UINT32 ppc_get_spr(int spr)
 {
 	switch(spr)
 	{
@@ -623,7 +619,7 @@ inline UINT32 ppc_get_spr(int spr)
 	return 0;
 }
 
-inline void ppc_set_msr(UINT32 value)
+static inline void ppc_set_msr(UINT32 value)
 {
 	if( value & (MSR_ILE | MSR_LE) )
 	{
@@ -637,12 +633,12 @@ inline void ppc_set_msr(UINT32 value)
 	ppc603_check_interrupts();
 }
 
-inline UINT32 ppc_get_msr(void)
+static inline UINT32 ppc_get_msr(void)
 {
 	return MSR;
 }
 
-inline void ppc_set_cr(UINT32 value)
+static inline void ppc_set_cr(UINT32 value)
 {
 	CR(0) = (value >> 28) & 0xf;
 	CR(1) = (value >> 24) & 0xf;
@@ -654,7 +650,7 @@ inline void ppc_set_cr(UINT32 value)
 	CR(7) = (value >> 0) & 0xf;
 }
 
-inline UINT32 ppc_get_cr(void)
+static inline UINT32 ppc_get_cr(void)
 {
 	return CR(0) << 28 | CR(1) << 24 | CR(2) << 20 | CR(3) << 16 | CR(4) << 12 | CR(5) << 8 | CR(6) << 4 | CR(7);
 }

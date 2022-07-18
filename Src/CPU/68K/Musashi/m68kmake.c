@@ -632,7 +632,7 @@ int fgetline(char* buff, int nchars, FILE* file)
 	if(fgets(buff, nchars, file) == NULL)
 		return -1;
 	if(buff[0] == '\r')
-		memcpy(buff, buff + 1, nchars - 1);
+		memmove(buff, buff + 1, nchars - 1);
 
 	length = strlen(buff);
 	while(length && (buff[length-1] == '\r' || buff[length-1] == '\n'))
@@ -1126,13 +1126,13 @@ void populate_table(void)
 	/* Find the start of the table */
 	while(strcmp(buff, ID_TABLE_START) != 0)
 		if(fgetline(buff, MAX_LINE_LENGTH, g_input_file) < 0)
-			error_exit("Premature EOF while reading table");
+			error_exit("(table_start) Premature EOF while reading table");
 
 	/* Process the entire table */
 	for(op = g_opcode_input_table;;op++)
 	{
 		if(fgetline(buff, MAX_LINE_LENGTH, g_input_file) < 0)
-			error_exit("Premature EOF while reading table");
+			error_exit("(inline) Premature EOF while reading table");
 		if(strlen(buff) == 0)
 			continue;
 		/* We finish when we find an input separator */
@@ -1270,7 +1270,7 @@ int main(int argc, char **argv)
 {
 	/* File stuff */
 	char output_path[M68K_MAX_DIR] = "";
-	char filename[M68K_MAX_PATH];
+	char filename[M68K_MAX_PATH*2];
 	/* Section identifier */
 	char section_id[MAX_LINE_LENGTH+1];
 	/* Inserts */
