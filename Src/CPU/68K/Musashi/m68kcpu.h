@@ -587,7 +587,7 @@
 #if M68K_LOG_ENABLE
 	#include <stdio.h>
 	extern FILE* M68K_LOG_FILEHANDLE
-	extern char* m68ki_cpu_names[];
+	extern const char *const m68ki_cpu_names[];
 
 	#define M68K_DO_LOG(A) if(M68K_LOG_FILEHANDLE) fprintf A
 	#if M68K_LOG_1010_1111
@@ -842,12 +842,12 @@
 extern m68ki_cpu_core m68ki_cpu;
 extern sint           m68ki_remaining_cycles;
 extern uint           m68ki_tracing;
-extern uint8          m68ki_shift_8_table[];
-extern uint16         m68ki_shift_16_table[];
-extern uint           m68ki_shift_32_table[];
-extern uint8          m68ki_exception_cycle_table[][256];
+extern const uint8    m68ki_shift_8_table[];
+extern const uint16   m68ki_shift_16_table[];
+extern const uint     m68ki_shift_32_table[];
+extern const uint8    m68ki_exception_cycle_table[][256];
 extern uint           m68ki_address_space;
-extern uint8          m68ki_ea_idx_cycle_table[];
+extern const uint8    m68ki_ea_idx_cycle_table[];
 
 extern uint           m68ki_aerr_address;
 extern uint           m68ki_aerr_write_mode;
@@ -1201,7 +1201,7 @@ INLINE uint m68ki_get_ea_ix(uint An)
 
 	/* Check if base displacement is present */
 	if(BIT_5(extension))                /* BD SIZE */
-		bd = BIT_4(extension) ? m68ki_read_imm_32() : MAKE_INT_16(m68ki_read_imm_16());
+		bd = BIT_4(extension) ? m68ki_read_imm_32() : (uint32)MAKE_INT_16(m68ki_read_imm_16());
 
 	/* If no indirect action, we are done */
 	if(!(extension&7))                  /* No Memory Indirect */
@@ -1209,7 +1209,7 @@ INLINE uint m68ki_get_ea_ix(uint An)
 
 	/* Check if outer displacement is present */
 	if(BIT_1(extension))                /* I/IS:  od */
-		od = BIT_0(extension) ? m68ki_read_imm_32() : MAKE_INT_16(m68ki_read_imm_16());
+		od = BIT_0(extension) ? m68ki_read_imm_32() : (uint32)MAKE_INT_16(m68ki_read_imm_16());
 
 	/* Postindex */
 	if(BIT_2(extension))                /* I/IS:  0 = preindex, 1 = postindex */
@@ -1533,7 +1533,7 @@ INLINE void m68ki_stack_frame_buserr(uint sr)
 /* Format 8 stack frame (68010).
  * 68010 only.  This is the 29 word bus/address error frame.
  */
-void m68ki_stack_frame_1000(uint pc, uint sr, uint vector)
+static inline void m68ki_stack_frame_1000(uint pc, uint sr, uint vector)
 {
 	/* VERSION
 	 * NUMBER
@@ -1587,7 +1587,7 @@ void m68ki_stack_frame_1000(uint pc, uint sr, uint vector)
  * if the error happens at an instruction boundary.
  * PC stacked is address of next instruction.
  */
-void m68ki_stack_frame_1010(uint sr, uint vector, uint pc)
+static inline void m68ki_stack_frame_1010(uint sr, uint vector, uint pc)
 {
 	/* INTERNAL REGISTER */
 	m68ki_push_16(0);
@@ -1634,7 +1634,7 @@ void m68ki_stack_frame_1010(uint sr, uint vector, uint pc)
  * if the error happens during instruction execution.
  * PC stacked is address of instruction in progress.
  */
-void m68ki_stack_frame_1011(uint sr, uint vector, uint pc)
+static inline void m68ki_stack_frame_1011(uint sr, uint vector, uint pc)
 {
 	/* INTERNAL REGISTERS (18 words) */
 	m68ki_push_32(0);
@@ -1856,7 +1856,7 @@ INLINE void m68ki_exception_address_error(void)
 	uint sr = m68ki_init_exception();
 
 	/* If we were processing a bus error, address error, or reset,
-	 * this is a catastrophic failure.
+	 * while writing the stack frame, this is a catastrophic failure.
 	 * Halt the CPU
 	 */
 	if(CPU_RUN_MODE == RUN_MODE_BERR_AERR_RESET)
@@ -1878,7 +1878,7 @@ m68k_read_memory_8(0x00ffff01);
 
 
 /* Service an interrupt request and start exception processing */
-void m68ki_exception_interrupt(uint int_level)
+static inline void m68ki_exception_interrupt(uint int_level)
 {
 	uint vector;
 	uint sr;
