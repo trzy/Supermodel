@@ -333,7 +333,7 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
     uint32_t pattern = vram[patternOffset + patternLine];
     for (int p = 7; p >= 0; p--)
     {
-      if (!clip || (/*pixelOffset >= 0 &&*/ (unsigned int)pixelOffset < 496u))
+      if (!clip || (/*pixelOffset >= 0 &&*/ (unsigned int)pixelOffset < 496u)) // the >= 0 check is accounted for, as the cast to uint makes them appear as very large unsigned values
       {
         uint16_t maskTest = 1 << (15-((pixelOffset+0)/32));
         bool visible = (mask & maskTest) != 0;
@@ -351,7 +351,7 @@ static inline void DrawTileLine(uint32_t *line, int pixelOffset, uint16_t tile, 
       uint32_t pattern = vram[patternOffset + patternLine + i];
       for (int p = 3; p >= 0; p--)
       {
-        if (!clip || (/*pixelOffset >= 0 &&*/ (unsigned int)pixelOffset < 496u))
+        if (!clip || (/*pixelOffset >= 0 &&*/ (unsigned int)pixelOffset < 496u)) // the >= 0 check is accounted for, as the cast to uint makes them appear as very large unsigned values
         {
           uint16_t maskTest = 1 << (15-((pixelOffset+0)/32));
           bool visible = (mask & maskTest) != 0;
