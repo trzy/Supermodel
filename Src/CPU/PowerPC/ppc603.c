@@ -53,6 +53,7 @@ void ppc603_exception(int exception)
 				else
 					ppc.npc = 0x00000000 | 0x0500;
 
+				//MAME has this: ppc.interrupt_pending &= ~0x1;
 				ppc_change_pc(ppc.npc);
 			}
 			break;
@@ -225,7 +226,7 @@ static void ppc603_check_interrupts(void)
 			else if (ppc.interrupt_pending & 0x2)
 			{
 				ppc603_exception(EXCEPTION_DECREMENTER);
-			}	
+			}
 			else if (ppc.interrupt_pending & 0x4)
 			{
 				ppc603_exception(EXCEPTION_SMI);
