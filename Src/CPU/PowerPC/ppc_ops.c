@@ -230,16 +230,16 @@ static void ppc_bx(UINT32 op)
 	if( li & 0x2000000 )
 		li |= 0xfc000000;
 
-	if( AABIT ) {
-		ppc.npc = li;
-	} else {
-		ppc.npc = ppc.pc + li;
+	ppc.npc = li;
+
+	if( !AABIT ) {
+		ppc.npc += ppc.pc;
 	}
 
 	if( LKBIT ) {
 		LR = ppc.pc + 4;
 	}
-	
+
 	ppc_change_pc(ppc.npc);
 }
 
@@ -248,11 +248,9 @@ static void ppc_bcx(UINT32 op)
 	int condition = check_condition_code(BO, BI);
 
 	if( condition ) {
-		if( AABIT ) {
-			ppc.npc = SIMM16 & ~0x3;
-		} else {
-			ppc.npc = ppc.pc + (SIMM16 & ~0x3);
-		}
+		ppc.npc = SIMM16 & ~0x3;
+		if( !AABIT )
+			ppc.npc += ppc.pc;
 
 		ppc_change_pc(ppc.npc);
 	}
@@ -383,7 +381,7 @@ static void ppc_crand(UINT32 op)
 {
 	int bit = RT;
 	int b = CRBIT(RA) & CRBIT(RB);
-	if( b & 0x1 )
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -392,8 +390,8 @@ static void ppc_crand(UINT32 op)
 static void ppc_crandc(UINT32 op)
 {
 	int bit = RT;
-	int b = CRBIT(RA) & ~CRBIT(RB);
-	if( b & 0x1 )
+	int b = CRBIT(RA) & (CRBIT(RB) ^ 0x1);
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -402,8 +400,8 @@ static void ppc_crandc(UINT32 op)
 static void ppc_creqv(UINT32 op)
 {
 	int bit = RT;
-	int b = ~(CRBIT(RA) ^ CRBIT(RB));
-	if( b & 0x1 )
+	int b = (CRBIT(RA) ^ CRBIT(RB)) ^ 0x1;
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -412,8 +410,8 @@ static void ppc_creqv(UINT32 op)
 static void ppc_crnand(UINT32 op)
 {
 	int bit = RT;
-	int b = ~(CRBIT(RA) & CRBIT(RB));
-	if( b & 0x1 )
+	int b = (CRBIT(RA) & CRBIT(RB)) ^ 0x1;
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -422,8 +420,8 @@ static void ppc_crnand(UINT32 op)
 static void ppc_crnor(UINT32 op)
 {
 	int bit = RT;
-	int b = ~(CRBIT(RA) | CRBIT(RB));
-	if( b & 0x1 )
+	int b = (CRBIT(RA) | CRBIT(RB)) ^ 0x1;
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -433,7 +431,7 @@ static void ppc_cror(UINT32 op)
 {
 	int bit = RT;
 	int b = CRBIT(RA) | CRBIT(RB);
-	if( b & 0x1 )
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -442,8 +440,8 @@ static void ppc_cror(UINT32 op)
 static void ppc_crorc(UINT32 op)
 {
 	int bit = RT;
-	int b = CRBIT(RA) | ~CRBIT(RB);
-	if( b & 0x1 )
+	int b = CRBIT(RA) | (CRBIT(RB) ^ 0x1);
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -453,7 +451,7 @@ static void ppc_crxor(UINT32 op)
 {
 	int bit = RT;
 	int b = CRBIT(RA) ^ CRBIT(RB);
-	if( b & 0x1 )
+	if( b )
 		CR(bit / 4) |= _BIT(3-(bit % 4));
 	else
 		CR(bit / 4) &= ~_BIT(3-(bit % 4));
@@ -584,12 +582,10 @@ static void ppc_isync(UINT32 op)
 
 static void ppc_lbz(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = (UINT32)READ8(ea);
 }
@@ -612,24 +608,20 @@ static void ppc_lbzux(UINT32 op)
 
 static void ppc_lbzx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = (UINT32)READ8(ea);
 }
 
 static void ppc_lha(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = (INT32)(INT16)READ16(ea);
 }
@@ -652,25 +644,21 @@ static void ppc_lhaux(UINT32 op)
 
 static void ppc_lhax(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = (INT32)(INT16)READ16(ea);
 }
 
 static void ppc_lhbrx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 	UINT16 w;
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	w = READ16(ea);
 	REG(RT) = (UINT32)BYTE_REVERSE16(w);
@@ -678,12 +666,10 @@ static void ppc_lhbrx(UINT32 op)
 
 static void ppc_lhz(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = (UINT32)READ16(ea);
 }
@@ -706,12 +692,10 @@ static void ppc_lhzux(UINT32 op)
 
 static void ppc_lhzx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = (UINT32)READ16(ea);
 }
@@ -719,12 +703,10 @@ static void ppc_lhzx(UINT32 op)
 static void ppc_lmw(UINT32 op)
 {
 	int r = RT;
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	while( r <= 31 )
 	{
@@ -737,14 +719,9 @@ static void ppc_lmw(UINT32 op)
 static void ppc_lswi(UINT32 op)
 {
 	int n, r, i;
-	UINT32 ea = 0;
-	if( RA != 0 )
-		ea = REG(RA);
+	UINT32 ea = (RA != 0) ? REG(RA) : 0;
 
-	if( RB == 0 )
-		n = 32;
-	else
-		n = RB;
+	n = (RB == 0) ? 32 : RB;
 
 	r = RT - 1;
 	i = 0;
@@ -767,19 +744,38 @@ static void ppc_lswi(UINT32 op)
 
 static void ppc_lswx(UINT32 op)
 {
-	ErrorLog("PowerPC hit an unimplemented instruction. Halting emulation until reset.");
-	DebugLog("ppc: lswx unimplemented at %08X\n", ppc.pc);
-	ppc.fatalError = true;
+	int n, r, i;
+	UINT32 ea = REG(RB);
+	if(RA != 0)
+		ea += REG(RA);
+
+	n = ppc.xer & 0x7f;
+
+	r = RT - 1;
+	i = 0;
+
+	while(n > 0)
+	{
+		if (i == 0) {
+			r = (r + 1) % 32;
+			REG(r) = 0;
+		}
+		REG(r) |= ((READ8(ea) & 0xff) << (24 - i));
+		i += 8;
+		if (i == 32) {
+			i = 0;
+		}
+		ea++;
+		n--;
+	}
 }
 
 static void ppc_lwarx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	ppc.reserved_address = ea;
 	ppc.reserved = 1;
@@ -789,13 +785,11 @@ static void ppc_lwarx(UINT32 op)
 
 static void ppc_lwbrx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 	UINT32 w;
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	w = READ32(ea);
 	REG(RT) = BYTE_REVERSE32(w);
@@ -803,12 +797,10 @@ static void ppc_lwbrx(UINT32 op)
 
 static void ppc_lwz(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = READ32(ea);
 }
@@ -831,12 +823,10 @@ static void ppc_lwzux(UINT32 op)
 
 static void ppc_lwzx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	REG(RT) = READ32(ea);
 }
@@ -1141,12 +1131,10 @@ static void ppc_srwx(UINT32 op)
 
 static void ppc_stb(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	WRITE8(ea, (UINT8)REG(RS));
 }
@@ -1169,37 +1157,31 @@ static void ppc_stbux(UINT32 op)
 
 static void ppc_stbx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	WRITE8(ea, (UINT8)REG(RS));
 }
 
 static void ppc_sth(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	WRITE16(ea, (UINT16)REG(RS));
 }
 
 static void ppc_sthbrx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 	UINT16 w;
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	w = REG(RS);
 	WRITE16(ea, (UINT16)BYTE_REVERSE16(w));
@@ -1223,25 +1205,21 @@ static void ppc_sthux(UINT32 op)
 
 static void ppc_sthx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	WRITE16(ea, (UINT16)REG(RS));
 }
 
 static void ppc_stmw(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 	int r = RS;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	while( r <= 31 )
 	{
@@ -1254,14 +1232,9 @@ static void ppc_stmw(UINT32 op)
 static void ppc_stswi(UINT32 op)
 {
 	int n, r, i;
-	UINT32 ea = 0;
-	if( RA != 0 )
-		ea = REG(RA);
+	UINT32 ea = (RA != 0) ? REG(RA) : 0;
 
-	if( RB == 0 )
-		n = 32;
-	else
-		n = RB;
+	n = (RB == 0) ? 32 : RB;
 
 	r = RT - 1;
 	i = 0;
@@ -1283,32 +1256,48 @@ static void ppc_stswi(UINT32 op)
 
 static void ppc_stswx(UINT32 op)
 {
-	ErrorLog("PowerPC hit an unimplemented instruction. Halting emulation until reset.");
-	DebugLog("ppc: stswx unimplemented\n");
-	ppc.fatalError = true;
+	int n, r, i;
+	UINT32 ea = REG(RB);
+	if (RA != 0)
+		ea += REG(RA);
+
+	n = ppc.xer & 0x7f;
+
+	r = RT - 1;
+	i = 0;
+
+	while(n > 0)
+	{
+		if (i == 0) {
+			r = (r + 1) % 32;
+		}
+		WRITE8(ea, (REG(r) >> (24-i)) & 0xff);
+		i += 8;
+		if (i == 32) {
+			i = 0;
+		}
+		ea++;
+		n--;
+	}
 }
 
 static void ppc_stw(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = SIMM16;
 
-	if( RA == 0 )
-		ea = SIMM16;
-	else
-		ea = REG(RA) + SIMM16;
+	if( RA != 0 )
+		ea += REG(RA);
 
 	WRITE32(ea, REG(RS));
 }
 
 static void ppc_stwbrx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 	UINT32 w;
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	w = REG(RS);
 	WRITE32(ea, BYTE_REVERSE32(w));
@@ -1316,12 +1305,10 @@ static void ppc_stwbrx(UINT32 op)
 
 static void ppc_stwcx_rc(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	if( ppc.reserved ) {
 		WRITE32(ea, REG(RS));
@@ -1330,13 +1317,12 @@ static void ppc_stwcx_rc(UINT32 op)
 		ppc.reserved_address = 0;
 
 		CR(0) = 0x2;	// set EQ to indicate success
-		if( XER & XER_SO )
-			CR(0) |= 0x1;
 	} else {
 		CR(0) = 0;
-		if( XER & XER_SO )
-			CR(0) |= 0x1;
 	}
+
+	if (XER & XER_SO)
+		CR(0) |= 0x1;
 }
 
 static void ppc_stwu(UINT32 op)
@@ -1357,12 +1343,10 @@ static void ppc_stwux(UINT32 op)
 
 static void ppc_stwx(UINT32 op)
 {
-	UINT32 ea;
+	UINT32 ea = REG(RB);
 
-	if( RA == 0 )
-		ea = REG(RB);
-	else
-		ea = REG(RA) + REG(RB);
+	if( RA != 0 )
+		ea += REG(RA);
 
 	WRITE32(ea, REG(RS));
 }
@@ -1479,19 +1463,11 @@ static void ppc_tw(UINT32 op)
 	INT32 b = REG(RB);
 	int to = RT;
 
-	if( (a < b) && (to & 0x10) ) {
-		exception = 1;
-	}
-	if( (a > b) && (to & 0x08) ) {
-		exception = 1;
-	}
-	if( (a == b) && (to & 0x04) ) {
-		exception = 1;
-	}
-	if( ((UINT32)a < (UINT32)b) && (to & 0x02) ) {
-		exception = 1;
-	}
-	if( ((UINT32)a > (UINT32)b) && (to & 0x01) ) {
+	if(( (a < b) && (to & 0x10) ) ||
+	   ( (a > b) && (to & 0x08) ) ||
+	   ( (a == b) && (to & 0x04) ) ||
+	   ( ((UINT32)a < (UINT32)b) && (to & 0x02) ) ||
+	   ( ((UINT32)a > (UINT32)b) && (to & 0x01) )) {
 		exception = 1;
 	}
 
@@ -1507,19 +1483,11 @@ static void ppc_twi(UINT32 op)
 	INT32 i = SIMM16;
 	int to = RT;
 
-	if( (a < i) && (to & 0x10) ) {
-		exception = 1;
-	}
-	if( (a > i) && (to & 0x08) ) {
-		exception = 1;
-	}
-	if( (a == i) && (to & 0x04) ) {
-		exception = 1;
-	}
-	if( ((UINT32)a < (UINT32)i) && (to & 0x02) ) {
-		exception = 1;
-	}
-	if( ((UINT32)a > (UINT32)i) && (to & 0x01) ) {
+	if(( (a < i) && (to & 0x10) ) ||
+	   ( (a > i) && (to & 0x08) ) ||
+	   ( (a == i) && (to & 0x04) ) ||
+	   ( ((UINT32)a < (UINT32)i) && (to & 0x02) ) ||
+	   ( ((UINT32)a > (UINT32)i) && (to & 0x01) )) {
 		exception = 1;
 	}
 
@@ -2108,11 +2076,11 @@ static void ppc_faddx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN(FPR(a), FPR(b));
 
 	FPR(t).fd = FPR(a).fd + FPR(b).fd;
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2166,9 +2134,9 @@ static void ppc_fcmpu(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN(FPR(a), FPR(b));
 
-    if(is_nan_double(FPR(a)) || is_nan_double(FPR(b)))
+	if(is_nan_double(FPR(a)) || is_nan_double(FPR(b)))
 	{
 		c = 1; /* OX */
 		if(is_snan_double(FPR(a)) || is_snan_double(FPR(b))) {
@@ -2197,12 +2165,12 @@ static void ppc_fctiwx(UINT32 op)
 	UINT32 b = RB;
 	UINT32 t = RT;
 	INT64 r = 0;
-	
+
 	// TODO: fix FPSCR flags FX,VXSNAN,VXCVI
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN_1(FPR(b));
+	SET_VXSNAN_1(FPR(b));
 
 	switch(ppc.fpscr & 3)
 	{
@@ -2212,7 +2180,7 @@ static void ppc_fctiwx(UINT32 op)
 		case 3: r = (INT64)round_toward_negative_infinity(FPR(b)); break;
 	}
 
-    if(r > (INT64)((INT32)0x7FFFFFFF))
+	if(r > (INT64)((INT32)0x7FFFFFFF))
 	{
 		FPR(t).id = 0x7FFFFFFF;
 		// FPSCR[FR] = 0
@@ -2221,14 +2189,14 @@ static void ppc_fctiwx(UINT32 op)
 	}
 	else if(FPR(b).fd < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;		
+		FPR(t).id = 0x80000000;
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
 	}
 	else
 	{
-		FPR(t).id = (UINT32)(r);
+		FPR(t).id = (UINT32)r;
 		// FPSCR[FR] = t.iw > t.fd
 		// FPSCR[FI] = t.iw == t.fd
 		// FPSCR[XX] = ?
@@ -2250,12 +2218,12 @@ static void ppc_fctiwzx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN_1(FPR(b));
+	SET_VXSNAN_1(FPR(b));
 	r = smround_toward_zero(FPR(b));
 
-    if(r > (INT64)((INT32)0x7fffffff))
+	if(r > (INT64)((INT32)0x7fffffff))
 	{
-		FPR(t).id = 0x7fffffff;		
+		FPR(t).id = 0x7fffffff;
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2263,7 +2231,7 @@ static void ppc_fctiwzx(UINT32 op)
 	}
 	else if(r < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;		
+		FPR(t).id = 0x80000000;
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2290,11 +2258,11 @@ static void ppc_fdivx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN(FPR(a), FPR(b));
 
-    FPR(t).fd = FPR(a).fd / FPR(b).fd;
+	FPR(t).fd = FPR(a).fd / FPR(b).fd;
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2349,11 +2317,11 @@ static void ppc_frspx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN_1(FPR(b));
+	SET_VXSNAN_1(FPR(b));
 
 	FPR(t).fd = (float)FPR(b).fd;
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2366,11 +2334,11 @@ static void ppc_frsqrtex(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN_1(FPR(b));
+	SET_VXSNAN_1(FPR(b));
 
-	FPR(t).fd = 1.0 / sqrt(FPR(b).fd);	/* verify this */		
-    
-    set_fprf(FPR(t));
+	FPR(t).fd = 1.0 / sqrt(FPR(b).fd);  /* verify this */
+
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2384,11 +2352,11 @@ static void ppc_fsqrtx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN_1(FPR(b));
+	SET_VXSNAN_1(FPR(b));
 
 	FPR(t).fd = (double)(sqrt(FPR(b).fd));
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2402,11 +2370,11 @@ static void ppc_fsubx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN(FPR(a), FPR(b));
 
 	FPR(t).fd = FPR(a).fd - FPR(b).fd;
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2423,28 +2391,28 @@ static void ppc_mffsx(UINT32 op)
 
 static void ppc_mtfsb0x(UINT32 op)
 {
-    UINT32 crbD;
+	UINT32 crbD;
 
-    crbD = (op >> 21) & 0x1F;
+	crbD = (op >> 21) & 0x1F;
 
-    if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
-        ppc.fpscr &= ~(1 << (31 - crbD));
+	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
+		ppc.fpscr &= ~(1 << (31 - crbD));
 
-    if( RCBIT ) {
+	if( RCBIT ) {
 		SET_CR1();
 	}
 }
 
 static void ppc_mtfsb1x(UINT32 op)
 {
-    UINT32 crbD;
+	UINT32 crbD;
 
-    crbD = (op >> 21) & 0x1F;
+	crbD = (op >> 21) & 0x1F;
 
-    if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
-        ppc.fpscr |= (1 << (31 - crbD));
+	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
+		ppc.fpscr |= (1 << (31 - crbD));
 
-    if( RCBIT ) {
+	if( RCBIT ) {
 		SET_CR1();
 	}
 }
@@ -2452,9 +2420,7 @@ static void ppc_mtfsb1x(UINT32 op)
 static void ppc_mtfsfx(UINT32 op)
 {
 	UINT32 b = RB;
-	UINT32 f = FM;
-
-	f = ppc_field_xlat[FM];
+	UINT32 f = ppc_field_xlat[FM];
 
 	ppc.fpscr &= (~f) | ~(FPSCR_FEX | FPSCR_VX);
 	ppc.fpscr |= (UINT32)(FPR(b).id) & ~(FPSCR_FEX | FPSCR_VX);
@@ -2591,11 +2557,11 @@ static void ppc_fsqrtsx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN_1(FPR(b));
+	SET_VXSNAN_1(FPR(b));
 
 	FPR(t).fd = (float)(sqrt(FPR(b).fd));
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2609,11 +2575,11 @@ static void ppc_fsubsx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN(FPR(a), FPR(b));
 
 	FPR(t).fd = (float)(FPR(a).fd - FPR(b).fd);
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2628,12 +2594,12 @@ static void ppc_fmaddx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
-    SET_VXSNAN_1(FPR(c));
+	SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN_1(FPR(c));
 
 	FPR(t).fd = ((FPR(a).fd * FPR(c).fd) + FPR(b).fd);
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2648,12 +2614,12 @@ static void ppc_fmsubx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-    SET_VXSNAN(FPR(a), FPR(b));
-    SET_VXSNAN_1(FPR(c));
+	SET_VXSNAN(FPR(a), FPR(b));
+	SET_VXSNAN_1(FPR(c));
 
-    FPR(t).fd = ((FPR(a).fd * FPR(c).fd) - FPR(b).fd);
+	FPR(t).fd = ((FPR(a).fd * FPR(c).fd) - FPR(b).fd);
 
-    set_fprf(FPR(t));
+	set_fprf(FPR(t));
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2745,7 +2711,7 @@ static void ppc_fmaddsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
-	FPR(t).fd = (float)((FPR(a).fd * FPR(c).fd) + FPR(b).fd);	
+	FPR(t).fd = (float)((FPR(a).fd * FPR(c).fd) + FPR(b).fd);
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2802,7 +2768,7 @@ static void ppc_fnmaddsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
-    FPR(t).fd = (float)(-((FPR(a).fd * FPR(c).fd) + FPR(b).fd));
+	FPR(t).fd = (float)(-((FPR(a).fd * FPR(c).fd) + FPR(b).fd));
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
