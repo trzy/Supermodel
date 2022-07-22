@@ -26,8 +26,8 @@ out VS_OUT
 	vec3	viewVertex;
 	vec3	viewNormal;		// per vertex normal vector
 	vec2	texCoord;
-	float	fixedShade;
 	vec4	color;
+	float	fixedShade;
 	float	discardPoly;	// can't have varying bool (glsl spec)
 } vs_out;
 
@@ -44,8 +44,8 @@ vec4 GetColour(vec4 colour)
 
 float CalcBackFace(in vec3 viewVertex)
 {
-	vec3 vt = viewVertex - vec3(0.0);
-	vec3 vn = (mat3(modelMat) * inFaceNormal);
+	vec3 vt = viewVertex; // - vec3(0.0);
+	vec3 vn = mat3(modelMat) * inFaceNormal;
 
 	// dot product of face normal with view direction
 	return dot(vt, vn);
@@ -75,8 +75,8 @@ in VS_OUT
 	vec3	viewVertex;
 	vec3	viewNormal;		// per vertex normal vector
 	vec2	texCoord;
-	float	fixedShade;
 	vec4	color;
+	float	fixedShade;
 	float	discardPoly;	// can't have varying bool (glsl spec)
 } gs_in[4];
 
@@ -90,13 +90,17 @@ out GS_OUT
 	flat vec3	viewVertex[4];
 	flat vec3	viewNormal[4];		// per vertex normal vector
 	flat vec2	texCoord[4];
-	flat float	fixedShade[4];
 	flat vec4	color;
+	flat float	fixedShade[4];
 } gs_out;
 
-double area(dvec2 a, dvec2 b)
+//a*b - c*d, computed in a stable fashion (Kahan)
+float DifferenceOfProducts(float a, float b, float c, float d)
 {
-	return a.x*b.y - a.y*b.x;
+    precise float cd = c * d;
+    precise float err = fma(-c, d, cd);
+    precise float dop = fma(a, b, -cd);
+    return dop + err;
 }
 
 void main(void)
@@ -105,10 +109,9 @@ void main(void)
 		return;					//emulate back face culling here (all vertices in poly have same value)
 	}
 
-	int i, j, j_next;
 	vec2 v[4];
 
-	for (i=0; i<4; i++) {
+	for (int i=0; i<4; i++) {
 		float oneOverW		= 1.0 / gl_in[i].gl_Position.w;
 		gs_out.oneOverW[i]	= oneOverW;
 		v[i]				= gl_in[i].gl_Position.xy * oneOverW;
@@ -123,7 +126,19 @@ void main(void)
 	// flat attributes
 	gs_out.color = gs_in[0].color;
 
-	for (i=0; i<4; i++) {
+	// precompute crossproducts for all vertex combinations to be looked up in loop below for area computation
+	precise float cross[4][4];
+	for (int i=0; i<4; i++)
+	{
+		cross[i][i] = 0.0;
+		for (int j=i+1; j<4; j++)
+			cross[i][j] = DifferenceOfProducts(gl_in[i].gl_Position.x, gl_in[j].gl_Position.y, gl_in[j].gl_Position.x, gl_in[i].gl_Position.y) / (gl_in[i].gl_Position.w * gl_in[j].gl_Position.w);
+	}
+	for (int i=1; i<4; i++)
+		for (int j=0; j<i; j++)
+			cross[i][j] = -cross[j][i];
+
+	for (int i=0; i<4; i++) {
 		// Mapping of polygon vertex order to triangle strip vertex order.
 		//
 		// Quad (lines adjacency)    Triangle strip
@@ -136,15 +151,13 @@ void main(void)
 		//
 		int reorder[4] = int[]( 1, 0, 2, 3 );
 		int ii = reorder[i];
-		dvec2 vector[4];
 
-		for (j=0; j<4; j++) {
-			vector[j] = dvec2(v[j]) - dvec2(v[ii]);
-			gs_out.v[j] = vec2(vector[j]);			
-		}
-		for (j=0; j<4; j++) {
-			j_next = (j+1) % 4;
-			gs_out.area[j] = float(area(vector[j], vector[j_next]));
+		for (int j=0; j<4; j++) {
+			gs_out.v[j] = v[j] - v[ii];
+			int j_next = (j+1) % 4;
+			// compute area via shoelace algorithm BUT divided by w afterwards to improve precision!
+			// in addition also use Kahans algorithm to further improve precision of the 2D crossproducts
+			gs_out.area[j] = cross[j][j_next] + cross[j_next][ii] + cross[ii][j];
 		}
 
 		gl_Position = gl_in[ii].gl_Position;
@@ -209,8 +222,8 @@ in GS_OUT
 	flat vec3	viewVertex[4];
 	flat vec3	viewNormal[4];		// per vertex normal vector
 	flat vec2	texCoord[4];
-	flat float	fixedShade[4];
 	flat vec4	color;
+	flat float	fixedShade[4];
 } fs_in;
 
 //our calculated vertex attributes from the above
@@ -225,12 +238,10 @@ out vec4 outColor;
 
 void QuadraticInterpolation()
 {
-	uint i, i_next, i_prev;
-
 	vec2 s[4];
 	float A[4];
 
-	for (i=0; i<4; i++) {
+	for (int i=0; i<4; i++) {
 		s[i] = fs_in.v[i];
 		A[i] = fs_in.area[i];
 	}
@@ -238,35 +249,35 @@ void QuadraticInterpolation()
 	float D[4];
 	float r[4];
 
-	for (i=0; i<4; i++) {
-		i_next = (i+1)%4;
+	for (int i=0; i<4; i++) {
+		int i_next = (i+1)%4;
 		D[i] = dot(s[i], s[i_next]);
 		r[i] = length(s[i]);
-		if (fs_in.oneOverW[i] < 0) {  // is w[i] negative?
+		if (fs_in.oneOverW[i] < 0.0) {  // is w[i] negative?
 			r[i] = -r[i];
 		}
 	}
 
 	float t[4];
 
-	for (i=0; i<4; i++) {
-		i_next = (i+1)%4;
-		if(A[i]==0.0)	t[i] = 0;									// check for zero area + div by zero
+	for (int i=0; i<4; i++) {
+		int i_next = (i+1)%4;
+		if(A[i]==0.0)	t[i] = 0.0;									// check for zero area + div by zero
 		else			t[i] = (r[i]*r[i_next] - D[i]) / A[i];
 	}
 
-	float uSum = 0;
+	float uSum = 0.0;
 	float u[4];
 
-	for (i=0; i<4; i++) {
-		i_prev = (i-1)%4;
+	for (uint i=0; i<4; i++) {
+		uint i_prev = (i-1)%4;
 		u[i] = (t[i_prev] + t[i]) / r[i];
 		uSum += u[i];
 	}
 
 	float lambda[4];
 
-	for (i=0; i<4; i++) {
+	for (int i=0; i<4; i++) {
 		lambda[i] = u[i] / uSum;
 	}
 
@@ -274,20 +285,11 @@ void QuadraticInterpolation()
 
 	int lambdaSignCount = 0;
 
-	for (i=0; i<4; i++) {
-		if (fs_in.oneOverW[i] < 0) {
-			if (lambda[i] > 0) {
-				lambdaSignCount--;
-			} else {
-				lambdaSignCount++;
-			}
-		}
-		else {
-			if (lambda[i] < 0) {
-				lambdaSignCount--;
-			} else {
-				lambdaSignCount++;
-			}
+	for (int i=0; i<4; i++) {
+		if (fs_in.oneOverW[i] * lambda[i] < 0.0) {
+			lambdaSignCount--;
+		} else {
+			lambdaSignCount++;
 		}
 	}
 	if (lambdaSignCount != 4) {
@@ -296,7 +298,7 @@ void QuadraticInterpolation()
 		}
 	}
 
-	float interp_oneOverW = 0;
+	float interp_oneOverW = 0.0;
 
 	fsViewVertex	= vec3(0.0);
 	fsViewNormal	= vec3(0.0);
@@ -304,7 +306,7 @@ void QuadraticInterpolation()
 	fsFixedShade	= 0.0;
 	fsColor			= fs_in.color;
 	
-	for (i=0; i<4; i++) {
+	for (int i=0; i<4; i++) {
 		fsViewVertex	+= lambda[i] * fs_in.viewVertex[i];
 		fsViewNormal	+= lambda[i] * fs_in.viewNormal[i];
 		fsTexCoord		+= lambda[i] * fs_in.texCoord[i];
@@ -321,21 +323,21 @@ void QuadraticInterpolation()
 	float depth;
 
 	// dirty hack for co-planar polys that really need 100% identical values to depth test correctly
-	// the reason we waste cycles and calcute depth value here is because we have run out of vertex attribs
+	// the reason we waste cycles and calculate depth value here is because we have run out of vertex attribs
 	if(fs_in.oneOverW[0]==fs_in.oneOverW[1] && 
 	   fs_in.oneOverW[1]==fs_in.oneOverW[2] && 
 	   fs_in.oneOverW[2]==fs_in.oneOverW[3]) {
 
 		fsViewVertex.z	= fs_in.viewVertex[0].z / fs_in.oneOverW[0];
 		vertex			= projMat * vec4(fsViewVertex,1.0);
-		depth			= ((vertex.z / vertex.w) + 1.0) / 2.0;
+		depth			= vertex.z / vertex.w;
 	}
 	else {
-		vertex.z		= (projMat[2][2] * fsViewVertex.z) + projMat[3][2];		// standard projMat * vertex - but just using Z components
-		depth			= ((vertex.z * interp_oneOverW) + 1.0) / 2.0;
+		vertex.z		= projMat[2][2] * fsViewVertex.z + projMat[3][2];		// standard projMat * vertex - but just using Z components
+		depth			= vertex.z * interp_oneOverW;
 	}
 
-	gl_FragDepth = depth;
+	gl_FragDepth = depth * 0.5 + 0.5;
 }
 
 float mip_map_level(in vec2 texture_coordinate) // in texel units
@@ -344,7 +346,7 @@ float mip_map_level(in vec2 texture_coordinate) // in texel units
     vec2  dy_vtc        = dFdy(texture_coordinate);
     float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
     float mml = 0.5 * log2(delta_max_sqr);
-    return max( 0, mml );
+    return max( 0.0, mml );
 }
 
 float LinearTexLocations(int wrapMode, float size, float u, out float u0, out float u1)
@@ -353,7 +355,7 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	float halfTexelSize	= 0.5 / size;
 
 	if(wrapMode==0) {							// repeat
-		u	= (u * size) - 0.5;
+		u	= u * size - 0.5;
 		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u0	= fract(u0);
 		u1	= u0 + texelSize;
@@ -363,7 +365,7 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	}
 	else if(wrapMode==1) {						// repeat + clamp
 		u	= fract(u);							// must force into 0-1 to start
-		u	= (u * size) - 0.5;
+		u	= u * size - 0.5;
 		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u1	= u0 + texelSize;
 
@@ -383,7 +385,7 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 			u = fract(u);
 		}
 
-		u	= (u * size) - 0.5;
+		u	= u * size - 0.5;
 		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u1	= u0 + texelSize;
 
@@ -431,13 +433,12 @@ vec4 textureR3D(sampler2D texSampler, ivec2 wrapMode, vec2 texSize, vec2 texCoor
 	float numLevels = floor(log2(min(texSize.x, texSize.y)));				// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
 	float fLevel	= min(mip_map_level(texCoord * texSize), numLevels);
 
-	if(alphaTest) fLevel *= 0.5;
-	else fLevel *= 0.8;
+	fLevel *= alphaTest ? 0.5 : 0.8;
 
 	float iLevel = floor(fLevel);						// value as an 'int'
 
-	vec2 texSize0 = texSize / pow(2, iLevel);
-	vec2 texSize1 = texSize / pow(2, iLevel+1.0);
+	vec2 texSize0 = texSize / exp2(iLevel);
+	vec2 texSize1 = texSize / exp2(iLevel+1.0);
 
 	vec4 texLevel0 = texBiLinear(texSampler, iLevel, wrapMode, texSize0, texCoord);
 	vec4 texLevel1 = texBiLinear(texSampler, iLevel+1.0, wrapMode, texSize1, texCoord);
@@ -455,21 +456,19 @@ vec4 GetTextureValue()
 
 	if (microTexture) {
 		vec2 scale			= (baseTexSize / 128.0) * microTextureScale;
-		vec4 tex2Data		= textureR3D( tex2, ivec2(0), vec2(128.0), fsTexCoord * scale);
+		vec4 tex2Data		= textureR3D( tex2, ivec2(0.0), vec2(128.0), fsTexCoord * scale);
 
 		float lod			= mip_map_level(fsTexCoord * scale * vec2(128.0));
 
 		float blendFactor	= max(lod - 1.5, 0.0);			// bias -1.5
 		blendFactor			= min(blendFactor, 1.0);		// clamp to max value 1
-		blendFactor			= (blendFactor + 1.0) / 2.0;	// 0.5 - 1 range
+		blendFactor			= blendFactor * 0.5 + 0.5;	    // 0.5 - 1 range
 
 		tex1Data			= mix(tex2Data, tex1Data, blendFactor);
 	}
 
-	if (alphaTest) {
-		if (tex1Data.a < (32.0/255.0)) {
-			discard;
-		}
+	if (alphaTest && (tex1Data.a < (32.0/255.0))) {
+		discard;
 	}
 
 	if(textureAlpha) {
@@ -485,7 +484,7 @@ vec4 GetTextureValue()
 		}
 	}
 
-	if (textureAlpha == false) {
+	if (!textureAlpha) {
 		tex1Data.a = 1.0;
 	}
 
@@ -503,7 +502,7 @@ void Step15Luminous(inout vec4 colour)
 				colour.rgb *= 1.0 + fsFixedShade + lighting[1].y;
 			}
 			else {
-				colour.rgb *= vec3(1.5);
+				colour.rgb *= 1.5;
 			}
 		}
 	}
@@ -515,6 +514,16 @@ float CalcFog()
 	float fog	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
 	return fog;
+}
+
+float sqr(float a)
+{
+	return a*a;
+}
+
+float sqr_length(vec2 a)
+{
+	return a.x*a.x + a.y*a.y;
 }
 
 void main()
@@ -542,8 +551,7 @@ void main()
 	}
 
 	float ellipse;
-	ellipse = length((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw);
-	ellipse = pow(ellipse, 2.0);  // decay rate = square of distance from center
+	ellipse = sqr_length((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw); // decay rate = square of distance from center
 	ellipse = 1.0 - ellipse;      // invert
 	ellipse = max(0.0, ellipse);  // clamp
 
@@ -568,7 +576,7 @@ void main()
 		// inverse-linear falloff
 		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
 		// y = 1 / (d/r + 1)^2
-		range = 1.0 / pow(d * inv_r - 1.0, 2.0);
+		range = 1.0 / sqr(d * inv_r - 1.0);
 		range *= enable;
 	}
 
