@@ -6,6 +6,8 @@ namespace New3D {
 
 static const char *vertexShaderFog = R"glsl(
 
+#version 120
+
 uniform mat4 mvp;
 attribute vec3 inVertex; 
 
@@ -17,6 +19,8 @@ void main(void)
 )glsl";
 
 static const char *fragmentShaderFog = R"glsl(
+
+#version 120
 
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
