@@ -201,6 +201,8 @@ void R3DFrameBuffers::AllocShaderBase()
 {
 	const char *vertexShader = R"glsl(
 
+	#version 120
+
 	// inputs
 	attribute vec3 inVertex; 
 	attribute vec2 inTexCoord;
@@ -217,6 +219,8 @@ void R3DFrameBuffers::AllocShaderBase()
 	)glsl";
 
 	const char *fragmentShader = R"glsl(
+
+	#version 120
 
 	uniform sampler2D tex1;			// base tex
 
@@ -241,6 +245,8 @@ void R3DFrameBuffers::AllocShaderTrans()
 {
 	const char *vertexShader = R"glsl(
 
+	#version 120
+
 	// inputs
 	attribute vec3 inVertex; 
 	attribute vec2 inTexCoord;
@@ -258,6 +264,8 @@ void R3DFrameBuffers::AllocShaderTrans()
 
 	const char *fragmentShader = R"glsl(
 
+	#version 120
+
 	uniform sampler2D tex1;			// trans layer 1
 	uniform sampler2D tex2;			// trans layer 2
 
@@ -269,10 +277,11 @@ void R3DFrameBuffers::AllocShaderTrans()
 		vec4 colTrans2 = texture2D( tex2, fsTexCoord);
 
 		if(colTrans1.a+colTrans2.a > 0.0) {
-			vec3 col1 = (colTrans1.rgb * colTrans1.a) / ( colTrans1.a + colTrans2.a);		// this is my best guess at the blending between the layers
-			vec3 col2 = (colTrans2.rgb * colTrans2.a) / ( colTrans1.a + colTrans2.a);
+			vec3 col1 = colTrans1.rgb * colTrans1.a;
+			vec3 col2 = colTrans2.rgb * colTrans2.a;
 
-			colTrans1 = vec4(col1+col2,colTrans1.a+colTrans2.a);
+			colTrans1 = vec4((col1+col2) / (colTrans1.a + colTrans2.a), // this is my best guess at the blending between the layers
+							 colTrans1.a+colTrans2.a);
 		}
 		
 		gl_FragColor = colTrans1;
@@ -293,6 +302,8 @@ void R3DFrameBuffers::AllocShaderWipe()
 {
 	const char *vertexShader = R"glsl(
 
+	#version 120
+
 	// inputs
 	attribute vec3 inVertex; 
 	attribute vec2 inTexCoord;
@@ -309,6 +320,8 @@ void R3DFrameBuffers::AllocShaderWipe()
 	)glsl";
 
 	const char *fragmentShader = R"glsl(
+
+	#version 120
 
 	uniform sampler2D texColor;				// base colour layer
 	varying vec2 fsTexCoord;
