@@ -2698,7 +2698,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0x71:      /* OUT (C),0 */
       cycles -= cycleTables[2][0x71];
-      OUTPUT(lreg(BC), lreg(0));
+      OUTPUT(lreg(BC), 0);
       break;
     case 0x72:      /* SBC HL,SP */
       cycles -= cycleTables[2][0x72];
@@ -2821,8 +2821,6 @@ int CZ80::Run(int numCycles)
       cycles -= cycleTables[2][0xB0];
       acu = hreg(AF);
       BC &= 0xffff;
-      if (BC == 0)
-        BC = 0x10000;
       do {
         acu = GetBYTE_pp(HL);
         PutBYTE_pp(DE, acu);
@@ -2834,8 +2832,6 @@ int CZ80::Run(int numCycles)
       cycles -= cycleTables[2][0xB1];
       acu = hreg(AF);
       BC &= 0xffff;
-      if (BC == 0)
-        BC = 0x10000;
       do {
         temp = GetBYTE_pp(HL);
         op = --BC != 0;
@@ -2872,8 +2868,6 @@ int CZ80::Run(int numCycles)
     case 0xB8:      /* LDDR */
       cycles -= cycleTables[2][0xB8];
       BC &= 0xffff;
-      if (BC == 0)
-        BC = 0x10000;
       do {
         acu = GetBYTE_mm(HL);
         PutBYTE_mm(DE, acu);
@@ -2885,8 +2879,6 @@ int CZ80::Run(int numCycles)
       cycles -= cycleTables[2][0xB9];
       acu = hreg(AF);
       BC &= 0xffff;
-      if (BC == 0)
-        BC = 0x10000;
       do {
         temp = GetBYTE_mm(HL);
         op = --BC != 0;
@@ -3513,7 +3505,7 @@ int CZ80::Run(int numCycles)
       break;
     case 0xCB:      /* CB prefix */
       adr = IY + (signed char) GetBYTE_pp(pc);
-      //adr = adr;
+      adr = adr;
       op = GetBYTE(pc);
       cycles -= cycleTables[4][op];
       switch (op & 7) {
