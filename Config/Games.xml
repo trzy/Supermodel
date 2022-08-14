@@ -1221,8 +1221,8 @@
   <game name="magtruck">
     <identity>
       <title>Magical Truck Adventure</title>
-      <manufacturer>Sega</manufacturer>
       <version>Japan</version>
+      <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
     <hardware>
