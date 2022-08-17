@@ -874,7 +874,7 @@ static void SuperSleepUntil(uint64_t target)
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, IScripting* scripting, std::shared_ptr<Debugger::CDebugger> Debugger)
+int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, std::shared_ptr<Debugger::CDebugger> Debugger)
 {
   std::shared_ptr<CLogger> oldLogger;
 #else
