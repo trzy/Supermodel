@@ -183,7 +183,7 @@ public:
 	* Parameters:
 	*   config  Run-time configuration.
 	*/
-	CNew3D(const Util::Config::Node &config, std::string gameName);
+	CNew3D(const Util::Config::Node &config, const std::string& gameName);
 	~CNew3D(void);
 
 private:
@@ -305,7 +305,7 @@ private:
 	void CalcBox			(float distance, BBox& box);
 	void TransformBox		(const float *m, BBox& box);
 	void MultVec			(const float matrix[16], const float in[4], float out[4]);
-	Clip ClipBox			(BBox& box, Plane planes[5]);
+	Clip ClipBox			(const BBox& box, Plane planes[5]);
 	void ClipModel			(const Model *m);
 	void ClipPolygon		(ClipPoly& clipPoly, Plane planes[5]);
 	void CalcBoxExtents		(const BBox& box);

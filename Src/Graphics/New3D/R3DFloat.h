@@ -3,8 +3,8 @@
 
 namespace R3DFloat
 {
-	static const UINT16	Pro16BitMax = 0x7fff;
-	static const float	Pro16BitFltMin = 1e-7f;		// float min in IEEE 
+	constexpr UINT16	Pro16BitMax = 0x7fff;
+	constexpr float	Pro16BitFltMin = 1e-7f;			// float min in IEEE 
 
 	float	GetFloat16(UINT16 f);
 	float	GetFloat32(UINT32 f);

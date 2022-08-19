@@ -166,11 +166,15 @@
 #include <cmath>
 #include <cstdint>
 
+#ifndef M_PI
+#define M_PI 3.1415926535897932384626433832795
+#endif
+
 namespace Legacy3D {
 
 // Microsoft doesn't provide isnan() and isinf()
 #ifdef _MSC_VER
-  #include <float.h>
+  #include <cfloat>
   #define ISNAN(x)  (_isnan(x))
   #define ISINF(x)  (!_finite(x))
 #else
@@ -847,9 +851,9 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   int vpHeight  = (vpnode[0x14]>>18)&0x3FFF;  // height (14.2)
   
   // Field of view and clipping
-  GLfloat vpTopAngle  = (float) asin(*(float *)&vpnode[0x0E]);  // FOV Y upper half-angle (radians)
-  GLfloat vpBotAngle  = (float) asin(*(float *)&vpnode[0x12]);  // FOV Y lower half-angle
-  GLfloat fovYDegrees = (vpTopAngle+vpBotAngle)*(float)(180.0/3.14159265358979323846);
+  GLfloat vpTopAngle  = asinf(uint_as_float(vpnode[0x0E]));  // FOV Y upper half-angle (radians)
+  GLfloat vpBotAngle  = asinf(uint_as_float(vpnode[0x12]));  // FOV Y lower half-angle
+  GLfloat fovYDegrees = (vpTopAngle+vpBotAngle)*(float)(180.0/M_PI);
   // TO-DO: investigate clipping planes
   
   // Set up viewport and projection (TO-DO: near and far clipping)
@@ -929,35 +933,35 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   UINT32 matrixBase = vpnode[0x16] & 0xFFFFFF;
   glMatrixMode(GL_MODELVIEW);
   InitMatrixStack(matrixBase);
-  
+
   // Safeguard: weird coordinate system matrices usually indicate scenes that will choke the renderer
   if (NULL != matrixBasePtr)
   {
     float m21, m32, m13;
-    
+
     // Get the three elements that are usually set and see if their magnitudes are 1
     m21 = matrixBasePtr[6];
     m32 = matrixBasePtr[10];
     m13 = matrixBasePtr[5];
-    
+
     m21 *= m21;
     m32 *= m32;
     m13 *= m13;
 
-    if ((m21>1.05) || (m21<0.95))
+    if ((m21>1.05f) || (m21<0.95f))
       return;
-    if ((m32>1.05) || (m32<0.95))
+    if ((m32>1.05f) || (m32<0.95f))
       return;
-    if ((m13>1.05) || (m13<0.95))
+    if ((m13>1.05f) || (m13<0.95f))
       return;
   }
-  
+
   // Render
   AppendDisplayList(&VROMCache, true, 0); // add a viewport display list node
   AppendDisplayList(&PolyCache, true, 0);
   stackDepth = 0;
   listDepth = 0;
-  
+
   // Descend down the node link: Use recursive traversal
   DescendNodePtr(nodeAddr);
 }

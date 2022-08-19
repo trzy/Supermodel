@@ -8,11 +8,11 @@ struct Plane
 	float a, b, c, d;
 
 	void Normalise() {
-		float temp = std::sqrt((a * a) + (b * b) + (c * c));
-		a /= temp;
-		b /= temp;
-		c /= temp;
-		d /= temp;
+		float temp = 1.f/std::sqrt((a * a) + (b * b) + (c * c));
+		a *= temp;
+		b *= temp;
+		c *= temp;
+		d *= temp;
 	}
 
 	float DistanceToPoint(const float v[3]) {

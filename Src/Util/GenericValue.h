@@ -20,6 +20,57 @@
 #include <memory>
 #include <cctype>
 
+#if __cplusplus >= 202002L
+#include <bit>
+#define float_as_int(x) std::bit_cast<int>(x)
+#define int_as_float(x) std::bit_cast<float>(x)
+#define uint_as_float(x) std::bit_cast<float>(x)
+#elif 1
+template <class Dest, class Source>
+inline Dest bit_cast(Source const& source) {
+    static_assert(sizeof(Dest) == sizeof(Source), "size of destination and source objects must be equal");
+    static_assert(std::is_trivially_copyable<Dest>::value, "destination type must be trivially copyable.");
+    static_assert(std::is_trivially_copyable<Source>::value, "source type must be trivially copyable");
+
+    Dest dest;
+    std::memcpy(&dest, &source, sizeof(dest));
+    return dest;
+}
+#define float_as_int(x) bit_cast<int,float>(x)
+#define int_as_float(x) bit_cast<float,int>(x)
+#define uint_as_float(x) bit_cast<float,unsigned int>(x)
+#else
+inline int float_as_int(const float x)
+{
+   union {
+      float f;
+      int i;
+   } uc;
+   uc.f = x;
+   return uc.i;
+}
+
+inline float int_as_float(const int i)
+{
+   union {
+      int i;
+      float f;
+   } iaf;
+   iaf.i = i;
+   return iaf.f;
+}
+
+inline float uint_as_float(const unsigned int i)
+{
+   union {
+      unsigned int u;
+      float f;
+   } iaf;
+   iaf.u = i;
+   return iaf.f;
+}
+#endif
+
 namespace Util
 {
   namespace detail

@@ -37,7 +37,7 @@ private:
 			texCoords[1] = t;
 			verts[0] = x;
 			verts[1] = y;
-			verts[2] = 0;	// z = 0
+			verts[2] = 0.f;	// z = 0
 		}
 
 		float texCoords[2];
