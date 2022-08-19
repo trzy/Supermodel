@@ -3,7 +3,7 @@
 #include <utility>
 
 #ifndef M_PI
-#define M_PI 3.14159265359
+#define M_PI 3.1415926535897932384626433832795
 #endif
 
 namespace New3D {
@@ -17,10 +17,10 @@ void Mat4::LoadIdentity()
 {
 	float *m = currentMatrix;
 
-	m[0] = 1; m[4] = 0; m[8 ] = 0; m[12] = 0;
-	m[1] = 0; m[5] = 1; m[9 ] = 0; m[13] = 0;
-	m[2] = 0; m[6] = 0; m[10] = 1; m[14] = 0;
-	m[3] = 0; m[7] = 0; m[11] = 0; m[15] = 1;
+	m[0] = 1.f; m[4] = 0.f; m[8 ] = 0.f; m[12] = 0.f;
+	m[1] = 0.f; m[5] = 1.f; m[9 ] = 0.f; m[13] = 0.f;
+	m[2] = 0.f; m[6] = 0.f; m[10] = 1.f; m[14] = 0.f;
+	m[3] = 0.f; m[7] = 0.f; m[11] = 0.f; m[15] = 1.f;
 }
 
 void Mat4::MultiMatrices(const float a[16], const float b[16], float r[16]) 
@@ -29,8 +29,7 @@ void Mat4::MultiMatrices(const float a[16], const float b[16], float r[16])
 #define B(row,col)  b[(col<<2)+row]
 #define P(row,col)  r[(col<<2)+row]
 
-	int i;
-	for (i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		const float ai0 = A(i, 0), ai1 = A(i, 1), ai2 = A(i, 2), ai3 = A(i, 3);
 		P(i, 0) = ai0 * B(0, 0) + ai1 * B(1, 0) + ai2 * B(2, 0) + ai3 * B(3, 0);
 		P(i, 1) = ai0 * B(0, 1) + ai1 * B(1, 1) + ai2 * B(2, 1) + ai3 * B(3, 1);
@@ -56,25 +55,25 @@ void Mat4::Translate(float x, float y, float z)
 	float m[16];
 	//==========
 
-	m[0] = 1;
-	m[1] = 0;
-	m[2] = 0;
-	m[3] = 0;
+	m[0] = 1.f;
+	m[1] = 0.f;
+	m[2] = 0.f;
+	m[3] = 0.f;
 
-	m[4] = 0;
-	m[5] = 1;
-	m[6] = 0;
-	m[7] = 0;
+	m[4] = 0.f;
+	m[5] = 1.f;
+	m[6] = 0.f;
+	m[7] = 0.f;
 
-	m[8] = 0;
-	m[9] = 0;
-	m[10] = 1;
-	m[11] = 0;
+	m[8] = 0.f;
+	m[9] = 0.f;
+	m[10] = 1.f;
+	m[11] = 0.f;
 
 	m[12] = x;
 	m[13] = y;
 	m[14] = z;
-	m[15] = 1;
+	m[15] = 1.f;
 
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
@@ -86,155 +85,137 @@ void Mat4::Scale(float x, float y, float z)
 	//==========
 
 	m[0] = x;
-	m[1] = 0;
-	m[2] = 0;
-	m[3] = 0;
+	m[1] = 0.f;
+	m[2] = 0.f;
+	m[3] = 0.f;
 
-	m[4] = 0;
+	m[4] = 0.f;
 	m[5] = y;
-	m[6] = 0;
-	m[7] = 0;
+	m[6] = 0.f;
+	m[7] = 0.f;
 
-	m[8] = 0;
-	m[9] = 0;
+	m[8] = 0.f;
+	m[9] = 0.f;
 	m[10] = z;
-	m[11] = 0;
+	m[11] = 0.f;
 
-	m[12] = 0;
-	m[13] = 0;
-	m[14] = 0;
-	m[15] = 1;
+	m[12] = 0.f;
+	m[13] = 0.f;
+	m[14] = 0.f;
+	m[15] = 1.f;
 
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
 void Mat4::Rotate(float angle, float x, float y, float z) 
 {
-	//===========
-	float c;
-	float s;
-	float m[16];
-	//===========
-
 	// normalise vector first
 	{
 		//========
-		float len;
+		float inv_len;
 		//========
 
-		len = std::sqrt(x * x + y * y + z * z);
+		inv_len = 1.f/std::sqrt(x * x + y * y + z * z);
 		
-		x /= len;
-		y /= len;
-		z /= len;
+		x *= inv_len;
+		y *= inv_len;
+		z *= inv_len;
 	}
 
-	c = std::cos(angle*3.14159265f / 180.0f);
-	s = std::sin(angle*3.14159265f / 180.0f);
+	float c = std::cos(angle*(float)(M_PI / 180.0));
+	float s = std::sin(angle*(float)(M_PI / 180.0));
 
-	m[0] = (x*x) * (1 - c) + c;
-	m[1] = (y*x) * (1 - c) + (z*s);
-	m[2] = (x*z) * (1 - c) - (y*s);
-	m[3] = 0;
+	float m[16];
+	m[0] = (x*x) * (1.f - c) + c;
+	m[1] = (y*x) * (1.f - c) + (z*s);
+	m[2] = (x*z) * (1.f - c) - (y*s);
+	m[3] = 0.f;
 
-	m[4] = (x*y) * (1 - c) - (z*s);
-	m[5] = (y*y) * (1 - c) + c;
-	m[6] = (y*z) * (1 - c) + (x*s);
-	m[7] = 0;
+	m[4] = (x*y) * (1.f - c) - (z*s);
+	m[5] = (y*y) * (1.f - c) + c;
+	m[6] = (y*z) * (1.f - c) + (x*s);
+	m[7] = 0.f;
 
-	m[8] = (x*z) * (1 - c) + (y*s);
-	m[9] = (y*z) * (1 - c) - (x*s);
-	m[10] = (z*z) * (1 - c) + c;
-	m[11] = 0;
+	m[8] = (x*z) * (1.f - c) + (y*s);
+	m[9] = (y*z) * (1.f - c) - (x*s);
+	m[10] = (z*z) * (1.f - c) + c;
+	m[11] = 0.f;
 
-	m[12] = 0;
-	m[13] = 0;
-	m[14] = 0;
-	m[15] = 1;
+	m[12] = 0.f;
+	m[13] = 0.f;
+	m[14] = 0.f;
+	m[15] = 1.f;
 
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
 void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal) 
 {
-	//=====================
+	float x = (2.0F*nearVal) / (right - left);
+	float y = (2.0F*nearVal) / (top - bottom);
+	float a = (right + left) / (right - left);
+	float b = (top + bottom) / (top - bottom);
+	float c = -(farVal + nearVal) / (farVal - nearVal);
+	float d = -(2.0F*farVal*nearVal) / (farVal - nearVal);
+
 	float m[16];
-	float x, y, a, b, c, d;
-	//=====================
-
-	x = (2.0F*nearVal) / (right - left);
-	y = (2.0F*nearVal) / (top - bottom);
-	a = (right + left) / (right - left);
-	b = (top + bottom) / (top - bottom);
-	c = -(farVal + nearVal) / (farVal - nearVal);
-	d = -(2.0F*farVal*nearVal) / (farVal - nearVal);
-
 	m[0] = x;
-	m[1] = 0;
-	m[2] = 0;
-	m[3] = 0;
+	m[1] = 0.f;
+	m[2] = 0.f;
+	m[3] = 0.f;
 
-	m[4] = 0;
+	m[4] = 0.f;
 	m[5] = y;
-	m[6] = 0;
-	m[7] = 0;
+	m[6] = 0.f;
+	m[7] = 0.f;
 
 	m[8] = a;
 	m[9] = b;
 	m[10] = c;
-	m[11] = -1;
+	m[11] = -1.f;
 
-	m[12] = 0;
-	m[13] = 0;
+	m[12] = 0.f;
+	m[13] = 0.f;
 	m[14] = d;
-	m[15] = 0;
+	m[15] = 0.f;
 
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
 void Mat4::Perspective(float fovy, float aspect, float zNear, float zFar)
 {
-	//=========
-	float ymax;
-	float xmax;
-	//=========
-
-	ymax = zNear * tanf(fovy * (float)M_PI / 360.0f);
-	xmax = ymax * aspect;
+	float ymax = zNear * tanf(fovy * (float)(M_PI / 360.0));
+	float xmax = ymax * aspect;
 
 	Frustum(-xmax, xmax, -ymax, ymax, zNear, zFar);
 }
 
 void Mat4::Ortho(float left, float right, float bottom, float top, float nearVal, float farVal)
 {
-	//================
+	float tx = -(right + left) / (right - left);
+	float ty = -(top + bottom) / (top - bottom);
+	float tz = -(farVal + nearVal) / (farVal - nearVal);
+
 	float m[16];
-	float tx, ty, tz;
-	//================
+	m[0] = 2.f/(right-left);
+	m[1] = 0.f;
+	m[2] = 0.f;
+	m[3] = 0.f;
 
-	tx = -(right + left) / (right - left);
-	ty = -(top + bottom) / (top - bottom);
-	tz = -(farVal + nearVal) / (farVal - nearVal);
+	m[4] = 0.f;
+	m[5] = 2.f/(top-bottom);
+	m[6] = 0.f;
+	m[7] = 0.f;
 
-	m[0] = 2/(right-left);
-	m[1] = 0;
-	m[2] = 0;
-	m[3] = 0;
-
-	m[4] = 0;
-	m[5] = 2/(top-bottom);
-	m[6] = 0;
-	m[7] = 0;
-
-	m[8] = 0;
-	m[9] = 0;
-	m[10] = -2/(farVal-nearVal);
-	m[11] = 0;
+	m[8] = 0.f;
+	m[9] = 0.f;
+	m[10] = -2.f/(farVal-nearVal);
+	m[11] = 0.f;
 
 	m[12] = tx;
 	m[13] = ty;
 	m[14] = tz;
-	m[15] = 1;
+	m[15] = 1.f;
 
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }

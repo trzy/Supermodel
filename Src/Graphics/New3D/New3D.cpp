@@ -1,20 +1,21 @@
-﻿#include "New3D.h"
+#include "New3D.h"
 #include "Texture.h"
 #include "Vec.h"
 #include <cmath>
 #include <algorithm>
 #include <limits>
-#include <string.h>
+#include <cstring>
+#include <unordered_map>
 #include "R3DFloat.h"
 
-#define MAX_RAM_VERTS 300000	
+#define MAX_RAM_VERTS 300000
 #define MAX_ROM_VERTS 1500000
 
-#define BYTE_TO_FLOAT(B)	((2.0f * (B) + 1.0f) * (1.0F/255.0f))
+#define BYTE_TO_FLOAT(B)	((2.0f * (B) + 1.0f) * (float)(1.0/255.0))
 
 namespace New3D {
 
-CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
+CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName)
 	: m_r3dShader(config),
 	  m_r3dScrollFog(config),
 	  m_gameName(gameName)
@@ -26,7 +27,7 @@ CNew3D::CNew3D(const Util::Config::Node &config, std::string gameName)
 	m_textureRAM	= nullptr;
 	m_sunClamp		= true;
 	m_shadeIsSigned = true;
-	m_numPolyVerts	= 3;			
+	m_numPolyVerts	= 3;
 	m_primType		= GL_TRIANGLES;
 
 	if (config["QuadRendering"].ValueAs<bool>()) {
@@ -72,8 +73,8 @@ void CNew3D::SetStepping(int stepping)
 bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
 {
 	// Resolution and offset within physical display area
-	m_xRatio	= xRes / 496.0f;
-	m_yRatio	= yRes / 384.0f;
+	m_xRatio	= xRes * (float)(1.0 / 496.0);
+	m_yRatio	= yRes * (float)(1.0 / 384.0);
 	m_xOffs		= xOffset;
 	m_yOffs		= yOffset;
 	m_xRes    = xRes;
@@ -129,7 +130,7 @@ void CNew3D::DrawScrollFog()
 	for (int i = 0; i < 4; i++) {
 		for (auto &n : m_nodes) {
 			if (n.viewport.priority == i) {
-				if (n.viewport.scrollFog) {
+				if (n.viewport.scrollFog != 0.f) {
 					rgba[0] = n.viewport.fogParams[0];
 					rgba[1] = n.viewport.fogParams[1];
 					rgba[2] = n.viewport.fogParams[2];
@@ -149,7 +150,7 @@ CheckScroll:
 			if (n.viewport.priority == i) {
 
 				//if we have a fog density value
-				if (n.viewport.fogParams[3]) {
+				if (n.viewport.fogParams[3] != 0.f) {
 
 					if (rgba[0] == n.viewport.fogParams[0] &&
 						rgba[1] == n.viewport.fogParams[1] &&
@@ -246,7 +247,7 @@ bool CNew3D::SkipLayer(int layer)
 {
 	for (const auto &n : m_nodes) {
 		if (n.viewport.priority == layer) {
-			if (n.models.size()) {
+			if (!n.models.empty()) {
 				return false;
 			}
 		}
@@ -283,7 +284,7 @@ void CNew3D::SetRenderStates()
 	glDisable		(GL_BLEND);
 
 	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
-	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we incriment the value
+	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we increment the value
 	glStencilMask	(0xFF);
 }
 
@@ -318,7 +319,7 @@ void CNew3D::RenderFrame(void)
 	}
 
 	// release any resources from last frame
-	m_polyBufferRam.clear();		// clear dyanmic model memory buffer
+	m_polyBufferRam.clear();		// clear dynamic model memory buffer
 	m_nodes.clear();				// memory will grow during the object life time, that's fine, no need to shrink to fit
 	m_modelMat.Release();			// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
@@ -329,7 +330,7 @@ void CNew3D::RenderFrame(void)
 	m_vbo.Bind(true);
 	m_vbo.BufferSubData(MAX_ROM_VERTS*sizeof(FVertex), m_polyBufferRam.size()*sizeof(FVertex), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
 
-	if (m_polyBufferRom.size()) {
+	if (!m_polyBufferRom.empty()) {
 
 		// sync rom memory with vbo
 		int romBytes	= (int)m_polyBufferRom.size() * sizeof(FVertex);
@@ -355,10 +356,6 @@ void CNew3D::RenderFrame(void)
 
 	for (int pri = 0; pri <= 3; pri++) {
 
-		//==============
-		bool hasOverlay;
-		//==============
-
 		if (SkipLayer(pri)) continue;
 
 		for (int i = 0; i < 2; i++) {
@@ -367,12 +364,12 @@ void CNew3D::RenderFrame(void)
 
 			m_r3dFrameBuffers.SetFBO(Layer::colour);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			
+
 			SetRenderStates();
 
 			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
 			m_r3dFrameBuffers.SetFBO(Layer::colour);
-			hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
+			bool hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
 
 			if (!renderOverlay && ProcessLos(pri)) {
 				ProcessLos(pri);
@@ -514,8 +511,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	UINT16			uCullRadius;
 	float			fCullRadius;
 	UINT16			uBlendRadius;
-	float			fBlendRadius;
-	UINT8			lodTablePointer;
+	//float			fBlendRadius;
+	//UINT8			lodTablePointer;
 	NodeType		nodeType;
 
 	if (m_nodeAttribs.StackLimit()) {
@@ -533,7 +530,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
 	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
-	lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
+	//lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
 
 	// check our node type
 	if (nodeType == NodeType::viewport) {
@@ -556,7 +553,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	if (!m_offset) {		// Step 1.5+
 		
-		float modelScale = *(float *)&node[1];
+		float modelScale = uint_as_float(node[1]);
 		if (modelScale > std::numeric_limits<float>::min()) {
 			m_nodeAttribs.currentModelScale = modelScale;
 		}
@@ -576,9 +573,9 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// apply translation vector
 	if (node[0x00] & 0x10) {
-		float x = *(float *)&node[0x04 - m_offset];
-		float y = *(float *)&node[0x05 - m_offset];
-		float z = *(float *)&node[0x06 - m_offset];
+		float x = uint_as_float(node[0x04 - m_offset]);
+		float y = uint_as_float(node[0x05 - m_offset]);
+		float z = uint_as_float(node[0x06 - m_offset]);
 		m_modelMat.Translate(x, y, z);
 	}
 	// multiply matrix, if specified
@@ -590,7 +587,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	fCullRadius = R3DFloat::GetFloat16(uCullRadius);
 
 	uBlendRadius = node[9 - m_offset] >> 16;
-	fBlendRadius = R3DFloat::GetFloat16(uBlendRadius);
+	//fBlendRadius = R3DFloat::GetFloat16(uBlendRadius);
 
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
@@ -788,14 +785,14 @@ void CNew3D::RenderViewport(UINT32 addr)
 {
 	static const GLfloat	color[8][3] =
 	{											// RGB1 color translation
-		{ 0.0, 0.0, 0.0 },	// off
-		{ 0.0, 0.0, 1.0 },	// blue
-		{ 0.0, 1.0, 0.0 },	// green
-		{ 0.0, 1.0, 1.0 },	// cyan
-		{ 1.0, 0.0, 0.0 }, 	// red
-		{ 1.0, 0.0, 1.0 },	// purple
-		{ 1.0, 1.0, 0.0 },	// yellow
-		{ 1.0, 1.0, 1.0 }	// white
+		{ 0.0f, 0.0f, 0.0f },	// off
+		{ 0.0f, 0.0f, 1.0f },	// blue
+		{ 0.0f, 1.0f, 0.0f },	// green
+		{ 0.0f, 1.0f, 1.0f },	// cyan
+		{ 1.0f, 0.0f, 0.0f }, 	// red
+		{ 1.0f, 0.0f, 1.0f },	// purple
+		{ 1.0f, 1.0f, 0.0f },	// yellow
+		{ 1.0f, 1.0f, 1.0f }	// white
 	};
 
 	if ((addr & 0x00FFFFFF) == 0) {
@@ -824,10 +821,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 		m_currentPriority = vp->priority;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) / 16.0f) + 0.5f);		// viewport X (12.4 fixed point)
-		vp->vpY			= (int)(((vpnode[0x1A] >> 16) / 16.0f) + 0.5f);			// viewport Y (12.4)
-		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) / 4.0f) + 0.5f);		// width (14.2)
-		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) / 4.0f) + 0.5f);			// height (14.2)
+		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) * (float)(1.0 / 16.0)) + 0.5f);		// viewport X (12.4 fixed point)
+		vp->vpY			= (int)(((vpnode[0x1A] >> 16) * (float)(1.0 / 16.0)) + 0.5f);			// viewport Y (12.4)
+		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) * (float)(1.0 / 4.0)) + 0.5f);		// width (14.2)
+		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) * (float)(1.0 / 4.0)) + 0.5f);			// height (14.2)
 
 		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
@@ -840,29 +837,29 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->angle_bottom	= -atan2(*(float *)&vpnode[18], -*(float *)&vpnode[19]);	// Perhaps they are just used for culling and not rendering.
 		*/
 
-		float cv = *(float *)&vpnode[0x8];	// 1/(left-right)
-		float cw = *(float *)&vpnode[0x9];	// 1/(top-bottom)
-		float io = *(float *)&vpnode[0xa];	// top / bottom (ratio) - ish
-		float jo = *(float *)&vpnode[0xb];	// left / right (ratio)
+		float cv = uint_as_float(vpnode[0x8]);	// 1/(left-right)
+		float cw = uint_as_float(vpnode[0x9]);	// 1/(top-bottom)
+		float io = uint_as_float(vpnode[0xa]);	// top / bottom (ratio) - ish
+		float jo = uint_as_float(vpnode[0xb]);	// left / right (ratio)
 
-		vp->angle_left		= (1.0f / cv) * (0.0f - jo);
-		vp->angle_right		= (1.0f / cv) * (1.0f - jo);
-		vp->angle_bottom	= (1.0f / cw) * -(1.0f - io);
-		vp->angle_top		= (1.0f / cw) * -(0.0f - io);
+		vp->angle_left		= (0.0f - jo) / cv;
+		vp->angle_right		= (1.0f - jo) / cv;
+		vp->angle_bottom	= -(1.0f - io)/ cw;
+		vp->angle_top		= -(0.0f - io)/ cw;
 
 		// calculate the frustum shape, near/far pair are dummy values
-		CalcViewport(vp, 1, 1000);
+		CalcViewport(vp, 1.f, 1000.f);
 
 		// calculate frustum planes
 		CalcFrustumPlanes(m_planes, vp->projectionMatrix);	// we need to calc a 'projection matrix' to get the correct frustum planes for clipping
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
-		vp->lightingParams[0] =  *(float *)&vpnode[0x05];								// sun X
-		vp->lightingParams[1] = -*(float *)&vpnode[0x06];								// sun Y (- to convert to ogl cordinate system)
-		vp->lightingParams[2] = -*(float *)&vpnode[0x04];								// sun Z (- to convert to ogl cordinate system)
-		vp->lightingParams[3] = std::max(0.f, std::min(*(float *)&vpnode[0x07], 1.0f));	// sun intensity (clamp to 0-1)
-		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (1.0f / 255.0f);	// ambient intensity
-		vp->lightingParams[5] = 0.0;	// reserved
+		vp->lightingParams[0] =  uint_as_float(vpnode[0x05]);								// sun X
+		vp->lightingParams[1] = -uint_as_float(vpnode[0x06]);								// sun Y (- to convert to ogl cordinate system)
+		vp->lightingParams[2] = -uint_as_float(vpnode[0x04]);								// sun Z (- to convert to ogl cordinate system)
+		vp->lightingParams[3] = std::max(0.f, std::min(uint_as_float(vpnode[0x07]), 1.0f));	// sun intensity (clamp to 0-1)
+		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// ambient intensity
+		vp->lightingParams[5] = 0.0f;	// reserved
 		
 		vp->sunClamp		= m_sunClamp;
 		vp->intensityClamp	= (m_step == 0x10);		// just step 1.0 ?
@@ -871,13 +868,13 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
 		int spotFogColorIdx = (vpnode[0x20] >> 8) & 7;									// spotlight on fog color index
-		vp->spotEllipse[0] = (float)(INT16)(vpnode[0x1E] & 0xFFFF) / 8.0f;				// spotlight X position (13.3 fixed point)
-		vp->spotEllipse[1] = (float)(INT16)(vpnode[0x1D] & 0xFFFF) / 8.0f;				// spotlight Y
+		vp->spotEllipse[0] = (float)(INT16)(vpnode[0x1E] & 0xFFFF) * (float)(1.0 / 8.0);				// spotlight X position (13.3 fixed point)
+		vp->spotEllipse[1] = (float)(INT16)(vpnode[0x1D] & 0xFFFF) * (float)(1.0 / 8.0);				// spotlight Y
 		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);					// spotlight X size (16-bit)
 		vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);					// spotlight Y size
 
-		vp->spotRange[0] = 1.0f / (*(float *)&vpnode[0x21]);							// spotlight start
-		vp->spotRange[1] = *(float *)&vpnode[0x1F];										// spotlight extent
+		vp->spotRange[0] = 1.0f / uint_as_float(vpnode[0x21]);							// spotlight start
+		vp->spotRange[1] = uint_as_float(vpnode[0x1F]);										// spotlight extent
 
 		vp->spotColor[0] = color[spotColorIdx][0];										// spotlight color
 		vp->spotColor[1] = color[spotColorIdx][1];
@@ -898,8 +895,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotEllipse[3] = std::roundf(2047.0f / vp->spotEllipse[3]);
 
 		// Scale the spotlight to the OpenGL viewport
-		vp->spotEllipse[0] = vp->spotEllipse[0] * m_xRatio + m_xOffs;
-		vp->spotEllipse[1] = vp->spotEllipse[1] * m_yRatio + m_yOffs;
+		vp->spotEllipse[0] = vp->spotEllipse[0] * m_xRatio + (float)m_xOffs;
+		vp->spotEllipse[1] = vp->spotEllipse[1] * m_yRatio + (float)m_yOffs;
 		vp->spotEllipse[2] *= m_xRatio;
 		vp->spotEllipse[3] *= m_yRatio;
 
@@ -908,22 +905,22 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->losPosY = (int)(((vpnode[0x1c] >> 16) / 16.0f) + 0.5f);						// y position 0 starts from the top
 
 		// Fog
-		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog color R
-		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (1.0f / 255.0f);	// fog color G
-		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (1.0f / 255.0f);	// fog color B
-		vp->fogParams[3] = std::abs(*(float *)&vpnode[0x23]);						// fog density	- ocean hunter uses negative values, but looks the same
-		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)*(1.0f / 255.0f);	// fog start
+		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog color R
+		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
+		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
+		vp->fogParams[3] = std::abs(uint_as_float(vpnode[0x23]));						// fog density	- ocean hunter uses negative values, but looks the same
+		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)* (float)(1.0 / 255.0);	// fog start
 
 		// Avoid Infinite and NaN values for Star Wars Trilogy
 		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3])) {
 			for (int i = 0; i < 7; i++) vp->fogParams[i] = 0.0f;
 		}
 
-		vp->fogParams[5] = (float)((vpnode[0x24] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog attenuation
-		vp->fogParams[6] = (float)((vpnode[0x25] >> 16) & 0xFF) * (1.0f / 255.0f);	// fog ambient
+		vp->fogParams[5] = (float)((vpnode[0x24] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog attenuation
+		vp->fogParams[6] = (float)((vpnode[0x25] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog ambient
 
-		vp->scrollFog = (float)(vpnode[0x20] & 0xFF) * (1.0f / 255.0f);				// scroll fog
-		vp->scrollAtt = (float)(vpnode[0x24] & 0xFF) * (1.0f / 255.0f);				// scroll attenuation
+		vp->scrollFog = (float)(vpnode[0x20] & 0xFF) * (float)(1.0 / 255.0);				// scroll fog
+		vp->scrollAtt = (float)(vpnode[0x24] & 0xFF) * (float)(1.0 / 255.0);				// scroll attenuation
 
 		// Clear texture offsets before proceeding
 		m_nodeAttribs.Reset();
@@ -947,7 +944,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray)
 {
 	// both lemans 24 and dirt devils are rendering some totally transparent polys as the first object in each viewport
-	// in dirt devils it's parallel to the camera so is completel invisible, but breaks our depth calculation
+	// in dirt devils it's parallel to the camera so is completely invisible, but breaks our depth calculation
 	// in lemans 24 its a sort of diamond shape, but never leaves a hole in the transparent geometry so must be being skipped by the h/w
 	if (r3dPoly.faceColour[3] == 0) {
 		return;
@@ -1058,7 +1055,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 		if (currentMesh->microTexture) {
 
-			float microTexScale[] = { 2, 4, 16, 256 };
+			static const float microTexScale[] = { 2.f, 4.f, 16.f, 256.f };
 
 			currentMesh->microTextureID = ph.MicroTextureID();
 			currentMesh->microTextureScale = microTexScale[ph.MicroTextureMinLOD()];
@@ -1073,7 +1070,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	UINT64			lastHash	= -1;
 	SortingMesh*	currentMesh = nullptr;
 	
-	std::map<UINT64, SortingMesh> sMap;
+	std::unordered_map<UINT64, SortingMesh> sMap;
 
 	if (data == NULL)
 		return;
@@ -1086,7 +1083,6 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		R3DPoly		p;					// current polygon
 		float		uvScale;
-		int			i, j;
 
 		if (ph.header[6] == 0) {
 			break;
@@ -1099,9 +1095,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 			if (sMap.count(hash) == 0) {
 
-				sMap[hash] = SortingMesh();
-
-				currentMesh = &sMap[hash];
+				currentMesh = &sMap.insert({hash, SortingMesh()}).first->second;
 
 				//make space for our vertices
 				currentMesh->verts.reserve(numTriangles * 3);
@@ -1109,8 +1103,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				//set mesh values
 				SetMeshValues(currentMesh, ph);
 			}
-
-			currentMesh = &sMap[hash];
+			else
+				currentMesh = &sMap[hash];
 		}
 
 		// Obtain basic polygon parameters
@@ -1120,9 +1114,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		ph.FaceNormal(p.faceNormal);
 
 		// Fetch reused vertices according to bitfield, then new verts
-		i = 0;
-		j = 0;
-		for (i = 0; i < 4; i++)		// up to 4 reused vertices
+		int j = 0;
+		for (int i = 0; i < 4; i++)		// up to 4 reused vertices
 		{
 			if (ph.SharedVertex(i))
 			{
@@ -1165,7 +1158,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 
 		// if we have flat shading, we can't re-use normals from shared vertices
-		for (i = 0; i < p.number && !ph.SmoothShading(); i++) {
+		for (int i = 0; i < p.number && !ph.SmoothShading(); i++) {
 			p.v[i].normal[0] = p.faceNormal[0];
 			p.v[i].normal[1] = p.faceNormal[1];
 			p.v[i].normal[2] = p.faceNormal[2];
@@ -1202,7 +1195,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				//==========
 
 				if (!m_shadeIsSigned) {
-					shade = (ix & 0xFF) / 255.f;
+					shade = (ix & 0xFF) * (float)(1.0 / 255.0);
 				}
 				else {
 					shade = BYTE_TO_FLOAT((INT8)(ix & 0xFF));
@@ -1237,8 +1230,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			// flip normals
 			V3::inverse(tempP.faceNormal);
 
-			for (int i = 0; i < tempP.number; i++) {
-				V3::inverse(tempP.v[i].normal);
+			for (int i2 = 0; i2 < tempP.number; i2++) {
+				V3::inverse(tempP.v[i2].normal);
 			}
 
 			CopyVertexData(tempP, currentMesh->verts);
@@ -1250,7 +1243,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 		}
 		
 		// Copy current vertices into previous vertex array
-		for (i = 0; i < 4; i++) {
+		for (int i = 0; i < 4; i++) {
 			m_prev[i] = p.v[i];
 			m_prevTexCoords[i][0] = texCoords[i][0];
 			m_prevTexCoords[i][1] = texCoords[i][1];
@@ -1365,10 +1358,10 @@ void CNew3D::CalcFrustumPlanes(Plane p[5], const float* matrix)
 	p[3].Normalise();
 
 	// Front Plane
-	p[4].a = 0;
-	p[4].b = 0;
-	p[4].c = -1;
-	p[4].d =0;
+	p[4].a = 0.f;
+	p[4].b = 0.f;
+	p[4].c = -1.f;
+	p[4].d = 0.f;
 }
 
 void CNew3D::CalcBox(float distance, BBox& box)
@@ -1377,49 +1370,49 @@ void CNew3D::CalcBox(float distance, BBox& box)
 	box.points[0][0] = -distance;
 	box.points[0][1] = -distance;
 	box.points[0][2] = distance;
-	box.points[0][3] = 1;
+	box.points[0][3] = 1.f;
 
 	//bottom left back
 	box.points[1][0] = -distance;
 	box.points[1][1] = -distance;
 	box.points[1][2] = -distance;
-	box.points[1][3] = 1;
+	box.points[1][3] = 1.f;
 
 	//bottom right back
 	box.points[2][0] = distance;
 	box.points[2][1] = -distance;
 	box.points[2][2] = -distance;
-	box.points[2][3] = 1;
+	box.points[2][3] = 1.f;
 
 	//bottom right front
 	box.points[3][0] = distance;
 	box.points[3][1] = -distance;
 	box.points[3][2] = distance;
-	box.points[3][3] = 1;
+	box.points[3][3] = 1.f;
 
 	//top left front
 	box.points[4][0] = -distance;
 	box.points[4][1] = distance;
 	box.points[4][2] = distance;
-	box.points[4][3] = 1;
+	box.points[4][3] = 1.f;
 
 	//top left back
 	box.points[5][0] = -distance;
 	box.points[5][1] = distance;
 	box.points[5][2] = -distance;
-	box.points[5][3] = 1;
+	box.points[5][3] = 1.f;
 
 	//top right back
 	box.points[6][0] = distance;
 	box.points[6][1] = distance;
 	box.points[6][2] = -distance;
-	box.points[6][3] = 1;
+	box.points[6][3] = 1.f;
 
 	//top right front
 	box.points[7][0] = distance;
 	box.points[7][1] = distance;
 	box.points[7][2] = distance;
-	box.points[7][3] = 1;
+	box.points[7][3] = 1.f;
 }
 
 void CNew3D::MultVec(const float matrix[16], const float in[4], float out[4]) 
@@ -1444,7 +1437,7 @@ void CNew3D::TransformBox(const float *m, BBox& box)
 	}
 }
 
-Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
+Clip CNew3D::ClipBox(const BBox& box, Plane planes[5])
 {
 	int count = 0;
 
@@ -1453,7 +1446,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
 		int temp = 0;
 
 		for (int j = 0; j < 5; j++) {
-			if (planes[j].DistanceToPoint(box.points[i]) >= 0) {
+			if (planes[j].DistanceToPoint(box.points[i]) >= 0.f) {
 				temp++;
 			}
 		}
@@ -1472,7 +1465,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
 		int temp = 0;
 
 		for (int j = 0; j < 8; j++) {
-			if (planes[i].DistanceToPoint(box.points[j]) >= 0) {
+			if (planes[i].DistanceToPoint(box.points[j]) >= 0.f) {
 				temp++;
 			}
 		}
@@ -1490,7 +1483,7 @@ Clip CNew3D::ClipBox(BBox& box, Plane planes[5])
 void CNew3D::CalcBoxExtents(const BBox& box)
 {
 	for (int i = 0; i < 8; i++) {
-		if (box.points[i][2] < 0) {
+		if (box.points[i][2] < 0.f) {
 			m_nfPairs[m_currentPriority].zNear = std::max(box.points[i][2], m_nfPairs[m_currentPriority].zNear);
 			m_nfPairs[m_currentPriority].zFar  = std::min(box.points[i][2], m_nfPairs[m_currentPriority].zFar);
 		}
@@ -1512,13 +1505,11 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[5])
 
 		//=================
 		bool	currentIn;
-		bool	nextIn;
 		float	currentDot;
-		float	nextDot;
 		//=================
 
 		currentDot	= planes[i].DotProduct(in->list[0].pos);
-		currentIn	= (currentDot + planes[i].d) >= 0;
+		currentIn	= (currentDot + planes[i].d) >= 0.f;
 		out->count	= 0;
 
 		for (int j = 0; j < in->count; j++) {
@@ -1533,16 +1524,16 @@ void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[5])
 				nextIndex = 0;
 			}
 
-			nextDot = planes[i].DotProduct(in->list[nextIndex].pos);
-			nextIn	= (nextDot + planes[i].d) >= 0;
+			float nextDot = planes[i].DotProduct(in->list[nextIndex].pos);
+			bool nextIn	= (nextDot + planes[i].d) >= 0.f;
 
 			// we have an intersection
 			if (currentIn != nextIn) {
 
 				float u = (currentDot + planes[i].d) / (currentDot - nextDot);
 
-				float* p1 = in->list[j].pos;
-				float* p2 = in->list[nextIndex].pos;
+				const float* p1 = in->list[j].pos;
+				const float* p2 = in->list[nextIndex].pos;
 
 				out->list[out->count].pos[0] = p1[0] + ((p2[0] - p1[0]) * u);
 				out->list[out->count].pos[1] = p1[1] + ((p2[1] - p1[1]) * u);
@@ -1590,7 +1581,7 @@ void CNew3D::ClipModel(const Model *m)
 			ClipPolygon(clipPoly, m_planes);
 
 			for (int j = 0; j < clipPoly.count; j++) {
-				if (clipPoly.list[j].pos[2] < 0) {
+				if (clipPoly.list[j].pos[2] < 0.f) {
 					m_nfPairs[m_currentPriority].zNear = std::max(clipPoly.list[j].pos[2], m_nfPairs[m_currentPriority].zNear);
 					m_nfPairs[m_currentPriority].zFar  = std::min(clipPoly.list[j].pos[2], m_nfPairs[m_currentPriority].zFar);
 				}
@@ -1601,12 +1592,12 @@ void CNew3D::ClipModel(const Model *m)
 
 void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 {
-	if (far > 1e30) {
-		far = near * 1000000;				// fix for ocean hunter which passes some FLT_MAX for a few matrices. HW must have some safe guard for these
+	if (far > 1e30f) {
+		far = near * 1000000.f;				// fix for ocean hunter which passes some FLT_MAX for a few matrices. HW must have some safe guard for these
 	}
 
-	if (near < far / 1000000) {
-		near = far / 1000000;				// if we get really close to zero somehow, we will have almost no depth precision
+	if (near < far / 1000000.f) {
+		near = far / 1000000.f;				// if we get really close to zero somehow, we will have almost no depth precision
 	}
 
 	float l = near * vp->angle_left;	// we need to calc the shape of the projection frustum for culling
@@ -1646,18 +1637,18 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 		float correction = windowAR / viewableAreaAR;
 
 		vp->x		= 0;
-		vp->y		= m_yOffs + (int)((384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
-		vp->height = (int)(vp->vpHeight*m_yRatio);
+		vp->height = (int)((float)vp->vpHeight*m_yRatio);
 
 		vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
 	}
 	else {
 
-		vp->x		= m_xOffs + (int)(vp->vpX*m_xRatio);
-		vp->y		= m_yOffs + (int)((384 - (vp->vpY + vp->vpHeight))*m_yRatio);
-		vp->width	= (int)(vp->vpWidth*m_xRatio);
-		vp->height	= (int)(vp->vpHeight*m_yRatio);
+		vp->x		= m_xOffs + (int)((float)vp->vpX*m_xRatio);
+		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->width	= (int)((float)vp->vpWidth*m_xRatio);
+		vp->height	= (int)((float)vp->vpHeight*m_yRatio);
 
 		vp->projectionMatrix.Frustum(l, r, b, t, near, far);
 	}

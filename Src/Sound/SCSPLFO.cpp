@@ -42,10 +42,10 @@ struct _LFO
 #define LFIX(v)	((unsigned int) ((float) (1<<LFO_SHIFT)*(v)))
 
 //Convert DB to multiply amplitude
-#define DB(v) 	LFIX(pow(10.0,v/20.0))
+#define DB(v) 	LFIX(pow(10.0,(v)*(1.0/20.0)))
 
 //Convert cents to step increment
-#define CENTS(v) LFIX(pow(2.0,v/1200.0))
+#define CENTS(v) LFIX(exp2((v)*(1.0/1200.0)))
 
 static int PLFO_TRI[256], PLFO_SQR[256], PLFO_SAW[256], PLFO_NOI[256];
 static int ALFO_TRI[256], ALFO_SQR[256], ALFO_SAW[256], ALFO_NOI[256];
@@ -115,12 +115,12 @@ void LFO_Init(void)
 		float limit = PSCALE[s];
 		for (i = -128; i < 128; ++i)
 		{
-			PSCALES[s][i + 128] = CENTS(((limit*(float)i) / 128.0));
+			PSCALES[s][i + 128] = CENTS(((limit*(double)i) / 128.0));
 		}
 		limit = -ASCALE[s];
 		for (i = 0; i < 256; ++i)
 		{
-			ASCALES[s][i] = DB(((limit*(float)i) / 256.0));
+			ASCALES[s][i] = DB(((limit*(double)i) / 256.0));
 		}
 	}
 }

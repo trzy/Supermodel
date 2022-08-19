@@ -725,7 +725,7 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   // Specular shininess
   GLfloat specularCoefficient = (GLfloat) ((P->header[0]>>26) & 0x3F) * (1.0f/63.0f);
   int shinyBits = (P->header[6] >> 5) & 3;
-  float shininess = std::pow(2.0f, 1.f + shinyBits);
+  float shininess = std::exp2f(1 + shinyBits);
   if (!(P->header[0]&0x80)) //|| (shininess == 0)) // bit 0x80 seems to enable specular lighting
   {
     specularCoefficient = 0.; // disable
@@ -1224,7 +1224,7 @@ bool CLegacy3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts,
   {
     // Last ditch attempt: try the local buffer size
     vboBytes = localBytes;
-    glBufferData(GL_ARRAY_BUFFER, vboBytes, 0, isDynamic?GL_STREAM_DRAW:GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vboBytes, nullptr, isDynamic?GL_STREAM_DRAW:GL_STATIC_DRAW);
     if (glGetError() != GL_NO_ERROR)
       return ErrorLog("OpenGL was unable to provide a %s vertex buffer.", isDynamic?"dynamic":"static");
   }

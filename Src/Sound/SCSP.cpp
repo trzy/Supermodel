@@ -602,7 +602,7 @@ void SCSP_StopSlot(_SLOT *slot,int keyoff)
 	//DebugLog("KEYOFF2 %d",slot->slot);
 }
 
-#define log2(n) (log((float) n)/log((float) 2))
+//#define log2(n) (log((float) n)/log((float) 2))
 
 bool SCSP_Init(const Util::Config::Node &config, int n)
 {
@@ -641,7 +641,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	{
 		double fcent=(double) 1200.0*log2((double)(((double) 1024.0+(double)i)/(double)1024.0));
 		//float fcent=1.0+(float) i/1024.0;
-		fcent=(double) 44100.0*pow(2.0,fcent/1200.0);
+		fcent=(double) 44100.0*exp2(fcent/1200.0);
 		FNS_Table[i]=(UINT32)((float) (1<<SHIFT) *fcent);
 		//FNS_Table[i]=(i>>(10-SHIFT))|(1<<SHIFT);
 		
@@ -655,7 +655,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 #ifdef RB_VOLUME
 	// Volume table, 1 = -0.375dB, 8 = -3dB, 256 = -96dB
 	for (i = 0; i < 256; i++)
-		volume[i] = 65536.0*pow(2.0, (-0.375 / 6.0)*i);
+		volume[i] = 65536.0*exp2((-0.375 / 6.0)*i);
 	for (i = 256; i < 256 * 4; i++)
 		volume[i] = 0;
 
