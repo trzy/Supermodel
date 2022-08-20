@@ -1670,7 +1670,12 @@ void CNew3D::SetSunClamp(bool enable)
 
 void CNew3D::SetSignedShade(bool enable)
 {
-	m_shadeIsSigned = enable;
+	if (m_gameName == "swtrilgy" || m_gameName == "swtrilgya") {
+		m_shadeIsSigned = false;
+	}
+	else {
+		m_shadeIsSigned = enable;
+	}
 }
 
 float CNew3D::GetLosValue(int layer)
