@@ -1,6 +1,6 @@
 #include "Types.h"
 #include "R3DFloat.h"
-#include "Util\GenericValue.h"
+#include "Util/GenericValue.h"
 
 float R3DFloat::GetFloat16(UINT16 f)
 {
