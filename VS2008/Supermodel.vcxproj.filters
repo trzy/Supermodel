@@ -847,6 +847,9 @@
     <ClInclude Include="..\Src\Graphics\New3D\Vec.h">
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\Util\BitCast.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Src\Debugger\ReadMe.txt">

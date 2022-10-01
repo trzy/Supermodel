@@ -1,6 +1,6 @@
 #include "Types.h"
 #include "R3DFloat.h"
-#include "Util/GenericValue.h"
+#include "Util/BitCast.h"
 
 float R3DFloat::GetFloat16(UINT16 f)
 {
@@ -35,5 +35,5 @@ UINT32 R3DFloat::Convert16BitProFloat(UINT32 a1)
 
 float R3DFloat::ToFloat(UINT32 a1)
 {
-	return uint_as_float(a1);
+	return Util::UintAsFloat(a1);
 }
