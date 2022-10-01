@@ -161,6 +161,7 @@
 #include "Supermodel.h"
 #include "Shaders3D.h"  // fragment and vertex shaders
 #include "Graphics/Shader.h"
+#include "Util/BitCast.h"
 
 #include <algorithm>
 #include <cmath>
@@ -851,8 +852,8 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   int vpHeight  = (vpnode[0x14]>>18)&0x3FFF;  // height (14.2)
   
   // Field of view and clipping
-  GLfloat vpTopAngle  = asinf(uint_as_float(vpnode[0x0E]));  // FOV Y upper half-angle (radians)
-  GLfloat vpBotAngle  = asinf(uint_as_float(vpnode[0x12]));  // FOV Y lower half-angle
+  GLfloat vpTopAngle  = asinf(Util::UintAsFloat(vpnode[0x0E]));  // FOV Y upper half-angle (radians)
+  GLfloat vpBotAngle  = asinf(Util::UintAsFloat(vpnode[0x12]));  // FOV Y lower half-angle
   GLfloat fovYDegrees = (vpTopAngle+vpBotAngle)*(float)(180.0/M_PI);
   // TO-DO: investigate clipping planes
   

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -545,6 +545,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Sound\SCSP.h" />
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />
+    <ClInclude Include="..\Src\Util\BitCast.h" />
     <ClInclude Include="..\Src\Util\BitRegister.h" />
     <ClInclude Include="..\Src\Util\BMPFile.h" />
     <ClInclude Include="..\Src\Util\ByteSwap.h" />
