@@ -688,9 +688,9 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   const UINT32 node1Ptr     = node[0x07-offset];
   const UINT32 node2Ptr     = node[0x08-offset];
   const UINT32 matrixOffset = node[0x03-offset]&0xFFF;
-  const float x             = *(float *) &node[0x04-offset];
-  const float y             = *(float *) &node[0x05-offset];
-  const float z             = *(float *) &node[0x06-offset];
+  const float x             = Util::Uint32AsFloat(node[0x04-offset]);
+  const float y             = Util::Uint32AsFloat(node[0x05-offset]);
+  const float z             = Util::Uint32AsFloat(node[0x06-offset]);
   
   // Texture offset?
   TextureOffset oldTextureOffset = m_textureOffset; // save old offsets
