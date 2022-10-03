@@ -8,10 +8,10 @@ namespace Util
 {
 #if __cplusplus >= 202002L
 #include <bit>
-#define FloatAsInt(x) std::bit_cast<int>(x)
-#define IntAsFloat(x) std::bit_cast<float>(x)
-#define UintAsFloat(x) std::bit_cast<float>(x)
-#elif 1
+#define FloatAsInt32(x) std::bit_cast<int32_t>(x)
+#define Int32AsFloat(x) std::bit_cast<float>(x)
+#define Uint32AsFloat(x) std::bit_cast<float>(x)
+#else
 template <class Dest, class Source>
 inline Dest bit_cast(Source const& source) {
    static_assert(sizeof(Dest) == sizeof(Source), "size of destination and source objects must be equal");
@@ -22,39 +22,9 @@ inline Dest bit_cast(Source const& source) {
    std::memcpy(&dest, &source, sizeof(dest));
    return dest;
 }
-#define FloatAsInt(x) bit_cast<int,float>(x)
-#define IntAsFloat(x) bit_cast<float,int>(x)
-#define UintAsFloat(x) bit_cast<float,unsigned int>(x)
-#else
-inline int FloatAsInt(const float x)
-{
-   union {
-      float f;
-      int i;
-   } uc;
-   uc.f = x;
-   return uc.i;
-}
-
-inline float IntAsFloat(const int i)
-{
-   union {
-      int i;
-      float f;
-   } iaf;
-   iaf.i = i;
-   return iaf.f;
-}
-
-inline float UintAsFloat(const unsigned int i)
-{
-   union {
-      unsigned int u;
-      float f;
-   } iaf;
-   iaf.u = i;
-   return iaf.f;
-}
+#define FloatAsInt32(x) bit_cast<int32_t,float>(x)
+#define Int32AsFloat(x) bit_cast<float,int32_t>(x)
+#define Uint32AsFloat(x) bit_cast<float,uint32_t>(x)
 #endif
 } // Util
 
