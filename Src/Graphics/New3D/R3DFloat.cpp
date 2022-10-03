@@ -35,5 +35,5 @@ UINT32 R3DFloat::Convert16BitProFloat(UINT32 a1)
 
 float R3DFloat::ToFloat(UINT32 a1)
 {
-	return Util::UintAsFloat(a1);
+	return Util::Uint32AsFloat(a1);
 }

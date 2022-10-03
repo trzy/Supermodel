@@ -553,8 +553,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	m_nodeAttribs.Push();	// save current attribs
 
 	if (!m_offset) {		// Step 1.5+
-		
-		float modelScale = Util::UintAsFloat(node[1]);
+
+		float modelScale = Util::Uint32AsFloat(node[1]);
 		if (modelScale > std::numeric_limits<float>::min()) {
 			m_nodeAttribs.currentModelScale = modelScale;
 		}
@@ -574,9 +574,9 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// apply translation vector
 	if (node[0x00] & 0x10) {
-		float x = Util::UintAsFloat(node[0x04 - m_offset]);
-		float y = Util::UintAsFloat(node[0x05 - m_offset]);
-		float z = Util::UintAsFloat(node[0x06 - m_offset]);
+		float x = Util::Uint32AsFloat(node[0x04 - m_offset]);
+		float y = Util::Uint32AsFloat(node[0x05 - m_offset]);
+		float z = Util::Uint32AsFloat(node[0x06 - m_offset]);
 		m_modelMat.Translate(x, y, z);
 	}
 	// multiply matrix, if specified
@@ -832,16 +832,16 @@ void CNew3D::RenderViewport(UINT32 addr)
 		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17] & 0xFFFFFF);
 
 		/*
-		vp->angle_left		= -atan2f(Util::UintAsFloat(vpnode[12]),  Util::UintAsFloat(vpnode[13]));	// These values work out as the normals for the clipping planes.
-		vp->angle_right		=  atan2f(Util::UintAsFloat(vpnode[16]), -Util::UintAsFloat(vpnode[17]));	// Sometimes these values (dirt devils,lost world) are totally wrong
-		vp->angle_top		=  atan2f(Util::UintAsFloat(vpnode[14]),  Util::UintAsFloat(vpnode[15]));	// and don't work for the frustum values exactly.
-		vp->angle_bottom	= -atan2f(Util::UintAsFloat(vpnode[18]), -Util::UintAsFloat(vpnode[19]));	// Perhaps they are just used for culling and not rendering.
+		vp->angle_left		= -atan2f(Util::Uint32AsFloat(vpnode[12]),  Util::Uint32AsFloat(vpnode[13]));	// These values work out as the normals for the clipping planes.
+		vp->angle_right		=  atan2f(Util::Uint32AsFloat(vpnode[16]), -Util::Uint32AsFloat(vpnode[17]));	// Sometimes these values (dirt devils,lost world) are totally wrong
+		vp->angle_top		=  atan2f(Util::Uint32AsFloat(vpnode[14]),  Util::Uint32AsFloat(vpnode[15]));	// and don't work for the frustum values exactly.
+		vp->angle_bottom	= -atan2f(Util::Uint32AsFloat(vpnode[18]), -Util::Uint32AsFloat(vpnode[19]));	// Perhaps they are just used for culling and not rendering.
 		*/
 
-		float cv = Util::UintAsFloat(vpnode[0x8]);	// 1/(left-right)
-		float cw = Util::UintAsFloat(vpnode[0x9]);	// 1/(top-bottom)
-		float io = Util::UintAsFloat(vpnode[0xa]);	// top / bottom (ratio) - ish
-		float jo = Util::UintAsFloat(vpnode[0xb]);	// left / right (ratio)
+		float cv = Util::Uint32AsFloat(vpnode[0x8]);	// 1/(left-right)
+		float cw = Util::Uint32AsFloat(vpnode[0x9]);	// 1/(top-bottom)
+		float io = Util::Uint32AsFloat(vpnode[0xa]);	// top / bottom (ratio) - ish
+		float jo = Util::Uint32AsFloat(vpnode[0xb]);	// left / right (ratio)
 
 		vp->angle_left		= (0.0f - jo) / cv;
 		vp->angle_right		= (1.0f - jo) / cv;
@@ -855,10 +855,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 		CalcFrustumPlanes(m_planes, vp->projectionMatrix);	// we need to calc a 'projection matrix' to get the correct frustum planes for clipping
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
-		vp->lightingParams[0] =  Util::UintAsFloat(vpnode[0x05]);							// sun X
-		vp->lightingParams[1] = -Util::UintAsFloat(vpnode[0x06]);							// sun Y (- to convert to ogl cordinate system)
-		vp->lightingParams[2] = -Util::UintAsFloat(vpnode[0x04]);							// sun Z (- to convert to ogl cordinate system)
-		vp->lightingParams[3] = std::max(0.f, std::min(Util::UintAsFloat(vpnode[0x07]), 1.0f));	// sun intensity (clamp to 0-1)
+		vp->lightingParams[0] =  Util::Uint32AsFloat(vpnode[0x05]);							// sun X
+		vp->lightingParams[1] = -Util::Uint32AsFloat(vpnode[0x06]);							// sun Y (- to convert to ogl cordinate system)
+		vp->lightingParams[2] = -Util::Uint32AsFloat(vpnode[0x04]);							// sun Z (- to convert to ogl cordinate system)
+		vp->lightingParams[3] = std::max(0.f, std::min(Util::Uint32AsFloat(vpnode[0x07]), 1.0f));	// sun intensity (clamp to 0-1)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// ambient intensity
 		vp->lightingParams[5] = 0.0f;	// reserved
 		
@@ -874,8 +874,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotEllipse[2] = (float)((vpnode[0x1E] >> 16) & 0xFFFF);					// spotlight X size (16-bit)
 		vp->spotEllipse[3] = (float)((vpnode[0x1D] >> 16) & 0xFFFF);					// spotlight Y size
 
-		vp->spotRange[0] = 1.0f / Util::UintAsFloat(vpnode[0x21]);						// spotlight start
-		vp->spotRange[1] = Util::UintAsFloat(vpnode[0x1F]);								// spotlight extent
+		vp->spotRange[0] = 1.0f / Util::Uint32AsFloat(vpnode[0x21]);					// spotlight start
+		vp->spotRange[1] = Util::Uint32AsFloat(vpnode[0x1F]);							// spotlight extent
 
 		vp->spotColor[0] = color[spotColorIdx][0];										// spotlight color
 		vp->spotColor[1] = color[spotColorIdx][1];
@@ -909,7 +909,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog color R
 		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
 		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
-		vp->fogParams[3] = std::abs(Util::UintAsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
+		vp->fogParams[3] = std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)* (float)(1.0 / 255.0);	// fog start
 
 		// Avoid Infinite and NaN values for Star Wars Trilogy
