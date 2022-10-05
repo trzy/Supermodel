@@ -1237,15 +1237,13 @@
     </hardware>
     <roms>
       <patches>
-	    <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
-        <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
         <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21434.20" crc32="0xE028D7CA" />
+        <file offset="0" name="epr-21434.20" crc32="0x18F8626A" />
         <file offset="2" name="epr-21436.19" crc32="0x22BCBCA3" />
-        <file offset="4" name="epr-21433.18" crc32="0x60AA9D76" />
+        <file offset="4" name="epr-21433.18" crc32="0xB3B124FA" />
         <file offset="6" name="epr-21435.17" crc32="0x9B169446" />
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
