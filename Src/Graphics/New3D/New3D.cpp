@@ -369,11 +369,9 @@ void CNew3D::RenderFrame(void)
 			SetRenderStates();
 
 			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
-			m_r3dFrameBuffers.SetFBO(Layer::colour);
 			bool hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
 
 			if (!renderOverlay && ProcessLos(pri)) {
-				ProcessLos(pri);
 			}
 
 			DisableRenderStates();
