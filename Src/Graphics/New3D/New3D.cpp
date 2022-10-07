@@ -371,7 +371,8 @@ void CNew3D::RenderFrame(void)
 			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
 			bool hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
 
-			if (!renderOverlay && ProcessLos(pri)) {
+			if (!renderOverlay) {
+				ProcessLos(pri);
 			}
 
 			DisableRenderStates();
@@ -380,7 +381,7 @@ void CNew3D::RenderFrame(void)
 			m_r3dFrameBuffers.CompositeBaseLayer();				// copy opaque pixels to back buffer
 
 			SetRenderStates();
-			
+
 			glDepthFunc(GL_LESS);								// alpha polys seem to use gl_less (ocean hunter)
 
 			m_r3dShader.DiscardAlpha		(false);			// render only translucent pixels
