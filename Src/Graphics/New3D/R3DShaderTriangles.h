@@ -63,6 +63,7 @@ static const char *fragmentShaderR3D = R"glsl(
 
 #version 120
 #extension GL_ARB_shader_texture_lod : require
+#extension GL_ARB_gpu_shader5 : enable
 
 uniform sampler2D tex1;			// base tex
 uniform sampler2D tex2;			// micro tex (optional)
