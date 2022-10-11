@@ -54,9 +54,9 @@ float CalcBackFace(in vec3 viewVertex)
 void main(void)
 {
 	vs_out.viewVertex	= vec3(modelMat * inVertex);
-	vs_out.viewNormal	= (mat3(modelMat) * inNormal) / modelScale;
+	vs_out.viewNormal	= (mat3(modelMat) / modelScale) * inNormal;
 	vs_out.discardPoly	= CalcBackFace(vs_out.viewVertex);
-	vs_out.color    	= GetColour(inColour);
+	vs_out.color		= GetColour(inColour);
 	vs_out.texCoord		= inTexCoord;
 	vs_out.fixedShade	= inFixedShade;
 	gl_Position			= projMat * modelMat * inVertex;
@@ -238,21 +238,10 @@ out vec4 outColor;
 
 void QuadraticInterpolation()
 {
-	vec2 s[4];
-	float A[4];
-
-	for (int i=0; i<4; i++) {
-		s[i] = fs_in.v[i];
-		A[i] = fs_in.area[i];
-	}
-
-	float D[4];
 	float r[4];
 
 	for (int i=0; i<4; i++) {
-		int i_next = (i+1)%4;
-		D[i] = dot(s[i], s[i_next]);
-		r[i] = length(s[i]);
+		r[i] = length(fs_in.v[i]);
 		if (fs_in.oneOverW[i] < 0.0) {  // is w[i] negative?
 			r[i] = -r[i];
 		}
@@ -262,8 +251,8 @@ void QuadraticInterpolation()
 
 	for (int i=0; i<4; i++) {
 		int i_next = (i+1)%4;
-		if(A[i]==0.0)	t[i] = 0.0;									// check for zero area + div by zero
-		else			t[i] = (r[i]*r[i_next] - D[i]) / A[i];
+		if(fs_in.area[i]==0.0) t[i] = 0.0; // check for zero area + div by zero
+		else                   t[i] = fma(r[i],r[i_next], -dot(fs_in.v[i],fs_in.v[i_next])) / fs_in.area[i];
 	}
 
 	float uSum = 0.0;
@@ -275,18 +264,22 @@ void QuadraticInterpolation()
 		uSum += u[i];
 	}
 
+	uSum = 1.0/uSum;
 	float lambda[4];
 
 	for (int i=0; i<4; i++) {
-		lambda[i] = u[i] / uSum;
+		lambda[i] = u[i] * uSum;
 	}
 
 	/* Discard fragments when all the weights are neither all negative nor all positive. */
 
+	float interp_oneOverW = 0.0;
 	int lambdaSignCount = 0;
 
 	for (int i=0; i<4; i++) {
-		if (fs_in.oneOverW[i] * lambda[i] < 0.0) {
+		const float tmp = lambda[i] * fs_in.oneOverW[i];
+		interp_oneOverW	+= tmp;
+		if (tmp < 0.0) {
 			lambdaSignCount--;
 		} else {
 			lambdaSignCount++;
@@ -297,8 +290,6 @@ void QuadraticInterpolation()
 			discard;
 		}
 	}
-
-	float interp_oneOverW = 0.0;
 
 	fsViewVertex	= vec3(0.0);
 	fsViewNormal	= vec3(0.0);
@@ -311,13 +302,13 @@ void QuadraticInterpolation()
 		fsViewNormal	+= lambda[i] * fs_in.viewNormal[i];
 		fsTexCoord		+= lambda[i] * fs_in.texCoord[i];
 		fsFixedShade	+= lambda[i] * fs_in.fixedShade[i];
-		interp_oneOverW	+= lambda[i] * fs_in.oneOverW[i];
 	}
 
-	fsViewVertex	/= interp_oneOverW;
-	fsViewNormal	/= interp_oneOverW;
-	fsTexCoord		/= interp_oneOverW;
-	fsFixedShade	/= interp_oneOverW;
+	float inv = 1.0/interp_oneOverW;
+	fsViewVertex	*= inv;
+	fsViewNormal	*= inv;
+	fsTexCoord		*= inv;
+	fsFixedShade	*= inv;
 
 	vec4 vertex;
 	float depth;
@@ -355,8 +346,8 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	float halfTexelSize	= 0.5 / size;
 
 	if(wrapMode==0) {							// repeat
-		u	= u * size - 0.5;
-		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u	= fma(u, size, -0.5);
+		u0	= fma(floor(u), texelSize, halfTexelSize); // + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u0	= fract(u0);
 		u1	= u0 + texelSize;
 		u1	= fract(u1);
@@ -365,8 +356,8 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	}
 	else if(wrapMode==1) {						// repeat + clamp
 		u	= fract(u);							// must force into 0-1 to start
-		u	= u * size - 0.5;
-		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u	= fma(u, size, -0.5);
+		u0	= fma(floor(u), texelSize, halfTexelSize); // + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u1	= u0 + texelSize;
 
 		if(u0 <  0.0)	u0 = 0.0;
@@ -377,21 +368,18 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	else {										// mirror + mirror clamp - both are the same since the edge pixels are repeated anyway
 
 		float odd = floor(mod(u, 2.0));			// odd values are mirrored
-
+		u = fract(u);
 		if(odd > 0.0) {
-			u = 1.0 - fract(u);
-		}
-		else {
-			u = fract(u);
+			u = 1.0 - u;
 		}
 
-		u	= u * size - 0.5;
-		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u	= fma(u, size, -0.5);
+		u0	= fma(floor(u), texelSize, halfTexelSize); // + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u1	= u0 + texelSize;
 
 		if(u0 <  0.0)	u0 = 0.0;
 		if(u1 >= 1.0)	u1 = 1.0 - halfTexelSize;
-		
+
 		return fract(u);						// return weight
 	}
 }
@@ -401,11 +389,11 @@ vec4 texBiLinear(sampler2D texSampler, float level, ivec2 wrapMode, vec2 texSize
 	float tx[2], ty[2];
 	float a = LinearTexLocations(wrapMode.s, texSize.x, texCoord.x, tx[0], tx[1]);
 	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
-	
+
 	vec4 p0q0 = textureLod(texSampler, vec2(tx[0],ty[0]), level);
-    vec4 p1q0 = textureLod(texSampler, vec2(tx[1],ty[0]), level);
-    vec4 p0q1 = textureLod(texSampler, vec2(tx[0],ty[1]), level);
-    vec4 p1q1 = textureLod(texSampler, vec2(tx[1],ty[1]), level);
+	vec4 p1q0 = textureLod(texSampler, vec2(tx[1],ty[0]), level);
+	vec4 p0q1 = textureLod(texSampler, vec2(tx[0],ty[1]), level);
+	vec4 p1q1 = textureLod(texSampler, vec2(tx[1],ty[1]), level);
 
 	if(alphaTest) {
 		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
@@ -422,10 +410,10 @@ vec4 texBiLinear(sampler2D texSampler, float level, ivec2 wrapMode, vec2 texSize
 	}
 
 	// Interpolation in X direction.
-    vec4 pInterp_q0 = mix( p0q0, p1q0, a ); // Interpolates top row in X direction.
-    vec4 pInterp_q1 = mix( p0q1, p1q1, a ); // Interpolates bottom row in X direction.
+	vec4 pInterp_q0 = mix( p0q0, p1q0, a ); // Interpolates top row in X direction.
+	vec4 pInterp_q1 = mix( p0q1, p1q1, a ); // Interpolates bottom row in X direction.
 
-    return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
+	return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
 }
 
 vec4 textureR3D(sampler2D texSampler, ivec2 wrapMode, vec2 texSize, vec2 texCoord)
@@ -437,8 +425,8 @@ vec4 textureR3D(sampler2D texSampler, ivec2 wrapMode, vec2 texSize, vec2 texCoor
 
 	float iLevel = floor(fLevel);						// value as an 'int'
 
-	vec2 texSize0 = texSize / exp2(iLevel);
-	vec2 texSize1 = texSize / exp2(iLevel+1.0);
+	vec2 texSize0 = texSize * exp2(-iLevel);
+	vec2 texSize1 = texSize * exp2(-(iLevel+1.0));
 
 	vec4 texLevel0 = texBiLinear(texSampler, iLevel, wrapMode, texSize0, texCoord);
 	vec4 texLevel1 = texBiLinear(texSampler, iLevel+1.0, wrapMode, texSize1, texCoord);
@@ -451,18 +439,18 @@ vec4 GetTextureValue()
 	vec4 tex1Data = textureR3D(tex1, textureWrapMode, baseTexSize, fsTexCoord);
 
 	if(textureInverted) {
-		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
+		tex1Data.rgb = 1.0 - tex1Data.rgb;
 	}
 
 	if (microTexture) {
 		vec2 scale			= (baseTexSize / 128.0) * microTextureScale;
 		vec4 tex2Data		= textureR3D( tex2, ivec2(0.0), vec2(128.0), fsTexCoord * scale);
 
-		float lod			= mip_map_level(fsTexCoord * scale * vec2(128.0));
+		float lod			= mip_map_level(fsTexCoord * scale * 128.0);
 
 		float blendFactor	= max(lod - 1.5, 0.0);			// bias -1.5
 		blendFactor			= min(blendFactor, 1.0);		// clamp to max value 1
-		blendFactor			= blendFactor * 0.5 + 0.5;	    // 0.5 - 1 range
+		blendFactor			= fma(blendFactor, 0.5, 0.5);	// 0.5 - 1 range
 
 		tex1Data			= mix(tex2Data, tex1Data, blendFactor);
 	}
@@ -518,7 +506,7 @@ float CalcFog()
 
 float sqr(float a)
 {
-	return a*a;
+	return a * a;
 }
 
 float sqr_length(vec2 a)
@@ -556,7 +544,7 @@ void main()
 	ellipse = max(0.0, ellipse);  // clamp
 
 	// Compute spotlight and apply lighting
-	float enable, absExtent, d, inv_r, range;
+	float enable, range;
 
 	// start of spotlight
 	enable = step(spotRange.x, -fsViewVertex.z);
@@ -565,19 +553,18 @@ void main()
 		range = 0.0;
 	}
 	else {
-		absExtent = abs(spotRange.y);
+		float absExtent = abs(spotRange.y);
 
-		d = spotRange.x + absExtent + fsViewVertex.z;
+		float d = spotRange.x + absExtent + fsViewVertex.z;
 		d = min(d, 0.0);
 
 		// slope of decay function
-		inv_r = 1.0 / (1.0 + absExtent);
+		float r = 1.0 + absExtent;
 
 		// inverse-linear falloff
 		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
 		// y = 1 / (d/r + 1)^2
-		range = 1.0 / sqr(d * inv_r - 1.0);
-		range *= enable;
+		range = enable / sqr(d / r - 1.0);
 	}
 
 	float lobeEffect = range * ellipse;
@@ -610,7 +597,7 @@ void main()
 		// Total light intensity: sum of all components 
 		lightIntensity = vec3(sunFactor*lighting[1].x + lighting[1].y);   // diffuse + ambient
 
-		lightIntensity.rgb += spotColor*lobeEffect;
+		lightIntensity += spotColor*lobeEffect;
 
 		// Upper clamp is optional, step 1.5+ games will drive brightness beyond 100%
 		if(intensityClamp) {
@@ -623,20 +610,19 @@ void main()
 		if (specularEnabled) {
 
 			float exponent, NdotL, specularFactor;
-			vec4 biasIndex, expIndex, multIndex;
 
 			// Always clamp floor to zero, we don't want deep black areas
 			NdotL = max(0.0,sunFactor);
 
-			expIndex = vec4(8.0, 16.0, 32.0, 64.0);
-			multIndex = vec4(2.0, 2.0, 3.0, 4.0);
-			biasIndex = vec4(0.95, 0.95, 1.05, 1.0);
+			const float expIndex[4]  = float[4](8.0, 16.0, 32.0, 64.0);
+			const float multIndex[4] = float[4](2.0, 2.0, 3.0, 4.0);
+			const float biasIndex[4] = float[4](0.95, 0.95, 1.05, 1.0);
 			exponent = expIndex[int(shininess)] / biasIndex[int(shininess)];
 
 			specularFactor = pow(NdotL, exponent);
 			specularFactor *= multIndex[int(shininess)];
 			specularFactor *= biasIndex[int(shininess)];
-			
+
 			specularFactor *= specularValue;
 			specularFactor *= lighting[1].x;
 
@@ -645,12 +631,12 @@ void main()
 				finalData.a = max(finalData.a, specularFactor);
 			}
 
-			finalData.rgb += vec3(specularFactor);
+			finalData.rgb += specularFactor;
 		}
 	}
 
 	// Final clamp: we need it for proper shading in dimmed light and dark ambients
-	finalData.rgb = min(finalData.rgb, vec3(1.0));
+	finalData.rgb = min(finalData.rgb, 1.0);
 
 	// Spotlight on fog
 	vec3 lSpotFogColor = spotFogColor * fogAttenuation * fogColour.rgb * lobeFogEffect;
@@ -659,7 +645,7 @@ void main()
 	finalData.rgb = mix(finalData.rgb, fogData.rgb + lSpotFogColor, fogData.a);
 
 	// Write output
-	outColor = finalData;	
+	outColor = finalData;
 }
 )glsl";
 
