@@ -3,7 +3,7 @@
 
 static const char *vertexShaderR3D = R"glsl(
 
-#version 120
+#version 150
 
 // uniforms
 uniform float	modelScale;
@@ -12,20 +12,23 @@ uniform mat4	projMat;
 uniform bool	translatorMap;
 
 // attributes
-attribute vec4	inVertex;
-attribute vec3	inNormal;
-attribute vec2	inTexCoord;
-attribute vec4	inColour;
-attribute vec3	inFaceNormal;		// used to emulate r3d culling 
-attribute float	inFixedShade;
+in vec4		inVertex;
+in vec3		inNormal;
+in vec2		inTexCoord;
+in vec3		inFaceNormal;		// used to emulate r3d culling 
+in float	inFixedShade;
+in vec4		inColour;
 
 // outputs to fragment shader
-varying vec3	fsViewVertex;
-varying vec3	fsViewNormal;		// per vertex normal vector
-varying vec2	fsTexCoord;
-varying vec4	fsColor;
-varying float	fsDiscard;			// can't have varying bool (glsl spec)
-varying float	fsFixedShade;
+out VS_OUT
+{
+	vec3	viewVertex;
+	vec3	viewNormal;		// per vertex normal vector
+	vec2	texCoord;
+	vec4	color;
+	float	fixedShade;
+	float	discardPoly;	// can't have varying bool (glsl spec)
+} vs_out;
 
 vec4 GetColour(vec4 colour)
 {
@@ -49,20 +52,19 @@ float CalcBackFace(in vec3 viewVertex)
 
 void main(void)
 {
-	fsViewVertex	= vec3(modelMat * inVertex);
-	fsViewNormal	= (mat3(modelMat) / modelScale) * inNormal;
-	fsDiscard		= CalcBackFace(fsViewVertex);
-	fsColor			= GetColour(inColour);
-	fsTexCoord		= inTexCoord;
-	fsFixedShade	= inFixedShade;
-	gl_Position		= projMat * modelMat * inVertex;
+	vs_out.viewVertex	= vec3(modelMat * inVertex);
+	vs_out.viewNormal	= (mat3(modelMat) / modelScale) * inNormal;
+	vs_out.discardPoly	= CalcBackFace(vs_out.viewVertex);
+	vs_out.color		= GetColour(inColour);
+	vs_out.texCoord		= inTexCoord;
+	vs_out.fixedShade	= inFixedShade;
+	gl_Position			= projMat * modelMat * inVertex;
 }
 )glsl";
 
 static const char *fragmentShaderR3D = R"glsl(
 
-#version 120
-#extension GL_ARB_shader_texture_lod : require
+#version 150
 #extension GL_ARB_gpu_shader5 : enable
 
 uniform sampler2D tex1;			// base tex
@@ -101,12 +103,18 @@ uniform bool	fixedShading;
 uniform int		hardwareStep;
 
 //interpolated inputs from vertex shader
-varying vec3	fsViewVertex;
-varying vec3	fsViewNormal;		// per vertex normal vector
-varying vec4	fsColor;
-varying vec2	fsTexCoord;
-varying float	fsDiscard;
-varying float	fsFixedShade;
+in VS_OUT
+{
+	vec3	viewVertex;
+	vec3	viewNormal;		// per vertex normal vector
+	vec2	texCoord;
+	vec4	color;
+	float	fixedShade;
+	float	discardPoly;
+} fs_in;
+
+//outputs
+out vec4 outColor;
 
 float mip_map_level(in vec2 texture_coordinate) // in texel units
 {
@@ -167,10 +175,10 @@ vec4 texBiLinear(sampler2D texSampler, float level, ivec2 wrapMode, vec2 texSize
 	float a = LinearTexLocations(wrapMode.s, texSize.x, texCoord.x, tx[0], tx[1]);
 	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
 
-	vec4 p0q0 = texture2DLod(texSampler, vec2(tx[0],ty[0]), level);
-	vec4 p1q0 = texture2DLod(texSampler, vec2(tx[1],ty[0]), level);
-	vec4 p0q1 = texture2DLod(texSampler, vec2(tx[0],ty[1]), level);
-	vec4 p1q1 = texture2DLod(texSampler, vec2(tx[1],ty[1]), level);
+	vec4 p0q0 = textureLod(texSampler, vec2(tx[0],ty[0]), level);
+	vec4 p1q0 = textureLod(texSampler, vec2(tx[1],ty[0]), level);
+	vec4 p0q1 = textureLod(texSampler, vec2(tx[0],ty[1]), level);
+	vec4 p1q1 = textureLod(texSampler, vec2(tx[1],ty[1]), level);
 
 	if(alphaTest) {
 		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
@@ -213,7 +221,7 @@ vec4 textureR3D(sampler2D texSampler, ivec2 wrapMode, vec2 texSize, vec2 texCoor
 
 vec4 GetTextureValue()
 {
-	vec4 tex1Data = textureR3D(tex1, textureWrapMode, baseTexSize, fsTexCoord);
+	vec4 tex1Data = textureR3D(tex1, textureWrapMode, baseTexSize, fs_in.texCoord);
 
 	if(textureInverted) {
 		tex1Data.rgb = 1.0 - tex1Data.rgb;
@@ -221,9 +229,9 @@ vec4 GetTextureValue()
 
 	if (microTexture) {
 		vec2 scale			= (baseTexSize / 128.0) * microTextureScale;
-		vec4 tex2Data		= textureR3D( tex2, ivec2(0.0), vec2(128.0), fsTexCoord * scale);
+		vec4 tex2Data		= textureR3D( tex2, ivec2(0.0), vec2(128.0), fs_in.texCoord * scale);
 
-		float lod			= mip_map_level(fsTexCoord * scale * 128.0);
+		float lod			= mip_map_level(fs_in.texCoord * scale * 128.0);
 
 		float blendFactor	= max(lod - 1.5, 0.0);			// bias -1.5
 		blendFactor			= min(blendFactor, 1.0);		// clamp to max value 1
@@ -243,7 +251,7 @@ vec4 GetTextureValue()
 			}
 		}
 		else {								// transparent 2nd pass
-			if ((tex1Data.a * fsColor.a) >= 1.0) {
+			if ((tex1Data.a * fs_in.color.a) >= 1.0) {
 				discard;
 			}
 		}
@@ -264,7 +272,7 @@ void Step15Luminous(inout vec4 colour)
 	if(hardwareStep==0x15) {
 		if(!lightEnabled && textureEnabled) {
 			if(fixedShading) {
-				colour.rgb *= 1.0 + fsFixedShade + lighting[1].y;
+				colour.rgb *= 1.0 + fs_in.fixedShade + lighting[1].y;
 			}
 			else {
 				colour.rgb *= 1.5;
@@ -275,7 +283,7 @@ void Step15Luminous(inout vec4 colour)
 
 float CalcFog()
 {
-	float z		= -fsViewVertex.z;
+	float z		= -fs_in.viewVertex.z;
 	float fog	= fogIntensity * clamp(fogStart + z * fogDensity, 0.0, 1.0);
 
 	return fog;
@@ -298,7 +306,7 @@ void main()
 	vec4 finalData;
 	vec4 fogData;
 
-	if(fsDiscard > 0) {
+	if(fs_in.discardPoly > 0) {
 		discard;		//emulate back face culling here
 	}
 
@@ -309,7 +317,7 @@ void main()
 		tex1Data = GetTextureValue();
 	}
 
-	colData = fsColor;
+	colData = fs_in.color;
 	Step15Luminous(colData);			// no-op for step 2.0+	
 	finalData = tex1Data * colData;
 
@@ -326,7 +334,7 @@ void main()
 	float enable, range;
 
 	// start of spotlight
-	enable = step(spotRange.x, -fsViewVertex.z);
+	enable = step(spotRange.x, -fs_in.viewVertex.z);
 
 	if (spotRange.y == 0.0) {
 		range = 0.0;
@@ -334,7 +342,7 @@ void main()
 	else {
 		float absExtent = abs(spotRange.y);
 
-		float d = spotRange.x + absExtent + fsViewVertex.z;
+		float d = spotRange.x + absExtent + fs_in.viewVertex.z;
 		d = min(d, 0.0);
 
 		// slope of decay function
@@ -359,10 +367,10 @@ void main()
 
 		// Compute diffuse factor for sunlight
 		if(fixedShading) {
-			sunFactor = fsFixedShade;
+			sunFactor = fs_in.fixedShade;
 		}
 		else {
-			sunFactor = dot(sunVector, fsViewNormal);
+			sunFactor = dot(sunVector, fs_in.viewNormal);
 		}
 
 		// Clamp ceil, fix for upscaled models without "modelScale" defined
@@ -423,7 +431,8 @@ void main()
 	 // Fog & spotlight applied
 	finalData.rgb = mix(finalData.rgb, fogData.rgb + lSpotFogColor, fogData.a);
 
-	gl_FragColor = finalData;
+	// Write output
+	outColor = finalData;
 }
 )glsl";
 
