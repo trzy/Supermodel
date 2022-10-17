@@ -3,6 +3,7 @@
 
 #include <GL/glew.h>
 #include <map>
+#include <cstring>
 
 class GLSLShader {
 
