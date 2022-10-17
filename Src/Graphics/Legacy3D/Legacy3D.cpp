@@ -173,16 +173,6 @@
 
 namespace Legacy3D {
 
-// Microsoft doesn't provide isnan() and isinf()
-#ifdef _MSC_VER
-  #include <cfloat>
-  #define ISNAN(x)  (_isnanf(x))
-  #define ISINF(x)  (!_finitef(x))
-#else
-  #define ISNAN(x)  (std::isnan(x))
-  #define ISINF(x)  (std::isinf(x))
-#endif
-
 /******************************************************************************
  Definitions and Constants
 ******************************************************************************/
@@ -918,7 +908,7 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   fogParams[2] = (float) ((vpnode[0x22]>>0)&0xFF) * (float)(1.0/255.0);  // fog color B
   fogParams[3] = Util::Uint32AsFloat(vpnode[0x23]);                      // fog density
   fogParams[4] = (float) (INT16) (vpnode[0x25]&0xFFFF) * (float)(1.0/255.0); // fog start
-  if (ISINF(fogParams[3]) || ISNAN(fogParams[3]) || ISINF(fogParams[4]) || ISNAN(fogParams[4])) // Star Wars Trilogy
+  if (std::isinf(fogParams[3]) || std::isnan(fogParams[3]) || std::isinf(fogParams[4]) || std::isnan(fogParams[4])) // Star Wars Trilogy
     fogParams[3] = fogParams[4] = 0.0f;
 
   // Unknown light/fog parameters
