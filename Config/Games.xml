@@ -1218,7 +1218,13 @@
     </roms>
   </game>
 
-  <game name="magtruck">
+  <game name="mgtrkbad">
+    <!--
+      Original bad ROM set. EPROMs 18 and 20 are corrupted, causing attract
+      mode to stop rendering. A patch is applied here. The game was redumped
+      September 2022 but because new MAME ROM sets are usually slow to
+      propagate online, we retain support for the old, patched version.
+    -->
     <identity>
       <title>Magical Truck Adventure</title>
       <version>Japan</version>
@@ -1237,7 +1243,7 @@
     </hardware>
     <roms>
       <patches>
-	    <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
+	      <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
         <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
         <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
@@ -1281,6 +1287,38 @@
         <file offset="0x400000" name="mpr-21428.24" crc32="0x162D1E43" />
         <file offset="0x800000" name="mpr-21431.23" crc32="0x0EF8F7BB" />
         <file offset="0xC00000" name="mpr-21432.25" crc32="0x59C0F6DF" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="magtruck" parent="mgtrkbad">
+    <!--
+      Correct dump of Magical Truck Adventure, redumped September 2022.
+    -->
+    <identity>
+      <title>Magical Truck Adventure</title>
+      <version>Japan</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1998</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <real3d_pci_id>0x16C311DB</real3d_pci_id>
+      <inputs>
+        <input type="common" />
+        <input type="magtruck" />
+      </inputs>
+      <encryption_key>0x29266e45</encryption_key>
+    </hardware>
+    <roms>
+      <patches>
+	      <!-- Enable Region change (remove the patch to return to Japan region) -->
+        <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
+      </patches>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21434.20" crc32="0x18F8626A" />
+        <file offset="4" name="epr-21433.18" crc32="0xB3B124FA" />
       </region>
     </roms>
   </game>
