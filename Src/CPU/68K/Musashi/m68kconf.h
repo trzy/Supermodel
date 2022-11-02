@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2003-2022 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,11 +18,11 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * m68kconf.h
  *
- * Musashi configuration. 
+ * Musashi configuration.
  *
  * Permission was obtained from Karl Stenerud to apply the GPL license to this
  * code.
@@ -96,8 +96,8 @@
  * If off, all interrupts will be autovectored and all interrupt requests will
  * auto-clear when the interrupt is serviced.
  */
-#define M68K_EMULATE_INT_ACK        OPT_SPECIFY_HANDLER
-#define M68K_INT_ACK_CALLBACK(A)    M68KIRQCallback(A)
+#define M68K_EMULATE_INT_ACK        OPT_ON
+#define M68K_INT_ACK_CALLBACK(A)    your_int_ack_handler_function(A)
 
 
 /* If ON, CPU will call the breakpoint acknowledge callback when it encounters
@@ -116,7 +116,7 @@
  * instruction.
  */
 #define M68K_EMULATE_RESET          OPT_OFF
-#define M68K_RESET_CALLBACK()       M68KResetCallback()
+#define M68K_RESET_CALLBACK()       your_reset_instr_handler_function()
 
 
 /* If ON, CPU will call the callback when it encounters a cmpi.l #v, dn
@@ -154,12 +154,12 @@
  * instruction.
  */
 #ifdef SUPERMODEL_DEBUGGER
-#define M68K_INSTRUCTION_HOOK       OPT_SPECIFY_HANDLER
-#define M68K_INSTRUCTION_CALLBACK() M68KDebugCallback()
+#define M68K_INSTRUCTION_HOOK       OPT_ON
 #else
 #define M68K_INSTRUCTION_HOOK       OPT_OFF
+#endif  // SUPERMODEL_DEBUGGER
 #define M68K_INSTRUCTION_CALLBACK() your_instruction_hook_function()
-#endif // SUPERMODEL_DEBUGGER
+
 
 /* If ON, the CPU will emulate the 4-byte prefetch queue of a real 68000 */
 #define M68K_EMULATE_PREFETCH       OPT_OFF
