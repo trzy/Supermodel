@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2003-2022 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,13 +18,13 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * 68K.cpp
- * 
+ *
  * 68K CPU interface. This is presently just a wrapper for the Musashi 68K core
  * and therefore, only a single CPU is supported. In the future, we may want to
- * add in another 68K core (eg., Turbo68K, A68K, or a recompiler). 
+ * add in another 68K core (eg., Turbo68K, A68K, or a recompiler).
  *
  * To-Do List
  * ----------
@@ -41,7 +41,7 @@
 
 /******************************************************************************
  Internal Context
- 
+
  An active context must be mapped before calling M68K interface functions. Only
  the bus and IRQ handlers are copied here; the CPU context is passed directly
  to Musashi.
@@ -67,11 +67,11 @@ static int s_lastCycles;
 ******************************************************************************/
 
 // CPU state
-	
+
 UINT32 M68KGetARegister(int n)
 {
 	m68k_register_t	r;
-	
+
 	switch (n)
 	{
 	case 0:		r = M68K_REG_A0; break;
@@ -84,14 +84,14 @@ UINT32 M68KGetARegister(int n)
 	case 7:		r = M68K_REG_A7; break;
 	default:	r = M68K_REG_A7; break;
 	}
-	
+
 	return m68k_get_reg(NULL, r);
 }
 
 UINT32 M68KGetDRegister(int n)
 {
 	m68k_register_t	r;
-	
+
 	switch (n)
 	{
 	case 0:		r = M68K_REG_D0; break;
@@ -104,7 +104,7 @@ UINT32 M68KGetDRegister(int n)
 	case 7:		r = M68K_REG_D7; break;
 	default:	r = M68K_REG_D7; break;
 	}
-	
+
 	return m68k_get_reg(NULL, r);
 }
 
@@ -116,22 +116,22 @@ UINT32 M68KGetPC(void)
 void M68KSaveState(CBlockFile *StateFile, const char *name)
 {
 	StateFile->NewBlock(name, __FILE__);
-	
+
 	/*
 	 * Rather than writing the context directly, the get/set register
 	 * functions are used, ensuring that all context members are packed/
 	 * unpacked correctly.
 	 *
 	 * Note: Some of these are undoubtedly 68010 or 68020 registers and not
-	 * really necessary. But if the layout is changed now, the save state 
+	 * really necessary. But if the layout is changed now, the save state
 	 * version has to be changed, so don't do it!
 	 */
-	 
+
 	UINT32			data[34];
 	m68ki_cpu_core	Ctx;
-	
+
 	m68k_get_context(&Ctx);
-	
+
 	data[0] = Ctx.int_level;
 	data[1] = Ctx.int_cycles;
 	data[2] = Ctx.stopped;
@@ -166,7 +166,7 @@ void M68KSaveState(CBlockFile *StateFile, const char *name)
 	data[31] = m68k_get_reg(NULL, M68K_REG_PREF_DATA);
 	data[32] = m68k_get_reg(NULL, M68K_REG_PPC);
 	data[33] = m68k_get_reg(NULL, M68K_REG_IR);
-	
+
 	StateFile->Write(data, sizeof(data));
 }
 
@@ -180,10 +180,10 @@ void M68KLoadState(CBlockFile *StateFile, const char *name)
 
 	UINT32			data[34];
 	m68ki_cpu_core	Ctx;
-		
+
 	StateFile->Read(data, sizeof(data));
-	
-	// These must be set first, to ensure another contexts' IRQs aren't active when PC is changed 
+
+	// These must be set first, to ensure another contexts' IRQs aren't active when PC is changed
 	m68k_get_context(&Ctx);
 	Ctx.int_level = data[0];
 	Ctx.int_cycles = data[1];
@@ -303,6 +303,7 @@ bool M68KInit(void)
 	s_Bus = NULL;
 #ifdef SUPERMODEL_DEBUGGER
 	s_Debug = NULL;
+	m68k_set_instr_hook_callback(M68KDebugCallback);
 #endif // SUPERMODEL_DEBUGGER
 	DebugLog("Initialized 68K\n");
 	return OKAY;
@@ -366,7 +367,7 @@ UINT32 M68KSetRegister(M68KCtx *Src, unsigned reg, UINT32 val)
 
 /******************************************************************************
  Musashi 68K Handlers
- 
+
  Musashi/m68kconf.h has been configured to call these directly.
 ******************************************************************************/
 
