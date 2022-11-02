@@ -1899,7 +1899,10 @@ static inline void m68ki_exception_interrupt(uint int_level)
 		return;
 
 	/* Acknowledge the interrupt */
-	vector = m68ki_int_ack(int_level);
+#if defined(__APPLE__)
+    uint m68ki_int_ack(uint);
+#endif
+    vector = m68ki_int_ack(int_level);
 
 	/* Get the interrupt vector */
 	if(vector == M68K_INT_ACK_AUTOVECTOR)
