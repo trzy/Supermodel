@@ -91,7 +91,7 @@ const char* CInput::GetInputGroup()
 		case Game::INPUT_JOYSTICK1:       // Fall through to below
 		case Game::INPUT_JOYSTICK2:       return "4-Way Joysticks";
 		case Game::INPUT_FIGHTING:        return "Fighting Game Buttons";
-		case Game::INPUT_SPIKEOUT:		 return "Spikeout Buttons";
+		case Game::INPUT_SPIKEOUT:        return "Spikeout Buttons";
 		case Game::INPUT_SOCCER:          return "Virtua Striker Buttons";
 		case Game::INPUT_VEHICLE:         return "Racing Game Steering Controls";
 		case Game::INPUT_SHIFT4:          return "Racing Game Gear 4-Way Shift";
@@ -108,8 +108,8 @@ const char* CInput::GetInputGroup()
 		case Game::INPUT_ANALOG_GUN2:     return "Analog Guns";
 		case Game::INPUT_SKI:             return "Ski Controls";
 		case Game::INPUT_MAGTRUCK:        return "Magical Truck Controls";
-	  case Game::INPUT_FISHING:         return "Fishing Controls";
-		default:                         return "Misc";
+		case Game::INPUT_FISHING:         return "Fishing Controls";
+		default:                          return "Misc";
 	}
 }
 
@@ -138,7 +138,7 @@ void CInput::AppendMapping(const char *mapping)
 	else
 	{
 		// Otherwise, append to mapping string and recreate source from new mapping string
-		int size = MAX_MAPPING_LENGTH - strlen(m_mapping);
+		size_t size = MAX_MAPPING_LENGTH - strlen(m_mapping);
 		strncat(m_mapping, ",", size--);
 		strncat(m_mapping, mapping, size);
 		CreateSource();

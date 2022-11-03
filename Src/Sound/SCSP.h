@@ -83,7 +83,7 @@ UINT32 SCSP_Slave_r32(UINT32 addr);
 // Supermodel interface functions
 void SCSP_SaveState(CBlockFile *StateFile);
 void SCSP_LoadState(CBlockFile *StateFile);
-void SCSP_SetBuffers(INT16 *leftBufferPtr, INT16 *rightBufferPtr, INT16* leftRearBufferPtr, INT16* rightRearBufferPtr, int bufferLength);
+void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRearBufferPtr, float* rightRearBufferPtr, int bufferLength);
 void SCSP_Deinit(void);
 
 
