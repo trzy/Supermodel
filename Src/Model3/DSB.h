@@ -71,7 +71,7 @@
 class CDSBResampler
 {
 public:
-	int		UpSampleAndMix(INT16 *outL, INT16 *outR, INT16 *inL, INT16 *inR, UINT8 volumeL, UINT8 volumeR, int sizeOut, int sizeIn, int outRate, int inRate);
+	int		UpSampleAndMix(float *outL, float *outR, INT16 *inL, INT16 *inR, UINT8 volumeL, UINT8 volumeR, int sizeOut, int sizeIn, int outRate, int inRate);
 	void	Reset(void);
 	CDSBResampler(const Util::Config::Node &config)
 	  : m_config(config)
@@ -114,7 +114,7 @@ public:
 	 *		audioL	Left audio channel, one frame (44 KHz, 1/60th second).
 	 *		audioR	Right audio channel.
 	 */
-	virtual void RunFrame(INT16 *audioL, INT16 *audioR) = 0;
+	virtual void RunFrame(float *audioL, float *audioR) = 0;
 
 	/*
 	 * Reset(void):
@@ -187,7 +187,7 @@ public:
 
 	// DSB interface (see CDSB definition)
 	void 	SendCommand(UINT8 data);
-	void 	RunFrame(INT16 *audioL, INT16 *audioR);
+	void 	RunFrame(float *audioL, float *audioR);
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
@@ -264,7 +264,7 @@ public:
 
 	// DSB interface (see definition of CDSB)
 	void 	SendCommand(UINT8 data);
-	void 	RunFrame(INT16 *audioL, INT16 *audioR);
+	void 	RunFrame(float *audioL, float *audioR);
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);

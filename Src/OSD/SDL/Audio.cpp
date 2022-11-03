@@ -166,6 +166,35 @@ static INT16 MixINT16(INT32 x, INT32 y)
     return (INT16)sum;
 }
 
+static INT16 MixINT16(float x, float y)
+{
+    INT32 sum = (INT32)((x + y)*0.5f); //!! dither
+    if (sum > INT16_MAX) {
+        sum = INT16_MAX;
+    }
+    if (sum < INT16_MIN) {
+        sum = INT16_MIN;
+    }
+    return (INT16)sum;
+}
+
+static float MixFloat(float x, float y)
+{
+    return (x + y)*0.5f;
+}
+
+static INT16 ClampINT16(float x)
+{
+    INT32 xi = (INT32)x;
+    if (xi > INT16_MAX) {
+        xi = INT16_MAX;
+    }
+    if (xi < INT16_MIN) {
+        xi = INT16_MIN;
+    }
+    return (INT16)xi;
+}
+
 static void PlayCallback(void* data, Uint8* stream, int len)
 {
     //printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
@@ -271,15 +300,15 @@ static void PlayCallback(void* data, Uint8* stream, int len)
         callback(callbackData);
 }
 
-static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontBuffer, INT16* leftRearBuffer, INT16* rightRearBuffer, void* dest, bool flipStereo)
+static void MixChannels(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, void* dest, bool flipStereo)
 {
     INT16* p = (INT16*)dest;
 
     if (nbHostAudioChannels == 1) {
         for (unsigned i = 0; i < numSamples; i++) {
             INT16 monovalue = MixINT16(
-                MixINT16((INT32)(leftFrontBuffer[i] * balanceFactorFrontLeft), (INT32)(rightFrontBuffer[i] * balanceFactorFrontRight)),
-                MixINT16((INT32)(leftRearBuffer[i] * balanceFactorRearLeft), (INT32)(rightRearBuffer[i] * balanceFactorRearRight)));
+                MixFloat(leftFrontBuffer[i] * balanceFactorFrontLeft,rightFrontBuffer[i] * balanceFactorFrontRight),
+                MixFloat(leftRearBuffer[i]  * balanceFactorRearLeft, rightRearBuffer[i]  * balanceFactorRearRight));
             *p++ = monovalue;
         }
     } else {
@@ -295,8 +324,8 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
         // Now order channels according to audio type
         if (nbHostAudioChannels == 2) {
             for (unsigned i = 0; i < numSamples; i++) {
-                INT16 leftvalue = MixINT16((INT32)(leftFrontBuffer[i] * balanceFactorFrontLeft), (INT32)(leftRearBuffer[i] * balanceFactorRearLeft));
-                INT16 rightvalue = MixINT16((INT32)(rightFrontBuffer[i]*balanceFactorFrontRight), (INT32)(rightRearBuffer[i]*balanceFactorRearRight));
+                INT16 leftvalue = MixINT16(leftFrontBuffer[i] * balanceFactorFrontLeft, leftRearBuffer[i] * balanceFactorRearLeft);
+                INT16 rightvalue = MixINT16(rightFrontBuffer[i]*balanceFactorFrontRight, rightRearBuffer[i]*balanceFactorRearRight);
                 if (flipStereo) // swap left and right channels
                 {
                     *p++ = rightvalue;
@@ -308,15 +337,15 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
             }
         } else if (nbHostAudioChannels == 4) {
             for (unsigned i = 0; i < numSamples; i++) {
-                INT16 frontLeftValue = (INT16)(leftFrontBuffer[i]*balanceFactorFrontLeft);
-                INT16 frontRightValue = (INT16)(rightFrontBuffer[i]*balanceFactorFrontRight);
-                INT16 rearLeftValue = (INT16)(leftRearBuffer[i]*balanceFactorRearLeft);
-                INT16 rearRightValue = (INT16)(rightRearBuffer[i]*balanceFactorRearRight);
+                float frontLeftValue = leftFrontBuffer[i]*balanceFactorFrontLeft;
+                float frontRightValue = rightFrontBuffer[i]*balanceFactorFrontRight;
+                float rearLeftValue = leftRearBuffer[i]*balanceFactorRearLeft;
+                float rearRightValue = rightRearBuffer[i]*balanceFactorRearRight;
 
                 // Check game audio type
                 switch (AudioType) {
                 case Game::MONO: {
-                    INT16 monovalue = MixINT16(MixINT16(frontLeftValue, frontRightValue), MixINT16(rearLeftValue, rearRightValue));
+                    INT16 monovalue = MixINT16(MixFloat(frontLeftValue, frontRightValue), MixFloat(rearLeftValue, rearRightValue));
                     *p++ = monovalue;
                     *p++ = monovalue;
                     *p++ = monovalue;
@@ -346,15 +375,15 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
                     // Normal channels Front Left/Right then Rear Left/Right
                     if (flipStereo) // swap left and right channels
                     {
-                        *p++ = frontRightValue;
-                        *p++ = frontLeftValue;
-                        *p++ = rearRightValue;
-                        *p++ = rearLeftValue;
+                        *p++ = ClampINT16(frontRightValue);
+                        *p++ = ClampINT16(frontLeftValue);
+                        *p++ = ClampINT16(rearRightValue);
+                        *p++ = ClampINT16(rearLeftValue);
                     } else {
-                        *p++ = frontLeftValue;
-                        *p++ = frontRightValue;
-                        *p++ = rearLeftValue;
-                        *p++ = rearRightValue;
+                        *p++ = ClampINT16(frontLeftValue);
+                        *p++ = ClampINT16(frontRightValue);
+                        *p++ = ClampINT16(rearLeftValue);
+                        *p++ = ClampINT16(rearRightValue);
                     }
                 } break;
 
@@ -363,15 +392,15 @@ static void MixChannels(unsigned numSamples, INT16* leftFrontBuffer, INT16* righ
                     // Reversed channels Front/Rear Left then Front/Rear Right
                     if (flipStereo) // swap left and right channels
                     {
-                        *p++ = rearRightValue;
-                        *p++ = rearLeftValue;
-                        *p++ = frontRightValue;
-                        *p++ = frontLeftValue;
+                        *p++ = ClampINT16(rearRightValue);
+                        *p++ = ClampINT16(rearLeftValue);
+                        *p++ = ClampINT16(frontRightValue);
+                        *p++ = ClampINT16(frontLeftValue);
                     } else {
-                        *p++ = rearLeftValue;
-                        *p++ = rearRightValue;
-                        *p++ = frontLeftValue;
-                        *p++ = frontRightValue;
+                        *p++ = ClampINT16(rearLeftValue);
+                        *p++ = ClampINT16(rearRightValue);
+                        *p++ = ClampINT16(frontLeftValue);
+                        *p++ = ClampINT16(frontRightValue);
                     }
                     break;
 
@@ -440,19 +469,11 @@ bool OpenAudio(const Util::Config::Node& config)
         break;
     }
     // Mixer Balance
-    float balancelr = (float)s_config->Get("BalanceLeftRight").ValueAs<float>();
-    if (balancelr < -100.0f)
-        balancelr = -100.0f;
-    else if (balancelr > 100.0f)
-        balancelr = 100.0f;
+    float balancelr = std::max(-100.f, std::min(100.f, s_config->Get("BalanceLeftRight").ValueAs<float>()));
     balancelr *= 0.01f;
     BalanceLeftRight = balancelr;
 
-    float balancefr = (float)s_config->Get("BalanceFrontRear").ValueAs<float>();
-    if (balancefr < -100.0f)
-        balancefr = -100.0f;
-    else if (balancefr > 100.0f)
-        balancefr = 100.0f;
+    float balancefr = std::max(-100.f, std::min(100.f, s_config->Get("BalanceFrontRear").ValueAs<float>()));
     balancefr *= 0.01f;
     BalanceFrontRear = balancefr;
 
@@ -462,8 +483,7 @@ bool OpenAudio(const Util::Config::Node& config)
     balanceFactorRearRight  = (BalanceLeftRight > 0.f ? 1.f - BalanceLeftRight : 1.f) * (BalanceFrontRear > 0 ? 1.f - BalanceFrontRear : 1.f);
 
     // Set up audio specification
-    SDL_AudioSpec desired;
-    memset(&desired, 0, sizeof(SDL_AudioSpec));
+    SDL_AudioSpec desired{};
     desired.freq = SAMPLE_RATE_M3;
     // Number of host channels to use (choice limited to 1,2,4)
     desired.channels = nbHostAudioChannels;
@@ -533,7 +553,7 @@ bool OpenAudio(const Util::Config::Node& config)
     return OKAY;
 }
 
-bool OutputAudio(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontBuffer, INT16* leftRearBuffer, INT16* rightRearBuffer, bool flipStereo)
+bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, bool flipStereo)
 {
     //printf("OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
     //	numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
@@ -559,7 +579,7 @@ bool OutputAudio(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontB
     // Get end of current play region (writing must occur past this point)
     UINT32 playEndPos = playPos + bytes_per_frame_host;
 
-    // Undo any wrap-around of the write position that may have occured to create following ordering: playPos < playEndPos < writePos
+    // Undo any wrap-around of the write position that may have occurred to create following ordering: playPos < playEndPos < writePos
     if (playEndPos > writePos && writeWrapped)
         writePos += audioBufferSize;
 
@@ -619,9 +639,9 @@ bool OutputAudio(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontB
         bufferFull = true;
 
         // Discard current chunk of data
-        goto Finish;
     }
-
+    else
+    {
     src = mixBuffer;
     INT8* dst1;
     INT8* dst2;
@@ -641,9 +661,9 @@ bool OutputAudio(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontB
 	{
         // Otherwise, just copy whole region
         dst1 = audioBuffer + writePos;
-        dst2 = 0;
+        dst2 = NULL;
         len1 = numBytes;
-        len2 = 0;
+        len2 = NULL;
     }
 
     // Copy chunk to write position in buffer
@@ -672,8 +692,8 @@ bool OutputAudio(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontB
         writePos -= audioBufferSize;
         writeWrapped = true;
     }
+    }
 
-Finish:
     // Unlock SDL audio callback
     SDL_UnlockAudio();
 

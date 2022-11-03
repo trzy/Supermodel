@@ -51,7 +51,7 @@ extern bool OpenAudio(const Util::Config::Node& config);
  *
  * Sends a chunk of two-channel audio with the given number of samples to the audio system.
  */
-extern bool OutputAudio(unsigned numSamples, INT16* leftFrontBuffer, INT16* rightFrontBuffer, INT16* leftRearBuffer, INT16* rightRearBuffer, bool flipStereo);
+extern bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, bool flipStereo);
 
 /*
  * CloseAudio()
