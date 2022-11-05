@@ -52,14 +52,40 @@ CXX = clang
 LD = clang
 
 #
+# Brew Tests
+#
+
+USE_BREW = 0
+BREW_IS_INSTALLED = $(shell which brew >> /dev/null 2>&1 && echo 1 || echo 0)
+ifeq ($(BREW_IS_INSTALLED),1)
+	BREW_SDL = $(shell brew list | grep ^sdl2$$ | wc -l | xargs)
+	ifeq ($(BREW_SDL),1)
+		BREW_SDLNET = $(shell brew list | grep ^sdl_net$$ | wc -l | xargs)
+		ifeq ($(BREW_SDLNET),1)
+			USE_BREW = 1
+		endif
+	endif
+endif
+
+#
 # SDL
 #
 
-SDL_CFLAGS =
-SDL_LIBS = -framework SDL2 -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
-ifeq ($(strip $(NET_BOARD)),1)
-	SDL_LIBS += -framework SDL2_net
+ifeq ($(strip $(USE_BREW)),1)
+	SDL_CFLAGS = -I$(shell brew --prefix)/include
+	SDL_LIBS = -L$(shell brew --prefix)/lib -lSDL2
+	ifeq ($(strip $(NET_BOARD)),1)
+		SDL_LIBS += -lSDL2_net
+	endif
+else
+	SDL_LIBS = -framework SDL2
+	ifeq ($(strip $(NET_BOARD)),1)
+		SDL_LIBS += -framework SDL2_net
+	endif
 endif
+
+SDL_CFLAGS +=
+SDL_LIBS += -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
 
 #
 #	OSX-specific

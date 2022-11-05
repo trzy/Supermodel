@@ -65,6 +65,11 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
 endif
 
+# If using Brew version of SDL, need to define USE_BREW
+ifeq ($(strip $(USE_BREW)),1)
+	SUPERMODEL_BUILD_FLAGS += -DUSE_BREW
+endif
+
 #
 # Compiler options
 #
