@@ -346,8 +346,8 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	float halfTexelSize	= 0.5 / size;
 
 	if(wrapMode==0) {							// repeat
-		u	= fma(u, size, -0.5);
-		u0	= fma(floor(u), texelSize, halfTexelSize); // + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u	= u * size - 0.5;
+		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u0	= fract(u0);
 		u1	= u0 + texelSize;
 		u1	= fract(u1);
@@ -356,8 +356,8 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	}
 	else if(wrapMode==1) {						// repeat + clamp
 		u	= fract(u);							// must force into 0-1 to start
-		u	= fma(u, size, -0.5);
-		u0	= fma(floor(u), texelSize, halfTexelSize); // + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u	= u * size - 0.5;
+		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u1	= u0 + texelSize;
 
 		if(u0 <  0.0)	u0 = 0.0;
@@ -368,13 +368,16 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	else {										// mirror + mirror clamp - both are the same since the edge pixels are repeated anyway
 
 		float odd = floor(mod(u, 2.0));			// odd values are mirrored
-		u = fract(u);
+
 		if(odd > 0.0) {
-			u = 1.0 - u;
+			u = 1.0 - fract(u);
+		}
+		else {
+			u = fract(u);
 		}
 
-		u	= fma(u, size, -0.5);
-		u0	= fma(floor(u), texelSize, halfTexelSize); // + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
+		u	= u * size - 0.5;
+		u0	= (floor(u) + 0.5) / size;			// + 0.5 offset added to push us into the centre of a pixel, without we'll get rounding errors
 		u1	= u0 + texelSize;
 
 		if(u0 <  0.0)	u0 = 0.0;
