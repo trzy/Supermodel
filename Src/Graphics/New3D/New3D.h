@@ -31,7 +31,6 @@
 
 #include <GL/glew.h>
 #include "Types.h"
-#include "TextureSheet.h"
 #include "Graphics/IRender3D.h"
 #include "Model.h"
 #include "Mat4.h"
@@ -207,9 +206,11 @@ private:
 	void RenderViewport(UINT32 addr);
 
 	// building the scene
+	int	GetTexFormat(int originalFormat, bool contour);
 	void SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph);
 	void CacheModel(Model *m, const UINT32 *data);
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray);
+	void GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
 
 	bool RenderScene(int priority, bool renderOverlay, Layer layer);		// returns if has overlay plane
 	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
@@ -259,7 +260,7 @@ private:
 	UINT32 m_colorTableAddr = 0x400;		// address of color table in polygon RAM
 	LODBlendTable* m_LODBlendTable;
 
-	TextureSheet	m_texSheet;
+	GLuint			m_textureBuffer;
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
 
@@ -280,6 +281,7 @@ private:
 	std::vector<FVertex> m_polyBufferRom;		// rom polys
 	std::unordered_map<UINT32, std::shared_ptr<std::vector<Mesh>>> m_romMap;	// a hash table for all the ROM models. The meshes don't have model matrices or tex offsets yet
 
+	GLuint m_vao;
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow
 	R3DShader m_r3dShader;
 	R3DScrollFog m_r3dScrollFog;

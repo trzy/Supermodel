@@ -1,7 +1,5 @@
 #include "VBO.h"
 
-namespace New3D {
-
 VBO::VBO()
 {
 	m_id		= 0;
@@ -17,7 +15,7 @@ void VBO::Create(GLenum target, GLenum usage, GLsizeiptr size, const void* data)
 	glBufferData(target, size, data, usage);		// upload data to video card
 
 	m_target	= target;
-	m_capacity	= size;
+	m_capacity	= (int)size;
 	m_size		= 0;
 
 	Bind(false);		// unbind
@@ -40,7 +38,7 @@ bool VBO::AppendData(GLsizeiptr size, const GLvoid* data)
 
 	BufferSubData(m_size, size, data);
 
-	m_size += size;
+	m_size += (int)size;
 
 	return true;
 }
@@ -80,5 +78,3 @@ int VBO::GetCapacity()
 {
 	return m_capacity;
 }
-
-} // New3D

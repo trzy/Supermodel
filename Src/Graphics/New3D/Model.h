@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <memory>
 #include <cstring>
-#include "Texture.h"
+#include "Types.h"
 #include "Mat4.h"
 
 namespace New3D {

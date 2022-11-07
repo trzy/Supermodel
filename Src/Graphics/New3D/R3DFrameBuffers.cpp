@@ -13,6 +13,7 @@ R3DFrameBuffers::R3DFrameBuffers()
 	m_renderBufferIDCopy = 0;
 	m_width = 0;
 	m_height = 0;
+	m_vao = 0;
 
 	for (auto &i : m_texIDs) {
 		i = 0;
@@ -24,13 +25,10 @@ R3DFrameBuffers::R3DFrameBuffers()
 	AllocShaderBase();
 	AllocShaderWipe();
 
-	FBVertex vertices[4];
-	vertices[0].Set(-1,-1, 0, 0);
-	vertices[1].Set(-1, 1, 0, 1);
-	vertices[2].Set( 1,-1, 1, 0);
-	vertices[3].Set( 1, 1, 1, 1);
-
-	m_vbo.Create(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(vertices), vertices);
+	glGenVertexArrays(1, &m_vao);
+	glBindVertexArray(m_vao);
+	// no states needed since we do it in the shader
+	glBindVertexArray(0);
 }
 
 R3DFrameBuffers::~R3DFrameBuffers()
@@ -39,7 +37,10 @@ R3DFrameBuffers::~R3DFrameBuffers()
 	m_shaderTrans.UnloadShaders();
 	m_shaderBase.UnloadShaders();
 	m_shaderWipe.UnloadShaders();
-	m_vbo.Destroy();
+	if (m_vao) {
+		glDeleteVertexArrays(1, &m_vao);
+		m_vao = 0;
+	}
 }
 
 bool R3DFrameBuffers::CreateFBO(int width, int height)
@@ -201,80 +202,86 @@ void R3DFrameBuffers::AllocShaderBase()
 {
 	const char *vertexShader = R"glsl(
 
-	#version 120
-
-	// inputs
-	attribute vec3 inVertex; 
-	attribute vec2 inTexCoord;
+	#version 410 core
 
 	// outputs
-	varying vec2 fsTexCoord;
+	out vec2 fsTexCoord;
 
 	void main(void)
 	{
-		fsTexCoord = inTexCoord;
-		gl_Position = vec4(inVertex,1.0);
+		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
+										vec4(-1.0,  1.0, 0.0, 1.0),
+										vec4( 1.0, -1.0, 0.0, 1.0),
+										vec4( 1.0,  1.0, 0.0, 1.0));
+
+		fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
+		gl_Position = vertices[gl_VertexID % 4];	
 	}
 
 	)glsl";
 
 	const char *fragmentShader = R"glsl(
 
-	#version 120
+	#version 410 core
 
+	// inputs
 	uniform sampler2D tex1;			// base tex
+	in vec2 fsTexCoord;
 
-	varying vec2 fsTexCoord;
+	// outputs
+	out vec4 fragColor;
 
 	void main()
 	{
-		vec4 colBase = texture2D( tex1, fsTexCoord);
+		vec4 colBase = texture(tex1, fsTexCoord);
 		if(colBase.a < 1.0) discard;
-		gl_FragColor = colBase;
+		fragColor = colBase;
 	}
 
 	)glsl";
 
 	m_shaderBase.LoadShaders(vertexShader, fragmentShader);
 	m_shaderBase.uniformLoc[0] = m_shaderTrans.GetUniformLocation("tex1");
-	m_shaderBase.attribLoc[0] = m_shaderTrans.GetAttributeLocation("inVertex");
-	m_shaderBase.attribLoc[1] = m_shaderTrans.GetAttributeLocation("inTexCoord");
 }
 
 void R3DFrameBuffers::AllocShaderTrans()
 {
 	const char *vertexShader = R"glsl(
 
-	#version 120
-
-	// inputs
-	attribute vec3 inVertex; 
-	attribute vec2 inTexCoord;
+	#version 410 core
 
 	// outputs
-	varying vec2 fsTexCoord;
+	out vec2 fsTexCoord;
 
 	void main(void)
 	{
-		fsTexCoord = inTexCoord;
-		gl_Position = vec4(inVertex,1.0);
+		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
+										vec4(-1.0,  1.0, 0.0, 1.0),
+										vec4( 1.0, -1.0, 0.0, 1.0),
+										vec4( 1.0,  1.0, 0.0, 1.0));
+
+		fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
+		gl_Position = vertices[gl_VertexID % 4];
 	}
 
 	)glsl";
 
 	const char *fragmentShader = R"glsl(
 
-	#version 120
+	#version 410 core
 
 	uniform sampler2D tex1;			// trans layer 1
 	uniform sampler2D tex2;			// trans layer 2
 
-	varying vec2 fsTexCoord;
+	in vec2 fsTexCoord;
+
+	// outputs
+	out vec4 fragColor;
 
 	void main()
 	{
-		vec4 colTrans1 = texture2D( tex1, fsTexCoord);
-		vec4 colTrans2 = texture2D( tex2, fsTexCoord);
+		vec4 colTrans1 = texture( tex1, fsTexCoord);
+		vec4 colTrans2 = texture( tex2, fsTexCoord);
 
 		if(colTrans1.a+colTrans2.a > 0.0) {
 			vec3 col1 = colTrans1.rgb * colTrans1.a;
@@ -284,7 +291,7 @@ void R3DFrameBuffers::AllocShaderTrans()
 							 colTrans1.a+colTrans2.a);
 		}
 		
-		gl_FragColor = colTrans1;
+		fragColor = colTrans1;
 	}
 
 	)glsl";
@@ -293,49 +300,51 @@ void R3DFrameBuffers::AllocShaderTrans()
 
 	m_shaderTrans.uniformLoc[0] = m_shaderTrans.GetUniformLocation("tex1");
 	m_shaderTrans.uniformLoc[1] = m_shaderTrans.GetUniformLocation("tex2");
-
-	m_shaderTrans.attribLoc[0] = m_shaderTrans.GetAttributeLocation("inVertex");
-	m_shaderTrans.attribLoc[1] = m_shaderTrans.GetAttributeLocation("inTexCoord");
 }
 
 void R3DFrameBuffers::AllocShaderWipe()
 {
 	const char *vertexShader = R"glsl(
 
-	#version 120
-
-	// inputs
-	attribute vec3 inVertex; 
-	attribute vec2 inTexCoord;
+	#version 410 core
 
 	// outputs
-	varying vec2 fsTexCoord;
+	out vec2 fsTexCoord;
 
 	void main(void)
 	{
-		fsTexCoord = inTexCoord;
-		gl_Position = vec4(inVertex,1.0);
+		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
+										vec4(-1.0,  1.0, 0.0, 1.0),
+										vec4( 1.0, -1.0, 0.0, 1.0),
+										vec4( 1.0,  1.0, 0.0, 1.0));
+
+		fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
+		gl_Position = vertices[gl_VertexID % 4];
 	}
 
 	)glsl";
 
 	const char *fragmentShader = R"glsl(
 
-	#version 120
+	#version 410 core
 
 	uniform sampler2D texColor;				// base colour layer
-	varying vec2 fsTexCoord;
+	in vec2 fsTexCoord;
+
+	// outputs
+	layout (location = 0) out vec4 fragColor0;
+	layout (location = 1) out vec4 fragColor1;
 
 	void main()
 	{
-		vec4 colBase = texture2D( texColor, fsTexCoord);
+		vec4 colBase = texture(texColor, fsTexCoord);
 
 		if(colBase.a == 0.0) {
-			discard;						// no colour pixels have been written
+			discard;					// no colour pixels have been written
 		}
 
-		gl_FragData[0] = vec4(0.0);			// wipe these parts of the alpha buffer
-		gl_FragData[1] = vec4(0.0);			// since they have been overwritten by the next priority layer
+		fragColor0 = vec4(0.0);			// wipe these parts of the alpha buffer
+		fragColor1 = vec4(0.0);			// since they have been overwritten by the next priority layer
 	}
 
 	)glsl";
@@ -343,9 +352,6 @@ void R3DFrameBuffers::AllocShaderWipe()
 	m_shaderWipe.LoadShaders(vertexShader, fragmentShader);
 
 	m_shaderWipe.uniformLoc[0] = m_shaderTrans.GetUniformLocation("texColor");
-
-	m_shaderWipe.attribLoc[0] = m_shaderTrans.GetAttributeLocation("inVertex");
-	m_shaderWipe.attribLoc[1] = m_shaderTrans.GetAttributeLocation("inTexCoord");
 }
 
 void R3DFrameBuffers::Draw()
@@ -361,18 +367,18 @@ void R3DFrameBuffers::Draw()
 		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
 	}
 
-	glActiveTexture	(GL_TEXTURE0);
-	m_vbo.Bind		(true);
+	glActiveTexture		(GL_TEXTURE0);
+	glBindVertexArray	(m_vao);
 
-	DrawBaseLayer	();
+	DrawBaseLayer		();
 
-	glBlendFunc		(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable		(GL_BLEND);
+	glBlendFunc			(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable			(GL_BLEND);
 
-	DrawAlphaLayer	();
+	DrawAlphaLayer		();
 
-	glDisable		(GL_BLEND);
-	m_vbo.Bind		(false);
+	glDisable			(GL_BLEND);
+	glBindVertexArray	(0);
 }
 
 void R3DFrameBuffers::CompositeBaseLayer()
@@ -389,11 +395,11 @@ void R3DFrameBuffers::CompositeBaseLayer()
 	}
 
 	glActiveTexture(GL_TEXTURE0);
-	m_vbo.Bind(true);
+	glBindVertexArray(m_vao);
 
 	DrawBaseLayer();
 
-	m_vbo.Bind(false);
+	glBindVertexArray(0);
 }
 
 void R3DFrameBuffers::CompositeAlphaLayer()
@@ -409,15 +415,15 @@ void R3DFrameBuffers::CompositeAlphaLayer()
 	}
 
 	glActiveTexture(GL_TEXTURE0);
-	m_vbo.Bind(true);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
+	glBindVertexArray(m_vao);
 
 	DrawAlphaLayer();
 
 	glDisable(GL_BLEND);
-	m_vbo.Bind(false);
+	glBindVertexArray(0);
 }
 
 void R3DFrameBuffers::DrawOverTransLayers()
@@ -431,43 +437,23 @@ void R3DFrameBuffers::DrawOverTransLayers()
 
 	glActiveTexture	(GL_TEXTURE0);
 	glBindTexture	(GL_TEXTURE_2D, m_texIDs[0]);
-
-	m_vbo.Bind(true);
-
+	
+	glBindVertexArray(m_vao);
 	m_shaderWipe.EnableShader();
 	glUniform1i(m_shaderWipe.uniformLoc[0], 0);
 
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-
-		glVertexAttribPointer(m_shaderWipe.attribLoc[0], 3, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, verts));
-		glVertexAttribPointer(m_shaderWipe.attribLoc[1], 2, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, texCoords));
-
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 	m_shaderWipe.DisableShader();
-
-	m_vbo.Bind(false);
+	glBindVertexArray(0);
 }
 
 void R3DFrameBuffers::DrawBaseLayer()
 {
 	m_shaderBase.EnableShader();
-	glUniform1i(m_shaderTrans.uniformLoc[0], 0);
-
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-
-	glVertexAttribPointer(m_shaderTrans.attribLoc[0], 3, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, verts));
-	glVertexAttribPointer(m_shaderTrans.attribLoc[1], 2, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, texCoords));
+	glUniform1i(m_shaderTrans.uniformLoc[0], 0);		// to do check this
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
 
 	m_shaderBase.DisableShader();
 }
@@ -478,16 +464,7 @@ void R3DFrameBuffers::DrawAlphaLayer()
 	glUniform1i(m_shaderTrans.uniformLoc[0], 1);		// tex unit 1
 	glUniform1i(m_shaderTrans.uniformLoc[1], 2);		// tex unit 2
 
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-
-	glVertexAttribPointer(m_shaderTrans.attribLoc[0], 3, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, verts));
-	glVertexAttribPointer(m_shaderTrans.attribLoc[1], 2, GL_FLOAT, GL_FALSE, sizeof(FBVertex), (void*)offsetof(FBVertex, texCoords));
-
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
 
 	m_shaderTrans.DisableShader();
 }

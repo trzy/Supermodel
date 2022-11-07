@@ -168,18 +168,19 @@ void main(void)
 
 )glsl";
 
-static const char *fragmentShaderR3DQuads = R"glsl(
+static const char *fragmentShaderR3DQuads1 = R"glsl(
 
 #version 450 core
 
-uniform sampler2D tex1;			// base tex
-uniform sampler2D tex2;			// micro tex (optional)
+uniform usampler2D tex1;			// entire texture sheet
 
 // texturing
 uniform bool	textureEnabled;
 uniform bool	microTexture;
 uniform float	microTextureScale;
-uniform vec2	baseTexSize;
+uniform int		microTextureID;
+uniform ivec4	baseTexInfo;		// x/y are x,y positions in the texture sheet. z/w are with and height
+uniform int		baseTexType;
 uniform bool	textureInverted;
 uniform bool	textureAlpha;
 uniform bool	alphaTest;
@@ -207,7 +208,7 @@ uniform float	fogAmbient;
 uniform bool	fixedShading;
 uniform int		hardwareStep;
 
-// test
+// matrices (shared with vertex shader)
 uniform mat4	projMat;
 
 //interpolated inputs from geometry shader
@@ -340,6 +341,140 @@ void QuadraticInterpolation()
 	gl_FragDepth = depth * 0.5 + 0.5;
 }
 
+vec4 ExtractColour(int type, uint value)
+{
+	vec4 c = vec4(0.0);
+
+	if(type==0) {			// T1RGB5	
+		c.r = float((value >> 10) & 0x1F) / 31.0;
+		c.g = float((value >> 5 ) & 0x1F) / 31.0;
+		c.b = float((value      ) & 0x1F) / 31.0;
+		c.a = 1.0 - float((value >> 15) & 0x1);
+	}
+	else if(type==1) {		// Interleaved A4L4 (low byte)
+		c.rgb = vec3(float(value&0xF) / 15.0);
+		c.a   = float((value >> 4) & 0xF) / 15.0;
+	}
+	else if(type==2) {
+		c.a		= float(value&0xF) / 15.0;
+		c.rgb   = vec3(float((value >> 4) & 0xF) / 15.0);
+	}
+	else if(type==3) {
+		c.rgb = vec3(float((value>>8)&0xF) / 15.0);
+		c.a   = float((value >> 12) & 0xF) / 15.0;
+	}
+	else if(type==4) {
+		c.a		= float((value>>8)&0xF) / 15.0;
+		c.rgb   = vec3(float((value >> 12) & 0xF) / 15.0);
+	}
+	else if(type==5) {
+		c = vec4(float(value&0xFF) / 255.0);
+		if(c.a==1.0)	{ c.a = 0.0; }
+		else			{ c.a = 1.0; }
+	}
+	else if(type==6) {
+		c = vec4(float((value>>8)&0xFF) / 255.0);
+		if(c.a==1.0)	{ c.a = 0.0; }
+		else			{ c.a = 1.0; }
+	}
+	else if(type==7) {	// RGBA4
+		c.r = float((value>>12)&0xF) / 15.0;
+		c.g = float((value>> 8)&0xF) / 15.0;
+		c.b = float((value>> 4)&0xF) / 15.0;
+		c.a = float((value>> 0)&0xF) / 15.0;
+	}
+	else if(type==8) {	// low byte, low nibble
+		c = vec4(float(value&0xF) / 15.0);
+		if(c.a==1.0)	{ c.a = 0.0; }
+		else			{ c.a = 1.0; }
+	}
+	else if(type==9) {	// low byte, high nibble
+		c = vec4(float((value>>4)&0xF) / 15.0);
+		if(c.a==1.0)	{ c.a = 0.0; }
+		else			{ c.a = 1.0; }
+	}
+	else if(type==10) {	// high byte, low nibble
+		c = vec4(float((value>>8)&0xF) / 15.0);
+		if(c.a==1.0)	{ c.a = 0.0; }
+		else			{ c.a = 1.0; }
+	}
+	else if(type==11) {	// high byte, high nibble
+		c = vec4(float((value>>12)&0xF) / 15.0);
+		if(c.a==1.0)	{ c.a = 0.0; }
+		else			{ c.a = 1.0; }
+	}
+
+	return c;
+}
+
+ivec2 GetTexturePosition(int level, ivec2 pos)
+{
+	const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+	const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+
+	int mipDivisor = 1 << level;
+
+	int page = pos.y / 1024;
+	pos.y -= (page * 1024);		// remove page from tex y
+
+	ivec2 retPos;
+	retPos.x = mipXBase[level] + (pos.x / mipDivisor);
+	retPos.y = mipYBase[level] + (pos.y / mipDivisor);
+
+	retPos.y += (page * 1024);	// add page back to tex y
+
+	return retPos;
+}
+
+ivec2 GetTextureSize(int level, ivec2 size)
+{
+	int mipDivisor = 1 << level;
+
+	return size / mipDivisor;
+}
+
+ivec2 GetMicroTexturePos(int id)
+{
+	int xCoords[8] = { 0, 0, 128, 128, 0, 0, 128, 128 };
+	int yCoords[8] = { 0, 128, 0, 128, 256, 384, 256, 384 };
+
+	return ivec2(xCoords[id],yCoords[id]);
+}
+
+int GetPage(int yCoord)
+{
+	return yCoord / 1024;
+}
+
+int GetNextPage(int yCoord)
+{
+	return (GetPage(yCoord) + 1) & 1;
+}
+
+int GetNextPageOffset(int yCoord)
+{
+	return GetNextPage(yCoord) * 1024;
+}
+
+// wrapping tex coords would be super easy but we combined tex sheets so have to handle wrap around between sheets
+// hardware testing would be useful because i don't know exactly what happens if you try to read outside the texture sheet
+// wrap around is a good guess
+ivec2 WrapTexCoords(ivec2 pos, ivec2 coordinate)
+{
+	ivec2 newCoord;
+
+	newCoord.x = coordinate.x & 2047;
+	newCoord.y = coordinate.y;
+
+	int page = GetPage(pos.y);
+
+	newCoord.y -= (page * 1024);	// remove page
+	newCoord.y &= 1023;				// wrap around in the same sheet
+	newCoord.y += (page * 1024);	// add page back
+
+	return newCoord;
+}
+
 float mip_map_level(in vec2 texture_coordinate) // in texel units
 {
     vec2  dx_vtc        = dFdx(texture_coordinate);
@@ -396,16 +531,16 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	}
 }
 
-vec4 texBiLinear(sampler2D texSampler, float level, ivec2 wrapMode, vec2 texSize, vec2 texCoord)
+vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texPos, vec2 texCoord)
 {
 	float tx[2], ty[2];
 	float a = LinearTexLocations(wrapMode.s, texSize.x, texCoord.x, tx[0], tx[1]);
 	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
-	
-	vec4 p0q0 = textureLod(texSampler, vec2(tx[0],ty[0]), level);
-    vec4 p1q0 = textureLod(texSampler, vec2(tx[1],ty[0]), level);
-    vec4 p0q1 = textureLod(texSampler, vec2(tx[0],ty[1]), level);
-    vec4 p1q1 = textureLod(texSampler, vec2(tx[1],ty[1]), level);
+
+	vec4 p0q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[0]) * texSize + texPos)), 0).r);
+    vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + texPos)), 0).r);
+    vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + texPos)), 0).r);
+    vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + texPos)), 0).r);
 
 	if(alphaTest) {
 		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
@@ -428,47 +563,58 @@ vec4 texBiLinear(sampler2D texSampler, float level, ivec2 wrapMode, vec2 texSize
     return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
 }
 
-vec4 textureR3D(sampler2D texSampler, ivec2 wrapMode, vec2 texSize, vec2 texCoord)
+vec4 textureR3D(usampler2D texSampler, ivec2 wrapMode, ivec2 texSize, ivec2 texPos, vec2 texCoord)
 {
-	float numLevels = floor(log2(min(texSize.x, texSize.y)));				// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
-	float fLevel	= min(mip_map_level(texCoord * texSize), numLevels);
+	float numLevels	= floor(log2(min(float(texSize.x), float(texSize.y))));				// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
+	float fLevel	= min(mip_map_level(texCoord * vec2(texSize)), numLevels);
 
-	fLevel *= alphaTest ? 0.5 : 0.8;
+	if(alphaTest) fLevel *= 0.5;
+	else fLevel *= 0.8;
 
-	float iLevel = floor(fLevel);						// value as an 'int'
+	int iLevel = int(fLevel);
 
-	vec2 texSize0 = texSize / exp2(iLevel);
-	vec2 texSize1 = texSize / exp2(iLevel+1.0);
+	ivec2 texPos0 = GetTexturePosition(iLevel,texPos);
+	ivec2 texPos1 = GetTexturePosition(iLevel+1,texPos);
 
-	vec4 texLevel0 = texBiLinear(texSampler, iLevel, wrapMode, texSize0, texCoord);
-	vec4 texLevel1 = texBiLinear(texSampler, iLevel+1.0, wrapMode, texSize1, texCoord);
+	ivec2 texSize0 = GetTextureSize(iLevel, texSize);
+	ivec2 texSize1 = GetTextureSize(iLevel+1, texSize); 
+
+	vec4 texLevel0 = texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord);
+	vec4 texLevel1 = texBiLinear(texSampler, wrapMode, vec2(texSize1), texPos1, texCoord);
 
 	return mix(texLevel0, texLevel1, fract(fLevel));	// linear blend between our mipmap levels
 }
 
 vec4 GetTextureValue()
 {
-	vec4 tex1Data = textureR3D(tex1, textureWrapMode, baseTexSize, fsTexCoord);
+	vec4 tex1Data = textureR3D(tex1, textureWrapMode, ivec2(baseTexInfo.zw), ivec2(baseTexInfo.xy), fsTexCoord);
 
 	if(textureInverted) {
 		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
 	}
 
 	if (microTexture) {
-		vec2 scale			= (baseTexSize / 128.0) * microTextureScale;
-		vec4 tex2Data		= textureR3D( tex2, ivec2(0.0), vec2(128.0), fsTexCoord * scale);
+		vec2 scale			= (vec2(baseTexInfo.zw) / 128.0) * microTextureScale;
+		ivec2 pos			= GetMicroTexturePos(microTextureID);
+
+		// add page offset to microtexture position
+		pos.y				+= GetNextPageOffset(baseTexInfo.y);
+	
+		vec4 tex2Data		= textureR3D(tex1, ivec2(0), ivec2(128), pos, fsTexCoord * scale);
 
 		float lod			= mip_map_level(fsTexCoord * scale * vec2(128.0));
 
 		float blendFactor	= max(lod - 1.5, 0.0);			// bias -1.5
 		blendFactor			= min(blendFactor, 1.0);		// clamp to max value 1
-		blendFactor			= blendFactor * 0.5 + 0.5;	    // 0.5 - 1 range
+		blendFactor			= (blendFactor + 1.0) / 2.0;	// 0.5 - 1 range
 
 		tex1Data			= mix(tex2Data, tex1Data, blendFactor);
 	}
 
-	if (alphaTest && (tex1Data.a < (32.0/255.0))) {
-		discard;
+	if (alphaTest) {
+		if (tex1Data.a < (32.0/255.0)) {
+			discard;
+		}
 	}
 
 	if(textureAlpha) {
@@ -484,7 +630,7 @@ vec4 GetTextureValue()
 		}
 	}
 
-	if (!textureAlpha) {
+	if (textureAlpha == false) {
 		tex1Data.a = 1.0;
 	}
 
@@ -525,6 +671,10 @@ float sqr_length(vec2 a)
 {
 	return a.x*a.x + a.y*a.y;
 }
+
+)glsl";
+
+static const char* fragmentShaderR3DQuads2 = R"glsl(
 
 void main()
 {

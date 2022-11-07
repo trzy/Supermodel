@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include "Util/NewConfig.h"
 #include "Model.h"
-#include <unordered_map>
+#include <map>
 #include <string>
 
 namespace New3D {
@@ -15,6 +15,7 @@ public:
 	R3DShader(const Util::Config::Node &config);
 
 	bool	LoadShader			(const char* vertexShader = nullptr, const char* fragmentShader = nullptr);
+	void	UnloadShader		();
 	void	SetMeshUniforms		(const Mesh* m);
 	void	SetModelStates		(const Model* model);
 	void	SetViewportUniforms	(const Viewport *vp);
@@ -28,6 +29,8 @@ private:
 	void PrintShaderResult(GLuint shader);
 	void PrintProgramResult(GLuint program);
 
+	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);
+
 	// run-time config
 	const Util::Config::Node &m_config;
 
@@ -39,13 +42,14 @@ private:
 
 	// mesh uniform locations
 	GLint m_locTexture1;
-	GLint m_locTexture2;
 	GLint m_locTexture1Enabled;
 	GLint m_locTexture2Enabled;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
 	GLint m_locMicroTexScale;
-	GLint m_locBaseTexSize;
+	GLint m_locMicroTexID;
+	GLint m_locBaseTexInfo;
+	GLint m_locBaseTexType;
 	GLint m_locTextureInverted;
 	GLint m_locTexWrapMode;
 	GLint m_locTranslatorMap;
@@ -65,12 +69,17 @@ private:
 
 	bool	m_layered;
 	float	m_microTexScale;
-	float	m_baseTexSize[2];
+	int		m_microTexID;
+	int		m_baseTexInfo[4];
+	int		m_baseTexType;
 	int		m_texWrapMode[2];
 	bool	m_textureInverted;
 
 	// cached model values
 	float	m_modelScale;
+	int		m_transX;
+	int		m_transY;
+	int		m_transPage;
 
 	// are our cache values dirty
 	bool	m_dirtyMesh;
@@ -109,7 +118,7 @@ private:
 	GLint m_locDiscardAlpha;
 
 	// vertex attribute position cache
-	std::unordered_map<std::string, GLint> m_vertexLocCache;
+	std::map<std::string, GLint> m_vertexLocCache;
 
 };
 

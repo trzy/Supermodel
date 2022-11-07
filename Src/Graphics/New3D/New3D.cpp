@@ -1,5 +1,4 @@
 #include "New3D.h"
-#include "Texture.h"
 #include "Vec.h"
 #include <cmath>
 #include <algorithm>
@@ -16,10 +15,12 @@
 
 namespace New3D {
 
-CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName)
-	: m_r3dShader(config),
-	  m_r3dScrollFog(config),
-	  m_gameName(gameName)
+CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) : 
+	m_r3dShader(config),
+	m_r3dScrollFog(config),
+	m_gameName(gameName),
+	m_textureBuffer(0),
+	m_vao(0)
 {
 	m_cullingRAMLo	= nullptr;
 	m_cullingRAMHi	= nullptr;
@@ -40,6 +41,17 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName)
 CNew3D::~CNew3D()
 {
 	m_vbo.Destroy();
+	if (m_vao) {
+		glDeleteVertexArrays(1, &m_vao);
+		m_vao = 0;
+	}
+
+	if (m_textureBuffer) {
+		glDeleteTextures(1, &m_textureBuffer);
+		m_textureBuffer = 0;
+	}
+
+	m_r3dShader.UnloadShader();
 }
 
 void CNew3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullingRAMHiPtr, const UINT32 *polyRAMPtr, const UINT32 *vromPtr, const UINT16 *textureRAMPtr)
@@ -67,8 +79,6 @@ void CNew3D::SetStepping(int stepping)
 		m_offset = 2;							// 8 words
 		m_vertexFactor = (1.0f / 128.0f);		// 17.7
 	}
-
-	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(FVertex) * (MAX_RAM_VERTS + MAX_ROM_VERTS));
 }
 
 bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
@@ -84,34 +94,55 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	m_totalYRes = totalYResParam;
 
 	m_r3dShader.LoadShader();
+	glUseProgram(0);
 
 	m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
 
-	glUseProgram(0);
+	// setup our texture memory
 
-	return OKAY;	// OKAY ? wtf ..
+	glGenTextures(1, &m_textureBuffer);
+	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 2048, 2048, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);	// allocate storage
+
+	// setup up our vertex buffer memory
+
+	glGenVertexArrays(1, &m_vao);
+	glBindVertexArray(m_vao);
+	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(FVertex) * (MAX_RAM_VERTS + MAX_ROM_VERTS));
+	m_vbo.Bind(true);
+
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inVertex"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inNormal"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inTexCoord"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inColour"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFaceNormal"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFixedShade"));
+
+	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
+
+	glBindVertexArray(0);
+	m_vbo.Bind(false);
+
+	return OKAY;
 }
 
 void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
 {
-	if (level == 0) {
-		m_texSheet.Invalidate(x, y, width, height);		// base textures only
-	} 
-	else if (level == 1) {
-		// we want to work out what the base level is, and invalidate the entire texture
-		// the mipmap data in some cases is being sent later
+	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 
-		int page = y / 1024;
-		y -= (page * 1024);	// remove page from tex y
-
-		int xPos = (x - 1024) * 2;
-		int yPos = (y - 512) * 2;
-
-		yPos += page * 1024;
-		width *= 2;
-		height *= 2;
-
-		m_texSheet.Invalidate(xPos, yPos, width, height);
+	for (unsigned i = 0; i < height; i++) {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, x, y + i, width, 1, GL_RED_INTEGER, GL_UNSIGNED_SHORT, m_textureRAM + ((y + i) * 2048) + x);
 	}
 }
 
@@ -170,6 +201,9 @@ CheckScroll:
 
 bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 {
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
+
 	bool hasOverlay = false;		// (high priority polys)
 
 	for (auto &n : m_nodes) {
@@ -177,8 +211,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 		if (n.viewport.priority != priority || n.models.empty()) {
 			continue;
 		}
-
-		std::shared_ptr<Texture> tex1;
 
 		CalcViewport(&n.viewport, std::abs(m_nfPairs[priority].zNear*0.96f), std::abs(m_nfPairs[priority].zFar*1.05f));	// make planes 5% bigger
 		glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
@@ -207,34 +239,6 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 					matrixLoaded = true;		// do this here to stop loading matrices we don't need. Ie when rendering non transparent etc
 				}
 				
-				if (mesh.textured) {
-
-					int x, y;
-					CalcTexOffset(m.textureOffsetX, m.textureOffsetY, m.page, mesh.x, mesh.y, x, y);
-
-					if (tex1 && tex1->Compare(x, y, mesh.width, mesh.height, mesh.format)) {
-						// texture already bound
-					}
-					else {
-						tex1 = m_texSheet.BindTexture(m_textureRAM, mesh.format, x, y, mesh.width, mesh.height);
-						if (tex1) {
-							tex1->BindTexture();
-						}
-					}
-
-					if (mesh.microTexture) {
-
-						int mX, mY;
-						glActiveTexture(GL_TEXTURE1);
-						m_texSheet.GetMicrotexPos(y / 1024, mesh.microTextureID, mX, mY);
-						auto tex2 = m_texSheet.BindTexture(m_textureRAM, 0, mX, mY, 128, 128);
-						if (tex2) {
-							tex2->BindTexture();
-						}
-						glActiveTexture(GL_TEXTURE0);
-					}
-				}
-				
 				m_r3dShader.SetMeshUniforms(&mesh);
 				glDrawArrays(m_primType, mesh.vboOffset, mesh.vertexCount);
 			}
@@ -260,22 +264,9 @@ bool CNew3D::SkipLayer(int layer)
 void CNew3D::SetRenderStates()
 {
 	m_vbo.Bind(true);
+	glBindVertexArray(m_vao);
+
 	m_r3dShader.SetShader(true);
-
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-	glEnableVertexAttribArray(3);
-	glEnableVertexAttribArray(4);
-	glEnableVertexAttribArray(5);
-
-	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
 
 	glDepthFunc		(GL_LEQUAL);
 	glEnable		(GL_DEPTH_TEST);
@@ -292,16 +283,11 @@ void CNew3D::SetRenderStates()
 void CNew3D::DisableRenderStates()
 {
 	m_vbo.Bind(false);
+	glBindVertexArray(0);
+
 	m_r3dShader.SetShader(false);
 
 	glDisable(GL_STENCIL_TEST);
-
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-	glDisableVertexAttribArray(3);
-	glDisableVertexAttribArray(4);
-	glDisableVertexAttribArray(5);
 }
 
 void CNew3D::RenderFrame(void)
@@ -992,6 +978,30 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 	}
 }
 
+void CNew3D::GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut)
+{
+	uOut = (uIn * uvScale) / width;
+	vOut = (vIn * uvScale) / height;
+}
+
+int CNew3D::GetTexFormat(int originalFormat, bool contour)
+{
+	if (!contour) {
+		return originalFormat;	// the same
+	}
+
+	switch (originalFormat)
+	{
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+		return originalFormat + 7;		// these formats are identical to 1-4, except they lose the 4 bit alpha part when contour is enabled
+	default:
+		return originalFormat;
+	}
+}
+
 void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 {
 	//copy attributes
@@ -1012,7 +1022,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 	if (currentMesh->textured) {
 
-		currentMesh->format = m_texSheet.GetTexFormat(ph.TexFormat(), ph.AlphaTest());
+		currentMesh->format = GetTexFormat(ph.TexFormat(), ph.AlphaTest());
 
 		if (currentMesh->format == 7) {
 			currentMesh->alphaTest = false;	// alpha test is a 1 bit test, this format needs a lower threshold, since it has 16 levels of transparency
@@ -1127,7 +1137,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				//check if we need to recalc tex coords - will only happen if tex tiles are different + sharing vertices
 				if (hash != lastHash) {
 					if (currentMesh->textured) {
-						Texture::GetCoordinates(currentMesh->width, currentMesh->height, texCoords[j][0], texCoords[j][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
+						GetCoordinates(currentMesh->width, currentMesh->height, texCoords[j][0], texCoords[j][1], uvScale, p.v[j].texcoords[0], p.v[j].texcoords[1]);
 					}
 				}
 
@@ -1209,7 +1219,7 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 			// tex coords
 			if (currentMesh->textured) {
-				Texture::GetCoordinates(currentMesh->width, currentMesh->height, (UINT16)(it >> 16), (UINT16)(it & 0xFFFF), uvScale, texU, texV);
+				GetCoordinates(currentMesh->width, currentMesh->height, (UINT16)(it >> 16), (UINT16)(it & 0xFFFF), uvScale, texU, texV);
 			}
 
 			p.v[j].texcoords[0] = texU;

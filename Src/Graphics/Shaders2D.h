@@ -29,89 +29,46 @@
 #define INCLUDED_SHADERS2D_H
 
 // Vertex shader
-static const char s_vertexShaderSource[] =
-{
-"/**\n"
-" ** Supermodel\n"
-" ** A Sega Model 3 Arcade Emulator.\n"
-" ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson \n"
-" **\n"
-" ** This file is part of Supermodel.\n"
-" **\n"
-" ** Supermodel is free software: you can redistribute it and/or modify it under\n"
-" ** the terms of the GNU General Public License as published by the Free \n"
-" ** Software Foundation, either version 3 of the License, or (at your option)\n"
-" ** any later version.\n"
-" **\n"
-" ** Supermodel is distributed in the hope that it will be useful, but WITHOUT\n"
-" ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or\n"
-" ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for\n"
-" ** more details.\n"
-" **\n"
-" ** You should have received a copy of the GNU General Public License along\n"
-" ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.\n"
-" **/\n"
-"\n"
-"/*\n"
-" * Vertex2D.glsl\n"
-" *\n"
-" * Vertex shader for 2D tilemap rendering.\n"
-" */\n"
-" \n"
-"#version 120\n"
-"\n"
-"void main(void)\n"
-"{\n"
-"\tgl_TexCoord[0] = gl_MultiTexCoord0;\n"
-"\tgl_Position = gl_ModelViewProjectionMatrix*gl_Vertex;\n"
-"}\n"
-};
+static const char s_vertexShaderSource[] = R"glsl(
+
+	#version 410 core
+
+	// outputs
+	out vec2 fsTexCoord;
+
+	void main(void)
+	{
+		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
+										vec4(-1.0,  1.0, 0.0, 1.0),
+										vec4( 1.0, -1.0, 0.0, 1.0),
+										vec4( 1.0,  1.0, 0.0, 1.0));
+
+		fsTexCoord = ((vertices[gl_VertexID % 4].xy + 1.0) / 2.0);
+		fsTexCoord.y = 1.0 - fsTexCoord.y;							// flip upside down
+		gl_Position = vertices[gl_VertexID % 4];	
+	}
+
+	)glsl";
+
 
 // Fragment shader
-static const char s_fragmentShaderSource[] = 
-{
-"/**\n"
-" ** Supermodel\n"
-" ** A Sega Model 3 Arcade Emulator.\n"
-" ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson \n"
-" **\n"
-" ** This file is part of Supermodel.\n"
-" **\n"
-" ** Supermodel is free software: you can redistribute it and/or modify it under\n"
-" ** the terms of the GNU General Public License as published by the Free \n"
-" ** Software Foundation, either version 3 of the License, or (at your option)\n"
-" ** any later version.\n"
-" **\n"
-" ** Supermodel is distributed in the hope that it will be useful, but WITHOUT\n"
-" ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or\n"
-" ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for\n"
-" ** more details.\n"
-" **\n"
-" ** You should have received a copy of the GNU General Public License along\n"
-" ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.\n"
-" **/\n"
-" \n"
-"/*\n"
-" * Fragment2D.glsl\n"
-" *\n"
-" * Fragment shader for 2D tilemap rendering.\n"
-" */\n"
-"\n"
-"#version 120\n"
-"\n"
-"// Global uniforms\n"
-"uniform sampler2D\ttextureMap;\t\t// 512x512 layer surface\n"
-"\n"
-"/*\n"
-" * main():\n"
-" *\n"
-" * Fragment shader entry point.\n"
-" */\n"
-"\n"
-"void main(void)\n"
-"{\t\n"
-"\tgl_FragColor = texture2D(textureMap, gl_TexCoord[0].st);\n"
-"}\n"
-};
+static const char s_fragmentShaderSource[] = R"glsl(
+
+	#version 410 core
+
+	// inputs
+	uniform sampler2D tex1;			// texture
+	in vec2 fsTexCoord;
+
+	// outputs
+	out vec4 fragColor;
+
+	void main()
+	{
+		fragColor = texture(tex1, fsTexCoord);
+	}
+
+	)glsl";
+
 
 #endif	// INCLUDED_SHADERS2D_H

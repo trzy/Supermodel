@@ -3,8 +3,6 @@
 
 #include <GL/glew.h>
 
-namespace New3D {
-
 class VBO
 {
 public:
@@ -20,12 +18,10 @@ public:
 	int  GetCapacity	();
 
 private:
-	GLuint	m_id;
-	GLenum	m_target;
-	int		m_capacity;
-	int		m_size;
+	GLuint		m_id;
+	GLenum		m_target;
+	int			m_capacity;
+	int			m_size;
 };
-
-} // New3D
 
 #endif

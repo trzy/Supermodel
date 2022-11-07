@@ -495,15 +495,20 @@ std::pair<bool, bool> CRender2D::DrawTilemaps(uint32_t *pixelsBottom, uint32_t *
 // Draws a surface to the screen (0 is top and 1 is bottom)
 void CRender2D::DisplaySurface(int surface)
 {
+  // Shader program
+  m_shader.EnableShader();
+
+  glBindVertexArray(m_vao);
+
   // Draw the surface
   glActiveTexture(GL_TEXTURE0); // texture unit 0
   glBindTexture(GL_TEXTURE_2D, m_texID[surface]);
-  glBegin(GL_QUADS);
-  glTexCoord2f(0.0f, 0.0f);  glVertex2f(0.0f, 0.0f);
-  glTexCoord2f(1.0f, 0.0f);  glVertex2f(1.0f, 0.0f);
-  glTexCoord2f(1.0f, 1.0f);  glVertex2f(1.0f, 1.0f);
-  glTexCoord2f(0.0f, 1.0f);  glVertex2f(0.0f, 1.0f);
-  glEnd();
+
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+  glBindVertexArray(0);
+
+  m_shader.DisableShader();
 }
 
 // Set up viewport and OpenGL state for 2D rendering (sets up blending function but disables blending)
@@ -514,9 +519,6 @@ void CRender2D::Setup2D(bool isBottom)
 
   // Disable Z-buffering
   glDisable(GL_DEPTH_TEST);
-
-  // Shader program
-  glUseProgram(m_shaderProgram);
 
   // Clear everything if requested or just overscan areas for wide screen mode
   if (isBottom)
@@ -534,11 +536,6 @@ void CRender2D::Setup2D(bool isBottom)
   {
     glViewport(m_xOffset - m_correction, m_yOffset + m_correction, m_xPixels, m_yPixels); //Preserve aspect ratio of tile layer by constraining and centering viewport
   }
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  glOrtho(0.0, 1.0, 1.0, 0.0, 1.0, -1.0);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
 }
 
 void CRender2D::BeginFrame(void)
@@ -626,15 +623,6 @@ void CRender2D::AttachVRAM(const uint8_t *vramPtr)
 
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes)
 {
-  // Load shaders
-  if (OKAY != LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, m_config["VertexShader2D"].ValueAs<std::string>(), m_config["FragmentShader2D"].ValueAs<std::string>(), s_vertexShaderSource, s_fragmentShaderSource))
-    return FAIL;
-
-  // Get locations of the uniforms
-  glUseProgram(m_shaderProgram);    // bind program
-  m_textureMapLoc = glGetUniformLocation(m_shaderProgram, "textureMap");
-  glUniform1i(m_textureMapLoc, 0);  // attach it to texture unit 0
-
   // Allocate memory for layer surfaces
   m_memoryPool = new(std::nothrow) uint8_t[MEMORY_POOL_SIZE];
   if (NULL == m_memoryPool)
@@ -654,34 +642,54 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   m_totalYPixels = totalYRes;
   m_correction = (UINT32)(((yRes / 384.f) * 2) + 0.5f);		// for some reason the 2d layer is 2 pixels off the 3D
 
+  DebugLog("Render2D initialized (allocated %1.1f MB)\n", float(MEMORY_POOL_SIZE) / 0x100000);
+  return OKAY;
+}
+
+CRender2D::CRender2D(const Util::Config::Node& config)
+  : m_config(config),
+  m_vao(0)
+{
+  DebugLog("Built Render2D\n");
+
+  m_shader.LoadShaders(s_vertexShaderSource, s_fragmentShaderSource);
+  m_shader.GetUniformLocationMap("tex1");
+  m_shader.EnableShader();
+
+  // update uniform memory
+  glUniform1i(m_shader.uniformLocMap["tex1"], 0);   // bind to texture unit zero
+
+  m_shader.DisableShader();
+
   // Create textures
   glActiveTexture(GL_TEXTURE0); // texture unit 0
   glGenTextures(2, m_texID);
 
   for (int i = 0; i < 2; i++)
   {
-    glBindTexture(GL_TEXTURE_2D, m_texID[i]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 496, 384, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      glBindTexture(GL_TEXTURE_2D, m_texID[i]);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 496, 384, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   }
 
-  DebugLog("Render2D initialized (allocated %1.1f MB)\n", float(MEMORY_POOL_SIZE) / 0x100000);
-  return OKAY;
-}
-
-CRender2D::CRender2D(const Util::Config::Node &config)
-  : m_config(config)
-{
-  DebugLog("Built Render2D\n");
+  glGenVertexArrays(1, &m_vao);
+  glBindVertexArray(m_vao);
+  // no states needed since we do it in the shader
+  glBindVertexArray(0);
 }
 
 CRender2D::~CRender2D(void)
 {
-  DestroyShaderProgram(m_shaderProgram, m_vertexShader, m_fragmentShader);
+  m_shader.UnloadShaders();
   glDeleteTextures(2, m_texID);
+
+  if (m_vao) {
+    glDeleteVertexArrays(1, &m_vao);
+    m_vao = 0;
+  }
 
   if (m_memoryPool)
   {

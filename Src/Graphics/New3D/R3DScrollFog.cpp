@@ -1,26 +1,27 @@
 #include "R3DScrollFog.h"
 #include "Graphics/Shader.h"
-#include "Mat4.h"
 
 namespace New3D {
 
 static const char *vertexShaderFog = R"glsl(
 
-#version 120
-
-uniform mat4 mvp;
-attribute vec3 inVertex; 
+#version 410 core
 
 void main(void)
 {
-	gl_Position = mvp * vec4(inVertex,1.0);
+	const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
+									vec4(-1.0,  1.0, 0.0, 1.0),
+									vec4( 1.0, -1.0, 0.0, 1.0),
+									vec4( 1.0,  1.0, 0.0, 1.0));
+
+	gl_Position = vertices[gl_VertexID % 4];
 }
 
 )glsl";
 
 static const char *fragmentShaderFog = R"glsl(
 
-#version 120
+#version 410 core
 
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
@@ -37,6 +38,9 @@ vec3	lSpotFogColor;
 float	lfogAttenuation;
 vec3	lFogColor;
 vec4	scrollFog;
+
+// outputs
+out vec4 fragColor;
 
 void main()
 {
@@ -58,67 +62,59 @@ void main()
 	scrollFog = vec4(lFogColor + lSpotFogColor, fogColour.a);
 
 	// Final Color
-	gl_FragColor = scrollFog;
+	fragColor = scrollFog;
 }
 
 )glsl";
 
 
 R3DScrollFog::R3DScrollFog(const Util::Config::Node &config)
-  : m_config(config)
+  : m_config(config),
+	m_vao(0)
+
 {
-	//default coordinates are NDC -1,1 etc
-
-	m_triangles[0].p1.Set(-1,-1, 0);
-	m_triangles[0].p2.Set(-1, 1, 0);
-	m_triangles[0].p3.Set( 1, 1, 0);
-
-	m_triangles[1].p1.Set(-1,-1, 0);
-	m_triangles[1].p2.Set( 1, 1, 0);
-	m_triangles[1].p3.Set( 1,-1, 0);
-
 	m_shaderProgram		= 0;
 	m_vertexShader		= 0;
 	m_fragmentShader	= 0;
 
 	AllocResources();
+
+	glGenVertexArrays(1, &m_vao);
+	glBindVertexArray(m_vao);
+	// no states needed since we do it in the shader
+	glBindVertexArray(0);
 }
 
 R3DScrollFog::~R3DScrollFog()
 {
 	DeallocResources();
+
+	if (m_vao) {
+		glDeleteVertexArrays(1, &m_vao);
+		m_vao = 0;
+	}
 }
 
 void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient, float *spotRGB, float *spotEllipse)
 {
-	//=======
-	Mat4 mvp;
-	//=======
-
-	// yeah this would have been much easier with immediate mode and fixed function ..  >_<
-
 	// some ogl states
 	glDepthMask			(GL_FALSE);			// disable z writes
 	glDisable			(GL_DEPTH_TEST);	// disable depth testing
 	glEnable			(GL_BLEND);
 	glBlendFunc			(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	m_vbo.Bind			(true);
+	glBindVertexArray	(m_vao);
 	glUseProgram		(m_shaderProgram);
-	glUniform4f			(m_locFogColour, rgba[0], rgba[1], rgba[2], rgba[3]);
+	glUniform4fv		(m_locFogColour, 1, rgba);
 	glUniform1f			(m_locFogAttenuation, attenuation);
 	glUniform1f			(m_locFogAmbient, ambient);
-	glUniform3f			(m_locSpotFogColor, spotRGB[0], spotRGB[1], spotRGB[2]);
-	glUniform4f			(m_locSpotEllipse, spotEllipse[0], spotEllipse[1], spotEllipse[2], spotEllipse[3]);
-	glUniformMatrix4fv	(m_locMVP, 1, GL_FALSE, mvp);
+	glUniform3fv		(m_locSpotFogColor, 1, spotRGB);
+	glUniform4fv		(m_locSpotEllipse, 1, spotEllipse);
 
-	glEnableVertexAttribArray	(0);
-	glVertexAttribPointer		(m_locInVertex, 3, GL_FLOAT, GL_FALSE, sizeof(SFVertex), 0);
-	glDrawArrays				(GL_TRIANGLES, 0, 6);
-	glDisableVertexAttribArray	(0);
+	glDrawArrays		(GL_TRIANGLE_STRIP, 0, 4);
 
 	glUseProgram		(0);
-	m_vbo.Bind			(false);
+	glBindVertexArray	(0);
 
 	glDisable			(GL_BLEND);
 	glDepthMask			(GL_TRUE);
@@ -128,16 +124,11 @@ void R3DScrollFog::AllocResources()
 {
 	bool success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, m_config["VertexShaderFog"].ValueAs<std::string>(), m_config["FragmentShaderFog"].ValueAs<std::string>(), vertexShaderFog, fragmentShaderFog);
 
-	m_locMVP			= glGetUniformLocation(m_shaderProgram, "mvp");
 	m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
 	m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");
 	m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
 	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
-
-	m_locInVertex		= glGetAttribLocation(m_shaderProgram, "inVertex");
-
-	m_vbo.Create(GL_ARRAY_BUFFER, GL_STATIC_DRAW, sizeof(SFTriangle) * (2), m_triangles);
 }
 
 void R3DScrollFog::DeallocResources()
@@ -149,8 +140,6 @@ void R3DScrollFog::DeallocResources()
 	m_shaderProgram		= 0;
 	m_vertexShader		= 0;
 	m_fragmentShader	= 0;
-
-	m_vbo.Destroy();
 }
 
 }
