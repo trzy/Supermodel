@@ -87,23 +87,19 @@ bool legacySound; // For LegacySound (SCSP DSP) config option.
 
 
 // These globals control the operation of the SCSP, they are no longer extern and are set through SCSP_SetBuffers(). --Bart
-float SoundClock; // Originally titled SysFPS; seems to be for the sound CPU.
-const float Freq = 76;
-signed short* bufferfl;
-signed short* bufferfr;
-signed short* bufferrl;
-signed short* bufferrr;
-int length;
-int cnts;
+static double SoundClock; // Originally titled SysFPS; seems to be for the sound CPU.
+static const double Freq = 76;
+static float* bufferfl;
+static float* bufferfr;
+static float* bufferrl;
+static float* bufferrr;
+static int length;
 
-signed int* buffertmpfl, * buffertmpfr;	// these are allocated inside this file
-signed int* buffertmprl, * buffertmprr;	// these are allocated inside this file
-
-unsigned int srate=44100;
+static const double srate=44100;
 
 
-#define ICLIP16(x) (x<-32768)?-32768:((x>32767)?32767:x)
-#define ICLIP18(x) (x<-131072)?-131072:((x>131071)?131071:x)
+#define ICLIP16(x) (((x)<-32768)?-32768:(((x)>32767)?32767:(x)))
+#define ICLIP18(x) (((x)<-131072)?-131072:(((x)>131071)?131071:(x)))
 
 
 
@@ -740,7 +736,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 		t=ARTimes[i];	//In ms
 		if(t!=0.0)
 		{
-			step=(1023*1000.0)/((float) srate*t);
+			step=(1023*1000.0)/(srate*t);
 			scale=(double) (1<<EG_SHIFT);
 			ARTABLE[i]=(int) (step*scale);
 		}
@@ -748,7 +744,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 			ARTABLE[i]=1024<<EG_SHIFT;
 
 		t=DRTimes[i];	//In ms
-		step=(1023*1000.0)/((float) srate*t);
+		step=(1023*1000.0)/(srate*t);
 		scale=(double) (1<<EG_SHIFT);
 		DRTABLE[i]=(int) (step*scale);
 	}
@@ -762,34 +758,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 #endif
 
 	LFO_Init();
-	buffertmpfl = NULL;
-	buffertmpfr = NULL;
-	buffertmprl = NULL;
-	buffertmprr = NULL;
-	buffertmpfl=(signed int*) malloc(44100*sizeof(signed int));
-	if (NULL == buffertmpfl)
-		return ErrorLog("Insufficient memory for internal SCSP buffers.");
-	buffertmpfr=(signed int*) malloc(44100*sizeof(signed int));
-	if (NULL == buffertmpfr)
-	{
-		free(buffertmpfl);
-		return ErrorLog("Insufficient memory for internal SCSP buffers.");
-	}
 
-	buffertmprl=(signed int*)malloc(44100*sizeof(signed int));
-	if (NULL == buffertmprl)
-		return ErrorLog("Insufficient memory for internal SCSP buffers.");
-	buffertmprr=(signed int*)malloc(44100*sizeof(signed int));
-	if (NULL == buffertmprr)
-	{
-		free(buffertmprl);
-		return ErrorLog("Insufficient memory for internal SCSP buffers.");
-	}
-
-	memset(buffertmpfl, 0, 44100*sizeof(signed int));
-	memset(buffertmpfr, 0, 44100*sizeof(signed int));
-	memset(buffertmprl, 0, 44100*sizeof(signed int));
-	memset(buffertmprr, 0, 44100*sizeof(signed int));
 	SCSPs->data[0x20 / 2] = 0;
 	TimCnt[0] = 0xffff;
 	TimCnt[1] = 0xffff;
@@ -799,10 +768,6 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	MIDILock = CThread::CreateMutex();
 	if (NULL == MIDILock)
 	{
-		free(buffertmpfl);
-		free(buffertmpfr);
-		free(buffertmprl);
-		free(buffertmprr);
 		return ErrorLog("Unable to create MIDI mutex!");
 	}
 	
@@ -1547,7 +1512,7 @@ void SCSP_CpuRunScanline()
 
 void SCSP_DoMasterSamples(int nsamples)
 {
-	int slice = (int)(12000000 / (SoundClock*nsamples));	// 68K cycles/sample
+	int slice = (int)(12000000. / (SoundClock*nsamples));	// 68K cycles/sample
 	static int lastdiff = 0;
 
 	/*
@@ -1556,33 +1521,25 @@ void SCSP_DoMasterSamples(int nsamples)
 	 * When one SCSP is fully attenuated, the other's samples will be multiplied
 	 * by 2.
 	 */
-	float balance = (float)s_config->Get("Balance").ValueAs<float>();
-	if (balance < -100.0f)
-		balance = -100.0f;
-	else if (balance > 100.0f)
-		balance = 100.0f;
-	balance /= 100.0f;
+	float balance = std::max(-100.f,std::min(100.f,s_config->Get("Balance").ValueAs<float>()));
+	balance *= 0.01f;
 	float masterBalance = 1.0f + balance;
 	float slaveBalance = 1.0f - balance;
-	signed short* buffl, * buffr;
-	signed short* bufrl, * bufrr;
 
-	INT32 sl, s, i;
-
-	buffl = bufferfl;
-	buffr = bufferfr;
-	bufrl = bufferrl;
-	bufrr = bufferrr;
+	float* buffl = bufferfl;
+	float* buffr = bufferfr;
+	float* bufrl = bufferrl;
+	float* bufrr = bufferrr;
 
 	/*
 	 * Generate samples
 	 */
-	for (s = 0; s < nsamples; ++s)
+	for (INT32 s = 0; s < nsamples; ++s)
 	{
 		signed int smpfl = 0, smpfr = 0;
 		signed int smprl = 0, smprr = 0;
 
-		for (sl = 0; sl < 32; ++sl)
+		for (INT32 sl = 0; sl < 32; ++sl)
 		{
 #if FM_DELAY
 			RBUFDST = SCSPs[0].DELAYBUF + SCSPs[0].DELAYPTR;
@@ -1595,8 +1552,6 @@ void SCSP_DoMasterSamples(int nsamples)
 				UINT16 Enc;
 
 				signed int sample = (int)(masterBalance*(float)SCSP_UpdateSlot(slot));
-
-
 
 				Enc = ((TL(slot)) << 0x0) | ((IMXL(slot)) << 0xd);
 				SCSPDSP_SetSample(&SCSPs[0].DSP, (sample*LPANTABLE[Enc]) >> (SHIFT - 2), ISEL(slot), IMXL(slot));
@@ -1666,7 +1621,7 @@ void SCSP_DoMasterSamples(int nsamples)
 
 		//		smpl=0;
 		//		smpr=0;
-		for (i = 0; i < 16; ++i)
+		for (INT32 i = 0; i < 16; ++i)
 		{
 			_SLOT *slot = SCSPs[0].Slots + i;
 			if (legacySound == true) {
@@ -1718,8 +1673,8 @@ void SCSP_DoMasterSamples(int nsamples)
 			smpfl = ICLIP16(smpfl >> 2);
 			smpfr = ICLIP16(smpfr >> 2);
 		}
-		*buffl++ = ICLIP16(smpfl);
-		*buffr++ = ICLIP16(smpfr);
+		*buffl++ = (float)smpfl;
+		*buffr++ = (float)smpfr;
 
 		if (HasSlaveSCSP)
 		{
@@ -1734,8 +1689,8 @@ void SCSP_DoMasterSamples(int nsamples)
 				smprr = ICLIP16(smprr >> 2);
 			}
 		}
-		*bufrl++ = ICLIP16(smprl);
-		*bufrr++ = ICLIP16(smprr);
+		*bufrl++ = (float)smprl;
+		*bufrr++ = (float)smprr;
 
 		SCSP_TimersAddTicks(1);
 		CheckPendingIRQ();
@@ -2146,16 +2101,15 @@ void SCSP_LoadState(CBlockFile *StateFile)
 	}
 }
 
-void SCSP_SetBuffers(INT16 *leftBufferPtr, INT16 *rightBufferPtr, INT16* leftRearBufferPtr, INT16* rightRearBufferPtr, int bufferLength)
+void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRearBufferPtr, float* rightRearBufferPtr, int bufferLength)
 {
-	SoundClock = 76;
+	SoundClock = Freq;
 	bufferfl = leftBufferPtr;
 	bufferfr = rightBufferPtr;
 	bufferrl = leftRearBufferPtr;
 	bufferrr = rightRearBufferPtr;
 
 	length = bufferLength;
-	cnts = 0;		// what is this for? seems unimportant but need to find out
 }
 
 void SCSP_Deinit(void)
@@ -2163,14 +2117,6 @@ void SCSP_Deinit(void)
 #ifdef USEDSP
 	free(SCSP->MIXBuf);
 #endif
-	free(buffertmpfl);
-	free(buffertmpfr);
-	free(buffertmprl);
-	free(buffertmprr);
 	delete MIDILock;
-	buffertmpfl = NULL;
-	buffertmpfr = NULL;
-	buffertmprl = NULL;
-	buffertmprr = NULL;
 	MIDILock = NULL;
 }

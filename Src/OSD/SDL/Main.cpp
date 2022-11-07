@@ -118,7 +118,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   float yRes = float(*yResPtr);
   if (keepAspectRatio)
   {
-    float model3Ratio = 496.0f/384.0f;
+    float model3Ratio = 496.0/384.0;
     if (yRes < (xRes/model3Ratio))
       xRes = yRes*model3Ratio;
     if (xRes < (yRes*model3Ratio))
@@ -154,7 +154,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   *xResPtr = (unsigned) xRes;
   *yResPtr = (unsigned) yRes;
 
-  UINT32 correction = (UINT32)(((yRes / 384.f) * 2) + 0.5f);
+  UINT32 correction = (UINT32)(((yRes / 384.f) * 2.f) + 0.5f);
 
   glEnable(GL_SCISSOR_TEST);
 
@@ -1522,7 +1522,7 @@ static void PrintGameList(const std::string &xml_file, const std::map<std::strin
   {
     const Game &game = v.second;
     printf("    %s", game.name.c_str());
-    for (int i = game.name.length(); i < 9; i++)  // pad for alignment (no game ID should be more than 9 letters)
+    for (size_t i = game.name.length(); i < 9; i++)  // pad for alignment (no game ID should be more than 9 letters)
       printf(" ");
     if (!game.version.empty())
       printf("       %s (%s)\n", game.title.c_str(), game.version.c_str());
@@ -1563,9 +1563,9 @@ static Util::Config::Node DefaultConfig()
   config.Set("FragmentShader2D", "");
   // CSoundBoard
   config.Set("EmulateSound", true);
-  config.Set("Balance", "0");
-  config.Set("BalanceLeftRight", "0");
-  config.Set("BalanceFrontRear", "0");
+  config.Set("Balance", "0.0");
+  config.Set("BalanceLeftRight", "0.0");
+  config.Set("BalanceFrontRear", "0.0");
   config.Set("NbSoundChannels", "4");
   config.Set("SoundFreq", "57.6"); // 60.0f? 57.524160f?
   // CDSB

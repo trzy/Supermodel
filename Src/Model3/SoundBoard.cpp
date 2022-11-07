@@ -70,11 +70,11 @@ static FILE		*soundFP;
 // Offsets of memory regions within sound board's pool
 #define OFFSET_RAM1	            0           // 1 MB SCSP1 RAM
 #define OFFSET_RAM2             0x100000    // 1 MB SCSP2 RAM
-#define LENGTH_CHANNEL_BUFFER   (sizeof(INT16)*NUM_SAMPLES_PER_FRAME)    // 1470 bytes (16 bits x 44.1 KHz x 1/60th second)
-#define OFFSET_AUDIO_FRONTLEFT  0x200000                                            // 1470 bytes (16 bits, 44.1 KHz, 1/60th second) left audio channel
-#define OFFSET_AUDIO_FRONTRIGHT (OFFSET_AUDIO_FRONTLEFT + LENGTH_CHANNEL_BUFFER)    // 1470 bytes right audio channel
-#define OFFSET_AUDIO_REARLEFT   (OFFSET_AUDIO_FRONTRIGHT + LENGTH_CHANNEL_BUFFER)   // 1470 bytes (16 bits, 44.1 KHz, 1/60th second) left audio channel
-#define OFFSET_AUDIO_REARRIGHT  (OFFSET_AUDIO_REARLEFT + LENGTH_CHANNEL_BUFFER)     // 1470 bytes right audio channel
+#define LENGTH_CHANNEL_BUFFER   (sizeof(float)*NUM_SAMPLES_PER_FRAME)               // 2940 bytes (32 bits x 44.1 KHz x 1/60th second)
+#define OFFSET_AUDIO_FRONTLEFT  0x200000                                            // 2940 bytes (32 bits, 44.1 KHz, 1/60th second) left audio channel
+#define OFFSET_AUDIO_FRONTRIGHT (OFFSET_AUDIO_FRONTLEFT + LENGTH_CHANNEL_BUFFER)    // 2940 bytes right audio channel
+#define OFFSET_AUDIO_REARLEFT   (OFFSET_AUDIO_FRONTRIGHT + LENGTH_CHANNEL_BUFFER)   // 2940 bytes (32 bits, 44.1 KHz, 1/60th second) left audio channel
+#define OFFSET_AUDIO_REARRIGHT  (OFFSET_AUDIO_REARLEFT + LENGTH_CHANNEL_BUFFER)     // 2940 bytes right audio channel
 
 #define MEMORY_POOL_SIZE        (0x100000 + 0x100000 + 4*LENGTH_CHANNEL_BUFFER)
 
@@ -351,6 +351,18 @@ void CSoundBoard::WriteMIDIPort(UINT8 data)
 		DSB->SendCommand(data);
 }
 
+static INT16 ClampINT16(float x)
+{
+    INT32 xi = (INT32)x;
+    if (xi > INT16_MAX) {
+        xi = INT16_MAX;
+    }
+    if (xi < INT16_MIN) {
+        xi = INT16_MIN;
+    }
+    return (INT16)xi;
+}
+
 bool CSoundBoard::RunFrame(void)
 {
 	// Run sound board first to generate SCSP audio
@@ -369,15 +381,15 @@ bool CSoundBoard::RunFrame(void)
 	}
 
 	// Compute sound volume as 
-	INT32 soundVol = m_config["SoundVolume"].ValueAs<int>();
-	soundVol = (INT32)((float)0x100 * (float)soundVol / 100.0f);
+	float soundVol = (float)std::max(0,std::min(200,m_config["SoundVolume"].ValueAs<int>()));
+	soundVol = soundVol * (float)(1.0 / 100.0);
 
 	// Apply sound volume setting to SCSP channels only
 	for (int i = 0; i < NUM_SAMPLES_PER_FRAME; i++) {
-		audioFL[i] = (audioFL[i]*soundVol) >> 8;
-		audioFR[i] = (audioFR[i]*soundVol) >> 8;
-		audioRL[i] = (audioRL[i]*soundVol) >> 8;
-		audioRR[i] = (audioRR[i]*soundVol) >> 8;
+		audioFL[i] *= soundVol;
+		audioFR[i] *= soundVol;
+		audioRL[i] *= soundVol;
+		audioRR[i] *= soundVol;
 	}
 
 	// Run DSB and mix with existing audio, apply music volume
@@ -399,9 +411,13 @@ bool CSoundBoard::RunFrame(void)
 	INT16	s;
 	for (int i = 0; i < NUM_SAMPLES_PER_FRAME; i++)
 	{	
-		s = audioL[i];
+		s = ClampINT16(audioFL[i]);
 		fwrite(&s, sizeof(INT16), 1, soundFP);	// left channel
-		s = audioR[i];
+		s = ClampINT16(audioFR[i]);
+		fwrite(&s, sizeof(INT16), 1, soundFP);	// right channel
+		s = ClampINT16(audioRL[i]);
+		fwrite(&s, sizeof(INT16), 1, soundFP);	// left channel
+		s = ClampINT16(audioRR[i]);
 		fwrite(&s, sizeof(INT16), 1, soundFP);	// right channel
 	}
 #endif // SUPERMODEL_LOG_AUDIO
@@ -496,10 +512,10 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	// Set up memory pointers
 	ram1 = &memoryPool[OFFSET_RAM1];
 	ram2 = &memoryPool[OFFSET_RAM2];
-	audioFL = (INT16*)&memoryPool[OFFSET_AUDIO_FRONTLEFT];
-	audioFR = (INT16*)&memoryPool[OFFSET_AUDIO_FRONTRIGHT];
-	audioRL = (INT16*)&memoryPool[OFFSET_AUDIO_REARLEFT];
-	audioRR = (INT16*)&memoryPool[OFFSET_AUDIO_REARRIGHT];
+	audioFL = (float*)&memoryPool[OFFSET_AUDIO_FRONTLEFT];
+	audioFR = (float*)&memoryPool[OFFSET_AUDIO_FRONTRIGHT];
+	audioRL = (float*)&memoryPool[OFFSET_AUDIO_REARLEFT];
+	audioRR = (float*)&memoryPool[OFFSET_AUDIO_REARRIGHT];
 
 	// Initialize 68K core
 	M68KSetContext(&M68K);
