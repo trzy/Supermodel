@@ -889,15 +889,8 @@ static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned c
   // Set up the viewport and orthogonal projection
   glUseProgram(0);    // no shaders
   glViewport(xOffset, yOffset, xRes, yRes);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluOrtho2D(0.0, 1.0, 1.0, 0.0);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  glDisable(GL_TEXTURE_2D); // no texture mapping
   glDisable(GL_BLEND);    // no blending
   glDisable(GL_DEPTH_TEST); // no Z-buffering needed
-  glDisable(GL_LIGHTING);
 
   New3D::Mat4 m;
   m.Ortho(0.0, 1.0, 1.0, 0.0, -1.0f, 1.0f);
