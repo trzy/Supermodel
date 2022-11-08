@@ -109,8 +109,6 @@ SRC_FILES = \
 	Src/Graphics/New3D/Mat4.cpp \
 	Src/Graphics/New3D/Model.cpp \
 	Src/Graphics/New3D/PolyHeader.cpp \
-	Src/Graphics/New3D/Texture.cpp \
-	Src/Graphics/New3D/TextureSheet.cpp \
 	Src/Graphics/New3D/VBO.cpp \
 	Src/Graphics/New3D/Vec.cpp \
 	Src/Graphics/New3D/R3DShader.cpp \
