@@ -49,10 +49,13 @@ struct _LFO
 
 static int PLFO_TRI[256], PLFO_SQR[256], PLFO_SAW[256], PLFO_NOI[256];
 static int ALFO_TRI[256], ALFO_SQR[256], ALFO_SAW[256], ALFO_NOI[256];
-static float LFOFreq[32] = { 0.17f, 0.19f, 0.23f, 0.27f, 0.34f, 0.39f, 0.45f, 0.55f, 0.68f, 0.78f, 0.92f, 1.10f, 1.39f, 1.60f, 1.87f, 2.27f,
-			  2.87f, 3.31f, 3.92f, 4.79f, 6.15f, 7.18f, 8.60f, 10.8f, 14.4f, 17.2f, 21.5f, 28.7f, 43.1f, 57.4f, 86.1f, 172.3f };
-static float ASCALE[8] = { 0.0f, 0.4f, 0.8f, 1.5f, 3.0f, 6.0f, 12.0f, 24.0f };
-static float PSCALE[8] = { 0.0f, 7.0f, 13.5f, 27.0f, 55.0f, 112.0f, 230.0f, 494.0f };
+static const float LFOFreq[32] =
+{
+	0.17f,0.19f,0.23f,0.27f,0.34f,0.39f,0.45f,0.55f,0.68f,0.78f,0.92f,1.10f,1.39f,1.60f,1.87f,2.27f,
+	2.87f,3.31f,3.92f,4.79f,6.15f,7.18f,8.60f,10.8f,14.4f,17.2f,21.5f,28.7f,43.1f,57.4f,86.1f,172.3f
+};
+static const float ASCALE[8] = {0.0f,0.4f,0.8f,1.5f,3.0f,6.0f,12.0f,24.0f};
+static const float PSCALE[8] = {0.0f,7.0f,13.5f,27.0f,55.0f,112.0f,230.0f,494.0f};
 static int PSCALES[8][256];
 static int ASCALES[8][256];
 
@@ -141,9 +144,9 @@ signed int inline ALFO_Step(struct _LFO *LFO)
 {
 	int p;
 	LFO->phase += LFO->phase_step;
-#if LFO_SHIFT!=8    
+#if LFO_SHIFT!=8
 	LFO->phase &= (1 << (LFO_SHIFT + 8)) - 1;
-#endif    
+#endif
 	p = LFO->table[LFO->phase >> LFO_SHIFT];
 	p = LFO->scale[p];
 	return p << (SHIFT - LFO_SHIFT);
@@ -151,7 +154,7 @@ signed int inline ALFO_Step(struct _LFO *LFO)
 
 void LFO_ComputeStep(struct _LFO *LFO, UINT32 LFOF, UINT32 LFOWS, UINT32 LFOS, int ALFO)
 {
-	float step = (float)LFOFreq[LFOF] * 256.0f / (float)44100.0f;
+	float step = (float)LFOFreq[LFOF] * 256.0f / 44100.0f;
 	LFO->phase_step = (unsigned int)((float)(1 << LFO_SHIFT)*step);
 	if (ALFO)
 	{
