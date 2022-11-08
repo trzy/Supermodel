@@ -55,6 +55,13 @@ LD = clang
 # Brew Tests
 #
 
+ifeq ($(shell uname -p),arm)
+	BREW_PATH := /opt/homebrew
+else
+	BREW_PATH := /usr/local/homebrew
+endif
+BREW_APP := $(BREW_PATH)/bin/brew
+
 ifeq ($(strip $(BREWED_SUPERMODEL)),)
 	BREW_IS_INSTALLED_SM = $(shell which brew >> /dev/null 2>&1 && echo 1 || echo 0)
 	ifeq ($(BREW_IS_INSTALLED_SM),1)
@@ -73,8 +80,8 @@ endif
 #
 
 ifeq ($(strip $(BREWED_SUPERMODEL)),1)
-	SDL_CFLAGS = "-I$(shell brew --prefix)/include"
-	SDL_LIBS = -L$(shell brew --prefix)/lib -lSDL2
+	SDL_CFLAGS = "-I$(shell $(BREW_APP) --prefix)/include"
+	SDL_LIBS = -L$(shell $(BREW_APP) --prefix)/lib -lSDL2
 	ifeq ($(strip $(NET_BOARD)),1)
 		SDL_LIBS += "-lSDL2_net"
 	endif
