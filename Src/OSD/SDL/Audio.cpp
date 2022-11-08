@@ -142,30 +142,6 @@ void SetAudioType(Game::AudioTypes type)
     AudioType = type;
 }
 
-static INT16 AddAndClampINT16(INT32 x, INT32 y)
-{
-    INT32 sum = x + y;
-    if (sum > INT16_MAX) {
-        sum = INT16_MAX;
-    }
-    if (sum < INT16_MIN) {
-        sum = INT16_MIN;
-    }
-    return (INT16)sum;
-}
-
-static INT16 MixINT16(INT32 x, INT32 y)
-{
-    INT32 sum = (x + y)>>1;
-    if (sum > INT16_MAX) {
-        sum = INT16_MAX;
-    }
-    if (sum < INT16_MIN) {
-        sum = INT16_MIN;
-    }
-    return (INT16)sum;
-}
-
 static INT16 MixINT16(float x, float y)
 {
     INT32 sum = (INT32)((x + y)*0.5f); //!! dither
@@ -185,7 +161,7 @@ static float MixFloat(float x, float y)
 
 static INT16 ClampINT16(float x)
 {
-    INT32 xi = (INT32)x;
+    INT32 xi = (INT32)x; //!! dither
     if (xi > INT16_MAX) {
         xi = INT16_MAX;
     }

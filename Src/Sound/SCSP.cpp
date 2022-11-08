@@ -85,6 +85,7 @@ bool legacySound; // For LegacySound (SCSP DSP) config option.
 
 #define MAX_SCSP	2
 
+//#define CORRECT_FOR_18BIT_DAC
 
 // These globals control the operation of the SCSP, they are no longer extern and are set through SCSP_SetBuffers(). --Bart
 static double SoundClock; // Originally titled SysFPS; seems to be for the sound CPU.
@@ -228,11 +229,11 @@ static int TimCnt[3];
 int ARTABLE[64],DRTABLE[64];
 
 //Envelope times in ms
-double ARTimes[64]={100000/*infinity*/,100000/*infinity*/,8100.0,6900.0,6000.0,4800.0,4000.0,3400.0,3000.0,2400.0,2000.0,1700.0,1500.0,
+static const double ARTimes[64] = {100000/*infinity*/,100000/*infinity*/,8100.0,6900.0,6000.0,4800.0,4000.0,3400.0,3000.0,2400.0,2000.0,1700.0,1500.0,
 					1200.0,1000.0,860.0,760.0,600.0,500.0,430.0,380.0,300.0,250.0,220.0,190.0,150.0,130.0,110.0,95.0,
 					76.0,63.0,55.0,47.0,38.0,31.0,27.0,24.0,19.0,15.0,13.0,12.0,9.4,7.9,6.8,6.0,4.7,3.8,3.4,3.0,2.4,
 					2.0,1.8,1.6,1.3,1.1,0.93,0.85,0.65,0.53,0.44,0.40,0.35,0.0,0.0};
-double DRTimes[64]={100000/*infinity*/,100000/*infinity*/,118200.0,101300.0,88600.0,70900.0,59100.0,50700.0,44300.0,35500.0,29600.0,25300.0,22200.0,17700.0,
+static const double DRTimes[64] = {100000/*infinity*/,100000/*infinity*/,118200.0,101300.0,88600.0,70900.0,59100.0,50700.0,44300.0,35500.0,29600.0,25300.0,22200.0,17700.0,
 					14800.0,12700.0,11100.0,8900.0,7400.0,6300.0,5500.0,4400.0,3700.0,3200.0,2800.0,2200.0,1800.0,1600.0,1400.0,1100.0,
 					920.0,790.0,690.0,550.0,460.0,390.0,340.0,270.0,230.0,200.0,170.0,140.0,110.0,98.0,85.0,68.0,57.0,49.0,43.0,34.0,
 					28.0,25.0,22.0,18.0,14.0,12.0,11.0,8.5,7.1,6.1,5.4,4.3,3.6,3.1};
@@ -719,10 +720,10 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 		else
 			SDL=0.0;
 
-		if(iSDL==0x6)
-			int a=1;
-		if(iTL==0x3a)
-			int a=1;
+		//if(iSDL==0x6)
+		//	int a=1;
+		//if(iTL==0x3a)
+		//	int a=1;
 		
 		LPANTABLE[i]=FIX((4.0*LPAN*TL*SDL));
 		RPANTABLE[i]=FIX((4.0*RPAN*TL*SDL));
@@ -1373,24 +1374,22 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 	//if (SSCTL(slot) == 0) {
 		if (PCM8B(slot))	//8 bit signed
 		{
-			signed char *p1 = (signed char *) &(slot->base[addr1 ^ 1]);
-			signed char *p2 = (signed char *) &(slot->base[addr2 ^ 1]);
+			signed char p1 = *(signed char *) &(slot->base[addr1 ^ 1]);
+			signed char p2 = *(signed char *) &(slot->base[addr2 ^ 1]);
 			int s;
 			signed int fpart = slot->cur_addr&((1 << SHIFT) - 1);
 			//sample=(p[0])<<8;
-			s = (int)(p1[0] << 8)*((1 << SHIFT) - fpart) + (int)(p2[0] << 8)*fpart;
+			s = (int)(p1 << 8)*((1 << SHIFT) - fpart) + (int)(p2 << 8)*fpart;
 			sample = (s >> SHIFT);
 		}
 		else	//16 bit signed (endianness?)
 		{
-			signed short *p1 = (signed short *) &(slot->base[addr1]);
-			signed short *p2 = (signed short *) &(slot->base[addr2]);
+			signed short p1 = *(signed short *) &(slot->base[addr1]);
+			signed short p2 = *(signed short *) &(slot->base[addr2]);
 			int s;
 			signed int fpart = slot->cur_addr&((1 << SHIFT) - 1);
 			//sample=(p[0]);
-			s = (int)(p1[0])*((1 << (SHIFT)) - fpart) + (int)(p2[0])*fpart;
-			
-			
+			s = (int)(p1)*((1 << (SHIFT)) - fpart) + (int)(p2)*fpart;
 			sample = (s >> (SHIFT));
 
 			//sample=((p[0]>>8)&0xFF)|(p[0]<<8);
@@ -1496,6 +1495,11 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 		if (!SDIR(slot))
 		{
 			UINT16 Enc = ((TL(slot)) << 0x0) | (0x7 << 0xd);
+			*RBUFDST = (sample * LPANTABLE[Enc]) >> (SHIFT + 1);
+		}
+		else
+		{
+			UINT16 Enc = (0 << 0x0) | (0x7 << 0xd);
 			*RBUFDST = (sample * LPANTABLE[Enc]) >> (SHIFT + 1);
 		}
 	}
@@ -1667,14 +1671,23 @@ void SCSP_DoMasterSamples(int nsamples)
 		{
 			smpfl = ICLIP18(smpfl);
 			smpfr = ICLIP18(smpfr);
+
+#ifdef CORRECT_FOR_18BIT_DAC
+			*buffl++ = (float)smpfl * 0.25f;
+			*buffr++ = (float)smpfr * 0.25f;
+#else
+			*buffl++ = (float)smpfl;
+			*buffr++ = (float)smpfr;
+#endif
 		}
 		else
 		{
 			smpfl = ICLIP16(smpfl >> 2);
 			smpfr = ICLIP16(smpfr >> 2);
+
+			*buffl++ = (float)smpfl;
+			*buffr++ = (float)smpfr;
 		}
-		*buffl++ = (float)smpfl;
-		*buffr++ = (float)smpfr;
 
 		if (HasSlaveSCSP)
 		{
@@ -1682,15 +1695,29 @@ void SCSP_DoMasterSamples(int nsamples)
 			{
 				smprl = ICLIP18(smprl);
 				smprr = ICLIP18(smprr);
+
+#ifdef CORRECT_FOR_18BIT_DAC
+				*bufrl++ = (float)smprl * 0.25f;
+				*bufrr++ = (float)smprr * 0.25f;
+#else
+				*bufrl++ = (float)smprl;
+				*bufrr++ = (float)smprr;
+#endif
 			}
 			else
 			{
- 				smprl = ICLIP16(smprl >> 2);
+				smprl = ICLIP16(smprl >> 2);
 				smprr = ICLIP16(smprr >> 2);
+
+				*bufrl++ = (float)smprl;
+				*bufrr++ = (float)smprr;
 			}
 		}
-		*bufrl++ = (float)smprl;
-		*bufrr++ = (float)smprr;
+		else
+		{
+			*bufrl++ = (float)smprl;
+			*bufrr++ = (float)smprr;
+		}
 
 		SCSP_TimersAddTicks(1);
 		CheckPendingIRQ();
