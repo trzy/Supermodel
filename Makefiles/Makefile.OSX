@@ -55,14 +55,15 @@ LD = clang
 # Brew Tests
 #
 
-BREWED_SUPERMODEL = 0
-BREW_IS_INSTALLED_SM = $(shell which brew >> /dev/null 2>&1 && echo 1 || echo 0)
-ifeq ($(BREW_IS_INSTALLED_SM),1)
-	BREW_SDL2_SM = $(shell brew list | grep ^sdl2$$ | wc -l | xargs)
-	ifeq ($(BREW_SDL2_SM),1)
-		BREW_SDL2NET_SM = $(shell brew list | grep ^sdl2_net$$ | wc -l | xargs)
-		ifeq ($(BREW_SDL2NET_SM),1)
-			BREWED_SUPERMODEL = 1
+ifeq ($(strip $(BREWED_SUPERMODEL)),)
+	BREW_IS_INSTALLED_SM = $(shell which brew >> /dev/null 2>&1 && echo 1 || echo 0)
+	ifeq ($(BREW_IS_INSTALLED_SM),1)
+		BREW_SDL2_SM = $(shell brew list | grep ^sdl2$$ | wc -l | xargs)
+		ifeq ($(BREW_SDL2_SM),1)
+			BREW_SDL2NET_SM = $(shell brew list | grep ^sdl2_net$$ | wc -l | xargs)
+			ifeq ($(BREW_SDL2NET_SM),1)
+				BREWED_SUPERMODEL = 1
+			endif
 		endif
 	endif
 endif
