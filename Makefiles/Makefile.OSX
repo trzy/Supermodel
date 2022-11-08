@@ -73,10 +73,10 @@ endif
 #
 
 ifeq ($(strip $(BREWED_SUPERMODEL)),1)
-	SDL_CFLAGS = -I$(shell brew --prefix)/include
+	SDL_CFLAGS = "-I$(shell brew --prefix)/include"
 	SDL_LIBS = -L$(shell brew --prefix)/lib -lSDL2
 	ifeq ($(strip $(NET_BOARD)),1)
-		SDL_LIBS += -lSDL2_net
+		SDL_LIBS += "-lSDL2_net"
 	endif
 else
 	SDL_LIBS = -framework SDL2
