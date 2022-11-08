@@ -60,7 +60,7 @@ BREW_IS_INSTALLED = $(shell which brew >> /dev/null 2>&1 && echo 1 || echo 0)
 ifeq ($(BREW_IS_INSTALLED),1)
 	BREW_SDL = $(shell brew list | grep ^sdl2$$ | wc -l | xargs)
 	ifeq ($(BREW_SDL),1)
-		BREW_SDLNET = $(shell brew list | grep ^sdl_net$$ | wc -l | xargs)
+		BREW_SDLNET = $(shell brew list | grep ^sdl2_net$$ | wc -l | xargs)
 		ifeq ($(BREW_SDLNET),1)
 			USE_BREW = 1
 		endif
