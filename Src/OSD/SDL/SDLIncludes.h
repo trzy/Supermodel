@@ -42,7 +42,7 @@
 #ifdef USE_BREW
 #include <SDL2/SDL_net.h>
 #else
-#include <SDL2_net/SDL2_net.h>
+#include <SDL2_net/SDL_net.h>
 #endif
 #else
 #include <SDL_net.h>
