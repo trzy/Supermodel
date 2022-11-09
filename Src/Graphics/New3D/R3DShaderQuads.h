@@ -346,60 +346,66 @@ vec4 ExtractColour(int type, uint value)
 	vec4 c = vec4(0.0);
 
 	if(type==0) {			// T1RGB5	
-		c.r = float((value >> 10) & 0x1F) / 31.0;
-		c.g = float((value >> 5 ) & 0x1F) / 31.0;
-		c.b = float((value      ) & 0x1F) / 31.0;
-		c.a = 1.0 - float((value >> 15) & 0x1);
+		c.r		= float((value >> 10) & 0x1Fu);
+		c.g		= float((value >> 5 ) & 0x1Fu);
+		c.b		= float((value      ) & 0x1Fu);
+		c.rgb  *= (1.0/31.0);
+		c.a		= 1.0 - float((value >> 15) & 0x1u);
 	}
 	else if(type==1) {		// Interleaved A4L4 (low byte)
-		c.rgb = vec3(float(value&0xF) / 15.0);
-		c.a   = float((value >> 4) & 0xF) / 15.0;
+		c.rgb	= vec3(float(value&0xFu));
+		c.a		= float((value >> 4) & 0xFu);
+		c      *= (1.0/15.0);
 	}
 	else if(type==2) {
-		c.a		= float(value&0xF) / 15.0;
-		c.rgb   = vec3(float((value >> 4) & 0xF) / 15.0);
+		c.a		= float(value&0xFu);
+		c.rgb   = vec3(float((value >> 4) & 0xFu));
+		c	   *= (1.0/15.0);
 	}
 	else if(type==3) {
-		c.rgb = vec3(float((value>>8)&0xF) / 15.0);
-		c.a   = float((value >> 12) & 0xF) / 15.0;
+		c.rgb	= vec3(float((value>>8)&0xFu));
+		c.a		= float((value >> 12) & 0xFu);
+		c	   *= (1.0/15.0);
 	}
 	else if(type==4) {
-		c.a		= float((value>>8)&0xF) / 15.0;
-		c.rgb   = vec3(float((value >> 12) & 0xF) / 15.0);
+		c.a		= float((value>>8)&0xFu);
+		c.rgb   = vec3(float((value >> 12) & 0xFu));
+		c	   *= (1.0/15.0);
 	}
 	else if(type==5) {
-		c = vec4(float(value&0xFF) / 255.0);
+		c = vec4(float(value&0xFFu) / 255.0);
 		if(c.a==1.0)	{ c.a = 0.0; }
 		else			{ c.a = 1.0; }
 	}
 	else if(type==6) {
-		c = vec4(float((value>>8)&0xFF) / 255.0);
+		c = vec4(float((value>>8)&0xFFu) / 255.0);
 		if(c.a==1.0)	{ c.a = 0.0; }
 		else			{ c.a = 1.0; }
 	}
 	else if(type==7) {	// RGBA4
-		c.r = float((value>>12)&0xF) / 15.0;
-		c.g = float((value>> 8)&0xF) / 15.0;
-		c.b = float((value>> 4)&0xF) / 15.0;
-		c.a = float((value>> 0)&0xF) / 15.0;
+		c.r = float((value>>12)&0xFu);
+		c.g = float((value>> 8)&0xFu);
+		c.b = float((value>> 4)&0xFu);
+		c.a = float((value>> 0)&0xFu);
+		c *= (1.0/15.0);
 	}
 	else if(type==8) {	// low byte, low nibble
-		c = vec4(float(value&0xF) / 15.0);
+		c = vec4(float(value&0xFu) / 15.0);
 		if(c.a==1.0)	{ c.a = 0.0; }
 		else			{ c.a = 1.0; }
 	}
 	else if(type==9) {	// low byte, high nibble
-		c = vec4(float((value>>4)&0xF) / 15.0);
+		c = vec4(float((value>>4)&0xFu) / 15.0);
 		if(c.a==1.0)	{ c.a = 0.0; }
 		else			{ c.a = 1.0; }
 	}
 	else if(type==10) {	// high byte, low nibble
-		c = vec4(float((value>>8)&0xF) / 15.0);
+		c = vec4(float((value>>8)&0xFu) / 15.0);
 		if(c.a==1.0)	{ c.a = 0.0; }
 		else			{ c.a = 1.0; }
 	}
 	else if(type==11) {	// high byte, high nibble
-		c = vec4(float((value>>12)&0xF) / 15.0);
+		c = vec4(float((value>>12)&0xFu) / 15.0);
 		if(c.a==1.0)	{ c.a = 0.0; }
 		else			{ c.a = 1.0; }
 	}
