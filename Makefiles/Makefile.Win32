@@ -73,7 +73,7 @@ endif
 # Use Bash or Windows Prompt shell commands?
 #
 DELETE = rm -d -r -f
-ifeq ($(strip $(MSYSTEM)),)
+ifeq ($(strip $(MSYSTEM)),1)
 	DELETE = rmdir /s /q
 endif
 
