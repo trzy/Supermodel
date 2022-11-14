@@ -70,6 +70,9 @@ PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net
 # Core Makefile
 ###############################################################################
 
+PLATFORM_SRC_FILES = \
+	Src/OSD/Unix/FileSystemPath.cpp
+
 include Makefiles/Rules.inc
 
 clean:

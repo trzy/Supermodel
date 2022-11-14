@@ -103,6 +103,7 @@ PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM
 
 PLATFORM_SRC_FILES = \
 	Src/OSD/Windows/DirectInputSystem.cpp \
+	Src/OSD/Windows/FileSystemPath.cpp \
 	Src/OSD/Windows/WinOutputs.cpp
 
 .PHONY: clean
