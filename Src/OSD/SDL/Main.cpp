@@ -66,6 +66,7 @@
 #include "Util/Format.h"
 #include "Util/NewConfig.h"
 #include "Util/ConfigBuilders.h"
+#include "OSD/FileSystemPath.h"
 #include "GameLoader.h"
 #include "SDLInputSystem.h"
 #include "SDLIncludes.h"
@@ -475,7 +476,7 @@ void Screenshot()
     time_t now = std::time(nullptr);
     tm* ltm = std::localtime(&now);
 
-    sprintf(file, "Screenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+    sprintf(file, "%sScreenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", FileSystemPath::GetPath("Screenshots").c_str(), 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
 
     info += file;
     puts(info.c_str());
@@ -549,7 +550,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -565,7 +566,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownCullingNodeBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << "Analysis/" << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -574,7 +575,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
   glReadBuffer(readBuffer);
 
   // Generate the HTML GUI
-  std::string file = Util::Format() << "Analysis/_" << GetFileBaseName(s_gfxStatePath) << ".html";
+  std::string file = Util::Format() << s_analysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
   std::ofstream fs(file);
   if (!fs.good())
     ErrorLog("Unable to open '%s' for writing.", file.c_str());
@@ -615,7 +616,7 @@ static void SaveState(IEmulator *Model3)
 {
   CBlockFile  SaveState;
 
-  std::string file_path = Util::Format() << "Saves/" << Model3->GetGame().name << ".st" << s_saveSlot;
+  std::string file_path = Util::Format() << FileSystemPath::GetPath("Saves") << Model3->GetGame().name << ".st" << s_saveSlot;
   if (OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save state to '%s'.", file_path.c_str());
@@ -640,7 +641,7 @@ static void LoadState(IEmulator *Model3, std::string file_path = std::string())
 
   // Generate file path
   if (file_path.empty())
-    file_path = Util::Format() << "Saves/" << Model3->GetGame().name << ".st" << s_saveSlot;
+    file_path = Util::Format() << FileSystemPath::GetPath("Saves") << Model3->GetGame().name << ".st" << s_saveSlot;
 
   // Open and check to make sure format is correct
   if (OKAY != SaveState.Load(file_path))
@@ -674,7 +675,7 @@ static void SaveNVRAM(IEmulator *Model3)
 {
   CBlockFile  NVRAM;
 
-  std::string file_path = Util::Format() << "NVRAM/" << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath("NVRAM") << Model3->GetGame().name << ".nv";
   if (OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", file_path.c_str());
@@ -697,7 +698,7 @@ static void LoadNVRAM(IEmulator *Model3)
   CBlockFile  NVRAM;
 
   // Generate file path
-  std::string file_path = Util::Format() << "NVRAM/" << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath("NVRAM") << Model3->GetGame().name << ".nv";
 
   // Open and check to make sure format is correct
   if (OKAY != NVRAM.Load(file_path))
@@ -1448,8 +1449,10 @@ QuitError:
  Entry Point and Command Line Procesing
 ******************************************************************************/
 
-static const char s_configFilePath[] = { "Config/Supermodel.ini" };
-static const char s_gameXMLFilePath[] = { "Config/Games.xml" };
+static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath("Analysis");
+static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath("Config") << "Supermodel.ini";
+static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath("Config") << "Games.xml";
+static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath("Log") << "Supermodel.log";
 
 // Create and configure inputs
 static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
@@ -1640,8 +1643,8 @@ static void Help(void)
   puts("General Options:");
   puts("  -?, -h, -help, --help   Print this help text");
   puts("  -print-games            List supported games and quit");
-  printf("  -game-xml-file=<file>   ROM set definition file [Default: %s]\n", s_gameXMLFilePath);
-  puts("  -log-output=<outputs>   Log output destination(s) [Default: Supermodel.log]");
+  printf("  -game-xml-file=<file>   ROM set definition file [Default: %s]\n", s_gameXMLFilePath.c_str());
+  printf("  -log-output=<outputs>   Log output destination(s) [Default: %s]\n", s_logFilePath.c_str());
   puts("  -log-level=<level>      Logging threshold [Default: info]");
   puts("");
   puts("Core Options:");
@@ -1737,7 +1740,7 @@ struct ParsedCommandLine
   {
     // Logging is special: it is only parsed from the command line and
     // therefore, defaults are needed early
-    config.Set("LogOutput", "Supermodel.log");
+    config.Set("LogOutput", s_logFilePath.c_str());
     config.Set("LogLevel", "info");
   }
 };
