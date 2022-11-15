@@ -476,7 +476,7 @@ void Screenshot()
     time_t now = std::time(nullptr);
     tm* ltm = std::localtime(&now);
 
-    sprintf(file, "%sScreenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", FileSystemPath::GetPath("Screenshots").c_str(), 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
+    sprintf(file, "%sScreenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", FileSystemPath::GetPath(FileSystemPath::Screenshots).c_str(), 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
 
     info += file;
     puts(info.c_str());
@@ -616,7 +616,7 @@ static void SaveState(IEmulator *Model3)
 {
   CBlockFile  SaveState;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath("Saves") << Model3->GetGame().name << ".st" << s_saveSlot;
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
   if (OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save state to '%s'.", file_path.c_str());
@@ -641,7 +641,7 @@ static void LoadState(IEmulator *Model3, std::string file_path = std::string())
 
   // Generate file path
   if (file_path.empty())
-    file_path = Util::Format() << FileSystemPath::GetPath("Saves") << Model3->GetGame().name << ".st" << s_saveSlot;
+    file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
 
   // Open and check to make sure format is correct
   if (OKAY != SaveState.Load(file_path))
@@ -675,7 +675,7 @@ static void SaveNVRAM(IEmulator *Model3)
 {
   CBlockFile  NVRAM;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath("NVRAM") << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
   if (OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", file_path.c_str());
@@ -698,7 +698,7 @@ static void LoadNVRAM(IEmulator *Model3)
   CBlockFile  NVRAM;
 
   // Generate file path
-  std::string file_path = Util::Format() << FileSystemPath::GetPath("NVRAM") << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
 
   // Open and check to make sure format is correct
   if (OKAY != NVRAM.Load(file_path))
@@ -1449,10 +1449,10 @@ QuitError:
  Entry Point and Command Line Procesing
 ******************************************************************************/
 
-static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath("Analysis");
-static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath("Config") << "Supermodel.ini";
-static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath("Config") << "Games.xml";
-static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath("Log") << "Supermodel.log";
+static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Analysis);
+static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Supermodel.ini";
+static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Games.xml";
+static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Log) << "Supermodel.log";
 
 // Create and configure inputs
 static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
