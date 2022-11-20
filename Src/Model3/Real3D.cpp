@@ -656,9 +656,9 @@ void CReal3D::Flush(void)
   DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
 
   // Upload textures (if any)
-  if (fifoIdx > 0)
+  if (fifoIdx > 2) // If the texture header/data aren't present, discard the texture (prevents garbage textures in Ski Champ)
   {
-    for (uint32_t i = 0; i < fifoIdx; )
+    for (uint32_t i = 0; i < fifoIdx - 2; )
     {
       uint32_t size = 2+textureFIFO[i+0]/2;
       size /= 4;
