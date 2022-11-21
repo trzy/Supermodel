@@ -25,22 +25,22 @@
 namespace FileSystemPath
 {
     // Generates a path to be used by Supermodel files
-    std::string GetPath(fsPathType pathType)
+    std::string GetPath(PathType pathType)
     {
         switch (pathType)
         {
-            case Analysis:
-                return "Analysis/";
-            case Config:
-                return "Config/";
-            case Log:
-                return "";
-            case NVRAM:
-                return "NVRAM/";
-            case Saves:
-                return "Saves/";
-            case Screenshots:
-                return "";
+        case Analysis:
+            return "Analysis/";
+        case Config:
+            return "Config/";
+        case Log:
+            return "";
+        case NVRAM:
+            return "NVRAM/";
+        case Saves:
+            return "Saves/";
+        case Screenshots:
+            return "";
         }
     }
 }
