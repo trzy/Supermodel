@@ -45,45 +45,45 @@ namespace FileSystemPath
     }
 
     // Generates a path to be used by Supermodel files
-    std::string GetPath(fsPathType pathType)
+    std::string GetPath(PathType pathType)
     {
         std::string finalPath = "";
         std::string homePath = "";
         std::string strPathType = "";
-		struct passwd* pwd = getpwuid(getuid());
+        struct passwd* pwd = getpwuid(getuid());
 
         // Resolve pathType to string for later use
         switch (pathType)
         {
-            case Analysis:
-                strPathType = "Analysis";
-                break;
-            case Config:
-                strPathType = "Config";
-                break;
-            case Log:
-                strPathType = "Log";
-                break;
-            case NVRAM:
-                strPathType = "NVRAM";
-                break;
-            case Saves:
-                strPathType = "Saves";
-                break;
-            case Screenshots:
-                strPathType = "Screenshots";
-                break;
+        case Analysis:
+            strPathType = "Analysis";
+            break;
+        case Config:
+            strPathType = "Config";
+            break;
+        case Log:
+            strPathType = "Log";
+            break;
+        case NVRAM:
+            strPathType = "NVRAM";
+            break;
+        case Saves:
+            strPathType = "Saves";
+            break;
+        case Screenshots:
+            strPathType = "Screenshots";
+            break;
         }
 
         // Get user's HOME directory
-		if (pwd)
-		{
-			homePath = pwd->pw_dir;
-		}
-		else
-		{
-			homePath = getenv("HOME");
-		}
+        if (pwd)
+        {
+            homePath = pwd->pw_dir;
+        }
+        else
+        {
+            homePath = getenv("HOME");
+        }
 
         // If Config path exists in current directory or the user doesn't have a HOME directory use current directory
         if (FileSystemPath::PathExists("Config") || homePath.empty())
@@ -96,10 +96,12 @@ namespace FileSystemPath
             else
             {
                 // If directory doesn't exist, create it
-                if (!FileSystemPath::PathExists(strPathType)) mkdir(strPathType.c_str(), 0775);
+                if (!FileSystemPath::PathExists(strPathType))
+                {
+                    mkdir(strPathType.c_str(), 0775);
+                }
                 finalPath = strPathType;
             }
-
         }
         // Check if $HOME/.supermodel exists
         else if (FileSystemPath::PathExists(Util::Format() << homePath << "/.supermodel"))
@@ -120,25 +122,39 @@ namespace FileSystemPath
             {
                 finalPath = Util::Format() << homePath << "/.config/supermodel";
                 // If directory doesn't exist, create it
-                if (!FileSystemPath::PathExists(finalPath)) mkdir(finalPath.c_str(), 0775);
+                if (!FileSystemPath::PathExists(finalPath))
+                {
+                    mkdir(finalPath.c_str(), 0775);
+                }
                 // If directory doesn't exist, create it
                 finalPath = Util::Format() << homePath << "/.config/supermodel/Config";
-                if (!FileSystemPath::PathExists(finalPath)) mkdir(finalPath.c_str(), 0775);
-                
+                if (!FileSystemPath::PathExists(finalPath))
+                {
+                    mkdir(finalPath.c_str(), 0775);
+                }
             }
             else
             {
                 finalPath = Util::Format() << homePath << "/.local/share/supermodel";
                 // If directory doesn't exist, create it
-                if (!FileSystemPath::PathExists(finalPath)) mkdir(finalPath.c_str(), 0775);
+                if (!FileSystemPath::PathExists(finalPath))
+                {
+                    mkdir(finalPath.c_str(), 0775);
+                }
                 // If directory doesn't exist, create it
                 finalPath = Util::Format() << homePath << "/.local/share/supermodel/" << strPathType;
-                if (!FileSystemPath::PathExists(finalPath)) mkdir(finalPath.c_str(), 0775);
+                if (!FileSystemPath::PathExists(finalPath))
+                {
+                    mkdir(finalPath.c_str(), 0775);
+                }
             }
             
         }
         
-        if (finalPath != "") finalPath = Util::Format() << finalPath << "/";
+        if (finalPath != "")
+        {
+            finalPath = Util::Format() << finalPath << "/";
+        }
 
         return finalPath;
 
