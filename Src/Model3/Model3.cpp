@@ -2042,7 +2042,7 @@ void CModel3::RunMainBoardFrame(void)
 	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned offsetCycles   = (unsigned)((float)frameCycles * 33.f / 100.0f);
-    unsigned dispCycles     = frameCycles - offsetCycles;
+	unsigned dispCycles     = frameCycles - offsetCycles;
 	unsigned statusCycles   = (unsigned)((float)frameCycles * (0.005f));
 
 	// we think a frame looks like this on the model 2
@@ -2069,12 +2069,12 @@ void CModel3::RunMainBoardFrame(void)
 		ppc_execute(offsetCycles);
 		IRQ.Assert(0x02);								// start at 33% of the frame
 
-        // keep running cycles until IRQ2 is acknowledged
-        while (IRQ.ReadIRQEnable() & 0x2 && IRQ.ReadIRQState() & 0x2 && dispCycles > 1000)
-        {
-            ppc_execute(1000);
-            dispCycles -= 1000;
-        }
+		// keep running cycles until IRQ2 is acknowledged
+		while (IRQ.ReadIRQEnable() & 0x2 && IRQ.ReadIRQState() & 0x2 && dispCycles > 1000)
+		{
+			ppc_execute(1000);
+			dispCycles -= 1000;
+		}
 
 		/*
 		* Sound:
