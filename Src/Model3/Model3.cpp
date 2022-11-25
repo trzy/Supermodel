@@ -2070,6 +2070,8 @@ void CModel3::RunMainBoardFrame(void)
 		IRQ.Assert(0x02);								// start at 33% of the frame
 
 		// keep running cycles until IRQ2 is acknowledged
+        // Ski Champ can hang if we check the MIDI control port too early
+        // and miss MIDI interrupts pending before the next IRQ2
 		while (IRQ.ReadIRQEnable() & 0x2 && IRQ.ReadIRQState() & 0x2 && dispCycles > 1000)
 		{
 			ppc_execute(1000);
