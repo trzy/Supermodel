@@ -351,7 +351,7 @@ void R3DFrameBuffers::AllocShaderWipe()
 
 	m_shaderWipe.LoadShaders(vertexShader, fragmentShader);
 
-	m_shaderWipe.uniformLoc[0] = m_shaderTrans.GetUniformLocation("texColor");
+	m_shaderWipe.uniformLoc[0] = m_shaderWipe.GetUniformLocation("texColor");
 }
 
 void R3DFrameBuffers::Draw()
