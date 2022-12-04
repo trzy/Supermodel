@@ -471,15 +471,24 @@ static void SaveFrameBuffer(const std::string& file)
 void Screenshot()
 {
     // Make a screenshot
-    char file[128];
-    std::string info = "Screenshot created: ";
     time_t now = std::time(nullptr);
     tm* ltm = std::localtime(&now);
+    std::string file = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Screenshots)
+        << "Screenshot_"
+        << std::setfill('0') << std::setw(4) << (1900 + ltm->tm_year)
+        << '-'
+        << std::setw(2) << (1 + ltm->tm_mon)
+        << '-'
+        << std::setw(2) << ltm->tm_mday
+        << "_("
+        << std::setw(2) << ltm->tm_hour
+        << '-'
+        << std::setw(2) << ltm->tm_min
+        << '-'
+        << std::setw(2) << ltm->tm_sec
+        << ").bmp";
 
-    sprintf(file, "%sScreenshot %.4d-%.2d-%.2d (%.2d-%.2d-%.2d).bmp", FileSystemPath::GetPath(FileSystemPath::Screenshots).c_str(), 1900 + ltm->tm_year, 1 + ltm->tm_mon, ltm->tm_mday, ltm->tm_hour, ltm->tm_min, ltm->tm_sec);
-
-    info += file;
-    puts(info.c_str());
+    std::cout << "Screenshot created: " << file << std::endl;
     SaveFrameBuffer(file);
 }
 
