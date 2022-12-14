@@ -257,6 +257,9 @@
     <ClCompile Include="..\Src\OSD\Windows\WinOutputs.cpp">
       <Filter>Source Files\OSD\Windows</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\Windows\FileSystemPath.cpp">
+      <Filter>Source Files\OSD\Windows</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\Pkgs\glew.c">
       <Filter>Source Files\Pkgs</Filter>
     </ClCompile>

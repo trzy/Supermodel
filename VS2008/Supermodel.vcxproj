@@ -351,6 +351,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\OSD\SDL\SDLInputSystem.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Thread.cpp" />
     <ClCompile Include="..\Src\OSD\Windows\DirectInputSystem.cpp" />
+    <ClCompile Include="..\Src\OSD\Windows\FileSystemPath.cpp" />
     <ClCompile Include="..\Src\OSD\Windows\WinOutputs.cpp" />
     <ClCompile Include="..\Src\Pkgs\glew.c">
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
