@@ -36,6 +36,44 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 		m_numPolyVerts	= 4;
 		m_primType		= GL_LINES_ADJACENCY;
 	}
+
+	m_r3dShader.LoadShader();
+	glUseProgram(0);
+
+	// setup our texture memory
+
+	glGenTextures(1, &m_textureBuffer);
+	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 2048, 2048, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);	// allocate storage
+
+	// setup up our vertex buffer memory
+
+	glGenVertexArrays(1, &m_vao);
+	glBindVertexArray(m_vao);
+	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(FVertex) * (MAX_RAM_VERTS + MAX_ROM_VERTS));
+	m_vbo.Bind(true);
+
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inVertex"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inNormal"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inTexCoord"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inColour"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFaceNormal"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFixedShade"));
+
+	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
+
+	glBindVertexArray(0);
+	m_vbo.Bind(false);
 }
 
 CNew3D::~CNew3D()
@@ -88,50 +126,13 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	m_yRatio	= yRes * (float)(1.0 / 384.0);
 	m_xOffs		= xOffset;
 	m_yOffs		= yOffset;
-	m_xRes    = xRes;
-	m_yRes    = yRes;
+	m_xRes		= xRes;
+	m_yRes		= yRes;
 	m_totalXRes	= totalXResParam;
 	m_totalYRes = totalYResParam;
 
-	m_r3dShader.LoadShader();
-	glUseProgram(0);
-
+	m_r3dFrameBuffers.DestroyFBO();		// remove any old ones if created
 	m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
-
-	// setup our texture memory
-
-	glGenTextures(1, &m_textureBuffer);
-	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 2048, 2048, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);	// allocate storage
-
-	// setup up our vertex buffer memory
-
-	glGenVertexArrays(1, &m_vao);
-	glBindVertexArray(m_vao);
-	m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(FVertex) * (MAX_RAM_VERTS + MAX_ROM_VERTS));
-	m_vbo.Bind(true);
-
-	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inVertex"));
-	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inNormal"));
-	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inTexCoord"));
-	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inColour"));
-	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFaceNormal"));
-	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFixedShade"));
-
-	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
-
-	glBindVertexArray(0);
-	m_vbo.Bind(false);
 
 	return OKAY;
 }
