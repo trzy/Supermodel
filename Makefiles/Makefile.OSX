@@ -73,6 +73,9 @@ PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/Library/Frameworks/
 # Core Makefile
 ###############################################################################
 
+PLATFORM_SRC_FILES = \
+	Src/OSD/OSX/FileSystemPath.cpp
+
 include Makefiles/Rules.inc
 
 clean:

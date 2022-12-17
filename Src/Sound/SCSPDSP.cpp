@@ -150,13 +150,10 @@ unsigned char UnpackFunc[]={0x8B,0xD8,0x8B,0xC8,0x81,0xE3,0x00,0x80,0x00,0x00,0x
 
 static UINT16 PACK(INT32 val)
 {
-	UINT32 temp;
-	int sign, exponent, k;
-
-	sign = (val >> 23) & 0x1;
-	temp = (val ^ (val << 1)) & 0xFFFFFF;
-	exponent = 0;
-	for (k = 0; k < 12; k++)
+	int sign = (val >> 23) & 0x1;
+	UINT32 temp = (val ^ (val << 1)) & 0xFFFFFF;
+	int exponent = 0;
+	for (int k = 0; k < 12; k++)
 	{
 		if (temp & 0x800000)
 			break;
@@ -177,13 +174,10 @@ static UINT16 PACK(INT32 val)
 
 static INT32 UNPACK(UINT16 val)
 {
-	int sign, exponent, mantissa;
-	INT32 uval;
-
-	sign = (val >> 15) & 0x1;
-	exponent = (val >> 11) & 0xF;
-	mantissa = val & 0x7FF;
-	uval = mantissa << 11;
+	int sign = (val >> 15) & 0x1;
+	int exponent = (val >> 11) & 0xF;
+	int mantissa = val & 0x7FF;
+	INT32 uval = mantissa << 11;
 	if (exponent > 11)
 	{
 		exponent = 11;
@@ -417,7 +411,7 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 			//ADDR+=DSP->RBP<<13;
 			//MEMVAL=DSP->SCSPRAM[ADDR>>1];
 			ADDR += DSP->RBP << 12;
-			if (ADDR > 0x7ffff) ADDR = 0;
+			if (ADDR > 0x7ffff) ADDR = 0; //!! MAME has ADDR <<= 1 in here, but this seems to be wrong?
 			if (MRD && (step & 1)) //memory only allowed on odd? DoA inserts NOPs on even
 			{
 				if (NOFL)
