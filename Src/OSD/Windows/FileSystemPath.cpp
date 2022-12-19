@@ -42,5 +42,7 @@ namespace FileSystemPath
         case Screenshots:
             return "";
         }
+
+        return "";
     }
 }

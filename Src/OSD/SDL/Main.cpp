@@ -119,7 +119,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   float yRes = float(*yResPtr);
   if (keepAspectRatio)
   {
-    float model3Ratio = 496.0/384.0;
+    float model3Ratio = float(496.0/384.0);
     if (yRes < (xRes/model3Ratio))
       xRes = yRes*model3Ratio;
     if (xRes < (yRes*model3Ratio))
@@ -174,6 +174,42 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
 static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
     printf("OGLDebug:: 0x%X: %s\n", id, message);
+}
+
+// In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
+// This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at 
+// 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists
+// It it doesn't exist, then it'll probably just default to 60 or whatever your refresh rate is.
+static void SetFullScreenRefreshRate()
+{
+    float refreshRateHz = std::abs(s_runtime_config["RefreshRate"].ValueAs<float>());
+
+    if (refreshRateHz > 57.f && refreshRateHz < 58.f) {
+
+        int display_in_use = 0; /* Only using first display */
+
+        int display_mode_count = SDL_GetNumDisplayModes(display_in_use);
+        if (display_mode_count < 1) {
+            return;
+        }
+
+        for (int i = 0; i < display_mode_count; ++i) {
+
+            SDL_DisplayMode mode;
+
+            if (SDL_GetDisplayMode(display_in_use, i, &mode) != 0) {
+                return;
+            }
+
+            if (SDL_BITSPERPIXEL(mode.format) >= 24 && mode.refresh_rate == 58 && mode.w == totalXRes && mode.h == totalYRes) {
+                int result = SDL_SetWindowDisplayMode(s_window, &mode);
+                if (result == 0) {
+                    printf("Custom fullscreen mode set: %ix%i@57.524 Hz\n", mode.w, mode.h);
+                }
+                break;
+            }
+        }
+    }
 }
 
 /*
@@ -1049,6 +1085,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
   SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+  
+  SetFullScreenRefreshRate();
+
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
   bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
   if (OKAY != ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
