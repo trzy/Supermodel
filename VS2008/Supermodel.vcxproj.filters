@@ -464,6 +464,9 @@
     <ClCompile Include="..\Src\Network\SimNetBoard.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -840,6 +843,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\Util\BitCast.h">
       <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\Crosshair.h">
+      <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
