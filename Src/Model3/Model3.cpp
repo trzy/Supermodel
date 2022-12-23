@@ -3224,6 +3224,10 @@ CModel3::CModel3(Util::Config::Node &config)
   DSB = NULL;
   DriveBoard = NULL;
 
+#ifdef NET_BOARD
+  NetBoard = NULL;
+#endif
+
   securityPtr = 0;
 
   startedThreads = false;
@@ -3302,6 +3306,14 @@ CModel3::~CModel3(void)
       delete DriveBoard;
       DriveBoard = NULL;
   }
+
+#ifdef NET_BOARD
+  if (NetBoard != NULL)
+  {
+      delete NetBoard;
+      NetBoard = NULL;
+  }
+#endif
 
   Inputs = NULL;
   Outputs = NULL;
