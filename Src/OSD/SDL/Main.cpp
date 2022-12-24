@@ -205,7 +205,10 @@ static void SetFullScreenRefreshRate()
                 if (mode.refresh_rate == 57 || mode.refresh_rate == 58) {       // nvidia is fairly flexible in what refresh rate windows will show, so we can match either 57 or 58,
                     int result = SDL_SetWindowDisplayMode(s_window, &mode);     // both are totally non standard frequencies and shouldn't be set incorrectly
                     if (result == 0) {
-                        printf("Custom fullscreen mode set: %ix%i@57.524 Hz\n", mode.w, mode.h);
+                        result = SDL_SetWindowFullscreen(s_window, SDL_WINDOW_FULLSCREEN);
+                        if (result == 0) {
+                            printf("Custom fullscreen mode set: %ix%i@57.524 Hz\n", mode.w, mode.h);
+                        }
                     }
                     break;
                 }
