@@ -14,12 +14,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: msys2/setup-msys2@v2
-    - shell: msys2 {0}
-      run: |
-        pacman -S mingw64/mingw-w64-x86_64-gcc
-        pacman -S mingw64/mingw-w64-x86_64-make
-        pacman -S mingw64/mingw-w64-x86_64-SDL2
-        pacman -S mingw64/mingw-w64-x86_64-SDL2_net
+    - uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          mingw64/mingw-w64-x86_64-gcc
+          mingw64/mingw-w64-x86_64-make
+          mingw64/mingw-w64-x86_64-SDL2
+          mingw64/mingw-w64-x86_64-SDL2_net
     - shell: msys2 {0}
       run: mingw32-make -f Makefiles/Makefile.Win32
     - uses: actions/upload-artifact@v3
