@@ -23,11 +23,11 @@ jobs:
           mingw64/mingw-w64-x86_64-SDL2_net
     - name: Update Path
       shell: msys2 {0}
-      run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
+      run: echo "/mingw64/bin" >> $GITHUB_PATH
     - name: make
       shell: msys2 {0}
       run: mingw32-make -f Makefiles/Makefile.Win32
     - uses: actions/upload-artifact@v3
       with:
         name: supermodel
-        path: bin\supermodel
+        path: bin/supermodel
