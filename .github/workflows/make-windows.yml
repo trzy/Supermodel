@@ -1,4 +1,4 @@
-name: build-windows
+name: make-windows
 
 on:
   push:
