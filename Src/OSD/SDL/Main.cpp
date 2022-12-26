@@ -1280,6 +1280,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
         goto QuitError;
       Model3->AttachRenderers(Render2D,Render3D);
 
+      Render3D->UploadTextures(0, 0, 0, 2048, 2048);    // sync texture memory
+
       Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
     }
     else if (Inputs->uiSaveState->Pressed())
