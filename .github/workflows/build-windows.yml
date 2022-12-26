@@ -22,8 +22,8 @@ jobs:
           mingw64/mingw-w64-x86_64-SDL2
           mingw64/mingw-w64-x86_64-SDL2_net
     - name: Update Path
-      shell: pwsh
-      run: Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
+      shell: cmd
+      run: echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
     - name: make
       shell: cmd
       run: mingw32-make -f Makefiles/Makefile.Win32
