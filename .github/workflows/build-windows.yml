@@ -14,7 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: msys2/setup-msys2@v2
-    - uses: msys2/setup-msys2@v2
       with:
         update: true
         install: >-
@@ -24,8 +23,9 @@ jobs:
           mingw64/mingw-w64-x86_64-SDL2_net
     - name: Update Path
       shell: pwsh
-      run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-    - shell: msys2 {0}
+      run: Add-Content $env:GITHUB_PATH "C:\msys64\mingw64\bin"
+    - name: make
+      shell: cmd
       run: mingw32-make -f Makefiles/Makefile.Win32
     - uses: actions/upload-artifact@v3
       with:
