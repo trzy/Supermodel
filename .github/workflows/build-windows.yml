@@ -1,0 +1,28 @@
+name: build-windows
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+  
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: msys2/setup-msys2@v2
+    - shell: msys2 {0}
+      run: |
+        pacman -S mingw64/mingw-w64-x86_64-gcc
+        pacman -S mingw64/mingw-w64-x86_64-make
+        pacman -S mingw64/mingw-w64-x86_64-SDL2
+        pacman -S mingw64/mingw-w64-x86_64-SDL2_net
+    - shell: msys2 {0}
+      run: mingw32-make -f Makefiles/Makefile.Win32
+    - uses: actions/upload-artifact@v3
+      with:
+        name: supermodel
+        path: bin\supermodel
