@@ -45,4 +45,9 @@
 #endif
 #endif
 
+
+SDL_Window *get_window();
+unsigned int get_total_width();
+unsigned int get_total_height();
+
 #endif  // INCLUDED_SDLINCLUDES_H

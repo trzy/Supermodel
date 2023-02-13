@@ -95,6 +95,8 @@ static Util::Config::Node s_runtime_config("Global");
 
 SDL_Window *s_window = nullptr;
 
+SDL_Window *get_window() { return s_window; }
+
 /*
  * Position and size of rectangular region within OpenGL display to render to.
  * Unlike the config tree, these end up containing the actual resolution (and
@@ -104,6 +106,9 @@ SDL_Window *s_window = nullptr;
 static unsigned  xOffset, yOffset;      // offset of renderer output within OpenGL viewport
 static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
+
+unsigned int get_total_width() { return totalXRes; }
+unsigned int get_total_height() { return totalYRes; }
 
 static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {

@@ -43,6 +43,9 @@ struct SDLKeyMapStruct
 	SDL_Scancode sdlKey;
 };
 
+
+#define MAX_MICE 32
+
 /*
  * Input system that uses SDL.
  */
@@ -63,12 +66,12 @@ private:
 	// Current key state obtained from SDL
 	const Uint8 *m_keyState;
 
-	// Current mouse state obtained from SDL
-	int m_mouseX;
-	int m_mouseY;
-	int m_mouseZ;
-	short m_mouseWheelDir;
-	Uint8 m_mouseButtons;
+	// Current mouse state obtained from ManyMouse
+	int m_mouseX[MAX_MICE];
+	int m_mouseY[MAX_MICE];
+	int m_mouseZ[MAX_MICE];
+	short m_mouseWheelDir[MAX_MICE];
+	Uint8 m_mouseButtons[MAX_MICE];
 
 	// SDL2 ffb
 	SDL_HapticEffect eff;
@@ -85,6 +88,23 @@ private:
 		int effectFrictionForceID = -1;
 	};
 	std::vector<hapticInfo> m_SDLHapticDatas;
+
+	struct Mouse
+	{
+		int connected;
+		int x;
+		int y;
+		int relx;
+		int rely;
+		SDL_Color color;
+		char name[MAX_NAME_LENGTH + 1];
+		Uint32 buttons;
+		Uint32 scrolluptick;
+		Uint32 scrolldowntick;
+		Uint32 scrolllefttick;
+		Uint32 scrollrighttick;
+	};
+	std::vector<MouseDetails> m_mseDetails;
 
 	/*
 	 * Opens all attached joysticks.
