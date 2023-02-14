@@ -1110,6 +1110,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Hide mouse if fullscreen, enable crosshairs for gun games
   Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
+  if (!s_runtime_config["FullScreen"].ValueAs<bool>())
+      Inputs->GetInputSystem()->SetMouseVisibility(s_runtime_config["MouseCursor"].ValueAs<bool>());
   gameHasLightguns = !!(game.inputs & (Game::INPUT_GUN1|Game::INPUT_GUN2));
   gameHasLightguns |= game.name == "lostwsga";
   currentInputs = game.inputs;
@@ -1288,6 +1290,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       Render3D->UploadTextures(0, 0, 0, 2048, 2048);    // sync texture memory
 
       Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
+      if (!s_runtime_config["FullScreen"].ValueAs<bool>())
+          Inputs->GetInputSystem()->SetMouseVisibility(s_runtime_config["MouseCursor"].ValueAs<bool>());
     }
     else if (Inputs->uiSaveState->Pressed())
     {
@@ -1643,6 +1647,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("RefreshRate", 60.0f);
   config.Set("ShowFrameRate", false);
   config.Set("Crosshairs", int(0));
+  config.Set("MouseCursor", true);
   config.Set("FlipStereo", false);
 #ifdef SUPERMODEL_WIN32
   config.Set("InputSystem", "dinput");
@@ -1726,6 +1731,7 @@ static void Help(void)
   puts("  -show-fps               Display frame rate in window title bar");
   puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
   puts("                          0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
+  puts("  -nomousecursor          Disable desktop mouse cursor in Windowed mode");
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
   puts("  -quad-rendering         Enable proper quad rendering");
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
@@ -1860,6 +1866,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-dsb",              { "EmulateDSB",       false } },
     { "-legacy-scsp",         { "LegacySoundDSP",   true } },
     { "-new-scsp",            { "LegacySoundDSP",   false } },
+    { "-nomousecursor",       { "MouseCursor",      false } },
 #ifdef NET_BOARD
     { "-net",                 { "Network",       true } },
     { "-no-net",              { "Network",       false } },
