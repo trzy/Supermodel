@@ -1086,8 +1086,16 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
+
+  if (  s_runtime_config["Xpos"].ValueAs<std::string>() != "NA" &&
+        s_runtime_config["Ypos"].ValueAs<std::string>() != "NA" )
+    SDL_SetWindowPosition(s_window, s_runtime_config["Xpos"].ValueAs<unsigned>(), s_runtime_config["Ypos"].ValueAs<unsigned>());
+  else  
   SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   
+  if (s_runtime_config["BorderLess"].ValueAs<bool>())
+    SDL_SetWindowBordered(s_window, SDL_FALSE);
+
   SetFullScreenRefreshRate();
 
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
@@ -1629,7 +1637,11 @@ static Util::Config::Node DefaultConfig()
   config.Set("QuadRendering", false);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
+  config.Set("XPos", "NA");
+  config.Set("YPos", "NA");
   config.Set("FullScreen", false);
+  config.Set("BorderLess", false);
+
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
   config.Set("WideBackground", false);
@@ -1708,7 +1720,9 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
+  puts("  -pos=<x>,<y>            Position [Default: centered]");  
   puts("  -window                 Windowed mode [Default]");
+  puts("  -borderless             Windowed mode with no border");
   puts("  -fullscreen             Full screen mode");
   puts("  -wide-screen            Expand 3D field of view to screen width");
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
@@ -1830,6 +1844,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-gpu-thread",       { "GPUMultiThreaded", false } },
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
+    { "-borderless",          { "BorderLess",       true } },
     { "-no-wide-screen",      { "WideScreen",       false } },
     { "-wide-screen",         { "WideScreen",       true } },
     { "-stretch",             { "Stretch",          true } },
@@ -1935,6 +1950,31 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
             cmd_line.error = true;
           }
         }
+      }
+      else if (arg == "-pos" || arg.find("-pos=") == 0)
+      {
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-pos' requires both a X and Y (e.g., '-pos=10,0').");
+              cmd_line.error = true;
+          }
+          else
+          {
+              unsigned  x, y;
+              if (2 == sscanf(&argv[i][4], "=%u,%u", &x, &y))
+              {
+                  std::string xres = Util::Format() << x;
+                  std::string yres = Util::Format() << y;
+                  cmd_line.config.Set("Xpos", xres);
+                  cmd_line.config.Set("Ypos", yres);
+              }
+              else
+              {
+                  ErrorLog("'-pos' requires both a X and Y (e.g., '-pos=10,0').");
+                  cmd_line.error = true;
+              }
+          }
       }
       else if (arg == "-true-hz")
         cmd_line.config.Set("RefreshRate", 57.524f);
