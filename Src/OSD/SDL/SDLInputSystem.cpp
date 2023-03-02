@@ -192,6 +192,11 @@ void CSDLInputSystem::OpenJoysticks()
   int numHapticAxes = 0;
   int possibleEffect = 0;
 
+  //allow joystick to be fetch if windows has no focus.
+  //this is usefull for multiple instance networked on the same machine
+  SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+
+
   for (int joyNum = 0; joyNum < numJoys; joyNum++)
   {
     numHapticAxes = 0;
