@@ -1087,11 +1087,10 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
 
-  if (  s_runtime_config["Xpos"].ValueAs<std::string>() != "NA" &&
-        s_runtime_config["Ypos"].ValueAs<std::string>() != "NA" )
+  if ( !s_runtime_config["Xpos"].Empty() && !s_runtime_config["Xpos"].Empty())
     SDL_SetWindowPosition(s_window, s_runtime_config["Xpos"].ValueAs<unsigned>(), s_runtime_config["Ypos"].ValueAs<unsigned>());
   else  
-  SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   
   if (s_runtime_config["BorderLess"].ValueAs<bool>())
     SDL_SetWindowBordered(s_window, SDL_FALSE);
