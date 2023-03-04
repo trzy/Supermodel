@@ -1087,13 +1087,19 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
 
-  if ( !s_runtime_config["Xpos"].Empty() && !s_runtime_config["Xpos"].Empty())
-    SDL_SetWindowPosition(s_window, s_runtime_config["Xpos"].ValueAs<unsigned>(), s_runtime_config["Ypos"].ValueAs<unsigned>());
-  else  
-    SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+  if (!s_runtime_config["WindowXPosition"].Empty() && !s_runtime_config["WindowYPosition"].Empty())
+  {
+    SDL_SetWindowPosition(s_window, s_runtime_config["WindowXPosition"].ValueAs<unsigned>(), s_runtime_config["WindowYPosition"].ValueAs<unsigned>());
+  }
+  else
+  {
+      SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+  }
   
-  if (s_runtime_config["BorderLess"].ValueAs<bool>())
+  if (s_runtime_config["BorderlessWindow"].ValueAs<bool>())
+  {
     SDL_SetWindowBordered(s_window, SDL_FALSE);
+  }
 
   SetFullScreenRefreshRate();
 
@@ -1636,10 +1642,10 @@ static Util::Config::Node DefaultConfig()
   config.Set("QuadRendering", false);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
-  config.Set("XPos", "NA");
-  config.Set("YPos", "NA");
+  config.Set("WindowXPosition", "NA");
+  config.Set("WindowYPosition", "NA");
   config.Set("FullScreen", false);
-  config.Set("BorderLess", false);
+  config.Set("BorderlessWindow", false);
 
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
@@ -1719,7 +1725,7 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
-  puts("  -pos=<x>,<y>            Position [Default: centered]");  
+  puts("  -window-pos=<x>,<y>     Position [Default: centered]");  
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
   puts("  -fullscreen             Full screen mode");
@@ -1843,7 +1849,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-gpu-thread",       { "GPUMultiThreaded", false } },
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
-    { "-borderless",          { "BorderLess",       true } },
+    { "-borderless",          { "BorderlessWindow", true } },
     { "-no-wide-screen",      { "WideScreen",       false } },
     { "-wide-screen",         { "WideScreen",       true } },
     { "-stretch",             { "Stretch",          true } },
@@ -1950,12 +1956,12 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
           }
         }
       }
-      else if (arg == "-pos" || arg.find("-pos=") == 0)
+      else if (arg == "-window-pos" || arg.find("-window-pos=") == 0)
       {
           std::vector<std::string> parts = Util::Format(arg).Split('=');
           if (parts.size() != 2)
           {
-              ErrorLog("'-pos' requires both a X and Y (e.g., '-pos=10,0').");
+              ErrorLog("'-window-pos' requires both an X and Y position (e.g., '-window-pos=10,0').");
               cmd_line.error = true;
           }
           else
@@ -1965,12 +1971,12 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               {
                   std::string xres = Util::Format() << x;
                   std::string yres = Util::Format() << y;
-                  cmd_line.config.Set("Xpos", xres);
-                  cmd_line.config.Set("Ypos", yres);
+                  cmd_line.config.Set("WindowXPosition", xres);
+                  cmd_line.config.Set("WindowYPosition", yres);
               }
               else
               {
-                  ErrorLog("'-pos' requires both a X and Y (e.g., '-pos=10,0').");
+                  ErrorLog("'-window-pos' requires both an X and Y position (e.g., '-window-pos=10,0').");
                   cmd_line.error = true;
               }
           }
