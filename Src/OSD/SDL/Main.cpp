@@ -177,7 +177,7 @@ static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLen
 }
 
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
-// This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at 
+// This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
 // 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists
 // It it doesn't exist, then it'll probably just default to 60 or whatever your refresh rate is.
 static void SetFullScreenRefreshRate()
@@ -828,7 +828,7 @@ private:
         const char* vertexShader = R"glsl(
 
             #version 410 core
-             
+
             uniform mat4 mvp;
             layout(location = 0) in vec3 inVertices;
 
@@ -841,7 +841,7 @@ private:
         const char* fragmentShader = R"glsl(
 
             #version 410 core
-             
+
             uniform vec4 colour;
             out vec4 fragColour;
 
@@ -1087,15 +1087,10 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
 
-  if (!s_runtime_config["WindowXPosition"].Empty() && !s_runtime_config["WindowYPosition"].Empty())
-  {
-    SDL_SetWindowPosition(s_window, s_runtime_config["WindowXPosition"].ValueAs<unsigned>(), s_runtime_config["WindowYPosition"].ValueAs<unsigned>());
-  }
-  else
-  {
-    SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-  }
-  
+  int xpos = s_runtime_config["WindowXPosition"].Exists() ? s_runtime_config["WindowXPosition"].ValueAs<int>() : SDL_WINDOWPOS_CENTERED;
+  int ypos = s_runtime_config["WindowYPosition"].Exists() ? s_runtime_config["WindowYPosition"].ValueAs<int>() : SDL_WINDOWPOS_CENTERED;
+  SDL_SetWindowPosition(s_window, xpos, ypos);
+
   if (s_runtime_config["BorderlessWindow"].ValueAs<bool>())
   {
     SDL_SetWindowBordered(s_window, SDL_FALSE);
@@ -1642,8 +1637,8 @@ static Util::Config::Node DefaultConfig()
   config.Set("QuadRendering", false);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
-  config.Set("WindowXPosition", "NA");
-  config.Set("WindowYPosition", "NA");
+  config.SetEmpty("WindowXPosition");
+  config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false);
   config.Set("BorderlessWindow", false);
 
@@ -1725,7 +1720,7 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
-  puts("  -window-pos=<x>,<y>     Window position [Default: centered]");  
+  puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
   puts("  -fullscreen             Full screen mode");
@@ -1966,13 +1961,11 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
           }
           else
           {
-              unsigned  x, y;
-              if (2 == sscanf(&argv[i][4], "=%u,%u", &x, &y))
+              int xpos, ypos;
+              if (2 == sscanf(&argv[i][11], "=%d,%d", &xpos, &ypos))
               {
-                  std::string xres = Util::Format() << x;
-                  std::string yres = Util::Format() << y;
-                  cmd_line.config.Set("WindowXPosition", xres);
-                  cmd_line.config.Set("WindowYPosition", yres);
+                  cmd_line.config.Set("WindowXPosition", xpos);
+                  cmd_line.config.Set("WindowYPosition", ypos);
               }
               else
               {
