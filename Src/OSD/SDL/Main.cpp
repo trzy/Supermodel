@@ -1093,7 +1093,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   }
   else
   {
-      SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
   }
   
   if (s_runtime_config["BorderlessWindow"].ValueAs<bool>())
@@ -1725,7 +1725,7 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
-  puts("  -window-pos=<x>,<y>     Position [Default: centered]");  
+  puts("  -window-pos=<x>,<y>     Window position [Default: centered]");  
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
   puts("  -fullscreen             Full screen mode");
