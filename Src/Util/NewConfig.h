@@ -36,6 +36,7 @@ namespace Util
 
       void CheckEmptyOrMissing() const;
       const Node &MissingNode(const std::string &key) const;
+      Node &AddEmpty(const std::string &path);
       void AddChild(Node &parent, ptr_t &node);
       void DeepCopy(const Node &that);
       void Swap(Node &rhs);
@@ -168,6 +169,11 @@ namespace Util
         return m_value;
       }
 
+      inline void Clear()
+      {
+        m_value = nullptr;
+      }
+
       inline void SetValue(const std::shared_ptr<GenericValue> &value)
       {
         m_value = value;
@@ -222,32 +228,9 @@ namespace Util
       template <typename T>
       Node &Add(const std::string &path, const T &value)
       {
-        std::vector<std::string> keys = Util::Format(path).Split('/');
-        Node *parent = this;
-        ptr_t node;
-        for (size_t i = 0; i < keys.size(); i++)
-        {
-          bool leaf = i == keys.size() - 1;
-          auto it = parent->m_children.find(keys[i]);
-          if (leaf || it == parent->m_children.end())
-          {
-            // Create node at this level
-            node = std::make_shared<Node>(keys[i]);
-            // The leaf node gets the value
-            if (leaf)
-              node->SetValue(value);
-            // Attach node to parent and move down to next nesting level: last
-            // created node is new parent
-            AddChild(*parent, node);
-            parent = node.get();
-          }
-          else
-          {
-            // Descend deeper...
-            parent = it->second.get();
-          }
-        }
-        return *node;
+        Node &new_leaf_node = AddEmpty(path);
+        new_leaf_node.SetValue(value);
+        return new_leaf_node;
       }
 
       Node &Add(const std::string &path)
@@ -264,6 +247,19 @@ namespace Util
           node->SetValue(value);
         else
           Add(key, value);
+      }
+
+      void SetEmpty(const std::string &key)
+      {
+        Node *node = TryGet(key);
+        if (node)
+        {
+          node->Clear();
+        }
+        else
+        {
+          AddEmpty(key);
+        }
       }
 
       // True if value is empty (does not exist)
@@ -312,6 +308,8 @@ namespace Util
       Node(Node&& that) noexcept;
       ~Node();
     };
+
+    void PrintConfigTree(const Node &config, int indent_level = 0, int tab_stops = 2);
   } // Config
 } // Util
 
