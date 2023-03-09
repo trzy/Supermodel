@@ -853,7 +853,7 @@
   <game name="harley">
     <identity>
       <title>Harley-Davidson and L.A. Riders</title>
-      <version>Revision B</version>
+      <version>Export, Revision B</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -926,7 +926,7 @@
   <game name="harleya" parent="harley">
     <identity>
       <title>Harley-Davidson and L.A. Riders</title>
-      <version>Revision A</version>
+      <version>Export, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -1218,13 +1218,8 @@
     </roms>
   </game>
 
-  <game name="mgtrkbad">
-    <!--
-      Original bad ROM set. EPROMs 18 and 20 are corrupted, causing attract
-      mode to stop rendering. A patch is applied here. The game was redumped
-      September 2022 but because new MAME ROM sets are usually slow to
-      propagate online, we retain support for the old, patched version.
-    -->
+  <game name="magtruck">
+    <!-- Correct dump of Magical Truck Adventure, redumped September 2022. -->
     <identity>
       <title>Magical Truck Adventure</title>
       <version>Japan</version>
@@ -1243,15 +1238,13 @@
     </hardware>
     <roms>
       <patches>
-	      <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
-        <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
-        <!-- Enable Region change (remove the patch to return to Japan region) -->
+	    <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21434.20" crc32="0xE028D7CA" />
+        <file offset="0" name="epr-21434.20" crc32="0x18F8626A" />
         <file offset="2" name="epr-21436.19" crc32="0x22BCBCA3" />
-        <file offset="4" name="epr-21433.18" crc32="0x60AA9D76" />
+        <file offset="4" name="epr-21433.18" crc32="0xB3B124FA" />
         <file offset="6" name="epr-21435.17" crc32="0x9B169446" />
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
@@ -1291,9 +1284,12 @@
     </roms>
   </game>
 
-  <game name="magtruck" parent="mgtrkbad">
+  <game name="mgtrkbad" parent="magtruck">
     <!--
-      Correct dump of Magical Truck Adventure, redumped September 2022.
+      Original bad ROM set. EPROMs 18 and 20 are corrupted, causing attract
+      mode to stop rendering. A patch is applied here. The game was redumped
+      September 2022 but because new MAME ROM sets are usually slow to
+      propagate online, we retain support for the old, patched version.
     -->
     <identity>
       <title>Magical Truck Adventure</title>
@@ -1313,12 +1309,16 @@
     </hardware>
     <roms>
       <patches>
-	      <!-- Enable Region change (remove the patch to return to Japan region) -->
+	    <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
+        <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
+        <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21434.20" crc32="0x18F8626A" />
-        <file offset="4" name="epr-21433.18" crc32="0xB3B124FA" />
+        <file offset="0" name="epr-21434.20" crc32="0xE028D7CA" />
+        <!-- file offset="2" name="epr-21436.19" crc32="0x22BCBCA3" - same data as EPR-21436 in MAGTRUCK -->
+        <file offset="4" name="epr-21433.18" crc32="0x60AA9D76" />
+        <!-- file offset="6" name="epr-21435.17" crc32="0x9B169446" - same data as EPR-21435 in MAGTRUCK -->
       </region>
     </roms>
   </game>
@@ -1326,7 +1326,7 @@
   <game name="oceanhun">
     <identity>
       <title>The Ocean Hunter</title>
-	  <version>Japan</version>
+	  <version>Japan, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1342,10 +1342,10 @@
     </hardware>
     <roms>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
-        <file offset="0" name="epr-21117.20" crc32="0x58D985f1" />
-        <file offset="2" name="epr-21116.19" crc32="0x69E31E85" />
-        <file offset="4" name="epr-21115.18" crc32="0x0BB9C107" />
-        <file offset="6" name="epr-21114.17" crc32="0x3ADFCB9D" />
+        <file offset="0" name="epr-21117a.20" crc32="0x2EE5B67D" />
+        <file offset="2" name="epr-21116a.19" crc32="0xD2CD1F7E" />
+        <file offset="4" name="epr-21115a.18" crc32="0xAC735888" />
+        <file offset="6" name="epr-21114a.17" crc32="0x75024695" />
       </region>
       <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
         <!-- CROM1 -->
@@ -1390,6 +1390,33 @@
         <file offset="0x400000" name="mpr-21096.24" crc32="0x0A0021A0" />
         <file offset="0x800000" name="mpr-21095.23" crc32="0x16D27A0A" />
         <file offset="0xC00000" name="mpr-21097.25" crc32="0x0D8033FC" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="oceanhuna" parent="oceanhun">
+    <identity>
+      <title>The Ocean Hunter</title>
+	    <version>Japan</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1998</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>2.1</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="analog_gun1" />
+        <input type="analog_gun2" />
+      </inputs>
+      <encryption_key>0x292B6A01</encryption_key>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-21117.20" crc32="0x58D985f1" />
+        <file offset="2" name="epr-21116.19" crc32="0x69E31E85" />
+        <file offset="4" name="epr-21115.18" crc32="0x0BB9C107" />
+        <file offset="6" name="epr-21114.17" crc32="0x3ADFCB9D" />
       </region>
     </roms>
   </game>
@@ -1517,7 +1544,7 @@
   <game name="scuddx" parent="scud">
     <identity>
       <title>Scud Race</title>
-      <version>Export, Deluxe</version>
+      <version>Export, Deluxe, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -2443,7 +2470,7 @@
   <game name="vf3">
     <identity>
       <title>Virtua Fighter 3</title>
-      <version>Revision D</version>
+      <version>Japan, Revision D</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -2521,7 +2548,7 @@
   <game name="vf3a" parent="vf3">
     <identity>
       <title>Virtua Fighter 3</title>
-      <version>Revision A</version>
+      <version>Japan, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -2549,7 +2576,7 @@
   <game name="vf3c" parent="vf3">
     <identity>
       <title>Virtua Fighter 3</title>
-      <version>Revision C</version>
+      <version>Japan, Revision C</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -2577,7 +2604,7 @@
   <game name="vf3tb" parent="vf3">
     <identity>
       <title>Virtua Fighter 3 Team Battle</title>
-	  <version>?</version>
+	  <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -2612,7 +2639,7 @@
   <game name="von2">
     <identity>
       <title>Virtual On 2: Oratorio Tangram</title>
-      <version>Revision B</version>
+      <version>Japan, Revision B</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -2693,7 +2720,7 @@
   <game name="von254g" parent="von2">
     <identity>
       <title>Virtual On 2: Oratorio Tangram</title>
-      <version>Ver 5.4g</version>
+      <version>Japan, Ver 5.4g</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -2722,7 +2749,7 @@
   <game name="von2a" parent="von2">
     <identity>
       <title>Virtual On 2: Oratorio Tangram</title>
-      <version>Revision A</version>
+      <version>Japan, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -2751,7 +2778,7 @@
   <game name="von2o" parent="von2">
     <identity>
       <title>Virtual On 2: Oratorio Tangram</title>
-      <version>?</version>
+      <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -2780,7 +2807,7 @@
   <game name="vs2">
     <identity>
       <title>Virtua Striker 2</title>
-      <version>Step 2.0</version>
+      <version>Step 2.0, Export, USA</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -2858,7 +2885,7 @@
   <game name="vs215" parent="vs2">
     <identity>
       <title>Virtua Striker 2</title>
-      <version>Step 1.5</version>
+      <version>Step 1.5, Export, USA</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -2885,9 +2912,10 @@
   </game>
 
   <game name="vs215o" parent="vs2">
+    <!-- locked to Japan, test or debug version with render/CPU data displayed on screen -->
     <identity>
       <title>Virtua Striker 2</title>
-      <version>Step 1.5, older</version>
+      <version>Step 1.5, Japan (test?)</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -2916,7 +2944,7 @@
   <game name="vs298">
     <identity>
       <title>Virtua Striker 2 '98</title>
-      <version>Step 2.0</version>
+      <version>Step 2.0, Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -3007,7 +3035,7 @@
   <game name="vs29815" parent="vs298">
     <identity>
       <title>Virtua Striker 2 '98</title>
-      <version>Step 1.5</version>
+      <version>Step 1.5, Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
