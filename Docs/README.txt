@@ -10,10 +10,10 @@
                  ####
 
                        A Sega Model 3 Arcade Emulator.
-                   Copyright 2003-2022 The Supermodel Team
+                   Copyright 2003-2023 The Supermodel Team
 
 
-                   USER MANUAL FOR SUPERMODEL VERSION 0.2A
+                        USER MANUAL FOR SUPERMODEL
 
 
 ================
@@ -21,30 +21,38 @@
 ================
 
 Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
-SDL, and can run on Windows, Linux, and Mac OS X.  In order to use it, you must
-legally possess ROM images of Model 3 games.  Learning to operate Supermodel
-will come with a steep learning curve for most people.  Before seeking out
-help, please read this user manual carefully.
+SDL, and can run on Windows, Linux, and Mac OS X.  Development began in January
+of 2011 and continues to focus on reverse engineering all aspects of the Model
+3 arcade platform.
+
+In order to use Supermodel, you must legally possess ROM images of Model 3 games.
+Learning to operate Supermodel will come with a steep learning curve for most
+people.  Before seeking out help, please read this user manual carefully.
 
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included in LICENSE.txt.  Additional copyright information for
 software included within Supermodel is located at the bottom of this file.
 
-The source code may be obtained from the official Supermodel web site:
+Windows 64-bit builds are updated automatically and are available for download
+on the official Supermodel download page.  Linux and MacOS users currently have
+to compile/build their own executable from the GitHub source code repository.
+
+The official Supermodel website:
 
     http://www.Supermodel3.com
+
+Supermodel's GitHub source code repository:
+
+    https://github.com/trzy/Supermodel
 
 
 ==============
   Disclaimer
 ==============
 
-This is an early public release of Supermodel.  It is very much preliminary,
-alpha version software (hence the 'a' in the version number).  Development
-began in January of 2011 and has focused on reverse engineering aspects of the
-Model 3 that are still unknown.  Consequently, many important features, such as
-a proper user interface, are not yet implemented and game compatibility is
-still low.
+Supermodel is a work-in-progress, open source emulator.  Emulation in Supermodel
+has evolved to the point where most games run well, however there may be some
+minor visual issues. You experience may vary.
 
 
 =====================
@@ -149,11 +157,8 @@ directories should be created:
     Saves/                  Directory where save states will be saved.
 
 Supermodel requires OpenGL 2.1 and a substantial amount of both video and
-system memory.  A very fast CPU and GPU are needed to achieve playable frame
-rates.
-
-As of this version, Linux and Mac OS X binaries are not provided.  Users must
-compile their own.
+system memory.  A modern 64-bit CPU and a mid range GPU are the minimum
+recommendations to achieve consistant frame rates of 60 FPS.
 
 
 =========================
@@ -184,121 +189,100 @@ command prompt.  In full screen mode, they will not be visible.
   4. Game Compatibility
 =========================
 
-Supermodel recognizes all known Model 3 ROM sets but not all of them are
-playable.  Below is a compatibility matrix.  The most obvious problem with each
-ROM set is reported.
+Supermodel recognizes all known Model 3 ROM sets. Below is a compatibility matrix.
+Other than minor graphical issues, if any, major issues are reported below:
 
-   ROM Set                    Title                  Playable?   Comments
-+-----------+-----------------------------------------+-----+-----------------+
-| bass      | Sega Bass Fishing                       | No  | No controls.    |
-+-----------+-----------------------------------------+-----+-----------------+
-| daytona2  | Daytona USA 2 Battle on the Edge        | Yes | Minor graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| dayto2pe  | Daytona USA 2 Power Edition             | Yes | Minor graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| dirtdvls  | Dirt Devils                             | Yes | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| dirtdvlsa | Dirt Devils (Alternate)                 | Yes | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| eca       | Emergency Call Ambulance                | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| ecax      | Emergency Call Ambulance (Export)       | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| fvipers2  | Fighting Vipers 2                       | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| getbass   | Get Bass                                | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| harley    | Harley Davidson & L.A. Riders           | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| harleyb   | Harley Davidson & L.A. Riders (Rev. B)  | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| lamachin  | L.A. Machineguns                        | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| lemans24  | Le Mans 24                              | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| lostwsga  | The Lost World                          | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| magtruck  | Magical Truck Adventure                 | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| oceanhun  | The Ocean Hunter                        | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scud      | Scud Race (Australia)                   | Yes | Minor shading   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scuda     | Scud Race (Export)                      | Yes | Minor shading   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scudj     | Scud Race (Japan)                       | Yes | Mis-colored 2D  |
-|           |                                         |     | graphics.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scudp     | Scud Race Plus                          | Yes | Minor shading   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| skichamp  | Ski Champ                               | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| spikeofe  | Spikeout Final Edition                  | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| spikeout  | Spikeout                                | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| srally2   | Sega Rally 2                            | Yes | Major graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| srally2x  | Sega Rally 2 DX                         | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| swtrilgy  | Star Wars Trilogy (Rev. A)              | Yes | Some graphics   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| swtrilgya | Star Wars Trilogy                       | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vf3       | Virtua Fighter 3                        | Yes | Major graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| vf3a      | Virtua Fighter 3 (Rev. A)               | Yes | Major graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| vf3tb     | Virtua Fighter 3 Team Battle            | No  | Cannot coin up. |
-+-----------+-----------------------------------------+-----+-----------------+
-| von2      | Virtual On Oratorio Tangram             | Yes | Encrypted 2D    |
-|           |                                         |     | graphics.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| von254g   | Virtual On Oratorio Tangram (Ver. 5.4g) | Yes | Encrypted 2D    |
-|           |                                         |     | graphics.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs2       | Virtua Striker 2 (Step 2.0)             | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs215     | Virtua Striker 2 (Step 1.5)             | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs298     | Virtua Striker 2 '98 (Step 2.0)         | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs29815   | Virtua Striker 2 '98 (Step 1.5)         | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs299     | Virtua Striker 2 '99                    | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs299a    | Virtua Striker 2 '99 (Rev. A)           | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs299b    | Virtua Striker 2 '99 (Rev. B)           | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs2v991   | Virtua Striker 2 '99.1                  | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
+   ROM Set                    Title                           Comments
++------------+-----------------------------------------+-----------------------+
+| bassdx     | Sega Bass Fishing (USA)                 |                       |
+|  getbassdx | Get Bass: Sega Bass Fishing (Deluxe)    |                       |
+|  getbassur | Get Bass: Sega Bass Fishing (Upright)   |                       |
+|  getbass   | Get Bass: Sega Bass Fishing             |                       |
++------------+-----------------------------------------+-----------------------+
+| daytona2   | Daytona USA 2 Battle on the Edge        |                       |
+|  dayto2pe  | Daytona USA 2 Power Edition             |                       |
++------------+-----------------------------------------+-----------------------+
+| dirtdvls   | Dirt Devils (Export, Revision A)        |                       |
+|  dirtdvlsu | Dirt Devils (USA, Revision A)           |                       |
+|  dirtdvlsj | Dirt Devils (Japan, Revision A)         |                       |
+|  dirtdvlsau| Dirt Devils (Australia, Revision A)     |                       |
+|  dirtdvlsg | Dirt Devils (Export, Ver. G?)           |                       |
++------------+-----------------------------------------+-----------------------+
+| eca        | Emergency Call Ambulance (Export)       |                       |
+|  ecau      | Emergency Call Ambulance (USA)          |                       |
+|  ecaj      | Emergency Call Ambulance (Japan)        |                       |
+|  ecap      | Emergency Call Ambulance (US proto?)    |                       |
++------------+-----------------------------------------+-----------------------+
+| fvipers2   | Fighting Vipers 2 (Japan, Revision A)   |                       |
+|  fvipers2o | Fighting Vipers 2 (Japan)               |                       |
++------------+-----------------------------------------+-----------------------+
+| harley     | Harley Davidson & L.A. Riders (Rev. B)  |                       |
+|  harleya   | Harley Davidson & L.A. Riders (Rev. A)  |                       |
++------------+-----------------------------------------+-----------------------+
+| lamachin   | L.A. Machineguns: Rage of the Machines  |     may run slow      |
++------------+-----------------------------------------+-----------------------+
+| lemans24   | Le Mans 24 (Japan, Revision B)          |                       |
++------------+-----------------------------------------+-----------------------+
+| lostwsga   | The Lost World Arcade (Japan, Rev A)    |                       |
+|  lostwsgp  | The Lost World Aracde (Location Test)   |                       |
++------------+-----------------------------------------+-----------------------+
+| magtruck   | Magical Truck Adventure (Japan)         |                       |
+|  mgtrkbad  | Magical Truck Adventure (bit rot dump)  |                       |
++------------+-----------------------------------------+-----------------------+
+| oceanhun   | The Ocean Hunter (Japan, Revision A)    |                       |
+|  oceanhuna | The Ocean Hunter (Japan)                |                       |
++------------+-----------------------------------------+-----------------------+
+| scud       | Scud Race (Export, Twin/DX)             |                       |
+|  scudau    | Scud Race (Australia, Twin/DX)          |                       |
+|  scuddx    | Scud Race (Export, Deluxe, Revision A)  |                       |
+|  scudplus  | Scud Race (Export, Twin/DX, Revision A) |                       |
+|  scudplusa | Scud Race (Export, Twin/DX)             |                       |
++------------+-----------------------------------------+-----------------------+
+| skichamp   | Ski Champ (Japan)                       |                       |
++------------+-----------------------------------------+-----------------------+
+| spikeofe   | Spikeout Final Edition (Export)         |                       |
++------------+-----------------------------------------+-----------------------+
+| spikeout   | Spikeout (Export, Revision C)           |                       |
++------------+-----------------------------------------+-----------------------+
+| srally2    | Sega Rally 2 (Export)                   |                       |
+|  srally2p  | Sega Rally 2 (Prototype)                | proto is non working  |
+|  srally2pa | Sega Rally 2 (Prototype Version A)      | proto is non working  |
+|  srally2dx | Sega Rally 2 (Export, Deluxe)           |  DX set may run slow  |
++------------+-----------------------------------------+-----------------------+
+| swtrilgy   | Star Wars Trilogy (Export, Revision A)  |   see note 1 below    |
+|  swtrilgya | Star Wars Trilogy (Export)              |   see note 1 below    |
+|  swtrilgyp | Star Wars Trilogy (Location Test)       |   see note 2 below    |
++------------+-----------------------------------------+-----------------------+
+| vf3        | Virtua Fighter 3 (Japan, Revision D)    |                       |
+|  vf3c      | Virtua Fighter 3 (Japan, Revision C)    |                       |
+|  vf3a      | Virtua Fighter 3 (Japan, Revision A)    |                       |
+|  vf3tb     | Virtua Fighter 3 Team Battle (Japan)    |                       |
++------------+-----------------------------------------+-----------------------+
+| von2       | Virtual On Oratorio Tangram (Revision B)|                       |
+|  von2a     | Virtual On Oratorio Tangram (Revision A)|                       |
+|  von2o     | Virtual On Oratorio Tangram             |                       |
+|  von254g   | Virtual On Oratorio Tangram (Ver. 5.4g) |                       |
++------------+-----------------------------------------+-----------------------+
+| vs2        | Virtua Striker 2 (Step 2.0, Export, USA)|                       |
+|  vs215     | Virtua Striker 2 (Step 1.5, Export, USA)|                       |
+|  vs215o    | Virtua Striker 2 (Step 1.5, Japan test?)|                       |
++------------+-----------------------------------------+-----------------------+
+| vs298      | Virtua Striker 2 '98 (Step 2.0, Japan)  |                       |
+|  vs29815   | Virtua Striker 2 '98 (Step 1.5, Japan)  |                       |
++------------+-----------------------------------------+------------+----------+
+| vs2v991    | Virtua Striker 2 '99.1 (Step 2.1 Export, USA, Rev B) |          |
+|  vs299a    | Virtua Striker 2 '99   (Step 2.1 Export, USA, Rev A) |          |
+|  vs299     | Virtua Striker 2 '99   (Step 2.1 Export, USA)        |          |
+|  vs299j    | Virtua Striker 2 '99.1 (Step 2.1 Japan, Rev B)       |          |
+|  vs29915   | Virtua Striker 2 '99.1 (Step 1.5 Export, USA, Rev B) |          |
+|  vs29915a  | Virtua Striker 2 '99   (Step 1.5 Export, USA)        |          |
+|  vs29915j  | Virtua Striker 2 '99.1 (Step 1.5 Japan, Rev B)       |          |
++------------+------------------------------------------------------+----------+
 
-Most ROM sets suffering from severe graphical problems are categorized as non-
-playable when in fact many are partially playable.  Controls may not be fully
-functional, however, and none have been tested thoroughly.
+Note 1: Set game to U/R in game assignment in the TEST MENU to bypass the
+        "WAIT SETUP THE FEEDBACK STICK" screen
+Note 2: Set game to SD in game assignment in the TEST MENU or wait a few seconds
+        for the game to continue past the "WAIT SETUP THE FEEDBACK STICK" screen
 
 
 =====================
@@ -517,6 +501,11 @@ For multiple mouse support, allowing two mice or PC light guns to be mapped,
 Raw Input must be used.  This is supported only on Windows and is described
 below.
 
+For specific information on using Sinden Light guns with Supermodel, refer to
+the Sinden Light gun Wiki:
+
+https://www.sindenwiki.org/wiki/Supermodel_M3
+
 
 Input Systems
 -------------
@@ -718,25 +707,9 @@ can be cleared by deleting the NVRAM files or pressing Alt-N.
 Daytona USA 2 and Daytona USA 2 Power Edition
 ---------------------------------------------
 
-To bypass the network board error, enter the Test Menu by pressing the Test
-button.  Navigate to 'Game Assignments' using the Service button and select it
-with Test.  Change 'Link ID' from 'Master' to 'Single'.
-
-In 'Daytona USA 2', the region menu can be accessed by entering the Test Menu,
-holding down the Start button, and pressing: VR4, VR4, VR2, VR3, VR1, VR3, VR2.
-Changing the region to USA changes game text to English.
-
 By default, the 'Power Edition' ROM set features remixed music lyrics by
 Takenobu Mitsuyoshi.  These can be changed back to the Dennis St. James version
 in the Test Menu, under 'Game Assignments'.
-
-
-Le Mans 24
-----------
-
-The region can be changed by entering the test menu (press the Test button) and
-pressing: Start, Start, Service, Service, Start, Test.
-
 
 Star Wars Trilogy
 -----------------
@@ -758,18 +731,12 @@ As with 'Star Wars Trilogy', you may experience problems if you attempt to
 start a game before any 3D graphics are displayed (for example, during the Sega
 logo).
 
-The region can be changed by entering the test menu (press the Test button) and
-then pressing the Service button four times for short durations, twice for long
-durations, twice for short durations, and once again for a long duration.
-
 
 Spikeout and Spikeout Final Edition
 -----------------------------------
 
-These games can be played all the way through but may lock up during the
-attract mode.  There are periodic texture glitches due to Supermodel's
-inadequate texture caching system and possibly also due to a texture offset
-bug.
+These games can be played all the way through.  There may be periodic texture
+glitches and or occasional flashing.
 
 
 The Lost World
@@ -779,30 +746,6 @@ To reload, the light gun must be pointed off-screen by pressing (and holding)
 the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
 This behavior can be changed with the 'InputAutoTrigger' setting in the
 configuration file.
-
-The region can be changed by entering the test menu (press the Test button) and
-pressing: Start, Start, Service, Start, Service, Test.  Use the player 1 Start
-button.
-
-
-Virtua Fighter 3
-----------------
-
-The game is playable but there are numerous graphical glitches, particularly
-during transition scenes.
-
-
-Virtua Striker 2 '98 (Step 1.5 and 2.0 versions)
-------------------------------------------------
-
-The Virtua Striker games all run very slowly for an unknown reason.
-
-The region can be changed by entering the test menu (press the Test button)
-and, in the 'Game Assignments' menu, performing the following sequence:
-
-    1. Press the Service button once for about 5 seconds.
-    2. Press the Service button three times shortly.
-    3. Press the Service button again one time for about 5 seconds.
 
 
 ==============================
@@ -1900,6 +1843,8 @@ we would like to thank:
     - Andrew Lewis (a.k.a. Andy Geezer), for dumping the drive board ROMs and
       providing region codes
     - The Guru, for his efforts in dumping Model 3 ROM sets
+    - Brian Troha & The Dumping Union, for their continuing efforts in adding
+      new Model 3 ROM sets
     - Abelardo Vidal Martos, for providing extremely useful video recordings of
       actual Model 3 games
     - Andrew Gardner, for fruitful discussion
@@ -1907,6 +1852,8 @@ we would like to thank:
       thorough play-testers
     - Charles MacDonald, for his helpful description of the System 24 tile
       generator
+    - Andreas Naive, Olivier Galibert, David Haywood & MAME for the interface
+      to and decryption code for the Sega 315-5881 protection device
 
 Supermodel includes code from the following projects:
 
