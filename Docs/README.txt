@@ -747,7 +747,7 @@ Get Bass and Sega Bass Fishing
 
 To change the region, enter Test mode and go to the second screen of the CRT test
 ('C.R.T. Test 2/2'). Press the Service button four times and then exit the CRT test. Next, enter
-'Game Assignments', pess Service three times, then press and hold Service and while holding, press
+'Game Assignments', press Service three times, then press and hold Service and while holding, press
 Test. The region select menu will appear.
 
 
