@@ -2638,7 +2638,7 @@
 
   <game name="von2">
     <identity>
-      <title>Virtual On 2: Oratorio Tangram</title>
+      <title>Cyber Troopers Virtual-On Oratorio Tangram</title>
       <version>Japan, Revision B</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
@@ -2719,7 +2719,7 @@
 
   <game name="von254g" parent="von2">
     <identity>
-      <title>Virtual On 2: Oratorio Tangram</title>
+      <title>Cyber Troopers Virtual-On Oratorio Tangram</title>
       <version>Japan, Ver 5.4g</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
@@ -2748,7 +2748,7 @@
 
   <game name="von2a" parent="von2">
     <identity>
-      <title>Virtual On 2: Oratorio Tangram</title>
+      <title>Cyber Troopers Virtual-On Oratorio Tangram</title>
       <version>Japan, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
@@ -2777,7 +2777,7 @@
 
   <game name="von2o" parent="von2">
     <identity>
-      <title>Virtual On 2: Oratorio Tangram</title>
+      <title>Cyber Troopers Virtual-On Oratorio Tangram</title>
       <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
