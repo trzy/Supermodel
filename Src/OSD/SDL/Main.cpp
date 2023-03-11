@@ -104,6 +104,7 @@ SDL_Window *s_window = nullptr;
 static unsigned  xOffset, yOffset;      // offset of renderer output within OpenGL viewport
 static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
+static unsigned  whiteBorder = 0;
 
 static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
@@ -117,6 +118,15 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   // If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
   float xRes = float(*xResPtr);
   float yRes = float(*yResPtr);
+
+  //if we want to draw a white border, we have also to put a black border around it so we are sure lightgun will find it...
+  if (s_runtime_config["DrawWhiteBorder"].ValueAs<bool>())
+  {
+    int blackborder = whiteBorder = 50; //50px borders
+    xRes -= (whiteBorder + blackborder);
+    yRes -= (whiteBorder + blackborder);
+  }
+
   if (keepAspectRatio)
   {
     float model3Ratio = float(496.0/384.0);
@@ -778,7 +788,7 @@ static void LoadNVRAM(IEmulator *Model3)
 /******************************************************************************
  UI Rendering
 
- Currently, only does crosshairs for light gun games.
+ Currently, only crosshairs and white border for light gun games.
 ******************************************************************************/
 
 struct BasicDraw
@@ -980,6 +990,36 @@ static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned c
 }
 
 
+void GenQuad(std::vector<BasicDraw::BasicVertex> &verts, float x, float y, float w, float h)
+{
+  verts.emplace_back(x, y);
+  verts.emplace_back(x, y + h);
+  verts.emplace_back(x + w, y + h);
+  verts.emplace_back(x, y);
+  verts.emplace_back(x + w, y + h);
+  verts.emplace_back(x + w, y);
+}
+
+void DrawWhiteBorder()
+{
+  glUseProgram(0); 
+  glViewport(0, 0, totalXRes, totalYRes);
+  glDisable(GL_BLEND);   
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_SCISSOR_TEST);
+
+  New3D::Mat4 m;
+  m.Ortho(0.0, totalXRes, totalYRes, 0.0, -1.0f, 1.0f);
+  std::vector<BasicDraw::BasicVertex> verts;
+  int internalWhiteBorder = whiteBorder / 2;
+  GenQuad(verts, xOffset - internalWhiteBorder, yOffset - internalWhiteBorder, internalWhiteBorder, yRes + internalWhiteBorder * 2);
+  GenQuad(verts, xOffset + xRes, yOffset - internalWhiteBorder, internalWhiteBorder, yRes + internalWhiteBorder * 2);
+  GenQuad(verts, xOffset, yOffset - internalWhiteBorder, xRes , internalWhiteBorder);
+  GenQuad(verts, xOffset, yOffset + yRes, xRes, internalWhiteBorder);
+  basicDraw.Draw(GL_TRIANGLES, m, verts.data(), (int)verts.size(), 1.0f, 1.0f, 1.0f, 1.0f);
+  glEnable(GL_SCISSOR_TEST);
+}
+
 /******************************************************************************
  Video Callbacks
 ******************************************************************************/
@@ -997,7 +1037,12 @@ void EndFrameVideo()
   // Show crosshairs for light gun games
   if (videoInputs)
     UpdateCrosshairs(currentInputs, videoInputs, s_runtime_config["Crosshairs"].ValueAs<unsigned>());
-
+  
+  //do we need to draw white border?
+  if (whiteBorder != 0)
+  {
+    DrawWhiteBorder();
+  }
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
 }
@@ -1641,6 +1686,7 @@ static Util::Config::Node DefaultConfig()
   config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false);
   config.Set("BorderlessWindow", false);
+  config.Set("DrawWhiteBorder", false);
 
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
@@ -1723,6 +1769,7 @@ static void Help(void)
   puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
+  puts("  -draw-white-border      Draw a whiteborder around image: usefull for some lightgun type (Sinden LightGun)");
   puts("  -fullscreen             Full screen mode");
   puts("  -wide-screen            Expand 3D field of view to screen width");
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
@@ -1845,6 +1892,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
     { "-borderless",          { "BorderlessWindow", true } },
+    { "-draw-white-border",   { "DrawWhiteBorder",  true } },    
     { "-no-wide-screen",      { "WideScreen",       false } },
     { "-wide-screen",         { "WideScreen",       true } },
     { "-stretch",             { "Stretch",          true } },
