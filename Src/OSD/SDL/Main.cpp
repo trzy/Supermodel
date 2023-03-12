@@ -781,18 +781,6 @@ static void LoadNVRAM(IEmulator *Model3)
 }
 
 
-/******************************************************************************
- UI Rendering
-
- Currently, only does crosshairs for light gun games.
-******************************************************************************/
-
-static void GunToViewCoords(float *x, float *y)
-{
-  *x = (*x-150.0f)/(651.0f-150.0f); // Scale [150,651] -> [0.0,1.0]
-  *y = (*y-80.0f)/(465.0f-80.0f);   // Scale [80,465] -> [0.0,1.0]
-}
-
 /*
 static void PrintGLError(GLenum error)
 {
@@ -811,77 +799,6 @@ static void PrintGLError(GLenum error)
 }
 */
 
-static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned crosshairs, std::string crosshairStyle)
-{
-  bool offscreenTrigger[2];
-  float x[2], y[2];
-
-  crosshairs &= 3;
-  if (!crosshairs)
-    return;
-
-  // Set up the viewport and orthogonal projection
-  glUseProgram(0);    // no shaders
-  glViewport(xOffset, yOffset, xRes, yRes);
-  glDisable(GL_DEPTH_TEST); // no Z-buffering needed
-  
-  if(crosshairStyle != "bmp")
-  {
-      glDisable(GL_BLEND);    // no blending
-  }
-  else
-  {
-      glEnable(GL_TEXTURE_2D); // enable texture mapping, blending and alpha chanel
-      glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  }
-
-  New3D::Mat4 m;
-  m.Ortho(0.0, 1.0, 1.0, 0.0, -1.0f, 1.0f);
-
-  // Convert gun coordinates to viewspace coordinates
-  if (currentInputs & Game::INPUT_ANALOG_GUN1)
-  {
-    x[0] = ((float)Inputs->analogGunX[0]->value / 255.0f);
-    y[0] = ((255.0f - (float)Inputs->analogGunY[0]->value) / 255.0f);
-    offscreenTrigger[0] = Inputs->analogTriggerLeft[0]->value || Inputs->analogTriggerRight[0]->value;
-  }
-  else if (currentInputs & Game::INPUT_GUN1)
-  {
-    x[0] = (float)Inputs->gunX[0]->value;
-    y[0] = (float)Inputs->gunY[0]->value;
-    GunToViewCoords(&x[0], &y[0]);
-	offscreenTrigger[0] = (Inputs->trigger[0]->offscreenValue) > 0;
-  }
-  if (currentInputs & Game::INPUT_ANALOG_GUN2)
-  {
-    x[1] = ((float)Inputs->analogGunX[1]->value / 255.0f);
-    y[1] = ((255.0f - (float)Inputs->analogGunY[1]->value) / 255.0f);
-    offscreenTrigger[1] = Inputs->analogTriggerLeft[1]->value || Inputs->analogTriggerRight[1]->value;
-  }
-  else if (currentInputs & Game::INPUT_GUN2)
-  {
-    x[1] = (float)Inputs->gunX[1]->value;
-    y[1] = (float)Inputs->gunY[1]->value;
-    GunToViewCoords(&x[1], &y[1]);
-	offscreenTrigger[1] = (Inputs->trigger[1]->offscreenValue) > 0;
-  }
-
-  // Draw visible crosshairs
-
-  if ((crosshairs & 1) && !offscreenTrigger[0])  // Player 1
-  {
-      s_crosshair->DrawCrosshair(m, x[0], y[0], 0);
-  }
-  if ((crosshairs & 2) && !offscreenTrigger[1])  // Player 2
-  {
-      s_crosshair->DrawCrosshair(m, x[1], y[1], 1);
-  }
-
-  //PrintGLError(glGetError());
-}
-
-
 /******************************************************************************
  Video Callbacks
 ******************************************************************************/
@@ -898,7 +815,7 @@ void EndFrameVideo()
 {
   // Show crosshairs for light gun games
   if (videoInputs)
-    UpdateCrosshairs(currentInputs, videoInputs, s_runtime_config["Crosshairs"].ValueAs<unsigned>(), s_runtime_config["CrosshairStyle"].ValueAs<std::string>());
+    s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset);
 
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);

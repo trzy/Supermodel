@@ -24,13 +24,16 @@
 
 #include "Supermodel.h"
 #include "Graphics/New3D/New3D.h"
+#include "Inputs/Inputs.h"
 
 class CCrosshair
 {
 private:
 	const Util::Config::Node& m_config;
-	std::string m_isBitmapCrosshair = "";
+	bool m_isBitmapCrosshair = false;
+	std::string m_crosshairStyle = "";
 	GLuint m_crosshairTexId[2] = { 0 };
+	unsigned int m_crosshairs = 0;
 	int m_p1CrosshairW = 0, m_p1CrosshairH = 0, m_p2CrosshairW = 0, m_p2CrosshairH = 0;
 	float m_diagDpi = 0.0f, m_hDpi = 0.0f, m_vDpi = 0.0f;
 	unsigned int m_xRes=0;
@@ -69,11 +72,14 @@ private:
 
 	const int MaxVerts = 1024;  // per draw call
 
+	void DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player);
+	void GunToViewCoords(float* x, float* y);
+
 public:
 	CCrosshair(const Util::Config::Node& config);
 	~CCrosshair();
 	bool Init();
-	void DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player);
+	void Update(uint32_t currentInputs, CInputs* Inputs, unsigned int, unsigned int);
 };
 
 #endif

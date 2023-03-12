@@ -26,13 +26,27 @@
 #include "SDLIncludes.h"
 #include <GL/glew.h>
 #include <vector>
+#include "Inputs/Inputs.h"
+#include "Util/Format.h"
 
 bool CCrosshair::Init()
 {
     const std::string p1CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p1crosshair.bmp";
     const std::string p2CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p2crosshair.bmp";
 
-    m_isBitmapCrosshair = m_config["CrosshairStyle"].ValueAs<std::string>();
+    m_crosshairStyle = Util::ToLower(m_config["CrosshairStyle"].ValueAs<std::string>());
+    if (m_crosshairStyle == "bmp")
+        m_isBitmapCrosshair = true;
+    else if (m_crosshairStyle == "vector")
+        m_isBitmapCrosshair = false;
+    else
+    {
+        ErrorLog("Invalid crosshair style '%s', must be 'vector' or 'bmp'. Reverting to 'vector'.\n", m_crosshairStyle.c_str());
+        m_isBitmapCrosshair = false;
+    }
+
+    m_crosshairs = m_config["Crosshairs"].ValueAs<unsigned>();
+
     m_xRes = m_config["XResolution"].ValueAs<unsigned>();
     m_yRes = m_config["YResolution"].ValueAs<unsigned>();
     m_a = (float)m_xRes / (float)m_yRes;
@@ -76,7 +90,7 @@ bool CCrosshair::Init()
     m_uvCoord.emplace_back(1.0f, 1.0f);
     m_uvCoord.emplace_back(0.0f, 1.0f);
 
-    if (m_isBitmapCrosshair != "bmp")
+    if (!m_isBitmapCrosshair)
     {
         m_verts.emplace_back(0.0f, m_dist);  // bottom triangle
         m_verts.emplace_back(m_base / 2.0f, (m_dist + m_height) * m_a);
@@ -178,16 +192,16 @@ void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player)
     m_shader.EnableShader();
     matrix.Translate(x, y, 0);
 
-    if (m_isBitmapCrosshair != "bmp")
+    if (!m_isBitmapCrosshair)
     {
         switch (player)
         {
-        case 0:
+        case 0: // P1 red color
             r = 1.0f;
             g = 0.0f;
             b = 0.0f;
             break;
-        case 1:
+        case 1: // P2 green color
             r = 0.0f;
             g = 1.0f;
             b = 0.0f;
@@ -234,6 +248,82 @@ void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player)
     glBindVertexArray(0);
 
     m_shader.DisableShader();
+}
+
+void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xOffset, unsigned int yOffset)
+{
+    bool offscreenTrigger[2]{false};
+    float x[2]{ 0.0f }, y[2]{ 0.0f };
+
+    m_crosshairs &= 3;
+    if (!m_crosshairs)
+        return;
+
+    // Set up the viewport and orthogonal projection
+    glUseProgram(0);    // no shaders
+    glViewport(xOffset, yOffset, m_xRes, m_yRes);
+    glDisable(GL_DEPTH_TEST); // no Z-buffering needed
+
+    if (!m_isBitmapCrosshair)
+    {
+        glDisable(GL_BLEND);    // no blending
+    }
+    else
+    {
+        glEnable(GL_TEXTURE_2D); // enable texture mapping, blending and alpha chanel
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    New3D::Mat4 m;
+    m.Ortho(0.0, 1.0, 1.0, 0.0, -1.0f, 1.0f);
+
+    // Convert gun coordinates to viewspace coordinates
+    if (currentInputs & Game::INPUT_ANALOG_GUN1)
+    {
+        x[0] = ((float)Inputs->analogGunX[0]->value / 255.0f);
+        y[0] = ((255.0f - (float)Inputs->analogGunY[0]->value) / 255.0f);
+        offscreenTrigger[0] = Inputs->analogTriggerLeft[0]->value || Inputs->analogTriggerRight[0]->value;
+    }
+    else if (currentInputs & Game::INPUT_GUN1)
+    {
+        x[0] = (float)Inputs->gunX[0]->value;
+        y[0] = (float)Inputs->gunY[0]->value;
+        GunToViewCoords(&x[0], &y[0]);
+        offscreenTrigger[0] = (Inputs->trigger[0]->offscreenValue) > 0;
+    }
+    if (currentInputs & Game::INPUT_ANALOG_GUN2)
+    {
+        x[1] = ((float)Inputs->analogGunX[1]->value / 255.0f);
+        y[1] = ((255.0f - (float)Inputs->analogGunY[1]->value) / 255.0f);
+        offscreenTrigger[1] = Inputs->analogTriggerLeft[1]->value || Inputs->analogTriggerRight[1]->value;
+    }
+    else if (currentInputs & Game::INPUT_GUN2)
+    {
+        x[1] = (float)Inputs->gunX[1]->value;
+        y[1] = (float)Inputs->gunY[1]->value;
+        GunToViewCoords(&x[1], &y[1]);
+        offscreenTrigger[1] = (Inputs->trigger[1]->offscreenValue) > 0;
+    }
+
+    // Draw visible crosshairs
+
+    if ((m_crosshairs & 1) && !offscreenTrigger[0])  // Player 1
+    {
+        DrawCrosshair(m, x[0], y[0], 0);
+    }
+    if ((m_crosshairs & 2) && !offscreenTrigger[1])  // Player 2
+    {
+        DrawCrosshair(m, x[1], y[1], 1);
+    }
+
+    //PrintGLError(glGetError());
+}
+
+void CCrosshair::GunToViewCoords(float* x, float* y)
+{
+    *x = (*x - 150.0f) / (651.0f - 150.0f); // Scale [150,651] -> [0.0,1.0]
+    *y = (*y - 80.0f) / (465.0f - 80.0f);   // Scale [80,465] -> [0.0,1.0]
 }
 
 CCrosshair::CCrosshair(const Util::Config::Node& config) : m_config(config),m_xRes(0),m_yRes(0)
