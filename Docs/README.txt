@@ -219,7 +219,7 @@ Other than minor graphical issues, if any, major issues are reported below:
 | harley     | Harley Davidson & L.A. Riders (Rev. B)  |                       |
 |  harleya   | Harley Davidson & L.A. Riders (Rev. A)  |                       |
 +------------+-----------------------------------------+-----------------------+
-| lamachin   | L.A. Machineguns: Rage of the Machines  |     may run slow      |
+| lamachin   | L.A. Machineguns: Rage of the Machines  |                       |
 +------------+-----------------------------------------+-----------------------+
 | lemans24   | Le Mans 24 (Japan, Revision B)          |                       |
 +------------+-----------------------------------------+-----------------------+
@@ -703,6 +703,16 @@ can be cleared by deleting the NVRAM files or pressing Alt-N.
   10. Game-Specific Comments and Tips
 =======================================
 
+This section contains additional game-specific setup information, workarounds for emulation issues,
+and region codes for changing the region.
+
+
+Cyber Troopers Virtual-On Oratorio Tangram
+------------------------------------------
+
+To change the region, enter Test mode and press Start, Start, Service, Start, Start, Start, Service,
+Service, Test.
+
 
 Daytona USA 2 and Daytona USA 2 Power Edition
 ---------------------------------------------
@@ -710,6 +720,98 @@ Daytona USA 2 and Daytona USA 2 Power Edition
 By default, the 'Power Edition' ROM set features remixed music lyrics by
 Takenobu Mitsuyoshi.  These can be changed back to the Dennis St. James version
 in the Test Menu, under 'Game Assignments'.
+
+The region change menu can be accessed in two different ways:
+
+  1. Enter Test mode and push the Service and Test buttons simultaneously.
+  2. Enter Test mode. Then, hold Start and press VR4, VR4, VR2, VR3, VR1, VR3, VR2.
+
+
+Dirt Devils
+-----------
+
+To access the region change menu, enter Test mode and press Start, Start, Service, Start, Start,
+Start, Service, Test.
+
+
+Fighting Vipers 2
+-----------------
+
+To change the region, in the 'Game Assignments' screen in Test mode, set the cursor at the 'Country'
+line and press: Left, Left, Left, Right, Right, Left. The country can then be changed using the Test
+switch.
+
+
+Get Bass and Sega Bass Fishing
+------------------------------
+
+To change the region, enter Test mode and go to the second screen of the CRT test
+('C.R.T. Test 2/2'). Press the Service button four times and then exit the CRT test. Next, enter
+'Game Assignments', press Service three times, then press and hold Service and while holding, press
+Test. The region select menu will appear.
+
+
+Harley-Davidson and L.A. Riders
+-------------------------------
+
+To change the region, enter Test mode and in the 'Game Assignments' screen, press Shift Up,
+Shift Up, Shift Down, Shift Down, View, Music, View, Music.
+
+
+L.A. Machineguns
+----------------
+
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, P1 Start,
+P1 Start, Service, Test.
+
+
+Le Mans 24
+----------
+
+To change the region, enter Test mode and press Start, Start, Service, Service, Start, Test.
+
+
+Magical Truck Adventure
+-----------------------
+
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, Service,
+Test.
+
+
+Sega Rally 2
+------------
+
+As with 'Star Wars Trilogy', you may experience problems if you attempt to
+start a game before any 3D graphics are displayed (for example, during the Sega
+logo).
+
+To change the region, enter Test mode and perform the following series of short (press and release)
+and long (press and hold for 4-5 seconds) Service button presses: 4 short, 2 long, 2 short, 1 long.
+
+
+Ski Champ
+---------
+
+To change the region, enter Test mode and press Select 1, Select 3, Select 1, Select 3, Service,
+Service.
+
+
+Spikeout
+--------
+
+To change the region, enter Test mode, place the cursor on the 'Game Assignments' line and press
+Charge, Start, Jump, Start, Start, Start, Shift, Start, Start. The region change menu will be
+revealed.
+
+
+Spikeout Final Edition
+----------------------
+
+To change the region, enter Test mode, place the cursor on the 'Game Assignments' line, and while
+holding the Service button press Jump, Start, Jump, Start. Then, release the Service button and
+press Shift, Start, Start, Start, Charge, Start, Start, Shift, Start, Test. The region change menu
+will be revealed.
+
 
 Star Wars Trilogy
 -----------------
@@ -723,20 +825,8 @@ If 'Star Wars Trilogy' is booting directly into the stage select screen, it is
 probably because you exited Supermodel with credits still in the machine.
 Clear the NVRAM (Alt-N) and reset the game (Alt-R).
 
-
-Sega Rally 2
-------------
-
-As with 'Star Wars Trilogy', you may experience problems if you attempt to
-start a game before any 3D graphics are displayed (for example, during the Sega
-logo).
-
-
-Spikeout and Spikeout Final Edition
------------------------------------
-
-These games can be played all the way through.  There may be periodic texture
-glitches and or occasional flashing.
+To change the region, enter Test mode and perform the following series of short (press and release)
+and long (press and hold for 4-5 seconds) Service button presses: 3 short, 2 long, 2 short, 1 long.
 
 
 The Lost World
@@ -746,6 +836,32 @@ To reload, the light gun must be pointed off-screen by pressing (and holding)
 the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
 This behavior can be changed with the 'InputAutoTrigger' setting in the
 configuration file.
+
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, Service,
+Test.
+
+
+The Ocean Hunter
+----------------
+
+To change the region, enter Test mode and in 'Game Assignments', press P1 Start, P2 Start, P1 Start,
+P2 Start, P1 Start, P2 Start, P2 Start.
+
+
+Virtua Fighter 2 '98
+--------------------
+
+To change the region, enter Test mode and in 'Game Assignments', perform the following series of
+short (press and release) and long (press and hold for 4-5 seconds) Service button presses: 1 long,
+3 short, 1 long.
+
+
+Virtua Striker 2 '99
+--------------------
+
+To change the region, enter Test mode and in 'Game Assignments', perform the following series of
+short (press and release) and long (press and hold for 4-5 seconds) Service button presses: 1 long,
+3 short, 1 long, 2 short, 1 long.
 
 
 ==============================
