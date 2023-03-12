@@ -29,19 +29,19 @@ class CCrosshair
 {
 private:
 	const Util::Config::Node& m_config;
-	bool IsBitmapCrosshair=false;
-	GLuint CrosshairtxID[2] = { 0 };
-	int P1CrosshairW = 0, P1CrosshairH = 0, P2CrosshairW = 0, P2CrosshairH = 0;
-	float diagdpi = 0.0f, hdpi = 0.0f, vdpi = 0.0f;
-	unsigned int xRes=0;
-	unsigned int yRes=0;
-	const float base = 0.01f, height = 0.02f; // geometric parameters of each triangle
-	const float dist = 0.004f;                // distance of triangle tip from center
-	float a = 0.0f;                           // aspect ratio (to square the crosshair)
-	const float squareSize = 1.0f;
-	const float standardDpi = 96.0f;          // normal dpi for usual monitor (full hd)
-	float dpiMultiplicator = 0.0f;
-	const float ScaleBitmap = 0.1f;
+	std::string m_isBitmapCrosshair = "";
+	GLuint m_crosshairTexId[2] = { 0 };
+	int m_p1CrosshairW = 0, m_p1CrosshairH = 0, m_p2CrosshairW = 0, m_p2CrosshairH = 0;
+	float m_diagDpi = 0.0f, m_hDpi = 0.0f, m_vDpi = 0.0f;
+	unsigned int m_xRes=0;
+	unsigned int m_yRes=0;
+	const float m_base = 0.01f, m_height = 0.02f; // geometric parameters of each triangle
+	const float m_dist = 0.004f;                // distance of triangle tip from center
+	float m_a = 0.0f;                           // aspect ratio (to square the crosshair)
+	const float m_squareSize = 1.0f;
+	const float m_standardDpi = 96.0f;          // normal dpi for usual monitor (full hd)
+	float m_dpiMultiplicator = 0.0f;
+	const float m_scaleBitmap = 0.1f;
 
 	struct BasicVertex
 	{
@@ -56,25 +56,24 @@ private:
 		float x, y;
 	};
 
-	std::vector<BasicVertex> verts;
-	std::vector<UVCoords> UVCoord;
+	std::vector<BasicVertex> m_verts;
+	std::vector<UVCoords> m_uvCoord;
 
 	GLSLShader m_shader;
 	VBO m_vbo;
 	VBO m_textvbo;
 	GLuint m_vao = 0;
-	int m_TextureCoordsCount = 0;
-	const char* vertexShader;
-	const char* fragmentShader;
+	int m_textureCoordsCount = 0;
+	const char* m_vertexShader;
+	const char* m_fragmentShader;
 
 	const int MaxVerts = 1024;  // per draw call
 
 public:
 	CCrosshair(const Util::Config::Node& config);
 	~CCrosshair();
-	bool init();
-	void DrawCrosshair(New3D::Mat4 matrix, float x, float y, float r, float g, float b);
-	void DrawBitmapCrosshair(New3D::Mat4 matrix, float x, float y, int TextureNum);
+	bool Init();
+	void DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player);
 };
 
 #endif

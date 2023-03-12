@@ -114,10 +114,10 @@
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
-if not exist "$(TargetDir)Media" mkdir "$(TargetDir)Media"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
-xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -147,10 +147,10 @@ xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
-if not exist "$(TargetDir)Media" mkdir "$(TargetDir)Media"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
-xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -179,10 +179,10 @@ xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
-if not exist "$(TargetDir)Media" mkdir "$(TargetDir)Media"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
-xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -215,10 +215,10 @@ xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
-if not exist "$(TargetDir)Media" mkdir "$(TargetDir)Media"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
-xcopy /D /Y "$(ProjectDir)..\Media\*" "$(TargetDir)Media"</Command>
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -109,8 +109,7 @@ static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewpo
 /*
  * Crosshair stuff
  */
-static bool IsBitmapCrosshair = false;
-CCrosshair* Crosshair = nullptr;
+static CCrosshair* s_crosshair = nullptr;
 
 static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
@@ -812,7 +811,7 @@ static void PrintGLError(GLenum error)
 }
 */
 
-static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned crosshairs)
+static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned crosshairs, std::string crosshairStyle)
 {
   bool offscreenTrigger[2];
   float x[2], y[2];
@@ -826,7 +825,7 @@ static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned c
   glViewport(xOffset, yOffset, xRes, yRes);
   glDisable(GL_DEPTH_TEST); // no Z-buffering needed
   
-  if (!IsBitmapCrosshair)
+  if(crosshairStyle != "bmp")
   {
       glDisable(GL_BLEND);    // no blending
   }
@@ -869,27 +868,14 @@ static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned c
   }
 
   // Draw visible crosshairs
-  if (!IsBitmapCrosshair)
+
+  if ((crosshairs & 1) && !offscreenTrigger[0])  // Player 1
   {
-      if ((crosshairs & 1) && !offscreenTrigger[0])  // Player 1
-      {
-          Crosshair->DrawCrosshair(m, x[0], y[0], 1.0f, 0.0f, 0.0f);
-      }
-      if ((crosshairs & 2) && !offscreenTrigger[1])  // Player 2
-      {
-          Crosshair->DrawCrosshair(m, x[1], y[1], 0.0f, 1.0f, 0.0f);
-      }
+      s_crosshair->DrawCrosshair(m, x[0], y[0], 0);
   }
-  else
+  if ((crosshairs & 2) && !offscreenTrigger[1])  // Player 2
   {
-      if ((crosshairs & 1) && !offscreenTrigger[0])  // Player 1
-      {
-          Crosshair->DrawBitmapCrosshair(m, x[0], y[0], 0);
-      }
-      if ((crosshairs & 2) && !offscreenTrigger[1])  // Player 2
-      {
-          Crosshair->DrawBitmapCrosshair(m, x[1], y[1], 1);
-      }
+      s_crosshair->DrawCrosshair(m, x[1], y[1], 1);
   }
 
   //PrintGLError(glGetError());
@@ -912,7 +898,7 @@ void EndFrameVideo()
 {
   // Show crosshairs for light gun games
   if (videoInputs)
-    UpdateCrosshairs(currentInputs, videoInputs, s_runtime_config["Crosshairs"].ValueAs<unsigned>());
+    UpdateCrosshairs(currentInputs, videoInputs, s_runtime_config["Crosshairs"].ValueAs<unsigned>(), s_runtime_config["CrosshairStyle"].ValueAs<std::string>());
 
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
@@ -1566,7 +1552,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("RefreshRate", 60.0f);
   config.Set("ShowFrameRate", false);
   config.Set("Crosshairs", int(0));
-  config.Set("BitmapCrosshair", false);
+  config.Set("CrosshairStyle", "vector");
   config.Set("FlipStereo", false);
 #ifdef SUPERMODEL_WIN32
   config.Set("InputSystem", "dinput");
@@ -1652,8 +1638,7 @@ static void Help(void)
   puts("  -show-fps               Display frame rate in window title bar");
   puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
   puts("                          0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
-  puts("  -vectorcrosshair        Use built-in crosshair [Default]");
-  puts("  -bitmapcrosshair        Use image (.bmp) as crosshair (only for lost world)");
+  puts("  -crosshair-style=<s>    Crosshair style: vector or bmp. [Default: vector]");
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
   puts("  -quad-rendering         Enable proper quad rendering");
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
@@ -1739,6 +1724,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-load-state",            "InitStateFile"           },
     { "-ppc-frequency",         "PowerPCFrequency"        },
     { "-crosshairs",            "Crosshairs"              },
+    { "-crosshair-style",       "CrosshairStyle"          },
     { "-vert-shader",           "VertexShader"            },
     { "-frag-shader",           "FragmentShader"          },
     { "-vert-shader-fog",       "VertexShaderFog"         },
@@ -1789,8 +1775,6 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-dsb",              { "EmulateDSB",       false } },
     { "-legacy-scsp",         { "LegacySoundDSP",   true } },
     { "-new-scsp",            { "LegacySoundDSP",   false } },
-    { "-bitmapcrosshair",     { "BitmapCrosshair",  true } },
-    { "-vectorcrosshair",     { "BitmapCrosshair",  false } },
 #ifdef NET_BOARD
     { "-net",                 { "Network",       true } },
     { "-no-net",              { "Network",       false } },
@@ -2052,11 +2036,9 @@ int main(int argc, char **argv)
     goto Exit;
   }
 
-  IsBitmapCrosshair = s_runtime_config["BitmapCrosshair"].ValueAs<bool>();
-
-  // Create Bitmap Crosshair
-  Crosshair = new CCrosshair(s_runtime_config);
-  if (Crosshair->init() != OKAY)
+  // Create Crosshair
+  s_crosshair = new CCrosshair(s_runtime_config);
+  if (s_crosshair->Init() != OKAY)
   {
       ErrorLog("Unable to load bitmap crosshair texture\n");
       exitCode = 1;
@@ -2164,8 +2146,8 @@ Exit:
     delete InputSystem;
   if (Outputs != NULL)
     delete Outputs;
-  if (Crosshair != NULL)
-      delete Crosshair;
+  if (s_crosshair != NULL)
+      delete s_crosshair;
   DestroyGLScreen();
   SDL_Quit();
 
