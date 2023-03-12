@@ -27,81 +27,81 @@
 #include <GL/glew.h>
 #include <vector>
 
-bool CCrosshair::init()
+bool CCrosshair::Init()
 {
-    const std::string P1CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Media) << "p1crosshair.bmp";
-    const std::string P2CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Media) << "p2crosshair.bmp";
+    const std::string p1CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p1crosshair.bmp";
+    const std::string p2CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p2crosshair.bmp";
 
-	IsBitmapCrosshair = m_config["BitmapCrosshair"].ValueAs<bool>();
-    xRes = m_config["XResolution"].ValueAs<unsigned>();
-    yRes = m_config["YResolution"].ValueAs<unsigned>();
-    a = (float)xRes / (float)yRes;
+    m_isBitmapCrosshair = m_config["CrosshairStyle"].ValueAs<std::string>();
+    m_xRes = m_config["XResolution"].ValueAs<unsigned>();
+    m_yRes = m_config["YResolution"].ValueAs<unsigned>();
+    m_a = (float)m_xRes / (float)m_yRes;
 
-	SDL_Surface* SurfaceCrosshairP1 = SDL_LoadBMP(P1CrosshairFile.c_str());
-	SDL_Surface* SurfaceCrosshairP2 = SDL_LoadBMP(P2CrosshairFile.c_str());
-    if (SurfaceCrosshairP1 == NULL || SurfaceCrosshairP2 == NULL)
+	SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
+	SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
+    if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
         return FAIL;
 
-    P1CrosshairW = SurfaceCrosshairP1->w;
-    P1CrosshairH = SurfaceCrosshairP1->h;
-    P2CrosshairW = SurfaceCrosshairP2->w;
-    P2CrosshairH = SurfaceCrosshairP2->h;
+    m_p1CrosshairW = surfaceCrosshairP1->w;
+    m_p1CrosshairH = surfaceCrosshairP1->h;
+    m_p2CrosshairW = surfaceCrosshairP2->w;
+    m_p2CrosshairH = surfaceCrosshairP2->h;
 
-    glGenTextures(2, CrosshairtxID);
+    glGenTextures(2, m_crosshairTexId);
 
-    glBindTexture(GL_TEXTURE_2D, CrosshairtxID[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, P1CrosshairW, P1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, SurfaceCrosshairP1->pixels);
+    glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    glBindTexture(GL_TEXTURE_2D, CrosshairtxID[1]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, P1CrosshairW, P1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, SurfaceCrosshairP2->pixels);
+    glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    SDL_FreeSurface(SurfaceCrosshairP1);
-    SDL_FreeSurface(SurfaceCrosshairP2);
+    SDL_FreeSurface(surfaceCrosshairP1);
+    SDL_FreeSurface(surfaceCrosshairP2);
 
     // Get DPI
-    SDL_GetDisplayDPI(0, &diagdpi, &hdpi, &vdpi);
-    dpiMultiplicator = hdpi / standardDpi;  // note : on linux VM diagdpi returns 0
+    SDL_GetDisplayDPI(0, &m_diagDpi, &m_hDpi, &m_vDpi);
+    m_dpiMultiplicator = m_hDpi / m_standardDpi;  // note : on linux VM diagdpi returns 0
     
     // 3d obj
-    UVCoord.emplace_back(0.0f, 0.0f);
-    UVCoord.emplace_back(1.0f, 0.0f);
-    UVCoord.emplace_back(1.0f, 1.0f);
-    UVCoord.emplace_back(0.0f, 0.0f);
-    UVCoord.emplace_back(1.0f, 1.0f);
-    UVCoord.emplace_back(0.0f, 1.0f);
+    m_uvCoord.emplace_back(0.0f, 0.0f);
+    m_uvCoord.emplace_back(1.0f, 0.0f);
+    m_uvCoord.emplace_back(1.0f, 1.0f);
+    m_uvCoord.emplace_back(0.0f, 0.0f);
+    m_uvCoord.emplace_back(1.0f, 1.0f);
+    m_uvCoord.emplace_back(0.0f, 1.0f);
 
-    if (!IsBitmapCrosshair)
+    if (m_isBitmapCrosshair != "bmp")
     {
-        verts.emplace_back(0.0f, dist);  // bottom triangle
-        verts.emplace_back(base / 2.0f, (dist + height) * a);
-        verts.emplace_back(-base / 2.0f, (dist + height) * a);
-        verts.emplace_back(0.0f, -dist);  // top triangle
-        verts.emplace_back(-base / 2.0f, -(dist + height) * a);
-        verts.emplace_back(base / 2.0f, -(dist + height) * a);
-        verts.emplace_back(-dist, 0.0f);  // left triangle
-        verts.emplace_back(-dist - height, (base / 2.0f) * a);
-        verts.emplace_back(-dist - height, -(base / 2.0f) * a);
-        verts.emplace_back(dist, 0.0f);  // right triangle
-        verts.emplace_back(dist + height, -(base / 2.0f) * a);
-        verts.emplace_back(dist + height, (base / 2.0f) * a);
+        m_verts.emplace_back(0.0f, m_dist);  // bottom triangle
+        m_verts.emplace_back(m_base / 2.0f, (m_dist + m_height) * m_a);
+        m_verts.emplace_back(-m_base / 2.0f, (m_dist + m_height) * m_a);
+        m_verts.emplace_back(0.0f, -m_dist);  // top triangle
+        m_verts.emplace_back(-m_base / 2.0f, -(m_dist + m_height) * m_a);
+        m_verts.emplace_back(m_base / 2.0f, -(m_dist + m_height) * m_a);
+        m_verts.emplace_back(-m_dist, 0.0f);  // left triangle
+        m_verts.emplace_back(-m_dist - m_height, (m_base / 2.0f) * m_a);
+        m_verts.emplace_back(-m_dist - m_height, -(m_base / 2.0f) * m_a);
+        m_verts.emplace_back(m_dist, 0.0f);  // right triangle
+        m_verts.emplace_back(m_dist + m_height, -(m_base / 2.0f) * m_a);
+        m_verts.emplace_back(m_dist + m_height, (m_base / 2.0f) * m_a);
     }
     else
     {
-        verts.emplace_back(-squareSize / 2.0f, -squareSize / 2.0f * a);
-        verts.emplace_back(squareSize / 2.0f, -squareSize / 2.0f * a);
-        verts.emplace_back(squareSize / 2.0f, squareSize / 2.0f * a);
-        verts.emplace_back(-squareSize / 2.0f, -squareSize / 2.0f * a);
-        verts.emplace_back(squareSize / 2.0f, squareSize / 2.0f * a);
-        verts.emplace_back(-squareSize / 2.0f, squareSize / 2.0f * a);
+        m_verts.emplace_back(-m_squareSize / 2.0f, -m_squareSize / 2.0f * m_a);
+        m_verts.emplace_back(m_squareSize / 2.0f, -m_squareSize / 2.0f * m_a);
+        m_verts.emplace_back(m_squareSize / 2.0f, m_squareSize / 2.0f * m_a);
+        m_verts.emplace_back(-m_squareSize / 2.0f, -m_squareSize / 2.0f * m_a);
+        m_verts.emplace_back(m_squareSize / 2.0f, m_squareSize / 2.0f * m_a);
+        m_verts.emplace_back(-m_squareSize / 2.0f, m_squareSize / 2.0f * m_a);
     }
 
-    vertexShader = R"glsl(
+    m_vertexShader = R"glsl(
 
             #version 410 core
              
@@ -117,7 +117,7 @@ bool CCrosshair::init()
             }
             )glsl";
 
-    fragmentShader = R"glsl(
+    m_fragmentShader = R"glsl(
 
             #version 410 core
              
@@ -136,7 +136,7 @@ bool CCrosshair::init()
             }
             )glsl";
 
-    m_shader.LoadShaders(vertexShader, fragmentShader);
+    m_shader.LoadShaders(m_vertexShader, m_fragmentShader);
     m_shader.GetUniformLocationMap("mvp");
     m_shader.GetUniformLocationMap("CrosshairTexture");
     m_shader.GetUniformLocationMap("colour");
@@ -144,7 +144,7 @@ bool CCrosshair::init()
 
     m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(BasicVertex) * (MaxVerts));
     m_vbo.Bind(true);
-    m_textvbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(UVCoords) * (int)UVCoord.size());
+    m_textvbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(UVCoords) * (int)m_uvCoord.size());
     m_textvbo.Bind(true);
 
     glGenVertexArrays(1, &m_vao);
@@ -166,27 +166,68 @@ bool CCrosshair::init()
     return OKAY;
 }
 
-void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, float r, float g, float b)
+void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player)
 {
-    int count = (int)verts.size();
+    float r=0.0f, g=0.0f, b=0.0f;
+    int count = (int)m_verts.size();
+
     if (count > MaxVerts) {
         count = MaxVerts;       // maybe we could error out somehow
     }
 
-
     m_shader.EnableShader();
-
     matrix.Translate(x, y, 0);
-    matrix.Scale(dpiMultiplicator, dpiMultiplicator, 0);
 
-    // update uniform memory
-    glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, matrix);
-    glUniform4f(m_shader.uniformLocMap["colour"], r, g, b, 1.0f);
-    glUniform1i(m_shader.uniformLocMap["isBitmap"], false);
+    if (m_isBitmapCrosshair != "bmp")
+    {
+        switch (player)
+        {
+        case 0:
+            r = 1.0f;
+            g = 0.0f;
+            b = 0.0f;
+            break;
+        case 1:
+            r = 0.0f;
+            g = 1.0f;
+            b = 0.0f;
+            break;
+        }
 
-    // update vbo mem
-    m_vbo.Bind(true);
-    m_vbo.BufferSubData(0, count * sizeof(BasicVertex), verts.data());
+        matrix.Scale(m_dpiMultiplicator, m_dpiMultiplicator, 0);
+
+        // update uniform memory
+        glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, matrix);
+        glUniform4f(m_shader.uniformLocMap["colour"], r, g, b, 1.0f);
+        glUniform1i(m_shader.uniformLocMap["isBitmap"], false);
+
+        // update vbo mem
+        m_vbo.Bind(true);
+        m_vbo.BufferSubData(0, count * sizeof(BasicVertex), m_verts.data());
+    }
+    else
+    {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[player]);
+
+        m_textureCoordsCount = (int)m_uvCoord.size();
+
+        matrix.Scale(m_dpiMultiplicator * m_scaleBitmap, m_dpiMultiplicator * m_scaleBitmap, 0);
+
+        // update uniform memory
+        glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, matrix);
+        glUniform1i(m_shader.uniformLocMap["CrosshairTexture"], 0); // 0 or 1 or GL_TEXTURE0 GL_TEXTURE1
+        glUniform4f(m_shader.uniformLocMap["colour"], 1.0f, 1.0f, 1.0f, 1.0f);
+        glUniform1i(m_shader.uniformLocMap["isBitmap"], true);
+
+        // update vbo mem
+        m_vbo.Bind(true);
+        m_vbo.BufferSubData(0, count * sizeof(BasicVertex), m_verts.data());
+        m_vbo.Bind(false);
+        m_textvbo.Bind(true);
+        m_textvbo.BufferSubData(0, m_textureCoordsCount * sizeof(UVCoords), m_uvCoord.data());
+        m_textvbo.Bind(false);
+    }
 
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, count);
@@ -195,48 +236,10 @@ void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, float r, fl
     m_shader.DisableShader();
 }
 
-void CCrosshair::DrawBitmapCrosshair(New3D::Mat4 matrix, float x, float y, int TextureNum)
+CCrosshair::CCrosshair(const Util::Config::Node& config) : m_config(config),m_xRes(0),m_yRes(0)
 {
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, CrosshairtxID[TextureNum]);
-
-    
-    int count = (int)verts.size();
-    if (count > MaxVerts) {
-        count = MaxVerts;       // maybe we could error out somehow
-    }
-    m_TextureCoordsCount = (int)UVCoord.size();
-
-    m_shader.EnableShader();
-
-    matrix.Translate(x, y, 0);
-    matrix.Scale(dpiMultiplicator * ScaleBitmap, dpiMultiplicator * ScaleBitmap, 0);
-
-    // update uniform memory
-    glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, matrix);
-    glUniform1i(m_shader.uniformLocMap["CrosshairTexture"], 0); // 0 or 1 or GL_TEXTURE0 GL_TEXTURE1
-    glUniform4f(m_shader.uniformLocMap["colour"], 1.0f, 1.0f, 1.0f, 1.0f);
-    glUniform1i(m_shader.uniformLocMap["isBitmap"], true);
-
-    // update vbo mem
-    m_vbo.Bind(true);
-    m_vbo.BufferSubData(0, count * sizeof(BasicVertex), verts.data());
-    m_vbo.Bind(false);
-    m_textvbo.Bind(true);
-    m_textvbo.BufferSubData(0, m_TextureCoordsCount * sizeof(UVCoords), UVCoord.data());
-    m_textvbo.Bind(false);
-
-    glBindVertexArray(m_vao);
-    glDrawArrays(GL_TRIANGLES, 0, count);
-    glBindVertexArray(0);
-
-    m_shader.DisableShader();
-}
-
-CCrosshair::CCrosshair(const Util::Config::Node& config) : m_config(config),xRes(0),yRes(0)
-{
-    vertexShader = nullptr;
-    fragmentShader = nullptr;
+    m_vertexShader = nullptr;
+    m_fragmentShader = nullptr;
 }
 
 CCrosshair::~CCrosshair()

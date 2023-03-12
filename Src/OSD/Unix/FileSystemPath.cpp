@@ -73,8 +73,8 @@ namespace FileSystemPath
         case Screenshots:
             strPathType = "Screenshots";
             break;
-        case Media:
-            strPathType = "Media/";
+        case Assets:
+            strPathType = "Assets/";
             break;
         }
 
