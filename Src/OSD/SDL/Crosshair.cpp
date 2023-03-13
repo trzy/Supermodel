@@ -45,14 +45,12 @@ bool CCrosshair::Init()
         m_isBitmapCrosshair = false;
     }
 
-    m_crosshairs = m_config["Crosshairs"].ValueAs<unsigned>();
-
     m_xRes = m_config["XResolution"].ValueAs<unsigned>();
     m_yRes = m_config["YResolution"].ValueAs<unsigned>();
     m_a = (float)m_xRes / (float)m_yRes;
 
-	SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
-	SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
+	  SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
+	  SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
     if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
         return FAIL;
 
@@ -81,7 +79,7 @@ bool CCrosshair::Init()
     // Get DPI
     SDL_GetDisplayDPI(0, &m_diagDpi, &m_hDpi, &m_vDpi);
     m_dpiMultiplicator = m_hDpi / m_standardDpi;  // note : on linux VM diagdpi returns 0
-    
+
     // 3d obj
     m_uvCoord.emplace_back(0.0f, 0.0f);
     m_uvCoord.emplace_back(1.0f, 0.0f);
@@ -118,7 +116,7 @@ bool CCrosshair::Init()
     m_vertexShader = R"glsl(
 
             #version 410 core
-             
+
             uniform mat4 mvp;
             layout(location = 0) in vec3 inVertices;
             layout(location = 1) in vec2 vertexUV;
@@ -134,7 +132,7 @@ bool CCrosshair::Init()
     m_fragmentShader = R"glsl(
 
             #version 410 core
-             
+
             uniform vec4 colour;
             uniform sampler2D CrosshairTexture;
             uniform bool isBitmap;
@@ -255,8 +253,10 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
     bool offscreenTrigger[2]{false};
     float x[2]{ 0.0f }, y[2]{ 0.0f };
 
-    m_crosshairs &= 3;
-    if (!m_crosshairs)
+    // Crosshairs can be enabled/disabled at run-tim
+    unsigned crosshairs = m_config["Crosshairs"].ValueAs<unsigned>();
+    crosshairs &= 3;
+    if (!crosshairs)
         return;
 
     // Set up the viewport and orthogonal projection
@@ -308,11 +308,11 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
 
     // Draw visible crosshairs
 
-    if ((m_crosshairs & 1) && !offscreenTrigger[0])  // Player 1
+    if ((crosshairs & 1) && !offscreenTrigger[0]) // Player 1
     {
         DrawCrosshair(m, x[0], y[0], 0);
     }
-    if ((m_crosshairs & 2) && !offscreenTrigger[1])  // Player 2
+    if ((crosshairs & 2) && !offscreenTrigger[1]) // Player 2
     {
         DrawCrosshair(m, x[1], y[1], 1);
     }

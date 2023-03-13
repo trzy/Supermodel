@@ -33,7 +33,6 @@ private:
 	bool m_isBitmapCrosshair = false;
 	std::string m_crosshairStyle = "";
 	GLuint m_crosshairTexId[2] = { 0 };
-	unsigned int m_crosshairs = 0;
 	int m_p1CrosshairW = 0, m_p1CrosshairH = 0, m_p2CrosshairW = 0, m_p2CrosshairH = 0;
 	float m_diagDpi = 0.0f, m_hDpi = 0.0f, m_vDpi = 0.0f;
 	unsigned int m_xRes=0;
