@@ -52,7 +52,7 @@ Supermodel's GitHub source code repository:
 
 Supermodel is a work-in-progress, open source emulator.  Emulation in Supermodel
 has evolved to the point where most games run well, however there may be some
-minor visual issues. You experience may vary.
+minor visual issues.  Your experience may vary.
 
 
 =====================
@@ -734,21 +734,32 @@ To access the region change menu, enter Test mode and press Start, Start, Servic
 Start, Service, Test.
 
 
+Emergency Call Ambulance
+------------------------
+
+To play as the paramedics pushing a stretcher, highlight 'Manual' at the transmission select screen
+and then perform the following sequences of gear shifts: Shift Up, Shift Up, Shift Down, Shift Down,
+Shift Up.
+
+Supermodel presently only emulates a sequential shifter but cabinets with a 4-way H-type shifter
+exist and the shift sequence on this units is: 3, 3, 4, 4, 3 or 1, 1, 2, 2, 1.
+
+
 Fighting Vipers 2
 -----------------
 
 To change the region, in the 'Game Assignments' screen in Test mode, set the cursor at the 'Country'
-line and press: Left, Left, Left, Right, Right, Left. The country can then be changed using the Test
-switch.
+line and press: Left, Left, Left, Right, Right, Left.  The country can then be changed using the
+Test switch.
 
 
 Get Bass and Sega Bass Fishing
 ------------------------------
 
 To change the region, enter Test mode and go to the second screen of the CRT test
-('C.R.T. Test 2/2'). Press the Service button four times and then exit the CRT test. Next, enter
+('C.R.T. Test 2/2'). Press the Service button four times and then exit the CRT test.  Next, enter
 'Game Assignments', press Service three times, then press and hold Service and while holding, press
-Test. The region select menu will appear.
+Test.  The region select menu will appear.
 
 
 Harley-Davidson and L.A. Riders
@@ -800,7 +811,7 @@ Spikeout
 --------
 
 To change the region, enter Test mode, place the cursor on the 'Game Assignments' line and press
-Charge, Start, Jump, Start, Start, Start, Shift, Start, Start. The region change menu will be
+Charge, Start, Jump, Start, Start, Start, Shift, Start, Start.  The region change menu will be
 revealed.
 
 
@@ -808,22 +819,21 @@ Spikeout Final Edition
 ----------------------
 
 To change the region, enter Test mode, place the cursor on the 'Game Assignments' line, and while
-holding the Service button press Jump, Start, Jump, Start. Then, release the Service button and
-press Shift, Start, Start, Start, Charge, Start, Start, Shift, Start, Test. The region change menu
+holding the Service button press Jump, Start, Jump, Start.  Then, release the Service button and
+press Shift, Start, Start, Start, Charge, Start, Start, Shift, Start, Test.  The region change menu
 will be revealed.
 
 
 Star Wars Trilogy
 -----------------
 
-Inserting coins and starting a game before any 3D graphics have been displayed
-in attract mode will result in a PowerPC crash before the stage loads.  This is
-caused by an unknown emulation bug.  Simply wait until the Darth Vader sequence
-appears before attempting to start a game.
+Inserting coins and starting a game before any 3D graphics have been displayed in attract mode will
+result in a PowerPC crash before the stage loads.  This is caused by an unknown emulation bug.
+Simply wait until the Darth Vader sequence appears before attempting to start a game.
 
-If 'Star Wars Trilogy' is booting directly into the stage select screen, it is
-probably because you exited Supermodel with credits still in the machine.
-Clear the NVRAM (Alt-N) and reset the game (Alt-R).
+If 'Star Wars Trilogy' is booting directly into the stage select screen, it is probably because you
+exited Supermodel with credits still in the machine.  Clear the NVRAM (Alt-N) and reset the game
+(Alt-R).
 
 To change the region, enter Test mode and perform the following series of short (press and release)
 and long (press and hold for 4-5 seconds) Service button presses: 3 short, 2 long, 2 short, 1 long.
@@ -832,10 +842,9 @@ and long (press and hold for 4-5 seconds) Service button presses: 3 short, 2 lon
 The Lost World
 --------------
 
-To reload, the light gun must be pointed off-screen by pressing (and holding)
-the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
-This behavior can be changed with the 'InputAutoTrigger' setting in the
-configuration file.
+To reload, the light gun must be pointed off-screen by pressing (and holding) the 'off-screen'
+button and, simultaneously, pressing the trigger to shoot.  This behavior can be changed with the
+'InputAutoTrigger' setting in the configuration file.
 
 To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, Service,
 Test.
