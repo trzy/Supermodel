@@ -111,11 +111,11 @@
 #endif
 
 #ifndef SAFE_DELETE
-	#define SAFE_DELETE(p) delete (p); (p) = NULL;
+	#define SAFE_DELETE(p) if (p != nullptr) { delete (p); (p) = NULL; }
 #endif
 
 #ifndef SAFE_ARRAY_DELETE
-	#define SAFE_ARRAY_DELETE(x) delete[] x; x = NULL;
+	#define SAFE_ARRAY_DELETE(x) if (x != nullptr) { delete[] x; x = NULL; }
 #endif
 
 static int(*Runnet68kCB)(int cycles);
@@ -667,7 +667,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			case 0x80:
 				nets->Send((const char*)CommRAM + send_offset, send_size);
 				DebugLog("send enable off=%x size=%x\n", send_offset, send_size);
-				
+
 				#ifdef NET_DEBUG
 				DebugLog("transmitting : ");
 				if (send_size > 50) //too big for print, so...

@@ -30,6 +30,10 @@
 class INetBoard
 {
 public:
+  virtual ~INetBoard()
+  {
+  }
+
 	virtual void SaveState(CBlockFile* SaveState) = 0;
 	virtual void LoadState(CBlockFile* SaveState) = 0;
 
