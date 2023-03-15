@@ -61,7 +61,7 @@ minor visual issues.  Your experience may vary.
 
     --- Introduction
     --- Disclaimer
-    --- Table of Conents
+    --- Table of Contents
      1. Revision History
      2. Installing Supermodel
      3. Running Supermodel
@@ -169,7 +169,7 @@ directories should be created:
 
 Supermodel requires OpenGL 2.1 and a substantial amount of both video and system
 memory.  A modern 64-bit CPU and a mid range GPU are the minimum recommendations
-to achieve consistant frame rates of 60 FPS.
+to achieve consistent frame rates of 60 FPS.
 
 
 =========================
@@ -602,7 +602,7 @@ Common input-related problems are discussed below.
     ---------
 
     Problem:
-        Unable to select a particular joysick axis when configuring a mapping.
+        Unable to select a particular joystick axis when configuring a mapping.
 
     Solution:
         This may mean that the joystick axis needs calibrating.  This can be
@@ -904,14 +904,6 @@ following series of short (press and release) and long (press and hold for 4-5
 seconds) Service button presses: 1 long, 3 short, 1 long.
 
 
-Virtua Striker 2 '99
---------------------
-
-To change the region, enter Test mode and in 'Game Assignments', perform the
-following series of short (press and release) and long (press and hold for 4-5
-seconds) Service button presses: 1 long, 3 short, 1 long, 2 short, 1 long.
-
-
 ==============================
   11. The Configuration File
 ==============================
@@ -967,7 +959,7 @@ Section names appear in between square brackets on their own lines.
 
     [ SectionName ]
 
-Settings that appear at the beginning of the file without a preceeding section
+Settings that appear at the beginning of the file without a preceding section
 are automatically assigned to 'Global'.
 
 Comments begin with a semicolon and extend until the end of the line.
@@ -1145,7 +1137,7 @@ their perfect center when released.  The dead zone is expressed as a percentage
 
 InputJoy**Saturation: The saturation of a joystick axis is the point at which
 the axis is considered to be at its most extreme position.  It can be thought
-of as a measure of the sensivity of the axis.  Like the dead zone, it is
+of as a measure of the sensitivity of the axis.  Like the dead zone, it is
 expressed as a percentage of the axis range but its value may be larger than
 100, up to a maximum of 200.  A value of 50 means that the joystick only needs
 to be moved halfway in order for Supermodel to see it as fully extended.
@@ -1167,7 +1159,7 @@ options.  The default values are MinVal -32768, OffVal 0, and MaxVal 32767 but
 with the pedal example just given, they would need to be set to MinVal 32767,
 OffVal 32767, and MaxVal -32768.
 
-In most cases it will be unecessary to alter the DeadZone, MinVal, OffVal, and
+In most cases it will be unnecessary to alter the DeadZone, MinVal, OffVal, and
 MaxVal options by hand as calibrating a joystick axis from within the input
 configuration screens of Supermodel will set them automatically.  Only the
 sensitivity option is not configured in this way.
@@ -1330,7 +1322,7 @@ not.  All options are case sensitive.
 
     Option:         -config-inputs
 
-    Description:    Launches the interacive input configuration utility in the
+    Description:    Launches the interactive input configuration utility in the
                     command prompt window.  Allows controls to be remapped.
                     See the section on controls for more information.
 
