@@ -104,7 +104,8 @@ PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM
 PLATFORM_SRC_FILES = \
 	Src/OSD/Windows/DirectInputSystem.cpp \
 	Src/OSD/Windows/FileSystemPath.cpp \
-	Src/OSD/Windows/WinOutputs.cpp
+	Src/OSD/Windows/WinOutputs.cpp \
+	Src/OSD/Windows/SupermodelResources.rc
 
 .PHONY: clean
 
@@ -114,3 +115,14 @@ clean:
 	$(SILENT)echo Cleaning up $(BIN_DIR) and $(OBJ_DIR)...
 	$(SILENT)$(DELETE) $(BIN_DIR)
 	$(SILENT)$(DELETE) $(OBJ_DIR)
+
+
+###############################################################################
+# Platform-specific Rules
+#
+# This section must be placed *after* the inclusion of Makefiles/Rules.inc.
+###############################################################################
+
+$(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD/Windows/SupermodelManifest.xml
+	$(info Compiling              : $< -> $@)
+	$(SILENT)windres -i Src/OSD/Windows/SupermodelResources.rc -o $@
