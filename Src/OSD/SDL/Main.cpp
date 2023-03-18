@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2022 The Supermodel Team
+ ** Copyright 2003-2023 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -815,7 +815,7 @@ void EndFrameVideo()
 {
   // Show crosshairs for light gun games
   if (videoInputs)
-    s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset);
+    s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
 
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
@@ -1515,7 +1515,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2003-2022 by The Supermodel Team");
+  puts("Copyright 2003-2023 by The Supermodel Team");
 }
 
 static void Help(void)
