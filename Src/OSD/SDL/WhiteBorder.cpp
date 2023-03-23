@@ -48,7 +48,7 @@ bool CWhiteBorder::Init()
             }
             )glsl";
 
-    m_fragmentShader = R"glsl(
+       m_fragmentShader = R"glsl(
 
             #version 410 core
 
@@ -61,40 +61,37 @@ bool CWhiteBorder::Init()
             }
             )glsl";
 
-    m_shader.LoadShaders(m_vertexShader, m_fragmentShader);
-    m_shader.GetUniformLocationMap("mvp");
-    m_shader.GetUniformLocationMap("colour");
-    m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(BasicVertex) * (MaxVerts));
-	m_vbo.Bind(true);
+        m_shader.LoadShaders(m_vertexShader, m_fragmentShader);
+        m_shader.GetUniformLocationMap("mvp");
+        m_shader.GetUniformLocationMap("colour");
+        m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(BasicVertex) * (MaxVerts));
+	    m_vbo.Bind(true);
 
 
-//FIXME: memory leak upon screen resolution change
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+        glGenVertexArrays(1, &m_vao);
+        glBindVertexArray(m_vao);
 
-    m_vbo.Bind(true);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(BasicVertex), 0);
-	m_vbo.Bind(false);
+        m_vbo.Bind(true);
+	    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(BasicVertex), 0);
+	    m_vbo.Bind(false);
 
-    
-
-    glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-    
-    glBindVertexArray(0);
-    m_drawWhiteBorder = true;
+        glEnableVertexAttribArray(0);
+	    glEnableVertexAttribArray(1);
+        
+        glBindVertexArray(0);
+        m_drawWhiteBorder = true;
 	}
     return OKAY;
 }
 
-void CWhiteBorder::GenQuad(std::vector<CBasicDrawable::BasicVertex> &verts, float x, float y, float w, float h)
+void CWhiteBorder::GenQuad(std::vector<CBasicDrawable::BasicVertex> &verts, unsigned int x, unsigned int y, unsigned int w, unsigned int h)
 {
-  verts.emplace_back(x, y);
-  verts.emplace_back(x, y + h);
-  verts.emplace_back(x + w, y + h);
-  verts.emplace_back(x, y);
-  verts.emplace_back(x + w, y + h);
-  verts.emplace_back(x + w, y);
+    verts.emplace_back(float(x),        float(y));
+    verts.emplace_back(float(x),        float(y + h));
+    verts.emplace_back(float(x + w),    float(y + h));
+    verts.emplace_back(float(x),        float(y));
+    verts.emplace_back(float(x + w),    float(y + h));
+    verts.emplace_back(float(x + w),    float(y));
 }
 
 
@@ -103,53 +100,51 @@ void CWhiteBorder::Update(unsigned int xOffset, unsigned int yOffset, unsigned i
     //white border
     if (m_drawWhiteBorder)
     {
-		if(m_xRes 		!= xRes 	|| 
-		   m_yRes 		!= yRes 	|| 
-		   m_xOffset	!= xOffset  ||
-		   m_yOffset	!= yOffset	)
-		{
-			
-			m_xRes 		= xRes 	 ;
-			m_yRes 		= yRes 	 ;
-			m_xOffset	= xOffset;
-			m_yOffset	= yOffset;
+        if(m_xRes 		!= xRes 	|| 
+           m_yRes 		!= yRes 	|| 
+           m_xOffset	!= xOffset  ||
+           m_yOffset	!= yOffset	)
+        {
+            m_xRes 		= xRes 	 ;
+            m_yRes 		= yRes 	 ;
+            m_xOffset	= xOffset;
+            m_yOffset	= yOffset;
             int whiteBorder = m_width;
-			int internalWhiteBorder = m_width / 2;
-			//generate border geometry
-			m_verts.clear();
-			GenQuad(m_verts, m_xOffset - internalWhiteBorder, m_yOffset - internalWhiteBorder, internalWhiteBorder, m_yRes + internalWhiteBorder * 2);
-			GenQuad(m_verts, m_xOffset + m_xRes, m_yOffset - internalWhiteBorder, internalWhiteBorder, m_yRes + internalWhiteBorder * 2);
-			GenQuad(m_verts, m_xOffset, m_yOffset - internalWhiteBorder, m_xRes , internalWhiteBorder);
-			GenQuad(m_verts, m_xOffset, m_yOffset + m_yRes, m_xRes, internalWhiteBorder);
+            int internalWhiteBorder = m_width / 2;
+            //generate border geometry
+            m_verts.clear();
+            GenQuad(m_verts, m_xOffset - internalWhiteBorder, m_yOffset - internalWhiteBorder, internalWhiteBorder, m_yRes + internalWhiteBorder * 2);
+            GenQuad(m_verts, m_xOffset + m_xRes, m_yOffset - internalWhiteBorder, internalWhiteBorder, m_yRes + internalWhiteBorder * 2);
+            GenQuad(m_verts, m_xOffset, m_yOffset - internalWhiteBorder, m_xRes , internalWhiteBorder);
+            GenQuad(m_verts, m_xOffset, m_yOffset + m_yRes, m_xRes, internalWhiteBorder);
+            
+            // update vbo mem
+            m_vbo.Bind(true);
+            m_vbo.BufferSubData(0, m_verts.size() * sizeof(BasicVertex), m_verts.data());			
+        }
 
-			// update vbo mem
-			m_vbo.Bind(true);
-			m_vbo.BufferSubData(0, m_verts.size() * sizeof(BasicVertex), m_verts.data());			
-		}	
-			
-		
         glUseProgram(0); 
-  		glViewport(0, 0, totalXRes, totalYRes);
-  		glDisable(GL_BLEND);   
-  		glDisable(GL_DEPTH_TEST);
-  		glDisable(GL_SCISSOR_TEST);
-
-  		New3D::Mat4 mvpMatrix;
-        mvpMatrix.Ortho(0.0, totalXRes, totalYRes, 0.0, -1.0f, 1.0f);
-  		
-  		m_shader.EnableShader();
-
+        glViewport(0, 0, totalXRes, totalYRes);
+        glDisable(GL_BLEND);   
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_SCISSOR_TEST);
+        
+        New3D::Mat4 mvpMatrix;
+        mvpMatrix.Ortho(0.0, float(totalXRes), float(totalYRes), 0.0, -1.0f, 1.0f);
+        
+        m_shader.EnableShader();
+        
         // update uniform memory
         glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, mvpMatrix);
         glUniform4f(m_shader.uniformLocMap["colour"], 1.0f, 1.0f, 1.0f, 1.0f);
-
+        
         glBindVertexArray(m_vao);
-        glDrawArrays(GL_TRIANGLES, 0, m_verts.size());
+        glDrawArrays(GL_TRIANGLES, 0, GLsizei(m_verts.size()));
         glBindVertexArray(0);
-
+        
         m_shader.DisableShader();
-  		
-  		glEnable(GL_SCISSOR_TEST);
+        
+        glEnable(GL_SCISSOR_TEST);
     }
 }
 
@@ -166,15 +161,14 @@ unsigned int CWhiteBorder::Width()
 
 CWhiteBorder::CWhiteBorder(const Util::Config::Node& config) : m_config(config)
 {
+    m_drawWhiteBorder = m_config["DrawWhiteBorder"].ValueAs<bool>();
     m_vertexShader = nullptr;
     m_fragmentShader = nullptr;
-	m_drawWhiteBorder = m_config["DrawWhiteBorder"].ValueAs<bool>();
-	m_xRes 		= 0;
-   	m_yRes 		= 0;
-	m_xOffset	= 0;
-	m_yOffset	= 0;	
+    m_xRes 		= 0;
+    m_yRes 		= 0;
+    m_xOffset	= 0;
+    m_yOffset	= 0;	
     m_width     = 50;
-	
 }
 
 CWhiteBorder::~CWhiteBorder()

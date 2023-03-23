@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2022 The Supermodel Team
+ ** Copyright 2003-2023 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -39,12 +39,10 @@ private:
 	unsigned int m_yOffset;
 	unsigned int m_width;
 	
-	void GenQuad(std::vector<CBasicDrawable::BasicVertex>& verts, float x, float y, float w, float h);
+	void GenQuad(std::vector<CBasicDrawable::BasicVertex>& verts, unsigned int x, unsigned int y, unsigned int w, unsigned int h);
 public:
 	CWhiteBorder(const Util::Config::Node& config);
 	~CWhiteBorder();
-	
-	//called when resolution is changing...
 	bool Init();
 	void Update(unsigned int xOffset, unsigned int yOffset, unsigned int xRes, unsigned int yRes, unsigned int totalXRes, unsigned int totalYRes);
 	bool IsEnabled();
