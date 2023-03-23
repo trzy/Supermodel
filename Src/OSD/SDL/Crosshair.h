@@ -43,7 +43,35 @@ private:
   float m_dpiMultiplicator = 0.0f;
   const float m_scaleBitmap = 0.1f;
 
+<<<<<<< HEAD
  
+=======
+  struct BasicVertex
+  {
+    BasicVertex(float x, float y, float z) : x(x), y(y), z(z) {}
+    BasicVertex(float x, float y) : x(x), y(y), z(0.0f) {}
+    float x, y, z;
+  };
+
+  struct UVCoords
+  {
+    UVCoords(float x, float y) : x(x), y(y) {}
+    float x, y;
+  };
+
+  std::vector<BasicVertex> m_verts;
+  std::vector<UVCoords> m_uvCoord;
+
+  GLSLShader m_shader;
+  VBO m_vbo;
+  VBO m_textvbo;
+  GLuint m_vao = 0;
+  int m_textureCoordsCount = 0;
+  const char* m_vertexShader;
+  const char* m_fragmentShader;
+
+  const int MaxVerts = 1024;  // per draw call
+>>>>>>> 87de86f7d19aba5cb16c675a3b0ee8142da72bd7
 
   void BuildCrosshairVertices(unsigned int xRes, unsigned int yRes);
   void DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player, unsigned int xRes, unsigned int yRes);
