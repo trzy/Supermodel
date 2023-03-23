@@ -333,7 +333,6 @@ void CCrosshair::GunToViewCoords(float* x, float* y)
 CCrosshair::CCrosshair(const Util::Config::Node& config)
     : m_config(config)
 {
-{
     m_vertexShader = nullptr;
     m_fragmentShader = nullptr;
 }
