@@ -32,7 +32,7 @@
 
 namespace FileSystemPath
 {
-    enum PathType { Analysis, Config, Log, NVRAM, Saves, Screenshots }; // Filesystem path types
+    enum PathType { Analysis, Config, Log, NVRAM, Saves, Screenshots, Assets }; // Filesystem path types
     bool PathExists(std::string fileSystemPath); // Checks if a directory exists (returns true if exists, false if it doesn't)
     std::string GetPath(PathType pathType);  // Generates a path to be used by Supermodel files
 }

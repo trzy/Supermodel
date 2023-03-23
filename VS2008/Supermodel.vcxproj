@@ -114,8 +114,10 @@
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -145,8 +147,10 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -175,8 +179,10 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -209,8 +215,10 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -347,9 +355,11 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\OSD\Logger.cpp" />
     <ClCompile Include="..\Src\OSD\Outputs.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Audio.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Main.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\SDLInputSystem.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Thread.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\WhiteBorder.cpp" />
     <ClCompile Include="..\Src\OSD\Windows\DirectInputSystem.cpp" />
     <ClCompile Include="..\Src\OSD\Windows\FileSystemPath.cpp" />
     <ClCompile Include="..\Src\OSD\Windows\WinOutputs.cpp" />
@@ -523,9 +533,12 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\OSD\Audio.h" />
     <ClInclude Include="..\Src\OSD\Logger.h" />
     <ClInclude Include="..\Src\OSD\Outputs.h" />
+    <ClInclude Include="..\Src\OSD\SDL\basicDrawable.h" />
+    <ClInclude Include="..\Src\OSD\SDL\Crosshair.h" />
     <ClInclude Include="..\Src\OSD\SDL\OSDConfig.h" />
     <ClInclude Include="..\Src\OSD\SDL\SDLInputSystem.h" />
     <ClInclude Include="..\Src\OSD\SDL\Types.h" />
+    <ClInclude Include="..\Src\OSD\SDL\WhiteBorder.h" />
     <ClInclude Include="..\Src\OSD\Thread.h" />
     <ClInclude Include="..\Src\OSD\Video.h" />
     <ClInclude Include="..\Src\OSD\Windows\DirectInputSystem.h" />

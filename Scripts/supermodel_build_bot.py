@@ -237,13 +237,14 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
       # Stage the release package files
       print("Creating release package...")
       pkg_dir = os.path.join(working_dir, "pkg")
-      bash.execute(working_dir=working_dir, command="mkdir pkg && mkdir pkg/Config && mkdir pkg/NVRAM && mkdir pkg/Saves && mkdir pkg/ROMs")
+      bash.execute(working_dir=working_dir, command="mkdir pkg && mkdir pkg/Config && mkdir pkg/NVRAM && mkdir pkg/Saves && mkdir pkg/ROMs && mkdir pkg/Assets")
       change_log_file_path = os.path.join(pkg_dir, "CHANGES.txt")
       create_change_log(bash, repo_dir=repo_dir, file_path=change_log_file_path, uploaded_shas=uploaded_shas, current_sha=current_sha)
       bash.execute(working_dir=working_dir, command="cp model3emu/Config/Supermodel.ini pkg/Config && cp model3emu/Config/Games.xml pkg/Config")
       bash.execute(working_dir=working_dir, command="echo NVRAM files go here. >pkg/NVRAM/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Save states go here. >pkg/Saves/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Recommended \\(but not mandatory\\) location for ROM sets. >pkg/ROMs/DIR.txt")
+      bash.execute(working_dir=working_dir, command="cp model3emu/Assets/DIR.txt pkg/Assets && cp model3emu/Assets/p1crosshair.bmp pkg/Assets && cp model3emu/Assets/p2crosshair.bmp pkg/Assets")
       bash.execute(working_dir=working_dir, command="cp model3emu/Docs/README.txt pkg && cp model3emu/Docs/LICENSE.txt pkg")
       bash.execute(working_dir=working_dir, command="cp model3emu/bin64/supermodel.exe pkg/Supermodel.exe")
       #bash.execute(working_dir=working_dir, command="cp /mingw64/bin/SDL2.dll pkg && cp /mingw64/bin/SDL2_net.dll pkg")
@@ -258,7 +259,10 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
         "Config/Games.xml",
         "NVRAM/DIR.txt",
         "Saves/DIR.txt",
-        "ROMs/DIR.txt"
+        "ROMs/DIR.txt",
+        "Assets/DIR.txt",
+        "Assets/p1crosshair.bmp",
+        "Assets/p2crosshair.bmp"
       ]
       confirm_package_contents(package_dir=pkg_dir, package_files=package_files)
 

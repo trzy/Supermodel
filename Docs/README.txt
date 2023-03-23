@@ -25,9 +25,9 @@ SDL, and can run on Windows, Linux, and Mac OS X.  Development began in January
 of 2011 and continues to focus on reverse engineering all aspects of the Model
 3 arcade platform.
 
-In order to use Supermodel, you must legally possess ROM images of Model 3 games.
-Learning to operate Supermodel will come with a steep learning curve for most
-people.  Before seeking out help, please read this user manual carefully.
+In order to use Supermodel, you must legally possess ROM images of Model 3
+games.  Learning to operate Supermodel will come with a steep learning curve for
+most people.  Before seeking out help, please read this user manual carefully.
 
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included in LICENSE.txt.  Additional copyright information for
@@ -52,7 +52,7 @@ Supermodel's GitHub source code repository:
 
 Supermodel is a work-in-progress, open source emulator.  Emulation in Supermodel
 has evolved to the point where most games run well, however there may be some
-minor visual issues. You experience may vary.
+minor visual issues.  Your experience may vary.
 
 
 =====================
@@ -61,7 +61,7 @@ minor visual issues. You experience may vary.
 
     --- Introduction
     --- Disclaimer
-    --- Table of Conents
+    --- Table of Contents
      1. Revision History
      2. Installing Supermodel
      3. Running Supermodel
@@ -147,18 +147,29 @@ directories should be created:
     Name                    Description
     ----                    -----------
     Supermodel.exe          Supermodel program.  Run this.
-    SDL.dll                 The SDL library.  Use the bundled DLL file.
     README.txt              This text file.
     LICENSE.txt             Supermodel license and terms of use.
-    Config/                 Directory where the configuration file is stored.
+    CHANGES.txt             Change log directly produces directly from the
+                            source code repository.
+    Assets/                 Directory containing multimedia assets required by
+                            Supermodel.
+    Assets/p1crosshair.bmp  Bitmap crosshair image for player 1, used when bit-
+                            mapped crosshairs are enabled
+                            ('--crosshair-style=bmp').
+    Assets/p2crosshair.bmp  Bitmap crosshair image for player 2.
+    Config/                 Directory where required configuration files are
+                            stored.
     Config/Supermodel.ini   Configuration file containing default input
                             settings.
+    Config/Games.xml        Game and ROM set definitions.
     NVRAM/                  Directory where NVRAM contents will be saved.
+    ROMs/                   Directory conveniently included (but not required)
+                            for placing ROM sets.
     Saves/                  Directory where save states will be saved.
 
-Supermodel requires OpenGL 2.1 and a substantial amount of both video and
-system memory.  A modern 64-bit CPU and a mid range GPU are the minimum
-recommendations to achieve consistant frame rates of 60 FPS.
+Supermodel requires OpenGL 2.1 and a substantial amount of both video and system
+memory.  A modern 64-bit CPU and a mid range GPU are the minimum recommendations
+to achieve consistent frame rates of 60 FPS.
 
 
 =========================
@@ -189,8 +200,9 @@ command prompt.  In full screen mode, they will not be visible.
   4. Game Compatibility
 =========================
 
-Supermodel recognizes all known Model 3 ROM sets. Below is a compatibility matrix.
-Other than minor graphical issues, if any, major issues are reported below:
+Supermodel recognizes all known Model 3 ROM sets. Below is a compatibility
+matrix.  Other than minor graphical issues, if any, major issues are reported
+below:
 
    ROM Set                    Title                           Comments
 +------------+-----------------------------------------+-----------------------+
@@ -289,15 +301,31 @@ Note 2: Set game to SD in game assignment in the TEST MENU or wait a few seconds
   5. Video Settings
 =====================
 
-Supermodel may be run in either windowed (default) or full screen mode.  It
-automatically adjusts the display area to retain the aspect ratio of the Model
-3's native (and Supermodel's default) resolution, 496x384.  Currently, this
-cannot be overriden.  Changing video modes at run-time is not yet supported.
+Supermodel may be run in either windowed (default) or full screen mode.  By
+default, it automatically adjusts the display area to retain the aspect ratio of
+the Model 3's native (and Supermodel's default) resolution, 496x384, introducing
+letterboxing (black borders) as needed.
+
+To stretch the image to fill the display, use the '-stretch' option.
+
+Wide aspect ratios that extend the field of view horizontally are supported by
+using the '-wide-screen' option.  This works well for most common aspect ratio
+and additional geometry will be visible but at extremely wide aspect ratios,
+objects will be culled by games, which are not aware of the extended field of
+view.  Tile-based 2D background layers will not be stretched and will be
+letterboxed.
+
+To stretch the 2D background layers, use '-wide-bg'.  Many games use 2D back-
+grounds instead of 3D skyboxes and when playing in wide screen mode, this option
+often enhances their appearance.
 
 By default, Supermodel limits the frame rate to 60 frames per second.  This has
 no impact on performance except when the frame rate exceeds 60 FPS on fast
 systems.  Frame rate limiting can be disabled with the '-no-throttle' option.
 Some video drivers may continue to lock to the refresh rate.
+
+The actual Model 3 refresh rate is 57.524 Hz.  The '-true-hz' option will switch
+to this rate.
 
 To change the resolution, use the '-res' command line option.  For full screen
 mode, use '-fullscreen'.  For example, to set a full screen 1920x1080 mode,
@@ -307,6 +335,8 @@ try:
 
 Video settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this manual.
+
+Changing video modes at run-time is not yet supported.
 
 
 =====================
@@ -572,7 +602,7 @@ Common input-related problems are discussed below.
     ---------
 
     Problem:
-        Unable to select a particular joysick axis when configuring a mapping.
+        Unable to select a particular joystick axis when configuring a mapping.
 
     Solution:
         This may mean that the joystick axis needs calibrating.  This can be
@@ -703,15 +733,15 @@ can be cleared by deleting the NVRAM files or pressing Alt-N.
   10. Game-Specific Comments and Tips
 =======================================
 
-This section contains additional game-specific setup information, workarounds for emulation issues,
-and region codes for changing the region.
+This section contains additional game-specific setup information, workarounds
+for emulation issues, and region codes for changing the region.
 
 
 Cyber Troopers Virtual-On Oratorio Tangram
 ------------------------------------------
 
-To change the region, enter Test mode and press Start, Start, Service, Start, Start, Start, Service,
-Service, Test.
+To change the region, enter Test mode and press Start, Start, Service, Start,
+Start, Start, Service, Service, Test.
 
 
 Daytona USA 2 and Daytona USA 2 Power Edition
@@ -724,58 +754,73 @@ in the Test Menu, under 'Game Assignments'.
 The region change menu can be accessed in two different ways:
 
   1. Enter Test mode and push the Service and Test buttons simultaneously.
-  2. Enter Test mode. Then, hold Start and press VR4, VR4, VR2, VR3, VR1, VR3, VR2.
+  2. Enter Test mode. Then, hold Start and press VR4, VR4, VR2, VR3, VR1, VR3,
+     VR2.
 
 
 Dirt Devils
 -----------
 
-To access the region change menu, enter Test mode and press Start, Start, Service, Start, Start,
-Start, Service, Test.
+To access the region change menu, enter Test mode and press Start, Start,
+Service, Start, Start, Start, Service, Test.
+
+
+Emergency Call Ambulance
+------------------------
+
+To play as the paramedics pushing a stretcher, highlight 'Manual' at the
+transmission select screen and then perform the following sequences of gear
+shifts: Shift Up, Shift Up, Shift Down, Shift Down, Shift Up.
+
+Supermodel presently only emulates a sequential shifter but cabinets with a 4-
+way H-type shifter exist and the shift sequence on this units is: 3, 3, 4, 4, 3
+or 1, 1, 2, 2, 1.
 
 
 Fighting Vipers 2
 -----------------
 
-To change the region, in the 'Game Assignments' screen in Test mode, set the cursor at the 'Country'
-line and press: Left, Left, Left, Right, Right, Left. The country can then be changed using the Test
-switch.
+To change the region, in the 'Game Assignments' screen in Test mode, set the
+cursor at the 'Country' line and press: Left, Left, Left, Right, Right, Left.
+The country can then be changed using the Test switch.
 
 
 Get Bass and Sega Bass Fishing
 ------------------------------
 
-To change the region, enter Test mode and go to the second screen of the CRT test
-('C.R.T. Test 2/2'). Press the Service button four times and then exit the CRT test. Next, enter
-'Game Assignments', pess Service three times, then press and hold Service and while holding, press
-Test. The region select menu will appear.
+To change the region, enter Test mode and go to the second screen of the CRT
+test ('C.R.T. Test 2/2'). Press the Service button four times and then exit the
+CRT test.  Next, enter 'Game Assignments', press Service three times, then press
+and hold Service and while holding, press Test.  The region select menu will
+appear.
 
 
 Harley-Davidson and L.A. Riders
 -------------------------------
 
-To change the region, enter Test mode and in the 'Game Assignments' screen, press Shift Up,
-Shift Up, Shift Down, Shift Down, View, Music, View, Music.
+To change the region, enter Test mode and in the 'Game Assignments' screen,
+press Shift Up, Shift Up, Shift Down, Shift Down, View, Music, View, Music.
 
 
 L.A. Machineguns
 ----------------
 
-To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, P1 Start,
-P1 Start, Service, Test.
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
+Start, P1 Start, P1 Start, Service, Test.
 
 
 Le Mans 24
 ----------
 
-To change the region, enter Test mode and press Start, Start, Service, Service, Start, Test.
+To change the region, enter Test mode and press Start, Start, Service, Service,
+Start, Test.
 
 
 Magical Truck Adventure
 -----------------------
 
-To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, Service,
-Test.
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
+Start, Service, Test.
 
 
 Sega Rally 2
@@ -785,32 +830,34 @@ As with 'Star Wars Trilogy', you may experience problems if you attempt to
 start a game before any 3D graphics are displayed (for example, during the Sega
 logo).
 
-To change the region, enter Test mode and perform the following series of short (press and release)
-and long (press and hold for 4-5 seconds) Service button presses: 4 short, 2 long, 2 short, 1 long.
+To change the region, enter Test mode and perform the following series of short
+(press and release) and long (press and hold for 4-5 seconds) Service button
+presses: 4 short, 2 long, 2 short, 1 long.
 
 
 Ski Champ
 ---------
 
-To change the region, enter Test mode and press Select 1, Select 3, Select 1, Select 3, Service,
-Service.
+To change the region, enter Test mode and press Select 1, Select 3, Select 1,
+Select 3, Service, Service.
 
 
 Spikeout
 --------
 
-To change the region, enter Test mode, place the cursor on the 'Game Assignments' line and press
-Charge, Start, Jump, Start, Start, Start, Shift, Start, Start. The region change menu will be
-revealed.
+To change the region, enter Test mode, place the cursor on the 'Game
+Assignments' line and press Charge, Start, Jump, Start, Start, Start, Shift,
+Start, Start.  The region change menu will be revealed.
 
 
 Spikeout Final Edition
 ----------------------
 
-To change the region, enter Test mode, place the cursor on the 'Game Assignments' line, and while
-holding the Service button press Jump, Start, Jump, Start. Then, release the Service button and
-press Shift, Start, Start, Start, Charge, Start, Start, Shift, Start, Test. The region change menu
-will be revealed.
+To change the region, enter Test mode, place the cursor on the
+'Game Assignments' line, and while holding the Service button press Jump, Start,
+Jump, Start.  Then, release the Service button and press Shift, Start, Start,
+Start, Charge, Start, Start, Shift, Start, Test.  The region change menu will be
+revealed.
 
 
 Star Wars Trilogy
@@ -822,11 +869,12 @@ caused by an unknown emulation bug.  Simply wait until the Darth Vader sequence
 appears before attempting to start a game.
 
 If 'Star Wars Trilogy' is booting directly into the stage select screen, it is
-probably because you exited Supermodel with credits still in the machine.
-Clear the NVRAM (Alt-N) and reset the game (Alt-R).
+probably because you exited Supermodel with credits still in the machine.  Clear
+the NVRAM (Alt-N) and reset the game (Alt-R).
 
-To change the region, enter Test mode and perform the following series of short (press and release)
-and long (press and hold for 4-5 seconds) Service button presses: 3 short, 2 long, 2 short, 1 long.
+To change the region, enter Test mode and perform the following series of short
+(press and release) and long (press and hold for 4-5 seconds) Service button
+presses: 3 short, 2 long, 2 short, 1 long.
 
 
 The Lost World
@@ -837,31 +885,23 @@ the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
 This behavior can be changed with the 'InputAutoTrigger' setting in the
 configuration file.
 
-To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1 Start, Service,
-Test.
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
+Start, Service, Test.
 
 
 The Ocean Hunter
 ----------------
 
-To change the region, enter Test mode and in 'Game Assignments', press P1 Start, P2 Start, P1 Start,
-P2 Start, P1 Start, P2 Start, P2 Start.
+To change the region, enter Test mode and in 'Game Assignments', press P1 Start,
+P2 Start, P1 Start, P2 Start, P1 Start, P2 Start, P2 Start.
 
 
-Virtua Fighter 2 '98
+Virtua Striker 2 '98
 --------------------
 
-To change the region, enter Test mode and in 'Game Assignments', perform the following series of
-short (press and release) and long (press and hold for 4-5 seconds) Service button presses: 1 long,
-3 short, 1 long.
-
-
-Virtua Striker 2 '99
---------------------
-
-To change the region, enter Test mode and in 'Game Assignments', perform the following series of
-short (press and release) and long (press and hold for 4-5 seconds) Service button presses: 1 long,
-3 short, 1 long, 2 short, 1 long.
+To change the region, enter Test mode and in 'Game Assignments', perform the
+following series of short (press and release) and long (press and hold for 4-5
+seconds) Service button presses: 1 long, 3 short, 1 long.
 
 
 ==============================
@@ -919,7 +959,7 @@ Section names appear in between square brackets on their own lines.
 
     [ SectionName ]
 
-Settings that appear at the beginning of the file without a preceeding section
+Settings that appear at the beginning of the file without a preceding section
 are automatically assigned to 'Global'.
 
 Comments begin with a semicolon and extend until the end of the line.
@@ -1097,7 +1137,7 @@ their perfect center when released.  The dead zone is expressed as a percentage
 
 InputJoy**Saturation: The saturation of a joystick axis is the point at which
 the axis is considered to be at its most extreme position.  It can be thought
-of as a measure of the sensivity of the axis.  Like the dead zone, it is
+of as a measure of the sensitivity of the axis.  Like the dead zone, it is
 expressed as a percentage of the axis range but its value may be larger than
 100, up to a maximum of 200.  A value of 50 means that the joystick only needs
 to be moved halfway in order for Supermodel to see it as fully extended.
@@ -1119,7 +1159,7 @@ options.  The default values are MinVal -32768, OffVal 0, and MaxVal 32767 but
 with the pedal example just given, they would need to be set to MinVal 32767,
 OffVal 32767, and MaxVal -32768.
 
-In most cases it will be unecessary to alter the DeadZone, MinVal, OffVal, and
+In most cases it will be unnecessary to alter the DeadZone, MinVal, OffVal, and
 MaxVal options by hand as calibrating a joystick axis from within the input
 configuration screens of Supermodel will set them automatically.  Only the
 sensitivity option is not configured in this way.
@@ -1282,7 +1322,7 @@ not.  All options are case sensitive.
 
     Option:         -config-inputs
 
-    Description:    Launches the interacive input configuration utility in the
+    Description:    Launches the interactive input configuration utility in the
                     command prompt window.  Allows controls to be remapped.
                     See the section on controls for more information.
 
