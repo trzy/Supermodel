@@ -829,8 +829,8 @@ void EndFrameVideo()
   if (videoInputs)
     s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
 
-	//Update whiteborders
-	s_whiteBorder->Update(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);
+  //Update whiteborders
+  s_whiteBorder->Update(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
 }
@@ -2092,9 +2092,9 @@ Exit:
   if (Outputs != NULL)
     delete Outputs;
   if (s_crosshair != NULL)
-      delete s_crosshair;
-   if (s_whiteBorder != NULL)
-      delete s_whiteBorder;
+    delete s_crosshair;
+  if (s_whiteBorder != NULL)
+    delete s_whiteBorder;
   DestroyGLScreen();
   SDL_Quit();
 
