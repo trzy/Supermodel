@@ -70,11 +70,13 @@ ifneq ($(filter $(strip $(BITS)),32 64),$(strip $(BITS)))
 endif
 
 #
-# Use Bash or Windows Prompt shell commands?
+# Use Bash or Windows Command Prompt shell commands?
 #
-DELETE = rm -d -r -f
-ifeq ($(strip $(MSYSTEM)),1)
-	DELETE = rmdir /s /q
+ifneq (,$(findstring cmd.exe,$(shell echo %COMSPEC%)))
+	# 'echo %COMSPEC%' returns path to cmd.exe on Windows, '%COMSPEC%' in bash
+	RMDIR = rmdir /s /q
+else
+	RMDIR = rm -d -r -f
 endif
 
 #
@@ -113,8 +115,8 @@ include Makefiles/Rules.inc
 
 clean:
 	$(SILENT)echo Cleaning up $(BIN_DIR) and $(OBJ_DIR)...
-	$(SILENT)$(DELETE) $(BIN_DIR)
-	$(SILENT)$(DELETE) $(OBJ_DIR)
+	$(SILENT)$(RMDIR) $(BIN_DIR)
+	$(SILENT)$(RMDIR) $(OBJ_DIR)
 
 
 ###############################################################################
