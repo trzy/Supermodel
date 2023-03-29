@@ -82,6 +82,7 @@
 #include "Util/BMPFile.h"
 
 #include "Crosshair.h"
+#include "WhiteBorder.h"
 
 /******************************************************************************
  Global Run-time Config
@@ -110,6 +111,7 @@ static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewpo
  * Crosshair stuff
  */
 static CCrosshair* s_crosshair = nullptr;
+static CWhiteBorder* s_whiteBorder = nullptr;
 
 static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
@@ -123,6 +125,16 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   // If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
   float xRes = float(*xResPtr);
   float yRes = float(*yResPtr);
+
+  //if we want to draw a white border, we have also to put a black border around it so we are sure lightgun will find it...
+  if (s_whiteBorder->IsEnabled())
+  {
+      int blackborder = s_whiteBorder->Width();
+      int whiteBorder = s_whiteBorder->Width(); //50px borders
+      xRes -= (whiteBorder + blackborder);
+      yRes -= (whiteBorder + blackborder);
+  }
+
   if (keepAspectRatio)
   {
     float model3Ratio = float(496.0/384.0);
@@ -174,6 +186,7 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   {
     glScissor(*xOffsetPtr + correction, *yOffsetPtr + correction, *xResPtr - (correction * 2), *yResPtr - (correction * 2));
   }
+    
   return OKAY;
 }
 
@@ -780,7 +793,6 @@ static void LoadNVRAM(IEmulator *Model3)
   DebugLog("Loaded NVRAM from '%s'.\n", file_path.c_str());
 }
 
-
 /*
 static void PrintGLError(GLenum error)
 {
@@ -817,6 +829,8 @@ void EndFrameVideo()
   if (videoInputs)
     s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
 
+  //Update whiteborders
+  s_whiteBorder->Update(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
 }
@@ -1460,6 +1474,7 @@ static Util::Config::Node DefaultConfig()
   config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false);
   config.Set("BorderlessWindow", false);
+  config.Set("DrawWhiteBorder", false);
 
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
@@ -1543,6 +1558,7 @@ static void Help(void)
   puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
+  puts("  -draw-white-border      Draw a whiteborder around image: usefull for some lightgun type (Sinden LightGun)");
   puts("  -fullscreen             Full screen mode");
   puts("  -wide-screen            Expand 3D field of view to screen width");
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
@@ -1667,6 +1683,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
     { "-borderless",          { "BorderlessWindow", true } },
+    { "-draw-white-border",   { "DrawWhiteBorder",  true } },    
     { "-no-wide-screen",      { "WideScreen",       false } },
     { "-wide-screen",         { "WideScreen",       true } },
     { "-stretch",             { "Stretch",          true } },
@@ -1943,6 +1960,8 @@ int main(int argc, char **argv)
   std::shared_ptr<Debugger::CSupermodelDebugger> Debugger;
 #endif // SUPERMODEL_DEBUGGER
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
+  s_crosshair = new CCrosshair(s_runtime_config);
+  s_whiteBorder = new CWhiteBorder(s_runtime_config);
 
   // Create a window
   xRes = 496;
@@ -1954,7 +1973,6 @@ int main(int argc, char **argv)
   }
 
   // Create Crosshair
-  s_crosshair = new CCrosshair(s_runtime_config);
   if (s_crosshair->Init() != OKAY)
   {
       ErrorLog("Unable to load bitmap crosshair texture\n");
@@ -1962,6 +1980,16 @@ int main(int argc, char **argv)
       goto Exit;
   }
 
+  // Create WhiteBorder
+  if (s_whiteBorder->Init() != OKAY)
+  {
+      ErrorLog("Unable to create whiteborder\n");
+      exitCode = 1;
+      goto Exit;
+  }
+  
+
+  
   // Create Model 3 emulator
 #ifdef DEBUG
   Model3 = s_gfxStatePath.empty() ? static_cast<IEmulator *>(new CModel3(s_runtime_config)) : static_cast<IEmulator *>(new CModel3GraphicsState(s_runtime_config, s_gfxStatePath));
@@ -2064,7 +2092,9 @@ Exit:
   if (Outputs != NULL)
     delete Outputs;
   if (s_crosshair != NULL)
-      delete s_crosshair;
+    delete s_crosshair;
+  if (s_whiteBorder != NULL)
+    delete s_whiteBorder;
   DestroyGLScreen();
   SDL_Quit();
 

@@ -467,6 +467,9 @@
     <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp">
       <Filter>Source Files\OSD\SDL</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\WhiteBorder.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -845,6 +848,12 @@
       <Filter>Header Files\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\OSD\SDL\Crosshair.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\basicDrawable.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\WhiteBorder.h">
       <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
   </ItemGroup>
