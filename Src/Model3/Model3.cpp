@@ -556,6 +556,10 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
   case 0x18:         // swtrilgy and getbass. Remove IO board error on getbass. Not sure, but may be related to device feedback ?
       data = 0x7f;   // Note : when this returned value is wrong, there is a side effect on Ocean Hunter game, a sort of 3d interlaced effect
+      if (m_game.name == "bassdx" || m_game.name == "getbassdx" || m_game.name == "getbass")  // Prevent I/O erreur after a while (related to tension)
+      {
+          data = 0x01;
+      }
       return data;
 
   case 0x2C:  // Serial FIFO 1
