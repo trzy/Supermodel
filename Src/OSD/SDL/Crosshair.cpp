@@ -84,6 +84,8 @@ bool CCrosshair::Init()
   m_uvCoord.emplace_back(1.0f, 1.0f);
   m_uvCoord.emplace_back(0.0f, 1.0f);
 
+  BuildCrosshairVertices();
+
   m_vertexShader = R"glsl(
 
     #version 410 core
@@ -149,40 +151,38 @@ bool CCrosshair::Init()
   return OKAY;
 }
 
-void CCrosshair::BuildCrosshairVertices(unsigned int xRes, unsigned int yRes)
+void CCrosshair::BuildCrosshairVertices()
 {
-  float aspect = (float)xRes / (float)yRes;
   m_verts.clear();
   if (!m_isBitmapCrosshair)
   {
     m_verts.emplace_back(0.0f, m_dist);  // bottom triangle
-    m_verts.emplace_back(m_base / 2.0f, (m_dist + m_height) * aspect);
-    m_verts.emplace_back(-m_base / 2.0f, (m_dist + m_height) * aspect);
+    m_verts.emplace_back(m_base / 2.0f, (m_dist + m_height));
+    m_verts.emplace_back(-m_base / 2.0f, (m_dist + m_height));
     m_verts.emplace_back(0.0f, -m_dist);  // top triangle
-    m_verts.emplace_back(-m_base / 2.0f, -(m_dist + m_height) * aspect);
-    m_verts.emplace_back(m_base / 2.0f, -(m_dist + m_height) * aspect);
+    m_verts.emplace_back(-m_base / 2.0f, -(m_dist + m_height));
+    m_verts.emplace_back(m_base / 2.0f, -(m_dist + m_height));
     m_verts.emplace_back(-m_dist, 0.0f);  // left triangle
-    m_verts.emplace_back(-m_dist - m_height, (m_base / 2.0f) * aspect);
-    m_verts.emplace_back(-m_dist - m_height, -(m_base / 2.0f) * aspect);
+    m_verts.emplace_back(-m_dist - m_height, (m_base / 2.0f));
+    m_verts.emplace_back(-m_dist - m_height, -(m_base / 2.0f));
     m_verts.emplace_back(m_dist, 0.0f);  // right triangle
-    m_verts.emplace_back(m_dist + m_height, -(m_base / 2.0f) * aspect);
-    m_verts.emplace_back(m_dist + m_height, (m_base / 2.0f) * aspect);
+    m_verts.emplace_back(m_dist + m_height, -(m_base / 2.0f));
+    m_verts.emplace_back(m_dist + m_height, (m_base / 2.0f));
   }
   else
   {
-    m_verts.emplace_back(-m_squareSize / 2.0f, -m_squareSize / 2.0f * aspect);
-    m_verts.emplace_back(m_squareSize / 2.0f, -m_squareSize / 2.0f * aspect);
-    m_verts.emplace_back(m_squareSize / 2.0f, m_squareSize / 2.0f * aspect);
-    m_verts.emplace_back(-m_squareSize / 2.0f, -m_squareSize / 2.0f * aspect);
-    m_verts.emplace_back(m_squareSize / 2.0f, m_squareSize / 2.0f * aspect);
-    m_verts.emplace_back(-m_squareSize / 2.0f, m_squareSize / 2.0f * aspect);
+    m_verts.emplace_back(-m_squareSize / 2.0f, -m_squareSize / 2.0f);
+    m_verts.emplace_back(m_squareSize / 2.0f, -m_squareSize / 2.0f);
+    m_verts.emplace_back(m_squareSize / 2.0f, m_squareSize / 2.0f);
+    m_verts.emplace_back(-m_squareSize / 2.0f, -m_squareSize / 2.0f);
+    m_verts.emplace_back(m_squareSize / 2.0f, m_squareSize / 2.0f);
+    m_verts.emplace_back(-m_squareSize / 2.0f, m_squareSize / 2.0f);
   }
 }
 
 void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player, unsigned int xRes, unsigned int yRes)
 {
-  BuildCrosshairVertices(xRes, yRes);
-
+  float aspect = (float)xRes / (float)yRes;
   float r=0.0f, g=0.0f, b=0.0f;
   int count = (int)m_verts.size();
 
@@ -210,7 +210,7 @@ void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player,
       break;
     }
 
-    matrix.Scale(m_dpiMultiplicator, m_dpiMultiplicator, 0);
+    matrix.Scale(m_dpiMultiplicator, m_dpiMultiplicator * aspect, 0);
 
     // update uniform memory
     glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, matrix);
@@ -228,7 +228,7 @@ void CCrosshair::DrawCrosshair(New3D::Mat4 matrix, float x, float y, int player,
 
     m_textureCoordsCount = (int)m_uvCoord.size();
 
-    matrix.Scale(m_dpiMultiplicator * m_scaleBitmap, m_dpiMultiplicator * m_scaleBitmap, 0);
+    matrix.Scale(m_dpiMultiplicator * m_scaleBitmap, m_dpiMultiplicator * m_scaleBitmap * aspect, 0);
 
     // update uniform memory
     glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, matrix);
