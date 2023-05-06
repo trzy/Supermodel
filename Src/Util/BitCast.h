@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <cstdint>
 
 namespace Util
 {
