@@ -2272,16 +2272,11 @@
     </hardware>
     <roms>
       <patches>
-        <!-- skip force feedback lever check -->
-        <!-- <patch region="crom" bits="32" offset="0xf6e44" value="0x60000000" /> --> <!-- from MAME -->
-        <!--<patch region="crom" bits="32" offset="0xf0e48" value="0x60000000" /> --> <!-- no more needed if ffb lever rom loaded -->
-        <!--<patch region="crom" bits="32" offset="0x043dc" value="0x48000090" /> --> <!-- related to joystick feedback --> <!-- no more needed if ffb lever rom loaded -->
-        <patch region="crom" bits="32" offset="0x029a0" value="0x60000000" /> <!-- skip force feedback setup? -->
-        <patch region="crom" bits="32" offset="0x02a0c" value="0x60000000" />
-        <!-- Additional patches from MAME for test menu -->
-        <patch region="crom" bits="32" offset="0xf776c" value="0x60000000" /> <!-- unemulated JTAG stuff -->
-        <patch region="crom" bits="32" offset="0xf7770" value="0x60000000" /> <!-- "" -->
-        <patch region="crom" bits="32" offset="0xf7774" value="0x60000000" /> <!-- "" -->
+        <!--
+          The purpose of this patch from MAME is no longer clear. Force feedback
+          or JTAG related? If anyone knows, please update this note.
+        -->
+        <patch region="crom" bits="32" offset="0xf6e44" value="0x60000000" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21382a.20" crc32="0x69BAF117" />
@@ -2367,18 +2362,11 @@
     </hardware>
     <roms>
       <patches>
-        <!-- skip force feedback lever check -->
-        <!--<patch region="crom" bits="32" offset="0xf6dd0" value="0x60000000" /> --> <!-- from MAME -->
-        <!-- Spindizzi notes : mimic patch from Bart's patch in swtrilgy to prevent game to be slow-->
-        <!-- instead of patch we can make hack timing in code -->
-        <!--<patch region="crom" bits="32" offset="0x043dc" value="0x48000090" />--> <!-- no more needed if ffb lever rom loaded -->
-        <patch region="crom" bits="32" offset="0x029a0" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x02a0c" value="0x60000000" />
-        <!--<patch region="crom" bits="32" offset="0xf0dd4" value="0x60000000" />--> <!-- no more needed if ffb lever rom loaded -->
-        <!-- Additional patches from MAME for test menu -->
-        <patch region="crom" bits="32" offset="0xf76f8" value="0x60000000" /> <!-- unemulated JTAG stuff -->
-        <patch region="crom" bits="32" offset="0xf76fc" value="0x60000000" /> <!-- "" -->
-        <patch region="crom" bits="32" offset="0xf7700" value="0x60000000" /> <!-- "" -->
+        <!--
+          The purpose of this patch from MAME is no longer clear. Force feedback
+          or JTAG related? If anyone knows, please update this note.
+        -->
+        <patch region="crom" bits="32" offset="0xf6dd0" value="0x60000000" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21382.20" crc32="0x0B9C44A0" />
