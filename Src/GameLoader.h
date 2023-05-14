@@ -104,7 +104,7 @@ private:
 
 public:
   GameLoader(const std::string &xml_file);
-  bool Load(Game *game, ROMSet *rom_set, const std::string &zipfilename) const;
+  bool Load(Game *game, ROMSet *rom_set, const std::string &zipfilename, const std::string &game_name) const;
   const std::map<std::string, Game> &GetGames() const
   {
     return m_game_info_by_game;
