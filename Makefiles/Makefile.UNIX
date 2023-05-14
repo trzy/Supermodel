@@ -57,13 +57,16 @@ LD = gcc
 
 SDL2_CFLAGS = `sdl2-config --cflags`
 SDL2_LIBS = `sdl2-config --libs`
+ifeq ($(strip $(NET_BOARD)),1)
+	SDL2_LIBS += -lSDL2_net
+endif
 
 #
 #	UNIX-specific
 #
 
 PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net
+PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
 
 
 ###############################################################################
