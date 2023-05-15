@@ -1,0 +1,91 @@
+name: PR tests
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'Assets/**'
+      - 'Config/**'
+      - 'Docs/**'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        include:
+          - os: windows-latest
+            makefile: Makefile.Win32
+            outfile_ext: .exe
+            shell: msys2 {0}
+            archive: zip
+          - os: ubuntu-latest
+            makefile: Makefile.UNIX
+            shell: bash
+            archive: tar
+          - os: macos-latest
+            makefile: Makefile.OSX
+            shell: bash
+            archive: tar
+            archive_files: Frameworks/
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@master
+      - name: Install ubuntu build dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt update
+          sudo apt install -y libsdl2-dev libsdl2-net-dev
+      - name: Install macos build dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          curl -sLo SDL2.dmg https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-2.26.5.dmg
+          curl -sLo SDL2_net.dmg https://github.com/libsdl-org/SDL_net/releases/download/release-2.2.0/SDL2_net-2.2.0.dmg
+          hdiutil attach -quiet SDL2.dmg
+          hdiutil attach -quiet SDL2_net.dmg
+          mkdir Frameworks
+          cp -r /Volumes/SDL2/SDL2.framework Frameworks/
+          cp -r /Volumes/SDL2_net/SDL2_net.framework Frameworks/
+          xattr -dr com.apple.quarantine Frameworks/SDL2.framework
+          xattr -dr com.apple.quarantine Frameworks/SDL2_net.framework
+          hdiutil detach -quiet /Volumes/SDL2
+          hdiutil detach -quiet /Volumes/SDL2_net
+      - name: Install windows build dependencies
+        if: startsWith(matrix.os, 'windows')
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            zip
+            mingw64/mingw-w64-x86_64-gcc
+            mingw64/mingw-w64-x86_64-SDL2
+            mingw64/mingw-w64-x86_64-SDL2_net
+      - name: Build with Symbols
+        run: make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="-O3 -g" LDOPT=""
+      - name: Validate
+        run: ./supermodel${{ matrix.outfile_ext }} -print-games
+      - name: Package
+        run: |
+          mkdir NVRAM Saves ROMs
+          cp Docs/LICENSE.txt Docs/README.txt .
+          echo "NVRAM files go here." > NVRAM/DIR.txt
+          echo "Save states go here." > Saves/DIR.txt
+          echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt
+          FILES="supermodel${{ matrix.outfile_ext }} LICENSE.txt README.txt Config/ Assets/ NVRAM/ Saves/ ROMs/ ${{ matrix.archive_files }}"
+          if [[ "${{ matrix.archive }}" == "tar" ]] ; then
+            tar -cvf supermodel-${{ github.sha }}.tar $FILES
+          elif [[ "${{ matrix.archive }}" == "zip" ]] ; then
+            zip -r supermodel-${{ github.sha }}.zip $FILES
+          fi
+      - uses: actions/upload-artifact@master
+        with:
+          name: supermodel-${{ runner.os }}-${{ runner.arch }}
+          path: supermodel-${{ github.sha }}.${{ matrix.archive }}

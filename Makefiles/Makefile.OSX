@@ -65,8 +65,8 @@ endif
 #	OSX-specific
 #
 
-PLATFORM_CXXFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -F/Library/Frameworks/
-PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/Library/Frameworks/
+PLATFORM_CXXFLAGS = -F./Frameworks $(SDL_CFLAGS) -DSUPERMODEL_OSX
+PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
 
 
 ###############################################################################
