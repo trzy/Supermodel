@@ -101,12 +101,21 @@ make -f Makefiles/Makefile.OSX NET_BOARD=1
 ```
 
 ### Note: running on macOS
-If you try and run a macOS binary that was downloaded from the internet and/or built on a different machine, you need to grant macOS permission to execute the binary (just 1-time):
+
+If you try and run a macOS binary that was downloaded from the internet and/or built on a different machine, you need to grant macOS permission to execute the binary (just 1-time). Use one of the following methods:
+
+**GUI**
 
 * Open the folder containing the binary in Finder, and right (or ctrl) click on it:
 
 * Click "Open" when the following dialogue box appears : "macOS cannot verify the developer of “supermodel-git-xxxx”. Are you sure you want to open it?"
 
 * Close the terminal window that opens (after clicking open)
+
+**Terminal**
+
+* cd to the folder containing the supermodel release and run:
+
+      xattr -dr com.apple.quarantine .
 
 Details: https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac
