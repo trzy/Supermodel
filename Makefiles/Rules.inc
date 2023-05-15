@@ -73,6 +73,7 @@ OPT = -O3
 WARN = -Wall
 CSTD = -std=iso9899:2011
 CXXSTD = -std=c++17
+LDOPT = -s
 
 
 #
@@ -81,7 +82,7 @@ CXXSTD = -std=c++17
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
-LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
+LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) $(LDOPT)
 
 
 ###############################################################################
