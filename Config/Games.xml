@@ -2273,8 +2273,8 @@
     <roms>
       <patches>
         <!--
-          The purpose of this patch from MAME is no longer clear. Force feedback
-          or JTAG related? If anyone knows, please update this note.
+          Patch from MAME: forces JTAG write/read tests to succeed, otherwise
+          the game spins in a loop forever (until we implement JTAG properly)
         -->
         <patch region="crom" bits="32" offset="0xf6e44" value="0x60000000" />
       </patches>
@@ -2362,10 +2362,7 @@
     </hardware>
     <roms>
       <patches>
-        <!--
-          The purpose of this patch from MAME is no longer clear. Force feedback
-          or JTAG related? If anyone knows, please update this note.
-        -->
+        <!-- Patch from MAME, see swtrilgy for details -->
         <patch region="crom" bits="32" offset="0xf6dd0" value="0x60000000" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
