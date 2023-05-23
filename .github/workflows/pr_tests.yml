@@ -7,6 +7,11 @@ on:
       - 'Assets/**'
       - 'Config/**'
       - 'Docs/**'
+  push:
+    branches:
+      - master
+      - dev
+      - main
 
 jobs:
   build:
