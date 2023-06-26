@@ -591,7 +591,7 @@ void CWheelBoard::ProcessEncoderCmd(void)
 
       case 0xFF:
         // Stop all effects
-        if (m_port42Out == 0)
+        if (m_port42Out == 0xFF)
           SendStopAll();
         break;
 
