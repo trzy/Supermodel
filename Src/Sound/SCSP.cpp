@@ -88,8 +88,6 @@ bool legacySound; // For LegacySound (SCSP DSP) config option.
 //#define CORRECT_FOR_18BIT_DAC
 
 // These globals control the operation of the SCSP, they are no longer extern and are set through SCSP_SetBuffers(). --Bart
-static double SoundClock; // Originally titled SysFPS; seems to be for the sound CPU.
-static const double Freq = 76;
 static float* bufferfl;
 static float* bufferfr;
 static float* bufferrl;
@@ -606,7 +604,6 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	s_config = &config;
 	s_multiThreaded = config["MultiThreaded"].ValueAs<bool>();
 	legacySound = config["LegacySoundDSP"].ValueAs<bool>();
-	SoundClock = Freq;
 
 	if(n==2)
 	{
@@ -1516,7 +1513,7 @@ void SCSP_CpuRunScanline()
 
 void SCSP_DoMasterSamples(int nsamples)
 {
-	int slice = (int)(12000000. / (SoundClock*nsamples));	// 68K cycles/sample
+	const int slice = 11289600 / 44100;	// 68K runs at 256 cycles/sample
 	static int lastdiff = 0;
 
 	/*
@@ -2130,7 +2127,6 @@ void SCSP_LoadState(CBlockFile *StateFile)
 
 void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRearBufferPtr, float* rightRearBufferPtr, int bufferLength)
 {
-	SoundClock = Freq;
 	bufferfl = leftBufferPtr;
 	bufferfr = rightBufferPtr;
 	bufferrl = leftRearBufferPtr;
