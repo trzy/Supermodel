@@ -2949,12 +2949,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 
   // Initialize Real3D
   int stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  uint32_t real3DPCIID = game.real3d_pci_id;
-  if (0 == real3DPCIID)
-  {
-    real3DPCIID = stepping >= 0x20 ? CReal3D::PCIID::Step2x : CReal3D::PCIID::Step1x;
-  }
-  GPU.SetStepping(stepping, real3DPCIID);
+  GPU.SetStepping(stepping);
 
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)
