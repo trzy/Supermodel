@@ -33,7 +33,7 @@
 namespace Debugger
 {
 	// Instruction templates
-	static char *templates[5][256] = {
+	static const char *templates[5][256] = {
 		{
 			// Table 0: single byte instructions
 			"NOP","LD BC,@a","LD (BC),A","INC BC","INC B","DEC B","LD B,@d","RLCA",
@@ -393,10 +393,10 @@ namespace Debugger
 		switch (opcode)
 		{
 			case 0xCB: 
-				templ = templates[1][m_bus->Read8(dAddr++)];
+				templ = (char*)templates[1][m_bus->Read8(dAddr++)];
 				break;
 			case 0xED:
-				templ = templates[2][m_bus->Read8(dAddr++)];
+				templ = (char*)templates[2][m_bus->Read8(dAddr++)];
 				break;
 			case 0xDD: 
 				xyChr = 'X';
@@ -405,10 +405,10 @@ namespace Debugger
 				{
 					offs = m_bus->Read8(dAddr++);
 					notJump = true;
-					templ = templates[4][m_bus->Read8(dAddr++)]; 
+					templ = (char*)templates[4][m_bus->Read8(dAddr++)];
 				}
 				else
-					templ = templates[3][nextCode];
+					templ = (char*)templates[3][nextCode];
 				break;
 			case 0xFD: 
 				xyChr = 'Y';
@@ -417,13 +417,13 @@ namespace Debugger
 				{
 					offs = m_bus->Read8(dAddr++);
 					notJump = true;
-					templ = templates[4][m_bus->Read8(dAddr++)]; 
+					templ = (char*)templates[4][m_bus->Read8(dAddr++)];
 				}
 				else
-					templ = templates[3][nextCode];
+					templ = (char*)templates[3][nextCode];
 				break;
 			default:
-				templ = templates[0][opcode];
+				templ = (char*)templates[0][opcode];
 				break;
 		}
 
