@@ -62,8 +62,8 @@ namespace Debugger
 		// Interrupts
 		cpu->AddInterrupt("VD0", 0, "Unknown video-related");
 		cpu->AddInterrupt("VBL", 1, "VBlank start");
-		cpu->AddInterrupt("VD2", 2, "Unknown video-related");
-		cpu->AddInterrupt("VD3", 3, "Unknown video-related");
+		cpu->AddInterrupt("VDP", 2, "DP done (display processing)");
+		cpu->AddInterrupt("VGP", 3, "GP done (geometry processing)");
 		cpu->AddInterrupt("NET", 4, "Network");
 		cpu->AddInterrupt("UN5", 5, "Unknown");
 		cpu->AddInterrupt("SND", 6, "SCSP (sound)");
@@ -82,8 +82,8 @@ namespace Debugger
 		cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI (Step 1.x)");
 #endif
 #ifdef NET_BOARD
-		cpu->AddRegion(0xC0000000, 0xC001FFFF, false, false, "Network Buffer");
-		cpu->AddRegion(0xC0020000, 0xC003FFFF, false, false, "Network RAM");
+		cpu->AddRegion(0xC0000000, 0xC000FFFF, false, false, "Netboard Shared RAM (Step 1.5+)");
+		cpu->AddRegion(0xC0020000, 0xC002FFFF, false, false, "Netboard Program RAM (Step 1.5+)");
 #endif
 		cpu->AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI (Step 1.x) (Lost World expects it here)");
 		cpu->AddRegion(0xC2000000, 0xC20000FF, false, false, "Real3D DMA (Step 2.x)");
@@ -91,7 +91,7 @@ namespace Debugger
 		cpu->AddRegion(0xF0080000, 0xF0080007, false, false, "Sound Board Registers");
 		cpu->AddRegion(0xF00C0000, 0xF00DFFFF, false, false, "Backup RAM");
 		cpu->AddRegion(0xF0100000, 0xF010003F, false, false, "System Registers");
-		cpu->AddRegion(0xF0140000, 0xF014003F, false, false, "Real, 0xTime Clock");
+		cpu->AddRegion(0xF0140000, 0xF014003F, false, false, "Real-Time Clock");
 		cpu->AddRegion(0xF0180000, 0xF019FFFF, false, false, "Security Board RAM");
 		cpu->AddRegion(0xF01A0000, 0xF01A003F, false, false, "Security Board Registers");
 		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_cpu->AddR (Step 1.x)");
@@ -103,6 +103,7 @@ namespace Debugger
 		cpu->AddRegion(0xF8FFF000, 0xF8FFF0FF, false, false, "MPC105 (Step 1.x) or MPC106 (Step 2.x) Registers");
 		cpu->AddRegion(0xF9000000, 0xF90000FF, false, false, "NCR 53C810 Registers (Step 1.x?)");
 		cpu->AddRegion(0xFE040000, 0xFE04003F, false, false, "Mirrored Input Registers");
+		cpu->AddRegion(0xFE100000, 0xFE10003F, false, false, "Mirrored System Registers");
 		cpu->AddRegion(0xFEC00000, 0xFEDFFFFF, false, false, "MPC106 CONFIG_cpu->AddR (Step 2.x)");
 		cpu->AddRegion(0xFEE00000, 0xFEFFFFFF, false, false, "MPC106 CONFIG_DATA (Step 2.x)");
 		cpu->AddRegion(0xFF000000, 0xFF7FFFFF, true,  true,  "Banked CROM (CROMxx)");

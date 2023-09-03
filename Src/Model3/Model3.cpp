@@ -48,6 +48,9 @@
  * 90000000-9000000B  Real3D VROM Texture Port
  * 94000000-940FFFFF  Real3D Texture FIFO
  * 98000000-980FFFFF  Real3D Polygon RAM
+ * C0000000-C000FFFF  Netboard Shared RAM (Step 1.5+)
+ * C0010000-C00101FF  Netboard Registers (Step 1.5+)
+ * C0020000-C002FFFF  Netboard Program RAM (Step 1.5+)
  * C0000000-C00000FF  SCSI (Step 1.x)
  * C1000000-C10000FF  SCSI (Step 1.x) (Lost World expects it here)
  * C2000000-C20000FF  Real3D DMA (Step 2.x)
@@ -86,14 +89,14 @@
  * F0100014: IRQ Enable
  *   7   6   5   4   3   2   1   0
  * +---+---+---+---+---+---+---+---+
- * | ? |SND| ? |NET|VD3|VD2|VBL|VD0|
+ * | ? |SND| ? |NET|VGP|VDP|VBL|VD0|
  * +---+---+---+---+---+---+---+---+
  *    SND   SCSP (sound)
  *    NET   Network
- *    VD3   Unknown video-related
- *    VD2   Unknown video-related
+ *    VGP   GP done (geometry processing)
+ *    VDP   DP done (display processing)
  *    VBL   VBlank start
- *    VD0   Unknown video-related (?)
+ *    VD0   Unknown video-related
  *    0 = Disable, 1 = Enable
  *
  * Game Buttons
@@ -2042,21 +2045,18 @@ void CModel3::RunMainBoardFrame(void)
 {
 	UINT32 start = CThread::GetTicks();
 
-	// Compute display and VBlank timings
+	// Compute display timings
 	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
-	unsigned offsetCycles   = (unsigned)((float)frameCycles * 33.f / 100.0f);
-	unsigned dispCycles     = frameCycles - offsetCycles;
+    unsigned lineCycles     = frameCycles / 424;
+    unsigned dispCycles     = lineCycles * (TileGen.ReadRegister(0x08) + 40);
+    unsigned offsetCycles   = frameCycles - dispCycles;
 	unsigned statusCycles   = (unsigned)((float)frameCycles * (0.005f));
 
-	// we think a frame looks like this on the model 2
-	//                         66% of frame
-	// [irq2------------------ping_pong_flips------]
-	//
-	// Games will start writing a new frame at the ping_pong time. It could be the buffer swaps here.
-	// Need more h/w testing to confirm.
-	// What we are doing here is asserting IRQ2 at 33% of the frame, and treating the ping_pong flip as the front/back buffer swap
-	// This way the data for the correct frames, ends up in the right frames!
+	// Games will start writing a new frame after the ping-pong buffers have been flipped, which is indicated by the
+    // ping-pong status bit. The timing of ping-pong flip is determined by the value of tilegen register 0x08, which
+    // is the number of active video lines to display before ping-pong flip occurs. Most games set it to 238 or 239
+    // so that ping-pong flip occurs 66% of the frame time after IRQ2, though a few games set it to a higher value.
 
 	// Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
 	// registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are
