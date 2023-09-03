@@ -2048,15 +2048,15 @@ void CModel3::RunMainBoardFrame(void)
 	// Compute display timings
 	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
-    unsigned lineCycles     = frameCycles / 424;
-    unsigned dispCycles     = lineCycles * (TileGen.ReadRegister(0x08) + 40);
-    unsigned offsetCycles   = frameCycles - dispCycles;
+	unsigned lineCycles     = frameCycles / 424;
+	unsigned dispCycles     = lineCycles * (TileGen.ReadRegister(0x08) + 40);
+	unsigned offsetCycles   = frameCycles - dispCycles;
 	unsigned statusCycles   = (unsigned)((float)frameCycles * (0.005f));
 
 	// Games will start writing a new frame after the ping-pong buffers have been flipped, which is indicated by the
-    // ping-pong status bit. The timing of ping-pong flip is determined by the value of tilegen register 0x08, which
-    // is the number of active video lines to display before ping-pong flip occurs. Most games set it to 238 or 239
-    // so that ping-pong flip occurs 66% of the frame time after IRQ2, though a few games set it to a higher value.
+	// ping-pong status bit. The timing of ping-pong flip is determined by the value of tilegen register 0x08, which
+	// is the number of active video lines to display before ping-pong flip occurs. Most games set it to 238 or 239
+	// so that ping-pong flip occurs 66% of the frame time after IRQ2, though a few games set it to a higher value.
 
 	// Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
 	// registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are
