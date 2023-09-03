@@ -40,7 +40,7 @@ namespace Debugger
 	CConsoleDebugger::CConsoleDebugger() : CDebugger(), 
 		m_nextFrame(false), m_listDism(0), m_listMem(0), m_analyseCode(true), 
 		m_addrFmt(HexDollar), m_portFmt(Decimal), m_dataFmt(HexDollar),
-		m_showLabels(true), m_labelsOverAddr(true), m_showOpCodes(false), m_memBytesPerRow(12), m_file(NULL)
+		m_showLabels(true), m_labelsOverAddr(true), m_showOpCodes(false), m_memBytesPerRow(16), m_file(NULL)
 	{
 		//
 	}
