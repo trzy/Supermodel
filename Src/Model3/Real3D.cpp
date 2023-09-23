@@ -27,10 +27,10 @@
  *
  * PCI IDs
  * -------
- * It appears that Step 2.0 returns a different PCI ID depending on whether
- * the PCI configuration space or DMA register are accessed. For example,
- * Virtual On 2 expects 0x178611DB from the PCI configuration header but
- * 0x16C311DB from the DMA device.
+ * It appears that accessing the PCI configuration space returns the PCI ID
+ * of Mercury (0x16C311DB) on Step 1.x and the DMA device (0x178611DB) on
+ * Step 2.x, while accessing the Step 2.x DMA device register returns the
+ * PCI ID of Mercury. Step 2.x games by AM3 expect this behavior.
  *
  * To-Do List
  * ----------
@@ -628,7 +628,8 @@ void CReal3D::WriteDMARegister32(unsigned reg, uint32_t data)
   case 0x10:  // command register
     if ((data&0x20000000)) // DMA ID command
     {
-      dmaData = pciID;
+      // Games requesting PCI ID via the DMA device expect 0x16C311DB, even on step 2.x boards
+      dmaData = PCIID::Step1x;
       DebugLog("Real3D: DMA ID command issued (ATTENTION: make sure we're returning the correct value), PC=%08X, LR=%08X\n", ppc_get_pc(), ppc_get_lr());
     }
     else if ((data&0x80000000))
@@ -921,7 +922,7 @@ uint32_t CReal3D::GetASICIDCode(ASIC asic) const
   return it == m_asicID.end() ? 0 : it->second;
 }
 
-void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
+void CReal3D::SetStepping(int stepping)
 {
   step = stepping;
   if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
@@ -931,7 +932,7 @@ void CReal3D::SetStepping(int stepping, uint32_t pciIDValue)
   }
 
   // Set PCI ID
-  pciID = pciIDValue;
+  pciID = stepping >= 0x20 ? PCIID::Step2x : PCIID::Step1x;
 
   // Pass to renderer
   if (Render3D != NULL)

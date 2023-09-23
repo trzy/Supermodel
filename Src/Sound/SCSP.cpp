@@ -7,7 +7,7 @@
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -19,17 +19,17 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * SCSP.cpp
- * 
+ *
  * WARNING: Here be dragons! Tread carefully. Enabling/disabling things may
  * break save state support.
  *
  * SCSP (Sega Custom Sound Processor) emulation. This code was generously
  * donated by ElSemi. Interfaces directly to the 68K processor through
  * callbacks. Some minor interface changes were made (external global variables
- * were removed). 
+ * were removed).
  *
  * The MIDI input buffer has been increased from 8 (which I assume is the
  * actual size) in order to accommodate Model 3's PowerPC/68K communication.
@@ -44,7 +44,7 @@
  */
 
 
-/*	
+/*
 	SEGA Custom Sound Processor (SCSP) Emulation
 	by ElSemi.
 	Driven by MC68000
@@ -78,7 +78,7 @@ Anyways credit to R. Belmont and ElSemi for the code, and for being awesome emul
 
 static const Util::Config::Node *s_config = 0;
 static bool s_multiThreaded = false;
-bool legacySound; // For LegacySound (SCSP DSP) config option. 
+bool legacySound; // For LegacySound (SCSP DSP) config option.
 
 #define USEDSP
 //#define RB_VOLUME
@@ -88,8 +88,6 @@ bool legacySound; // For LegacySound (SCSP DSP) config option.
 //#define CORRECT_FOR_18BIT_DAC
 
 // These globals control the operation of the SCSP, they are no longer extern and are set through SCSP_SetBuffers(). --Bart
-static double SoundClock; // Originally titled SysFPS; seems to be for the sound CPU.
-static const double Freq = 76;
 static float* bufferfl;
 static float* bufferfr;
 static float* bufferrl;
@@ -214,7 +212,7 @@ static int TimCnt[3];
 #define PLFOWS(slot)    ((slot->data[0x9] >> 0x8) & 0x0003)
 #define PLFOS(slot)     ((slot->data[0x9] >> 0x5) & 0x000E) // Setting this to 14 seems to make FM more precise
 #define ALFOWS(slot)    ((slot->data[0x9] >> 0x3) & 0x0003)
-#define ALFOS(slot)     ((slot->data[0x9] >> 0x0) & 0x0007) 
+#define ALFOS(slot)     ((slot->data[0x9] >> 0x0) & 0x0007)
 
 #define ISEL(slot)      ((slot->data[0xA] >> 0x3) & 0x000F)
 #define IMXL(slot)      ((slot->data[0xA] >> 0x0) & 0x0007)
@@ -349,7 +347,7 @@ void CheckPendingIRQ()
 {
 	DWORD pend=SCSPs->data[0x20/2];
 	DWORD en=SCSPs->data[0x1e/2];
-	
+
 	/*
 	 * MIDI FIFO critical section
 	 *
@@ -363,20 +361,20 @@ void CheckPendingIRQ()
 	{
 		//if (g_Config.multiThreaded)
 		//	MIDILock->Unlock();
-		
+
 		//SCSP.data[0x20/2]|=0x8;	//Hold midi line while there are commands pending
 
 		//Int68kCB(IrqMidi);
 		//printf("68K: MIDI IRQ\n");
 		//ErrorLogMessage("Midi");
-		
+
 		SCSP->data[0x20 / 2] |= 8;
 		pend |= 8;
 	}
-	
+
 	//if (g_Config.multiThreaded)
 	//	MIDILock->Unlock();
-	
+
 	if(!pend)
 		return;
 	if(pend&0x40)
@@ -606,7 +604,6 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	s_config = &config;
 	s_multiThreaded = config["MultiThreaded"].ValueAs<bool>();
 	legacySound = config["LegacySoundDSP"].ValueAs<bool>();
-	SoundClock = Freq;
 
 	if(n==2)
 	{
@@ -632,7 +629,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	MidiOutR=MidiOutW=0;
 	MidiOutFill=0;
 	MidiInFill=0;
-	
+
 
 	for(int i=0;i<0x400;++i)
 	{
@@ -641,7 +638,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 		fcent=(double) 44100.0*exp2(fcent/1200.0);
 		FNS_Table[i]=(UINT32)((float) (1<<SHIFT) *fcent);
 		//FNS_Table[i]=(i>>(10-SHIFT))|(1<<SHIFT);
-		
+
 	}
 	for (int i = 0; i < 0x400; ++i) {
 		float envDB = ((float)(3 * (i - 0x3ff))) / 32.0f;
@@ -724,7 +721,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 		//	int a=1;
 		//if(iTL==0x3a)
 		//	int a=1;
-		
+
 		LPANTABLE[i]=FIX((4.0*LPAN*TL*SDL));
 		RPANTABLE[i]=FIX((4.0*RPAN*TL*SDL));
 	}
@@ -749,7 +746,7 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 		scale=(double) (1<<EG_SHIFT);
 		DRTABLE[i]=(int) (step*scale);
 	}
-	
+
 	for(int i=0;i<32;++i)
 		SCSPs[0].Slots[i].slot=i;
 
@@ -764,14 +761,14 @@ bool SCSP_Init(const Util::Config::Node &config, int n)
 	TimCnt[0] = 0xffff;
 	TimCnt[1] = 0xffff;
 	TimCnt[2] = 0xffff;
-	
+
 	// MIDI FIFO mutex
 	MIDILock = CThread::CreateMutex();
 	if (NULL == MIDILock)
 	{
 		return ErrorLog("Unable to create MIDI mutex!");
 	}
-	
+
 	return OKAY;
 }
 
@@ -853,7 +850,7 @@ void SCSP_UpdateReg(int reg)
 
 		case 8:
 		case 9:
-			SCSP->data[0x8 / 2] &= 0xf800; 
+			SCSP->data[0x8 / 2] &= 0xf800;
 			break;
 		case 0x12:
 		case 0x13:
@@ -867,7 +864,7 @@ void SCSP_UpdateReg(int reg)
 			break;
 		case 0x18:
 		case 0x19:
-			if(SCSP->Master)	
+			if(SCSP->Master)
 			{
 				TimPris[0]=1<<((SCSPs->data[0x18/2]>>8)&0x7);
 				TimCnt[0]=((SCSPs->data[0x18/2]&0xfe)<<8)/*|(TimCnt[0]&0xff)*/;
@@ -875,7 +872,7 @@ void SCSP_UpdateReg(int reg)
 			break;
 		case 0x1a:
 		case 0x1b:
-			if(SCSP->Master)	
+			if(SCSP->Master)
 			{
 				TimPris[1]=1<<((SCSPs->data[0x1A/2]>>8)&0x7);
 				TimCnt[1]=((SCSPs->data[0x1A/2]&0xfe)<<8)/*|(TimCnt[1]&0xff)*/;
@@ -883,7 +880,7 @@ void SCSP_UpdateReg(int reg)
 			break;
 		case 0x1C:
 		case 0x1D:
-			if(SCSP->Master)	
+			if(SCSP->Master)
 			{
 				TimPris[2]=1<<((SCSPs->data[0x1C/2]>>8)&0x7);
 				TimCnt[2]=((SCSPs->data[0x1C/2]&0xfe)<<8)/*|(TimCnt[2]&0xff)*/;
@@ -891,7 +888,7 @@ void SCSP_UpdateReg(int reg)
 			break;
 		case 0x22:	//SCIRE
 		case 0x23:
-			if(SCSP->Master)	
+			if(SCSP->Master)
 			{
 				SCSP->data[0x20 / 2] &= ~SCSP->data[0x22 / 2];
 				//ResetInterrupts();
@@ -1029,7 +1026,7 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 	{
 		*(unsigned char *) &(SCSP->datab[(addr&0xff)^1]) = val;
 		SCSP_UpdateReg((addr^1)&0xff);
-	}	
+	}
 	else if(addr<0x700)
 		SCSP->RINGBUF[(addr-0x600)/2]=val;
 	else
@@ -1096,7 +1093,7 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 			*((unsigned short *)(SCSP->datab + ((addr & 0x3f)))) = val;
 			SCSP_UpdateReg(addr & 0x3f);
 		}
-	}	
+	}
 	else if (addr < 0x700)
 		SCSP->RINGBUF[(addr - 0x600) / 2] = val;
 	else
@@ -1162,7 +1159,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 		*(unsigned int *) &(SCSP->datab[addr&0xff]) = val;
 		SCSP_UpdateReg(addr&0xff);
 		SCSP_UpdateReg((addr&0xff)+2);
-	}	
+	}
 	else if(addr<0x700)
 		int a=1;
 	else
@@ -1196,7 +1193,7 @@ unsigned char SCSP_r8(unsigned int addr)
 		int slot=addr/0x20;
 		addr&=0x1f;
 		SCSP_UpdateSlotRegR(slot,(addr^1)&0x1f);
-		
+
 		v=*(unsigned char *) &(SCSP->Slots[slot].datab[addr^1]);
 		//DebugLog("Slot %02X Reg %02X Read byte %02X",slot,addr^1,v);
 	}
@@ -1204,8 +1201,8 @@ unsigned char SCSP_r8(unsigned int addr)
 	{
 		SCSP_UpdateRegR(addr&0xff);
 		v= *(unsigned char *) &(SCSP->datab[(addr&0xff)^1]);
-		//ErrorLogMessage("SCSP Reg %02X Read byte %02X",addr&0xff,v);		
-	}	
+		//ErrorLogMessage("SCSP Reg %02X Read byte %02X",addr&0xff,v);
+	}
 	else if(addr<0x700)
 		v=0;
 	return v;
@@ -1233,7 +1230,7 @@ unsigned short SCSP_r16(unsigned int addr)
 			SCSP_UpdateRegR(addr & 0x3f);
 			v = *((UINT16 *)(SCSP->datab + ((addr & 0x3f))));
 		}
-	}	
+	}
 	else if (addr < 0x700)
 		v = SCSP->RINGBUF[(addr - 0x600) / 2];
 	else
@@ -1476,7 +1473,7 @@ signed int inline SCSP_UpdateSlot(_SLOT *slot)
 
 	if (!SDIR(slot))
 	{
-		if (ALFOS(slot) != 0) 
+		if (ALFOS(slot) != 0)
 		{
 			sample = sample * ALFO_Step(&(slot->ALFO));
 			sample >>= (SHIFT);
@@ -1516,7 +1513,7 @@ void SCSP_CpuRunScanline()
 
 void SCSP_DoMasterSamples(int nsamples)
 {
-	int slice = (int)(12000000. / (SoundClock*nsamples));	// 68K cycles/sample
+	const int slice = 11289600 / 44100;	// 68K clocked at 11.2896MHz (45.1584MHz OSC / 4), which is 256 cycles/sample
 	static int lastdiff = 0;
 
 	/*
@@ -1563,7 +1560,7 @@ void SCSP_DoMasterSamples(int nsamples)
 #ifdef RB_VOLUME
 				smpfl += (sample * volume[TL(slot) + pan_left[DIPAN(slot)]]) >> 17;
 				smpfr += (sample * volume[TL(slot) + pan_right[DIPAN(slot)]]) >> 17;
-#else				
+#else
 				{
 					smpfl += (sample*LPANTABLE[Enc]) >> SHIFT;
 					smpfr += (sample*RPANTABLE[Enc]) >> SHIFT;
@@ -1600,7 +1597,7 @@ void SCSP_DoMasterSamples(int nsamples)
 #ifdef RB_VOLUME
 						smprl += (sample * volume[TL(slot) + pan_left[DIPAN(slot)]]) >> 17;
 						smprr += (sample * volume[TL(slot) + pan_right[DIPAN(slot)]]) >> 17;
-#else				
+#else
 						smprl += (sample*LPANTABLE[Enc]) >> SHIFT;
 						smprr += (sample*RPANTABLE[Enc]) >> SHIFT;
 					}
@@ -1743,7 +1740,7 @@ void SCSP_MidiIn(BYTE val)
 	 */
 	if (s_multiThreaded)
 		MIDILock->Lock();
-		
+
 	//DebugLog("Midi Buffer push %02X",val);
 	MidiStack[MidiW++]=val;
 	MidiW&=MIDI_STACK_SIZE_MASK;
@@ -1780,7 +1777,7 @@ unsigned char SCSP_MidiOutR()
 
 	if(MidiOutR==MidiOutW)	// I don't think this needs to be a critical section...
 		return 0xff;
-		
+
 	/*
 	 * MIDI FIFO critical section
 	 */
@@ -1791,17 +1788,17 @@ unsigned char SCSP_MidiOutR()
 	//DebugLog("Midi Out Buffer pop %02X",val);
 	MidiOutR&=31;
 	--MidiOutFill;
-	
+
 	if (s_multiThreaded)
 		MIDILock->Unlock();
-		
+
 	return val;
 }
 
 unsigned char SCSP_MidiOutFill()
 {
 	unsigned char v;
-	
+
 	/*
 	 * MIDI FIFO critical section
 	 */
@@ -1809,17 +1806,17 @@ unsigned char SCSP_MidiOutFill()
 		MIDILock->Lock();
 
 	v = MidiOutFill;
-	
+
 	if (s_multiThreaded)
 		MIDILock->Unlock();
-	
+
 	return v;
 }
 
 unsigned char SCSP_MidiInFill()
 {
 	unsigned char v;
-	
+
 	/*
 	 * MIDI FIFO critical section
 	 */
@@ -1827,10 +1824,10 @@ unsigned char SCSP_MidiInFill()
 		MIDILock->Lock();
 
 	v = MidiInFill;
-	
+
 	if (s_multiThreaded)
 		MIDILock->Unlock();
-	
+
 	return v;
 }
 
@@ -1937,13 +1934,13 @@ unsigned int SCSP_Slave_r32(unsigned int addr)
 void SCSP_SaveState(CBlockFile *StateFile)
 {
 	StateFile->NewBlock("SCSP x 2", __FILE__);
-	
+
 	/*
 	 * Save global variables.
 	 *
 	 * Difficult to say exactly what is necessary given that many things are
 	 * commented out and should not be enabled but I try to save as much as
-	 * possible. 
+	 * possible.
 	 *
 	 * Things not saved:
 	 *
@@ -1965,7 +1962,7 @@ void SCSP_SaveState(CBlockFile *StateFile)
 	StateFile->Write(&MidiR, sizeof(MidiR));
 	StateFile->Write(TimPris, sizeof(TimPris));
 	StateFile->Write(TimCnt, sizeof(TimCnt));
-	
+
 	// Save both SCSP states
 	for (int i = 0; i < 2; i++)
 	{
@@ -1976,13 +1973,13 @@ void SCSP_SaveState(CBlockFile *StateFile)
 		StateFile->Write(&(SCSPs[i].DELAYBUF), sizeof(SCSPs[i].DELAYBUF));
 		StateFile->Write(&(SCSPs[i].DELAYPTR), sizeof(SCSPs[i].DELAYPTR));
 #endif
-		
+
 		// Save each slot
 		for (int j = 0; j < 32; j++)
 		{
 			UINT64	baseOffset;
 			UINT8	egState;
-			
+
 			StateFile->Write(SCSPs[i].Slots[j].datab, sizeof(SCSPs[i].Slots[j].datab));
 			StateFile->Write(&(SCSPs[i].Slots[j].active), sizeof(SCSPs[i].Slots[j].active));
 			baseOffset = (UINT64) (SCSPs[i].Slots[j].base - SCSPs[i].SCSPRAM);
@@ -1993,7 +1990,7 @@ void SCSP_SaveState(CBlockFile *StateFile)
 			StateFile->Write(&(SCSPs[i].Slots[j].Back), sizeof(SCSPs[i].Slots[j].Back));
 			StateFile->Write(&(SCSPs[i].Slots[j].slot), sizeof(SCSPs[i].Slots[j].slot));
 			StateFile->Write(&(SCSPs[i].Slots[j].Prev), sizeof(SCSPs[i].Slots[j].Prev));
-			
+
 			// EG
 			StateFile->Write(&(SCSPs[i].Slots[j].EG.volume), sizeof(SCSPs[i].Slots[j].EG.volume));
 			egState = SCSPs[i].Slots[j].EG.state;
@@ -2006,18 +2003,18 @@ void SCSP_SaveState(CBlockFile *StateFile)
 			StateFile->Write(&(SCSPs[i].Slots[j].EG.DL), sizeof(SCSPs[i].Slots[j].EG.DL));
 			StateFile->Write(&(SCSPs[i].Slots[j].EG.EGHOLD), sizeof(SCSPs[i].Slots[j].EG.EGHOLD));
 			StateFile->Write(&(SCSPs[i].Slots[j].EG.LPLINK), sizeof(SCSPs[i].Slots[j].EG.LPLINK));
-			
+
 			// PLFO
 			StateFile->Write(&(SCSPs[i].Slots[j].PLFO.phase), sizeof(SCSPs[i].Slots[j].PLFO.phase));
 			StateFile->Write(&(SCSPs[i].Slots[j].PLFO.phase_step), sizeof(SCSPs[i].Slots[j].PLFO.phase_step));
-			
+
 			// ALFO
 			StateFile->Write(&(SCSPs[i].Slots[j].ALFO.phase), sizeof(SCSPs[i].Slots[j].ALFO.phase));
 			StateFile->Write(&(SCSPs[i].Slots[j].ALFO.phase_step), sizeof(SCSPs[i].Slots[j].ALFO.phase_step));
-			
+
 			//when loading, make sure to compute lfo
 		}
-		
+
 		// DSP
 		StateFile->Write(&(SCSPs[i].DSP.RBP), sizeof(SCSPs[i].DSP.RBP));
 		StateFile->Write(&(SCSPs[i].DSP.RBL), sizeof(SCSPs[i].DSP.RBL));
@@ -2042,7 +2039,7 @@ void SCSP_LoadState(CBlockFile *StateFile)
 		ErrorLog("Unable to load SCSP state. Save state file is corrupt.");
 		return;
 	}
-	
+
 	// Load global variables
 	StateFile->Read(&IrqTimA, sizeof(IrqTimA));
 	StateFile->Read(&IrqTimBC, sizeof(IrqTimBC));
@@ -2057,7 +2054,7 @@ void SCSP_LoadState(CBlockFile *StateFile)
 	StateFile->Read(&MidiR, sizeof(MidiR));
 	StateFile->Read(TimPris, sizeof(TimPris));
 	StateFile->Read(TimCnt, sizeof(TimCnt));
-	
+
 	// Load both SCSP states
 	for (int i = 0; i < 2; i++)
 	{
@@ -2068,13 +2065,13 @@ void SCSP_LoadState(CBlockFile *StateFile)
 		StateFile->Read(&(SCSPs[i].DELAYBUF), sizeof(SCSPs[i].DELAYBUF));
 		StateFile->Read(&(SCSPs[i].DELAYPTR), sizeof(SCSPs[i].DELAYPTR));
 #endif
-		
+
 		// Load each slot
 		for (int j = 0; j < 32; j++)
 		{
 			UINT64	baseOffset;
 			UINT8	egState;
-			
+
 			StateFile->Read(SCSPs[i].Slots[j].datab, sizeof(SCSPs[i].Slots[j].datab));
 			StateFile->Read(&(SCSPs[i].Slots[j].active), sizeof(SCSPs[i].Slots[j].active));
 			StateFile->Read(&baseOffset, sizeof(baseOffset));
@@ -2085,7 +2082,7 @@ void SCSP_LoadState(CBlockFile *StateFile)
 			StateFile->Read(&(SCSPs[i].Slots[j].Back), sizeof(SCSPs[i].Slots[j].Back));
 			StateFile->Read(&(SCSPs[i].Slots[j].slot), sizeof(SCSPs[i].Slots[j].slot));
 			StateFile->Read(&(SCSPs[i].Slots[j].Prev), sizeof(SCSPs[i].Slots[j].Prev));
-			
+
 			// EG
 			StateFile->Read(&(SCSPs[i].Slots[j].EG.volume), sizeof(SCSPs[i].Slots[j].EG.volume));
 			StateFile->Read(&egState, sizeof(egState));
@@ -2098,11 +2095,11 @@ void SCSP_LoadState(CBlockFile *StateFile)
 			StateFile->Read(&(SCSPs[i].Slots[j].EG.DL), sizeof(SCSPs[i].Slots[j].EG.DL));
 			StateFile->Read(&(SCSPs[i].Slots[j].EG.EGHOLD), sizeof(SCSPs[i].Slots[j].EG.EGHOLD));
 			StateFile->Read(&(SCSPs[i].Slots[j].EG.LPLINK), sizeof(SCSPs[i].Slots[j].EG.LPLINK));
-			
+
 			// PLFO
 			StateFile->Read(&(SCSPs[i].Slots[j].PLFO.phase), sizeof(SCSPs[i].Slots[j].PLFO.phase));
 			StateFile->Read(&(SCSPs[i].Slots[j].PLFO.phase_step), sizeof(SCSPs[i].Slots[j].PLFO.phase_step));
-			
+
 			// ALFO
 			StateFile->Read(&(SCSPs[i].Slots[j].ALFO.phase), sizeof(SCSPs[i].Slots[j].ALFO.phase));
 			StateFile->Read(&(SCSPs[i].Slots[j].ALFO.phase_step), sizeof(SCSPs[i].Slots[j].ALFO.phase_step));
@@ -2110,7 +2107,7 @@ void SCSP_LoadState(CBlockFile *StateFile)
 			// Recompute LFOs
 			Compute_LFO(&(SCSPs[i].Slots[j]));
 		}
-		
+
 		// DSP
 		StateFile->Read(&(SCSPs[i].DSP.RBP), sizeof(SCSPs[i].DSP.RBP));
 		StateFile->Read(&(SCSPs[i].DSP.RBL), sizeof(SCSPs[i].DSP.RBL));
@@ -2130,7 +2127,6 @@ void SCSP_LoadState(CBlockFile *StateFile)
 
 void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRearBufferPtr, float* rightRearBufferPtr, int bufferLength)
 {
-	SoundClock = Freq;
 	bufferfl = leftBufferPtr;
 	bufferfr = rightBufferPtr;
 	bufferrl = leftRearBufferPtr;

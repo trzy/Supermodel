@@ -68,10 +68,11 @@ public:
   /*
    * PCI IDs
    *
-   * The CReal3D object must be configured with the desired ID. Some Step 2.x
-   * appear to defy this and expect the 1.x ID. The symptom of this is that 
-   * VBL is enabled briefly then disabled. This should be investigated further.
-   * Perhaps a different ASIC's PCI ID is being read in these situations?
+   * The CReal3D object must be configured with the PCI ID of the ASIC directly
+   * connected to the PCI slot; 0x16c311db for Step 1.x, 0x178611db for Step
+   * 2.x. Requesting PCI ID via the DMA device on Step 2.x appears to return
+   * the PCI ID of Mercury which is the ASIC connected to the PCI slot on Step
+   * 1.x, hence why some Step 2.x games appear to expect the 1.x ID.
    *
    * The vendor ID code 0x11db is Sega's.
    */
@@ -374,7 +375,7 @@ public:
   uint32_t GetASICIDCode(ASIC asic) const;
 
   /*
-   * SetStepping(stepping, pciIDValue):
+   * SetStepping(stepping):
    *
    * Sets the Model 3 hardware stepping, which also determines the Real3D
    * functionality. The default is Step 1.0. This should be called prior to 
@@ -383,13 +384,8 @@ public:
    * Parameters:
    *    stepping    0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
    *                0x21 for Step 2.1. Anything else defaults to 1.0.
-   *    pciIDValue  The PCI ID code to return. This should be one of the PCIID
-   *                enum values otherwise games may fail to boot. Although the
-   *                PCI ID depends on stepping, there are a few games that
-   *                have to be explicitly configured with an older ID code,
-   *                which is why this parameter is exposed.
    */
-  void SetStepping(int stepping, uint32_t pciIDValue);
+  void SetStepping(int stepping);
 
   
   /*
