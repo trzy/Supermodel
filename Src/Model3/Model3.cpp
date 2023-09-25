@@ -2045,7 +2045,16 @@ void CModel3::RunMainBoardFrame(void)
 {
 	UINT32 start = CThread::GetTicks();
 
-	// Compute display timings
+	/* 
+         * Compute display timings. Refresh rate is 57.524160 Hz and we assume frame timing is the same as System 24:
+	 *
+	 * - 25 scanlines from /VSYNC high to /BLANK high (top border)
+         * - 384 scanlines from /BLANK high to /BLANK low (active display)
+         * - 11 scanlines from /BLANK low to /VSYNC low (bottom border)
+         * - 4 scanlines from /VSYNC low to /VSYNC high (vertical sync. pulse)
+	 *
+         * 424 lines total: 384 display and 40 blanking/vsync.
+	 */ 
 	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned lineCycles     = frameCycles / 424;
