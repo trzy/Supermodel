@@ -30,10 +30,11 @@ modules:
       - install -Dm 0644 supermodel128x128.png ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png
       - cp -r Assets ${FLATPAK_DEST}/bin/
       - cp -r Config ${FLATPAK_DEST}/bin/
+      - cp -r Docs ${FLATPAK_DEST}/bin/
     sources:
       - type: git
         url: https://github.com/trzy/Supermodel.git
-        commit: b2fee4242cd061a55e8f3bb2f6dfafbf9f87403f
+        commit: e6b54686804cc349972d43e5960edae4c46b61ae
       - type: file
         path: com.supermodel3.Supermodel.desktop
       - type: file
