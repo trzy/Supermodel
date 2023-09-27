@@ -197,6 +197,7 @@ private:
 	// Matrix stack
 	void MultMatrix(UINT32 matrixOffset, Mat4& mat);
 	void InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat);
+	void ResetMatrix(Mat4& mat);
 
 	// Scene database traversal
 	bool DrawModel(UINT32 modelAddr);

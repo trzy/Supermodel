@@ -487,7 +487,38 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	return true;
 }
 
-// Descends into a 10-word culling node
+/*
+	0x00:   x------- -------- -------- --------	Is UF ref
+			-x------ -------- -------- --------	Is 3D model
+			--x----- -------- -------- --------	Is point
+			---x---- -------- -------- --------	Is point ref
+			----x--- -------- -------- --------	Is animation
+			-----x-- -------- -------- --------	Is billboard
+			------x- -------- -------- --------	Child is billboard
+			-------x -------- -------- --------	Extra child pointer needed
+			-------- -----xxx xxxxxx-- --------	Node ID
+
+			-------- -------- -------- x-------	Reset matrix
+			-------- -------- -------- -x------	Use child pointer
+			-------- -------- -------- --x-----	Use sibling pointer
+			-------- -------- -------- ---x----	No matrix
+			-------- -------- -------- ----x---	Indirect child
+			-------- -------- -------- -----x--	Valid color table
+			-------- -------- -------- ------xx	Node type(0 = viewport, 1 = root node, 2 = culling node)
+
+	0x01, 0x02 only present on Step 2 +
+
+	0x01:   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx	Model scale(float)
+	0x02 :	-------- -------- x------- --------	Texture replace
+			-------- -------- -x------ --------	Switch bank
+			-------- -------- --xxxxxx x-------	X offset
+			-------- -------- -------- -xxxxxxx	Y offset
+
+	0x03 :	xxxxxxxx xxxxx--- -------- --------	Color table address 1
+			-------- -----xxx xxxx---- --------	LOD table pointer
+			-------- -------- ----xxxx xxxxxxxx	Node matrix
+*/
+
 void CNew3D::DescendCullingNode(UINT32 addr)
 {
 	enum class NodeType { undefined = -1, viewport = 0, rootNode = 1, cullingNode = 2 };
@@ -498,9 +529,10 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	UINT16			uCullRadius;
 	float			fCullRadius;
 	UINT16			uBlendRadius;
-	//float			fBlendRadius;
-	//UINT8			lodTablePointer;
+	float			fBlendRadius;
+	UINT8			lodTablePointer;
 	NodeType		nodeType;
+	bool			resetMatrix;
 
 	if (m_nodeAttribs.StackLimit()) {
 		return;
@@ -517,7 +549,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
 	sibling2Ptr		= node[0x08 - m_offset] & 0x1FFFFFF;	// mask colour table bits
 	matrixOffset	= node[0x03 - m_offset] & 0xFFF;
-	//lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
+	resetMatrix		= (node[0x0] & 0x80) > 0;
+	lodTablePointer = (node[0x03 - m_offset] >> 12) & 0x7F;
 
 	// check our node type
 	if (nodeType == NodeType::viewport) {
@@ -570,11 +603,15 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		MultMatrix(matrixOffset,m_modelMat);
 	}
 
+	if (resetMatrix) {
+		ResetMatrix(m_modelMat);
+	}
+
 	uCullRadius = node[9 - m_offset] & 0xFFFF;
 	fCullRadius = R3DFloat::GetFloat16(uCullRadius);
 
 	uBlendRadius = node[9 - m_offset] >> 16;
-	//fBlendRadius = R3DFloat::GetFloat16(uBlendRadius);
+	fBlendRadius = R3DFloat::GetFloat16(uBlendRadius);
 
 	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
 
@@ -765,6 +802,35 @@ void CNew3D::InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat)
 	// Set matrix base address and apply matrix #0 (coordinate system matrix)
 	m_matrixBasePtr = (float *)TranslateCullingAddress(matrixBaseAddr);
 	MultMatrix(0, mat);
+}
+
+// what this does is to set the rotation back to zero, whilst keeping the position and scale of the current matrix
+void CNew3D::ResetMatrix(Mat4& mat)
+{
+	float m[16];
+	memcpy(m, mat.currentMatrix, 16 * 4);
+
+	// transpose the top 3x3 of the matrix (this effectively inverts the rotation). When we multiply our new matrix it'll effectively cancel out the rotations.
+	std::swap(m[1], m[4]);
+	std::swap(m[2], m[8]);
+	std::swap(m[6], m[9]);
+
+	// set position to zero
+	m[12] = 0;
+	m[13] = 0;
+	m[14] = 0;
+	m[15] = 1;
+
+	// normalise columns, this removes the scaling, otherwise we'll apply it twice
+	float s1 = std::sqrt((m[0] * m[0]) + (m[1] * m[1]) + (m[2] * m[2]));
+	float s2 = std::sqrt((m[4] * m[4]) + (m[5] * m[5]) + (m[6] * m[6]));
+	float s3 = std::sqrt((m[8] * m[8]) + (m[9] * m[9]) + (m[10] * m[10]));
+
+	m[0] /= s1;		m[4] /= s2;		m[8] /= s3;
+	m[1] /= s1;		m[5] /= s2;		m[9] /= s3;
+	m[2] /= s1;		m[6] /= s2;		m[10] /= s3;
+
+	mat.MultMatrix(m);
 }
 
 // Draws viewports of the given priority
