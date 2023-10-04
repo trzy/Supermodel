@@ -1,7 +1,7 @@
 #
 # Supermodel
 # A Sega Model 3 Arcade Emulator.
-# Copyright 2003-2022 The Supermodel Team
+# Copyright 2003-2023 The Supermodel Team
 #
 # This file is part of Supermodel.
 #
@@ -35,6 +35,7 @@
 #   - msys/subversion package
 #   - msys/zip package
 #   - git
+#   - paramiko (Python package for SSH/SFTP)
 #
 # To perform a test run:
 #   - Download https://supermodel3.com/Download.html to the directory from
@@ -43,10 +44,13 @@
 #
 
 import argparse
+import base64
 import os
 import shutil
 import sys
 import tempfile
+
+import paramiko
 
 class CheckoutError(Exception):
   pass
@@ -81,7 +85,7 @@ def get_web_page(test_run):
       html = fp.read()
   else:
     import urllib.request
-    with urllib.request.urlopen("https://supermodel3.com/Download.html") as data:
+    with urllib.request.urlopen("http://supermodel3.com/Download.html") as data:
       html = data.read().decode("utf-8")
   return html
 
@@ -141,7 +145,7 @@ def create_change_log(bash, repo_dir, file_path, uploaded_shas, current_sha):
       "\n" \
       "                       A Sega Model 3 Arcade Emulator.\n" \
       "\n" \
-      "                   Copyright 2003-2022 The Supermodel Team\n" \
+      "                   Copyright 2003-2023 The Supermodel Team\n" \
       "\n" \
       "                                 CHANGE LOG\n" \
       "\n" \
@@ -154,16 +158,21 @@ def write_html_file(html, file_path):
     fp.write(html)
 
 def upload(html_file, zip_file_path, username, password):
-  from ftplib import FTP
-  ftp = FTP("supermodel3.com")
-  ftp.login(username, password)
-  ftp.cwd("public_html/Files/Git_Snapshots")
-  with open(zip_file_path, "rb") as fp:
-    ftp.storbinary("STOR " + os.path.basename(zip_file_path), fp)
-  ftp.cwd("../../")
-  with open(html_file, "rb") as fp:
-    ftp.storlines("STOR Download.html", fp)
-  ftp.quit()
+  # supermodel3.com host public key
+  keydata=b"""AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBE49lZKcEsFhEfEgVc4iNrBKOtItoXqQ/TKkPH9bAWOfn25H9BAi5AjkpqSsv/p1T5qfDni5G9sajqzamHw0TmU="""
+  key = paramiko.ECDSAKey(data=base64.decodebytes(keydata))
+
+  # Create SFTP client
+  ssh = paramiko.SSHClient()
+  ssh.get_host_keys().add('supermodel3.com', 'ecdsa-sha2-nistp256', key)
+  ssh.connect(hostname = "supermodel3.com", username = options.username, password = options.password)
+  sftp = ssh.open_sftp()
+
+  # Upload
+  sftp.put(localpath = zip_file_path, remotepath = f"public_html/Files/Git_Snapshots/{os.path.basename(zip_file_path)}")
+  sftp.put(localpath = html_file, remotepath = "public_html/Download.html")
+  sftp.close()
+  ssh.close()
 
 def confirm_package_contents(package_dir, package_files):
   all_found = True
