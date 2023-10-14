@@ -223,8 +223,6 @@ private:
 	void TranslateLosPosition(int inX, int inY, int& outX, int& outY);
 	bool ProcessLos(int priority);
 
-	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);	
-
 	/*
 	* Data
 	*/

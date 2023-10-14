@@ -725,7 +725,7 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   // Specular shininess
   GLfloat specularCoefficient = (GLfloat) ((P->header[0]>>26) & 0x3F) * (1.0f/63.0f);
   int shinyBits = (P->header[6] >> 5) & 3;
-  float shininess = std::exp2f(1 + shinyBits);
+  float shininess = std::exp2f(1.0f + shinyBits);
   if (!(P->header[0]&0x80)) //|| (shininess == 0)) // bit 0x80 seems to enable specular lighting
   {
     specularCoefficient = 0.; // disable

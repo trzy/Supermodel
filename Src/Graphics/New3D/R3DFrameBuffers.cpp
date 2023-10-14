@@ -1,7 +1,4 @@
 #include "R3DFrameBuffers.h"
-#include "Mat4.h"
-
-#define countof(a) (sizeof(a)/sizeof(*(a)))
 
 namespace New3D {
 
@@ -23,7 +20,6 @@ R3DFrameBuffers::R3DFrameBuffers()
 
 	AllocShaderTrans();
 	AllocShaderBase();
-	AllocShaderWipe();
 
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);
@@ -36,7 +32,7 @@ R3DFrameBuffers::~R3DFrameBuffers()
 	DestroyFBO();
 	m_shaderTrans.UnloadShaders();
 	m_shaderBase.UnloadShaders();
-	m_shaderWipe.UnloadShaders();
+
 	if (m_vao) {
 		glDeleteVertexArrays(1, &m_vao);
 		m_vao = 0;
@@ -165,26 +161,24 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 	switch (layer)
 	{
 	case Layer::colour:
-	case Layer::trans1:
-	case Layer::trans2:
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-		GLenum buffers[] = { GL_COLOR_ATTACHMENT0 + (GLenum)layer };
-		glDrawBuffers(countof(buffers), buffers);
-		break;
-	}
-	case Layer::trans12:
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-		GLenum buffers[] = { GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-		glDrawBuffers(countof(buffers), buffers);
-		break;
-	}
-	case Layer::all:
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-		glDrawBuffers(countof(buffers), buffers);
+		glDrawBuffers((GLsizei)std::size(buffers), buffers);
+		break;
+	}
+	case Layer::trans1:
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
+		GLenum buffers[] = { GL_NONE, GL_COLOR_ATTACHMENT1, GL_NONE };
+		glDrawBuffers((GLsizei)std::size(buffers), buffers);
+		break;
+	}
+	case Layer::trans2:
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
+		GLenum buffers[] = { GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT2 };
+		glDrawBuffers((GLsizei)std::size(buffers), buffers);
 		break;
 	}
 	case Layer::none:
@@ -280,8 +274,8 @@ void R3DFrameBuffers::AllocShaderTrans()
 
 	void main()
 	{
-		vec4 colTrans1 = texture( tex1, fsTexCoord);
-		vec4 colTrans2 = texture( tex2, fsTexCoord);
+		vec4 colTrans1 = texture(tex1, fsTexCoord);
+		vec4 colTrans2 = texture(tex2, fsTexCoord);
 
 		if(colTrans1.a+colTrans2.a > 0.0) {
 			vec3 col1 = colTrans1.rgb * colTrans1.a;
@@ -302,58 +296,6 @@ void R3DFrameBuffers::AllocShaderTrans()
 	m_shaderTrans.uniformLoc[1] = m_shaderTrans.GetUniformLocation("tex2");
 }
 
-void R3DFrameBuffers::AllocShaderWipe()
-{
-	const char *vertexShader = R"glsl(
-
-	#version 410 core
-
-	// outputs
-	out vec2 fsTexCoord;
-
-	void main(void)
-	{
-		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
-										vec4(-1.0,  1.0, 0.0, 1.0),
-										vec4( 1.0, -1.0, 0.0, 1.0),
-										vec4( 1.0,  1.0, 0.0, 1.0));
-
-		fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
-		gl_Position = vertices[gl_VertexID % 4];
-	}
-
-	)glsl";
-
-	const char *fragmentShader = R"glsl(
-
-	#version 410 core
-
-	uniform sampler2D texColor;				// base colour layer
-	in vec2 fsTexCoord;
-
-	// outputs
-	layout (location = 0) out vec4 fragColor0;
-	layout (location = 1) out vec4 fragColor1;
-
-	void main()
-	{
-		vec4 colBase = texture(texColor, fsTexCoord);
-
-		if(colBase.a == 0.0) {
-			discard;					// no colour pixels have been written
-		}
-
-		fragColor0 = vec4(0.0);			// wipe these parts of the alpha buffer
-		fragColor1 = vec4(0.0);			// since they have been overwritten by the next priority layer
-	}
-
-	)glsl";
-
-	m_shaderWipe.LoadShaders(vertexShader, fragmentShader);
-
-	m_shaderWipe.uniformLoc[0] = m_shaderWipe.GetUniformLocation("texColor");
-}
-
 void R3DFrameBuffers::Draw()
 {
 	SetFBO		(Layer::none);						// make sure to draw on the back buffer
@@ -362,7 +304,7 @@ void R3DFrameBuffers::Draw()
 	glDisable	(GL_CULL_FACE);
 	glDisable	(GL_BLEND);
 
-	for (int i = 0; i < countof(m_texIDs); i++) {	// bind our textures to correct texture units
+	for (int i = 0; i < (int)std::size(m_texIDs); i++) {	// bind our textures to correct texture units
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
 	}
@@ -381,77 +323,10 @@ void R3DFrameBuffers::Draw()
 	glBindVertexArray	(0);
 }
 
-void R3DFrameBuffers::CompositeBaseLayer()
-{
-	SetFBO(Layer::none);							// make sure to draw on the back buffer
-	glViewport(0, 0, m_width, m_height);			// cover the entire screen
-	glDisable(GL_DEPTH_TEST);						// disable depth testing / writing
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_BLEND);
-
-	for (int i = 0; i < countof(m_texIDs); i++) {	// bind our textures to correct texture units
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindVertexArray(m_vao);
-
-	DrawBaseLayer();
-
-	glBindVertexArray(0);
-}
-
-void R3DFrameBuffers::CompositeAlphaLayer()
-{
-	SetFBO(Layer::none);							// make sure to draw on the back buffer
-	glViewport(0, 0, m_width, m_height);			// cover the entire screen
-	glDisable(GL_DEPTH_TEST);						// disable depth testing / writing
-	glDisable(GL_CULL_FACE);
-
-	for (int i = 0; i < countof(m_texIDs); i++) {	// bind our textures to correct texture units
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, m_texIDs[i]);
-	}
-
-	glActiveTexture(GL_TEXTURE0);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-	glBindVertexArray(m_vao);
-
-	DrawAlphaLayer();
-
-	glDisable(GL_BLEND);
-	glBindVertexArray(0);
-}
-
-void R3DFrameBuffers::DrawOverTransLayers()
-{
-	SetFBO(Layer::trans12);							// need to write to both layers
-
-	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
-	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
-	glDisable	(GL_CULL_FACE);
-	glDisable	(GL_BLEND);
-
-	glActiveTexture	(GL_TEXTURE0);
-	glBindTexture	(GL_TEXTURE_2D, m_texIDs[0]);
-	
-	glBindVertexArray(m_vao);
-	m_shaderWipe.EnableShader();
-	glUniform1i(m_shaderWipe.uniformLoc[0], 0);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-	m_shaderWipe.DisableShader();
-	glBindVertexArray(0);
-}
-
 void R3DFrameBuffers::DrawBaseLayer()
 {
 	m_shaderBase.EnableShader();
-	glUniform1i(m_shaderTrans.uniformLoc[0], 0);		// to do check this
+	glUniform1i(m_shaderTrans.uniformLoc[0], 0);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 

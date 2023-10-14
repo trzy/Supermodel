@@ -1,6 +1,7 @@
 #include "R3DShader.h"
 #include "R3DShaderQuads.h"
 #include "R3DShaderTriangles.h"
+#include "R3DShaderCommon.h"
 
 // having 2 sets of shaders to maintain is really less than ideal
 // but hopefully not too many breaking changes at this point
@@ -31,6 +32,7 @@ void R3DShader::Start()
 	m_fixedShading		= false;
 	m_translatorMap		= false;
 	m_modelScale		= 1.0f;
+	m_nodeAlpha			= 1.0f;
 	m_shininess			= 0;
 	m_specularValue		= 0;
 	m_microTexScale		= 0;
@@ -62,30 +64,27 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	const char* gShader = "";
 	const char* fShader = fragmentShaderR3D;
 
-	std::string fragmentShaderCombined;
-
 	if (quads) {
 		vShader = vertexShaderR3DQuads;
 		gShader = geometryShaderR3DQuads;
-
-		fragmentShaderCombined += fragmentShaderR3DQuads1;
-		fragmentShaderCombined += fragmentShaderR3DQuads2;
-		fShader = fragmentShaderCombined.c_str();
+		fShader = fragmentShaderR3DQuads;
 	}
 
 	m_shaderProgram		= glCreateProgram();
 	m_vertexShader		= glCreateShader(GL_VERTEX_SHADER);
 	m_fragmentShader	= glCreateShader(GL_FRAGMENT_SHADER);
 
-	glShaderSource(m_vertexShader,		1, (const GLchar **)&vShader, NULL);
-	glShaderSource(m_fragmentShader,	1, (const GLchar **)&fShader, NULL);
+	const char* shaderArray[] = { fShader, fragmentShaderR3DCommon };
+
+	glShaderSource(m_vertexShader, 1, (const GLchar **)&vShader, nullptr);
+	glShaderSource(m_fragmentShader, (GLsizei)std::size(shaderArray), shaderArray, nullptr);
 
 	glCompileShader(m_vertexShader);
 	glCompileShader(m_fragmentShader);
 
 	if (quads) {
 		m_geoShader = glCreateShader(GL_GEOMETRY_SHADER);
-		glShaderSource(m_geoShader, 1, (const GLchar **)&gShader, NULL);
+		glShaderSource(m_geoShader, 1, (const GLchar **)&gShader, nullptr);
 		glCompileShader(m_geoShader);
 		glAttachShader(m_shaderProgram, m_geoShader);
 		PrintShaderResult(m_geoShader);
@@ -111,6 +110,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locBaseTexType		= glGetUniformLocation(m_shaderProgram, "baseTexType");
 	m_locTextureInverted	= glGetUniformLocation(m_shaderProgram, "textureInverted");
 	m_locTexWrapMode		= glGetUniformLocation(m_shaderProgram, "textureWrapMode");
+	m_locColourLayer		= glGetUniformLocation(m_shaderProgram, "colourLayer");
 
 	m_locFogIntensity		= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity			= glGetUniformLocation(m_shaderProgram, "fogDensity");
@@ -134,6 +134,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpotColor			= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor		= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locModelScale			= glGetUniformLocation(m_shaderProgram, "modelScale");
+	m_locNodeAlpha			= glGetUniformLocation(m_shaderProgram, "nodeAlpha");
 
 	m_locProjMat			= glGetUniformLocation(m_shaderProgram, "projMat");
 	m_locModelMat			= glGetUniformLocation(m_shaderProgram, "modelMat");
@@ -338,6 +339,11 @@ void R3DShader::SetModelStates(const Model* model)
 		m_modelScale = model->scale;
 	}
 
+	if (m_dirtyModel || model->alpha != m_nodeAlpha) {
+		glUniform1f(m_locNodeAlpha, model->alpha);
+		m_nodeAlpha = model->alpha;
+	}
+
 	m_transX = model->textureOffsetX;
 	m_transY = model->textureOffsetY;
 	m_transPage = model->page;
@@ -353,6 +359,11 @@ void R3DShader::SetModelStates(const Model* model)
 void R3DShader::DiscardAlpha(bool discard)
 {
 	glUniform1i(m_locDiscardAlpha, discard);
+}
+
+void R3DShader::SetLayer(Layer layer)
+{
+	glUniform1i(m_locColourLayer, (GLint)layer);
 }
 
 void R3DShader::PrintShaderResult(GLuint shader)

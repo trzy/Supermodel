@@ -232,7 +232,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 					hasOverlay = true;
 				}
 
-				if (!mesh.Render(layer)) continue;
+				if (!mesh.Render(layer, m.alpha)) continue;
 				if (mesh.highPriority != renderOverlay) continue;
 
 				if (!matrixLoaded) {
@@ -274,11 +274,13 @@ void CNew3D::SetRenderStates()
 	glDepthMask		(GL_TRUE);
 	glActiveTexture	(GL_TEXTURE0);
 	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader		
-	glDisable		(GL_BLEND);
 
 	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
 	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we increment the value
 	glStencilMask	(0xFF);
+
+	glBlendFunc		(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable		(GL_BLEND);
 }
 
 void CNew3D::DisableRenderStates()
@@ -313,7 +315,6 @@ void CNew3D::RenderFrame(void)
 	m_nodeAttribs.Reset();
 
 	RenderViewport(0x800000);						// build model structure
-	DrawScrollFog();								// fog layer if applicable must be drawn here
 	
 	m_vbo.Bind(true);
 	m_vbo.BufferSubData(MAX_ROM_VERTS*sizeof(FVertex), m_polyBufferRam.size()*sizeof(FVertex), m_polyBufferRam.data());	// upload all the dynamic data to GPU in one go
@@ -339,8 +340,10 @@ void CNew3D::RenderFrame(void)
 		}
 	}
 
-	m_r3dFrameBuffers.SetFBO(Layer::trans12);
-	glClear(GL_COLOR_BUFFER_BIT);					// wipe both trans layers
+	m_r3dFrameBuffers.SetFBO(Layer::colour);		// colour will draw to all 3 buffers. For regular opaque pixels the transparent layers will be essentially masked
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	DrawScrollFog();								// fog layer if applicable must be drawn here
 
 	for (int pri = 0; pri <= 3; pri++) {
 
@@ -350,35 +353,33 @@ void CNew3D::RenderFrame(void)
 
 			bool renderOverlay = (i == 1);
 
-			m_r3dFrameBuffers.SetFBO(Layer::colour);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
 			SetRenderStates();
 
-			m_r3dShader.DiscardAlpha(true);						// discard all translucent pixels in opaque pass
+			m_r3dFrameBuffers.SetFBO(Layer::colour);
+
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+			m_r3dShader.DiscardAlpha(true);
+			m_r3dShader.SetLayer(Layer::colour);
 			bool hasOverlay = RenderScene(pri, renderOverlay, Layer::colour);
 
 			if (!renderOverlay) {
 				ProcessLos(pri);
 			}
 
-			DisableRenderStates();
+			glDepthFunc(GL_LESS);
 
-			m_r3dFrameBuffers.DrawOverTransLayers();			// mask trans layer with opaque pixels
-			m_r3dFrameBuffers.CompositeBaseLayer();				// copy opaque pixels to back buffer
+			m_r3dShader.DiscardAlpha(false);
 
-			SetRenderStates();
+			m_r3dFrameBuffers.StoreDepth();
+			m_r3dShader.SetLayer(Layer::trans1);
+			m_r3dFrameBuffers.SetFBO(Layer::trans1);
+			RenderScene(pri, renderOverlay, Layer::trans1);
 
-			glDepthFunc(GL_LESS);								// alpha polys seem to use gl_less (ocean hunter)
-
-			m_r3dShader.DiscardAlpha		(false);			// render only translucent pixels
-			m_r3dFrameBuffers.StoreDepth	();					// save depth buffer for 1st trans pass
-			m_r3dFrameBuffers.SetFBO		(Layer::trans1);
-			RenderScene						(pri, renderOverlay, Layer::trans1);
-
-			m_r3dFrameBuffers.RestoreDepth	();					// restore depth buffer, trans layers don't seem to depth test against each other
-			m_r3dFrameBuffers.SetFBO		(Layer::trans2);
-			RenderScene						(pri, renderOverlay, Layer::trans2);
+			m_r3dFrameBuffers.RestoreDepth();
+			m_r3dShader.SetLayer(Layer::trans2);
+			m_r3dFrameBuffers.SetFBO(Layer::trans2);
+			RenderScene(pri, renderOverlay, Layer::trans2);
 
 			DisableRenderStates();
 
@@ -386,7 +387,8 @@ void CNew3D::RenderFrame(void)
 		}
 	}
 
-	m_r3dFrameBuffers.CompositeAlphaLayer();
+	m_r3dFrameBuffers.SetFBO(Layer::none);
+	m_r3dFrameBuffers.Draw();
 }
 
 void CNew3D::BeginFrame(void)
@@ -471,10 +473,11 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	}
 
 	// update texture offsets
-	m->textureOffsetX = m_nodeAttribs.currentTexOffsetX;
-	m->textureOffsetY = m_nodeAttribs.currentTexOffsetY;
-	m->page = m_nodeAttribs.currentPage;
-	m->scale = m_nodeAttribs.currentModelScale;
+	m->textureOffsetX	= m_nodeAttribs.currentTexOffsetX;
+	m->textureOffsetY	= m_nodeAttribs.currentTexOffsetY;
+	m->page				= m_nodeAttribs.currentPage;
+	m->scale			= m_nodeAttribs.currentModelScale;
+	m->alpha			= m_nodeAttribs.currentModelAlpha;
 
 	if (!cached) {
 		CacheModel(m, modelAddress);
@@ -587,6 +590,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 			m_nodeAttribs.currentPage = (node[0x02] & 0x4000) >> 14;
 		}
 	}
+
+	m_nodeAttribs.currentModelAlpha = 1;	// TODO fade out if required
 
 	// Apply matrix and translation
 	m_modelMat.PushMatrix();
@@ -1385,23 +1390,6 @@ bool CNew3D::IsDynamicModel(UINT32 *data)
 bool CNew3D::IsVROMModel(UINT32 modelAddr)
 {
 	return modelAddr >= 0x100000;
-}
-
-void CNew3D::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY)
-{
-	newX = (x + offX) & 2047;	// wrap around 2048, shouldn't be required
-
-	int oldPage = y / 1024;
-
-	y -= (oldPage * 1024);	// remove page from tex y
-
-	// calc newY with wrap around, wraps around in the same sheet, not into another memory sheet
-
-	newY = (y + offY) & 1023;
-
-	// add page to Y
-
-	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
 void CNew3D::CalcFrustumPlanes(Plane p[5], const float* matrix)

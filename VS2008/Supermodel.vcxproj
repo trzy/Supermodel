@@ -495,6 +495,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Graphics\New3D\R3DFrameBuffers.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DScrollFog.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderQuads.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h" />
     <ClInclude Include="..\Src\Graphics\New3D\VBO.h" />

@@ -48,6 +48,7 @@
  * - For consistency, the registers should probably be byte reversed (this is a
  *   little endian device), forcing the Model3 Read32/Write32 handlers to
  *   manually reverse the data. This keeps with the convention for VRAM.
+ *   Need to finish ripping out code that no longer does anything. Removed a lot but there's still more.
  */
 
 #include "TileGen.h"
@@ -109,9 +110,6 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 	}	
 	SaveState->Read(regs, sizeof(regs));
 	
-	// Because regs were read after palette, must recompute
-	RecomputePalettes();
-	
 	// If multi-threaded, update read-only snapshots too
 	if (m_gpuMultiThreaded)
 		UpdateSnapshots(true);
@@ -143,34 +141,8 @@ void CTileGen::EndVBlank(void)
 	//
 }
 
-void CTileGen::RecomputePalettes(void)
-{
-	// Writing the colors forces palettes to be computed
-	if (m_gpuMultiThreaded)
-	{
-		for (unsigned colorAddr = 0; colorAddr < 32768*4; colorAddr += 4 )
-		{
-			MARK_DIRTY(palDirty[0], colorAddr);
-			MARK_DIRTY(palDirty[1], colorAddr);
-			WritePalette(colorAddr/4, *(UINT32 *) &vram[0x100000+colorAddr]);
-		}
-	}
-	else
-	{
-		for (unsigned colorAddr = 0; colorAddr < 32768*4; colorAddr += 4 )
-			WritePalette(colorAddr/4, *(UINT32 *) &vram[0x100000+colorAddr]);
-	}
-}
-
 UINT32 CTileGen::SyncSnapshots(void)
 {
-	// Good time to recompute the palettes
-	if (recomputePalettes)
-	{
-		RecomputePalettes();
-		recomputePalettes = false;
-	}
-	
 	if (!m_gpuMultiThreaded)
 		return 0;
 	
@@ -279,23 +251,6 @@ void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 	if (m_gpuMultiThreaded)
 		MARK_DIRTY(vramDirty, addr);
 	*(UINT32 *) &vram[addr] = data;
-		
-	// Update palette if required
-	if (addr >= 0x100000)
-    {
-		addr -= 0x100000;
-		unsigned color = addr/4;	// color index
-		
-		// Same address in both palettes must be marked dirty
-		if (m_gpuMultiThreaded)
-		{
-			MARK_DIRTY(palDirty[0], addr);
-			MARK_DIRTY(palDirty[1], addr);
-		}
-			
-		// Both palettes will be modified simultaneously
-        WritePalette(color, data);
-    }
 }
 
 //TODO: 8- and 16-bit handlers have not been thoroughly tested
@@ -330,76 +285,6 @@ void CTileGen::WriteRAM16(unsigned addr, uint16_t data)
   WriteRAM32(addr & ~1, tmp);
 }
 
-void CTileGen::InitPalette(void)
-{
-	for (int i = 0; i < 0x20000/4; i++)
-	{
-		WritePalette(i, *(UINT32 *) &vram[0x100000 + i*4]);
-		if (m_gpuMultiThreaded)
-		{
-			palRO[0][i] = pal[0][i];
-			palRO[1][i] = pal[1][i];
-		}
-	}
-}
-
-static inline UINT32 AddColorOffset(UINT8 r, UINT8 g, UINT8 b, UINT8 a, UINT32 offsetReg)
-{
-	INT32	ir, ig, ib;
-	
-	/*
-	 * Color offsets are signed but I'm not sure whether or not their range is 
-	 * merely [-128,+127], which would mean adding to a 0 component would not 
-	 * result full intensity (only +127 at most). Alternatively, the signed 
-	 * value might have to be multiplied by 2. That is assumed here. In either 
-	 * case, the signed addition should be saturated.
-	 */
-
-	ib = (INT32) (INT8)((offsetReg>>16)&0xFF);
-	ig = (INT32) (INT8)((offsetReg>>8)&0xFF);
-	ir = (INT32) (INT8)((offsetReg>>0)&0xFF);
-	ib *= 2;
-	ig *= 2;
-	ir *= 2;
-	
-	// Add with saturation
-	ib += (INT32) (UINT32) b;
-	if (ib < 0)			ib = 0;
-	else if (ib > 0xFF)	ib = 0xFF;
-	ig += (INT32) (UINT32) g;
-	if (ig < 0)			ig = 0;
-	else if (ig > 0xFF)	ig = 0xFF;
-	ir += (INT32) (UINT32) r;
-	if (ir < 0)			ir = 0;
-	else if (ir > 0xFF)	ir = 0xFF;
-	
-	// Construct the final 32-bit ABGR-format color
-	r = (UINT8) ir;
-	g = (UINT8) ig;
-	b = (UINT8) ib;
-	return ((UINT32)a<<24)|((UINT32)b<<16)|((UINT32)g<<8)|(UINT32)r;
-}
-
-void CTileGen::WritePalette(unsigned color, UINT32 data)
-{
-	UINT8		r, g, b, a;
-	
-	a = 0xFF * ((data>>15)&1); 	// decode the RGBA (make alpha 0xFF or 0x00)
-    a = ~a;                  	// invert it (set on Model 3 means clear pixel)
-	
-	if ((data&0x8000))
-    	r = g = b = 0;
-	else
-    {
-		b = (((data >> 10) & 0x1F) * 255) / 31;
-		g = (((data >> 5) & 0x1F) * 255) / 31;
-		r = ((data & 0x1F) * 255) / 31;
-	}
-
-	pal[0][color] = AddColorOffset(r, g, b, a, regs[0x40/4]);	// A/A'
-	pal[1][color] = AddColorOffset(r, g, b, a, regs[0x44/4]);	// B/B'
-}
-
 UINT32 CTileGen::ReadRegister(unsigned reg)
 {
   reg &= 0xFF;
@@ -423,11 +308,6 @@ void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 		break;
 	case 0x40:	// layer A/A' color offset
 	case 0x44:	// layer B/B' color offset
-		// We only have a mechanism to recompute both palettes simultaneously.
-		// These regs are often written together in the same frame. To avoid
-		// needlessly recomputing both palettes twice, we defer the operation.
-		if (regs[reg/4] != data)	// only if changed
-			recomputePalettes = true;
 		break;
 	case 0x10:	// IRQ acknowledge
 		IRQ->Deassert(data&0xFF);
@@ -450,9 +330,6 @@ void CTileGen::Reset(void)
 	memset(memoryPool, 0, memSize);
 	memset(regs, 0, sizeof(regs));
 	memset(regsRO, 0, sizeof(regsRO));
-	
-	InitPalette();
-	recomputePalettes = false;
 
 	DebugLog("Tile Generator reset\n");
 }

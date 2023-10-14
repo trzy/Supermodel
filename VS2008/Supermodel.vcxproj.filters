@@ -853,6 +853,9 @@
     <ClInclude Include="..\Src\Graphics\FBO.h">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h">
+      <Filter>Header Files\Graphics\New</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Src\Debugger\ReadMe.txt">

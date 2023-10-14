@@ -9,6 +9,7 @@ NodeAttributes::NodeAttributes()
 	currentPage			= 0;
 	currentClipStatus	= Clip::INTERCEPT;
 	currentModelScale	= 1.0f;
+	currentModelAlpha	= 1.0;
 }
 
 bool NodeAttributes::Push()
@@ -27,6 +28,7 @@ bool NodeAttributes::Push()
 	na.texOffsetY	= currentTexOffsetY;
 	na.clip			= currentClipStatus;
 	na.modelScale	= currentModelScale;
+	na.modelAlpha	= currentModelAlpha;
 
 	m_vecAttribs.emplace_back(na);
 
@@ -46,6 +48,7 @@ bool NodeAttributes::Pop()
 	currentTexOffsetY	= last.texOffsetY;
 	currentClipStatus	= last.clip;
 	currentModelScale	= last.modelScale;
+	currentModelAlpha	= last.modelAlpha;
 
 	m_vecAttribs.pop_back();
 
@@ -64,6 +67,7 @@ void NodeAttributes::Reset()
 	currentTexOffsetY	= 0;
 	currentClipStatus	= Clip::INTERCEPT;
 	currentModelScale	= 1.0f;
+	currentModelAlpha	= 1.0f;
 
 	m_vecAttribs.clear();
 }
