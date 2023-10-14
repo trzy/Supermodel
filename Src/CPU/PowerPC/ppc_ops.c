@@ -33,6 +33,7 @@
 
 // it really seems like this should be elsewhere - like maybe the floating point checks can hang out someplace else
 #include <math.h>
+#include <cfenv>
 
 static void ppc_unimplemented(UINT32 op)
 {
@@ -1661,8 +1662,23 @@ inline int sign_double(FPR x)
 	return ((x.id & DOUBLE_SIGN) != 0);
 }
 
+inline void set_rounding_mode(void)
+{
+	// may require compiler option to work correctly (-frounding-math for GCC, /fp:strict for Visual Studio)
+	// unknown if any games actually change this
+	switch (ppc.fpscr & 3)
+	{
+	case 0: fesetround(FE_TONEAREST); break;
+	case 1: fesetround(FE_TOWARDZERO); break;
+	case 2: fesetround(FE_UPWARD); break;
+	case 3: fesetround(FE_DOWNWARD); break;
+	}
+}
+
+/*
 inline INT64 smround_to_nearest(FPR f)
 {
+	// This method is incorrect; it ties away from zero, while PowerPC ties to even
 	if (f.fd >= 0)
 	{
 		return (INT64)(f.fd + 0.5);
@@ -1689,6 +1705,7 @@ inline INT64 round_toward_negative_infinity(FPR f)
 	double r = floor(f.fd);
 	return (INT64)(r);
 }
+*/
 
 #define SET_VXSNAN(a, b)    if (is_snan_double(a) || is_snan_double(b)) ppc.fpscr |= 0x80000000
 #define SET_VXSNAN_1(c)     if (is_snan_double(c)) ppc.fpscr |= 0x80000000
@@ -2174,10 +2191,12 @@ static void ppc_fctiwx(UINT32 op)
 
 	switch(ppc.fpscr & 3)
 	{
-		case 0: r = (INT64)smround_to_nearest(FPR(b)); break;
-		case 1: r = (INT64)smround_toward_zero(FPR(b)); break;
-		case 2: r = (INT64)round_toward_positive_infinity(FPR(b)); break;
-		case 3: r = (INT64)round_toward_negative_infinity(FPR(b)); break;
+		// nearbyint() uses rounding mode set by fesetround()
+		// this should be FE_TONEAREST (ties to even) if the case is 0
+		case 0: r = (INT64)nearbyint(FPR(b).fd); break;
+		case 1: r = (INT64)trunc(FPR(b).fd); break;
+		case 2: r = (INT64)ceil(FPR(b).fd); break;
+		case 3: r = (INT64)floor(FPR(b).fd); break;
 	}
 
 	if(r > (INT64)((INT32)0x7FFFFFFF))
@@ -2219,7 +2238,7 @@ static void ppc_fctiwzx(UINT32 op)
 	CHECK_FPU_AVAILABLE();
 
 	SET_VXSNAN_1(FPR(b));
-	r = smround_toward_zero(FPR(b));
+	r = (INT64)trunc(FPR(b).fd);
 
 	if(r > (INT64)((INT32)0x7fffffff))
 	{
@@ -2398,6 +2417,8 @@ static void ppc_mtfsb0x(UINT32 op)
 	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
 		ppc.fpscr &= ~(1 << (31 - crbD));
 
+	set_rounding_mode();
+
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2412,6 +2433,8 @@ static void ppc_mtfsb1x(UINT32 op)
 	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
 		ppc.fpscr |= (1 << (31 - crbD));
 
+	set_rounding_mode();
+
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2424,6 +2447,8 @@ static void ppc_mtfsfx(UINT32 op)
 
 	ppc.fpscr &= (~f) | ~(FPSCR_FEX | FPSCR_VX);
 	ppc.fpscr |= (UINT32)(FPR(b).id) & ~(FPSCR_FEX | FPSCR_VX);
+
+	set_rounding_mode();
 
 	// FEX, VX
 
@@ -2458,6 +2483,8 @@ static void ppc_mtfsfix(UINT32 op)
 
     ppc.fpscr &= ~(0xf << crfd);    // clear field
     ppc.fpscr |= (imm << crfd);     // insert new data
+
+	set_rounding_mode();
 
 	if( RCBIT ) {
 		SET_CR1();
@@ -2541,7 +2568,8 @@ static void ppc_fresx(UINT32 op)
 
 	SET_VXSNAN_1(FPR(b));
 
-	FPR(t).fd = 1.0 / FPR(b).fd; /* ??? */
+	// On the 603 fres behaves the same as fdivs RT, 1.0, RB
+	FPR(t).fd = (float)(1.0 / FPR(b).fd);
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
