@@ -380,7 +380,7 @@ void CNew3D::RenderFrame(void)
 			m_r3dShader.SetLayer(Layer::trans2);
 			m_r3dFrameBuffers.SetFBO(Layer::trans2);
 			RenderScene(pri, renderOverlay, Layer::trans2);
-
+			
 			DisableRenderStates();
 
 			if (!hasOverlay) break;								// no high priority polys						

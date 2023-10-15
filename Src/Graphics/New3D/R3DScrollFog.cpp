@@ -48,16 +48,9 @@ void WriteOutputs(vec4 colour)
 {
 	vec4 blank = vec4(0.0);
 	
-	if(colour.a < 1.0) {		// some transparency
-		out0 = blank;
-		out1 = colour;
-		out2 = blank;
-	}
-	else {						// opaque
-		out0 = colour;
-		out1 = blank;
-		out2 = blank;
-	}
+	out0 = colour;
+	out1 = blank;
+	out2 = blank;	
 }
 
 void main()
@@ -117,8 +110,6 @@ void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient
 	// some ogl states
 	glDepthMask			(GL_FALSE);			// disable z writes
 	glDisable			(GL_DEPTH_TEST);	// disable depth testing
-	glEnable			(GL_BLEND);
-	glBlendFunc			(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glBindVertexArray	(m_vao);
 	glUseProgram		(m_shaderProgram);

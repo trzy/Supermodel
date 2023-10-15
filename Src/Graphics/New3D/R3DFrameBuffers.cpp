@@ -227,9 +227,7 @@ void R3DFrameBuffers::AllocShaderBase()
 
 	void main()
 	{
-		vec4 colBase = texture(tex1, fsTexCoord);
-		if(colBase.a < 1.0) discard;
-		fragColor = colBase;
+		fragColor = texture(tex1, fsTexCoord);
 	}
 
 	)glsl";
@@ -302,7 +300,8 @@ void R3DFrameBuffers::Draw()
 	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
 	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
 	glDisable	(GL_CULL_FACE);
-	glDisable	(GL_BLEND);
+	glBlendFunc	(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable	(GL_BLEND);
 
 	for (int i = 0; i < (int)std::size(m_texIDs); i++) {	// bind our textures to correct texture units
 		glActiveTexture(GL_TEXTURE0 + i);
@@ -313,10 +312,6 @@ void R3DFrameBuffers::Draw()
 	glBindVertexArray	(m_vao);
 
 	DrawBaseLayer		();
-
-	glBlendFunc			(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable			(GL_BLEND);
-
 	DrawAlphaLayer		();
 
 	glDisable			(GL_BLEND);
