@@ -853,10 +853,6 @@ void CNew3D::RenderViewport(UINT32 addr)
 		return;
 	}
 
-	if (addr == 0x800244) {
-		int debug = 0;
-	}
-
 	// Translate address and obtain pointer
 	const uint32_t *vpnode = TranslateCullingAddress(addr);
 
@@ -963,9 +959,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->losPosY = (int)(((vpnode[0x1c] >> 16) / 16.0f) + 0.5f);						// y position 0 starts from the top
 
 		// Fog
-		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF)* (float)(1.0 / 255.0);	// fog color R
-		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF)* (float)(1.0 / 255.0);	// fog color G
-		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF)* (float)(1.0 / 255.0);	// fog color B
+		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog color R
+		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
+		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
 		vp->fogParams[3] = std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)* (float)(1.0 / 255.0);	// fog start
 
