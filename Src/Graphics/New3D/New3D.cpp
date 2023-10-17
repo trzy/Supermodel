@@ -153,50 +153,46 @@ void CNew3D::DrawScrollFog()
 	//
 	// ocean hunter		- every viewport has scroll fog values set. Must start with lowest priority layers as the higher ones sometimes are garbage
 	// scud race		- first viewports in priority layer missing scroll values. The latter ones all contain valid scroll values.
-	// daytona			- doesn't seem to use scroll fog at all. Will set scroll values for the first viewports, the end ones contain no scroll values
+	// daytona			- doesn't seem to use scroll fog at all. Will set scroll values for the first viewports, the end ones contain no scroll values. End credits have scroll fog, but constrained to the viewport
 	// vf3				- first viewport only has it set. But set with highest select value ?? Rest of the viewports in priority layer contain a lower select value
 	// sega bassfishing	- first viewport in priority 1 sets scroll value. The rest all contain the wrong value + a higher select value ..
 	// spikeout final	- 2nd viewport in the priority layer has scroll values set, none of the others do. It also uses the highest select value
 
-	float rgba[4];
+	// I think the basic logic is this: the real3d picks the highest scroll fog value, starting from the lowest priority layer. 
+	// If it finds a value for priority layer 0 for example, it then bails out looking for any more.
+	// Fogging seems to be constrained to whatever the viewport is that is set.
 
-	for (int i = 0; i < 4; i++) {
+	Node* nodePtr = nullptr;
+
+	for (int i = 0; i < 4 && !nodePtr; i++) {
 		for (auto &n : m_nodes) {
 			if (n.viewport.priority == i) {
-				if (n.viewport.scrollFog != 0.f) {
-					rgba[0] = n.viewport.fogParams[0];
-					rgba[1] = n.viewport.fogParams[1];
-					rgba[2] = n.viewport.fogParams[2];
-					rgba[3] = n.viewport.scrollFog;
-					goto CheckScroll;
+				if (n.viewport.scrollFog > 0.f) {
+
+					// check to see if we have a higher scroll fog value
+					if (nodePtr) {
+						if (nodePtr->viewport.scrollFog < n.viewport.scrollFog) {
+							nodePtr = &n;
+						}
+
+						continue;
+					}
+
+					nodePtr = &n;
 				}
 			}
 		}
 	}
 
-	return;
-
-CheckScroll:
-
-	for (int i = 0; i < 4; i++) {
-		for (auto &n : m_nodes) {
-			if (n.viewport.priority == i) {
-
-				//if we have a fog density value
-				if (n.viewport.fogParams[3] != 0.f) {
-
-					if (rgba[0] == n.viewport.fogParams[0] &&
-						rgba[1] == n.viewport.fogParams[1] &&
-						rgba[2] == n.viewport.fogParams[2]) {
-
-						glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
-						m_r3dScrollFog.DrawScrollFog(rgba, n.viewport.scrollAtt, n.viewport.fogParams[6], n.viewport.spotFogColor, n.viewport.spotEllipse);
-						return;
-					}
-				}
-
-			}
-		}
+	if (nodePtr) {
+		float rgba[4];
+		auto& vp = nodePtr->viewport;
+		rgba[0] = vp.fogParams[0];
+		rgba[1] = vp.fogParams[1];
+		rgba[2] = vp.fogParams[2];
+		rgba[3] = vp.scrollFog;
+		glViewport(vp.x, vp.y, vp.width, vp.height);
+		m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6], vp.spotFogColor, vp.spotEllipse);
 	}
 }
 
@@ -857,6 +853,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 		return;
 	}
 
+	if (addr == 0x800244) {
+		int debug = 0;
+	}
+
 	// Translate address and obtain pointer
 	const uint32_t *vpnode = TranslateCullingAddress(addr);
 
@@ -963,9 +963,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->losPosY = (int)(((vpnode[0x1c] >> 16) / 16.0f) + 0.5f);						// y position 0 starts from the top
 
 		// Fog
-		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog color R
-		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
-		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
+		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF)* (float)(1.0 / 255.0);	// fog color R
+		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF)* (float)(1.0 / 255.0);	// fog color G
+		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF)* (float)(1.0 / 255.0);	// fog color B
 		vp->fogParams[3] = std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
 		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)* (float)(1.0 / 255.0);	// fog start
 
