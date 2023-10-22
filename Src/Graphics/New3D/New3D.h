@@ -217,6 +217,7 @@ private:
 	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
 	void DrawScrollFog();
+	void DrawAmbientFog();
 	bool SkipLayer(int layer);
 	void SetRenderStates();
 	void DisableRenderStates();

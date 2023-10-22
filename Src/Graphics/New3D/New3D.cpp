@@ -161,6 +161,7 @@ void CNew3D::DrawScrollFog()
 	// I think the basic logic is this: the real3d picks the highest scroll fog value, starting from the lowest priority layer. 
 	// If it finds a value for priority layer 0 for example, it then bails out looking for any more.
 	// Fogging seems to be constrained to whatever the viewport is that is set.
+	// Scroll fog needs a density or start value to work, but these can come from another viewport if the fog colour is the same
 
 	Node* nodePtr = nullptr;
 
@@ -185,12 +186,57 @@ void CNew3D::DrawScrollFog()
 	}
 
 	if (nodePtr) {
-		float rgba[4];
+
+		// interate nodes to see if any viewports with that fog colour actually set a fog density or start value
+		// if both of these are zero fogging is effectively disabled
+
+		for (auto& n : m_nodes) {
+
+			if (nodePtr->viewport.fogParams[0] == n.viewport.fogParams[0] &&
+				nodePtr->viewport.fogParams[1] == n.viewport.fogParams[1] &&
+				nodePtr->viewport.fogParams[2] == n.viewport.fogParams[2]) 
+			{
+				// check to see if we have a fog start or density value
+
+				if (n.viewport.fogParams[3] > 0.0f || n.viewport.fogParams[4] > 0.0f) {
+
+					float rgba[4];
+					auto& vp = nodePtr->viewport;
+					rgba[0] = vp.fogParams[0];
+					rgba[1] = vp.fogParams[1];
+					rgba[2] = vp.fogParams[2];
+					rgba[3] = vp.scrollFog;
+					glViewport(vp.x, vp.y, vp.width, vp.height);
+					m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6], vp.spotFogColor, vp.spotEllipse);
+				}
+			}
+		}
+	}
+}
+
+void CNew3D::DrawAmbientFog()
+{
+	// logic here is still not totally understood
+	// some games are setting fog ambient which seems to darken the 2d background layer too when scroll fogging is not set
+	// The logic is something like tileGenColour * fogAmbient
+	// If fogAmbient = 1.0 it's a no-op. Lower values darken the image
+	// Does this work with scroll fog? Well technically scroll fog already takes into account the fog ambient as it darkens the fog colour
+
+	// Let's pick the lowest fog ambient value
+
+	float fogAmbient = 1.0f;
+	Node* nodePtr = nullptr;
+
+	for (auto& n : m_nodes) {
+		if (n.viewport.fogParams[6] < fogAmbient) {
+			nodePtr = &n;
+			fogAmbient = n.viewport.fogParams[6];
+		}
+	}
+
+	if (fogAmbient < 1.0f) {
 		auto& vp = nodePtr->viewport;
-		rgba[0] = vp.fogParams[0];
-		rgba[1] = vp.fogParams[1];
-		rgba[2] = vp.fogParams[2];
-		rgba[3] = vp.scrollFog;
+		float rgba[] = { 0.0f, 0.0f, 0.0f, 1.0f - fogAmbient };
 		glViewport(vp.x, vp.y, vp.width, vp.height);
 		m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6], vp.spotFogColor, vp.spotEllipse);
 	}
@@ -339,6 +385,7 @@ void CNew3D::RenderFrame(void)
 	m_r3dFrameBuffers.SetFBO(Layer::colour);		// colour will draw to all 3 buffers. For regular opaque pixels the transparent layers will be essentially masked
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	DrawAmbientFog();
 	DrawScrollFog();								// fog layer if applicable must be drawn here
 
 	for (int pri = 0; pri <= 3; pri++) {
