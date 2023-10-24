@@ -207,7 +207,7 @@ void CNew3D::DrawScrollFog()
 					rgba[2] = vp.fogParams[2];
 					rgba[3] = vp.scrollFog;
 					glViewport(vp.x, vp.y, vp.width, vp.height);
-					m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6], vp.spotFogColor, vp.spotEllipse);
+					m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6]);
 				}
 			}
 		}
@@ -223,22 +223,29 @@ void CNew3D::DrawAmbientFog()
 	// Does this work with scroll fog? Well technically scroll fog already takes into account the fog ambient as it darkens the fog colour
 
 	// Let's pick the lowest fog ambient value
+	// Check for fog density or a fog start value, otherwise the effect seems to be disabled (lost world)
 
 	float fogAmbient = 1.0f;
 	Node* nodePtr = nullptr;
 
 	for (auto& n : m_nodes) {
+
+		// check to see if we have a fog density or fog start
+		if (n.viewport.fogParams[3] <= 0.0f && n.viewport.fogParams[4] <= 0.0f) {
+			continue;
+		}
+
 		if (n.viewport.fogParams[6] < fogAmbient) {
 			nodePtr = &n;
 			fogAmbient = n.viewport.fogParams[6];
 		}
 	}
 
-	if (fogAmbient < 1.0f) {
+	if (nodePtr) {
 		auto& vp = nodePtr->viewport;
 		float rgba[] = { 0.0f, 0.0f, 0.0f, 1.0f - fogAmbient };
 		glViewport(vp.x, vp.y, vp.width, vp.height);
-		m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6], vp.spotFogColor, vp.spotEllipse);
+		m_r3dScrollFog.DrawScrollFog(rgba, 0.0f, 1.0f);
 	}
 }
 

@@ -26,18 +26,6 @@ static const char *fragmentShaderFog = R"glsl(
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
 uniform vec4	fogColour;
-uniform vec3	spotFogColor;
-uniform vec4	spotEllipse;
-
-// Spotlight on fog
-float	ellipse;
-vec2	position, size;
-vec3	lSpotFogColor;
-
-// Scroll fog
-float	lfogAttenuation;
-vec3	lFogColor;
-vec4	scrollFog;
 
 // outputs
 layout(location = 0) out vec4 out0;		// opaque
@@ -56,21 +44,10 @@ void WriteOutputs(vec4 colour)
 void main()
 {
 	// Scroll fog base color
-	lFogColor = fogColour.rgb * fogAmbient;
-
-	// Spotlight on fog (area) 
-	position = spotEllipse.xy;
-	size = spotEllipse.zw;
-	ellipse = length((gl_FragCoord.xy - position) / size);
-	ellipse = ellipse * ellipse;			// decay rate = square of distance from center
-	ellipse = 1.0 - ellipse;				// invert
-	ellipse = max(0.0, ellipse);			// clamp
-
-	// Spotlight on fog (color)
-	lSpotFogColor = mix(spotFogColor * ellipse * fogColour.rgb, vec3(0.0), fogAttenuation);
+	vec3 lFogColor = fogColour.rgb * fogAmbient;
 
 	// Scroll fog density
-	scrollFog = vec4(lFogColor + lSpotFogColor, fogColour.a);
+	vec4 scrollFog = vec4(lFogColor, fogColour.a * (1.0 - fogAttenuation));
 
 	// Final Color
 	WriteOutputs(scrollFog);
@@ -105,7 +82,7 @@ R3DScrollFog::~R3DScrollFog()
 	}
 }
 
-void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient, float *spotRGB, float *spotEllipse)
+void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient)
 {
 	// some ogl states
 	glDepthMask			(GL_FALSE);			// disable z writes
@@ -116,8 +93,6 @@ void R3DScrollFog::DrawScrollFog(float rgba[4], float attenuation, float ambient
 	glUniform4fv		(m_locFogColour, 1, rgba);
 	glUniform1f			(m_locFogAttenuation, attenuation);
 	glUniform1f			(m_locFogAmbient, ambient);
-	glUniform3fv		(m_locSpotFogColor, 1, spotRGB);
-	glUniform4fv		(m_locSpotEllipse, 1, spotEllipse);
 
 	glDrawArrays		(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -135,8 +110,6 @@ void R3DScrollFog::AllocResources()
 	m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
 	m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");
 	m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
-	m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
-	m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
 }
 
 void R3DScrollFog::DeallocResources()

@@ -13,7 +13,7 @@ public:
 	R3DScrollFog(const Util::Config::Node &config);
 	~R3DScrollFog();
 
-	void DrawScrollFog(float rbga[4], float attenuation, float ambient, float *spotRGB, float *spotEllipse);
+	void DrawScrollFog(float rbga[4], float attenuation, float ambient);
 
 private:
 
@@ -29,8 +29,6 @@ private:
 	GLint m_locFogColour;
 	GLint m_locFogAttenuation;
 	GLint m_locFogAmbient;
-	GLint m_locSpotFogColor;
-	GLint m_locSpotEllipse;
 
 	GLuint m_vao;
 };
