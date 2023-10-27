@@ -337,6 +337,16 @@ float CalcFog()
 	return fog;
 }
 
+float Sqr(float a)
+{
+	return a*a;
+}
+
+float SqrLength(vec2 a)
+{
+	return a.x*a.x + a.y*a.y;
+}
+
 void WriteOutputs(vec4 colour, int layer)
 {
 	vec4 blank = vec4(0.0);

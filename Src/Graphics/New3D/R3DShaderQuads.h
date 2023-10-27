@@ -249,6 +249,8 @@ float CalcFog();
 void Step15Luminous(inout vec4 colour);
 vec4 GetTextureValue();
 void WriteOutputs(vec4 colour, int layer);
+float Sqr(float a);
+float SqrLength(vec2 a);
 
 void QuadraticInterpolation()
 {
@@ -354,16 +356,6 @@ void QuadraticInterpolation()
 	gl_FragDepth = depth * 0.5 + 0.5;
 }
 
-float sqr(float a)
-{
-	return a*a;
-}
-
-float sqr_length(vec2 a)
-{
-	return a.x*a.x + a.y*a.y;
-}
-
 void main()
 {
 	vec4 tex1Data;
@@ -389,7 +381,7 @@ void main()
 	}
 
 	float ellipse;
-	ellipse = sqr_length((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw); // decay rate = square of distance from center
+	ellipse = SqrLength((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw); // decay rate = square of distance from center
 	ellipse = 1.0 - ellipse;      // invert
 	ellipse = max(0.0, ellipse);  // clamp
 
@@ -414,7 +406,7 @@ void main()
 		// inverse-linear falloff
 		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
 		// y = 1 / (d/r + 1)^2
-		range = 1.0 / sqr(d * inv_r - 1.0);
+		range = 1.0 / Sqr(d * inv_r - 1.0);
 		range *= enable;
 	}
 
