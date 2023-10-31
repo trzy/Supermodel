@@ -151,7 +151,7 @@ static const char s_fragmentShaderTileGen[] = R"glsl(
 	int GetLineScrollValue(int layerNum, int yCoord)
 	{
 		int index = ((0xF6000 + (layerNum * 0x400)) / 4) + (yCoord / 2);
-		int shift = (yCoord % 2) * 16;												// double check this
+		int shift = (1 - (yCoord % 2)) * 16;
 
 		ivec2 coords = GetVRamCoords(index);
 		return int((texelFetch(vram,coords,0).r >> shift) & 0xFFFFu);
