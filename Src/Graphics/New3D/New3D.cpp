@@ -561,7 +561,9 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 
 	0x01, 0x02 only present on Step 2 +
 
-	0x01:   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx	Model scale(float)
+	0x01:   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx--	Model scale (float32) last 2 bits are control words
+			-------- -------- -------- ------x- Disable culling
+			-------- -------- -------- -------x	Valid model scale
 	0x02 :	-------- -------- x------- --------	Texture replace
 			-------- -------- -x------ --------	Switch bank
 			-------- -------- --xxxxxx x-------	X offset
@@ -570,6 +572,23 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 	0x03 :	xxxxxxxx xxxxx--- -------- --------	Color table address 1
 			-------- -----xxx xxxx---- --------	LOD table pointer
 			-------- -------- ----xxxx xxxxxxxx	Node matrix
+
+	0x04:   Translation X coordinate
+	0x05:   Translation Y coordinate
+	0x06:   Translation Z coordinate
+
+	0x07:   xxxx---- -------- -------- -------- Color table address 2
+			-----x-- -------- -------- -------- Sibling table
+			------x- -------- -------- -------- Point
+			-------x -------- -------- -------- Leaf node
+			-------- xxxxxxxx xxxxxxxx xxxxxxxx Child pointer
+
+	0x08:   xxxxxxx- -------- -------- -------- Color table address 3
+			-------x -------- -------- -------- Null sibling
+			-------- xxxxxxxx xxxxxxxx xxxxxxxx Sibling pointer
+
+	0x09:   xxxxxxxx xxxxxxxx -------- -------- Blend radius
+			-------- -------- xxxxxxxx xxxxxxxx Culling radius
 */
 
 void CNew3D::DescendCullingNode(UINT32 addr)
@@ -596,6 +615,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	if (NULL == node) {
 		return;
 	}
+
+	printf("scale %x %f\n", node[1], Util::Uint32AsFloat(node[1]));
 
 	// Extract known fields
 	nodeType		= (NodeType)(node[0x00] & 3);
