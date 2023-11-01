@@ -616,8 +616,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		return;
 	}
 
-	printf("scale %x %f\n", node[1], Util::Uint32AsFloat(node[1]));
-
 	// Extract known fields
 	nodeType		= (NodeType)(node[0x00] & 3);
 	child1Ptr		= node[0x07 - m_offset] & 0x7FFFFFF;	// mask colour table bits
