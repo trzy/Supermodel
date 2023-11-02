@@ -3,8 +3,8 @@
 
 struct LOD
 {
-	float startRange;		// possibly specified as angles also, yeah who knows >_<
-	float deleteRange;
+	float deleteSize;
+	float blendFactor;
 };
 
 struct LODFeatureType
