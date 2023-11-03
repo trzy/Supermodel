@@ -809,12 +809,6 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 
 	int index = (reg - 20) / 4;
 	float val = Render3D->GetLosValue(index);
-
-	if (val != 0.f) {
-		//val = 1.0f / val;		// test program indicate z values are 1 over
-		return 0xffffffff;		// infinity
-	}
-
 	return *(uint32_t*)(&val);
   }
 

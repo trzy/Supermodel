@@ -70,6 +70,7 @@ private:
 	bool	m_translatorMap;
 
 	bool	m_layered;
+	bool	m_noLosReturn;
 	float	m_microTexScale;
 	int		m_microTexID;
 	int		m_baseTexInfo[4];

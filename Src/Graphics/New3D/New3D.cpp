@@ -324,8 +324,8 @@ void CNew3D::SetRenderStates()
 	glActiveTexture	(GL_TEXTURE0);
 	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader		
 
-	glStencilFunc	(GL_EQUAL, 0, 0xFF);			// basically stencil test passes if the value is zero
-	glStencilOp		(GL_KEEP, GL_INCR, GL_INCR);	// if the stencil test passes, we increment the value
+	glEnable		(GL_STENCIL_TEST);
+	glStencilOp		(GL_KEEP, GL_KEEP, GL_REPLACE);
 	glStencilMask	(0xFF);
 
 	glBlendFunc		(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1160,6 +1160,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->specularValue	= ph.SpecularValue();
 	currentMesh->fogIntensity	= ph.LightModifier();
 	currentMesh->translatorMap	= ph.TranslatorMap();
+	currentMesh->noLosReturn	= ph.NoLosReturn();
 
 	if (currentMesh->textured) {
 
@@ -1827,17 +1828,32 @@ bool CNew3D::ProcessLos(int priority)
 				float depth;
 				glReadPixels(losX, losY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
 
-				if (depth < 0.99f || depth == 1.0f) {		// kinda guess work but when depth = 1, haven't drawn anything, when 0.99~ drawing sky somewhere far
-					return false;
-				}
-
 				depth = 2.0f * depth - 1.0f;
 
 				float zNear = m_nfPairs[priority].zNear;
 				float zFar	= m_nfPairs[priority].zFar;
 				float zVal	= 2.0f * zNear * zFar / (zFar + zNear - depth * (zFar - zNear));
 
+				// real3d test program indicates that return values are 1/zVal
+				zVal = 1.0f / zVal;
+
+				GLubyte stencilVal;
+				glReadPixels(losX, losY, 1, 1, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, &stencilVal);
+
+				// if the stencil val is zero that means we've hit sky or whatever, if it hits a 1 we've hit geometry
+				// the real3d returns 1 in the top bit of the float if the line of sight test passes (ie doesn't hit geometry)
+
+				auto zValP = reinterpret_cast<unsigned char*>(&zVal);	// this is legal in c++, casting to int technically isn't
+
+				if (stencilVal == 0) {
+					zValP[0] |= 1;		// set first bit to 1
+				}
+				else {
+					zValP[0] &= 0xFE;	// set first bit to zero
+				}
+
 				m_losBack->value[priority] = zVal;
+
 				return true;
 			}
 		}

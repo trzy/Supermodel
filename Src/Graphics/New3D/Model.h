@@ -147,6 +147,7 @@ struct Mesh
 	bool highPriority	= false;		// rendered over the top
 	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1
 	bool translatorMap	= false;		// colours are multiplied by 16
+	bool noLosReturn	= false;		// line of sight test
 
 	// lighting
 	bool fixedShading	= false;

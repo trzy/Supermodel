@@ -408,6 +408,7 @@ UINT64 PolyHeader::Hash()
 	hash |= (UINT64)FixedShading() << 34;										// bits 34 fixed shading
 	hash |= (UINT64)(header[0] >> 26) << 35;									// bits 35-40 specular coefficient (opacity)
 	hash |= (UINT64)(header[6] & 0x3FFFF) << 41;								// bits 41-58 Translucency pattern select / disable lighting / Polygon light modifier / Texture enable / Texture format / Shininess / High priority / Layered polygon / Translucency mode
+	hash |= (UINT64)NoLosReturn() << 59;										// bits 59 no line of sight return
 
 	return hash;
 }

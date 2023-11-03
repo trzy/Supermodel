@@ -28,6 +28,7 @@ void R3DShader::Start()
 	m_lightEnabled		= false;
 	m_specularEnabled	= false;
 	m_layered			= false;
+	m_noLosReturn		= false;
 	m_textureInverted	= false;
 	m_fixedShading		= false;
 	m_translatorMap		= false;
@@ -299,12 +300,12 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 
 	if (m_dirtyMesh || m->layered != m_layered) {
 		m_layered = m->layered;
-		if (m_layered) {
-			glEnable(GL_STENCIL_TEST);
-		}
-		else {
-			glDisable(GL_STENCIL_TEST);
-		}
+		// i think it should just disable z write, but the polys I think must be written first
+	}
+
+	if (m_dirtyMesh || m->noLosReturn != m_noLosReturn) {
+		m_noLosReturn = m->noLosReturn;
+		glStencilFunc(GL_ALWAYS, m_noLosReturn, -1);		// we'll write either a 0 or 1 to the stencil buffer
 	}
 
 	m_dirtyMesh = false;
