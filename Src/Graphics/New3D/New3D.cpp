@@ -559,11 +559,12 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 			-------- -------- -------- -----x--	Valid color table
 			-------- -------- -------- ------xx	Node type(0 = viewport, 1 = root node, 2 = culling node)
 
-	0x01, 0x02 only present on Step 2 +
+	0x01, 0x02 only present on Step 1.5+
 
 	0x01:   xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx--	Model scale (float32) last 2 bits are control words
 			-------- -------- -------- ------x- Disable culling
 			-------- -------- -------- -------x	Valid model scale
+
 	0x02 :	-------- -------- x------- --------	Texture replace
 			-------- -------- -x------ --------	Switch bank
 			-------- -------- --xxxxxx x-------	X offset
@@ -595,7 +596,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 {
 	enum class NodeType { undefined = -1, viewport = 0, rootNode = 1, cullingNode = 2 };
 
-	const UINT32	*node, *lodTable;
+	const UINT32	*node, *lodPtr;
 	UINT32			matrixOffset, child1Ptr, sibling2Ptr;
 	BBox			bbox;
 	UINT16			uCullRadius;
@@ -645,10 +646,11 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	if (!m_offset) {		// Step 1.5+
 
-		float modelScale = Util::Uint32AsFloat(node[1]);
-		if (modelScale > std::numeric_limits<float>::min()) {
-			m_nodeAttribs.currentModelScale = modelScale;
-		}
+		if (node[0x01] & 1)
+			m_nodeAttribs.currentModelScale = Util::Uint32AsFloat(node[0x01] & ~3);	// mask out control bits
+
+		if (node[0x01] & 2)
+			m_nodeAttribs.currentDisableCulling = true;
 
 		// apply texture offsets, else retain current ones
 		if ((node[0x02] & 0x8000))	{
@@ -659,8 +661,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 			m_nodeAttribs.currentPage = (node[0x02] & 0x4000) >> 14;
 		}
 	}
-
-	m_nodeAttribs.currentModelAlpha = 1;	// TODO fade out if required
 
 	// Apply matrix and translation
 	m_modelMat.PushMatrix();
@@ -705,19 +705,42 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		}
 	}
 
-	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && fCullRadius > R3DFloat::Pro16BitFltMin) {
+	float LODscale = fBlendRadius * m_nodeAttribs.currentModelScale / std::abs(m_modelMat.currentMatrix[14]);
+
+	LODFeatureType lodTableEntry = m_LODBlendTable->table[lodTablePointer];
+
+	if (m_nodeAttribs.currentDisableCulling)
+	{
+		m_nodeAttribs.currentModelAlpha = 1.0f;
+	}
+	else
+	{
+		float nodeAlpha = lodTableEntry.lod[3].blendFactor * (LODscale - lodTableEntry.lod[3].deleteSize);
+		nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
+		m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
+	}
+
+	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && m_nodeAttribs.currentModelAlpha > 0.0f) {
 
 		// Descend down first link
 		if ((node[0x00] & 0x08))	// 4-element LOD table
 		{
-			lodTable = TranslateCullingAddress(child1Ptr);
+			lodPtr = TranslateCullingAddress(child1Ptr);
 
-			if (NULL != lodTable) {
+			// determine which LOD to use; we do not currently blend between LODs
+			int modelLOD;
+			for (modelLOD = 0; modelLOD < 3; modelLOD++)
+			{
+				if (LODscale >= lodTableEntry.lod[modelLOD].deleteSize)
+					break;
+			}
+
+			if (NULL != lodPtr) {
 				if ((node[0x03 - m_offset] & 0x20000000)) {
-					DescendCullingNode(lodTable[0] & 0xFFFFFF);
+					DescendCullingNode(lodPtr[modelLOD] & 0xFFFFFF);
 				}
 				else {
-					DrawModel(lodTable[0] & 0xFFFFFF);	//TODO
+					DrawModel(lodPtr[modelLOD] & 0xFFFFFF);
 				}
 			}
 		}

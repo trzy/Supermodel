@@ -243,6 +243,7 @@ public:
 	Clip currentClipStatus;
 	float currentModelScale;
 	float currentModelAlpha;
+	bool currentDisableCulling;
 
 private:
 
@@ -254,6 +255,7 @@ private:
 		Clip clip;
 		float modelScale;
 		float modelAlpha;	// from culling node
+		bool disableCulling;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };
