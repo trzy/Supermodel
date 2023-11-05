@@ -6,32 +6,34 @@
 
 namespace New3D {
 
-class R3DScrollFog
-{
-public:
+	class R3DScrollFog
+	{
+	public:
 
-	R3DScrollFog(const Util::Config::Node &config);
-	~R3DScrollFog();
+		R3DScrollFog(const Util::Config::Node& config);
+		~R3DScrollFog();
 
-	void DrawScrollFog(float rbga[4], float attenuation, float ambient);
+		void DrawScrollFog(float rbga[4], float attenuation, float ambient, float spotRGB[3], float spotEllipse[4]);
 
-private:
+	private:
 
-	void AllocResources();
-	void DeallocResources();
+		void AllocResources();
+		void DeallocResources();
 
-  const Util::Config::Node &m_config;
+		const Util::Config::Node& m_config;
 
-	GLuint m_shaderProgram;
-	GLuint m_vertexShader;
-	GLuint m_fragmentShader;
+		GLuint m_shaderProgram;
+		GLuint m_vertexShader;
+		GLuint m_fragmentShader;
 
-	GLint m_locFogColour;
-	GLint m_locFogAttenuation;
-	GLint m_locFogAmbient;
+		GLint m_locFogColour;
+		GLint m_locFogAttenuation;
+		GLint m_locFogAmbient;
+		GLint m_locSpotFogColor;
+		GLint m_locSpotEllipse;
 
-	GLuint m_vao;
-};
+		GLuint m_vao;
+	};
 
 }
 

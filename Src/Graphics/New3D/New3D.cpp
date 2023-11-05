@@ -207,7 +207,7 @@ void CNew3D::DrawScrollFog()
 					rgba[2] = vp.fogParams[2];
 					rgba[3] = vp.scrollFog;
 					glViewport(vp.x, vp.y, vp.width, vp.height);
-					m_r3dScrollFog.DrawScrollFog(rgba, 0, vp.fogParams[6]);
+					m_r3dScrollFog.DrawScrollFog(rgba, n.viewport.scrollAtt, n.viewport.fogParams[6], n.viewport.spotFogColor, n.viewport.spotEllipse);
 					break;
 				}
 			}
@@ -246,7 +246,7 @@ void CNew3D::DrawAmbientFog()
 		auto& vp = nodePtr->viewport;
 		float rgba[] = { 0.0f, 0.0f, 0.0f, 1.0f - fogAmbient };
 		glViewport(vp.x, vp.y, vp.width, vp.height);
-		m_r3dScrollFog.DrawScrollFog(rgba, 0.0f, 1.0f);
+		m_r3dScrollFog.DrawScrollFog(rgba, 0.0f, 1.0f, vp.spotFogColor, vp.spotEllipse); // we assume spot light is not used
 	}
 }
 
