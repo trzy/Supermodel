@@ -198,7 +198,7 @@ void CNew3D::DrawScrollFog()
 			{
 				// check to see if we have a fog start or density value
 
-				if (n.viewport.fogParams[3] > 0.0f || n.viewport.fogParams[4] > 0.0f) {
+				if (n.viewport.fogParams[3] > 0.0f || n.viewport.fogParams[4] > 0.0f || n.viewport.scrollAtt > 0.0f) {
 
 					float rgba[4];
 					auto& vp = nodePtr->viewport;
@@ -207,7 +207,8 @@ void CNew3D::DrawScrollFog()
 					rgba[2] = vp.fogParams[2];
 					rgba[3] = vp.scrollFog;
 					glViewport(vp.x, vp.y, vp.width, vp.height);
-					m_r3dScrollFog.DrawScrollFog(rgba, vp.scrollAtt, vp.fogParams[6]);
+					m_r3dScrollFog.DrawScrollFog(rgba, 0, vp.fogParams[6]);
+					break;
 				}
 			}
 		}
@@ -549,7 +550,10 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 			-----x-- -------- -------- --------	Is billboard
 			------x- -------- -------- --------	Child is billboard
 			-------x -------- -------- --------	Extra child pointer needed
+			-------x xxxxx--- -------- --------	Spare (unknown if used)
 			-------- -----xxx xxxxxx-- --------	Node ID
+			-------- -------- ------x- --------	Discard 1
+			-------- -------- -------x --------	Discard 2
 
 			-------- -------- -------- x-------	Reset matrix
 			-------- -------- -------- -x------	Use child pointer
@@ -630,6 +634,11 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		return;												// viewport nodes aren't rendered
 	}
 
+	// node discard
+	if ((0x300 & node[0]) == 0x300) {						// why 2 bits for node discard? Sega rally uses this
+		return;
+	}
+
 	// parse siblings 
 	if ((node[0x00] & 0x07) != 0x06) {						// colour table seems to indicate no siblings
 		if (!(sibling2Ptr & 0x1000000) && sibling2Ptr) {
@@ -707,7 +716,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	float LODscale = fBlendRadius * m_nodeAttribs.currentModelScale / std::abs(m_modelMat.currentMatrix[14]);
 
-	LODFeatureType lodTableEntry = m_LODBlendTable->table[lodTablePointer];
+	const LODFeatureType& lodTableEntry = m_LODBlendTable->table[lodTablePointer];
 
 	if (m_nodeAttribs.currentDisableCulling)
 	{
