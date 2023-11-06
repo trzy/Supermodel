@@ -550,7 +550,7 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 			-----x-- -------- -------- --------	Is billboard
 			------x- -------- -------- --------	Child is billboard
 			-------x -------- -------- --------	Extra child pointer needed
-			-------x xxxxx--- -------- --------	Spare (unknown if used)
+			-------- xxxxx--- -------- --------	Spare (unknown if used)
 			-------- -----xxx xxxxxx-- --------	Node ID
 			-------- -------- ------x- --------	Discard 1
 			-------- -------- -------x --------	Discard 2
