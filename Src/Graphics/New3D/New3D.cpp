@@ -236,6 +236,10 @@ void CNew3D::DrawAmbientFog()
 			continue;
 		}
 
+		if (n.viewport.scrollAtt > 0.0f) {
+			continue;		// scroll attenuation indicates scroll fog layer
+		}
+
 		if (n.viewport.fogParams[6] < fogAmbient) {
 			nodePtr = &n;
 			fogAmbient = n.viewport.fogParams[6];
