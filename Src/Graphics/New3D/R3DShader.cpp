@@ -298,14 +298,26 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		glUniform2iv(m_locTexWrapMode, 1, m_texWrapMode);
 	}
 
+	if (m_dirtyMesh || m->noLosReturn != m_noLosReturn) {
+		m_noLosReturn = m->noLosReturn;
+		glStencilFunc(GL_ALWAYS, m_noLosReturn << 7, 0b10000000);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0b10000000);
+	}
+
 	if (m_dirtyMesh || m->layered != m_layered) {
 		m_layered = m->layered;
 		// i think it should just disable z write, but the polys I think must be written first
-	}
-
-	if (m_dirtyMesh || m->noLosReturn != m_noLosReturn) {
-		m_noLosReturn = m->noLosReturn;
-		glStencilFunc(GL_ALWAYS, m_noLosReturn, -1);		// we'll write either a 0 or 1 to the stencil buffer
+		if (m_layered) {
+			glStencilFunc(GL_EQUAL, 0, 0b01111111);			// basically stencil test passes if the value is zero
+			glStencilOp(GL_KEEP, GL_INCR, GL_INCR);			// if the stencil test passes, we increment the value
+			glStencilMask(0b01111111);
+		}
+		else {
+			glStencilFunc(GL_ALWAYS, m_noLosReturn << 7, 0b10000000);
+			glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+			glStencilMask(0b10000000);
+		}
 	}
 
 	m_dirtyMesh = false;

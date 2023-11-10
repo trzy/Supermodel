@@ -330,8 +330,6 @@ void CNew3D::SetRenderStates()
 	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader		
 
 	glEnable		(GL_STENCIL_TEST);
-	glStencilOp		(GL_KEEP, GL_KEEP, GL_REPLACE);
-	glStencilMask	(0xFF);
 
 	glBlendFunc		(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDisable		(GL_BLEND);
@@ -1875,6 +1873,9 @@ bool CNew3D::ProcessLos(int priority)
 
 				GLubyte stencilVal;
 				glReadPixels(losX, losY, 1, 1, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, &stencilVal);
+
+				// apply our mask to stencil, because layered poly attributes use the lower bits
+				stencilVal &= 0x80;
 
 				// if the stencil val is zero that means we've hit sky or whatever, if it hits a 1 we've hit geometry
 				// the real3d returns 1 in the top bit of the float if the line of sight test passes (ie doesn't hit geometry)
