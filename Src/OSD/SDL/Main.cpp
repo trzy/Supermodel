@@ -547,6 +547,7 @@ void Screenshot()
 #include <fstream>
 
 static std::string s_gfxStatePath;
+static const std::string k_gfxAnalysisPath = "GraphicsAnalysis/";
 
 static std::string GetFileBaseName(const std::string &file)
 {
@@ -603,7 +604,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -619,7 +620,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownCullingNodeBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -628,7 +629,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
   glReadBuffer(readBuffer);
 
   // Generate the HTML GUI
-  std::string file = Util::Format() << s_analysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
+  std::string file = Util::Format() << k_gfxAnalysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
   std::ofstream fs(file);
   if (!fs.good())
     ErrorLog("Unable to open '%s' for writing.", file.c_str());
@@ -1603,8 +1604,13 @@ static void Help(void)
 #ifdef SUPERMODEL_DEBUGGER
   puts("  -disable-debugger       Completely disable debugger functionality");
   puts("  -enter-debugger         Enter debugger at start of emulation");
-  puts("");
 #endif // SUPERMODEL_DEBUGGER
+#ifdef DEBUG
+  puts("  -gfx-state=<file>       Produce graphics analysis for save state (works only");
+  puts("                          with the legacy 3D engine and requires a");
+  puts("                          GraphicsAnalysis directory to exist)");
+#endif
+  puts("");
 }
 
 struct ParsedCommandLine

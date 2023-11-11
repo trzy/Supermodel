@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,10 +18,10 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Model3GraphicsState.h
- * 
+ *
  * Minimalistic implementation of IEmulator designed to load and view graphics
  * state.
  */
@@ -52,7 +52,7 @@ public:
   void SaveState(CBlockFile *SaveState) override
   {
   }
-  
+
   void LoadState(CBlockFile *SaveState) override
   {
     m_real3D.LoadState(SaveState);
@@ -116,7 +116,7 @@ public:
     else
       rom_set.get_rom("vrom").CopyTo(m_vrom.get(), 64*0x100000);
     int stepping = ((m_game.stepping[0] - '0') << 4) | (m_game.stepping[2] - '0');
-    m_real3D.SetStepping(stepping, false);
+    m_real3D.SetStepping(stepping);
     return OKAY;
   }
 
