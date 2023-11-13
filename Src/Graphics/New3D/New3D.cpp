@@ -1825,7 +1825,6 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 void CNew3D::SetSunClamp(bool enable)
 {
 	m_sunClamp = enable;
-	m_sunClamp = true;
 }
 
 void CNew3D::SetSignedShade(bool enable)
