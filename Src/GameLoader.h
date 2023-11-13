@@ -31,7 +31,7 @@ private:
     std::string region_name;
     size_t stride;
     size_t chunk_size;
-    bool byte_swap;
+    std::string byte_layout;
     bool required;
     std::vector<File::ptr_t> files;
     static ptr_t Create(const GameLoader &loader, const Util::Config::Node &region_node);

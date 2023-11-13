@@ -5,6 +5,7 @@
 #include "Util/ByteSwap.h"
 #include "Util/Format.h"
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <iostream>
 
@@ -161,18 +162,68 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
 {
   if (GameLoader::MissingAttrib(loader, region_node, "name") | MissingAttrib(loader, region_node, "stride") | GameLoader::MissingAttrib(loader, region_node, "chunk_size")) // no || to easier detect errors
     return ptr_t();
+
+  if (region_node["byte_swap"].Exists() && region_node["byte_layout"].Exists())
+  {
+    ErrorLog("%s: '%s' region has both 'byte_swap' and 'byte_layout' attributes. Use one or the other.", loader.m_xml_filename.c_str(), region_node["name"].Value<std::string>().c_str());
+    return ptr_t();
+  }
+
   ptr_t region = std::make_shared<Region>();
+
   region->region_name = region_node["name"].Value<std::string>();
+
   region->stride = region_node["stride"].ValueAs<size_t>();
+  if (region->stride == 0)
+  {
+    ErrorLog("%s: '%s' stride length must be greater than 0.", loader.m_xml_filename.c_str(), region->region_name.c_str());
+    return ptr_t();
+  }
+
   region->chunk_size = region_node["chunk_size"].ValueAs<size_t>();
-  region->byte_swap = region_node["byte_swap"].ValueAsDefault<bool>(false);
+  if (region->chunk_size == 0)
+  {
+    ErrorLog("%s: '%s' chunk size must be greater than 0.", loader.m_xml_filename.c_str(), region->region_name.c_str());
+    return ptr_t();
+  }
+
   region->required = region_node["required"].ValueAsDefault<bool>(true);
+
+  // Byte layout. If byte_swap was specified, construct the byte swapped layout string based on
+  // stride size. If byte_swap is set to false, empty layout string is fine.
+  if (region_node["byte_swap"].Exists())
+  {
+    if (region_node["byte_swap"].ValueAs<bool>())
+    {
+      // Special case: if chunk size and stride are both 1, change them both to 2 so we can allow byte
+      // swapping (these values are used for singular ROMs that don't need to be merged; technically,
+      // the stride and chunk size should be 2 since they are 16-bit ROMs).
+      if (region->stride == 1 && region->chunk_size == 1)
+      {
+        region->stride = 2;
+        region->chunk_size = 2;
+      }
+
+      std::string byte_layout;
+      for (size_t i = 0; i < region->stride; i++)
+      {
+        byte_layout += '0' + (i ^ 1);
+      }
+      region->byte_layout = byte_layout;
+    }
+  }
+  else
+  {
+    region->byte_layout = region_node["byte_layout"].ValueAsDefault<std::string>(std::string());
+
+  }
+
   return region;
 }
 
 bool GameLoader::Region::AttribsMatch(const ptr_t &other) const
 {
-  return stride == other->stride && chunk_size == other->chunk_size && byte_swap == other->byte_swap;
+  return stride == other->stride && chunk_size == other->chunk_size && byte_layout == other->byte_layout;
 }
 
 bool GameLoader::Region::FindFileIndexByOffset(size_t *idx, uint32_t offset) const
@@ -451,7 +502,7 @@ void GameLoader::LogROMDefinition(const std::string &game_name, const RegionsByN
   InfoLog("%s:", game_name.c_str());
   for (auto &v2: regions_by_name)
   {
-    InfoLog("  %s: stride=%zu, chunk size=%zu, byte swap=%d", v2.first.c_str(), v2.second->stride, v2.second->chunk_size, v2.second->byte_swap ? 1 : 0);
+    InfoLog("  %s: stride=%zu, chunk size=%zu, byte layout=%s", v2.first.c_str(), v2.second->stride, v2.second->chunk_size, v2.second->byte_layout.c_str());
     for (auto &file: v2.second->files)
     {
       InfoLog("    %s, crc32=0x%08x, offset=0x%08x", file->filename.c_str(), file->crc32, file->offset);
@@ -727,19 +778,78 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
   return error;
 }
 
-// We need to preserve the absolute offsets in order for byte swapping to work
-// properly when chunk size is 1
-static inline void CopyBytes(uint8_t *dest_base, uint32_t dest_offset, const uint8_t *src_base, uint32_t src_offset, uint32_t size, uint32_t byte_swap)
+static bool ApplyLayout(ROM *rom, const std::string &byte_layout, size_t stride, const std::string &region_name)
 {
-  for (uint32_t i = 0; i < size; i++)
+  // Empty layout means do nothing
+  if (byte_layout.size() == 0)
+    return false;
+
+  // Validate that the layout string includes the same number of bytes as the region stride. The
+  // stride is block size that the ROM files all contribute to. We also verify that each byte is
+  // used once and only once.
+  if (byte_layout.size() != stride)
   {
-    dest_base[(dest_offset + i) ^ byte_swap] = src_base[src_offset + i];
+    ErrorLog("Byte layout of '%s' region does not match the stride length (%d bytes but should be %d bytes).", region_name.c_str(), byte_layout.size(), stride);
+    return true;
   }
+
+  if (stride > 8)
+  {
+    ErrorLog("Region '%s' has stride larger than 8 (%d), which is currently unsupported.", region_name.c_str(), stride);
+    return true;
+  }
+
+  std::vector<size_t> byte_offsets;
+  for (char c: byte_layout)
+  {
+    if (isdigit(c))
+    {
+      byte_offsets.push_back(c - '0');
+    }
+    else
+    {
+      ErrorLog("Byte layout of '%s' region contains non-numeric characters. Use single-digit byte indices only.", region_name.c_str());
+      return true;
+    }
+  }
+
+  // Check all byte indices 0..N-1 are present
+  std::vector<size_t> sorted(byte_offsets);
+  std::sort(sorted.begin(), sorted.end());  // ascending order
+  size_t expected_offset = 0;
+  for (size_t offset: sorted)
+  {
+    if (offset != expected_offset)
+    {
+      ErrorLog("Byte layout of '%s' region must specify all byte offsets exactly once.", region_name.c_str());
+      return true;
+    }
+    expected_offset += 1;
+  }
+
+  // Okay, all good. Now we can reshuffle the region memory according to layout.
+  uint8_t *buffer = new uint8_t[stride];
+  uint8_t *dest = rom->data.get();
+  for (size_t dest_offset = 0; (dest_offset + stride) <= rom->size; dest_offset += stride)
+  {
+    // Copy current region bytes to temporary buffer. The layout offsets refer to this original layout.
+    memcpy(buffer, dest + dest_offset, stride);
+
+    // Place the bytes back into the ROM region in the layout order specified.
+    for (size_t i = 0; i < stride; i++)
+    {
+      dest[dest_offset + i] = buffer[byte_offsets[i]];
+    }
+  }
+  delete [] buffer;
+
+  return false; // no error
 }
 
 bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const
 {
   bool error = false;
+
   for (auto &file: region->files)
   {
     std::shared_ptr<uint8_t> tmp;
@@ -752,8 +862,6 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
       if (region->chunk_size == region->stride)
       {
         memcpy(dest + file->offset, src, file_size);
-        if (region->byte_swap)
-          Util::FlipEndian16(dest + file->offset, file_size);
       }
       else
       {
@@ -762,16 +870,21 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
         uint32_t src_offset = 0;
         uint32_t chunk_size = (uint32_t)region->chunk_size;		// cache these as pointer dereferencing cripples performance in a tight loop
         uint32_t stride = (uint32_t)region->stride;
-        uint32_t byte_swap = region->byte_swap;
         for (uint32_t i = 0; i < num_chunks; i++)
         {
-          CopyBytes(dest, dest_offset, src, src_offset, chunk_size, byte_swap);
+          memcpy(dest + dest_offset, src + src_offset, chunk_size);
           dest_offset += stride;
           src_offset += chunk_size;
         }
       }
     }
   }
+
+  if (!error)
+  {
+    error = ApplyLayout(rom, region->byte_layout, region->stride, region->region_name);
+  }
+
   return error;
 }
 

@@ -24,6 +24,23 @@
  *
  * Main program driver for the SDL port.
  *
+ * Bugs and Issues to Address
+ * --------------------------
+ * - -gfx-state crashes when ENABLE_DEBUGGER is also enabled:
+ *
+ *    #0  0x00007ff6586392a0 in CSoundBoard::GetDSB (this=0x1128) at Src/Model3/SoundBoard.cpp:552
+ *    #1  0x00007ff6587072cf in Debugger::CSupermodelDebugger::CreateDSBCPUDebug (model3=0x0) at Src/Debugger/SupermodelDebugger.cpp:269
+ *    #2  0x00007ff6587076e9 in Debugger::CSupermodelDebugger::AddCPUs (this=0x185da75df40) at Src/Debugger/SupermodelDebugger.cpp:361
+ *    #3  0x00007ff6586f91a6 in Debugger::CDebugger::Attach (this=0x185da75df40) at Src/Debugger/Debugger.cpp:263
+ *    #4  0x00007ff658705312 in Debugger::CConsoleDebugger::Attach (this=0x185da75df40) at Src/Debugger/ConsoleDebugger.cpp:2707
+ *    #5  0x00007ff65862c6fc in Supermodel (game=..., rom_set=0x6cc8dff0e0, Model3=0x185da7598d0, Inputs=0x185da752590, Outputs=0x0, Debugger=std::shared_ptr<Debugger::CDebugger> (use count 3, weak count 0) = {...})
+ *        at Src/OSD/SDL/Main.cpp:978
+ *    #6  0x00007ff658634ba3 in SDL_main (argc=3, argv=0x185da4e68a0) at Src/OSD/SDL/Main.cpp:2056
+ *    #7  0x00007ff658720141 in main_getcmdline ()
+ *    #8  0x00007ff6585b13b1 in __tmainCRTStartup () at C:/M/mingw-w64-crt-git/src/mingw-w64/mingw-w64-crt/crt/crtexe.c:321
+ *    #9  0x00007ff6585b14e6 in mainCRTStartup () at C:/M/mingw-w64-crt-git/src/mingw-w64/mingw-w64-crt/crt/crtexe.c:202
+ * - Need to address all the stale TO-DOs below and clear them out :)
+ *
  * To Do Before Next Release
  * -------------------------
  * - Thoroughly test config system (do overrides work as expected? XInput
@@ -547,6 +564,7 @@ void Screenshot()
 #include <fstream>
 
 static std::string s_gfxStatePath;
+static const std::string k_gfxAnalysisPath = "GraphicsAnalysis/";
 
 static std::string GetFileBaseName(const std::string &file)
 {
@@ -603,7 +621,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -619,7 +637,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownCullingNodeBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -628,7 +646,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
   glReadBuffer(readBuffer);
 
   // Generate the HTML GUI
-  std::string file = Util::Format() << s_analysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
+  std::string file = Util::Format() << k_gfxAnalysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
   std::ofstream fs(file);
   if (!fs.good())
     ErrorLog("Unable to open '%s' for writing.", file.c_str());
@@ -1603,8 +1621,13 @@ static void Help(void)
 #ifdef SUPERMODEL_DEBUGGER
   puts("  -disable-debugger       Completely disable debugger functionality");
   puts("  -enter-debugger         Enter debugger at start of emulation");
-  puts("");
 #endif // SUPERMODEL_DEBUGGER
+#ifdef DEBUG
+  puts("  -gfx-state=<file>       Produce graphics analysis for save state (works only");
+  puts("                          with the legacy 3D engine and requires a");
+  puts("                          GraphicsAnalysis directory to exist)");
+#endif
+  puts("");
 }
 
 struct ParsedCommandLine
