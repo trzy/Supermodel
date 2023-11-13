@@ -330,6 +330,7 @@ void CNew3D::SetRenderStates()
 	glDisable		(GL_CULL_FACE);					// we'll emulate this in the shader		
 
 	glEnable		(GL_STENCIL_TEST);
+	glStencilMask	(0xFF);
 
 	glBlendFunc		(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDisable		(GL_BLEND);
@@ -424,16 +425,14 @@ void CNew3D::RenderFrame(void)
 
 			m_r3dShader.DiscardAlpha(false);
 
-			m_r3dFrameBuffers.StoreDepth();
 			m_r3dShader.SetLayer(Layer::trans1);
 			m_r3dFrameBuffers.SetFBO(Layer::trans1);
 			RenderScene(pri, renderOverlay, Layer::trans1);
 
-			m_r3dFrameBuffers.RestoreDepth();
 			m_r3dShader.SetLayer(Layer::trans2);
 			m_r3dFrameBuffers.SetFBO(Layer::trans2);
 			RenderScene(pri, renderOverlay, Layer::trans2);
-			
+						
 			DisableRenderStates();
 
 			if (!hasOverlay) break;								// no high priority polys						
@@ -1826,6 +1825,7 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 void CNew3D::SetSunClamp(bool enable)
 {
 	m_sunClamp = enable;
+	m_sunClamp = true;
 }
 
 void CNew3D::SetSignedShade(bool enable)
