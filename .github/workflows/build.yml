@@ -1,6 +1,11 @@
-name: PR tests
+name: Build
 
 on:
+  workflow_dispatch:
+    inputs:
+      opt:
+        description: "OPT value"
+        default: "-O3 -g"
   pull_request:
     paths-ignore:
       - '**.md'
@@ -42,7 +47,7 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - name: Install ubuntu build dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
@@ -74,7 +79,9 @@ jobs:
             mingw64/mingw-w64-x86_64-SDL2
             mingw64/mingw-w64-x86_64-SDL2_net
       - name: Build with Symbols
-        run: make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="-O3 -g" LDOPT=""
+        run: |
+          OPT_INPUT="${{ github.event.inputs.opt }}"
+          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
       - name: Validate
         run: ./supermodel${{ matrix.outfile_ext }} -print-games
       - name: Package
@@ -90,7 +97,7 @@ jobs:
           elif [[ "${{ matrix.archive }}" == "zip" ]] ; then
             zip -r supermodel-${{ github.sha }}.zip $FILES
           fi
-      - uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@v4
         with:
           name: supermodel-${{ runner.os }}-${{ runner.arch }}
           path: supermodel-${{ github.sha }}.${{ matrix.archive }}
