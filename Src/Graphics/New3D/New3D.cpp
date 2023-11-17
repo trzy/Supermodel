@@ -715,46 +715,69 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		}
 	}
 
-	float LODscale = fBlendRadius * m_nodeAttribs.currentModelScale / std::abs(m_modelMat.currentMatrix[14]);
+	float LODscale;
+	if (m_nodeAttribs.currentDisableCulling)
+		LODscale = FLT_MAX;
+	else
+	{
+		float distance = std::hypot(m_modelMat.currentMatrix[12], m_modelMat.currentMatrix[13], m_modelMat.currentMatrix[14]);
+		LODscale = fBlendRadius * m_nodeAttribs.currentModelScale / distance;
+	}
 
 	const LODFeatureType& lodTableEntry = m_LODBlendTable->table[lodTablePointer];
 
-	if (m_nodeAttribs.currentDisableCulling)
-	{
-		m_nodeAttribs.currentModelAlpha = 1.0f;
-	}
-	else
-	{
-		float nodeAlpha = lodTableEntry.lod[3].blendFactor * (LODscale - lodTableEntry.lod[3].deleteSize);
-		nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
-		m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
-	}
-
-	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && m_nodeAttribs.currentModelAlpha > 0.0f) {
+	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && LODscale >= lodTableEntry.lod[3].deleteSize) {
 
 		// Descend down first link
 		if ((node[0x00] & 0x08))	// 4-element LOD table
 		{
 			lodPtr = TranslateCullingAddress(child1Ptr);
 
-			// determine which LOD to use; we do not currently blend between LODs
-			int modelLOD;
-			for (modelLOD = 0; modelLOD < 3; modelLOD++)
+			if (NULL != lodPtr)
 			{
-				if (LODscale >= lodTableEntry.lod[modelLOD].deleteSize)
-					break;
-			}
+				int modelLOD;
+				for (modelLOD = 0; modelLOD < 3; modelLOD++)
+				{
+					if (LODscale >= lodTableEntry.lod[modelLOD].deleteSize && lodPtr[modelLOD] & 0x1000000)
+						break;
+				}
 
-			if (NULL != lodPtr) {
+				float tempAlpha = m_nodeAttribs.currentModelAlpha;
+
+				float nodeAlpha = lodTableEntry.lod[modelLOD].blendFactor * (LODscale - lodTableEntry.lod[modelLOD].deleteSize);
+				nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
+				if (nodeAlpha > 15.0f / 16.0f)		// shader discards pixels below 1/16 alpha
+					nodeAlpha = 1.0f;
+				else if (nodeAlpha < 1.0f / 16.0f)
+					nodeAlpha = 0.0f;
+				m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
+				
 				if ((node[0x03 - m_offset] & 0x20000000)) {
 					DescendCullingNode(lodPtr[modelLOD] & 0xFFFFFF);
+
+					if (nodeAlpha < 1.0f && modelLOD != 3)
+					{
+						m_nodeAttribs.currentModelAlpha = (1.0f - nodeAlpha) * tempAlpha;
+						DescendCullingNode(lodPtr[modelLOD+1] & 0xFFFFFF);
+					}
 				}
 				else {
 					DrawModel(lodPtr[modelLOD] & 0xFFFFFF);
+
+					if (nodeAlpha < 1.0f && modelLOD != 3)
+					{
+						m_nodeAttribs.currentModelAlpha = (1.0f - nodeAlpha) * tempAlpha;
+						DrawModel(lodPtr[modelLOD + 1] & 0xFFFFFF);
+					}
 				}
 			}
 		}
 		else {
+
+			float nodeAlpha = lodTableEntry.lod[3].blendFactor * (LODscale - lodTableEntry.lod[3].deleteSize);
+			nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
+			m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
+
 			DescendNodePtr(child1Ptr);
 		}
 

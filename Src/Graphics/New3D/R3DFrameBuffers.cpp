@@ -274,16 +274,18 @@ void R3DFrameBuffers::AllocShaderTrans()
 	{
 		vec4 colTrans1 = texture(tex1, fsTexCoord);
 		vec4 colTrans2 = texture(tex2, fsTexCoord);
-
-		if(colTrans1.a+colTrans2.a > 0.0) {
-			vec3 col1 = colTrans1.rgb * colTrans1.a;
-			vec3 col2 = colTrans2.rgb * colTrans2.a;
-
-			colTrans1 = vec4((col1+col2) / (colTrans1.a + colTrans2.a), // this is my best guess at the blending between the layers
-							 colTrans1.a+colTrans2.a);
+			
+		// if both transparency layers overlap, the result is opaque
+		if (colTrans1.a * colTrans2.a > 0.0) {
+			vec3 mixCol = mix(colTrans1.rgb, colTrans2.rgb, (colTrans2.a + (1.0 - colTrans1.a)) / 2.0);
+			fragColor = vec4(mixCol, 1.0);
 		}
-		
-		fragColor = colTrans1;
+		else if (colTrans1.a > 0.0) {
+			fragColor = colTrans1;
+		}
+		else {
+			fragColor = colTrans2;		// if alpha is zero it will have no effect anyway
+		}
 	}
 
 	)glsl";
