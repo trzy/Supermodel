@@ -277,7 +277,10 @@ void R3DFrameBuffers::AllocShaderTrans()
 			
 		// if both transparency layers overlap, the result is opaque
 		if (colTrans1.a * colTrans2.a > 0.0) {
-			vec3 mixCol = mix(colTrans1.rgb, colTrans2.rgb, (colTrans2.a + (1.0 - colTrans1.a)) / 2.0);
+
+			// are the two lines functionally identical? Need to check.
+			//vec3 mixCol = mix(colTrans1.rgb, colTrans2.rgb, (colTrans2.a + (1.0 - colTrans1.a)) / 2.0);
+			vec3 mixCol = (((colTrans1.rgb * colTrans1.a) + (colTrans2.rgb * (1.0-colTrans1.a))) + ((colTrans2.rgb * colTrans2.a) + (colTrans1 .rgb * (1.0-colTrans2.a)))) / 2.0;
 			fragColor = vec4(mixCol, 1.0);
 		}
 		else if (colTrans1.a > 0.0) {
