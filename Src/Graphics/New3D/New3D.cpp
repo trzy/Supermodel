@@ -718,10 +718,10 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	}
 
 	float LODscale;
-	if (m_nodeAttribs.currentDisableCulling)
-		LODscale = FLT_MAX;
-	else
-	{
+	if (m_nodeAttribs.currentDisableCulling) {
+		LODscale = std::numeric_limits<float>::max();
+	}
+	else {
 		float distance = std::hypot(m_modelMat.currentMatrix[12], m_modelMat.currentMatrix[13], m_modelMat.currentMatrix[14]);
 		LODscale = fBlendRadius * m_nodeAttribs.currentModelScale / distance;
 	}
