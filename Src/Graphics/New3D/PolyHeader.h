@@ -108,6 +108,7 @@ public:
 	bool	FixedShading();
 	bool	SmoothShading();
 	bool	NoLosReturn();			// no line of sight return	(still not exactly how sure this attribute is used yet)
+	bool	EdgeOnTranslucency();
 
 	//header 2
 	bool	TexUMirror();

@@ -179,6 +179,11 @@ bool PolyHeader::NoLosReturn()
 	return (header[1] & 0x1) > 0;
 }
 
+bool PolyHeader::EdgeOnTranslucency()
+{
+	return (header[1] & 0x80) > 0;
+}
+
 //
 // header 2
 //
