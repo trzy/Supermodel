@@ -323,7 +323,7 @@ void R3DFrameBuffers::Draw()
 void R3DFrameBuffers::DrawBaseLayer()
 {
 	m_shaderBase.EnableShader();
-	glUniform1i(m_shaderTrans.uniformLoc[0], 0);
+	glUniform1i(m_shaderBase.uniformLoc[0], 0);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
