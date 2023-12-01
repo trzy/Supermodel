@@ -353,7 +353,6 @@
         <input type="common" />
         <input type="vehicle" />
         <input type="shiftupdown" />
-        <input type="handbrake" />
         <input type="viewchange" />
       </inputs>
       <encryption_key>0x29290f17</encryption_key>
@@ -428,7 +427,6 @@
         <input type="common" />
         <input type="vehicle" />
         <input type="shiftupdown" />
-        <input type="handbrake" />
         <input type="viewchange" />
       </inputs>
       <encryption_key>0x29290f17</encryption_key>
@@ -461,7 +459,6 @@
         <input type="common" />
         <input type="vehicle" />
         <input type="shiftupdown" />
-        <input type="handbrake" />
         <input type="viewchange" />
       </inputs>
       <encryption_key>0x29290f17</encryption_key>
@@ -494,7 +491,6 @@
         <input type="common" />
         <input type="vehicle" />
         <input type="shiftupdown" />
-        <input type="handbrake" />
         <input type="viewchange" />
       </inputs>
       <encryption_key>0x29290f17</encryption_key>
@@ -527,7 +523,6 @@
         <input type="common" />
         <input type="vehicle" />
         <input type="shiftupdown" />
-        <input type="handbrake" />
         <input type="viewchange" />
       </inputs>
       <encryption_key>0x29290f17</encryption_key>
