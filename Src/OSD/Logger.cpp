@@ -239,8 +239,8 @@ void CFileLogger::DebugLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Debug] %s", string1);
 
   // Debug logging is so copious that we don't bother to guarantee it is saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -257,8 +257,8 @@ void CFileLogger::InfoLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Info]  %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Info]  %s\n", string1);
 
   // Write to file, close, and reopen to ensure it was saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -276,8 +276,8 @@ void CFileLogger::ErrorLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Error] %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Error] %s\n", string1);
 
   // Write to file, close, and reopen to ensure it was saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -347,8 +347,8 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Debug] %s", string1);
 
 #ifdef _WIN32
   OutputDebugString(string2);
@@ -367,8 +367,8 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Info]  %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Info]  %s\n", string1);
 
 #ifdef _WIN32
   OutputDebugString(string2);
@@ -387,8 +387,8 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Error] %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Error] %s\n", string1);
 
  #ifdef _WIN32
   OutputDebugString(string2);

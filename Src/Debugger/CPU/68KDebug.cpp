@@ -1244,7 +1244,7 @@ namespace Debugger
 		int offset = 2;
 
 		const char *instr;
-		char moveStr[50];
+		char moveStr[64];
 		char dataStr[20];
 		INT8 i8;
 		INT16 i16;
