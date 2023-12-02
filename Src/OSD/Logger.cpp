@@ -228,10 +228,10 @@ void CFileLogger::DebugLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4104]; // add 8 for the prefix
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  sprintf(string2, "[Debug] %s\n", string1);
 
   // Debug logging is so copious that we don't bother to guarantee it is saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -336,10 +336,10 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4104]; // add 8 for the prefix
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  sprintf(string2, "[Debug] %s\n", string1);
 
 #ifdef _WIN32
   OutputDebugString(string2);
