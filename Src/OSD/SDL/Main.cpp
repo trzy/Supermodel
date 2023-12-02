@@ -917,7 +917,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Set the video mode
   char baseTitleStr[128];
-  char titleStr[128];
+  char titleStr[256];
   totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
   totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
   sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());

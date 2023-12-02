@@ -228,7 +228,7 @@ void CFileLogger::DebugLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4104]; // add 8 for the prefix
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Debug] %s", string1);
@@ -246,7 +246,7 @@ void CFileLogger::InfoLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Info]  %s\n", string1);
@@ -265,7 +265,7 @@ void CFileLogger::ErrorLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Error] %s\n", string1);
@@ -336,7 +336,7 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4104]; // add 8 for the prefix
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Debug] %s", string1);
@@ -356,7 +356,7 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Info]  %s\n", string1);
@@ -376,7 +376,7 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Error] %s\n", string1);
