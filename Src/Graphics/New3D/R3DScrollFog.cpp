@@ -130,7 +130,7 @@ void main()
 
 	void R3DScrollFog::AllocResources()
 	{
-		bool success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, m_config["VertexShaderFog"].ValueAs<std::string>(), m_config["FragmentShaderFog"].ValueAs<std::string>(), vertexShaderFog, fragmentShaderFog);
+		/*bool success = */LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, m_config["VertexShaderFog"].ValueAs<std::string>(), m_config["FragmentShaderFog"].ValueAs<std::string>(), vertexShaderFog, fragmentShaderFog);
 
 		m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
 		m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");
