@@ -58,8 +58,10 @@ static Debugger::CMusashi68KDebug *s_Debug = NULL;
 // IRQ callback
 static int	(*IRQAck)(int nIRQ) = NULL;
 
+#ifdef SUPERMODEL_DEBUGGER
 // Cycles remaining in timeslice
 static int s_lastCycles;
+#endif
 
 
 /******************************************************************************

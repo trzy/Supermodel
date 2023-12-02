@@ -124,7 +124,6 @@ static const double srate=44100;
 static CMutex *MIDILock;	// for safe access to the MIDI FIFOs
 static int (*Run68kCB)(int cycles);
 static void (*Int68kCB)(int irq);
-static void (*RetIntCB)();
 static DWORD IrqTimA;
 static DWORD IrqTimBC;
 static DWORD IrqMidi;
