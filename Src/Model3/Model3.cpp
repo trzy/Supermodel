@@ -3205,6 +3205,7 @@ CModel3::CModel3(Util::Config::Node &config)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    sndBrdWakeNotify(false),
     TileGen(config),
     GPU(config),
     SoundBoard(config),
