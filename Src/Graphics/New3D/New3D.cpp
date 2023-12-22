@@ -1543,7 +1543,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 		vp->width	= m_totalXRes;
 		vp->height = (int)((float)vp->vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, NEAR_PLANE);
+		vp->projectionMatrix.FrustumRZ(l*correction, r*correction, b, t, NEAR_PLANE);
 	}
 	else {
 
@@ -1552,7 +1552,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 		vp->width	= (int)((float)vp->vpWidth*m_xRatio);
 		vp->height	= (int)((float)vp->vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Frustum(l, r, b, t, NEAR_PLANE);
+		vp->projectionMatrix.FrustumRZ(l, r, b, t, NEAR_PLANE);
 	}
 }
 

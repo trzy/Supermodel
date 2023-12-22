@@ -55,6 +55,7 @@ private:
 	GLint m_locTexWrapMode;
 	GLint m_locTranslatorMap;
 	GLint m_locColourLayer;
+	GLint m_locPolyAlpha;
 
 	// cached mesh values
 	bool	m_textured1;
@@ -68,6 +69,7 @@ private:
 	bool	m_specularEnabled;
 	bool	m_fixedShading;
 	bool	m_translatorMap;
+	bool	m_polyAlpha;
 
 	bool	m_layered;
 	bool	m_noLosReturn;

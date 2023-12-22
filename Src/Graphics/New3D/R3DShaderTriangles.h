@@ -102,6 +102,7 @@ uniform float	fogAmbient;
 uniform bool	fixedShading;
 uniform int		hardwareStep;
 uniform int		colourLayer;
+uniform bool	polyAlpha;
 
 // matrices (shared with vertex shader)
 uniform mat4	projMat;
@@ -210,7 +211,7 @@ void main()
 
 		// Optional clamping, value is allowed to be negative
 		// We suspect that translucent polygons are always clamped (e.g. lasers in Daytona 2)
-		if(sunClamp || fsColor.a < 0.99) {
+		if(sunClamp || polyAlpha) {
 			sunFactor = max(sunFactor,0.0);
 		}
 

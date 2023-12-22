@@ -149,7 +149,40 @@ void Mat4::Rotate(float angle, float x, float y, float z)
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal) 
+void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal)
+{
+	float x = 2.0F / (right - left);
+	float y = 2.0F / (top - bottom);
+	float a = (right + left) / (right - left);
+	float b = (top + bottom) / (top - bottom);
+	float c = -(farVal + nearVal) / (farVal - nearVal);
+	float d = -(2.0F * farVal * nearVal) / (farVal - nearVal);
+
+	float m[16];
+	m[0] = x;
+	m[1] = 0.f;
+	m[2] = 0.f;
+	m[3] = 0.f;
+
+	m[4] = 0.f;
+	m[5] = y;
+	m[6] = 0.f;
+	m[7] = 0.f;
+
+	m[8] = a;
+	m[9] = b;
+	m[10] = c;
+	m[11] = -1.f;
+
+	m[12] = 0.f;
+	m[13] = 0.f;
+	m[14] = d;
+	m[15] = 0.f;
+
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
+}
+
+void Mat4::FrustumRZ(float left, float right, float bottom, float top, float nearVal) 
 {
 	float x = 2.0F / (right - left);
 	float y = 2.0F / (top - bottom);
@@ -180,19 +213,19 @@ void Mat4::Frustum(float left, float right, float bottom, float top, float nearV
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Perspective(float fovy, float aspect, float zNear)
+void Mat4::Perspective(float fovy, float aspect, float zNear, float zFar)
 {
 	float ymax = tanf(fovy * (float)(M_PI / 360.0));
 	float xmax = ymax * aspect;
 
-	Frustum(-xmax, xmax, -ymax, ymax, zNear);
+	Frustum(-xmax, xmax, -ymax, ymax, zNear, zFar);
 }
 
 void Mat4::Ortho(float left, float right, float bottom, float top, float nearVal, float farVal)
 {
 	float tx = -(right + left) / (right - left);
 	float ty = -(top + bottom) / (top - bottom);
-	float tz = (farVal + nearVal - 1.f) / (farVal - nearVal);
+	float tz = -(farVal + nearVal) / (farVal - nearVal);
 
 	float m[16];
 	m[0] = 2.f/(right-left);
@@ -207,7 +240,7 @@ void Mat4::Ortho(float left, float right, float bottom, float top, float nearVal
 
 	m[8] = 0.f;
 	m[9] = 0.f;
-	m[10] = 1.f/(farVal-nearVal);
+	m[10] = -2.f/(farVal-nearVal);
 	m[11] = 0.f;
 
 	m[12] = tx;
