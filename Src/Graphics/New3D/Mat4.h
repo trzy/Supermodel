@@ -15,8 +15,8 @@ public:
 	void Translate				(float x, float y, float z);
 	void Rotate					(float angle, float x, float y, float z);
 	void Scale					(float x, float y, float z);
-	void Frustum				(float left, float right, float bottom, float top, float nearVal, float farVal);
-	void Perspective			(float fovy, float aspect, float zNear, float zFar);
+	void Frustum				(float left, float right, float bottom, float top, float nearVal);
+	void Perspective			(float fovy, float aspect, float zNear);
 	void Ortho					(float left, float right, float bottom, float top, float nearVal, float farVal);
 	void MultMatrix				(const float *m);
 	void LoadMatrix				(const float *m);
