@@ -112,6 +112,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locTextureInverted	= glGetUniformLocation(m_shaderProgram, "textureInverted");
 	m_locTexWrapMode		= glGetUniformLocation(m_shaderProgram, "textureWrapMode");
 	m_locColourLayer		= glGetUniformLocation(m_shaderProgram, "colourLayer");
+	m_locPolyAlpha			= glGetUniformLocation(m_shaderProgram, "polyAlpha");
 
 	m_locFogIntensity		= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity			= glGetUniformLocation(m_shaderProgram, "fogDensity");
@@ -290,6 +291,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->translatorMap != m_translatorMap) {
 		glUniform1i(m_locTranslatorMap, m->translatorMap);
 		m_translatorMap = m->translatorMap;
+	}
+
+	if (m_dirtyMesh || m->polyAlpha != m_polyAlpha) {
+		glUniform1i(m_locPolyAlpha, m->polyAlpha);
+		m_polyAlpha = m->polyAlpha;
 	}
 
 	if (m_dirtyMesh || m->wrapModeU != m_texWrapMode[0] || m->wrapModeV != m_texWrapMode[1]) {

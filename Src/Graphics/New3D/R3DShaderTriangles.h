@@ -102,6 +102,10 @@ uniform float	fogAmbient;
 uniform bool	fixedShading;
 uniform int		hardwareStep;
 uniform int		colourLayer;
+uniform bool	polyAlpha;
+
+// matrices (shared with vertex shader)
+uniform mat4	projMat;
 
 //interpolated inputs from vertex shader
 in	vec3	fsViewVertex;
@@ -135,7 +139,9 @@ void main()
 	if(fsDiscard > 0) {
 		discard;		//emulate back face culling here
 	}
-
+	
+	gl_FragDepth = projMat[3][2] * gl_FragCoord.w;
+	
 	fogData = vec4(fogColour.rgb * fogAmbient, CalcFog());
 	tex1Data = vec4(1.0, 1.0, 1.0, 1.0);
 
@@ -147,7 +153,7 @@ void main()
 	Step15Luminous(colData);			// no-op for step 2.0+	
 	finalData = tex1Data * colData;
 
-	if (finalData.a < (1.0/16.0)) {		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
+	if (finalData.a < (1.0/32.0)) {		// basically chuck out any totally transparent pixels value = 1/16 the smallest transparency level h/w supports
 		discard;
 	}
 
@@ -204,7 +210,8 @@ void main()
 		sunFactor = clamp(sunFactor,-1.0,1.0);
 
 		// Optional clamping, value is allowed to be negative
-		if(sunClamp) {
+		// We suspect that translucent polygons are always clamped (e.g. lasers in Daytona 2)
+		if(sunClamp || polyAlpha) {
 			sunFactor = max(sunFactor,0.0);
 		}
 

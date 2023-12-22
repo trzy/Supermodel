@@ -13,6 +13,8 @@
 
 #define BYTE_TO_FLOAT(B)	((2.0f * (B) + 1.0f) * (float)(1.0/255.0))
 
+#define NEAR_PLANE 1e-3f
+
 namespace New3D {
 
 CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) : 
@@ -267,7 +269,7 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 			continue;
 		}
 
-		CalcViewport(&n.viewport, std::abs(m_nfPairs[priority].zNear*0.96f), std::abs(m_nfPairs[priority].zFar*1.05f));	// make planes 5% bigger
+		CalcViewport(&n.viewport);
 		glViewport(n.viewport.x, n.viewport.y, n.viewport.width, n.viewport.height);
 
 		m_r3dShader.SetViewportUniforms(&n.viewport);
@@ -323,7 +325,7 @@ void CNew3D::SetRenderStates()
 
 	m_r3dShader.SetShader(true);
 
-	glDepthFunc		(GL_LEQUAL);
+	glDepthFunc		(GL_GEQUAL);
 	glEnable		(GL_DEPTH_TEST);
 	glDepthMask		(GL_TRUE);
 	glActiveTexture	(GL_TEXTURE0);
@@ -348,11 +350,6 @@ void CNew3D::DisableRenderStates()
 
 void CNew3D::RenderFrame(void)
 {
-	for (int i = 0; i < 4; i++) {
-		m_nfPairs[i].zNear = -std::numeric_limits<float>::max();
-		m_nfPairs[i].zFar  =  std::numeric_limits<float>::max();
-	}
-
 	{
 		std::lock_guard<std::mutex> guard(m_losMutex);
 		std::swap(m_losBack, m_losFront);
@@ -411,6 +408,7 @@ void CNew3D::RenderFrame(void)
 
 			m_r3dFrameBuffers.SetFBO(Layer::colour);
 
+			glClearDepth(0.0);
 			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 			m_r3dShader.DiscardAlpha(true);
@@ -421,7 +419,7 @@ void CNew3D::RenderFrame(void)
 				ProcessLos(pri);
 			}
 
-			glDepthFunc(GL_LESS);
+			glDepthFunc(GL_GREATER);
 
 			m_r3dShader.DiscardAlpha(false);
 
@@ -537,10 +535,6 @@ bool CNew3D::DrawModel(UINT32 modelAddr)
 		CacheModel(m, modelAddress);
 	}
 
-	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
-		ClipModel(m);	// not storing clipped values, only working out the Z range
-	}
-
 	return true;
 }
 
@@ -605,7 +599,6 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	const UINT32	*node, *lodPtr;
 	UINT32			matrixOffset, child1Ptr, sibling2Ptr;
-	BBox			bbox;
 	UINT16			uCullRadius;
 	float			fCullRadius;
 	UINT16			uBlendRadius;
@@ -679,10 +672,10 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 	// apply translation vector
 	if (node[0x00] & 0x10) {
-		float x = Util::Uint32AsFloat(node[0x04 - m_offset]);
-		float y = Util::Uint32AsFloat(node[0x05 - m_offset]);
-		float z = Util::Uint32AsFloat(node[0x06 - m_offset]);
-		m_modelMat.Translate(x, y, z);
+		float centroid_x = Util::Uint32AsFloat(node[0x04 - m_offset]);
+		float centroid_y = Util::Uint32AsFloat(node[0x05 - m_offset]);
+		float centroid_z = Util::Uint32AsFloat(node[0x06 - m_offset]);
+		m_modelMat.Translate(centroid_x, centroid_y, centroid_z);
 	}
 	// multiply matrix, if specified
 	else if (matrixOffset) {
@@ -693,42 +686,29 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		ResetMatrix(m_modelMat);
 	}
 
+	float& x = m_modelMat.currentMatrix[12];
+	float& y = m_modelMat.currentMatrix[13];
+	float& z = m_modelMat.currentMatrix[14];
+
 	uCullRadius = node[9 - m_offset] & 0xFFFF;
-	fCullRadius = R3DFloat::GetFloat16(uCullRadius);
+	fCullRadius = R3DFloat::GetFloat16(uCullRadius) * m_nodeAttribs.currentModelScale;;
 
 	uBlendRadius = node[9 - m_offset] >> 16;
-	fBlendRadius = R3DFloat::GetFloat16(uBlendRadius);
+	fBlendRadius = R3DFloat::GetFloat16(uBlendRadius) * m_nodeAttribs.currentModelScale;;
 
-	if (m_nodeAttribs.currentClipStatus != Clip::INSIDE) {
-
-		if (uCullRadius != R3DFloat::Pro16BitMax) {
-
-			CalcBox(fCullRadius, bbox);
-			TransformBox(m_modelMat, bbox);
-
-			m_nodeAttribs.currentClipStatus = ClipBox(bbox, m_planes);
-
-			if (m_nodeAttribs.currentClipStatus == Clip::INSIDE) {
-				CalcBoxExtents(bbox);
-			}
-		}
-		else {
-			m_nodeAttribs.currentClipStatus = Clip::NOT_SET;
-		}
+	bool outsideFrustum = false;
+	if ((z * m_planes.bnlu - x * m_planes.bnlv * m_planes.correction) > fCullRadius ||
+		(z * m_planes.bntu + y * m_planes.bntw) > fCullRadius ||
+		(z * m_planes.bnru - x * m_planes.bnrv * m_planes.correction) > fCullRadius ||
+		(z * m_planes.bnbu + y * m_planes.bnbw) > fCullRadius)
+	{
+		outsideFrustum = true;
 	}
 
-	float LODscale;
-	if (m_nodeAttribs.currentDisableCulling) {
-		LODscale = std::numeric_limits<float>::max();
-	}
-	else {
-		float distance = std::hypot(m_modelMat.currentMatrix[12], m_modelMat.currentMatrix[13], m_modelMat.currentMatrix[14]);
-		LODscale = fBlendRadius * m_nodeAttribs.currentModelScale / distance;
-	}
+	float LODscale = m_nodeAttribs.currentDisableCulling ? std::numeric_limits<float>::max() : (fBlendRadius / std::hypot(x, y, z));
+	const LOD *lod = m_LODBlendTable->table[lodTablePointer].lod;
 
-	const LODFeatureType& lodTableEntry = m_LODBlendTable->table[lodTablePointer];
-
-	if (m_nodeAttribs.currentClipStatus != Clip::OUTSIDE && LODscale >= lodTableEntry.lod[3].deleteSize) {
+	if (m_nodeAttribs.currentDisableCulling || (!outsideFrustum && LODscale >= lod[3].deleteSize)) {
 
 		// Descend down first link
 		if ((node[0x00] & 0x08))	// 4-element LOD table
@@ -740,17 +720,17 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 				int modelLOD;
 				for (modelLOD = 0; modelLOD < 3; modelLOD++)
 				{
-					if (LODscale >= lodTableEntry.lod[modelLOD].deleteSize && lodPtr[modelLOD] & 0x1000000)
+					if (LODscale >= lod[modelLOD].deleteSize && lodPtr[modelLOD] & 0x1000000)
 						break;
 				}
 
 				float tempAlpha = m_nodeAttribs.currentModelAlpha;
 
-				float nodeAlpha = lodTableEntry.lod[modelLOD].blendFactor * (LODscale - lodTableEntry.lod[modelLOD].deleteSize);
+				float nodeAlpha = lod[modelLOD].blendFactor * (LODscale - lod[modelLOD].deleteSize);
 				nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
-				if (nodeAlpha > 15.0f / 16.0f)		// shader discards pixels below 1/16 alpha
+				if (nodeAlpha > 31.0f / 32.0f)		// shader discards pixels below 1/32 alpha
 					nodeAlpha = 1.0f;
-				else if (nodeAlpha < 1.0f / 16.0f)
+				else if (nodeAlpha < 1.0f / 32.0f)
 					nodeAlpha = 0.0f;
 				m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
 				
@@ -776,7 +756,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		}
 		else {
 
-			float nodeAlpha = lodTableEntry.lod[3].blendFactor * (LODscale - lodTableEntry.lod[3].deleteSize);
+			float nodeAlpha = lod[3].blendFactor * (LODscale - lod[3].deleteSize);
 			nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
 			m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
 
@@ -1015,28 +995,27 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17] & 0xFFFFFF);
 
-		/*
-		vp->angle_left		= -atan2f(Util::Uint32AsFloat(vpnode[12]),  Util::Uint32AsFloat(vpnode[13]));	// These values work out as the normals for the clipping planes.
-		vp->angle_right		=  atan2f(Util::Uint32AsFloat(vpnode[16]), -Util::Uint32AsFloat(vpnode[17]));	// Sometimes these values (dirt devils,lost world) are totally wrong
-		vp->angle_top		=  atan2f(Util::Uint32AsFloat(vpnode[14]),  Util::Uint32AsFloat(vpnode[15]));	// and don't work for the frustum values exactly.
-		vp->angle_bottom	= -atan2f(Util::Uint32AsFloat(vpnode[18]), -Util::Uint32AsFloat(vpnode[19]));	// Perhaps they are just used for culling and not rendering.
-		*/
-
 		float cv = Util::Uint32AsFloat(vpnode[0x8]);	// 1/(left-right)
 		float cw = Util::Uint32AsFloat(vpnode[0x9]);	// 1/(top-bottom)
 		float io = Util::Uint32AsFloat(vpnode[0xa]);	// top / bottom (ratio) - ish
 		float jo = Util::Uint32AsFloat(vpnode[0xb]);	// left / right (ratio)
+
+		// clipping plane normals
+		m_planes.bnlu = Util::Uint32AsFloat(vpnode[0xc]);
+		m_planes.bnlv = Util::Uint32AsFloat(vpnode[0xd]);
+		m_planes.bntu = Util::Uint32AsFloat(vpnode[0xe]);
+		m_planes.bntw = Util::Uint32AsFloat(vpnode[0xf]);
+		m_planes.bnru = Util::Uint32AsFloat(vpnode[0x10]);
+		m_planes.bnrv = Util::Uint32AsFloat(vpnode[0x11]);
+		m_planes.bnbu = Util::Uint32AsFloat(vpnode[0x12]);
+		m_planes.bnbw = Util::Uint32AsFloat(vpnode[0x13]);
 
 		vp->angle_left		= (0.0f - jo) / cv;
 		vp->angle_right		= (1.0f - jo) / cv;
 		vp->angle_bottom	= -(1.0f - io)/ cw;
 		vp->angle_top		= -(0.0f - io)/ cw;
 
-		// calculate the frustum shape, near/far pair are dummy values
-		CalcViewport(vp, 1.f, 1000.f);
-
-		// calculate frustum planes
-		CalcFrustumPlanes(m_planes, vp->projectionMatrix);	// we need to calc a 'projection matrix' to get the correct frustum planes for clipping
+		CalcViewport(vp);
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
 		vp->lightingParams[0] =  Util::Uint32AsFloat(vpnode[0x05]);							// sun X
@@ -1520,283 +1499,12 @@ bool CNew3D::IsVROMModel(UINT32 modelAddr)
 	return modelAddr >= 0x100000;
 }
 
-void CNew3D::CalcFrustumPlanes(Plane p[5], const float* matrix)
+void CNew3D::CalcViewport(Viewport* vp)
 {
-	// Left Plane
-	p[0].a = matrix[3] + matrix[0];
-	p[0].b = matrix[7] + matrix[4];
-	p[0].c = matrix[11] + matrix[8];
-	p[0].d = matrix[15] + matrix[12];
-	p[0].Normalise();
-
-	// Right Plane
-	p[1].a = matrix[3] - matrix[0];
-	p[1].b = matrix[7] - matrix[4];
-	p[1].c = matrix[11] - matrix[8];
-	p[1].d = matrix[15] - matrix[12];
-	p[1].Normalise();
-
-	// Bottom Plane
-	p[2].a = matrix[3] + matrix[1];
-	p[2].b = matrix[7] + matrix[5];
-	p[2].c = matrix[11] + matrix[9];
-	p[2].d = matrix[15] + matrix[13];
-	p[2].Normalise();
-
-	// Top Plane
-	p[3].a = matrix[3] - matrix[1];
-	p[3].b = matrix[7] - matrix[5];
-	p[3].c = matrix[11] - matrix[9];
-	p[3].d = matrix[15] - matrix[13];
-	p[3].Normalise();
-
-	// Front Plane
-	p[4].a = 0.f;
-	p[4].b = 0.f;
-	p[4].c = -1.f;
-	p[4].d = 0.f;
-}
-
-void CNew3D::CalcBox(float distance, BBox& box)
-{
-	//bottom left front
-	box.points[0][0] = -distance;
-	box.points[0][1] = -distance;
-	box.points[0][2] = distance;
-	box.points[0][3] = 1.f;
-
-	//bottom left back
-	box.points[1][0] = -distance;
-	box.points[1][1] = -distance;
-	box.points[1][2] = -distance;
-	box.points[1][3] = 1.f;
-
-	//bottom right back
-	box.points[2][0] = distance;
-	box.points[2][1] = -distance;
-	box.points[2][2] = -distance;
-	box.points[2][3] = 1.f;
-
-	//bottom right front
-	box.points[3][0] = distance;
-	box.points[3][1] = -distance;
-	box.points[3][2] = distance;
-	box.points[3][3] = 1.f;
-
-	//top left front
-	box.points[4][0] = -distance;
-	box.points[4][1] = distance;
-	box.points[4][2] = distance;
-	box.points[4][3] = 1.f;
-
-	//top left back
-	box.points[5][0] = -distance;
-	box.points[5][1] = distance;
-	box.points[5][2] = -distance;
-	box.points[5][3] = 1.f;
-
-	//top right back
-	box.points[6][0] = distance;
-	box.points[6][1] = distance;
-	box.points[6][2] = -distance;
-	box.points[6][3] = 1.f;
-
-	//top right front
-	box.points[7][0] = distance;
-	box.points[7][1] = distance;
-	box.points[7][2] = distance;
-	box.points[7][3] = 1.f;
-}
-
-void CNew3D::MultVec(const float matrix[16], const float in[4], float out[4]) 
-{
-	for (int i = 0; i < 4; i++) {
-		out[i] =
-			in[0] * matrix[0 * 4 + i] +
-			in[1] * matrix[1 * 4 + i] +
-			in[2] * matrix[2 * 4 + i] +
-			in[3] * matrix[3 * 4 + i];
-	}
-}
-
-void CNew3D::TransformBox(const float *m, BBox& box)
-{
-	for (int i = 0; i < 8; i++) {
-		float v[4];
-		MultVec(m, box.points[i], v);
-		box.points[i][0] = v[0];
-		box.points[i][1] = v[1];
-		box.points[i][2] = v[2];
-	}
-}
-
-Clip CNew3D::ClipBox(const BBox& box, Plane planes[5])
-{
-	int count = 0;
-
-	for (int i = 0; i < 8; i++) {
-
-		int temp = 0;
-
-		for (int j = 0; j < 5; j++) {
-			if (planes[j].DistanceToPoint(box.points[i]) >= 0.f) {
-				temp++;
-			}
-		}
-
-		if (temp == 5) count++;		// point is inside all 4 frustum planes
-	}
-
-	if (count == 8)	return Clip::INSIDE;
-	if (count > 0)	return Clip::INTERCEPT;
-	
-	//if we got here all points are outside of the view frustum
-	//check for all points being side same of any plane, means box outside of view
-
-	for (int i = 0; i < 5; i++) {
-
-		int temp = 0;
-
-		for (int j = 0; j < 8; j++) {
-			if (planes[i].DistanceToPoint(box.points[j]) >= 0.f) {
-				temp++;
-			}
-		}
-
-		if (temp == 0) {
-			return Clip::OUTSIDE;
-		}
-	}
-
-	//if we got here, box is traversing view frustum
-
-	return Clip::INTERCEPT;
-}
-
-void CNew3D::CalcBoxExtents(const BBox& box)
-{
-	for (int i = 0; i < 8; i++) {
-		if (box.points[i][2] < 0.f) {
-			m_nfPairs[m_currentPriority].zNear = std::max(box.points[i][2], m_nfPairs[m_currentPriority].zNear);
-			m_nfPairs[m_currentPriority].zFar  = std::min(box.points[i][2], m_nfPairs[m_currentPriority].zFar);
-		}
-	}
-}
-
-void CNew3D::ClipPolygon(ClipPoly& clipPoly, Plane planes[5])
-{
-	//============
-	ClipPoly temp;
-	ClipPoly *in;
-	ClipPoly *out;
-	//============
-
-	in = &clipPoly;
-	out = &temp;
-
-	for (int i = 0; i < 4; i++) {
-
-		//=================
-		bool	currentIn;
-		float	currentDot;
-		//=================
-
-		currentDot	= planes[i].DotProduct(in->list[0].pos);
-		currentIn	= (currentDot + planes[i].d) >= 0.f;
-		out->count	= 0;
-
-		for (int j = 0; j < in->count; j++) {
-
-			if (currentIn) {
-				out->list[out->count] = in->list[j];
-				out->count++;
-			}
-
-			int nextIndex = j + 1;
-			if (nextIndex >= in->count) {
-				nextIndex = 0;
-			}
-
-			float nextDot = planes[i].DotProduct(in->list[nextIndex].pos);
-			bool nextIn	= (nextDot + planes[i].d) >= 0.f;
-
-			// we have an intersection
-			if (currentIn != nextIn) {
-
-				float u = (currentDot + planes[i].d) / (currentDot - nextDot);
-
-				const float* p1 = in->list[j].pos;
-				const float* p2 = in->list[nextIndex].pos;
-
-				out->list[out->count].pos[0] = p1[0] + ((p2[0] - p1[0]) * u);
-				out->list[out->count].pos[1] = p1[1] + ((p2[1] - p1[1]) * u);
-				out->list[out->count].pos[2] = p1[2] + ((p2[2] - p1[2]) * u);
-				out->count++;
-			}
-
-			currentDot = nextDot;
-			currentIn = nextIn;
-		}
-
-		std::swap(in, out);
-	}
-}
-
-void CNew3D::ClipModel(const Model *m)
-{
-	//===============================
-	ClipPoly				clipPoly;
-	std::vector<FVertex>*	vertices;
-	int						offset;
-	//===============================
-
-	if (m->dynamic) {
-		vertices = &m_polyBufferRam;
-		offset = MAX_ROM_VERTS;
-	}
-	else {
-		vertices = &m_polyBufferRom;
-		offset = 0;
-	}
-
-	for (const auto &mesh : *m->meshes) {
-
-		int start = mesh.vboOffset - offset;
-		
-		for (int i = 0; i < mesh.vertexCount; i += m_numPolyVerts) {							// inc to next poly
-
-			for (int j = 0; j < m_numPolyVerts; j++) {
-				MultVec(m->modelMat, (*vertices)[start + i + j].pos, clipPoly.list[j].pos);		// copy all 3 of 4  our transformed vertices into our clip poly struct
-			}
-
-			clipPoly.count = m_numPolyVerts;
-
-			ClipPolygon(clipPoly, m_planes);
-
-			for (int j = 0; j < clipPoly.count; j++) {
-				if (clipPoly.list[j].pos[2] < 0.f) {
-					m_nfPairs[m_currentPriority].zNear = std::max(clipPoly.list[j].pos[2], m_nfPairs[m_currentPriority].zNear);
-					m_nfPairs[m_currentPriority].zFar  = std::min(clipPoly.list[j].pos[2], m_nfPairs[m_currentPriority].zFar);
-				}
-			}
-		}
-	}
-}
-
-void CNew3D::CalcViewport(Viewport* vp, float near, float far)
-{
-	if (far > 1e30f) {
-		far = near * 1000000.f;				// fix for ocean hunter which passes some FLT_MAX for a few matrices. HW must have some safe guard for these
-	}
-
-	if (near < far / 1000000.f) {
-		near = far / 1000000.f;				// if we get really close to zero somehow, we will have almost no depth precision
-	}
-
-	float l = near * vp->angle_left;	// we need to calc the shape of the projection frustum for culling
-	float r = near * vp->angle_right;
-	float t = near * vp->angle_top;
-	float b = near * vp->angle_bottom;
+	float l = vp->angle_left;	// we need to calc the shape of the projection frustum for culling
+	float r = vp->angle_right;
+	float t = vp->angle_top;
+	float b = vp->angle_bottom;
 
 	vp->projectionMatrix.LoadIdentity();	// reset matrix
 
@@ -1828,13 +1536,14 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 		// screen and non-wide-screen modes have identical resolution parameters
 		// and only their scissor box differs)
 		float correction = windowAR / viewableAreaAR;
+		m_planes.correction = 1.0f / correction;
 
 		vp->x		= 0;
 		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
 		vp->height = (int)((float)vp->vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Frustum(l*correction, r*correction, b, t, near, far);
+		vp->projectionMatrix.FrustumRZ(l*correction, r*correction, b, t, NEAR_PLANE);
 	}
 	else {
 
@@ -1843,7 +1552,7 @@ void CNew3D::CalcViewport(Viewport* vp, float near, float far)
 		vp->width	= (int)((float)vp->vpWidth*m_xRatio);
 		vp->height	= (int)((float)vp->vpHeight*m_yRatio);
 
-		vp->projectionMatrix.Frustum(l, r, b, t, near, far);
+		vp->projectionMatrix.FrustumRZ(l, r, b, t, NEAR_PLANE);
 	}
 }
 
@@ -1883,17 +1592,10 @@ bool CNew3D::ProcessLos(int priority)
 				int losX, losY;
 				TranslateLosPosition(n.viewport.losPosX, n.viewport.losPosY, losX, losY);
 
-				float depth;
-				glReadPixels(losX, losY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+				float range;
+				glReadPixels(losX, losY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &range);
 
-				depth = 2.0f * depth - 1.0f;
-
-				float zNear = m_nfPairs[priority].zNear;
-				float zFar	= m_nfPairs[priority].zFar;
-				float zVal	= 2.0f * zNear * zFar / (zFar + zNear - depth * (zFar - zNear));
-
-				// real3d test program indicates that return values are 1/zVal
-				zVal = 1.0f / zVal;
+				float zVal = range / NEAR_PLANE;
 
 				GLubyte stencilVal;
 				glReadPixels(losX, losY, 1, 1, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, &stencilVal);

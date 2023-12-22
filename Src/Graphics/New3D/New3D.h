@@ -287,31 +287,22 @@ private:
 	R3DScrollFog m_r3dScrollFog;
 	R3DFrameBuffers m_r3dFrameBuffers;
 
-	Plane m_planes[5];
-
-	struct BBox
-	{
-		V4::Vec4 points[8];
-	};
-
-	struct NFPair
-	{
-		float zNear;
-		float zFar;
-	};
-
-	NFPair m_nfPairs[4];
 	int m_currentPriority;
 
-	void CalcFrustumPlanes	(Plane p[5], const float* matrix);
-	void CalcBox			(float distance, BBox& box);
-	void TransformBox		(const float *m, BBox& box);
-	void MultVec			(const float matrix[16], const float in[4], float out[4]);
-	Clip ClipBox			(const BBox& box, Plane planes[5]);
-	void ClipModel			(const Model *m);
-	void ClipPolygon		(ClipPoly& clipPoly, Plane planes[5]);
-	void CalcBoxExtents		(const BBox& box);
-	void CalcViewport		(Viewport* vp, float near, float far);
+	struct
+	{
+		float bnlu;
+		float bnlv;
+		float bntu;
+		float bntw;
+		float bnru;
+		float bnrv;
+		float bnbu;
+		float bnbw;
+		float correction;
+	} m_planes;
+
+	void CalcViewport		(Viewport* vp);
 };
 
 } // New3D
