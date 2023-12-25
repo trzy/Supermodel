@@ -1547,6 +1547,8 @@ void CNew3D::CalcViewport(Viewport* vp)
 	}
 	else {
 
+		m_planes.correction = 1.0f;
+
 		vp->x		= m_xOffs + (int)((float)vp->vpX*m_xRatio);
 		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= (int)((float)vp->vpWidth*m_xRatio);
