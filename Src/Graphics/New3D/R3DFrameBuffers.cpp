@@ -298,7 +298,6 @@ void R3DFrameBuffers::AllocShaderTrans()
 
 void R3DFrameBuffers::Draw()
 {
-	SetFBO		(Layer::none);						// make sure to draw on the back buffer
 	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
 	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
 	glDisable	(GL_CULL_FACE);

@@ -158,7 +158,7 @@ public:
 	 *    OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *    occurred. Prints own error messages.
 	 */
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
 	 * CRender2D(config):
@@ -198,6 +198,7 @@ private:
 	unsigned  m_totalXPixels = 0;   // total display surface resolution
 	unsigned  m_totalYPixels = 0;
 	unsigned  m_correction = 0;
+	GLuint m_aaTarget = 0;
 
 	GLuint m_vao;
 	GLSLShader m_shader;

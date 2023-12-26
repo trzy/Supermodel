@@ -22,7 +22,8 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_r3dScrollFog(config),
 	m_gameName(gameName),
 	m_textureBuffer(0),
-	m_vao(0)
+	m_vao(0),
+	m_aaTarget(0)
 {
 	m_cullingRAMLo	= nullptr;
 	m_cullingRAMHi	= nullptr;
@@ -121,7 +122,7 @@ void CNew3D::SetStepping(int stepping)
 	}
 }
 
-bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
+bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
 	// Resolution and offset within physical display area
 	m_xRatio	= xRes * (float)(1.0 / 496.0);
@@ -132,6 +133,7 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	m_yRes		= yRes;
 	m_totalXRes	= totalXResParam;
 	m_totalYRes = totalYResParam;
+	m_aaTarget	= aaTarget;
 
 	m_r3dFrameBuffers.DestroyFBO();		// remove any old ones if created
 	m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
@@ -440,7 +442,16 @@ void CNew3D::RenderFrame(void)
 	}
 
 	m_r3dFrameBuffers.SetFBO(Layer::none);
+
+	if (m_aaTarget) {
+		glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer
+	}
+
 	m_r3dFrameBuffers.Draw();
+
+	if (m_aaTarget) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 }
 
 void CNew3D::BeginFrame(void)
@@ -1009,6 +1020,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		m_planes.bnrv = Util::Uint32AsFloat(vpnode[0x11]);
 		m_planes.bnbu = Util::Uint32AsFloat(vpnode[0x12]);
 		m_planes.bnbw = Util::Uint32AsFloat(vpnode[0x13]);
+		m_planes.correction = 1.0f;		// might get changed by the calc viewport method
 
 		vp->angle_left		= (0.0f - jo) / cv;
 		vp->angle_right		= (1.0f - jo) / cv;

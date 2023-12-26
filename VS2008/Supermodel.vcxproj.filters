@@ -470,6 +470,9 @@
     <ClCompile Include="..\Src\Graphics\FBO.cpp">
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Graphics\SuperAA.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -855,6 +858,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h">
       <Filter>Header Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\SuperAA.h">
+      <Filter>Header Files\Graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

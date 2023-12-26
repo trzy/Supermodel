@@ -94,6 +94,7 @@
 #include "Model3/Model3.h"
 #include "OSD/Audio.h"
 #include "Graphics/New3D/VBO.h"
+#include "Graphics/SuperAA.h"
 
 #include <iostream>
 #include "Util/BMPFile.h"
@@ -122,6 +123,7 @@ SDL_Window *s_window = nullptr;
 static unsigned  xOffset, yOffset;      // offset of renderer output within OpenGL viewport
 static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
+static int aaValue = 1;                 // default is 1 which is no aa
 
 /*
  * Crosshair stuff
@@ -185,11 +187,11 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   // Scissor box (to clip visible area)
   if (s_runtime_config["WideScreen"].ValueAsDefault<bool>(false))
   {
-    glScissor(0, correction, *totalXResPtr, *totalYResPtr - (correction * 2));
+    glScissor(0* aaValue, correction* aaValue, *totalXResPtr * aaValue, (*totalYResPtr - (correction * 2)) * aaValue);
   }
   else
   {
-    glScissor(*xOffsetPtr + correction, *yOffsetPtr + correction, *xResPtr - (correction * 2), *yResPtr - (correction * 2));
+      glScissor((*xOffsetPtr + correction) * aaValue, (*yOffsetPtr + correction) * aaValue, (*xResPtr - (correction * 2)) * aaValue, (*yResPtr - (correction * 2)) * aaValue);
   }
   return OKAY;
 }
@@ -971,13 +973,17 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   uint64_t nextTime = 0;
 
   // Initialize the renderers
+  SuperAA* superAA = new SuperAA(aaValue);
+  superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
   CRender2D *Render2D = new CRender2D(s_runtime_config);
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
-  if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+
+  if (OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
     goto QuitError;
-  if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+  if (OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
     goto QuitError;
-  Model3->AttachRenderers(Render2D,Render3D);
+ 
+  Model3->AttachRenderers(Render2D,Render3D, superAA);
 
   // Reset emulator
   Model3->Reset();
@@ -1105,8 +1111,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Delete renderers and recreate them afterwards since GL context will most likely be lost when switching from/to fullscreen
       delete Render2D;
       delete Render3D;
-      Render2D = NULL;
-      Render3D = NULL;
+      Render2D = nullptr;
+      Render3D = nullptr;
 
       // Resize screen
       totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
@@ -1117,13 +1123,15 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
+      superAA->Init(totalXRes, totalYRes);
       Render2D = new CRender2D(s_runtime_config);
       Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
-      if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+      if (OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
         goto QuitError;
-      if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+      if (OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
         goto QuitError;
-      Model3->AttachRenderers(Render2D,Render3D);
+
+      Model3->AttachRenderers(Render2D, Render3D, superAA);
 
       Render3D->UploadTextures(0, 0, 0, 2048, 2048);    // sync texture memory
 
@@ -1331,6 +1339,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Shut down renderers
   delete Render2D;
   delete Render3D;
+  delete superAA;
 
   return 0;
 
@@ -1338,6 +1347,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 QuitError:
   delete Render2D;
   delete Render3D;
+  delete superAA;
+
   return 1;
 }
 
@@ -1478,7 +1489,7 @@ static Util::Config::Node DefaultConfig()
   config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false);
   config.Set("BorderlessWindow", false);
-
+  config.Set("Supersampling", 1);
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
   config.Set("WideBackground", false);
@@ -1558,6 +1569,7 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
+  puts("  -ss=<n>                 Supersampling (range 1-8)");
   puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
@@ -1819,6 +1831,29 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               }
           }
       }
+      else if (arg == "-ss" || arg.find("-ss=") == 0) {
+
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
+              cmd_line.error = true;
+          }
+          else {
+
+              try {
+                  int val = std::stoi(parts[1]);
+                  val = std::clamp(val, 1, 8);
+
+                  cmd_line.config.Set("Supersampling", val);
+              }
+              catch (...) {
+                  ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
+                  cmd_line.error = true;
+              }
+          }
+      }
       else if (arg == "-true-hz")
         cmd_line.config.Set("RefreshRate", 57.524f);
       else if (arg == "-print-gl-info")
@@ -1966,6 +2001,8 @@ int main(int argc, char **argv)
   std::shared_ptr<Debugger::CSupermodelDebugger> Debugger;
 #endif // SUPERMODEL_DEBUGGER
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
+
+  aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
 
   // Create a window
   xRes = 496;

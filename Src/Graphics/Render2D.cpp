@@ -310,11 +310,19 @@ void CRender2D::Setup2D(bool isBottom)
 	// Clear everything if requested or just overscan areas for wide screen mode
 	if (isBottom)
 	{
+		if (m_aaTarget) {
+			glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);	// set target if needed
+		}
+
 		glClearColor(0.0, 0.0, 0.0, 0.0);
 		glViewport	(0, 0, m_totalXPixels, m_totalYPixels);
 		glDisable	(GL_SCISSOR_TEST);							// scissor is enabled to fix the 2d/3d miss match problem
 		glClear		(GL_COLOR_BUFFER_BIT);						// we want to clear outside the scissored areas so must disable it
 		glEnable	(GL_SCISSOR_TEST);
+
+		if (m_aaTarget) {
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+		}
 	}
 
 	// Set up the viewport and orthogonal projection
@@ -327,6 +335,10 @@ void CRender2D::Setup2D(bool isBottom)
 
 void CRender2D::DrawSurface(GLuint textureID)
 {
+	if (m_aaTarget) {
+		glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);	// set target if needed
+	}
+
 	m_shader.EnableShader();
 
 	glEnable			(GL_BLEND);
@@ -338,6 +350,10 @@ void CRender2D::DrawSurface(GLuint textureID)
 	glDisable			(GL_BLEND);
 
 	m_shader.DisableShader();	
+
+	if (m_aaTarget) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+	}
 }
 
 float CRender2D::LineToPercentStart(int lineNumber)
@@ -470,16 +486,17 @@ void CRender2D::AttachVRAM(const uint8_t* vramPtr)
 	DebugLog("Render2D attached VRAM\n");
 }
 
-bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes)
+bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget)
 {
 	// Resolution
-	m_xPixels = xRes;
-	m_yPixels = yRes;
-	m_xOffset = xOffset;
-	m_yOffset = yOffset;
-	m_totalXPixels = totalXRes;
-	m_totalYPixels = totalYRes;
-	m_correction = (UINT32)(((yRes / 384.f) * 2) + 0.5f);		// for some reason the 2d layer is 2 pixels off the 3D
+	m_xPixels		= xRes;
+	m_yPixels		= yRes;
+	m_xOffset		= xOffset;
+	m_yOffset		= yOffset;
+	m_totalXPixels	= totalXRes;
+	m_totalYPixels	= totalYRes;
+	m_correction	= (UINT32)(((yRes / 384.f) * 2) + 0.5f);		// for some reason the 2d layer is 2 pixels off the 3D
+	m_aaTarget		= aaTarget;
 
 	return OKAY;
 }

@@ -116,6 +116,7 @@ SRC_FILES = \
 	Src/Graphics/New3D/R3DScrollFog.cpp \
 	Src/Graphics/FBO.cpp \
 	Src/Graphics/Render2D.cpp \
+	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
 	Src/CPU/PowerPC/ppc.cpp \

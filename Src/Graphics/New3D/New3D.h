@@ -141,7 +141,7 @@ public:
 	*		occurred. Any allocated memory will not be freed until the
 	*		destructor is called. Prints own error messages.
 	*/
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
 	* SetSunClamp(bool enable);
@@ -223,6 +223,7 @@ private:
 	void DisableRenderStates();
 	void TranslateLosPosition(int inX, int inY, int& outX, int& outY);
 	bool ProcessLos(int priority);
+	void CalcViewport(Viewport* vp);
 
 	/*
 	* Data
@@ -286,6 +287,7 @@ private:
 	R3DShader m_r3dShader;
 	R3DScrollFog m_r3dScrollFog;
 	R3DFrameBuffers m_r3dFrameBuffers;
+	GLuint m_aaTarget;						// optional, maybe zero
 
 	int m_currentPriority;
 
@@ -300,9 +302,7 @@ private:
 		float bnbu;
 		float bnbw;
 		float correction;
-	} m_planes;
-
-	void CalcViewport		(Viewport* vp);
+	} m_planes;	
 };
 
 } // New3D

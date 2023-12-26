@@ -2163,6 +2163,7 @@ void CModel3::RenderFrame(void)
     TileGen.RenderFrameTop();
     GPU.EndFrame();
     TileGen.EndFrame();
+    m_superAA->Draw();
   }
 
   EndFrameVideo();
@@ -3062,10 +3063,11 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   return OKAY;
 }
 
-void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr)
+void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
   TileGen.AttachRenderer(Render2DPtr);
   GPU.AttachRenderer(Render3DPtr);
+  m_superAA = superAA;
 }
 
 void CModel3::AttachInputs(CInputs *InputsPtr)
@@ -3209,7 +3211,8 @@ CModel3::CModel3(Util::Config::Node &config)
     TileGen(config),
     GPU(config),
     SoundBoard(config),
-    m_jtag(GPU)
+    m_jtag(GPU),
+    m_superAA(nullptr)
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;

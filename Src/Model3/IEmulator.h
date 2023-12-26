@@ -35,6 +35,7 @@ class CRender2D;
 class IRender3D;
 class CInputs;
 class COutputs;
+class SuperAA;
 
 /*
  * IEmulator:
@@ -150,7 +151,7 @@ public:
    *    Render2DPtr   Pointer to a tile renderer object.
    *    Render3DPtr   Same as above but for a 3D renderer.
    */
-  virtual void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr) = 0;
+  virtual void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
   
   /*
    * AttachInputs(InputsPtr):
