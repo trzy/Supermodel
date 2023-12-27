@@ -227,27 +227,46 @@ void CNew3D::DrawAmbientFog()
 	// If fogAmbient = 1.0 it's a no-op. Lower values darken the image
 	// Does this work with scroll fog? Well technically scroll fog already takes into account the fog ambient as it darkens the fog colour
 
-	// Let's pick the lowest fog ambient value
+	// lemans24 every viewport will set ambient fog, scroll attentuation is sometimes set (for every viewport) for explosion effects from car exhaust. So has no effect on ambient fog
+	// otherwise we'll make the ambient fog flash 
+	// sega rally will set ambient fog to zero for every viewport in priority layers 1-3 with a fog density set. Disabled viewports with priority zero have ambient fog disabled (1.0). Don't think srally uses ambient fog
+	// vf3 almost all viewports in all priority layers have ambient fog set (<1.0)
+	// lost world is setting an ambient fog value every every viewport but has no density or fog start value set. Don't think lost world is using ambient fog
+
+	// Let's pick the lowest fog ambient value from only the first priority layer
 	// Check for fog density or a fog start value, otherwise the effect seems to be disabled (lost world)
 
 	float fogAmbient = 1.0f;
 	Node* nodePtr = nullptr;
 
-	for (auto& n : m_nodes) {
+	for (int i = 0; i < 4; i++) {
 
-		// check to see if we have a fog density or fog start
-		if (n.viewport.fogParams[3] <= 0.0f && n.viewport.fogParams[4] <= 0.0f) {
-			continue;
+		bool hasPriority = false;
+
+		for (auto& n : m_nodes) {
+
+			auto& vp = n.viewport;
+
+			if (vp.priority == i) {
+
+				hasPriority = true;
+
+				// check to see if we have a fog density or fog start
+				if (vp.fogParams[3] <= 0.0f && vp.fogParams[4] <= 0.0f) {
+					continue;
+				}
+
+				if (vp.fogParams[6] < fogAmbient) {
+					nodePtr = &n;
+					fogAmbient = vp.fogParams[6];
+				}
+			}
 		}
 
-		if (n.viewport.scrollAtt > 0.0f) {
-			continue;		// scroll attenuation indicates scroll fog layer
+		if (nodePtr || hasPriority) {
+			break;
 		}
 
-		if (n.viewport.fogParams[6] < fogAmbient) {
-			nodePtr = &n;
-			fogAmbient = n.viewport.fogParams[6];
-		}
 	}
 
 	if (nodePtr) {
@@ -982,18 +1001,19 @@ void CNew3D::RenderViewport(UINT32 addr)
 		return;
 	}
 
-	if (!(vpnode[0] & 0x20)) {	// only if viewport enabled
+	bool vpDisabled = vpnode[0] & 0x20;						// only if viewport enabled
 
+	{
 		// create node object 
 		m_nodes.emplace_back(Node());
 		m_nodes.back().models.reserve(2048);				// create space for models
 
 		// get pointer to its viewport
-		Viewport *vp = &m_nodes.back().viewport;
+		Viewport* vp = &m_nodes.back().viewport;
 
-		vp->priority	= (vpnode[0] >> 3) & 0x3;
-		vp->select		= (vpnode[0] >> 8) & 0x3;
-		vp->number		= (vpnode[0] >> 10);
+		vp->priority = (vpnode[0] >> 3) & 0x3;
+		vp->select = (vpnode[0] >> 8) & 0x3;
+		vp->number = (vpnode[0] >> 10);
 		m_currentPriority = vp->priority;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
@@ -1002,7 +1022,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) * (float)(1.0 / 4.0)) + 0.5f);		// width (14.2)
 		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) * (float)(1.0 / 4.0)) + 0.5f);			// height (14.2)
 
-		uint32_t matrixBase	= vpnode[0x16] & 0xFFFFFF;							// matrix base address
+		uint32_t matrixBase = vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
 		m_LODBlendTable = (LODBlendTable*)TranslateCullingAddress(vpnode[0x17] & 0xFFFFFF);
 
@@ -1024,23 +1044,23 @@ void CNew3D::RenderViewport(UINT32 addr)
 
 		vp->angle_left		= (0.0f - jo) / cv;
 		vp->angle_right		= (1.0f - jo) / cv;
-		vp->angle_bottom	= -(1.0f - io)/ cw;
-		vp->angle_top		= -(0.0f - io)/ cw;
+		vp->angle_bottom	= -(1.0f - io) / cw;
+		vp->angle_top		= -(0.0f - io) / cw;
 
 		CalcViewport(vp);
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
-		vp->lightingParams[0] =  Util::Uint32AsFloat(vpnode[0x05]);							// sun X
+		vp->lightingParams[0] = Util::Uint32AsFloat(vpnode[0x05]);							// sun X
 		vp->lightingParams[1] = -Util::Uint32AsFloat(vpnode[0x06]);							// sun Y (- to convert to ogl cordinate system)
 		vp->lightingParams[2] = -Util::Uint32AsFloat(vpnode[0x04]);							// sun Z (- to convert to ogl cordinate system)
 		vp->lightingParams[3] = std::max(0.f, std::min(Util::Uint32AsFloat(vpnode[0x07]), 1.0f));	// sun intensity (clamp to 0-1)
 		vp->lightingParams[4] = (float)((vpnode[0x24] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// ambient intensity
 		vp->lightingParams[5] = 0.0f;	// reserved
-		
-		vp->sunClamp		= m_sunClamp;
-		vp->intensityClamp	= (m_step == 0x10);		// just step 1.0 ?
-		vp->hardwareStep	= m_step;
-		
+
+		vp->sunClamp = m_sunClamp;
+		vp->intensityClamp = (m_step == 0x10);		// just step 1.0 ?
+		vp->hardwareStep = m_step;
+
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
 		int spotFogColorIdx = (vpnode[0x20] >> 8) & 7;									// spotlight on fog color index
@@ -1085,7 +1105,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
 		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
 		vp->fogParams[3] = std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
-		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF)* (float)(1.0 / 255.0);	// fog start
+		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF) * (float)(1.0 / 255.0);	// fog start
 
 		// Avoid Infinite and NaN values for Star Wars Trilogy
 		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3])) {
@@ -1105,12 +1125,14 @@ void CNew3D::RenderViewport(UINT32 addr)
 		InitMatrixStack(matrixBase, m_modelMat);
 
 		// Descend down the node link. Need to start with a culling node because that defines our culling radius.
-		auto childptr = vpnode[0x02];
-		if (((childptr >> 24) & 0x5) == 0) {
-			DescendNodePtr(vpnode[0x02]);
+		if (!vpDisabled) {
+			auto childptr = vpnode[0x02];
+			if (((childptr >> 24) & 0x5) == 0) {
+				DescendNodePtr(vpnode[0x02]);
+			}
 		}
 	}
-
+	
 	// render next viewport
 	if (vpnode[0x01] != 0x01000000) {
 		RenderViewport(vpnode[0x01]);
