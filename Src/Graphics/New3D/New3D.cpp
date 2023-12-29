@@ -738,6 +738,8 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	float LODscale = m_nodeAttribs.currentDisableCulling ? std::numeric_limits<float>::max() : (fBlendRadius / std::hypot(x, y, z));
 	const LOD *lod = m_LODBlendTable->table[lodTablePointer].lod;
 
+	LODscale = std::clamp(LODscale, 0.0f, std::numeric_limits<float>::max());
+
 	if (m_nodeAttribs.currentDisableCulling || (!outsideFrustum && LODscale >= lod[3].deleteSize)) {
 
 		// Descend down first link
