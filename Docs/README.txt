@@ -62,82 +62,25 @@ minor visual issues.  Your experience may vary.
     --- Introduction
     --- Disclaimer
     --- Table of Contents
-     1. Revision History
-     2. Installing Supermodel
-     3. Running Supermodel
-     4. Game Compatibility
-     5. Video Settings
-     6. Audio Settings
-     7. Controls
-     8. Force Feedback
-     9. Save States and NVRAM
-    10. Game-Specific Comments and Tips
-    11. The Configuration File
-    12. Index of Command Line Options
-    13. Index of Configuration File Settings
-    14. Compiling the Source Code
-    15. Contact Information
-    16. Acknowledgments
-
-
-=======================
-  1. Revision History
-=======================
-
-    Version 0.2a (September 24, 2011)
-        - New, fully customizable input system.  Supports any combination of
-          keyboards, mice, and analog and digital controllers.  [Nik Henson]
-        - Texture offsets.  Fixes models in 'Fighting Vipers 2', 'Virtual On',
-          cars in the 'Scud Race' and 'Daytona USA 2' selection screens, etc.
-        - Fixed a 2D palette bug that would cause black pixels to occasionally
-          turn transparent.
-        - Added all remaining ROM sets.  [krom]
-        - Got some new games to boot: 'Spikeout', 'Ski Champ', 'Sega Bass
-          Fishing', 'Dirt Devils', etc.
-        - Sound support.  Special thanks to ElSemi for contributing his SCSP
-          emulator and Karl Stenerud for allowing us to use his 68K emulator.
-        - Multi-threading support.  Sound and drive board emulation are off-
-          loaded to separate threads, substantially enhancing performance.
-          [Nik Henson]
-        - Z80 emulation based on code by Frank D. Cringle and YAZE-AG by
-          Andreas Gerlich.
-        - Digital Sound Board (MPEG music) emulation courtesy of R. Belmont and
-          the MPEG decoder library by Tomislav Uzelac.
-        - Improved ROM loader.  It should no longer be as easily confused by
-          combined ROM sets as long as unused files are removed.
-        - Configuration file now supports more settings and allows game-
-          specific customization.
-        - Added light gun crosshairs ('The Lost World'), enabled by default in
-          full screen mode and selectable by pressing Alt-I.
-        - Drive board and force feedback emulation for 'Scud Race', 'Daytona
-          USA 2', and 'Sega Rally 2'.  [Nik Henson]
-        - Viewable display area properly clipped.  Ghost artifacts no longer
-          appear in border regions when the resolution exceeds the display
-          area.
-        - Changed gear shifting: added a dedicated neutral gear and sequential
-          shifting.
-        - Console-based debugger (not enabled by default, must be
-          enabled during compile-time).  [Nik Henson]
-        - Source code and Makefile cleanup.
-
-    Version 0.1.2a (April 3, 2011)
-        - Included missing GLEW files.
-
-    Version 0.1.1a (April 2, 2011)
-        - Minor source code update.
-        - Set Render3D to NULL in the CReal3D constructor.  Fixes crashes that
-          occur on some builds. [Nik Henson]
-        - Cleaned up UNIX Makefile and added OS X Makefile.  [R. Belmont]
-        - Small changes to ppc_ops.cpp for C++0x compliance.  [R. Belmont]
-        - Included glew.h into the source tree.  [R. Belmont]
-        - Changed WIN32 definition to SUPERMODEL_WIN32.
-
-    Version 0.1a (April 1, 2011)
-        - Initial public alpha release.
+     1. Installing Supermodel
+     2. Running Supermodel
+     3. Game Compatibility
+     4. Video Settings
+     5. Audio Settings
+     6. Controls
+     7. Force Feedback
+     8. Save States and NVRAM
+     9. Game-Specific Comments and Tips
+    10. The Configuration File
+    11. Index of Command Line Options
+    12. Index of Configuration File Settings
+    13. Compiling the Source Code
+    14. Contact Information
+    15. Acknowledgments
 
 
 ============================
-  2. Installing Supermodel
+  1. Installing Supermodel
 ============================
 
 To install Supermodel on Windows, extract the ZIP archive containing the
@@ -173,7 +116,7 @@ to achieve consistent frame rates of 60 FPS.
 
 
 =========================
-  3. Running Supermodel
+  2. Running Supermodel
 =========================
 
 For now, Supermodel does not include a proper user interface.  It is operated
@@ -197,7 +140,7 @@ command prompt.  In full screen mode, they will not be visible.
 
 
 =========================
-  4. Game Compatibility
+  3. Game Compatibility
 =========================
 
 Supermodel recognizes all known Model 3 ROM sets. Below is a compatibility
@@ -298,7 +241,7 @@ Note 2: Set game to SD in game assignment in the TEST MENU or wait a few seconds
 
 
 =====================
-  5. Video Settings
+  4. Video Settings
 =====================
 
 Supermodel may be run in either windowed (default) or full screen mode.  By
@@ -340,7 +283,7 @@ Changing video modes at run-time is not yet supported.
 
 
 =====================
-  6. Audio Settings
+  5. Audio Settings
 =====================
 
 All Model 3 games have a sound board that is used for sound effects and, in
@@ -386,7 +329,7 @@ tunes do not sound quite correct yet.
 
 
 ===============
-  7. Controls
+  6. Controls
 ===============
 
 Game controls are fully configurable and can be mapped to keyboards, mice, and
@@ -641,7 +584,7 @@ Common input-related problems are discussed below.
 
 
 =====================
-  8. Force Feedback
+  7. Force Feedback
 =====================
 
 Force feedback is presently supported in 'Scud Race' (including 'Scud Race
@@ -706,7 +649,7 @@ best feel.
 
 
 ============================
-  9. Save States and NVRAM
+  8. Save States and NVRAM
 ============================
 
 Save states are saved and restored by pressing F5 and F7, respectively.  Up to
@@ -730,7 +673,7 @@ can be cleared by deleting the NVRAM files or pressing Alt-N.
 
 
 =======================================
-  10. Game-Specific Comments and Tips
+  9. Game-Specific Comments and Tips
 =======================================
 
 This section contains additional game-specific setup information, workarounds
@@ -905,7 +848,7 @@ seconds) Service button presses: 1 long, 3 short, 1 long.
 
 
 ==============================
-  11. The Configuration File
+  10. The Configuration File
 ==============================
 
 Supermodel reads configuration settings from 'Supermodel.ini' located in the
@@ -1183,7 +1126,7 @@ option '-input-system=rawinput' and the input mappings configured for each gun.
 
 
 =====================================
-  12. Index of Command Line Options
+  11. Index of Command Line Options
 =====================================
 
 All valid command line settings are listed here, ordered by category.  Defaults
@@ -1357,7 +1300,7 @@ not.  All options are case sensitive.
 
 
 ============================================
-  13. Index of Configuration File Settings
+  12. Index of Configuration File Settings
 ============================================
 
 All valid configuration file settings are listed here, ordered by category.
@@ -1927,7 +1870,7 @@ All settings are case sensitive.
 
 
 =================================
-  14. Compiling the Source Code
+  13. Compiling the Source Code
 =================================
 
 First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
@@ -1961,7 +1904,7 @@ When everything is ready, rename the appropriate Makefile to 'Makefile' and run
 
 
 ===========================
-  15. Contact Information
+  14. Contact Information
 ===========================
 
 The official Supermodel web site is:
@@ -1982,7 +1925,7 @@ We ask that you remain mindful of the following courtesies:
 
 
 =======================
-  16. Acknowledgments
+  15. Acknowledgments
 =======================
 
 Numerous people contributed their precious time and energy to this project.
