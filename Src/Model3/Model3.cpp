@@ -2041,21 +2041,42 @@ ThreadError:
   m_multiThreaded = false;
 }
 
+static unsigned GetCPUClockFrequencyInHz(const Game &game, Util::Config::Node &config)
+{
+  unsigned mhz = config["PowerPCFrequency"].ValueAsDefault<unsigned>(0);
+  if (!mhz)
+  {
+    if (game.stepping == "1.0")
+    {
+      mhz = 66;
+    }
+    else if (game.stepping == "1.5")
+    {
+      mhz = 100;
+    }
+    else  // 2.x
+    {
+      mhz = 166;
+    }
+  }
+  return mhz * 1000000;
+}
+
 void CModel3::RunMainBoardFrame(void)
 {
 	UINT32 start = CThread::GetTicks();
 
 	/* 
-         * Compute display timings. Refresh rate is 57.524160 Hz and we assume frame timing is the same as System 24:
+   * Compute display timings. Refresh rate is 57.524160 Hz and we assume frame timing is the same as System 24:
+   *
+   * - 25 scanlines from /VSYNC high to /BLANK high (top border)
+   * - 384 scanlines from /BLANK high to /BLANK low (active display)
+   * - 11 scanlines from /BLANK low to /VSYNC low (bottom border)
+   * - 4 scanlines from /VSYNC low to /VSYNC high (vertical sync. pulse)
 	 *
-	 * - 25 scanlines from /VSYNC high to /BLANK high (top border)
-         * - 384 scanlines from /BLANK high to /BLANK low (active display)
-         * - 11 scanlines from /BLANK low to /VSYNC low (bottom border)
-         * - 4 scanlines from /VSYNC low to /VSYNC high (vertical sync. pulse)
-	 *
-         * 424 lines total: 384 display and 40 blanking/vsync.
+   * 424 lines total: 384 display and 40 blanking/vsync.
 	 */ 
-	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
+	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned lineCycles     = frameCycles / 424;
 	unsigned dispCycles     = lineCycles * (TileGen.ReadRegister(0x08) + 40);

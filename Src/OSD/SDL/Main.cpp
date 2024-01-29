@@ -1456,7 +1456,6 @@ static Util::Config::Node DefaultConfig()
   // CModel3
   config.Set("MultiThreaded", true);
   config.Set("GPUMultiThreaded", true);
-  config.Set("PowerPCFrequency", "50");
   // 2D and 3D graphics engines
   config.Set("MultiTexture", false);
   config.Set("VertexShader", "");
@@ -1561,7 +1560,7 @@ static void Help(void)
   puts("  -log-level=<level>      Logging threshold [Default: info]");
   puts("");
   puts("Core Options:");
-  printf("  -ppc-frequency=<freq>   PowerPC frequency in MHz [Default: %d]\n", defaultConfig["PowerPCFrequency"].ValueAs<unsigned>());
+  puts("  -ppc-frequency=<mhz>    PowerPC frequency (default varies by stepping)");
   puts("  -no-threads             Disable multi-threading entirely");
   puts("  -gpu-multi-threaded     Run graphics rendering in separate thread [Default]");
   puts("  -no-gpu-thread          Run graphics rendering in main thread");
