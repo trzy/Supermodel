@@ -81,12 +81,12 @@ From a terminal:
 xcode-select --install
 ```
 
-Ensure SDL2 is installed via [homebrew](https://brew.sh/):
+Ensure SDL2 is installed.  Download the latest *.dmg files from both of the links below, and install per the READMEs in the .dmgs (i.e. in "/Library/Frameworks")
 
-```
-brew install sdl2
-brew install sdl2_net
-```
+* SDL2: https://github.com/libsdl-org/SDL/releases
+
+* SDL_net: https://github.com/libsdl-org/SDL_net/releases
+
 
 And then build Supermodel:
 
