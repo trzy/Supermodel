@@ -1,4 +1,4 @@
-name: make-linux
+name: make-macos
 on:
   push:
     branches: [ "master" ]
@@ -8,17 +8,17 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v4
     - name: install_dependencies
       run: |
-        sudo apt update
-        sudo apt install libsdl2-dev
-        sudo apt install libsdl2-net-dev
+        brew update && brew upgrade
+        brew install sdl2
+        brew install sdl2_net
     - name: make
-      run: make -f Makefiles/Makefile.UNIX
+      run: make -f Makefiles/Makefile.OSX
     - uses: actions/upload-artifact@v4
       with:
         name: supermodel

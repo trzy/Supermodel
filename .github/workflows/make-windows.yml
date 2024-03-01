@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: msys2/setup-msys2@v2
       with:
         update: true
@@ -27,7 +27,7 @@ jobs:
     - name: make
       shell: msys2 {0}
       run: mingw32-make -f Makefiles/Makefile.Win32
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: supermodel
         path: bin/supermodel
