@@ -65,8 +65,8 @@ endif
 #	OSX-specific
 #
 
-PLATFORM_CXXFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -F/opt/homebrew/include -O3
-PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/opt/homebrew/include
+PLATFORM_CXXFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -F/opt/homebrew/include/SDL -O3
+PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/opt/homebrew/include/SDL
 
 
 ###############################################################################
