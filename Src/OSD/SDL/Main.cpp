@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2022 The Supermodel Team
+ ** Copyright 2003-2023 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -23,6 +23,23 @@
  * Main.cpp
  *
  * Main program driver for the SDL port.
+ *
+ * Bugs and Issues to Address
+ * --------------------------
+ * - -gfx-state crashes when ENABLE_DEBUGGER is also enabled:
+ *
+ *    #0  0x00007ff6586392a0 in CSoundBoard::GetDSB (this=0x1128) at Src/Model3/SoundBoard.cpp:552
+ *    #1  0x00007ff6587072cf in Debugger::CSupermodelDebugger::CreateDSBCPUDebug (model3=0x0) at Src/Debugger/SupermodelDebugger.cpp:269
+ *    #2  0x00007ff6587076e9 in Debugger::CSupermodelDebugger::AddCPUs (this=0x185da75df40) at Src/Debugger/SupermodelDebugger.cpp:361
+ *    #3  0x00007ff6586f91a6 in Debugger::CDebugger::Attach (this=0x185da75df40) at Src/Debugger/Debugger.cpp:263
+ *    #4  0x00007ff658705312 in Debugger::CConsoleDebugger::Attach (this=0x185da75df40) at Src/Debugger/ConsoleDebugger.cpp:2707
+ *    #5  0x00007ff65862c6fc in Supermodel (game=..., rom_set=0x6cc8dff0e0, Model3=0x185da7598d0, Inputs=0x185da752590, Outputs=0x0, Debugger=std::shared_ptr<Debugger::CDebugger> (use count 3, weak count 0) = {...})
+ *        at Src/OSD/SDL/Main.cpp:978
+ *    #6  0x00007ff658634ba3 in SDL_main (argc=3, argv=0x185da4e68a0) at Src/OSD/SDL/Main.cpp:2056
+ *    #7  0x00007ff658720141 in main_getcmdline ()
+ *    #8  0x00007ff6585b13b1 in __tmainCRTStartup () at C:/M/mingw-w64-crt-git/src/mingw-w64/mingw-w64-crt/crt/crtexe.c:321
+ *    #9  0x00007ff6585b14e6 in mainCRTStartup () at C:/M/mingw-w64-crt-git/src/mingw-w64/mingw-w64-crt/crt/crtexe.c:202
+ * - Need to address all the stale TO-DOs below and clear them out :)
  *
  * To Do Before Next Release
  * -------------------------
@@ -77,10 +94,12 @@
 #include "Model3/Model3.h"
 #include "OSD/Audio.h"
 #include "Graphics/New3D/VBO.h"
+#include "Graphics/SuperAA.h"
 
 #include <iostream>
 #include "Util/BMPFile.h"
 
+#include "Crosshair.h"
 
 /******************************************************************************
  Global Run-time Config
@@ -104,6 +123,12 @@ SDL_Window *s_window = nullptr;
 static unsigned  xOffset, yOffset;      // offset of renderer output within OpenGL viewport
 static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
+static int aaValue = 1;                 // default is 1 which is no aa
+
+/*
+ * Crosshair stuff
+ */
+static CCrosshair* s_crosshair = nullptr;
 
 static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
@@ -162,11 +187,11 @@ static bool SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *
   // Scissor box (to clip visible area)
   if (s_runtime_config["WideScreen"].ValueAsDefault<bool>(false))
   {
-    glScissor(0, correction, *totalXResPtr, *totalYResPtr - (correction * 2));
+    glScissor(0* aaValue, correction* aaValue, *totalXResPtr * aaValue, (*totalYResPtr - (correction * 2)) * aaValue);
   }
   else
   {
-    glScissor(*xOffsetPtr + correction, *yOffsetPtr + correction, *xResPtr - (correction * 2), *yResPtr - (correction * 2));
+      glScissor((*xOffsetPtr + correction) * aaValue, (*yOffsetPtr + correction) * aaValue, (*xResPtr - (correction * 2)) * aaValue, (*yResPtr - (correction * 2)) * aaValue);
   }
   return OKAY;
 }
@@ -177,7 +202,7 @@ static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLen
 }
 
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
-// This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at 
+// This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
 // 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists
 // It it doesn't exist, then it'll probably just default to 60 or whatever your refresh rate is.
 static void SetFullScreenRefreshRate()
@@ -541,6 +566,7 @@ void Screenshot()
 #include <fstream>
 
 static std::string s_gfxStatePath;
+static const std::string k_gfxAnalysisPath = "GraphicsAnalysis/";
 
 static std::string GetFileBaseName(const std::string &file)
 {
@@ -597,7 +623,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownPolyBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "poly" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -613,7 +639,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
       if ((unknownCullingNodeBits[idx] & mask))
       {
         Emu->RenderFrame();
-        std::string file = Util::Format() << s_analysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
+        std::string file = Util::Format() << k_gfxAnalysisPath << GetFileBaseName(s_gfxStatePath) << "." << "culling" << "." << idx << "_" << Util::Hex(mask) << ".bmp";
         SaveFrameBuffer(file);
       }
     }
@@ -622,7 +648,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
   glReadBuffer(readBuffer);
 
   // Generate the HTML GUI
-  std::string file = Util::Format() << s_analysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
+  std::string file = Util::Format() << k_gfxAnalysisPath << "_" << GetFileBaseName(s_gfxStatePath) << ".html";
   std::ofstream fs(file);
   if (!fs.good())
     ErrorLog("Unable to open '%s' for writing.", file.c_str());
@@ -775,138 +801,6 @@ static void LoadNVRAM(IEmulator *Model3)
 }
 
 
-/******************************************************************************
- UI Rendering
-
- Currently, only does crosshairs for light gun games.
-******************************************************************************/
-
-struct BasicDraw
-{
-public:
-
-    struct BasicVertex
-    {
-        BasicVertex(float x, float y, float z) : x(x), y(y), z(z) {}
-        BasicVertex(float x, float y) : x(x), y(y), z(0.f) {}
-        float x, y, z;
-    };
-
-    const int MaxVerts = 1024;  // per draw call
-
-    void Draw(GLenum mode, const float mvpMatrix[16], const BasicVertex* vertices, int count, float r, float g, float b, float a)
-    {
-        if (count > MaxVerts) {
-            count = MaxVerts;       // maybe we could error out somehow
-        }
-
-        if (!m_initialised) {
-            Setup();
-        }
-
-        m_shader.EnableShader();
-
-        // update uniform memory
-        glUniformMatrix4fv(m_shader.uniformLocMap["mvp"], 1, GL_FALSE, mvpMatrix);
-        glUniform4f(m_shader.uniformLocMap["colour"], r, g, b, a);
-
-        // update vbo mem
-        m_vbo.Bind(true);
-        m_vbo.BufferSubData(0, count * sizeof(BasicVertex), vertices);
-
-        glBindVertexArray(m_vao);
-        glDrawArrays(mode, 0, count);
-        glBindVertexArray(0);
-
-        m_shader.DisableShader();
-    }
-
-private:
-
-    void Setup()
-    {
-        const char* vertexShader = R"glsl(
-
-            #version 410 core
-             
-            uniform mat4 mvp;
-            layout(location = 0) in vec3 inVertices;
-
-            void main(void)
-            {
-	            gl_Position = mvp * vec4(inVertices,1.0);
-            }
-            )glsl";
-
-        const char* fragmentShader = R"glsl(
-
-            #version 410 core
-             
-            uniform vec4 colour;
-            out vec4 fragColour;
-
-            void main(void)
-            {
-	            fragColour = colour;
-            }
-            )glsl";
-
-        m_shader.LoadShaders(vertexShader, fragmentShader);
-        m_shader.GetUniformLocationMap("mvp");
-        m_shader.GetUniformLocationMap("colour");
-
-        glGenVertexArrays(1, &m_vao);
-        glBindVertexArray(m_vao);
-
-        m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(BasicVertex) * (MaxVerts));
-        m_vbo.Bind(true);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(BasicVertex), 0);
-
-        glBindVertexArray(0);
-        m_vbo.Bind(false);
-
-        m_initialised = true;
-    }
-
-    GLSLShader m_shader;
-    VBO m_vbo;
-    GLuint m_vao = 0;
-    bool m_initialised = false;
-
-} basicDraw;
-
-static void GunToViewCoords(float *x, float *y)
-{
-  *x = (*x-150.0f)/(651.0f-150.0f); // Scale [150,651] -> [0.0,1.0]
-  *y = (*y-80.0f)/(465.0f-80.0f);   // Scale [80,465] -> [0.0,1.0]
-}
-
-static void DrawCrosshair(const float* matrix, float x, float y, float r, float g, float b)
-{
-  float base = 0.01f, height = 0.02f; // geometric parameters of each triangle
-  float dist = 0.004f;          // distance of triangle tip from center
-  float a = (float)xRes/(float)yRes;  // aspect ratio (to square the crosshair)
-
-  std::vector<BasicDraw::BasicVertex> verts;
-
-  verts.emplace_back(x, y+dist);  // bottom triangle
-  verts.emplace_back(x+base/2.0f, y+(dist+height)*a);
-  verts.emplace_back(x-base/2.0f, y+(dist+height)*a);
-  verts.emplace_back(x, y-dist);  // top triangle
-  verts.emplace_back(x-base/2.0f, y-(dist+height)*a);
-  verts.emplace_back(x+base/2.0f, y-(dist+height)*a);
-  verts.emplace_back(x-dist, y);  // left triangle
-  verts.emplace_back(x-dist-height, y+(base/2.0f)*a);
-  verts.emplace_back(x-dist-height, y-(base/2.0f)*a);
-  verts.emplace_back(x+dist, y);  // right triangle
-  verts.emplace_back(x+dist+height, y-(base/2.0f)*a);
-  verts.emplace_back(x+dist+height, y+(base/2.0f)*a);
-
-  basicDraw.Draw(GL_TRIANGLES, matrix, verts.data(), (int)verts.size(), r, g, b, 1.0f);
-}
-
 /*
 static void PrintGLError(GLenum error)
 {
@@ -925,61 +819,6 @@ static void PrintGLError(GLenum error)
 }
 */
 
-static void UpdateCrosshairs(uint32_t currentInputs, CInputs *Inputs, unsigned crosshairs)
-{
-  bool offscreenTrigger[2];
-  float x[2], y[2];
-
-  crosshairs &= 3;
-  if (!crosshairs)
-    return;
-
-  // Set up the viewport and orthogonal projection
-  glUseProgram(0);    // no shaders
-  glViewport(xOffset, yOffset, xRes, yRes);
-  glDisable(GL_BLEND);    // no blending
-  glDisable(GL_DEPTH_TEST); // no Z-buffering needed
-
-  New3D::Mat4 m;
-  m.Ortho(0.0, 1.0, 1.0, 0.0, -1.0f, 1.0f);
-
-  // Convert gun coordinates to viewspace coordinates
-  if (currentInputs & Game::INPUT_ANALOG_GUN1)
-  {
-    x[0] = ((float)Inputs->analogGunX[0]->value / 255.0f);
-    y[0] = ((255.0f - (float)Inputs->analogGunY[0]->value) / 255.0f);
-    offscreenTrigger[0] = Inputs->analogTriggerLeft[0]->value || Inputs->analogTriggerRight[0]->value;
-  }
-  else if (currentInputs & Game::INPUT_GUN1)
-  {
-    x[0] = (float)Inputs->gunX[0]->value;
-    y[0] = (float)Inputs->gunY[0]->value;
-    GunToViewCoords(&x[0], &y[0]);
-	offscreenTrigger[0] = (Inputs->trigger[0]->offscreenValue) > 0;
-  }
-  if (currentInputs & Game::INPUT_ANALOG_GUN2)
-  {
-    x[1] = ((float)Inputs->analogGunX[1]->value / 255.0f);
-    y[1] = ((255.0f - (float)Inputs->analogGunY[1]->value) / 255.0f);
-    offscreenTrigger[1] = Inputs->analogTriggerLeft[1]->value || Inputs->analogTriggerRight[1]->value;
-  }
-  else if (currentInputs & Game::INPUT_GUN2)
-  {
-    x[1] = (float)Inputs->gunX[1]->value;
-    y[1] = (float)Inputs->gunY[1]->value;
-    GunToViewCoords(&x[1], &y[1]);
-	offscreenTrigger[1] = (Inputs->trigger[1]->offscreenValue) > 0;
-  }
-  // Draw visible crosshairs
-  if ((crosshairs & 1) && !offscreenTrigger[0])  // Player 1
-    DrawCrosshair(m,x[0], y[0], 1.0f, 0.0f, 0.0f);
-  if ((crosshairs & 2) && !offscreenTrigger[1])  // Player 2
-    DrawCrosshair(m,x[1], y[1], 0.0f, 1.0f, 0.0f);
-
-  //PrintGLError(glGetError());
-}
-
-
 /******************************************************************************
  Video Callbacks
 ******************************************************************************/
@@ -996,7 +835,7 @@ void EndFrameVideo()
 {
   // Show crosshairs for light gun games
   if (videoInputs)
-    UpdateCrosshairs(currentInputs, videoInputs, s_runtime_config["Crosshairs"].ValueAs<unsigned>());
+    s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
 
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
@@ -1086,8 +925,16 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
-  SDL_SetWindowPosition(s_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-  
+
+  int xpos = s_runtime_config["WindowXPosition"].Exists() ? s_runtime_config["WindowXPosition"].ValueAs<int>() : SDL_WINDOWPOS_CENTERED;
+  int ypos = s_runtime_config["WindowYPosition"].Exists() ? s_runtime_config["WindowYPosition"].ValueAs<int>() : SDL_WINDOWPOS_CENTERED;
+  SDL_SetWindowPosition(s_window, xpos, ypos);
+
+  if (s_runtime_config["BorderlessWindow"].ValueAs<bool>())
+  {
+    SDL_SetWindowBordered(s_window, SDL_FALSE);
+  }
+
   SetFullScreenRefreshRate();
 
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
@@ -1126,13 +973,17 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   uint64_t nextTime = 0;
 
   // Initialize the renderers
+  SuperAA* superAA = new SuperAA(aaValue);
+  superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
   CRender2D *Render2D = new CRender2D(s_runtime_config);
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
-  if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+
+  if (OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
     goto QuitError;
-  if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+  if (OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
     goto QuitError;
-  Model3->AttachRenderers(Render2D,Render3D);
+ 
+  Model3->AttachRenderers(Render2D,Render3D, superAA);
 
   // Reset emulator
   Model3->Reset();
@@ -1260,8 +1111,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Delete renderers and recreate them afterwards since GL context will most likely be lost when switching from/to fullscreen
       delete Render2D;
       delete Render3D;
-      Render2D = NULL;
-      Render3D = NULL;
+      Render2D = nullptr;
+      Render3D = nullptr;
 
       // Resize screen
       totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
@@ -1272,13 +1123,15 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
+      superAA->Init(totalXRes, totalYRes);
       Render2D = new CRender2D(s_runtime_config);
       Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
-      if (OKAY != Render2D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+      if (OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
         goto QuitError;
-      if (OKAY != Render3D->Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes))
+      if (OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
         goto QuitError;
-      Model3->AttachRenderers(Render2D,Render3D);
+
+      Model3->AttachRenderers(Render2D, Render3D, superAA);
 
       Render3D->UploadTextures(0, 0, 0, 2048, 2048);    // sync texture memory
 
@@ -1486,6 +1339,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Shut down renderers
   delete Render2D;
   delete Render3D;
+  delete superAA;
 
   return 0;
 
@@ -1493,6 +1347,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 QuitError:
   delete Render2D;
   delete Render3D;
+  delete superAA;
+
   return 1;
 }
 
@@ -1600,7 +1456,6 @@ static Util::Config::Node DefaultConfig()
   // CModel3
   config.Set("MultiThreaded", true);
   config.Set("GPUMultiThreaded", true);
-  config.Set("PowerPCFrequency", "50");
   // 2D and 3D graphics engines
   config.Set("MultiTexture", false);
   config.Set("VertexShader", "");
@@ -1629,7 +1484,11 @@ static Util::Config::Node DefaultConfig()
   config.Set("QuadRendering", false);
   config.Set("XResolution", "496");
   config.Set("YResolution", "384");
+  config.SetEmpty("WindowXPosition");
+  config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false);
+  config.Set("BorderlessWindow", false);
+  config.Set("Supersampling", 1);
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
   config.Set("WideBackground", false);
@@ -1638,6 +1497,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("RefreshRate", 60.0f);
   config.Set("ShowFrameRate", false);
   config.Set("Crosshairs", int(0));
+  config.Set("CrosshairStyle", "vector");
   config.Set("FlipStereo", false);
 #ifdef SUPERMODEL_WIN32
   config.Set("InputSystem", "dinput");
@@ -1683,7 +1543,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2003-2022 by The Supermodel Team");
+  puts("Copyright 2003-2023 by The Supermodel Team");
 }
 
 static void Help(void)
@@ -1700,7 +1560,7 @@ static void Help(void)
   puts("  -log-level=<level>      Logging threshold [Default: info]");
   puts("");
   puts("Core Options:");
-  printf("  -ppc-frequency=<freq>   PowerPC frequency in MHz [Default: %d]\n", defaultConfig["PowerPCFrequency"].ValueAs<unsigned>());
+  puts("  -ppc-frequency=<mhz>    PowerPC frequency (default varies by stepping)");
   puts("  -no-threads             Disable multi-threading entirely");
   puts("  -gpu-multi-threaded     Run graphics rendering in separate thread [Default]");
   puts("  -no-gpu-thread          Run graphics rendering in main thread");
@@ -1708,7 +1568,10 @@ static void Help(void)
   puts("");
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
+  puts("  -ss=<n>                 Supersampling (range 1-8)");
+  puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
+  puts("  -borderless             Windowed mode with no border");
   puts("  -fullscreen             Full screen mode");
   puts("  -wide-screen            Expand 3D field of view to screen width");
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
@@ -1721,6 +1584,7 @@ static void Help(void)
   puts("  -show-fps               Display frame rate in window title bar");
   puts("  -crosshairs=<n>         Crosshairs configuration for gun games:");
   puts("                          0=none [Default], 1=P1 only, 2=P2 only, 3=P1 & P2");
+  puts("  -crosshair-style=<s>    Crosshair style: vector or bmp. [Default: vector]");
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
   puts("  -quad-rendering         Enable proper quad rendering");
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
@@ -1768,8 +1632,13 @@ static void Help(void)
 #ifdef SUPERMODEL_DEBUGGER
   puts("  -disable-debugger       Completely disable debugger functionality");
   puts("  -enter-debugger         Enter debugger at start of emulation");
-  puts("");
 #endif // SUPERMODEL_DEBUGGER
+#ifdef DEBUG
+  puts("  -gfx-state=<file>       Produce graphics analysis for save state (works only");
+  puts("                          with the legacy 3D engine and requires a");
+  puts("                          GraphicsAnalysis directory to exist)");
+#endif
+  puts("");
 }
 
 struct ParsedCommandLine
@@ -1806,6 +1675,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-load-state",            "InitStateFile"           },
     { "-ppc-frequency",         "PowerPCFrequency"        },
     { "-crosshairs",            "Crosshairs"              },
+    { "-crosshair-style",       "CrosshairStyle"          },
     { "-vert-shader",           "VertexShader"            },
     { "-frag-shader",           "FragmentShader"          },
     { "-vert-shader-fog",       "VertexShaderFog"         },
@@ -1830,6 +1700,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-gpu-thread",       { "GPUMultiThreaded", false } },
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
+    { "-borderless",          { "BorderlessWindow", true } },
     { "-no-wide-screen",      { "WideScreen",       false } },
     { "-wide-screen",         { "WideScreen",       true } },
     { "-stretch",             { "Stretch",          true } },
@@ -1935,6 +1806,52 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
             cmd_line.error = true;
           }
         }
+      }
+      else if (arg == "-window-pos" || arg.find("-window-pos=") == 0)
+      {
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-window-pos' requires both an X and Y position (e.g., '-window-pos=10,0').");
+              cmd_line.error = true;
+          }
+          else
+          {
+              int xpos, ypos;
+              if (2 == sscanf(&argv[i][11], "=%d,%d", &xpos, &ypos))
+              {
+                  cmd_line.config.Set("WindowXPosition", xpos);
+                  cmd_line.config.Set("WindowYPosition", ypos);
+              }
+              else
+              {
+                  ErrorLog("'-window-pos' requires both an X and Y position (e.g., '-window-pos=10,0').");
+                  cmd_line.error = true;
+              }
+          }
+      }
+      else if (arg == "-ss" || arg.find("-ss=") == 0) {
+
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
+              cmd_line.error = true;
+          }
+          else {
+
+              try {
+                  int val = std::stoi(parts[1]);
+                  val = std::clamp(val, 1, 8);
+
+                  cmd_line.config.Set("Supersampling", val);
+              }
+              catch (...) {
+                  ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
+                  cmd_line.error = true;
+              }
+          }
       }
       else if (arg == "-true-hz")
         cmd_line.config.Set("RefreshRate", 57.524f);
@@ -2084,6 +2001,8 @@ int main(int argc, char **argv)
 #endif // SUPERMODEL_DEBUGGER
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
 
+  aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
+
   // Create a window
   xRes = 496;
   yRes = 384;
@@ -2091,6 +2010,15 @@ int main(int argc, char **argv)
   {
     exitCode = 1;
     goto Exit;
+  }
+
+  // Create Crosshair
+  s_crosshair = new CCrosshair(s_runtime_config);
+  if (s_crosshair->Init() != OKAY)
+  {
+      ErrorLog("Unable to load bitmap crosshair texture\n");
+      exitCode = 1;
+      goto Exit;
   }
 
   // Create Model 3 emulator
@@ -2194,6 +2122,8 @@ Exit:
     delete InputSystem;
   if (Outputs != NULL)
     delete Outputs;
+  if (s_crosshair != NULL)
+      delete s_crosshair;
   DestroyGLScreen();
   SDL_Quit();
 

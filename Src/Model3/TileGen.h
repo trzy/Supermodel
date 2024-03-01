@@ -254,9 +254,6 @@ public:
 	
 private:
 	// Private member functions
-	void		RecomputePalettes(void);
-	void		InitPalette(void);
-	void		WritePalette(unsigned color, UINT32 data);
 	UINT32		UpdateSnapshots(bool copyWhole);
 	UINT32		UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty);
 
@@ -274,7 +271,6 @@ private:
 	UINT8	*memoryPool;		// all memory allocated here
 	UINT8   *vram;          	// 1.125MB of VRAM
 	UINT32	*pal[2];			// 2 x 0x20000 byte (32K colors) palette
-	bool	recomputePalettes;	// whether to recompute palettes A/A' and B/B' during sync
 
 	// Read-only snapshots
 	UINT8   *vramRO;        // 1.125MB of VRAM                       [read-only snapshot]	

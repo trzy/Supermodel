@@ -114,7 +114,9 @@ SRC_FILES = \
 	Src/Graphics/New3D/R3DShader.cpp \
 	Src/Graphics/New3D/R3DFloat.cpp \
 	Src/Graphics/New3D/R3DScrollFog.cpp \
+	Src/Graphics/FBO.cpp \
 	Src/Graphics/Render2D.cpp \
+	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
@@ -149,6 +151,7 @@ SRC_FILES = \
 	Src/Inputs/InputTypes.cpp \
 	Src/Inputs/MultiInputSource.cpp \
 	Src/OSD/SDL/SDLInputSystem.cpp \
+	Src/OSD/SDL/Crosshair.cpp \
 	Src/OSD/Outputs.cpp \
 	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \

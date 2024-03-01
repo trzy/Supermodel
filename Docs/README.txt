@@ -10,10 +10,10 @@
                  ####
 
                        A Sega Model 3 Arcade Emulator.
-                   Copyright 2003-2022 The Supermodel Team
+                   Copyright 2003-2023 The Supermodel Team
 
 
-                   USER MANUAL FOR SUPERMODEL VERSION 0.2A
+                        USER MANUAL FOR SUPERMODEL
 
 
 ================
@@ -21,30 +21,38 @@
 ================
 
 Supermodel emulates the Sega Model 3 arcade platform.  It uses OpenGL 2.1 and
-SDL, and can run on Windows, Linux, and Mac OS X.  In order to use it, you must
-legally possess ROM images of Model 3 games.  Learning to operate Supermodel
-will come with a steep learning curve for most people.  Before seeking out
-help, please read this user manual carefully.
+SDL, and can run on Windows, Linux, and Mac OS X.  Development began in January
+of 2011 and continues to focus on reverse engineering all aspects of the Model
+3 arcade platform.
+
+In order to use Supermodel, you must legally possess ROM images of Model 3
+games.  Learning to operate Supermodel will come with a steep learning curve for
+most people.  Before seeking out help, please read this user manual carefully.
 
 Supermodel is distributed as free software under the terms of the GNU General
 Public License, included in LICENSE.txt.  Additional copyright information for
 software included within Supermodel is located at the bottom of this file.
 
-The source code may be obtained from the official Supermodel web site:
+Windows 64-bit builds are updated automatically and are available for download
+on the official Supermodel download page.  Linux and MacOS users currently have
+to compile/build their own executable from the GitHub source code repository.
+
+The official Supermodel website:
 
     http://www.Supermodel3.com
+
+Supermodel's GitHub source code repository:
+
+    https://github.com/trzy/Supermodel
 
 
 ==============
   Disclaimer
 ==============
 
-This is an early public release of Supermodel.  It is very much preliminary,
-alpha version software (hence the 'a' in the version number).  Development
-began in January of 2011 and has focused on reverse engineering aspects of the
-Model 3 that are still unknown.  Consequently, many important features, such as
-a proper user interface, are not yet implemented and game compatibility is
-still low.
+Supermodel is a work-in-progress, open source emulator.  Emulation in Supermodel
+has evolved to the point where most games run well, however there may be some
+minor visual issues.  Your experience may vary.
 
 
 =====================
@@ -53,83 +61,26 @@ still low.
 
     --- Introduction
     --- Disclaimer
-    --- Table of Conents
-     1. Revision History
-     2. Installing Supermodel
-     3. Running Supermodel
-     4. Game Compatibility
-     5. Video Settings
-     6. Audio Settings
-     7. Controls
-     8. Force Feedback
-     9. Save States and NVRAM
-    10. Game-Specific Comments and Tips
-    11. The Configuration File
-    12. Index of Command Line Options
-    13. Index of Configuration File Settings
-    14. Compiling the Source Code
-    15. Contact Information
-    16. Acknowledgments
-
-
-=======================
-  1. Revision History
-=======================
-
-    Version 0.2a (September 24, 2011)
-        - New, fully customizable input system.  Supports any combination of
-          keyboards, mice, and analog and digital controllers.  [Nik Henson]
-        - Texture offsets.  Fixes models in 'Fighting Vipers 2', 'Virtual On',
-          cars in the 'Scud Race' and 'Daytona USA 2' selection screens, etc.
-        - Fixed a 2D palette bug that would cause black pixels to occasionally
-          turn transparent.
-        - Added all remaining ROM sets.  [krom]
-        - Got some new games to boot: 'Spikeout', 'Ski Champ', 'Sega Bass
-          Fishing', 'Dirt Devils', etc.
-        - Sound support.  Special thanks to ElSemi for contributing his SCSP
-          emulator and Karl Stenerud for allowing us to use his 68K emulator.
-        - Multi-threading support.  Sound and drive board emulation are off-
-          loaded to separate threads, substantially enhancing performance.
-          [Nik Henson]
-        - Z80 emulation based on code by Frank D. Cringle and YAZE-AG by
-          Andreas Gerlich.
-        - Digital Sound Board (MPEG music) emulation courtesy of R. Belmont and
-          the MPEG decoder library by Tomislav Uzelac.
-        - Improved ROM loader.  It should no longer be as easily confused by
-          combined ROM sets as long as unused files are removed.
-        - Configuration file now supports more settings and allows game-
-          specific customization.
-        - Added light gun crosshairs ('The Lost World'), enabled by default in
-          full screen mode and selectable by pressing Alt-I.
-        - Drive board and force feedback emulation for 'Scud Race', 'Daytona
-          USA 2', and 'Sega Rally 2'.  [Nik Henson]
-        - Viewable display area properly clipped.  Ghost artifacts no longer
-          appear in border regions when the resolution exceeds the display
-          area.
-        - Changed gear shifting: added a dedicated neutral gear and sequential
-          shifting.
-        - Console-based debugger (not enabled by default, must be
-          enabled during compile-time).  [Nik Henson]
-        - Source code and Makefile cleanup.
-
-    Version 0.1.2a (April 3, 2011)
-        - Included missing GLEW files.
-
-    Version 0.1.1a (April 2, 2011)
-        - Minor source code update.
-        - Set Render3D to NULL in the CReal3D constructor.  Fixes crashes that
-          occur on some builds. [Nik Henson]
-        - Cleaned up UNIX Makefile and added OS X Makefile.  [R. Belmont]
-        - Small changes to ppc_ops.cpp for C++0x compliance.  [R. Belmont]
-        - Included glew.h into the source tree.  [R. Belmont]
-        - Changed WIN32 definition to SUPERMODEL_WIN32.
-
-    Version 0.1a (April 1, 2011)
-        - Initial public alpha release.
+    --- Table of Contents
+     1. Installing Supermodel
+     2. Running Supermodel
+     3. Game Compatibility
+     4. Video Settings
+     5. Audio Settings
+     6. Controls
+     7. Force Feedback
+     8. Save States and NVRAM
+     9. Game-Specific Comments and Tips
+    10. The Configuration File
+    11. Index of Command Line Options
+    12. Index of Configuration File Settings
+    13. Compiling the Source Code
+    14. Contact Information
+    15. Acknowledgments
 
 
 ============================
-  2. Installing Supermodel
+  1. Installing Supermodel
 ============================
 
 To install Supermodel on Windows, extract the ZIP archive containing the
@@ -139,25 +90,33 @@ directories should be created:
     Name                    Description
     ----                    -----------
     Supermodel.exe          Supermodel program.  Run this.
-    SDL.dll                 The SDL library.  Use the bundled DLL file.
     README.txt              This text file.
     LICENSE.txt             Supermodel license and terms of use.
-    Config/                 Directory where the configuration file is stored.
+    CHANGES.txt             Change log directly produces directly from the
+                            source code repository.
+    Assets/                 Directory containing multimedia assets required by
+                            Supermodel.
+    Assets/p1crosshair.bmp  Bitmap crosshair image for player 1, used when bit-
+                            mapped crosshairs are enabled
+                            ('--crosshair-style=bmp').
+    Assets/p2crosshair.bmp  Bitmap crosshair image for player 2.
+    Config/                 Directory where required configuration files are
+                            stored.
     Config/Supermodel.ini   Configuration file containing default input
                             settings.
+    Config/Games.xml        Game and ROM set definitions.
     NVRAM/                  Directory where NVRAM contents will be saved.
+    ROMs/                   Directory conveniently included (but not required)
+                            for placing ROM sets.
     Saves/                  Directory where save states will be saved.
 
-Supermodel requires OpenGL 2.1 and a substantial amount of both video and
-system memory.  A very fast CPU and GPU are needed to achieve playable frame
-rates.
-
-As of this version, Linux and Mac OS X binaries are not provided.  Users must
-compile their own.
+Supermodel requires OpenGL 2.1 and a substantial amount of both video and system
+memory.  A modern 64-bit CPU and a mid range GPU are the minimum recommendations
+to achieve consistent frame rates of 60 FPS.
 
 
 =========================
-  3. Running Supermodel
+  2. Running Supermodel
 =========================
 
 For now, Supermodel does not include a proper user interface.  It is operated
@@ -181,139 +140,135 @@ command prompt.  In full screen mode, they will not be visible.
 
 
 =========================
-  4. Game Compatibility
+  3. Game Compatibility
 =========================
 
-Supermodel recognizes all known Model 3 ROM sets but not all of them are
-playable.  Below is a compatibility matrix.  The most obvious problem with each
-ROM set is reported.
+Supermodel recognizes all known Model 3 ROM sets. Below is a compatibility
+matrix.  Other than minor graphical issues, if any, major issues are reported
+below:
 
-   ROM Set                    Title                  Playable?   Comments
-+-----------+-----------------------------------------+-----+-----------------+
-| bass      | Sega Bass Fishing                       | No  | No controls.    |
-+-----------+-----------------------------------------+-----+-----------------+
-| daytona2  | Daytona USA 2 Battle on the Edge        | Yes | Minor graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| dayto2pe  | Daytona USA 2 Power Edition             | Yes | Minor graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| dirtdvls  | Dirt Devils                             | Yes | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| dirtdvlsa | Dirt Devils (Alternate)                 | Yes | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| eca       | Emergency Call Ambulance                | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| ecax      | Emergency Call Ambulance (Export)       | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| fvipers2  | Fighting Vipers 2                       | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| getbass   | Get Bass                                | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| harley    | Harley Davidson & L.A. Riders           | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| harleyb   | Harley Davidson & L.A. Riders (Rev. B)  | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| lamachin  | L.A. Machineguns                        | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| lemans24  | Le Mans 24                              | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| lostwsga  | The Lost World                          | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| magtruck  | Magical Truck Adventure                 | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| oceanhun  | The Ocean Hunter                        | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scud      | Scud Race (Australia)                   | Yes | Minor shading   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scuda     | Scud Race (Export)                      | Yes | Minor shading   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scudj     | Scud Race (Japan)                       | Yes | Mis-colored 2D  |
-|           |                                         |     | graphics.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| scudp     | Scud Race Plus                          | Yes | Minor shading   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| skichamp  | Ski Champ                               | No  | Severe graphics |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| spikeofe  | Spikeout Final Edition                  | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| spikeout  | Spikeout                                | Yes | Some texture    |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| srally2   | Sega Rally 2                            | Yes | Major graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| srally2x  | Sega Rally 2 DX                         | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| swtrilgy  | Star Wars Trilogy (Rev. A)              | Yes | Some graphics   |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| swtrilgya | Star Wars Trilogy                       | No  | Does not boot.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vf3       | Virtua Fighter 3                        | Yes | Major graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| vf3a      | Virtua Fighter 3 (Rev. A)               | Yes | Major graphics  |
-|           |                                         |     | problems.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| vf3tb     | Virtua Fighter 3 Team Battle            | No  | Cannot coin up. |
-+-----------+-----------------------------------------+-----+-----------------+
-| von2      | Virtual On Oratorio Tangram             | Yes | Encrypted 2D    |
-|           |                                         |     | graphics.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| von254g   | Virtual On Oratorio Tangram (Ver. 5.4g) | Yes | Encrypted 2D    |
-|           |                                         |     | graphics.       |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs2       | Virtua Striker 2 (Step 2.0)             | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs215     | Virtua Striker 2 (Step 1.5)             | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs298     | Virtua Striker 2 '98 (Step 2.0)         | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs29815   | Virtua Striker 2 '98 (Step 1.5)         | Yes | Slow.           |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs299     | Virtua Striker 2 '99                    | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs299a    | Virtua Striker 2 '99 (Rev. A)           | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs299b    | Virtua Striker 2 '99 (Rev. B)           | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
-| vs2v991   | Virtua Striker 2 '99.1                  | No  | PowerPC error.  |
-+-----------+-----------------------------------------+-----+-----------------+
+   ROM Set                    Title                           Comments
++------------+-----------------------------------------+-----------------------+
+| bassdx     | Sega Bass Fishing (USA)                 |                       |
+|  getbassdx | Get Bass: Sega Bass Fishing (Deluxe)    |                       |
+|  getbassur | Get Bass: Sega Bass Fishing (Upright)   |                       |
+|  getbass   | Get Bass: Sega Bass Fishing             |                       |
++------------+-----------------------------------------+-----------------------+
+| daytona2   | Daytona USA 2 Battle on the Edge        |                       |
+|  dayto2pe  | Daytona USA 2 Power Edition             |                       |
++------------+-----------------------------------------+-----------------------+
+| dirtdvls   | Dirt Devils (Export, Revision A)        |                       |
+|  dirtdvlsu | Dirt Devils (USA, Revision A)           |                       |
+|  dirtdvlsj | Dirt Devils (Japan, Revision A)         |                       |
+|  dirtdvlsau| Dirt Devils (Australia, Revision A)     |                       |
+|  dirtdvlsg | Dirt Devils (Export, Ver. G?)           |                       |
++------------+-----------------------------------------+-----------------------+
+| eca        | Emergency Call Ambulance (Export)       |                       |
+|  ecau      | Emergency Call Ambulance (USA)          |                       |
+|  ecaj      | Emergency Call Ambulance (Japan)        |                       |
+|  ecap      | Emergency Call Ambulance (US proto?)    |                       |
++------------+-----------------------------------------+-----------------------+
+| fvipers2   | Fighting Vipers 2 (Japan, Revision A)   |                       |
+|  fvipers2o | Fighting Vipers 2 (Japan)               |                       |
++------------+-----------------------------------------+-----------------------+
+| harley     | Harley Davidson & L.A. Riders (Rev. B)  |                       |
+|  harleya   | Harley Davidson & L.A. Riders (Rev. A)  |                       |
++------------+-----------------------------------------+-----------------------+
+| lamachin   | L.A. Machineguns: Rage of the Machines  |                       |
++------------+-----------------------------------------+-----------------------+
+| lemans24   | Le Mans 24 (Japan, Revision B)          |                       |
++------------+-----------------------------------------+-----------------------+
+| lostwsga   | The Lost World Arcade (Japan, Rev A)    |                       |
+|  lostwsgp  | The Lost World Aracde (Location Test)   |                       |
++------------+-----------------------------------------+-----------------------+
+| magtruck   | Magical Truck Adventure (Japan)         |                       |
+|  mgtrkbad  | Magical Truck Adventure (bit rot dump)  |                       |
++------------+-----------------------------------------+-----------------------+
+| oceanhun   | The Ocean Hunter (Japan, Revision A)    |                       |
+|  oceanhuna | The Ocean Hunter (Japan)                |                       |
++------------+-----------------------------------------+-----------------------+
+| scud       | Scud Race (Export, Twin/DX)             |                       |
+|  scudau    | Scud Race (Australia, Twin/DX)          |                       |
+|  scuddx    | Scud Race (Export, Deluxe, Revision A)  |                       |
+|  scudplus  | Scud Race (Export, Twin/DX, Revision A) |                       |
+|  scudplusa | Scud Race (Export, Twin/DX)             |                       |
++------------+-----------------------------------------+-----------------------+
+| skichamp   | Ski Champ (Japan)                       |                       |
++------------+-----------------------------------------+-----------------------+
+| spikeofe   | Spikeout Final Edition (Export)         |                       |
++------------+-----------------------------------------+-----------------------+
+| spikeout   | Spikeout (Export, Revision C)           |                       |
++------------+-----------------------------------------+-----------------------+
+| srally2    | Sega Rally 2 (Export)                   |                       |
+|  srally2p  | Sega Rally 2 (Prototype)                | proto is non working  |
+|  srally2pa | Sega Rally 2 (Prototype Version A)      | proto is non working  |
+|  srally2dx | Sega Rally 2 (Export, Deluxe)           |  DX set may run slow  |
++------------+-----------------------------------------+-----------------------+
+| swtrilgy   | Star Wars Trilogy (Export, Revision A)  |   see note 1 below    |
+|  swtrilgya | Star Wars Trilogy (Export)              |   see note 1 below    |
+|  swtrilgyp | Star Wars Trilogy (Location Test)       |   see note 2 below    |
++------------+-----------------------------------------+-----------------------+
+| vf3        | Virtua Fighter 3 (Japan, Revision D)    |                       |
+|  vf3c      | Virtua Fighter 3 (Japan, Revision C)    |                       |
+|  vf3a      | Virtua Fighter 3 (Japan, Revision A)    |                       |
+|  vf3tb     | Virtua Fighter 3 Team Battle (Japan)    |                       |
++------------+-----------------------------------------+-----------------------+
+| von2       | Virtual On Oratorio Tangram (Revision B)|                       |
+|  von2a     | Virtual On Oratorio Tangram (Revision A)|                       |
+|  von2o     | Virtual On Oratorio Tangram             |                       |
+|  von254g   | Virtual On Oratorio Tangram (Ver. 5.4g) |                       |
++------------+-----------------------------------------+-----------------------+
+| vs2        | Virtua Striker 2 (Step 2.0, Export, USA)|                       |
+|  vs215     | Virtua Striker 2 (Step 1.5, Export, USA)|                       |
+|  vs215o    | Virtua Striker 2 (Step 1.5, Japan test?)|                       |
++------------+-----------------------------------------+-----------------------+
+| vs298      | Virtua Striker 2 '98 (Step 2.0, Japan)  |                       |
+|  vs29815   | Virtua Striker 2 '98 (Step 1.5, Japan)  |                       |
++------------+-----------------------------------------+------------+----------+
+| vs2v991    | Virtua Striker 2 '99.1 (Step 2.1 Export, USA, Rev B) |          |
+|  vs299a    | Virtua Striker 2 '99   (Step 2.1 Export, USA, Rev A) |          |
+|  vs299     | Virtua Striker 2 '99   (Step 2.1 Export, USA)        |          |
+|  vs299j    | Virtua Striker 2 '99.1 (Step 2.1 Japan, Rev B)       |          |
+|  vs29915   | Virtua Striker 2 '99.1 (Step 1.5 Export, USA, Rev B) |          |
+|  vs29915a  | Virtua Striker 2 '99   (Step 1.5 Export, USA)        |          |
+|  vs29915j  | Virtua Striker 2 '99.1 (Step 1.5 Japan, Rev B)       |          |
++------------+------------------------------------------------------+----------+
 
-Most ROM sets suffering from severe graphical problems are categorized as non-
-playable when in fact many are partially playable.  Controls may not be fully
-functional, however, and none have been tested thoroughly.
+Note 1: Set game to U/R in game assignment in the TEST MENU to bypass the
+        "WAIT SETUP THE FEEDBACK STICK" screen
+Note 2: Set game to SD in game assignment in the TEST MENU or wait a few seconds
+        for the game to continue past the "WAIT SETUP THE FEEDBACK STICK" screen
 
 
 =====================
-  5. Video Settings
+  4. Video Settings
 =====================
 
-Supermodel may be run in either windowed (default) or full screen mode.  It
-automatically adjusts the display area to retain the aspect ratio of the Model
-3's native (and Supermodel's default) resolution, 496x384.  Currently, this
-cannot be overriden.  Changing video modes at run-time is not yet supported.
+Supermodel may be run in either windowed (default) or full screen mode.  By
+default, it automatically adjusts the display area to retain the aspect ratio of
+the Model 3's native (and Supermodel's default) resolution, 496x384, introducing
+letterboxing (black borders) as needed.
+
+To stretch the image to fill the display, use the '-stretch' option.
+
+Wide aspect ratios that extend the field of view horizontally are supported by
+using the '-wide-screen' option.  This works well for most common aspect ratio
+and additional geometry will be visible but at extremely wide aspect ratios,
+objects will be culled by games, which are not aware of the extended field of
+view.  Tile-based 2D background layers will not be stretched and will be
+letterboxed.
+
+To stretch the 2D background layers, use '-wide-bg'.  Many games use 2D back-
+grounds instead of 3D skyboxes and when playing in wide screen mode, this option
+often enhances their appearance.
 
 By default, Supermodel limits the frame rate to 60 frames per second.  This has
 no impact on performance except when the frame rate exceeds 60 FPS on fast
 systems.  Frame rate limiting can be disabled with the '-no-throttle' option.
 Some video drivers may continue to lock to the refresh rate.
+
+The actual Model 3 refresh rate is 57.524 Hz.  The '-true-hz' option will switch
+to this rate.
 
 To change the resolution, use the '-res' command line option.  For full screen
 mode, use '-fullscreen'.  For example, to set a full screen 1920x1080 mode,
@@ -324,9 +279,11 @@ try:
 Video settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this manual.
 
+Changing video modes at run-time is not yet supported.
+
 
 =====================
-  6. Audio Settings
+  5. Audio Settings
 =====================
 
 All Model 3 games have a sound board that is used for sound effects and, in
@@ -372,7 +329,7 @@ tunes do not sound quite correct yet.
 
 
 ===============
-  7. Controls
+  6. Controls
 ===============
 
 Game controls are fully configurable and can be mapped to keyboards, mice, and
@@ -517,6 +474,11 @@ For multiple mouse support, allowing two mice or PC light guns to be mapped,
 Raw Input must be used.  This is supported only on Windows and is described
 below.
 
+For specific information on using Sinden Light guns with Supermodel, refer to
+the Sinden Light gun Wiki:
+
+https://www.sindenwiki.org/wiki/Supermodel_M3
+
 
 Input Systems
 -------------
@@ -583,7 +545,7 @@ Common input-related problems are discussed below.
     ---------
 
     Problem:
-        Unable to select a particular joysick axis when configuring a mapping.
+        Unable to select a particular joystick axis when configuring a mapping.
 
     Solution:
         This may mean that the joystick axis needs calibrating.  This can be
@@ -622,7 +584,7 @@ Common input-related problems are discussed below.
 
 
 =====================
-  8. Force Feedback
+  7. Force Feedback
 =====================
 
 Force feedback is presently supported in 'Scud Race' (including 'Scud Race
@@ -687,7 +649,7 @@ best feel.
 
 
 ============================
-  9. Save States and NVRAM
+  8. Save States and NVRAM
 ============================
 
 Save states are saved and restored by pressing F5 and F7, respectively.  Up to
@@ -711,31 +673,134 @@ can be cleared by deleting the NVRAM files or pressing Alt-N.
 
 
 =======================================
-  10. Game-Specific Comments and Tips
+  9. Game-Specific Comments and Tips
 =======================================
+
+This section contains additional game-specific setup information, workarounds
+for emulation issues, and region codes for changing the region.
+
+
+Cyber Troopers Virtual-On Oratorio Tangram
+------------------------------------------
+
+To change the region, enter Test mode and press Start, Start, Service, Start,
+Start, Start, Service, Service, Test.
 
 
 Daytona USA 2 and Daytona USA 2 Power Edition
 ---------------------------------------------
 
-To bypass the network board error, enter the Test Menu by pressing the Test
-button.  Navigate to 'Game Assignments' using the Service button and select it
-with Test.  Change 'Link ID' from 'Master' to 'Single'.
-
-In 'Daytona USA 2', the region menu can be accessed by entering the Test Menu,
-holding down the Start button, and pressing: VR4, VR4, VR2, VR3, VR1, VR3, VR2.
-Changing the region to USA changes game text to English.
-
 By default, the 'Power Edition' ROM set features remixed music lyrics by
 Takenobu Mitsuyoshi.  These can be changed back to the Dennis St. James version
 in the Test Menu, under 'Game Assignments'.
+
+The region change menu can be accessed in two different ways:
+
+  1. Enter Test mode and push the Service and Test buttons simultaneously.
+  2. Enter Test mode. Then, hold Start and press VR4, VR4, VR2, VR3, VR1, VR3,
+     VR2.
+
+
+Dirt Devils
+-----------
+
+To access the region change menu, enter Test mode and press Start, Start,
+Service, Start, Start, Start, Service, Test.
+
+
+Emergency Call Ambulance
+------------------------
+
+To play as the paramedics pushing a stretcher, highlight 'Manual' at the
+transmission select screen and then perform the following sequences of gear
+shifts: Shift Up, Shift Up, Shift Down, Shift Down, Shift Up.
+
+Supermodel presently only emulates a sequential shifter but cabinets with a 4-
+way H-type shifter exist and the shift sequence on this units is: 3, 3, 4, 4, 3
+or 1, 1, 2, 2, 1.
+
+
+Fighting Vipers 2
+-----------------
+
+To change the region, in the 'Game Assignments' screen in Test mode, set the
+cursor at the 'Country' line and press: Left, Left, Left, Right, Right, Left.
+The country can then be changed using the Test switch.
+
+
+Get Bass and Sega Bass Fishing
+------------------------------
+
+To change the region, enter Test mode and go to the second screen of the CRT
+test ('C.R.T. Test 2/2'). Press the Service button four times and then exit the
+CRT test.  Next, enter 'Game Assignments', press Service three times, then press
+and hold Service and while holding, press Test.  The region select menu will
+appear.
+
+
+Harley-Davidson and L.A. Riders
+-------------------------------
+
+To change the region, enter Test mode and in the 'Game Assignments' screen,
+press Shift Up, Shift Up, Shift Down, Shift Down, View, Music, View, Music.
+
+
+L.A. Machineguns
+----------------
+
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
+Start, P1 Start, P1 Start, Service, Test.
 
 
 Le Mans 24
 ----------
 
-The region can be changed by entering the test menu (press the Test button) and
-pressing: Start, Start, Service, Service, Start, Test.
+To change the region, enter Test mode and press Start, Start, Service, Service,
+Start, Test.
+
+
+Magical Truck Adventure
+-----------------------
+
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
+Start, Service, Test.
+
+
+Sega Rally 2
+------------
+
+As with 'Star Wars Trilogy', you may experience problems if you attempt to
+start a game before any 3D graphics are displayed (for example, during the Sega
+logo).
+
+To change the region, enter Test mode and perform the following series of short
+(press and release) and long (press and hold for 4-5 seconds) Service button
+presses: 4 short, 2 long, 2 short, 1 long.
+
+
+Ski Champ
+---------
+
+To change the region, enter Test mode and press Select 1, Select 3, Select 1,
+Select 3, Service, Service.
+
+
+Spikeout
+--------
+
+To change the region, enter Test mode, place the cursor on the 'Game
+Assignments' line and press Charge, Start, Jump, Start, Start, Start, Shift,
+Start, Start.  The region change menu will be revealed.
+
+
+Spikeout Final Edition
+----------------------
+
+To change the region, enter Test mode, place the cursor on the
+'Game Assignments' line, and while holding the Service button press Jump, Start,
+Jump, Start.  Then, release the Service button and press Shift, Start, Start,
+Start, Charge, Start, Start, Shift, Start, Test.  The region change menu will be
+revealed.
 
 
 Star Wars Trilogy
@@ -747,29 +812,12 @@ caused by an unknown emulation bug.  Simply wait until the Darth Vader sequence
 appears before attempting to start a game.
 
 If 'Star Wars Trilogy' is booting directly into the stage select screen, it is
-probably because you exited Supermodel with credits still in the machine.
-Clear the NVRAM (Alt-N) and reset the game (Alt-R).
+probably because you exited Supermodel with credits still in the machine.  Clear
+the NVRAM (Alt-N) and reset the game (Alt-R).
 
-
-Sega Rally 2
-------------
-
-As with 'Star Wars Trilogy', you may experience problems if you attempt to
-start a game before any 3D graphics are displayed (for example, during the Sega
-logo).
-
-The region can be changed by entering the test menu (press the Test button) and
-then pressing the Service button four times for short durations, twice for long
-durations, twice for short durations, and once again for a long duration.
-
-
-Spikeout and Spikeout Final Edition
------------------------------------
-
-These games can be played all the way through but may lock up during the
-attract mode.  There are periodic texture glitches due to Supermodel's
-inadequate texture caching system and possibly also due to a texture offset
-bug.
+To change the region, enter Test mode and perform the following series of short
+(press and release) and long (press and hold for 4-5 seconds) Service button
+presses: 3 short, 2 long, 2 short, 1 long.
 
 
 The Lost World
@@ -780,33 +828,27 @@ the 'off-screen' button and, simultaneously, pressing the trigger to shoot.
 This behavior can be changed with the 'InputAutoTrigger' setting in the
 configuration file.
 
-The region can be changed by entering the test menu (press the Test button) and
-pressing: Start, Start, Service, Start, Service, Test.  Use the player 1 Start
-button.
+To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
+Start, Service, Test.
 
 
-Virtua Fighter 3
+The Ocean Hunter
 ----------------
 
-The game is playable but there are numerous graphical glitches, particularly
-during transition scenes.
+To change the region, enter Test mode and in 'Game Assignments', press P1 Start,
+P2 Start, P1 Start, P2 Start, P1 Start, P2 Start, P2 Start.
 
 
-Virtua Striker 2 '98 (Step 1.5 and 2.0 versions)
-------------------------------------------------
+Virtua Striker 2 '98
+--------------------
 
-The Virtua Striker games all run very slowly for an unknown reason.
-
-The region can be changed by entering the test menu (press the Test button)
-and, in the 'Game Assignments' menu, performing the following sequence:
-
-    1. Press the Service button once for about 5 seconds.
-    2. Press the Service button three times shortly.
-    3. Press the Service button again one time for about 5 seconds.
+To change the region, enter Test mode and in 'Game Assignments', perform the
+following series of short (press and release) and long (press and hold for 4-5
+seconds) Service button presses: 1 long, 3 short, 1 long.
 
 
 ==============================
-  11. The Configuration File
+  10. The Configuration File
 ==============================
 
 Supermodel reads configuration settings from 'Supermodel.ini' located in the
@@ -860,7 +902,7 @@ Section names appear in between square brackets on their own lines.
 
     [ SectionName ]
 
-Settings that appear at the beginning of the file without a preceeding section
+Settings that appear at the beginning of the file without a preceding section
 are automatically assigned to 'Global'.
 
 Comments begin with a semicolon and extend until the end of the line.
@@ -1038,7 +1080,7 @@ their perfect center when released.  The dead zone is expressed as a percentage
 
 InputJoy**Saturation: The saturation of a joystick axis is the point at which
 the axis is considered to be at its most extreme position.  It can be thought
-of as a measure of the sensivity of the axis.  Like the dead zone, it is
+of as a measure of the sensitivity of the axis.  Like the dead zone, it is
 expressed as a percentage of the axis range but its value may be larger than
 100, up to a maximum of 200.  A value of 50 means that the joystick only needs
 to be moved halfway in order for Supermodel to see it as fully extended.
@@ -1060,7 +1102,7 @@ options.  The default values are MinVal -32768, OffVal 0, and MaxVal 32767 but
 with the pedal example just given, they would need to be set to MinVal 32767,
 OffVal 32767, and MaxVal -32768.
 
-In most cases it will be unecessary to alter the DeadZone, MinVal, OffVal, and
+In most cases it will be unnecessary to alter the DeadZone, MinVal, OffVal, and
 MaxVal options by hand as calibrating a joystick axis from within the input
 configuration screens of Supermodel will set them automatically.  Only the
 sensitivity option is not configured in this way.
@@ -1084,7 +1126,7 @@ option '-input-system=rawinput' and the input mappings configured for each gun.
 
 
 =====================================
-  12. Index of Command Line Options
+  11. Index of Command Line Options
 =====================================
 
 All valid command line settings are listed here, ordered by category.  Defaults
@@ -1223,7 +1265,7 @@ not.  All options are case sensitive.
 
     Option:         -config-inputs
 
-    Description:    Launches the interacive input configuration utility in the
+    Description:    Launches the interactive input configuration utility in the
                     command prompt window.  Allows controls to be remapped.
                     See the section on controls for more information.
 
@@ -1258,7 +1300,7 @@ not.  All options are case sensitive.
 
 
 ============================================
-  13. Index of Configuration File Settings
+  12. Index of Configuration File Settings
 ============================================
 
 All valid configuration file settings are listed here, ordered by category.
@@ -1828,7 +1870,7 @@ All settings are case sensitive.
 
 
 =================================
-  14. Compiling the Source Code
+  13. Compiling the Source Code
 =================================
 
 First, ensure that OpenGL, SDL (http://www.libsdl.org), and zlib
@@ -1862,7 +1904,7 @@ When everything is ready, rename the appropriate Makefile to 'Makefile' and run
 
 
 ===========================
-  15. Contact Information
+  14. Contact Information
 ===========================
 
 The official Supermodel web site is:
@@ -1883,7 +1925,7 @@ We ask that you remain mindful of the following courtesies:
 
 
 =======================
-  16. Acknowledgments
+  15. Acknowledgments
 =======================
 
 Numerous people contributed their precious time and energy to this project.
@@ -1900,6 +1942,8 @@ we would like to thank:
     - Andrew Lewis (a.k.a. Andy Geezer), for dumping the drive board ROMs and
       providing region codes
     - The Guru, for his efforts in dumping Model 3 ROM sets
+    - Brian Troha & The Dumping Union, for their continuing efforts in adding
+      new Model 3 ROM sets
     - Abelardo Vidal Martos, for providing extremely useful video recordings of
       actual Model 3 games
     - Andrew Gardner, for fruitful discussion
@@ -1907,6 +1951,8 @@ we would like to thank:
       thorough play-testers
     - Charles MacDonald, for his helpful description of the System 24 tile
       generator
+    - Andreas Naive, Olivier Galibert, David Haywood & MAME for the interface
+      to and decryption code for the Sega 315-5881 protection device
 
 Supermodel includes code from the following projects:
 

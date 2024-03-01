@@ -963,6 +963,10 @@ void CLegacy3D::RenderFrame(void)
 
   // Begin frame
   ClearErrors();  // must be cleared each frame
+
+  if (m_aaTarget) {
+      glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer
+  }
   
   // Z buffering (Z buffer is cleared by display list viewport nodes)
   glDepthFunc(GL_LESS);
@@ -1039,6 +1043,10 @@ void CLegacy3D::RenderFrame(void)
   glDisableClientState(GL_TEXTURE_COORD_ARRAY);
   glDisableClientState(GL_NORMAL_ARRAY);
   glDisableClientState(GL_VERTEX_ARRAY);
+
+  if (m_aaTarget) {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+  }
 }
 
 void CLegacy3D::EndFrame(void)
@@ -1089,7 +1097,7 @@ void CLegacy3D::SetStepping(int stepping)
   DebugLog("Legacy3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
   
-bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
+bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
   // Allocate memory for texture buffer
   textureBuffer = new(std::nothrow) GLfloat[1024*1024*4];
@@ -1097,6 +1105,8 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     return ErrorLog("Insufficient memory for texture decode buffer.");
     
   glGetError(); // clear error flag
+
+  m_aaTarget = aaTarget;
   
   // Create model caches and VBOs
   if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false))
@@ -1310,7 +1320,8 @@ float CLegacy3D::GetLosValue(int layer)
 }
 
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
-  : m_config(config)
+  : m_config(config),
+    m_aaTarget(0)
 { 
   cullingRAMLo = NULL;
   cullingRAMHi = NULL;

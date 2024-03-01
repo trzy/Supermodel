@@ -97,22 +97,24 @@ enum class Layer { colour, trans1, trans2, trans12 /*both 1&2*/, all, none };
 struct Mesh
 {
 	//helper funcs
-	bool Render(Layer layer)
+	bool Render(Layer layer, float nodeAlpha)
 	{
+		bool nAlpha = nodeAlpha < 1.0f;
+
 		switch (layer)
 		{
 		case Layer::colour:
-			if (polyAlpha) {
+			if (polyAlpha || nAlpha) {
 				return false;
 			}
 			break;
 		case Layer::trans1:
-			if ((!textureAlpha && !polyAlpha) || transLSelect) {
+			if ((!textureAlpha && !polyAlpha && !nAlpha) || transLSelect) {
 				return false;
 			}
 			break;
 		case Layer::trans2:
-			if ((!textureAlpha && !polyAlpha) || !transLSelect) {
+			if ((!textureAlpha && !polyAlpha && !nAlpha) || !transLSelect) {
 				return false;
 			}
 			break;
@@ -145,6 +147,7 @@ struct Mesh
 	bool highPriority	= false;		// rendered over the top
 	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1
 	bool translatorMap	= false;		// colours are multiplied by 16
+	bool noLosReturn	= false;		// line of sight test
 
 	// lighting
 	bool fixedShading	= false;
@@ -183,6 +186,9 @@ struct Model
 
 	//model scale step 1.5+
 	float scale = 1.0f;
+
+	//node transparency
+	float alpha = 1.0f;
 };
 
 struct Viewport
@@ -236,6 +242,8 @@ public:
 	int currentPage;
 	Clip currentClipStatus;
 	float currentModelScale;
+	float currentModelAlpha;
+	bool currentDisableCulling;
 
 private:
 
@@ -246,6 +254,8 @@ private:
 		int page;
 		Clip clip;
 		float modelScale;
+		float modelAlpha;	// from culling node
+		bool disableCulling;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };

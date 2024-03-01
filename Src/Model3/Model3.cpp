@@ -48,6 +48,9 @@
  * 90000000-9000000B  Real3D VROM Texture Port
  * 94000000-940FFFFF  Real3D Texture FIFO
  * 98000000-980FFFFF  Real3D Polygon RAM
+ * C0000000-C000FFFF  Netboard Shared RAM (Step 1.5+)
+ * C0010000-C00101FF  Netboard Registers (Step 1.5+)
+ * C0020000-C002FFFF  Netboard Program RAM (Step 1.5+)
  * C0000000-C00000FF  SCSI (Step 1.x)
  * C1000000-C10000FF  SCSI (Step 1.x) (Lost World expects it here)
  * C2000000-C20000FF  Real3D DMA (Step 2.x)
@@ -86,14 +89,14 @@
  * F0100014: IRQ Enable
  *   7   6   5   4   3   2   1   0
  * +---+---+---+---+---+---+---+---+
- * | ? |SND| ? |NET|VD3|VD2|VBL|VD0|
+ * | ? |SND| ? |NET|VGP|VDP|VBL|VD0|
  * +---+---+---+---+---+---+---+---+
  *    SND   SCSP (sound)
  *    NET   Network
- *    VD3   Unknown video-related
- *    VD2   Unknown video-related
+ *    VGP   GP done (geometry processing)
+ *    VDP   DP done (display processing)
  *    VBL   VBlank start
- *    VD0   Unknown video-related (?)
+ *    VD0   Unknown video-related
  *    0 = Disable, 1 = Enable
  *
  * Game Buttons
@@ -556,6 +559,10 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
   case 0x18:         // swtrilgy and getbass. Remove IO board error on getbass. Not sure, but may be related to device feedback ?
       data = 0x7f;   // Note : when this returned value is wrong, there is a side effect on Ocean Hunter game, a sort of 3d interlaced effect
+      if (m_game.name == "bassdx" || m_game.name == "getbassdx" || m_game.name == "getbass")  // Prevent I/O erreur after a while (related to tension)
+      {
+          data = 0x01;
+      }
       return data;
 
   case 0x2C:  // Serial FIFO 1
@@ -2034,25 +2041,52 @@ ThreadError:
   m_multiThreaded = false;
 }
 
+static unsigned GetCPUClockFrequencyInHz(const Game &game, Util::Config::Node &config)
+{
+  unsigned mhz = config["PowerPCFrequency"].ValueAsDefault<unsigned>(0);
+  if (!mhz)
+  {
+    if (game.stepping == "1.0")
+    {
+      mhz = 66;
+    }
+    else if (game.stepping == "1.5")
+    {
+      mhz = 100;
+    }
+    else  // 2.x
+    {
+      mhz = 166;
+    }
+  }
+  return mhz * 1000000;
+}
+
 void CModel3::RunMainBoardFrame(void)
 {
 	UINT32 start = CThread::GetTicks();
 
-	// Compute display and VBlank timings
-	unsigned ppcCycles		= m_config["PowerPCFrequency"].ValueAs<unsigned>() * 1000000;
+	/* 
+   * Compute display timings. Refresh rate is 57.524160 Hz and we assume frame timing is the same as System 24:
+   *
+   * - 25 scanlines from /VSYNC high to /BLANK high (top border)
+   * - 384 scanlines from /BLANK high to /BLANK low (active display)
+   * - 11 scanlines from /BLANK low to /VSYNC low (bottom border)
+   * - 4 scanlines from /VSYNC low to /VSYNC high (vertical sync. pulse)
+	 *
+   * 424 lines total: 384 display and 40 blanking/vsync.
+	 */ 
+	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
-	unsigned offsetCycles   = (unsigned)((float)frameCycles * 33.f / 100.0f);
-	unsigned dispCycles     = frameCycles - offsetCycles;
+	unsigned lineCycles     = frameCycles / 424;
+	unsigned dispCycles     = lineCycles * (TileGen.ReadRegister(0x08) + 40);
+	unsigned offsetCycles   = frameCycles - dispCycles;
 	unsigned statusCycles   = (unsigned)((float)frameCycles * (0.005f));
 
-	// we think a frame looks like this on the model 2
-	//                         66% of frame
-	// [irq2------------------ping_pong_flips------]
-	//
-	// Games will start writing a new frame at the ping_pong time. It could be the buffer swaps here.
-	// Need more h/w testing to confirm.
-	// What we are doing here is asserting IRQ2 at 33% of the frame, and treating the ping_pong flip as the front/back buffer swap
-	// This way the data for the correct frames, ends up in the right frames!
+	// Games will start writing a new frame after the ping-pong buffers have been flipped, which is indicated by the
+	// ping-pong status bit. The timing of ping-pong flip is determined by the value of tilegen register 0x08, which
+	// is the number of active video lines to display before ping-pong flip occurs. Most games set it to 238 or 239
+	// so that ping-pong flip occurs 66% of the frame time after IRQ2, though a few games set it to a higher value.
 
 	// Scale PPC timer ratio according to speed at which the PowerPC is being emulated so that the observed running frequency of the PPC timer
 	// registers is more or less correct.  This is needed to get the Virtua Striker 2 series of games running at the right speed (they are
@@ -2150,6 +2184,7 @@ void CModel3::RenderFrame(void)
     TileGen.RenderFrameTop();
     GPU.EndFrame();
     TileGen.EndFrame();
+    m_superAA->Draw();
   }
 
   EndFrameVideo();
@@ -2945,12 +2980,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 
   // Initialize Real3D
   int stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  uint32_t real3DPCIID = game.real3d_pci_id;
-  if (0 == real3DPCIID)
-  {
-    real3DPCIID = stepping >= 0x20 ? CReal3D::PCIID::Step2x : CReal3D::PCIID::Step1x;
-  }
-  GPU.SetStepping(stepping, real3DPCIID);
+  GPU.SetStepping(stepping);
 
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)
@@ -3054,10 +3084,11 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   return OKAY;
 }
 
-void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr)
+void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
   TileGen.AttachRenderer(Render2DPtr);
   GPU.AttachRenderer(Render3DPtr);
+  m_superAA = superAA;
 }
 
 void CModel3::AttachInputs(CInputs *InputsPtr)
@@ -3197,10 +3228,12 @@ CModel3::CModel3(Util::Config::Node &config)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    sndBrdWakeNotify(false),
     TileGen(config),
     GPU(config),
     SoundBoard(config),
-    m_jtag(GPU)
+    m_jtag(GPU),
+    m_superAA(nullptr)
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
@@ -3223,6 +3256,10 @@ CModel3::CModel3(Util::Config::Node &config)
 
   DSB = NULL;
   DriveBoard = NULL;
+
+#ifdef NET_BOARD
+  NetBoard = NULL;
+#endif
 
   securityPtr = 0;
 
@@ -3302,6 +3339,14 @@ CModel3::~CModel3(void)
       delete DriveBoard;
       DriveBoard = NULL;
   }
+
+#ifdef NET_BOARD
+  if (NetBoard != NULL)
+  {
+      delete NetBoard;
+      NetBoard = NULL;
+  }
+#endif
 
   Inputs = NULL;
   Outputs = NULL;

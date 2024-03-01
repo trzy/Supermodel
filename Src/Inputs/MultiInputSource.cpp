@@ -84,7 +84,7 @@ CMultiInputSource::CMultiInputSource(bool isOr, vector<CInputSource*> &sources) 
 CMultiInputSource::~CMultiInputSource()
 {
 	if (m_srcArray != NULL)
-		delete m_srcArray;
+		delete [] m_srcArray;
 }
 
 void CMultiInputSource::Acquire()

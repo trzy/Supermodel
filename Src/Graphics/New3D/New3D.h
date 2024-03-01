@@ -141,7 +141,7 @@ public:
 	*		occurred. Any allocated memory will not be freed until the
 	*		destructor is called. Prints own error messages.
 	*/
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes);
+	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
 	* SetSunClamp(bool enable);
@@ -197,6 +197,7 @@ private:
 	// Matrix stack
 	void MultMatrix(UINT32 matrixOffset, Mat4& mat);
 	void InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat);
+	void ResetMatrix(Mat4& mat);
 
 	// Scene database traversal
 	bool DrawModel(UINT32 modelAddr);
@@ -216,13 +217,13 @@ private:
 	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
 	bool IsVROMModel(UINT32 modelAddr);
 	void DrawScrollFog();
+	void DrawAmbientFog();
 	bool SkipLayer(int layer);
 	void SetRenderStates();
 	void DisableRenderStates();
 	void TranslateLosPosition(int inX, int inY, int& outX, int& outY);
 	bool ProcessLos(int priority);
-
-	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);	
+	void CalcViewport(Viewport* vp);
 
 	/*
 	* Data
@@ -286,32 +287,22 @@ private:
 	R3DShader m_r3dShader;
 	R3DScrollFog m_r3dScrollFog;
 	R3DFrameBuffers m_r3dFrameBuffers;
+	GLuint m_aaTarget;						// optional, maybe zero
 
-	Plane m_planes[5];
-
-	struct BBox
-	{
-		V4::Vec4 points[8];
-	};
-
-	struct NFPair
-	{
-		float zNear;
-		float zFar;
-	};
-
-	NFPair m_nfPairs[4];
 	int m_currentPriority;
 
-	void CalcFrustumPlanes	(Plane p[5], const float* matrix);
-	void CalcBox			(float distance, BBox& box);
-	void TransformBox		(const float *m, BBox& box);
-	void MultVec			(const float matrix[16], const float in[4], float out[4]);
-	Clip ClipBox			(const BBox& box, Plane planes[5]);
-	void ClipModel			(const Model *m);
-	void ClipPolygon		(ClipPoly& clipPoly, Plane planes[5]);
-	void CalcBoxExtents		(const BBox& box);
-	void CalcViewport		(Viewport* vp, float near, float far);
+	struct
+	{
+		float bnlu;
+		float bnlv;
+		float bntu;
+		float bntw;
+		float bnru;
+		float bnrv;
+		float bnbu;
+		float bnbw;
+		float correction;
+	} m_planes;	
 };
 
 } // New3D

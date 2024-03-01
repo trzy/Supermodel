@@ -351,6 +351,7 @@ void CSoundBoard::WriteMIDIPort(UINT8 data)
 		DSB->SendCommand(data);
 }
 
+#ifdef SUPERMODEL_LOG_AUDIO
 static INT16 ClampINT16(float x)
 {
     INT32 xi = (INT32)x;
@@ -362,6 +363,7 @@ static INT16 ClampINT16(float x)
     }
     return (INT16)xi;
 }
+#endif
 
 bool CSoundBoard::RunFrame(void)
 {
@@ -567,19 +569,6 @@ CSoundBoard::CSoundBoard(const Util::Config::Node &config)
 	sampleROM = NULL;
 	
 	DebugLog("Built Sound Board\n");
-}
-
-static void Reverse16(UINT8 *buf, unsigned size)
-{
-	unsigned	i;
-	UINT8		tmp;
-	
-	for (i = 0; i < size; i += 2)
-	{
-		tmp = buf[i+0];
-		buf[i+0] = buf[i+1];
-		buf[i+1] = tmp;
-	}
 }
 
 CSoundBoard::~CSoundBoard(void)

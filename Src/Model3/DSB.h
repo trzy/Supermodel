@@ -324,8 +324,8 @@ private:
 
 	// M68K CPU
 	M68KCtx	M68K;
-	static const int k_framePeriod = 11000000/60;
-	static const int k_timerPeriod = 11000000/1000; // 1KHz timer
+	static constexpr int k_framePeriod = 11000000/60;
+	static constexpr int k_timerPeriod = 11000000/1000; // 1KHz timer
 	int m_cyclesElapsedThisFrame;
 	int m_nextTimerInterruptCycles;
 };

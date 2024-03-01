@@ -101,6 +101,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -114,8 +115,10 @@
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -132,6 +135,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -145,8 +149,10 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -160,6 +166,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -175,8 +182,10 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -194,6 +203,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -209,8 +219,10 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
 if not exist "$(TargetDir)NVRAM" mkdir "$(TargetDir)NVRAM"
 if not exist "$(TargetDir)Saves" mkdir "$(TargetDir)Saves"
+if not exist "$(TargetDir)Assets" mkdir "$(TargetDir)Assets"
 xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
-xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
+xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
+xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -298,6 +310,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
     <ClCompile Include="..\Src\Debugger\Watch.cpp" />
     <ClCompile Include="..\Src\GameLoader.cpp" />
+    <ClCompile Include="..\Src\Graphics\FBO.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp" />
@@ -315,6 +328,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
     <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
     <ClCompile Include="..\Src\Graphics\Shader.cpp" />
+    <ClCompile Include="..\Src\Graphics\SuperAA.cpp" />
     <ClCompile Include="..\Src\Inputs\Input.cpp" />
     <ClCompile Include="..\Src\Inputs\Inputs.cpp" />
     <ClCompile Include="..\Src\Inputs\InputSource.cpp" />
@@ -347,6 +361,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClCompile Include="..\Src\OSD\Logger.cpp" />
     <ClCompile Include="..\Src\OSD\Outputs.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Audio.cpp" />
+    <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Main.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\SDLInputSystem.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Thread.cpp" />
@@ -469,6 +484,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
     <ClInclude Include="..\Src\Debugger\Watch.h" />
     <ClInclude Include="..\Src\GameLoader.h" />
+    <ClInclude Include="..\Src\Graphics\FBO.h" />
     <ClInclude Include="..\Src\Graphics\IRender3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h" />
@@ -484,6 +500,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Graphics\New3D\R3DFrameBuffers.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DScrollFog.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderQuads.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h" />
     <ClInclude Include="..\Src\Graphics\New3D\VBO.h" />
@@ -491,6 +508,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\Graphics\Render2D.h" />
     <ClInclude Include="..\Src\Graphics\Shader.h" />
     <ClInclude Include="..\Src\Graphics\Shaders2D.h" />
+    <ClInclude Include="..\Src\Graphics\SuperAA.h" />
     <ClInclude Include="..\Src\Inputs\Input.h" />
     <ClInclude Include="..\Src\Inputs\Inputs.h" />
     <ClInclude Include="..\Src\Inputs\InputSource.h" />
@@ -523,6 +541,7 @@ xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"</Command>
     <ClInclude Include="..\Src\OSD\Audio.h" />
     <ClInclude Include="..\Src\OSD\Logger.h" />
     <ClInclude Include="..\Src\OSD\Outputs.h" />
+    <ClInclude Include="..\Src\OSD\SDL\Crosshair.h" />
     <ClInclude Include="..\Src\OSD\SDL\OSDConfig.h" />
     <ClInclude Include="..\Src\OSD\SDL\SDLInputSystem.h" />
     <ClInclude Include="..\Src\OSD\SDL\Types.h" />

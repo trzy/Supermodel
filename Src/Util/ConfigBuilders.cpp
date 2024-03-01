@@ -248,7 +248,7 @@ namespace Util
       file.open(filename);
       if (file.fail())
       {
-        ErrorLog("Unable to write to '%s'. Configuration will not be saved.");
+        ErrorLog("Unable to write to '%s'. Configuration will not be saved.", filename.c_str());
         return;
       }
       if (!header_comment.empty())

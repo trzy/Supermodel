@@ -73,6 +73,9 @@ namespace FileSystemPath
         case Screenshots:
             strPathType = "Screenshots";
             break;
+        case Assets:
+            strPathType = "Assets/";
+            break;
         }
 
         // Get user's HOME directory
