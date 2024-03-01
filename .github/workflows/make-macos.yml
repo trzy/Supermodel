@@ -12,19 +12,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    # - name: install_dependencies
-    #   run: |
-    #     brew update
-    #     brew install sdl2
-    #     brew install sdl2_net
-    - name: Setup SDL2 frameworks
-      uses: BrettDong/setup-sdl2-frameworks@main
-      with:
-        sdl2: latest
-        sdl2-net: latest
-        # sdl2-image: 2.6.3
-        # sdl2-mixer: none
-        # sdl2-net: 2.2.0
+    - name: install_dependencies
+      run: |
+        brew update
+        brew install sdl2
+        brew install sdl2_net
     - name: make
       run: make -f Makefiles/Makefile.OSX
     - uses: actions/upload-artifact@v4
