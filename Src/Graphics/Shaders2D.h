@@ -189,12 +189,12 @@ static const char s_fragmentShaderTileGen[] = R"glsl(
 
 	// register data
 	bool LineScrollMode		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x8000u) != 0; }
-	int  GetHorizontalScroll(int layerNum)	{ return int(regs[0x60/4 + layerNum] & 0x3FFu); }
-	int  GetVerticalScroll	(int layerNum)	{ return int((regs[0x60/4 + layerNum] >> 16) & 0x1FFu); }
-	int	 LayerPriority		()				{ return int((regs[0x20/4] >> 8) & 0xFu); }
-    bool LayerIs4Bit		(int layerNum)	{ return (regs[0x20/4] & uint(1 << (12 + layerNum))) != 0; }
-    bool LayerEnabled		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x80000000u) != 0; }
-    bool LayerSelected		(int layerNum)	{ return (LayerPriority() & (1 << layerNum)) == 0; }
+	int  GetHorizontalScroll	(int layerNum)	{ return int(regs[0x60/4 + layerNum] & 0x3FFu); }
+	int  GetVerticalScroll		(int layerNum)	{ return int((regs[0x60/4 + layerNum] >> 16) & 0x1FFu); }
+	int  LayerPriority		()		{ return int((regs[0x20/4] >> 8) & 0xFu); }
+	bool LayerIs4Bit		(int layerNum)	{ return (regs[0x20/4] & uint(1 << (12 + layerNum))) != 0; }
+	bool LayerEnabled		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x80000000u) != 0; }
+	bool LayerSelected		(int layerNum)	{ return (LayerPriority() & (1 << layerNum)) == 0; }
 
 	float Int8ToFloat(uint c)
 	{
