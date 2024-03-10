@@ -56,14 +56,18 @@
 class CLogger
 {
 public:
-  // Log level in ascending order
-  enum LogLevel: int
-  {
-    All = 0,
-    Debug,
-    Info,
-    Error
-  };
+	// Log level in ascending order
+	enum LogLevel: int
+	{
+		All = 0,
+		Debug,
+		Info,
+		Error
+	};
+
+	virtual ~CLogger()
+  	{
+  	}
 
 	/*
 	 * DebugLog(fmt, ...):
