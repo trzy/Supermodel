@@ -188,13 +188,13 @@ static const char s_fragmentShaderTileGen[] = R"glsl(
 	}
 
 	// register data
-	bool LineScrollMode		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x8000) != 0; }
-	int  GetHorizontalScroll(int layerNum)	{ return int(regs[0x60 / 4 + layerNum] &0x3FFu); }
-	int  GetVerticalScroll	(int layerNum)	{ return int((regs[0x60/4 + layerNum] >> 16) & 0x1FFu); }
-	int	 LayerPriority		()				{ return int((regs[0x20/4] >> 8) & 0xFu); }
-    bool LayerIs4Bit		(int layerNum)	{ return (regs[0x20/4] & (1 << (12 + layerNum))) != 0; }
-    bool LayerEnabled		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x80000000) != 0; }
-    bool LayerSelected		(int layerNum)	{ return (LayerPriority() & (1 << layerNum)) == 0; }
+	bool LineScrollMode		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x8000u) != 0; }
+	int  GetHorizontalScroll	(int layerNum)	{ return int(regs[0x60/4 + layerNum] & 0x3FFu); }
+	int  GetVerticalScroll		(int layerNum)	{ return int((regs[0x60/4 + layerNum] >> 16) & 0x1FFu); }
+	int  LayerPriority		()		{ return int((regs[0x20/4] >> 8) & 0xFu); }
+	bool LayerIs4Bit		(int layerNum)	{ return (regs[0x20/4] & uint(1 << (12 + layerNum))) != 0; }
+	bool LayerEnabled		(int layerNum)	{ return (regs[0x60/4 + layerNum] & 0x80000000u) != 0; }
+	bool LayerSelected		(int layerNum)	{ return (LayerPriority() & (1 << layerNum)) == 0; }
 
 	float Int8ToFloat(uint c)
 	{
@@ -225,11 +225,12 @@ static const char s_fragmentShaderTileGen[] = R"glsl(
 		uint alpha = (colour>>15);		// top bit is alpha. 1 means clear, 0 opaque
 		alpha = ~alpha;					// invert
 		alpha = alpha & 0x1u;			// mask bit
+		const uint mask = 0x1F;
 		
 		vec4 c;
-		c.r = float((colour >> 0 ) & 0x1F) / 31.0;
-		c.g = float((colour >> 5 ) & 0x1F) / 31.0;
-		c.b = float((colour >> 10) & 0x1F) / 31.0;
+		c.r = float((colour >> 0 ) & mask) / 31.0;
+		c.g = float((colour >> 5 ) & mask) / 31.0;
+		c.b = float((colour >> 10) & mask) / 31.0;
 		c.a = float(alpha) / 1.0;
 
 		c.rgb *= c.a;		// multiply by alpha value, this will push transparent to black, no branch needed
