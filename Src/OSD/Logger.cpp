@@ -237,10 +237,10 @@ void CFileLogger::DebugLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  sprintf(string2, "[Debug] %s\n", string1);
 
   // Debug logging is so copious that we don't bother to guarantee it is saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -255,7 +255,7 @@ void CFileLogger::InfoLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Info]  %s\n", string1);
@@ -274,7 +274,7 @@ void CFileLogger::ErrorLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Error] %s\n", string1);
@@ -345,10 +345,10 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  sprintf(string2, "[Debug] %s\n", string1);
 
 #ifdef _WIN32
   OutputDebugString(string2);
@@ -365,7 +365,7 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Info]  %s\n", string1);
@@ -385,7 +385,7 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
   }
 
   char string1[4096];
-  char string2[4096];
+  char string2[4105]; // add 8 for the prefix and 1 for newline
 
   vsprintf(string1, fmt, vl);
   sprintf(string2, "[Error] %s\n", string1);
