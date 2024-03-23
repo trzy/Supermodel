@@ -1,0 +1,137 @@
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      opt:
+        description: "OPT value"
+        default: "-O3 -g"
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'Assets/**'
+      - 'Config/**'
+      - 'Docs/**'
+  push:
+    branches:
+      - master
+      - dev
+      - main
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        include:
+          - os: windows-latest
+            makefile: Makefile.Win32
+            outfile_ext: .exe
+            shell: msys2 {0}
+            archive: zip
+          - os: ubuntu-latest
+            makefile: Makefile.UNIX
+            shell: bash
+            archive: tar
+          - os: macos-latest
+            makefile: Makefile.OSX
+            shell: bash
+            archive: tar
+            archive_files: Frameworks/
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ubuntu build dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt update
+          sudo apt install -y libsdl2-dev libsdl2-net-dev
+      - if: startsWith(matrix.os, 'macos')
+        name: Find latest macos SDL2 release
+        id: find_sdl
+        uses: joutvhu/get-release@v1
+        with:
+          debug: true
+          owner: libsdl-org
+          repo: SDL
+          latest: true
+          pattern: 'release-2\..*'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: startsWith(matrix.os, 'macos')
+        name: Find latest macos SDL2_net release
+        id: find_sdl_net
+        uses: joutvhu/get-release@v1
+        with:
+          debug: true
+          owner: libsdl-org
+          repo: SDL_net
+          latest: true
+          pattern: 'release-2\..*'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install macos build dependencies
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          cd Frameworks
+          echo ::group::download sdl2
+          curl -fLo SDL2.dmg https://github.com/libsdl-org/SDL/releases/download/${{ steps.find_sdl.outputs.tag_name }}/SDL2-${{ steps.find_sdl.outputs.name }}.dmg
+          echo ::endgroup::
+          echo ::group::download sdl_net
+          curl -fLo SDL2_net.dmg https://github.com/libsdl-org/SDL_net/releases/download/${{ steps.find_sdl_net.outputs.tag_name }}/SDL2_net-${{ steps.find_sdl_net.outputs.name }}.dmg
+          echo ::endgroup::
+          echo ::group::attach dmg
+          hdiutil attach -quiet SDL2.dmg
+          hdiutil attach -quiet SDL2_net.dmg
+          echo ::endgroup::
+          echo ::group::copy frameworks
+          cp -r /Volumes/SDL2/SDL2.framework .
+          cp -r /Volumes/SDL2_net/SDL2_net.framework .
+          xattr -dr com.apple.quarantine SDL2.framework
+          xattr -dr com.apple.quarantine SDL2_net.framework
+          echo ::endgroup::
+          echo ::group::detach dmg
+          hdiutil detach -quiet /Volumes/SDL2
+          hdiutil detach -quiet /Volumes/SDL2_net
+          echo ::endgroup::
+      - name: Install windows build dependencies
+        if: startsWith(matrix.os, 'windows')
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            zip
+            mingw64/mingw-w64-x86_64-gcc
+            mingw64/mingw-w64-x86_64-SDL2
+            mingw64/mingw-w64-x86_64-SDL2_net
+      - name: Build with Symbols
+        run: |
+          OPT_INPUT="${{ github.event.inputs.opt }}"
+          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+      - name: Validate
+        run: ./supermodel${{ matrix.outfile_ext }} -print-games
+      - name: Package
+        run: |
+          mkdir NVRAM Saves ROMs
+          cp Docs/LICENSE.txt Docs/README.txt .
+          echo "NMRAM files go here." > NVRAM/DIR.txt
+          echo "Save states go here." > Saves/DIR.txt
+          echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt
+          FILES="supermodel${{ matrix.outfile_ext }} LICENSE.txt README.txt Config/ Assets/ NVRAM/ Saves/ ROMs/ ${{ matrix.archive_files }}"
+          if [[ "${{ matrix.archive }}" == "tar" ]] ; then
+            tar -cvf supermodel-${{ github.sha }}.tar $FILES
+          elif [[ "${{ matrix.archive }}" == "zip" ]] ; then
+            zip -r supermodel-${{ github.sha }}.zip $FILES
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supermodel-${{ runner.os }}-${{ runner.arch }}
+          path: supermodel-${{ github.sha }}.${{ matrix.archive }}

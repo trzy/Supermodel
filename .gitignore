@@ -338,6 +338,7 @@ ASALocalRun/
 
 # Ignore Libraries folder
 Libraries
+Frameworks
 
 #ignore generated files
 Src/CPU/68K/Musashi/m68kopac.c
