@@ -80,6 +80,7 @@ jobs:
       - name: Install macos build dependencies
         if: startsWith(matrix.os, 'macos')
         run: |
+          cd Frameworks
           echo ::group::download sdl2
           curl -fLo SDL2.dmg https://github.com/libsdl-org/SDL/releases/download/${{ steps.find_sdl.outputs.tag_name }}/SDL2-${{ steps.find_sdl.outputs.name }}.dmg
           echo ::endgroup::
@@ -91,11 +92,10 @@ jobs:
           hdiutil attach -quiet SDL2_net.dmg
           echo ::endgroup::
           echo ::group::copy frameworks
-          mkdir Frameworks
-          cp -r /Volumes/SDL2/SDL2.framework Frameworks/
-          cp -r /Volumes/SDL2_net/SDL2_net.framework Frameworks/
-          xattr -dr com.apple.quarantine Frameworks/SDL2.framework
-          xattr -dr com.apple.quarantine Frameworks/SDL2_net.framework
+          cp -r /Volumes/SDL2/SDL2.framework .
+          cp -r /Volumes/SDL2_net/SDL2_net.framework .
+          xattr -dr com.apple.quarantine SDL2.framework
+          xattr -dr com.apple.quarantine SDL2_net.framework
           echo ::endgroup::
           echo ::group::detach dmg
           hdiutil detach -quiet /Volumes/SDL2
