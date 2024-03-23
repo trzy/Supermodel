@@ -78,7 +78,14 @@ PLATFORM_SRC_FILES = \
 
 include Makefiles/Rules.inc
 
+.PHONY: Frameworks
+Frameworks:
+	$(SILENT)$(MAKE) -C $@
+
+$(OBJ_FILES): Frameworks
+
 clean:
-	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)echo Cleaning up \"Frameworks\", \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)$(MAKE) -C Frameworks clean
 	$(SILENT)$(DELETE) $(BIN_DIR)
 	$(SILENT)$(DELETE) $(OBJ_DIR)
