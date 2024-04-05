@@ -125,6 +125,6 @@ clean:
 # This section must be placed *after* the inclusion of Makefiles/Rules.inc.
 ###############################################################################
 
-$(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD/Windows/SupermodelManifest.xml
+$(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD/Windows/SupermodelManifest.xml directories
 	$(info Compiling              : $< -> $@)
 	$(SILENT)windres -i Src/OSD/Windows/SupermodelResources.rc -o $@
