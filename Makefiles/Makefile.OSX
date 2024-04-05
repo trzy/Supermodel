@@ -62,7 +62,7 @@ ifeq ($(strip $(NET_BOARD)),1)
 endif
 
 #
-# OSX-specific
+# macOS-specific
 #
 
 PLATFORM_CXXFLAGS = -F./Frameworks $(SDL_CFLAGS) -DSUPERMODEL_OSX
