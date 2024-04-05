@@ -339,11 +339,26 @@ ASALocalRun/
 # Ignore Libraries folder
 Libraries
 
-#ignore generated files
+#ignore generated files and directories
+bin/
+bin64/
+bin32/
+obj/
+obj64/
+obj32/
+Frameworks/
 Src/CPU/68K/Musashi/m68kopac.c
 Src/CPU/68K/Musashi/m68kopdm.c
 Src/CPU/68K/Musashi/m68kopnz.c
 Src/CPU/68K/Musashi/m68kops.c
 Src/CPU/68K/Musashi/m68kops.h
+
+#ignore Supermodel release directories
+nvram/
+roms/
+saves/
+
+
+
 
 
