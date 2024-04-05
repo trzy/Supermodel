@@ -248,7 +248,7 @@ $(BIN_DIR):
 	$(info Creating directory     : $(BIN_DIR))
 	$(SILENT)mkdir $(BIN_DIR)
 
-$(OBJ_DIR): $(PLATFORM_DIRS)
+$(OBJ_DIR): | $(PLATFORM_DIRS)
 	$(info Creating directory     : $(OBJ_DIR))
 	$(SILENT)mkdir $(OBJ_DIR)
 
