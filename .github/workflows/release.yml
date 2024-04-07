@@ -1,0 +1,13 @@
+---
+name: "Release"
+
+on:
+  push:
+    branches: [ 'main', 'master' ]
+  workflow_dispatch:
+
+jobs:
+  Artifacts:
+    uses: ./.github/workflows/_artifact.yml
+    with:
+      opt: "-O3"

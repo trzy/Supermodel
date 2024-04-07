@@ -1,25 +1,16 @@
-name: Build
+---
+name: _artifact
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       opt:
-        description: "OPT value"
-        default: "-O3 -g"
-  pull_request:
-    paths-ignore:
-      - '**.md'
-      - 'Assets/**'
-      - 'Config/**'
-      - 'Docs/**'
-  push:
-    branches:
-      - master
-      - dev
-      - main
+        description: "make OPT value"
+        type: string
+        default: "-O3"
 
 jobs:
-  build:
+  Build:
     strategy:
       fail-fast: true
       matrix:
@@ -61,16 +52,17 @@ jobs:
           install: >-
             make
             zip
+            git
             mingw64/mingw-w64-x86_64-gcc
             mingw64/mingw-w64-x86_64-SDL2
             mingw64/mingw-w64-x86_64-SDL2_net
-      - name: Build
+      - name: Compile
         run: |
           OPT_INPUT="${{ inputs.opt }}"
           make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
       - name: Validate
         run: ./supermodel${{ matrix.outfile_ext }} -print-games
-      - name: Package
+      - name: Archive
         run: |
           mkdir NVRAM Saves ROMs
           cp Docs/LICENSE.txt Docs/README.txt .
