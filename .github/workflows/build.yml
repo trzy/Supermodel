@@ -41,7 +41,7 @@ jobs:
             makefile: Makefile.OSX
             shell: bash
             archive: tar
-            archive_files: Frameworks/
+            archive_files: Frameworks/*.framework
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -53,54 +53,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y libsdl2-dev libsdl2-net-dev
-      - if: startsWith(matrix.os, 'macos')
-        name: Find latest macos SDL2 release
-        id: find_sdl
-        uses: joutvhu/get-release@v1
-        with:
-          debug: true
-          owner: libsdl-org
-          repo: SDL
-          latest: true
-          pattern: 'release-2\..*'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: startsWith(matrix.os, 'macos')
-        name: Find latest macos SDL2_net release
-        id: find_sdl_net
-        uses: joutvhu/get-release@v1
-        with:
-          debug: true
-          owner: libsdl-org
-          repo: SDL_net
-          latest: true
-          pattern: 'release-2\..*'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install macos build dependencies
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          cd Frameworks
-          echo ::group::download sdl2
-          curl -fLo SDL2.dmg https://github.com/libsdl-org/SDL/releases/download/${{ steps.find_sdl.outputs.tag_name }}/SDL2-${{ steps.find_sdl.outputs.name }}.dmg
-          echo ::endgroup::
-          echo ::group::download sdl_net
-          curl -fLo SDL2_net.dmg https://github.com/libsdl-org/SDL_net/releases/download/${{ steps.find_sdl_net.outputs.tag_name }}/SDL2_net-${{ steps.find_sdl_net.outputs.name }}.dmg
-          echo ::endgroup::
-          echo ::group::attach dmg
-          hdiutil attach -quiet SDL2.dmg
-          hdiutil attach -quiet SDL2_net.dmg
-          echo ::endgroup::
-          echo ::group::copy frameworks
-          cp -r /Volumes/SDL2/SDL2.framework .
-          cp -r /Volumes/SDL2_net/SDL2_net.framework .
-          xattr -dr com.apple.quarantine SDL2.framework
-          xattr -dr com.apple.quarantine SDL2_net.framework
-          echo ::endgroup::
-          echo ::group::detach dmg
-          hdiutil detach -quiet /Volumes/SDL2
-          hdiutil detach -quiet /Volumes/SDL2_net
-          echo ::endgroup::
       - name: Install windows build dependencies
         if: startsWith(matrix.os, 'windows')
         uses: msys2/setup-msys2@v2
@@ -112,9 +64,9 @@ jobs:
             mingw64/mingw-w64-x86_64-gcc
             mingw64/mingw-w64-x86_64-SDL2
             mingw64/mingw-w64-x86_64-SDL2_net
-      - name: Build with Symbols
+      - name: Build
         run: |
-          OPT_INPUT="${{ github.event.inputs.opt }}"
+          OPT_INPUT="${{ inputs.opt }}"
           make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
       - name: Validate
         run: ./supermodel${{ matrix.outfile_ext }} -print-games
