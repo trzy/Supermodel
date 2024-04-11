@@ -118,8 +118,6 @@ PLATFORM_SRC_FILES = \
 	Src/OSD/Windows/WinOutputs.cpp \
 	Src/OSD/Windows/SupermodelResources.rc
 
-.PHONY: clean
-
 include Makefiles/Rules.inc
 
 clean:

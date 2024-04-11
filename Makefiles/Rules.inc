@@ -223,12 +223,12 @@ all:	$(BIN_DIR)/$(OUTFILE)
 # version number. Double-colon rules should force ordered execution.
 # The automated build script relies on these -- don't modify their output!
 #
+.PHONY: clean
 .PHONY: set_version
 .PHONY: print_message
 .PHONY: version
-release:: set_version
-release:: print_message
 release:: clean
+release:: print_message
 release:: all
 
 PKG_FILES += $(BIN_DIR)/$(OUTFILE) Docs/README.txt Docs/LICENSE.txt Config Assets
@@ -263,7 +263,7 @@ pkg/path: set_version
 set_version:
 	$(eval VERSION = $(strip $(subst ',,0.3a-git-$(shell git rev-parse --short HEAD --sq))))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
-print_message:
+print_message: set_version
 	$(info Building Supermodel Version $(VERSION))
 version: set_version
 	@echo $(VERSION)

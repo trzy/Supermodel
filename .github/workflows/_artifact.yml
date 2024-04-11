@@ -56,7 +56,7 @@ jobs:
             mingw64/mingw-w64-x86_64-SDL2_net
       - name: Compile
         run: |
-          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+          make -f Makefiles/${{ matrix.makefile }} -j release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
           echo "pkg_path=$(make -f Makefiles/${{ matrix.makefile }} -j pkg/path)" >> $GITHUB_ENV
       - name: Validate
         run: ./bin/supermodel${{ matrix.outfile_ext }} -print-games
