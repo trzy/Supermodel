@@ -230,6 +230,36 @@ release:: set_version
 release:: print_message
 release:: clean
 release:: all
+
+PKG_FILES += $(BIN_DIR)/$(OUTFILE) Docs/README.txt Docs/LICENSE.txt Config Assets
+pkg: pkg/$(PKG_TYPE)
+	$(info Cleaning up            : $(PKG_STAGE_PATH))
+	$(SILENT)cd pkg && rm -r $(notdir $(PKG_STAGE_PATH))
+pkg/tgz: pkg/stage
+	$(info Creating package       : $(PKG_PATH))
+	$(SILENT)tar -C pkg -czf $(PKG_PATH) $(notdir $(PKG_STAGE_PATH))
+pkg/zip: pkg/stage
+	$(info Creating package       : $(PKG_STAGE_PATH).zip)
+	$(SILENT)cd pkg && zip -r $(notdir $(PKG_PATH)) $(notdir $(PKG_STAGE_PATH))
+pkg/stage:: all
+pkg/stage:: pkg/path
+	$(info Staging package        : $(PKG_STAGE_PATH))
+	$(SILENT)rm -rf $(PKG_PATH) $(PKG_STAGE_PATH) ; mkdir -p $(PKG_STAGE_PATH)
+	$(SILENT)tar -cf - $(PKG_FILES) | tar -C $(PKG_STAGE_PATH) -xf -
+	$(SILENT)cd $(PKG_STAGE_PATH) && \
+	  mkdir NVRAM Saves ROMs && \
+	  echo "NVRAM files go here." > NVRAM/DIR.txt && \
+	  echo "Save states go here." > Saves/DIR.txt && \
+	  echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt && \
+	  mv $(BIN_DIR)/$(OUTFILE) . && rmdir $(BIN_DIR) && \
+	  mv Docs//* . && rmdir Docs
+	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
+	$(SILENT)OUTPUT=$(PKG_STAGE_PATH)/CHANGES.txt ./Scripts/changelog.sh
+pkg/path: set_version
+	$(eval PKG_STAGE_PATH = pkg/supermodel-$(VERSION))
+	$(eval PKG_PATH = pkg/supermodel-$(VERSION).$(PKG_TYPE))
+	@echo $(PKG_PATH)
+
 set_version:
 	$(eval VERSION = $(strip $(subst ',,0.3a-git-$(shell git rev-parse --short HEAD --sq))))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")

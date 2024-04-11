@@ -23,20 +23,18 @@ jobs:
             makefile: Makefile.Win32
             outfile_ext: .exe
             shell: msys2 {0}
-            archive: zip
           - os: ubuntu-latest
             makefile: Makefile.UNIX
             shell: bash
-            archive: tar
           - os: macos-latest
             makefile: Makefile.OSX
             shell: bash
-            archive: tar
-            archive_files: Frameworks/*.framework
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: ${{ matrix.shell }}
+    env:
+      OPT_INPUT: ${{ inputs.opt }}
     steps:
       - uses: actions/checkout@v4
       - name: Install ubuntu build dependencies
@@ -58,24 +56,14 @@ jobs:
             mingw64/mingw-w64-x86_64-SDL2_net
       - name: Compile
         run: |
-          OPT_INPUT="${{ inputs.opt }}"
-          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OUTFILE=../supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+          echo "pkg_path=$(make -f Makefiles/${{ matrix.makefile }} -j pkg/path)" >> $GITHUB_ENV
       - name: Validate
-        run: ./supermodel${{ matrix.outfile_ext }} -print-games
-      - name: Archive
+        run: ./bin/supermodel${{ matrix.outfile_ext }} -print-games
+      - name: Package
         run: |
-          mkdir NVRAM Saves ROMs
-          cp Docs/LICENSE.txt Docs/README.txt .
-          echo "NVRAM files go here." > NVRAM/DIR.txt
-          echo "Save states go here." > Saves/DIR.txt
-          echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt
-          FILES="supermodel${{ matrix.outfile_ext }} LICENSE.txt README.txt Config/ Assets/ NVRAM/ Saves/ ROMs/ ${{ matrix.archive_files }}"
-          if [[ "${{ matrix.archive }}" == "tar" ]] ; then
-            tar -cvf supermodel-${{ github.sha }}.tar $FILES
-          elif [[ "${{ matrix.archive }}" == "zip" ]] ; then
-            zip -r supermodel-${{ github.sha }}.zip $FILES
-          fi
+          make -f Makefiles/${{ matrix.makefile }} pkg NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
       - uses: actions/upload-artifact@v4
         with:
           name: supermodel-${{ runner.os }}-${{ runner.arch }}
-          path: supermodel-${{ github.sha }}.${{ matrix.archive }}
+          path: ${{ env.pkg_path }}
