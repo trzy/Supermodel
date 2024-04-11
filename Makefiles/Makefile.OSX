@@ -106,11 +106,11 @@ Frameworks:
 
 Frameworks/SDL2.dmg.url: | Frameworks
 	$(info Finding Latest Release : $@)
-	$(SILENT)curl -fs https://api.github.com/repos/libsdl-org/SDL/releases/latest | awk '/"browser_download_url": "(.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
+	$(SILENT)curl --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL/releases/latest | awk '/"browser_download_url": "(.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
 
 Frameworks/SDL2_net.dmg.url: | Frameworks
 	$(info Finding Latest Release : $@)
-	$(SILENT)curl -fs https://api.github.com/repos/libsdl-org/SDL_net/releases/latest | awk '/"browser_download_url": "(.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
+	$(SILENT)curl --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL_net/releases/latest | awk '/"browser_download_url": "(.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
 
 Frameworks/SDL2.dmg: Frameworks/SDL2.dmg.url
 	$(info Downloading            : $(shell cat $@.url))
