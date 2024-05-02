@@ -1015,9 +1015,9 @@ UINT8 CModel3::Read8(UINT32 addr)
     break;
 
   // 53C810 SCSI
-  case 0xC0:  // only on Step 1.0
+  case 0xC0:  // only on Step 1.x
 #ifndef NET_BOARD
-    if (m_game.stepping != "1.0")
+    if (m_stepping > 0x15)
     {
       //printf("Model3 : Read8 %x\n", addr);
       break;
@@ -1049,7 +1049,7 @@ UINT8 CModel3::Read8(UINT32 addr)
       break;
     }
   }
-  else if (m_game.stepping != "1.0") break;
+  else if (m_stepping > 0x15) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1309,9 +1309,9 @@ UINT32 CModel3::Read32(UINT32 addr)
     break;
 
   // 53C810 SCSI
-  case 0xC0:  // only on Step 1.0
+  case 0xC0:  // only on Step 1.x
 #ifndef NET_BOARD
-    if (m_game.stepping != "1.0") // check for Step 1.0
+    if (m_stepping > 0x15) // check for Step 1.x
       break;
 #endif
 #ifdef NET_BOARD
@@ -1346,7 +1346,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-    else if (m_game.stepping != "1.0") break;
+    else if (m_stepping > 0x15) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1466,9 +1466,9 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     break;
 
   // 53C810 SCSI
-  case 0xC0:  // only on Step 1.0
+  case 0xC0:  // only on Step 1.x
 #ifndef NET_BOARD
-    if (m_game.stepping != "1.0")
+    if (m_stepping > 0x15)
       goto Unknown8;
 #endif
 #ifdef NET_BOARD
@@ -1503,7 +1503,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-    else if (m_game.stepping != "1.0") break;
+    else if (m_stepping > 0x15) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1788,9 +1788,9 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     break;
 
   // 53C810 SCSI
-  case 0xC0:  // step 1.0 only
+  case 0xC0:  // step 1.x only
 #ifndef NET_BOARD
-    if (m_game.stepping != "1.0")
+    if (m_stepping > 0x15)
       goto Unknown32;
 #endif
 #ifdef NET_BOARD
@@ -1825,7 +1825,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-    else if (m_game.stepping != "1.0") break;
+    else if (m_stepping > 0x15) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -2979,8 +2979,8 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   ppc_set_fetch(PPCFetchRegions);
 
   // Initialize Real3D
-  int stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  GPU.SetStepping(stepping);
+  m_stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
+  GPU.SetStepping(m_stepping);
 
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)

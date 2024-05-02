@@ -1554,7 +1554,7 @@
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
       <drive_board>Wheel</drive_board>
-      <netboard>true</netboard>
+      <netboard>false</netboard>
       <audio>QuadFrontRear</audio>
       <inputs>
         <input type="common" />
@@ -1611,6 +1611,79 @@
       </region>
       <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
         <file offset="0" name="epr-19611a.21" crc32="0x9D4A34F6" />
+      </region>
+      <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
+        <file offset="0x000000" name="mpr-19601.22" crc32="0xBA350FCC" />
+        <file offset="0x400000" name="mpr-19602.24" crc32="0xA92231C1" />
+      </region>
+    </roms>
+  </game>
+  
+  <game name="scuddxo" parent="scud">
+    <identity>
+      <title>Scud Race</title>
+      <version>Export, Deluxe</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1996</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 3</platform>
+      <stepping>1.5</stepping>
+      <mpeg_board>DSB1</mpeg_board>
+      <drive_board>Wheel</drive_board>
+	  <netboard>false</netboard>
+      <audio>QuadFrontRear</audio>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shift4" />
+        <input type="vr4" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="crom" stride="8" chunk_size="2" byte_swap="true">
+        <file offset="0" name="epr-19607.20" crc32="0x365CE059" />
+        <file offset="2" name="epr-19608.19" crc32="0x56B46D26" />
+        <file offset="4" name="epr-19609.18" crc32="0x75D2675C" />
+        <file offset="6" name="epr-19610.17" crc32="0x3632870A" />
+      </region>
+      <region name="banked_crom" stride="8" chunk_size="2" byte_swap="true">
+        <!-- CROM0 -->
+        <file offset="0x0000000" name="mpr-19589.4" crc32="0x5482238F" />
+        <file offset="0x0000002" name="mpr-19590.3" crc32="0xA5CD4718" />
+        <file offset="0x0000004" name="mpr-19591.2" crc32="0x48E1AAFF" />
+        <file offset="0x0000006" name="mpr-19592.1" crc32="0xD9003B6F" />
+        <!-- CROM1 -->
+        <file offset="0x1000000" name="mpr-19593.8" crc32="0x21E48FF8" />
+        <file offset="0x1000002" name="mpr-19594.7" crc32="0x654C26B0" />
+        <file offset="0x1000004" name="mpr-19595.6" crc32="0xD06FD9D6" />
+        <file offset="0x1000006" name="mpr-19596.5" crc32="0x5672E3F4" />
+        <!-- CROM2 -->
+        <file offset="0x2000000" name="mpr-19597.12" crc32="0x4D0FFE60" />
+        <file offset="0x2000002" name="mpr-19598.11" crc32="0xA081592E" />
+        <file offset="0x2000004" name="mpr-19599.10" crc32="0x65C1D33C" />
+        <file offset="0x2000006" name="mpr-19600.9" crc32="0xA25DA127" />
+      </region>
+      <region name="vrom" stride="32" chunk_size="2">
+        <file offset="0"  name="mpr-19574.26" crc32="0x9BE8F314" />
+        <file offset="2"  name="mpr-19573.27" crc32="0x57B61D65" />
+        <file offset="4"  name="mpr-19576.28" crc32="0x85F9B587" />
+        <file offset="6"  name="mpr-19575.29" crc32="0xDAB11C34" />
+        <file offset="8"  name="mpr-19578.30" crc32="0xAE882C42" />
+        <file offset="10" name="mpr-19577.31" crc32="0x36A1FE5D" />
+        <file offset="12" name="mpr-19580.32" crc32="0x62503CEE" />
+        <file offset="14" name="mpr-19579.33" crc32="0xAF9698D0" />
+        <file offset="16" name="mpr-19582.34" crc32="0xC8B9CF1A" />
+        <file offset="18" name="mpr-19581.35" crc32="0x8863C2D7" />
+        <file offset="20" name="mpr-19584.36" crc32="0x256B056C" />
+        <file offset="22" name="mpr-19583.37" crc32="0xC22CB5AA" />
+        <file offset="24" name="mpr-19586.38" crc32="0xAC37163E" />
+        <file offset="26" name="mpr-19585.39" crc32="0xE2598012" />
+        <file offset="28" name="mpr-19588.40" crc32="0x42E20AE9" />
+        <file offset="30" name="mpr-19587.41" crc32="0xC288C910" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1" byte_swap="true">
+        <file offset="0" name="epr-19611.21" crc32="0x8888BF36" />
       </region>
       <region name="sound_samples" stride="1" chunk_size="1" byte_swap="true">
         <file offset="0x000000" name="mpr-19601.22" crc32="0xBA350FCC" />

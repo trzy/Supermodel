@@ -239,6 +239,7 @@ private:
 
   // Game and hardware information
   Game m_game;
+  int m_stepping;
 
   // Game inputs and outputs
   CInputs   *Inputs;
