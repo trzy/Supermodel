@@ -458,6 +458,14 @@ UINT32 C53C810::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits,
 void C53C810::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data)
 {
   DebugLog("53C810 PCI %d-bit write request for reg=%02X, data=%08X\n", bits, reg, data);
+
+  if (reg == 4) // set base address of SCSI device
+      baseAddress = data & 0xFF;
+}
+
+UINT8 C53C810::GetBaseAddress(void)
+{
+  return baseAddress;
 }
 
 void C53C810::Reset(void)
