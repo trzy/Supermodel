@@ -1017,7 +1017,7 @@ UINT8 CModel3::Read8(UINT32 addr)
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.x
 #ifndef NET_BOARD
-    if (m_stepping > 0x15)
+    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0)
     {
       //printf("Model3 : Read8 %x\n", addr);
       break;
@@ -1049,7 +1049,7 @@ UINT8 CModel3::Read8(UINT32 addr)
       break;
     }
   }
-  else if (m_stepping > 0x15) break;
+  else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1311,7 +1311,7 @@ UINT32 CModel3::Read32(UINT32 addr)
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.x
 #ifndef NET_BOARD
-    if (m_stepping > 0x15) // check for Step 1.x
+    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) // check for Step 1.x
       break;
 #endif
 #ifdef NET_BOARD
@@ -1346,7 +1346,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-    else if (m_stepping > 0x15) break;
+    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1468,7 +1468,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.x
 #ifndef NET_BOARD
-    if (m_stepping > 0x15)
+    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0)
       goto Unknown8;
 #endif
 #ifdef NET_BOARD
@@ -1503,7 +1503,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-    else if (m_stepping > 0x15) break;
+    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
 #endif
   case 0xF9:
   case 0xC1:
@@ -1790,7 +1790,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
   // 53C810 SCSI
   case 0xC0:  // step 1.x only
 #ifndef NET_BOARD
-    if (m_stepping > 0x15)
+    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0)
       goto Unknown32;
 #endif
 #ifdef NET_BOARD
@@ -1825,7 +1825,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-    else if (m_stepping > 0x15) break;
+    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
 #endif
   case 0xF9:
   case 0xC1:

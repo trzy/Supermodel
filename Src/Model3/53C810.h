@@ -157,6 +157,13 @@ public:
 	void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, UINT32 data);
 
 	/*
+	 * GetBaseAddress(void):
+	 * 
+	 * Retrieves the base address of the SCSI device.
+	 */
+	UINT8 GetBaseAddress(void);
+
+	/*
 	 * Reset(void):
 	 *
 	 * Resets the device. 
@@ -201,6 +208,9 @@ private:
 	// IRQ controller and IRQ identifier for this SCSI controller
 	CIRQ		*IRQ;
 	unsigned	scsiIRQ;
+
+	// Base address of the SCSI device (varies by game)
+	UINT8	baseAddress;
 };
 
 
