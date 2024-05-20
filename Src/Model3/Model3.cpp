@@ -1418,8 +1418,11 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     // Sound Board
     case 0x08:
       //printf("PPC: %08X=%02X * (PC=%08X, LR=%08X)\n", addr, data, ppc_get_pc(), ppc_get_lr());
-      if ((addr&0xF) == 0)      // MIDI data port
+      if ((addr & 0xF) == 0)      // MIDI data port
+      {
         SoundBoard.WriteMIDIPort(data);
+        IRQ.Deassert(0x40);
+      }
       else if ((addr&0xF) == 4) // MIDI control port
         midiCtrlPort = data;
       break;
@@ -2133,9 +2136,7 @@ void CModel3::RunMainBoardFrame(void)
 
 			// Process MIDI interrupt
 			IRQ.Assert(0x40);
-			ppc_execute(200); // give PowerPC time to acknowledge IR
-			IRQ.Deassert(0x40);
-			ppc_execute(200); // acknowledge that IRQ was deasserted (TODO: is this really needed?)
+			ppc_execute(400); // give PowerPC time to acknowledge IR
 			dispCycles -= 400;
 
 			++irqCount;
