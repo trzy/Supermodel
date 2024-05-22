@@ -1423,8 +1423,12 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
         SoundBoard.WriteMIDIPort(data);
         IRQ.Deassert(0x40);
       }
-      else if ((addr&0xF) == 4) // MIDI control port
+      else if ((addr & 0xF) == 4) // MIDI control port
+      {
         midiCtrlPort = data;
+        if ((data & 0x20) == 0)
+          IRQ.Deassert(0x40);
+      }
       break;
 
     // Backup RAM
