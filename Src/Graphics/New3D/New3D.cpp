@@ -191,18 +191,18 @@ void CNew3D::DrawScrollFog()
 
 	if (nodePtr) {
 
-		// interate nodes to see if any viewports with that fog colour actually set a fog density or start value
-		// if both of these are zero fogging is effectively disabled
+		// interate nodes to see if any viewports with that fog colour actually set a fog density, start or spotlight on fog
+		// if all of these are zero fogging is effectively disabled
 
 		for (auto& n : m_nodes) {
 
 			if (nodePtr->viewport.fogParams[0] == n.viewport.fogParams[0] &&
 				nodePtr->viewport.fogParams[1] == n.viewport.fogParams[1] &&
-				nodePtr->viewport.fogParams[2] == n.viewport.fogParams[2]) 
+				nodePtr->viewport.fogParams[2] == n.viewport.fogParams[2])
 			{
-				// check to see if we have a fog start or density value
+				// check to see if we have a fog start, density or spotlight on fog value. All of these effectively enable fog .
 
-				if (n.viewport.fogParams[3] > 0.0f || n.viewport.fogParams[4] > 0.0f || n.viewport.scrollAtt > 0.0f) {
+				if (n.viewport.fogParams[3] > 0.0f || n.viewport.fogParams[4] > 0.0f || n.viewport.fogParams[5] > 0.0f || n.viewport.scrollAtt > 0.0f) {
 
 					float rgba[4];
 					auto& vp = nodePtr->viewport;
