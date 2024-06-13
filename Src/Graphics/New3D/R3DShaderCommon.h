@@ -233,7 +233,7 @@ vec4 textureR3D(usampler2D texSampler, ivec2 wrapMode, ivec2 texSize, ivec2 texP
 	else
 	{
 		// if fLevel is 0, no need to mix with next mipmap level; slight performance boost
-		return texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord);
+		return texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord, iLevel);
 	}
 }
 
