@@ -218,15 +218,23 @@ vec4 textureR3D(usampler2D texSampler, ivec2 wrapMode, ivec2 texSize, ivec2 texP
 	int iLevel = int(fLevel);
 
 	ivec2 texPos0 = GetTexturePosition(iLevel,texPos);
-	ivec2 texPos1 = GetTexturePosition(iLevel+1,texPos);
-
 	ivec2 texSize0 = GetTextureSize(iLevel, texSize);
-	ivec2 texSize1 = GetTextureSize(iLevel+1, texSize); 
 
-	vec4 texLevel0 = texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord, iLevel);
-	vec4 texLevel1 = texBiLinear(texSampler, wrapMode, vec2(texSize1), texPos1, texCoord, iLevel+1);
+	if (fLevel > 0)
+	{
+		ivec2 texPos1 = GetTexturePosition(iLevel+1,texPos);
+		ivec2 texSize1 = GetTextureSize(iLevel+1, texSize); 
 
-	return mix(texLevel0, texLevel1, fract(fLevel));	// linear blend between our mipmap levels
+		vec4 texLevel0 = texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord, iLevel);
+		vec4 texLevel1 = texBiLinear(texSampler, wrapMode, vec2(texSize1), texPos1, texCoord, iLevel+1);
+
+		return mix(texLevel0, texLevel1, fract(fLevel));	// linear blend between our mipmap levels
+	}
+	else
+	{
+		// if fLevel is 0, no need to mix with next mipmap level; slight performance boost
+		return texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord);
+	}
 }
 
 vec4 GetTextureValue()
