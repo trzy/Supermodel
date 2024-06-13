@@ -21,7 +21,6 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_r3dShader(config),
 	m_r3dScrollFog(config),
 	m_gameName(gameName),
-	m_textureBuffer(0),
 	m_vao(0),
 	m_aaTarget(0)
 {
@@ -42,16 +41,6 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 
 	m_r3dShader.LoadShader();
 	glUseProgram(0);
-
-	// setup our texture memory
-
-	glGenTextures(1, &m_textureBuffer);
-	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, 2048, 2048, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);	// allocate storage
 
 	// setup up our vertex buffer memory
 
@@ -87,11 +76,6 @@ CNew3D::~CNew3D()
 		m_vao = 0;
 	}
 
-	if (m_textureBuffer) {
-		glDeleteTextures(1, &m_textureBuffer);
-		m_textureBuffer = 0;
-	}
-
 	m_r3dShader.UnloadShader();
 }
 
@@ -102,6 +86,9 @@ void CNew3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullingRA
 	m_polyRAM		= polyRAMPtr;
 	m_vrom			= vromPtr;
 	m_textureRAM	= textureRAMPtr;
+
+	m_textureBank[0].AttachMemory(textureRAMPtr);
+	m_textureBank[1].AttachMemory(textureRAMPtr + (2048*1024));
 }
 
 void CNew3D::SetStepping(int stepping)
@@ -143,12 +130,28 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 
 void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
 {
-	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+	// handle case of entire sheet invalidation
+	if (width == 2048 && height == 2048) {
 
-	for (unsigned i = 0; i < height; i++) {
-		glTexSubImage2D(GL_TEXTURE_2D, 0, x, y + i, width, 1, GL_RED_INTEGER, GL_UNSIGNED_SHORT, m_textureRAM + ((y + i) * 2048) + x);
+		height = 1024;
+
+		const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+		const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+
+		for (int i = 0; i < m_textureBank[0].GetNumberOfLevels(); i++) {
+			m_textureBank[0].UploadTextures(i, mipXBase[i], mipYBase[i], width, height);
+			m_textureBank[1].UploadTextures(i, mipXBase[i], mipYBase[i], width, height);
+			width = (width > 1) ? width / 2 : 1;
+			height = (height > 1) ? height / 2 : 1;
+		}
+
+		return;
 	}
+
+	int page;
+	TranslateTexture(x, y, width, height, page);
+
+	m_textureBank[page].UploadTextures(level, x, y, width, height);
 }
 
 void CNew3D::DrawScrollFog()
@@ -280,7 +283,10 @@ void CNew3D::DrawAmbientFog()
 bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 {
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_textureBuffer);
+	m_textureBank[0].Bind();
+	glActiveTexture(GL_TEXTURE1);
+	m_textureBank[1].Bind();
+	glActiveTexture(GL_TEXTURE0);
 
 	bool hasOverlay = false;		// (high priority polys)
 
@@ -1249,6 +1255,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 		currentMesh->height			= ph.TexHeight();
 		currentMesh->microTexture	= ph.MicroTexture();
 		currentMesh->inverted		= ph.TranslatorMapOffset() == 2;
+		currentMesh->page			= ph.Page();
 
 		{
 			bool smoothU = ph.TexSmoothU();
@@ -1590,6 +1597,14 @@ void CNew3D::CalcViewport(Viewport* vp)
 
 		vp->projectionMatrix.FrustumRZ(l, r, b, t, NEAR_PLANE);
 	}
+}
+
+void CNew3D::TranslateTexture(unsigned& x, unsigned& y, int width, int height, int& page)
+{
+	page = y / 1024;
+
+	// remove page from y coordinate
+	y -= (page * 1024);
 }
 
 void CNew3D::SetSunClamp(bool enable)

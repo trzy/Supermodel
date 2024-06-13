@@ -43,6 +43,7 @@
 #include "PolyHeader.h"
 #include "R3DFrameBuffers.h"
 #include <mutex>
+#include "TextureBank.h"
 
 namespace New3D {
 
@@ -224,6 +225,7 @@ private:
 	void TranslateLosPosition(int inX, int inY, int& outX, int& outY);
 	bool ProcessLos(int priority);
 	void CalcViewport(Viewport* vp);
+	void TranslateTexture(unsigned& x, unsigned& y, int width, int height, int& page);
 
 	/*
 	* Data
@@ -261,7 +263,6 @@ private:
 	UINT32 m_colorTableAddr = 0x400;		// address of color table in polygon RAM
 	LODBlendTable* m_LODBlendTable;
 
-	GLuint			m_textureBuffer;
 	NodeAttributes	m_nodeAttribs;
 	Mat4			m_modelMat;				// current modelview matrix
 
@@ -281,6 +282,7 @@ private:
 	std::vector<FVertex> m_polyBufferRam;		// dynamic polys
 	std::vector<FVertex> m_polyBufferRom;		// rom polys
 	std::unordered_map<UINT32, std::shared_ptr<std::vector<Mesh>>> m_romMap;	// a hash table for all the ROM models. The meshes don't have model matrices or tex offsets yet
+	TextureBank			m_textureBank[2];
 
 	GLuint m_vao;
 	VBO m_vbo;								// large VBO to hold our poly data, start of VBO is ROM data, ram polys follow

@@ -30,8 +30,6 @@ private:
 	void PrintShaderResult(GLuint shader);
 	void PrintProgramResult(GLuint program);
 
-	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);
-
 	// run-time config
 	const Util::Config::Node &m_config;
 
@@ -42,9 +40,10 @@ private:
 	GLuint m_fragmentShader;
 
 	// mesh uniform locations
-	GLint m_locTexture1;
-	GLint m_locTexture1Enabled;
-	GLint m_locTexture2Enabled;
+	GLint m_locTextureBank[2];		// 2 banks
+	GLint m_locTexture1Enabled;		// base texture
+	GLint m_locTexture2Enabled;		// micro texture
+	GLint m_locTexturePage;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
 	GLint m_locMicroTexScale;
@@ -70,6 +69,7 @@ private:
 	bool	m_fixedShading;
 	bool	m_translatorMap;
 	bool	m_polyAlpha;
+	int		m_texturePage;
 
 	bool	m_layered;
 	bool	m_noLosReturn;

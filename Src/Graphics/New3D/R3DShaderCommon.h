@@ -82,36 +82,13 @@ vec4 ExtractColour(int type, uint value)
 	return c;
 }
 
-int GetPage(int yCoord)
-{
-	return yCoord / 1024;
-}
-
-int GetNextPage(int yCoord)
-{
-	return (GetPage(yCoord) + 1) & 1;
-}
-
-int GetNextPageOffset(int yCoord)
-{
-	return GetNextPage(yCoord) * 1024;
-}
-
-// wrapping tex coords would be super easy but we combined tex sheets so have to handle wrap around between sheets
 // hardware testing would be useful because i don't know exactly what happens if you try to read outside the texture sheet
 // wrap around is a good guess
-ivec2 WrapTexCoords(ivec2 pos, ivec2 coordinate)
+ivec2 WrapTexCoords(ivec2 pos, ivec2 coordinate, int level)
 {
 	ivec2 newCoord;
-
-	newCoord.x = coordinate.x & 2047;
-	newCoord.y = coordinate.y;
-
-	int page = GetPage(pos.y);
-
-	newCoord.y -= (page * 1024);	// remove page
-	newCoord.y &= 1023;				// wrap around in the same sheet
-	newCoord.y += (page * 1024);	// add page back
+	newCoord.x = coordinate.x & (2047 >> level);
+	newCoord.y = coordinate.y & (1023 >> level);
 
 	return newCoord;
 }
@@ -125,19 +102,11 @@ ivec2 GetTextureSize(int level, ivec2 size)
 
 ivec2 GetTexturePosition(int level, ivec2 pos)
 {
-	const int mipXBase[] = int[](0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047);
-	const int mipYBase[] = int[](0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023);
-
 	int mipDivisor = 1 << level;
 
-	int page = pos.y / 1024;
-	pos.y -= (page * 1024);		// remove page from tex y
-
 	ivec2 retPos;
-	retPos.x = mipXBase[level] + (pos.x / mipDivisor);
-	retPos.y = mipYBase[level] + (pos.y / mipDivisor);
-
-	retPos.y += (page * 1024);	// add page back to tex y
+	retPos.x = pos.x / mipDivisor;
+	retPos.y = pos.y / mipDivisor;
 
 	return retPos;
 }
@@ -206,16 +175,16 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 	}
 }
 
-vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texPos, vec2 texCoord)
+vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texPos, vec2 texCoord, int level)
 {
 	float tx[2], ty[2];
 	float a = LinearTexLocations(wrapMode.s, texSize.x, texCoord.x, tx[0], tx[1]);
 	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
 
-	vec4 p0q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[0]) * texSize + texPos)), 0).r);
-    vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + texPos)), 0).r);
-    vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + texPos)), 0).r);
-    vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + texPos)), 0).r);
+	vec4 p0q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[0]) * texSize + texPos),level), level).r);
+    vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + texPos),level), level).r);
+    vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + texPos),level), level).r);
+    vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + texPos),level), level).r);
 
 	if(alphaTest) {
 		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
@@ -254,15 +223,15 @@ vec4 textureR3D(usampler2D texSampler, ivec2 wrapMode, ivec2 texSize, ivec2 texP
 	ivec2 texSize0 = GetTextureSize(iLevel, texSize);
 	ivec2 texSize1 = GetTextureSize(iLevel+1, texSize); 
 
-	vec4 texLevel0 = texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord);
-	vec4 texLevel1 = texBiLinear(texSampler, wrapMode, vec2(texSize1), texPos1, texCoord);
+	vec4 texLevel0 = texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord, iLevel);
+	vec4 texLevel1 = texBiLinear(texSampler, wrapMode, vec2(texSize1), texPos1, texCoord, iLevel+1);
 
 	return mix(texLevel0, texLevel1, fract(fLevel));	// linear blend between our mipmap levels
 }
 
 vec4 GetTextureValue()
 {
-	vec4 tex1Data = textureR3D(tex1, textureWrapMode, ivec2(baseTexInfo.zw), ivec2(baseTexInfo.xy), fsTexCoord);
+	vec4 tex1Data = textureR3D(textureBank[texturePage], textureWrapMode, ivec2(baseTexInfo.zw), ivec2(baseTexInfo.xy), fsTexCoord);
 
 	if(textureInverted) {
 		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
@@ -271,11 +240,8 @@ vec4 GetTextureValue()
 	if (microTexture) {
 		vec2 scale			= (vec2(baseTexInfo.zw) / 128.0) * microTextureScale;
 		ivec2 pos			= GetMicroTexturePos(microTextureID);
-
-		// add page offset to microtexture position
-		pos.y				+= GetNextPageOffset(baseTexInfo.y);
 	
-		vec4 tex2Data		= textureR3D(tex1, ivec2(0), ivec2(128), pos, fsTexCoord * scale);
+		vec4 tex2Data		= textureR3D(textureBank[(texturePage+1)&1], ivec2(0), ivec2(128), pos, fsTexCoord * scale);
 
 		float lod			= mip_map_level(fsTexCoord * scale * vec2(128.0));
 

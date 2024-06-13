@@ -324,6 +324,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Graphics\New3D\R3DFrameBuffers.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DScrollFog.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
     <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
@@ -503,6 +504,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderQuads.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\TextureBank.h" />
     <ClInclude Include="..\Src\Graphics\New3D\VBO.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Vec.h" />
     <ClInclude Include="..\Src\Graphics\Render2D.h" />

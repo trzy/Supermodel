@@ -128,10 +128,16 @@ struct Mesh
 	enum TexWrapMode : int { repeat = 0, repeatClamp, mirror, mirrorClamp };
 
 	// texture
-	int format, x, y, width, height = 0;
+	int		format		= 0;
+	int		x			= 0;
+	int		y			= 0;
+	int		width		= 0;
+	int		height		= 0;
+	int		page		= 0;
+	bool	inverted	= false;
+
 	TexWrapMode wrapModeU;
 	TexWrapMode wrapModeV;
-	bool inverted = false;
 
 	// microtexture
 	bool	microTexture		= false;

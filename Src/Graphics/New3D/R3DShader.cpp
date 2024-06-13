@@ -38,6 +38,7 @@ void R3DShader::Start()
 	m_specularValue		= 0;
 	m_microTexScale		= 0;
 	m_microTexID		= -1;
+	m_texturePage		= -1;
 
 	m_baseTexInfo[0]	= -1;
 	m_baseTexInfo[1]	= -1;
@@ -100,7 +101,9 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	PrintProgramResult(m_shaderProgram);
 
-	m_locTexture1			= glGetUniformLocation(m_shaderProgram, "tex1");
+	m_locTextureBank[0]		= glGetUniformLocation(m_shaderProgram, "textureBank[0]");
+	m_locTextureBank[1]		= glGetUniformLocation(m_shaderProgram, "textureBank[1]");
+	m_locTexturePage		= glGetUniformLocation(m_shaderProgram, "texturePage");
 	m_locTexture1Enabled	= glGetUniformLocation(m_shaderProgram, "textureEnabled");
 	m_locTexture2Enabled	= glGetUniformLocation(m_shaderProgram, "microTexture");
 	m_locTextureAlpha		= glGetUniformLocation(m_shaderProgram, "textureAlpha");
@@ -202,7 +205,8 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	}
 
 	if (m_dirtyMesh) {
-		glUniform1i(m_locTexture1, 0);
+		glUniform1i(m_locTextureBank[0], 0);
+		glUniform1i(m_locTextureBank[1], 1);
 	}
 
 	if (m_dirtyMesh || m->textured != m_textured1) {
@@ -213,6 +217,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->microTexture != m_textured2) {
 		glUniform1i(m_locTexture2Enabled, m->microTexture);
 		m_textured2 = m->microTexture;
+	}
+
+	if (m_dirtyMesh || (m->page ^ m_transPage) != m_texturePage) {
+		glUniform1i(m_locTexturePage, m->page ^ m_transPage);
+		m_texturePage = (m->page ^ m_transPage);
 	}
 
 	if (m_dirtyMesh || m->microTextureScale != m_microTexScale) {
@@ -232,10 +241,7 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_baseTexInfo[2] = m->width;
 		m_baseTexInfo[3] = m->height;
 
-		int translatedX, translatedY;
-		CalcTexOffset(m_transX, m_transY, m_transPage, m->x, m->y, translatedX, translatedY);	// need to apply model translation
-
-		glUniform4i(m_locBaseTexInfo, translatedX, translatedY, m->width, m->height);
+		glUniform4i(m_locBaseTexInfo, (m->x + m_transX), (m->y + m_transY), m->width, m->height);
 	}
 
 	if (m_dirtyMesh || m_baseTexType != m->format) {
@@ -424,23 +430,6 @@ void R3DShader::PrintProgramResult(GLuint program)
 		glGetProgramInfoLog(program, maxLength, &maxLength, infoLog.data());
 		printf("%s\n", infoLog.data());
 	}
-}
-
-void R3DShader::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY)
-{
-	newX = (x + offX) & 2047;	// wrap around 2048, shouldn't be required
-
-	int oldPage = y / 1024;
-
-	y -= (oldPage * 1024);	// remove page from tex y
-
-	// calc newY with wrap around, wraps around in the same sheet, not into another memory sheet
-
-	newY = (y + offY) & 1023;
-
-	// add page to Y
-
-	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
 } // New3D

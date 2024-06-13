@@ -66,7 +66,7 @@ static const char *fragmentShaderR3D = R"glsl(
 
 #version 410 core
 
-uniform usampler2D tex1;			// entire texture sheet
+uniform usampler2D textureBank[2];			// entire texture sheet
 
 // texturing
 uniform bool	textureEnabled;
@@ -80,6 +80,7 @@ uniform bool	textureAlpha;
 uniform bool	alphaTest;
 uniform bool	discardAlpha;
 uniform ivec2	textureWrapMode;
+uniform int		texturePage;
 
 // general
 uniform vec3	fogColour;
