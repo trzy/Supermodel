@@ -36,7 +36,7 @@ void R3DShader::Start()
 	m_nodeAlpha			= 1.0f;
 	m_shininess			= 0;
 	m_specularValue		= 0;
-	m_microTexScale		= 0;
+	m_microTexMinLOD	= 0;
 	m_microTexID		= -1;
 	m_texturePage		= -1;
 
@@ -108,7 +108,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locTexture2Enabled	= glGetUniformLocation(m_shaderProgram, "microTexture");
 	m_locTextureAlpha		= glGetUniformLocation(m_shaderProgram, "textureAlpha");
 	m_locAlphaTest			= glGetUniformLocation(m_shaderProgram, "alphaTest");
-	m_locMicroTexScale		= glGetUniformLocation(m_shaderProgram, "microTextureScale");
+	m_locMicroTexMinLOD		= glGetUniformLocation(m_shaderProgram, "microTextureMinLOD");
 	m_locMicroTexID			= glGetUniformLocation(m_shaderProgram, "microTextureID");
 	m_locBaseTexInfo		= glGetUniformLocation(m_shaderProgram, "baseTexInfo");
 	m_locBaseTexType		= glGetUniformLocation(m_shaderProgram, "baseTexType");
@@ -224,9 +224,9 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_texturePage = (m->page ^ m_transPage);
 	}
 
-	if (m_dirtyMesh || m->microTextureScale != m_microTexScale) {
-		glUniform1f(m_locMicroTexScale, m->microTextureScale);
-		m_microTexScale = m->microTextureScale;
+	if (m_dirtyMesh || m->microTextureMinLOD != m_microTexMinLOD) {
+		glUniform1f(m_locMicroTexMinLOD, m->microTextureMinLOD);
+		m_microTexMinLOD = m->microTextureMinLOD;
 	}
 
 	if (m_dirtyMesh || m->microTextureID != m_microTexID) {

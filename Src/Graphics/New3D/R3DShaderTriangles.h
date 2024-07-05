@@ -19,6 +19,7 @@ in  vec2	inTexCoord;
 in  vec4	inColour;
 in  vec3	inFaceNormal;		// used to emulate r3d culling 
 in  float	inFixedShade;
+in  float	inTextureNP;
 
 // outputs to fragment shader
 out vec3	fsViewVertex;
@@ -27,6 +28,7 @@ out vec2	fsTexCoord;
 out vec4	fsColor;
 out float	fsDiscard;			// can't have varying bool (glsl spec)
 out float	fsFixedShade;
+out float	fsTextureNP;
 
 vec4 GetColour(vec4 colour)
 {
@@ -58,6 +60,7 @@ void main(void)
 	fsColor    		= GetColour(inColour);
 	fsTexCoord		= inTexCoord;
 	fsFixedShade	= inFixedShade;
+	fsTextureNP		= inTextureNP * modelScale;
 	gl_Position		= projMat * modelMat * inVertex;
 }
 )glsl";
@@ -71,7 +74,7 @@ uniform usampler2D textureBank[2];			// entire texture sheet
 // texturing
 uniform bool	textureEnabled;
 uniform bool	microTexture;
-uniform float	microTextureScale;
+uniform float	microTextureMinLOD;
 uniform int		microTextureID;
 uniform ivec4	baseTexInfo;		// x/y are x,y positions in the texture sheet. z/w are with and height
 uniform int		baseTexType;
@@ -115,6 +118,7 @@ in  vec4	fsColor;
 in  vec2	fsTexCoord;
 in  float	fsDiscard;
 in  float	fsFixedShade;
+in	float	fsTextureNP;
 
 //outputs
 layout(location = 0) out vec4 out0;		// opaque

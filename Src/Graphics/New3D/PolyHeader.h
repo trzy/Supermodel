@@ -55,7 +55,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Color (RGB888 or two 12-bit indexes, sensor
 -------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
 
 0x05 : 
-xxxxxxxx xxxxxxxx xxxxxxxx --------		Texture NP ?
+xxxxxxxx xxxxxxxx xxxxxxxx --------		Texture NP
 -------- -------- -------- x-------		Low bit of texture U coordinate
 -------- -------- -------- ---xxxxx		Low 5 bits of texture V coordinate
 
@@ -115,7 +115,7 @@ public:
 	bool	TexVMirror();
 	bool	MicroTexture();
 	int		MicroTextureID();
-	int		MicroTextureMinLOD();	// basically how many times it repeats compared to the base texture (i assume)
+	int		MicroTextureMinLOD();
 
 	// header 3
 	int		TexWidth();
@@ -133,6 +133,7 @@ public:
 	// header 5
 	int		X();
 	int		Y();
+	float	TextureNP();
 
 	//header 6
 	bool	Layered();

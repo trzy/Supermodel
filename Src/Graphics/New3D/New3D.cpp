@@ -55,6 +55,7 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inColour"));
 	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFaceNormal"));
 	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inFixedShade"));
+	glEnableVertexAttribArray(m_r3dShader.GetVertexAttribPos("inTextureNP"));
 
 	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
@@ -63,6 +64,7 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTextureNP"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, textureNP));
 
 	glBindVertexArray(0);
 	m_vbo.Bind(false);
@@ -102,10 +104,12 @@ void CNew3D::SetStepping(int stepping)
 	if (m_step > 0x10) {
 		m_offset = 0;							// culling nodes are 10 words
 		m_vertexFactor = (1.0f / 2048.0f);		// vertices are in 13.11 format
+		m_textureNPFactor = (1.0f / 16384.0f);	// texture NP values are in 10.14 format
 	}
 	else {
 		m_offset = 2;							// 8 words
 		m_vertexFactor = (1.0f / 128.0f);		// 17.7
+		m_textureNPFactor = (1.0f / 4096.0f);	// 12.12
 	}
 }
 
@@ -1287,10 +1291,8 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 		if (currentMesh->microTexture) {
 
-			static const float microTexScale[] = { 2.f, 4.f, 16.f, 256.f };
-
 			currentMesh->microTextureID = ph.MicroTextureID();
-			currentMesh->microTextureScale = microTexScale[ph.MicroTextureMinLOD()];
+			currentMesh->microTextureMinLOD = (float)ph.MicroTextureMinLOD();
 		}
 	}
 }
@@ -1395,6 +1397,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 			p.v[i].normal[1] = p.faceNormal[1];
 			p.v[i].normal[2] = p.faceNormal[2];
 		}
+
+		p.textureNP = ph.TextureNP() * m_textureNPFactor;
 
 		UINT32* vData = ph.StartOfData();	// vertex data starts here
 
