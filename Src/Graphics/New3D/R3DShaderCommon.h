@@ -119,13 +119,13 @@ ivec2 GetMicroTexturePos(int id)
 	return ivec2(xCoords[id],yCoords[id]);
 }
 
-float mip_map_level(in vec2 texture_coordinate) // in texel units
+float mip_map_level(in vec3 coordinate)
 {
-    vec2  dx_vtc        = dFdx(texture_coordinate);
-    vec2  dy_vtc        = dFdy(texture_coordinate);
-    float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
-    float mml = 0.5 * log2(delta_max_sqr);
-    return max( 0.0, mml );
+	// Real3D uses vertex coordinates rather than texel coordinates to calculate mipmap levels
+	vec3 dx_vtc = dFdx(coordinate);
+	vec3 dy_vtc = dFdy(coordinate);
+	float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
+	return log2(delta_max_sqr / (fsTextureNP * fsTextureNP)) * 0.5;			// result not clamped
 }
 
 float LinearTexLocations(int wrapMode, float size, float u, out float u0, out float u1)
@@ -207,57 +207,49 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
     return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
 }
 
-vec4 textureR3D(usampler2D texSampler, ivec2 wrapMode, ivec2 texSize, ivec2 texPos, vec2 texCoord)
+vec4 GetTextureValue()
 {
-	float numLevels	= floor(log2(min(float(texSize.x), float(texSize.y))));				// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
-	float fLevel	= min(mip_map_level(texCoord * vec2(texSize)), numLevels);
-
-	if(alphaTest) fLevel *= 0.5;
-	else fLevel *= 0.8;
+	float lod = mip_map_level(fsViewVertex);
+	float numLevels = floor(log2(min(float(baseTexInfo.z), float(baseTexInfo.w))));		// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
+	float fLevel = clamp(lod, 0.0, numLevels);
 
 	int iLevel = int(fLevel);
 
-	ivec2 texPos0 = GetTexturePosition(iLevel,texPos);
-	ivec2 texSize0 = GetTextureSize(iLevel, texSize);
+	ivec2 tex1Pos = GetTexturePosition(iLevel, ivec2(baseTexInfo.xy));
+	ivec2 tex1Size = GetTextureSize(iLevel, ivec2(baseTexInfo.zw));
+	vec4 tex1Data = texBiLinear(textureBank[texturePage], textureWrapMode, vec2(tex1Size), tex1Pos, fsTexCoord, iLevel);
 
-	if (fLevel > 0)
+	// init second texel with blank data to avoid any potentially undefined behavior
+	vec4 tex2Data = vec4(0.0);
+
+	float blendFactor = 0.0;
+
+	// if LOD < 0, no need to blend with next mipmap level; slight performance boost
+	if (lod > 0.0)
 	{
-		ivec2 texPos1 = GetTexturePosition(iLevel+1,texPos);
-		ivec2 texSize1 = GetTextureSize(iLevel+1, texSize); 
+		ivec2 tex2Pos = GetTexturePosition(iLevel+1, ivec2(baseTexInfo.xy));
+		ivec2 tex2Size = GetTextureSize(iLevel+1, ivec2(baseTexInfo.zw));
+		tex2Data = texBiLinear(textureBank[texturePage], textureWrapMode, vec2(tex2Size), tex2Pos, fsTexCoord, iLevel+1);
 
-		vec4 texLevel0 = texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord, iLevel);
-		vec4 texLevel1 = texBiLinear(texSampler, wrapMode, vec2(texSize1), texPos1, texCoord, iLevel+1);
-
-		return mix(texLevel0, texLevel1, fract(fLevel));	// linear blend between our mipmap levels
+		blendFactor = fract(fLevel);
 	}
-	else
+	else if (microTexture && lod < -microTextureMinLOD)
 	{
-		// if fLevel is 0, no need to mix with next mipmap level; slight performance boost
-		return texBiLinear(texSampler, wrapMode, vec2(texSize0), texPos0, texCoord, iLevel);
-	}
-}
+		vec4 scaleIndex = vec4(2.0, 4.0, 16.0, 256.0);		// unsure if minLOD=4 has 256x scale? No games appear to use it
+		vec2 scale = (vec2(baseTexInfo.zw) / 128.0) * scaleIndex[int(microTextureMinLOD)];
 
-vec4 GetTextureValue()
-{
-	vec4 tex1Data = textureR3D(textureBank[texturePage], textureWrapMode, ivec2(baseTexInfo.zw), ivec2(baseTexInfo.xy), fsTexCoord);
+		// microtextures are always 128x128 and only use LOD 0 mipmap
+		ivec2 tex2Pos = GetMicroTexturePos(microTextureID);
+		tex2Data = texBiLinear(textureBank[(texturePage+1)&1], ivec2(0), ivec2(128), tex2Pos, fsTexCoord * scale, 0);
+
+		blendFactor = -(lod + microTextureMinLOD) * 0.25;
+		blendFactor = clamp(blendFactor, 0.0, 0.5);
+	}
+
+	tex1Data = mix(tex1Data, tex2Data, blendFactor);
 
 	if(textureInverted) {
 		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
-	}
-
-	if (microTexture) {
-		vec2 scale			= (vec2(baseTexInfo.zw) / 128.0) * microTextureScale;
-		ivec2 pos			= GetMicroTexturePos(microTextureID);
-	
-		vec4 tex2Data		= textureR3D(textureBank[(texturePage+1)&1], ivec2(0), ivec2(128), pos, fsTexCoord * scale);
-
-		float lod			= mip_map_level(fsTexCoord * scale * vec2(128.0));
-
-		float blendFactor	= max(lod - 1.5, 0.0);			// bias -1.5
-		blendFactor			= min(blendFactor, 1.0);		// clamp to max value 1
-		blendFactor			= (blendFactor + 1.0) / 2.0;	// 0.5 - 1 range
-
-		tex1Data			= mix(tex2Data, tex1Data, blendFactor);
 	}
 
 	if (alphaTest) {

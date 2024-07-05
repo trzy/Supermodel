@@ -46,7 +46,7 @@ private:
 	GLint m_locTexturePage;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
-	GLint m_locMicroTexScale;
+	GLint m_locMicroTexMinLOD;
 	GLint m_locMicroTexID;
 	GLint m_locBaseTexInfo;
 	GLint m_locBaseTexType;
@@ -73,7 +73,7 @@ private:
 
 	bool	m_layered;
 	bool	m_noLosReturn;
-	float	m_microTexScale;
+	float	m_microTexMinLOD;
 	int		m_microTexID;
 	int		m_baseTexInfo[4];
 	int		m_baseTexType;

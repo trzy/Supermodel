@@ -52,6 +52,7 @@ struct R3DPoly
 	Vertex v[4];			// just easier to have them as an array
 	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
 	UINT8 faceColour[4];	// per face colour
+	float textureNP;
 	int number = 4;
 };
 
@@ -59,6 +60,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 {
 	float faceNormal[3];
 	UINT8 faceColour[4];
+	float textureNP;
 
 	FVertex& operator=(const Vertex& vertex) 
 	{
@@ -71,6 +73,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 	{
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
+		textureNP = r3dPoly.textureNP;
 
 		*this = r3dPoly.v[index];
 	}
@@ -82,6 +85,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 		// copy face attributes
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
+		textureNP = r3dPoly.textureNP;
 	}
 
 	static void Average(const FVertex& p1, const FVertex& p2, FVertex& p3)
@@ -142,7 +146,7 @@ struct Mesh
 	// microtexture
 	bool	microTexture		= false;
 	int		microTextureID		= 0;
-	float	microTextureScale	= 0;
+	float	microTextureMinLOD	= 0;
 
 	// attributes
 	bool textured		= false;

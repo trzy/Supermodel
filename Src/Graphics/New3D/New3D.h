@@ -244,6 +244,7 @@ private:
 	int		m_step;
 	int		m_offset;			// offset to subtract for words 3 and higher of culling nodes
 	float	m_vertexFactor;		// fixed-point conversion factor for vertices
+	float	m_textureNPFactor;	// fixed-point conversion factor for texture NP values
 
 	// Memory (passed from outside)
 	const UINT32	*m_cullingRAMLo;	// 4 MB

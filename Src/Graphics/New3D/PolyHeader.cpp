@@ -306,6 +306,11 @@ int PolyHeader::Y()
 	return y;
 }
 
+float PolyHeader::TextureNP()
+{
+	return (float)(header[5] >> 8);
+}
+
 //
 // header 6
 //

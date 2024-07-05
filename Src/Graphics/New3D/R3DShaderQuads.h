@@ -19,6 +19,7 @@ in vec2		inTexCoord;
 in vec3		inFaceNormal;		// used to emulate r3d culling 
 in float	inFixedShade;
 in vec4		inColour;
+in float	inTextureNP;
 
 // outputs to geometry shader
 
@@ -29,6 +30,7 @@ out VS_OUT
 	vec2	texCoord;
 	vec4	color;
 	float	fixedShade;
+	float	textureNP;
 	float	discardPoly;	// can't have varying bool (glsl spec)
 } vs_out;
 
@@ -62,6 +64,7 @@ void main(void)
 	vs_out.color    	= GetColour(inColour);
 	vs_out.texCoord		= inTexCoord;
 	vs_out.fixedShade	= inFixedShade;
+	vs_out.textureNP	= inTextureNP * modelScale;
 	gl_Position			= projMat * modelMat * inVertex;
 }
 )glsl";
@@ -80,6 +83,7 @@ in VS_OUT
 	vec2	texCoord;
 	vec4	color;
 	float	fixedShade;
+	float	textureNP;
 	float	discardPoly;	// can't have varying bool (glsl spec)
 } gs_in[4];
 
@@ -95,6 +99,7 @@ out GS_OUT
 	flat vec2	texCoord[4];
 	flat vec4	color;
 	flat float	fixedShade[4];
+	flat float	textureNP;
 } gs_out;
 
 //a*b - c*d, computed in a stable fashion (Kahan)
@@ -128,6 +133,7 @@ void main(void)
 
 	// flat attributes
 	gs_out.color = gs_in[0].color;
+	gs_out.textureNP = gs_in[0].textureNP;
 
 	// precompute crossproducts for all vertex combinations to be looked up in loop below for area computation
 	precise float cross[4][4];
@@ -180,7 +186,7 @@ uniform usampler2D textureBank[2];			// entire texture sheet
 // texturing
 uniform bool	textureEnabled;
 uniform bool	microTexture;
-uniform float	microTextureScale;
+uniform float	microTextureMinLOD;
 uniform int		microTextureID;
 uniform ivec4	baseTexInfo;		// x/y are x,y positions in the texture sheet. z/w are with and height
 uniform int		baseTexType;
@@ -231,6 +237,7 @@ in GS_OUT
 	flat vec2	texCoord[4];
 	flat vec4	color;
 	flat float	fixedShade[4];
+	flat float	textureNP;
 } fs_in;
 
 //our calculated vertex attributes from the above
@@ -239,6 +246,7 @@ vec3	fsViewNormal;
 vec2	fsTexCoord;
 float	fsFixedShade;
 vec4	fsColor;
+float	fsTextureNP;
 
 //outputs
 layout(location = 0) out vec4 out0;		// opaque
@@ -323,6 +331,7 @@ void QuadraticInterpolation()
 	fsTexCoord		= vec2(0.0);
 	fsFixedShade	= 0.0;
 	fsColor			= fs_in.color;
+	fsTextureNP		= fs_in.textureNP;
 	
 	for (int i=0; i<4; i++) {
 		fsViewVertex	+= lambda[i] * fs_in.viewVertex[i];
