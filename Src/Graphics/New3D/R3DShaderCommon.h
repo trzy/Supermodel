@@ -210,7 +210,7 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
 vec4 GetTextureValue()
 {
 	float lod = mip_map_level(fsViewVertex);
-	float numLevels = floor(log2(min(float(baseTexInfo.z), float(baseTexInfo.w))));		// r3d only generates down to 1:1 for square textures, otherwise its the min dimension
+	float numLevels = floor(log2(min(float(baseTexInfo.z), float(baseTexInfo.w)))) - 1.0;	// r3d only generates down to 2:2 for square textures, otherwise its the min dimension
 	float fLevel = clamp(lod, 0.0, numLevels);
 
 	int iLevel = int(fLevel);
