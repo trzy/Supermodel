@@ -120,7 +120,7 @@ public:
     return OKAY;
   }
 
-  void AttachRenderers(CRender2D *render2D, IRender3D *render3D) override
+  void AttachRenderers(CRender2D *render2D, IRender3D *render3D, SuperAA* superAA) override
   {
     m_tileGen.AttachRenderer(render2D);
     m_real3D.AttachRenderer(render3D);
