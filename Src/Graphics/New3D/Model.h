@@ -10,18 +10,6 @@
 
 namespace New3D {
 
-struct ClipVertex
-{
-	float pos[4];
-};
-
-struct ClipPoly
-{
-	ClipVertex list[12];		// what's the max number we can hit for a triangle + 4 planes?
-	int count = 0;
-};
-
-
 struct Vertex					// half vertex
 {
 	float pos[4];
