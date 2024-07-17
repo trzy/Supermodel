@@ -1,0 +1,68 @@
+---
+name: _artifact
+
+on:
+  workflow_call:
+    inputs:
+      opt:
+        description: "make OPT value"
+        type: string
+        default: "-O3"
+
+jobs:
+  Build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        include:
+          - os: windows-latest
+            makefile: Makefile.Win32
+            outfile_ext: .exe
+            shell: msys2 {0}
+          - os: ubuntu-latest
+            makefile: Makefile.UNIX
+            shell: bash
+          - os: macos-latest
+            makefile: Makefile.OSX
+            shell: bash
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    env:
+      OPT_INPUT: ${{ inputs.opt }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ubuntu build dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt update
+          sudo apt install -y libsdl2-dev libsdl2-net-dev
+      - name: Install windows build dependencies
+        if: startsWith(matrix.os, 'windows')
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            zip
+            git
+            mingw64/mingw-w64-x86_64-gcc
+            mingw64/mingw-w64-x86_64-SDL2
+            mingw64/mingw-w64-x86_64-SDL2_net
+      - name: Compile
+        run: |
+          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+          echo "pkg_path=$(make -f Makefiles/${{ matrix.makefile }} -j pkg/path)" >> $GITHUB_ENV
+      - name: Validate
+        run: ./bin/supermodel${{ matrix.outfile_ext }} -print-games
+      - name: Package
+        run: |
+          make -f Makefiles/${{ matrix.makefile }} pkg NET_BOARD=1 BIN_DIR=bin OUTFILE=supermodel${{ matrix.outfile_ext }} OPT="${OPT_INPUT:-"-O3 -g"}" LDOPT=""
+      - uses: actions/upload-artifact@v4
+        with:
+          name: supermodel-${{ runner.os }}-${{ runner.arch }}
+          path: ${{ env.pkg_path }}
