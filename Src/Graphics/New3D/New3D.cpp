@@ -39,6 +39,8 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 		m_primType		= GL_LINES_ADJACENCY;
 	}
 
+	m_wideScreen = config["WideScreen"].ValueAs<bool>();
+
 	m_r3dShader.LoadShader();
 	glUseProgram(0);
 
@@ -1555,7 +1557,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 
 	vp->projectionMatrix.LoadIdentity();	// reset matrix
 
-	if ((vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
+	if (m_wideScreen && (vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
 
 		/*
 		 * Compute aspect ratio correction factor. "Window" refers to the full GL

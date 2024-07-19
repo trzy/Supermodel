@@ -258,6 +258,7 @@ private:
 	unsigned	m_xOffs, m_yOffs;
 	unsigned	m_xRes, m_yRes;           // resolution of Model 3's 496x384 display area within the window
 	unsigned 	m_totalXRes, m_totalYRes; // total OpenGL window resolution
+	bool		m_wideScreen;
 
 	// Real3D Base Matrix Pointer
 	const float	*m_matrixBasePtr;
