@@ -11,6 +11,7 @@ uniform float	nodeAlpha;
 uniform mat4	modelMat;
 uniform mat4	projMat;
 uniform bool	translatorMap;
+uniform bool	lightEnabled;
 
 // attributes
 in	vec4	inVertex;
@@ -60,7 +61,7 @@ void main(void)
 	fsColor    		= GetColour(inColour);
 	fsTexCoord		= inTexCoord;
 	fsFixedShade	= inFixedShade;
-	fsTextureNP		= inTextureNP * modelScale;
+	fsTextureNP		= inTextureNP * (lightEnabled ? modelScale : modelScale * length(fsViewNormal));
 	gl_Position		= projMat * modelMat * inVertex;
 }
 )glsl";

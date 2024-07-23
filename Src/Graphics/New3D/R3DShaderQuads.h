@@ -11,6 +11,7 @@ uniform float	nodeAlpha;
 uniform mat4	modelMat;
 uniform mat4	projMat;
 uniform bool	translatorMap;
+uniform bool	lightEnabled;
 
 // attributes
 in vec4		inVertex;
@@ -64,7 +65,7 @@ void main(void)
 	vs_out.color    	= GetColour(inColour);
 	vs_out.texCoord		= inTexCoord;
 	vs_out.fixedShade	= inFixedShade;
-	vs_out.textureNP	= inTextureNP * modelScale;
+	vs_out.textureNP	= inTextureNP * (lightEnabled ? modelScale : modelScale * length(vs_out.viewNormal));
 	gl_Position			= projMat * modelMat * inVertex;
 }
 )glsl";
