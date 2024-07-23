@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2022 The Supermodel Team
+## Copyright 2003-2024 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -73,6 +73,7 @@ OPT = -O3
 WARN = -Wall
 CSTD = -std=iso9899:2011
 CXXSTD = -std=c++17
+LDOPT = -s
 
 
 #
@@ -81,7 +82,7 @@ CXXSTD = -std=c++17
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
-LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) -s
+LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) $(LDOPT)
 
 
 ###############################################################################
@@ -223,22 +224,52 @@ all:	$(BIN_DIR)/$(OUTFILE)
 # version number. Double-colon rules should force ordered execution.
 # The automated build script relies on these -- don't modify their output!
 #
+.PHONY: clean
 .PHONY: set_version
 .PHONY: print_message
 .PHONY: version
-release:: set_version
-release:: print_message
 release:: clean
+release:: print_message
 release:: all
+
+PKG_FILES += $(BIN_DIR)/$(OUTFILE) Docs/README.txt Docs/LICENSE.txt Config Assets
+pkg: pkg/$(PKG_TYPE)
+	$(info Cleaning up            : $(PKG_STAGE_PATH))
+	$(SILENT)cd pkg && rm -r $(notdir $(PKG_STAGE_PATH))
+pkg/tgz: pkg/stage
+	$(info Creating package       : $(PKG_PATH))
+	$(SILENT)tar -C pkg -czf $(PKG_PATH) $(notdir $(PKG_STAGE_PATH))
+pkg/zip: pkg/stage
+	$(info Creating package       : $(PKG_STAGE_PATH).zip)
+	$(SILENT)cd pkg && zip -r $(notdir $(PKG_PATH)) $(notdir $(PKG_STAGE_PATH))
+pkg/stage:: all
+pkg/stage:: pkg/path
+	$(info Staging package        : $(PKG_STAGE_PATH))
+	$(SILENT)rm -rf $(PKG_PATH) $(PKG_STAGE_PATH) ; mkdir -p $(PKG_STAGE_PATH)
+	$(SILENT)tar -cf - $(PKG_FILES) | tar -C $(PKG_STAGE_PATH) -xf -
+	$(SILENT)cd $(PKG_STAGE_PATH) && \
+	  mkdir NVRAM Saves ROMs && \
+	  echo "NVRAM files go here." > NVRAM/DIR.txt && \
+	  echo "Save states go here." > Saves/DIR.txt && \
+	  echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt && \
+	  mv $(BIN_DIR)/$(OUTFILE) . && rmdir $(BIN_DIR) && \
+	  mv Docs//* . && rmdir Docs
+	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
+	$(SILENT)OUTPUT=$(PKG_STAGE_PATH)/CHANGES.txt ./Scripts/changelog.sh
+pkg/path: set_version
+	$(eval PKG_STAGE_PATH = pkg/supermodel-$(VERSION))
+	$(eval PKG_PATH = pkg/supermodel-$(VERSION).$(PKG_TYPE))
+	@echo $(PKG_PATH)
+
 set_version:
 	$(eval VERSION = $(strip $(subst ',,0.3a-git-$(shell git rev-parse --short HEAD --sq))))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
-print_message:
+print_message: set_version
 	$(info Building Supermodel Version $(VERSION))
 version: set_version
 	@echo $(VERSION)
 
-$(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_DIR) $(OBJ_FILES)
+$(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
 	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE))
 	$(SILENT)$(LD) $(OBJ_FILES) $(LDFLAGS)
@@ -248,7 +279,7 @@ $(BIN_DIR):
 	$(info Creating directory     : $(BIN_DIR))
 	$(SILENT)mkdir $(BIN_DIR)
 
-$(OBJ_DIR):
+$(OBJ_DIR): | $(PLATFORM_DIRS)
 	$(info Creating directory     : $(OBJ_DIR))
 	$(SILENT)mkdir $(OBJ_DIR)
 
@@ -275,13 +306,13 @@ VPATH = $(INCLUDE_DIRS)
 # the source code. This technique is described in the reply by user "rr-" at:
 # https://stackoverflow.com/questions/8025766/makefile-auto-dependency-generation
 #
-$(OBJ_DIR)/%.o:	%.cpp
+$(OBJ_DIR)/%.o:	%.cpp | $(OBJ_DIR)
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)
 	$(SILENT)$(CXX) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
 	$(SILENT)$(CXX) $(CXXFLAGS) $< -o $@
 
-$(OBJ_DIR)/%.o:	%.c
+$(OBJ_DIR)/%.o:	%.c | $(OBJ_DIR)
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)
 	$(SILENT)$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CFLAGS) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
@@ -301,33 +332,33 @@ MUSASHI_OUTFILE = $(OBJ_DIR)/m68kmake.exe # do not remove the .exe suffix!
 MUSASHI_CFLAGS = -ISrc/CPU/68K/Musashi -I$(OBJ_DIR) -DINLINE="static inline" -Wno-unused-variable
 MUSASHI_LDFLAGS = -o $(MUSASHI_OUTFILE) $(OBJ_DIR)/m68kmake.o -s
 
-$(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c
+$(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c | $(OBJ_DIR)
 	$(info --------------------------------------------------------------------------------)
 	$(info Compiling              : $< -> $(OBJ_DIR)/m68kmake.o)
 	$(SILENT)$(CC) $< $(CFLAGS) -o $(OBJ_DIR)/m68kmake.o
 	$(info Linking                : $(MUSASHI_OUTFILE))
 	$(SILENT)$(LD) $(MUSASHI_LDFLAGS)
 
-$(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+$(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h | $(OBJ_DIR)
 	$(info Generating 68K emulator: $@)
 	@$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
 
-$(OBJ_DIR)/m68kcpu.o:	Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h
+$(OBJ_DIR)/m68kcpu.o:	Src/CPU/68K/Musashi/m68kcpu.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $(OBJ_DIR)/m68kcpu.o
 
-$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
+$(OBJ_DIR)/m68kops.o:	$(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
+$(OBJ_DIR)/m68kopac.o: $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
+$(OBJ_DIR)/m68kopdm.o: $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
 
-$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE)
+$(OBJ_DIR)/m68kopnz.o: $(OBJ_DIR)/m68kopnz.c $(OBJ_DIR)/m68kops.h Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h $(MUSASHI_OUTFILE) | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	@$(CC) $< $(CFLAGS) $(MUSASHI_CFLAGS) -o $@
