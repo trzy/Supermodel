@@ -31,6 +31,7 @@ void R3DShader::Start()
 	m_noLosReturn		= false;
 	m_textureInverted	= false;
 	m_fixedShading		= false;
+	m_smoothShading		= false;
 	m_translatorMap		= false;
 	m_modelScale		= 1.0f;
 	m_nodeAlpha			= 1.0f;
@@ -132,6 +133,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpecularValue		= glGetUniformLocation(m_shaderProgram, "specularValue");
 	m_locSpecularEnabled	= glGetUniformLocation(m_shaderProgram, "specularEnabled");
 	m_locFixedShading		= glGetUniformLocation(m_shaderProgram, "fixedShading");
+	m_locSmoothShading		= glGetUniformLocation(m_shaderProgram, "smoothShading");
 	m_locTranslatorMap		= glGetUniformLocation(m_shaderProgram, "translatorMap");
 
 	m_locSpotEllipse		= glGetUniformLocation(m_shaderProgram, "spotEllipse");
@@ -292,6 +294,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	if (m_dirtyMesh || m->fixedShading != m_fixedShading) {
 		glUniform1i(m_locFixedShading, m->fixedShading);
 		m_fixedShading = m->fixedShading;
+	}
+
+	if (m_dirtyMesh || m->smoothShading != m_smoothShading) {
+		glUniform1i(m_locSmoothShading, m->smoothShading);
+		m_smoothShading = m->smoothShading;
 	}
 
 	if (m_dirtyMesh || m->translatorMap != m_translatorMap) {

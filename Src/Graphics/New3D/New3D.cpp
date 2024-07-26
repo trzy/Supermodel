@@ -1246,6 +1246,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 	currentMesh->fogIntensity	= ph.LightModifier();
 	currentMesh->translatorMap	= ph.TranslatorMap();
 	currentMesh->noLosReturn	= ph.NoLosReturn();
+	currentMesh->smoothShading	= ph.SmoothShading();
 
 	if (currentMesh->textured) {
 

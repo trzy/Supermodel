@@ -216,6 +216,7 @@ uniform float	fogStart;
 uniform float	fogAttenuation;
 uniform float	fogAmbient;
 uniform bool	fixedShading;
+uniform bool	smoothShading;
 uniform int		hardwareStep;
 uniform int		colourLayer;
 uniform bool	polyAlpha;
@@ -464,20 +465,27 @@ void main()
 		// for now assume fixed shading doesn't work with specular
 		if (specularEnabled) {
 
-			float exponent, NdotL, specularFactor;
-			vec4 biasIndex, expIndex, multIndex;
+			float specularFactor;
 
-			// Always clamp floor to zero, we don't want deep black areas
-			NdotL = max(0.0,sunFactor);
+			if (smoothShading)
+			{
+				// Always clamp floor to zero
+				float NdotL = max(0.0, sunFactor);
 
-			expIndex = vec4(8.0, 16.0, 32.0, 64.0);
-			multIndex = vec4(2.0, 2.0, 3.0, 4.0);
-			biasIndex = vec4(0.95, 0.95, 1.05, 1.0);
-			exponent = expIndex[int(shininess)] / biasIndex[int(shininess)];
-
-			specularFactor = pow(NdotL, exponent);
-			specularFactor *= multIndex[int(shininess)];
-			specularFactor *= biasIndex[int(shininess)];
+				vec4 expIndex = vec4(8.0, 16.0, 32.0, 64.0);
+				vec4 multIndex = vec4(1.6, 1.6, 2.4, 3.2);
+				float exponent = expIndex[int(shininess)];
+			
+				specularFactor = pow(NdotL, exponent);
+				specularFactor *= multIndex[int(shininess)];
+			}
+			else
+			{
+				// flat shaded polys use Phong reflection model (R dot V) without any exponent or multiplier
+				// V = (0.0, 0.0, 1.0) is used by Model 3 as a fast approximation, so R dot V = R.z
+				vec3 R = reflect(-sunVector, fsViewNormal);
+				specularFactor = max(0.0, R.z);
+			}
 			
 			specularFactor *= specularValue;
 			specularFactor *= lighting[1].x;

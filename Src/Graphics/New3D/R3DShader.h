@@ -67,6 +67,7 @@ private:
 	float	m_specularValue;
 	bool	m_specularEnabled;
 	bool	m_fixedShading;
+	bool	m_smoothShading;
 	bool	m_translatorMap;
 	bool	m_polyAlpha;
 	int		m_texturePage;
@@ -109,6 +110,7 @@ private:
 	GLint m_locSpecularValue;
 	GLint m_locSpecularEnabled;
 	GLint m_locFixedShading;
+	GLint m_locSmoothShading;
 
 	GLint m_locSpotEllipse;
 	GLint m_locSpotRange;
