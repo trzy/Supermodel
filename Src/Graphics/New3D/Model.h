@@ -149,6 +149,7 @@ struct Mesh
 
 	// lighting
 	bool fixedShading	= false;
+	bool smoothShading	= false;
 	bool lighting		= false;
 	bool specular		= false;
 	float shininess		= 0;
