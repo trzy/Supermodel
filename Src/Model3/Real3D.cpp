@@ -715,7 +715,13 @@ void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
     {
       uint32_t addr = m_vromTextureFIFO[0];
       uint32_t header = m_vromTextureFIFO[1];
-      UploadTexture(header, (const uint16_t *) &vrom[addr & 0xFFFFFF]);
+
+      // first 4 MB maps to polygon RAM rather than VROM
+      // Daytona 2 PE uses zeroed data to replace unused Dreamcast logo textures
+      if (addr < 0x100000)
+        UploadTexture(header, (const uint16_t*)&polyRAM[addr & 0xFFFFFF]);
+      else
+        UploadTexture(header, (const uint16_t*)&vrom[addr & 0xFFFFFF]);
       m_vromTextureFIFOIdx = 0;
     }
     else
