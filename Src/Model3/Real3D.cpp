@@ -326,18 +326,6 @@ static const unsigned decode8x2[16] =
   15, 14
 };
 
-static const unsigned decode8x1[8] =
-{
-  1,
-  3,
-  0,
-  2,
-  5,
-  7,
-  4,
-  6
-};
-
 void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, bool sixteenBit, bool writeLSB, bool writeMSB, uint32_t &texDataOffset)
 {
   uint32_t tileX = (std::min)(8u, width);
@@ -360,16 +348,17 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
           {
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
-            if (tileX == 1) texData -= tileY;
-            if (tileY == 1) texData -= tileX;
-            if (tileX == 8)
+
+            if (tileX == 8) {
               textureRAM[destOffset++] = texData[decode8x8[yy * tileX + xx]];
-            else if (tileX == 4)
+            }
+            else if (tileX == 4) {
               textureRAM[destOffset++] = texData[decode8x4[yy * tileX + xx]];
-            else if (tileX == 2)
+            }
+            else if (tileX == 2) {
               textureRAM[destOffset++] = texData[decode8x2[yy * tileX + xx]];
-            else if (tileX == 1)
-              textureRAM[destOffset++] = texData[decode8x1[yy * tileX + xx]];
+            }
+
             texDataOffset++;
           }
           destOffset += 2048 - tileX; // next line
@@ -409,16 +398,17 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
               textureRAM[destOffset] &= byteMask[byteSelect];
               const uint8_t shift = (8 * ((xx & 1) ^ 1));
               const uint8_t index = (yy ^ 1) * tileX + (xx ^ 1) - (tileX & 1);
-              if (tileX == 1) texData -= tileY;
-              if (tileY == 1) texData -= tileX;
-              if (tileX == 8)
+
+              if (tileX == 8) {
                 tempData = (texData[decode8x8[index] / 2] >> shift) & 0xFF;
-              else if (tileX == 4)
+              }
+              else if (tileX == 4) {
                 tempData = (texData[decode8x4[index] / 2] >> shift) & 0xFF;
-              else if (tileX == 2)
+              }
+              else if (tileX == 2) {
                 tempData = (texData[decode8x2[index] / 2] >> shift) & 0xFF;
-              else if (tileX == 1)
-                tempData = (texData[decode8x1[index] / 2] >> shift) & 0xFF;
+              }
+
               tempData |= tempData << 8;
               tempData &= byteMask[byteSelect] ^ 0xFFFF;
               textureRAM[destOffset] |= tempData;
@@ -492,9 +482,10 @@ void CReal3D::UploadTexture(uint32_t header, const uint16_t *texData)
     if (type == 0x01) {
       break;
     }
+    [[fallthrough]];
   case 0x02:  // mipmaps only
   {
-    for (int i = 1; width > 0 && height > 0; i++) {
+    for (int i = 1; width >=4 && height >=4; i++) {
 
       int xPos = mipXBase[i] + (x / mipDivisor[i]);
       int yPos = mipYBase[i] + (y / mipDivisor[i]);
