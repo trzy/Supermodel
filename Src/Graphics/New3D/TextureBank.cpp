@@ -60,7 +60,7 @@ void New3D::TextureBank::UploadTextures(int level, int x, int y, int width, int 
 	int subX = x - mipXBase[level];
 	int subY = y - mipYBase[level];
 
-	for (unsigned i = 0; i < height; i++) {
+	for (int i = 0; i < height; i++) {
 		glTexSubImage2D(GL_TEXTURE_2D, level, subX, subY + i, width, 1, GL_RED_INTEGER, GL_UNSIGNED_SHORT, m_textureRam + ((y + i) * 2048) + x);
 	}
 }
