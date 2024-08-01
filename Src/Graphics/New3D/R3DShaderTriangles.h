@@ -8,6 +8,7 @@ static const char *vertexShaderR3D = R"glsl(
 // uniforms
 uniform float	modelScale;
 uniform float	nodeAlpha;
+uniform float	cota;
 uniform mat4	modelMat;
 uniform mat4	projMat;
 uniform bool	translatorMap;
@@ -28,7 +29,7 @@ out vec2	fsTexCoord;
 out vec4	fsColor;
 out float	fsDiscard;			// can't have varying bool (glsl spec)
 out float	fsFixedShade;
-out float	fsTextureNP;
+out float	fsLODBase;
 
 vec4 GetColour(vec4 colour)
 {
@@ -60,7 +61,7 @@ void main(void)
 	fsColor    		= GetColour(inColour);
 	fsTexCoord		= inTexCoord;
 	fsFixedShade	= inFixedShade;
-	fsTextureNP		= inTextureNP * modelScale;
+	fsLODBase		= -fsDiscard * cota * inTextureNP;
 	gl_Position		= projMat * modelMat * inVertex;
 }
 )glsl";
@@ -119,7 +120,7 @@ in  vec4	fsColor;
 in  vec2	fsTexCoord;
 in  float	fsDiscard;
 in  float	fsFixedShade;
-in	float	fsTextureNP;
+in	float	fsLODBase;
 
 //outputs
 layout(location = 0) out vec4 out0;		// opaque

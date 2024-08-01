@@ -100,6 +100,7 @@ private:
 	GLint m_locFogAttenuation;
 	GLint m_locFogAmbient;
 	GLint m_locProjMat;
+	GLint m_locCota;
 
 	// lighting / other
 	GLint m_locLighting;

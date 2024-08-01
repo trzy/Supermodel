@@ -8,6 +8,7 @@ static const char *vertexShaderR3DQuads = R"glsl(
 // uniforms
 uniform float	modelScale;
 uniform float	nodeAlpha;
+uniform float	cota;
 uniform mat4	modelMat;
 uniform mat4	projMat;
 uniform bool	translatorMap;
@@ -30,8 +31,8 @@ out VS_OUT
 	vec2	texCoord;
 	vec4	color;
 	float	fixedShade;
-	float	textureNP;
 	float	discardPoly;	// can't have varying bool (glsl spec)
+	float	LODBase;
 } vs_out;
 
 vec4 GetColour(vec4 colour)
@@ -64,7 +65,7 @@ void main(void)
 	vs_out.color    	= GetColour(inColour);
 	vs_out.texCoord		= inTexCoord;
 	vs_out.fixedShade	= inFixedShade;
-	vs_out.textureNP	= inTextureNP * modelScale;
+	vs_out.LODBase		= -vs_out.discardPoly * cota * inTextureNP;
 	gl_Position			= projMat * modelMat * inVertex;
 }
 )glsl";
@@ -83,8 +84,8 @@ in VS_OUT
 	vec2	texCoord;
 	vec4	color;
 	float	fixedShade;
-	float	textureNP;
 	float	discardPoly;	// can't have varying bool (glsl spec)
+	float	LODBase;
 } gs_in[4];
 
 out GS_OUT
@@ -99,7 +100,7 @@ out GS_OUT
 	flat vec2	texCoord[4];
 	flat vec4	color;
 	flat float	fixedShade[4];
-	flat float	textureNP;
+	flat float	LODBase;
 } gs_out;
 
 //a*b - c*d, computed in a stable fashion (Kahan)
@@ -133,7 +134,7 @@ void main(void)
 
 	// flat attributes
 	gs_out.color = gs_in[0].color;
-	gs_out.textureNP = gs_in[0].textureNP;
+	gs_out.LODBase = gs_in[0].LODBase;
 
 	// precompute crossproducts for all vertex combinations to be looked up in loop below for area computation
 	precise float cross[4][4];
@@ -238,7 +239,7 @@ in GS_OUT
 	flat vec2	texCoord[4];
 	flat vec4	color;
 	flat float	fixedShade[4];
-	flat float	textureNP;
+	flat float	LODBase;
 } fs_in;
 
 //our calculated vertex attributes from the above
@@ -247,7 +248,7 @@ vec3	fsViewNormal;
 vec2	fsTexCoord;
 float	fsFixedShade;
 vec4	fsColor;
-float	fsTextureNP;
+float	fsLODBase;
 
 //outputs
 layout(location = 0) out vec4 out0;		// opaque
@@ -332,7 +333,7 @@ void QuadraticInterpolation()
 	fsTexCoord		= vec2(0.0);
 	fsFixedShade	= 0.0;
 	fsColor			= fs_in.color;
-	fsTextureNP		= fs_in.textureNP;
+	fsLODBase		= fs_in.LODBase;
 	
 	for (int i=0; i<4; i++) {
 		fsViewVertex	+= lambda[i] * fs_in.viewVertex[i];
