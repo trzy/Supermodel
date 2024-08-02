@@ -119,15 +119,6 @@ ivec2 GetMicroTexturePos(int id)
 	return ivec2(xCoords[id],yCoords[id]);
 }
 
-float mip_map_level(in vec3 coordinate)
-{
-	// Real3D uses vertex coordinates rather than texel coordinates to calculate mipmap levels
-	vec3 dx_vtc = dFdx(coordinate);
-	vec3 dy_vtc = dFdy(coordinate);
-	float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
-	return log2(delta_max_sqr / (fsTextureNP * fsTextureNP)) * 0.5;			// result not clamped
-}
-
 float LinearTexLocations(int wrapMode, float size, float u, out float u0, out float u1)
 {
 	float texelSize		= 1.0 / size;
@@ -209,7 +200,7 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
 
 vec4 GetTextureValue()
 {
-	float lod = mip_map_level(fsViewVertex);
+	float lod = -log2(gl_FragCoord.w * gl_FragCoord.w * fsLODBase);
 	float numLevels = floor(log2(min(float(baseTexInfo.z), float(baseTexInfo.w)))) - 1.0;	// r3d only generates down to 2:2 for square textures, otherwise its the min dimension
 	float fLevel = clamp(lod, 0.0, numLevels);
 
@@ -242,7 +233,7 @@ vec4 GetTextureValue()
 		ivec2 tex2Pos = GetMicroTexturePos(microTextureID);
 		tex2Data = texBiLinear(textureBank[(texturePage+1)&1], ivec2(0), ivec2(128), tex2Pos, fsTexCoord * scale, 0);
 
-		blendFactor = -(lod + microTextureMinLOD) * 0.25;
+		blendFactor = -(lod + microTextureMinLOD) * 0.5;
 		blendFactor = clamp(blendFactor, 0.0, 0.5);
 	}
 

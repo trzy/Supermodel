@@ -200,6 +200,7 @@ struct Viewport
 	float	angle_right;
 	float	angle_top;
 	float	angle_bottom;
+	float	cota;
 
 	Mat4	projectionMatrix;		// projection matrix, we will calc this later when we have scene near/far vals
 

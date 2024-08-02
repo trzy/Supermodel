@@ -1061,6 +1061,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->angle_bottom	= -(1.0f - io) / cw;
 		vp->angle_top		= -(0.0f - io) / cw;
 
+		vp->cota = Util::Uint32AsFloat(vpnode[0x3]);
+
 		CalcViewport(vp);
 
 		// Lighting (note that sun vector points toward sun -- away from vertex)
