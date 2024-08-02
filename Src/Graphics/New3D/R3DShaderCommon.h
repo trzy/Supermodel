@@ -275,7 +275,7 @@ void Step15Luminous(inout vec4 colour)
 	// when fixed shading is enabled the colour is modulated by the vp ambient + fixed shade value
 	// when disabled it appears to be multiplied by 1.5, presumably to allow a higher range
 	if(hardwareStep==0x15) {
-		if(!lightEnabled && textureEnabled) {
+		if(!lightEnabled) {
 			if(fixedShading) {
 				colour.rgb *= 1.0 + fsFixedShade + lighting[1].y;
 			}
