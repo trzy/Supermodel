@@ -251,7 +251,8 @@ void MpegDec::SetMemory(const uint8_t *data, int offset, int length, bool loop)
   dec.loop        = loop;
   dec.stopped     = false;
 
-	printf("SET MEMORY: %08x\n", offset);
+	// Uncomment this line to print out track offsets in the MPEG ROM
+	//printf("MPEG: Set memory: %08x\n", offset);
 }
 
 void MpegDec::UpdateMemory(const uint8_t* data, int offset, int length, bool loop)
@@ -300,7 +301,8 @@ void MpegDec::UpdateMemory(const uint8_t* data, int offset, int length, bool loo
 
 	dec.loop	= loop;
 
-	printf("UPDATE MEMORY: %08x\n", offset);
+	// Uncomment this line to print out track offsets in the MPEG ROM
+	//printf("MPEG: Update memory: %08x\n", offset);
 }
 
 int MpegDec::GetPosition()
