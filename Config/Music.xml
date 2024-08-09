@@ -1,0 +1,31 @@
+<!--
+  Supermodel
+  A Sega Model 3 Arcade Emulator.
+  Copyright 2003-2024 The Supermodel Team
+
+  Music.xml
+
+  This file defines custom MPEG music tracks to be used in DSB1 and DSB2 games.
+  Make sure to use MP3 files sampled at 32 KHz. Normal sampling rates (e.g. 44.1
+  or 48 KHz) will sound slow.
+
+  The example below is wrapped in a dummy <comment></comment> block to render it
+  inactive. Remove these and add your own MP3 files.
+-->
+<games>
+  <!-- Scud Race (Australian version) example -->
+  <comment>   <!-- Remove this tag -->
+  <game name="scudau">
+    <track mpeg_rom_start_offset="0x001d4b42" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Beginner Day -->
+    <track mpeg_rom_start_offset="0x000e7e41" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Beginner Night (initial start) -->
+    <track mpeg_rom_start_offset="0x00103981" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Beginner Night (loop point) -->
+    <track mpeg_rom_start_offset="0x00000000" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Medium (initial start) -->
+    <track mpeg_rom_start_offset="0x0001caff" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Medium (loop point) -->
+    <track mpeg_rom_start_offset="0x0037a4c4" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Expert (initial start) -->
+    <track mpeg_rom_start_offset="0x0037fc84" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Expert (loop point) -->
+    <track mpeg_rom_start_offset="0x002afa83" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Extra (initial start) -->
+    <track mpeg_rom_start_offset="0x002b4943" filepath="Rick Astley - Together Forever - 32 KHz.mp3" />         <!-- Extra (loop point) -->
+    <track mpeg_rom_start_offset="0x00463745" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Selector -->
+  </game>
+  </comment>  <!-- Remove this tag! -->
+</games>
