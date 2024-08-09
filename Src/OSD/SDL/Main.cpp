@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2023 The Supermodel Team
+ ** Copyright 2003-2024 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -1543,7 +1543,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2003-2023 by The Supermodel Team");
+  puts("Copyright 2003-2024 by The Supermodel Team");
 }
 
 static void Help(void)
