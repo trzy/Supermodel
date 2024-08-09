@@ -221,7 +221,7 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			usingMPEGStart	= mpegStart;
 			usingMPEGEnd	= mpegEnd;
 
-			MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+			MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);
 			return;
 		}
 
@@ -233,7 +233,7 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			usingMPEGStart	= mpegStart;
 			usingMPEGEnd	= mpegEnd;
 
-			MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);		// assume not looped for now
+			MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);		// assume not looped for now
 			return;
 		}
 		break;
@@ -266,13 +266,13 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			{
 				usingLoopStart	= loopStart;
 				usingLoopEnd	= mpegEnd-loopStart;
-				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+				MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			}
 			else
 			{
 				usingLoopStart	= loopStart;
 				usingLoopEnd	= loopEnd-loopStart;
-				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+				MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			}
 		}
 
@@ -302,7 +302,7 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			loopEnd			= endLatch;
 			usingLoopStart	= loopStart;
 			usingLoopEnd	= loopEnd-loopStart;
-			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+			MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			//printf("loopEnd = %08X\n", loopEnd);
 		}
 		break;
@@ -529,10 +529,10 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
-		MpegDec::SetMemory(&mpegROM[usingMPEGStart], usingMPEGEnd - usingMPEGStart, false);
+		MpegDec::SetMemory(mpegROM, usingMPEGStart, usingMPEGEnd - usingMPEGStart, false);
 
 		if (usingLoopEnd != 0) {	// only if looping was actually enabled
-			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+			MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 		}
 
 		MpegDec::SetPosition(playOffset);
@@ -691,7 +691,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGEnd	= mpegEnd;
 				playing			= 1;
 
-				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+				MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);
 
 				mpegState = ST_IDLE;
 			}
@@ -737,7 +737,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			{
 				usingLoopStart	= mpegStart;
 				usingLoopEnd	= mpegEnd - mpegStart;
-				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+				MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			}
 
 			break;
@@ -773,7 +773,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart	= mpegStart;
 				usingMPEGEnd	= mpegEnd;
 				playing			= 1;
-				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+				MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);
 			}
 			break;
 		case ST_GOTA5:
@@ -1165,10 +1165,10 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
-		MpegDec::SetMemory(&mpegROM[usingMPEGStart], usingMPEGEnd - usingMPEGStart, false);
+		MpegDec::SetMemory(mpegROM, usingMPEGStart, usingMPEGEnd - usingMPEGStart, false);
 
 		if (usingLoopEnd != 0) {		// only if looping was actually enabled
-			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+			MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 		}
 
 		MpegDec::SetPosition(playOffset);
