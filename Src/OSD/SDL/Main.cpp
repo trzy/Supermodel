@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2023 The Supermodel Team
+ ** Copyright 2003-2024 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -95,6 +95,7 @@
 #include "OSD/Audio.h"
 #include "Graphics/New3D/VBO.h"
 #include "Graphics/SuperAA.h"
+#include "Sound/MPEG/MpegAudio.h"
 
 #include <iostream>
 #include "Util/BMPFile.h"
@@ -104,6 +105,12 @@
 /******************************************************************************
  Global Run-time Config
 ******************************************************************************/
+
+static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Analysis);
+static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Supermodel.ini";
+static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Games.xml";
+static const std::string s_musicXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Music.xml";
+static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Log) << "Supermodel.log";
 
 static Util::Config::Node s_runtime_config("Global");
 
@@ -914,6 +921,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     return 1;
   *rom_set = ROMSet();  // free up this memory we won't need anymore
 
+  // Customized music for games with MPEG boards
+  MpegDec::LoadCustomTracks(s_musicXMLFilePath, game);
+
   // Load NVRAM
   LoadNVRAM(Model3);
 
@@ -982,7 +992,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     goto QuitError;
   if (OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
     goto QuitError;
- 
+
   Model3->AttachRenderers(Render2D,Render3D, superAA);
 
   // Reset emulator
@@ -1356,12 +1366,6 @@ QuitError:
 /******************************************************************************
  Entry Point and Command Line Procesing
 ******************************************************************************/
-
-static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Analysis);
-static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Supermodel.ini";
-static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Games.xml";
-static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Log) << "Supermodel.log";
-
 // Create and configure inputs
 static bool ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
 {
@@ -1543,7 +1547,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2003-2023 by The Supermodel Team");
+  puts("Copyright 2003-2024 by The Supermodel Team");
 }
 
 static void Help(void)
