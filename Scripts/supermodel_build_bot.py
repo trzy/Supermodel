@@ -1,7 +1,7 @@
 #
 # Supermodel
 # A Sega Model 3 Arcade Emulator.
-# Copyright 2003-2023 The Supermodel Team
+# Copyright 2003-2024 The Supermodel Team
 #
 # This file is part of Supermodel.
 #
@@ -40,7 +40,7 @@
 # To perform a test run:
 #   - Download https://supermodel3.com/Download.html to the directory from
 #     which the script will be run.
-#   - Run: python update_model3emu_snapshot.py --working-dir=c:\tmp\build --test-run
+#   - Run: python supermodel_build_bot.py --working-dir=c:\tmp\build --test-run
 #
 
 import argparse
@@ -145,7 +145,7 @@ def create_change_log(bash, repo_dir, file_path, uploaded_shas, current_sha):
       "\n" \
       "                       A Sega Model 3 Arcade Emulator.\n" \
       "\n" \
-      "                   Copyright 2003-2023 The Supermodel Team\n" \
+      "                   Copyright 2003-2024 The Supermodel Team\n" \
       "\n" \
       "                                 CHANGE LOG\n" \
       "\n" \
@@ -205,6 +205,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
     repo_dir = os.path.join(working_dir, "model3emu")
 
     # Clone Git repo. Unfortunately need to always do this in order to get short SHA
+    print("Cloning repo...")
     result = bash.execute(working_dir=working_dir, command="git clone https://github.com/trzy/Supermodel.git model3emu")
     if result.returncode != 0:
       raise CheckoutError("Git clone failed")
@@ -249,7 +250,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
       bash.execute(working_dir=working_dir, command="mkdir pkg && mkdir pkg/Config && mkdir pkg/NVRAM && mkdir pkg/Saves && mkdir pkg/ROMs && mkdir pkg/Assets")
       change_log_file_path = os.path.join(pkg_dir, "CHANGES.txt")
       create_change_log(bash, repo_dir=repo_dir, file_path=change_log_file_path, uploaded_shas=uploaded_shas, current_sha=current_sha)
-      bash.execute(working_dir=working_dir, command="cp model3emu/Config/Supermodel.ini pkg/Config && cp model3emu/Config/Games.xml pkg/Config")
+      bash.execute(working_dir=working_dir, command="cp model3emu/Config/Supermodel.ini pkg/Config && cp model3emu/Config/Games.xml pkg/Config && cp model3emu/Config/Music.xml pkg/Config")
       bash.execute(working_dir=working_dir, command="echo NVRAM files go here. >pkg/NVRAM/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Save states go here. >pkg/Saves/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Recommended \\(but not mandatory\\) location for ROM sets. >pkg/ROMs/DIR.txt")
@@ -266,6 +267,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
         "CHANGES.txt",
         "Config/Supermodel.ini",
         "Config/Games.xml",
+        "Config/Music.xml",
         "NVRAM/DIR.txt",
         "Saves/DIR.txt",
         "ROMs/DIR.txt",
