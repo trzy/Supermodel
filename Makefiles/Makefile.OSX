@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2022 The Supermodel Team
+## Copyright 2003-2024 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -32,6 +32,12 @@
 
 DELETE = rm -d -r -f
 
+###############################################################################
+# Release Package Options
+###############################################################################
+
+PKG_TYPE = tgz
+PKG_FILES = Frameworks/*.framework
 
 ###############################################################################
 # Platform Configuration
@@ -62,11 +68,12 @@ ifeq ($(strip $(NET_BOARD)),1)
 endif
 
 #
-#	OSX-specific
+# macOS-specific
 #
 
-PLATFORM_CXXFLAGS = $(SDL_CFLAGS) -DSUPERMODEL_OSX -F/Library/Frameworks/ -O3
-PLATFORM_LDFLAGS = $(SDL_LIBS) -lz -lm -lstdc++ -F/Library/Frameworks/
+PLATFORM_CXXFLAGS = -F./Frameworks $(SDL_CFLAGS) -DSUPERMODEL_OSX
+PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
+PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
 
 
 ###############################################################################
@@ -79,6 +86,52 @@ PLATFORM_SRC_FILES = \
 include Makefiles/Rules.inc
 
 clean:
-	$(SILENT)echo Cleaning up \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
+	$(SILENT)echo Cleaning up \"Frameworks\", \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...
 	$(SILENT)$(DELETE) $(BIN_DIR)
 	$(SILENT)$(DELETE) $(OBJ_DIR)
+	$(SILENT)$(DELETE) Frameworks/SDL2.* Frameworks/SDL2_net.*
+
+
+###############################################################################
+# SDL2 Frameworks
+#
+# SDL2 can be installed in different seemingly incompatible ways on macOS. The
+# simplest solution appears to be to download the framework files from the
+# official SDL repo.
+###############################################################################
+
+Frameworks:
+	$(info Creating directory     : $@)
+	$(SILENT)mkdir Frameworks
+
+Frameworks/SDL2.dmg.url: | Frameworks
+	$(info Finding Latest Release : $@)
+	$(SILENT)curl --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL/releases/latest | awk '/"browser_download_url": "(.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
+
+Frameworks/SDL2_net.dmg.url: | Frameworks
+	$(info Finding Latest Release : $@)
+	$(SILENT)curl --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL_net/releases/latest | awk '/"browser_download_url": "(.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
+
+Frameworks/SDL2.dmg: Frameworks/SDL2.dmg.url
+	$(info Downloading            : $(shell cat $@.url))
+	$(SILENT)curl "$(shell cat $@.url)" -sfL --output $@
+
+Frameworks/SDL2_net.dmg: Frameworks/SDL2_net.dmg.url
+	$(info Downloading            : $(shell cat $@.url))
+	$(SILENT)curl "$(shell cat $@.url)" -sfL --output $@
+
+Frameworks/SDL2.framework: Frameworks/SDL2.dmg
+	$(info Extracting             : $@)
+	$(SILENT)hdiutil attach -quiet Frameworks/SDL2.dmg
+	$(SILENT)cp -r /Volumes/SDL2/SDL2.framework Frameworks
+	$(SILENT)xattr -dr com.apple.quarantine $@
+	$(SILENT)hdiutil detach -quiet /Volumes/SDL2
+	$(SILENT)touch $@
+
+Frameworks/SDL2_net.framework: Frameworks/SDL2_net.dmg
+	$(info Extracting             : $@)
+	$(SILENT)hdiutil attach -quiet Frameworks/SDL2_net.dmg
+	$(SILENT)cp -r /Volumes/SDL2_net/SDL2_net.framework Frameworks
+	$(SILENT)xattr -dr com.apple.quarantine $@
+	$(SILENT)hdiutil detach -quiet /Volumes/SDL2_net
+	$(SILENT)touch $@

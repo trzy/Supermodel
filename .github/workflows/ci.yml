@@ -1,0 +1,21 @@
+---
+name: "CI"
+
+on:
+  pull_request:
+    branches: [ 'main', 'master' ]
+    paths-ignore:
+      - '**.md'
+      - 'Assets/**'
+      - 'Config/**'
+      - 'Docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Artifacts:
+    uses: ./.github/workflows/_artifact.yml
+    with:
+      opt: "-O3 -g"
