@@ -220,29 +220,39 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 all:	$(BIN_DIR)/$(OUTFILE)
 
 #
-# Release targets: used only to create official builds stamped with the Git
-# version number. Double-colon rules should force ordered execution.
-# The automated build script relies on these -- don't modify their output!
+# Supermodel3.com release targets: used only to create official builds stamped
+# with the Git version number. Double-colon rules should force ordered
+# execution. The automated build script relies on these -- don't modify their
+# output!
 #
 .PHONY: clean
 .PHONY: set_version
 .PHONY: print_message
 .PHONY: version
-release:: clean
+release:: set_version
 release:: print_message
+release:: clean
 release:: all
 
+#
+# Github release flow (not yet used).
+#
 PKG_FILES += $(BIN_DIR)/$(OUTFILE) Docs/README.txt Docs/LICENSE.txt Config Assets
+
 pkg: pkg/$(PKG_TYPE)
 	$(info Cleaning up            : $(PKG_STAGE_PATH))
 	$(SILENT)cd pkg && rm -r $(notdir $(PKG_STAGE_PATH))
+
 pkg/tgz: pkg/stage
 	$(info Creating package       : $(PKG_PATH))
 	$(SILENT)tar -C pkg -czf $(PKG_PATH) $(notdir $(PKG_STAGE_PATH))
+
 pkg/zip: pkg/stage
 	$(info Creating package       : $(PKG_STAGE_PATH).zip)
 	$(SILENT)cd pkg && zip -r $(notdir $(PKG_PATH)) $(notdir $(PKG_STAGE_PATH))
+
 pkg/stage:: all
+
 pkg/stage:: pkg/path
 	$(info Staging package        : $(PKG_STAGE_PATH))
 	$(SILENT)rm -rf $(PKG_PATH) $(PKG_STAGE_PATH) ; mkdir -p $(PKG_STAGE_PATH)
@@ -256,29 +266,52 @@ pkg/stage:: pkg/path
 	  mv Docs//* . && rmdir Docs
 	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
 	$(SILENT)OUTPUT=$(PKG_STAGE_PATH)/CHANGES.txt ./Scripts/changelog.sh
+
 pkg/path: set_version
 	$(eval PKG_STAGE_PATH = pkg/supermodel-$(VERSION))
 	$(eval PKG_PATH = pkg/supermodel-$(VERSION).$(PKG_TYPE))
 	@echo $(PKG_PATH)
 
+#
+# Sets a VERSION variable based on the git sha.
+#
 set_version:
 	$(eval VERSION = $(strip $(subst ',,0.3a-git-$(shell git rev-parse --short HEAD --sq))))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
+
+#
+# Prints a message containing the version number to stdout for informational
+# purposes only.
+#
 print_message: set_version
 	$(info Building Supermodel Version $(VERSION))
+
+#
+# Print *only* the version directly.
+#
 version: set_version
 	@echo $(VERSION)
 
+#
+# Supermodel binary
+#
 $(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
 	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE))
 	$(SILENT)$(LD) $(OBJ_FILES) $(LDFLAGS)
 	$(info --------------------------------------------------------------------------------)
 
+#
+# Directory to which binary will be written. Note that Supermodel is never
+# packaged with this directory.
+#
 $(BIN_DIR):
 	$(info Creating directory     : $(BIN_DIR))
 	$(SILENT)mkdir $(BIN_DIR)
 
+#
+# Object directory
+#
 $(OBJ_DIR): | $(PLATFORM_DIRS)
 	$(info Creating directory     : $(OBJ_DIR))
 	$(SILENT)mkdir $(OBJ_DIR)
