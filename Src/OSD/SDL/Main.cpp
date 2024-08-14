@@ -681,7 +681,7 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
  Different subsystems output their own blocks.
 ******************************************************************************/
 
-static const int STATE_FILE_VERSION = 3;  // save state file version
+static const int STATE_FILE_VERSION = 4;  // save state file version
 static const int NVRAM_FILE_VERSION = 0;  // NVRAM file version
 static unsigned s_saveSlot = 0;           // save state slot #
 
