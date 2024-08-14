@@ -48,22 +48,22 @@ bool CJTAGDevice::ReadTDO()
     return m_shiftReg[0];
 }
 
-static void SaveShiftRegister(CBlockFile* SaveState, const std::bitset<MAX_REGISTER_LENGTH>& reg)
+void CJTAGDevice::SaveShiftRegister(CBlockFile* SaveState)
 {
-    SaveState->Write(reg.to_string());
+    SaveState->Write(m_shiftReg.to_string());
 }
 
-static void LoadShiftRegister(CBlockFile* SaveState, std::bitset<MAX_REGISTER_LENGTH>& reg)
+void CJTAGDevice::LoadShiftRegister(CBlockFile* SaveState)
 {
-    char* str = new char[MAX_REGISTER_LENGTH + 1];      // add one char for null terminator
-    SaveState->Read(str, MAX_REGISTER_LENGTH + 1);
+    char str[MAX_REGISTER_LENGTH + 1];      // add one char for null terminator
+    SaveState->Read(str, sizeof(str));
     std::bitset<MAX_REGISTER_LENGTH> tempReg{ str };
-    reg = tempReg;
+    m_shiftReg = tempReg;
 }
 
 void CASIC::SaveStateToBlock(CBlockFile* SaveState)
 {
-    SaveShiftRegister(SaveState, m_shiftReg);
+    SaveShiftRegister(SaveState);
     SaveState->Write(&m_shiftRegSize, sizeof(m_shiftRegSize));
     SaveState->Write(&m_instructionReg, sizeof(m_instructionReg));
     SaveState->Write(&m_idCode, sizeof(m_idCode));
@@ -72,7 +72,7 @@ void CASIC::SaveStateToBlock(CBlockFile* SaveState)
 
 void CASIC::LoadStateFromBlock(CBlockFile* SaveState)
 {
-    LoadShiftRegister(SaveState, m_shiftReg);
+    LoadShiftRegister(SaveState);
     SaveState->Read(&m_shiftRegSize, sizeof(m_shiftRegSize));
     SaveState->Read(&m_instructionReg, sizeof(m_instructionReg));
     SaveState->Read(&m_idCode, sizeof(m_idCode));
@@ -135,14 +135,14 @@ CASIC::CASIC(CReal3D& real3D, CASIC::Name deviceName) :
 
 void C3DRAM::SaveStateToBlock(CBlockFile* SaveState)
 {
-    SaveShiftRegister(SaveState, m_shiftReg);
+    SaveShiftRegister(SaveState);
     SaveState->Write(&m_shiftRegSize, sizeof(m_shiftRegSize));
     SaveState->Write(&m_instructionReg, sizeof(m_instructionReg));
 }
 
 void C3DRAM::LoadStateFromBlock(CBlockFile* SaveState)
 {
-    LoadShiftRegister(SaveState, m_shiftReg);
+    LoadShiftRegister(SaveState);
     SaveState->Read(&m_shiftRegSize, sizeof(m_shiftRegSize));
     SaveState->Read(&m_instructionReg, sizeof(m_instructionReg));
 }

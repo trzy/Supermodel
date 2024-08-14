@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2017 Bart Trzynadlowski, Nik Henson, Ian Curtis
+ ** Copyright 2003-2024 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -31,8 +31,6 @@
 #include "BlockFile.h"
 #include <bitset>
 
-static constexpr auto MAX_REGISTER_LENGTH = 262;
-
 class CReal3D;
 
 class CJTAGDevice
@@ -49,6 +47,10 @@ public:
     bool ReadTDO();
 
 protected:
+    void SaveShiftRegister(CBlockFile* SaveState);
+    void LoadShiftRegister(CBlockFile* SaveState);
+
+    static constexpr auto MAX_REGISTER_LENGTH = 262;
     std::bitset<MAX_REGISTER_LENGTH> m_shiftReg;
     size_t m_shiftRegSize;
     uint8_t m_instructionReg;
