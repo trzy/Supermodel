@@ -345,20 +345,6 @@ public:
    *    Render3DPtr   Pointer to a 3D renderer object.
    */
   void AttachRenderer(IRender3D *Render3DPtr);
-  
-  /*
-   * GetASICIDCodes(asic):
-   *
-   * Obtain ASIC ID code for the specified ASIC under the currently configured
-   * hardware stepping.
-   *
-   * Parameters:
-   *    asic  ASIC ID.
-   *
-   * Returns:
-   *    The ASIC ID code. Undefined for invalid ASIC ID.
-   */
-  uint32_t GetASICIDCode(ASIC asic) const;
 
   /*
    * SetStepping(stepping):
