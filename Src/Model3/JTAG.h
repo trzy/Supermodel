@@ -52,7 +52,7 @@ protected:
 
     static constexpr auto MAX_REGISTER_LENGTH = 262;
     std::bitset<MAX_REGISTER_LENGTH> m_shiftReg;
-    size_t m_shiftRegSize;
+    uint32_t m_shiftRegSize;
     uint8_t m_instructionReg;
 };
 
@@ -163,7 +163,7 @@ private:
         &m_3dram[6],
         &m_3dram[7],
     };
-    size_t m_numDevices = 0;
+    uint32_t m_numDevices = 0;
 };
 
 #endif  // INCLUDED_JTAG_H
