@@ -244,7 +244,7 @@ void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
 {
     if (!trst)
     {
-        for (int i = 0; i < m_numDevices; i++)
+        for (uint32_t i = 0; i < m_numDevices; i++)
             m_device[i]->Reset();
         return;
     }
@@ -258,20 +258,20 @@ void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
         switch (m_state)
         {
         case State::TestLogicReset:
-            for (int i = 0; i < m_numDevices; i++)
+            for (uint32_t i = 0; i < m_numDevices; i++)
                 m_device[i]->Reset();
             break;
         case State::CaptureDR:
-            for (int i = 0; i < m_numDevices; i++)
+            for (uint32_t i = 0; i < m_numDevices; i++)
                 m_device[i]->CaptureDR();
             break;
         case State::CaptureIR:
-            for (int i = 0; i < m_numDevices; i++)
+            for (uint32_t i = 0; i < m_numDevices; i++)
                 m_device[i]->CaptureIR();
             break;
         case State::ShiftDR:
         case State::ShiftIR:
-            for (int i = 0; i < m_numDevices; i++)
+            for (uint32_t i = 0; i < m_numDevices; i++)
                 tdi = m_device[i]->Shift(tdi);
             break;
         }
@@ -288,11 +288,11 @@ void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
             m_tdo = m_device[m_numDevices - 1]->ReadTDO();
             break;
         case State::UpdateDR:
-            for (int i = 0; i < m_numDevices; i++)
+            for (uint32_t i = 0; i < m_numDevices; i++)
                 m_device[i]->UpdateDR();
             break;
         case State::UpdateIR:
-            for (int i = 0; i < m_numDevices; i++)
+            for (uint32_t i = 0; i < m_numDevices; i++)
                 m_device[i]->UpdateIR();
             break;
         }
