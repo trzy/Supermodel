@@ -74,7 +74,7 @@ static FileContents LoadFile(const std::string &filepath)
   if (!fp)
   {
     ErrorLog("Unable to load music track from disk: %s.", filepath.c_str());
-    return { .bytes = nullptr, .size = 0 };
+    return { nullptr, 0 };
   }
   fseek(fp, 0, SEEK_END);
   long file_size = ftell(fp);
@@ -82,7 +82,7 @@ static FileContents LoadFile(const std::string &filepath)
   std::shared_ptr<uint8_t[]> mpeg_data(new uint8_t[file_size], std::default_delete<uint8_t[]>());
   fread(mpeg_data.get(), sizeof(uint8_t), file_size, fp);
   fclose(fp);
-  return { .bytes = mpeg_data, .size = size_t(file_size) };
+  return { mpeg_data, size_t(file_size) };
 }
 
 void MpegDec::LoadCustomTracks(const std::string &music_filepath, const Game &game)
