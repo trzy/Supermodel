@@ -419,9 +419,6 @@
     <ClCompile Include="..\Src\ROMSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Util\BitRegister.cpp">
-      <Filter>Source Files\Util</Filter>
-    </ClCompile>
     <ClCompile Include="..\Src\Model3\JTAG.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
@@ -741,9 +738,6 @@
     </ClInclude>
     <ClInclude Include="..\Src\Model3\JTAG.h">
       <Filter>Header Files\Model3</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Util\BitRegister.h">
-      <Filter>Header Files\Util</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Network\NetBoard.h">
       <Filter>Header Files\Network</Filter>

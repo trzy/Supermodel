@@ -143,6 +143,8 @@ private:
     CASIC m_jupiter;
     C3DRAM m_3dram[8];
 
+    // Order of JTAG devices on step 2.x video boards
+    // On step 1.x we only use the first ten devices
     CJTAGDevice* m_device[17] =
     {
         &m_jupiter,

@@ -28,6 +28,14 @@
  *
  * It is unclear which exact JTAG standard the device conforms to (and it 
  * probably doesn't matter), so we assume IEEE 1149.1-1990 here.
+ * 
+ * All of the video board ASICs and the 3D-RAM chips are JTAG-compatible; their
+ * JTAG lines are daisy chained together. Usually only one device is accessed at
+ * a time (the other devices are given the BYPASS instruction) but some
+ * procedures such as reading ID codes and performing boundary scan tests call
+ * for accessing most or all of the devices at once.
+ * 
+ * 3D-RAM chips are only used for boundary scan tests (currently unemulated).
  */
 
 #include "JTAG.h"
@@ -356,6 +364,7 @@ void CJTAG::SetStepping(int stepping)
     }
 }
 
+// Only the first ASIC of each type has its modeword written to the Real3D object
 CJTAG::CJTAG(CReal3D& real3D) :
     m_mercury(real3D, CASIC::Name::Mercury),
     m_venus(real3D, CASIC::Name::Venus),
