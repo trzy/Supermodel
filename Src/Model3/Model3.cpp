@@ -2986,6 +2986,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   // Initialize Real3D
   m_stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
   GPU.SetStepping(m_stepping);
+  m_jtag.SetStepping(m_stepping);
 
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)

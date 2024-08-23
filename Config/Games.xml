@@ -2066,20 +2066,6 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!-- Old patch to bypass JTAG checks, breaks linked mode -->
-        <!--
-        <patch region="crom" bits="32" offset="0x7c0c4" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x7c0c8" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x7c0cc" value="0x60000000" />
-        -->
-        <!-- New patch to bypass JTAG checks -->
-        <patch region="crom" bits="32" offset="0x7b348" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x7b568" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x7b6b4" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x7b7b0" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x7b8a8" value="0x60000000" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20635.20" crc32="0x7937473F" />
         <file offset="2" name="epr-20634.19" crc32="0x45A09245" />
@@ -2165,25 +2151,6 @@
       </inputs>
     </hardware>
     <roms>
-    	<patches>
-        <!-- Spindizzi notes : Not working ATM - Need correct patches for jtag stuffs -->
-        <!-- Test 1 -->
-        <!--
-        <patch region="crom" bits="32" offset="0x5bebc" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x5bec0" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x5bec4" value="0x60000000" />
-        -->
-        <!-- Test 2 -->
-        <!--
-        <patch region="crom" bits="32" offset="0x4f8d4" value="0x60000000" />
-        -->
-        <!-- Test 3 -->
-        <!--
-        <patch region="crom" bits="32" offset="0x501fc" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x50200" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x50204" value="0x60000000" />
-        -->
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="ic20.20" crc32="0x5CC4FEA1" />
         <file offset="2" name="ic19.19" crc32="0xEF8C5FD0" />
@@ -2220,19 +2187,6 @@
       </inputs>
     </hardware>
     <roms>
-    	<patches>
-        <!-- Spindizzi notes : Not working ATM - Need correct patches for jtag stuffs -->
-        <!-- Test 1 -->
-        <!--
-        <patch region="crom" bits="32" offset="0x3ba44" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x3ba48" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x3ba4c" value="0x60000000" />
-        -->
-        <!-- Test 2 -->
-        <!--
-        <patch region="crom" bits="32" offset="0x3b10c" value="0x60000000" />
-        -->
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="prog0.20" crc32="0xA904227D" />
         <file offset="2" name="prog1.19" crc32="0xB486BB74" />
@@ -2275,18 +2229,6 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!--
-          Base offset of program in CROM space: 0 (lines up perfectly with RAM
-          offsets). The game gets stuck in a region of code that appears to
-          wait on some exception to occur. It also appears to access the
-          tilegen space, indicating that this is perhaps related to frame
-          timing and IRQs (pure speculation; I haven't really looked at it).
-          Multiple places can be patched out - another one that works is
-          0x66ae0.
-        -->
-        <patch region="crom" bits="32" offset="0x66aa8" value="0x60000000" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20505.20" crc32="0xC24A5097" />
         <file offset="2" name="epr-20504.19" crc32="0x30BBC46D" />
@@ -2357,13 +2299,6 @@
       <encryption_key>0x31272A01</encryption_key>
     </hardware>
     <roms>
-      <patches>
-        <!--
-          Patch from MAME: forces JTAG write/read tests to succeed, otherwise
-          the game spins in a loop forever (until we implement JTAG properly)
-        -->
-        <patch region="crom" bits="32" offset="0xf6e44" value="0x60000000" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21382a.20" crc32="0x69BAF117" />
         <file offset="2" name="epr-21381a.19" crc32="0x2DD34E28" />
@@ -2447,10 +2382,6 @@
       <encryption_key>0x31272A01</encryption_key>
     </hardware>
     <roms>
-      <patches>
-        <!-- Patch from MAME, see swtrilgy for details -->
-        <patch region="crom" bits="32" offset="0xf6dd0" value="0x60000000" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21382.20" crc32="0x0B9C44A0" />
         <file offset="2" name="epr-21381.19" crc32="0xBB5757BF" />
@@ -2479,19 +2410,6 @@
       <encryption_key>0x31272A01</encryption_key>
     </hardware>
     <roms>
-      <patches>
-        <!-- obsolete patches -->
-        <!-- 0x87db8 = 0x60000000 patch from Mame -->
-        <!-- 0x04184 = 0x480000AC no more needed if ffb lever rom loaded -->
-        <!-- 0x8391c = 0x60000000 no more needed if ffb lever rom loaded -->
-        <!-- related to force feedback setup -->
-        <patch region="crom" bits="32" offset="0x0292c" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x02998" value="0x60000000" />
-        <!-- unemulated JTAG stuff : enable service menu -->
-        <patch region="crom" bits="32" offset="0x886e0" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x886e4" value="0x60000000" />
-        <patch region="crom" bits="32" offset="0x886e8" value="0x60000000" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-crom0.20" crc32="0xDA7D49FA" />
         <file offset="2" name="epr-crom1.19" crc32="0x322B67A5" />
