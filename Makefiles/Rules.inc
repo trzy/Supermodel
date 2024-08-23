@@ -94,7 +94,6 @@ SRC_FILES = \
 	Src/Pkgs/unzip.cpp \
 	Src/Pkgs/ioapi.cpp \
 	Src/Model3/93C46.cpp \
-	Src/Util/BitRegister.cpp \
 	Src/JTAG.cpp \
 	Src/Graphics/Legacy3D/Error.cpp \
 	Src/Pkgs/glew.cpp \
