@@ -1310,10 +1310,6 @@ void CLegacy3D::SetSunClamp(bool enable)
 {
 }
 
-void CLegacy3D::SetSignedShade(bool enable)
-{
-}
-
 float CLegacy3D::GetLosValue(int layer)
 {
 	return 0.0f;

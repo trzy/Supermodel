@@ -30,7 +30,6 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_vrom			= nullptr;
 	m_textureRAM	= nullptr;
 	m_sunClamp		= true;
-	m_shadeIsSigned = true;
 	m_numPolyVerts	= 3;
 	m_primType		= GL_TRIANGLES;
 
@@ -1435,7 +1434,8 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 				float shade;
 				//==========
 
-				if (!m_shadeIsSigned) {
+				// If specular is enabled fixed shading values are treated as unsigned
+				if (ph.SpecularEnabled()) {
 					shade = (ix & 0xFF) * (float)(1.0 / 255.0);
 				}
 				else {
@@ -1619,11 +1619,6 @@ void CNew3D::TranslateTexture(unsigned& x, unsigned& y, int width, int height, i
 void CNew3D::SetSunClamp(bool enable)
 {
 	m_sunClamp = enable;
-}
-
-void CNew3D::SetSignedShade(bool enable)
-{
-	m_shadeIsSigned = enable;
 }
 
 float CNew3D::GetLosValue(int layer)

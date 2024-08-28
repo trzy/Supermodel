@@ -341,16 +341,6 @@ public:
 	void SetSunClamp(bool enable);
 
 	/*
-	* SetSignedShade(bool enable);
-	*
-	* Sets the sign-ness of fixed shading value
-	*
-	* Parameters:
-	*		enable	Fixed shading is expressed as signed value
-	*/
-	void SetSignedShade(bool enable);
-
-	/*
 	* GetLosValue(int layer);
 	*
 	* Gets the line of sight value for the priority layer

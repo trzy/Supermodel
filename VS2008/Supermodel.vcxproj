@@ -398,7 +398,6 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\Src\Util\BitRegister.cpp" />
     <ClCompile Include="..\Src\Util\ByteSwap.cpp" />
     <ClCompile Include="..\Src\Util\ConfigBuilders.cpp" />
     <ClCompile Include="..\Src\Util\Format.cpp" />
@@ -564,7 +563,6 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />
     <ClInclude Include="..\Src\Util\BitCast.h" />
-    <ClInclude Include="..\Src\Util\BitRegister.h" />
     <ClInclude Include="..\Src\Util\BMPFile.h" />
     <ClInclude Include="..\Src\Util\ByteSwap.h" />
     <ClInclude Include="..\Src\Util\ConfigBuilders.h" />
