@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2012 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,25 +18,26 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
-/*
- * TileGen.h
- * 
- * Header file defining the CTileGen (tile generator device) class.
- */
+
+ /*
+  * TileGen.h
+  *
+  * Header file defining the CTileGen (tile generator device) class.
+  */
 
 #ifndef INCLUDED_TILEGEN_H
 #define INCLUDED_TILEGEN_H
 
 #include "IRQ.h"
 #include "Graphics/Render2D.h"
+#include "TileGenBuffer.h"
 
-/*
- * CTileGen:
- *
- * Tile generator device. The Model 3's tile generator handles not only the 2D
- * tile map layers but also seems to control video output and VBL IRQs.
- */
+  /*
+   * CTileGen:
+   *
+   * Tile generator device. The Model 3's tile generator handles not only the 2D
+   * tile map layers but also seems to control video output and VBL IRQs.
+   */
 class CTileGen
 {
 public:
@@ -48,7 +49,7 @@ public:
 	 * Parameters:
 	 *		SaveState	Block file to save state information to.
 	 */
-	void SaveState(CBlockFile *SaveState);
+	void SaveState(CBlockFile* SaveState);
 
 	/*
 	 * LoadState(SaveState):
@@ -58,15 +59,15 @@ public:
 	 * Parameters:
 	 *		SaveState	Block file to load state information from.
 	 */
-	void LoadState(CBlockFile *SaveState);
-	
+	void LoadState(CBlockFile* SaveState);
+
 	/*
 	 * BeginVBlank(void):
 	 *
 	 * Must be called before the VBlank starts.
 	 */
 	void BeginVBlank(void);
-	
+
 	/*
 	 * EndVBlank(void)
 	 *
@@ -96,36 +97,36 @@ public:
 	 */
 	void BeginFrame(void);
 
-  /*
-   * PreRenderFrame(void):
-   *
-   * Draws the all top layers (above 3D graphics) and bottom layers (below 3D
-   * graphics) but does not yet display them. May send data to the GPU.
-   *
-   * Invokes the equivalent method in the underlying 2D renderer.
-   */
-  void PreRenderFrame(void);
+	/*
+	 * PreRenderFrame(void):
+	 *
+	 * Draws the all top layers (above 3D graphics) and bottom layers (below 3D
+	 * graphics) but does not yet display them. May send data to the GPU.
+	 *
+	 * Invokes the equivalent method in the underlying 2D renderer.
+	 */
+	void PreRenderFrame(void);
 
-  /*
-   * RenderFrameBottom(void):
-   *
-   * Overwrites the color buffer with bottom surface that was pre-rendered by
-   * the last call to PreRenderFrame().
-   *
-   * Invokes the equivalent method in the underlying 2D renderer.
-   */
-  void RenderFrameBottom(void);
+	/*
+	 * RenderFrameBottom(void):
+	 *
+	 * Overwrites the color buffer with bottom surface that was pre-rendered by
+	 * the last call to PreRenderFrame().
+	 *
+	 * Invokes the equivalent method in the underlying 2D renderer.
+	 */
+	void RenderFrameBottom(void);
 
-  /*
-   * RenderFrameTop(void):
-   *
-   * Draws the top surface (if it exists) that was pre-rendered by the last 
-   * call to PreRenderFrame(). Previously drawn graphics layers will be visible
-   * through transparent regions.
-   *
-   * Invokes the equivalent method in the underlying 2D renderer.
-   */
-  void RenderFrameTop(void);
+	/*
+	 * RenderFrameTop(void):
+	 *
+	 * Draws the top surface (if it exists) that was pre-rendered by the last
+	 * call to PreRenderFrame(). Previously drawn graphics layers will be visible
+	 * through transparent regions.
+	 *
+	 * Invokes the equivalent method in the underlying 2D renderer.
+	 */
+	void RenderFrameTop(void);
 
 	/*
 	 * EndFrame(void):
@@ -148,7 +149,7 @@ public:
 	 * the result must be manually adjusted.
 	 *
 	 * Parameters:
-	 *		addr	Address in tile generator RAM. Caller must ensure it is 
+	 *		addr	Address in tile generator RAM. Caller must ensure it is
 	 *				clamped to the range 0x000000 to 0x11FFFF because this
 	 *				function does not.
 	 *
@@ -158,7 +159,7 @@ public:
 	uint8_t ReadRAM8(unsigned addr);
 	uint16_t ReadRAM16(unsigned addr);
 	uint32_t ReadRAM32(unsigned addr);
-	
+
 	/*
 	 * WriteRAM8(addr, data):
 	 * WriteRAM16(addr, data):
@@ -169,7 +170,7 @@ public:
 	 * data must be adjusted manually before passing it to this function.
 	 *
 	 * Parameters:
-	 *		addr	Address in tile generator RAM. Caller must ensure it is 
+	 *		addr	Address in tile generator RAM. Caller must ensure it is
 	 *				clamped to the range 0x000000 to 0x11FFFF because this
 	 *				function does not.
 	 *		data	The data to write.
@@ -177,7 +178,7 @@ public:
 	void WriteRAM8(unsigned addr, uint8_t data);
 	void WriteRAM16(unsigned addr, uint16_t data);
 	void WriteRAM32(unsigned addr, uint32_t data);
-	
+
 	/*
 	 * ReadRegister(reg):
 	 *
@@ -203,14 +204,14 @@ public:
 	 *		data	Data to write.
 	 */
 	void WriteRegister(unsigned reg, UINT32 data);
-	
+
 	/*
 	 * Reset(void):
 	 *
-	 * Resets the device. 
+	 * Resets the device.
 	 */
 	void Reset(void);
-	
+
 	/*
 	 * AttachRenderer(render2DPtr):
 	 *
@@ -221,13 +222,13 @@ public:
 	 * Parameters:
 	 *		Render2DPtr		Pointer to a 2D renderer object.
 	 */
-	void AttachRenderer(CRender2D *Render2DPtr);
-	
+	void AttachRenderer(CRender2D* Render2DPtr);
+
 	/*
 	 * Init(IRQObjectPtr):
 	 *
 	 * One-time initialization of the context. Must be called prior to all
-	 * other members. Links the tile generator to an IRQ controller and 
+	 * other members. Links the tile generator to an IRQ controller and
 	 * allocates memory for tile generator RAM.
 	 *
 	 * Parameters:
@@ -237,8 +238,19 @@ public:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	bool Init(CIRQ *IRQObjectPtr);
-	 
+	bool Init(CIRQ* IRQObjectPtr);
+
+
+	/*
+	 * DrawLine(line):
+	 *
+	 * Draw a line for the tilegen
+	 *
+	 * Parameters:
+	 *		line	The line number to draw (from 0-383)
+	 */
+	void DrawLine(int line);	// from 0-383
+
 	/*
 	 * CTileGen(config):
 	 * ~CTileGen(void):
@@ -249,41 +261,74 @@ public:
    *    config  Run-time configuration. The reference should be held because
    *            this changes at run-time.
 	 */
-	CTileGen(const Util::Config::Node &config);
+	CTileGen(const Util::Config::Node& config);
 	~CTileGen(void);
-	
+
 private:
-	// Private member functions
-	UINT32		UpdateSnapshots(bool copyWhole);
-	UINT32		UpdateSnapshot(bool copyWhole, UINT8 *src, UINT8 *dst, unsigned size, UINT8 *dirty);
 
-  const Util::Config::Node &m_config;
-  const bool m_gpuMultiThreaded;
+	struct ColourOffsetRegister
+	{
+		void Reset()
+		{
+			r = 0; g = 0; b = 0;
+		}
 
-	CIRQ		*IRQ;		// IRQ controller the tile generator is attached to
-	CRender2D	*Render2D;	// 2D renderer the tile generator is attached to
-	
-	/*
-	 * Tile generator VRAM. The upper 128KB of VRAM stores the palette data.
-	 * Two palettes are computed from this based on the color offset registers:
-	 * A/A' and B/B'.
-	 */
-	UINT8	*memoryPool;		// all memory allocated here
-	UINT8   *vram;          	// 1.125MB of VRAM
-	UINT32	*pal[2];			// 2 x 0x20000 byte (32K colors) palette
+		void Update(UINT32 reg)
+		{
+			b = (INT32)(INT8)((reg >> 16) & 0xFF);
+			g = (INT32)(INT8)((reg >> 8) & 0xFF);
+			r = (INT32)(INT8)((reg >> 0) & 0xFF);
+			b *= 2;
+			g *= 2;
+			r *= 2;
+		}
 
-	// Read-only snapshots
-	UINT8   *vramRO;        // 1.125MB of VRAM                       [read-only snapshot]	
-	UINT32  *palRO[2];      // 2 x 0x20000 byte (32K colors) palette [read-only snapshot]
-	
-	// Arrays to keep track of dirty pages in memory regions
-	UINT8   *vramDirty;
-	UINT8   *palDirty[2];	// one for each palette
+		INT32 r = 0;
+		INT32 g = 0;
+		INT32 b = 0;
+	};
+
+	ColourOffsetRegister m_colourOffsetRegs[2];
+
+	bool	IsEnabled		(int layerNumber);
+	bool	Above3D			(int layerNumber);
+	bool	Is4Bit			(int layerNumber);
+	int		GetYScroll		(int layerNumber);
+	int		GetXScroll		(int layerNumber);
+	bool	LineScrollMode	(int layerNumber);
+	int		GetLineScroll	(int layerNumber, int yCoord);
+	int		GetTileNumber	(int xCoord, int yCoord, int xScroll, int yScroll);
+	int		GetTileData		(int layerNum, int tileNumber);
+	int		GetVFine		(int yCoord, int yScroll);
+	int		GetHFine		(int xCoord, int xScroll);
+	int		GetLineMask		(int layerNumber, int yCoord);
+	int		GetPixelMask	(int lineMask, int xCoord);
+	UINT32	GetColour32		(int layer, UINT32 data);
+	void	Draw4Bit		(int tileData, int hFine, int vFine, UINT32* lineBuffer, const UINT32* pal, int& x);
+	void	Draw8Bit		(int tileData, int hFine, int vFine, UINT32* lineBuffer, const UINT32* pal, int& x);
+
+	void	WritePalette	(int layer, int address, UINT32 data);
+	void	RecomputePalettes(int layer);	// 0 = bottom, 1 = top
+
+	const Util::Config::Node& m_config;
+	const bool m_gpuMultiThreaded;
+
+	CIRQ*		IRQ;		// IRQ controller the tile generator is attached to
+	CRender2D*	Render2D;	// 2D renderer the tile generator is attached to
+
+	UINT8*		memoryPool;		// all memory allocated here
+	UINT8*		m_vram;         // 1.125MB of VRAM
+	UINT32*		m_vramP;		// vram pointer but integer size
+	UINT32*		m_palP;			// just a pointer to the palette ram which comes after the vram
+
+	UINT32*		m_pal[2];		// cached decoded pallettes. 0 = layer 0&1, 1 = layer 2&3
 
 	// Registers
-	UINT32	regs[64];
-	UINT32  regsRO[64];     // Read-only copy of registers
-	
+	UINT32	m_regs[64];
+
+	// buffers we draw to
+	std::shared_ptr<TileGenBuffer> m_drawSurface[2];	// drawing surfaces 0 = bottom, 1 = top
+	std::shared_ptr<TileGenBuffer> m_drawSurfaceRO[2];	// read only version for threading, we can swap between the 2. Maybe not needed.
 };
 
 

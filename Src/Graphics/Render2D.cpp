@@ -65,12 +65,12 @@
 						 -------- -------- ------x- -------- Layer 1 priority (0 = below 3D, 1 = above 3D)
 						 -------- -------- -------x -------- Layer 0 priority (0 = below 3D, 1 = above 3D)
 
-	 0xF1180040:                                             Foreground layer color modulation
+	 0xF1180040:                                             Layer 0 & 1 modulation
 						 -------- xxxxxxxx -------- -------- Red component
 						 -------- -------- xxxxxxxx -------- Green component
 						 -------- -------- -------- xxxxxxxx Blue component
 
-	 0xF1180044:                                             Background layer color modulation
+	 0xF1180044:                                             Layer 2 & 3 modulation
 						 -------- xxxxxxxx -------- -------- Red component
 						 -------- -------- xxxxxxxx -------- Green component
 						 -------- -------- -------- xxxxxxxx Blue component
@@ -339,7 +339,7 @@ void CRender2D::DrawSurface(GLuint textureID)
 		glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);	// set target if needed
 	}
 
-	m_shader.EnableShader();
+	m_drawShader.EnableShader();
 
 	glEnable			(GL_BLEND);
 	glBindVertexArray	(m_vao);
@@ -349,21 +349,11 @@ void CRender2D::DrawSurface(GLuint textureID)
 	glBindVertexArray	(0);
 	glDisable			(GL_BLEND);
 
-	m_shader.DisableShader();	
+	m_drawShader.DisableShader();
 
 	if (m_aaTarget) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
 	}
-}
-
-float CRender2D::LineToPercentStart(int lineNumber)
-{
-	return lineNumber / 384.0f;
-}
-
-float CRender2D::LineToPercentEnd(int lineNumber)
-{
-	return (lineNumber + 1) / 384.0f;
 }
 
 void CRender2D::BeginFrame(void)
@@ -371,81 +361,27 @@ void CRender2D::BeginFrame(void)
 }
 
 void CRender2D::PreRenderFrame(void)
-{
-	glDisable(GL_SCISSOR_TEST);
-	glViewport(0, 0, 496, 384);
+{	
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 512);	// skip the non viewable data
 
-	m_shaderTileGen.EnableShader();
-
-	glActiveTexture(GL_TEXTURE0); // texture unit 0
-	glBindTexture(GL_TEXTURE_2D, m_vramTexID);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RED_INTEGER, GL_UNSIGNED_INT, m_vram);
-	glActiveTexture(GL_TEXTURE1); // texture unit 1
-	glBindTexture(GL_TEXTURE_2D, m_paletteTexID);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 128, 256, GL_RED_INTEGER, GL_UNSIGNED_INT, m_vram + 0x40000);
-	glActiveTexture(GL_TEXTURE0); // texture unit 1
-
-	glUniform1uiv(m_shaderTileGen.uniformLocMap["regs"], 32, m_regs);
-
-	glBindVertexArray(m_vao);
-
-	m_fboBottom.Set();
-
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glEnable(GL_BLEND);
-
-	// render bottom layer
-	for (int i = 4; i-- > 0;) {
-
-		if (!IsEnabled(i)) {
-			continue;
-		}
-
-		if (Above3D(i)) {
-			continue;
-		}
-
-		glUniform1i(m_shaderTileGen.uniformLocMap["layerNumber"], i);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	for (int i = 0; i < 2; i++) {
+		glBindTexture(GL_TEXTURE_2D, m_textureIDs[i]);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_drawBuffers[i]->data);
 	}
 
-	m_fboTop.Set();
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// render top layer
-	for (int i = 4; i-- > 0;) {
-
-		if (!IsEnabled(i)) {
-			continue;
-		}
-
-		if (!Above3D(i)) {
-			continue;
-		}
-
-		glUniform1i(m_shaderTileGen.uniformLocMap["layerNumber"], i);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	}
-
-	glBindVertexArray(0);
-
-	m_shaderTileGen.DisableShader();
-	m_fboBottom.Disable();
-
-	glDisable(GL_BLEND);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 }
 
 void CRender2D::RenderFrameBottom(void)
 {
 	Setup2D(true);
-	DrawSurface(m_fboBottom.GetTextureID());
+	DrawSurface(m_textureIDs[0]);
 }
 
 void CRender2D::RenderFrameTop(void)
 {
 	Setup2D(false);
-	DrawSurface(m_fboTop.GetTextureID());
+	DrawSurface(m_textureIDs[1]);
 }
 
 void CRender2D::EndFrame(void)
@@ -469,21 +405,20 @@ void CRender2D::WriteVRAM(unsigned addr, uint32_t data)
 
 void CRender2D::AttachRegisters(const uint32_t* regPtr)
 {
-	m_regs = regPtr;
-	DebugLog("Render2D attached registers\n");
 }
 
 void CRender2D::AttachPalette(const uint32_t* palPtr[2])
 {
-	m_palette[0] = palPtr[0];
-	m_palette[1] = palPtr[1];
-	DebugLog("Render2D attached palette\n");
 }
 
 void CRender2D::AttachVRAM(const uint8_t* vramPtr)
 {
-	m_vram = (uint32_t*)vramPtr;
-	DebugLog("Render2D attached VRAM\n");
+}
+
+void CRender2D::AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::shared_ptr<TileGenBuffer> top)
+{
+	m_drawBuffers[0] = bottom;
+	m_drawBuffers[1] = top;
 }
 
 bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget)
@@ -503,100 +438,43 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 
 CRender2D::CRender2D(const Util::Config::Node& config)
 	: m_config(config),
-	m_vao(0),
-	m_vram(nullptr),
-	m_palette{nullptr},
-	m_regs(nullptr)
+	m_vao(0)
 {
-	DebugLog("Built Render2D\n");
-
-	m_shader.LoadShaders(s_vertexShaderSource, s_fragmentShaderSource);
-	m_shader.GetUniformLocationMap("tex1");
-	m_shader.EnableShader();
-
-	// update uniform memory
-	glUniform1i(m_shader.uniformLocMap["tex1"], 0);				// texture unit zero
-
-	m_shader.DisableShader();
-
-	m_shaderTileGen.LoadShaders(s_vertexShaderTileGen, s_fragmentShaderTileGen);
-	m_shaderTileGen.GetUniformLocationMap("vram");
-	m_shaderTileGen.GetUniformLocationMap("palette");
-	m_shaderTileGen.GetUniformLocationMap("regs");
-	m_shaderTileGen.GetUniformLocationMap("layerNumber");
-	m_shaderTileGen.GetUniformLocationMap("lineStart");
-	m_shaderTileGen.GetUniformLocationMap("lineEnd");
-
-	m_shaderTileGen.EnableShader();
-
-	glUniform1i(m_shaderTileGen.uniformLocMap["vram"], 0);		// texture unit 0
-	glUniform1i(m_shaderTileGen.uniformLocMap["palette"], 1);	// texture unit 1
-	glUniform1f(m_shaderTileGen.uniformLocMap["lineStart"], LineToPercentStart(0));
-	glUniform1f(m_shaderTileGen.uniformLocMap["lineEnd"], LineToPercentEnd(383));
-
-	m_shaderTileGen.DisableShader();
-
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);
 	// no states needed since we do it in the shader
 	glBindVertexArray(0);
 
-	glGenTextures(1, &m_vramTexID);
-	glBindTexture(GL_TEXTURE_2D, m_vramTexID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 512, 512, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+	m_drawShader.LoadShaders(s_vertexShader, s_fragmentShader);
+	m_drawShader.GetUniformLocationMap("tex1");
+	// init uniform memory
+	m_drawShader.EnableShader();
+	glUniform1f(m_drawShader.uniformLocMap["tex1"], 0);	// texture bound to texture unit 0
+	m_drawShader.DisableShader();
 
-	glGenTextures(1, &m_paletteTexID);
-	glBindTexture(GL_TEXTURE_2D, m_paletteTexID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 128, 256, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+	// create textures
+	glGenTextures(2, m_textureIDs);
 
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	m_fboBottom.Create(496, 384);
-	m_fboTop.Create(496, 384);
+	// allocate storage
+	for (auto& t : m_textureIDs) {
+		glBindTexture(GL_TEXTURE_2D, t);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 496, 384, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	}
 }
 
 CRender2D::~CRender2D(void)
 {
-	m_shader.UnloadShaders();
-	m_shaderTileGen.UnloadShaders();
-
-	if (m_vramTexID) {
-		glDeleteTextures(1, &m_vramTexID);
-		m_vramTexID = 0;
-	}
-
-	if (m_paletteTexID) {
-		glDeleteTextures(1, &m_paletteTexID);
-		m_paletteTexID = 0;
-	}
-
 	if (m_vao) {
 		glDeleteVertexArrays(1, &m_vao);
 		m_vao = 0;
 	}
 
-	m_fboBottom.Destroy();
-	m_fboTop.Destroy();
-
-	m_vram = nullptr;
-
-	DebugLog("Destroyed Render2D\n");
-}
-
-bool CRender2D::IsEnabled(int layerNumber)
-{
-	return (m_regs[0x60 / 4 + layerNumber] & 0x80000000) > 0;
-}
-
-bool CRender2D::Above3D(int layerNumber)
-{
-	return (m_regs[0x20 / 4] >> (8 + layerNumber)) & 0x1;
+	for (auto& t : m_textureIDs) {
+		glDeleteTextures(1, &t);
+		t = 0;
+	}
 }
