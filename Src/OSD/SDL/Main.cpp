@@ -1027,15 +1027,15 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 #endif
   while (!quit)
   {
+    // Poll the inputs
+    if (!Inputs->Poll(&game, xOffset, yOffset, xRes, yRes))
+      quit = true;
+
     // Render if paused, otherwise run a frame
     if (paused)
       Model3->RenderFrame();
     else
       Model3->RunFrame();
-
-    // Poll the inputs
-    if (!Inputs->Poll(&game, xOffset, yOffset, xRes, yRes))
-      quit = true;
 
 #ifdef SUPERMODEL_DEBUGGER
     bool processUI = true;
