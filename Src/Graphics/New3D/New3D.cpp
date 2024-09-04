@@ -128,9 +128,8 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	m_aaTarget	= aaTarget;
 
 	m_r3dFrameBuffers.DestroyFBO();		// remove any old ones if created
-	m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
 
-	return OKAY;
+	return m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
 }
 
 void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
@@ -404,7 +403,7 @@ void CNew3D::RenderFrame(void)
 	if (!m_polyBufferRom.empty()) {
 
 		// sync rom memory with vbo
-		int romBytes	= (int)m_polyBufferRom.size() * sizeof(FVertex);
+		int romBytes	= (int)(m_polyBufferRom.size() * sizeof(FVertex));
 		int vboBytes	= m_vbo.GetSize();
 		int size		= romBytes - vboBytes;
 
@@ -510,7 +509,7 @@ const UINT32* CNew3D::TranslateCullingAddress(UINT32 addr)
 		return &m_cullingRAMLo[addr];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 // Translates model references
@@ -528,17 +527,15 @@ const UINT32* CNew3D::TranslateModelAddress(UINT32 modelAddr)
 
 bool CNew3D::DrawModel(UINT32 modelAddr)
 {
-	const UINT32*	modelAddress;
 	bool			cached = false;
-	Model*			m;
 
-	modelAddress = TranslateModelAddress(modelAddr);
+	const UINT32* const modelAddress = TranslateModelAddress(modelAddr);
 
 	// create a new model to push onto the vector
 	m_nodes.back().models.emplace_back();
 
 	// get the last model in the array
-	m = &m_nodes.back().models.back();
+	Model* const m = &m_nodes.back().models.back();
 
 	if (IsVROMModel(modelAddr) && !IsDynamicModel((UINT32*)modelAddress)) {
 
@@ -747,7 +744,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	}
 
 	float LODscale = m_nodeAttribs.currentDisableCulling ? std::numeric_limits<float>::max() : (fBlendRadius / std::hypot(x, y, z));
-	const LOD *lod = m_LODBlendTable->table[lodTablePointer].lod;
+	const LOD * const lod = m_LODBlendTable->table[lodTablePointer].lod;
 
 	LODscale = std::clamp(LODscale, 0.0f, std::numeric_limits<float>::max());
 
@@ -758,7 +755,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 		{
 			lodPtr = TranslateCullingAddress(child1Ptr);
 
-			if (NULL != lodPtr)
+			if (nullptr != lodPtr)
 			{
 				int modelLOD;
 				for (modelLOD = 0; modelLOD < 3; modelLOD++)
@@ -771,9 +768,9 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 
 				float nodeAlpha = lod[modelLOD].blendFactor * (LODscale - lod[modelLOD].deleteSize);
 				nodeAlpha = std::clamp(nodeAlpha, 0.0f, 1.0f);
-				if (nodeAlpha > 31.0f / 32.0f)		// shader discards pixels below 1/32 alpha
+				if (nodeAlpha > (float)(31.0 / 32.0))		// shader discards pixels below 1/32 alpha
 					nodeAlpha = 1.0f;
-				else if (nodeAlpha < 1.0f / 32.0f)
+				else if (nodeAlpha < (float)(1.0 / 32.0))
 					nodeAlpha = 0.0f;
 				m_nodeAttribs.currentModelAlpha *= nodeAlpha;	// alpha of each node multiples by the alpha of its parent
 				
@@ -839,17 +836,13 @@ void CNew3D::DescendNodePtr(UINT32 nodeAddr)
 
 void CNew3D::DescendPointerList(UINT32 addr)
 {
-	const UINT32*	list;
-	UINT32			nodeAddr;
-	int				index;
+	const UINT32* const list = TranslateCullingAddress(addr);
 
-	list = TranslateCullingAddress(addr);
-
-	if (NULL == list) {
+	if (nullptr == list) {
 		return;
 	}
 
-	index = 0;
+	int index = 0;
 
 	while (true) {
 
@@ -857,7 +850,7 @@ void CNew3D::DescendPointerList(UINT32 addr)
 			break;	// empty list
 		}
 
-		nodeAddr = list[index] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
+		UINT32 nodeAddr = list[index] & 0x00FFFFFF;	// clear upper 8 bits to ensure this is processed as a culling node
 
 		DescendCullingNode(nodeAddr);
 
@@ -960,7 +953,7 @@ void CNew3D::InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat)
 }
 
 // what this does is to set the rotation back to zero, whilst keeping the position and scale of the current matrix
-void CNew3D::ResetMatrix(Mat4& mat)
+void CNew3D::ResetMatrix(Mat4& mat) const
 {
 	float m[16];
 	memcpy(m, mat.currentMatrix, 16 * 4);
@@ -1008,9 +1001,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 	}
 
 	// Translate address and obtain pointer
-	const uint32_t *vpnode = TranslateCullingAddress(addr);
+	const uint32_t * const vpnode = TranslateCullingAddress(addr);
 
-	if (NULL == vpnode) {
+	if (nullptr == vpnode) {
 		return;
 	}
 
@@ -1205,13 +1198,13 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 	}
 }
 
-void CNew3D::GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut)
+void CNew3D::GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut) const
 {
 	uOut = (uIn * uvScale) / width;
 	vOut = (vIn * uvScale) / height;
 }
 
-int CNew3D::GetTexFormat(int originalFormat, bool contour)
+int CNew3D::GetTexFormat(int originalFormat, bool contour) const
 {
 	if (!contour) {
 		return originalFormat;	// the same
@@ -1303,7 +1296,7 @@ void CNew3D::SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph)
 
 void CNew3D::CacheModel(Model *m, const UINT32 *data)
 {
-	if (data == NULL)
+	if (data == nullptr)
 		return;
 
 	UINT16			texCoords[4][2];
@@ -1523,9 +1516,9 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 	}
 }
 
-bool CNew3D::IsDynamicModel(UINT32 *data)
+bool CNew3D::IsDynamicModel(UINT32 *data) const
 {
-	if (data == NULL) {
+	if (data == nullptr) {
 		return false;
 	}
 
@@ -1546,7 +1539,7 @@ bool CNew3D::IsDynamicModel(UINT32 *data)
 	return false;
 }
 
-bool CNew3D::IsVROMModel(UINT32 modelAddr)
+bool CNew3D::IsVROMModel(UINT32 modelAddr) const
 {
 	return modelAddr >= 0x100000;
 }
@@ -1608,7 +1601,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 	}
 }
 
-void CNew3D::TranslateTexture(unsigned& x, unsigned& y, int width, int height, int& page)
+void CNew3D::TranslateTexture(unsigned& x, unsigned& y, int width, int height, int& page) const
 {
 	page = y / 1024;
 
@@ -1629,7 +1622,7 @@ float CNew3D::GetLosValue(int layer)
 	return m_losFront->value[layer];
 }
 
-void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY)
+void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY) const
 {
 	// remap real3d 496x384 to our new viewport
 	inY = 384 - inY;
@@ -1647,13 +1640,11 @@ bool CNew3D::ProcessLos(int priority)
 				int losX, losY;
 				TranslateLosPosition(n.viewport.losPosX, n.viewport.losPosY, losX, losY);
 
-				float range;
-				glReadPixels(losX, losY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &range);
+				float range[2];
+				glReadPixels(losX, losY, 1, 1, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, range);
+				GLubyte stencilVal = Util::FloatAsInt32(range[1]);
 
-				float zVal = range / NEAR_PLANE;
-
-				GLubyte stencilVal;
-				glReadPixels(losX, losY, 1, 1, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, &stencilVal);
+				float zVal = range[0] / NEAR_PLANE;
 
 				// apply our mask to stencil, because layered poly attributes use the lower bits
 				stencilVal &= 0x80;
