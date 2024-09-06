@@ -231,7 +231,7 @@ struct TexSheet
  *
  * 3D renderer. Lots of work to do here :)
  */
-class CLegacy3D: public IRender3D
+class CLegacy3D final : public IRender3D
 {
 	friend class CTextureRefs;
 
