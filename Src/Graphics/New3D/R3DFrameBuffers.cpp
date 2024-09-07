@@ -39,7 +39,7 @@ R3DFrameBuffers::~R3DFrameBuffers()
 	}
 }
 
-bool R3DFrameBuffers::CreateFBO(int width, int height)
+Result R3DFrameBuffers::CreateFBO(int width, int height)
 {
 	m_width = width;
 	m_height = height;
@@ -67,10 +67,10 @@ bool R3DFrameBuffers::CreateFBO(int width, int height)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);	//created R3DFrameBuffers now disable it
 
-	return ((CreateFBODepthCopy(width, height) == OKAY) && (fboStatus == GL_FRAMEBUFFER_COMPLETE)) ? OKAY : FAIL;
+	return ((CreateFBODepthCopy(width, height) == Result::OKAY) && (fboStatus == GL_FRAMEBUFFER_COMPLETE)) ? Result::OKAY : Result::FAIL;
 }
 
-bool R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
+Result R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
 {
 	glGenFramebuffers(1, &m_frameBufferIDCopy);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferIDCopy);
@@ -85,7 +85,7 @@ bool R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
 	// check setup was successful
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-	return (fboStatus == GL_FRAMEBUFFER_COMPLETE) ? OKAY : FAIL;
+	return (fboStatus == GL_FRAMEBUFFER_COMPLETE) ? Result::OKAY : Result::FAIL;
 }
 
 void R3DFrameBuffers::StoreDepth()
