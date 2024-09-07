@@ -421,7 +421,7 @@ void CRender2D::AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::sh
 	m_drawBuffers[1] = top;
 }
 
-bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget)
+Result CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget)
 {
 	// Resolution
 	m_xPixels		= xRes;
@@ -433,7 +433,7 @@ bool CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 	m_correction	= (UINT32)(((yRes / 384.f) * 2) + 0.5f);		// for some reason the 2d layer is 2 pixels off the 3D
 	m_aaTarget		= aaTarget;
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 CRender2D::CRender2D(const Util::Config::Node& config)

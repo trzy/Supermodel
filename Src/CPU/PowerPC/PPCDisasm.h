@@ -52,7 +52,7 @@
  *      OKAY if successful, FAIL if the instruction was unrecognized or had an
  *      invalid form (see note above in function description.)
  */ 
-extern bool DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
+extern Result DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
                         	   bool simplify);
 
 #endif	// INCLUDED_PPCDISASM_H

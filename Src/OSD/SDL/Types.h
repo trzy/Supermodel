@@ -32,10 +32,11 @@
 #ifndef INCLUDED_TYPES_H
 #define INCLUDED_TYPES_H
 
-
-// Boolean return codes (must be 0 or 1 only)
-#define OKAY	0
-#define FAIL	1
+#ifdef __cplusplus
+	enum class Result { OKAY, FAIL };
+#else
+	enum Result { OKAY, FAIL };
+#endif
 
 // Types
 typedef unsigned long long	UINT64;

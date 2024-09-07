@@ -97,7 +97,7 @@ public:
   void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
-  bool Init(void);
+  Result Init(void);
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
 
@@ -128,7 +128,7 @@ public:
    * Returns:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
-  bool LoadGame(const Game &game, const ROMSet &rom_set);
+  Result LoadGame(const Game &game, const ROMSet &rom_set);
 
   /*
    * GetSoundBoard(void):

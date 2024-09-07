@@ -30,6 +30,7 @@
 
 #include <GL/glew.h>
 #include <string>
+#include "Types.h"
 
 /*
  * LoadShaderProgram(shaderProgramPtr, vertexShaderPtr, fragmentShaderPtr, 
@@ -52,7 +53,7 @@
  * Returns:
  *		OKAY is successfully loaded, otherwise FAIL. Prints own error messages.
  */
-extern bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, 
+extern Result LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr,
 							  GLuint *fragmentShaderPtr, const std::string& vsFile, 
 							  const std::string& fsFile, const char *vsString,
 							  const char *fsString);

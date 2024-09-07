@@ -63,18 +63,18 @@ void InfoLog(const char *fmt, ...)
   va_end(vl);
 }
 
-bool ErrorLog(const char *fmt, ...)
+Result ErrorLog(const char *fmt, ...)
 {
   if (!s_Logger)
-    return FAIL;
+    return Result::FAIL;
   va_list vl;
   va_start(vl, fmt);
   s_Logger->ErrorLog(fmt, vl);
   va_end(vl);
-  return FAIL;
+  return Result::FAIL;
 }
 
-static std::pair<bool, CLogger::LogLevel> GetLogLevel(const Util::Config::Node &config)
+static std::pair<Result, CLogger::LogLevel> GetLogLevel(const Util::Config::Node &config)
 {
   const std::map<std::string, CLogger::LogLevel> logLevelByString
   {
@@ -89,11 +89,11 @@ static std::pair<bool, CLogger::LogLevel> GetLogLevel(const Util::Config::Node &
   auto it = logLevelByString.find(logLevel);
   if (it != logLevelByString.end())
   {
-    return std::pair<bool, CLogger::LogLevel>(OKAY, it->second);
+    return std::pair<Result, CLogger::LogLevel>(Result::OKAY, it->second);
   }
 
   ErrorLog("Invalid log level: %s", logLevel.c_str());
-  return std::pair<bool, CLogger::LogLevel>(FAIL, CLogger::LogLevel::Info);
+  return std::pair<Result, CLogger::LogLevel>(Result::FAIL, CLogger::LogLevel::Info);
 }
 
 std::shared_ptr<CLogger> CreateLogger(const Util::Config::Node &config)
@@ -102,7 +102,7 @@ std::shared_ptr<CLogger> CreateLogger(const Util::Config::Node &config)
 
   // Get log level
   auto logLevelResult = GetLogLevel(config);
-  if (logLevelResult.first != OKAY)
+  if (logLevelResult.first != Result::OKAY)
   {
     return std::shared_ptr<CLogger>();
   }

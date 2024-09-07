@@ -91,7 +91,7 @@ void CBillBoard::SaveState(CBlockFile* SaveState)
 void CBillBoard::LoadState(CBlockFile* SaveState)
 {
   CDriveBoard::LoadState(SaveState);
-  if (SaveState->FindBlock("BillBoard") != OKAY)
+  if (SaveState->FindBlock("BillBoard") != Result::OKAY)
   {
     ErrorLog("Unable to load billboard state. Save state file is corrupt.");
     return;

@@ -199,8 +199,8 @@ private:
 	// Private members
 	void	Run(bool singleStep);
 	void	BuildOpTable(void);
-	void	Insert(UINT8 mask, UINT8 op, bool (*Handler)(struct NCR53C810Context *));
-	bool	(*OpTable[256])(struct NCR53C810Context *);
+	void	Insert(UINT8 mask, UINT8 op, Result (*Handler)(struct NCR53C810Context *));
+	Result	(*OpTable[256])(struct NCR53C810Context *);
 	
 	// Context (register file)
 	struct NCR53C810Context	Ctx;

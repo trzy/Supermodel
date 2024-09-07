@@ -575,11 +575,11 @@ static uint32_t Mask(unsigned mb, unsigned me)
  * Perform checks on the instruction as required by the flags. Returns 1 if
  * the instruction failed.
  */
-static bool Check(uint32_t op, unsigned flags)
+static Result Check(uint32_t op, unsigned flags)
 {
     unsigned  nb, rt, ra;
 
-    if (!flags) return OKAY;  // nothing to check for!
+    if (!flags) return Result::OKAY;  // nothing to check for!
 
     rt = G_RT(op);
     ra = G_RA(op);
@@ -587,13 +587,13 @@ static bool Check(uint32_t op, unsigned flags)
     if (flags & FL_CHECK_RA_RT) // invalid if rA==0 or rA==rT
     {
         if ((G_RA(op) == 0) || (G_RA(op) == G_RT(op)))
-            return FAIL;
+            return Result::FAIL;
     }
 
     if (flags & FL_CHECK_RA)    // invalid if rA==0
     {
         if (G_RA(op) == 0)
-            return FAIL;
+            return Result::FAIL;
     }
 
     if (flags & FL_CHECK_LSWI)
@@ -605,11 +605,11 @@ static bool Check(uint32_t op, unsigned flags)
 
         nb = G_NB(op);
 
-        if (ra >= rt && ra <= (rt + nb - 1))    return FAIL;
+        if (ra >= rt && ra <= (rt + nb - 1))    return Result::FAIL;
         if ((rt + nb - 1) > 31) // register wrap-around!
         {
             if (ra < ((rt + nb - 1) - 31))
-                return FAIL;
+                return Result::FAIL;
         }
     }
 
@@ -624,10 +624,10 @@ static bool Check(uint32_t op, unsigned flags)
          */
 
         if (rt == ra || rt == G_RB(op) || ((rt == 0) && (ra == 0)))
-            return FAIL;
+            return Result::FAIL;
     }
 
-    return OKAY;  // passed checks
+    return Result::OKAY;  // passed checks
 }
 
 /*
@@ -808,7 +808,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
  *      Zero if successful, non-zero if the instruction was unrecognized or
  *      had an invalid form (see note above in function description.)
  */ 
-bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
+Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
                         bool simplify)
 {
     char    signed16[12];
@@ -830,7 +830,7 @@ bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
     if (simplify)
     {
         if (Simplified(op, vpc, signed16, mnem, oprs))
-            return OKAY;
+            return Result::OKAY;
     }
 
     /*
@@ -1097,7 +1097,7 @@ bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
         }
     }
 
-    return FAIL;  // no match found
+    return Result::FAIL;  // no match found
 }
 
 

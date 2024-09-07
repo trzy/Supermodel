@@ -114,7 +114,7 @@ void CNew3D::SetStepping(int stepping)
 	}
 }
 
-bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
+Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
 	// Resolution and offset within physical display area
 	m_xRatio	= xRes * (float)(1.0 / 496.0);
@@ -130,7 +130,7 @@ bool CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yR
 	m_r3dFrameBuffers.DestroyFBO();		// remove any old ones if created
 	m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)

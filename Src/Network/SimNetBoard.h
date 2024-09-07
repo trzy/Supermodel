@@ -53,7 +53,7 @@ public:
 	void SaveState(CBlockFile* SaveState);
 	void LoadState(CBlockFile* SaveState);
 
-	bool Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr);
+	Result Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr);
 	void RunFrame(void);
 	void Reset(void);
 

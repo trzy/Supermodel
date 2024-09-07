@@ -996,7 +996,7 @@ void ppc_save_state(CBlockFile *SaveState)
 
 void ppc_load_state(CBlockFile *SaveState)
 {	
-	if (OKAY != SaveState->FindBlock("PowerPC"))
+	if (Result::OKAY != SaveState->FindBlock("PowerPC"))
 	{
 		ErrorLog("Unable to load PowerPC state. Save state file is corrupt.");
 		return;

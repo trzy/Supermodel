@@ -81,7 +81,7 @@ void CJoyBoard::LoadState(CBlockFile *SaveState)
 {
   CDriveBoard::LoadState(SaveState);
 
-  if (SaveState->FindBlock("JoystickBoard") != OKAY)
+  if (SaveState->FindBlock("JoystickBoard") != Result::OKAY)
   {
     ErrorLog("Unable to load joystick drive board state. Save state file is corrupt.");
     Disable();

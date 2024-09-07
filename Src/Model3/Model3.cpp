@@ -1901,7 +1901,7 @@ void CModel3::SaveState(CBlockFile *SaveState)
 void CModel3::LoadState(CBlockFile *SaveState)
 {
   // Load Model 3 state
-  if (OKAY != SaveState->FindBlock("Model 3"))
+  if (Result::OKAY != SaveState->FindBlock("Model 3"))
   {
     ErrorLog("Unable to load Model 3 core state. Save state file is corrupt.");
     return;
@@ -1953,7 +1953,7 @@ void CModel3::LoadNVRAM(CBlockFile *NVRAM)
   EEPROM.LoadState(NVRAM);
 
   // Load backup RAM
-  if (OKAY != NVRAM->FindBlock("Backup RAM"))
+  if (Result::OKAY != NVRAM->FindBlock("Backup RAM"))
   {
     ErrorLog("Unable to load Model 3 backup RAM. NVRAM file is corrupt.");
     return;
@@ -2882,7 +2882,7 @@ const Game &CModel3::GetGame() const
 }
 
 // Stepping-dependent parameters (MPC10x type, etc.) are initialized here
-bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
+Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 {
   m_game = Game();
 
@@ -2956,7 +2956,7 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   else
   {
     ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", game.stepping.c_str());
-    return FAIL;
+    return Result::FAIL;
   }
 
   if (!game.pci_bridge.empty())
@@ -3008,8 +3008,8 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
       ErrorLog("No MPEG board type defined in game XML for MPEG ROMs.");
     else
       ErrorLog("Unknown MPEG board type '%s'. Only 'DSB1' and 'DSB2' are supported.", game.mpeg_board.c_str());
-    if (DSB && OKAY != DSB->Init(dsbROM, mpegROM))
-      return FAIL;
+    if (DSB && Result::OKAY != DSB->Init(dsbROM, mpegROM))
+      return Result::FAIL;
   }
   SoundBoard.AttachDSB(DSB);
 
@@ -3017,33 +3017,33 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   if (game.driveboard_type == Game::DRIVE_BOARD_WHEEL && rom_set.get_rom("driveboard_program").size)
   {
     DriveBoard = new CWheelBoard(m_config);
-    if (DriveBoard->Init(driveROM))
-      return FAIL;
+    if (DriveBoard->Init(driveROM) != Result::OKAY)
+      return Result::FAIL;
   }
   else if (game.driveboard_type == Game::DRIVE_BOARD_JOYSTICK && rom_set.get_rom("driveboard_program").size)
   {
     DriveBoard = new CJoyBoard(m_config);
-    if (DriveBoard->Init(driveROM))
-      return FAIL;
+    if (DriveBoard->Init(driveROM) != Result::OKAY)
+      return Result::FAIL;
   }
   else if (game.driveboard_type == Game::DRIVE_BOARD_BILLBOARD && rom_set.get_rom("driveboard_program").size)
   {
     DriveBoard = new CBillBoard(m_config);
-    if (DriveBoard->Init(driveROM))
-      return FAIL;
+    if (DriveBoard->Init(driveROM) != Result::OKAY)
+      return Result::FAIL;
   }
   else if (game.driveboard_type == Game::DRIVE_BOARD_SKI)
   {
     DriveBoard = new CSkiBoard(m_config);
-    if (DriveBoard->Init(driveROM)) // no actual ROM data loaded (ski feedback is simulated)
-      return FAIL;
+    if (DriveBoard->Init(driveROM) != Result::OKAY) // no actual ROM data loaded (ski feedback is simulated)
+      return Result::FAIL;
   }
   else
   {
     // Dummy drive board (presents itself as not attached)
     DriveBoard = new CDriveBoard(m_config);
-    if (DriveBoard->Init())
-      return FAIL;
+    if (DriveBoard->Init() != Result::OKAY)
+      return Result::FAIL;
   }
 
   // Security board encryption device
@@ -3080,14 +3080,14 @@ bool CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   m_game = game;
 #ifdef NET_BOARD
   NetBoard->GetGame(m_game);
-  if (OKAY != NetBoard->Init(netRAM, netBuffer))
+  if (Result::OKAY != NetBoard->Init(netRAM, netBuffer))
   {
-    return FAIL;
+    return Result::FAIL;
   }
 
   m_runNetBoard = m_game.stepping != "1.0" && NetBoard->IsAttached();
 #endif
-  return OKAY;
+  return Result::OKAY;
 }
 
 void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
@@ -3156,7 +3156,7 @@ const static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
 const static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
 
 // Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
-bool CModel3::Init(void)
+Result CModel3::Init(void)
 {
   float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
 
@@ -3189,12 +3189,12 @@ bool CModel3::Init(void)
   SCSI.Init(this,&IRQ,0x100); // SCSI is actually a non-maskable interrupt, so we give it a bit number outside of 8-bit range
   RTC.Init();
   EEPROM.Init();
-  if (OKAY != TileGen.Init(&IRQ))
-    return FAIL;
-  if (OKAY != GPU.Init(vrom,this,&IRQ,0x100)) // same for Real3D DMA interrupt
-    return FAIL;
-  if (OKAY != SoundBoard.Init(soundROM,sampleROM))
-    return FAIL;
+  if (Result::OKAY != TileGen.Init(&IRQ))
+    return Result::FAIL;
+  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,0x100)) // same for Real3D DMA interrupt
+    return Result::FAIL;
+  if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
+    return Result::FAIL;
 
   PCIBridge.AttachPCIBus(&PCIBus);
   PCIBus.AttachDevice(13,&GPU);
@@ -3210,7 +3210,7 @@ bool CModel3::Init(void)
 
   DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 
-  return OKAY;
+  return Result::OKAY;
 }
 
 CSoundBoard *CModel3::GetSoundBoard(void)

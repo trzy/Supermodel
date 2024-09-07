@@ -315,10 +315,10 @@ void CLegacy3D::DrawDisplayList(ModelCache *Cache, POLY_STATE state)
 }
 
 // Appends an instance of a model or viewport to the display list, copying over the required state information
-bool CLegacy3D::AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model)
+Result CLegacy3D::AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model)
 {
   if ((Cache->listSize+2) > Cache->maxListSize) // a model may have 2 states (viewports are added to both display lists)
-    return FAIL;
+    return Result::FAIL;
     //return ErrorLog("Display list is full.");
   
   // Insert states into the display list
@@ -428,7 +428,7 @@ bool CLegacy3D::AppendDisplayList(ModelCache *Cache, bool isViewport, const stru
     }
   }
     
-  return OKAY;
+  return Result::OKAY;
 }
 
 // Clears the display list in preparation for a new frame
@@ -809,13 +809,13 @@ void CLegacy3D::InsertVertex(ModelCache *Cache, const Vertex *V, const Poly *P, 
   Cache->vboCurOffset += VBO_VERTEX_SIZE*sizeof(GLfloat);
 }
 
-bool CLegacy3D::InsertPolygon(ModelCache *Cache, const Poly *P)
+Result CLegacy3D::InsertPolygon(ModelCache *Cache, const Poly *P)
 {
   // Bounds testing: up to 12 triangles will be inserted (worst case: double sided quad is 6 triangles)
   if ((Cache->curVertIdx[P->state]+6*2) >= Cache->maxVertIdx)
     return ErrorLocalVertexOverflow();  // local buffers are not expected to overflow
   if ((Cache->vboCurOffset+6*2*VBO_VERTEX_SIZE*sizeof(GLfloat)) >= Cache->vboMaxOffset)
-    return FAIL;  // this just indicates we may need to re-cache
+    return Result::FAIL;  // this just indicates we may need to re-cache
     
   // Is the polygon double sided?
   bool doubleSided = (P->header[1]&0x10) ? true : false;
@@ -911,7 +911,7 @@ bool CLegacy3D::InsertPolygon(ModelCache *Cache, const Poly *P)
     }
   }
   
-  return OKAY;
+  return Result::OKAY;
 }
 
 // Begins caching a new model by resetting to the start of the local vertex buffer
@@ -1134,7 +1134,7 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 textu
         Prev[i] = P.Vert[i];
       
       // Copy this polygon into the model buffer
-      if (OKAY != InsertPolygon(Cache,&P))
+      if (Result::OKAY != InsertPolygon(Cache,&P))
         return NULL;
       ++numPolys;
     }
@@ -1185,7 +1185,7 @@ void CLegacy3D::ClearModelCache(ModelCache *Cache)
   ClearDisplayList(Cache);
 }
 
-bool CLegacy3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts, 
+Result CLegacy3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts,
                  unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, 
                  unsigned displayListSize, bool isDynamic)
 {
@@ -1270,7 +1270,7 @@ bool CLegacy3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts,
     Cache->lut[i] = -1;
     
   // All good!
-  return OKAY;
+  return Result::OKAY;
 }
 
 void CLegacy3D::DestroyModelCache(ModelCache *Cache)

@@ -42,19 +42,19 @@ namespace Legacy3D {
 
 
 // Overflow in the local vertex buffer, which holds one model
-bool CLegacy3D::ErrorLocalVertexOverflow(void)
+Result CLegacy3D::ErrorLocalVertexOverflow(void)
 {
 	if ((errorMsgFlags&ERROR_LOCAL_VERTEX_OVERFLOW))
-		return FAIL;
+		return Result::FAIL;
 	errorMsgFlags |= ERROR_LOCAL_VERTEX_OVERFLOW;
 	return ErrorLog("Overflow in local vertex buffer!");
 }
 
 // Model could not be cached, even after dumping display list and re-caching
-bool CLegacy3D::ErrorUnableToCacheModel(UINT32 modelAddr)
+Result CLegacy3D::ErrorUnableToCacheModel(UINT32 modelAddr)
 {
 	if ((errorMsgFlags&ERROR_UNABLE_TO_CACHE_MODEL))
-		return FAIL;
+		return Result::FAIL;
 	errorMsgFlags |= ERROR_UNABLE_TO_CACHE_MODEL;
 	return ErrorLog("Encountered a model that was too large to cache (at %08X)!", modelAddr);
 }

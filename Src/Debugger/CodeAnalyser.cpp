@@ -705,7 +705,7 @@ namespace Debugger
 		// Load custom entry addresses
 		char blockStr[255];
 		sprintf(blockStr, "%s.entryaddrs", cpu->name);
-		if (state->FindBlock(blockStr) == OKAY)
+		if (state->FindBlock(blockStr) == Result::OKAY)
 		{
 			m_customEntryAddrs.clear();
 			UINT32 numAddrs;

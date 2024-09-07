@@ -250,7 +250,7 @@ extern void	DebugLog(const char *fmt, ...);
  * Returns:
  *		Must always return FAIL.
  */
-extern bool	ErrorLog(const char *fmt, ...);
+extern Result ErrorLog(const char *fmt, ...);
 
 /*
  * InfoLog(fmt, ...);

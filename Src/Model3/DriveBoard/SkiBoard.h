@@ -86,7 +86,7 @@ public:
    *    because no ROM was passed to it, no error is generated and the
    *    drive board is silently disabled (detached).
    */
-  bool Init(const UINT8 *romPtr);
+  Result Init(const UINT8 *romPtr);
 
 
   /*

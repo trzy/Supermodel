@@ -138,11 +138,11 @@ public:
 	*		totalYRes	Vertical resolution.
 	*
 	* Returns:
-	*		OKAY is successful, otherwise FAILED if a non-recoverable error
+	*		OKAY if successful, otherwise FAILED if a non-recoverable error
 	*		occurred. Any allocated memory will not be freed until the
 	*		destructor is called. Prints own error messages.
 	*/
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
+	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
 	* SetSunClamp(bool enable);

@@ -67,9 +67,9 @@ void CSkiBoard::Disable(void)
   CDriveBoard::Disable();
 }
 
-bool CSkiBoard::Init(const UINT8 *romPtr)
+Result CSkiBoard::Init(const UINT8 *romPtr)
 {
-  bool result = CDriveBoard::Init(romPtr);
+  auto result = CDriveBoard::Init(romPtr);
   m_simulated = true;
   return result;
 }

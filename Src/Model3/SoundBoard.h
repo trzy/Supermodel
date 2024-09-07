@@ -164,7 +164,7 @@ public:
 	 *		OKAY if successful, FAIL if unable to allocate memory. Prints own
 	 *		error messages.
 	 */
-	bool Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
+	Result Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr);
 
 	/*
 	 * CSoundBoard(config):

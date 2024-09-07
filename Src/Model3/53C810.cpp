@@ -71,7 +71,7 @@ void C53C810::SaveState(CBlockFile *SaveState)
 
 void C53C810::LoadState(CBlockFile *SaveState)
 {
-  if (OKAY != SaveState->FindBlock("53C810"))
+  if (Result::OKAY != SaveState->FindBlock("53C810"))
   {
     ErrorLog("Unable to load 53C810 state. Save state file is corrupt.");
     return;
@@ -102,7 +102,7 @@ static inline UINT32 Fetch(struct NCR53C810Context *Ctx, UINT32 offset)
 }
 
 //TODO: what happens if interrupt is executed in single step mode?
-static bool SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
+static Result SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
 {
   Ctx->halt = true;   // halt SCRIPTS execution
   Ctx->regISTAT |= 1; // DMA interrupt pending
@@ -112,10 +112,10 @@ static bool SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
   if ((Ctx->regDBC&0x100000)) // INTFLY
     return ErrorLog("53C810 INTFLY instruction not emulated!");
   // DSP not incremented (VF3 relies on this)
-  return OKAY;
+  return Result::OKAY;
 }
 
-static bool SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
+static Result SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
 {
   UINT32    src, dest;
   unsigned  numBytes, i;
@@ -151,14 +151,14 @@ static bool SCRIPTS_MoveMemory(struct NCR53C810Context *Ctx)
   Ctx->regTEMP = dest;
   Ctx->regDSP += 12;
 
-  return OKAY;
+  return Result::OKAY;
 }
 
 // Invalid instruction handler
-static bool SCRIPTS_Invalid(struct NCR53C810Context *Ctx)
+static Result SCRIPTS_Invalid(struct NCR53C810Context *Ctx)
 {
   DebugLog("53C810 encountered an unrecognized instruction (%02X%06X, DSP=%08X)\n!", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
-  return FAIL;
+  return Result::FAIL;
 }
 
 void C53C810::Run(bool singleStep)
@@ -198,14 +198,14 @@ void C53C810::Run(bool singleStep)
       Ctx.regDSPS = Fetch(&Ctx, 4); // word 2
     
       // Execute!
-      if (OpTable[Ctx.regDCMD](&Ctx) != OKAY)
+      if (OpTable[Ctx.regDCMD](&Ctx) != Result::OKAY)
         break;
     }
   }
 }
 
 // Insert instructions into the LUT under control of the mask
-void C53C810::Insert(UINT8 mask, UINT8 op, bool (*Handler)(struct NCR53C810Context *))
+void C53C810::Insert(UINT8 mask, UINT8 op, Result (*Handler)(struct NCR53C810Context *))
 {
   UINT32  i;
 

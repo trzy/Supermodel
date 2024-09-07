@@ -91,7 +91,7 @@ public:
   {
     // Load state
     CBlockFile SaveState;
-    if (OKAY != SaveState.Load(m_stateFilePath.c_str()))
+    if (Result::OKAY != SaveState.Load(m_stateFilePath.c_str()))
       ErrorLog("Unable to load state from '%s'.", m_stateFilePath.c_str());
     else
     {
@@ -105,7 +105,7 @@ public:
     return m_game;
   }
 
-  bool LoadGame(const Game &game, const ROMSet &rom_set) override
+  Result LoadGame(const Game &game, const ROMSet &rom_set) override
   {
     m_game = game;
     if (rom_set.get_rom("vrom").size <= 32*0x100000)
@@ -117,7 +117,7 @@ public:
       rom_set.get_rom("vrom").CopyTo(m_vrom.get(), 64*0x100000);
     int stepping = ((m_game.stepping[0] - '0') << 4) | (m_game.stepping[2] - '0');
     m_real3D.SetStepping(stepping);
-    return OKAY;
+    return Result::OKAY;
   }
 
   void AttachRenderers(CRender2D *render2D, IRender3D *render3D, SuperAA* superAA) override
@@ -134,15 +134,15 @@ public:
   {
   }
 
-  bool Init(void) override
+  Result Init(void) override
   {
     m_vrom.reset(new uint8_t[64*1024*1024], std::default_delete<uint8_t[]>());
     m_irq.Init();
-    if (OKAY != m_tileGen.Init(&m_irq))
-      return FAIL;
-    if (OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, 0x100))
-      return FAIL;
-    return OKAY;
+    if (Result::OKAY != m_tileGen.Init(&m_irq))
+      return Result::FAIL;
+    if (Result::OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, 0x100))
+      return Result::FAIL;
+    return Result::OKAY;
   }
 
   bool PauseThreads(void) override

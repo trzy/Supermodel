@@ -381,7 +381,7 @@ public:
    *    OKAY if successful otherwise FAIL (not enough memory). Prints own
    *    errors.
    */
-  bool Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
+  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
    
   /*
    * CReal3D(config):

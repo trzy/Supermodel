@@ -77,7 +77,7 @@ void CTileGen::SaveState(CBlockFile *SaveState)
 
 void CTileGen::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("Tile Generator"))
+	if (Result::OKAY != SaveState->FindBlock("Tile Generator"))
 	{
 		ErrorLog("Unable to load tile generator state. Save state file is corrupt.");
 		return;
@@ -302,7 +302,7 @@ void CTileGen::AttachRenderer(CRender2D *Render2DPtr)
 	DebugLog("Tile Generator attached a Render2D object\n");
 }
 
-bool CTileGen::Init(CIRQ *IRQObjectPtr)
+Result CTileGen::Init(CIRQ *IRQObjectPtr)
 {
 	unsigned memSize   = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
 	float	 memSizeMB = (float)memSize/(float)0x100000;
@@ -321,7 +321,7 @@ bool CTileGen::Init(CIRQ *IRQObjectPtr)
 	IRQ = IRQObjectPtr;
 	
 	DebugLog("Initialized Tile Generator (allocated %1.1f MB and connected to IRQ controller)\n", memSizeMB);
-	return OKAY;
+	return Result::OKAY;
 }
 
 CTileGen::CTileGen(const Util::Config::Node& config)

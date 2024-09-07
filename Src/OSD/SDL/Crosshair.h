@@ -75,7 +75,7 @@ private:
 public:
   CCrosshair(const Util::Config::Node& config);
   ~CCrosshair();
-  bool Init();
+  Result Init();
   void Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xOffset, unsigned int yOffset, unsigned int xRes, unsigned int yRes);
 };
 

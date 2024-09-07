@@ -113,7 +113,7 @@ void CReal3D::SaveState(CBlockFile *SaveState)
 
 void CReal3D::LoadState(CBlockFile *SaveState)
 {
-  if (OKAY != SaveState->FindBlock("Real3D"))
+  if (Result::OKAY != SaveState->FindBlock("Real3D"))
   {
     ErrorLog("Unable to load Real3D GPU state. Save state file is corrupt.");
     return;
@@ -925,7 +925,7 @@ void CReal3D::SetStepping(int stepping)
   DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
 
-bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
+Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit)
 {
   uint32_t memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   float  memSizeMB = (float)memSize/(float)0x100000;
@@ -964,7 +964,7 @@ bool CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPt
   vrom = (uint32_t *) vromPtr;
 
   DebugLog("Initialized Real3D (allocated %1.1f MB)\n", memSizeMB);
-  return OKAY;
+  return Result::OKAY;
 }
 
 CReal3D::CReal3D(const Util::Config::Node &config)

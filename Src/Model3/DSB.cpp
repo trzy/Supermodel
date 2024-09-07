@@ -497,7 +497,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 
-	if (OKAY != StateFile->FindBlock("DSB1"))
+	if (Result::OKAY != StateFile->FindBlock("DSB1"))
 	{
 		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupt.");
 		return;
@@ -548,7 +548,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 #define DSB1_OFFSET_MPEG_RIGHT	0x8644	// 1604 bytes right MPEG buffer
 #define DSB1_MEMORY_POOL_SIZE	(0x8000 + 0x644 + 0x644)
 
-bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
+Result CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float	memSizeMB = (float)DSB1_MEMORY_POOL_SIZE/(float)0x100000;
 
@@ -572,7 +572,7 @@ bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 
 	retainedSamples = 0;
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 CZ80 *CDSB1::GetZ80(void)
@@ -1127,7 +1127,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 
-	if (OKAY != StateFile->FindBlock("DSB2"))
+	if (Result::OKAY != StateFile->FindBlock("DSB2"))
 	{
 		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupt.");
 		return;
@@ -1191,7 +1191,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 #define DSB2_OFFSET_MPEG_RIGHT	0x20644	// 1604 bytes right MPEG buffer
 #define DSB2_MEMORY_POOL_SIZE	(0x20000 + 0x644 + 0x644)
 
-bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
+Result CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float memSizeMB = (float)DSB2_MEMORY_POOL_SIZE/(float)0x100000;
 
@@ -1219,7 +1219,7 @@ bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 
 	retainedSamples = 0;
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 M68KCtx *CDSB2::GetM68K(void)

@@ -424,7 +424,7 @@ static void LogAudioInfo(SDL_AudioSpec *fmt)
 /// </summary>
 /// <param name="config"></param>
 /// <returns></returns>
-bool OpenAudio(const Util::Config::Node& config)
+Result OpenAudio(const Util::Config::Node& config)
 {
     s_config = &config;
     // Initialize SDL audio sub-system
@@ -526,7 +526,7 @@ bool OpenAudio(const Util::Config::Node& config)
 
     // Start audio playing
     SDL_PauseAudio(0);
-    return OKAY;
+    return Result::OKAY;
 }
 
 bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, bool flipStereo)

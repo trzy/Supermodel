@@ -3947,7 +3947,7 @@ void CZ80::SaveState(CBlockFile *StateFile, const char *name)
 
 void CZ80::LoadState(CBlockFile *StateFile, const char *name)
 {
-  if (OKAY != StateFile->FindBlock(name))
+  if (Result::OKAY != StateFile->FindBlock(name))
   {
     ErrorLog("Unable to load Z80 state. Save state file is corrupt.");
     return;

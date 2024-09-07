@@ -153,7 +153,7 @@ public:
    *    FAIL if the drive board could not be initialized (prints own error
    *    message), otherwise OKAY.
    */
-  virtual bool Init(const UINT8 *romPtr);
+  virtual Result Init(const UINT8 *romPtr);
 
   /*
    * Init(void):
@@ -162,7 +162,7 @@ public:
    * before other members. This initializer is provided in case a CDriveBoard
    * object or pointer is needed but no drive board actually exists.
    */
-  bool Init(void);
+  Result Init(void);
 
   /*
    * AttachInputs(InputsPtr, gameInputFlags):

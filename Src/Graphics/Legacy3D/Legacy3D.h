@@ -328,7 +328,7 @@ public:
 	 *		occurred. Any allocated memory will not be freed until the
 	 *		destructor is called. Prints own error messages.
 	 */
-	bool Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
+	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
 	* SetSunClamp(bool enable);
@@ -373,18 +373,18 @@ private:
 	
 	// Model caching and display list management
 	void 			DrawDisplayList(ModelCache *Cache, POLY_STATE state);
-	bool 			AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model);
+	Result 			AppendDisplayList(ModelCache *Cache, bool isViewport, const struct VBORef *Model);
 	void 			ClearDisplayList(ModelCache *Cache);
-	int       GetTextureBaseX(const Poly *P) const;
-	int       GetTextureBaseY(const Poly *P) const;
-	bool 			InsertPolygon(ModelCache *cache, const Poly *p);
+	int				GetTextureBaseX(const Poly *P) const;
+	int				GetTextureBaseY(const Poly *P) const;
+	Result 			InsertPolygon(ModelCache *cache, const Poly *p);
 	void 			InsertVertex(ModelCache *cache, const Vertex *v, const Poly *p, float normFlip);
 	struct VBORef	*BeginModel(ModelCache *cache);
 	void			EndModel(ModelCache *cache, struct VBORef *Model, int lutIdx, UINT16 textureOffsetState, bool useStencil);
 	struct VBORef	*CacheModel(ModelCache *cache, int lutIdx, UINT16 textureOffsetState, const UINT32 *data);
 	struct VBORef	*LookUpModel(ModelCache *cache, int lutIdx, UINT16 textureOffsetState);
 	void 			ClearModelCache(ModelCache *cache);
-	bool 			CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, bool isDynamic);
+	Result 			CreateModelCache(ModelCache *cache, unsigned vboMaxVerts, unsigned localMaxVerts, unsigned maxNumModels, unsigned numLUTEntries, unsigned displayListSize, bool isDynamic);
 	void 			DestroyModelCache(ModelCache *cache);
 	
 	// Texture management
@@ -395,15 +395,15 @@ private:
 	void 	InitMatrixStack(UINT32 matrixBaseAddr);
 	
 	// Scene database traversal
-	bool DrawModel(UINT32 modelAddr);
+	Result DrawModel(UINT32 modelAddr);
 	void DescendCullingNode(UINT32 addr);
 	void DescendPointerList(UINT32 addr);
 	void DescendNodePtr(UINT32 nodeAddr);
 	void RenderViewport(UINT32 addr, int pri, bool wideScreen);
 	
 	// In-frame error reporting
-	bool ErrorLocalVertexOverflow(void);
-	bool ErrorUnableToCacheModel(UINT32 modelAddr);
+	Result ErrorLocalVertexOverflow(void);
+	Result ErrorUnableToCacheModel(UINT32 modelAddr);
 	void ClearErrors(void);
 	
 	/*

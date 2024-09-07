@@ -437,9 +437,9 @@ namespace Debugger
 #ifdef DEBUGGER_HASBLOCKFILE
 		// Open file and find header 
 		CBlockFile state;
-		if (state.Load(fileName) != OKAY)
+		if (state.Load(fileName) != Result::OKAY)
 			return false;
-		if (state.FindBlock("Debugger State") != OKAY)
+		if (state.FindBlock("Debugger State") != Result::OKAY)
 		{
 			state.Close();
 			return false;
@@ -483,7 +483,7 @@ namespace Debugger
 #ifdef DEBUGGER_HASBLOCKFILE
 		// Create file with header
 		CBlockFile state;
-		if (state.Create(fileName, "Debugger State", __FILE__) != OKAY)
+		if (state.Create(fileName, "Debugger State", __FILE__) != Result::OKAY)
 			return false;
 
 		// Write out version in header

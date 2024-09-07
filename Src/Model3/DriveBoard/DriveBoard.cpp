@@ -99,7 +99,7 @@ void CDriveBoard::SaveState(CBlockFile* SaveState)
 
 void CDriveBoard::LoadState(CBlockFile* SaveState)
 {
-    if (SaveState->FindBlock("DriveBoard.2") != OKAY)
+    if (SaveState->FindBlock("DriveBoard.2") != Result::OKAY)
     {
         ErrorLog("Unable to load base drive board state. Save state file is corrupt.");
         Disable();
@@ -307,7 +307,7 @@ void CDriveBoard::RunFrame(void)
   }
 }
 
-bool CDriveBoard::Init(const UINT8* romPtr)
+Result CDriveBoard::Init(const UINT8* romPtr)
 {
     // This constructor must present a valid ROM
     if (!romPtr)
@@ -333,11 +333,11 @@ bool CDriveBoard::Init(const UINT8* romPtr)
     // We are attached
     m_attached = true;
 
-    return OKAY;
+    return Result::OKAY;
 }
 
 // Dummy drive board (not attached)
-bool CDriveBoard::Init(void)
+Result CDriveBoard::Init(void)
 {
   // Use an empty dummy ROM otherwise so debugger doesn't crash if it
   // tries to read our memory or if we accidentally run the Z80 (which
@@ -352,7 +352,7 @@ bool CDriveBoard::Init(void)
     memset(rom, 0xFF, ROM_SIZE);
     m_dummyROM = rom;
   }
-  bool result = Init(m_dummyROM);
+  auto result = Init(m_dummyROM);
   m_attached = false; // force detached
   return result;
 }

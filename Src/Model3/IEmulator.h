@@ -140,7 +140,7 @@ public:
    * Returns:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
-  virtual bool LoadGame(const Game &game, const ROMSet &rom_set) = 0;
+  virtual Result LoadGame(const Game &game, const ROMSet &rom_set) = 0;
   
   /*
    * AttachRenderers(Render2DPtr, Render3DPtr):
@@ -185,7 +185,7 @@ public:
    *    OKAY is successful, otherwise FAILED if a non-recoverable error
    *    occurred. Prints own error messages.
    */
-  virtual bool Init(void) = 0;
+  virtual Result Init(void) = 0;
 
   /*
    * PauseThreads(void):

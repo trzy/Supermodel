@@ -463,7 +463,7 @@ void CSoundBoard::SaveState(CBlockFile *SaveState)
 
 void CSoundBoard::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("Sound Board"))
+	if (Result::OKAY != SaveState->FindBlock("Sound Board"))
 	{
 		ErrorLog("Unable to load sound board state. Save state file is corrupt.");
 		return;
@@ -495,7 +495,7 @@ void CSoundBoard::AttachDSB(CDSB *DSBPtr)
 }
 
 
-bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
+Result CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -529,8 +529,8 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	// Initialize SCSPs
 	SCSP_SetBuffers(audioFL, audioFR, audioRL, audioRR, NUM_SAMPLES_PER_FRAME);
 	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback);
-	if (OKAY != SCSP_Init(m_config, 2))
-		return FAIL;
+	if (Result::OKAY != SCSP_Init(m_config, 2))
+		return Result::FAIL;
 	SCSP_SetRAM(0, ram1);
 	SCSP_SetRAM(1, ram2);
 	
@@ -541,7 +541,7 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	soundFP = fopen("sound.bin","ab");	// append mode
 #endif
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 M68KCtx *CSoundBoard::GetM68K(void)

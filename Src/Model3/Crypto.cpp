@@ -118,7 +118,8 @@ void CCrypto::LoadState(CBlockFile *SaveState)
 {
   if (!key)
     return;
-  if (SaveState->FindBlock("Sega 315-5881"))
+
+  if (SaveState->FindBlock("Sega 315-5881") != Result::OKAY)
 	{
 		ErrorLog("Unable to load security board encryption device state. Save state file is corrupt.");
 		return;

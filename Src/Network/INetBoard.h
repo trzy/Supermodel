@@ -43,7 +43,7 @@ public:
 	virtual bool IsAttached(void) = 0;
 	virtual bool IsRunning(void) = 0;
 
-	virtual bool Init(UINT8* netRAMPtr, UINT8* netBufferPtr) = 0;
+	virtual Result Init(UINT8* netRAMPtr, UINT8* netBufferPtr) = 0;
 
 	virtual void GetGame(const Game&) = 0;
 

@@ -155,7 +155,7 @@ public:
 	 * Returns:
 	 *		OKAY if successful, otherwise FAIL.
 	 */
-	virtual bool	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
+	virtual Result Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
 
 	virtual ~CDSB()
 	{
@@ -191,7 +191,7 @@ public:
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
-	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+	Result 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 
 	// Returns a reference to the Z80 CPU
 	CZ80 *GetZ80(void);
@@ -268,7 +268,7 @@ public:
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
-	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+	Result 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 
 	// Returns a reference to the 68K CPU context
 	M68KCtx *GetM68K(void);

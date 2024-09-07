@@ -174,7 +174,7 @@ void M68KSaveState(CBlockFile *StateFile, const char *name)
 
 void M68KLoadState(CBlockFile *StateFile, const char *name)
 {
-	if (OKAY != StateFile->FindBlock(name))
+	if (Result::OKAY != StateFile->FindBlock(name))
 	{
 		ErrorLog("Unable to load 68K state. Save state file is corrupt.");
 		return;
@@ -297,7 +297,7 @@ void M68KSetContext(M68KCtx *Src)
 
 // One-time initialization
 
-bool M68KInit(void)
+Result M68KInit(void)
 {
 	m68k_init();
 	m68k_set_cpu_type(M68K_CPU_TYPE_68000);
@@ -308,7 +308,7 @@ bool M68KInit(void)
 	m68k_set_instr_hook_callback(M68KDebugCallback);
 #endif // SUPERMODEL_DEBUGGER
 	DebugLog("Initialized 68K\n");
-	return OKAY;
+	return Result::OKAY;
 }
 
 #ifdef SUPERMODEL_DEBUGGER

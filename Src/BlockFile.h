@@ -30,6 +30,7 @@
 
 #include <cstdint>
 #include <string>
+#include "Types.h"
 
 /*
  * CBlockFile:
@@ -85,7 +86,7 @@ public:
    * Returns:
    *    OKAY if found, FAIL if unable to locate.
    */
-  bool FindBlock(const std::string &name);
+  Result FindBlock(const std::string &name);
   
   /*
    * Write(value):
@@ -149,7 +150,7 @@ public:
    * Returns:
      *    OKAY if successfully opened, otherwise FAIL.
    */
-  bool Create(const std::string &file, const std::string &headerName, const std::string &comment);
+  Result Create(const std::string &file, const std::string &headerName, const std::string &comment);
 
   /*
    * Load(file):
@@ -165,7 +166,7 @@ public:
    *    subsequent operations will be silently ignored (reads will return
    *    0's). Write commands will be ignored.
    */
-  bool Load(const std::string &file);
+  Result Load(const std::string &file);
 
   /*
    * Close(void):

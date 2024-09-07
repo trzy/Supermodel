@@ -50,7 +50,7 @@ void CIRQ::SaveState(CBlockFile *SaveState)
 
 void CIRQ::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("IRQ"))
+	if (Result::OKAY != SaveState->FindBlock("IRQ"))
 	{
 		ErrorLog("Unable to load IRQ controller state. Save state file is corrupt.");
 		return;

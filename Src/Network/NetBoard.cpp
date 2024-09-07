@@ -1090,7 +1090,7 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 #define MEMORY_POOL_SIZE	0x40000 // contiguous, not sure
 #define OFFSET_COMMRAM		0x0 // size 256kb 0x80000-0xbffff
 
-bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
+Result CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 {
 	netRAM = netRAMPtr;
 	netBuffer = netBufferPtr;
@@ -1171,7 +1171,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 		printf("Successfully connected.\n");
 	}
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)

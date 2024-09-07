@@ -58,7 +58,7 @@ void CSimNetBoard::LoadState(CBlockFile* SaveState)
 
 }
 
-bool CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
+Result CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
 {
 	RAM = netRAMPtr;
 	Buffer = netBufferPtr;
@@ -69,7 +69,7 @@ bool CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
 	m_attached = m_gameInfo.netboard_present && m_config["Network"].ValueAs<bool>();
 
 	if (!m_attached)
-		return 0;
+		return Result::OKAY;
 
 	if (IsGame("daytona2") || IsGame("harley") || IsGame("scud") || IsGame("srally2") ||
 		IsGame("skichamp") || IsGame("spikeout") || IsGame("spikeofe"))
@@ -89,7 +89,7 @@ bool CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
 	nets = std::make_unique<TCPSend>(addr_out, port_out);
 	netr = std::make_unique<TCPReceive>(port_in);
 
-	return 0;
+	return Result::OKAY;
 }
 
 void CSimNetBoard::RunFrame(void)

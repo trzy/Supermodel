@@ -668,9 +668,9 @@ namespace Debugger
 	{
 		// Open file and find header
 		CBlockFile state;
-		if (state.Load(fileName) != OKAY)
+		if (state.Load(fileName) != Result::OKAY)
 			return false;
-		if (state.FindBlock("Debugger Model3 State") != OKAY)
+		if (state.FindBlock("Debugger Model3 State") != Result::OKAY)
 		{
 			state.Close();
 			return false;
@@ -698,7 +698,7 @@ namespace Debugger
 	{
 		// Create file with header
 		CBlockFile state;
-		if (state.Create(fileName, "Debugger Model3 State", __FILE__) != OKAY)
+		if (state.Create(fileName, "Debugger Model3 State", __FILE__) != Result::OKAY)
 			return false;
 
 		// Write out version in header

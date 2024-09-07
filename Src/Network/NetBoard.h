@@ -58,7 +58,7 @@ public:
 	bool IsAttached(void);
 	bool IsRunning(void);
 
-	bool Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
+	Result Init(UINT8 *netRAMPtr, UINT8 *netBufferPtr);
 
 	void GetGame(const Game&);
 
