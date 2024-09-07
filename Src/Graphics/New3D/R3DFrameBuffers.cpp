@@ -60,17 +60,14 @@ bool R3DFrameBuffers::CreateFBO(int width, int height)
 	glGenRenderbuffers(1, &m_renderBufferID);
 	glBindRenderbuffer(GL_RENDERBUFFER, m_renderBufferID);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferID);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferID);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferID);
 
 	// check setup was successful
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);	//created R3DFrameBuffers now disable it
 
-	CreateFBODepthCopy(width, height);
-
-	return (fboStatus == GL_FRAMEBUFFER_COMPLETE);
+	return ((CreateFBODepthCopy(width, height) == OKAY) && (fboStatus == GL_FRAMEBUFFER_COMPLETE)) ? OKAY : FAIL;
 }
 
 bool R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
@@ -81,15 +78,14 @@ bool R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
 	glGenRenderbuffers(1, &m_renderBufferIDCopy);
 	glBindRenderbuffer(GL_RENDERBUFFER, m_renderBufferIDCopy);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferIDCopy);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferIDCopy);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferIDCopy);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	// check setup was successful
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-	return (fboStatus == GL_FRAMEBUFFER_COMPLETE);
+	return (fboStatus == GL_FRAMEBUFFER_COMPLETE) ? OKAY : FAIL;
 }
 
 void R3DFrameBuffers::StoreDepth()
@@ -208,8 +204,8 @@ void R3DFrameBuffers::AllocShaderBase()
 										vec4( 1.0, -1.0, 0.0, 1.0),
 										vec4( 1.0,  1.0, 0.0, 1.0));
 
-		fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
-		gl_Position = vertices[gl_VertexID % 4];	
+		fsTexCoord = vertices[gl_VertexID % 4].xy * 0.5 + 0.5;
+		gl_Position = vertices[gl_VertexID % 4];
 	}
 
 	)glsl";
@@ -252,7 +248,7 @@ void R3DFrameBuffers::AllocShaderTrans()
 										vec4( 1.0, -1.0, 0.0, 1.0),
 										vec4( 1.0,  1.0, 0.0, 1.0));
 
-		fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
+		fsTexCoord = vertices[gl_VertexID % 4].xy * 0.5 + 0.5;
 		gl_Position = vertices[gl_VertexID % 4];
 	}
 

@@ -177,7 +177,7 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   glDisable(GL_CULL_FACE);
 
   // Clear both buffers to ensure a black border
-  for (int i = 0; i < 2; i++)
+  for (int i = 0; i < 3; i++)
   {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     SDL_GL_SwapWindow(s_window);
@@ -198,7 +198,7 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   }
   else
   {
-      glScissor((*xOffsetPtr + correction) * aaValue, (*yOffsetPtr + correction) * aaValue, (*xResPtr - (correction * 2)) * aaValue, (*yResPtr - (correction * 2)) * aaValue);
+    glScissor((*xOffsetPtr + correction) * aaValue, (*yOffsetPtr + correction) * aaValue, (*xResPtr - (correction * 2)) * aaValue, (*yResPtr - (correction * 2)) * aaValue);
   }
   return Result::OKAY;
 }
@@ -210,8 +210,8 @@ static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLen
 
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
 // This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
-// 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists
-// It it doesn't exist, then it'll probably just default to 60 or whatever your refresh rate is.
+// 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists.
+// If it doesn't exist, then it'll probably just default to 60 or whatever your refresh rate is.
 static void SetFullScreenRefreshRate()
 {
     float refreshRateHz = std::abs(s_runtime_config["RefreshRate"].ValueAs<float>());
@@ -278,8 +278,16 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
-  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,8);
+  if(s_runtime_config["New3DEngine"].ValueAs<bool>())
+  {
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,0);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,0);
+  }
+  else
+  {
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,8);
+  }
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
 
   if (coreContext) {
@@ -341,7 +349,7 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   }
 
   if (profile & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) {
-      printf("(compatability profile)");
+      printf("(compatibility profile)");
   }
 
   printf("\n\n");
@@ -974,7 +982,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   Model3->AttachInputs(Inputs);
 
   // Attach the outputs to the emulator
-  if (Outputs != NULL)
+  if (Outputs != nullptr)
     Model3->AttachOutputs(Outputs);
 
   // Frame timing
@@ -1027,15 +1035,15 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 #endif
   while (!quit)
   {
+    // Poll the inputs
+    if (!Inputs->Poll(&game, xOffset, yOffset, xRes, yRes))
+      quit = true;
+
     // Render if paused, otherwise run a frame
     if (paused)
       Model3->RenderFrame();
     else
       Model3->RunFrame();
-
-    // Poll the inputs
-    if (!Inputs->Poll(&game, xOffset, yOffset, xRes, yRes))
-      quit = true;
 
 #ifdef SUPERMODEL_DEBUGGER
     bool processUI = true;
@@ -1312,7 +1320,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       uint64_t measurementTicks = currentFPSTicks - prevFPSTicks;
       if (measurementTicks >= s_perfCounterFrequency) // update FPS every 1 second (s_perfCounterFrequency is how many perf ticks in one second)
       {
-        float fps = float(fpsFramesElapsed) / (float(measurementTicks) / float(s_perfCounterFrequency));
+        double fps = double(fpsFramesElapsed) / (double(measurementTicks) / double(s_perfCounterFrequency));
         sprintf(titleStr, "%s - %1.3f FPS%s", baseTitleStr, fps, paused ? " (Paused)" : "");
         SDL_SetWindowTitle(s_window, titleStr);
         prevFPSTicks = currentFPSTicks;   // reset tick count

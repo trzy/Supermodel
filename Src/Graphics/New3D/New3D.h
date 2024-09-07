@@ -1,4 +1,3 @@
-
 /**
 ** Supermodel
 ** A Sega Model 3 Arcade Emulator.
@@ -47,7 +46,7 @@
 
 namespace New3D {
 
-class CNew3D : public IRender3D
+class CNew3D final : public IRender3D
 {
 public:
 	/*
@@ -188,7 +187,7 @@ private:
 	// Matrix stack
 	void MultMatrix(UINT32 matrixOffset, Mat4& mat);
 	void InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat);
-	void ResetMatrix(Mat4& mat);
+	void ResetMatrix(Mat4& mat) const;
 
 	// Scene database traversal
 	bool DrawModel(UINT32 modelAddr);
@@ -198,24 +197,24 @@ private:
 	void RenderViewport(UINT32 addr);
 
 	// building the scene
-	int	GetTexFormat(int originalFormat, bool contour);
+	int	GetTexFormat(int originalFormat, bool contour) const;
 	void SetMeshValues(SortingMesh *currentMesh, PolyHeader &ph);
 	void CacheModel(Model *m, const UINT32 *data);
 	void CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertexArray);
-	void GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut);
+	void GetCoordinates(int width, int height, UINT16 uIn, UINT16 vIn, float uvScale, float& uOut, float& vOut) const;
 
 	bool RenderScene(int priority, bool renderOverlay, Layer layer);		// returns if has overlay plane
-	bool IsDynamicModel(UINT32 *data);				// check if the model has a colour palette
-	bool IsVROMModel(UINT32 modelAddr);
+	bool IsDynamicModel(UINT32 *data) const;				// check if the model has a colour palette
+	bool IsVROMModel(UINT32 modelAddr) const;
 	void DrawScrollFog();
 	void DrawAmbientFog();
 	bool SkipLayer(int layer);
 	void SetRenderStates();
 	void DisableRenderStates();
-	void TranslateLosPosition(int inX, int inY, int& outX, int& outY);
+	void TranslateLosPosition(int inX, int inY, int& outX, int& outY) const;
 	bool ProcessLos(int priority);
 	void CalcViewport(Viewport* vp);
-	void TranslateTexture(unsigned& x, unsigned& y, int width, int height, int& page);
+	void TranslateTexture(unsigned& x, unsigned& y, int width, int height, int& page) const;
 
 	/*
 	* Data
