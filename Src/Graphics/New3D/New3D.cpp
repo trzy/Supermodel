@@ -129,7 +129,7 @@ Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned 
 
 	m_r3dFrameBuffers.DestroyFBO();		// remove any old ones if created
 
-	return Result::OKAY;
+	return m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
 }
 
 void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
