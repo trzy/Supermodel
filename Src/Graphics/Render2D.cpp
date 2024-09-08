@@ -449,7 +449,7 @@ CRender2D::CRender2D(const Util::Config::Node& config)
 	m_drawShader.GetUniformLocationMap("tex1");
 	// init uniform memory
 	m_drawShader.EnableShader();
-	glUniform1f(m_drawShader.uniformLocMap["tex1"], 0);	// texture bound to texture unit 0
+	glUniform1i(m_drawShader.uniformLocMap["tex1"], 0);	// texture bound to texture unit 0
 	m_drawShader.DisableShader();
 
 	// create textures
