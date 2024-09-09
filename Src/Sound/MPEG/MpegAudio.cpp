@@ -63,7 +63,7 @@ struct CustomTrack
 struct FileContents
 {
   std::shared_ptr<uint8_t[]> bytes;
-  size_t size;
+  size_t size = 0;
 };
 
 static std::map<uint32_t, CustomTrack> s_custom_tracks_by_mpeg_rom_address;

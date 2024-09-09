@@ -179,7 +179,7 @@ void CGearShift4Input::Poll()
 CTriggerInput::CTriggerInput(const char *inputId, const char *inputLabel, unsigned inputGameFlags,
 	CSwitchInput *triggerInput, CSwitchInput *offscreenInput, UINT16 offVal, UINT16 onVal) :
 	CInput(inputId, inputLabel, INPUT_FLAGS_VIRTUAL, inputGameFlags),
-	m_triggerInput(triggerInput), m_offscreenInput(offscreenInput), m_autoTrigger(false), m_offscreenCount(0), m_offVal(offVal), m_onVal(onVal)
+	m_triggerInput(triggerInput), m_offscreenInput(offscreenInput), m_autoTrigger(false), m_offscreenCount(0), m_offVal(offVal), m_onVal(onVal), offscreenValue(0)
 {
 	//
 }
