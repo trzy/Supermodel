@@ -229,7 +229,7 @@ void R3DFrameBuffers::AllocShaderBase()
 	)glsl";
 
 	m_shaderBase.LoadShaders(vertexShader, fragmentShader);
-	m_shaderBase.uniformLoc[0] = m_shaderTrans.GetUniformLocation("tex1");
+	m_shaderBase.uniformLoc[0] = m_shaderBase.GetUniformLocation("tex1");
 }
 
 void R3DFrameBuffers::AllocShaderTrans()
