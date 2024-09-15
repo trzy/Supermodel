@@ -278,7 +278,7 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
   SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
-  if(s_runtime_config["New3DEngine"].ValueAs<bool>())
+  if(s_runtime_config["New3DEngine"].ValueAsDefault<bool>(true))
   {
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,0);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,0);
