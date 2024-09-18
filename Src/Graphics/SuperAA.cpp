@@ -13,9 +13,6 @@ SuperAA::SuperAA(int aaValue) :
 
 			#version 410 core
 
-			// outputs
-			out vec2 fsTexCoord;
-
 			void main(void)
 			{
 				const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
@@ -23,8 +20,7 @@ SuperAA::SuperAA(int aaValue) :
 												vec4( 1.0, -1.0, 0.0, 1.0),
 												vec4( 1.0,  1.0, 0.0, 1.0));
 
-				fsTexCoord = (vertices[gl_VertexID % 4].xy + 1.0) / 2.0;
-				gl_Position = vertices[gl_VertexID % 4];	
+				gl_Position = vertices[gl_VertexID % 4];
 			}
 
 			)glsl";
@@ -43,37 +39,35 @@ SuperAA::SuperAA(int aaValue) :
 
 		// inputs
 		uniform sampler2D tex1;			// base tex
-		in vec2 fsTexCoord;
 
 		// outputs
 		out vec4 fragColor;
 
-		vec4 GetTextureValue(sampler2D s, vec2 texCoord)
+		vec3 GetTextureValue(sampler2D s)
 		{
-			vec2 size		= vec2(textureSize(s,0));        // want the values as floats
-			ivec2 texPos	= ivec2(size * texCoord);
-			vec4 texColour	= vec4(0.0);
+			ivec2 texPos	= ivec2(gl_FragCoord.xy /*-vec2(0.5)*/) * aa;
+			vec3 texColour	= vec3(0.0);
 
 			for(int i=0; i < aa; i++) {
 				for(int j=0; j < aa; j++) {
-					texColour += texelFetch(s,ivec2(texPos.x+i,texPos.y+j),0);
+					texColour += texelFetch(s,ivec2(texPos.x+i,texPos.y+j),0).rgb;
 				}
 			}
 
-			texColour /= float(aa * aa);
+			texColour *= 1.0/float(aa * aa);
 
 			return texColour;
 		}
 
 		void main()
 		{
-			fragColor = GetTextureValue(tex1, fsTexCoord);
+			fragColor = vec4(GetTextureValue(tex1), 1.0);
 		}
 
 		)glsl";
 
 		std::string fragmentShaderString = fragmentShaderVersion + aaString + fragmentShader;
-		
+
 		// load shaders
 		m_shader.LoadShaders(vertexShader, fragmentShaderString.c_str());
 		m_shader.GetUniformLocationMap("tex1");
