@@ -135,8 +135,8 @@ GLuint R3DFrameBuffers::CreateTexture(int width, int height)
 	GLuint texId;
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
@@ -194,9 +194,6 @@ void R3DFrameBuffers::AllocShaderBase()
 
 	#version 410 core
 
-	// outputs
-	out vec2 fsTexCoord;
-
 	void main(void)
 	{
 		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
@@ -204,7 +201,6 @@ void R3DFrameBuffers::AllocShaderBase()
 										vec4( 1.0, -1.0, 0.0, 1.0),
 										vec4( 1.0,  1.0, 0.0, 1.0));
 
-		fsTexCoord = vertices[gl_VertexID % 4].xy * 0.5 + 0.5;
 		gl_Position = vertices[gl_VertexID % 4];
 	}
 
@@ -216,14 +212,14 @@ void R3DFrameBuffers::AllocShaderBase()
 
 	// inputs
 	uniform sampler2D tex1;			// base tex
-	in vec2 fsTexCoord;
 
 	// outputs
 	out vec4 fragColor;
 
 	void main()
 	{
-		fragColor = texture(tex1, fsTexCoord);
+		ivec2 tc = ivec2(gl_FragCoord.xy /*-vec2(0.5)*/);
+		fragColor = texelFetch(tex1, tc, 0);
 	}
 
 	)glsl";
@@ -238,9 +234,6 @@ void R3DFrameBuffers::AllocShaderTrans()
 
 	#version 410 core
 
-	// outputs
-	out vec2 fsTexCoord;
-
 	void main(void)
 	{
 		const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
@@ -248,7 +241,6 @@ void R3DFrameBuffers::AllocShaderTrans()
 										vec4( 1.0, -1.0, 0.0, 1.0),
 										vec4( 1.0,  1.0, 0.0, 1.0));
 
-		fsTexCoord = vertices[gl_VertexID % 4].xy * 0.5 + 0.5;
 		gl_Position = vertices[gl_VertexID % 4];
 	}
 
@@ -261,16 +253,15 @@ void R3DFrameBuffers::AllocShaderTrans()
 	uniform sampler2D tex1;			// trans layer 1
 	uniform sampler2D tex2;			// trans layer 2
 
-	in vec2 fsTexCoord;
-
 	// outputs
 	out vec4 fragColor;
 
 	void main()
 	{
-		vec4 colTrans1 = texture(tex1, fsTexCoord);
-		vec4 colTrans2 = texture(tex2, fsTexCoord);
-			
+		ivec2 tc = ivec2(gl_FragCoord.xy /*-vec2(0.5)*/);
+		vec4 colTrans1 = texelFetch(tex1, tc, 0);
+		vec4 colTrans2 = texelFetch(tex2, tc, 0);
+
 		// if both transparency layers overlap, the result is opaque
 		if (colTrans1.a * colTrans2.a > 0.0) {
 			vec3 mixCol = mix(colTrans1.rgb, colTrans2.rgb, (colTrans2.a + (1.0 - colTrans1.a)) / 2.0);
