@@ -131,6 +131,7 @@ static unsigned  xOffset, yOffset;      // offset of renderer output within Open
 static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
 static int aaValue = 1;                 // default is 1 which is no aa
+static CRTcolor CRTcolors = CRTcolor::None; // default to no gamma/color adaption being done
 
 /*
  * Crosshair stuff
@@ -991,7 +992,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   uint64_t nextTime = 0;
 
   // Initialize the renderers
-  SuperAA* superAA = new SuperAA(aaValue);
+  SuperAA* superAA = new SuperAA(aaValue, CRTcolors);
   superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
   CRender2D *Render2D = new CRender2D(s_runtime_config);
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
@@ -1501,6 +1502,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("FullScreen", false);
   config.Set("BorderlessWindow", false);
   config.Set("Supersampling", 1);
+  config.Set("CRTcolors", int(0));
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
   config.Set("WideBackground", false);
@@ -1589,6 +1591,7 @@ static void Help(void)
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
   puts("                          background layer to screen width");
   puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
+  puts("  -crtcolors=<n>          CRT color emulation (range 0-5)");
   puts("  -no-throttle            Disable frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
   puts("  -no-vsync               Do not lock to vertical refresh rate");
@@ -1865,6 +1868,29 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               }
           }
       }
+      else if (arg == "-crtcolors" || arg.find("-crtcolors=") == 0) {
+
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-crtcolors' requires an integer argument (e.g., '-crtcolors=1').");
+              cmd_line.error = true;
+          }
+          else {
+
+              try {
+                  int val = std::stoi(parts[1]);
+                  val = std::clamp(val, 0, 5);
+
+                  cmd_line.config.Set("CRTcolors", val);
+              }
+              catch (...) {
+                  ErrorLog("'-crtcolors' requires an integer argument (e.g., '-crtcolors=1').");
+                  cmd_line.error = true;
+              }
+          }
+      }
       else if (arg == "-true-hz")
         cmd_line.config.Set("RefreshRate", 57.524f);
       else if (arg == "-print-gl-info")
@@ -2014,6 +2040,7 @@ int main(int argc, char **argv)
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
 
   aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
+  CRTcolors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
 
   // Create a window
   xRes = 496;

@@ -1213,6 +1213,25 @@ not.  All options are case sensitive.
 
     ----------------
 
+    Option:         -crtcolors=<mode>
+
+    Description:    Emulates other regional TV standards of the time.
+                    These came with the caveat that displaying video content on
+                    other regions TVs would/should have needed color corrections
+                    (which was usually not done for video games, only broadcasting, etc).
+                    Nowadays the world has settled on the same standards, and we
+                    can transform from the old ones to the (for now) common sRGB.
+
+                    This means one can choose between 6 different mappings now:
+                    0=none (default)
+                    1=ARI/D93 (recommended for all JP developed games, most likely true for all Model 3 games)
+                    2=PVM_20M2U/D93
+                    3=BT601_525/D93
+                    4=BT601_525/D65 (recommended for all US developed games)
+                    5=BT601_625/D65 (recommended for all EUR/AUS developed games)
+
+    ----------------
+
     Option:         -show-fps
 
     Description:    Shows the frame rate in the window title bar.
