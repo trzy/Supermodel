@@ -112,7 +112,9 @@ void CIRQ::Init(void)
 	// this function really only exists for consistency with other device classes
 }
 
-CIRQ::CIRQ(void)
+CIRQ::CIRQ(void) :
+	irqEnable(0),
+	irqState(0)
 {	
 	DebugLog("Built IRQ controller\n");
 }

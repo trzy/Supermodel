@@ -346,14 +346,15 @@ void CMPC10x::Init(void)
  *
  * Constructor.
  */
-CMPC10x::CMPC10x(void)
+CMPC10x::CMPC10x(void) :
+	regs{},
+	PCIBus(nullptr),
+	model(0x105),		// default to MPC105
+	pciBus(0),
+	pciDevice(0),
+	pciFunction(0),
+	pciReg(0)
 {	
-	PCIBus = NULL;
-	model = 0x105;	// default to MPC105
-	pciBus = 0;
-	pciDevice = 0;
-	pciFunction = 0;
-	pciReg = 0;
 	DebugLog("Built MPC10x\n");
 }
 
@@ -364,6 +365,6 @@ CMPC10x::CMPC10x(void)
  */
 CMPC10x::~CMPC10x(void)
 {
-	PCIBus = NULL;
+	PCIBus = nullptr;
 	DebugLog("Destroyed MPC10x\n");
 }

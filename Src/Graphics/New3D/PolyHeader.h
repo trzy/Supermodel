@@ -31,7 +31,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx--------		Polygon normal X coordinate(2.22 fixed point
 -------- -------- -------- ----x---		1 = smooth shading, 0 = flat shading
 -------- -------- -------- -----x--		If set, this is the last polygon
 -------- -------- -------- ------x-		Poly color, 1 = RGB, 0 = color table
--------- -------- -------- -------x		No los return ?
+-------- -------- -------- -------x		No los return (line of sight)
 
 0x02: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Y coordinate(2.22 fixed point)
@@ -50,7 +50,7 @@ xxxxxxxx xxxxxxxx xxxxxxxx --------		Polygon normal Z coordinate(2.22 fixed poin
 
 0x04: 
 xxxxxxxx xxxxxxxx xxxxxxxx --------		Color (RGB888 or two 12-bit indexes, sensor color and color)
--------- -------- -------- x-------		Translator map enable ? (Seems to be some 4/5bit colour format. Max observed value=16)
+-------- -------- -------- x-------		Translator map enable (multiplies colour values by 16)
 -------- -------- -------- -x------		Texture page
 -------- -------- -------- ---xxxxx		Upper 5 bits of texture U coordinate
 

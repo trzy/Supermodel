@@ -969,7 +969,30 @@ Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObject
 
 CReal3D::CReal3D(const Util::Config::Node &config)
   : m_config(config),
-    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>())
+    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    Bus(nullptr),
+    IRQ(nullptr),
+    commandPortWritten(false),
+    commandPortWrittenRO(false),
+    cullingRAMHi(nullptr),
+    cullingRAMHiDirty(nullptr),
+    cullingRAMHiRO(nullptr),
+    dmaConfig(0),
+    dmaData(0),
+    dmaDest(0),
+    dmaIRQ(0),
+    dmaLength(0),
+    dmaSrc(0),
+    dmaStatus(0),
+    dmaUnknownReg(0),
+    m_modeword{},
+    m_pingPong(0),
+    pciID(0),
+    polyRAMDirty(nullptr),
+    polyRAMRO(nullptr),
+    step(0),
+    textureRAMDirty(nullptr),
+    textureRAMRO(nullptr)
 {
   Render3D = NULL;
   memoryPool = NULL;
