@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Supermodel.h"
 #include "FBO.h"
 #include "New3D/GLSLShader.h"
 
@@ -12,11 +13,11 @@
 class SuperAA
 {
 public:
-	SuperAA(int aaValue);		
+	SuperAA(int aaValue, CRTcolor CRTcolors);
 	~SuperAA();
 
 	void Init(int width, int height);		// width & height are real window dimensions
-	void Draw();							// this is a no-op if AA is 1, since we'll be drawing straight on the back buffer anyway
+	void Draw();							// this is a no-op if AA is 1 and CRTcolors 0, since we'll be drawing straight on the back buffer anyway
 
 	GLuint GetTargetID();
 
@@ -24,8 +25,8 @@ private:
 	FBO m_fbo;
 	GLSLShader m_shader;
 	const int m_aa;
+	const CRTcolor m_crtcolors;
 	GLuint m_vao;
 	int m_width;
 	int m_height;
 };
-
