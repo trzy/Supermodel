@@ -131,7 +131,7 @@ static unsigned  xOffset, yOffset;      // offset of renderer output within Open
 static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
 static int aaValue = 1;                 // default is 1 which is no aa
-static int CRTcolors = 0;               // default is 0 which is no gamma/color adaption being done
+static CRTcolor CRTcolors = CRTcolor::None; // default to no gamma/color adaption being done
 
 /*
  * Crosshair stuff
@@ -2040,7 +2040,7 @@ int main(int argc, char **argv)
   std::string selectedInputSystem = s_runtime_config["InputSystem"].ValueAs<std::string>();
 
   aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
-  CRTcolors = s_runtime_config["CRTcolors"].ValueAs<int>();
+  CRTcolors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
 
   // Create a window
   xRes = 496;

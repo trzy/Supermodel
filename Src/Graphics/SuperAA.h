@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Supermodel.h"
 #include "FBO.h"
 #include "New3D/GLSLShader.h"
 
@@ -12,7 +13,7 @@
 class SuperAA
 {
 public:
-	SuperAA(int aaValue, int CRTcolors);
+	SuperAA(int aaValue, CRTcolor CRTcolors);
 	~SuperAA();
 
 	void Init(int width, int height);		// width & height are real window dimensions
@@ -24,7 +25,7 @@ private:
 	FBO m_fbo;
 	GLSLShader m_shader;
 	const int m_aa;
-	const int m_crtcolors;
+	const CRTcolor m_crtcolors;
 	GLuint m_vao;
 	int m_width;
 	int m_height;
