@@ -46,7 +46,7 @@ private:
 	bool m_isOr;
 
 	// Number of input sources (if zero then represents an 'empty' source)
-	int m_numSrcs;
+	size_t m_numSrcs;
 
 	// Array of the input sources
 	CInputSource **m_srcArray;

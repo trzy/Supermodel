@@ -865,7 +865,7 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
       }
       else
       {
-        uint32_t num_chunks = (uint32_t)file_size / region->chunk_size;
+        uint32_t num_chunks = (uint32_t)(file_size / region->chunk_size);
         uint32_t dest_offset = file->offset;
         uint32_t src_offset = 0;
         uint32_t chunk_size = (uint32_t)region->chunk_size;		// cache these as pointer dereferencing cripples performance in a tight loop

@@ -328,11 +328,12 @@ void CInputs::PrintHeader(const char *fmt, ...)
 	char header[1024];
 	va_list vl;
 	va_start(vl, fmt);
-	vsprintf(header, fmt, vl);
+	vsnprintf(header, sizeof(header), fmt, vl);
 	va_end(vl);
 
 	puts(header);
-	for (size_t i = 0; i < strlen(header); i++)
+	const size_t s = strlen(header);
+	for (size_t i = 0; i < s; i++)
 		putchar('-');
 	printf("\n\n");
 }
