@@ -309,8 +309,7 @@ static BOOL CALLBACK DI8EnumDevicesCallback(LPCDIDEVICEINSTANCE instance, LPVOID
 	DIEnumDevsContext *diDevsContext = (DIEnumDevsContext*)context;
 	
 	// Keep track of all joystick device GUIDs
-	DIJoyInfo info;
-	memset(&info, 0, sizeof(info));
+	DIJoyInfo info{};
 	info.guid = instance->guidInstance;
 	// If XInput is enabled, see if device is an XInput device
 	info.isXInput = diDevsContext->useXInput && IsXInputDevice(instance->guidProduct);
@@ -620,7 +619,7 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 					if (m_getRIDevInfoPtr(device.hDevice, RIDI_DEVICENAME, NULL, &nLength) != 0)
 						continue;
 					nLength = std::min<int>(MAX_NAME_LENGTH, nLength);
-					char name[MAX_NAME_LENGTH];
+					char name[MAX_NAME_LENGTH] = {};
 					if (m_getRIDevInfoPtr(device.hDevice, RIDI_DEVICENAME, name, &nLength) == -1)
 						continue;
 
@@ -652,8 +651,7 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 						// TODO mseDetails.isAbsolute = ???
 						m_mseDetails.push_back(mseDetails);
 
-						RawMseState mseState;
-						memset(&mseState, 0, sizeof(mseState));
+						RawMseState mseState{};
 						m_rawMseStates.push_back(mseState);
 					}
 				}
@@ -1084,14 +1082,13 @@ void CDirectInputSystem::OpenJoysticks()
 	{
 		joyNum++;
 
-		JoyDetails joyDetails;
-		memset(&joyDetails, 0, sizeof(joyDetails));
+		JoyDetails joyDetails{};
 
 		// See if can use XInput for device
 		if (it->isXInput)
 		{
 			// If so, set joystick details (currently XBox controller is only gamepad handled by XInput and so its capabilities are fixed)
-			sprintf(joyDetails.name, "Xbox 360 Controller %d (via XInput)", (xNum + 1));
+			snprintf(joyDetails.name, sizeof(joyDetails.name), "Xbox 360 Controller %d (via XInput)", (xNum + 1));
 			joyDetails.numAxes = 6;  // Left & right triggers are mapped to axes in addition to the two analog sticks, giving a total of 6 axes
 			joyDetails.numPOVs = 1;  // Digital D-pad
 			joyDetails.numButtons = 10;
@@ -1165,8 +1162,7 @@ void CDirectInputSystem::OpenJoysticks()
 			joyDetails.numButtons = devCaps.dwButtons;
 			
 			// Enumerate axes
-			DIEnumObjsContext diObjsContext;
-			memset(&diObjsContext, 0, sizeof(diObjsContext));
+			DIEnumObjsContext diObjsContext{};
 			diObjsContext.joyDetails = &joyDetails;
 			if (FAILED(hr = joystick->EnumObjects(DI8EnumObjectsCallback, &diObjsContext, DIDFT_ALL)))
 			{
@@ -1279,8 +1275,7 @@ void CDirectInputSystem::OpenJoysticks()
 		}
 
 		// Create initial blank joystick state
-		DIJOYSTATE2 joyState;
-		memset(&joyState, 0, sizeof(joyState));
+		DIJOYSTATE2 joyState{};
 		for (int povNum = 0; povNum < 4; povNum++)
 			joyState.rgdwPOV[povNum] = -1;
 		
@@ -1321,8 +1316,7 @@ void CDirectInputSystem::PollJoysticks()
 		if (it->isXInput)
 		{
 			// Use XInput to query joystick
-			XINPUT_STATE xState;
-			memset(&xState, 0, sizeof(xState));
+			XINPUT_STATE xState{};
 			if (FAILED(hr = m_xiGetStatePtr(it->xInputNum, &xState)))
 			{
 				memset(pJoyState, 0, sizeof(DIJOYSTATE2));
@@ -1448,8 +1442,7 @@ HRESULT CDirectInputSystem::CreateJoystickEffect(LPDIRECTINPUTDEVICE8 joystick, 
 	GUID guid;
 
 	// Set common effects parameters
-	DIEFFECT eff;
-	memset(&eff, 0, sizeof(eff));
+	DIEFFECT eff{};
 	eff.dwSize = sizeof(DIEFFECT);
 	eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
 	eff.dwTriggerButton = DIEB_NOTRIGGER;
@@ -1886,8 +1879,7 @@ bool CDirectInputSystem::ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceF
 		//DIENVELOPE die;
 
 		// Set common parameters
-		DIEFFECT eff;
-		memset(&eff, 0, sizeof(eff));
+		DIEFFECT eff{};
 		eff.dwSize = sizeof(DIEFFECT);
 		eff.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTOFFSETS;
 		eff.cAxes = 1;
@@ -2056,11 +2048,11 @@ bool CDirectInputSystem::Poll()
 	{
 		// If not, then get Window handle of SDL window
 		SDL_SysWMinfo info;
-    SDL_VERSION(&info.version);
-    if (SDL_GetWindowWMInfo(m_window, &info))
-    {
-  			m_hwnd = info.info.win.window;
-    }
+		SDL_VERSION(&info.version);
+		if (SDL_GetWindowWMInfo(m_window, &info))
+		{
+			m_hwnd = info.info.win.window;
+		}
 		
 		// Tell SDL to pass on all Windows events
 		// Removed - see below

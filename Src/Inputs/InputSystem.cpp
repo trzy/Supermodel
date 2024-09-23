@@ -993,8 +993,8 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
 
   // Try parsing a key mapping
   int kbdNum;
-  int keyNameIndex = ParseDevMapping(str, "KEY", kbdNum);
-  if (keyNameIndex >= 0)
+  size_t keyNameIndex = ParseDevMapping(str, "KEY", kbdNum);
+  if (keyNameIndex != (size_t)-1)
   {
     string keyName = str.substr(keyNameIndex);
     if (IsValidKeyName(keyName))
@@ -1032,8 +1032,8 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
   
   // Try parsing a mouse mapping
   int mseNum;
-  int msePartIndex = ParseDevMapping(str, "MOUSE", mseNum);
-  if (msePartIndex >= 0)
+  size_t msePartIndex = ParseDevMapping(str, "MOUSE", mseNum);
+  if (msePartIndex != (size_t)-1)
   {
     // Lookup mouse part and map to mouse source
     EMousePart msePart = LookupMousePart(str.substr(msePartIndex));
@@ -1043,8 +1043,8 @@ CInputSource *CInputSystem::ParseSingleSource(string str)
 
   // Try parsing a joystick mapping
   int joyNum;
-  int joyPartIndex = ParseDevMapping(str, "JOY", joyNum);
-  if (joyPartIndex >= 0)
+  size_t joyPartIndex = ParseDevMapping(str, "JOY", joyNum);
+  if (joyPartIndex != (size_t)-1)
   {
     // Lookup joystick part and map to joystick source
     EJoyPart joyPart = LookupJoyPart(str.substr(joyPartIndex));

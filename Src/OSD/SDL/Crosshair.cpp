@@ -129,7 +129,7 @@ Result CCrosshair::Init()
 
   m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(BasicVertex) * (MaxVerts));
   m_vbo.Bind(true);
-  m_textvbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(UVCoords) * (int)m_uvCoord.size());
+  m_textvbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(UVCoords) * m_uvCoord.size());
   m_textvbo.Bind(true);
 
   glGenVertexArrays(1, &m_vao);

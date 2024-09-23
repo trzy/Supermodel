@@ -941,12 +941,12 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   char titleStr[128];
   totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
   totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
-  sprintf(baseTitleStr, "Supermodel - %s", game.title.c_str());
+  snprintf(baseTitleStr, sizeof(baseTitleStr), "Supermodel - %s", game.title.c_str());
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
 
-  int xpos = s_runtime_config["WindowXPosition"].Exists() ? s_runtime_config["WindowXPosition"].ValueAs<int>() : SDL_WINDOWPOS_CENTERED;
-  int ypos = s_runtime_config["WindowYPosition"].Exists() ? s_runtime_config["WindowYPosition"].ValueAs<int>() : SDL_WINDOWPOS_CENTERED;
+  int xpos = s_runtime_config["WindowXPosition"].ValueAsDefault<int>(SDL_WINDOWPOS_CENTERED);
+  int ypos = s_runtime_config["WindowYPosition"].ValueAsDefault<int>(SDL_WINDOWPOS_CENTERED);
   SDL_SetWindowPosition(s_window, xpos, ypos);
 
   if (s_runtime_config["BorderlessWindow"].ValueAs<bool>())
@@ -1108,7 +1108,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       {
         Model3->PauseThreads();
         SetAudioEnabled(false);
-        sprintf(titleStr, "%s (Paused)", baseTitleStr);
+        snprintf(titleStr, sizeof(titleStr), "%s (Paused)", baseTitleStr);
         SDL_SetWindowTitle(s_window, titleStr);
       }
       else
@@ -1322,7 +1322,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       if (measurementTicks >= s_perfCounterFrequency) // update FPS every 1 second (s_perfCounterFrequency is how many perf ticks in one second)
       {
         double fps = double(fpsFramesElapsed) / (double(measurementTicks) / double(s_perfCounterFrequency));
-        sprintf(titleStr, "%s - %1.3f FPS%s", baseTitleStr, fps, paused ? " (Paused)" : "");
+        snprintf(titleStr, sizeof(titleStr), "%s - %1.3f FPS%s", baseTitleStr, fps, paused ? " (Paused)" : "");
         SDL_SetWindowTitle(s_window, titleStr);
         prevFPSTicks = currentFPSTicks;   // reset tick count
         fpsFramesElapsed = 0;             // reset frame count

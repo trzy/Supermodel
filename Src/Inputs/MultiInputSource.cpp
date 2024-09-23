@@ -94,7 +94,7 @@ void CMultiInputSource::Acquire()
 	if (m_acquired == 1)
 	{
 		// Acquire all sources
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 			m_srcArray[i]->Acquire();
 	}
 }
@@ -104,7 +104,7 @@ void CMultiInputSource::Release()
 	if (m_acquired == 1)
 	{
 		// Release all sources
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 			m_srcArray[i]->Release();
 	}
 
@@ -116,7 +116,7 @@ bool CMultiInputSource::GetValueAsSwitch(bool &val)
 	if (m_isOr)
 	{
 		// Return value for first input that is active
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 		{
 			if (m_srcArray[i]->GetValueAsSwitch(val))
 				return true;
@@ -126,7 +126,7 @@ bool CMultiInputSource::GetValueAsSwitch(bool &val)
 	else
 	{
 		// Check all inputs are active
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 		{
 			if (!m_srcArray[i]->GetValueAsSwitch(val))
 				return false;
@@ -140,7 +140,7 @@ bool CMultiInputSource::GetValueAsAnalog(int &val, int minVal, int offVal, int m
 	if (m_isOr)
 	{
 		// Return value for first input that is active
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 		{
 			if (m_srcArray[i]->GetValueAsAnalog(val, minVal, offVal, maxVal))
 				return true;
@@ -150,13 +150,13 @@ bool CMultiInputSource::GetValueAsAnalog(int &val, int minVal, int offVal, int m
 	else
 	{
 		// Check all switch inputs are active
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 		{
 			if (m_srcArray[i]->type == SourceSwitch && !m_srcArray[i]->GetValueAsAnalog(val, minVal, offVal, maxVal))
 				return false;
 		}
 		// If so, then return value for first non-switch input that is active
-		for (int i = 0; i < m_numSrcs; i++)
+		for (size_t i = 0; i < m_numSrcs; i++)
 		{
 			if (m_srcArray[i]->type != SourceSwitch && m_srcArray[i]->GetValueAsAnalog(val, minVal, offVal, maxVal))
 				return true;
@@ -169,7 +169,7 @@ bool CMultiInputSource::GetValueAsAnalog(int &val, int minVal, int offVal, int m
 bool CMultiInputSource::SendForceFeedbackCmd(ForceFeedbackCmd ffCmd)
 {
 	bool result = false;
-	for (int i = 0; i < m_numSrcs; i++)
+	for (size_t i = 0; i < m_numSrcs; i++)
 		result |= m_srcArray[i]->SendForceFeedbackCmd(ffCmd);
 	return result;
 }
