@@ -188,7 +188,7 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   *xResPtr = (unsigned) xRes;
   *yResPtr = (unsigned) yRes;
 
-  UINT32 correction = (UINT32)(((yRes / 384.f) * 2.f) + 0.5f);
+  UINT32 correction = (UINT32)(((*yResPtr / 384.) * 2.) + 0.5); // due to the 2D layer compensation (2 pixels off)
 
   glEnable(GL_SCISSOR_TEST);
 
@@ -869,7 +869,7 @@ static uint64_t GetDesiredRefreshRateMilliHz()
   // The refresh rate is expressed as mHz (millihertz -- Hz * 1000) in order to
   // be expressable as an integer. E.g.: 57.524 Hz -> 57524 mHz.
   float refreshRateHz = std::abs(s_runtime_config["RefreshRate"].ValueAs<float>());
-  uint64_t refreshRateMilliHz = uint64_t(1000.0f * refreshRateHz);
+  uint64_t refreshRateMilliHz = uint64_t(1000.0 * refreshRateHz);
   return refreshRateMilliHz;
 }
 
@@ -997,7 +997,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   CRender2D *Render2D = new CRender2D(s_runtime_config);
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
 
-  if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
+  UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
+
+  if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID(), upscaleMode))
     goto QuitError;
   if (Result::OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
     goto QuitError;
@@ -1145,7 +1147,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       superAA->Init(totalXRes, totalYRes);
       Render2D = new CRender2D(s_runtime_config);
       Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
-      if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
+      if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
         goto QuitError;
       if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
         goto QuitError;
@@ -1503,6 +1505,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("BorderlessWindow", false);
   config.Set("Supersampling", 1);
   config.Set("CRTcolors", int(0));
+  config.Set("UpscaleMode", 1);
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
   config.Set("WideBackground", false);
@@ -1591,6 +1594,7 @@ static void Help(void)
   puts("  -wide-bg                When wide-screen mode is enabled, also expand the 2D");
   puts("                          background layer to screen width");
   puts("  -stretch                Fit viewport to resolution, ignoring aspect ratio");
+  puts("  -upscalemode=<n>        2D layer upscaling filter mode (range 0-3)");
   puts("  -crtcolors=<n>          CRT color emulation (range 0-5)");
   puts("  -no-throttle            Disable frame rate lock");
   puts("  -vsync                  Lock to vertical refresh rate [Default]");
@@ -1684,7 +1688,7 @@ struct ParsedCommandLine
 static ParsedCommandLine ParseCommandLine(int argc, char **argv)
 {
   ParsedCommandLine cmd_line;
-  const std::map<std::string, std::string> valued_options
+  static const std::map<std::string, std::string> valued_options
   { // -option=value
     { "-game-xml-file",         "GameXMLFile"             },
     { "-load-state",            "InitStateFile"           },
@@ -1707,7 +1711,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-log-output",            "LogOutput"               },
     { "-log-level",             "LogLevel"                }
   };
-  const std::map<std::string, std::pair<std::string, bool>> bool_options
+  static const std::map<std::string, std::pair<std::string, bool>> bool_options
   { // -option
     { "-threads",             { "MultiThreaded",    true } },
     { "-no-threads",          { "MultiThreaded",    false } },
@@ -1887,6 +1891,29 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               }
               catch (...) {
                   ErrorLog("'-crtcolors' requires an integer argument (e.g., '-crtcolors=1').");
+                  cmd_line.error = true;
+              }
+          }
+      }
+      else if (arg == "-upscalemode" || arg.find("-upscalemode=") == 0) {
+
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-upscalemode' requires an integer argument (e.g., '-upscalemode=1').");
+              cmd_line.error = true;
+          }
+          else {
+
+              try {
+                  int val = std::stoi(parts[1]);
+                  val = std::clamp(val, 0, 3);
+
+                  cmd_line.config.Set("UpscaleMode", val);
+              }
+              catch (...) {
+                  ErrorLog("'-upscalemode' requires an integer argument (e.g., '-upscalemode=1').");
                   cmd_line.error = true;
               }
           }

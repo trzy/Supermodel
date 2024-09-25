@@ -291,10 +291,6 @@
 #include "Shader.h"
 #include "Shaders2D.h" // fragment and vertex shaders
 
-#include <cstring>
-#include <GL/glew.h>
-
-
 /******************************************************************************
  Frame Display Functions
 ******************************************************************************/
@@ -361,7 +357,7 @@ void CRender2D::BeginFrame(void)
 }
 
 void CRender2D::PreRenderFrame(void)
-{	
+{
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 512);	// skip the non viewable data
 
 	for (int i = 0; i < 2; i++) {
@@ -421,7 +417,7 @@ void CRender2D::AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::sh
 	m_drawBuffers[1] = top;
 }
 
-Result CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget)
+Result CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget, UpscaleMode upscaleMode)
 {
 	// Resolution
 	m_xPixels		= xRes;
@@ -430,8 +426,28 @@ Result CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsign
 	m_yOffset		= yOffset;
 	m_totalXPixels	= totalXRes;
 	m_totalYPixels	= totalYRes;
-	m_correction	= (UINT32)(((yRes / 384.f) * 2) + 0.5f);		// for some reason the 2d layer is 2 pixels off the 3D
+	m_correction	= (UINT32)(((yRes / 384.) * 2.) + 0.5);		// for some reason the 2d layer is 2 pixels off the 3D
 	m_aaTarget		= aaTarget;
+	m_upscaleMode	= (m_xPixels == 496 && m_yPixels == 384) ? UpscaleMode::Nearest : upscaleMode;
+
+	std::string um = "#define UPSCALEMODE " + std::to_string((int)m_upscaleMode) + '\n';
+
+	m_drawShader.LoadShaders(s_vertexShader, (std::string(s_fragmentShaderHeader) + um + s_fragmentShader).c_str());
+	m_drawShader.GetUniformLocationMap("tex1");
+	// init uniform memory
+	m_drawShader.EnableShader();
+	glUniform1i(m_drawShader.uniformLocMap["tex1"], 0);	// texture bound to texture unit 0
+	m_drawShader.DisableShader();
+
+	// allocate storage
+	for (auto& t : m_textureIDs) {
+		glBindTexture(GL_TEXTURE_2D, t);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_upscaleMode == UpscaleMode::Nearest ? GL_NEAREST : GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_upscaleMode == UpscaleMode::Nearest ? GL_NEAREST : GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 496, 384, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	}
 
 	return Result::OKAY;
 }
@@ -445,25 +461,8 @@ CRender2D::CRender2D(const Util::Config::Node& config)
 	// no states needed since we do it in the shader
 	glBindVertexArray(0);
 
-	m_drawShader.LoadShaders(s_vertexShader, s_fragmentShader);
-	m_drawShader.GetUniformLocationMap("tex1");
-	// init uniform memory
-	m_drawShader.EnableShader();
-	glUniform1i(m_drawShader.uniformLocMap["tex1"], 0);	// texture bound to texture unit 0
-	m_drawShader.DisableShader();
-
 	// create textures
 	glGenTextures(2, m_textureIDs);
-
-	// allocate storage
-	for (auto& t : m_textureIDs) {
-		glBindTexture(GL_TEXTURE_2D, t);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 496, 384, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	}
 }
 
 CRender2D::~CRender2D(void)
