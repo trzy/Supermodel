@@ -1505,7 +1505,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("BorderlessWindow", false);
   config.Set("Supersampling", 1);
   config.Set("CRTcolors", int(0));
-  config.Set("UpscaleMode", 1);
+  config.Set("UpscaleMode", 2);
   config.Set("WideScreen", false);
   config.Set("Stretch", false);
   config.Set("WideBackground", false);

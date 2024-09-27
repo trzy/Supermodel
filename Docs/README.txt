@@ -1239,8 +1239,8 @@ not.  All options are case sensitive.
 
                     This means one can choose between 4 different filters now:
                     0=none (sharp pixels)
-                    1=biquintic (a bit smoother, default)
-                    2=bilinear (smooth, but lowest quality)
+                    1=biquintic (a bit smoother)
+                    2=bilinear (smooth, but lowest quality, default)
                     3=bicubic (smoothest)
 
     ----------------
