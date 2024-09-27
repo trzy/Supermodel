@@ -1232,6 +1232,19 @@ not.  All options are case sensitive.
 
     ----------------
 
+    Option:         -upscalemode=<mode>
+
+    Description:    Selects the filter for upscaling the 2D layers when
+                    using a higher output resolution.
+
+                    This means one can choose between 4 different filters now:
+                    0=none (sharp pixels)
+                    1=biquintic (a bit smoother)
+                    2=bilinear (smooth, but lowest quality, default)
+                    3=bicubic (smoothest)
+
+    ----------------
+
     Option:         -show-fps
 
     Description:    Shows the frame rate in the window title bar.

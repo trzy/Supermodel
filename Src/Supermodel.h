@@ -109,6 +109,19 @@ enum CRTcolor
 	BT601EA = 5
 };
 
+// interpolation filter for 2D layers during upscale
+#ifdef __cplusplus
+enum class UpscaleMode
+#else
+enum UpscaleMode
+#endif
+{
+	Nearest = 0,
+	Biquintic = 1,
+	Bilinear = 2,
+	Bicubic = 3
+};
+
 
 /******************************************************************************
  Helpful Macros and Inlines
