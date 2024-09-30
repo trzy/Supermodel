@@ -102,10 +102,6 @@
 
 #include "Crosshair.h"
 
-#if (defined(_M_X64) || defined(__x86_64__))
-#include <emmintrin.h>
-#endif
-
 /******************************************************************************
  Global Run-time Config
 ******************************************************************************/
@@ -902,13 +898,7 @@ static void SuperSleepUntil(const uint64_t target)
     // according to all available processor documentation for x86 and arm,
     // spinning should pause the processor for a short while for better
     // power efficiency and (surprisingly) overall faster system performance
-#ifdef _WIN32
-    YieldProcessor();
-#elif (defined(_M_X64) || defined(__x86_64__))
-    _mm_pause();
-#elif (defined(_M_ARM64) || defined(__aarch64__))
-    __asm__ __volatile__("isb\n"); // as researched by Rust devs
-#endif
+    SDL_CPUPauseInstruction();
     remain = target - SDL_GetPerformanceCounter();
   } while (remain > 0);
 }
