@@ -898,7 +898,9 @@ static void SuperSleepUntil(const uint64_t target)
     // according to all available processor documentation for x86 and arm,
     // spinning should pause the processor for a short while for better
     // power efficiency and (surprisingly) overall faster system performance
+    #ifdef SDL_CPUPauseInstruction
     SDL_CPUPauseInstruction();
+    #endif
     remain = target - SDL_GetPerformanceCounter();
   } while (remain > 0);
 }
