@@ -873,33 +873,36 @@ static uint64_t GetDesiredRefreshRateMilliHz()
   return refreshRateMilliHz;
 }
 
-static void SuperSleepUntil(uint64_t target)
+static void SuperSleepUntil(const uint64_t target)
 {
   uint64_t time = SDL_GetPerformanceCounter();
 
   // If we're ahead of the target, we're done
-  if (time > target)
+  if (time >= target)
   {
     return;
   }
 
-  // Compute the whole number of millis to sleep. Because OS sleep is not accurate,
-  // we actually sleep for one less and will spin-wait for the final millisecond.
-  int32_t numWholeMillisToSleep = int32_t((target - time) * 1000 / s_perfCounterFrequency);
-  numWholeMillisToSleep -= 1;
-  if (numWholeMillisToSleep > 0)
+  // Because OS sleep is not accurate,
+  // we actually sleep until a maximum of 2 milliseconds are left.
+  while (int64_t(target - time) * 1000 > 2 * int64_t(s_perfCounterFrequency))
   {
-    SDL_Delay(numWholeMillisToSleep);
+    SDL_Delay(1);
+    time = SDL_GetPerformanceCounter();
   }
 
   // Spin until requested time
-  volatile uint64_t now;
-  int32_t remain;
+  int64_t remain;
   do
   {
-    now = SDL_GetPerformanceCounter();
-    remain = int32_t((target - now));
-  } while (remain>0);
+    // according to all available processor documentation for x86 and arm,
+    // spinning should pause the processor for a short while for better
+    // power efficiency and (surprisingly) overall faster system performance
+    #ifdef SDL_CPUPauseInstruction
+    SDL_CPUPauseInstruction();
+    #endif
+    remain = target - SDL_GetPerformanceCounter();
+  } while (remain > 0);
 }
 
 
@@ -977,7 +980,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   if (gameHasLightguns)
     videoInputs = Inputs;
   else
-    videoInputs = NULL;
+    videoInputs = nullptr;
 
   // Attach the inputs to the emulator
   Model3->AttachInputs(Inputs);

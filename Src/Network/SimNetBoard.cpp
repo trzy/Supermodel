@@ -20,10 +20,10 @@
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
 
-#include <chrono>
 #include <thread>
 #include "Supermodel.h"
 #include "SimNetBoard.h"
+#include <OSD/Thread.h>
 
  // these make 16-bit read/writes much neater
 #define RAM16 *(uint16_t*)&RAM
@@ -527,8 +527,6 @@ void CSimNetBoard::GetGame(const Game& gameInfo)
 
 void CSimNetBoard::ConnectProc(void)
 {
-	using namespace std::chrono_literals;
-
 	if (m_connected)
 		return;
 
@@ -546,7 +544,7 @@ void CSimNetBoard::ConnectProc(void)
 	{
 		if (m_quit)
 			return;
-		std::this_thread::sleep_for(1ms);
+		CThread::Sleep(1);
 	}
 
 	printf("Successfully connected.\n");
