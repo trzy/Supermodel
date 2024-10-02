@@ -441,7 +441,7 @@ const UINT32 *CLegacy3D::TranslateModelAddress(UINT32 modelAddr)
 ******************************************************************************/
 
 // Macro to generate column-major (OpenGL) index from y,x subscripts
-#define CMINDEX(y,x)  (x*4+y)
+#define CMINDEX(y,x)  ((x)*4+(y))
 
 /*
  * MultMatrix():
@@ -527,7 +527,7 @@ void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
   }
   
   // Set matrix base address and apply matrix #0 (coordinate system matrix)
-  matrixBasePtr = (float *) TranslateCullingAddress(matrixBaseAddr);
+  matrixBasePtr = (const float *) TranslateCullingAddress(matrixBaseAddr);
   MultMatrix(0);
 }
 
@@ -547,7 +547,7 @@ static bool IsDynamicModel(const UINT32 *data)
 {
   if (data == NULL)
     return false;
-  unsigned sharedVerts[16] = { 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 };
+  static constexpr unsigned sharedVerts[16] = { 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 };
   // VROM models are only dynamic if they reference polygon RAM via color palette indices
   bool done = false;
   do
@@ -561,7 +561,7 @@ static bool IsDynamicModel(const UINT32 *data)
     unsigned numVerts = (data[0]&0x40 ? 4 : 3);
     // Deduct number of reused verts
     numVerts -= sharedVerts[data[0]&0xf];
-	done = (data[1] & 4) > 0;
+    done = (data[1] & 4) > 0;
     // Skip header and vertices to next polygon
     data += 7 + numVerts * 4;
   }
@@ -1353,22 +1353,21 @@ CLegacy3D::~CLegacy3D(void)
   if (glBindBuffer != NULL) // we may have failed earlier due to lack of OpenGL 2.0 functions 
     glBindBuffer(GL_ARRAY_BUFFER, 0); // disable VBOs by binding to 0
   glDeleteTextures(numTexMaps, texMapIDs);
-  
+
   DestroyModelCache(&VROMCache);
   DestroyModelCache(&PolyCache);
-  
+
   cullingRAMLo = NULL;
   cullingRAMHi = NULL;
   polyRAM = NULL;
   vrom = NULL;
   textureRAM = NULL;
-  
-  if (texSheets != NULL)
-    delete [] texSheets;
 
-  if (textureBuffer != NULL)
-    delete [] textureBuffer;
-  textureBuffer = NULL;
+  delete [] texSheets;
+  texSheets = nullptr;
+
+  delete [] textureBuffer;
+  textureBuffer = nullptr;
 
   DebugLog("Destroyed Legacy3D\n");
 }

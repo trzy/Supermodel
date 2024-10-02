@@ -200,7 +200,7 @@ void SCSPDSP_Init(_SCSPDSP *DSP)
 {
 	memset(DSP, 0, sizeof(_SCSPDSP));
 	DSP->RBL = (8 * 1024); // Initial RBL is 0
-	DSP->Stopped = 1;
+	DSP->Stopped = true;
 }
 //#ifndef DYNDSP
 void SCSPDSP_Step(_SCSPDSP *DSP)
@@ -455,7 +455,7 @@ void SCSPDSP_SetSample(_SCSPDSP *DSP, INT32 sample, int SEL, int MXL)
 void SCSPDSP_Start(_SCSPDSP *DSP)
 {
 	int i;
-	DSP->Stopped = 0;
+	DSP->Stopped = false;
 	for (i = 127; i >= 0; --i)
 	{
 		UINT16 *IPtr = DSP->MPRO + i * 4;
@@ -479,13 +479,14 @@ void SCSPDSP_Start(_SCSPDSP *DSP)
 	}
 */
 
-	for(int t=0;t<0x10000;++t)
+/*	for(int t=0;t<0x10000;++t)
 	{
 		signed int unp=UNPACK(t);
 		unsigned short t2=PACK(unp);
 		if(t2!=t)
 			int a=1;
 	}
+*/
 
 #ifdef DYNDSP
 	SCSPDSP_Recompile(DSP);

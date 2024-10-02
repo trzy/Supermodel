@@ -160,7 +160,7 @@ namespace Legacy3D {
 ******************************************************************************/
 
 // Macro to generate column-major (OpenGL) index from y,x subscripts
-#define CMINDEX(y,x)  (x*4+y)
+#define CMINDEX(y,x)  ((x)*4+(y))
 
 static void CrossProd(GLfloat out[3], const GLfloat a[3], const GLfloat b[3])
 {
@@ -190,12 +190,11 @@ static GLfloat Sign(GLfloat x)
 // 4x4 matrix with the extra components undefined (do not use them!)
 static void InvertTransposeMat3(GLfloat out[4*4], GLfloat m[4*4])
 {
-  GLfloat invDet;
   GLfloat a00 = m[CMINDEX(0,0)], a01 = m[CMINDEX(0,1)], a02 = m[CMINDEX(0,2)];
   GLfloat a10 = m[CMINDEX(1,0)], a11 = m[CMINDEX(1,1)], a12 = m[CMINDEX(1,2)];
   GLfloat a20 = m[CMINDEX(2,0)], a21 = m[CMINDEX(2,1)], a22 = m[CMINDEX(2,2)];
   
-  invDet = 1.0f/(a00*(a22*a11-a21*a12)-a10*(a22*a01-a21*a02)+a20*(a12*a01-a11*a02));
+  GLfloat invDet = 1.0f/(a00*(a22*a11-a21*a12)-a10*(a22*a01-a21*a02)+a20*(a12*a01-a11*a02));
   out[CMINDEX(0,0)] = invDet*(a22*a11-a21*a12);   out[CMINDEX(1,0)] = invDet*(-(a22*a01-a21*a02));  out[CMINDEX(2,0)] = invDet*(a12*a01-a11*a02);
   out[CMINDEX(0,1)] = invDet*(-(a22*a10-a20*a12));  out[CMINDEX(1,1)] = invDet*(a22*a00-a20*a02);   out[CMINDEX(2,1)] = invDet*(-(a12*a00-a10*a02));
   out[CMINDEX(0,2)] = invDet*(a21*a10-a20*a11);   out[CMINDEX(1,2)] = invDet*(-(a21*a00-a20*a01));  out[CMINDEX(2,2)] = invDet*(a11*a00-a10*a01);
@@ -390,8 +389,8 @@ Result CLegacy3D::AppendDisplayList(ModelCache *Cache, bool isViewport, const st
        * This is described further in InsertPolygon(), where the vertices
        * are ordered in clockwise fashion.
        */
-      static const GLfloat x[3] = { 1.0f, 0.0f, 0.0f };
-      static const GLfloat y[3] = { 0.0f, 1.0f, 0.0f };
+      static constexpr GLfloat x[3] = { 1.0f, 0.0f, 0.0f };
+      static constexpr GLfloat y[3] = { 0.0f, 1.0f, 0.0f };
       const GLfloat z[3] = { 0.0f, 0.0f, -1.0f*matrixBasePtr[0x5] };
       GLfloat m[4*4];
       GLfloat xT[3], yT[3], zT[3], pT[3];
@@ -1268,7 +1267,7 @@ Result CLegacy3D::CreateModelCache(ModelCache *Cache, unsigned vboMaxVerts,
   // Clear LUT (MUST be done here because ClearModelCache() won't do it for dynamic models)
   for (size_t i = 0; i < numLUTEntries; i++)
     Cache->lut[i] = -1;
-    
+
   // All good!
   return Result::OKAY;
 }
@@ -1279,16 +1278,12 @@ void CLegacy3D::DestroyModelCache(ModelCache *Cache)
 
   for (size_t i = 0; i < 2; i++)
   {
-    if (Cache->verts[i] != NULL)
-      delete [] Cache->verts[i];
+    delete [] Cache->verts[i];
   }
-  if (Cache->Models != NULL)
-    delete [] Cache->Models;
-  if (Cache->lut != NULL)
-    delete [] Cache->lut;
-  if (Cache->List != NULL)
-    delete [] Cache->List;
-  
+  delete [] Cache->Models;
+  delete [] Cache->lut;
+  delete [] Cache->List;
+
   memset(Cache, 0, sizeof(ModelCache));
 }
 

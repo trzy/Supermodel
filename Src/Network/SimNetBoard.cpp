@@ -157,7 +157,7 @@ void CSimNetBoard::RunFrame(void)
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 
@@ -193,7 +193,7 @@ void CSimNetBoard::RunFrame(void)
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 				nets->Send(&testGUID, sizeof(testGUID));
@@ -202,7 +202,7 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 				nets->Send(&testGUID, sizeof(testGUID));
@@ -231,7 +231,7 @@ void CSimNetBoard::RunFrame(void)
 
 			// if there are no other linked machines, only continue if Supermodel is linked to itself
 			// there might be more than one machine set to master which would cause glitches
-			if ((numMachines == 0) && ((port_in != port_out) || (addr_out.compare("127.0.0.1") != 0)))
+			if ((numMachines == 0) && ((port_in != port_out) || (addr_out != "127.0.0.1")))
 			{
 				ErrorLog("no slave machines detected. Make sure only one machine is set to master!");
 				m_state = State::error;
@@ -285,7 +285,7 @@ void CSimNetBoard::RunFrame(void)
 					break;
 
 				uint64_t testGUID;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 
@@ -301,14 +301,14 @@ void CSimNetBoard::RunFrame(void)
 				}
 
 				// master has indices set to zero
-				machineIndex.total = 0, machineIndex.playable = 0;
+				machineIndex.total = 0; machineIndex.playable = 0;
 				nets->Send(&machineIndex, sizeof(machineIndex));
 
 				// receive back the number of other linked machines
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&numMachines, &recv_data[0], recv_data.size());
+				memcpy(&numMachines, recv_data.data(), recv_data.size());
 
 				// send the number of other linked machines
 				nets->Send(&numMachines, sizeof(numMachines));
@@ -321,7 +321,7 @@ void CSimNetBoard::RunFrame(void)
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 				nets->Send(&testGUID, sizeof(testGUID));
@@ -330,7 +330,7 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 				nets->Send(&testGUID, sizeof(testGUID));
@@ -346,8 +346,8 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&machineIndex, &recv_data[0], recv_data.size());
-				machineIndex.total++, machineIndex.playable++;
+				memcpy(&machineIndex, recv_data.data(), recv_data.size());
+				machineIndex.total++; machineIndex.playable++;
 
 				// send our indices to the next machine
 				nets->Send(&machineIndex, sizeof(machineIndex));
@@ -356,7 +356,7 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&numMachines, &recv_data[0], recv_data.size());
+				memcpy(&numMachines, recv_data.data(), recv_data.size());
 
 				// forward the number of machines
 				nets->Send(&numMachines, sizeof(numMachines));
@@ -370,7 +370,7 @@ void CSimNetBoard::RunFrame(void)
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 				nets->Send(&testGUID, sizeof(testGUID));
@@ -379,7 +379,7 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&testGUID, &recv_data[0], recv_data.size());
+				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
 				nets->Send(&testGUID, sizeof(testGUID));
@@ -395,7 +395,7 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&machineIndex, &recv_data[0], recv_data.size());
+				memcpy(&machineIndex, recv_data.data(), recv_data.size());
 				machineIndex.total++;
 
 				// send our indices to the next machine
@@ -405,7 +405,7 @@ void CSimNetBoard::RunFrame(void)
 				recv_data = netr->Receive();
 				if (recv_data.empty())
 					break;
-				memcpy(&numMachines, &recv_data[0], recv_data.size());
+				memcpy(&numMachines, recv_data.data(), recv_data.size());
 
 				// forward the number of machines
 				nets->Send(&numMachines, sizeof(numMachines));
@@ -417,7 +417,7 @@ void CSimNetBoard::RunFrame(void)
 
 			// if there are no other linked machines, only continue if Supermodel is linked to itself
 			// there might be more than one machine set to master which would cause glitches
-			if ((numMachines.total == 0) && ((port_in != port_out) || (addr_out.compare("127.0.0.1") != 0)))
+			if ((numMachines.total == 0) && ((port_in != port_out) || (addr_out != "127.0.0.1")))
 			{
 				ErrorLog("no slave machines detected. Make sure only one machine is set to master!");
 				if (IsGame("dirtdvls"))
@@ -463,7 +463,7 @@ void CSimNetBoard::RunFrame(void)
 		{
 			nets->Send(CommRAM + 0x100 + i * m_segmentSize, m_segmentSize);
 			auto& recv_data = netr->Receive();
-			if (recv_data.size() == 0)
+			if (recv_data.empty())
 			{
 				// link broken - send an "empty" packet to alert other machines
 				nets->Send(nullptr, 0);

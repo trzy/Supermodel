@@ -33,10 +33,9 @@
 #include "Input.h"
 #include "InputSystem.h"
 
-#include <vector>
 using namespace std;
 
-CInputSource::CInputSource(ESourceType sourceType) : type(sourceType), m_acquired(0)
+CInputSource::CInputSource(ESourceType sourceType) : m_acquired(0), type(sourceType)
 {
 	//
 }

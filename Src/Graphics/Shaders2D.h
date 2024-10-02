@@ -30,7 +30,7 @@
 
 
 // Vertex shader
-static const char s_vertexShader[] = R"glsl(
+static constexpr char s_vertexShader[] = R"glsl(
 
 	#version 410 core
 
@@ -57,13 +57,13 @@ static const char s_vertexShader[] = R"glsl(
 
 
 // Fragment shader
-static const char s_fragmentShaderHeader[] = R"glsl(
+static constexpr char s_fragmentShaderHeader[] = R"glsl(
 
 	#version 410 core
 
 	)glsl";
 
-static const char s_fragmentShader[] = R"glsl(
+static constexpr char s_fragmentShader[] = R"glsl(
 
 	// inputs
 	uniform sampler2D tex1;			// texture

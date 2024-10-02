@@ -287,6 +287,7 @@ void CJoyBoard::SimulateWrite(UINT8 cmd)
         case 6:  /* Ignore */                                        break;  // 0x86 Set cockpit banking position
         case 7:  /* Ignore */                                        break;  // 0x87 Lamp on/off
       }
+      break;
     case 0x9: // 0x90-9F ??? Don't appear to have any effect with Scud Race ROM
       /* TODO */
       break;
@@ -575,7 +576,7 @@ void CJoyBoard::SendStopAll(void)
 {
   //DebugLog(">> Stop All Effects\n");
 
-  ForceFeedbackCmd ffCmd;
+  ForceFeedbackCmd ffCmd{};
   ffCmd.id = FFStop;
 
   m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);

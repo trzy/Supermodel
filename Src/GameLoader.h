@@ -99,8 +99,6 @@ private:
   void ChooseGameInZipArchive(std::string *chosen_game, bool *missing_parent_roms, const ZipArchive &zip, const std::string &zipfilename) const;
   bool LoadRegion(ROM *buffer, const GameLoader::Region::ptr_t &region, const ZipArchive &zip) const;
   bool LoadROMs(ROMSet *rom_set, const std::string &game_name, const ZipArchive &zip) const;
-  std::string ChooseGame(const std::set<std::string> &games_found, const std::string &zipfilename) const;
-  static bool CompareFilesByName(const File::ptr_t &a,const File::ptr_t &b);
 
 public:
   GameLoader(const std::string &xml_file);

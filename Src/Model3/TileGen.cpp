@@ -325,23 +325,23 @@ Result CTileGen::Init(CIRQ *IRQObjectPtr)
 }
 
 CTileGen::CTileGen(const Util::Config::Node& config)
-	: m_config(config),
+	: //m_config(config),
 	m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
 	IRQ(nullptr),
-	memoryPool(nullptr),
 	Render2D(nullptr),
-	m_regs{},
+	memoryPool(nullptr),
 	m_vram(nullptr),
 	m_vramP(nullptr),
 	m_palP(nullptr),
-	m_pal{nullptr}
+	m_pal{nullptr},
+	m_regs{}
 {
 	for (auto& s : m_drawSurface) {
-		s = std::shared_ptr<TileGenBuffer>(new TileGenBuffer());
+		s = std::make_shared<TileGenBuffer>();
 	}
 
 	for (auto& s : m_drawSurfaceRO) {
-		s = std::shared_ptr<TileGenBuffer>(new TileGenBuffer());
+		s = std::make_shared<TileGenBuffer>();
 	}
 
 	for (auto& p : m_pal) {

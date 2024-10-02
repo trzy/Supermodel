@@ -4,7 +4,6 @@
 #include "Util/GenericValue.h"
 #include <map>
 #include <memory>
-#include <iterator>
 #include <exception>
 
 namespace Util

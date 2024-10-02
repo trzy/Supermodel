@@ -363,8 +363,8 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
 
           // Look up region structure or create new one if needed
           std::string region_name = region_node["name"].Value<std::string>();
-          auto it = regions_by_name.find(region_name);
-          Region::ptr_t region = (it != regions_by_name.end()) ? it->second : Region::Create(*this, region_node);
+          auto it2 = regions_by_name.find(region_name);
+          Region::ptr_t region = (it2 != regions_by_name.end()) ? it2->second : Region::Create(*this, region_node);
           if (!region)
             continue;
 
@@ -432,7 +432,7 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
 
 static bool IsChildSet(const Game &game)
 {
-  return game.parent.length() > 0;
+  return !game.parent.empty();
 }
 
 bool GameLoader::MergeChildrenWithParents()
@@ -587,7 +587,7 @@ void GameLoader::IdentifyGamesInZipArchive(
       Region::ptr_t region = v2.second;
       if (!region->required)
         continue;
-      for (auto file: region->files)
+      for (const auto& file: region->files)
       {
         // Add each file to the set of required files per game
         files_required_by_game[game_name].insert(file);
@@ -757,7 +757,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
   // use maximum end_addr = offset + stride * (num_chunks - 1) + chunk_size.
   std::vector<uint32_t> end_addr;
   bool error = false;
-  for (auto file: region->files)
+  for (const auto& file: region->files)
   {
     const ZippedFile *zipped_file = LookupFile(file, zip);
     if (zipped_file)
@@ -781,7 +781,7 @@ bool GameLoader::ComputeRegionSize(uint32_t *region_size, const GameLoader::Regi
 static bool ApplyLayout(ROM *rom, const std::string &byte_layout, size_t stride, const std::string &region_name)
 {
   // Empty layout means do nothing
-  if (byte_layout.size() == 0)
+  if (byte_layout.empty())
     return false;
 
   // Validate that the layout string includes the same number of bytes as the region stride. The

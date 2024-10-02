@@ -137,7 +137,7 @@ public:
 	 * Returns:
 	 *		Register data.
 	 */
-	UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
+	UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
 	
 	/*
 	 * WritePCIConfigSpace(device, reg, bits, offset, data):
@@ -154,7 +154,7 @@ public:
 	 * 				register number.
 	 *		data	Data.
 	 */
-	void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, UINT32 data);
+	void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
 
 	/*
 	 * GetBaseAddress(void):
@@ -194,19 +194,19 @@ public:
 	 */
 	C53C810(void);
 	~C53C810(void);
-	
+
 private:
 	// Private members
 	void	Run(bool singleStep);
 	void	BuildOpTable(void);
 	void	Insert(UINT8 mask, UINT8 op, Result (*Handler)(struct NCR53C810Context *));
 	Result	(*OpTable[256])(struct NCR53C810Context *);
-	
+
 	// Context (register file)
 	struct NCR53C810Context	Ctx;
 	
 	// IRQ controller and IRQ identifier for this SCSI controller
-	CIRQ		*IRQ;
+	//CIRQ		*IRQ;
 	unsigned	scsiIRQ;
 
 	// Base address of the SCSI device (varies by game)

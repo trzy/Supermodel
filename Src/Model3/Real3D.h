@@ -307,8 +307,8 @@ public:
    * Returns:
    *    Register data.
    */
-  uint32_t ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
-  
+  uint32_t ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
+
   /*
    * WritePCIConfigSpace(device, reg, bits, offset, data):
    *
@@ -324,8 +324,8 @@ public:
    *            register number.
    *    data    Data.
    */
-  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, uint32_t data);
-  
+  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, uint32_t data);
+
   /*
    * Reset(void):
    *
@@ -333,7 +333,7 @@ public:
    * device.
    */
   void Reset(void);
-  
+
   /*
    * AttachRenderer(render3DPtr):
    *

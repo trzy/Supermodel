@@ -53,8 +53,8 @@
 // Macros that divide memory regions into pages and mark them as dirty when they are written to
 #define PAGE_WIDTH 12
 #define PAGE_SIZE (1<<PAGE_WIDTH)
-#define DIRTY_SIZE(arraySize) (1+(arraySize-1)/(8*PAGE_SIZE))
-#define MARK_DIRTY(dirtyArray, addr) dirtyArray[addr>>(PAGE_WIDTH+3)] |= 1<<((addr>>PAGE_WIDTH)&7)
+#define DIRTY_SIZE(arraySize) (1+((arraySize)-1)/(8*PAGE_SIZE))
+#define MARK_DIRTY(dirtyArray, addr) dirtyArray[(addr)>>(PAGE_WIDTH+3)] |= 1<<(((addr)>>PAGE_WIDTH)&7)
 
 // Offsets of memory regions within Real3D memory pool
 #define OFFSET_8C           0x0000000 // 4 MB, culling RAM low (at 0x8C000000)
@@ -375,7 +375,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
     // Outer 2 loops: NxN tiles
     const uint8_t byteSelect = (uint8_t)writeLSB | ((uint8_t)writeMSB << 1);
     uint16_t tempData;
-    const uint16_t byteMask[4] = {0xFFFF, 0xFF00, 0x00FF, 0x0000};
+    static constexpr uint16_t byteMask[4] = {0xFFFF, 0xFF00, 0x00FF, 0x0000};
     for (uint32_t y = yPos; y < (yPos + height); y += tileY)
     {
       for (uint32_t x = xPos; x < (xPos + width); x += tileX)

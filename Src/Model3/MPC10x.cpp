@@ -347,9 +347,9 @@ void CMPC10x::Init(void)
  * Constructor.
  */
 CMPC10x::CMPC10x(void) :
-	regs{},
-	PCIBus(nullptr),
 	model(0x105),		// default to MPC105
+	PCIBus(nullptr),
+	regs{},
 	pciBus(0),
 	pciDevice(0),
 	pciFunction(0),

@@ -28,6 +28,7 @@
 #ifndef INCLUDED_NEW3D_H
 #define INCLUDED_NEW3D_H
 
+#include <unordered_map>
 #include <GL/glew.h>
 #include "Types.h"
 #include "Graphics/IRender3D.h"

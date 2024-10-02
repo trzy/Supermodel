@@ -216,11 +216,11 @@ struct Decoder
 	std::shared_ptr<uint8_t[]>  custom_mpeg_data;
 };
 
-static Decoder dec = { 0 };
+static Decoder dec{};
 
 void MpegDec::SetMemory(const uint8_t *data, int offset, int length, bool loop)
 {
-	mp3dec_init(&dec.mp3d);
+  mp3dec_init(&dec.mp3d);
 
   auto it = s_custom_tracks_by_mpeg_rom_address.find(offset);
   if (it == s_custom_tracks_by_mpeg_rom_address.end()) {

@@ -148,20 +148,20 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   *totalYResPtr = actualHeight;
 
   // If required, fix the aspect ratio of the resolution that the user passed to match Model 3 ratio
-  float xRes = float(*xResPtr);
-  float yRes = float(*yResPtr);
+  float xResF = float(*xResPtr);
+  float yResF = float(*yResPtr);
   if (keepAspectRatio)
   {
     float model3Ratio = float(496.0/384.0);
-    if (yRes < (xRes/model3Ratio))
-      xRes = yRes*model3Ratio;
-    if (xRes < (yRes*model3Ratio))
-      yRes = xRes/model3Ratio;
+    if (yResF < (xResF/model3Ratio))
+      xResF = yResF*model3Ratio;
+    if (xResF < (yResF*model3Ratio))
+      yResF = xResF/model3Ratio;
   }
 
   // Center the visible area
-  *xOffsetPtr = (*xResPtr - (unsigned) xRes)/2;
-  *yOffsetPtr = (*yResPtr - (unsigned) yRes)/2;
+  *xOffsetPtr = (*xResPtr - (unsigned) xResF)/2;
+  *yOffsetPtr = (*yResPtr - (unsigned) yResF)/2;
 
   // If the desired resolution is smaller than what we got, re-center again
   if (int(*xResPtr) < actualWidth)
@@ -185,8 +185,8 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   }
 
   // Write back resolution parameters
-  *xResPtr = (unsigned) xRes;
-  *yResPtr = (unsigned) yRes;
+  *xResPtr = (unsigned) xResF;
+  *yResPtr = (unsigned) yResF;
 
   UINT32 correction = (UINT32)(((*yResPtr / 384.) * 2.) + 0.5); // due to the 2D layer compensation (2 pixels off)
 
@@ -1013,7 +1013,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   Model3->Reset();
 
   // Load initial save state if requested
-  if (initialState.length() > 0)
+  if (!initialState.empty())
     LoadState(Model3, initialState);
 
 #ifdef SUPERMODEL_DEBUGGER
@@ -1141,9 +1141,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Resize screen
       totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
       totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
-      bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
-      bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
-      if (Result::OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretch,fullscreen))
+      bool stretchc = s_runtime_config["Stretch"].ValueAs<bool>();
+      bool fullscreenc = s_runtime_config["FullScreen"].ValueAs<bool>();
+      if (Result::OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretchc,fullscreenc))
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
@@ -1383,7 +1383,7 @@ QuitError:
 // Create and configure inputs
 static Result ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
 {
-  static const char configFileComment[] = {
+  static constexpr char configFileComment[] = {
     ";\n"
     "; Supermodel Configuration File\n"
     ";\n"
@@ -1769,7 +1769,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
       {
         std::string option(arg.begin(), arg.begin() + idx_equals);
         std::string value(arg.begin() + idx_equals + 1, arg.end());
-        if (value.length() == 0)
+        if (value.empty())
         {
           ErrorLog("Argument to '%s' cannot be blank.", option.c_str());
           cmd_line.error = true;
@@ -2185,14 +2185,10 @@ int main(int argc, char **argv)
   delete Model3;
 
 Exit:
-  if (Inputs != NULL)
-    delete Inputs;
-  if (InputSystem != NULL)
-    delete InputSystem;
-  if (Outputs != NULL)
-    delete Outputs;
-  if (s_crosshair != NULL)
-      delete s_crosshair;
+  delete Inputs;
+  delete InputSystem;
+  delete Outputs;
+  delete s_crosshair;
   DestroyGLScreen();
   SDL_Quit();
 

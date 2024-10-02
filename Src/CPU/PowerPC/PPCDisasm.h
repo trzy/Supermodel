@@ -28,6 +28,8 @@
 #ifndef INCLUDED_PPCDISASM_H
 #define INCLUDED_PPCDISASM_H
 
+#include "Types.h"
+
 /*
  * DisassemblePowerPC(op, vpc, mnem, oprs, simplify):
  *

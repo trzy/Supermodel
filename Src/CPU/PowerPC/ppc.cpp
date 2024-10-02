@@ -117,12 +117,12 @@ static UINT32		ppc_field_xlat[256];
 
 
 
-#define BITMASK_0(n)	(UINT32)(((UINT64)1 << n) - 1)
-#define CRBIT(x)		((ppc.cr[x / 4] & (1 << (3 - (x % 4)))) ? 1 : 0)
+#define BITMASK_0(n)	(UINT32)(((UINT64)1 << (n)) - 1)
+#define CRBIT(x)		((ppc.cr[(x) / 4] & (1 << (3 - ((x) % 4)))) ? 1 : 0)
 #define _BIT(n)			(1 << (n))
 #define GET_ROTATE_MASK(mb,me)		(ppc_rotate_mask[mb][me])
-#define ADD_CA(r,a,b)		((UINT32)r < (UINT32)a)
-#define SUB_CA(r,a,b)		(!((UINT32)a < (UINT32)b))
+#define ADD_CA(r,a,b)		((UINT32)(r) < (UINT32)(a))
+#define SUB_CA(r,a,b)		(!((UINT32)(a) < (UINT32)(b)))
 #define ADD_OV(r,a,b)		((~((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 #define SUB_OV(r,a,b)		(( ((a) ^ (b)) & ((a) ^ (r))) & 0x80000000)
 
@@ -154,8 +154,8 @@ static UINT32		ppc_field_xlat[256];
 #define TSR_ENW			0x80000000
 #define TSR_WIS			0x40000000
 
-#define BYTE_REVERSE16(x)	(((x >> 8) | (x << 8)) & 0xFFFF)
-#define BYTE_REVERSE32(x)	((x >> 24) | ((x << 8) & 0x00FF0000) | ((x >> 8) & 0x0000FF00) | (x << 24))
+#define BYTE_REVERSE16(x)	((((x) >> 8) | ((x) << 8)) & 0xFFFF)
+#define BYTE_REVERSE32(x)	(((x) >> 24) | (((x) << 8) & 0x00FF0000) | (((x) >> 8) & 0x0000FF00) | ((x) << 24))
 
 typedef union {
 	UINT64	id;
@@ -714,10 +714,9 @@ void ppc_base_init(void)
 	/* Calculate rotate mask table */
 	for( i=0; i < 32; i++ ) {
 		for( j=0; j < 32; j++ ) {
-			UINT32 mask;
 			int mb = i;
 			int me = j;
-			mask = ((UINT32)0xFFFFFFFF >> mb) ^ ((me >= 31) ? 0 : ((UINT32)0xFFFFFFFF >> (me + 1)));
+			UINT32 mask = ((UINT32)0xFFFFFFFF >> mb) ^ ((me >= 31) ? 0 : ((UINT32)0xFFFFFFFF >> (me + 1)));
 			if( mb > me )
 				mask = ~mask;
 

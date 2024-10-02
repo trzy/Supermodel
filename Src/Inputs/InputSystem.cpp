@@ -1734,19 +1734,19 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
   CInputSource *escape = ParseSource(escapeMapping);
   if (escape)
     escape->Acquire();
-  
+
   string badMapping;
   string mapping;
   vector<CInputSource*> badSources;
   vector<CInputSource*> sources;
   bool mseCentered = false;
-  
+
   // See which sources activated to begin with and from here on ignore these (this stops badly calibrated axes that are constantly "active"
   // from preventing the user from exiting read loop)
   if (!Poll())
     goto Cancelled;
 
-  CheckAllSources(readFlags, fullAxisOnly, mseCentered, badSources, badMapping, sources);
+  CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, badMapping, badSources);
 
   // Loop until have received meaningful inputs
   for (;;)

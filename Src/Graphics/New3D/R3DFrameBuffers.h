@@ -2,7 +2,6 @@
 #define FBO_H
 
 #include <GL/glew.h>
-#include "VBO.h"
 #include "GLSLShader.h"
 #include "Model.h"
 

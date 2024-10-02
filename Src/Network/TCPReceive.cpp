@@ -25,7 +25,7 @@
 #include "OSD/Thread.h"
 
 #if defined(_DEBUG)
-#include <stdio.h>
+#include <cstdio>
 #define DPRINTF DebugLog
 #else
 #define DPRINTF(a, ...)
