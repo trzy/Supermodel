@@ -295,7 +295,7 @@ void CFileLogger::ReopenFiles(std::ios_base::openmode mode)
   m_logFiles.clear();
 
   // (Re-)Open
-  for (const auto& filename: m_logFilenames)
+  for (const auto &filename: m_logFilenames)
   {
     std::ofstream ofs(filename.c_str(), mode);
     if (ofs.is_open() && ofs.good())
