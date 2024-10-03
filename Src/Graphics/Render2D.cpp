@@ -411,7 +411,7 @@ void CRender2D::AttachVRAM(const uint8_t* vramPtr)
 {
 }
 
-void CRender2D::AttachDrawBuffers(const std::shared_ptr<TileGenBuffer>& bottom, const std::shared_ptr<TileGenBuffer>& top)
+void CRender2D::AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::shared_ptr<TileGenBuffer> top)
 {
 	m_drawBuffers[0] = bottom;
 	m_drawBuffers[1] = top;

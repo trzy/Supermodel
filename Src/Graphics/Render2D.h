@@ -150,7 +150,7 @@ public:
 	*    bottom		Bottom surface
 	*    top		Top surface	
 	*/
-	void AttachDrawBuffers(const std::shared_ptr<TileGenBuffer>& bottom, const std::shared_ptr<TileGenBuffer>& top);
+	void AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::shared_ptr<TileGenBuffer> top);
 
 	/*
 	 * Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes);

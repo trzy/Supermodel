@@ -318,14 +318,14 @@ void CFileLogger::WriteToFiles(const char *str)
   }
 }
 
-CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string>& filenames)
+CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string> &filenames)
   : m_logLevel(level),
     m_logFilenames(filenames)
 {
   ReopenFiles(std::ios::out);
 }
 
-CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string>& filenames, const std::vector<FILE *>& systemFiles)
+CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string> &filenames, const std::vector<FILE *> &systemFiles)
   : m_logLevel(level),
     m_logFilenames(filenames),
     m_systemFiles(systemFiles)
