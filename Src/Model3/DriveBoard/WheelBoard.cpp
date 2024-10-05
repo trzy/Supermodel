@@ -610,7 +610,7 @@ void CWheelBoard::SendStopAll(void)
 {
   //DebugLog(">> Stop All Effects\n");
 
-  ForceFeedbackCmd ffCmd;
+  ForceFeedbackCmd ffCmd{};
   ffCmd.id = FFStop;
 
   m_inputs->steering->SendForceFeedbackCmd(ffCmd);

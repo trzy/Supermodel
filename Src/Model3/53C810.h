@@ -18,7 +18,7 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * 53C810.h
  * 
@@ -42,7 +42,7 @@
 struct NCR53C810Context
 {
 	UINT8	regs[0x60];
-	
+
 	// Registers defined below should not be read from here, not regs[]
 	UINT32	regTEMP;	// TEMP
 	UINT32	regDSP;		// DSP: DMA SCRIPTS Pointer
@@ -54,13 +54,13 @@ struct NCR53C810Context
 	UINT8	regDSTAT;	// DSTAT: DMA Status (read only)
 	UINT8	regDIEN;	// DIEN: DMA Interrupt Enable
 	UINT8	regISTAT;	// ISTAT: Interrupt Status
-	
+
 	// Operational status
 	bool	halt;		// set true if halted by interrupt instruction
-	
+
 	// Big endian bus object for DMA memory access and instruction fetching
 	IBus	*Bus;
-	
+
 	// IRQ handling
 	CIRQ		*IRQ;		// IRQ controller
 	unsigned	scsiIRQ;	// IRQ bit to use when calling IRQ handler
@@ -93,7 +93,7 @@ public:
 	 *		SaveState	Block file to load state information from.
 	 */
 	void LoadState(CBlockFile *SaveState);
-	
+
 	/*
 	 * ReadRegister(reg):
 	 *
@@ -104,7 +104,7 @@ public:
 	 *				is ignored and returns 0.
 	 */
 	UINT8 ReadRegister(unsigned reg);
-	
+
 	/*
 	 * WriteRegister(reg, data):
 	 *
@@ -119,7 +119,7 @@ public:
 	 *		data	Data to write.
 	 */
 	void WriteRegister(unsigned reg, UINT8 data);
-	
+
 	/*
 	 * ReadPCIConfigSpace(device, reg, bits, offset):
 	 *
@@ -137,8 +137,8 @@ public:
 	 * Returns:
 	 *		Register data.
 	 */
-	UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
-	
+	UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
+
 	/*
 	 * WritePCIConfigSpace(device, reg, bits, offset, data):
 	 *
@@ -154,7 +154,7 @@ public:
 	 * 				register number.
 	 *		data	Data.
 	 */
-	void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, UINT32 data);
+	void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
 
 	/*
 	 * GetBaseAddress(void):
@@ -194,19 +194,18 @@ public:
 	 */
 	C53C810(void);
 	~C53C810(void);
-	
+
 private:
 	// Private members
 	void	Run(bool singleStep);
 	void	BuildOpTable(void);
 	void	Insert(UINT8 mask, UINT8 op, Result (*Handler)(struct NCR53C810Context *));
 	Result	(*OpTable[256])(struct NCR53C810Context *);
-	
+
 	// Context (register file)
 	struct NCR53C810Context	Ctx;
 	
-	// IRQ controller and IRQ identifier for this SCSI controller
-	CIRQ		*IRQ;
+	// IRQ identifier for this SCSI controller
 	unsigned	scsiIRQ;
 
 	// Base address of the SCSI device (varies by game)

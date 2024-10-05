@@ -226,20 +226,20 @@ void CJTAG::SaveState(CBlockFile* SaveState)
     }
 }
 
-void CJTAG::LoadState(CBlockFile* SaveState)
+void CJTAG::LoadState(CBlockFile* LoadState)
 {
-    if (Result::OKAY != SaveState->FindBlock("JTAG2"))
+    if (Result::OKAY != LoadState->FindBlock("JTAG2"))
     {
         ErrorLog("Unable to load JTAG state. Save state file is corrupt.");
         return;
     }
-    SaveState->Read(&m_state, sizeof(m_state));
-    SaveState->Read(&m_lastTck, sizeof(m_lastTck));
-    SaveState->Read(&m_tdo, sizeof(m_tdo));
-    SaveState->Read(&m_numDevices, sizeof(m_numDevices));
+    LoadState->Read(&m_state, sizeof(m_state));
+    LoadState->Read(&m_lastTck, sizeof(m_lastTck));
+    LoadState->Read(&m_tdo, sizeof(m_tdo));
+    LoadState->Read(&m_numDevices, sizeof(m_numDevices));
     for (auto& device : m_device)
     {
-        device->LoadStateFromBlock(SaveState);
+        device->LoadStateFromBlock(LoadState);
     }
 }
 

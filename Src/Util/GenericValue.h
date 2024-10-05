@@ -29,19 +29,19 @@ namespace Util
     template <typename T>
     struct IntegerEncodableAsHex
     {
-      static const bool value = std::is_integral<T>::value && sizeof(T) >= 2 && sizeof(T) <= 8;
+      static const bool value = std::is_integral_v<T> && sizeof(T) >= 2 && sizeof(T) <= 8;
     };
 
     // This case should never actually be called
     template <typename T>
-    static typename std::enable_if<!IntegerEncodableAsHex<T>::value, T>::type ParseInteger(const std::string &str)
+    static typename std::enable_if_t<!IntegerEncodableAsHex<T>::value, T> ParseInteger(const std::string &str)
     {
       return T();
     }
 
     // This case will be generated for hex encodable integers and executed
     template <typename T>
-    static typename std::enable_if<IntegerEncodableAsHex<T>::value, T>::type ParseInteger(const std::string &str)
+    static typename std::enable_if_t<IntegerEncodableAsHex<T>::value, T> ParseInteger(const std::string &str)
     {
       T tmp = 0;
       if (str.length() >= 3 && (

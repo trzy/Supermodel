@@ -130,7 +130,7 @@ bool CWinOutputs::CreateWindowClass()
 		return true;
 
 	// Setup description of window class
-	WNDCLASS wc = { 0 };
+	WNDCLASS wc{};
 	wc.lpszClassName = OUTPUT_WINDOW_CLASS;
 	wc.hInstance = GetModuleHandle(NULL);
 	wc.lpfnWndProc = OutputWindowProcCallback;

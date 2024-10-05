@@ -18,7 +18,7 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * SCSPDSP.h
  * 
@@ -32,8 +32,6 @@
 #include "Types.h"
 
 //#define DYNDSP
-#define DYNOPT	1		//set to 1 to enable optimization of recompiler
-
 
 //the DSP Context
 struct _SCSPDSP
@@ -83,8 +81,5 @@ void SCSPDSP_Init(_SCSPDSP *DSP);
 void SCSPDSP_SetSample(_SCSPDSP *DSP,INT32 sample,int SEL,int MXL);
 void SCSPDSP_Step(_SCSPDSP *DSP);
 void SCSPDSP_Start(_SCSPDSP *DSP);
-
-
-
 
 #endif	// INCLUDED_SCSPDSP_H

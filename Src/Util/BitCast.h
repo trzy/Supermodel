@@ -1,23 +1,25 @@
 #ifndef INCLUDED_UTIL_BITCAST_H
 #define INCLUDED_UTIL_BITCAST_H
 
-#include <stdexcept>
-#include <cstring>
 #include <cstdint>
 
-namespace Util
-{
 #if __cplusplus >= 202002L
 #include <bit>
+namespace Util
+{
 #define FloatAsInt32(x) std::bit_cast<int32_t>(x)
 #define Int32AsFloat(x) std::bit_cast<float>(x)
 #define Uint32AsFloat(x) std::bit_cast<float>(x)
 #else
+#include <stdexcept>
+#include <cstring>
+namespace Util
+{
 template <class Dest, class Source>
 inline Dest bit_cast(Source const& source) {
    static_assert(sizeof(Dest) == sizeof(Source), "size of destination and source objects must be equal");
-   static_assert(std::is_trivially_copyable<Dest>::value, "destination type must be trivially copyable.");
-   static_assert(std::is_trivially_copyable<Source>::value, "source type must be trivially copyable");
+   static_assert(std::is_trivially_copyable_v<Dest>, "destination type must be trivially copyable.");
+   static_assert(std::is_trivially_copyable_v<Source>, "source type must be trivially copyable");
 
    Dest dest;
    std::memcpy(&dest, &source, sizeof(dest));

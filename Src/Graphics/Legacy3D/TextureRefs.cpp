@@ -39,7 +39,7 @@ namespace Legacy3D {
 
 CTextureRefs::CTextureRefs() : m_size(0), m_hashCapacity(0), m_hashEntries(NULL)
 {
-	//
+	memset(m_array, 0, sizeof(m_array));
 }
 
 CTextureRefs::~CTextureRefs()
@@ -261,8 +261,7 @@ void CTextureRefs::DeleteAllHashEntries()
 	for (unsigned i = 0; i < m_hashCapacity; i++)
 	{
 		HashEntry *entry = m_hashEntries[i];
-		if (entry)
-			delete entry;
+		delete entry;
 	}
 	delete[] m_hashEntries;
 }

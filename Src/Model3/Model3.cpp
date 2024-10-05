@@ -838,6 +838,7 @@ UINT32 CModel3::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits,
     default:
       break;
     }
+    break;
   default:
     break;
   }
@@ -1144,13 +1145,13 @@ UINT16 CModel3::Read16(UINT32 addr)
     if (addr < 0xF1120000)
     {
       // Tile generator accesses its RAM as little endian, no adjustment needed here
-      uint16_t data = TileGen.ReadRAM16(addr&0x1FFFFF);
+      data = TileGen.ReadRAM16(addr&0x1FFFFF);
       return FLIPENDIAN16(data);
     }
     break;
 
 #ifdef NET_BOARD
-  case 0xc0: // spikeout call this
+  case 0xc0: // spikeout calls this
   // interesting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
   // sort of sync ack ? who writes this 16b value ?
   {
@@ -1165,6 +1166,7 @@ UINT16 CModel3::Read16(UINT32 addr)
       break;
     }
   }
+  break;
 #endif
   // Unknown
   default:
@@ -3119,21 +3121,21 @@ void CModel3::AttachOutputs(COutputs *OutputsPtr)
   DebugLog("Model 3 attached outputs\n");
 }
 
-const static int RAM_SIZE			= 0x800000;		//8MB
-const static int CROM_SIZE			= 0x800000;		//8MB
-const static int CROMxx_SIZE		= 0x8000000;	//128MB
-const static int VROM_SIZE			= 0x4000000;	//64MB
-const static int BACKUPRAM_SIZE		= 0x20000;		//128KB
-const static int SECURITYRAM_SIZE	= 0x20000;		//128KB
-const static int SOUNDROM_SIZE		= 0x80000;		//512KB
-const static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
-const static int DSBPROGROM_SIZE	= 0x20000;		//128KB
-const static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
-const static int DRIVEROM_SIZE		= 0x10000;		//64KB
-const static int NETBUFFER_SIZE		= 0x20000;		//128KB
-const static int NETRAM_SIZE		= 0x10000;		//64KB
+constexpr static int RAM_SIZE			= 0x800000;		//8MB
+constexpr static int CROM_SIZE			= 0x800000;		//8MB
+constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
+constexpr static int VROM_SIZE			= 0x4000000;	//64MB
+constexpr static int BACKUPRAM_SIZE		= 0x20000;		//128KB
+constexpr static int SECURITYRAM_SIZE	= 0x20000;		//128KB
+constexpr static int SOUNDROM_SIZE		= 0x80000;		//512KB
+constexpr static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
+constexpr static int DSBPROGROM_SIZE	= 0x20000;		//128KB
+constexpr static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
+constexpr static int DRIVEROM_SIZE		= 0x10000;		//64KB
+constexpr static int NETBUFFER_SIZE		= 0x20000;		//128KB
+constexpr static int NETRAM_SIZE		= 0x10000;		//64KB
 
-const static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
+constexpr static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
                                         CROMxx_SIZE + VROM_SIZE +
                                         BACKUPRAM_SIZE + SECURITYRAM_SIZE +
                                         SOUNDROM_SIZE + SAMPLEROM_SIZE +
@@ -3141,24 +3143,24 @@ const static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
                                         DRIVEROM_SIZE + NETBUFFER_SIZE +
                                         NETRAM_SIZE;
 
-const static int RAM_OFFSET			= 0;
-const static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
-const static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
-const static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
-const static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
-const static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
-const static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
-const static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
-const static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
-const static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
-const static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
-const static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
-const static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
+constexpr static int RAM_OFFSET			= 0;
+constexpr static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
+constexpr static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
+constexpr static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
+constexpr static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
+constexpr static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
+constexpr static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
+constexpr static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
+constexpr static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
+constexpr static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
+constexpr static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
+constexpr static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
+constexpr static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
 
 // Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
 Result CModel3::Init(void)
 {
-  float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
+  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
 
   // Allocate all memory for ROMs and PPC RAM
   memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];

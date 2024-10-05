@@ -603,11 +603,8 @@ CDSB1::CDSB1(const Util::Config::Node &config)
 
 CDSB1::~CDSB1(void)
 {
-	if (memoryPool != NULL)
-	{
-		delete [] memoryPool;
-		memoryPool = NULL;
-	}
+	delete [] memoryPool;
+	memoryPool = NULL;
 
 	progROM	= NULL;
 	mpegROM	= NULL;
@@ -648,7 +645,7 @@ enum
 	ST_GOTB6
 };
 
-static const char *stateName[] =
+static constexpr char *stateName[] =
 {
 	"idle",
 	"st_got_14",

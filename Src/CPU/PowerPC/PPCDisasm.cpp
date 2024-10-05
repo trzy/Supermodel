@@ -655,7 +655,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
         }
         else
-            return 0;
+            return false;
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_RC)) == (D_OP(31)|D_XO(124)))
     {
@@ -666,7 +666,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
         }
         else
-            return 0;
+            return false;
     }
     else if ((op & ~(M_RT|M_RA|M_SIMM)) == D_OP(14))
     {
@@ -676,7 +676,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             sprintf(oprs, "r%d,0x%08X", G_RT(op), value);
         }
         else
-            return 0;
+            return false;
     }
     else if ((op & ~(M_RT|M_RA|M_SIMM)) == D_OP(15))
     {
@@ -757,7 +757,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             strcat(mnem, "bt");
             break;
         default:
-            return 0;
+            return false;
         }
 
         if (op & M_LK)  strcat(mnem, "l");
@@ -780,8 +780,8 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
     sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
     }
     else
-        return 0;   // no match
-  return 1;
+        return false;   // no match
+  return true;
 }
 
 /*
@@ -821,7 +821,7 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
      * Decode signed 16-bit fields (SIMM and d) to spare us the work later
      */
 
-    DecodeSigned16(signed16, op, 0);
+    DecodeSigned16(signed16, op, false);
 
     /*
      * Try simplified forms first, then real instructions

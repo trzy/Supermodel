@@ -148,7 +148,7 @@ public:
 	*
 	* Parameters:
 	*    bottom		Bottom surface
-	*	 top		Top surface	
+	*    top		Top surface	
 	*/
 	void AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::shared_ptr<TileGenBuffer> top);
 

@@ -2,7 +2,6 @@
 #define _MODEL_H_
 
 #include <vector>
-#include <unordered_map>
 #include <memory>
 #include <cstring>
 #include "Types.h"

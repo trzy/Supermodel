@@ -310,14 +310,14 @@ private:
 	void	WritePalette	(int layer, int address, UINT32 data);
 	void	RecomputePalettes(int layer);	// 0 = bottom, 1 = top
 
-	const Util::Config::Node& m_config;
+	//const Util::Config::Node& m_config;
 	const bool m_gpuMultiThreaded;
 
 	CIRQ*		IRQ;		// IRQ controller the tile generator is attached to
 	CRender2D*	Render2D;	// 2D renderer the tile generator is attached to
 
 	UINT8*		memoryPool;		// all memory allocated here
-	UINT8*		m_vram;         // 1.125MB of VRAM
+	UINT8*		m_vram;			// 1.125MB of VRAM
 	UINT32*		m_vramP;		// vram pointer but integer size
 	UINT32*		m_palP;			// just a pointer to the palette ram which comes after the vram
 

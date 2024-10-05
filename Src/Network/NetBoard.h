@@ -99,7 +99,6 @@ private:
 	UINT16		recv_size;
 	UINT16		send_offset;
 	UINT16		send_size;
-	UINT8		slot;
 
 	// netsock
 	UINT16 port_in = 0;
@@ -114,7 +113,6 @@ private:
 
 	// only for some tests
 	UINT8 *bank;
-	UINT8 *bank2;
 	UINT8 test_irq;
 
 	std::thread interrupt5;
@@ -124,5 +122,3 @@ private:
 void Net_SetCB(int(*Run68k)(int cycles), void(*Int68k)(int irq));
 
 #endif	// INCLUDED_NETBOARD_H
-
-

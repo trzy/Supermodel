@@ -132,7 +132,7 @@ public:
    *    name      Block name. Must be unique and not NULL.
    *    comment   Comment string to embed in the block header.
    */
-  void NewBlock(const std::string &title, const std::string &comment);
+  void NewBlock(const std::string &name, const std::string &comment);
 
   /*
    * Create(file, headerName, comment):

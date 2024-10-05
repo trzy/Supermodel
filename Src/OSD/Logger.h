@@ -183,13 +183,13 @@ public:
   void DebugLog(const char *fmt, va_list vl);
   void InfoLog(const char *fmt, va_list vl);
   void ErrorLog(const char *fmt, va_list vl);
-	CFileLogger(LogLevel level, std::vector<std::string> filenames);
-  CFileLogger(LogLevel level, std::vector<std::string> filenames, std::vector<FILE *> systemFiles);
+  CFileLogger(LogLevel level, const std::vector<std::string> &filenames);
+  CFileLogger(LogLevel level, const std::vector<std::string> &filenames, const std::vector<FILE *> &systemFiles);
 
 private:
-	std::mutex m_mtx; // needed because we may close/reopen files and logging must be thread-safe
+  std::mutex m_mtx; // needed because we may close/reopen files and logging must be thread-safe
   LogLevel m_logLevel;
-	const std::vector<std::string> m_logFilenames;
+  const std::vector<std::string> m_logFilenames;
   std::vector<std::ofstream> m_logFiles;
   std::vector<FILE *> m_systemFiles;
 

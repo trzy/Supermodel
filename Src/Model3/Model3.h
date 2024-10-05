@@ -46,7 +46,7 @@
 #endif // NET_BOARD
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
-
+#include "OSD/Thread.h"
 
 /*
  * FrameTimings
@@ -102,8 +102,8 @@ public:
   Util::Config::Node& GetConfig() { return this->m_config; }
 
   // IPCIDevice interface
-  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
-  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, UINT32 data);
+  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
+  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
 
   // IBus interface
   UINT8 Read8(UINT32 addr);

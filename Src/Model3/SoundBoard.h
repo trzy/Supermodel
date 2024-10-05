@@ -31,7 +31,6 @@
 #include "Types.h"
 #include "CPU/Bus.h"
 #include "Model3/DSB.h"
-#include "OSD/Thread.h"
 
 /*
  * CSoundBoard:

@@ -293,7 +293,7 @@ void CDriveBoard::RunFrame(void)
   // Assuming Z80 runs @ 8.0MHz and INT triggers @ 60.0KHz for BillBoard
   // TODO - find out if Z80 frequency is correct and exact frequency of NMI interrupts (just guesswork at the moment!)
   int cycles = (int)(m_z80Clock * 1000000 / 60);
-  int loopCycles = 10000;
+  constexpr int loopCycles = 10000;
   while (cycles > 0)
   {
     if (m_allowInterrupts)

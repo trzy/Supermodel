@@ -31,7 +31,7 @@
 namespace Legacy3D {
 
 // Vertex shader
-static const char vertexShaderSource[] =
+static constexpr char vertexShaderSource[] =
 {
 "/**\n"
 " ** Supermodel\n"
@@ -246,7 +246,7 @@ static const char vertexShaderSource[] =
 	
 	
 // Fragment shader (single texture sheet)
-static const char fragmentShaderSingleSheetSource[] = 
+static constexpr char fragmentShaderSingleSheetSource[] = 
 {
 "/**\n"
 " ** Supermodel\n"
@@ -446,7 +446,7 @@ static const char fragmentShaderSingleSheetSource[] =
 
 
 // Fragment shader (8 texture sheets)
-static const char fragmentShaderMultiSheetSource[] = 
+static constexpr char fragmentShaderMultiSheetSource[] = 
 {
 "/**\n"
 " ** Supermodel\n"

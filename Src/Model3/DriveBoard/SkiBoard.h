@@ -150,7 +150,7 @@ private:
 
   UINT8 SimulateRead(void);
 
-  void SimulateWrite(UINT8 data);
+  void SimulateWrite(UINT8 cmd);
 
   void SendVibrate(UINT8 val);
 

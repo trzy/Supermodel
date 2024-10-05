@@ -33,7 +33,7 @@
 #include "InputSystem.h"
 #include "InputTypes.h"
 #include "Game.h"
-#include <stdarg.h>
+#include <cstdarg>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -316,9 +316,9 @@ CGearShift4Input *CInputs::AddGearShift4Input(const char *id, const char *label,
 }
 
 CTriggerInput *CInputs::AddTriggerInput(const char *id, const char *label, unsigned gameFlags, 
-	CSwitchInput *trigger, CSwitchInput *offscreen, UINT16 offVal, UINT16 onVal)
+	CSwitchInput *_trigger, CSwitchInput *offscreen, UINT16 offVal, UINT16 onVal)
 {
-	CTriggerInput *input = new CTriggerInput(id, label, gameFlags, trigger, offscreen, offVal, onVal);
+	CTriggerInput *input = new CTriggerInput(id, label, gameFlags, _trigger, offscreen, offVal, onVal);
 	m_inputs.push_back(input);
 	return input;
 }
@@ -488,9 +488,9 @@ Redisplay:
 
 		// Loop until user has selected a valid option
 		bool done = false;
-		char mapping[50];
 		while (!done)
 		{
+			char mapping[50];
 			// Wait for input from user
 			if (!m_system->ReadMapping(mapping, 50, false, READ_KEYBOARD|READ_MERGE, uiExit->GetMapping()))
 			{
@@ -500,7 +500,7 @@ Redisplay:
 				{
 					(*it)->SetMapping(oldMappings[index].c_str());
 					index++;
-				}	
+				}
 
 				cancelled = true;
 				goto Finish;

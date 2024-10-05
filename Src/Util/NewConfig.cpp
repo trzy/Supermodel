@@ -238,7 +238,7 @@ namespace Util
       if (Exists())
         m_value->Serialize(os);
       *os << "\"  children={";
-      for (auto v: m_children)
+      for (const auto &v: m_children)
         *os << ' ' << v.first;
       *os << " }" << std::endl;
       for (ptr_t child = m_first_child; child; child = child->m_next_sibling)

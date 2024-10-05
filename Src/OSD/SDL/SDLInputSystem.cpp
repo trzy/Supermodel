@@ -174,8 +174,8 @@ CSDLInputSystem::CSDLInputSystem(const Util::Config::Node& config)
     m_mouseX(0),
     m_mouseY(0),
     m_mouseZ(0),
-    m_mouseButtons(0),
-    m_config(config)
+    m_config(config),
+    m_mouseButtons(0)
 {
   //
 }

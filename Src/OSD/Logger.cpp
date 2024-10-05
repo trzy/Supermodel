@@ -295,7 +295,7 @@ void CFileLogger::ReopenFiles(std::ios_base::openmode mode)
   m_logFiles.clear();
 
   // (Re-)Open
-  for (auto filename: m_logFilenames)
+  for (const auto &filename: m_logFilenames)
   {
     std::ofstream ofs(filename.c_str(), mode);
     if (ofs.is_open() && ofs.good())
@@ -318,14 +318,14 @@ void CFileLogger::WriteToFiles(const char *str)
   }
 }
 
-CFileLogger::CFileLogger(CLogger::LogLevel level, std::vector<std::string> filenames)
+CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string> &filenames)
   : m_logLevel(level),
     m_logFilenames(filenames)
 {
   ReopenFiles(std::ios::out);
 }
 
-CFileLogger::CFileLogger(CLogger::LogLevel level, std::vector<std::string> filenames, std::vector<FILE *> systemFiles)
+CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string> &filenames, const std::vector<FILE *> &systemFiles)
   : m_logLevel(level),
     m_logFilenames(filenames),
     m_systemFiles(systemFiles)
