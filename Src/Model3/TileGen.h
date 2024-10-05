@@ -156,7 +156,7 @@ public:
 	 * Returns:
 	 *		Data from the RAM address.
 	 */
-	uint8_t ReadRAM8(unsigned addr) const;
+	uint8_t  ReadRAM8(unsigned addr) const;
 	uint16_t ReadRAM16(unsigned addr) const;
 	uint32_t ReadRAM32(unsigned addr) const;
 
@@ -290,22 +290,22 @@ private:
 
 	ColourOffsetRegister m_colourOffsetRegs[2];
 
-	bool	IsEnabled		(int layerNumber);
-	bool	Above3D			(int layerNumber);
-	bool	Is4Bit			(int layerNumber);
-	int		GetYScroll		(int layerNumber);
-	int		GetXScroll		(int layerNumber);
-	bool	LineScrollMode	(int layerNumber);
-	int		GetLineScroll	(int layerNumber, int yCoord);
-	int		GetTileNumber	(int xCoord, int yCoord, int xScroll, int yScroll);
-	int		GetTileData		(int layerNum, int tileNumber);
-	int		GetVFine		(int yCoord, int yScroll);
-	int		GetHFine		(int xCoord, int xScroll);
-	int		GetLineMask		(int layerNumber, int yCoord);
-	int		GetPixelMask	(int lineMask, int xCoord);
-	UINT32	GetColour32		(int layer, UINT32 data);
-	void	Draw4Bit		(int tileData, int hFine, int vFine, UINT32* lineBuffer, const UINT32* pal, int& x);
-	void	Draw8Bit		(int tileData, int hFine, int vFine, UINT32* lineBuffer, const UINT32* pal, int& x);
+	bool	IsEnabled		(int layerNumber) const;
+	bool	Above3D			(int layerNumber) const;
+	bool	Is4Bit			(int layerNumber) const;
+	int		GetYScroll		(int layerNumber) const;
+	int		GetXScroll		(int layerNumber) const;
+	bool	LineScrollMode	(int layerNumber) const;
+	int		GetLineScroll	(int layerNumber, int yCoord) const;
+	int		GetTileNumber	(int xCoord, int yCoord, int xScroll, int yScroll) const;
+	int		GetTileData		(int layerNum, int tileNumber) const;
+	int		GetVFine		(int yCoord, int yScroll) const;
+	int		GetHFine		(int xCoord, int xScroll) const;
+	int		GetLineMask		(int layerNumber, int yCoord) const;
+	int		GetPixelMask	(int lineMask, int xCoord) const;
+	UINT32	GetColour32		(int layer, UINT32 data) const;
+	void	Draw4Bit		(int tileData, int hFine, int vFine, UINT32* const __restrict lineBuffer, const UINT32* const __restrict pal, int& x) const;
+	void	Draw8Bit		(int tileData, int hFine, int vFine, UINT32* const __restrict lineBuffer, const UINT32* const __restrict pal, int& x) const;
 
 	void	WritePalette	(int layer, int address, UINT32 data);
 	void	RecomputePalettes(int layer);	// 0 = bottom, 1 = top

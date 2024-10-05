@@ -58,7 +58,7 @@ bool NodeAttributes::Pop()
 	return true;
 }
 
-bool NodeAttributes::StackLimit()
+bool NodeAttributes::StackLimit() const
 {
 	return m_vecAttribs.size() >= 1024;
 }

@@ -183,7 +183,7 @@ namespace Debugger
 			cpu->AddMappedIO(addr + 0x17, 1, "EFSDL,EFPAN",                            s_mSlotStr[slot]);
 		}
 		// SCSP Master control registers
-		const char *masterCtl = "SCSP Master Control Registers";
+		static const char *masterCtl = "SCSP Master Control Registers";
 		cpu->AddMappedIO(0x100400, 1, "MEM4MB,DAC18B",                   masterCtl);
 		cpu->AddMappedIO(0x100401, 1, "VER,MVOL",                        masterCtl);
 		cpu->AddMappedIO(0x100402, 2, "RBL,RBP",                         masterCtl);
@@ -233,7 +233,7 @@ namespace Debugger
 		}
 
 		// SCSP Master control registers
-		const char *slaveCtl = "SCSP Slave Control Registers";
+		static const char *slaveCtl = "SCSP Slave Control Registers";
 		cpu->AddMappedIO(0x300400, 1, "MEM4MB,DAC18B",                   slaveCtl);
 		cpu->AddMappedIO(0x300401, 1, "VER,MVOL",                        slaveCtl);
 		cpu->AddMappedIO(0x300402, 2, "RBL,RBP",                         slaveCtl);
@@ -329,7 +329,7 @@ namespace Debugger
 		cpu->AddRegion(0x080000, 0x0bffff, false, false, "Net 2"); // commram ???
 		cpu->AddRegion(0x0c0000, 0x0c01ff, false, false, "Net 3"); // ??? size unknown
 
-		const char *NetReg = "NetBoard Control Registers";
+		static const char *NetReg = "NetBoard Control Registers";
 		cpu->AddMappedIO(0x010110, 4, "Reg 1", NetReg);
 		cpu->AddMappedIO(0x010114, 4, "Reg 2", NetReg);
 		cpu->AddMappedIO(0x010180, 4, "Reg 3", NetReg);
@@ -576,7 +576,7 @@ namespace Debugger
 		{
 			CConsoleDebugger::ProcessToken(token, cmd);
 
-			const char *fmt = "  %-6s %-25s %s\n";
+			static const char *fmt = "  %-6s %-25s %s\n";
 			Print(" Emulator:\n");
 			Print(fmt, "les",    "loademustate",           "<filename>");
 			Print(fmt, "ses",    "saveemustate",           "<filename>");

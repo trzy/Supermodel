@@ -153,8 +153,8 @@ void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned wid
 
 		height = 1024;
 
-		const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
-		const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+		static constexpr int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+		static constexpr int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
 
 		for (int i = 0; i < m_textureBank[0].GetNumberOfLevels(); i++) {
 			m_textureBank[0].UploadTextures(i, mipXBase[i], mipYBase[i], width, height);

@@ -278,13 +278,13 @@ void CReal3D::EndFrame(void)
 
 // Mipmap coordinates for each reduction level (within a single 2048x1024 page)
 
-static const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
-static const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
-static const int mipDivisor[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
+static constexpr int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+static constexpr int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+static constexpr int mipDivisor[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
 
 // Tables of texel offsets corresponding to an NxN texel texture tile
 
-static const unsigned decode8x8[64] =
+static constexpr unsigned decode8x8[64] =
 {
    1, 0, 5, 4, 9, 8,13,12,
    3, 2, 7, 6,11,10,15,14,
@@ -296,7 +296,7 @@ static const unsigned decode8x8[64] =
   51,50,55,54,59,58,63,62
 };
 
-static const unsigned decode8x4[32] =
+static constexpr unsigned decode8x4[32] =
 {
    1, 0, 5, 4,
    3, 2, 7, 6,
@@ -308,7 +308,7 @@ static const unsigned decode8x4[32] =
   27,26,31,30
 };
 
-static const unsigned decode8x2[16] =
+static constexpr unsigned decode8x2[16] =
 {
    1, 0,
    3, 2,
@@ -322,8 +322,10 @@ static const unsigned decode8x2[16] =
 
 void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, bool sixteenBit, bool writeLSB, bool writeMSB, uint32_t &texDataOffset)
 {
-  uint32_t tileX = (std::min)(8u, width);
-  uint32_t tileY = (std::min)(8u, height);
+  const uint32_t tileX = (std::min)(8u, width);
+  const uint32_t tileY = (std::min)(8u, height);
+
+  const unsigned* const __restrict decode = (tileX == 8) ? decode8x8 : (tileX == 4) ? decode8x4 : (tileX == 2) ? decode8x2 : nullptr;
 
   texDataOffset = 0;
 
@@ -343,15 +345,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
             if (m_gpuMultiThreaded)
               MARK_DIRTY(textureRAMDirty, destOffset * 2);
 
-            if (tileX == 8) {
-              textureRAM[destOffset++] = texData[decode8x8[yy * tileX + xx]];
-            }
-            else if (tileX == 4) {
-              textureRAM[destOffset++] = texData[decode8x4[yy * tileX + xx]];
-            }
-            else if (tileX == 2) {
-              textureRAM[destOffset++] = texData[decode8x2[yy * tileX + xx]];
-            }
+            textureRAM[destOffset++] = texData[decode[yy * tileX + xx]];
 
             texDataOffset++;
           }
@@ -374,8 +368,8 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
 
     // Outer 2 loops: NxN tiles
     const uint8_t byteSelect = (uint8_t)writeLSB | ((uint8_t)writeMSB << 1);
-    uint16_t tempData;
     static constexpr uint16_t byteMask[4] = {0xFFFF, 0xFF00, 0x00FF, 0x0000};
+    const uint32_t offset = std::max(1u, (tileY * tileX) / 2);
     for (uint32_t y = yPos; y < (yPos + height); y += tileY)
     {
       for (uint32_t x = xPos; x < (xPos + width); x += tileX)
@@ -393,15 +387,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
               const uint8_t shift = (8 * ((xx & 1) ^ 1));
               const uint8_t index = (yy ^ 1) * tileX + (xx ^ 1) - (tileX & 1);
 
-              if (tileX == 8) {
-                tempData = (texData[decode8x8[index] / 2] >> shift) & 0xFF;
-              }
-              else if (tileX == 4) {
-                tempData = (texData[decode8x4[index] / 2] >> shift) & 0xFF;
-              }
-              else if (tileX == 2) {
-                tempData = (texData[decode8x2[index] / 2] >> shift) & 0xFF;
-              }
+              uint16_t tempData = (texData[decode[index] / 2] >> shift) & 0xFF;
 
               tempData |= tempData << 8;
               tempData &= byteMask[byteSelect] ^ 0xFFFF;
@@ -411,7 +397,6 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
           }
           destOffset += 2048 - tileX; // next line
         }
-        uint32_t offset = (std::max)(1u, (tileY * tileX) / 2);
         texData += offset; // next tile
         texDataOffset += offset; // next tile
       }
@@ -521,7 +506,7 @@ void CReal3D::DMACopy(void)
   {
     while (dmaLength != 0)
     {
-      uint32_t  data = Bus->Read32(dmaSrc);
+      uint32_t data = Bus->Read32(dmaSrc);
       Bus->Write32(dmaDest, FLIPENDIAN32(data));
       dmaSrc += 4;
       dmaDest += 4;
@@ -798,7 +783,7 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 			ping_pong = (ppc_total_cycles() >= statusChange ? 0x02000000 : 0x0);
 	  }
 
-		return 0xfdffffff | ping_pong;
+	  return 0xfdffffff | ping_pong;
   }
 
   else if (reg >= 20 && reg<=32) {	// line of sight registers
@@ -1094,17 +1079,14 @@ CReal3D::~CReal3D(void)
     printf("Wrote textures as L4 (channel 3) to 'textures_l4_3.bmp'\n");
   }
 
-  Render3D = NULL;
-  if (memoryPool != NULL)
-  {
-    delete [] memoryPool;
-    memoryPool = NULL;
-  }
-  cullingRAMLo = NULL;
-  cullingRAMHi = NULL;
-  polyRAM = NULL;
-  textureRAM = NULL;
-  textureFIFO = NULL;
-  vrom = NULL;
+  Render3D = nullptr;
+  delete [] memoryPool;
+  memoryPool = nullptr;
+  cullingRAMLo = nullptr;
+  cullingRAMHi = nullptr;
+  polyRAM = nullptr;
+  textureRAM = nullptr;
+  textureFIFO = nullptr;
+  vrom = nullptr;
   DebugLog("Destroyed Real3D\n");
 }

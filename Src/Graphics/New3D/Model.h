@@ -233,7 +233,7 @@ public:
 
 	bool Push();
 	bool Pop();
-	bool StackLimit();
+	bool StackLimit() const;
 	void Reset();
 
 	int currentTexOffsetX;
