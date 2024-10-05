@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <exception>
+#include <iterator>
 
 namespace Util
 {
