@@ -58,7 +58,7 @@ public:
 	UINT8 Read8(UINT32 addr);
 	UINT16 Read16(UINT32 addr);
 	UINT32 Read32(UINT32 addr);
-	
+
 	/*
 	 * Write8(addr, data):
 	 * Write16(addr, data):
@@ -83,7 +83,7 @@ public:
 	 *		data	Byte to write to MIDI port.
 	 */
 	void WriteMIDIPort(UINT8 data);
-	
+
 	/*
 	 * SaveState(SaveState):
 	 *
@@ -110,14 +110,14 @@ public:
 	 * Runs the sound board for one frame, updating sound in the process.
 	 */
 	bool RunFrame(void);
-	
+
 	/*
 	 * Reset(void):
 	 *
 	 * Resets the sound board.
 	 */
 	void Reset(void);
-	
+
 	/*
 	 * AttachDSB(CDSB *DSBPtr):
 	 *

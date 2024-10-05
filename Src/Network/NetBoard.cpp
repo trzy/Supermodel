@@ -353,7 +353,7 @@ UINT16 CNetBoard::Read16(UINT32 a)
 
 UINT32 CNetBoard::Read32(UINT32 a)
 {
-	UINT32	hi, lo;
+	UINT32 hi, lo;
 	UINT32 result;
 	switch ((a >> 16) & 0xF)
 	{
@@ -1128,7 +1128,7 @@ Result CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	memset(bank, 0, 0x10000);*/
 
 	// control register alloc
-	ct = new UINT8[0x100];
+	ct = new (std::nothrow) UINT8[0x100];
 	if (NULL == ct)
 	{
 		DebugLog("error mem ct\n");
@@ -1178,6 +1178,7 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 {
 	memoryPool	= NULL;
 	bank		= NULL;
+	bank2		= NULL;
 	ct			= NULL;
 	netRAM		= NULL;
 	netBuffer	= NULL;
@@ -1190,6 +1191,15 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 	test_irq	= 0;
 
 	int5		= false;
+
+	m_attached = false;
+	commbank = 0;
+	recv_offset = 0;
+	recv_size = 0;
+	send_offset = 0;
+	send_size = 0;
+
+	slot = 0;
 }
 
 CNetBoard::~CNetBoard(void)

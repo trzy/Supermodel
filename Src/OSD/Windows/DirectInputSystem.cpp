@@ -604,7 +604,7 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 		UINT nDevices;
 		if (m_getRIDevListPtr(NULL, &nDevices, sizeof(RAWINPUTDEVICELIST)) == 0 && nDevices > 0)
 		{
-			PRAWINPUTDEVICELIST pDeviceList = new RAWINPUTDEVICELIST[nDevices];
+			PRAWINPUTDEVICELIST pDeviceList = new (std::nothrow) RAWINPUTDEVICELIST[nDevices];
 			if (pDeviceList != NULL && m_getRIDevListPtr(pDeviceList, &nDevices, sizeof(RAWINPUTDEVICELIST)) != (UINT)-1)
 			{
 				// Loop through devices backwards (since new devices are usually added at beginning)
@@ -1644,7 +1644,7 @@ const char *CDirectInputSystem::GetKeyName(int keyIndex)
 	return s_keyMap[keyIndex].keyName;
 }
 
-bool CDirectInputSystem::IsKeyPressed(int kbdNum, int keyIndex)
+bool CDirectInputSystem::IsKeyPressed(int kbdNum, int keyIndex) const
 {
 	// Get DI key code (scancode) for given key index
 	int diKey = s_keyMap[keyIndex].diKey;
@@ -1660,14 +1660,14 @@ bool CDirectInputSystem::IsKeyPressed(int kbdNum, int keyIndex)
 	return !!(m_diKeyState[diKey] & 0x80);
 }
 
-int CDirectInputSystem::GetMouseAxisValue(int mseNum, int axisNum)
+int CDirectInputSystem::GetMouseAxisValue(int mseNum, int axisNum) const
 {
 	if (m_useRawInput)
 	{
 		// For RawInput, get combined or individual mouse state and return value for given axis
 		// The cursor is always hidden when using RawInput, so it does not matter if these values don't match with the cursor (with multiple
 		// mice the cursor is irrelevant anyway)
-		RawMseState *pMseState = (mseNum == ANY_MOUSE ? &m_combRawMseState : &m_rawMseStates[mseNum]);
+		const RawMseState *pMseState = (mseNum == ANY_MOUSE ? &m_combRawMseState : &m_rawMseStates[mseNum]);
 		switch (axisNum)
 		{
 			case AXIS_X: return pMseState->x;
@@ -1676,7 +1676,7 @@ int CDirectInputSystem::GetMouseAxisValue(int mseNum, int axisNum)
 			default:     return 0;
 		}
 	}
-	
+
 	// For DirectInput, for X- and Y-axes just use cursor position within window if available (so that mouse movements sync with the cursor)
 	if (axisNum == AXIS_X || axisNum == AXIS_Y)
 	{
@@ -1695,7 +1695,7 @@ int CDirectInputSystem::GetMouseAxisValue(int mseNum, int axisNum)
 	}
 }
 
-int CDirectInputSystem::GetMouseWheelDir(int mseNum)
+int CDirectInputSystem::GetMouseWheelDir(int mseNum) const
 {
 	if (m_useRawInput)
 	{
@@ -1707,7 +1707,7 @@ int CDirectInputSystem::GetMouseWheelDir(int mseNum)
 	return m_diMseState.wheelDir;
 }
 
-bool CDirectInputSystem::IsMouseButPressed(int mseNum, int butNum)
+bool CDirectInputSystem::IsMouseButPressed(int mseNum, int butNum) const
 {
 	if (m_useRawInput)
 	{
@@ -1722,7 +1722,7 @@ bool CDirectInputSystem::IsMouseButPressed(int mseNum, int butNum)
 	return (butNum < 5 ? !!(m_diMseState.buttons[butNum] & 0x80) : false);
 }
 
-int CDirectInputSystem::GetJoyAxisValue(int joyNum, int axisNum)
+int CDirectInputSystem::GetJoyAxisValue(int joyNum, int axisNum) const
 {
 	// Return raw value for given joystick number and axis (values range from -32768 to 32767)
 	switch (axisNum)
@@ -1739,21 +1739,21 @@ int CDirectInputSystem::GetJoyAxisValue(int joyNum, int axisNum)
 	}
 }
 
-bool CDirectInputSystem::IsJoyPOVInDir(int joyNum, int povNum, int povDir)
+bool CDirectInputSystem::IsJoyPOVInDir(int joyNum, int povNum, int povDir) const
 {
 	// Check if POV-hat value for given joystick number and POV is pointing in required direction
 	int povVal = m_diJoyStates[joyNum].rgdwPOV[povNum] / 100;   // DirectInput value is angle of POV-hat in 100ths of a degree
 	switch (povDir)
 	{
-		case POV_UP:    return povVal == 315 || povVal == 0 || povVal == 45;
+		case POV_UP:    return povVal == 315 || povVal == 0   || povVal == 45;
 		case POV_DOWN:  return povVal == 135 || povVal == 180 || povVal == 225;
-		case POV_RIGHT: return povVal == 45 || povVal == 90 || povVal == 135;
+		case POV_RIGHT: return povVal == 45  || povVal == 90  || povVal == 135;
 		case POV_LEFT:  return povVal == 225 || povVal == 270 || povVal == 315;
 		default:        return false;
 	}
 }
 
-bool CDirectInputSystem::IsJoyButPressed(int joyNum, int butNum)
+bool CDirectInputSystem::IsJoyButPressed(int joyNum, int butNum) const
 {
 	// Get joystick state for given joystick and return current button value for given button number
 	return !!m_diJoyStates[joyNum].rgbButtons[butNum];
@@ -2003,19 +2003,19 @@ CInputSource *CDirectInputSystem::CreateAnyMouseSource(EMousePart msePart)
 	return CInputSystem::CreateAnyMouseSource(msePart);
 }
 
-int CDirectInputSystem::GetNumKeyboards()
+int CDirectInputSystem::GetNumKeyboards() const
 {
 	// If RawInput enabled, then return number of keyboards found.  Otherwise, return ANY_KEYBOARD as DirectInput cannot handle multiple keyboards
 	return (m_useRawInput ? m_rawKeyboards.size() : ANY_KEYBOARD);
 }
-	
-int CDirectInputSystem::GetNumMice()
+
+int CDirectInputSystem::GetNumMice() const
 {
 	// If RawInput enabled, then return number of mice found.  Otherwise, return ANY_MOUSE as DirectInput cannot handle multiple keyboards
 	return (m_useRawInput ? m_rawMice.size() : ANY_MOUSE);
 }
-	
-int CDirectInputSystem::GetNumJoysticks()
+
+int CDirectInputSystem::GetNumJoysticks() const
 {
 	// Return number of joysticks found
 	return m_diJoyInfos.size();

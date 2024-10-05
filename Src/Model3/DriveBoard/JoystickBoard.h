@@ -45,7 +45,7 @@ public:
    * Returns:
    *    Drive board type.
    */
-  Game::DriveBoardType GetType(void);
+  Game::DriveBoardType GetType(void) const;
 
   /*
    * Get7SegDisplays(seg1Digit1, seg1Digit2, seg2Digit1, seg2Digit2):
@@ -59,7 +59,7 @@ public:
    *    seg2Digit1  Second display, first digit.
    *    seg2Digit2  Second display, second digit.
    */
-  void Get7SegDisplays(UINT8 &seg1Digit, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2);
+  void Get7SegDisplays(UINT8 &seg1Digit, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2) const;
 
 
   /*
@@ -208,13 +208,13 @@ private:
 
   void SendVibrate(UINT8 val);
 
-  uint8_t ReadADCChannel1();
+  uint8_t ReadADCChannel1() const;
 
-  uint8_t ReadADCChannel2();
+  uint8_t ReadADCChannel2() const;
 
-  uint8_t ReadADCChannel3();
+  uint8_t ReadADCChannel3() const;
 
-  uint8_t ReadADCChannel4();
+  uint8_t ReadADCChannel4() const;
 };
 
 #endif  // INCLUDED_JOYBOARD_H

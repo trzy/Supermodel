@@ -122,7 +122,7 @@ void CDSBResampler::Reset(void)
 {
 	// Initial state of fractions (24.8 fixed point)
 	nFrac = 0<<8;	// fraction of next sample to use (0->1.0 as x moves p->n)
- 	pFrac = 1<<8;	// previous sample (1.0->0 as x moves p->n)
+	pFrac = 1<<8;	// previous sample (1.0->0 as x moves p->n)
 }
 
 // Mixes audio and returns number of samples copied back to start of buffer (ie. offset at which new samples should be written)
@@ -883,7 +883,7 @@ UINT16 CDSB2::Read16(UINT32 addr)
 
 UINT32 CDSB2::Read32(UINT32 addr)
 {
-	UINT32	hi, lo;
+	UINT32 hi, lo;
 
 	if (addr < (128*1024))
 	{
@@ -1236,10 +1236,26 @@ CDSB2::CDSB2(const Util::Config::Node &config)
 	mpegR		= NULL;
 
 	cmdLatch	= 0;
-	mpegState	= 0;
+	mpegState	= ST_IDLE;
 	mpegStart	= 0;
 	mpegEnd		= 0;
 	playing		= 0;
+
+	retainedSamples = 0;
+
+	memset(fifo, 0, sizeof(fifo));
+	fifoIdxW = fifoIdxR = 0;
+	volume[0] = 0xFF;	// set to max volume in case we miss the volume commands
+	volume[1] = 0xFF;
+	stereo = StereoMode::Stereo;
+
+	m_cyclesElapsedThisFrame = 0;
+	m_nextTimerInterruptCycles = k_timerPeriod;
+
+	usingLoopStart = 0;
+	usingLoopEnd = 0;
+	usingMPEGStart = 0;
+	usingMPEGEnd = 0;
 
 	DebugLog("Built DSB2 Board\n");
 }

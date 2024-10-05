@@ -517,7 +517,7 @@ static void SPR(char *dest, unsigned spr_field)
     case 982:   strcat(dest, "rpa");    break;
     case 1010:  strcat(dest, "iabr");   break;
 
-    default:    sprintf(dest, "%s%d", dest, spr);
+    default:    strcat(dest, std::to_string(spr).c_str());
                 break;
     }
 }
@@ -1053,7 +1053,8 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
 
             case F_MTSPR:
                 SPR(oprs, G_SPR(op));
-                sprintf(oprs, "%s,r%d", oprs, G_RT(op));
+                strcat(oprs, ",r");
+                strcat(oprs, std::to_string(G_RT(op)).c_str());
                 break;
 
             case F_MTSR:

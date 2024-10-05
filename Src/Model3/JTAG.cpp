@@ -243,7 +243,7 @@ void CJTAG::LoadState(CBlockFile* LoadState)
     }
 }
 
-bool CJTAG::Read()
+bool CJTAG::Read() const
 {
     return m_tdo;
 }

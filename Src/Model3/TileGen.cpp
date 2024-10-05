@@ -177,7 +177,7 @@ void CTileGen::EndFrame(void)
  Emulation Functions
 ******************************************************************************/
 
-UINT32 CTileGen::ReadRAM32(unsigned addr)
+UINT32 CTileGen::ReadRAM32(unsigned addr) const
 {
 	return *(UINT32 *) &m_vram[addr];
 }
@@ -198,7 +198,7 @@ void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 }
 
 //TODO: 8- and 16-bit handlers have not been thoroughly tested
-uint8_t CTileGen::ReadRAM8(unsigned addr)
+uint8_t CTileGen::ReadRAM8(unsigned addr) const
 {
   return m_vram[addr];
 }
@@ -214,7 +214,7 @@ void CTileGen::WriteRAM8(unsigned addr, uint8_t data)
 }
 
 // Star Wars Trilogy uses this
-uint16_t CTileGen::ReadRAM16(unsigned addr)
+uint16_t CTileGen::ReadRAM16(unsigned addr) const
 {
   return *((uint16_t *) &m_vram[addr]);
 }
@@ -229,7 +229,7 @@ void CTileGen::WriteRAM16(unsigned addr, uint16_t data)
   WriteRAM32(addr & ~1, tmp);
 }
 
-UINT32 CTileGen::ReadRegister(unsigned reg)
+UINT32 CTileGen::ReadRegister(unsigned reg) const
 {
   reg &= 0xFF;
   return m_regs[reg/4];
@@ -238,10 +238,10 @@ UINT32 CTileGen::ReadRegister(unsigned reg)
 void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 {
 	reg &= 0xFF;
-		
+
 	switch (reg)
 	{
-  case 0x00:
+	case 0x00:
 	case 0x08:
 	case 0x0C:
 		//end of frame
@@ -273,7 +273,7 @@ void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 		//printf("%02X = %08X\n", reg, data);
 		break;
 	}
-	
+
 	// Modify register
 	m_regs[reg/4] = data;
 }

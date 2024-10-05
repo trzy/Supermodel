@@ -50,12 +50,12 @@ void CSwitchInput::Poll()
 		value = m_offVal;
 }
 
-bool CSwitchInput::Pressed()
+bool CSwitchInput::Pressed() const
 {
 	return prevValue == m_offVal && value == m_onVal;
 }
 
-bool CSwitchInput::Released()
+bool CSwitchInput::Released() const
 {
 	return prevValue == m_onVal && value == m_offVal;
 }
@@ -85,12 +85,12 @@ void CAnalogInput::Poll()
 		value = m_minVal;
 }
 
-bool CAnalogInput::HasValue()
+bool CAnalogInput::HasValue() const
 {
 	return value > m_minVal;
 }
 
-double CAnalogInput::ValueAsFraction()
+double CAnalogInput::ValueAsFraction() const
 {
 	double frac = (double)(value - m_minVal)/(double)(m_maxVal - m_minVal);
 	return (frac >= 0.0 ? frac : -frac);
@@ -134,12 +134,12 @@ void CAxisInput::Poll()
 		value = m_offVal;
 }
 
-bool CAxisInput::HasValue()
+bool CAxisInput::HasValue() const
 {
 	return value != m_offVal;
 }
 
-double CAxisInput::ValueAsFraction()
+double CAxisInput::ValueAsFraction() const
 {
 	double frac = (double)(value - m_minVal)/(double)(m_maxVal - m_minVal);
 	return (frac >= 0.0 ? frac : -frac);

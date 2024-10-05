@@ -419,7 +419,7 @@ UINT8 C53C810::ReadRegister(unsigned reg)
   return Ctx.regs[reg&0xFF];
 } 
 
-UINT32 C53C810::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
+UINT32 C53C810::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const
 {
   UINT32  d;
   
@@ -463,7 +463,7 @@ void C53C810::WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, 
       baseAddress = data & 0xFF;
 }
 
-UINT8 C53C810::GetBaseAddress(void)
+UINT8 C53C810::GetBaseAddress(void) const
 {
   return baseAddress;
 }

@@ -49,7 +49,7 @@ public:
    * Returns:
    *    Drive board type.
    */
-  virtual Game::DriveBoardType GetType(void);
+  virtual Game::DriveBoardType GetType(void) const;
 
   /*
    * IsAttached(void):
@@ -58,7 +58,7 @@ public:
    *    True if the drive board is "attached" and should be emulated,
    *    otherwise false.
    */
-  virtual bool IsAttached(void);
+  virtual bool IsAttached(void) const;
 
   /*
    * IsSimulated(void):
@@ -67,7 +67,7 @@ public:
    *    True if the drive board is being simulated rather than actually
    *    emulated, otherwise false.
    */
-  virtual bool IsSimulated(void);
+  virtual bool IsSimulated(void) const;
 
   /*
    * GetDIPSwitches(dip1, dip2):
@@ -78,8 +78,8 @@ public:
    *    dip1  Reference of variable to store DIP switch 1 to.
    *    dip2  DIP switch 2.
    */
-  virtual void GetDIPSwitches(UINT8 &dip1, UINT8 &dip2);
-  virtual void GetDIPSwitches(UINT8& dip1);
+  virtual void GetDIPSwitches(UINT8 &dip1, UINT8 &dip2) const;
+  virtual void GetDIPSwitches(UINT8& dip1) const;
 
   /*
    * SetDIPSwitches(dip1, dip2):
@@ -99,7 +99,7 @@ public:
    * Returns:
    *    Strength of the force feedback based on drive board DIP switches (1-8).
    */
-  virtual unsigned GetForceFeedbackStrength(void);
+  virtual unsigned GetForceFeedbackStrength(void) const;
 
   /*
    * SetForceFeedbackStrength(strength):
@@ -277,50 +277,50 @@ protected:
   virtual void Disable(void);
 
   // Whether disabled and/or not attached -- used to determine whether to carry out emulation
-  bool IsDisabled(void);
+  bool IsDisabled(void) const;
 
   // Attempt to load drive board data from old save states (prior to drive board refactor)
   void LoadLegacyState(const LegacyDriveBoardState &state, CBlockFile *SaveState);
 
 
-    const Util::Config::Node& m_config;
+  const Util::Config::Node& m_config;
 
-    bool m_attached;    // True if drive board is attached
-    bool m_disabled;    // True if emulation is internally disabled (e.g., by loading an incompatible save state). Can only be enabled once and if attached.
-    bool m_simulated;   // True if drive board should be simulated rather than emulated
+  bool m_attached;    // True if drive board is attached
+  bool m_disabled;    // True if emulation is internally disabled (e.g., by loading an incompatible save state). Can only be enabled once and if attached.
+  bool m_simulated;   // True if drive board should be simulated rather than emulated
 
-    // Emulation state
-    bool m_initialized;     // True if drive board has finished initialization
-    bool m_allowInterrupts; // True if drive board has enabled NMI interrupts
+  // Emulation state
+  bool m_initialized;     // True if drive board has finished initialization
+  bool m_allowInterrupts; // True if drive board has enabled NMI interrupts
 
-    UINT8 m_dataSent;       // Last command sent by main board
-    UINT8 m_dataReceived;   // Data to send back to main board
+  UINT8 m_dataSent;       // Last command sent by main board
+  UINT8 m_dataReceived;   // Data to send back to main board
 
-    UINT8 m_dip1;           // Value of DIP switch 1
-    UINT8 m_dip2;           // Value of DIP switch 2
+  UINT8 m_dip1;           // Value of DIP switch 1
+  UINT8 m_dip2;           // Value of DIP switch 2
 
-    // Simulation state
-    UINT8 m_initState;
-    UINT8 m_statusFlags;
-    UINT8 m_boardMode;
-    UINT8 m_readMode;
-    UINT8 m_wheelCenter;
-    UINT8 m_cockpitCenter;
-    UINT8 m_echoVal;
+  // Simulation state
+  UINT8 m_initState;
+  UINT8 m_statusFlags;
+  UINT8 m_boardMode;
+  UINT8 m_readMode;
+  UINT8 m_wheelCenter;
+  UINT8 m_cockpitCenter;
+  UINT8 m_echoVal;
 
-    const UINT8* m_rom;     // 32k ROM
-    UINT8* m_ram;           // 8k RAM
+  const UINT8* m_rom;     // 32k ROM
+  UINT8* m_ram;           // 8k RAM
 
-    const UINT8* m_dummyROM;
+  const UINT8* m_dummyROM;
 
-    CZ80 m_z80;             // Z80 CPU
-    float m_z80Clock;       // Z80 clock frequency
-    bool m_z80NMI;          // Non Masquable Interrupt or Interrupt
+  CZ80 m_z80;             // Z80 CPU
+  float m_z80Clock;       // Z80 clock frequency
+  bool m_z80NMI;          // Non Masquable Interrupt or Interrupt
 
-    CInputs* m_inputs;
-    unsigned m_inputFlags;
+  CInputs* m_inputs;
+  unsigned m_inputFlags;
 
-    COutputs* m_outputs;
+  COutputs* m_outputs;
 };
 
 #endif  // INCLUDED_DRIVEBOARD_H

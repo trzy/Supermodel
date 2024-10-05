@@ -20,11 +20,11 @@ namespace New3D {
 		void AttachMemory(const UINT16* textureRam);
 		void Bind();
 		void UploadTextures(int level, int x, int y, int width, int height);
-		int GetNumberOfLevels();
+		int GetNumberOfLevels() const;
 
 	private:
-		GLuint m_texID = 0;
 		const UINT16* m_textureRam = nullptr;
+		GLuint m_texID = 0;
 		int m_numLevels = 0;
 	};
 

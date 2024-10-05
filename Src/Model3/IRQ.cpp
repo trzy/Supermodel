@@ -86,12 +86,12 @@ void CIRQ::WriteIRQEnable(UINT8 data)
 	irqEnable = (unsigned) data;
 }
 
-UINT8 CIRQ::ReadIRQEnable(void)
+UINT8 CIRQ::ReadIRQEnable(void) const
 {
 	return (UINT8) (irqEnable&0xFF);
 }
 
-UINT8 CIRQ::ReadIRQState(void)
+UINT8 CIRQ::ReadIRQState(void) const
 {
 	return (UINT8) (irqState&0xFF);
 }

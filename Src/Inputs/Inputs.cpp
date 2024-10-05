@@ -44,8 +44,8 @@ CInputs::CInputs(CInputSystem *system)
 {
 	// UI controls are hard coded here, everything else is initialized to NONE so that it can be loaded from
 	// the config file.
-	
-	// UI Controls  
+
+	// UI Controls
 	uiExit             = AddSwitchInput("UIExit",             "Exit UI",               Game::INPUT_UI, "KEY_ESCAPE");
 	uiReset            = AddSwitchInput("UIReset",            "Reset",                 Game::INPUT_UI, "KEY_ALT+KEY_R");
 	uiPause            = AddSwitchInput("UIPause",            "Pause",                 Game::INPUT_UI, "KEY_ALT+KEY_P");
@@ -53,10 +53,10 @@ CInputs::CInputs(CInputSystem *system)
 	uiSaveState        = AddSwitchInput("UISaveState",        "Save State",            Game::INPUT_UI, "KEY_F5");
 	uiChangeSlot       = AddSwitchInput("UIChangeSlot",       "Change Save Slot",      Game::INPUT_UI, "KEY_F6");
 	uiLoadState        = AddSwitchInput("UILoadState",        "Load State",            Game::INPUT_UI, "KEY_F7");
-	uiMusicVolUp	     = AddSwitchInput("UIMusicVolUp",		    "Increase Music Volume", Game::INPUT_UI, "KEY_F10");
-	uiMusicVolDown	   = AddSwitchInput("UIMusicVolDown",	    "Decrease Music Volume", Game::INPUT_UI, "KEY_F9");
-	uiSoundVolUp	     = AddSwitchInput("UISoundVolUp",		    "Increase Sound Volume", Game::INPUT_UI, "KEY_F12");
-	uiSoundVolDown	   = AddSwitchInput("UISoundVolDown",	    "Decrease Sound Volume", Game::INPUT_UI, "KEY_F11");
+	uiMusicVolUp       = AddSwitchInput("UIMusicVolUp",       "Increase Music Volume", Game::INPUT_UI, "KEY_F10");
+	uiMusicVolDown     = AddSwitchInput("UIMusicVolDown",     "Decrease Music Volume", Game::INPUT_UI, "KEY_F9");
+	uiSoundVolUp       = AddSwitchInput("UISoundVolUp",       "Increase Sound Volume", Game::INPUT_UI, "KEY_F12");
+	uiSoundVolDown     = AddSwitchInput("UISoundVolDown",     "Decrease Sound Volume", Game::INPUT_UI, "KEY_F11");
 	uiClearNVRAM       = AddSwitchInput("UIClearNVRAM",       "Clear NVRAM",           Game::INPUT_UI, "KEY_ALT+KEY_N");
 	uiSelectCrosshairs = AddSwitchInput("UISelectCrosshairs", "Select Crosshairs",     Game::INPUT_UI, "KEY_ALT+KEY_I");
 	uiToggleFrLimit    = AddSwitchInput("UIToggleFrameLimit", "Toggle Frame Limiting", Game::INPUT_UI, "KEY_ALT+KEY_T");
@@ -76,7 +76,7 @@ CInputs::CInputs(CInputSystem *system)
 	service[1]         = AddSwitchInput("ServiceB", "Service B", Game::INPUT_COMMON, "NONE");
 	test[0]            = AddSwitchInput("TestA",    "Test A",    Game::INPUT_COMMON, "NONE");
 	test[1]            = AddSwitchInput("TestB",    "Test B",    Game::INPUT_COMMON, "NONE");
-	
+
 	// 4-Way Joysticks
 	up[0]              = AddSwitchInput("JoyUp",     "P1 Joystick Up",    Game::INPUT_JOYSTICK1, "NONE");
 	down[0]            = AddSwitchInput("JoyDown",   "P1 Joystick Down",  Game::INPUT_JOYSTICK1, "NONE");
@@ -96,7 +96,7 @@ CInputs::CInputs(CInputSystem *system)
 	kick[1]            = AddSwitchInput("Kick2",   "P2 Kick",   Game::INPUT_FIGHTING, "NONE");
 	guard[1]           = AddSwitchInput("Guard2",  "P2 Guard",  Game::INPUT_FIGHTING, "NONE");
 	escape[1]          = AddSwitchInput("Escape2", "P2 Escape", Game::INPUT_FIGHTING, "NONE");
-	
+
 	// Spikeout Buttons
 	shift              = AddSwitchInput("Shift",   "Shift", Game::INPUT_SPIKEOUT, "NONE");
 	beat               = AddSwitchInput("Beat",    "Beat",  Game::INPUT_SPIKEOUT, "NONE");
@@ -114,22 +114,22 @@ CInputs::CInputs(CInputSystem *system)
 	// Racing Game Steering Controls
 	CAnalogInput *steeringLeft  = AddAnalogInput("SteeringLeft",  "Steer Left",  Game::INPUT_VEHICLE, "NONE");
 	CAnalogInput *steeringRight = AddAnalogInput("SteeringRight", "Steer Right", Game::INPUT_VEHICLE, "NONE");
-	
+
 	steering           = AddAxisInput  ("Steering",      "Full Steering",           Game::INPUT_VEHICLE, "NONE", steeringLeft, steeringRight);
 	accelerator        = AddAnalogInput("Accelerator",   "Accelerator Pedal",       Game::INPUT_VEHICLE, "NONE");
 	brake              = AddAnalogInput("Brake",         "Brake Pedal/Front Brake", Game::INPUT_VEHICLE, "NONE");
 	gearShiftUp        = AddSwitchInput("GearShiftUp",   "Shift Up",                Game::INPUT_VEHICLE, "NONE");
 	gearShiftDown      = AddSwitchInput("GearShiftDown", "Shift Down",              Game::INPUT_VEHICLE, "NONE");
-	
+
 	// Racing Game Gear Shift
 	CSwitchInput *shift1 = AddSwitchInput("GearShift1", "Shift 1",       Game::INPUT_SHIFT4,  "NONE");
 	CSwitchInput *shift2 = AddSwitchInput("GearShift2", "Shift 2",       Game::INPUT_SHIFT4,  "NONE");
 	CSwitchInput *shift3 = AddSwitchInput("GearShift3", "Shift 3",       Game::INPUT_SHIFT4,  "NONE");
 	CSwitchInput *shift4 = AddSwitchInput("GearShift4", "Shift 4",       Game::INPUT_SHIFT4,  "NONE");
 	CSwitchInput *shiftN = AddSwitchInput("GearShiftN", "Shift Neutral", Game::INPUT_SHIFT4,  "NONE");
-	
+
 	gearShift4         = AddGearShift4Input("GearShift", "Gear Shift", Game::INPUT_SHIFT4,  shift1, shift2, shift3, shift4, shiftN, gearShiftUp, gearShiftDown);
-	
+
 	// Racing Game 4 VR View Buttons
 	vr[0]              = AddSwitchInput("VR1", "VR1", Game::INPUT_VR4, "NONE");
 	vr[1]              = AddSwitchInput("VR2", "VR2", Game::INPUT_VR4, "NONE");
@@ -138,10 +138,10 @@ CInputs::CInputs(CInputSystem *system)
 
 	// Racing Game Single View Change Button
 	viewChange         = AddSwitchInput("ViewChange", "View Change", Game::INPUT_VIEWCHANGE, "NONE");
-	
+
 	// Racing Game Handbrake
 	handBrake          = AddSwitchInput("HandBrake",  "Hand Brake",  Game::INPUT_HANDBRAKE, "NONE");
-	
+
 	// Harley Davidson Controls
 	rearBrake          = AddAnalogInput("RearBrake",   "Rear Brake",      Game::INPUT_HARLEY, "NONE");
 	musicSelect        = AddSwitchInput("MusicSelect", "Music Selection", Game::INPUT_HARLEY, "NONE");
@@ -167,13 +167,13 @@ CInputs::CInputs(CInputSystem *system)
 	twinJoyShot2       = AddSwitchInput("TwinJoyShot2",       "Right Shot Trigger", 	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyTurbo1      = AddSwitchInput("TwinJoyTurbo1",      "Left Turbo",         	Game::INPUT_TWIN_JOYSTICKS, "NONE");
 	twinJoyTurbo2      = AddSwitchInput("TwinJoyTurbo2",      "Right Turbo",        	Game::INPUT_TWIN_JOYSTICKS, "NONE");
-	
+
 	// Analog Joystick
 	CAnalogInput *analogJoyLeft  = AddAnalogInput("AnalogJoyLeft",  "Analog Left",  Game::INPUT_ANALOG_JOYSTICK, "NONE");
 	CAnalogInput *analogJoyRight = AddAnalogInput("AnalogJoyRight", "Analog Right", Game::INPUT_ANALOG_JOYSTICK, "NONE");
 	CAnalogInput *analogJoyUp    = AddAnalogInput("AnalogJoyUp",    "Analog Up",    Game::INPUT_ANALOG_JOYSTICK, "NONE");
 	CAnalogInput *analogJoyDown  = AddAnalogInput("AnalogJoyDown",  "Analog Down",  Game::INPUT_ANALOG_JOYSTICK, "NONE");
-	
+
 	analogJoyX         = AddAxisInput  ("AnalogJoyX",        "Analog X-Axis",    Game::INPUT_ANALOG_JOYSTICK, "NONE", analogJoyLeft, analogJoyRight);
 	analogJoyY         = AddAxisInput  ("AnalogJoyY",        "Analog Y-Axis",    Game::INPUT_ANALOG_JOYSTICK, "NONE", analogJoyUp,   analogJoyDown);
 	analogJoyTrigger1  = AddSwitchInput("AnalogJoyTrigger",  "Trigger Button 1", Game::INPUT_ANALOG_JOYSTICK, "NONE");
@@ -189,12 +189,12 @@ CInputs::CInputs(CInputSystem *system)
 
 	gunX[0]            = AddAxisInput("GunX", "P1 Gun X-Axis", Game::INPUT_GUN1, "NONE", gun1Left, gun1Right, 150, 400, 651); // normalize to [150,651]
 	gunY[0]            = AddAxisInput("GunY", "P1 Gun Y-Axis", Game::INPUT_GUN1, "NONE", gun1Up,   gun1Down,  80,  272, 465); // normalize to [80,465]
-	
+
 	CSwitchInput *gun1Trigger   = AddSwitchInput("Trigger",   "P1 Trigger",          Game::INPUT_GUN1, "NONE");
 	CSwitchInput *gun1Offscreen = AddSwitchInput("Offscreen", "P1 Point Off-screen", Game::INPUT_GUN1, "NONE");
 
 	trigger[0]         = AddTriggerInput("AutoTrigger", "P1 Auto Trigger", Game::INPUT_GUN1, gun1Trigger, gun1Offscreen);
-	
+
 	CAnalogInput *gun2Left  = AddAnalogInput("GunLeft2",  "P2 Gun Left",  Game::INPUT_GUN2, "NONE");
 	CAnalogInput *gun2Right = AddAnalogInput("GunRight2", "P2 Gun Right", Game::INPUT_GUN2, "NONE");
 	CAnalogInput *gun2Up    = AddAnalogInput("GunUp2",    "P2 Gun Up",    Game::INPUT_GUN2, "NONE");
@@ -202,7 +202,7 @@ CInputs::CInputs(CInputSystem *system)
 
 	gunX[1]            = AddAxisInput("GunX2", "P2 Gun X-Axis", Game::INPUT_GUN2, "NONE", gun2Left, gun2Right, 150, 400, 651); // normalize to [150,651]
 	gunY[1]            = AddAxisInput("GunY2", "P2 Gun Y-Axis", Game::INPUT_GUN2, "NONE", gun2Up,   gun2Down,  80,  272, 465); // normalize to [80,465]
-	
+
 	CSwitchInput *gun2Trigger   = AddSwitchInput("Trigger2",   "P2 Trigger",          Game::INPUT_GUN2, "NONE");
 	CSwitchInput *gun2Offscreen = AddSwitchInput("Offscreen2", "P2 Point Off-screen", Game::INPUT_GUN2, "NONE");
 
@@ -249,31 +249,31 @@ CInputs::CInputs(CInputSystem *system)
 	CAnalogInput *magicalLeverUp1   = AddAnalogInput("MagicalLeverUp1",   "P1 Magical Lever Up",    Game::INPUT_MAGTRUCK, "NONE");
 	CAnalogInput *magicalLeverDown1 = AddAnalogInput("MagicalLeverDown1", "P1 Magical Lever Down",  Game::INPUT_MAGTRUCK, "NONE");
 	CAnalogInput *magicalLeverUp2   = AddAnalogInput("MagicalLeverUp2",   "P2 Magical Lever Up",    Game::INPUT_MAGTRUCK, "NONE");
-  CAnalogInput *magicalLeverDown2 = AddAnalogInput("MagicalLeverDown2", "P2 Magical Lever Down",  Game::INPUT_MAGTRUCK, "NONE");
-  
-  magicalLever1 = AddAxisInput(   "MagicalLever1", "P1 Magical Lever",  Game::INPUT_MAGTRUCK, "NONE", magicalLeverUp1, magicalLeverDown1, 0xFF, 0x80, 0);
-  magicalLever2 = AddAxisInput(   "MagicalLever2", "P2 Magical Lever",  Game::INPUT_MAGTRUCK, "NONE", magicalLeverUp2, magicalLeverDown2, 0xFF, 0x80, 0);
-  magicalPedal1 = AddSwitchInput( "MagicalPedal1", "P1 Magical Pedal",  Game::INPUT_MAGTRUCK, "NONE");
-  magicalPedal2 = AddSwitchInput( "MagicalPedal2", "P2 Magical Pedal",  Game::INPUT_MAGTRUCK, "NONE");
+	CAnalogInput *magicalLeverDown2 = AddAnalogInput("MagicalLeverDown2", "P2 Magical Lever Down",  Game::INPUT_MAGTRUCK, "NONE");
 
-  // Sega Bass Fishing controls
-  CAnalogInput *fishingRodLeft    = AddAnalogInput("FishingRodLeft",    "Rod Left",     Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingRodRight   = AddAnalogInput("FishingRodRight",   "Rod Right",    Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingRodUp      = AddAnalogInput("FishingRodUp",      "Rod Up",       Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingRodDown    = AddAnalogInput("FishingRodDown",    "Rod Down",     Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingStickLeft  = AddAnalogInput("FishingStickLeft",  "Stick Left",   Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingStickRight = AddAnalogInput("FishingStickRight", "Stick Right",  Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingStickUp    = AddAnalogInput("FishingStickUp",    "Stick Up",     Game::INPUT_FISHING, "NONE");
-  CAnalogInput *fishingStickDown  = AddAnalogInput("FishingStickDown",  "Stick Down",   Game::INPUT_FISHING, "NONE");
+	magicalLever1 = AddAxisInput(   "MagicalLever1", "P1 Magical Lever",  Game::INPUT_MAGTRUCK, "NONE", magicalLeverUp1, magicalLeverDown1, 0xFF, 0x80, 0);
+	magicalLever2 = AddAxisInput(   "MagicalLever2", "P2 Magical Lever",  Game::INPUT_MAGTRUCK, "NONE", magicalLeverUp2, magicalLeverDown2, 0xFF, 0x80, 0);
+	magicalPedal1 = AddSwitchInput( "MagicalPedal1", "P1 Magical Pedal",  Game::INPUT_MAGTRUCK, "NONE");
+	magicalPedal2 = AddSwitchInput( "MagicalPedal2", "P2 Magical Pedal",  Game::INPUT_MAGTRUCK, "NONE");
 
-  fishingRodX   = AddAxisInput(   "FishingRodX",    "Rod X-Axis",     Game::INPUT_FISHING, "NONE", fishingRodLeft, fishingRodRight, 0, 0x80, 0xFF);
-  fishingRodY   = AddAxisInput(   "FishingRodY",    "Rod Y-Axis",     Game::INPUT_FISHING, "NONE", fishingRodUp, fishingRodDown, 0, 0x80, 0xFF);
-  fishingReel   = AddAnalogInput( "FishingReel",    "Reel Speed",     Game::INPUT_FISHING, "NONE");
-  fishingStickX = AddAxisInput(   "FishingStickX",  "Stick X-Axis",   Game::INPUT_FISHING, "NONE", fishingStickLeft, fishingStickRight, 0, 0x80, 0xFF);
-  fishingStickY = AddAxisInput(   "FishingStickY",  "Stick Y-Axis",   Game::INPUT_FISHING, "NONE", fishingStickUp, fishingStickDown, 0, 0x80, 0xFF);
-  fishingCast   = AddSwitchInput( "FishingCast",    "Cast",           Game::INPUT_FISHING, "NONE");
-  fishingSelect = AddSwitchInput( "FishingSelect",  "Select",         Game::INPUT_FISHING, "NONE");
-  fishingTension = AddAnalogInput("FishingTension", "Tension",	      Game::INPUT_FISHING, "NONE"); // getbass only
+	// Sega Bass Fishing controls
+	CAnalogInput *fishingRodLeft    = AddAnalogInput("FishingRodLeft",    "Rod Left",     Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingRodRight   = AddAnalogInput("FishingRodRight",   "Rod Right",    Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingRodUp      = AddAnalogInput("FishingRodUp",      "Rod Up",       Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingRodDown    = AddAnalogInput("FishingRodDown",    "Rod Down",     Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingStickLeft  = AddAnalogInput("FishingStickLeft",  "Stick Left",   Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingStickRight = AddAnalogInput("FishingStickRight", "Stick Right",  Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingStickUp    = AddAnalogInput("FishingStickUp",    "Stick Up",     Game::INPUT_FISHING, "NONE");
+	CAnalogInput *fishingStickDown  = AddAnalogInput("FishingStickDown",  "Stick Down",   Game::INPUT_FISHING, "NONE");
+
+	fishingRodX   = AddAxisInput(   "FishingRodX",    "Rod X-Axis",     Game::INPUT_FISHING, "NONE", fishingRodLeft, fishingRodRight, 0, 0x80, 0xFF);
+	fishingRodY   = AddAxisInput(   "FishingRodY",    "Rod Y-Axis",     Game::INPUT_FISHING, "NONE", fishingRodUp, fishingRodDown, 0, 0x80, 0xFF);
+	fishingReel   = AddAnalogInput( "FishingReel",    "Reel Speed",     Game::INPUT_FISHING, "NONE");
+	fishingStickX = AddAxisInput(   "FishingStickX",  "Stick X-Axis",   Game::INPUT_FISHING, "NONE", fishingStickLeft, fishingStickRight, 0, 0x80, 0xFF);
+	fishingStickY = AddAxisInput(   "FishingStickY",  "Stick Y-Axis",   Game::INPUT_FISHING, "NONE", fishingStickUp, fishingStickDown, 0, 0x80, 0xFF);
+	fishingCast   = AddSwitchInput( "FishingCast",    "Cast",           Game::INPUT_FISHING, "NONE");
+	fishingSelect = AddSwitchInput( "FishingSelect",  "Select",         Game::INPUT_FISHING, "NONE");
+	fishingTension= AddAnalogInput("FishingTension", "Tension",	      Game::INPUT_FISHING, "NONE"); // getbass only
 }
 
 CInputs::~CInputs()
@@ -402,7 +402,7 @@ bool CInputs::Initialize()
 	// Make sure the input system is initialized too
 	if (!m_system->Initialize())
 		return false;
-	
+
 	// Initialize all the inputs
 	for (vector<CInput*>::iterator it = m_inputs.begin(); it != m_inputs.end(); ++it)
 		(*it)->Initialize(m_system);

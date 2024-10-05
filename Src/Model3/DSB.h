@@ -75,8 +75,9 @@ public:
 	void	Reset(void);
 	CDSBResampler(const Util::Config::Node &config)
 	  : m_config(config)
-  {
-  }
+	{
+		Reset();
+	}
 private:
 	const Util::Config::Node &m_config;
 	int	nFrac;

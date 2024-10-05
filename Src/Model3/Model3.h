@@ -102,7 +102,7 @@ public:
   Util::Config::Node& GetConfig() { return this->m_config; }
 
   // IPCIDevice interface
-  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
+  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
   void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
 
   // IBus interface
@@ -204,7 +204,7 @@ private:
   UINT32    ReadSecurity(unsigned reg);
   void      WriteSecurity(unsigned reg, UINT32 data);
   void      SetCROMBank(unsigned idx);
-  UINT8     ReadSystemRegister(unsigned reg);
+  UINT8     ReadSystemRegister(unsigned reg) const;
   void      WriteSystemRegister(unsigned reg, UINT8 data);
 
   void RunMainBoardFrame(void);                       // Runs PPC main board for a frame
@@ -212,7 +212,7 @@ private:
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
 #ifdef NET_BOARD
-  void RunNetBoardFrame(void);						  // Runs net board for a frame
+  void RunNetBoardFrame(void);                        // Runs net board for a frame
 #endif
 
   bool    StartThreads(void);                         // Starts all threads

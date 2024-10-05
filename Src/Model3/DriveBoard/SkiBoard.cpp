@@ -35,15 +35,14 @@
 #include "Inputs/Input.h"
 
 #include <cstdio>
-#include <cmath>
 #include <algorithm>
 
-Game::DriveBoardType CSkiBoard::GetType(void)
+Game::DriveBoardType CSkiBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_SKI;
 }
 
-unsigned CSkiBoard::GetForceFeedbackStrength()
+unsigned CSkiBoard::GetForceFeedbackStrength() const
 {
   return 0;
 }

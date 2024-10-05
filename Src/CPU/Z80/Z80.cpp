@@ -3803,7 +3803,7 @@ void CZ80::SetINT(bool state)
   intLine = state;
 }
 
-UINT16 CZ80::GetPC(void)
+UINT16 CZ80::GetPC(void) const
 {
   return pc;
 }

@@ -156,9 +156,9 @@ public:
 	 * Returns:
 	 *		Data from the RAM address.
 	 */
-	uint8_t ReadRAM8(unsigned addr);
-	uint16_t ReadRAM16(unsigned addr);
-	uint32_t ReadRAM32(unsigned addr);
+	uint8_t ReadRAM8(unsigned addr) const;
+	uint16_t ReadRAM16(unsigned addr) const;
+	uint32_t ReadRAM32(unsigned addr) const;
 
 	/*
 	 * WriteRAM8(addr, data):
@@ -191,7 +191,7 @@ public:
 	 * Returns:
 	 *    Data read as little endian from the register.
 	 */
-	UINT32 ReadRegister(unsigned reg);
+	UINT32 ReadRegister(unsigned reg) const;
 
 	/*
 	 * WriteRegister(reg, data):

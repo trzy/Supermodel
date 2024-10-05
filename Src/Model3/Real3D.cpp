@@ -540,14 +540,14 @@ void CReal3D::DMACopy(void)
   }
 }
 
-uint8_t CReal3D::ReadDMARegister8(unsigned reg)
+uint8_t CReal3D::ReadDMARegister8(unsigned reg) const
 {
   switch (reg)
   {
   case 0xC: // status
     return dmaStatus;
   case 0xE: // configuration
-    return  dmaConfig;
+    return dmaConfig;
   default:
     break;
   }
@@ -577,7 +577,7 @@ void CReal3D::WriteDMARegister8(unsigned reg, uint8_t data)
   //DebugLog("Real3D: WriteDMARegister8: reg=%X, data=%02X\n", reg, data);
 }
 
-uint32_t CReal3D::ReadDMARegister32(unsigned reg)
+uint32_t CReal3D::ReadDMARegister32(unsigned reg) const
 {
   switch (reg)
   {
@@ -813,7 +813,7 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 
 // TODO: This returns data in the way that the PowerPC bus expects. Other functions in CReal3D should
 // return data this way.
-uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
+uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const
 {
   uint32_t  d;
 
@@ -997,6 +997,8 @@ CReal3D::CReal3D(const Util::Config::Node &config)
   Render3D = NULL;
   memoryPool = NULL;
   cullingRAMLo = NULL;
+  cullingRAMLoRO = NULL;
+  cullingRAMLoDirty = NULL;
   cullingRAMHi = NULL;
   polyRAM = NULL;
   textureRAM = NULL;
@@ -1009,6 +1011,7 @@ CReal3D::CReal3D(const Util::Config::Node &config)
   m_vromTextureFIFOIdx = 0;
   m_internalRenderConfig[0] = 0;
   m_internalRenderConfig[1] = 0;
+
   DebugLog("Built Real3D\n");
 }
 

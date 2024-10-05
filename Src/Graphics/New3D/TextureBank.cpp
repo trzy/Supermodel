@@ -54,8 +54,8 @@ void New3D::TextureBank::UploadTextures(int level, int x, int y, int width, int 
 	glBindTexture(GL_TEXTURE_2D, m_texID);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 
-	const int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
-	const int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
+	static constexpr int mipXBase[] = { 0, 1024, 1536, 1792, 1920, 1984, 2016, 2032, 2040, 2044, 2046, 2047 };
+	static constexpr int mipYBase[] = { 0, 512, 768, 896, 960, 992, 1008, 1016, 1020, 1022, 1023 };
 
 	int subX = x - mipXBase[level];
 	int subY = y - mipYBase[level];
@@ -65,7 +65,7 @@ void New3D::TextureBank::UploadTextures(int level, int x, int y, int width, int 
 	}
 }
 
-int New3D::TextureBank::GetNumberOfLevels()
+int New3D::TextureBank::GetNumberOfLevels() const
 {
 	return m_numLevels;
 }

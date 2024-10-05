@@ -820,7 +820,7 @@ void CModel3::WriteSecurity(unsigned reg, UINT32 data)
  Unknown PCI devices are handled here.
 ******************************************************************************/
 
-UINT32 CModel3::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset)
+UINT32 CModel3::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const
 {
   if ((bits==8) || (bits==16))
   {
@@ -869,7 +869,7 @@ void CModel3::SetCROMBank(unsigned idx)
   DebugLog("CROM bank setting: %d (%02X), PC=%08X, LR=%08X\n", idx, cromBankReg, ppc_get_pc(), ppc_get_lr());
 }
 
-UINT8 CModel3::ReadSystemRegister(unsigned reg)
+UINT8 CModel3::ReadSystemRegister(unsigned reg) const
 {
   switch (reg&0x3F)
   {
@@ -3267,6 +3267,7 @@ CModel3::CModel3(Util::Config::Node &config)
 
 #ifdef NET_BOARD
   NetBoard = NULL;
+  m_runNetBoard = false;
 #endif
 
   securityPtr = 0;
@@ -3292,6 +3293,23 @@ CModel3::CModel3(Util::Config::Node &config)
 
   notifyLock = NULL;
   notifySync = NULL;
+
+  m_stepping = 0;
+  inputBank = 0;
+  serialFIFO1 = 0;
+  serialFIFO2 = 0;
+  gunReg = 0;
+  adcChannel = 0;
+
+  midiCtrlPort = 0;
+  driveROM = nullptr;
+  OutputRegister[0] = OutputRegister[1] = 0;
+  cromBankReg = 0;
+  memset(PPCFetchRegions, 0, sizeof(PPCFetchRegions));
+  gpusReady = false;
+  sndBrdNotifyLock = nullptr;
+  sndBrdNotifySync = nullptr;
+  memset(&timings, 0, sizeof(FrameTimings));
 
   DebugLog("Built Model 3\n");
 }

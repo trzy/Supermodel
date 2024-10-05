@@ -62,16 +62,15 @@
 #include "Supermodel.h"
 
 #include <cstdio>
-#include <cmath>
 #include <algorithm>
 
 
-Game::DriveBoardType CBillBoard::GetType(void)
+Game::DriveBoardType CBillBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_BILLBOARD;
 }
 
-unsigned CBillBoard::GetForceFeedbackStrength()
+unsigned CBillBoard::GetForceFeedbackStrength() const
 {
   return 0;
 }
@@ -182,7 +181,7 @@ CBillBoard::CBillBoard(const Util::Config::Node& config)
 {
   m_dip1 = 0x0f;
   m_simulated = false;
-  m_z80Clock = 8.0;
+  m_z80Clock = 8.0f;
   m_z80NMI = false;
 
   DebugLog("Built Drive Board (billboard)\n");

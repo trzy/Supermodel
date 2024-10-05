@@ -157,7 +157,7 @@ public:
    * Returns:
    *    Current value of PC register.
    */
-  UINT16 GetPC(void);
+  UINT16 GetPC(void) const;
 
 #ifdef SUPERMODEL_DEBUGGER
   /*

@@ -139,16 +139,11 @@ void CCrypto::LoadState(CBlockFile *SaveState)
 
 void CCrypto::Init(uint32_t encryptionKey, std::function<uint16_t(uint32_t)> ReadRAMCallback)
 {
-  /*
 	buffer = std::make_unique<UINT8[]>(BUFFER_SIZE);
 	line_buffer = std::make_unique<UINT8[]>(LINE_SIZE);
 	line_buffer_prev = std::make_unique<UINT8[]>(LINE_SIZE);
-	*/
-  buffer = std::unique_ptr<UINT8[]>{ new UINT8[BUFFER_SIZE] };
-  line_buffer = std::unique_ptr<UINT8[]>{ new UINT8[LINE_SIZE] };
-  line_buffer_prev = std::unique_ptr<UINT8[]>{ new UINT8[LINE_SIZE] };
 
-  m_read = ReadRAMCallback;
+	m_read = ReadRAMCallback;
 	//m_read.bind_relative_to(*owner());
 
 /*
@@ -165,7 +160,7 @@ void CCrypto::Init(uint32_t encryptionKey, std::function<uint16_t(uint32_t)> Rea
 	save_item(NAME(line_buffer_size));
 */
 
-  key = encryptionKey;
+	key = encryptionKey;
 }
 
 void CCrypto::Reset()
