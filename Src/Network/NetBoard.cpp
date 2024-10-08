@@ -1178,7 +1178,6 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 {
 	memoryPool	= NULL;
 	bank		= NULL;
-	bank2		= NULL;
 	ct			= NULL;
 	netRAM		= NULL;
 	netBuffer	= NULL;
@@ -1198,8 +1197,6 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 	recv_size = 0;
 	send_offset = 0;
 	send_size = 0;
-
-	slot = 0;
 }
 
 CNetBoard::~CNetBoard(void)
