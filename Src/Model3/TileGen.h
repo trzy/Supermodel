@@ -304,8 +304,8 @@ private:
 	int		GetLineMask		(int layerNumber, int yCoord) const;
 	int		GetPixelMask	(int lineMask, int xCoord) const;
 	UINT32	GetColour32		(int layer, UINT32 data) const;
-	void	Draw4Bit		(int tileData, int hFine, int vFine, UINT32* const __restrict lineBuffer, const UINT32* const __restrict pal, int& x) const;
-	void	Draw8Bit		(int tileData, int hFine, int vFine, UINT32* const __restrict lineBuffer, const UINT32* const __restrict pal, int& x) const;
+	void	Draw4Bit		(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const;
+	void	Draw8Bit		(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const;
 
 	void	WritePalette	(int layer, int address, UINT32 data);
 	void	RecomputePalettes(int layer);	// 0 = bottom, 1 = top

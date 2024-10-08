@@ -325,7 +325,7 @@ void CReal3D::StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigne
   const uint32_t tileX = (std::min)(8u, width);
   const uint32_t tileY = (std::min)(8u, height);
 
-  const unsigned* const __restrict decode = (tileX == 8) ? decode8x8 : (tileX == 4) ? decode8x4 : (tileX == 2) ? decode8x2 : nullptr;
+  const unsigned* const decode = (tileX == 8) ? decode8x8 : (tileX == 4) ? decode8x4 : (tileX == 2) ? decode8x2 : nullptr;
 
   texDataOffset = 0;
 

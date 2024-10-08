@@ -489,7 +489,7 @@ UINT32 CTileGen::GetColour32(int layer, UINT32 data) const
 	return (a << 24) | (bb << 16) | (gg << 8) | rr;
 }
 
-void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* const __restrict lineBuffer, const UINT32* const __restrict pal, int& x) const
+void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
 {
 	// Tile pattern offset: each tile occupies 32 bytes when using 4-bit pixels (offset of tile pattern within VRAM)
 	int patternOffset = ((tileData & 0x3FFF) << 1) | ((tileData >> 15) & 1);
@@ -526,7 +526,7 @@ void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* const __rest
 	*colour16++ = pal[ paletteIndex | ((pattern >> 0)  & 0xF) ];
 */
 
-void CTileGen::Draw8Bit(int tileData, int hFine, int vFine, UINT32* const __restrict lineBuffer, const UINT32* const __restrict pal, int& x) const
+void CTileGen::Draw8Bit(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
 {
 	// Tile pattern offset: each tile occupies 64 bytes when using 8-bit pixels
 	int patternOffset = tileData & 0x3FFF;
