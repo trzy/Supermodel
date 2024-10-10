@@ -37,7 +37,7 @@
 #include "Supermodel.h"
 #include "Input.h"
 #include "OSD/Thread.h"
-
+#include <cmath>
 #include <string>
 #include <algorithm>
 #include <vector>
