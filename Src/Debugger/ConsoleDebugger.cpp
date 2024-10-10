@@ -1538,7 +1538,7 @@ namespace Debugger
 		else if (CheckToken(token, "h", "help"))					// help
 		{
 			// TODO - improve the following
-			const char *fmt = "  %-6s %-25s %s\n";
+			static const char *fmt = "  %-6s %-25s %s\n";
 
 			Print("Debugger Commands:\n");
 			

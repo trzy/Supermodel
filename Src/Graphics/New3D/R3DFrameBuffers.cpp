@@ -190,7 +190,7 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 
 void R3DFrameBuffers::AllocShaderBase()
 {
-	const char *vertexShader = R"glsl(
+	static const char *vertexShader = R"glsl(
 
 	#version 410 core
 
@@ -206,7 +206,7 @@ void R3DFrameBuffers::AllocShaderBase()
 
 	)glsl";
 
-	const char *fragmentShader = R"glsl(
+	static const char *fragmentShader = R"glsl(
 
 	#version 410 core
 
@@ -230,7 +230,7 @@ void R3DFrameBuffers::AllocShaderBase()
 
 void R3DFrameBuffers::AllocShaderTrans()
 {
-	const char *vertexShader = R"glsl(
+	static const char *vertexShader = R"glsl(
 
 	#version 410 core
 
@@ -246,7 +246,7 @@ void R3DFrameBuffers::AllocShaderTrans()
 
 	)glsl";
 
-	const char *fragmentShader = R"glsl(
+	static const char *fragmentShader = R"glsl(
 
 	#version 410 core
 

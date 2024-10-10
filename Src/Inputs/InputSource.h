@@ -53,6 +53,7 @@ protected:
 	unsigned m_acquired;
 
 	CInputSource(ESourceType sourceType);
+	virtual ~CInputSource() {};
 
 public:
 	/*
@@ -87,13 +88,13 @@ public:
 	/*
 	 * Returns true if the source is active (taken from GetValueAsSwitch).
 	 */
-	bool IsActive();
+	bool IsActive() const;
 
 	/*
 	 * Reads a boolean value for a switch input.
 	 * Returns true if the value was set.
 	 */
-	virtual bool GetValueAsSwitch(bool &val) = 0;
+	virtual bool GetValueAsSwitch(bool &val) const = 0;
 
 	/*
 	 * Reads an int value for an analog/axis input, guaranteeing that the value falls within the given range and has the correct off value when required.

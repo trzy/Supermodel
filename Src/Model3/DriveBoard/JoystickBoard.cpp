@@ -41,12 +41,12 @@
 #include <cmath>
 #include <algorithm>
 
-Game::DriveBoardType CJoyBoard::GetType(void)
+Game::DriveBoardType CJoyBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_JOYSTICK;
 }
 
-void CJoyBoard::Get7SegDisplays(UINT8 &seg1Digit1, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2)
+void CJoyBoard::Get7SegDisplays(UINT8 &seg1Digit1, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2) const
 {
   seg1Digit1 = m_seg1Digit1;
   seg1Digit2 = m_seg1Digit2;
@@ -693,7 +693,7 @@ void CJoyBoard::SendVibrate(UINT8 val)
   m_lastVibrate = val;
 }
 
-uint8_t CJoyBoard::ReadADCChannel1()
+uint8_t CJoyBoard::ReadADCChannel1() const
 {
   if (m_initialized)
     return (UINT8)m_inputs->analogJoyY->value;
@@ -701,7 +701,7 @@ uint8_t CJoyBoard::ReadADCChannel1()
     return 0x80; // If not initialized, return 0x80 so that ffb centering test does not fail
 }
 
-uint8_t CJoyBoard::ReadADCChannel2()
+uint8_t CJoyBoard::ReadADCChannel2() const
 {
   if (m_initialized)
     return (UINT8)m_inputs->analogJoyX->value;
@@ -709,12 +709,12 @@ uint8_t CJoyBoard::ReadADCChannel2()
     return 0x80; // If not initialized, return 0x80 so that ffb centering test does not fail
 }
 
-uint8_t CJoyBoard::ReadADCChannel3()
+uint8_t CJoyBoard::ReadADCChannel3() const
 {
   return 0x80;
 }
 
-uint8_t CJoyBoard::ReadADCChannel4()
+uint8_t CJoyBoard::ReadADCChannel4() const
 {
   return 0x80;
 }

@@ -14,8 +14,8 @@ public:
 	void Reset			();		// don't delete data, just go back to start
 	void Destroy		();
 	void Bind			(bool enable);
-	int  GetSize		();
-	int  GetCapacity	();
+	int  GetSize		() const;
+	int  GetCapacity	() const;
 
 private:
 	GLuint		m_id;

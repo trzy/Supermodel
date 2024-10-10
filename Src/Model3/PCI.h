@@ -70,7 +70,7 @@ public:
 	 * Returns:
 	 *		Register data. Bit width will be the same as specified by 'bits'.
 	 */
-	virtual UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) = 0;
+	virtual UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const = 0;
 	
 	/*
 	 * WritePCIConfigSpace(reg, bits, offset, data):
@@ -118,8 +118,8 @@ public:
 	 * Returns:
 	 *		Register data. Bit width will be the same as specified by 'bits'.
 	 */
-	UINT32 ReadConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
-	
+	UINT32 ReadConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
+
 	/*
 	 * WriteConfigSpace(device, reg, bits, offset, data):
 	 *
@@ -134,7 +134,7 @@ public:
 	 *		data	Data being written. Interpreted according to bit width.
 	 */
 	void WriteConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
-	
+
 	/*
 	 * Reset(void):
 	 *
@@ -142,19 +142,19 @@ public:
 	 * attached to the PCI bus. These must be reset manually.
 	 */
 	void Reset(void);
-	
+
 	/*
- 	 * AttachDevice(device, DeviceObjectPtr):
- 	 *
- 	 * Attaches a device to the PCI bus. This means it is added to a list of 
- 	 * devices to scan when handling PCI configuration space requests.
- 	 *
- 	 * Parameters:
- 	 *		device				PCI ID of the device being attached.
- 	 *		DeviceObjectPtr		Pointer to the device object.
- 	 */
- 	void AttachDevice(unsigned device, IPCIDevice *DeviceObjectPtr);
- 	 
+	 * AttachDevice(device, DeviceObjectPtr):
+	 *
+	 * Attaches a device to the PCI bus. This means it is added to a list of 
+	 * devices to scan when handling PCI configuration space requests.
+	 *
+	 * Parameters:
+	 *		device				PCI ID of the device being attached.
+	 *		DeviceObjectPtr		Pointer to the device object.
+	 */
+	void AttachDevice(unsigned device, IPCIDevice *DeviceObjectPtr);
+
 	/*
 	 * Init(void):
 	 *
@@ -162,7 +162,7 @@ public:
 	 * other members.
 	 */
 	void Init(void);
-	 
+
 	/*
 	 * CPCIBus(void):
 	 * ~CPCIBus(void):
@@ -171,16 +171,16 @@ public:
 	 */
 	CPCIBus(void);
 	~CPCIBus(void);
-	
+
 private:
-	
+
 	// Map device IDs to objects
 	struct DeviceObjectLink
 	{
 		unsigned	device;
 		IPCIDevice	*DeviceObject;
 	};
-	
+
 	// An array of device objects
 	std::vector<struct DeviceObjectLink> DeviceVector;
 };

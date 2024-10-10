@@ -57,7 +57,6 @@
 #include "Supermodel.h"
 
 #include <cstdio>
-#include <cmath>
 #include <algorithm>
 
 #define ROM_SIZE 0x9000
@@ -156,22 +155,22 @@ void CDriveBoard::LoadLegacyState(const LegacyDriveBoardState &state, CBlockFile
   m_z80.LoadState(SaveState, "DriveBoard Z80");
 }
 
-Game::DriveBoardType CDriveBoard::GetType(void)
+Game::DriveBoardType CDriveBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_NONE;
 }
 
-bool CDriveBoard::IsAttached(void)
+bool CDriveBoard::IsAttached(void) const
 {
   return m_attached;
 }
 
-bool CDriveBoard::IsSimulated(void)
+bool CDriveBoard::IsSimulated(void) const
 {
   return m_simulated;
 }
 
-bool CDriveBoard::IsDisabled(void)
+bool CDriveBoard::IsDisabled(void) const
 {
   bool enabled = !m_disabled;
   return !(m_attached && enabled);
@@ -182,13 +181,13 @@ void CDriveBoard::Disable(void)
   m_disabled = true;
 }
 
-void CDriveBoard::GetDIPSwitches(UINT8& dip1, UINT8& dip2)
+void CDriveBoard::GetDIPSwitches(UINT8& dip1, UINT8& dip2) const
 {
   dip1 = m_dip1;
   dip2 = m_dip2;
 }
 
-void CDriveBoard::GetDIPSwitches(UINT8& dip1)
+void CDriveBoard::GetDIPSwitches(UINT8& dip1) const
 {
   dip1 = m_dip1;
 }
@@ -204,7 +203,7 @@ void CDriveBoard::SetDIPSwitches(UINT8 dip1)
   m_dip1 = dip1;
 }
 
-unsigned CDriveBoard::GetForceFeedbackStrength()
+unsigned CDriveBoard::GetForceFeedbackStrength() const
 {
   return ((~(m_dip1 >> 2)) & 7) + 1;
 }
@@ -320,7 +319,7 @@ Result CDriveBoard::Init(const UINT8* romPtr)
 
     // Allocate memory for RAM
     m_ram = new (std::nothrow) UINT8[RAM_SIZE];
-    if (NULL == m_ram)
+    if (nullptr == m_ram)
     {
         float ramSizeMB = (float)RAM_SIZE / (float)0x100000;
         return ErrorLog("Insufficient memory for drive board (needs %1.1f MB).", ramSizeMB);
@@ -345,7 +344,7 @@ Result CDriveBoard::Init(void)
   if (!m_dummyROM)
   {
     uint8_t *rom = new (std::nothrow) uint8_t[ROM_SIZE];
-    if (NULL == rom)
+    if (nullptr == rom)
     {
       return ErrorLog("Insufficient memory for drive board.");
     }
@@ -399,7 +398,7 @@ CDriveBoard::CDriveBoard(const Util::Config::Node& config)
     m_rom(NULL),
     m_ram(NULL),
     m_dummyROM(NULL),
-    m_z80Clock(4.0),
+    m_z80Clock(4.0f),
     m_z80NMI(true),
     m_inputs(NULL),
     m_inputFlags(0),

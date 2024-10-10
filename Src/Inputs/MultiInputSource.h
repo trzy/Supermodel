@@ -76,7 +76,7 @@ public:
 
 	void Release();
 
-	bool GetValueAsSwitch(bool &val);
+	bool GetValueAsSwitch(bool &val) const;
 
 	bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);	
 
@@ -101,7 +101,7 @@ public:
 
 	void Release();
 
-	bool GetValueAsSwitch(bool &val);
+	bool GetValueAsSwitch(bool &val) const;
 
 	bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
 };

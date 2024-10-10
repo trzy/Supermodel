@@ -45,9 +45,9 @@ public:
    *    Drive board type.
    */
 
-  Game::DriveBoardType GetType(void);
+  Game::DriveBoardType GetType(void) const;
 
-  unsigned GetForceFeedbackStrength(void);
+  unsigned GetForceFeedbackStrength(void) const;
   void SetForceFeedbackStrength(unsigned strength);
 
   /*

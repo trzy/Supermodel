@@ -103,7 +103,7 @@ class CJTAG
 public:
     void SaveState(CBlockFile* SaveState);
     void LoadState(CBlockFile* LoadState);
-    bool Read();
+    bool Read() const;
     void Write(bool tck, bool tms, bool tdi, bool trst);
     void Reset();
     void SetStepping(int stepping);

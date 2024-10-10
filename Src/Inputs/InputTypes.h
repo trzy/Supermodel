@@ -28,12 +28,12 @@ public:
 	/*
 	 * Returns true if the input was pressed during last update (ie currently on but previously off)
 	 */
-	bool Pressed();
+	bool Pressed() const;
 
 	/*
 	 * Returns true if the input was released duing last update (ie currently off but previously on)
 	 */
-	bool Released();
+	bool Released() const;
 };
 
 /*
@@ -58,12 +58,12 @@ public:
 	/*
 	 * Returns true if the input is currently activated
 	 */
-	bool HasValue();
+	bool HasValue() const;
 
 	/*
 	 * Returns current value as a fraction 0.0 to 1.0 of the full range
 	 */
-	double ValueAsFraction();
+	double ValueAsFraction() const;
 };
 
 /*
@@ -95,12 +95,12 @@ public:
 	/*
 	 * Returns true if the input is currently activated (ie axis is not centered)
 	 */
-	bool HasValue();
+	bool HasValue() const;
 
 	/*
 	 * Returns current value as a fraction -1.0 to 1.0
 	 */ 
-	double ValueAsFraction();
+	double ValueAsFraction() const;
 };
 
 /*

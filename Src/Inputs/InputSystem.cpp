@@ -38,7 +38,6 @@
 #include "Input.h"
 #include "OSD/Thread.h"
 
-#include <cmath>
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -203,7 +202,7 @@ const char *CInputSystem::s_validKeyNames[] =
   "UNDO"
 };
 
-MousePartsStruct CInputSystem::s_mseParts[] = 
+const MousePartsStruct CInputSystem::s_mseParts[] = 
 {
   // X Axis (Axis 1)
   { "XAXIS",         MouseXAxis },
@@ -259,7 +258,7 @@ MousePartsStruct CInputSystem::s_mseParts[] =
   { NULL,            MouseUnknown }
 };
 
-JoyPartsStruct CInputSystem::s_joyParts[] = 
+const JoyPartsStruct CInputSystem::s_joyParts[] = 
 {
   // X-Axis (Axis 1)
   { "XAXIS",         JoyXAxis },
@@ -417,7 +416,19 @@ const char *CInputSystem::GetDefaultAxisName(int axisNum)
 }
 
 CInputSystem::CInputSystem(const char *systemName)
-  : m_dispX(0),
+  : m_numKbds(0),
+    m_numMice(0),
+    m_numJoys(0),
+    m_anyKeySources(nullptr),
+    m_anyMseSources(nullptr),
+    m_anyJoySources(nullptr),
+    m_keySources(nullptr),
+    m_mseSources(nullptr),
+    m_joySources(nullptr),
+    m_defKeySettings(),
+    m_defMseSettings(),
+    m_defJoySettings(),
+    m_dispX(0),
     m_dispY(0),
     m_dispW(0),
     m_dispH(0),
@@ -749,7 +760,7 @@ void CInputSystem::CheckMouseSources(int mseNum, bool fullAxisOnly, bool mseCent
     bool isAxis = GetAxisDetails(msePart, axisNum, axisDir);
     bool isXYAxis = isAxis && (axisNum == AXIS_X || axisNum == AXIS_Y);
     // Ignore X- & Y-axes if mouse hasn't been centered yet and filter axes according to fullAxisOnly
-    if ((isXYAxis && !mseCentered) || (isAxis && ((IsFullAxis(msePart) && !fullAxisOnly) || (!IsFullAxis(msePart) && fullAxisOnly))))
+    if ((isXYAxis && !mseCentered) || (isAxis && (IsFullAxis(msePart) != fullAxisOnly)))
       continue;
     // Get mouse source for mouse number and part and test to see if it is active (but was not previously) and that it is not a "bad" source
     CInputSource *source = GetMouseSource(mseNum, msePart);
@@ -778,7 +789,7 @@ void CInputSystem::CheckJoySources(int joyNum, bool fullAxisOnly, vector<CInputS
   {
     EJoyPart joyPart = (EJoyPart)joyIndex;
     // Filter axes according to fullAxisOnly
-    if (IsAxis(joyPart) && ((IsFullAxis(joyPart) && !fullAxisOnly) || (!IsFullAxis(joyPart) && fullAxisOnly)))
+    if (IsAxis(joyPart) && (IsFullAxis(joyPart) != fullAxisOnly))
       continue;
     // Get joystick source for joystick number and part and test to see if it is active (but was not previously) and that it is not a "bad" source
     CInputSource *source = GetJoySource(joyNum, joyPart);
@@ -808,9 +819,7 @@ bool CInputSystem::ParseInt(const string& str, int &num)
 
 string CInputSystem::IntToString(int num)
 {
-  stringstream ss;
-  ss << num;
-  return ss.str();
+  return std::to_string(num);
 }
 
 bool CInputSystem::EqualsIgnoreCase(const string& str1, const char *str2)
@@ -2267,10 +2276,9 @@ CInputSystem::CKeyInputSource::CKeyInputSource(CInputSystem *system, int kbdNum,
   int d = Clamp((int)decaySpeed, 1, 200);
   m_incr = 100 * s;
   m_decr = d * s;
-  m_maxVal = 10000;
 }
 
-bool CInputSystem::CKeyInputSource::GetValueAsSwitch(bool &val)
+bool CInputSystem::CKeyInputSource::GetValueAsSwitch(bool &val) const
 {
   if (!m_system->IsKeyPressed(m_kbdNum, m_keyIndex))
     return false;
@@ -2307,7 +2315,7 @@ CInputSystem::CMseAxisInputSource::CMseAxisInputSource(CInputSystem *system, int
     m_deadPixels = Clamp((int)deadZone, 0, 99);
 }
 
-int CInputSystem::CMseAxisInputSource::ScaleAxisValue(int minVal, int offVal, int maxVal)
+int CInputSystem::CMseAxisInputSource::ScaleAxisValue(int minVal, int offVal, int maxVal) const
 {
   int mseVal = m_system->GetMouseAxisValue(m_mseNum, m_axisNum);
   // If X- or Y-axis then convert to value centered around zero (ie relative to centre of display)
@@ -2348,7 +2356,7 @@ int CInputSystem::CMseAxisInputSource::ScaleAxisValue(int minVal, int offVal, in
   }
 }
 
-bool CInputSystem::CMseAxisInputSource::GetValueAsSwitch(bool &val)
+bool CInputSystem::CMseAxisInputSource::GetValueAsSwitch(bool &val) const
 {
   // For Z-axis (wheel), switch value is handled slightly differently
   if (m_axisNum == AXIS_Z)
@@ -2385,7 +2393,7 @@ CInputSystem::CMseButInputSource::CMseButInputSource(CInputSystem *system, int m
   //
 }
 
-bool CInputSystem::CMseButInputSource::GetValueAsSwitch(bool &val)
+bool CInputSystem::CMseButInputSource::GetValueAsSwitch(bool &val) const
 {
   if (!m_system->IsMouseButPressed(m_mseNum, m_butNum))
     return false;
@@ -2420,7 +2428,7 @@ CInputSystem::CJoyAxisInputSource::CJoyAxisInputSource(CInputSystem *system, int
   m_negSat = m_axisOffVal + (int)(dSaturation * (m_axisMinVal - m_axisOffVal));
 }
 
-int CInputSystem::CJoyAxisInputSource::ScaleAxisValue(int minVal, int offVal, int maxVal)
+int CInputSystem::CJoyAxisInputSource::ScaleAxisValue(int minVal, int offVal, int maxVal) const
 {
   // Get raw axis value from input system
   int joyVal = m_system->GetJoyAxisValue(m_joyNum, m_axisNum);
@@ -2448,7 +2456,7 @@ int CInputSystem::CJoyAxisInputSource::ScaleAxisValue(int minVal, int offVal, in
   }
 }
 
-bool CInputSystem::CJoyAxisInputSource::GetValueAsSwitch(bool &val)
+bool CInputSystem::CJoyAxisInputSource::GetValueAsSwitch(bool &val) const
 {
   if (ScaleAxisValue(0, 0, 3) < 2)
     return false;
@@ -2479,7 +2487,7 @@ CInputSystem::CJoyPOVInputSource::CJoyPOVInputSource(CInputSystem *system, int j
   //
 }
 
-bool CInputSystem::CJoyPOVInputSource::GetValueAsSwitch(bool &val)
+bool CInputSystem::CJoyPOVInputSource::GetValueAsSwitch(bool &val) const
 {
   if (!m_system->IsJoyPOVInDir(m_joyNum, m_povNum, m_povDir))
     return false;
@@ -2504,7 +2512,7 @@ CInputSystem::CJoyButInputSource::CJoyButInputSource(CInputSystem *system, int j
   //
 }
 
-bool CInputSystem::CJoyButInputSource::GetValueAsSwitch(bool &val)
+bool CInputSystem::CJoyButInputSource::GetValueAsSwitch(bool &val) const
 {
   if (!m_system->IsJoyButPressed(m_joyNum, m_butNum))
     return false;

@@ -92,7 +92,7 @@ void CSoundBoard::UpdateROMBanks(void)
 }
 
 UINT8 CSoundBoard::Read8(UINT32 a)
-{ 
+{
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
@@ -128,8 +128,8 @@ UINT8 CSoundBoard::Read8(UINT32 a)
 	return 0;
 }
 
-UINT16 CSoundBoard::Read16(UINT32 a) 
-{ 	
+UINT16 CSoundBoard::Read16(UINT32 a)
+{
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
@@ -165,28 +165,28 @@ UINT16 CSoundBoard::Read16(UINT32 a)
 	return 0;
 }
 
-UINT32 CSoundBoard::Read32(UINT32 a) 
+UINT32 CSoundBoard::Read32(UINT32 a)
 {
 	UINT32	hi, lo;
-	
+
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
 		hi = *(UINT16 *) &ram1[a];
 		lo = *(UINT16 *) &ram1[a+2];	// TODO: clamp? Possible bounds hazard.
 		return (hi<<16)|lo;
-		
+
 	case 0x1:	// SCSP registers (master): 100000-10FFFF
 		return SCSP_Master_r32(a);
-		
+
 	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
 		hi = *(UINT16 *) &ram2[a&0x0FFFFF];
 		lo = *(UINT16 *) &ram2[(a+2)&0x0FFFFF];
 		return (hi<<16)|lo;
-	
+
 	case 0x3:	// SCSP registers (slave): 300000-30FFFF
 		return SCSP_Slave_r32(a);
-		
+
 	case 0x6:	// Program ROM: 600000-67FFFF
 		hi = *(UINT16 *) &soundROM[a&0x07FFFF];
 		lo = *(UINT16 *) &soundROM[(a+2)&0x07FFFF];
@@ -397,7 +397,7 @@ bool CSoundBoard::RunFrame(void)
 	// Run DSB and mix with existing audio, apply music volume
 	if (NULL != DSB) {
 		// Will need to mix with proper front, rear channels or both (game specific)
-		bool mixDSBWithFront = true; // Everything to front channels for now
+		constexpr bool mixDSBWithFront = true; // Everything to front channels for now
 		// Case "both" not handled for now
 		if (mixDSBWithFront)
 			DSB->RunFrame(audioFL, audioFR);
@@ -567,7 +567,10 @@ CSoundBoard::CSoundBoard(const Util::Config::Node &config)
 	audioRR = NULL;
 	soundROM = NULL;
 	sampleROM = NULL;
-	
+
+	sampleBank = nullptr;
+	ctrlReg = 0;
+
 	DebugLog("Built Sound Board\n");
 }
 
@@ -579,9 +582,9 @@ CSoundBoard::~CSoundBoard(void)
 #endif
 
 	SCSP_Deinit();
-	
+
 	DSB = NULL;
-	
+
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
@@ -595,6 +598,6 @@ CSoundBoard::~CSoundBoard(void)
 	audioRR = NULL;
 	soundROM = NULL;
 	sampleROM = NULL;
-	
+
 	DebugLog("Destroyed Sound Board\n");
 }

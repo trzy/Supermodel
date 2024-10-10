@@ -116,7 +116,7 @@ int CInputSource::Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal,
 			toRange = (double)(toMaxVal - toOffVal);
 		else
 			toRange = (double)(toOffVal - toMinVal);
-		return toOffVal + (int)(toRange * frac); 
+		return toOffVal + (int)(toRange * frac);
 	}
 	else
 	{
@@ -124,11 +124,11 @@ int CInputSource::Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal,
 			toRange = (double)(toOffVal - toMaxVal);
 		else
 			toRange = (double)(toMinVal - toOffVal);
-		return toOffVal - (int)(toRange * frac); 
+		return toOffVal - (int)(toRange * frac);
 	}
 }
 
-bool CInputSource::IsActive()
+bool CInputSource::IsActive() const
 {
 	bool boolVal;
 	return GetValueAsSwitch(boolVal);

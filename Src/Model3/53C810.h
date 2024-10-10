@@ -137,7 +137,7 @@ public:
 	 * Returns:
 	 *		Register data.
 	 */
-	UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset);
+	UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
 
 	/*
 	 * WritePCIConfigSpace(device, reg, bits, offset, data):
@@ -161,7 +161,7 @@ public:
 	 * 
 	 * Retrieves the base address of the SCSI device.
 	 */
-	UINT8 GetBaseAddress(void);
+	UINT8 GetBaseAddress(void) const;
 
 	/*
 	 * Reset(void):
@@ -169,7 +169,7 @@ public:
 	 * Resets the device. 
 	 */
 	void Reset(void);
-	
+
 	/*
 	 * Init(BusObjectPtr, IRQObjectPtr, scsiIRQBit):
 	 *
@@ -185,7 +185,7 @@ public:
 	 *						when asserting interrupts.
 	 */
 	void Init(IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit);
-	 
+
 	/*
 	 * C53C810(void):
 	 * ~C53C810(void):
@@ -204,7 +204,7 @@ private:
 
 	// Context (register file)
 	struct NCR53C810Context	Ctx;
-	
+
 	// IRQ identifier for this SCSI controller
 	unsigned	scsiIRQ;
 

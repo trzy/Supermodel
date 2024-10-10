@@ -131,7 +131,7 @@ void CMPC10x::WritePCIConfigAddress(UINT32 data)
 	}
 	//DebugLog("MPC10x: Bus=%X, Device=%X, Function=%X, Reg=%X\n", pciBus, pciDevice, pciFunction, pciReg);
 #endif
-	
+
 	if (pciBus != 0)
 	{
 		//printf("Multiple PCI buses detected!\n");
@@ -145,7 +145,7 @@ void CMPC10x::WritePCIConfigAddress(UINT32 data)
  * Reads from the PCI configuration space data (CONFIG_DATA) register, which in
  * turn calls upon the selected PCI device to return the data.
  */
-UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset)
+UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset) const
 {
 	// Handle self-access first
 	if (pciDevice == 0)
@@ -155,7 +155,7 @@ UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset)
 		if (((bits==16)&&(offset&1)) || ((bits==32)&&(offset&3)))
 			ErrorLog("Misaligned MPC10x read request (bits=%d,reg=%X,offset=%d)\n", bits, pciReg, offset);
 #endif
-		
+
 		switch (bits)
 		{
 		case 8:
@@ -172,7 +172,7 @@ UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset)
 			break;
 		}
 	}
-	
+
 	// All other PCI devices passed to PCI bus
 	return PCIBus->ReadConfigSpace(pciDevice, (pciReg>>2)&0x3C, bits, offset);
 }

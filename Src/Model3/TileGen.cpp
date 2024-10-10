@@ -177,7 +177,7 @@ void CTileGen::EndFrame(void)
  Emulation Functions
 ******************************************************************************/
 
-UINT32 CTileGen::ReadRAM32(unsigned addr)
+UINT32 CTileGen::ReadRAM32(unsigned addr) const
 {
 	return *(UINT32 *) &m_vram[addr];
 }
@@ -198,7 +198,7 @@ void CTileGen::WriteRAM32(unsigned addr, UINT32 data)
 }
 
 //TODO: 8- and 16-bit handlers have not been thoroughly tested
-uint8_t CTileGen::ReadRAM8(unsigned addr)
+uint8_t CTileGen::ReadRAM8(unsigned addr) const
 {
   return m_vram[addr];
 }
@@ -214,7 +214,7 @@ void CTileGen::WriteRAM8(unsigned addr, uint8_t data)
 }
 
 // Star Wars Trilogy uses this
-uint16_t CTileGen::ReadRAM16(unsigned addr)
+uint16_t CTileGen::ReadRAM16(unsigned addr) const
 {
   return *((uint16_t *) &m_vram[addr]);
 }
@@ -229,7 +229,7 @@ void CTileGen::WriteRAM16(unsigned addr, uint16_t data)
   WriteRAM32(addr & ~1, tmp);
 }
 
-UINT32 CTileGen::ReadRegister(unsigned reg)
+UINT32 CTileGen::ReadRegister(unsigned reg) const
 {
   reg &= 0xFF;
   return m_regs[reg/4];
@@ -238,10 +238,10 @@ UINT32 CTileGen::ReadRegister(unsigned reg)
 void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 {
 	reg &= 0xFF;
-		
+
 	switch (reg)
 	{
-  case 0x00:
+	case 0x00:
 	case 0x08:
 	case 0x0C:
 		//end of frame
@@ -273,7 +273,7 @@ void CTileGen::WriteRegister(unsigned reg, UINT32 data)
 		//printf("%02X = %08X\n", reg, data);
 		break;
 	}
-	
+
 	// Modify register
 	m_regs[reg/4] = data;
 }
@@ -384,37 +384,37 @@ CTileGen::~CTileGen(void)
 	DebugLog("Destroyed Tile Generator\n");
 }
 
-bool CTileGen::IsEnabled(int layerNumber)
+bool CTileGen::IsEnabled(int layerNumber) const
 {
 	return (m_regs[0x60 / 4 + layerNumber] & 0x80000000) > 0;
 }
 
-bool CTileGen::Above3D(int layerNumber)
+bool CTileGen::Above3D(int layerNumber) const
 {
 	return (m_regs[0x20 / 4] >> (8 + layerNumber)) & 0x1;
 }
 
-bool CTileGen::Is4Bit(int layerNumber)
+bool CTileGen::Is4Bit(int layerNumber) const
 {
 	return (m_regs[0x20 / 4] & (1 << (12 + layerNumber))) != 0;
 }
 
-int CTileGen::GetYScroll(int layerNumber)
+int CTileGen::GetYScroll(int layerNumber) const
 {
 	return (m_regs[0x60 / 4 + layerNumber] >> 16) & 0x1FF;
 }
 
-int CTileGen::GetXScroll(int layerNumber)
+int CTileGen::GetXScroll(int layerNumber) const
 {
 	return m_regs[0x60 / 4 + layerNumber] & 0x3FF;
 }
 
-bool CTileGen::LineScrollMode(int layerNumber)
+bool CTileGen::LineScrollMode(int layerNumber) const
 {
 	return (m_regs[0x60 / 4 + layerNumber] & 0x8000) != 0;
 }
 
-int CTileGen::GetLineScroll(int layerNumber, int yCoord)
+int CTileGen::GetLineScroll(int layerNumber, int yCoord) const
 {
 	int index = ((0xF6000 + (layerNumber * 0x400)) / 4) + (yCoord / 2);
 	int shift = (1 - (yCoord % 2)) * 16;
@@ -422,7 +422,7 @@ int CTileGen::GetLineScroll(int layerNumber, int yCoord)
 	return (m_vramP[index] >> shift) & 0xFFFFu;
 }
 
-int CTileGen::GetTileNumber(int xCoord, int yCoord, int xScroll, int yScroll)
+int CTileGen::GetTileNumber(int xCoord, int yCoord, int xScroll, int yScroll) const
 {
 	int xIndex = ((xCoord + xScroll) / 8) & 0x3F;
 	int yIndex = ((yCoord + yScroll) / 8) & 0x3F;
@@ -430,7 +430,7 @@ int CTileGen::GetTileNumber(int xCoord, int yCoord, int xScroll, int yScroll)
 	return (yIndex * 64) + xIndex;
 }
 
-int CTileGen::GetTileData(int layerNum, int tileNumber)
+int CTileGen::GetTileData(int layerNum, int tileNumber) const
 {
 	int addressBase = (0xF8000 + (layerNum * 0x2000)) / 4;
 	int offset = tileNumber / 2;							// two tiles per 32bit word
@@ -439,17 +439,17 @@ int CTileGen::GetTileData(int layerNum, int tileNumber)
 	return (m_vramP[addressBase + offset] >> shift) & 0xFFFFu;
 }
 
-int CTileGen::GetVFine(int yCoord, int yScroll)
+int CTileGen::GetVFine(int yCoord, int yScroll) const
 {
 	return (yCoord + yScroll) & 7;
 }
 
-int CTileGen::GetHFine(int xCoord, int xScroll)
+int CTileGen::GetHFine(int xCoord, int xScroll) const
 {
 	return (xCoord + xScroll) & 7;
 }
 
-int CTileGen::GetLineMask(int layerNumber, int yCoord)
+int CTileGen::GetLineMask(int layerNumber, int yCoord) const
 {
 	auto shift = (layerNumber < 2) ? 16u : 0u;
 	int index = (0xF7000 / 4) + yCoord;
@@ -457,14 +457,14 @@ int CTileGen::GetLineMask(int layerNumber, int yCoord)
 	return ((m_vramP[index] >> shift) & 0xFFFFu);
 }
 
-int CTileGen::GetPixelMask(int lineMask, int xCoord)
+int CTileGen::GetPixelMask(int lineMask, int xCoord) const
 {
 	int maskTest = 1 << (15 - (xCoord / 32));
 
 	return (lineMask & maskTest) != 0;		// zero means alt layer
 }
 
-UINT32 CTileGen::GetColour32(int layer, UINT32 data)
+UINT32 CTileGen::GetColour32(int layer, UINT32 data) const
 {
 	int a = (((data >> 15) +1) & 1) * 255;
 	int b = ((((data >> 10) & 0x1F) * 255) / 31) & a;
@@ -489,7 +489,7 @@ UINT32 CTileGen::GetColour32(int layer, UINT32 data)
 	return (a << 24) | (bb << 16) | (gg << 8) | rr;
 }
 
-void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* lineBuffer, const UINT32* pal, int& x)
+void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
 {
 	// Tile pattern offset: each tile occupies 32 bytes when using 4-bit pixels (offset of tile pattern within VRAM)
 	int patternOffset = ((tileData & 0x3FFF) << 1) | ((tileData >> 15) & 1);
@@ -526,7 +526,7 @@ void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* lineBuffer, 
 	*colour16++ = pal[ paletteIndex | ((pattern >> 0)  & 0xF) ];
 */
 
-void CTileGen::Draw8Bit(int tileData, int hFine, int vFine, UINT32* lineBuffer, const UINT32* pal, int& x)
+void CTileGen::Draw8Bit(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
 {
 	// Tile pattern offset: each tile occupies 64 bytes when using 8-bit pixels
 	int patternOffset = tileData & 0x3FFF;

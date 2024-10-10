@@ -70,7 +70,7 @@ public:
 	 *		data	Data to write.
 	 */
 	void WritePCIConfigAddress(UINT32 data);
-	
+
 	/*
 	 * ReadPCIConfigData(bits, offset):
 	 *
@@ -89,8 +89,8 @@ public:
 	 *		Data from the PCI conifguration space of the presently selected 
 	 *		device. Bit width will be the same as specified by 'bits'.
 	 */
-	UINT32 ReadPCIConfigData(unsigned bits, unsigned offset);
-	
+	UINT32 ReadPCIConfigData(unsigned bits, unsigned offset) const;
+
 	/*
 	 * WritePCIConfigData(bits, offset, data):
 	 *
@@ -104,7 +104,7 @@ public:
 	 *		data	Data to write.
 	 */
 	void WritePCIConfigData(unsigned bits, unsigned offset, UINT32 data);
-	
+
 	/*
 	 * WriteRegister(reg, data):
 	 *
@@ -115,14 +115,14 @@ public:
 	 *		data	Data to write.
 	 */
 	void WriteRegister(unsigned reg, UINT8 data);
-	
+
 	/*
 	 * Reset(void):
 	 *
 	 * Resets the device. 
 	 */
 	void Reset(void);
-	
+
 	/*
 	 * AttachPCIBus(BusObjectPtr):
 	 *
@@ -135,7 +135,7 @@ public:
 	 *		BusObjectPtr	A pointer to the PCI bus object.
 	 */
 	void AttachPCIBus(CPCIBus *BusObjectPtr);
-	
+
 	/*
 	 * SetModel(modelNum):
 	 *
