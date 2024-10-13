@@ -151,12 +151,12 @@ void Mat4::Rotate(float angle, float x, float y, float z)
 
 void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal)
 {
-	float x = 2.0F / (right - left);
-	float y = 2.0F / (top - bottom);
-	float a = (right + left) / (right - left);
-	float b = (top + bottom) / (top - bottom);
+	float x = 2.0f / (right - left);
+	float y = 2.0f / (top - bottom);
+	float a = left*x + 1.0f;
+	float b = bottom*y + 1.0f;
 	float c = -(farVal + nearVal) / (farVal - nearVal);
-	float d = -(2.0F * farVal * nearVal) / (farVal - nearVal);
+	float d = -2.0f * farVal * nearVal / (farVal - nearVal);
 
 	float m[16];
 	m[0] = x;
@@ -184,10 +184,10 @@ void Mat4::Frustum(float left, float right, float bottom, float top, float nearV
 
 void Mat4::FrustumRZ(float left, float right, float bottom, float top, float nearVal) 
 {
-	float x = 2.0F / (right - left);
-	float y = 2.0F / (top - bottom);
-	float a = (right + left) / (right - left);
-	float b = (top + bottom) / (top - bottom);
+	float x = 2.0f / (right - left);
+	float y = 2.0f / (top - bottom);
+	float a = left*x + 1.0f;
+	float b = bottom*y + 1.0f;
 
 	float m[16];
 	m[0] = x;

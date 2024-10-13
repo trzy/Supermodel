@@ -88,7 +88,7 @@ enum class Layer { colour, trans1, trans2, trans12 /*both 1&2*/, all, none };
 struct Mesh
 {
 	//helper funcs
-	bool Render(Layer layer, float nodeAlpha)
+	bool Render(Layer layer, float nodeAlpha) const
 	{
 		bool nAlpha = nodeAlpha < 1.0f;
 
@@ -151,9 +151,9 @@ struct Mesh
 	bool smoothShading	= false;
 	bool lighting		= false;
 	bool specular		= false;
-	float shininess		= 0;
-	float specularValue = 0;
-	
+	float shininess		= 0.f;
+	float specularValue = 0.f;
+
 	// fog
 	float fogIntensity = 1.0f;
 
@@ -191,10 +191,10 @@ struct Model
 
 struct Viewport
 {
-	int		vpX;					// these are the original hardware values
-	int		vpY;
-	int		vpWidth;
-	int		vpHeight;
+	float	vpX;					// these are the original hardware values (12.4 or 14.2 -> float)
+	float	vpY;
+	float	vpWidth;
+	float	vpHeight;
 	float	angle_left;
 	float	angle_right;
 	float	angle_top;
