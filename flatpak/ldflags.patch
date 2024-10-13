@@ -1,0 +1,13 @@
+diff --git a/Makefiles/Makefile.UNIX b/Makefiles/Makefile.UNIX
+index 1e48361..1e7577d 100644
+--- a/Makefiles/Makefile.UNIX
++++ b/Makefiles/Makefile.UNIX
+@@ -63,7 +63,7 @@ SDL2_LIBS = `sdl2-config --libs`
+ #
+ 
+ PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
+-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net
++PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -lSDL2_net -L/app/lib
+ 
+ 
+ ###############################################################################
