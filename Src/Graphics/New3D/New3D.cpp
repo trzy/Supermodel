@@ -131,8 +131,8 @@ void CNew3D::SetStepping(int stepping)
 Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
 	// Resolution and offset within physical display area
-	m_xRatio	= xRes * (float)(1.0 / 496.0);
-	m_yRatio	= yRes * (float)(1.0 / 384.0);
+	m_xRatio	= (float)xRes * (float)(1.0 / 496.0);
+	m_yRatio	= (float)yRes * (float)(1.0 / 384.0);
 	m_xOffs		= xOffset;
 	m_yOffs		= yOffset;
 	m_xRes		= xRes;
@@ -321,13 +321,12 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 
 		for (auto &m : n.models) {
 
-			bool matrixLoaded = false;
-
 			if (m.meshes->empty()) {
 				continue;
 			}
 
-			for (auto &mesh : *m.meshes) {
+			bool matrixLoaded = false;
+			for (const auto &mesh : *m.meshes) {
 
 				if (mesh.highPriority) {
 					hasOverlay = true;
@@ -998,13 +997,13 @@ void CNew3D::ResetMatrix(Mat4& mat) const
 // Draws viewports of the given priority
 void CNew3D::RenderViewport(UINT32 addr)
 {
-	static const GLfloat	color[8][3] =
-	{											// RGB1 color translation
+	static constexpr GLfloat color[8][3] =
+	{							// RGB1 color translation
 		{ 0.0f, 0.0f, 0.0f },	// off
 		{ 0.0f, 0.0f, 1.0f },	// blue
 		{ 0.0f, 1.0f, 0.0f },	// green
 		{ 0.0f, 1.0f, 1.0f },	// cyan
-		{ 1.0f, 0.0f, 0.0f }, 	// red
+		{ 1.0f, 0.0f, 0.0f },	// red
 		{ 1.0f, 0.0f, 1.0f },	// purple
 		{ 1.0f, 1.0f, 0.0f },	// yellow
 		{ 1.0f, 1.0f, 1.0f }	// white
@@ -1037,10 +1036,10 @@ void CNew3D::RenderViewport(UINT32 addr)
 		m_currentPriority = vp->priority;
 
 		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) * (float)(1.0 / 16.0)) + 0.5f);		// viewport X (12.4 fixed point)
-		vp->vpY			= (int)(((vpnode[0x1A] >> 16) * (float)(1.0 / 16.0)) + 0.5f);			// viewport Y (12.4)
-		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) * (float)(1.0 / 4.0)) + 0.5f);		// width (14.2)
-		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) * (float)(1.0 / 4.0)) + 0.5f);			// height (14.2)
+		vp->vpX			= (vpnode[0x1A] & 0xFFFF) * (float)(1.0 / 16.0);		// viewport X (12.4 fixed point)
+		vp->vpY			= (vpnode[0x1A] >> 16) * (float)(1.0 / 16.0);			// viewport Y (12.4)
+		vp->vpWidth		= (vpnode[0x14] & 0xFFFF) * (float)(1.0 / 4.0);			// width (14.2)
+		vp->vpHeight	= (vpnode[0x14] >> 16) * (float)(1.0 / 4.0);			// height (14.2)
 
 		uint32_t matrixBase = vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
@@ -1127,7 +1126,7 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
 		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
 		vp->fogParams[3] = std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
-		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF) * (float)(1.0 / 255.0);	// fog start
+		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF) * (float)(1.0 / 255.0);// fog start
 
 		// Avoid Infinite and NaN values for Star Wars Trilogy
 		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3])) {
@@ -1560,14 +1559,14 @@ bool CNew3D::IsVROMModel(UINT32 modelAddr) const
 
 void CNew3D::CalcViewport(Viewport* vp)
 {
-	float l = vp->angle_left;	// we need to calc the shape of the projection frustum for culling
-	float r = vp->angle_right;
-	float t = vp->angle_top;
-	float b = vp->angle_bottom;
+	const float l = vp->angle_left;	// we need to calc the shape of the projection frustum for culling
+	const float r = vp->angle_right;
+	const float t = vp->angle_top;
+	const float b = vp->angle_bottom;
 
 	vp->projectionMatrix.LoadIdentity();	// reset matrix
 
-	if (m_wideScreen && (vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
+	if (m_wideScreen && (vp->vpX == 0.f) && (vp->vpWidth >= 495.f) && (vp->vpY == 0.f) && (vp->vpHeight >= 383.f)) {
 
 		/*
 		 * Compute aspect ratio correction factor. "Window" refers to the full GL
@@ -1595,21 +1594,21 @@ void CNew3D::CalcViewport(Viewport* vp)
 		// screen and non-wide-screen modes have identical resolution parameters
 		// and only their scissor box differs)
 		float correction = windowAR / viewableAreaAR;
-		m_planes.correction = 1.0f / correction;
+		m_planes.correction = viewableAreaAR / windowAR;
 
 		vp->x		= 0;
-		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((384.f - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
-		vp->height = (int)((float)vp->vpHeight*m_yRatio);
+		vp->height = (int)(vp->vpHeight*m_yRatio);
 
 		vp->projectionMatrix.FrustumRZ(l*correction, r*correction, b, t, NEAR_PLANE);
 	}
 	else {
 
-		vp->x		= m_xOffs + (int)((float)vp->vpX*m_xRatio);
-		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
-		vp->width	= (int)((float)vp->vpWidth*m_xRatio);
-		vp->height	= (int)((float)vp->vpHeight*m_yRatio);
+		vp->x		= m_xOffs + (int)(vp->vpX*m_xRatio);
+		vp->y		= m_yOffs + (int)((384.f - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->width	= (int)(vp->vpWidth*m_xRatio);
+		vp->height	= (int)(vp->vpHeight*m_yRatio);
 
 		vp->projectionMatrix.FrustumRZ(l, r, b, t, NEAR_PLANE);
 	}
@@ -1641,8 +1640,8 @@ void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY) const
 	// remap real3d 496x384 to our new viewport
 	inY = 384 - inY;
 
-	outX = m_xOffs + int(inX * m_xRatio);
-	outY = m_yOffs + int(inY * m_yRatio);
+	outX = m_xOffs + int((float)inX * m_xRatio);
+	outY = m_yOffs + int((float)inY * m_yRatio);
 }
 
 bool CNew3D::ProcessLos(int priority)
