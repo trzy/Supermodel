@@ -268,7 +268,7 @@ void QuadraticInterpolation()
 {
 	float u[4];
 	for (int i=0; i<4; i++)
-		u[i] = length(fs_in.v[i]) * sign(fs_in.oneOverW[i]); // is w[i] negative?
+		u[i] = length(fs_in.v[i]);
 
 	precise float t[4];
 	for (int i=0; i<4; i++) {
