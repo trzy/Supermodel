@@ -2184,7 +2184,7 @@ static void ppc_fctiwx(UINT32 op)
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
 	}
-	else if(FPR(b).fd < (INT64)((INT32)0x80000000))
+	else if(r < (INT64)((INT32)0x80000000))
 	{
 		FPR(t).id = 0x80000000;
 		// FPSCR[FR] = 1
