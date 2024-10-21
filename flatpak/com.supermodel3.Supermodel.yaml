@@ -1,0 +1,45 @@
+id: com.supermodel3.Supermodel
+runtime: org.freedesktop.Platform
+runtime-version: "22.08"
+sdk: org.freedesktop.Sdk
+command: supermodel
+separate-locales: false
+finish-args:
+  - --device=all
+  - --persist=.supermodel
+  - --filesystem=home
+  - --filesystem=host:ro
+  - --share=network
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --socket=wayland
+  - --allow=bluetooth
+modules:
+  - shared-modules/glu/glu-9.json
+
+  - name: supermodel
+    buildsystem: simple
+    build-commands:
+      - make
+          -f Makefiles/Makefile.UNIX
+          NET_BOARD=1
+      - install -Dm 0755 bin/supermodel ${FLATPAK_DEST}/bin/supermodel
+      - install -Dm 0644 ${FLATPAK_ID}.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm 0644 ${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dm 0644 supermodel128x128.png ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/${FLATPAK_ID}.png
+      - cp -r Assets ${FLATPAK_DEST}/bin/
+      - cp -r Config ${FLATPAK_DEST}/bin/
+      - cp -r Docs ${FLATPAK_DEST}/bin/
+    sources:
+      - type: git
+        url: https://github.com/trzy/Supermodel.git
+        commit: e6b54686804cc349972d43e5960edae4c46b61ae
+      - type: file
+        path: com.supermodel3.Supermodel.desktop
+      - type: file
+        path: com.supermodel3.Supermodel.metainfo.xml
+      - type: file
+        path: supermodel128x128.png
+      - type: patch
+        path: ldflags.patch
