@@ -1571,6 +1571,10 @@ inline INT64 round_toward_negative_infinity(FPR f)
 }
 */
 
+// the following operations/functions CAN BREAK if fast math compiler options (i.e. finite math only) are enabled.
+// std::isnan is definetly ignored by GCC/clang then, and there are even fancier compiler heuristics that
+// can detect the bit fiddling ops to detect infinity, nan and denorms and then even may ignore these!
+// (the latter currently (2024) the case in non-production/experimental clang builds)
 inline bool is_nan_double(FPR x)
 {
 	return std::isnan(x.fd);
@@ -2748,7 +2752,7 @@ static void ppc_fselx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-	FPR(t).fd = (FPR(a).fd >= 0.0) ? FPR(c).fd : FPR(b).fd;
+	FPR(t).fd = (is_nan_double(FPR(a)) || FPR(a).fd < 0.0) ? FPR(b).fd : FPR(c).fd; // do not just sign check, as -0.0 also counts as +0.0
 
 	if( RCBIT ) {
 		SET_CR1();
