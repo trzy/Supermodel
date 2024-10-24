@@ -2171,14 +2171,14 @@ static void ppc_fctiwx(UINT32 op)
 
 	if(r > (INT64)((INT32)0x7FFFFFFF))
 	{
-		FPR(t).id = 0x7FFFFFFF;
+		FPR(t).id = (INT64)((INT32)0x7FFFFFFF);
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
 	}
 	else if(r < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;
+		FPR(t).id = (INT64)((INT32)0x80000000);
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2210,9 +2210,9 @@ static void ppc_fctiwzx(UINT32 op)
 	SET_VXSNAN_1(FPR(b));
 	r = (INT64)trunc(FPR(b).fd);
 
-	if(r > (INT64)((INT32)0x7fffffff))
+	if(r > (INT64)((INT32)0x7FFFFFFF))
 	{
-		FPR(t).id = 0x7fffffff;
+		FPR(t).id = (INT64)((INT32)0x7FFFFFFF);
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2220,7 +2220,7 @@ static void ppc_fctiwzx(UINT32 op)
 	}
 	else if(r < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;
+		FPR(t).id = (INT64)((INT32)0x80000000);
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
