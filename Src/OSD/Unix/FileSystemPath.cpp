@@ -32,24 +32,27 @@ namespace FileSystemPath
     // Checks if a directory exists (returns true if exists, false if it doesn't)
     bool PathExists(std::string fileSystemPath)
     {
-        bool pathExists = false;
         struct stat pathInfo;
+        return stat(fileSystemPath.c_str(), &pathInfo) == 0 && S_ISDIR(pathInfo.st_mode);
+    }
 
-        if (stat(fileSystemPath.c_str(), &pathInfo) == 0 && S_ISDIR(pathInfo.st_mode))
-        {
-            pathExists = true;
-        }
+    // If directory doesn't exist, create it
+    int MakeDir(std::string dir)
+    {
+        if (!PathExists(dir))
+	{
+            return mkdir(dir.c_str(), 0775);
+	}
 
-        return pathExists;
-
+        return 0;
     }
 
     // Generates a path to be used by Supermodel files
     std::string GetPath(PathType pathType)
     {
-        std::string finalPath = "";
-        std::string homePath = "";
-        std::string strPathType = "";
+        std::string finalPath;
+        std::string homePath;
+        std::string strPathType;
         struct passwd* pwd = getpwuid(getuid());
 
         // Resolve pathType to string for later use
@@ -74,7 +77,7 @@ namespace FileSystemPath
             strPathType = "Screenshots";
             break;
         case Assets:
-            strPathType = "Assets/";
+            strPathType = "Assets";
             break;
         }
 
@@ -85,25 +88,18 @@ namespace FileSystemPath
         }
         else
         {
-            homePath = getenv("HOME");
+            const char *envHome = getenv("HOME");
+            homePath = envHome == NULL ? std::string() : envHome;
         }
 
         // If Config path exists in current directory or the user doesn't have a HOME directory use current directory
         if (FileSystemPath::PathExists("Config") || homePath.empty())
         {
             // Use current directory
-            if (pathType == Screenshots || pathType == Log)
+            if (pathType != Screenshots && pathType != Log)
             {
-                finalPath = "";
-            }
-            else
-            {
-                // If directory doesn't exist, create it
-                if (!FileSystemPath::PathExists(strPathType))
-                {
-                    mkdir(strPathType.c_str(), 0775);
-                }
                 finalPath = strPathType;
+                FileSystemPath::MakeDir(finalPath);
             }
         }
         // Check if $HOME/.supermodel exists
@@ -111,11 +107,7 @@ namespace FileSystemPath
         {
             // Use $HOME/.supermodel
             finalPath = Util::Format() << homePath << "/.supermodel/" << strPathType;
-            // If directory doesn't exist, create it
-            if (!FileSystemPath::PathExists(finalPath))
-            {
-                mkdir(finalPath.c_str(), 0775);
-            }
+            FileSystemPath::MakeDir(finalPath);
         }
         // On Linux one may want to follow the XDG base directory specs (https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
         else
@@ -124,42 +116,43 @@ namespace FileSystemPath
             if (pathType == Config)
             {
                 finalPath = Util::Format() << homePath << "/.config/supermodel";
-                // If directory doesn't exist, create it
                 if (!FileSystemPath::PathExists(finalPath))
                 {
-                    mkdir(finalPath.c_str(), 0775);
+                    const char *envConfig = getenv("XDG_CONFIG_HOME");
+                    std::string configPath = (envConfig == NULL ? std::string() : envConfig);
+		    if (!configPath.empty())
+		    {
+		        finalPath = Util::Format() << configPath << "/supermodel";
+	            }
                 }
-                // If directory doesn't exist, create it
-                finalPath = Util::Format() << homePath << "/.config/supermodel/Config";
-                if (!FileSystemPath::PathExists(finalPath))
-                {
-                    mkdir(finalPath.c_str(), 0775);
-                }
+		FileSystemPath::MakeDir(finalPath);
+
+		finalPath = Util::Format() << finalPath << "/Config";
+		FileSystemPath::MakeDir(finalPath);
             }
             else
             {
                 finalPath = Util::Format() << homePath << "/.local/share/supermodel";
-                // If directory doesn't exist, create it
                 if (!FileSystemPath::PathExists(finalPath))
                 {
-                    mkdir(finalPath.c_str(), 0775);
+		    const char *envData = getenv("XDG_DATA_HOME");
+                    std::string dataPath = (envData == NULL ? std::string() : envData);
+		    if (!dataPath.empty())
+		    {
+		        finalPath = Util::Format() << dataPath << "/supermodel";
+	            }
                 }
-                // If directory doesn't exist, create it
-                finalPath = Util::Format() << homePath << "/.local/share/supermodel/" << strPathType;
-                if (!FileSystemPath::PathExists(finalPath))
-                {
-                    mkdir(finalPath.c_str(), 0775);
-                }
+		FileSystemPath::MakeDir(finalPath);
+
+		finalPath = Util::Format() << finalPath << "/" << strPathType;
+		FileSystemPath::MakeDir(finalPath);
             }
-            
         }
-        
-        if (finalPath != "")
+
+        if (!finalPath.empty())
         {
             finalPath = Util::Format() << finalPath << "/";
         }
-
         return finalPath;
-
     }
 }
