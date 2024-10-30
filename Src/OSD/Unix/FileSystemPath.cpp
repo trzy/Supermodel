@@ -119,7 +119,7 @@ namespace FileSystemPath
                 if (!FileSystemPath::PathExists(finalPath))
                 {
                     const char *envConfig = getenv("XDG_CONFIG_HOME");
-                    std::string configPath = (envConfig == NULL ? std::string() : envConfig);
+                    std::string configPath = (envConfig == NULL ? finalPath : envConfig);
 		    if (!configPath.empty())
 		    {
 		        finalPath = Util::Format() << configPath << "/supermodel";
@@ -136,7 +136,7 @@ namespace FileSystemPath
                 if (!FileSystemPath::PathExists(finalPath))
                 {
 		    const char *envData = getenv("XDG_DATA_HOME");
-                    std::string dataPath = (envData == NULL ? std::string() : envData);
+                    std::string dataPath = (envData == NULL ? finalPath : envData);
 		    if (!dataPath.empty())
 		    {
 		        finalPath = Util::Format() << dataPath << "/supermodel";
