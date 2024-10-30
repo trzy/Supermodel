@@ -1,1 +1,6 @@
 Source code for Third-party libraries needs to be placed in here.
+Should look something like
+
+SDL2_net-2.2.0
+SDL2-2.30.8
+zlib-1.2.4

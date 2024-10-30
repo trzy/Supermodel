@@ -30,6 +30,7 @@
 #define INCLUDED_REAL3D_H
 
 #include "IRQ.h"
+#include "JTAG.h"
 #include "PCI.h"
 #include "CPU/Bus.h"
 #include "Graphics/IRender3D.h"
@@ -80,21 +81,6 @@ public:
   {
     Step1x = 0x16C311DB,  // Step 1.x
     Step2x = 0x178611DB   // Step 2.x
-  };
-
-  /*
-   * ASIC Names
-   *
-   * These were determined from Virtual On, which prints them out if any of the
-   * ID codes are incorrect. ID codes depend on stepping.
-   */
-  enum ASIC
-  {
-    Mercury,
-    Venus,
-    Earth,
-    Mars,
-    Jupiter
   };
 
   /*
@@ -179,7 +165,7 @@ public:
    * This should be called when the command port is written.
    */
   void Flush(void);
-   
+
   /*
    * ReadDMARegister8(reg):
    * ReadDMARegister32(reg):
@@ -193,9 +179,9 @@ public:
    * Returns:
    *    Data of the requested size, in little endian.
    */
-  uint8_t ReadDMARegister8(unsigned reg);
-  uint32_t ReadDMARegister32(unsigned reg);
-  
+  uint8_t ReadDMARegister8(unsigned reg) const;
+  uint32_t ReadDMARegister32(unsigned reg) const;
+
   /*
    * WriteDMARegister8(reg, data):
    * WriteDMARegister32(reg, data);
@@ -209,7 +195,7 @@ public:
    */
   void WriteDMARegister8(unsigned reg, uint8_t data);
   void WriteDMARegister32(unsigned reg, uint32_t data);
-  
+
   /*
    * WriteLowCullingRAM(addr, data):
    *
@@ -279,17 +265,17 @@ public:
   void WritePolygonRAM(uint32_t addr, uint32_t data);
   
   /*
-   * WriteJTAGRegister(instruction, data):
-   *
-   * Write to an internal register using the JTAG interface. This is intended
-   * to be called from the JTAG emulation for instructions that are known to
-   * poke the internal state of Real3D ASICs.
-   *
-   * Parameters:
-   *    instruction   Value of the JTAG instruction register.
-   *    data          Data written.
-   */
-  void WriteJTAGRegister(uint64_t instruction, uint64_t data);
+  * WriteJTAGModeword(device, data):
+  *
+  * Write to an internal modeword register using the JTAG interface. This is
+  * intended to be called from the JTAG emulation to poke the internal state
+  * of Real3D ASICs.
+  *
+  * Parameters:
+  *    device   Name of the Real3D ASIC whose modeword is being accessed.
+  *    data     Data written.
+  */
+  void WriteJTAGModeword(CASIC::Name device, uint32_t data);
 
   /*
    * ReadRegister(reg):
@@ -303,7 +289,7 @@ public:
    *    The 32-bit status register.
    */
   uint32_t ReadRegister(unsigned reg);
-  
+
   /*
    * ReadPCIConfigSpace(device, reg, bits, offset):
    *
@@ -321,8 +307,8 @@ public:
    * Returns:
    *    Register data.
    */
-  uint32_t ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
-  
+  uint32_t ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
+
   /*
    * WritePCIConfigSpace(device, reg, bits, offset, data):
    *
@@ -338,8 +324,8 @@ public:
    *            register number.
    *    data    Data.
    */
-  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, uint32_t data);
-  
+  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, uint32_t data);
+
   /*
    * Reset(void):
    *
@@ -347,7 +333,7 @@ public:
    * device.
    */
   void Reset(void);
-  
+
   /*
    * AttachRenderer(render3DPtr):
    *
@@ -359,20 +345,6 @@ public:
    *    Render3DPtr   Pointer to a 3D renderer object.
    */
   void AttachRenderer(IRender3D *Render3DPtr);
-  
-  /*
-   * GetASICIDCodes(asic):
-   *
-   * Obtain ASIC ID code for the specified ASIC under the currently configured
-   * hardware stepping.
-   *
-   * Parameters:
-   *    asic  ASIC ID.
-   *
-   * Returns:
-   *    The ASIC ID code. Undefined for invalid ASIC ID.
-   */
-  uint32_t GetASICIDCode(ASIC asic) const;
 
   /*
    * SetStepping(stepping):
@@ -409,7 +381,7 @@ public:
    *    OKAY if successful otherwise FAIL (not enough memory). Prints own
    *    errors.
    */
-  bool Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
+  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
    
   /*
    * CReal3D(config):
@@ -501,8 +473,8 @@ private:
   bool m_evenFrame = false;
   
   // Internal ASIC state
-  std::unordered_map<ASIC, uint32_t> m_asicID;
   uint64_t m_internalRenderConfig[2];
+  uint32_t m_modeword[5];
 };
 
 

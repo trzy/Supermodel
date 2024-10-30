@@ -45,6 +45,8 @@
 #include "Network/INetBoard.h"
 #endif // NET_BOARD
 #include "Util/NewConfig.h"
+#include "Graphics/SuperAA.h"
+#include "OSD/Thread.h"
 
 /*
  * FrameTimings
@@ -92,16 +94,16 @@ public:
   void RenderFrame(void);
   void Reset(void);
   const Game &GetGame(void) const;
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr);
+  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
-  bool Init(void);
+  Result Init(void);
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
 
   // IPCIDevice interface
-  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width);
-  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned width, UINT32 data);
+  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
+  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
 
   // IBus interface
   UINT8 Read8(UINT32 addr);
@@ -126,7 +128,7 @@ public:
    * Returns:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
-  bool LoadGame(const Game &game, const ROMSet &rom_set);
+  Result LoadGame(const Game &game, const ROMSet &rom_set);
 
   /*
    * GetSoundBoard(void):
@@ -202,7 +204,7 @@ private:
   UINT32    ReadSecurity(unsigned reg);
   void      WriteSecurity(unsigned reg, UINT32 data);
   void      SetCROMBank(unsigned idx);
-  UINT8     ReadSystemRegister(unsigned reg);
+  UINT8     ReadSystemRegister(unsigned reg) const;
   void      WriteSystemRegister(unsigned reg, UINT8 data);
 
   void RunMainBoardFrame(void);                       // Runs PPC main board for a frame
@@ -210,7 +212,7 @@ private:
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
 #ifdef NET_BOARD
-  void RunNetBoardFrame(void);						  // Runs net board for a frame
+  void RunNetBoardFrame(void);                        // Runs net board for a frame
 #endif
 
   bool    StartThreads(void);                         // Starts all threads
@@ -237,6 +239,7 @@ private:
 
   // Game and hardware information
   Game m_game;
+  int m_stepping;
 
   // Game inputs and outputs
   CInputs   *Inputs;
@@ -321,6 +324,7 @@ private:
   CDriveBoard *DriveBoard;    // Drive board
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
+  SuperAA     *m_superAA;
 #ifdef NET_BOARD
   INetBoard   *NetBoard;      // Net board
   bool		m_runNetBoard;

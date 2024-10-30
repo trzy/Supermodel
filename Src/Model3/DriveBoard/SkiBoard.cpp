@@ -35,15 +35,14 @@
 #include "Inputs/Input.h"
 
 #include <cstdio>
-#include <cmath>
 #include <algorithm>
 
-Game::DriveBoardType CSkiBoard::GetType(void)
+Game::DriveBoardType CSkiBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_SKI;
 }
 
-unsigned CSkiBoard::GetForceFeedbackStrength()
+unsigned CSkiBoard::GetForceFeedbackStrength() const
 {
   return 0;
 }
@@ -67,9 +66,9 @@ void CSkiBoard::Disable(void)
   CDriveBoard::Disable();
 }
 
-bool CSkiBoard::Init(const UINT8 *romPtr)
+Result CSkiBoard::Init(const UINT8 *romPtr)
 {
-  bool result = CDriveBoard::Init(romPtr);
+  auto result = CDriveBoard::Init(romPtr);
   m_simulated = true;
   return result;
 }

@@ -93,7 +93,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.30.8\include;..\Libraries\SDL2_net-2.2.0;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -101,6 +101,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -126,7 +127,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.30.8\include;..\Libraries\SDL2_net-2.2.0;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -134,6 +135,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -157,13 +159,14 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.30.8\include;..\Libraries\SDL2_net-2.2.0;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -192,7 +195,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.0.12\include;..\Libraries\SDL2_net-2.0.1;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.2.4;..\Libraries\SDL2-2.30.8\include;..\Libraries\SDL2_net-2.2.0;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC;NET_BOARD</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -200,6 +203,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -306,6 +310,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Debugger\SupermodelDebugger.cpp" />
     <ClCompile Include="..\Src\Debugger\Watch.cpp" />
     <ClCompile Include="..\Src\GameLoader.cpp" />
+    <ClCompile Include="..\Src\Graphics\FBO.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Error.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Legacy3D.cpp" />
     <ClCompile Include="..\Src\Graphics\Legacy3D\Models.cpp" />
@@ -319,10 +324,12 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Graphics\New3D\R3DFrameBuffers.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DScrollFog.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\R3DShader.cpp" />
+    <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
     <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
     <ClCompile Include="..\Src\Graphics\Shader.cpp" />
+    <ClCompile Include="..\Src\Graphics\SuperAA.cpp" />
     <ClCompile Include="..\Src\Inputs\Input.cpp" />
     <ClCompile Include="..\Src\Inputs\Inputs.cpp" />
     <ClCompile Include="..\Src\Inputs\InputSource.cpp" />
@@ -391,7 +398,6 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\Src\Util\BitRegister.cpp" />
     <ClCompile Include="..\Src\Util\ByteSwap.cpp" />
     <ClCompile Include="..\Src\Util\ConfigBuilders.cpp" />
     <ClCompile Include="..\Src\Util\Format.cpp" />
@@ -478,6 +484,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Debugger\SupermodelDebugger.h" />
     <ClInclude Include="..\Src\Debugger\Watch.h" />
     <ClInclude Include="..\Src\GameLoader.h" />
+    <ClInclude Include="..\Src\Graphics\FBO.h" />
     <ClInclude Include="..\Src\Graphics\IRender3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Legacy3D.h" />
     <ClInclude Include="..\Src\Graphics\Legacy3D\Shaders3D.h" />
@@ -493,13 +500,16 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Graphics\New3D\R3DFrameBuffers.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DScrollFog.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShader.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\R3DShaderCommon.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderQuads.h" />
     <ClInclude Include="..\Src\Graphics\New3D\R3DShaderTriangles.h" />
+    <ClInclude Include="..\Src\Graphics\New3D\TextureBank.h" />
     <ClInclude Include="..\Src\Graphics\New3D\VBO.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Vec.h" />
     <ClInclude Include="..\Src\Graphics\Render2D.h" />
     <ClInclude Include="..\Src\Graphics\Shader.h" />
     <ClInclude Include="..\Src\Graphics\Shaders2D.h" />
+    <ClInclude Include="..\Src\Graphics\SuperAA.h" />
     <ClInclude Include="..\Src\Inputs\Input.h" />
     <ClInclude Include="..\Src\Inputs\Inputs.h" />
     <ClInclude Include="..\Src\Inputs\InputSource.h" />
@@ -553,7 +563,6 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Sound\SCSPDSP.h" />
     <ClInclude Include="..\Src\Supermodel.h" />
     <ClInclude Include="..\Src\Util\BitCast.h" />
-    <ClInclude Include="..\Src\Util\BitRegister.h" />
     <ClInclude Include="..\Src\Util\BMPFile.h" />
     <ClInclude Include="..\Src\Util\ByteSwap.h" />
     <ClInclude Include="..\Src\Util\ConfigBuilders.h" />

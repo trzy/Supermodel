@@ -1,7 +1,7 @@
 #
 # Supermodel
 # A Sega Model 3 Arcade Emulator.
-# Copyright 2003-2022 The Supermodel Team
+# Copyright 2003-2024 The Supermodel Team
 #
 # This file is part of Supermodel.
 #
@@ -35,18 +35,22 @@
 #   - msys/subversion package
 #   - msys/zip package
 #   - git
+#   - paramiko (Python package for SSH/SFTP)
 #
 # To perform a test run:
 #   - Download https://supermodel3.com/Download.html to the directory from
 #     which the script will be run.
-#   - Run: python update_model3emu_snapshot.py --working-dir=c:\tmp\build --test-run
+#   - Run: python supermodel_build_bot.py --working-dir=c:\tmp\build --test-run
 #
 
 import argparse
+import base64
 import os
 import shutil
 import sys
 import tempfile
+
+import paramiko
 
 class CheckoutError(Exception):
   pass
@@ -81,7 +85,7 @@ def get_web_page(test_run):
       html = fp.read()
   else:
     import urllib.request
-    with urllib.request.urlopen("https://supermodel3.com/Download.html") as data:
+    with urllib.request.urlopen("http://supermodel3.com/Download.html") as data:
       html = data.read().decode("utf-8")
   return html
 
@@ -141,7 +145,7 @@ def create_change_log(bash, repo_dir, file_path, uploaded_shas, current_sha):
       "\n" \
       "                       A Sega Model 3 Arcade Emulator.\n" \
       "\n" \
-      "                   Copyright 2003-2022 The Supermodel Team\n" \
+      "                   Copyright 2003-2024 The Supermodel Team\n" \
       "\n" \
       "                                 CHANGE LOG\n" \
       "\n" \
@@ -154,16 +158,21 @@ def write_html_file(html, file_path):
     fp.write(html)
 
 def upload(html_file, zip_file_path, username, password):
-  from ftplib import FTP
-  ftp = FTP("supermodel3.com")
-  ftp.login(username, password)
-  ftp.cwd("public_html/Files/Git_Snapshots")
-  with open(zip_file_path, "rb") as fp:
-    ftp.storbinary("STOR " + os.path.basename(zip_file_path), fp)
-  ftp.cwd("../../")
-  with open(html_file, "rb") as fp:
-    ftp.storlines("STOR Download.html", fp)
-  ftp.quit()
+  # supermodel3.com host public key
+  keydata=b"""AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBE49lZKcEsFhEfEgVc4iNrBKOtItoXqQ/TKkPH9bAWOfn25H9BAi5AjkpqSsv/p1T5qfDni5G9sajqzamHw0TmU="""
+  key = paramiko.ECDSAKey(data=base64.decodebytes(keydata))
+
+  # Create SFTP client
+  ssh = paramiko.SSHClient()
+  ssh.get_host_keys().add('supermodel3.com', 'ecdsa-sha2-nistp256', key)
+  ssh.connect(hostname = "supermodel3.com", username = options.username, password = options.password)
+  sftp = ssh.open_sftp()
+
+  # Upload
+  sftp.put(localpath = zip_file_path, remotepath = f"public_html/Files/Git_Snapshots/{os.path.basename(zip_file_path)}")
+  sftp.put(localpath = html_file, remotepath = "public_html/Download.html")
+  sftp.close()
+  ssh.close()
 
 def confirm_package_contents(package_dir, package_files):
   all_found = True
@@ -196,6 +205,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
     repo_dir = os.path.join(working_dir, "model3emu")
 
     # Clone Git repo. Unfortunately need to always do this in order to get short SHA
+    print("Cloning repo...")
     result = bash.execute(working_dir=working_dir, command="git clone https://github.com/trzy/Supermodel.git model3emu")
     if result.returncode != 0:
       raise CheckoutError("Git clone failed")
@@ -240,7 +250,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
       bash.execute(working_dir=working_dir, command="mkdir pkg && mkdir pkg/Config && mkdir pkg/NVRAM && mkdir pkg/Saves && mkdir pkg/ROMs && mkdir pkg/Assets")
       change_log_file_path = os.path.join(pkg_dir, "CHANGES.txt")
       create_change_log(bash, repo_dir=repo_dir, file_path=change_log_file_path, uploaded_shas=uploaded_shas, current_sha=current_sha)
-      bash.execute(working_dir=working_dir, command="cp model3emu/Config/Supermodel.ini pkg/Config && cp model3emu/Config/Games.xml pkg/Config")
+      bash.execute(working_dir=working_dir, command="cp model3emu/Config/Supermodel.ini pkg/Config && cp model3emu/Config/Games.xml pkg/Config && cp model3emu/Config/Music.xml pkg/Config")
       bash.execute(working_dir=working_dir, command="echo NVRAM files go here. >pkg/NVRAM/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Save states go here. >pkg/Saves/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Recommended \\(but not mandatory\\) location for ROM sets. >pkg/ROMs/DIR.txt")
@@ -257,6 +267,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
         "CHANGES.txt",
         "Config/Supermodel.ini",
         "Config/Games.xml",
+        "Config/Music.xml",
         "NVRAM/DIR.txt",
         "Saves/DIR.txt",
         "ROMs/DIR.txt",

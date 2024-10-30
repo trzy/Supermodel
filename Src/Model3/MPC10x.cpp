@@ -88,7 +88,7 @@ void CMPC10x::SaveState(CBlockFile *SaveState)
 
 void CMPC10x::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("MPC10x"))
+	if (Result::OKAY != SaveState->FindBlock("MPC10x"))
 	{
 		ErrorLog("Unable to load MPC%X state. Save state file is corrupt.", model);
 		return;
@@ -131,7 +131,7 @@ void CMPC10x::WritePCIConfigAddress(UINT32 data)
 	}
 	//DebugLog("MPC10x: Bus=%X, Device=%X, Function=%X, Reg=%X\n", pciBus, pciDevice, pciFunction, pciReg);
 #endif
-	
+
 	if (pciBus != 0)
 	{
 		//printf("Multiple PCI buses detected!\n");
@@ -145,7 +145,7 @@ void CMPC10x::WritePCIConfigAddress(UINT32 data)
  * Reads from the PCI configuration space data (CONFIG_DATA) register, which in
  * turn calls upon the selected PCI device to return the data.
  */
-UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset)
+UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset) const
 {
 	// Handle self-access first
 	if (pciDevice == 0)
@@ -155,7 +155,7 @@ UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset)
 		if (((bits==16)&&(offset&1)) || ((bits==32)&&(offset&3)))
 			ErrorLog("Misaligned MPC10x read request (bits=%d,reg=%X,offset=%d)\n", bits, pciReg, offset);
 #endif
-		
+
 		switch (bits)
 		{
 		case 8:
@@ -172,7 +172,7 @@ UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset)
 			break;
 		}
 	}
-	
+
 	// All other PCI devices passed to PCI bus
 	return PCIBus->ReadConfigSpace(pciDevice, (pciReg>>2)&0x3C, bits, offset);
 }
@@ -346,14 +346,15 @@ void CMPC10x::Init(void)
  *
  * Constructor.
  */
-CMPC10x::CMPC10x(void)
+CMPC10x::CMPC10x(void) :
+	model(0x105),		// default to MPC105
+	PCIBus(nullptr),
+	regs{},
+	pciBus(0),
+	pciDevice(0),
+	pciFunction(0),
+	pciReg(0)
 {	
-	PCIBus = NULL;
-	model = 0x105;	// default to MPC105
-	pciBus = 0;
-	pciDevice = 0;
-	pciFunction = 0;
-	pciReg = 0;
 	DebugLog("Built MPC10x\n");
 }
 
@@ -364,6 +365,6 @@ CMPC10x::CMPC10x(void)
  */
 CMPC10x::~CMPC10x(void)
 {
-	PCIBus = NULL;
+	PCIBus = nullptr;
 	DebugLog("Destroyed MPC10x\n");
 }

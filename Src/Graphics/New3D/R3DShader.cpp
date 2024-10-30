@@ -1,6 +1,7 @@
 #include "R3DShader.h"
 #include "R3DShaderQuads.h"
 #include "R3DShaderTriangles.h"
+#include "R3DShaderCommon.h"
 
 // having 2 sets of shaders to maintain is really less than ideal
 // but hopefully not too many breaking changes at this point
@@ -27,14 +28,18 @@ void R3DShader::Start()
 	m_lightEnabled		= false;
 	m_specularEnabled	= false;
 	m_layered			= false;
+	m_noLosReturn		= false;
 	m_textureInverted	= false;
 	m_fixedShading		= false;
+	m_smoothShading		= false;
 	m_translatorMap		= false;
 	m_modelScale		= 1.0f;
+	m_nodeAlpha			= 1.0f;
 	m_shininess			= 0;
 	m_specularValue		= 0;
-	m_microTexScale		= 0;
+	m_microTexMinLOD	= 0;
 	m_microTexID		= -1;
+	m_texturePage		= -1;
 
 	m_baseTexInfo[0]	= -1;
 	m_baseTexInfo[1]	= -1;
@@ -62,30 +67,27 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	const char* gShader = "";
 	const char* fShader = fragmentShaderR3D;
 
-	std::string fragmentShaderCombined;
-
 	if (quads) {
 		vShader = vertexShaderR3DQuads;
 		gShader = geometryShaderR3DQuads;
-
-		fragmentShaderCombined += fragmentShaderR3DQuads1;
-		fragmentShaderCombined += fragmentShaderR3DQuads2;
-		fShader = fragmentShaderCombined.c_str();
+		fShader = fragmentShaderR3DQuads;
 	}
 
 	m_shaderProgram		= glCreateProgram();
 	m_vertexShader		= glCreateShader(GL_VERTEX_SHADER);
 	m_fragmentShader	= glCreateShader(GL_FRAGMENT_SHADER);
 
-	glShaderSource(m_vertexShader,		1, (const GLchar **)&vShader, NULL);
-	glShaderSource(m_fragmentShader,	1, (const GLchar **)&fShader, NULL);
+	const char* shaderArray[] = { fShader, fragmentShaderR3DCommon };
+
+	glShaderSource(m_vertexShader, 1, (const GLchar **)&vShader, nullptr);
+	glShaderSource(m_fragmentShader, (GLsizei)std::size(shaderArray), shaderArray, nullptr);
 
 	glCompileShader(m_vertexShader);
 	glCompileShader(m_fragmentShader);
 
 	if (quads) {
 		m_geoShader = glCreateShader(GL_GEOMETRY_SHADER);
-		glShaderSource(m_geoShader, 1, (const GLchar **)&gShader, NULL);
+		glShaderSource(m_geoShader, 1, (const GLchar **)&gShader, nullptr);
 		glCompileShader(m_geoShader);
 		glAttachShader(m_shaderProgram, m_geoShader);
 		PrintShaderResult(m_geoShader);
@@ -100,17 +102,21 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	PrintProgramResult(m_shaderProgram);
 
-	m_locTexture1			= glGetUniformLocation(m_shaderProgram, "tex1");
+	m_locTextureBank[0]		= glGetUniformLocation(m_shaderProgram, "textureBank[0]");
+	m_locTextureBank[1]		= glGetUniformLocation(m_shaderProgram, "textureBank[1]");
+	m_locTexturePage		= glGetUniformLocation(m_shaderProgram, "texturePage");
 	m_locTexture1Enabled	= glGetUniformLocation(m_shaderProgram, "textureEnabled");
 	m_locTexture2Enabled	= glGetUniformLocation(m_shaderProgram, "microTexture");
 	m_locTextureAlpha		= glGetUniformLocation(m_shaderProgram, "textureAlpha");
 	m_locAlphaTest			= glGetUniformLocation(m_shaderProgram, "alphaTest");
-	m_locMicroTexScale		= glGetUniformLocation(m_shaderProgram, "microTextureScale");
+	m_locMicroTexMinLOD		= glGetUniformLocation(m_shaderProgram, "microTextureMinLOD");
 	m_locMicroTexID			= glGetUniformLocation(m_shaderProgram, "microTextureID");
 	m_locBaseTexInfo		= glGetUniformLocation(m_shaderProgram, "baseTexInfo");
 	m_locBaseTexType		= glGetUniformLocation(m_shaderProgram, "baseTexType");
 	m_locTextureInverted	= glGetUniformLocation(m_shaderProgram, "textureInverted");
 	m_locTexWrapMode		= glGetUniformLocation(m_shaderProgram, "textureWrapMode");
+	m_locColourLayer		= glGetUniformLocation(m_shaderProgram, "colourLayer");
+	m_locPolyAlpha			= glGetUniformLocation(m_shaderProgram, "polyAlpha");
 
 	m_locFogIntensity		= glGetUniformLocation(m_shaderProgram, "fogIntensity");
 	m_locFogDensity			= glGetUniformLocation(m_shaderProgram, "fogDensity");
@@ -127,6 +133,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpecularValue		= glGetUniformLocation(m_shaderProgram, "specularValue");
 	m_locSpecularEnabled	= glGetUniformLocation(m_shaderProgram, "specularEnabled");
 	m_locFixedShading		= glGetUniformLocation(m_shaderProgram, "fixedShading");
+	m_locSmoothShading		= glGetUniformLocation(m_shaderProgram, "smoothShading");
 	m_locTranslatorMap		= glGetUniformLocation(m_shaderProgram, "translatorMap");
 
 	m_locSpotEllipse		= glGetUniformLocation(m_shaderProgram, "spotEllipse");
@@ -134,12 +141,15 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locSpotColor			= glGetUniformLocation(m_shaderProgram, "spotColor");
 	m_locSpotFogColor		= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 	m_locModelScale			= glGetUniformLocation(m_shaderProgram, "modelScale");
+	m_locNodeAlpha			= glGetUniformLocation(m_shaderProgram, "nodeAlpha");
 
 	m_locProjMat			= glGetUniformLocation(m_shaderProgram, "projMat");
 	m_locModelMat			= glGetUniformLocation(m_shaderProgram, "modelMat");
 
 	m_locHardwareStep		= glGetUniformLocation(m_shaderProgram, "hardwareStep");
 	m_locDiscardAlpha		= glGetUniformLocation(m_shaderProgram, "discardAlpha");
+
+	m_locCota				= glGetUniformLocation(m_shaderProgram, "cota");
 
 	return true;
 }
@@ -199,7 +209,8 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 	}
 
 	if (m_dirtyMesh) {
-		glUniform1i(m_locTexture1, 0);
+		glUniform1i(m_locTextureBank[0], 0);
+		glUniform1i(m_locTextureBank[1], 1);
 	}
 
 	if (m_dirtyMesh || m->textured != m_textured1) {
@@ -212,9 +223,14 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_textured2 = m->microTexture;
 	}
 
-	if (m_dirtyMesh || m->microTextureScale != m_microTexScale) {
-		glUniform1f(m_locMicroTexScale, m->microTextureScale);
-		m_microTexScale = m->microTextureScale;
+	if (m_dirtyMesh || (m->page ^ m_transPage) != m_texturePage) {
+		glUniform1i(m_locTexturePage, m->page ^ m_transPage);
+		m_texturePage = (m->page ^ m_transPage);
+	}
+
+	if (m_dirtyMesh || m->microTextureMinLOD != m_microTexMinLOD) {
+		glUniform1f(m_locMicroTexMinLOD, m->microTextureMinLOD);
+		m_microTexMinLOD = m->microTextureMinLOD;
 	}
 
 	if (m_dirtyMesh || m->microTextureID != m_microTexID) {
@@ -229,10 +245,7 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_baseTexInfo[2] = m->width;
 		m_baseTexInfo[3] = m->height;
 
-		int translatedX, translatedY;
-		CalcTexOffset(m_transX, m_transY, m_transPage, m->x, m->y, translatedX, translatedY);	// need to apply model translation
-
-		glUniform4i(m_locBaseTexInfo, translatedX, translatedY, m->width, m->height);
+		glUniform4i(m_locBaseTexInfo, (m->x + m_transX), (m->y + m_transY), m->width, m->height);
 	}
 
 	if (m_dirtyMesh || m_baseTexType != m->format) {
@@ -285,9 +298,19 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		m_fixedShading = m->fixedShading;
 	}
 
+	if (m_dirtyMesh || m->smoothShading != m_smoothShading) {
+		glUniform1i(m_locSmoothShading, m->smoothShading);
+		m_smoothShading = m->smoothShading;
+	}
+
 	if (m_dirtyMesh || m->translatorMap != m_translatorMap) {
 		glUniform1i(m_locTranslatorMap, m->translatorMap);
 		m_translatorMap = m->translatorMap;
+	}
+
+	if (m_dirtyMesh || m->polyAlpha != m_polyAlpha) {
+		glUniform1i(m_locPolyAlpha, m->polyAlpha);
+		m_polyAlpha = m->polyAlpha;
 	}
 
 	if (m_dirtyMesh || m->wrapModeU != m_texWrapMode[0] || m->wrapModeV != m_texWrapMode[1]) {
@@ -296,13 +319,25 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 		glUniform2iv(m_locTexWrapMode, 1, m_texWrapMode);
 	}
 
+	if (m_dirtyMesh || m->noLosReturn != m_noLosReturn) {
+		m_noLosReturn = m->noLosReturn;
+		glStencilFunc(GL_ALWAYS, m_noLosReturn << 7, 0b10000000);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0b10000000);
+	}
+
 	if (m_dirtyMesh || m->layered != m_layered) {
 		m_layered = m->layered;
+		// i think it should just disable z write, but the polys I think must be written first
 		if (m_layered) {
-			glEnable(GL_STENCIL_TEST);
+			glStencilFunc(GL_EQUAL, 0, 0b01111111);			// basically stencil test passes if the value is zero
+			glStencilOp(GL_KEEP, GL_INCR, GL_INCR);			// if the stencil test passes, we increment the value
+			glStencilMask(0b01111111);
 		}
 		else {
-			glDisable(GL_STENCIL_TEST);
+			glStencilFunc(GL_ALWAYS, m_noLosReturn << 7, 0b10000000);
+			glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+			glStencilMask(0b10000000);
 		}
 	}
 
@@ -329,6 +364,8 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 	glUniformMatrix4fv(m_locProjMat, 1, GL_FALSE, vp->projectionMatrix);
 
 	glUniform1i(m_locHardwareStep, vp->hardwareStep);
+
+	glUniform1f(m_locCota, vp->cota);
 }
 
 void R3DShader::SetModelStates(const Model* model)
@@ -336,6 +373,11 @@ void R3DShader::SetModelStates(const Model* model)
 	if (m_dirtyModel || model->scale != m_modelScale) {
 		glUniform1f(m_locModelScale, model->scale);
 		m_modelScale = model->scale;
+	}
+
+	if (m_dirtyModel || model->alpha != m_nodeAlpha) {
+		glUniform1f(m_locNodeAlpha, model->alpha);
+		m_nodeAlpha = model->alpha;
 	}
 
 	m_transX = model->textureOffsetX;
@@ -353,6 +395,11 @@ void R3DShader::SetModelStates(const Model* model)
 void R3DShader::DiscardAlpha(bool discard)
 {
 	glUniform1i(m_locDiscardAlpha, discard);
+}
+
+void R3DShader::SetLayer(Layer layer)
+{
+	glUniform1i(m_locColourLayer, (GLint)layer);
 }
 
 void R3DShader::PrintShaderResult(GLuint shader)
@@ -394,23 +441,6 @@ void R3DShader::PrintProgramResult(GLuint program)
 		glGetProgramInfoLog(program, maxLength, &maxLength, infoLog.data());
 		printf("%s\n", infoLog.data());
 	}
-}
-
-void R3DShader::CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY)
-{
-	newX = (x + offX) & 2047;	// wrap around 2048, shouldn't be required
-
-	int oldPage = y / 1024;
-
-	y -= (oldPage * 1024);	// remove page from tex y
-
-	// calc newY with wrap around, wraps around in the same sheet, not into another memory sheet
-
-	newY = (y + offY) & 1023;
-
-	// add page to Y
-
-	newY += ((oldPage + page) & 1) * 1024;		// max page 0-1
 }
 
 } // New3D

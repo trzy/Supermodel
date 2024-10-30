@@ -33,10 +33,9 @@
 #include "Input.h"
 #include "InputSystem.h"
 
-#include <vector>
 using namespace std;
 
-CInputSource::CInputSource(ESourceType sourceType) : type(sourceType), m_acquired(0)
+CInputSource::CInputSource(ESourceType sourceType) : m_acquired(0), type(sourceType)
 {
 	//
 }
@@ -117,7 +116,7 @@ int CInputSource::Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal,
 			toRange = (double)(toMaxVal - toOffVal);
 		else
 			toRange = (double)(toOffVal - toMinVal);
-		return toOffVal + (int)(toRange * frac); 
+		return toOffVal + (int)(toRange * frac);
 	}
 	else
 	{
@@ -125,11 +124,11 @@ int CInputSource::Scale(int val, int fromMinVal, int fromOffVal, int fromMaxVal,
 			toRange = (double)(toOffVal - toMaxVal);
 		else
 			toRange = (double)(toMinVal - toOffVal);
-		return toOffVal - (int)(toRange * frac); 
+		return toOffVal - (int)(toRange * frac);
 	}
 }
 
-bool CInputSource::IsActive()
+bool CInputSource::IsActive() const
 {
 	bool boolVal;
 	return GetValueAsSwitch(boolVal);

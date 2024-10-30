@@ -1321,7 +1321,7 @@ namespace Debugger
 
 		// Load labels
 		sprintf(blockStr, "%s.labels", name);
-		if (state->FindBlock(blockStr) == OKAY)
+		if (state->FindBlock(blockStr) == Result::OKAY)
 		{
 			labels.clear();
 			UINT32 numLabels;
@@ -1340,7 +1340,7 @@ namespace Debugger
 
 		// Load comments
 		sprintf(blockStr, "%s.comments", name);
-		if (state->FindBlock(blockStr) == OKAY)
+		if (state->FindBlock(blockStr) == Result::OKAY)
 		{
 			comments.clear();
 			UINT32 numComments;

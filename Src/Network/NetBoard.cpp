@@ -111,11 +111,11 @@
 #endif
 
 #ifndef SAFE_DELETE
-	#define SAFE_DELETE(p) if (p != nullptr) { delete (p); (p) = NULL; }
+	#define SAFE_DELETE(p) { delete (p); (p) = nullptr; }
 #endif
 
 #ifndef SAFE_ARRAY_DELETE
-	#define SAFE_ARRAY_DELETE(x) if (x != nullptr) { delete[] x; x = NULL; }
+	#define SAFE_ARRAY_DELETE(x) { delete[] (x); (x) = nullptr; }
 #endif
 
 static int(*Runnet68kCB)(int cycles);
@@ -218,7 +218,7 @@ UINT8 CNetBoard::Read8(UINT32 a)
 		case 0x11: // ioreg[c0011]
 			DebugLog("Netboard R8\tioreg[%x]=%x\t\treceive result status\n", a & 0xff, ioreg[a & 0xff]);
 			//return 0x5; /////////////////////////////////// pure hack for spikofe - must have the pure hack spikeout enable too ///////////////////////////////////////////////////////
-			if (Gameinfo.name.compare("spikeofe") == 0) return 0x5;
+			if (Gameinfo.name == "spikeofe") return 0x5;
 			return ioreg[(a&0xff) ^ 1];
 			break;
 
@@ -353,7 +353,7 @@ UINT16 CNetBoard::Read16(UINT32 a)
 
 UINT32 CNetBoard::Read32(UINT32 a)
 {
-	UINT32	hi, lo;
+	UINT32 hi, lo;
 	UINT32 result;
 	switch ((a >> 16) & 0xF)
 	{
@@ -836,7 +836,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 		case 0x89: // ioreg[c0089] // dayto2pe loops with values 00 01 02 during type 2 trame
 			ioreg[(a & 0xff) ^ 1] = d;
 			//CommRAM[4] = d; /////////////////////////////////// pure hack for spikeout /////////////////////////////////////////////////////////////////////////////////////////////
-			if (Gameinfo.name.compare("spikeout") == 0 || Gameinfo.name.compare("spikeofe") == 0) CommRAM[4] = d;
+			if (Gameinfo.name == "spikeout" || Gameinfo.name == "spikeofe") CommRAM[4] = d;
 			DebugLog("Netboard W8\tioreg[%x] <- %x\n", a & 0xff, d);
 			break;
 
@@ -1090,7 +1090,7 @@ void CNetBoard::Write32(UINT32 a, UINT32 d)
 #define MEMORY_POOL_SIZE	0x40000 // contiguous, not sure
 #define OFFSET_COMMRAM		0x0 // size 256kb 0x80000-0xbffff
 
-bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
+Result CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 {
 	netRAM = netRAMPtr;
 	netBuffer = netBufferPtr;
@@ -1128,7 +1128,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	memset(bank, 0, 0x10000);*/
 
 	// control register alloc
-	ct = new UINT8[0x100];
+	ct = new (std::nothrow) UINT8[0x100];
 	if (NULL == ct)
 	{
 		DebugLog("error mem ct\n");
@@ -1171,7 +1171,7 @@ bool CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 		printf("Successfully connected.\n");
 	}
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
@@ -1190,6 +1190,13 @@ CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
 	test_irq	= 0;
 
 	int5		= false;
+
+	m_attached = false;
+	commbank = 0;
+	recv_offset = 0;
+	recv_size = 0;
+	send_offset = 0;
+	send_size = 0;
 }
 
 CNetBoard::~CNetBoard(void)

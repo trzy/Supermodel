@@ -30,8 +30,6 @@
 #define DPRINTF(a, ...)
 #endif
 
-static const int RETRY_COUNT = 10;			// shrugs
-
 TCPSend::TCPSend(std::string& ip, int port) :
 	m_ip(ip),
 	m_port(port),

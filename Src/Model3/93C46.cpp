@@ -60,7 +60,7 @@ void C93C46::SaveState(CBlockFile *SaveState)
 
 void C93C46::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("93C46"))
+	if (Result::OKAY != SaveState->FindBlock("93C46"))
 	{
 		ErrorLog("Unable to load EEPROM state. File is corrupt.");
 		return;

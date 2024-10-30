@@ -441,7 +441,7 @@ const UINT32 *CLegacy3D::TranslateModelAddress(UINT32 modelAddr)
 ******************************************************************************/
 
 // Macro to generate column-major (OpenGL) index from y,x subscripts
-#define CMINDEX(y,x)  (x*4+y)
+#define CMINDEX(y,x)  ((x)*4+(y))
 
 /*
  * MultMatrix():
@@ -527,7 +527,7 @@ void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
   }
   
   // Set matrix base address and apply matrix #0 (coordinate system matrix)
-  matrixBasePtr = (float *) TranslateCullingAddress(matrixBaseAddr);
+  matrixBasePtr = (const float *) TranslateCullingAddress(matrixBaseAddr);
   MultMatrix(0);
 }
 
@@ -547,7 +547,7 @@ static bool IsDynamicModel(const UINT32 *data)
 {
   if (data == NULL)
     return false;
-  unsigned sharedVerts[16] = { 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 };
+  static constexpr unsigned sharedVerts[16] = { 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 };
   // VROM models are only dynamic if they reference polygon RAM via color palette indices
   bool done = false;
   do
@@ -561,7 +561,7 @@ static bool IsDynamicModel(const UINT32 *data)
     unsigned numVerts = (data[0]&0x40 ? 4 : 3);
     // Deduct number of reused verts
     numVerts -= sharedVerts[data[0]&0xf];
-	done = (data[1] & 4) > 0;
+    done = (data[1] & 4) > 0;
     // Skip header and vertices to next polygon
     data += 7 + numVerts * 4;
   }
@@ -579,12 +579,12 @@ static bool IsDynamicModel(const UINT32 *data)
  *
  * Models are cached for each unique culling node texture offset state.
  */
-bool CLegacy3D::DrawModel(UINT32 modelAddr)
+Result CLegacy3D::DrawModel(UINT32 modelAddr)
 {  
   //if (modelAddr==0x7FFF00)  // Fighting Vipers (this is not polygon data!)
   //  return;
   if (modelAddr == 0x200000)  // Virtual On 2 (during boot-up, causes slow-down)
-    return OKAY;
+    return Result::OKAY;
   const UINT32 *model = TranslateModelAddress(modelAddr);
   
   // Determine whether model is in polygon RAM or VROM
@@ -963,6 +963,10 @@ void CLegacy3D::RenderFrame(void)
 
   // Begin frame
   ClearErrors();  // must be cleared each frame
+
+  if (m_aaTarget) {
+      glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer
+  }
   
   // Z buffering (Z buffer is cleared by display list viewport nodes)
   glDepthFunc(GL_LESS);
@@ -1039,6 +1043,10 @@ void CLegacy3D::RenderFrame(void)
   glDisableClientState(GL_TEXTURE_COORD_ARRAY);
   glDisableClientState(GL_NORMAL_ARRAY);
   glDisableClientState(GL_VERTEX_ARRAY);
+
+  if (m_aaTarget) {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+  }
 }
 
 void CLegacy3D::EndFrame(void)
@@ -1089,7 +1097,7 @@ void CLegacy3D::SetStepping(int stepping)
   DebugLog("Legacy3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
   
-bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam)
+Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
   // Allocate memory for texture buffer
   textureBuffer = new(std::nothrow) GLfloat[1024*1024*4];
@@ -1097,12 +1105,14 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
     return ErrorLog("Insufficient memory for texture decode buffer.");
     
   glGetError(); // clear error flag
+
+  m_aaTarget = aaTarget;
   
   // Create model caches and VBOs
-  if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false))
-    return FAIL;
-  if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, true))
-    return FAIL;
+  if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false) != Result::OKAY)
+    return Result::FAIL;
+  if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, true) != Result::OKAY)
+    return Result::FAIL;
 
   // Initialize lighting parameters (updated as viewports are traversed)
   lightingParams[0] = 0.0;
@@ -1155,8 +1165,8 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
 
   // Load shaders, using multi-sheet shader if requested.
   const char *fragmentShaderSource = (m_config["MultiTexture"].ValueAs<bool>() ? fragmentShaderMultiSheetSource : fragmentShaderSingleSheetSource); // single texture shader
-  if (OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,m_config["VertexShader"].ValueAs<std::string>(),m_config["FragmentShader"].ValueAs<std::string>(),vertexShaderSource,fragmentShaderSource))
-    return FAIL;
+  if (Result::OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,m_config["VertexShader"].ValueAs<std::string>(),m_config["FragmentShader"].ValueAs<std::string>(),vertexShaderSource,fragmentShaderSource))
+    return Result::FAIL;
   
   // Try locating default "textureMap" uniform in shader program
   glUseProgram(shaderProgram); // bind program
@@ -1293,14 +1303,10 @@ bool CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned
   UploadTextures(0, 0, 0, 2048, 2048);
 
   DebugLog("Legacy3D initialized\n");
-  return OKAY;
+  return Result::OKAY;
 }
 
 void CLegacy3D::SetSunClamp(bool enable)
-{
-}
-
-void CLegacy3D::SetSignedShade(bool enable)
 {
 }
 
@@ -1310,7 +1316,8 @@ float CLegacy3D::GetLosValue(int layer)
 }
 
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
-  : m_config(config)
+  : m_config(config),
+    m_aaTarget(0)
 { 
   cullingRAMLo = NULL;
   cullingRAMHi = NULL;
@@ -1346,22 +1353,21 @@ CLegacy3D::~CLegacy3D(void)
   if (glBindBuffer != NULL) // we may have failed earlier due to lack of OpenGL 2.0 functions 
     glBindBuffer(GL_ARRAY_BUFFER, 0); // disable VBOs by binding to 0
   glDeleteTextures(numTexMaps, texMapIDs);
-  
+
   DestroyModelCache(&VROMCache);
   DestroyModelCache(&PolyCache);
-  
+
   cullingRAMLo = NULL;
   cullingRAMHi = NULL;
   polyRAM = NULL;
   vrom = NULL;
   textureRAM = NULL;
-  
-  if (texSheets != NULL)
-    delete [] texSheets;
 
-  if (textureBuffer != NULL)
-    delete [] textureBuffer;
-  textureBuffer = NULL;
+  delete [] texSheets;
+  texSheets = nullptr;
+
+  delete [] textureBuffer;
+  textureBuffer = nullptr;
 
   DebugLog("Destroyed Legacy3D\n");
 }

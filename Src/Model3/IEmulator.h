@@ -35,6 +35,7 @@ class CRender2D;
 class IRender3D;
 class CInputs;
 class COutputs;
+class SuperAA;
 
 /*
  * IEmulator:
@@ -139,7 +140,7 @@ public:
    * Returns:
    *    OKAY if successful, FAIL otherwise. Prints errors.
    */
-  virtual bool LoadGame(const Game &game, const ROMSet &rom_set) = 0;
+  virtual Result LoadGame(const Game &game, const ROMSet &rom_set) = 0;
   
   /*
    * AttachRenderers(Render2DPtr, Render3DPtr):
@@ -150,7 +151,7 @@ public:
    *    Render2DPtr   Pointer to a tile renderer object.
    *    Render3DPtr   Same as above but for a 3D renderer.
    */
-  virtual void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr) = 0;
+  virtual void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
   
   /*
    * AttachInputs(InputsPtr):
@@ -184,7 +185,7 @@ public:
    *    OKAY is successful, otherwise FAILED if a non-recoverable error
    *    occurred. Prints own error messages.
    */
-  virtual bool Init(void) = 0;
+  virtual Result Init(void) = 0;
 
   /*
    * PauseThreads(void):

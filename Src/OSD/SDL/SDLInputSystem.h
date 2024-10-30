@@ -106,19 +106,19 @@ protected:
 
 	const char *GetKeyName(int keyIndex);
 
-	bool IsKeyPressed(int kbdNum, int keyIndex);
+	bool IsKeyPressed(int kbdNum, int keyIndex) const;
 
-	int GetMouseAxisValue(int mseNum, int axisNum);
+	int GetMouseAxisValue(int mseNum, int axisNum) const;
 
-	int GetMouseWheelDir(int mseNum);
+	int GetMouseWheelDir(int mseNum) const;
 
-	bool IsMouseButPressed(int mseNum, int butNum);
+	bool IsMouseButPressed(int mseNum, int butNum) const;
 
-	int GetJoyAxisValue(int joyNum, int axisNum);
+	int GetJoyAxisValue(int joyNum, int axisNum) const;
 
-	bool IsJoyPOVInDir(int joyNum, int povNum, int povDir);
+	bool IsJoyPOVInDir(int joyNum, int povNum, int povDir) const;
 
-	bool IsJoyButPressed(int joyNum, int butNum);
+	bool IsJoyButPressed(int joyNum, int butNum) const;
 
 	bool ProcessForceFeedbackCmd(int joyNum, int axisNum, ForceFeedbackCmd ffCmd);
 
@@ -150,11 +150,11 @@ public:
 
 	~CSDLInputSystem();
 
-	int GetNumKeyboards();
+	int GetNumKeyboards() const;
 
-	int GetNumMice();
+	int GetNumMice() const;
 
-	int GetNumJoysticks();
+	int GetNumJoysticks() const;
 
 	const KeyDetails *GetKeyDetails(int kbdNum);
 

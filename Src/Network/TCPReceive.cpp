@@ -22,12 +22,10 @@
 
 #include "TCPReceive.h"
 #include "OSD/Logger.h"
-#include <chrono>
-
-using namespace std::chrono_literals;
+#include "OSD/Thread.h"
 
 #if defined(_DEBUG)
-#include <stdio.h>
+#include <cstdio>
 #define DPRINTF DebugLog
 #else
 #define DPRINTF(a, ...)
@@ -98,9 +96,7 @@ std::vector<char>& TCPReceive::Receive()
 	}
 
 	int size = 0;
-	int result = 0;
-
-	result = SDLNet_TCP_Recv(m_receiveSocket, &size, sizeof(int));
+	int result = SDLNet_TCP_Recv(m_receiveSocket, &size, sizeof(int));
 	DPRINTF("Received %i bytes\n", result);
 	if (result <= 0) {
 		SDLNet_TCP_Close(m_receiveSocket);
@@ -130,7 +126,7 @@ void TCPReceive::ListenFunc()
 {
 	while (m_running) {
 
-		std::this_thread::sleep_for(16ms);
+		CThread::Sleep(16);
 		if (m_receiveSocket) continue;
 
 		auto socket = SDLNet_TCP_Accept(m_listenSocket);

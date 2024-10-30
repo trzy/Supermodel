@@ -325,10 +325,10 @@ private:
   static const char *s_validKeyNames[];
 
   // Lookup table for translating mouse mapping strings to their respective mouse parts
-  static MousePartsStruct s_mseParts[];
+  static const MousePartsStruct s_mseParts[];
 
   // Lookup table for translating joystick mapping strings to their respective joystick parts
-  static JoyPartsStruct s_joyParts[];
+  static const JoyPartsStruct s_joyParts[];
 
   // Ids and names of axes
   static const char *s_axisIds[];
@@ -420,40 +420,40 @@ private:
    */
   void CheckJoySources(int joyNum, bool fullAxisOnly, std::vector<CInputSource*> &sources, std::string &mapping, std::vector<CInputSource*> &badSources);
 
-  bool ParseInt(const std::string& str, int &num);
+  static bool ParseInt(const std::string& str, int &num);
 
-  std::string IntToString(int num);
+  static std::string IntToString(int num);
 
-  bool EqualsIgnoreCase(const std::string& str1, const char *str2);
+  static bool EqualsIgnoreCase(const std::string& str1, const char *str2);
 
-  bool StartsWithIgnoreCase(const std::string& str1, const char *str2);
+  static bool StartsWithIgnoreCase(const std::string& str1, const char *str2);
 
   /*
    * Returns true if the given string represents a valid key name.
    */
-  bool IsValidKeyName(const std::string& str);
+  static bool IsValidKeyName(const std::string& str);
 
   /*
    * Returns the EMousePart with the given mapping name or MouseUnknown if not found.
    */
-  EMousePart LookupMousePart(const std::string& str);
+  static EMousePart LookupMousePart(const std::string& str);
 
   /*
    * Returns the mapping name for the given EMousePart.
    */
-  const char *LookupName(EMousePart msePart);
+  static const char *LookupName(EMousePart msePart);
 
   /*
    * Returns the EJoyPart with the given mapping name or JoyUnknown if not found.
    */
-  EJoyPart LookupJoyPart(const std::string& str);
+  static EJoyPart LookupJoyPart(const std::string& str);
 
   /*
    * Returns the mapping name for the given EJoyPart.
    */
-  const char *LookupName(EJoyPart joyPart);
+  static const char *LookupName(EJoyPart joyPart);
 
-  size_t ParseDevMapping(const std::string& str, const char *devType, int &devNum);
+  static size_t ParseDevMapping(const std::string& str, const char *devType, int &devNum);
 
   /*
    * Parses the given mapping string, possibly representing more than one mapping, and returns an input source for it or NULL if the 
@@ -470,14 +470,14 @@ private:
   /*
    * Prints the given key settings to stdout.
    */
-  void PrintKeySettings(int kbdNum, KeySettings *settings);
+  static void PrintKeySettings(int kbdNum, KeySettings *settings);
 
   /*
    * Reads key settings from an INI file for the given keyboard number, or common settings if ANY_KEYBOARD specified.
    * Returns NULL if no relevant settings were found in the INI file.
    */
   KeySettings *LoadKeySettings(const Util::Config::Node &config, int kbdNum);
-  
+
   /*
    * Writes the given key settings to an INI file, only writing out settings that are different to their defaults.
    */
@@ -486,7 +486,7 @@ private:
   /*
    * Prints the given mouse settings to stdout.
    */
-  void PrintMouseSettings(int mseNum, MouseSettings *settings);
+  static void PrintMouseSettings(int mseNum, MouseSettings *settings);
 
   /*
    * Loads mouse settings from a config object for the given mouse number, or common settings if ANY_MOUSE specified.
@@ -533,12 +533,12 @@ protected:
   /*
    * Returns true if the given EMousePart is an axis.
    */
-  bool IsAxis(EMousePart msePart);
+  static bool IsAxis(EMousePart msePart);
 
   /*
    * Returns true if the given EMousePart represents a full axis, eg MouseXAxis or MouseXAxisInv.
    */
-  bool IsFullAxis(EMousePart msePart);
+  static bool IsFullAxis(EMousePart msePart);
 
   /*
    * Returns true if the EMousePart represents an axis and sets axisPart and axisDir as follows:
@@ -546,43 +546,43 @@ protected:
    * axisDir will be AXIS_FULL, AXIS_INVERTED, AXIS_POS or AXIS_POS depending on whether the axis has the full range, has
    * the full range but inverted, is negative only, or is positive only.
    */
-  bool GetAxisDetails(EMousePart msePart, int &axisNum, int &axisDir);
+  static bool GetAxisDetails(EMousePart msePart, int &axisNum, int &axisDir);
 
   /*
    * Returns true if the given EMousePart represets a button, eg MouseButtonLeft.
    */
-  bool IsButton(EMousePart msePart);
+  static bool IsButton(EMousePart msePart);
 
   /*
    * Returns the button number (indexed from 0) of the given EMousePart if it is a button, or -1 otherwise.
    */
-  int GetButtonNumber(EMousePart msePart);
+  static int GetButtonNumber(EMousePart msePart);
 
   /* 
    * Returns the EMousePart that represents the axis component for the given axis number (AXIS_X, AXIS_Y or AXIS_Z) and direction 
    * (AXIS_FULL, AXIS_INVERTED, AXIS_POS or AXIS_POS), or MouseUnknown otherwise.
    */
-  EMousePart GetMouseAxis(int axisNum, int axisDir);
+  static EMousePart GetMouseAxis(int axisNum, int axisDir);
 
   /*
    * Returns the EMousePart that represents the mouse button with the given number (0-4), or MouseUnknown otherwise.
    */
-  EMousePart GetMouseButton(int butNum);
+  static EMousePart GetMouseButton(int butNum);
 
   /*
    * Returns true if the given EJoyPart is an axis.
    */
-  bool IsAxis(EJoyPart joyPart);
+  static bool IsAxis(EJoyPart joyPart);
 
   /*
    * Returns true if the given EJoyPart represents a full axis, eg JoyXAxis.
    */
-  bool IsFullAxis(EJoyPart joyPart);
+  static bool IsFullAxis(EJoyPart joyPart);
 
   /*
    * Returns true if the given EJoyPart represents a slider axis, eg JoyS1Axis.
    */
-  bool IsSliderAxis(EJoyPart joyPart);
+  static bool IsSliderAxis(EJoyPart joyPart);
 
   /*
    * Returns true if joystick part represents an axis and sets axisPart and axisDir as follows:
@@ -590,46 +590,46 @@ protected:
    * axisDir is AXIS_FULL, AXIS_INVERTED, AXIS_POS or AXIS_POS depending on whether the axis has the full range, has
    * the full range but inverted, is negative only, or is positive only.
    */
-  bool GetAxisDetails(EJoyPart joyPart, int &axisNum, int &axisDir);
+  static bool GetAxisDetails(EJoyPart joyPart, int &axisNum, int &axisDir);
 
   /*
    * Returns true if the given EJoyPart represents a POV hat direction, eg JoyPOV0Left.
    */ 
-  bool IsPOV(EJoyPart joyPart);
+  static bool IsPOV(EJoyPart joyPart);
 
   /*
    * Returns true if the EJoyPart represents a POV hat direction and sets povNum and povDir as follows:
    * povNum will be the POV hat number 0-4,
    * povDir will be POV_UP, POV_DOWN, POV_LEFT or POV_RIGHT.
    */
-  bool GetPOVDetails(EJoyPart joyPart, int &povNum, int &povDir);
+  static bool GetPOVDetails(EJoyPart joyPart, int &povNum, int &povDir);
 
   /*
    * Returns true if the given EJoyPart is a button
    */
-  bool IsButton(EJoyPart joyPart);
+  static bool IsButton(EJoyPart joyPart);
 
   /*
    * Returns the button number (indexed from 0) of the given EJoyPart if it is a button, or -1 otherwise.
    */
-  int GetButtonNumber(EJoyPart joyPart);
+  static int GetButtonNumber(EJoyPart joyPart);
 
   /* 
    * Returns the EJoyPart that represents the axis component for the given axis number (AXIS_X, AXIS_Y, AXIS_Z, AXIS_RX, AXIS_RY or AXIS_RZ) and
    * direction (AXIS_FULL, AXIS_INVERTED, AXIS_POS or AXIS_POS), or JoyUnknown otherwise.
    */
-  EJoyPart GetJoyAxis(int axisNum, int axisDir);
+  static EJoyPart GetJoyAxis(int axisNum, int axisDir);
 
   /*
    * Returns the EJoyPart that represents the POV hot direction for the given POV number (0-4) and direction (POV_UP, POV_DOWN, 
    * POV_LEFT or POV_RIGHT), JoyUnknown otherwise.
    */
-  EJoyPart GetJoyPOV(int povNum, int povDir);
+  static EJoyPart GetJoyPOV(int povNum, int povDir);
 
   /*
    * Returns the EJoyPart that represents the joystick button with the given number (0-31), or JoyUnknown otherwise.
    */
-  EJoyPart GetJoyButton(int butNum);
+  static EJoyPart GetJoyButton(int butNum);
 
   //
   // Abstract methods subclass must implement (ie system-specific code)
@@ -650,38 +650,38 @@ protected:
   /* 
    * Returns true if for the given keyboard the key with the system-specific key index is currently pressed.
    */
-  virtual bool IsKeyPressed(int kbdNum, int keyIndex) = 0;
+  virtual bool IsKeyPressed(int kbdNum, int keyIndex) const = 0;
 
   /*
    * Returns the current axis value for the given mouse and axis number (AXIS_X, AXIS_Y or AXIS_Z).
    */
-  virtual int GetMouseAxisValue(int mseNum, int axisNum) = 0;
+  virtual int GetMouseAxisValue(int mseNum, int axisNum) const = 0;
 
   /*
    * Returns the current direction (-1, 0 or 1) the Z-axis (wheel) is moving in for the given mouse.
    */
-  virtual int GetMouseWheelDir(int mseNum) = 0;
+  virtual int GetMouseWheelDir(int mseNum) const = 0;
 
   /*
    * Returns true if for the given mouse the button with the given number is currently pressed.
    */
-  virtual bool IsMouseButPressed(int mseNum, int butNum) = 0;
+  virtual bool IsMouseButPressed(int mseNum, int butNum) const = 0;
 
   /*
    * Returns the current axis value for the given joystick and axis number (AXIS_X, AXIS_Y, AXIS_Z, AXIS_RX, AXIS_RY or AXIS_RZ).
    */
-  virtual int GetJoyAxisValue(int joyNum, int axisNum) = 0;
+  virtual int GetJoyAxisValue(int joyNum, int axisNum) const = 0;
 
   /*
    * Returns true if for the given joystick the POV-hat controller with the given number is pointing in a particular direction (POV_UP, POV_DOWN,
    * POV_LEFT or POV_RIGHT)
    */
-  virtual bool IsJoyPOVInDir(int joyNum, int povNum, int povDir) = 0;
+  virtual bool IsJoyPOVInDir(int joyNum, int povNum, int povDir) const = 0;
 
   /*
    * Returns true if for the given joystick the button with the given number is currently pressed.
    */
-  virtual bool IsJoyButPressed(int joyNum, int butNum) = 0;
+  virtual bool IsJoyButPressed(int joyNum, int butNum) const = 0;
 
   /*
    * Processes the given force feedback command for the given joystick and axis number.
@@ -754,19 +754,19 @@ public:
    * Returns the number of attached keyboards (or 0 if the system cannot handle keyboards at all or ANY_KEYBOARD if the system cannot 
    * handle multiple keyboards).
    */
-  virtual int GetNumKeyboards() = 0;
+  virtual int GetNumKeyboards() const = 0;
   
   /*
    * Returns the number of attached mice (or 0 if the system cannot handle mice at all or ANY_MOUSE if the system cannot handle 
    * multiple mice).
    */
-  virtual int GetNumMice() = 0;
+  virtual int GetNumMice() const = 0;
   
   /*
    * Returns number of attached joysticks (or 0 if the system cannot handle joysticks at all or ANY_JOYSTICK if the system cannot 
    * handle multiple joysticks).
    */
-  virtual int GetNumJoysticks() = 0;
+  virtual int GetNumJoysticks() const = 0;
 
   /*
    * Returns details about the keyboard with the given number, or NULL if it does not exist.
@@ -874,12 +874,12 @@ public:
     int m_incr;             // Key increment for analog values 
     int m_decr;             // Key decrement for analog values
     int m_val;              // Current analog key value
-    int m_maxVal;           // Maximum analog key value
+    static constexpr int m_maxVal = 10000; // Maximum analog key value
 
   public:
     CKeyInputSource(CInputSystem *system, int kbdNum, int keyIndex, unsigned sensitivity, unsigned decaySpeed);
 
-    bool GetValueAsSwitch(bool &val);
+    bool GetValueAsSwitch(bool &val) const;
 
     bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
   };
@@ -899,12 +899,12 @@ public:
     /*
      * Scales the mouse axis value to the given range.
      */
-    int ScaleAxisValue(int minVal, int offVal, int maxVal);
+    int ScaleAxisValue(int minVal, int offVal, int maxVal) const;
 
   public:
     CMseAxisInputSource(CInputSystem *system, int mseNum, int axisNum, int axisDir, unsigned deadZone);
 
-    bool GetValueAsSwitch(bool &val);
+    bool GetValueAsSwitch(bool &val) const;
 
     bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
   };
@@ -922,7 +922,7 @@ public:
   public:
     CMseButInputSource(CInputSystem *system, int mseNum, int butNum);
 
-    bool GetValueAsSwitch(bool &val);
+    bool GetValueAsSwitch(bool &val) const;
 
     bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
   };
@@ -949,13 +949,13 @@ public:
     /*
      * Scales the joystick axis value to the given range.
      */
-    int ScaleAxisValue(int minVal, int offVal, int maxVal);
+    int ScaleAxisValue(int minVal, int offVal, int maxVal) const;
 
   public:
     CJoyAxisInputSource(CInputSystem *system, int joyNum, int axisNum, int axisDir, int axisMinVal, int axisOffVal, int axisMaxVal,
       unsigned deadZone, unsigned saturation);
 
-    bool GetValueAsSwitch(bool &val);
+    bool GetValueAsSwitch(bool &val) const;
 
     bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
 
@@ -976,7 +976,7 @@ public:
   public:
     CJoyPOVInputSource(CInputSystem *system, int joyNum, int povNum, int povDir);
 
-    bool GetValueAsSwitch(bool &val);
+    bool GetValueAsSwitch(bool &val) const;
 
     bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
   };
@@ -994,7 +994,7 @@ public:
   public:
     CJoyButInputSource(CInputSystem *system, int joyNum, int butNum);
 
-    bool GetValueAsSwitch(bool &val);
+    bool GetValueAsSwitch(bool &val) const;
 
     bool GetValueAsAnalog(int &val, int minVal, int offVal, int maxVal);
   };

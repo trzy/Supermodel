@@ -2,25 +2,12 @@
 #define _MODEL_H_
 
 #include <vector>
-#include <unordered_map>
 #include <memory>
 #include <cstring>
 #include "Types.h"
 #include "Mat4.h"
 
 namespace New3D {
-
-struct ClipVertex
-{
-	float pos[4];
-};
-
-struct ClipPoly
-{
-	ClipVertex list[12];		// what's the max number we can hit for a triangle + 4 planes?
-	int count = 0;
-};
-
 
 struct Vertex					// half vertex
 {
@@ -52,6 +39,7 @@ struct R3DPoly
 	Vertex v[4];			// just easier to have them as an array
 	float faceNormal[3];	// we need this to help work out poly winding, i assume the h/w uses this instead of calculating normals itself
 	UINT8 faceColour[4];	// per face colour
+	float textureNP;
 	int number = 4;
 };
 
@@ -59,6 +47,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 {
 	float faceNormal[3];
 	UINT8 faceColour[4];
+	float textureNP;
 
 	FVertex& operator=(const Vertex& vertex) 
 	{
@@ -71,6 +60,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 	{
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
+		textureNP = r3dPoly.textureNP;
 
 		*this = r3dPoly.v[index];
 	}
@@ -82,6 +72,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 		// copy face attributes
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
+		textureNP = r3dPoly.textureNP;
 	}
 
 	static void Average(const FVertex& p1, const FVertex& p2, FVertex& p3)
@@ -97,22 +88,24 @@ enum class Layer { colour, trans1, trans2, trans12 /*both 1&2*/, all, none };
 struct Mesh
 {
 	//helper funcs
-	bool Render(Layer layer)
+	bool Render(Layer layer, float nodeAlpha)
 	{
+		bool nAlpha = nodeAlpha < 1.0f;
+
 		switch (layer)
 		{
 		case Layer::colour:
-			if (polyAlpha) {
+			if (polyAlpha || nAlpha) {
 				return false;
 			}
 			break;
 		case Layer::trans1:
-			if ((!textureAlpha && !polyAlpha) || transLSelect) {
+			if ((!textureAlpha && !polyAlpha && !nAlpha) || transLSelect) {
 				return false;
 			}
 			break;
 		case Layer::trans2:
-			if ((!textureAlpha && !polyAlpha) || !transLSelect) {
+			if ((!textureAlpha && !polyAlpha && !nAlpha) || !transLSelect) {
 				return false;
 			}
 			break;
@@ -126,15 +119,21 @@ struct Mesh
 	enum TexWrapMode : int { repeat = 0, repeatClamp, mirror, mirrorClamp };
 
 	// texture
-	int format, x, y, width, height = 0;
-	TexWrapMode wrapModeU;
-	TexWrapMode wrapModeV;
-	bool inverted = false;
+	int		format		= 0;
+	int		x			= 0;
+	int		y			= 0;
+	int		width		= 0;
+	int		height		= 0;
+	int		page		= 0;
+	bool	inverted	= false;
+
+	TexWrapMode wrapModeU = TexWrapMode::repeat;
+	TexWrapMode wrapModeV = TexWrapMode::repeat;
 
 	// microtexture
 	bool	microTexture		= false;
 	int		microTextureID		= 0;
-	float	microTextureScale	= 0;
+	float	microTextureMinLOD	= 0;
 
 	// attributes
 	bool textured		= false;
@@ -145,9 +144,11 @@ struct Mesh
 	bool highPriority	= false;		// rendered over the top
 	bool transLSelect	= false;		// actually the transparency layer, false = layer 0, true = layer 1
 	bool translatorMap	= false;		// colours are multiplied by 16
+	bool noLosReturn	= false;		// line of sight test
 
 	// lighting
 	bool fixedShading	= false;
+	bool smoothShading	= false;
 	bool lighting		= false;
 	bool specular		= false;
 	float shininess		= 0;
@@ -183,6 +184,9 @@ struct Model
 
 	//model scale step 1.5+
 	float scale = 1.0f;
+
+	//node transparency
+	float alpha = 1.0f;
 };
 
 struct Viewport
@@ -195,6 +199,7 @@ struct Viewport
 	float	angle_right;
 	float	angle_top;
 	float	angle_bottom;
+	float	cota;
 
 	Mat4	projectionMatrix;		// projection matrix, we will calc this later when we have scene near/far vals
 
@@ -228,7 +233,7 @@ public:
 
 	bool Push();
 	bool Pop();
-	bool StackLimit();
+	bool StackLimit() const;
 	void Reset();
 
 	int currentTexOffsetX;
@@ -236,6 +241,8 @@ public:
 	int currentPage;
 	Clip currentClipStatus;
 	float currentModelScale;
+	float currentModelAlpha;
+	bool currentDisableCulling;
 
 private:
 
@@ -246,6 +253,8 @@ private:
 		int page;
 		Clip clip;
 		float modelScale;
+		float modelAlpha;	// from culling node
+		bool disableCulling;
 	};
 	std::vector<NodeAttribs> m_vecAttribs;
 };

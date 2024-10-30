@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,10 +18,10 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Model3GraphicsState.h
- * 
+ *
  * Minimalistic implementation of IEmulator designed to load and view graphics
  * state.
  */
@@ -52,7 +52,7 @@ public:
   void SaveState(CBlockFile *SaveState) override
   {
   }
-  
+
   void LoadState(CBlockFile *SaveState) override
   {
     m_real3D.LoadState(SaveState);
@@ -91,7 +91,7 @@ public:
   {
     // Load state
     CBlockFile SaveState;
-    if (OKAY != SaveState.Load(m_stateFilePath.c_str()))
+    if (Result::OKAY != SaveState.Load(m_stateFilePath.c_str()))
       ErrorLog("Unable to load state from '%s'.", m_stateFilePath.c_str());
     else
     {
@@ -105,7 +105,7 @@ public:
     return m_game;
   }
 
-  bool LoadGame(const Game &game, const ROMSet &rom_set) override
+  Result LoadGame(const Game &game, const ROMSet &rom_set) override
   {
     m_game = game;
     if (rom_set.get_rom("vrom").size <= 32*0x100000)
@@ -116,11 +116,11 @@ public:
     else
       rom_set.get_rom("vrom").CopyTo(m_vrom.get(), 64*0x100000);
     int stepping = ((m_game.stepping[0] - '0') << 4) | (m_game.stepping[2] - '0');
-    m_real3D.SetStepping(stepping, false);
-    return OKAY;
+    m_real3D.SetStepping(stepping);
+    return Result::OKAY;
   }
 
-  void AttachRenderers(CRender2D *render2D, IRender3D *render3D) override
+  void AttachRenderers(CRender2D *render2D, IRender3D *render3D, SuperAA* superAA) override
   {
     m_tileGen.AttachRenderer(render2D);
     m_real3D.AttachRenderer(render3D);
@@ -134,15 +134,15 @@ public:
   {
   }
 
-  bool Init(void) override
+  Result Init(void) override
   {
     m_vrom.reset(new uint8_t[64*1024*1024], std::default_delete<uint8_t[]>());
     m_irq.Init();
-    if (OKAY != m_tileGen.Init(&m_irq))
-      return FAIL;
-    if (OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, 0x100))
-      return FAIL;
-    return OKAY;
+    if (Result::OKAY != m_tileGen.Init(&m_irq))
+      return Result::FAIL;
+    if (Result::OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, 0x100))
+      return Result::FAIL;
+    return Result::OKAY;
   }
 
   bool PauseThreads(void) override

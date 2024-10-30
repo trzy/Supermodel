@@ -82,13 +82,13 @@ static char *LoadShaderSource(const char *file)
 	return buf;
 }
 
-bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const std::string& vsFile, const std::string& fsFile, const char *vsString, const char *fsString)
+Result LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint *fragmentShaderPtr, const std::string& vsFile, const std::string& fsFile, const char *vsString, const char *fsString)
 {
 	char		infoLog[2048];
 	const char	*vsSource, *fsSource;	// source code
 	GLuint		shaderProgram, vertexShader, fragmentShader;
 	GLint		result, len;
-	bool		ret = OKAY;
+	Result		ret = Result::OKAY;
 	
 	// Load shaders from files if specified
 	if (!vsFile.empty())
@@ -101,14 +101,14 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 		fsSource = fsString;
 	if (vsSource == NULL || fsSource == NULL)
 	{
-		ret = FAIL;
+		ret = Result::FAIL;
 		goto Quit;
 	}
 
 	// Ensure that shader support exists
 	if ((glCreateProgram==NULL) || (glCreateShader==NULL) || (glShaderSource==NULL) || (glCompileShader==NULL))
 	{
-		ret = FAIL;
+		ret = Result::FAIL;
 		ErrorLog("OpenGL 2.x does not appear to be present. Unable to proceed.");
 		goto Quit;
 	}
@@ -129,7 +129,7 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	{
 		glGetShaderInfoLog(vertexShader, 2048, &len, infoLog);
 		ErrorLog("Vertex shader failed to compile. Your OpenGL driver said:\n%s", infoLog);
-		ret = FAIL;	// error
+		ret = Result::FAIL;	// error
 	}
 	
 	// Attempt to compile fragment shader
@@ -140,7 +140,7 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	{
 		glGetShaderInfoLog(fragmentShader, 2048, &len, infoLog);
 		ErrorLog("Fragment shader failed to compile. Your OpenGL driver said:\n%s", infoLog);
-		ret = FAIL;	// error
+		ret = Result::FAIL;	// error
 	}
 	
 	// Link
@@ -152,11 +152,11 @@ bool LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLuint
 	{
 		glGetProgramInfoLog(shaderProgram, 2048, &len, infoLog);
 		ErrorLog("Failed to link shader objects. Your OpenGL driver said:\n%s\n", infoLog);
-		ret = FAIL;	// error
+		ret = Result::FAIL;	// error
 	}
 
 	// Enable the shader (if no errors)
-	if (ret == OKAY)
+	if (ret == Result::OKAY)
 		glUseProgram(shaderProgram);
 
 	// Clean up and quit 

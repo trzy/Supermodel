@@ -23,13 +23,12 @@ public:
 	void	SetShader			(bool enable = true);
 	GLint	GetVertexAttribPos	(const std::string& attrib);
 	void	DiscardAlpha		(bool discard);				// use to remove alpha from texture alpha only polys for 1st pass
+	void	SetLayer			(Layer layer);
 
 private:
 
 	void PrintShaderResult(GLuint shader);
 	void PrintProgramResult(GLuint program);
-
-	void CalcTexOffset(int offX, int offY, int page, int x, int y, int& newX, int& newY);
 
 	// run-time config
 	const Util::Config::Node &m_config;
@@ -41,18 +40,21 @@ private:
 	GLuint m_fragmentShader;
 
 	// mesh uniform locations
-	GLint m_locTexture1;
-	GLint m_locTexture1Enabled;
-	GLint m_locTexture2Enabled;
+	GLint m_locTextureBank[2];		// 2 banks
+	GLint m_locTexture1Enabled;		// base texture
+	GLint m_locTexture2Enabled;		// micro texture
+	GLint m_locTexturePage;
 	GLint m_locTextureAlpha;
 	GLint m_locAlphaTest;
-	GLint m_locMicroTexScale;
+	GLint m_locMicroTexMinLOD;
 	GLint m_locMicroTexID;
 	GLint m_locBaseTexInfo;
 	GLint m_locBaseTexType;
 	GLint m_locTextureInverted;
 	GLint m_locTexWrapMode;
 	GLint m_locTranslatorMap;
+	GLint m_locColourLayer;
+	GLint m_locPolyAlpha;
 
 	// cached mesh values
 	bool	m_textured1;
@@ -65,10 +67,14 @@ private:
 	float	m_specularValue;
 	bool	m_specularEnabled;
 	bool	m_fixedShading;
+	bool	m_smoothShading;
 	bool	m_translatorMap;
+	bool	m_polyAlpha;
+	int		m_texturePage;
 
 	bool	m_layered;
-	float	m_microTexScale;
+	bool	m_noLosReturn;
+	float	m_microTexMinLOD;
 	int		m_microTexID;
 	int		m_baseTexInfo[4];
 	int		m_baseTexType;
@@ -77,6 +83,7 @@ private:
 
 	// cached model values
 	float	m_modelScale;
+	float	m_nodeAlpha;
 	int		m_transX;
 	int		m_transY;
 	int		m_transPage;
@@ -93,6 +100,7 @@ private:
 	GLint m_locFogAttenuation;
 	GLint m_locFogAmbient;
 	GLint m_locProjMat;
+	GLint m_locCota;
 
 	// lighting / other
 	GLint m_locLighting;
@@ -103,6 +111,7 @@ private:
 	GLint m_locSpecularValue;
 	GLint m_locSpecularEnabled;
 	GLint m_locFixedShading;
+	GLint m_locSmoothShading;
 
 	GLint m_locSpotEllipse;
 	GLint m_locSpotRange;
@@ -111,6 +120,7 @@ private:
 
 	// model uniforms
 	GLint m_locModelScale;
+	GLint m_locNodeAlpha;
 	GLint m_locModelMat;
 
 	// global uniforms

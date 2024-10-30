@@ -164,17 +164,17 @@ public:
 	/*
 	 * Returns true if the input is a UI input.
 	 */
-	bool IsUIInput();
+	bool IsUIInput() const;
 
 	/*
 	 * Returns true if the input is configurable and can be set by the user.
 	 */
-	bool IsConfigurable();
+	bool IsConfigurable() const;
 
 	/*
 	 * Returns true if the input is a virtual input, ie one which generates its value based on other inputs and so has no mapping.
 	 */
-	bool IsVirtual();
+	bool IsVirtual() const;
 
 	/*
 	 * Configures the current mapping(s) assigned to this input by asking the user for input.
@@ -191,7 +191,7 @@ public:
 	/*
 	 * Returns true if the value of this input changed during the last poll.
 	 */
-	bool Changed();
+	bool Changed() const;
 
 	/*
 	 * Sends a force feedback command to the input source of this input.
@@ -203,18 +203,18 @@ public:
 // Inlined methods
 //
 
-inline bool CInput::IsUIInput()
+inline bool CInput::IsUIInput() const
 {
 	return gameFlags == Game::INPUT_UI;
 }
 
-inline bool CInput::IsConfigurable()
+inline bool CInput::IsConfigurable() const
 {
 	// All inputs except UI and virtual ones can be configured by the user
 	return (gameFlags != Game::INPUT_UI) && !(flags & INPUT_FLAGS_VIRTUAL);
 }
 
-inline bool CInput::IsVirtual()
+inline bool CInput::IsVirtual() const
 {
 	return !!(flags & INPUT_FLAGS_VIRTUAL);
 }

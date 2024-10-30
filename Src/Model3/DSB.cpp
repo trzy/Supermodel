@@ -122,7 +122,7 @@ void CDSBResampler::Reset(void)
 {
 	// Initial state of fractions (24.8 fixed point)
 	nFrac = 0<<8;	// fraction of next sample to use (0->1.0 as x moves p->n)
- 	pFrac = 1<<8;	// previous sample (1.0->0 as x moves p->n)
+	pFrac = 1<<8;	// previous sample (1.0->0 as x moves p->n)
 }
 
 // Mixes audio and returns number of samples copied back to start of buffer (ie. offset at which new samples should be written)
@@ -221,7 +221,7 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			usingMPEGStart	= mpegStart;
 			usingMPEGEnd	= mpegEnd;
 
-			MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+			MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);
 			return;
 		}
 
@@ -233,7 +233,7 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			usingMPEGStart	= mpegStart;
 			usingMPEGEnd	= mpegEnd;
 
-			MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);		// assume not looped for now
+			MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);		// assume not looped for now
 			return;
 		}
 		break;
@@ -266,13 +266,13 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			{
 				usingLoopStart	= loopStart;
 				usingLoopEnd	= mpegEnd-loopStart;
-				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+				MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			}
 			else
 			{
 				usingLoopStart	= loopStart;
 				usingLoopEnd	= loopEnd-loopStart;
-				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+				MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			}
 		}
 
@@ -302,7 +302,7 @@ void CDSB1::IOWrite8(UINT32 addr, UINT8 data)
 			loopEnd			= endLatch;
 			usingLoopStart	= loopStart;
 			usingLoopEnd	= loopEnd-loopStart;
-			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+			MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			//printf("loopEnd = %08X\n", loopEnd);
 		}
 		break;
@@ -497,7 +497,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 
-	if (OKAY != StateFile->FindBlock("DSB1"))
+	if (Result::OKAY != StateFile->FindBlock("DSB1"))
 	{
 		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupt.");
 		return;
@@ -529,10 +529,10 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
-		MpegDec::SetMemory(&mpegROM[usingMPEGStart], usingMPEGEnd - usingMPEGStart, false);
+		MpegDec::SetMemory(mpegROM, usingMPEGStart, usingMPEGEnd - usingMPEGStart, false);
 
 		if (usingLoopEnd != 0) {	// only if looping was actually enabled
-			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+			MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 		}
 
 		MpegDec::SetPosition(playOffset);
@@ -548,7 +548,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 #define DSB1_OFFSET_MPEG_RIGHT	0x8644	// 1604 bytes right MPEG buffer
 #define DSB1_MEMORY_POOL_SIZE	(0x8000 + 0x644 + 0x644)
 
-bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
+Result CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float	memSizeMB = (float)DSB1_MEMORY_POOL_SIZE/(float)0x100000;
 
@@ -572,7 +572,7 @@ bool CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 
 	retainedSamples = 0;
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 CZ80 *CDSB1::GetZ80(void)
@@ -603,11 +603,8 @@ CDSB1::CDSB1(const Util::Config::Node &config)
 
 CDSB1::~CDSB1(void)
 {
-	if (memoryPool != NULL)
-	{
-		delete [] memoryPool;
-		memoryPool = NULL;
-	}
+	delete [] memoryPool;
+	memoryPool = NULL;
 
 	progROM	= NULL;
 	mpegROM	= NULL;
@@ -648,7 +645,7 @@ enum
 	ST_GOTB6
 };
 
-static const char *stateName[] =
+static constexpr char *stateName[] =
 {
 	"idle",
 	"st_got_14",
@@ -691,7 +688,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGEnd	= mpegEnd;
 				playing			= 1;
 
-				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+				MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);
 
 				mpegState = ST_IDLE;
 			}
@@ -737,7 +734,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 			{
 				usingLoopStart	= mpegStart;
 				usingLoopEnd	= mpegEnd - mpegStart;
-				MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+				MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 			}
 
 			break;
@@ -773,7 +770,7 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 				usingMPEGStart	= mpegStart;
 				usingMPEGEnd	= mpegEnd;
 				playing			= 1;
-				MpegDec::SetMemory(&mpegROM[mpegStart], mpegEnd - mpegStart, false);
+				MpegDec::SetMemory(mpegROM, mpegStart, mpegEnd - mpegStart, false);
 			}
 			break;
 		case ST_GOTA5:
@@ -886,7 +883,7 @@ UINT16 CDSB2::Read16(UINT32 addr)
 
 UINT32 CDSB2::Read32(UINT32 addr)
 {
-	UINT32	hi, lo;
+	UINT32 hi, lo;
 
 	if (addr < (128*1024))
 	{
@@ -1127,7 +1124,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	UINT32	playOffset, endOffset;
 	UINT8	isPlaying;
 
-	if (OKAY != StateFile->FindBlock("DSB2"))
+	if (Result::OKAY != StateFile->FindBlock("DSB2"))
 	{
 		ErrorLog("Unable to load Digital Sound Board state. Save state file is corrupt.");
 		return;
@@ -1165,10 +1162,10 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 	// Restart MPEG audio at the appropriate position
 	if (isPlaying)
 	{
-		MpegDec::SetMemory(&mpegROM[usingMPEGStart], usingMPEGEnd - usingMPEGStart, false);
+		MpegDec::SetMemory(mpegROM, usingMPEGStart, usingMPEGEnd - usingMPEGStart, false);
 
 		if (usingLoopEnd != 0) {		// only if looping was actually enabled
-			MpegDec::UpdateMemory(&mpegROM[usingLoopStart], usingLoopEnd, true);
+			MpegDec::UpdateMemory(mpegROM, usingLoopStart, usingLoopEnd, true);
 		}
 
 		MpegDec::SetPosition(playOffset);
@@ -1191,7 +1188,7 @@ void CDSB2::LoadState(CBlockFile *StateFile)
 #define DSB2_OFFSET_MPEG_RIGHT	0x20644	// 1604 bytes right MPEG buffer
 #define DSB2_MEMORY_POOL_SIZE	(0x20000 + 0x644 + 0x644)
 
-bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
+Result CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 {
 	float memSizeMB = (float)DSB2_MEMORY_POOL_SIZE/(float)0x100000;
 
@@ -1219,7 +1216,7 @@ bool CDSB2::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
 
 	retainedSamples = 0;
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 M68KCtx *CDSB2::GetM68K(void)
@@ -1239,10 +1236,26 @@ CDSB2::CDSB2(const Util::Config::Node &config)
 	mpegR		= NULL;
 
 	cmdLatch	= 0;
-	mpegState	= 0;
+	mpegState	= ST_IDLE;
 	mpegStart	= 0;
 	mpegEnd		= 0;
 	playing		= 0;
+
+	retainedSamples = 0;
+
+	memset(fifo, 0, sizeof(fifo));
+	fifoIdxW = fifoIdxR = 0;
+	volume[0] = 0xFF;	// set to max volume in case we miss the volume commands
+	volume[1] = 0xFF;
+	stereo = StereoMode::Stereo;
+
+	m_cyclesElapsedThisFrame = 0;
+	m_nextTimerInterruptCycles = k_timerPeriod;
+
+	usingLoopStart = 0;
+	usingLoopEnd = 0;
+	usingMPEGStart = 0;
+	usingMPEGEnd = 0;
 
 	DebugLog("Built DSB2 Board\n");
 }

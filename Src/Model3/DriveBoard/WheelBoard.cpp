@@ -33,15 +33,14 @@
 
 #include "Supermodel.h"
 #include <cstdio>
-#include <cmath>
 #include <algorithm>
 
-Game::DriveBoardType CWheelBoard::GetType(void)
+Game::DriveBoardType CWheelBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_WHEEL;
 }
 
-void CWheelBoard::Get7SegDisplays(UINT8 &seg1Digit1, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2)
+void CWheelBoard::Get7SegDisplays(UINT8 &seg1Digit1, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2) const
 {
   seg1Digit1 = m_seg1Digit1;
   seg1Digit2 = m_seg1Digit2;
@@ -74,7 +73,7 @@ void CWheelBoard::SaveState(CBlockFile *SaveState)
 
 void CWheelBoard::LoadState(CBlockFile *SaveState)
 {
-  if (SaveState->FindBlock("WheelBoard") != OKAY)
+  if (SaveState->FindBlock("WheelBoard") != Result::OKAY)
   {
     // Fall back to old "DriveBoad" state format
     LoadLegacyState(SaveState);
@@ -108,7 +107,7 @@ void CWheelBoard::LoadState(CBlockFile *SaveState)
 // Load save states created prior to DriveBoard refactor of SVN 847
 void CWheelBoard::LoadLegacyState(CBlockFile *SaveState)
 {
-  if (SaveState->FindBlock("DriveBoard") != OKAY)
+  if (SaveState->FindBlock("DriveBoard") != Result::OKAY)
   {
     // No wheel board or legacy drive board data found
     ErrorLog("Unable to load wheel drive board state. Save state file is corrupt.");
@@ -610,7 +609,7 @@ void CWheelBoard::SendStopAll(void)
 {
   //DebugLog(">> Stop All Effects\n");
 
-  ForceFeedbackCmd ffCmd;
+  ForceFeedbackCmd ffCmd{};
   ffCmd.id = FFStop;
 
   m_inputs->steering->SendForceFeedbackCmd(ffCmd);
@@ -712,12 +711,12 @@ void CWheelBoard::SendVibrate(UINT8 val)
   m_lastVibrate = val;
 }
 
-uint8_t CWheelBoard::ReadADCChannel1()
+uint8_t CWheelBoard::ReadADCChannel1() const
 {
   return 0x00;
 }
 
-uint8_t CWheelBoard::ReadADCChannel2()
+uint8_t CWheelBoard::ReadADCChannel2() const
 {
   if (m_initialized)
     return (UINT8)m_inputs->steering->value;
@@ -725,12 +724,12 @@ uint8_t CWheelBoard::ReadADCChannel2()
     return 0x80; // If not initialized, return 0x80 so that wheel centering test does not fail
 }
 
-uint8_t CWheelBoard::ReadADCChannel3()
+uint8_t CWheelBoard::ReadADCChannel3() const
 {
   return 0x80;
 }
 
-uint8_t CWheelBoard::ReadADCChannel4()
+uint8_t CWheelBoard::ReadADCChannel4() const
 {
   return 0x00;
 }
@@ -740,6 +739,29 @@ CWheelBoard::CWheelBoard(const Util::Config::Node &config)
 {
   m_dip1 = 0xCF;
   m_dip2 = 0xFF;
+
+  m_seg1Digit1 = 0;
+  m_seg1Digit2 = 0;
+  m_seg2Digit1 = 0;
+  m_seg2Digit2 = 0;
+
+  m_adcPortRead = 0;
+  m_adcPortBit = 0;
+
+  m_port42Out = 0;
+  m_port46Out = 0;
+
+  m_prev42Out = 0;
+  m_prev46Out = 0;
+
+  m_uncenterVal1 = 0;
+  m_uncenterVal2 = 0;
+
+  // Feedback state
+  m_lastConstForce = 0;
+  m_lastSelfCenter = 0;
+  m_lastFriction = 0;
+  m_lastVibrate = 0;
 
   DebugLog("Built Drive Board (wheel)\n");
 }

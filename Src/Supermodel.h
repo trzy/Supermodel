@@ -94,6 +94,34 @@
 // Error logging interface
 #include "OSD/Logger.h"
 
+// CRT/TV color transformations
+#ifdef __cplusplus
+enum class CRTcolor
+#else
+enum CRTcolor
+#endif
+{
+	None = 0,
+	ARI = 1,
+	PVM = 2,
+	BT601JP = 3,
+	BT601US = 4,
+	BT601EA = 5
+};
+
+// interpolation filter for 2D layers during upscale
+#ifdef __cplusplus
+enum class UpscaleMode
+#else
+enum UpscaleMode
+#endif
+{
+	Nearest = 0,
+	Biquintic = 1,
+	Bilinear = 2,
+	Bicubic = 3
+};
+
 
 /******************************************************************************
  Helpful Macros and Inlines

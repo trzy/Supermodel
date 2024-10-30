@@ -206,13 +206,6 @@ void ppc603_exception(int exception)
 	}
 }
 
-static void ppc603_set_smi_line(int state)
-{
-	if( state ) {
-		ppc.interrupt_pending |= 0x4;
-	}
-}
-
 static void ppc603_check_interrupts(void)
 {
 	if (MSR & MSR_EE)

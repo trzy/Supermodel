@@ -149,14 +149,14 @@ void Mat4::Rotate(float angle, float x, float y, float z)
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
-void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal) 
+void Mat4::Frustum(float left, float right, float bottom, float top, float nearVal, float farVal)
 {
-	float x = (2.0F*nearVal) / (right - left);
-	float y = (2.0F*nearVal) / (top - bottom);
+	float x = 2.0F / (right - left);
+	float y = 2.0F / (top - bottom);
 	float a = (right + left) / (right - left);
 	float b = (top + bottom) / (top - bottom);
 	float c = -(farVal + nearVal) / (farVal - nearVal);
-	float d = -(2.0F*farVal*nearVal) / (farVal - nearVal);
+	float d = -(2.0F * farVal * nearVal) / (farVal - nearVal);
 
 	float m[16];
 	m[0] = x;
@@ -182,9 +182,40 @@ void Mat4::Frustum(float left, float right, float bottom, float top, float nearV
 	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
 }
 
+void Mat4::FrustumRZ(float left, float right, float bottom, float top, float nearVal) 
+{
+	float x = 2.0F / (right - left);
+	float y = 2.0F / (top - bottom);
+	float a = (right + left) / (right - left);
+	float b = (top + bottom) / (top - bottom);
+
+	float m[16];
+	m[0] = x;
+	m[1] = 0.f;
+	m[2] = 0.f;
+	m[3] = 0.f;
+
+	m[4] = 0.f;
+	m[5] = y;
+	m[6] = 0.f;
+	m[7] = 0.f;
+
+	m[8] = a;
+	m[9] = b;
+	m[10] = 0.f;
+	m[11] = -1.f;
+
+	m[12] = 0.f;
+	m[13] = 0.f;
+	m[14] = nearVal;
+	m[15] = 0.f;
+
+	Mat4::MultiMatrices(currentMatrix, m, currentMatrix);
+}
+
 void Mat4::Perspective(float fovy, float aspect, float zNear, float zFar)
 {
-	float ymax = zNear * tanf(fovy * (float)(M_PI / 360.0));
+	float ymax = tanf(fovy * (float)(M_PI / 360.0));
 	float xmax = ymax * aspect;
 
 	Frustum(-xmax, xmax, -ymax, ymax, zNear, zFar);

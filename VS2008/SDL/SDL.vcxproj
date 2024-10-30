@@ -22,43 +22,27 @@
     <ProjectName>SDL2</ProjectName>
     <ProjectGuid>{81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68}</ProjectGuid>
     <RootNamespace>SDL</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset Condition="'$(VisualStudioVersion)' != '10.0'">$(DefaultPlatformToolset)</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC70.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC70.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC70.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC70.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -99,10 +83,9 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.0.12/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.30.8/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>DLL_EXPORT;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
       <WarningLevel>Level3</WarningLevel>
@@ -130,15 +113,15 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.0.12/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.30.8/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>DLL_EXPORT;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <OmitDefaultLibName>true</OmitDefaultLibName>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -163,10 +146,9 @@
       <TypeLibraryName>.\Release/SDL.tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.0.12/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.30.8/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>DLL_EXPORT;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
       <WarningLevel>Level3</WarningLevel>
@@ -195,10 +177,9 @@
       <TypeLibraryName>.\Release/SDL.tlb</TypeLibraryName>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.0.12/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)/../../Libraries/SDL2-2.30.8/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PreprocessorDefinitions>DLL_EXPORT;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -218,330 +199,426 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\begin_code.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\close_code.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_assert.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_atomic.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_audio.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_bits.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_blendmode.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_clipboard.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_config.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_config_windows.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_copying.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_cpuinfo.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_egl.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_endian.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_error.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_events.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_filesystem.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_gamecontroller.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_gesture.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_haptic.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_hints.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_joystick.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_keyboard.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_keycode.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_loadso.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_log.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_main.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_messagebox.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_mouse.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_mutex.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_name.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengl.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengl_glext.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengles.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengles2.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengles2_gl2.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengles2_gl2ext.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengles2_gl2platform.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_opengles2_khrplatform.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_pixels.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_platform.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_power.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_quit.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_rect.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_render.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_revision.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_rwops.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_scancode.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_sensor.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_shape.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_stdinc.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_surface.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_system.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_syswm.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_assert.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_common.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_compare.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_crc32.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_font.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_fuzzer.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_harness.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_images.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_log.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_md5.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_test_random.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_thread.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_timer.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_touch.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_types.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_version.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_video.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\include\SDL_vulkan.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\directsound\SDL_directsound.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\disk\SDL_diskaudio.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\dummy\SDL_dummyaudio.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_audio_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_audiodev_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_sysaudio.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_wave.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\wasapi\SDL_wasapi.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\audio\winmm\SDL_winmm.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\core\windows\SDL_directx.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\core\windows\SDL_windows.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\core\windows\SDL_xinput.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\dynapi\SDL_dynapi.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\dynapi\SDL_dynapi_overrides.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\dynapi\SDL_dynapi_procs.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\blank_cursor.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\default_cursor.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_clipboardevents_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_displayevents_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_dropevents_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_events_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_gesture_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_keyboard_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_mouse_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_sysevents.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_touch_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_windowevents_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\haptic\SDL_syshaptic.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\haptic\windows\SDL_dinputhaptic_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\haptic\windows\SDL_windowshaptic_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\haptic\windows\SDL_xinputhaptic_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\controller_type.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapijoystick_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\SDL_joystick_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\SDL_sysjoystick.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_dinputjoystick_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_windowsjoystick_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_xinputjoystick_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\libm\math_libm.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\libm\math_private.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\direct3d11\SDL_shaders_d3d11.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\direct3d\SDL_shaders_d3d.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\opengl\SDL_glfuncs.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\opengl\SDL_shaders_gl.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\opengles\SDL_glesfuncs.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\SDL_d3dmath.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\SDL_sysrender.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\SDL_yuv_sw_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_blendfillrect.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_blendline.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_blendpoint.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_draw.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_drawline.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_drawpoint.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_render_sw_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_rotate.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\SDL_dataqueue.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\SDL_error_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\sensor\dummy\SDL_dummysensor.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\sensor\SDL_sensor_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\sensor\SDL_syssensor.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\thread\SDL_systhread.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\thread\SDL_thread_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\thread\windows\SDL_systhread_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\timer\SDL_timer_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\dummy\SDL_nullevents_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\dummy\SDL_nullframebuffer_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\dummy\SDL_nullvideo.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_auto.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_copy.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_slow.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_pixels_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_rect_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_RLEaccel_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_shape_internals.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_sysvideo.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_vulkan_internal.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_yuv_c.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_vkeys.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsclipboard.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsevents.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsframebuffer.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowskeyboard.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsmessagebox.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsmodes.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsmouse.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsopengl.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsshape.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsvideo.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsvulkan.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowswindow.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\wmmsg.h" />
-    <ClInclude Include="..\..\Libraries\SDL2-2.0.12\src\video\yuv2rgb\yuv_rgb.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\begin_code.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\close_code.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_assert.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_atomic.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_audio.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_bits.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_blendmode.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_clipboard.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_config.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_config_windows.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_copying.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_cpuinfo.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_egl.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_endian.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_error.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_events.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_filesystem.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_gamecontroller.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_gesture.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_guid.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_haptic.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_hints.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_hidapi.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_joystick.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_keyboard.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_keycode.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_loadso.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_locale.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_log.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_main.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_messagebox.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_metal.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_misc.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_mouse.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_mutex.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_name.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengl.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengl_glext.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengles.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengles2.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengles2_gl2.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengles2_gl2ext.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengles2_gl2platform.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_opengles2_khrplatform.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_pixels.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_platform.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_power.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_quit.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_rect.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_render.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_revision.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_rwops.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_scancode.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_sensor.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_shape.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_stdinc.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_surface.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_system.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_syswm.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_assert.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_common.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_compare.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_crc32.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_font.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_fuzzer.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_harness.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_images.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_log.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_md5.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_memory.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_test_random.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_thread.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_timer.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_touch.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_types.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_version.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_video.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\include\SDL_vulkan.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\directsound\SDL_directsound.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\disk\SDL_diskaudio.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\dummy\SDL_dummyaudio.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_audio_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_audiodev_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_sysaudio.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_wave.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\wasapi\SDL_wasapi.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\audio\winmm\SDL_winmm.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_directx.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_hid.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_immdevice.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_windows.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_xinput.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\dynapi\SDL_dynapi.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\dynapi\SDL_dynapi_overrides.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\dynapi\SDL_dynapi_procs.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\blank_cursor.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\default_cursor.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\scancodes_windows.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_clipboardevents_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_displayevents_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_dropevents_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_events_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_gesture_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_keyboard_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_mouse_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_touch_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_windowevents_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\haptic\SDL_haptic_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\haptic\SDL_syshaptic.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\haptic\windows\SDL_dinputhaptic_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\haptic\windows\SDL_windowshaptic_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\haptic\windows\SDL_xinputhaptic_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\hidapi\hidapi\hidapi.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\hidapi\SDL_hidapi_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\controller_type.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapijoystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_rumble.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_gamecontrollerdb.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_joystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_steam_virtual_gamepad.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_sysjoystick.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\usb_ids.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\virtual\SDL_virtualjoystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_dinputjoystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_rawinputjoystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_windowsjoystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_xinputjoystick_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\libm\math_libm.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\libm\math_private.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\locale\SDL_syslocale.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\misc\SDL_sysurl.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\power\SDL_syspower.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d11\SDL_shaders_d3d11.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d12\SDL_shaders_d3d12.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d\SDL_shaders_d3d.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\opengles2\SDL_gles2funcs.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\opengles2\SDL_shaders_gles2.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\opengl\SDL_glfuncs.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\opengl\SDL_shaders_gl.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\SDL_d3dmath.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\SDL_sysrender.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\SDL_yuv_sw_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_blendfillrect.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_blendline.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_blendpoint.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_draw.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_drawline.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_drawpoint.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_render_sw_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_rotate.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_triangle.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_assert_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_dataqueue.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_error_c.h" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_guid.c" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_hints_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_internal.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_list.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\SDL_log_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\sensor\dummy\SDL_dummysensor.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\sensor\SDL_sensor_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\sensor\SDL_syssensor.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\sensor\windows\SDL_windowssensor.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\thread\SDL_systhread.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\thread\SDL_thread_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\thread\generic\SDL_syscond_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_sysmutex_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_systhread_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\timer\SDL_timer_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\dummy\SDL_nullevents_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\dummy\SDL_nullframebuffer_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\dummy\SDL_nullvideo.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vk_icd.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vk_layer.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vk_platform.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vk_sdk_platform.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_android.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_beta.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_core.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_directfb.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_fuchsia.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_ggp.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_ios.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_macos.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_metal.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_vi.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_wayland.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_win32.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_xcb.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_xlib.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\khronos\vulkan\vulkan_xlib_xrandr.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_auto.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_copy.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_slow.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_egl_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_pixels_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_rect_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_RLEaccel_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_shape_internals.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_sysvideo.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_vulkan_internal.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_yuv_c.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_msctf.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_vkeys.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsclipboard.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsevents.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsframebuffer.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowskeyboard.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsmessagebox.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsmodes.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsmouse.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsopengl.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsopengles.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsshape.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsvideo.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsvulkan.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowswindow.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\wmmsg.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_common.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_internal.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_lsx.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_lsx_func.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_sse.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_sse_func.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_std.h" />
+    <ClInclude Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_std_func.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\atomic\SDL_atomic.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\atomic\SDL_spinlock.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\directsound\SDL_directsound.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\disk\SDL_diskaudio.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\dummy\SDL_dummyaudio.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_audio.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_audiocvt.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_audiodev.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_audiotypecvt.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_mixer.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\SDL_wave.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\winmm\SDL_winmm.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\wasapi\SDL_wasapi.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\audio\wasapi\SDL_wasapi_win32.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\core\windows\SDL_windows.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\core\windows\SDL_xinput.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\cpuinfo\SDL_cpuinfo.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\dynapi\SDL_dynapi.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_clipboardevents.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_displayevents.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_dropevents.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_events.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_gesture.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_keyboard.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_mouse.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_quit.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_touch.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\events\SDL_windowevents.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\file\SDL_rwops.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\filesystem\windows\SDL_sysfilesystem.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\haptic\SDL_haptic.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\haptic\windows\SDL_dinputhaptic.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\haptic\windows\SDL_windowshaptic.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\haptic\windows\SDL_xinputhaptic.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\hidapi\windows\hid.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapijoystick.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_gamecube.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_ps4.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_rumble.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_switch.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_xbox360.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_xbox360w.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\hidapi\SDL_hidapi_xboxone.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\SDL_gamecontroller.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\SDL_joystick.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_dinputjoystick.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_mmjoystick.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_windowsjoystick.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\joystick\windows\SDL_xinputjoystick.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_atan2.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_exp.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_fmod.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_log.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_log10.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_pow.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_rem_pio2.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\e_sqrt.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\k_cos.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\k_rem_pio2.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\k_sin.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\k_tan.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_atan.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_copysign.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_cos.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_fabs.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_floor.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_scalbn.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_sin.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\libm\s_tan.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\loadso\windows\SDL_sysloadso.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\power\SDL_power.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\power\windows\SDL_syspower.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\direct3d11\SDL_shaders_d3d11.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\direct3d\SDL_render_d3d.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\direct3d11\SDL_render_d3d11.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\direct3d\SDL_shaders_d3d.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\opengl\SDL_render_gl.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\opengl\SDL_shaders_gl.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\opengles2\SDL_render_gles2.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\opengles2\SDL_shaders_gles2.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\SDL_d3dmath.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\SDL_render.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\SDL_yuv_sw.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_blendfillrect.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_blendline.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_blendpoint.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_drawline.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_drawpoint.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_render_sw.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\render\software\SDL_rotate.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\SDL.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\SDL_assert.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\SDL_dataqueue.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\SDL_error.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\SDL_hints.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\SDL_log.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\sensor\dummy\SDL_dummysensor.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\sensor\SDL_sensor.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_getenv.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_iconv.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_malloc.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_qsort.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_stdlib.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_string.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\stdlib\SDL_strtokr.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\thread\generic\SDL_syscond.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\thread\SDL_thread.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\thread\windows\SDL_sysmutex.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\thread\windows\SDL_syssem.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\thread\windows\SDL_systhread.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\thread\windows\SDL_systls.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\timer\SDL_timer.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\timer\windows\SDL_systimer.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\dummy\SDL_nullevents.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\dummy\SDL_nullframebuffer.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\dummy\SDL_nullvideo.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_0.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_1.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_A.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_auto.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_copy.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_N.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_blit_slow.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_bmp.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_clipboard.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_egl.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_fillrect.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_pixels.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_rect.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_RLEaccel.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_shape.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_stretch.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_surface.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_video.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_vulkan_utils.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\SDL_yuv.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsclipboard.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsevents.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsframebuffer.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowskeyboard.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsmessagebox.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsmodes.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsmouse.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsopengl.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsopengles.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsshape.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsvideo.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowsvulkan.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\windows\SDL_windowswindow.c" />
-    <ClCompile Include="..\..\Libraries\SDL2-2.0.12\src\video\yuv2rgb\yuv_rgb.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\atomic\SDL_atomic.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\atomic\SDL_spinlock.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\directsound\SDL_directsound.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\disk\SDL_diskaudio.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\dummy\SDL_dummyaudio.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_audio.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_audiocvt.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_audiodev.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_audiotypecvt.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_mixer.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\SDL_wave.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\winmm\SDL_winmm.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\wasapi\SDL_wasapi.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\audio\wasapi\SDL_wasapi_win32.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_hid.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_immdevice.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_windows.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\core\windows\SDL_xinput.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\cpuinfo\SDL_cpuinfo.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\dynapi\SDL_dynapi.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_clipboardevents.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_displayevents.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_dropevents.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_events.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_gesture.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_keyboard.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_mouse.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_quit.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_touch.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\events\SDL_windowevents.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\file\SDL_rwops.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\filesystem\windows\SDL_sysfilesystem.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\haptic\dummy\SDL_syshaptic.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\haptic\SDL_haptic.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\haptic\windows\SDL_dinputhaptic.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\haptic\windows\SDL_windowshaptic.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\haptic\windows\SDL_xinputhaptic.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\hidapi\SDL_hidapi.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\controller_type.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\dummy\SDL_sysjoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapijoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_combined.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_gamecube.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_luna.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_ps3.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_ps4.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_ps5.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_rumble.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_shield.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_stadia.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_steam.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_steamdeck.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_switch.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_wii.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_xbox360.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_xbox360w.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\hidapi\SDL_hidapi_xboxone.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_gamecontroller.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_joystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\SDL_steam_virtual_gamepad.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\virtual\SDL_virtualjoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_dinputjoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_rawinputjoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_windowsjoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_windows_gaming_input.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\joystick\windows\SDL_xinputjoystick.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_atan2.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_exp.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_fmod.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_log.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_log10.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_pow.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_rem_pio2.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\e_sqrt.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\k_cos.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\k_rem_pio2.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\k_sin.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\k_tan.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_atan.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_copysign.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_cos.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_fabs.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_floor.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_scalbn.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_sin.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\libm\s_tan.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\loadso\windows\SDL_sysloadso.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\locale\SDL_locale.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\locale\windows\SDL_syslocale.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\misc\SDL_url.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\misc\windows\SDL_sysurl.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\power\SDL_power.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\power\windows\SDL_syspower.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d11\SDL_shaders_d3d11.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d12\SDL_render_d3d12.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d12\SDL_shaders_d3d12.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d\SDL_render_d3d.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d11\SDL_render_d3d11.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\direct3d\SDL_shaders_d3d.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\opengl\SDL_render_gl.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\opengl\SDL_shaders_gl.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\opengles2\SDL_render_gles2.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\opengles2\SDL_shaders_gles2.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\SDL_d3dmath.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\SDL_render.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\SDL_yuv_sw.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_blendfillrect.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_blendline.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_blendpoint.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_drawline.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_drawpoint.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_render_sw.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_rotate.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\render\software\SDL_triangle.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_assert.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_dataqueue.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_list.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_error.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_hints.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_log.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\SDL_utils.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\sensor\dummy\SDL_dummysensor.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\sensor\SDL_sensor.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\sensor\windows\SDL_windowssensor.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_crc16.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_crc32.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_getenv.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_iconv.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_malloc.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_mslibc.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_qsort.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_stdlib.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_string.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\stdlib\SDL_strtokr.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\generic\SDL_syscond.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\SDL_thread.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_syscond_cv.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_sysmutex.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_syssem.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_systhread.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\thread\windows\SDL_systls.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\timer\SDL_timer.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\timer\windows\SDL_systimer.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\dummy\SDL_nullevents.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\dummy\SDL_nullframebuffer.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\dummy\SDL_nullvideo.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_0.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_1.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_A.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_auto.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_copy.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_N.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_blit_slow.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_bmp.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_clipboard.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_egl.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_fillrect.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_pixels.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_rect.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_RLEaccel.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_shape.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_stretch.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_surface.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_video.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_vulkan_utils.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\SDL_yuv.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsclipboard.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsevents.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsframebuffer.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowskeyboard.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsmessagebox.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsmodes.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsmouse.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsopengl.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsopengles.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsshape.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsvideo.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowsvulkan.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\windows\SDL_windowswindow.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_lsx.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_sse.c" />
+    <ClCompile Include="..\..\Libraries\SDL2-2.30.8\src\video\yuv2rgb\yuv_rgb_std.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\..\Libraries\SDL2-2.0.12\src\main\windows\version.rc" />
+    <ResourceCompile Include="..\..\Libraries\SDL2-2.30.8\src\main\windows\version.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

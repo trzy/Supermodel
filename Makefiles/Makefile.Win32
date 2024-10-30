@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2022 The Supermodel Team
+## Copyright 2003-2024 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -41,16 +41,16 @@
 #
 include Makefiles/Options.inc
 
+###############################################################################
+# Release Package Options
+###############################################################################
+
+PKG_TYPE = zip
+
 #
 # Bitness of build ('32' or '64')
 #
 BITS = 64
-
-#
-# Path to SDL2
-#
-SDL2_INCLUDE_DIR = \msys64\mingw64\include\SDL2
-SDL2_LIB_DIR = \msys64\mingw64\lib
 
 #
 # Toolchain
@@ -82,8 +82,18 @@ endif
 #
 # SDL2
 #
-SDL2_LIBS =  -lmingw32 -lSDL2main -lSDL2 -Wl,--no-undefined -lshell32 -lsetupapi -ladvapi32 -luuid -lversion -limm32 -lwinmm -lgdi32 -luser32 -lm -pipe
-SDL2_CFLAGS =
+ifneq (,$(findstring cmd.exe,$(shell echo %COMSPEC%)))
+	# When building in Command Prompt, we don't have sdl2-config and must hard-code the SDL2 include
+	# and library directories
+	SDL2_INCLUDE_DIR = \msys64\mingw64\include\SDL2
+	SDL2_LIB_DIR = \msys64\mingw64\lib
+	SDL2_LIBS = -lmingw32 -lSDL2main -lSDL2 -Wl,--no-undefined -lshell32 -lsetupapi -ladvapi32 -luuid -lversion -limm32 -lwinmm -lgdi32 -luser32 -lm -pipe
+	SDL2_CFLAGS =
+else
+	# Must strip out -mwindows so we don't create a GUI app (will not work in Command Prompt)
+	SDL2_LIBS = $(shell sdl2-config --static-libs | sed 's/-mwindows//g')
+	SDL2_CFLAGS = $(shell sdl2-config --cflags)
+endif
 ifeq ($(strip $(NET_BOARD)),1)
 	SDL2_LIBS += -lSDL2_net -liphlpapi
 endif
@@ -109,8 +119,6 @@ PLATFORM_SRC_FILES = \
 	Src/OSD/Windows/WinOutputs.cpp \
 	Src/OSD/Windows/SupermodelResources.rc
 
-.PHONY: clean
-
 include Makefiles/Rules.inc
 
 clean:
@@ -125,6 +133,6 @@ clean:
 # This section must be placed *after* the inclusion of Makefiles/Rules.inc.
 ###############################################################################
 
-$(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD/Windows/SupermodelManifest.xml
+$(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD/Windows/SupermodelManifest.xml | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	$(SILENT)windres -i Src/OSD/Windows/SupermodelResources.rc -o $@

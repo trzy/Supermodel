@@ -69,12 +69,12 @@ void VBO::Bind(bool enable)
 	}
 }
 
-int VBO::GetSize()
+int VBO::GetSize() const
 {
 	return m_size;
 }
 
-int VBO::GetCapacity()
+int VBO::GetCapacity() const
 {
 	return m_capacity;
 }

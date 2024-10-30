@@ -45,9 +45,9 @@ public:
    * Returns:
    *    Drive board type.
    */
-  Game::DriveBoardType GetType(void);
+  Game::DriveBoardType GetType(void) const;
 
-  unsigned GetForceFeedbackStrength(void);
+  unsigned GetForceFeedbackStrength(void) const;
   void SetForceFeedbackStrength(unsigned strength);
 
   /*
@@ -86,7 +86,7 @@ public:
    *    because no ROM was passed to it, no error is generated and the
    *    drive board is silently disabled (detached).
    */
-  bool Init(const UINT8 *romPtr);
+  Result Init(const UINT8 *romPtr);
 
 
   /*
@@ -150,7 +150,7 @@ private:
 
   UINT8 SimulateRead(void);
 
-  void SimulateWrite(UINT8 data);
+  void SimulateWrite(UINT8 cmd);
 
   void SendVibrate(UINT8 val);
 

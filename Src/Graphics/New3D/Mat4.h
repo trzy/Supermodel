@@ -16,6 +16,7 @@ public:
 	void Rotate					(float angle, float x, float y, float z);
 	void Scale					(float x, float y, float z);
 	void Frustum				(float left, float right, float bottom, float top, float nearVal, float farVal);
+	void FrustumRZ				(float left, float right, float bottom, float top, float nearVal);
 	void Perspective			(float fovy, float aspect, float zNear, float zFar);
 	void Ortho					(float left, float right, float bottom, float top, float nearVal, float farVal);
 	void MultMatrix				(const float *m);

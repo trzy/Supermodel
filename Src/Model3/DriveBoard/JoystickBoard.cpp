@@ -41,12 +41,12 @@
 #include <cmath>
 #include <algorithm>
 
-Game::DriveBoardType CJoyBoard::GetType(void)
+Game::DriveBoardType CJoyBoard::GetType(void) const
 {
   return Game::DRIVE_BOARD_JOYSTICK;
 }
 
-void CJoyBoard::Get7SegDisplays(UINT8 &seg1Digit1, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2)
+void CJoyBoard::Get7SegDisplays(UINT8 &seg1Digit1, UINT8 &seg1Digit2, UINT8 &seg2Digit1, UINT8 &seg2Digit2) const
 {
   seg1Digit1 = m_seg1Digit1;
   seg1Digit2 = m_seg1Digit2;
@@ -81,7 +81,7 @@ void CJoyBoard::LoadState(CBlockFile *SaveState)
 {
   CDriveBoard::LoadState(SaveState);
 
-  if (SaveState->FindBlock("JoystickBoard") != OKAY)
+  if (SaveState->FindBlock("JoystickBoard") != Result::OKAY)
   {
     ErrorLog("Unable to load joystick drive board state. Save state file is corrupt.");
     Disable();
@@ -287,6 +287,7 @@ void CJoyBoard::SimulateWrite(UINT8 cmd)
         case 6:  /* Ignore */                                        break;  // 0x86 Set cockpit banking position
         case 7:  /* Ignore */                                        break;  // 0x87 Lamp on/off
       }
+      break;
     case 0x9: // 0x90-9F ??? Don't appear to have any effect with Scud Race ROM
       /* TODO */
       break;
@@ -575,7 +576,7 @@ void CJoyBoard::SendStopAll(void)
 {
   //DebugLog(">> Stop All Effects\n");
 
-  ForceFeedbackCmd ffCmd;
+  ForceFeedbackCmd ffCmd{};
   ffCmd.id = FFStop;
 
   m_inputs->analogJoyX->SendForceFeedbackCmd(ffCmd);
@@ -692,7 +693,7 @@ void CJoyBoard::SendVibrate(UINT8 val)
   m_lastVibrate = val;
 }
 
-uint8_t CJoyBoard::ReadADCChannel1()
+uint8_t CJoyBoard::ReadADCChannel1() const
 {
   if (m_initialized)
     return (UINT8)m_inputs->analogJoyY->value;
@@ -700,7 +701,7 @@ uint8_t CJoyBoard::ReadADCChannel1()
     return 0x80; // If not initialized, return 0x80 so that ffb centering test does not fail
 }
 
-uint8_t CJoyBoard::ReadADCChannel2()
+uint8_t CJoyBoard::ReadADCChannel2() const
 {
   if (m_initialized)
     return (UINT8)m_inputs->analogJoyX->value;
@@ -708,12 +709,12 @@ uint8_t CJoyBoard::ReadADCChannel2()
     return 0x80; // If not initialized, return 0x80 so that ffb centering test does not fail
 }
 
-uint8_t CJoyBoard::ReadADCChannel3()
+uint8_t CJoyBoard::ReadADCChannel3() const
 {
   return 0x80;
 }
 
-uint8_t CJoyBoard::ReadADCChannel4()
+uint8_t CJoyBoard::ReadADCChannel4() const
 {
   return 0x80;
 }

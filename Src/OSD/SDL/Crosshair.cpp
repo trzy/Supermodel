@@ -29,7 +29,7 @@
 #include "Inputs/Inputs.h"
 #include "Util/Format.h"
 
-bool CCrosshair::Init()
+Result CCrosshair::Init()
 {
   const std::string p1CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p1crosshair.bmp";
   const std::string p2CrosshairFile = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Assets) << "p2crosshair.bmp";
@@ -48,7 +48,7 @@ bool CCrosshair::Init()
   SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
   SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
   if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
-      return FAIL;
+      return Result::FAIL;
 
   m_p1CrosshairW = surfaceCrosshairP1->w;
   m_p1CrosshairH = surfaceCrosshairP1->h;
@@ -129,7 +129,7 @@ bool CCrosshair::Init()
 
   m_vbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(BasicVertex) * (MaxVerts));
   m_vbo.Bind(true);
-  m_textvbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(UVCoords) * (int)m_uvCoord.size());
+  m_textvbo.Create(GL_ARRAY_BUFFER, GL_DYNAMIC_DRAW, sizeof(UVCoords) * m_uvCoord.size());
   m_textvbo.Bind(true);
 
   glGenVertexArrays(1, &m_vao);
@@ -148,7 +148,7 @@ bool CCrosshair::Init()
 
   glBindVertexArray(0);
 
-  return OKAY;
+  return Result::OKAY;
 }
 
 void CCrosshair::BuildCrosshairVertices()

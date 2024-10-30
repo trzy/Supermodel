@@ -92,7 +92,7 @@ void CSoundBoard::UpdateROMBanks(void)
 }
 
 UINT8 CSoundBoard::Read8(UINT32 a)
-{ 
+{
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
@@ -128,8 +128,8 @@ UINT8 CSoundBoard::Read8(UINT32 a)
 	return 0;
 }
 
-UINT16 CSoundBoard::Read16(UINT32 a) 
-{ 	
+UINT16 CSoundBoard::Read16(UINT32 a)
+{
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
@@ -165,28 +165,28 @@ UINT16 CSoundBoard::Read16(UINT32 a)
 	return 0;
 }
 
-UINT32 CSoundBoard::Read32(UINT32 a) 
+UINT32 CSoundBoard::Read32(UINT32 a)
 {
 	UINT32	hi, lo;
-	
+
 	switch ((a>>20)&0xF)
 	{
 	case 0x0:	// SCSP RAM 1 (master): 000000-0FFFFF
 		hi = *(UINT16 *) &ram1[a];
 		lo = *(UINT16 *) &ram1[a+2];	// TODO: clamp? Possible bounds hazard.
 		return (hi<<16)|lo;
-		
+
 	case 0x1:	// SCSP registers (master): 100000-10FFFF
 		return SCSP_Master_r32(a);
-		
+
 	case 0x2:	// SCSP RAM 2 (slave): 200000-2FFFFF
 		hi = *(UINT16 *) &ram2[a&0x0FFFFF];
 		lo = *(UINT16 *) &ram2[(a+2)&0x0FFFFF];
 		return (hi<<16)|lo;
-	
+
 	case 0x3:	// SCSP registers (slave): 300000-30FFFF
 		return SCSP_Slave_r32(a);
-		
+
 	case 0x6:	// Program ROM: 600000-67FFFF
 		hi = *(UINT16 *) &soundROM[a&0x07FFFF];
 		lo = *(UINT16 *) &soundROM[(a+2)&0x07FFFF];
@@ -351,6 +351,7 @@ void CSoundBoard::WriteMIDIPort(UINT8 data)
 		DSB->SendCommand(data);
 }
 
+#ifdef SUPERMODEL_LOG_AUDIO
 static INT16 ClampINT16(float x)
 {
     INT32 xi = (INT32)x;
@@ -362,6 +363,7 @@ static INT16 ClampINT16(float x)
     }
     return (INT16)xi;
 }
+#endif
 
 bool CSoundBoard::RunFrame(void)
 {
@@ -395,7 +397,7 @@ bool CSoundBoard::RunFrame(void)
 	// Run DSB and mix with existing audio, apply music volume
 	if (NULL != DSB) {
 		// Will need to mix with proper front, rear channels or both (game specific)
-		bool mixDSBWithFront = true; // Everything to front channels for now
+		constexpr bool mixDSBWithFront = true; // Everything to front channels for now
 		// Case "both" not handled for now
 		if (mixDSBWithFront)
 			DSB->RunFrame(audioFL, audioFR);
@@ -461,7 +463,7 @@ void CSoundBoard::SaveState(CBlockFile *SaveState)
 
 void CSoundBoard::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("Sound Board"))
+	if (Result::OKAY != SaveState->FindBlock("Sound Board"))
 	{
 		ErrorLog("Unable to load sound board state. Save state file is corrupt.");
 		return;
@@ -493,7 +495,7 @@ void CSoundBoard::AttachDSB(CDSB *DSBPtr)
 }
 
 
-bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
+Result CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 {
 	float	memSizeMB = (float)MEMORY_POOL_SIZE/(float)0x100000;
 	
@@ -527,8 +529,8 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	// Initialize SCSPs
 	SCSP_SetBuffers(audioFL, audioFR, audioRL, audioRR, NUM_SAMPLES_PER_FRAME);
 	SCSP_SetCB(SCSP68KRunCallback, SCSP68KIRQCallback);
-	if (OKAY != SCSP_Init(m_config, 2))
-		return FAIL;
+	if (Result::OKAY != SCSP_Init(m_config, 2))
+		return Result::FAIL;
 	SCSP_SetRAM(0, ram1);
 	SCSP_SetRAM(1, ram2);
 	
@@ -539,7 +541,7 @@ bool CSoundBoard::Init(const UINT8 *soundROMPtr, const UINT8 *sampleROMPtr)
 	soundFP = fopen("sound.bin","ab");	// append mode
 #endif
 
-	return OKAY;
+	return Result::OKAY;
 }
 
 M68KCtx *CSoundBoard::GetM68K(void)
@@ -565,21 +567,11 @@ CSoundBoard::CSoundBoard(const Util::Config::Node &config)
 	audioRR = NULL;
 	soundROM = NULL;
 	sampleROM = NULL;
-	
-	DebugLog("Built Sound Board\n");
-}
 
-static void Reverse16(UINT8 *buf, unsigned size)
-{
-	unsigned	i;
-	UINT8		tmp;
-	
-	for (i = 0; i < size; i += 2)
-	{
-		tmp = buf[i+0];
-		buf[i+0] = buf[i+1];
-		buf[i+1] = tmp;
-	}
+	sampleBank = nullptr;
+	ctrlReg = 0;
+
+	DebugLog("Built Sound Board\n");
 }
 
 CSoundBoard::~CSoundBoard(void)
@@ -590,9 +582,9 @@ CSoundBoard::~CSoundBoard(void)
 #endif
 
 	SCSP_Deinit();
-	
+
 	DSB = NULL;
-	
+
 	if (memoryPool != NULL)
 	{
 		delete [] memoryPool;
@@ -606,6 +598,6 @@ CSoundBoard::~CSoundBoard(void)
 	audioRR = NULL;
 	soundROM = NULL;
 	sampleROM = NULL;
-	
+
 	DebugLog("Destroyed Sound Board\n");
 }

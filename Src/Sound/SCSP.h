@@ -61,7 +61,7 @@ UINT8 SCSP_MidiOutR();
  * Returns:
  *		FAIL if an error occured (prints own error messages), OKAY otherwise.
  */
-bool SCSP_Init(const Util::Config::Node &config, int n);
+Result SCSP_Init(const Util::Config::Node &config, int n);
 
 void SCSP_SetRAM(int n,UINT8 *r);
 void SCSP_RTECheck();

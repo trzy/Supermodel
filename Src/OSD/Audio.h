@@ -44,7 +44,7 @@ extern void SetAudioType(Game::AudioTypes type);
  *
  * Initializes the audio system.
  */
-extern bool OpenAudio(const Util::Config::Node& config);
+extern Result OpenAudio(const Util::Config::Node& config);
 
 /*
  * OutputAudio(unsigned numSamples, *INT16 leftBuffer, *INT16 rightBuffer)

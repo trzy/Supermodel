@@ -517,7 +517,7 @@ static void SPR(char *dest, unsigned spr_field)
     case 982:   strcat(dest, "rpa");    break;
     case 1010:  strcat(dest, "iabr");   break;
 
-    default:    sprintf(dest, "%s%d", dest, spr);
+    default:    strcat(dest, std::to_string(spr).c_str());
                 break;
     }
 }
@@ -575,11 +575,11 @@ static uint32_t Mask(unsigned mb, unsigned me)
  * Perform checks on the instruction as required by the flags. Returns 1 if
  * the instruction failed.
  */
-static bool Check(uint32_t op, unsigned flags)
+static Result Check(uint32_t op, unsigned flags)
 {
     unsigned  nb, rt, ra;
 
-    if (!flags) return OKAY;  // nothing to check for!
+    if (!flags) return Result::OKAY;  // nothing to check for!
 
     rt = G_RT(op);
     ra = G_RA(op);
@@ -587,13 +587,13 @@ static bool Check(uint32_t op, unsigned flags)
     if (flags & FL_CHECK_RA_RT) // invalid if rA==0 or rA==rT
     {
         if ((G_RA(op) == 0) || (G_RA(op) == G_RT(op)))
-            return FAIL;
+            return Result::FAIL;
     }
 
     if (flags & FL_CHECK_RA)    // invalid if rA==0
     {
         if (G_RA(op) == 0)
-            return FAIL;
+            return Result::FAIL;
     }
 
     if (flags & FL_CHECK_LSWI)
@@ -605,11 +605,11 @@ static bool Check(uint32_t op, unsigned flags)
 
         nb = G_NB(op);
 
-        if (ra >= rt && ra <= (rt + nb - 1))    return FAIL;
+        if (ra >= rt && ra <= (rt + nb - 1))    return Result::FAIL;
         if ((rt + nb - 1) > 31) // register wrap-around!
         {
             if (ra < ((rt + nb - 1) - 31))
-                return FAIL;
+                return Result::FAIL;
         }
     }
 
@@ -624,10 +624,10 @@ static bool Check(uint32_t op, unsigned flags)
          */
 
         if (rt == ra || rt == G_RB(op) || ((rt == 0) && (ra == 0)))
-            return FAIL;
+            return Result::FAIL;
     }
 
-    return OKAY;  // passed checks
+    return Result::OKAY;  // passed checks
 }
 
 /*
@@ -655,7 +655,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
         }
         else
-            return 0;
+            return false;
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_RC)) == (D_OP(31)|D_XO(124)))
     {
@@ -666,7 +666,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
         }
         else
-            return 0;
+            return false;
     }
     else if ((op & ~(M_RT|M_RA|M_SIMM)) == D_OP(14))
     {
@@ -676,7 +676,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             sprintf(oprs, "r%d,0x%08X", G_RT(op), value);
         }
         else
-            return 0;
+            return false;
     }
     else if ((op & ~(M_RT|M_RA|M_SIMM)) == D_OP(15))
     {
@@ -757,7 +757,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
             strcat(mnem, "bt");
             break;
         default:
-            return 0;
+            return false;
         }
 
         if (op & M_LK)  strcat(mnem, "l");
@@ -780,8 +780,8 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
     sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
     }
     else
-        return 0;   // no match
-  return 1;
+        return false;   // no match
+  return true;
 }
 
 /*
@@ -808,7 +808,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
  *      Zero if successful, non-zero if the instruction was unrecognized or
  *      had an invalid form (see note above in function description.)
  */ 
-bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
+Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
                         bool simplify)
 {
     char    signed16[12];
@@ -821,7 +821,7 @@ bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
      * Decode signed 16-bit fields (SIMM and d) to spare us the work later
      */
 
-    DecodeSigned16(signed16, op, 0);
+    DecodeSigned16(signed16, op, false);
 
     /*
      * Try simplified forms first, then real instructions
@@ -830,7 +830,7 @@ bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
     if (simplify)
     {
         if (Simplified(op, vpc, signed16, mnem, oprs))
-            return OKAY;
+            return Result::OKAY;
     }
 
     /*
@@ -1053,7 +1053,8 @@ bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
 
             case F_MTSPR:
                 SPR(oprs, G_SPR(op));
-                sprintf(oprs, "%s,r%d", oprs, G_RT(op));
+                strcat(oprs, ",r");
+                strcat(oprs, std::to_string(G_RT(op)).c_str());
                 break;
 
             case F_MTSR:
@@ -1097,7 +1098,7 @@ bool DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
         }
     }
 
-    return FAIL;  // no match found
+    return Result::FAIL;  // no match found
 }
 
 

@@ -18,7 +18,7 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * WinOutputs.cpp
  */
@@ -108,7 +108,7 @@ void CWinOutputs::Attached()
 void CWinOutputs::SendOutput(EOutputs output, UINT8 prevValue, UINT8 value)
 {
 	//printf("LAMP OUTPUT %s = %u -> %u\n", GetOutputName(output), prevValue, value);
-	
+
 	// Loop through all registered clients and send them new output value
 	LPARAM param = (LPARAM)output + 1;
 	for (vector<RegisteredClient>::iterator it = m_clients.begin(), end = m_clients.end(); it != end; ++it)
@@ -130,7 +130,7 @@ bool CWinOutputs::CreateWindowClass()
 		return true;
 
 	// Setup description of window class
-	WNDCLASS wc = { 0 };
+	WNDCLASS wc{};
 	wc.lpszClassName = OUTPUT_WINDOW_CLASS;
 	wc.hInstance = GetModuleHandle(NULL);
 	wc.lpfnWndProc = OutputWindowProcCallback;
@@ -141,7 +141,7 @@ bool CWinOutputs::CreateWindowClass()
 		s_createdClass = true;
 		return true;
 	}
-	
+
 	return false;
 }
 bool CWinOutputs::DeleteWindowClass()
@@ -239,7 +239,7 @@ LRESULT CWinOutputs::SendIdString(HWND hwnd, LPARAM id)
 		name = GetGame().name;
 	else
 		name = MapIdToName(id) ? MapIdToName(id) : "";
-	
+
 	// Allocate memory for message
 	int dataLen = sizeof(CopyDataIdString) + name.length();
 	CopyDataIdString *data = (CopyDataIdString*)new(nothrow) UINT8[dataLen];

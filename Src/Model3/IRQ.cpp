@@ -50,7 +50,7 @@ void CIRQ::SaveState(CBlockFile *SaveState)
 
 void CIRQ::LoadState(CBlockFile *SaveState)
 {
-	if (OKAY != SaveState->FindBlock("IRQ"))
+	if (Result::OKAY != SaveState->FindBlock("IRQ"))
 	{
 		ErrorLog("Unable to load IRQ controller state. Save state file is corrupt.");
 		return;
@@ -86,12 +86,12 @@ void CIRQ::WriteIRQEnable(UINT8 data)
 	irqEnable = (unsigned) data;
 }
 
-UINT8 CIRQ::ReadIRQEnable(void)
+UINT8 CIRQ::ReadIRQEnable(void) const
 {
 	return (UINT8) (irqEnable&0xFF);
 }
 
-UINT8 CIRQ::ReadIRQState(void)
+UINT8 CIRQ::ReadIRQState(void) const
 {
 	return (UINT8) (irqState&0xFF);
 }
@@ -112,7 +112,9 @@ void CIRQ::Init(void)
 	// this function really only exists for consistency with other device classes
 }
 
-CIRQ::CIRQ(void)
+CIRQ::CIRQ(void) :
+	irqEnable(0),
+	irqState(0)
 {	
 	DebugLog("Built IRQ controller\n");
 }

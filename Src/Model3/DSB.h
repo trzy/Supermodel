@@ -75,8 +75,9 @@ public:
 	void	Reset(void);
 	CDSBResampler(const Util::Config::Node &config)
 	  : m_config(config)
-  {
-  }
+	{
+		Reset();
+	}
 private:
 	const Util::Config::Node &m_config;
 	int	nFrac;
@@ -155,7 +156,7 @@ public:
 	 * Returns:
 	 *		OKAY if successful, otherwise FAIL.
 	 */
-	virtual bool	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
+	virtual Result Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr) = 0;
 
 	virtual ~CDSB()
 	{
@@ -191,7 +192,7 @@ public:
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
-	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+	Result 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 
 	// Returns a reference to the Z80 CPU
 	CZ80 *GetZ80(void);
@@ -268,7 +269,7 @@ public:
 	void 	Reset(void);
 	void	SaveState(CBlockFile *StateFile);
 	void	LoadState(CBlockFile *StateFile);
-	bool 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
+	Result 	Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr);
 
 	// Returns a reference to the 68K CPU context
 	M68KCtx *GetM68K(void);
@@ -324,8 +325,8 @@ private:
 
 	// M68K CPU
 	M68KCtx	M68K;
-	static const int k_framePeriod = 11000000/60;
-	static const int k_timerPeriod = 11000000/1000; // 1KHz timer
+	static constexpr int k_framePeriod = 11000000/60;
+	static constexpr int k_timerPeriod = 11000000/1000; // 1KHz timer
 	int m_cyclesElapsedThisFrame;
 	int m_nextTimerInterruptCycles;
 };

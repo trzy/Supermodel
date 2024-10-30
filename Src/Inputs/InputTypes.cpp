@@ -50,12 +50,12 @@ void CSwitchInput::Poll()
 		value = m_offVal;
 }
 
-bool CSwitchInput::Pressed()
+bool CSwitchInput::Pressed() const
 {
 	return prevValue == m_offVal && value == m_onVal;
 }
 
-bool CSwitchInput::Released()
+bool CSwitchInput::Released() const
 {
 	return prevValue == m_onVal && value == m_offVal;
 }
@@ -85,12 +85,12 @@ void CAnalogInput::Poll()
 		value = m_minVal;
 }
 
-bool CAnalogInput::HasValue()
+bool CAnalogInput::HasValue() const
 {
 	return value > m_minVal;
 }
 
-double CAnalogInput::ValueAsFraction()
+double CAnalogInput::ValueAsFraction() const
 {
 	double frac = (double)(value - m_minVal)/(double)(m_maxVal - m_minVal);
 	return (frac >= 0.0 ? frac : -frac);
@@ -134,12 +134,12 @@ void CAxisInput::Poll()
 		value = m_offVal;
 }
 
-bool CAxisInput::HasValue()
+bool CAxisInput::HasValue() const
 {
 	return value != m_offVal;
 }
 
-double CAxisInput::ValueAsFraction()
+double CAxisInput::ValueAsFraction() const
 {
 	double frac = (double)(value - m_minVal)/(double)(m_maxVal - m_minVal);
 	return (frac >= 0.0 ? frac : -frac);
@@ -179,7 +179,7 @@ void CGearShift4Input::Poll()
 CTriggerInput::CTriggerInput(const char *inputId, const char *inputLabel, unsigned inputGameFlags,
 	CSwitchInput *triggerInput, CSwitchInput *offscreenInput, UINT16 offVal, UINT16 onVal) :
 	CInput(inputId, inputLabel, INPUT_FLAGS_VIRTUAL, inputGameFlags),
-	m_triggerInput(triggerInput), m_offscreenInput(offscreenInput), m_autoTrigger(false), m_offscreenCount(0), m_offVal(offVal), m_onVal(onVal)
+	m_triggerInput(triggerInput), m_offscreenInput(offscreenInput), m_offVal(offVal), m_onVal(onVal), m_autoTrigger(false), m_offscreenCount(0), offscreenValue(0)
 {
 	//
 }

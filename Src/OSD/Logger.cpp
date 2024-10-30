@@ -63,18 +63,18 @@ void InfoLog(const char *fmt, ...)
   va_end(vl);
 }
 
-bool ErrorLog(const char *fmt, ...)
+Result ErrorLog(const char *fmt, ...)
 {
   if (!s_Logger)
-    return FAIL;
+    return Result::FAIL;
   va_list vl;
   va_start(vl, fmt);
   s_Logger->ErrorLog(fmt, vl);
   va_end(vl);
-  return FAIL;
+  return Result::FAIL;
 }
 
-static std::pair<bool, CLogger::LogLevel> GetLogLevel(const Util::Config::Node &config)
+static std::pair<Result, CLogger::LogLevel> GetLogLevel(const Util::Config::Node &config)
 {
   const std::map<std::string, CLogger::LogLevel> logLevelByString
   {
@@ -89,11 +89,11 @@ static std::pair<bool, CLogger::LogLevel> GetLogLevel(const Util::Config::Node &
   auto it = logLevelByString.find(logLevel);
   if (it != logLevelByString.end())
   {
-    return std::pair<bool, CLogger::LogLevel>(OKAY, it->second);
+    return std::pair<Result, CLogger::LogLevel>(Result::OKAY, it->second);
   }
 
   ErrorLog("Invalid log level: %s", logLevel.c_str());
-  return std::pair<bool, CLogger::LogLevel>(FAIL, CLogger::LogLevel::Info);
+  return std::pair<Result, CLogger::LogLevel>(Result::FAIL, CLogger::LogLevel::Info);
 }
 
 std::shared_ptr<CLogger> CreateLogger(const Util::Config::Node &config)
@@ -102,7 +102,7 @@ std::shared_ptr<CLogger> CreateLogger(const Util::Config::Node &config)
 
   // Get log level
   auto logLevelResult = GetLogLevel(config);
-  if (logLevelResult.first != OKAY)
+  if (logLevelResult.first != Result::OKAY)
   {
     return std::shared_ptr<CLogger>();
   }
@@ -118,7 +118,7 @@ std::shared_ptr<CLogger> CreateLogger(const Util::Config::Node &config)
   std::set<std::string> supportedDestinations { "stdout", "stderr", "syslog" };
   std::set<std::string> destinations; // log output destinations
   std::set<std::string> filenames;    // anything that is not a known destination is assumed to be a file
-  for (auto output: outputs)
+  for (auto& output: outputs)
   {
     // Is this a known destination or a file?
     std::string canonicalizedOutput = Util::TrimWhiteSpace(Util::ToLower(output));
@@ -168,7 +168,10 @@ void CMultiLogger::DebugLog(const char *fmt, va_list vl)
 {
   for (auto &logger: m_loggers)
   {
-    logger->DebugLog(fmt, vl);
+    va_list vl_tmp;
+    va_copy(vl_tmp, vl);
+    logger->DebugLog(fmt, vl_tmp);
+    va_end(vl_tmp);
   }
 }
 
@@ -176,7 +179,10 @@ void CMultiLogger::InfoLog(const char *fmt, va_list vl)
 {
   for (auto &logger: m_loggers)
   {
-    logger->InfoLog(fmt, vl);
+    va_list vl_tmp;
+    va_copy(vl_tmp, vl);
+    logger->InfoLog(fmt, vl_tmp);
+    va_end(vl_tmp);
   }
 }
 
@@ -184,7 +190,10 @@ void CMultiLogger::ErrorLog(const char *fmt, va_list vl)
 {
   for (auto &logger: m_loggers)
   {
-    logger->ErrorLog(fmt, vl);
+    va_list vl_tmp;
+    va_copy(vl_tmp, vl);
+    logger->ErrorLog(fmt, vl_tmp);
+    va_end(vl_tmp);
   }
 }
 
@@ -211,8 +220,8 @@ void CConsoleErrorLogger::InfoLog(const char *fmt, va_list vl)
 
 void CConsoleErrorLogger::ErrorLog(const char *fmt, va_list vl)
 {
-  char  string[4096];
-  vsprintf(string, fmt, vl);
+  char string[4096];
+  vsnprintf(string, sizeof(string), fmt, vl);
   fprintf(stderr, "Error: %s\n", string);
 }
 
@@ -230,8 +239,8 @@ void CFileLogger::DebugLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Debug] %s", string1);
 
   // Debug logging is so copious that we don't bother to guarantee it is saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -248,8 +257,8 @@ void CFileLogger::InfoLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Info]  %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Info]  %s\n", string1);
 
   // Write to file, close, and reopen to ensure it was saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -267,8 +276,8 @@ void CFileLogger::ErrorLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Error] %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Error] %s\n", string1);
 
   // Write to file, close, and reopen to ensure it was saved
   std::unique_lock<std::mutex> lock(m_mtx);
@@ -286,7 +295,7 @@ void CFileLogger::ReopenFiles(std::ios_base::openmode mode)
   m_logFiles.clear();
 
   // (Re-)Open
-  for (auto filename: m_logFilenames)
+  for (const auto &filename: m_logFilenames)
   {
     std::ofstream ofs(filename.c_str(), mode);
     if (ofs.is_open() && ofs.good())
@@ -309,14 +318,14 @@ void CFileLogger::WriteToFiles(const char *str)
   }
 }
 
-CFileLogger::CFileLogger(CLogger::LogLevel level, std::vector<std::string> filenames)
+CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string> &filenames)
   : m_logLevel(level),
     m_logFilenames(filenames)
 {
   ReopenFiles(std::ios::out);
 }
 
-CFileLogger::CFileLogger(CLogger::LogLevel level, std::vector<std::string> filenames, std::vector<FILE *> systemFiles)
+CFileLogger::CFileLogger(CLogger::LogLevel level, const std::vector<std::string> &filenames, const std::vector<FILE *> &systemFiles)
   : m_logLevel(level),
     m_logFilenames(filenames),
     m_systemFiles(systemFiles)
@@ -338,8 +347,8 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Debug] %s", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Debug] %s", string1);
 
 #ifdef _WIN32
   OutputDebugString(string2);
@@ -358,8 +367,8 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Info]  %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Info]  %s\n", string1);
 
 #ifdef _WIN32
   OutputDebugString(string2);
@@ -378,10 +387,10 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
   char string1[4096];
   char string2[4096];
 
-  vsprintf(string1, fmt, vl);
-  sprintf(string2, "[Error] %s\n", string1);
+  vsnprintf(string1, sizeof(string1), fmt, vl);
+  snprintf(string2, sizeof(string2), "[Error] %s\n", string1);
 
- #ifdef _WIN32
+#ifdef _WIN32
   OutputDebugString(string2);
 #else
   syslog(LOG_ERR, string2);

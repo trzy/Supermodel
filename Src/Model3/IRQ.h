@@ -73,7 +73,7 @@ public:
 	 *					indicates assertion, 0 does nothing).
 	 */
 	void Assert(unsigned irqBits);
-	
+
 	/*
 	 * Deassert(irqBits):
 	 *
@@ -85,14 +85,14 @@ public:
 	 *					indicates deassertion, 0 does nothing).
 	 */
 	void Deassert(unsigned irqBits);
-	
+
 	/*
 	 * ReadIRQEnable(void):
 	 *
 	 * Returns:
 	 *		The 8-bit IRQ enable register.
 	 */
-	UINT8 ReadIRQEnable(void);
+	UINT8 ReadIRQEnable(void) const;
 	
 	/*
 	 * WriteIRQEnable(data):
@@ -104,7 +104,7 @@ public:
 	 *		data	IRQ enable bits (8 bits).
 	 */
 	void WriteIRQEnable(UINT8 data);
-	
+
 	/*
 	 * ReadIRQState(void):
 	 *
@@ -115,15 +115,15 @@ public:
 	 * Returns:
 	 *		The 8-bit IRQ state register.
 	 */
-	UINT8 ReadIRQState(void);
-	
+	UINT8 ReadIRQState(void) const;
+
 	/*
 	 * Reset(void):
 	 *
 	 * Resets the IRQ controller. All IRQs are disabled.
 	 */
 	void Reset(void);
-	
+
 	/*
 	 * Init(void):
 	 *
@@ -131,7 +131,7 @@ public:
 	 * other members.
 	 */
 	void Init(void);
-	 
+
 	/*
 	 * CIRQ(void):
 	 * ~CIRQ(void):
@@ -140,7 +140,7 @@ public:
 	 */
 	CIRQ(void);
 	~CIRQ(void);
-	
+
 private:
 	unsigned	irqEnable;	// 8 bits, 1=enabled, 0=disabled
 	unsigned	irqState;	// bits correspond to irqEnable, 1=pending, 0=not pending
