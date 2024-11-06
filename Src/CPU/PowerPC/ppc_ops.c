@@ -40,8 +40,6 @@
 #pragma fenv_access(on) // because of fesetround
 #endif
 
-static unsigned int rounding_mode = FE_TONEAREST;
-
 static void ppc_unimplemented(UINT32 op)
 {
 	ErrorLog("PowerPC hit an unimplemented instruction. Halting emulation until reset.");
@@ -1614,36 +1612,28 @@ inline bool sign_double(FPR x)
 	return (x.id >> 63);
 }
 
-// in theory the following 3 functions require compiler options to work correctly
+// in theory the following 2 functions require compiler options to work correctly
 //  -frounding-math for GCC
 //   GCC and clang can show weird behavior nevertheless according to various threads on the net
 //  /fp:strict for MS Visual Studio/C++
 //   here we use a set of pragmas at the beginning of the file instead (to steer selective behavior for just this file)
 // 
 // unknown if any games actually change this, at least its extremely rare for Model3
-inline void set_rounding_mode(void)
-{
-	switch (ppc.fpscr & 3)
-	{
-	case 0: rounding_mode = FE_TONEAREST; break;
-	case 1: rounding_mode = FE_TOWARDZERO; break;
-	case 2: rounding_mode = FE_UPWARD; break;
-	case 3: rounding_mode = FE_DOWNWARD; break;
-	}
-}
 
 // we just 'cache' FE_TONEAREST, as other math functions that are called
 // by other code inbetween PPC emulation could be influenced in a bad way,
 // as these may expect FE_TONEAREST to be set
 inline void init_rounding_mode(void)
 {
-	if (rounding_mode != FE_TONEAREST)
-		fesetround(rounding_mode);
+	static constexpr unsigned int rounding_mode[4] = {FE_TONEAREST,FE_TOWARDZERO,FE_UPWARD,FE_DOWNWARD};
+
+	if ((ppc.fpscr & 3) != 0) // rounding mode not nearest?
+		fesetround(rounding_mode[ppc.fpscr & 3]);
 }
 
 inline void restore_rounding_mode(void)
 {
-	if (rounding_mode != FE_TONEAREST)
+	if ((ppc.fpscr & 3) != 0) // rounding mode not nearest?
 		fesetround(FE_TONEAREST);
 }
 
@@ -2405,10 +2395,7 @@ static void ppc_mtfsb0x(UINT32 op)
 	crbD = (op >> 21) & 0x1F;
 
 	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
-	{
 		ppc.fpscr &= ~(1 << (31 - crbD));
-		set_rounding_mode();
-	}
 
 	if( RCBIT ) {
 		SET_CR1();
@@ -2422,10 +2409,7 @@ static void ppc_mtfsb1x(UINT32 op)
 	crbD = (op >> 21) & 0x1F;
 
 	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
-	{
 		ppc.fpscr |= (1 << (31 - crbD));
-		set_rounding_mode();
-	}
 
 	if( RCBIT ) {
 		SET_CR1();
@@ -2439,8 +2423,6 @@ static void ppc_mtfsfx(UINT32 op)
 
 	ppc.fpscr &= (~f) | ~(FPSCR_FEX | FPSCR_VX);
 	ppc.fpscr |= (UINT32)(FPR(b).id) & ~(FPSCR_FEX | FPSCR_VX);
-
-	set_rounding_mode();
 
 	// FEX, VX
 
@@ -2475,8 +2457,6 @@ static void ppc_mtfsfix(UINT32 op)
 
     ppc.fpscr &= ~(0xf << crfd);    // clear field
     ppc.fpscr |= (imm << crfd);     // insert new data
-
-	set_rounding_mode();
 
 	if( RCBIT ) {
 		SET_CR1();
