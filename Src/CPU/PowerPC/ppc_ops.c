@@ -18,22 +18,27 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * ppc_ops.c
  *
- * PowerPC common opcodes. Included from ppc.cpp; do not compile compile 
+ * PowerPC common opcodes. Included from ppc.cpp; do not compile
  * separately.
  * 
  * Changes to opcode handlers since inclusion in new Supermodel:
  *		- Feb. 13 2011: Changed stwcx. to always set the EQ flag.
  */
- 
+
 /* PowerPC common opcodes */
 
 // it really seems like this should be elsewhere - like maybe the floating point checks can hang out someplace else
-#include <math.h>
 #include <cfenv>
+#include <cmath>
+#pragma STDC FENV_ACCESS ON // because of fesetround
+#ifdef _MSC_VER
+#pragma float_control(precise,on) // because of fenv_access(on)
+#pragma fenv_access(on) // because of fesetround
+#endif
 
 static void ppc_unimplemented(UINT32 op)
 {
@@ -1387,9 +1392,7 @@ static void ppc_subfex(UINT32 op)
 	UINT32 ra = REG(RA);
 	UINT32 rb = REG(RB);
 	UINT32 carry = (XER >> 29) & 0x1;
-	UINT32 r;
-
-	r = ~ra + carry;
+	UINT32 r = ~ra + carry;
 	REG(RT) = rb + r;
 
 	SET_ADD_CA(r, ~ra, carry);		/* step 1 carry */
@@ -1418,9 +1421,7 @@ static void ppc_subfmex(UINT32 op)
 {
 	UINT32 ra = REG(RA);
 	UINT32 carry = (XER >> 29) & 0x1;
-	UINT32 r;
-
-	r = ~ra + carry;
+	UINT32 r = ~ra + carry;
 	REG(RT) = r - 1;
 
 	SET_SUB_CA(r, ~ra, carry);		/* step 1 carry */
@@ -1536,53 +1537,7 @@ static void ppc_invalid(UINT32 op)
   Floating point operations.
 */
 
-/*************************OLD
-inline int is_nan_double(FPR x)
-{
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
-}
-
-inline int is_qnan_double(FPR x)
-{
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & 0x0007fffffffffff) == 0x000000000000000) &&
-			((x.id & 0x000800000000000) == 0x000800000000000) );
-}
-
-inline int is_snan_double(FPR x)
-{
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-			((x.id & 0x0008000000000000) == DOUBLE_ZERO) );
-}
-
-inline int is_infinity_double(FPR x)
-{
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & DOUBLE_FRAC) == DOUBLE_ZERO) );
-}
-
-inline int is_normalized_double(FPR x)
-{
-	UINT64 exp;
-
-	exp = (x.id & DOUBLE_EXP) >> 52;
-
-	return (exp >= 1) && (exp <= 2046);
-}
-
-inline int is_denormalized_double(FPR x)
-{
-	return( ((x.id & DOUBLE_EXP) == 0) &&
-			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
-}
-
-inline int sign_double(FPR x)
-{
-	return ((x.id & DOUBLE_SIGN) != 0);
-}
-
+/* UNUSED
 inline INT64 round_to_nearest(FPR f)
 {
 	//return (INT64)(f.fd + 0.5);
@@ -1614,65 +1569,72 @@ inline INT64 round_toward_negative_infinity(FPR f)
 }
 */
 
-
-// New below, based on changes in MAME
-inline int is_nan_double(FPR x)
+// the following operations/functions CAN BREAK if fast math compiler options (i.e. finite math only) are enabled.
+// std::isnan is definetly ignored by GCC/clang then, and there are even fancier compiler heuristics that
+// can detect the bit fiddling ops to detect infinity, nan and denorms and then even may ignore these!
+// (the latter currently (2024) the case in non-production/experimental clang builds)
+inline bool is_nan_double(FPR x)
 {
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
+	return std::isnan(x.fd);
 }
 
-inline int is_qnan_double(FPR x)
+inline bool is_qnan_double(FPR x)
 {
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & 0x0007fffffffffffULL) == 0x000000000000000ULL) &&
-			((x.id & 0x000800000000000ULL) == 0x000800000000000ULL) );
+	UINT64 expfrac = (x.id & (DOUBLE_EXP | DOUBLE_FRAC));
+	return (expfrac >= (DOUBLE_EXP | 0x0008000000000000ULL));
 }
 
-inline int is_snan_double(FPR x)
+inline bool is_snan_double(FPR x)
 {
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-			((x.id & (0x0008000000000000ULL)) == DOUBLE_ZERO) );
+	UINT64 expfrac = (x.id & (DOUBLE_EXP | DOUBLE_FRAC));
+	return ((expfrac > DOUBLE_EXP) && (expfrac < (DOUBLE_EXP | 0x0008000000000000ULL)));
 }
 
-inline int is_infinity_double(FPR x)
+inline bool is_infinity_double(FPR x)
 {
-	return( ((x.id & DOUBLE_EXP) == DOUBLE_EXP) &&
-			((x.id & DOUBLE_FRAC) == DOUBLE_ZERO) );
+	return ((x.id & (DOUBLE_EXP | DOUBLE_FRAC)) == DOUBLE_EXP);
 }
 
-inline int is_normalized_double(FPR x)
+inline bool is_normalized_double(FPR x)
 {
-	UINT64 exp;
-
-	exp = (x.id & DOUBLE_EXP) >> 52;
-
-	return (exp >= 1) && (exp <= 2046);
+	UINT64 exp = (x.id & DOUBLE_EXP);
+	return ((exp > 0) && (exp <= (2046ull << 52)));
 }
 
-inline int is_denormalized_double(FPR x)
+inline bool is_denormalized_double(FPR x)
 {
-	return( ((x.id & DOUBLE_EXP) == 0) &&
-			((x.id & DOUBLE_FRAC) != DOUBLE_ZERO) );
+	UINT64 expfrac = (x.id & (DOUBLE_EXP | DOUBLE_FRAC));
+	return ((expfrac > 0) && (expfrac <= DOUBLE_FRAC));
 }
 
-inline int sign_double(FPR x)
+inline bool sign_double(FPR x)
 {
-	return ((x.id & DOUBLE_SIGN) != 0);
+	return (x.id >> 63);
 }
 
-inline void set_rounding_mode(void)
+// in theory the following 2 functions require compiler options to work correctly
+//  -frounding-math for GCC
+//   GCC and clang can show weird behavior nevertheless according to various threads on the net
+//  /fp:strict for MS Visual Studio/C++
+//   here we use a set of pragmas at the beginning of the file instead (to steer selective behavior for just this file)
+// 
+// unknown if any games actually change this, at least its extremely rare for Model3
+
+// we just 'cache' FE_TONEAREST, as other math functions that are called
+// by other code inbetween PPC emulation could be influenced in a bad way,
+// as these may expect FE_TONEAREST to be set
+inline void init_rounding_mode(void)
 {
-	// may require compiler option to work correctly (-frounding-math for GCC, /fp:strict for Visual Studio)
-	// unknown if any games actually change this
-	switch (ppc.fpscr & 3)
-	{
-	case 0: fesetround(FE_TONEAREST); break;
-	case 1: fesetround(FE_TOWARDZERO); break;
-	case 2: fesetround(FE_UPWARD); break;
-	case 3: fesetround(FE_DOWNWARD); break;
-	}
+	static constexpr unsigned int rounding_mode[4] = {FE_TONEAREST,FE_TOWARDZERO,FE_UPWARD,FE_DOWNWARD};
+
+	if ((ppc.fpscr & 3) != 0) // rounding mode not nearest?
+		fesetround(rounding_mode[ppc.fpscr & 3]);
+}
+
+inline void restore_rounding_mode(void)
+{
+	if ((ppc.fpscr & 3) != 0) // rounding mode not nearest?
+		fesetround(FE_TONEAREST);
 }
 
 /*
@@ -2095,7 +2057,11 @@ static void ppc_faddx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = FPR(a).fd + FPR(b).fd;
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2191,9 +2157,7 @@ static void ppc_fctiwx(UINT32 op)
 
 	switch(ppc.fpscr & 3)
 	{
-		// nearbyint() uses rounding mode set by fesetround()
-		// this should be FE_TONEAREST (ties to even) if the case is 0
-		case 0: r = (INT64)nearbyint(FPR(b).fd); break;
+		case 0: init_rounding_mode(); r = (INT64)nearbyint(FPR(b).fd); restore_rounding_mode(); break;
 		case 1: r = (INT64)trunc(FPR(b).fd); break;
 		case 2: r = (INT64)ceil(FPR(b).fd); break;
 		case 3: r = (INT64)floor(FPR(b).fd); break;
@@ -2201,14 +2165,14 @@ static void ppc_fctiwx(UINT32 op)
 
 	if(r > (INT64)((INT32)0x7FFFFFFF))
 	{
-		FPR(t).id = 0x7FFFFFFF;
+		FPR(t).id = (INT64)((INT32)0x7FFFFFFF);
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
 	}
-	else if(FPR(b).fd < (INT64)((INT32)0x80000000))
+	else if(r < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;
+		FPR(t).id = (INT64)((INT32)0x80000000);
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2240,9 +2204,9 @@ static void ppc_fctiwzx(UINT32 op)
 	SET_VXSNAN_1(FPR(b));
 	r = (INT64)trunc(FPR(b).fd);
 
-	if(r > (INT64)((INT32)0x7fffffff))
+	if(r > (INT64)((INT32)0x7FFFFFFF))
 	{
-		FPR(t).id = 0x7fffffff;
+		FPR(t).id = (INT64)((INT32)0x7FFFFFFF);
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2250,7 +2214,7 @@ static void ppc_fctiwzx(UINT32 op)
 	}
 	else if(r < (INT64)((INT32)0x80000000))
 	{
-		FPR(t).id = 0x80000000;
+		FPR(t).id = (INT64)((INT32)0x80000000);
 		// FPSCR[FR] = 1
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
@@ -2279,7 +2243,11 @@ static void ppc_fdivx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = FPR(a).fd / FPR(b).fd;
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2355,7 +2323,11 @@ static void ppc_frsqrtex(UINT32 op)
 
 	SET_VXSNAN_1(FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = 1.0 / sqrt(FPR(b).fd);  /* verify this */
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2373,7 +2345,11 @@ static void ppc_fsqrtx(UINT32 op)
 
 	SET_VXSNAN_1(FPR(b));
 
-	FPR(t).fd = (double)(sqrt(FPR(b).fd));
+	init_rounding_mode();
+
+	FPR(t).fd = sqrt(FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2391,7 +2367,11 @@ static void ppc_fsubx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = FPR(a).fd - FPR(b).fd;
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2417,8 +2397,6 @@ static void ppc_mtfsb0x(UINT32 op)
 	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
 		ppc.fpscr &= ~(1 << (31 - crbD));
 
-	set_rounding_mode();
-
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2433,8 +2411,6 @@ static void ppc_mtfsb1x(UINT32 op)
 	if (crbD != 1 && crbD != 2) // these bits cannot be explicitly cleared
 		ppc.fpscr |= (1 << (31 - crbD));
 
-	set_rounding_mode();
-
 	if( RCBIT ) {
 		SET_CR1();
 	}
@@ -2447,8 +2423,6 @@ static void ppc_mtfsfx(UINT32 op)
 
 	ppc.fpscr &= (~f) | ~(FPSCR_FEX | FPSCR_VX);
 	ppc.fpscr |= (UINT32)(FPR(b).id) & ~(FPSCR_FEX | FPSCR_VX);
-
-	set_rounding_mode();
 
 	// FEX, VX
 
@@ -2483,8 +2457,6 @@ static void ppc_mtfsfix(UINT32 op)
 
     ppc.fpscr &= ~(0xf << crfd);    // clear field
     ppc.fpscr |= (imm << crfd);     // insert new data
-
-	set_rounding_mode();
 
 	if( RCBIT ) {
 		SET_CR1();
@@ -2533,7 +2505,11 @@ static void ppc_faddsx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(FPR(a).fd + FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2551,7 +2527,11 @@ static void ppc_fdivsx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(FPR(a).fd / FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2568,8 +2548,12 @@ static void ppc_fresx(UINT32 op)
 
 	SET_VXSNAN_1(FPR(b));
 
+	init_rounding_mode();
+
 	// On the 603 fres behaves the same as fdivs RT, 1.0, RB
 	FPR(t).fd = (float)(1.0 / FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2587,7 +2571,11 @@ static void ppc_fsqrtsx(UINT32 op)
 
 	SET_VXSNAN_1(FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(sqrt(FPR(b).fd));
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2605,7 +2593,11 @@ static void ppc_fsubsx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(b));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(FPR(a).fd - FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2625,7 +2617,11 @@ static void ppc_fmaddx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = ((FPR(a).fd * FPR(c).fd) + FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2645,7 +2641,11 @@ static void ppc_fmsubx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = ((FPR(a).fd * FPR(c).fd) - FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2663,7 +2663,11 @@ static void ppc_fmulx(UINT32 op)
 
 	SET_VXSNAN(FPR(a), FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (FPR(a).fd * FPR(c).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2683,7 +2687,11 @@ static void ppc_fnmaddx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (-((FPR(a).fd * FPR(c).fd) + FPR(b).fd));
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2703,7 +2711,11 @@ static void ppc_fnmsubx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (-((FPR(a).fd * FPR(c).fd) - FPR(b).fd));
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2720,7 +2732,7 @@ static void ppc_fselx(UINT32 op)
 
 	CHECK_FPU_AVAILABLE();
 
-	FPR(t).fd = (FPR(a).fd >= 0.0) ? FPR(c).fd : FPR(b).fd;
+	FPR(t).fd = (is_nan_double(FPR(a)) || FPR(a).fd < 0.0) ? FPR(b).fd : FPR(c).fd; // do not just sign check, as -0.0 also counts as +0.0
 
 	if( RCBIT ) {
 		SET_CR1();
@@ -2739,7 +2751,11 @@ static void ppc_fmaddsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)((FPR(a).fd * FPR(c).fd) + FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2759,7 +2775,11 @@ static void ppc_fmsubsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)((FPR(a).fd * FPR(c).fd) - FPR(b).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2776,7 +2796,11 @@ static void ppc_fmulsx(UINT32 op)
 	CHECK_FPU_AVAILABLE();
 	SET_VXSNAN(FPR(a), FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(FPR(a).fd * FPR(c).fd);
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2796,7 +2820,11 @@ static void ppc_fnmaddsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(-((FPR(a).fd * FPR(c).fd) + FPR(b).fd));
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2816,7 +2844,11 @@ static void ppc_fnmsubsx(UINT32 op)
 	SET_VXSNAN(FPR(a), FPR(b));
 	SET_VXSNAN_1(FPR(c));
 
+	init_rounding_mode();
+
 	FPR(t).fd = (float)(-((FPR(a).fd * FPR(c).fd) - FPR(b).fd));
+
+	restore_rounding_mode();
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
