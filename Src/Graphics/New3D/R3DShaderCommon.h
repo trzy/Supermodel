@@ -14,32 +14,32 @@ vec4 ExtractColour(int type, uint value)
 {
 	vec4 c = vec4(0.0);
 
-	if(type==0) {			// T1RGB5	
-		c.r		= float((value >> 10) & 0x1Fu);
-		c.g		= float((value >> 5 ) & 0x1Fu);
-		c.b		= float((value      ) & 0x1Fu);
+	if(type==0) {			// T1RGB5
+		c.r     = float((value >> 10) & 0x1Fu);
+		c.g     = float((value >> 5 ) & 0x1Fu);
+		c.b     = float((value      ) & 0x1Fu);
 		c.rgb  *= (1.0/31.0);
-		c.a		= 1.0 - float((value >> 15) & 0x1u);
+		c.a     = 1.0 - float((value >> 15) & 0x1u);
 	}
 	else if(type==1) {		// Interleaved A4L4 (low byte)
-		c.rgb	= vec3(float(value&0xFu));
-		c.a		= float((value >> 4) & 0xFu);
+		c.rgb   = vec3(float(value&0xFu));
+		c.a     = float((value >> 4) & 0xFu);
 		c      *= (1.0/15.0);
 	}
 	else if(type==2) {
-		c.a		= float(value&0xFu);
+		c.a     = float(value&0xFu);
 		c.rgb   = vec3(float((value >> 4) & 0xFu));
-		c	   *= (1.0/15.0);
+		c      *= (1.0/15.0);
 	}
 	else if(type==3) {
-		c.rgb	= vec3(float((value>>8)&0xFu));
-		c.a		= float((value >> 12) & 0xFu);
-		c	   *= (1.0/15.0);
+		c.rgb   = vec3(float((value>>8)&0xFu));
+		c.a     = float((value >> 12) & 0xFu);
+		c      *= (1.0/15.0);
 	}
 	else if(type==4) {
-		c.a		= float((value>>8)&0xFu);
+		c.a     = float((value>>8)&0xFu);
 		c.rgb   = vec3(float((value >> 12) & 0xFu));
-		c	   *= (1.0/15.0);
+		c      *= (1.0/15.0);
 	}
 	else if(type==5) {
 		c = vec4(float(value&0xFFu) / 255.0);
@@ -145,7 +145,6 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 		return fract(u);						// return weight
 	}
 	else {										// mirror + mirror clamp - both are the same since the edge pixels are repeated anyway
-
 		float odd = floor(mod(u, 2.0));			// odd values are mirrored
 
 		if(odd > 0.0) {
@@ -161,7 +160,7 @@ float LinearTexLocations(int wrapMode, float size, float u, out float u0, out fl
 
 		if(u0 <  0.0)	u0 = 0.0;
 		if(u1 >= 1.0)	u1 = 1.0 - halfTexelSize;
-		
+
 		return fract(u);						// return weight
 	}
 }
@@ -173,9 +172,9 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
 	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
 
 	vec4 p0q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[0]) * texSize + texPos),level), level).r);
-    vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + texPos),level), level).r);
-    vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + texPos),level), level).r);
-    vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + texPos),level), level).r);
+	vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + texPos),level), level).r);
+	vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + texPos),level), level).r);
+	vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + texPos),level), level).r);
 
 	if(alphaTest) {
 		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
@@ -192,10 +191,10 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
 	}
 
 	// Interpolation in X direction.
-    vec4 pInterp_q0 = mix( p0q0, p1q0, a ); // Interpolates top row in X direction.
-    vec4 pInterp_q1 = mix( p0q1, p1q1, a ); // Interpolates bottom row in X direction.
+	vec4 pInterp_q0 = mix( p0q0, p1q0, a ); // Interpolates top row in X direction.
+	vec4 pInterp_q1 = mix( p0q1, p1q1, a ); // Interpolates bottom row in X direction.
 
-    return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
+	return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
 }
 
 vec4 GetTextureValue()
@@ -206,8 +205,8 @@ vec4 GetTextureValue()
 
 	int iLevel = int(fLevel);
 
-	ivec2 tex1Pos = GetTexturePosition(iLevel, ivec2(baseTexInfo.xy));
-	ivec2 tex1Size = GetTextureSize(iLevel, ivec2(baseTexInfo.zw));
+	ivec2 tex1Pos = GetTexturePosition(iLevel, baseTexInfo.xy);
+	ivec2 tex1Size = GetTextureSize(iLevel, baseTexInfo.zw);
 	vec4 tex1Data = texBiLinear(textureBank[texturePage], textureWrapMode, vec2(tex1Size), tex1Pos, fsTexCoord, iLevel);
 
 	// init second texel with blank data to avoid any potentially undefined behavior
@@ -216,13 +215,15 @@ vec4 GetTextureValue()
 	float blendFactor = 0.0;
 
 	// if LOD < 0, no need to blend with next mipmap level; slight performance boost
-	if (lod > 0.0)
+	//  while at it, just generalize to all cases where only one mip level needs to be touched
+	float ffL = fract(fLevel);
+	if (ffL > 0.0)
 	{
-		ivec2 tex2Pos = GetTexturePosition(iLevel+1, ivec2(baseTexInfo.xy));
-		ivec2 tex2Size = GetTextureSize(iLevel+1, ivec2(baseTexInfo.zw));
+		ivec2 tex2Pos = GetTexturePosition(iLevel+1, baseTexInfo.xy);
+		ivec2 tex2Size = GetTextureSize(iLevel+1, baseTexInfo.zw);
 		tex2Data = texBiLinear(textureBank[texturePage], textureWrapMode, vec2(tex2Size), tex2Pos, fsTexCoord, iLevel+1);
 
-		blendFactor = fract(fLevel);
+		blendFactor = ffL;
 	}
 	else if (microTexture && lod < -microTextureMinLOD)
 	{
@@ -240,7 +241,7 @@ vec4 GetTextureValue()
 	tex1Data = mix(tex1Data, tex2Data, blendFactor);
 
 	if(textureInverted) {
-		tex1Data.rgb = vec3(1.0) - vec3(tex1Data.rgb);
+		tex1Data.rgb = vec3(1.0) - tex1Data.rgb;
 	}
 
 	if (alphaTest) {
