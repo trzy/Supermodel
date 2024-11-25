@@ -191,10 +191,10 @@ struct Model
 
 struct Viewport
 {
-	int		vpX;					// these are the original hardware values
-	int		vpY;
-	int		vpWidth;
-	int		vpHeight;
+	float	vpX;					// these are the original hardware values
+	float	vpY;
+	float	vpWidth;
+	float	vpHeight;
 	float	angle_left;
 	float	angle_right;
 	float	angle_top;

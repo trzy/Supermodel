@@ -1036,11 +1036,11 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->number = (vpnode[0] >> 10);
 		m_currentPriority = vp->priority;
 
-		// Fetch viewport parameters (TO-DO: would rounding make a difference?)
-		vp->vpX			= (int)(((vpnode[0x1A] & 0xFFFF) * (float)(1.0 / 16.0)) + 0.5f);		// viewport X (12.4 fixed point)
-		vp->vpY			= (int)(((vpnode[0x1A] >> 16) * (float)(1.0 / 16.0)) + 0.5f);			// viewport Y (12.4)
-		vp->vpWidth		= (int)(((vpnode[0x14] & 0xFFFF) * (float)(1.0 / 4.0)) + 0.5f);		// width (14.2)
-		vp->vpHeight	= (int)(((vpnode[0x14] >> 16) * (float)(1.0 / 4.0)) + 0.5f);			// height (14.2)
+		// Fetch viewport parameters
+		vp->vpX			= ((vpnode[0x1A] & 0xFFFF) * (float)(1.0 / 16.0)) ;		// viewport X (12.4 fixed point)
+		vp->vpY			= ((vpnode[0x1A] >> 16) * (float)(1.0 / 16.0));			// viewport Y (12.4)
+		vp->vpWidth		= ((vpnode[0x14] & 0xFFFF) * (float)(1.0 / 4.0));		// width (14.2)
+		vp->vpHeight	= ((vpnode[0x14] >> 16) * (float)(1.0 / 4.0));			// height (14.2)
 
 		uint32_t matrixBase = vpnode[0x16] & 0xFFFFFF;							// matrix base address
 
@@ -1598,18 +1598,18 @@ void CNew3D::CalcViewport(Viewport* vp)
 		m_planes.correction = 1.0f / correction;
 
 		vp->x		= 0;
-		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((384.0f - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
-		vp->height = (int)((float)vp->vpHeight*m_yRatio);
+		vp->height = (int)(vp->vpHeight*m_yRatio);
 
 		vp->projectionMatrix.FrustumRZ(l*correction, r*correction, b, t, NEAR_PLANE);
 	}
 	else {
 
-		vp->x		= m_xOffs + (int)((float)vp->vpX*m_xRatio);
-		vp->y		= m_yOffs + (int)((float)(384 - (vp->vpY + vp->vpHeight))*m_yRatio);
-		vp->width	= (int)((float)vp->vpWidth*m_xRatio);
-		vp->height	= (int)((float)vp->vpHeight*m_yRatio);
+		vp->x		= m_xOffs + (int)(vp->vpX*m_xRatio);
+		vp->y		= m_yOffs + (int)((384.0f - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->width	= (int)(vp->vpWidth*m_xRatio);
+		vp->height	= (int)(vp->vpHeight*m_yRatio);
 
 		vp->projectionMatrix.FrustumRZ(l, r, b, t, NEAR_PLANE);
 	}
