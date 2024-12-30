@@ -1,0 +1,5 @@
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "$0")")"
+echo "Starting Supermodel"
+cd "$HERE/usr"
+exec "./bin/Supermodel" "$@"

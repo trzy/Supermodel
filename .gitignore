@@ -358,7 +358,7 @@ nvram/
 roms/
 saves/
 
-
-
-
-
+# ignore app_image related generated files/directories
+/AppImage/appimagetool-x86_64.AppImage
+/AppImage/Supermodel.AppDir
+/AppImage/Supermodel-x86_64.AppImage
