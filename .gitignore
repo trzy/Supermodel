@@ -362,3 +362,5 @@ saves/
 /AppImage/appimagetool-x86_64.AppImage
 /AppImage/Supermodel.AppDir
 /AppImage/Supermodel-x86_64.AppImage
+/AppImage/squashfs-root/
+/AppImage/appimagetool

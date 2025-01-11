@@ -12,10 +12,6 @@ make -f Makefiles/Makefile.UNIX NET_BOARD=1 APP_IMAGE=1
 cd ./AppImage
 mkdir -p ./${APP_DIR}
 
-# Download appimagetool (for creating the image)
-wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -c
-chmod +x appimagetool-x86_64.AppImage
-
 # Copy binary into folder
 mkdir -p ./${APP_DIR}/usr/bin
 cp ../bin/supermodel ./${APP_DIR}/usr/bin/Supermodel
@@ -54,5 +50,13 @@ cp /lib/x86_64-linux-gnu/libxcb-randr.so.0 ./${APP_DIR}/usr/lib/
 cp /lib/x86_64-linux-gnu/libxcb.so.1 ./${APP_DIR}/usr/lib/
 cp /lib/x86_64-linux-gnu/libxkbcommon.so.0 ./${APP_DIR}/usr/lib/
 
-# Build the app-image
-./appimagetool-x86_64.AppImage Supermodel.AppDir
+echo "Building appimage"
+# Download appimagetool (for creating the image)
+wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -c
+chmod +x appimagetool-x86_64.AppImage
+# ./appimagetool-x86_64.AppImage Supermodel.AppDir
+
+# Extract out the contents
+# NOTE: We do it this way so it can work without FUSE and also work via a github action
+./appimagetool-x86_64.AppImage --appimage-extract
+./squashfs-root/AppRun ./Supermodel.AppDir
