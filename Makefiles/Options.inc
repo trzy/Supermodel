@@ -59,6 +59,14 @@ ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
 endif
 
 #
+# Enable AppImage compiling
+#
+APP_IMAGE =
+ifneq ($(filter $(strip $(APP_IMAGE)),0 1),$(strip $(APP_IMAGE)))
+	override APP_IMAGE =
+endif
+
+#
 # Include console-based debugger in emulator ('yes' or 'no')
 #
 ENABLE_DEBUGGER =
