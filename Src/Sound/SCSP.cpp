@@ -374,38 +374,30 @@ void CheckPendingIRQ()
 	//if (g_Config.multiThreaded)
 	//	MIDILock->Unlock();
 
-	if(!pend)
-		return;
-	if(pend&0x40)
-		if(en&0x40)
-		{
-			Int68kCB(IrqTimA);
-			//ErrorLogMessage("TimA");
-			return;
-		}
-	if(pend&0x80)
-		if(en&0x80)
-		{
-			Int68kCB(IrqTimBC);
-			//ErrorLogMessage("TimB");
-			return;
-		}
-	if(pend&0x100)
-		if(en&0x100)
-		{
-			Int68kCB(IrqTimBC);
-			//ErrorLogMessage("TimC");
-			return;
-		}
-	if(pend&0x8)
-	if(en&0x8)
+	unsigned int irqLevel = 0;
+
+	if (pend & en & 0x40)
 	{
-		Int68kCB(IrqMidi);
+		irqLevel = IrqTimA;
+		//ErrorLogMessage("TimA");
+	}
+	if (pend & en & 0x80)
+	{
+		irqLevel = (IrqTimBC > irqLevel) ? IrqTimBC : irqLevel;
+		//ErrorLogMessage("TimB");
+	}
+	if (pend & en & 0x100)
+	{
+		irqLevel = (IrqTimBC > irqLevel) ? IrqTimBC : irqLevel;
+		//ErrorLogMessage("TimC");
+	}
+	if (pend & en & 0x8)
+	{
+		irqLevel = (IrqMidi > irqLevel) ? IrqMidi : irqLevel;
 		SCSP->data[0x20 / 2] &= ~8;
-		return;
 	}
 
-	Int68kCB(0);
+	Int68kCB(irqLevel);
 }
 
 //void ResetInterrupts() // Can't get this to work correctly in Supermodel.
@@ -905,6 +897,8 @@ void SCSP_UpdateReg(int reg)
 				{
 					SCSP->data[0x20 / 2] |= 0x100;
 				}
+
+				CheckPendingIRQ();
 			}
 			break;
 		case 0x24:
@@ -965,6 +959,8 @@ void SCSP_UpdateRegR(int reg)
 
 		MidiInFill--;
 		SCSP->data[0x4 / 2] = v;
+
+		CheckPendingIRQ();
 
 		if (s_multiThreaded)
 			MIDILock->Unlock();

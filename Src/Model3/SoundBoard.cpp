@@ -306,31 +306,17 @@ void CSoundBoard::Write32(unsigned int a,unsigned int d)
  the CSoundBoard object for now, unfortunately.
 ******************************************************************************/
 
-// Status of IRQ pins (IPL2-0) on 68K
-// TODO: can we get rid of this global variable altogether?
-static int	irqLine = 0;
-
-// Interrupt acknowledge callback (TODO: don't need this, default behavior in M68K.cpp should be fine)
+// Interrupt acknowledge callback; do not automatically clear interrupts!
 int IRQAck(int irqLevel)
 {
-	M68KSetIRQ(0);
-	irqLine = 0;
 	return M68K_IRQ_AUTOVECTOR;
 }
 
 // SCSP callback for generating IRQs
 void SCSP68KIRQCallback(int irqLevel)
 {
-	/*
-	 * IRQ arbitration logic: only allow higher priority IRQs to be asserted or
-	 * 0 to clear pending IRQ.
-	 */
-	if ((irqLevel>irqLine) || (0==irqLevel))
-	{
-		irqLine = irqLevel;	
-		
-	}
-	M68KSetIRQ(irqLine);
+	// SCSP is responsible for IRQ arbitration logic
+	M68KSetIRQ(irqLevel);
 }
 
 // SCSP callback for running the 68K
