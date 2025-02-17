@@ -75,6 +75,16 @@ public:
 	void Write32(UINT32 addr, UINT32 data);
 
 	/*
+	 * ReadMIDIPort(void):
+	 *
+	 * Reads from the sound board MIDI port.
+	 * 
+	 * Returns:
+	 *		Data read from MIDI port.
+	 */
+	UINT8 ReadMIDIPort(void);
+
+	/*
 	 * WriteMIDIPort(data):
 	 *
 	 * Writes to the sound board MIDI port.
@@ -83,6 +93,16 @@ public:
 	 *		data	Byte to write to MIDI port.
 	 */
 	void WriteMIDIPort(UINT8 data);
+
+	/*
+	 * CheckMIDIStatus(void):
+	 * 
+	 * Checks status of MIDI input/output buffers.
+	 * 
+	 * Returns:
+	 *		Status of MIDI input/output buffers.
+	 */
+	UINT8 CheckMIDIStatus(void);
 
 	/*
 	 * SaveState(SaveState):

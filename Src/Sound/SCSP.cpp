@@ -1757,8 +1757,8 @@ void SCSP_MidiOutW(BYTE val)
 
 	//printf("68K: MIDI out\n");
 	//DebugLog("Midi Out Buffer push %02X",val);
-	MidiStack[MidiOutW++]=val;
-	MidiOutW&=31;
+	MidiOutStack[MidiOutW++]=val;
+	MidiOutW &= 3;
 	++MidiOutFill;
 
 	if (s_multiThreaded)
@@ -1779,9 +1779,9 @@ unsigned char SCSP_MidiOutR()
 	if (s_multiThreaded)
 		MIDILock->Lock();
 
-	val=MidiStack[MidiOutR++];
+	val=MidiOutStack[MidiOutR++];
 	//DebugLog("Midi Out Buffer pop %02X",val);
-	MidiOutR&=31;
+	MidiOutR&=3;
 	--MidiOutFill;
 
 	if (s_multiThreaded)
