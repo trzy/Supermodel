@@ -53,6 +53,7 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	}
 
 	m_wideScreen = config["WideScreen"].ValueAs<bool>();
+	m_noWhiteFlash = config["NoWhiteFlash"].ValueAs<bool>();
 
 	m_r3dShader.LoadShader();
 	glUseProgram(0);
@@ -408,6 +409,23 @@ void CNew3D::RenderFrame(void)
 	m_nodes.clear();				// memory will grow during the object life time, that's fine, no need to shrink to fit
 	m_modelMat.Release();			// would hope we wouldn't need this but no harm in checking
 	m_nodeAttribs.Reset();
+
+	if (m_blockCulling && !m_noWhiteFlash)		// block culling disables 3D rendering
+	{
+		if (m_aaTarget) {
+			glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);		// if we have an AA target draw to it instead of the default back buffer
+		}
+
+		// clear screen to white
+		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		if (m_aaTarget) {
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+
+		return;
+	}
 
 	RenderViewport(0x800000);						// build model structure
 	
@@ -1626,6 +1644,11 @@ void CNew3D::TranslateTexture(unsigned& x, unsigned& y, int width, int height, i
 void CNew3D::SetSunClamp(bool enable)
 {
 	m_sunClamp = enable;
+}
+
+void CNew3D::SetBlockCulling(bool enable)
+{
+	m_blockCulling = enable;
 }
 
 float CNew3D::GetLosValue(int layer)
