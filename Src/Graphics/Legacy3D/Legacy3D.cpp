@@ -967,6 +967,19 @@ void CLegacy3D::RenderFrame(void)
   if (m_aaTarget) {
       glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer
   }
+
+  if (blockCulling && !m_config["NoWhiteFlash"].ValueAs<bool>())    // block culling disables 3D rendering
+  {
+      // clear screen to white
+      glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+
+      if (m_aaTarget) {
+          glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      }
+
+      return;
+  }
   
   // Z buffering (Z buffer is cleared by display list viewport nodes)
   glDepthFunc(GL_LESS);
@@ -1308,6 +1321,11 @@ Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsign
 
 void CLegacy3D::SetSunClamp(bool enable)
 {
+}
+
+void CLegacy3D::SetBlockCulling(bool enable)
+{
+    blockCulling = enable;
 }
 
 float CLegacy3D::GetLosValue(int layer)

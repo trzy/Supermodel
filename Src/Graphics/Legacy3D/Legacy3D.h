@@ -341,6 +341,16 @@ public:
 	void SetSunClamp(bool enable);
 
 	/*
+	* SetBlockCulling(bool enable);
+	* 
+	* When enabled, clears screen to white and disables 3D rendering
+	* 
+	* Parameters:
+	*		enable	Set block culling
+	*/
+	void SetBlockCulling(bool enable);
+
+	/*
 	* GetLosValue(int layer);
 	*
 	* Gets the line of sight value for the priority layer
@@ -520,6 +530,9 @@ private:
  	 * before being uploaded. Dimensions are 512x512.
  	 */
 	GLfloat	*textureBuffer;	// RGBA8 format
+
+	// JTAG configuration settings
+	bool blockCulling;
 };
 
 } // Legacy3D

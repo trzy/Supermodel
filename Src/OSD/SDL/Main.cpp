@@ -1518,6 +1518,7 @@ static Util::Config::Node DefaultConfig()
   config.Set("ShowFrameRate", false);
   config.Set("Crosshairs", int(0));
   config.Set("CrosshairStyle", "vector");
+  config.Set("NoWhiteFlash", false);
   config.Set("FlipStereo", false);
 #ifdef SUPERMODEL_WIN32
   config.Set("InputSystem", "dinput");
@@ -1612,6 +1613,7 @@ static void Help(void)
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
   puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
   puts("  -no-multi-texture       Decode to single texture (legacy engine) [Default]");
+  puts("  -no-white-flash         Disables white flash when games disable 3D rendering");
   puts("  -vert-shader=<file>     Load Real3D vertex shader for 3D rendering");
   puts("  -frag-shader=<file>     Load Real3D fragment shader for 3D rendering");
   puts("  -vert-shader-fog=<file> Load Real3D scroll fog vertex shader (new engine)");
@@ -1748,6 +1750,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-dsb",              { "EmulateDSB",       false } },
     { "-legacy-scsp",         { "LegacySoundDSP",   true } },
     { "-new-scsp",            { "LegacySoundDSP",   false } },
+    { "-no-white-flash",      { "NoWhiteFlash",     true } },
+    { "-white-flash",         { "NoWhiteFlash",     false } },
 #ifdef NET_BOARD
     { "-net",                 { "Network",       true } },
     { "-no-net",              { "Network",       false } },

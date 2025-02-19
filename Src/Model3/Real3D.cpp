@@ -729,6 +729,9 @@ void CReal3D::WriteJTAGModeword(CASIC::Name device, uint32_t data)
 
     switch (device)
     {
+    case CASIC::Name::Mercury:
+        Render3D->SetBlockCulling((data & 4) == 4);
+        break;
     case CASIC::Name::Mars:
         Render3D->SetSunClamp((data & 0x40000) == 0);
         break;
