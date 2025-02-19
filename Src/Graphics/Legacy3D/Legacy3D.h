@@ -530,6 +530,9 @@ private:
  	 * before being uploaded. Dimensions are 512x512.
  	 */
 	GLfloat	*textureBuffer;	// RGBA8 format
+
+	// JTAG configuration settings
+	bool blockCulling;
 };
 
 } // Legacy3D
