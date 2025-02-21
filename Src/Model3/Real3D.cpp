@@ -140,7 +140,8 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&commandPortWritten);
   SaveState->Read(&m_pingPong, sizeof(m_pingPong));
   SaveState->Read(&m_modeword, sizeof(m_modeword));
-  Render3D->SetSunClamp((m_modeword[4] & 0x40000) == 0);
+  Render3D->SetSunClamp((m_modeword[static_cast<int>(CASIC::Name::Mars)] & 0x40000) == 0);
+  Render3D->SetBlockCulling((m_modeword[static_cast<int>(CASIC::Name::Mercury)] & 4) == 4);
   for (int i = 0; i < 19; i++)
   {
     uint8_t nul;
