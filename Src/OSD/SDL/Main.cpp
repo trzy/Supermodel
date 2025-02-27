@@ -2106,7 +2106,9 @@ int main(int argc, char **argv)
 
   // Create input system
   if (selectedInputSystem == "sdl")
-    InputSystem = new CSDLInputSystem(s_runtime_config);
+    InputSystem = new CSDLInputSystem(s_runtime_config, false);
+  else if (selectedInputSystem == "sdlgamepad")
+    InputSystem = new CSDLInputSystem(s_runtime_config, true);
 #ifdef SUPERMODEL_WIN32
   else if (selectedInputSystem == "dinput")
     InputSystem = new CDirectInputSystem(s_runtime_config, s_window, false, false);
