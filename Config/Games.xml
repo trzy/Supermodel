@@ -1438,10 +1438,6 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!-- Prevent "rolling start" scrolling glitch -->
-        <patch region="crom" bits="32" offset="0x14BDB8" value="0x20B201E0" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19691.20" crc32="0x83523B89" />
         <file offset="2" name="epr-19690.19" crc32="0x25F007FE" />
@@ -1530,8 +1526,6 @@
       <patches>
         <!-- Secret debug menu -->
         <patch region="crom" bits="32" offset="0x199DE8" value="0x00050208" />
-        <!-- Prevent "rolling start" scrolling glitch -->
-        <patch region="crom" bits="32" offset="0x14BDF4" value="0x20B201E0" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19734.20" crc32="0xBE897336" />
@@ -1564,10 +1558,6 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!-- Prevent "rolling start" scrolling glitch -->
-        <patch region="crom" bits="32" offset="0x146350" value="0x20B201E0" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-19607a.20" crc32="0x24301A12" />
         <file offset="2" name="epr-19608a.19" crc32="0x1426160E" />
@@ -1714,10 +1704,6 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!-- Prevent "rolling start" scrolling glitch -->
-        <patch region="crom" bits="32" offset="0x14E424" value="0x20B201E0" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20095a.20" crc32="0x58C7E393" />
         <file offset="2" name="epr-20094a.19" crc32="0xDBF17A43" />
@@ -1766,10 +1752,6 @@
       </inputs>
     </hardware>
     <roms>
-      <patches>
-        <!-- Prevent "rolling start" scrolling glitch -->
-        <patch region="crom" bits="32" offset="0x14E014" value="0x20B201E0" />
-      </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-20095.20" crc32="0x44467BC1" />
         <file offset="2" name="epr-20094.19" crc32="0x299B6257" />

@@ -290,25 +290,25 @@ private:
 
 	ColourOffsetRegister m_colourOffsetRegs[2];
 
-	bool	IsEnabled		(int layerNumber) const;
-	bool	Above3D			(int layerNumber) const;
-	bool	Is4Bit			(int layerNumber) const;
-	int		GetYScroll		(int layerNumber) const;
-	int		GetXScroll		(int layerNumber) const;
-	bool	LineScrollMode	(int layerNumber) const;
-	int		GetLineScroll	(int layerNumber, int yCoord) const;
-	int		GetTileNumber	(int xCoord, int yCoord, int xScroll, int yScroll) const;
-	int		GetTileData		(int layerNum, int tileNumber) const;
-	int		GetVFine		(int yCoord, int yScroll) const;
-	int		GetHFine		(int xCoord, int xScroll) const;
-	int		GetLineMask		(int layerNumber, int yCoord) const;
-	int		GetPixelMask	(int lineMask, int xCoord) const;
-	UINT32	GetColour32		(int layer, UINT32 data) const;
-	void	Draw4Bit		(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const;
-	void	Draw8Bit		(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const;
+	bool	IsEnabled			(int layerNumber) const;
+	bool	Above3D				(int layerNumber) const;
+	bool	Is4Bit				(int layerNumber) const;
+	int		GetYScroll			(int layerNumber) const;
+	int		GetXScroll			(int layerNumber) const;
+	bool	LineScrollMode		(int layerNumber) const;
+	int		GetLineScroll		(int layerNumber, int yCoord) const;
+	int		GetTilePairNumber	(int xCoord, int yCoord, int xScroll, int yScroll) const;
+	int		GetTileData			(int layerNum, int tilePairNumber) const;
+	int		GetVFine			(int yCoord, int yScroll) const;
+	int		GetHFine			(int xCoord, int xScroll) const;
+	int		GetLineMask			(int layerNumber, int yCoord) const;
+	int		GetPixelMask		(int lineMask, int xCoord) const;
+	UINT32	GetColour32			(int layer, UINT32 data) const;
+	void	Draw4BitTilePair	(int tileData, int hStart, int hEnd, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const;
+	void	Draw8BitTilePair	(int tileData, int hStart, int hEnd, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const;
 
-	void	WritePalette	(int layer, int address, UINT32 data);
-	void	RecomputePalettes(int layer);	// 0 = bottom, 1 = top
+	void	WritePalette		(int layer, int address, UINT32 data);
+	void	RecomputePalettes	(int layer);	// 0 = bottom, 1 = top
 
 	//const Util::Config::Node& m_config;
 	const bool m_gpuMultiThreaded;
