@@ -422,21 +422,18 @@ int CTileGen::GetLineScroll(int layerNumber, int yCoord) const
 	return (m_vramP[index] >> shift) & 0xFFFFu;
 }
 
-int CTileGen::GetTileNumber(int xCoord, int yCoord, int xScroll, int yScroll) const
+int CTileGen::GetTilePairNumber(int xCoord, int yCoord, int xScroll, int yScroll) const
 {
-	int xIndex = ((xCoord + xScroll) / 8) & 0x3F;
+	int xIndex = ((xCoord + xScroll) / 16) & 0x1F;
 	int yIndex = ((yCoord + yScroll) / 8) & 0x3F;
 
-	return (yIndex * 64) + xIndex;
+	return (yIndex * 32) + xIndex;
 }
 
-int CTileGen::GetTileData(int layerNum, int tileNumber) const
+int CTileGen::GetTileData(int layerNum, int tilePairNumber) const
 {
 	int addressBase = (0xF8000 + (layerNum * 0x2000)) / 4;
-	int offset = tileNumber / 2;							// two tiles per 32bit word
-	int shift = (1 - (tileNumber % 2)) * 16;				// triple check this
-
-	return (m_vramP[addressBase + offset] >> shift) & 0xFFFFu;
+	return m_vramP[addressBase + tilePairNumber];
 }
 
 int CTileGen::GetVFine(int yCoord, int yScroll) const
@@ -446,7 +443,7 @@ int CTileGen::GetVFine(int yCoord, int yScroll) const
 
 int CTileGen::GetHFine(int xCoord, int xScroll) const
 {
-	return (xCoord + xScroll) & 7;
+	return (xCoord + xScroll) & 15;
 }
 
 int CTileGen::GetLineMask(int layerNumber, int yCoord) const
@@ -489,25 +486,32 @@ UINT32 CTileGen::GetColour32(int layer, UINT32 data) const
 	return (a << 24) | (bb << 16) | (gg << 8) | rr;
 }
 
-void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
+void CTileGen::Draw4BitTilePair(int tileData, int hStart, int hEnd, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
 {
 	// Tile pattern offset: each tile occupies 32 bytes when using 4-bit pixels (offset of tile pattern within VRAM)
-	int patternOffset = ((tileData & 0x3FFF) << 1) | ((tileData >> 15) & 1);
-	patternOffset *= 32;
-	patternOffset /= 4;
+	int patternOffset[2];
+
+	patternOffset[0] = (((tileData >> 16) & 0x3FFF) << 1) | ((tileData >> 31) & 1);
+	patternOffset[0] *= 32;
+	patternOffset[0] /= 4;
+
+	patternOffset[1] = ((tileData & 0x3FFF) << 1) | ((tileData >> 15) & 1);
+	patternOffset[1] *= 32;
+	patternOffset[1] /= 4;
 
 	// Upper color bits; the lower 4 bits come from the tile pattern
-	int paletteIndex = tileData & 0x7FF0;
+	int paletteIndex[] = { (tileData >> 16) & 0x7FF0, tileData & 0x7FF0 };
 
-	auto pattern = m_vramP[patternOffset + vFine];
+	uint32_t patterns[] = { m_vramP[patternOffset[0] + vFine], m_vramP[patternOffset[1] + vFine] };
 
-	for (int i = 0; i < 8 - hFine; i++, x++) {
-		auto p = (pattern >> ((7 - (hFine + i)) * 4)) & 0xFu;
-		auto colour32 = pal[paletteIndex | p];
-		if (colour32 < 0x1000000) {
-			continue;
+	for (int i = hStart; i < hEnd; i++, x++) {
+		auto pattern = patterns[i / 8];		// first 8 pixels use pattern 1, next 8 pattern 2
+		auto p = (pattern >> ((7 - (i % 8)) * 4)) & 0xFu;
+		auto colour32 = pal[paletteIndex[i / 8] | p];
+
+		if (colour32 >= 0x1000000) {		// if not transparent write pixel colour
+			lineBuffer[x] = colour32;
 		}
-		lineBuffer[x] = colour32;
 	}
 }
 
@@ -526,36 +530,33 @@ void CTileGen::Draw4Bit(int tileData, int hFine, int vFine, UINT32* const lineBu
 	*colour16++ = pal[ paletteIndex | ((pattern >> 0)  & 0xF) ];
 */
 
-void CTileGen::Draw8Bit(int tileData, int hFine, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
+void CTileGen::Draw8BitTilePair(int tileData, int hStart, int hEnd, int vFine, UINT32* const lineBuffer, const UINT32* const pal, int& x) const
 {
 	// Tile pattern offset: each tile occupies 64 bytes when using 8-bit pixels
-	int patternOffset = tileData & 0x3FFF;
-	patternOffset *= 64;
-	patternOffset /= 4;
+	int patternOffset[2];
+
+	patternOffset[0] = (tileData >> 16) & 0x3FFF;
+	patternOffset[0] *= 64;
+	patternOffset[0] /= 4;
+
+	patternOffset[1] = tileData & 0x3FFF;
+	patternOffset[1] *= 64;
+	patternOffset[1] /= 4;
 
 	// Upper color bits
-	int paletteIndex = tileData & 0x7F00;
+	int paletteIndex[2] = { (tileData >> 16) & 0x7F00, tileData & 0x7F00 };
 
-	auto pattern1 = m_vramP[patternOffset + (vFine * 2)];			// first 4 pixels
-	auto pattern2 = m_vramP[patternOffset + (vFine * 2) + 1];		// next 4 pixels
+	uint32_t patterns[] = { m_vramP[patternOffset[0] + (vFine * 2)], m_vramP[patternOffset[0] + (vFine * 2) + 1],
+							m_vramP[patternOffset[1] + (vFine * 2)], m_vramP[patternOffset[1] + (vFine * 2) + 1]};
 
-	// might not hit this loop
-	for (int i = 0; i < 4 - hFine; i++, x++) {
-		auto p = (pattern1 >> ((3 - ((hFine + i) % 4)) * 8)) & 0xFFu;
-		auto colour32 = pal[paletteIndex | p];
-		if (colour32 < 0x1000000) {
-			continue;
+	for (int i = hStart; i < hEnd; i++, x++) {
+		auto pattern = patterns[i / 4];		// each pattern contains 4 pixels
+		auto p = (pattern >> ((3 - (i % 4)) * 8)) & 0xFFu;
+		auto colour32 = pal[paletteIndex[i / 8] | p];
+
+		if (colour32 >= 0x1000000) {		// if not transparent write pixel colour
+			lineBuffer[x] = colour32;
 		}
-		lineBuffer[x] = colour32;
-	}
-
-	for (int i = 0; i < 4 - (hFine % 4); i++, x++) {
-		auto p = (pattern2 >> ((3 - ((hFine + i) % 4)) * 8)) & 0xFFu;
-		auto colour32 = pal[paletteIndex | p];
-		if (colour32 < 0x1000000) {
-			continue;
-		}
-		lineBuffer[x] = colour32;
 	}
 }
 
@@ -583,30 +584,36 @@ void CTileGen::DrawLine(int line)
 			continue;	// both disabled let's try next pair
 		}
 
-		UINT32* drawLayers[2] = { m_drawSurface[Above3D(primaryIndex)]->GetLine(line), m_drawSurface[Above3D(altIndex)]->GetLine(line) };
+		UINT32* drawLayers[2] = { m_drawSurface[Above3D(primaryIndex)]->GetLine(line),
+								  m_drawSurface[Above3D(altIndex)]->GetLine(line) };
 
 		int lineMask	= GetLineMask(primaryIndex, line);
-		int scrollX[2]	= { LineScrollMode(primaryIndex) ? GetLineScroll(primaryIndex,line) : GetXScroll(primaryIndex),  LineScrollMode(altIndex) ? GetLineScroll(altIndex,line) : GetXScroll(altIndex) };
+		int scrollX[2]	= { LineScrollMode(primaryIndex) ? GetLineScroll(primaryIndex,line) : GetXScroll(primaryIndex),
+							LineScrollMode(altIndex) ? GetLineScroll(altIndex,line) : GetXScroll(altIndex) };
 		int scrollY[2]	= { GetYScroll(primaryIndex),GetYScroll(altIndex) };
 		
 		for (int x = 0; x < 496; ) {
 
 			int layer = (GetPixelMask(lineMask, x) + 1) & 1;	// 1 means primary layer, so we flip so it's zero
+			bool maskSwitch = GetPixelMask(lineMask, x) != GetPixelMask(lineMask, x + 15);
 
 			if (hasLayer[layer]) {
 
 				const auto index = primaryIndex + layer;
 
-				int tileNumber	= GetTileNumber(x, line, scrollX[layer], scrollY[layer]);
-				int	hFine		= GetHFine(x, scrollX[layer]);
-				int vFine		= GetVFine(line, scrollY[layer]);
-				int tileData	= GetTileData(index, tileNumber);
+				// tiles are loaded in pairs, since the RAM is 32-bit and each name table entry is 16-bit
+				// if the mask will change before we can draw all 16 pixels of the next tile pair, we reuse the previous tile pair
+				int tilePairNumber	= GetTilePairNumber(maskSwitch ? (x - 16) : x, line, scrollX[layer], scrollY[layer]);
+				int	hStart			= GetHFine(x, scrollX[layer]);
+				int hEnd			= maskSwitch ? 16 - (x & 15) : 16;
+				int vFine			= GetVFine(line, scrollY[layer]);
+				int tileData		= GetTileData(index, tilePairNumber);
 
 				if (Is4Bit(index)) {
-					Draw4Bit(tileData, hFine, vFine, drawLayers[layer], m_pal[index / 2], x);
+					Draw4BitTilePair(tileData, hStart, hEnd, vFine, drawLayers[layer], m_pal[index / 2], x);
 				}
 				else {
-					Draw8Bit(tileData, hFine, vFine, drawLayers[layer], m_pal[index / 2], x);
+					Draw8BitTilePair(tileData, hStart, hEnd, vFine, drawLayers[layer], m_pal[index / 2], x);
 				}
 			}
 			else {
