@@ -67,12 +67,18 @@ ifeq ($(strip $(NET_BOARD)),1)
 	SDL2_LIBS += -lSDL2_net
 endif
 
+# APP_IMAGE flags
+APP_IMAGE_FLAGS = ``
+ifeq ($(strip $(APP_IMAGE)),1)
+	APP_IMAGE_FLAGS += `-Wl,-rpath,'$$ORIGIN/../lib'`
+endif
+
 #
 #	UNIX-specific
 #
 
 PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
+PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread $(APP_IMAGE_FLAGS)
 
 
 ###############################################################################
