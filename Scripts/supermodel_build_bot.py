@@ -250,7 +250,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
       bash.execute(working_dir=working_dir, command="mkdir pkg && mkdir pkg/Config && mkdir pkg/NVRAM && mkdir pkg/Saves && mkdir pkg/ROMs && mkdir pkg/Assets")
       change_log_file_path = os.path.join(pkg_dir, "CHANGES.txt")
       create_change_log(bash, repo_dir=repo_dir, file_path=change_log_file_path, uploaded_shas=uploaded_shas, current_sha=current_sha)
-      bash.execute(working_dir=working_dir, command="cp pkg/Config && cp model3emu/Config/Games.xml pkg/Config && cp model3emu/Config/Music.xml pkg/Config")
+      bash.execute(working_dir=working_dir, command="cp model3emu/Config/Games.xml pkg/Config && cp model3emu/Config/Music.xml pkg/Config")
       bash.execute(working_dir=working_dir, command="echo NVRAM files go here. >pkg/NVRAM/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Save states go here. >pkg/Saves/DIR.txt")
       bash.execute(working_dir=working_dir, command="echo Recommended \\(but not mandatory\\) location for ROM sets. >pkg/ROMs/DIR.txt")
