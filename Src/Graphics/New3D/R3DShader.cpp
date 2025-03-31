@@ -38,6 +38,7 @@ void R3DShader::Start()
 	m_shininess			= 0;
 	m_specularValue		= 0;
 	m_microTexMinLOD	= 0;
+	m_fogIntensity		= 0.0f;
 	m_microTexID		= -1;
 	m_texturePage		= -1;
 

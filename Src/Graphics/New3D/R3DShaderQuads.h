@@ -1,7 +1,7 @@
 #ifndef _R3DSHADERQUADS_H_
 #define _R3DSHADERQUADS_H_
 
-static const char *vertexShaderR3DQuads = R"glsl(
+static const char* vertexShaderR3DQuads = R"glsl(
 
 #version 450 core
 
@@ -70,7 +70,7 @@ void main(void)
 }
 )glsl";
 
-static const char *geometryShaderR3DQuads = R"glsl(
+static const char* geometryShaderR3DQuads = R"glsl(
 
 #version 450 core
 
@@ -101,6 +101,7 @@ out GS_OUT
 	flat vec4	color;
 	flat float	fixedShade[4];
 	flat float	LODBase;
+	vec3 barycentricCoords;
 } gs_out;
 
 //a*b - c*d, computed in a stable fashion (Kahan)
@@ -154,10 +155,10 @@ void main(void)
 		// Quad (lines adjacency)    Triangle strip
 		// vertex order:             vertex order:
 		// 
-		//        1----2                 1----3
-		//        |    |      ===>       | \  |
-		//        |    |                 |  \ |
-		//        0----3                 0----2
+		//        1----2                 0----2
+		//        |    |      ===>       |  / |
+		//        |    |                 | /  |
+		//        0----3                 1----3
 		//
 		const int reorder[4] = int[4]( 1, 0, 2, 3 );
 		int ii = reorder[i];
@@ -170,6 +171,15 @@ void main(void)
 			gs_out.area[j] = cross[j][j_next] + cross[j_next][ii] + cross[ii][j];
 		}
 
+		const vec3 bary[4] = vec3[](
+			vec3(1.0, 0.0, 0.0),
+			vec3(0.0, 1.0, 0.0),
+			vec3(0.0, 0.0, 1.0),
+			vec3(0.0,-1.0, 0.0)		// make the last coordinate negative so we can tell the difference between the triangles
+		);
+
+		gs_out.barycentricCoords = bary[ii];
+
 		gl_Position = gl_in[ii].gl_Position;
 
 		EmitVertex();
@@ -178,7 +188,7 @@ void main(void)
 
 )glsl";
 
-static const char *fragmentShaderR3DQuads = R"glsl(
+static const char* fragmentShaderR3DQuads = R"glsl(
 
 #version 450 core
 
@@ -240,6 +250,7 @@ in GS_OUT
 	flat vec4	color;
 	flat float	fixedShade[4];
 	flat float	LODBase;
+	vec3 barycentricCoords;
 } fs_in;
 
 //our calculated vertex attributes from the above
@@ -266,54 +277,94 @@ float SqrLength(vec2 a);
 
 void QuadraticInterpolation()
 {
-	float u[4];
-	for (int i=0; i<4; i++)
-		u[i] = length(fs_in.v[i]) * sign(fs_in.oneOverW[i]); // is w[i] negative?
-
-	precise float t[4];
-	for (int i=0; i<4; i++) {
-		int i_next = (i+1)%4;
-		if(fs_in.area[i]==0.0) t[i] = 0.0; // check for zero area to avoid div by zero
-		else                   t[i] = fma(u[i],u[i_next], -dot(fs_in.v[i],fs_in.v[i_next])) / fs_in.area[i];
-	}
-
-	int lambdaSignCount = 0; // to discard fragments if all the weights are neither all negative nor all positive (=outside the convex/concave/crossed quad).
-
-	for (uint i=0; i<4; i++) {
-		uint i_prev = (i-1)%4;
-		u[i] = (t[i_prev] + t[i]) / u[i];
-		lambdaSignCount += (t[i_prev] < -t[i]) ? -1 : 1;
-	}
-
-	if (lambdaSignCount == 0) { // one can either check for == 0 or abs(...) != 4, both should(!) be equivalent (but in practice its not due to precision issues, but these cases are extremely rare)
-		if(!gl_HelperInvocation) {
-			discard;
-		}
-	}
-
+	// init interpolated vertex attributes
 	fsViewVertex	= vec3(0.0);
 	fsViewNormal	= vec3(0.0);
 	fsTexCoord		= vec2(0.0);
 	fsFixedShade	= 0.0;
-	float interp_oneOverW = 0.0;
-	float uSum		= 0.0;
-	fsColor			= fs_in.color;
-	fsLODBase		= fs_in.LODBase;
-	
-	for (int i=0; i<4; i++) {
-		fsViewVertex	+= u[i] * fs_in.viewVertex[i];
-		fsViewNormal	+= u[i] * fs_in.viewNormal[i];
-		fsTexCoord		+= u[i] * fs_in.texCoord[i];
-		fsFixedShade	+= u[i] * fs_in.fixedShade[i];
-		interp_oneOverW	+= u[i] * fs_in.oneOverW[i];
-		uSum			+= u[i];
+
+	float interp_oneOverW	= 0.0;
+	float uSum				= 0.0;
+
+	const float hpFMin		= 0.00006103515625;		// half precision FLT_MIN
+	bool extreme_edge		= (fs_in.barycentricCoords.x <= hpFMin || fs_in.barycentricCoords.z <= hpFMin); 
+
+	// As the coordinates get closer to the poly edge the interpolated areas can approach zero which can blow up the maths leading to bad interpolation.
+	// In this case we fall back to 3 point triangle interpolation (really 2 because 1 coord will be zero).
+	// This code will only get triggered in rarer corner cases
+
+	float u[4];
+	if(extreme_edge)
+	{
+		for (int i=0; i<4; i++) {
+			int b = (i == 3) ? 1  // 2nd triangle
+			                 : i; // 1st triangle
+			float baryCoord	= abs(fs_in.barycentricCoords[b]);
+			u[i] = baryCoord / fs_in.oneOverW[i];
+			if((i == 1 && !(fs_in.barycentricCoords.y>0.0)) // ignore u[1] if 2nd triangle
+			 ||(i == 3 &&  (fs_in.barycentricCoords.y>0.0)) // ignore u[3] if 1st triangle
+			 ||(baryCoord <= hpFMin))
+			{
+				u[i] = 0.0;
+			}
+		}
+	}
+	else
+	{
+		for (int i=0; i<4; i++)
+			u[i] = length(fs_in.v[i]) * sign(fs_in.oneOverW[i]); // is w[i] negative?
+
+		precise float t[4];
+		for (int i=0; i<4; i++) {
+			int i_next = (i+1)%4;
+			if(fs_in.area[i]==0.0) t[i] = 0.0; // check for zero area to avoid div by zero
+			else                   t[i] = fma(u[i],u[i_next], -dot(fs_in.v[i],fs_in.v[i_next])) / fs_in.area[i];
+		}
+
+		int lambdaSignCount = 0; // to discard fragments if all the weights are neither all negative nor all positive (=outside the convex/concave/crossed quad).
+
+		for (uint i=0; i<4; i++) {
+			uint i_prev = (i-1)%4;
+			u[i] = (t[i_prev] + t[i]) / u[i];
+			lambdaSignCount += (t[i_prev] < -t[i]) ? -1 : 1;
+		}
+
+		if (lambdaSignCount == 0) { // one can either check for == 0 or abs(...) != 4, both should(!) be equivalent (but in practice its not due to precision issues, but these cases are extremely rare)
+			if(!gl_HelperInvocation) {
+				discard;
+			}
+		}
+
+		for (int i=0; i<4; i++) {
+			interp_oneOverW	= fma(fs_in.oneOverW[i], u[i], interp_oneOverW);
+			uSum           += u[i];
+		}
 	}
 
-	float inv = 1.0/interp_oneOverW;
-	fsViewVertex	*= inv;
-	fsViewNormal	*= inv;
-	fsTexCoord		*= inv;
-	fsFixedShade	*= inv;
+	// shared computations
+	for (int i=0; i<4; i++) {
+		fsViewVertex	= fma(fs_in.viewVertex[i], vec3(u[i]), fsViewVertex);
+		fsViewNormal	= fma(fs_in.viewNormal[i], vec3(u[i]), fsViewNormal);
+		fsTexCoord		= fma(fs_in.texCoord[i], vec2(u[i]), fsTexCoord);
+		fsFixedShade	= fma(fs_in.fixedShade[i], u[i], fsFixedShade);
+	}
+
+	// finalize the 2 cases
+	if(extreme_edge)
+	{
+		float w = (projMat * vec4(fsViewVertex,1.0)).w;
+
+		interp_oneOverW = 1.0 / w;
+		uSum = 1.0;
+	}
+	else
+	{
+		float inv = 1.0/interp_oneOverW;
+		fsViewVertex *= inv;
+		fsViewNormal *= inv;
+		fsTexCoord   *= inv;
+		fsFixedShade *= inv;
+	}
 
 	vec4 vertex;
 	float depth;
@@ -332,6 +383,9 @@ void QuadraticInterpolation()
 		vertex.z		= projMat[2][2] * fsViewVertex.z + projMat[3][2];		// standard projMat * vertex - but just using Z components
 		depth			= vertex.z * (interp_oneOverW/uSum);
 	}
+
+	fsColor			= fs_in.color;
+	fsLODBase		= fs_in.LODBase;
 
 	gl_FragDepth = depth;
 }
