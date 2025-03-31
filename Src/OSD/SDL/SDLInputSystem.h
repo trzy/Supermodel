@@ -51,11 +51,17 @@ class CSDLInputSystem : public CInputSystem
 private:
 	const Util::Config::Node& m_config;
 
+	// use gamecontroller api
+	bool m_useGameController;
+
 	// Lookup table to map key names to SDLKeys
 	static SDLKeyMapStruct s_keyMap[];
 
 	// Vector to keep track of attached joysticks
 	std::vector<SDL_Joystick*> m_joysticks;
+
+	// Vector to keep track of attached gamepads
+	std::vector<SDL_GameController*> m_gamepads;
 
 	// Vector of joystick details
 	std::vector<JoyDetails> m_joyDetails;
@@ -146,7 +152,7 @@ public:
 	/*
 	 * Constructs an SDL input system.
 	 */
-	CSDLInputSystem(const Util::Config::Node& config);
+	CSDLInputSystem(const Util::Config::Node& config, bool useGameController);
 
 	~CSDLInputSystem();
 

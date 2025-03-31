@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2024 The Supermodel Team
+ ** Copyright 2003-2025 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -101,6 +101,8 @@
 #include "Util/BMPFile.h"
 
 #include "Crosshair.h"
+#include "OSD/DefaultConfigFile.h"
+
 
 /******************************************************************************
  Global Run-time Config
@@ -1378,8 +1380,34 @@ QuitError:
 
 
 /******************************************************************************
- Entry Point and Command Line Procesing
+ Entry Point and Command Line Processing
 ******************************************************************************/
+
+// Configuration file is generated whenever it is not present. We no longer
+// distribute it with Supermodel to make it easier to upgrade Supermodel from
+// .zip archives without accidentally overwriting the configuration.
+static void WriteDefaultConfigurationFileIfNotPresent()
+{
+  // Test whether file exists by opening it
+  FILE *fp = fopen(s_configFilePath.c_str(), "r");
+  if (fp)
+  {
+    fclose(fp);
+    return;
+  }
+
+  // Write config
+  fp = fopen(s_configFilePath.c_str(), "w");
+  if (!fp)
+  {
+    ErrorLog("Unable to write default configuration file to %s", s_configFilePath.c_str());
+    return;
+  }
+  fputs(s_defaultConfigFileContents, fp);
+  fclose(fp);
+  InfoLog("Wrote default configuration file to %s", s_configFilePath.c_str());
+}
+
 // Create and configure inputs
 static Result ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
 {
@@ -1564,7 +1592,7 @@ static Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2003-2024 by The Supermodel Team");
+  puts("Copyright 2003-2025 by The Supermodel Team");
 }
 
 static void Help(void)
@@ -2028,6 +2056,7 @@ int main(int argc, char **argv)
   // Load game and resolve run-time config
   Game game;
   ROMSet rom_set;
+  WriteDefaultConfigurationFileIfNotPresent();
   Util::Config::Node fileConfig("Global");
   {
     Util::Config::Node fileConfigWithDefaults("Global");
@@ -2106,7 +2135,9 @@ int main(int argc, char **argv)
 
   // Create input system
   if (selectedInputSystem == "sdl")
-    InputSystem = new CSDLInputSystem(s_runtime_config);
+    InputSystem = new CSDLInputSystem(s_runtime_config, false);
+  else if (selectedInputSystem == "sdlgamepad")
+    InputSystem = new CSDLInputSystem(s_runtime_config, true);
 #ifdef SUPERMODEL_WIN32
   else if (selectedInputSystem == "dinput")
     InputSystem = new CDirectInputSystem(s_runtime_config, s_window, false, false);
