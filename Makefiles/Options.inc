@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2024 The Supermodel Team
+## Copyright 2003-2025 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -43,11 +43,12 @@ ifeq ($(strip $(VERBOSE)),1)
 endif
 
 #
-# Enable render state analyser for the legacy 3D engine (will slow down emulation!)
+# Enable extra debug logging and render state analyser for the legacy 3D engine
+# (will slow down emulation!)
 #
-DEBUG =
-ifneq ($(filter $(strip $(DEBUG)),0 1),$(strip $(DEBUG)))
-	override DEBUG =
+EXTRA_DEBUG =
+ifneq ($(filter $(strip $(EXTRA_DEBUG)),0 1),$(strip $(EXTRA_DEBUG)))
+	override EXTRA_DEBUG =
 endif
 
 #
