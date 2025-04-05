@@ -361,6 +361,7 @@ void CRender2D::PreRenderFrame(void)
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 512);	// skip the non viewable data
 
 	for (int i = 0; i < 2; i++) {
+		if (!m_drawBuffers[i]) continue;		// we don't have a draw buffer yet
 		glBindTexture(GL_TEXTURE_2D, m_textureIDs[i]);
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 496, 384, GL_RGBA, GL_UNSIGNED_BYTE, m_drawBuffers[i]->data);
 	}

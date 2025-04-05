@@ -1109,214 +1109,219 @@ void CLegacy3D::SetStepping(int stepping)
   
   DebugLog("Legacy3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
 }
+
+Result CLegacy3D::SetupGLObjects()
+{
+    // Allocate memory for texture buffer
+    textureBuffer = new(std::nothrow) GLfloat[1024 * 1024 * 4];
+    if (NULL == textureBuffer)
+        return ErrorLog("Insufficient memory for texture decode buffer.");
+
+    glGetError(); // clear error flag
+
+    // Create model caches and VBOs
+    if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000 / 4, NUM_DISPLAY_LIST_ITEMS, false) != Result::OKAY)
+        return Result::FAIL;
+    if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x4000000 / 4, NUM_DISPLAY_LIST_ITEMS, true) != Result::OKAY)
+        return Result::FAIL;
+
+    // Initialize lighting parameters (updated as viewports are traversed)
+    lightingParams[0] = 0.0;
+    lightingParams[1] = 0.0;
+    lightingParams[2] = 0.0;
+    lightingParams[3] = 0.0;
+    lightingParams[4] = 1.0;  // full ambient intensity in case we want to render a standalone model
+    lightingParams[5] = 0.0;
+
+    // Get ideal number of texture sheets required by default mapping from Model3 texture format to texture sheet
+    int idealTexSheets = 0;
+    for (size_t fmt = 0; fmt < 8; fmt++)
+    {
+        int sheetNum = defaultFmtToTexSheetNum[fmt];
+        idealTexSheets = std::max<int>(idealTexSheets, sheetNum + 1);
+    }
+
+    // Get upper limit for number of texture maps to use from max number of texture units supported by video card
+    GLint glMaxTexUnits;
+    glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glMaxTexUnits);
+    int maxTexMaps = std::max<int>(1, std::min<int>(m_config["MaxTexMaps"].ValueAsDefault<int>(9), glMaxTexUnits));
+
+    // Get upper limit for extent of texture maps to use from max texture size supported by video card
+    GLint maxTexSize;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
+    int mapExtent = std::max<int>(1, std::min<unsigned>(m_config["MaxTexMapExtent"].ValueAsDefault<int>(4), maxTexSize / 2048));
+    int mapSize = 2048 * mapExtent;
+    while (mapExtent > 1)
+    {
+        if ((mapExtent - 1) * (mapExtent - 1) < idealTexSheets)
+        {
+            // Use a GL proxy texture to double check max texture size returned above
+            glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGBA8, mapSize, mapSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, NULL);
+            GLint glTexWidth;
+            glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &glTexWidth);
+            if (glTexWidth == mapSize)
+                break;
+        }
+        mapExtent--;
+        mapSize -= 2048;
+    }
+
+    // Load shaders, using multi-sheet shader if requested.
+    const char* fragmentShaderSource = (m_config["MultiTexture"].ValueAs<bool>() ? fragmentShaderMultiSheetSource : fragmentShaderSingleSheetSource); // single texture shader
+    if (Result::OKAY != LoadShaderProgram(&shaderProgram, &vertexShader, &fragmentShader, m_config["VertexShader"].ValueAs<std::string>(), m_config["FragmentShader"].ValueAs<std::string>(), vertexShaderSource, fragmentShaderSource))
+        return Result::FAIL;
+
+    // Try locating default "textureMap" uniform in shader program
+    glUseProgram(shaderProgram); // bind program
+    textureMapLoc = glGetUniformLocation(shaderProgram, "textureMap");
+
+    // If exists, bind to first texture unit
+    int mapCount = 0;
+    if (textureMapLoc != -1)
+        glUniform1i(textureMapLoc, mapCount++);
+
+    // Try locating "textureMap[0-7]" uniforms in shader program
+    for (int mapNum = 0; mapNum < 8 && mapCount < maxTexMaps; mapNum++)
+    {
+        char uniformName[12];
+        sprintf(uniformName, "textureMap%u", mapNum);
+        textureMapLocs[mapNum] = glGetUniformLocation(shaderProgram, uniformName);
+        // If exist, bind to remaining texture units
+        if (textureMapLocs[mapNum] != -1)
+            glUniform1i(textureMapLocs[mapNum], mapCount++);
+    }
+
+    // Check sucessully located at least one "textureMap" uniform in shader program
+    if (mapCount == 0)
+        return ErrorLog("Fragment shader must contain at least one 'textureMap' uniform.");
+    InfoLog("Located and bound %u 'textureMap' uniform(s) in fragment shader.", mapCount);
+
+    // Readjust map extent so as to utilise as many texture maps found in shader program as possible
+    while (mapExtent > 1 && mapCount * (mapExtent - 1) * (mapExtent - 1) >= idealTexSheets)
+    {
+        mapExtent--;
+        mapSize -= 2048;
+    }
+
+    // Create required number of GL textures for texture maps, decreasing map extent if memory is insufficent
+    unsigned sheetsPerMap = mapExtent * mapExtent;
+    while (true)
+    {
+        numTexMaps = std::min<unsigned>(mapCount, 1 + (idealTexSheets - 1) / sheetsPerMap);
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glGenTextures(numTexMaps, texMapIDs);
+        bool okay = true;
+        for (unsigned mapNum = 0; mapNum < numTexMaps; mapNum++)
+        {
+            glActiveTexture(GL_TEXTURE0 + mapNum); // activate correct texture unit
+            glBindTexture(GL_TEXTURE_2D, texMapIDs[mapNum]); // bind correct texture sheet
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  // fragment shader performs its own interpolation
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mapSize, mapSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, 0);
+            if (glGetError() != GL_NO_ERROR)
+            {
+                // Ran out of video memory or texture size is too large
+                numTexMaps = mapNum;
+                okay = false;
+                break;
+            }
+        }
+        if (okay || mapExtent == 1)
+            break;
+
+        // Delete textures, decrease extent and try again
+        glDeleteTextures(numTexMaps, texMapIDs);
+        mapExtent--;
+        mapSize -= 2048;
+        sheetsPerMap = mapExtent * mapExtent;
+    }
+
+    // Check successfully created at least one texture map
+    if (numTexMaps == 0)
+        return ErrorLog("OpenGL was unable to provide any 2048x2048-texel texture maps.");
+    InfoLog("Created %u %ux%u-texel GL texture map(s).", numTexMaps, mapSize, mapSize);
+
+    // Create texture sheet objects and assign them to texture maps
+    numTexSheets = std::min<unsigned>(numTexMaps * sheetsPerMap, idealTexSheets);
+    texSheets = new(std::nothrow) TexSheet[numTexSheets];
+    if (texSheets == NULL)
+        return ErrorLog("Unable to assign memory for %u texture sheet objects.", numTexSheets);
+    for (unsigned sheetNum = 0; sheetNum < numTexSheets; sheetNum++)
+    {
+        unsigned mapNum = sheetNum / sheetsPerMap;
+        unsigned posInMap = sheetNum % sheetsPerMap;
+        texSheets[sheetNum].sheetNum = sheetNum;
+        texSheets[sheetNum].mapNum = mapNum;
+        texSheets[sheetNum].xOffset = 2048 * (posInMap % mapExtent);
+        texSheets[sheetNum].yOffset = 2048 * (posInMap / mapExtent);
+    }
+
+    // Assign Model3 texture formats to texture sheets (cannot just use default mapping as may have ended up with fewer
+    // texture sheets than anticipated)
+    for (unsigned fmt = 0; fmt < 8; fmt++)
+    {
+        int sheetNum = defaultFmtToTexSheetNum[fmt] % numTexSheets;
+        fmtToTexSheet[fmt] = &texSheets[sheetNum];
+    }
+
+    InfoLog("Mapped %u Model3 texture formats to %u texture sheet(s) in %u %ux%u-texel texture map(s).", 8, numTexSheets, numTexMaps, mapSize, mapSize);
+
+    // Get location of the rest of the uniforms
+    modelViewMatrixLoc = glGetUniformLocation(shaderProgram, "modelViewMatrix");
+    projectionMatrixLoc = glGetUniformLocation(shaderProgram, "projectionMatrix");
+    lightingLoc = glGetUniformLocation(shaderProgram, "lighting");
+    mapSizeLoc = glGetUniformLocation(shaderProgram, "mapSize");
+    spotEllipseLoc = glGetUniformLocation(shaderProgram, "spotEllipse");
+    spotRangeLoc = glGetUniformLocation(shaderProgram, "spotRange");
+    spotColorLoc = glGetUniformLocation(shaderProgram, "spotColor");
+
+    // Get locations of custom vertex attributes
+    subTextureLoc = glGetAttribLocation(shaderProgram, "subTexture");
+    texParamsLoc = glGetAttribLocation(shaderProgram, "texParams");
+    texFormatLoc = glGetAttribLocation(shaderProgram, "texFormat");
+    texMapLoc = glGetAttribLocation(shaderProgram, "texMap");
+    transLevelLoc = glGetAttribLocation(shaderProgram, "transLevel");
+    lightEnableLoc = glGetAttribLocation(shaderProgram, "lightEnable");
+    specularLoc = glGetAttribLocation(shaderProgram, "specular");
+    shininessLoc = glGetAttribLocation(shaderProgram, "shininess");
+    fogIntensityLoc = glGetAttribLocation(shaderProgram, "fogIntensity");
+
+    // Set map size
+    if (mapSizeLoc != -1)
+        glUniform1f(mapSizeLoc, (GLfloat)mapSize);
+
+    // Additional OpenGL stuff
+    glFrontFace(GL_CW);   // polygons are uploaded w/ clockwise winding
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
+    glClearDepth(1.0);
+    glEnable(GL_TEXTURE_2D);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Mark all textures as dirty
+    UploadTextures(0, 0, 0, 2048, 2048);
+
+    DebugLog("Legacy3D initialized\n");
+    return Result::OKAY;
+}
   
 Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
-  // Allocate memory for texture buffer
-  textureBuffer = new(std::nothrow) GLfloat[1024*1024*4];
-  if (NULL == textureBuffer)
-    return ErrorLog("Insufficient memory for texture decode buffer.");
-    
-  glGetError(); // clear error flag
+    // Resolution and offset within physical display area
+    xRatio = (GLfloat)xRes / 496.0f;
+    yRatio = (GLfloat)yRes / 384.0f;
+    xOffs = xOffset;
+    yOffs = yOffset;
+    totalXRes = totalXResParam;
+    totalYRes = totalYResParam;
 
-  m_aaTarget = aaTarget;
-  
-  // Create model caches and VBOs
-  if (CreateModelCache(&VROMCache, NUM_STATIC_VERTS, NUM_LOCAL_VERTS, NUM_STATIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, false) != Result::OKAY)
-    return Result::FAIL;
-  if (CreateModelCache(&PolyCache, NUM_DYNAMIC_VERTS, NUM_LOCAL_VERTS, NUM_DYNAMIC_MODELS, 0x4000000/4, NUM_DISPLAY_LIST_ITEMS, true) != Result::OKAY)
-    return Result::FAIL;
+    m_aaTarget = aaTarget;
 
-  // Initialize lighting parameters (updated as viewports are traversed)
-  lightingParams[0] = 0.0;
-  lightingParams[1] = 0.0;
-  lightingParams[2] = 0.0;
-  lightingParams[3] = 0.0;
-  lightingParams[4] = 1.0;  // full ambient intensity in case we want to render a standalone model
-  lightingParams[5] = 0.0;
-
-  // Resolution and offset within physical display area
-  xRatio = (GLfloat) xRes / 496.0f;
-  yRatio = (GLfloat) yRes / 384.0f;
-  xOffs = xOffset;
-  yOffs = yOffset;
-  totalXRes = totalXResParam;
-  totalYRes = totalYResParam;
-
-  // Get ideal number of texture sheets required by default mapping from Model3 texture format to texture sheet
-  int idealTexSheets = 0;
-  for (size_t fmt = 0; fmt < 8; fmt++)
-  {
-    int sheetNum = defaultFmtToTexSheetNum[fmt];
-    idealTexSheets = std::max<int>(idealTexSheets, sheetNum + 1);
-  } 
-
-  // Get upper limit for number of texture maps to use from max number of texture units supported by video card
-  GLint glMaxTexUnits;
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glMaxTexUnits);
-  int maxTexMaps = std::max<int>(1, std::min<int>(m_config["MaxTexMaps"].ValueAsDefault<int>(9), glMaxTexUnits));
-  
-  // Get upper limit for extent of texture maps to use from max texture size supported by video card
-  GLint maxTexSize;
-  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTexSize);
-  int mapExtent = std::max<int>(1, std::min<unsigned>(m_config["MaxTexMapExtent"].ValueAsDefault<int>(4), maxTexSize / 2048));
-  int mapSize = 2048 * mapExtent;
-  while (mapExtent > 1)
-  {
-    if ((mapExtent - 1) * (mapExtent - 1) < idealTexSheets)
-    {
-      // Use a GL proxy texture to double check max texture size returned above
-      glTexImage2D(GL_PROXY_TEXTURE_2D, 0, GL_RGBA8, mapSize, mapSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, NULL);
-      GLint glTexWidth;
-      glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &glTexWidth);
-      if (glTexWidth == mapSize)
-        break;
-    }
-    mapExtent--;
-    mapSize -= 2048;
-  }
-
-  // Load shaders, using multi-sheet shader if requested.
-  const char *fragmentShaderSource = (m_config["MultiTexture"].ValueAs<bool>() ? fragmentShaderMultiSheetSource : fragmentShaderSingleSheetSource); // single texture shader
-  if (Result::OKAY != LoadShaderProgram(&shaderProgram,&vertexShader,&fragmentShader,m_config["VertexShader"].ValueAs<std::string>(),m_config["FragmentShader"].ValueAs<std::string>(),vertexShaderSource,fragmentShaderSource))
-    return Result::FAIL;
-  
-  // Try locating default "textureMap" uniform in shader program
-  glUseProgram(shaderProgram); // bind program
-  textureMapLoc = glGetUniformLocation(shaderProgram, "textureMap");
-  
-  // If exists, bind to first texture unit
-  int mapCount = 0;
-  if (textureMapLoc != -1)
-    glUniform1i(textureMapLoc, mapCount++);
-  
-  // Try locating "textureMap[0-7]" uniforms in shader program
-  for (int mapNum = 0; mapNum < 8 && mapCount < maxTexMaps; mapNum++)
-  {
-    char uniformName[12];
-    sprintf(uniformName, "textureMap%u", mapNum);
-    textureMapLocs[mapNum] = glGetUniformLocation(shaderProgram, uniformName);  
-    // If exist, bind to remaining texture units
-    if (textureMapLocs[mapNum] != -1)
-      glUniform1i(textureMapLocs[mapNum], mapCount++);
-  }
-  
-  // Check sucessully located at least one "textureMap" uniform in shader program
-  if (mapCount == 0)
-    return ErrorLog("Fragment shader must contain at least one 'textureMap' uniform.");
-  InfoLog("Located and bound %u 'textureMap' uniform(s) in fragment shader.", mapCount);
-
-  // Readjust map extent so as to utilise as many texture maps found in shader program as possible
-  while (mapExtent > 1 && mapCount * (mapExtent - 1) * (mapExtent - 1) >= idealTexSheets)
-  {
-    mapExtent--;
-    mapSize -= 2048;
-  }
-  
-  // Create required number of GL textures for texture maps, decreasing map extent if memory is insufficent
-  unsigned sheetsPerMap = mapExtent * mapExtent;
-  while (true)
-  {
-    numTexMaps = std::min<unsigned>(mapCount, 1 + (idealTexSheets - 1) / sheetsPerMap);
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glGenTextures(numTexMaps, texMapIDs);
-    bool okay = true;
-    for (unsigned mapNum = 0; mapNum < numTexMaps; mapNum++)
-    {
-      glActiveTexture(GL_TEXTURE0 + mapNum); // activate correct texture unit
-      glBindTexture(GL_TEXTURE_2D, texMapIDs[mapNum]); // bind correct texture sheet
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);  // fragment shader performs its own interpolation
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, mapSize, mapSize, 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, 0);
-      if (glGetError() != GL_NO_ERROR)
-      {
-        // Ran out of video memory or texture size is too large
-        numTexMaps = mapNum;
-        okay = false;
-        break;
-      }
-    }
-    if (okay || mapExtent == 1)
-      break;
-
-    // Delete textures, decrease extent and try again
-    glDeleteTextures(numTexMaps, texMapIDs);    
-    mapExtent--;
-    mapSize -= 2048;
-    sheetsPerMap = mapExtent * mapExtent;
-  }
-  
-  // Check successfully created at least one texture map
-  if (numTexMaps == 0)
-    return ErrorLog("OpenGL was unable to provide any 2048x2048-texel texture maps.");
-  InfoLog("Created %u %ux%u-texel GL texture map(s).", numTexMaps, mapSize, mapSize);
-
-  // Create texture sheet objects and assign them to texture maps
-  numTexSheets = std::min<unsigned>(numTexMaps * sheetsPerMap, idealTexSheets);
-  texSheets = new(std::nothrow) TexSheet[numTexSheets];
-  if (texSheets == NULL)
-    return ErrorLog("Unable to assign memory for %u texture sheet objects.", numTexSheets);
-  for (unsigned sheetNum = 0; sheetNum < numTexSheets; sheetNum++)
-  {
-    unsigned mapNum = sheetNum / sheetsPerMap;
-    unsigned posInMap = sheetNum % sheetsPerMap;
-    texSheets[sheetNum].sheetNum = sheetNum;
-    texSheets[sheetNum].mapNum = mapNum;
-    texSheets[sheetNum].xOffset = 2048 * (posInMap % mapExtent);
-    texSheets[sheetNum].yOffset = 2048 * (posInMap / mapExtent);
-  }
-
-  // Assign Model3 texture formats to texture sheets (cannot just use default mapping as may have ended up with fewer
-  // texture sheets than anticipated)
-  for (unsigned fmt = 0; fmt < 8; fmt++)
-  {
-    int sheetNum = defaultFmtToTexSheetNum[fmt] % numTexSheets; 
-    fmtToTexSheet[fmt] = &texSheets[sheetNum];
-  }
-
-  InfoLog("Mapped %u Model3 texture formats to %u texture sheet(s) in %u %ux%u-texel texture map(s).", 8, numTexSheets, numTexMaps, mapSize, mapSize);
-
-  // Get location of the rest of the uniforms
-  modelViewMatrixLoc = glGetUniformLocation(shaderProgram,"modelViewMatrix");
-  projectionMatrixLoc = glGetUniformLocation(shaderProgram,"projectionMatrix");
-  lightingLoc = glGetUniformLocation(shaderProgram, "lighting");
-  mapSizeLoc = glGetUniformLocation(shaderProgram, "mapSize");
-  spotEllipseLoc = glGetUniformLocation(shaderProgram, "spotEllipse");
-  spotRangeLoc = glGetUniformLocation(shaderProgram, "spotRange");
-  spotColorLoc = glGetUniformLocation(shaderProgram, "spotColor");
-  
-  // Get locations of custom vertex attributes
-  subTextureLoc = glGetAttribLocation(shaderProgram,"subTexture");
-  texParamsLoc = glGetAttribLocation(shaderProgram,"texParams");
-  texFormatLoc = glGetAttribLocation(shaderProgram,"texFormat");
-  texMapLoc = glGetAttribLocation(shaderProgram,"texMap");
-  transLevelLoc = glGetAttribLocation(shaderProgram,"transLevel");
-  lightEnableLoc = glGetAttribLocation(shaderProgram,"lightEnable");
-  specularLoc = glGetAttribLocation(shaderProgram,"specular");
-  shininessLoc = glGetAttribLocation(shaderProgram,"shininess");
-  fogIntensityLoc = glGetAttribLocation(shaderProgram,"fogIntensity");
-  
-  // Set map size
-  if (mapSizeLoc != -1)
-    glUniform1f(mapSizeLoc, (GLfloat)mapSize);
-
-  // Additional OpenGL stuff
-  glFrontFace(GL_CW);   // polygons are uploaded w/ clockwise winding
-  glCullFace(GL_BACK);
-  glEnable(GL_CULL_FACE);
-  glClearDepth(1.0);
-  glEnable(GL_TEXTURE_2D);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-
-  // Mark all textures as dirty
-  UploadTextures(0, 0, 0, 2048, 2048);
-
-  DebugLog("Legacy3D initialized\n");
-  return Result::OKAY;
+    return Result::OKAY;
 }
 
 void CLegacy3D::SetSunClamp(bool enable)
@@ -1361,6 +1366,8 @@ CLegacy3D::CLegacy3D(const Util::Config::Node &config)
     VROMCache.ListTail[i] = NULL;
     PolyCache.ListTail[i] = NULL;
   }
+
+  SetupGLObjects();
   
   DebugLog("Built Legacy3D\n");
 }

@@ -415,6 +415,9 @@ private:
 	Result ErrorLocalVertexOverflow(void);
 	Result ErrorUnableToCacheModel(UINT32 modelAddr);
 	void ClearErrors(void);
+
+	// init
+	Result SetupGLObjects();
 	
 	/*
 	 * Data
