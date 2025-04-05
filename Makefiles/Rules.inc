@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2024 The Supermodel Team
+## Copyright 2003-2025 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -45,8 +45,9 @@ OUTFILE = supermodel
 #
 SUPERMODEL_BUILD_FLAGS =
 
-# If render state analyser is enabled, need to define DEBUG
-ifeq ($(strip $(DEBUG)),1)
+# EXTRA_DEBUG enables render state analyser and additional debugging code by
+# defining DEBUG
+ifeq ($(strip $(EXTRA_DEBUG)),1)
 	SUPERMODEL_BUILD_FLAGS += -DDEBUG
 endif
 
@@ -55,26 +56,29 @@ ifeq ($(strip $(NET_BOARD)),1)
 	SUPERMODEL_BUILD_FLAGS += -DNET_BOARD
 endif
 
-# If Bart's new frame timing is enabled, need to define NEW_FRAME_TIMING
-ifeq ($(strip $(NEW_FRAME_TIMING)),1)
-	SUPERMODEL_BUILD_FLAGS += -DNEW_FRAME_TIMING
-endif
-
 # If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
 endif
+
+# DEBUG will build a debug build but does *not* enable extra debug logging and
+# therefore does not modify SUPERMODEL_BUILD_FLAGS
 
 #
 # Compiler options
 #
 ARCH =
 OPT = -O3
+ifeq ($(strip $(DEBUG)),1)
+	OPT = -g	# no optimization; debug mode
+endif
 WARN = -Wall
 CSTD = -std=iso9899:2011
 CXXSTD = -std=c++17
 LDOPT = -s
-
+ifeq ($(strip $(DEBUG)),1)
+	LDOPT =
+endif
 
 #
 # Construct the compiler (C and C++) and linker flags
@@ -349,7 +353,6 @@ $(OBJ_DIR)/%.o:	%.c | $(OBJ_DIR)
 	$(SILENT)$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CFLAGS) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
 	$(SILENT)$(CC) $(CFLAGS) $< -o $@
-
 
 #
 # Musashi 68K emulator

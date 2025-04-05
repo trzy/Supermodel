@@ -723,7 +723,7 @@ static void SaveState(IEmulator *Model3)
   Model3->SaveState(&SaveState);
   SaveState.Close();
   printf("Saved state to '%s'.\n", file_path.c_str());
-  DebugLog("Saved state to '%s'.\n", file_path.c_str());
+  InfoLog("Saved state to '%s'.", file_path.c_str());
 }
 
 static void LoadState(IEmulator *Model3, std::string file_path = std::string())
@@ -759,7 +759,7 @@ static void LoadState(IEmulator *Model3, std::string file_path = std::string())
   Model3->LoadState(&SaveState);
   SaveState.Close();
   printf("Loaded state from '%s'.\n", file_path.c_str());
-  DebugLog("Loaded state from '%s'.\n", file_path.c_str());
+  InfoLog("Loaded state from '%s'.", file_path.c_str());
 }
 
 static void SaveNVRAM(IEmulator *Model3)
@@ -781,7 +781,7 @@ static void SaveNVRAM(IEmulator *Model3)
   // Save NVRAM
   Model3->SaveNVRAM(&NVRAM);
   NVRAM.Close();
-  DebugLog("Saved NVRAM to '%s'.\n", file_path.c_str());
+  InfoLog("Saved NVRAM to '%s'.", file_path.c_str());
 }
 
 static void LoadNVRAM(IEmulator *Model3)
@@ -815,7 +815,7 @@ static void LoadNVRAM(IEmulator *Model3)
   // Load
   Model3->LoadNVRAM(&NVRAM);
   NVRAM.Close();
-  DebugLog("Loaded NVRAM from '%s'.\n", file_path.c_str());
+  InfoLog("Loaded NVRAM from '%s'.", file_path.c_str());
 }
 
 
