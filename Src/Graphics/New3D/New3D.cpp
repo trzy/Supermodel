@@ -1562,10 +1562,6 @@ bool CNew3D::IsDynamicModel(UINT32 *data) const
 			return true;
 		}
 
-		if (p.header[6] == 0) {
-			break;
-		}
-
 	} while (p.NextPoly());
 
 	return false;

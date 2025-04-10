@@ -50,10 +50,6 @@ int	PolyHeader::NumPolysTotal()
 
 int	PolyHeader::NumTrianglesTotal()
 {
-	if (header[6] == 0) {
-		return 0;			// no poly data
-	}
-
 	UINT32* start = header;	// save start address
 
 	int count = (NumVerts() == 4) ? 2 : 1;
@@ -152,7 +148,7 @@ bool PolyHeader::DoubleSided()
 
 bool PolyHeader::LastPoly() 
 {
-	if ((header[1] & 4) > 0 || header[6] == 0) {
+	if ((header[1] & 4) > 0) {
 		return true;
 	}
 
