@@ -1,0 +1,64 @@
+name: Build and Package AppImage
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - appimage
+  pull_request:
+    branches:
+      - main
+      - master
+      - appimage
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    # Checkout the repository
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Set up dependencies
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libgl1-mesa-dev libglu1-mesa-dev \
+          libsdl2-dev libsdl2-net-dev zlib1g-dev
+
+    # Build Supermodel
+    - name: Build Supermodel
+      run: |
+        cd ./AppImage
+        ./build_app_image.sh
+
+    - name: Delete Existing latest Release
+      run: |
+        gh release delete latest -y || true
+        gh api -X DELETE /repos/${{ github.repository }}/git/refs/tags/latest || true
+
+    - name: Check AppImage File
+      run: ls -lah ./AppImage/
+
+    # Create release as the "latest" tag
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      with:
+        tag_name: latest
+        release_name: "Supermodel Release latest"
+        draft: false
+        prerelease: false
+
+    - name: Upload AppImage
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        # upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./AppImage/Supermodel-x86_64.AppImage
+        asset_name: Supermodel-x86_64.AppImage
+        asset_content_type: application/octet-stream
