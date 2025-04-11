@@ -978,9 +978,9 @@ UINT8 CModel3::Read8(UINT32 addr)
       switch (addr & 0xf)
       {
       case 0x0:         // MIDI data port
-        return 0x00;    // Something to do with region locked in magtruck (0=locked, 1=unlocked). /!\ no effect if rom patch is activated!
+        return SoundBoard.ReadMIDIPort();
       case 0x4:         // MIDI control port
-        return 0x83;    // magtruck country check
+        return SoundBoard.CheckMIDIStatus();
       default:
         return 0;
       }
@@ -1428,7 +1428,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       else if ((addr & 0xF) == 4) // MIDI control port
       {
         midiCtrlPort = data;
-        if ((data & 0x20) == 0)
+        if ((data & 0x01) == 0)
           IRQ.Deassert(0x40);
       }
       break;
@@ -2124,17 +2124,19 @@ void CModel3::RunMainBoardFrame(void)
 		/*
 		* Sound:
 		*
-		* Bit 0x20 of the MIDI control port appears to enable periodic interrupts,
-		* which are used to send MIDI commands. Often games will write 0x27, send
-		* a series of commands, and write 0x06 to stop. Other games, like Star
-		* Wars Trilogy and Sega Rally 2, will enable interrupts at the beginning
-		* by writing 0x37 and will disable/enable interrupts to control command
-		* output.
+        * The PPC communicates with the soundboard via an Intel 8251 compatible
+        * USART device, which transmits/receives data to/from the master SCSP MIDI
+        * input/output lines. Setting bit 0 (0x01) when writing to the control
+        * port enables data transmission; when it is enabled, a sound IRQ (0x40)
+        * is triggered when the USART device is ready to transmit data.
+        * 
+        * Most games disable sound IRQs once they have finished sending commands
+        * by writing 0x06 to the control port, clearing bit 0 to disable data
+        * transmission. Sega Rally 2 and Star Wars Trilogy instead disable sound
+        * IRQs by masking them via the IRQ controller.
 		*/
 		//printf("\t-- BEGIN (Ctrl=%02X, IRQEn=%02X, IRQPend=%02X) --\n", midiCtrlPort, IRQ.ReadIRQEnable()&0x40, IRQ.ReadIRQState());
-		int irqCount = 0;
-		while ((midiCtrlPort & 0x20))
-			//while (midiCtrlPort == 0x27)  // 27 triggers IRQ sequence, 06 stops it
+		while (midiCtrlPort & 0x01 && SoundBoard.CheckMIDIStatus() & 0x01)  // don't send any more commands if the FIFO buffer is full
 		{
 			// Don't waste time firing MIDI interrupts if game has disabled them
 			if ((IRQ.ReadIRQEnable() & 0x40) == 0)
@@ -2144,12 +2146,6 @@ void CModel3::RunMainBoardFrame(void)
 			IRQ.Assert(0x40);
 			ppc_execute(1000); // give PowerPC time to acknowledge IR
 			dispCycles -= 1000;
-
-			++irqCount;
-			if (irqCount > 128)
-			{
-				break;
-			}
 		}
 
 		IRQ.Assert(0x0D);

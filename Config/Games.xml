@@ -1217,7 +1217,7 @@
     <!-- Correct dump of Magical Truck Adventure, redumped September 2022. -->
     <identity>
       <title>Magical Truck Adventure</title>
-      <version>Japan</version>
+      <version>Export</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1233,8 +1233,8 @@
     </hardware>
     <roms>
       <patches>
-	    <!-- Enable Region change (remove the patch to return to Japan region) -->
-        <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
+        <!-- Force region to Japan -->
+        <!--<patch region="crom" bits="32" offset="0x001794" value="0x38000000" />-->
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21434.20" crc32="0x18F8626A" />
@@ -1288,7 +1288,7 @@
     -->
     <identity>
       <title>Magical Truck Adventure</title>
-      <version>Japan</version>
+      <version>Export</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1306,8 +1306,8 @@
       <patches>
 	    <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
         <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
-        <!-- Enable Region change (remove the patch to return to Japan region) -->
-        <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
+        <!-- Force region to Japan -->
+        <!--<patch region="crom" bits="32" offset="0x001794" value="0x38000000" />-->
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
         <file offset="0" name="epr-21434.20" crc32="0xE028D7CA" />

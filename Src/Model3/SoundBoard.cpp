@@ -330,11 +330,28 @@ int SCSP68KRunCallback(int numCycles)
  Sound Board Interface
 ******************************************************************************/
 
+UINT8 CSoundBoard::ReadMIDIPort(void)
+{
+	UINT8 result = SCSP_MidiOutR();
+	return result;
+}
+
 void CSoundBoard::WriteMIDIPort(UINT8 data)
 {
 	SCSP_MidiIn(data);
 	if (NULL != DSB)	// DSB receives all commands as well
 		DSB->SendCommand(data);
+}
+
+UINT8 CSoundBoard::CheckMIDIStatus(void)
+{
+	UINT8 status = 0x80;
+	if (SCSP_MidiInFill() < 256)	// MIDI input buffer not full
+		status |= 1;
+	if (SCSP_MidiOutFill() > 0)		// MIDI output buffer not empty
+		status |= 2;
+
+	return status;
 }
 
 #ifdef SUPERMODEL_LOG_AUDIO
