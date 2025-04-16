@@ -29,6 +29,7 @@
 #define INCLUDED_NEW3D_H
 
 #include <unordered_map>
+#include <atomic>
 #include <GL/glew.h>
 #include "Types.h"
 #include "Graphics/IRender3D.h"
@@ -237,8 +238,8 @@ private:
 	GLenum m_primType;
 
 	// GPU configuration
-	bool m_sunClamp;
-	bool m_blockCulling;
+	std::atomic_bool m_sunClamp;
+	std::atomic_bool m_blockCulling;
 	bool m_noWhiteFlash;
 
 	// Stepping
