@@ -1674,7 +1674,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
   // Real3D configuration registers
   case 0x9C:  // 9Cxxxxxx
-    //printf("%08X=%08X\n", addr, data);  //TODO: flip endian?
+    GPU.WriteConfigurationRegister(addr, FLIPENDIAN32(data));
     break;
 
   // Real3D DMA
@@ -2088,9 +2088,8 @@ void CModel3::RunMainBoardFrame(void)
 	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned lineCycles     = frameCycles / 424;
-	unsigned dispCycles     = lineCycles * (TileGen.ReadRegister(0x08) + 40);
-	unsigned offsetCycles   = frameCycles - dispCycles;
-	unsigned statusCycles   = (unsigned)((float)frameCycles * (0.005f));
+	unsigned pingPongCycles = lineCycles * (TileGen.ReadRegister(0x08) + 40);
+    unsigned vBlankCycles   = lineCycles * 40;
 
 	// Games will start writing a new frame after the ping-pong buffers have been flipped, which is indicated by the
 	// ping-pong status bit. The timing of ping-pong flip is determined by the value of tilegen register 0x08, which
@@ -2106,19 +2105,17 @@ void CModel3::RunMainBoardFrame(void)
 	// VBlank
 	if (gpusReady)
 	{
+        IRQ.Assert(0x02);
 		TileGen.BeginVBlank();
-		GPU.BeginVBlank(statusCycles);	// Games poll the ping_pong at startup. Values aren't 100% accurate so we stretch the frame a bit to ensure writes happen in the correct frame
-
-		ppc_execute(offsetCycles);
-		IRQ.Assert(0x02);								// start at 33% of the frame
-
+		GPU.BeginVBlank(pingPongCycles);	// Games poll the ping_pong at startup. When this flips games can start to write data for the next frame. Often 66% of the frame time.
+        
 		// keep running cycles until IRQ2 is acknowledged
 		// Ski Champ can hang if we check the MIDI control port too early
 		// and miss MIDI interrupts pending before the next IRQ2
-		while (IRQ.ReadIRQEnable() & 0x2 && IRQ.ReadIRQState() & 0x2 && dispCycles > 1000)
+		while (IRQ.ReadIRQEnable() & 0x2 && IRQ.ReadIRQState() & 0x2 && vBlankCycles > 1000)
 		{
 			ppc_execute(1000);
-			dispCycles -= 1000;
+            vBlankCycles -= 1000;
 		}
 
 		/*
@@ -2143,7 +2140,7 @@ void CModel3::RunMainBoardFrame(void)
 			// Process MIDI interrupt
 			IRQ.Assert(0x40);
 			ppc_execute(1000); // give PowerPC time to acknowledge IR
-			dispCycles -= 1000;
+            vBlankCycles -= 1000;
 
 			++irqCount;
 			if (irqCount > 128)
@@ -2151,6 +2148,8 @@ void CModel3::RunMainBoardFrame(void)
 				break;
 			}
 		}
+
+        ppc_execute(vBlankCycles);
 
 		IRQ.Assert(0x0D);
 
@@ -2160,7 +2159,11 @@ void CModel3::RunMainBoardFrame(void)
 	}
 
 	// Run the PowerPC for the active display part of the frame
-	ppc_execute(dispCycles);
+    for (int i = 0; i < 384; i++)
+    {
+        TileGen.DrawLine(i);
+        ppc_execute(lineCycles);
+    }
 
 	timings.ppcTicks = CThread::GetTicks() - start;
 }

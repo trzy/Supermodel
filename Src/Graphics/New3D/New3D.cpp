@@ -419,7 +419,7 @@ void CNew3D::RenderFrame(void)
 		// clear screen to white
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-
+		
 		if (m_aaTarget) {
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
@@ -559,7 +559,7 @@ const UINT32* CNew3D::TranslateModelAddress(UINT32 modelAddr)
 
 bool CNew3D::DrawModel(UINT32 modelAddr)
 {
-	bool			cached = false;
+	bool cached = false;
 
 	const UINT32* const modelAddress = TranslateModelAddress(modelAddr);
 

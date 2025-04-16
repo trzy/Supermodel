@@ -97,6 +97,16 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 	m_colourOffsetRegs[1].Update(m_regs[0x44 / 4]);
 	RecomputePalettes(1);	// layer 2 & 3
 
+	// clear surfaces
+	for (auto& s : m_drawSurface) {
+		s->Clear();
+	}
+
+	// draw buffers
+	for (int i = 0; i < 384; i++) {
+		DrawLine(i);
+	}
+
 	SyncSnapshots();
 }
 
@@ -119,24 +129,19 @@ void CTileGen::BeginVBlank(void)
 	printf("6C: %08X\n", regs[0x6C/4]);
 	printf("\n");
 */
+
+// clear surfaces
+	for (auto& s : m_drawSurface) {
+		s->Clear();
+	}
 }
 
 void CTileGen::EndVBlank(void)
 {
-	//
 }
 
 UINT32 CTileGen::SyncSnapshots(void)
 {
-	// clear surfaces
-	for (auto& s : m_drawSurface) {
-		s->Clear();
-	}
-
-	// draw buffers (this should be called elsewhere later)
-	for (int i = 0; i < 384; i++) {
-		DrawLine(i);
-	}
 
 	// swap buffers
 	for (int i = 0; i < 2; i++) {

@@ -196,6 +196,19 @@ public:
   void WriteDMARegister8(unsigned reg, uint8_t data);
   void WriteDMARegister32(unsigned reg, uint32_t data);
 
+
+  /*
+   * WriteConfigurationRegister(reg, data):
+   *
+   * Write to a configuration register. Written data must be
+   * byte reversed (this is a little endian device).
+   *
+   * Parameters:
+   *    reg   Register number to write to(0-0x3 only).
+   *    data  Data to write.
+   */
+  void WriteConfigurationRegister(unsigned reg, uint32_t data);
+
   /*
    * WriteLowCullingRAM(addr, data):
    *
@@ -397,6 +410,29 @@ public:
   ~CReal3D(void);
   
 private:
+
+    struct UpdateBlock
+    {
+        uint32_t startAddr;
+        uint32_t lastAddr;
+        uint32_t data[1];     // this will be expandable 
+
+        uint32_t Count() const
+        {
+            return lastAddr - startAddr + 1;    // container will always contain at least 1 element
+        }
+
+        constexpr uint32_t HeaderSize()
+        {
+            return 2;     // startAddr + lastAddr in 32bit words
+        }
+
+        UpdateBlock* Next()
+        {
+            return (UpdateBlock*)((uint32_t*)this + HeaderSize() + Count());
+        }
+    };
+
   // Private member functions
   void      DMACopy(void);
   void      StoreTexture(unsigned level, unsigned xPos, unsigned yPos, unsigned width, unsigned height, const uint16_t *texData, bool sixteenBit, bool writeLSB, bool writeMSB, uint32_t &texDataOffset);
@@ -404,6 +440,9 @@ private:
   void      UploadTexture(uint32_t header, const uint16_t *texData);
   uint32_t  UpdateSnapshots(bool copyWhole);
   uint32_t  UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, unsigned size, uint8_t *dirty);
+  void      SyncBufferedMem(UpdateBlock* updateBlock, uint32_t* updateBuffer, uint32_t* dst, uint8_t* dirty);
+  void      FlushTextures();
+  bool      PollPingPong();
 
   // Config 
   const Util::Config::Node &m_config;
@@ -430,6 +469,17 @@ private:
   uint32_t  fifoIdx;            // index into texture FIFO
   uint32_t  m_vromTextureFIFO[2];
   uint32_t  m_vromTextureFIFOIdx;
+
+  union ConfigRegisters {
+      uint32_t regs[4];
+      struct {
+          uint32_t pingPongMemSize;             // in 32bit words
+          uint32_t flags;
+          uint32_t pingPongAndUpdateMemSize;    // in 32bit words
+          uint32_t unused;
+      };
+  } m_configRegisters;
+
   
   // Read-only snapshots
   uint32_t  *cullingRAMLoRO;    // 4MB of culling RAM at 8C000000 [read-only snapshot]
@@ -471,10 +521,15 @@ private:
   uint32_t m_pingPong;
   uint64_t statusChange = 0;
   bool m_evenFrame = false;
-  
+
   // Internal ASIC state
   uint64_t m_internalRenderConfig[2];
   uint32_t m_modeword[5];
+
+  // pointers to our buffered memory
+  UpdateBlock* m_polyUpdateBlock;
+  UpdateBlock* m_highRamUpdateBlock;
+
 };
 
 
