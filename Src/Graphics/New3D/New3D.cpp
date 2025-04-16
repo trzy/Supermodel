@@ -41,7 +41,8 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_vrom(nullptr),
 	m_textureRAM(nullptr),
 	m_prev{ 0 },
-	m_prevTexCoords{ 0 }
+	m_prevTexCoords{ 0 },
+	m_blockCulling(false)
 {
 	m_sunClamp		= true;
 	m_numPolyVerts	= 3;
