@@ -176,6 +176,8 @@ void CReal3D::BeginVBlank(int statusCycles)
         commandPortWritten = false;
     }
 
+    Render3D->SetBlockCulling((m_modeword[static_cast<int>(CASIC::Name::Mercury)] & 4) == 4);
+
     // sync any update buffers
     SyncBufferedMem(m_highRamUpdateBlock, cullingRAMLo, cullingRAMHi, cullingRAMHiDirty);
     SyncBufferedMem(m_polyUpdateBlock, cullingRAMLo + m_configRegisters.pingPongMemSize, polyRAM, polyRAMDirty);
@@ -857,7 +859,7 @@ void CReal3D::WriteJTAGModeword(CASIC::Name device, uint32_t data)
     switch (device)
     {
     case CASIC::Name::Mercury:
-        Render3D->SetBlockCulling((data & 4) == 4);
+        //Render3D->SetBlockCulling((data & 4) == 4);
         break;
     case CASIC::Name::Mars:
         Render3D->SetSunClamp((data & 0x40000) == 0);
