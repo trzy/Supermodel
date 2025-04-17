@@ -223,8 +223,6 @@ struct Viewport
 	int		hardwareStep;			// not really a viewport param but will do here
 };
 
-enum class Clip { INSIDE, OUTSIDE, INTERCEPT, NOT_SET };
-
 class NodeAttributes
 {
 public:
@@ -239,7 +237,6 @@ public:
 	int currentTexOffsetX;
 	int currentTexOffsetY;
 	int currentPage;
-	Clip currentClipStatus;
 	float currentModelScale;
 	float currentModelAlpha;
 	bool currentDisableCulling;
@@ -251,7 +248,6 @@ private:
 		int texOffsetX;
 		int texOffsetY;
 		int page;
-		Clip clip;
 		float modelScale;
 		float modelAlpha;	// from culling node
 		bool disableCulling;

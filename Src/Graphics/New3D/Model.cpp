@@ -7,7 +7,6 @@ NodeAttributes::NodeAttributes()
 	currentTexOffsetX		= 0;
 	currentTexOffsetY		= 0;
 	currentPage				= 0;
-	currentClipStatus		= Clip::INTERCEPT;
 	currentModelScale		= 1.0f;
 	currentModelAlpha		= 1.0;
 	currentDisableCulling	= false;
@@ -27,7 +26,6 @@ bool NodeAttributes::Push()
 	na.page				= currentPage;
 	na.texOffsetX		= currentTexOffsetX;
 	na.texOffsetY		= currentTexOffsetY;
-	na.clip				= currentClipStatus;
 	na.modelScale		= currentModelScale;
 	na.modelAlpha		= currentModelAlpha;
 	na.disableCulling	= currentDisableCulling;
@@ -48,7 +46,6 @@ bool NodeAttributes::Pop()
 	currentPage				= last.page;
 	currentTexOffsetX		= last.texOffsetX;
 	currentTexOffsetY		= last.texOffsetY;
-	currentClipStatus		= last.clip;
 	currentModelScale		= last.modelScale;
 	currentModelAlpha		= last.modelAlpha;
 	currentDisableCulling	= last.disableCulling;
@@ -68,7 +65,6 @@ void NodeAttributes::Reset()
 	currentPage				= 0;
 	currentTexOffsetX		= 0;
 	currentTexOffsetY		= 0;
-	currentClipStatus		= Clip::INTERCEPT;
 	currentModelScale		= 1.0f;
 	currentModelAlpha		= 1.0f;
 	currentDisableCulling	= false;
