@@ -172,7 +172,6 @@
       <stepping>2.1</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <drive_board>Wheel</drive_board>
-      <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <netboard>true</netboard>
 	  <audio>QuadFrontRear</audio>
       <inputs>
@@ -745,7 +744,6 @@
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
       <drive_board>Billboard</drive_board>
-      <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -826,7 +824,6 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>2.0</stepping>
-      <real3d_status_bit_set_percent_of_frame>24</real3d_status_bit_set_percent_of_frame>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -2200,7 +2197,6 @@
       <stepping>2.0</stepping>
       <mpeg_board>DSB2</mpeg_board>
       <drive_board>Wheel</drive_board>
-      <real3d_status_bit_set_percent_of_frame>48</real3d_status_bit_set_percent_of_frame>
       <audio>QuadMix</audio>
       <inputs>
         <input type="common" />

@@ -265,7 +265,6 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->audio = audio_types[audio_type];
   game->pci_bridge = game_node["hardware/pci_bridge"].ValueAsDefault<std::string>("");
   game->real3d_pci_id = game_node["hardware/real3d_pci_id"].ValueAsDefault<uint32_t>(0);
-  game->real3d_status_bit_set_percent_of_frame = game_node["hardware/real3d_status_bit_set_percent_of_frame"].ValueAsDefault<float>(0);
   game->encryption_key = game_node["hardware/encryption_key"].ValueAsDefault<uint32_t>(0);
   game->netboard_present = game_node["hardware/netboard"].ValueAsDefault<bool>(false);
 
