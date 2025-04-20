@@ -154,6 +154,9 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   }
 
   SaveState->Read(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
+
+  m_polyUpdateBlock = nullptr;
+  m_highRamUpdateBlock = nullptr;
 }
 
 
