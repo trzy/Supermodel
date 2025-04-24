@@ -107,13 +107,24 @@ void CReal3D::SaveState(CBlockFile *SaveState)
   SaveState->Write(commandPortWritten);
   SaveState->Write(&m_pingPong, sizeof(m_pingPong));
   SaveState->Write(&m_modeword, sizeof(m_modeword));
-  for (int i = 0; i < 19; i++)
-  {
-    uint8_t nul = 0;
-    SaveState->Write(&nul, sizeof(uint8_t));
+  SaveState->Write(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
+  SaveState->Write(&m_configRegisters, sizeof(m_configRegisters));
+
+  uint32_t polyUpdateBlockOffset = -1;
+  uint32_t highCullUpdateBlockOffset = -1;
+
+  // calculate block offsets in 32bit words
+  if (m_polyUpdateBlock) {
+      auto pStartAddr = cullingRAMLo + m_configRegisters.pingPongMemSize;
+      polyUpdateBlockOffset = (uint32_t)((uint32_t*)m_polyUpdateBlock - pStartAddr);
+  }
+  if (m_highRamUpdateBlock) {
+      auto pStartAddr = cullingRAMLo;
+      highCullUpdateBlockOffset = (uint32_t)((uint32_t*)m_highRamUpdateBlock - pStartAddr);
   }
 
-  SaveState->Write(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
+  SaveState->Write(&polyUpdateBlockOffset, sizeof(polyUpdateBlockOffset));
+  SaveState->Write(&highCullUpdateBlockOffset, sizeof(highCullUpdateBlockOffset));
 }
 
 void CReal3D::LoadState(CBlockFile *SaveState)
@@ -147,16 +158,21 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&m_modeword, sizeof(m_modeword));
   Render3D->SetSunClamp((m_modeword[static_cast<int>(CASIC::Name::Mars)] & 0x40000) == 0);
   Render3D->SetBlockCulling((m_modeword[static_cast<int>(CASIC::Name::Mercury)] & 4) == 4);
-  for (int i = 0; i < 19; i++)
-  {
-    uint8_t nul;
-    SaveState->Read(&nul, sizeof(uint8_t));
-  }
-
   SaveState->Read(&m_vromTextureFIFOIdx, sizeof(m_vromTextureFIFOIdx));
+  SaveState->Read(&m_configRegisters, sizeof(m_configRegisters));
 
-  m_polyUpdateBlock = nullptr;
-  m_highRamUpdateBlock = nullptr;
+  uint32_t polyUpdateBlockOffset = 0;
+  uint32_t highCullUpdateBlockOffset = 0;
+  SaveState->Read(&polyUpdateBlockOffset, sizeof(polyUpdateBlockOffset));
+  SaveState->Read(&highCullUpdateBlockOffset, sizeof(highCullUpdateBlockOffset));
+
+  // use -1 to indicate null pointer
+  if (polyUpdateBlockOffset==-1) { m_polyUpdateBlock = nullptr;}
+  else                           { m_polyUpdateBlock = (UpdateBlock*)(cullingRAMLo + m_configRegisters.pingPongMemSize + polyUpdateBlockOffset); }
+
+  if (highCullUpdateBlockOffset == -1) { m_highRamUpdateBlock = nullptr; }
+  else                                 { m_highRamUpdateBlock = (UpdateBlock*)(cullingRAMLo + highCullUpdateBlockOffset); }
+  
 }
 
 
@@ -1001,6 +1017,9 @@ void CReal3D::Reset(void)
   for (auto& r : m_configRegisters.regs) {
       r = 0;
   }
+
+  m_polyUpdateBlock = nullptr;
+  m_highRamUpdateBlock = nullptr;
 
   unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
   memset(memoryPool, 0, memSize);
