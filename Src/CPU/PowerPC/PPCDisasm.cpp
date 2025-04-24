@@ -6,7 +6,7 @@
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,7 +18,7 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * PPCDisasm.cpp
  *
@@ -43,7 +43,7 @@
 
 /******************************************************************************
  Instruction Descriptions
- 
+
  The disassembler is primarily table-driven making it easily modifiable.
 ******************************************************************************/
 
@@ -147,8 +147,8 @@ enum
     F_BCx,          // BO, BI, target_addr  used only by BCx
     F_RT_RA_0_SIMM, // rT, rA|0, SIMM       rA|0 means if rA == 0, print 0
     F_ADDIS,        // rT, rA, SIMM (printed as unsigned)   only used by ADDIS
-    F_RT_RA_SIMM,   // rT, rA, SIMM         
-    F_RA_RT_UIMM,   // rA, rT, UIMM         
+    F_RT_RA_SIMM,   // rT, rA, SIMM
+    F_RA_RT_UIMM,   // rA, rT, UIMM
     F_CMP_SIMM,     // crfD, L, A, SIMM
     F_CMP_UIMM,     // crfD, L, A, UIMM
     F_RT_RA_0_RB,   // rT, rA|0, rB
@@ -705,7 +705,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
     {
         strcat(mnem, "xori");   // xoris rA,rT,UIMM -> xori rA,rT,UIMM<<16
         sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
-    }        
+    }
     else if ((op & ~(M_RT|M_RA|M_SH|M_MB|M_ME|M_RC)) == D_OP(20))
     {
         value = Mask(G_MB(op), G_ME(op));
@@ -787,7 +787,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
 /*
  * DisassemblePowerPC(op, vpc, mnem, oprs, simplify):
  *
- * Disassembles one PowerPC 603e instruction. 
+ * Disassembles one PowerPC 603e instruction.
  *
  * A non-zero return code indicates that the instruction could not be
  * recognized or that the operands to an instruction were invalid. To
@@ -807,7 +807,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
  * Returns:
  *      Zero if successful, non-zero if the instruction was unrecognized or
  *      had an invalid form (see note above in function description.)
- */ 
+ */
 Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
                         bool simplify)
 {
@@ -1104,7 +1104,7 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
 
 /******************************************************************************
  Standalone Disassembler
- 
+
  Define STANDALONE to build a command line-driven PowerPC disassembler.
 ******************************************************************************/
 
@@ -1135,8 +1135,8 @@ int main(int argc, char **argv)
     char      mnem[16], oprs[48];
     FILE      *fp;
     uint8_t   *buffer;
-    unsigned  i, fsize, start = 0, len, org, file = 0;
-    uint32_t    op;
+    unsigned  fsize, start = 0, len, org, file = 0;
+    uint32_t  op;
     bool      len_specified = 0, org_specified = 0, little = 0, simple = 1;
     char      *c;
 
@@ -1144,7 +1144,7 @@ int main(int argc, char **argv)
     if (argc <= 1)
         PrintUsage();
 
-    for (i = 1; i < argc; i++)
+    for (int i = 1; i < argc; i++)
     {
         if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-?"))
             PrintUsage();
@@ -1195,7 +1195,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "ppcd: no input file specified\n");
         exit(1);
     }
-            
+
     /*
      * Load file
      */
@@ -1210,7 +1210,7 @@ int main(int argc, char **argv)
     rewind(fp);
 
     if ((buffer = (uint8_t *) calloc(fsize, sizeof(uint8_t))) == NULL)
-    {              
+    {
         fprintf(stderr, "ppcd: not enough memory to load input file: %s, %lu bytes\n", argv[file], (unsigned long) fsize);
         fclose(fp);
         exit(1);
@@ -1230,7 +1230,7 @@ int main(int argc, char **argv)
      * Disassemble!
      */
 
-    for (i = start; i < fsize && i < (start + len); i += 4, org += 4)
+    for (unsigned i = start; i < fsize && i < (start + len); i += 4, org += 4)
     {
         if (!little)
             op = (buffer[i] << 24) | (buffer[i + 1] << 16) |
@@ -1239,7 +1239,7 @@ int main(int argc, char **argv)
             op = (buffer[i + 3] << 24) | (buffer[i + 2] << 16) |
                  (buffer[i + 1] << 8) | buffer[i + 0];
 
-        if (DisassemblePowerPC(op, org, mnem, oprs, simple))
+        if (Result::OKAY == DisassemblePowerPC(op, org, mnem, oprs, simple))
         {
             if (mnem[0] != '\0')    // invalid form
                 printf("0x%08X: 0x%08X\t%s*\t%s\n", org, op, mnem, oprs);

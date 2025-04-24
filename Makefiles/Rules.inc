@@ -33,7 +33,8 @@
 OBJ_DIR = obj$(strip $(BITS))
 BIN_DIR = bin$(strip $(BITS))
 
-OUTFILE = supermodel
+SUPERMODEL_BINARY = supermodel
+DISASSEMBLER_BINARY = ppcd
 
 
 ###############################################################################
@@ -86,7 +87,7 @@ endif
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
-LDFLAGS = -o $(BIN_DIR)/$(OUTFILE) $(PLATFORM_LDFLAGS) $(LDOPT)
+LDFLAGS = -o $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_LDFLAGS) $(LDOPT)
 
 
 ###############################################################################
@@ -220,7 +221,7 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
 #
-all:	$(BIN_DIR)/$(OUTFILE)
+all:	$(BIN_DIR)/$(DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY)
 
 #
 # Supermodel3.com release targets: used only to create official builds stamped
@@ -240,7 +241,7 @@ release:: all
 #
 # Github release flow (not yet used).
 #
-PKG_FILES += $(BIN_DIR)/$(OUTFILE) Docs/README.txt Docs/LICENSE.txt Config Assets
+PKG_FILES += $(BIN_DIR)/$(SUPERMODEL_BINARY) Docs/README.txt Docs/LICENSE.txt Config Assets
 
 pkg: pkg/$(PKG_TYPE)
 	$(info Cleaning up            : $(PKG_STAGE_PATH))
@@ -265,7 +266,7 @@ pkg/stage:: pkg/path
 	  echo "NVRAM files go here." > NVRAM/DIR.txt && \
 	  echo "Save states go here." > Saves/DIR.txt && \
 	  echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt && \
-	  mv $(BIN_DIR)/$(OUTFILE) . && rmdir $(BIN_DIR) && \
+	  mv $(BIN_DIR)/$(SUPERMODEL_BINARY) . && rmdir $(BIN_DIR) && \
 	  mv Docs//* . && rmdir Docs
 	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
 	$(SILENT)OUTPUT=$(PKG_STAGE_PATH)/CHANGES.txt ./Scripts/changelog.sh
@@ -298,10 +299,19 @@ version: set_version
 #
 # Supermodel binary
 #
-$(BIN_DIR)/$(OUTFILE):	$(BIN_DIR) $(OBJ_FILES)
+$(BIN_DIR)/$(SUPERMODEL_BINARY):	$(BIN_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
-	$(info Linking Supermodel     : $(BIN_DIR)/$(OUTFILE))
+	$(info Linking Supermodel     : $(BIN_DIR)/$(SUPERMODEL_BINARY))
 	$(SILENT)$(LD) $(OBJ_FILES) $(LDFLAGS)
+	$(info --------------------------------------------------------------------------------)
+
+#
+# Disassembler binary (we assume $(LD) can also compile here, which is sloppy)
+#
+$(BIN_DIR)/$(DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp
+	$(info --------------------------------------------------------------------------------)
+	$(info Building Disassembler  : $(BIN_DIR)/$(DISASSEMBLER_BINARY))
+	$(SILENT)$(LD) -o $(BIN_DIR)/$(DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS)))
 	$(info --------------------------------------------------------------------------------)
 
 #
