@@ -77,6 +77,7 @@
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
 #include "WinOutputs.h"
+#include "NetOutputs.h"
 #endif
 
 #include "Supermodel.h"
@@ -1582,6 +1583,9 @@ static Util::Config::Node DefaultConfig()
 #endif
   config.Set("Outputs", "none");
   config.Set("DumpTextures", false);
+  config.Set("NetOutputsWithLF", "1");
+  config.Set("NetOutputsTCPPort", "8000");
+  config.Set("NetOutputsUDPBroadcastPort", "8001");
   return config;
 }
 
@@ -2184,6 +2188,15 @@ int main(int argc, char **argv)
       Outputs = NULL;
     else if (outputs == "win")
       Outputs = new CWinOutputs();
+    else if (outputs == "net") 
+    {
+        CNetOutputs* netOutputs = new CNetOutputs();
+        if (s_runtime_config["NetOutputsWithLF"].ValueAs<int>()==1)
+            netOutputs->FrameEnding = std::string("\r\n");
+        netOutputs->TcpPort = s_runtime_config["NetOutputsTCPPort"].ValueAs<int>();
+        netOutputs->UdpBroadcastPort = s_runtime_config["NetOutputsUDPBroadcastPort"].ValueAs<int>();
+        Outputs = (COutputs*)netOutputs;
+    }
     else
     {
       ErrorLog("Unknown outputs: %s\n", outputs.c_str());
