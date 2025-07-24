@@ -1799,7 +1799,7 @@ bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly
   if (!Poll())
     goto Cancelled;
 
-  CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, badMapping, badSources);
+  CheckAllSources(readFlags, fullAxisOnly, mseCentered, badSources, badMapping, sources);
 
   // Loop until have received meaningful inputs
   for (;;)
