@@ -468,7 +468,7 @@ void main()
 
 		// Optional clamping, value is allowed to be negative
 		// We suspect that translucent polygons are always clamped (e.g. lasers in Daytona 2)
-		if(sunClamp || polyAlpha) {
+		if(sunClamp || finalData.a<1.0) {
 			sunFactor = max(sunFactor,0.0);
 		}
 

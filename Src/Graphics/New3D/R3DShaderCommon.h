@@ -263,7 +263,7 @@ vec4 GetTextureValue()
 		}
 	}
 
-	if (textureAlpha == false) {
+	if (textureAlpha == false && alphaTest == false) {
 		tex1Data.a = 1.0;
 	}
 
@@ -310,6 +310,7 @@ void WriteOutputs(vec4 colour, int layer)
 	vec4 blank = vec4(0.0);
 
 	if(layer==LayerColour) {
+		colour.a = 1.0;		// always have alpha of 1
 		out0 = colour;
 		out1 = blank;
 		out2 = blank;
