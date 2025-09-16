@@ -306,9 +306,11 @@ $(BIN_DIR)/$(SUPERMODEL_BINARY):	$(BIN_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
 
 #
-# Disassembler binary (we assume $(LD) can also compile here, which is sloppy)
+# Disassembler binary (we assume $(LD) can also compile here, which is sloppy).
+# $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS) pulls in 
+# Frameworks that must be downloaded.
 #
-$(BIN_DIR)/$(DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp
+$(BIN_DIR)/$(DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp $(PLATFORM_DIRS)
 	$(info --------------------------------------------------------------------------------)
 	$(info Building Disassembler  : $(BIN_DIR)/$(DISASSEMBLER_BINARY))
 	$(SILENT)$(LD) -o $(BIN_DIR)/$(DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
