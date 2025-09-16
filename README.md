@@ -58,6 +58,7 @@ Ensure SDL2 is installed. Most package managers ought to have this available. Fo
 ```
 sudo apt install libsdl2-dev
 sudo apt install libsdl2-net-dev
+sudo apt install libglu1-mesa-dev
 ```
 
 And then build Supermodel:
