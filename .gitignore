@@ -364,6 +364,9 @@ nvram/
 roms/
 saves/
 
+# Ignore Supermodel package
+pkg/
+
 
 
 
