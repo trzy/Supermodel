@@ -1,0 +1,56 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ master ]  # Auto-build on master
+  workflow_dispatch:      # Manual triggering
+    inputs:
+      opt:
+        description: "Optimization flags"
+        type: string
+        default: "-O3 -g"
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      opt: ${{ github.event.inputs.opt || '-O3 -g' }}
+  
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(make -f Makefiles/Makefile.UNIX version)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Debug downloaded artifacts
+        run: |
+          echo "=== Downloaded artifacts structure ==="
+          find artifacts -type f -name "*.zip" -o -name "*.tar.gz" | sort
+          echo "=== End debug ==="
+          
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "Supermodel v${{ steps.version.outputs.version }}"
+          files: |
+            artifacts/*/*.zip
+            artifacts/*/*.tar.gz
+          body: "Automated release with builds for Windows, Linux, and macOS."
+          draft: false
+          prerelease: false
+          generate_release_notes: true

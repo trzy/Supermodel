@@ -1,0 +1,112 @@
+---
+name: Build Supermodel
+
+on:
+  workflow_call:
+    inputs:
+      opt:
+        description: "Optimization flags for compiler (e.g. -O3 -g)"
+        type: string
+        default: "-O3"
+
+jobs:
+  Build:
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+        include:
+          - os: windows-latest
+            makefile: Makefile.Win32
+            shell: msys2 {0}
+            pkg_pattern: "pkg/supermodel-*.zip"
+          - os: ubuntu-latest
+            makefile: Makefile.UNIX
+            shell: bash
+            pkg_pattern: "pkg/supermodel-*.tgz"
+          - os: macos-latest
+            makefile: Makefile.OSX
+            shell: bash
+            pkg_pattern: "pkg/supermodel-*.tgz"
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    env:
+      OPT_INPUT: ${{ inputs.opt }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full git history (needed for changelog.sh script)
+      
+      - name: Install ubuntu build dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt update
+          sudo apt install -y libsdl2-dev libsdl2-net-dev libglu1-mesa-dev
+          
+      - name: Install windows build dependencies
+        if: startsWith(matrix.os, 'windows')
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            zip
+            unzip
+            git
+            mingw64/mingw-w64-x86_64-gcc
+            mingw64/mingw-w64-x86_64-SDL2
+            mingw64/mingw-w64-x86_64-SDL2_net
+
+      - name: Build Supermodel
+        run: |
+          make -f Makefiles/${{ matrix.makefile }} NET_BOARD=1 OPT="${OPT_INPUT:-"-O3"}" GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
+          
+      - name: Validate build
+        run: |
+          # Find the executable in bin/ directory (bin64/ on Windows)
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ./bin64/supermodel.exe -print-games
+          else
+            ./bin/supermodel -print-games
+          fi
+          
+      - name: Create package
+        run: |
+          make -f Makefiles/${{ matrix.makefile }} pkg NET_BOARD=1 GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
+          
+      - name: Find and upload package
+        run: |
+          # Find the package file created by Makefile
+          PKG_FILES=(${{ matrix.pkg_pattern }})
+          if [ ${#PKG_FILES[@]} -eq 0 ] || [ ! -f "${PKG_FILES[0]}" ]; then
+            echo "No package files found matching pattern: ${{ matrix.pkg_pattern }}"
+            echo "Available files in pkg/:"
+            ls -la pkg/ 2>/dev/null || echo "pkg directory is empty or doesn't exist"
+            exit 1
+          fi
+          
+          PKG_FILE="${PKG_FILES[0]}"
+          echo "Found package: $PKG_FILE"
+          
+          # Get version and create platform-specific name
+          VERSION=$(make -f Makefiles/${{ matrix.makefile }} version)
+          PLATFORM_LOWER=$(echo "${{ runner.os }}" | tr '[:upper:]' '[:lower:]')
+          
+          # Copy package with platform-specific name
+          if [[ "$PKG_FILE" == *.zip ]]; then
+            NEW_NAME="supermodel-${VERSION}-${PLATFORM_LOWER}.zip"
+          else
+            NEW_NAME="supermodel-${VERSION}-${PLATFORM_LOWER}.tar.gz"
+          fi
+          
+          cp "$PKG_FILE" "$NEW_NAME"
+          echo "package_file=$NEW_NAME" >> $GITHUB_ENV
+          
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Supermodel-${{ runner.os }}
+          path: ${{ env.package_file }}
