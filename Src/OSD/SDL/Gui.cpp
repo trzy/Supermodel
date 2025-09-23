@@ -1,5 +1,6 @@
 #include "SDLIncludes.h"
 #include <GL/glew.h>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -234,7 +235,7 @@ static void CreateControls(Util::Config::Node& config, const std::string group)
                             }
                             else {
                                 char buffer[256];
-                                std::strcpy(buffer, p);
+                                strcpy(buffer, p);
                                 ImGui::InputText(key.c_str(), buffer, IM_ARRAYSIZE(buffer));
                                 option = buffer;     // update temp buffer
                             }
