@@ -1,4 +1,4 @@
-#include <SDL.h>
+#include "SDLIncludes.h"
 #include <GL/glew.h>
 #include <iostream>
 #include <string>

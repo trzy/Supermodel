@@ -73,7 +73,7 @@ endif
 # macOS-specific
 #
 
-PLATFORM_CXXFLAGS = -F./Frameworks $(SDL_CFLAGS) -DSUPERMODEL_OSX
+PLATFORM_CXXFLAGS = -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS) -DSUPERMODEL_OSX
 PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
 PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
 PLATFORM_BINARY_EXTENSION =
