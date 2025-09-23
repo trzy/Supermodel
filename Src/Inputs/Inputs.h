@@ -32,6 +32,7 @@
 #include "Types.h"
 #include "Util/NewConfig.h"
 #include <vector>
+#include <memory>
 
 class CInputSystem;
 class CInput;
@@ -44,40 +45,40 @@ class CInputs
 {
 private:
   // Assigned input system
-  CInputSystem *m_system;
+  std::shared_ptr<CInputSystem> m_system;
 
   // Vector of all created inputs
-  std::vector<CInput*> m_inputs;
+  std::vector<std::shared_ptr<CInput>> m_inputs;
 
   /*
    * Adds a switch input (eg button) to this collection.
    */ 
-  CSwitchInput *AddSwitchInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
+  std::shared_ptr<CSwitchInput> AddSwitchInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
     UINT16 offVal = 0x00, UINT16 onVal = 0x01);
 
   /*
    * Adds an analog input (eg pedal) to this collection.
    */
-  CAnalogInput *AddAnalogInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping, 
+  std::shared_ptr<CAnalogInput> AddAnalogInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
     UINT16 minVal = 0x00, UINT16 maxVal = 0xFF);
 
   /*
    * Adds an axis input (eg jostick axis, light gun axis or steering wheel) to this collection.
    */
-  CAxisInput *AddAxisInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
-    CAnalogInput *axisNeg, CAnalogInput *axisPos, UINT16 minVal = 0x00, UINT16 offVal = 0x80, UINT16 maxVal = 0xFF);
+  std::shared_ptr<CAxisInput> AddAxisInput(const char *id, const char *label, unsigned gameFlags, const char *defaultMapping,
+      std::shared_ptr<CAnalogInput> axisNeg, std::shared_ptr<CAnalogInput> axisPos, UINT16 minVal = 0x00, UINT16 offVal = 0x80, UINT16 maxVal = 0xFF);
 
   /*
    * Adds a 4-gear shifter input to this collection.
    */
-  CGearShift4Input *AddGearShift4Input(const char *id, const char *label, unsigned gameFlags, 
-    CSwitchInput *shift1, CSwitchInput *shift2, CSwitchInput *shift3, CSwitchInput *shift4, CSwitchInput *shiftN, CSwitchInput *shiftUp, CSwitchInput *shiftDown);
+  std::shared_ptr<CGearShift4Input> AddGearShift4Input(const char *id, const char *label, unsigned gameFlags,
+      std::shared_ptr<CSwitchInput> shift1, std::shared_ptr<CSwitchInput> shift2, std::shared_ptr<CSwitchInput> shift3, std::shared_ptr<CSwitchInput> shift4, std::shared_ptr<CSwitchInput> shiftN, std::shared_ptr<CSwitchInput> shiftUp, std::shared_ptr<CSwitchInput> shiftDown);
 
   /*
    * Adds a lightgun trigger input to this collection.
    */
-  CTriggerInput *AddTriggerInput(const char *id, const char *label, unsigned gameFlags, 
-    CSwitchInput *trigger, CSwitchInput *offscreen, UINT16 offVal = 0x00, UINT16 onVal = 0x01);
+  std::shared_ptr<CTriggerInput> AddTriggerInput(const char *id, const char *label, unsigned gameFlags,
+      std::shared_ptr<CSwitchInput> trigger, std::shared_ptr<CSwitchInput> offscreen, UINT16 offVal = 0x00, UINT16 onVal = 0x01);
 
   void PrintHeader(const char *fmt, ...);
 
@@ -85,151 +86,151 @@ private:
 
 public:
   // UI controls
-  CSwitchInput  *uiExit;
-  CSwitchInput  *uiReset;
-  CSwitchInput  *uiPause;
-  CSwitchInput  *uiFullScreen;
-  CSwitchInput  *uiSaveState;
-  CSwitchInput  *uiChangeSlot;
-  CSwitchInput  *uiLoadState;
-  CSwitchInput  *uiMusicVolUp;
-  CSwitchInput  *uiMusicVolDown;
-  CSwitchInput  *uiSoundVolUp;
-  CSwitchInput  *uiSoundVolDown;
-  CSwitchInput  *uiClearNVRAM;
-  CSwitchInput  *uiSelectCrosshairs;
-  CSwitchInput  *uiToggleFrLimit;
-  CSwitchInput  *uiDumpInpState;
-  CSwitchInput  *uiDumpTimings;
-  CSwitchInput  *uiScreenshot;
+  std::shared_ptr<CSwitchInput> uiExit;
+  std::shared_ptr<CSwitchInput> uiReset;
+  std::shared_ptr<CSwitchInput> uiPause;
+  std::shared_ptr<CSwitchInput> uiFullScreen;
+  std::shared_ptr<CSwitchInput> uiSaveState;
+  std::shared_ptr<CSwitchInput> uiChangeSlot;
+  std::shared_ptr<CSwitchInput> uiLoadState;
+  std::shared_ptr<CSwitchInput> uiMusicVolUp;
+  std::shared_ptr<CSwitchInput> uiMusicVolDown;
+  std::shared_ptr<CSwitchInput> uiSoundVolUp;
+  std::shared_ptr<CSwitchInput> uiSoundVolDown;
+  std::shared_ptr<CSwitchInput> uiClearNVRAM;
+  std::shared_ptr<CSwitchInput> uiSelectCrosshairs;
+  std::shared_ptr<CSwitchInput> uiToggleFrLimit;
+  std::shared_ptr<CSwitchInput> uiDumpInpState;
+  std::shared_ptr<CSwitchInput> uiDumpTimings;
+  std::shared_ptr<CSwitchInput> uiScreenshot;
 #ifdef SUPERMODEL_DEBUGGER
-  CSwitchInput  *uiEnterDebugger;
+  std::shared_ptr<CSwitchInput> uiEnterDebugger;
 #endif
 
   // Common controls between all games
-  CSwitchInput  *coin[2];
-  CSwitchInput  *start[2];
-  CSwitchInput  *test[2];
-  CSwitchInput  *service[2];
+  std::shared_ptr<CSwitchInput> coin[2];
+  std::shared_ptr<CSwitchInput> start[2];
+  std::shared_ptr<CSwitchInput> test[2];
+  std::shared_ptr<CSwitchInput> service[2];
 
   // Joysticks (players 1 and 2)
-  CSwitchInput  *up[2];
-  CSwitchInput  *down[2];
-  CSwitchInput  *left[2];
-  CSwitchInput  *right[2];
+  std::shared_ptr<CSwitchInput> up[2];
+  std::shared_ptr<CSwitchInput> down[2];
+  std::shared_ptr<CSwitchInput> left[2];
+  std::shared_ptr<CSwitchInput> right[2];
 
   // Fighting game controls (players 1 and 2)
-  CSwitchInput  *punch[2];
-  CSwitchInput  *kick[2];
-  CSwitchInput  *guard[2];
-  CSwitchInput  *escape[2];
+  std::shared_ptr<CSwitchInput> punch[2];
+  std::shared_ptr<CSwitchInput> kick[2];
+  std::shared_ptr<CSwitchInput> guard[2];
+  std::shared_ptr<CSwitchInput> escape[2];
   
   // Spikeout controls
-  CSwitchInput  *shift;
-  CSwitchInput  *beat;
-  CSwitchInput  *charge;
-  CSwitchInput  *jump;
+  std::shared_ptr<CSwitchInput> shift;
+  std::shared_ptr<CSwitchInput> beat;
+  std::shared_ptr<CSwitchInput> charge;
+  std::shared_ptr<CSwitchInput> jump;
 
   // Soccer game controls (players 1 and 2)
-  CSwitchInput  *shortPass[2];
-  CSwitchInput  *longPass[2];
-  CSwitchInput  *shoot[2];
+  std::shared_ptr<CSwitchInput> shortPass[2];
+  std::shared_ptr<CSwitchInput> longPass[2];
+  std::shared_ptr<CSwitchInput> shoot[2];
 
   // Vehicle controls
-  CAxisInput    *steering;
-  CAnalogInput  *accelerator;
-  CAnalogInput  *brake;
+  std::shared_ptr<CAxisInput> steering;
+  std::shared_ptr<CAnalogInput> accelerator;
+  std::shared_ptr<CAnalogInput> brake;
 
   // VR view buttons: VR1 Red, VR2 Blue, VR3 Yellow, VR4 Green
-  CSwitchInput  *vr[4];
+  std::shared_ptr<CSwitchInput> vr[4];
  
   // Up/down gear shift
-  CSwitchInput  *gearShiftUp;
-  CSwitchInput  *gearShiftDown;
+  std::shared_ptr<CSwitchInput> gearShiftUp;
+  std::shared_ptr<CSwitchInput> gearShiftDown;
   
   // 4-speed gear shift
-  CGearShift4Input *gearShift4;
+  std::shared_ptr<CGearShift4Input> gearShift4;
 
   // Rally controls
-  CSwitchInput  *viewChange;
-  CSwitchInput  *handBrake;
+  std::shared_ptr<CSwitchInput> viewChange;
+  std::shared_ptr<CSwitchInput> handBrake;
 
   // Harley Davidson controls
-  CAnalogInput  *rearBrake;
-  CSwitchInput  *musicSelect;
+  std::shared_ptr<CAnalogInput> rearBrake;
+  std::shared_ptr<CSwitchInput> musicSelect;
 
   // Twin joysticks (individually mapped version; 1 = left stick, 2 = right stick)
-  CSwitchInput  *twinJoyLeft1;
-  CSwitchInput  *twinJoyLeft2;
-  CSwitchInput  *twinJoyRight1;
-  CSwitchInput  *twinJoyRight2;
-  CSwitchInput  *twinJoyUp1;
-  CSwitchInput  *twinJoyUp2;
-  CSwitchInput  *twinJoyDown1;
-  CSwitchInput  *twinJoyDown2;
-  CSwitchInput  *twinJoyShot1;
-  CSwitchInput  *twinJoyShot2;
-  CSwitchInput  *twinJoyTurbo1;
-  CSwitchInput  *twinJoyTurbo2;
+  std::shared_ptr<CSwitchInput> twinJoyLeft1;
+  std::shared_ptr<CSwitchInput> twinJoyLeft2;
+  std::shared_ptr<CSwitchInput> twinJoyRight1;
+  std::shared_ptr<CSwitchInput> twinJoyRight2;
+  std::shared_ptr<CSwitchInput> twinJoyUp1;
+  std::shared_ptr<CSwitchInput> twinJoyUp2;
+  std::shared_ptr<CSwitchInput> twinJoyDown1;
+  std::shared_ptr<CSwitchInput> twinJoyDown2;
+  std::shared_ptr<CSwitchInput> twinJoyShot1;
+  std::shared_ptr<CSwitchInput> twinJoyShot2;
+  std::shared_ptr<CSwitchInput> twinJoyTurbo1;
+  std::shared_ptr<CSwitchInput> twinJoyTurbo2;
   
   // Twin joysticks (macro mapping, for users w/out dual joysticks) 
-  CSwitchInput  *twinJoyTurnLeft;
-  CSwitchInput  *twinJoyTurnRight;
-  CSwitchInput  *twinJoyStrafeLeft;
-  CSwitchInput  *twinJoyStrafeRight;
-  CSwitchInput  *twinJoyForward;
-  CSwitchInput  *twinJoyReverse;
-  CSwitchInput  *twinJoyJump;
-  CSwitchInput  *twinJoyCrouch;
+  std::shared_ptr<CSwitchInput> twinJoyTurnLeft;
+  std::shared_ptr<CSwitchInput> twinJoyTurnRight;
+  std::shared_ptr<CSwitchInput> twinJoyStrafeLeft;
+  std::shared_ptr<CSwitchInput> twinJoyStrafeRight;
+  std::shared_ptr<CSwitchInput> twinJoyForward;
+  std::shared_ptr<CSwitchInput> twinJoyReverse;
+  std::shared_ptr<CSwitchInput> twinJoyJump;
+  std::shared_ptr<CSwitchInput> twinJoyCrouch;
   
   // Analog joystick
-  CAxisInput    *analogJoyX;
-  CAxisInput    *analogJoyY;
-  CSwitchInput  *analogJoyTrigger1;
-  CSwitchInput  *analogJoyTrigger2;
-  CSwitchInput  *analogJoyEvent1;
-  CSwitchInput  *analogJoyEvent2;
+  std::shared_ptr<CAxisInput> analogJoyX;
+  std::shared_ptr<CAxisInput> analogJoyY;
+  std::shared_ptr<CSwitchInput> analogJoyTrigger1;
+  std::shared_ptr<CSwitchInput> analogJoyTrigger2;
+  std::shared_ptr<CSwitchInput> analogJoyEvent1;
+  std::shared_ptr<CSwitchInput> analogJoyEvent2;
 
   // Light gun controls (players 1 and 2)
-  CAxisInput    *gunX[2];
-  CAxisInput    *gunY[2];
-  CTriggerInput *trigger[2];
+  std::shared_ptr<CAxisInput> gunX[2];
+  std::shared_ptr<CAxisInput> gunY[2];
+  std::shared_ptr<CTriggerInput> trigger[2];
   
   // Analog gun controls (players 1 and 2)
-  CAxisInput    *analogGunX[2];
-  CAxisInput    *analogGunY[2];
-  CSwitchInput  *analogTriggerLeft[2];
-  CSwitchInput  *analogTriggerRight[2];
+  std::shared_ptr<CAxisInput> analogGunX[2];
+  std::shared_ptr<CAxisInput> analogGunY[2];
+  std::shared_ptr<CSwitchInput> analogTriggerLeft[2];
+  std::shared_ptr<CSwitchInput> analogTriggerRight[2];
 
   // Ski Champ controls
-  CAxisInput    *skiX;
-  CAxisInput    *skiY;
-  CSwitchInput  *skiPollLeft;
-  CSwitchInput  *skiPollRight;
-  CSwitchInput  *skiSelect1;
-  CSwitchInput  *skiSelect2;
-  CSwitchInput  *skiSelect3;
+  std::shared_ptr<CAxisInput> skiX;
+  std::shared_ptr<CAxisInput> skiY;
+  std::shared_ptr<CSwitchInput> skiPollLeft;
+  std::shared_ptr<CSwitchInput> skiPollRight;
+  std::shared_ptr<CSwitchInput> skiSelect1;
+  std::shared_ptr<CSwitchInput> skiSelect2;
+  std::shared_ptr<CSwitchInput> skiSelect3;
 
   // Magical Truck Adventure controls
-  CAxisInput    *magicalLever1;
-  CAxisInput    *magicalLever2;
-  CSwitchInput  *magicalPedal1;
-  CSwitchInput  *magicalPedal2;
+  std::shared_ptr<CAxisInput> magicalLever1;
+  std::shared_ptr<CAxisInput> magicalLever2;
+  std::shared_ptr<CSwitchInput> magicalPedal1;
+  std::shared_ptr<CSwitchInput> magicalPedal2;
 
   // Sega Bass Fishing controls
-  CAxisInput    *fishingRodX;
-  CAxisInput    *fishingRodY;
-  CAnalogInput  *fishingReel;
-  CAxisInput    *fishingStickX;
-  CAxisInput    *fishingStickY;
-  CSwitchInput  *fishingCast;
-  CSwitchInput  *fishingSelect;
-  CAnalogInput  *fishingTension;
+  std::shared_ptr<CAxisInput> fishingRodX;
+  std::shared_ptr<CAxisInput> fishingRodY;
+  std::shared_ptr<CAnalogInput> fishingReel;
+  std::shared_ptr<CAxisInput> fishingStickX;
+  std::shared_ptr<CAxisInput> fishingStickY;
+  std::shared_ptr<CSwitchInput> fishingCast;
+  std::shared_ptr<CSwitchInput> fishingSelect;
+  std::shared_ptr<CAnalogInput> fishingTension;
 
   /*
    * Creates a set of inputs with the given input system.
    */
-  CInputs(CInputSystem *system);
+  CInputs(std::shared_ptr<CInputSystem> system);
   
   /*
    * CInputs destructor.
@@ -244,17 +245,17 @@ public:
   /*
    * Returns the input with the given index.
    */
-  CInput *operator[](const unsigned index);
+  std::shared_ptr<CInput> operator[](const unsigned index);
 
   /*
    * Returns the input with the given id or label.
    */
-  CInput *operator[](const char *idOrLabel);
+  std::shared_ptr<CInput> operator[](const char *idOrLabel);
 
   /*
    * Returns the assigned input system.
    */
-  CInputSystem *GetInputSystem();
+  std::shared_ptr<CInputSystem> GetInputSystem();
 
   /*
    * Initializes the inputs.  Must be called before any other methods are used.
@@ -283,6 +284,8 @@ public:
    * Returns true if the inputs were configured okay or false if the user exited without requesting to save changes.
    */
   bool ConfigureInputs(const Game &game, unsigned dispX, unsigned dispY, unsigned dispW, unsigned dispH);
+
+  std::vector<std::shared_ptr<CInput>> GetGameInputs(const Game& game);
 
   void CalibrateJoysticks();
 

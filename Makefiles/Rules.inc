@@ -129,6 +129,7 @@ SRC_FILES = \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \
 	Src/OSD/SDL/Thread.cpp \
+	Src/OSD/SDL/Gui.cpp \
 	Src/Model3/SoundBoard.cpp \
 	Src/Sound/SCSP.cpp \
 	Src/Sound/SCSPDSP.cpp \
@@ -168,6 +169,12 @@ SRC_FILES = \
 	Src/Util/ConfigBuilders.cpp \
 	Src/GameLoader.cpp \
 	Src/Pkgs/tinyxml2.cpp \
+	Src/Pkgs/imgui/imgui.cpp \
+	Src/Pkgs/imgui/imgui_draw.cpp \
+	Src/Pkgs/imgui/imgui_impl_sdl2.cpp \
+	Src/Pkgs/imgui/imgui_impl_opengl3.cpp \
+	Src/Pkgs/imgui/imgui_tables.cpp \
+	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
 	$(PLATFORM_SRC_FILES)
 

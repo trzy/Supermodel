@@ -59,9 +59,6 @@
     <Filter Include="Source Files\Makefiles">
       <UniqueIdentifier>{02f1be5d-5fef-484e-a0e1-54c9d1b76af5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Config">
-      <UniqueIdentifier>{c8fbae68-16ff-4305-bd88-452e1d91704a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Docs">
       <UniqueIdentifier>{1e84796b-88ed-4dda-80cd-9f3620fa660b}</UniqueIdentifier>
     </Filter>
@@ -152,6 +149,12 @@
     </Filter>
     <Filter Include="Header Files\Graphics\New">
       <UniqueIdentifier>{fdb4e5a0-a0ec-4865-a5e6-56eb54c36a2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Pkgs\imgui">
+      <UniqueIdentifier>{68ebcaab-fca4-4e7c-b392-ca512be9c4cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Pkgs\imgui">
+      <UniqueIdentifier>{36e7c598-149b-4f91-af6b-8593c02c4663}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -473,6 +476,27 @@
     <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui.cpp">
+      <Filter>Source Files\Pkgs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui_draw.cpp">
+      <Filter>Source Files\Pkgs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui_tables.cpp">
+      <Filter>Source Files\Pkgs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\Pkgs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\Gui.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui_impl_sdl2.cpp">
+      <Filter>Source Files\Pkgs\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\imgui\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\Pkgs\imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -480,9 +504,6 @@
     </MASM>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Config\Supermodel.ini">
-      <Filter>Source Files\Config</Filter>
-    </None>
     <None Include="..\Src\Graphics\Legacy3D\Shaders\Fragment.glsl">
       <Filter>Source Files\Graphics\Legacy\Shaders</Filter>
     </None>
@@ -861,6 +882,33 @@
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\TextureBank.h">
       <Filter>Header Files\Graphics\New</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\Gui.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imconfig.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imgui.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imgui_impl_sdl2.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imstb_rectpack.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imstb_textedit.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imstb_truetype.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\imgui\imgui_impl_opengl3_loader.h">
+      <Filter>Header Files\Pkgs\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\Main.h">
+      <Filter>Header Files\OSD\SDL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

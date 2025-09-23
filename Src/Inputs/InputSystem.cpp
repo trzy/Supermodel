@@ -1780,92 +1780,92 @@ void CInputSystem::StoreToConfig(Util::Config::Node *config)
     StoreJoySettings(config, *it);
 }
 
-bool CInputSystem::ReadMapping(char *buffer, unsigned bufSize, bool fullAxisOnly, unsigned readFlags, const char *escapeMapping)
+bool CInputSystem::ReadMapping(char* buffer, unsigned bufSize, bool fullAxisOnly, unsigned readFlags, const char* escapeMapping)
 {
-  // Map given escape mapping to an input source
-  bool cancelled = false;
-  CInputSource *escape = ParseSource(escapeMapping);
-  if (escape)
-    escape->Acquire();
+    // Map given escape mapping to an input source
+    bool cancelled = false;
+    CInputSource* escape = ParseSource(escapeMapping);
+    if (escape)
+        escape->Acquire();
 
-  string badMapping;
-  string mapping;
-  vector<CInputSource*> badSources;
-  vector<CInputSource*> sources;
-  bool mseCentered = false;
+    string badMapping;
+    string mapping;
+    vector<CInputSource*> badSources;
+    vector<CInputSource*> sources;
+    bool mseCentered = false;
 
-  // See which sources activated to begin with and from here on ignore these (this stops badly calibrated axes that are constantly "active"
-  // from preventing the user from exiting read loop)
-  if (!Poll())
-    goto Cancelled;
-
-  CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, badMapping, badSources);
-
-  // Loop until have received meaningful inputs
-  for (;;)
-  {
-    // Poll inputs
+    // See which sources activated to begin with and from here on ignore these (this stops badly calibrated axes that are constantly "active"
+    // from preventing the user from exiting read loop)
     if (!Poll())
-      goto Cancelled;
+        goto Cancelled;
 
-    // Check if escape source was triggered
-    if (escape && escape->IsActive())
+    CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, badMapping, badSources);
+
+    // Loop until have received meaningful inputs
+    for (;;)
     {
-      // If so, wait until source no longer active and then exit
-      while (escape->IsActive())
-      {
+        // Poll inputs
         if (!Poll())
-          goto Cancelled;
-        CThread::Sleep(1000/60);
-      }
-      goto Cancelled;
-    }
+            goto Cancelled;
 
-    // Check all active sources
-    CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, mapping, badSources);
-
-    // When some inputs have been activated, keep looping until they have all been released again.
-    if (!sources.empty())
-    {
-      // Check each source is no longer active
-      bool active = false;
-      for (vector<CInputSource*>::iterator it = sources.begin(); it != sources.end(); ++it)
-      {
-        if ((*it)->IsActive())
+        // Check if escape source was triggered
+        if (escape && escape->IsActive())
         {
-          active = true;
-          break;
+            // If so, wait until source no longer active and then exit
+            while (escape->IsActive())
+            {
+                if (!Poll())
+                    goto Cancelled;
+                CThread::Sleep(1000 / 60);
+            }
+            goto Cancelled;
         }
-      }
-      if (!active)
-      {
-        // If so, get combined type of sources and if is valid then return
-        ESourceType type = CMultiInputSource::GetCombinedType(sources);
-        if ((type != SourceInvalid) && ((type == SourceFullAxis && fullAxisOnly) || (type != SourceFullAxis && !fullAxisOnly)))
-          break;
 
-        mapping.clear();
-        sources.clear();
-        mseCentered = false;
-      }
+        // Check all active sources
+        CheckAllSources(readFlags, fullAxisOnly, mseCentered, sources, mapping, badSources);
+
+        // When some inputs have been activated, keep looping until they have all been released again.
+        if (!sources.empty())
+        {
+            // Check each source is no longer active
+            bool active = false;
+            for (vector<CInputSource*>::iterator it = sources.begin(); it != sources.end(); ++it)
+            {
+                if ((*it)->IsActive())
+                {
+                    active = true;
+                    break;
+                }
+            }
+            if (!active)
+            {
+                // If so, get combined type of sources and if is valid then return
+                ESourceType type = CMultiInputSource::GetCombinedType(sources);
+                if ((type != SourceInvalid) && ((type == SourceFullAxis && fullAxisOnly) || (type != SourceFullAxis && !fullAxisOnly)))
+                    break;
+
+                mapping.clear();
+                sources.clear();
+                mseCentered = false;
+            }
+        }
+
+        // Don't poll continuously
+        CThread::Sleep(1000 / 60);
     }
 
-    // Don't poll continuously
-    CThread::Sleep(1000/60);
-  }
-
-  // Copy mapping to buffer and return
-  strncpy(buffer, mapping.c_str(), bufSize - 1);
-  buffer[bufSize - 1] = '\0';
-  goto Finish;
+    // Copy mapping to buffer and return
+    strncpy(buffer, mapping.c_str(), bufSize - 1);
+    buffer[bufSize - 1] = '\0';
+    goto Finish;
 
 Cancelled:
-  cancelled = true;
+    cancelled = true;
 
 Finish:
-  if (escape)
-    escape->Release();
-  return !cancelled;
+    if (escape)
+        escape->Release();
+    return !cancelled;
 }
 
 void CInputSystem::GrabMouse()

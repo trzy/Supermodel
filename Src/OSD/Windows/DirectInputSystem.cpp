@@ -359,12 +359,12 @@ static BOOL CALLBACK DI8EnumObjectsCallback(LPCDIDEVICEOBJECTINSTANCE instance, 
 #ifdef _MSC_VER	// MS VisualC++
 		switch (fmt.dwOfs)
 		{
-			case DIJOFS_X:  axisNum = AXIS_X; break;
-			case DIJOFS_Y:  axisNum = AXIS_Y; break;
-			case DIJOFS_Z:  axisNum = AXIS_Z; break;
-			case DIJOFS_RX: axisNum = AXIS_RX; break;
-			case DIJOFS_RY: axisNum = AXIS_RY; break;
-			case DIJOFS_RZ: axisNum = AXIS_RZ; break;
+			case offsetof(DIJOYSTATE, lX):  axisNum = AXIS_X; break;
+			case offsetof(DIJOYSTATE, lY):  axisNum = AXIS_Y; break;
+			case offsetof(DIJOYSTATE, lZ):  axisNum = AXIS_Z; break;
+			case offsetof(DIJOYSTATE, lRx): axisNum = AXIS_RX; break;
+			case offsetof(DIJOYSTATE, lRy): axisNum = AXIS_RY; break;
+			case offsetof(DIJOYSTATE, lRz): axisNum = AXIS_RZ; break;
 			default:        
 				// If still couldn't match then it is not an axis
 				return DIENUM_CONTINUE;  

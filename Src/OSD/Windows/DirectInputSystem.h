@@ -36,11 +36,12 @@
 #include <SDL.h>
 
 #define WIN32_LEAN_AND_MEAN
+#define DIRECTINPUT_VERSION 0x0800
+
 #include <windows.h>
 #include <dinput.h>
 #include <XInput.h>
 #include <functional>
-
 #include <vector>
 
 #define NUM_DI_KEYS (sizeof(s_keyMap) / sizeof(DIKeyMapStruct))

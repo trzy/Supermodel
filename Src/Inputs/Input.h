@@ -33,6 +33,7 @@
 #include "Types.h"
 #include "Game.h"
 #include "Util/NewConfig.h"
+#include <memory>
 
 class CInputSystem;
 
@@ -74,7 +75,7 @@ private:
 	const char *m_defaultMapping;
 	
 	// Assigned input system
-	CInputSystem *m_system;
+	std::shared_ptr<CInputSystem> m_system;
 
 	/*
 	 * Creates an input source using the current input system and assigns it to this input.
@@ -115,7 +116,12 @@ public:
 	/*
 	 * Initializes this input with the given input system.  Must be called before any other methods are used.
 	 */
-	void Initialize(CInputSystem *system);
+	void Initialize(std::shared_ptr<CInputSystem> system);
+
+	/*
+    * Initializes this input with the given input system.  Must be called before any other methods are used.
+    */
+	std::shared_ptr<CInputSystem> GetInputSystem();
 
 	/*
 	 * Returns the name of the group of controls that this input belongs to.

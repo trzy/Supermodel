@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <memory>
 #include <cctype>
+#include <variant>
 
 namespace Util
 {
@@ -101,15 +102,73 @@ namespace Util
     }    
   }
 
+  // This class helps us validate paramater values
+  // by storing a list or a min/max of valid values
+  // variant is just a fancy c++ union, we can add as many types as we need to it
+  class ValueRange
+  {
+  public:
+
+      using Variant = std::variant<bool, unsigned, int, float, std::string>;
+
+      template <typename T>
+      ValueRange(const std::string& group, T min = 0, T max = 0, const std::vector<T> &list = std::vector<T>{}) :
+          m_group(group),
+          m_min(min),
+          m_max(max)
+      {
+          for (const auto& l : list) {
+              m_list.emplace_back(l);
+          }
+      }
+
+      ValueRange(const std::string& group, const std::vector<std::string> &list = std::vector<std::string>{}) :
+          m_group(group),
+          m_min(std::string("")),
+          m_max(std::string(""))
+      {
+          for (const auto& l : list) {
+              m_list.emplace_back(l);
+          }
+      }
+
+      Variant tempValue;        // kludge for the GUI because we need somewhere to store the val
+
+      std::string GetGroup() { return m_group; }
+      bool HasMinMax() { return m_min != m_max; }
+      Variant GetMin() { return m_min; }
+      Variant GetMax() { return m_max; }
+      std::vector<Variant>& GetList() { return m_list; }
+      int GetIndex() { return (int)m_min.index(); }      // gets the variant index (basically the type)
+
+  private:
+      std::string m_group;
+      Variant m_min;
+      Variant m_max;
+      std::vector<Variant> m_list;
+  };
+
   class GenericValue
   {
   private:
     std::type_index m_type;
+    std::shared_ptr<ValueRange> m_valueRange;
 
     virtual void *GetData() = 0;
     virtual const void *GetData() const = 0;
 
   public:
+
+    std::shared_ptr<ValueRange> GetValueRange()
+    {
+        return m_valueRange;
+    }
+
+    void SetValueRange(std::shared_ptr<ValueRange> v)
+    {
+        m_valueRange = v;
+    }
+
     template <typename T>
     inline bool Is() const
     {

@@ -241,7 +241,7 @@ LRESULT CWinOutputs::SendIdString(HWND hwnd, LPARAM id)
 		name = MapIdToName(id) ? MapIdToName(id) : "";
 
 	// Allocate memory for message
-	int dataLen = sizeof(CopyDataIdString) + name.length();
+	DWORD dataLen = sizeof(CopyDataIdString) + (DWORD)name.length();
 	CopyDataIdString *data = (CopyDataIdString*)new(nothrow) UINT8[dataLen];
 	if (!data)
 		return 1;

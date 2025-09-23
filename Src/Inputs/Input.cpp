@@ -75,11 +75,16 @@ void CInput::CreateSource()
 	}
 }
 
-void CInput::Initialize(CInputSystem *system)
+void CInput::Initialize(std::shared_ptr<CInputSystem> system)
 {
 	m_system = system;
 
 	CreateSource();
+}
+
+std::shared_ptr<CInputSystem> CInput::GetInputSystem()
+{
+	return m_system;
 }
 
 const char* CInput::GetInputGroup()

@@ -151,12 +151,12 @@ namespace Util
 
       inline const_iterator begin() const
       {
-        return iterator(m_first_child);
+        return const_iterator(m_first_child);
       }
 
       inline const_iterator end() const
       {
-        return iterator();
+        return const_iterator();
       }
 
       const inline std::string &Key() const
@@ -247,6 +247,29 @@ namespace Util
           node->SetValue(value);
         else
           Add(key, value);
+      }
+
+      // Set the value of the matching child node if it exists, else add new
+      template <typename T>
+      void Set(const std::string& key, const T& value, const std::string& group, T _min = 0, T _max = 0, const std::vector<T> &list = std::vector<T>{})
+      {
+          Node* node = TryGet(key);
+          if (node) {
+              node->SetValue(value);
+          }
+          else {
+              Add(key, value);
+          }
+
+          // key should have been added above 
+          node = TryGet(key);
+
+          if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, const char*>) {
+              node->m_value->SetValueRange(std::make_shared<ValueRange>(group, list));
+          }
+          else {
+              node->m_value->SetValueRange(std::make_shared<ValueRange>(group, _min, _max, list));
+          }
       }
 
       void SetEmpty(const std::string &key)

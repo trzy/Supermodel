@@ -213,20 +213,62 @@ namespace Util
     void MergeINISections(Node *merged, const Node &x, const Node &y)
     {
       *merged = Node(x.Key());  // result has same key as x
+
+      std::map<std::string, std::shared_ptr<ValueRange>> mapX;
+      std::map<std::string, std::shared_ptr<ValueRange>> mapY;
+
       // First copy settings from section x
       for (auto it = x.begin(); it != x.end(); ++it)
       {
         if (it->IsLeaf())
         {
           // INI semantics: take care to only create a single setting per key
-          merged->Set(it->Key(), it->GetValue());
+          auto key = it->Key();
+          auto val = it->GetValue();
+
+          merged->Set(key, val);
+
+          //build new map from value ranges
+          if (val) {
+            mapX[key] = val->GetValueRange();
+          }
         }
       }
+
       // Merge in settings from section y
       for (auto it = y.begin(); it != y.end(); ++it)
       {
-        if (it->IsLeaf() && it->Exists())
-          merged->Set(it->Key(), it->GetValue());
+        if (it->IsLeaf() && it->Exists()) {
+
+          auto key = it->Key();
+          auto val = it->GetValue();
+
+          merged->Set(key, val);
+
+          //build new map from value ranges
+          if (val) {
+            mapY[key] = val->GetValueRange();
+          }
+        }
+      }
+
+      // merge the value ranges if they exist for the keys
+      // this code is overly cumbersome 
+      for (auto& m : mapX) {
+          if (m.second) {
+
+            for (auto it = merged->begin(); it != merged->end(); ++it) {
+
+                auto key = it->Key();
+                auto val = it->GetValue();
+
+                if (m.first == key) {
+                    if (val) {
+                        val->SetValueRange(m.second);
+                    }
+                }
+            }
+          }
       }
     }
 
@@ -236,8 +278,10 @@ namespace Util
       file << std::endl;
       for (auto it = section.begin(); it != section.end(); ++it)
       {
-        if (it->IsLeaf()) //TODO: check if value exists?
-          file << it->Key() << " = " << it->ValueAs<std::string>() << std::endl;
+        if (it->IsLeaf()) {//TODO: check if value exists?
+            if (it->Empty()) continue;
+            file << it->Key() << " = " << it->ValueAs<std::string>() << std::endl;
+        }
       }
       file << std::endl << std::endl;
     }
