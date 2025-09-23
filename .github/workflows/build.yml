@@ -41,13 +41,13 @@ jobs:
         with:
           fetch-depth: 0  # Fetch full git history (needed for changelog.sh script)
       
-      - name: Install ubuntu build dependencies
+      - name: Install Ubuntu build dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt update
           sudo apt install -y libsdl2-dev libsdl2-net-dev libglu1-mesa-dev
           
-      - name: Install windows build dependencies
+      - name: Install Windows build dependencies
         if: startsWith(matrix.os, 'windows')
         uses: msys2/setup-msys2@v2
         with:
@@ -73,6 +73,8 @@ jobs:
           else
             ./bin/supermodel -print-games
           fi
+          # Remove auto-generated default Supermodel.ini. We do not want to bundle this into packages.
+          rm Config/Supermodel.ini
           
       - name: Create package
         run: |
