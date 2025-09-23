@@ -64,7 +64,7 @@ LD = clang
 #
 
 SDL_CFLAGS =
-SDL_LIBS = -framework SDL2 -framework AGL -framework OpenGL -framework GLUT -framework Cocoa
+SDL_LIBS = -framework SDL2 -framework OpenGL -framework GLUT -framework Cocoa
 ifeq ($(strip $(NET_BOARD)),1)
 	SDL_LIBS += -framework SDL2_net
 endif
@@ -76,6 +76,21 @@ endif
 PLATFORM_CXXFLAGS = -F./Frameworks $(SDL_CFLAGS) -DSUPERMODEL_OSX
 PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
 PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
+PLATFORM_BINARY_EXTENSION =
+
+#
+# GitHub token
+#
+# In GitHub Actions, a token must be used to access the GitHub API (we use curl
+# and the GitHub API to download SDL dependencies). If GITHUB_TOKEN is passed to
+# the Makefile (which it will be in the GitHub Actions scripts), we pass the
+# token as an authorization header with curl. Otherwise, nothing.
+#
+ifdef GITHUB_TOKEN
+GITHUB_TOKEN_CURL_ARGUMENT = -H "Authorization: token $(GITHUB_TOKEN)"
+else
+GITHUB_TOKEN_CURL_ARGUMENT =
+endif
 
 
 ###############################################################################
@@ -108,19 +123,19 @@ Frameworks:
 
 Frameworks/SDL2.dmg.url: | Frameworks
 	$(info Finding Latest Release : $@)
-	$(SILENT)curl --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL/releases | awk '/"browser_download_url": "(.*SDL2-.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
+	$(SILENT)curl $(GITHUB_TOKEN_CURL_ARGUMENT) --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL/releases | awk '/"browser_download_url": "(.*SDL2-.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
 
 Frameworks/SDL2_net.dmg.url: | Frameworks
 	$(info Finding Latest Release : $@)
-	$(SILENT)curl --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL_net/releases | awk '/"browser_download_url": "(.*SDL2_net-.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
+	$(SILENT)curl $(GITHUB_TOKEN_CURL_ARGUMENT) --retry 5 --retry-delay 2 --fail-with-body -s https://api.github.com/repos/libsdl-org/SDL_net/releases | awk '/"browser_download_url": "(.*SDL2_net-.*\.dmg)"/{m++; if (m>1) exit; print $$2 }' | tr -d '"' > $@
 
 Frameworks/SDL2.dmg: Frameworks/SDL2.dmg.url
 	$(info Downloading            : $(shell cat $@.url))
-	$(SILENT)curl "$(shell cat $@.url)" -sfL --output $@
+	$(SILENT)curl $(GITHUB_TOKEN_CURL_ARGUMENT) "$(shell cat $@.url)" -sfL --output $@
 
 Frameworks/SDL2_net.dmg: Frameworks/SDL2_net.dmg.url
 	$(info Downloading            : $(shell cat $@.url))
-	$(SILENT)curl "$(shell cat $@.url)" -sfL --output $@
+	$(SILENT)curl $(GITHUB_TOKEN_CURL_ARGUMENT) "$(shell cat $@.url)" -sfL --output $@
 
 Frameworks/SDL2.framework: Frameworks/SDL2.dmg
 	$(info Extracting             : $@)

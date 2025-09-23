@@ -33,8 +33,8 @@
 OBJ_DIR = obj$(strip $(BITS))
 BIN_DIR = bin$(strip $(BITS))
 
-SUPERMODEL_BINARY = supermodel
-DISASSEMBLER_BINARY = ppcd
+SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
+DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
 
 
 ###############################################################################
@@ -276,7 +276,7 @@ pkg/stage:: pkg/path
 	  mv $(BIN_DIR)/$(SUPERMODEL_BINARY) . && rmdir $(BIN_DIR) && \
 	  mv Docs//* . && rmdir Docs
 	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
-	$(SILENT)OUTPUT=$(PKG_STAGE_PATH)/CHANGES.txt ./Scripts/changelog.sh
+	$(SILENT)./Scripts/changelog.sh $(PKG_STAGE_PATH)/CHANGES.txt
 
 pkg/path: set_version
 	$(eval PKG_STAGE_PATH = pkg/supermodel-$(VERSION))
