@@ -161,7 +161,7 @@ namespace Util
         throw std::logic_error(Util::Format() << "Node \"" << m_key << "\" has no value" );
     }
 
-    const Node &Node::MissingNode(const std::string &key) const
+    Node &Node::MissingNode(const std::string &key) const
     {
       auto it = m_missing_nodes.find(key);
       if (it == m_missing_nodes.end())
@@ -173,9 +173,9 @@ namespace Util
       return it->second;
     }
 
-    const Node &Node::operator[](const std::string &path) const
+    Node &Node::operator[](const std::string &path)
     {
-      const Node *e = this;
+       Node *e = this;
       std::vector<std::string> keys = Util::Format(path).Split('/');
       for (auto &key: keys)
       {
@@ -185,6 +185,11 @@ namespace Util
         e = it->second.get();
       }
       return *e;
+    }
+
+    const Node& Node::operator[](const std::string& path) const
+    {
+        return const_cast<const Node&>(const_cast<Node&>(*this)[path]);
     }
 
     Node &Node::Get(const std::string &path)

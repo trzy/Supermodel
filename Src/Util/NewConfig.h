@@ -35,7 +35,7 @@ namespace Util
       }
 
       void CheckEmptyOrMissing() const;
-      const Node &MissingNode(const std::string &key) const;
+      Node& MissingNode(const std::string& key) const;
       Node &AddEmpty(const std::string &path);
       void AddChild(Node &parent, ptr_t &node);
       void DeepCopy(const Node &that);
@@ -43,121 +43,44 @@ namespace Util
       Node(); // prohibit accidental/unintentional creation of empty nodes
 
     public:
-      class const_iterator;
 
-      class iterator
-      {
+      template <typename T>
+      class NodeIterator {
       private:
-        ptr_t m_node;
-        friend class const_iterator;
+          std::shared_ptr<T> m_node;
+
       public:
-        inline iterator(ptr_t node = ptr_t())
-          : m_node(node)
-        {}
-        inline iterator(const iterator &it)
-          : m_node(it.m_node)
-        {}
-        inline iterator operator++()
-        {
-          // Prefix increment
-          m_node = m_node->m_next_sibling;
-          return *this;
-        }
-        inline iterator operator++(int)
-        {
-          // Postfix increment
-          iterator current(*this);
-          m_node = m_node->m_next_sibling;
-          return *this;
-        }
-        inline Node &operator*() const
-        {
-          return *m_node;
-        }
-        inline ptr_t operator->() const
-        {
-          return m_node;
-        }
-        inline bool operator==(const iterator &rhs) const
-        {
-          return m_node == rhs.m_node;
-        }
-        inline bool operator!=(const iterator &rhs) const
-        {
-          return m_node != rhs.m_node;
-        }
+          NodeIterator(std::shared_ptr<T> node = nullptr)
+              : m_node(std::move(node)) {}
+
+          NodeIterator& operator++() 
+          {
+              m_node = std::static_pointer_cast<T>(m_node->m_next_sibling);
+              return *this;
+          }
+
+          NodeIterator operator++(int) 
+          {
+              NodeIterator temp = *this;
+              ++(*this);
+              return temp;
+          }
+
+          T& operator*() const { return *m_node; }
+          T* operator->() const { return m_node.get(); }
+
+          bool operator==(const NodeIterator& rhs) const { return m_node == rhs.m_node; }
+          bool operator!=(const NodeIterator& rhs) const { return m_node != rhs.m_node; }
       };
 
-      class const_iterator
-      {
-      private:
-        const_ptr_t m_node;
-      public:
-        inline const_iterator()
-		  : m_node(const_ptr_t())
-        {}
-        inline const_iterator(const_ptr_t node)
-          : m_node(node)
-        {}
-        inline const_iterator(ptr_t node)
-          : m_node(std::const_pointer_cast<const Node>(node))
-        {}
-        inline const_iterator(const const_iterator &it)
-          : m_node(it.m_node)
-        {}
-        inline const_iterator(const Node::iterator &it)
-          : m_node(it.m_node)
-        {}
-        inline const_iterator operator++()
-        {
-          // Prefix increment
-          m_node = m_node->m_next_sibling;
-          return *this;
-        }
-        inline const_iterator operator++(int)
-        {
-          // Postfix increment
-          //iterator current(*this);	//unreferenced local variable
-          m_node = m_node->m_next_sibling;
-          return *this;
-        }
-        inline const Node &operator*() const
-        {
-          return *m_node;
-        }
-        inline const_ptr_t operator->() const
-        {
-          return m_node;
-        }
-        inline bool operator==(const const_iterator &rhs) const
-        {
-          return m_node == rhs.m_node;
-        }
-        inline bool operator!=(const const_iterator &rhs) const
-        {
-          return m_node != rhs.m_node;
-        }
-      };
+      using iterator = NodeIterator<Node>;
+      using const_iterator = NodeIterator<const Node>;
 
-      inline iterator begin()
-      {
-        return iterator(m_first_child);
-      }
+      iterator begin() { return iterator(m_first_child); }
+      iterator end() { return iterator(); }
 
-      inline iterator end()
-      {
-        return iterator();
-      }
-
-      inline const_iterator begin() const
-      {
-        return const_iterator(m_first_child);
-      }
-
-      inline const_iterator end() const
-      {
-        return const_iterator();
-      }
+      const_iterator begin() const { return const_iterator(m_first_child); }
+      const_iterator end()   const { return const_iterator(); }
 
       const inline std::string &Key() const
       {
@@ -311,7 +234,8 @@ namespace Util
 
       // Always succeeds -- failed lookups permanently create an empty node.
       // Use with caution. Intended for hard-coded lookups.
-      const Node &operator[](const std::string &path) const;
+      Node &operator[](const std::string &path);
+      const Node& operator[](const std::string& path) const;
 
       // These throw if the node is missing
       Node &Get(const std::string &path);
