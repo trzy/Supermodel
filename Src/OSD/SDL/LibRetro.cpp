@@ -359,8 +359,10 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
 
   ROMSet rom_set;
 
-  // XXX make this robust
-  GameLoader loader("/Users/jay/Dev/dist/Supermodel/Config/Games.xml");
+  const char* system_path;
+  cb_env(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_path);
+  std::string games_path = Util::Format() << system_path << "/Supermodel/Config/Games.xml";
+  GameLoader loader(games_path);
   if (loader.Load(&game, &rom_set, rgame->path))
     return false;
   if (Model3->LoadGame(game, rom_set) != Result::OKAY)
