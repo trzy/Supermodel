@@ -2,40 +2,18 @@
 #include <stdio.h>
 #include "../Pkgs/libretro.h"
 #include "Version.h"
-
-#include <new>
-#include <cmath>
-#include <cstdio>
-#include <cstring>
-#include <cstdarg>
-#include <memory>
-#include <vector>
-#include <algorithm>
 #include <GL/glew.h>
 #include "Supermodel.h"
 #include "Util/Format.h"
-#include "Util/NewConfig.h"
 #include "Util/ConfigBuilders.h"
 #include "OSD/FileSystemPath.h"
 #include "GameLoader.h"
-#include "SDLInputSystem.h"
 #include "SDLIncludes.h"
-#include "Debugger/SupermodelDebugger.h"
-#include "Graphics/Legacy3D/Legacy3D.h"
 #include "Graphics/New3D/New3D.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
-#include "OSD/Audio.h"
-#include "Graphics/New3D/VBO.h"
 #include "Graphics/SuperAA.h"
-#include "Sound/MPEG/MpegAudio.h"
-
-#include <iostream>
-#include "Util/BMPFile.h"
-
-#include "Crosshair.h"
 #include "OSD/DefaultConfigFile.h"
-#include "Gui.h"
 
 // Before everything
 RETRO_API unsigned retro_api_version(void) {
@@ -54,6 +32,12 @@ RETRO_API void retro_get_system_info(struct retro_system_info *info) {
 retro_environment_t cb_env;
 RETRO_API void retro_set_environment(retro_environment_t cb) {
   cb_env = cb;
+}
+
+std::string config_path(const char *file) {
+  const char* system_path;
+  cb_env(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_path);
+  return Util::Format() << system_path << "/Supermodel/Config/" << file;
 }
 
 // Before run
@@ -86,8 +70,7 @@ CInputs *Inputs = nullptr;
 static Util::Config::Node s_runtime_config("Global");
 SDL_Window *r_window = nullptr;
 
-static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Supermodel.ini";
-static void WriteDefaultConfigurationFileIfNotPresent()
+static void WriteDefaultConfigurationFileIfNotPresent(std::string s_configFilePath)
 {
     // Test whether file exists by opening it
     FILE* fp = fopen(s_configFilePath.c_str(), "r");
@@ -268,8 +251,9 @@ RETRO_API void retro_init(void) {
   // Flag as DPI-aware, otherwise the window content might be scaled by some graphics drivers
   SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "system");
 
-  WriteDefaultConfigurationFileIfNotPresent();
-  Util::Config::FromINIFile(&s_runtime_config, s_configFilePath);
+  std::string config_file = config_path("Supermodel.ini");
+  WriteDefaultConfigurationFileIfNotPresent(config_file);
+  Util::Config::FromINIFile(&s_runtime_config, config_file);
   s_runtime_config.Set("New3DEngine", true, "Global");
   s_runtime_config.Set("QuadRendering", false, "Global");
   s_runtime_config.Set("MultiThreaded", false, "Core");
@@ -359,18 +343,12 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
 
   ROMSet rom_set;
 
-  const char* system_path;
-  cb_env(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_path);
-  std::string games_path = Util::Format() << system_path << "/Supermodel/Config/Games.xml";
-  GameLoader loader(games_path);
+  GameLoader loader(config_path("Games.xml"));
   if (loader.Load(&game, &rom_set, rgame->path))
     return false;
   if (Model3->LoadGame(game, rom_set) != Result::OKAY)
     return false;
   rom_set = ROMSet();  // free up this memory we won't need anymore
-
-  // Initialize audio system
-  SetAudioType(game.audio);
 
   // Initialize input
   InputSystem = std::shared_ptr<CInputSystem>(new CRetroInputSystem());
@@ -386,7 +364,7 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   SuperAA* superAA = new SuperAA(1, CRTcolor::None);
   superAA->Init(SUPERMODEL_W, SUPERMODEL_H);  // pass actual frame sizes here
   CRender2D *Render2D = new CRender2D(s_runtime_config);
-  IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+  IRender3D *Render3D = new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
 
   if (Result::OKAY != Render2D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID(), upscaleMode))
