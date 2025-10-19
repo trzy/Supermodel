@@ -279,7 +279,7 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set("Balance", 0.0f, "Sound", -100.f, 100.f);
   s_runtime_config.Set("BalanceLeftRight", 0.0f, "Sound", -100.f, 100.f);
   s_runtime_config.Set("BalanceFrontRear", 0.0f, "Sound", -100.f, 100.f);
-  s_runtime_config.Set("NbSoundChannels", 4, "Sound", 0, 0, { 1,2,4 });
+  s_runtime_config.Set("NbSoundChannels", 2, "Sound", 0, 0, { 1,2,4 });
   s_runtime_config.Set("SoundFreq", 57.6f, "Sound", 0.0f, 0.0f, { 57.524160f, 60.f }); // 60.0f? 57.524160f?
   s_runtime_config.Set("FlipStereo", false, "Sound");
   s_runtime_config.Set("EmulateDSB", true, "Sound");
@@ -369,9 +369,6 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
 
   // Initialize audio system
   SetAudioType(game.audio);
-  // XXX use libretro
-  if (Result::OKAY != OpenAudio(s_runtime_config))
-    return false;
 
   // Initialize input
   InputSystem = std::shared_ptr<CInputSystem>(new CRetroInputSystem());
@@ -405,7 +402,6 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
 }
 RETRO_API void retro_unload_game(void) {
   assert(game_loaded);
-  CloseAudio();
   delete Model3;
   delete Inputs;
   game_loaded = false;
@@ -429,6 +425,28 @@ RETRO_API void retro_run(void) {
   SDL_GL_SwapWindow(r_window);
   glReadPixels(0, 0, SUPERMODEL_W, SUPERMODEL_H, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
   cb_video_refresh(pixels, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W * 4);
+}
+
+// Audio
+const unsigned audio_max_samples = 735;
+int16_t audio_buffer[audio_max_samples * 2] = {0};
+int16_t fTo16(float f1, float f2) {
+  int32_t d = (int32_t)((f1 + f2)*0.5f);
+  if (d > INT16_MAX) {
+    d = INT16_MAX;
+  } else if (d < INT16_MIN) {
+    d = INT16_MIN;
+  }
+  return (int16_t)d;
+}
+bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, bool flipStereo) {
+  numSamples = std::min(numSamples, audio_max_samples);
+  for (unsigned i = 0; i < numSamples; i++) {
+    audio_buffer[i * 2] = fTo16(leftFrontBuffer[i], leftRearBuffer[i]);
+    audio_buffer[i * 2 + 1] = fTo16(rightFrontBuffer[i], rightRearBuffer[i]);
+  }
+  cb_audio_sample_batch(audio_buffer, numSamples);
+  return true;
 }
 
 // State
