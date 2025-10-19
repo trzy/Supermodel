@@ -350,6 +350,9 @@ Libraries
 bin/
 bin64/
 bin32/
+lib/
+lib64/
+lib32/
 obj/
 obj64/
 obj32/
