@@ -442,7 +442,7 @@ namespace Debugger
 				Print("Mising input name.\n");
 				return false;
 			}
-			::CInput *input = (*m_inputs)[token];
+			std::shared_ptr<CInput> input = (*m_inputs)[token];
 			if (input == NULL)
 			{
 				Print("No input with id or label '%s'.\n", token);
@@ -473,7 +473,7 @@ namespace Debugger
 				Print("Mising input id or label.\n");
 				return false;
 			}
-			::CInput *input = (*m_inputs)[token];
+			std::shared_ptr<CInput> input = (*m_inputs)[token];
 			if (input == NULL)
 			{
 				Print("No input with id or label '%s'.\n", token);
@@ -505,7 +505,7 @@ namespace Debugger
 				Print("Mising input id or label.\n");
 				return false;
 			}
-			::CInput *input = (*m_inputs)[token];
+			std::shared_ptr<CInput> input = (*m_inputs)[token];
 			if (input == NULL)
 			{
 				Print("No input with id or label '%s'.\n", token);
@@ -531,7 +531,7 @@ namespace Debugger
 				Print("Mising input id or label.\n");
 				return false;
 			}
-			CInput *input = (*m_inputs)[token];
+			std::shared_ptr<CInput> input = (*m_inputs)[token];
 			if (input == NULL)
 			{
 				Print("No input with id or label '%s'.\n", token);
@@ -594,7 +594,7 @@ namespace Debugger
 			return CConsoleDebugger::ProcessToken(token, cmd);
 	}
 
-	bool CSupermodelDebugger::InputIsValid(::CInput *input)
+	bool CSupermodelDebugger::InputIsValid(std::shared_ptr<CInput> input)
 	{
 		return input->IsUIInput() || (input->gameFlags & m_model3->GetGame().inputs);
 	}
@@ -610,7 +610,7 @@ namespace Debugger
 		size_t mappingWidth    = 0;
 		for (unsigned i = 0; i < m_inputs->Count(); i++)
 		{
-			::CInput *input = (*m_inputs)[i];
+			std::shared_ptr<CInput> input = (*m_inputs)[i];
 			if (!InputIsValid(input))
 				continue;
 
@@ -626,7 +626,7 @@ namespace Debugger
 		char mapping[21];
 		for (unsigned i = 0; i < m_inputs->Count(); i++)
 		{
-			::CInput *input = (*m_inputs)[i];
+			std::shared_ptr<CInput> input = (*m_inputs)[i];
 			if (!InputIsValid(input))
 				continue;
 

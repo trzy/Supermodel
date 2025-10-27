@@ -56,7 +56,7 @@ namespace Debugger
 		bool m_resetEmu;
 		char m_stateFile[255];
 
-		bool InputIsValid(CInput *input);
+		bool InputIsValid(std::shared_ptr<CInput> input);
 
 		void ListInputs();
 
