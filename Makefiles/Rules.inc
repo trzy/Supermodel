@@ -32,9 +32,11 @@
 
 OBJ_DIR = obj$(strip $(BITS))
 BIN_DIR = bin$(strip $(BITS))
+LIB_DIR = lib$(strip $(BITS))
 
 SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
 DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
+SUPERMODEL_DYLIB = supermodel_libretro$(PLATFORM_DYLIB_EXTENSION)
 
 
 ###############################################################################
@@ -62,6 +64,11 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
 endif
 
+# If libretro enabled, need to define SUPERMODEL_LIBRETRO
+ifeq ($(strip $(LIBRETRO)),1)
+	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_LIBRETRO
+endif
+
 # DEBUG will build a debug build but does *not* enable extra debug logging and
 # therefore does not modify SUPERMODEL_BUILD_FLAGS
 
@@ -87,8 +94,11 @@ endif
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
+ifeq ($(strip $(LIBRETRO)),1)
+LDFLAGS = $(PLATFORM_DYLIB_FLAG) -o $(LIB_DIR)/$(SUPERMODEL_DYLIB) $(PLATFORM_LDFLAGS) $(LDOPT)
+else
 LDFLAGS = -o $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_LDFLAGS) $(LDOPT)
-
+endif
 
 ###############################################################################
 # Source Files
@@ -207,6 +217,11 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 		Src/Debugger/CPU/Z80Debug.cpp
 endif
 
+ifeq ($(strip $(LIBRETRO)),1)
+	SRC_FILES += \
+		Src/OSD/SDL/LibRetro.cpp
+endif
+
 #
 # Sorted-path compile order
 #
@@ -228,7 +243,11 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
 #
+ifeq ($(strip $(LIBRETRO)),1)
+all:	$(LIB_DIR)/$(SUPERMODEL_DYLIB)
+else
 all:	$(BIN_DIR)/$(DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY)
+endif
 
 #
 # Supermodel3.com release targets: used only to create official builds stamped
@@ -314,13 +333,22 @@ $(BIN_DIR)/$(SUPERMODEL_BINARY):	$(BIN_DIR) $(OBJ_FILES)
 
 #
 # Disassembler binary (we assume $(LD) can also compile here, which is sloppy).
-# $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS) pulls in 
+# $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS) pulls in
 # Frameworks that must be downloaded.
 #
 $(BIN_DIR)/$(DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp $(PLATFORM_DIRS)
 	$(info --------------------------------------------------------------------------------)
 	$(info Building Disassembler  : $(BIN_DIR)/$(DISASSEMBLER_BINARY))
 	$(SILENT)$(LD) -o $(BIN_DIR)/$(DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
+	$(info --------------------------------------------------------------------------------)
+
+#
+# Supermodel dylib
+#
+$(LIB_DIR)/$(SUPERMODEL_DYLIB):	$(LIB_DIR) $(OBJ_FILES)
+	$(info --------------------------------------------------------------------------------)
+	$(info Dynamic Linking Supermodel     : $(LIB_DIR)/$(SUPERMODEL_DYLIB))
+	$(LD) $(OBJ_FILES) $(LDFLAGS)
 	$(info --------------------------------------------------------------------------------)
 
 #
@@ -337,6 +365,13 @@ $(BIN_DIR):
 $(OBJ_DIR): | $(PLATFORM_DIRS)
 	$(info Creating directory     : $(OBJ_DIR))
 	$(SILENT)mkdir $(OBJ_DIR)
+
+#
+# Library directory
+#
+$(LIB_DIR): | $(PLATFORM_DIRS)
+	$(info Creating directory     : $(LIB_DIR))
+	$(SILENT)mkdir $(LIB_DIR)
 
 
 ###############################################################################
