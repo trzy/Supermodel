@@ -212,6 +212,9 @@
 	#undef FASTCALL
 	#define FASTCALL
 //#endif
+
+extern int M68KIRQCallback(int irq);
+
 unsigned int FASTCALL M68KFetch8(unsigned int a);
 unsigned int FASTCALL M68KFetch16(unsigned int a);
 unsigned int FASTCALL M68KFetch32(unsigned int a);
