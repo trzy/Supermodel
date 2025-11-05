@@ -2088,7 +2088,7 @@ void CModel3::RunMainBoardFrame(void)
 	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned lineCycles     = frameCycles / 424;
-	unsigned pingPongCycles = lineCycles * (TileGen.ReadRegister(0x08) + 40);
+    unsigned pingPongCycles = lineCycles * (TileGen.ReadRegister(0x08) + 40 + 1);       // add 1 or lost world soft locks in the gun calibration menu. Perhaps ping_ping flips at the end of the line not the start.
     unsigned vBlankCycles   = lineCycles * 40;
 
 	// Games will start writing a new frame after the ping-pong buffers have been flipped, which is indicated by the
