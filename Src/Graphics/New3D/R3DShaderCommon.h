@@ -225,7 +225,7 @@ vec4 GetTextureValue()
 
 		blendFactor = ffL;
 	}
-	else if (microTexture && lod < -microTextureMinLOD)
+	else if (microTexture && lod < 0.0)
 	{
 		vec4 scaleIndex = vec4(2.0, 4.0, 16.0, 256.0);		// unsure if minLOD=4 has 256x scale? No games appear to use it
 		vec2 scale = (vec2(baseTexInfo.zw) / 128.0) * scaleIndex[int(microTextureMinLOD)];
@@ -234,8 +234,8 @@ vec4 GetTextureValue()
 		ivec2 tex2Pos = GetMicroTexturePos(microTextureID);
 		tex2Data = texBiLinear(textureBank[(texturePage+1)&1], ivec2(0), ivec2(128), tex2Pos, fsTexCoord * scale, 0);
 
-		blendFactor = -(lod + microTextureMinLOD) * 0.5;
-		blendFactor = clamp(blendFactor, 0.0, 0.5);
+		blendFactor = -lod * exp2(-microTextureMinLOD) * 0.5;
+		blendFactor = min(blendFactor, 0.5);
 	}
 
 	tex1Data = mix(tex1Data, tex2Data, blendFactor);
