@@ -63,7 +63,7 @@ jobs:
 
       - name: Build Supermodel
         run: |
-          make -f Makefiles/${{ matrix.makefile }} NET_BOARD=1 OPT="${OPT_INPUT:-"-O3"}" GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
+          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OPT="${OPT_INPUT:-"-O3"}" GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
           
       - name: Validate build
         run: |
