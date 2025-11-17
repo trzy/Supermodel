@@ -52,6 +52,35 @@ static Util::Config::Node NodeDiff(Util::Config::Node& config1, const Util::Conf
 }
 */
 
+static void PersistStartupScreenSelection(const std::string& configPath, const std::string& startupValue)
+{
+    Util::Config::Node diskConfig("Global");
+    bool loaded = false;
+
+    if (std::filesystem::exists(configPath))
+    {
+        if (!Util::Config::FromINIFile(&diskConfig, configPath))
+        {
+            loaded = true;
+        }
+    }
+    else
+    {
+        diskConfig = DefaultConfig();
+        loaded = true;
+    }
+
+    if (!loaded)
+    {
+        return;
+    }
+
+    // Persist StartupScreen in the Interface section with the same definition as default config
+    diskConfig.Set("StartupScreen", startupValue, "Interface", std::string(""), std::string(""), { std::string("Games"), std::string("Settings") });
+
+    Util::Config::WriteINIFile(configPath, diskConfig, "");
+}
+
 static void UpdateTempValues(Util::Config::Node& config, const std::string group, bool init)
 {
     for (auto it = config.begin(); it != config.end(); ++it)
@@ -570,7 +599,7 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return game;
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb)
+static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, bool& startupPreferenceChanged)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
@@ -579,140 +608,201 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
+    static bool startupTabPreferenceNeedsApply = true;
+    static std::string startupTabPreference = "Games";
+
+    if (startupTabPreferenceNeedsApply)
+    {
+        auto startupNode = config["StartupScreen"];
+        if (startupNode.Exists())
+        {
+            startupTabPreference = startupNode.ValueAs<std::string>();
+        }
+        else
+        {
+            startupTabPreference = "Games";
+        }
+    }
+
     ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
     ImGui::Begin("Custom Window", nullptr, ImGuiWindowFlags_NoTitleBar); // Explicitly set a window name
 
-    ImGui::BeginChild("TableRegion", ImVec2(0.0f, 200.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGuiTabItemFlags gamesTabFlags = 0;
+    ImGuiTabItemFlags settingsTabFlags = 0;
 
-    if (ImGui::BeginTable("Games", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+    if (startupTabPreferenceNeedsApply)
     {
-        ImGui::TableSetupColumn("Title");
-        ImGui::TableSetupColumn("Rom Name");
-        ImGui::TableSetupColumn("Version");
-        ImGui::TableSetupColumn("Year");
-        ImGui::TableSetupColumn("Stepping");
-
-        ImGui::TableHeadersRow();
-
-        int row = 0;
-        for (const auto& g : games) {
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("%s", g.second.title.c_str());
-            ImGui::TableSetColumnIndex(1);
-            if (ImGui::Selectable(g.second.name.c_str(), selectedGameIndex == row, ImGuiSelectableFlags_SpanAllColumns)) {
-                selectedGameIndex = row;
-            }
-
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-                exit = true;
-            }
-
-            ImGui::TableSetColumnIndex(2);
-            ImGui::Text("%s", g.second.version.c_str());
-            ImGui::TableSetColumnIndex(3);
-            ImGui::Text("%d", g.second.year);
-            ImGui::TableSetColumnIndex(4);
-            ImGui::Text("%s", g.second.stepping.c_str());
-
-            row++;
+        if (startupTabPreference == "Settings")
+        {
+            settingsTabFlags |= ImGuiTabItemFlags_SetSelected;
         }
-
-        ImGui::EndTable();
+        else
+        {
+            gamesTabFlags |= ImGuiTabItemFlags_SetSelected;
+        }
     }
 
-    ImGui::EndChild();
-
-    // draw button options
-    DrawButtonOptions(config, selectedGameIndex, exit, saveSettings);
-
-    // create a space
-    ImGui::Dummy(ImVec2(0.0f, 20.0f));
-
-    // draw the tabbed options
-    if (ImGui::BeginTabBar("MyTabBar", ImGuiTabBarFlags_FittingPolicyResizeDown)) {
-        if (ImGui::BeginTabItem("Core")) {
-            UpdateTempValues(config, "Core", true);
-            CreateControls(config, "Core");
-            UpdateTempValues(config, "Core", false);
-            ImGui::EndTabItem();
-            inputs = nullptr;
+    if (ImGui::BeginTabBar("MainViewTabs", ImGuiTabBarFlags_FittingPolicyResizeDown))
+    {
+        if (startupTabPreferenceNeedsApply)
+        {
+            startupTabPreferenceNeedsApply = false;
         }
-        if (ImGui::BeginTabItem("Video")) {
-            UpdateTempValues(config, "Video", true);
-            CreateControls(config, "Video");
-            UpdateTempValues(config, "Video", false);
-            ImGui::EndTabItem();
-            inputs = nullptr;
-        }
-        if (ImGui::BeginTabItem("Audio")) {
-            UpdateTempValues(config, "Sound", true);
-            CreateControls(config, "Sound");
-            UpdateTempValues(config, "Sound", false);
-            ImGui::EndTabItem();
-            inputs = nullptr;
-        }
-        if (ImGui::BeginTabItem("Networking")) {
-            UpdateTempValues(config, "Network", true);
-            CreateControls(config, "Network");
-            UpdateTempValues(config, "Network", false);
-            ImGui::EndTabItem();
-            inputs = nullptr;
-        }
-        if (ImGui::BeginTabItem("Misc")) {
-            UpdateTempValues(config, "Misc", true);
-            CreateControls(config, "Misc");
-            UpdateTempValues(config, "Misc", false);
-            ImGui::EndTabItem();
-            inputs = nullptr;
-        }
-        if (ImGui::BeginTabItem("ForceFeedback")) {
-            UpdateTempValues(config, "ForceFeedback", true);
-            CreateControls(config, "ForceFeedback");
-            UpdateTempValues(config, "ForceFeedback", false);
-            ImGui::EndTabItem();
-            inputs = nullptr;
-        }
-        if (ImGui::BeginTabItem("Sensitivity")) {
-            UpdateTempValues(config, "Sensitivity", true);
-            CreateControls(config, "Sensitivity");
-            UpdateTempValues(config, "Sensitivity", false);
-            if (ImGui::Button("Joystick calibration")) {
-                if (inputs == nullptr) {
-                    if (inputs == nullptr) {
-                        inputs = GetInputSystem(config, window);
-                    }
-                }
-                inputs->CalibrateJoysticks();
-                inputs->StoreToConfig(&config);
-            }
-            ImGui::EndTabItem();
-            inputs = nullptr;
-        }
-        if (ImGui::BeginTabItem("Key bindings")) {
 
-            if (inputs == nullptr) {
-                inputs = GetInputSystem(config, window);
-            }
+        if (ImGui::BeginTabItem("Games", nullptr, gamesTabFlags))
+        {
+            ImGui::BeginChild("TableRegion", ImVec2(0.0f, 0.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
 
-            auto inputList = inputs->GetGameInputs(GetGame(games,selectedGameIndex));
+            if (ImGui::BeginTable("Games", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
+            {
+                ImGui::TableSetupColumn("Title");
+                ImGui::TableSetupColumn("Rom Name");
+                ImGui::TableSetupColumn("Version");
+                ImGui::TableSetupColumn("Year");
+                ImGui::TableSetupColumn("Stepping");
 
-            if (ImGui::BeginTable("KeyTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-
-                ImGui::TableSetupColumn("Group");
-                ImGui::TableSetupColumn("Action");
-                ImGui::TableSetupColumn("Keys");
                 ImGui::TableHeadersRow();
 
-                AddKeys(config, kb, inputList);
+                int row = 0;
+                for (const auto& g : games) {
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("%s", g.second.title.c_str());
+                    ImGui::TableSetColumnIndex(1);
+                    if (ImGui::Selectable(g.second.name.c_str(), selectedGameIndex == row, ImGuiSelectableFlags_SpanAllColumns)) {
+                        selectedGameIndex = row;
+                    }
+
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                        exit = true;
+                    }
+
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::Text("%s", g.second.version.c_str());
+                    ImGui::TableSetColumnIndex(3);
+                    ImGui::Text("%d", g.second.year);
+                    ImGui::TableSetColumnIndex(4);
+                    ImGui::Text("%s", g.second.stepping.c_str());
+
+                    row++;
+                }
 
                 ImGui::EndTable();
             }
-            
+
+            ImGui::EndChild();
+            ImGui::Dummy(ImVec2(0.0f, 20.0f));
+            DrawButtonOptions(config, selectedGameIndex, exit, saveSettings);
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Settings", nullptr, settingsTabFlags))
+        {
+            if (ImGui::BeginTabBar("MyTabBar", ImGuiTabBarFlags_FittingPolicyResizeDown)) {
+                if (ImGui::BeginTabItem("Core")) {
+                    UpdateTempValues(config, "Core", true);
+                    CreateControls(config, "Core");
+                    UpdateTempValues(config, "Core", false);
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Video")) {
+                    UpdateTempValues(config, "Video", true);
+                    CreateControls(config, "Video");
+                    UpdateTempValues(config, "Video", false);
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Audio")) {
+                    UpdateTempValues(config, "Sound", true);
+                    CreateControls(config, "Sound");
+                    UpdateTempValues(config, "Sound", false);
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Networking")) {
+                    UpdateTempValues(config, "Network", true);
+                    CreateControls(config, "Network");
+                    UpdateTempValues(config, "Network", false);
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Interface")) {
+                    const char* startupOptions[] = { "Games", "Settings" };
+                    std::string startupScreenValue = config["StartupScreen"].ValueAs<std::string>();
+                    int startupSelection = (startupScreenValue == "Settings") ? 1 : 0;
+
+                    if (ImGui::Combo("Startup screen", &startupSelection, startupOptions, IM_ARRAYSIZE(startupOptions))) {
+                        const std::string newValue = startupOptions[startupSelection];
+                        config.Set("StartupScreen", newValue);
+                        startupTabPreference = newValue;
+                        startupTabPreferenceNeedsApply = true;
+                        startupPreferenceChanged = true;
+                    }
+
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Misc")) {
+                    UpdateTempValues(config, "Misc", true);
+                    CreateControls(config, "Misc");
+                    UpdateTempValues(config, "Misc", false);
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("ForceFeedback")) {
+                    UpdateTempValues(config, "ForceFeedback", true);
+                    CreateControls(config, "ForceFeedback");
+                    UpdateTempValues(config, "ForceFeedback", false);
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Sensitivity")) {
+                    UpdateTempValues(config, "Sensitivity", true);
+                    CreateControls(config, "Sensitivity");
+                    UpdateTempValues(config, "Sensitivity", false);
+                    if (ImGui::Button("Joystick calibration")) {
+                        if (inputs == nullptr) {
+                            if (inputs == nullptr) {
+                                inputs = GetInputSystem(config, window);
+                            }
+                        }
+                        inputs->CalibrateJoysticks();
+                        inputs->StoreToConfig(&config);
+                    }
+                    ImGui::EndTabItem();
+                    inputs = nullptr;
+                }
+                if (ImGui::BeginTabItem("Key bindings")) {
+
+                    if (inputs == nullptr) {
+                        inputs = GetInputSystem(config, window);
+                    }
+
+                    auto inputList = inputs->GetGameInputs(GetGame(games,selectedGameIndex));
+
+                    if (ImGui::BeginTable("KeyTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+
+                        ImGui::TableSetupColumn("Group");
+                        ImGui::TableSetupColumn("Action");
+                        ImGui::TableSetupColumn("Keys");
+                        ImGui::TableHeadersRow();
+
+                        AddKeys(config, kb, inputList);
+
+                        ImGui::EndTable();
+                    }
+                    
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
+            }
+
             ImGui::EndTabItem();
         }
 
@@ -817,6 +907,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
     KeyBindState kb{};
     bool exit = false;
     SDL_Event event{};
+    bool startupPreferenceChanged = false;
 
     while (running) {
 
@@ -825,11 +916,13 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
             ImGui_ImplSDL2_ProcessEvent(&event);
 
             if (event.type == SDL_QUIT) {
-                goto exitNoSave;
+                // Treat window close like a normal exit so settings (including StartupScreen)
+                // get a chance to be written out.
+                exit = true;
             }
         }
 
-        GUI(io, config, games, selectedGame, exit, saveSettings, window, inputs, kb);
+        GUI(io, config, games, selectedGame, exit, saveSettings, window, inputs, kb, startupPreferenceChanged);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
@@ -847,6 +940,9 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
     
     if (saveSettings) {
         Util::Config::WriteINIFile(configPath, config, "");
+    }
+    else if (startupPreferenceChanged) {
+        PersistStartupScreenSelection(configPath, config["StartupScreen"].ValueAs<std::string>());
     }
 
 exitNoSave:

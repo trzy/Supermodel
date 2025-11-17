@@ -1524,6 +1524,7 @@ Util::Config::Node DefaultConfig()
   config.Set("ForceFeedback", false, "ForceFeedback");
   
   // Platform-specific/UI
+  config.Set("StartupScreen", std::string("Games"), "Interface", std::string(""), std::string(""), { std::string("Games"), std::string("Settings") });
   config.Set("New3DEngine", true, "Video");
   config.Set("QuadRendering", false, "Video");
   config.Set("XResolution", 496, "Video");
