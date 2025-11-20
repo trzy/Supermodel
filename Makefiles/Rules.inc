@@ -287,7 +287,7 @@ pkg/path: set_version
 # Sets a VERSION variable based on the git sha.
 #
 set_version:
-	$(eval VERSION = $(strip $(subst ',,0.3a-git-$(shell git rev-parse --short HEAD --sq))))
+	$(eval VERSION = $(strip $(subst ',,0.3a-$(shell git show -s --format=%cd --date=format:%Y%m%d HEAD)-git-$(shell git rev-parse --short HEAD))))
 	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
 
 #
