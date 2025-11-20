@@ -348,11 +348,11 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 void R3DShader::SetViewportUniforms(const Viewport *vp)
 {
 	//didn't bother caching these, they don't get frequently called anyway
-	glUniform1f(m_locFogDensity, vp->fogParams[3]);
-	glUniform1f(m_locFogStart, vp->fogParams[4]);
-	glUniform3fv(m_locFogColour, 1, vp->fogParams);
-	glUniform1f(m_locFogAttenuation, vp->fogParams[5]);
-	glUniform1f(m_locFogAmbient, vp->fogParams[6]);
+	glUniform1f(m_locFogDensity, vp->fogDensity);
+	glUniform1f(m_locFogStart, vp->fogStart);
+	glUniform3fv(m_locFogColour, 1, vp->fogColour);
+	glUniform1f(m_locFogAttenuation, vp->fogAttenuation);
+	glUniform1f(m_locFogAmbient, vp->fogAmbient);
 
 	glUniform3fv(m_locLighting, 2, vp->lightingParams);
 	glUniform1i(m_locSunClamp, vp->sunClamp);

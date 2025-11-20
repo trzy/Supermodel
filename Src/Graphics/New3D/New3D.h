@@ -295,8 +295,6 @@ private:
 	R3DFrameBuffers m_r3dFrameBuffers;
 	GLuint m_aaTarget;						// optional, maybe zero
 
-	int m_currentPriority;
-
 	struct
 	{
 		float bnlu;

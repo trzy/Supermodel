@@ -24,7 +24,6 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_vao(0),
 	m_aaTarget(0),
 	m_LODBlendTable(nullptr),
-	m_currentPriority(0),
 	m_matrixBasePtr(nullptr),
 	m_xRatio(0),
 	m_yRatio(0),
@@ -190,6 +189,9 @@ void CNew3D::DrawScrollFog()
 	// Fogging seems to be constrained to whatever the viewport is that is set.
 	// Scroll fog needs a density or start value to work, but these can come from another viewport if the fog colour is the same
 
+	// For fullscreen viewports I am fairly certain the fogging aspect is drawn at the mixer level, not directly to the frame buffer, otherwise alpha can't work correctly.
+	// For spotlight on fog, I think it must be drawn with the 3d h/w. Think only ECA uses this, maybe ocean hunter
+
 	Node* nodePtr = nullptr;
 
 	for (int i = 0; i < 4 && !nodePtr; i++) {
@@ -219,22 +221,38 @@ void CNew3D::DrawScrollFog()
 
 		for (auto& n : m_nodes) {
 
-			if (nodePtr->viewport.fogParams[0] == n.viewport.fogParams[0] &&
-				nodePtr->viewport.fogParams[1] == n.viewport.fogParams[1] &&
-				nodePtr->viewport.fogParams[2] == n.viewport.fogParams[2])
+			if (nodePtr->viewport.fogColour[0] == n.viewport.fogColour[0] &&
+				nodePtr->viewport.fogColour[1] == n.viewport.fogColour[1] &&
+				nodePtr->viewport.fogColour[2] == n.viewport.fogColour[2])
 			{
-				// check to see if we have a fog start, density or spotlight on fog value. All of these effectively enable fog .
 
-				if (n.viewport.fogParams[3] > 0.0f || n.viewport.fogParams[4] > 0.0f || n.viewport.fogParams[5] > 0.0f || n.viewport.scrollAtt > 0.0f) {
+				// spotlight on fog is disabled if colour = black
+				bool spotOnFogEnabled = false;
+				for (auto c : n.viewport.spotFogColor) {
+					if (c > 0.0f) {
+						spotOnFogEnabled = true;
+						break;
+					}
+				}
 
-					float rgba[4];
+				bool fog			= n.viewport.fogDensity > 0.0f || n.viewport.fogStart > 0.0f || n.viewport.scrollAtt > 0.0f;
+				bool spotlightFog	= n.viewport.fogAttenuation > 0.0f && spotOnFogEnabled;
+
+				if (fog || spotlightFog) {
+
 					auto& vp = nodePtr->viewport;
-					rgba[0] = vp.fogParams[0];
-					rgba[1] = vp.fogParams[1];
-					rgba[2] = vp.fogParams[2];
+					float rgba[4];
+					
+					rgba[0] = vp.fogColour[0];
+					rgba[1] = vp.fogColour[1];
+					rgba[2] = vp.fogColour[2];
 					rgba[3] = vp.scrollFog;
+
+					float fogAttentuation = (fog && spotlightFog) ? 0.0f : n.viewport.fogAttenuation;	// if regular fog is enabled h/w seems to only apply this and skip the spotlight on fog (ECA)
+
 					glViewport(vp.x, vp.y, vp.width, vp.height);
-					m_r3dScrollFog.DrawScrollFog(rgba, n.viewport.scrollAtt, n.viewport.fogParams[6], n.viewport.spotFogColor, n.viewport.spotEllipse);
+
+					m_r3dScrollFog.DrawScrollFog(rgba, fogAttentuation, n.viewport.fogAmbient, n.viewport.spotFogColor, n.viewport.spotEllipse);
 					break;
 				}
 			}
@@ -249,6 +267,7 @@ void CNew3D::DrawAmbientFog()
 	// The logic is something like tileGenColour * fogAmbient
 	// If fogAmbient = 1.0 it's a no-op. Lower values darken the image
 	// Does this work with scroll fog? Well technically scroll fog already takes into account the fog ambient as it darkens the fog colour
+	// Like scroll fog I am sure this works at the mixer level, rather than drawing into the frame buffer.
 
 	// lemans24 every viewport will set ambient fog, scroll attentuation is sometimes set (for every viewport) for explosion effects from car exhaust. So has no effect on ambient fog
 	// otherwise we'll make the ambient fog flash 
@@ -273,15 +292,19 @@ void CNew3D::DrawAmbientFog()
 			if (vp.priority == i) {
 
 				hasPriority = true;
-
-				// check to see if we have a fog density or fog start
-				if (vp.fogParams[3] <= 0.0f && vp.fogParams[4] <= 0.0f) {
+				
+				if (vp.scrollFog > 0.0f) {
 					continue;
 				}
 
-				if (vp.fogParams[6] < fogAmbient) {
+				// if we don't have a fog density or fog start skip this viewport
+				if (vp.fogDensity <= 0.0f && vp.fogStart <= 0.0f) {
+					continue;
+				}
+
+				if (vp.fogAmbient < fogAmbient) {
 					nodePtr = &n;
-					fogAmbient = vp.fogParams[6];
+					fogAmbient = vp.fogAmbient;
 				}
 			}
 		}
@@ -702,7 +725,7 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	}
 
 	// node discard
-	if ((0x300 & node[0]) == 0x300) {						// why 2 bits for node discard? Sega rally uses this
+	if ((0x300 & node[0]) == 0x300) {						// This allows to set node transparency. If both bits are set object is completely invisible.
 		return;
 	}
 
@@ -1050,10 +1073,9 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// get pointer to its viewport
 		Viewport* vp = &m_nodes.back().viewport;
 
-		vp->priority = (vpnode[0] >> 3) & 0x3;
-		vp->select = (vpnode[0] >> 8) & 0x3;
-		vp->number = (vpnode[0] >> 10);
-		m_currentPriority = vp->priority;
+		vp->priority	= (vpnode[0] >> 3) & 0x3;
+		vp->select		= (vpnode[0] >> 8) & 0x3;
+		vp->number		= (vpnode[0] >> 10);
 
 		// Fetch viewport parameters
 		vp->vpX			= ((vpnode[0x1A] & 0xFFFF) * (float)(1.0 / 16.0)) ;		// viewport X (12.4 fixed point)
@@ -1142,19 +1164,18 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->losPosY = (int)(((vpnode[0x1c] >> 16) / 16.0f) + 0.5f);						// y position 0 starts from the top
 
 		// Fog
-		vp->fogParams[0] = (float)((vpnode[0x22] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog color R
-		vp->fogParams[1] = (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
-		vp->fogParams[2] = (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
-		vp->fogParams[3] = std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
-		vp->fogParams[4] = (float)(INT16)(vpnode[0x25] & 0xFFFF) * (float)(1.0 / 255.0);	// fog start
+		vp->fogColour[0]	= (float)((vpnode[0x22] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog color R
+		vp->fogColour[1]	= (float)((vpnode[0x22] >> 8) & 0xFF) * (float)(1.0 / 255.0);	// fog color G
+		vp->fogColour[2]	= (float)((vpnode[0x22] >> 0) & 0xFF) * (float)(1.0 / 255.0);	// fog color B
+		vp->fogDensity		= std::abs(Util::Uint32AsFloat(vpnode[0x23]));					// fog density	- ocean hunter uses negative values, but looks the same
+		vp->fogStart		= (float)(INT16)(vpnode[0x25] & 0xFFFF) * (float)(1.0 / 255.0);	// fog start
+		vp->fogAttenuation	= (float)((vpnode[0x24] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog attenuation
+		vp->fogAmbient		= (float)((vpnode[0x25] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog ambient
 
 		// Avoid Infinite and NaN values for Star Wars Trilogy
-		if (std::isinf(vp->fogParams[3]) || std::isnan(vp->fogParams[3])) {
-			for (int i = 0; i < 7; i++) vp->fogParams[i] = 0.0f;
+		if (std::isinf(vp->fogDensity) || std::isnan(vp->fogDensity)) {
+			vp->fogDensity = 0;
 		}
-
-		vp->fogParams[5] = (float)((vpnode[0x24] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog attenuation
-		vp->fogParams[6] = (float)((vpnode[0x25] >> 16) & 0xFF) * (float)(1.0 / 255.0);	// fog ambient
 
 		vp->scrollFog = (float)(vpnode[0x20] & 0xFF) * (float)(1.0 / 255.0);				// scroll fog
 		vp->scrollAtt = (float)(vpnode[0x24] & 0xFF) * (float)(1.0 / 255.0);				// scroll attenuation
