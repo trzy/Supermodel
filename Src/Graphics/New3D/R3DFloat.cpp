@@ -2,6 +2,8 @@
 #include "R3DFloat.h"
 #include "Util/BitCast.h"
 
+#include <cstdint>
+
 float R3DFloat::GetFloat16(UINT16 f)
 {
 	return ToFloat(Convert16BitProFloat(f));
