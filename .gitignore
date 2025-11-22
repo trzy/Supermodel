@@ -29,6 +29,7 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+[Ll]ib/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -349,6 +350,9 @@ Libraries
 bin/
 bin64/
 bin32/
+lib/
+lib64/
+lib32/
 obj/
 obj64/
 obj32/
