@@ -1,7 +1,7 @@
 <!--
   Supermodel
   A Sega Model 3 Arcade Emulator.
-  Copyright 2003-2024 The Supermodel Team
+  Copyright 2003-2025 The Supermodel Team
 
   Music.xml
 
@@ -43,12 +43,12 @@
     <track mpeg_rom_start_offset="0x003cddae" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Expert, Dennis (initial start) -->
     <track mpeg_rom_start_offset="0x003fe3ae" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Expert, Dennis (loop point) -->
     <track mpeg_rom_start_offset="0x00d80e02" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Advertise, Mitsuyoshi -->
-    <track mpeg_rom_start_offset="0x005177b0" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Beginner, Dennis (initial start) -->
-    <track mpeg_rom_start_offset="0x0051aff0" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Beginner, Dennis (loop point) -->
-    <track mpeg_rom_start_offset="0x007cd0b4" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Advanced, Dennis (initial start) -->
-    <track mpeg_rom_start_offset="0x007fe674" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Advanced, Dennis (loop point) -->
-    <track mpeg_rom_start_offset="0x008df436" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Expert, Dennis (initial start) -->
-    <track mpeg_rom_start_offset="0x008df676" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Expert, Dennis (loop point) -->
+    <track mpeg_rom_start_offset="0x005177b0" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Beginner, Mitsuyoshi (initial start) -->
+    <track mpeg_rom_start_offset="0x0051aff0" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Beginner, Mitsuyoshi (loop point) -->
+    <track mpeg_rom_start_offset="0x007cd0b4" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Advanced, Mitsuyoshi (initial start) -->
+    <track mpeg_rom_start_offset="0x007fe674" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Advanced, Mitsuyoshi (loop point) -->
+    <track mpeg_rom_start_offset="0x008df436" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Expert, Mitsuyoshi (initial start) -->
+    <track mpeg_rom_start_offset="0x008df676" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Expert, Mitsuyoshi (loop point) -->
     <track mpeg_rom_start_offset="0x00a29978" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- How To (initial start) -->
     <track mpeg_rom_start_offset="0x00a50438" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- How To (loop point) -->
     <track mpeg_rom_start_offset="0x00b1427a" filepath="Rick Astley - Never Gonna Give You Up - 32 KHz.mp3" />  <!-- Selector (initial start)  -->
