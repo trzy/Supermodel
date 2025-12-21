@@ -16,7 +16,8 @@ The aim of the Supermodel project is to develop an emulator that is both accurat
 
 ## How To Get It
 
-Windows builds are updated automatically and available on the official Supermodel [download page](https://supermodel3.com/Download.html). Linux and macOS users currently have to build from source.
+Automated builds for Windows, macOS and Linux are now available here on GitHub.  
+Check out the releases page [here](https://github.com/trzy/Supermodel/releases).
 
 ## Build Instructions
 
