@@ -134,7 +134,7 @@ namespace Util
 
       Variant tempValue;        // kludge for the GUI because we need somewhere to store the val
 
-      std::string GetGroup() { return m_group; }
+      const std::string& GetGroup() { return m_group; }
       bool HasMinMax() { return m_min != m_max; }
       Variant GetMin() { return m_min; }
       Variant GetMax() { return m_max; }

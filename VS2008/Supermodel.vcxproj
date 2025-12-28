@@ -120,6 +120,9 @@ xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
 xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
@@ -154,6 +157,9 @@ xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
 xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -172,11 +178,11 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
       <AdditionalDependencies>opengl32.lib;glu32.lib;WbemUuid.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName).exe</OutputFile>
       <AdditionalLibraryDirectories>$(DXSDK_DIR)\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
       <Command>if not exist "$(TargetDir)Config" mkdir "$(TargetDir)Config"
@@ -187,6 +193,9 @@ xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
 xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
@@ -224,6 +233,9 @@ xcopy /D /Y "$(ProjectDir)..\Docs\*" "$(TargetDir)"
 xcopy /D /Y "$(ProjectDir)..\Config\*" "$(TargetDir)Config"
 xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </PostBuildEvent>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="Musashi68K\Musashi68K.vcxproj">

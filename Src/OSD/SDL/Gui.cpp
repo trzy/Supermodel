@@ -45,12 +45,56 @@ Quick description on the GUI stuff
  - Per game options. Need some code to get a diff of possible configs I think.
 */
 
-/*
-static Util::Config::Node NodeDiff(Util::Config::Node& config1, const Util::Config::Node& config2)
+
+static void WriteGameNode(Util::Config::Node& baseNode, const Util::Config::Node& diffNode, Util::Config::Node& writeNode, const std::string& group)
 {
-    //config1.
+    for (const auto& n : baseNode) {
+
+        if (n.IsLeaf() && n.Exists()) {
+
+            auto& key = n.Key();
+            auto  val = n.GetValue();
+
+            if (val) {
+
+                auto vRange = val->GetValueRange();
+
+                if (vRange->GetGroup() != group) {
+                    continue;
+                }
+
+                auto s1 = baseNode[key].ValueAs<std::string>();
+                auto s2 = diffNode[key].ValueAs<std::string>();
+
+                if (s1 != s2) {
+                    writeNode[key] = s2;
+                }
+            }
+        }
+    }
 }
-*/
+
+static std::string NodeToString(Util::Config::Node& config)
+{
+    std::string s;
+
+    for (const auto& n : config) {
+
+        if (n.IsLeaf() && n.Exists()) {
+
+            auto& key = n.Key();
+
+            auto val = config[key].ValueAs<std::string>();
+
+            s += key;
+            s += " ";
+            s += val;
+            s += "\n";
+        }
+    }
+
+    return s;
+}
 
 static void UpdateTempValues(Util::Config::Node& config, const std::string group, bool init)
 {
@@ -235,7 +279,7 @@ static void CreateControls(Util::Config::Node& config, const std::string group)
                             }
                             else {
                                 char buffer[256];
-                                strcpy(buffer, p);
+                                std::strcpy(buffer, p);
                                 ImGui::InputText(key.c_str(), buffer, IM_ARRAYSIZE(buffer));
                                 option = buffer;     // update temp buffer
                             }
@@ -510,7 +554,10 @@ static void DrawButtonOptions(Util::Config::Node& config, int selectedGameIndex,
         }
 
         static bool perGameSettings = false;
-        ImGui::Checkbox("Per game settings", &perGameSettings);
+        bool perGamesSettingsCopy = perGameSettings;
+        ImGui::Checkbox("Per game settings", &perGamesSettingsCopy);
+
+
 
         if (disabled) {
             ImGui::PopStyleVar();
@@ -737,13 +784,24 @@ static std::string GetRomPath(int selectedGame, const std::map<std::string, Game
         int index = 0;
         for (auto& g : games) {
             if (selectedGame == index) {
-                return (std::filesystem::path("roms") / (g.second.name + ".zip")).string();        // todo config rom directory? File dialog will be a bit more tricky cross platform but we can specifiy edit box for manual path entry        
+                return (std::filesystem::path("ROMs") / (g.second.name + ".zip")).string();        // todo config rom directory? File dialog will be a bit more tricky cross platform but we can specifiy edit box for manual path entry        
             }
             index++;
         }
     }
 
     return {};  // no game
+}
+
+static float GetDPIScale(SDL_Window* window)
+{
+    int displayIndex = SDL_GetWindowDisplayIndex(window);
+    float ddpi = 96.0f; // Default fallback
+    if (SDL_GetDisplayDPI(displayIndex, &ddpi, nullptr, nullptr) != 0) {
+        SDL_Log("Failed to get DPI: %s", SDL_GetError());
+    }
+
+    return ddpi / 96.0f;
 }
 
 std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Node& config)
@@ -766,7 +824,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_INPUT_FOCUS);
 
     // Create SDL window
-    SDL_Window* window = SDL_CreateWindow("SuperSetup", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, window_flags);
+    SDL_Window* window = SDL_CreateWindow("SuperSetup", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 950, 600, window_flags);
     if (!window) {
         std::cerr << "Window could not be created! Error: " << SDL_GetError() << std::endl;
         SDL_Quit();
@@ -792,12 +850,18 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
+    io.Fonts->AddFontDefaultVector();
+
     ImGui::GetIO().IniFilename = nullptr;                      // we don't need to save window positions between runs
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
     //ImGui::StyleColorsClassic();
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    float scale = GetDPIScale(window);
+    //style.ScaleAllSizes(scale);
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
