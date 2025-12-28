@@ -289,23 +289,25 @@ static UINT32 ppc_rotate_mask[32][32];
 
 static void ppc_change_pc(UINT32 newpc)
 {
-	if (ppc.cur_fetch.start <= newpc && newpc <= ppc.cur_fetch.end)
+	UINT32 offset	= newpc - ppc.cur_fetch.start;		//  unsigned wrap around can happen, that's defined behavour 
+	UINT32 range	= ppc.cur_fetch.end - ppc.cur_fetch.start;
+
+	if (offset <= range)
 	{
-		ppc.op = &ppc.cur_fetch.ptr[(newpc-ppc.cur_fetch.start)/4];
-//		ppc.op = (UINT32 *)((void *)ppc.cur_fetch.ptr + (UINT32)(newpc - ppc.cur_fetch.start));
+		ppc.op = &ppc.cur_fetch.ptr[offset / 4];
 		return;
 	}
 
-	for(UINT i = 0; ppc.fetch[i].ptr != NULL; i++)
+	for(UINT32 i = 0; ppc.fetch[i].ptr != NULL; i++)
 	{
-		if (ppc.fetch[i].start <= newpc && newpc <= ppc.fetch[i].end)
-		{
-			ppc.cur_fetch.start = ppc.fetch[i].start;
-			ppc.cur_fetch.end = ppc.fetch[i].end;
-			ppc.cur_fetch.ptr = ppc.fetch[i].ptr;
+		offset	= newpc - ppc.fetch[i].start;
+		range	= ppc.fetch[i].end - ppc.fetch[i].start;
 
-//			ppc.op = (UINT32 *)((UINT32)ppc.cur_fetch.ptr + (UINT32)(newpc - ppc.cur_fetch.start));
-			ppc.op = &ppc.cur_fetch.ptr[(newpc-ppc.cur_fetch.start)/4];			
+		if (offset <= range)
+		{
+			ppc.cur_fetch = ppc.fetch[i];
+
+			ppc.op = &ppc.cur_fetch.ptr[offset / 4];
 			return;
 		}
 	}
@@ -417,7 +419,7 @@ static inline UINT32 check_condition_code(UINT32 bo, UINT32 bi)
 	UINT32 bo2 = (bo & 0x04) ? 1 : 0;
 	UINT32 bo3 = (bo & 0x02) ? 1 : 0;
 
-	if( bo2 == 0 )
+	if (bo2 == 0)
 		--CTR;
 
 	UINT32 ctr_ok = bo2 | ((CTR != 0) ^ bo3);
