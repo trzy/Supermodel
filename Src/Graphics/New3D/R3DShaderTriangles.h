@@ -135,6 +135,7 @@ vec4 GetTextureValue();
 void WriteOutputs(vec4 colour, int layer);
 float Sqr(float a);
 float SqrLength(vec2 a);
+void ComputeSpotlight(vec4 spotEllipse, vec2 spotRange, float viewZ, out float lobeEffect, out float lobeFogEffect);
 
 void main()
 {
@@ -164,38 +165,9 @@ void main()
 		discard;
 	}
 
-	float ellipse;
-	ellipse = SqrLength((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw); // decay rate = square of distance from center
-	ellipse = 1.0 - ellipse;      // invert
-	ellipse = max(0.0, ellipse);  // clamp
-
-	// Compute spotlight and apply lighting
-	float enable, absExtent, d, inv_r, range;
-
-	// start of spotlight
-	enable = step(spotRange.x, -fsViewVertex.z);
-
-	if (spotRange.y == 0.0) {
-		range = 0.0;
-	}
-	else {
-		absExtent = abs(spotRange.y);
-
-		d = spotRange.x + absExtent + fsViewVertex.z;
-		d = min(d, 0.0);
-
-		// slope of decay function
-		inv_r = 1.0 / (1.0 + absExtent);
-
-		// inverse-linear falloff
-		// Reference: https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
-		// y = 1 / (d/r + 1)^2
-		range = 1.0 / Sqr(d * inv_r - 1.0);
-		range *= enable;
-	}
-
-	float lobeEffect = range * ellipse;
-	float lobeFogEffect = enable * ellipse;
+	float lobeEffect;
+	float lobeFogEffect;
+	ComputeSpotlight(spotEllipse, spotRange, fsViewVertex.z, lobeEffect, lobeFogEffect);
 
 	if (lightEnabled) {
 		vec3   lightIntensity;

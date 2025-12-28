@@ -305,6 +305,50 @@ float SqrLength(vec2 a)
 	return a.x*a.x + a.y*a.y;
 }
 
+// Computes spotlight lobe + fog lobe effects
+// ------------------------------------------------------------
+// Inputs:
+//   spotEllipse   - vec4(center.xy, radius.xy)
+//   spotRange     - vec2(startZ, extent)
+//   viewZ         - fsViewVertex.z
+//
+// Outputs:
+//   lobeEffect    - spotlight intensity
+//   lobeFogEffect - spotlight on fog intensity
+// ------------------------------------------------------------
+void ComputeSpotlight(vec4 spotEllipse, vec2 spotRange, float viewZ,
+    out float lobeEffect, 
+	out float lobeFogEffect)
+{
+    // Ellipse falloff
+    float ellipse = SqrLength((gl_FragCoord.xy - spotEllipse.xy) / spotEllipse.zw);
+    ellipse = 1.0 - ellipse;
+    ellipse = max(0.0, ellipse);
+
+    // Spotlight enable
+    float enable = step(spotRange.x, -viewZ);
+
+    // Spotlight range falloff
+    float range = 0.0;
+
+    if (spotRange.y != 0.0) {
+        float absExtent = abs(spotRange.y);
+
+        float d = spotRange.x + absExtent + viewZ;
+        d = min(d, 0.0);
+
+        float inv_r = 1.0 / (1.0 + absExtent);
+
+        // inverse-linear falloff
+        range = 1.0 / Sqr(d * inv_r - 1.0);
+        range *= enable;
+    }
+
+    // Final outputs
+    lobeEffect    = range * ellipse;
+    lobeFogEffect = enable * ellipse;
+}
+
 void WriteOutputs(vec4 colour, int layer)
 {
 	vec4 blank = vec4(0.0);
