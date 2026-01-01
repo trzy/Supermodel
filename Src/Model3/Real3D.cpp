@@ -181,21 +181,10 @@ void CReal3D::LoadState(CBlockFile *SaveState)
 ******************************************************************************/
 
 
-void CReal3D::BeginVBlank(int statusCycles)
+void CReal3D::BeginVBlank()
 {
-  // Calculate point at which status bit should change value.  Currently the same timing is used for both the status bit in ReadRegister
-  // and in WriteDMARegister32/ReadDMARegister32, however it may be that they are completely unrelated.  It appears that step 1.x games
-  // access just the former while step 2.x access the latter.  It is not known yet what this bit/these bits actually represent.
-	statusChange = ppc_total_cycles() + statusCycles;
-	m_evenFrame = !m_evenFrame;
-    m_pingPong = 0;
-
-    if (commandPortWritten) {
-        FlushTextures();
-        commandPortWritten = false;
-    }
-
-    Render3D->SetBlockCulling((m_modeword[static_cast<int>(CASIC::Name::Mercury)] & 4) == 4);
+    // need to grab a copy at the start of the frame so we can see if it's flipped
+    m_pingPongCopy = m_pingPong;
 
     // sync any update buffers
     SyncBufferedMem(m_highRamUpdateBlock, cullingRAMLo, cullingRAMHi, cullingRAMHiDirty);
@@ -204,11 +193,31 @@ void CReal3D::BeginVBlank(int statusCycles)
     // update write pointers
     m_polyUpdateBlock = nullptr;
     m_highRamUpdateBlock = nullptr;
+
+    // update any textures if they were written after the ping_pong time.
+    if (commandPortWritten) {
+        FlushTextures();
+    }
+
+    // check to see if a complete frame was written after the ping_pong time
+    if (m_tilegenDrawFrame && commandPortWritten) {
+        DrawFrame();
+    }
 }
 
 void CReal3D::EndVBlank(void)
 {
   error = false;  // clear error (just needs to be done once per frame)
+}
+
+void CReal3D::FlipPingPongBit(void)
+{
+    m_pingPong = !m_pingPong;
+
+    // this is the last time writes can happen for this frame, any writes after are buffered for the next frame
+    // so we reset drawing flags here
+    m_tilegenDrawFrame = false;
+    commandPortWritten = false;
 }
 
 uint32_t CReal3D::SyncSnapshots(void)
@@ -219,6 +228,8 @@ uint32_t CReal3D::SyncSnapshots(void)
   // Update read-only queue
   queuedUploadTexturesRO = queuedUploadTextures;
   queuedUploadTextures.clear();
+
+  Render3D->SetBlockCulling(m_blockCullingRO);
 
   // Update read-only snapshots
   return UpdateSnapshots(false);
@@ -327,22 +338,42 @@ void CReal3D::FlushTextures()
     fifoIdx = 0;
 }
 
-// it would be better not to poll this and to flip the state after X frame cycles from the main loop
-// but not sure how to how best to do this when it might be in the middle of the loop for the tilegen drawing
 bool CReal3D::PollPingPong()
 {
-    if (m_pingPong) {
-        return true;
+    return m_pingPong != m_pingPongCopy;
+}
+
+void CReal3D::DrawFrame()
+{
+    // on real h/w the frame should start drawing here
+    // we are drawing at the end of the frame time which does the same
+
+    m_tilegenDrawFrame = false;
+    commandPortWritten = false;
+
+    // we need the block culling state when a frame has been triggered for rendering
+    m_blockCullingRO = (m_modeword[static_cast<int>(CASIC::Name::Mercury)] & 4) == 4;
+
+    // todo figure out what exactly happens if a frame hasn't been triggered for rendering
+    // are we just drawing the previous frame that's left in the buffer
+    // or are we triggering white to draw
+
+    if (!m_gpuMultiThreaded) {
+        Render3D->SetBlockCulling(m_blockCullingRO);
     }
+}
 
-    m_pingPong = ppc_total_cycles() >= statusChange;
+void CReal3D::TilegenDrawFrame(uint32_t flags)
+{
+    m_tilegenDrawFrame = true;
 
-    if (m_pingPong) {
-        commandPortWritten = false;
-        return true;
+    bool pingPongFlipped = PollPingPong();
+
+    if (!pingPongFlipped) {
+        if (commandPortWritten) {
+            DrawFrame();
+        }
     }
-
-    return false;
 }
 
 uint32_t CReal3D::UpdateSnapshots(bool copyWhole)
@@ -749,6 +780,9 @@ void CReal3D::Flush(void)
   DebugLog("Real3D 88000000 written @ PC=%08X\n", ppc_get_pc());
   if (!PollPingPong()) {
       FlushTextures();
+      if (m_tilegenDrawFrame) {
+          DrawFrame();
+      }
   }
 }
 
@@ -878,7 +912,7 @@ void CReal3D::WriteJTAGModeword(CASIC::Name device, uint32_t data)
     switch (device)
     {
     case CASIC::Name::Mercury:
-        //Render3D->SetBlockCulling((data & 4) == 4);
+        // block culling (disables rendering for 3d h/w)
         break;
     case CASIC::Name::Mars:
         Render3D->SetSunClamp((data & 0x40000) == 0);
@@ -925,15 +959,7 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
   DebugLog("Real3D: Read reg %X\n", reg);
   if (reg == 0)
   {
-	  uint32_t ping_pong;
-
-	  if (m_evenFrame) {
-			ping_pong = (ppc_total_cycles() >= statusChange ? 0x0 : 0x02000000);
-	  }
-	  else {
-			ping_pong = (ppc_total_cycles() >= statusChange ? 0x02000000 : 0x0);
-	  }
-
+	  uint32_t ping_pong = (m_pingPong ? 0x02000000 : 0x0);
 	  return 0xfdffffff | ping_pong;
   }
 
@@ -998,7 +1024,8 @@ void CReal3D::Reset(void)
 
   m_pingPong = 0;
   commandPortWritten = false;
-  commandPortWrittenRO = false;
+  m_tilegenDrawFrame = false;
+  m_blockCullingRO = false;
 
   queuedUploadTextures.clear();
   queuedUploadTexturesRO.clear();
@@ -1116,7 +1143,6 @@ CReal3D::CReal3D(const Util::Config::Node &config)
     Bus(nullptr),
     IRQ(nullptr),
     commandPortWritten(false),
-    commandPortWrittenRO(false),
     cullingRAMHi(nullptr),
     cullingRAMHiDirty(nullptr),
     cullingRAMHiRO(nullptr),
@@ -1152,7 +1178,9 @@ CReal3D::CReal3D(const Util::Config::Node &config)
     m_vromTextureFIFO{},
     m_vromTextureFIFOIdx(0),
     m_internalRenderConfig{},
-    m_configRegisters{}
+    m_configRegisters{},
+    m_tilegenDrawFrame(false),
+    m_blockCullingRO(false)
 {
   DebugLog("Built Real3D\n");
 }

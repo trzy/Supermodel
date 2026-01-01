@@ -1782,6 +1782,9 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     else if ((addr>=0xF1180000) && (addr<0xF1180100))
     {
       TileGen.WriteRegister(addr&0xFF,FLIPENDIAN32(data));
+      if (addr == 0xf118000c) {
+        GPU.TilegenDrawFrame(FLIPENDIAN32(data));
+      }
       break;
     }
 
@@ -2088,7 +2091,6 @@ void CModel3::RunMainBoardFrame(void)
 	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
 	unsigned lineCycles     = frameCycles / 424;
-    unsigned pingPongCycles = lineCycles * (TileGen.ReadRegister(0x08) + 40 + 1);       // add 1 or lost world soft locks in the gun calibration menu. Perhaps ping_ping flips at the end of the line not the start.
     unsigned vBlankCycles   = lineCycles * 40;
 
 	// Games will start writing a new frame after the ping-pong buffers have been flipped, which is indicated by the
@@ -2105,9 +2107,8 @@ void CModel3::RunMainBoardFrame(void)
 	// VBlank
 	if (gpusReady)
 	{
-        IRQ.Assert(0x02);
-		TileGen.BeginVBlank();
-		GPU.BeginVBlank(pingPongCycles);	// Games poll the ping_pong at startup. When this flips games can start to write data for the next frame. Often 66% of the frame time.
+        TileGen.BeginVBlank();
+		GPU.BeginVBlank();
         
 		// keep running cycles until IRQ2 is acknowledged
 		// Ski Champ can hang if we check the MIDI control port too early
@@ -2158,9 +2159,19 @@ void CModel3::RunMainBoardFrame(void)
 		TileGen.EndVBlank();
 	}
 
+    auto pingPongFlipLine = TileGen.ReadRegister(0x08);
+
 	// Run the PowerPC for the active display part of the frame
     for (int i = 0; i < 384; i++)
     {
+        if (i == pingPongFlipLine) {
+            GPU.FlipPingPongBit();
+        }
+
+        if (i == 383) {
+            IRQ.Assert(0x02);       // irq2 is asserted at the start of the last line on system24 (as apposed to the end). Lost world won't work without this, the game soft locks. We assume the same here
+        }
+
         TileGen.DrawLine(i);
         ppc_execute(lineCycles);
     }

@@ -108,7 +108,7 @@ public:
    *
    * Must be called before the VBlank starts.
    */
-  void BeginVBlank(int statusCycles);
+  void BeginVBlank(void);
   
   /*
    * EndVBlank(void)
@@ -116,6 +116,16 @@ public:
    * Must be called after the VBlank finishes.
    */
   void EndVBlank(void);
+
+  /*
+   * FlipPingPongBit(void)
+   *
+   * Any writes that happen after the ping_pong bit flips but before v-blank are buffered.
+   * During v-blank these buffered writes are then copied to the normal memory destinations. 
+   * The ping_pong flip time comes from the tilegen.
+   * The point of this is so the CPU can be calculating the data for the next frame whilst the GPU is rendering
+   */
+  void FlipPingPongBit(void);
 
   /*
    * SyncSnapshots(void):
@@ -340,6 +350,20 @@ public:
   void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, uint32_t data);
 
   /*
+   * TilegenDrawFrame(flags):
+   * 
+   * The tilegen controls the frame timing. When reg 0x0C is written to it seems to trigger the 3d h/w to draw the frame.
+   * For a frame to actually draw Flush or 0x88 must have been called. This can happen before or after 0x0C has been written to.
+   * Flush signifies a transfer has been completed and the database has been updated. Some games call this multiple times per frame.
+   * 0xC can be called before or after the ping_pong bit has flipped. If it's called after, the frame will start to draw when v-blank starts.
+   *
+   * Parameters:
+   *    flags   A bitmask controlling behavior. Unknown what it does exactly.
+   *            3 binary (11) or 7 binary (111) are written by games.
+   */
+  void TilegenDrawFrame(uint32_t flags);
+
+  /*
    * Reset(void):
    *
    * Resets the Real3D device. Must be called before reading/writing the
@@ -443,6 +467,7 @@ private:
   void      SyncBufferedMem(UpdateBlock* updateBlock, uint32_t* updateBuffer, uint32_t* dst, uint8_t* dirty);
   void      FlushTextures();
   bool      PollPingPong();
+  void      DrawFrame();
 
   // Config 
   const Util::Config::Node &m_config;
@@ -515,12 +540,12 @@ private:
   
   // Command port
   bool  commandPortWritten;
-  bool  commandPortWrittenRO; // Read-only copy of flag
+  bool  m_tilegenDrawFrame;
   
   // Status and command registers
   uint32_t m_pingPong;
-  uint64_t statusChange = 0;
-  bool m_evenFrame = false;
+  uint32_t m_pingPongCopy;      // we copy the value during v-blank to see if ping_pong has flipped during the frame
+  bool m_blockCullingRO;        // really just disables rendering
 
   // Internal ASIC state
   uint64_t m_internalRenderConfig[2];
