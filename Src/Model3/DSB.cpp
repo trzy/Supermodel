@@ -645,7 +645,7 @@ enum
 	ST_GOTB6
 };
 
-static constexpr char *stateName[] =
+static constexpr const char *stateName[] =
 {
 	"idle",
 	"st_got_14",
