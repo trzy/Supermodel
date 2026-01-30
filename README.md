@@ -1,9 +1,9 @@
 # Supermodel: A Sega Model 3 Arcade Emulator
-*Copyright 2003-2024 The Supermodel Team*
+*Copyright 2003-2026 The Supermodel Team*
 
 ## Overview
 
-[Supermodel](https://supermodel3.com) emulates Sega's Model 3 arcade platform, allowing you to relive state-of-the-art 3D arcade gaming as it existed from 1996 through 1999. It uses OpenGL, [SDL2](https://libsdl.org), and can run on Windows, Linux, and macOS. It also supports network play on low-latency network connections. The source code is freely available under the terms of the [GNU General Public License](http://www.gnu.org/copyleft/gpl.html).
+**Supermodel** emulates Sega's Model 3 arcade platform, allowing you to relive state-of-the-art 3D arcade gaming as it existed from 1996 through 1999. It uses OpenGL, [SDL2](https://libsdl.org), and can run on Windows, Linux, and macOS. It also supports network play on low-latency network connections. The source code is freely available under the terms of the [GNU General Public License](http://www.gnu.org/copyleft/gpl.html).
 
 <p align="center">
   <img src="Docs/Images/Daytona2_1.gif" width="375" height="250" /> <img src="Docs/Images/LAMachin.gif" width="375" height="250" />
@@ -18,6 +18,16 @@ The aim of the Supermodel project is to develop an emulator that is both accurat
 
 Automated builds for Windows, macOS and Linux are now available here on GitHub.  
 Check out the releases page [here](https://github.com/trzy/Supermodel/releases).
+
+## Community
+
+<table border="0">
+  <tr>
+    <td><a href="https://discord.gg/XDd7TMMUMz"><img width="32" src="Docs/Images/Discord.svg"></a></td><td><a href="https://discord.gg/XDd7TMMUMz">Join the Discord server</a>.</td>
+  </tr>
+</table>
+
+We lost our web hosting and have no backup of the recent forum. For now, please use this GitHub page for official releases and [Discord](https://discord.gg/XDd7TMMUMz) for asking questions.
 
 ## Build Instructions
 
