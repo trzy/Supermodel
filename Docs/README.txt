@@ -10,7 +10,7 @@
                  ####
 
                        A Sega Model 3 Arcade Emulator.
-                   Copyright 2003-2024 The Supermodel Team
+                   Copyright 2003-2026 The Supermodel Team
 
 
                         USER MANUAL FOR SUPERMODEL
@@ -748,6 +748,12 @@ press Shift Up, Shift Up, Shift Down, Shift Down, View, Music, View, Music.
 L.A. Machineguns
 ----------------
 
+Initial calibration in the game's service menu will be needed to make the gun
+responsive. Enter the Test mode and select 'AIM SET' from the menu. When in the
+calibration screen, make sure to pull the trigger first, then move your
+mouse around until your max-min axis values are 255-0, then simply exit the
+calibration screen and the settings should be saved.
+
 To change the region, enter Test mode and press P1 Start, P1 Start, Service, P1
 Start, P1 Start, P1 Start, Service, Test.
 
@@ -780,6 +786,21 @@ presses: 4 short, 2 long, 2 short, 1 long.
 
 Ski Champ
 ---------
+
+Using P1 Start to initiate a game will cause 1st person view to be selected.
+The real hardware did not have a P1 Start button, it used the character select
+buttons instead. Your button choice would determine the camera view for the
+duration of the game.
+
+Supermodel's default InputSkiSelect keys and their corresponding views are,
+
+Q - 3rd person far
+W - 3rd person near
+E - 1st person
+
+To start a game, during the attract mode, hold one of those keys while coining up
+or simply press one if free play is set. No key held when coining up defaults
+to 3rd person near.
 
 To change the region, enter Test mode and press Select 1, Select 3, Select 1,
 Select 3, Service, Service.
