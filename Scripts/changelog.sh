@@ -3,7 +3,7 @@
 #
 # Supermodel
 # A Sega Model 3 Arcade Emulator.
-# Copyright 2003-2025 The Supermodel Team
+# Copyright 2003-2026 The Supermodel Team
 #
 # This file is part of Supermodel.
 #
@@ -55,7 +55,7 @@ cat <<EOF > "${OUTPUT_FILE}"
 
                        A Sega Model 3 Arcade Emulator.
 
-                   Copyright 2003-2025 The Supermodel Team
+                   Copyright 2003-2026 The Supermodel Team
 
                                  CHANGE LOG
 

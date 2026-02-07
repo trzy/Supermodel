@@ -1,7 +1,7 @@
 <!--
   Supermodel
   A Sega Model 3 Arcade Emulator.
-  Copyright 2003-2024 The Supermodel Team
+  Copyright 2003-2026 The Supermodel Team
 
   Games.xml
 
@@ -817,7 +817,7 @@
   <game name="fvipers2o" parent="fvipers2">
     <identity>
       <title>Fighting Vipers 2</title>
-      <version>?</version>
+      <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>

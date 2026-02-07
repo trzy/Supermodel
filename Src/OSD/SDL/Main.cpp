@@ -1463,13 +1463,13 @@ static void PrintGameList(const std::string &xml_file, const std::map<std::strin
   }
   printf("Games defined in %s:\n", xml_file.c_str());
   puts("");
-  puts("    ROM Set         Title");
-  puts("    -------         -----");
+  puts("    ROM Set          Title");
+  puts("    -------          -----");
   for (auto &v: games)
   {
     const Game &game = v.second;
     printf("    %s", game.name.c_str());
-    for (size_t i = game.name.length(); i < 9; i++)  // pad for alignment (no game ID should be more than 9 letters)
+    for (size_t i = game.name.length(); i < 10; i++)  // pad for alignment
       printf(" ");
     if (!game.version.empty())
       printf("       %s (%s)\n", game.title.c_str(), game.version.c_str());
@@ -1807,7 +1807,7 @@ Util::Config::Node DefaultConfig()
 static void Title(void)
 {
   puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
-  puts("Copyright 2003-2025 by The Supermodel Team");
+  puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
 static void Help(void)
@@ -2462,3 +2462,4 @@ Exit:
 
   return exitCode;
 }
+
