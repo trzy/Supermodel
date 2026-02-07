@@ -1463,8 +1463,8 @@ static void PrintGameList(const std::string &xml_file, const std::map<std::strin
   }
   printf("Games defined in %s:\n", xml_file.c_str());
   puts("");
-  puts("    ROM Set         Title");
-  puts("    -------         -----");
+  puts("    ROM Set          Title");
+  puts("    -------          -----");
   for (auto &v: games)
   {
     const Game &game = v.second;
@@ -2462,3 +2462,4 @@ Exit:
 
   return exitCode;
 }
+
