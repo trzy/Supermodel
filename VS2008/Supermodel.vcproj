@@ -2099,6 +2099,10 @@
 						RelativePath="..\Src\OSD\SDL\Types.h"
 						>
 					</File>
+					<File
+						RelativePath="..\Src\OSD\SDL\NetOutputs.h"
+						>
+					</File>
 				</Filter>
 				<Filter
 					Name="Windows"
