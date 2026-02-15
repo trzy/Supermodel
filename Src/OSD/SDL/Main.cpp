@@ -78,6 +78,7 @@
 #include "DirectInputSystem.h"
 #include "WinOutputs.h"
 #endif
+#include "NetOutputs.h"
 
 #include "Supermodel.h"
 #include "Util/Format.h"
@@ -1583,7 +1584,14 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
-  config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win" });
+#ifdef SUPERMODEL_WIN32
+  config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win","net" });
+#else
+  config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","net" });
+#endif
+  config.Set<bool>("OutputsWithLF", false, "Misc");
+  config.Set<unsigned int>("OutputsTCPPort", 8000, "Misc", 1024, 65535);
+  config.Set<unsigned int>("OutputsUDPBroadcastPort", 8001, "Misc", 1024, 65535);
   config.Set("DumpTextures", false, "Misc");
 
   //
@@ -2407,13 +2415,23 @@ int main(int argc, char **argv)
     goto Exit;
 
   // Create outputs
-#ifdef SUPERMODEL_WIN32
   {
     std::string outputs = s_runtime_config["Outputs"].ValueAs<std::string>();
     if (outputs == "none")
       Outputs = NULL;
-    else if (outputs == "win")
+    else if (outputs == "net") 
+    {
+        CNetOutputs* netOutputs = new CNetOutputs();
+        if (s_runtime_config["OutputsWithLF"].ValueAs<bool>())
+            netOutputs->SetFrameEnding(std::string("\r\n"));
+        netOutputs->SetTcpPort(s_runtime_config["OutputsTCPPort"].ValueAs<unsigned int>());
+        netOutputs->SetUdpBroadcastPort(s_runtime_config["OutputsUDPBroadcastPort"].ValueAs<unsigned int>());
+        Outputs = (COutputs*)netOutputs;
+#ifdef SUPERMODEL_WIN32
+    } else if (outputs == "win") {
       Outputs = new CWinOutputs();
+#endif // SUPERMODEL_WIN32
+    }
     else
     {
       ErrorLog("Unknown outputs: %s\n", outputs.c_str());
@@ -2421,7 +2439,6 @@ int main(int argc, char **argv)
       goto Exit;
     }
   }
-#endif // SUPERMODEL_WIN32
 
   // Initialize outputs
   if (Outputs != NULL && !Outputs->Initialize())

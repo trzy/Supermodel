@@ -176,6 +176,7 @@ SRC_FILES = \
 	Src/Pkgs/imgui/imgui_tables.cpp \
 	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
+	Src/OSD/SDL/NetOutputs.cpp \
 	$(PLATFORM_SRC_FILES)
 
 ifeq ($(strip $(NET_BOARD)),1)
