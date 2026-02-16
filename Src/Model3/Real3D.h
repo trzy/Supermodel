@@ -474,26 +474,26 @@ private:
   const bool                m_gpuMultiThreaded;
 
   // Renderer attached to the Real3D
-  IRender3D *Render3D;
+  IRender3D *Render3D = nullptr;
   
   // Data passed from Model 3 object
-  const uint32_t  *vrom;  // Video ROM
-  int             step;   // hardware stepping (as in GameInfo structure)
-  uint32_t        pciID;  // PCI vendor and device ID
+  const uint32_t  *vrom = nullptr;          // Video ROM
+  int             step = 0x10;              // hardware stepping (as in GameInfo structure)
+  uint32_t        pciID = PCIID::Step1x;;   // PCI vendor and device ID
   
   // Error flag (to limit errors to once per frame)
-  bool error; // true if an error occurred this frame
+  bool error = false;   // true if an error occurred this frame
 
   // Real3D memory
-  uint8_t   *memoryPool;        // all memory allocated here
-  uint32_t  *cullingRAMLo;      // 4MB of culling RAM at 8C000000
-  uint32_t  *cullingRAMHi;      // 1MB of culling RAM at 8E000000
-  uint32_t  *polyRAM;           // 4MB of polygon RAM at 98000000
-  uint16_t  *textureRAM;        // 8MB of internal texture RAM
-  uint32_t  *textureFIFO;       // 1MB texture FIFO at 0x94000000
-  uint32_t  fifoIdx;            // index into texture FIFO
-  uint32_t  m_vromTextureFIFO[2];
-  uint32_t  m_vromTextureFIFOIdx;
+  uint8_t   *memoryPool = nullptr;      // all memory allocated here
+  uint32_t  *cullingRAMLo = nullptr;    // 4MB of culling RAM at 8C000000
+  uint32_t  *cullingRAMHi = nullptr;    // 1MB of culling RAM at 8E000000
+  uint32_t  *polyRAM = nullptr;         // 4MB of polygon RAM at 98000000
+  uint16_t  *textureRAM = nullptr;      // 8MB of internal texture RAM
+    uint32_t  *textureFIFO = nullptr;   // 1MB texture FIFO at 0x94000000
+  uint32_t  fifoIdx = 0;                // index into texture FIFO
+  uint32_t  m_vromTextureFIFO[2] = { 0,  0 };
+  uint32_t  m_vromTextureFIFOIdx = 0;
 
   union ConfigRegisters {
       uint32_t regs[4];
@@ -507,54 +507,53 @@ private:
 
   
   // Read-only snapshots
-  uint32_t  *cullingRAMLoRO;    // 4MB of culling RAM at 8C000000 [read-only snapshot]
-  uint32_t  *cullingRAMHiRO;    // 1MB of culling RAM at 8E000000 [read-only snapshot]
-  uint32_t  *polyRAMRO;         // 4MB of polygon RAM at 98000000 [read-only snapshot]
-  uint16_t  *textureRAMRO;      // 8MB of internal texture RAM    [read-only snapshot]
+  uint32_t  *cullingRAMLoRO = nullptr;  // 4MB of culling RAM at 8C000000 [read-only snapshot]
+  uint32_t  *cullingRAMHiRO = nullptr;  // 1MB of culling RAM at 8E000000 [read-only snapshot]
+  uint32_t  *polyRAMRO = nullptr;       // 4MB of polygon RAM at 98000000 [read-only snapshot]
+  uint16_t  *textureRAMRO = nullptr;    // 8MB of internal texture RAM    [read-only snapshot]
   
   // Arrays to keep track of dirty pages in memory regions
-  uint8_t   *cullingRAMLoDirty;
-  uint8_t   *cullingRAMHiDirty;
-  uint8_t   *polyRAMDirty;
-  uint8_t   *textureRAMDirty;
+  uint8_t   *cullingRAMLoDirty = nullptr;
+  uint8_t   *cullingRAMHiDirty = nullptr;
+  uint8_t   *polyRAMDirty = nullptr;
+  uint8_t   *textureRAMDirty = nullptr;
 
   // Queued texture uploads
   std::vector<QueuedUploadTextures> queuedUploadTextures;
   std::vector<QueuedUploadTextures> queuedUploadTexturesRO;  // Read-only copy of queue
   
   // Big endian bus object for DMA memory access
-  IBus  *Bus;
+  IBus  *Bus = nullptr;
   
   // IRQ handling
-  CIRQ    *IRQ;   // IRQ controller
-  uint32_t  dmaIRQ; // IRQ bit to use when calling IRQ handler
+  CIRQ    *IRQ = nullptr;   // IRQ controller
+  uint32_t  dmaIRQ = 0;     // IRQ bit to use when calling IRQ handler
   
   // DMA device
-  uint32_t  dmaSrc;
-  uint32_t  dmaDest;
-  uint32_t  dmaLength;
-  uint32_t  dmaData;
-  uint32_t  dmaUnknownReg;
-  uint8_t   dmaStatus;
-  uint8_t   dmaConfig;
+  uint32_t  dmaSrc = 0;
+  uint32_t  dmaDest = 0;
+  uint32_t  dmaLength = 0;
+  uint32_t  dmaData = 0;
+  uint32_t  dmaUnknownReg = 0;
+  uint8_t   dmaStatus = 0;
+  uint8_t   dmaConfig = 0;
   
   // Command port
-  bool  commandPortWritten;
-  bool  m_tilegenDrawFrame;
+  bool  commandPortWritten = false;
+  bool  m_tilegenDrawFrame = false;
   
   // Status and command registers
-  uint32_t m_pingPong;
-  uint32_t m_pingPongCopy;      // we copy the value during v-blank to see if ping_pong has flipped during the frame
-  bool m_blockCullingRO;        // really just disables rendering
+  uint32_t m_pingPong = 0;
+  uint32_t m_pingPongCopy = 0;      // we copy the value during v-blank to see if ping_pong has flipped during the frame
+  bool m_blockCullingRO = false;    // really just disables rendering
 
   // Internal ASIC state
-  uint64_t m_internalRenderConfig[2];
-  uint32_t m_modeword[5];
+  uint64_t m_internalRenderConfig[2] = { 0, 0 };
+  uint32_t m_modeword[5] = { 0, 0, 0, 0, 0 };
 
   // pointers to our buffered memory
-  UpdateBlock* m_polyUpdateBlock;
-  UpdateBlock* m_highRamUpdateBlock;
-
+  UpdateBlock* m_polyUpdateBlock = nullptr;
+  UpdateBlock* m_highRamUpdateBlock = nullptr;
 };
 
 

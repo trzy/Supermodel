@@ -917,6 +917,8 @@ void CReal3D::WriteJTAGModeword(CASIC::Name device, uint32_t data)
     case CASIC::Name::Mars:
         Render3D->SetSunClamp((data & 0x40000) == 0);
         break;
+    default:
+        break;
     }
 }
 
@@ -979,7 +981,7 @@ uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bit
 {
   uint32_t  d;
 
-  if ((bits==8))
+  if (bits == 8)
   {
     DebugLog("Real3D: %d-bit PCI read request for reg=%02X\n", bits, reg);
     return 0;
@@ -1139,48 +1141,7 @@ Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObject
 
 CReal3D::CReal3D(const Util::Config::Node &config)
   : m_config(config),
-    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
-    Bus(nullptr),
-    IRQ(nullptr),
-    commandPortWritten(false),
-    cullingRAMHi(nullptr),
-    cullingRAMHiDirty(nullptr),
-    cullingRAMHiRO(nullptr),
-    dmaConfig(0),
-    dmaData(0),
-    dmaDest(0),
-    dmaIRQ(0),
-    dmaLength(0),
-    dmaSrc(0),
-    dmaStatus(0),
-    dmaUnknownReg(0),
-    m_modeword{},
-    m_pingPong(0),
-    pciID(0),
-    polyRAMDirty(nullptr),
-    polyRAMRO(nullptr),
-    step(0),
-    textureRAMDirty(nullptr),
-    textureRAMRO(nullptr),
-    m_polyUpdateBlock(nullptr),
-    m_highRamUpdateBlock(nullptr),
-    Render3D(nullptr),
-    memoryPool(nullptr),
-    cullingRAMLo(nullptr),
-    cullingRAMLoRO(nullptr),
-    cullingRAMLoDirty(nullptr),
-    polyRAM(nullptr),
-    textureRAM(nullptr),
-    textureFIFO(nullptr),
-    vrom(nullptr),
-    error(false),
-    fifoIdx(0),
-    m_vromTextureFIFO{},
-    m_vromTextureFIFOIdx(0),
-    m_internalRenderConfig{},
-    m_configRegisters{},
-    m_tilegenDrawFrame(false),
-    m_blockCullingRO(false)
+    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>())
 {
   DebugLog("Built Real3D\n");
 }
