@@ -999,7 +999,6 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 textu
   
   // Cache all polygons
   Vertex    Prev[4];  // previous vertices
-  int       numPolys = 0;
   bool      useStencil = true;
   bool      done = false;
   while (!done)
@@ -1135,7 +1134,6 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 textu
       // Copy this polygon into the model buffer
       if (Result::OKAY != InsertPolygon(Cache,&P))
         return NULL;
-      ++numPolys;
     }
   }
   
