@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -270,7 +270,7 @@ namespace Debugger
 		char valStr[40];
 		UINT32 opcode = m_bus->Read32(addr);
 		operands[0] = '\0';
-		if (DisassemblePowerPC(opcode, addr, mnemonic, opStr, true) == Result::OKAY)
+		if (DisassemblePowerPC(opcode, addr, mnemonic, opStr, sizeof(opStr), true) == Result::OKAY)
 		{
 			char *o = opStr;
 			char *s = strstr(o, "0x");

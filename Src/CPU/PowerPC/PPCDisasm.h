@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -54,7 +54,7 @@
  *      OKAY if successful, FAIL if the instruction was unrecognized or had an
  *      invalid form (see note above in function description.)
  */ 
-extern Result DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs,
+extern Result DisassemblePowerPC(UINT32 op, UINT32 vpc, char *mnem, char *oprs, size_t oprs_size,
                         	   bool simplify);
 
 #endif	// INCLUDED_PPCDISASM_H

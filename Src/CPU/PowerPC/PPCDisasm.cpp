@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -38,7 +38,7 @@
 #endif
 #include "Supermodel.h"
 
-#define DISASM_VERSION  "1.1"
+#define DISASM_VERSION  "1.2"
 
 
 /******************************************************************************
@@ -528,19 +528,19 @@ static void SPR(char *dest, unsigned spr_field)
  * Predecodes the SIMM field for us. If do_unsigned, it is printed as an
  * unsigned 32-bit integer.
  */
-static void DecodeSigned16(char *outbuf, uint32_t op, bool do_unsigned)
+static void DecodeSigned16(char *outbuf, size_t outbuf_size, uint32_t op, bool do_unsigned)
 {
     INT16   s;
 
     s = G_SIMM(op);
     if (do_unsigned)    // sign extend to unsigned 32-bits
-        sprintf(outbuf, "0x%04X", (uint32_t) s);
+        snprintf(outbuf, outbuf_size, "0x%04X", (uint32_t) s);
     else                // print as signed 16 bits
     {
         if (s < 0)
-            sprintf(outbuf, "-0x%02X", -s);
+            snprintf(outbuf, outbuf_size, "-0x%02X", -s);
         else
-            sprintf(outbuf, "0x%02X",s);
+            snprintf(outbuf, outbuf_size, "0x%02X",s);
     }
 }
 
@@ -636,7 +636,7 @@ static Result Check(uint32_t op, unsigned flags)
  * Handles all simplified instruction forms. Returns 1 if one was decoded,
  * otherwise 0 to indicate disassembly should carry on as normal.
  */
-static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, char *oprs)
+static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, char *oprs, size_t oprs_size)
 {
     uint32_t  value, disp;
 
@@ -652,7 +652,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         {
             strcat(mnem, "mr");     // orx rA,rT,rT -> mrx rA,rT
             if (op & M_RC)  strcat(mnem, ".");
-            sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
+            snprintf(oprs, oprs_size, "r%d,r%d", G_RA(op), G_RT(op));
         }
         else
             return false;
@@ -663,7 +663,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         {
             strcat(mnem, "not");    // nor rA,rT,rT -> not rA,rT
             if (op & M_RC)  strcat(mnem, ".");
-            sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
+            snprintf(oprs, oprs_size, "r%d,r%d", G_RA(op), G_RT(op));
         }
         else
             return false;
@@ -673,7 +673,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         if (G_RA(op) == 0)
         {
             strcat(mnem, "li");     // addi rT,0,value -> li rT,value
-            sprintf(oprs, "r%d,0x%08X", G_RT(op), value);
+            snprintf(oprs, oprs_size, "r%d,0x%08X", G_RT(op), value);
         }
         else
             return false;
@@ -683,35 +683,35 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         if (G_RA(op) == 0)
         {
             strcat(mnem, "li"); // addis rT,0,value -> li rT,(value<<16)
-            sprintf(oprs, "r%d,0x%08X", G_RT(op), value << 16);
+            snprintf(oprs, oprs_size, "r%d,0x%08X", G_RT(op), value << 16);
         }
         else
         {
             strcat(mnem, "addi");   // addis rT,rA,SIMM -> addi rT,rA,SIMM<<16
-            sprintf(oprs, "r%d,r%d,0x%08X", G_RT(op), G_RA(op), value << 16);
+            snprintf(oprs, oprs_size, "r%d,r%d,0x%08X", G_RT(op), G_RA(op), value << 16);
         }
     }
     else if ((op & ~(M_RT|M_RA|M_UIMM)) == D_OP(29))
     {
         strcat(mnem, "andi.");  // andis. rA,rT,UIMM -> andi. rA,rT,UIMM<<16
-        sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
+        snprintf(oprs, oprs_size, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
     }
     else if ((op & ~(M_RT|M_RA|M_UIMM)) == D_OP(25))
     {
         strcat(mnem, "ori");    // oris rA,rT,UIMM -> ori rA,rT,UIMM<<16
-        sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
+        snprintf(oprs, oprs_size, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
     }
     else if ((op & ~(M_RT|M_RA|M_UIMM)) == D_OP(27))
     {
         strcat(mnem, "xori");   // xoris rA,rT,UIMM -> xori rA,rT,UIMM<<16
-        sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
+        snprintf(oprs, oprs_size, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_UIMM(op) << 16);
     }
     else if ((op & ~(M_RT|M_RA|M_SH|M_MB|M_ME|M_RC)) == D_OP(20))
     {
         value = Mask(G_MB(op), G_ME(op));
         strcat(mnem, "rlwimi"); // rlwimi[.] rA,rT,SH,MB,ME -> rlwimi[.] rA,rT,SH,MASK
         if (op & M_RC) strcat(mnem, ".");
-        sprintf(oprs, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
+        snprintf(oprs, oprs_size, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
     }
     else if ((op & ~(M_RT|M_RA|M_SH|M_MB|M_ME|M_RC)) == D_OP(21))
     {
@@ -720,13 +720,13 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         {
             strcat(mnem, "and");
           if (op & M_RC) strcat(mnem, ".");
-            sprintf(oprs, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), value);
+            snprintf(oprs, oprs_size, "r%d,r%d,0x%08X", G_RA(op), G_RT(op), value);
         }
         else                    // rlwinm[.] rA,rT,SH,MASK
         {
             strcat(mnem, "rlwinm");
           if (op & M_RC) strcat(mnem, ".");
-            sprintf(oprs, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
+            snprintf(oprs, oprs_size, "r%d,r%d,%d,0x%08X", G_RA(op), G_RT(op), G_SH(op), value);
         }
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_MB|M_ME|M_RC)) == D_OP(23))
@@ -734,7 +734,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         value = Mask(G_MB(op), G_ME(op));
         strcat(mnem, "rlwnm");  // rlwnm[.] rA,rT,SH,MB,ME -> rlwnm[.] rA,rT,SH,MASK
         if (op & M_RC) strcat(mnem, ".");
-        sprintf(oprs, "r%d,r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_RB(op), value);
+        snprintf(oprs, oprs_size, "r%d,r%d,r%d,0x%08X", G_RA(op), G_RT(op), G_RB(op), value);
     }
     else if ((op & ~(M_BO|M_BI|M_BD|M_AA|M_LK)) == D_OP(16))
     {
@@ -763,21 +763,21 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
         if (op & M_LK)  strcat(mnem, "l");
         if (op & M_AA)  strcat(mnem, "a");
 
-        sprintf(oprs, "cr%d[%s],0x%08X", G_BI(op) / 4, crbit[G_BI(op) & 3], disp + ((op & M_AA) ? 0 : vpc));
+        snprintf(oprs, oprs_size, "cr%d[%s],0x%08X", G_BI(op) / 4, crbit[G_BI(op) & 3], disp + ((op & M_AA) ? 0 : vpc));
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_OE|M_RC)) == (D_OP(31)|D_XO(40)))
     {
         strcat(mnem, "sub");
         if (op & M_OE) strcat(mnem, "o");
         if (op & M_RC) strcat(mnem, ".");
-        sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
+        snprintf(oprs, oprs_size, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
     }
     else if ((op & ~(M_RT|M_RA|M_RB|M_OE|M_RC)) == (D_OP(31)|D_XO(8)))
     {
         strcat(mnem, "subc");
         if (op & M_OE) strcat(mnem, "o");
         if (op & M_RC) strcat(mnem, ".");
-    sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
+    snprintf(oprs, oprs_size, "r%d,r%d,r%d", G_RT(op), G_RB(op), G_RA(op));
     }
     else
         return false;   // no match
@@ -808,7 +808,7 @@ static bool Simplified(uint32_t op, uint32_t vpc, char *signed16, char *mnem, ch
  *      Zero if successful, non-zero if the instruction was unrecognized or
  *      had an invalid form (see note above in function description.)
  */
-Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
+Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs, size_t oprs_size,
                         bool simplify)
 {
     char    signed16[12];
@@ -821,7 +821,7 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
      * Decode signed 16-bit fields (SIMM and d) to spare us the work later
      */
 
-    DecodeSigned16(signed16, op, false);
+    DecodeSigned16(signed16, sizeof(signed16), op, false);
 
     /*
      * Try simplified forms first, then real instructions
@@ -829,7 +829,7 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
 
     if (simplify)
     {
-        if (Simplified(op, vpc, signed16, mnem, oprs))
+        if (Simplified(op, vpc, signed16, mnem, oprs, oprs_size))
             return Result::OKAY;
     }
 
@@ -858,44 +858,44 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
             switch (itab[i].format)
             {
             case F_RT_RA_RB:
-                sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
+                snprintf(oprs, oprs_size, "r%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
                 break;
 
             case F_RT_RA_0_SIMM:
                 if (G_RA(op))
-                    sprintf(oprs, "r%d,r%d,%s", G_RT(op), G_RA(op), signed16);
+                    snprintf(oprs, oprs_size, "r%d,r%d,%s", G_RT(op), G_RA(op), signed16);
                 else
-                    sprintf(oprs, "r%d,0,%s", G_RT(op), signed16);
+                    snprintf(oprs, oprs_size, "r%d,0,%s", G_RT(op), signed16);
                 break;
 
             case F_ADDIS:
                 if (G_RA(op))
-                    sprintf(oprs, "r%d,r%d,0x%04X", G_RT(op), G_RA(op), G_SIMM(op));
+                    snprintf(oprs, oprs_size, "r%d,r%d,0x%04X", G_RT(op), G_RA(op), G_SIMM(op));
                 else
-                    sprintf(oprs, "r%d,0,0x%04X", G_RT(op), G_SIMM(op));
+                    snprintf(oprs, oprs_size, "r%d,0,0x%04X", G_RT(op), G_SIMM(op));
                 break;
 
             case F_RT_RA_SIMM:
-                sprintf(oprs, "r%d,r%d,%s", G_RT(op), G_RA(op), signed16);
+                snprintf(oprs, oprs_size, "r%d,r%d,%s", G_RT(op), G_RA(op), signed16);
                 break;
 
             case F_RT_RA:
-                sprintf(oprs, "r%d,r%d", G_RT(op), G_RA(op));
+                snprintf(oprs, oprs_size, "r%d,r%d", G_RT(op), G_RA(op));
                 break;
 
             case F_RA_RT_RB:
-                sprintf(oprs, "r%d,r%d,r%d", G_RA(op), G_RT(op), G_RB(op));
+                snprintf(oprs, oprs_size, "r%d,r%d,r%d", G_RA(op), G_RT(op), G_RB(op));
                 break;
 
             case F_RA_RT_UIMM:
-                sprintf(oprs, "r%d,r%d,0x%04X", G_RA(op), G_RT(op), G_UIMM(op));
+                snprintf(oprs, oprs_size, "r%d,r%d,0x%04X", G_RA(op), G_RT(op), G_UIMM(op));
                 break;
 
             case F_LI:
                 disp = G_LI(op) * 4;
                 if (disp & 0x02000000)  // sign extend
                     disp |= 0xfc000000;
-                sprintf(oprs, "0x%08X", disp + ((op & M_AA) ? 0 : vpc));
+                snprintf(oprs, oprs_size, "0x%08X", disp + ((op & M_AA) ? 0 : vpc));
                 break;
 
             case F_BCx:
@@ -904,151 +904,151 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
                     disp |= 0xffff0000;
 
                 if (G_BO(op) & 0x10)    // BI is ignored (don't print CR bit)
-                    sprintf(oprs, "0x%02X,%d,0x%08X", G_BO(op), G_BI(op), disp + ((op & M_AA) ? 0 : vpc));
+                    snprintf(oprs, oprs_size, "0x%02X,%d,0x%08X", G_BO(op), G_BI(op), disp + ((op & M_AA) ? 0 : vpc));
                 else                    // BI gives us the condition bit
-                    sprintf(oprs, "0x%02X,cr%d[%s],0x%08X", G_BO(op), G_BI(op) / 4, crbit[G_BI(op) & 3], disp + ((op & M_AA) ? 0 : vpc));
+                    snprintf(oprs, oprs_size, "0x%02X,cr%d[%s],0x%08X", G_BO(op), G_BI(op) / 4, crbit[G_BI(op) & 3], disp + ((op & M_AA) ? 0 : vpc));
                 break;
 
             case F_BO_BI:
                 if (G_BO(op) & 0x10)    // BI is ignored (don't print CR bit)
-                    sprintf(oprs, "0x%02X,%d", G_BO(op), G_BI(op));
+                    snprintf(oprs, oprs_size, "0x%02X,%d", G_BO(op), G_BI(op));
                 else
-                    sprintf(oprs, "0x%02X,cr%d[%s]", G_BO(op), G_BI(op) / 4, crbit[G_BI(op) & 3]);
+                    snprintf(oprs, oprs_size, "0x%02X,cr%d[%s]", G_BO(op), G_BI(op) / 4, crbit[G_BI(op) & 3]);
                 break;
 
             case F_CMP:
-                sprintf(oprs, "cr%d,%d,r%d,r%d", G_CRFD(op), G_L(op), G_RA(op), G_RB(op));
+                snprintf(oprs, oprs_size, "cr%d,%d,r%d,r%d", G_CRFD(op), G_L(op), G_RA(op), G_RB(op));
                 break;
 
             case F_CMP_SIMM:
-                sprintf(oprs, "cr%d,%d,r%d,%s", G_CRFD(op), G_L(op), G_RA(op), signed16);
+                snprintf(oprs, oprs_size, "cr%d,%d,r%d,%s", G_CRFD(op), G_L(op), G_RA(op), signed16);
                 break;
 
             case F_CMP_UIMM:
-                sprintf(oprs, "cr%d,%d,r%d,0x%04X", G_CRFD(op), G_L(op), G_RA(op), G_UIMM(op));
+                snprintf(oprs, oprs_size, "cr%d,%d,r%d,0x%04X", G_CRFD(op), G_L(op), G_RA(op), G_UIMM(op));
                 break;
 
             case F_RA_RT:
-                sprintf(oprs, "r%d,r%d", G_RA(op), G_RT(op));
+                snprintf(oprs, oprs_size, "r%d,r%d", G_RA(op), G_RT(op));
                 break;
 
             case F_CRBD_CRBA_CRBB:
-                sprintf(oprs, "cr%d[%s],cr%d[%s],cr%d[%s]", G_CRBD(op) / 4, crbit[G_CRBD(op) & 3], G_CRBA(op) / 4, crbit[G_CRBA(op) & 3], G_CRBB(op) / 4, crbit[G_CRBB(op) & 3]);
+                snprintf(oprs, oprs_size, "cr%d[%s],cr%d[%s],cr%d[%s]", G_CRBD(op) / 4, crbit[G_CRBD(op) & 3], G_CRBA(op) / 4, crbit[G_CRBA(op) & 3], G_CRBB(op) / 4, crbit[G_CRBB(op) & 3]);
                 break;
 
             case F_RA_0_RB:
                 if (G_RA(op))
-                    sprintf(oprs, "r%d,r%d", G_RA(op), G_RB(op));
+                    snprintf(oprs, oprs_size, "r%d,r%d", G_RA(op), G_RB(op));
                 else
-                    sprintf(oprs, "0,r%d", G_RB(op));
+                    snprintf(oprs, oprs_size, "0,r%d", G_RB(op));
                 break;
 
             case F_RT_RA_0_RB:
                 if (G_RA(op))
-                    sprintf(oprs, "r%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
+                    snprintf(oprs, oprs_size, "r%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
                 else
-                    sprintf(oprs, "r%d,0,r%d", G_RT(op), G_RB(op));
+                    snprintf(oprs, oprs_size, "r%d,0,r%d", G_RT(op), G_RB(op));
                 break;
 
             case F_FRT_FRB:
-                sprintf(oprs, "f%d,f%d", G_RT(op), G_RB(op));
+                snprintf(oprs, oprs_size, "f%d,f%d", G_RT(op), G_RB(op));
                 break;
 
             case F_FRT_FRA_FRB:
-                sprintf(oprs, "f%d,f%d,f%d", G_RT(op), G_RA(op), G_RB(op));
+                snprintf(oprs, oprs_size, "f%d,f%d,f%d", G_RT(op), G_RA(op), G_RB(op));
                 break;
 
             case F_FCMP:
-                sprintf(oprs, "cr%d,f%d,f%d", G_CRFD(op), G_RA(op), G_RB(op));
+                snprintf(oprs, oprs_size, "cr%d,f%d,f%d", G_CRFD(op), G_RA(op), G_RB(op));
                 break;
 
             case F_FRT_FRA_FRC_FRB:
-                sprintf(oprs, "f%d,f%d,f%d,f%d", G_RT(op), G_RA(op), G_REGC(op), G_RB(op));
+                snprintf(oprs, oprs_size, "f%d,f%d,f%d,f%d", G_RT(op), G_RA(op), G_REGC(op), G_RB(op));
                 break;
 
             case F_FRT_FRA_FRC:
-                sprintf(oprs, "f%d,f%d,f%d", G_RT(op), G_RA(op), G_REGC(op));
+                snprintf(oprs, oprs_size, "f%d,f%d,f%d", G_RT(op), G_RA(op), G_REGC(op));
                 break;
 
             case F_RT_D_RA_0:
                 if (G_RA(op))
-                    sprintf(oprs, "r%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
+                    snprintf(oprs, oprs_size, "r%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
                 else
-                    sprintf(oprs, "r%d,0x%08X", G_RT(op), (uint32_t) ((INT16) G_D(op)));
+                    snprintf(oprs, oprs_size, "r%d,0x%08X", G_RT(op), (uint32_t) ((INT16) G_D(op)));
                 break;
 
             case F_RT_D_RA:
-                sprintf(oprs, "r%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
+                snprintf(oprs, oprs_size, "r%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
                 break;
 
             case F_FRT_D_RA_0:
                 if (G_RA(op))
-                    sprintf(oprs, "f%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
+                    snprintf(oprs, oprs_size, "f%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
                 else
-                    sprintf(oprs, "f%d,0x%08X", G_RT(op), (uint32_t) ((INT16) G_D(op)));
+                    snprintf(oprs, oprs_size, "f%d,0x%08X", G_RT(op), (uint32_t) ((INT16) G_D(op)));
                 break;
 
             case F_FRT_D_RA:
-                sprintf(oprs, "f%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
+                snprintf(oprs, oprs_size, "f%d,%s(r%d)", G_RT(op), signed16, G_RA(op));
                 break;
 
             case F_FRT_RA_RB:
-                sprintf(oprs, "f%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
+                snprintf(oprs, oprs_size, "f%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
                 break;
 
             case F_FRT_RA_0_RB:
                 if (G_RA(op))
-                    sprintf(oprs, "f%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
+                    snprintf(oprs, oprs_size, "f%d,r%d,r%d", G_RT(op), G_RA(op), G_RB(op));
                 else
-                    sprintf(oprs, "f%d,0,r%d", G_RT(op), G_RB(op));
+                    snprintf(oprs, oprs_size, "f%d,0,r%d", G_RT(op), G_RB(op));
                 break;
 
             case F_RT_RA_0_NB:
                 if (G_RA(op))
-                    sprintf(oprs, "r%d,r%d,%d", G_RT(op), G_RA(op), G_NB(op) ? G_NB(op) : 32);
+                    snprintf(oprs, oprs_size, "r%d,r%d,%d", G_RT(op), G_RA(op), G_NB(op) ? G_NB(op) : 32);
                 else
-                    sprintf(oprs, "r%d,0,%d", G_RT(op), G_NB(op) ? G_NB(op) : 32);
+                    snprintf(oprs, oprs_size, "r%d,0,%d", G_RT(op), G_NB(op) ? G_NB(op) : 32);
                 break;
 
             case F_CRFD_CRFS:
-                sprintf(oprs, "cr%d,cr%d", G_CRFD(op), G_CRFS(op));
+                snprintf(oprs, oprs_size, "cr%d,cr%d", G_CRFD(op), G_CRFS(op));
                 break;
 
             case F_MCRXR:
-                sprintf(oprs, "cr%d", G_CRFD(op));
+                snprintf(oprs, oprs_size, "cr%d", G_CRFD(op));
                 break;
 
             case F_RT:
-                sprintf(oprs, "r%d", G_RT(op));
+                snprintf(oprs, oprs_size, "r%d", G_RT(op));
                 break;
 
             case F_MFFSx:
-                sprintf(oprs, "f%d", G_RT(op));
+                snprintf(oprs, oprs_size, "f%d", G_RT(op));
                 break;
 
             case F_FCRBD:
-                sprintf(oprs, "fpscr[%d]", G_CRBD(op));
+                snprintf(oprs, oprs_size, "fpscr[%d]", G_CRBD(op));
                 break;
 
             case F_RT_SPR:
-                sprintf(oprs, "r%d,", G_RT(op));
+                snprintf(oprs, oprs_size, "r%d,", G_RT(op));
                 SPR(oprs, G_SPR(op));
                 break;
 
             case F_MFSR:
-                sprintf(oprs, "r%d,sr%d", G_RT(op), G_SR(op));
+                snprintf(oprs, oprs_size, "r%d,sr%d", G_RT(op), G_SR(op));
                 break;
 
             case F_MTCRF:
-                sprintf(oprs, "0x%02X,r%d", G_CRM(op), G_RT(op));
+                snprintf(oprs, oprs_size, "0x%02X,r%d", G_CRM(op), G_RT(op));
                 break;
 
             case F_MTFSFx:
-                sprintf(oprs, "0x%02X,f%d", G_FM(op), G_RB(op));
+                snprintf(oprs, oprs_size, "0x%02X,f%d", G_FM(op), G_RB(op));
                 break;
 
             case F_MTFSFIx:
-                sprintf(oprs, "cr%d,0x%X", G_CRFD(op), G_IMM(op));
+                snprintf(oprs, oprs_size, "cr%d,0x%X", G_CRFD(op), G_IMM(op));
                 break;
 
             case F_MTSPR:
@@ -1058,35 +1058,35 @@ Result DisassemblePowerPC(uint32_t op, uint32_t vpc, char *mnem, char *oprs,
                 break;
 
             case F_MTSR:
-                sprintf(oprs, "sr%d,r%d", G_SR(op), G_RT(op));
+                snprintf(oprs, oprs_size, "sr%d,r%d", G_SR(op), G_RT(op));
                 break;
 
             case F_RT_RB:
-                sprintf(oprs, "r%d,r%d", G_RT(op), G_RB(op));
+                snprintf(oprs, oprs_size, "r%d,r%d", G_RT(op), G_RB(op));
                 break;
 
             case F_RA_RT_SH_MB_ME:
-                sprintf(oprs, "r%d,r%d,%d,%d,%d", G_RA(op), G_RT(op), G_SH(op), G_MB(op), G_ME(op));
+                snprintf(oprs, oprs_size, "r%d,r%d,%d,%d,%d", G_RA(op), G_RT(op), G_SH(op), G_MB(op), G_ME(op));
                 break;
 
             case F_RLWNMx:
-                sprintf(oprs, "r%d,r%d,r%d,%d,%d", G_RA(op), G_RT(op), G_RB(op), G_MB(op), G_ME(op));
+                snprintf(oprs, oprs_size, "r%d,r%d,r%d,%d,%d", G_RA(op), G_RT(op), G_RB(op), G_MB(op), G_ME(op));
                 break;
 
             case F_SRAWIx:
-                sprintf(oprs, "r%d,r%d,%d", G_RA(op), G_RT(op), G_SH(op));
+                snprintf(oprs, oprs_size, "r%d,r%d,%d", G_RA(op), G_RT(op), G_SH(op));
                 break;
 
             case F_RB:
-                sprintf(oprs, "r%d", G_RB(op));
+                snprintf(oprs, oprs_size, "r%d", G_RB(op));
                 break;
 
             case F_TW:
-                sprintf(oprs, "%d,r%d,r%d", G_TO(op), G_RA(op), G_RB(op));
+                snprintf(oprs, oprs_size, "%d,r%d,r%d", G_TO(op), G_RA(op), G_RB(op));
                 break;
 
             case F_TWI:
-                sprintf(oprs, "%d,r%d,%s", G_TO(op), G_RA(op), signed16);
+                snprintf(oprs, oprs_size, "%d,r%d,%s", G_TO(op), G_RA(op), signed16);
                 break;
 
             case F_NONE:
@@ -1239,7 +1239,7 @@ int main(int argc, char **argv)
             op = (buffer[i + 3] << 24) | (buffer[i + 2] << 16) |
                  (buffer[i + 1] << 8) | buffer[i + 0];
 
-        if (Result::OKAY == DisassemblePowerPC(op, org, mnem, oprs, simple))
+        if (Result::OKAY == DisassemblePowerPC(op, org, mnem, oprs, sizeof(oprs), simple))
         {
             if (mnem[0] != '\0')    // invalid form
                 printf("0x%08X: 0x%08X\t%s*\t%s\n", org, op, mnem, oprs);
