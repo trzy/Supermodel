@@ -207,10 +207,10 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   return Result::OKAY;
 }
 
-static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
-{
-    printf("OGLDebug:: 0x%X: %s\n", id, message);
-}
+// static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
+// {
+//     printf("OGLDebug:: 0x%X: %s\n", id, message);
+// }
 
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
 // This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
