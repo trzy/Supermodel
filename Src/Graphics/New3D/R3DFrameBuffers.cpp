@@ -183,6 +183,10 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 		glDrawBuffer(GL_BACK);
 		break;
 	}
+	default:
+	{
+		break;
+	}
 	}
 
 	m_lastLayer = layer;
