@@ -102,6 +102,9 @@ PLATFORM_SRC_FILES = \
 
 include Makefiles/Rules.inc
 
+# -s (strip) is obsolete and ignored by Apple ld64; remove it to avoid potential warnings
+LDOPT := $(filter-out -s,$(LDOPT))
+
 # Suppress gluPerspective deprecation warnings (macOS only, deprecated since 10.9)
 $(OBJ_DIR)/Legacy3D.o: CXXFLAGS += -Wno-deprecated-declarations
 
