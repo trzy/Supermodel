@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -72,7 +72,7 @@ typedef struct
 	UINT32 cyc_shift;
 	UINT32 cyc_reset;
 	UINT8* cyc_instruction;
-	UINT8* cyc_exception;
+	const UINT8* cyc_exception;
 
 	/* Callbacks to host */
 	int  (*int_ack_callback)(int int_line);           /* Interrupt Acknowledge */
