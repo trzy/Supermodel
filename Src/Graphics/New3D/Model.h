@@ -9,21 +9,20 @@
 
 namespace New3D {
 
-struct Vertex					// half vertex
+// Helper struct providing only static methods. Must not have any members in order for offsetof to
+// work on vertex structs that inherit this.
+struct VertexHelpers
 {
-	float pos[4];
-	float normal[3];
-	float texcoords[2];
-	float fixedShade;
-
-	static bool Equal(const Vertex& p1, const Vertex& p2)
+	template <typename VertexLike>
+	static bool Equal(const VertexLike& p1, const VertexLike& p2)
 	{
 		return (p1.pos[0] == p2.pos[0] &&
 			p1.pos[1] == p2.pos[1] &&
 			p1.pos[2] == p2.pos[2]);
 	}
 
-	static void Average(const Vertex& p1, const Vertex& p2, Vertex& p3)
+	template <typename VertexLike1, typename VertexLike2>
+	static void Average(const VertexLike1& p1, const VertexLike1& p2, VertexLike2& p3)
 	{
 		p3.pos[3] = 1.0f;	//always 1
 		p3.fixedShade = (p1.fixedShade + p2.fixedShade) * 0.5f;
@@ -32,6 +31,14 @@ struct Vertex					// half vertex
 		for (int i = 0; i < 3; i++)	{ p3.normal[i] = (p1.normal[i] + p2.normal[i]) * 0.5f; }
 		for (int i = 0; i < 2; i++)	{ p3.texcoords[i] = (p1.texcoords[i] + p2.texcoords[i]) * 0.5f; }
 	}
+};
+
+struct Vertex: VertexHelpers	// half vertex
+{
+	float pos[4];
+	float normal[3];
+	float texcoords[2];
+	float fixedShade;
 };
 
 struct R3DPoly
@@ -43,8 +50,13 @@ struct R3DPoly
 	int number = 4;
 };
 
-struct FVertex : Vertex			// full vertex including face attributes
+struct FVertex: VertexHelpers	// full vertex including face attributes
 {
+	float pos[4];
+	float normal[3];
+	float texcoords[2];
+	float fixedShade;
+
 	float faceNormal[3];
 	UINT8 faceColour[4];
 	float textureNP;
