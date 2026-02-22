@@ -32,8 +32,8 @@
 #include "InputSystem.h"
 
 CInput::CInput(const char *inputId, const char *inputLabel, unsigned inputFlags, unsigned inputGameFlags, const char *defaultMapping, UINT16 initValue) : 
-	id(inputId), label(inputLabel), flags(inputFlags), gameFlags(inputGameFlags), m_defaultMapping(defaultMapping), value(initValue), prevValue(initValue),
-	m_system(NULL), m_source(NULL)
+	m_defaultMapping(defaultMapping), m_system(NULL), m_source(NULL),
+	id(inputId), label(inputLabel), flags(inputFlags), gameFlags(inputGameFlags), value(initValue), prevValue(initValue)
 {
 	ResetToDefaultMapping();
 }
