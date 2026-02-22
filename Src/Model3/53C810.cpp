@@ -423,7 +423,7 @@ UINT32 C53C810::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits,
 {
   UINT32  d;
   
-  if ((bits==8))
+  if (bits == 8)
   {
     DebugLog("53C810 %d-bit PCI read request for reg=%02X\n", bits, reg);
     return 0;
