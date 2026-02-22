@@ -1584,6 +1584,7 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
   config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win" });
+  config.Set("DumpMemory", false, "Misc");
   config.Set("DumpTextures", false, "Misc");
 
   //
@@ -1891,6 +1892,7 @@ static void Help(void)
   puts("  -print-inputs           Prints current input configuration");
   puts("");
   puts("Debug Options:");
+  puts("  -dump-memory            Write memory regions to files on exit");
   puts("  -dump-textures          Write textures to bitmap image files on exit");
 #ifdef SUPERMODEL_DEBUGGER
   puts("  -disable-debugger       Completely disable debugger functionality");
@@ -1995,6 +1997,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
 #endif
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },
+    { "-dump-memory",         { "DumpMemory",       true } },
     { "-dump-textures",       { "DumpTextures",     true } },
   };
   for (int i = 1; i < argc; i++)

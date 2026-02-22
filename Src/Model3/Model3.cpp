@@ -3329,8 +3329,7 @@ CModel3::CModel3(Util::Config::Node &config)
 }
 
 // Dumps a memory region to a file for debugging purposes
-#if 0
-static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bool reverse16)
+static void Dump(const char *name, const char *file, uint8_t *buf, size_t size, bool reverse32, bool reverse16)
 {
   FILE *fp = fopen(file, "wb");
   if (NULL != fp)
@@ -3341,22 +3340,24 @@ static void Dump(const char *file, uint8_t *buf, size_t size, bool reverse32, bo
       Util::FlipEndian16(buf, size);
     fwrite(buf, sizeof(UINT8), size, fp);
     fclose(fp);
-    printf("dumped %s\n", file);
+    printf("Wrote %s to '%s'\n", name, file);
   }
   else
-    printf("unable to dump %s\n", file);
+    ErrorLog("Unable to open '%s' for writing.", file);
 }
-#endif
 
 CModel3::~CModel3(void)
 {
-  // Debug: dump some files
-  //Dump("ram", ram, 0x800000, true, false);
-  //Dump("vrom", vrom, 0x4000000, true, false);
-  //Dump("crom", crom, 0x800000, true, false);
-  //Dump("bankedCrom", &crom[0x800000], 0x7000000, true, false);
-  //Dump("soundROM", soundROM, 0x80000, false, true);
-  //Dump("sampleROM", sampleROM, 0x800000, false, true);
+  // Dump memory if requested
+  if (m_config["DumpMemory"].ValueAsDefault<bool>(false))
+  {
+    Dump("RAM", "ram.bin", ram, 0x800000, true, false);
+    Dump("VROM", "vrom.bin", vrom, 0x4000000, true, false);
+    Dump("CROM", "crom.bin", crom, 0x800000, true, false);
+    Dump("banked CROM", "banked_crom.bin", &crom[0x800000], 0x7000000, true, false);
+    Dump("sound ROM", "sound_rom.bin", soundROM, 0x80000, false, true);
+    Dump("sample ROM", "sample_rom.bin", sampleROM, 0x800000, false, true);
+  }
 
   // Stop all threads
   StopThreads();
