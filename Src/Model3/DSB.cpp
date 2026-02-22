@@ -1,8 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2021 Bart Trzynadlowski, Nik Henson, Ian Curtis,
- **                     Harry Tuttle, and Spindizzi
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -671,7 +670,7 @@ static constexpr const char *stateName[] =
 
 void CDSB2::WriteMPEGFIFO(UINT8 byte)
 {
-	//printf("fifo: %x (state %s)\n", byte, stateName[mpegState]);
+	DebugLog("fifo: %x (state %s)\n", byte, stateName[mpegState]);
 	switch (mpegState)
 	{
 		case ST_IDLE:
