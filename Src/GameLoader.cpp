@@ -136,7 +136,11 @@ bool GameLoader::MissingAttrib(const GameLoader &loader, const Util::Config::Nod
 
 GameLoader::File::ptr_t GameLoader::File::Create(const GameLoader &loader, const Util::Config::Node &file_node)
 {
-  if (GameLoader::MissingAttrib(loader, file_node, "name") | GameLoader::MissingAttrib(loader, file_node, "offset")) // no || to easier detect errors
+  // Evaluate separately (not in a single expression) to avoid short-circuit evaluation,
+  // ensuring all missing attributes are detected and reported.
+  bool missingName = GameLoader::MissingAttrib(loader, file_node, "name");
+  bool missingOffset = GameLoader::MissingAttrib(loader, file_node, "offset");
+  if (missingName || missingOffset)
     return ptr_t();
   ptr_t file = std::make_shared<File>();
   file->offset = file_node["offset"].ValueAs<uint32_t>();
@@ -160,7 +164,12 @@ bool GameLoader::File::operator==(const File &rhs) const
 
 GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, const Util::Config::Node &region_node)
 {
-  if (GameLoader::MissingAttrib(loader, region_node, "name") | MissingAttrib(loader, region_node, "stride") | GameLoader::MissingAttrib(loader, region_node, "chunk_size")) // no || to easier detect errors
+  // Evaluate separately (not in a single expression) to avoid short-circuit evaluation,
+  // ensuring all missing attributes are detected and reported.
+  bool missingName = GameLoader::MissingAttrib(loader, region_node, "name");
+  bool missingStride = MissingAttrib(loader, region_node, "stride");
+  bool missingChunkSize = GameLoader::MissingAttrib(loader, region_node, "chunk_size");
+  if (missingName || missingStride || missingChunkSize)
     return ptr_t();
 
   if (region_node["byte_swap"].Exists() && region_node["byte_layout"].Exists())
