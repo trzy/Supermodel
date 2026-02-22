@@ -1,3 +1,24 @@
+/**
+ ** Supermodel
+ ** A Sega Model 3 Arcade Emulator.
+ ** Copyright 2003-2026 The Supermodel Team
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 #include "R3DScrollFog.h"
 #include "Graphics/Shader.h"
 
@@ -79,9 +100,8 @@ void main()
 )glsl";
 
 
-	R3DScrollFog::R3DScrollFog(const Util::Config::Node& config)
-		: m_config(config),
-		m_vao(0)
+	R3DScrollFog::R3DScrollFog()
+		: m_vao(0)
 	{
 		m_shaderProgram		= 0;
 		m_vertexShader		= 0;
@@ -130,7 +150,7 @@ void main()
 
 	void R3DScrollFog::AllocResources()
 	{
-		auto success = LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, "", "", vertexShaderFog, fragmentShaderFog);
+		LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, "", "", vertexShaderFog, fragmentShaderFog);
 
 		m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
 		m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");

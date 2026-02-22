@@ -1,3 +1,24 @@
+/**
+ ** Supermodel
+ ** A Sega Model 3 Arcade Emulator.
+ ** Copyright 2003-2026 The Supermodel Team
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 #include "New3D.h"
 #include "Vec.h"
 #include <cmath>
@@ -40,7 +61,7 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_prevTexCoords{{}},
 	m_vao(0),
 	m_r3dShader(config),
-	m_r3dScrollFog(config),
+	m_r3dScrollFog(),
 	m_aaTarget(0)
 {
 	m_sunClamp		= true;
