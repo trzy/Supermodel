@@ -2,7 +2,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -849,9 +849,6 @@ void SCSP_UpdateReg(int reg)
 		case 0x15:
 		case 0x16:
 		case 0x17:
-			{
-				int a=1;
-			}
 			break;
 		case 0x18:
 		case 0x19:
@@ -1035,13 +1032,10 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 				((unsigned char *)SCSP->DSP.MADRS)[(addr - 0x780) ^ 1] = val;
 			else if (addr >= 0x800 && addr < 0xC00)
 				((unsigned char *)SCSP->DSP.MPRO)[(addr - 0x800) ^ 1] = val;
-			else
-				int a = 1;
 			if (addr == 0xBF0)
 			{
 				SCSPDSP_Start(&SCSP->DSP);
 			}
-			int a = 1;
 #endif
 		}
 		else {
@@ -1055,13 +1049,10 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 				((unsigned char *)SCSP->DSP.MADRS)[(addr - 0x7c0) ^ 1] = val;
 			else if (addr < 0xC00)
 				((unsigned char *)SCSP->DSP.MPRO)[(addr - 0x800) ^ 1] = val;
-			else
-				int a = 1;
 			if (addr == 0xBF0)
 			{
 				SCSPDSP_Start(&SCSP->DSP);
 			}
-			int a = 1;
 #endif
 		}
 	}
@@ -1102,11 +1093,8 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 				*(unsigned short *) &(SCSP->DSP.MADRS[(addr - 0x780) / 2]) = val;
 			else if (addr < 0xC00)
 				*(unsigned short *) &(SCSP->DSP.MPRO[(addr - 0x800) / 2]) = val;
-			else
-				int a = 1;
 			if (addr == 0xBF0)
 				SCSPDSP_Start(&SCSP->DSP);
-			int a = 1;
 #endif
 		}
 		else {
@@ -1122,11 +1110,8 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 			{
 				*((UINT16 *)(SCSP->DSP.MPRO + (addr - 0x800) / 2)) = val;
 			}
-			else
-				int a = 1;
 			if (addr == 0xBF0)
 				SCSPDSP_Start(&SCSP->DSP);
-			int a = 1;
 #endif
 		}
 	}
@@ -1156,7 +1141,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 		SCSP_UpdateReg((addr&0xff)+2);
 	}
 	else if(addr<0x700)
-		int a=1;
+		{} // do nothing
 	else
 	{
 #ifdef USEDSP
@@ -1170,11 +1155,8 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 				*(unsigned int *) &(SCSP->DSP.MADRS[(addr-0x7c0)/2]) = val;
 			else if(addr<0xC00)
 				*(unsigned int *) &(SCSP->DSP.MPRO[(addr-0x800)/2])=val;
-			else
-				int a=1;
 			if(addr==0xBF0)
 				SCSPDSP_Start(&SCSP->DSP);
-			int a=1;
 #endif
 	}
 }
