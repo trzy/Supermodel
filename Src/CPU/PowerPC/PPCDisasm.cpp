@@ -1230,7 +1230,7 @@ int main(int argc, char **argv)
      * Disassemble!
      */
 
-    for (unsigned i = start; i < fsize && i < (start + len); i += 4, org += 4)
+    for (unsigned i = start; i < fsize && i < (start + len) && (i + 4) <= fsize; i += 4, org += 4)
     {
         if (!little)
             op = (buffer[i] << 24) | (buffer[i + 1] << 16) |
