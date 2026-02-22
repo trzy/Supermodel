@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -638,18 +638,6 @@ static inline void ppc_set_msr(UINT32 value)
 static inline UINT32 ppc_get_msr(void)
 {
 	return MSR;
-}
-
-static inline void ppc_set_cr(UINT32 value)
-{
-	CR(0) = (value >> 28) & 0xf;
-	CR(1) = (value >> 24) & 0xf;
-	CR(2) = (value >> 20) & 0xf;
-	CR(3) = (value >> 16) & 0xf;
-	CR(4) = (value >> 12) & 0xf;
-	CR(5) = (value >> 8) & 0xf;
-	CR(6) = (value >> 4) & 0xf;
-	CR(7) = (value >> 0) & 0xf;
 }
 
 static inline UINT32 ppc_get_cr(void)
