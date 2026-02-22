@@ -18,13 +18,13 @@
 namespace New3D {
 
 CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) : 
-	m_r3dShader(config),
-	m_r3dScrollFog(config),
 	m_gameName(gameName),
-	m_vao(0),
-	m_aaTarget(0),
-	m_LODBlendTable(nullptr),
-	m_matrixBasePtr(nullptr),
+	m_blockCulling(false),
+	m_cullingRAMLo(nullptr),
+	m_cullingRAMHi(nullptr),
+	m_polyRAM(nullptr),
+	m_vrom(nullptr),
+	m_textureRAM(nullptr),
 	m_xRatio(0),
 	m_yRatio(0),
 	m_xOffs(0),
@@ -34,14 +34,14 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_totalXRes(0),
 	m_totalYRes(0),
 	m_wideScreen(false),
-	m_cullingRAMLo(nullptr),
-	m_cullingRAMHi(nullptr),
-	m_polyRAM(nullptr),
-	m_vrom(nullptr),
-	m_textureRAM(nullptr),
-	m_prev{ 0 },
-	m_prevTexCoords{ 0 },
-	m_blockCulling(false)
+	m_matrixBasePtr(nullptr),
+	m_LODBlendTable(nullptr),
+	m_prev{{}},
+	m_prevTexCoords{{}},
+	m_vao(0),
+	m_r3dShader(config),
+	m_r3dScrollFog(config),
+	m_aaTarget(0)
 {
 	m_sunClamp		= true;
 	m_numPolyVerts	= 3;
