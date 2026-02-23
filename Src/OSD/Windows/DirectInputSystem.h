@@ -95,10 +95,10 @@ struct DIJoyInfo
 };
 
 // RawInput API
-typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDeviceListPtr)(OUT PRAWINPUTDEVICELIST pRawInputDeviceList, IN OUT PUINT puiNumDevices, IN UINT cbSize);
-typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDeviceInfoPtr)(IN HANDLE hDevice, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize);
+typedef /*WINUSERAPI*/ UINT (WINAPI *GetRawInputDeviceListPtr)(OUT PRAWINPUTDEVICELIST pRawInputDeviceList, IN OUT PUINT puiNumDevices, IN UINT cbSize);
+typedef /*WINUSERAPI*/ UINT (WINAPI *GetRawInputDeviceInfoPtr)(IN HANDLE hDevice, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize);
 typedef /*WINUSERAPI*/ bool (WINAPI *RegisterRawInputDevicesPtr)(IN PCRAWINPUTDEVICE pRawInputDevices, IN UINT uiNumDevices, IN UINT cbSize);
-typedef /*WINUSERAPI*/ INT (WINAPI *GetRawInputDataPtr)(IN HRAWINPUT hRawInput, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize, IN UINT cbSizeHeader);
+typedef /*WINUSERAPI*/ UINT (WINAPI *GetRawInputDataPtr)(IN HRAWINPUT hRawInput, IN UINT uiCommand, OUT LPVOID pData, IN OUT PUINT pcbSize, IN UINT cbSizeHeader);
 
 // XInput API
 typedef /*WINUSERAPI*/ DWORD (WINAPI *XInputGetCapabilitiesPtr)(IN DWORD dwUserIndex, IN DWORD dwFlags, OUT PXINPUT_CAPABILITIES pCapabilities);

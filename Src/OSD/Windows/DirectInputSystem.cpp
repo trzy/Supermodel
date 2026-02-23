@@ -400,10 +400,7 @@ static BOOL CALLBACK DI8EnumObjectsCallback(LPCDIDEVICEOBJECTINSTANCE instance, 
 
 	// Get axis name from DirectInput and store that too
 	char *axisName = joyDetails->axisName[axisNum];
-	strcpy(axisName, CInputSystem::GetDefaultAxisName(axisNum));
-	strcat(axisName, " (");
-	strncat(axisName, instance->tszName, MAX_NAME_LENGTH - strlen(axisName) - 1);
-	strcat(axisName, ")");
+	snprintf(axisName, MAX_NAME_LENGTH + 1, "%s (%s)", CInputSystem::GetDefaultAxisName(axisNum), instance->tszName);
 
 	return DIENUM_CONTINUE;
 }
@@ -618,7 +615,7 @@ void CDirectInputSystem::OpenKeyboardsAndMice()
 						continue;
 					nLength = std::min<int>(MAX_NAME_LENGTH, nLength);
 					char name[MAX_NAME_LENGTH] = {};
-					if (m_getRIDevInfoPtr(device.hDevice, RIDI_DEVICENAME, name, &nLength) == -1)
+					if (m_getRIDevInfoPtr(device.hDevice, RIDI_DEVICENAME, name, &nLength) == (UINT)-1)
 						continue;
 
 					// Ignore any RDP devices
@@ -1629,7 +1626,7 @@ bool CDirectInputSystem::InitializeSystem()
 
 int CDirectInputSystem::GetKeyIndex(const char *keyName)
 {
-	for (int i = 0; i < NUM_DI_KEYS; i++)
+	for (size_t i = 0; i < NUM_DI_KEYS; i++)
 	{
 		if (stricmp(keyName, s_keyMap[i].keyName) == 0)
 			return i;
@@ -1639,7 +1636,7 @@ int CDirectInputSystem::GetKeyIndex(const char *keyName)
 
 const char *CDirectInputSystem::GetKeyName(int keyIndex)
 {
-	if (keyIndex < 0 || keyIndex >= NUM_DI_KEYS)
+	if (keyIndex < 0 || keyIndex >= (int)NUM_DI_KEYS)
 		return NULL;
 	return s_keyMap[keyIndex].keyName;
 }
