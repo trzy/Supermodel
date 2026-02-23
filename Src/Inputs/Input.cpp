@@ -143,9 +143,8 @@ void CInput::AppendMapping(const char *mapping)
 	else
 	{
 		// Otherwise, append to mapping string and recreate source from new mapping string
-		size_t size = MAX_MAPPING_LENGTH - strlen(m_mapping);
-		strncat(m_mapping, ",", size--);
-		strncat(m_mapping, mapping, size);
+		size_t currentLen = strlen(m_mapping);
+		snprintf(m_mapping + currentLen, MAX_MAPPING_LENGTH + 1 - currentLen, ",%s", mapping);
 		CreateSource();
 	}
 }
