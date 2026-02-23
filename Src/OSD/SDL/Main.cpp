@@ -1822,6 +1822,7 @@ static void Help(void)
   printf("  -game-xml-file=<file>   ROM set definition file [Default: %s]\n", s_gameXMLFilePath.c_str());
   printf("  -log-output=<outputs>   Log output destination(s) [Default: %s]\n", s_logFilePath.c_str());
   puts("  -log-level=<level>      Logging threshold [Default: info]");
+  puts("  -game=<name>            Specific game to start in multi-romset");
   puts("");
   puts("Core Options:");
   puts("  -ppc-frequency=<mhz>    PowerPC frequency (default varies by stepping)");
@@ -1908,6 +1909,7 @@ struct ParsedCommandLine
 {
   Util::Config::Node config = Util::Config::Node("CommandLine");
   std::vector<std::string> rom_files;
+  std::string game_name;
   bool error = false;
   bool print_help = false;
   bool print_games = false;
@@ -2187,6 +2189,17 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
           cmd_line.gfx_state = parts[1];
       }
 #endif
+      else if (arg == "-game" || arg.find("-game=") == 0)
+      {
+        std::vector<std::string> parts = Util::Format(arg).Split('=');
+        if (parts.size() != 2)
+        {
+          ErrorLog("'-game' requires a name.");
+          cmd_line.error = true;
+        }
+        else
+          cmd_line.game_name = parts[1];
+      }
       else
       {
         ErrorLog("Ignoring unrecognized option: %s", argv[i]);
@@ -2300,7 +2313,7 @@ int main(int argc, char **argv)
         PrintGameList(xml_file, loader.GetGames());
         return 0;
       }
-      if (loader.Load(&game, &rom_set, *cmd_line.rom_files.begin()))
+      if (loader.Load(&game, &rom_set, *cmd_line.rom_files.begin(), cmd_line.game_name))
         return 1;
       Util::Config::MergeINISections(&config4, config3, fileConfig[game.name]);   // apply game-specific config
     }
