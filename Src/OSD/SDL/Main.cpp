@@ -237,7 +237,7 @@ static void SetFullScreenRefreshRate()
                 return;
             }
 
-            if (SDL_BITSPERPIXEL(mode.format) >= 24 && mode.w == totalXRes && mode.h == totalYRes) {
+            if (SDL_BITSPERPIXEL(mode.format) >= 24 && (unsigned)mode.w == totalXRes && (unsigned)mode.h == totalYRes) {
                 if (mode.refresh_rate == 57 || mode.refresh_rate == 58) {       // nvidia is fairly flexible in what refresh rate windows will show, so we can match either 57 or 58,
                     int result = SDL_SetWindowDisplayMode(s_window, &mode);     // both are totally non standard frequencies and shouldn't be set incorrectly
                     if (result == 0) {
