@@ -2162,7 +2162,7 @@ void CModel3::RunMainBoardFrame(void)
     auto pingPongFlipLine = TileGen.ReadRegister(0x08);
 
 	// Run the PowerPC for the active display part of the frame
-    for (int i = 0; i < 384; i++)
+    for (unsigned int i = 0; i < 384; i++)
     {
         if (i == pingPongFlipLine) {
             GPU.FlipPingPongBit();
