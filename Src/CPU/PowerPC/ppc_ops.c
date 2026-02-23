@@ -34,10 +34,21 @@
 // it really seems like this should be elsewhere - like maybe the floating point checks can hang out someplace else
 #include <cfenv>
 #include <cmath>
-#pragma STDC FENV_ACCESS ON // because of fesetround
+// Inform the compiler that the FP environment (rounding mode, status flags) is
+// accessed at runtime via fesetround(). Each compiler has its own mechanism:
+// MSVC uses float_control + fenv_access; Clang supports the standard STDC pragma;
+// GCC ignores STDC FENV_ACCESS and warns, so we use trapping-math (don't assume
+// FP ops don't trap) and rounding-math (don't assume default rounding mode).
+// Note: __clang__ must be checked before __GNUC__ since Clang defines both.
 #ifdef _MSC_VER
 #pragma float_control(precise,on) // because of fenv_access(on)
-#pragma fenv_access(on) // because of fesetround
+#pragma fenv_access(on)           // because of fesetround
+#elif defined(__clang__)
+#pragma STDC FENV_ACCESS ON       // because of fesetround
+#elif defined(__GNUC__)
+#pragma GCC optimize ("trapping-math,rounding-math") // because of fesetround
+#else
+#pragma STDC FENV_ACCESS ON       // because of fesetround
 #endif
 
 static void ppc_unimplemented(UINT32 op)
