@@ -53,6 +53,7 @@
 #include "JTAG.h"
 #include "CPU/PowerPC/ppc.h"
 #include "Util/BMPFile.h"
+#include "Util/BitCast.h"
 #include <cstring>
 #include <algorithm>
 
@@ -167,11 +168,11 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&highCullUpdateBlockOffset, sizeof(highCullUpdateBlockOffset));
 
   // use -1 to indicate null pointer
-  if (polyUpdateBlockOffset==-1) { m_polyUpdateBlock = nullptr;}
-  else                           { m_polyUpdateBlock = (UpdateBlock*)(cullingRAMLo + m_configRegisters.pingPongMemSize + polyUpdateBlockOffset); }
+  if (polyUpdateBlockOffset == (uint32_t)-1) { m_polyUpdateBlock = nullptr;}
+  else                                       { m_polyUpdateBlock = (UpdateBlock*)(cullingRAMLo + m_configRegisters.pingPongMemSize + polyUpdateBlockOffset); }
 
-  if (highCullUpdateBlockOffset == -1) { m_highRamUpdateBlock = nullptr; }
-  else                                 { m_highRamUpdateBlock = (UpdateBlock*)(cullingRAMLo + highCullUpdateBlockOffset); }
+  if (highCullUpdateBlockOffset == (uint32_t)-1) { m_highRamUpdateBlock = nullptr; }
+  else                                           { m_highRamUpdateBlock = (UpdateBlock*)(cullingRAMLo + highCullUpdateBlockOffset); }
   
 }
 
@@ -969,7 +970,7 @@ uint32_t CReal3D::ReadRegister(unsigned reg)
 
 	int index = (reg - 20) / 4;
 	float val = Render3D->GetLosValue(index);
-	return *(uint32_t*)(&val);
+	return Util::FloatAsUint32(val);
   }
 
   return 0xffffffff;
