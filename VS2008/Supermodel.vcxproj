@@ -570,6 +570,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\OSD\Video.h" />
     <ClInclude Include="..\Src\OSD\Windows\DirectInputSystem.h" />
     <ClInclude Include="..\Src\OSD\Windows\WinOutputs.h" />
+    <ClInclude Include="..\Src\OSD\SDL\NetOutputs.h" />
     <ClInclude Include="..\Src\Pkgs\glew.h" />
     <ClInclude Include="..\Src\Pkgs\glxew.h" />
     <ClInclude Include="..\Src\Pkgs\imgui\imconfig.h" />
