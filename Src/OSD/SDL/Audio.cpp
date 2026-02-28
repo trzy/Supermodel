@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -295,6 +295,8 @@ static void MixChannels(unsigned numSamples, const float* leftFrontBuffer, const
         case Game::QUAD_1_RRL_2_FRL:
             flipStereo = !flipStereo;
             break;
+        default: // all other types are left-before-right ordered and need no flip
+            break;
         }
 
         // Now order channels according to audio type
@@ -442,6 +444,8 @@ Result OpenAudio(const Util::Config::Node& config)
     case Game::STEREO_LR:
     case Game::STEREO_RL:
         nbHostAudioChannels = std::min(nbHostAudioChannels, 2);
+        break;
+    default: // quad types need up to 4 channels; config value already defaults to 4
         break;
     }
     // Mixer Balance
@@ -639,7 +643,7 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
         dst1 = audioBuffer + writePos;
         dst2 = NULL;
         len1 = numBytes;
-        len2 = NULL;
+        len2 = 0;
     }
 
     // Copy chunk to write position in buffer

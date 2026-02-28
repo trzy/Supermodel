@@ -1184,7 +1184,7 @@ Result CLegacy3D::SetupGLObjects()
     for (int mapNum = 0; mapNum < 8 && mapCount < maxTexMaps; mapNum++)
     {
         char uniformName[12];
-        sprintf(uniformName, "textureMap%u", mapNum);
+        snprintf(uniformName, sizeof(uniformName), "textureMap%u", mapNum);
         textureMapLocs[mapNum] = glGetUniformLocation(shaderProgram, uniformName);
         // If exist, bind to remaining texture units
         if (textureMapLocs[mapNum] != -1)

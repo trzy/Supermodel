@@ -1,3 +1,24 @@
+/**
+ ** Supermodel
+ ** A Sega Model 3 Arcade Emulator.
+ ** Copyright 2003-2026 The Supermodel Team
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 #include "New3D.h"
 #include "Vec.h"
 #include <cmath>
@@ -18,13 +39,13 @@
 namespace New3D {
 
 CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) : 
-	m_r3dShader(config),
-	m_r3dScrollFog(config),
 	m_gameName(gameName),
-	m_vao(0),
-	m_aaTarget(0),
-	m_LODBlendTable(nullptr),
-	m_matrixBasePtr(nullptr),
+	m_blockCulling(false),
+	m_cullingRAMLo(nullptr),
+	m_cullingRAMHi(nullptr),
+	m_polyRAM(nullptr),
+	m_vrom(nullptr),
+	m_textureRAM(nullptr),
 	m_xRatio(0),
 	m_yRatio(0),
 	m_xOffs(0),
@@ -34,14 +55,14 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_totalXRes(0),
 	m_totalYRes(0),
 	m_wideScreen(false),
-	m_cullingRAMLo(nullptr),
-	m_cullingRAMHi(nullptr),
-	m_polyRAM(nullptr),
-	m_vrom(nullptr),
-	m_textureRAM(nullptr),
-	m_prev{ 0 },
-	m_prevTexCoords{ 0 },
-	m_blockCulling(false)
+	m_matrixBasePtr(nullptr),
+	m_LODBlendTable(nullptr),
+	m_prev{{}},
+	m_prevTexCoords{{}},
+	m_vao(0),
+	m_r3dShader(config),
+	m_r3dScrollFog(),
+	m_aaTarget(0)
 {
 	m_sunClamp		= true;
 	m_numPolyVerts	= 3;
@@ -75,11 +96,11 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 
 	// before draw, specify vertex and index arrays with their offsets, offsetof is maybe evil ..
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inVertex"), 4, GL_FLOAT, GL_FALSE, sizeof(FVertex), 0);
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, normal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, texcoords));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, base.normal));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTexCoord"), 2, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, base.texcoords));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inColour"), 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(FVertex), (void*)offsetof(FVertex, faceColour));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFaceNormal"), 3, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, faceNormal));
-	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, fixedShade));
+	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inFixedShade"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, base.fixedShade));
 	glVertexAttribPointer(m_r3dShader.GetVertexAttribPos("inTextureNP"), 1, GL_FLOAT, GL_FALSE, sizeof(FVertex), (void*)offsetof(FVertex, textureNP));
 
 	glBindVertexArray(0);

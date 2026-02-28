@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -698,7 +698,11 @@ opcode_struct* find_opcode(char* name, int size, char* spec_proc, char* spec_ea)
 	opcode_struct* op;
 
 
-	for(op = g_opcode_input_table;op->name != NULL;op++)
+	/* Note: original Musashi code used 'op->name != NULL' here, but op->name is a char array
+	 * (not a pointer), so that comparison is always true and would loop forever if no match
+	 * were found. In practice the loop always exits early via 'return op'. The correct
+	 * sentinel check is an empty name string from the zero-initialized table. */
+	for(op = g_opcode_input_table;op->name[0] != '\0';op++)
 	{
 		if(	strcmp(name, op->name) == 0 &&
 			(size == op->size) &&
@@ -714,7 +718,11 @@ opcode_struct* find_illegal_opcode(void)
 {
 	opcode_struct* op;
 
-	for(op = g_opcode_input_table;op->name != NULL;op++)
+	/* Note: original Musashi code used 'op->name != NULL' here, but op->name is a char array
+	 * (not a pointer), so that comparison is always true and would loop forever if no match
+	 * were found. In practice the loop always exits early via 'return op'. The correct
+	 * sentinel check is an empty name string from the zero-initialized table. */
+	for(op = g_opcode_input_table;op->name[0] != '\0';op++)
 	{
 		if(strcmp(op->name, "illegal") == 0)
 			return op;

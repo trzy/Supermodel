@@ -102,6 +102,7 @@ void CASIC::CaptureDR()
     default:                    // BYPASS
         m_shiftRegSize = 1;
         m_shiftReg = 0;
+        break;
     }
 }
 
@@ -118,6 +119,8 @@ void CASIC::UpdateDR()
     case 8:                     // MODEWORD
         m_modeword = m_shiftReg.to_ulong();
         m_real3D.WriteJTAGModeword(m_deviceName, m_modeword);
+        break;
+    default:
         break;
     }
 }
@@ -162,6 +165,7 @@ void C3DRAM::CaptureDR()
     default:                // BYPASS
         m_shiftRegSize = 1;
         m_shiftReg = 0;
+        break;
     }
 }
 
@@ -282,6 +286,8 @@ void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
             for (uint32_t i = 0; i < m_numDevices; i++)
                 tdi = m_device[i]->Shift(tdi);
             break;
+        default:
+            break;
         }
 
         // Go to next state
@@ -302,6 +308,8 @@ void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
         case State::UpdateIR:
             for (uint32_t i = 0; i < m_numDevices; i++)
                 m_device[i]->UpdateIR();
+            break;
+        default:
             break;
         }
     }
@@ -361,6 +369,7 @@ void CJTAG::SetStepping(int stepping)
         m_mars01.SetIDCode(0x116c6057);
         m_jupiter.SetIDCode(0x116c7057);
         m_numDevices = 10;
+        break;
     }
 }
 

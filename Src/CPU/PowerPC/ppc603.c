@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -271,7 +271,7 @@ int ppc_execute(int cycles)
 		char string1[200];
 		char string2[200];
 		opcode = BSWAP32(*ppc.op);
-		DisassemblePowerPC(opcode, ppc.npc, string1, string2, true);
+		DisassemblePowerPC(opcode, ppc.npc, string1, string2, sizeof(string2), true);
 		printf("%08X: %s %s\n", ppc.npc, string1, string2);
 	}*/
 
@@ -341,7 +341,7 @@ int ppc_execute(int cycles)
 		char string1[200];
 		char string2[200];
 		opcode = BSWAP32(*ppc.op);
-		DisassemblePowerPC(opcode, ppc.npc, string1, string2, true);
+		DisassemblePowerPC(opcode, ppc.npc, string1, string2, sizeof(string2), true);
 		printf("%08X: %s %s\n", ppc.npc, string1, string2);
 	}
 	*/

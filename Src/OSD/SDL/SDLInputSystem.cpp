@@ -468,7 +468,7 @@ bool CSDLInputSystem::InitializeSystem()
 
 int CSDLInputSystem::GetKeyIndex(const char *keyName)
 {
-  for (int i = 0; i < NUM_SDL_KEYS; i++)
+  for (size_t i = 0; i < NUM_SDL_KEYS; i++)
   {
     if (stricmp(keyName, s_keyMap[i].keyName) == 0)
       return i;
@@ -478,7 +478,7 @@ int CSDLInputSystem::GetKeyIndex(const char *keyName)
 
 const char *CSDLInputSystem::GetKeyName(int keyIndex)
 {
-  if (keyIndex < 0 || keyIndex >= NUM_SDL_KEYS)
+  if (keyIndex < 0 || keyIndex >= (int)NUM_SDL_KEYS)
     return nullptr;
   return s_keyMap[keyIndex].keyName;
 }

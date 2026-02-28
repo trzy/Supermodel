@@ -43,20 +43,21 @@ struct R3DPoly
 	int number = 4;
 };
 
-struct FVertex : Vertex			// full vertex including face attributes
+struct FVertex				// full vertex including face attributes
 {
+	Vertex base;			// composition instead of inheritance keeps FVertex standard-layout, making offsetof well-defined
 	float faceNormal[3];
 	UINT8 faceColour[4];
 	float textureNP;
 
-	FVertex& operator=(const Vertex& vertex) 
+	FVertex& operator=(const Vertex& vertex)
 	{
-		memcpy(this, &vertex, sizeof(Vertex));
+		base = vertex;
 		return *this;
 	}
 
 	FVertex() {}
-	FVertex(const R3DPoly& r3dPoly, int index) 
+	FVertex(const R3DPoly& r3dPoly, int index)
 	{
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
@@ -67,7 +68,7 @@ struct FVertex : Vertex			// full vertex including face attributes
 
 	FVertex(const R3DPoly& r3dPoly, int index1, int index2)		// average of 2 points
 	{
-		Vertex::Average(r3dPoly.v[index1], r3dPoly.v[index2], *this);
+		Vertex::Average(r3dPoly.v[index1], r3dPoly.v[index2], base);
 
 		// copy face attributes
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
@@ -75,9 +76,14 @@ struct FVertex : Vertex			// full vertex including face attributes
 		textureNP = r3dPoly.textureNP;
 	}
 
+	static bool Equal(const FVertex& p1, const FVertex& p2)
+	{
+		return Vertex::Equal(p1.base, p2.base);
+	}
+
 	static void Average(const FVertex& p1, const FVertex& p2, FVertex& p3)
 	{
-		Vertex::Average(p1, p2, p3);
+		Vertex::Average(p1.base, p2.base, p3.base);
 		for (int i = 0; i < 4; i++) { p3.faceColour[i] = p1.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { p3.faceNormal[i] = p1.faceNormal[i]; }
 	}

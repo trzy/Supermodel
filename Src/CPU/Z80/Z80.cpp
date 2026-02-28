@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -2270,7 +2270,6 @@ int CZ80::Run(int numCycles)
       break;
     case 0xCB:      /* CB prefix */
       adr = IX + (signed char) GetBYTE_pp(pc);
-      adr = adr;
       op = GetBYTE(pc);
       cycles -= cycleTables[4][op];
       switch (op & 7) {
@@ -3505,7 +3504,6 @@ int CZ80::Run(int numCycles)
       break;
     case 0xCB:      /* CB prefix */
       adr = IY + (signed char) GetBYTE_pp(pc);
-      adr = adr;
       op = GetBYTE(pc);
       cycles -= cycleTables[4][op];
       switch (op & 7) {

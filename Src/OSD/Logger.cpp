@@ -1,8 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011-2020 Bart Trzynadlowski, Nik Henson, Ian Curtis,
- **                     Harry Tuttle, and Spindizzi
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -353,7 +352,7 @@ void CSystemLogger::DebugLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  syslog(LOG_DEBUG, string2);
+  syslog(LOG_DEBUG, "%s", string2);
 #endif
 }
 
@@ -373,7 +372,7 @@ void CSystemLogger::InfoLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  syslog(LOG_INFO, string2);
+  syslog(LOG_INFO, "%s", string2);
 #endif
 }
 
@@ -393,7 +392,7 @@ void CSystemLogger::ErrorLog(const char *fmt, va_list vl)
 #ifdef _WIN32
   OutputDebugString(string2);
 #else
-  syslog(LOG_ERR, string2);
+  syslog(LOG_ERR, "%s", string2);
 #endif
 }
 

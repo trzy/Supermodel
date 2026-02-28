@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -423,7 +423,7 @@ UINT32 C53C810::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits,
 {
   UINT32  d;
   
-  if ((bits==8))
+  if (bits == 8)
   {
     DebugLog("53C810 %d-bit PCI read request for reg=%02X\n", bits, reg);
     return 0;

@@ -8,6 +8,7 @@
 namespace Util
 {
 #define FloatAsInt32(x) std::bit_cast<int32_t>(x)
+#define FloatAsUint32(x) std::bit_cast<uint32_t>(x)
 #define Int32AsFloat(x) std::bit_cast<float>(x)
 #define Uint32AsFloat(x) std::bit_cast<float>(x)
 #else
@@ -26,6 +27,7 @@ inline Dest bit_cast(Source const& source) {
    return dest;
 }
 #define FloatAsInt32(x) bit_cast<int32_t,float>(x)
+#define FloatAsUint32(x) bit_cast<uint32_t,float>(x)
 #define Int32AsFloat(x) bit_cast<float,int32_t>(x)
 #define Uint32AsFloat(x) bit_cast<float,uint32_t>(x)
 #endif

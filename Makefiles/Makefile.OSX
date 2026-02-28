@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2025 The Supermodel Team
+## Copyright 2003-2026 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -101,6 +101,12 @@ PLATFORM_SRC_FILES = \
 	Src/OSD/OSX/FileSystemPath.cpp
 
 include Makefiles/Rules.inc
+
+# -s (strip) is obsolete and ignored by Apple ld64; remove it to avoid potential warnings
+LDOPT := $(filter-out -s,$(LDOPT))
+
+# Suppress gluPerspective deprecation warnings (macOS only, deprecated since 10.9)
+$(OBJ_DIR)/Legacy3D.o: CXXFLAGS += -Wno-deprecated-declarations
 
 clean:
 	$(SILENT)echo Cleaning up \"Frameworks\", \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...

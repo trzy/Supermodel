@@ -1,7 +1,7 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2003-2025 The Supermodel Team
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
@@ -207,10 +207,10 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   return Result::OKAY;
 }
 
-static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
-{
-    printf("OGLDebug:: 0x%X: %s\n", id, message);
-}
+// static void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
+// {
+//     printf("OGLDebug:: 0x%X: %s\n", id, message);
+// }
 
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
 // This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
@@ -237,7 +237,7 @@ static void SetFullScreenRefreshRate()
                 return;
             }
 
-            if (SDL_BITSPERPIXEL(mode.format) >= 24 && mode.w == totalXRes && mode.h == totalYRes) {
+            if (SDL_BITSPERPIXEL(mode.format) >= 24 && (unsigned)mode.w == totalXRes && (unsigned)mode.h == totalYRes) {
                 if (mode.refresh_rate == 57 || mode.refresh_rate == 58) {       // nvidia is fairly flexible in what refresh rate windows will show, so we can match either 57 or 58,
                     int result = SDL_SetWindowDisplayMode(s_window, &mode);     // both are totally non standard frequencies and shouldn't be set incorrectly
                     if (result == 0) {
@@ -1584,6 +1584,7 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
   config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win" });
+  config.Set("DumpMemory", false, "Misc");
   config.Set("DumpTextures", false, "Misc");
 
   //
@@ -1891,6 +1892,7 @@ static void Help(void)
   puts("  -print-inputs           Prints current input configuration");
   puts("");
   puts("Debug Options:");
+  puts("  -dump-memory            Write memory regions to files on exit");
   puts("  -dump-textures          Write textures to bitmap image files on exit");
 #ifdef SUPERMODEL_DEBUGGER
   puts("  -disable-debugger       Completely disable debugger functionality");
@@ -1995,6 +1997,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
 #endif
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },
+    { "-dump-memory",         { "DumpMemory",       true } },
     { "-dump-textures",       { "DumpTextures",     true } },
   };
   for (int i = 1; i < argc; i++)
