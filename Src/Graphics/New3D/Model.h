@@ -9,20 +9,21 @@
 
 namespace New3D {
 
-// Helper struct providing only static methods. Must not have any members in order for offsetof to
-// work on vertex structs that inherit this.
-struct VertexHelpers
+struct Vertex					// half vertex
 {
-	template <typename VertexLike>
-	static bool Equal(const VertexLike& p1, const VertexLike& p2)
+	float pos[4];
+	float normal[3];
+	float texcoords[2];
+	float fixedShade;
+
+	static bool Equal(const Vertex& p1, const Vertex& p2)
 	{
 		return (p1.pos[0] == p2.pos[0] &&
 			p1.pos[1] == p2.pos[1] &&
 			p1.pos[2] == p2.pos[2]);
 	}
 
-	template <typename VertexLike1, typename VertexLike2>
-	static void Average(const VertexLike1& p1, const VertexLike1& p2, VertexLike2& p3)
+	static void Average(const Vertex& p1, const Vertex& p2, Vertex& p3)
 	{
 		p3.pos[3] = 1.0f;	//always 1
 		p3.fixedShade = (p1.fixedShade + p2.fixedShade) * 0.5f;
@@ -31,14 +32,6 @@ struct VertexHelpers
 		for (int i = 0; i < 3; i++)	{ p3.normal[i] = (p1.normal[i] + p2.normal[i]) * 0.5f; }
 		for (int i = 0; i < 2; i++)	{ p3.texcoords[i] = (p1.texcoords[i] + p2.texcoords[i]) * 0.5f; }
 	}
-};
-
-struct Vertex: VertexHelpers	// half vertex
-{
-	float pos[4];
-	float normal[3];
-	float texcoords[2];
-	float fixedShade;
 };
 
 struct R3DPoly
@@ -50,25 +43,21 @@ struct R3DPoly
 	int number = 4;
 };
 
-struct FVertex: VertexHelpers	// full vertex including face attributes
+struct FVertex				// full vertex including face attributes
 {
-	float pos[4];
-	float normal[3];
-	float texcoords[2];
-	float fixedShade;
-
+	Vertex base;			// composition instead of inheritance keeps FVertex standard-layout, making offsetof well-defined
 	float faceNormal[3];
 	UINT8 faceColour[4];
 	float textureNP;
 
-	FVertex& operator=(const Vertex& vertex) 
+	FVertex& operator=(const Vertex& vertex)
 	{
-		memcpy(this, &vertex, sizeof(Vertex));
+		base = vertex;
 		return *this;
 	}
 
 	FVertex() {}
-	FVertex(const R3DPoly& r3dPoly, int index) 
+	FVertex(const R3DPoly& r3dPoly, int index)
 	{
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { faceNormal[i] = r3dPoly.faceNormal[i]; }
@@ -79,7 +68,7 @@ struct FVertex: VertexHelpers	// full vertex including face attributes
 
 	FVertex(const R3DPoly& r3dPoly, int index1, int index2)		// average of 2 points
 	{
-		Vertex::Average(r3dPoly.v[index1], r3dPoly.v[index2], *this);
+		Vertex::Average(r3dPoly.v[index1], r3dPoly.v[index2], base);
 
 		// copy face attributes
 		for (int i = 0; i < 4; i++) { faceColour[i] = r3dPoly.faceColour[i]; }
@@ -87,9 +76,14 @@ struct FVertex: VertexHelpers	// full vertex including face attributes
 		textureNP = r3dPoly.textureNP;
 	}
 
+	static bool Equal(const FVertex& p1, const FVertex& p2)
+	{
+		return Vertex::Equal(p1.base, p2.base);
+	}
+
 	static void Average(const FVertex& p1, const FVertex& p2, FVertex& p3)
 	{
-		Vertex::Average(p1, p2, p3);
+		Vertex::Average(p1.base, p2.base, p3.base);
 		for (int i = 0; i < 4; i++) { p3.faceColour[i] = p1.faceColour[i]; }
 		for (int i = 0; i < 3; i++) { p3.faceNormal[i] = p1.faceNormal[i]; }
 	}
