@@ -1531,6 +1531,52 @@ All settings are case sensitive.
 
     ----------------
 
+    Name:           Outputs
+
+    Argument:       String.
+
+    Description:    Manages MAME Hooker compatible outputs.
+                    Valid options are:
+                      - none    - default, disables outputs.
+                      - win     - Use Windows messages (only on Windows).
+                      - net     - Use network messages.
+
+                    See OutputsWithLF, OutputsTCPPort and
+                    OutputsUDPBroadcastPort settings when using 'net' option.
+                    Can only be set in the 'Global' section.
+
+    ----------------
+
+    Name:           OutputsWithLF
+
+    Argument:       Boolean value (true or false).
+
+    Description:    When using 'net' option for 'Outputs', this setting determines whether
+                    messages are terminated with a line feed character.  The
+                    default is false. Can only be set in 'Global' section.
+
+    ----------------
+
+    Name:           OutputsTCPPort
+
+    Argument:       Integer value.
+
+    Description:    When using 'net' option for 'Outputs', this setting determines the
+                    TCP port to use for network messages. Can only be set in 'Global'
+                    section.
+
+    ----------------
+
+    Name:           OutputsUDPBroadcastPort
+
+    Argument:       Integer value.
+
+    Description:    When using 'net' option for 'Outputs', this setting determines the
+                    UDP broadcast port to use for network messages. Can only be set
+                    in 'Global' section.
+
+    ----------------
+
     Names:          InputStart1
                     InputStart2
                     InputCoin1
