@@ -104,6 +104,8 @@
 #include "OSD/DefaultConfigFile.h"
 #include "Gui.h"
 
+#include <SDL.h>
+SDL_Haptic* g_haptic = nullptr;
 
 /******************************************************************************
  Global Run-time Config
@@ -2314,7 +2316,8 @@ int main(int argc, char **argv)
   LogConfig(s_runtime_config);
 
   // Initialize SDL (individual subsystems get initialized later)
-  if (SDL_Init(0) != 0)
+  // Adjustments for hle_vibration
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) != 0)
   {
     ErrorLog("Unable to initialize SDL: %s\n", SDL_GetError());
     return 1;
@@ -2465,4 +2468,5 @@ Exit:
 
   return exitCode;
 }
+
 
