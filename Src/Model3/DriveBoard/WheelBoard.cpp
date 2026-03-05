@@ -26,7 +26,11 @@
  * Implementation of the CWheelBoard class: drive board (force feedback for wheel)
  * emulation.
  *
- * NOTE: Simulation does not yet work. Drive board ROMs are required.
+ * NOTE: Using SDL haptic to simulate vibration. Drive board ROMs are no longer required. FFB function still ROMs required.
+ * epr-19338a: Scud race / plus
+ * epr-19338a: Dart devils
+ * epr-20985: Daytona USA 2 PE / BOTE
+ * epr-20985: Sega Rally2
  */
 
 #include "WheelBoard.h"
@@ -34,6 +38,11 @@
 #include "Supermodel.h"
 #include <cstdio>
 #include <algorithm>
+
+// added hle_vibration
+#include <SDL.h>
+extern SDL_Haptic* g_haptic;
+
 
 Game::DriveBoardType CWheelBoard::GetType(void) const
 {
@@ -193,8 +202,9 @@ void CWheelBoard::Reset(void)
 
   m_simulated = false;  //TODO: make this run-time configurable when simulation mode is supported
 
-  if (!m_config["ForceFeedback"].ValueAsDefault<bool>(false))
-    Disable();
+//  Disabled to activate SDL hle_vibration  
+//  if (!m_config["ForceFeedback"].ValueAsDefault<bool>(false))
+//    Disable();
 
   // Stop any effects that may still be playing
   if (!IsDisabled())
@@ -229,14 +239,9 @@ void CWheelBoard::Write(UINT8 data)
   //  data >= 0x40 && data <= 0x4F ||
   //  data >= 0x70 && data <= 0x7F)
   //  DebugLog("DriveBoard.Write(%02X)\n", data);
-  if (m_simulated)
-    SimulateWrite(data);
-  else
-  {
-    CDriveBoard::Write(data);
-    if (data == 0xCB)
-      m_initialized = false;
-  }
+
+// Always calculate vibration commands  
+SimulateWrite(data);
 }
 
 UINT8 CWheelBoard::SimulateRead(void)
@@ -441,6 +446,8 @@ UINT8 CWheelBoard::IORead8(UINT32 portNum)
     return 0xFF;
   }
 }
+
+
 
 void CWheelBoard::IOWrite8(UINT32 portNum, UINT8 data)
 {
@@ -694,8 +701,16 @@ void CWheelBoard::SendFriction(UINT8 val)
 
 void CWheelBoard::SendVibrate(UINT8 val)
 {
-  if (val == m_lastVibrate)
+  if (!g_haptic)
     return;
+
+  // stop when value is 0
+  if (val == 0)
+  {
+    SDL_HapticRumbleStop(g_haptic);
+    return;
+  }
+
   /*
   if (val == 0)
     DebugLog(">> Stop Vibrate\n");
@@ -770,3 +785,5 @@ CWheelBoard::~CWheelBoard(void)
 {
 
 }
+
+
