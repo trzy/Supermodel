@@ -448,13 +448,6 @@ UINT8 CWheelBoard::IORead8(UINT32 portNum)
 }
 
 
-// dummy wheel call
-UINT8 CWheelBoard::ReadADCChannel1() const
-{
-return 0x80;  // dummy centre position call
-}
-
-
 
 void CWheelBoard::IOWrite8(UINT32 portNum, UINT8 data)
 {
@@ -792,4 +785,5 @@ CWheelBoard::~CWheelBoard(void)
 {
 
 }
+
 
