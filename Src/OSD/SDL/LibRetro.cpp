@@ -1,5 +1,6 @@
 #include <cassert>
 #include <stdio.h>
+#include <cstring>
 #include "../Pkgs/libretro.h"
 #include "Version.h"
 #include <GL/glew.h>
@@ -291,8 +292,12 @@ RETRO_API void retro_init(void) {
     return;
   }
 
-  int fmt = 1337;
-  cb_env(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt);
+  enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+  if (!cb_env(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+  {
+    ErrorLog("RetroArch rejected pixel format XRGB8888");
+    return;
+  }
 
   initialized = true;
 }
@@ -397,14 +402,23 @@ RETRO_API unsigned retro_get_region(void) {
 }
 
 // Run
-uint8_t pixels[SUPERMODEL_W * SUPERMODEL_H * 4];
+static uint32_t pixels[SUPERMODEL_W * SUPERMODEL_H];
+static uint32_t flipped_pixels[SUPERMODEL_W * SUPERMODEL_H];
 RETRO_API void retro_run(void) {
   assert(game_loaded);
   Inputs->Poll(&game, 0, 0, SUPERMODEL_W, SUPERMODEL_H);
   Model3->RunFrame();
+  glReadPixels(0, 0, SUPERMODEL_W, SUPERMODEL_H, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
   SDL_GL_SwapWindow(r_window);
-  glReadPixels(0, 0, SUPERMODEL_W, SUPERMODEL_H, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-  cb_video_refresh(pixels, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W * 4);
+  for (unsigned y = 0; y < SUPERMODEL_H; y++)
+  {
+    std::memcpy(
+      flipped_pixels + (y * SUPERMODEL_W),
+      pixels + ((SUPERMODEL_H - 1 - y) * SUPERMODEL_W),
+      SUPERMODEL_W * sizeof(uint32_t)
+    );
+  }
+  cb_video_refresh(flipped_pixels, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W * sizeof(uint32_t));
 }
 
 // Audio
