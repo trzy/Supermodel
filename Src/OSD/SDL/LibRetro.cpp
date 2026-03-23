@@ -114,6 +114,14 @@ static bool game_loaded = false;
 static int supersampling = 1;
 static unsigned output_width = SUPERMODEL_W;
 static unsigned output_height = SUPERMODEL_H;
+static unsigned x_offset = 0;
+static unsigned y_offset = 0;
+static unsigned x_res = SUPERMODEL_W;
+static unsigned y_res = SUPERMODEL_H;
+static unsigned total_x_res = SUPERMODEL_W;
+static unsigned total_y_res = SUPERMODEL_H;
+static unsigned reported_width = 0;
+static unsigned reported_height = 0;
 static SuperAA *superAA = nullptr;
 static CRender2D *Render2D = nullptr;
 static IRender3D *Render3D = nullptr;
@@ -122,6 +130,90 @@ static ROMSet rom_set;
 static retro_hw_render_callback hw_render_cb = {};
 
 static bool InitializeRenderers(bool reset_model);
+
+static void UpdateOutputGeometry(void)
+{
+  total_x_res = output_width > 0 ? output_width : SUPERMODEL_W;
+  total_y_res = output_height > 0 ? output_height : SUPERMODEL_H;
+
+  float xResF = (float)total_x_res;
+  float yResF = (float)total_y_res;
+  const float model3Ratio = 496.0f / 384.0f;
+
+  if (yResF < (xResF / model3Ratio))
+    xResF = yResF * model3Ratio;
+  if (xResF < (yResF * model3Ratio))
+    yResF = xResF / model3Ratio;
+
+  x_res = (unsigned)xResF;
+  y_res = (unsigned)yResF;
+  x_offset = (total_x_res - x_res) / 2;
+  y_offset = (total_y_res - y_res) / 2;
+}
+
+static void PushRetroGeometry(void)
+{
+  if (cb_env == nullptr)
+    return;
+
+  retro_game_geometry geom = {};
+  geom.base_width = total_x_res;
+  geom.base_height = total_y_res;
+  geom.max_width = std::max(total_x_res, SUPERMODEL_W * 8u);
+  geom.max_height = std::max(total_y_res, SUPERMODEL_H * 8u);
+  geom.aspect_ratio = (float)total_x_res / (float)total_y_res;
+  cb_env(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
+  reported_width = total_x_res;
+  reported_height = total_y_res;
+}
+
+static bool RefreshOutputGeometry(void)
+{
+  GLint viewport[4] = { 0, 0, 0, 0 };
+  glGetIntegerv(GL_VIEWPORT, viewport);
+
+  unsigned new_output_width = output_width;
+  unsigned new_output_height = output_height;
+  if (viewport[2] > 0 && viewport[3] > 0)
+  {
+    new_output_width = (unsigned)viewport[2];
+    new_output_height = (unsigned)viewport[3];
+  }
+
+  unsigned previous_total_x_res = total_x_res;
+  unsigned previous_total_y_res = total_y_res;
+
+  output_width = new_output_width;
+  output_height = new_output_height;
+  UpdateOutputGeometry();
+
+  if (superAA != nullptr)
+    superAA->SetOutputSize((int)total_x_res, (int)total_y_res);
+
+  bool geometry_changed =
+    previous_total_x_res != total_x_res ||
+    previous_total_y_res != total_y_res;
+
+  if (geometry_changed || reported_width != total_x_res || reported_height != total_y_res)
+    PushRetroGeometry();
+
+  return geometry_changed;
+}
+
+static void ApplyGLGeometry(void)
+{
+  const unsigned internal_x_offset = 0;
+  const unsigned internal_y_offset = 0;
+  const unsigned internal_x_res = SUPERMODEL_W * (unsigned)supersampling;
+  const unsigned internal_y_res = SUPERMODEL_H * (unsigned)supersampling;
+  const unsigned internal_total_x_res = internal_x_res;
+  const unsigned internal_total_y_res = internal_y_res;
+  const UINT32 correction = (UINT32)((((double)internal_y_res / 384.0) * 2.0) + 0.5);
+
+  glViewport(0, 0, internal_total_x_res, internal_total_y_res);
+  glEnable(GL_SCISSOR_TEST);
+  glScissor(internal_x_offset + correction, internal_y_offset + correction, internal_x_res - (correction * 2), internal_y_res - (correction * 2));
+}
 
 static void DestroyRenderers(void)
 {
@@ -177,6 +269,8 @@ static bool InitGLState(void)
     output_width = (unsigned)viewport[2];
     output_height = (unsigned)viewport[3];
   }
+  UpdateOutputGeometry();
+  PushRetroGeometry();
 
   GLint profile = 0;
   glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
@@ -187,19 +281,16 @@ static bool InitGLState(void)
     printf("(compatibility profile)");
   printf("\n\n");
 
-  glViewport(0,0,SUPERMODEL_W,SUPERMODEL_H);
   glClearColor(0.0,0.0,0.0,0.0);
   glClearDepth(1.0);
   glDepthFunc(GL_LESS);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
 
+  ApplyGLGeometry();
+
   for (int i = 0; i < 3; i++)
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-  UINT32 correction = (UINT32)(((SUPERMODEL_H / 384.) * 2.) + 0.5);
-  glEnable(GL_SCISSOR_TEST);
-  glScissor(correction, correction, (SUPERMODEL_W - (correction * 2)), (SUPERMODEL_H - (correction * 2)));
 
   hw_context_ready = true;
   return true;
@@ -282,24 +373,30 @@ static bool InitializeRenderers(bool reset_model)
   if (!hw_context_ready || Model3 == nullptr || renderers_ready)
     return renderers_ready;
 
-  const unsigned internal_width = SUPERMODEL_W * (unsigned)supersampling;
-  const unsigned internal_height = SUPERMODEL_H * (unsigned)supersampling;
+  const unsigned internal_x_offset = 0;
+  const unsigned internal_y_offset = 0;
+  const unsigned internal_x_res = SUPERMODEL_W * (unsigned)supersampling;
+  const unsigned internal_y_res = SUPERMODEL_H * (unsigned)supersampling;
+  const unsigned internal_total_x_res = internal_x_res;
+  const unsigned internal_total_y_res = internal_y_res;
+
+  ApplyGLGeometry();
 
   superAA = new SuperAA(supersampling, CRTcolor::None);
-  superAA->Init(SUPERMODEL_W, SUPERMODEL_H);
-  superAA->SetOutputSize((int)output_width, (int)output_height);
+  superAA->Init((int)SUPERMODEL_W, (int)SUPERMODEL_H);
+  superAA->SetOutputSize((int)total_x_res, (int)total_y_res);
 
   Render2D = new CRender2D(s_runtime_config);
   Render3D = new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
 
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
-  if (Result::OKAY != Render2D->Init(0, 0, internal_width, internal_height, internal_width, internal_height, superAA->GetTargetID(), upscaleMode))
+  if (Result::OKAY != Render2D->Init(internal_x_offset, internal_y_offset, internal_x_res, internal_y_res, internal_total_x_res, internal_total_y_res, superAA->GetTargetID(), upscaleMode))
   {
     ErrorLog("Failed to initialize 2D renderer");
     DestroyRenderers();
     return false;
   }
-  if (Result::OKAY != Render3D->Init(0, 0, internal_width, internal_height, internal_width, internal_height, superAA->GetTargetID()))
+  if (Result::OKAY != Render3D->Init(internal_x_offset, internal_y_offset, internal_x_res, internal_y_res, internal_total_x_res, internal_total_y_res, superAA->GetTargetID()))
   {
     ErrorLog("Failed to initialize 3D renderer");
     DestroyRenderers();
@@ -456,11 +553,11 @@ RETRO_API void retro_deinit(void) {
 
 // Before load_game
 RETRO_API void retro_get_system_av_info(struct retro_system_av_info *info) {
-  info->geometry.base_width = SUPERMODEL_W;
-  info->geometry.base_height = SUPERMODEL_H;
-  info->geometry.max_width = SUPERMODEL_W;
-  info->geometry.max_height = SUPERMODEL_H;
-  info->geometry.aspect_ratio = (float) SUPERMODEL_W / (float) SUPERMODEL_H;
+  info->geometry.base_width = total_x_res;
+  info->geometry.base_height = total_y_res;
+  info->geometry.max_width = std::max(total_x_res, SUPERMODEL_W * 8u);
+  info->geometry.max_height = std::max(total_y_res, SUPERMODEL_H * 8u);
+  info->geometry.aspect_ratio = (float) total_x_res / (float) total_y_res;
   info->timing.fps = 60.0f;
   info->timing.sample_rate = 44100.0f;
 }
@@ -576,10 +673,11 @@ RETRO_API void retro_run(void) {
       return;
   }
   BindCurrentFramebuffer();
+  RefreshOutputGeometry();
   Inputs->Poll(&game, 0, 0, SUPERMODEL_W, SUPERMODEL_H);
   Model3->RunFrame();
   glFlush();
-  cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, SUPERMODEL_W, SUPERMODEL_H, 0);
+  cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, total_x_res, total_y_res, 0);
 }
 
 // Audio

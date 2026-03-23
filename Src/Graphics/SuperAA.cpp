@@ -16,14 +16,21 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 
 			#version 410 core
 
+			out vec2 texCoord;
+
 			void main(void)
 			{
 				const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
 												vec4(-1.0,  1.0, 0.0, 1.0),
 												vec4( 1.0, -1.0, 0.0, 1.0),
 												vec4( 1.0,  1.0, 0.0, 1.0));
+				const vec2 texCoords[] = vec2[](vec2(0.0, 0.0),
+												vec2(0.0, 1.0),
+												vec2(1.0, 0.0),
+												vec2(1.0, 1.0));
 
 				gl_Position = vertices[gl_VertexID % 4];
+				texCoord = texCoords[gl_VertexID % 4];
 			}
 
 			)glsl";
@@ -45,6 +52,7 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 
 		// inputs
 		uniform sampler2D tex1;			// base tex
+		in vec2 texCoord;
 
 		// outputs
 		out vec4 fragColor;
@@ -113,18 +121,8 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 
 		vec3 GetTextureValue(sampler2D s)
 		{
-			ivec2 texPos	= ivec2(gl_FragCoord.xy /*-vec2(0.5)*/) * aa;
-			vec3 texColour	= vec3(0.0);
-
-			for(int i=0; i < aa; i++) {
-				for(int j=0; j < aa; j++) {
-					texColour += texelFetch(s,ivec2(texPos.x+i,texPos.y+j),0).rgb;
-				}
-			}
-
-			texColour *= 1.0/float(aa * aa);
-
-			return texColour;
+			vec2 clampedCoord = clamp(texCoord, vec2(0.0), vec2(1.0));
+			return texture(s, clampedCoord).rgb;
 		}
 
 		float sRGB(float color)
