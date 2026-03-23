@@ -128,6 +128,7 @@ static IRender3D *Render3D = nullptr;
 static Game game;
 static ROMSet rom_set;
 static retro_hw_render_callback hw_render_cb = {};
+static bool racer_profile_active = false;
 
 static bool InitializeRenderers(bool reset_model);
 
@@ -439,8 +440,39 @@ static void WriteDefaultConfigurationFileIfNotPresent(std::string s_configFilePa
 // Input system
 #include "Inputs/InputSystem.h"
 const JoyDetails theJoystick = {
-  "RetroPad", 4, 0, 16, false, {false}, {""}, {false}
+  "RetroPad",
+  8,
+  0,
+  16,
+  false,
+  { true, true, true, true, false, false, true, true },
+  {
+    "Left Stick X",
+    "Left Stick Y",
+    "Right Stick X",
+    "Right Stick Y",
+    "Unused Axis 5",
+    "Unused Axis 6",
+    "Right Trigger",
+    "Left Trigger"
+  },
+  { false, false, false, false, false, false, false, false }
 };
+
+// Expose L2/R2 as virtual slider axes so racers can bind them with analog sensitivity.
+static uint16_t get_analog_trigger(int joyNum, unsigned id)
+{
+  uint16_t trigger = (uint16_t)cb_input_state(joyNum,
+                                              RETRO_DEVICE_ANALOG,
+                                              RETRO_DEVICE_INDEX_ANALOG_BUTTON,
+                                              id);
+
+  if (trigger == 0)
+    trigger = cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, id) ? 0x7FFF : 0;
+
+  return trigger;
+}
+
 class CRetroInputSystem : public CInputSystem
 {
   private:
@@ -464,7 +496,23 @@ class CRetroInputSystem : public CInputSystem
 
   int GetNumJoysticks() const { return 1; }
   int GetJoyAxisValue(int joyNum, int axisNum) const {
-    return cb_input_state(joyNum, RETRO_DEVICE_ANALOG, axisNum / 2, axisNum % 2);
+    switch (axisNum)
+    {
+    case AXIS_X:
+      return cb_input_state(joyNum, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+    case AXIS_Y:
+      return cb_input_state(joyNum, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
+    case AXIS_Z:
+      return cb_input_state(joyNum, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+    case AXIS_RX:
+      return cb_input_state(joyNum, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
+    case AXIS_S1:
+      return get_analog_trigger(joyNum, RETRO_DEVICE_ID_JOYPAD_R2);
+    case AXIS_S2:
+      return get_analog_trigger(joyNum, RETRO_DEVICE_ID_JOYPAD_L2);
+    default:
+      return 0;
+    }
   }
   bool IsJoyPOVInDir(int joyNum, int povNum, int povDir) const { return false; }
   const JoyDetails *GetJoyDetails(int joyNum) { return &theJoystick; }
@@ -485,6 +533,34 @@ class CRetroInputSystem : public CInputSystem
 	}
 
 };
+
+static void ApplyVehicleInputDefaults(void)
+{
+  if (!racer_profile_active)
+    return;
+
+  // Racer-style mapping: left stick for steering, triggers for throttle/brake,
+  // L1 for test, R1 for service/handbrake, and face buttons for shift.
+  s_runtime_config.Set<std::string>("InputSteering", "JOY1_XAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAccelerator", "KEY_UP,JOY1_SLIDER1_POS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputBrake", "KEY_DOWN,JOY1_SLIDER2_POS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputGearShiftUp", "KEY_Y,JOY1_BUTTON1", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputGearShiftDown", "KEY_H,JOY1_BUTTON2", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  if (game.inputs & Game::INPUT_HANDBRAKE)
+  {
+    s_runtime_config.Set<std::string>("InputHandBrake", "KEY_S,JOY1_BUTTON12", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputServiceA", "NONE", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputServiceB", "NONE", "Input", "", "");
+  }
+  else
+  {
+    s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputHandBrake", "NONE", "Input", "", "");
+  }
+}
 
 RETRO_API void retro_init(void) {
   assert(!initialized);
@@ -549,6 +625,7 @@ RETRO_API void retro_deinit(void) {
   hw_context_ready = false;
   reset_pending = false;
   game_loaded = false;
+  racer_profile_active = false;
 }
 
 // Before load_game
@@ -603,6 +680,9 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   }
   rom_set = ROMSet();  // free up this memory we won't need anymore
 
+  racer_profile_active = (game.inputs & Game::INPUT_VEHICLE) != 0;
+  ApplyVehicleInputDefaults();
+
   // Initialize input
   InputSystem = std::shared_ptr<CInputSystem>(new CRetroInputSystem());
   Inputs = new CInputs(InputSystem);
@@ -642,6 +722,7 @@ RETRO_API void retro_unload_game(void) {
   game = Game();
   game_loaded = false;
   reset_pending = false;
+  racer_profile_active = false;
 }
 RETRO_API bool retro_load_game_special(
   unsigned game_type,
