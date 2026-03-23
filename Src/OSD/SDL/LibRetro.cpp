@@ -237,6 +237,7 @@ static Game game;
 static ROMSet rom_set;
 static retro_hw_render_callback hw_render_cb = {};
 static bool racer_profile_active = false;
+static bool fighting_profile_active = false;
 static InputProfileMode input_profile_mode = InputProfileMode::Auto;
 static unsigned frontend_controller_device = RETRO_DEVICE_JOYPAD;
 static bool input_mode_dirty = true;
@@ -1083,26 +1084,54 @@ static void ApplyVehicleInputDefaults(void)
     return;
 
   // Racer-style mapping: left stick for steering, triggers for throttle/brake,
-  // and face buttons for shift.
+  // face buttons for shift/view change, shoulders for operator buttons.
   s_runtime_config.Set<std::string>("InputSteering", "JOY1_XAXIS", "Input", "", "");
   s_runtime_config.Set<std::string>("InputAccelerator", "KEY_UP,JOY1_SLIDER1_POS", "Input", "", "");
   s_runtime_config.Set<std::string>("InputBrake", "KEY_DOWN,JOY1_SLIDER2_POS", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputGearShiftUp", "KEY_Y,JOY1_BUTTON1", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputGearShiftDown", "KEY_H,JOY1_BUTTON2", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON10", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputGearShiftUp", "KEY_Y,JOY1_BUTTON9", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputGearShiftDown", "KEY_H,JOY1_BUTTON1", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  if (game.inputs & Game::INPUT_VIEWCHANGE)
+    s_runtime_config.Set<std::string>("InputViewChange", "KEY_A,JOY1_BUTTON2", "Input", "", "");
+  else
+    s_runtime_config.Set<std::string>("InputViewChange", "NONE", "Input", "", "");
   if (game.inputs & Game::INPUT_HANDBRAKE)
   {
-    s_runtime_config.Set<std::string>("InputHandBrake", "KEY_S,JOY1_BUTTON11", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputHandBrake", "KEY_S,JOY1_BUTTON12", "Input", "", "");
     s_runtime_config.Set<std::string>("InputServiceA", "NONE", "Input", "", "");
     s_runtime_config.Set<std::string>("InputServiceB", "NONE", "Input", "", "");
   }
   else
   {
-    s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON11", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON11", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
     s_runtime_config.Set<std::string>("InputHandBrake", "NONE", "Input", "", "");
   }
+}
+
+static void ApplyFightingInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_FIGHTING))
+    return;
+
+  // Map the four face buttons to the four fighting actions.
+  // RetroPad/LibRetro joypad semantics:
+  //   A = BUTTON9, B = BUTTON1, X = BUTTON10, Y = BUTTON2.
+  s_runtime_config.Set<std::string>("InputPunch",  "KEY_A,JOY1_BUTTON9",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputKick",   "KEY_S,JOY1_BUTTON1",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputGuard",  "KEY_D,JOY1_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputEscape", "KEY_F,JOY1_BUTTON2",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputPunch2",  "JOY2_BUTTON9",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputKick2",   "JOY2_BUTTON1",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputGuard2",  "JOY2_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputEscape2", "JOY2_BUTTON2",  "Input", "", "");
+
+  // Keep operator inputs off the face buttons so they do not interfere with fights.
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
 }
 
 static void ApplyGunInputDefaults(void)
@@ -1170,7 +1199,18 @@ static void UpdateInputDescriptors(void)
   InputProfileMode profile = GetEffectiveInputProfile();
   memset(desc, 0, sizeof(desc));
 
-  if (profile == InputProfileMode::Lightgun)
+  if (game.inputs & Game::INPUT_FIGHTING)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "Punch" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Kick" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Guard" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "Escape" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+  }
+  else if (profile == InputProfileMode::Lightgun)
   {
     desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_DPAD_LEFT,  "D-Pad Left" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_DPAD_UP,    "D-Pad Up" };
@@ -1200,6 +1240,10 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service/Handbrake" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "Shift Up" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "Shift Down" };
+    if (game.inputs & Game::INPUT_VIEWCHANGE)
+      desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,    "View Change" };
   }
   else
   {
@@ -1207,10 +1251,10 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "D-Pad Right" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "A" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "B" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "A" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "B" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "Y" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,    "R Trigger" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "L Trigger" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" };
@@ -1260,9 +1304,9 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set<std::string>("InputStart1", "JOY1_BUTTON4", "Input", "", "");
   s_runtime_config.Set<std::string>("InputCoin1", "JOY1_BUTTON3", "Input", "", "");
   s_runtime_config.Set<std::string>("InputServiceA", "JOY1_BUTTON11", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputServiceB", "JOY1_BUTTON11", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputTestA", "JOY1_BUTTON10", "Input", "", "");
-  s_runtime_config.Set<std::string>("InputTestB", "JOY1_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "JOY1_BUTTON12", "Input", "", "");
   s_runtime_config.Set<std::string>("InputJoyUp", "JOY1_BUTTON5", "Input", "", "");
   s_runtime_config.Set<std::string>("InputJoyDown", "JOY1_BUTTON6", "Input", "", "");
   s_runtime_config.Set<std::string>("InputJoyLeft", "JOY1_BUTTON7", "Input", "", "");
@@ -1295,6 +1339,7 @@ RETRO_API void retro_deinit(void) {
   reset_pending = false;
   game_loaded = false;
   racer_profile_active = false;
+  fighting_profile_active = false;
   input_mode_dirty = true;
 }
 
@@ -1364,7 +1409,9 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
     rom_set = ROMSet();  // free up this memory we won't need anymore
 
     racer_profile_active = (game.inputs & Game::INPUT_VEHICLE) != 0;
+    fighting_profile_active = (game.inputs & Game::INPUT_FIGHTING) != 0;
     ApplyInputProfileOption();
+    ApplyFightingInputDefaults();
     ApplyVehicleInputDefaults();
     ApplyGunInputDefaults();
 
@@ -1431,6 +1478,7 @@ RETRO_API void retro_unload_game(void) {
   game_loaded = false;
   reset_pending = false;
   racer_profile_active = false;
+  fighting_profile_active = false;
   input_mode_dirty = true;
 }
 RETRO_API bool retro_load_game_special(
@@ -1463,6 +1511,8 @@ RETRO_API void retro_run(void) {
   }
   if (refresh_input_mode)
   {
+    if (fighting_profile_active)
+      ApplyFightingInputDefaults();
     if (racer_profile_active)
       ApplyVehicleInputDefaults();
     ApplyGunInputDefaults();
