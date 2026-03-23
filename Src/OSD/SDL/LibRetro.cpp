@@ -1,5 +1,6 @@
 #include <cassert>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <stdio.h>
 #include <cstring>
@@ -336,10 +337,31 @@ static void MarkInputModeDirty(void)
   input_mode_dirty = true;
 }
 
+static bool IsWideScreenEnabled(void)
+{
+  return s_runtime_config["WideScreen"].ValueAsDefault<bool>(false);
+}
+
 static void UpdateOutputGeometry(void)
 {
   x_res = SUPERMODEL_W;
   y_res = SUPERMODEL_H;
+  if (IsWideScreenEnabled())
+  {
+    total_y_res = y_res;
+    total_x_res = (unsigned)std::lround((double)total_y_res * 16.0 / 9.0);
+    if (total_x_res < x_res)
+      total_x_res = x_res;
+    x_offset = (total_x_res - x_res) / 2;
+    y_offset = 0;
+  }
+  else
+  {
+    total_x_res = x_res;
+    total_y_res = y_res;
+    x_offset = 0;
+    y_offset = 0;
+  }
 }
 
 static void PushRetroGeometry(void)
@@ -348,11 +370,11 @@ static void PushRetroGeometry(void)
     return;
 
   retro_game_geometry geom = {};
-  geom.base_width = SUPERMODEL_W;
-  geom.base_height = SUPERMODEL_H;
+  geom.base_width = IsWideScreenEnabled() ? total_x_res : SUPERMODEL_W;
+  geom.base_height = IsWideScreenEnabled() ? total_y_res : SUPERMODEL_H;
   geom.max_width = std::max(total_x_res, SUPERMODEL_W * 8u);
   geom.max_height = std::max(total_y_res, SUPERMODEL_H * 8u);
-  geom.aspect_ratio = (float)SUPERMODEL_W / (float)SUPERMODEL_H;
+  geom.aspect_ratio = IsWideScreenEnabled() ? (16.0f / 9.0f) : ((float)SUPERMODEL_W / (float)SUPERMODEL_H);
   cb_env(RETRO_ENVIRONMENT_SET_GEOMETRY, &geom);
   reported_width = total_x_res;
   reported_height = total_y_res;
@@ -576,17 +598,20 @@ static void DrawPointerOverlay(void)
 
 static void ApplyGLGeometry(void)
 {
-  const unsigned internal_x_offset = 0;
-  const unsigned internal_y_offset = 0;
-  const unsigned internal_x_res = SUPERMODEL_W * (unsigned)supersampling;
-  const unsigned internal_y_res = SUPERMODEL_H * (unsigned)supersampling;
-  const unsigned internal_total_x_res = internal_x_res;
-  const unsigned internal_total_y_res = internal_y_res;
+  const unsigned internal_x_offset = x_offset * (unsigned)supersampling;
+  const unsigned internal_y_offset = y_offset * (unsigned)supersampling;
+  const unsigned internal_x_res = x_res * (unsigned)supersampling;
+  const unsigned internal_y_res = y_res * (unsigned)supersampling;
+  const unsigned internal_total_x_res = total_x_res * (unsigned)supersampling;
+  const unsigned internal_total_y_res = total_y_res * (unsigned)supersampling;
   const UINT32 correction = (UINT32)((((double)internal_y_res / 384.0) * 2.0) + 0.5);
 
-  glViewport(0, 0, internal_total_x_res, internal_total_y_res);
+  glViewport(0, 0, internal_x_res, internal_y_res);
   glEnable(GL_SCISSOR_TEST);
-  glScissor(internal_x_offset + correction, internal_y_offset + correction, internal_x_res - (correction * 2), internal_y_res - (correction * 2));
+  if (IsWideScreenEnabled())
+    glScissor(0, correction, internal_total_x_res, internal_total_y_res - (correction * 2));
+  else
+    glScissor(internal_x_offset + correction, internal_y_offset + correction, internal_x_res - (correction * 2), internal_y_res - (correction * 2));
 }
 
 static void DestroyRenderers(void)
@@ -813,17 +838,19 @@ static bool InitializeRenderers(bool reset_model)
   if (!hw_context_ready || Model3 == nullptr || renderers_ready)
     return renderers_ready;
 
-  const unsigned internal_x_offset = 0;
-  const unsigned internal_y_offset = 0;
-  const unsigned internal_x_res = SUPERMODEL_W * (unsigned)supersampling;
-  const unsigned internal_y_res = SUPERMODEL_H * (unsigned)supersampling;
-  const unsigned internal_total_x_res = internal_x_res;
-  const unsigned internal_total_y_res = internal_y_res;
+  UpdateOutputGeometry();
+  const unsigned internal_x_offset = x_offset * (unsigned)supersampling;
+  const unsigned internal_y_offset = y_offset * (unsigned)supersampling;
+  const unsigned internal_x_res = x_res * (unsigned)supersampling;
+  const unsigned internal_y_res = y_res * (unsigned)supersampling;
+  const unsigned internal_total_x_res = total_x_res * (unsigned)supersampling;
+  const unsigned internal_total_y_res = total_y_res * (unsigned)supersampling;
 
+  PushRetroGeometry();
   ApplyGLGeometry();
 
   superAA = new SuperAA(supersampling, CRTcolor::None);
-  superAA->Init((int)SUPERMODEL_W, (int)SUPERMODEL_H);
+  superAA->Init((int)total_x_res, (int)total_y_res);
   superAA->SetOutputSize((int)total_x_res, (int)total_y_res);
 
   Render2D = new CRender2D(s_runtime_config);
@@ -1273,11 +1300,12 @@ RETRO_API void retro_deinit(void) {
 
 // Before load_game
 RETRO_API void retro_get_system_av_info(struct retro_system_av_info *info) {
-  info->geometry.base_width = SUPERMODEL_W;
-  info->geometry.base_height = SUPERMODEL_H;
+  UpdateOutputGeometry();
+  info->geometry.base_width = IsWideScreenEnabled() ? total_x_res : SUPERMODEL_W;
+  info->geometry.base_height = IsWideScreenEnabled() ? total_y_res : SUPERMODEL_H;
   info->geometry.max_width = std::max(total_x_res, SUPERMODEL_W * 8u);
   info->geometry.max_height = std::max(total_y_res, SUPERMODEL_H * 8u);
-  info->geometry.aspect_ratio = (float)SUPERMODEL_W / (float)SUPERMODEL_H;
+  info->geometry.aspect_ratio = IsWideScreenEnabled() ? (16.0f / 9.0f) : ((float)SUPERMODEL_W / (float)SUPERMODEL_H);
   info->timing.fps = 60.0f;
   info->timing.sample_rate = 44100.0f;
 }
