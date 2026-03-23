@@ -265,6 +265,9 @@ static bool InitializeRenderers(void)
   if (!hw_context_ready || Model3 == nullptr || renderers_ready)
     return renderers_ready;
 
+  const unsigned internal_width = SUPERMODEL_W * (unsigned)supersampling;
+  const unsigned internal_height = SUPERMODEL_H * (unsigned)supersampling;
+
   superAA = new SuperAA(supersampling, CRTcolor::None);
   superAA->Init(SUPERMODEL_W, SUPERMODEL_H);
 
@@ -272,13 +275,13 @@ static bool InitializeRenderers(void)
   Render3D = new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
 
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
-  if (Result::OKAY != Render2D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID(), upscaleMode))
+  if (Result::OKAY != Render2D->Init(0, 0, internal_width, internal_height, internal_width, internal_height, superAA->GetTargetID(), upscaleMode))
   {
     ErrorLog("Failed to initialize 2D renderer");
     DestroyRenderers();
     return false;
   }
-  if (Result::OKAY != Render3D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID()))
+  if (Result::OKAY != Render3D->Init(0, 0, internal_width, internal_height, internal_width, internal_height, superAA->GetTargetID()))
   {
     ErrorLog("Failed to initialize 3D renderer");
     DestroyRenderers();
