@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <stdio.h>
 #include <cstring>
+#include <exception>
 #include <vector>
 #include "../Pkgs/libretro.h"
 #include "Version.h"
@@ -42,6 +43,11 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
       "Configure video backend and internal scaling."
     },
     {
+      "audio",
+      "Audio",
+      "Configure sound compatibility options."
+    },
+    {
       "input",
       "Input",
       "Select the control profile used by the core."
@@ -68,6 +74,64 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
         { NULL, NULL }
       },
       "1x"
+    },
+    {
+      "supermodel_upscale_mode",
+      "2D Upscale Mode",
+      NULL,
+      "Select the filter used when scaling 2D layers.",
+      NULL,
+      "video",
+      {
+        { "nearest", "Nearest" },
+        { "biquintic", "Biquintic" },
+        { "bilinear", "Bilinear" },
+        { "bicubic", "Bicubic" },
+        { NULL, NULL }
+      },
+      "bilinear"
+    },
+    {
+      "supermodel_widescreen",
+      "Wide Screen",
+      NULL,
+      "Enable widescreen rendering for supported games.",
+      NULL,
+      "video",
+      {
+        { "disabled", "Disabled" },
+        { "enabled", "Enabled" },
+        { NULL, NULL }
+      },
+      "disabled"
+    },
+    {
+      "supermodel_quad_rendering",
+      "Quad Rendering",
+      NULL,
+      "Render 3D quads as single primitives when supported.",
+      NULL,
+      "video",
+      {
+        { "disabled", "Disabled" },
+        { "enabled", "Enabled" },
+        { NULL, NULL }
+      },
+      "disabled"
+    },
+    {
+      "supermodel_no_white_flash",
+      "No White Flash",
+      NULL,
+      "Disable white flash effects used by some 3D block culling paths.",
+      NULL,
+      "video",
+      {
+        { "disabled", "Disabled" },
+        { "enabled", "Enabled" },
+        { NULL, NULL }
+      },
+      "disabled"
     },
     {
       "supermodel_input_profile",
@@ -561,6 +625,71 @@ static bool ApplySupersamplingOption(void)
   return supersampling != previous;
 }
 
+static bool ParseEnabledOption(const char *value)
+{
+  return value != NULL && strcmp(value, "enabled") == 0;
+}
+
+static bool ApplyVideoCoreOptions(void)
+{
+  bool changed = false;
+  struct retro_variable var = { NULL, NULL };
+
+  var.key = "supermodel_upscale_mode";
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    int mode = 2;
+    if (strcmp(var.value, "nearest") == 0)
+      mode = 0;
+    else if (strcmp(var.value, "biquintic") == 0)
+      mode = 1;
+    else if (strcmp(var.value, "bilinear") == 0)
+      mode = 2;
+    else if (strcmp(var.value, "bicubic") == 0)
+      mode = 3;
+    if (s_runtime_config["UpscaleMode"].ValueAs<int>() != mode)
+    {
+      s_runtime_config.Get("UpscaleMode").SetValue(mode);
+      changed = true;
+    }
+  }
+
+  var.key = "supermodel_widescreen";
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    bool wide = ParseEnabledOption(var.value);
+    if (s_runtime_config["WideScreen"].ValueAs<bool>() != wide)
+    {
+      s_runtime_config.Get("WideScreen").SetValue(wide);
+      changed = true;
+    }
+  }
+
+  var.key = "supermodel_quad_rendering";
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    bool quad = ParseEnabledOption(var.value);
+    if (s_runtime_config["QuadRendering"].ValueAs<bool>() != quad)
+    {
+      s_runtime_config.Get("QuadRendering").SetValue(quad);
+      changed = true;
+    }
+  }
+
+  var.key = "supermodel_no_white_flash";
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    bool no_white = ParseEnabledOption(var.value);
+    if (s_runtime_config["NoWhiteFlash"].ValueAs<bool>() != no_white)
+    {
+      s_runtime_config.Get("NoWhiteFlash").SetValue(no_white);
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 static bool InitGLState(void)
 {
   GLenum err;
@@ -724,28 +853,6 @@ static bool InitializeRenderers(bool reset_model)
     reset_pending = false;
   }
   return true;
-}
-
-static void WriteDefaultConfigurationFileIfNotPresent(std::string s_configFilePath)
-{
-    // Test whether file exists by opening it
-    FILE* fp = fopen(s_configFilePath.c_str(), "r");
-    if (fp)
-    {
-        fclose(fp);
-        return;
-    }
-
-    // Write config
-    fp = fopen(s_configFilePath.c_str(), "w");
-    if (!fp)
-    {
-        ErrorLog("Unable to write default configuration file to %s", s_configFilePath.c_str());
-        return;
-    }
-    fputs(s_defaultConfigFileContents, fp);
-    fclose(fp);
-    InfoLog("Wrote default configuration file to %s", s_configFilePath.c_str());
 }
 
 // Input system
@@ -1092,15 +1199,18 @@ RETRO_API void retro_init(void) {
   // XXX in the future use the retro logging callback
   SetLogger(std::make_shared<CConsoleErrorLogger>());
 
-  std::string config_file = config_path("Supermodel.ini");
-  WriteDefaultConfigurationFileIfNotPresent(config_file);
-  Util::Config::FromINIFile(&s_runtime_config, config_file);
   s_runtime_config.Set("New3DEngine", true, "Global");
   s_runtime_config.Set("QuadRendering", false, "Global");
+  s_runtime_config.Set("WideBackground", false, "Video");
   s_runtime_config.Set("MultiThreaded", false, "Core");
   s_runtime_config.Set("GPUMultiThreaded", false, "Core");
+  s_runtime_config.Set("MultiTexture", false, "Legacy3D");
+  s_runtime_config.Set<std::string>("VertexShader", "", "Legacy3D", "", "");
+  s_runtime_config.Set<std::string>("FragmentShader", "", "Legacy3D", "", "");
   s_runtime_config.Set("NoWhiteFlash", false, "Video");
+  s_runtime_config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });
   s_runtime_config.Set("WideScreen", false, "Video");
+  s_runtime_config.Set("SimulateNet", true, "Network");
   s_runtime_config.Set("EmulateSound", true, "Sound");
   s_runtime_config.Set("Balance", 0.0f, "Sound", -100.f, 100.f);
   s_runtime_config.Set("BalanceLeftRight", 0.0f, "Sound", -100.f, 100.f);
@@ -1112,6 +1222,13 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set("SoundVolume", 100, "Sound", 0, 200);
   s_runtime_config.Set("MusicVolume", 100, "Sound", 0, 200);
   s_runtime_config.Set("LegacySoundDSP", false, "Sound"); // New config option for games that do not play correctly with MAME's SCSP sound core.
+  s_runtime_config.Set("Stretch", false, "Video");
+  s_runtime_config.Set("VSync", true, "Video");
+  s_runtime_config.Set("Throttle", true, "Video");
+  s_runtime_config.Set("RefreshRate", 60.0f, "Video", 0.0f, 0.0f, { 57.5f,60.f });
+  s_runtime_config.Set("ShowFrameRate", false, "Video");
+  s_runtime_config.Set("Crosshairs", int(0), "Video", 0, 0, { 0,1,2,3 });
+  s_runtime_config.Set<std::string>("CrosshairStyle", "vector", "Video", "", "", { "bmp","vector" });
 
   s_runtime_config.Set<std::string>("InputStart1", "JOY1_BUTTON4", "Input", "", "");
   s_runtime_config.Set<std::string>("InputCoin1", "JOY1_BUTTON3", "Input", "", "");
@@ -1184,71 +1301,93 @@ RETRO_API void retro_reset(void) {
 RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   assert(initialized);
   assert(!game_loaded);
-
-  ApplySupersamplingOption();
-
-  Model3 = new CModel3(s_runtime_config);
-  if (! Model3) {
-    return false;
-  }
-
-  if (Result::OKAY != Model3->Init()) {
-    delete Model3;
-    Model3 = nullptr;
-    return false;
-  }
-
-  GameLoader loader(config_path("Games.xml"));
-  if (loader.Load(&game, &rom_set, rgame->path))
+  try
   {
-    delete Model3;
-    Model3 = nullptr;
-    return false;
+    ApplySupersamplingOption();
+    ApplyVideoCoreOptions();
+
+    Model3 = new CModel3(s_runtime_config);
+    if (!Model3)
+      return false;
+
+    if (Result::OKAY != Model3->Init())
+    {
+      ErrorLog("Model3 initialization failed.");
+      delete Model3;
+      Model3 = nullptr;
+      return false;
+    }
+
+    GameLoader loader(config_path("Games.xml"));
+    if (loader.Load(&game, &rom_set, rgame->path))
+    {
+      ErrorLog("Unable to identify ROM set for '%s'.", rgame->path);
+      delete Model3;
+      Model3 = nullptr;
+      return false;
+    }
+    if (Model3->LoadGame(game, rom_set) != Result::OKAY)
+    {
+      ErrorLog("Model3::LoadGame() failed for '%s'.", game.name.c_str());
+      delete Model3;
+      Model3 = nullptr;
+      return false;
+    }
+    rom_set = ROMSet();  // free up this memory we won't need anymore
+
+    racer_profile_active = (game.inputs & Game::INPUT_VEHICLE) != 0;
+    ApplyInputProfileOption();
+    ApplyVehicleInputDefaults();
+    ApplyGunInputDefaults();
+
+    // Initialize input
+    InputSystem = std::shared_ptr<CInputSystem>(new CRetroInputSystem());
+    Inputs = new CInputs(InputSystem);
+    if (!Inputs->Initialize())
+    {
+      ErrorLog("Input initialization failed.");
+      delete Model3;
+      Model3 = nullptr;
+      delete Inputs;
+      Inputs = nullptr;
+      return false;
+    }
+    Inputs->LoadFromConfig(s_runtime_config);
+    Model3->AttachInputs(Inputs);
+    UpdateInputDescriptors();
+    pointer_x = (int)(x_res / 2);
+    pointer_y = (int)(y_res / 2);
+    input_mode_dirty = false;
+
+    reset_pending = true;
+    if (hw_context_ready && !InitializeRenderers(true))
+    {
+      ErrorLog("Renderer initialization failed.");
+      delete Model3;
+      Model3 = nullptr;
+      delete Inputs;
+      Inputs = nullptr;
+      return false;
+    }
+
+    game_loaded = true;
+    LoadNVRAMFromDisk();
+    return game_loaded;
   }
-  if (Model3->LoadGame(game, rom_set) != Result::OKAY)
+  catch (const std::exception &e)
   {
-    delete Model3;
-    Model3 = nullptr;
-    return false;
+    ErrorLog("retro_load_game exception: %s", e.what());
   }
-  rom_set = ROMSet();  // free up this memory we won't need anymore
-
-  racer_profile_active = (game.inputs & Game::INPUT_VEHICLE) != 0;
-  ApplyInputProfileOption();
-  ApplyVehicleInputDefaults();
-  ApplyGunInputDefaults();
-
-  // Initialize input
-  InputSystem = std::shared_ptr<CInputSystem>(new CRetroInputSystem());
-  Inputs = new CInputs(InputSystem);
-  if (!Inputs->Initialize())
+  catch (...)
   {
-    delete Model3;
-    Model3 = nullptr;
-    delete Inputs;
-    Inputs = nullptr;
-    return false;
-  }
-  Inputs->LoadFromConfig(s_runtime_config);
-  Model3->AttachInputs(Inputs);
-  UpdateInputDescriptors();
-  pointer_x = (int)(x_res / 2);
-  pointer_y = (int)(y_res / 2);
-  input_mode_dirty = false;
-
-  reset_pending = true;
-  if (hw_context_ready && !InitializeRenderers(true))
-  {
-    delete Model3;
-    Model3 = nullptr;
-    delete Inputs;
-    Inputs = nullptr;
-    return false;
+    ErrorLog("retro_load_game threw an unknown exception.");
   }
 
-  game_loaded = true;
-  LoadNVRAMFromDisk();
-  return game_loaded;
+  delete Model3;
+  Model3 = nullptr;
+  delete Inputs;
+  Inputs = nullptr;
+  return false;
 }
 RETRO_API void retro_unload_game(void) {
   assert(game_loaded);
@@ -1284,9 +1423,10 @@ RETRO_API void retro_run(void) {
   if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &variables_updated) && variables_updated)
   {
     bool supersampling_changed = ApplySupersamplingOption();
+    bool video_options_changed = ApplyVideoCoreOptions();
     if (ApplyInputProfileOption())
       refresh_input_mode = true;
-    if (supersampling_changed && renderers_ready)
+    if ((supersampling_changed || video_options_changed) && renderers_ready)
     {
       DestroyRenderers();
       if (!InitializeRenderers(false))
