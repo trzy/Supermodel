@@ -1282,6 +1282,48 @@ static void ApplyVehicleInputDefaults(void)
   }
 }
 
+static void ApplyAnalogJoystickInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_ANALOG_JOYSTICK))
+    return;
+
+  // Keep the analog joystick profile self-contained in libretro.
+  // Match the standalone defaults, but expose the common RetroPad face buttons.
+  s_runtime_config.Set<std::string>("InputAnalogJoyLeft",  "KEY_LEFT,JOY1_LEFT",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyRight", "KEY_RIGHT,JOY1_RIGHT", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyUp",    "KEY_UP,JOY1_UP",    "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyDown",  "KEY_DOWN,JOY1_DOWN",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyX",     "JOY1_XAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyY",     "JOY1_YAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyTrigger",  "KEY_A,JOY1_BUTTON9",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyEvent",    "KEY_S,JOY1_BUTTON1",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyTrigger2", "KEY_D,JOY1_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputAnalogJoyEvent2",    "KEY_F,JOY1_BUTTON2",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+}
+
+static void ApplySoccerInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_SOCCER))
+    return;
+
+  // Virtua Striker style controls: short pass, long pass and shoot.
+  // Expose them on the familiar RetroPad face buttons.
+  s_runtime_config.Set<std::string>("InputShortPass",  "KEY_A,JOY1_BUTTON9",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputLongPass",   "KEY_S,JOY1_BUTTON1",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputShoot",      "KEY_D,JOY1_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputShortPass2",  "JOY2_BUTTON9", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputLongPass2",   "JOY2_BUTTON1", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputShoot2",      "JOY2_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+}
+
 static void ApplyFightingInputDefaults(void)
 {
   if (!(game.inputs & Game::INPUT_FIGHTING))
@@ -1431,6 +1473,33 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Guard" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "Escape" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+  }
+  else if (game.inputs & Game::INPUT_ANALOG_JOYSTICK)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Analog X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Analog Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "Trigger 1" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Event 1" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Trigger 2" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "Event 2" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+  }
+  else if (game.inputs & Game::INPUT_SOCCER)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "D-Pad Left" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "D-Pad Up" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "D-Pad Down" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "D-Pad Right" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "Short Pass" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Long Pass" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Shoot" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
@@ -1617,6 +1686,8 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
     ApplyInputProfileOption();
     ApplyFightingInputDefaults();
     ApplyVehicleInputDefaults();
+    ApplyAnalogJoystickInputDefaults();
+    ApplySoccerInputDefaults();
     ApplyGunInputDefaults();
 
     // Initialize input
@@ -1728,6 +1799,8 @@ RETRO_API void retro_run(void) {
       ApplyFightingInputDefaults();
     if (racer_profile_active)
       ApplyVehicleInputDefaults();
+    ApplyAnalogJoystickInputDefaults();
+    ApplySoccerInputDefaults();
     ApplyGunInputDefaults();
     if (Inputs != nullptr)
     {
