@@ -45,32 +45,35 @@ Result CCrosshair::Init()
     m_isBitmapCrosshair = false;
   }
 
-  SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
-  SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
-  if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
-      return Result::FAIL;
+  if (m_isBitmapCrosshair)
+  {
+    SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
+    SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
+    if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
+        return Result::FAIL;
 
-  m_p1CrosshairW = surfaceCrosshairP1->w;
-  m_p1CrosshairH = surfaceCrosshairP1->h;
-  m_p2CrosshairW = surfaceCrosshairP2->w;
-  m_p2CrosshairH = surfaceCrosshairP2->h;
+    m_p1CrosshairW = surfaceCrosshairP1->w;
+    m_p1CrosshairH = surfaceCrosshairP1->h;
+    m_p2CrosshairW = surfaceCrosshairP2->w;
+    m_p2CrosshairH = surfaceCrosshairP2->h;
 
-  glGenTextures(2, m_crosshairTexId);
+    glGenTextures(2, m_crosshairTexId);
 
-  glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-  glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-  glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-  SDL_FreeSurface(surfaceCrosshairP1);
-  SDL_FreeSurface(surfaceCrosshairP2);
+    SDL_FreeSurface(surfaceCrosshairP1);
+    SDL_FreeSurface(surfaceCrosshairP2);
+  }
 
   // Get DPI
   SDL_GetDisplayDPI(0, &m_diagDpi, &m_hDpi, &m_vDpi);

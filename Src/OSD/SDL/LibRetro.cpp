@@ -15,6 +15,7 @@
 #include "OSD/FileSystemPath.h"
 #include "GameLoader.h"
 #include "Graphics/New3D/New3D.h"
+#include "OSD/SDL/Crosshair.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "Graphics/SuperAA.h"
@@ -135,6 +136,20 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
       "disabled"
     },
     {
+      "supermodel_libretro_crosshair",
+      "Libretro Crosshair",
+      NULL,
+      "Show the vector crosshair overlay drawn by the libretro core.",
+      NULL,
+      "video",
+      {
+        { "enabled", "Enabled" },
+        { "disabled", "Disabled" },
+        { NULL, NULL }
+      },
+      "enabled"
+    },
+    {
       "supermodel_input_profile",
       "Input Profile",
       NULL,
@@ -241,9 +256,11 @@ static bool fighting_profile_active = false;
 static InputProfileMode input_profile_mode = InputProfileMode::Auto;
 static unsigned frontend_controller_device = RETRO_DEVICE_JOYPAD;
 static bool input_mode_dirty = true;
+static bool libretro_crosshair_enabled = true;
 static std::string save_directory;
 static int pointer_x = 248;
 static int pointer_y = 192;
+static CCrosshair *s_crosshair = nullptr;
 
 struct PointerOverlayVertex
 {
@@ -264,23 +281,37 @@ struct PointerOverlayGL
 static PointerOverlayGL pointer_overlay;
 
 static bool InitializeRenderers(bool reset_model);
+static void DestroyCrosshair(void);
+static bool InitializeCrosshair(void);
 static void UpdateInputDescriptors(void);
 static void DrawPointerOverlay(void);
 static void LoadNVRAMFromDisk(void);
 static void SaveNVRAMToDisk(void);
+static InputProfileMode GetEffectiveInputProfile(void);
+
+static bool IsGunGame(void)
+{
+  return (game.inputs & (Game::INPUT_GUN1 | Game::INPUT_GUN2 | Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) != 0;
+}
+
+static bool IsGunProfileActive(void)
+{
+  InputProfileMode profile = GetEffectiveInputProfile();
+  return IsGunGame() && (profile == InputProfileMode::Lightgun || profile == InputProfileMode::Mouse || profile == InputProfileMode::Joypad);
+}
 
 static InputProfileMode GetAutoInputProfile(void)
 {
   if (game.inputs & Game::INPUT_VEHICLE)
     return InputProfileMode::Joypad;
 
-  if (game.inputs & (Game::INPUT_GUN1 | Game::INPUT_GUN2 | Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2))
+  if (IsGunGame())
   {
     if (frontend_controller_device == RETRO_DEVICE_MOUSE)
       return InputProfileMode::Mouse;
     if (frontend_controller_device == RETRO_DEVICE_LIGHTGUN)
       return InputProfileMode::Lightgun;
-    return InputProfileMode::Lightgun;
+    return InputProfileMode::Joypad;
   }
 
   if (frontend_controller_device == RETRO_DEVICE_MOUSE)
@@ -440,8 +471,8 @@ static bool InitializePointerOverlay(void)
     return true;
 
   static const char *vertex_source = R"glsl(
-    #version 330 core
-    layout(location = 0) in vec2 in_pos;
+    #version 130
+    in vec2 in_pos;
     uniform vec2 u_resolution;
 
     void main(void)
@@ -449,12 +480,12 @@ static bool InitializePointerOverlay(void)
       vec2 zero_to_one = in_pos / u_resolution;
       vec2 zero_to_two = zero_to_one * 2.0;
       vec2 clip = zero_to_two - 1.0;
-      gl_Position = vec4(clip.x, 1.0 - clip.y, 0.0, 1.0);
+      gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     }
   )glsl";
 
   static const char *fragment_source = R"glsl(
-    #version 330 core
+    #version 130
     uniform vec4 u_color;
     out vec4 frag_color;
 
@@ -483,6 +514,7 @@ static bool InitializePointerOverlay(void)
     return false;
   }
 
+  glBindAttribLocation(program, 0, "in_pos");
   glAttachShader(program, vertex_shader);
   glAttachShader(program, fragment_shader);
   glLinkProgram(program);
@@ -554,8 +586,32 @@ static void AppendRect(std::vector<PointerOverlayVertex> &verts, float left, flo
 
 static bool ShouldDrawPointerOverlay(void)
 {
+  if (!libretro_crosshair_enabled)
+    return false;
   InputProfileMode profile = GetEffectiveInputProfile();
-  return profile == InputProfileMode::Lightgun || profile == InputProfileMode::Mouse;
+  return profile == InputProfileMode::Lightgun || profile == InputProfileMode::Mouse || profile == InputProfileMode::Joypad;
+}
+
+static bool GetPointerOverlayCoords(float *x, float *y)
+{
+  if (Inputs == nullptr || !IsGunGame())
+    return false;
+
+  if ((game.inputs & Game::INPUT_ANALOG_GUN1) && Inputs->analogGunX[0] && Inputs->analogGunY[0])
+  {
+    *x = (float)Inputs->analogGunX[0]->value / 255.0f;
+    *y = (255.0f - (float)Inputs->analogGunY[0]->value) / 255.0f;
+    return true;
+  }
+
+  if ((game.inputs & Game::INPUT_GUN1) && Inputs->gunX[0] && Inputs->gunY[0])
+  {
+    *x = ((float)Inputs->gunX[0]->value - 150.0f) / (651.0f - 150.0f);
+    *y = ((float)Inputs->gunY[0]->value - 80.0f) / (465.0f - 80.0f);
+    return true;
+  }
+
+  return false;
 }
 
 static void DrawPointerOverlay(void)
@@ -563,17 +619,45 @@ static void DrawPointerOverlay(void)
   if (!pointer_overlay.ready || !ShouldDrawPointerOverlay())
     return;
 
+  GLint saved_viewport[4] = { 0, 0, 0, 0 };
+  GLboolean saved_scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
+  GLint saved_scissor_box[4] = { 0, 0, 0, 0 };
+  GLboolean saved_blend_enabled = glIsEnabled(GL_BLEND);
+  GLboolean saved_depth_enabled = glIsEnabled(GL_DEPTH_TEST);
+  GLint saved_program = 0;
+  GLint saved_vao = 0;
+  glGetIntegerv(GL_VIEWPORT, saved_viewport);
+  glGetIntegerv(GL_SCISSOR_BOX, saved_scissor_box);
+  glGetIntegerv(GL_CURRENT_PROGRAM, &saved_program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &saved_vao);
+
   glViewport(0, 0, (GLsizei)total_x_res, (GLsizei)total_y_res);
-  float draw_x = (float)x_offset + ((float)pointer_x * (float)total_x_res / (float)SUPERMODEL_W);
-  float draw_y = (float)y_offset + ((float)pointer_y * (float)total_y_res / (float)SUPERMODEL_H);
+  float norm_x = 0.5f;
+  float norm_y = 0.5f;
+  if (!GetPointerOverlayCoords(&norm_x, &norm_y))
+  {
+    norm_x = (float)pointer_x / (float)SUPERMODEL_W;
+    norm_y = (float)pointer_y / (float)SUPERMODEL_H;
+  }
+
+  if (norm_x < 0.0f) norm_x = 0.0f;
+  if (norm_x > 1.0f) norm_x = 1.0f;
+  if (norm_y < 0.0f) norm_y = 0.0f;
+  if (norm_y > 1.0f) norm_y = 1.0f;
+
+  const float scale_x = (x_res > 0) ? ((float)total_x_res / (float)x_res) : 1.0f;
+  const float scale_y = (y_res > 0) ? ((float)total_y_res / (float)y_res) : 1.0f;
+  const float overlay_scale = 0.5f;
+  float draw_x = ((float)x_offset + norm_x * (float)x_res) * scale_x;
+  float draw_y = ((float)y_offset + norm_y * (float)y_res) * scale_y;
 
   std::vector<PointerOverlayVertex> verts;
   verts.reserve(24);
 
-  const float outer_length = 14.0f;
-  const float outer_thickness = 4.0f;
-  const float inner_length = 10.0f;
-  const float inner_thickness = 2.0f;
+  const float outer_length = 14.0f * overlay_scale * scale_x;
+  const float outer_thickness = 4.0f * overlay_scale * scale_y;
+  const float inner_length = 10.0f * overlay_scale * scale_x;
+  const float inner_thickness = 2.0f * overlay_scale * scale_y;
 
   AppendRect(verts, draw_x - outer_length, draw_y - outer_thickness, draw_x + outer_length, draw_y + outer_thickness);
   AppendRect(verts, draw_x - outer_thickness, draw_y - outer_length, draw_x + outer_thickness, draw_y + outer_length);
@@ -582,19 +666,68 @@ static void DrawPointerOverlay(void)
 
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_SCISSOR_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glUseProgram(pointer_overlay.program);
   glUniform2f(pointer_overlay.resolution_loc, (float)total_x_res, (float)total_y_res);
   glBindVertexArray(pointer_overlay.vao);
   glBindBuffer(GL_ARRAY_BUFFER, pointer_overlay.vbo);
   glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(verts.size() * sizeof(PointerOverlayVertex)), verts.data(), GL_DYNAMIC_DRAW);
 
-  glUniform4f(pointer_overlay.color_loc, 0.0f, 0.0f, 0.0f, 1.0f);
+  glUniform4f(pointer_overlay.color_loc, 0.0f, 0.85f, 1.0f, 0.85f);
   glDrawArrays(GL_TRIANGLES, 0, 12);
-  glUniform4f(pointer_overlay.color_loc, 1.0f, 1.0f, 1.0f, 1.0f);
+  glUniform4f(pointer_overlay.color_loc, 1.0f, 0.15f, 0.85f, 0.95f);
   glDrawArrays(GL_TRIANGLES, 12, 12);
 
   glBindVertexArray(0);
   glUseProgram(0);
+  glDisable(GL_BLEND);
+
+  if (saved_depth_enabled == GL_TRUE)
+    glEnable(GL_DEPTH_TEST);
+  else
+    glDisable(GL_DEPTH_TEST);
+
+  if (saved_blend_enabled == GL_TRUE)
+    glEnable(GL_BLEND);
+  else
+    glDisable(GL_BLEND);
+
+  if (saved_scissor_enabled == GL_TRUE)
+    glEnable(GL_SCISSOR_TEST);
+  else
+    glDisable(GL_SCISSOR_TEST);
+
+  glViewport(saved_viewport[0], saved_viewport[1], saved_viewport[2], saved_viewport[3]);
+  glScissor(saved_scissor_box[0], saved_scissor_box[1], saved_scissor_box[2], saved_scissor_box[3]);
+  glUseProgram((GLuint)saved_program);
+  glBindVertexArray((GLuint)saved_vao);
+}
+
+static void DestroyCrosshair(void)
+{
+  delete s_crosshair;
+  s_crosshair = nullptr;
+}
+
+static bool InitializeCrosshair(void)
+{
+  if (!IsGunGame())
+  {
+    DestroyCrosshair();
+    return true;
+  }
+
+  DestroyCrosshair();
+  s_runtime_config.Set("Crosshairs", int(3), "Video", 0, 0, { 0,1,2,3 });
+  s_crosshair = new CCrosshair(s_runtime_config);
+  if (s_crosshair->Init() != Result::OKAY)
+  {
+    ErrorLog("Unable to initialize native crosshair.\n");
+    DestroyCrosshair();
+    return false;
+  }
+  return true;
 }
 
 static void ApplyGLGeometry(void)
@@ -713,6 +846,22 @@ static bool ApplyVideoCoreOptions(void)
     }
   }
 
+  return changed;
+}
+
+static bool ApplyCrosshairOverlayOption(void)
+{
+  bool changed = false;
+  struct retro_variable var = { "supermodel_libretro_crosshair", NULL };
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    bool show_overlay = ParseEnabledOption(var.value);
+    if (libretro_crosshair_enabled != show_overlay)
+    {
+      libretro_crosshair_enabled = show_overlay;
+      changed = true;
+    }
+  }
   return changed;
 }
 
@@ -927,12 +1076,10 @@ class CRetroInputSystem : public CInputSystem
 	CRetroInputSystem() : CInputSystem("LibRetro") {}
   void SetMouseVisibility(bool visible) {}
   int GetNumMice() const {
-    InputProfileMode profile = GetEffectiveInputProfile();
-    return (profile == InputProfileMode::Lightgun || profile == InputProfileMode::Mouse) ? 1 : 0;
+    return IsGunProfileActive() ? 1 : 0;
   }
   int GetMouseAxisValue(int mseNum, int axisNum) const {
-    InputProfileMode profile = GetEffectiveInputProfile();
-    if (profile != InputProfileMode::Lightgun && profile != InputProfileMode::Mouse)
+    if (!IsGunProfileActive())
       return 0;
 
     if (axisNum == AXIS_X)
@@ -944,23 +1091,29 @@ class CRetroInputSystem : public CInputSystem
   int GetMouseWheelDir(int mseNum) const { return 0; }
   bool IsMouseButPressed(int mseNum, int butNum) const {
     InputProfileMode profile = GetEffectiveInputProfile();
-  if (profile != InputProfileMode::Lightgun && profile != InputProfileMode::Mouse)
+    if (!IsGunProfileActive())
       return false;
 
     switch (butNum)
     {
       case 0:
-        return profile == InputProfileMode::Lightgun
-          ? cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER) != 0
-          : cb_input_state(mseNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT) != 0;
+        if (profile == InputProfileMode::Lightgun)
+          return cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER) != 0;
+        if (profile == InputProfileMode::Mouse)
+          return cb_input_state(mseNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT) != 0;
+        return false;
       case 1:
-        return profile == InputProfileMode::Lightgun
-          ? cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD) != 0
-          : cb_input_state(mseNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE) != 0;
+        if (profile == InputProfileMode::Lightgun)
+          return cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD) != 0;
+        if (profile == InputProfileMode::Mouse)
+          return cb_input_state(mseNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE) != 0;
+        return false;
       case 2:
-        return profile == InputProfileMode::Lightgun
-          ? cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_A) != 0
-          : cb_input_state(mseNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT) != 0;
+        if (profile == InputProfileMode::Lightgun)
+          return cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD) != 0;
+        if (profile == InputProfileMode::Mouse)
+          return cb_input_state(mseNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT) != 0;
+        return false;
       case 3:
         return profile == InputProfileMode::Lightgun
           ? cb_input_state(mseNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_B) != 0
@@ -973,7 +1126,7 @@ class CRetroInputSystem : public CInputSystem
     static MouseDetails details = {};
     InputProfileMode profile = GetEffectiveInputProfile();
     snprintf(details.name, sizeof(details.name), "%s", profile == InputProfileMode::Lightgun ? "RetroArch Lightgun" : "RetroArch Mouse");
-    details.isAbsolute = (profile == InputProfileMode::Lightgun || profile == InputProfileMode::Mouse);
+    details.isAbsolute = IsGunProfileActive();
     return &details;
   }
 
@@ -1009,7 +1162,7 @@ class CRetroInputSystem : public CInputSystem
   const JoyDetails *GetJoyDetails(int joyNum) { return &theJoystick; }
   bool IsJoyButPressed(int joyNum, int butNum) const {
     InputProfileMode profile = GetEffectiveInputProfile();
-    if (profile == InputProfileMode::Lightgun)
+    if (IsGunProfileActive() && profile == InputProfileMode::Lightgun)
     {
       switch (butNum)
       {
@@ -1022,19 +1175,24 @@ class CRetroInputSystem : public CInputSystem
       case 3:
         return cb_input_state(joyNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START) != 0;
       case 10:
-        return cb_input_state(joyNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_A) != 0;
+        return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) != 0;
       case 11:
-        return cb_input_state(joyNum, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_B) != 0;
+        return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) != 0;
       default:
-        break;
+        return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, butNum) != 0;
       }
     }
-    else if (profile == InputProfileMode::Mouse)
+    else if (IsGunProfileActive() && profile == InputProfileMode::Mouse)
     {
-      if (butNum == 10)
-        return cb_input_state(joyNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE) != 0;
-      if (butNum == 11)
-        return cb_input_state(joyNum, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT) != 0;
+      switch (butNum)
+      {
+      case 10:
+        return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) != 0;
+      case 11:
+        return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) != 0;
+      default:
+        return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, butNum) != 0;
+      }
     }
     return cb_input_state(joyNum, RETRO_DEVICE_JOYPAD, 0, butNum) != 0;
   }
@@ -1048,7 +1206,7 @@ class CRetroInputSystem : public CInputSystem
 	bool Poll() {
     cb_input_poll();
     InputProfileMode profile = GetEffectiveInputProfile();
-    if (profile == InputProfileMode::Lightgun)
+    if (IsGunProfileActive() && profile == InputProfileMode::Lightgun)
     {
       int raw_x = (int16_t)cb_input_state(0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X);
       int raw_y = (int16_t)cb_input_state(0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SCREEN_Y);
@@ -1062,7 +1220,7 @@ class CRetroInputSystem : public CInputSystem
         if (pointer_y >= (int)m_dispH) pointer_y = (int)m_dispH - 1;
       }
     }
-    else if (profile == InputProfileMode::Mouse)
+    else if (IsGunProfileActive() && profile == InputProfileMode::Mouse)
     {
       int dx = cb_input_state(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
       int dy = cb_input_state(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
@@ -1072,6 +1230,20 @@ class CRetroInputSystem : public CInputSystem
       if (m_dispH > 0 && pointer_y >= (int)m_dispH) pointer_y = (int)m_dispH - 1;
       if (pointer_x < 0) pointer_x = 0;
       if (pointer_y < 0) pointer_y = 0;
+    }
+    else if (IsGunProfileActive() && profile == InputProfileMode::Joypad)
+    {
+      int raw_x = (int16_t)cb_input_state(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+      int raw_y = (int16_t)cb_input_state(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
+      if (m_dispW > 0 && m_dispH > 0)
+      {
+        pointer_x = (int)(((int64_t)raw_x + 0x8000) * (int64_t)m_dispW / 0x10000);
+        pointer_y = (int)(((int64_t)raw_y + 0x8000) * (int64_t)m_dispH / 0x10000);
+        if (pointer_x < 0) pointer_x = 0;
+        if (pointer_y < 0) pointer_y = 0;
+        if (pointer_x >= (int)m_dispW) pointer_x = (int)m_dispW - 1;
+        if (pointer_y >= (int)m_dispH) pointer_y = (int)m_dispH - 1;
+      }
     }
     return true;
 	}
@@ -1136,32 +1308,51 @@ static void ApplyFightingInputDefaults(void)
 
 static void ApplyGunInputDefaults(void)
 {
-  if (!(game.inputs & (Game::INPUT_GUN1 | Game::INPUT_GUN2 | Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)))
+  if (!IsGunGame())
     return;
 
   InputProfileMode profile = GetEffectiveInputProfile();
-  if (profile != InputProfileMode::Lightgun && profile != InputProfileMode::Mouse)
+  if (profile != InputProfileMode::Lightgun && profile != InputProfileMode::Mouse && profile != InputProfileMode::Joypad)
     return;
 
-  if (profile == InputProfileMode::Mouse)
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set("Crosshairs", int(3), "Video", 0, 0, { 0,1,2,3 });
+
+  if (game.inputs & (Game::INPUT_GUN1 | Game::INPUT_GUN2))
   {
-    s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON10", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON10", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON11", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON11", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputOffscreen", "KEY_S,JOY1_BUTTON2,MOUSE_MIDDLE_BUTTON", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputAutoTrigger", "1", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputAutoTrigger2", "1", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputGunX", "MOUSE_XAXIS", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputGunY", "MOUSE_YAXIS", "Input", "", "");
+    if (profile == InputProfileMode::Joypad)
+    {
+      s_runtime_config.Set<std::string>("InputTrigger", "JOY1_SLIDER1_POS,JOY1_BUTTON1", "Input", "", "");
+      s_runtime_config.Set<std::string>("InputOffscreen", "JOY1_SLIDER2_POS,JOY1_BUTTON2", "Input", "", "");
+    }
+    else
+    {
+      s_runtime_config.Set<std::string>("InputTrigger", "MOUSE_LEFT_BUTTON", "Input", "", "");
+      s_runtime_config.Set<std::string>("InputOffscreen", "MOUSE_RIGHT_BUTTON,MOUSE_MIDDLE_BUTTON", "Input", "", "");
+    }
+    s_runtime_config.Set<std::string>("InputAutoTrigger", "0", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputAutoTrigger2", "0", "Input", "", "");
   }
-  else
+
+  if (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2))
   {
-    s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON10", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON10", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON11", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON11", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputOffscreen", "KEY_S,JOY1_BUTTON2,MOUSE_MIDDLE_BUTTON", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputAutoTrigger", "1", "Input", "", "");
-    s_runtime_config.Set<std::string>("InputAutoTrigger2", "1", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputAnalogGunX", "MOUSE_XAXIS", "Input", "", "");
+    s_runtime_config.Set<std::string>("InputAnalogGunY", "MOUSE_YAXIS", "Input", "", "");
+    if (profile == InputProfileMode::Joypad)
+    {
+      s_runtime_config.Set<std::string>("InputAnalogTriggerLeft", "JOY1_SLIDER1_POS,JOY1_BUTTON1", "Input", "", "");
+      s_runtime_config.Set<std::string>("InputAnalogTriggerRight", "JOY1_SLIDER2_POS,JOY1_BUTTON2", "Input", "", "");
+    }
+    else
+    {
+      s_runtime_config.Set<std::string>("InputAnalogTriggerLeft", "MOUSE_LEFT_BUTTON", "Input", "", "");
+      s_runtime_config.Set<std::string>("InputAnalogTriggerRight", "MOUSE_RIGHT_BUTTON,MOUSE_MIDDLE_BUTTON", "Input", "", "");
+    }
   }
 }
 
@@ -1199,7 +1390,41 @@ static void UpdateInputDescriptors(void)
   InputProfileMode profile = GetEffectiveInputProfile();
   memset(desc, 0, sizeof(desc));
 
-  if (game.inputs & Game::INPUT_FIGHTING)
+  if (IsGunGame() && profile == InputProfileMode::Lightgun)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER,    (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Left Trigger" : "Trigger" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD,     (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Right Trigger" : "Reload" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SELECT,     "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START,      "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_A,      "Button 1" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_B,      "Button 2" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD,   0, RETRO_DEVICE_ID_JOYPAD_L,            "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD,   0, RETRO_DEVICE_ID_JOYPAD_R,            "Service" };
+  }
+  else if (IsGunGame() && profile == InputProfileMode::Mouse)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT,   (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Left Trigger" : "Fire" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT,  (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Right Trigger" : "Reload" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE, (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Right Trigger Alt" : "Reload Alt" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X,      "Aim X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y,      "Aim Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+  }
+  else if (IsGunGame() && profile == InputProfileMode::Joypad)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Aim X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Aim Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Left Trigger" : "Fire" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, (game.inputs & (Game::INPUT_ANALOG_GUN1 | Game::INPUT_ANALOG_GUN2)) ? "Right Trigger" : "Reload" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+  }
+  else if (game.inputs & Game::INPUT_FIGHTING)
   {
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "Punch" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Kick" };
@@ -1209,27 +1434,6 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
-  }
-  else if (profile == InputProfileMode::Lightgun)
-  {
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_DPAD_LEFT,  "D-Pad Left" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_DPAD_UP,    "D-Pad Up" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_DPAD_DOWN,  "D-Pad Down" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_DPAD_RIGHT, "D-Pad Right" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_TRIGGER,    "Trigger" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_RELOAD,     "Reload" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_SELECT,     "Coin" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_START,      "Start" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_A,      "Test" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_LIGHTGUN, 0, RETRO_DEVICE_ID_LIGHTGUN_AUX_B,      "Service" };
-  }
-  else if (profile == InputProfileMode::Mouse)
-  {
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT,   "Fire" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE, "Reload" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT,  "Aux" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X,      "Aim X" };
-    desc[descriptor_index++] = { 0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y,      "Aim Y" };
   }
   else if (racer_profile_active)
   {
@@ -1444,6 +1648,10 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
       Inputs = nullptr;
       return false;
     }
+    if (renderers_ready && !InitializeCrosshair())
+    {
+      ErrorLog("Crosshair initialization failed; falling back to software overlay.");
+    }
 
     game_loaded = true;
     LoadNVRAMFromDisk();
@@ -1468,6 +1676,7 @@ RETRO_API void retro_unload_game(void) {
   assert(game_loaded);
   SaveNVRAMToDisk();
   DestroyRenderers();
+  DestroyCrosshair();
   delete Model3;
   Model3 = nullptr;
   delete Inputs;
@@ -1500,13 +1709,17 @@ RETRO_API void retro_run(void) {
   {
     bool supersampling_changed = ApplySupersamplingOption();
     bool video_options_changed = ApplyVideoCoreOptions();
+    ApplyCrosshairOverlayOption();
     if (ApplyInputProfileOption())
       refresh_input_mode = true;
     if ((supersampling_changed || video_options_changed) && renderers_ready)
     {
       DestroyRenderers();
+      DestroyCrosshair();
       if (!InitializeRenderers(false))
         return;
+      if (!InitializeCrosshair())
+        ErrorLog("Crosshair initialization failed; falling back to software overlay.");
     }
   }
   if (refresh_input_mode)
@@ -1517,7 +1730,9 @@ RETRO_API void retro_run(void) {
       ApplyVehicleInputDefaults();
     ApplyGunInputDefaults();
     if (Inputs != nullptr)
+    {
       Inputs->LoadFromConfig(s_runtime_config);
+    }
     UpdateInputDescriptors();
     pointer_x = (int)(x_res / 2);
     pointer_y = (int)(y_res / 2);
@@ -1526,12 +1741,17 @@ RETRO_API void retro_run(void) {
   {
     if (!InitializeRenderers(false))
       return;
+    if (!InitializeCrosshair())
+      ErrorLog("Crosshair initialization failed; falling back to software overlay.");
   }
   BindCurrentFramebuffer();
   RefreshOutputGeometry();
-  Inputs->Poll(&game, 0, 0, SUPERMODEL_W, SUPERMODEL_H);
+  Inputs->Poll(&game, x_offset, y_offset, x_res, y_res);
   Model3->RunFrame();
-  DrawPointerOverlay();
+  if (s_crosshair != nullptr)
+    s_crosshair->Update(game.inputs, Inputs, x_offset, y_offset, x_res, y_res);
+  if (ShouldDrawPointerOverlay())
+    DrawPointerOverlay();
   glFlush();
   cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, total_x_res, total_y_res, 0);
 }
