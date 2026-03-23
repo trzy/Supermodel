@@ -2,6 +2,7 @@
 #define _FBO_H_
 
 #include <GL/glew.h>
+#include "Supermodel.h"
 
 class FBO
 {

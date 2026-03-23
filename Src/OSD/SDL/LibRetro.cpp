@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdlib>
 #include <stdio.h>
 #include <cstring>
 #include "../Pkgs/libretro.h"
@@ -9,7 +10,6 @@
 #include "Util/ConfigBuilders.h"
 #include "OSD/FileSystemPath.h"
 #include "GameLoader.h"
-#include "SDLIncludes.h"
 #include "Graphics/New3D/New3D.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
@@ -33,6 +33,42 @@ RETRO_API void retro_get_system_info(struct retro_system_info *info) {
 retro_environment_t cb_env;
 RETRO_API void retro_set_environment(retro_environment_t cb) {
   cb_env = cb;
+  static struct retro_core_option_v2_category option_cats_us[] = {
+    {
+      "video",
+      "Video",
+      "Configure video backend and internal scaling."
+    },
+    { NULL, NULL, NULL }
+  };
+  static struct retro_core_option_v2_definition option_defs_us[] = {
+    {
+      "supermodel_supersampling",
+      "Supersampling",
+      NULL,
+      "Render internally at 1x to 8x using SuperAA.",
+      NULL,
+      "video",
+      {
+        { "1x", NULL },
+        { "2x", NULL },
+        { "3x", NULL },
+        { "4x", NULL },
+        { "5x", NULL },
+        { "6x", NULL },
+        { "7x", NULL },
+        { "8x", NULL },
+        { NULL, NULL }
+      },
+      "1x"
+    },
+    { NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL }
+  };
+  static struct retro_core_options_v2 options = {
+    option_cats_us,
+    option_defs_us
+  };
+  cb_env(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2, &options);
 }
 
 std::string config_path(const char *file) {
@@ -69,7 +105,193 @@ IEmulator *Model3 = nullptr;
 std::shared_ptr<CInputSystem> InputSystem;
 CInputs *Inputs = nullptr;
 static Util::Config::Node s_runtime_config("Global");
-SDL_Window *r_window = nullptr;
+static bool hw_context_ready = false;
+static bool renderers_ready = false;
+static bool reset_pending = false;
+static bool game_loaded = false;
+static int supersampling = 1;
+static SuperAA *superAA = nullptr;
+static CRender2D *Render2D = nullptr;
+static IRender3D *Render3D = nullptr;
+static Game game;
+static ROMSet rom_set;
+static retro_hw_render_callback hw_render_cb = {};
+const unsigned SUPERMODEL_W = 496;
+const unsigned SUPERMODEL_H = 384;
+
+static bool InitializeRenderers(void);
+
+static void DestroyRenderers(void)
+{
+  if (Render3D != nullptr)
+  {
+    delete Render3D;
+    Render3D = nullptr;
+  }
+  if (Render2D != nullptr)
+  {
+    delete Render2D;
+    Render2D = nullptr;
+  }
+  if (superAA != nullptr)
+  {
+    delete superAA;
+    superAA = nullptr;
+  }
+  renderers_ready = false;
+}
+
+static bool ApplySupersamplingOption(void)
+{
+  struct retro_variable var = { "supermodel_supersampling", NULL };
+  supersampling = 1;
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    int aa = std::atoi(var.value);
+    if (aa >= 1 && aa <= 8)
+      supersampling = aa;
+  }
+  s_runtime_config.Set("Supersampling", supersampling, "Video", 1, 8);
+  return true;
+}
+
+static bool InitGLState(void)
+{
+  GLenum err;
+
+  glewExperimental = GL_TRUE;
+  err = glewInit();
+  if (GLEW_OK != err)
+  {
+    ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
+    return false;
+  }
+
+  GLint profile = 0;
+  glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
+  printf("GPU info: %s ", glGetString(GL_VERSION));
+  if (profile & GL_CONTEXT_CORE_PROFILE_BIT)
+    printf("(core profile)");
+  if (profile & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT)
+    printf("(compatibility profile)");
+  printf("\n\n");
+
+  glViewport(0,0,SUPERMODEL_W,SUPERMODEL_H);
+  glClearColor(0.0,0.0,0.0,0.0);
+  glClearDepth(1.0);
+  glDepthFunc(GL_LESS);
+  glEnable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE);
+
+  for (int i = 0; i < 3; i++)
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+  UINT32 correction = (UINT32)(((SUPERMODEL_H / 384.) * 2.) + 0.5);
+  glEnable(GL_SCISSOR_TEST);
+  glScissor(correction, correction, (SUPERMODEL_W - (correction * 2)), (SUPERMODEL_H - (correction * 2)));
+
+  hw_context_ready = true;
+  return true;
+}
+
+static void retro_context_reset(void)
+{
+  if (!InitGLState())
+    return;
+  InitializeRenderers();
+}
+
+static void retro_context_destroy(void)
+{
+  hw_context_ready = false;
+  DestroyRenderers();
+}
+
+static bool RequestHWContext(void)
+{
+  unsigned preferred = RETRO_HW_CONTEXT_OPENGL_CORE;
+  cb_env(RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER, &preferred);
+  if (preferred != RETRO_HW_CONTEXT_OPENGL && preferred != RETRO_HW_CONTEXT_OPENGL_CORE)
+    preferred = RETRO_HW_CONTEXT_OPENGL_CORE;
+
+  retro_hw_render_callback hw_render = {};
+  hw_render.context_type = (enum retro_hw_context_type)preferred;
+  hw_render.context_reset = retro_context_reset;
+  hw_render.context_destroy = retro_context_destroy;
+  hw_render.depth = true;
+  hw_render.stencil = true;
+  hw_render.bottom_left_origin = true;
+  hw_render.version_major = 3;
+  hw_render.version_minor = 0;
+  hw_render.cache_context = true;
+  hw_render.debug_context = false;
+
+  if (!cb_env(RETRO_ENVIRONMENT_SET_HW_RENDER, &hw_render))
+  {
+    ErrorLog("RetroArch rejected hardware rendering context");
+    return false;
+  }
+  hw_render_cb = hw_render;
+  return true;
+}
+
+static void BindCurrentFramebuffer(void)
+{
+  if (hw_render_cb.get_current_framebuffer != nullptr)
+  {
+    GLuint framebuffer = (GLuint)hw_render_cb.get_current_framebuffer();
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  }
+}
+
+void BindSupermodelDefaultFramebuffer(void)
+{
+  if (hw_render_cb.get_current_framebuffer != nullptr)
+  {
+    GLuint framebuffer = (GLuint)hw_render_cb.get_current_framebuffer();
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  }
+  else
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDrawBuffer(GL_BACK);
+  }
+}
+
+static bool InitializeRenderers(void)
+{
+  if (!hw_context_ready || Model3 == nullptr || renderers_ready)
+    return renderers_ready;
+
+  superAA = new SuperAA(supersampling, CRTcolor::None);
+  superAA->Init(SUPERMODEL_W, SUPERMODEL_H);
+
+  Render2D = new CRender2D(s_runtime_config);
+  Render3D = new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
+
+  UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
+  if (Result::OKAY != Render2D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID(), upscaleMode))
+  {
+    ErrorLog("Failed to initialize 2D renderer");
+    DestroyRenderers();
+    return false;
+  }
+  if (Result::OKAY != Render3D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID()))
+  {
+    ErrorLog("Failed to initialize 3D renderer");
+    DestroyRenderers();
+    return false;
+  }
+
+  Model3->AttachRenderers(Render2D, Render3D, superAA);
+  renderers_ready = true;
+
+  Model3->Reset();
+  reset_pending = false;
+  return true;
+}
 
 static void WriteDefaultConfigurationFileIfNotPresent(std::string s_configFilePath)
 {
@@ -91,99 +313,6 @@ static void WriteDefaultConfigurationFileIfNotPresent(std::string s_configFilePa
     fputs(s_defaultConfigFileContents, fp);
     fclose(fp);
     InfoLog("Wrote default configuration file to %s", s_configFilePath.c_str());
-}
-
-
-const unsigned SUPERMODEL_W = 496;
-const unsigned SUPERMODEL_H = 384;
-
-static Result CreateGLScreen()
-{
-  GLenum err;
-
-  // Call only once per program session (this is because of issues with
-  // DirectInput when the window is destroyed and a new one created). Use
-  // ResizeGLScreen() to change resolutions instead.
-  if (r_window != nullptr)
-  {
-    return ErrorLog("Internal error: CreateGLScreen() called more than once");
-  }
-
-  // Initialize video subsystem
-  if (SDL_Init(SDL_INIT_VIDEO) != 0)
-    return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
-
-  // Important GL attributes
-  SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
-  SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE,8);
-  SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,8);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE,0);
-  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE,0);
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-
-  r_window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SUPERMODEL_W, SUPERMODEL_H, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN );
-  if (nullptr == r_window)
-  {
-    ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
-    return Result::FAIL;
-  }
-
-  SDL_GLContext context = SDL_GL_CreateContext(r_window);
-  if (nullptr == context)
-  {
-    ErrorLog("Unable to create OpenGL context: %s\n", SDL_GetError());
-    return Result::FAIL;
-  }
-
-  SDL_GL_SetSwapInterval(1);
-  SDL_GL_MakeCurrent(r_window, context);
-
-  // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
-  err = glewInit();
-  if (GLEW_OK != err)
-  {
-    ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
-    return Result::FAIL;
-  }
-
-  // print some basic GPU info
-  GLint profile = 0;
-  glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
-  printf("GPU info: %s ", glGetString(GL_VERSION));
-  if (profile & GL_CONTEXT_CORE_PROFILE_BIT) {
-      printf("(core profile)");
-  }
-  if (profile & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) {
-      printf("(compatibility profile)");
-  }
-  printf("\n\n");
-
-  // OpenGL initialization
-  glViewport(0,0,SUPERMODEL_W,SUPERMODEL_H);
-  glClearColor(0.0,0.0,0.0,0.0);
-  glClearDepth(1.0);
-  glDepthFunc(GL_LESS);
-  glEnable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
-
-  // Clear both buffers to ensure a black border
-  for (int i = 0; i < 3; i++)
-  {
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    SDL_GL_SwapWindow(r_window);
-  }
-
-  UINT32 correction = (UINT32)(((SUPERMODEL_H / 384.) * 2.) + 0.5); // due to the 2D layer compensation (2 pixels off)
-
-  glEnable(GL_SCISSOR_TEST);
-
-  // Scissor box (to clip visible area)
-  glScissor(correction, correction, (SUPERMODEL_W - (correction * 2)), (SUPERMODEL_H - (correction * 2)));
-
-  return Result::OKAY;
 }
 
 // Input system
@@ -242,16 +371,6 @@ RETRO_API void retro_init(void) {
   // XXX in the future use the retro logging callback
   SetLogger(std::make_shared<CConsoleErrorLogger>());
 
-  // Initialize SDL (individual subsystems get initialized later)
-  if (SDL_Init(0) != 0)
-  {
-    ErrorLog("Unable to initialize SDL: %s\n", SDL_GetError());
-    return;
-  }
-
-  // Flag as DPI-aware, otherwise the window content might be scaled by some graphics drivers
-  SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "system");
-
   std::string config_file = config_path("Supermodel.ini");
   WriteDefaultConfigurationFileIfNotPresent(config_file);
   Util::Config::FromINIFile(&s_runtime_config, config_file);
@@ -287,15 +406,10 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set<std::string>("InputCharge", "JOY1_BUTTON9", "Input", "", "");
   s_runtime_config.Set<std::string>("InputJump", "JOY1_BUTTON2", "Input", "", "");
 
-  if (Result::OKAY != CreateGLScreen())
-  {
-    return;
-  }
+  ApplySupersamplingOption();
 
-  enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-  if (!cb_env(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+  if (!RequestHWContext())
   {
-    ErrorLog("RetroArch rejected pixel format XRGB8888");
     return;
   }
 
@@ -304,13 +418,16 @@ RETRO_API void retro_init(void) {
 
 RETRO_API void retro_deinit(void) {
   assert(initialized);
-  if (r_window != nullptr)
-  {
-    SDL_GL_DeleteContext(SDL_GL_GetCurrentContext());
-    SDL_DestroyWindow(r_window);
-  }
-  SDL_Quit();
+  DestroyRenderers();
+  delete Model3;
+  Model3 = nullptr;
+  delete Inputs;
+  Inputs = nullptr;
+  InputSystem.reset();
   initialized = false;
+  hw_context_ready = false;
+  reset_pending = false;
+  game_loaded = false;
 }
 
 // Before load_game
@@ -327,15 +444,17 @@ RETRO_API void retro_set_controller_port_device(unsigned port, unsigned device) 
 }
 RETRO_API void retro_reset(void) {
   assert(initialized);
-  Model3->Reset();
+  if (renderers_ready && Model3 != nullptr)
+    Model3->Reset();
+  else
+    reset_pending = true;
 }
 
-// Load game
-bool game_loaded = false;
-Game game;
 RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   assert(initialized);
   assert(!game_loaded);
+
+  ApplySupersamplingOption();
 
   Model3 = new CModel3(s_runtime_config);
   if (! Model3) {
@@ -343,16 +462,24 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   }
 
   if (Result::OKAY != Model3->Init()) {
+    delete Model3;
+    Model3 = nullptr;
     return false;
   }
 
-  ROMSet rom_set;
-
   GameLoader loader(config_path("Games.xml"));
   if (loader.Load(&game, &rom_set, rgame->path))
+  {
+    delete Model3;
+    Model3 = nullptr;
     return false;
+  }
   if (Model3->LoadGame(game, rom_set) != Result::OKAY)
+  {
+    delete Model3;
+    Model3 = nullptr;
     return false;
+  }
   rom_set = ROMSet();  // free up this memory we won't need anymore
 
   // Initialize input
@@ -360,36 +487,41 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   Inputs = new CInputs(InputSystem);
   if (!Inputs->Initialize())
   {
+    delete Model3;
+    Model3 = nullptr;
+    delete Inputs;
+    Inputs = nullptr;
     return false;
   }
   Inputs->LoadFromConfig(s_runtime_config);
   Model3->AttachInputs(Inputs);
 
-  // Initialize the renderers
-  SuperAA* superAA = new SuperAA(1, CRTcolor::None);
-  superAA->Init(SUPERMODEL_W, SUPERMODEL_H);  // pass actual frame sizes here
-  CRender2D *Render2D = new CRender2D(s_runtime_config);
-  IRender3D *Render3D = new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
-  UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
-
-  if (Result::OKAY != Render2D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID(), upscaleMode))
+  reset_pending = true;
+  if (hw_context_ready && !InitializeRenderers())
+  {
+    DestroyRenderers();
+    delete Model3;
+    Model3 = nullptr;
+    delete Inputs;
+    Inputs = nullptr;
     return false;
-  if (Result::OKAY != Render3D->Init(0, 0, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W, SUPERMODEL_H, superAA->GetTargetID()))
-    return false;
-
-  Model3->AttachRenderers(Render2D, Render3D, superAA);
-
-  // Reset emulator
-  Model3->Reset();
+  }
 
   game_loaded = true;
   return game_loaded;
 }
 RETRO_API void retro_unload_game(void) {
   assert(game_loaded);
+  DestroyRenderers();
   delete Model3;
+  Model3 = nullptr;
   delete Inputs;
+  Inputs = nullptr;
+  InputSystem.reset();
+  rom_set = ROMSet();
+  game = Game();
   game_loaded = false;
+  reset_pending = false;
 }
 RETRO_API bool retro_load_game_special(
   unsigned game_type,
@@ -402,23 +534,18 @@ RETRO_API unsigned retro_get_region(void) {
 }
 
 // Run
-static uint32_t pixels[SUPERMODEL_W * SUPERMODEL_H];
-static uint32_t flipped_pixels[SUPERMODEL_W * SUPERMODEL_H];
 RETRO_API void retro_run(void) {
   assert(game_loaded);
+  if (!renderers_ready)
+  {
+    if (!InitializeRenderers())
+      return;
+  }
+  BindCurrentFramebuffer();
   Inputs->Poll(&game, 0, 0, SUPERMODEL_W, SUPERMODEL_H);
   Model3->RunFrame();
-  glReadPixels(0, 0, SUPERMODEL_W, SUPERMODEL_H, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
-  SDL_GL_SwapWindow(r_window);
-  for (unsigned y = 0; y < SUPERMODEL_H; y++)
-  {
-    std::memcpy(
-      flipped_pixels + (y * SUPERMODEL_W),
-      pixels + ((SUPERMODEL_H - 1 - y) * SUPERMODEL_W),
-      SUPERMODEL_W * sizeof(uint32_t)
-    );
-  }
-  cb_video_refresh(flipped_pixels, SUPERMODEL_W, SUPERMODEL_H, SUPERMODEL_W * sizeof(uint32_t));
+  glFlush();
+  cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, SUPERMODEL_W, SUPERMODEL_H, 0);
 }
 
 // Audio

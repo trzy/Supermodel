@@ -31,6 +31,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <GL/glew.h>
+#include "Supermodel.h"
 #include "Types.h"
 #include "Graphics/IRender3D.h"
 #include "Model.h"

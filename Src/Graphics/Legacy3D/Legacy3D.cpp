@@ -975,7 +975,7 @@ void CLegacy3D::RenderFrame(void)
       glClear(GL_COLOR_BUFFER_BIT);
 
       if (m_aaTarget) {
-          glBindFramebuffer(GL_FRAMEBUFFER, 0);
+          BindSupermodelDefaultFramebuffer();
       }
 
       return;
@@ -1058,7 +1058,7 @@ void CLegacy3D::RenderFrame(void)
   glDisableClientState(GL_VERTEX_ARRAY);
 
   if (m_aaTarget) {
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+      BindSupermodelDefaultFramebuffer();			// restore target if needed
   }
 }
 
