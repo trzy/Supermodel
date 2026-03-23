@@ -105,21 +105,23 @@ IEmulator *Model3 = nullptr;
 std::shared_ptr<CInputSystem> InputSystem;
 CInputs *Inputs = nullptr;
 static Util::Config::Node s_runtime_config("Global");
+const unsigned SUPERMODEL_W = 496;
+const unsigned SUPERMODEL_H = 384;
 static bool hw_context_ready = false;
 static bool renderers_ready = false;
 static bool reset_pending = false;
 static bool game_loaded = false;
 static int supersampling = 1;
+static unsigned output_width = SUPERMODEL_W;
+static unsigned output_height = SUPERMODEL_H;
 static SuperAA *superAA = nullptr;
 static CRender2D *Render2D = nullptr;
 static IRender3D *Render3D = nullptr;
 static Game game;
 static ROMSet rom_set;
 static retro_hw_render_callback hw_render_cb = {};
-const unsigned SUPERMODEL_W = 496;
-const unsigned SUPERMODEL_H = 384;
 
-static bool InitializeRenderers(void);
+static bool InitializeRenderers(bool reset_model);
 
 static void DestroyRenderers(void)
 {
@@ -143,6 +145,7 @@ static void DestroyRenderers(void)
 
 static bool ApplySupersamplingOption(void)
 {
+  int previous = supersampling;
   struct retro_variable var = { "supermodel_supersampling", NULL };
   supersampling = 1;
   if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
@@ -152,7 +155,7 @@ static bool ApplySupersamplingOption(void)
       supersampling = aa;
   }
   s_runtime_config.Set("Supersampling", supersampling, "Video", 1, 8);
-  return true;
+  return supersampling != previous;
 }
 
 static bool InitGLState(void)
@@ -165,6 +168,14 @@ static bool InitGLState(void)
   {
     ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
     return false;
+  }
+
+  GLint viewport[4] = { 0, 0, 0, 0 };
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  if (viewport[2] > 0 && viewport[3] > 0)
+  {
+    output_width = (unsigned)viewport[2];
+    output_height = (unsigned)viewport[3];
   }
 
   GLint profile = 0;
@@ -198,7 +209,13 @@ static void retro_context_reset(void)
 {
   if (!InitGLState())
     return;
-  InitializeRenderers();
+  if (!InitializeRenderers(false))
+    return;
+  if (reset_pending && Model3 != nullptr)
+  {
+    Model3->Reset();
+    reset_pending = false;
+  }
 }
 
 static void retro_context_destroy(void)
@@ -260,7 +277,7 @@ void BindSupermodelDefaultFramebuffer(void)
   }
 }
 
-static bool InitializeRenderers(void)
+static bool InitializeRenderers(bool reset_model)
 {
   if (!hw_context_ready || Model3 == nullptr || renderers_ready)
     return renderers_ready;
@@ -270,6 +287,7 @@ static bool InitializeRenderers(void)
 
   superAA = new SuperAA(supersampling, CRTcolor::None);
   superAA->Init(SUPERMODEL_W, SUPERMODEL_H);
+  superAA->SetOutputSize((int)output_width, (int)output_height);
 
   Render2D = new CRender2D(s_runtime_config);
   Render3D = new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
@@ -291,8 +309,11 @@ static bool InitializeRenderers(void)
   Model3->AttachRenderers(Render2D, Render3D, superAA);
   renderers_ready = true;
 
-  Model3->Reset();
-  reset_pending = false;
+  if (reset_model)
+  {
+    Model3->Reset();
+    reset_pending = false;
+  }
   return true;
 }
 
@@ -500,9 +521,8 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   Model3->AttachInputs(Inputs);
 
   reset_pending = true;
-  if (hw_context_ready && !InitializeRenderers())
+  if (hw_context_ready && !InitializeRenderers(true))
   {
-    DestroyRenderers();
     delete Model3;
     Model3 = nullptr;
     delete Inputs;
@@ -539,9 +559,20 @@ RETRO_API unsigned retro_get_region(void) {
 // Run
 RETRO_API void retro_run(void) {
   assert(game_loaded);
+  bool variables_updated = false;
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &variables_updated) && variables_updated)
+  {
+    bool supersampling_changed = ApplySupersamplingOption();
+    if (supersampling_changed && renderers_ready)
+    {
+      DestroyRenderers();
+      if (!InitializeRenderers(false))
+        return;
+    }
+  }
   if (!renderers_ready)
   {
-    if (!InitializeRenderers())
+    if (!InitializeRenderers(false))
       return;
   }
   BindCurrentFramebuffer();

@@ -6,7 +6,9 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 	m_crtcolors(CRTcolors),
 	m_vao(0),
 	m_width(0),
-	m_height(0)
+	m_height(0),
+	m_outputWidth(0),
+	m_outputHeight(0)
 {
 	if ((m_aa > 1) || (m_crtcolors != CRTcolor::None)) {
 
@@ -202,7 +204,15 @@ void SuperAA::Init(int width, int height)
 
 		m_width = width;
 		m_height = height;
+		m_outputWidth = width;
+		m_outputHeight = height;
 	}
+}
+
+void SuperAA::SetOutputSize(int width, int height)
+{
+	m_outputWidth = width > 0 ? width : m_width;
+	m_outputHeight = height > 0 ? height : m_height;
 }
 
 void SuperAA::Draw()
@@ -215,7 +225,7 @@ void SuperAA::Draw()
 
 		glBindTexture(GL_TEXTURE_2D, m_fbo.GetTextureID());
 		glBindVertexArray(m_vao);
-		glViewport(0, 0, m_width, m_height);
+		glViewport(0, 0, m_outputWidth > 0 ? m_outputWidth : m_width, m_outputHeight > 0 ? m_outputHeight : m_height);
 		m_shader.EnableShader();
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		m_shader.DisableShader();

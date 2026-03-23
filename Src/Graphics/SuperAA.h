@@ -17,6 +17,7 @@ public:
 	~SuperAA();
 
 	void Init(int width, int height);		// width & height are real window dimensions
+	void SetOutputSize(int width, int height);
 	void Draw();							// this is a no-op if AA is 1 and CRTcolors 0, since we'll be drawing straight on the back buffer anyway
 
 	GLuint GetTargetID();
@@ -29,4 +30,6 @@ private:
 	GLuint m_vao;
 	int m_width;
 	int m_height;
+	int m_outputWidth;
+	int m_outputHeight;
 };
