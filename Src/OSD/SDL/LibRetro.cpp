@@ -2413,8 +2413,38 @@ RETRO_API void retro_cheat_set(unsigned index, bool enabled, const char *code) {
 
 // Memory
 RETRO_API void *retro_get_memory_data(unsigned id) {
-  return NULL;
+  if (!game_loaded || Model3 == nullptr)
+    return NULL;
+
+  CModel3 *model3 = dynamic_cast<CModel3 *>(Model3);
+  if (model3 == nullptr)
+    return NULL;
+
+  switch (id)
+  {
+    case RETRO_MEMORY_SAVE_RAM:
+      return model3->GetBackupRAMData();
+    case RETRO_MEMORY_RTC:
+      return model3->GetEEPROMData();
+    default:
+      return NULL;
+  }
 }
 RETRO_API size_t retro_get_memory_size(unsigned id) {
-  return 0;
+  if (!game_loaded || Model3 == nullptr)
+    return 0;
+
+  const CModel3 *model3 = dynamic_cast<const CModel3 *>(Model3);
+  if (model3 == nullptr)
+    return 0;
+
+  switch (id)
+  {
+    case RETRO_MEMORY_SAVE_RAM:
+      return model3->GetBackupRAMSize();
+    case RETRO_MEMORY_RTC:
+      return model3->GetEEPROMSize();
+    default:
+      return 0;
+  }
 }

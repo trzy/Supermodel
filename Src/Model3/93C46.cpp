@@ -253,6 +253,21 @@ void C93C46::Init(void)
 	// this function really only exists for consistency with other device classes
 }
 
+UINT16 *C93C46::GetData(void)
+{
+	return regs;
+}
+
+const UINT16 *C93C46::GetData(void) const
+{
+	return regs;
+}
+
+size_t C93C46::GetSizeBytes(void) const
+{
+	return sizeof(regs);
+}
+
 C93C46::C93C46(void)
 {	
 	memset(regs, 0xFF, sizeof(regs));	

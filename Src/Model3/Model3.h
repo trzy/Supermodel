@@ -45,6 +45,7 @@
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
 #include "OSD/Thread.h"
+#include <cstddef>
 
 /*
  * FrameTimings
@@ -145,6 +146,16 @@ public:
    *    Pointer to CDriveBoard object.
    */
   CDriveBoard *GetDriveBoard(void);
+
+  /*
+   * Persistent memory exposure for libretro memory API.
+   */
+  UINT8 *GetBackupRAMData(void);
+  const UINT8 *GetBackupRAMData(void) const;
+  size_t GetBackupRAMSize(void) const;
+  UINT16 *GetEEPROMData(void);
+  const UINT16 *GetEEPROMData(void) const;
+  size_t GetEEPROMSize(void) const;
 
   /*
   * GetNetBoard(void):
