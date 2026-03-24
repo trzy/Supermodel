@@ -147,7 +147,7 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
         { "disabled", "Disabled" },
         { NULL, NULL }
       },
-      "enabled"
+      "disabled"
     },
     {
       "supermodel_input_profile",
@@ -256,7 +256,7 @@ static bool fighting_profile_active = false;
 static InputProfileMode input_profile_mode = InputProfileMode::Auto;
 static unsigned frontend_controller_device = RETRO_DEVICE_JOYPAD;
 static bool input_mode_dirty = true;
-static bool libretro_crosshair_enabled = true;
+static bool libretro_crosshair_enabled = false;
 static std::string save_directory;
 static int pointer_x = 248;
 static int pointer_y = 192;
@@ -586,10 +586,7 @@ static void AppendRect(std::vector<PointerOverlayVertex> &verts, float left, flo
 
 static bool ShouldDrawPointerOverlay(void)
 {
-  if (!libretro_crosshair_enabled)
-    return false;
-  InputProfileMode profile = GetEffectiveInputProfile();
-  return profile == InputProfileMode::Lightgun || profile == InputProfileMode::Mouse || profile == InputProfileMode::Joypad;
+  return libretro_crosshair_enabled;
 }
 
 static bool GetPointerOverlayCoords(float *x, float *y)
@@ -1324,6 +1321,39 @@ static void ApplySoccerInputDefaults(void)
   s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
 }
 
+static void ApplyTwinJoystickInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_TWIN_JOYSTICKS))
+    return;
+
+  // Map the two joysticks to the two analog sticks on a modern controller.
+  // Keep the macro movement buttons available on the D-pad and shoulder/press buttons.
+  s_runtime_config.Set<std::string>("InputTwinJoyTurnLeft",     "KEY_Q,JOY1_LEFT",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyTurnRight",    "KEY_W,JOY1_RIGHT", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyForward",      "KEY_UP,JOY1_UP",   "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyReverse",      "KEY_DOWN,JOY1_DOWN","Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyStrafeLeft",    "KEY_A,JOY1_BUTTON13", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyStrafeRight",   "KEY_D,JOY1_BUTTON14", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyJump",         "KEY_E,JOY1_BUTTON15", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyCrouch",       "KEY_R,JOY1_BUTTON16", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyLeft1",        "JOY1_XAXIS_NEG",   "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyRight1",       "JOY1_XAXIS_POS",   "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyUp1",          "JOY1_YAXIS_NEG",   "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyDown1",        "JOY1_YAXIS_POS",   "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyLeft2",        "JOY1_RXAXIS_NEG",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyRight2",       "JOY1_RXAXIS_POS",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyUp2",          "JOY1_RYAXIS_NEG",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyDown2",        "JOY1_RYAXIS_POS",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyShot1",        "KEY_A,JOY1_BUTTON9", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyShot2",        "KEY_S,JOY1_BUTTON1", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyTurbo1",       "KEY_D,JOY1_BUTTON10", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTwinJoyTurbo2",       "KEY_F,JOY1_BUTTON2", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+}
+
 static void ApplyFightingInputDefaults(void)
 {
   if (!(game.inputs & Game::INPUT_FIGHTING))
@@ -1503,6 +1533,27 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+  }
+  else if (game.inputs & Game::INPUT_TWIN_JOYSTICKS)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_X, "Left Stick X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_Y, "Left Stick Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Right Stick X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Right Stick Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,       "Macro Turn Left" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,      "Macro Turn Right" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,         "Macro Forward" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,       "Macro Reverse" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,         "Macro Strafe Left" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,         "Macro Strafe Right" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,         "Macro Jump" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,         "Macro Crouch" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,          "Left Shot" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,          "Right Shot" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,          "Left Turbo" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,          "Right Turbo" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,          "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,          "Service" };
   }
   else if (racer_profile_active)
   {
@@ -1684,10 +1735,12 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
     racer_profile_active = (game.inputs & Game::INPUT_VEHICLE) != 0;
     fighting_profile_active = (game.inputs & Game::INPUT_FIGHTING) != 0;
     ApplyInputProfileOption();
+    ApplyCrosshairOverlayOption();
     ApplyFightingInputDefaults();
     ApplyVehicleInputDefaults();
     ApplyAnalogJoystickInputDefaults();
     ApplySoccerInputDefaults();
+    ApplyTwinJoystickInputDefaults();
     ApplyGunInputDefaults();
 
     // Initialize input
@@ -1801,6 +1854,7 @@ RETRO_API void retro_run(void) {
       ApplyVehicleInputDefaults();
     ApplyAnalogJoystickInputDefaults();
     ApplySoccerInputDefaults();
+    ApplyTwinJoystickInputDefaults();
     ApplyGunInputDefaults();
     if (Inputs != nullptr)
     {
