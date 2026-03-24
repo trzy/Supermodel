@@ -62,6 +62,7 @@ endif
 # If libretro enabled, need to define SUPERMODEL_LIBRETRO
 ifeq ($(strip $(LIBRETRO)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_LIBRETRO
+	SUPERMODEL_BUILD_FLAGS += -DGLEW_LIBRETRO
 endif
 
 # DEBUG will build a debug build but does *not* enable extra debug logging and
@@ -87,6 +88,9 @@ endif
 # Construct the compiler (C and C++) and linker flags
 #
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
+ifeq ($(strip $(LIBRETRO)),1)
+COMMON_CFLAGS += -fPIC
+endif
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
 ifeq ($(strip $(LIBRETRO)),1)
@@ -99,16 +103,16 @@ endif
 # Source Files
 ###############################################################################
 
-SRC_FILES = \
-	Src/CPU/PowerPC/PPCDisasm.cpp \
-	Src/BlockFile.cpp \
-	Src/Pkgs/unzip.cpp \
-	Src/Pkgs/ioapi.cpp \
-	Src/Model3/93C46.cpp \
-	Src/JTAG.cpp \
-	Src/Graphics/Legacy3D/Error.cpp \
-	Src/Pkgs/glew.cpp \
-	Src/Graphics/Shader.cpp \
+	SRC_FILES = \
+		Src/CPU/PowerPC/PPCDisasm.cpp \
+		Src/BlockFile.cpp \
+		Src/Pkgs/unzip.c \
+		Src/Pkgs/ioapi.c \
+		Src/Model3/93C46.cpp \
+		Src/Model3/JTAG.cpp \
+		Src/Graphics/Legacy3D/Error.cpp \
+		Src/Pkgs/glew.c \
+		Src/Graphics/Shader.cpp \
 	Src/Model3/Real3D.cpp \
 	Src/Graphics/Legacy3D/Legacy3D.cpp \
 	Src/Graphics/Legacy3D/Models.cpp \

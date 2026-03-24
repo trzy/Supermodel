@@ -292,6 +292,13 @@ static retro_perf_counter s_perf_video_submit = { "supermodel.video_submit" };
 static retro_perf_counter s_perf_serialize = { "supermodel.serialize" };
 static retro_perf_counter s_perf_unserialize = { "supermodel.unserialize" };
 
+extern "C" retro_proc_address_t RetroArchGetProcAddress(const GLubyte *name)
+{
+  if (hw_render_cb.get_proc_address == nullptr || name == nullptr)
+    return nullptr;
+  return hw_render_cb.get_proc_address(reinterpret_cast<const char *>(name));
+}
+
 struct ThrottleEntry
 {
   std::chrono::steady_clock::time_point last_emit;
