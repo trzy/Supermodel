@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <cstring>
 #include <exception>
+#include <chrono>
+#include <cstdarg>
+#include <mutex>
+#include <string>
+#include <unordered_map>
 #include <vector>
 #include "../Pkgs/libretro.h"
 #include "Version.h"
@@ -36,8 +41,11 @@ RETRO_API void retro_get_system_info(struct retro_system_info *info) {
 
 // Before init
 retro_environment_t cb_env;
+static void RefreshFrontendInterfaces(void);
 RETRO_API void retro_set_environment(retro_environment_t cb) {
   cb_env = cb;
+  RefreshFrontendInterfaces();
+
   static struct retro_core_option_v2_category option_cats_us[] = {
     {
       "video",
@@ -271,6 +279,38 @@ static bool baseline_vsync_enabled = true;
 static int pointer_x = 248;
 static int pointer_y = 192;
 static CCrosshair *s_crosshair = nullptr;
+static retro_log_callback s_retro_log_cb = {};
+static retro_log_printf_t s_retro_log_printf = nullptr;
+static retro_perf_callback s_retro_perf_cb = {};
+static bool s_retro_perf_available = false;
+static bool s_retro_perf_registered = false;
+static unsigned s_message_interface_version = 0;
+static retro_perf_counter s_perf_frame_total = { "supermodel.frame_total" };
+static retro_perf_counter s_perf_input_poll = { "supermodel.input_poll" };
+static retro_perf_counter s_perf_emulate_frame = { "supermodel.emulate_frame" };
+static retro_perf_counter s_perf_video_submit = { "supermodel.video_submit" };
+static retro_perf_counter s_perf_serialize = { "supermodel.serialize" };
+static retro_perf_counter s_perf_unserialize = { "supermodel.unserialize" };
+
+struct ThrottleEntry
+{
+  std::chrono::steady_clock::time_point last_emit;
+  unsigned suppressed = 0;
+  bool seen = false;
+};
+
+struct ThrottleDecision
+{
+  bool emit = true;
+  unsigned suppressed = 0;
+};
+
+static std::unordered_map<std::string, ThrottleEntry> s_log_throttle_entries;
+static std::unordered_map<std::string, ThrottleEntry> s_runtime_message_throttle_entries;
+static std::mutex s_throttle_mutex;
+static const uint64_t LOG_THROTTLE_MS_DEFAULT = 1000;
+static const uint64_t MESSAGE_THROTTLE_MS_DEFAULT = 800;
+static const size_t THROTTLE_TABLE_MAX_ENTRIES = 512;
 
 struct PointerOverlayVertex
 {
@@ -289,6 +329,233 @@ struct PointerOverlayGL
 };
 
 static PointerOverlayGL pointer_overlay;
+
+static std::string FormatStringV(const char *fmt, va_list args)
+{
+  char buffer[4096];
+  int written = vsnprintf(buffer, sizeof(buffer), fmt, args);
+  if (written < 0)
+    return std::string("Formatting error");
+  if ((size_t)written >= sizeof(buffer))
+    return std::string(buffer, buffer + sizeof(buffer) - 1);
+  return std::string(buffer);
+}
+
+static const char *LogLevelName(enum retro_log_level level)
+{
+  switch (level)
+  {
+    case RETRO_LOG_DEBUG: return "DEBUG";
+    case RETRO_LOG_INFO:  return "INFO";
+    case RETRO_LOG_WARN:  return "WARN";
+    case RETRO_LOG_ERROR: return "ERROR";
+    default:              return "LOG";
+  }
+}
+
+static ThrottleDecision GetThrottleDecision(std::unordered_map<std::string, ThrottleEntry> &table, const std::string &key, uint64_t min_interval_ms)
+{
+  std::lock_guard<std::mutex> lock(s_throttle_mutex);
+
+  if (table.size() > THROTTLE_TABLE_MAX_ENTRIES)
+    table.clear();
+
+  ThrottleDecision decision;
+  ThrottleEntry &entry = table[key];
+  auto now = std::chrono::steady_clock::now();
+
+  if (entry.seen)
+  {
+    uint64_t elapsed_ms = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(now - entry.last_emit).count();
+    if (elapsed_ms < min_interval_ms)
+    {
+      entry.suppressed++;
+      decision.emit = false;
+      return decision;
+    }
+    decision.suppressed = entry.suppressed;
+  }
+
+  entry.last_emit = now;
+  entry.suppressed = 0;
+  entry.seen = true;
+  return decision;
+}
+
+static void EmitFrontendLogDirect(enum retro_log_level level, const std::string &message)
+{
+  if (s_retro_log_printf != nullptr)
+  {
+    s_retro_log_printf(level, "%s\n", message.c_str());
+    return;
+  }
+
+  fprintf(stderr, "SM[%s]: %s\n", LogLevelName(level), message.c_str());
+}
+
+static void EmitFrontendLogThrottledText(const std::string &key, enum retro_log_level level, uint64_t min_interval_ms, const std::string &message)
+{
+  ThrottleDecision decision = GetThrottleDecision(s_log_throttle_entries, key, min_interval_ms);
+  if (!decision.emit)
+    return;
+
+  if (decision.suppressed > 0)
+  {
+    char summary[256];
+    snprintf(summary, sizeof(summary), "[dedupe] Suppressed %u repeated entries for key '%s'.", decision.suppressed, key.c_str());
+    EmitFrontendLogDirect(level, summary);
+  }
+
+  EmitFrontendLogDirect(level, message);
+}
+
+static void EmitFrontendLogThrottledV(const char *key, enum retro_log_level level, uint64_t min_interval_ms, const char *fmt, va_list args)
+{
+  std::string message = FormatStringV(fmt, args);
+  std::string dedupe_key = key != nullptr ? std::string(key) : (std::to_string((int)level) + ":" + message);
+  EmitFrontendLogThrottledText(dedupe_key, level, min_interval_ms, message);
+}
+
+static void EmitFrontendLogThrottled(const char *key, enum retro_log_level level, uint64_t min_interval_ms, const char *fmt, ...)
+{
+  va_list args;
+  va_start(args, fmt);
+  EmitFrontendLogThrottledV(key, level, min_interval_ms, fmt, args);
+  va_end(args);
+}
+
+static void PushRuntimeMessage(const std::string &message, enum retro_log_level level, unsigned duration_ms, unsigned priority)
+{
+  if (cb_env == nullptr || message.empty())
+    return;
+
+  if (s_message_interface_version > 0)
+  {
+    retro_message_ext ext = {};
+    ext.msg = message.c_str();
+    ext.duration = duration_ms;
+    ext.priority = priority;
+    ext.level = level;
+    ext.target = RETRO_MESSAGE_TARGET_OSD;
+    ext.type = RETRO_MESSAGE_TYPE_STATUS;
+    ext.progress = -1;
+    if (cb_env(RETRO_ENVIRONMENT_SET_MESSAGE_EXT, &ext))
+      return;
+  }
+
+  retro_message legacy = {};
+  legacy.msg = message.c_str();
+  legacy.frames = std::max(1u, (duration_ms + 16u) / 17u);
+  cb_env(RETRO_ENVIRONMENT_SET_MESSAGE, &legacy);
+}
+
+static void PushRuntimeMessageThrottledV(const char *key, enum retro_log_level level, unsigned duration_ms, unsigned priority, uint64_t min_interval_ms, const char *fmt, va_list args)
+{
+  std::string message = FormatStringV(fmt, args);
+  std::string dedupe_key = key != nullptr ? std::string(key) : message;
+  ThrottleDecision decision = GetThrottleDecision(s_runtime_message_throttle_entries, dedupe_key, min_interval_ms);
+  if (!decision.emit)
+    return;
+  PushRuntimeMessage(message, level, duration_ms, priority);
+}
+
+static void PushRuntimeMessageThrottled(const char *key, enum retro_log_level level, unsigned duration_ms, unsigned priority, uint64_t min_interval_ms, const char *fmt, ...)
+{
+  va_list args;
+  va_start(args, fmt);
+  PushRuntimeMessageThrottledV(key, level, duration_ms, priority, min_interval_ms, fmt, args);
+  va_end(args);
+}
+
+static void RefreshFrontendInterfaces(void)
+{
+  s_retro_log_cb = {};
+  s_retro_log_printf = nullptr;
+  if (cb_env != nullptr && cb_env(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &s_retro_log_cb) && s_retro_log_cb.log != nullptr)
+    s_retro_log_printf = s_retro_log_cb.log;
+
+  s_retro_perf_cb = {};
+  s_retro_perf_available = false;
+  if (cb_env != nullptr && cb_env(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &s_retro_perf_cb))
+  {
+    s_retro_perf_available = s_retro_perf_cb.perf_register != nullptr &&
+                             s_retro_perf_cb.perf_start != nullptr &&
+                             s_retro_perf_cb.perf_stop != nullptr;
+  }
+  s_retro_perf_registered = false;
+
+  s_message_interface_version = 0;
+  if (cb_env != nullptr)
+    cb_env(RETRO_ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION, &s_message_interface_version);
+}
+
+static void RegisterPerfCounter(retro_perf_counter *counter)
+{
+  if (!s_retro_perf_available || counter == nullptr || counter->registered || s_retro_perf_cb.perf_register == nullptr)
+    return;
+  s_retro_perf_cb.perf_register(counter);
+}
+
+static void RegisterPerfCounters(void)
+{
+  if (!s_retro_perf_available || s_retro_perf_registered)
+    return;
+
+  RegisterPerfCounter(&s_perf_frame_total);
+  RegisterPerfCounter(&s_perf_input_poll);
+  RegisterPerfCounter(&s_perf_emulate_frame);
+  RegisterPerfCounter(&s_perf_video_submit);
+  RegisterPerfCounter(&s_perf_serialize);
+  RegisterPerfCounter(&s_perf_unserialize);
+  s_retro_perf_registered = true;
+}
+
+static inline void PerfStart(retro_perf_counter *counter)
+{
+  if (s_retro_perf_available && counter != nullptr && counter->registered && s_retro_perf_cb.perf_start != nullptr)
+    s_retro_perf_cb.perf_start(counter);
+}
+
+static inline void PerfStop(retro_perf_counter *counter)
+{
+  if (s_retro_perf_available && counter != nullptr && counter->registered && s_retro_perf_cb.perf_stop != nullptr)
+    s_retro_perf_cb.perf_stop(counter);
+}
+
+class ScopedPerfCounter
+{
+public:
+  explicit ScopedPerfCounter(retro_perf_counter *counter) : m_counter(counter)
+  {
+    PerfStart(m_counter);
+  }
+  ~ScopedPerfCounter()
+  {
+    PerfStop(m_counter);
+  }
+
+private:
+  retro_perf_counter *m_counter;
+};
+
+class CLibretroFrontendLogger : public CLogger
+{
+public:
+  void DebugLog(const char *fmt, va_list vl) override
+  {
+    EmitFrontendLogThrottledV(NULL, RETRO_LOG_DEBUG, LOG_THROTTLE_MS_DEFAULT, fmt, vl);
+  }
+
+  void InfoLog(const char *fmt, va_list vl) override
+  {
+    EmitFrontendLogThrottledV(NULL, RETRO_LOG_INFO, LOG_THROTTLE_MS_DEFAULT, fmt, vl);
+  }
+
+  void ErrorLog(const char *fmt, va_list vl) override
+  {
+    EmitFrontendLogThrottledV(NULL, RETRO_LOG_ERROR, LOG_THROTTLE_MS_DEFAULT, fmt, vl);
+  }
+};
 
 static bool InitializeRenderers(bool reset_model);
 static void DestroyCrosshair(void);
@@ -789,6 +1056,13 @@ static bool ApplySupersamplingOption(void)
       supersampling = aa;
   }
   s_runtime_config.Set("Supersampling", supersampling, "Video", 1, 8);
+  if (supersampling != previous && game_loaded)
+  {
+    PushRuntimeMessageThrottled("video.supersampling", RETRO_LOG_INFO, 1400, 1, MESSAGE_THROTTLE_MS_DEFAULT,
+      "Supersampling set to %dx", supersampling);
+    EmitFrontendLogThrottled("video.supersampling", RETRO_LOG_INFO, LOG_THROTTLE_MS_DEFAULT,
+      "Supersampling changed from %dx to %dx", previous, supersampling);
+  }
   return supersampling != previous;
 }
 
@@ -805,6 +1079,8 @@ static void ApplyFastForwardAwareness(bool fastforwarding)
   frontend_fastforwarding = fastforwarding;
   s_runtime_config.Get("Throttle").SetValue(frontend_fastforwarding ? false : baseline_throttle_enabled);
   s_runtime_config.Get("VSync").SetValue(frontend_fastforwarding ? false : baseline_vsync_enabled);
+  EmitFrontendLogThrottled("run.fastforward", RETRO_LOG_DEBUG, LOG_THROTTLE_MS_DEFAULT,
+    "Fast-forward state changed: %s", frontend_fastforwarding ? "enabled" : "disabled");
 }
 
 static bool ApplyVideoCoreOptions(void)
@@ -1477,7 +1753,21 @@ static bool ApplyInputProfileOption(void)
     input_profile_mode = ParseInputProfileValue(var.value);
 
   if (previous != input_profile_mode)
+  {
     MarkInputModeDirty();
+    if (game_loaded)
+    {
+      const char *profile_name = "auto";
+      if (input_profile_mode == InputProfileMode::Joypad)
+        profile_name = "joypad";
+      else if (input_profile_mode == InputProfileMode::Lightgun)
+        profile_name = "lightgun";
+      else if (input_profile_mode == InputProfileMode::Mouse)
+        profile_name = "mouse";
+      PushRuntimeMessageThrottled("input.profile", RETRO_LOG_INFO, 1400, 1, MESSAGE_THROTTLE_MS_DEFAULT,
+        "Input profile: %s", profile_name);
+    }
+  }
   return previous != input_profile_mode;
 }
 
@@ -1627,9 +1917,15 @@ static void UpdateInputDescriptors(void)
 
 RETRO_API void retro_init(void) {
   assert(!initialized);
-  // Set logger
-  // XXX in the future use the retro logging callback
-  SetLogger(std::make_shared<CConsoleErrorLogger>());
+  // Set frontend-integrated logger (with throttling fallback to stderr).
+  SetLogger(std::make_shared<CLibretroFrontendLogger>());
+  RefreshFrontendInterfaces();
+  RegisterPerfCounters();
+  EmitFrontendLogThrottled("core.frontend_interfaces", RETRO_LOG_INFO, 0,
+    "Frontend interfaces ready (log=%s, perf=%s, message_ext=%s).",
+    s_retro_log_printf != nullptr ? "yes" : "no",
+    s_retro_perf_available ? "yes" : "no",
+    s_message_interface_version > 0 ? "yes" : "no");
 
   s_runtime_config.Set("New3DEngine", true, "Global");
   s_runtime_config.Set("QuadRendering", false, "Global");
@@ -1693,6 +1989,8 @@ RETRO_API void retro_init(void) {
 
 RETRO_API void retro_deinit(void) {
   assert(initialized);
+  if (s_retro_perf_available && s_retro_perf_cb.perf_log != nullptr)
+    s_retro_perf_cb.perf_log();
   DestroyRenderers();
   delete Model3;
   Model3 = nullptr;
@@ -1711,6 +2009,9 @@ RETRO_API void retro_deinit(void) {
   frontend_fastforwarding = false;
   baseline_vsync_enabled = true;
   baseline_throttle_enabled = true;
+  s_retro_perf_registered = false;
+  s_log_throttle_entries.clear();
+  s_runtime_message_throttle_entries.clear();
 }
 
 // Before load_game
@@ -1780,6 +2081,13 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
 
     racer_profile_active = (game.inputs & Game::INPUT_VEHICLE) != 0;
     fighting_profile_active = (game.inputs & Game::INPUT_FIGHTING) != 0;
+    if (fighting_profile_active)
+    {
+      PushRuntimeMessageThrottled("profile.fighters", RETRO_LOG_INFO, 1800, 1, MESSAGE_THROTTLE_MS_DEFAULT,
+        "Fighters profile active: P2 port enabled.");
+      EmitFrontendLogThrottled("profile.fighters", RETRO_LOG_INFO, LOG_THROTTLE_MS_DEFAULT,
+        "Fighters profile detected for '%s'. P2 joystick path enabled.", game.name.c_str());
+    }
     ApplyInputProfileOption();
     ApplyCrosshairOverlayOption();
     ApplyFightingInputDefaults();
@@ -1876,6 +2184,7 @@ RETRO_API unsigned retro_get_region(void) {
 // Run
 RETRO_API void retro_run(void) {
   assert(game_loaded);
+  ScopedPerfCounter perf_frame_scope(&s_perf_frame_total);
   bool variables_updated = false;
   bool refresh_input_mode = input_mode_dirty;
   bool fastforwarding = false;
@@ -1927,14 +2236,23 @@ RETRO_API void retro_run(void) {
   }
   BindCurrentFramebuffer();
   RefreshOutputGeometry();
-  Inputs->Poll(&game, x_offset, y_offset, x_res, y_res);
-  Model3->RunFrame();
-  if (!frontend_fastforwarding && s_crosshair != nullptr)
-    s_crosshair->Update(game.inputs, Inputs, x_offset, y_offset, x_res, y_res);
-  if (!frontend_fastforwarding && ShouldDrawPointerOverlay())
-    DrawPointerOverlay();
-  glFlush();
-  cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, total_x_res, total_y_res, 0);
+  {
+    ScopedPerfCounter perf_input_scope(&s_perf_input_poll);
+    Inputs->Poll(&game, x_offset, y_offset, x_res, y_res);
+  }
+  {
+    ScopedPerfCounter perf_emulate_scope(&s_perf_emulate_frame);
+    Model3->RunFrame();
+  }
+  {
+    ScopedPerfCounter perf_video_scope(&s_perf_video_submit);
+    if (!frontend_fastforwarding && s_crosshair != nullptr)
+      s_crosshair->Update(game.inputs, Inputs, x_offset, y_offset, x_res, y_res);
+    if (!frontend_fastforwarding && ShouldDrawPointerOverlay())
+      DrawPointerOverlay();
+    glFlush();
+    cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, total_x_res, total_y_res, 0);
+  }
 }
 
 // NVRAM
@@ -2015,6 +2333,7 @@ static const int STATE_FILE_VERSION = 5;  // save state file version
 
 static bool BuildSerializedStateBuffer(void)
 {
+  ScopedPerfCounter perf_serialize_scope(&s_perf_serialize);
   if (Model3 == nullptr || !game_loaded)
     return false;
 
@@ -2047,6 +2366,7 @@ RETRO_API size_t retro_serialize_size(void) {
   return serialized_state_buffer.size();
 }
 RETRO_API bool retro_serialize(void *data, size_t len) {
+  ScopedPerfCounter perf_serialize_scope(&s_perf_serialize);
   if (data == nullptr)
     return false;
   if (!serialized_state_ready && !BuildSerializedStateBuffer())
@@ -2059,6 +2379,7 @@ RETRO_API bool retro_serialize(void *data, size_t len) {
   return true;
 }
 RETRO_API bool retro_unserialize(const void *data, size_t len) {
+  ScopedPerfCounter perf_unserialize_scope(&s_perf_unserialize);
   if (data == nullptr || len == 0)
     return false;
 
