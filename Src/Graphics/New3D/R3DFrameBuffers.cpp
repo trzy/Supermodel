@@ -291,6 +291,11 @@ void R3DFrameBuffers::Draw()
 	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
 	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
 	glDisable	(GL_CULL_FACE);
+#ifdef __linux__
+	// Linux libretro keeps the render scissor active from the internal pass.
+	// Disable it here so the final composite covers the whole framebuffer.
+	glDisable	(GL_SCISSOR_TEST);
+#endif
 	glBlendFunc	(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable	(GL_BLEND);
 

@@ -661,6 +661,19 @@ static bool IsWideScreenEnabled(void)
 
 static void UpdateOutputGeometry(void)
 {
+#ifdef __linux__
+  if (output_width > 0 && output_height > 0)
+  {
+    x_res = output_width;
+    y_res = output_height;
+    total_x_res = output_width;
+    total_y_res = output_height;
+    x_offset = 0;
+    y_offset = 0;
+    return;
+  }
+#endif
+
   x_res = SUPERMODEL_W;
   y_res = SUPERMODEL_H;
   if (IsWideScreenEnabled())
@@ -701,14 +714,13 @@ static bool RefreshOutputGeometry(void)
 {
   UpdateOutputGeometry();
 
-  GLint viewport[4] = { 0, 0, 0, 0 };
-  glGetIntegerv(GL_VIEWPORT, viewport);
-  if (viewport[2] > 0 && viewport[3] > 0)
+#ifdef __linux__
+  if (output_width > 0 && output_height > 0)
   {
-    total_x_res = (unsigned)viewport[2];
-    total_y_res = (unsigned)viewport[3];
-    x_offset = (unsigned)viewport[0];
-    y_offset = (unsigned)viewport[1];
+    total_x_res = output_width;
+    total_y_res = output_height;
+    x_offset = 0;
+    y_offset = 0;
   }
   else
   {
@@ -717,6 +729,24 @@ static bool RefreshOutputGeometry(void)
     x_offset = 0;
     y_offset = 0;
   }
+#else
+      GLint viewport[4] = { 0, 0, 0, 0 };
+      glGetIntegerv(GL_VIEWPORT, viewport);
+     if (viewport[2] > 0 && viewport[3] > 0)
+     {
+         total_x_res = (unsigned)viewport[2];
+         total_y_res = (unsigned)viewport[3];
+         x_offset = (unsigned)viewport[0];
+         y_offset = (unsigned)viewport[1];
+     }
+     else
+     {
+          total_x_res = SUPERMODEL_W;
+          total_y_res = SUPERMODEL_H;
+          x_offset = 0;
+          y_offset = 0;
+     }
+    #endif
 
   if (superAA != nullptr)
     superAA->SetOutputSize((int)total_x_res, (int)total_y_res);
