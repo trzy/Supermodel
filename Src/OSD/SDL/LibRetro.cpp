@@ -701,6 +701,23 @@ static bool RefreshOutputGeometry(void)
 {
   UpdateOutputGeometry();
 
+  GLint viewport[4] = { 0, 0, 0, 0 };
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  if (viewport[2] > 0 && viewport[3] > 0)
+  {
+    total_x_res = (unsigned)viewport[2];
+    total_y_res = (unsigned)viewport[3];
+    x_offset = (unsigned)viewport[0];
+    y_offset = (unsigned)viewport[1];
+  }
+  else
+  {
+    total_x_res = SUPERMODEL_W;
+    total_y_res = SUPERMODEL_H;
+    x_offset = 0;
+    y_offset = 0;
+  }
+
   if (superAA != nullptr)
     superAA->SetOutputSize((int)total_x_res, (int)total_y_res);
   if (reported_width != total_x_res || reported_height != total_y_res)
