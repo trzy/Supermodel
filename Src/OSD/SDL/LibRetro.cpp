@@ -179,8 +179,13 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
     { "Light Gun", RETRO_DEVICE_LIGHTGUN },
     { NULL, 0 }
   };
+  static const struct retro_controller_description port1_types[] = {
+    { "RetroPad", RETRO_DEVICE_JOYPAD },
+    { NULL, 0 }
+  };
   static const struct retro_controller_info port0_info[] = {
     { port0_types, 3 },
+    { port1_types, 1 },
     { NULL, 0 }
   };
   cb_env(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)port0_info);
@@ -1151,7 +1156,7 @@ class CRetroInputSystem : public CInputSystem
   }
   const KeyDetails *GetKeyDetails(int kbdNum) { return NULL; }
 
-  int GetNumJoysticks() const { return 1; }
+  int GetNumJoysticks() const { return fighting_profile_active ? 2 : 1; }
   int GetJoyAxisValue(int joyNum, int axisNum) const {
     switch (axisNum)
     {
@@ -1382,6 +1387,12 @@ static void ApplyFightingInputDefaults(void)
   s_runtime_config.Set<std::string>("InputKick",   "KEY_S,JOY1_BUTTON1",  "Input", "", "");
   s_runtime_config.Set<std::string>("InputGuard",  "KEY_D,JOY1_BUTTON10", "Input", "", "");
   s_runtime_config.Set<std::string>("InputEscape", "KEY_F,JOY1_BUTTON2",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputStart2", "JOY2_BUTTON4",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputCoin2",  "JOY2_BUTTON3",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputJoyUp2",    "JOY2_BUTTON5", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputJoyDown2",  "JOY2_BUTTON6", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputJoyLeft2",  "JOY2_BUTTON7", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputJoyRight2", "JOY2_BUTTON8", "Input", "", "");
   s_runtime_config.Set<std::string>("InputPunch2",  "JOY2_BUTTON9",  "Input", "", "");
   s_runtime_config.Set<std::string>("InputKick2",   "JOY2_BUTTON1",  "Input", "", "");
   s_runtime_config.Set<std::string>("InputGuard2",  "JOY2_BUTTON10", "Input", "", "");
@@ -1522,6 +1533,16 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Coin" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Test" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Service" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,     "P2 Punch" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "P2 Kick" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "P2 Guard" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "P2 Escape" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "P2 Up" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "P2 Down" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "P2 Left" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "P2 Right" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "P2 Start" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "P2 Coin" };
   }
   else if (game.inputs & Game::INPUT_ANALOG_JOYSTICK)
   {
@@ -1704,9 +1725,9 @@ RETRO_API void retro_get_system_av_info(struct retro_system_av_info *info) {
   info->timing.sample_rate = 44100.0f;
 }
 RETRO_API void retro_set_controller_port_device(unsigned port, unsigned device) {
-  if (port != 0)
+  if (port > 1)
     return;
-  if (frontend_controller_device != device)
+  if (port == 0 && frontend_controller_device != device)
   {
     frontend_controller_device = device;
     MarkInputModeDirty();
