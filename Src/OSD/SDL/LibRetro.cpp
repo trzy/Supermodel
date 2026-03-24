@@ -258,6 +258,11 @@ static unsigned frontend_controller_device = RETRO_DEVICE_JOYPAD;
 static bool input_mode_dirty = true;
 static bool libretro_crosshair_enabled = false;
 static std::string save_directory;
+static std::vector<uint8_t> serialized_state_buffer;
+static bool serialized_state_ready = false;
+static bool frontend_fastforwarding = false;
+static bool baseline_throttle_enabled = true;
+static bool baseline_vsync_enabled = true;
 static int pointer_x = 248;
 static int pointer_y = 192;
 static CCrosshair *s_crosshair = nullptr;
@@ -288,6 +293,7 @@ static void DrawPointerOverlay(void);
 static void LoadNVRAMFromDisk(void);
 static void SaveNVRAMToDisk(void);
 static InputProfileMode GetEffectiveInputProfile(void);
+static void ApplyFastForwardAwareness(bool fastforwarding);
 
 static bool IsGunGame(void)
 {
@@ -784,6 +790,16 @@ static bool ApplySupersamplingOption(void)
 static bool ParseEnabledOption(const char *value)
 {
   return value != NULL && strcmp(value, "enabled") == 0;
+}
+
+static void ApplyFastForwardAwareness(bool fastforwarding)
+{
+  if (frontend_fastforwarding == fastforwarding)
+    return;
+
+  frontend_fastforwarding = fastforwarding;
+  s_runtime_config.Get("Throttle").SetValue(frontend_fastforwarding ? false : baseline_throttle_enabled);
+  s_runtime_config.Get("VSync").SetValue(frontend_fastforwarding ? false : baseline_vsync_enabled);
 }
 
 static bool ApplyVideoCoreOptions(void)
@@ -1640,6 +1656,10 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set<std::string>("InputCharge", "JOY1_BUTTON9", "Input", "", "");
   s_runtime_config.Set<std::string>("InputJump", "JOY1_BUTTON2", "Input", "", "");
 
+  baseline_vsync_enabled = s_runtime_config["VSync"].ValueAsDefault<bool>(true);
+  baseline_throttle_enabled = s_runtime_config["Throttle"].ValueAsDefault<bool>(true);
+  frontend_fastforwarding = false;
+
   ApplySupersamplingOption();
 
   if (!RequestHWContext())
@@ -1665,6 +1685,11 @@ RETRO_API void retro_deinit(void) {
   racer_profile_active = false;
   fighting_profile_active = false;
   input_mode_dirty = true;
+  serialized_state_buffer.clear();
+  serialized_state_ready = false;
+  frontend_fastforwarding = false;
+  baseline_vsync_enabled = true;
+  baseline_throttle_enabled = true;
 }
 
 // Before load_game
@@ -1813,6 +1838,9 @@ RETRO_API void retro_unload_game(void) {
   racer_profile_active = false;
   fighting_profile_active = false;
   input_mode_dirty = true;
+  serialized_state_buffer.clear();
+  serialized_state_ready = false;
+  frontend_fastforwarding = false;
 }
 RETRO_API bool retro_load_game_special(
   unsigned game_type,
@@ -1829,6 +1857,11 @@ RETRO_API void retro_run(void) {
   assert(game_loaded);
   bool variables_updated = false;
   bool refresh_input_mode = input_mode_dirty;
+  bool fastforwarding = false;
+  if (cb_env != nullptr)
+    cb_env(RETRO_ENVIRONMENT_GET_FASTFORWARDING, &fastforwarding);
+  ApplyFastForwardAwareness(fastforwarding);
+
   if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &variables_updated) && variables_updated)
   {
     bool supersampling_changed = ApplySupersamplingOption();
@@ -1875,9 +1908,9 @@ RETRO_API void retro_run(void) {
   RefreshOutputGeometry();
   Inputs->Poll(&game, x_offset, y_offset, x_res, y_res);
   Model3->RunFrame();
-  if (s_crosshair != nullptr)
+  if (!frontend_fastforwarding && s_crosshair != nullptr)
     s_crosshair->Update(game.inputs, Inputs, x_offset, y_offset, x_res, y_res);
-  if (ShouldDrawPointerOverlay())
+  if (!frontend_fastforwarding && ShouldDrawPointerOverlay())
     DrawPointerOverlay();
   glFlush();
   cb_video_refresh(RETRO_HW_FRAME_BUFFER_VALID, total_x_res, total_y_res, 0);
@@ -1958,56 +1991,58 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
 
 // State
 static const int STATE_FILE_VERSION = 5;  // save state file version
-const char *savestate_path = ".supermodel.st";
-bool serialize_size_called = false;
-RETRO_API size_t retro_serialize_size(void) {
-  assert(!serialize_size_called);
-  CBlockFile  SaveState;
 
-  if (Result::OKAY != SaveState.Create(savestate_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
-  {
-    return 0;
-  }
+static bool BuildSerializedStateBuffer(void)
+{
+  if (Model3 == nullptr || !game_loaded)
+    return false;
+
+  CBlockFile SaveState;
+  if (Result::OKAY != SaveState.CreateMemory("Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
+    return false;
+
   int32_t fileVersion = STATE_FILE_VERSION;
   SaveState.Write(&fileVersion, sizeof(fileVersion));
   SaveState.Write(Model3->GetGame().name);
   Model3->SaveState(&SaveState);
-  SaveState.Close();
 
-  FILE* file = fopen(savestate_path, "rb");
-  if (file == nullptr) {
-      return 0;
+  const uint8_t *stateData = SaveState.GetMemoryData();
+  const size_t stateSize = SaveState.GetMemorySize();
+  if (stateData == nullptr || stateSize == 0)
+  {
+    SaveState.Close();
+    return false;
   }
-  if (fseek(file, 0, SEEK_END) != 0) {
-      fclose(file);
-      return 0;
-  }
-  long size = ftell(file);
-  fclose(file);
-  serialize_size_called = true;
-  return size;
+
+  serialized_state_buffer.assign(stateData, stateData + stateSize);
+  serialized_state_ready = true;
+  SaveState.Close();
+  return true;
+}
+
+RETRO_API size_t retro_serialize_size(void) {
+  if (!BuildSerializedStateBuffer())
+    return 0;
+  return serialized_state_buffer.size();
 }
 RETRO_API bool retro_serialize(void *data, size_t len) {
-  assert(serialize_size_called);
-  serialize_size_called = false;
-  FILE* file = fopen(savestate_path, "rb");
-  if (file == nullptr) {
-      return false;
-  }
-  fread(data, 1, len, file);
-  fclose(file);
-  remove(savestate_path);
+  if (data == nullptr)
+    return false;
+  if (!serialized_state_ready && !BuildSerializedStateBuffer())
+    return false;
+  if (len < serialized_state_buffer.size())
+    return false;
+
+  std::memcpy(data, serialized_state_buffer.data(), serialized_state_buffer.size());
+  serialized_state_ready = false;
   return true;
 }
 RETRO_API bool retro_unserialize(const void *data, size_t len) {
-  FILE* file = fopen(savestate_path, "wb");
-  if (file == nullptr) {
-      return false;
-  }
-  fwrite(data, 1, len, file);
-  fclose(file);
+  if (data == nullptr || len == 0)
+    return false;
+
   CBlockFile  SaveState;
-  if (Result::OKAY != SaveState.Load(savestate_path))
+  if (Result::OKAY != SaveState.LoadMemory(data, len))
   {
     return false;
   }
@@ -2023,8 +2058,8 @@ RETRO_API bool retro_unserialize(const void *data, size_t len) {
   }
   Model3->LoadState(&SaveState);
   SaveState.Close();
-
-  remove(savestate_path);
+  serialized_state_buffer.clear();
+  serialized_state_ready = false;
   return true;
 }
 

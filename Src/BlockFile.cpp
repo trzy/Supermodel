@@ -28,6 +28,7 @@
 
 #include "BlockFile.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
@@ -40,15 +41,18 @@
 
 void CBlockFile::ReadString(std::string *str, uint32_t length)
 {
-  if (NULL == fp)
+  if (backend == Backend::None)
     return;
+
   str->clear();
-  //TODO: use fstream to get rid of this ugly hack
+
   bool keep_loading = true;
   for (uint32_t i = 0; i < length; i++)
   {
-    char c;
-    fread(&c, sizeof(char), 1, fp);
+    char c = 0;
+    if (ReadBytes(&c, sizeof(c)) != sizeof(c))
+      break;
+
     if (keep_loading)
     {
       if (!c)
@@ -61,64 +65,114 @@ void CBlockFile::ReadString(std::string *str, uint32_t length)
 
 unsigned CBlockFile::ReadBytes(void *data, uint32_t numBytes)
 {
-  if (NULL == fp)
-    return 0;
-  return fread(data, sizeof(uint8_t), numBytes, fp);
+  if (backend == Backend::File)
+  {
+    if (NULL == fp)
+      return 0;
+    return fread(data, sizeof(uint8_t), numBytes, fp);
+  }
+
+  if (backend == Backend::MemoryRead)
+  {
+    if (memoryPos >= memoryData.size())
+      return 0;
+
+    const size_t remaining = memoryData.size() - memoryPos;
+    const size_t bytesToRead = std::min<size_t>(numBytes, remaining);
+    if (bytesToRead == 0)
+      return 0;
+
+    std::memcpy(data, memoryData.data() + memoryPos, bytesToRead);
+    memoryPos += bytesToRead;
+    return static_cast<unsigned>(bytesToRead);
+  }
+
+  return 0;
 }
 
 unsigned CBlockFile::ReadDWord(uint32_t *data)
 {
-  if (NULL == fp)
-    return 0;
-  fread(data, sizeof(uint32_t), 1, fp);
-  return 4;
+  return ReadBytes(data, sizeof(uint32_t));
 }
   
 void CBlockFile::UpdateBlockSize(void)
 {
-  long int  curPos;
-  unsigned  newBlockSize;
-  
-  if (NULL == fp)
+  long int curPos;
+  uint32_t newBlockSize;
+
+  if (backend == Backend::File)
+  {
+    if (NULL == fp)
+      return;
+
+    curPos = ftell(fp); // save current file position
+    fseek(fp, blockStartPos, SEEK_SET);
+    newBlockSize = static_cast<uint32_t>(curPos - blockStartPos);
+    fwrite(&newBlockSize, sizeof(uint32_t), 1, fp);
+    fseek(fp, curPos, SEEK_SET); // go back
     return;
-  curPos = ftell(fp);       // save current file position
-  fseek(fp, blockStartPos, SEEK_SET);
-  newBlockSize = curPos - blockStartPos;
-  fwrite(&newBlockSize, sizeof(uint32_t), 1, fp);
-  fseek(fp, curPos, SEEK_SET);  // go back
+  }
+
+  if (backend == Backend::MemoryWrite)
+  {
+    curPos = static_cast<long int>(memoryPos);
+    if (blockStartPos < 0)
+      return;
+
+    const size_t blockPos = static_cast<size_t>(blockStartPos);
+    if (blockPos + sizeof(uint32_t) > memoryData.size())
+      return;
+
+    newBlockSize = static_cast<uint32_t>(curPos - blockStartPos);
+    std::memcpy(memoryData.data() + blockPos, &newBlockSize, sizeof(newBlockSize));
+  }
 }
 
 void CBlockFile::WriteByte(uint8_t data)
 {
-  if (NULL == fp)
-    return;
-  fwrite(&data, sizeof(uint8_t), 1, fp);
-  UpdateBlockSize();
+  WriteBytes(&data, sizeof(data));
 }
 
 void CBlockFile::WriteDWord(uint32_t data)
 {
-  if (NULL == fp)
-    return;
-  fwrite(&data, sizeof(uint32_t), 1, fp);
-  UpdateBlockSize();
+  WriteBytes(&data, sizeof(data));
 }
 
 void CBlockFile::WriteBytes(const void *data, uint32_t numBytes)
 {
-  if (NULL == fp)
+  if (backend == Backend::File)
+  {
+    if (NULL == fp)
+      return;
+    fwrite(data, sizeof(uint8_t), numBytes, fp);
+    UpdateBlockSize();
     return;
-  fwrite(data, sizeof(uint8_t), numBytes, fp);
-  UpdateBlockSize();
+  }
+
+  if (backend == Backend::MemoryWrite)
+  {
+    const size_t start = memoryPos;
+    const size_t end = start + numBytes;
+    if (end > memoryData.size())
+      memoryData.resize(end);
+
+    std::memcpy(memoryData.data() + start, data, numBytes);
+    memoryPos = end;
+    fileSize = static_cast<long int>(memoryData.size());
+    UpdateBlockSize();
+  }
 }
 
 void CBlockFile::WriteBlockHeader(const std::string &name, const std::string &comment)
 {
-  if (NULL == fp)
+  if (backend == Backend::None)
     return;
   
   // Record current block starting position
-  blockStartPos = ftell(fp);
+  if (backend == Backend::File)
+    blockStartPos = ftell(fp);
+  else
+    blockStartPos = static_cast<long int>(memoryPos);
 
   // Write the total block length field
   WriteDWord(0);  // will be automatically updated as we write the file
@@ -130,7 +184,10 @@ void CBlockFile::WriteBlockHeader(const std::string &name, const std::string &co
   Write(comment);
   
   // Record the start of the current data section
-  dataStartPos = ftell(fp);
+  if (backend == Backend::File)
+    dataStartPos = ftell(fp);
+  else
+    dataStartPos = static_cast<long int>(memoryPos);
 } 
 
 
@@ -194,8 +251,21 @@ Result CBlockFile::FindBlock(const std::string &name)
 {
   if (mode != 'r')
     return Result::FAIL;
-    
-  fseek(fp, 0, SEEK_SET);
+
+  if (backend == Backend::File)
+  {
+    if (fp == NULL)
+      return Result::FAIL;
+    fseek(fp, 0, SEEK_SET);
+  }
+  else if (backend == Backend::MemoryRead)
+  {
+    memoryPos = 0;
+  }
+  else
+  {
+    return Result::FAIL;
+  }
   
   long int  curPos = 0;
   while (curPos < fileSize)
@@ -215,14 +285,26 @@ Result CBlockFile::FindBlock(const std::string &name)
     // Is this the block we want?
     if (block_name == name)
     {
-      fseek(fp, blockStartPos + 12 + name_length + comment_length, SEEK_SET); // move to beginning of data
-      dataStartPos = ftell(fp);
+      const long int nextDataPos = blockStartPos + 12 + name_length + comment_length;
+      if (backend == Backend::File)
+      {
+        fseek(fp, nextDataPos, SEEK_SET); // move to beginning of data
+        dataStartPos = ftell(fp);
+      }
+      else
+      {
+        memoryPos = static_cast<size_t>(nextDataPos);
+        dataStartPos = nextDataPos;
+      }
       return Result::OKAY;
     }
     
     // Move to next block
-    fseek(fp, blockStartPos + block_length, SEEK_SET);
     curPos = blockStartPos + block_length;
+    if (backend == Backend::File)
+      fseek(fp, curPos, SEEK_SET);
+    else
+      memoryPos = static_cast<size_t>(curPos);
     if (block_length == 0)  // this would never advance
       break;
   }
@@ -232,9 +314,18 @@ Result CBlockFile::FindBlock(const std::string &name)
 
 Result CBlockFile::Create(const std::string &file, const std::string &headerName, const std::string &comment)
 {
+  Close();
+
   fp = fopen(file.c_str(), "wb");
   if (NULL == fp)
     return Result::FAIL;
+
+  backend = Backend::File;
+  memoryData.clear();
+  memoryPos = 0;
+  blockStartPos = 0;
+  dataStartPos = 0;
+  fileSize = 0;
   mode = 'w';
   WriteBlockHeader(headerName, comment);
   return Result::OKAY;
@@ -242,9 +333,17 @@ Result CBlockFile::Create(const std::string &file, const std::string &headerName
   
 Result CBlockFile::Load(const std::string &file)
 {
+  Close();
+
   fp = fopen(file.c_str(), "rb");
   if (NULL == fp)
     return Result::FAIL;
+
+  backend = Backend::File;
+  memoryData.clear();
+  memoryPos = 0;
+  blockStartPos = 0;
+  dataStartPos = 0;
   mode = 'r';
   
   // TODO: is this a valid block file?
@@ -256,25 +355,90 @@ Result CBlockFile::Load(const std::string &file)
   
   return Result::OKAY;
 }
+
+Result CBlockFile::CreateMemory(const std::string &headerName, const std::string &comment)
+{
+  Close();
+
+  backend = Backend::MemoryWrite;
+  mode = 'w';
+  fileSize = 0;
+  blockStartPos = 0;
+  dataStartPos = 0;
+  memoryPos = 0;
+  memoryData.clear();
+
+  WriteBlockHeader(headerName, comment);
+  return Result::OKAY;
+}
+
+Result CBlockFile::LoadMemory(const void *data, size_t size)
+{
+  if (data == nullptr && size > 0)
+    return Result::FAIL;
+
+  Close();
+
+  backend = Backend::MemoryRead;
+  mode = 'r';
+  fileSize = static_cast<long int>(size);
+  blockStartPos = 0;
+  dataStartPos = 0;
+  memoryPos = 0;
+  memoryData.resize(size);
+  if (size > 0)
+    std::memcpy(memoryData.data(), data, size);
+
+  return Result::OKAY;
+}
+
+const uint8_t *CBlockFile::GetMemoryData(void) const
+{
+  if (memoryData.empty())
+    return nullptr;
+  return memoryData.data();
+}
+
+size_t CBlockFile::GetMemorySize(void) const
+{
+  return memoryData.size();
+}
   
 void CBlockFile::Close(void)
 {
-  if (fp != NULL)
+  if (backend == Backend::File && fp != NULL)
     fclose(fp);
+
   fp = NULL;
+  backend = Backend::None;
+  memoryPos = 0;
   mode = 0;
+  fileSize = 0;
+  blockStartPos = 0;
+  dataStartPos = 0;
 }
 
 CBlockFile::CBlockFile(void)
 {
+  backend = Backend::None;
   fp = NULL;
+  memoryPos = 0;
   mode = 0;   // neither reading nor writing (do nothing)
+  fileSize = 0;
+  blockStartPos = 0;
+  dataStartPos = 0;
 }
 
 CBlockFile::~CBlockFile(void)
 {
-  if (fp != NULL) // in case user forgot
+  if (backend == Backend::File && fp != NULL) // in case user forgot
     fclose(fp);
+
   fp = NULL;
+  backend = Backend::None;
+  memoryPos = 0;
   mode = 0;
+  fileSize = 0;
+  blockStartPos = 0;
+  dataStartPos = 0;
 }

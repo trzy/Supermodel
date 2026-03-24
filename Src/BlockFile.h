@@ -29,7 +29,9 @@
 #define INCLUDED_BLOCKFILE_H
 
 #include <cstdint>
+#include <cstddef>
 #include <string>
+#include <vector>
 #include "Types.h"
 
 /*
@@ -169,6 +171,43 @@ public:
   Result Load(const std::string &file);
 
   /*
+   * CreateMemory(headerName, comment):
+   *
+   * Opens an in-memory block file for writing and creates the header block.
+   *
+   * Parameters:
+   *    headerName  Block name for header. Must be unique and not NULL.
+   *    comment     Comment string that will be embedded into file header.
+   *
+   * Returns:
+   *    OKAY on success, otherwise FAIL.
+   */
+  Result CreateMemory(const std::string &headerName, const std::string &comment);
+
+  /*
+   * LoadMemory(data, size):
+   *
+   * Opens an in-memory block file for reading.
+   *
+   * Parameters:
+   *    data  Pointer to serialized data buffer.
+   *    size  Number of bytes in data buffer.
+   *
+   * Returns:
+   *    OKAY on success, otherwise FAIL.
+   */
+  Result LoadMemory(const void *data, size_t size);
+
+  /*
+   * GetMemoryData(void):
+   * GetMemorySize(void):
+   *
+   * Returns the current in-memory serialized block buffer and size.
+   */
+  const uint8_t *GetMemoryData(void) const;
+  size_t GetMemorySize(void) const;
+
+  /*
    * Close(void):
    *
    * Closes the file.
@@ -185,6 +224,14 @@ public:
   ~CBlockFile(void);
 
 private:
+  enum class Backend
+  {
+    None,
+    File,
+    MemoryRead,
+    MemoryWrite
+  };
+
   // Helper functions
   void      ReadString(std::string *str, uint32_t length);
   unsigned  ReadBytes(void *data, uint32_t numBytes);
@@ -196,7 +243,10 @@ private:
   void      WriteBlockHeader(const std::string &name, const std::string &comment);
 
   // File state data
+  Backend   backend;
   FILE      *fp;
+  std::vector<uint8_t> memoryData;
+  size_t    memoryPos;
   int       mode;           // 'r' for read, 'w' for write
   long int  fileSize;       // size of file in bytes
   long int  blockStartPos;  // points to beginning of current block (or file) header
