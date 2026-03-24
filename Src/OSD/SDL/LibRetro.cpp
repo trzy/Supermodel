@@ -650,7 +650,7 @@ static void DrawPointerOverlay(void)
 
   const float scale_x = (x_res > 0) ? ((float)total_x_res / (float)x_res) : 1.0f;
   const float scale_y = (y_res > 0) ? ((float)total_y_res / (float)y_res) : 1.0f;
-  const float overlay_scale = 0.5f;
+  const float overlay_scale = 0.4f;
   float draw_x = ((float)x_offset + norm_x * (float)x_res) * scale_x;
   float draw_y = ((float)y_offset + norm_y * (float)y_res) * scale_y;
 

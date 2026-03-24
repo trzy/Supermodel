@@ -259,6 +259,18 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
 {
   bool offscreenTrigger[2]{false};
   float x[2]{ 0.0f }, y[2]{ 0.0f };
+  GLint saved_viewport[4] = { 0, 0, 0, 0 };
+  GLboolean saved_scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
+  GLint saved_scissor_box[4] = { 0, 0, 0, 0 };
+  GLboolean saved_blend_enabled = glIsEnabled(GL_BLEND);
+  GLboolean saved_depth_enabled = glIsEnabled(GL_DEPTH_TEST);
+  GLint saved_program = 0;
+  GLint saved_vao = 0;
+
+  glGetIntegerv(GL_VIEWPORT, saved_viewport);
+  glGetIntegerv(GL_SCISSOR_BOX, saved_scissor_box);
+  glGetIntegerv(GL_CURRENT_PROGRAM, &saved_program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &saved_vao);
 
   // Crosshairs can be enabled/disabled at run-tim
   unsigned crosshairs = m_config["Crosshairs"].ValueAs<unsigned>();
@@ -323,6 +335,26 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
   {
     DrawCrosshair(m, x[1], y[1], 1, xRes, yRes);
   }
+
+  if (saved_depth_enabled == GL_TRUE)
+    glEnable(GL_DEPTH_TEST);
+  else
+    glDisable(GL_DEPTH_TEST);
+
+  if (saved_blend_enabled == GL_TRUE)
+    glEnable(GL_BLEND);
+  else
+    glDisable(GL_BLEND);
+
+  if (saved_scissor_enabled == GL_TRUE)
+    glEnable(GL_SCISSOR_TEST);
+  else
+    glDisable(GL_SCISSOR_TEST);
+
+  glViewport(saved_viewport[0], saved_viewport[1], saved_viewport[2], saved_viewport[3]);
+  glScissor(saved_scissor_box[0], saved_scissor_box[1], saved_scissor_box[2], saved_scissor_box[3]);
+  glUseProgram((GLuint)saved_program);
+  glBindVertexArray((GLuint)saved_vao);
 
   //PrintGLError(glGetError());
 }
