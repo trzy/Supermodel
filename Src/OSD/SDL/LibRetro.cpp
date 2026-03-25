@@ -21,6 +21,7 @@
 #include "GameLoader.h"
 #include "Graphics/New3D/New3D.h"
 #include "OSD/SDL/Crosshair.h"
+#include "Sound/SCSP.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "Graphics/SuperAA.h"
@@ -48,6 +49,11 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
 
   static struct retro_core_option_v2_category option_cats_us[] = {
     {
+      "core",
+      "Core",
+      "Configure hardware timing and compatibility settings."
+    },
+    {
       "video",
       "Video",
       "Configure video backend and internal scaling."
@@ -65,6 +71,22 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
     { NULL, NULL, NULL }
   };
   static struct retro_core_option_v2_definition option_defs_us[] = {
+    {
+      "supermodel_ppc_frequency",
+      "PowerPC Frequency",
+      NULL,
+      "Override the emulated PowerPC clock. Auto uses the game stepping default.",
+      NULL,
+      "core",
+      {
+        { "auto", "Auto" },
+        { "66mhz", "66 MHz" },
+        { "100mhz", "100 MHz" },
+        { "166mhz", "166 MHz" },
+        { NULL, NULL }
+      },
+      "auto"
+    },
     {
       "supermodel_supersampling",
       "Supersampling",
@@ -144,6 +166,24 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
       "disabled"
     },
     {
+      "supermodel_crt_colors",
+      "CRT Color Emulation",
+      NULL,
+      "Apply a CRT color/gamma transform in the SuperAA pass.",
+      NULL,
+      "video",
+      {
+        { "none", "None" },
+        { "ari", "ARI / D93" },
+        { "pvm", "PVM 20M2U / D93" },
+        { "bt601jp", "BT.601 525 / D93" },
+        { "bt601us", "BT.601 525 / D65" },
+        { "bt601ea", "BT.601 625 / D65" },
+        { NULL, NULL }
+      },
+      "none"
+    },
+    {
       "supermodel_libretro_crosshair",
       "Libretro Crosshair",
       NULL,
@@ -153,6 +193,20 @@ RETRO_API void retro_set_environment(retro_environment_t cb) {
       {
         { "enabled", "Enabled" },
         { "disabled", "Disabled" },
+        { NULL, NULL }
+      },
+      "disabled"
+    },
+    {
+      "supermodel_legacy_sound_dsp",
+      "Legacy Sound DSP",
+      NULL,
+      "Use the older SCSP DSP path for compatibility with specific games.",
+      NULL,
+      "audio",
+      {
+        { "disabled", "Disabled" },
+        { "enabled", "Enabled" },
         { NULL, NULL }
       },
       "disabled"
@@ -248,6 +302,7 @@ static bool renderers_ready = false;
 static bool reset_pending = false;
 static bool game_loaded = false;
 static int supersampling = 1;
+static CRTcolor crtcolors = CRTcolor::None;
 static unsigned output_width = SUPERMODEL_W;
 static unsigned output_height = SUPERMODEL_H;
 static unsigned x_offset = 0;
@@ -1108,6 +1163,105 @@ static bool ParseEnabledOption(const char *value)
   return value != NULL && strcmp(value, "enabled") == 0;
 }
 
+static unsigned ParsePPCFrequencyOption(const char *value)
+{
+  if (value == NULL || strcmp(value, "auto") == 0)
+    return 0;
+  if (strcmp(value, "66mhz") == 0)
+    return 66;
+  if (strcmp(value, "100mhz") == 0)
+    return 100;
+  if (strcmp(value, "166mhz") == 0)
+    return 166;
+  return 0;
+}
+
+static CRTcolor ParseCRTColorOption(const char *value)
+{
+  if (value == NULL || strcmp(value, "none") == 0)
+    return CRTcolor::None;
+  if (strcmp(value, "ari") == 0)
+    return CRTcolor::ARI;
+  if (strcmp(value, "pvm") == 0)
+    return CRTcolor::PVM;
+  if (strcmp(value, "bt601jp") == 0)
+    return CRTcolor::BT601JP;
+  if (strcmp(value, "bt601us") == 0)
+    return CRTcolor::BT601US;
+  if (strcmp(value, "bt601ea") == 0)
+    return CRTcolor::BT601EA;
+  return CRTcolor::None;
+}
+
+static const char *DescribePPCFrequency(unsigned mhz)
+{
+  switch (mhz)
+  {
+    case 66: return "66 MHz";
+    case 100: return "100 MHz";
+    case 166: return "166 MHz";
+    default: return "auto";
+  }
+}
+
+static const char *DescribeCRTColor(CRTcolor color)
+{
+  switch (color)
+  {
+    case CRTcolor::ARI: return "ARI / D93";
+    case CRTcolor::PVM: return "PVM 20M2U / D93";
+    case CRTcolor::BT601JP: return "BT.601 525 / D93";
+    case CRTcolor::BT601US: return "BT.601 525 / D65";
+    case CRTcolor::BT601EA: return "BT.601 625 / D65";
+    default: return "none";
+  }
+}
+
+static bool ApplyPowerPCFrequencyOption(void)
+{
+  unsigned previous = s_runtime_config["PowerPCFrequency"].ValueAsDefault<unsigned>(0);
+  struct retro_variable var = { "supermodel_ppc_frequency", NULL };
+  unsigned mhz = 0;
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+    mhz = ParsePPCFrequencyOption(var.value);
+  if (s_runtime_config["PowerPCFrequency"].ValueAs<unsigned>() != mhz)
+    s_runtime_config.Get("PowerPCFrequency").SetValue(mhz);
+
+  if (previous != mhz && game_loaded)
+  {
+    PushRuntimeMessageThrottled("core.ppc_frequency", RETRO_LOG_INFO, 1400, 1, MESSAGE_THROTTLE_MS_DEFAULT,
+      "PowerPC frequency set to %s", DescribePPCFrequency(mhz));
+    EmitFrontendLogThrottled("core.ppc_frequency", RETRO_LOG_INFO, LOG_THROTTLE_MS_DEFAULT,
+      "PowerPC frequency changed from %s to %s", DescribePPCFrequency(previous), DescribePPCFrequency(mhz));
+  }
+  return previous != mhz;
+}
+
+static bool ApplyAudioCoreOptions(void)
+{
+  bool changed = false;
+  struct retro_variable var = { "supermodel_legacy_sound_dsp", NULL };
+  bool legacy_sound = s_runtime_config["LegacySoundDSP"].ValueAsDefault<bool>(false);
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+    legacy_sound = ParseEnabledOption(var.value);
+
+  if (s_runtime_config["LegacySoundDSP"].ValueAs<bool>() != legacy_sound)
+  {
+    s_runtime_config.Get("LegacySoundDSP").SetValue(legacy_sound);
+    changed = true;
+    SCSP_SetLegacySound(legacy_sound);
+  }
+
+  if (changed && game_loaded)
+  {
+    PushRuntimeMessageThrottled("audio.legacy_scsp", RETRO_LOG_INFO, 1400, 1, MESSAGE_THROTTLE_MS_DEFAULT,
+      "Legacy Sound DSP %s", legacy_sound ? "enabled" : "disabled");
+    EmitFrontendLogThrottled("audio.legacy_scsp", RETRO_LOG_INFO, LOG_THROTTLE_MS_DEFAULT,
+      "Legacy Sound DSP changed to %s", legacy_sound ? "enabled" : "disabled");
+  }
+  return changed;
+}
+
 static void ApplyFastForwardAwareness(bool fastforwarding)
 {
   if (frontend_fastforwarding == fastforwarding)
@@ -1123,6 +1277,7 @@ static void ApplyFastForwardAwareness(bool fastforwarding)
 static bool ApplyVideoCoreOptions(void)
 {
   bool changed = false;
+  CRTcolor previous_crt = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
   struct retro_variable var = { NULL, NULL };
 
   var.key = "supermodel_upscale_mode";
@@ -1175,6 +1330,27 @@ static bool ApplyVideoCoreOptions(void)
       s_runtime_config.Get("NoWhiteFlash").SetValue(no_white);
       changed = true;
     }
+  }
+
+  var.key = "supermodel_crt_colors";
+  CRTcolor colors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
+  if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value != NULL)
+  {
+    colors = ParseCRTColorOption(var.value);
+  }
+  if (s_runtime_config["CRTcolors"].ValueAs<int>() != (int)colors)
+  {
+    s_runtime_config.Get("CRTcolors").SetValue((int)colors);
+    changed = true;
+  }
+  crtcolors = colors;
+
+  if (game_loaded && previous_crt != crtcolors)
+  {
+    PushRuntimeMessageThrottled("video.crtcolors", RETRO_LOG_INFO, 1400, 1, MESSAGE_THROTTLE_MS_DEFAULT,
+      "CRT color emulation set to %s", DescribeCRTColor(crtcolors));
+    EmitFrontendLogThrottled("video.crtcolors", RETRO_LOG_INFO, LOG_THROTTLE_MS_DEFAULT,
+      "CRT color emulation changed from %s to %s", DescribeCRTColor(previous_crt), DescribeCRTColor(crtcolors));
   }
 
   return changed;
@@ -1330,7 +1506,7 @@ static bool InitializeRenderers(bool reset_model)
   PushRetroGeometry();
   ApplyGLGeometry();
 
-  superAA = new SuperAA(supersampling, CRTcolor::None);
+  superAA = new SuperAA(supersampling, crtcolors);
   superAA->Init((int)total_x_res, (int)total_y_res);
   superAA->SetOutputSize((int)total_x_res, (int)total_y_res);
 
@@ -1967,6 +2143,7 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set("New3DEngine", true, "Global");
   s_runtime_config.Set("QuadRendering", false, "Global");
   s_runtime_config.Set("WideBackground", false, "Video");
+  s_runtime_config.Set("PowerPCFrequency", 0u, "Core", 0u, 200u);
   s_runtime_config.Set("MultiThreaded", false, "Core");
   s_runtime_config.Set("GPUMultiThreaded", false, "Core");
   s_runtime_config.Set("MultiTexture", false, "Legacy3D");
@@ -1987,6 +2164,7 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set("SoundVolume", 100, "Sound", 0, 200);
   s_runtime_config.Set("MusicVolume", 100, "Sound", 0, 200);
   s_runtime_config.Set("LegacySoundDSP", false, "Sound"); // New config option for games that do not play correctly with MAME's SCSP sound core.
+  s_runtime_config.Set("CRTcolors", int(0), "Video", 0, 0, { 0,1,2,3,4,5 });
   s_runtime_config.Set("Stretch", false, "Video");
   s_runtime_config.Set("VSync", true, "Video");
   s_runtime_config.Set("Throttle", true, "Video");
@@ -2013,7 +2191,11 @@ RETRO_API void retro_init(void) {
   baseline_vsync_enabled = s_runtime_config["VSync"].ValueAsDefault<bool>(true);
   baseline_throttle_enabled = s_runtime_config["Throttle"].ValueAsDefault<bool>(true);
   frontend_fastforwarding = false;
+  crtcolors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
 
+  ApplyPowerPCFrequencyOption();
+  ApplyAudioCoreOptions();
+  ApplyVideoCoreOptions();
   ApplySupersamplingOption();
 
   if (!RequestHWContext())
@@ -2084,6 +2266,8 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
   assert(!game_loaded);
   try
   {
+    ApplyPowerPCFrequencyOption();
+    ApplyAudioCoreOptions();
     ApplySupersamplingOption();
     ApplyVideoCoreOptions();
 
@@ -2231,6 +2415,8 @@ RETRO_API void retro_run(void) {
 
   if (cb_env(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &variables_updated) && variables_updated)
   {
+    ApplyPowerPCFrequencyOption();
+    ApplyAudioCoreOptions();
     bool supersampling_changed = ApplySupersamplingOption();
     bool video_options_changed = ApplyVideoCoreOptions();
     ApplyCrosshairOverlayOption();

@@ -47,6 +47,7 @@ UINT8 SCSP_MidiOutFill();
 UINT8 SCSP_MidiInFill();
 void SCSP_CpuRunScanline();
 UINT8 SCSP_MidiOutR();
+void SCSP_SetLegacySound(bool enabled);
 
 /*
  * SCSP_Init(n):
