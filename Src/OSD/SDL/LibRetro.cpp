@@ -1864,6 +1864,70 @@ static void ApplyTwinJoystickInputDefaults(void)
   s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
 }
 
+static void ApplySkiInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_SKI))
+    return;
+
+  // Ski Champ: left stick for the ski board, buttons for poll/select.
+  // Keep the digital D-pad fallback so it is still playable without analog.
+  s_runtime_config.Set<std::string>("InputSkiLeft",  "KEY_LEFT,JOY1_LEFT",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiRight", "KEY_RIGHT,JOY1_RIGHT", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiUp",    "KEY_UP,JOY1_UP",    "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiDown",  "KEY_DOWN,JOY1_DOWN",  "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiX",     "JOY1_XAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiY",     "JOY1_YAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiPollLeft",  "JOY1_BUTTON9,KEY_A", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiPollRight", "JOY1_BUTTON1,KEY_S", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiSelect1",   "JOY1_BUTTON10,KEY_Q", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiSelect2",   "JOY1_BUTTON2,KEY_W", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputSkiSelect3",   "JOY1_BUTTON3,KEY_E", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+}
+
+static void ApplyMagTruckInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_MAGTRUCK))
+    return;
+
+  // Magical Truck Adventure: one lever and one pedal per player.
+  // Keep the mapping permissive so modern controllers and keyboard both work.
+  s_runtime_config.Set<std::string>("InputMagicalLever1", "JOY1_YAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputMagicalLever2", "JOY2_YAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputMagicalPedal1", "JOY1_SLIDER1_POS,JOY1_BUTTON9,JOY1_BUTTON1,JOY1_BUTTON4,KEY_A", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputMagicalPedal2", "JOY2_SLIDER1_POS,JOY2_BUTTON9,JOY2_BUTTON1,JOY2_BUTTON4,KEY_S", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputStart1", "JOY1_BUTTON4,JOY1_BUTTON9,KEY_1", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputStart2", "JOY2_BUTTON4,JOY2_BUTTON9,KEY_2", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+}
+
+static void ApplyFishingInputDefaults(void)
+{
+  if (!(game.inputs & Game::INPUT_FISHING))
+    return;
+
+  // Sega Bass Fishing / Get Bass: rod on the left stick, reel stick on the right,
+  // reel/tension on triggers, cast/select on face buttons.
+  s_runtime_config.Set<std::string>("InputFishingRodX", "JOY1_XAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingRodY", "JOY1_YAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingStickX", "JOY1_RXAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingStickY", "JOY1_RYAXIS", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingReel", "JOY1_SLIDER1_POS,JOY1_ZAXIS_POS,KEY_SPACE", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingCast", "JOY1_BUTTON9,JOY1_BUTTON1,KEY_Z", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingSelect", "JOY1_BUTTON10,JOY1_BUTTON2,KEY_X", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputFishingTension", "JOY1_SLIDER2_POS,JOY1_ZAXIS_NEG,KEY_T", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestA", "KEY_6,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputTestB", "KEY_8,JOY1_BUTTON11", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceA", "KEY_5,JOY1_BUTTON12", "Input", "", "");
+  s_runtime_config.Set<std::string>("InputServiceB", "KEY_7,JOY1_BUTTON12", "Input", "", "");
+}
+
 static void ApplyFightingInputDefaults(void)
 {
   if (!(game.inputs & Game::INPUT_FIGHTING))
@@ -2095,6 +2159,43 @@ static void UpdateInputDescriptors(void)
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,          "Test" };
     desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,          "Service" };
   }
+  else if (game.inputs & Game::INPUT_SKI)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_X, "Ski X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_Y, "Ski Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,                             "Poll Left" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,                             "Poll Right" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,                             "Select 1" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,                             "Select 2" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,                          "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,                         "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,                              "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,                              "Service" };
+  }
+  else if (game.inputs & Game::INPUT_MAGTRUCK)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_Y, "Lever" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,                          "Pedal" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,                       "Start" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,                      "Coin" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,                           "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,                           "Service" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_Y, "P2 Lever" };
+    desc[descriptor_index++] = { 1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,                          "P2 Pedal" };
+  }
+  else if (game.inputs & Game::INPUT_FISHING)
+  {
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_X, "Rod X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_Y, "Rod Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Stick X" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Stick Y" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,                           "Reel" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,                            "Cast" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,                            "Select" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,                           "Tension" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,                            "Test" };
+    desc[descriptor_index++] = { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,                            "Service" };
+  }
   else if (racer_profile_active)
   {
     desc[descriptor_index++] = { 0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,  RETRO_DEVICE_ID_ANALOG_X, "Steering" };
@@ -2313,6 +2414,9 @@ RETRO_API bool retro_load_game(const struct retro_game_info *rgame) {
     ApplyCrosshairOverlayOption();
     ApplyFightingInputDefaults();
     ApplyVehicleInputDefaults();
+    ApplySkiInputDefaults();
+    ApplyMagTruckInputDefaults();
+    ApplyFishingInputDefaults();
     ApplyAnalogJoystickInputDefaults();
     ApplySoccerInputDefaults();
     ApplyTwinJoystickInputDefaults();
@@ -2438,6 +2542,9 @@ RETRO_API void retro_run(void) {
       ApplyFightingInputDefaults();
     if (racer_profile_active)
       ApplyVehicleInputDefaults();
+    ApplySkiInputDefaults();
+    ApplyMagTruckInputDefaults();
+    ApplyFishingInputDefaults();
     ApplyAnalogJoystickInputDefaults();
     ApplySoccerInputDefaults();
     ApplyTwinJoystickInputDefaults();
