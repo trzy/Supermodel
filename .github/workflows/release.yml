@@ -1,56 +1,121 @@
-name: Build and Release
+name: Release Supermodel Libretro
 
 on:
   push:
-    branches: [ master ]  # Auto-build on master
-  workflow_dispatch:      # Manual triggering
+    tags:
+      - "v*"
+  workflow_dispatch:
     inputs:
-      opt:
-        description: "Optimization flags"
+      tag_name:
+        description: "Release tag to create or publish (for example v0.3a-1)"
+        required: false
         type: string
-        default: "-O3 -g"
+        default: ""
+      release_name:
+        description: "Release title"
+        required: false
+        type: string
+        default: ""
+      notes:
+        description: "Extra release notes to prepend"
+        required: false
+        type: string
+        default: ""
+      prerelease:
+        description: "Mark as prerelease"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build:
     uses: ./.github/workflows/build.yml
     with:
-      opt: ${{ github.event.inputs.opt || '-O3 -g' }}
-  
+      opt: "-O3 -g"
+
   release:
     needs: build
-    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(make -f Makefiles/Makefile.UNIX version)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
-      - name: Download all artifacts
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Debug downloaded artifacts
+      - name: Prepare release metadata
+        id: meta
+        shell: bash
         run: |
-          echo "=== Downloaded artifacts structure ==="
-          find artifacts -type f -name "*.zip" -o -name "*.tar.gz" | sort
-          echo "=== End debug ==="
-          
-      - name: Create release
-        uses: softprops/action-gh-release@v1
+          set -e
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            TAG_NAME="${{ github.event.inputs.tag_name }}"
+          else
+            TAG_NAME="${{ github.ref_name }}"
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.release_name }}" ]; then
+            RELEASE_NAME="${{ github.event.inputs.release_name }}"
+          else
+            RELEASE_NAME="Supermodel Libretro ${TAG_NAME}"
+          fi
+
+          PREV_TAG="$(git tag --sort=-creatordate | grep -Fxv "$TAG_NAME" | head -n 1 || true)"
+
+          if [ -n "$PREV_TAG" ]; then
+            CHANGELOG="$(git log --pretty=format:'- %s' "${PREV_TAG}..HEAD")"
+          else
+            CHANGELOG="$(git log -n 12 --pretty=format:'- %s')"
+          fi
+
+          EXTRA_NOTES=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.notes }}" ]; then
+            EXTRA_NOTES="${{ github.event.inputs.notes }}"
+          fi
+
+          {
+            echo "tag_name=$TAG_NAME"
+            echo "release_name=$RELEASE_NAME"
+            echo "prerelease=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.prerelease || 'false' }}"
+            echo "body<<EOF"
+            echo "Supermodel Libretro automated release."
+            echo ""
+            echo "Assets:"
+            echo "- Win32: \`supermodel_libretro-win32.dll\`"
+            echo "- Win64: \`supermodel_libretro-win64.dll\`"
+            echo "- Linux: \`supermodel_libretro-linux.so\`"
+            echo ""
+            if [ -n "$EXTRA_NOTES" ]; then
+              echo "Notes:"
+              echo "$EXTRA_NOTES"
+              echo ""
+            fi
+            echo "Recent changes:"
+            if [ -n "$CHANGELOG" ]; then
+              echo "$CHANGELOG"
+            else
+              echo "- No recent commits available."
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ steps.version.outputs.version }}"
-          name: "Supermodel v${{ steps.version.outputs.version }}"
-          files: |
-            artifacts/*/*.zip
-            artifacts/*/*.tar.gz
-          body: "Automated release with builds for Windows, Linux, and macOS."
+          tag_name: ${{ steps.meta.outputs.tag_name }}
+          name: ${{ steps.meta.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          body: ${{ steps.meta.outputs.body }}
+          prerelease: ${{ steps.meta.outputs.prerelease }}
           draft: false
-          prerelease: false
-          generate_release_notes: true
+          files: |
+            artifacts/**/supermodel_libretro-win32.dll
+            artifacts/**/supermodel_libretro-win64.dll
+            artifacts/**/supermodel_libretro-linux.so
