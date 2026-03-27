@@ -1566,15 +1566,6 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLFrictionMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
-#ifdef NET_BOARD
-
-  // NetBoard
-  config.Set("Network", false, "Network");
-  config.Set("SimulateNet", true, "Network");
-  config.Set("PortIn", unsigned(1970), "Network");
-  config.Set("PortOut", unsigned(1971), "Network");
-  config.Set<std::string>("AddressOut", "127.0.0.1", "Network", "", "");
-#endif
 #else
   config.Set<std::string>("InputSystem", "sdl", "Core", "", "", { "sdl","sdlgamepad" });
   // SDL ForceFeedback
@@ -1584,6 +1575,12 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
+  // NetBoard
+  config.Set("Network", false, "Network");
+  config.Set("SimulateNet", true, "Network");
+  config.Set("PortIn", unsigned(1970), "Network");
+  config.Set("PortOut", unsigned(1971), "Network");
+  config.Set<std::string>("AddressOut", "127.0.0.1", "Network", "", "");
 
 #ifdef SUPERMODEL_WIN32
   config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win","net" });
@@ -1884,22 +1881,22 @@ static void Help(void)
   puts("  -new-scsp               New SCSP engine based on MAME [Default]");
   puts("  -legacy-scsp            Legacy SCSP engine by ElSemi");
   puts("");
-#ifdef NET_BOARD
   puts("Net Options:");
   puts("  -no-net                 Disable net board [Default]");
   puts("  -net                    Enable net board");
   puts("  -simulate-netboard      Simulate the net board [Default]");
   puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
   puts("");
-#endif
   puts("Input Options:");
   puts("  -force-feedback         Enable force feedback (DirectInput, XInput)");
   puts("  -config-inputs          Configure keyboards, mice, and game controllers");
 #ifdef SUPERMODEL_WIN32
   printf("  -input-system=<s>       Input system [Default: %s]\n", defaultConfig["InputSystem"].ValueAs<std::string>().c_str());
-  printf("  -outputs=<s>            Outputs [Default: %s]\n", defaultConfig["Outputs"].ValueAs<std::string>().c_str());
 #endif
   puts("  -print-inputs           Prints current input configuration");
+  puts("");
+  puts("Output Options:");
+  printf("  -outputs=<s>            Outputs [Default: %s]\n", defaultConfig["Outputs"].ValueAs<std::string>().c_str());
   puts("");
   puts("Debug Options:");
   puts("  -dump-memory            Write memory regions to files on exit");
@@ -1999,12 +1996,10 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-new-scsp",            { "LegacySoundDSP",   false } },
     { "-no-white-flash",      { "NoWhiteFlash",     true } },
     { "-white-flash",         { "NoWhiteFlash",     false } },
-#ifdef NET_BOARD
-    { "-net",                 { "Network",       true } },
-    { "-no-net",              { "Network",       false } },
-    { "-simulate-netboard",   { "SimulateNet",   true } },
-    { "-emulate-netboard",    { "SimulateNet",   false } },
-#endif
+    { "-net",                 { "Network",          true } },
+    { "-no-net",              { "Network",          false } },
+    { "-simulate-netboard",   { "SimulateNet",      true } },
+    { "-emulate-netboard",    { "SimulateNet",      false } },
     { "-no-force-feedback",   { "ForceFeedback",    false } },
     { "-force-feedback",      { "ForceFeedback",    true } },
     { "-dump-memory",         { "DumpMemory",       true } },

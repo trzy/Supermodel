@@ -64,9 +64,7 @@ LD = gcc
 
 SDL2_CFLAGS = `sdl2-config --cflags`
 SDL2_LIBS = `sdl2-config --libs`
-ifeq ($(strip $(NET_BOARD)),1)
-	SDL2_LIBS += -lSDL2_net
-endif
+SDL2_LIBS += -lSDL2_net
 
 #
 #	UNIX-specific

@@ -64,10 +64,7 @@ LD = clang
 #
 
 SDL_CFLAGS =
-SDL_LIBS = -framework SDL2 -framework OpenGL -framework GLUT -framework Cocoa
-ifeq ($(strip $(NET_BOARD)),1)
-	SDL_LIBS += -framework SDL2_net
-endif
+SDL_LIBS = -framework SDL2 -framework SDL2_net -framework OpenGL -framework GLUT -framework Cocoa
 
 #
 # macOS-specific

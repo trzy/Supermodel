@@ -240,7 +240,7 @@ def update_git_snapshot(working_dir, username, password, test_run, make):
       if result.returncode != 0:
         raise BuildError("Failed to obtain version")
       version = result.stdout.decode().strip()
-      result = bash.execute(working_dir=repo_dir, command=make + " -f Makefiles/Makefile.Win32 release NET_BOARD=1", print_output=False)
+      result = bash.execute(working_dir=repo_dir, command=make + " -f Makefiles/Makefile.Win32 release", print_output=False)
       if result.returncode != 0:
         raise BuildError("Build failed")
 

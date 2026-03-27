@@ -52,11 +52,6 @@ ifeq ($(strip $(EXTRA_DEBUG)),1)
 	SUPERMODEL_BUILD_FLAGS += -DDEBUG
 endif
 
-# If Net Board support is enabled, need to define NET_BOARD
-ifeq ($(strip $(NET_BOARD)),1)
-	SUPERMODEL_BUILD_FLAGS += -DNET_BOARD
-endif
-
 # If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
@@ -177,15 +172,11 @@ SRC_FILES = \
 	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
 	Src/OSD/SDL/NetOutputs.cpp \
+	Src/Network/TCPReceive.cpp \
+	Src/Network/TCPSend.cpp \
+	Src/Network/NetBoard.cpp \
+	Src/Network/SimNetBoard.cpp \
 	$(PLATFORM_SRC_FILES)
-
-ifeq ($(strip $(NET_BOARD)),1)
-	SRC_FILES += \
-		Src/Network/TCPReceive.cpp \
-		Src/Network/TCPSend.cpp \
-		Src/Network/NetBoard.cpp \
-		Src/Network/SimNetBoard.cpp
-endif
 
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SRC_FILES += \

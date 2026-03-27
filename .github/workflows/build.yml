@@ -63,7 +63,7 @@ jobs:
 
       - name: Build Supermodel
         run: |
-          make -f Makefiles/${{ matrix.makefile }} release NET_BOARD=1 OPT="${OPT_INPUT:-"-O3"}" GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
+          make -f Makefiles/${{ matrix.makefile }} release OPT="${OPT_INPUT:-"-O3"}" GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
           
       - name: Validate build
         run: |
@@ -78,7 +78,7 @@ jobs:
           
       - name: Create package
         run: |
-          make -f Makefiles/${{ matrix.makefile }} pkg NET_BOARD=1 GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
+          make -f Makefiles/${{ matrix.makefile }} pkg GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
           
       - name: Find and upload package
         run: |

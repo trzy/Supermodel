@@ -50,16 +50,10 @@ pacman -S mingw64/mingw-w64-x86_64-SDL2_net
 
 At this point, you can continue using either the MSYS2 shell or Windows Command Prompt but ensure that both ```gcc``` and ```mingw32-make``` are in your path. In MSYS2, the location of these binaries will be ```/mingw64/bin``` and for Command Prompt, assuming MSYS2 was installed in the default location, add ```C:\msys64\mingw64\bin``` to your Windows ```PATH``` variable.
 
-To build Supermodel without network support, use:
+To build Supermodel use (Network support built in by default now, no need to specify anymore):
 
 ```
 mingw32-make -f Makefiles/Makefile.Win32
-```
-
-For network support:
-
-```
-mingw32-make -f Makefiles/Makefile.Win32 NET_BOARD=1
 ```
 
 ### Linux
@@ -76,12 +70,6 @@ And then build Supermodel:
 
 ```
 make -f Makefiles/Makefile.UNIX
-```
-
-For network support:
-
-```
-make -f Makefiles/Makefile.UNIX NET_BOARD=1
 ```
 
 ### macOS
@@ -104,12 +92,6 @@ And then build Supermodel:
 
 ```
 make -f Makefiles/Makefile.OSX
-```
-
-For network support:
-
-```
-make -f Makefiles/Makefile.OSX NET_BOARD=1
 ```
 
 ### Note: running on macOS
