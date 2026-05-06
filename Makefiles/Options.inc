@@ -52,14 +52,6 @@ ifneq ($(filter $(strip $(EXTRA_DEBUG)),0 1),$(strip $(EXTRA_DEBUG)))
 endif
 
 #
-# Enable support for Model3 Net Board emulation
-#
-NET_BOARD =
-ifneq ($(filter $(strip $(NET_BOARD)),0 1),$(strip $(NET_BOARD)))
-	override NET_BOARD =
-endif
-
-#
 # Include console-based debugger in emulator ('yes' or 'no')
 #
 ENABLE_DEBUGGER =

@@ -226,10 +226,8 @@
 #include "DriveBoard/WheelBoard.h"
 #include "Game.h"
 #include "ROMSet.h"
-#ifdef NET_BOARD
 #include "Network/NetBoard.h"
 #include "Network/SimNetBoard.h"
-#endif // NET_BOARD
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
 #include "Util/Format.h"
@@ -1017,50 +1015,39 @@ UINT8 CModel3::Read8(UINT32 addr)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.x
-#ifndef NET_BOARD
-    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0)
+    if (m_runNetBoard)
     {
-      //printf("Model3 : Read8 %x\n", addr);
-      break;
-    }
-#endif
-#ifdef NET_BOARD
-  if (m_runNetBoard)
-  {
-    switch ((addr & 0x3ffff) >> 16)
-    {
-    case 0:
-      return NetBoard->ReadCommRAM8((addr & 0xFFFF) ^ 2);
-
-    case 1: // ioreg 32bits access in 16bits environment
-      if (addr > 0xc00101ff)
+      switch ((addr & 0x3ffff) >> 16)
       {
+      case 0:
+        return NetBoard->ReadCommRAM8((addr & 0xFFFF) ^ 2);
+
+      case 1: // ioreg 32bits access in 16bits environment
+        if (addr > 0xc00101ff)
+        {
+          printf("R8 ATTENTION OUT OF RANGE\n");
+          SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
+        }
+        return (UINT8)NetBoard->ReadIORegister((addr & 0x1FF) / 2);
+
+      case 2:
+      case 3:
+        return netRAM[((addr & 0x1FFFF) / 2)];
+
+      default:
         printf("R8 ATTENTION OUT OF RANGE\n");
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
+        break;
       }
-      return (UINT8)NetBoard->ReadIORegister((addr & 0x1FF) / 2);
-
-    case 2:
-    case 3:
-      return netRAM[((addr & 0x1FFFF) / 2)];
-
-    default:
-      printf("R8 ATTENTION OUT OF RANGE\n");
-      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "Out of Range", NULL);
-      break;
     }
-  }
   else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
-#endif
   case 0xF9:
   case 0xC1:
     return SCSI.ReadRegister(addr&0xFF);
 
   // Unknown
   default:
-#ifdef NET_BOARD
     printf("CMODEL3 : unknown R8 : %x\n", addr >> 24);
-#endif
     break;
   }
 
@@ -1150,7 +1137,6 @@ UINT16 CModel3::Read16(UINT32 addr)
     }
     break;
 
-#ifdef NET_BOARD
   case 0xc0: // spikeout calls this
   // interesting : poking @4 master to same value as slave (0x100) or simply !=0 -> connected and go in game, but freeze (prints comm error) as soon as players appear after the gate
   // sort of sync ack ? who writes this 16b value ?
@@ -1167,13 +1153,10 @@ UINT16 CModel3::Read16(UINT32 addr)
     }
   }
   break;
-#endif
   // Unknown
   default:
-#ifdef NET_BOARD
     printf("CMODEL3 : unknown R16 : %x (%x)\n", addr, addr >> 24);
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Info", "CMODEL3 : Unknown R16", NULL);
-#endif
     break;
   }
 
@@ -1312,11 +1295,6 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.x
-#ifndef NET_BOARD
-    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) // check for Step 1.x
-      break;
-#endif
-#ifdef NET_BOARD
     if (m_runNetBoard)
     {
       UINT32 result;
@@ -1349,7 +1327,6 @@ UINT32 CModel3::Read32(UINT32 addr)
 
     }
     else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
-#endif
   case 0xF9:
   case 0xC1:
     data =  (SCSI.ReadRegister((addr+0)&0xFF) << 24);
@@ -1360,9 +1337,7 @@ UINT32 CModel3::Read32(UINT32 addr)
 
   // Unknown
   default:
-#ifdef NET_BOARD
     printf("CMODEL3 : unknown R32 : %x\n", addr >> 24);
-#endif
     break;
   }
 
@@ -1476,11 +1451,6 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
   // 53C810 SCSI
   case 0xC0:  // only on Step 1.x
-#ifndef NET_BOARD
-    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0)
-      goto Unknown8;
-#endif
-#ifdef NET_BOARD
     if (m_runNetBoard)
     {
       //printf("CModel 3 : write8 %x<-%x\n", addr, data);
@@ -1513,7 +1483,6 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       break;
     }
     else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
-#endif
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister(addr&0xFF,data);
@@ -1522,9 +1491,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
   // Unknown:
   default:
   Unknown8:
-#ifdef NET_BOARD
     //printf("CMODEL3 : unknown W8 : %x\n", addr >> 24); // harleyb unknown 0xF1
-#endif
     DebugLog("PC=%08X\twrite8 : %08X=%02X\n", ppc_get_pc(), addr, data);
     break;
   }
@@ -1596,10 +1563,8 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     PCIBridge.WriteRegister((addr&0xFF)+1,data&0xFF);
     break;
 
-#ifdef NET_BOARD
   case 0xC0: // skichamp only
     //printf("CModel 3 : write16 %x<-%x\n", addr, data);
-
 
     switch ((addr & 0x3ffff) >> 16)
     {
@@ -1613,7 +1578,6 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     }
 
     break;
-#endif
 
   // Unknown
   default:
@@ -1801,11 +1765,6 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
   // 53C810 SCSI
   case 0xC0:  // step 1.x only
-#ifndef NET_BOARD
-    if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0)
-      goto Unknown32;
-#endif
-#ifdef NET_BOARD
     if (m_runNetBoard)
     {
       UINT32 temp;
@@ -1838,7 +1797,6 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
       break;
     }
     else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
-#endif
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
@@ -1850,9 +1808,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
   // Unknown
   default:
   Unknown32:
-#ifdef NET_BOARD
-      if (m_runNetBoard) printf("CMODEL3 : unknown W32 : %x (%x) data=%d\n", addr,addr >> 24,data);
-#endif
+    if (m_runNetBoard) printf("CMODEL3 : unknown W32 : %x (%x) data=%d\n", addr,addr >> 24,data);
     //printf("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     DebugLog("PC=%08X\twrite32: %08X=%08X\n", ppc_get_pc(), addr, data);
     break;
@@ -2023,10 +1979,8 @@ void CModel3::RunFrame(void)
     if (m_gpuMultiThreaded)
       SyncGPUs();
 
-#ifdef NET_BOARD
     if (NetBoard->IsRunning() && m_config["SimulateNet"].ValueAs<bool>())
         RunNetBoardFrame();
-#endif
   }
   else
   {
@@ -2037,10 +1991,8 @@ void CModel3::RunFrame(void)
     RunSoundBoardFrame();
     if (DriveBoard->IsAttached())
       RunDriveBoardFrame();
-#ifdef NET_BOARD
     if (NetBoard->IsRunning())
       RunNetBoardFrame();
-#endif
   }
 
   timings.frameTicks = CThread::GetTicks() - start;
@@ -2228,12 +2180,10 @@ void CModel3::RunDriveBoardFrame(void)
   timings.drvTicks = CThread::GetTicks() - start;
 }
 
-#ifdef NET_BOARD
 void CModel3::RunNetBoardFrame(void)
 {
   NetBoard->RunFrame();
 }
-#endif
 
 bool CModel3::StartThreads(void)
 {
@@ -2877,10 +2827,8 @@ void CModel3::Reset(void)
   timings.renderTicks = 0;
   timings.sndTicks = 0;
   timings.drvTicks = 0;
-#ifdef NET_BOARD
   timings.netTicks = 0;
   NetBoard->Reset();
-#endif
   timings.frameTicks = 0;
   timings.frameId = 0;
   
@@ -3094,7 +3042,6 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   std::cout << std::endl;
 
   m_game = game;
-#ifdef NET_BOARD
   NetBoard->GetGame(m_game);
   if (Result::OKAY != NetBoard->Init(netRAM, netBuffer))
   {
@@ -3102,7 +3049,7 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   }
 
   m_runNetBoard = m_game.stepping != "1.0" && NetBoard->IsAttached();
-#endif
+
   return Result::OKAY;
 }
 
@@ -3217,12 +3164,10 @@ Result CModel3::Init(void)
   PCIBus.AttachDevice(14,&SCSI);
   PCIBus.AttachDevice(16,this);
 
-#ifdef NET_BOARD
   if (m_config["SimulateNet"].ValueAs<bool>())
       NetBoard = new CSimNetBoard(m_config);
   else
       NetBoard = new CNetBoard(m_config);
-#endif // NET_BOARD
 
   DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 
@@ -3239,12 +3184,10 @@ CDriveBoard *CModel3::GetDriveBoard(void)
   return DriveBoard;
 }
 
-#ifdef NET_BOARD
 INetBoard *CModel3::GetNetBoard(void)
 {
   return NetBoard;
 }
-#endif
 
 CModel3::CModel3(Util::Config::Node &config)
   : m_config(config),
@@ -3279,10 +3222,8 @@ CModel3::CModel3(Util::Config::Node &config)
   DSB = NULL;
   DriveBoard = NULL;
 
-#ifdef NET_BOARD
   NetBoard = NULL;
   m_runNetBoard = false;
-#endif
 
   securityPtr = 0;
 
@@ -3381,13 +3322,11 @@ CModel3::~CModel3(void)
       DriveBoard = NULL;
   }
 
-#ifdef NET_BOARD
   if (NetBoard != NULL)
   {
       delete NetBoard;
       NetBoard = NULL;
   }
-#endif
 
   Inputs = NULL;
   Outputs = NULL;

@@ -637,6 +637,9 @@
     <ClInclude Include="..\Src\OSD\Windows\WinOutputs.h">
       <Filter>Header Files\OSD\Windows</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\OSD\SDL\NetOutputs.h">
+      <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
     <ClInclude Include="..\Src\Pkgs\glew.h">
       <Filter>Header Files\Pkgs</Filter>
     </ClInclude>

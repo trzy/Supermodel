@@ -41,9 +41,7 @@
 #include "TileGen.h"
 #include "DriveBoard/DriveBoard.h"
 #include "CPU/PowerPC/ppc.h"
-#ifdef NET_BOARD
 #include "Network/INetBoard.h"
-#endif // NET_BOARD
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
 #include "OSD/Thread.h"
@@ -61,9 +59,7 @@ struct FrameTimings
   UINT32 renderTicks;
   UINT32 sndTicks;
   UINT32 drvTicks;
-#ifdef NET_BOARD
   UINT32 netTicks;
-#endif
   UINT32 frameTicks;
   UINT64 frameId;
 };
@@ -150,7 +146,6 @@ public:
    */
   CDriveBoard *GetDriveBoard(void);
 
-#ifdef NET_BOARD
   /*
   * GetNetBoard(void):
   *
@@ -160,7 +155,6 @@ public:
   *    Pointer to CNetBoard or CSimNetBoard object.
   */
   INetBoard * GetNetBoard(void);
-#endif
 
   /*
    * DumpTimings(void):
@@ -211,9 +205,7 @@ private:
   void SyncGPUs(void);                                // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
-#ifdef NET_BOARD
   void RunNetBoardFrame(void);                        // Runs net board for a frame
-#endif
 
   bool    StartThreads(void);                         // Starts all threads
   bool    StopThreads(void);                          // Stops all threads
@@ -325,10 +317,8 @@ private:
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
   SuperAA     *m_superAA;
-#ifdef NET_BOARD
   INetBoard   *NetBoard;      // Net board
-  bool		m_runNetBoard;
-#endif
+  bool		    m_runNetBoard;
 };
 
 

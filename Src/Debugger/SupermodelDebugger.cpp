@@ -22,7 +22,6 @@
 /*
  * SupermodelDebugger.cpp
  */
-
 #ifdef SUPERMODEL_DEBUGGER
 
 #include "SupermodelDebugger.h"
@@ -32,9 +31,7 @@
 #include "ConsoleDebugger.h"
 #include "CPUDebug.h"
 #include "Label.h"
-#ifdef NET_BOARD
 #include "Network/NetBoard.h"
-#endif // NET_BOARD
 #include "CPU/Musashi68KDebug.h"
 #include "CPU/PPCDebug.h"
 #include "CPU/Z80Debug.h"
@@ -78,13 +75,17 @@ namespace Debugger
 		cpu->AddRegion(0x90000000, 0x9000000B, false, false, "Real3D VROM Texture Port");
 		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
 		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
-#ifndef NET_BOARD
-		cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI (Step 1.x)");
-#endif
-#ifdef NET_BOARD
-		cpu->AddRegion(0xC0000000, 0xC000FFFF, false, false, "Netboard Shared RAM (Step 1.5+)");
-		cpu->AddRegion(0xC0020000, 0xC002FFFF, false, false, "Netboard Program RAM (Step 1.5+)");
-#endif
+		if (!model3->GetGame().netboard_present)
+		{
+			// Netboard not present, SCSI is at 0xC0000000.
+			cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI (Step 1.x)");
+		}
+		else
+		{
+			// Netboard present, 0xC0000000 is used for netboard RAM.
+			cpu->AddRegion(0xC0000000, 0xC000FFFF, false, false, "Netboard Shared RAM (Step 1.5+)");
+			cpu->AddRegion(0xC0020000, 0xC002FFFF, false, false, "Netboard Program RAM (Step 1.5+)");
+		}
 		cpu->AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI (Step 1.x) (Lost World expects it here)");
 		cpu->AddRegion(0xC2000000, 0xC20000FF, false, false, "Real3D DMA (Step 2.x)");
 		cpu->AddRegion(0xF0040000, 0xF004003F, false, false, "Input (Controls) Registers");
@@ -312,7 +313,6 @@ namespace Debugger
 		return cpu;
 	}
 
-#ifdef NET_BOARD
 	CCPUDebug *CSupermodelDebugger::CreateNetBoardCPUDebug(::CModel3 * model3)
 	{
 		CNetBoard *netBrd = dynamic_cast<CNetBoard*>(model3->GetNetBoard());
@@ -336,7 +336,6 @@ namespace Debugger
 
 		return cpu;
 	}
-#endif
 
 	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, std::shared_ptr<CLogger> logger) :
 		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger),
@@ -365,11 +364,9 @@ namespace Debugger
 		cpu = CreateDriveBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
 
-#ifdef NET_BOARD
 		// Add net board CPU (if attached)
 		cpu = CreateNetBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
-#endif
 
 	}
 

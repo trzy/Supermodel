@@ -95,9 +95,7 @@ else
 	SDL2_LIBS = $(shell sdl2-config --static-libs | sed 's/-mwindows//g')
 	SDL2_CFLAGS = $(shell sdl2-config --cflags)
 endif
-ifeq ($(strip $(NET_BOARD)),1)
-	SDL2_LIBS += -lSDL2_net -liphlpapi
-endif
+SDL2_LIBS += -lSDL2_net -liphlpapi
 
 #
 # MinGW/Windows-specific

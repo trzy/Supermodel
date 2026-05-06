@@ -53,7 +53,6 @@
 // scud canceled network, reset
 // dirtdlvs starts to run, this is at least 1 good news (add skichamp & harley)
 
-// add NET_BOARD for building
 // do not forget -no-threads when launching
 //
 // in supermodel.ini
