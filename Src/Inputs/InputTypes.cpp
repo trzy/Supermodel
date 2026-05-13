@@ -155,8 +155,8 @@ CGearShift4Input::CGearShift4Input(const char *inputId, const char *inputLabel, 
 		m_shift1Input(shift1Input), m_shift2Input(shift2Input), m_shift3Input(shift3Input), m_shift4Input(shift4Input), m_shiftNInput(shiftNInput),
 		m_shiftUpInput(shiftUpInput), m_shiftDownInput(shiftDownInput)
 {
-	// Initialize to gear 1
-	prevValue = value = 1;
+	// Initialize to gear 0
+	prevValue = value = 0;
 }
 
 void CGearShift4Input::Poll()
