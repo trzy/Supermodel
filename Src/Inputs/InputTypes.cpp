@@ -163,7 +163,7 @@ void CGearShift4Input::Poll()
 {
 	prevValue = value;
 
-	// Gears (values 1-4) are set by pressing a button (lower gears have priority) and "stick" until a shift to another gear is made.
+	// Gears (values 1-4) are set by holding a button (lower gears have priority).
 	// Neutral is selected by releasing all gear inputs (value 0).
 	if		(m_shift1Input->Released() || m_shift2Input->Released() || m_shift3Input->Released() || m_shift4Input->Released()) value = 0;
 	else if (m_shift1Input->Pressed()) value = 1;
