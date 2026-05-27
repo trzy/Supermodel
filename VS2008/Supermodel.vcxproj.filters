@@ -497,6 +497,9 @@
     <ClCompile Include="..\Src\Pkgs\imgui\imgui_impl_opengl3.cpp">
       <Filter>Source Files\Pkgs\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\SDL\NetOutputs.cpp">
+      <Filter>Source Files\OSD\SDL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
