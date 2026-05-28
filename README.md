@@ -56,6 +56,9 @@ To build Supermodel use (Network support built in by default now, no need to spe
 mingw32-make -f Makefiles/Makefile.Win32
 ```
 
+If you wish to build via Visual Studio 202x,
+Make sure ```"SDL2-2.30.8"``` ```"SDL2_net-2.2.0"``` ```"zlib-1.2.4"``` source code (unzipped) are located in Supermodel > Libraries
+
 ### Linux
 
 Ensure SDL2 is installed. Most package managers ought to have this available. For example, on Ubuntu, it should be sufficient to run:

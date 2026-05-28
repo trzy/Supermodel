@@ -25,6 +25,9 @@
 #define FSEEKO_FUNC(stream, offset, origin) fseeko64(stream, offset, origin)
 #endif
 
+#ifndef z_off64_t
+  #define z_off64_t __int64
+#endif
 
 #include "ioapi.h"
 
