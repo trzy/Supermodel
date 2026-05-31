@@ -608,7 +608,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
   	  // probably to allow users to define inverted controls for this game only,
   	  // which means the input system must support loading per-game config (not
   	  // all analog_gun games require axis inversion to be playable).
-	  if (m_game.name == "lostwsga" || m_game.name == "lostwsgo")
+	  if (m_game.name == "lostwsga" || m_game.name == "lostwsgp")
 	  { // to do, not a string compare
         adc[0] =       (UINT8)Inputs->analogGunX[0]->value; // order is different for some reason in lost world
         adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value; // why are values inverted? is this the wrong place to fix this
