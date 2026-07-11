@@ -841,7 +841,7 @@ static bool InitializePointerOverlay(void)
     return true;
 
   static const char *vertex_source = R"glsl(
-    #version 130
+    #version 410 core
     in vec2 in_pos;
     uniform vec2 u_resolution;
 
@@ -855,7 +855,7 @@ static bool InitializePointerOverlay(void)
   )glsl";
 
   static const char *fragment_source = R"glsl(
-    #version 130
+    #version 410 core
     uniform vec4 u_color;
     out vec4 frag_color;
 
