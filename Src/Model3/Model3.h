@@ -156,6 +156,13 @@ public:
   UINT16 *GetEEPROMData(void);
   const UINT16 *GetEEPROMData(void) const;
   size_t GetEEPROMSize(void) const;
+  // Live 8 MB PowerPC main RAM, exposed via RETRO_MEMORY_SYSTEM_RAM for frontend
+  // memory inspection / analysis (NOT battery-backed persistence). The buffer is
+  // byte-swapped for a little-endian host: a big-endian PPC byte at address A is
+  // at data[A^3], a halfword at [A^2], a word at [A] (see Read8/Read32 below).
+  UINT8 *GetPPCRAMData(void);
+  const UINT8 *GetPPCRAMData(void) const;
+  size_t GetPPCRAMSize(void) const;
 
   /*
   * GetNetBoard(void):

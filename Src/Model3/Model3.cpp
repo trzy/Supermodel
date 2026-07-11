@@ -3214,6 +3214,21 @@ size_t CModel3::GetEEPROMSize(void) const
   return EEPROM.GetSizeBytes();
 }
 
+UINT8 *CModel3::GetPPCRAMData(void)
+{
+  return ram;
+}
+
+const UINT8 *CModel3::GetPPCRAMData(void) const
+{
+  return ram;
+}
+
+size_t CModel3::GetPPCRAMSize(void) const
+{
+  return 0x800000;  // 8 MB, matches RAM_SIZE / the SaveState ram block
+}
+
 INetBoard *CModel3::GetNetBoard(void)
 {
   return NetBoard;

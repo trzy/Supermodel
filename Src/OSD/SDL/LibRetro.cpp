@@ -2757,6 +2757,8 @@ RETRO_API void *retro_get_memory_data(unsigned id) {
       return model3->GetBackupRAMData();
     case RETRO_MEMORY_RTC:
       return model3->GetEEPROMData();
+    case RETRO_MEMORY_SYSTEM_RAM:
+      return model3->GetPPCRAMData();
     default:
       return NULL;
   }
@@ -2775,6 +2777,8 @@ RETRO_API size_t retro_get_memory_size(unsigned id) {
       return model3->GetBackupRAMSize();
     case RETRO_MEMORY_RTC:
       return model3->GetEEPROMSize();
+    case RETRO_MEMORY_SYSTEM_RAM:
+      return model3->GetPPCRAMSize();
     default:
       return 0;
   }
