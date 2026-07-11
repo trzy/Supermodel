@@ -2253,6 +2253,7 @@ RETRO_API void retro_init(void) {
   s_runtime_config.Set("NoWhiteFlash", false, "Video");
   s_runtime_config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });
   s_runtime_config.Set("WideScreen", false, "Video");
+  s_runtime_config.Set("Network", false, "Network");
   s_runtime_config.Set("SimulateNet", true, "Network");
   s_runtime_config.Set("EmulateSound", true, "Sound");
   s_runtime_config.Set("Balance", 0.0f, "Sound", -100.f, 100.f);
