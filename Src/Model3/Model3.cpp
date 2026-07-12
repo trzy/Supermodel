@@ -1258,7 +1258,7 @@ UINT32 CModel3::Read32(UINT32 addr)
     case 0xED:
     case 0xEE:
     case 0xEF:
-      if (PCIBridge.GetModel() == 0x105)
+      if (PCIBridge.GetModel() == 0x106)
         return PCIBridge.ReadPCIConfigData(32,0);
       break;
 
