@@ -16,7 +16,7 @@ bool FBO::Create(int width, int height)
 	
 	auto frameBufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);	//created FBO now disable it
+	BindSupermodelDefaultFramebuffer();	// created FBO now disable it
 
 	return frameBufferStatus == GL_FRAMEBUFFER_COMPLETE;
 }
@@ -24,7 +24,7 @@ bool FBO::Create(int width, int height)
 void FBO::Destroy()
 {
 	if (m_frameBufferID) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		BindSupermodelDefaultFramebuffer();
 		glDeleteFramebuffers(1, &m_frameBufferID);
 	}
 
@@ -48,7 +48,7 @@ void FBO::Set()
 
 void FBO::Disable()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	BindSupermodelDefaultFramebuffer();
 }
 
 GLuint FBO::GetFBOID()

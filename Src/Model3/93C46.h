@@ -30,6 +30,7 @@
 
 #include "BlockFile.h"
 #include "Types.h"
+#include <cstddef>
 
 /*
  * C93C46:
@@ -103,6 +104,16 @@ public:
 	 * other members.
 	 */
 	void Init(void);
+
+	/*
+	 * GetData(void):
+	 * GetSizeBytes(void):
+	 *
+	 * Exposes the persistent EEPROM register array for frontend memory APIs.
+	 */
+	UINT16 *GetData(void);
+	const UINT16 *GetData(void) const;
+	size_t GetSizeBytes(void) const;
 	 
 	/*
 	 * C93C46(void):

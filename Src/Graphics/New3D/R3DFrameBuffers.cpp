@@ -65,7 +65,7 @@ Result R3DFrameBuffers::CreateFBO(int width, int height)
 	// check setup was successful
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);	//created R3DFrameBuffers now disable it
+	BindSupermodelDefaultFramebuffer();	// created R3DFrameBuffers now disable it
 
 	return ((CreateFBODepthCopy(width, height) == Result::OKAY) && (fboStatus == GL_FRAMEBUFFER_COMPLETE)) ? Result::OKAY : Result::FAIL;
 }
@@ -80,7 +80,7 @@ Result R3DFrameBuffers::CreateFBODepthCopy(int width, int height)
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_renderBufferIDCopy);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	BindSupermodelDefaultFramebuffer();
 
 	// check setup was successful
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -105,7 +105,7 @@ void R3DFrameBuffers::RestoreDepth()
 void R3DFrameBuffers::DestroyFBO()
 {
 	if (m_frameBufferID) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		BindSupermodelDefaultFramebuffer();
 		glDeleteRenderbuffers(1, &m_renderBufferID);
 		glDeleteFramebuffers(1, &m_frameBufferID);
 	}
@@ -179,8 +179,7 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 	}
 	case Layer::none:
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
+		BindSupermodelDefaultFramebuffer();
 		break;
 	}
 	default:
@@ -292,6 +291,11 @@ void R3DFrameBuffers::Draw()
 	glViewport	(0, 0, m_width, m_height);			// cover the entire screen
 	glDisable	(GL_DEPTH_TEST);					// disable depth testing / writing
 	glDisable	(GL_CULL_FACE);
+#ifdef __linux__
+	// Linux libretro keeps the render scissor active from the internal pass.
+	// Disable it here so the final composite covers the whole framebuffer.
+	glDisable	(GL_SCISSOR_TEST);
+#endif
 	glBlendFunc	(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable	(GL_BLEND);
 

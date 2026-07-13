@@ -3191,6 +3191,51 @@ CDriveBoard *CModel3::GetDriveBoard(void)
   return DriveBoard;
 }
 
+UINT8 *CModel3::GetBackupRAMData(void)
+{
+  return backupRAM;
+}
+
+const UINT8 *CModel3::GetBackupRAMData(void) const
+{
+  return backupRAM;
+}
+
+size_t CModel3::GetBackupRAMSize(void) const
+{
+  return 0x20000;
+}
+
+UINT16 *CModel3::GetEEPROMData(void)
+{
+  return EEPROM.GetData();
+}
+
+const UINT16 *CModel3::GetEEPROMData(void) const
+{
+  return EEPROM.GetData();
+}
+
+size_t CModel3::GetEEPROMSize(void) const
+{
+  return EEPROM.GetSizeBytes();
+}
+
+UINT8 *CModel3::GetPPCRAMData(void)
+{
+  return ram;
+}
+
+const UINT8 *CModel3::GetPPCRAMData(void) const
+{
+  return ram;
+}
+
+size_t CModel3::GetPPCRAMSize(void) const
+{
+  return 0x800000;  // 8 MB, matches RAM_SIZE / the SaveState ram block
+}
+
 INetBoard *CModel3::GetNetBoard(void)
 {
   return NetBoard;

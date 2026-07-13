@@ -317,7 +317,7 @@ void CRender2D::Setup2D(bool isBottom)
 		glEnable	(GL_SCISSOR_TEST);
 
 		if (m_aaTarget) {
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+			BindSupermodelDefaultFramebuffer();			// restore target if needed
 		}
 	}
 
@@ -348,7 +348,7 @@ void CRender2D::DrawSurface(GLuint textureID)
 	m_drawShader.DisableShader();
 
 	if (m_aaTarget) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);			// restore target if needed
+		BindSupermodelDefaultFramebuffer();			// restore target if needed
 	}
 }
 

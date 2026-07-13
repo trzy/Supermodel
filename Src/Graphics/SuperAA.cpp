@@ -6,7 +6,9 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 	m_crtcolors(CRTcolors),
 	m_vao(0),
 	m_width(0),
-	m_height(0)
+	m_height(0),
+	m_outputWidth(0),
+	m_outputHeight(0)
 {
 	if ((m_aa > 1) || (m_crtcolors != CRTcolor::None)) {
 
@@ -14,14 +16,21 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 
 			#version 410 core
 
+			out vec2 texCoord;
+
 			void main(void)
 			{
 				const vec4 vertices[] = vec4[](vec4(-1.0, -1.0, 0.0, 1.0),
 												vec4(-1.0,  1.0, 0.0, 1.0),
 												vec4( 1.0, -1.0, 0.0, 1.0),
 												vec4( 1.0,  1.0, 0.0, 1.0));
+				const vec2 texCoords[] = vec2[](vec2(0.0, 0.0),
+												vec2(0.0, 1.0),
+												vec2(1.0, 0.0),
+												vec2(1.0, 1.0));
 
 				gl_Position = vertices[gl_VertexID % 4];
+				texCoord = texCoords[gl_VertexID % 4];
 			}
 
 			)glsl";
@@ -43,6 +52,7 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 
 		// inputs
 		uniform sampler2D tex1;			// base tex
+		in vec2 texCoord;
 
 		// outputs
 		out vec4 fragColor;
@@ -111,18 +121,8 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 
 		vec3 GetTextureValue(sampler2D s)
 		{
-			ivec2 texPos	= ivec2(gl_FragCoord.xy /*-vec2(0.5)*/) * aa;
-			vec3 texColour	= vec3(0.0);
-
-			for(int i=0; i < aa; i++) {
-				for(int j=0; j < aa; j++) {
-					texColour += texelFetch(s,ivec2(texPos.x+i,texPos.y+j),0).rgb;
-				}
-			}
-
-			texColour *= 1.0/float(aa * aa);
-
-			return texColour;
+			vec2 clampedCoord = clamp(texCoord, vec2(0.0), vec2(1.0));
+			return texture(s, clampedCoord).rgb;
 		}
 
 		float sRGB(float color)
@@ -202,7 +202,15 @@ void SuperAA::Init(int width, int height)
 
 		m_width = width;
 		m_height = height;
+		m_outputWidth = width;
+		m_outputHeight = height;
 	}
+}
+
+void SuperAA::SetOutputSize(int width, int height)
+{
+	m_outputWidth = width > 0 ? width : m_width;
+	m_outputHeight = height > 0 ? height : m_height;
 }
 
 void SuperAA::Draw()
@@ -215,7 +223,7 @@ void SuperAA::Draw()
 
 		glBindTexture(GL_TEXTURE_2D, m_fbo.GetTextureID());
 		glBindVertexArray(m_vao);
-		glViewport(0, 0, m_width, m_height);
+		glViewport(0, 0, m_outputWidth > 0 ? m_outputWidth : m_width, m_outputHeight > 0 ? m_outputHeight : m_height);
 		m_shader.EnableShader();
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		m_shader.DisableShader();

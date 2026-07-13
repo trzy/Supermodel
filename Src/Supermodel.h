@@ -65,6 +65,10 @@
 	#define rotl(val, shift) val = (val>>shift)|(val<<(32-shift))
 #endif
 
+#ifdef SUPERMODEL_LIBRETRO
+void BindSupermodelDefaultFramebuffer(void);
+#endif
+
 /* 
  * Fundamental Data Types:
  *

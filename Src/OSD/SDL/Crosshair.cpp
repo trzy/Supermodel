@@ -45,32 +45,35 @@ Result CCrosshair::Init()
     m_isBitmapCrosshair = false;
   }
 
-  SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
-  SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
-  if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
-      return Result::FAIL;
+  if (m_isBitmapCrosshair)
+  {
+    SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
+    SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
+    if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
+        return Result::FAIL;
 
-  m_p1CrosshairW = surfaceCrosshairP1->w;
-  m_p1CrosshairH = surfaceCrosshairP1->h;
-  m_p2CrosshairW = surfaceCrosshairP2->w;
-  m_p2CrosshairH = surfaceCrosshairP2->h;
+    m_p1CrosshairW = surfaceCrosshairP1->w;
+    m_p1CrosshairH = surfaceCrosshairP1->h;
+    m_p2CrosshairW = surfaceCrosshairP2->w;
+    m_p2CrosshairH = surfaceCrosshairP2->h;
 
-  glGenTextures(2, m_crosshairTexId);
+    glGenTextures(2, m_crosshairTexId);
 
-  glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-  glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-  glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-  SDL_FreeSurface(surfaceCrosshairP1);
-  SDL_FreeSurface(surfaceCrosshairP2);
+    SDL_FreeSurface(surfaceCrosshairP1);
+    SDL_FreeSurface(surfaceCrosshairP2);
+  }
 
   // Get DPI
   SDL_GetDisplayDPI(0, &m_diagDpi, &m_hDpi, &m_vDpi);
@@ -256,6 +259,18 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
 {
   bool offscreenTrigger[2]{false};
   float x[2]{ 0.0f }, y[2]{ 0.0f };
+  GLint saved_viewport[4] = { 0, 0, 0, 0 };
+  GLboolean saved_scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
+  GLint saved_scissor_box[4] = { 0, 0, 0, 0 };
+  GLboolean saved_blend_enabled = glIsEnabled(GL_BLEND);
+  GLboolean saved_depth_enabled = glIsEnabled(GL_DEPTH_TEST);
+  GLint saved_program = 0;
+  GLint saved_vao = 0;
+
+  glGetIntegerv(GL_VIEWPORT, saved_viewport);
+  glGetIntegerv(GL_SCISSOR_BOX, saved_scissor_box);
+  glGetIntegerv(GL_CURRENT_PROGRAM, &saved_program);
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &saved_vao);
 
   // Crosshairs can be enabled/disabled at run-tim
   unsigned crosshairs = m_config["Crosshairs"].ValueAs<unsigned>();
@@ -320,6 +335,26 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
   {
     DrawCrosshair(m, x[1], y[1], 1, xRes, yRes);
   }
+
+  if (saved_depth_enabled == GL_TRUE)
+    glEnable(GL_DEPTH_TEST);
+  else
+    glDisable(GL_DEPTH_TEST);
+
+  if (saved_blend_enabled == GL_TRUE)
+    glEnable(GL_BLEND);
+  else
+    glDisable(GL_BLEND);
+
+  if (saved_scissor_enabled == GL_TRUE)
+    glEnable(GL_SCISSOR_TEST);
+  else
+    glDisable(GL_SCISSOR_TEST);
+
+  glViewport(saved_viewport[0], saved_viewport[1], saved_viewport[2], saved_viewport[3]);
+  glScissor(saved_scissor_box[0], saved_scissor_box[1], saved_scissor_box[2], saved_scissor_box[3]);
+  glUseProgram((GLuint)saved_program);
+  glBindVertexArray((GLuint)saved_vao);
 
   //PrintGLError(glGetError());
 }

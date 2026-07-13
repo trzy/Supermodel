@@ -466,7 +466,7 @@ void CNew3D::RenderFrame(void)
 		glClear(GL_COLOR_BUFFER_BIT);
 		
 		if (m_aaTarget) {
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			BindSupermodelDefaultFramebuffer();
 		}
 
 		return;
@@ -556,7 +556,7 @@ void CNew3D::RenderFrame(void)
 	m_r3dFrameBuffers.Draw();
 
 	if (m_aaTarget) {
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		BindSupermodelDefaultFramebuffer();
 	}
 }
 

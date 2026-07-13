@@ -36,6 +36,10 @@
 #include GLEW_INCLUDE
 #endif
 
+#if defined(GLEW_LIBRETRO)
+#include "libretro.h"
+#endif
+
 #if defined(GLEW_OSMESA)
 #  define GLAPI extern
 #  include <GL/osmesa.h>
@@ -164,6 +168,9 @@ void* NSGLGetProcAddress (const GLubyte *name)
 #  define glewGetProcAddress(name) OSMesaGetProcAddress((const char *)name)
 #elif defined(GLEW_EGL)
 #  define glewGetProcAddress(name) eglGetProcAddress((const char *)name)
+#elif defined(GLEW_LIBRETRO)
+extern retro_proc_address_t RetroArchGetProcAddress(const GLubyte *name);
+#  define glewGetProcAddress(name) RetroArchGetProcAddress((const GLubyte *)name)
 #elif defined(_WIN32)
 #  define glewGetProcAddress(name) wglGetProcAddress((LPCSTR)name)
 #elif defined(__APPLE__) && !defined(GLEW_APPLE_GLX)
@@ -20865,6 +20872,9 @@ GLenum GLEWAPIENTRY glewInit (void)
 #endif
   r = glewContextInit();
   if ( r != 0 ) return r;
+#if defined(GLEW_LIBRETRO)
+  return r;
+#else
 #if defined(GLEW_EGL)
   getCurrentDisplay = (PFNEGLGETCURRENTDISPLAYPROC) glewGetProcAddress("eglGetCurrentDisplay");
   return eglewInit(getCurrentDisplay());
@@ -20877,6 +20887,7 @@ GLenum GLEWAPIENTRY glewInit (void)
 #else
   return r;
 #endif /* _WIN32 */
+#endif /* GLEW_LIBRETRO */
 }
 
 #if defined(_WIN32) && defined(GLEW_BUILD) && defined(__GNUC__)

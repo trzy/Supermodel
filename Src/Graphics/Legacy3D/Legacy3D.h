@@ -29,6 +29,7 @@
 #ifndef INCLUDED_LEGACY3D_H
 #define INCLUDED_LEGACY3D_H
 
+#include "Supermodel.h"
 #include "TextureRefs.h"
 #include "Graphics/IRender3D.h"
 #include <GL/glew.h>

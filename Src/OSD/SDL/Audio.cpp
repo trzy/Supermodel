@@ -86,8 +86,8 @@ static int bytes_per_sample_host = BYTES_PER_SAMPLE_M3;
 static int bytes_per_frame_host = BYTES_PER_FRAME_M3;
 
 // Balance percents for mixer
-float BalanceLeftRight = 0; // 0 mid balance, 100: left only,  -100:right only 
-float BalanceFrontRear = 0; // 0 mid balance, 100: front only, -100:right only 
+float BalanceLeftRight = 0; // 0 mid balance, 100: left only,  -100:right only
+float BalanceFrontRear = 0; // 0 mid balance, 100: front only, -100:right only
 // Mixer factor (depends on values above)
 float balanceFactorFrontLeft  = 1.0f;
 float balanceFactorFrontRight = 1.0f;
@@ -533,6 +533,7 @@ Result OpenAudio(const Util::Config::Node& config)
     return Result::OKAY;
 }
 
+#ifndef SUPERMODEL_LIBRETRO
 bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, bool flipStereo)
 {
     //printf("OutputAudio(%u) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
@@ -680,6 +681,7 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
     // Return whether buffer is half full
     return bufferFull;
 }
+#endif
 
 void CloseAudio()
 {

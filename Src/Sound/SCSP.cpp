@@ -1759,6 +1759,11 @@ void SCSP_MidiOutW(BYTE val)
 		MIDILock->Unlock();
 }
 
+void SCSP_SetLegacySound(bool enabled)
+{
+	legacySound = enabled;
+}
+
 
 unsigned char SCSP_MidiOutR()
 {
