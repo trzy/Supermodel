@@ -53,17 +53,24 @@ static char *LoadShaderSource(const char *file)
 {
 	FILE	*fp;
 	char	*buf;
-	int		size;
+	long	size;
 
 	// Open shader and get the file size
 	fp = fopen(file, "r");
-	if (NULL == fp)
+	if (nullptr == fp)
 	{
 		ErrorLog("Unable to open shader source file: %s", file);
-		return NULL;
+		return nullptr;
 	}
+
 	fseek(fp, 0, SEEK_END);
 	size = ftell(fp);
+
+	// -1 means an error has happened
+	if (size == -1) { 
+		return nullptr; 
+	}
+
 	rewind(fp);
 
 	// Allocate memory and read it in
@@ -75,8 +82,8 @@ static char *LoadShaderSource(const char *file)
 		return NULL;
 	}
 	buf[size] = '\0';	// for safety, actual size might be smaller once newline characters are converted
-	size = fread(buf, sizeof(char), size, fp);
-	buf[size] = '\0';
+	auto read = fread(buf, sizeof(char), size, fp);
+	buf[read] = '\0';
 	
 	fclose(fp);
 	return buf;

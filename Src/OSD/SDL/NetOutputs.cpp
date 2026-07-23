@@ -174,7 +174,7 @@ bool CNetOutputs::SendUdpBroadcastWithId()
     std::string lines = "mame_start" + m_separatorIdAndValue + GetGame().name + m_frameEnding + "tcp" + m_separatorIdAndValue + std::to_string(m_tcpPort) + m_frameEnding;
 
     memcpy(packet->data, lines.c_str(), lines.length());
-    packet->len = lines.length();
+    packet->len = (int)lines.length();
     packet->address = broadcastAddr;
 
     // Send the broadcast packet.
@@ -290,7 +290,7 @@ bool CNetOutputs::SendPauseString(RegisteredClientTcp& client, bool paused)
 
 bool CNetOutputs::SendTcpData(RegisteredClientTcp& client, const std::string& data)
 {
-    auto sentDataLen = SDLNet_TCP_Send(client.ClientSocket, data.c_str(), data.length());
+    auto sentDataLen = SDLNet_TCP_Send(client.ClientSocket, data.c_str(), (int)data.length());
     DebugLog("Sent to client: %s", data.c_str());
     DebugLog("Bytes sent: %d", sentDataLen);
     DebugLog("Expected bytes: %zu", data.length());

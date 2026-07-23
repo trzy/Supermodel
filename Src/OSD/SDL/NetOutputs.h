@@ -105,9 +105,9 @@ private:
 	std::string m_separatorIdAndValue = NET_OUTPUTS_DEFAULT_SEPARATOR_ID_AND_VALUE;
 	unsigned int m_maxClients = NET_OUTPUTS_MAX_CLIENTS;
 	std::atomic<bool> m_running = false;
-	std::vector<RegisteredClientTcp> m_clients{};
-	TCPsocket m_serverSocket;
-    SDLNet_SocketSet m_tcpSocketSet;
+	std::vector<RegisteredClientTcp> m_clients;
+	TCPsocket m_serverSocket{};
+	SDLNet_SocketSet m_tcpSocketSet{};
 	std::thread m_tcpServerThread;
 
 	/*

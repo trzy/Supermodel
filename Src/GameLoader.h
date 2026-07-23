@@ -15,10 +15,10 @@ private:
   struct File
   {
     typedef std::shared_ptr<File> ptr_t;
-    uint32_t offset;
     std::string filename;
-    uint32_t crc32;
-    bool has_crc32;
+    uint32_t offset = 0;
+    uint32_t crc32 = 0;
+    bool has_crc32 = false;
     static ptr_t Create(const GameLoader &loader, const Util::Config::Node &file_node);
     bool Matches(const std::string &filename, uint32_t crc32) const;
     bool operator==(const File &rhs) const;
@@ -29,10 +29,10 @@ private:
   {
     typedef std::shared_ptr<Region> ptr_t;
     std::string region_name;
-    size_t stride;
-    size_t chunk_size;
+    uint32_t stride = 0;
+    uint32_t chunk_size = 0;
     std::string byte_layout;
-    bool required;
+    bool required = false;
     std::vector<File::ptr_t> files;
     static ptr_t Create(const GameLoader &loader, const Util::Config::Node &region_node);
     bool AttribsMatch(const ptr_t &other) const;
@@ -59,7 +59,7 @@ private:
     unzFile zf = nullptr;
     std::string zipfilename;  // zip archive
     std::string filename;     // file inside the zip archive
-    size_t uncompressed_size = 0;
+    uint32_t uncompressed_size = 0;
     uint32_t crc32 = 0;
   };
 
@@ -82,7 +82,7 @@ private:
   bool LoadZipArchive(ZipArchive *zip, const std::string &zipfilename) const;
   const ZippedFile *LookupFile(const File::ptr_t &file, const ZipArchive &zip) const;
   bool FileExistsInZipArchive(const File::ptr_t &file, const ZipArchive &zip) const;
-  bool LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip) const;
+  bool LoadZippedFile(std::shared_ptr<uint8_t> *buffer, uint32_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip) const;
   static bool MissingAttrib(const GameLoader &loader, const Util::Config::Node &node, const std::string &attribute);
   bool LoadGamesFromXML(const Util::Config::Node &xml);
   bool MergeChildrenWithParents();

@@ -1263,7 +1263,7 @@ void CDirectInputSystem::OpenJoysticks()
 			}
 		
 			// Keep track of DirectInput device number
-			it->dInputNum = m_di8Joysticks.size();
+			it->dInputNum = (int)m_di8Joysticks.size();
 
 			m_di8Joysticks.push_back(joystick);
 		}
@@ -1629,7 +1629,7 @@ int CDirectInputSystem::GetKeyIndex(const char *keyName)
 	for (size_t i = 0; i < NUM_DI_KEYS; i++)
 	{
 		if (stricmp(keyName, s_keyMap[i].keyName) == 0)
-			return i;
+			return (int)i;
 	}
 	return -1;
 }
@@ -2003,19 +2003,19 @@ CInputSource *CDirectInputSystem::CreateAnyMouseSource(EMousePart msePart)
 int CDirectInputSystem::GetNumKeyboards() const
 {
 	// If RawInput enabled, then return number of keyboards found.  Otherwise, return ANY_KEYBOARD as DirectInput cannot handle multiple keyboards
-	return (m_useRawInput ? m_rawKeyboards.size() : ANY_KEYBOARD);
+	return (m_useRawInput ? (int)m_rawKeyboards.size() : ANY_KEYBOARD);
 }
 
 int CDirectInputSystem::GetNumMice() const
 {
 	// If RawInput enabled, then return number of mice found.  Otherwise, return ANY_MOUSE as DirectInput cannot handle multiple keyboards
-	return (m_useRawInput ? m_rawMice.size() : ANY_MOUSE);
+	return (m_useRawInput ? (int)m_rawMice.size() : ANY_MOUSE);
 }
 
 int CDirectInputSystem::GetNumJoysticks() const
 {
 	// Return number of joysticks found
-	return m_diJoyInfos.size();
+	return (int)m_diJoyInfos.size();
 }
 
 const KeyDetails *CDirectInputSystem::GetKeyDetails(int kbdNum)

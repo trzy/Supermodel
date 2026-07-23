@@ -35,8 +35,6 @@
 
 #include <vector>
 
-using namespace std;
-
 // Struct that represents a client (eg MAMEHooker) currently registered with the emulator
 struct RegisteredClient
 {
@@ -113,7 +111,7 @@ private:
 	UINT m_unregClient;
 	UINT m_getIdString;
 
-	vector<RegisteredClient> m_clients;
+	std::vector<RegisteredClient> m_clients;
 
 	/*
 	 * AllocateMessageId(regId, str):

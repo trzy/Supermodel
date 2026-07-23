@@ -63,7 +63,7 @@ unsigned CBlockFile::ReadBytes(void *data, uint32_t numBytes)
 {
   if (NULL == fp)
     return 0;
-  return fread(data, sizeof(uint8_t), numBytes, fp);
+  return (uint32_t)fread(data, sizeof(uint8_t), numBytes, fp);
 }
 
 unsigned CBlockFile::ReadDWord(uint32_t *data)
@@ -124,8 +124,8 @@ void CBlockFile::WriteBlockHeader(const std::string &name, const std::string &co
   WriteDWord(0);  // will be automatically updated as we write the file
   
   // Write name and comment lengths
-  WriteDWord(name.size() + 1);
-  WriteDWord(comment.size() + 1);
+  WriteDWord((uint32_t)name.size() + 1);
+  WriteDWord((uint32_t)comment.size() + 1);
   Write(name);
   Write(comment);
   
@@ -181,7 +181,7 @@ void CBlockFile::Write(bool value)
 void CBlockFile::Write(const std::string &str)
 {
   if (mode == 'w')
-    WriteBytes(str.c_str(), str.length() + 1);
+    WriteBytes(str.c_str(), (uint32_t)str.length() + 1);
 }
 
 void CBlockFile::NewBlock(const std::string &name, const std::string &comment)

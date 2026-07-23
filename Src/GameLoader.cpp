@@ -90,7 +90,7 @@ const GameLoader::ZippedFile *GameLoader::LookupFile(const File::ptr_t &file, co
   return nullptr;
 }
 
-bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip) const
+bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, uint32_t *file_size, const GameLoader::File::ptr_t &file, const ZipArchive &zip) const
 {
   // Locate file
   const ZippedFile *zipped_file = LookupFile(file, zip);
@@ -110,7 +110,7 @@ bool GameLoader::LoadZippedFile(std::shared_ptr<uint8_t> *buffer, size_t *file_s
   }
   *file_size = zipped_file->uncompressed_size;
   buffer->reset(new uint8_t[*file_size], std::default_delete<uint8_t[]>());
-  size_t bytes_read = (size_t) unzReadCurrentFile(zipped_file->zf, buffer->get(), *file_size);
+  auto bytes_read = unzReadCurrentFile(zipped_file->zf, buffer->get(), *file_size);
   if (bytes_read != *file_size)
   {
     ErrorLog("Unable to read '%s' from '%s'. Is zip file corrupt?", zipped_file->filename.c_str(), zipped_file->zipfilename.c_str());
@@ -182,14 +182,14 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
 
   region->region_name = region_node["name"].Value<std::string>();
 
-  region->stride = region_node["stride"].ValueAs<size_t>();
+  region->stride = region_node["stride"].ValueAs<uint32_t>();
   if (region->stride == 0)
   {
     ErrorLog("%s: '%s' stride length must be greater than 0.", loader.m_xml_filename.c_str(), region->region_name.c_str());
     return ptr_t();
   }
 
-  region->chunk_size = region_node["chunk_size"].ValueAs<size_t>();
+  region->chunk_size = region_node["chunk_size"].ValueAs<uint32_t>();
   if (region->chunk_size == 0)
   {
     ErrorLog("%s: '%s' chunk size must be greater than 0.", loader.m_xml_filename.c_str(), region->region_name.c_str());
@@ -214,9 +214,9 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
       }
 
       std::string byte_layout;
-      for (size_t i = 0; i < region->stride; i++)
+      for (uint32_t i = 0; i < region->stride; i++)
       {
-        byte_layout += '0' + (i ^ 1);
+        byte_layout += '0' + char(i ^ 1);
       }
       region->byte_layout = byte_layout;
     }
@@ -859,7 +859,7 @@ bool GameLoader::LoadRegion(ROM *rom, const GameLoader::Region::ptr_t &region, c
   for (auto &file: region->files)
   {
     std::shared_ptr<uint8_t> tmp;
-    size_t file_size;
+    uint32_t file_size;
     error |= LoadZippedFile(&tmp, &file_size, file, zip);
     if (!error)
     {
