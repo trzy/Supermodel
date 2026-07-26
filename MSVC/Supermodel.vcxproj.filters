@@ -497,6 +497,9 @@
     <ClCompile Include="..\Src\OSD\SDL\NetOutputs.cpp">
       <Filter>Source Files\OSD\SDL</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Model3\DriveBoard\Z80CTC.cpp">
+      <Filter>Source Files\Model3\DriveBoard</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\Src\CPU\68K\Turbo68K\Turbo68K.asm">
@@ -912,6 +915,9 @@
     </ClInclude>
     <ClInclude Include="..\Src\OSD\SDL\Main.h">
       <Filter>Header Files\OSD\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\DriveBoard\Z80CTC.h">
+      <Filter>Header Files\Model3\DriveBoard</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -161,7 +161,6 @@ protected:
   void Disable(void);
 
 private:
-  void LoadLegacyState(CBlockFile *SaveState);
 
   UINT8 m_seg1Digit1;   // Current value of left digit on 7-segment display 1
   UINT8 m_seg1Digit2;   // Current value of right digit on 7-segment display 1

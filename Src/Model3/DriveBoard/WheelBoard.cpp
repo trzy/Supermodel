@@ -53,7 +53,7 @@ void CWheelBoard::SaveState(CBlockFile *SaveState)
   CDriveBoard::SaveState(SaveState);
 
   SaveState->NewBlock("WheelBoard", __FILE__);
-  SaveState->Write(&m_simulated, sizeof(m_simulated));
+  SaveState->Write(m_simulated);
   if (m_simulated)
   {
     // TODO - save board simulation state
@@ -61,13 +61,13 @@ void CWheelBoard::SaveState(CBlockFile *SaveState)
   else
   {
     // Save DIP switches and digit displays
-    SaveState->Write(&m_dip1, sizeof(m_dip1));
-    SaveState->Write(&m_dip2, sizeof(m_dip2));
+    SaveState->Write(m_dip1);
+    SaveState->Write(m_dip2);
 
-    SaveState->Write(&m_adcPortRead, sizeof(m_adcPortRead));
-    SaveState->Write(&m_adcPortBit, sizeof(m_adcPortBit));
-    SaveState->Write(&m_uncenterVal1, sizeof(m_uncenterVal1));
-    SaveState->Write(&m_uncenterVal2, sizeof(m_uncenterVal2));
+    SaveState->Write(m_adcPortRead);
+    SaveState->Write(m_adcPortBit);
+    SaveState->Write(m_uncenterVal1);
+    SaveState->Write(m_uncenterVal2);
   }
 }
 
@@ -75,8 +75,6 @@ void CWheelBoard::LoadState(CBlockFile *SaveState)
 {
   if (SaveState->FindBlock("WheelBoard") != Result::OKAY)
   {
-    // Fall back to old "DriveBoad" state format
-    LoadLegacyState(SaveState);
     return;
   }
 
@@ -92,73 +90,16 @@ void CWheelBoard::LoadState(CBlockFile *SaveState)
   else
   {
     // Load DIP switches and digit displays
-    SaveState->Read(&m_dip1, sizeof(m_dip1));
-    SaveState->Read(&m_dip2, sizeof(m_dip2));
+    SaveState->Read(m_dip1);
+    SaveState->Read(m_dip2);
 
-    SaveState->Read(&m_adcPortRead, sizeof(m_adcPortRead));
-    SaveState->Read(&m_adcPortBit, sizeof(m_adcPortBit));
-    SaveState->Read(&m_uncenterVal1, sizeof(m_uncenterVal1));
-    SaveState->Read(&m_uncenterVal2, sizeof(m_uncenterVal2));
+    SaveState->Read(m_adcPortRead);
+    SaveState->Read(m_adcPortBit);
+    SaveState->Read(m_uncenterVal1);
+    SaveState->Read(m_uncenterVal2);
   }
 
   CDriveBoard::LoadState(SaveState);
-}
-
-// Load save states created prior to DriveBoard refactor of SVN 847
-void CWheelBoard::LoadLegacyState(CBlockFile *SaveState)
-{
-  if (SaveState->FindBlock("DriveBoard") != Result::OKAY)
-  {
-    // No wheel board or legacy drive board data found
-    ErrorLog("Unable to load wheel drive board state. Save state file is corrupt.");
-    Disable();
-    return;
-  }
-
-  CDriveBoard::LegacyDriveBoardState state;
-
-  bool isEnabled = !IsDisabled();
-  bool wasEnabled = false;
-  bool wasSimulated = false;
-  SaveState->Read(&wasEnabled, sizeof(wasEnabled));
-  if (wasEnabled)
-  {
-    SaveState->Read(&wasSimulated, sizeof(wasSimulated));
-    if (wasSimulated)
-    {
-      // Simulation has never actually existed
-      ErrorLog("Save state contains unexpected data. Halting drive board emulation.");
-      Disable();
-      return;
-    }
-    else
-    {
-      SaveState->Read(&state.dip1, sizeof(state.dip1));
-      SaveState->Read(&state.dip2, sizeof(state.dip2));
-      SaveState->Read(state.ram, 0x2000);
-      SaveState->Read(&state.initialized, sizeof(state.initialized));
-      SaveState->Read(&state.allowInterrupts, sizeof(state.allowInterrupts));
-      SaveState->Read(&state.dataSent, sizeof(state.dataSent));
-      SaveState->Read(&state.dataReceived, sizeof(state.dataReceived));
-      SaveState->Read(&state.adcPortRead, sizeof(state.adcPortRead));
-      SaveState->Read(&state.adcPortBit, sizeof(state.adcPortBit));
-      SaveState->Read(&state.uncenterVal1, sizeof(state.uncenterVal1));
-      SaveState->Read(&state.uncenterVal2, sizeof(state.uncenterVal2));
-    }
-  }
-
-  if (wasEnabled != isEnabled)
-  {
-    // If the board was not in the same activity state when the save file was
-    // generated, we cannot safely resume and must disable it
-    Disable();
-    ErrorLog("Halting drive board emulation due to mismatch in active and restored states.");
-  }
-  else
-  {
-    // Success: pass along to base class
-    CDriveBoard::LoadLegacyState(state, SaveState);
-  }
 }
 
 void CWheelBoard::Disable(void)
@@ -444,16 +385,10 @@ UINT8 CWheelBoard::IORead8(UINT32 portNum)
 
 void CWheelBoard::IOWrite8(UINT32 portNum, UINT8 data)
 {
+  CDriveBoard::IOWrite8(portNum, data);
+
   switch (portNum)
   {
-  case 0x10: // Unsure? - single byte 0x03 sent at initialization, then occasionally writes 0x07 & 0xFA to port
-    return;
-  case 0x11: // Interrupt control
-    if (data == 0x57)
-      m_allowInterrupts = true;
-    else if (data == 0x53) // Strictly speaking 0x53 then 0x04
-      m_allowInterrupts = false;
-    return;
   case 0x1c: // Unsure? - two bytes 0xFF, 0xFF sent at initialization only
   case 0x1d: // Unsure? - two bytes 0x0F, 0x17 sent at initialization only
   case 0x1e: // Unsure? - same as port 28
@@ -491,10 +426,6 @@ void CWheelBoard::IOWrite8(UINT32 portNum, UINT8 data)
     return;
   case 0x2e: // Encoder motor control
     m_port46Out = data;
-    return;
-  case 0xf0: // Unsure? - single byte 0xBB sent at initialization only
-    return;
-  case 0xf1: // Unsure? - single byte 0x4E sent regularly - some sort of watchdog?
     return;
   default:
     DebugLog("Unhandled Z80 output on port %u (at PC = %04X)\n", portNum, m_z80.GetPC());
@@ -612,8 +543,12 @@ void CWheelBoard::SendStopAll(void)
   ForceFeedbackCmd ffCmd{};
   ffCmd.id = FFStop;
 
-  m_inputs->steering->SendForceFeedbackCmd(ffCmd);
-
+  if (m_inputs) {
+      if (m_inputs->steering) {
+          m_inputs->steering->SendForceFeedbackCmd(ffCmd);
+      }
+  }
+  
   m_lastConstForce = 0;
   m_lastSelfCenter = 0;
   m_lastFriction   = 0;

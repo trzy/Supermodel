@@ -59,7 +59,7 @@ void CJoyBoard::SaveState(CBlockFile *SaveState)
   CDriveBoard::SaveState(SaveState);
 
   SaveState->NewBlock("JoystickBoard", __FILE__);
-  SaveState->Write(&m_simulated, sizeof(m_simulated));
+  SaveState->Write(m_simulated);
   if (m_simulated)
   {
     // TODO - save board simulation state
@@ -67,13 +67,13 @@ void CJoyBoard::SaveState(CBlockFile *SaveState)
   else
   {
     // Save DIP switches and digit displays
-    SaveState->Write(&m_dip1, sizeof(m_dip1));
-    SaveState->Write(&m_dip2, sizeof(m_dip2));
+    SaveState->Write(m_dip1);
+    SaveState->Write(m_dip2);
 
-    SaveState->Write(&m_adcPortRead, sizeof(m_adcPortRead));
-    SaveState->Write(&m_adcPortBit, sizeof(m_adcPortBit));
-    SaveState->Write(&m_uncenterVal1, sizeof(m_uncenterVal1));
-    SaveState->Write(&m_uncenterVal2, sizeof(m_uncenterVal2));
+    SaveState->Write(m_adcPortRead);
+    SaveState->Write(m_adcPortBit);
+    SaveState->Write(m_uncenterVal1);
+    SaveState->Write(m_uncenterVal2);
   }
 }
 
@@ -100,13 +100,13 @@ void CJoyBoard::LoadState(CBlockFile *SaveState)
   else
   {
     // Load DIP switches and digit displays
-    SaveState->Read(&m_dip1, sizeof(m_dip1));
-    SaveState->Read(&m_dip2, sizeof(m_dip2));
+    SaveState->Read(m_dip1);
+    SaveState->Read(m_dip2);
 
-    SaveState->Read(&m_adcPortRead, sizeof(m_adcPortRead));
-    SaveState->Read(&m_adcPortBit, sizeof(m_adcPortBit));
-    SaveState->Read(&m_uncenterVal1, sizeof(m_uncenterVal1));
-    SaveState->Read(&m_uncenterVal2, sizeof(m_uncenterVal2));
+    SaveState->Read(m_adcPortRead);
+    SaveState->Read(m_adcPortBit);
+    SaveState->Read(m_uncenterVal1);
+    SaveState->Read(m_uncenterVal2);
   }
 }
 
@@ -394,20 +394,14 @@ UINT8 CJoyBoard::IORead8(UINT32 portNum)
 
 void CJoyBoard::IOWrite8(UINT32 portNum, UINT8 data)
 {
+  CDriveBoard::IOWrite8(portNum, data);
+
   switch (portNum)
   {
-  case 0x10: // Unsure? - single byte 0x03 sent at initialization, then occasionally writes 0x07 & 0xFA to port
-    return;
-  case 0x11: // Interrupt control
-    if (data == 0x57)
-      m_allowInterrupts = true;
-    else if (data == 0x53) // Strictly speaking 0x53 then 0x04
-      m_allowInterrupts = false;
-    return;
-  case 0x1c: // Unsure? - two bytes 0xFF, 0xFF sent at initialization only
-  case 0x1d: // Unsure? - two bytes 0x0F, 0x17 sent at initialization only
-  case 0x1e: // Unsure? - same as port 28
-  case 0x1f: // Unsure? - same as port 31
+  case 0x1c: // Parallel (I/O) A port data
+  case 0x1d: // Parallel (I/O) A port command
+  case 0x1e: // Parallel (I/O) B port data
+  case 0x1f: // Parallel (I/O) B port command
     return;
   case 0x20: // Left digit of 7-segment display 1
     m_seg1Digit1 = data;
@@ -443,10 +437,6 @@ void CJoyBoard::IOWrite8(UINT32 portNum, UINT8 data)
     return;
   case 0x2e: // Encoder motor control
     m_port46Out = data;
-    return;
-  case 0xf0: // Unsure? - single byte 0xBB sent at initialization only
-    return;
-  case 0xf1: // Unsure? - single byte 0x4E sent regularly - some sort of watchdog?
     return;
   default:
     DebugLog("Unhandled Z80 output on port %u (at PC = %04X)\n", portNum, m_z80.GetPC());

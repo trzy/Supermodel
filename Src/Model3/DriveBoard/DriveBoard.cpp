@@ -70,11 +70,11 @@ void CDriveBoard::SaveState(CBlockFile* SaveState)
 
     // Check board is attached and enabled
     bool enabled = !IsDisabled();
-    SaveState->Write(&enabled, sizeof(enabled));
+    SaveState->Write(enabled);
     if (enabled)
     {
         // Check if simulated
-        SaveState->Write(&m_simulated, sizeof(m_simulated));
+        SaveState->Write(m_simulated);
         if (m_simulated)
         {
             // TODO - save board simulation state
@@ -85,10 +85,15 @@ void CDriveBoard::SaveState(CBlockFile* SaveState)
             SaveState->Write(m_ram, RAM_SIZE);
 
             // Save interrupt and input/output state
-            SaveState->Write(&m_initialized, sizeof(m_initialized));
-            SaveState->Write(&m_allowInterrupts, sizeof(m_allowInterrupts));
-            SaveState->Write(&m_dataSent, sizeof(m_dataSent));
-            SaveState->Write(&m_dataReceived, sizeof(m_dataReceived));
+            SaveState->Write(m_initialized);
+            SaveState->Write(m_allowNMIInterupts);
+            SaveState->Write(m_allowInterrupts);
+            SaveState->Write(m_dataSent);
+            SaveState->Write(m_dataReceived);
+            SaveState->Write(m_nmiTimerVal);
+
+            // Save CTC state
+            m_z80CTC.SaveState(SaveState);
 
             // Save CPU state
             m_z80.SaveState(SaveState, "DriveBoard Z80");
@@ -109,11 +114,11 @@ void CDriveBoard::LoadState(CBlockFile* SaveState)
     bool isEnabled = !IsDisabled();
     bool wasEnabled = false;
     bool wasSimulated = false;
-    SaveState->Read(&wasEnabled, sizeof(wasEnabled));
+    SaveState->Read(wasEnabled);
     if (wasEnabled)
     {
         // Simulated?
-        SaveState->Read(&wasSimulated, sizeof(wasSimulated));
+        SaveState->Read(wasSimulated);
         if (wasSimulated)
         {
             // Derived classes may have simulation state (e.g., SkiBoard)
@@ -124,10 +129,15 @@ void CDriveBoard::LoadState(CBlockFile* SaveState)
             SaveState->Read(m_ram, RAM_SIZE);
 
             // Load interrupt and input/output state
-            SaveState->Read(&m_initialized, sizeof(m_initialized));
-            SaveState->Read(&m_allowInterrupts, sizeof(m_allowInterrupts));
-            SaveState->Read(&m_dataSent, sizeof(m_dataSent));
-            SaveState->Read(&m_dataReceived, sizeof(m_dataReceived));
+            SaveState->Read(m_initialized);
+            SaveState->Read(m_allowNMIInterupts);
+            SaveState->Read(m_allowInterrupts);
+            SaveState->Read(m_dataSent);
+            SaveState->Read(m_dataReceived);
+            SaveState->Read(m_nmiTimerVal);
+
+            // Load CTC state
+            m_z80CTC.LoadState(SaveState);
 
             // Load CPU state
             // TODO: we should have a way to check whether this succeeds... make CZ80::LoadState() return a bool
@@ -144,15 +154,12 @@ void CDriveBoard::LoadState(CBlockFile* SaveState)
     }
 }
 
-void CDriveBoard::LoadLegacyState(const LegacyDriveBoardState &state, CBlockFile *SaveState)
+int CDriveBoard::GetFramecycles() const
 {
-  static_assert(RAM_SIZE == sizeof(state.ram),"Ram sizes must match");
-  memcpy(m_ram, state.ram, RAM_SIZE);
-  m_initialized = state.initialized;
-  m_allowInterrupts = state.allowInterrupts;
-  m_dataSent = state.dataSent;
-  m_dataReceived = state.dataReceived;
-  m_z80.LoadState(SaveState, "DriveBoard Z80");
+    int freq = (int)m_z80Clock * 1000000;
+    int frameCycles = (int)(freq / 57.524);
+
+    return frameCycles;
 }
 
 Game::DriveBoardType CDriveBoard::GetType(void) const
@@ -279,6 +286,36 @@ UINT8 CDriveBoard::IORead8(UINT32 portNum)
 
 void CDriveBoard::IOWrite8(UINT32 portNum, UINT8 data)
 {
+    switch (portNum)
+    {
+        case 0x10: // CTC channel 0
+        case 0x11: // CTC channel 1
+        case 0x12: // CTC channel 2
+        case 0x13: // CTC channel 3
+        {
+            int channel = portNum & 3;
+            m_z80CTC.Write(channel, data);
+
+            if (channel == 1) {
+                if (m_z80CTC.TimerRunning(channel)) {
+
+                    int freq = (int)m_z80Clock * 1000000;
+
+                    m_nmiTimerVal = freq / m_z80CTC.CalcFrequency(1, freq);
+
+                    m_allowNMIInterupts = true;
+                }
+                else {
+                    m_allowNMIInterupts = false;
+                }
+            }
+            break;
+        }
+        case 0xf0: // Watchdog timer - single byte 0xBB sent at initialization only
+            return;
+        case 0xf1: // Watchdog timer - single byte 0x4E sent regularly
+            return;
+    }
 }
 
 void CDriveBoard::RunFrame(void)
@@ -288,21 +325,35 @@ void CDriveBoard::RunFrame(void)
     return;
   }
 
-  // Assuming Z80 runs @ 4.0MHz and NMI triggers @ 60.0KHz for WheelBoard and JoystickBoard
-  // Assuming Z80 runs @ 8.0MHz and INT triggers @ 60.0KHz for BillBoard
-  // TODO - find out if Z80 frequency is correct and exact frequency of NMI interrupts (just guesswork at the moment!)
-  int cycles = (int)(m_z80Clock * 1000000 / 60);
-  constexpr int loopCycles = 10000;
-  while (cycles > 0)
+  int frameCycles = GetFramecycles();
+
+  while (frameCycles > 0)
   {
-    if (m_allowInterrupts)
-    {
-      if(m_z80NMI)
-        m_z80.TriggerNMI();
-      else
-        m_z80.SetINT(true);
-    }
-    cycles -= m_z80.Run(std::min<int>(loopCycles, cycles));
+      if (m_allowNMIInterupts) {
+          int cycles = m_z80.Run(std::min<int>(frameCycles, m_nmiTimerVal));
+          frameCycles   -= cycles;
+          m_nmiTimerVal -= cycles;
+      }
+      else {
+          int cycles = m_z80.Run(frameCycles);
+          frameCycles -= cycles;
+      }
+
+      if (m_allowNMIInterupts && m_nmiTimerVal <= 0) {
+
+          // fire nmi
+          m_z80.TriggerNMI();
+
+          int freq = (int)m_z80Clock * 1000000;
+
+          // reset timer
+          m_nmiTimerVal = freq / m_z80CTC.CalcFrequency(1, freq);
+      }
+
+      // billboard needs this
+      if (m_allowInterrupts) {
+          m_z80.SetINT(true);       // once per frame seems enough, not sure what triggers this
+      }
   }
 }
 
@@ -364,9 +415,11 @@ void CDriveBoard::Reset()
     m_boardMode = 0;
     m_wheelCenter = 0x80;
     m_allowInterrupts = false;
+    m_allowNMIInterupts = false;
     m_dataSent = 0;
     m_dataReceived = 0;
     m_z80.Reset();        // always reset to provide a valid Z80 state
+    m_z80CTC.Reset();
 
     // Configure options (cannot be done in Init() because command line settings weren't yet parsed)
     SetForceFeedbackStrength(m_config["ForceFeedbackStrength"].ValueAsDefault<unsigned>(5));
@@ -398,11 +451,13 @@ CDriveBoard::CDriveBoard(const Util::Config::Node& config)
     m_rom(NULL),
     m_ram(NULL),
     m_dummyROM(NULL),
-    m_z80Clock(4.0f),
+    m_z80Clock(8.0f),
     m_z80NMI(true),
     m_inputs(NULL),
     m_inputFlags(0),
-    m_outputs(NULL)
+    m_outputs(NULL),
+    m_nmiTimerVal(0),
+    m_allowNMIInterupts(false)
 {
   DebugLog("Built Drive Board\n");
 }

@@ -36,6 +36,7 @@
 #include "OSD/Outputs.h"
 #include "Util/NewConfig.h"
 #include "Game.h"
+#include "Z80CTC.h"
 
 /*
  * CDriveBoard
@@ -258,29 +259,14 @@ public:
 
 protected:
 
-  struct LegacyDriveBoardState
-  {
-    uint8_t   dip1;
-    uint8_t   dip2;
-    uint8_t   ram[0x2000];
-    uint8_t   initialized;
-    uint8_t   allowInterrupts;
-    uint8_t   dataSent;
-    uint8_t   dataReceived;
-    uint16_t  adcPortRead;
-    uint8_t   adcPortBit;
-    uint8_t   uncenterVal1;
-    uint8_t   uncenterVal2;
-  };
-
   // Disable the drive board (without affecting attachment state). Used internally only to disable emulation.
   virtual void Disable(void);
 
   // Whether disabled and/or not attached -- used to determine whether to carry out emulation
   bool IsDisabled(void) const;
 
-  // Attempt to load drive board data from old save states (prior to drive board refactor)
-  void LoadLegacyState(const LegacyDriveBoardState &state, CBlockFile *SaveState);
+  // get the number of cycles for 1 render frame
+  int GetFramecycles() const;
 
 
   const Util::Config::Node& m_config;
@@ -290,8 +276,9 @@ protected:
   bool m_simulated;   // True if drive board should be simulated rather than emulated
 
   // Emulation state
-  bool m_initialized;     // True if drive board has finished initialization
-  bool m_allowInterrupts; // True if drive board has enabled NMI interrupts
+  bool m_initialized;       // True if drive board has finished initialization
+  bool m_allowInterrupts;   // True if board has enabled interrupts
+  bool m_allowNMIInterupts; // True if board has enabled NMI interrupts
 
   UINT8 m_dataSent;       // Last command sent by main board
   UINT8 m_dataReceived;   // Data to send back to main board
@@ -316,11 +303,15 @@ protected:
   CZ80 m_z80;             // Z80 CPU
   float m_z80Clock;       // Z80 clock frequency
   bool m_z80NMI;          // Non Masquable Interrupt or Interrupt
+  Z80CTC m_z80CTC;          // z80 counter / timer circuit
+  int m_nmiTimerVal;
 
   CInputs* m_inputs;
   unsigned m_inputFlags;
 
   COutputs* m_outputs;
+
+  
 };
 
 #endif  // INCLUDED_DRIVEBOARD_H

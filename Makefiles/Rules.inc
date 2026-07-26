@@ -145,6 +145,7 @@ SRC_FILES = \
 	Src/Model3/DriveBoard/JoystickBoard.cpp \
 	Src/Model3/DriveBoard/SkiBoard.cpp \
 	Src/Model3/DriveBoard/BillBoard.cpp \
+	Src/Model3/DriveBoard/Z80CTC.cpp \
 	Src/Model3/MPC10x.cpp \
 	Src/Inputs/Input.cpp \
 	Src/Inputs/Inputs.cpp \
