@@ -166,6 +166,11 @@ unsigned CBlockFile::Read(bool *value)
   return numBytes;
 }
 
+unsigned CBlockFile::Read(bool& value)
+{
+    return Read(&value);        // turn reference into pointer for above function
+}
+
 void CBlockFile::Write(const void *data, uint32_t numBytes)
 {
   if (mode == 'w')
@@ -181,7 +186,7 @@ void CBlockFile::Write(bool value)
 void CBlockFile::Write(const std::string &str)
 {
   if (mode == 'w')
-    WriteBytes(str.c_str(), (uint32_t)str.length() + 1);
+      WriteBytes(str.c_str(), (uint32_t)str.length() + 1);
 }
 
 void CBlockFile::NewBlock(const std::string &name, const std::string &comment)
@@ -259,22 +264,25 @@ Result CBlockFile::Load(const std::string &file)
   
 void CBlockFile::Close(void)
 {
-  if (fp != NULL)
+  if (fp != nullptr)
     fclose(fp);
-  fp = NULL;
+  fp = nullptr;
   mode = 0;
 }
 
-CBlockFile::CBlockFile(void)
+CBlockFile::CBlockFile(void) :
+    fp(nullptr),
+    mode(0),
+    fileSize(0),
+    blockStartPos(0),
+    dataStartPos(0)
 {
-  fp = NULL;
-  mode = 0;   // neither reading nor writing (do nothing)
 }
 
 CBlockFile::~CBlockFile(void)
 {
-  if (fp != NULL) // in case user forgot
+  if (fp != nullptr) // in case user forgot
     fclose(fp);
-  fp = NULL;
+  fp = nullptr;
   mode = 0;
 }

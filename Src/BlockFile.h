@@ -73,6 +73,36 @@ public:
    *    Number of bytes read. If not 1, an error occurred.
    */
   unsigned Read(bool *value);
+
+  /*
+ * Read(value):
+ *
+ * Reads a bool value from the current file position.
+ *
+ * Parameters:
+ *    value   Bool to read to.
+ *
+ * Returns:
+ *    Number of bytes read. If not 1, an error occurred.
+ */
+  unsigned Read(bool& value);
+
+  /*
+   * Read(value):
+   *
+   * Reads a value from the current file position.
+   *
+   * Parameters:
+   *    value   Variable to read to.
+   *
+   * Returns:
+   *    Number of bytes read
+   */
+  template<typename T>
+  unsigned Read(T& value)
+  {
+      return Read(static_cast<void*>(&value), static_cast<uint32_t>(sizeof(value)));
+  }
   
   /*
    * FindBlock(name):
@@ -121,6 +151,22 @@ public:
    *    str   String to write.
    */
   void Write(const std::string &str);
+
+  /*
+   * Write(value):
+   *
+   * Outputs POD data types, float, double, int etc
+   * position. Updates the block header appropriately.
+   *
+   * Parameters:
+   *    value   Value to write.
+  */
+  template<typename T>
+  void Write(const T& value)
+  {
+    static_assert(std::is_trivially_copyable<T>::value, "Write() only supports POD / trivially copyable types");
+    Write(static_cast<const void*>(&value), static_cast<uint32_t>(sizeof(value)));
+  }
 
   /*
    * NewBlock(name, comment):
