@@ -1,7 +1,7 @@
 ##
 ## Supermodel
 ## A Sega Model 3 Arcade Emulator.
-## Copyright 2003-2025 The Supermodel Team
+## Copyright 2003-2026 The Supermodel Team
 ##
 ## This file is part of Supermodel.
 ##
@@ -83,6 +83,8 @@ COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
 LDFLAGS = -o $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_LDFLAGS) $(LDOPT)
+CFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CFLAGS))	# remove -c because clang will warn
+CXXFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CXXFLAGS))
 
 
 ###############################################################################
@@ -96,13 +98,9 @@ SRC_FILES = \
 	Src/Pkgs/ioapi.cpp \
 	Src/Model3/93C46.cpp \
 	Src/JTAG.cpp \
-	Src/Graphics/Legacy3D/Error.cpp \
 	Src/Pkgs/glew.cpp \
 	Src/Graphics/Shader.cpp \
 	Src/Model3/Real3D.cpp \
-	Src/Graphics/Legacy3D/Legacy3D.cpp \
-	Src/Graphics/Legacy3D/Models.cpp \
-	Src/Graphics/Legacy3D/TextureRefs.cpp \
 	Src/Graphics/New3D/GLSLShader.cpp \
 	Src/Graphics/New3D/R3DFrameBuffers.cpp \
 	Src/Graphics/New3D/New3D.cpp \
@@ -178,6 +176,16 @@ SRC_FILES = \
 	Src/Network/NetBoard.cpp \
 	Src/Network/SimNetBoard.cpp \
 	$(PLATFORM_SRC_FILES)
+
+ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))
+	# -DSUPERMODEL_OSX not present: we are not compiling for macOS and can
+	# therefore include the legacy renderer
+	SRC_FILES += \
+		Src/Graphics/Legacy3D/Error.cpp \
+		Src/Graphics/Legacy3D/Legacy3D.cpp \
+		Src/Graphics/Legacy3D/Models.cpp \
+		Src/Graphics/Legacy3D/TextureRefs.cpp
+endif
 
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SRC_FILES += \
@@ -356,7 +364,7 @@ VPATH = $(INCLUDE_DIRS)
 #
 $(OBJ_DIR)/%.o:	%.cpp | $(OBJ_DIR)
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)
-	$(SILENT)$(CXX) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS) $< > $(OBJ_DIR)/$(*F).d
+	$(SILENT)$(CXX) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS_GENERATE_DEPENDENCIES) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
 	$(SILENT)$(CXX) $(CXXFLAGS) $< -o $@
 
@@ -365,7 +373,7 @@ $(OBJ_DIR)/glew.o: CFLAGS += -w
 
 $(OBJ_DIR)/%.o:	%.c | $(OBJ_DIR)
 	$(info Generating dependencies: $< -> $(OBJ_DIR)/$(*F).d)
-	$(SILENT)$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CFLAGS) $< > $(OBJ_DIR)/$(*F).d
+	$(SILENT)$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CFLAGS_GENERATE_DEPENDENCIES) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
 	$(SILENT)$(CC) $(CFLAGS) $< -o $@
 
