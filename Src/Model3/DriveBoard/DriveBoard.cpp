@@ -437,6 +437,7 @@ CDriveBoard::CDriveBoard(const Util::Config::Node& config)
     m_simulated(false),
     m_initialized(false),
     m_allowInterrupts(false),
+    m_allowNMIInterupts(false),
     m_dataSent(0),
     m_dataReceived(0),
     m_dip1(0x00),
@@ -453,11 +454,10 @@ CDriveBoard::CDriveBoard(const Util::Config::Node& config)
     m_dummyROM(NULL),
     m_z80Clock(8.0f),
     m_z80NMI(true),
+    m_nmiTimerVal(0),
     m_inputs(NULL),
     m_inputFlags(0),
-    m_outputs(NULL),
-    m_nmiTimerVal(0),
-    m_allowNMIInterupts(false)
+    m_outputs(NULL)
 {
   DebugLog("Built Drive Board\n");
 }
