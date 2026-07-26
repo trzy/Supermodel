@@ -1,7 +1,7 @@
 #pragma once
 
-#include "..\..\OSD\SDL\Types.h"
-#include "..\..\BlockFile.h"
+#include "Types.h"
+#include "BlockFile.h"
 
 class Z80CTC
 {
