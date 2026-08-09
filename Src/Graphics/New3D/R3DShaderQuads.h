@@ -90,8 +90,13 @@ in VS_OUT
 
 out GS_OUT
 {
+#ifdef SUPERMODEL_GLES
+	vec2 v[4];
+	float area[4];
+#else
 	noperspective vec2 v[4];
 	noperspective float area[4];
+#endif
 	flat float oneOverW[4];
 
 	//our regular attributes
@@ -163,12 +168,23 @@ void main(void)
 		const int reorder[4] = int[4]( 1, 0, 2, 3 );
 		int ii = reorder[i];
 
+		float clipW = gl_in[ii].gl_Position.w;
 		for (int j=0; j<4; j++) {
-			gs_out.v[j] = v[j] - v[ii];
+			vec2 screenV = v[j] - v[ii];
 			int j_next = (j+1) % 4;
-			// compute area via shoelace algorithm BUT divided by w afterwards to improve precision!
-			// in addition also use Kahans algorithm to further improve precision of the 2D crossproducts
-			gs_out.area[j] = cross[j][j_next] + cross[j_next][ii] + cross[ii][j];
+			// Compute area via the shoelace algorithm, divided by W afterwards
+			// to improve precision, and use Kahan's algorithm for the 2D crossproducts.
+			float screenArea = cross[j][j_next] + cross[j_next][ii] + cross[ii][j];
+#ifdef SUPERMODEL_GLES
+			// GLSL ES has no noperspective qualifier. Pre-multiplying by the
+			// emitted vertex's clip W lets the fragment shader recover the same
+			// screen-linear values after smooth interpolation.
+			gs_out.v[j] = screenV * clipW;
+			gs_out.area[j] = screenArea * clipW;
+#else
+			gs_out.v[j] = screenV;
+			gs_out.area[j] = screenArea;
+#endif
 		}
 
 		const vec3 bary[4] = vec3[](
@@ -231,6 +247,9 @@ uniform bool	smoothShading;
 uniform int		hardwareStep;
 uniform int		colourLayer;
 uniform bool	polyAlpha;
+#ifdef SUPERMODEL_GLES
+uniform bool	noLosReturn;
+#endif
 
 // matrices (shared with vertex shader)
 uniform mat4	projMat;
@@ -239,8 +258,13 @@ uniform mat4	projMat;
 
 in GS_OUT
 {
+#ifdef SUPERMODEL_GLES
+	vec2 v[4];
+	float area[4];
+#else
 	noperspective vec2 v[4];
 	noperspective float area[4];
+#endif
 	flat float oneOverW[4];
 
 	//our regular attributes
@@ -265,6 +289,9 @@ float	fsLODBase;
 layout(location = 0) out vec4 out0;		// opaque
 layout(location = 1) out vec4 out1;		// trans layer 1
 layout(location = 2) out vec4 out2;		// trans layer 2
+#ifdef SUPERMODEL_GLES
+layout(location = 3) out uvec2 outLos;		// line-of-sight depth bits and no-return flag
+#endif
 
 // forward declarations (see common file)
 
@@ -286,6 +313,21 @@ void QuadraticInterpolation()
 
 	float interp_oneOverW	= 0.0;
 	float uSum				= 0.0;
+
+#ifndef SUPERMODEL_GLES
+	// Desktop GLSL provides noperspective interpolation directly.
+	vec2 screenV[4];
+	float screenArea[4];
+	for (int i=0; i<4; i++) {
+		screenV[i] = fs_in.v[i];
+		screenArea[i] = fs_in.area[i];
+	}
+#else
+	// The ES geometry shader pre-multiplies v and area by clip W. Smooth
+	// interpolation therefore leaves both with the same positive perspective
+	// scale. Quadratic weights are homogeneous in that common scale, so using
+	// the interpolants directly avoids 12 per-fragment recovery multiplies.
+#endif
 
 	const float hpFMin		= 0.00006103515625;		// half precision FLT_MIN
 	bool extreme_edge		= (fs_in.barycentricCoords.x <= hpFMin || fs_in.barycentricCoords.z <= hpFMin); 
@@ -312,20 +354,30 @@ void QuadraticInterpolation()
 	}
 	else
 	{
-		for (int i=0; i<4; i++)
-			u[i] = length(fs_in.v[i]) * sign(fs_in.oneOverW[i]); // is w[i] negative?
+		for (int i=0; i<4; i++) {
+#ifdef SUPERMODEL_GLES
+			u[i] = length(fs_in.v[i]) * sign(fs_in.oneOverW[i]); // common perspective scale cancels below
+#else
+			u[i] = length(screenV[i]) * sign(fs_in.oneOverW[i]); // is w[i] negative?
+#endif
+		}
 
 		precise float t[4];
 		for (int i=0; i<4; i++) {
 			int i_next = (i+1)%4;
+#ifdef SUPERMODEL_GLES
 			if(fs_in.area[i]==0.0) t[i] = 0.0; // check for zero area to avoid div by zero
-			else                   t[i] = fma(u[i],u[i_next], -dot(fs_in.v[i],fs_in.v[i_next])) / fs_in.area[i];
+			else                    t[i] = fma(u[i],u[i_next], -dot(fs_in.v[i],fs_in.v[i_next])) / fs_in.area[i];
+#else
+			if(screenArea[i]==0.0) t[i] = 0.0; // check for zero area to avoid div by zero
+			else                   t[i] = fma(u[i],u[i_next], -dot(screenV[i],screenV[i_next])) / screenArea[i];
+#endif
 		}
 
 		int lambdaSignCount = 0; // to discard fragments if all the weights are neither all negative nor all positive (=outside the convex/concave/crossed quad).
 
-		for (uint i=0; i<4; i++) {
-			uint i_prev = (i-1)%4;
+		for (uint i=0u; i<4u; i++) {
+			uint i_prev = (i-1u)%4u;
 			u[i] = (t[i_prev] + t[i]) / u[i];
 			lambdaSignCount += (t[i_prev] < -t[i]) ? -1 : 1;
 		}
@@ -504,6 +556,10 @@ void main()
 
 	// Write outputs to colour buffers
 	WriteOutputs(finalData,colourLayer);
+
+#ifdef SUPERMODEL_GLES
+	outLos = uvec2(floatBitsToUint(gl_FragDepth), noLosReturn ? 1u : 0u);
+#endif
 }
 )glsl";
 

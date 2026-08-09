@@ -4,6 +4,7 @@
 SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 	m_aa(aaValue),
 	m_crtcolors(CRTcolors),
+	m_shaderReady((aaValue <= 1) && (CRTcolors == CRTcolor::None)),
 	m_vao(0),
 	m_width(0),
 	m_height(0)
@@ -167,7 +168,9 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 		std::string fragmentShaderString = fragmentShaderVersion + aaString + ccString + fragmentShader;
 
 		// load shaders
-		m_shader.LoadShaders(vertexShader, fragmentShaderString.c_str());
+		if (!m_shader.LoadShaders(vertexShader, fragmentShaderString.c_str())) {
+			return;
+		}
 		m_shader.GetUniformLocationMap("tex1");
 
 		// setup uniform memory
@@ -179,6 +182,7 @@ SuperAA::SuperAA(int aaValue, CRTcolor CRTcolors) :
 		glBindVertexArray(m_vao);
 		// no states needed since we do it in the shader
 		glBindVertexArray(0);
+		m_shaderReady = true;
 	}
 }
 
@@ -194,15 +198,24 @@ SuperAA::~SuperAA()
 	}
 }
 
-void SuperAA::Init(int width, int height)
+Result SuperAA::Init(int width, int height)
 {
+	if (!m_shaderReady) {
+		return Result::FAIL;
+	}
+
 	if ((m_aa > 1) || (m_crtcolors != CRTcolor::None)) {
 		m_fbo.Destroy();
-		m_fbo.Create(width * m_aa, height * m_aa);
+		if (!m_fbo.Create(width * m_aa, height * m_aa)) {
+			m_fbo.Destroy();
+			return Result::FAIL;
+		}
 
 		m_width = width;
 		m_height = height;
 	}
+
+	return Result::OKAY;
 }
 
 void SuperAA::Draw()

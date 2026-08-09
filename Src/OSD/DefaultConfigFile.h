@@ -70,6 +70,7 @@
     "Stretch = false\n"
     "WideBackground = false\n"
     "Supersampling = 1\n"
+    "RenderScale = 0\n"
     "; CRT-like color adaption: 0=none, 1=ARI/D93 (recommended for all JP developed games),\n"
     "; 2=PVM_20M2U/D93, 3=BT601_525/D93, 4=BT601_525/D65 (recommended for all US developed games)\n"
     "; 5=BT601_625/D65 (recommended for all EUR/AUS developed games)\n"

@@ -4,7 +4,7 @@
 #define _TEXTUREBANK_H_
 
 #include "Types.h"
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 
 // texture banks are a fixed size
 // 2048x1024 pixels, each pixel is 16bits in size

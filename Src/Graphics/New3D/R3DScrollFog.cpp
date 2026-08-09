@@ -101,13 +101,16 @@ void main()
 
 
 	R3DScrollFog::R3DScrollFog()
-		: m_vao(0)
+		: m_ready(false),
+		m_shaderProgram(0),
+		m_vertexShader(0),
+		m_fragmentShader(0),
+		m_vao(0)
 	{
-		m_shaderProgram		= 0;
-		m_vertexShader		= 0;
-		m_fragmentShader	= 0;
-
-		AllocResources();
+		m_ready = AllocResources();
+		if (!m_ready) {
+			return;
+		}
 
 		glGenVertexArrays(1, &m_vao);
 		glBindVertexArray(m_vao);
@@ -148,26 +151,31 @@ void main()
 		glDepthMask			(GL_TRUE);
 	}
 
-	void R3DScrollFog::AllocResources()
+	bool R3DScrollFog::AllocResources()
 	{
-		LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, "", "", vertexShaderFog, fragmentShaderFog);
+		if (LoadShaderProgram(&m_shaderProgram, &m_vertexShader, &m_fragmentShader, "", "", vertexShaderFog, fragmentShaderFog) != Result::OKAY) {
+			DeallocResources();
+			return false;
+		}
 
 		m_locFogColour		= glGetUniformLocation(m_shaderProgram, "fogColour");
 		m_locFogAttenuation	= glGetUniformLocation(m_shaderProgram, "fogAttenuation");
 		m_locFogAmbient		= glGetUniformLocation(m_shaderProgram, "fogAmbient");
 		m_locSpotFogColor	= glGetUniformLocation(m_shaderProgram, "spotFogColor");
 		m_locSpotEllipse	= glGetUniformLocation(m_shaderProgram, "spotEllipse");
+		return true;
 	}
 
 	void R3DScrollFog::DeallocResources()
 	{
-		if (m_shaderProgram) {
+		if (m_shaderProgram || m_vertexShader || m_fragmentShader) {
 			DestroyShaderProgram(m_shaderProgram, m_vertexShader, m_fragmentShader);
 		}
 
 		m_shaderProgram		= 0;
 		m_vertexShader		= 0;
 		m_fragmentShader	= 0;
+		m_ready = false;
 	}
 
 }

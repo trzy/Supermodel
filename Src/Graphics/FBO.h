@@ -1,7 +1,7 @@
 #ifndef _FBO_H_
 #define _FBO_H_
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 
 class FBO
 {

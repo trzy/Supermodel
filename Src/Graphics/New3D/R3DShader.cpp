@@ -2,6 +2,7 @@
 #include "R3DShaderQuads.h"
 #include "R3DShaderTriangles.h"
 #include "R3DShaderCommon.h"
+#include "Graphics/GLSL.h"
 
 // having 2 sets of shaders to maintain is really less than ideal
 // but hopefully not too many breaking changes at this point
@@ -62,10 +63,11 @@ void R3DShader::Start()
 
 bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 {
+	UnloadShader();
 	bool quads = m_config["QuadRendering"].ValueAs<bool>();
 
 	const char* vShader = vertexShaderR3D;
-	const char* gShader = "";
+	const char* gShader = nullptr;
 	const char* fShader = fragmentShaderR3D;
 
 	if (quads) {
@@ -74,13 +76,24 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 		fShader = fragmentShaderR3DQuads;
 	}
 
+	const std::string vertexSource = GLSL::PrepareSource(vShader, GLSL::ShaderStage::Vertex);
+	const std::string geometrySource = quads ? GLSL::PrepareSource(gShader, GLSL::ShaderStage::Geometry) : std::string();
+	const std::string fragmentSource = GLSL::PrepareSource(fShader, GLSL::ShaderStage::Fragment);
+	const char *vertexSourcePtr = vertexSource.c_str();
+	const char *geometrySourcePtr = geometrySource.c_str();
+	const char *fragmentSourcePtr = fragmentSource.c_str();
+
 	m_shaderProgram		= glCreateProgram();
 	m_vertexShader		= glCreateShader(GL_VERTEX_SHADER);
 	m_fragmentShader	= glCreateShader(GL_FRAGMENT_SHADER);
+	if (!m_shaderProgram || !m_vertexShader || !m_fragmentShader) {
+		UnloadShader();
+		return false;
+	}
 
-	const char* shaderArray[] = { fShader, fragmentShaderR3DCommon };
+	const char* shaderArray[] = { fragmentSourcePtr, fragmentShaderR3DCommon };
 
-	glShaderSource(m_vertexShader, 1, (const GLchar **)&vShader, nullptr);
+	glShaderSource(m_vertexShader, 1, &vertexSourcePtr, nullptr);
 	glShaderSource(m_fragmentShader, (GLsizei)std::size(shaderArray), shaderArray, nullptr);
 
 	glCompileShader(m_vertexShader);
@@ -88,7 +101,11 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	if (quads) {
 		m_geoShader = glCreateShader(GL_GEOMETRY_SHADER);
-		glShaderSource(m_geoShader, 1, (const GLchar **)&gShader, nullptr);
+		if (!m_geoShader) {
+			UnloadShader();
+			return false;
+		}
+		glShaderSource(m_geoShader, 1, &geometrySourcePtr, nullptr);
 		glCompileShader(m_geoShader);
 		glAttachShader(m_shaderProgram, m_geoShader);
 		PrintShaderResult(m_geoShader);
@@ -97,11 +114,31 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	PrintShaderResult(m_vertexShader);
 	PrintShaderResult(m_fragmentShader);
 
+	GLint vertexCompiled = GL_FALSE;
+	GLint fragmentCompiled = GL_FALSE;
+	GLint geometryCompiled = GL_TRUE;
+	glGetShaderiv(m_vertexShader, GL_COMPILE_STATUS, &vertexCompiled);
+	glGetShaderiv(m_fragmentShader, GL_COMPILE_STATUS, &fragmentCompiled);
+	if (quads) {
+		glGetShaderiv(m_geoShader, GL_COMPILE_STATUS, &geometryCompiled);
+	}
+	if (vertexCompiled != GL_TRUE || fragmentCompiled != GL_TRUE || geometryCompiled != GL_TRUE) {
+		UnloadShader();
+		return false;
+	}
+
 	glAttachShader(m_shaderProgram, m_vertexShader);
 	glAttachShader(m_shaderProgram, m_fragmentShader);
 	glLinkProgram(m_shaderProgram);
 
 	PrintProgramResult(m_shaderProgram);
+
+	GLint linked = GL_FALSE;
+	glGetProgramiv(m_shaderProgram, GL_LINK_STATUS, &linked);
+	if (linked != GL_TRUE) {
+		UnloadShader();
+		return false;
+	}
 
 	m_locTextureBank[0]		= glGetUniformLocation(m_shaderProgram, "textureBank[0]");
 	m_locTextureBank[1]		= glGetUniformLocation(m_shaderProgram, "textureBank[1]");
@@ -149,6 +186,9 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 
 	m_locHardwareStep		= glGetUniformLocation(m_shaderProgram, "hardwareStep");
 	m_locDiscardAlpha		= glGetUniformLocation(m_shaderProgram, "discardAlpha");
+#ifdef SUPERMODEL_GLES
+	m_locNoLosReturn		= glGetUniformLocation(m_shaderProgram, "noLosReturn");
+#endif
 
 	m_locCota				= glGetUniformLocation(m_shaderProgram, "cota");
 
@@ -322,6 +362,9 @@ void R3DShader::SetMeshUniforms(const Mesh* m)
 
 	if (m_dirtyMesh || m->noLosReturn != m_noLosReturn) {
 		m_noLosReturn = m->noLosReturn;
+#ifdef SUPERMODEL_GLES
+		glUniform1i(m_locNoLosReturn, m_noLosReturn);
+#endif
 		glStencilFunc(GL_ALWAYS, m_noLosReturn << 7, 0b10000000);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 		glStencilMask(0b10000000);

@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include "R3DFloat.h"
 #include "Util/BitCast.h"
+#include "OSD/Logger.h"
 
 #define MAX_RAM_VERTS 300000
 #define MAX_ROM_VERTS 1500000
@@ -54,7 +55,12 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_yRes(0),
 	m_totalXRes(0),
 	m_totalYRes(0),
-	m_wideScreen(false),
+	m_wideScreen(config["WideScreen"].ValueAs<bool>()),
+	m_renderScale(config["RenderScale"].ValueAs<int>()),
+	m_outputXOffs(0),
+	m_outputYOffs(0),
+	m_outputXRes(0),
+	m_outputYRes(0),
 	m_matrixBasePtr(nullptr),
 	m_LODBlendTable(nullptr),
 	m_prev{{}},
@@ -62,7 +68,9 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 	m_vao(0),
 	m_r3dShader(config),
 	m_r3dScrollFog(),
-	m_aaTarget(0)
+	m_r3dFrameBuffers(m_renderScale > 0),
+	m_aaTarget(0),
+	m_ready(false)
 {
 	m_sunClamp		= true;
 	m_numPolyVerts	= 3;
@@ -73,11 +81,13 @@ CNew3D::CNew3D(const Util::Config::Node &config, const std::string& gameName) :
 		m_primType		= GL_LINES_ADJACENCY;
 	}
 
-	m_wideScreen = config["WideScreen"].ValueAs<bool>();
 	m_noWhiteFlash = config["NoWhiteFlash"].ValueAs<bool>();
 
-	m_r3dShader.LoadShader();
+	m_ready = m_r3dShader.LoadShader() && m_r3dFrameBuffers.IsReady() && m_r3dScrollFog.IsReady();
 	glUseProgram(0);
+	if (!m_ready) {
+		return;
+	}
 
 	// setup up our vertex buffer memory
 
@@ -152,20 +162,80 @@ void CNew3D::SetStepping(int stepping)
 
 Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
+	if (!m_ready) {
+		return Result::FAIL;
+	}
+
 	// Resolution and offset within physical display area
-	m_xRatio	= xRes * (float)(1.0 / 496.0);
-	m_yRatio	= yRes * (float)(1.0 / 384.0);
-	m_xOffs		= xOffset;
-	m_yOffs		= yOffset;
-	m_xRes		= xRes;
-	m_yRes		= yRes;
-	m_totalXRes	= totalXResParam;
-	m_totalYRes = totalYResParam;
-	m_aaTarget	= aaTarget;
+	if (m_wideScreen) {
+		m_outputXOffs = 0;
+		m_outputYOffs = 0;
+		m_outputXRes = totalXResParam;
+		m_outputYRes = totalYResParam;
+	}
+	else {
+		m_outputXOffs = xOffset;
+		m_outputYOffs = yOffset;
+		m_outputXRes = xRes;
+		m_outputYRes = yRes;
+	}
+
+	if (m_renderScale > 0) {
+		const unsigned scale = static_cast<unsigned>(m_renderScale);
+		m_xRes = 496u * scale;
+		m_yRes = 384u * scale;
+		m_totalYRes = m_yRes;
+
+		if (m_wideScreen && m_outputYRes > 0) {
+			const unsigned long long scaledWidth =
+				static_cast<unsigned long long>(m_yRes) * m_outputXRes;
+			m_totalXRes = static_cast<unsigned>((scaledWidth + m_outputYRes / 2u) / m_outputYRes);
+		}
+		else {
+			m_totalXRes = m_xRes;
+		}
+
+		m_xOffs = m_totalXRes > m_xRes ? (m_totalXRes - m_xRes) / 2u : 0u;
+		m_yOffs = 0;
+	}
+	else {
+		m_xOffs = xOffset;
+		m_yOffs = yOffset;
+		m_xRes = xRes;
+		m_yRes = yRes;
+		m_totalXRes = totalXResParam;
+		m_totalYRes = totalYResParam;
+	}
+	m_xRatio = m_xRes * (float)(1.0 / 496.0);
+	m_yRatio = m_yRes * (float)(1.0 / 384.0);
+	m_aaTarget = aaTarget;
+
+	GLint maxTextureSize = 0;
+	GLint maxRenderbufferSize = 0;
+	GLint maxViewportDimensions[2] = { 0, 0 };
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+	glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &maxRenderbufferSize);
+	glGetIntegerv(GL_MAX_VIEWPORT_DIMS, maxViewportDimensions);
+	const bool renderTargetExceedsLimits =
+		m_totalXRes > static_cast<unsigned>(maxTextureSize) ||
+		m_totalYRes > static_cast<unsigned>(maxTextureSize) ||
+		m_totalXRes > static_cast<unsigned>(maxRenderbufferSize) ||
+		m_totalYRes > static_cast<unsigned>(maxRenderbufferSize) ||
+		m_totalXRes > static_cast<unsigned>(maxViewportDimensions[0]) ||
+		m_totalYRes > static_cast<unsigned>(maxViewportDimensions[1]);
+	const bool outputViewportExceedsLimits = m_renderScale > 0 &&
+		(m_outputXRes > static_cast<unsigned>(maxViewportDimensions[0]) ||
+		 m_outputYRes > static_cast<unsigned>(maxViewportDimensions[1]));
+	if (renderTargetExceedsLimits || outputViewportExceedsLimits) {
+		ErrorLog("New3D dimensions exceed the OpenGL limits: render target %ux%u, output viewport %ux%u; maximum texture %d, renderbuffer %d, viewport %dx%d.",
+			m_totalXRes, m_totalYRes, m_outputXRes, m_outputYRes,
+			maxTextureSize, maxRenderbufferSize, maxViewportDimensions[0], maxViewportDimensions[1]);
+		return Result::FAIL;
+	}
 
 	m_r3dFrameBuffers.DestroyFBO();		// remove any old ones if created
 
-	return m_r3dFrameBuffers.CreateFBO(totalXResParam, totalYResParam);
+	return m_r3dFrameBuffers.CreateFBO(m_totalXRes, m_totalYRes);
 }
 
 void CNew3D::UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height)
@@ -386,6 +456,11 @@ bool CNew3D::RenderScene(int priority, bool renderOverlay, Layer layer)
 					m_r3dShader.SetModelStates(&m);
 					matrixLoaded = true;		// do this here to stop loading matrices we don't need. Ie when rendering non transparent etc
 				}
+#ifdef SUPERMODEL_GLES
+				if (layer == Layer::colour) {
+					m_r3dFrameBuffers.SetLosFlagWrite(!mesh.layered);
+				}
+#endif
 				
 				m_r3dShader.SetMeshUniforms(&mesh);
 				glDrawArrays(m_primType, mesh.vboOffset, mesh.vertexCount);
@@ -498,8 +573,19 @@ void CNew3D::RenderFrame(void)
 		}
 	}
 
-	m_r3dFrameBuffers.SetFBO(Layer::colour);		// colour will draw to all 3 buffers. For regular opaque pixels the transparent layers will be essentially masked
+	const bool restoreScissor = m_renderScale > 0 && glIsEnabled(GL_SCISSOR_TEST);
+	if (restoreScissor) {
+		glDisable(GL_SCISSOR_TEST);
+	}
+	m_r3dFrameBuffers.SetFBO(Layer::colour);		// colour will draw to all buffers. For regular opaque pixels the transparent layers will be essentially masked
+#ifdef SUPERMODEL_GLES
+	const GLfloat clearColour[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	glClearBufferfv(GL_COLOR, 0, clearColour);
+	glClearBufferfv(GL_COLOR, 1, clearColour);
+	glClearBufferfv(GL_COLOR, 2, clearColour);
+#else
 	glClear(GL_COLOR_BUFFER_BIT);
+#endif
 
 	DrawAmbientFog();
 	DrawScrollFog();								// fog layer if applicable must be drawn here
@@ -516,8 +602,17 @@ void CNew3D::RenderFrame(void)
 
 			m_r3dFrameBuffers.SetFBO(Layer::colour);
 
+#ifdef SUPERMODEL_GLES
+			glClearDepthf(0.0f);
+#else
 			glClearDepth(0.0);
+#endif
 			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+#ifdef SUPERMODEL_GLES
+			if (!renderOverlay) {
+				m_r3dFrameBuffers.PrepareLos();
+			}
+#endif
 
 			m_r3dShader.DiscardAlpha(true);
 			m_r3dShader.SetLayer(Layer::colour);
@@ -547,13 +642,21 @@ void CNew3D::RenderFrame(void)
 		}
 	}
 
+	if (restoreScissor) {
+		glEnable(GL_SCISSOR_TEST);
+	}
 	m_r3dFrameBuffers.SetFBO(Layer::none);
 
 	if (m_aaTarget) {
 		glBindFramebuffer(GL_FRAMEBUFFER, m_aaTarget);			// if we have an AA target draw to it instead of the default back buffer
 	}
 
-	m_r3dFrameBuffers.Draw();
+	if (m_renderScale > 0) {
+		m_r3dFrameBuffers.DrawScaled(m_outputXOffs, m_outputYOffs, m_outputXRes, m_outputYRes);
+	}
+	else {
+		m_r3dFrameBuffers.Draw();
+	}
 
 	if (m_aaTarget) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1705,6 +1808,10 @@ void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY) const
 
 	outX = m_xOffs + int(inX * m_xRatio);
 	outY = m_yOffs + int(inY * m_yRatio);
+	if (m_renderScale > 0) {
+		outX = std::clamp(outX, 0, static_cast<int>(m_totalXRes) - 1);
+		outY = std::clamp(outY, 0, static_cast<int>(m_totalYRes) - 1);
+	}
 }
 
 bool CNew3D::ProcessLos(int priority)
@@ -1716,11 +1823,19 @@ bool CNew3D::ProcessLos(int priority)
 				int losX, losY;
 				TranslateLosPosition(n.viewport.losPosX, n.viewport.losPosY, losX, losY);
 
+#ifdef SUPERMODEL_GLES
+				float depth;
+				bool noLosReturn;
+				m_r3dFrameBuffers.ReadLos(losX, losY, depth, noLosReturn);
+				GLubyte stencilVal = noLosReturn ? 0x80 : 0;
+				float zVal = depth / NEAR_PLANE;
+#else
 				float range[2];
 				glReadPixels(losX, losY, 1, 1, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, range);
 				GLubyte stencilVal = Util::FloatAsInt32(range[1]);
 
 				float zVal = range[0] / NEAR_PLANE;
+#endif
 
 				// apply our mask to stencil, because layered poly attributes use the lower bits
 				stencilVal &= 0x80;

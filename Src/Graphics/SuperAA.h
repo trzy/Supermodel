@@ -16,7 +16,7 @@ public:
 	SuperAA(int aaValue, CRTcolor CRTcolors);
 	~SuperAA();
 
-	void Init(int width, int height);		// width & height are real window dimensions
+	Result Init(int width, int height);		// width & height are real window dimensions
 	void Draw();							// this is a no-op if AA is 1 and CRTcolors 0, since we'll be drawing straight on the back buffer anyway
 
 	GLuint GetTargetID();
@@ -26,6 +26,7 @@ private:
 	GLSLShader m_shader;
 	const int m_aa;
 	const CRTcolor m_crtcolors;
+	bool m_shaderReady;
 	GLuint m_vao;
 	int m_width;
 	int m_height;

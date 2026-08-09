@@ -1,4 +1,5 @@
 #include "GLSLShader.h"
+#include "Graphics/GLSL.h"
 #include <cstdio>
 
 GLSLShader::GLSLShader() 
@@ -36,33 +37,62 @@ GLSLShader& GLSLShader::operator=(GLSLShader&& other) noexcept
 
 bool GLSLShader::LoadShaders(const char* vertexShader, const char* fragmentShader) 
 {
+	UnloadShaders();
+
+	const std::string vertexSource = GLSL::PrepareSource(vertexShader, GLSL::ShaderStage::Vertex);
+	const std::string fragmentSource = GLSL::PrepareSource(fragmentShader, GLSL::ShaderStage::Fragment);
+	const char *vertexSourcePtr = vertexSource.c_str();
+	const char *fragmentSourcePtr = fragmentSource.c_str();
+
 	m_program = glCreateProgram();
 	m_vShader = glCreateShader(GL_VERTEX_SHADER);
 	m_fShader = glCreateShader(GL_FRAGMENT_SHADER);
+	if (!m_program || !m_vShader || !m_fShader) {
+		UnloadShaders();
+		return false;
+	}
 
-	glShaderSource(m_vShader, 1, &vertexShader, NULL);
-	glShaderSource(m_fShader, 1, &fragmentShader, NULL);
-
+	glShaderSource(m_vShader, 1, &vertexSourcePtr, NULL);
+	glShaderSource(m_fShader, 1, &fragmentSourcePtr, NULL);
 	glCompileShader(m_vShader);
 	glCompileShader(m_fShader);
 
-	glAttachShader(m_program, m_vShader);
-	glAttachShader(m_program, m_fShader);
-
-	glLinkProgram(m_program);
-
 	PrintShaderInfoLog(m_vShader);
 	PrintShaderInfoLog(m_fShader);
+
+	GLint vertexCompiled = GL_FALSE;
+	GLint fragmentCompiled = GL_FALSE;
+	glGetShaderiv(m_vShader, GL_COMPILE_STATUS, &vertexCompiled);
+	glGetShaderiv(m_fShader, GL_COMPILE_STATUS, &fragmentCompiled);
+	if (vertexCompiled != GL_TRUE || fragmentCompiled != GL_TRUE) {
+		UnloadShaders();
+		return false;
+	}
+
+	glAttachShader(m_program, m_vShader);
+	glAttachShader(m_program, m_fShader);
+	glLinkProgram(m_program);
 	PrintProgramInfoLog(m_program);
+
+	GLint linked = GL_FALSE;
+	glGetProgramiv(m_program, GL_LINK_STATUS, &linked);
+	if (linked != GL_TRUE) {
+		UnloadShaders();
+		return false;
+	}
 
 	return true;
 }
 
 void GLSLShader::UnloadShaders()
 {
-	if (m_program) {
+	if (m_vShader) {
 		glDeleteShader(m_vShader);
+	}
+	if (m_fShader) {
 		glDeleteShader(m_fShader);
+	}
+	if (m_program) {
 		glDeleteProgram(m_program);
 	}
 

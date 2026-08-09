@@ -28,7 +28,7 @@
 #ifndef INCLUDED_RENDER2D_H
 #define INCLUDED_RENDER2D_H
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 #include <memory>
 #include "Supermodel.h"
 #include "Util/NewConfig.h"

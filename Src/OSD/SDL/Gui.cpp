@@ -1,5 +1,6 @@
 #include "SDLIncludes.h"
-#include <GL/glew.h>
+#include "Graphics/GL.h"
+#include "Graphics/GLSL.h"
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -813,9 +814,15 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
     }
 
     // Set OpenGL attributes
+#ifdef SUPERMODEL_GLES
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
 
     // Create window with graphics context
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -865,7 +872,23 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
-    ImGui_ImplOpenGL3_Init("#version 410");
+    if (!ImGui_ImplOpenGL3_Init(GLSL::VersionDirective())) {
+        ImGui_ImplSDL2_Shutdown();
+        ImGui::DestroyContext();
+        SDL_GL_DeleteContext(glContext);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return {};
+    }
+    if (!ImGui_ImplOpenGL3_CreateDeviceObjects()) {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplSDL2_Shutdown();
+        ImGui::DestroyContext();
+        SDL_GL_DeleteContext(glContext);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return {};
+    }
 
     std::string xmlFile = config["GameXMLFile"].ValueAs<std::string>();
     GameLoader loader(xmlFile);
