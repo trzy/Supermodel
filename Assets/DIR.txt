@@ -1,6 +1,7 @@
-Crosshairs images needs to be placed in here.
-32bits bmp format + alpha
-size multiple of 2
+Image assets are placed here.
+Crosshairs use 32-bit BMP format with alpha and dimensions that are multiples of 2.
 p1crosshair.bmp
 p2crosshair.bmp
+Bezel.png (generic racing-cabinet bezel artwork)
+Bezel2.png (generic molded-monitor bezel artwork)
 

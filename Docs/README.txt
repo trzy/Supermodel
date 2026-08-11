@@ -344,6 +344,8 @@ are listed below.
     Clear NVRAM                             Alt-N
     Crosshairs (for light gun games)        Alt-I
     Toggle 60 Hz Frame Limiting             Alt-T
+    Previous Game View                      Alt-Left
+    Next Game View                          Alt-Right
     Save State                              F5
     Load State                              F7
     Change Save Slot                        F6
@@ -1420,6 +1422,27 @@ All settings are case sensitive.
     Description:    Resolution of the display in pixels.  The default is
                     496x384, the Model 3's native resolution.  Equivalent to
                     the '-res' command line option.
+
+    ----------------
+
+    Name:           CRTMode
+
+    Argument:       Integer.
+
+    Description:    Applies a CRT display effect to the combined 2D and 3D
+                    game image before artwork is drawn. 0 disables the effect,
+                    1 selects an ArcCabView-style flat CRT treatment, and 2
+                    selects the same treatment with CRT curvature and rounded
+                    corners. Disabled by default.
+
+    ----------------
+
+    Name:           CRTStrength
+
+    Argument:       Floating point number between 0.0 and 1.0.
+
+    Description:    Controls the intensity of the effect selected by CRTMode.
+                    The default is 0.55.
 
     ----------------
 

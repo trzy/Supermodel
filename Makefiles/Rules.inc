@@ -100,6 +100,8 @@ SRC_FILES = \
 	Src/JTAG.cpp \
 	Src/Pkgs/glew.cpp \
 	Src/Graphics/Shader.cpp \
+	Src/Graphics/ArtworkRenderer.cpp \
+	Src/Graphics/ViewManager.cpp \
 	Src/Model3/Real3D.cpp \
 	Src/Graphics/New3D/GLSLShader.cpp \
 	Src/Graphics/New3D/R3DFrameBuffers.cpp \

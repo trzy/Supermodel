@@ -93,6 +93,8 @@
 #include "Graphics/Legacy3D/Legacy3D.h"
 #endif
 #include "Graphics/New3D/New3D.h"
+#include "Graphics/ArtworkRenderer.h"
+#include "Graphics/ViewManager.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "OSD/Audio.h"
@@ -114,6 +116,7 @@
 
 static const std::string s_analysisPath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Analysis);
 static const std::string s_configFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Supermodel.ini";
+static const std::string s_viewDefinitionDirectory = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Views/";
 static const std::string s_gameXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Games.xml";
 static const std::string s_musicXMLFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Config) << "Music.xml";
 static const std::string s_logFilePath = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Log) << "Supermodel.log";
@@ -133,8 +136,7 @@ SDL_Window *s_window = nullptr;
  * computed offsets within the viewport) that will be rendered based on what
  * was obtained from SDL.
  */
-static unsigned  xOffset, yOffset;      // offset of renderer output within OpenGL viewport
-static unsigned  xRes, yRes;            // renderer output resolution (can be smaller than GL viewport)
+static Video::GameViewport s_baseGameViewport; // SDL-computed viewport before a game view is applied
 static unsigned  totalXRes, totalYRes;  // total resolution (the whole GL viewport)
 static int aaValue = 1;                 // default is 1 which is no aa
 static CRTcolor CRTcolors = CRTcolor::None; // default to no gamma/color adaption being done
@@ -143,6 +145,74 @@ static CRTcolor CRTcolors = CRTcolor::None; // default to no gamma/color adaptio
  * Crosshair stuff
  */
 static CCrosshair* s_crosshair = nullptr;
+static Video::CViewManager s_viewManager;
+static bool s_viewManagerActive = false;
+static Video::CArtworkRenderer* s_artworkRenderer = nullptr;
+
+static const Video::GameViewport& GetGameViewport()
+{
+  return s_viewManagerActive ? s_viewManager.GetGameViewport() : s_baseGameViewport;
+}
+
+static bool IsWideScreenViewActive()
+{
+  const Video::View* view = s_viewManagerActive ? s_viewManager.GetCurrentView() : nullptr;
+  return view == nullptr ? s_runtime_config["WideScreen"].ValueAsDefault<bool>(false) : view->widescreen;
+}
+
+static bool IsCRTCurvatureActive()
+{
+  const Video::View* view = s_viewManagerActive ? s_viewManager.GetCurrentView() : nullptr;
+  if (view != nullptr && view->crtCurvature >= 0)
+    return view->crtCurvature != 0;
+  return s_runtime_config["CRTMode"].ValueAsDefault<int>(0) == 2;
+}
+
+static const Video::GameViewport& GetRendererViewport()
+{
+  // Supermodel's widescreen mode expands the 3D projection from the normal
+  // Model 3 viewable area to the full output.  Keep that native-aspect
+  // reference geometry even though the active view is visible full-screen.
+  return IsWideScreenViewActive() ? s_baseGameViewport : GetGameViewport();
+}
+
+static void SaveSelectedView(Util::Config::Node* fileConfig, const std::string& gameName, const Video::View* view)
+{
+  if (fileConfig == nullptr || view == nullptr)
+    return;
+
+  Util::Config::Node* gameConfig = fileConfig->TryGet(gameName);
+  if (gameConfig == nullptr)
+    gameConfig = &fileConfig->Add(gameName);
+  gameConfig->Set("SelectedView", view->name);
+
+  static constexpr char configFileComment[] = {
+    ";\n"
+    "; Supermodel Configuration File\n"
+    ";\n"
+  };
+  Util::Config::WriteINIFile(s_configFilePath, *fileConfig, configFileComment);
+}
+
+static void SetGameViewportScissor(const Video::GameViewport& viewport)
+{
+  const UINT32 correction = static_cast<UINT32>(((viewport.height / 384.0) * 2.0) + 0.5);
+  const UINT32 horizontalCorrection = (std::min)(correction, viewport.width / 2);
+  const UINT32 verticalCorrection = (std::min)(correction, viewport.height / 2);
+  const UINT32 outputCorrection = (std::min)(correction, totalYRes / 2);
+  glEnable(GL_SCISSOR_TEST);
+  if (IsWideScreenViewActive())
+  {
+    glScissor(0, outputCorrection * aaValue, totalXRes * aaValue, (totalYRes - (outputCorrection * 2)) * aaValue);
+  }
+  else
+  {
+    glScissor((viewport.x + horizontalCorrection) * aaValue,
+              (viewport.y + verticalCorrection) * aaValue,
+              (viewport.width - (horizontalCorrection * 2)) * aaValue,
+              (viewport.height - (verticalCorrection * 2)) * aaValue);
+  }
+}
 
 static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio)
 {
@@ -855,9 +925,15 @@ bool BeginFrameVideo()
 
 void EndFrameVideo()
 {
+  const Video::GameViewport& gameViewport = GetGameViewport();
+
   // Show crosshairs for light gun games
   if (videoInputs)
-    s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
+    s_crosshair->Update(currentInputs, videoInputs, gameViewport.x, gameViewport.y, gameViewport.width, gameViewport.height);
+
+  // Artwork is the final layer, above the game and crosshairs.
+  if (s_artworkRenderer)
+    s_artworkRenderer->Draw(totalXRes, totalYRes);
 
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
@@ -917,11 +993,11 @@ static void SuperSleepUntil(const uint64_t target)
 ******************************************************************************/
 
 #ifdef SUPERMODEL_DEBUGGER
-int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, std::shared_ptr<Debugger::CDebugger> Debugger)
+int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, Util::Config::Node* fileConfig, std::shared_ptr<Debugger::CDebugger> Debugger)
 {
   std::shared_ptr<CLogger> oldLogger;
 #else
-int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs)
+int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *Inputs, COutputs *Outputs, Util::Config::Node* fileConfig)
 {
 #endif // SUPERMODEL_DEBUGGER
   std::string initialState = s_runtime_config["InitStateFile"].ValueAs<std::string>();
@@ -931,6 +1007,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   bool        quit = false;
   bool        paused = false;
   bool        dumpTimings = false;
+  Video::CArtworkRenderer artworkRenderer;
 
   // Initialize and load ROMs
   if (Result::OKAY != Model3->Init())
@@ -948,8 +1025,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Set the video mode
   char baseTitleStr[128];
   char titleStr[128];
-  totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
-  totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
+  totalXRes = s_baseGameViewport.width = s_runtime_config["XResolution"].ValueAs<unsigned>();
+  totalYRes = s_baseGameViewport.height = s_runtime_config["YResolution"].ValueAs<unsigned>();
   snprintf(baseTitleStr, sizeof(baseTitleStr), "Supermodel - %s", game.title.c_str());
   SDL_SetWindowTitle(s_window, baseTitleStr);
   SDL_SetWindowSize(s_window, totalXRes, totalYRes);
@@ -967,8 +1044,19 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
   bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
-  if (Result::OKAY != ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
+  if (Result::OKAY != ResizeGLScreen(&s_baseGameViewport.x, &s_baseGameViewport.y, &s_baseGameViewport.width, &s_baseGameViewport.height, &totalXRes, &totalYRes, !stretch, fullscreen))
     return 1;
+
+  const std::string viewDefinitionPath = s_viewDefinitionDirectory + game.name + ".ini";
+  const std::string selectedViewName = s_runtime_config["SelectedView"].ValueAsDefault<std::string>("");
+  s_viewManager.Init(viewDefinitionPath, selectedViewName, totalXRes, totalYRes, s_baseGameViewport);
+  s_viewManagerActive = true;
+  const Video::GameViewport& gameViewport = GetGameViewport();
+  const Video::View* currentView = s_viewManager.GetCurrentView();
+  if (currentView != nullptr && !currentView->artworkPath.empty())
+    artworkRenderer.Load(currentView->artworkPath);
+  s_artworkRenderer = &artworkRenderer;
+  SetGameViewportScissor(gameViewport);
 
   // Info log GL information
   PrintGLInfo(false, true, false);
@@ -976,7 +1064,11 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Initialize audio system
   SetAudioType(game.audio);
   if (Result::OKAY != OpenAudio(s_runtime_config))
+  {
+    s_artworkRenderer = nullptr;
+    s_viewManagerActive = false;
     return 1;
+  }
 
   // Hide mouse if fullscreen, enable crosshairs for gun games
   Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
@@ -1001,8 +1093,12 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   uint64_t nextTime = 0;
 
   // Initialize the renderers
-  SuperAA* superAA = new SuperAA(aaValue, CRTcolors);
+  SuperAA* superAA = new SuperAA(aaValue, CRTcolors,
+    s_runtime_config["CRTMode"].ValueAs<int>(),
+    s_runtime_config["CRTStrength"].ValueAs<float>());
   superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
+  superAA->SetViewport(gameViewport.x, gameViewport.y, gameViewport.width, gameViewport.height);
+  superAA->SetCurvature(IsCRTCurvatureActive());
   CRender2D *Render2D = new CRender2D(s_runtime_config);
 #ifndef SUPERMODEL_OSX
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
@@ -1010,12 +1106,14 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Legacy renderer is not supported on Mac, always use new engine
   IRender3D *Render3D = (IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
 #endif
+  Render3D->SetWideScreen(IsWideScreenViewActive());
+  Video::GameViewport rendererViewport = GetRendererViewport();
 
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
 
-  if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID(), upscaleMode))
+  if (Result::OKAY != Render2D->Init(rendererViewport.x * aaValue, rendererViewport.y * aaValue, rendererViewport.width * aaValue, rendererViewport.height * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
     goto QuitError;
-  if (Result::OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
+  if (Result::OKAY != Render3D->Init(rendererViewport.x * aaValue, rendererViewport.y * aaValue, rendererViewport.width * aaValue, rendererViewport.height * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
     goto QuitError;
 
   Model3->AttachRenderers(Render2D,Render3D, superAA);
@@ -1053,7 +1151,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   while (!quit)
   {
     // Poll the inputs
-    if (!Inputs->Poll(&game, xOffset, yOffset, xRes, yRes))
+    if (!Inputs->Poll(&game, gameViewport.x, gameViewport.y, gameViewport.width, gameViewport.height))
       quit = true;
 
     // Render if paused, otherwise run a frame
@@ -1146,27 +1244,64 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
       // Delete renderers and recreate them afterwards since GL context will most likely be lost when switching from/to fullscreen
       delete Render2D;
       Render2D = nullptr;
+      artworkRenderer.Unload();
 
       // Resize screen
-      totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
-      totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
+      totalXRes = s_baseGameViewport.width = s_runtime_config["XResolution"].ValueAs<unsigned>();
+      totalYRes = s_baseGameViewport.height = s_runtime_config["YResolution"].ValueAs<unsigned>();
       bool stretchc = s_runtime_config["Stretch"].ValueAs<bool>();
       bool fullscreenc = s_runtime_config["FullScreen"].ValueAs<bool>();
-      if (Result::OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretchc,fullscreenc))
+      if (Result::OKAY != ResizeGLScreen(&s_baseGameViewport.x, &s_baseGameViewport.y, &s_baseGameViewport.width, &s_baseGameViewport.height, &totalXRes, &totalYRes, !stretchc, fullscreenc))
         goto QuitError;
+
+      s_viewManager.SetOutputGeometry(totalXRes, totalYRes, s_baseGameViewport);
+      SetGameViewportScissor(gameViewport);
+      currentView = s_viewManager.GetCurrentView();
+      if (currentView != nullptr && !currentView->artworkPath.empty())
+        artworkRenderer.Load(currentView->artworkPath);
 
       // Recreate renderers and attach to the emulator
       superAA->Init(totalXRes, totalYRes);
+      superAA->SetViewport(gameViewport.x, gameViewport.y, gameViewport.width, gameViewport.height);
+      superAA->SetCurvature(IsCRTCurvatureActive());
       Render2D = new CRender2D(s_runtime_config);
+      Render3D->SetWideScreen(IsWideScreenViewActive());
+      rendererViewport = GetRendererViewport();
 
-      if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
+      if (Result::OKAY != Render2D->Init(rendererViewport.x * aaValue, rendererViewport.y * aaValue, rendererViewport.width * aaValue, rendererViewport.height * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
         goto QuitError;
-      if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
+      if (Result::OKAY != Render3D->Init(rendererViewport.x * aaValue, rendererViewport.y * aaValue, rendererViewport.width * aaValue, rendererViewport.height * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
         goto QuitError;
 
       Model3->AttachRenderers(Render2D, Render3D, superAA);
 
       Inputs->GetInputSystem()->SetMouseVisibility(!s_runtime_config["FullScreen"].ValueAs<bool>());
+    }
+    else if (Inputs->uiPreviousView->Pressed() || Inputs->uiNextView->Pressed())
+    {
+      const bool changed = Inputs->uiPreviousView->Pressed() ? s_viewManager.PreviousView() : s_viewManager.NextView();
+      if (changed)
+      {
+        currentView = s_viewManager.GetCurrentView();
+        artworkRenderer.Unload();
+        if (currentView != nullptr && !currentView->artworkPath.empty())
+          artworkRenderer.Load(currentView->artworkPath);
+
+        Render3D->SetWideScreen(IsWideScreenViewActive());
+        SetGameViewportScissor(gameViewport);
+        superAA->SetViewport(gameViewport.x, gameViewport.y, gameViewport.width, gameViewport.height);
+        superAA->SetCurvature(IsCRTCurvatureActive());
+        rendererViewport = GetRendererViewport();
+        if (Result::OKAY != Render2D->Init(rendererViewport.x * aaValue, rendererViewport.y * aaValue, rendererViewport.width * aaValue, rendererViewport.height * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
+          goto QuitError;
+        if (Result::OKAY != Render3D->Init(rendererViewport.x * aaValue, rendererViewport.y * aaValue, rendererViewport.width * aaValue, rendererViewport.height * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
+          goto QuitError;
+        Model3->AttachRenderers(Render2D, Render3D, superAA);
+
+        SaveSelectedView(fileConfig, game.name, currentView);
+        printf("Selected view: %s\n", currentView->name.c_str());
+        InfoLog("Selected view '%s' for game '%s'.", currentView->name.c_str(), game.name.c_str());
+      }
     }
     else if (Inputs->uiSaveState->Pressed())
     {
@@ -1371,6 +1506,8 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   delete Render2D;
   delete Render3D;
   delete superAA;
+  s_artworkRenderer = nullptr;
+  s_viewManagerActive = false;
 
   return 0;
 
@@ -1379,6 +1516,8 @@ QuitError:
   delete Render2D;
   delete Render3D;
   delete superAA;
+  s_artworkRenderer = nullptr;
+  s_viewManagerActive = false;
 
   return 1;
 }
@@ -1444,7 +1583,8 @@ static Result ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, U
     }
 
     // Configure the inputs
-    if (Inputs->ConfigureInputs(game, xOffset, yOffset, xRes, yRes))
+    const Video::GameViewport& gameViewport = GetGameViewport();
+    if (Inputs->ConfigureInputs(game, gameViewport.x, gameViewport.y, gameViewport.width, gameViewport.height))
     {
       // Write input configuration and input system settings to config file
       Inputs->StoreToConfig(fileConfigRoot);
@@ -1544,6 +1684,8 @@ Util::Config::Node DefaultConfig()
   config.Set("BorderlessWindow", false, "Video");
   config.Set("Supersampling", 1, "Video", 1, 8);
   config.Set("CRTcolors", int(0), "Video", 0, 0, { 0,1,2,3,4,5 });      // these might be more user friendly as strings
+  config.Set("CRTMode", 0, "Video", 0, 0, { 0,1,2 });
+  config.Set("CRTStrength", 0.55f, "Video", 0.0f, 1.0f);
   config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });             // to do make strings
   config.Set("WideScreen", false, "Video");
   config.Set("Stretch", false, "Video");
@@ -2367,9 +2509,9 @@ int main(int argc, char **argv)
   CRTcolors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
 
   // Create a window
-  xRes = 496;
-  yRes = 384;
-  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(),"Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  s_baseGameViewport.width = 496;
+  s_baseGameViewport.height = 384;
+  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(),"Supermodel", false, &s_baseGameViewport.x, &s_baseGameViewport.y, &s_baseGameViewport.width, &s_baseGameViewport.height, &totalXRes, &totalYRes, false, false))
   {
     exitCode = 1;
     goto Exit;
@@ -2482,10 +2624,10 @@ int main(int argc, char **argv)
       Debugger->ForceBreak(true);
   }
   // Fire up Supermodel with debugger
-  exitCode = Supermodel(game, &rom_set, Model3, Inputs, Outputs, Debugger);
+  exitCode = Supermodel(game, &rom_set, Model3, Inputs, Outputs, &fileConfig, Debugger);
 #else
   // Fire up Supermodel
-  exitCode = Supermodel(game, &rom_set, Model3, Inputs, Outputs);
+  exitCode = Supermodel(game, &rom_set, Model3, Inputs, Outputs, &fileConfig);
 #endif // SUPERMODEL_DEBUGGER
   delete Model3;
 

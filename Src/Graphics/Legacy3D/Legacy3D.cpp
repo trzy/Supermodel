@@ -959,7 +959,7 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
 
 void CLegacy3D::RenderFrame(void)
 {
-  bool wideScreen = m_config["WideScreen"].ValueAs<bool>();
+  bool wideScreen = m_wideScreen;
 
   // Begin frame
   ClearErrors();  // must be cleared each frame
@@ -1333,6 +1333,11 @@ void CLegacy3D::SetBlockCulling(bool enable)
     blockCulling = enable;
 }
 
+void CLegacy3D::SetWideScreen(bool enable)
+{
+    m_wideScreen = enable;
+}
+
 float CLegacy3D::GetLosValue(int layer)
 {
 	return 0.0f;
@@ -1340,6 +1345,7 @@ float CLegacy3D::GetLosValue(int layer)
 
 CLegacy3D::CLegacy3D(const Util::Config::Node &config)
   : m_config(config),
+    m_wideScreen(config["WideScreen"].ValueAs<bool>()),
     m_aaTarget(0)
 { 
   cullingRAMLo = NULL;

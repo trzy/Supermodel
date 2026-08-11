@@ -1690,6 +1690,11 @@ void CNew3D::SetBlockCulling(bool enable)
 	m_blockCulling = enable;
 }
 
+void CNew3D::SetWideScreen(bool enable)
+{
+	m_wideScreen = enable;
+}
+
 float CNew3D::GetLosValue(int layer)
 {
 	// we always write to the 'back' buffer, and the software reads from the front

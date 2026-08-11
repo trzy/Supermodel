@@ -164,6 +164,7 @@ public:
 	*		enable	Set block culling
 	*/
 	void SetBlockCulling(bool enable);
+	void SetWideScreen(bool enable);
 
 	/*
 	* GetLosValue(int layer);

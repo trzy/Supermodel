@@ -63,6 +63,8 @@ CInputs::CInputs(std::shared_ptr<CInputSystem> system)
 	uiDumpInpState     = AddSwitchInput("UIDumpInputState",   "Dump Input State",      Game::INPUT_UI, "KEY_ALT+KEY_U");
 	uiDumpTimings      = AddSwitchInput("UIDumpTimings",      "Dump Frame Timings",    Game::INPUT_UI, "KEY_ALT+KEY_O");
 	uiScreenshot       = AddSwitchInput("UIScreenShot",	      "Screenshot",            Game::INPUT_UI, "KEY_ALT+KEY_S");
+	uiPreviousView     = AddSwitchInput("UIPreviousView",     "Previous Game View",    Game::INPUT_UI, "KEY_ALT+KEY_LEFT");
+	uiNextView         = AddSwitchInput("UINextView",         "Next Game View",        Game::INPUT_UI, "KEY_ALT+KEY_RIGHT");
 #ifdef SUPERMODEL_DEBUGGER
 	uiEnterDebugger    = AddSwitchInput("UIEnterDebugger",    "Enter Debugger",        Game::INPUT_UI, "KEY_ALT+KEY_B");
 #endif

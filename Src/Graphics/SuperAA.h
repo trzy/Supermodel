@@ -13,20 +13,39 @@
 class SuperAA
 {
 public:
-	SuperAA(int aaValue, CRTcolor CRTcolors);
+	SuperAA(int aaValue, CRTcolor CRTcolors, int crtMode, float crtStrength);
 	~SuperAA();
 
 	void Init(int width, int height);		// width & height are real window dimensions
-	void Draw();							// this is a no-op if AA is 1 and CRTcolors 0, since we'll be drawing straight on the back buffer anyway
+	void Draw();							// no-op when AA, CRT color correction, and CRT display effects are all disabled
+	void SetViewport(unsigned x, unsigned y, unsigned width, unsigned height);
+	void SetCurvature(bool enable);
 
 	GLuint GetTargetID();
 
 private:
 	FBO m_fbo;
-	GLSLShader m_shader;
+	FBO m_history[2];
+	FBO m_blurHorizontal;
+	FBO m_blurVertical;
+	GLSLShader m_sourceShader;
+	GLSLShader m_blurShader;
+	GLSLShader m_crtShader;
 	const int m_aa;
 	const CRTcolor m_crtcolors;
+	const int m_crtMode;
+	const float m_crtStrength;
 	GLuint m_vao;
 	int m_width;
 	int m_height;
+	unsigned m_viewportX;
+	unsigned m_viewportY;
+	unsigned m_viewportWidth;
+	unsigned m_viewportHeight;
+	unsigned m_historyIndex;
+	bool m_resetHistory;
+	bool m_curvatureEnabled;
+
+	bool IsEnabled() const;
+	void ClearIntermediateTargets();
 };

@@ -103,6 +103,8 @@ public:
   std::shared_ptr<CSwitchInput> uiDumpInpState;
   std::shared_ptr<CSwitchInput> uiDumpTimings;
   std::shared_ptr<CSwitchInput> uiScreenshot;
+  std::shared_ptr<CSwitchInput> uiPreviousView;
+  std::shared_ptr<CSwitchInput> uiNextView;
 #ifdef SUPERMODEL_DEBUGGER
   std::shared_ptr<CSwitchInput> uiEnterDebugger;
 #endif

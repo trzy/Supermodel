@@ -470,6 +470,12 @@
     <ClCompile Include="..\Src\Graphics\SuperAA.cpp">
       <Filter>Source Files\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Graphics\ArtworkRenderer.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\ViewManager.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp">
       <Filter>Source Files\Graphics\New</Filter>
     </ClCompile>
@@ -884,6 +890,12 @@
       <Filter>Header Files\Graphics\New</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\SuperAA.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\ArtworkRenderer.h">
+      <Filter>Header Files\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\ViewManager.h">
       <Filter>Header Files\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\New3D\TextureBank.h">

@@ -349,6 +349,7 @@ public:
 	*		enable	Set block culling
 	*/
 	void SetBlockCulling(bool enable);
+	void SetWideScreen(bool enable);
 
 	/*
 	* GetLosValue(int layer);
@@ -424,6 +425,7 @@ private:
 	 */
   
   const Util::Config::Node &m_config;
+	bool m_wideScreen;
 	
 #ifdef DEBUG
 	// Debug
