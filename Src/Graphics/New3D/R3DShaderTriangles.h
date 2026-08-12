@@ -109,6 +109,9 @@ uniform bool	smoothShading;
 uniform int		hardwareStep;
 uniform int		colourLayer;
 uniform bool	polyAlpha;
+#ifdef SUPERMODEL_GLES
+uniform bool	noLosReturn;
+#endif
 
 // matrices (shared with vertex shader)
 uniform mat4	projMat;
@@ -126,6 +129,9 @@ in float	fsLODBase;
 layout(location = 0) out vec4 out0;		// opaque
 layout(location = 1) out vec4 out1;		// trans layer 1
 layout(location = 2) out vec4 out2;		// trans layer 2
+#ifdef SUPERMODEL_GLES
+layout(location = 3) out uvec2 outLos;		// line-of-sight depth bits and no-return flag
+#endif
 
 // forward declarations (see common file)
 
@@ -254,6 +260,10 @@ void main()
 
 	// Write outputs to colour buffers
 	WriteOutputs(finalData,colourLayer);
+
+#ifdef SUPERMODEL_GLES
+	outLos = uvec2(floatBitsToUint(gl_FragDepth), noLosReturn ? 1u : 0u);
+#endif
 }
 )glsl";
 

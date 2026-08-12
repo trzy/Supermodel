@@ -276,6 +276,15 @@ try:
 
     supermodel game.zip -res=1920,1080 -fullscreen
 
+Rendering resolution is controlled independently with '-render-scale'.
+The default value of 0 renders at the output surface resolution.
+Values 1 through 8 select scales based on the origianl Model 3 resolution.
+In standard aspect mode, these produce targets from 496x384 through 3968x3072.
+In wide-screen mode, the target height remains 384 times the selected scale while its
+width follows the output aspect ratio; for example, scale 3 at 16:9 renders at 2048x1152.
+The result is then scaled to the output surface resolution.
+This setting does not affect the 2D layers or Supersampling multiplying with '-ss'.
+
 Video settings may also be specified globally or on a per-game basis in the
 configuration file, described elsewhere in this manual.
 
@@ -1234,6 +1243,19 @@ not.  All options are case sensitive.
 
     ----------------
 
+    Option:         -render-scale=<n>
+
+    Description:    Sets the New3D rendering resolution.  Valid values are 0
+                    through 8 and the default is 0, which renders at the
+                    output-surface resolution.  Positive values select fixed
+                    integer scales based on a height of 384 pixels.  Standard
+                    aspect mode uses a width of 496 pixels per scale; wide-
+                    screen mode derives the width from the output aspect ratio.
+                    This setting works with the New3D rendering engine and is
+                    independent of supersampling.
+
+    ----------------
+
     Option:         -crtcolors=<mode>
 
     Description:    Emulates other regional TV standards of the time.
@@ -1420,6 +1442,22 @@ All settings are case sensitive.
     Description:    Resolution of the display in pixels.  The default is
                     496x384, the Model 3's native resolution.  Equivalent to
                     the '-res' command line option.
+
+    ----------------
+
+    Name:           RenderScale
+
+    Argument:       Integer.
+
+    Description:    Controls the New3D rendering resolution.  The default is 0
+                    and valid values are 0 through 8.  A value of 0 uses the
+                    output-surface resolution.  Positive values select fixed
+                    integer scales based on a height of 384 pixels.  Standard
+                    aspect mode uses a width of 496 pixels per scale; wide-
+                    screen mode derives the width from the output aspect ratio.
+                    This setting works with the New3D rendering engine and is
+                    independent of Supersampling.
+                    Equivalent to the '-render-scale' command line option.
 
     ----------------
 

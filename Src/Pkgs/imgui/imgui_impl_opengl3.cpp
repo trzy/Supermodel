@@ -983,43 +983,55 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 
     // Create shaders
     const GLchar* vertex_shader_with_version[2] = { bd->GlslVersionString, vertex_shader };
-    GLuint vert_handle;
+    const GLchar* fragment_shader_with_version[2] = { bd->GlslVersionString, fragment_shader };
+    GLuint vert_handle = 0;
+    GLuint frag_handle = 0;
+    bool success = false;
+
     GL_CALL(vert_handle = glCreateShader(GL_VERTEX_SHADER));
     glShaderSource(vert_handle, 2, vertex_shader_with_version, nullptr);
     glCompileShader(vert_handle);
-    if (!CheckShader(vert_handle, "vertex shader"))
-        return false;
+    if (CheckShader(vert_handle, "vertex shader"))
+    {
+        GL_CALL(frag_handle = glCreateShader(GL_FRAGMENT_SHADER));
+        glShaderSource(frag_handle, 2, fragment_shader_with_version, nullptr);
+        glCompileShader(frag_handle);
+        if (CheckShader(frag_handle, "fragment shader"))
+        {
+            // Link
+            bd->ShaderHandle = glCreateProgram();
+            glAttachShader(bd->ShaderHandle, vert_handle);
+            glAttachShader(bd->ShaderHandle, frag_handle);
+            glLinkProgram(bd->ShaderHandle);
+            success = CheckProgram(bd->ShaderHandle, "shader program");
+        }
+    }
 
-    const GLchar* fragment_shader_with_version[2] = { bd->GlslVersionString, fragment_shader };
-    GLuint frag_handle;
-    GL_CALL(frag_handle = glCreateShader(GL_FRAGMENT_SHADER));
-    glShaderSource(frag_handle, 2, fragment_shader_with_version, nullptr);
-    glCompileShader(frag_handle);
-    if (!CheckShader(frag_handle, "fragment shader"))
-        return false;
+    if (success)
+    {
+        glDetachShader(bd->ShaderHandle, vert_handle);
+        glDetachShader(bd->ShaderHandle, frag_handle);
 
-    // Link
-    bd->ShaderHandle = glCreateProgram();
-    glAttachShader(bd->ShaderHandle, vert_handle);
-    glAttachShader(bd->ShaderHandle, frag_handle);
-    glLinkProgram(bd->ShaderHandle);
-    if (!CheckProgram(bd->ShaderHandle, "shader program"))
-        return false;
+        bd->AttribLocationTex = glGetUniformLocation(bd->ShaderHandle, "Texture");
+        bd->AttribLocationProjMtx = glGetUniformLocation(bd->ShaderHandle, "ProjMtx");
+        bd->AttribLocationVtxPos = (GLuint)glGetAttribLocation(bd->ShaderHandle, "Position");
+        bd->AttribLocationVtxUV = (GLuint)glGetAttribLocation(bd->ShaderHandle, "UV");
+        bd->AttribLocationVtxColor = (GLuint)glGetAttribLocation(bd->ShaderHandle, "Color");
 
-    glDetachShader(bd->ShaderHandle, vert_handle);
-    glDetachShader(bd->ShaderHandle, frag_handle);
-    glDeleteShader(vert_handle);
-    glDeleteShader(frag_handle);
+        // Create buffers
+        glGenBuffers(1, &bd->VboHandle);
+        glGenBuffers(1, &bd->ElementsHandle);
+    }
+    else if (bd->ShaderHandle)
+    {
+        glDeleteProgram(bd->ShaderHandle);
+        bd->ShaderHandle = 0;
+    }
 
-    bd->AttribLocationTex = glGetUniformLocation(bd->ShaderHandle, "Texture");
-    bd->AttribLocationProjMtx = glGetUniformLocation(bd->ShaderHandle, "ProjMtx");
-    bd->AttribLocationVtxPos = (GLuint)glGetAttribLocation(bd->ShaderHandle, "Position");
-    bd->AttribLocationVtxUV = (GLuint)glGetAttribLocation(bd->ShaderHandle, "UV");
-    bd->AttribLocationVtxColor = (GLuint)glGetAttribLocation(bd->ShaderHandle, "Color");
-
-    // Create buffers
-    glGenBuffers(1, &bd->VboHandle);
-    glGenBuffers(1, &bd->ElementsHandle);
+    if (vert_handle)
+        glDeleteShader(vert_handle);
+    if (frag_handle)
+        glDeleteShader(frag_handle);
 
     // Restore modified GL state
     glBindTexture(GL_TEXTURE_2D, last_texture);
@@ -1031,7 +1043,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glBindVertexArray(last_vertex_array);
 #endif
 
-    return true;
+    return success;
 }
 
 void    ImGui_ImplOpenGL3_DestroyDeviceObjects()

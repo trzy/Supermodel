@@ -22,7 +22,7 @@
 #ifndef _R3DSCROLLFOG_H_
 #define _R3DSCROLLFOG_H_
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 
 namespace New3D {
 
@@ -33,13 +33,15 @@ namespace New3D {
 		R3DScrollFog();
 		~R3DScrollFog();
 
+		bool IsReady() const { return m_ready; }
 		void DrawScrollFog(float rbga[4], float attenuation, float ambient, float spotRGB[3], float spotEllipse[4]);
 
 	private:
 
-		void AllocResources();
+		bool AllocResources();
 		void DeallocResources();
 
+		bool m_ready;
 		GLuint m_shaderProgram;
 		GLuint m_vertexShader;
 		GLuint m_fragmentShader;

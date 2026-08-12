@@ -433,7 +433,9 @@ Result CRender2D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsign
 
 	std::string um = "#define UPSCALEMODE " + std::to_string((int)m_upscaleMode) + '\n';
 
-	m_drawShader.LoadShaders(s_vertexShader, (std::string(s_fragmentShaderHeader) + um + s_fragmentShader).c_str());
+	if (!m_drawShader.LoadShaders(s_vertexShader, (std::string(s_fragmentShaderHeader) + um + s_fragmentShader).c_str())) {
+		return Result::FAIL;
+	}
 	m_drawShader.GetUniformLocationMap("tex1");
 	// init uniform memory
 	m_drawShader.EnableShader();

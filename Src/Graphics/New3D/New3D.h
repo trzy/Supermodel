@@ -30,7 +30,7 @@
 
 #include <unordered_map>
 #include <atomic>
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 #include "Types.h"
 #include "Graphics/IRender3D.h"
 #include "Model.h"
@@ -258,9 +258,12 @@ private:
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	float		m_xRatio, m_yRatio;
 	unsigned	m_xOffs, m_yOffs;
-	unsigned	m_xRes, m_yRes;           // resolution of Model 3's 496x384 display area within the window
-	unsigned 	m_totalXRes, m_totalYRes; // total OpenGL window resolution
+	unsigned	m_xRes, m_yRes;			// Model 3 display area within the New3D render target
+	unsigned  	m_totalXRes, m_totalYRes;	// complete New3D render-target resolution
 	bool		m_wideScreen;
+	int			m_renderScale;
+	unsigned	m_outputXOffs, m_outputYOffs;
+	unsigned	m_outputXRes, m_outputYRes;	// destination area within the output surface
 
 	// Real3D Base Matrix Pointer
 	const float	*m_matrixBasePtr;
@@ -294,6 +297,7 @@ private:
 	R3DScrollFog m_r3dScrollFog;
 	R3DFrameBuffers m_r3dFrameBuffers;
 	GLuint m_aaTarget;						// optional, maybe zero
+	bool m_ready;
 
 	struct
 	{

@@ -44,7 +44,8 @@
 
 #include <new>
 #include <cstdio>
-#include <GL/glew.h>
+#include "Graphics/GL.h"
+#include "Graphics/GLSL.h"
 #include "Supermodel.h"
 
 
@@ -93,6 +94,8 @@ Result LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLui
 {
 	char		infoLog[2048];
 	const char	*vsSource, *fsSource;	// source code
+	const char	*vsCompileSource, *fsCompileSource;
+	std::string	vsPreparedSource, fsPreparedSource;
 	GLuint		shaderProgram, vertexShader, fragmentShader;
 	GLint		result, len;
 	Result		ret = Result::OKAY;
@@ -112,13 +115,20 @@ Result LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLui
 		goto Quit;
 	}
 
-	// Ensure that shader support exists
+	vsPreparedSource = GLSL::PrepareSource(vsSource, GLSL::ShaderStage::Vertex);
+	fsPreparedSource = GLSL::PrepareSource(fsSource, GLSL::ShaderStage::Fragment);
+	vsCompileSource = vsPreparedSource.c_str();
+	fsCompileSource = fsPreparedSource.c_str();
+
+#ifndef SUPERMODEL_GLES
+	// Ensure that shader support exists when using dynamically loaded desktop GL.
 	if ((glCreateProgram==NULL) || (glCreateShader==NULL) || (glShaderSource==NULL) || (glCompileShader==NULL))
 	{
 		ret = Result::FAIL;
 		ErrorLog("OpenGL 2.x does not appear to be present. Unable to proceed.");
 		goto Quit;
 	}
+#endif
 	
 	// Create the shaders and shader program
 	shaderProgram	= glCreateProgram();
@@ -129,7 +139,7 @@ Result LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLui
 	*fragmentShaderPtr 	= fragmentShader;
 	
 	// Attempt to compile vertex shader
-	glShaderSource(vertexShader, 1, (const GLchar **) &vsSource, NULL);
+	glShaderSource(vertexShader, 1, (const GLchar **) &vsCompileSource, NULL);
 	glCompileShader(vertexShader);
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &result);
 	if (!result)	// failed to compile
@@ -140,7 +150,7 @@ Result LoadShaderProgram(GLuint *shaderProgramPtr, GLuint *vertexShaderPtr, GLui
 	}
 	
 	// Attempt to compile fragment shader
-	glShaderSource(fragmentShader, 1, (const GLchar **) &fsSource, NULL);
+	glShaderSource(fragmentShader, 1, (const GLchar **) &fsCompileSource, NULL);
 	glCompileShader(fragmentShader);
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &result);
 	if (!result)	// failed to compile
@@ -177,9 +187,11 @@ Quit:
 
 void DestroyShaderProgram(GLuint shaderProgram, GLuint vertexShader, GLuint fragmentShader)
 {
+#ifndef SUPERMODEL_GLES
 	// In case LoadShaderProgram() failed above due to lack of OpenGL 2.0+ functions...
 	if ((glUseProgram==NULL) || (glDeleteShader==NULL) || (glDeleteProgram==NULL))
 		return;
+#endif
 
 	glUseProgram(0);	// return to fixed function pipeline
 	glDeleteShader(vertexShader);

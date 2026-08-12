@@ -28,7 +28,7 @@
 #ifndef INCLUDED_SHADER_H
 #define INCLUDED_SHADER_H
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 #include <string>
 #include "Types.h"
 

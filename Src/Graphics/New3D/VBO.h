@@ -1,7 +1,7 @@
 #ifndef _VBO_H_
 #define _VBO_H_
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 
 class VBO
 {

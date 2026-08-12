@@ -24,7 +24,7 @@
 #include "Graphics/New3D/New3D.h"
 #include "OSD/FileSystemPath.h"
 #include "SDLIncludes.h"
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 #include <vector>
 #include "Inputs/Inputs.h"
 #include "Util/Format.h"
@@ -50,6 +50,24 @@ Result CCrosshair::Init()
   if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
       return Result::FAIL;
 
+#ifdef SUPERMODEL_GLES
+  SDL_Surface* rgbaCrosshairP1 = SDL_ConvertSurfaceFormat(surfaceCrosshairP1, SDL_PIXELFORMAT_RGBA32, 0);
+  SDL_Surface* rgbaCrosshairP2 = SDL_ConvertSurfaceFormat(surfaceCrosshairP2, SDL_PIXELFORMAT_RGBA32, 0);
+  SDL_FreeSurface(surfaceCrosshairP1);
+  SDL_FreeSurface(surfaceCrosshairP2);
+  surfaceCrosshairP1 = rgbaCrosshairP1;
+  surfaceCrosshairP2 = rgbaCrosshairP2;
+  if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
+  {
+    SDL_FreeSurface(surfaceCrosshairP1);
+    SDL_FreeSurface(surfaceCrosshairP2);
+    return Result::FAIL;
+  }
+  const GLenum textureFormat = GL_RGBA;
+#else
+  const GLenum textureFormat = GL_BGRA;
+#endif
+
   m_p1CrosshairW = surfaceCrosshairP1->w;
   m_p1CrosshairH = surfaceCrosshairP1->h;
   m_p2CrosshairW = surfaceCrosshairP2->w;
@@ -58,12 +76,12 @@ Result CCrosshair::Init()
   glGenTextures(2, m_crosshairTexId);
 
   glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, textureFormat, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
   glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, textureFormat, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
@@ -121,7 +139,13 @@ Result CCrosshair::Init()
     }
     )glsl";
 
-  m_shader.LoadShaders(m_vertexShader, m_fragmentShader);
+  if (!m_shader.LoadShaders(m_vertexShader, m_fragmentShader))
+  {
+    glDeleteTextures(2, m_crosshairTexId);
+    m_crosshairTexId[0] = 0;
+    m_crosshairTexId[1] = 0;
+    return Result::FAIL;
+  }
   m_shader.GetUniformLocationMap("mvp");
   m_shader.GetUniformLocationMap("CrosshairTexture");
   m_shader.GetUniformLocationMap("colour");
@@ -274,7 +298,9 @@ void CCrosshair::Update(uint32_t currentInputs, CInputs* Inputs, unsigned int xO
   }
   else
   {
-    glEnable(GL_TEXTURE_2D); // enable texture mapping, blending and alpha chanel
+#ifndef SUPERMODEL_GLES
+    glEnable(GL_TEXTURE_2D); // enable texture mapping on the legacy desktop state path
+#endif
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   }

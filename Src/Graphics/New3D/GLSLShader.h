@@ -1,7 +1,7 @@
 #ifndef _GLSLSHADER_H_
 #define _GLSLSHADER_H_
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 #include <map>
 #include <cstring>
 

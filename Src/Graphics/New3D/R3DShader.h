@@ -1,7 +1,7 @@
 #ifndef _R3DSHADER_H_
 #define _R3DSHADER_H_
 
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 #include "Util/NewConfig.h"
 #include "Model.h"
 #include <map>
@@ -126,6 +126,9 @@ private:
 	// global uniforms
 	GLint m_locHardwareStep;
 	GLint m_locDiscardAlpha;
+#ifdef SUPERMODEL_GLES
+	GLint m_locNoLosReturn;
+#endif
 
 	// vertex attribute position cache
 	std::map<std::string, GLint> m_vertexLocCache;

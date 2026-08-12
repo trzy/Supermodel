@@ -67,12 +67,14 @@
 #include <new>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cstdarg>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 #include <algorithm>
-#include <GL/glew.h>
+#include "Graphics/GL.h"
 
 #ifdef SUPERMODEL_WIN32
 #include "DirectInputSystem.h"
@@ -89,7 +91,7 @@
 #include "SDLInputSystem.h"
 #include "SDLIncludes.h"
 #include "Debugger/SupermodelDebugger.h"
-#ifndef SUPERMODEL_OSX
+#if !defined(SUPERMODEL_OSX) && !defined(SUPERMODEL_GLES)
 #include "Graphics/Legacy3D/Legacy3D.h"
 #endif
 #include "Graphics/New3D/New3D.h"
@@ -126,6 +128,7 @@ static Util::Config::Node s_runtime_config("Global");
 ******************************************************************************/
 
 SDL_Window *s_window = nullptr;
+static bool s_showWindowAfterNextSwap = false;
 
 /*
  * Position and size of rectangular region within OpenGL display to render to.
@@ -178,7 +181,11 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
   // OpenGL initialization
   glViewport(0,0,*xResPtr,*yResPtr);
   glClearColor(0.0,0.0,0.0,0.0);
+#ifdef SUPERMODEL_GLES
+  glClearDepthf(1.0f);
+#else
   glClearDepth(1.0);
+#endif
   glDepthFunc(GL_LESS);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
@@ -215,12 +222,78 @@ static Result SetGLGeometry(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned
 //     printf("OGLDebug:: 0x%X: %s\n", id, message);
 // }
 
+static bool IsWaylandVideoDriver()
+{
+  const char *videoDriver = SDL_GetCurrentVideoDriver();
+  return videoDriver != nullptr && SDL_strcmp(videoDriver, "wayland") == 0;
+}
+
+static Uint32 GetFullScreenWindowFlag()
+{
+  // Wayland compositors control output modes; use compositor fullscreen rather
+  // than requesting the exclusive display-mode switch used by X11.
+  return IsWaylandVideoDriver() ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
+}
+
+static Result InitializeVideoSubsystem()
+{
+#ifdef SUPERMODEL_PREFER_WAYLAND
+  bool waylandPreferenceInjected = false;
+  const char *requestedVideoDriver = SDL_getenv("SDL_VIDEODRIVER");
+  if (requestedVideoDriver == nullptr || requestedVideoDriver[0] == '\0')
+  {
+    if (SDL_setenv("SDL_VIDEODRIVER", "wayland", 1) == 0)
+      waylandPreferenceInjected = true;
+    else
+      InfoLog("Unable to request SDL's Wayland video driver; using SDL's default driver selection.");
+  }
+#endif
+
+  if (SDL_Init(SDL_INIT_VIDEO) != 0)
+  {
+#ifdef SUPERMODEL_PREFER_WAYLAND
+    if (waylandPreferenceInjected)
+    {
+      std::string waylandError = SDL_GetError();
+      SDL_QuitSubSystem(SDL_INIT_VIDEO);
+      ::unsetenv("SDL_VIDEODRIVER");
+      waylandPreferenceInjected = false;
+      SDL_ClearError();
+
+      if (SDL_Init(SDL_INIT_VIDEO) != 0)
+      {
+        return ErrorLog("Unable to initialize SDL video subsystem with Wayland (%s) or fallback driver (%s).\n", waylandError.c_str(), SDL_GetError());
+      }
+      InfoLog("SDL Wayland video initialization failed (%s); using SDL's fallback driver selection.", waylandError.c_str());
+    }
+    else
+#endif
+    {
+      return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
+    }
+  }
+
+#ifdef SUPERMODEL_PREFER_WAYLAND
+  if (waylandPreferenceInjected)
+    ::unsetenv("SDL_VIDEODRIVER");
+#endif
+
+  const char *videoDriver = SDL_GetCurrentVideoDriver();
+  printf("SDL video driver: %s\n", videoDriver != nullptr ? videoDriver : "unknown");
+  return Result::OKAY;
+}
+
 // In windows with an nvidia card (sorry not tested anything else) you can customise the resolution.
 // This also allows you to set a totally custom refresh rate. Apparently you can drive most monitors at
 // 57.5fps with no issues. Anyway this code will automatically pick up your custom refresh rate, and set it if it exists.
 // If it doesn't exist, then it'll probably just default to 60 or whatever your refresh rate is.
-static void SetFullScreenRefreshRate()
+static void SetFullScreenRefreshRate(unsigned width, unsigned height)
 {
+    // Wayland does not expose X11-style output mode switching to clients.
+    if (IsWaylandVideoDriver()) {
+        return;
+    }
+
     float refreshRateHz = std::abs(s_runtime_config["RefreshRate"].ValueAs<float>());
 
     if (refreshRateHz > 57.f && refreshRateHz < 58.f) {
@@ -240,7 +313,7 @@ static void SetFullScreenRefreshRate()
                 return;
             }
 
-            if (SDL_BITSPERPIXEL(mode.format) >= 24 && (unsigned)mode.w == totalXRes && (unsigned)mode.h == totalYRes) {
+            if (SDL_BITSPERPIXEL(mode.format) >= 24 && (unsigned)mode.w == width && (unsigned)mode.h == height) {
                 if (mode.refresh_rate == 57 || mode.refresh_rate == 58) {       // nvidia is fairly flexible in what refresh rate windows will show, so we can match either 57 or 58,
                     int result = SDL_SetWindowDisplayMode(s_window, &mode);     // both are totally non standard frequencies and shouldn't be set incorrectly
                     if (result == 0) {
@@ -265,9 +338,96 @@ static void SetFullScreenRefreshRate()
  * NOTE: keepAspectRatio should always be true. It has not yet been tested with
  * the wide screen hack.
  */
-static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+#ifdef SUPERMODEL_GLES
+static Result ValidateGLESContext(bool quadRendering)
 {
+  GLint majorVersion = 0;
+  GLint minorVersion = 0;
+  GLint maxDrawBuffers = 0;
+  GLint maxColorAttachments = 0;
+  GLint maxTextureSize = 0;
+  GLint maxVertexAttribs = 0;
+
+  glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+  glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+  glGetIntegerv(GL_MAX_DRAW_BUFFERS, &maxDrawBuffers);
+  glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachments);
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+
+  const bool supportsES31 = majorVersion > 3 || (majorVersion == 3 && minorVersion >= 1);
+  const bool supportsES32 = majorVersion > 3 || (majorVersion == 3 && minorVersion >= 2);
+  bool valid = true;
+  if (!supportsES31)
+  {
+    ErrorLog("OpenGL ES 3.1 or newer is required (received %d.%d).", majorVersion, minorVersion);
+    valid = false;
+  }
+  if (maxDrawBuffers < 3)
+  {
+    ErrorLog("OpenGL ES requires at least 3 draw buffers (received %d).", maxDrawBuffers);
+    valid = false;
+  }
+  if (maxColorAttachments < 3)
+  {
+    ErrorLog("OpenGL ES requires at least 3 color attachments (received %d).", maxColorAttachments);
+    valid = false;
+  }
+  if (maxTextureSize < 2048)
+  {
+    ErrorLog("OpenGL ES requires a maximum texture size of at least 2048 (received %d).", maxTextureSize);
+    valid = false;
+  }
+  if (maxVertexAttribs < 7)
+  {
+    ErrorLog("OpenGL ES New3D requires at least 7 vertex attributes (received %d).", maxVertexAttribs);
+    valid = false;
+  }
+
+  // GLES cannot read depth/stencil buffers directly. The portable New3D LOS
+  // path uses one additional integer color attachment.
+  if (maxDrawBuffers < 4 || maxColorAttachments < 4)
+  {
+    ErrorLog("OpenGL ES New3D line-of-sight rendering requires 4 draw buffers and color attachments (received %d and %d).", maxDrawBuffers, maxColorAttachments);
+    valid = false;
+  }
+
+  if (quadRendering && !supportsES32)
+  {
+    ErrorLog("OpenGL ES QuadRendering requires OpenGL ES 3.2 or newer (received %d.%d).", majorVersion, minorVersion);
+    valid = false;
+  }
+
+  if (quadRendering && supportsES32)
+  {
+    GLint maxGeometryOutputVertices = 0;
+    GLint maxGeometryOutputComponents = 0;
+    GLint maxGeometryTotalOutputComponents = 0;
+    glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES, &maxGeometryOutputVertices);
+    glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_COMPONENTS, &maxGeometryOutputComponents);
+    glGetIntegerv(GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS, &maxGeometryTotalOutputComponents);
+
+    // The quad shader emits four vertices with 60 user components plus
+    // gl_Position (4 components) per vertex.
+    if (maxGeometryOutputVertices < 4 || maxGeometryOutputComponents < 64 || maxGeometryTotalOutputComponents < 256)
+    {
+      ErrorLog("OpenGL ES QuadRendering requires geometry output limits of at least 4 vertices, 64 components, and 256 total components (received %d, %d, and %d).",
+               maxGeometryOutputVertices, maxGeometryOutputComponents, maxGeometryTotalOutputComponents);
+      valid = false;
+    }
+  }
+
+  return valid ? Result::OKAY : Result::FAIL;
+}
+#endif
+
+static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::string &caption, int windowXPosition, int windowYPosition, bool borderless, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+{
+#ifndef SUPERMODEL_GLES
   GLenum err;
+#else
+  (void)coreContext;
+#endif
 
   // Call only once per program session (this is because of issues with
   // DirectInput when the window is destroyed and a new one created). Use
@@ -278,8 +438,8 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   }
 
   // Initialize video subsystem
-  if (SDL_Init(SDL_INIT_VIDEO) != 0)
-    return ErrorLog("Unable to initialize SDL video subsystem: %s\n", SDL_GetError());
+  if (InitializeVideoSubsystem() != Result::OKAY)
+    return Result::FAIL;
 
   // Important GL attributes
   SDL_GL_SetAttribute(SDL_GL_RED_SIZE,8);
@@ -297,6 +457,11 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   }
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
 
+#ifdef SUPERMODEL_GLES
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, quadRendering ? 2 : 1);
+#else
   if (coreContext) {
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
@@ -309,25 +474,57 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
           SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
       }
   }
+#endif
 
-  // Set video mode
-  s_window = SDL_CreateWindow(caption.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, *xResPtr, *yResPtr, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | (fullScreen ? SDL_WINDOW_FULLSCREEN : 0));
+  // Create the emulator window once at its final windowed geometry. Keep it
+  // hidden until the first complete emulated frame has been presented.
+  Uint32 windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN;
+  if (borderless)
+    windowFlags |= SDL_WINDOW_BORDERLESS;
+
+  s_window = SDL_CreateWindow(caption.c_str(), windowXPosition, windowYPosition, *xResPtr, *yResPtr, windowFlags);
   if (nullptr == s_window)
   {
     ErrorLog("Unable to create an OpenGL display: %s\n", SDL_GetError());
     return Result::FAIL;
   }
 
-  if (focusWindow)
+  // SDL requires a window before a custom display mode can be selected. Apply
+  // the mode and enter fullscreen while hidden, before creating renderers.
+  if (fullScreen)
   {
-    SDL_RaiseWindow(s_window);
+    SetFullScreenRefreshRate(*xResPtr, *yResPtr);
+    if (SDL_SetWindowFullscreen(s_window, GetFullScreenWindowFlag()) < 0)
+    {
+      ErrorLog("Unable to enter fullscreen mode: %s\n", SDL_GetError());
+      SDL_DestroyWindow(s_window);
+      s_window = nullptr;
+      return Result::FAIL;
+    }
   }
 
   // Create OpenGL context
+#ifdef SUPERMODEL_GLES
+  SDL_GLContext context = nullptr;
+  const int firstMinorVersion = quadRendering ? 2 : 1;
+  for (int minorVersion = firstMinorVersion; minorVersion >= 1 && context == nullptr; --minorVersion)
+  {
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVersion);
+    SDL_ClearError();
+    context = SDL_GL_CreateContext(s_window);
+    if (context == nullptr && minorVersion > 1)
+    {
+      InfoLog("Unable to create an OpenGL ES 3.%d context (%s); retrying with a lower version.", minorVersion, SDL_GetError());
+    }
+  }
+#else
   SDL_GLContext context = SDL_GL_CreateContext(s_window);
+#endif
   if (nullptr == context)
   {
     ErrorLog("Unable to create OpenGL context: %s\n", SDL_GetError());
+    SDL_DestroyWindow(s_window);
+    s_window = nullptr;
     return Result::FAIL;
   }
 
@@ -337,19 +534,37 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   // Set the context as the current window context
   SDL_GL_MakeCurrent(s_window, context);
 
+#ifdef SUPERMODEL_GLES
+  if (quadRendering)
+  {
+    GLint majorVersion = 0;
+    GLint minorVersion = 0;
+    glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
+    glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
+    if (majorVersion < 3 || (majorVersion == 3 && minorVersion < 2))
+    {
+      InfoLog("OpenGL ES QuadRendering requires ES 3.2; disabling it for the available ES %d.%d context.", majorVersion, minorVersion);
+      s_runtime_config.Set("QuadRendering", false);
+      quadRendering = false;
+    }
+  }
+#endif
+
+#ifndef SUPERMODEL_GLES
   // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
   err = glewInit();
-  if (GLEW_OK != err)
+  if (GLEW_OK != err && !(IsWaylandVideoDriver() && GLEW_ERROR_NO_GLX_DISPLAY == err))
   {
     ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
     return Result::FAIL;
   }
+#endif
 
   // print some basic GPU info
+  printf("GPU info: %s ", glGetString(GL_VERSION));
+#ifndef SUPERMODEL_GLES
   GLint profile = 0;
   glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
-
-  printf("GPU info: %s ", glGetString(GL_VERSION));
 
   if (profile & GL_CONTEXT_CORE_PROFILE_BIT) {
       printf("(core profile)");
@@ -358,8 +573,21 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
   if (profile & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) {
       printf("(compatibility profile)");
   }
+#else
+  printf("(OpenGL ES profile)");
+#endif
 
   printf("\n\n");
+
+#ifdef SUPERMODEL_GLES
+  if (ValidateGLESContext(quadRendering) != Result::OKAY)
+  {
+    SDL_GL_DeleteContext(context);
+    SDL_DestroyWindow(s_window);
+    s_window = nullptr;
+    return Result::FAIL;
+  }
+#endif
 
   //glDebugMessageCallback(DebugCallback, NULL);
   //glDebugMessageControl(GL_DONT_CARE,GL_DONT_CARE,GL_DONT_CARE, 0, 0, GL_TRUE);
@@ -379,8 +607,11 @@ static void DestroyGLScreen()
 
 static Result ResizeGLScreen(unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
+  if (fullScreen)
+    SetFullScreenRefreshRate(*xResPtr, *yResPtr);
+
   // Set full screen mode
-  if (SDL_SetWindowFullscreen(s_window, fullScreen ? SDL_WINDOW_FULLSCREEN : 0) < 0)
+  if (SDL_SetWindowFullscreen(s_window, fullScreen ? GetFullScreenWindowFlag() : 0) < 0)
   {
     ErrorLog("Unable to enter %s mode: %s\n", fullScreen ? "fullscreen" : "windowed", SDL_GetError());
     return Result::FAIL;
@@ -400,7 +631,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
   unsigned xOffset, yOffset, xRes=496, yRes=384, totalXRes, totalYRes;
   if (createScreen)
   {
-    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
     {
       ErrorLog("Unable to query OpenGL.\n");
       return;
@@ -431,14 +662,30 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
   glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &value);
   if (infoLog)  InfoLog("  Maximum Vertex Attributes: %d", value);
   else           printf("  Maximum Vertex Attributes: %d\n", value);
+#ifdef SUPERMODEL_GLES
+  glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &value);
+  if (infoLog)  InfoLog("  Maximum Vertex Uniforms  : %d vectors", value);
+  else           printf("  Maximum Vertex Uniforms  : %d vectors\n", value);
+#else
   glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &value);
   if (infoLog)  InfoLog("  Maximum Vertex Uniforms  : %d", value);
   else           printf("  Maximum Vertex Uniforms  : %d\n", value);
+#endif
   glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &value);
   if (infoLog)  InfoLog("  Maximum Texture Img Units: %d", value);
   else           printf("  Maximum Texture Img Units: %d\n", value);
   if (printExtensions)
   {
+#ifdef SUPERMODEL_GLES
+    GLint numExtensions = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
+    for (GLint i = 0; i < numExtensions; i++)
+    {
+      str = glGetStringi(GL_EXTENSIONS, GLuint(i));
+      if (infoLog)  InfoLog("  %s%s", i == 0 ? "Supported Extensions     : " : "                           ", str);
+      else           printf("  %s%s\n", i == 0 ? "Supported Extensions     : " : "                           ", str);
+    }
+#else
     str = glGetString(GL_EXTENSIONS);
     char *strLocal = (char *) malloc((strlen((char *) str)+1)*sizeof(char));
     if (NULL == strLocal)
@@ -459,6 +706,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
       }
     }
     free(strLocal);
+#endif
   }
   if (infoLog)  InfoLog("");
   else      printf("\n");
@@ -631,7 +879,11 @@ static void TestPolygonHeaderBits(IEmulator *Emu)
 
   GLint readBuffer;
   glGetIntegerv(GL_READ_BUFFER, &readBuffer);
+#ifdef SUPERMODEL_GLES
+  glReadBuffer(GL_BACK);
+#else
   glReadBuffer(GL_FRONT);
+#endif
 
   // Render separate image for each unknown bit
   s_runtime_config.Set("Debug/ForceFlushModels", true);
@@ -861,6 +1113,15 @@ void EndFrameVideo()
 
   // Swap the buffers
   SDL_GL_SwapWindow(s_window);
+
+  // Normal launches stay hidden through sizing, fullscreen transition, and
+  // renderer initialization. Reveal only after the first complete frame.
+  if (s_showWindowAfterNextSwap)
+  {
+    SDL_ShowWindow(s_window);
+    SDL_RaiseWindow(s_window);
+    s_showWindowAfterNextSwap = false;
+  }
 }
 
 
@@ -945,30 +1206,12 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
   // Load NVRAM
   LoadNVRAM(Model3);
 
-  // Set the video mode
+  // The window already has its final geometry and display mode. Only restore
+  // the game title here in case input configuration temporarily changed it.
   char baseTitleStr[128];
   char titleStr[128];
-  totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
-  totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
   snprintf(baseTitleStr, sizeof(baseTitleStr), "Supermodel - %s", game.title.c_str());
   SDL_SetWindowTitle(s_window, baseTitleStr);
-  SDL_SetWindowSize(s_window, totalXRes, totalYRes);
-
-  int xpos = s_runtime_config["WindowXPosition"].ValueAsDefault<int>(SDL_WINDOWPOS_CENTERED);
-  int ypos = s_runtime_config["WindowYPosition"].ValueAsDefault<int>(SDL_WINDOWPOS_CENTERED);
-  SDL_SetWindowPosition(s_window, xpos, ypos);
-
-  if (s_runtime_config["BorderlessWindow"].ValueAs<bool>())
-  {
-    SDL_SetWindowBordered(s_window, SDL_FALSE);
-  }
-
-  SetFullScreenRefreshRate();
-
-  bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
-  bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
-  if (Result::OKAY != ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
-    return 1;
 
   // Info log GL information
   PrintGLInfo(false, true, false);
@@ -1002,16 +1245,23 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
 
   // Initialize the renderers
   SuperAA* superAA = new SuperAA(aaValue, CRTcolors);
-  superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
-  CRender2D *Render2D = new CRender2D(s_runtime_config);
-#ifndef SUPERMODEL_OSX
-  IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
-#else
-  // Legacy renderer is not supported on Mac, always use new engine
-  IRender3D *Render3D = (IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
-#endif
-
+  CRender2D *Render2D = nullptr;
+  IRender3D *Render3D = nullptr;
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
+
+  if (Result::OKAY != superAA->Init(totalXRes, totalYRes))  // pass actual frame sizes here
+  {
+    ErrorLog("Unable to initialize supersampling/CRT rendering.");
+    goto QuitError;
+  }
+
+  Render2D = new CRender2D(s_runtime_config);
+#if !defined(SUPERMODEL_OSX) && !defined(SUPERMODEL_GLES)
+  Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+#else
+  // Legacy renderer is not supported on macOS or OpenGL ES builds; always use New3D
+  Render3D = (IRender3D *) new New3D::CNew3D(s_runtime_config, Model3->GetGame().name);
+#endif
 
   if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID(), upscaleMode))
     goto QuitError;
@@ -1036,6 +1286,9 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     Debugger->Attach();
   }
 #endif // SUPERMODEL_DEBUGGER
+
+  // Reveal the finalized window after EndFrameVideo presents the first frame.
+  s_showWindowAfterNextSwap = true;
 
   // Emulate!
   fpsFramesElapsed = 0;
@@ -1156,7 +1409,11 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
-      superAA->Init(totalXRes, totalYRes);
+      if (Result::OKAY != superAA->Init(totalXRes, totalYRes))
+      {
+        ErrorLog("Unable to reinitialize supersampling/CRT rendering.");
+        goto QuitError;
+      }
       Render2D = new CRender2D(s_runtime_config);
 
       if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
@@ -1510,7 +1767,7 @@ Util::Config::Node DefaultConfig()
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
   // 2D and 3D graphics engines
-#ifndef SUPERMODEL_OSX
+#if !defined(SUPERMODEL_OSX) && !defined(SUPERMODEL_GLES)
   config.Set("MultiTexture", false, "Legacy3D");
   config.Set<std::string>("VertexShader", "", "Legacy3D", "", "");
   config.Set<std::string>("FragmentShader", "", "Legacy3D", "", "");
@@ -1543,6 +1800,7 @@ Util::Config::Node DefaultConfig()
   config.Set("FullScreen", false, "Video");
   config.Set("BorderlessWindow", false, "Video");
   config.Set("Supersampling", 1, "Video", 1, 8);
+  config.Set("RenderScale", 0, "Video", 0, 8);
   config.Set("CRTcolors", int(0), "Video", 0, 0, { 0,1,2,3,4,5 });      // these might be more user friendly as strings
   config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });             // to do make strings
   config.Set("WideScreen", false, "Video");
@@ -1850,6 +2108,7 @@ static void Help(void)
   puts("Video Options:");
   puts("  -res=<x>,<y>            Resolution [Default: 496,384]");
   puts("  -ss=<n>                 Supersampling (range 1-8)");
+  puts("  -render-scale=<n>       New3D resolution scale: 0=output, 1-8=fixed scale");
   puts("  -window-pos=<x>,<y>     Window position [Default: centered]");
   puts("  -window                 Windowed mode [Default]");
   puts("  -borderless             Windowed mode with no border");
@@ -1872,13 +2131,15 @@ static void Help(void)
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
 #endif
   puts("  -quad-rendering         Enable proper quad rendering");
-#ifndef SUPERMODEL_OSX
+#if !defined(SUPERMODEL_OSX) && !defined(SUPERMODEL_GLES)
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
   puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
   puts("  -no-multi-texture       Decode to single texture (legacy engine) [Default]");
+#elif defined(SUPERMODEL_GLES)
+  puts("  -legacy3d               Not supported by OpenGL ES builds");
 #endif
   puts("  -no-white-flash         Disables white flash when games disable 3D rendering");
-#ifndef SUPERMODEL_OSX
+#if !defined(SUPERMODEL_OSX) && !defined(SUPERMODEL_GLES)
   puts("  -vert-shader=<file>     Load Real3D vertex shader for 3D rendering (legacy");
   puts("                          engine)");
   puts("  -frag-shader=<file>     Load Real3D fragment shader for 3D rendering (legacy");
@@ -1992,7 +2253,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-stretch",          { "Stretch",          false } },
     { "-wide-bg",             { "WideBackground",   true } },
     { "-no-wide-bg",          { "WideBackground",   false } },
-#ifndef SUPERMODEL_OSX
+#if !defined(SUPERMODEL_OSX) && !defined(SUPERMODEL_GLES)
     { "-no-multi-texture",    { "MultiTexture",     false } },
     { "-multi-texture",       { "MultiTexture",     true } },
 #endif
@@ -2139,6 +2400,31 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
               }
               catch (...) {
                   ErrorLog("'-ss' requires an integer argument (e.g., '-ss=2').");
+                  cmd_line.error = true;
+              }
+          }
+      }
+      else if (arg == "-render-scale" || arg.find("-render-scale=") == 0)
+      {
+          std::vector<std::string> parts = Util::Format(arg).Split('=');
+          if (parts.size() != 2)
+          {
+              ErrorLog("'-render-scale' requires an integer from 0 to 8 (e.g., '-render-scale=1').");
+              cmd_line.error = true;
+          }
+          else
+          {
+              try
+              {
+                  size_t parsed = 0;
+                  int val = std::stoi(parts[1], &parsed);
+                  if (parsed != parts[1].size() || val < 0 || val > 8)
+                      throw std::out_of_range("RenderScale");
+                  cmd_line.config.Set("RenderScale", val);
+              }
+              catch (...)
+              {
+                  ErrorLog("'-render-scale' requires an integer from 0 to 8 (e.g., '-render-scale=1').");
                   cmd_line.error = true;
               }
           }
@@ -2342,6 +2628,14 @@ int main(int argc, char **argv)
   }
   LogConfig(s_runtime_config);
 
+#ifdef SUPERMODEL_GLES
+  if (!s_runtime_config["New3DEngine"].ValueAs<bool>())
+  {
+    ErrorLog("Legacy3D is not available in OpenGL ES builds. Enable New3DEngine and remove -legacy3d.");
+    return 1;
+  }
+#endif
+
   // Initialize SDL (individual subsystems get initialized later)
   if (SDL_Init(0) != 0)
   {
@@ -2366,10 +2660,30 @@ int main(int argc, char **argv)
   aaValue = s_runtime_config["Supersampling"].ValueAs<int>();
   CRTcolors = (CRTcolor)s_runtime_config["CRTcolors"].ValueAs<int>();
 
-  // Create a window
+  // Create the sole emulator window at the game's final geometry. Input-only
+  // utility modes retain the traditional centered 496x384 window.
   xRes = 496;
   yRes = 384;
-  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(),"Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  int windowXPosition = SDL_WINDOWPOS_CENTERED;
+  int windowYPosition = SDL_WINDOWPOS_CENTERED;
+  bool borderless = false;
+  bool keepAspectRatio = false;
+  bool startupFullscreen = false;
+  std::string windowCaption = "Supermodel";
+
+  if (rom_specified)
+  {
+    xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
+    yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
+    windowXPosition = s_runtime_config["WindowXPosition"].ValueAsDefault<int>(SDL_WINDOWPOS_CENTERED);
+    windowYPosition = s_runtime_config["WindowYPosition"].ValueAsDefault<int>(SDL_WINDOWPOS_CENTERED);
+    borderless = s_runtime_config["BorderlessWindow"].ValueAs<bool>();
+    keepAspectRatio = !s_runtime_config["Stretch"].ValueAs<bool>();
+    startupFullscreen = s_runtime_config["FullScreen"].ValueAs<bool>() && !cmd_line.config_inputs;
+    windowCaption += " - " + game.title;
+  }
+
+  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(), windowCaption, windowXPosition, windowYPosition, borderless, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, keepAspectRatio, startupFullscreen))
   {
     exitCode = 1;
     goto Exit;
@@ -2420,6 +2734,14 @@ int main(int argc, char **argv)
     goto Exit;
   }
 
+  // Input configuration needs a visible, focused window, but normal launches
+  // remain hidden until their first completed emulated frame.
+  if (cmd_line.config_inputs)
+  {
+    SDL_ShowWindow(s_window);
+    SDL_RaiseWindow(s_window);
+  }
+
   // NOTE: fileConfig is passed so that the global section is used for input settings
   // and because this function may write out a new config file, which must preserve
   // all sections. We don't want to pollute the output with built-in defaults.
@@ -2433,6 +2755,24 @@ int main(int argc, char **argv)
   {
     Inputs->PrintInputs(NULL);
     InputSystem->PrintSettings();
+  }
+
+  // Input configuration temporarily uses the final-sized window in windowed
+  // mode. Hide it again and apply the configured fullscreen mode before any
+  // game renderers are initialized.
+  if (cmd_line.config_inputs && rom_specified)
+  {
+    SDL_HideWindow(s_window);
+    if (s_runtime_config["FullScreen"].ValueAs<bool>())
+    {
+      totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
+      totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
+      if (Result::OKAY != ResizeGLScreen(&xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, keepAspectRatio, true))
+      {
+        exitCode = 1;
+        goto Exit;
+      }
+    }
   }
 
   if (!rom_specified)

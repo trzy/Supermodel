@@ -171,10 +171,10 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
 	float a = LinearTexLocations(wrapMode.s, texSize.x, texCoord.x, tx[0], tx[1]);
 	float b = LinearTexLocations(wrapMode.t, texSize.y, texCoord.y, ty[0], ty[1]);
 
-	vec4 p0q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[0]) * texSize + texPos),level), level).r);
-	vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + texPos),level), level).r);
-	vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + texPos),level), level).r);
-	vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + texPos),level), level).r);
+	vec4 p0q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[0]) * texSize + vec2(texPos)),level), level).r);
+	vec4 p1q0 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[0]) * texSize + vec2(texPos)),level), level).r);
+	vec4 p0q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[0],ty[1]) * texSize + vec2(texPos)),level), level).r);
+	vec4 p1q1 = ExtractColour(baseTexType,texelFetch(texSampler, WrapTexCoords(texPos,ivec2(vec2(tx[1],ty[1]) * texSize + vec2(texPos)),level), level).r);
 
 	if(alphaTest) {
 		if(p0q0.a > p1q0.a)		{ p1q0.rgb = p0q0.rgb; }
@@ -197,6 +197,20 @@ vec4 texBiLinear(usampler2D texSampler, ivec2 wrapMode, vec2 texSize, ivec2 texP
 	return mix( pInterp_q0, pInterp_q1, b ); // Interpolate in Y direction.
 }
 
+vec4 texBiLinearBank(int page, ivec2 wrapMode, vec2 texSize, ivec2 texPos, vec2 texCoord, int level)
+{
+#ifdef SUPERMODEL_GLES
+	// GLSL ES forbids sampler arrays indexed with non-constant expressions.
+	// texturePage is uniform across the draw, so a branch with constant indices
+	// preserves the original bank selection and remains dynamically uniform.
+	if (page == 0)
+		return texBiLinear(textureBank[0], wrapMode, texSize, texPos, texCoord, level);
+	return texBiLinear(textureBank[1], wrapMode, texSize, texPos, texCoord, level);
+#else
+	return texBiLinear(textureBank[page], wrapMode, texSize, texPos, texCoord, level);
+#endif
+}
+
 vec4 GetTextureValue()
 {
 	float lod = -log2(gl_FragCoord.w * gl_FragCoord.w * fsLODBase);
@@ -207,7 +221,7 @@ vec4 GetTextureValue()
 
 	ivec2 tex1Pos = GetTexturePosition(iLevel, baseTexInfo.xy);
 	ivec2 tex1Size = GetTextureSize(iLevel, baseTexInfo.zw);
-	vec4 tex1Data = texBiLinear(textureBank[texturePage], textureWrapMode, vec2(tex1Size), tex1Pos, fsTexCoord, iLevel);
+	vec4 tex1Data = texBiLinearBank(texturePage, textureWrapMode, vec2(tex1Size), tex1Pos, fsTexCoord, iLevel);
 
 	// init second texel with blank data to avoid any potentially undefined behavior
 	vec4 tex2Data = vec4(0.0);
@@ -221,7 +235,7 @@ vec4 GetTextureValue()
 	{
 		ivec2 tex2Pos = GetTexturePosition(iLevel+1, baseTexInfo.xy);
 		ivec2 tex2Size = GetTextureSize(iLevel+1, baseTexInfo.zw);
-		tex2Data = texBiLinear(textureBank[texturePage], textureWrapMode, vec2(tex2Size), tex2Pos, fsTexCoord, iLevel+1);
+		tex2Data = texBiLinearBank(texturePage, textureWrapMode, vec2(tex2Size), tex2Pos, fsTexCoord, iLevel+1);
 
 		blendFactor = ffL;
 	}
@@ -232,7 +246,7 @@ vec4 GetTextureValue()
 
 		// microtextures are always 128x128 and only use LOD 0 mipmap
 		ivec2 tex2Pos = GetMicroTexturePos(microTextureID);
-		tex2Data = texBiLinear(textureBank[(texturePage+1)&1], ivec2(0), ivec2(128), tex2Pos, fsTexCoord * scale, 0);
+		tex2Data = texBiLinearBank((texturePage+1)&1, ivec2(0), vec2(128.0), tex2Pos, fsTexCoord * scale, 0);
 
 		blendFactor = -lod * exp2(-microTextureMinLOD) * 0.5;
 		blendFactor = min(blendFactor, 0.5);

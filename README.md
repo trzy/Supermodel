@@ -75,6 +75,45 @@ And then build Supermodel:
 make -f Makefiles/Makefile.UNIX
 ```
 
+The default build leaves video-driver selection to SDL, preserving the existing
+X11 and other platform behavior. To build a variant that prefers native
+Wayland when available, use:
+
+```
+make -f Makefiles/Makefile.UNIX WAYLAND=1
+```
+
+It requires an SDL2 installation built with Wayland support, but Supermodel
+does not link directly to Wayland libraries. If SDL cannot initialize its
+native Wayland video backend, the application retries SDL's normal video-driver
+selection. Window or OpenGL context failures after successful backend
+initialization are reported normally; set `SDL_VIDEODRIVER=x11` to force the
+X11 backend in that case. An explicit `SDL_VIDEODRIVER` environment variable
+always takes precedence, so either backend can be selected manually:
+
+```
+SDL_VIDEODRIVER=wayland ./bin/supermodel
+SDL_VIDEODRIVER=x11 ./bin/supermodel
+```
+
+Wayland compositors control fullscreen output modes and window placement.
+Consequently, native Wayland uses compositor fullscreen and does not attempt
+the custom 57.524 Hz X11 display-mode switch.
+
+Desktop OpenGL is used by default. On Linux/UNIX systems with OpenGL ES development headers and libraries (for example, `libgles2-mesa-dev` on Ubuntu), build the GLES version with:
+
+```
+make -f Makefiles/Makefile.UNIX GLES=1
+```
+
+Wayland preference and GLES can be enabled together:
+
+```
+make -f Makefiles/Makefile.UNIX WAYLAND=1 GLES=1
+```
+
+The GLES build requires an OpenGL ES 3.1-capable display/device and uses the New3D renderer. Legacy3D is not supported. Triangle rendering is used by default and supports ES 3.1 or newer. `-quad-rendering` requires the ES 3.2 geometry-shader path; if an ES 3.2 context cannot be created, Supermodel retries ES 3.1 and automatically disables quad rendering. Quad rendering may also be slower on some tile-based ARM GPUs. macOS builds continue to use desktop OpenGL.
+
 ### macOS
 
 Ensure Apple's Xcode Command Line Tools are installed:

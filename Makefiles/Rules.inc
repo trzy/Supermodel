@@ -30,8 +30,8 @@
 # Output Locations
 ###############################################################################
 
-OBJ_DIR = obj$(strip $(BITS))
-BIN_DIR = bin$(strip $(BITS))
+OBJ_DIR = obj$(strip $(BITS))$(PLATFORM_BUILD_SUFFIX)
+BIN_DIR = bin$(strip $(BITS))$(PLATFORM_BUILD_SUFFIX)
 
 SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
 DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
@@ -79,7 +79,11 @@ endif
 #
 # Construct the compiler (C and C++) and linker flags
 #
-COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
+GLEW_CFLAGS = -DGLEW_STATIC
+ifeq ($(strip $(SUPERMODEL_GLES_BUILD)),1)
+	GLEW_CFLAGS =
+endif
+COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(GLEW_CFLAGS) $(SUPERMODEL_BUILD_FLAGS)
 CFLAGS = $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
 LDFLAGS = -o $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_LDFLAGS) $(LDOPT)
@@ -98,7 +102,7 @@ SRC_FILES = \
 	Src/Pkgs/ioapi.cpp \
 	Src/Model3/93C46.cpp \
 	Src/JTAG.cpp \
-	Src/Pkgs/glew.cpp \
+	Src/Pkgs/glew.c \
 	Src/Graphics/Shader.cpp \
 	Src/Model3/Real3D.cpp \
 	Src/Graphics/New3D/GLSLShader.cpp \
@@ -177,14 +181,19 @@ SRC_FILES = \
 	Src/Network/SimNetBoard.cpp \
 	$(PLATFORM_SRC_FILES)
 
+ifeq ($(strip $(SUPERMODEL_GLES_BUILD)),1)
+	SRC_FILES := $(filter-out Src/Pkgs/glew.c,$(SRC_FILES))
+endif
+
 ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))
-	# -DSUPERMODEL_OSX not present: we are not compiling for macOS and can
-	# therefore include the legacy renderer
+ifneq ($(strip $(SUPERMODEL_GLES_BUILD)),1)
+	# macOS and OpenGL ES builds cannot include the legacy renderer
 	SRC_FILES += \
 		Src/Graphics/Legacy3D/Error.cpp \
 		Src/Graphics/Legacy3D/Legacy3D.cpp \
 		Src/Graphics/Legacy3D/Models.cpp \
 		Src/Graphics/Legacy3D/TextureRefs.cpp
+endif
 endif
 
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
@@ -338,6 +347,36 @@ $(BIN_DIR):
 $(OBJ_DIR): | $(PLATFORM_DIRS)
 	$(info Creating directory     : $(OBJ_DIR))
 	$(SILENT)mkdir $(OBJ_DIR)
+
+ifeq ($(strip $(PLATFORM_TRACK_BUILD_CONFIG)),1)
+BUILD_CONFIG_STAMP = $(OBJ_DIR)/.build-config
+
+.PHONY: force_build_config
+force_build_config:
+
+$(BUILD_CONFIG_STAMP): force_build_config | $(OBJ_DIR)
+	$(SILENT)printf '%s\n' \
+	  'BITS=$(strip $(BITS))' \
+	  'DEBUG=$(strip $(DEBUG))' \
+	  'EXTRA_DEBUG=$(strip $(EXTRA_DEBUG))' \
+	  'ENABLE_DEBUGGER=$(strip $(ENABLE_DEBUGGER))' \
+	  'GLES=$(strip $(GLES))' \
+	  'WAYLAND=$(strip $(WAYLAND))' \
+	  'CC=$(CC)' \
+	  'CXX=$(CXX)' \
+	  'CFLAGS=$(strip $(CFLAGS))' \
+	  'CXXFLAGS=$(strip $(CXXFLAGS))' \
+	  'LDFLAGS=$(strip $(LDFLAGS))' \
+	  'SRC_FILES=$(strip $(SRC_FILES))' > $@.tmp
+	$(SILENT)if test -r $@ && cmp -s $@.tmp $@; then \
+	  rm -f $@.tmp; \
+	else \
+	  rm -f $(OBJ_FILES) $(AUTODEPS); \
+	  mv -f $@.tmp $@; \
+	fi
+
+$(OBJ_FILES): $(BUILD_CONFIG_STAMP)
+endif
 
 
 ###############################################################################

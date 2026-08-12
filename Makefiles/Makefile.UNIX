@@ -52,6 +52,27 @@ PKG_TYPE = tgz
 include Makefiles/Options.inc
 
 #
+# Optional OpenGL ES 3.2 build. This is intentionally supported only by the
+# UNIX/Linux makefile; macOS uses desktop OpenGL.
+#
+GLES =
+ifneq ($(filter $(strip $(GLES)),0 1),$(strip $(GLES)))
+	override GLES =
+endif
+SUPERMODEL_GLES_BUILD =
+
+#
+# Optional SDL Wayland-preferred build. SDL still owns the platform backend;
+# no direct Wayland libraries are required by Supermodel.
+#
+WAYLAND =
+ifneq ($(words $(strip $(WAYLAND))),1)
+	override WAYLAND =
+else ifneq ($(filter $(strip $(WAYLAND)),0 1),$(strip $(WAYLAND)))
+	override WAYLAND =
+endif
+
+#
 # Toolchain
 #
 CC = gcc
@@ -71,8 +92,18 @@ SDL2_LIBS += -lSDL2_net
 #
 
 PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
+ifeq ($(strip $(WAYLAND)),1)
+	PLATFORM_CXXFLAGS += -DSUPERMODEL_PREFER_WAYLAND
+endif
+ifeq ($(strip $(GLES)),1)
+	SUPERMODEL_GLES_BUILD = 1
+	PLATFORM_CXXFLAGS += -DSUPERMODEL_GLES -DIMGUI_IMPL_OPENGL_ES3
+	PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGLESv2 -lz -lm -lstdc++ -lpthread
+else
+	PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
+endif
 PLATFORM_BINARY_EXTENSION =
+PLATFORM_TRACK_BUILD_CONFIG = 1
 
 
 ###############################################################################
