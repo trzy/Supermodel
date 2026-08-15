@@ -34,6 +34,7 @@
 #include "Supermodel.h"
 #include "Inputs/Input.h"
 
+#include <fstream>
 #include <vector>
 using namespace std;
 
@@ -451,6 +452,19 @@ bool CSDLInputSystem::InitializeSystem()
         ErrorLog("Unable to initialize SDL joystick subsystem (%s).\n", SDL_GetError());
         return false;
     }
+
+    static constexpr char mappingDatabasePath[] = "gamecontrollerdb.txt";
+    std::ifstream mappingDatabase(mappingDatabasePath);
+    if (mappingDatabase.good())
+    {
+      mappingDatabase.close();
+      const int mappingsAdded = SDL_GameControllerAddMappingsFromFile(mappingDatabasePath);
+      if (mappingsAdded < 0)
+        ErrorLog("Unable to load SDL game controller mappings from '%s' (%s).\n", mappingDatabasePath, SDL_GetError());
+      else
+        InfoLog("Loaded %d SDL game controller mapping(s) from '%s'.", mappingsAdded, mappingDatabasePath);
+    }
+
     SDL_GameControllerEventState(SDL_ENABLE);
   } else {
     if (SDL_InitSubSystem(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC) != 0)

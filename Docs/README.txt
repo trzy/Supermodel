@@ -490,7 +490,7 @@ compatibility for different input devices and configuration schemes.  On
 Windows, the default is DirectInput.  On all other platforms, SDL is the only
 option available.
 
-Windows users can select between four different input systems:
+Windows users can select between five different input systems:
 
     - DirectInput.  Selected with '-input-system=dinput'.  This is the default.
       It provides the best support for PC game controllers and, when emulating
@@ -503,6 +503,14 @@ Windows users can select between four different input systems:
     - SDL.  Selected with '-input-system=sdl'.  The standard, cross-platform
       input system intended for non-Windows builds.  It is accessible on
       Windows but does not provide full support for all devices.
+    - SDL Gamepad.  Selected with '-input-system=sdlgamepad'.  Uses SDL's
+      standardized game controller layout, including separate trigger axes.
+
+When SDL Gamepad is selected, Supermodel checks the current working directory
+for an optional file named 'gamecontrollerdb.txt'. If present, mappings from
+that file are loaded before controllers are opened. This permits use of the
+community SDL_GameControllerDB without rebuilding Supermodel. The filename is
+case sensitive on platforms with case-sensitive file systems.
 
 When switching input systems with '-input-system', you must also configure your
 inputs using the same option.  For example, when running Supermodel with XInput
