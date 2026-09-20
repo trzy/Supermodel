@@ -926,7 +926,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         // Fold the edited global settings back into the complete config so that the
         // game-specific sections are preserved by the write
         Util::Config::CopyINISection(&fullConfig, config);
-        Util::Config::WriteINIFile(configPath, fullConfig, s_configFileComment);
+        Util::Config::WriteINIFile(configPath, fullConfig, TimestampedConfigFileComment("Updated from GUI."));
     }
 
 exitNoSave:

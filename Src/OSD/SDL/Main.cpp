@@ -1408,7 +1408,7 @@ static void WriteDefaultConfigurationFileIfNotPresent()
         ErrorLog("Unable to write default configuration file to %s", s_configFilePath.c_str());
         return;
     }
-    fputs(s_defaultConfigFileContents, fp);
+    fputs(DefaultConfigFileContents().c_str(), fp);
     fclose(fp);
     InfoLog("Wrote default configuration file to %s", s_configFilePath.c_str());
 }
@@ -1442,7 +1442,7 @@ static Result ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, U
     {
       // Write input configuration and input system settings to config file
       Inputs->StoreToConfig(fileConfigRoot);
-      Util::Config::WriteINIFile(s_configFilePath, *fileConfig, s_configFileComment);
+      Util::Config::WriteINIFile(s_configFilePath, *fileConfig, TimestampedConfigFileComment("Updated from input configuration."));
 
       // Also save to runtime configuration in case we proceed and play
       Inputs->StoreToConfig(runtimeConfig);

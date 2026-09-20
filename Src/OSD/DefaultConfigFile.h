@@ -22,11 +22,15 @@
 /*
  * DefaultConfigFile.h
  *
- * Default Supermodel.ini.
+ * Default Supermodel.ini and generation of the comment block that heads every
+ * configuration file we write out.
  */
 
 #ifndef INCLUDED_DEFAULTCONFIGFILE_H
 #define INCLUDED_DEFAULTCONFIGFILE_H
+
+#include <ctime>
+#include <string>
 
 #define CONFIG_FILE_BANNER_HEAD \
    ";;\n" \
@@ -50,7 +54,7 @@
    "; corresponding MAME ROM set, like so:\n" \
    ";\n" \
    ";       ; Scud Race\n" \
-   ";       [ scud ]\n" \
+   ";       [ scudau ]\n" \
    ";\n" \
    ";       SoundVolume = 50\n" \
    ";       MusicVolume = 200\n" \
@@ -60,29 +64,62 @@
    "; inputs are assigned here.\n" \
    ";\n"
 
-// Header comment placed at the top of the configuration file whenever it is
-// written back out (the file is regenerated from the parse tree, so this is all
-// that survives of the original comments). Same as the default configuration
-// file's header minus the line marking it as the default settings.
-static const char s_configFileComment[] =
+// Current local date and time in a human readable form, e.g.
+// "2026-09-20 14:31:07".
+inline std::string CurrentDateTimeString()
 {
-   CONFIG_FILE_BANNER_HEAD
-   CONFIG_FILE_BANNER_TAIL
-   "\n"
-   "\n"
-   CONFIG_FILE_QUICK_OVERVIEW
-};
+   std::time_t now = std::time(nullptr);
+   std::tm local{};
+#ifdef _WIN32
+   localtime_s(&local, &now);
+#else
+   localtime_r(&now, &local);
+#endif
+   char buffer[64];
+   if (std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &local) == 0)
+      return "unknown time";
+   return buffer;
+}
 
-static const char s_defaultConfigFileContents[] =
+// Wraps the given banner lines in the comment block that heads every
+// configuration file we write out
+inline std::string MakeConfigFileComment(const std::string &bannerLines)
 {
-   CONFIG_FILE_BANNER_HEAD
-   ";; Default settings.\n"
-   CONFIG_FILE_BANNER_TAIL
-   "\n"
-   "\n"
-   CONFIG_FILE_QUICK_OVERVIEW
-   "\n"
-   "\n"
+   return std::string(CONFIG_FILE_BANNER_HEAD)
+      + bannerLines
+      + CONFIG_FILE_BANNER_TAIL
+      + "\n"
+      + "\n"
+      + CONFIG_FILE_QUICK_OVERVIEW;
+}
+
+// Generates the comment block placed at the top of a configuration file
+// whenever one is written out. Configuration files are regenerated from the
+// parse tree, so this is all that survives of the original comments.
+// 'description' is a complete sentence describing what produced the file, e.g.
+// "Default settings."
+inline std::string ConfigFileComment(const std::string &description)
+{
+   return MakeConfigFileComment(";; " + description + "\n");
+}
+
+// As ConfigFileComment() but additionally records when the file was written, on
+// a line of its own beneath the description:
+//
+//    ;; Updated from GUI.
+//    ;; Written at: 2026-09-20 14:31:07
+//
+inline std::string TimestampedConfigFileComment(const std::string &description)
+{
+   return MakeConfigFileComment(
+      ";; " + description + "\n"
+      + ";; Written at: " + CurrentDateTimeString() + "\n");
+}
+
+// Settings of the default configuration file, sans comment block (see
+// DefaultConfigFileContents())
+static const char s_defaultConfigFileSettings[] =
+{
    "[ Global ]\n"
    "\n"
    "; Graphics\n"
@@ -312,5 +349,12 @@ static const char s_defaultConfigFileContents[] =
    "InputFishingSelect = \"KEY_X,JOY1_BUTTON2\"\n"
    "InputFishingTension = \"KEY_T,JOY1_ZAXIS_NEG\"\n"
 };
+
+// Complete contents of the default configuration file, written out whenever no
+// configuration file is present
+inline std::string DefaultConfigFileContents()
+{
+   return ConfigFileComment("Default settings.") + "\n" + "\n" + s_defaultConfigFileSettings;
+}
 
 #endif  // INCLUDED_DEFAULTCONFIGFILE_H
