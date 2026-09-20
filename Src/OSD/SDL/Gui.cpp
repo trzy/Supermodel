@@ -15,7 +15,9 @@
 #include "Util/ConfigBuilders.h"
 #include "../Src/OSD/SDL/SDLInputSystem.h"
 #include "../Src/Inputs/Inputs.h"
+#include "OSD/DefaultConfigFile.h"
 #include "Main.h"
+#include "Gui.h"
 
 #ifdef _WIN32
     #include "../Src/OSD/Windows/DirectInputSystem.h"
@@ -804,8 +806,19 @@ static float GetDPIScale(SDL_Window* window)
     return ddpi / 96.0f;
 }
 
-std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Node& config)
+std::vector<std::string> RunGUI(const std::string& configPath, const Util::Config::Node& fileConfig)
 {
+    // Our own copy of the complete config file. The GUI only ever edits the global
+    // section but the game-specific sections are carried along so that they survive
+    // being written back out.
+    Util::Config::Node fullConfig = fileConfig;
+
+    // The global section, merged over the defaults, is what the GUI operates on. The
+    // merge is also what attaches the value ranges the controls are built from, so it
+    // has to be done here: copying a node does not preserve them.
+    Util::Config::Node config("Global");
+    Util::Config::MergeINISections(&config, DefaultConfig(), fullConfig);
+
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL could not initialize! Error: " << SDL_GetError() << std::endl;
@@ -910,7 +923,10 @@ std::vector<std::string> RunGUI(const std::string& configPath, Util::Config::Nod
     }
     
     if (saveSettings) {
-        Util::Config::WriteINIFile(configPath, config, "");
+        // Fold the edited global settings back into the complete config so that the
+        // game-specific sections are preserved by the write
+        Util::Config::CopyINISection(&fullConfig, config);
+        Util::Config::WriteINIFile(configPath, fullConfig, s_configFileComment);
     }
 
 exitNoSave:

@@ -293,6 +293,29 @@ namespace Util
       }
     }
 
+    /*
+     * Copies the settings of one INI section into another.
+     *
+     * - Settings from src overwrite those already present in dest; settings not
+     *   present in dest are appended.
+     * - Nodes with children are ignored as per INI semantics (they are sections,
+     *   not settings), so any sections hanging off dest are left untouched. This
+     *   allows the global section of a config to be updated in place without
+     *   disturbing the game-specific sections.
+     * - Values are copied rather than shared so that dest does not alias src.
+     * - dest's key is retained.
+     */
+    void CopyINISection(Node *dest, const Node &src)
+    {
+      for (auto it = src.begin(); it != src.end(); ++it)
+      {
+        if (it->IsLeaf() && it->Exists())
+        {
+          dest->Set(it->Key(), it->GetValue()->MakeCopy());
+        }
+      }
+    }
+
     static void WriteSection(std::ofstream &file, const Node &section)
     {
       file << "[ " << section.Key() << " ]" << std::endl;
