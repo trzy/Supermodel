@@ -20,14 +20,14 @@
  **/
 
 /*
- * DefaultConfigFile.h
+ * ConfigFile.h
  *
  * Default Supermodel.ini and generation of the comment block that heads every
  * configuration file we write out.
  */
 
-#ifndef INCLUDED_DEFAULTCONFIGFILE_H
-#define INCLUDED_DEFAULTCONFIGFILE_H
+#ifndef INCLUDED_CONFIGFILE_H
+#define INCLUDED_CONFIGFILE_H
 
 #include <ctime>
 #include <string>
@@ -357,4 +357,4 @@ inline std::string DefaultConfigFileContents()
    return ConfigFileComment("Default settings.") + "\n" + "\n" + s_defaultConfigFileSettings;
 }
 
-#endif  // INCLUDED_DEFAULTCONFIGFILE_H
+#endif  // INCLUDED_CONFIGFILE_H

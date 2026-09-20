@@ -15,7 +15,7 @@
 #include "Util/ConfigBuilders.h"
 #include "../Src/OSD/SDL/SDLInputSystem.h"
 #include "../Src/Inputs/Inputs.h"
-#include "OSD/DefaultConfigFile.h"
+#include "OSD/ConfigFile.h"
 #include "Main.h"
 #include "Gui.h"
 

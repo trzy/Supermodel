@@ -104,7 +104,7 @@
 #include "Util/BMPFile.h"
 
 #include "Crosshair.h"
-#include "OSD/DefaultConfigFile.h"
+#include "OSD/ConfigFile.h"
 #include "Gui.h"
 
 
