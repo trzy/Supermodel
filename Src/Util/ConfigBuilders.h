@@ -34,6 +34,7 @@ namespace Util
     bool FromXMLFile(Node *config, const std::string &filename);
     bool FromINIFile(Node *config, const std::string &filename);
     void MergeINISections(Node *merged, const Node &x, const Node &y);
+    void CopyINISection(Node *dest, const Node &src);
     void WriteINIFile(const std::string &filename, const Node &config, const std::string &header_comment);
   }
 }

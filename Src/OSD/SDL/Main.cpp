@@ -104,7 +104,7 @@
 #include "Util/BMPFile.h"
 
 #include "Crosshair.h"
-#include "OSD/DefaultConfigFile.h"
+#include "OSD/ConfigFile.h"
 #include "Gui.h"
 
 
@@ -1408,7 +1408,7 @@ static void WriteDefaultConfigurationFileIfNotPresent()
         ErrorLog("Unable to write default configuration file to %s", s_configFilePath.c_str());
         return;
     }
-    fputs(s_defaultConfigFileContents, fp);
+    fputs(DefaultConfigFileContents().c_str(), fp);
     fclose(fp);
     InfoLog("Wrote default configuration file to %s", s_configFilePath.c_str());
 }
@@ -1416,12 +1416,6 @@ static void WriteDefaultConfigurationFileIfNotPresent()
 // Create and configure inputs
 static Result ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, Util::Config::Node *runtimeConfig, const Game &game, bool configure)
 {
-  static constexpr char configFileComment[] = {
-    ";\n"
-    "; Supermodel Configuration File\n"
-    ";\n"
-  };
-
   Inputs->LoadFromConfig(*runtimeConfig);
 
   // If the user wants to configure the inputs, do that now
@@ -1448,7 +1442,7 @@ static Result ConfigureInputs(CInputs *Inputs, Util::Config::Node *fileConfig, U
     {
       // Write input configuration and input system settings to config file
       Inputs->StoreToConfig(fileConfigRoot);
-      Util::Config::WriteINIFile(s_configFilePath, *fileConfig, configFileComment);
+      Util::Config::WriteINIFile(s_configFilePath, *fileConfig, TimestampedConfigFileComment("Updated from input configuration."));
 
       // Also save to runtime configuration in case we proceed and play
       Inputs->StoreToConfig(runtimeConfig);
@@ -2256,15 +2250,14 @@ int main(int argc, char **argv)
   }
 
   if (loadGUI) {
-      Util::Config::Node fConfig1("Global");
-      Util::Config::Node fConfig2("Global");
+      // Load up what settings we have so far. The complete file is passed to the GUI,
+      // which edits only the global section and preserves any game-specific sections.
+      // Editing the game-specific sections themselves is not supported atm but we can
+      // look at this later.
+      Util::Config::Node fileConfig("Global");
+      Util::Config::FromINIFile(&fileConfig, s_configFilePath);
 
-      // load up what settings we have so far
-      // per game settings are not supported atm but we can look at this later
-      Util::Config::FromINIFile(&fConfig1, s_configFilePath);
-      Util::Config::MergeINISections(&fConfig2, DefaultConfig(), fConfig1); // apply .ini file's global section over defaults
-
-      cmd_line.rom_files = RunGUI(s_configFilePath, fConfig2);
+      cmd_line.rom_files = RunGUI(s_configFilePath, fileConfig);
 
       if (cmd_line.rom_files.empty()) {
           return 0;
