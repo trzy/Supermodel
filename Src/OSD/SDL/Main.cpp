@@ -1499,6 +1499,7 @@ Util::Config::Node DefaultConfig()
   
   config.Set("GameXMLFile", s_gameXMLFilePath);
   config.Set("InitStateFile", "");
+  config.Set("RomsDirectory", "ROMs");
   // CModel3
   config.Set("PowerPCFrequency", 0u, "Core", 0u, 200u);
   config.Set("MultiThreaded", true,"Core");
