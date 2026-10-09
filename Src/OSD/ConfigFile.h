@@ -124,7 +124,7 @@ static const char s_defaultConfigFileSettings[] =
    "\n"
    "; Graphics\n"
    "New3DEngine = true\n"
-   "QuadRendering = false\n"
+   "QuadRendering = true\n"
    "WideScreen = false\n"
    "Stretch = false\n"
    "WideBackground = false\n"
