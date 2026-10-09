@@ -1254,10 +1254,15 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 			}
 		}
 		else {
-			vertexArray.emplace_back(r3dPoly, 0);	
+			vertexArray.emplace_back(r3dPoly, 0);
 			vertexArray.emplace_back(r3dPoly, 1);
 			vertexArray.emplace_back(r3dPoly, 2);
 			vertexArray.emplace_back(r3dPoly, 0, 2);	// last point is an average of 0 and 2
+
+			// TODO: the quad shader's second strip triangle (0,2,3) is meant to be empty here, but rounding can turn it into
+			// a sub-pixel sliver along edge 0-2 whose fragments get bad weights and depth (stray wrong pixels, mostly on thin
+			// distant triangles), and fragments right on edge 0-2 can be discarded. The geometry shader could detect this case
+			// (vertex 3 on edge 0-2), emit only the first triangle and use plain barycentric interpolation, which is exact and cheaper
 		}
 	}
 	else {
