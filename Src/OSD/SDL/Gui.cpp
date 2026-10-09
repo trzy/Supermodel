@@ -1,5 +1,6 @@
 #include "SDLIncludes.h"
 #include <GL/glew.h>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -7,6 +8,7 @@
 #include <filesystem>
 #include <memory>
 #include <thread>
+#include <sstream>
 #include "GameLoader.h"
 #include "../Pkgs/imgui/imgui.h"
 #include "../Pkgs/imgui/imgui_impl_sdl2.h"
@@ -27,8 +29,8 @@
 Quick description on the GUI stuff
 ----------------------------------
 
-- Using imgui because I didn't want to suck in 1000 other dependancies.
-- GUI will only show up if supermodel is run without command line paramaters, so existing loaders etc should be completely
+- Using imgui because I didn't want to suck in 1000 other dependencies.
+- GUI will only show up if supermodel is run without command line parameters, so existing loaders etc should be completely
   uneffected by this code.
 - All controls are completely dynamic, they are created from the settings themselves. So if new settings are added/removed
   they will automatically show up in the GUI, no modifications are required to this code.
@@ -98,13 +100,13 @@ static std::string NodeToString(Util::Config::Node& config)
     return s;
 }
 
-static void UpdateTempValues(Util::Config::Node& config, const std::string group, bool init)
+static void UpdateTempValues(Util::Config::Node& config, const std::string& group, bool init)
 {
     for (auto it = config.begin(); it != config.end(); ++it)
     {
         if (it->IsLeaf() && it->Exists()) {
 
-            auto key = it->Key();
+            const auto& key = it->Key();
             auto val = it->GetValue();
 
             if (val) {
@@ -158,13 +160,69 @@ static void UpdateTempValues(Util::Config::Node& config, const std::string group
     }
 }
 
-static void CreateControls(Util::Config::Node& config, const std::string group)
+template <typename T>
+static std::string ValueToString(const T& value)
+{
+    std::ostringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+template <typename T>
+static bool ValuesMatch(const T& a, const T& b)
+{
+    return a == b;
+}
+
+// Floats are written to the INI file with 6 significant digits, so compare with a tolerance
+static bool ValuesMatch(float a, float b)
+{
+    return std::fabs(a - b) <= 1e-5f * std::fabs(b);
+}
+
+// Combo box for a setting restricted to a list of values, showing the entries' labels if it has
+// them. A current value that is not in the list (e.g. set by hand in the INI file or on the
+// command line) is shown as an extra "Custom" entry and kept unless another entry is picked.
+template <typename T>
+static void ValueCombo(const std::string& key, Util::ValueRange& vRange, const T& current)
+{
+    auto& list = vRange.GetList();
+    auto& labels = vRange.GetLabels();
+    bool useLabels = labels.size() == list.size();
+
+    std::vector<std::string> items;
+    int selectedIndex = -1;
+
+    for (size_t i = 0; i < list.size(); i++) {
+        const auto& value = std::get<T>(list[i]);
+        items.emplace_back(useLabels ? labels[i] : ValueToString(value));
+        if (ValuesMatch(value, current)) {
+            selectedIndex = (int)i;
+        }
+    }
+
+    if (selectedIndex < 0) {
+        items.emplace_back("Custom (" + ValueToString(current) + ')');
+        selectedIndex = (int)list.size();
+    }
+
+    std::vector<const char*> itemPtrs;
+    for (auto& s : items) {
+        itemPtrs.emplace_back(s.c_str());
+    }
+
+    if (ImGui::Combo(key.c_str(), &selectedIndex, itemPtrs.data(), (int)itemPtrs.size()) && selectedIndex < (int)list.size()) {
+        vRange.tempValue = list[selectedIndex];
+    }
+}
+
+static void CreateControls(Util::Config::Node& config, const std::string& group)
 {
     for (auto it = config.begin(); it != config.end(); ++it)
     {
         if (it->IsLeaf() && it->Exists()) {
 
-            auto key = it->Key();
+            const auto& key = it->Key();
             auto val = it->GetValue();
 
             if (val) {
@@ -178,41 +236,22 @@ static void CreateControls(Util::Config::Node& config, const std::string group)
                         auto index = vRange->GetIndex();
                         auto& list = vRange->GetList();
 
-                        // create a lambda to process combo box
-
-                        auto ProcessCombo = [&](auto* valuePtr) 
-                        {
-                            using T = std::decay_t<decltype(*valuePtr)>;
-
-                            int selectedIndex = 0;
-                            int loopCount = 0;
-                            std::vector<std::string> sVector;
-                            std::vector<const char*> sVectorChar;
-
-                            for (auto& l : list) {
-                                auto value = std::get<T>(l);
-                                sVector.emplace_back(std::to_string(value));
-
-                                if (value == *valuePtr) {
-                                    selectedIndex = loopCount;
-                                }
-                                loopCount++;
-                            }
-
-                            for (auto& s : sVector) {
-                                sVectorChar.emplace_back(s.c_str());   // store pointer to the data
-                            }
-
-                            ImGui::Combo(key.c_str(), &selectedIndex, sVectorChar.data(), (int)sVectorChar.size());
-                            vRange->tempValue = list[selectedIndex];
-                        };
-
                         auto ProcessScalar = [&](auto valuePtr, ImGuiDataType type)
                         {
                             using T = std::decay_t<decltype(*valuePtr)>;
                             auto min_ = std::get<T>(vRange->GetMin());
                             auto max_ = std::get<T>(vRange->GetMax());
-                            ImGui::SliderScalar(key.c_str(), type, valuePtr, &min_, &max_);
+
+                            // optional display text: a unit, or a name for the minimum value
+                            const char* format = nullptr;
+                            if (!vRange->GetSliderMinLabel().empty() && *valuePtr == min_) {
+                                format = vRange->GetSliderMinLabel().c_str();
+                            }
+                            else if (!vRange->GetSliderFormat().empty()) {
+                                format = vRange->GetSliderFormat().c_str();
+                            }
+
+                            ImGui::SliderScalar(key.c_str(), type, valuePtr, &min_, &max_, format);
                         };
                         
                         auto ProcessControls = [&](auto valuePtr, ImGuiDataType type)
@@ -221,7 +260,7 @@ static void CreateControls(Util::Config::Node& config, const std::string group)
                                 ProcessScalar(valuePtr, type);
                             }
                             else if (list.size()) {
-                                ProcessCombo(valuePtr);
+                                ValueCombo(key, *vRange, *valuePtr);
                             }
                             else {
                                 ImGui::InputScalar(key.c_str(), type, valuePtr);
@@ -259,25 +298,8 @@ static void CreateControls(Util::Config::Node& config, const std::string group)
                             auto p = std::get_if<std::string>(&vRange->tempValue)->c_str();
                             auto& option = std::get<std::string>(vRange->tempValue);
 
-                            auto& list = vRange->GetList();
-
                             if (list.size()) {
-
-                                int selectedIndex = 0;
-                                int loopCount = 0;
-                                std::vector<const char*> sVector;
-
-                                for (auto& l : list) {
-                                    auto& item = std::get<std::string>(l);
-                                    if (option == item) {
-                                        selectedIndex = loopCount;
-                                    }
-                                    sVector.emplace_back(item.c_str());
-                                    loopCount++;
-                                }
-
-                                ImGui::Combo(key.c_str(), &selectedIndex, sVector.data(), (int)sVector.size());
-                                vRange->tempValue = list[selectedIndex];
+                                ValueCombo(key, *vRange, option);
                             }
                             else {
                                 char buffer[256];
@@ -302,7 +324,7 @@ static void SetDefaultKeyVal(std::shared_ptr<CInput> input)
 
     auto defaultConfig = DefaultConfig();
 
-    auto mapping = defaultConfig[key.c_str()].ValueAs<std::string>();
+    auto mapping = defaultConfig[key].ValueAs<std::string>();
 
     // update input with value from our default config
     input->SetMapping(mapping.c_str());
@@ -444,7 +466,7 @@ static void BindKeys(Util::Config::Node& config, KeyBindState& kb, bool openPopu
     }
 }
 
-static void AddKeys(Util::Config::Node& config, KeyBindState& kb, std::vector<std::shared_ptr<CInput>> keyInputs)
+static void AddKeys(Util::Config::Node& config, KeyBindState& kb, const std::vector<std::shared_ptr<CInput>>& keyInputs)
 {
     bool openPopup = false;
 
@@ -602,21 +624,18 @@ static std::shared_ptr<CInputs> GetInputSystem(Util::Config::Node& config, SDL_W
 
 static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIndex)
 {
-    Game game;
-
     if (selectedGameIndex >= 0) {
 
         int index = 0;
         for (const auto& g : games) {
             if (index == selectedGameIndex) {
-                game = g.second;
-                break;
+                return g.second;
             }
             index++;
         }
     }
 
-    return game;
+    return {};
 }
 
 static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb)
@@ -942,5 +961,3 @@ exitNoSave:
 
     return romFiles;
 }
-
-
