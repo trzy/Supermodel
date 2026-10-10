@@ -780,13 +780,14 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-static std::string GetRomPath(int selectedGame, const std::map<std::string, Game>& games)
+static std::string GetRomPath(int selectedGame, const std::map<std::string, Game>& games, std::string romsDirectory)
 {
     if (selectedGame >= 0) {
         int index = 0;
+
         for (auto& g : games) {
             if (selectedGame == index) {
-                return (std::filesystem::path("ROMs") / (g.second.name + ".zip")).string();        // todo config rom directory? File dialog will be a bit more tricky cross platform but we can specifiy edit box for manual path entry        
+                return (std::filesystem::path(romsDirectory) / (g.second.name + ".zip")).string();      
             }
             index++;
         }
@@ -881,6 +882,8 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     ImGui_ImplOpenGL3_Init("#version 410");
 
     std::string xmlFile = config["GameXMLFile"].ValueAs<std::string>();
+    std::string romsDirectory = config["RomsDirectory"].ValueAs<std::string>();
+    
     GameLoader loader(xmlFile);
     auto& games = loader.GetGames();
     int selectedGame = -1;  // -1 means no selection
@@ -916,8 +919,9 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
             break;
         }
     }
-
-    path = GetRomPath(selectedGame, games);
+    
+    path = GetRomPath(selectedGame, games, romsDirectory);
+    
     if (!path.empty()) {
         romFiles.emplace_back(path);
     }
