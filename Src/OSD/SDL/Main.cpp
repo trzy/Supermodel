@@ -265,7 +265,7 @@ static void SetFullScreenRefreshRate()
  * NOTE: keepAspectRatio should always be true. It has not yet been tested with
  * the wide screen hack.
  */
-static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+static Result CreateGLScreen(bool coreContext, const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
   GLenum err;
 
@@ -299,15 +299,8 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
 
   if (coreContext) {
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-      if (quadRendering) {
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-      }
-      else {
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-      }
+      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   }
 
   // Set video mode
@@ -400,7 +393,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
   unsigned xOffset, yOffset, xRes=496, yRes=384, totalXRes, totalYRes;
   if (createScreen)
   {
-    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
     {
       ErrorLog("Unable to query OpenGL.\n");
       return;
@@ -1529,7 +1522,7 @@ Util::Config::Node DefaultConfig()
   
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
-  config.Set("QuadRendering", false, "Video");
+  config.Set("QuadRendering", true, "Video");
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");
   config.SetEmpty("WindowXPosition");
@@ -1865,7 +1858,8 @@ static void Help(void)
 #ifndef SUPERMODEL_OSX
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
 #endif
-  puts("  -quad-rendering         Enable proper quad rendering");
+  puts("  -quad-rendering         Enable proper quad rendering [Default]");
+  puts("  -no-quad-rendering      Render quads as triangles");
 #ifndef SUPERMODEL_OSX
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
   puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
@@ -1998,6 +1992,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-fps",              { "ShowFrameRate",    false } },
     { "-new3d",               { "New3DEngine",      true } },
     { "-quad-rendering",      { "QuadRendering",    true } },
+    { "-no-quad-rendering",   { "QuadRendering",    false } },
 #ifndef SUPERMODEL_OSX
     { "-legacy3d",            { "New3DEngine",      false } },
 #endif
@@ -2362,7 +2357,7 @@ int main(int argc, char **argv)
   // Create a window
   xRes = 496;
   yRes = 384;
-  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(),"Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
   {
     exitCode = 1;
     goto Exit;
