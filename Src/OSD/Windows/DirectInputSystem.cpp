@@ -122,7 +122,7 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	{ "Y",					DIK_Y },
 	{ "Z",					DIK_Z },
 	{ "DEL",				DIK_DELETE },
-	
+
 	// Keypad
 	{ "KEYPAD0",			DIK_NUMPAD0 },
 	{ "KEYPAD1",			DIK_NUMPAD1 },
@@ -169,8 +169,8 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	{ "F13",				DIK_F13 },
 	{ "F14",				DIK_F14 },
 	{ "F15",				DIK_F15 },
-    
-	// Modifier Keys  
+
+	// Modifier Keys
 	{ "NUMLOCK",			DIK_NUMLOCK },
 	{ "CAPSLOCK",			DIK_CAPITAL },
 	{ "SCROLLLOCK",			DIK_SCROLL },
@@ -186,12 +186,12 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 	{ "LEFTWINDOWS",		DIK_LWIN },
 	//{ "ALTGR",			?? },
 	//{ "COMPOSE",			?? },
-    
+
 	// Other
 	//{ "HELP",				?? },
 	{ "PRINT",				DIK_SYSRQ },
 	//{ "SYSREQ",			?? },
-	//{ "BREAK",			?? },								
+	//{ "BREAK",			?? },
 	//{ "MENU",				?? },
 	//{ "POWER",			?? },
 	//{ "EURO",				?? },
@@ -200,10 +200,10 @@ DIKeyMapStruct CDirectInputSystem::s_keyMap[] =
 
 static bool IsXInputDevice(const GUID &devProdGUID)
 {
-	// Following code taken from MSDN
-	IWbemLocator* pIWbemLocator  = NULL;
+    // Following code taken from MSDN
+    IWbemLocator* pIWbemLocator  = NULL;
     IEnumWbemClassObject* pEnumDevices = NULL;
-    IWbemClassObject* pDevices[20] = {0};
+    IWbemClassObject* pDevices[20] = {};
     IWbemServices* pIWbemServices = NULL;
     BSTR bstrNamespace = NULL;
     BSTR bstrDeviceID = NULL;

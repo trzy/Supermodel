@@ -43,7 +43,7 @@
 
 UINT8 CRTC72421::ReadRegister(unsigned reg)
 {
-	static time_t oldTime{0};
+	static time_t oldTime{};
 	time_t currentTime;
 	static struct tm *Time;
 

@@ -620,9 +620,11 @@ Force feedback can be enabled and tuned in the configuration file.  Setting
     ForceFeedback = 1
 
 There are four DirectInput effects: constant force, self centering, friction,
-and vibration.  The strength of each can be tuned with the following settings:
+and vibration.  The strength of each can be tuned with the following settings
+(constant force separately for each direction):
 
-    DirectInputConstForceMax = 100
+    DirectInputConstForceLeftMax = 100
+    DirectInputConstForceRightMax = 100
     DirectInputSelfCenterMax = 100
     DirectInputFrictionMax = 100
     DirectInputVibrateMax = 100
@@ -1190,7 +1192,9 @@ not.  All options are case sensitive.
 
     Option:         -ppc-frequency=<f>
 
-    Description:    Sets the PowerPC frequency in MHz.  The default is 50.
+    Description:    Sets the PowerPC frequency in MHz.  By default (or if set
+                    to 0) it matches the game's hardware: 66 MHz for Step 1.0,
+                    100 MHz for Step 1.5 and 166 MHz for Step 2.x games.
                     Higher frequencies will allow games to do more processing
                     per frame, making them run faster in 'virtual' time, but
                     may slow down Supermodel on weaker computers.  Supermodel's
@@ -1376,7 +1380,8 @@ All settings are case sensitive.
 
     Argument:       Integer.
 
-    Description:    The PowerPC frequency in MHz.  The default is 50.
+    Description:    The PowerPC frequency in MHz, or 0 (the default) to match
+                    the game's hardware.
                     Equivalent to the '-ppc-frequency' command line option.
 
     ----------------
@@ -1493,7 +1498,8 @@ All settings are case sensitive.
 
     ----------------
 
-    Name:           DirectInputConstForceMax
+    Name:           DirectInputConstForceLeftMax
+                    DirectInputConstForceRightMax
                     DirectInputFrictionMax
                     DirectInputSelfCenterMax
                     DirectInputVibrateMax
@@ -1501,9 +1507,10 @@ All settings are case sensitive.
     Argument:       Integer value.
 
     Description:    Sets strength of the four DirectInput force feedback
-                    effects in percent.  Default is 100, indicating full
-                    strength.  Values exceeding 100% will distort the effects.
-                    Available only on Windows.
+                    effects in percent, the constant force separately for
+                    leftward and rightward forces.  Default is 100, indicating
+                    full strength.  Values exceeding 100% will distort the
+                    effects.  Available only on Windows.
 
     ----------------
 

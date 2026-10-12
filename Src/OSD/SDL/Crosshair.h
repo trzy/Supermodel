@@ -32,7 +32,7 @@ private:
   const Util::Config::Node& m_config;
   bool m_isBitmapCrosshair = false;
   std::string m_crosshairStyle;
-  GLuint m_crosshairTexId[2] = { 0 };
+  GLuint m_crosshairTexId[2] = {};
   int m_p1CrosshairW = 0, m_p1CrosshairH = 0, m_p2CrosshairW = 0, m_p2CrosshairH = 0;
   float m_diagDpi = 0.0f, m_hDpi = 0.0f, m_vDpi = 0.0f;
   const float m_base = 0.01f, m_height = 0.02f; // geometric parameters of each triangle
