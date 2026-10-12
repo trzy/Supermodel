@@ -1211,7 +1211,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     else if (Inputs->uiMusicVolUp->Pressed())
     {
       // Increase music volume by 10%
-      if (!Model3->GetGame().mpeg_board.empty())
+      if (Model3->GetGame().mpeg_board != Game::MPEG_BOARD_NONE)
       {
         int vol = (std::min)(200, s_runtime_config["MusicVolume"].ValueAs<int>() + 10);
         s_runtime_config.Get("MusicVolume").SetValue(vol);
@@ -1227,7 +1227,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Model3, CInputs *In
     else if (Inputs->uiMusicVolDown->Pressed())
     {
       // Decrease music volume by 10%
-      if (!Model3->GetGame().mpeg_board.empty())
+      if (Model3->GetGame().mpeg_board != Game::MPEG_BOARD_NONE)
       {
         int vol = (std::max)(0, s_runtime_config["MusicVolume"].ValueAs<int>() - 10);
         s_runtime_config.Get("MusicVolume").SetValue(vol);
@@ -2348,6 +2348,11 @@ int main(int argc, char **argv)
       }
       if (loader.Load(&game, &rom_set, *cmd_line.rom_files.begin()))
         return 1;
+      if (game.platform != Game::PLATFORM_MODEL3)
+      {
+        ErrorLog("Real3D Pro-1000 emulation is not yet supported.");
+        return 1;
+      }
       Util::Config::MergeINISections(&config4, config3, fileConfig[game.name]);   // apply game-specific config
     }
     else
