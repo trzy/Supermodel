@@ -337,8 +337,32 @@ namespace Debugger
 		return cpu;
 	}
 
-	CSupermodelDebugger::CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, std::shared_ptr<CLogger> logger) :
-		CConsoleDebugger(), m_model3(model3), m_inputs(inputs), m_logger(logger),
+	CCPUDebug *CSupermodelDebugger::CreatePro1000CPUDebug(::CPro1000 *pro1000)
+	{
+		CPPCDebug *cpu = new CPPCDebug("MainPPC");
+
+		// Memory regions
+		cpu->AddRegion(0x00000000, 0x007FFFFF, true,  false, "RAM");
+		cpu->AddRegion(0x84000000, 0x8400003F, false, false, "Real3D Status Registers");
+		cpu->AddRegion(0x88000000, 0x88000007, false, false, "Real3D Command Port");
+		cpu->AddRegion(0x8C000000, 0x8C3FFFFF, false, false, "Real3D Culling RAM (Low)");
+		cpu->AddRegion(0x8E000000, 0x8E0FFFFF, false, false, "Real3D Culling RAM (High)");
+		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
+		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
+		cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI");
+		cpu->AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI");
+		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_ADDR");
+		cpu->AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA");
+		cpu->AddRegion(0xF8FFF000, 0xF8FFF0FF, false, false, "MPC105 Registers");
+		cpu->AddRegion(0xF9000000, 0xF90000FF, false, false, "NCR 53C810 Registers");
+		cpu->AddRegion(0xFF800000, 0xFFFFFFFF, true,  true,  "CROM");
+
+		return cpu;
+	}
+
+	CSupermodelDebugger::CSupermodelDebugger(::IEmulator *emu, ::CInputs *inputs, std::shared_ptr<CLogger> logger) :
+		CConsoleDebugger(), m_emu(emu), m_model3(dynamic_cast<::CModel3 *>(emu)), m_pro1000(dynamic_cast<::CPro1000 *>(emu)),
+		m_inputs(inputs), m_logger(logger),
 		m_loadEmuState(false), m_saveEmuState(false), m_resetEmu(false)
 	{
 		//
@@ -347,6 +371,17 @@ namespace Debugger
 	void CSupermodelDebugger::AddCPUs()
 	{
 		CCPUDebug *cpu;
+
+		if (m_pro1000)
+		{
+			// Pro-1000 only has a main board CPU
+			cpu = CreatePro1000CPUDebug(m_pro1000);
+			if (cpu) AddCPU(cpu);
+			return;
+		}
+
+		if (!m_model3)
+			return;
 
 		// Add main board CPU
 		cpu = CreateMainBoardCPUDebug(m_model3);
@@ -563,7 +598,7 @@ namespace Debugger
 		}
 		else if (CheckToken(token, "caip", "configallinputs"))		// configallinputs
 		{
-			m_inputs->ConfigureInputs(m_model3->GetGame());
+			m_inputs->ConfigureInputs(m_emu->GetGame());
 			return false;
 		}
 		//
@@ -593,7 +628,7 @@ namespace Debugger
 
 	bool CSupermodelDebugger::InputIsValid(std::shared_ptr<CInput> input)
 	{
-		return input->IsUIInput() || (input->gameFlags & m_model3->GetGame().inputs);
+		return input->IsUIInput() || (input->gameFlags & m_emu->GetGame().inputs);
 	}
 
 	void CSupermodelDebugger::ListInputs()
@@ -648,14 +683,14 @@ namespace Debugger
 		CConsoleDebugger::Attached();
 
 		char fileName[25];
-		sprintf(fileName, "Debug/%s.ds", m_model3->GetGame().name.c_str());
+		sprintf(fileName, "Debug/%s.ds", m_emu->GetGame().name.c_str());
 		LoadState(fileName);
 	}
 
 	void CSupermodelDebugger::Detaching()
 	{
 		char fileName[25];
-		sprintf(fileName, "Debug/%s.ds", m_model3->GetGame().name.c_str());
+		sprintf(fileName, "Debug/%s.ds", m_emu->GetGame().name.c_str());
 		SaveState(fileName);
 
 		CConsoleDebugger::Detaching();
@@ -683,7 +718,7 @@ namespace Debugger
 		}
 
 		// Load Model3 state
-		m_model3->LoadState(&state);
+		m_emu->LoadState(&state);
 		state.Close();
 
 		// Reset debugger
@@ -703,7 +738,7 @@ namespace Debugger
 		state.Write(&version, sizeof(version));
 
 		// Save Model3 state
-		m_model3->SaveState(&state);
+		m_emu->SaveState(&state);
 		state.Close();
 		return true;
 	}
@@ -711,7 +746,7 @@ namespace Debugger
 	void CSupermodelDebugger::ResetModel3()
 	{
 		// Reset Model3
-		m_model3->Reset();
+		m_emu->Reset();
 
 		// Reset debugger
 		Reset();
