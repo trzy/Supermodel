@@ -349,13 +349,23 @@ namespace Debugger
 		cpu->AddRegion(0x8E000000, 0x8E0FFFFF, false, false, "Real3D Culling RAM (High)");
 		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
 		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
-		cpu->AddRegion(0xC0000000, 0xC00000FF, false, false, "SCSI");
-		cpu->AddRegion(0xC1000000, 0xC10000FF, false, false, "SCSI");
+		cpu->AddRegion(0x64000000, 0x6400003F, false, false, "UART");
+		cpu->AddRegion(0xD0000000, 0xD00000FF, false, false, "SCSI (PCI device 11 BAR as programmed by firmware)");
 		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_ADDR");
 		cpu->AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA");
 		cpu->AddRegion(0xF8FFF000, 0xF8FFF0FF, false, false, "MPC105 Registers");
-		cpu->AddRegion(0xF9000000, 0xF90000FF, false, false, "NCR 53C810 Registers");
 		cpu->AddRegion(0xFF800000, 0xFFFFFFFF, true,  true,  "CROM");
+
+		// Memory-mapped IO
+		static const char *uartGroup = "UART";
+		cpu->AddMappedIO(0x64000003, 1, "RBR/THR/DLL", uartGroup);
+		cpu->AddMappedIO(0x6400000B, 1, "IER/DLM",     uartGroup);
+		cpu->AddMappedIO(0x64000013, 1, "IIR/FCR",     uartGroup);
+		cpu->AddMappedIO(0x6400001B, 1, "LCR",         uartGroup);
+		cpu->AddMappedIO(0x64000023, 1, "MCR",         uartGroup);
+		cpu->AddMappedIO(0x6400002B, 1, "LSR",         uartGroup);
+		cpu->AddMappedIO(0x64000033, 1, "MSR",         uartGroup);
+		cpu->AddMappedIO(0x6400003B, 1, "SCR",         uartGroup);
 
 		return cpu;
 	}
