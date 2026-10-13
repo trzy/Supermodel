@@ -342,11 +342,12 @@ namespace Debugger
 		CPPCDebug *cpu = new CPPCDebug("MainPPC");
 
 		// Memory regions
-		cpu->AddRegion(0x00000000, 0x007FFFFF, true,  false, "RAM");
+		cpu->AddRegion(0x00000000, 0x003FFFFF, true,  false, "RAM");
 		cpu->AddRegion(0x84000000, 0x8400003F, false, false, "Real3D Status Registers");
 		cpu->AddRegion(0x88000000, 0x88000007, false, false, "Real3D Command Port");
 		cpu->AddRegion(0x8C000000, 0x8C3FFFFF, false, false, "Real3D Culling RAM (Low)");
 		cpu->AddRegion(0x8E000000, 0x8E0FFFFF, false, false, "Real3D Culling RAM (High)");
+		cpu->AddRegion(0x90000000, 0x9000000B, false, false, "Real3D VROM Texture Port (REND_ROM_UPDATE)");
 		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
 		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
 		cpu->AddRegion(0x52000000, 0x52000003, false, false, "8259 Interrupt Acknowledge");
@@ -357,7 +358,7 @@ namespace Debugger
 		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_ADDR");
 		cpu->AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA");
 		cpu->AddRegion(0xF8FFF000, 0xF8FFF0FF, false, false, "MPC105 Registers");
-		cpu->AddRegion(0xFF800000, 0xFFFFFFFF, true,  true,  "CROM");
+		cpu->AddRegion(0xFF800000, 0xFFFFFFFF, true,  true,  "Flash ROM");
 
 		// Memory-mapped IO
 		static const char *uartGroup = "UART";

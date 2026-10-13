@@ -51,7 +51,7 @@
  *
  * A Real3D Pro-1000 image generator. Very little is known about this hardware,
  * so for now, it is modeled as a stripped-down Step 1.0 Model 3 board: a
- * PowerPC 603 with RAM, CROM, an MPC105 PCI bridge, an NCR 53C810 SCSI
+ * PowerPC 603 with RAM, flash ROM, an MPC105 PCI bridge, an NCR 53C810 SCSI
  * controller, and the Real3D graphics hardware.
  *
  * Inherits IBus in order to pass the address space handlers to devices that
@@ -151,8 +151,8 @@ private:
 
   // Emulated memory regions
   UINT8   *memoryPool;  // single allocated region for all ROM and system RAM
-  UINT8   *ram;         // 8 MB PowerPC RAM
-  UINT8   *crom;        // 8 MB CROM
+  UINT8   *ram;         // 4 MB PowerPC RAM
+  UINT8   *flash;       // 8 MB flash ROM window
   UINT8   *vrom;        // 64 MB VROM (does not exist on Pro-1000 but Real3D and renderer expect it; always zero)
 
   // PowerPC

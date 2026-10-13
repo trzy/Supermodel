@@ -48,6 +48,8 @@
  *    names (e.g., "jtag_wrt with zero bits"), which locates those functions.
  *  - Datasheets for identified parts (National SCANPSC100F, Intel 8259A,
  *    NCR 53C8xx, 16550 UART).
+ *  - The firmware's own address table (see Address Map below), found in
+ *    init_rom.c's data. It names every hardware address used by the firmware.
  *
  * Most firmware code runs from RAM. To convert, RAM = ROM - 0xFFF10000 +
  * 0x3000. Addresses below are RAM addresses unless prefixed with "ROM".
@@ -55,30 +57,51 @@
  *
  * ROM Layout
  * ----------
- * ROM FFF00000-FFF0FFFF  Boot stub (reset vector at FFF00100)
- * ROM FFF10000-FFF7FFFF  Main firmware, copied to RAM 00003000
- * ROM FFF80000-FFF8FFFF  Gamma memory contents (expected; not in our dump)
- * ROM FFF90000-FFF93FFF  Soft edge blend memory contents (expected; not in dump)
- * ROM FFF94000-FFF9400F  Power-up mode words (expected; not in dump)
+ * Names in parentheses are from the firmware's address table.
  *
- * The ROM is flash and the firmware can reprogram these areas (monitor
- * commands GMS, BMS, MWSV, DS). Our dump ends at ROM FFF7014C, so the rest of
- * the CROM space is filled with 0xFF (erased flash). The contents of p2.bin
- * are unknown and it is not loaded.
+ * ROM FFF00000-FFF0FFFF  Boot stub (CPU_ROM_BASE; reset vector CPU_BOOT_BASE)
+ * ROM FFF10000-FFF7FFFF  Main firmware (LOOP_ROM_BASE-LOOP_ROM_TOP), copied to
+ *                        RAM 00003000 (CODE_BASE)
+ * ROM FFF80000           Logic sync memory contents (LOGIC_SYNC_INIT)
+ * ROM FFF90000           Video sync memory contents (VIDEO_SYNC_INIT)
+ * ROM FFF94000           Scroll register (SCROLL_INIT)
+ * ROM FFF94004/06/08     PLL REF/FBK/CW registers (PLL_*_INIT)
+ * ROM FFF9400A           Mode word (MODEWORD_INIT)
+ * ROM FFF9400C           RIF mode word (REND_INIT_START)
+ *
+ * ROM FFFEFFFC           INIT ROM revision (54 in p2.bin)
+ * ROM FFFFF000           Gamma bank 0 (magic 0xA569A569, then 256 RGB
+ *                        triplets from FFFFF008), saved by monitor command GMS
+ *
+ * The ROM is flash and the firmware can reprogram it. The SDK's flash update
+ * (burn.exe, "Loop Code Software Revision 5.4, Init ROM Revision 54")
+ * consists of two images:
+ *
+ *   p1_p4.bin  Parts 1 and 4: boot stub and loop code, loaded at FFF00000
+ *              (region "cpu_rom"). Ends at FFF7014C.
+ *   p2.bin     Part 2: INIT ROM, loaded at FFF80000-FFFEFFFF (region
+ *              "init_rom"). Identified by the revision word at FFFEFFFC and
+ *              the contents at the addresses named in the firmware's address
+ *              table (sync memories, scroll, PLL, mode words).
+ *
+ * FFFF0000-FFFFFFFF (gamma and soft edge blend data written by GMS/BMS) is not
+ * part of the update and reads as 0xFF (erased flash), so the firmware reports
+ * no gamma or blend data. The gap between the two images also reads as 0xFF.
  *
  *
  * Boot Sequence
  * -------------
  * Boot stub (ROM):
- *  1. Reads RIF mode word (0x70000000), checks bit 13, writes 0x2000 to
- *     0x70000000 and 0x40000000.
+ *  1. Reads RIF mode word (RIF_MODE), checks bit 13, writes 0x2000 to
+ *     RIF_MODE and to MAIN_RST_AUX (0x40000000).
  *  2. Initializes the UART and prints "go" four times.
  *  3. Copies ROM FFF10000-FFF7FFFC to RAM 0x3000.
- *  4. Copies 64KB from ROM FFF80000 to byte-wide memory at 0x60000000 (gamma).
- *  5. Copies 16KB from ROM FFF90000 to halfword-wide memory at 0x58000000
- *     (soft edge blend).
- *  6. Copies mode words from ROM FFF94000-FFF9400C to 0x62000000, 0x74000002,
- *     0x7400000A, 0x74000012, and ORs ROM FFF9400C | 0x100 into 0x70000000.
+ *  4. Copies 64KB from ROM FFF80000 to byte-wide logic sync memory
+ *     (LSYNC_BASE, 0x60000000).
+ *  5. Copies 16KB from ROM FFF90000 to halfword-wide video sync memory
+ *     (VSYNC_BASE, 0x58000000).
+ *  6. Loads SCROLL (0x62000000) and the PLL registers (0x74000000-0x74000010)
+ *     from ROM FFF94000-FFF94008, and ORs ROM FFF9400C | 0x100 into RIF_MODE.
  *  7. Jumps to RAM 0x3000 (_start).
  *
  * _start (RAM 0x3000, startup.c):
@@ -103,37 +126,83 @@
  *  8. Calls 0x5660 (sets up mode words via 0x130A4 and configures PCI
  *     device 12 via 0x4E78), then prints "_start: before get_hw_config".
  *     0x5660 waits for a GP sync (IR7) via 0x577C.
+ *  9. get_hw_config, rend_mw_init, then rend_init (0x51A8). rend_init reads
+ *     the word at SCSI_ROM_BASE, byte swaps it (little endian PCI ROM), and
+ *     requires 0xCAFEBABE; otherwise it prints "SCSI ROM magic does NOT
+ *     validate" and aborts. If valid, a little endian offset at
+ *     SCSI_ROM_BASE+0x24 points to further data. rom_to_bm and rom_to_gm
+ *     then look for blend and gamma data in the "INIT ROM".
  *
  *
  * PowerPC Address Map
  * -------------------
- * 00000000-007FFFFF  RAM (8MB assumed)
- * 40000000           Unknown control register. Written with 0x2000 at boot.
- * 52000000           8259 interrupt acknowledge: each write is one INTA pulse
- *                    (dispatcher writes twice, then reads ISR). [Emulated]
- * 54000000-5400000F  Intel 8259A interrupt controller (int_8259.c). [Emulated]
- * 58000000-5801FFFF  Soft edge blend memory? 8K halfwords at stride 8.
- * 60000000-6007FFFF  Gamma memory? 64K bytes at stride 8 (Pluto gamma).
- * 62000000           Unknown. Loaded with a mode word from ROM at boot.
- * 64000000-6400003F  16550-style UART (uart.c). [Emulated]
- * 68000000-6800003F  SCANPSC100F JTAG scan controller (jtag_*.c). [Emulated]
- * 70000000           RIF mode word register. Bit 13 checked at boot, bit 14
- *                    toggled by boot stub, bits 23:16 probably DIP switches.
- * 72000000           Reset? Boot stub writes it in a loop on 'r' over serial.
- * 74000000-74000017  Video sync generator? Halfword registers at +2, +A, +12
- *                    loaded with mode words at boot.
- * 78000000           Free-running timer? Read by IR0 handler to time fields.
- * 80000000-          PCI device 12 memory BAR (probably Real3D). The Model 3
- *                    Real3D ranges (84, 88, 8C, 8E, 94, 98, 9C) are mapped
- *                    here provisionally.
- * C0000000           SCSI expansion ROM (PCI device 11 ROM BAR). [Not mapped]
- * D0000000-D00000FF  SCSI controller registers (PCI device 11 BAR1). [Emulated]
- * F0800CF8-F0800CFF  MPC105 CONFIG_ADDR (same as Model 3 Step 1.0)
- * F0C00CF8-F0C00CFF  MPC105 CONFIG_DATA
- * F8FFF000-F8FFF0FF  MPC105 registers
- * FF800000-FFFFFFFF  CROM (firmware at FFF00000)
+ * The firmware contains a table of 76 named hardware addresses (RAM
+ * 0x5F2B0-0x5FE90, entries of a 36-byte name followed by a 32-bit value).
+ * Names below are from that table. Descriptions are inferred.
  *
- * Byte-wide peripherals (8259, UART, SCANPSC100F, gamma memory) are connected
+ * 00000000-003FFFFF  DRAM_BASE/DRAM_TOP  RAM (4MB). DRAM_G1_TOP=0x02000000 is
+ *                                        also defined; its meaning is unknown.
+ * 00010000           LOW_MEM_TOP
+ * 00003000           CODE_BASE           Main firmware copied here
+ * 40000000           MAIN_RST_AUX        Reset auxiliary processor? 0x2000
+ *                                        written at boot.
+ * 42000000           AUX_INT_MAIN        Auxiliary to main interrupt?
+ * 44000000           MAIN_INT_AUX        Main to auxiliary interrupt?
+ * 48000000           AUX_INTACK          Auxiliary interrupt acknowledge
+ * 50000000/08        AUX_INT_R0/R1       Auxiliary interrupt controller (a
+ *                                        second 8259?)
+ * 52000000           MAIN_INTACK         8259 INTA: each write is one pulse.
+ *                                        [Emulated]
+ * 54000000/08        MAIN_INT_R0/R1      Main 8259A. [Emulated]
+ * 58000000           VSYNC_BASE          Video sync memory, 8K halfwords at
+ *                                        stride 8
+ * 60000000           LSYNC_BASE          Logic sync memory, 64K bytes at
+ *                                        stride 8
+ * 62000000           SCROLL              Scroll register
+ * 64000000-38        UART_*              16550 UART (RDTD_BUFFER, INT_ENABLE,
+ *                                        INT_ID/FIFO_CNTRL, LINE_CNTRL,
+ *                                        MODEM_CNTRL, LINE_STATUS,
+ *                                        MODEM_STATUS, SCRATCH, DIV_LATCH0/1).
+ *                                        [Emulated]
+ * 68000000-38        JTAG_*              SCANPSC100F (TDO, TDI, TMS0, TMS1,
+ *                                        CNT0, MODE0-2). [Emulated]
+ * 70000000           RIF_MODE            RIF mode word. Bit 13 checked at boot,
+ *                                        bit 14 toggled by boot stub, bits
+ *                                        23:16 probably DIP switches.
+ * 72000000           HARD_RESET          Written in a loop by boot stub on 'r'
+ * 74000000/08/10     PLL_REF/FBK/CW      Video PLL registers
+ * 78000000/08        MAIN_RD_INTA_R0/R1  Main interrupt acknowledge by read?
+ *                                        Read by IR0 handler.
+ * 7A000000/08        AUX_RD_INTA_R0/R1   Auxiliary equivalent
+ * 80000000           REND_BASE           Renderer (Real3D), PCI device 12 BAR0
+ * 84000000           REND_STATUS         Status registers. [Emulated, Model 3]
+ * 88000000           REND_UPDATE_COMPL   Update complete (Model 3 "flush").
+ *                                        [Emulated, Model 3]
+ * 8C000000-8FFFFFFC  REND_CULL_BASE/TOP  Culling memory (64MB window).
+ *                                        [Model 3 8C/8E mapping emulated]
+ * 90000000           REND_ROM_UPDATE     Model 3 VROM texture port equivalent.
+ *                                        Used by firmware (e.g., 0x63AC) and
+ *                                        accepted from the host. [Emulated as
+ *                                        on Model 3 with an empty VROM; all
+ *                                        accesses logged at info level]
+ * 94000000           REND_TEX_UPDATE,    Texture FIFO. [Emulated, Model 3]
+ *                    REND_TEX_CONTINUE,
+ *                    REND_TRANS_UPDATE
+ * 98000000-9FFFFFFC  REND_POLY_BASE/TOP  Polygon memory (128MB window).
+ *                                        [Model 3 98 mapping emulated]
+ * 9C000000           REND_UPDATE_START   Model 3 configuration registers.
+ *                                        [Emulated, Model 3]
+ * C0000000-C0080000  SCSI_ROM_BASE/TOP   SCSI controller expansion ROM, 512KB.
+ *                                        Holds the "INIT ROM" data used by
+ *                                        rend_init. [Not mapped]
+ * D0000000           SCSI_MEM_BASE       SCSI controller registers. [Emulated]
+ * F0800000           CONFIG_ADDR         MPC105 (same as Model 3 Step 1.0)
+ * F0C00000           CONFIG_DATA
+ * F8FFF000           BRIDGE_CSR_BASE     MPC105 registers
+ * FFF00000-FFFFFFFF  CPU_ROM_BASE/TOP    Flash ROM (mapped in an 8MB window
+ *                                        from 0xFF800000)
+ *
+ * Byte-wide peripherals (8259, UART, SCANPSC100F, logic sync memory) are connected
  * to D7:0 and decode address bits 3 and up: register n is the least
  * significant byte of the big endian word at base+n*8. Firmware uses both
  * byte (base+n*8+3) and word (base+n*8) accesses.
@@ -174,7 +243,8 @@
  * Handlers are registered with 0x4BDC(handler, line), which also calls the
  * handler once and unmasks the line. 0x4C7C/0x4CF0 mask/unmask a line.
  *
- *  IR0  Field sync (0x4EBC): counts fields at 0x5D960, reads 0x78000000.
+ *  IR0  Field sync (0x4EBC): counts fields at 0x5D960, reads 0x78000000
+ *       (MAIN_RD_INTA_R0).
  *       [Emulated: one line long pulse per frame at line 383, matching when
  *       Model 3 asserts its VBlank interrupt]
  *  IR3  SCSI (0x44868, ncrintr). [Emulated]
@@ -286,7 +356,19 @@
  *    state layout.
  *  - What determines "Pre-Production" vs. "Production" system and the
  *    extended texture memory setting reported by show_config_data.
- *  - 0x40000000, 0x62000000, 0x72000000, 0x78000000.
+ *  - Contents of the SCSI ROM at SCSI_ROM_BASE (magic 0xCAFEBABE at offset 0,
+ *    offset at 0x24), checked by rend_init. This is the SCSI controller's
+ *    expansion ROM, separate from the INIT ROM in CPU flash, and is not part
+ *    of the SDK flash update (p1_p4.bin, p2.bin), so it was presumably
+ *    programmed at the factory. Without it, renderer initialization is
+ *    skipped.
+ *  - RIF_MODE (0x70000000) is not emulated as a register, so the mode word
+ *    from the INIT ROM (0x1401) does not stick.
+ *  - REND_ROM_UPDATE (0x90000000) is used, which suggests the renderer has a
+ *    ROM-based update path like Model 3's VROM texture port.
+ *  - What p2.bin is.
+ *  - The auxiliary processor/interrupt controller (MAIN_RST_AUX, AUX_*).
+ *  - MAIN_RD_INTA_R0/R1 (0x78000000) semantics.
  *
  *
  * Endianness
@@ -306,18 +388,22 @@
 #include "OSD/Video.h"
 #include "Util/ByteSwap.h"
 
-constexpr static uint32_t RAM_SIZE          = 0x800000;   // 8MB
-constexpr static uint32_t CROM_SIZE         = 0x800000;   // 8MB
+constexpr static uint32_t RAM_SIZE          = 0x400000;   // 4MB (DRAM_TOP)
+constexpr static uint32_t FLASH_SIZE        = 0x800000;   // 8MB window
 constexpr static uint32_t VROM_SIZE         = 0x4000000;  // 64MB
 
-constexpr static uint32_t CROM_BASE_ADDR    = 0xFF800000; // start of CROM in PowerPC address space
-constexpr static uint32_t CROM_LOAD_ADDR    = 0xFFF00000; // where the CROM image is loaded (reset vector is at +0x100)
-constexpr static uint32_t CROM_LOAD_OFFSET  = CROM_LOAD_ADDR - CROM_BASE_ADDR;
+// Flash is mapped in an 8MB window (as on Model 3) although only the top 1MB
+// (CPU_ROM_BASE-CPU_ROM_TOP) is populated
+constexpr static uint32_t FLASH_BASE_ADDR   = 0xFF800000; // start of flash window in PowerPC address space
+constexpr static uint32_t CPU_ROM_BASE      = 0xFFF00000; // boot stub and loop code image (reset vector is at +0x100)
+constexpr static uint32_t CPU_ROM_OFFSET    = CPU_ROM_BASE - FLASH_BASE_ADDR;
+constexpr static uint32_t INIT_ROM_BASE     = 0xFFF80000; // INIT ROM image (LOGIC_SYNC_INIT)
+constexpr static uint32_t INIT_ROM_OFFSET   = INIT_ROM_BASE - FLASH_BASE_ADDR;
 
-constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + CROM_SIZE + VROM_SIZE;
+constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + VROM_SIZE;
 constexpr static uint32_t RAM_OFFSET        = 0;
-constexpr static uint32_t CROM_OFFSET       = RAM_OFFSET + RAM_SIZE;
-constexpr static uint32_t VROM_OFFSET       = CROM_OFFSET + CROM_SIZE;
+constexpr static uint32_t FLASH_OFFSET      = RAM_OFFSET + RAM_SIZE;
+constexpr static uint32_t VROM_OFFSET       = FLASH_OFFSET + FLASH_SIZE;
 
 constexpr static int      STEPPING          = 0x10;       // treat hardware as Model 3 Step 1.0
 constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // Step 1.0 PowerPC frequency
@@ -383,11 +469,34 @@ bool CPro1000::IsSCSIAddress(UINT32 addr) const
  Address Space Access Handlers
 ******************************************************************************/
 
+// REND_ROM_UPDATE is the Model 3 VROM texture port. The Pro-1000 has no VROM
+// that we know of, but the firmware references the port, so all accesses are
+// logged.
+constexpr static uint32_t REND_ROM_UPDATE   = 0x90000000;
+
+static inline bool IsVROMPortAddress(UINT32 addr)
+{
+  return (addr >> 24) == (REND_ROM_UPDATE >> 24);
+}
+
+static void LogVROMPortAccess(const char *access, UINT32 addr)
+{
+  InfoLog("Pro-1000: %s REND_ROM_UPDATE (VROM port) @ %08X (PC=%08X, LR=%08X)", access, addr, ppc_get_pc(), ppc_get_lr());
+}
+
+static void LogVROMPortAccess(const char *access, UINT32 addr, UINT32 data)
+{
+  InfoLog("Pro-1000: %s REND_ROM_UPDATE (VROM port) %08X=%08X (PC=%08X, LR=%08X)", access, addr, data, ppc_get_pc(), ppc_get_lr());
+}
+
 UINT8 CPro1000::Read8(UINT32 addr)
 {
   // RAM (most frequently accessed)
-  if (addr < 0x00800000)
+  if (addr < RAM_SIZE)
     return ram[addr ^ 3];
+
+  if (IsVROMPortAddress(addr))
+    LogVROMPortAccess("read8", addr);
 
   // SCSI
   if (IsSCSIAddress(addr))
@@ -403,10 +512,10 @@ UINT8 CPro1000::Read8(UINT32 addr)
   // Other
   switch ((addr >> 24))
   {
-  // CROM
+  // Flash
   case 0xFF:
-    if (addr >= CROM_BASE_ADDR)
-      return crom[(addr & 0x7FFFFF) ^ 3];
+    if (addr >= FLASH_BASE_ADDR)
+      return flash[(addr & 0x7FFFFF) ^ 3];
     break;
 
   // UART
@@ -436,8 +545,11 @@ UINT16 CPro1000::Read16(UINT32 addr)
   }
 
   // RAM (most frequently accessed)
-  if (addr < 0x00800000)
+  if (addr < RAM_SIZE)
     return *(UINT16 *) &ram[addr ^ 2];
+
+  if (IsVROMPortAddress(addr))
+    LogVROMPortAccess("read16", addr);
 
   // SCSI
   if (IsSCSIAddress(addr))
@@ -450,10 +562,10 @@ UINT16 CPro1000::Read16(UINT32 addr)
   // Other
   switch ((addr >> 24))
   {
-  // CROM
+  // Flash
   case 0xFF:
-    if (addr >= CROM_BASE_ADDR)
-      return *(UINT16 *) &crom[(addr & 0x7FFFFF) ^ 2];
+    if (addr >= FLASH_BASE_ADDR)
+      return *(UINT16 *) &flash[(addr & 0x7FFFFF) ^ 2];
     break;
 
   case 0xF0:
@@ -483,8 +595,11 @@ UINT32 CPro1000::Read32(UINT32 addr)
   }
 
   // RAM (most frequently accessed)
-  if (addr < 0x00800000)
+  if (addr < RAM_SIZE)
     return *(UINT32 *) &ram[addr];
+
+  if (IsVROMPortAddress(addr))
+    LogVROMPortAccess("read32", addr);
 
   // SCSI
   if (IsSCSIAddress(addr))
@@ -506,10 +621,10 @@ UINT32 CPro1000::Read32(UINT32 addr)
   // Other
   switch ((addr >> 24))
   {
-  // CROM
+  // Flash
   case 0xFF:
-    if (addr >= CROM_BASE_ADDR)
-      return *(UINT32 *) &crom[(addr & 0x7FFFFF)];
+    if (addr >= FLASH_BASE_ADDR)
+      return *(UINT32 *) &flash[(addr & 0x7FFFFF)];
     break;
 
   // Real3D registers
@@ -551,11 +666,14 @@ UINT64 CPro1000::Read64(UINT32 addr)
 void CPro1000::Write8(UINT32 addr, UINT8 data)
 {
   // RAM (most frequently accessed)
-  if (addr < 0x00800000)
+  if (addr < RAM_SIZE)
   {
     ram[addr ^ 3] = data;
     return;
   }
+
+  if (IsVROMPortAddress(addr))
+    LogVROMPortAccess("write8", addr, data);
 
   // SCSI
   if (IsSCSIAddress(addr))
@@ -619,11 +737,14 @@ void CPro1000::Write16(UINT32 addr, UINT16 data)
   }
 
   // RAM (most frequently accessed)
-  if (addr < 0x00800000)
+  if (addr < RAM_SIZE)
   {
     *(UINT16 *) &ram[addr ^ 2] = data;
     return;
   }
+
+  if (IsVROMPortAddress(addr))
+    LogVROMPortAccess("write16", addr, data);
 
   // SCSI
   if (IsSCSIAddress(addr))
@@ -670,11 +791,14 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
   }
 
   // RAM (most frequently accessed)
-  if (addr < 0x00800000)
+  if (addr < RAM_SIZE)
   {
     *(UINT32 *) &ram[addr] = data;
     return;
   }
+
+  if (IsVROMPortAddress(addr))
+    LogVROMPortAccess("write32", addr, data);
 
   // SCSI
   if (IsSCSIAddress(addr))
@@ -722,6 +846,11 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
   // Real3D high culling RAM
   case 0x8E:  // 8E000000-8E100000
     GPU.WriteHighCullingRAM(addr & 0xFFFFF, FLIPENDIAN32(data));
+    return;
+
+  // Real3D texture port (REND_ROM_UPDATE). Reads from VROM, which is empty.
+  case 0x90:  // 90000000-90??????
+    GPU.WriteTexturePort(addr & 0xFF, FLIPENDIAN32(data));
     return;
 
   // Real3D texture FIFO
@@ -1237,18 +1366,28 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
 {
   m_game = Game();
 
-  // Load CROM at its base address. Unused space reads back as all 1's, like
-  // an erased EPROM.
-  ROM rom = rom_set.get_rom("crom");
-  if (rom.size == 0)
-    return ErrorLog("No CROM defined for '%s'.", game.name.c_str());
-  if (rom.size > CROM_SIZE - CROM_LOAD_OFFSET)
-    return ErrorLog("CROM for '%s' is too large (%zu bytes). It must fit within 0x%08X-0xFFFFFFFF.", game.name.c_str(), rom.size, CROM_LOAD_ADDR);
-  memset(crom, 0xFF, CROM_SIZE);
-  rom.CopyTo(&crom[CROM_LOAD_OFFSET], rom.size);
+  // Unprogrammed flash reads back as all 1's
+  memset(flash, 0xFF, FLASH_SIZE);
+
+  // CPU ROM: boot stub and loop code
+  ROM cpuROM = rom_set.get_rom("cpu_rom");
+  if (cpuROM.size == 0)
+    return ErrorLog("No CPU ROM defined for '%s'.", game.name.c_str());
+  if (cpuROM.size > INIT_ROM_BASE - CPU_ROM_BASE)
+    return ErrorLog("CPU ROM for '%s' is too large (%zu bytes). It must fit within 0x%08X-0x%08X.", game.name.c_str(), cpuROM.size, CPU_ROM_BASE, INIT_ROM_BASE - 1);
+  cpuROM.CopyTo(&flash[CPU_ROM_OFFSET], cpuROM.size);
+
+  // INIT ROM: power-up video timing, mode words, and renderer initialization
+  // data stored in flash above the loop code
+  ROM initROM = rom_set.get_rom("init_rom");
+  if (initROM.size == 0)
+    return ErrorLog("No INIT ROM defined for '%s'.", game.name.c_str());
+  if (initROM.size > FLASH_SIZE - INIT_ROM_OFFSET)
+    return ErrorLog("INIT ROM for '%s' is too large (%zu bytes). It must fit within 0x%08X-0xFFFFFFFF.", game.name.c_str(), initROM.size, INIT_ROM_BASE);
+  initROM.CopyTo(&flash[INIT_ROM_OFFSET], initROM.size);
 
   // Convert PowerPC ROM to little endian words
-  Util::FlipEndian32(crom, CROM_SIZE);
+  Util::FlipEndian32(flash, FLASH_SIZE);
 
   // Configure CPU and PCI bridge as Step 1.0
   PPC_CONFIG ppc_config;
@@ -1263,9 +1402,9 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   PPCFetchRegions[0].start = 0;
   PPCFetchRegions[0].end = RAM_SIZE - 1;
   PPCFetchRegions[0].ptr = (UINT32 *) ram;
-  PPCFetchRegions[1].start = CROM_BASE_ADDR;
+  PPCFetchRegions[1].start = FLASH_BASE_ADDR;
   PPCFetchRegions[1].end = 0xFFFFFFFF;
-  PPCFetchRegions[1].ptr = (UINT32 *) crom;
+  PPCFetchRegions[1].ptr = (UINT32 *) flash;
   PPCFetchRegions[2].start = 0;
   PPCFetchRegions[2].end = 0;
   PPCFetchRegions[2].ptr = NULL;
@@ -1354,7 +1493,7 @@ Result CPro1000::Init(void)
 
   // Set up pointers
   ram = &memoryPool[RAM_OFFSET];
-  crom = &memoryPool[CROM_OFFSET];
+  flash = &memoryPool[FLASH_OFFSET];
   vrom = &memoryPool[VROM_OFFSET];
 
   // Initialize devices (PowerPC initialized after ROMs loaded)
@@ -1387,7 +1526,7 @@ CPro1000::CPro1000(Util::Config::Node &config)
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
     memoryPool(NULL),
     ram(NULL),
-    crom(NULL),
+    flash(NULL),
     vrom(NULL),
     gpusReady(false),
     startedThreads(false),
@@ -1428,7 +1567,7 @@ CPro1000::~CPro1000(void)
   if (m_config["DumpMemory"].ValueAsDefault<bool>(false) && memoryPool != NULL)
   {
     Dump("RAM", "ram.bin", ram, RAM_SIZE);
-    Dump("CROM", "crom.bin", crom, CROM_SIZE);
+    Dump("flash", "flash.bin", flash, FLASH_SIZE);
   }
 
   // Stop all threads
@@ -1442,7 +1581,7 @@ CPro1000::~CPro1000(void)
   }
 
   ram = NULL;
-  crom = NULL;
+  flash = NULL;
   vrom = NULL;
 
   DebugLog("Destroyed Pro-1000\n");
