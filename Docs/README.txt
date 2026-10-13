@@ -1376,6 +1376,17 @@ All settings are case sensitive.
 
     ----------------
 
+    Name:           ROMDirectory
+
+    Argument:       String.
+
+    Description:    Directory in which the settings GUI looks for ROM sets
+                    (<romset>.zip) when a game is loaded from it.  The default
+                    is 'ROMs', relative to the working directory.  Not used
+                    when a ROM set is given on the command line.
+
+    ----------------
+
     Name:           PowerPCFrequency
 
     Argument:       Integer.
