@@ -3153,12 +3153,12 @@ Result CModel3::Init(void)
   IRQ.Init();
   PCIBridge.Init();
   PCIBus.Init();
-  SCSI.Init(this,&IRQ,0x100); // SCSI is actually a non-maskable interrupt, so we give it a bit number outside of 8-bit range
+  SCSI.Init(this,&IRQ,CIRQ::NMI); // SCSI is actually a non-maskable interrupt
   RTC.Init();
   EEPROM.Init();
   if (Result::OKAY != TileGen.Init(&IRQ))
     return Result::FAIL;
-  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,0x100)) // same for Real3D DMA interrupt
+  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI)) // same for Real3D DMA interrupt
     return Result::FAIL;
   if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
     return Result::FAIL;

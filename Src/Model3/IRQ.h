@@ -30,15 +30,23 @@
 
 #include "BlockFile.h"
 #include "Types.h"
+#include "CPU/IRQController.h"
 
 /*
  * CIRQ:
  *
- * Model 3 IRQ controller.
+ * Model 3 IRQ controller. Lines 0-7 (bits 0x01-0x80) are the maskable
+ * interrupts visible through the IRQ enable and state registers.
  */
-class CIRQ
+class CIRQ: public IIRQController
 {
 public:
+	/*
+	 * Non-maskable line. Not visible in the IRQ state register. Used by devices
+	 * whose interrupts bypass the 8 maskable lines (SCSI, Real3D DMA).
+	 */
+	static constexpr uint16_t NMI = 0x100;
+
 	/*
 	 * SaveState(SaveState):
 	 *
@@ -64,7 +72,7 @@ public:
 	 *
 	 * Assert IRQ(s). Also asserts the CPU IRQ line (unless no IRQs are 
 	 * actually asserted). The IRQ controller only tracks 8 state bits but for
-	 * non-maskable interrupts, higher bits (bits 9 and above) can be used.
+	 * non-maskable interrupts, higher bits (e.g., NMI) can be used.
 	 * They will be tracked internally but not visible when external hardware
 	 * tries reading the IRQ state.
 	 *
@@ -72,7 +80,7 @@ public:
 	 *		irqBits		IRQ bits corresponding to the IRQ state register (1
 	 *					indicates assertion, 0 does nothing).
 	 */
-	void Assert(unsigned irqBits);
+	void Assert(uint16_t irqBits) override;
 
 	/*
 	 * Deassert(irqBits):
@@ -84,7 +92,7 @@ public:
 	 *		irqBits		IRQ bits corresponding to the IRQ state register (1
 	 *					indicates deassertion, 0 does nothing).
 	 */
-	void Deassert(unsigned irqBits);
+	void Deassert(uint16_t irqBits) override;
 
 	/*
 	 * ReadIRQEnable(void):

@@ -29,10 +29,11 @@
 #define INCLUDED_PRO1000_H
 
 #include "Game.h"
+#include "Pro1000/8259.h"
+#include "Pro1000/SCANPSC100F.h"
 #include "Pro1000/UART.h"
 #include "Model3/53C810.h"
 #include "Model3/IEmulator.h"
-#include "Model3/IRQ.h"
 #include "Model3/MPC10x.h"
 #include "Model3/PCI.h"
 #include "Model3/Real3D.h"
@@ -171,7 +172,8 @@ private:
   FrameTimings timings;
 
   // Devices
-  CIRQ        IRQ;          // Model 3 IRQ controller (needed by devices; its registers are not mapped)
+  C8259       PIC;          // Intel 8259A interrupt controller
+  CSCANPSC100F JTAG;        // SCANPSC100F JTAG scan controller
   CMPC10x     PCIBridge;    // MPC105 PCI/bridge/memory controller
   CPCIBus     PCIBus;       // PCI bus
   C53C810     SCSI;         // SCSI controller (NCR 53C825 on real hardware, emulated as 53C810)

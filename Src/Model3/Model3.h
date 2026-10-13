@@ -32,6 +32,7 @@
 #include "53C810.h"
 #include "93C46.h"
 #include "Crypto.h"
+#include "IRQ.h"
 #include "IEmulator.h"
 #include "JTAG.h"
 #include "MPC10x.h"

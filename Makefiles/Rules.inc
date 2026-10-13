@@ -120,6 +120,8 @@ SRC_FILES = \
 	Src/Model3/Model3.cpp \
 	Src/Pro1000/Pro1000.cpp \
 	Src/Pro1000/UART.cpp \
+	Src/Pro1000/8259.cpp \
+	Src/Pro1000/SCANPSC100F.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \

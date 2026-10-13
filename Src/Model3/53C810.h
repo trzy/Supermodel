@@ -28,7 +28,7 @@
 #ifndef INCLUDED_53C810_H
 #define INCLUDED_53C810_H
 
-#include "IRQ.h"
+#include "CPU/IRQController.h"
 #include "PCI.h"
 #include "BlockFile.h"
 #include "CPU/Bus.h"
@@ -62,8 +62,8 @@ struct NCR53C810Context
 	IBus	*Bus;
 
 	// IRQ handling
-	CIRQ		*IRQ;		// IRQ controller
-	unsigned	scsiIRQ;	// IRQ bit to use when calling IRQ handler
+	IIRQController	*IRQ;		// IRQ controller
+	uint16_t	scsiIRQ;	// IRQ line mask to use when calling IRQ controller
 };
 
 /*
@@ -181,10 +181,10 @@ public:
 	 *						over. Used to read/write memory.
 	 *		IRQObjectPtr	Pointer to the IRQ controller. Used to trigger SCSI
 	 *						and DMA interrupts.
-	 *		scsiIRQBit		IRQ identifier bit to pass along to IRQ controller
+	 *		scsiIRQBit		IRQ line mask to pass along to IRQ controller
 	 *						when asserting interrupts.
 	 */
-	void Init(IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit);
+	void Init(IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t scsiIRQBit);
 
 	/*
 	 * C53C810(void):
@@ -205,8 +205,8 @@ private:
 	// Context (register file)
 	struct NCR53C810Context	Ctx;
 
-	// IRQ identifier for this SCSI controller
-	unsigned	scsiIRQ;
+	// IRQ line mask for this SCSI controller
+	uint16_t	scsiIRQ;
 
 	// Base address of the SCSI device (varies by game)
 	UINT8	baseAddress;

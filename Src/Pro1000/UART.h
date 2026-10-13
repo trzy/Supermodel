@@ -23,6 +23,9 @@
  * UART.h
  *
  * Header file defining the CUART class: a 16550-style serial port.
+ *
+ * Register names (RBR, THR, IER, IIR, FCR, LCR, MCR, LSR, MSR, SCR, DLL, DLM)
+ * follow the 16550 datasheet.
  */
 
 #ifndef INCLUDED_UART_H

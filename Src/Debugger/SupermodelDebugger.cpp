@@ -349,7 +349,10 @@ namespace Debugger
 		cpu->AddRegion(0x8E000000, 0x8E0FFFFF, false, false, "Real3D Culling RAM (High)");
 		cpu->AddRegion(0x94000000, 0x940FFFFF, false, false, "Real3D Texture FIFO");
 		cpu->AddRegion(0x98000000, 0x980FFFFF, false, false, "Real3D Polygon RAM");
+		cpu->AddRegion(0x52000000, 0x52000003, false, false, "8259 Interrupt Acknowledge");
+		cpu->AddRegion(0x54000000, 0x5400000F, false, false, "8259 Interrupt Controller");
 		cpu->AddRegion(0x64000000, 0x6400003F, false, false, "UART");
+		cpu->AddRegion(0x68000000, 0x6800003F, false, false, "SCANPSC100F JTAG Controller");
 		cpu->AddRegion(0xD0000000, 0xD00000FF, false, false, "SCSI (PCI device 11 BAR as programmed by firmware)");
 		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_ADDR");
 		cpu->AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA");
@@ -366,6 +369,18 @@ namespace Debugger
 		cpu->AddMappedIO(0x6400002B, 1, "LSR",         uartGroup);
 		cpu->AddMappedIO(0x64000033, 1, "MSR",         uartGroup);
 		cpu->AddMappedIO(0x6400003B, 1, "SCR",         uartGroup);
+		static const char *picGroup = "8259";
+		cpu->AddMappedIO(0x54000003, 1, "ICW1/OCW2/OCW3, IRR/ISR", picGroup);
+		cpu->AddMappedIO(0x5400000B, 1, "ICW2-4/OCW1 (IMR)",       picGroup);
+		static const char *jtagGroup = "SCANPSC100F";
+		cpu->AddMappedIO(0x68000003, 1, "TDO / CNT32 reg 1",   jtagGroup);
+		cpu->AddMappedIO(0x6800000B, 1, "TDI",                 jtagGroup);
+		cpu->AddMappedIO(0x68000013, 1, "TMS0 / CNT32 reg 2",  jtagGroup);
+		cpu->AddMappedIO(0x6800001B, 1, "TMS1 / CNT32 reg 3",  jtagGroup);
+		cpu->AddMappedIO(0x68000023, 1, "CNT32 / CNT32 reg 0", jtagGroup);
+		cpu->AddMappedIO(0x6800002B, 1, "MODE0",               jtagGroup);
+		cpu->AddMappedIO(0x68000033, 1, "MODE1",               jtagGroup);
+		cpu->AddMappedIO(0x6800003B, 1, "MODE2",               jtagGroup);
 
 		return cpu;
 	}

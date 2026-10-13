@@ -24,33 +24,210 @@
  *
  * Implementation of the CPro1000 class: a Real3D Pro-1000 image generator.
  *
- * The Pro-1000 was attached to a Windows NT host via SCSI. Its memory map is
- * not yet known, so it is presently modeled as a Step 1.0 Model 3 with all of
- * the Sega-specific hardware (tile generator, sound board, inputs, system
- * registers, etc.) removed.
+ * The Pro-1000 was attached to a Windows NT host via SCSI. Applications ran on
+ * the host and sent data to the image generator, which had its own display.
+ * The Model 3 graphics hardware is derived from it. This file documents what
+ * has been learned about the hardware from its firmware. Everything here was
+ * reverse engineered and should be treated as a working hypothesis unless
+ * stated otherwise.
  *
- * PowerPC Address Map (assumed to match Model 3 Step 1.0)
+ *
+ * Methods
+ * -------
+ * The firmware (p1_p4.bin, 0x7014C bytes) is a flat big endian PowerPC image
+ * loaded at 0xFFF00000. Findings come from:
+ *
+ *  - Disassembly with ppcd (bin64/ppcd.exe roms/P1_P4.bin -o FFF00000).
+ *  - Logging unmapped accesses (DebugLog, -log-level=all) and UART output.
+ *  - SCCS ID strings: each C module embeds "@(#)<file>.c <ver> <date>" in its
+ *    data section. Data adjacent to an ID string belongs to that module, which
+ *    attributes tables (e.g., register address tables) to source files.
+ *  - Address cross-referencing: code forms addresses with "lis rX,hi" followed
+ *    by "addi/ori rY,rX,lo". Collecting all such pairs reveals which code
+ *    references which string or table. Error messages often contain function
+ *    names (e.g., "jtag_wrt with zero bits"), which locates those functions.
+ *  - Datasheets for identified parts (National SCANPSC100F, Intel 8259A,
+ *    NCR 53C8xx, 16550 UART).
+ *
+ * Most firmware code runs from RAM. To convert, RAM = ROM - 0xFFF10000 +
+ * 0x3000. Addresses below are RAM addresses unless prefixed with "ROM".
+ *
+ *
+ * ROM Layout
+ * ----------
+ * ROM FFF00000-FFF0FFFF  Boot stub (reset vector at FFF00100)
+ * ROM FFF10000-FFF7FFFF  Main firmware, copied to RAM 00003000
+ * ROM FFF80000-FFF8FFFF  Gamma memory contents (expected; not in our dump)
+ * ROM FFF90000-FFF93FFF  Soft edge blend memory contents (expected; not in dump)
+ * ROM FFF94000-FFF9400F  Power-up mode words (expected; not in dump)
+ *
+ * The ROM is flash and the firmware can reprogram these areas (monitor
+ * commands GMS, BMS, MWSV, DS). Our dump ends at ROM FFF7014C, so the rest of
+ * the CROM space is filled with 0xFF (erased flash). The contents of p2.bin
+ * are unknown and it is not loaded.
+ *
+ *
+ * Boot Sequence
+ * -------------
+ * Boot stub (ROM):
+ *  1. Reads RIF mode word (0x70000000), checks bit 13, writes 0x2000 to
+ *     0x70000000 and 0x40000000.
+ *  2. Initializes the UART and prints "go" four times.
+ *  3. Copies ROM FFF10000-FFF7FFFC to RAM 0x3000.
+ *  4. Copies 64KB from ROM FFF80000 to byte-wide memory at 0x60000000 (gamma).
+ *  5. Copies 16KB from ROM FFF90000 to halfword-wide memory at 0x58000000
+ *     (soft edge blend).
+ *  6. Copies mode words from ROM FFF94000-FFF9400C to 0x62000000, 0x74000002,
+ *     0x7400000A, 0x74000012, and ORs ROM FFF9400C | 0x100 into 0x70000000.
+ *  7. Jumps to RAM 0x3000 (_start).
+ *
+ * _start (RAM 0x3000, startup.c):
+ *  1. Prints RIF mode word (register), RIF mode word from ROM (FFF9400C),
+ *     merges them, and prints PPC version.
+ *  2. Initializes the 8259 (0x4AA8) and registers interrupt handlers (IR0,
+ *     IR7, IR3).
+ *  3. Configures PCI device 11 (SCSI, 0x4E0C).
+ *  4. Resets the SCANPSC100F: writes 2 to MODE2, waits for the reset bit to
+ *     clear, then writes 0x0C (status update). Registers IR4 (jtag_int).
+ *  5. Initializes the SCSI controller ("ncrinit"), SCSI ID 0.
+ *  6. Measures field time: clears the field counter at 0x5D960 and waits for
+ *     the IR0 handler to increment it. Without field syncs, it prints
+ *     "NO FIELD SYNCS DETECTED" and skips renderer initialization.
+ *  7. Reads DIP switches (probably RIF register bits 23:16, active low).
+ *  8. Prints revision, then ". . . entering main loop . . .".
+ *
+ *
+ * PowerPC Address Map
  * -------------------
- * 00000000-007FFFFF  RAM
- * 84000000-8400003F  Real3D Status Registers
- * 88000000-88000007  Real3D Command Port
- * 8C000000-8C3FFFFF  Real3D Culling RAM (Low)
- * 8E000000-8E0FFFFF  Real3D Culling RAM (High)
- * 94000000-940FFFFF  Real3D Texture FIFO
- * 98000000-980FFFFF  Real3D Polygon RAM
- * 9C000000-9CFFFFFF  Real3D Configuration Registers
- * 64000000-6400003F  UART (16550-style, register n at 64000000+n*8+3)
- * D0000000-D00000FF  SCSI (PCI device 11 memory BAR, programmed by firmware)
- * F0800CF8-F0800CFF  MPC105 CONFIG_ADDR
+ * 00000000-007FFFFF  RAM (8MB assumed)
+ * 40000000           Unknown control register. Written with 0x2000 at boot.
+ * 52000000           8259 interrupt acknowledge: each write is one INTA pulse
+ *                    (dispatcher writes twice, then reads ISR). [Emulated]
+ * 54000000-5400000F  Intel 8259A interrupt controller (int_8259.c). [Emulated]
+ * 58000000-5801FFFF  Soft edge blend memory? 8K halfwords at stride 8.
+ * 60000000-6007FFFF  Gamma memory? 64K bytes at stride 8 (Pluto gamma).
+ * 62000000           Unknown. Loaded with a mode word from ROM at boot.
+ * 64000000-6400003F  16550-style UART (uart.c). [Emulated]
+ * 68000000-6800003F  SCANPSC100F JTAG scan controller (jtag_*.c). [Emulated]
+ * 70000000           RIF mode word register. Bit 13 checked at boot, bit 14
+ *                    toggled by boot stub, bits 23:16 probably DIP switches.
+ * 72000000           Reset? Boot stub writes it in a loop on 'r' over serial.
+ * 74000000-74000017  Video sync generator? Halfword registers at +2, +A, +12
+ *                    loaded with mode words at boot.
+ * 78000000           Free-running timer? Read by IR0 handler to time fields.
+ * 80000000-          PCI device 12 memory BAR (probably Real3D). The Model 3
+ *                    Real3D ranges (84, 88, 8C, 8E, 94, 98, 9C) are mapped
+ *                    here provisionally.
+ * C0000000           SCSI expansion ROM (PCI device 11 ROM BAR). [Not mapped]
+ * D0000000-D00000FF  SCSI controller registers (PCI device 11 BAR1). [Emulated]
+ * F0800CF8-F0800CFF  MPC105 CONFIG_ADDR (same as Model 3 Step 1.0)
  * F0C00CF8-F0C00CFF  MPC105 CONFIG_DATA
- * F8FFF000-F8FFF0FF  MPC105 Registers
- * FF800000-FFFFFFFF  CROM
+ * F8FFF000-F8FFF0FF  MPC105 registers
+ * FF800000-FFFFFFFF  CROM (firmware at FFF00000)
  *
- * The PowerPC resets to 0xFFF00100, so CROM is loaded at 0xFFF00000 rather
- * than being aligned to the top of the address space as on Model 3.
+ * Byte-wide peripherals (8259, UART, SCANPSC100F, gamma memory) are connected
+ * to D7:0 and decode address bits 3 and up: register n is the least
+ * significant byte of the big endian word at base+n*8. Firmware uses both
+ * byte (base+n*8+3) and word (base+n*8) accesses.
  *
- * There is no VROM, so the Real3D VROM texture port (0x90000000 on Model 3)
- * is not mapped.
+ * DEADBEEF/CAFEBABE/DEADFACE test patterns written by the boot stub to 58, 60,
+ * 62, 68, and 74 confirm these are distinct register/memory regions.
+ *
+ *
+ * PCI
+ * ---
+ * The firmware never reads configuration space (no device probing). It
+ * programs fixed device numbers through the MPC105 (CONFIG_ADDR values decoded
+ * as bus 0, device 11 or 12):
+ *
+ *  Device 11 (SCSI, 0x4E0C):
+ *    04 Command  = 0x0006 (memory space, bus master)
+ *    0C          = 0x8000 (latency timer 0x80)
+ *    14 BAR1     = 0xD0000000 (memory-mapped registers)
+ *    30 ROM BAR  = 0xC0000001 (expansion ROM at 0xC0000000, enabled)
+ *  Device 12 (probably Real3D, 0x4E78, not yet reached):
+ *    04 Command  = 0x0142, status cleared
+ *    10 BAR0     = 0x80000000
+ *
+ * The SCSI controller is an NCR 53C825 (scsi825.c, sslib25.c; "NCR825 is
+ * revision 0 silicon"). It is emulated with the 53C810, which has a
+ * compatible register set. Its flash ROM (expansion ROM) can be reprogrammed
+ * ("test_flash_prog: erase SCSI ROM").
+ *
+ *
+ * Interrupts
+ * ----------
+ * An 8259A (int_8259.c) drives the PowerPC external interrupt. Initialization
+ * (0x4AA8): ICW1=0x13 (edge, single, ICW4), ICW2=0x00, ICW4=0x01 (8086 mode),
+ * mask all, OCW2=0xC6 (IR6 lowest priority), OCW3=0x0B (read ISR).
+ *
+ * Dispatcher (0x4B24): writes 0x52000000 twice (INTA), reads ISR, scans from
+ * IR7 down, calls handler[line], then issues a specific EOI (0x60|line).
+ * Handlers are registered with 0x4BDC(handler, line), which also calls the
+ * handler once and unmasks the line. 0x4C7C/0x4CF0 mask/unmask a line.
+ *
+ *  IR0  Field sync (0x4EBC): counts fields at 0x5D960, reads 0x78000000.
+ *       [Not yet generated]
+ *  IR3  SCSI (0x44868, ncrintr). [Emulated]
+ *  IR4  SCANPSC100F INT (0x4F98, jtag_int). Dispatches to sub-handlers
+ *       registered with 0x50B4(handler, MODE1 bit). [Emulated]
+ *  IR7  Unknown (0x6918).
+ *
+ * The 8259 raises the CPU interrupt line only between CPU time slices (see
+ * C8259::Tick()), modeling the time devices take to complete operations.
+ * jtag_wrt, for example, sets a busy flag after starting a shift and would
+ * miss an interrupt taken immediately.
+ *
+ *
+ * JTAG
+ * ----
+ * The Real3D ASICs are configured through JTAG (mode words, ID codes) using a
+ * National SCANPSC100F controller at 0x68000000, unlike Model 3 which
+ * bit-bangs a TAP through system registers. jtag_wrt (0x12444, jtag_io.c)
+ * navigates the TAP with TMS0 patterns (0x30 = to Shift-IR, 0x20 = to
+ * Shift-DR, 0x01 = exit to Run-Test/Idle), shifts one byte per CNT32
+ * interrupt using Auto TMS High on the final byte, and completes in its
+ * interrupt handler (0x12630). jtag_read is at approximately 0x12790.
+ *
+ * ASIC name table (pointer table at 0x611AC): NOT_PRESENT, JUPITER, MERCURY,
+ * VENUS, EARTH_0, MARS_00, MARS_01, EARTH_1, MARS_10, MARS_11, EARTH_2,
+ * MARS_20, MARS_21, EARTH_3, MARS_30, MARS_31, PLUTO, NEPTUNE_0-3. This is a
+ * naming table, not the scan chain order. Pluto is new relative to Model 3
+ * and appears to handle video output/gamma. The chain depends on the hardware
+ * configuration: single pixel board, dual pixel boards, or high resolution
+ * (get_hw_config.c, auto_config.c). The 3D RAMs are not named.
+ *
+ * No scan chain is attached yet (TDI reads 1).
+ *
+ *
+ * Serial Console
+ * --------------
+ * The UART carries boot messages and a command monitor (rs232_ui.c, menu.c)
+ * with a "command> " prompt and about 80 commands, including memory display
+ * and modification (RD, RC, RP, WC, WP), mode word access (MWR, MWW), JTAG
+ * (WJIR, WJDR, RJDR), ID code and hardware configuration dumps (ID, HW,
+ * RIF_MODE), and rendering feature toggles. The boot stub also polls for
+ * input ('r' resets, ESC prints the scratch register). Input is not yet
+ * emulated.
+ *
+ *
+ * Other Firmware Landmarks
+ * ------------------------
+ * 0x47D6C  printf
+ * 0x8750   Disable external interrupts (clears MSR[EE]), returns old MSR
+ * 0x876C   Restore MSR[EE]
+ * 0x9400   Read time base (lower)
+ *
+ *
+ * Open Questions
+ * --------------
+ *  - Source and rate of field syncs (IR0). Probably the video timing at
+ *    0x74000000.
+ *  - IR7 source.
+ *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
+ *  - Scan chain order and ID codes for each hardware configuration.
+ *  - 0x40000000, 0x62000000, 0x72000000, 0x78000000.
+ *
  *
  * Endianness
  * ----------
@@ -100,6 +277,29 @@ static inline unsigned UARTRegister(UINT32 addr)
   return (addr >> 3) & 7;
 }
 
+/*
+ * Byte-wide peripherals are connected to D7:0 and decode address bits 3 and
+ * up, so register n of a device is accessed as the least significant byte of
+ * the big endian 32-bit word at base+n*8. Firmware uses both byte accesses
+ * (at base+n*8+3) and word accesses (at base+n*8).
+ */
+static inline bool DecodeByteRegister(UINT32 addr, UINT32 base, unsigned numRegs, unsigned lane, unsigned *reg)
+{
+  if (addr < base || addr >= base + numRegs * 8 || (addr & 7) != lane)
+    return false;
+  *reg = (addr - base) >> 3;
+  return true;
+}
+
+constexpr static uint32_t PIC_BASE_ADDR     = 0x54000000; // 8259 (2 registers: A0)
+constexpr static uint32_t INTA_ADDR         = 0x52000000; // any write performs one 8259 INTA pulse
+constexpr static uint32_t JTAG_BASE_ADDR    = 0x68000000; // SCANPSC100F (8 registers: A2:0)
+
+// 8259 input lines (IR mask bits)
+constexpr static uint16_t PIC_LINE_SCSI     = 1 << 3;     // handler is ncrintr
+constexpr static uint16_t PIC_LINE_JTAG     = 1 << 4;     // handler is jtag_int
+constexpr static uint16_t PIC_LINE_NONE     = 0;          // not connected
+
 // SCSI controller is PCI device 11 (an NCR 53C825 on the real hardware;
 // emulated using the 53C810). Its registers are located wherever firmware
 // maps its memory BAR (0xD0000000 has been observed). A base address of 0
@@ -126,6 +326,13 @@ UINT8 CPro1000::Read8(UINT32 addr)
   // SCSI
   if (IsSCSIAddress(addr))
     return SCSI.ReadRegister(addr & 0xFF);
+
+  // Byte-wide peripherals
+  unsigned reg;
+  if (DecodeByteRegister(addr, PIC_BASE_ADDR, 2, 3, &reg))
+    return PIC.Read(reg);
+  if (DecodeByteRegister(addr, JTAG_BASE_ADDR, 8, 3, &reg))
+    return JTAG.Read(reg);
 
   // Other
   switch ((addr >> 24))
@@ -223,6 +430,13 @@ UINT32 CPro1000::Read32(UINT32 addr)
     return data;
   }
 
+  // Byte-wide peripherals
+  unsigned reg;
+  if (DecodeByteRegister(addr, PIC_BASE_ADDR, 2, 0, &reg))
+    return 0xFFFFFF00 | PIC.Read(reg);
+  if (DecodeByteRegister(addr, JTAG_BASE_ADDR, 8, 0, &reg))
+    return 0xFFFFFF00 | JTAG.Read(reg);
+
   // Other
   switch ((addr >> 24))
   {
@@ -281,6 +495,26 @@ void CPro1000::Write8(UINT32 addr, UINT8 data)
   if (IsSCSIAddress(addr))
   {
     SCSI.WriteRegister(addr & 0xFF, data);
+    return;
+  }
+
+  // Byte-wide peripherals
+  unsigned reg;
+  if (DecodeByteRegister(addr, PIC_BASE_ADDR, 2, 3, &reg))
+  {
+    PIC.Write(reg, data);
+    return;
+  }
+  if (DecodeByteRegister(addr, JTAG_BASE_ADDR, 8, 3, &reg))
+  {
+    JTAG.Write(reg, data);
+    return;
+  }
+
+  // 8259 interrupt acknowledge
+  if ((addr >> 24) == (INTA_ADDR >> 24))
+  {
+    PIC.Acknowledge();
     return;
   }
 
@@ -383,6 +617,26 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     SCSI.WriteRegister((addr & 0xFF) + 1, (data >> 16) & 0xFF);
     SCSI.WriteRegister((addr & 0xFF) + 2, (data >> 8) & 0xFF);
     SCSI.WriteRegister((addr & 0xFF) + 3, data & 0xFF);
+    return;
+  }
+
+  // Byte-wide peripherals
+  unsigned reg;
+  if (DecodeByteRegister(addr, PIC_BASE_ADDR, 2, 0, &reg))
+  {
+    PIC.Write(reg, data & 0xFF);
+    return;
+  }
+  if (DecodeByteRegister(addr, JTAG_BASE_ADDR, 8, 0, &reg))
+  {
+    JTAG.Write(reg, data & 0xFF);
+    return;
+  }
+
+  // 8259 interrupt acknowledge
+  if ((addr >> 24) == (INTA_ADDR >> 24))
+  {
+    PIC.Acknowledge();
     return;
   }
 
@@ -590,7 +844,11 @@ void CPro1000::RunMainBoardFrame(void)
   if (gpusReady)
   {
     GPU.BeginVBlank();
-    ppc_execute(vBlankCycles);
+    for (unsigned i = 0; i < vBlankCycles / lineCycles; i++)
+    {
+      PIC.Tick();
+      ppc_execute(lineCycles);
+    }
     GPU.EndVBlank();
   }
 
@@ -599,6 +857,7 @@ void CPro1000::RunMainBoardFrame(void)
   {
     if (i == PING_PONG_FLIP_LINE)
       GPU.FlipPingPongBit();
+    PIC.Tick();
     ppc_execute(lineCycles);
   }
 
@@ -871,7 +1130,8 @@ void CPro1000::Reset(void)
 
   // Reset all devices
   ppc_reset();
-  IRQ.Reset();
+  PIC.Reset();
+  JTAG.Reset();
   PCIBridge.Reset();
   PCIBus.Reset();
   SCSI.Reset();
@@ -984,12 +1244,18 @@ Result CPro1000::Init(void)
   vrom = &memoryPool[VROM_OFFSET];
 
   // Initialize devices (PowerPC initialized after ROMs loaded)
-  IRQ.Init();
   PCIBridge.Init();
   PCIBus.Init();
-  SCSI.Init(this, &IRQ, 0x100); // SCSI is actually a non-maskable interrupt, so we give it a bit number outside of 8-bit range
-  if (Result::OKAY != GPU.Init(vrom, this, &IRQ, 0x100)) // same for Real3D DMA interrupt
+  SCSI.Init(this, &PIC, PIC_LINE_SCSI);
+  if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
     return Result::FAIL;
+  JTAG.AttachInterruptOutput([this](bool level)
+  {
+    if (level)
+      PIC.Assert(PIC_LINE_JTAG);
+    else
+      PIC.Deassert(PIC_LINE_JTAG);
+  });
 
   PCIBridge.AttachPCIBus(&PCIBus);
   PCIBus.AttachDevice(13, &GPU);

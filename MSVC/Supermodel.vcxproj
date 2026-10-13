@@ -368,6 +368,8 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Model3\TileGen.cpp" />
     <ClCompile Include="..\Src\Pro1000\Pro1000.cpp" />
     <ClCompile Include="..\Src\Pro1000\UART.cpp" />
+    <ClCompile Include="..\Src\Pro1000\8259.cpp" />
+    <ClCompile Include="..\Src\Pro1000\SCANPSC100F.cpp" />
     <ClCompile Include="..\Src\Network\NetBoard.cpp" />
     <ClCompile Include="..\Src\Network\SimNetBoard.cpp" />
     <ClCompile Include="..\Src\Network\TCPReceive.cpp" />
@@ -457,6 +459,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\CPU\68K\Musashi\m68kops.h" />
     <ClInclude Include="..\Src\CPU\68K\Turbo68K\Turbo68K.h" />
     <ClInclude Include="..\Src\CPU\Bus.h" />
+    <ClInclude Include="..\Src\CPU\IRQController.h" />
     <ClInclude Include="..\Src\CPU\PowerPC\ppc.h" />
     <ClInclude Include="..\Src\CPU\PowerPC\PPCDisasm.h" />
     <ClInclude Include="..\Src\CPU\PowerPC\ppc_ops.h" />
@@ -533,6 +536,8 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Model3\TileGen.h" />
     <ClInclude Include="..\Src\Pro1000\Pro1000.h" />
     <ClInclude Include="..\Src\Pro1000\UART.h" />
+    <ClInclude Include="..\Src\Pro1000\8259.h" />
+    <ClInclude Include="..\Src\Pro1000\SCANPSC100F.h" />
     <ClInclude Include="..\Src\Network\INetBoard.h" />
     <ClInclude Include="..\Src\Network\NetBoard.h" />
     <ClInclude Include="..\Src\Network\SimNetBoard.h" />

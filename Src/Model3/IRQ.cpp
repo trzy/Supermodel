@@ -65,7 +65,7 @@ void CIRQ::LoadState(CBlockFile *SaveState)
  Emulation Functions
 ******************************************************************************/
 
-void CIRQ::Assert(unsigned irqBits)
+void CIRQ::Assert(uint16_t irqBits)
 {
 	irqState |= irqBits;
 	if ((irqState&irqEnable))	// low 8 bits are maskable interrupts
@@ -74,7 +74,7 @@ void CIRQ::Assert(unsigned irqBits)
 		ppc_set_irq_line(1);
 }
 
-void CIRQ::Deassert(unsigned irqBits)
+void CIRQ::Deassert(uint16_t irqBits)
 {
 	irqState &= ~irqBits;
 	if (!(irqState & irqEnable) && !(irqState & (~0xFF)))

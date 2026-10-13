@@ -506,7 +506,7 @@ void C53C810::Reset(void)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
-void C53C810::Init(IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit)
+void C53C810::Init(IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t scsiIRQBit)
 {
   Ctx.Bus = BusObjectPtr; 
   Ctx.IRQ = IRQObjectPtr;
