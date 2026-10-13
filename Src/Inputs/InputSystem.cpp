@@ -2025,6 +2025,96 @@ Finish:
   return !cancelled;
 }
 
+std::string CInputSystem::GetJoystickAxisCalibrationInstructions(unsigned axisNum, unsigned step)
+{
+  std::string s;
+  switch (step)
+  {
+    case 0:
+      s = " Move axis now to its furthest positive/'on' position and hold, i.e.:\n";
+      if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+        s += " - for a horizontal joystick axis, push it all the way to the right.\n";
+      if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+        s += " - for a vertical joystick axis, push it all the way downwards.\n";
+      if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
+        s += " - for a joystick slider, push it all the way to its extreme.\n";
+      s += " - for a steering wheel, turn it all the way to the right.\n";
+      s += " - for a pedal, press it all the way to the floor.\n";
+      break;
+    case 1:
+      s = " Move axis the other way to its furthest negative position and hold, i.e.:\n";
+      if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+        s += " - for a horizontal joystick axis, push it all the way to the left.\n";
+      if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+        s += " - for a vertical joystick axis, push it all the way upwards.\n";
+      if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
+        s += " - for a joystick slider, return it to its off position.\n";
+      s += " - for a steering wheel, turn it all the way to the left.\n";
+      s += " - for a pedal, let go of the pedal completely.  If there is another pedal\n";
+      s += "   that shares the same axis then press that one all the way to the floor.\n";
+      break;
+    case 2:
+      s = " Return axis to its central/'off' position and hold, i.e.:\n";
+      if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
+        s += " - for a joystick axis, let it return to the middle.\n";
+      else if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
+        s += " - for a joystick slider, keep it at its off position.\n";
+      s += " - for a steering wheel, turn it back to the center.\n";
+      s += " - for a pedal, let go of pedal completely.  Likewise for any other pedal\n";
+      s += "   that shares the same axis.\n";
+      break;
+  }
+  return s;
+}
+
+bool CInputSystem::CalculateJoystickAxisCalibration(int posVal, int negVal, int offMinVal, int offMaxVal, int &offVal, unsigned &deadZone)
+{
+  if (offMinVal <= 0 && offMaxVal >= 0)
+    offVal = 0;
+  else if (offMinVal == DEFAULT_JOY_AXISMINVAL)
+    offVal = DEFAULT_JOY_AXISMINVAL;
+  else if (offMaxVal == DEFAULT_JOY_AXISMAXVAL)
+    offVal = DEFAULT_JOY_AXISMAXVAL;
+  else
+    offVal = (offMinVal + offMaxVal) / 2;
+
+  unsigned posRange = abs(posVal - offVal);
+  unsigned negRange = abs(negVal - offVal);
+  if (posRange == 0 || negRange == 0)
+    return false;
+  unsigned posOffRange = (unsigned)(posVal > offVal ? offMaxVal - offVal : offVal - offMinVal);
+  unsigned negOffRange = (unsigned)(posVal > offVal ? offVal - offMinVal : offMaxVal - offVal);
+
+  unsigned totalRange = posRange + negRange;
+  unsigned posDeadZone = (unsigned)ceil(100.0 * (double)posOffRange / (double)posRange);
+  unsigned negDeadZone = (unsigned)ceil(100.0 * (double)negOffRange / (double)negRange);
+  deadZone = max<unsigned>(1, max<unsigned>(negDeadZone, posDeadZone));
+
+  if (posVal > negVal)
+    return negVal <= offVal && offVal <= posVal && totalRange > 3000 && deadZone < 90;
+  else
+    return posVal <= offVal && offVal <= negVal && totalRange > 3000 && deadZone < 90;
+}
+
+void CInputSystem::SetJoystickAxisCalibration(unsigned joyNum, unsigned axisNum, int minVal, int offVal, int maxVal, unsigned deadZone)
+{
+  JoySettings *joySettings = GetJoySettings(joyNum, false);
+  if (joySettings == NULL)
+  {
+    JoySettings *commonSettings = GetJoySettings(ANY_JOYSTICK, true);
+    joySettings = new JoySettings(*commonSettings);
+    m_joySettings.push_back(joySettings);
+    joySettings->joyNum = joyNum;
+  }
+
+  joySettings->axisMinVals[axisNum] = minVal;
+  joySettings->axisMaxVals[axisNum] = maxVal;
+  joySettings->axisOffVals[axisNum] = offVal;
+  joySettings->deadZones[axisNum] = deadZone;
+
+  ClearSourceCache();
+}
+
 bool CInputSystem::CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, const char *escapeMapping, const char *confirmMapping)
 {
   const JoyDetails *joyDetails = GetJoyDetails(joyNum);
@@ -2046,60 +2136,17 @@ bool CInputSystem::CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, cons
 Repeat:
   printf("Calibrating %s of joystick '%s'.\n\n", joyDetails->axisName[axisNum], joyDetails->name);
 
-  unsigned totalRange;
-  unsigned posDeadZone;
-  unsigned negDeadZone;
-  unsigned deadZone;
+  unsigned deadZone = 0;
 
   int posVal = 0;
   int negVal = 0;
   int offVal = 0;
-  unsigned posRange = 0;
-  unsigned negRange = 0;
-  unsigned posOffRange = 0;
-  unsigned negOffRange = 0;
+  int offMinVal = 0;
+  int offMaxVal = 0;
   char mapping[50];
   for (unsigned step = 0; step < 3; step++)
   {
-    switch (step)
-    {
-      case 0:
-        puts("Step 1:");
-        puts(" Move axis now to its furthest positive/'on' position and hold, ie:");
-        if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-          puts(" - for a horizontal joystick axis, push it all the way to the right.");
-        if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-          puts(" - for a vertical joystick axis, push it all the way downwards.");
-        if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
-          puts(" - for a joystick slider, push it all the way to its extreme.");
-        puts(" - for a steering wheel, turn it all the way to the right.");
-        puts(" - for a pedal, press it all the way to the floor.");
-        break;
-      case 1:
-        puts("Step 2:");
-        puts(" Move axis the other way to its furthest negative position and hold, ie:");
-        if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-          puts(" - for a horizontal joystick axis, push it all the way to the left.");
-        if (axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-          puts(" - for a vertical joystick axis, push it all the way updwards.");
-        if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
-          puts(" - for a joystick slider, return it to its off position.");
-        puts(" - for a steering wheel, turn it all the way to the left.");
-        puts(" - for a pedal, let go of the pedal completely.  If there is another pedal");
-        puts("   that shares the same axis then press that one all the way to the floor.");
-        break;
-      case 2:
-        puts("Step 3:");
-        puts(" Return axis to its central/'off' position and hold, ie:");
-        if (axisNum == AXIS_X || axisNum == AXIS_RX || axisNum == AXIS_Y || axisNum == AXIS_RY || axisNum == AXIS_Z || axisNum == AXIS_RZ)
-           puts(" - for a joystick axis, let it return to the middle.");
-        else if (axisNum == AXIS_S1 || axisNum == AXIS_S2)
-          puts(" - for a joystick slider, keep it at its off position.");
-        puts(" - for a steering weel, turn it back to the center.");
-        puts(" - for a pedal, let go of pedal completely.  Likewise for any other pedal");
-        puts("   that shares the same axis.");
-        break;
-    }
+    printf("Step %u:\n%s", step + 1, GetJoystickAxisCalibrationInstructions(axisNum, step).c_str());
     printf("\nPress Return when done (or press Esc to cancel): ");
     fflush(stdout); // required on terminals that use buffering
 
@@ -2161,44 +2208,12 @@ Repeat:
     {
       case 0: posVal = (abs(maxVal) >= abs(minVal) ? maxVal : minVal); break;
       case 1: negVal = (abs(minVal) >= abs(maxVal) ? minVal : maxVal); break;
-      case 2:
-        if (minVal <= 0 && maxVal >= 0)
-          offVal = 0;
-        else if (minVal == DEFAULT_JOY_AXISMINVAL)
-          offVal = DEFAULT_JOY_AXISMINVAL;
-        else if (maxVal == DEFAULT_JOY_AXISMAXVAL)
-          offVal = DEFAULT_JOY_AXISMAXVAL;
-        else
-          offVal = (minVal + maxVal) / 2;
-        posRange = abs(posVal - offVal);
-        negRange = abs(negVal - offVal);
-        posOffRange = (unsigned)(posVal > offVal ? maxVal - offVal : offVal - minVal);
-        negOffRange = (unsigned)(posVal > offVal ? offVal - minVal : maxVal - offVal);
-        break;
+      case 2: offMinVal = minVal; offMaxVal = maxVal; break;
     }
   }
 
-  totalRange = posRange + negRange;
-  posDeadZone = (unsigned)ceil(100.0 * (double)posOffRange / (double)posRange);
-  negDeadZone = (unsigned)ceil(100.0 * (double)negOffRange / (double)negRange);
-  deadZone = max<unsigned>(1, max<unsigned>(negDeadZone, posDeadZone));
-
-  bool okay;
-  if (posVal > negVal)
-    okay = negVal <= offVal && offVal <= posVal && totalRange > 3000 && deadZone < 90;
-  else
-    okay = posVal <= offVal && offVal <= negVal && totalRange > 3000 && deadZone < 90;
-  if (okay)
+  if (CalculateJoystickAxisCalibration(posVal, negVal, offMinVal, offMaxVal, offVal, deadZone))
   {
-    JoySettings *commonSettings = GetJoySettings(ANY_JOYSTICK, true);
-    JoySettings *joySettings = GetJoySettings(joyNum, false);
-    if (joySettings == NULL)
-    {
-      joySettings = new JoySettings(*commonSettings);
-      m_joySettings.push_back(joySettings);
-      joySettings->joyNum = joyNum;
-    }
-
     printf("Calibrated Axis Settings:\n\n");
     printf(" Min Value        = %d\n", negVal);
     printf(" Center/Off Value = %d\n", offVal);
@@ -2214,12 +2229,7 @@ Repeat:
         break;
       else if (stricmp(mapping, "KEY_Y") == 0)
       {
-        joySettings->axisMinVals[axisNum] = negVal;
-        joySettings->axisMaxVals[axisNum] = posVal;
-        joySettings->axisOffVals[axisNum] = offVal;
-        joySettings->deadZones[axisNum] = deadZone;
-
-        ClearSourceCache();
+        SetJoystickAxisCalibration(joyNum, axisNum, negVal, offVal, posVal, deadZone);
 
         puts("Accepted");
         goto Finish;

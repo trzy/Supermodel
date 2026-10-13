@@ -544,6 +544,9 @@ protected:
   // Flag to indicate if system has grabbed mouse
   bool m_grabMouse;
 
+  // Whether Poll drains the SDL event queue (see SetPollConsumesEvents)
+  bool m_pollConsumesEvents = true;
+
   /*
    * Constructs an input system with the given name.
    */
@@ -874,6 +877,29 @@ public:
   bool DetectJoystickAxis(unsigned joyNum, unsigned &axisNum, const char *escapeMapping = "KEY_ESCAPE", const char *confirmMapping = "KEY_RETURN");
 
   bool CalibrateJoystickAxis(unsigned joyNum, unsigned axisNum, const char *escapeMapping = "KEY_ESCAPE", const char *confirmMapping = "KEY_RETURN");
+
+  /*
+   * Steps of CalibrateJoystickAxis, shared with the GUI's non-blocking calibration:
+   * - instructions for step 0 (positive extreme), 1 (negative extreme) or 2 (off position),
+   * - the off value and dead zone from the sampled values (offMinVal/offMaxVal: range seen in the off position);
+   *   returns false if they don't make a usable calibration,
+   * - storing the result for a joystick axis.
+   */
+  static std::string GetJoystickAxisCalibrationInstructions(unsigned axisNum, unsigned step);
+
+  static bool CalculateJoystickAxisCalibration(int posVal, int negVal, int offMinVal, int offMaxVal, int &offVal, unsigned &deadZone);
+
+  void SetJoystickAxisCalibration(unsigned joyNum, unsigned axisNum, int minVal, int offVal, int maxVal, unsigned deadZone);
+
+  /*
+   * Returns the raw value of the given joystick axis as of the last Poll.
+   */
+  int GetRawJoyAxisValue(int joyNum, int axisNum) const { return GetJoyAxisValue(joyNum, axisNum); }
+
+  /*
+   * Poll drains the SDL event queue by default. A host with its own event loop (the GUI) turns this off.
+   */
+  void SetPollConsumesEvents(bool consume) { m_pollConsumesEvents = consume; }
 
   void PrintDevices();
 

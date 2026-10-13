@@ -2097,14 +2097,14 @@ bool CDirectInputSystem::Poll()
 	}
 
 	// SDL2: I'm not sure how the SDL1.x code was detecting quit events but in
-  // SDL2, it seems that we want to explicitly run SDL_PollEvent() after we
-  // have peeked at the message queue ourselves (above).
-	// Wait or poll for event from SDL
+	// SDL2, it seems that we want to explicitly run SDL_PollEvent() after we
+	// have peeked at the message queue ourselves (above).
+	// Wait or poll for event from SDL, unless the host handles the events itself (see SetPollConsumesEvents)
 	SDL_Event e;
-	while (SDL_PollEvent(&e))
+	while (m_pollConsumesEvents && SDL_PollEvent(&e))
 	{
 		if (e.type == SDL_QUIT)
-			return false;	
+			return false;
 	}
 
 	// Poll keyboards, mice and joysticks

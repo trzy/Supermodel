@@ -1,7 +1,10 @@
 #include "SDLIncludes.h"
 #include <GL/glew.h>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -194,6 +197,14 @@ static void UpdateTempValues(Util::Config::Node& config, const std::string& grou
             }  
         }
     }
+}
+
+// Display scale factor (1 = 96 DPI) for sizes given in pixels
+static float s_uiScale = 1.0f;
+
+static ImVec2 ScaledSize(float x, float y)
+{
+    return ImVec2(x * s_uiScale, y * s_uiScale);
 }
 
 template <typename T>
@@ -457,26 +468,26 @@ static void BindKeys(Util::Config::Node& config, KeyBindState& kb, bool openPopu
             ImGui::BeginDisabled();
         }
 
-        if (ImGui::Button("Set", ImVec2(120, 0))) {
+        if (ImGui::Button("Set", ScaledSize(120, 0))) {
             kb.input->ClearMapping();
             appendPressed = true;
         }
 
-        if (ImGui::Button("Append", ImVec2(120, 0))) {
+        if (ImGui::Button("Append", ScaledSize(120, 0))) {
             appendPressed = true;
         }
 
-        if (ImGui::Button("Clear", ImVec2(120, 0))) {
+        if (ImGui::Button("Clear", ScaledSize(120, 0))) {
             kb.input->ClearMapping();
             kb.input->StoreToConfig(&config);
         }
 
-        if (ImGui::Button("Default", ImVec2(120, 0))) {
+        if (ImGui::Button("Default", ScaledSize(120, 0))) {
             SetDefaultKeyVal(kb.input);
             kb.input->StoreToConfig(&config);
         }
 
-        if (ImGui::Button("Finish", ImVec2(120, 0))) {
+        if (ImGui::Button("Finish", ScaledSize(120, 0))) {
             ImGui::CloseCurrentPopup();
             finish = true;
         }
@@ -553,7 +564,7 @@ static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex
         ImGui::Text("No game selected");
         ImGui::Separator();
 
-        if (ImGui::Button("OK", ImVec2(120, 0))) { 
+        if (ImGui::Button("OK", ScaledSize(120, 0))) { 
             ImGui::CloseCurrentPopup(); 
         }
 
@@ -571,13 +582,13 @@ static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex
         ImGui::Text("Are you sure you want to load defaults?");
         ImGui::Separator();
 
-        if (ImGui::Button("Yes", ImVec2(120, 0))) { 
+        if (ImGui::Button("Yes", ScaledSize(120, 0))) { 
             config = DefaultConfig();
             inputs = nullptr; // rebuilt from the defaults when Key bindings is next shown
             ImGui::CloseCurrentPopup(); 
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) { 
+        if (ImGui::Button("Cancel", ScaledSize(120, 0))) { 
             ImGui::CloseCurrentPopup(); 
         }
 
@@ -596,7 +607,7 @@ static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex
         ImGui::Text("Save settings upon exit?");
         ImGui::Separator();
 
-        if (ImGui::Button("Yes", ImVec2(120, 0))) {
+        if (ImGui::Button("Yes", ScaledSize(120, 0))) {
             selectedGameIndex = -1;
             saveSettings = true;
             exit = true;
@@ -605,7 +616,7 @@ static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex
 
         ImGui::SameLine();
 
-        if (ImGui::Button("No", ImVec2(120, 0))) {
+        if (ImGui::Button("No", ScaledSize(120, 0))) {
             selectedGameIndex = -1;
             saveSettings = false;
             exit = true;
@@ -674,6 +685,229 @@ static void DrawInputSystemError(const Util::Config::Node& config)
         config["InputSystem"].ValueAs<std::string>().c_str());
 }
 
+// State of the joystick calibration dialog, kept across frames
+struct CalibrationState
+{
+    static constexpr Uint32 SampleTimeMs = 3000; // how long each step samples the axis (same as console calibration)
+
+    std::shared_ptr<CInputs> inputs; // own input system, alive while the dialog is open
+    int joyNum = 0;
+    int axisNum = -1;
+    int step = -1;                   // -1 = choosing joystick and axis, 0-2 = calibration steps, 3 = result
+    bool sampling = false;
+    Uint32 sampleStart = 0;
+    int minVal = 0;                  // range seen while sampling the current step
+    int maxVal = 0;
+    int posVal = 0;
+    int negVal = 0;
+    int offVal = 0;
+    unsigned deadZone = 0;
+    bool valid = false;
+
+    void Reset() { *this = CalibrationState(); }
+
+    // back to choosing an axis, keeping the input system and joystick
+    void Restart()
+    {
+        axisNum = -1;
+        step = -1;
+        sampling = false;
+    }
+};
+
+static void AxisValueBar(int value)
+{
+    float fraction = (value - DEFAULT_JOY_AXISMINVAL) / float(DEFAULT_JOY_AXISMAXVAL - DEFAULT_JOY_AXISMINVAL);
+    char text[16];
+    std::snprintf(text, sizeof(text), "%d", value);
+    ImGui::ProgressBar(fraction, ImVec2(-1.0f, 0.0f), text);
+}
+
+// Stores the input system settings to config. Storing replaces values of a different type (numbers read from the INI file are text),
+// which drops the value ranges the controls are built from, so they are put back afterwards.
+static void StoreInputsToConfig(CInputs& inputs, Util::Config::Node& config)
+{
+    std::map<std::string, std::shared_ptr<Util::ValueRange>> ranges;
+    for (auto& n : config) {
+        if (n.IsLeaf() && n.Exists() && n.GetValue()->GetValueRange()) {
+            ranges[n.Key()] = n.GetValue()->GetValueRange();
+        }
+    }
+
+    inputs.StoreToConfig(&config);
+
+    for (auto& r : ranges) {
+        auto val = config[r.first].GetValue();
+        if (val && !val->GetValueRange()) {
+            val->SetValueRange(r.second);
+        }
+    }
+}
+
+// Same procedure as the console calibration (CInputs::CalibrateJoysticks), but without blocking the GUI
+static void DrawCalibrationDialog(Util::Config::Node& config, CalibrationState& cal, bool openPopup)
+{
+    if (openPopup) {
+        ImGui::OpenPopup("Joystick Calibration");
+    }
+
+    if (!ImGui::BeginPopupModal("Joystick Calibration", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        return;
+    }
+
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f); // the dialog sizes to its content, so give wrapped text a width
+
+    bool close = false;
+    auto system = cal.inputs ? cal.inputs->GetInputSystem() : nullptr;
+    int numJoys = 0;
+    const JoyDetails* joyDetails = nullptr;
+
+    if (system) {
+        system->Poll();
+        numJoys = system->GetNumJoysticks();
+        if (numJoys == ANY_JOYSTICK) {
+            numJoys = 0;    // can't tell joysticks apart, so can't calibrate them
+        }
+        if (cal.joyNum >= numJoys || !system->GetJoyDetails(cal.joyNum)) {
+            cal.Restart();  // joystick went away
+            cal.joyNum = 0;
+        }
+        joyDetails = numJoys > 0 ? system->GetJoyDetails(cal.joyNum) : nullptr;
+    }
+
+    if (!system) {
+        DrawInputSystemError(config);
+        close = ImGui::Button("Close", ScaledSize(120, 0));
+    }
+    else if (!joyDetails) {
+        ImGui::Text("No joysticks attached to calibrate.");
+        close = ImGui::Button("Close", ScaledSize(120, 0));
+    }
+    else if (cal.step < 0) {
+
+        // choose joystick and axis
+        std::vector<const char*> joyNames;
+        for (int i = 0; i < numJoys; i++) {
+            auto details = system->GetJoyDetails(i);
+            joyNames.emplace_back(details ? details->name : "?");
+        }
+        if (ImGui::Combo("Joystick", &cal.joyNum, joyNames.data(), (int)joyNames.size())) {
+            cal.axisNum = -1;
+        }
+
+        ImGui::Text("Choose the axis to calibrate. Move the control to see which axis it is.");
+
+        if (ImGui::BeginTable("Axes", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+            ImGui::TableSetupColumn("Axis", ImGuiTableColumnFlags_WidthFixed, 150.0f * s_uiScale);
+            ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 300.0f * s_uiScale);
+            for (int axisNum = 0; axisNum < NUM_JOY_AXES; axisNum++) {
+                if (!joyDetails->hasAxis[axisNum]) {
+                    continue;
+                }
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                if (ImGui::Selectable(joyDetails->axisName[axisNum], cal.axisNum == axisNum, ImGuiSelectableFlags_SpanAllColumns)) {
+                    cal.axisNum = axisNum;
+                }
+                ImGui::TableSetColumnIndex(1);
+                AxisValueBar(system->GetRawJoyAxisValue(cal.joyNum, axisNum));
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::BeginDisabled(cal.axisNum < 0);
+        if (ImGui::Button("Calibrate", ScaledSize(120, 0))) {
+            cal.step = 0;
+        }
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        close = ImGui::Button("Close", ScaledSize(120, 0));
+    }
+    else if (cal.step < 3) {
+
+        int value = system->GetRawJoyAxisValue(cal.joyNum, cal.axisNum);
+
+        ImGui::Text("Calibrating %s of joystick '%s'", joyDetails->axisName[cal.axisNum], joyDetails->name);
+        ImGui::Separator();
+        ImGui::Text("Step %d of 3:", cal.step + 1);
+        ImGui::TextUnformatted(CInputSystem::GetJoystickAxisCalibrationInstructions(cal.axisNum, cal.step).c_str());
+        AxisValueBar(value);
+
+        if (cal.sampling) {
+            cal.minVal = std::min(cal.minVal, value);
+            cal.maxVal = std::max(cal.maxVal, value);
+
+            Uint32 elapsed = SDL_GetTicks() - cal.sampleStart;
+            ImGui::ProgressBar(std::min(1.0f, elapsed / float(CalibrationState::SampleTimeMs)), ImVec2(-1.0f, 0.0f), "Calibrating, keep holding...");
+
+            if (elapsed >= CalibrationState::SampleTimeMs) {
+                cal.sampling = false;
+                switch (cal.step) {
+                case 0: cal.posVal = (std::abs(cal.maxVal) >= std::abs(cal.minVal) ? cal.maxVal : cal.minVal); break;
+                case 1: cal.negVal = (std::abs(cal.minVal) >= std::abs(cal.maxVal) ? cal.minVal : cal.maxVal); break;
+                case 2: cal.valid = CInputSystem::CalculateJoystickAxisCalibration(cal.posVal, cal.negVal, cal.minVal, cal.maxVal, cal.offVal, cal.deadZone); break;
+                }
+                cal.step++;
+            }
+        }
+        else {
+            ImGui::NewLine();
+            if (ImGui::Button("Start", ScaledSize(120, 0))) {
+                cal.sampling = true;
+                cal.sampleStart = SDL_GetTicks();
+                cal.minVal = value;
+                cal.maxVal = value;
+            }
+            ImGui::SameLine();
+        }
+
+        if (ImGui::Button("Cancel", ScaledSize(120, 0))) {
+            cal.Restart();
+        }
+    }
+    else if (cal.valid) {
+
+        ImGui::Text("Calibrated axis settings:");
+        ImGui::Text(" Min value        = %d", cal.negVal);
+        ImGui::Text(" Center/off value = %d", cal.offVal);
+        ImGui::Text(" Max value        = %d", cal.posVal);
+        ImGui::Text(" Dead zone        = %u %%", cal.deadZone);
+        ImGui::Separator();
+
+        if (ImGui::Button("Accept", ScaledSize(120, 0))) {
+            system->SetJoystickAxisCalibration(cal.joyNum, cal.axisNum, cal.negVal, cal.offVal, cal.posVal, cal.deadZone);
+            StoreInputsToConfig(*cal.inputs, config);
+            cal.Restart();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Discard", ScaledSize(120, 0))) {
+            cal.Restart();
+        }
+    }
+    else {
+
+        ImGui::TextWrapped("There was a problem calibrating the axis. This may be because the steps were not followed correctly or the joystick is sending invalid data.");
+        if (ImGui::Button("Try again", ScaledSize(120, 0))) {
+            cal.step = 0;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ScaledSize(120, 0))) {
+            cal.Restart();
+        }
+    }
+
+    if (close) {
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::PopTextWrapPos();
+    ImGui::EndPopup();
+
+    if (close) {
+        cal.Reset();    // releases the input system
+    }
+}
+
 static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIndex)
 {
     if (selectedGameIndex >= 0) {
@@ -690,7 +924,7 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return {};
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, bool closeRequested, bool& exitPromptOpen)
+static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
@@ -704,7 +938,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
 
     ImGui::Begin("Custom Window", nullptr, ImGuiWindowFlags_NoTitleBar); // Explicitly set a window name
 
-    ImGui::BeginChild("TableRegion", ImVec2(0.0f, 200.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::BeginChild("TableRegion", ScaledSize(0.0f, 200.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
 
     if (ImGui::BeginTable("Games", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
     {
@@ -772,7 +1006,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     DrawButtonOptions(config, selectedGameIndex, exit, saveSettings, inputs, closeRequested, exitPromptOpen);
 
     // create a space
-    ImGui::Dummy(ImVec2(0.0f, 20.0f));
+    ImGui::Dummy(ScaledSize(0.0f, 20.0f));
 
     // draw the tabbed options
     if (ImGui::BeginTabBar("MyTabBar", ImGuiTabBarFlags_FittingPolicyResizeDown)) {
@@ -822,15 +1056,16 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
             UpdateTempValues(config, "Sensitivity", true);
             CreateControls(config, "Sensitivity");
             UpdateTempValues(config, "Sensitivity", false);
+            bool openCalibration = false;
             if (ImGui::Button("Joystick calibration")) {
-                if (inputs == nullptr) {
-                    if (inputs == nullptr) {
-                        inputs = GetInputSystem(config, window);
-                    }
+                cal.Reset();
+                cal.inputs = GetInputSystem(config, window);
+                if (cal.inputs) {
+                    cal.inputs->GetInputSystem()->SetPollConsumesEvents(false); // the GUI's own event loop needs the events
                 }
-                inputs->CalibrateJoysticks();
-                inputs->StoreToConfig(&config);
+                openCalibration = true;
             }
+            DrawCalibrationDialog(config, cal, openCalibration);
             ImGui::EndTabItem();
             inputs = nullptr;
         }
@@ -890,15 +1125,21 @@ static std::string GetRomPath(int selectedGame, const std::map<std::string, Game
     return {};  // no game
 }
 
-static float GetDPIScale(SDL_Window* window)
+// Scale factor of the primary display, where the window opens (1 = 96 DPI). Windows only: a DPI aware build (per its manifest)
+// works in physical pixels, an unaware one is told 96 DPI and gets scaled by Windows. Elsewhere SDL reports the
+// monitor's physical DPI rather than the user's scaling preference.
+static float GetDPIScale()
 {
-    int displayIndex = SDL_GetWindowDisplayIndex(window);
-    float ddpi = 96.0f; // Default fallback
-    if (SDL_GetDisplayDPI(displayIndex, &ddpi, nullptr, nullptr) != 0) {
+#ifdef _WIN32
+    float ddpi = 96.0f;
+    if (SDL_GetDisplayDPI(0, &ddpi, nullptr, nullptr) != 0) {
         SDL_Log("Failed to get DPI: %s", SDL_GetError());
+        return 1.0f;
     }
-
-    return ddpi / 96.0f;
+    return std::max(1.0f, ddpi / 96.0f);
+#else
+    return 1.0f;
+#endif
 }
 
 std::vector<std::string> RunGUI(const std::string& configPath, const Util::Config::Node& fileConfig)
@@ -932,7 +1173,8 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_INPUT_FOCUS);
 
     // Create SDL window
-    SDL_Window* window = SDL_CreateWindow("SuperSetup", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 950, 600, window_flags);
+    s_uiScale = GetDPIScale();
+    SDL_Window* window = SDL_CreateWindow("SuperSetup", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, int(950 * s_uiScale), int(600 * s_uiScale), window_flags);
     if (!window) {
         std::cerr << "Window could not be created! Error: " << SDL_GetError() << std::endl;
         SDL_Quit();
@@ -968,8 +1210,8 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     //ImGui::StyleColorsClassic();
 
     ImGuiStyle& style = ImGui::GetStyle();
-    float scale = GetDPIScale(window);
-    //style.ScaleAllSizes(scale);
+    style.ScaleAllSizes(s_uiScale);
+    style.FontScaleDpi = s_uiScale;
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForOpenGL(window, glContext);
@@ -989,6 +1231,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     bool saveSettings = true;
     bool running = true;
     KeyBindState kb{};
+    CalibrationState cal{};
     bool exitPromptOpen = false;
     bool exit = false;
     SDL_Event event{};
@@ -1018,7 +1261,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
             selectedGame = -1;
         }
 
-        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, closeRequested, exitPromptOpen);
+        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, cal, closeRequested, exitPromptOpen);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
@@ -1045,6 +1288,7 @@ exitNoSave:
 
     // Release the input systems while SDL is still up
     kb.Reset();
+    cal.Reset();
     inputs = nullptr;
 
     // Cleanup resources

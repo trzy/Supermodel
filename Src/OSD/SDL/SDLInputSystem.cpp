@@ -697,14 +697,16 @@ bool CSDLInputSystem::Poll()
   // Reset mouse wheel direction
   m_mouseWheelDir = 0;
 
-  // Poll for event from SDL
+  // Poll for events from SDL, or if the host handles them itself (see SetPollConsumesEvents) just update the input state
+  if (!m_pollConsumesEvents)
+    SDL_PumpEvents();
   SDL_Event e;
-  while (SDL_PollEvent(&e))
+  while (m_pollConsumesEvents && SDL_PollEvent(&e))
   {
     switch (e.type)
-		{
-	  default:
-	    break;
+    {
+		default:
+			break;
 		case SDL_QUIT:
 			return false;
 		case SDL_MOUSEWHEEL:
@@ -719,7 +721,7 @@ bool CSDLInputSystem::Poll()
 				m_mouseWheelDir = -1;
 			}
 			break;
-		}
+    }
   }
 
   // Get key state from SDL
