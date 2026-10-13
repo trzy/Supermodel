@@ -211,22 +211,41 @@
  * configuration: single pixel board, dual pixel boards, or high resolution
  * (get_hw_config.c, auto_config.c). The 3D RAMs are not named.
  *
- * Expected ID codes, as printed by the firmware's ID check ("FAILED ID'S")
- * in chain order for a single pixel board configuration:
+ * Configuration detection (0x17EB0, auto_config.c) reads the chain with all
+ * devices in IDCODE (ASICs, 32 bits) or BYPASS (3D-RAMs, 1 bit) using a
+ * bit-at-a-time DR read (0x1CD18, jtag_dr.c) that discards the first 3 bits
+ * shifted out (the last three 3D-RAMs) and stores the rest LSB first. It tries
+ * each configuration in turn and checks ID codes at the bit positions that
+ * configuration implies (masked with 0x0FFFFFFF, ignoring the version field):
  *
- *   JUPITER   0x016C7057 or 0x0D7F1057
- *   MERCURY   0x016C3057
- *   VENUS     0x016C4057
- *   EARTH_n   0x016C5057 or 0x0D7F0057    (n = 0-3)
- *   MARS_n0   0x016C6057
- *   MARS_n1   0x016C6057
+ *   Config        Bits  Chain (TDI to TDO)                        Check
+ *   Single pixel   196  J Me V E R Ma Ma R R R                    0x18204
+ *   Dual pixel     296  J Me V (E R Ma Ma R R R) x2               0x1879C
+ *   High res       496  J Me V (E R Ma Ma R R R) x4               0x18F58
  *
- * These follow the Model 3 ID codes (e.g., Mercury 0x216C3057 on Step 1.0)
- * with version field 0. Fifteen devices are checked: Jupiter, Mercury, Venus,
- * then four groups of Earth followed by two Mars.
+ * J = Jupiter, Me = Mercury, V = Venus, E = Earth, Ma = Mars, R = 3D-RAM. The
+ * single and dual configurations are exactly the Model 3 Step 1.x and Step
+ * 2.x chains. If all fail, the high res check prints "FAILED ID'S" with the
+ * expected values and the single pixel board configuration is assumed.
  *
- * The emulated chain (CPro1000::BuildScanChain()) contains these 15 ASICs
- * using the Model 3 CASIC device model.
+ * Expected ID codes (table at 0x61200): Jupiter 0x016C7057 or 0x0D7F1057,
+ * Mercury 0x016C3057, Venus 0x016C4057, Earth 0x016C5057 or 0x0D7F0057, Mars
+ * 0x016C6057. These are the Model 3 ID codes with version field 0.
+ *
+ * The emulated chain (CPro1000::BuildScanChain()) is the single pixel board
+ * configuration, using the Model 3 CASIC and C3DRAM device models. With it,
+ * the firmware prints "SINGLE PIXEL BOARD DETECTED". Early attempts used only
+ * the 15 ASICs from the firmware's name table (0x611AC) and omitted the
+ * 3D-RAMs; every missing 1-bit device shifted the ID codes out of position and
+ * all three configuration checks failed.
+ *
+ * Other configurations could be detected simply by building the corresponding
+ * chain (dual is the Model 3 Step 2.x chain). Actually emulating them also
+ * depends on what the firmware configures afterwards (mode words for the
+ * additional Earth/Mars ASICs, memory sizes, high res video timing) and on
+ * renderer support. Dual should be similar to Model 3 Step 2.x; high res goes
+ * beyond anything on Model 3. show_config_data reports a "Pre-Production
+ * System" with this chain, possibly derived from ID code version fields.
  *
  *
  * Serial Console
@@ -255,12 +274,18 @@
  *    17.4 ms (57.52 Hz), so either the expected rate is 30 Hz (there is a 30
  *    Hz mode) or the time base runs at a different rate than assumed.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
- *  - Scan chain order and ID codes for each hardware configuration.
+ *  - Board configurations. Only the single pixel board is emulated. Support
+ *    single, dual, and high res configurations, probably selected by reusing
+ *    the Games.xml stepping field (currently a placeholder "1.0" for the
+ *    Pro-1000). To revisit once rendering works.
  *  - Where scan chains should be built. Currently CPro1000 builds its chain
- *    while Model 3's CJTAG builds its own. Once the Pro-1000 chain is
- *    understood, consider having CReal3D build the chain (its ASICs are the
- *    Real3D chipset) from a board configuration supplied by the system,
- *    preserving the Model 3 JTAG2 save state layout.
+ *    while Model 3's CJTAG builds its own. Since the Pro-1000 single and dual
+ *    chains are the Model 3 Step 1.x and 2.x chains, consider having CReal3D
+ *    build the chain (its ASICs are the Real3D chipset) from a board
+ *    configuration supplied by the system, preserving the Model 3 JTAG2 save
+ *    state layout.
+ *  - What determines "Pre-Production" vs. "Production" system and the
+ *    extended texture memory setting reported by show_config_data.
  *  - 0x40000000, 0x62000000, 0x72000000, 0x78000000.
  *
  *
@@ -1282,46 +1307,37 @@ void CPro1000::AttachOutputs(COutputs *OutputsPtr)
 }
 
 /*
- * Single pixel board configuration, in the order and with the ID codes the
- * firmware's ID check expects. Only the first ASIC of each type forwards its
- * mode word to the Real3D object (as on Model 3). Whether the 3D-RAMs, Pluto,
- * or Neptune are on this chain is not yet known.
+ * Single pixel board configuration. The firmware's configuration detection
+ * (0x17EB0) reads the chain's ID codes and expects exactly the Model 3 Step
+ * 1.x chain layout: Jupiter, Mercury, Venus, Earth, 3D-RAM, Mars, Mars,
+ * 3D-RAM x3 (196 bits in IDCODE/BYPASS). ID code version fields are ignored by
+ * the firmware but are set to 0, as printed in its expected ID table. Only the
+ * first ASIC of each type forwards its mode word to the Real3D object (as on
+ * Model 3).
  */
 void CPro1000::BuildScanChain(void)
 {
-  struct ASICInfo
-  {
-    CASIC::Name name;
-    uint32_t    idCode;
-  };
-
-  static const ASICInfo s_chain[] =
-  {
-    { CASIC::Name::Jupiter, 0x016C7057 },
-    { CASIC::Name::Mercury, 0x016C3057 },
-    { CASIC::Name::Venus,   0x016C4057 },
-    { CASIC::Name::Earth,   0x016C5057 },   // EARTH_0
-    { CASIC::Name::Mars,    0x016C6057 },   // MARS_00
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_01
-    { CASIC::Name::Dummy,   0x016C5057 },   // EARTH_1
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_10
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_11
-    { CASIC::Name::Dummy,   0x016C5057 },   // EARTH_2
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_20
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_21
-    { CASIC::Name::Dummy,   0x016C5057 },   // EARTH_3
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_30
-    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_31
-  };
-
-  std::vector<CJTAGDevice *> devices;
   m_asics.clear();
-  for (auto &info: s_chain)
+  auto addASIC = [this](CASIC::Name name, uint32_t idCode) -> CJTAGDevice *
   {
-    m_asics.emplace_back(std::make_unique<CASIC>(GPU, info.name));
-    m_asics.back()->SetIDCode(info.idCode);
-    devices.push_back(m_asics.back().get());
-  }
+    m_asics.emplace_back(std::make_unique<CASIC>(GPU, name));
+    m_asics.back()->SetIDCode(idCode);
+    return m_asics.back().get();
+  };
+
+  std::vector<CJTAGDevice *> devices
+  {
+    addASIC(CASIC::Name::Jupiter, 0x016C7057),
+    addASIC(CASIC::Name::Mercury, 0x016C3057),
+    addASIC(CASIC::Name::Venus,   0x016C4057),
+    addASIC(CASIC::Name::Earth,   0x016C5057),
+    &m_3dram[0],
+    addASIC(CASIC::Name::Mars,    0x016C6057),
+    addASIC(CASIC::Name::Dummy,   0x016C6057),
+    &m_3dram[1],
+    &m_3dram[2],
+    &m_3dram[3]
+  };
   m_scanChain = CJTAGScanChain(devices);
   JTAG.AttachScanChain(&m_scanChain);
 }

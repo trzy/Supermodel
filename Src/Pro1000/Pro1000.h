@@ -183,6 +183,7 @@ private:
   C53C810     SCSI;         // SCSI controller (NCR 53C825 on real hardware, emulated as 53C810)
   CReal3D     GPU;          // Real3D graphics hardware
   std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
+  C3DRAM      m_3dram[4];                       // 3D-RAMs on the JTAG scan chain
   CJTAGScanChain m_scanChain;                   // JTAG scan chain driven by JTAG controller
   CUART       UART;         // 16550-style serial port
   SuperAA     *m_superAA;
