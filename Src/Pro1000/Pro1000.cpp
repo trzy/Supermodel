@@ -179,6 +179,13 @@
  * scene, tables the renderer needs in order to operate, default data
  * structures, or test data.
  *
+ * Emulation: the ROM is mapped read only at SCSI_ROM_BASE regardless of the
+ * expansion ROM BAR (the firmware always programs 0xC0000000). Writes (flash
+ * programming) are not emulated. If the game defines a "scsi_rom" region, it
+ * is loaded as a byte image in PCI address order. Otherwise a synthetic image
+ * is created (CPro1000::BuildSyntheticSCSIROM()): magic, zeroed 256-byte
+ * directory (all blocks empty, configuration words 0), and 0xFF elsewhere.
+ *
  *
  * PowerPC Address Map
  * -------------------
@@ -204,7 +211,14 @@
  *                                        stride 8
  * 60000000           LSYNC_BASE          Logic sync memory, 64K bytes at
  *                                        stride 8
- * 62000000           SCROLL              Scroll register
+ * 62000000           SCROLL              Pluto scroll register (also accessible
+ *                                        via JTAG as "PL Scroll Register").
+ *                                        Bit 26: foreground/background, bits
+ *                                        25-24: viewport select, bits 23-0:
+ *                                        RGB color (from the SC monitor
+ *                                        command's formatted dump). INIT ROM
+ *                                        value is 0x040CF0F8. Probably a solid
+ *                                        color layer in the output stage.
  * 64000000-38        UART_*              16550 UART (RDTD_BUFFER, INT_ENABLE,
  *                                        INT_ID/FIFO_CNTRL, LINE_CNTRL,
  *                                        MODEM_CNTRL, LINE_STATUS,
@@ -214,7 +228,20 @@
  *                                        CNT0, MODE0-2). [Emulated]
  * 70000000           RIF_MODE            RIF mode word. Bit 13 checked at boot,
  *                                        bit 14 toggled by boot stub, bits
- *                                        23:16 probably DIP switches.
+ *                                        23:16 probably DIP switches, bit 7
+ *                                        cleared around GP sync waits
+ *                                        (0x577C). Field names from the
+ *                                        RIF_MODE monitor command (bit
+ *                                        positions not yet mapped): BIST
+ *                                        enabled, flash ROM write enabled,
+ *                                        renderer init disabled, unused
+ *                                        switch, SCSI ID (4 bits), align
+ *                                        syncs, BIST LED, main CPU flag, four
+ *                                        external sync logic resistor
+ *                                        selects, kill video syncs, overload
+ *                                        force/no report/mode (2 bits)/enable,
+ *                                        select external video reference,
+ *                                        sync transition select, RIF on-line.
  * 72000000           HARD_RESET          Written in a loop by boot stub on 'r'
  * 74000000/08/10     PLL_REF/FBK/CW      Video PLL registers
  * 78000000/08        MAIN_RD_INTA_R0/R1  Main interrupt acknowledge by read?
@@ -238,9 +265,9 @@
  *                                        [Model 3 98 mapping emulated]
  * 9C000000           REND_UPDATE_START   Model 3 configuration registers.
  *                                        [Emulated, Model 3]
- * C0000000-C0080000  SCSI_ROM_BASE/TOP   SCSI controller expansion ROM, 512KB.
- *                                        Holds the "INIT ROM" data used by
- *                                        rend_init. [Not mapped]
+ * C0000000-C007FFFF  SCSI_ROM_BASE/TOP   SCSI ROM, 512KB (see SCSI ROM below).
+ *                                        [Emulated: read only, optional image
+ *                                        "scsi_rom", otherwise synthetic]
  * D0000000           SCSI_MEM_BASE       SCSI controller registers. [Emulated]
  * F0800000           CONFIG_ADDR         MPC105 (same as Model 3 Step 1.0)
  * F0C00000           CONFIG_DATA
@@ -446,10 +473,17 @@ constexpr static uint32_t CPU_ROM_OFFSET    = CPU_ROM_BASE - FLASH_BASE_ADDR;
 constexpr static uint32_t INIT_ROM_BASE     = 0xFFF80000; // INIT ROM image (LOGIC_SYNC_INIT)
 constexpr static uint32_t INIT_ROM_OFFSET   = INIT_ROM_BASE - FLASH_BASE_ADDR;
 
-constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + VROM_SIZE;
+// SCSI ROM: flash on the SCSI controller's expansion ROM interface, mapped by
+// the firmware through PCI device 11's expansion ROM BAR
+constexpr static uint32_t SCSI_ROM_BASE     = 0xC0000000;
+constexpr static uint32_t SCSI_ROM_SIZE     = 0x80000;    // 512KB (SCSI_ROM_TOP = 0xC0080000)
+constexpr static uint32_t SCSI_ROM_HEADER_SIZE = 0x100;   // directory area zeroed in synthetic image
+
+constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE + VROM_SIZE;
 constexpr static uint32_t RAM_OFFSET        = 0;
 constexpr static uint32_t FLASH_OFFSET      = RAM_OFFSET + RAM_SIZE;
-constexpr static uint32_t VROM_OFFSET       = FLASH_OFFSET + FLASH_SIZE;
+constexpr static uint32_t SCSI_ROM_OFFSET   = FLASH_OFFSET + FLASH_SIZE;
+constexpr static uint32_t VROM_OFFSET       = SCSI_ROM_OFFSET + SCSI_ROM_SIZE;
 
 constexpr static int      STEPPING          = 0x10;       // treat hardware as Model 3 Step 1.0
 constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // Step 1.0 PowerPC frequency
@@ -564,6 +598,12 @@ UINT8 CPro1000::Read8(UINT32 addr)
       return flash[(addr & 0x7FFFFF) ^ 3];
     break;
 
+  // SCSI ROM
+  case 0xC0:
+    if (addr < SCSI_ROM_BASE + SCSI_ROM_SIZE)
+      return scsiROM[(addr - SCSI_ROM_BASE) ^ 3];
+    break;
+
   // UART
   case 0x64:
     if (addr < UART_END_ADDR && (addr & 7) == 3)
@@ -612,6 +652,12 @@ UINT16 CPro1000::Read16(UINT32 addr)
   case 0xFF:
     if (addr >= FLASH_BASE_ADDR)
       return *(UINT16 *) &flash[(addr & 0x7FFFFF) ^ 2];
+    break;
+
+  // SCSI ROM
+  case 0xC0:
+    if (addr < SCSI_ROM_BASE + SCSI_ROM_SIZE)
+      return *(UINT16 *) &scsiROM[(addr - SCSI_ROM_BASE) ^ 2];
     break;
 
   case 0xF0:
@@ -671,6 +717,12 @@ UINT32 CPro1000::Read32(UINT32 addr)
   case 0xFF:
     if (addr >= FLASH_BASE_ADDR)
       return *(UINT32 *) &flash[(addr & 0x7FFFFF)];
+    break;
+
+  // SCSI ROM
+  case 0xC0:
+    if (addr < SCSI_ROM_BASE + SCSI_ROM_SIZE)
+      return *(UINT32 *) &scsiROM[(addr - SCSI_ROM_BASE)];
     break;
 
   // Real3D registers
@@ -1432,8 +1484,21 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
     return ErrorLog("INIT ROM for '%s' is too large (%zu bytes). It must fit within 0x%08X-0xFFFFFFFF.", game.name.c_str(), initROM.size, INIT_ROM_BASE);
   initROM.CopyTo(&flash[INIT_ROM_OFFSET], initROM.size);
 
-  // Convert PowerPC ROM to little endian words
+  // SCSI ROM: use image if provided, otherwise synthesize a minimal one
+  memset(scsiROM, 0xFF, SCSI_ROM_SIZE);
+  ROM scsiROMImage = rom_set.get_rom("scsi_rom");
+  if (scsiROMImage.size)
+  {
+    if (scsiROMImage.size > SCSI_ROM_SIZE)
+      return ErrorLog("SCSI ROM for '%s' is too large (%zu bytes). It must fit within 0x%08X-0x%08X.", game.name.c_str(), scsiROMImage.size, SCSI_ROM_BASE, SCSI_ROM_BASE + SCSI_ROM_SIZE - 1);
+    scsiROMImage.CopyTo(scsiROM, scsiROMImage.size);
+  }
+  else
+    BuildSyntheticSCSIROM();
+
+  // Convert PowerPC ROMs to little endian words
   Util::FlipEndian32(flash, FLASH_SIZE);
+  Util::FlipEndian32(scsiROM, SCSI_ROM_SIZE);
 
   // Configure CPU and PCI bridge as Step 1.0
   PPC_CONFIG ppc_config;
@@ -1492,6 +1557,25 @@ void CPro1000::AttachOutputs(COutputs *OutputsPtr)
 }
 
 /*
+ * The real SCSI ROM contents are unknown (it was likely used to hold an initial
+ * scene, perhaps a Real3D logo). This creates the minimum needed for rend_init
+ * to proceed: the magic word and a zeroed directory, so that every block has
+ * offset 0 and size 0 and the three configuration register words are 0 (the
+ * Real3D's reset values). The rest of the ROM is erased (0xFF).The image is in
+ * PCI byte order (little endian words) as the real ROM would be.
+ */
+void CPro1000::BuildSyntheticSCSIROM(void)
+{
+  memset(scsiROM, 0, SCSI_ROM_HEADER_SIZE);
+  const uint32_t magic = 0xCAFEBABE;
+  scsiROM[0] = uint8_t(magic >> 0);
+  scsiROM[1] = uint8_t(magic >> 8);
+  scsiROM[2] = uint8_t(magic >> 16);
+  scsiROM[3] = uint8_t(magic >> 24);
+  InfoLog("Pro-1000: Using synthetic SCSI ROM (magic and empty directory only).");
+}
+
+/*
  * Single pixel board configuration. The firmware's configuration detection
  * (0x17EB0) reads the chain's ID codes and expects exactly the Model 3 Step
  * 1.x chain layout: Jupiter, Mercury, Venus, Earth, 3D-RAM, Mars, Mars,
@@ -1540,6 +1624,7 @@ Result CPro1000::Init(void)
   // Set up pointers
   ram = &memoryPool[RAM_OFFSET];
   flash = &memoryPool[FLASH_OFFSET];
+  scsiROM = &memoryPool[SCSI_ROM_OFFSET];
   vrom = &memoryPool[VROM_OFFSET];
 
   // Initialize devices (PowerPC initialized after ROMs loaded)
@@ -1573,6 +1658,7 @@ CPro1000::CPro1000(Util::Config::Node &config)
     memoryPool(NULL),
     ram(NULL),
     flash(NULL),
+    scsiROM(NULL),
     vrom(NULL),
     gpusReady(false),
     startedThreads(false),
@@ -1628,6 +1714,7 @@ CPro1000::~CPro1000(void)
 
   ram = NULL;
   flash = NULL;
+  scsiROM = NULL;
   vrom = NULL;
 
   DebugLog("Destroyed Pro-1000\n");

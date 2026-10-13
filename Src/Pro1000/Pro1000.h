@@ -130,6 +130,7 @@ private:
 
   bool IsSCSIAddress(UINT32 addr) const;          // True if address falls within SCSI controller's PCI-mapped register window
 
+  void BuildSyntheticSCSIROM(void);             // Creates minimal SCSI ROM contents when no image is available
   void BuildScanChain(void);                    // Creates JTAG devices and connects them to the scan controller
   void RunMainBoardFrame(void);                 // Runs PPC main board for a frame
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
@@ -153,6 +154,7 @@ private:
   UINT8   *memoryPool;  // single allocated region for all ROM and system RAM
   UINT8   *ram;         // 4 MB PowerPC RAM
   UINT8   *flash;       // 8 MB flash ROM window
+  UINT8   *scsiROM;     // 512 KB SCSI ROM (flash on SCSI controller's expansion ROM interface)
   UINT8   *vrom;        // 64 MB VROM (does not exist on Pro-1000 but Real3D and renderer expect it; always zero)
 
   // PowerPC

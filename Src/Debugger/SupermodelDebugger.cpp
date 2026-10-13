@@ -354,6 +354,7 @@ namespace Debugger
 		cpu->AddRegion(0x54000000, 0x5400000F, false, false, "8259 Interrupt Controller");
 		cpu->AddRegion(0x64000000, 0x6400003F, false, false, "UART");
 		cpu->AddRegion(0x68000000, 0x6800003F, false, false, "SCANPSC100F JTAG Controller");
+		cpu->AddRegion(0xC0000000, 0xC007FFFF, true,  true,  "SCSI ROM");
 		cpu->AddRegion(0xD0000000, 0xD00000FF, false, false, "SCSI (PCI device 11 BAR as programmed by firmware)");
 		cpu->AddRegion(0xF0800CF8, 0xF0800CFF, false, false, "MPC105 CONFIG_ADDR");
 		cpu->AddRegion(0xF0C00CF8, 0xF0C00CFF, false, false, "MPC105 CONFIG_DATA");
