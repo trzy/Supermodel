@@ -265,7 +265,7 @@ static void SetFullScreenRefreshRate()
  * NOTE: keepAspectRatio should always be true. It has not yet been tested with
  * the wide screen hack.
  */
-static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
+static Result CreateGLScreen(bool coreContext, const std::string &caption, bool focusWindow, unsigned *xOffsetPtr, unsigned *yOffsetPtr, unsigned *xResPtr, unsigned *yResPtr, unsigned *totalXResPtr, unsigned *totalYResPtr, bool keepAspectRatio, bool fullScreen)
 {
   GLenum err;
 
@@ -299,15 +299,8 @@ static Result CreateGLScreen(bool coreContext, bool quadRendering, const std::st
 
   if (coreContext) {
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-      if (quadRendering) {
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
-      }
-      else {
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-          SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-      }
+      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
   }
 
   // Set video mode
@@ -400,7 +393,7 @@ static void PrintGLInfo(bool createScreen, bool infoLog, bool printExtensions)
   unsigned xOffset, yOffset, xRes=496, yRes=384, totalXRes, totalYRes;
   if (createScreen)
   {
-    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+    if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel - Querying OpenGL Information...", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
     {
       ErrorLog("Unable to query OpenGL.\n");
       return;
@@ -1496,13 +1489,21 @@ static void LogConfig(const Util::Config::Node &config)
 Util::Config::Node DefaultConfig()
 {
   Util::Config::Node config("Global");
-  
+
+  // Names the GUI shows for a setting's list of values, in list order (the config file keeps the values)
+  auto SetLabels = [&config](const std::string& key, const std::vector<std::string>& labels)
+  {
+    config[key].GetValue()->GetValueRange()->SetLabels(labels);
+  };
+
   config.Set("GameXMLFile", s_gameXMLFilePath);
   config.Set("InitStateFile", "");
   // CModel3
   config.Set("PowerPCFrequency", 0u, "Core", 0u, 200u);
+  config["PowerPCFrequency"].GetValue()->GetValueRange()->SetSliderFormat("%u MHz", "Auto"); // 0 = chosen by default game stepping
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
+  config.Set<std::string>("ROMDirectory", FileSystemPath::GetPath(FileSystemPath::ROMs), "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
 #ifndef SUPERMODEL_OSX
   config.Set("MultiTexture", false, "Legacy3D");
@@ -1516,7 +1517,9 @@ Util::Config::Node DefaultConfig()
   config.Set("BalanceLeftRight", 0.0f, "Sound", -100.f, 100.f);
   config.Set("BalanceFrontRear", 0.0f, "Sound", -100.f, 100.f);
   config.Set("NbSoundChannels", 4, "Sound", 0, 0, { 1,2,4 });
-  config.Set("SoundFreq", 57.6f, "Sound", 0.0f, 0.0f, { 57.524160f, 60.f }); // 60.0f? 57.524160f?
+  SetLabels("NbSoundChannels", { "Mono", "Stereo", "Quad (4 channels)" });
+  config.Set("SoundFreq", 57.6f, "Sound", 0.0f, 0.0f, { 57.524160f, 57.6f, 60.f });
+  SetLabels("SoundFreq", { "57.524 Hz (original hardware)", "57.6 Hz", "60 Hz" });
   // CDSB
   
   config.Set("EmulateDSB", true, "Sound");
@@ -1529,7 +1532,7 @@ Util::Config::Node DefaultConfig()
   
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
-  config.Set("QuadRendering", false, "Video");
+  config.Set("QuadRendering", true, "Video");
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");
   config.SetEmpty("WindowXPosition");
@@ -1537,21 +1540,27 @@ Util::Config::Node DefaultConfig()
   config.Set("FullScreen", false, "Video");
   config.Set("BorderlessWindow", false, "Video");
   config.Set("Supersampling", 1, "Video", 1, 8);
-  config.Set("CRTcolors", int(0), "Video", 0, 0, { 0,1,2,3,4,5 });      // these might be more user friendly as strings
-  config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });             // to do make strings
+  config.Set("CRTcolors", int(0), "Video", 0, 0, { 0,1,2,3,4,5 });
+  SetLabels("CRTcolors", { "None", "ARI/D93 (JP games)", "PVM_20M2U/D93", "BT601_525/D93", "BT601_525/D65 (US games)", "BT601_625/D65 (EUR/AUS games)" });
+  config.Set("UpscaleMode", 2, "Video", 0, 0, { 0,1,2,3 });
+  SetLabels("UpscaleMode", { "None (sharp pixels)", "Biquintic", "Bilinear", "Bicubic" });
   config.Set("WideScreen", false, "Video");
   config.Set("Stretch", false, "Video");
   config.Set("WideBackground", false, "Video");
   config.Set("VSync", true, "Video");
   config.Set("Throttle", true, "Video");
-  config.Set("RefreshRate", 60.0f, "Video", 0.0f, 0.0f, { 57.5f,60.f });
+  config.Set("RefreshRate", 60.0f, "Video", 0.0f, 0.0f, { 57.524f, 60.f });
+  SetLabels("RefreshRate", { "57.524 Hz (original hardware)", "60 Hz" });
   config.Set("ShowFrameRate", false, "Video");
   config.Set("Crosshairs", int(0), "Video", 0, 0, { 0,1,2,3 });
+  SetLabels("Crosshairs", { "None", "Player 1 only", "Player 2 only", "Players 1 & 2" });
   config.Set<std::string>("CrosshairStyle", "vector", "Video", "", "", { "bmp","vector" });
+  SetLabels("CrosshairStyle", { "Bitmap", "Vector" });
   config.Set("NoWhiteFlash", false, "Video");
   config.Set("FlipStereo", false, "Sound");
 #ifdef SUPERMODEL_WIN32
   config.Set<std::string>("InputSystem", "dinput", "Core", "", "", { "sdl","sdlgamepad","dinput","xinput","rawinput" });
+  SetLabels("InputSystem", { "SDL (joystick)", "SDL (gamepad)", "DirectInput", "XInput", "Raw Input (multiple mice/keyboards)" });
   // DirectInput ForceFeedback
   config.Set("DirectInputConstForceLeftMax", 100, "ForceFeedback", 0, 100);
   config.Set("DirectInputConstForceRightMax", 100, "ForceFeedback", 0, 100);
@@ -1571,6 +1580,7 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #else
   config.Set<std::string>("InputSystem", "sdl", "Core", "", "", { "sdl","sdlgamepad" });
+  SetLabels("InputSystem", { "SDL (joystick)", "SDL (gamepad)" });
   // SDL ForceFeedback
   config.Set("SDLConstForceMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLSelfCenterMax", 100, "ForceFeedback", 0, 100);
@@ -1587,8 +1597,10 @@ Util::Config::Node DefaultConfig()
 
 #ifdef SUPERMODEL_WIN32
   config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","win","net" });
+  SetLabels("Outputs", { "None", "Windows messages", "Network (TCP/UDP)" });
 #else
   config.Set<std::string>("Outputs", "none", "Misc", "", "", { "none","net" });
+  SetLabels("Outputs", { "None", "Network (TCP/UDP)" });
 #endif
   config.Set<bool>("OutputsWithLF", false, "Misc");
   config.Set<unsigned int>("OutputsTCPPort", 8000, "Misc", 1024, 65535);
@@ -1605,9 +1617,16 @@ Util::Config::Node DefaultConfig()
   config.Set<unsigned>("InputKeySensitivity", DEFAULT_DIGITAL_SENSITIVITY, "Sensitivity", 0, 100);
   config.Set<unsigned>("InputKeyDecaySpeed", DEFAULT_DIGITAL_DECAYSPEED, "Sensitivity", 0, 100);
 
-  config.Set<unsigned>("InputMouseXDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 100);
-  config.Set<unsigned>("InputMouseYDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 100);
-  config.Set<unsigned>("InputMouseZDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 100);
+  config.Set<unsigned>("InputMouseXDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 99);
+  config.Set<unsigned>("InputMouseYDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 99);
+  config.Set<unsigned>("InputMouseZDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 99);
+
+  // Joystick axes, for all joysticks (InputJoy<n>... settings for an individual joystick override these)
+  static const char* joyAxisIds[] = { "X", "Y", "Z", "RX", "RY", "RZ", "S1", "S2" };
+  for (const char* axis : joyAxisIds)
+    config.Set<unsigned>(std::string("InputJoy") + axis + "DeadZone", DEFAULT_JOY_DEADZONE, "Sensitivity", 0, 99);
+  for (const char* axis : joyAxisIds)
+    config.Set<unsigned>(std::string("InputJoy") + axis + "Saturation", DEFAULT_JOY_SATURATION, "Sensitivity", 1, 200);
 
   //
   // controls
@@ -1865,7 +1884,8 @@ static void Help(void)
 #ifndef SUPERMODEL_OSX
   puts("  -new3d                  New 3D engine by Ian Curtis [Default]");
 #endif
-  puts("  -quad-rendering         Enable proper quad rendering");
+  puts("  -quad-rendering         Enable proper quad rendering [Default]");
+  puts("  -no-quad-rendering      Render quads as triangles");
 #ifndef SUPERMODEL_OSX
   puts("  -legacy3d               Legacy 3D engine (faster but less accurate)");
   puts("  -multi-texture          Use 8 texture maps for decoding (legacy engine)");
@@ -1998,6 +2018,7 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-fps",              { "ShowFrameRate",    false } },
     { "-new3d",               { "New3DEngine",      true } },
     { "-quad-rendering",      { "QuadRendering",    true } },
+    { "-no-quad-rendering",   { "QuadRendering",    false } },
 #ifndef SUPERMODEL_OSX
     { "-legacy3d",            { "New3DEngine",      false } },
 #endif
@@ -2362,7 +2383,7 @@ int main(int argc, char **argv)
   // Create a window
   xRes = 496;
   yRes = 384;
-  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), s_runtime_config["QuadRendering"].ValueAs<bool>(),"Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
   {
     exitCode = 1;
     goto Exit;

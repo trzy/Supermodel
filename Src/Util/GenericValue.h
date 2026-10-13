@@ -160,6 +160,13 @@ namespace Util
       Variant GetMin() { return m_min; }
       Variant GetMax() { return m_max; }
       std::vector<Variant>& GetList() { return m_list; }
+      // GUI names for the list entries, in list order
+      void SetLabels(const std::vector<std::string>& labels) { m_labels = labels; }
+      const std::vector<std::string>& GetLabels() { return m_labels; }
+      // GUI slider display format (e.g. "%u MHz"), and optional text shown instead at the minimum (e.g. "Auto")
+      void SetSliderFormat(const std::string& format, const std::string& minLabel = "") { m_sliderFormat = format; m_sliderMinLabel = minLabel; }
+      const std::string& GetSliderFormat() { return m_sliderFormat; }
+      const std::string& GetSliderMinLabel() { return m_sliderMinLabel; }
       int GetIndex() { return (int)m_min.index(); }      // gets the variant index (basically the type)
 
   private:
@@ -167,6 +174,9 @@ namespace Util
       Variant m_min;
       Variant m_max;
       std::vector<Variant> m_list;
+      std::vector<std::string> m_labels;
+      std::string m_sliderFormat;
+      std::string m_sliderMinLabel;
   };
 
   class GenericValue
