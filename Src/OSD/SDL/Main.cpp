@@ -1503,7 +1503,7 @@ Util::Config::Node DefaultConfig()
   config["PowerPCFrequency"].GetValue()->GetValueRange()->SetSliderFormat("%u MHz", "Auto"); // 0 = chosen by default game stepping
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
-  config.Set<std::string>("ROMDirectory", "ROMs", "Core", "", ""); // where the GUI looks for <romset>.zip
+  config.Set<std::string>("ROMDirectory", FileSystemPath::GetPath(FileSystemPath::ROMs), "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
 #ifndef SUPERMODEL_OSX
   config.Set("MultiTexture", false, "Legacy3D");

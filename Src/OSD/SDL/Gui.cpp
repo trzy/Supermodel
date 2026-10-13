@@ -7,6 +7,10 @@
 #include <filesystem>
 #include <memory>
 #include <thread>
+#include <set>
+#include <algorithm>
+#include <cctype>
+#include <system_error>
 #include <sstream>
 #include "GameLoader.h"
 #include "../Pkgs/imgui/imgui.h"
@@ -48,6 +52,39 @@ Quick description on the GUI stuff
  - Per game options. Need some code to get a diff of possible configs I think.
 */
 
+
+// ---------------------------------------------------------------------------------------------------------------
+// ROM folder scan: only games whose "<name>.zip" exists in the ROM folder are shown as owned
+// ---------------------------------------------------------------------------------------------------------------
+
+static const bool  s_hideUnownedGames = false;   // true: unowned games are removed from the list
+                                                // false: unowned games are blacked out so the list layout is kept
+
+static std::string ToLowerStr(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    return s;
+}
+
+// Returns the lower case file names (without extension) of all *.zip files in the given directory
+static std::set<std::string> ScanRomZips(const std::string& dir)
+{
+    std::set<std::string> found;
+    std::error_code ec;
+
+    for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+        std::error_code ec2;
+        if (!it->is_regular_file(ec2)) {
+            continue;
+        }
+        if (ToLowerStr(it->path().extension().string()) != ".zip") {
+            continue;
+        }
+        found.insert(ToLowerStr(it->path().stem().string()));
+    }
+
+    return found;
+}
 
 static void WriteGameNode(Util::Config::Node& baseNode, const Util::Config::Node& diffNode, Util::Config::Node& writeNode, const std::string& group)
 {
@@ -653,7 +690,7 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return {};
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, bool closeRequested, bool& exitPromptOpen)
+static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, bool closeRequested, bool& exitPromptOpen)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
@@ -682,7 +719,24 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
         int row = 0;
         for (const auto& g : games) {
 
+            const bool owned = ownedZips.count(ToLowerStr(g.second.name)) > 0;
+
+            // row must always advance, GetGame() / GetRomPath() index the full games map
+            if (!owned && s_hideUnownedGames) {
+                row++;
+                continue;
+            }
+
             ImGui::TableNextRow();
+
+            if (!owned) {
+                // black out the row and make it non-interactive so the layout is kept
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(0, 0, 0, 255));
+                ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, IM_COL32(0, 0, 0, 255));
+                ImGui::BeginDisabled();
+                ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
+            }
+
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("%s", g.second.title.c_str());
             ImGui::TableSetColumnIndex(1);
@@ -700,6 +754,11 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
             ImGui::Text("%d", g.second.year);
             ImGui::TableSetColumnIndex(4);
             ImGui::Text("%s", g.second.stepping.c_str());
+
+            if (!owned) {
+                ImGui::PopStyleColor();
+                ImGui::EndDisabled();
+            }
 
             row++;
         }
@@ -919,6 +978,8 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     std::string xmlFile = config["GameXMLFile"].ValueAs<std::string>();
     GameLoader loader(xmlFile);
     auto& games = loader.GetGames();
+    std::string scannedRomDirectory = config["ROMDirectory"].ValueAs<std::string>();
+    std::set<std::string> ownedZips = ScanRomZips(scannedRomDirectory);
     int selectedGame = -1;  // -1 means no selection
     std::vector<std::string> romFiles;
     std::string path;
@@ -949,7 +1010,15 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
             }
         }
 
-        GUI(io, config, games, selectedGame, exit, saveSettings, window, inputs, kb, closeRequested, exitPromptOpen);
+        // Rescan only when the ROM directory setting changes.
+        const std::string romDirectory = config["ROMDirectory"].ValueAs<std::string>();
+        if (romDirectory != scannedRomDirectory) {
+            scannedRomDirectory = romDirectory;
+            ownedZips = ScanRomZips(scannedRomDirectory);
+            selectedGame = -1;
+        }
+
+        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, closeRequested, exitPromptOpen);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
