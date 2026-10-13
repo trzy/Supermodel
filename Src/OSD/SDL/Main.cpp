@@ -1503,6 +1503,7 @@ Util::Config::Node DefaultConfig()
   config["PowerPCFrequency"].GetValue()->GetValueRange()->SetSliderFormat("%u MHz", "Auto"); // 0 = chosen by default game stepping
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
+  config.Set<std::string>("ROMDirectory", "ROMs", "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
 #ifndef SUPERMODEL_OSX
   config.Set("MultiTexture", false, "Legacy3D");
@@ -1616,9 +1617,16 @@ Util::Config::Node DefaultConfig()
   config.Set<unsigned>("InputKeySensitivity", DEFAULT_DIGITAL_SENSITIVITY, "Sensitivity", 0, 100);
   config.Set<unsigned>("InputKeyDecaySpeed", DEFAULT_DIGITAL_DECAYSPEED, "Sensitivity", 0, 100);
 
-  config.Set<unsigned>("InputMouseXDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 100);
-  config.Set<unsigned>("InputMouseYDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 100);
-  config.Set<unsigned>("InputMouseZDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 100);
+  config.Set<unsigned>("InputMouseXDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 99);
+  config.Set<unsigned>("InputMouseYDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 99);
+  config.Set<unsigned>("InputMouseZDeadZone", DEFAULT_MSE_DEADZONE, "Sensitivity", 0, 99);
+
+  // Joystick axes, for all joysticks (InputJoy<n>... settings for an individual joystick override these)
+  static const char* joyAxisIds[] = { "X", "Y", "Z", "RX", "RY", "RZ", "S1", "S2" };
+  for (const char* axis : joyAxisIds)
+    config.Set<unsigned>(std::string("InputJoy") + axis + "DeadZone", DEFAULT_JOY_DEADZONE, "Sensitivity", 0, 99);
+  for (const char* axis : joyAxisIds)
+    config.Set<unsigned>(std::string("InputJoy") + axis + "Saturation", DEFAULT_JOY_SATURATION, "Sensitivity", 1, 200);
 
   //
   // controls

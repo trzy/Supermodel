@@ -1,7 +1,6 @@
 #include "SDLIncludes.h"
 #include <GL/glew.h>
 #include <cmath>
-#include <cstring>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -216,6 +215,17 @@ static void ValueCombo(const std::string& key, Util::ValueRange& vRange, const T
     }
 }
 
+// Lets ImGui::InputText edit a std::string directly
+static int InputTextResizeCallback(ImGuiInputTextCallbackData* data)
+{
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        auto str = static_cast<std::string*>(data->UserData);
+        str->resize(data->BufTextLen);
+        data->Buf = str->data();
+    }
+    return 0;
+}
+
 static void CreateControls(Util::Config::Node& config, const std::string& group)
 {
     for (auto it = config.begin(); it != config.end(); ++it)
@@ -295,17 +305,14 @@ static void CreateControls(Util::Config::Node& config, const std::string& group)
                         }
                         case 4:             // std::string
                         {
-                            auto p = std::get_if<std::string>(&vRange->tempValue)->c_str();
                             auto& option = std::get<std::string>(vRange->tempValue);
 
                             if (list.size()) {
                                 ValueCombo(key, *vRange, option);
                             }
                             else {
-                                char buffer[256];
-                                std::strcpy(buffer, p);
-                                ImGui::InputText(key.c_str(), buffer, IM_ARRAYSIZE(buffer));
-                                option = buffer;     // update temp buffer
+                                // edit the string directly, it grows as needed
+                                ImGui::InputText(key.c_str(), option.data(), option.capacity() + 1, ImGuiInputTextFlags_CallbackResize, InputTextResizeCallback, &option);
                             }
 
                             break;
@@ -492,7 +499,7 @@ static void AddKeys(Util::Config::Node& config, KeyBindState& kb, const std::vec
     BindKeys(config, kb, openPopup);
 }
 
-static void DrawButtonOptions(Util::Config::Node& config, int selectedGameIndex, bool& exit, bool& saveSettings)
+static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex, bool& exit, bool& saveSettings, std::shared_ptr<CInputs>& inputs, bool closeRequested, bool& exitPromptOpen)
 {
     if (ImGui::Button("Load game")) {
 
@@ -529,6 +536,7 @@ static void DrawButtonOptions(Util::Config::Node& config, int selectedGameIndex,
 
         if (ImGui::Button("Yes", ImVec2(120, 0))) { 
             config = DefaultConfig();
+            inputs = nullptr; // rebuilt from the defaults when Key bindings is next shown
             ImGui::CloseCurrentPopup(); 
         }
         ImGui::SameLine();
@@ -541,11 +549,12 @@ static void DrawButtonOptions(Util::Config::Node& config, int selectedGameIndex,
 
     ImGui::SameLine();
 
-    if (ImGui::Button("Exit")) {
+    if (ImGui::Button("Exit") || closeRequested) {
         ImGui::OpenPopup("Save On Exit");
     }
 
-    if (ImGui::BeginPopupModal("Save On Exit", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+    exitPromptOpen = ImGui::BeginPopupModal("Save On Exit", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+    if (exitPromptOpen) {
 
         ImGui::Text("Save settings upon exit?");
         ImGui::Separator();
@@ -622,6 +631,12 @@ static std::shared_ptr<CInputs> GetInputSystem(Util::Config::Node& config, SDL_W
     return nullptr;
 }
 
+static void DrawInputSystemError(const Util::Config::Node& config)
+{
+    ImGui::TextWrapped("Input system \"%s\" is not available on this platform. Choose another one under Core > InputSystem.",
+        config["InputSystem"].ValueAs<std::string>().c_str());
+}
+
 static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIndex)
 {
     if (selectedGameIndex >= 0) {
@@ -638,7 +653,7 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return {};
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb)
+static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, bool closeRequested, bool& exitPromptOpen)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
@@ -647,7 +662,6 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
@@ -696,7 +710,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     ImGui::EndChild();
 
     // draw button options
-    DrawButtonOptions(config, selectedGameIndex, exit, saveSettings);
+    DrawButtonOptions(config, selectedGameIndex, exit, saveSettings, inputs, closeRequested, exitPromptOpen);
 
     // create a space
     ImGui::Dummy(ImVec2(0.0f, 20.0f));
@@ -767,9 +781,12 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
                 inputs = GetInputSystem(config, window);
             }
 
-            auto inputList = inputs->GetGameInputs(GetGame(games,selectedGameIndex));
+            if (inputs == nullptr) {
+                DrawInputSystemError(config);
+            }
+            else if (ImGui::BeginTable("KeyTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
 
-            if (ImGui::BeginTable("KeyTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+                auto inputList = inputs->GetGameInputs(GetGame(games,selectedGameIndex));
 
                 ImGui::TableSetupColumn("Group");
                 ImGui::TableSetupColumn("Action");
@@ -799,13 +816,13 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-static std::string GetRomPath(int selectedGame, const std::map<std::string, Game>& games)
+static std::string GetRomPath(int selectedGame, const std::map<std::string, Game>& games, const std::string& romDirectory)
 {
     if (selectedGame >= 0) {
         int index = 0;
         for (auto& g : games) {
             if (selectedGame == index) {
-                return (std::filesystem::path("ROMs") / (g.second.name + ".zip")).string();        // todo config rom directory? File dialog will be a bit more tricky cross platform but we can specifiy edit box for manual path entry        
+                return (std::filesystem::path(romDirectory) / (g.second.name + ".zip")).string();
             }
             index++;
         }
@@ -911,21 +928,28 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     bool saveSettings = true;
     bool running = true;
     KeyBindState kb{};
+    bool exitPromptOpen = false;
     bool exit = false;
     SDL_Event event{};
 
     while (running) {
+
+        // Closing the window asks to save like Exit does; closing it again while asked exits without saving
+        bool closeRequested = false;
 
         while (SDL_PollEvent(&event)) {
 
             ImGui_ImplSDL2_ProcessEvent(&event);
 
             if (event.type == SDL_QUIT) {
-                goto exitNoSave;
+                if (exitPromptOpen) {
+                    goto exitNoSave;
+                }
+                closeRequested = true;
             }
         }
 
-        GUI(io, config, games, selectedGame, exit, saveSettings, window, inputs, kb);
+        GUI(io, config, games, selectedGame, exit, saveSettings, window, inputs, kb, closeRequested, exitPromptOpen);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
@@ -936,7 +960,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         }
     }
 
-    path = GetRomPath(selectedGame, games);
+    path = GetRomPath(selectedGame, games, config["ROMDirectory"].ValueAs<std::string>());
     if (!path.empty()) {
         romFiles.emplace_back(path);
     }
@@ -949,6 +973,10 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     }
 
 exitNoSave:
+
+    // Release the input systems while SDL is still up
+    kb.Reset();
+    inputs = nullptr;
 
     // Cleanup resources
     ImGui_ImplOpenGL3_Shutdown();
