@@ -33,6 +33,7 @@
 #include "Pro1000/SCANPSC100F.h"
 #include "Pro1000/UART.h"
 #include "Model3/53C810.h"
+#include "Model3/JTAG.h"
 #include "Model3/IEmulator.h"
 #include "Model3/MPC10x.h"
 #include "Model3/PCI.h"
@@ -42,6 +43,8 @@
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
 #include "OSD/Thread.h"
+#include <memory>
+#include <vector>
 
 /*
  * CPro1000:
@@ -127,6 +130,7 @@ private:
 
   bool IsSCSIAddress(UINT32 addr) const;          // True if address falls within SCSI controller's PCI-mapped register window
 
+  void BuildScanChain(void);                    // Creates JTAG devices and connects them to the scan controller
   void RunMainBoardFrame(void);                 // Runs PPC main board for a frame
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
 
@@ -178,6 +182,8 @@ private:
   CPCIBus     PCIBus;       // PCI bus
   C53C810     SCSI;         // SCSI controller (NCR 53C825 on real hardware, emulated as 53C810)
   CReal3D     GPU;          // Real3D graphics hardware
+  std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
+  CJTAGScanChain m_scanChain;                   // JTAG scan chain driven by JTAG controller
   CUART       UART;         // 16550-style serial port
   SuperAA     *m_superAA;
 };

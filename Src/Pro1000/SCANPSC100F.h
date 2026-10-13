@@ -35,35 +35,9 @@
 #ifndef INCLUDED_SCANPSC100F_H
 #define INCLUDED_SCANPSC100F_H
 
+#include "Model3/JTAG.h"
 #include <cstdint>
 #include <functional>
-
-/*
- * IJTAGScanChain:
- *
- * A JTAG scan chain driven by the controller. Each call is one TCK cycle.
- */
-class IJTAGScanChain
-{
-public:
-  /*
-   * Clock(tms, tdi):
-   *
-   * Applies one TCK cycle to the chain.
-   *
-   * Parameters:
-   *    tms   Value on TMS.
-   *    tdi   Value on the chain's TDI (controller's TDO).
-   *
-   * Returns:
-   *    Value on the chain's TDO (controller's TDI).
-   */
-  virtual bool Clock(bool tms, bool tdi) = 0;
-
-  virtual ~IJTAGScanChain()
-  {
-  }
-};
 
 /*
  * CSCANPSC100F:

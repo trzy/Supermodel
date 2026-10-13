@@ -102,7 +102,7 @@
  *     detection fails, and calls write_scroll().
  *  8. Calls 0x5660 (sets up mode words via 0x130A4 and configures PCI
  *     device 12 via 0x4E78), then prints "_start: before get_hw_config".
- *     Currently does not return from 0x5660.
+ *     0x5660 waits for a GP sync (IR7) via 0x577C.
  *
  *
  * PowerPC Address Map
@@ -180,7 +180,12 @@
  *  IR3  SCSI (0x44868, ncrintr). [Emulated]
  *  IR4  SCANPSC100F INT (0x4F98, jtag_int). Dispatches to sub-handlers
  *       registered with 0x50B4(handler, MODE1 bit). [Emulated]
- *  IR7  Unknown (0x6918).
+ *  IR7  Geometry processor (GP) sync (0x6918, gp_sync_int.c): counts frames at
+ *       0x5DB80, sets flag 0x5DB84, and keeps interval statistics (monitor
+ *       "Delta Frame (GP) Sync Count"). Equivalent to the Model 3 "GP done"
+ *       interrupt. 0x577C waits for it to change before returning.
+ *       [Emulated: one line long pulse per frame at end of VBlank, matching
+ *       when Model 3 asserts its GP done interrupt]
  *
  * The 8259 raises the CPU interrupt line only between CPU time slices (see
  * C8259::Tick()), modeling the time devices take to complete operations.
@@ -220,7 +225,8 @@
  * with version field 0. Fifteen devices are checked: Jupiter, Mercury, Venus,
  * then four groups of Earth followed by two Mars.
  *
- * No scan chain is attached yet (TDI reads 1), so every ID reads 0xFFFFFFFF.
+ * The emulated chain (CPro1000::BuildScanChain()) contains these 15 ASICs
+ * using the Model 3 CASIC device model.
  *
  *
  * Serial Console
@@ -248,11 +254,13 @@
  *    0x74000000. Firmware measures 34 ms per field although frames are
  *    17.4 ms (57.52 Hz), so either the expected rate is 30 Hz (there is a 30
  *    Hz mode) or the time base runs at a different rate than assumed.
- *  - Why 0x5660 does not return (mode word writes via 0x130A4 reference the
- *    field counter; possibly waiting on JTAG or the counter at 0x5DB80).
- *  - IR7 source.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
  *  - Scan chain order and ID codes for each hardware configuration.
+ *  - Where scan chains should be built. Currently CPro1000 builds its chain
+ *    while Model 3's CJTAG builds its own. Once the Pro-1000 chain is
+ *    understood, consider having CReal3D build the chain (its ASICs are the
+ *    Real3D chipset) from a board configuration supplied by the system,
+ *    preserving the Model 3 JTAG2 save state layout.
  *  - 0x40000000, 0x62000000, 0x72000000, 0x78000000.
  *
  *
@@ -330,6 +338,7 @@ constexpr static uint32_t JTAG_BASE_ADDR    = 0x68000000; // SCANPSC100F (8 regi
 constexpr static uint16_t PIC_LINE_FIELD_SYNC = 1 << 0;  // handler counts fields
 constexpr static uint16_t PIC_LINE_SCSI     = 1 << 3;     // handler is ncrintr
 constexpr static uint16_t PIC_LINE_JTAG     = 1 << 4;     // handler is jtag_int
+constexpr static uint16_t PIC_LINE_GP_SYNC  = 1 << 7;     // handler counts geometry processor frames
 constexpr static uint16_t PIC_LINE_NONE     = 0;          // not connected
 
 // SCSI controller is PCI device 11 (an NCR 53C825 on the real hardware;
@@ -881,6 +890,11 @@ void CPro1000::RunMainBoardFrame(void)
       PIC.Tick();
       ppc_execute(lineCycles);
     }
+
+    // Geometry processor sync at end of VBlank, which is when Model 3 asserts
+    // its GP done interrupt (IRQ 0x08). Deasserted after first active line.
+    PIC.Assert(PIC_LINE_GP_SYNC);
+
     GPU.EndVBlank();
   }
 
@@ -893,6 +907,8 @@ void CPro1000::RunMainBoardFrame(void)
       PIC.Assert(PIC_LINE_FIELD_SYNC);
     PIC.Tick();
     ppc_execute(lineCycles);
+    if (i == 0)
+      PIC.Deassert(PIC_LINE_GP_SYNC);     // one line long pulse
     if (i == FIELD_SYNC_LINE)
       PIC.Deassert(PIC_LINE_FIELD_SYNC);  // one line long pulse
   }
@@ -1168,6 +1184,7 @@ void CPro1000::Reset(void)
   ppc_reset();
   PIC.Reset();
   JTAG.Reset();
+  m_scanChain.Reset();
   PCIBridge.Reset();
   PCIBus.Reset();
   SCSI.Reset();
@@ -1264,6 +1281,51 @@ void CPro1000::AttachOutputs(COutputs *OutputsPtr)
   // No outputs
 }
 
+/*
+ * Single pixel board configuration, in the order and with the ID codes the
+ * firmware's ID check expects. Only the first ASIC of each type forwards its
+ * mode word to the Real3D object (as on Model 3). Whether the 3D-RAMs, Pluto,
+ * or Neptune are on this chain is not yet known.
+ */
+void CPro1000::BuildScanChain(void)
+{
+  struct ASICInfo
+  {
+    CASIC::Name name;
+    uint32_t    idCode;
+  };
+
+  static const ASICInfo s_chain[] =
+  {
+    { CASIC::Name::Jupiter, 0x016C7057 },
+    { CASIC::Name::Mercury, 0x016C3057 },
+    { CASIC::Name::Venus,   0x016C4057 },
+    { CASIC::Name::Earth,   0x016C5057 },   // EARTH_0
+    { CASIC::Name::Mars,    0x016C6057 },   // MARS_00
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_01
+    { CASIC::Name::Dummy,   0x016C5057 },   // EARTH_1
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_10
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_11
+    { CASIC::Name::Dummy,   0x016C5057 },   // EARTH_2
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_20
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_21
+    { CASIC::Name::Dummy,   0x016C5057 },   // EARTH_3
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_30
+    { CASIC::Name::Dummy,   0x016C6057 },   // MARS_31
+  };
+
+  std::vector<CJTAGDevice *> devices;
+  m_asics.clear();
+  for (auto &info: s_chain)
+  {
+    m_asics.emplace_back(std::make_unique<CASIC>(GPU, info.name));
+    m_asics.back()->SetIDCode(info.idCode);
+    devices.push_back(m_asics.back().get());
+  }
+  m_scanChain = CJTAGScanChain(devices);
+  JTAG.AttachScanChain(&m_scanChain);
+}
+
 Result CPro1000::Init(void)
 {
   constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
@@ -1285,6 +1347,7 @@ Result CPro1000::Init(void)
   SCSI.Init(this, &PIC, PIC_LINE_SCSI);
   if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
     return Result::FAIL;
+  BuildScanChain();
   JTAG.AttachInterruptOutput([this](bool level)
   {
     if (level)
