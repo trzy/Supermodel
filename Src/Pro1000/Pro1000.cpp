@@ -126,12 +126,58 @@
  *  8. Calls 0x5660 (sets up mode words via 0x130A4 and configures PCI
  *     device 12 via 0x4E78), then prints "_start: before get_hw_config".
  *     0x5660 waits for a GP sync (IR7) via 0x577C.
- *  9. get_hw_config, rend_mw_init, then rend_init (0x51A8). rend_init reads
- *     the word at SCSI_ROM_BASE, byte swaps it (little endian PCI ROM), and
- *     requires 0xCAFEBABE; otherwise it prints "SCSI ROM magic does NOT
- *     validate" and aborts. If valid, a little endian offset at
- *     SCSI_ROM_BASE+0x24 points to further data. rom_to_bm and rom_to_gm
- *     then look for blend and gamma data in the "INIT ROM".
+ *  9. get_hw_config, rend_mw_init, then rend_init (0x51A8), which uploads
+ *     initial renderer memory contents from the SCSI ROM (see SCSI ROM
+ *     below). Without a valid SCSI ROM it prints "SCSI ROM magic does NOT
+ *     validate" and aborts. rom_to_bm and rom_to_gm then look for blend and
+ *     gamma data in the INIT ROM.
+ *
+ *
+ * SCSI ROM
+ * --------
+ * A flash memory attached to the SCSI controller's expansion ROM interface
+ * (SCSI_ROM_BASE, 0xC0000000, 512KB). It is called the SCSI ROM because of
+ * where it is connected, not what it is for:
+ *
+ *  - The firmware's address table names 0xC0000000-0xC0080000 SCSI_ROM_BASE
+ *    and SCSI_ROM_TOP.
+ *  - The firmware maps it by programming the expansion ROM BAR of PCI device
+ *    11 (the 53C825) to 0xC0000001.
+ *  - Firmware messages refer to it as the SCSI ROM ("SCSI ROM magic does NOT
+ *    validate", "test_flash_prog: erase SCSI ROM").
+ *
+ * On a PC SCSI card this interface holds the BIOS. Here it appears to be used
+ * as general purpose flash storage readable over PCI, separate from the INIT
+ * ROM in CPU flash.
+ *
+ * It is a data ROM. No code executes from it: none of the code that forms
+ * 0xC0xxxxxx addresses branches indirectly. It begins with a directory of
+ * little endian 32-bit words (the PowerPC byte swaps them when reading across
+ * PCI). Offsets are relative to SCSI_ROM_BASE.
+ *
+ *   +0x00        Magic, 0xCAFEBABE (checked by rend_init and 0xA680)
+ *   +0x1C,+0x20  Size, offset of a block uploaded to polygon memory
+ *                (REND_POLY_BASE) by 0x615C, preceded by a header word
+ *                written to 0x98000000; +0x48 is also read
+ *   +0x24,+0x28  Offset, size in bytes of a block uploaded to culling memory
+ *                (REND_CULL_BASE) in four parts by rend_init
+ *   +0x2C,+0x30  Offset, size of a block uploaded to polygon memory in four
+ *                parts by 0x12AF0
+ *   +0x34        Offset of a 12-entry table (used by 0xA680)
+ *   +0x3C        3 words written to REND_UPDATE_START (0x9C000000, the Model
+ *                3 configuration registers) by rend_init
+ *
+ * Block data is copied word for word with no byte swapping (0x944C), so it is
+ * stored in the renderer's little endian byte order. Each upload goes through
+ * 0x10E3C (write words to a renderer address) and 0x63DC, and is followed by a
+ * write to REND_UPDATE_COMPL (0x88000000) and a wait for GP sync (0x577C).
+ * After uploading, 0x615C writes one word to REND_ROM_UPDATE (0x90000000).
+ *
+ * The SCSI ROM is not part of the SDK flash update and its contents are
+ * unknown. All that is known is where the blocks are uploaded: culling memory,
+ * polygon memory, and the configuration registers. They could be a default
+ * scene, tables the renderer needs in order to operate, default data
+ * structures, or test data.
  *
  *
  * PowerPC Address Map
