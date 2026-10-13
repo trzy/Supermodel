@@ -90,11 +90,19 @@
  *  4. Resets the SCANPSC100F: writes 2 to MODE2, waits for the reset bit to
  *     clear, then writes 0x0C (status update). Registers IR4 (jtag_int).
  *  5. Initializes the SCSI controller ("ncrinit"), SCSI ID 0.
- *  6. Measures field time: clears the field counter at 0x5D960 and waits for
- *     the IR0 handler to increment it. Without field syncs, it prints
- *     "NO FIELD SYNCS DETECTED" and skips renderer initialization.
- *  7. Reads DIP switches (probably RIF register bits 23:16, active low).
- *  8. Prints revision, then ". . . entering main loop . . .".
+ *  6. Measures field time: clears the field counter at 0x5D960 and waits up to
+ *     0x7F2C89 time base ticks for the IR0 handler to increment it. Without
+ *     field syncs, it prints "NO FIELD SYNCS DETECTED", skips the steps
+ *     below that touch the renderer, and goes on to read DIP switches
+ *     (probably RIF register bits 23:16, active low), print the revision,
+ *     and enter the main loop (". . . entering main loop . . .").
+ *  7. With field syncs: prints "field time = N milliseconds", reads ASIC ID
+ *     codes over JTAG and prints any that do not match (see JTAG section),
+ *     falls back to the low res single pixel board configuration if
+ *     detection fails, and calls write_scroll().
+ *  8. Calls 0x5660 (sets up mode words via 0x130A4 and configures PCI
+ *     device 12 via 0x4E78), then prints "_start: before get_hw_config".
+ *     Currently does not return from 0x5660.
  *
  *
  * PowerPC Address Map
@@ -167,7 +175,8 @@
  * handler once and unmasks the line. 0x4C7C/0x4CF0 mask/unmask a line.
  *
  *  IR0  Field sync (0x4EBC): counts fields at 0x5D960, reads 0x78000000.
- *       [Not yet generated]
+ *       [Emulated: one line long pulse per frame at line 383, matching when
+ *       Model 3 asserts its VBlank interrupt]
  *  IR3  SCSI (0x44868, ncrintr). [Emulated]
  *  IR4  SCANPSC100F INT (0x4F98, jtag_int). Dispatches to sub-handlers
  *       registered with 0x50B4(handler, MODE1 bit). [Emulated]
@@ -197,7 +206,21 @@
  * configuration: single pixel board, dual pixel boards, or high resolution
  * (get_hw_config.c, auto_config.c). The 3D RAMs are not named.
  *
- * No scan chain is attached yet (TDI reads 1).
+ * Expected ID codes, as printed by the firmware's ID check ("FAILED ID'S")
+ * in chain order for a single pixel board configuration:
+ *
+ *   JUPITER   0x016C7057 or 0x0D7F1057
+ *   MERCURY   0x016C3057
+ *   VENUS     0x016C4057
+ *   EARTH_n   0x016C5057 or 0x0D7F0057    (n = 0-3)
+ *   MARS_n0   0x016C6057
+ *   MARS_n1   0x016C6057
+ *
+ * These follow the Model 3 ID codes (e.g., Mercury 0x216C3057 on Step 1.0)
+ * with version field 0. Fifteen devices are checked: Jupiter, Mercury, Venus,
+ * then four groups of Earth followed by two Mars.
+ *
+ * No scan chain is attached yet (TDI reads 1), so every ID reads 0xFFFFFFFF.
  *
  *
  * Serial Console
@@ -222,7 +245,11 @@
  * Open Questions
  * --------------
  *  - Source and rate of field syncs (IR0). Probably the video timing at
- *    0x74000000.
+ *    0x74000000. Firmware measures 34 ms per field although frames are
+ *    17.4 ms (57.52 Hz), so either the expected rate is 30 Hz (there is a 30
+ *    Hz mode) or the time base runs at a different rate than assumed.
+ *  - Why 0x5660 does not return (mode word writes via 0x130A4 reference the
+ *    field counter; possibly waiting on JTAG or the counter at 0x5DB80).
  *  - IR7 source.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
  *  - Scan chain order and ID codes for each hardware configuration.
@@ -267,6 +294,10 @@ constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // Step 1.0 PowerPC fr
 // games program.
 constexpr static unsigned PING_PONG_FLIP_LINE = 238;
 
+// Field sync is signaled at the start of the last active line, which is when
+// Model 3 asserts its VBlank interrupt (IRQ 0x02)
+constexpr static unsigned FIELD_SYNC_LINE = 383;
+
 // UART registers are 8 bytes apart and occupy the least significant byte of
 // each big endian 32-bit word
 constexpr static uint32_t UART_BASE_ADDR    = 0x64000000;
@@ -296,6 +327,7 @@ constexpr static uint32_t INTA_ADDR         = 0x52000000; // any write performs 
 constexpr static uint32_t JTAG_BASE_ADDR    = 0x68000000; // SCANPSC100F (8 registers: A2:0)
 
 // 8259 input lines (IR mask bits)
+constexpr static uint16_t PIC_LINE_FIELD_SYNC = 1 << 0;  // handler counts fields
 constexpr static uint16_t PIC_LINE_SCSI     = 1 << 3;     // handler is ncrintr
 constexpr static uint16_t PIC_LINE_JTAG     = 1 << 4;     // handler is jtag_int
 constexpr static uint16_t PIC_LINE_NONE     = 0;          // not connected
@@ -857,8 +889,12 @@ void CPro1000::RunMainBoardFrame(void)
   {
     if (i == PING_PONG_FLIP_LINE)
       GPU.FlipPingPongBit();
+    if (i == FIELD_SYNC_LINE)
+      PIC.Assert(PIC_LINE_FIELD_SYNC);
     PIC.Tick();
     ppc_execute(lineCycles);
+    if (i == FIELD_SYNC_LINE)
+      PIC.Deassert(PIC_LINE_FIELD_SYNC);  // one line long pulse
   }
 
   timings.ppcTicks = CThread::GetTicks() - start;
