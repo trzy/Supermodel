@@ -28,7 +28,8 @@
 #ifndef INCLUDED_TILEGEN_H
 #define INCLUDED_TILEGEN_H
 
-#include "IRQ.h"
+#include "BlockFile.h"
+#include "CPU/IRQController.h"
 #include "Graphics/Render2D.h"
 #include "TileGenBuffer.h"
 
@@ -238,7 +239,7 @@ public:
 	 *		OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *		occurred. Prints own error messages.
 	 */
-	Result Init(CIRQ* IRQObjectPtr);
+	Result Init(IIRQController* IRQObjectPtr);
 
 
 	/*
@@ -313,7 +314,7 @@ private:
 	//const Util::Config::Node& m_config;
 	const bool m_gpuMultiThreaded;
 
-	CIRQ*		IRQ;		// IRQ controller the tile generator is attached to
+	IIRQController*	IRQ;	// IRQ controller the tile generator is attached to
 	CRender2D*	Render2D;	// 2D renderer the tile generator is attached to
 
 	UINT8*		memoryPool;		// all memory allocated here

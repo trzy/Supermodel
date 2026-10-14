@@ -257,7 +257,26 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
   game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
   game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
-  game->mpeg_board = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>("");
+  std::map<std::string, Game::Platform> platforms
+  {
+    { "",                 Game::PLATFORM_MODEL3 },  // default to Model 3
+    { "Sega Model 3",     Game::PLATFORM_MODEL3 },
+    { "Real3D Pro-1000",  Game::PLATFORM_PRO1000 }
+  };
+  std::string platform = game_node["hardware/platform"].ValueAsDefault<std::string>("");
+  if (platforms.find(platform) == platforms.end())
+    ErrorLog("Unknown platform '%s' for '%s'. Defaulting to Sega Model 3.", platform.c_str(), game->name.c_str());
+  game->platform = platforms[platform];
+  std::map<std::string, Game::MpegBoardType> mpeg_board_types
+  {
+    { "",     Game::MPEG_BOARD_NONE },
+    { "DSB1", Game::MPEG_BOARD_DSB1 },
+    { "DSB2", Game::MPEG_BOARD_DSB2 }
+  };
+  std::string mpeg_board_type = game_node["hardware/mpeg_board"].ValueAsDefault<std::string>("");
+  if (mpeg_board_types.find(mpeg_board_type) == mpeg_board_types.end())
+    ErrorLog("Unknown MPEG board type '%s' for '%s'. Only 'DSB1' and 'DSB2' are supported.", mpeg_board_type.c_str(), game->name.c_str());
+  game->mpeg_board = mpeg_board_types[mpeg_board_type];
   std::map<std::string, Game::AudioTypes> audio_types
   {
     { "",                      Game::STEREO_LR }, // default to stereo

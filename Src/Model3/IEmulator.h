@@ -36,6 +36,7 @@ class IRender3D;
 class CInputs;
 class COutputs;
 class SuperAA;
+class IConsoleInput;
 
 /*
  * IEmulator:
@@ -172,6 +173,20 @@ public:
    *    OutputsPtr  Pointer to the object containing output states.
    */
   virtual void AttachOutputs(COutputs *OutputsPtr) = 0;
+
+  /*
+   * AttachConsoleInput(input):
+   *
+   * Attaches console (stdin) input, for systems with a serial console. The
+   * default implementation ignores it.
+   *
+   * Parameters:
+   *    input   Console input endpoint. Remains valid for the lifetime of the
+   *            emulator.
+   */
+  virtual void AttachConsoleInput(IConsoleInput *input)
+  {
+  }
 
   /*
    * Init(void):

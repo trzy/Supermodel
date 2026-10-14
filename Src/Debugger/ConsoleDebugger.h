@@ -34,6 +34,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+class IConsoleInput;
+
 #define NUM_LISTAUTOLABELS (sizeof(s_listAutoLabels) / sizeof(ELabelFlags))
 
 namespace Debugger
@@ -72,6 +74,8 @@ namespace Debugger
 		unsigned m_memBytesPerRow;
 
 		FILE *m_file;
+
+		IConsoleInput *m_consoleInput;
 
 	protected:
 		void Read(char *str, size_t maxLen);
@@ -179,6 +183,15 @@ namespace Debugger
 		virtual void Log(CCPUDebug *cpu, const char *typeStr, const char *fmtStr, va_list vl);
 
 	public:
+		/*
+		 * AttachConsoleInput(input):
+		 *
+		 * Reads commands from a shared console input endpoint rather than
+		 * directly from stdin. The console is claimed while waiting for
+		 * commands.
+		 */
+		void AttachConsoleInput(IConsoleInput *input);
+
 		CConsoleDebugger();
 
 		void Attach();

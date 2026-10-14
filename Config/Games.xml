@@ -1401,6 +1401,28 @@
     </roms>
   </game>
 
+  <game name="pro1000">
+    <identity>
+      <title>Real3D Pro-1000</title>
+      <version>SDK Firmware</version>
+      <manufacturer>Real3D</manufacturer>
+      <year>1997</year>
+    </identity>
+    <hardware>
+      <platform>Real3D Pro-1000</platform>
+    </hardware>
+    <roms>
+      <!-- Flash parts 1 and 4: boot stub and loop code (software revision 5.4), loaded at 0xFFF00000 -->
+      <region name="cpu_rom" stride="1" chunk_size="1">
+        <file offset="0" name="p1_p4.bin" crc32="0x6026A0DB" />
+      </region>
+      <!-- Flash part 2: INIT ROM (revision 54), loaded at 0xFFF80000 -->
+      <region name="init_rom" stride="1" chunk_size="1">
+        <file offset="0" name="p2.bin" crc32="0x945BBCF5" />
+      </region>
+    </roms>
+  </game>
+
   <game name="scud">
     <identity>
       <title>Scud Race</title>

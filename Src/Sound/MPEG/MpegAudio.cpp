@@ -89,7 +89,7 @@ void MpegDec::LoadCustomTracks(const std::string &music_filepath, const Game &ga
 {
   s_custom_tracks_by_mpeg_rom_address.clear();
 
-  if (game.mpeg_board.empty())
+  if (game.mpeg_board == Game::MPEG_BOARD_NONE)
   {
     // No MPEG board
     return;

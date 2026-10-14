@@ -140,7 +140,7 @@ public:
     m_irq.Init();
     if (Result::OKAY != m_tileGen.Init(&m_irq))
       return Result::FAIL;
-    if (Result::OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, 0x100))
+    if (Result::OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, CIRQ::NMI))
       return Result::FAIL;
     return Result::OKAY;
   }

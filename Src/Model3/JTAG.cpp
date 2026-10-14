@@ -196,7 +196,7 @@ void C3DRAM::Reset()
 }
 
 // Finite state machine. Each state has two possible next states.
-const CJTAG::State CJTAG::s_fsm[][2] =
+const CJTAGScanChain::State CJTAGScanChain::s_fsm[][2] =
 {
     // tms = 0				tms = 1
     { State::RunTestIdle,	State::TestLogicReset },	// 0  Test-Logic/Reset
@@ -217,12 +217,109 @@ const CJTAG::State CJTAG::s_fsm[][2] =
     { State::RunTestIdle,	State::SelectDRScan }		// 15 Update-IR
 };
 
+bool CJTAGScanChain::Clock(bool tms, bool tdi)
+{
+    // TDO changes on the falling edge of TCK and is sampled by the master on
+    // the rising edge, so the value returned is the one presented after the
+    // previous cycle
+    bool tdo = m_tdo;
+    RisingEdge(tms, tdi);
+    FallingEdge();
+    return tdo;
+}
+
+void CJTAGScanChain::RisingEdge(bool tms, bool tdi)
+{
+    switch (m_state)
+    {
+    case State::TestLogicReset:
+        for (auto device : m_devices)
+            device->Reset();
+        break;
+    case State::CaptureDR:
+        for (auto device : m_devices)
+            device->CaptureDR();
+        break;
+    case State::CaptureIR:
+        for (auto device : m_devices)
+            device->CaptureIR();
+        break;
+    case State::ShiftDR:
+    case State::ShiftIR:
+        for (auto device : m_devices)
+            tdi = device->Shift(tdi);
+        break;
+    default:
+        break;
+    }
+
+    // Go to next state
+    m_state = s_fsm[static_cast<int>(m_state)][tms];
+}
+
+void CJTAGScanChain::FallingEdge()
+{
+    switch (m_state)
+    {
+    case State::ShiftDR:
+    case State::ShiftIR:
+        if (!m_devices.empty())
+            m_tdo = m_devices.back()->ReadTDO();
+        break;
+    case State::UpdateDR:
+        for (auto device : m_devices)
+            device->UpdateDR();
+        break;
+    case State::UpdateIR:
+        for (auto device : m_devices)
+            device->UpdateIR();
+        break;
+    default:
+        break;
+    }
+}
+
+bool CJTAGScanChain::TDO() const
+{
+    return m_tdo;
+}
+
+void CJTAGScanChain::ResetDevices()
+{
+    for (auto device : m_devices)
+        device->Reset();
+}
+
+void CJTAGScanChain::Reset()
+{
+    m_state = State::TestLogicReset;
+    ResetDevices();
+}
+
+CJTAGScanChain::State CJTAGScanChain::GetState() const
+{
+    return m_state;
+}
+
+void CJTAGScanChain::SetState(State state, bool tdo)
+{
+    m_state = state;
+    m_tdo = tdo;
+}
+
+CJTAGScanChain::CJTAGScanChain(std::vector<CJTAGDevice*> devices)
+  : m_devices(std::move(devices))
+{
+}
+
 void CJTAG::SaveState(CBlockFile* SaveState)
 {
+    CJTAGScanChain::State state = m_scanChain.GetState();
+    bool tdo = m_scanChain.TDO();
     SaveState->NewBlock("JTAG2", __FILE__);
-    SaveState->Write(&m_state, sizeof(m_state));
+    SaveState->Write(&state, sizeof(state));
     SaveState->Write(&m_lastTck, sizeof(m_lastTck));
-    SaveState->Write(&m_tdo, sizeof(m_tdo));
+    SaveState->Write(&tdo, sizeof(tdo));
     SaveState->Write(&m_numDevices, sizeof(m_numDevices));
     for (auto& device : m_device)
     {
@@ -237,27 +334,30 @@ void CJTAG::LoadState(CBlockFile* LoadState)
         ErrorLog("Unable to load JTAG state. Save state file is corrupt.");
         return;
     }
-    LoadState->Read(&m_state, sizeof(m_state));
+    CJTAGScanChain::State state;
+    bool tdo;
+    LoadState->Read(&state, sizeof(state));
     LoadState->Read(&m_lastTck, sizeof(m_lastTck));
-    LoadState->Read(&m_tdo, sizeof(m_tdo));
+    LoadState->Read(&tdo, sizeof(tdo));
     LoadState->Read(&m_numDevices, sizeof(m_numDevices));
     for (auto& device : m_device)
     {
         device->LoadStateFromBlock(LoadState);
     }
+    BuildScanChain();
+    m_scanChain.SetState(state, tdo);
 }
 
 bool CJTAG::Read() const
 {
-    return m_tdo;
+    return m_scanChain.TDO();
 }
 
 void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
 {
     if (!trst)
     {
-        for (uint32_t i = 0; i < m_numDevices; i++)
-            m_device[i]->Reset();
+        m_scanChain.ResetDevices();
         return;
     }
 
@@ -266,61 +366,22 @@ void CJTAG::Write(bool tck, bool tms, bool tdi, bool trst)
     m_lastTck = tck;
 
     if (tck)
-    {
-        switch (m_state)
-        {
-        case State::TestLogicReset:
-            for (uint32_t i = 0; i < m_numDevices; i++)
-                m_device[i]->Reset();
-            break;
-        case State::CaptureDR:
-            for (uint32_t i = 0; i < m_numDevices; i++)
-                m_device[i]->CaptureDR();
-            break;
-        case State::CaptureIR:
-            for (uint32_t i = 0; i < m_numDevices; i++)
-                m_device[i]->CaptureIR();
-            break;
-        case State::ShiftDR:
-        case State::ShiftIR:
-            for (uint32_t i = 0; i < m_numDevices; i++)
-                tdi = m_device[i]->Shift(tdi);
-            break;
-        default:
-            break;
-        }
-
-        // Go to next state
-        m_state = s_fsm[static_cast<int>(m_state)][tms];
-    }
+        m_scanChain.RisingEdge(tms, tdi);
     else
-    {
-        switch (m_state)
-        {
-        case State::ShiftDR:
-        case State::ShiftIR:
-            m_tdo = m_device[m_numDevices - 1]->ReadTDO();
-            break;
-        case State::UpdateDR:
-            for (uint32_t i = 0; i < m_numDevices; i++)
-                m_device[i]->UpdateDR();
-            break;
-        case State::UpdateIR:
-            for (uint32_t i = 0; i < m_numDevices; i++)
-                m_device[i]->UpdateIR();
-            break;
-        default:
-            break;
-        }
-    }
+        m_scanChain.FallingEdge();
 }
 
 void CJTAG::Reset()
 {
-    m_state = State::TestLogicReset;
-    for (auto& device : m_device)
+    m_scanChain.Reset();
+    for (auto& device : m_device)   // includes devices not on this stepping's chain
         device->Reset();
     DebugLog("JTAG reset\n");
+}
+
+void CJTAG::BuildScanChain()
+{
+    m_scanChain = CJTAGScanChain(std::vector<CJTAGDevice*>(m_device, m_device + m_numDevices));
 }
 
 void CJTAG::SetStepping(int stepping)
@@ -371,6 +432,7 @@ void CJTAG::SetStepping(int stepping)
         m_numDevices = 10;
         break;
     }
+    BuildScanChain();
 }
 
 // Only the first ASIC of each type has its modeword written to the Real3D object
