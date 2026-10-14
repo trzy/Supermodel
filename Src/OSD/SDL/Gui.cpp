@@ -834,11 +834,11 @@ static void DrawCalibrationDialog(Util::Config::Node& config, CalibrationState& 
         AxisValueBar(value);
 
         if (cal.sampling) {
-            cal.minVal = std::min(cal.minVal, value);
-            cal.maxVal = std::max(cal.maxVal, value);
+            cal.minVal = (std::min)(cal.minVal, value);
+            cal.maxVal = (std::max)(cal.maxVal, value);
 
             Uint32 elapsed = SDL_GetTicks() - cal.sampleStart;
-            ImGui::ProgressBar(std::min(1.0f, elapsed / float(CalibrationState::SampleTimeMs)), ImVec2(-1.0f, 0.0f), "Calibrating, keep holding...");
+            ImGui::ProgressBar((std::min)(1.0f, elapsed / float(CalibrationState::SampleTimeMs)), ImVec2(-1.0f, 0.0f), "Calibrating, keep holding...");
 
             if (elapsed >= CalibrationState::SampleTimeMs) {
                 cal.sampling = false;
@@ -1136,7 +1136,7 @@ static float GetDPIScale()
         SDL_Log("Failed to get DPI: %s", SDL_GetError());
         return 1.0f;
     }
-    return std::max(1.0f, ddpi / 96.0f);
+    return (std::max)(1.0f, ddpi / 96.0f);
 #else
     return 1.0f;
 #endif
