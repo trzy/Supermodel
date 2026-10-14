@@ -8,9 +8,10 @@ PolyHeader::PolyHeader()
 	header = nullptr;
 }
 
-PolyHeader::PolyHeader(UINT32* h) 
+PolyHeader::PolyHeader(UINT32* h, const UINT32* e)
 {
 	header = h;
+	end = e;
 }
 
 void PolyHeader::operator = (const UINT32* h) 
@@ -23,13 +24,32 @@ UINT32* PolyHeader::StartOfData()
 	return header + 7;	// 7 is size of header in bytes, data immediately follows
 }
 
+bool PolyHeader::InBounds()
+{
+	if (!end) {
+		return true;
+	}
+
+	if (header + 7 > end) {
+		return false;													// header itself
+	}
+
+	return header + 7 + (NumVerts() - NumSharedVerts()) * 4 <= end;		// plus its vertex data
+}
+
 bool PolyHeader::NextPoly()
 {
 	if (LastPoly()) {
 		return false;
 	}
 
+	UINT32* const current = header;
 	header += 7 + (NumVerts() - NumSharedVerts()) * 4;
+
+	if (!InBounds()) {		// no last-poly flag before the end of memory (garbage model, e.g. games loading the GPU during boot sync)
+		header = current;	// stay on the last valid polygon
+		return false;
+	}
 
 	return true;
 }

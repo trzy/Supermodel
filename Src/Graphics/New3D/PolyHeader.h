@@ -78,9 +78,11 @@ class PolyHeader
 {
 public:
 	PolyHeader();
-	PolyHeader(UINT32* h);
+	PolyHeader(UINT32* h, const UINT32* end = nullptr);
 
 	void operator =(const UINT32* h);
+	void SetEnd(const UINT32* e) { end = e; }
+	bool InBounds();				// current polygon (header + vertex data) lies inside memory
 
 	UINT32*	StartOfData();
 	bool	NextPoly();
@@ -157,6 +159,7 @@ public:
 
 	//=============
 	UINT32* header;
+	const UINT32* end = nullptr;	// one past the last word of the memory the model is in (nullptr = unchecked)
 	//=============
 };
 

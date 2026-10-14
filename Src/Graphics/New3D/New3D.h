@@ -195,11 +195,14 @@ private:
 	// Real3D address translation
 	const UINT32 *TranslateCullingAddress(UINT32 addr);
 	const UINT32 *TranslateModelAddress(UINT32 addr);
+	const UINT32 *ModelMemoryEnd(const UINT32 *data) const;	// one past the end of the memory a model lives in
 
 	// Matrix stack
 	void MultMatrix(UINT32 matrixOffset, Mat4& mat);
-	void InitMatrixStack(UINT32 matrixBaseAddr, Mat4& mat);
+	void MultInverseMatrix(UINT32 matrixOffset, Mat4& mat);
+	void InitMatrixStack(UINT32 matrixBaseAddr, UINT32 envIdx, Mat4& mat);
 	void ResetMatrix(Mat4& mat) const;
+	void SaveCoordSysRot();
 
 	// Scene database traversal
 	bool DrawModel(UINT32 modelAddr);
@@ -265,6 +268,7 @@ private:
 	// Real3D Base Matrix Pointer
 	const float	*m_matrixBasePtr;
 	UINT32 m_colorTableAddr = 0x400;		// address of color table in polygon RAM
+	float m_coordSysRot[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };	// rotation of the viewport's coordinate system (no translation), used by reset_matrix
 	LODBlendTable* m_LODBlendTable;
 
 	NodeAttributes	m_nodeAttribs;

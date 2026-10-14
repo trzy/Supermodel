@@ -106,9 +106,9 @@ uniform float	fogAttenuation;
 uniform float	fogAmbient;
 uniform bool	fixedShading;
 uniform bool	smoothShading;
+uniform float	layerDepthBias;		// PRO-1000: >1.0 pulls layered polys towards the viewer (reverse z)
 uniform int		hardwareStep;
 uniform int		colourLayer;
-uniform bool	polyAlpha;
 
 // matrices (shared with vertex shader)
 uniform mat4	projMat;
@@ -148,7 +148,7 @@ void main()
 		discard;		//emulate back face culling here
 	}
 
-	gl_FragDepth = projMat[3][2] * gl_FragCoord.w;
+	gl_FragDepth = projMat[3][2] * gl_FragCoord.w * layerDepthBias;
 
 	fogData = vec4(fogColour.rgb * fogAmbient, CalcFog());
 	tex1Data = vec4(1.0, 1.0, 1.0, 1.0);
