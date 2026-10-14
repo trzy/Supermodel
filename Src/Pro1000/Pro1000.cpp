@@ -55,6 +55,56 @@
  * 0x3000. Addresses below are RAM addresses unless prefixed with "ROM".
  *
  *
+ * SDK Documentation
+ * -----------------
+ * The Pro-1000 SDK CD (Owner's Manual v3.0e, Product Description v4.0e,
+ * Developer's Guide v4.0e, API headers) describes the product from the user's
+ * point of view. Hardware facts relevant to emulation:
+ *
+ *  - Models: PRO-1100/1110 (1 pixel processor, 50M pixel writes/s, 640x480),
+ *    PRO-1200/1210 (2 pixel processors, 100M, 640x480 or dual 512x384/486),
+ *    PRO-1400/1410 (4 pixel processors, 200M, 1024x768 or dual 640x480, soft
+ *    edge blending). These correspond to the firmware's single pixel board,
+ *    dual pixel board, and high res configurations.
+ *  - Update rate: 30 or 60 Hz. Standard line rates are 640x480 and 1024x768
+ *    non-interlaced at 60 Hz and 512/640/720x486 interlaced at 59.94 Hz and
+ *    720x576 at 50 Hz ("application programmers should treat this as 60 Hz").
+ *    The API's PRO_Line_Rate enumeration lists 8 line rates (VGA_640X480=1,
+ *    SVGA_1024X768=2, NTSC_505X480=3, ..., PAL_720X576=8), matching the
+ *    firmware's 8 sync files. Display timing is programmable.
+ *  - Overload modes: off (frame lock: drop polygons to hold the update rate),
+ *    on (halve the frame rate, e.g. 60 to 30 Hz), extended (render everything
+ *    regardless of time). Overload state can be daisy chained between units.
+ *  - Memory: 8MB polygon memory, expandable in 8MB modules to 32MB. Texture
+ *    memory is 4M 16-bit texels (8MB), optionally 16M (32MB). Texel formats
+ *    include 4/8-bit monochrome, 1-5-5-5, and 4-4-4-4. Maps are 32x32 to
+ *    1024x1024. Up to 4096 matrices; matrix tree depth 15.
+ *  - Rendering: 24-bit floating point Z-buffer, stencil for coplanar
+ *    polygons, post-process edge anti-aliasing ("S-buffer"). Up to 4
+ *    viewports per channel with priorities 0-3.
+ *  - Video output: 8-bit DACs, gamma correction (256 entry 8-bit lookup table
+ *    per color component), soft edge blending (1400 series only), foreground
+ *    and background colors (see SCROLL register), dual channel output.
+ *  - Host interface: differential fast-wide SCSI II at 20MB/s, up to 7 units
+ *    per host adapter. The SCSI ID is set with DIP switches 1-4 (5-8 are
+ *    reserved) behind the rear panel. The protocol's data structures are in
+ *    API/Include/pro_io_structs.hh (Scsi_Head: address, word count, control,
+ *    and valid/swapped/render done/operation failed flags; Hw_Config; sync
+ *    and miscellaneous information).
+ *  - Rear panel: two video outputs, genlock in/out/sync, overload in/out,
+ *    an RS-232 port, a "HOST" port providing RS-232 syncs for the host, SCSI
+ *    in/out, SCSI ID switches, and a reset button.
+ *  - Power-on: the unit runs a confidence test and then displays a spinning
+ *    Real 3D logo. The API describes the logo as the "default database"
+ *    (PRO_ReloadLogo; monitor command LDDB). This is most likely the contents
+ *    of the SCSI ROM. The SDK's DB_Demos/Orlando contains 3dlogo.cmem and
+ *    3dlogo.pmem.
+ *  - The real-time clock count returned to the host is in 30 ns hardware
+ *    clocks.
+ *  - Demo databases (DB_Demos) are distributed precompiled as .cmem (culling
+ *    memory), .pmem (polygon memory), and .tmap (texture) files.
+ *
+ *
  * ROM Layout
  * ----------
  * Names in parentheses are from the firmware's address table.
@@ -177,7 +227,8 @@
  * unknown. All that is known is where the blocks are uploaded: culling memory,
  * polygon memory, and the configuration registers. They could be a default
  * scene, tables the renderer needs in order to operate, default data
- * structures, or test data.
+ * structures, or test data. The SDK documentation suggests it is the
+ * default database, a spinning Real 3D logo displayed at power-on.
  *
  * Emulation: the ROM is mapped read only at SCSI_ROM_BASE regardless of the
  * expansion ROM BAR (the firmware always programs 0xC0000000). Writes (flash
@@ -412,10 +463,11 @@
  *
  * Open Questions
  * --------------
- *  - Source and rate of field syncs (IR0). Probably the video timing at
- *    0x74000000. Firmware measures 34 ms per field although frames are
- *    17.4 ms (57.52 Hz), so either the expected rate is 30 Hz (there is a 30
- *    Hz mode) or the time base runs at a different rate than assumed.
+ *  - Field sync timing (IR0). The nominal rate is 60 Hz (or 59.94/50 Hz for
+ *    interlaced modes) per the SDK documentation, but emulation still uses
+ *    the Model 3 rate of 57.52 Hz. The firmware measures 34 ms per field,
+ *    so the time base rate may also be off. The logic sync memory
+ *    (LSYNC_BASE) probably sequences these signals.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
  *  - Board configurations. Only the single pixel board is emulated. Support
  *    single, dual, and high res configurations, probably selected by reusing
