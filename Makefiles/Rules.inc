@@ -34,7 +34,8 @@ OBJ_DIR = obj$(strip $(BITS))
 BIN_DIR = bin$(strip $(BITS))
 
 SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
-DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
+POWERPC_DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
+SCRIPTS_DISASSEMBLER_BINARY = scriptsd$(PLATFORM_BINARY_EXTENSION)
 
 
 ###############################################################################
@@ -234,7 +235,7 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
 #
-all:	$(BIN_DIR)/$(DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY)
+all:	$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY)
 
 #
 # Supermodel3.com release targets: used only to create official builds stamped
@@ -319,14 +320,25 @@ $(BIN_DIR)/$(SUPERMODEL_BINARY):	$(BIN_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
 
 #
-# Disassembler binary (we assume $(LD) can also compile here, which is sloppy).
-# $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS) pulls in 
-# Frameworks that must be downloaded.
+# PowerPC disassembler binary (we assume $(LD) can also compile here, which is
+# sloppy). $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS)
+# pulls in Frameworks that must be downloaded.
 #
-$(BIN_DIR)/$(DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp $(PLATFORM_DIRS)
+$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp $(PLATFORM_DIRS)
 	$(info --------------------------------------------------------------------------------)
-	$(info Building Disassembler  : $(BIN_DIR)/$(DISASSEMBLER_BINARY))
-	$(SILENT)$(LD) -o $(BIN_DIR)/$(DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
+	$(info Building Disassembler  : $(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY))
+	$(SILENT)$(LD) -o $(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
+	$(info --------------------------------------------------------------------------------)
+
+#
+# 53C810 SCRIPTS disassembler binary (we assume $(LD) can also compile here,
+# which is sloppy). $(PLATFORM_DIRS) is required on macOS, whose
+# $(PLATFORM_LDFLAGS) pulls in Frameworks that must be downloaded.
+#
+$(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY):  $(BIN_DIR) Src/Model3/53C810Disasm.cpp $(PLATFORM_DIRS)
+	$(info --------------------------------------------------------------------------------)
+	$(info Building Disassembler  : $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY))
+	$(SILENT)$(LD) -o $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) Src/Model3/53C810Disasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
 	$(info --------------------------------------------------------------------------------)
 
 #
