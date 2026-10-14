@@ -76,6 +76,9 @@ namespace FileSystemPath
         case Screenshots:
             strPathType = "Screenshots";
             break;
+        case ROMs:
+            strPathType = "ROMs";
+            break;
         case Assets:
             strPathType = "Assets";
             break;

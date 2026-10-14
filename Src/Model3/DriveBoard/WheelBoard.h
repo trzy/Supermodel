@@ -176,8 +176,14 @@ private:
   UINT8 m_prev42Out;      // Previous value sent to Z80 I/O port 42
   UINT8 m_prev46Out;      // Previous value sent to Z80 I/O port 46
 
-  UINT8 m_uncenterVal1;   // First part of pending uncenter command
-  UINT8 m_uncenterVal2;   // Second part of pending uncenter command
+  UINT8 m_uncenterVal1;   // Vibration, first byte: servo board sub-registers FC 0 (low nibble) and 1 (high nibble)
+  UINT8 m_uncenterVal2;   // Vibration, second byte: sub-registers FC 2 (low nibble) and 3 (high nibble)
+
+  UINT8 m_servoGain;      // Servo board torque gain (register FB), 0-127
+
+  // What the board asks for, sent to the wheel once a frame
+  INT8 m_constForce;      // Torque, before the gain
+  UINT8 m_vibrate;        // Vibration, before the gain
 
   // Feedback state
   INT8 m_lastConstForce;  // Last constant force command sent
@@ -192,6 +198,8 @@ private:
   void SimulateFrame(void);
 
   void ProcessEncoderCmd(void);
+
+  void UpdateForceFeedback(void);
 
   void SendStopAll(void);
 

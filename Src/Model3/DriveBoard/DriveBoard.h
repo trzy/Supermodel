@@ -38,6 +38,9 @@
 #include "Game.h"
 #include "Z80CTC.h"
 
+#include <deque>
+#include <mutex>
+
 /*
  * CDriveBoard
  */
@@ -282,6 +285,13 @@ protected:
 
   UINT8 m_dataSent;       // Last command sent by main board
   UINT8 m_dataReceived;   // Data to send back to main board
+
+  // Commands written by the main board, each shown to the Z80 for a whole frame: the drive board runs its frame in
+  // one go, in its own thread when multi-threaded, and a command changing during it could be seen for fewer
+  // NMIs than the program needs to take it (Scud Race's: 4)
+  std::mutex m_commandMutex;
+  std::deque<UINT8> m_commands;
+  UINT8 m_lastCommand;
 
   UINT8 m_dip1;           // Value of DIP switch 1
   UINT8 m_dip2;           // Value of DIP switch 2

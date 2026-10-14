@@ -40,7 +40,7 @@ namespace Util
 
       // Push the top level of the XML tree
       for (const XMLElement *e = xml.RootElement(); e != 0; e = e->NextSiblingElement())
-        q.push( { e, config } );
+        q.emplace(e, config);
 
       // Process the elements in order, pushing subsequent levels along with the
       // config nodes to add them to
@@ -59,7 +59,7 @@ namespace Util
 
         // Push all child elements
         for (const XMLElement *e = element->FirstChildElement(); e != 0; e = e->NextSiblingElement())
-          q.push( { e, node } );
+          q.emplace(e, node);
       }
     }
 

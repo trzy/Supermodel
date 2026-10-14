@@ -29,6 +29,9 @@
     <Filter Include="Source Files\Model3">
       <UniqueIdentifier>{9113f873-c745-44ac-860a-dcf12d177f5b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Pro1000">
+      <UniqueIdentifier>{10297567-7bf1-47c1-89e4-d5856ff09166}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\OSD">
       <UniqueIdentifier>{ae989a55-7782-48d6-9397-2684c7611e23}</UniqueIdentifier>
     </Filter>
@@ -83,6 +86,9 @@
     </Filter>
     <Filter Include="Header Files\Model3">
       <UniqueIdentifier>{5f55bf72-6938-4887-b78c-58b29e674985}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Pro1000">
+      <UniqueIdentifier>{bd7e7ea0-3439-4858-9e18-b170acb39aa0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\OSD">
       <UniqueIdentifier>{4340a810-7e55-471b-8ac0-0deb48f54a0c}</UniqueIdentifier>
@@ -217,6 +223,18 @@
     </ClCompile>
     <ClCompile Include="..\Src\Model3\Model3.cpp">
       <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pro1000\Pro1000.cpp">
+      <Filter>Source Files\Pro1000</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pro1000\UART.cpp">
+      <Filter>Source Files\Pro1000</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pro1000\8259.cpp">
+      <Filter>Source Files\Pro1000</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pro1000\SCANPSC100F.cpp">
+      <Filter>Source Files\Pro1000</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Model3\MPC10x.cpp">
       <Filter>Source Files\Model3</Filter>
@@ -398,6 +416,9 @@
     <ClCompile Include="..\Src\Pkgs\tinyxml2.cpp">
       <Filter>Source Files\Pkgs</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\ConsoleInput.cpp">
+      <Filter>Source Files\OSD</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\OSD\Logger.cpp">
       <Filter>Source Files\OSD</Filter>
     </ClCompile>
@@ -547,6 +568,9 @@
     <ClInclude Include="..\Src\CPU\Bus.h">
       <Filter>Header Files\CPU</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\CPU\IRQController.h">
+      <Filter>Header Files\CPU</Filter>
+    </ClInclude>
     <ClInclude Include="..\Src\CPU\PowerPC\ppc.h">
       <Filter>Header Files\CPU\PowerPC</Filter>
     </ClInclude>
@@ -592,6 +616,18 @@
     <ClInclude Include="..\Src\Model3\Model3.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\Pro1000\Pro1000.h">
+      <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pro1000\UART.h">
+      <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pro1000\8259.h">
+      <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pro1000\SCANPSC100F.h">
+      <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
     <ClInclude Include="..\Src\Model3\MPC10x.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
@@ -611,6 +647,9 @@
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\OSD\Audio.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\ConsoleInput.h">
       <Filter>Header Files\OSD</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\OSD\Logger.h">

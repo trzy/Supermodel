@@ -45,7 +45,7 @@ class CInputSystem;
 
 #define MAX_MAPPING_LENGTH 255
 
-#define NUM_FF_EFFECTS 3
+#define NUM_FF_EFFECTS 4  // One per EForceFeedback effect, FFStop excepted
 
 enum EForceFeedback
 {

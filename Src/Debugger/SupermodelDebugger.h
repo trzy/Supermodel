@@ -29,6 +29,7 @@
 
 #include "ConsoleDebugger.h"
 #include "Model3/Model3.h"
+#include "Pro1000/Pro1000.h"
 
 #include <stdarg.h>
 
@@ -47,7 +48,9 @@ namespace Debugger
 	class CSupermodelDebugger : public CConsoleDebugger
 	{
 	private:
-		::CModel3 *m_model3;
+		::IEmulator *m_emu;
+		::CModel3 *m_model3;		// null if emulator is not a Model 3
+		::CPro1000 *m_pro1000;	// null if emulator is not a Pro-1000
 		::CInputs *m_inputs;
 		std::shared_ptr<CLogger> m_logger;
 
@@ -82,7 +85,9 @@ namespace Debugger
 
 		static CCPUDebug *CreateNetBoardCPUDebug(::CModel3 *model3);
 
-		CSupermodelDebugger(::CModel3 *model3, ::CInputs *inputs, std::shared_ptr<CLogger> logger);
+		static CCPUDebug *CreatePro1000CPUDebug(::CPro1000 *pro1000);
+
+		CSupermodelDebugger(::IEmulator *emu, ::CInputs *inputs, std::shared_ptr<CLogger> logger);
 
 		void Poll();
 

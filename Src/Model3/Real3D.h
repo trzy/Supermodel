@@ -29,7 +29,7 @@
 #ifndef INCLUDED_REAL3D_H
 #define INCLUDED_REAL3D_H
 
-#include "IRQ.h"
+#include "CPU/IRQController.h"
 #include "JTAG.h"
 #include "PCI.h"
 #include "CPU/Bus.h"
@@ -411,14 +411,14 @@ public:
    *                  over. Used to read/write memory.
    *    IRQObjectPtr  Pointer to the IRQ controller. Used to trigger SCSI
    *                  and DMA interrupts.
-   *    dmaIRQBit     IRQ identifier bit to pass along to IRQ controller
+   *    dmaIRQBit     IRQ line mask to pass along to IRQ controller
    *                  when asserting interrupts.
    *
    * Returns:
    *    OKAY if successful otherwise FAIL (not enough memory). Prints own
    *    errors.
    */
-  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned dmaIRQBit);
+  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit);
    
   /*
    * CReal3D(config):
@@ -526,8 +526,8 @@ private:
   IBus  *Bus = nullptr;
   
   // IRQ handling
-  CIRQ    *IRQ = nullptr;   // IRQ controller
-  uint32_t  dmaIRQ = 0;     // IRQ bit to use when calling IRQ handler
+  IIRQController *IRQ = nullptr;  // IRQ controller
+  uint16_t  dmaIRQ = 0;           // IRQ line mask to use when calling IRQ controller
   
   // DMA device
   uint32_t  dmaSrc = 0;

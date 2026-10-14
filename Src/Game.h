@@ -14,7 +14,19 @@ struct Game
   std::string manufacturer;
   unsigned year = 0;
   std::string stepping;
-  std::string mpeg_board;
+  enum Platform
+  {
+    PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
+    PLATFORM_PRO1000      // Real3D Pro-1000 image generator
+  };
+  Platform platform = Platform::PLATFORM_MODEL3;
+  enum MpegBoardType
+  {
+    MPEG_BOARD_NONE = 0,
+    MPEG_BOARD_DSB1,
+    MPEG_BOARD_DSB2
+  };
+  MpegBoardType mpeg_board = MpegBoardType::MPEG_BOARD_NONE;
   enum AudioTypes
   {
       MONO = 0,             // Merge DSB+SCSP1+SCSP2 to 1 channel mono

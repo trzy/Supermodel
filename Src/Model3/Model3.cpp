@@ -2961,23 +2961,21 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   // MPEG board (if present)
   if (rom_set.get_rom("mpeg_program").size)
   {
-    if (game.mpeg_board == "DSB1")
+    if (game.mpeg_board == Game::MPEG_BOARD_DSB1)
     {
       DSB = new(std::nothrow) CDSB1(m_config);
       if (NULL == DSB)
         return ErrorLog("Insufficient memory for Digital Sound Board object.");
     }
-    else if (game.mpeg_board == "DSB2")
+    else if (game.mpeg_board == Game::MPEG_BOARD_DSB2)
     {
       Util::FlipEndian16(dsbROM, 128*1024); // 68K program needs to be byte swapped
       DSB = new(std::nothrow) CDSB2(m_config);
       if (NULL == DSB)
         return ErrorLog("Insufficient memory for Digital Sound Board object.");
     }
-    else if (game.mpeg_board.empty())
-      ErrorLog("No MPEG board type defined in game XML for MPEG ROMs.");
     else
-      ErrorLog("Unknown MPEG board type '%s'. Only 'DSB1' and 'DSB2' are supported.", game.mpeg_board.c_str());
+      ErrorLog("No MPEG board type defined in game XML for MPEG ROMs.");
     if (DSB && Result::OKAY != DSB->Init(dsbROM, mpegROM))
       return Result::FAIL;
   }
@@ -3023,7 +3021,7 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   std::set<std::string> extra_hw;
 
   if (DSB)
-    extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << game.mpeg_board << ")");
+    extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << (game.mpeg_board == Game::MPEG_BOARD_DSB1 ? 1 : 2) << ")");
   if (DriveBoard->IsAttached())
   {
     if (DriveBoard->GetType() == Game::DRIVE_BOARD_BILLBOARD)
@@ -3155,12 +3153,12 @@ Result CModel3::Init(void)
   IRQ.Init();
   PCIBridge.Init();
   PCIBus.Init();
-  SCSI.Init(this,&IRQ,0x100); // SCSI is actually a non-maskable interrupt, so we give it a bit number outside of 8-bit range
+  SCSI.Init(this,&IRQ,CIRQ::NMI); // SCSI is actually a non-maskable interrupt
   RTC.Init();
   EEPROM.Init();
   if (Result::OKAY != TileGen.Init(&IRQ))
     return Result::FAIL;
-  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,0x100)) // same for Real3D DMA interrupt
+  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI)) // same for Real3D DMA interrupt
     return Result::FAIL;
   if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
     return Result::FAIL;

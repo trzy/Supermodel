@@ -249,6 +249,12 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
     Ctx.regISTAT = data;
     DebugLog("ISTAT=%02X\n", data);
     break;
+  case 0x1B:    // CTEST3
+    Ctx.regs[0x1B] &= ~0x04;  // CLF (clear DMA FIFO) self-clears once FIFO is cleared, which is instantaneous here
+    break;
+  case 0x4F:    // STEST3
+    Ctx.regs[0x4F] &= ~0x02;  // CSF (clear SCSI FIFO) self-clears once FIFO is cleared, which is instantaneous here
+    break;
   case 0x1C:    // TEMP 7-0
     Ctx.regTEMP &= 0xFFFFFF00;
     Ctx.regTEMP |= data;
@@ -500,7 +506,7 @@ void C53C810::Reset(void)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
-void C53C810::Init(IBus *BusObjectPtr, CIRQ *IRQObjectPtr, unsigned scsiIRQBit)
+void C53C810::Init(IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t scsiIRQBit)
 {
   Ctx.Bus = BusObjectPtr; 
   Ctx.IRQ = IRQObjectPtr;
@@ -513,6 +519,7 @@ C53C810::C53C810(void)
   Ctx.Bus = NULL;
   Ctx.IRQ = NULL;
   scsiIRQ = 0;
+  baseAddress = 0;
   DebugLog("Built 53C810\n");
 }
 

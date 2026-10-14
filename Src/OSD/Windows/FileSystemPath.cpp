@@ -41,6 +41,8 @@ namespace FileSystemPath
             return "Saves/";
         case Screenshots:
             return "";
+        case ROMs:
+            return "ROMs/";
         case Assets:
             return "Assets/";
         }

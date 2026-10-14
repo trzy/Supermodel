@@ -307,7 +307,7 @@ void CTileGen::AttachRenderer(CRender2D *Render2DPtr)
 	DebugLog("Tile Generator attached a Render2D object\n");
 }
 
-Result CTileGen::Init(CIRQ *IRQObjectPtr)
+Result CTileGen::Init(IIRQController *IRQObjectPtr)
 {
 	unsigned memSize   = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
 	float	 memSizeMB = (float)memSize/(float)0x100000;
