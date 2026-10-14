@@ -79,6 +79,7 @@ public:
   void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
+  void AttachConsoleInput(IConsoleInput *input) override;
   Result Init(void);
 
   // IBus interface

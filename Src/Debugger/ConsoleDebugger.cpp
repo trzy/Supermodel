@@ -29,6 +29,7 @@
 #include "CPUDebug.h"
 #include "CodeAnalyser.h"
 #include "Label.h"
+#include "OSD/ConsoleInput.h"
 
 #include <cctype>
 #include <string>
@@ -40,14 +41,23 @@ namespace Debugger
 	CConsoleDebugger::CConsoleDebugger() : CDebugger(), 
 		m_nextFrame(false), m_listDism(0), m_listMem(0), m_analyseCode(true), 
 		m_addrFmt(HexDollar), m_portFmt(Decimal), m_dataFmt(HexDollar),
-		m_showLabels(true), m_labelsOverAddr(true), m_showOpCodes(false), m_memBytesPerRow(16), m_file(NULL)
+		m_showLabels(true), m_labelsOverAddr(true), m_showOpCodes(false), m_memBytesPerRow(16), m_file(NULL),
+		m_consoleInput(NULL)
 	{
 		//
+	}
+
+	void CConsoleDebugger::AttachConsoleInput(IConsoleInput *input)
+	{
+		m_consoleInput = input;
 	}
 
 	// TODO - tidy up this function, ie do some proper parsing of commands - it is a mess!
 	void CConsoleDebugger::WaitCommand(CCPUDebug *cpu)
 	{
+		// Console input belongs to the debugger while execution is halted
+		CConsoleInputClaim consoleClaim(m_consoleInput);
+
 		m_cpu = cpu;
 
 		UINT32 pc = m_cpu->pc;
@@ -1625,6 +1635,16 @@ namespace Debugger
 
 	void CConsoleDebugger::Read(char *str, size_t maxSize)
 	{
+		if (m_consoleInput != NULL)
+		{
+			std::string line;
+			if (!m_consoleInput->ReadLine(&line, true))
+				line.clear();
+			strncpy(str, line.c_str(), maxSize - 1);
+			str[maxSize - 1] = '\0';
+			return;
+		}
+
 		if (fgets(str, maxSize, stdin) != NULL)
 		{
 			char *pos = strchr(str, '\n');

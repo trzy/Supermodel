@@ -97,6 +97,7 @@
 #include "Model3/Model3.h"
 #include "Pro1000/Pro1000.h"
 #include "OSD/Audio.h"
+#include "OSD/ConsoleInput.h"
 #include "Graphics/New3D/VBO.h"
 #include "Graphics/SuperAA.h"
 #include "Sound/MPEG/MpegAudio.h"
@@ -2374,6 +2375,7 @@ int main(int argc, char **argv)
   std::shared_ptr<CInputSystem> InputSystem;
   CInputs *Inputs = nullptr;
   COutputs *Outputs = nullptr;
+  std::unique_ptr<CConsoleInput> consoleInput;  // must outlive emulator and debugger
 #ifdef SUPERMODEL_DEBUGGER
   std::shared_ptr<Debugger::CSupermodelDebugger> Debugger;
 #endif // SUPERMODEL_DEBUGGER
@@ -2410,6 +2412,20 @@ int main(int argc, char **argv)
     Emu = new CPro1000(s_runtime_config);
   else
     Emu = new CModel3(s_runtime_config);
+
+  // Console input is created only when something reads it: the emulated
+  // machine's serial console (Pro-1000) and/or the debugger
+  {
+    bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
+#ifdef SUPERMODEL_DEBUGGER
+    needConsoleInput |= !cmd_line.disable_debugger;
+#endif // SUPERMODEL_DEBUGGER
+    if (needConsoleInput)
+    {
+      consoleInput = std::make_unique<CConsoleInput>();
+      Emu->AttachConsoleInput(consoleInput->CreateInput());
+    }
+  }
 
   // Create input system
   if (selectedInputSystem == "sdl")
@@ -2497,6 +2513,8 @@ int main(int argc, char **argv)
   if (!cmd_line.disable_debugger)
   {
     Debugger = std::make_shared<Debugger::CSupermodelDebugger>(Emu, Inputs, logger);
+    if (consoleInput)
+      Debugger->AttachConsoleInput(consoleInput->CreateInput());
     // If -enter-debugger option was set force debugger to break straightaway
     if (cmd_line.enter_debugger)
       Debugger->ForceBreak(true);

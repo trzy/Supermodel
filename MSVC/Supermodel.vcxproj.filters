@@ -416,6 +416,9 @@
     <ClCompile Include="..\Src\Pkgs\tinyxml2.cpp">
       <Filter>Source Files\Pkgs</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\OSD\ConsoleInput.cpp">
+      <Filter>Source Files\OSD</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\OSD\Logger.cpp">
       <Filter>Source Files\OSD</Filter>
     </ClCompile>
@@ -644,6 +647,9 @@
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\OSD\Audio.h">
+      <Filter>Header Files\OSD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\OSD\ConsoleInput.h">
       <Filter>Header Files\OSD</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\OSD\Logger.h">

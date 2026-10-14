@@ -374,6 +374,10 @@
  *  IR3  SCSI (0x44868, ncrintr). [Emulated]
  *  IR4  SCANPSC100F INT (0x4F98, jtag_int). Dispatches to sub-handlers
  *       registered with 0x50B4(handler, MODE1 bit). [Emulated]
+ *  IR5  UART (handler 0x6530, uart.c, installed by 0x6488). The firmware's
+ *       main loop receives serial input by interrupt (IER = 0x01, receive
+ *       data available), one character per interrupt, masking the UART
+ *       interrupt with MCR OUT1 while servicing it. [Emulated]
  *  IR7  Geometry processor (GP) sync (0x6918, gp_sync_int.c): counts frames at
  *       0x5DB80, sets flag 0x5DB84, and keeps interval statistics (monitor
  *       "Delta Frame (GP) Sync Count"). Equivalent to the Model 3 "GP done"
@@ -449,8 +453,14 @@
  * and modification (RD, RC, RP, WC, WP), mode word access (MWR, MWW), JTAG
  * (WJIR, WJDR, RJDR), ID code and hardware configuration dumps (ID, HW,
  * RIF_MODE), and rendering feature toggles. The boot stub also polls for
- * input ('r' resets, ESC prints the scratch register). Input is not yet
- * emulated.
+ * input ('r' resets, ESC prints the scratch register).
+ *
+ * Lines typed at the emulator's console are received by the UART (followed by
+ * a carriage return). Console input is shared with the debugger through
+ * CConsoleInput: the UART claims it permanently and the debugger claims it
+ * while execution is halted, so commands typed at the debugger prompt go to
+ * the debugger and everything else goes to the Pro-1000. The UART's claim is
+ * also what starts the console being read.
  *
  *
  * Other Firmware Landmarks
@@ -581,6 +591,7 @@ constexpr static uint32_t JTAG_BASE_ADDR    = 0x68000000; // SCANPSC100F (8 regi
 constexpr static uint16_t PIC_LINE_FIELD_SYNC = 1 << 0;  // handler counts fields
 constexpr static uint16_t PIC_LINE_SCSI     = 1 << 3;     // handler is ncrintr
 constexpr static uint16_t PIC_LINE_JTAG     = 1 << 4;     // handler is jtag_int
+constexpr static uint16_t PIC_LINE_UART     = 1 << 5;     // handler at 0x6530 (uart.c)
 constexpr static uint16_t PIC_LINE_GP_SYNC  = 1 << 7;     // handler counts geometry processor frames
 constexpr static uint16_t PIC_LINE_NONE     = 0;          // not connected
 
@@ -1191,6 +1202,7 @@ void CPro1000::RunMainBoardFrame(void)
     GPU.BeginVBlank();
     for (unsigned i = 0; i < vBlankCycles / lineCycles; i++)
     {
+      UART.Tick();
       PIC.Tick();
       ppc_execute(lineCycles);
     }
@@ -1209,6 +1221,7 @@ void CPro1000::RunMainBoardFrame(void)
       GPU.FlipPingPongBit();
     if (i == FIELD_SYNC_LINE)
       PIC.Assert(PIC_LINE_FIELD_SYNC);
+    UART.Tick();
     PIC.Tick();
     ppc_execute(lineCycles);
     if (i == 0)
@@ -1608,6 +1621,12 @@ void CPro1000::AttachOutputs(COutputs *OutputsPtr)
   // No outputs
 }
 
+void CPro1000::AttachConsoleInput(IConsoleInput *input)
+{
+  // Console input is received by the serial port
+  UART.AttachInput(input);
+}
+
 /*
  * The real SCSI ROM contents are unknown (it was likely used to hold an initial
  * scene, perhaps a Real3D logo). This creates the minimum needed for rend_init
@@ -1686,6 +1705,13 @@ Result CPro1000::Init(void)
   if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
     return Result::FAIL;
   BuildScanChain();
+  UART.AttachInterruptOutput([this](bool level)
+  {
+    if (level)
+      PIC.Assert(PIC_LINE_UART);
+    else
+      PIC.Deassert(PIC_LINE_UART);
+  });
   JTAG.AttachInterruptOutput([this](bool level)
   {
     if (level)

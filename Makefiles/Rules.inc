@@ -161,6 +161,7 @@ SRC_FILES = \
 	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \
 	Src/OSD/Logger.cpp \
+	Src/OSD/ConsoleInput.cpp \
 	Src/Util/Format.cpp \
 	Src/Util/NewConfig.cpp \
 	Src/Util/ByteSwap.cpp \

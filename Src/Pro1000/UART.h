@@ -32,14 +32,21 @@
 #define INCLUDED_UART_H
 
 #include <cstdint>
+#include <deque>
+#include <functional>
 #include <string>
+
+class IConsoleInput;
 
 /*
  * CUART:
  *
  * Minimal 16550-compatible UART. Transmitted characters are collected into
- * lines and written to the log at info level. There is no receive source, so
- * the receive buffer is always empty. Interrupts are not generated.
+ * lines and written to the console and to the log at info level. Received
+ * characters come from console input: each line typed is received followed
+ * by a carriage return, through a 16-byte receive FIFO. Only the received
+ * data available interrupt is generated. MCR OUT1 masks the interrupt output
+ * (the Pro-1000 firmware sets it while servicing an interrupt).
  */
 class CUART
 {
@@ -75,11 +82,40 @@ public:
    */
   void Reset(void);
 
+  /*
+   * AttachInput(input):
+   *
+   * Attaches console input as the source of received characters. The
+   * console is claimed for the lifetime of the UART.
+   *
+   * Parameters:
+   *    input   Console input endpoint (may be null).
+   */
+  void AttachInput(IConsoleInput *input);
+
+  /*
+   * AttachInterruptOutput(callback):
+   *
+   * Sets the function called when the level of the INT pin changes.
+   */
+  void AttachInterruptOutput(std::function<void(bool)> callback);
+
+  /*
+   * Tick(void):
+   *
+   * Accepts any newly available console input and updates the interrupt
+   * output. Should be called periodically.
+   */
+  void Tick(void);
+
   ~CUART(void);
 
 private:
   void TransmitByte(uint8_t data);
   void FlushLine(void);
+  void FillReceiveFIFO(void);
+  bool ReceiveInterruptPending(void) const;
+  void UpdateInterrupt(void);
 
   uint8_t m_ier = 0;  // interrupt enable
   uint8_t m_fcr = 0;  // FIFO control
@@ -90,6 +126,13 @@ private:
   uint8_t m_dlm = 0;  // divisor latch (high)
 
   std::string m_line;
+
+  IConsoleInput       *m_input = nullptr;
+  std::deque<uint8_t> m_rxFIFO;     // receive FIFO
+  std::string         m_rxPending;  // remainder of received line not yet in FIFO
+
+  bool m_intPin = false;
+  std::function<void(bool)> m_intCallback;
 };
 
 #endif  // INCLUDED_UART_H
