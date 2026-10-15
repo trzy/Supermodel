@@ -101,7 +101,7 @@ out GS_OUT
 	flat vec4	color;
 	flat float	fixedShade[4];
 	flat float	LODBase;
-	vec3 barycentricCoords;
+	vec4 barycentricCoords;			// w = 1: triangle (see main)
 } gs_out;
 
 //a*b - c*d, computed in a stable fashion (Kahan)
@@ -113,29 +113,57 @@ float DifferenceOfProducts(float a, float b, float c, float d)
     return dop + err;
 }
 
+// writes input vertex src's attributes to output slot i, returns its projected position
+vec2 SetVertexAttribs(int i, int src)
+{
+	float oneOverW			= 1.0 / gl_in[src].gl_Position.w;
+	gs_out.oneOverW[i]		= oneOverW;
+
+	// our regular vertex attribs
+	gs_out.viewVertex[i]	= gs_in[src].viewVertex * oneOverW;
+	gs_out.viewNormal[i]	= gs_in[src].viewNormal * oneOverW;
+	gs_out.texCoord[i]		= gs_in[src].texCoord   * oneOverW;
+	gs_out.fixedShade[i]	= gs_in[src].fixedShade * oneOverW;
+
+	return gl_in[src].gl_Position.xy * oneOverW;
+}
+
 void main(void)
 {
 	if(gs_in[0].discardPoly > 0.0) {
 		return;					//emulate back face culling here (all vertices in poly have same value)
 	}
 
-	vec2 v[4];
-
-	for (int i=0; i<4; i++) {
-		float oneOverW		= 1.0 / gl_in[i].gl_Position.w;
-		gs_out.oneOverW[i]	= oneOverW;
-		v[i]				= gl_in[i].gl_Position.xy * oneOverW;
-
-		// our regular vertex attribs
-		gs_out.viewVertex[i]	= gs_in[i].viewVertex * oneOverW;
-		gs_out.viewNormal[i]	= gs_in[i].viewNormal * oneOverW;
-		gs_out.texCoord[i]		= gs_in[i].texCoord   * oneOverW;
-		gs_out.fixedShade[i]	= gs_in[i].fixedShade * oneOverW;
-	}
+	// Triangles arrive as quads with one vertex at the midpoint of its neighbours (CNew3D::CopyVertexData). As a quad,
+	// one strip triangle is empty, but rounding can make it a sliver with bad weights and depth. So emit just the triangle,
+	// in slots 0-2, flagged (barycentricCoords.w) for the fragment shader's barycentric path, which is exact for it.
+	// A midpoint has 2*vertex - neighbours = 0; tol covers rounding in the vertex transform
+	vec4 p0 = gl_in[0].gl_Position, p1 = gl_in[1].gl_Position, p2 = gl_in[2].gl_Position, p3 = gl_in[3].gl_Position;
+	vec4 d0 = 2.0*p0 - (p1 + p3), d1 = 2.0*p1 - (p0 + p2), d2 = 2.0*p2 - (p1 + p3), d3 = 2.0*p3 - (p0 + p2);
+	float tol = 4e-10 * max(max(dot(p0,p0), dot(p1,p1)), max(dot(p2,p2), dot(p3,p3)));
+	int triVertex = dot(d3,d3) <= tol ? 3 : dot(d1,d1) <= tol ? 1 : dot(d0,d0) <= tol ? 0 : dot(d2,d2) <= tol ? 2 : -1;
 
 	// flat attributes
 	gs_out.color = gs_in[0].color;
 	gs_out.LODBase = gs_in[0].LODBase;
+
+	if (triVertex >= 0) {
+		for (int i=0; i<4; i++) {
+			SetVertexAttribs(i, (triVertex+1+i)%4);
+		}
+		for (int i=0; i<3; i++) {
+			gs_out.barycentricCoords = vec4(i==0, i==1, i==2, 1.0);
+			gl_Position = gl_in[(triVertex+1+i)%4].gl_Position;
+			EmitVertex();
+		}
+		return;
+	}
+
+	vec2 v[4];
+
+	for (int i=0; i<4; i++) {
+		v[i] = SetVertexAttribs(i, i);
+	}
 
 	// precompute crossproducts for all vertex combinations to be looked up in loop below for area computation
 	// (cross[i*4+j] for vertices i and j; a flat array because arrays of arrays would need GLSL 4.30)
@@ -179,7 +207,7 @@ void main(void)
 			vec3(0.0,-1.0, 0.0)		// make the last coordinate negative so we can tell the difference between the triangles
 		);
 
-		gs_out.barycentricCoords = bary[ii];
+		gs_out.barycentricCoords = vec4(bary[ii], 0.0);
 
 		gl_Position = gl_in[ii].gl_Position;
 
@@ -251,7 +279,7 @@ in GS_OUT
 	flat vec4	color;
 	flat float	fixedShade[4];
 	flat float	LODBase;
-	vec3 barycentricCoords;
+	vec4 barycentricCoords;
 } fs_in;
 
 //our calculated vertex attributes from the above
@@ -289,7 +317,7 @@ void QuadraticInterpolation()
 	float uSum				= 0.0;
 
 	const float hpFMin		= 0.00006103515625;		// half precision FLT_MIN
-	bool extreme_edge		= (fs_in.barycentricCoords.x <= hpFMin || fs_in.barycentricCoords.z <= hpFMin); 
+	bool extreme_edge		= (fs_in.barycentricCoords.w > 0.5 || fs_in.barycentricCoords.x <= hpFMin || fs_in.barycentricCoords.z <= hpFMin); // w: triangle
 
 	// As the coordinates get closer to the poly edge the interpolated areas can approach zero which can blow up the maths leading to bad interpolation.
 	// In this case we fall back to 3 point triangle interpolation (really 2 because 1 coord will be zero).
