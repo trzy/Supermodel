@@ -56,6 +56,42 @@ struct QueuedUploadTextures
 };
 
 /*
+ * Real3DConfig:
+ *
+ * Hardware configuration of the Real3D graphics hardware. The default values
+ * are the Model 3 configuration. Use Pro1000() for the Real3D Pro-1000.
+ */
+struct Real3DConfig
+{
+  // Size of polygon RAM in bytes. Model 3: 4 MB at 0x98000000. Pro-1000:
+  // 64 MB at 0x98000000-0x9BFFFFFF, enough for every 24-bit word address.
+  uint32_t polygonRAMSize = 0x400000;
+
+  // If true, there is no VROM and polygon RAM replaces it: model and texture
+  // word addresses at 0x100000 and above address polygon RAM (Pro-1000). If
+  // false, they address VROM (Model 3).
+  bool vromIsPolygonRAM = false;
+
+  // If true, writes after the ping-pong flip can go to the update buffers
+  // (see Real3D.cpp). If false, all writes go directly to memory.
+  bool updateBuffers = true;
+
+  static Real3DConfig Model3(void)
+  {
+    return Real3DConfig();
+  }
+
+  static Real3DConfig Pro1000(void)
+  {
+    Real3DConfig config;
+    config.polygonRAMSize = 0x4000000;
+    config.vromIsPolygonRAM = true;
+    config.updateBuffers = false;
+    return config;
+  }
+};
+
+/*
  * CReal3D:
  *
  * Model 3 Real3D-based graphics hardware. This class manages the hardware
@@ -398,7 +434,7 @@ public:
 
   
   /*
-   * Init(vromPtr, BusObjectPtr, IRQObjectPtr, dmaIRQBit):
+   * Init(vromPtr, BusObjectPtr, IRQObjectPtr, dmaIRQBit, hwConfig):
    *
    * One-time initialization of the context. Must be called prior to all
    * other members. Connects the Real3D device to its video ROM and allocates
@@ -406,19 +442,21 @@ public:
    *
    * Parameters:
    *    vromPtr       A pointer to video ROM (with each 32-bit word in
-   *                  its native little endian format).
+   *                  its native little endian format). Not used, and can be
+   *                  null, if hwConfig.vromIsPolygonRAM is true.
    *    BusObjectPtr  Pointer to the bus that the 53C810 has control
    *                  over. Used to read/write memory.
    *    IRQObjectPtr  Pointer to the IRQ controller. Used to trigger SCSI
    *                  and DMA interrupts.
    *    dmaIRQBit     IRQ line mask to pass along to IRQ controller
    *                  when asserting interrupts.
+   *    hwConfig      Hardware configuration (default: Model 3).
    *
    * Returns:
    *    OKAY if successful otherwise FAIL (not enough memory). Prints own
    *    errors.
    */
-  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit);
+  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit, const Real3DConfig &hwConfig = Real3DConfig::Model3());
    
   /*
    * CReal3D(config):
@@ -446,7 +484,7 @@ private:
             return lastAddr - startAddr + 1;    // container will always contain at least 1 element
         }
 
-        constexpr uint32_t HeaderSize()
+        static constexpr uint32_t HeaderSize()
         {
             return 2;     // startAddr + lastAddr in 32bit words
         }
@@ -464,20 +502,36 @@ private:
   void      UploadTexture(uint32_t header, const uint16_t *texData);
   uint32_t  UpdateSnapshots(bool copyWhole);
   uint32_t  UpdateSnapshot(bool copyWhole, uint8_t *src, uint8_t *dst, unsigned size, uint8_t *dirty);
-  void      SyncBufferedMem(UpdateBlock* updateBlock, uint32_t* updateBuffer, uint32_t* dst, uint8_t* dirty);
+  void      SyncBufferedMem(UpdateBlock* updateBlock, uint32_t* updateBuffer, uint32_t* dst, uint32_t dstWords, uint8_t* dirty);
+  bool      UpdateBuffersActive(void) const;
+  bool      AddToUpdateBuffer(UpdateBlock *&block, uint32_t *bufferStart, uint32_t *bufferEnd, uint32_t addr, uint32_t data);
   void      FlushTextures();
   bool      PollPingPong();
   void      DrawFrame();
 
-  // Config 
+  // Config
   const Util::Config::Node &m_config;
   const bool                m_gpuMultiThreaded;
+
+  // Hardware configuration, and the layout of the memory pool that follows
+  // from it (offsets and sizes in bytes)
+  Real3DConfig m_hwConfig;
+  struct MemoryLayout
+  {
+    uint32_t cullingRAMLo, cullingRAMHi, polyRAM, textureRAM, textureFIFO;
+    uint32_t sizeRW;          // writable memory (saved in save states)
+    uint32_t cullingRAMLoRO, cullingRAMHiRO, polyRAMRO, textureRAMRO;
+    uint32_t sizeRO;          // read-only snapshots
+    uint32_t cullingRAMLoDirty, cullingRAMHiDirty, polyRAMDirty, textureRAMDirty;
+    uint32_t sizeDirty;       // dirty page arrays
+    uint32_t total;
+  } m_layout;
 
   // Renderer attached to the Real3D
   IRender3D *Render3D = nullptr;
   
   // Data passed from Model 3 object
-  const uint32_t  *vrom = nullptr;          // Video ROM
+  const uint32_t  *vrom = nullptr;          // Video ROM (polygon RAM if m_hwConfig.vromIsPolygonRAM)
   int             step = 0x10;              // hardware stepping (as in GameInfo structure)
   uint32_t        pciID = PCIID::Step1x;;   // PCI vendor and device ID
   
@@ -488,7 +542,7 @@ private:
   uint8_t   *memoryPool = nullptr;      // all memory allocated here
   uint32_t  *cullingRAMLo = nullptr;    // 4MB of culling RAM at 8C000000
   uint32_t  *cullingRAMHi = nullptr;    // 1MB of culling RAM at 8E000000
-  uint32_t  *polyRAM = nullptr;         // 4MB of polygon RAM at 98000000
+  uint32_t  *polyRAM = nullptr;         // polygon RAM at 98000000 (Model 3: 4MB, Pro-1000: 64MB)
   uint16_t  *textureRAM = nullptr;      // 8MB of internal texture RAM
     uint32_t  *textureFIFO = nullptr;   // 1MB texture FIFO at 0x94000000
   uint32_t  fifoIdx = 0;                // index into texture FIFO
@@ -509,7 +563,7 @@ private:
   // Read-only snapshots
   uint32_t  *cullingRAMLoRO = nullptr;  // 4MB of culling RAM at 8C000000 [read-only snapshot]
   uint32_t  *cullingRAMHiRO = nullptr;  // 1MB of culling RAM at 8E000000 [read-only snapshot]
-  uint32_t  *polyRAMRO = nullptr;       // 4MB of polygon RAM at 98000000 [read-only snapshot]
+  uint32_t  *polyRAMRO = nullptr;       // polygon RAM at 98000000       [read-only snapshot]
   uint16_t  *textureRAMRO = nullptr;    // 8MB of internal texture RAM    [read-only snapshot]
   
   // Arrays to keep track of dirty pages in memory regions

@@ -159,7 +159,6 @@ private:
   UINT8   *ram;         // 4 MB PowerPC RAM
   UINT8   *flash;       // 8 MB flash ROM window
   UINT8   *scsiROM;     // 512 KB SCSI ROM (flash on SCSI controller's expansion ROM interface)
-  UINT8   *vrom;        // 64 MB VROM (does not exist on Pro-1000 but Real3D and renderer expect it; always zero)
 
   // PowerPC
   PPC_FETCH_REGION  PPCFetchRegions[3];

@@ -150,6 +150,11 @@ void CNew3D::SetStepping(int stepping)
 	}
 }
 
+void CNew3D::SetVROMIsPolygonRAM(bool enable)
+{
+	m_vromIsPolygonRAM = enable;
+}
+
 Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
 	// Resolution and offset within physical display area
@@ -782,7 +787,12 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	
 	if ((node[0x00] & 0x04)) {
 		m_colorTableAddr = ((node[0x03 - m_offset] >> 19) << 0) | ((node[0x07 - m_offset] >> 28) << 13) | ((node[0x08 - m_offset] >> 25) << 17);
-		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
+		if (m_vromIsPolygonRAM) {
+			m_colorTableAddr &= 0x00FFFFFF;	// all 24 bits: the table can be anywhere in polygon RAM
+		}
+		else {
+			m_colorTableAddr &= 0x000FFFFF;	// clamp to 4MB (in words) range
+		}
 	}
 
 	m_nodeAttribs.Push();	// save current attribs
@@ -1526,9 +1536,13 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		if (!ph.PolyColor()) {
 			int colorIdx = ph.ColorIndex();
-			p.faceColour[2] = (m_polyRAM[m_colorTableAddr + colorIdx] & 0xFF);
-			p.faceColour[1] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 8) & 0xFF);
-			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF);
+			UINT32 colorAddr = m_colorTableAddr + colorIdx;
+			if (m_vromIsPolygonRAM) {
+				colorAddr &= 0x00FFFFFF;	// stay inside the 64 MB polygon RAM
+			}
+			p.faceColour[2] = (m_polyRAM[colorAddr] & 0xFF);
+			p.faceColour[1] = ((m_polyRAM[colorAddr] >> 8) & 0xFF);
+			p.faceColour[0] = ((m_polyRAM[colorAddr] >> 16) & 0xFF);
 		}
 		else {
 			p.faceColour[0] = ((ph.header[4] >> 24));
@@ -1694,7 +1708,8 @@ bool CNew3D::IsDynamicModel(UINT32 *data) const
 
 bool CNew3D::IsVROMModel(UINT32 modelAddr) const
 {
-	return modelAddr >= 0x100000;
+	// Without VROM, models at these addresses are in polygon RAM and can change
+	return !m_vromIsPolygonRAM && modelAddr >= 0x100000;
 }
 
 void CNew3D::CalcViewport(Viewport* vp)

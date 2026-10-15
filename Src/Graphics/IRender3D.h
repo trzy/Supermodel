@@ -23,6 +23,18 @@ public:
   virtual void SetBlockCulling(bool enable) = 0;
   virtual float GetLosValue(int layer) = 0;
 
+  /*
+   * SetVROMIsPolygonRAM(enable):
+   *
+   * Tells the renderer that there is no VROM (Real3D Pro-1000). The VROM
+   * pointer then points to polygon RAM, which is larger, so model addresses
+   * at 0x100000 and above are writable polygon RAM. The default is false
+   * (Model 3). A renderer that does not support this can ignore it.
+   */
+  virtual void SetVROMIsPolygonRAM(bool enable)
+  {
+  }
+
   virtual ~IRender3D()
   {
   }

@@ -304,16 +304,23 @@
  *                                        [Emulated, Model 3]
  * 8C000000-8FFFFFFC  REND_CULL_BASE/TOP  Culling memory (64MB window).
  *                                        [Model 3 8C/8E mapping emulated]
- * 90000000           REND_ROM_UPDATE     Model 3 VROM texture port equivalent.
- *                                        Used by firmware (e.g., 0x63AC) and
- *                                        accepted from the host. [Emulated as
- *                                        on Model 3 with an empty VROM; all
- *                                        accesses logged at info level]
+ * 90000000           REND_ROM_UPDATE     Texture port (Model 3 Step 1.0 VROM
+ *                                        texture port). The data is the word
+ *                                        address of a texture block in
+ *                                        polygon memory. Used by firmware
+ *                                        (e.g., 0x63AC) and accepted from the
+ *                                        host. [Emulated as on Model 3 Step
+ *                                        1.0, with polygon memory as VROM;
+ *                                        all accesses logged at info level]
  * 94000000           REND_TEX_UPDATE,    Texture FIFO. [Emulated, Model 3]
  *                    REND_TEX_CONTINUE,
  *                    REND_TRANS_UPDATE
- * 98000000-9FFFFFFC  REND_POLY_BASE/TOP  Polygon memory (128MB window).
- *                                        [Model 3 98 mapping emulated]
+ * 98000000-9FFFFFFC  REND_POLY_BASE/TOP  Polygon memory (128MB window). There
+ *                                        is no VROM: model and texture word
+ *                                        addresses at 0x100000 and above are
+ *                                        also polygon memory. [Emulated:
+ *                                        98000000-9BFFFFFF, 64MB, enough for
+ *                                        all 24-bit word addresses]
  * 9C000000           REND_UPDATE_START   Model 3 configuration registers.
  *                                        [Emulated, Model 3]
  * C0000000-C007FFFF  SCSI_ROM_BASE/TOP   SCSI ROM, 512KB (see SCSI ROM below).
@@ -499,8 +506,9 @@
  *    skipped.
  *  - RIF_MODE (0x70000000) is not emulated as a register, so the mode word
  *    from the INIT ROM (0x1401) does not stick.
- *  - REND_ROM_UPDATE (0x90000000) is used, which suggests the renderer has a
- *    ROM-based update path like Model 3's VROM texture port.
+ *  - REND_ROM_UPDATE (0x90000000): the Model 3 Step 1.0 texture port, which
+ *    reads textures from polygon memory instead of VROM (as in the proof of
+ *    concept ASPI DLL and the SDK demos).
  *  - What p2.bin is.
  *  - The auxiliary processor/interrupt controller (MAIN_RST_AUX, AUX_*).
  *  - MAIN_RD_INTA_R0/R1 (0x78000000) semantics.
@@ -525,7 +533,6 @@
 
 constexpr static uint32_t RAM_SIZE          = 0x400000;   // 4MB (DRAM_TOP)
 constexpr static uint32_t FLASH_SIZE        = 0x800000;   // 8MB window
-constexpr static uint32_t VROM_SIZE         = 0x4000000;  // 64MB
 
 // Flash is mapped in an 8MB window (as on Model 3) although only the top 1MB
 // (CPU_ROM_BASE-CPU_ROM_TOP) is populated
@@ -541,11 +548,10 @@ constexpr static uint32_t SCSI_ROM_BASE     = 0xC0000000;
 constexpr static uint32_t SCSI_ROM_SIZE     = 0x80000;    // 512KB (SCSI_ROM_TOP = 0xC0080000)
 constexpr static uint32_t SCSI_ROM_HEADER_SIZE = 0x100;   // directory area zeroed in synthetic image
 
-constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE + VROM_SIZE;
+constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE;
 constexpr static uint32_t RAM_OFFSET        = 0;
 constexpr static uint32_t FLASH_OFFSET      = RAM_OFFSET + RAM_SIZE;
 constexpr static uint32_t SCSI_ROM_OFFSET   = FLASH_OFFSET + FLASH_SIZE;
-constexpr static uint32_t VROM_OFFSET       = SCSI_ROM_OFFSET + SCSI_ROM_SIZE;
 
 constexpr static int      STEPPING          = 0x10;       // treat hardware as Model 3 Step 1.0
 constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // Step 1.0 PowerPC frequency
@@ -1014,7 +1020,8 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     GPU.WriteHighCullingRAM(addr & 0xFFFFF, FLIPENDIAN32(data));
     return;
 
-  // Real3D texture port (REND_ROM_UPDATE). Reads from VROM, which is empty.
+  // Real3D texture port (REND_ROM_UPDATE). The data is the word address of
+  // a texture in polygon RAM (which replaces VROM on the Pro-1000).
   case 0x90:  // 90000000-90??????
     GPU.WriteTexturePort(addr & 0xFF, FLIPENDIAN32(data));
     return;
@@ -1024,9 +1031,12 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     GPU.WriteTextureFIFO(FLIPENDIAN32(data));
     return;
 
-  // Real3D polygon RAM
-  case 0x98:  // 98000000-98400000
-    GPU.WritePolygonRAM(addr & 0x3FFFFF, FLIPENDIAN32(data));
+  // Real3D polygon RAM: 64MB, which includes the area that is VROM on Model 3
+  case 0x98:  // 98000000-9BFFFFFF
+  case 0x99:
+  case 0x9A:
+  case 0x9B:
+    GPU.WritePolygonRAM(addr - 0x98000000, FLIPENDIAN32(data));
     return;
 
   // Real3D configuration registers
@@ -1704,7 +1714,6 @@ Result CPro1000::Init(void)
   ram = &memoryPool[RAM_OFFSET];
   flash = &memoryPool[FLASH_OFFSET];
   scsiROM = &memoryPool[SCSI_ROM_OFFSET];
-  vrom = &memoryPool[VROM_OFFSET];
 
   // Initialize devices (PowerPC initialized after ROMs loaded)
   PCIBridge.Init();
@@ -1716,7 +1725,7 @@ Result CPro1000::Init(void)
   // bridge. If the bridge cannot start, emulation continues without it.
   m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
   m_scsiTCPBridge->Start();
-  if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
+  if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000())) // no VROM; Real3D DMA interrupt line unknown
     return Result::FAIL;
   BuildScanChain();
   UART.AttachInterruptOutput([this](bool level)
@@ -1751,7 +1760,6 @@ CPro1000::CPro1000(Util::Config::Node &config)
     ram(NULL),
     flash(NULL),
     scsiROM(NULL),
-    vrom(NULL),
     gpusReady(false),
     startedThreads(false),
     pauseThreads(false),
@@ -1807,7 +1815,6 @@ CPro1000::~CPro1000(void)
   ram = NULL;
   flash = NULL;
   scsiROM = NULL;
-  vrom = NULL;
 
   DebugLog("Destroyed Pro-1000\n");
 }

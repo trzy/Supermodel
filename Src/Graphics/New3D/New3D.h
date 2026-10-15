@@ -121,6 +121,16 @@ public:
 	void SetStepping(int stepping);
 
 	/*
+	* SetVROMIsPolygonRAM(enable):
+	*
+	* If enabled, there is no VROM (Real3D Pro-1000): the VROM pointer points
+	* to polygon RAM, so models at 0x100000 and above are in writable polygon
+	* RAM. Then models are not cached as ROM models, and color table addresses
+	* have 24 bits instead of 20 bits.
+	*/
+	void SetVROMIsPolygonRAM(bool enable) override;
+
+	/*
 	* Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes):
 	*
 	* One-time initialization of the context. Must be called before any other
@@ -255,7 +265,8 @@ private:
 	const UINT32	*m_cullingRAMLo;	// 4 MB
 	const UINT32	*m_cullingRAMHi;	// 1 MB
 	const UINT32	*m_polyRAM;			// 4 MB
-	const UINT32	*m_vrom;			// 64 MB
+	const UINT32	*m_vrom;			// 64 MB (polygon RAM if m_vromIsPolygonRAM)
+	bool			m_vromIsPolygonRAM = false;
 	const UINT16	*m_textureRAM;		// 8 MB
 
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
