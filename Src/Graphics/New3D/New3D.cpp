@@ -1307,7 +1307,7 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 			vertexArray.emplace_back(r3dPoly, 3);
 
 			// check for identical points (ie forced triangle) and replace with average point
-			// if we don't do this our quad code falls apart
+			// if we don't do, this our quad code falls apart
 			FVertex* v = (&vertexArray.back()) - 3;
 
 			for (int i = 0; i < 4; i++) {
@@ -1317,6 +1317,7 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 
 				if (FVertex::Equal(v[i], v[next1])) {
 					FVertex::Average(v[next1], v[next2], v[next1]);
+					std::rotate(v, v + (next1 + 1) % 4, v + 4);	// move the average to slot 3, as the quad shader only looks for it there (performance)
 					break;
 				}
 			}
