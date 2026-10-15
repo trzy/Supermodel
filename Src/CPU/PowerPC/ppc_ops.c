@@ -501,7 +501,7 @@ static void ppc_dcbtst(UINT32 op)
 
 static void ppc_dcbz(UINT32 op)
 {
-
+	// TODO: should zero the 32-byte block at (rA|0)+rB. Left a no-op until a game is known to use it, as a wrong implementation would clear memory
 }
 
 static void ppc_divwx(UINT32 op)
@@ -925,10 +925,7 @@ static void ppc_mulhwux(UINT32 op)
 
 static void ppc_mulli(UINT32 op)
 {
-	INT32 ra = (INT32)REG(RA);
-	INT32 i = SIMM16;
-
-	REG(RT) = ra * i;
+	REG(RT) = REG(RA) * (UINT32)SIMM16;	// unsigned, as signed overflow is undefined
 }
 
 static void ppc_mullwx(UINT32 op)
@@ -963,7 +960,7 @@ static void ppc_nandx(UINT32 op)
 
 static void ppc_negx(UINT32 op)
 {
-	REG(RT) = -(INT32)(REG(RA));
+	REG(RT) = 0 - REG(RA);	// unsigned, as -INT_MIN is undefined
 
 	if( OEBIT ) {
 		if( REG(RT) == 0x80000000 )
@@ -1017,8 +1014,8 @@ static void ppc_oris(UINT32 op)
 static void ppc_rfi(UINT32 op)
 {
 	UINT32 msr;
-	ppc.npc = ppc_get_spr(SPR_SRR0);
-	msr = ppc_get_spr(SPR_SRR1);
+	ppc.npc = ppc_get_spr(SPR_SRR0) & ~3;
+	msr = ppc_get_spr(SPR_SRR1);	// TODO: should restore only some MSR bits from SRR1 (0x87C0FFFF in the 32-bit architecture)
 	ppc_set_msr( msr );
 
 	ppc_change_pc(ppc.npc);
@@ -1031,7 +1028,7 @@ static void ppc_rlwimix(UINT32 op)
 	UINT32 rs = REG(RS);
 	int sh = SH;
 
-	r = (rs << sh) | (rs >> (32-sh));
+	r = (rs << sh) | (rs >> ((32-sh) & 31));
 	REG(RA) = (REG(RA) & ~mask) | (r & mask);
 
 	if( RCBIT ) {
@@ -1046,7 +1043,7 @@ static void ppc_rlwinmx(UINT32 op)
 	UINT32 rs = REG(RS);
 	int sh = SH;
 
-	r = (rs << sh) | (rs >> (32-sh));
+	r = (rs << sh) | (rs >> ((32-sh) & 31));
 	REG(RA) = r & mask;
 
 	if( RCBIT ) {
@@ -1061,7 +1058,7 @@ static void ppc_rlwnmx(UINT32 op)
 	UINT32 rs = REG(RS);
 	int sh = REG(RB) & 0x1f;
 
-	r = (rs << sh) | (rs >> (32-sh));
+	r = (rs << sh) | (rs >> ((32-sh) & 31));
 	REG(RA) = r & mask;
 
 	if( RCBIT ) {
@@ -1093,11 +1090,12 @@ static void ppc_slwx(UINT32 op)
 static void ppc_srawx(UINT32 op)
 {
 	int sh = REG(RB) & 0x3f;
+	UINT32 rs = REG(RS);	// rA may be rS
 
 	XER &= ~XER_CA;
 
 	if( sh > 31 ) {
-		if (REG(RS) & 0x80000000)
+		if (rs & 0x80000000)
 			REG(RA) = 0xffffffff;
 		else
 			REG(RA) = 0;
@@ -1105,8 +1103,8 @@ static void ppc_srawx(UINT32 op)
 			XER |= XER_CA;
 	}
 	else {
-		REG(RA) = (INT32)(REG(RS)) >> sh;
-		if( ((INT32)(REG(RS)) < 0) && (REG(RS) & BITMASK_0(sh)) )
+		REG(RA) = (INT32)rs >> sh;
+		if( ((INT32)rs < 0) && (rs & BITMASK_0(sh)) )
 			XER |= XER_CA;
 	}
 
@@ -1435,7 +1433,7 @@ static void ppc_subfmex(UINT32 op)
 	UINT32 r = ~ra + carry;
 	REG(RT) = r - 1;
 
-	SET_SUB_CA(r, ~ra, carry);		/* step 1 carry */
+	SET_ADD_CA(r, ~ra, carry);		/* step 1 carry */
 	if( REG(RT) < r )
 		XER |= XER_CA;				/* step 2 carry */
 
@@ -1457,7 +1455,7 @@ static void ppc_subfzex(UINT32 op)
 	SET_ADD_CA(REG(RT), ~ra, carry);
 
 	if( OEBIT ) {
-		SET_SUB_OV(REG(RT), 0, REG(RA));
+		SET_SUB_OV(REG(RT), 0, ra);
 	}
 	if( RCBIT ) {
 		SET_CR0(REG(RT));
@@ -1680,6 +1678,7 @@ inline INT64 round_toward_negative_infinity(FPR f)
 }
 */
 
+// TODO: these set only FX, not VXSNAN (0x01000000) itself or the VX summary bit
 #define SET_VXSNAN(a, b)    if (is_snan_double(a) || is_snan_double(b)) ppc.fpscr |= 0x80000000
 #define SET_VXSNAN_1(c)     if (is_snan_double(c)) ppc.fpscr |= 0x80000000
 
@@ -2094,11 +2093,15 @@ static void ppc_fcmpo(UINT32 op)
 	if(is_nan_double(FPR(a)) || is_nan_double(FPR(b)))
 	{
 		c = 1; /* OX */
+		bool vxvc = true;
 		if(is_snan_double(FPR(a)) || is_snan_double(FPR(b))) {
 			ppc.fpscr |= 0x01000000; /* VXSNAN */
-
-			if(!(ppc.fpscr & 0x40000000) || is_qnan_double(FPR(a)) || is_qnan_double(FPR(b)))
-				ppc.fpscr |= 0x00080000; /* VXVC */
+			vxvc = !(ppc.fpscr & 0x00000080); /* VE */
+		}
+		if(vxvc) {
+			if(!(ppc.fpscr & 0x00080000))
+				ppc.fpscr |= 0x80000000; /* FX */
+			ppc.fpscr |= 0x00080000; /* VXVC */
 		}
 	}
 	else if(FPR(a).fd < FPR(b).fd){
@@ -2113,7 +2116,7 @@ static void ppc_fcmpo(UINT32 op)
 
 	CR(t) = c;
 
-	// TODO
+	// TODO: compares only set FPCC (0x0000F000), the C bit (0x00010000) should be left alone
 	// Enabled by Bart
 	ppc.fpscr &= ~0x0001F000;
 	ppc.fpscr |= (c << 12);
@@ -2149,7 +2152,7 @@ static void ppc_fcmpu(UINT32 op)
 
 	CR(t) = c;
 
-	// TODO
+	// TODO: compares only set FPCC (0x0000F000), the C bit (0x00010000) should be left alone
 	ppc.fpscr &= ~0x0001F000;
 	ppc.fpscr |= (c << 12);
 }
@@ -2158,7 +2161,7 @@ static void ppc_fctiwx(UINT32 op)
 {
 	UINT32 b = RB;
 	UINT32 t = RT;
-	INT64 r = 0;
+	double r = 0.0;
 
 	// TODO: fix FPSCR flags FX,VXSNAN,VXCVI
 
@@ -2168,20 +2171,21 @@ static void ppc_fctiwx(UINT32 op)
 
 	switch(ppc.fpscr & 3)
 	{
-		case 0: init_rounding_mode(); r = (INT64)nearbyint(FPR(b).fd); restore_rounding_mode(); break;
-		case 1: r = (INT64)trunc(FPR(b).fd); break;
-		case 2: r = (INT64)ceil(FPR(b).fd); break;
-		case 3: r = (INT64)floor(FPR(b).fd); break;
+		case 0: init_rounding_mode(); r = nearbyint(FPR(b).fd); restore_rounding_mode(); break;
+		case 1: r = trunc(FPR(b).fd); break;
+		case 2: r = ceil(FPR(b).fd); break;
+		case 3: r = floor(FPR(b).fd); break;
 	}
 
-	if(r > (INT64)((INT32)0x7FFFFFFF))
+	// clamp as double: converting NaN or out-of-range values to an integer is undefined (and differs between x86 and ARM)
+	if(r > 2147483647.0)
 	{
 		FPR(t).id = (INT64)((INT32)0x7FFFFFFF);
 		// FPSCR[FR] = 0
 		// FPSCR[FI] = 1
 		// FPSCR[XX] = 1
 	}
-	else if(r < (INT64)((INT32)0x80000000))
+	else if(r < -2147483648.0 || is_nan_double(FPR(b)))
 	{
 		FPR(t).id = (INT64)((INT32)0x80000000);
 		// FPSCR[FR] = 1
@@ -2190,7 +2194,7 @@ static void ppc_fctiwx(UINT32 op)
 	}
 	else
 	{
-		FPR(t).id = (UINT32)r;
+		FPR(t).id = (UINT32)(INT32)r;
 		// FPSCR[FR] = t.iw > t.fd
 		// FPSCR[FI] = t.iw == t.fd
 		// FPSCR[XX] = ?
@@ -2206,16 +2210,17 @@ static void ppc_fctiwzx(UINT32 op)
 {
 	UINT32 b = RB;
 	UINT32 t = RT;
-	INT64 r;
+	double r;
 
 	// TODO: fix FPSCR flags FX,VXSNAN,VXCVI
 
 	CHECK_FPU_AVAILABLE();
 
 	SET_VXSNAN_1(FPR(b));
-	r = (INT64)trunc(FPR(b).fd);
+	r = trunc(FPR(b).fd);
 
-	if(r > (INT64)((INT32)0x7FFFFFFF))
+	// clamp as double: converting NaN or out-of-range values to an integer is undefined (and differs between x86 and ARM)
+	if(r > 2147483647.0)
 	{
 		FPR(t).id = (INT64)((INT32)0x7FFFFFFF);
 		// FPSCR[FR] = 0
@@ -2223,7 +2228,7 @@ static void ppc_fctiwzx(UINT32 op)
 		// FPSCR[XX] = 1
 
 	}
-	else if(r < (INT64)((INT32)0x80000000))
+	else if(r < -2147483648.0 || is_nan_double(FPR(b)))
 	{
 		FPR(t).id = (INT64)((INT32)0x80000000);
 		// FPSCR[FR] = 1
@@ -2232,7 +2237,7 @@ static void ppc_fctiwzx(UINT32 op)
 	}
 	else
 	{
-		FPR(t).id = (UINT32)r;
+		FPR(t).id = (UINT32)(INT32)r;
 		// FPSCR[FR] = t.iw > t.fd
 		// FPSCR[FI] = t.iw == t.fd
 		// FPSCR[XX] = ?
@@ -2317,7 +2322,7 @@ static void ppc_frspx(UINT32 op)
 
 	SET_VXSNAN_1(FPR(b));
 
-	FPR(t).fd = (float)FPR(b).fd;
+	FPR(t).fd = (float)FPR(b).fd;	// TODO: ignores FPSCR[RN] (always rounds to nearest)
 
 	set_fprf(FPR(t));
 	if( RCBIT ) {
@@ -2430,12 +2435,10 @@ static void ppc_mtfsb1x(UINT32 op)
 static void ppc_mtfsfx(UINT32 op)
 {
 	UINT32 b = RB;
-	UINT32 f = ppc_field_xlat[FM];
+	UINT32 f = ppc_field_xlat[FM] & ~(FPSCR_FEX | FPSCR_VX);	// FEX and VX are not set from FRB
 
-	ppc.fpscr &= (~f) | ~(FPSCR_FEX | FPSCR_VX);
-	ppc.fpscr |= (UINT32)(FPR(b).id) & ~(FPSCR_FEX | FPSCR_VX);
-
-	// FEX, VX
+	ppc.fpscr = (ppc.fpscr & ~f) | ((UINT32)(FPR(b).id) & f);
+	// TODO: FEX and VX should be recomputed from the new exception and enable bits (also in mtfsfi)
 
 	if( RCBIT ) {
 		SET_CR1();
@@ -2460,14 +2463,12 @@ static void ppc_mtfsfix(UINT32 op)
 
     crfd = (7 - crfd) * 4;  // calculate LSB position of field
 
+    UINT32 mask = 0xf << crfd;
     if (crfd == 28)         // field containing FEX and VX is special...
-    {                       // bits 1 and 2 of FPSCR must not be altered
-        ppc.fpscr &= 0x9fffffff;
-        ppc.fpscr |= (imm & 0x9fffffff);
-    }
+        mask &= ~(FPSCR_FEX | FPSCR_VX);    // bits 1 and 2 of FPSCR must not be altered
 
-    ppc.fpscr &= ~(0xf << crfd);    // clear field
-    ppc.fpscr |= (imm << crfd);     // insert new data
+    ppc.fpscr &= ~mask;                 // clear field
+    ppc.fpscr |= (imm << crfd) & mask;  // insert new data
 
 	if( RCBIT ) {
 		SET_CR1();
