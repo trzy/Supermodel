@@ -1129,13 +1129,16 @@ static void SubmitSCSISelfTest(CSCSIHostAdapter &hostAdapter)
     const char *name;
     std::vector<uint8_t> cdb;
     size_t dataInLength;
+    size_t dataOutLength;
   };
   static const Test tests[] =
   {
-    { "TEST UNIT READY", { 0x00, 0, 0, 0, 0, 0 }, 0 },
-    { "INQUIRY", { 0x12, 0, 0, 0, 36, 0 }, 36 },
-    { "REQUEST SENSE", { 0x03, 0, 0, 0, 18, 0 }, 18 },
-    { "READ CAPACITY", { 0x25, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 8 }
+    { "TEST UNIT READY", { 0x00, 0, 0, 0, 0, 0 }, 0, 0 },
+    { "INQUIRY", { 0x12, 0, 0, 0, 36, 0 }, 36, 0 },
+    { "REQUEST SENSE", { 0x03, 0, 0, 0, 18, 0 }, 18, 0 },
+    { "READ CAPACITY", { 0x25, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 8, 0 },
+    { "WRITE(10)", { 0x2A, 0, 0, 0, 0, 0, 0, 0, 1, 0 }, 0, 512 },    // 1 block
+    { "READ(10)", { 0x28, 0, 0, 0, 0, 0, 0, 0, 1, 0 }, 512, 0 }      // 1 block
   };
   for (const Test &test: tests)
   {
@@ -1143,6 +1146,22 @@ static void SubmitSCSISelfTest(CSCSIHostAdapter &hostAdapter)
     request.targetID = 0;
     request.cdb = test.cdb;
     request.dataInLength = test.dataInLength;
+
+    // Data out: one packet that writes 4 words to culling memory, then an
+    // end of list (opcode 0). The host sends little endian words. Packet
+    // header (Scsi_Head): word 0 = cntrl (opcode) << 24 | number of words,
+    // word 1 = address.
+    if (test.dataOutLength > 0)
+    {
+      const uint32_t packet[] = { 0x01000004, 0x8C000100, 0x11223344, 0x55667788, 0x99AABBCC, 0xDDEEFF00 };
+      std::vector<uint32_t> words(test.dataOutLength / 4, 0);
+      std::copy(std::begin(packet), std::end(packet), words.begin());
+      for (uint32_t word: words)
+      {
+        for (unsigned b = 0; b < 4; b++)
+          request.dataOut.push_back(uint8_t(word >> (b * 8)));
+      }
+    }
     const char *name = test.name;
     hostAdapter.Submit(request, [name](const SCSIResult &result)
     {
