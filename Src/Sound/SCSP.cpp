@@ -375,7 +375,7 @@ void CheckPendingIRQ()
 		//printf("68K: MIDI IRQ\n");
 		//ErrorLogMessage("Midi");
 
-		SCSPs->data[0x20 / 2] |= 8;	// verified via spec, not from MAME: the master's SCIPD (SCSP is whichever chip was accessed last)
+		SCSPs->data[0x20 / 2] |= 8;	// not from MAME: the master's SCIPD (SCSP is whichever chip was accessed last)
 		pend |= 8;
 	}
 
@@ -402,7 +402,7 @@ void CheckPendingIRQ()
 	if (pend & en & 0x8)
 	{
 		irqLevel = (IrqMidi > irqLevel) ? IrqMidi : irqLevel;
-		SCSPs->data[0x20 / 2] &= ~8;	// verified via spec, not from MAME: the master's SCIPD
+		SCSPs->data[0x20 / 2] &= ~8;	// not from MAME: the master's SCIPD
 	}
 
 	Int68kCB(irqLevel);
@@ -947,7 +947,7 @@ void SCSP_UpdateRegR(int reg, bool readsLowByte)
 	case 4:
 	case 5:
 	{
-		if (!SCSP->Master)	// verified via spec, not from MAME: only the master's MIDI is connected, so the slave's FIFOs stay empty
+		if (!SCSP->Master)	// not from MAME (Model 3 wiring): only the master's MIDI is connected, so the slave's FIFOs stay empty
 		{
 			SCSP->data[0x4 / 2] = 0x0900;	// MOEMP | MIEMP
 			break;
@@ -1047,7 +1047,7 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 	}
 	else if(addr<0x600)
 	{
-		if (addr < 0x430)	// verified via spec, verified via spec, not from MAME: the registers are only 0x30 bytes (like SCSP_w16)
+		if (addr < 0x430)	// verified via spec, not from MAME: the registers are only 0x30 bytes (like SCSP_w16)
 		{
 			*(unsigned char *) &(SCSP->datab[(addr&0xff)^1]) = val;
 			SCSP_UpdateReg((addr^1)&0xff);
@@ -1175,7 +1175,7 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 	}
 	else if(addr<0x600)
 	{
-		// verified via spec, not from MAME: as two 16-bit writes, which keeps them inside the registers (same result as updating after both
+		// not from MAME: as two 16-bit writes, which keeps them inside the registers (same result as updating after both
 		// halves, as an update that reads the other half is redone by that half's own update)
 		SCSP_w16(addr, val >> 16);
 		SCSP_w16(addr + 2, val & 0xffff);
@@ -1314,7 +1314,7 @@ unsigned short SCSP_r16(unsigned int addr)
 
 unsigned int SCSP_r32(unsigned int addr)
 {
-	// verified via spec, not from MAME: the 68K's bus is 16 bits wide, so this is two 16-bit reads
+	// not from MAME: the 68K's bus is 16 bits wide, so this is two 16-bit reads
 	unsigned int hi = SCSP_r16(addr);
 	return (hi << 16) | SCSP_r16(addr + 2);
 }
@@ -1708,7 +1708,7 @@ void SCSP_DoMasterSamples(int nsamples)
 			}
 		}
 
-		if (DAC18B((&SCSPs[0])))	// verified via spec, not from MAME: the master's, not the one of the chip accessed last
+		if (DAC18B((&SCSPs[0])))	// not from MAME: the master's, not the one of the chip accessed last
 		{
 			smpfl = ICLIP18(smpfl);
 			smpfr = ICLIP18(smpfr);
