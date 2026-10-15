@@ -470,6 +470,24 @@
  * also what starts the console being read.
  *
  *
+ * CPU Clock and Time Base
+ * -----------------------
+ * The firmware measures time with the PowerPC time base. It divides time
+ * base ticks by 0x208E (8334) to get milliseconds: at 0x3328 (the "field
+ * time" message in _start) and in the wait for the SCSI controller (0x45C4C).
+ * Thus the firmware expects a time base of 8.33 MHz. The 603 time base
+ * increments once every four bus clocks, so the bus is 33.3 MHz.
+ *
+ * The emulated CPU has a 33 MHz bus and a 2X multiplier. The core clock is
+ * 66 MHz, as on Model 3 Step 1.0. The real core clock is not known; the
+ * firmware constants give only the bus clock.
+ *
+ * Earlier, the bus was 66 MHz (1X multiplier), as on Model 3 Step 1.0. Then
+ * the time base was 16.5 MHz, all times that the firmware measured were two
+ * times too long ("field time = 34 milliseconds" instead of 17), and
+ * firmware timeouts expired in half of the correct time.
+ *
+ *
  * Other Firmware Landmarks
  * ------------------------
  * 0x47D6C  printf
@@ -482,9 +500,10 @@
  * --------------
  *  - Field sync timing (IR0). The nominal rate is 60 Hz (or 59.94/50 Hz for
  *    interlaced modes) per the SDK documentation, but emulation still uses
- *    the Model 3 rate of 57.52 Hz. The firmware measures 34 ms per field,
- *    so the time base rate may also be off. The logic sync memory
- *    (LSYNC_BASE) probably sequences these signals.
+ *    the Model 3 rate of 57.52 Hz, and the firmware measures 17 ms per field.
+ *    (Before the time base correction, it measured 34 ms; see "CPU Clock and
+ *    Time Base".) The logic sync memory (LSYNC_BASE) probably sequences
+ *    these signals.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
  *  - Board configurations. Only the single pixel board is emulated. Support
  *    single, dual, and high res configurations, probably selected by reusing
@@ -554,7 +573,7 @@ constexpr static uint32_t FLASH_OFFSET      = RAM_OFFSET + RAM_SIZE;
 constexpr static uint32_t SCSI_ROM_OFFSET   = FLASH_OFFSET + FLASH_SIZE;
 
 constexpr static int      STEPPING          = 0x10;       // treat hardware as Model 3 Step 1.0
-constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // Step 1.0 PowerPC frequency
+constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // core clock (33 MHz bus x 2), see "CPU Clock and Time Base"
 
 // On Model 3, the ping-pong flip line is programmed into a tile generator
 // register. There is no tile generator here, so use the value most Model 3
@@ -1583,11 +1602,13 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   Util::FlipEndian32(flash, FLASH_SIZE);
   Util::FlipEndian32(scsiROM, SCSI_ROM_SIZE);
 
-  // Configure CPU and PCI bridge as Step 1.0
+  // Configure CPU and PCI bridge. The bus is 33 MHz because the firmware
+  // expects a time base of 8.33 MHz (see "CPU Clock and Time Base"). The 2X
+  // multiplier keeps the core at 66 MHz, as on Model 3 Step 1.0.
   PPC_CONFIG ppc_config;
-  ppc_config.pvr = PPC_MODEL_603R;              // 66 MHz
-  ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
-  ppc_config.bus_frequency_multiplier = 0x10;   // 1X multiplier
+  ppc_config.pvr = PPC_MODEL_603R;
+  ppc_config.bus_frequency = BUS_FREQUENCY_33MHZ;
+  ppc_config.bus_frequency_multiplier = 0x20;   // 2X multiplier
   PCIBridge.SetModel(0x105);                    // MPC105
 
   // Initialize CPU
