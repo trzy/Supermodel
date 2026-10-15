@@ -559,6 +559,11 @@ constexpr static unsigned PING_PONG_FLIP_LINE = 238;
 // Model 3 asserts its VBlank interrupt (IRQ 0x02)
 constexpr static unsigned FIELD_SYNC_LINE = 383;
 
+// The SCSI controller's SCRIPTS processor runs alongside the PowerPC: it is
+// given a slice of instructions each line. SCRIPTS waiting on the SCSI bus end
+// their slice early, so this only bounds runaway loops.
+constexpr static unsigned SCSI_INSTRUCTIONS_PER_LINE = 100;
+
 // UART registers are 8 bytes apart and occupy the least significant byte of
 // each big endian 32-bit word
 constexpr static uint32_t UART_BASE_ADDR    = 0x64000000;
@@ -1203,6 +1208,7 @@ void CPro1000::RunMainBoardFrame(void)
     for (unsigned i = 0; i < vBlankCycles / lineCycles; i++)
     {
       UART.Tick();
+      SCSI.Run(SCSI_INSTRUCTIONS_PER_LINE);
       PIC.Tick();
       ppc_execute(lineCycles);
     }
@@ -1222,6 +1228,7 @@ void CPro1000::RunMainBoardFrame(void)
     if (i == FIELD_SYNC_LINE)
       PIC.Assert(PIC_LINE_FIELD_SYNC);
     UART.Tick();
+    SCSI.Run(SCSI_INSTRUCTIONS_PER_LINE);
     PIC.Tick();
     ppc_execute(lineCycles);
     if (i == 0)

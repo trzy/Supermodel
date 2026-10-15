@@ -57,6 +57,12 @@ struct NCR53C810Context
 
 	// Operational status
 	bool	halt;		// set true if halted by interrupt instruction
+	bool	idle;		// set true if SCRIPTS have not been started since reset or were stopped by an unrecognized instruction
+	bool	waiting;	// set true if the last instruction is waiting on the SCSI bus (re-executed by the next Run())
+	bool	carry;		// ALU carry flag (register arithmetic, carry tests)
+
+	// SCSI bus state (target mode)
+	bool	atn;		// ATN asserted by the initiator
 
 	// Big endian bus object for DMA memory access and instruction fetching
 	IBus	*Bus;
@@ -164,6 +170,23 @@ public:
 	UINT8 GetBaseAddress(void) const;
 
 	/*
+	 * Run(maxInstructions):
+	 *
+	 * Executes SCRIPTS until the SCRIPTS processor halts or the instruction
+	 * limit is reached, whichever comes first. A limit is always required
+	 * because SCRIPTS can loop indefinitely. SCRIPTS are also started
+	 * immediately (with a fixed limit) when the registers that start them are
+	 * written; this may be called periodically to continue execution.
+	 *
+	 * Parameters:
+	 *		maxInstructions	Maximum number of instructions to execute.
+	 *
+	 * Returns:
+	 *		Number of instructions executed.
+	 */
+	unsigned Run(unsigned maxInstructions);
+
+	/*
 	 * Reset(void):
 	 *
 	 * Resets the device. 
@@ -197,7 +220,8 @@ public:
 
 private:
 	// Private members
-	void	Run(bool singleStep);
+	Result	ExecuteInstruction(void);	// fetches and executes the instruction at DSP
+	void	SingleStep(void);			// executes one instruction and raises the single step interrupt
 	void	BuildOpTable(void);
 	void	Insert(UINT8 mask, UINT8 op, Result (*Handler)(struct NCR53C810Context *));
 	Result	(*OpTable[256])(struct NCR53C810Context *);

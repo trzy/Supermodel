@@ -24,6 +24,16 @@
  * 
  * Implementation of the C53C810 class: NCR 53C810 SCSI controller.
  *
+ * References:
+ * -----------
+ * [810A]  Technical Manual, LSI53C810A PCI to SCSI I/O Processor, Version 2.1,
+ *         March 2001. Page numbers cited without a document refer to this
+ *         manual.
+ * [825A]  Technical Manual, LSI53C825A/825AE PCI to SCSI I/O Processor,
+ *         Version 3.1, January 2001 (DB14-000159-00, Fourth Edition). Used
+ *         for target mode operation and the 53C825 used by the Real3D
+ *         Pro-1000.
+ *
  * Notes:
  * ------
  * - VF3 does something weird: it writes DSP (triggering automatic code
@@ -39,7 +49,24 @@
  *   jerky graphics). Enabling automatic execution and also allowing single
  *   stepping to occur when the processor is halted seems to work, but it 
  *   causes invalid instructions to be hit each time.
- * - pg 2-22 (42) of the manual has description of how to clear interrupts.
+ * - pg 2-22 (42) of [810A] has description of how to clear interrupts.
+ * - Model 3 games use the SCRIPTS processor only as a DMA engine (memory move
+ *   and interrupt instructions, in initiator mode). The Real3D Pro-1000 uses
+ *   it as a SCSI target (its 53C825 runs target mode SCRIPTS). Target mode
+ *   support covers what the Pro-1000 firmware's SCRIPTS use: JUMP, CALL,
+ *   RETURN, register read/write, and the target mode I/O instructions.
+ *   Initiator mode I/O instructions and phase tests are not emulated.
+ * - Instructions that wait on the SCSI bus (e.g., WAIT SELECT) set the
+ *   waiting flag and leave DSP unchanged, ending the current Run(). The next
+ *   Run() executes them again. Because no SCSI bus is attached yet, a target
+ *   is never selected and block moves wait indefinitely. SIGP aborts WAIT
+ *   SELECT.
+ * - TODO: DSP is inaccurate while an instruction waits. On the real chip, DSP
+ *   is advanced past an instruction as soon as it is fetched, so a CPU
+ *   reading DSP during WAIT SELECT would see the address of the following
+ *   instruction. Here, DSP still points at the waiting instruction. Likewise,
+ *   INT leaves DSP pointing at itself (VF3 relies on this; see above). The
+ *   Pro-1000 firmware does not read DSP while SCRIPTS wait.
  *
  */
 
@@ -53,6 +80,9 @@
  Save States
 ******************************************************************************/
 
+// TODO: target mode state (waiting, carry, ATN, and connection status) is not
+// saved. Model 3 never uses it and the Pro-1000 does not yet support save
+// states. Saving in the middle of a SCSI transaction may not be meaningful.
 void C53C810::SaveState(CBlockFile *SaveState)
 {
   SaveState->NewBlock("53C810", __FILE__);
@@ -101,9 +131,258 @@ static inline UINT32 Fetch(struct NCR53C810Context *Ctx, UINT32 offset)
   return FLIPENDIAN32(data);  // remember: bus is big endian, need to convert to little endian
 }
 
+static Result SCRIPTS_Invalid(struct NCR53C810Context *Ctx);
+
+static constexpr UINT8 ISTAT_SRST = 0x40; // software reset
+static constexpr UINT8 ISTAT_SIGP = 0x20; // signal process
+static constexpr UINT8 ISTAT_CON = 0x08;  // connected to SCSI bus
+
+static inline bool TargetMode(const struct NCR53C810Context *Ctx)
+{
+  return (Ctx->regs[0x00] & 1) != 0;  // SCNTL0.TRG
+}
+
+static inline INT32 SignExtend24(UINT32 x)
+{
+  return (INT32) ((x & 0x00FFFFFF) ^ 0x00800000) - 0x00800000;
+}
+
+// Destination of a jump. Relative addresses are offsets from the next
+// instruction (DSP has not yet been advanced past this one).
+static UINT32 JumpAddress(const struct NCR53C810Context *Ctx, bool relative)
+{
+  if (relative)
+    return Ctx->regDSP + 8 + SignExtend24(Ctx->regDSPS);
+  return Ctx->regDSPS;
+}
+
+// Evaluates the condition of a transfer control instruction (JUMP, CALL,
+// RETURN, INT). Returns true if the transfer should occur. When both phase
+// and data are compared, both must be true to branch on true and both must
+// be false to branch on false.
+static bool TransferConditionMet(const struct NCR53C810Context *Ctx)
+{
+  bool jumpIfTrue = (Ctx->regDBC & 0x080000) != 0;
+  if ((Ctx->regDBC & 0x200000))     // carry test (phase and data compares are illegal)
+    return Ctx->carry == jumpIfTrue;
+
+  bool compared = false;
+  bool allMatch = true;             // every enabled comparison matches the condition
+  if ((Ctx->regDBC & 0x020000))     // compare phase
+  {
+    bool phase;
+    if (TargetMode(Ctx))
+      phase = Ctx->atn;             // in target mode, tests ATN
+    else
+    {
+      DebugLog("53C810: initiator mode phase comparison not emulated (DSP=%08X)\n", Ctx->regDSP);
+      phase = false;
+    }
+    compared = true;
+    allMatch = allMatch && (phase == jumpIfTrue);
+  }
+  if ((Ctx->regDBC & 0x040000))     // compare data with SFBR (mask bits that are set are not compared)
+  {
+    UINT8 compareMask = ~(Ctx->regDBC >> 8) & 0xFF;
+    bool data = (Ctx->regs[0x08] & compareMask) == (Ctx->regDBC & compareMask);
+    compared = true;
+    allMatch = allMatch && (data == jumpIfTrue);
+  }
+  if (!compared)
+    return jumpIfTrue;              // unconditional (e.g., INT 0x98080000 used by Model 3)
+  return allMatch;
+}
+
+// JUMP, CALL, RETURN
+static Result SCRIPTS_TransferControl(struct NCR53C810Context *Ctx)
+{
+  unsigned opcode = (Ctx->regDCMD >> 3) & 7;
+  if (!TransferConditionMet(Ctx))
+  {
+    Ctx->regDSP += 8;
+    return Result::OKAY;
+  }
+  bool relative = (Ctx->regDBC & 0x800000) != 0;
+  switch (opcode)
+  {
+  case 0:   // JUMP
+    Ctx->regDSP = JumpAddress(Ctx, relative);
+    break;
+  case 1:   // CALL (return address saved in TEMP)
+    Ctx->regTEMP = Ctx->regDSP + 8;
+    Ctx->regDSP = JumpAddress(Ctx, relative);
+    break;
+  case 2:   // RETURN
+    Ctx->regDSP = Ctx->regTEMP;
+    break;
+  default:
+    return ErrorLog("53C810: invalid transfer control instruction (%02X%06X, DSP=%08X)", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
+  }
+  return Result::OKAY;
+}
+
+// Register access by SCRIPTS (no side effects)
+static UINT8 ScriptsReadRegister(const struct NCR53C810Context *Ctx, unsigned reg)
+{
+  switch (reg)
+  {
+  case 0x1C: case 0x1D: case 0x1E: case 0x1F:   // TEMP
+    return (Ctx->regTEMP >> ((reg - 0x1C) * 8)) & 0xFF;
+  case 0x30: case 0x31: case 0x32: case 0x33:   // DSPS
+    return (Ctx->regDSPS >> ((reg - 0x30) * 8)) & 0xFF;
+  default:
+    return reg < sizeof(Ctx->regs) ? Ctx->regs[reg] : 0;
+  }
+}
+
+static void ScriptsWriteRegister(struct NCR53C810Context *Ctx, unsigned reg, UINT8 data)
+{
+  switch (reg)
+  {
+  case 0x1C: case 0x1D: case 0x1E: case 0x1F:   // TEMP
+  {
+    unsigned shift = (reg - 0x1C) * 8;
+    Ctx->regTEMP = (Ctx->regTEMP & ~(0xFF << shift)) | (UINT32(data) << shift);
+    break;
+  }
+  case 0x30: case 0x31: case 0x32: case 0x33:   // DSPS
+  {
+    unsigned shift = (reg - 0x30) * 8;
+    Ctx->regDSPS = (Ctx->regDSPS & ~(0xFF << shift)) | (UINT32(data) << shift);
+    break;
+  }
+  default:
+    if (reg < sizeof(Ctx->regs))
+      Ctx->regs[reg] = data;
+    break;
+  }
+}
+
+// Read/write register instructions: move SFBR to register (opcode 5),
+// register to SFBR (6), and read-modify-write (7)
+static Result SCRIPTS_ReadWriteRegister(struct NCR53C810Context *Ctx)
+{
+  unsigned opcode = (Ctx->regDCMD >> 3) & 7;
+  unsigned oper = Ctx->regDCMD & 7;
+  unsigned reg = (Ctx->regDBC >> 16) & 0x7F;
+  bool useSFBR = opcode == 7 && (Ctx->regDBC & 0x800000);  // SFBR replaces data8 (read-modify-write only)
+  UINT8 operand = useSFBR ? Ctx->regs[0x08] : (Ctx->regDBC >> 8) & 0xFF;
+  UINT8 src = (opcode == 5) ? Ctx->regs[0x08] : ScriptsReadRegister(Ctx, reg);
+  unsigned result;
+  bool carryIn = Ctx->carry;
+
+  switch (oper)
+  {
+  case 0:   // move data
+    result = operand;
+    break;
+  case 1:   // shift left through carry
+    Ctx->carry = (src & 0x80) != 0;
+    result = (src << 1) | (carryIn ? 0x01 : 0);
+    break;
+  case 2:   // OR
+    result = src | operand;
+    break;
+  case 3:   // XOR
+    result = src ^ operand;
+    break;
+  case 4:   // AND
+    result = src & operand;
+    break;
+  case 5:   // shift right through carry
+    Ctx->carry = (src & 1) != 0;
+    result = (src >> 1) | (carryIn ? 0x80 : 0);
+    break;
+  case 6:   // add
+    result = src + operand;
+    Ctx->carry = result > 0xFF;
+    break;
+  default:  // add with carry
+    result = src + operand + (carryIn ? 1 : 0);
+    Ctx->carry = result > 0xFF;
+    break;
+  }
+
+  if (opcode == 6)
+    Ctx->regs[0x08] = result & 0xFF;  // SFBR
+  else
+    ScriptsWriteRegister(Ctx, reg, result & 0xFF);
+  Ctx->regDSP += 8;
+  return Result::OKAY;
+}
+
+// I/O instructions in target mode: RESELECT, DISCONNECT, WAIT SELECT, SET,
+// CLEAR
+static Result SCRIPTS_IO(struct NCR53C810Context *Ctx)
+{
+  unsigned opcode = (Ctx->regDCMD >> 3) & 7;
+  if (!TargetMode(Ctx))
+    return SCRIPTS_Invalid(Ctx);  // initiator mode I/O instructions are not emulated
+
+  bool relative = (Ctx->regDCMD & 4) != 0;  // bit 26 (bit 25 is table indirect, bit 24 is select with ATN)
+  switch (opcode)
+  {
+  case 0:   // RESELECT
+    // Takes the alternate address only if we are selected by an initiator
+    // before winning arbitration. SIGP has no effect. No SCSI bus is attached
+    // yet, so there is no initiator to reselect.
+    Ctx->waiting = true;
+    return Result::OKAY;
+  case 2:   // WAIT SELECT
+    if ((Ctx->regISTAT & ISTAT_SIGP))
+    {
+      // Signaled by the CPU: give up and take the alternate address
+      Ctx->regDSP = JumpAddress(Ctx, relative);
+      return Result::OKAY;
+    }
+    // No SCSI bus is attached yet, so we are never selected
+    Ctx->waiting = true;
+    return Result::OKAY;
+  case 1:   // DISCONNECT
+    Ctx->regISTAT &= ~ISTAT_CON;
+    Ctx->regDSP += 8;
+    return Result::OKAY;
+  case 3:   // SET
+  case 4:   // CLEAR
+  {
+    bool set = opcode == 3;
+    if ((Ctx->regDBC & 0x400))  // carry
+      Ctx->carry = set;
+    if ((Ctx->regDBC & 0x200))  // target mode
+      Ctx->regs[0x00] = set ? (Ctx->regs[0x00] | 1) : (Ctx->regs[0x00] & ~1);
+    // ATN and ACK are latched in SOCL but are not driven onto the bus in
+    // target mode
+    if ((Ctx->regDBC & 0x040))  // ACK
+      Ctx->regs[0x09] = set ? (Ctx->regs[0x09] | 0x40) : (Ctx->regs[0x09] & ~0x40);
+    if ((Ctx->regDBC & 0x008))  // ATN
+      Ctx->regs[0x09] = set ? (Ctx->regs[0x09] | 0x08) : (Ctx->regs[0x09] & ~0x08);
+    Ctx->regDSP += 8;
+    return Result::OKAY;
+  }
+  default:
+    return ErrorLog("53C810: invalid I/O instruction (%02X%06X, DSP=%08X)", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
+  }
+}
+
+// Block move
+static Result SCRIPTS_BlockMove(struct NCR53C810Context *Ctx)
+{
+  if (!TargetMode(Ctx))
+    return SCRIPTS_Invalid(Ctx);  // initiator mode block moves are not emulated
+
+  // Without a SCSI bus, there is no initiator to transfer data with
+  Ctx->waiting = true;
+  return Result::OKAY;
+}
+
 //TODO: what happens if interrupt is executed in single step mode?
 static Result SCRIPTS_Int_IntFly(struct NCR53C810Context *Ctx)
 {
+  if (!TransferConditionMet(Ctx))
+  {
+    Ctx->regDSP += 8;
+    return Result::OKAY;
+  }
   Ctx->halt = true;   // halt SCRIPTS execution
   Ctx->regISTAT |= 1; // DMA interrupt pending
   Ctx->regDSTAT |= 4; // SCRIPTS interrupt instruction received
@@ -161,46 +440,57 @@ static Result SCRIPTS_Invalid(struct NCR53C810Context *Ctx)
   return Result::FAIL;
 }
 
-void C53C810::Run(bool singleStep)
+// Maximum number of instructions executed when SCRIPTS are started by a
+// register write
+static constexpr unsigned MAX_IMMEDIATE_INSTRUCTIONS = 100;
+
+Result C53C810::ExecuteInstruction(void)
 {
-  UINT32  op;
-  int   i;
-  
-  if (singleStep)// && !Ctx.halt)
+  Ctx.waiting = false;
+
+  // Fetch instruction (first two words are always fetched)
+  UINT32 op = Fetch(&Ctx, 0);   // word 1
+  Ctx.regDBC = op&0x00FFFFFF;
+  Ctx.regDCMD = (op>>24)&0xFF;
+  Ctx.regDSPS = Fetch(&Ctx, 4); // word 2
+
+  // Execute!
+  return OpTable[Ctx.regDCMD](&Ctx);
+}
+
+unsigned C53C810::Run(unsigned maxInstructions)
+{
+  // Run as long as the processor is started and not halted. An unrecognized
+  // instruction stops execution (without halting) until SCRIPTS are started
+  // again. An instruction waiting on the SCSI bus ends this run and is
+  // executed again by the next one.
+  unsigned numExecuted = 0;
+  while (numExecuted < maxInstructions && !Ctx.halt && !Ctx.idle)
   {
-    // Fetch instruction (first two words are always fetched)
-    op = Fetch(&Ctx, 0);          // word 1
-    Ctx.regDBC = op&0x00FFFFFF;
-    Ctx.regDCMD = (op>>24)&0xFF;
-    Ctx.regDSPS = Fetch(&Ctx, 4); // word 2
-    
-    // Single step
-    OpTable[Ctx.regDCMD](&Ctx);
-    
-    // Issue IRQ and finish
-    Ctx.regISTAT |= 1;            // DMA interrupt pending
-    Ctx.regDSTAT |= 8;            // single step interrupt
-    if (Ctx.regDIEN & 8)
+    ++numExecuted;
+    if (ExecuteInstruction() != Result::OKAY)
     {
-      Ctx.IRQ->Assert(Ctx.scsiIRQ); // generate an interrupt
-      DebugLog("53C810: Asserted IRQ\n");
+      Ctx.idle = true;
+      break;
     }
+    if (Ctx.waiting)
+      break;
   }
-  else
+  return numExecuted;
+}
+
+void C53C810::SingleStep(void)
+{
+  // Executes even when halted (see notes at top of file)
+  ExecuteInstruction();
+
+  // Issue IRQ and finish
+  Ctx.regISTAT |= 1;            // DMA interrupt pending
+  Ctx.regDSTAT |= 8;            // single step interrupt
+  if (Ctx.regDIEN & 8)
   {
-    // Automatic mode: run (as long as the processor is not halted)
-    for (i = 0; (i < 100) && !Ctx.halt; i++)
-    {
-      // Fetch instruction (first two words are always fetched)
-      op = Fetch(&Ctx, 0);          // word 1
-      Ctx.regDBC = op&0x00FFFFFF;
-      Ctx.regDCMD = (op>>24)&0xFF;
-      Ctx.regDSPS = Fetch(&Ctx, 4); // word 2
-    
-      // Execute!
-      if (OpTable[Ctx.regDCMD](&Ctx) != Result::OKAY)
-        break;
-    }
+    Ctx.IRQ->Assert(Ctx.scsiIRQ); // generate an interrupt
+    DebugLog("53C810: Asserted IRQ\n");
   }
 }
 
@@ -219,6 +509,12 @@ void C53C810::Insert(UINT8 mask, UINT8 op, Result (*Handler)(struct NCR53C810Con
 void C53C810::BuildOpTable(void)
 {
   Insert(0, 0, &SCRIPTS_Invalid);
+  Insert(0xC0, 0x00, &SCRIPTS_BlockMove);
+  Insert(0xC0, 0x40, &SCRIPTS_IO);
+  Insert(0xF8, 0x68, &SCRIPTS_ReadWriteRegister);
+  Insert(0xF8, 0x70, &SCRIPTS_ReadWriteRegister);
+  Insert(0xF8, 0x78, &SCRIPTS_ReadWriteRegister);
+  Insert(0xE0, 0x80, &SCRIPTS_TransferControl);
   Insert(0xE0, 0xC0, &SCRIPTS_MoveMemory);
   Insert(0xF8, 0x98, &SCRIPTS_Int_IntFly);
 }
@@ -246,8 +542,22 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
   switch(reg)
   {
   case 0x14:    // ISTAT
-    Ctx.regISTAT = data;
+    if ((data & ISTAT_SRST))
+    {
+      // Software reset: operating registers return to their defaults (PCI
+      // configuration is unaffected) for as long as SRST remains set
+      Reset();
+      Ctx.regISTAT = ISTAT_SRST;
+      Ctx.regs[0x14] = ISTAT_SRST;
+      Ctx.IRQ->Deassert(Ctx.scsiIRQ);
+      break;
+    }
+    Ctx.regISTAT = (data & ~ISTAT_CON) | (Ctx.regISTAT & ISTAT_CON); // CON is read-only
     DebugLog("ISTAT=%02X\n", data);
+    // SIGP aborts WAIT SELECT: let a waiting SCRIPTS processor respond
+    // immediately
+    if ((data & ISTAT_SIGP) && Ctx.waiting && !Ctx.halt)
+      Run(MAX_IMMEDIATE_INSTRUCTIONS);
     break;
   case 0x1B:    // CTEST3
     Ctx.regs[0x1B] &= ~0x04;  // CLF (clear DMA FIFO) self-clears once FIFO is cleared, which is instantaneous here
@@ -301,13 +611,14 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
   case 0x2F:    // DSP 31-24
     Ctx.regDSP &= 0x00FFFFFF;
     Ctx.regDSP |= (data<<24);
-    Ctx.halt = false; // writing this register un-halts 53C810 operation (pg.6-31 of LSI manual)
+    Ctx.halt = false; // writing this register un-halts 53C810 operation (pg.6-31 of [810A])
     if (!(Ctx.regDMODE&1))  // if MAN=0, start SCRIPTS automatically
     // To-Do: is this correct? Should single step really be tested first?
     //if (!(Ctx.regDCNTL&0x10) && !(Ctx.regDMODE&1))  // if MAN=0 and not single stepping, start SCRIPTS automatically
     {
       DebugLog("53C810: Automatically starting (PC=%08X, LR=%08X, single step=%d)\n", ppc_get_pc(), ppc_get_lr(), !!(Ctx.regDCNTL&0x10));
-      Run(false);       // automatic
+      Ctx.idle = false;
+      Run(MAX_IMMEDIATE_INSTRUCTIONS);  // automatic
     }
     break;  
   case 0x30:    // DSPS 7-0
@@ -337,12 +648,13 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
     if ((Ctx.regDCNTL&0x14) == 0x14)    // single step
     {
       DebugLog("53C810: single step: %08X, (halt=%d)\n", Ctx.regDSP, Ctx.halt);
-      Run(true);
+      SingleStep();
     }
     else if ((Ctx.regDCNTL&0x04))     // start DMA bit
     {
       DebugLog("53C810: Manually starting\n");
-      Run(false);
+      Ctx.idle = false;
+      Run(MAX_IMMEDIATE_INSTRUCTIONS);
     }
     break;
   default:
@@ -379,6 +691,14 @@ UINT8 C53C810::ReadRegister(unsigned reg)
   case 0x14:    // ISTAT
     //DebugLog("53C810: ISTAT read\n");
     return Ctx.regISTAT;
+  case 0x1A:    // CTEST2
+    // Bit 6 reflects SIGP, and reading clears SIGP
+    if ((Ctx.regISTAT & ISTAT_SIGP))
+    {
+      Ctx.regISTAT &= ~ISTAT_SIGP;
+      return Ctx.regs[0x1A] | 0x40;
+    }
+    break;
   case 0x1C:    // TEMP 7-0
     return Ctx.regTEMP&0xFF;
   case 0x1D:    // TEMP 15-8
@@ -497,6 +817,10 @@ void C53C810::Reset(void)
   Ctx.regDIEN = 0;
   Ctx.regISTAT = 0;
   Ctx.halt = false;
+  Ctx.idle = true;    // nothing runs until SCRIPTS are started
+  Ctx.waiting = false;
+  Ctx.carry = false;
+  Ctx.atn = false;
   
   DebugLog("53C810 reset\n");
 }
