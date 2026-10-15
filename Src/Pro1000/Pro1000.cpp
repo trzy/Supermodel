@@ -470,6 +470,49 @@
  * also what starts the console being read.
  *
  *
+ * Rendering
+ * ---------
+ * The Real3D draws continuously, one frame for each field (hypothesis). No
+ * command starts the drawing. Real3D.cpp ("Rendering") describes how
+ * Supermodel draws and how the Pro-1000 differs from Model 3.
+ *
+ * Firmware sequence for each frame (main loop 0x9B6C, simplified):
+ *  1. Wait for host data. A WRITE from the host (LUN 0) puts the update in
+ *     the ring buffer and sets bit 1 of 0x62384.
+ *  2. Render cycle (0xA984): set bits in RIF_MODE (0x70000000), process the
+ *     packets in the ring buffer (0xAC18), and write REND_UPDATE_COMPL
+ *     (0x88000000) at 0xC954 if the packets wrote data.
+ *  3. Read the Real3D status registers into the status packet (Stat_Pckt),
+ *     with "render done" and the ping-pong bit. The host reads this packet
+ *     (READ, LUN 0) before it sends the next frame.
+ *  4. Wait for the geometry processor sync (IR7) or the next field (IR0).
+ *
+ * Emulation of each frame (RunMainBoardFrame()):
+ *  - VBlank (40 lines): CReal3D::BeginVBlank(), then IR7 (GP sync) at the
+ *    end of VBlank.
+ *  - Active display (384 lines): the ping-pong bit flips at line
+ *    PING_PONG_FLIP_LINE (238, the value that most Model 3 games put in a
+ *    tile generator register), and IR0 (field sync) occurs at line
+ *    FIELD_SYNC_LINE (383).
+ *  - Then the renderer draws the scene that is in memory (RenderFrame()).
+ * The Pro-1000 time of the ping-pong flip is not known. The update buffers
+ * are off (Real3DConfig::Pro1000()), so the flip only changes the status
+ * bit.
+ *
+ * Textures:
+ *  - Texture port (REND_ROM_UPDATE, 0x90000000): the firmware and the SDK
+ *    demos use it. The data is the word address of a texture block in
+ *    polygon memory (Model 3 Step 1.0 texture port, with polygon memory as
+ *    VROM).
+ *  - Texture FIFO (REND_TEX_UPDATE, REND_TEX_CONTINUE, REND_TRANS_UPDATE,
+ *    0x94000000): the firmware address table gives it, but no firmware code
+ *    uses it. A host can write to it with packets. The SDK demos were not
+ *    seen to use it.
+ *  - Texture memory: 8 MB (4M texels), as on Model 3. The SDK gives an
+ *    optional 32 MB (16M texels), and the firmware reports "Extended
+ *    Texture Memory = 1". The extended texture memory is not emulated.
+ *
+ *
  * CPU Clock and Time Base
  * -----------------------
  * The firmware measures time with the PowerPC time base. It divides time

@@ -38,6 +38,64 @@
  *   little endian device), forcing the Model3 Read32/Write32 handlers to
  *   manually reverse the data. This keeps with the convention for VRAM.
  * 
+ * Rendering
+ * ---------
+ * Supermodel draws one frame for each emulated frame. RenderFrame() tells
+ * the renderer to draw the scene that is in Real3D memory. In multi-threaded
+ * mode, the renderer reads the read-only snapshots, which SyncSnapshots()
+ * updates once for each frame. No command starts the drawing.
+ *
+ * Model 3:
+ *
+ * Two signals tell when the data for a frame is complete:
+ *
+ *   Command port (0x88000000)  Flush(). The CPU wrote all the data for the
+ *                              frame.
+ *   Tile generator             TilegenDrawFrame(). The tile generator draws
+ *                              a frame.
+ *
+ * When both signals occur for a frame, DrawFrame() latches the block culling
+ * bit (Mercury mode word, bit 2). This bit can stop the display of the 3D
+ * scene. DrawFrame() does not draw. Signals that occur after the ping-pong
+ * flip apply to the next frame: BeginVBlank() then applies the update
+ * buffers, uploads the textures if the command port was written, and calls
+ * DrawFrame() if both signals occurred.
+ *
+ * Textures:
+ *
+ *   Texture FIFO (0x94000000)  WriteTextureFIFO() keeps the words. The
+ *                              textures are uploaded when the command port
+ *                              is written (before the flip) or in
+ *                              BeginVBlank() (after the flip).
+ *   Texture port (0x90000000)  WriteTexturePort(). Step 1.0: the data is the
+ *                              word address of a texture block in VROM, and
+ *                              the block goes into the texture FIFO. Step
+ *                              2.x: two words (address and header), and the
+ *                              texture is uploaded immediately. Addresses
+ *                              below 0x100000 are in polygon RAM.
+ *
+ * Texture RAM is 8 MB: two pages of 2048x1024 16-bit texels.
+ *
+ * Real3D Pro-1000 (hypothesis):
+ *
+ * The Pro-1000 has no tile generator. Thus TilegenDrawFrame() does not occur,
+ * DrawFrame() does not occur, and block culling stays off. The firmware
+ * writes the command port (REND_UPDATE_COMPL) after it processes the update
+ * from the host. This uploads the textures. Supermodel draws each frame from
+ * memory, as for Model 3.
+ *
+ * The hypothesis is that the Pro-1000 draws continuously, one frame for each
+ * field, and that REND_UPDATE_COMPL marks the end of an update. The firmware
+ * sends no command to draw. For each frame, it processes the update from the
+ * host, writes REND_UPDATE_COMPL, waits for the geometry processor sync, and
+ * reports "render done" in the status packet. The host reads the status
+ * packet before it sends the next frame.
+ *
+ * Difference: Supermodel draws at the end of each emulated frame, not when
+ * REND_UPDATE_COMPL is written. On the Pro-1000, the update buffers are off
+ * (see below). Thus a frame can show part of an update that is not complete.
+ * This was not seen in the SDK demos.
+ *
  * Update Buffers
  * --------------
  * Model 3:
