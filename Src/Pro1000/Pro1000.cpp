@@ -1120,63 +1120,6 @@ void CPro1000::ClearNVRAM(void)
   // No NVRAM
 }
 
-// TEMPORARY: SCSI self test. It sends some standard commands to the Pro-1000
-// and prints the results. Remove when a host computer can connect.
-static void SubmitSCSISelfTest(CSCSIHostAdapter &hostAdapter)
-{
-  struct Test
-  {
-    const char *name;
-    std::vector<uint8_t> cdb;
-    size_t dataInLength;
-    size_t dataOutLength;
-  };
-  static const Test tests[] =
-  {
-    { "TEST UNIT READY", { 0x00, 0, 0, 0, 0, 0 }, 0, 0 },
-    { "INQUIRY", { 0x12, 0, 0, 0, 36, 0 }, 36, 0 },
-    { "REQUEST SENSE", { 0x03, 0, 0, 0, 18, 0 }, 18, 0 },
-    { "READ CAPACITY", { 0x25, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 8, 0 },
-    { "WRITE(10)", { 0x2A, 0, 0, 0, 0, 0, 0, 0, 1, 0 }, 0, 512 },    // 1 block
-    { "READ(10)", { 0x28, 0, 0, 0, 0, 0, 0, 0, 1, 0 }, 512, 0 }      // 1 block
-  };
-  for (const Test &test: tests)
-  {
-    SCSIRequest request;
-    request.targetID = 0;
-    request.cdb = test.cdb;
-    request.dataInLength = test.dataInLength;
-
-    // Data out: one packet that writes 4 words to culling memory, then an
-    // end of list (opcode 0). The host sends little endian words. Packet
-    // header (Scsi_Head): word 0 = cntrl (opcode) << 24 | number of words,
-    // word 1 = address.
-    if (test.dataOutLength > 0)
-    {
-      const uint32_t packet[] = { 0x01000004, 0x8C000100, 0x11223344, 0x55667788, 0x99AABBCC, 0xDDEEFF00 };
-      std::vector<uint32_t> words(test.dataOutLength / 4, 0);
-      std::copy(std::begin(packet), std::end(packet), words.begin());
-      for (uint32_t word: words)
-      {
-        for (unsigned b = 0; b < 4; b++)
-          request.dataOut.push_back(uint8_t(word >> (b * 8)));
-      }
-    }
-    const char *name = test.name;
-    hostAdapter.Submit(request, [name](const SCSIResult &result)
-    {
-      std::string data;
-      for (uint8_t b: result.dataIn)
-      {
-        char hex[4];
-        snprintf(hex, sizeof(hex), "%02X ", b);
-        data += hex;
-      }
-      printf("SCSI test: %s: completed=%d status=%02X error=\"%s\" data (%u bytes): %s\n", name, result.completed, result.status, result.error.c_str(), unsigned(result.dataIn.size()), data.c_str());
-    });
-  }
-}
-
 void CPro1000::RunFrame(void)
 {
   UINT32 start = CThread::GetTicks();
@@ -1232,10 +1175,6 @@ void CPro1000::RunFrame(void)
 
   timings.frameTicks = CThread::GetTicks() - start;
   timings.frameId++;
-
-  // TEMPORARY: SCSI self test. Remove when a host computer can connect.
-  if (timings.frameId == 600)
-    SubmitSCSISelfTest(SCSIHostAdapter);
   return;
 
 ThreadError:
@@ -1772,6 +1711,11 @@ Result CPro1000::Init(void)
   PCIBus.Init();
   SCSI.Init(this, &PIC, PIC_LINE_SCSI);
   SCSI.AttachInitiator(&SCSIHostAdapter);
+
+  // Host computer programs connect to the SCSI host adapter through the
+  // bridge. If the bridge cannot start, emulation continues without it.
+  m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
+  m_scsiTCPBridge->Start();
   if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
     return Result::FAIL;
   BuildScanChain();

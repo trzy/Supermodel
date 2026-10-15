@@ -31,6 +31,8 @@
 #include "Game.h"
 #include "Pro1000/8259.h"
 #include "Pro1000/SCANPSC100F.h"
+#include "Pro1000/SCSITCPBridge.h"
+#include "Pro1000/SCSITCPBridgeProtocol.h"
 #include "Pro1000/SCSIHostAdapter.h"
 #include "Pro1000/UART.h"
 #include "Model3/53C810.h"
@@ -186,6 +188,7 @@ private:
   CPCIBus     PCIBus;       // PCI bus
   C53C810     SCSI;         // SCSI controller (NCR 53C825 on real hardware, emulated as 53C810)
   CSCSIHostAdapter SCSIHostAdapter; // host computer's SCSI host adapter (initiator on the SCSI bus)
+  std::unique_ptr<CSCSITCPBridge> m_scsiTCPBridge;  // connects host computer programs to the host adapter (destroyed before it)
   CReal3D     GPU;          // Real3D graphics hardware
   std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
   C3DRAM      m_3dram[4];                       // 3D-RAMs on the JTAG scan chain

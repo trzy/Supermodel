@@ -108,6 +108,33 @@ PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PL
 PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM_LIBS)
 PLATFORM_BINARY_EXTENSION = .exe
 
+#
+# ASPI DLL (wnaspi32.dll) for Real3D Pro-1000 host programs. These programs are
+# 32-bit, so the DLL needs a 32-bit (i686) compiler, which is a separate MSYS2
+# package (mingw-w64-i686-gcc). Set CXX32 to use a different compiler. If the
+# compiler is not available, the DLL is not built. The DLL goes in its own
+# 32-bit output directory.
+#
+# The compiler runs other programs (assembler, linker) from its own directory.
+# CXX32_ENV puts this directory first in PATH, before the 64-bit toolchain.
+ifneq (,$(findstring cmd.exe,$(shell echo %COMSPEC%)))
+	CXX32 = \msys64\mingw32\bin\g++
+	CXX32_ENV = set "PATH=$(dir $(CXX32));%PATH%" &&
+else
+	CXX32 = /mingw32/bin/g++
+	CXX32_ENV = PATH="$$(cygpath -u '$(dir $(CXX32))'):$$PATH"
+endif
+WNASPI32_BIN_DIR = bin32
+WNASPI32_DLL = $(WNASPI32_BIN_DIR)/wnaspi32.dll
+WNASPI32_SRC_FILES = Src/OSD/Windows/wnaspi32/wnaspi32.cpp Src/OSD/Windows/wnaspi32/wnaspi32.def
+WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/Pro1000/SCSITCPBridgeProtocol.h
+ifneq (,$(findstring i686,$(shell $(CXX32) -dumpmachine 2>&1)))
+	PLATFORM_TARGETS += $(WNASPI32_DLL)
+	PLATFORM_PKG_FILES += $(WNASPI32_DLL)
+else
+	PLATFORM_TARGETS += wnaspi32_skipped
+endif
+
 
 ###############################################################################
 # Core Makefile
@@ -125,6 +152,9 @@ clean:
 	$(SILENT)echo Cleaning up $(BIN_DIR) and $(OBJ_DIR)...
 	$(SILENT)$(RMDIR) $(BIN_DIR)
 	$(SILENT)$(RMDIR) $(OBJ_DIR)
+ifneq ($(WNASPI32_BIN_DIR),$(BIN_DIR))
+	$(SILENT)-$(RMDIR) $(WNASPI32_BIN_DIR)
+endif
 
 
 ###############################################################################
@@ -136,3 +166,23 @@ clean:
 $(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD/Windows/SupermodelManifest.xml | $(OBJ_DIR)
 	$(info Compiling              : $< -> $@)
 	$(SILENT)windres -i Src/OSD/Windows/SupermodelResources.rc -o $@
+
+#
+# ASPI DLL (32-bit). The C and C++ run-time libraries are linked statically,
+# so the DLL needs only Windows system DLLs.
+#
+$(WNASPI32_DLL):	$(WNASPI32_SRC_FILES) $(WNASPI32_HEADERS) | $(WNASPI32_BIN_DIR)
+	$(info --------------------------------------------------------------------------------)
+	$(info Building ASPI DLL      : $@)
+	$(SILENT)$(CXX32_ENV) $(CXX32) -shared -o $@ $(WNASPI32_SRC_FILES) -ISrc $(OPT) $(WARN) $(CXXSTD) -static -static-libgcc -static-libstdc++ $(LDOPT) -lws2_32
+	$(info --------------------------------------------------------------------------------)
+
+ifneq ($(WNASPI32_BIN_DIR),$(BIN_DIR))
+$(WNASPI32_BIN_DIR):
+	$(info Creating directory     : $@)
+	$(SILENT)mkdir $@
+endif
+
+.PHONY: wnaspi32_skipped
+wnaspi32_skipped:
+	$(info Skipping ASPI DLL      : no 32-bit compiler ($(CXX32)). Install mingw-w64-i686-gcc or set CXX32.)

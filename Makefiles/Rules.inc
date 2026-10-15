@@ -123,6 +123,7 @@ SRC_FILES = \
 	Src/Pro1000/UART.cpp \
 	Src/Pro1000/8259.cpp \
 	Src/Pro1000/SCANPSC100F.cpp \
+	Src/Pro1000/SCSITCPBridge.cpp \
 	Src/Pro1000/SCSIHostAdapter.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
@@ -236,7 +237,10 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
 #
-all:	$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY)
+# PLATFORM_TARGETS are additional platform-specific targets. The platform
+# Makefile must set it before it includes this file.
+#
+all:	$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_TARGETS)
 
 #
 # Supermodel3.com release targets: used only to create official builds stamped
@@ -256,7 +260,11 @@ release:: all
 #
 # Github release flow (not yet used).
 #
-PKG_FILES += $(BIN_DIR)/$(SUPERMODEL_BINARY) Docs/README.txt Docs/LICENSE.txt Config Assets
+# PLATFORM_PKG_FILES are additional platform-specific files. The package puts
+# them next to the Supermodel binary. The platform Makefile must set it before
+# it includes this file.
+#
+PKG_FILES += $(BIN_DIR)/$(SUPERMODEL_BINARY) Docs/README.txt Docs/LICENSE.txt Config Assets $(PLATFORM_PKG_FILES)
 
 pkg: pkg/$(PKG_TYPE)
 	$(info Cleaning up            : $(PKG_STAGE_PATH))
@@ -282,6 +290,7 @@ pkg/stage:: pkg/path
 	  echo "Save states go here." > Saves/DIR.txt && \
 	  echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt && \
 	  mv $(BIN_DIR)/$(SUPERMODEL_BINARY) . && rmdir $(BIN_DIR) && \
+	  $(foreach file,$(PLATFORM_PKG_FILES),mv $(file) . && rmdir $(patsubst %/,%,$(dir $(file))) &&) \
 	  mv Docs//* . && rmdir Docs
 	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
 	$(SILENT)./Scripts/changelog.sh $(PKG_STAGE_PATH)/CHANGES.txt

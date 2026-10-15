@@ -73,10 +73,10 @@ void CSCSIHostAdapter::StartRequest(PendingRequest &&pending)
   m_commandComplete = false;
   m_disconnectMessage = false;
 
-  // Identify the logical unit (LUN 0) and let the target disconnect, as the
-  // usual host adapters do. ATN stays asserted until the target receives the
+  // Identify the logical unit and let the target disconnect, as the usual
+  // host adapters do. ATN stays asserted until the target receives the
   // message.
-  m_messagesOut.push_back(MSG_IDENTIFY | IDENTIFY_DISCONNECT_PRIVILEGE);
+  m_messagesOut.push_back(MSG_IDENTIFY | IDENTIFY_DISCONNECT_PRIVILEGE | (m_current.request.lun & 7));
   m_state = State::Connected;
 }
 

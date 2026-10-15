@@ -73,7 +73,8 @@
  * Connected:
  *   The target controls the bus. The host adapter supplies and keeps bytes
  *   for each phase that the target requests:
- *     message out  The IDENTIFY message, then NO OPERATION messages.
+ *     message out  The IDENTIFY message (with the LUN of the request and
+ *                  permission to disconnect), then NO OPERATION messages.
  *     command      The CDB.
  *     data out     The data of the request.
  *     data in      Kept as the result data.
@@ -126,6 +127,7 @@
 struct SCSIRequest
 {
   unsigned targetID = 0;
+  unsigned lun = 0;               // logical unit number (sent in the IDENTIFY message)
   std::vector<uint8_t> cdb;       // command descriptor block
   std::vector<uint8_t> dataOut;   // data to send to the target (data out phase)
   size_t dataInLength = 0;        // maximum number of bytes to receive (data in phase)
