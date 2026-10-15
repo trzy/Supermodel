@@ -99,6 +99,19 @@ void CASIC::CaptureDR()
         m_shiftRegSize = 32;
         m_shiftReg = m_modeword;
         break;
+    case 9:                     // update memory configuration (Mercury only)
+        if (m_deviceName == Name::Mercury)
+        {
+            uint64_t word0 = m_real3D.ReadConfigurationRegister(0x0) & 0x7FFFF;
+            uint64_t word1 = m_real3D.ReadConfigurationRegister(0x4) & 0x7FFFF;
+            uint64_t word2 = m_real3D.ReadConfigurationRegister(0x8) & 0x7FFFF;
+            m_shiftRegSize = 57;
+            m_shiftReg = (word0 << 38) | (word1 << 19) | word2;
+            break;
+        }
+        m_shiftRegSize = 1;     // otherwise BYPASS
+        m_shiftReg = 0;
+        break;
     default:                    // BYPASS
         m_shiftRegSize = 1;
         m_shiftReg = 0;
@@ -119,6 +132,15 @@ void CASIC::UpdateDR()
     case 8:                     // MODEWORD
         m_modeword = m_shiftReg.to_ulong();
         m_real3D.WriteJTAGModeword(m_deviceName, m_modeword);
+        break;
+    case 9:                     // update memory configuration (Mercury only)
+        if (m_deviceName == Name::Mercury)
+        {
+            uint64_t value = (m_shiftReg & std::bitset<MAX_REGISTER_LENGTH>((1ull << 57) - 1)).to_ullong();
+            m_real3D.WriteConfigurationRegister(0x0, uint32_t(value >> 38) & 0x7FFFF);
+            m_real3D.WriteConfigurationRegister(0x4, uint32_t(value >> 19) & 0x7FFFF);
+            m_real3D.WriteConfigurationRegister(0x8, uint32_t(value) & 0x7FFFF);
+        }
         break;
     default:
         break;

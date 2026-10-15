@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2011 Bart Trzynadlowski, Nik Henson
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,10 +18,10 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Real3D.h
- * 
+ *
  * Header file defining the CReal3D class: the Model 3's Real3D-based graphics
  * hardware.
  */
@@ -39,7 +39,7 @@
 #include <cstdint>
 #include <unordered_map>
 
-/* 
+/*
  * QueuedUploadTextures:
  *
  * When rendering is multi-threaded, this struct is used to represent a postponed
@@ -73,7 +73,10 @@ struct Real3DConfig
   bool vromIsPolygonRAM = false;
 
   // If true, writes after the ping-pong flip can go to the update buffers
-  // (see Real3D.cpp). If false, all writes go directly to memory.
+  // (see Real3D.cpp). If false, all writes go directly to memory. The
+  // buffers operate only after the configuration registers give an area for
+  // them (Model 3: CPU writes to 0x9C000000. Pro-1000: Mercury JTAG
+  // instruction 0x09).
   bool updateBuffers = true;
 
   static Real3DConfig Model3(void)
@@ -86,7 +89,14 @@ struct Real3DConfig
     Real3DConfig config;
     config.polygonRAMSize = 0x4000000;
     config.vromIsPolygonRAM = true;
-    config.updateBuffers = false;
+
+    // Pro-1000 firmware sets update memory configuration from SCSI ROM, which
+    // we lack, so this *should* be disabled (even though on the actual
+    // hardware, it is likely always used). But we create a synthetic ROM that
+    // sets a valid update memory configuration, so this safeguard is not needed
+    // and we can proceed with emulating this feature.
+    config.updateBuffers = true;
+
     return config;
   }
 };
@@ -145,7 +155,7 @@ public:
    * Must be called before the VBlank starts.
    */
   void BeginVBlank(void);
-  
+
   /*
    * EndVBlank(void)
    *
@@ -157,7 +167,7 @@ public:
    * FlipPingPongBit(void)
    *
    * Any writes that happen after the ping_pong bit flips but before v-blank are buffered.
-   * During v-blank these buffered writes are then copied to the normal memory destinations. 
+   * During v-blank these buffered writes are then copied to the normal memory destinations.
    * The ping_pong flip time comes from the tilegen.
    * The point of this is so the CPU can be calculating the data for the next frame whilst the GPU is rendering
    */
@@ -182,7 +192,7 @@ public:
    * since it may be running in a separate thread.
    */
   void BeginFrame(void);
-  
+
   /*
    * RenderFrame(void):
    *
@@ -200,12 +210,12 @@ public:
    * may be running in a separate thread.
    */
   void EndFrame(void);
-  
+
   /*
    * Flush(void):
    *
    * Triggers the beginning of a new frame. All textures in the texture FIFO
-   * are uploaded and the FIFO is reset. On the real device, this seems to 
+   * are uploaded and the FIFO is reset. On the real device, this seems to
    * cause a frame to be rendered as well but this is not performed here.
    *
    * This should be called when the command port is written.
@@ -256,33 +266,50 @@ public:
   void WriteConfigurationRegister(unsigned reg, uint32_t data);
 
   /*
+   * ReadConfigurationRegister(reg):
+   *
+   * Reads a configuration register. Mercury uses this to capture its update
+   * memory configuration register (JTAG instruction 0x09).
+   *
+   * Parameters:
+   *    reg   Register byte offset (0x0, 0x4, 0x8, or 0xC).
+   *
+   * Returns:
+   *    Register value.
+   */
+  uint32_t ReadConfigurationRegister(unsigned reg) const
+  {
+    return m_configRegisters.regs[(reg & 0xF) / 4];
+  }
+
+  /*
    * WriteLowCullingRAM(addr, data):
    *
    * Writes the low culling RAM region. Because this is a little endian
    * device, big endian devices/buses have to take care to manually reverse
-   * the data before writing. 
-   * 
+   * the data before writing.
+   *
    * Parameters:
    *    addr  Word (32-bit) aligned address ranging from 0 to 0x3FFFFC.
    *          User must ensure address is properly clamped.
    *    data  Data to write.
    */
   void WriteLowCullingRAM(uint32_t addr, uint32_t data);
-  
+
   /*
    * WriteHighCullingRAM(addr, data):
    *
    * Writes the high culling RAM region. Because this is a little endian
    * device, big endian devices/buses have to take care to manually reverse
-   * the data before writing. 
-   * 
+   * the data before writing.
+   *
    * Parameters:
    *    addr  Word (32-bit) aligned address ranging from 0 to 0xFFFFC.
    *          User must ensure address is properly clamped.
    *    data  Data to write.
    */
   void WriteHighCullingRAM(uint32_t addr, uint32_t data);
-  
+
   /*
    * WriteTextureFIFO(data):
    *
@@ -294,7 +321,7 @@ public:
    *    data  Data to write.
    */
   void WriteTextureFIFO(uint32_t data);
-  
+
   /*
    * WriteTexturePort(reg, data):
    *
@@ -308,21 +335,21 @@ public:
    *          register 8 triggers the upload.
    */
   void WriteTexturePort(unsigned reg, uint32_t data);
-  
+
   /*
    * WritePolygonRAM(addr, data):
    *
    * Writes the polygon RAM region. Because this is a little endian device,
    * big endian devices/buses have to take care to manually reverse the data
-   * before writing. 
-   * 
+   * before writing.
+   *
    * Parameters:
    *    addr  Word (32-bit) aligned address ranging from 0 to 0x3FFFFC.
    *          User must ensure address is properly clamped.
    *    data  Data to write.
    */
   void WritePolygonRAM(uint32_t addr, uint32_t data);
-  
+
   /*
   * WriteJTAGModeword(device, data):
   *
@@ -387,7 +414,7 @@ public:
 
   /*
    * TilegenDrawFrame(flags):
-   * 
+   *
    * The tilegen controls the frame timing. When reg 0x0C is written to it seems to trigger the 3d h/w to draw the frame.
    * For a frame to actually draw Flush or 0x88 must have been called. This can happen before or after 0x0C has been written to.
    * Flush signifies a transfer has been completed and the database has been updated. Some games call this multiple times per frame.
@@ -423,7 +450,7 @@ public:
    * SetStepping(stepping):
    *
    * Sets the Model 3 hardware stepping, which also determines the Real3D
-   * functionality. The default is Step 1.0. This should be called prior to 
+   * functionality. The default is Step 1.0. This should be called prior to
    * any other emulation functions and after Init().
    *
    * Parameters:
@@ -432,7 +459,7 @@ public:
    */
   void SetStepping(int stepping);
 
-  
+
   /*
    * Init(vromPtr, BusObjectPtr, IRQObjectPtr, dmaIRQBit, hwConfig):
    *
@@ -457,7 +484,7 @@ public:
    *    errors.
    */
   Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit, const Real3DConfig &hwConfig = Real3DConfig::Model3());
-   
+
   /*
    * CReal3D(config):
    * ~CReal3D(void):
@@ -470,14 +497,14 @@ public:
    */
   CReal3D(const Util::Config::Node &config);
   ~CReal3D(void);
-  
+
 private:
 
     struct UpdateBlock
     {
         uint32_t startAddr;
         uint32_t lastAddr;
-        uint32_t data[1];     // this will be expandable 
+        uint32_t data[1];     // this will be expandable
 
         uint32_t Count() const
         {
@@ -529,12 +556,12 @@ private:
 
   // Renderer attached to the Real3D
   IRender3D *Render3D = nullptr;
-  
+
   // Data passed from Model 3 object
   const uint32_t  *vrom = nullptr;          // Video ROM (polygon RAM if m_hwConfig.vromIsPolygonRAM)
   int             step = 0x10;              // hardware stepping (as in GameInfo structure)
   uint32_t        pciID = PCIID::Step1x;;   // PCI vendor and device ID
-  
+
   // Error flag (to limit errors to once per frame)
   bool error = false;   // true if an error occurred this frame
 
@@ -559,13 +586,13 @@ private:
       };
   } m_configRegisters;
 
-  
+
   // Read-only snapshots
   uint32_t  *cullingRAMLoRO = nullptr;  // 4MB of culling RAM at 8C000000 [read-only snapshot]
   uint32_t  *cullingRAMHiRO = nullptr;  // 1MB of culling RAM at 8E000000 [read-only snapshot]
   uint32_t  *polyRAMRO = nullptr;       // polygon RAM at 98000000       [read-only snapshot]
   uint16_t  *textureRAMRO = nullptr;    // 8MB of internal texture RAM    [read-only snapshot]
-  
+
   // Arrays to keep track of dirty pages in memory regions
   uint8_t   *cullingRAMLoDirty = nullptr;
   uint8_t   *cullingRAMHiDirty = nullptr;
@@ -575,14 +602,14 @@ private:
   // Queued texture uploads
   std::vector<QueuedUploadTextures> queuedUploadTextures;
   std::vector<QueuedUploadTextures> queuedUploadTexturesRO;  // Read-only copy of queue
-  
+
   // Big endian bus object for DMA memory access
   IBus  *Bus = nullptr;
-  
+
   // IRQ handling
   IIRQController *IRQ = nullptr;  // IRQ controller
   uint16_t  dmaIRQ = 0;           // IRQ line mask to use when calling IRQ controller
-  
+
   // DMA device
   uint32_t  dmaSrc = 0;
   uint32_t  dmaDest = 0;
@@ -591,11 +618,11 @@ private:
   uint32_t  dmaUnknownReg = 0;
   uint8_t   dmaStatus = 0;
   uint8_t   dmaConfig = 0;
-  
+
   // Command port
   bool  commandPortWritten = false;
   bool  m_tilegenDrawFrame = false;
-  
+
   // Status and command registers
   uint32_t m_pingPong = 0;
   uint32_t m_pingPongCopy = 0;      // we copy the value during v-blank to see if ping_pong has flipped during the frame

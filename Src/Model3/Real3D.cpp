@@ -92,9 +92,10 @@
  * packet before it sends the next frame.
  *
  * Difference: Supermodel draws at the end of each emulated frame, not when
- * REND_UPDATE_COMPL is written. On the Pro-1000, the update buffers are off
- * (see below). Thus a frame can show part of an update that is not complete.
- * This was not seen in the SDK demos.
+ * REND_UPDATE_COMPL is written. The update buffers (see below) hold only the
+ * writes that occur after the flip. Writes before the flip go directly to
+ * memory. Thus a frame can show part of an update that is not complete. This
+ * was not seen in the SDK demos.
  *
  * Update Buffers
  * --------------
@@ -130,16 +131,21 @@
  * immediately and the write goes directly to memory. Writes from a buffer
  * cannot go outside the memory that they update.
  *
- * Real3D Pro-1000 (hypothesis):
+ * Real3D Pro-1000:
  *
  * The Pro-1000 has the same architecture. Its SDK gives a "ping-pong memory"
  * in high culling RAM (PRO_PINGPONG_BASE = 0x8E000000) and an "update memory"
  * (PRO_AbbreviatedConfigureMemory()), and its status packet has a ping_pong
- * bit. The firmware (rend_init) writes three words from the SCSI ROM to
- * 0x9C000000. Thus, on real hardware, the SCSI ROM almost certainly
- * configures the update buffers. The contents of the SCSI ROM are not known.
- * Without it, the registers stay at zero. Also, the time of the flip on the
- * Pro-1000 is not known: it has no tile generator.
+ * bit. The same three values configure the buffers, but the firmware does not
+ * write them to 0x9C000000. It sends them to the Mercury ASIC through JTAG
+ * (instruction 0x09). In Supermodel, an update of that JTAG register writes
+ * the configuration registers (see "Update Memory Configuration" in
+ * Pro1000.cpp). The firmware sends values from the SCSI ROM at boot. The host
+ * sends values when it starts (the SDK demos send 0x8000, 0, 0x20000).
+ *
+ * The time of the flip on the Pro-1000 is not known: it has no tile
+ * generator. Supermodel flips the bit at the line that most Model 3 games
+ * program (PING_PONG_FLIP_LINE in Pro1000.cpp).
  *
  * Why the update buffers can be disabled:
  *
@@ -147,9 +153,8 @@
  * start of low culling RAM. On the Pro-1000, the firmware writes scene data
  * there directly. This data changed the buffers and caused writes outside
  * polygon RAM (a crash). Now, without configuration, there are no buffers.
- * Also, until the configuration and the flip time of the Pro-1000 are known,
- * the Pro-1000 disables the buffers (Real3DConfig::updateBuffers) and all
- * writes go directly to memory. Model 3 enables them.
+ * Real3DConfig::updateBuffers can disable the buffers. Then all writes go
+ * directly to memory. Model 3 and the Pro-1000 both enable them.
  */
 
 #include "Real3D.h"
@@ -872,6 +877,7 @@ void CReal3D::WriteConfigurationRegister(unsigned reg, uint32_t data)
     // reg 8 = combined size of the ping pong buffer and the update buffer in 32-bit words
 
     m_configRegisters.regs[reg / 4] = data;
+    DebugLog("Real3D: configuration register %X = %08X\n", reg, data);
 }
 
 /******************************************************************************
