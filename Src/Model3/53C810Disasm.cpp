@@ -22,8 +22,25 @@
 /*
  * 53C810Disasm.cpp
  *
- * NCR 53C810 SCRIPTS disassembler. Also covers the 53C825 (used by the
- * Real3D Pro-1000), which adds wide SCSI chained moves (CHMOV).
+ * NCR 53C8xx SCRIPTS disassembler for the 53C810 (Model 3) and 53C825 (Real3D
+ * Pro-1000). The chip must be specified. Differences, per the references
+ * below:
+ *
+ *	- The 53C825 supports wide SCSI. Its block move opcode bit selects CHMOV
+ *	  (chained move) where it is reserved on the 53C810.
+ *	- The 53C825 has registers the 53C810 lacks: SWIDE (0x45), RESPID1
+ *	  (0x4B), the high bytes of SIDL, SODL, and SBDL (0x51, 0x55, 0x59), and
+ *	  SCRATCHC-SCRATCHJ (0x60-0x7F). The 53C810 has a single RESPID (0x4A).
+ *
+ * The references describe the "A" revisions. Original 53C810 and 53C825 parts
+ * are decoded the same way; notably, load and store instructions are listed
+ * as a new feature of the 53C810A.
+ *
+ * References:
+ *	[810A]	Technical Manual, LSI53C810A PCI to SCSI I/O Processor, Version
+ *			2.1, March 2001.
+ *	[825A]	Technical Manual, LSI53C825A/825AE PCI to SCSI I/O Processor,
+ *			Version 3.1, January 2001 (DB14-000159-00, Fourth Edition).
  *
  * All instruction types are decoded: block move, I/O (SELECT, WAIT SELECT,
  * DISCONNECT, SET, CLEAR, etc.), read/write register, transfer control (JUMP,
@@ -50,8 +67,17 @@
 ******************************************************************************/
 
 /*
- * Register names (53C810 and 53C825). Unnamed registers are printed as
- * hexadecimal addresses.
+ * SCRIPTS processor variants.
+ */
+enum class SCRIPTSChip
+{
+	NCR53C810,
+	NCR53C825
+};
+
+/*
+ * Register names (53C825; see RegName() for the 53C810). Unnamed registers
+ * are printed as hexadecimal addresses.
  */
 static const char *s_regName[0x80] =
 {
@@ -67,20 +93,40 @@ static const char *s_regName[0x80] =
 	"stime0",   "stime1",   "respid0",  "respid1",  "stest0",   "stest1",   "stest2",   "stest3",	// 48
 	"sidl0",    "sidl1",    NULL,       NULL,       "sodl0",    "sodl1",    NULL,       NULL,		// 50
 	"sbdl0",    "sbdl1",    NULL,       NULL,       "scratchb0","scratchb1","scratchb2","scratchb3",// 58
-	NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,		// 60
-	NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,		// 68
-	NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,		// 70
-	NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL,       NULL		// 78
+	"scratchc0","scratchc1","scratchc2","scratchc3","scratchd0","scratchd1","scratchd2","scratchd3",// 60
+	"scratche0","scratche1","scratche2","scratche3","scratchf0","scratchf1","scratchf2","scratchf3",// 68
+	"scratchg0","scratchg1","scratchg2","scratchg3","scratchh0","scratchh1","scratchh2","scratchh3",// 70
+	"scratchi0","scratchi1","scratchi2","scratchi3","scratchj0","scratchj1","scratchj2","scratchj3"	// 78
 };
 
 static const char *s_phase[] = { "data_out", "data_in", "command", "status", "res4", "res5", "message_out", "message_in" };
 
-static const char *RegName(unsigned reg, char *buf)
+static const char *RegName(unsigned reg, SCRIPTSChip chip, char *buf)
 {
 	reg &= 0x7F;
-	if (s_regName[reg])
+	if (chip == SCRIPTSChip::NCR53C810)
+	{
+		// Registers that differ from the 53C825
+		switch (reg)
+		{
+		case 0x4A:
+			return "respid";
+		case 0x45:	// SWIDE
+		case 0x4B:	// RESPID1
+		case 0x51:	// SIDL1
+		case 0x55:	// SODL1
+		case 0x59:	// SBDL1
+			reg |= 0x80;	// flag as unnamed
+			break;
+		default:
+			if (reg >= 0x60)
+				reg |= 0x80;
+			break;
+		}
+	}
+	if (reg < 0x80 && s_regName[reg])
 		return s_regName[reg];
-	sprintf(buf, "reg%02X", reg);
+	sprintf(buf, "reg%02X", reg & 0x7F);
 	return buf;
 }
 
@@ -121,8 +167,8 @@ static char *FormatCondition(char *p, UINT32 op, bool targetMode)
 	{
 		// In target mode, the phase comparison tests ATN instead
 		p += sprintf(p, "%s", targetMode ? "atn" : s_phase[(op >> 24) & 7]);
-		if (compData)
-			p += sprintf(p, " and ");
+		if (compData)	// both must be true (or both false, for "not")
+			p += sprintf(p, ifTrue ? " and " : " and not ");
 	}
 	if (compData)
 	{
@@ -135,7 +181,7 @@ static char *FormatCondition(char *p, UINT32 op, bool targetMode)
 }
 
 /*
- * DisassembleSCRIPTS(op, addr, mnem, targetMode):
+ * DisassembleSCRIPTS(op, addr, mnem, targetMode, chip):
  *
  * Disassembles one SCRIPTS instruction.
  *
@@ -148,12 +194,14 @@ static char *FormatCondition(char *p, UINT32 op, bool targetMode)
  *		targetMode	If true, decodes instructions as executed in target mode
  *					(SCNTL0.TRG set), which changes the meaning of the I/O
  *					instructions, block move opcodes, and phase comparisons.
+ *		chip		SCRIPTS processor (affects chained moves and register
+ *					names).
  *
  * Returns:
  *		Number of 32-bit words decoded (1, 2, or 3) or 0 if the instruction was
  *		not recognized.
  */
-int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
+int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, SCRIPTSChip chip)
 {
 	static const char	*ioInitiator[] = { "select", "wait disconnect", "wait reselect", "set", "clear" };
 	static const char	*ioTarget[] = { "reselect", "disconnect", "wait select", "set", "clear" };
@@ -168,11 +216,12 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
 	case 0:
 	{
 		// Block Move. The opcode bit selects MOVE in one mode and CHMOV (wide
-		// SCSI chained move) in the other.
+		// SCSI chained move) in the other. The 53C810 has no CHMOV.
 		bool indirect = (op[0] & 0x20000000) != 0;
 		bool tableIndirect = (op[0] & 0x10000000) != 0;
 		bool opcode = (op[0] & 0x08000000) != 0;
-		const char *name = (opcode != targetMode) ? "move" : "chmov";
+		bool chainedMove = opcode == targetMode;
+		const char *name = chainedMove ? (chip == SCRIPTSChip::NCR53C810 ? "reserved (chmov)" : "chmov") : "move";
 		const char *phase = s_phase[(op[0] >> 24) & 7];
 		const char *with = targetMode ? "with" : "when";
 
@@ -194,9 +243,9 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
 			// Read/Write Register
 			static const char *operation[] = { "", "shl", "|", "^", "&", "shr", "+", "+ (carry)" };
 			unsigned oper = (op[0] >> 24) & 7;
-			bool useSFBR = (op[0] & 0x00800000) != 0;
+			bool useSFBR = opcode == 7 && (op[0] & 0x00800000) != 0;	// SFBR replaces data8 (read-modify-write only)
 			unsigned data = (op[0] >> 8) & 0xFF;
-			const char *reg = RegName((op[0] >> 16) & 0x7F, regBuf);
+			const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf);
 			char operand[32];
 
 			if (useSFBR)
@@ -207,7 +256,7 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
 			if (opcode == 5)		// SFBR (op data) -> register
 			{
 				if (oper == 0)
-					sprintf(p, "move %s to %s", useSFBR ? "sfbr" : operand, reg);
+					sprintf(p, "move %s to %s", operand, reg);
 				else if (oper == 1 || oper == 5)
 					sprintf(p, "move sfbr %s to %s", operation[oper], reg);
 				else
@@ -256,9 +305,9 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
 			return 2;	// (WAIT) DISCONNECT has no operands
 
 		// SELECT, RESELECT, WAIT SELECT, WAIT RESELECT
-		bool atn = (op[0] & 0x04000000) != 0;
+		bool relative = (op[0] & 0x04000000) != 0;
 		bool tableIndirect = (op[0] & 0x02000000) != 0;
-		bool relative = (op[0] & 0x01000000) != 0;
+		bool atn = (op[0] & 0x01000000) != 0;
 		if (atn && opcode == 0)
 			p += sprintf(p, " atn");
 		if (opcode == 0)	// (RE)SELECT names a SCSI ID
@@ -312,7 +361,7 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
 		bool load = (op[0] & 0x01000000) != 0;
 		bool noFlush = (op[0] & 0x02000000) != 0;
 		unsigned count = op[0] & 7;
-		const char *reg = RegName((op[0] >> 16) & 0x7F, regBuf);
+		const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf);
 		char where[32];
 		if (dsaRelative)
 		{
@@ -341,13 +390,14 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode)
 
 static void PrintUsage(void)
 {
-    puts("scriptsd Version " DISASM_VERSION " by Bart Trzynadlowski: NCR 53C810 SCRIPTS Disassembler");
+    puts("scriptsd Version " DISASM_VERSION " by Bart Trzynadlowski: NCR 53C8xx SCRIPTS Disassembler");
     puts("Usage:    scriptsd <file> [options]");
     puts("Options:  -?,-h       Show this help text");
     puts("          -s <offset> Start offset (hexadecimal)");
     puts("          -l <num>    Number of instructions (Default=16)");
     puts("          -o <addr>   Set origin (hexadecimal)");
     puts("          -t          Decode as executed in target mode");
+    puts("          -825        Decode for the 53C825/825A (Default: 53C810/810A)");
     exit(0);
 }
 
@@ -364,6 +414,7 @@ int main(int argc, char **argv)
     unsigned	start = 0, len, org, file = 0;
     UINT32  	op[3];
     bool    	len_specified = 0, org_specified = 0, target_mode = 0;
+    SCRIPTSChip	chip = SCRIPTSChip::NCR53C810;
     char    	*c;
 
 
@@ -406,6 +457,8 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "-t"))
             target_mode = 1;
+        else if (!strcmp(argv[i], "-825"))
+            chip = SCRIPTSChip::NCR53C825;
         else
             file = i;
     }
@@ -456,7 +509,7 @@ int main(int argc, char **argv)
  		op[1] = (buffer[offset+7]<<24)|(buffer[offset+6]<<16)|(buffer[offset+5]<<8)|buffer[offset+4];
  		op[2] = (buffer[offset+11]<<24)|(buffer[offset+10]<<16)|(buffer[offset+9]<<8)|buffer[offset+8];
 
- 		unsigned num = DisassembleSCRIPTS(op, org, mnem, target_mode);
+ 		unsigned num = DisassembleSCRIPTS(op, org, mnem, target_mode, chip);
  		if (0 == num)
  		{
  			printf("%08X: %08X                   ?\n", org, op[0]);
