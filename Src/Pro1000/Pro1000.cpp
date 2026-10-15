@@ -1120,6 +1120,44 @@ void CPro1000::ClearNVRAM(void)
   // No NVRAM
 }
 
+// TEMPORARY: SCSI self test. It sends some standard commands to the Pro-1000
+// and prints the results. Remove when a host computer can connect.
+static void SubmitSCSISelfTest(CSCSIHostAdapter &hostAdapter)
+{
+  struct Test
+  {
+    const char *name;
+    std::vector<uint8_t> cdb;
+    size_t dataInLength;
+  };
+  static const Test tests[] =
+  {
+    { "TEST UNIT READY", { 0x00, 0, 0, 0, 0, 0 }, 0 },
+    { "INQUIRY", { 0x12, 0, 0, 0, 36, 0 }, 36 },
+    { "REQUEST SENSE", { 0x03, 0, 0, 0, 18, 0 }, 18 },
+    { "READ CAPACITY", { 0x25, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 8 }
+  };
+  for (const Test &test: tests)
+  {
+    SCSIRequest request;
+    request.targetID = 0;
+    request.cdb = test.cdb;
+    request.dataInLength = test.dataInLength;
+    const char *name = test.name;
+    hostAdapter.Submit(request, [name](const SCSIResult &result)
+    {
+      std::string data;
+      for (uint8_t b: result.dataIn)
+      {
+        char hex[4];
+        snprintf(hex, sizeof(hex), "%02X ", b);
+        data += hex;
+      }
+      printf("SCSI test: %s: completed=%d status=%02X error=\"%s\" data (%u bytes): %s\n", name, result.completed, result.status, result.error.c_str(), unsigned(result.dataIn.size()), data.c_str());
+    });
+  }
+}
+
 void CPro1000::RunFrame(void)
 {
   UINT32 start = CThread::GetTicks();
@@ -1175,6 +1213,10 @@ void CPro1000::RunFrame(void)
 
   timings.frameTicks = CThread::GetTicks() - start;
   timings.frameId++;
+
+  // TEMPORARY: SCSI self test. Remove when a host computer can connect.
+  if (timings.frameId == 600)
+    SubmitSCSISelfTest(SCSIHostAdapter);
   return;
 
 ThreadError:
@@ -1512,6 +1554,7 @@ void CPro1000::Reset(void)
   PCIBridge.Reset();
   PCIBus.Reset();
   SCSI.Reset();
+  SCSIHostAdapter.Reset();
   GPU.Reset();
   UART.Reset();
 
@@ -1709,6 +1752,7 @@ Result CPro1000::Init(void)
   PCIBridge.Init();
   PCIBus.Init();
   SCSI.Init(this, &PIC, PIC_LINE_SCSI);
+  SCSI.AttachInitiator(&SCSIHostAdapter);
   if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
     return Result::FAIL;
   BuildScanChain();

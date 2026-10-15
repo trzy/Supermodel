@@ -236,6 +236,9 @@
     <ClCompile Include="..\Src\Pro1000\SCANPSC100F.cpp">
       <Filter>Source Files\Pro1000</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Pro1000\SCSIHostAdapter.cpp">
+      <Filter>Source Files\Pro1000</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\Model3\MPC10x.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
@@ -604,6 +607,9 @@
     <ClInclude Include="..\Src\Model3\53C810.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
+    <ClInclude Include="..\Src\Model3\SCSIBus.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
     <ClInclude Include="..\Src\Model3\93C46.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
@@ -626,6 +632,9 @@
       <Filter>Header Files\Pro1000</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Pro1000\SCANPSC100F.h">
+      <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pro1000\SCSIHostAdapter.h">
       <Filter>Header Files\Pro1000</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\MPC10x.h">

@@ -123,6 +123,7 @@ SRC_FILES = \
 	Src/Pro1000/UART.cpp \
 	Src/Pro1000/8259.cpp \
 	Src/Pro1000/SCANPSC100F.cpp \
+	Src/Pro1000/SCSIHostAdapter.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \

@@ -58,9 +58,23 @@
  *   Initiator mode I/O instructions and phase tests are not emulated.
  * - Instructions that wait on the SCSI bus (e.g., WAIT SELECT) set the
  *   waiting flag and leave DSP unchanged, ending the current Run(). The next
- *   Run() executes them again. Because no SCSI bus is attached yet, a target
- *   is never selected and block moves wait indefinitely. SIGP aborts WAIT
- *   SELECT.
+ *   Run() executes them again. SIGP aborts WAIT SELECT.
+ * - SCSI bus (target mode). The controller connects to a SCSI bus through the
+ *   ISCSIInitiator interface (see SCSIBus.h and AttachInitiator()). The
+ *   interface does not model bus signals or timing. Each block move transfers
+ *   all of its bytes in one operation. Model 3 does not attach a bus. Without
+ *   a bus, the controller is never selected and block moves wait.
+ *     WAIT SELECT  Asks the initiator if it selects the controller. The
+ *                  controller responds only if SCID.SRE is set and RESPID
+ *                  contains the selected ID. Then it sets ISTAT.CON and SSID.
+ *     Block move   Gets bytes from the initiator or gives bytes to it. In the
+ *                  command phase, the group code of the first byte sets the
+ *                  CDB length. SFBR gets the first byte received.
+ *     DISCONNECT   Clears ISTAT.CON and tells the initiator.
+ *     RESELECT     Asks the initiator to accept reselection.
+ *     SCNTL1.RST   Tells the initiator about a bus reset.
+ *   SCSI interrupts (SIST0, SIST1) are not generated. Wide transfers and
+ *   synchronous transfer settings have no effect.
  * - TODO: DSP is inaccurate while an instruction waits. On the real chip, DSP
  *   is advanced past an instruction as soon as it is fetched, so a CPU
  *   reading DSP during WAIT SELECT would see the address of the following
@@ -72,6 +86,7 @@
 
 #include "53C810.h"
 
+#include <algorithm>
 #include <cstring>
 #include "Supermodel.h"
 #include "CPU/PowerPC/ppc.h"
@@ -80,9 +95,11 @@
  Save States
 ******************************************************************************/
 
-// TODO: target mode state (waiting, carry, ATN, and connection status) is not
-// saved. Model 3 never uses it and the Pro-1000 does not yet support save
-// states. Saving in the middle of a SCSI transaction may not be meaningful.
+// TODO: target mode state (waiting, idle, carry, and the SCSI bus connection)
+// is not saved. Model 3 does not use it and the Pro-1000 does not yet support
+// save states. A save state cannot include the state of the initiator (for
+// example, a host computer), so a save during a SCSI transaction may not be
+// possible.
 void C53C810::SaveState(CBlockFile *SaveState)
 {
   SaveState->NewBlock("53C810", __FILE__);
@@ -142,6 +159,45 @@ static inline bool TargetMode(const struct NCR53C810Context *Ctx)
   return (Ctx->regs[0x00] & 1) != 0;  // SCNTL0.TRG
 }
 
+// Returns true if the controller is connected to an initiator on the SCSI bus
+static inline bool Connected(const struct NCR53C810Context *Ctx)
+{
+  return Ctx->initiator && (Ctx->regISTAT & ISTAT_CON);
+}
+
+// Reads a 32-bit register from the register file (registers are little endian)
+static inline UINT32 GetRegister32(const struct NCR53C810Context *Ctx, unsigned reg)
+{
+  return Ctx->regs[reg] | (Ctx->regs[reg + 1] << 8) | (Ctx->regs[reg + 2] << 16) | (UINT32(Ctx->regs[reg + 3]) << 24);
+}
+
+static inline void SetRegister32(struct NCR53C810Context *Ctx, unsigned reg, UINT32 value)
+{
+  for (unsigned i = 0; i < 4; i++)
+    Ctx->regs[reg + i] = (value >> (i * 8)) & 0xFF;
+}
+
+// Reads a little endian 32-bit value from memory. The bus is big endian.
+static inline UINT32 ReadMemoryLE32(const struct NCR53C810Context *Ctx, UINT32 addr)
+{
+  return FLIPENDIAN32(Ctx->Bus->Read32(addr));
+}
+
+// Byte access from the controller. The controller is a little endian PCI
+// device and memory is big endian. The bytes in each 32-bit word are in the
+// opposite sequence, so byte address A on PCI is byte address A ^ 3 on the
+// bus. Fetch() uses the same rule for 32-bit words. (The Pro-1000 firmware
+// shows this: it reads byte 0 of a received CDB at byte address 3.)
+static inline UINT8 ReadMemory8(const struct NCR53C810Context *Ctx, UINT32 addr)
+{
+  return Ctx->Bus->Read8(addr ^ 3);
+}
+
+static inline void WriteMemory8(const struct NCR53C810Context *Ctx, UINT32 addr, UINT8 data)
+{
+  Ctx->Bus->Write8(addr ^ 3, data);
+}
+
 static inline INT32 SignExtend24(UINT32 x)
 {
   return (INT32) ((x & 0x00FFFFFF) ^ 0x00800000) - 0x00800000;
@@ -172,7 +228,7 @@ static bool TransferConditionMet(const struct NCR53C810Context *Ctx)
   {
     bool phase;
     if (TargetMode(Ctx))
-      phase = Ctx->atn;             // in target mode, tests ATN
+      phase = Connected(Ctx) && Ctx->initiator->ATN();  // in target mode, tests ATN
     else
     {
       DebugLog("53C810: initiator mode phase comparison not emulated (DSP=%08X)\n", Ctx->regDSP);
@@ -323,22 +379,55 @@ static Result SCRIPTS_IO(struct NCR53C810Context *Ctx)
   switch (opcode)
   {
   case 0:   // RESELECT
-    // Takes the alternate address only if we are selected by an initiator
-    // before winning arbitration. SIGP has no effect. No SCSI bus is attached
-    // yet, so there is no initiator to reselect.
+  {
+    // The real chip takes the alternate address if an initiator selects it
+    // before it wins arbitration. That cannot occur here: the initiator does
+    // one request at a time. SIGP has no effect.
+    if ((Ctx->regDCMD & 2))
+      return ErrorLog("53C810: table indirect RESELECT not emulated (DSP=%08X)", Ctx->regDSP);
+    unsigned targetID = Ctx->regs[0x04] & 0x0F;       // SCID
+    unsigned initiatorID = (Ctx->regDBC >> 16) & 0x0F; // encoded destination ID
+    if (Ctx->initiator && Ctx->initiator->Reselect(targetID, initiatorID))
+    {
+      Ctx->regISTAT |= ISTAT_CON;
+      Ctx->regDSP += 8;
+      return Result::OKAY;
+    }
+    // The initiator does not respond. The real chip would report a selection
+    // timeout. Wait for the initiator.
     Ctx->waiting = true;
     return Result::OKAY;
+  }
   case 2:   // WAIT SELECT
+  {
     if ((Ctx->regISTAT & ISTAT_SIGP))
     {
       // Signaled by the CPU: give up and take the alternate address
       Ctx->regDSP = JumpAddress(Ctx, relative);
       return Result::OKAY;
     }
-    // No SCSI bus is attached yet, so we are never selected
+    // Respond to selection only if SCID.SRE is set, and only for the IDs set
+    // in RESPID0 and RESPID1
+    uint16_t respondIDs = Ctx->regs[0x4A] | (Ctx->regs[0x4B] << 8);
+    unsigned targetID, initiatorID;
+    if (Ctx->initiator && (Ctx->regs[0x04] & 0x40) && Ctx->initiator->Selecting(respondIDs, &targetID, &initiatorID))
+    {
+      Ctx->regISTAT |= ISTAT_CON;
+      Ctx->regs[0x0A] = 0x80 | (initiatorID & 0x0F);   // SSID: VAL and the ID of the initiator
+      if (!(Ctx->regDCNTL & 0x01))                      // DCNTL.COM clear: SFBR gets the IDs on the data bus
+        Ctx->regs[0x08] = ((1 << initiatorID) | (1 << targetID)) & 0xFF;
+      Ctx->regDSP += 8;
+      return Result::OKAY;
+    }
     Ctx->waiting = true;
     return Result::OKAY;
+  }
   case 1:   // DISCONNECT
+    if (Connected(Ctx))
+    {
+      Ctx->regISTAT &= ~ISTAT_CON;
+      Ctx->initiator->Disconnected();
+    }
     Ctx->regISTAT &= ~ISTAT_CON;
     Ctx->regDSP += 8;
     return Result::OKAY;
@@ -364,14 +453,93 @@ static Result SCRIPTS_IO(struct NCR53C810Context *Ctx)
   }
 }
 
-// Block move
+// Block move in target mode. The controller sets the bus phase and transfers
+// bytes between memory and the initiator. CHMOV operates as MOVE because wide
+// transfers are not emulated.
 static Result SCRIPTS_BlockMove(struct NCR53C810Context *Ctx)
 {
   if (!TargetMode(Ctx))
     return SCRIPTS_Invalid(Ctx);  // initiator mode block moves are not emulated
+  if (!Ctx->initiator)
+  {
+    // No SCSI bus is attached. There is no initiator to transfer bytes with.
+    Ctx->waiting = true;
+    return Result::OKAY;
+  }
+  if (!Connected(Ctx))
+    return ErrorLog("53C810: block move while not connected to the SCSI bus (DSP=%08X)", Ctx->regDSP);
 
-  // Without a SCSI bus, there is no initiator to transfer data with
-  Ctx->waiting = true;
+  // Get the byte count and the memory address. Table indirect moves get them
+  // from a table entry at DSA + offset. Indirect moves get the address from
+  // memory.
+  SCSIPhase phase = static_cast<SCSIPhase>(Ctx->regDCMD & 7);
+  unsigned count = Ctx->regDBC & 0x00FFFFFF;
+  UINT32 addr = Ctx->regDSPS;
+  if ((Ctx->regDCMD & 0x10))
+  {
+    UINT32 entry = GetRegister32(Ctx, 0x10) + SignExtend24(Ctx->regDSPS);
+    count = ReadMemoryLE32(Ctx, entry) & 0x00FFFFFF;
+    addr = ReadMemoryLE32(Ctx, entry + 4);
+  }
+  else if ((Ctx->regDCMD & 0x20))
+    addr = ReadMemoryLE32(Ctx, Ctx->regDSPS);
+
+  UINT8 buffer[256];
+  unsigned done = 0;
+  if (IsInitiatorToTarget(phase))
+  {
+    UINT8 firstByte = 0;
+    if (phase == SCSIPhase::Command)
+    {
+      // Get the first command byte. Its group code gives the length of the
+      // CDB, unless SCNTL2.VUE1 is set ([825A] pg 5-9).
+      Ctx->initiator->SendToTarget(phase, buffer, 1);
+      if (!(Ctx->regs[0x02] & 0x02))
+      {
+        switch (buffer[0] >> 5)
+        {
+        case 0:           count = 6;  break;
+        case 1: case 2:   count = 10; break;
+        case 5:           count = 12; break;
+        default:          break;      // other groups: use the byte count
+        }
+      }
+      if (count == 0)
+        return ErrorLog("53C810: command block move with a byte count of 0 (DSP=%08X)", Ctx->regDSP);
+      WriteMemory8(Ctx, addr, buffer[0]);
+      firstByte = buffer[0];
+      done = 1;
+    }
+    while (done < count)
+    {
+      unsigned n = std::min<unsigned>(count - done, sizeof(buffer));
+      Ctx->initiator->SendToTarget(phase, buffer, n);
+      if (done == 0)
+        firstByte = buffer[0];
+      for (unsigned i = 0; i < n; i++)
+        WriteMemory8(Ctx, addr + done + i, buffer[i]);
+      done += n;
+    }
+    if (count > 0)
+      Ctx->regs[0x08] = firstByte;  // SFBR: the first byte received
+  }
+  else
+  {
+    while (done < count)
+    {
+      unsigned n = std::min<unsigned>(count - done, sizeof(buffer));
+      for (unsigned i = 0; i < n; i++)
+        buffer[i] = ReadMemory8(Ctx, addr + done + i);
+      Ctx->initiator->ReceiveFromTarget(phase, buffer, n);
+      done += n;
+    }
+  }
+
+  // The transfer is complete
+  DebugLog("53C810: block move, phase %u, %X bytes at %08X (DSP=%08X)\n", unsigned(phase), count, addr, Ctx->regDSP);
+  Ctx->regDBC = 0;
+  SetRegister32(Ctx, 0x28, addr + count);   // DNAD
+  Ctx->regDSP += 8;
   return Result::OKAY;
 }
 
@@ -545,8 +713,12 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
     if ((data & ISTAT_SRST))
     {
       // Software reset: operating registers return to their defaults (PCI
-      // configuration is unaffected) for as long as SRST remains set
+      // configuration is unaffected) for as long as SRST remains set. The
+      // controller releases the SCSI bus.
+      bool wasConnected = Connected(&Ctx);
       Reset();
+      if (wasConnected)
+        Ctx.initiator->Disconnected();
       Ctx.regISTAT = ISTAT_SRST;
       Ctx.regs[0x14] = ISTAT_SRST;
       Ctx.IRQ->Deassert(Ctx.scsiIRQ);
@@ -558,6 +730,14 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
     // immediately
     if ((data & ISTAT_SIGP) && Ctx.waiting && !Ctx.halt)
       Run(MAX_IMMEDIATE_INSTRUCTIONS);
+    break;
+  case 0x01:    // SCNTL1
+    // RST asserts reset on the SCSI bus. The initiator stops its transaction.
+    if ((data & 0x08) && Ctx.initiator)
+    {
+      Ctx.regISTAT &= ~ISTAT_CON;
+      Ctx.initiator->BusReset();
+    }
     break;
   case 0x1B:    // CTEST3
     Ctx.regs[0x1B] &= ~0x04;  // CLF (clear DMA FIFO) self-clears once FIFO is cleared, which is instantaneous here
@@ -820,7 +1000,6 @@ void C53C810::Reset(void)
   Ctx.idle = true;    // nothing runs until SCRIPTS are started
   Ctx.waiting = false;
   Ctx.carry = false;
-  Ctx.atn = false;
   
   DebugLog("53C810 reset\n");
 }
@@ -837,11 +1016,18 @@ void C53C810::Init(IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t sc
   Ctx.scsiIRQ = scsiIRQBit;
 }
 
+void C53C810::AttachInitiator(ISCSIInitiator *initiator)
+{
+  Ctx.initiator = initiator;
+  Ctx.regISTAT &= ~ISTAT_CON;
+}
+
 C53C810::C53C810(void)
 { 
   BuildOpTable();
   Ctx.Bus = NULL;
   Ctx.IRQ = NULL;
+  Ctx.initiator = NULL;
   scsiIRQ = 0;
   baseAddress = 0;
   DebugLog("Built 53C810\n");

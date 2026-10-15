@@ -32,6 +32,7 @@
 #include "PCI.h"
 #include "BlockFile.h"
 #include "CPU/Bus.h"
+#include "SCSIBus.h"
 
 /*
  * struct NCR53C810Context:
@@ -61,8 +62,8 @@ struct NCR53C810Context
 	bool	waiting;	// set true if the last instruction is waiting on the SCSI bus (re-executed by the next Run())
 	bool	carry;		// ALU carry flag (register arithmetic, carry tests)
 
-	// SCSI bus state (target mode)
-	bool	atn;		// ATN asserted by the initiator
+	// SCSI bus: the initiator on the bus, or null if no bus is attached (target mode)
+	ISCSIInitiator	*initiator;
 
 	// Big endian bus object for DMA memory access and instruction fetching
 	IBus	*Bus;
@@ -208,6 +209,20 @@ public:
 	 *						when asserting interrupts.
 	 */
 	void Init(IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t scsiIRQBit);
+
+	/*
+	 * AttachInitiator(initiator):
+	 *
+	 * Connects the controller to a SCSI bus that has an initiator on it. The
+	 * controller can then operate as a target: it can be selected, transfer
+	 * bytes, disconnect, and reselect. If no initiator is attached, the
+	 * controller is never selected.
+	 *
+	 * Parameters:
+	 *		initiator	The initiator, or null to disconnect from the bus. The
+	 *					initiator must stay available while it is attached.
+	 */
+	void AttachInitiator(ISCSIInitiator *initiator);
 
 	/*
 	 * C53C810(void):
