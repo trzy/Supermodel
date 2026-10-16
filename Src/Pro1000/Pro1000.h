@@ -134,7 +134,6 @@ private:
 
   bool IsSCSIAddress(UINT32 addr) const;          // True if address falls within SCSI controller's PCI-mapped register window
 
-  void BuildSyntheticSCSIROM(void);             // Creates minimal SCSI ROM contents when no image is available
   void BuildScanChain(void);                    // Creates JTAG devices and connects them to the scan controller
   void RunMainBoardFrame(void);                 // Runs PPC main board for a frame
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running

@@ -372,6 +372,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Pro1000\SCANPSC100F.cpp" />
     <ClCompile Include="..\Src\Pro1000\SCSITCPBridge.cpp" />
     <ClCompile Include="..\Src\Pro1000\SCSIHostAdapter.cpp" />
+    <ClCompile Include="..\Src\Pro1000\SyntheticSCSIROM.cpp" />
     <ClCompile Include="..\Src\Network\NetBoard.cpp" />
     <ClCompile Include="..\Src\Network\SimNetBoard.cpp" />
     <ClCompile Include="..\Src\Network\TCPReceive.cpp" />
@@ -545,6 +546,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Pro1000\SCSITCPBridge.h" />
     <ClInclude Include="..\Src\Pro1000\SCSITCPBridgeProtocol.h" />
     <ClInclude Include="..\Src\Pro1000\SCSIHostAdapter.h" />
+    <ClInclude Include="..\Src\Pro1000\SyntheticSCSIROM.h" />
     <ClInclude Include="..\Src\Network\INetBoard.h" />
     <ClInclude Include="..\Src\Network\NetBoard.h" />
     <ClInclude Include="..\Src\Network\SimNetBoard.h" />

@@ -242,6 +242,9 @@
     <ClCompile Include="..\Src\Pro1000\SCSIHostAdapter.cpp">
       <Filter>Source Files\Pro1000</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Pro1000\SyntheticSCSIROM.cpp">
+      <Filter>Source Files\Pro1000</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\Model3\MPC10x.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
@@ -644,6 +647,9 @@
       <Filter>Header Files\Pro1000</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Pro1000\SCSIHostAdapter.h">
+      <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pro1000\SyntheticSCSIROM.h">
       <Filter>Header Files\Pro1000</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\MPC10x.h">

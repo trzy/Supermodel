@@ -125,6 +125,7 @@ SRC_FILES = \
 	Src/Pro1000/SCANPSC100F.cpp \
 	Src/Pro1000/SCSITCPBridge.cpp \
 	Src/Pro1000/SCSIHostAdapter.cpp \
+	Src/Pro1000/SyntheticSCSIROM.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \

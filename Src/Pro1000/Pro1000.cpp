@@ -97,8 +97,8 @@
  *  - Power-on: the unit runs a confidence test and then displays a spinning
  *    Real 3D logo. The API describes the logo as the "default database"
  *    (PRO_ReloadLogo; monitor command LDDB). This is most likely the contents
- *    of the SCSI ROM. The SDK's DB_Demos/Orlando contains 3dlogo.cmem and
- *    3dlogo.pmem.
+ *    of the SCSI ROM. The SDK's DB_Demos/Orlando and DB_Demos/Bayou contain
+ *    3dlogo.cmem and 3dlogo.pmem (see SCSI ROM).
  *  - The real-time clock count returned to the host is in 30 ns hardware
  *    clocks.
  *  - Demo databases (DB_Demos) are distributed precompiled as .cmem (culling
@@ -210,8 +210,8 @@
  * that are not in the table were not seen to be read.
  *
  *   +0x00  Magic, 0xCAFEBABE. rend_init and 0xA680 check it.
- *   +0x0C  A word that 0xA680 puts in each render job that it makes
- *          (probably the culling memory address of the scene).
+ *   +0x0C  PowerPC address (0x80000000-0x9FFFFFFC) to which 0xA680 writes
+ *          one view table entry (12 words) each frame.
  *   +0x1C  Size of polygon block A.
  *   +0x20  Offset of polygon block A.
  *   +0x24  Offset of the culling block.
@@ -247,17 +247,29 @@
  *     that, it writes 0 to REND_ROM_UPDATE (0x90000000, the texture port).
  *  5. 0x12AF0 copies polygon block B to REND_POLY_BASE (0x98000000) in four
  *     parts, as in step 3. After each part, it waits for bit 2 of RAM
- *     0x62384 (probably set by an interrupt).
+ *     0x62384 (the copy is complete, see below).
  *  6. It calls 0x10984.
  *
  * Polygon blocks A and B both start at 0x98000000. Thus block B overwrites
  * the start of block A. Probably a ROM uses only one of them.
  *
- * The CPU copies block data word for word with no byte swap (0x944C). Thus
- * the data is in the byte order of the renderer (little endian), as in the
- * .cmem and .pmem files. After each part, the firmware calls 0x63DC (it waits
- * a maximum of 8 ms for the write to complete), writes REND_UPDATE_COMPL, and
- * waits for GP sync. If 0x63DC fails, 0x615C stops in an error loop.
+ * The CPU copies each part from the ROM to a RAM buffer (0x944C), word for
+ * word with no byte swap. Thus the data is in the byte order of the renderer
+ * (little endian). The .cmem and .pmem files are big endian. Then 0x10E3C
+ * writes the buffer to the renderer. It uses the CPU for a part of at most
+ * the number of words at RAM 0x5E060, and a 53C825 SCRIPTS memory move (DMA,
+ * 0x45AC0) for a larger part. The main loop sets 0x5E060 to 40 words. During
+ * rend_init it is still 0, thus all parts use the 53C825. At the end of the
+ * move, the script interrupts with DSPS 0xFFFFFF0B, and the SCSI interrupt
+ * handler (0x452C8) sets bit 2 of RAM 0x62384 (the copy is complete).
+ *
+ * After each part, the firmware calls 0x63DC (it waits a maximum of 8 ms for
+ * bit 2 of 0x62384), writes REND_UPDATE_COMPL, and waits for GP sync. If
+ * 0x63DC fails, it prints "SCSI_BLK_MV_DONE time-out for address ...". Only
+ * 0x615C (polygon block A) stops on a failure (an error loop). In Supermodel,
+ * this message can occur although the copy is complete: the 8259 interrupts
+ * the CPU only between CPU time slices (see Interrupts), and 0x63DC stops
+ * immediately when its two time base reads are equal.
  *
  * When there is no host, the firmware draws the scene in the ROM. 0xA908
  * calls 0xA680, which makes a render job from the ROM, and then 0xA984 (the
@@ -267,24 +279,27 @@
  * words of an entry are probably a view matrix or other viewpoint data. This
  * is probably how the spinning logo turns.
  *
- * To build a synthetic ROM from a demo database: put the .cmem file in the
- * culling block, the .pmem file in polygon block B, the configuration
- * words at +0x3C, and (to draw it) a view table. This was not tried.
+ * The SCSI ROM is not part of the SDK flash update (burn.exe programs only
+ * P1_P4.bin and P2.bin), and no file in the SDK contains a SCSI ROM image.
+ * Its contents are unknown. All that is known is where the blocks are
+ * uploaded: culling memory, polygon memory, and the configuration registers.
+ * The SDK documentation suggests it is the default database, a spinning Real
+ * 3D logo displayed at power-on. Host command 5 (PRO_ReloadLogo, a packet
+ * write to 0x20000005) and the monitor command LDDB run rend_init again and
+ * then go back to the idle loop. The firmware has a flash test that erases
+ * and programs the SCSI ROM (test_flash_prog, 0x99AC), but no code calls it.
  *
- * The SCSI ROM is not part of the SDK flash update and its contents are
- * unknown. All that is known is where the blocks are uploaded: culling memory,
- * polygon memory, and the configuration registers. They could be a default
- * scene, tables the renderer needs in order to operate, default data
- * structures, or test data. The SDK documentation suggests it is the
- * default database, a spinning Real 3D logo displayed at power-on.
+ * The firmware writes only one word of the root viewport (the screen size,
+ * 0x8E000050, from 0x10984). It is not known how the real ROM supplies the
+ * rest of the viewport. See "Update Memory Configuration" for a hypothesis.
  *
  * Emulation: the ROM is mapped read only at SCSI_ROM_BASE regardless of the
  * expansion ROM BAR (the firmware always programs 0xC0000000). Writes (flash
  * programming) are not emulated. If the game defines a "scsi_rom" region, it
  * is loaded as a byte image in PCI address order. Otherwise a synthetic image
- * is created (CPro1000::BuildSyntheticSCSIROM()): magic, the update memory
- * configuration words (0x7FFC, 0x4, 0x20000), all blocks empty, an empty view
- * table, and 0xFF after the 256-byte directory.
+ * is created (BuildSyntheticSCSIROM() in SyntheticSCSIROM.cpp). It can
+ * contain the logo database from the Assets folder, but it has no viewport.
+ * Thus nothing is drawn.
  *
  *
  * Update Memory Configuration
@@ -294,11 +309,13 @@
  * values set the areas. On Model 3, the CPU writes them to the configuration
  * registers at 0x9C000000, 0x9C000004, and 0x9C000008:
  *
- *   word 0  Ping-pong memory size in words. High culling RAM writes go to
- *           low culling RAM words 0 to word 0 - 1.
+ *   word 0  Ping-pong memory size in words.
  *   word 1  Unknown (flags?). Model 3 games and the SCSI ROM use small values.
- *   word 2  Ping-pong memory size plus update memory size in words. Polygon
- *           RAM writes go to low culling RAM words word 0 to word 2 - 1.
+ *   word 2  Ping-pong memory size plus update memory size in words.
+ *
+ * Supermodel keeps the high culling RAM update buffer in low culling RAM
+ * words 0 to word 0 - 1 and the polygon RAM update buffer in words word 0 to
+ * word 2 - 1. High culling RAM (0x8E000000) is a separate memory.
  *
  * The Pro-1000 firmware does not write these values to memory. Its function
  * that writes words to a renderer address (0x10E3C) sends a write to
@@ -311,13 +328,34 @@
  *
  *  - At boot, rend_init sends the words at +0x3C in the SCSI ROM.
  *  - The host sends them in a packet to 0x9C000000. The SDK demos send
- *    0x8000, 0, 0x20000. Bayou first sends 0x45, 0x7FF76, 0x7FFBB (purpose
- *    unknown) and then the SDK values.
+ *    0x8000, 0, 0x20000. Bayou first sends 0x45, 0x7FF76, 0x7FFBB and then
+ *    the SDK values (see below).
  *
  * The SDK defaults: ping-pong memory of 32K words at PRO_PINGPONG_BASE
  * (0x8E000000) and a total of 128K words. Model 3 Step 1.0 games use the
  * same values. These are the values in the synthetic SCSI ROM (word 0 is
  * 0x7FFC, 4 words less, as on Model 3).
+ *
+ * Hypothesis (not emulated): the ping-pong memory is low culling RAM words 0
+ * to word 0 - 1, and culling address 0x800000 + i (0x8E000000 + 4i) is low
+ * culling word i. High culling RAM is then not a separate memory. Evidence:
+ *
+ *  - With the configuration 0x45, 0x7FF76, 0x7FFBB, Bayou writes a 0x45-word
+ *    scene to low culling words 0-0x44 (0x8C000000): a viewport (words
+ *    0-0x2F, one viewport), a pointer list (0x30), matrix 0 (0x31-0x3C), and
+ *    a culling node with no child (0x3D-0x44). Its pointers are 0x800030,
+ *    0x800031, 0x80003D, and 0x800000. They are correct only if culling
+ *    address 0x800000 + i is low culling word i.
+ *  - The packet parser rejects writes to 0x8E000000 above word 0 ("PPO").
+ *  - The high culling RAM data of Bayou ends at word 0x8000 (its word 0).
+ *  - Hosts put their culling data above word 2 (Asia: 0x20000, Bayou:
+ *    0x40000). Model 3 games (Scud Race, Virtua Fighter 3, Daytona USA 2)
+ *    do not write low culling RAM below word 0x20000.
+ *
+ * If this is correct, the culling block of the SCSI ROM (loaded at
+ * 0x8C000000) can contain the root viewport, and 0x10984 then sets its
+ * screen size through 0x8E000050. The double buffering of the ping-pong
+ * memory is not known.
  *
  * Emulation: Mercury has the register (CASIC, instruction 9) on Model 3 and
  * on the Pro-1000, because the two use the same ASICs. An update of the
@@ -541,6 +579,34 @@
  * beyond anything on Model 3. show_config_data reports a "Pre-Production
  * System" with this chain, possibly derived from ID code version fields.
  *
+ * Mode words: 0x130A4(index, value) writes the mode word (JTAG instruction 8)
+ * of the device at position index in the chain (1 = Jupiter, 2 = Mercury).
+ * The firmware keeps the current values in a table at RAM 0x606A4 (Jupiter,
+ * Mercury, ...). 0x137BC(index, pointer) reads one. The values that a single
+ * pixel board gets (from a trace of the emulated firmware):
+ *
+ *   When                     Changes
+ *   Boot (0x5660)            Jupiter 0x06000000, Mercury 0x800, Venus 0,
+ *                            Earth 0x00080000, Mars 0. Bit 0 of Jupiter and
+ *                            Mercury is set and then cleared (a pulse).
+ *   get_hw_config            Venus 0x6000 and Mars 0x80 for a short time.
+ *   rend_init                Jupiter bit 4 is set while the SCSI ROM is
+ *                            loaded and cleared after (dual pixel board:
+ *                            Mercury bit 2).
+ *   Main loop, logo          No changes.
+ *   Host gamma control       Jupiter bit 25 (see below).
+ *
+ * Gamma bypass: host command 4 (a packet write of one word to 0x20000004,
+ * SDK function ls_ctrl_gamma) calls 0x1BC34(data != 0). On a single pixel
+ * board, 0x1BC34(1) clears Jupiter mode word bit 25 and 0x1BC34(0) sets it.
+ * On a dual pixel board (hardware configuration 4), the bit is Jupiter bit 7.
+ * At boot the bit is set. The SDK demos clear it. Thus the bit probably
+ * bypasses the gamma tables: set = no gamma correction, clear = gamma
+ * correction. Supermodel does not emulate gamma correction. To emulate it,
+ * use this bit and the gamma tables (rom_to_gm, ls_wrt_gamma). 0x1BB04, which
+ * the gamma loading code (0x1C220) calls, sets and then clears Jupiter bit 20
+ * (dual pixel board: bit 4). Its purpose is not known.
+ *
  *
  * Serial Console
  * --------------
@@ -585,8 +651,8 @@
  *    FIELD_SYNC_LINE (383).
  *  - Then the renderer draws the scene that is in memory (RenderFrame()).
  * The Pro-1000 time of the ping-pong flip is not known. The update buffers
- * are off (Real3DConfig::Pro1000()), so the flip only changes the status
- * bit.
+ * are on (Real3DConfig::Pro1000()) and use the update memory configuration
+ * (see Update Memory Configuration).
  *
  * Textures:
  *  - Texture port (REND_ROM_UPDATE, 0x90000000): the firmware and the SDK
@@ -672,6 +738,7 @@
  */
 
 #include "Pro1000.h"
+#include "SyntheticSCSIROM.h"
 
 #include <new>
 #include <cstdio>
@@ -697,7 +764,6 @@ constexpr static uint32_t INIT_ROM_OFFSET   = INIT_ROM_BASE - FLASH_BASE_ADDR;
 // the firmware through PCI device 11's expansion ROM BAR
 constexpr static uint32_t SCSI_ROM_BASE     = 0xC0000000;
 constexpr static uint32_t SCSI_ROM_SIZE     = 0x80000;    // 512KB (SCSI_ROM_TOP = 0xC0080000)
-constexpr static uint32_t SCSI_ROM_HEADER_SIZE = 0x100;   // directory area zeroed in synthetic image
 
 constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE;
 constexpr static uint32_t RAM_OFFSET        = 0;
@@ -1728,7 +1794,7 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
     scsiROMImage.CopyTo(scsiROM, scsiROMImage.size);
   }
   else
-    BuildSyntheticSCSIROM();
+    BuildSyntheticSCSIROM(scsiROM, SCSI_ROM_SIZE);
 
   // Convert PowerPC ROMs to little endian words
   Util::FlipEndian32(flash, FLASH_SIZE);
@@ -1796,38 +1862,6 @@ void CPro1000::AttachConsoleInput(IConsoleInput *input)
 {
   // Console input is received by the serial port
   UART.AttachInput(input);
-}
-
-/*
- * The real SCSI ROM contents are unknown (it was likely used to hold an initial
- * scene, perhaps a Real3D logo). This creates the minimum needed for rend_init
- * to proceed: the magic word, the update memory configuration, and a zeroed
- * directory otherwise, so that every block has offset 0 and size 0 and the
- * view table is empty. The rest of the ROM is erased (0xFF). The image is in
- * PCI byte order (little endian words) as the real ROM would be. See "SCSI
- * ROM" for the directory format.
- */
-void CPro1000::BuildSyntheticSCSIROM(void)
-{
-  memset(scsiROM, 0, SCSI_ROM_HEADER_SIZE);
-  const uint32_t magic = 0xCAFEBABE;
-  scsiROM[0] = uint8_t(magic >> 0);
-  scsiROM[1] = uint8_t(magic >> 8);
-  scsiROM[2] = uint8_t(magic >> 16);
-  scsiROM[3] = uint8_t(magic >> 24);
-
-  // Update memory configuration (+0x3C, +0x40, +0x44), sent to Mercury by
-  // rend_init. The values are the SDK defaults: ping-pong memory of 32K words
-  // (PRO_PINGPONG_MEMSIZE, less 4 words) and update memory of 96K words, so
-  // ping-pong plus update memory is 128K words. Model 3 Step 1.0 games use the
-  // same values. See "SCSI ROM" and "Update Memory Configuration".
-  const uint32_t updateConfiguration[3] = { 0x7FFC, 0x4, 0x20000 };
-  for (int i = 0; i < 3; i++)
-  {
-    for (int b = 0; b < 4; b++)
-      scsiROM[0x3C + 4 * i + b] = uint8_t(updateConfiguration[i] >> (8 * b));  // little endian
-  }
-  InfoLog("Pro-1000: Using synthetic SCSI ROM (magic and update memory configuration only).");
 }
 
 /*
