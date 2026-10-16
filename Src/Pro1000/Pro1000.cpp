@@ -336,9 +336,16 @@
  * same values. These are the values in the synthetic SCSI ROM (word 0 is
  * 0x7FFC, 4 words less, as on Model 3).
  *
- * Hypothesis (not emulated): the ping-pong memory is low culling RAM words 0
- * to word 0 - 1, and culling address 0x800000 + i (0x8E000000 + 4i) is low
- * culling word i. High culling RAM is then not a separate memory. Evidence:
+ * Ping-pong memory (not emulated): there are two physical ping-pong
+ * memories. A write to 0x8E000000 goes only to the memory that is not drawn,
+ * and data that must stay is written to both (the firmware writes each word
+ * two times with a flip between; Model 3 games write such data exactly two
+ * times in consecutive frames). See "TODO: Physical Ping-Pong Memory" in
+ * Real3D.cpp for the evidence.
+ *
+ * Hypothesis (weak evidence): one of the two ping-pong memories is low
+ * culling RAM words 0 to word 0 - 1, and culling address 0x800000 + i
+ * (0x8E000000 + 4i) is word i of it. Evidence:
  *
  *  - With the configuration 0x45, 0x7FF76, 0x7FFBB, Bayou writes a 0x45-word
  *    scene to low culling words 0-0x44 (0x8C000000): a viewport (words
@@ -352,10 +359,13 @@
  *    0x40000). Model 3 games (Scud Race, Virtua Fighter 3, Daytona USA 2)
  *    do not write low culling RAM below word 0x20000.
  *
- * If this is correct, the culling block of the SCSI ROM (loaded at
+ * But there is no evidence that the renderer draws this scene. If the
+ * hypothesis is correct, the culling block of the SCSI ROM (loaded at
  * 0x8C000000) can contain the root viewport, and 0x10984 then sets its
- * screen size through 0x8E000050. The double buffering of the ping-pong
- * memory is not known.
+ * screen size through 0x8E000050. But rend_init writes the culling block
+ * only one time, through 0x8C000000, thus it is in only one ping-pong memory,
+ * and the logo would not be shown in each frame. It is not known how the
+ * hardware prevents this.
  *
  * Emulation: Mercury has the register (CASIC, instruction 9) on Model 3 and
  * on the Pro-1000, because the two use the same ASICs. An update of the
@@ -363,6 +373,52 @@
  * capture reads them. Thus the register adds no state. No Model 3 game that
  * was examined loads instruction 9 (they use 0x03, 0x08, 0x0A, 0x0B, 0x18,
  * and 0x1F with Mercury). Thus Model 3 operation does not change.
+ *
+ *
+ * Host Commands
+ * -------------
+ * A packet write item to an address with bits 31:24 = 0x20 is a command, not
+ * a write to memory (packet parser 0xAC18, write handler 0xBEF0, command
+ * dispatcher 0x16000, jump table at 0x160A0). The firmware has a list of the
+ * command names (0x52930):
+ *
+ *   0x20000001  mem_op_valid checking (PRO_Init)
+ *   0x20000002  Prev_buff processing flag (PRO_Init, PRO_SetDebugOn/Off;
+ *               sets a flag at RAM 0x5E058)
+ *   0x20000003  Soft Edge Blending Option
+ *   0x20000004  Gamma Correction Option (ls_ctrl_gamma; see JTAG)
+ *   0x20000005  Reload Default Data base (PRO_ReloadLogo): runs rend_init,
+ *               sets the video sync again, and goes back to the idle loop
+ *   0x20000006  Load gamma memory bank 0
+ *   0x20000007  Load gamma memory bank 1
+ *   0x20000008  Save Soft Edge Blend Memory to ROM
+ *   0x20000009  Invalidate Soft Edge Blend Memory in ROM
+ *   0x2000000A  Update Specific Pixels in Soft Edge Blend Memory
+ *   0x2000000B  Texture (0 = off, 1 = on, other = texture map size in words)
+ *   0x2000000C  Texture Translucency On/Off
+ *   0x2000000D  S-Buffer On/Off
+ *   0x2000000E  Polygon Translucency On/Off
+ *   0x2000000F  Contour Translucency On/Off
+ *   0x20000010  Edges On/Off
+ *   0x20000011  Set Cursor/Edge Color 0-7 (3 bits RGB)
+ *   0x20000012  Select Sync File (1-8)
+ *   0x20000013  Set Default Sync File (1-8)
+ *   0x20000014  Stencil On/Off
+ *   0x20000015  Shading On/Off
+ *   0x20000016  Illumination On/Off
+ *   0x20000017  Fading On/Off
+ *   0x20000018  Save Gamma Memory to ROM
+ *   0x20000019  Invalidate Gamma Memory in ROM
+ *   0x2000001A  Set Drop SCSI BSY Time
+ *   0x2000001B  Set up as master for 30 Hz genlock
+ *   0x2000001C  Genlock as 30 Hz Slave
+ *   0x2000001D  Burst Mode On/Off
+ *   0x20000020  Do_update_complete On/Off (sets a flag at RAM 0x5E05C)
+ *   0x200000FC  Read Soft Edge Blend Memory from ROM into Buffer to Host
+ *   0x200000FD  Read Gamma Memory Bank 0 from ROM into Buffer to Host
+ *   0x200000FE  Read Gamma Memory Bank 1 from ROM into Buffer to Host
+ *   0x200000FF  Read Both Gamma Memory Banks from ROM into Buffer to Host
+ *   0x74000000  Genlock Control
  *
  *
  * PowerPC Address Map
@@ -405,21 +461,24 @@
  * 68000000-38        JTAG_*              SCANPSC100F (TDO, TDI, TMS0, TMS1,
  *                                        CNT0, MODE0-2). [Emulated]
  * 70000000           RIF_MODE            RIF mode word. Bit 13 checked at boot,
- *                                        bit 14 toggled by boot stub, bits
- *                                        23:16 probably DIP switches, bit 7
+ *                                        bit 14 toggled by boot stub, bit 7
  *                                        cleared around GP sync waits
- *                                        (0x577C). Field names from the
- *                                        RIF_MODE monitor command (bit
- *                                        positions not yet mapped): BIST
- *                                        enabled, flash ROM write enabled,
- *                                        renderer init disabled, unused
- *                                        switch, SCSI ID (4 bits), align
- *                                        syncs, BIST LED, main CPU flag, four
- *                                        external sync logic resistor
- *                                        selects, kill video syncs, overload
- *                                        force/no report/mode (2 bits)/enable,
- *                                        select external video reference,
- *                                        sync transition select, RIF on-line.
+ *                                        (0x577C) and while command 5 reloads
+ *                                        the SCSI ROM. Bit names from the
+ *                                        RIF_MODE monitor command (0x17BA0):
+ *                                        23 BIST Enabled, 22 Flash ROM Write
+ *                                        Enabled, 21 Renderer Init Disabled
+ *                                        (DIP switch: _start skips rend_init),
+ *                                        20 Unused Switch, 19-16 SCSI ID,
+ *                                        15 Align Syncs (write only), 14 BIST
+ *                                        LED (0 = pass), 13 Main CPU Flag,
+ *                                        12-9 402K/806K/1.6M/3.3M resistor
+ *                                        for external sync logic, 8 Kill
+ *                                        Video Syncs, 7 Ovld Force, 6 Ovld No
+ *                                        Report, 5-4 Ovld Mode, 3 Ovld
+ *                                        Enable, 2 Select External Video
+ *                                        Reference, 1 Sync Transition Select
+ *                                        (1 = even only), 0 Rif On-Line.
  * 72000000           HARD_RESET          Written in a loop by boot stub on 'r'
  * 74000000/08/10     PLL_REF/FBK/CW      Video PLL registers
  * 78000000/08        MAIN_RD_INTA_R0/R1  Main interrupt acknowledge by read?
@@ -590,22 +649,83 @@
  *                            Earth 0x00080000, Mars 0. Bit 0 of Jupiter and
  *                            Mercury is set and then cleared (a pulse).
  *   get_hw_config            Venus 0x6000 and Mars 0x80 for a short time.
- *   rend_init                Jupiter bit 4 is set while the SCSI ROM is
- *                            loaded and cleared after (dual pixel board:
- *                            Mercury bit 2).
+ *   rend_init                Jupiter bit 4 (Disable Fog) is set while the
+ *                            SCSI ROM is loaded and cleared after (dual
+ *                            pixel board: device 2, bit 2).
  *   Main loop, logo          No changes.
  *   Host gamma control       Jupiter bit 25 (see below).
  *
  * Gamma bypass: host command 4 (a packet write of one word to 0x20000004,
- * SDK function ls_ctrl_gamma) calls 0x1BC34(data != 0). On a single pixel
- * board, 0x1BC34(1) clears Jupiter mode word bit 25 and 0x1BC34(0) sets it.
- * On a dual pixel board (hardware configuration 4), the bit is Jupiter bit 7.
- * At boot the bit is set. The SDK demos clear it. Thus the bit probably
- * bypasses the gamma tables: set = no gamma correction, clear = gamma
- * correction. Supermodel does not emulate gamma correction. To emulate it,
- * use this bit and the gamma tables (rom_to_gm, ls_wrt_gamma). 0x1BB04, which
- * the gamma loading code (0x1C220) calls, sets and then clears Jupiter bit 20
- * (dual pixel board: bit 4). Its purpose is not known.
+ * SDK function ls_ctrl_gamma, "Gamma Correction Option") calls 0x1BC34(data
+ * != 0). On a single pixel board, 0x1BC34(1) clears Jupiter mode word bit 25
+ * (Gamma Bypass) and 0x1BC34(0) sets it. On a dual pixel board (hardware
+ * configuration 4), it uses bit 7 of device 1, which is Pluto Gamma Bypass
+ * (thus device 1 is probably Pluto on a dual pixel board). At boot the bit
+ * is set (no gamma correction). The SDK demos clear it (gamma correction).
+ * Supermodel does not emulate gamma correction. To emulate it, use this bit
+ * and the gamma tables (rom_to_gm, ls_wrt_gamma). 0x1BB04, which the gamma
+ * loading code (0x1C220) calls, sets and then clears Jupiter bit 20 (Enable
+ * Memory Test). On a dual pixel board, it uses bit 4 of device 1 (Pluto Test
+ * Gamma Memory).
+ *
+ * Mode word bit names: the firmware has a table of bit names for each ASIC
+ * (pointer arrays at RAM 0x6018C (Pluto), 0x6020C (Jupiter), 0x6028C
+ * (Mercury), 0x6030C (Venus), 0x60390 (Earth and Neptune), 0x60410 (Mars)),
+ * which the monitor uses to print mode words (0x15578 selects the table by
+ * ASIC type). The Earth and Mars tables are printed with the name of the
+ * device. Their assignment to Earth and Mars is from the type numbers and
+ * the boot values. Bits that are not listed are "unused".
+ *
+ *   Jupiter  0 GLOBAL RESET, 1 Enable Two Channel, 2 Enable Interlace,
+ *            3 Enable Two Processor, 4 Disable Fog, 5 Disable Illumination,
+ *            6 Disable Scroll, 7 Disable S-Buffer, 8 Enable Scroll
+ *            Smoothing, 9 Display Edges Only, 10 Slope, 11 Trap Pixel Data,
+ *            12 Trap Line FIFOs, 13-18 Threshold[0-5], 19 Enable MISRs,
+ *            20 Enable Memory Test, 21 Enable Edge Resolver Compare,
+ *            22 Enable Blend Compare, 23 Enable Smudge Compare, 24 Enable
+ *            Color Calc Test, 25 Gamma Bypass, 26 Dac Strobes Invert.
+ *   Mercury  0 NOT Initialized, 1 Block CPU Write, 2 Block Culling, 3 Block
+ *            Burst, 4 Block PingPong, 5 Force PingPong, 6 Block Poly
+ *            Request, 7 Force Poly Request, 8 Block LOS, 9 MISR Enable,
+ *            10 SDRAM Short Refresh, 11 Memory Pointer JTAG, 12-14 Stats
+ *            Sel[0-2], 15 Burst Always, 16-17 Stack Mem Test[0-1], 18 Model
+ *            FIFO Test, 19 Culling SDRAM Test, 20 Ignore Discard, 21 Model
+ *            FIFO Ignore Discard, 22 Model FIFO Cycle, 23 LOS Test, 24 MISR
+ *            MAC Sel, 25 MAC Test, 26 Datamux Test, 27 Counter Test, 28-29
+ *            Mux Isolation Sel[0-1], 30 Fltfunc Test, 31 Do Nothing.
+ *   Venus    4 Stop SDRAM writes/reads, 5 Always Available, 6 Test 1x,
+ *            7 MISR Enable, 8-9 Stats Mode[0-1], 10 Projection Scale
+ *            Disable, 11 Snapshot Enable, 12 Stats Disable, 13 Polygon Mem
+ *            Test, 14 Texture Update, 15 Polygon FIFO Test, 16 No writes to
+ *            rd FIFO, 17 No reads to rd FIFO, 18 Short Refresh, 19 Pmem ROM
+ *            Checksum Enable, 20-22 Test Mode[0-2], 23 Counter Test.
+ *   Earth    0 Two Processors, 1 Two Monitors, 2 Disable Texture Xluc,
+ *            3 Disable Polygon Xluc (configuration 4: Enable Polygon Xluc),
+ *            4 Disable Contour Xluc, 5 Disable Stencil, 6-7 Test/Trap Input
+ *            FIFO[0-1], 8-10 Stats Sel[0-2], 11 Enable LOS Test, 12-14 Trap
+ *            Code[0-2], 15 Enable DBM Test, 16 Enable Video Mem Test,
+ *            17 Cycle Video Mem, 18 Enable MISRs, 19 Disable DRAM Refresh,
+ *            20 Disable Mars Freeze, 21 Select Database Color.
+ *   Mars     0 Two Processors, 1 Disable Texture, 2 Disable Shading,
+ *            3 Disable Illumination, 4 Disable Fading, 5 Enable Compare
+ *            Test, 6 Enable MISRs, 7 Enable Memory Test, 8 Enable CDRAM
+ *            Debug, 9 Short Refresh, 10 Disable Texture Updates, 11 Hi Res.
+ *   Pluto    0 GLOBAL RESET, 1 Enable Dual Channel, 2 Enable Interlace,
+ *            3 Enable MISRs, 4 Test Gamma Memory, 5 Test Soft Edge Blend
+ *            Memory, 6 Fab Test, 7 Gamma Bypass, 8 Disable Soft Edge
+ *            Blending, 9 Display Edges, 10-15 Threshold[0-5], 16 Slope,
+ *            17 Trap Pixel Data, 18 Trap Line FIFOs, 19 Disable S-Buffer,
+ *            20 Disable Background Color.
+ *
+ * Thus the boot values are: Jupiter 0x06000000 (Gamma Bypass, Dac Strobes
+ * Invert), Mercury 0x800 (Memory Pointer JTAG), Earth 0x00080000 (Disable
+ * DRAM Refresh). The bit 0 pulses are GLOBAL RESET (Jupiter) and NOT
+ * Initialized (Mercury). get_hw_config sets Venus Polygon Mem Test and
+ * Texture Update and Mars Enable Memory Test for a short time. Supermodel
+ * uses Mercury bit 2 (Block Culling) as in this table. It uses Mars bit 18 to
+ * clamp the sun on Model 3, but in this table Mars bit 18 is unused. The
+ * firmware does not set Mercury Block PingPong or Force PingPong (only the
+ * monitor can).
  *
  *
  * Serial Console
@@ -715,12 +835,14 @@
  *    state layout.
  *  - What determines "Pre-Production" vs. "Production" system and the
  *    extended texture memory setting reported by show_config_data.
- *  - Contents of the SCSI ROM at SCSI_ROM_BASE (magic 0xCAFEBABE at offset 0,
- *    offset at 0x24), checked by rend_init. This is the SCSI controller's
- *    expansion ROM, separate from the INIT ROM in CPU flash, and is not part
- *    of the SDK flash update (p1_p4.bin, p2.bin), so it was presumably
- *    programmed at the factory. Without it, renderer initialization is
- *    skipped.
+ *  - Contents of the SCSI ROM (see SCSI ROM). It is not part of the SDK
+ *    flash update (p1_p4.bin, p2.bin), so it was presumably programmed at
+ *    the factory. Supermodel makes a synthetic ROM. It is not known how the
+ *    real ROM supplies the viewport of the power-on logo.
+ *  - The ping-pong memory: where the second ping-pong memory is, which
+ *    memory each window (0x8C000000, 0x8E000000) and the renderer use, and
+ *    what swaps them (see Update Memory Configuration and "TODO: Physical
+ *    Ping-Pong Memory" in Real3D.cpp).
  *  - RIF_MODE (0x70000000) is not emulated as a register, so the mode word
  *    from the INIT ROM (0x1401) does not stick.
  *  - REND_ROM_UPDATE (0x90000000): the Model 3 Step 1.0 texture port, which

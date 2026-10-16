@@ -160,7 +160,7 @@
  *
  * Supermodel has one high culling RAM (0x8E000000) that is separate from low
  * culling RAM. The ping_pong bit flips, but no memory changes. The evidence
- * below suggests that the hardware is different.
+ * below shows that the hardware is different.
  *
  * The SDK (PRO_AbbreviatedConfigureMemory(), Developer's Guide 4.0e) gives
  * the two sizes:
@@ -173,13 +173,38 @@
  *    application sends to the renderer. The default (PRO_UPDATE_MEMSIZE) is
  *    96K words (393216 bytes). The application can change it.
  *
- * Hypothesis: there are two physical ping-pong memories of reg 0 words. The
- * renderer draws from one of them while the CPU writes the other. They swap
- * at a frame boundary after an update is complete (REND_UPDATE_COMPL). One of
- * them is at the start of low culling RAM (0x8C000000, low culling words 0 to
- * reg 0 - 1). Culling address 0x800000 + i (0x8E000000 + 4i) is word i of a
- * ping-pong memory. Call the two memories A and B. Two versions agree with
- * the evidence:
+ * 1. Two ping-pong memories (strong evidence)
+ *
+ * There are two physical ping-pong memories, A and B. The renderer draws
+ * from one of them. A write to 0x8E000000 (culling address 0x800000 + i)
+ * goes only to the other one. They swap at a frame boundary after an update
+ * is complete (REND_UPDATE_COMPL). Thus data that must stay in ping-pong
+ * memory must be written to both memories. Evidence:
+ *
+ *  - Model 3 games write their ping-pong data again in each frame, or they
+ *    write it exactly two times in two consecutive frames. Data that was
+ *    not written for 60 frames or more, at frame 1800 of the attract mode:
+ *    Scud Race: 590 words written exactly two times, all one frame apart,
+ *    and no word written only once. Virtua Fighter 3: 2927 words written
+ *    exactly two times, 2926 of them one frame apart. Daytona USA 2: 632
+ *    words written exactly two times, all one frame apart.
+ *  - The SDK demo Bayou writes all of its ping-pong data (2266 words, words
+ *    0 to 0x7FFF) again in each update. It does not send an update in every
+ *    frame. Thus the swap probably occurs after an update, not in each
+ *    frame.
+ *  - The Pro-1000 firmware writes each word to 0x8E000000 two times, with an
+ *    update complete and a frame boundary between the writes (0x10984, the
+ *    monitor write command at 0xFDE4).
+ *  - The firmware rejects writes to 0x8E000000 above reg 0 ("PPO"). The
+ *    0x8E000000 data of Bayou ends at reg 0 (0x8000).
+ *  - Mercury mode word bit 4 is "Block PingPong" and bit 5 is "Force
+ *    PingPong" (bit names in the Pro-1000 firmware). The firmware does not
+ *    set them. Only the monitor can.
+ *
+ * 2. Ping-pong memory A is low culling RAM (weak evidence)
+ *
+ * One of the two memories is possibly at the start of low culling RAM
+ * (0x8C000000, low culling words 0 to reg 0 - 1). Two versions:
  *
  *  a. The windows swap. At any time, one memory is at 0x8C000000 and the
  *     other is at 0x8E000000: A at 0x8C000000 and B at 0x8E000000, then after
@@ -188,37 +213,34 @@
  *     each flip. When 0x8E000000 is A, the two windows get the same memory.
  *     The location of B is not known (it possibly has no CPU address).
  *
- * In both versions, the renderer probably draws the memory that is not at
- * 0x8E000000.
+ * Evidence (see "Update Memory Configuration" in Pro1000.cpp):
  *
- * Evidence (see "Update Memory Configuration" in Pro1000.cpp for details):
- *
- *  - With reg 0 = 0x45, the SDK demo Bayou writes a complete scene (a
- *    viewport, a pointer list, a matrix, and a culling node) to low culling
- *    words 0-0x44 through 0x8C000000. Its pointers are culling addresses
- *    0x800000 + i, which are correct only if word i of that area is culling
- *    address 0x800000 + i.
- *  - The Pro-1000 firmware writes each word to 0x8E000000 two times, with an
- *    update complete and a frame boundary between the writes (0x10984, the
- *    monitor write command at 0xFDE4). This writes both ping-pong memories.
- *  - The firmware rejects writes to 0x8E000000 above reg 0 ("PPO"). The
- *    0x8E000000 data of Bayou ends at reg 0 (0x8000).
+ *  - With reg 0 = 0x45, Bayou writes a complete scene (a viewport, a pointer
+ *    list, a matrix, and a culling node) to low culling words 0-0x44 through
+ *    0x8C000000. Its pointers are culling addresses 0x800000 + i, which are
+ *    correct only if word i of that area is culling address 0x800000 + i.
+ *    But there is no evidence that the renderer draws this scene: Bayou
+ *    replaces it soon after through 0x8E000000.
  *  - Hosts put their own culling data above reg 8 (Asia: 0x20000, Bayou:
  *    0x40000). The Model 3 games that were examined do not write low culling
  *    RAM below word 0x20000.
- *  - A real SCSI ROM can then contain the root viewport of the power-on logo
- *    in its culling block, which the firmware loads at 0x8C000000.
+ *
+ * Problem: the Pro-1000 shows a spinning logo at power-on. The firmware
+ * loads the culling block of the SCSI ROM through 0x8C000000 one time
+ * (rend_init), and it does not write the scene through 0x8E000000. If
+ * 0x8C000000 gets only one ping-pong memory, the logo is in only one memory
+ * and is not shown in each frame. Thus part 2 is possibly not correct, or
+ * the hardware writes the culling block to both memories in a way that is
+ * not known.
  *
  * To do:
  *
- *  1. Keep both update buffers in update memory: low culling words reg 0 to
- *     reg 8 - 1, after the ping-pong memory at 0x8C000000. Do not use words 0
- *     to reg 0 - 1: they are a ping-pong memory.
- *  2. Find how the flip operates (which memory each window and the renderer
+ *  1. Find how the flip operates (which memory each window and the renderer
  *     use, where the second memory is, and what swaps them), then emulate
- *     the two ping-pong memories. The firmware diagnostics "Block PingPong"
- *     and "Force PingPong" (Pro-1000 firmware 0x16F50-0x1760C) and the RIF
- *     mode register (0x70000000) can help.
+ *     the two ping-pong memories.
+ *  2. If part 2 is correct, keep both update buffers in update memory (low
+ *     culling words reg 0 to reg 8 - 1). Do not use words 0 to reg 0 - 1:
+ *     they are then a ping-pong memory.
  */
 
 #include "Real3D.h"
