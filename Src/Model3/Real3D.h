@@ -72,13 +72,6 @@ struct Real3DConfig
   // false, they address VROM (Model 3).
   bool vromIsPolygonRAM = false;
 
-  // If true, writes after the ping-pong flip can go to the update buffers
-  // (see Real3D.cpp). If false, all writes go directly to memory. The
-  // buffers operate only after the configuration registers give an area for
-  // them (Model 3: CPU writes to 0x9C000000. Pro-1000: Mercury JTAG
-  // instruction 0x09).
-  bool updateBuffers = true;
-
   static Real3DConfig Model3(void)
   {
     return Real3DConfig();
@@ -89,14 +82,6 @@ struct Real3DConfig
     Real3DConfig config;
     config.polygonRAMSize = 0x4000000;
     config.vromIsPolygonRAM = true;
-
-    // Pro-1000 firmware sets update memory configuration from SCSI ROM, which
-    // we lack, so this *should* be disabled (even though on the actual
-    // hardware, it is likely always used). But we create a synthetic ROM that
-    // sets a valid update memory configuration, so this safeguard is not needed
-    // and we can proceed with emulating this feature.
-    config.updateBuffers = true;
-
     return config;
   }
 };

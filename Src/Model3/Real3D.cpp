@@ -142,19 +142,23 @@
  * the configuration registers (see "Update Memory Configuration" in
  * Pro1000.cpp). The firmware sends values from the SCSI ROM at boot. The host
  * sends values when it starts (the SDK demos send 0x8000, 0, 0x20000).
+ * Supermodel does not have the real SCSI ROM. The synthetic SCSI ROM
+ * (SyntheticSCSIROM.cpp) contains valid values (0x7FFC, 0x4, 0x20000). Thus
+ * the configuration registers are valid after boot.
  *
  * The time of the flip on the Pro-1000 is not known: it has no tile
  * generator. Supermodel flips the bit at the line that most Model 3 games
  * program (PING_PONG_FLIP_LINE in Pro1000.cpp).
  *
- * Why the update buffers can be disabled:
+ * Without configuration:
  *
- * When the registers were zero, earlier versions put both buffers at the
- * start of low culling RAM. On the Pro-1000, the firmware writes scene data
- * there directly. This data changed the buffers and caused writes outside
- * polygon RAM (a crash). Now, without configuration, there are no buffers.
- * Real3DConfig::updateBuffers can disable the buffers. Then all writes go
- * directly to memory. Model 3 and the Pro-1000 both enable them.
+ * The update buffers are always emulated. They operate only when the
+ * configuration registers give an area for them (reg 8 > reg 0). Before the
+ * configuration registers are written (they are zero after reset), there are
+ * no buffers and all writes go directly to memory. Earlier versions put both
+ * buffers at the start of low culling RAM when the registers were zero. On
+ * the Pro-1000, the firmware writes scene data there directly. This data
+ * changed the buffers and caused writes outside polygon RAM (a crash).
  *
  * TODO: Physical Ping-Pong Memory (hypothesis, not emulated)
  *
@@ -1037,12 +1041,12 @@ void CReal3D::WriteLowCullingRAM(uint32_t addr, uint32_t data)
   cullingRAMLo[addr/4] = data;
 }
 
-// Returns true if writes go to the update buffers now: buffers are permitted
-// by the hardware configuration, the ping-pong bit flipped in this frame, and
-// the configuration registers give an update buffer area.
+// Returns true if writes go to the update buffers now: the ping-pong bit
+// flipped in this frame, and the configuration registers give an update
+// buffer area.
 bool CReal3D::UpdateBuffersActive(void) const
 {
-  return m_hwConfig.updateBuffers && m_pingPong != m_pingPongCopy &&
+  return m_pingPong != m_pingPongCopy &&
          m_configRegisters.pingPongAndUpdateMemSize > m_configRegisters.pingPongMemSize;
 }
 

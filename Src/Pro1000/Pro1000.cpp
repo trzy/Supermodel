@@ -771,8 +771,8 @@
  *    FIELD_SYNC_LINE (383).
  *  - Then the renderer draws the scene that is in memory (RenderFrame()).
  * The Pro-1000 time of the ping-pong flip is not known. The update buffers
- * are on (Real3DConfig::Pro1000()) and use the update memory configuration
- * (see Update Memory Configuration).
+ * use the update memory configuration, which the SCSI ROM sets at boot (see
+ * Update Memory Configuration).
  *
  * Textures:
  *  - Texture port (REND_ROM_UPDATE, 0x90000000): the firmware and the SDK
@@ -1916,7 +1916,12 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
     scsiROMImage.CopyTo(scsiROM, scsiROMImage.size);
   }
   else
+  {
+    // The synthetic ROM also contains the update memory configuration. At
+    // boot, rend_init sends it to the Real3D configuration registers. Without
+    // it, the registers stay zero and the update buffers do not operate.
     BuildSyntheticSCSIROM(scsiROM, SCSI_ROM_SIZE);
+  }
 
   // Convert PowerPC ROMs to little endian words
   Util::FlipEndian32(flash, FLASH_SIZE);

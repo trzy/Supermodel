@@ -29,7 +29,8 @@
  * The real SCSI ROM contents are unknown (it was likely used to hold an
  * initial scene, perhaps a Real3D logo). Without the logo database, the
  * synthetic ROM has the minimum needed for rend_init to proceed: the magic
- * word, the update memory configuration, and a zeroed directory otherwise,
+ * word, the update memory configuration (which sets the Real3D configuration
+ * registers to valid values at boot), and a zeroed directory otherwise,
  * so that every block has offset 0 and size 0 and the view table is empty.
  * The rest of the ROM is erased (0xFF).
  *
@@ -212,12 +213,16 @@ void BuildSyntheticSCSIROM(uint8_t *scsiROM, size_t size)
   scsiROM[2] = uint8_t(magic >> 16);
   scsiROM[3] = uint8_t(magic >> 24);
 
-  // Update memory configuration (+0x3C, +0x40, +0x44), sent to Mercury by
-  // rend_init. The values are the SDK defaults: ping-pong memory of 32K words
+  // Update memory configuration (+0x3C, +0x40, +0x44). rend_init sends it to
+  // Mercury through JTAG, and Supermodel writes it to the Real3D
+  // configuration registers. This is what makes the configuration registers
+  // valid at boot: without it, they stay zero (their reset value) until a
+  // host sends a configuration, and the update buffers do not operate. The
+  // values are the SDK defaults: ping-pong memory of 32K words
   // (PRO_PINGPONG_MEMSIZE, less 4 words) and update memory of 96K words, so
   // ping-pong plus update memory is 128K words. Model 3 Step 1.0 games use the
   // same values. See "SCSI ROM" and "Update Memory Configuration" in
-  // Pro1000.cpp.
+  // Pro1000.cpp, and "Update Buffers" in Real3D.cpp.
   const uint32_t updateConfiguration[3] = { 0x7FFC, 0x4, 0x20000 };
   for (int i = 0; i < 3; i++)
   {

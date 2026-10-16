@@ -38,7 +38,9 @@
  * Makes a synthetic SCSI ROM image. The image has the magic word, the update
  * memory configuration, and (if the Assets folder contains 3dlogo.cmem and
  * 3dlogo.pmem) the logo database. All other bytes are 0xFF. The image is in
- * PCI byte order (little endian words), as the real ROM is.
+ * PCI byte order (little endian words), as the real ROM is. At boot, the
+ * firmware sends the update memory configuration to the Real3D configuration
+ * registers. Thus this ROM sets them to valid values.
  *
  * Parameters:
  *    scsiROM   Buffer for the image.
