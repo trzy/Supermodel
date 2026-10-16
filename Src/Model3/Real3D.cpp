@@ -155,6 +155,70 @@
  * polygon RAM (a crash). Now, without configuration, there are no buffers.
  * Real3DConfig::updateBuffers can disable the buffers. Then all writes go
  * directly to memory. Model 3 and the Pro-1000 both enable them.
+ *
+ * TODO: Physical Ping-Pong Memory (hypothesis, not emulated)
+ *
+ * Supermodel has one high culling RAM (0x8E000000) that is separate from low
+ * culling RAM. The ping_pong bit flips, but no memory changes. The evidence
+ * below suggests that the hardware is different.
+ *
+ * The SDK (PRO_AbbreviatedConfigureMemory(), Developer's Guide 4.0e) gives
+ * the two sizes:
+ *
+ *  - Ping-pong memory (reg 0): the culling memory where viewports,
+ *    animation sequences, and databases are stored. The API objects for
+ *    viewports, matrices, databases, animation sequences, and indirection
+ *    tables are "ping-pong data blocks".
+ *  - Update memory (reg 8 - reg 0): the largest amount of data that the
+ *    application sends to the renderer. The default (PRO_UPDATE_MEMSIZE) is
+ *    96K words (393216 bytes). The application can change it.
+ *
+ * Hypothesis: there are two physical ping-pong memories of reg 0 words. The
+ * renderer draws from one of them while the CPU writes the other. They swap
+ * at a frame boundary after an update is complete (REND_UPDATE_COMPL). One of
+ * them is at the start of low culling RAM (0x8C000000, low culling words 0 to
+ * reg 0 - 1). Culling address 0x800000 + i (0x8E000000 + 4i) is word i of a
+ * ping-pong memory. Call the two memories A and B. Two versions agree with
+ * the evidence:
+ *
+ *  a. The windows swap. At any time, one memory is at 0x8C000000 and the
+ *     other is at 0x8E000000: A at 0x8C000000 and B at 0x8E000000, then after
+ *     a flip, B at 0x8C000000 and A at 0x8E000000.
+ *  b. 0x8C000000 is always memory A. 0x8E000000 changes between A and B at
+ *     each flip. When 0x8E000000 is A, the two windows get the same memory.
+ *     The location of B is not known (it possibly has no CPU address).
+ *
+ * In both versions, the renderer probably draws the memory that is not at
+ * 0x8E000000.
+ *
+ * Evidence (see "Update Memory Configuration" in Pro1000.cpp for details):
+ *
+ *  - With reg 0 = 0x45, the SDK demo Bayou writes a complete scene (a
+ *    viewport, a pointer list, a matrix, and a culling node) to low culling
+ *    words 0-0x44 through 0x8C000000. Its pointers are culling addresses
+ *    0x800000 + i, which are correct only if word i of that area is culling
+ *    address 0x800000 + i.
+ *  - The Pro-1000 firmware writes each word to 0x8E000000 two times, with an
+ *    update complete and a frame boundary between the writes (0x10984, the
+ *    monitor write command at 0xFDE4). This writes both ping-pong memories.
+ *  - The firmware rejects writes to 0x8E000000 above reg 0 ("PPO"). The
+ *    0x8E000000 data of Bayou ends at reg 0 (0x8000).
+ *  - Hosts put their own culling data above reg 8 (Asia: 0x20000, Bayou:
+ *    0x40000). The Model 3 games that were examined do not write low culling
+ *    RAM below word 0x20000.
+ *  - A real SCSI ROM can then contain the root viewport of the power-on logo
+ *    in its culling block, which the firmware loads at 0x8C000000.
+ *
+ * To do:
+ *
+ *  1. Keep both update buffers in update memory: low culling words reg 0 to
+ *     reg 8 - 1, after the ping-pong memory at 0x8C000000. Do not use words 0
+ *     to reg 0 - 1: they are a ping-pong memory.
+ *  2. Find how the flip operates (which memory each window and the renderer
+ *     use, where the second memory is, and what swaps them), then emulate
+ *     the two ping-pong memories. The firmware diagnostics "Block PingPong"
+ *     and "Force PingPong" (Pro-1000 firmware 0x16F50-0x1760C) and the RIF
+ *     mode register (0x70000000) can help.
  */
 
 #include "Real3D.h"
