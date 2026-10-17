@@ -53,7 +53,7 @@
 /* MAME SCSP conversion by Paul Prosser (aka Conversus W. Vans). Code by R.Belmont and ElSemi.
 Fixes made: buggy timing, better envelope processing, better FM support, a more reasonable DSP emulation and all kinds of improvements.
 But the new core isn't without its to-do list:
-- Fix low sound volume when changing music in Harley-Davidson & LA Riders (Maybe the MVOL code from MAME will fix this?)
+- Fix low sound volume when changing music in Harley-Davidson & LA Riders (Maybe the MVOL code from MAME will fix this? See APPLY_MVOL)
 - Prevent music in Fighting Vipers 2 Bahn's stage from hanging with MAME's SCSP DSP core.
 - Figure out why Sega Rally 2 navigator voice can cut off sometimes (Legacy DSP)
 
@@ -86,6 +86,11 @@ bool legacySound; // For LegacySound (SCSP DSP) config option.
 #define MAX_SCSP	2
 
 //#define CORRECT_FOR_18BIT_DAC
+
+// Scales each SCSP's output by its MVOL master volume (0-15), like MAME. Not from MAME: the define, off by default, as the
+// volume levels were tuned without it, and games that set MVOL < 15 (or never set it: it starts at 0, which is silent)
+// would get quieter.
+//#define APPLY_MVOL
 
 // These globals control the operation of the SCSP, they are no longer extern and are set through SCSP_SetBuffers(). --Bart
 static float* bufferfl;
@@ -134,12 +139,15 @@ unsigned short MCIPD;
 #define MIDI_STACK_SIZE			0x100
 #define MIDI_STACK_SIZE_MASK	(MIDI_STACK_SIZE-1)
 
-static BYTE MidiOutStack[16];
+#define MIDI_OUT_STACK_MASK		15	// not from MAME: 16 entries (MAME has 32), as the size is part of the save state
+
+static BYTE MidiOutStack[MIDI_OUT_STACK_MASK+1];
 static BYTE MidiOutW=0,MidiOutR=0;
 static BYTE MidiStack[MIDI_STACK_SIZE];
 static BYTE MidiOutFill;
 static BYTE MidiInFill;
 static BYTE MidiW=0,MidiR=0;
+static bool MidiInOverflow=false;	// MIOVF: a byte arrived while the input FIFO was full
 static BYTE HasSlaveSCSP=0;
 
 static DWORD FNS_Table[0x400];
@@ -367,7 +375,7 @@ void CheckPendingIRQ()
 		//printf("68K: MIDI IRQ\n");
 		//ErrorLogMessage("Midi");
 
-		SCSP->data[0x20 / 2] |= 8;
+		SCSPs->data[0x20 / 2] |= 8;	// not from MAME: the master's SCIPD (SCSP is whichever chip was accessed last)
 		pend |= 8;
 	}
 
@@ -394,7 +402,7 @@ void CheckPendingIRQ()
 	if (pend & en & 0x8)
 	{
 		irqLevel = (IrqMidi > irqLevel) ? IrqMidi : irqLevel;
-		SCSP->data[0x20 / 2] &= ~8;
+		SCSPs->data[0x20 / 2] &= ~8;	// not from MAME: the master's SCIPD
 	}
 
 	Int68kCB(irqLevel);
@@ -617,6 +625,7 @@ Result SCSP_Init(const Util::Config::Node &config, int n)
 	SCSP->DSP.SCSPRAM = (UINT16 *)SCSP->SCSPRAM;
 	SCSP->DSP.SCSPRAM_LENGTH = (512 * 1024) / 2;
 	MidiR=MidiW=0;
+	MidiInOverflow=false;
 	MidiOutR=MidiOutW=0;
 	MidiOutFill=0;
 	MidiInFill=0;
@@ -818,7 +827,7 @@ void SCSP_UpdateReg(int reg)
 {
 	switch(reg&0x3f)
 	{
-		case 0x0: // Need to get this working in Supermodel as well
+		case 0x0: // MVOL is applied in SCSP_DoMasterSamples (if APPLY_MVOL is defined)
 			//m_stream->set_output_gain(0, MVOL() / 15.0);
 			//m_stream->set_output_gain(1, MVOL() / 15.0);
 			//break;
@@ -834,8 +843,7 @@ void SCSP_UpdateReg(int reg)
 		}
 		break;
 
-		case 0x6:
-		case 0x7:
+		case 0x6:	// MOBUF (verified via spec, not from MAME: not 0x7, the unused high byte)
 			SCSP_MidiOutW(SCSP->data[0x6/2]&0xff);
 			break;
 
@@ -874,6 +882,7 @@ void SCSP_UpdateReg(int reg)
 				TimCnt[2]=((SCSPs->data[0x1C/2]&0xfe)<<8)/*|(TimCnt[2]&0xff)*/;
 			}
 			break;
+		// TODO (verified via spec, not from MAME): SCIPD (0x20) is read only, except that writes can set bit 5 (raising that interrupt)
 		case 0x22:	//SCIRE
 		case 0x23:
 			if(SCSP->Master)
@@ -929,15 +938,20 @@ void SCSP_UpdateSlotRegR(int slot,int reg)
 
 }
 
-void SCSP_UpdateRegR(int reg)
+// readsLowByte: the access includes the register's low byte (for 0x404: MIBUF), like MAME's m_read_mask & 0x00ff
+// TODO: debugger memory views read through here too, and so take MIDI bytes (MAME checks side_effects_disabled())
+void SCSP_UpdateRegR(int reg, bool readsLowByte)
 {
 	switch (reg & 0x3f)
 	{
 	case 4:
 	case 5:
 	{
-		unsigned short v = SCSP->data[0x4 / 2];
-		v &= 0xff00;
+		if (!SCSP->Master)	// not from MAME (Model 3 wiring): only the master's MIDI is connected, so the slave's FIFOs stay empty
+		{
+			SCSP->data[0x4 / 2] = 0x0900;	// MOEMP | MIEMP
+			break;
+		}
 
 		/*
 		 * MIDI FIFO critical section!
@@ -945,19 +959,32 @@ void SCSP_UpdateRegR(int reg)
 		if (s_multiThreaded)
 			MIDILock->Lock();
 
-		v |= MidiStack[MidiR];
-		//printf("read MIDI\n");
-		if (MidiR != MidiW)
-		{
-			++MidiR;
-			MidiR &= MIDI_STACK_SIZE_MASK;
-			//Int68kCB(IrqMidi);
-		}
-
-		MidiInFill--;
+		// from MAME (b99614c513): MOFUL/MOEMP/MIOVF/MIFUL/MIEMP, and MIBUF, the oldest byte in the input FIFO
+		unsigned short v = MidiStack[MidiR];
+		v |= 0x0800;	// not from MAME: MOEMP always (never MOFUL), as nothing takes the MIDI out bytes here
+		if (MidiInOverflow)
+			v |= 0x0400;
+		if (((MidiW + 1) & MIDI_STACK_SIZE_MASK) == MidiR)
+			v |= 0x0200;
+		if (MidiR == MidiW)
+			v |= 0x0100;
 		SCSP->data[0x4 / 2] = v;
 
-		CheckPendingIRQ();
+		// only reading MIBUF takes the byte: the status half alone doesn't
+		if (readsLowByte)
+		{
+			//printf("read MIDI\n");
+			MidiInOverflow = false;
+			if (MidiR != MidiW)
+			{
+				++MidiR;
+				MidiR &= MIDI_STACK_SIZE_MASK;
+				MidiInFill--;	// not from MAME: only for a byte actually taken
+				//Int68kCB(IrqMidi);
+			}
+
+			CheckPendingIRQ();
+		}
 
 		if (s_multiThreaded)
 			MIDILock->Unlock();
@@ -974,7 +1001,11 @@ void SCSP_UpdateRegR(int reg)
 		unsigned int CA = (slot->cur_addr >> (SHIFT + 12)) & 0xf;
 		unsigned int EG = (0x1f - (slot->EG.volume >> (EG_SHIFT + 5))) & 0x1f;
 		/* note: according to the manual MSLC is write only, CA, SGC and EG read only.  */
-		SCSP->data[0x8 / 2] =  /*(MSLC << 11) |*/ (CA << 7) | (SGC << 5) | EG;
+		// not from MAME: keep MSLC in the register (MAME latches it, which would change the save state), so later reads
+		// monitor the same slot (SCSP_r8/r16 mask it out of the value read)
+		// TODO: MAME (458507e06b) updates this only once per sample, so a read right after selecting a slot returns the
+		// old value. Depends on 68K timing, and needs a save state change
+		SCSP->data[0x8 / 2] = (SCSP->data[0x8 / 2] & 0xf800) | (CA << 7) | (SGC << 5) | EG;
 	}
 	break;
 	case 0x18:
@@ -1016,8 +1047,11 @@ void SCSP_w8(unsigned int addr,unsigned char val)
 	}
 	else if(addr<0x600)
 	{
-		*(unsigned char *) &(SCSP->datab[(addr&0xff)^1]) = val;
-		SCSP_UpdateReg((addr^1)&0xff);
+		if (addr < 0x430)	// verified via spec, not from MAME: the registers are only 0x30 bytes (like SCSP_w16)
+		{
+			*(unsigned char *) &(SCSP->datab[(addr&0xff)^1]) = val;
+			SCSP_UpdateReg((addr^1)&0xff);
+		}
 	}
 	else if(addr<0x700)
 		SCSP->RINGBUF[(addr-0x600)/2]=val;
@@ -1122,6 +1156,13 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 	addr&=0xffff;
 	if(addr<0x400)
 	{
+		if ((addr&0x1f) == 0x1e)	// verified via spec, not from MAME: crosses into the next slot (or the common registers)
+		{
+			SCSP_w16(addr, val >> 16);
+			SCSP_w16(addr + 2, val & 0xffff);
+			return;
+		}
+		// otherwise write both halves before the updates, as a key on (offset 0) uses SA from the second half
 		int slot=addr/0x20;
 		addr&=0x1f;
 		//DebugLog("Slot %02X Reg %02X write dword %08X\n",slot,addr,val);
@@ -1134,11 +1175,10 @@ void SCSP_w32(unsigned int addr,unsigned int val)
 	}
 	else if(addr<0x600)
 	{
-		rotl(val, 16);
-
-		*(unsigned int *) &(SCSP->datab[addr&0xff]) = val;
-		SCSP_UpdateReg(addr&0xff);
-		SCSP_UpdateReg((addr&0xff)+2);
+		// not from MAME: as two 16-bit writes, which keeps them inside the registers (same result as updating after both
+		// halves, as an update that reads the other half is redone by that half's own update)
+		SCSP_w16(addr, val >> 16);
+		SCSP_w16(addr + 2, val & 0xffff);
 	}
 	else if(addr<0x700)
 		{} // do nothing
@@ -1188,9 +1228,14 @@ unsigned char SCSP_r8(unsigned int addr)
 	}
 	else if(addr<0x600)
 	{
-		SCSP_UpdateRegR(addr&0xff);
-		v= *(unsigned char *) &(SCSP->datab[(addr&0xff)^1]);
-		//ErrorLogMessage("SCSP Reg %02X Read byte %02X",addr&0xff,v);
+		if (addr < 0x430)	// verified via spec, not from MAME: the registers are only 0x30 bytes (like SCSP_r16)
+		{
+			SCSP_UpdateRegR(addr&0xff, (addr&1) != 0);
+			v= *(unsigned char *) &(SCSP->datab[(addr&0xff)^1]);
+			if ((addr&0xff) == 0x8)	// verified via spec, not from MAME: MSLC is write only
+				v &= 0x07;
+			//ErrorLogMessage("SCSP Reg %02X Read byte %02X",addr&0xff,v);
+		}
 	}
 	else if(addr<0x700)
 		v=0;
@@ -1216,8 +1261,10 @@ unsigned short SCSP_r16(unsigned int addr)
 		////ErrorLogMessage("SCSP Reg %02X Read word %04X",addr&0xff,v);
 		if (addr < 0x430)
 		{
-			SCSP_UpdateRegR(addr & 0x3f);
+			SCSP_UpdateRegR(addr & 0x3f, true);
 			v = *((UINT16 *)(SCSP->datab + ((addr & 0x3f))));
+			if ((addr & 0x3e) == 0x8)	// verified via spec, not from MAME: MSLC is write only
+				v &= 0x07ff;
 		}
 	}
 	else if (addr < 0x700)
@@ -1267,7 +1314,9 @@ unsigned short SCSP_r16(unsigned int addr)
 
 unsigned int SCSP_r32(unsigned int addr)
 {
-	return 0xffffffff;
+	// not from MAME: the 68K's bus is 16 bits wide, so this is two 16-bit reads
+	unsigned int hi = SCSP_r16(addr);
+	return (hi << 16) | SCSP_r16(addr + 2);
 }
 
 #define REVSIGN(v) ((~v)+1)
@@ -1543,12 +1592,15 @@ void SCSP_DoMasterSamples(int nsamples)
 
 				signed int sample = (int)(masterBalance*(float)SCSP_UpdateSlot(slot));
 
-				Enc = ((TL(slot)) << 0x0) | ((IMXL(slot)) << 0xd);
+				// from MAME (f010d3df86): SDIR bypasses TL in both mixes, like the EG and ALFO (see SCSP_UpdateSlot)
+				UINT16 eff_tl = SDIR(slot) ? 0 : TL(slot);
+				Enc = ((eff_tl) << 0x0) | ((IMXL(slot)) << 0xd);
 				SCSPDSP_SetSample(&SCSPs[0].DSP, (sample*LPANTABLE[Enc]) >> (SHIFT - 2), ISEL(slot), IMXL(slot));
-				Enc = ((TL(slot)) << 0x0) | ((DIPAN(slot)) << 0x8) | ((DISDL(slot)) << 0xd);
+				UINT16 dir_tl = SDIR(slot) ? 0 : TL(slot);
+				Enc = ((dir_tl) << 0x0) | ((DIPAN(slot)) << 0x8) | ((DISDL(slot)) << 0xd);
 #ifdef RB_VOLUME
-				smpfl += (sample * volume[TL(slot) + pan_left[DIPAN(slot)]]) >> 17;
-				smpfr += (sample * volume[TL(slot) + pan_right[DIPAN(slot)]]) >> 17;
+				smpfl += (sample * volume[dir_tl + pan_left[DIPAN(slot)]]) >> 17;	// not from MAME: same bypass here
+				smpfr += (sample * volume[dir_tl + pan_right[DIPAN(slot)]]) >> 17;
 #else
 				{
 					smpfl += (sample*LPANTABLE[Enc]) >> SHIFT;
@@ -1579,13 +1631,16 @@ void SCSP_DoMasterSamples(int nsamples)
 
 					signed int sample = (int)(slaveBalance*(float)SCSP_UpdateSlot(slot));
 
-					Enc = ((TL(slot)) << 0x0) | ((IMXL(slot)) << 0xd);
+					// from MAME (f010d3df86): SDIR bypasses TL in both mixes, like the EG and ALFO (see SCSP_UpdateSlot)
+					UINT16 eff_tl = SDIR(slot) ? 0 : TL(slot);
+					Enc = ((eff_tl) << 0x0) | ((IMXL(slot)) << 0xd);
 					SCSPDSP_SetSample(&SCSPs[1].DSP, (sample*LPANTABLE[Enc]) >> (SHIFT - 2), ISEL(slot), IMXL(slot));
-					Enc = ((TL(slot)) << 0x0) | ((DIPAN(slot)) << 0x8) | ((DISDL(slot)) << 0xd);
+					UINT16 dir_tl = SDIR(slot) ? 0 : TL(slot);
+					Enc = ((dir_tl) << 0x0) | ((DIPAN(slot)) << 0x8) | ((DISDL(slot)) << 0xd);
 					{
 #ifdef RB_VOLUME
-						smprl += (sample * volume[TL(slot) + pan_left[DIPAN(slot)]]) >> 17;
-						smprr += (sample * volume[TL(slot) + pan_right[DIPAN(slot)]]) >> 17;
+						smprl += (sample * volume[dir_tl + pan_left[DIPAN(slot)]]) >> 17;	// not from MAME: same bypass here
+						smprr += (sample * volume[dir_tl + pan_right[DIPAN(slot)]]) >> 17;
 #else
 						smprl += (sample*LPANTABLE[Enc]) >> SHIFT;
 						smprr += (sample*RPANTABLE[Enc]) >> SHIFT;
@@ -1653,7 +1708,7 @@ void SCSP_DoMasterSamples(int nsamples)
 			}
 		}
 
-		if (DAC18B((&SCSP[0])))
+		if (DAC18B((&SCSPs[0])))	// not from MAME: the master's, not the one of the chip accessed last
 		{
 			smpfl = ICLIP18(smpfl);
 			smpfr = ICLIP18(smpfr);
@@ -1705,6 +1760,21 @@ void SCSP_DoMasterSamples(int nsamples)
 			*bufrr++ = (float)smprr;
 		}
 
+#ifdef APPLY_MVOL
+		// as MAME's output gain, so after the clipping above ([-1]: each buffer pointer has just advanced by one)
+		{
+			const float masterVol = (float)MVOL((&SCSPs[0])) / 15.0f;
+			buffl[-1] *= masterVol;
+			buffr[-1] *= masterVol;
+			if (HasSlaveSCSP)
+			{
+				const float slaveVol = (float)MVOL((&SCSPs[1])) / 15.0f;
+				bufrl[-1] *= slaveVol;
+				bufrr[-1] *= slaveVol;
+			}
+		}
+#endif
+
 		SCSP_TimersAddTicks(1);
 		CheckPendingIRQ();
 		lastdiff = Run68kCB(slice - lastdiff);
@@ -1722,6 +1792,8 @@ void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq))
 	Run68kCB=Run68k;
 }
 
+// NOTE (not from/unlike MAME): bytes arrive instantly instead of at the serial MIDI rate, and the FIFO is bigger than the
+// hardware's, on purpose (see MIDI_STACK_SIZE at the top of this file)
 void SCSP_MidiIn(BYTE val)
 {
 	/*
@@ -1731,9 +1803,18 @@ void SCSP_MidiIn(BYTE val)
 		MIDILock->Lock();
 
 	//DebugLog("Midi Buffer push %02X",val);
-	MidiStack[MidiW++]=val;
-	MidiW&=MIDI_STACK_SIZE_MASK;
-	MidiInFill++;
+	// from MAME (rcv_complete)
+	if (((MidiW + 1) & MIDI_STACK_SIZE_MASK) == MidiR)
+	{
+		// input FIFO full: the byte is lost
+		MidiInOverflow = true;
+	}
+	else
+	{
+		MidiStack[MidiW++]=val;
+		MidiW&=MIDI_STACK_SIZE_MASK;
+		MidiInFill++;
+	}
 	//Int68kCB(IrqMidi);
 //	SCSP.data[0x20/2]|=0x8;
 
@@ -1751,9 +1832,13 @@ void SCSP_MidiOutW(BYTE val)
 
 	//printf("68K: MIDI out\n");
 	//DebugLog("Midi Out Buffer push %02X",val);
-	MidiStack[MidiOutW++]=val;
-	MidiOutW&=31;
-	++MidiOutFill;
+	// from MAME (5039631dda): its own FIFO, not the input one
+	if (((MidiOutW + 1) & MIDI_OUT_STACK_MASK) != MidiOutR)	// not from MAME: drop the byte if full
+	{
+		MidiOutStack[MidiOutW++]=val;
+		MidiOutW&=MIDI_OUT_STACK_MASK;
+		++MidiOutFill;
+	}
 
 	if (s_multiThreaded)
 		MIDILock->Unlock();
@@ -1773,9 +1858,9 @@ unsigned char SCSP_MidiOutR()
 	if (s_multiThreaded)
 		MIDILock->Lock();
 
-	val=MidiStack[MidiOutR++];
+	val=MidiOutStack[MidiOutR++];
 	//DebugLog("Midi Out Buffer pop %02X",val);
-	MidiOutR&=31;
+	MidiOutR&=MIDI_OUT_STACK_MASK;
 	--MidiOutFill;
 
 	if (s_multiThreaded)
@@ -2041,6 +2126,12 @@ void SCSP_LoadState(CBlockFile *StateFile)
 	StateFile->Read(&MidiInFill, sizeof(MidiInFill));
 	StateFile->Read(&MidiW, sizeof(MidiW));
 	StateFile->Read(&MidiR, sizeof(MidiR));
+	// not from MAME: older states can have MIDI out indices up to 31, and the fill counts could be off
+	MidiOutW &= MIDI_OUT_STACK_MASK;
+	MidiOutR &= MIDI_OUT_STACK_MASK;
+	MidiOutFill = (MidiOutW - MidiOutR) & MIDI_OUT_STACK_MASK;
+	MidiInFill = (MidiW - MidiR) & MIDI_STACK_SIZE_MASK;
+	MidiInOverflow = false;
 	StateFile->Read(TimPris, sizeof(TimPris));
 	StateFile->Read(TimCnt, sizeof(TimCnt));
 
