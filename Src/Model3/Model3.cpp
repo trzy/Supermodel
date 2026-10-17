@@ -3057,9 +3057,9 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   return Result::OKAY;
 }
 
-void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
+void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  TileGen.AttachRenderer(Render2DPtr);
+  TileGen.AttachRenderer(dynamic_cast<CRender2D *>(Render2DPtr));
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
 }

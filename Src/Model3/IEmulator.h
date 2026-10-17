@@ -31,7 +31,7 @@
 class CBlockFile;
 struct Game;
 struct ROMSet;
-class CRender2D;
+class IRender2D;
 class IRender3D;
 class CInputs;
 class COutputs;
@@ -149,10 +149,12 @@ public:
    * Attaches the renderers to the appropriate device objects.
    *
    * Parameters:
-   *    Render2DPtr   Pointer to a tile renderer object.
+   *    Render2DPtr   Pointer to a 2D layer renderer object (the type that
+   *                  the emulator needs: CRender2D for Model 3,
+   *                  CPro1000Render2D for the Pro-1000).
    *    Render3DPtr   Same as above but for a 3D renderer.
    */
-  virtual void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
+  virtual void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
   
   /*
    * AttachInputs(InputsPtr):

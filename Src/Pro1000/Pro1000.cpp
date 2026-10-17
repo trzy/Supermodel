@@ -97,8 +97,8 @@
  *  - Power-on: the unit runs a confidence test and then displays a spinning
  *    Real 3D logo. The API describes the logo as the "default database"
  *    (PRO_ReloadLogo; monitor command LDDB). This is most likely the contents
- *    of the SCSI ROM. The SDK's DB_Demos/Orlando contains 3dlogo.cmem and
- *    3dlogo.pmem.
+ *    of the SCSI ROM. The SDK's DB_Demos/Orlando and DB_Demos/Bayou contain
+ *    3dlogo.cmem and 3dlogo.pmem (see SCSI ROM).
  *  - The real-time clock count returned to the host is in 30 ns hardware
  *    clocks.
  *  - Demo databases (DB_Demos) are distributed precompiled as .cmem (culling
@@ -205,37 +205,220 @@
  * little endian 32-bit words (the PowerPC byte swaps them when reading across
  * PCI). Offsets are relative to SCSI_ROM_BASE.
  *
- *   +0x00        Magic, 0xCAFEBABE (checked by rend_init and 0xA680)
- *   +0x1C,+0x20  Size, offset of a block uploaded to polygon memory
- *                (REND_POLY_BASE) by 0x615C, preceded by a header word
- *                written to 0x98000000; +0x48 is also read
- *   +0x24,+0x28  Offset, size in bytes of a block uploaded to culling memory
- *                (REND_CULL_BASE) in four parts by rend_init
- *   +0x2C,+0x30  Offset, size of a block uploaded to polygon memory in four
- *                parts by 0x12AF0
- *   +0x34        Offset of a 12-entry table (used by 0xA680)
- *   +0x3C        3 words written to REND_UPDATE_START (0x9C000000, the Model
- *                3 configuration registers) by rend_init
+ * Directory format. Each entry is one 32-bit word. Offsets are byte offsets
+ * from SCSI_ROM_BASE. Sizes are in bytes and must be multiples of 4. Words
+ * that are not in the table were not seen to be read.
  *
- * Block data is copied word for word with no byte swapping (0x944C), so it is
- * stored in the renderer's little endian byte order. Each upload goes through
- * 0x10E3C (write words to a renderer address) and 0x63DC, and is followed by a
- * write to REND_UPDATE_COMPL (0x88000000) and a wait for GP sync (0x577C).
- * After uploading, 0x615C writes one word to REND_ROM_UPDATE (0x90000000).
+ *   +0x00  Magic, 0xCAFEBABE. rend_init and 0xA680 check it.
+ *   +0x0C  PowerPC address (0x80000000-0x9FFFFFFC) to which 0xA680 writes
+ *          one view table entry (12 words) each frame.
+ *   +0x1C  Size of polygon block A.
+ *   +0x20  Offset of polygon block A.
+ *   +0x24  Offset of the culling block.
+ *   +0x28  Size of the culling block.
+ *   +0x2C  Offset of polygon block B.
+ *   +0x30  Size of polygon block B.
+ *   +0x34  Offset of the view table. Each entry is 12 words (48 bytes).
+ *   +0x38  Number of entries in the view table. 0 disables 0xA680.
+ *   +0x3C  Update memory configuration, word 0 (ping-pong memory size).
+ *   +0x40  Update memory configuration, word 1.
+ *   +0x44  Update memory configuration, word 2 (ping-pong memory size plus
+ *          update memory size).
+ *   +0x48  Number of words in each part of the polygon block A upload. It
+ *          must not be 0 if polygon block A is not empty (0x615C does not
+ *          stop).
  *
- * The SCSI ROM is not part of the SDK flash update and its contents are
- * unknown. All that is known is where the blocks are uploaded: culling memory,
- * polygon memory, and the configuration registers. They could be a default
- * scene, tables the renderer needs in order to operate, default data
- * structures, or test data. The SDK documentation suggests it is the
- * default database, a spinning Real 3D logo displayed at power-on.
+ * rend_init (0x51A8) loads the ROM in this sequence:
+ *
+ *  1. If the magic is not correct, it prints "SCSI ROM magic does NOT
+ *     validate" and stops.
+ *  2. It writes the three update memory configuration words to
+ *     REND_UPDATE_START (0x9C000000). The write function sends them to
+ *     Mercury through JTAG (see Update Memory Configuration). Then it writes
+ *     REND_UPDATE_COMPL (0x88000000) and waits for GP sync (0x577C) four
+ *     times.
+ *  3. It copies the culling block to REND_CULL_BASE (0x8C000000) in four
+ *     parts. Parts 1 to 3 each have size / 16 words (rounded down). Part 4
+ *     has the remaining words.
+ *  4. 0x615C copies polygon block A. First, it writes the word
+ *     (n << 3) | 4 to REND_POLY_BASE (0x98000000), where n is the number of
+ *     words in the block. Then it copies the block to 0x98000004, in parts
+ *     of the number of words at +0x48 (the last part can be smaller). After
+ *     that, it writes 0 to REND_ROM_UPDATE (0x90000000, the texture port).
+ *  5. 0x12AF0 copies polygon block B to REND_POLY_BASE (0x98000000) in four
+ *     parts, as in step 3. After each part, it waits for bit 2 of RAM
+ *     0x62384 (the copy is complete, see below).
+ *  6. It calls 0x10984.
+ *
+ * Polygon blocks A and B both start at 0x98000000. Thus block B overwrites
+ * the start of block A. Probably a ROM uses only one of them.
+ *
+ * The CPU copies each part from the ROM to a RAM buffer (0x944C), word for
+ * word with no byte swap. Thus the data is in the byte order of the renderer
+ * (little endian). The .cmem and .pmem files are big endian. Then 0x10E3C
+ * writes the buffer to the renderer. It uses the CPU for a part of at most
+ * the number of words at RAM 0x5E060, and a 53C825 SCRIPTS memory move (DMA,
+ * 0x45AC0) for a larger part. The main loop sets 0x5E060 to 40 words. During
+ * rend_init it is still 0, thus all parts use the 53C825. At the end of the
+ * move, the script interrupts with DSPS 0xFFFFFF0B, and the SCSI interrupt
+ * handler (0x452C8) sets bit 2 of RAM 0x62384 (the copy is complete).
+ *
+ * After each part, the firmware calls 0x63DC (it waits a maximum of 8 ms for
+ * bit 2 of 0x62384), writes REND_UPDATE_COMPL, and waits for GP sync. If
+ * 0x63DC fails, it prints "SCSI_BLK_MV_DONE time-out for address ...". Only
+ * 0x615C (polygon block A) stops on a failure (an error loop). In Supermodel,
+ * this message can occur although the copy is complete: the 8259 interrupts
+ * the CPU only between CPU time slices (see Interrupts), and 0x63DC stops
+ * immediately when its two time base reads are equal.
+ *
+ * When there is no host, the firmware draws the scene in the ROM. 0xA908
+ * calls 0xA680, which makes a render job from the ROM, and then 0xA984 (the
+ * render cycle). 0xA680 does nothing if the magic is not correct or if the
+ * view table is empty. Each job uses the next entry of the view table (the
+ * index is at RAM 0x5E014 and goes back to 0 after the last entry). The 12
+ * words of an entry are probably a view matrix or other viewpoint data. This
+ * is probably how the spinning logo turns.
+ *
+ * The SCSI ROM is not part of the SDK flash update (burn.exe programs only
+ * P1_P4.bin and P2.bin), and no file in the SDK contains a SCSI ROM image.
+ * Its contents are unknown. All that is known is where the blocks are
+ * uploaded: culling memory, polygon memory, and the configuration registers.
+ * The SDK documentation suggests it is the default database, a spinning Real
+ * 3D logo displayed at power-on. Host command 5 (PRO_ReloadLogo, a packet
+ * write to 0x20000005) and the monitor command LDDB run rend_init again and
+ * then go back to the idle loop. The firmware has a flash test that erases
+ * and programs the SCSI ROM (test_flash_prog, 0x99AC), but no code calls it.
+ *
+ * The firmware writes only one word of the root viewport (the screen size,
+ * 0x8E000050, from 0x10984). It is not known how the real ROM supplies the
+ * rest of the viewport. See "Update Memory Configuration" for a hypothesis.
  *
  * Emulation: the ROM is mapped read only at SCSI_ROM_BASE regardless of the
  * expansion ROM BAR (the firmware always programs 0xC0000000). Writes (flash
  * programming) are not emulated. If the game defines a "scsi_rom" region, it
  * is loaded as a byte image in PCI address order. Otherwise a synthetic image
- * is created (CPro1000::BuildSyntheticSCSIROM()): magic, zeroed 256-byte
- * directory (all blocks empty, configuration words 0), and 0xFF elsewhere.
+ * is created (BuildSyntheticSCSIROM() in SyntheticSCSIROM.cpp). It can
+ * contain the logo database from the Assets folder, but it has no viewport.
+ * Thus nothing is drawn.
+ *
+ *
+ * Update Memory Configuration
+ * ---------------------------
+ * The Real3D keeps writes that occur after the ping-pong flip in update
+ * memory, in low culling RAM (see "Update Buffers" in Real3D.cpp). Three
+ * values set the areas. On Model 3, the CPU writes them to the configuration
+ * registers at 0x9C000000, 0x9C000004, and 0x9C000008:
+ *
+ *   word 0  Ping-pong memory size in words.
+ *   word 1  Unknown (flags?). Model 3 games and the SCSI ROM use small values.
+ *   word 2  Ping-pong memory size plus update memory size in words.
+ *
+ * Supermodel keeps the high culling RAM update buffer in low culling RAM
+ * words 0 to word 0 - 1 and the polygon RAM update buffer in words word 0 to
+ * word 2 - 1. High culling RAM (0x8E000000) is a separate memory.
+ *
+ * The Pro-1000 firmware does not write these values to memory. Its function
+ * that writes words to a renderer address (0x10E3C) sends a write to
+ * 0x9C000000 to 0x11060. 0x11060 keeps the three words at RAM 0x5F2A0 and
+ * sends them to Mercury through JTAG: instruction 0x09, with a 57-bit data
+ * register. The register has three fields of 19 bits, from the most
+ * significant bit: word 0, word 1, word 2.
+ *
+ * The firmware sends values two times:
+ *
+ *  - At boot, rend_init sends the words at +0x3C in the SCSI ROM.
+ *  - The host sends them in a packet to 0x9C000000. The SDK demos send
+ *    0x8000, 0, 0x20000. Bayou first sends 0x45, 0x7FF76, 0x7FFBB and then
+ *    the SDK values (see below).
+ *
+ * The SDK defaults: ping-pong memory of 32K words at PRO_PINGPONG_BASE
+ * (0x8E000000) and a total of 128K words. Model 3 Step 1.0 games use the
+ * same values. These are the values in the synthetic SCSI ROM (word 0 is
+ * 0x7FFC, 4 words less, as on Model 3).
+ *
+ * Ping-pong memory (not emulated): there are two physical ping-pong
+ * memories. A write to 0x8E000000 goes only to the memory that is not drawn,
+ * and data that must stay is written to both (the firmware writes each word
+ * two times with a flip between; Model 3 games write such data exactly two
+ * times in consecutive frames). See "TODO: Physical Ping-Pong Memory" in
+ * Real3D.cpp for the evidence.
+ *
+ * Hypothesis (weak evidence): one of the two ping-pong memories is low
+ * culling RAM words 0 to word 0 - 1, and culling address 0x800000 + i
+ * (0x8E000000 + 4i) is word i of it. Evidence:
+ *
+ *  - With the configuration 0x45, 0x7FF76, 0x7FFBB, Bayou writes a 0x45-word
+ *    scene to low culling words 0-0x44 (0x8C000000): a viewport (words
+ *    0-0x2F, one viewport), a pointer list (0x30), matrix 0 (0x31-0x3C), and
+ *    a culling node with no child (0x3D-0x44). Its pointers are 0x800030,
+ *    0x800031, 0x80003D, and 0x800000. They are correct only if culling
+ *    address 0x800000 + i is low culling word i.
+ *  - The packet parser rejects writes to 0x8E000000 above word 0 ("PPO").
+ *  - The high culling RAM data of Bayou ends at word 0x8000 (its word 0).
+ *  - Hosts put their culling data above word 2 (Asia: 0x20000, Bayou:
+ *    0x40000). Model 3 games (Scud Race, Virtua Fighter 3, Daytona USA 2)
+ *    do not write low culling RAM below word 0x20000.
+ *
+ * But there is no evidence that the renderer draws this scene. If the
+ * hypothesis is correct, the culling block of the SCSI ROM (loaded at
+ * 0x8C000000) can contain the root viewport, and 0x10984 then sets its
+ * screen size through 0x8E000050. But rend_init writes the culling block
+ * only one time, through 0x8C000000, thus it is in only one ping-pong memory,
+ * and the logo would not be shown in each frame. It is not known how the
+ * hardware prevents this.
+ *
+ * Emulation: Mercury has the register (CASIC, instruction 9) on Model 3 and
+ * on the Pro-1000, because the two use the same ASICs. An update of the
+ * register writes the three values to the Real3D configuration registers. A
+ * capture reads them. Thus the register adds no state. No Model 3 game that
+ * was examined loads instruction 9 (they use 0x03, 0x08, 0x0A, 0x0B, 0x18,
+ * and 0x1F with Mercury). Thus Model 3 operation does not change.
+ *
+ *
+ * Host Commands
+ * -------------
+ * A packet write item to an address with bits 31:24 = 0x20 is a command, not
+ * a write to memory (packet parser 0xAC18, write handler 0xBEF0, command
+ * dispatcher 0x16000, jump table at 0x160A0). The firmware has a list of the
+ * command names (0x52930):
+ *
+ *   0x20000001  mem_op_valid checking (PRO_Init)
+ *   0x20000002  Prev_buff processing flag (PRO_Init, PRO_SetDebugOn/Off;
+ *               sets a flag at RAM 0x5E058)
+ *   0x20000003  Soft Edge Blending Option
+ *   0x20000004  Gamma Correction Option (ls_ctrl_gamma; see JTAG)
+ *   0x20000005  Reload Default Data base (PRO_ReloadLogo): runs rend_init,
+ *               sets the video sync again, and goes back to the idle loop
+ *   0x20000006  Load gamma memory bank 0
+ *   0x20000007  Load gamma memory bank 1
+ *   0x20000008  Save Soft Edge Blend Memory to ROM
+ *   0x20000009  Invalidate Soft Edge Blend Memory in ROM
+ *   0x2000000A  Update Specific Pixels in Soft Edge Blend Memory
+ *   0x2000000B  Texture (0 = off, 1 = on, other = texture map size in words)
+ *   0x2000000C  Texture Translucency On/Off
+ *   0x2000000D  S-Buffer On/Off
+ *   0x2000000E  Polygon Translucency On/Off
+ *   0x2000000F  Contour Translucency On/Off
+ *   0x20000010  Edges On/Off
+ *   0x20000011  Set Cursor/Edge Color 0-7 (3 bits RGB)
+ *   0x20000012  Select Sync File (1-8)
+ *   0x20000013  Set Default Sync File (1-8)
+ *   0x20000014  Stencil On/Off
+ *   0x20000015  Shading On/Off
+ *   0x20000016  Illumination On/Off
+ *   0x20000017  Fading On/Off
+ *   0x20000018  Save Gamma Memory to ROM
+ *   0x20000019  Invalidate Gamma Memory in ROM
+ *   0x2000001A  Set Drop SCSI BSY Time
+ *   0x2000001B  Set up as master for 30 Hz genlock
+ *   0x2000001C  Genlock as 30 Hz Slave
+ *   0x2000001D  Burst Mode On/Off
+ *   0x20000020  Do_update_complete On/Off (sets a flag at RAM 0x5E05C)
+ *   0x200000FC  Read Soft Edge Blend Memory from ROM into Buffer to Host
+ *   0x200000FD  Read Gamma Memory Bank 0 from ROM into Buffer to Host
+ *   0x200000FE  Read Gamma Memory Bank 1 from ROM into Buffer to Host
+ *   0x200000FF  Read Both Gamma Memory Banks from ROM into Buffer to Host
+ *   0x74000000  Genlock Control
  *
  *
  * PowerPC Address Map
@@ -264,12 +447,19 @@
  *                                        stride 8
  * 62000000           SCROLL              Pluto scroll register (also accessible
  *                                        via JTAG as "PL Scroll Register").
- *                                        Bit 26: foreground/background, bits
- *                                        25-24: viewport select, bits 23-0:
- *                                        RGB color (from the SC monitor
- *                                        command's formatted dump). INIT ROM
- *                                        value is 0x040CF0F8. Probably a solid
- *                                        color layer in the output stage.
+ *                                        Bit 26: 1 = background, 0 =
+ *                                        foreground, bits 25-24: viewport
+ *                                        select, bits 23-0: RGB color (from
+ *                                        the SC monitor command's formatted
+ *                                        dump). INIT ROM value is 0x040CF0F8.
+ *                                        A solid color layer. A host packet
+ *                                        write to 0x62000000 goes to
+ *                                        write_scroll (0x145D4), which stores
+ *                                        the word here (single pixel board)
+ *                                        or sends it to Pluto through JTAG
+ *                                        (dual pixel board). Bayou sends
+ *                                        0x07DCDCDC. [Emulated: see
+ *                                        CPro1000Render2D]
  * 64000000-38        UART_*              16550 UART (RDTD_BUFFER, INT_ENABLE,
  *                                        INT_ID/FIFO_CNTRL, LINE_CNTRL,
  *                                        MODEM_CNTRL, LINE_STATUS,
@@ -278,21 +468,24 @@
  * 68000000-38        JTAG_*              SCANPSC100F (TDO, TDI, TMS0, TMS1,
  *                                        CNT0, MODE0-2). [Emulated]
  * 70000000           RIF_MODE            RIF mode word. Bit 13 checked at boot,
- *                                        bit 14 toggled by boot stub, bits
- *                                        23:16 probably DIP switches, bit 7
+ *                                        bit 14 toggled by boot stub, bit 7
  *                                        cleared around GP sync waits
- *                                        (0x577C). Field names from the
- *                                        RIF_MODE monitor command (bit
- *                                        positions not yet mapped): BIST
- *                                        enabled, flash ROM write enabled,
- *                                        renderer init disabled, unused
- *                                        switch, SCSI ID (4 bits), align
- *                                        syncs, BIST LED, main CPU flag, four
- *                                        external sync logic resistor
- *                                        selects, kill video syncs, overload
- *                                        force/no report/mode (2 bits)/enable,
- *                                        select external video reference,
- *                                        sync transition select, RIF on-line.
+ *                                        (0x577C) and while command 5 reloads
+ *                                        the SCSI ROM. Bit names from the
+ *                                        RIF_MODE monitor command (0x17BA0):
+ *                                        23 BIST Enabled, 22 Flash ROM Write
+ *                                        Enabled, 21 Renderer Init Disabled
+ *                                        (DIP switch: _start skips rend_init),
+ *                                        20 Unused Switch, 19-16 SCSI ID,
+ *                                        15 Align Syncs (write only), 14 BIST
+ *                                        LED (0 = pass), 13 Main CPU Flag,
+ *                                        12-9 402K/806K/1.6M/3.3M resistor
+ *                                        for external sync logic, 8 Kill
+ *                                        Video Syncs, 7 Ovld Force, 6 Ovld No
+ *                                        Report, 5-4 Ovld Mode, 3 Ovld
+ *                                        Enable, 2 Select External Video
+ *                                        Reference, 1 Sync Transition Select
+ *                                        (1 = even only), 0 Rif On-Line.
  * 72000000           HARD_RESET          Written in a loop by boot stub on 'r'
  * 74000000/08/10     PLL_REF/FBK/CW      Video PLL registers
  * 78000000/08        MAIN_RD_INTA_R0/R1  Main interrupt acknowledge by read?
@@ -304,16 +497,23 @@
  *                                        [Emulated, Model 3]
  * 8C000000-8FFFFFFC  REND_CULL_BASE/TOP  Culling memory (64MB window).
  *                                        [Model 3 8C/8E mapping emulated]
- * 90000000           REND_ROM_UPDATE     Model 3 VROM texture port equivalent.
- *                                        Used by firmware (e.g., 0x63AC) and
- *                                        accepted from the host. [Emulated as
- *                                        on Model 3 with an empty VROM; all
- *                                        accesses logged at info level]
+ * 90000000           REND_ROM_UPDATE     Texture port (Model 3 Step 1.0 VROM
+ *                                        texture port). The data is the word
+ *                                        address of a texture block in
+ *                                        polygon memory. Used by firmware
+ *                                        (e.g., 0x63AC) and accepted from the
+ *                                        host. [Emulated as on Model 3 Step
+ *                                        1.0, with polygon memory as VROM;
+ *                                        all accesses logged at info level]
  * 94000000           REND_TEX_UPDATE,    Texture FIFO. [Emulated, Model 3]
  *                    REND_TEX_CONTINUE,
  *                    REND_TRANS_UPDATE
- * 98000000-9FFFFFFC  REND_POLY_BASE/TOP  Polygon memory (128MB window).
- *                                        [Model 3 98 mapping emulated]
+ * 98000000-9FFFFFFC  REND_POLY_BASE/TOP  Polygon memory (128MB window). There
+ *                                        is no VROM: model and texture word
+ *                                        addresses at 0x100000 and above are
+ *                                        also polygon memory. [Emulated:
+ *                                        98000000-9BFFFFFF, 64MB, enough for
+ *                                        all 24-bit word addresses]
  * 9C000000           REND_UPDATE_START   Model 3 configuration registers.
  *                                        [Emulated, Model 3]
  * C0000000-C007FFFF  SCSI_ROM_BASE/TOP   SCSI ROM, 512KB (see SCSI ROM below).
@@ -445,6 +645,95 @@
  * beyond anything on Model 3. show_config_data reports a "Pre-Production
  * System" with this chain, possibly derived from ID code version fields.
  *
+ * Mode words: 0x130A4(index, value) writes the mode word (JTAG instruction 8)
+ * of the device at position index in the chain (1 = Jupiter, 2 = Mercury).
+ * The firmware keeps the current values in a table at RAM 0x606A4 (Jupiter,
+ * Mercury, ...). 0x137BC(index, pointer) reads one. The values that a single
+ * pixel board gets (from a trace of the emulated firmware):
+ *
+ *   When                     Changes
+ *   Boot (0x5660)            Jupiter 0x06000000, Mercury 0x800, Venus 0,
+ *                            Earth 0x00080000, Mars 0. Bit 0 of Jupiter and
+ *                            Mercury is set and then cleared (a pulse).
+ *   get_hw_config            Venus 0x6000 and Mars 0x80 for a short time.
+ *   rend_init                Jupiter bit 4 (Disable Fog) is set while the
+ *                            SCSI ROM is loaded and cleared after (dual
+ *                            pixel board: device 2, bit 2).
+ *   Main loop, logo          No changes.
+ *   Host gamma control       Jupiter bit 25 (see below).
+ *
+ * Gamma bypass: host command 4 (a packet write of one word to 0x20000004,
+ * SDK function ls_ctrl_gamma, "Gamma Correction Option") calls 0x1BC34(data
+ * != 0). On a single pixel board, 0x1BC34(1) clears Jupiter mode word bit 25
+ * (Gamma Bypass) and 0x1BC34(0) sets it. On a dual pixel board (hardware
+ * configuration 4), it uses bit 7 of device 1, which is Pluto Gamma Bypass
+ * (thus device 1 is probably Pluto on a dual pixel board). At boot the bit
+ * is set (no gamma correction). The SDK demos clear it (gamma correction).
+ * Supermodel does not emulate gamma correction. To emulate it, use this bit
+ * and the gamma tables (rom_to_gm, ls_wrt_gamma). 0x1BB04, which the gamma
+ * loading code (0x1C220) calls, sets and then clears Jupiter bit 20 (Enable
+ * Memory Test). On a dual pixel board, it uses bit 4 of device 1 (Pluto Test
+ * Gamma Memory).
+ *
+ * Mode word bit names: the firmware has a table of bit names for each ASIC
+ * (pointer arrays at RAM 0x6018C (Pluto), 0x6020C (Jupiter), 0x6028C
+ * (Mercury), 0x6030C (Venus), 0x60390 (Earth and Neptune), 0x60410 (Mars)),
+ * which the monitor uses to print mode words (0x15578 selects the table by
+ * ASIC type). The Earth and Mars tables are printed with the name of the
+ * device. Their assignment to Earth and Mars is from the type numbers and
+ * the boot values. Bits that are not listed are "unused".
+ *
+ *   Jupiter  0 GLOBAL RESET, 1 Enable Two Channel, 2 Enable Interlace,
+ *            3 Enable Two Processor, 4 Disable Fog, 5 Disable Illumination,
+ *            6 Disable Scroll, 7 Disable S-Buffer, 8 Enable Scroll
+ *            Smoothing, 9 Display Edges Only, 10 Slope, 11 Trap Pixel Data,
+ *            12 Trap Line FIFOs, 13-18 Threshold[0-5], 19 Enable MISRs,
+ *            20 Enable Memory Test, 21 Enable Edge Resolver Compare,
+ *            22 Enable Blend Compare, 23 Enable Smudge Compare, 24 Enable
+ *            Color Calc Test, 25 Gamma Bypass, 26 Dac Strobes Invert.
+ *   Mercury  0 NOT Initialized, 1 Block CPU Write, 2 Block Culling, 3 Block
+ *            Burst, 4 Block PingPong, 5 Force PingPong, 6 Block Poly
+ *            Request, 7 Force Poly Request, 8 Block LOS, 9 MISR Enable,
+ *            10 SDRAM Short Refresh, 11 Memory Pointer JTAG, 12-14 Stats
+ *            Sel[0-2], 15 Burst Always, 16-17 Stack Mem Test[0-1], 18 Model
+ *            FIFO Test, 19 Culling SDRAM Test, 20 Ignore Discard, 21 Model
+ *            FIFO Ignore Discard, 22 Model FIFO Cycle, 23 LOS Test, 24 MISR
+ *            MAC Sel, 25 MAC Test, 26 Datamux Test, 27 Counter Test, 28-29
+ *            Mux Isolation Sel[0-1], 30 Fltfunc Test, 31 Do Nothing.
+ *   Venus    4 Stop SDRAM writes/reads, 5 Always Available, 6 Test 1x,
+ *            7 MISR Enable, 8-9 Stats Mode[0-1], 10 Projection Scale
+ *            Disable, 11 Snapshot Enable, 12 Stats Disable, 13 Polygon Mem
+ *            Test, 14 Texture Update, 15 Polygon FIFO Test, 16 No writes to
+ *            rd FIFO, 17 No reads to rd FIFO, 18 Short Refresh, 19 Pmem ROM
+ *            Checksum Enable, 20-22 Test Mode[0-2], 23 Counter Test.
+ *   Earth    0 Two Processors, 1 Two Monitors, 2 Disable Texture Xluc,
+ *            3 Disable Polygon Xluc (configuration 4: Enable Polygon Xluc),
+ *            4 Disable Contour Xluc, 5 Disable Stencil, 6-7 Test/Trap Input
+ *            FIFO[0-1], 8-10 Stats Sel[0-2], 11 Enable LOS Test, 12-14 Trap
+ *            Code[0-2], 15 Enable DBM Test, 16 Enable Video Mem Test,
+ *            17 Cycle Video Mem, 18 Enable MISRs, 19 Disable DRAM Refresh,
+ *            20 Disable Mars Freeze, 21 Select Database Color.
+ *   Mars     0 Two Processors, 1 Disable Texture, 2 Disable Shading,
+ *            3 Disable Illumination, 4 Disable Fading, 5 Enable Compare
+ *            Test, 6 Enable MISRs, 7 Enable Memory Test, 8 Enable CDRAM
+ *            Debug, 9 Short Refresh, 10 Disable Texture Updates, 11 Hi Res.
+ *   Pluto    0 GLOBAL RESET, 1 Enable Dual Channel, 2 Enable Interlace,
+ *            3 Enable MISRs, 4 Test Gamma Memory, 5 Test Soft Edge Blend
+ *            Memory, 6 Fab Test, 7 Gamma Bypass, 8 Disable Soft Edge
+ *            Blending, 9 Display Edges, 10-15 Threshold[0-5], 16 Slope,
+ *            17 Trap Pixel Data, 18 Trap Line FIFOs, 19 Disable S-Buffer,
+ *            20 Disable Background Color.
+ *
+ * Thus the boot values are: Jupiter 0x06000000 (Gamma Bypass, Dac Strobes
+ * Invert), Mercury 0x800 (Memory Pointer JTAG), Earth 0x00080000 (Disable
+ * DRAM Refresh). The bit 0 pulses are GLOBAL RESET (Jupiter) and NOT
+ * Initialized (Mercury). get_hw_config sets Venus Polygon Mem Test and
+ * Texture Update and Mars Enable Memory Test for a short time. Supermodel
+ * uses Mercury bit 2 (Block Culling) as in this table. It uses Mars bit 18 to
+ * clamp the sun on Model 3, but in this table Mars bit 18 is unused. The
+ * firmware does not set Mercury Block PingPong or Force PingPong (only the
+ * monitor can).
+ *
  *
  * Serial Console
  * --------------
@@ -463,6 +752,77 @@
  * also what starts the console being read.
  *
  *
+ * Rendering
+ * ---------
+ * The Real3D draws continuously, one frame for each field (hypothesis). No
+ * command starts the drawing. Real3D.cpp ("Rendering") describes how
+ * Supermodel draws and how the Pro-1000 differs from Model 3.
+ *
+ * Firmware sequence for each frame (main loop 0x9B6C, simplified):
+ *  1. Wait for host data. A WRITE from the host (LUN 0) puts the update in
+ *     the ring buffer and sets bit 1 of 0x62384.
+ *  2. Render cycle (0xA984): set bits in RIF_MODE (0x70000000), process the
+ *     packets in the ring buffer (0xAC18), and write REND_UPDATE_COMPL
+ *     (0x88000000) at 0xC954 if the packets wrote data.
+ *  3. Read the Real3D status registers into the status packet (Stat_Pckt),
+ *     with "render done" and the ping-pong bit. The host reads this packet
+ *     (READ, LUN 0) before it sends the next frame.
+ *  4. Wait for the geometry processor sync (IR7) or the next field (IR0).
+ *
+ * Emulation of each frame (RunMainBoardFrame()):
+ *  - VBlank (40 lines): CReal3D::BeginVBlank(), then IR7 (GP sync) at the
+ *    end of VBlank.
+ *  - Active display (384 lines): the ping-pong bit flips at line
+ *    PING_PONG_FLIP_LINE (238, the value that most Model 3 games put in a
+ *    tile generator register), and IR0 (field sync) occurs at line
+ *    FIELD_SYNC_LINE (383).
+ *  - Then the renderer draws the scene that is in memory (RenderFrame()).
+ * The Pro-1000 time of the ping-pong flip is not known. The update buffers
+ * use the update memory configuration, which the SCSI ROM sets at boot (see
+ * Update Memory Configuration).
+ *
+ * 2D layer: the Pro-1000 has no tile generator. Its only 2D layer is the
+ * solid color of the SCROLL register (0x62000000). CPro1000Render2D draws it
+ * as CRender2D draws the Model 3 tile layers: the background before the 3D
+ * image, the foreground after it. The register value goes to the renderer in
+ * SyncGPUs(). As in the proof of concept (pro1000_aspi), there is no layer if
+ * the viewport select bits (25-24) are 0, and a foreground covers the
+ * complete 3D image. No known program uses a foreground, thus that part is a
+ * guess. The meaning of the viewport select bits is not known. The layer
+ * covers the complete viewable area.
+ *
+ * Textures:
+ *  - Texture port (REND_ROM_UPDATE, 0x90000000): the firmware and the SDK
+ *    demos use it. The data is the word address of a texture block in
+ *    polygon memory (Model 3 Step 1.0 texture port, with polygon memory as
+ *    VROM).
+ *  - Texture FIFO (REND_TEX_UPDATE, REND_TEX_CONTINUE, REND_TRANS_UPDATE,
+ *    0x94000000): the firmware address table gives it, but no firmware code
+ *    uses it. A host can write to it with packets. The SDK demos were not
+ *    seen to use it.
+ *  - Texture memory: 8 MB (4M texels), as on Model 3. The SDK gives an
+ *    optional 32 MB (16M texels), and the firmware reports "Extended
+ *    Texture Memory = 1". The extended texture memory is not emulated.
+ *
+ *
+ * CPU Clock and Time Base
+ * -----------------------
+ * The firmware measures time with the PowerPC time base. It divides time
+ * base ticks by 0x208E (8334) to get milliseconds: at 0x3328 (the "field
+ * time" message in _start) and in the wait for the SCSI controller (0x45C4C).
+ * Thus the firmware expects a time base of 8.33 MHz. The 603 time base
+ * increments once every four bus clocks, so the bus is 33.3 MHz.
+ *
+ * The emulated CPU has a 33 MHz bus and a 2X multiplier. The core clock is
+ * 66 MHz, as on Model 3 Step 1.0. The real core clock is not known; the
+ * firmware constants give only the bus clock.
+ *
+ * Earlier, the bus was 66 MHz (1X multiplier), as on Model 3 Step 1.0. Then
+ * the time base was 16.5 MHz, all times that the firmware measured were two
+ * times too long ("field time = 34 milliseconds" instead of 17), and
+ * firmware timeouts expired in half of the correct time.
+ *
+ *
  * Other Firmware Landmarks
  * ------------------------
  * 0x47D6C  printf
@@ -475,9 +835,10 @@
  * --------------
  *  - Field sync timing (IR0). The nominal rate is 60 Hz (or 59.94/50 Hz for
  *    interlaced modes) per the SDK documentation, but emulation still uses
- *    the Model 3 rate of 57.52 Hz. The firmware measures 34 ms per field,
- *    so the time base rate may also be off. The logic sync memory
- *    (LSYNC_BASE) probably sequences these signals.
+ *    the Model 3 rate of 57.52 Hz, and the firmware measures 17 ms per field.
+ *    (Before the time base correction, it measured 34 ms; see "CPU Clock and
+ *    Time Base".) The logic sync memory (LSYNC_BASE) probably sequences
+ *    these signals.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
  *  - Board configurations. Only the single pixel board is emulated. Support
  *    single, dual, and high res configurations, probably selected by reusing
@@ -491,16 +852,19 @@
  *    state layout.
  *  - What determines "Pre-Production" vs. "Production" system and the
  *    extended texture memory setting reported by show_config_data.
- *  - Contents of the SCSI ROM at SCSI_ROM_BASE (magic 0xCAFEBABE at offset 0,
- *    offset at 0x24), checked by rend_init. This is the SCSI controller's
- *    expansion ROM, separate from the INIT ROM in CPU flash, and is not part
- *    of the SDK flash update (p1_p4.bin, p2.bin), so it was presumably
- *    programmed at the factory. Without it, renderer initialization is
- *    skipped.
+ *  - Contents of the SCSI ROM (see SCSI ROM). It is not part of the SDK
+ *    flash update (p1_p4.bin, p2.bin), so it was presumably programmed at
+ *    the factory. Supermodel makes a synthetic ROM. It is not known how the
+ *    real ROM supplies the viewport of the power-on logo.
+ *  - The ping-pong memory: where the second ping-pong memory is, which
+ *    memory each window (0x8C000000, 0x8E000000) and the renderer use, and
+ *    what swaps them (see Update Memory Configuration and "TODO: Physical
+ *    Ping-Pong Memory" in Real3D.cpp).
  *  - RIF_MODE (0x70000000) is not emulated as a register, so the mode word
  *    from the INIT ROM (0x1401) does not stick.
- *  - REND_ROM_UPDATE (0x90000000) is used, which suggests the renderer has a
- *    ROM-based update path like Model 3's VROM texture port.
+ *  - REND_ROM_UPDATE (0x90000000): the Model 3 Step 1.0 texture port, which
+ *    reads textures from polygon memory instead of VROM (as in the proof of
+ *    concept ASPI DLL and the SDK demos).
  *  - What p2.bin is.
  *  - The auxiliary processor/interrupt controller (MAIN_RST_AUX, AUX_*).
  *  - MAIN_RD_INTA_R0/R1 (0x78000000) semantics.
@@ -513,6 +877,7 @@
  */
 
 #include "Pro1000.h"
+#include "SyntheticSCSIROM.h"
 
 #include <new>
 #include <cstdio>
@@ -521,11 +886,11 @@
 #include "Supermodel.h"
 #include "ROMSet.h"
 #include "OSD/Video.h"
+#include "Graphics/Pro1000Render2D.h"
 #include "Util/ByteSwap.h"
 
 constexpr static uint32_t RAM_SIZE          = 0x400000;   // 4MB (DRAM_TOP)
 constexpr static uint32_t FLASH_SIZE        = 0x800000;   // 8MB window
-constexpr static uint32_t VROM_SIZE         = 0x4000000;  // 64MB
 
 // Flash is mapped in an 8MB window (as on Model 3) although only the top 1MB
 // (CPU_ROM_BASE-CPU_ROM_TOP) is populated
@@ -539,16 +904,15 @@ constexpr static uint32_t INIT_ROM_OFFSET   = INIT_ROM_BASE - FLASH_BASE_ADDR;
 // the firmware through PCI device 11's expansion ROM BAR
 constexpr static uint32_t SCSI_ROM_BASE     = 0xC0000000;
 constexpr static uint32_t SCSI_ROM_SIZE     = 0x80000;    // 512KB (SCSI_ROM_TOP = 0xC0080000)
-constexpr static uint32_t SCSI_ROM_HEADER_SIZE = 0x100;   // directory area zeroed in synthetic image
+constexpr static uint32_t SCROLL_REGISTER_ADDR = 0x62000000;  // SCROLL: 2D layer color
 
-constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE + VROM_SIZE;
+constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE;
 constexpr static uint32_t RAM_OFFSET        = 0;
 constexpr static uint32_t FLASH_OFFSET      = RAM_OFFSET + RAM_SIZE;
 constexpr static uint32_t SCSI_ROM_OFFSET   = FLASH_OFFSET + FLASH_SIZE;
-constexpr static uint32_t VROM_OFFSET       = SCSI_ROM_OFFSET + SCSI_ROM_SIZE;
 
 constexpr static int      STEPPING          = 0x10;       // treat hardware as Model 3 Step 1.0
-constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // Step 1.0 PowerPC frequency
+constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // core clock (33 MHz bus x 2), see "CPU Clock and Time Base"
 
 // On Model 3, the ping-pong flip line is programmed into a tile generator
 // register. There is no tile generator here, so use the value most Model 3
@@ -558,6 +922,11 @@ constexpr static unsigned PING_PONG_FLIP_LINE = 238;
 // Field sync is signaled at the start of the last active line, which is when
 // Model 3 asserts its VBlank interrupt (IRQ 0x02)
 constexpr static unsigned FIELD_SYNC_LINE = 383;
+
+// The SCSI controller's SCRIPTS processor runs alongside the PowerPC: it is
+// given a slice of instructions each line. SCRIPTS waiting on the SCSI bus end
+// their slice early, so this only bounds runaway loops.
+constexpr static unsigned SCSI_INSTRUCTIONS_PER_LINE = 100;
 
 // UART registers are 8 bytes apart and occupy the least significant byte of
 // each big endian 32-bit word
@@ -793,6 +1162,12 @@ UINT32 CPro1000::Read32(UINT32 addr)
     data = GPU.ReadRegister(addr & 0x3F);
     return FLIPENDIAN32(data);
 
+  // SCROLL register
+  case 0x62:
+    if (addr == SCROLL_REGISTER_ADDR)
+      return m_scrollRegister;
+    break;
+
   case 0xF0:
     // MPC105 CONFIG_DATA (F0C00CF8)
     if (((addr >> 16) & 0xFF) == 0xC0)
@@ -999,6 +1374,15 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     GPU.Flush();
     return;
 
+  // SCROLL register (2D layer color, see CPro1000Render2D)
+  case 0x62:
+    if (addr == SCROLL_REGISTER_ADDR)
+    {
+      m_scrollRegister = data;
+      return;
+    }
+    break;
+
   // Real3D low culling RAM
   case 0x8C:  // 8C000000-8C400000
     GPU.WriteLowCullingRAM(addr & 0x3FFFFF, FLIPENDIAN32(data));
@@ -1009,7 +1393,8 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     GPU.WriteHighCullingRAM(addr & 0xFFFFF, FLIPENDIAN32(data));
     return;
 
-  // Real3D texture port (REND_ROM_UPDATE). Reads from VROM, which is empty.
+  // Real3D texture port (REND_ROM_UPDATE). The data is the word address of
+  // a texture in polygon RAM (which replaces VROM on the Pro-1000).
   case 0x90:  // 90000000-90??????
     GPU.WriteTexturePort(addr & 0xFF, FLIPENDIAN32(data));
     return;
@@ -1019,9 +1404,12 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     GPU.WriteTextureFIFO(FLIPENDIAN32(data));
     return;
 
-  // Real3D polygon RAM
-  case 0x98:  // 98000000-98400000
-    GPU.WritePolygonRAM(addr & 0x3FFFFF, FLIPENDIAN32(data));
+  // Real3D polygon RAM: 64MB, which includes the area that is VROM on Model 3
+  case 0x98:  // 98000000-9BFFFFFF
+  case 0x99:
+  case 0x9A:
+  case 0x9B:
+    GPU.WritePolygonRAM(addr - 0x98000000, FLIPENDIAN32(data));
     return;
 
   // Real3D configuration registers
@@ -1203,6 +1591,7 @@ void CPro1000::RunMainBoardFrame(void)
     for (unsigned i = 0; i < vBlankCycles / lineCycles; i++)
     {
       UART.Tick();
+      SCSI.Run(SCSI_INSTRUCTIONS_PER_LINE);
       PIC.Tick();
       ppc_execute(lineCycles);
     }
@@ -1222,6 +1611,7 @@ void CPro1000::RunMainBoardFrame(void)
     if (i == FIELD_SYNC_LINE)
       PIC.Assert(PIC_LINE_FIELD_SYNC);
     UART.Tick();
+    SCSI.Run(SCSI_INSTRUCTIONS_PER_LINE);
     PIC.Tick();
     ppc_execute(lineCycles);
     if (i == 0)
@@ -1238,6 +1628,8 @@ void CPro1000::SyncGPUs(void)
   UINT32 start = CThread::GetTicks();
 
   timings.syncSize = GPU.SyncSnapshots();
+  if (m_render2D)
+    m_render2D->SetScrollRegister(m_scrollRegister);
   gpusReady = true;
 
   timings.syncTicks = CThread::GetTicks() - start;
@@ -1250,9 +1642,14 @@ void CPro1000::RenderFrame(void)
   // Call OSD video callbacks
   if (BeginFrameVideo() && gpusReady)
   {
+    m_render2D->BeginFrame();
     GPU.BeginFrame();
+    m_render2D->PreRenderFrame();
+    m_render2D->RenderFrameBottom();
     GPU.RenderFrame();
+    m_render2D->RenderFrameTop();
     GPU.EndFrame();
+    m_render2D->EndFrame();
     m_superAA->Draw();
   }
 
@@ -1505,8 +1902,10 @@ void CPro1000::Reset(void)
   PCIBridge.Reset();
   PCIBus.Reset();
   SCSI.Reset();
+  SCSIHostAdapter.Reset();
   GPU.Reset();
   UART.Reset();
+  m_scrollRegister = 0;
 
   gpusReady = false;
 
@@ -1559,17 +1958,24 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
     scsiROMImage.CopyTo(scsiROM, scsiROMImage.size);
   }
   else
-    BuildSyntheticSCSIROM();
+  {
+    // The synthetic ROM also contains the update memory configuration. At
+    // boot, rend_init sends it to the Real3D configuration registers. Without
+    // it, the registers stay zero and the update buffers do not operate.
+    BuildSyntheticSCSIROM(scsiROM, SCSI_ROM_SIZE);
+  }
 
   // Convert PowerPC ROMs to little endian words
   Util::FlipEndian32(flash, FLASH_SIZE);
   Util::FlipEndian32(scsiROM, SCSI_ROM_SIZE);
 
-  // Configure CPU and PCI bridge as Step 1.0
+  // Configure CPU and PCI bridge. The bus is 33 MHz because the firmware
+  // expects a time base of 8.33 MHz (see "CPU Clock and Time Base"). The 2X
+  // multiplier keeps the core at 66 MHz, as on Model 3 Step 1.0.
   PPC_CONFIG ppc_config;
-  ppc_config.pvr = PPC_MODEL_603R;              // 66 MHz
-  ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
-  ppc_config.bus_frequency_multiplier = 0x10;   // 1X multiplier
+  ppc_config.pvr = PPC_MODEL_603R;
+  ppc_config.bus_frequency = BUS_FREQUENCY_33MHZ;
+  ppc_config.bus_frequency_multiplier = 0x20;   // 2X multiplier
   PCIBridge.SetModel(0x105);                    // MPC105
 
   // Initialize CPU
@@ -1604,9 +2010,10 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   return Result::OKAY;
 }
 
-void CPro1000::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
+void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  // No tile generator, so 2D renderer is unused
+  // No tile generator. The 2D layer is the scroll layer (CPro1000Render2D).
+  m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
 }
@@ -1625,25 +2032,6 @@ void CPro1000::AttachConsoleInput(IConsoleInput *input)
 {
   // Console input is received by the serial port
   UART.AttachInput(input);
-}
-
-/*
- * The real SCSI ROM contents are unknown (it was likely used to hold an initial
- * scene, perhaps a Real3D logo). This creates the minimum needed for rend_init
- * to proceed: the magic word and a zeroed directory, so that every block has
- * offset 0 and size 0 and the three configuration register words are 0 (the
- * Real3D's reset values). The rest of the ROM is erased (0xFF).The image is in
- * PCI byte order (little endian words) as the real ROM would be.
- */
-void CPro1000::BuildSyntheticSCSIROM(void)
-{
-  memset(scsiROM, 0, SCSI_ROM_HEADER_SIZE);
-  const uint32_t magic = 0xCAFEBABE;
-  scsiROM[0] = uint8_t(magic >> 0);
-  scsiROM[1] = uint8_t(magic >> 8);
-  scsiROM[2] = uint8_t(magic >> 16);
-  scsiROM[3] = uint8_t(magic >> 24);
-  InfoLog("Pro-1000: Using synthetic SCSI ROM (magic and empty directory only).");
 }
 
 /*
@@ -1696,13 +2084,18 @@ Result CPro1000::Init(void)
   ram = &memoryPool[RAM_OFFSET];
   flash = &memoryPool[FLASH_OFFSET];
   scsiROM = &memoryPool[SCSI_ROM_OFFSET];
-  vrom = &memoryPool[VROM_OFFSET];
 
   // Initialize devices (PowerPC initialized after ROMs loaded)
   PCIBridge.Init();
   PCIBus.Init();
   SCSI.Init(this, &PIC, PIC_LINE_SCSI);
-  if (Result::OKAY != GPU.Init(vrom, this, &PIC, PIC_LINE_NONE)) // Real3D DMA interrupt line unknown
+  SCSI.AttachInitiator(&SCSIHostAdapter);
+
+  // Host computer programs connect to the SCSI host adapter through the
+  // bridge. If the bridge cannot start, emulation continues without it.
+  m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
+  m_scsiTCPBridge->Start();
+  if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000())) // no VROM; Real3D DMA interrupt line unknown
     return Result::FAIL;
   BuildScanChain();
   UART.AttachInterruptOutput([this](bool level)
@@ -1737,7 +2130,6 @@ CPro1000::CPro1000(Util::Config::Node &config)
     ram(NULL),
     flash(NULL),
     scsiROM(NULL),
-    vrom(NULL),
     gpusReady(false),
     startedThreads(false),
     pauseThreads(false),
@@ -1793,7 +2185,6 @@ CPro1000::~CPro1000(void)
   ram = NULL;
   flash = NULL;
   scsiROM = NULL;
-  vrom = NULL;
 
   DebugLog("Destroyed Pro-1000\n");
 }

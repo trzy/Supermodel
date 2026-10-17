@@ -96,6 +96,8 @@
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "Pro1000/Pro1000.h"
+#include "Graphics/Pro1000Render2D.h"
+#include "Graphics/IRender2D.h"
 #include "OSD/Audio.h"
 #include "OSD/ConsoleInput.h"
 #include "Graphics/New3D/VBO.h"
@@ -911,6 +913,14 @@ static void SuperSleepUntil(const uint64_t target)
  Main Program Loop
 ******************************************************************************/
 
+// Creates the 2D layer renderer that the emulator needs
+static IRender2D *CreateRender2D(IEmulator *Emu)
+{
+  if (dynamic_cast<CPro1000 *>(Emu))
+    return new CPro1000Render2D();
+  return new CRender2D(s_runtime_config);
+}
+
 #ifdef SUPERMODEL_DEBUGGER
 int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Inputs, COutputs *Outputs, std::shared_ptr<Debugger::CDebugger> Debugger)
 {
@@ -998,7 +1008,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   // Initialize the renderers
   SuperAA* superAA = new SuperAA(aaValue, CRTcolors);
   superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
-  CRender2D *Render2D = new CRender2D(s_runtime_config);
+  IRender2D *Render2D = CreateRender2D(Emu);
 #ifndef SUPERMODEL_OSX
   IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Emu->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
 #else
@@ -1152,7 +1162,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
 
       // Recreate renderers and attach to the emulator
       superAA->Init(totalXRes, totalYRes);
-      Render2D = new CRender2D(s_runtime_config);
+      Render2D = CreateRender2D(Emu);
 
       if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
         goto QuitError;
