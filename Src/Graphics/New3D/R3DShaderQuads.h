@@ -134,12 +134,11 @@ void main(void)
 		return;					//emulate back face culling here (all vertices in poly have same value)
 	}
 
-	// Triangles arrive as quads with vertex 3 at the midpoint of vertices 0 and 2 (CNew3D::CopyVertexData). As a quad, one
-	// strip triangle is empty, but rounding can make it a sliver with bad weights and depth. So emit just triangle 0-2,
-	// flagged (barycentricCoords.w) for the fragment shader's barycentric path, which is exact for it. The tolerance
-	// covers rounding in the vertex transform.
-	vec4 p0 = gl_in[0].gl_Position, p2 = gl_in[2].gl_Position, d3 = 2.0*gl_in[3].gl_Position - (p0 + p2);
-	bool triangle = dot(d3,d3) <= 4e-10 * max(dot(p0,p0), dot(p2,p2));
+	// Triangles: stored as quads with vertex 3 being a copy of vertex 2 (CNew3D::CopyVertexData), and the same transform makes both
+	// positions bit-identical (not spec guaranteed though). The quad code can't handle a duplicate vertex, so emit just 0-2, flagged
+	// (barycentricCoords.w) for the fragment shader's barycentric path, which is exact for it. Slot 3 must still be set
+	// below: the fragment shader reads its oneOverW in the coplanar depth test, and the rest with weight 0.
+	bool triangle = (gl_in[3].gl_Position == gl_in[2].gl_Position);
 
 	// flat attributes
 	gs_out.color = gs_in[0].color;
