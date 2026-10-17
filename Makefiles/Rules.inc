@@ -116,6 +116,7 @@ SRC_FILES = \
 	Src/Graphics/New3D/TextureBank.cpp \
 	Src/Graphics/FBO.cpp \
 	Src/Graphics/Render2D.cpp \
+	Src/Graphics/Pro1000Render2D.cpp \
 	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \

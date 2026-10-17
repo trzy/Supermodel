@@ -38,6 +38,8 @@
 #include "Model3/53C810.h"
 #include "Model3/JTAG.h"
 #include "Model3/IEmulator.h"
+
+class CPro1000Render2D;
 #include "Model3/MPC10x.h"
 #include "Model3/PCI.h"
 #include "Model3/Real3D.h"
@@ -79,7 +81,7 @@ public:
   void Reset(void);
   const Game &GetGame(void) const;
   Result LoadGame(const Game &game, const ROMSet &rom_set);
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
+  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
   void AttachConsoleInput(IConsoleInput *input) override;
@@ -193,6 +195,8 @@ private:
   CJTAGScanChain m_scanChain;                   // JTAG scan chain driven by JTAG controller
   CUART       UART;         // 16550-style serial port
   SuperAA     *m_superAA;
+  CPro1000Render2D *m_render2D = nullptr; // 2D layer (scroll layer) renderer
+  uint32_t    m_scrollRegister = 0;       // SCROLL register (0x62000000)
 };
 
 

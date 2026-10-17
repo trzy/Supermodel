@@ -338,6 +338,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
     <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
+    <ClCompile Include="..\Src\Graphics\Pro1000Render2D.cpp" />
     <ClCompile Include="..\Src\Graphics\Shader.cpp" />
     <ClCompile Include="..\Src\Graphics\SuperAA.cpp" />
     <ClCompile Include="..\Src\Inputs\Input.cpp" />
@@ -510,6 +511,8 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Graphics\New3D\VBO.h" />
     <ClInclude Include="..\Src\Graphics\New3D\Vec.h" />
     <ClInclude Include="..\Src\Graphics\Render2D.h" />
+    <ClInclude Include="..\Src\Graphics\Pro1000Render2D.h" />
+    <ClInclude Include="..\Src\Graphics\IRender2D.h" />
     <ClInclude Include="..\Src\Graphics\Shader.h" />
     <ClInclude Include="..\Src\Graphics\Shaders2D.h" />
     <ClInclude Include="..\Src\Graphics\SuperAA.h" />

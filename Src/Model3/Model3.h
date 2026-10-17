@@ -91,7 +91,7 @@ public:
   void RenderFrame(void);
   void Reset(void);
   const Game &GetGame(void) const;
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
+  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
   Result Init(void);

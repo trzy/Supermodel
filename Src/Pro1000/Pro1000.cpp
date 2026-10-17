@@ -447,12 +447,19 @@
  *                                        stride 8
  * 62000000           SCROLL              Pluto scroll register (also accessible
  *                                        via JTAG as "PL Scroll Register").
- *                                        Bit 26: foreground/background, bits
- *                                        25-24: viewport select, bits 23-0:
- *                                        RGB color (from the SC monitor
- *                                        command's formatted dump). INIT ROM
- *                                        value is 0x040CF0F8. Probably a solid
- *                                        color layer in the output stage.
+ *                                        Bit 26: 1 = background, 0 =
+ *                                        foreground, bits 25-24: viewport
+ *                                        select, bits 23-0: RGB color (from
+ *                                        the SC monitor command's formatted
+ *                                        dump). INIT ROM value is 0x040CF0F8.
+ *                                        A solid color layer. A host packet
+ *                                        write to 0x62000000 goes to
+ *                                        write_scroll (0x145D4), which stores
+ *                                        the word here (single pixel board)
+ *                                        or sends it to Pluto through JTAG
+ *                                        (dual pixel board). Bayou sends
+ *                                        0x07DCDCDC. [Emulated: see
+ *                                        CPro1000Render2D]
  * 64000000-38        UART_*              16550 UART (RDTD_BUFFER, INT_ENABLE,
  *                                        INT_ID/FIFO_CNTRL, LINE_CNTRL,
  *                                        MODEM_CNTRL, LINE_STATUS,
@@ -774,6 +781,16 @@
  * use the update memory configuration, which the SCSI ROM sets at boot (see
  * Update Memory Configuration).
  *
+ * 2D layer: the Pro-1000 has no tile generator. Its only 2D layer is the
+ * solid color of the SCROLL register (0x62000000). CPro1000Render2D draws it
+ * as CRender2D draws the Model 3 tile layers: the background before the 3D
+ * image, the foreground after it. The register value goes to the renderer in
+ * SyncGPUs(). As in the proof of concept (pro1000_aspi), there is no layer if
+ * the viewport select bits (25-24) are 0, and a foreground covers the
+ * complete 3D image. No known program uses a foreground, thus that part is a
+ * guess. The meaning of the viewport select bits is not known. The layer
+ * covers the complete viewable area.
+ *
  * Textures:
  *  - Texture port (REND_ROM_UPDATE, 0x90000000): the firmware and the SDK
  *    demos use it. The data is the word address of a texture block in
@@ -869,6 +886,7 @@
 #include "Supermodel.h"
 #include "ROMSet.h"
 #include "OSD/Video.h"
+#include "Graphics/Pro1000Render2D.h"
 #include "Util/ByteSwap.h"
 
 constexpr static uint32_t RAM_SIZE          = 0x400000;   // 4MB (DRAM_TOP)
@@ -886,6 +904,7 @@ constexpr static uint32_t INIT_ROM_OFFSET   = INIT_ROM_BASE - FLASH_BASE_ADDR;
 // the firmware through PCI device 11's expansion ROM BAR
 constexpr static uint32_t SCSI_ROM_BASE     = 0xC0000000;
 constexpr static uint32_t SCSI_ROM_SIZE     = 0x80000;    // 512KB (SCSI_ROM_TOP = 0xC0080000)
+constexpr static uint32_t SCROLL_REGISTER_ADDR = 0x62000000;  // SCROLL: 2D layer color
 
 constexpr static uint32_t MEM_POOL_SIZE     = RAM_SIZE + FLASH_SIZE + SCSI_ROM_SIZE;
 constexpr static uint32_t RAM_OFFSET        = 0;
@@ -1143,6 +1162,12 @@ UINT32 CPro1000::Read32(UINT32 addr)
     data = GPU.ReadRegister(addr & 0x3F);
     return FLIPENDIAN32(data);
 
+  // SCROLL register
+  case 0x62:
+    if (addr == SCROLL_REGISTER_ADDR)
+      return m_scrollRegister;
+    break;
+
   case 0xF0:
     // MPC105 CONFIG_DATA (F0C00CF8)
     if (((addr >> 16) & 0xFF) == 0xC0)
@@ -1348,6 +1373,15 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
   case 0x88:  // 88000000
     GPU.Flush();
     return;
+
+  // SCROLL register (2D layer color, see CPro1000Render2D)
+  case 0x62:
+    if (addr == SCROLL_REGISTER_ADDR)
+    {
+      m_scrollRegister = data;
+      return;
+    }
+    break;
 
   // Real3D low culling RAM
   case 0x8C:  // 8C000000-8C400000
@@ -1594,6 +1628,8 @@ void CPro1000::SyncGPUs(void)
   UINT32 start = CThread::GetTicks();
 
   timings.syncSize = GPU.SyncSnapshots();
+  if (m_render2D)
+    m_render2D->SetScrollRegister(m_scrollRegister);
   gpusReady = true;
 
   timings.syncTicks = CThread::GetTicks() - start;
@@ -1606,9 +1642,14 @@ void CPro1000::RenderFrame(void)
   // Call OSD video callbacks
   if (BeginFrameVideo() && gpusReady)
   {
+    m_render2D->BeginFrame();
     GPU.BeginFrame();
+    m_render2D->PreRenderFrame();
+    m_render2D->RenderFrameBottom();
     GPU.RenderFrame();
+    m_render2D->RenderFrameTop();
     GPU.EndFrame();
+    m_render2D->EndFrame();
     m_superAA->Draw();
   }
 
@@ -1864,6 +1905,7 @@ void CPro1000::Reset(void)
   SCSIHostAdapter.Reset();
   GPU.Reset();
   UART.Reset();
+  m_scrollRegister = 0;
 
   gpusReady = false;
 
@@ -1968,9 +2010,10 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   return Result::OKAY;
 }
 
-void CPro1000::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
+void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  // No tile generator, so 2D renderer is unused
+  // No tile generator. The 2D layer is the scroll layer (CPro1000Render2D).
+  m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
 }
