@@ -1306,17 +1306,17 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 			vertexArray.emplace_back(r3dPoly, 2);
 			vertexArray.emplace_back(r3dPoly, 3);
 
-			// check for identical points (ie forced triangle) and replace with average point
-			// if we don't do this our quad code falls apart
+			// check for identical points (i.e. forced triangle), as the quad code can be inprecise for these:
+			// the quad shader detects them and draws just the triangle
 			FVertex* v = (&vertexArray.back()) - 3;
 
 			for (int i = 0; i < 4; i++) {
 
 				int next1 = (i + 1) % 4;
-				int next2 = (i + 2) % 4;
 
 				if (FVertex::Equal(v[i], v[next1])) {
-					FVertex::Average(v[next1], v[next2], v[next1]);
+					v[next1] = v[i];
+					std::rotate(v, v + (next1 + 1) % 4, v + 4);	// copy to slot 3, after its original in slot 2, as the quad shader looks for it there
 					break;
 				}
 			}
@@ -1325,12 +1325,7 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 			vertexArray.emplace_back(r3dPoly, 0);
 			vertexArray.emplace_back(r3dPoly, 1);
 			vertexArray.emplace_back(r3dPoly, 2);
-			vertexArray.emplace_back(r3dPoly, 0, 2);	// last point is an average of 0 and 2
-
-			// TODO: the quad shader's second strip triangle (0,2,3) is meant to be empty here, but rounding can turn it into
-			// a sub-pixel sliver along edge 0-2 whose fragments get bad weights and depth (stray wrong pixels, mostly on thin
-			// distant triangles), and fragments right on edge 0-2 can be discarded. The geometry shader could detect this case
-			// (vertex 3 on edge 0-2), emit only the first triangle and use plain barycentric interpolation, which is exact and cheaper
+			vertexArray.emplace_back(r3dPoly, 2);		// last point is a copy of 2 (the quad shader detects this and draws just the triangle)
 		}
 	}
 	else {
