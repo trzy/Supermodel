@@ -39,6 +39,7 @@ class CReal3D;
 class CJTAGDevice
 {
 public:
+    virtual ~CJTAGDevice() = default;
     virtual void SaveStateToBlock(CBlockFile* SaveState) = 0;
     virtual void LoadStateFromBlock(CBlockFile* SaveState) = 0;
     virtual void CaptureDR() = 0;
