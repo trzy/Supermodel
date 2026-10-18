@@ -58,7 +58,7 @@ public:
 	* EndFrame(). This function traverses the scene database and builds up display
 	* lists.
 	*/
-	void RenderFrame(void);
+	void RenderFrame(void) override;
 
 	/*
 	* BeginFrame(void):
@@ -66,7 +66,7 @@ public:
 	* Prepare to render a new frame. Must be called once per frame prior to
 	* drawing anything.
 	*/
-	void BeginFrame(void);
+	void BeginFrame(void) override;
 
 	/*
 	* EndFrame(void):
@@ -74,7 +74,7 @@ public:
 	* Signals the end of rendering for this frame. Must be called last during
 	* the frame.
 	*/
-	void EndFrame(void);
+	void EndFrame(void) override;
 
 	/*
 	* UploadTextures(x, y, width, height):
@@ -87,7 +87,7 @@ public:
 	*		width	Width of texture data in texels.
 	*		height	Height.
 	*/
-	void UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height);
+	void UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height) override;
 
 	/*
 	* AttachMemory(cullingRAMLoPtr, cullingRAMHiPtr, polyRAMPtr, vromPtr,
@@ -105,7 +105,7 @@ public:
 	*/
 	void AttachMemory(const UINT32 *cullingRAMLoPtr,
 		const UINT32 *cullingRAMHiPtr, const UINT32 *polyRAMPtr,
-		const UINT32 *vromPtr, const UINT16 *textureRAMPtr);
+		const UINT32 *vromPtr, const UINT16 *textureRAMPtr) override;
 
 	/*
 	* SetStepping(stepping):
@@ -118,7 +118,7 @@ public:
 	*   stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
 	*             0x21 for Step 2.1. Anything else defaults to 1.0.
 	*/
-	void SetStepping(int stepping);
+	void SetStepping(int stepping) override;
 
 	/*
 	* SetVROMIsPolygonRAM(enable):
@@ -153,7 +153,7 @@ public:
 	*		occurred. Any allocated memory will not be freed until the
 	*		destructor is called. Prints own error messages.
 	*/
-	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
+	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget) override;
 
 	/*
 	* SetSunClamp(bool enable);
@@ -163,7 +163,7 @@ public:
 	* Parameters:
 	*		enable	Set clamp mode
 	*/
-	void SetSunClamp(bool enable);
+	void SetSunClamp(bool enable) override;
 
 	/*
 	* SetBlockCulling(bool enable);
@@ -173,7 +173,7 @@ public:
 	* Parameters:
 	*		enable	Set block culling
 	*/
-	void SetBlockCulling(bool enable);
+	void SetBlockCulling(bool enable) override;
 
 	/*
 	* GetLosValue(int layer);
@@ -183,7 +183,7 @@ public:
 	* Parameters:
 	*		layer	Priority layer to read from
 	*/
-	float GetLosValue(int layer);
+	float GetLosValue(int layer) override;
 
 	/*
 	* CRender3D(config):
