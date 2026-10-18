@@ -52,6 +52,7 @@
  * printed as offsets followed by the absolute address they resolve to.
  */
 
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #ifdef STANDALONE
@@ -101,7 +102,7 @@ static const char *s_regName[0x80] =
 
 static const char *s_phase[] = { "data_out", "data_in", "command", "status", "res4", "res5", "message_out", "message_in" };
 
-static const char *RegName(unsigned reg, SCRIPTSChip chip, char *buf)
+static const char *RegName(unsigned reg, SCRIPTSChip chip, char *buf, size_t bufSize)
 {
 	reg &= 0x7F;
 	if (chip == SCRIPTSChip::NCR53C810)
@@ -126,8 +127,21 @@ static const char *RegName(unsigned reg, SCRIPTSChip chip, char *buf)
 	}
 	if (reg < 0x80 && s_regName[reg])
 		return s_regName[reg];
-	sprintf(buf, "reg%02X", reg & 0x7F);
+	snprintf(buf, bufSize, "reg%02X", reg & 0x7F);
 	return buf;
+}
+
+// Appends formatted text at p without writing past end, returning the new end
+// of the string (truncated output stops at end - 1)
+static char *Append(char *p, char *end, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int n = vsnprintf(p, end - p, fmt, args);
+	va_end(args);
+	if (n < 0)
+		return p;
+	return n < end - p ? p + n : end - 1;
 }
 
 // Sign-extends a 24-bit value
@@ -138,18 +152,18 @@ static INT32 SignExtend24(UINT32 x)
 
 // Formats a jump address, which is either absolute or relative to the next
 // instruction (addr is the address of the next instruction)
-static char *FormatAddress(char *p, UINT32 operand, bool relative, UINT32 next)
+static char *FormatAddress(char *p, char *end, UINT32 operand, bool relative, UINT32 next)
 {
 	if (relative)
 	{
 		INT32 offset = SignExtend24(operand);
-		return p + sprintf(p, "rel(%c%X) ; -> %08X", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset, next + offset);
+		return Append(p, end, "rel(%c%X) ; -> %08X", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset, next + offset);
 	}
-	return p + sprintf(p, "%08X", operand);
+	return Append(p, end, "%08X", operand);
 }
 
 // Formats the condition of a transfer control instruction
-static char *FormatCondition(char *p, UINT32 op, bool targetMode)
+static char *FormatCondition(char *p, char *end, UINT32 op, bool targetMode)
 {
 	bool carry = (op & 0x00200000) != 0;
 	bool ifTrue = (op & 0x00080000) != 0;
@@ -158,24 +172,24 @@ static char *FormatCondition(char *p, UINT32 op, bool targetMode)
 	bool wait = (op & 0x00010000) != 0;
 
 	if (!carry && !compData && !compPhase)
-		return p + sprintf(p, ifTrue ? "" : ", never");
+		return Append(p, end, ifTrue ? "" : ", never");
 
-	p += sprintf(p, ", %s%s ", wait ? "when" : "if", ifTrue ? "" : " not");
+	p = Append(p, end, ", %s%s ", wait ? "when" : "if", ifTrue ? "" : " not");
 	if (carry)
-		return p + sprintf(p, "carry");
+		return Append(p, end, "carry");
 	if (compPhase)
 	{
 		// In target mode, the phase comparison tests ATN instead
-		p += sprintf(p, "%s", targetMode ? "atn" : s_phase[(op >> 24) & 7]);
+		p = Append(p, end, "%s", targetMode ? "atn" : s_phase[(op >> 24) & 7]);
 		if (compData)	// both must be true (or both false, for "not")
-			p += sprintf(p, ifTrue ? " and " : " and not ");
+			p = Append(p, end, ifTrue ? " and " : " and not ");
 	}
 	if (compData)
 	{
 		unsigned mask = (op >> 8) & 0xFF;
-		p += sprintf(p, "%02X", op & 0xFF);
+		p = Append(p, end, "%02X", op & 0xFF);
 		if (mask)
-			p += sprintf(p, " and mask %02X", mask);
+			p = Append(p, end, " and mask %02X", mask);
 	}
 	return p;
 }
@@ -207,6 +221,7 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 	static const char	*ioTarget[] = { "reselect", "disconnect", "wait select", "set", "clear" };
 	static const char	*transfer[] = { "jump", "call", "return", "int", NULL, NULL, NULL, NULL };
 	char				*p = mnem;
+	char				*end = mnem + 128;
 	char				regBuf[8];
 
 	mnem[0] = '\0';
@@ -228,10 +243,10 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 		if (tableIndirect)
 		{
 			INT32 offset = SignExtend24(op[1]);
-			sprintf(p, "%s from %c%X, %s %s", name, offset < 0 ? '-' : '+', offset < 0 ? -offset : offset, with, phase);
+			Append(p, end, "%s from %c%X, %s %s", name, offset < 0 ? '-' : '+', offset < 0 ? -offset : offset, with, phase);
 		}
 		else
-			sprintf(p, "%s %X, %s%08X, %s %s", name, op[0] & 0x00FFFFFF, indirect ? "ptr " : "", op[1], with, phase);
+			Append(p, end, "%s %X, %s%08X, %s %s", name, op[0] & 0x00FFFFFF, indirect ? "ptr " : "", op[1], with, phase);
 		return 2;
 	}
 
@@ -245,47 +260,47 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 			unsigned oper = (op[0] >> 24) & 7;
 			bool useSFBR = opcode == 7 && (op[0] & 0x00800000) != 0;	// SFBR replaces data8 (read-modify-write only)
 			unsigned data = (op[0] >> 8) & 0xFF;
-			const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf);
+			const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf, sizeof(regBuf));
 			char operand[32];
 
 			if (useSFBR)
-				sprintf(operand, "sfbr");
+				snprintf(operand, sizeof(operand), "sfbr");
 			else
-				sprintf(operand, "%02X", data);
+				snprintf(operand, sizeof(operand), "%02X", data);
 
 			if (opcode == 5)		// SFBR (op data) -> register
 			{
 				if (oper == 0)
-					sprintf(p, "move %s to %s", operand, reg);
+					Append(p, end, "move %s to %s", operand, reg);
 				else if (oper == 1 || oper == 5)
-					sprintf(p, "move sfbr %s to %s", operation[oper], reg);
+					Append(p, end, "move sfbr %s to %s", operation[oper], reg);
 				else
-					sprintf(p, "move sfbr %s %s to %s", operation[oper], operand, reg);
+					Append(p, end, "move sfbr %s %s to %s", operation[oper], operand, reg);
 			}
 			else if (opcode == 6)	// register (op data) -> SFBR
 			{
 				if (oper == 0)
-					sprintf(p, "move %s to sfbr", operand);
+					Append(p, end, "move %s to sfbr", operand);
 				else if (oper == 1 || oper == 5)
-					sprintf(p, "move %s %s to sfbr", reg, operation[oper]);
+					Append(p, end, "move %s %s to sfbr", reg, operation[oper]);
 				else
-					sprintf(p, "move %s %s %s to sfbr", reg, operation[oper], operand);
+					Append(p, end, "move %s %s %s to sfbr", reg, operation[oper], operand);
 			}
 			else					// register (op data) -> register
 			{
 				if (oper == 0)
-					sprintf(p, "move %s to %s", operand, reg);
+					Append(p, end, "move %s to %s", operand, reg);
 				else if (oper == 1 || oper == 5)
-					sprintf(p, "move %s %s to %s", reg, operation[oper], reg);
+					Append(p, end, "move %s %s to %s", reg, operation[oper], reg);
 				else
-					sprintf(p, "move %s %s %s to %s", reg, operation[oper], operand, reg);
+					Append(p, end, "move %s %s %s to %s", reg, operation[oper], operand, reg);
 			}
 			return 2;
 		}
 
 		// I/O
 		const char *name = targetMode ? ioTarget[opcode] : ioInitiator[opcode];
-		p += sprintf(p, "%s", name);
+		p = Append(p, end, "%s", name);
 		if (opcode == 3 || opcode == 4)
 		{
 			// SET/CLEAR: list the affected signals and flags
@@ -295,7 +310,7 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 			{
 				if (op[0] & flag.bit)
 				{
-					p += sprintf(p, "%s%s", first ? " " : " and ", flag.name);
+					p = Append(p, end, "%s%s", first ? " " : " and ", flag.name);
 					first = false;
 				}
 			}
@@ -309,19 +324,19 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 		bool tableIndirect = (op[0] & 0x02000000) != 0;
 		bool atn = (op[0] & 0x01000000) != 0;
 		if (atn && opcode == 0)
-			p += sprintf(p, " atn");
+			p = Append(p, end, " atn");
 		if (opcode == 0)	// (RE)SELECT names a SCSI ID
 		{
 			if (tableIndirect)
 			{
 				INT32 offset = SignExtend24(op[0]);
-				p += sprintf(p, " from %c%X,", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset);
+				p = Append(p, end, " from %c%X,", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset);
 			}
 			else
-				p += sprintf(p, " id %u,", (op[0] >> 16) & 0xF);
+				p = Append(p, end, " id %u,", (op[0] >> 16) & 0xF);
 		}
-		p += sprintf(p, " ");
-		FormatAddress(p, op[1], relative, addr + 8);
+		p = Append(p, end, " ");
+		FormatAddress(p, end, op[1], relative, addr + 8);
 		return 2;
 	}
 
@@ -333,17 +348,17 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 		if (!transfer[opcode])
 			return 0;
 		if (opcode == 3 && (op[0] & 0x00100000))
-			p += sprintf(p, "intfly");
+			p = Append(p, end, "intfly");
 		else
-			p += sprintf(p, "%s", transfer[opcode]);
+			p = Append(p, end, "%s", transfer[opcode]);
 		if (opcode == 3)
-			p += sprintf(p, " %08X", op[1]);
+			p = Append(p, end, " %08X", op[1]);
 		else if (opcode != 2)	// RETURN has no address
 		{
-			p += sprintf(p, " ");
-			p = FormatAddress(p, op[1], relative, addr + 8);
+			p = Append(p, end, " ");
+			p = FormatAddress(p, end, op[1], relative, addr + 8);
 		}
-		FormatCondition(p, op[0], targetMode);
+		FormatCondition(p, end, op[0], targetMode);
 		return 2;
 	}
 
@@ -352,7 +367,7 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 		if ((op[0] & 0xE0000000) == 0xC0000000)
 		{
 			// Memory Move
-			sprintf(p, "move memory%s %X, %08X, %08X", (op[0] & 0x01000000) ? " no flush" : "", op[0] & 0x00FFFFFF, op[1], op[2]);
+			Append(p, end, "move memory%s %X, %08X, %08X", (op[0] & 0x01000000) ? " no flush" : "", op[0] & 0x00FFFFFF, op[1], op[2]);
 			return 3;
 		}
 
@@ -361,19 +376,19 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, S
 		bool load = (op[0] & 0x01000000) != 0;
 		bool noFlush = (op[0] & 0x02000000) != 0;
 		unsigned count = op[0] & 7;
-		const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf);
+		const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf, sizeof(regBuf));
 		char where[32];
 		if (dsaRelative)
 		{
 			INT32 offset = SignExtend24(op[1]);
-			sprintf(where, "dsa%c%X", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset);
+			snprintf(where, sizeof(where), "dsa%c%X", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset);
 		}
 		else
-			sprintf(where, "%08X", op[1]);
+			snprintf(where, sizeof(where), "%08X", op[1]);
 		if (load)
-			sprintf(p, "load %s, %u, %s", reg, count, where);
+			Append(p, end, "load %s, %u, %s", reg, count, where);
 		else
-			sprintf(p, "store%s %s, %u, %s", noFlush ? " no flush" : "", reg, count, where);
+			Append(p, end, "store%s %s, %u, %s", noFlush ? " no flush" : "", reg, count, where);
 		return 2;
 	}
 	}
@@ -502,32 +517,32 @@ int main(int argc, char **argv)
      * Disassemble!
      */
 
-	unsigned offset = start;
- 	for (unsigned i = 0; (i<len) && (offset<fsize); i++)
- 	{
- 		op[0] = (buffer[offset+3]<<24)|(buffer[offset+2]<<16)|(buffer[offset+1]<<8)|buffer[offset+0];
- 		op[1] = (buffer[offset+7]<<24)|(buffer[offset+6]<<16)|(buffer[offset+5]<<8)|buffer[offset+4];
- 		op[2] = (buffer[offset+11]<<24)|(buffer[offset+10]<<16)|(buffer[offset+9]<<8)|buffer[offset+8];
+    unsigned offset = start;
+    for (unsigned i = 0; (i<len) && (offset<fsize); i++)
+    {
+        op[0] = (buffer[offset+3]<<24)|(buffer[offset+2]<<16)|(buffer[offset+1]<<8)|buffer[offset+0];
+        op[1] = (buffer[offset+7]<<24)|(buffer[offset+6]<<16)|(buffer[offset+5]<<8)|buffer[offset+4];
+        op[2] = (buffer[offset+11]<<24)|(buffer[offset+10]<<16)|(buffer[offset+9]<<8)|buffer[offset+8];
 
- 		unsigned num = DisassembleSCRIPTS(op, org, mnem, target_mode, chip);
- 		if (0 == num)
- 		{
- 			printf("%08X: %08X                   ?\n", org, op[0]);
- 			offset += 4;
- 			org += 4;
- 		}
- 		else
- 		{
- 			if (num == 3)
- 				printf("%08X: %08X %08X %08X %s\n", org, op[0], op[1], op[2], mnem);
- 			else if (num == 2)
- 				printf("%08X: %08X %08X          %s\n", org, op[0], op[1], mnem);
- 			else
- 				printf("%08X: %08X                     %s\n", org, op[0], mnem);
- 			offset += num*4;
- 			org += num*4;
- 		}
- 	}
+        unsigned num = DisassembleSCRIPTS(op, org, mnem, target_mode, chip);
+        if (0 == num)
+        {
+            printf("%08X: %08X                   ?\n", org, op[0]);
+            offset += 4;
+            org += 4;
+        }
+        else
+        {
+            if (num == 3)
+                printf("%08X: %08X %08X %08X %s\n", org, op[0], op[1], op[2], mnem);
+            else if (num == 2)
+                printf("%08X: %08X %08X          %s\n", org, op[0], op[1], mnem);
+            else
+                printf("%08X: %08X                     %s\n", org, op[0], mnem);
+            offset += num*4;
+            org += num*4;
+        }
+    }
 
     free(buffer);
 
