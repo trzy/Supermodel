@@ -38,8 +38,17 @@
  *
  * Operation
  * ---------
- * - The DLL connects to Supermodel when the program sends its first SCSI
- *   command. If Supermodel is not ready, the DLL tries again for a time.
+ * - The DLL connects to Supermodel when the program calls the first ASPI
+ *   function that needs the connection (GetASPI32SupportInfo() or the first
+ *   SCSI command). It shows the "Supermodel Pro-1000 Host" window, in which
+ *   the user gives the host and the port of Supermodel (see
+ *   ConnectDialog.cpp). The default is 127.0.0.1, port 31000. The window
+ *   stays until the connection is made, or until the user presses Exit,
+ *   which ends the program.
+ * - The DLL connects only one time. If the connection is lost, the DLL
+ *   prints an error, and all SCSI commands after that fail (selection
+ *   timeout). The Pro-1000 programs cannot continue after lost commands, so
+ *   the DLL does not connect again.
  * - SendASPI32Command() does each SCSI command completely before it
  *   returns. Then it sets the status, and sets the event or calls the post
  *   routine if the program asked for one.
@@ -57,6 +66,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include "aspi.h"
+#include "ConnectDialog.h"
 #include "Pro1000/SCSITCPBridgeProtocol.h"
 #include <algorithm>
 #include <cstdint>
@@ -75,7 +85,6 @@ namespace
   constexpr BYTE MAX_LUN = 1;
   constexpr BYTE DEVICE_TYPE_PROCESSOR = 3;
   constexpr DWORD MAX_TRANSFER_LENGTH = 0x10000;
-  constexpr DWORD CONNECT_TIMEOUT_MS = 30000;   // time to wait for Supermodel
 
   constexpr BYTE STATUS_CHECK_CONDITION = 0x02;
   constexpr BYTE SRB_DIR_NONE = SRB_DIR_IN | SRB_DIR_OUT;
@@ -94,6 +103,13 @@ namespace
   SOCKET g_socket = INVALID_SOCKET;
   bool g_winsockStarted = false;
   uint32_t g_sequence = 0;
+
+  // Host and port of Supermodel: the default, then the values that were used
+  // for the connection. After the connection is lost, the DLL does not
+  // connect again.
+  std::string g_host = "127.0.0.1";
+  uint16_t g_port = DEFAULT_PORT;
+  bool g_connectedBefore = false;
 
   bool SendAll(const void *data, size_t length)
   {
@@ -132,8 +148,10 @@ namespace
     }
   }
 
-  // Connects to Supermodel if there is no connection. Tries again until
-  // CONNECT_TIMEOUT_MS passes.
+  // Connects to Supermodel the first time it is called. Shows the
+  // "Supermodel Pro-1000 Host" window, which stays until there is a
+  // connection or the user ends the program. Returns false after the
+  // connection is lost (the DLL does not connect again).
   bool Connect(void)
   {
     if (g_socket != INVALID_SOCKET)
@@ -150,37 +168,22 @@ namespace
       g_winsockStarted = true;
     }
 
-    sockaddr_in address = {};
-    address.sin_family = AF_INET;
-    address.sin_port = htons(DEFAULT_PORT);
-    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (g_connectedBefore)
+      return false;   // the connection was lost
+    g_connectedBefore = true;
 
-    DWORD start = GetTickCount();
-    bool reported = false;
-    while (true)
+    g_socket = ShowConnectDialog(&g_host, &g_port, std::string());
+    if (g_socket == INVALID_SOCKET)
     {
-      g_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-      if (g_socket != INVALID_SOCKET && connect(g_socket, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0)
-        break;
-      Disconnect();
-      if (GetTickCount() - start >= CONNECT_TIMEOUT_MS)
-      {
-        fprintf(stderr, "wnaspi32: unable to connect to Supermodel (TCP port %u)\n", DEFAULT_PORT);
-        return false;
-      }
-      if (!reported)
-      {
-        fprintf(stderr, "wnaspi32: waiting for Supermodel (TCP port %u)...\n", DEFAULT_PORT);
-        reported = true;
-      }
-      Sleep(250);
+      fprintf(stderr, "wnaspi32: unable to show the connection window\n");
+      return false;
     }
 
     // Send each command immediately. Commands are small and the program waits
     // for each result.
     BOOL noDelay = TRUE;
     setsockopt(g_socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char *>(&noDelay), sizeof(noDelay));
-    fprintf(stderr, "wnaspi32: connected to Supermodel\n");
+    fprintf(stderr, "wnaspi32: connected to Supermodel at %s (port %u)\n", g_host.c_str(), unsigned(g_port));
     return true;
   }
 
@@ -222,14 +225,14 @@ namespace
     std::vector<uint8_t> message;
     if (!SendAll(buffer.data(), buffer.size()) || !ReceiveAll(&resultFrame, sizeof(resultFrame)) || resultFrame.length < sizeof(result) || resultFrame.length > MAX_MESSAGE_SIZE)
     {
-      fprintf(stderr, "wnaspi32: connection to Supermodel failed\n");
+      fprintf(stderr, "wnaspi32: connection to Supermodel lost. SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
     message.resize(resultFrame.length);
     if (!ReceiveAll(message.data(), message.size()))
     {
-      fprintf(stderr, "wnaspi32: connection to Supermodel failed\n");
+      fprintf(stderr, "wnaspi32: connection to Supermodel lost. SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
@@ -237,7 +240,7 @@ namespace
     if (result.header.version != VERSION || result.header.type != uint16_t(MessageType::CommandResult) || result.header.sequence != command.header.sequence ||
         sizeof(result) + size_t(result.dataInLength) + size_t(result.errorLength) != message.size())
     {
-      fprintf(stderr, "wnaspi32: incorrect result from Supermodel\n");
+      fprintf(stderr, "wnaspi32: incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
@@ -414,6 +417,11 @@ extern "C" DWORD __cdecl SendASPI32Command(void *srbPointer)
 
 extern "C" DWORD __cdecl GetASPI32SupportInfo(void)
 {
+  // Programs call this first. Connect now, so the connection window opens
+  // when the program starts.
+  EnterCriticalSection(&g_lock);
+  Connect();
+  LeaveCriticalSection(&g_lock);
   return (SS_COMP << 8) | 1;  // status, and one host adapter
 }
 

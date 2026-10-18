@@ -38,9 +38,10 @@
  * Operation
  * ---------
  * The bridge has one thread. The thread accepts a client, receives
- * messages, and sends results. The bridge accepts one client at a time, and
- * only from the same computer. When a client disconnects, the bridge accepts
- * a new client.
+ * messages, and sends results. The bridge accepts one client at a time, from
+ * any computer (the host programs run on Windows, and Supermodel can run on
+ * a different computer). There is no authentication. When a client
+ * disconnects, the bridge accepts a new client.
  *
  * The host adapter calls the completion function on the emulator thread.
  * This function puts the result in a queue. The bridge thread sends the

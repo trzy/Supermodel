@@ -30,7 +30,7 @@
  * Connection
  * ----------
  * The client connects to the bridge with TCP. The bridge accepts connections
- * only from the same computer. The bridge accepts one client at a time.
+ * from any computer, one client at a time. There is no authentication.
  *
  * Format
  * ------

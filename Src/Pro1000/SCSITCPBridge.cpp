@@ -227,21 +227,15 @@ void CSCSITCPBridge::ThreadFunction(void)
       continue;
     }
 
-    // Accept clients only from the same computer (127.x.x.x). SDL_net cannot
-    // listen only on the loopback interface.
+    // Clients can be on other computers (the host programs run on Windows,
+    // Supermodel possibly does not)
     IPaddress *peer = SDLNet_TCP_GetPeerAddress(client);
     uint32_t host = peer ? SDL_SwapBE32(peer->host) : 0;
-    if ((host >> 24) != 127)
-    {
-      ErrorLog("SCSI TCP bridge: refused a connection from %u.%u.%u.%u.", host >> 24, (host >> 16) & 0xFF, (host >> 8) & 0xFF, host & 0xFF);
-      SDLNet_TCP_Close(client);
-      continue;
-    }
 
     ++connectionID;
     SDLNet_TCP_AddSocket(set, client);
-    printf("SCSI TCP bridge: client connected.\n");
-    InfoLog("SCSI TCP bridge: client connected.");
+    printf("SCSI TCP bridge: client connected from %u.%u.%u.%u.\n", host >> 24, (host >> 16) & 0xFF, (host >> 8) & 0xFF, host & 0xFF);
+    InfoLog("SCSI TCP bridge: client connected from %u.%u.%u.%u.", host >> 24, (host >> 16) & 0xFF, (host >> 8) & 0xFF, host & 0xFF);
 
     // Receive commands and send results until the client disconnects
     while (m_running)

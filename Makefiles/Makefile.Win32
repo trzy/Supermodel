@@ -126,8 +126,8 @@ else
 endif
 WNASPI32_BIN_DIR = bin32
 WNASPI32_DLL = $(WNASPI32_BIN_DIR)/wnaspi32.dll
-WNASPI32_SRC_FILES = Src/OSD/Windows/wnaspi32/wnaspi32.cpp Src/OSD/Windows/wnaspi32/wnaspi32.def
-WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/Pro1000/SCSITCPBridgeProtocol.h
+WNASPI32_SRC_FILES = Src/OSD/Windows/wnaspi32/wnaspi32.cpp Src/OSD/Windows/wnaspi32/ConnectDialog.cpp Src/OSD/Windows/wnaspi32/wnaspi32.def
+WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/OSD/Windows/wnaspi32/ConnectDialog.h Src/Pro1000/SCSITCPBridgeProtocol.h
 ifneq (,$(findstring i686,$(shell $(CXX32) -dumpmachine 2>&1)))
 	PLATFORM_TARGETS += $(WNASPI32_DLL)
 	PLATFORM_PKG_FILES += $(WNASPI32_DLL)
@@ -174,7 +174,7 @@ $(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD
 $(WNASPI32_DLL):	$(WNASPI32_SRC_FILES) $(WNASPI32_HEADERS) | $(WNASPI32_BIN_DIR)
 	$(info --------------------------------------------------------------------------------)
 	$(info Building ASPI DLL      : $@)
-	$(SILENT)$(CXX32_ENV) $(CXX32) -shared -o $@ $(WNASPI32_SRC_FILES) -ISrc $(OPT) $(WARN) $(CXXSTD) -static -static-libgcc -static-libstdc++ $(LDOPT) -lws2_32
+	$(SILENT)$(CXX32_ENV) $(CXX32) -shared -o $@ $(WNASPI32_SRC_FILES) -ISrc $(OPT) $(WARN) $(CXXSTD) -static -static-libgcc -static-libstdc++ $(LDOPT) -lws2_32 -luser32
 	$(info --------------------------------------------------------------------------------)
 
 ifneq ($(WNASPI32_BIN_DIR),$(BIN_DIR))
