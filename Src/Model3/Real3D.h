@@ -336,6 +336,34 @@ public:
   void WritePolygonRAM(uint32_t addr, uint32_t data);
 
   /*
+   * SetInstalledPolygonRAM(size):
+   *
+   * Sets the size of the polygon RAM that is installed. It cannot be larger
+   * than Real3DConfig::polygonRAMSize, which is the size of the memory that
+   * the renderer can address. Writes above the installed size are ignored,
+   * and ReadPolygonRAM() returns 0 there. The default is
+   * Real3DConfig::polygonRAMSize. The Real3D Pro-1000 has 8, 16, 24, or 32
+   * MB.
+   *
+   * Parameters:
+   *    size  Installed size in bytes.
+   */
+  void SetInstalledPolygonRAM(uint32_t size);
+
+  /*
+   * ReadPolygonRAM(addr):
+   *
+   * Reads a word of polygon RAM (for the JTAG memory test access of Venus).
+   *
+   * Parameters:
+   *    addr  Byte address in polygon RAM.
+   *
+   * Returns:
+   *    The word, or 0 if the address is above the installed polygon RAM.
+   */
+  uint32_t ReadPolygonRAM(uint32_t addr) const;
+
+  /*
   * WriteJTAGModeword(device, data):
   *
   * Write to an internal modeword register using the JTAG interface. This is
@@ -528,6 +556,7 @@ private:
   // Hardware configuration, and the layout of the memory pool that follows
   // from it (offsets and sizes in bytes)
   Real3DConfig m_hwConfig;
+  uint32_t m_installedPolygonRAMSize = 0;   // installed polygon RAM in bytes (see SetInstalledPolygonRAM())
   struct MemoryLayout
   {
     uint32_t cullingRAMLo, cullingRAMHi, polyRAM, textureRAM, textureFIFO;

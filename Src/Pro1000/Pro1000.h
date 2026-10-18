@@ -136,7 +136,15 @@ private:
 
   bool IsSCSIAddress(UINT32 addr) const;          // True if address falls within SCSI controller's PCI-mapped register window
 
-  void BuildScanChain(void);                    // Creates JTAG devices and connects them to the scan controller
+  // Models (board configurations), see "Models" in Pro1000.cpp
+  enum class Model
+  {
+    PRO1100,  // 1 pixel processor (single pixel board)
+    PRO1200,  // 2 pixel processors (dual pixel board)
+    PRO1400   // 4 pixel processors (high res)
+  };
+
+  void BuildScanChain(Model model);             // Creates JTAG devices and connects them to the scan controller
   void RunMainBoardFrame(void);                 // Runs PPC main board for a frame
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
 
@@ -191,7 +199,9 @@ private:
   std::unique_ptr<CSCSITCPBridge> m_scsiTCPBridge;  // connects host computer programs to the host adapter (destroyed before it)
   CReal3D     GPU;          // Real3D graphics hardware
   std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
-  C3DRAM      m_3dram[4];                       // 3D-RAMs on the JTAG scan chain
+  std::vector<std::unique_ptr<C3DRAM>> m_3drams; // 3D-RAMs on the JTAG scan chain
+  Model       m_model = Model::PRO1100;         // model (Games.xml stepping)
+  unsigned    m_polygonMemoryMB = 8;            // polygon memory (Games.xml polygon_memory)
   CJTAGScanChain m_scanChain;                   // JTAG scan chain driven by JTAG controller
   CUART       UART;         // 16550-style serial port
   SuperAA     *m_superAA;

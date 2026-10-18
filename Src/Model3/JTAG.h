@@ -84,10 +84,18 @@ public:
     CASIC(CReal3D& real3D, Name deviceName);
 
 private:
+    bool PolygonMemoryAccess(void) const;
+    unsigned PolygonMemoryWordCount(void) const;
+
     uint32_t m_idCode = 0;
     uint32_t m_modeword = 0;
     CReal3D& m_real3D;
     Name m_deviceName = Name::Dummy;
+
+    // Venus polygon memory test access (instructions 0x0C, 0x0F, 0x11). Not in
+    // save states: Model 3 does not use it.
+    uint32_t m_memoryAddress = 0;   // word address in polygon RAM
+    uint32_t m_memoryCount = 0;     // number of words to read
 };
 
 class C3DRAM : public CJTAGDevice

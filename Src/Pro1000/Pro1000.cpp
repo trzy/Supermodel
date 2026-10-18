@@ -105,6 +105,51 @@
  *    memory), .pmem (polygon memory), and .tmap (texture) files.
  *
  *
+ * Models
+ * ------
+ * Games.xml selects the model with the stepping field and the polygon memory
+ * with the polygon_memory field (in MB):
+ *
+ *   stepping  Model     Firmware configuration  Config byte (0x611A8)
+ *   1100      PRO-1100  Single pixel board      1
+ *   1200      PRO-1200  Dual pixel board        2
+ *   1400      PRO-1400  High res                4
+ *
+ * If there is no stepping, the model is the PRO-1100. The polygon memory is
+ * 8, 16, 24, or 32 MB (8 MB on the base board and up to three 8 MB cards,
+ * independent of the model). If there is no polygon_memory, it is 8 MB.
+ *
+ * The firmware finds the model from the JTAG scan chain (see JTAG), and
+ * CPro1000::BuildScanChain() makes the chain of the model. The firmware finds
+ * the polygon memory size in get_hw_config (0x6A48): for k = 1 to 3, it
+ * writes 0xCAFEBABE to 0x98000000 + k * 8 MB with the CPU and reads the word
+ * back through the Venus JTAG polygon memory access (0x1DDF4, see
+ * CASIC::PolygonMemoryAccess() in JTAG.cpp). It stops at the first word that
+ * is not correct. The number of correct words is the number of memory cards
+ * (bits 7-6 of the byte at RAM 0x70004), and show_config_data prints 8 MB +
+ * 8 MB for each card. CReal3D::SetInstalledPolygonRAM() sets the size:
+ * writes above it are ignored and reads return 0.
+ *
+ * show_config_data also prints the system type (bits 4-2 of the byte at RAM
+ * 0x70005, set in get_hw_config at 0x6C44):
+ *
+ *   Production High Resolution System  high res configuration
+ *   Production System                  single or dual configuration, the ID
+ *                                      code version fields of the Mars
+ *                                      ASICs are not 0
+ *   Pre-Production System              single or dual configuration, the
+ *                                      Mars version fields are 0
+ *
+ * Supermodel sets the version fields to 0 (Pre-Production). With version 3
+ * (the Model 3 value), the firmware prints "Production System". Other than
+ * this message, the effect of the system type is not known.
+ *
+ * Only the PRO-1100 is emulated fully. For the PRO-1200 and PRO-1400, the
+ * firmware detects the configuration and the memory, but the renderer does
+ * not emulate the additional pixel processors, dual channel output, or high
+ * res video timing.
+ *
+ *
  * ROM Layout
  * ----------
  * Names in parentheses are from the firmware's address table.
@@ -176,7 +221,8 @@
  *  8. Calls 0x5660 (sets up mode words via 0x130A4 and configures PCI
  *     device 12 via 0x4E78), then prints "_start: before get_hw_config".
  *     0x5660 waits for a GP sync (IR7) via 0x577C.
- *  9. get_hw_config, rend_mw_init, then rend_init (0x51A8), which uploads
+ *  9. get_hw_config (measures the polygon memory, see Models), rend_mw_init,
+ *     then rend_init (0x51A8), which uploads
  *     initial renderer memory contents from the SCSI ROM (see SCSI ROM
  *     below). Without a valid SCSI ROM it prints "SCSI ROM magic does NOT
  *     validate" and aborts. rom_to_bm and rom_to_gm then look for blend and
@@ -455,9 +501,10 @@
  *                                        A solid color layer. A host packet
  *                                        write to 0x62000000 goes to
  *                                        write_scroll (0x145D4), which stores
- *                                        the word here (single pixel board)
- *                                        or sends it to Pluto through JTAG
- *                                        (dual pixel board). Bayou sends
+ *                                        the word here (single and dual
+ *                                        pixel boards) or sends it to Pluto
+ *                                        through JTAG (high res, config byte
+ *                                        4). Bayou sends
  *                                        0x07DCDCDC. [Emulated: see
  *                                        CPro1000Render2D]
  * 64000000-38        UART_*              16550 UART (RDTD_BUFFER, INT_ENABLE,
@@ -626,24 +673,27 @@
  * 2.x chains. If all fail, the high res check prints "FAILED ID'S" with the
  * expected values and the single pixel board configuration is assumed.
  *
- * Expected ID codes (table at 0x61200): Jupiter 0x016C7057 or 0x0D7F1057,
- * Mercury 0x016C3057, Venus 0x016C4057, Earth 0x016C5057 or 0x0D7F0057, Mars
- * 0x016C6057. These are the Model 3 ID codes with version field 0.
+ * Expected ID codes (table at 0x61200): Jupiter 0x016C7057, Mercury
+ * 0x016C3057, Venus 0x016C4057, Earth 0x016C5057, Mars 0x016C6057 (the Model
+ * 3 ID codes with version field 0), then Jupiter 0x0D7F1057 and Earth
+ * 0x0D7F0057. The single and dual pixel checks use the first five. The high
+ * res check uses 0x0D7F1057 at the Jupiter position and 0x0D7F0057 at all
+ * four Earth positions. "FAILED ID'S" prints both values for Jupiter and
+ * Earth, but the high res check compares only with the second value. The
+ * device table that the high res check makes (0x70B28, entries of type,
+ * name index, and version) names these devices PLUTO and NEPTUNE_0-3. Thus
+ * on the high res system, Pluto is at the Jupiter position and Neptune is at
+ * each Earth position.
  *
- * The emulated chain (CPro1000::BuildScanChain()) is the single pixel board
- * configuration, using the Model 3 CASIC and C3DRAM device models. With it,
- * the firmware prints "SINGLE PIXEL BOARD DETECTED". Early attempts used only
- * the 15 ASICs from the firmware's name table (0x611AC) and omitted the
- * 3D-RAMs; every missing 1-bit device shifted the ID codes out of position and
- * all three configuration checks failed.
- *
- * Other configurations could be detected simply by building the corresponding
- * chain (dual is the Model 3 Step 2.x chain). Actually emulating them also
- * depends on what the firmware configures afterwards (mode words for the
- * additional Earth/Mars ASICs, memory sizes, high res video timing) and on
- * renderer support. Dual should be similar to Model 3 Step 2.x; high res goes
- * beyond anything on Model 3. show_config_data reports a "Pre-Production
- * System" with this chain, possibly derived from ID code version fields.
+ * CPro1000::BuildScanChain() makes the chain of the model (see Models) with
+ * the Model 3 CASIC and C3DRAM device models. On the high res chain, the
+ * Pluto and Neptune positions are CASIC objects with the Jupiter and Earth
+ * names and the high res ID codes. The firmware prints "SINGLE PIXEL BOARD
+ * DETECTED", "DUAL PIXEL BOARDS DETECTED", or "HI RES CONFIGURATION
+ * DETECTED". Early attempts used only the 15 ASICs from the firmware's name
+ * table (0x611AC) and omitted the 3D-RAMs; every missing 1-bit device
+ * shifted the ID codes out of position and all three configuration checks
+ * failed.
  *
  * Mode words: 0x130A4(index, value) writes the mode word (JTAG instruction 8)
  * of the device at position index in the chain (1 = Jupiter, 2 = Mercury).
@@ -657,22 +707,22 @@
  *                            Mercury is set and then cleared (a pulse).
  *   get_hw_config            Venus 0x6000 and Mars 0x80 for a short time.
  *   rend_init                Jupiter bit 4 (Disable Fog) is set while the
- *                            SCSI ROM is loaded and cleared after (dual
- *                            pixel board: device 2, bit 2).
+ *                            SCSI ROM is loaded and cleared after (high
+ *                            res: device 2, bit 2).
  *   Main loop, logo          No changes.
  *   Host gamma control       Jupiter bit 25 (see below).
  *
  * Gamma bypass: host command 4 (a packet write of one word to 0x20000004,
  * SDK function ls_ctrl_gamma, "Gamma Correction Option") calls 0x1BC34(data
  * != 0). On a single pixel board, 0x1BC34(1) clears Jupiter mode word bit 25
- * (Gamma Bypass) and 0x1BC34(0) sets it. On a dual pixel board (hardware
- * configuration 4), it uses bit 7 of device 1, which is Pluto Gamma Bypass
- * (thus device 1 is probably Pluto on a dual pixel board). At boot the bit
+ * (Gamma Bypass) and 0x1BC34(0) sets it. On the high res system (config
+ * byte 4), it uses bit 7 of device 1, which is Pluto Gamma Bypass (device 1
+ * is Pluto on the high res system, see JTAG). At boot the bit
  * is set (no gamma correction). The SDK demos clear it (gamma correction).
  * Supermodel does not emulate gamma correction. To emulate it, use this bit
  * and the gamma tables (rom_to_gm, ls_wrt_gamma). 0x1BB04, which the gamma
  * loading code (0x1C220) calls, sets and then clears Jupiter bit 20 (Enable
- * Memory Test). On a dual pixel board, it uses bit 4 of device 1 (Pluto Test
+ * Memory Test). On the high res system, it uses bit 4 of device 1 (Pluto Test
  * Gamma Memory).
  *
  * Mode word bit names: the firmware has a table of bit names for each ASIC
@@ -707,7 +757,7 @@
  *            rd FIFO, 17 No reads to rd FIFO, 18 Short Refresh, 19 Pmem ROM
  *            Checksum Enable, 20-22 Test Mode[0-2], 23 Counter Test.
  *   Earth    0 Two Processors, 1 Two Monitors, 2 Disable Texture Xluc,
- *            3 Disable Polygon Xluc (configuration 4: Enable Polygon Xluc),
+ *            3 Disable Polygon Xluc (high res: Enable Polygon Xluc),
  *            4 Disable Contour Xluc, 5 Disable Stencil, 6-7 Test/Trap Input
  *            FIFO[0-1], 8-10 Stats Sel[0-2], 11 Enable LOS Test, 12-14 Trap
  *            Code[0-2], 15 Enable DBM Test, 16 Enable Video Mem Test,
@@ -840,17 +890,15 @@
  *    Time Base".) The logic sync memory (LSYNC_BASE) probably sequences
  *    these signals.
  *  - Device 12 (Real3D) register layout and the culling/polygon memory map.
- *  - Board configurations. Only the single pixel board is emulated. Support
- *    single, dual, and high res configurations, probably selected by reusing
- *    the Games.xml stepping field (currently a placeholder "1.0" for the
- *    Pro-1000). To revisit once rendering works.
+ *  - Models. The PRO-1200 and PRO-1400 boot, but rendering is that of the
+ *    PRO-1100 (see Models). To revisit once rendering works.
  *  - Where scan chains should be built. Currently CPro1000 builds its chain
  *    while Model 3's CJTAG builds its own. Since the Pro-1000 single and dual
  *    chains are the Model 3 Step 1.x and 2.x chains, consider having CReal3D
  *    build the chain (its ASICs are the Real3D chipset) from a board
  *    configuration supplied by the system, preserving the Model 3 JTAG2 save
  *    state layout.
- *  - What determines "Pre-Production" vs. "Production" system and the
+ *  - What the system type (see Models) changes, and what determines the
  *    extended texture memory setting reported by show_config_data.
  *  - Contents of the SCSI ROM (see SCSI ROM). It is not part of the SDK
  *    flash update (p1_p4.bin, p2.bin), so it was presumably programmed at
@@ -1995,6 +2043,21 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   // Initialize Real3D
   GPU.SetStepping(STEPPING);
 
+  // Model and polygon memory (see "Models")
+  if (game.stepping.empty() || game.stepping == "1100")
+    m_model = Model::PRO1100;
+  else if (game.stepping == "1200")
+    m_model = Model::PRO1200;
+  else if (game.stepping == "1400")
+    m_model = Model::PRO1400;
+  else
+    return ErrorLog("Unknown Pro-1000 model '%s' for '%s'. The stepping must be 1100, 1200, or 1400.", game.stepping.c_str(), game.name.c_str());
+  m_polygonMemoryMB = game.polygon_memory ? game.polygon_memory : 8;
+  if (m_polygonMemoryMB != 8 && m_polygonMemoryMB != 16 && m_polygonMemoryMB != 24 && m_polygonMemoryMB != 32)
+    return ErrorLog("Polygon memory of %u MB for '%s' is not possible. It must be 8, 16, 24, or 32 MB.", m_polygonMemoryMB, game.name.c_str());
+  BuildScanChain(m_model);
+  GPU.SetInstalledPolygonRAM(m_polygonMemoryMB * 0x100000);
+
   // Print game information
   if (!game.version.empty())
     std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
@@ -2004,6 +2067,7 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
   std::cout << "    Platform:       Real3D Pro-1000" << std::endl;
+  std::cout << "    Model:          PRO-" << (m_model == Model::PRO1100 ? "1100 (1 pixel processor)" : (m_model == Model::PRO1200 ? "1200 (2 pixel processors)" : "1400 (4 pixel processors)")) << ", " << m_polygonMemoryMB << " MB polygon memory" << std::endl;
   std::cout << std::endl;
 
   m_game = game;
@@ -2035,37 +2099,58 @@ void CPro1000::AttachConsoleInput(IConsoleInput *input)
 }
 
 /*
- * Single pixel board configuration. The firmware's configuration detection
- * (0x17EB0) reads the chain's ID codes and expects exactly the Model 3 Step
- * 1.x chain layout: Jupiter, Mercury, Venus, Earth, 3D-RAM, Mars, Mars,
- * 3D-RAM x3 (196 bits in IDCODE/BYPASS). ID code version fields are ignored by
- * the firmware but are set to 0, as printed in its expected ID table. Only the
- * first ASIC of each type forwards its mode word to the Real3D object (as on
- * Model 3).
+ * Builds the JTAG scan chain of the model. The firmware's configuration
+ * detection (0x17EB0) reads the chain's ID codes and expects one of three
+ * layouts (see JTAG):
+ *
+ *   PRO-1100  single pixel board  Jupiter, Mercury, Venus, then one group
+ *   PRO-1200  dual pixel board    Jupiter, Mercury, Venus, then two groups
+ *   PRO-1400  high res            Jupiter, Mercury, Venus, then four groups
+ *
+ * A group is Earth, 3D-RAM, Mars, Mars, 3D-RAM, 3D-RAM, 3D-RAM. The single
+ * and dual layouts are the Model 3 Step 1.x and 2.x chains. The high res
+ * layout must have the high res ID codes for Jupiter (0x0D7F1057) and Earth
+ * (0x0D7F0057). ID code version fields are ignored by the firmware but are
+ * set to 0, as printed in its expected ID table. Only the first ASIC of each
+ * type forwards its mode word to the Real3D object (as on Model 3).
  */
-void CPro1000::BuildScanChain(void)
+void CPro1000::BuildScanChain(Model model)
 {
   m_asics.clear();
+  m_3drams.clear();
   auto addASIC = [this](CASIC::Name name, uint32_t idCode) -> CJTAGDevice *
   {
     m_asics.emplace_back(std::make_unique<CASIC>(GPU, name));
     m_asics.back()->SetIDCode(idCode);
     return m_asics.back().get();
   };
+  auto add3DRAM = [this]() -> CJTAGDevice *
+  {
+    m_3drams.emplace_back(std::make_unique<C3DRAM>());
+    return m_3drams.back().get();
+  };
 
+  bool highRes = model == Model::PRO1400;
+  uint32_t jupiterID = highRes ? 0x0D7F1057 : 0x016C7057;
+  uint32_t earthID = highRes ? 0x0D7F0057 : 0x016C5057;
   std::vector<CJTAGDevice *> devices
   {
-    addASIC(CASIC::Name::Jupiter, 0x016C7057),
+    addASIC(CASIC::Name::Jupiter, jupiterID),
     addASIC(CASIC::Name::Mercury, 0x016C3057),
-    addASIC(CASIC::Name::Venus,   0x016C4057),
-    addASIC(CASIC::Name::Earth,   0x016C5057),
-    &m_3dram[0],
-    addASIC(CASIC::Name::Mars,    0x016C6057),
-    addASIC(CASIC::Name::Dummy,   0x016C6057),
-    &m_3dram[1],
-    &m_3dram[2],
-    &m_3dram[3]
+    addASIC(CASIC::Name::Venus,   0x016C4057)
   };
+  unsigned groups = model == Model::PRO1100 ? 1 : (model == Model::PRO1200 ? 2 : 4);
+  for (unsigned group = 0; group < groups; group++)
+  {
+    bool first = group == 0;
+    devices.push_back(addASIC(first ? CASIC::Name::Earth : CASIC::Name::Dummy, earthID));
+    devices.push_back(add3DRAM());
+    devices.push_back(addASIC(first ? CASIC::Name::Mars : CASIC::Name::Dummy, 0x016C6057));
+    devices.push_back(addASIC(CASIC::Name::Dummy, 0x016C6057));
+    devices.push_back(add3DRAM());
+    devices.push_back(add3DRAM());
+    devices.push_back(add3DRAM());
+  }
   m_scanChain = CJTAGScanChain(devices);
   JTAG.AttachScanChain(&m_scanChain);
 }
@@ -2097,7 +2182,6 @@ Result CPro1000::Init(void)
   m_scsiTCPBridge->Start();
   if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000())) // no VROM; Real3D DMA interrupt line unknown
     return Result::FAIL;
-  BuildScanChain();
   UART.AttachInterruptOutput([this](bool level)
   {
     if (level)

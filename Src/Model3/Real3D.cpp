@@ -1103,9 +1103,21 @@ void CReal3D::WriteHighCullingRAM(uint32_t addr, uint32_t data)
   cullingRAMHi[addr/4] = data;
 }
 
+void CReal3D::SetInstalledPolygonRAM(uint32_t size)
+{
+  m_installedPolygonRAMSize = std::min(size, m_hwConfig.polygonRAMSize);
+}
+
+uint32_t CReal3D::ReadPolygonRAM(uint32_t addr) const
+{
+  if (addr >= m_installedPolygonRAMSize)
+    return 0;
+  return polyRAM[addr / 4];
+}
+
 void CReal3D::WritePolygonRAM(uint32_t addr, uint32_t data)
 {
-  if (addr >= m_hwConfig.polygonRAMSize)
+  if (addr >= m_installedPolygonRAMSize)
     return;
 
   // If ping pong has elapsed we buffer this data, else we write it normally.
@@ -1332,6 +1344,7 @@ Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController 
 {
   // Memory layout for the hardware configuration
   m_hwConfig = hwConfig;
+  m_installedPolygonRAMSize = m_hwConfig.polygonRAMSize;
   MemoryLayout &l = m_layout;
   l.cullingRAMLo = 0;
   l.cullingRAMHi = l.cullingRAMLo + CULLING_RAM_LO_SIZE;

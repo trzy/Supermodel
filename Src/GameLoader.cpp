@@ -257,6 +257,7 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
   game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
   game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
+  game->polygon_memory = game_node["hardware/polygon_memory"].ValueAsDefault<unsigned>(0);
   std::map<std::string, Game::Platform> platforms
   {
     { "",                 Game::PLATFORM_MODEL3 },  // default to Model 3

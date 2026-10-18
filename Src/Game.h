@@ -13,7 +13,8 @@ struct Game
   std::string version;
   std::string manufacturer;
   unsigned year = 0;
-  std::string stepping;
+  std::string stepping;         // Model 3: stepping ("1.0", ...). Real3D Pro-1000: model ("1100", "1200", "1400").
+  unsigned polygon_memory = 0;  // Real3D Pro-1000: polygon memory in MB (0 = not given)
   enum Platform
   {
     PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
