@@ -67,6 +67,14 @@ void C53C810::SaveState(CBlockFile *SaveState)
   SaveState->Write(&Ctx.regDSTAT, sizeof(Ctx.regDSTAT));
   SaveState->Write(&Ctx.regDIEN, sizeof(Ctx.regDIEN));
   SaveState->Write(&Ctx.regISTAT, sizeof(Ctx.regISTAT));
+
+  // Separate block so that older save states still load. The base address is set by the game through PCI
+  // configuration space at boot; without it the register window at C0000000 ignores all accesses after a state is
+  // loaded in a new session (VF3 then waits on its DMA chain every frame and runs in slow motion).
+  SaveState->NewBlock("53C810 PCI", __FILE__);
+  UINT8 halted = Ctx.halt ? 1 : 0;
+  SaveState->Write(&baseAddress, sizeof(baseAddress));
+  SaveState->Write(&halted, sizeof(halted));
 }
 
 void C53C810::LoadState(CBlockFile *SaveState)
@@ -88,6 +96,16 @@ void C53C810::LoadState(CBlockFile *SaveState)
   SaveState->Read(&Ctx.regDSTAT, sizeof(Ctx.regDSTAT));
   SaveState->Read(&Ctx.regDIEN, sizeof(Ctx.regDIEN));
   SaveState->Read(&Ctx.regISTAT, sizeof(Ctx.regISTAT));
+
+  if (Result::OKAY == SaveState->FindBlock("53C810 PCI"))
+  {
+    UINT8 halted;
+    SaveState->Read(&baseAddress, sizeof(baseAddress));
+    SaveState->Read(&halted, sizeof(halted));
+    Ctx.halt = halted != 0;
+  }
+  else if (baseAddress == 0)
+    baseAddress = 0xC0;   // older save state: the address every Step 1.x game sets (Step 2.x boards don't use it)
 }
 
 
