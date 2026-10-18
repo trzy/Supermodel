@@ -147,7 +147,7 @@ bool R3DShader::LoadShader(const char* vertexShader, const char* fragmentShader)
 	m_locProjMat			= glGetUniformLocation(m_shaderProgram, "projMat");
 	m_locModelMat			= glGetUniformLocation(m_shaderProgram, "modelMat");
 
-	m_locHardwareStep		= glGetUniformLocation(m_shaderProgram, "hardwareStep");
+	m_locStep15Luminous		= glGetUniformLocation(m_shaderProgram, "step15Luminous");
 	m_locDiscardAlpha		= glGetUniformLocation(m_shaderProgram, "discardAlpha");
 
 	m_locCota				= glGetUniformLocation(m_shaderProgram, "cota");
@@ -370,7 +370,7 @@ void R3DShader::SetViewportUniforms(const Viewport *vp)
 
 	glUniformMatrix4fv(m_locProjMat, 1, GL_FALSE, vp->projectionMatrix);
 
-	glUniform1i(m_locHardwareStep, vp->hardwareStep);
+	glUniform1i(m_locStep15Luminous, vp->step15Luminous);
 
 	glUniform1f(m_locCota, vp->cota);
 }

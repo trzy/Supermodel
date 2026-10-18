@@ -31,7 +31,7 @@
 class CBlockFile;
 struct Game;
 struct ROMSet;
-class CRender2D;
+class IRender2D;
 class IRender3D;
 class CInputs;
 class COutputs;
@@ -129,30 +129,17 @@ public:
   virtual const Game &GetGame(void) const = 0;
 
   /*
-   * LoadGame(game, rom_set):
-   *
-   * Loads a game, copying in the provided ROMs and setting the hardware
-   * stepping.
-   *
-    * Parameters:
-   *    game      Game information.
-   *    rom_set   ROMs.
-   *
-   * Returns:
-   *    OKAY if successful, FAIL otherwise. Prints errors.
-   */
-  virtual Result LoadGame(const Game &game, const ROMSet &rom_set) = 0;
-  
-  /*
    * AttachRenderers(Render2DPtr, Render3DPtr):
    *
    * Attaches the renderers to the appropriate device objects.
    *
    * Parameters:
-   *    Render2DPtr   Pointer to a tile renderer object.
+   *    Render2DPtr   Pointer to a 2D layer renderer object (the type that
+   *                  the emulator needs: CRender2D for Model 3,
+   *                  CPro1000Render2D for the Pro-1000).
    *    Render3DPtr   Same as above but for a 3D renderer.
    */
-  virtual void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
+  virtual void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
   
   /*
    * AttachInputs(InputsPtr):
@@ -189,18 +176,24 @@ public:
   }
 
   /*
-   * Init(void):
+   * Init(game, rom_set):
    *
-   * One-time initialization of the context. Must be called prior to all
+   * One-time initialization of the context. Allocates memory, initializes
+   * the devices, copies in the provided ROMs, and configures the hardware
+   * for the game (for example, the stepping). Must be called prior to all
    * other members.
    *
    * NOTE: Command line settings will not have been applied here yet.
+   *
+   * Parameters:
+   *    game      Game information.
+   *    rom_set   ROMs.
    *
    * Returns:
    *    OKAY is successful, otherwise FAILED if a non-recoverable error
    *    occurred. Prints own error messages.
    */
-  virtual Result Init(void) = 0;
+  virtual Result Init(const Game &game, const ROMSet &rom_set) = 0;
 
   /*
    * PauseThreads(void):

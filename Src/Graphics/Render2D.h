@@ -35,6 +35,7 @@
 #include "New3D/GLSLShader.h"
 #include "FBO.h"
 #include "../Model3/TileGenBuffer.h"
+#include "IRender2D.h"
 
   /*
    * CRender2D:
@@ -44,7 +45,7 @@
    * the constructor, all members assume that a global GL device
    * context is available and that GL functions may be called.
    */
-class CRender2D
+class CRender2D : public IRender2D
 {
 public:
 	/*
@@ -53,7 +54,7 @@ public:
 	 * Prepare to render a new frame. Must be called once per frame prior to
 	 * drawing anything.
 	 */
-	void BeginFrame(void);
+	void BeginFrame(void) override;
 
 	/*
 	 * PreRenderFrame(void):
@@ -61,7 +62,7 @@ public:
 	 * Draws the all top layers (above 3D graphics) and bottom layers (below 3D
 	 * graphics) but does not yet display them. May send data to the GPU.
 	 */
-	void PreRenderFrame(void);
+	void PreRenderFrame(void) override;
 
 	/*
 	 * RenderFrameBottom(void):
@@ -69,7 +70,7 @@ public:
 	 * Overwrites the color buffer with bottom surface that was pre-rendered by
 	 * the last call to PreRenderFrame().
 	 */
-	void RenderFrameBottom(void);
+	void RenderFrameBottom(void) override;
 
 	/*
 	 * RenderFrameTop(void):
@@ -78,7 +79,7 @@ public:
 	 * call to PreRenderFrame(). Previously drawn graphics layers will be visible
 	 * through transparent regions.
 	 */
-	void RenderFrameTop(void);
+	void RenderFrameTop(void) override;
 
 	/*
 	 * EndFrame(void):
@@ -86,7 +87,7 @@ public:
 	 * Signals the end of rendering for this frame. Must be called last during
 	 * the frame.
 	 */
-	void EndFrame(void);
+	void EndFrame(void) override;
 
 	/*
 	 * WriteVRAM(addr, data):
@@ -172,7 +173,7 @@ public:
 	 *    OKAY is successful, otherwise FAILED if a non-recoverable error
 	 *    occurred. Prints own error messages.
 	 */
-	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget, UpscaleMode upscaleMode);
+	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget, UpscaleMode upscaleMode) override;
 
 	/*
 	 * CRender2D(config):
@@ -184,7 +185,7 @@ public:
 	 *    config  Run-time configuration.
 	 */
 	CRender2D(const Util::Config::Node& config);
-	~CRender2D(void);
+	~CRender2D(void) override;
 
 private:
 

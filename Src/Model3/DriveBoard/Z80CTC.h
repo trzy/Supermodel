@@ -19,7 +19,7 @@ private:
     struct Channel
     {
         UINT8   control                 = 0;        // last control word
-        UINT8   timeConstant            = 0;        // reload value
+        UINT16  timeConstant            = 0;        // reload value
         UINT16  counter                 = 0;        // current down-counter
         bool    interruptEnabled        = false;
         bool    counterMode             = false;

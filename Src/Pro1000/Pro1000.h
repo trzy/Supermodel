@@ -31,10 +31,15 @@
 #include "Game.h"
 #include "Pro1000/8259.h"
 #include "Pro1000/SCANPSC100F.h"
+#include "Pro1000/SCSITCPBridge.h"
+#include "Pro1000/SCSITCPBridgeProtocol.h"
+#include "Pro1000/SCSIHostAdapter.h"
 #include "Pro1000/UART.h"
 #include "Model3/53C810.h"
 #include "Model3/JTAG.h"
 #include "Model3/IEmulator.h"
+
+class CPro1000Render2D;
 #include "Model3/MPC10x.h"
 #include "Model3/PCI.h"
 #include "Model3/Real3D.h"
@@ -64,33 +69,32 @@ class CPro1000: public IEmulator, public IBus
 {
 public:
   // IEmulator interface
-  bool PauseThreads(void);
-  bool ResumeThreads(void);
-  void SaveState(CBlockFile *SaveState);
-  void LoadState(CBlockFile *SaveState);
-  void SaveNVRAM(CBlockFile *NVRAM);
-  void LoadNVRAM(CBlockFile *NVRAM);
-  void ClearNVRAM(void);
-  void RunFrame(void);
-  void RenderFrame(void);
-  void Reset(void);
-  const Game &GetGame(void) const;
-  Result LoadGame(const Game &game, const ROMSet &rom_set);
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
-  void AttachInputs(CInputs *InputsPtr);
-  void AttachOutputs(COutputs *OutputsPtr);
+  bool PauseThreads(void) override;
+  bool ResumeThreads(void) override;
+  void SaveState(CBlockFile *SaveState) override;
+  void LoadState(CBlockFile *SaveState) override;
+  void SaveNVRAM(CBlockFile *NVRAM) override;
+  void LoadNVRAM(CBlockFile *NVRAM) override;
+  void ClearNVRAM(void) override;
+  void RunFrame(void) override;
+  void RenderFrame(void) override;
+  void Reset(void) override;
+  const Game &GetGame(void) const override;
+  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
+  void AttachInputs(CInputs *InputsPtr) override;
+  void AttachOutputs(COutputs *OutputsPtr) override;
   void AttachConsoleInput(IConsoleInput *input) override;
-  Result Init(void);
+  Result Init(const Game &game, const ROMSet &rom_set) override;
 
   // IBus interface
-  UINT8 Read8(UINT32 addr);
-  UINT16 Read16(UINT32 addr);
-  UINT32 Read32(UINT32 addr);
-  UINT64 Read64(UINT32 addr);
-  void Write8(UINT32 addr, UINT8 data);
-  void Write16(UINT32 addr, UINT16 data);
-  void Write32(UINT32 addr, UINT32 data);
-  void Write64(UINT32 addr, UINT64 data);
+  UINT8 Read8(UINT32 addr) override;
+  UINT16 Read16(UINT32 addr) override;
+  UINT32 Read32(UINT32 addr) override;
+  UINT64 Read64(UINT32 addr) override;
+  void Write8(UINT32 addr, UINT8 data) override;
+  void Write16(UINT32 addr, UINT16 data) override;
+  void Write32(UINT32 addr, UINT32 data) override;
+  void Write64(UINT32 addr, UINT64 data) override;
 
   /*
    * DumpTimings(void):
@@ -131,8 +135,7 @@ private:
 
   bool IsSCSIAddress(UINT32 addr) const;          // True if address falls within SCSI controller's PCI-mapped register window
 
-  void BuildSyntheticSCSIROM(void);             // Creates minimal SCSI ROM contents when no image is available
-  void BuildScanChain(void);                    // Creates JTAG devices and connects them to the scan controller
+  void BuildScanChain(Game::Stepping stepping); // Creates the JTAG devices of the model (see "Models") and connects them to the scan controller
   void RunMainBoardFrame(void);                 // Runs PPC main board for a frame
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
 
@@ -156,7 +159,6 @@ private:
   UINT8   *ram;         // 4 MB PowerPC RAM
   UINT8   *flash;       // 8 MB flash ROM window
   UINT8   *scsiROM;     // 512 KB SCSI ROM (flash on SCSI controller's expansion ROM interface)
-  UINT8   *vrom;        // 64 MB VROM (does not exist on Pro-1000 but Real3D and renderer expect it; always zero)
 
   // PowerPC
   PPC_FETCH_REGION  PPCFetchRegions[3];
@@ -184,12 +186,16 @@ private:
   CMPC10x     PCIBridge;    // MPC105 PCI/bridge/memory controller
   CPCIBus     PCIBus;       // PCI bus
   C53C810     SCSI;         // SCSI controller (NCR 53C825 on real hardware, emulated as 53C810)
+  CSCSIHostAdapter SCSIHostAdapter; // host computer's SCSI host adapter (initiator on the SCSI bus)
+  std::unique_ptr<CSCSITCPBridge> m_scsiTCPBridge;  // connects host computer programs to the host adapter (destroyed before it)
   CReal3D     GPU;          // Real3D graphics hardware
   std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
-  C3DRAM      m_3dram[4];                       // 3D-RAMs on the JTAG scan chain
+  std::vector<std::unique_ptr<C3DRAM>> m_3drams; // 3D-RAMs on the JTAG scan chain
   CJTAGScanChain m_scanChain;                   // JTAG scan chain driven by JTAG controller
   CUART       UART;         // 16550-style serial port
   SuperAA     *m_superAA;
+  CPro1000Render2D *m_render2D = nullptr; // 2D layer (scroll layer) renderer
+  uint32_t    m_scrollRegister = 0;       // SCROLL register (0x62000000)
 };
 
 

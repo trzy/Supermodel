@@ -107,7 +107,7 @@ uniform float	fogAmbient;
 uniform bool	fixedShading;
 uniform bool	smoothShading;
 uniform float	layerDepthBias;		// PRO-1000: >1.0 pulls layered polys towards the viewer (reverse z)
-uniform int		hardwareStep;
+uniform bool	step15Luminous;
 uniform int		colourLayer;
 
 // matrices (shared with vertex shader)

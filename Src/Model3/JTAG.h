@@ -31,6 +31,7 @@
 #define INCLUDED_JTAG_H
 
 #include "BlockFile.h"
+#include "Game.h"
 #include <bitset>
 #include <vector>
 
@@ -39,6 +40,7 @@ class CReal3D;
 class CJTAGDevice
 {
 public:
+    virtual ~CJTAGDevice() = default;
     virtual void SaveStateToBlock(CBlockFile* SaveState) = 0;
     virtual void LoadStateFromBlock(CBlockFile* SaveState) = 0;
     virtual void CaptureDR() = 0;
@@ -83,10 +85,18 @@ public:
     CASIC(CReal3D& real3D, Name deviceName);
 
 private:
+    bool PolygonMemoryAccess(void) const;
+    unsigned PolygonMemoryWordCount(void) const;
+
     uint32_t m_idCode = 0;
     uint32_t m_modeword = 0;
     CReal3D& m_real3D;
     Name m_deviceName = Name::Dummy;
+
+    // Venus polygon memory test access (instructions 0x0C, 0x0F, 0x11). Not in
+    // save states: Model 3 does not use it.
+    uint32_t m_memoryAddress = 0;   // word address in polygon RAM
+    uint32_t m_memoryCount = 0;     // number of words to read
 };
 
 class C3DRAM : public CJTAGDevice
@@ -200,7 +210,21 @@ public:
     bool Read() const;
     void Write(bool tck, bool tms, bool tdi, bool trst);
     void Reset();
-    void SetStepping(int stepping);
+
+    /*
+     * SetStepping(stepping):
+     *
+     * Builds the Model 3 scan chain of the stepping (Step 1.x: 10 devices,
+     * Step 2.x: 17 devices) and sets the ID codes of the stepping. This is
+     * the Model 3 path only. Other systems do not use CJTAG. They build
+     * their scan chain manually: they make the CASIC and C3DRAM devices,
+     * put them in a CJTAGScanChain, and attach it to their JTAG controller
+     * (see CPro1000::BuildScanChain()).
+     *
+     * Parameters:
+     *    stepping  Model 3 stepping. Other values select Step 1.0.
+     */
+    void SetStepping(Game::Stepping stepping);
     CJTAG(CReal3D& real3D);
 
 private:

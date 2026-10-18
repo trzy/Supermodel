@@ -58,7 +58,7 @@ public:
 	* EndFrame(). This function traverses the scene database and builds up display
 	* lists.
 	*/
-	void RenderFrame(void);
+	void RenderFrame(void) override;
 
 	/*
 	* BeginFrame(void):
@@ -66,7 +66,7 @@ public:
 	* Prepare to render a new frame. Must be called once per frame prior to
 	* drawing anything.
 	*/
-	void BeginFrame(void);
+	void BeginFrame(void) override;
 
 	/*
 	* EndFrame(void):
@@ -74,7 +74,7 @@ public:
 	* Signals the end of rendering for this frame. Must be called last during
 	* the frame.
 	*/
-	void EndFrame(void);
+	void EndFrame(void) override;
 
 	/*
 	* UploadTextures(x, y, width, height):
@@ -87,7 +87,7 @@ public:
 	*		width	Width of texture data in texels.
 	*		height	Height.
 	*/
-	void UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height);
+	void UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height) override;
 
 	/*
 	* AttachMemory(cullingRAMLoPtr, cullingRAMHiPtr, polyRAMPtr, vromPtr,
@@ -105,20 +105,30 @@ public:
 	*/
 	void AttachMemory(const UINT32 *cullingRAMLoPtr,
 		const UINT32 *cullingRAMHiPtr, const UINT32 *polyRAMPtr,
-		const UINT32 *vromPtr, const UINT16 *textureRAMPtr);
+		const UINT32 *vromPtr, const UINT16 *textureRAMPtr) override;
 
 	/*
 	* SetStepping(stepping):
 	*
-	* Sets the Model 3 hardware stepping, which also determines the Real3D
-	* functionality. The default is Step 1.0. This should be called prior to
-	* any other emulation functions and after Init().
+	* Sets the hardware stepping, which determines the data formats and some
+	* behavior. The Real3D Pro-1000 uses the Model 3 Step 1.0 formats. This
+	* should be called prior to any other emulation functions and after
+	* Init().
 	*
 	* Parameters:
-	*   stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
-	*             0x21 for Step 2.1. Anything else defaults to 1.0.
+	*   stepping  Hardware stepping.
 	*/
-	void SetStepping(int stepping);
+	void SetStepping(Game::Stepping stepping) override;
+
+	/*
+	* SetVROMIsPolygonRAM(enable):
+	*
+	* If enabled, there is no VROM (Real3D Pro-1000): the VROM pointer points
+	* to polygon RAM, so models at 0x100000 and above are in writable polygon
+	* RAM. Then models are not cached as ROM models, and color table addresses
+	* have 24 bits instead of 20 bits.
+	*/
+	void SetVROMIsPolygonRAM(bool enable) override;
 
 	/*
 	* Init(xOffset, yOffset, xRes, yRes, totalXRes, totalYRes):
@@ -143,7 +153,7 @@ public:
 	*		occurred. Any allocated memory will not be freed until the
 	*		destructor is called. Prints own error messages.
 	*/
-	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
+	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget) override;
 
 	/*
 	* SetSunClamp(bool enable);
@@ -153,7 +163,7 @@ public:
 	* Parameters:
 	*		enable	Set clamp mode
 	*/
-	void SetSunClamp(bool enable);
+	void SetSunClamp(bool enable) override;
 
 	/*
 	* SetBlockCulling(bool enable);
@@ -163,7 +173,7 @@ public:
 	* Parameters:
 	*		enable	Set block culling
 	*/
-	void SetBlockCulling(bool enable);
+	void SetBlockCulling(bool enable) override;
 
 	/*
 	* GetLosValue(int layer);
@@ -173,7 +183,7 @@ public:
 	* Parameters:
 	*		layer	Priority layer to read from
 	*/
-	float GetLosValue(int layer);
+	float GetLosValue(int layer) override;
 
 	/*
 	* CRender3D(config):
@@ -246,7 +256,8 @@ private:
 	bool m_noWhiteFlash;
 
 	// Stepping
-	int		m_step;
+	bool	m_step10;			// Model 3 Step 1.0 or Pro-1000 (Step 1.0 formats and behavior)
+	bool	m_step15;			// Model 3 Step 1.5
 	int		m_offset;			// offset to subtract for words 3 and higher of culling nodes
 	float	m_vertexFactor;		// fixed-point conversion factor for vertices
 	float	m_textureNPFactor;	// fixed-point conversion factor for texture NP values
@@ -255,7 +266,8 @@ private:
 	const UINT32	*m_cullingRAMLo;	// 4 MB
 	const UINT32	*m_cullingRAMHi;	// 1 MB
 	const UINT32	*m_polyRAM;			// 4 MB
-	const UINT32	*m_vrom;			// 64 MB
+	const UINT32	*m_vrom;			// 64 MB (polygon RAM if m_vromIsPolygonRAM)
+	bool			m_vromIsPolygonRAM = false;
 	const UINT16	*m_textureRAM;		// 8 MB
 
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
