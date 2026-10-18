@@ -127,8 +127,9 @@
  * CASIC::PolygonMemoryAccess() in JTAG.cpp). It stops at the first word that
  * is not correct. The number of correct words is the number of memory cards
  * (bits 7-6 of the byte at RAM 0x70004), and show_config_data prints 8 MB +
- * 8 MB for each card. CReal3D::SetInstalledPolygonRAM() sets the size:
- * writes above it are ignored and reads return 0.
+ * 8 MB for each card. CPro1000::Init() gives the size to CReal3D
+ * (Real3DConfig::installedPolygonRAMSize): writes above it are ignored and
+ * reads return 0.
  *
  * show_config_data also prints the system type (bits 4-2 of the byte at RAM
  * 0x70005, set in get_hw_config at 0x6C44):
@@ -1972,9 +1973,148 @@ const Game &CPro1000::GetGame() const
   return m_game;
 }
 
-Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
+void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  m_game = Game();
+  // No tile generator. The 2D layer is the scroll layer (CPro1000Render2D).
+  m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
+  GPU.AttachRenderer(Render3DPtr);
+  m_superAA = superAA;
+}
+
+void CPro1000::AttachInputs(CInputs *InputsPtr)
+{
+  // No game inputs
+}
+
+void CPro1000::AttachOutputs(COutputs *OutputsPtr)
+{
+  // No outputs
+}
+
+void CPro1000::AttachConsoleInput(IConsoleInput *input)
+{
+  // Console input is received by the serial port
+  UART.AttachInput(input);
+}
+
+/*
+ * Builds the JTAG scan chain of the model. The firmware's configuration
+ * detection (0x17EB0) reads the chain's ID codes and expects one of three
+ * layouts (see JTAG):
+ *
+ *   PRO-1100  single pixel board  Jupiter, Mercury, Venus, then one group
+ *   PRO-1200  dual pixel board    Jupiter, Mercury, Venus, then two groups
+ *   PRO-1400  high res            Jupiter, Mercury, Venus, then four groups
+ *
+ * A group is Earth, 3D-RAM, Mars, Mars, 3D-RAM, 3D-RAM, 3D-RAM. The single
+ * and dual layouts are the Model 3 Step 1.x and 2.x chains. The high res
+ * layout must have the high res ID codes for Jupiter (0x0D7F1057) and Earth
+ * (0x0D7F0057). ID code version fields are ignored by the firmware but are
+ * set to 0, as printed in its expected ID table. Only the first ASIC of each
+ * type forwards its mode word to the Real3D object (as on Model 3).
+ */
+void CPro1000::BuildScanChain(Model model)
+{
+  auto addASIC = [this](CASIC::Name name, uint32_t idCode) -> CJTAGDevice *
+  {
+    m_asics.emplace_back(std::make_unique<CASIC>(GPU, name));
+    m_asics.back()->SetIDCode(idCode);
+    return m_asics.back().get();
+  };
+  auto add3DRAM = [this]() -> CJTAGDevice *
+  {
+    m_3drams.emplace_back(std::make_unique<C3DRAM>());
+    return m_3drams.back().get();
+  };
+
+  bool highRes = model == Model::PRO1400;
+  uint32_t jupiterID = highRes ? 0x0D7F1057 : 0x016C7057;
+  uint32_t earthID = highRes ? 0x0D7F0057 : 0x016C5057;
+  std::vector<CJTAGDevice *> devices
+  {
+    addASIC(CASIC::Name::Jupiter, jupiterID),
+    addASIC(CASIC::Name::Mercury, 0x016C3057),
+    addASIC(CASIC::Name::Venus,   0x016C4057)
+  };
+  unsigned groups = model == Model::PRO1100 ? 1 : (model == Model::PRO1200 ? 2 : 4);
+  for (unsigned group = 0; group < groups; group++)
+  {
+    bool first = group == 0;
+    devices.push_back(addASIC(first ? CASIC::Name::Earth : CASIC::Name::Dummy, earthID));
+    devices.push_back(add3DRAM());
+    devices.push_back(addASIC(first ? CASIC::Name::Mars : CASIC::Name::Dummy, 0x016C6057));
+    devices.push_back(addASIC(CASIC::Name::Dummy, 0x016C6057));
+    devices.push_back(add3DRAM());
+    devices.push_back(add3DRAM());
+    devices.push_back(add3DRAM());
+  }
+  m_scanChain = CJTAGScanChain(devices);
+  JTAG.AttachScanChain(&m_scanChain);
+}
+
+// Pro-1000 initialization: memory, devices, the model, and ROMs
+Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
+{
+  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
+
+  // Model and polygon memory (see "Models")
+  Model model;
+  if (game.stepping.empty() || game.stepping == "1100")
+    model = Model::PRO1100;
+  else if (game.stepping == "1200")
+    model = Model::PRO1200;
+  else if (game.stepping == "1400")
+    model = Model::PRO1400;
+  else
+    return ErrorLog("Unknown Pro-1000 model '%s' for '%s'. The stepping must be 1100, 1200, or 1400.", game.stepping.c_str(), game.name.c_str());
+  unsigned polygonMemoryMB = game.polygon_memory ? game.polygon_memory : 8;
+  if (polygonMemoryMB != 8 && polygonMemoryMB != 16 && polygonMemoryMB != 24 && polygonMemoryMB != 32)
+    return ErrorLog("Polygon memory of %u MB for '%s' is not possible. It must be 8, 16, 24, or 32 MB.", polygonMemoryMB, game.name.c_str());
+
+  // Allocate all memory for ROMs and PPC RAM
+  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
+  if (NULL == memoryPool)
+    return ErrorLog("Insufficient memory for Pro-1000 object (needs %1.1f MB).", memSizeMB);
+  memset(memoryPool, 0, MEM_POOL_SIZE);
+
+  // Set up pointers
+  ram = &memoryPool[RAM_OFFSET];
+  flash = &memoryPool[FLASH_OFFSET];
+  scsiROM = &memoryPool[SCSI_ROM_OFFSET];
+
+  // Initialize devices (PowerPC initialized after ROMs loaded)
+  PCIBridge.Init();
+  PCIBus.Init();
+  SCSI.Init(this, &PIC, PIC_LINE_SCSI);
+  SCSI.AttachInitiator(&SCSIHostAdapter);
+
+  // Host computer programs connect to the SCSI host adapter through the
+  // bridge. If the bridge cannot start, emulation continues without it.
+  m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
+  m_scsiTCPBridge->Start();
+  if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000(polygonMemoryMB * 0x100000))) // no VROM; Real3D DMA interrupt line unknown
+    return Result::FAIL;
+  UART.AttachInterruptOutput([this](bool level)
+  {
+    if (level)
+      PIC.Assert(PIC_LINE_UART);
+    else
+      PIC.Deassert(PIC_LINE_UART);
+  });
+  JTAG.AttachInterruptOutput([this](bool level)
+  {
+    if (level)
+      PIC.Assert(PIC_LINE_JTAG);
+    else
+      PIC.Deassert(PIC_LINE_JTAG);
+  });
+
+  PCIBridge.AttachPCIBus(&PCIBus);
+  PCIBus.AttachDevice(13, &GPU);
+  PCIBus.AttachDevice(SCSI_PCI_DEVICE, &SCSI);
+  BuildScanChain(model);
+
+  DebugLog("Initialized Pro-1000 (allocated %1.1f MB)\n", memSizeMB);
 
   // Unprogrammed flash reads back as all 1's
   memset(flash, 0xFF, FLASH_SIZE);
@@ -2043,21 +2183,6 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   // Initialize Real3D
   GPU.SetStepping(STEPPING);
 
-  // Model and polygon memory (see "Models")
-  if (game.stepping.empty() || game.stepping == "1100")
-    m_model = Model::PRO1100;
-  else if (game.stepping == "1200")
-    m_model = Model::PRO1200;
-  else if (game.stepping == "1400")
-    m_model = Model::PRO1400;
-  else
-    return ErrorLog("Unknown Pro-1000 model '%s' for '%s'. The stepping must be 1100, 1200, or 1400.", game.stepping.c_str(), game.name.c_str());
-  m_polygonMemoryMB = game.polygon_memory ? game.polygon_memory : 8;
-  if (m_polygonMemoryMB != 8 && m_polygonMemoryMB != 16 && m_polygonMemoryMB != 24 && m_polygonMemoryMB != 32)
-    return ErrorLog("Polygon memory of %u MB for '%s' is not possible. It must be 8, 16, 24, or 32 MB.", m_polygonMemoryMB, game.name.c_str());
-  BuildScanChain(m_model);
-  GPU.SetInstalledPolygonRAM(m_polygonMemoryMB * 0x100000);
-
   // Print game information
   if (!game.version.empty())
     std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
@@ -2067,142 +2192,10 @@ Result CPro1000::LoadGame(const Game &game, const ROMSet &rom_set)
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
   std::cout << "    Platform:       Real3D Pro-1000" << std::endl;
-  std::cout << "    Model:          PRO-" << (m_model == Model::PRO1100 ? "1100 (1 pixel processor)" : (m_model == Model::PRO1200 ? "1200 (2 pixel processors)" : "1400 (4 pixel processors)")) << ", " << m_polygonMemoryMB << " MB polygon memory" << std::endl;
+  std::cout << "    Model:          PRO-" << (model == Model::PRO1100 ? "1100 (1 pixel processor)" : (model == Model::PRO1200 ? "1200 (2 pixel processors)" : "1400 (4 pixel processors)")) << ", " << polygonMemoryMB << " MB polygon memory" << std::endl;
   std::cout << std::endl;
 
   m_game = game;
-  return Result::OKAY;
-}
-
-void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
-{
-  // No tile generator. The 2D layer is the scroll layer (CPro1000Render2D).
-  m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
-  GPU.AttachRenderer(Render3DPtr);
-  m_superAA = superAA;
-}
-
-void CPro1000::AttachInputs(CInputs *InputsPtr)
-{
-  // No game inputs
-}
-
-void CPro1000::AttachOutputs(COutputs *OutputsPtr)
-{
-  // No outputs
-}
-
-void CPro1000::AttachConsoleInput(IConsoleInput *input)
-{
-  // Console input is received by the serial port
-  UART.AttachInput(input);
-}
-
-/*
- * Builds the JTAG scan chain of the model. The firmware's configuration
- * detection (0x17EB0) reads the chain's ID codes and expects one of three
- * layouts (see JTAG):
- *
- *   PRO-1100  single pixel board  Jupiter, Mercury, Venus, then one group
- *   PRO-1200  dual pixel board    Jupiter, Mercury, Venus, then two groups
- *   PRO-1400  high res            Jupiter, Mercury, Venus, then four groups
- *
- * A group is Earth, 3D-RAM, Mars, Mars, 3D-RAM, 3D-RAM, 3D-RAM. The single
- * and dual layouts are the Model 3 Step 1.x and 2.x chains. The high res
- * layout must have the high res ID codes for Jupiter (0x0D7F1057) and Earth
- * (0x0D7F0057). ID code version fields are ignored by the firmware but are
- * set to 0, as printed in its expected ID table. Only the first ASIC of each
- * type forwards its mode word to the Real3D object (as on Model 3).
- */
-void CPro1000::BuildScanChain(Model model)
-{
-  m_asics.clear();
-  m_3drams.clear();
-  auto addASIC = [this](CASIC::Name name, uint32_t idCode) -> CJTAGDevice *
-  {
-    m_asics.emplace_back(std::make_unique<CASIC>(GPU, name));
-    m_asics.back()->SetIDCode(idCode);
-    return m_asics.back().get();
-  };
-  auto add3DRAM = [this]() -> CJTAGDevice *
-  {
-    m_3drams.emplace_back(std::make_unique<C3DRAM>());
-    return m_3drams.back().get();
-  };
-
-  bool highRes = model == Model::PRO1400;
-  uint32_t jupiterID = highRes ? 0x0D7F1057 : 0x016C7057;
-  uint32_t earthID = highRes ? 0x0D7F0057 : 0x016C5057;
-  std::vector<CJTAGDevice *> devices
-  {
-    addASIC(CASIC::Name::Jupiter, jupiterID),
-    addASIC(CASIC::Name::Mercury, 0x016C3057),
-    addASIC(CASIC::Name::Venus,   0x016C4057)
-  };
-  unsigned groups = model == Model::PRO1100 ? 1 : (model == Model::PRO1200 ? 2 : 4);
-  for (unsigned group = 0; group < groups; group++)
-  {
-    bool first = group == 0;
-    devices.push_back(addASIC(first ? CASIC::Name::Earth : CASIC::Name::Dummy, earthID));
-    devices.push_back(add3DRAM());
-    devices.push_back(addASIC(first ? CASIC::Name::Mars : CASIC::Name::Dummy, 0x016C6057));
-    devices.push_back(addASIC(CASIC::Name::Dummy, 0x016C6057));
-    devices.push_back(add3DRAM());
-    devices.push_back(add3DRAM());
-    devices.push_back(add3DRAM());
-  }
-  m_scanChain = CJTAGScanChain(devices);
-  JTAG.AttachScanChain(&m_scanChain);
-}
-
-Result CPro1000::Init(void)
-{
-  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
-
-  // Allocate all memory for ROMs and PPC RAM
-  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
-  if (NULL == memoryPool)
-    return ErrorLog("Insufficient memory for Pro-1000 object (needs %1.1f MB).", memSizeMB);
-  memset(memoryPool, 0, MEM_POOL_SIZE);
-
-  // Set up pointers
-  ram = &memoryPool[RAM_OFFSET];
-  flash = &memoryPool[FLASH_OFFSET];
-  scsiROM = &memoryPool[SCSI_ROM_OFFSET];
-
-  // Initialize devices (PowerPC initialized after ROMs loaded)
-  PCIBridge.Init();
-  PCIBus.Init();
-  SCSI.Init(this, &PIC, PIC_LINE_SCSI);
-  SCSI.AttachInitiator(&SCSIHostAdapter);
-
-  // Host computer programs connect to the SCSI host adapter through the
-  // bridge. If the bridge cannot start, emulation continues without it.
-  m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
-  m_scsiTCPBridge->Start();
-  if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000())) // no VROM; Real3D DMA interrupt line unknown
-    return Result::FAIL;
-  UART.AttachInterruptOutput([this](bool level)
-  {
-    if (level)
-      PIC.Assert(PIC_LINE_UART);
-    else
-      PIC.Deassert(PIC_LINE_UART);
-  });
-  JTAG.AttachInterruptOutput([this](bool level)
-  {
-    if (level)
-      PIC.Assert(PIC_LINE_JTAG);
-    else
-      PIC.Deassert(PIC_LINE_JTAG);
-  });
-
-  PCIBridge.AttachPCIBus(&PCIBus);
-  PCIBus.AttachDevice(13, &GPU);
-  PCIBus.AttachDevice(SCSI_PCI_DEVICE, &SCSI);
-
-  DebugLog("Initialized Pro-1000 (allocated %1.1f MB)\n", memSizeMB);
-
   return Result::OKAY;
 }
 

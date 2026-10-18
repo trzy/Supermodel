@@ -129,21 +129,6 @@ public:
   virtual const Game &GetGame(void) const = 0;
 
   /*
-   * LoadGame(game, rom_set):
-   *
-   * Loads a game, copying in the provided ROMs and setting the hardware
-   * stepping.
-   *
-    * Parameters:
-   *    game      Game information.
-   *    rom_set   ROMs.
-   *
-   * Returns:
-   *    OKAY if successful, FAIL otherwise. Prints errors.
-   */
-  virtual Result LoadGame(const Game &game, const ROMSet &rom_set) = 0;
-  
-  /*
    * AttachRenderers(Render2DPtr, Render3DPtr):
    *
    * Attaches the renderers to the appropriate device objects.
@@ -191,18 +176,24 @@ public:
   }
 
   /*
-   * Init(void):
+   * Init(game, rom_set):
    *
-   * One-time initialization of the context. Must be called prior to all
+   * One-time initialization of the context. Allocates memory, initializes
+   * the devices, copies in the provided ROMs, and configures the hardware
+   * for the game (for example, the stepping). Must be called prior to all
    * other members.
    *
    * NOTE: Command line settings will not have been applied here yet.
+   *
+   * Parameters:
+   *    game      Game information.
+   *    rom_set   ROMs.
    *
    * Returns:
    *    OKAY is successful, otherwise FAILED if a non-recoverable error
    *    occurred. Prints own error messages.
    */
-  virtual Result Init(void) = 0;
+  virtual Result Init(const Game &game, const ROMSet &rom_set) = 0;
 
   /*
    * PauseThreads(void):

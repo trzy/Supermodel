@@ -80,12 +80,11 @@ public:
   void RenderFrame(void) override;
   void Reset(void) override;
   const Game &GetGame(void) const override;
-  Result LoadGame(const Game &game, const ROMSet &rom_set) override;
   void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
   void AttachInputs(CInputs *InputsPtr) override;
   void AttachOutputs(COutputs *OutputsPtr) override;
   void AttachConsoleInput(IConsoleInput *input) override;
-  Result Init(void) override;
+  Result Init(const Game &game, const ROMSet &rom_set) override;
 
   // IBus interface
   UINT8 Read8(UINT32 addr) override;
@@ -200,8 +199,6 @@ private:
   CReal3D     GPU;          // Real3D graphics hardware
   std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
   std::vector<std::unique_ptr<C3DRAM>> m_3drams; // 3D-RAMs on the JTAG scan chain
-  Model       m_model = Model::PRO1100;         // model (Games.xml stepping)
-  unsigned    m_polygonMemoryMB = 8;            // polygon memory (Games.xml polygon_memory)
   CJTAGScanChain m_scanChain;                   // JTAG scan chain driven by JTAG controller
   CUART       UART;         // 16550-style serial port
   SuperAA     *m_superAA;

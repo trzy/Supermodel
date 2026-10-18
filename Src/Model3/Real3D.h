@@ -67,6 +67,12 @@ struct Real3DConfig
   // 64 MB at 0x98000000-0x9BFFFFFF, enough for every 24-bit word address.
   uint32_t polygonRAMSize = 0x400000;
 
+  // Size of the polygon RAM that is installed, in bytes. CReal3D::Init()
+  // clamps it to polygonRAMSize. Writes above it are ignored, and
+  // CReal3D::ReadPolygonRAM() returns 0 there. Model 3: 4 MB. Pro-1000: 8,
+  // 16, 24, or 32 MB.
+  uint32_t installedPolygonRAMSize = 0x400000;
+
   // If true, there is no VROM and polygon RAM replaces it: model and texture
   // word addresses at 0x100000 and above address polygon RAM (Pro-1000). If
   // false, they address VROM (Model 3).
@@ -77,10 +83,11 @@ struct Real3DConfig
     return Real3DConfig();
   }
 
-  static Real3DConfig Pro1000(void)
+  static Real3DConfig Pro1000(uint32_t installedPolygonRAMSize)
   {
     Real3DConfig config;
     config.polygonRAMSize = 0x4000000;
+    config.installedPolygonRAMSize = installedPolygonRAMSize;
     config.vromIsPolygonRAM = true;
     return config;
   }
@@ -336,21 +343,6 @@ public:
   void WritePolygonRAM(uint32_t addr, uint32_t data);
 
   /*
-   * SetInstalledPolygonRAM(size):
-   *
-   * Sets the size of the polygon RAM that is installed. It cannot be larger
-   * than Real3DConfig::polygonRAMSize, which is the size of the memory that
-   * the renderer can address. Writes above the installed size are ignored,
-   * and ReadPolygonRAM() returns 0 there. The default is
-   * Real3DConfig::polygonRAMSize. The Real3D Pro-1000 has 8, 16, 24, or 32
-   * MB.
-   *
-   * Parameters:
-   *    size  Installed size in bytes.
-   */
-  void SetInstalledPolygonRAM(uint32_t size);
-
-  /*
    * ReadPolygonRAM(addr):
    *
    * Reads a word of polygon RAM (for the JTAG memory test access of Venus).
@@ -556,7 +548,6 @@ private:
   // Hardware configuration, and the layout of the memory pool that follows
   // from it (offsets and sizes in bytes)
   Real3DConfig m_hwConfig;
-  uint32_t m_installedPolygonRAMSize = 0;   // installed polygon RAM in bytes (see SetInstalledPolygonRAM())
   struct MemoryLayout
   {
     uint32_t cullingRAMLo, cullingRAMHi, polyRAM, textureRAM, textureFIFO;

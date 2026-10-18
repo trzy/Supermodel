@@ -938,9 +938,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   bool        dumpTimings = false;
 
   // Initialize and load ROMs
-  if (Result::OKAY != Emu->Init())
-    return 1;
-  if (Emu->LoadGame(game, *rom_set) != Result::OKAY)
+  if (Result::OKAY != Emu->Init(game, *rom_set))
     return 1;
   *rom_set = ROMSet();  // free up this memory we won't need anymore
 
