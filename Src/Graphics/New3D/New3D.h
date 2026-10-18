@@ -110,15 +110,15 @@ public:
 	/*
 	* SetStepping(stepping):
 	*
-	* Sets the Model 3 hardware stepping, which also determines the Real3D
-	* functionality. The default is Step 1.0. This should be called prior to
-	* any other emulation functions and after Init().
+	* Sets the hardware stepping, which determines the data formats and some
+	* behavior. The Real3D Pro-1000 uses the Model 3 Step 1.0 formats. This
+	* should be called prior to any other emulation functions and after
+	* Init().
 	*
 	* Parameters:
-	*   stepping  0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
-	*             0x21 for Step 2.1. Anything else defaults to 1.0.
+	*   stepping  Hardware stepping.
 	*/
-	void SetStepping(int stepping) override;
+	void SetStepping(Game::Stepping stepping) override;
 
 	/*
 	* SetVROMIsPolygonRAM(enable):
@@ -256,7 +256,8 @@ private:
 	bool m_noWhiteFlash;
 
 	// Stepping
-	int		m_step;
+	bool	m_step10;			// Model 3 Step 1.0 or Pro-1000 (Step 1.0 formats and behavior)
+	bool	m_step15;			// Model 3 Step 1.5
 	int		m_offset;			// offset to subtract for words 3 and higher of culling nodes
 	float	m_vertexFactor;		// fixed-point conversion factor for vertices
 	float	m_textureNPFactor;	// fixed-point conversion factor for texture NP values

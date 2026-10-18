@@ -108,6 +108,7 @@ public:
   void AttachRenderers(IRender2D *render2D, IRender3D *render3D, SuperAA* superAA) override
   {
     m_tileGen.AttachRenderer(dynamic_cast<CRender2D *>(render2D));
+    render3D->SetStepping(m_game.stepping);
     m_real3D.AttachRenderer(render3D);
   }
 
@@ -125,7 +126,7 @@ public:
     m_irq.Init();
     if (Result::OKAY != m_tileGen.Init(&m_irq))
       return Result::FAIL;
-    if (Result::OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, CIRQ::NMI))
+    if (Result::OKAY != m_real3D.Init(m_vrom.get(), this, &m_irq, CIRQ::NMI, Real3DConfig::Model3(game.stepping)))
       return Result::FAIL;
     m_game = game;
     if (rom_set.get_rom("vrom").size <= 32*0x100000)
@@ -135,8 +136,6 @@ public:
     }
     else
       rom_set.get_rom("vrom").CopyTo(m_vrom.get(), 64*0x100000);
-    int stepping = ((m_game.stepping[0] - '0') << 4) | (m_game.stepping[2] - '0');
-    m_real3D.SetStepping(stepping);
     return Result::OKAY;
   }
 

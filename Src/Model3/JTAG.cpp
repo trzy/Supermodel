@@ -473,11 +473,11 @@ void CJTAG::BuildScanChain()
     m_scanChain = CJTAGScanChain(std::vector<CJTAGDevice*>(m_device, m_device + m_numDevices));
 }
 
-void CJTAG::SetStepping(int stepping)
+void CJTAG::SetStepping(Game::Stepping stepping)
 {
     switch (stepping)
     {
-    case 0x21:
+    case Game::Stepping::MODEL3_2_1:
         m_mercury.SetIDCode(0x416c3057);
         m_venus.SetIDCode(0x316c4057);
         m_earth0.SetIDCode(0x516c5057);
@@ -489,7 +489,7 @@ void CJTAG::SetStepping(int stepping)
         m_jupiter.SetIDCode(0x516c7057);
         m_numDevices = 17;
         break;
-    case 0x20:
+    case Game::Stepping::MODEL3_2_0:
         m_mercury.SetIDCode(0x416c3057);
         m_venus.SetIDCode(0x316c4057);
         m_earth0.SetIDCode(0x416c5057);
@@ -501,7 +501,7 @@ void CJTAG::SetStepping(int stepping)
         m_jupiter.SetIDCode(0x416c7057);
         m_numDevices = 17;
         break;
-    case 0x15:
+    case Game::Stepping::MODEL3_1_5:
         m_mercury.SetIDCode(0x316c3057);
         m_venus.SetIDCode(0x216c4057);
         m_earth0.SetIDCode(0x316c5057);
@@ -510,7 +510,7 @@ void CJTAG::SetStepping(int stepping)
         m_jupiter.SetIDCode(0x316c7057);
         m_numDevices = 10;
         break;
-    case 0x10:
+    case Game::Stepping::MODEL3_1_0:
     default:
         m_mercury.SetIDCode(0x216c3057);
         m_venus.SetIDCode(0x116c4057);

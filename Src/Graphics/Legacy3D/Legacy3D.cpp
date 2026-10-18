@@ -515,7 +515,7 @@ void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
   m[CMINDEX(2,0)]=-1.0; m[CMINDEX(2,1)]=0.0;  m[CMINDEX(2,2)]=0.0;  m[CMINDEX(2,3)]=0.0;
   m[CMINDEX(3,0)]=0.0;  m[CMINDEX(3,1)]=0.0;  m[CMINDEX(3,2)]=0.0;  m[CMINDEX(3,3)]=1.0;
   
-  if (step > 0x10)
+  if (!step10)
     glLoadMatrixf(m);
   else
   {
@@ -1086,17 +1086,12 @@ void CLegacy3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullin
   DebugLog("Legacy3D attached Real3D memory regions\n");
 }
 
-void CLegacy3D::SetStepping(int stepping)
+void CLegacy3D::SetStepping(Game::Stepping stepping)
 {
-  step = stepping;
-  
-  if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
-  {
-    DebugLog("Legacy3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
-    step = 0x10;
-  }
-  
-  if (step > 0x10)
+  // The Pro-1000 uses the Step 1.0 formats
+  step10 = stepping == Game::Stepping::MODEL3_1_0 || Game::IsPro1000Stepping(stepping);
+
+  if (!step10)
   {
     offset = 0;           // culling nodes are 10 words
     vertexFactor = (1.0f/2048.0f);  // vertices are in 13.11 format
@@ -1107,7 +1102,7 @@ void CLegacy3D::SetStepping(int stepping)
     vertexFactor = (1.0f/128.0f); // 17.7
   }
   
-  DebugLog("Legacy3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
+  DebugLog("Legacy3D set to %s\n", Game::SteppingName(stepping));
 }
 
 Result CLegacy3D::SetupGLObjects()

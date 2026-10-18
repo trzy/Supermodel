@@ -30,6 +30,7 @@
 #define INCLUDED_REAL3D_H
 
 #include "CPU/IRQController.h"
+#include "Game.h"
 #include "JTAG.h"
 #include "PCI.h"
 #include "CPU/Bus.h"
@@ -58,8 +59,8 @@ struct QueuedUploadTextures
 /*
  * Real3DConfig:
  *
- * Hardware configuration of the Real3D graphics hardware. The default values
- * are the Model 3 configuration. Use Pro1000() for the Real3D Pro-1000.
+ * Hardware configuration of the Real3D graphics hardware. Use Model3() or
+ * Pro1000() to make a configuration.
  */
 struct Real3DConfig
 {
@@ -78,19 +79,22 @@ struct Real3DConfig
   // false, they address VROM (Model 3).
   bool vromIsPolygonRAM = false;
 
-  static Real3DConfig Model3(void)
-  {
-    return Real3DConfig();
-  }
+  // PCI vendor and device ID of the ASIC that is connected to the PCI slot
+  // (CReal3D::PCIID). Model 3 Step 1.x and the Pro-1000: Step1x. Model 3
+  // Step 2.x: Step2x.
+  uint32_t pciID = 0;
 
-  static Real3DConfig Pro1000(uint32_t installedPolygonRAMSize)
-  {
-    Real3DConfig config;
-    config.polygonRAMSize = 0x4000000;
-    config.installedPolygonRAMSize = installedPolygonRAMSize;
-    config.vromIsPolygonRAM = true;
-    return config;
-  }
+  // If true, the texture port (0x90000000) takes one word: the word address
+  // of a texture block in VROM (Model 3 Step 1.0 and the Pro-1000). If false,
+  // it takes two words: the address and the texture header (Model 3 Step 1.5
+  // and later).
+  bool singleWordTexturePort = false;
+
+  // Model 3 configuration of the stepping
+  static Real3DConfig Model3(Game::Stepping stepping);
+
+  // Real3D Pro-1000 configuration. The installed polygon RAM is in bytes.
+  static Real3DConfig Pro1000(uint32_t installedPolygonRAMSize);
 };
 
 /*
@@ -451,19 +455,6 @@ public:
    */
   void AttachRenderer(IRender3D *Render3DPtr);
 
-  /*
-   * SetStepping(stepping):
-   *
-   * Sets the Model 3 hardware stepping, which also determines the Real3D
-   * functionality. The default is Step 1.0. This should be called prior to
-   * any other emulation functions and after Init().
-   *
-   * Parameters:
-   *    stepping    0x10 for Step 1.0, 0x15 for Step 1.5, 0x20 for Step 2.0, or
-   *                0x21 for Step 2.1. Anything else defaults to 1.0.
-   */
-  void SetStepping(int stepping);
-
 
   /*
    * Init(vromPtr, BusObjectPtr, IRQObjectPtr, dmaIRQBit, hwConfig):
@@ -482,13 +473,13 @@ public:
    *                  and DMA interrupts.
    *    dmaIRQBit     IRQ line mask to pass along to IRQ controller
    *                  when asserting interrupts.
-   *    hwConfig      Hardware configuration (default: Model 3).
+   *    hwConfig      Hardware configuration (see Real3DConfig).
    *
    * Returns:
    *    OKAY if successful otherwise FAIL (not enough memory). Prints own
    *    errors.
    */
-  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit, const Real3DConfig &hwConfig = Real3DConfig::Model3());
+  Result Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit, const Real3DConfig &hwConfig);
 
   /*
    * CReal3D(config):
@@ -564,8 +555,6 @@ private:
 
   // Data passed from Model 3 object
   const uint32_t  *vrom = nullptr;          // Video ROM (polygon RAM if m_hwConfig.vromIsPolygonRAM)
-  int             step = 0x10;              // hardware stepping (as in GameInfo structure)
-  uint32_t        pciID = PCIID::Step1x;;   // PCI vendor and device ID
 
   // Error flag (to limit errors to once per frame)
   bool error = false;   // true if an error occurred this frame

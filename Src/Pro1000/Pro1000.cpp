@@ -960,7 +960,6 @@ constexpr static uint32_t RAM_OFFSET        = 0;
 constexpr static uint32_t FLASH_OFFSET      = RAM_OFFSET + RAM_SIZE;
 constexpr static uint32_t SCSI_ROM_OFFSET   = FLASH_OFFSET + FLASH_SIZE;
 
-constexpr static int      STEPPING          = 0x10;       // treat hardware as Model 3 Step 1.0
 constexpr static unsigned PPC_FREQUENCY_MHZ = 66;         // core clock (33 MHz bus x 2), see "CPU Clock and Time Base"
 
 // On Model 3, the ping-pong flip line is programmed into a tile generator
@@ -1977,6 +1976,7 @@ void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, S
 {
   // No tile generator. The 2D layer is the scroll layer (CPro1000Render2D).
   m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
+  Render3DPtr->SetStepping(m_game.stepping);
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
 }
@@ -2013,7 +2013,7 @@ void CPro1000::AttachConsoleInput(IConsoleInput *input)
  * set to 0, as printed in its expected ID table. Only the first ASIC of each
  * type forwards its mode word to the Real3D object (as on Model 3).
  */
-void CPro1000::BuildScanChain(Model model)
+void CPro1000::BuildScanChain(Game::Stepping stepping)
 {
   auto addASIC = [this](CASIC::Name name, uint32_t idCode) -> CJTAGDevice *
   {
@@ -2027,7 +2027,7 @@ void CPro1000::BuildScanChain(Model model)
     return m_3drams.back().get();
   };
 
-  bool highRes = model == Model::PRO1400;
+  bool highRes = stepping == Game::Stepping::PRO1000_1400;
   uint32_t jupiterID = highRes ? 0x0D7F1057 : 0x016C7057;
   uint32_t earthID = highRes ? 0x0D7F0057 : 0x016C5057;
   std::vector<CJTAGDevice *> devices
@@ -2036,7 +2036,7 @@ void CPro1000::BuildScanChain(Model model)
     addASIC(CASIC::Name::Mercury, 0x016C3057),
     addASIC(CASIC::Name::Venus,   0x016C4057)
   };
-  unsigned groups = model == Model::PRO1100 ? 1 : (model == Model::PRO1200 ? 2 : 4);
+  unsigned groups = stepping == Game::Stepping::PRO1000_1100 ? 1 : (stepping == Game::Stepping::PRO1000_1200 ? 2 : 4);
   for (unsigned group = 0; group < groups; group++)
   {
     bool first = group == 0;
@@ -2057,16 +2057,7 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
 {
   constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
 
-  // Model and polygon memory (see "Models")
-  Model model;
-  if (game.stepping.empty() || game.stepping == "1100")
-    model = Model::PRO1100;
-  else if (game.stepping == "1200")
-    model = Model::PRO1200;
-  else if (game.stepping == "1400")
-    model = Model::PRO1400;
-  else
-    return ErrorLog("Unknown Pro-1000 model '%s' for '%s'. The stepping must be 1100, 1200, or 1400.", game.stepping.c_str(), game.name.c_str());
+  // Polygon memory (see "Models"). GameLoader has checked the stepping.
   unsigned polygonMemoryMB = game.polygon_memory ? game.polygon_memory : 8;
   if (polygonMemoryMB != 8 && polygonMemoryMB != 16 && polygonMemoryMB != 24 && polygonMemoryMB != 32)
     return ErrorLog("Polygon memory of %u MB for '%s' is not possible. It must be 8, 16, 24, or 32 MB.", polygonMemoryMB, game.name.c_str());
@@ -2112,7 +2103,7 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   PCIBridge.AttachPCIBus(&PCIBus);
   PCIBus.AttachDevice(13, &GPU);
   PCIBus.AttachDevice(SCSI_PCI_DEVICE, &SCSI);
-  BuildScanChain(model);
+  BuildScanChain(game.stepping);
 
   DebugLog("Initialized Pro-1000 (allocated %1.1f MB)\n", memSizeMB);
 
@@ -2180,9 +2171,6 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   PPCFetchRegions[2].ptr = NULL;
   ppc_set_fetch(PPCFetchRegions);
 
-  // Initialize Real3D
-  GPU.SetStepping(STEPPING);
-
   // Print game information
   if (!game.version.empty())
     std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
@@ -2191,8 +2179,8 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   std::cout << "    ROM Set:        " << game.name << std::endl;
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
-  std::cout << "    Platform:       Real3D Pro-1000" << std::endl;
-  std::cout << "    Model:          PRO-" << (model == Model::PRO1100 ? "1100 (1 pixel processor)" : (model == Model::PRO1200 ? "1200 (2 pixel processors)" : "1400 (4 pixel processors)")) << ", " << polygonMemoryMB << " MB polygon memory" << std::endl;
+  const char *pixelProcessors = game.stepping == Game::Stepping::PRO1000_1100 ? "1 pixel processor" : (game.stepping == Game::Stepping::PRO1000_1200 ? "2 pixel processors" : "4 pixel processors");
+  std::cout << "    Hardware:       " << Game::SteppingName(game.stepping) << " (" << pixelProcessors << "), " << polygonMemoryMB << " MB polygon memory" << std::endl;
   std::cout << std::endl;
 
   m_game = game;

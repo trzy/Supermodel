@@ -248,7 +248,8 @@ bool GameLoader::Region::FindFileIndexByOffset(size_t *idx, uint32_t offset) con
   return false;
 }
 
-static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
+// Returns false if the game is not valid (prints the error)
+static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
 {
   game->name = game_node["name"].ValueAs<std::string>();
   game->parent = game_node["parent"].ValueAsDefault<std::string>("");
@@ -256,7 +257,6 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   game->version = game_node["identity/version"].ValueAsDefault<std::string>("");
   game->manufacturer = game_node["identity/manufacturer"].ValueAsDefault<std::string>("Unknown");
   game->year = game_node["identity/year"].ValueAsDefault<unsigned>(0);
-  game->stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
   game->polygon_memory = game_node["hardware/polygon_memory"].ValueAsDefault<unsigned>(0);
   std::map<std::string, Game::Platform> platforms
   {
@@ -268,6 +268,33 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   if (platforms.find(platform) == platforms.end())
     ErrorLog("Unknown platform '%s' for '%s'. Defaulting to Sega Model 3.", platform.c_str(), game->name.c_str());
   game->platform = platforms[platform];
+  // The stepping must be a stepping of the platform. The Pro-1000 default is
+  // the PRO-1100.
+  std::map<std::string, Game::Stepping> model3_steppings
+  {
+    { "1.0",  Game::Stepping::MODEL3_1_0 },
+    { "1.5",  Game::Stepping::MODEL3_1_5 },
+    { "2.0",  Game::Stepping::MODEL3_2_0 },
+    { "2.1",  Game::Stepping::MODEL3_2_1 }
+  };
+  std::map<std::string, Game::Stepping> pro1000_steppings
+  {
+    { "",     Game::Stepping::PRO1000_1100 },
+    { "1100", Game::Stepping::PRO1000_1100 },
+    { "1200", Game::Stepping::PRO1000_1200 },
+    { "1400", Game::Stepping::PRO1000_1400 }
+  };
+  bool pro1000 = game->platform == Game::PLATFORM_PRO1000;
+  const auto &steppings = pro1000 ? pro1000_steppings : model3_steppings;
+  std::string stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
+  auto stepping_it = steppings.find(stepping);
+  if (stepping_it == steppings.end())
+  {
+    ErrorLog("Stepping '%s' of '%s' is not a %s stepping (%s). Ignoring this game.", stepping.c_str(), game->name.c_str(),
+             pro1000 ? "Real3D Pro-1000" : "Sega Model 3", pro1000 ? "1100, 1200, or 1400" : "1.0, 1.5, 2.0, or 2.1");
+    return false;
+  }
+  game->stepping = stepping_it->second;
   std::map<std::string, Game::MpegBoardType> mpeg_board_types
   {
     { "",     Game::MPEG_BOARD_NONE },
@@ -338,6 +365,7 @@ static void PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   };
   std::string drive_board_type = game_node["hardware/drive_board"].ValueAsDefault<std::string>(std::string());
   game->driveboard_type = drive_board_types[drive_board_type];
+  return true;
 }
 
 bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
@@ -365,9 +393,13 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
         ErrorLog("%s: Ignoring redefinition of game '%s'.", m_xml_filename.c_str(), game_name.c_str());
         continue;
       }
+      if (!PopulateGameInfo(&m_game_info_by_game[game_name], game_node))
+      {
+        m_game_info_by_game.erase(game_name);
+        continue;
+      }
       RegionsByName_t &regions_by_name = m_regions_by_game[game_name];
       PatchesByRegion_t &patches_by_region = m_patches_by_game[game_name];
-      PopulateGameInfo(&m_game_info_by_game[game_name], game_node);
 
       for (auto &roms_node: game_node)
       {

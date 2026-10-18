@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "Types.h"
+#include "Game.h"
 
 /*
  * IRender3D:
@@ -17,7 +18,16 @@ public:
   virtual void EndFrame(void) = 0;
   virtual void UploadTextures(unsigned level, unsigned x, unsigned y, unsigned width, unsigned height) = 0;
   virtual void AttachMemory(const uint32_t *cullingRAMLoPtr, const uint32_t *cullingRAMHiPtr, const uint32_t *polyRAMPtr, const uint32_t *vromPtr, const uint16_t *textureRAMPtr) = 0;
-  virtual void SetStepping(int stepping) = 0;
+
+  /*
+   * SetStepping(stepping):
+   *
+   * Sets the hardware stepping. It sets the data formats (culling node size,
+   * fixed-point formats) and some behavior. The Real3D Pro-1000 uses the
+   * Model 3 Step 1.0 formats. Call it before AttachMemory().
+   */
+  virtual void SetStepping(Game::Stepping stepping) = 0;
+
   virtual Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget) = 0;
   virtual void SetSunClamp(bool enable) = 0;
   virtual void SetBlockCulling(bool enable) = 0;

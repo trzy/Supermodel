@@ -130,15 +130,13 @@ void CNew3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullingRA
 	m_textureBank[1].AttachMemory(textureRAMPtr + (2048*1024));
 }
 
-void CNew3D::SetStepping(int stepping)
+void CNew3D::SetStepping(Game::Stepping stepping)
 {
-	m_step = stepping;
+	// The Pro-1000 uses the Step 1.0 formats
+	m_step10 = stepping == Game::Stepping::MODEL3_1_0 || Game::IsPro1000Stepping(stepping);
+	m_step15 = stepping == Game::Stepping::MODEL3_1_5;
 
-	if ((m_step != 0x10) && (m_step != 0x15) && (m_step != 0x20) && (m_step != 0x21)) {
-		m_step = 0x10;
-	}
-
-	if (m_step > 0x10) {
+	if (!m_step10) {
 		m_offset = 0;							// culling nodes are 10 words
 		m_vertexFactor = (1.0f / 2048.0f);		// vertices are in 13.11 format
 		m_textureNPFactor = (1.0f / 16384.0f);	// texture NP values are in 10.14 format
@@ -1221,8 +1219,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[5] = 0.0f;	// reserved
 
 		vp->sunClamp = m_sunClamp;
-		vp->intensityClamp = (m_step == 0x10);		// just step 1.0 ?
-		vp->hardwareStep = m_step;
+		vp->intensityClamp = m_step10;				// just step 1.0 ?
+		vp->step15Luminous = m_step15;
 
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index

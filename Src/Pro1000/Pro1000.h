@@ -135,15 +135,7 @@ private:
 
   bool IsSCSIAddress(UINT32 addr) const;          // True if address falls within SCSI controller's PCI-mapped register window
 
-  // Models (board configurations), see "Models" in Pro1000.cpp
-  enum class Model
-  {
-    PRO1100,  // 1 pixel processor (single pixel board)
-    PRO1200,  // 2 pixel processors (dual pixel board)
-    PRO1400   // 4 pixel processors (high res)
-  };
-
-  void BuildScanChain(Model model);             // Creates JTAG devices and connects them to the scan controller
+  void BuildScanChain(Game::Stepping stepping); // Creates the JTAG devices of the model (see "Models") and connects them to the scan controller
   void RunMainBoardFrame(void);                 // Runs PPC main board for a frame
   void SyncGPUs(void);                          // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
 

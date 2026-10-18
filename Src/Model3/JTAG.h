@@ -31,6 +31,7 @@
 #define INCLUDED_JTAG_H
 
 #include "BlockFile.h"
+#include "Game.h"
 #include <bitset>
 #include <vector>
 
@@ -209,7 +210,21 @@ public:
     bool Read() const;
     void Write(bool tck, bool tms, bool tdi, bool trst);
     void Reset();
-    void SetStepping(int stepping);
+
+    /*
+     * SetStepping(stepping):
+     *
+     * Builds the Model 3 scan chain of the stepping (Step 1.x: 10 devices,
+     * Step 2.x: 17 devices) and sets the ID codes of the stepping. This is
+     * the Model 3 path only. Other systems do not use CJTAG. They build
+     * their scan chain manually: they make the CASIC and C3DRAM devices,
+     * put them in a CJTAGScanChain, and attach it to their JTAG controller
+     * (see CPro1000::BuildScanChain()).
+     *
+     * Parameters:
+     *    stepping  Model 3 stepping. Other values select Step 1.0.
+     */
+    void SetStepping(Game::Stepping stepping);
     CJTAG(CReal3D& real3D);
 
 private:

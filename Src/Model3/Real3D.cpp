@@ -1002,7 +1002,7 @@ void CReal3D::WriteTextureFIFO(uint32_t data)
 
 void CReal3D::WriteTexturePort(unsigned reg, uint32_t data)
 {
-  if (step == 0x10)
+  if (m_hwConfig.singleWordTexturePort)
   {
     uint32_t addr = data & 0xFFFFFF;
     uint32_t num_words = (2+vrom[addr+0]/2) / 4;
@@ -1226,7 +1226,7 @@ uint32_t CReal3D::ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bit
   switch (reg)
   {
   case 0x00:  // Device ID and Vendor ID
-    d = FLIPENDIAN32(pciID);
+    d = FLIPENDIAN32(m_hwConfig.pciID);
     switch (bits)
     {
     case 8:
@@ -1310,29 +1310,29 @@ void CReal3D::AttachRenderer(IRender3D *Render3DPtr)
   else
     Render3D->AttachMemory(cullingRAMLo, cullingRAMHi, polyRAM, vrom, textureRAM);
 
-  Render3D->SetStepping(step);
   Render3D->SetVROMIsPolygonRAM(m_hwConfig.vromIsPolygonRAM);
 
   DebugLog("Real3D attached a Render3D object\n");
 }
 
-void CReal3D::SetStepping(int stepping)
+Real3DConfig Real3DConfig::Model3(Game::Stepping stepping)
 {
-  step = stepping;
-  if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
-  {
-    DebugLog("Real3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
-    step = 0x10;
-  }
+  Real3DConfig config;
+  bool step2x = stepping == Game::Stepping::MODEL3_2_0 || stepping == Game::Stepping::MODEL3_2_1;
+  config.pciID = step2x ? CReal3D::PCIID::Step2x : CReal3D::PCIID::Step1x;
+  config.singleWordTexturePort = stepping == Game::Stepping::MODEL3_1_0;
+  return config;
+}
 
-  // Set PCI ID
-  pciID = stepping >= 0x20 ? PCIID::Step2x : PCIID::Step1x;
-
-  // Pass to renderer
-  if (Render3D != NULL)
-    Render3D->SetStepping(step);
-
-  DebugLog("Real3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
+Real3DConfig Real3DConfig::Pro1000(uint32_t installedPolygonRAMSize)
+{
+  Real3DConfig config;
+  config.polygonRAMSize = 0x4000000;
+  config.installedPolygonRAMSize = installedPolygonRAMSize;
+  config.vromIsPolygonRAM = true;
+  config.pciID = CReal3D::PCIID::Step1x;
+  config.singleWordTexturePort = true;
+  return config;
 }
 
 Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController *IRQObjectPtr, uint16_t dmaIRQBit, const Real3DConfig &hwConfig)

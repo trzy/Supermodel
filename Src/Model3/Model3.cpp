@@ -1039,7 +1039,7 @@ UINT8 CModel3::Read8(UINT32 addr)
         break;
       }
     }
-  else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+  else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     return SCSI.ReadRegister(addr&0xFF);
@@ -1333,7 +1333,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     data =  (SCSI.ReadRegister((addr+0)&0xFF) << 24);
@@ -1490,7 +1490,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister(addr&0xFF,data);
@@ -1812,7 +1812,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
@@ -2026,11 +2026,11 @@ static unsigned GetCPUClockFrequencyInHz(const Game &game, Util::Config::Node &c
   unsigned mhz = config["PowerPCFrequency"].ValueAsDefault<unsigned>(0);
   if (!mhz)
   {
-    if (game.stepping == "1.0")
+    if (game.stepping == Game::Stepping::MODEL3_1_0)
     {
       mhz = 66;
     }
-    else if (game.stepping == "1.5")
+    else if (game.stepping == Game::Stepping::MODEL3_1_5)
     {
       mhz = 100;
     }
@@ -2864,6 +2864,7 @@ const Game &CModel3::GetGame() const
 void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
   TileGen.AttachRenderer(dynamic_cast<CRender2D *>(Render2DPtr));
+  Render3DPtr->SetStepping(m_stepping);
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
 }
@@ -2964,7 +2965,7 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   EEPROM.Init();
   if (Result::OKAY != TileGen.Init(&IRQ))
     return Result::FAIL;
-  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI)) // same for Real3D DMA interrupt
+  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI,Real3DConfig::Model3(game.stepping))) // same for Real3D DMA interrupt
     return Result::FAIL;
   if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
     return Result::FAIL;
@@ -3027,21 +3028,21 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
 
   // Configure CPU and PCI bridge
   PPC_CONFIG  ppc_config;
-  if (game.stepping == "2.0" || game.stepping == "2.1")
+  if (game.stepping == Game::Stepping::MODEL3_2_0 || game.stepping == Game::Stepping::MODEL3_2_1)
   {
     ppc_config.pvr = PPC_MODEL_603R;  // 166 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x25; // 2.5X multiplier
     PCIBridge.SetModel(0x106);        // MPC106
   }
-  else if (game.stepping == "1.5")
+  else if (game.stepping == Game::Stepping::MODEL3_1_5)
   {
     ppc_config.pvr = PPC_MODEL_603E;  // 100 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x15; // 1.5X multiplier
     PCIBridge.SetModel(0x105);        // MPC105
   }
-  else if (game.stepping == "1.0")
+  else if (game.stepping == Game::Stepping::MODEL3_1_0)
   {
     ppc_config.pvr = PPC_MODEL_603R;  // 66 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
@@ -3050,7 +3051,7 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   }
   else
   {
-    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", game.stepping.c_str());
+    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", Game::SteppingName(game.stepping));
     return Result::FAIL;
   }
 
@@ -3068,9 +3069,8 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   PPCFetchRegions[2].ptr = NULL;
   ppc_set_fetch(PPCFetchRegions);
 
-  // Initialize Real3D
-  m_stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  GPU.SetStepping(m_stepping);
+  // JTAG scan chain of the stepping
+  m_stepping = game.stepping;
   m_jtag.SetStepping(m_stepping);
 
   // MPEG board (if present)
@@ -3155,7 +3155,7 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   std::cout << "    ROM Set:        " << game.name << std::endl;
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
-  std::cout << "    Stepping:       " << game.stepping << std::endl;
+  std::cout << "    Hardware:       " << Game::SteppingName(game.stepping) << std::endl;
   if (!extra_hw.empty())
     std::cout << "    Extra Hardware: " << Util::Format(", ").Join(extra_hw) << std::endl;
   std::cout << std::endl;
@@ -3167,7 +3167,7 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
     return Result::FAIL;
   }
 
-  m_runNetBoard = m_game.stepping != "1.0" && NetBoard->IsAttached();
+  m_runNetBoard = m_game.stepping != Game::Stepping::MODEL3_1_0 && NetBoard->IsAttached();
 
   return Result::OKAY;
 }
@@ -3247,7 +3247,7 @@ CModel3::CModel3(Util::Config::Node &config)
   notifyLock = NULL;
   notifySync = NULL;
 
-  m_stepping = 0;
+  m_stepping = Game::Stepping::UNKNOWN;
   inputBank = 0;
   serialFIFO1 = 0;
   serialFIFO2 = 0;
