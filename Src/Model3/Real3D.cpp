@@ -1372,6 +1372,10 @@ Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController 
   if (NULL == memoryPool)
     return ErrorLog("Insufficient memory for Real3D object (needs %1.1f MB).", memSizeMB);
 
+  // new[] does not initialize the memory. Clear it, or the renderer reads
+  // random values where a program writes no data.
+  memset(memoryPool, 0, memSize);
+
   // Set up main pointers
   cullingRAMLo = (uint32_t *) &memoryPool[l.cullingRAMLo];
   cullingRAMHi = (uint32_t *) &memoryPool[l.cullingRAMHi];

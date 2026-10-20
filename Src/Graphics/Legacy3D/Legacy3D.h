@@ -330,6 +330,16 @@ public:
 	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
+	 * SetVROMIsPolygonRAM(enable):
+	 *
+	 * Tells the renderer that there is no VROM (Real3D Pro-1000). The VROM
+	 * pointer then points to polygon RAM. Model addresses at 0x100000 and above
+	 * are therefore writable polygon RAM that changes every frame. The default
+	 * is false (Model 3).
+	 */
+	void SetVROMIsPolygonRAM(bool enable) override;
+
+	/*
 	 * SetScreenSize(width, height):
 	 *
 	 * Set the native display coordinate range that viewport coordinates use.
@@ -410,7 +420,8 @@ private:
 	
 	// Matrix stack
 	void	MultMatrix(UINT32 matrixOffset);
-	void 	InitMatrixStack(UINT32 matrixBaseAddr);
+	void	MultInverseMatrix(UINT32 matrixOffset);
+	void 	InitMatrixStack(UINT32 matrixBaseAddr, UINT32 envIdx);
 	
 	// Scene database traversal
 	Result DrawModel(UINT32 modelAddr);
@@ -444,6 +455,7 @@ private:
 	
 	// Stepping
 	bool	step10;			// Model 3 Step 1.0 or Pro-1000 (Step 1.0 formats)
+	bool	pro1000 = false;	// true for Real3D Pro-1000
 	int		offset;			// offset to subtract for words 3 and higher of culling nodes
 	GLfloat	vertexFactor;	// fixed-point conversion factor for vertices
 	
@@ -497,6 +509,7 @@ private:
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	GLfloat		xRatio, yRatio;
 	float		screenWidth = 496.0f, screenHeight = 384.0f;	// native display coordinate range (Model 3: 496x384, Pro-1000: sync-file dependent)
+	bool		m_vromIsPolygonRAM = false;	// true for Pro-1000: VROM pointer is polygon RAM; all model addresses are dynamic
 	unsigned	xOffs, yOffs;
 	unsigned 	totalXRes, totalYRes;
 	
