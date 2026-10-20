@@ -153,11 +153,25 @@ void CNew3D::SetVROMIsPolygonRAM(bool enable)
 	m_vromIsPolygonRAM = enable;
 }
 
+void CNew3D::SetScreenSize(float width, float height)
+{
+	m_screenWidth  = width;
+	m_screenHeight = height;
+	// If Init() has run, recalculate ratios immediately so the next frame uses the new values.
+	if (m_xRes)
+	{
+		m_xRatio = m_xRes / m_screenWidth;
+		m_yRatio = m_yRes / m_screenHeight;
+	}
+}
+
 Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
-	// Resolution and offset within physical display area
-	m_xRatio	= xRes * (float)(1.0 / 496.0);
-	m_yRatio	= yRes * (float)(1.0 / 384.0);
+	// Scale from native display coordinates to screen pixels.
+	// m_screenWidth/Height hold the native coordinate range (496x384 for
+	// Model 3, sync-file dependent for Pro-1000).
+	m_xRatio	= xRes / m_screenWidth;
+	m_yRatio	= yRes / m_screenHeight;
 	m_xOffs		= xOffset;
 	m_yOffs		= yOffset;
 	m_xRes		= xRes;
@@ -1241,8 +1255,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotFogColor[1] = color[spotFogColorIdx][1];
 		vp->spotFogColor[2] = color[spotFogColorIdx][2];
 
-		// spotlight is specified in terms of physical resolution
-		vp->spotEllipse[1] = 384.0f - vp->spotEllipse[1];								// flip Y position
+		// Spotlight Y is top-referenced. Convert to bottom-referenced.
+		vp->spotEllipse[1] = m_screenHeight - vp->spotEllipse[1];
 
 		// Avoid division by zero
 		vp->spotEllipse[2] = std::max(1.0f, vp->spotEllipse[2]);
@@ -1714,7 +1728,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 
 	vp->projectionMatrix.LoadIdentity();	// reset matrix
 
-	if (m_wideScreen && (vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
+	if (m_wideScreen && (vp->vpX == 0) && (vp->vpWidth >= m_screenWidth - 1) && (vp->vpY == 0) && (vp->vpHeight >= m_screenHeight - 1)) {
 
 		/*
 		 * Compute aspect ratio correction factor. "Window" refers to the full GL
@@ -1745,7 +1759,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 		m_planes.correction = 1.0f / correction;
 
 		vp->x		= 0;
-		vp->y		= m_yOffs + (int)((384.0f - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((m_screenHeight - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
 		vp->height = (int)(vp->vpHeight*m_yRatio);
 
@@ -1754,7 +1768,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 	else {
 
 		vp->x		= m_xOffs + (int)(vp->vpX*m_xRatio);
-		vp->y		= m_yOffs + (int)((384.0f - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((m_screenHeight - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= (int)(vp->vpWidth*m_xRatio);
 		vp->height	= (int)(vp->vpHeight*m_yRatio);
 
@@ -1790,8 +1804,8 @@ float CNew3D::GetLosValue(int layer)
 
 void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY) const
 {
-	// remap real3d 496x384 to our new viewport
-	inY = 384 - inY;
+	// Convert from top-referenced to bottom-referenced Y.
+	inY = (int)m_screenHeight - inY;
 
 	outX = m_xOffs + int(inX * m_xRatio);
 	outY = m_yOffs + int(inY * m_yRatio);

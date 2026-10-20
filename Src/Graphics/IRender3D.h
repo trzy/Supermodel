@@ -45,6 +45,19 @@ public:
   {
   }
 
+  /*
+   * SetScreenSize(width, height):
+   *
+   * Set the native display coordinate range that viewport coordinates use.
+   * Model 3 uses 496x384. Pro-1000 uses values from the selected sync file
+   * (for example, 636x480 for sync file 1). Call this before Init(), or
+   * call it at any time when the sync file changes. Renderers that do not
+   * need this can ignore it.
+   */
+  virtual void SetScreenSize(float width, float height)
+  {
+  }
+
   virtual ~IRender3D()
   {
   }
