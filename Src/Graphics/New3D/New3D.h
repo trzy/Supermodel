@@ -156,6 +156,20 @@ public:
 	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget) override;
 
 	/*
+	 * SetScreenSize(width, height):
+	 *
+	 * Set the physical display size that viewport coordinates refer to.
+	 * Model 3 uses 496x384. Pro-1000 uses values from the selected sync file
+	 * (for example, 636x480 for sync file 1). Call this before Init(), or
+	 * call it at any time to update the ratios when the sync file changes.
+	 *
+	 * Parameters:
+	 *		width	Display width in native coordinate units.
+	 *		height	Display height in native coordinate units.
+	 */
+	void SetScreenSize(float width, float height) override;
+
+	/*
 	* SetSunClamp(bool enable);
 	*
 	* Sets or unsets the clamped light model
@@ -272,6 +286,7 @@ private:
 
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	float		m_xRatio, m_yRatio;
+	float		m_screenWidth = 496.0f, m_screenHeight = 384.0f;	// native display coordinate range (Model 3: 496x384, Pro-1000: sync-file dependent)
 	unsigned	m_xOffs, m_yOffs;
 	unsigned	m_xRes, m_yRes;           // resolution of Model 3's 496x384 display area within the window
 	unsigned 	m_totalXRes, m_totalYRes; // total OpenGL window resolution

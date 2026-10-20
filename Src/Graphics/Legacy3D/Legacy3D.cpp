@@ -850,23 +850,22 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   // Set up viewport and projection (TO-DO: near and far clipping)
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  if (wideScreen && (vpX==0) && (vpWidth>=495) && (vpY==0) && (vpHeight >= 383))  // only expand viewports that occupy whole screen
+  if (wideScreen && (vpX==0) && (vpWidth>=screenWidth-1) && (vpY==0) && (vpHeight >= screenHeight-1))  // only expand viewports that occupy whole screen
   {
     // Wide screen hack only modifies X axis and not the Y FOV
     viewportX      = 0;
-    viewportY      = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
+    viewportY      = yOffs + (GLint) ((float)(screenHeight-(vpY+vpHeight))*yRatio);
     viewportWidth  = totalXRes;
     viewportHeight = (GLint) ((float)vpHeight*yRatio);
     gluPerspective(fovYDegrees,(GLfloat)viewportWidth/(GLfloat)viewportHeight,0.1f,1e5);  // use actual full screen ratio to get proper X FOV
-    //printf("viewportX=%d, viewportY=%d, viewportWidth=%d, viewportHeight=%d\tvpY=%d vpHeight=%d\n", viewportX, viewportY, viewportWidth, viewportHeight, vpY,vpHeight);
   }
   else
   {
     viewportX      = xOffs + (GLint) ((float)vpX*xRatio);
-    viewportY      = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
+    viewportY      = yOffs + (GLint) ((float)(screenHeight-(vpY+vpHeight))*yRatio);
     viewportWidth  = (GLint) ((float)vpWidth*xRatio);
     viewportHeight = (GLint) ((float)vpHeight*yRatio);
-    gluPerspective(fovYDegrees,(GLdouble)vpWidth/(GLdouble)vpHeight,0.1,1e5);        // use Model 3 viewport ratio
+    gluPerspective(fovYDegrees,(GLdouble)vpWidth/(GLdouble)vpHeight,0.1,1e5);        // use viewport coordinate ratio
   }
   
   // Lighting (note that sun vector points toward sun -- away from vertex)
@@ -891,10 +890,10 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   //printf("(%g,%g),(%g,%g),(%g,%g) -> \n", spotEllipse[0], spotEllipse[1], spotEllipse[2], spotEllipse[3], spotRange[0], spotRange[1]);
   
   // Spotlight is applied on a per pixel basis, must scale its position and size to screen
-  spotEllipse[1] = 384.0f-spotEllipse[1];
+  spotEllipse[1] = screenHeight - spotEllipse[1];  // convert from top-referenced to bottom-referenced Y
   spotRange[1] += spotRange[0]; // limit
-  spotEllipse[2] = 496.0f/sqrt(spotEllipse[2]); // spotlight appears to be specified in terms of physical resolution (unconfirmed)
-  spotEllipse[3] = 384.0f/sqrt(spotEllipse[3]);
+  spotEllipse[2] = screenWidth  / sqrt(spotEllipse[2]);  // spotlight size is specified in native display coordinates (unconfirmed)
+  spotEllipse[3] = screenHeight / sqrt(spotEllipse[3]);
 
   // Scale the spotlight to the OpenGL viewport
   spotEllipse[0] = spotEllipse[0]*xRatio + xOffs;
@@ -1306,9 +1305,9 @@ Result CLegacy3D::SetupGLObjects()
   
 Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
-    // Resolution and offset within physical display area
-    xRatio = (GLfloat)xRes / 496.0f;
-    yRatio = (GLfloat)yRes / 384.0f;
+    // Scale from native display coordinates to screen pixels.
+    xRatio = (GLfloat)xRes / screenWidth;
+    yRatio = (GLfloat)yRes / screenHeight;
     xOffs = xOffset;
     yOffs = yOffset;
     totalXRes = totalXResParam;
@@ -1317,6 +1316,19 @@ Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsign
     m_aaTarget = aaTarget;
 
     return Result::OKAY;
+}
+
+void CLegacy3D::SetScreenSize(float width, float height)
+{
+	// If Init() has run, rescale the existing ratios to the new coordinate range.
+	// new_ratio = old_ratio * old_screen / new_screen  (pixel count is unchanged)
+	if (xRatio != 0.0f)
+	{
+		xRatio = xRatio * screenWidth  / width;
+		yRatio = yRatio * screenHeight / height;
+	}
+	screenWidth  = width;
+	screenHeight = height;
 }
 
 void CLegacy3D::SetSunClamp(bool enable)

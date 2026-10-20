@@ -1977,6 +1977,21 @@ void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, S
   // No tile generator. The 2D layer is the scroll layer (CPro1000Render2D).
   m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
   Render3DPtr->SetStepping(m_game.stepping);
+
+  // Set the native display coordinate range for Pro-1000 sync file 1 (VGA
+  // 640x480). The API sync table gives j_max=636, i_max=480 for this mode.
+  // These values are the coordinate range that the host program uses to set
+  // viewport positions and sizes.
+  //
+  // TODO: detect sync file changes at runtime and call SetScreenSize() again.
+  // The host program sends a record with cntrl=0x17 and the sync file number
+  // (1-8) in the update buffer. The firmware processes this record and writes
+  // new timing values to the video sync memory (0x58000000) and logic sync
+  // memory (0x60000000). Intercept these writes, or parse the SCSI WRITE data
+  // before the firmware receives it, to read the new j_max and i_max values
+  // from the sync table and call SetScreenSize() with those values.
+  Render3DPtr->SetScreenSize(636.0f, 480.0f);
+
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
 }

@@ -330,6 +330,15 @@ public:
 	Result Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXRes, unsigned totalYRes, unsigned aaTarget);
 
 	/*
+	 * SetScreenSize(width, height):
+	 *
+	 * Set the native display coordinate range that viewport coordinates use.
+	 * Model 3 uses 496x384. Pro-1000 uses values from the selected sync file
+	 * (for example, 636x480 for sync file 1).
+	 */
+	void SetScreenSize(float width, float height) override;
+
+	/*
 	* SetSunClamp(bool enable);
 	*
 	* Sets or unsets the clamped light model
@@ -487,6 +496,7 @@ private:
 	
 	// Resolution and scaling factors (to support resolutions higher than 496x384) and offsets
 	GLfloat		xRatio, yRatio;
+	float		screenWidth = 496.0f, screenHeight = 384.0f;	// native display coordinate range (Model 3: 496x384, Pro-1000: sync-file dependent)
 	unsigned	xOffs, yOffs;
 	unsigned 	totalXRes, totalYRes;
 	
