@@ -97,6 +97,15 @@ And then build Supermodel:
 make -f Makefiles/Makefile.OSX
 ```
 
+### libretro core
+Add `LIBRETRO=1` to any of the commands above to build Supermodel as a libretro core for RetroArch and other libretro frontends instead of the standalone emulator, e.g.:
+
+```
+make -f Makefiles/Makefile.UNIX LIBRETRO=1
+```
+
+See [Docs/LIBRETRO.md](Docs/LIBRETRO.md) for installation, controls and core options.
+
 ### Note: running on macOS
 If you try and run a macOS binary that was downloaded from the internet and/or built on a different machine, you need to grant macOS permission to execute the binary (just 1-time):
 

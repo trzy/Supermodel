@@ -158,7 +158,12 @@ void* NSGLGetProcAddress (const GLubyte *name)
 /*
  * Define glewGetProcAddress.
  */
-#if defined(GLEW_REGAL)
+#if defined(GLEW_LIBRETRO)
+/* Supermodel libretro core: functions are resolved through the frontend's
+   get_proc_address callback (works with GLX, EGL, WGL and CGL contexts) */
+extern void *glewLibretroGetProcAddress(const char *name);
+#  define glewGetProcAddress(name) glewLibretroGetProcAddress((const char *)name)
+#elif defined(GLEW_REGAL)
 #  define glewGetProcAddress(name) regalGetProcAddress((const GLchar *)name)
 #elif defined(GLEW_OSMESA)
 #  define glewGetProcAddress(name) OSMesaGetProcAddress((const char *)name)
@@ -20865,7 +20870,10 @@ GLenum GLEWAPIENTRY glewInit (void)
 #endif
   r = glewContextInit();
   if ( r != 0 ) return r;
-#if defined(GLEW_EGL)
+#if defined(GLEW_LIBRETRO)
+  /* The window system extensions (GLX/WGL/EGL) belong to the frontend */
+  return r;
+#elif defined(GLEW_EGL)
   getCurrentDisplay = (PFNEGLGETCURRENTDISPLAYPROC) glewGetProcAddress("eglGetCurrentDisplay");
   return eglewInit(getCurrentDisplay());
 #elif defined(GLEW_OSMESA) || defined(__ANDROID__) || defined(__native_client__) || defined(__HAIKU__)

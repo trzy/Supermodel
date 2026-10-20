@@ -1067,3 +1067,9 @@ GameLoader::GameLoader(const std::string &xml_file)
 {
   LoadDefinitionXML(xml_file);
 }
+
+GameLoader::GameLoader(const Util::Config::Node &xml, const std::string &source_name)
+{
+  m_xml_filename = source_name;
+  ParseXML(xml);
+}

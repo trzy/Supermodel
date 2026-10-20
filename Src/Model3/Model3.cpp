@@ -225,8 +225,16 @@
 #include "DriveBoard/WheelBoard.h"
 #include "Game.h"
 #include "ROMSet.h"
+#ifdef SUPERMODEL_NO_NETWORK
+#include "Network/NullNetBoard.h"
+#else
 #include "Network/NetBoard.h"
 #include "Network/SimNetBoard.h"
+#endif
+#if defined(SUPERMODEL_LIBRETRO) || defined(SUPERMODEL_NO_NETWORK)
+// No windowing system is available to show message boxes: log instead
+#define SDL_ShowSimpleMessageBox(flags, title, message, window) ErrorLog("%s: %s", title, message)
+#endif
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
 #include "Util/Format.h"
@@ -2975,10 +2983,14 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   PCIBus.AttachDevice(14,&SCSI);
   PCIBus.AttachDevice(16,this);
 
+#ifdef SUPERMODEL_NO_NETWORK
+  NetBoard = new CNullNetBoard();
+#else
   if (m_config["SimulateNet"].ValueAs<bool>())
       NetBoard = new CSimNetBoard(m_config);
   else
       NetBoard = new CNetBoard(m_config);
+#endif
 
   DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 
@@ -3239,7 +3251,13 @@ CModel3::CModel3(Util::Config::Node &config)
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
 
+#ifdef SUPERMODEL_LIBRETRO
+  // The libretro frontend pulls exactly one frame of audio per emulated frame,
+  // so the sound board thread must run in lockstep with the main board
+  syncSndBrdThread = true;
+#else
   syncSndBrdThread = false;
+#endif
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;

@@ -102,6 +102,8 @@ private:
 
 public:
   GameLoader(const std::string &xml_file);
+  // Uses game definitions that are already parsed (source_name is only used in messages)
+  GameLoader(const Util::Config::Node &xml, const std::string &source_name);
   bool Load(Game *game, ROMSet *rom_set, const std::string &zipfilename) const;
   const std::map<std::string, Game> &GetGames() const
   {

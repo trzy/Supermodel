@@ -31,7 +31,67 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdint>
+#include <algorithm>
 #include "Supermodel.h"
+
+
+/******************************************************************************
+ Storage Backend
+
+ A block file is either a file on disk (FILE *) or a buffer in memory. The
+ memory backend is used for libretro save states and avoids non-portable
+ functions such as fmemopen(), which MinGW and MSVC do not provide.
+******************************************************************************/
+
+bool CBlockFile::IsOpen(void) const
+{
+  return m_inMemory || fp != nullptr;
+}
+
+size_t CBlockFile::IORead(void *data, size_t numBytes)
+{
+  if (m_inMemory)
+  {
+    size_t available = m_pos < m_memory.size() ? m_memory.size() - m_pos : 0;
+    size_t n = std::min(numBytes, available);
+    if (n)
+      memcpy(data, m_memory.data() + m_pos, n);
+    m_pos += n;
+    return n;
+  }
+  return fread(data, 1, numBytes, fp);
+}
+
+void CBlockFile::IOWrite(const void *data, size_t numBytes)
+{
+  if (m_inMemory)
+  {
+    if (m_pos + numBytes > m_memory.size())
+      m_memory.resize(m_pos + numBytes);
+    if (numBytes)
+      memcpy(m_memory.data() + m_pos, data, numBytes);
+    m_pos += numBytes;
+    return;
+  }
+  fwrite(data, 1, numBytes, fp);
+}
+
+long int CBlockFile::IOTell(void)
+{
+  if (m_inMemory)
+    return (long int) m_pos;
+  return ftell(fp);
+}
+
+void CBlockFile::IOSeek(long int pos)
+{
+  if (m_inMemory)
+  {
+    m_pos = pos < 0 ? 0 : (size_t) pos;
+    return;
+  }
+  fseek(fp, pos, SEEK_SET);
+}
 
 
 /******************************************************************************
@@ -40,7 +100,7 @@
 
 void CBlockFile::ReadString(std::string *str, uint32_t length)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return;
   str->clear();
   //TODO: use fstream to get rid of this ugly hack
@@ -48,7 +108,8 @@ void CBlockFile::ReadString(std::string *str, uint32_t length)
   for (uint32_t i = 0; i < length; i++)
   {
     char c;
-    fread(&c, sizeof(char), 1, fp);
+    if (IORead(&c, 1) != 1)
+      c = 0;
     if (keep_loading)
     {
       if (!c)
@@ -61,16 +122,17 @@ void CBlockFile::ReadString(std::string *str, uint32_t length)
 
 unsigned CBlockFile::ReadBytes(void *data, uint32_t numBytes)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return 0;
-  return (uint32_t)fread(data, sizeof(uint8_t), numBytes, fp);
+  return (uint32_t)IORead(data, numBytes);
 }
 
 unsigned CBlockFile::ReadDWord(uint32_t *data)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return 0;
-  fread(data, sizeof(uint32_t), 1, fp);
+  if (IORead(data, sizeof(uint32_t)) != sizeof(uint32_t))
+    *data = 0;
   return 4;
 }
   
@@ -79,46 +141,46 @@ void CBlockFile::UpdateBlockSize(void)
   long int  curPos;
   unsigned  newBlockSize;
   
-  if (NULL == fp)
+  if (!IsOpen())
     return;
-  curPos = ftell(fp);       // save current file position
-  fseek(fp, blockStartPos, SEEK_SET);
+  curPos = IOTell();        // save current file position
+  IOSeek(blockStartPos);
   newBlockSize = curPos - blockStartPos;
-  fwrite(&newBlockSize, sizeof(uint32_t), 1, fp);
-  fseek(fp, curPos, SEEK_SET);  // go back
+  IOWrite(&newBlockSize, sizeof(uint32_t));
+  IOSeek(curPos);           // go back
 }
 
 void CBlockFile::WriteByte(uint8_t data)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return;
-  fwrite(&data, sizeof(uint8_t), 1, fp);
+  IOWrite(&data, sizeof(uint8_t));
   UpdateBlockSize();
 }
 
 void CBlockFile::WriteDWord(uint32_t data)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return;
-  fwrite(&data, sizeof(uint32_t), 1, fp);
+  IOWrite(&data, sizeof(uint32_t));
   UpdateBlockSize();
 }
 
 void CBlockFile::WriteBytes(const void *data, uint32_t numBytes)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return;
-  fwrite(data, sizeof(uint8_t), numBytes, fp);
+  IOWrite(data, numBytes);
   UpdateBlockSize();
 }
 
 void CBlockFile::WriteBlockHeader(const std::string &name, const std::string &comment)
 {
-  if (NULL == fp)
+  if (!IsOpen())
     return;
   
   // Record current block starting position
-  blockStartPos = ftell(fp);
+  blockStartPos = IOTell();
 
   // Write the total block length field
   WriteDWord(0);  // will be automatically updated as we write the file
@@ -130,7 +192,7 @@ void CBlockFile::WriteBlockHeader(const std::string &name, const std::string &co
   Write(comment);
   
   // Record the start of the current data section
-  dataStartPos = ftell(fp);
+  dataStartPos = IOTell();
 } 
 
 
@@ -200,7 +262,7 @@ Result CBlockFile::FindBlock(const std::string &name)
   if (mode != 'r')
     return Result::FAIL;
     
-  fseek(fp, 0, SEEK_SET);
+  IOSeek(0);
   
   long int  curPos = 0;
   while (curPos < fileSize)
@@ -220,13 +282,13 @@ Result CBlockFile::FindBlock(const std::string &name)
     // Is this the block we want?
     if (block_name == name)
     {
-      fseek(fp, blockStartPos + 12 + name_length + comment_length, SEEK_SET); // move to beginning of data
-      dataStartPos = ftell(fp);
+      IOSeek(blockStartPos + 12 + name_length + comment_length); // move to beginning of data
+      dataStartPos = IOTell();
       return Result::OKAY;
     }
     
     // Move to next block
-    fseek(fp, blockStartPos + block_length, SEEK_SET);
+    IOSeek(blockStartPos + block_length);
     curPos = blockStartPos + block_length;
     if (block_length == 0)  // this would never advance
       break;
@@ -237,6 +299,7 @@ Result CBlockFile::FindBlock(const std::string &name)
 
 Result CBlockFile::Create(const std::string &file, const std::string &headerName, const std::string &comment)
 {
+  Close();
   fp = fopen(file.c_str(), "wb");
   if (NULL == fp)
     return Result::FAIL;
@@ -245,8 +308,38 @@ Result CBlockFile::Create(const std::string &file, const std::string &headerName
   return Result::OKAY;
 }
   
+Result CBlockFile::CreateInMemory(const std::string &headerName, const std::string &comment)
+{
+  Close();
+  m_inMemory = true;
+  m_memory.clear();
+  m_pos = 0;
+  mode = 'w';
+  WriteBlockHeader(headerName, comment);
+  return Result::OKAY;
+}
+
+Result CBlockFile::LoadFromMemory(const void *data, size_t size)
+{
+  Close();
+  if (data == nullptr && size != 0)
+    return Result::FAIL;
+  m_inMemory = true;
+  m_memory.assign((const uint8_t *) data, (const uint8_t *) data + size);
+  m_pos = 0;
+  mode = 'r';
+  fileSize = (long int) size;
+  return Result::OKAY;
+}
+
+const std::vector<uint8_t> &CBlockFile::GetMemoryBuffer(void) const
+{
+  return m_memory;
+}
+
 Result CBlockFile::Load(const std::string &file)
 {
+  Close();
   fp = fopen(file.c_str(), "rb");
   if (NULL == fp)
     return Result::FAIL;
@@ -268,6 +361,9 @@ void CBlockFile::Close(void)
     fclose(fp);
   fp = nullptr;
   mode = 0;
+  // The memory buffer is kept so that it can be retrieved after Close()
+  m_inMemory = false;
+  m_pos = 0;
 }
 
 CBlockFile::CBlockFile(void) :
@@ -275,7 +371,9 @@ CBlockFile::CBlockFile(void) :
     mode(0),
     fileSize(0),
     blockStartPos(0),
-    dataStartPos(0)
+    dataStartPos(0),
+    m_inMemory(false),
+    m_pos(0)
 {
 }
 

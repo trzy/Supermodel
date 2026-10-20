@@ -97,6 +97,11 @@
 #include "NetBoard.h"
 #include "Util/Format.h"
 #include "Util/ByteSwap.h"
+#ifdef SUPERMODEL_LIBRETRO
+// No windowing system is available to show message boxes: log instead
+#undef SDL_ShowSimpleMessageBox
+#define SDL_ShowSimpleMessageBox(flags, title, message, window) ErrorLog("%s: %s", title, message)
+#endif
 #include <algorithm>
 
 // few macros to make debugging a bit less painful

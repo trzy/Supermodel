@@ -2096,8 +2096,10 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
 
   // Host computer programs connect to the SCSI host adapter through the
   // bridge. If the bridge cannot start, emulation continues without it.
+#ifndef SUPERMODEL_NO_NETWORK
   m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
   m_scsiTCPBridge->Start();
+#endif
   if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000(polygonMemoryMB * 0x100000))) // no VROM; Real3D DMA interrupt line unknown
     return Result::FAIL;
   UART.AttachInterruptOutput([this](bool level)

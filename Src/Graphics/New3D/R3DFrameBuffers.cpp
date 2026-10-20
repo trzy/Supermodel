@@ -180,7 +180,16 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 	case Layer::none:
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#ifdef SUPERMODEL_LIBRETRO
+		{
+			// The libretro frontend usually supplies its own FBO in place of the default framebuffer
+			GLint drawFramebuffer = 0;
+			glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer);
+			glDrawBuffer(drawFramebuffer ? GL_COLOR_ATTACHMENT0 : GL_BACK);
+		}
+#else
 		glDrawBuffer(GL_BACK);
+#endif
 		break;
 	}
 	default:
