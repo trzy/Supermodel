@@ -98,13 +98,64 @@ make -f Makefiles/Makefile.OSX
 ```
 
 ### libretro core
-Add `LIBRETRO=1` to any of the commands above to build Supermodel as a libretro core for RetroArch and other libretro frontends instead of the standalone emulator, e.g.:
+
+Supermodel can also be built as a [libretro](https://www.libretro.com) core for RetroArch and other libretro frontends. Add `LIBRETRO=1` to the usual `make` command; everything else (compilers, MSYS2 setup) is the same as for the standalone emulator above.
+
+The core does not use SDL: it only needs OpenGL and zlib, so the SDL2 packages are not required unless you build with `LIBRETRO_NET=1` (see below).
+
+#### Linux
 
 ```
+sudo apt install build-essential libgl-dev zlib1g-dev
 make -f Makefiles/Makefile.UNIX LIBRETRO=1
 ```
 
-See [Docs/LIBRETRO.md](Docs/LIBRETRO.md) for installation, controls and core options.
+Output: `bin/supermodel_libretro.so`
+
+#### Windows (MSYS2 MinGW-w64)
+
+Install GCC and Make as described above (zlib is `mingw64/mingw-w64-x86_64-zlib`, normally already installed with GCC), then:
+
+```
+mingw32-make -f Makefiles/Makefile.Win32 LIBRETRO=1
+```
+
+Output: `bin64/supermodel_libretro.dll` (the C/C++ runtimes and zlib are linked statically, so no MinGW DLLs are needed next to it).
+
+#### macOS
+
+With the Xcode Command Line Tools installed (`xcode-select --install`):
+
+```
+make -f Makefiles/Makefile.OSX LIBRETRO=1
+```
+
+Output: `bin/supermodel_libretro.dylib`
+
+#### Build options
+
+| Option | Effect |
+|--------|--------|
+| `LIBRETRO=1` | Build the libretro core instead of the standalone emulator. |
+| `LIBRETRO_NET=1` | Together with `LIBRETRO=1`: also build the net board (linked cabinets), the Pro-1000 SCSI TCP bridge and the network outputs. These use SDL2_net, so SDL2 and SDL2_net must be installed to build and to run the core. |
+| `DEBUG=1` | Debug build (no optimization, symbols kept). |
+| `-j<n>` | Parallel build, e.g. `-j8`. |
+
+The core is compiled into its own object directory (`obj_libretro`, `obj64_libretro` on Windows, `..._net` with `LIBRETRO_NET=1`), so the standalone emulator and the core can be built from the same source tree without cleaning in between. `make ... LIBRETRO=1 clean` removes the core's object directory and the whole output directory (`bin` / `bin64`), including a standalone binary built there.
+
+A copy of `Config/Games.xml` is compiled into the core, so the core works without any extra file.
+
+#### Installing in RetroArch
+
+1. Copy `supermodel_libretro.so` / `.dll` / `.dylib` to RetroArch's `cores` directory.
+2. Copy `Src/OSD/Libretro/supermodel_libretro.info` to RetroArch's `info` directory (core name, supported extensions, required OpenGL version).
+3. Optional, in RetroArch's system directory (`system/supermodel/`):
+   - `Games.xml`: replaces the built-in game list (e.g. a newer one).
+   - `Music.xml`: custom MPEG music.
+   - `Assets/p1crosshair.bmp` and `Assets/p2crosshair.bmp`: needed for the "Bitmap" crosshair style.
+4. Load a ROM set (`.zip`, the same files as for the standalone emulator) with the core. Use the `glcore` video driver for the new 3D engine (OpenGL 4.1 core profile) or the `gl` driver if you switch to the legacy 3D engine, which needs a compatibility profile context.
+
+See [Docs/LIBRETRO.md](Docs/LIBRETRO.md) for the controls (RetroPad layout per game type), the core options and how they map to the standalone emulator's command line options.
 
 ### Note: running on macOS
 If you try and run a macOS binary that was downloaded from the internet and/or built on a different machine, you need to grant macOS permission to execute the binary (just 1-time):
