@@ -1521,15 +1521,11 @@ Util::Config::Node DefaultConfig()
   config.Set("BalanceFrontRear", 0.0f, "Sound", -100.f, 100.f);
   config.Set("NbSoundChannels", 4, "Sound", 0, 0, { 1,2,4 });
   SetLabels("NbSoundChannels", { "Mono", "Stereo", "Quad (4 channels)" });
-  config.Set("SoundFreq", 57.6f, "Sound", 0.0f, 0.0f, { 57.524160f, 57.6f, 60.f });
-  SetLabels("SoundFreq", { "57.524 Hz (original hardware)", "57.6 Hz", "60 Hz" });
   // CDSB
 
   config.Set("EmulateDSB", true, "Sound");
   config.Set("SoundVolume", 100, "Sound", 0, 200);
   config.Set("MusicVolume", 100, "Sound", 0, 200);
-  // Other sound options
-  config.Set("LegacySoundDSP", false, "Sound"); // New config option for games that do not play correctly with MAME's SCSP sound core.
   // CDriveBoard
   config.Set("ForceFeedback", false, "ForceFeedback");
 
@@ -1912,8 +1908,6 @@ static void Help(void)
   puts("  -flip-stereo            Swap left and right audio channels");
   puts("  -no-sound               Disable sound board emulation (sound effects)");
   puts("  -no-dsb                 Disable Digital Sound Board (MPEG music)");
-  puts("  -new-scsp               New SCSP engine based on MAME [Default]");
-  puts("  -legacy-scsp            Legacy SCSP engine by ElSemi");
   puts("");
   puts("Net Options:");
   puts("  -no-net                 Disable net board [Default]");
@@ -1988,7 +1982,6 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-music-volume",          "MusicVolume"             },
     { "-balance",               "Balance"                 },
     { "-channels", 	            "NbSoundChannels"         },
-    { "-soundfreq",             "SoundFreq"               },
     { "-input-system",          "InputSystem"             },
     { "-outputs",               "Outputs"                 },
     { "-log-output",            "LogOutput"               },
@@ -2031,8 +2024,6 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-sound",            { "EmulateSound",     false } },
     { "-dsb",                 { "EmulateDSB",       true } },
     { "-no-dsb",              { "EmulateDSB",       false } },
-    { "-legacy-scsp",         { "LegacySoundDSP",   true } },
-    { "-new-scsp",            { "LegacySoundDSP",   false } },
     { "-no-white-flash",      { "NoWhiteFlash",     true } },
     { "-white-flash",         { "NoWhiteFlash",     false } },
     { "-net",                 { "Network",          true } },

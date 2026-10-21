@@ -26,156 +26,73 @@
  * not compile this!
  */
 
-#include <cmath>
-#include <cstdlib>
-
-#define LFO_SHIFT 	8
-
+// One LFO per slot, shared by the pitch (PLFO) and amplitude (ALFO) modulation, which decode its 8-bit
+// counter differently (manual Fig. 4.52). The waveform shapes, depths and step timing follow Mednafen's
+// SCSP (ss/scsp.inc). The LFO runs for every slot whether it is playing or not, and key on
+// doesn't restart it; LFORE holds the counter at 0.
 struct _LFO
 {
-	unsigned short phase;
-	UINT32 phase_step;
-	int *table;
-	int *scale;
+	UINT8 counter;		// position in the waveform (256 steps per cycle)
+	UINT16 timeCounter;	// samples until the next step
 };
 
-#define LFIX(v)	((unsigned int) ((float) (1<<LFO_SHIFT)*(v)))
-
-//Convert DB to multiply amplitude
-#define DB(v) 	LFIX(pow(10.0,(v)*(1.0/20.0)))
-
-//Convert cents to step increment
-#define CENTS(v) LFIX(exp2((v)*(1.0/1200.0)))
-
-static int PLFO_TRI[256], PLFO_SQR[256], PLFO_SAW[256], PLFO_NOI[256];
-static int ALFO_TRI[256], ALFO_SQR[256], ALFO_SAW[256], ALFO_NOI[256];
-static constexpr float LFOFreq[32] =
+// Advance one sample. LFOF sets the samples per step: 0 (0.17 Hz) to 1Fh (172 Hz), as in manual Table 4.21.
+static inline void LFO_Run(_LFO *lfo, unsigned lfof, bool lfore)
 {
-	0.17f,0.19f,0.23f,0.27f,0.34f,0.39f,0.45f,0.55f,0.68f,0.78f,0.92f,1.10f,1.39f,1.60f,1.87f,2.27f,
-	2.87f,3.31f,3.92f,4.79f,6.15f,7.18f,8.60f,10.8f,14.4f,17.2f,21.5f,28.7f,43.1f,57.4f,86.1f,172.3f
-};
-static constexpr float ASCALE[8] = {0.0f,0.4f,0.8f,1.5f,3.0f,6.0f,12.0f,24.0f};
-static constexpr float PSCALE[8] = {0.0f,7.0f,13.5f,27.0f,55.0f,112.0f,230.0f,494.0f};
-static int PSCALES[8][256];
-static int ASCALES[8][256];
-
-void LFO_Init(void)
-{
-	int i, s;
-	for (i = 0; i < 256; ++i)
+	if (--lfo->timeCounter == 0)
 	{
-		int a, p;
-		//		float TL;
-				//Saw
-		a = 255 - i;
-		if (i < 128)
-			p = i;
-		else
-			p = i - 256;
-		ALFO_SAW[i] = a;
-		PLFO_SAW[i] = p;
-
-		//Square
-		if (i < 128)
-		{
-			a = 255;
-			p = 127;
-		}
-		else
-		{
-			a = 0;
-			p = -128;
-		}
-		ALFO_SQR[i] = a;
-		PLFO_SQR[i] = p;
-
-		//Tri
-		if (i < 128)
-			a = 255 - (i * 2);
-		else
-			a = (i * 2) - 256;
-		if (i < 64)
-			p = i * 2;
-		else if (i < 128)
-			p = 255 - i * 2;
-		else if (i < 192)
-			p = 256 - i * 2;
-		else
-			p = i * 2 - 511;
-		ALFO_TRI[i] = a;
-		PLFO_TRI[i] = p;
-
-		//noise
-		//a=lfo_noise[i];
-		a = rand() & 0xff;
-		p = 128 - a;
-		ALFO_NOI[i] = a;
-		PLFO_NOI[i] = p;
+		lfo->counter++;
+		lfo->timeCounter = (UINT16)((((8 - (lfof & 3)) << 7) >> (lfof >> 2)) - 4);
 	}
-
-	for (s = 0; s < 8; ++s)
-	{
-		float limit = PSCALE[s];
-		for (i = -128; i < 128; ++i)
-		{
-			PSCALES[s][i + 128] = CENTS(((limit*(double)i) / 128.0));
-		}
-		limit = -ASCALE[s];
-		for (i = 0; i < 256; ++i)
-		{
-			ASCALES[s][i] = DB(((limit*(double)i) / 256.0));
-		}
-	}
+	if (lfore)
+		lfo->counter = 0;
 }
 
-signed int inline PLFO_Step(struct _LFO *LFO)
+// The noise generator (17-bit LFSR). It supplies SSCTL = 1 slot data and the noise LFO waveform, so noise
+// modulation doesn't depend on LFOF or LFORE (manual p.36). It is clocked once per slot.
+static inline UINT32 LFO_NextNoise(UINT32 lfsr)
 {
-	int p;
-	LFO->phase += LFO->phase_step;
-#if LFO_SHIFT!=8    
-	LFO->phase &= (1 << (LFO_SHIFT + 8)) - 1;
-#endif    
-	p = LFO->table[LFO->phase >> LFO_SHIFT];
-	p = LFO->scale[p + 128];
-	return p << (SHIFT - LFO_SHIFT);
+	return (lfsr >> 1) | ((((lfsr >> 5) ^ lfsr) & 1) << 16);
 }
 
-signed int inline ALFO_Step(struct _LFO *LFO)
+// Pitch LFO: an offset added to the 11-bit frequency number (400h | FNS), scaled with FNS so the depth
+// in cents is about the same for every note. PLFOS 7 gives about +/-210 cents, each lower level half. That is
+// Mednafen's depth; the manual's Table 4.24 gives twice as much (+/-7 to +/-494 cents).
+static inline int PLFO_Get(const _LFO *lfo, unsigned ws, unsigned level, unsigned fns, UINT32 lfsr)
 {
-	int p;
-	LFO->phase += LFO->phase_step;
-#if LFO_SHIFT!=8
-	LFO->phase &= (1 << (LFO_SHIFT + 8)) - 1;
-#endif
-	p = LFO->table[LFO->phase >> LFO_SHIFT];
-	p = LFO->scale[p];
-	return p << (SHIFT - LFO_SHIFT);
+	if (level == 0)
+		return 0;
+
+	const UINT8 c = lfo->counter;
+	int v;
+	switch (ws)
+	{
+	default:
+	case 0:	v = (INT8)(c & ~1); break;							// saw
+	case 1:	v = (c & 0x80) ? -0x80 : 0x7E; break;				// square
+	case 2:	v = (INT8)((((c & 0x3F) ^ ((c & 0x40) ? 0x3F : 0x00)) ^ ((c & 0x80) ? 0x7F : 0x00)) << 1); break;	// triangle
+	case 3:	v = (INT8)(lfsr & ~1); break;						// noise
+	}
+	v >>= (7 - level);
+	return ((int)(0x40 ^ (fns >> 4)) * v) >> 6;	// signed: v is negative half the time
 }
 
-void LFO_ComputeStep(struct _LFO *LFO, UINT32 LFOF, UINT32 LFOWS, UINT32 LFOS, int ALFO)
+// Amplitude LFO: attenuation added to the envelope (same 0.09375 dB units), 0 = none. ALFOS 7 goes down to
+// about 24 dB, each lower level half.
+static inline int ALFO_Get(const _LFO *lfo, unsigned ws, unsigned level, UINT32 lfsr)
 {
-	float step = (float)LFOFreq[LFOF] * 256.0f / 44100.0f;
-	LFO->phase_step = (unsigned int)((float)(1 << LFO_SHIFT)*step);
-	if (ALFO)
+	if (level == 0)
+		return 0;
+
+	const UINT8 c = lfo->counter;
+	unsigned v;
+	switch (ws)
 	{
-		switch (LFOWS)
-		{
-		case 0: LFO->table = ALFO_SAW; break;
-		case 1: LFO->table = ALFO_SQR; break;
-		case 2: LFO->table = ALFO_TRI; break;
-		case 3: LFO->table = ALFO_NOI; break;
-		}
-		LFO->scale = ASCALES[LFOS];
+	default:
+	case 0:	v = c & ~1; break;									// saw
+	case 1:	v = (c & 0x80) ? 0xFE : 0; break;					// square
+	case 2:	v = (UINT8)((c ^ ((c & 0x80) ? 0xFF : 0)) << 1); break;	// triangle
+	case 3:	v = lfsr & 0xFE; break;								// noise
 	}
-	else
-	{
-		switch (LFOWS)
-		{
-		case 0: LFO->table = PLFO_SAW; break;
-		case 1: LFO->table = PLFO_SQR; break;
-		case 2: LFO->table = PLFO_TRI; break;
-		case 3: LFO->table = PLFO_NOI; break;
-		}
-		LFO->scale = PSCALES[LFOS];
-	}
+	return (int)(v >> (7 - level));
 }

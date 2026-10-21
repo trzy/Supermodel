@@ -27,11 +27,6 @@
  
 #include "Supermodel.h"
 #include "SCSPDSP.h"
-//#include <assert.h>
-#define assert(x)	;	// disable assert() for releases
-//#include <memory.h>
-//#include <stdio.h>
-//#include <malloc.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -39,118 +34,6 @@
 #ifdef _MSC_VER
 #pragma warning(disable:4311)
 #endif
-
-#define DYNBUF	0x10000
-
-//this doesn't work at all
-//#define USEFLOATPACK
-
-//the PACK func in asm plus mov [esi],ax
-/*unsigned char PackFunc[]={0x8B,0xD8,0xA9,0x00,0x00,0x80,0x00,0x75,0x02,0xF7,0xD3,0xF7,0xD3,0x0F,0xBD,0xCB,
-						  0xF7,0xD9,0xC1,0xE0,0x08,0x83,0xC1,0x16,0xD3,0xE0,0xC1,0xF8,0x13,0xC1,0xE1,0x0B,
-						  0x25,0xFF,0x87,0x00,0x00,0x0B,0xC1,0x66,0x89,0x06};
-unsigned char UnpackFunc[]={0x8B,0xD8,0x8B,0xC8,0x81,0xE3,0x00,0x80,0x00,0x00,0x25,0xFF,0x07,
-							0x00,0x00,0xC1,0xE9,0x0B,0xC1,0xE0,0x0B,0xC1,0xE3,0x08,0x83,0xE1,0x0F,0x0B,0xC3,
-							0xD1,0xEB,0x81,0xF3,0x00,0x00,0x40,0x00,0x0B,0xC3,0x83,0xC1,0x08,0xC1,0xE0,0x08,
-							0xD3,0xF8};
-*/
-
-//#if 0
-//unsigned short inline PACK(signed int val)
-//{
-///*	signed int v1=val;
-//	int n=0;
-//	while(((v1>>22)&1) == ((v1>>23)&1))
-//	{
-//		v1<<=1;
-//		++n;
-//	}
-//	v1<<=8;
-//	v1>>=11+8;
-//	v1=(v1&(~0x7800))|(n<<11);
-//	return v1;
-//*/
-//#ifdef USEFLOATPACK
-//	unsigned short f;
-//	__asm
-//	{
-//		mov eax,val
-//		mov ebx,eax
-//		test eax,0x00800000
-//		jne negval
-//		not ebx
-//negval:	not ebx
-//		bsr ecx,ebx
-//		neg ecx
-//		shl eax,8
-//		add ecx,22
-//		shl eax,cl
-//		sar eax,8+11
-//		shl ecx,11
-//		and eax,~0x7800
-//		or eax,ecx
-//		mov f,ax
-//	}
-//	return f;
-//#else
-//
-//	//cut to 16 bits
-//	unsigned int f=((unsigned int ) val)>>8;
-//	return f;
-//#endif
-//}
-//
-//signed int inline UNPACK(unsigned short val)
-//{
-///*	if(val)
-//		int a=1;
-//	unsigned int mant=val&0x7ff;
-//	unsigned int exp=(val>>11)&0xf;
-//	unsigned int sign=(val>>15)&1;
-//	signed int r=0;
-//	r|=mant<<11;
-//	r|=sign<<23;
-//	r|=(sign^1)<<22;
-//
-//	//signed int r=val<<8;
-//	//if(r&0x00800000)
-//	//	r|=0xFF000000;
-//	r<<=8;
-//	r>>=8+exp;
-//	return r;
-//*/
-//#ifdef USEFLOATPACK
-//	signed int r;
-//	__asm
-//	{
-//		xor eax,eax
-//		mov ax,val
-//		mov ebx,eax
-//		mov ecx,eax
-//		and ebx,0x8000
-//		and eax,0x07ff
-//		shr ecx,11
-//		shl eax,11
-//		shl ebx,8
-//		and ecx,0xF
-//		or eax,ebx
-//		shr ebx,1
-//		xor ebx,0x00400000
-//		or eax,ebx
-//		add ecx,8
-//		shl eax,8
-//		sar eax,cl
-//		mov r,eax
-//	}
-//#else
-//	//unpack 16->24
-//	signed int r=val<<8;
-//	r<<=8;
-//	r>>=8;
-//#endif
-//	return r;
-//}
-//#else
 
 static UINT16 PACK(INT32 val)
 {
@@ -198,7 +81,6 @@ static INT32 UNPACK(UINT16 val)
 
 	return uval;
 }
-//#endif
 
 void SCSPDSP_Init(_SCSPDSP *DSP)
 {
@@ -206,32 +88,40 @@ void SCSPDSP_Init(_SCSPDSP *DSP)
 	DSP->RBL = (8 * 1024); // Initial RBL is 0
 	DSP->Stopped = true;
 }
-//#ifndef DYNDSP
+static inline INT32 SignExtend(int bits, UINT32 v)
+{
+	return (INT32)(v << (32 - bits)) >> (32 - bits);
+}
+
+// The sound memory access started by the previous step happens now, through a single port: a pending read is done
+// in preference to a pending write. A read becomes available to an IWT 2 or 3 steps after its MRD.
+static inline void DoMemoryAccess(_SCSPDSP *DSP)
+{
+	if (DSP->READPENDING)
+	{
+		UINT16 w = DSP->SCSPRAM[DSP->RWADDR];
+		DSP->MEMVAL = (DSP->READPENDING == 2) ? ((INT32)(INT16)w << 8) : UNPACK(w);
+		DSP->READPENDING = 0;
+	}
+	else if (DSP->WRITEPENDING)
+	{
+		DSP->SCSPRAM[DSP->RWADDR] = DSP->WRITEVAL;
+		DSP->WRITEPENDING = false;
+	}
+}
+
+// One sample of the DSP program. Instruction timing follows Mednafen (hardware tested) and Neill Corlett's notes:
+// - an MRD/MWT only starts a memory access, which is done during the next step;
+// - IWT copies the last word read (from an MRD 2 or 3 steps earlier) into MEMS, after this step's input was read;
+// - ACC, FRC, Y, ADRS and INPUTS keep their values from one sample to the next.
 void SCSPDSP_Step(_SCSPDSP *DSP)
 {
-	INT32 ACC = 0;    //26 bit
-	INT32 SHIFTED = 0;    //24 bit
-	INT32 X = 0;  //24 bit
-	INT32 Y = 0;  //13 bit
-	INT32 B = 0;  //26 bit
-	INT32 INPUTS = 0; //24 bit
-	INT32 MEMVAL = 0;
-	INT32 FRC_REG = 0;    //13 bit
-	INT32 Y_REG = 0;      //24 bit
-	UINT32 ADDR = 0;
-	UINT32 ADRS_REG = 0;  //13 bit
-	int step;
-
 	if (DSP->Stopped)
 		return;
 
-	memset(DSP->EFREG, 0, 2 * 16);
-	for (step = 0; step </*128*/DSP->LastStep; ++step)
+	for (int step = 0; step < DSP->LastStep; ++step)
 	{
-		UINT16 *IPtr = DSP->MPRO + step * 4;
-
-		//		if(IPtr[0]==0 && IPtr[1]==0 && IPtr[2]==0 && IPtr[3]==0)
-		//			break;
+		const UINT16 *IPtr = DSP->MPRO + step * 4;
 
 		UINT32 TRA = (IPtr[0] >> 8) & 0x7F;
 		UINT32 TWT = (IPtr[0] >> 7) & 0x01;
@@ -256,204 +146,127 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 		UINT32 ZERO = (IPtr[2] >> 1) & 0x01;
 		UINT32 BSEL = (IPtr[2] >> 0) & 0x01;
 
-		UINT32 NOFL = (IPtr[3] >> 15) & 0x01;	//????
 		UINT32 COEF = (IPtr[3] >> 9) & 0x3f;
-
-		UINT32 MASA = (IPtr[3] >> 2) & 0x1f;	//???
+		UINT32 NOFL = (IPtr[3] >> 8) & 0x01;	// 1: sound memory data is 16-bit integer, not floating point (bit 8, Mednafen)
+		UINT32 MASA = (IPtr[3] >> 2) & 0x1f;	// MADRS entry for the memory address
 		UINT32 ADREB = (IPtr[3] >> 1) & 0x01;
 		UINT32 NXADR = (IPtr[3] >> 0) & 0x01;
 
-		INT64 v;
-
-		//operations are done at 24 bit precision
-#if 0
-		if (MASA)
-			int a = 1;
-		if (NOFL)
-			int a = 1;
-#endif
-		//INPUTS RW
-// colmns97 hits this
-//		assert(IRA<0x32);
+		// Input: MEMS, MIXS (20 bit) or EXTS (16 bit). IRA 32h-3Fh selects nothing and INPUTS keeps its value.
 		if (IRA <= 0x1f)
-			INPUTS = DSP->MEMS[IRA];
+			DSP->INPUTS = SignExtend(24, DSP->MEMS[IRA]);
 		else if (IRA <= 0x2F)
-			INPUTS = DSP->MIXS[IRA - 0x20] << 4;  //MIXS is 20 bit
+			DSP->INPUTS = SignExtend(20, DSP->MIXS[IRA - 0x20]) << 4;
 		else if (IRA <= 0x31)
-			INPUTS = DSP->EXTS[IRA - 0x30] << 8;  //EXTS is 16 bit
-		else
-			return;
+			DSP->INPUTS = (INT32)DSP->EXTS[IRA - 0x30] << 8;
+		const INT32 INPUTS = DSP->INPUTS;
 
-		INPUTS <<= 8;
-		INPUTS >>= 8;
-		//if(INPUTS&0x00800000)
-		//	INPUTS|=0xFF000000;
-
-		if (IWT)
-		{
-			DSP->MEMS[IWA] = MEMVAL;  //MEMVAL was selected in previous MRD
-			if (IRA == IWA)
-				INPUTS = MEMVAL;
-		}
-
-		//Operand sel
-		//B
-		if (!ZERO)
-		{
-			if (BSEL)
-				B = ACC;
-			else
-			{
-				B = DSP->TEMP[(TRA + DSP->DEC) & 0x7F];
-				B <<= 8;
-				B >>= 8;
-				//if(B&0x00800000)
-				//	B|=0xFF000000;  //Sign extend
-			}
-			if (NEGB)
-				B = 0 - B;
-		}
-		else
-			B = 0;
-
-		//X
-		if (XSEL)
-			X = INPUTS;
-		else
-		{
-			X = DSP->TEMP[(TRA + DSP->DEC) & 0x7F];
-			X <<= 8;
-			X >>= 8;
-			//if(X&0x00800000)
-			//	X|=0xFF000000;
-		}
-
-		//Y
+		// Y operand (13 bit), from the registers as they were before this step
+		INT32 Y;
 		if (YSEL == 0)
-			Y = FRC_REG;
+			Y = DSP->FRC_REG;
 		else if (YSEL == 1)
-			Y = DSP->COEF[COEF] >> 3;   //COEF is 16 bits
+			Y = DSP->COEF[COEF] >> 3;	// COEF[12:0] is in bits 15-3
 		else if (YSEL == 2)
-			Y = (Y_REG >> 11) & 0x1FFF;
-		else if (YSEL == 3)
-			Y = (Y_REG >> 4) & 0x0FFF;
+			Y = (DSP->Y_REG >> 11) & 0x1FFF;
+		else
+			Y = (DSP->Y_REG >> 4) & 0x0FFF;
+		Y = SignExtend(13, (UINT32)Y);
 
 		if (YRL)
-			Y_REG = INPUTS;
+			DSP->Y_REG = INPUTS & 0xFFFFFF;
 
-		//Shifter
-		if (SHIFT == 0)
+		// Shifter: the accumulator from the previous step, x1 or x2, saturated (SHIFT 0, 1) or wrapped (2, 3) to 24 bits
+		INT32 SHIFTED = DSP->ACC;
+		if (SHIFT == 1 || SHIFT == 2)
+			SHIFTED *= 2;
+		if (SHIFT < 2)
 		{
-			SHIFTED = ACC;
 			if (SHIFTED > 0x007FFFFF)
 				SHIFTED = 0x007FFFFF;
-			if (SHIFTED < (-0x00800000))
+			if (SHIFTED < -0x00800000)
 				SHIFTED = -0x00800000;
 		}
-		else if (SHIFT == 1)
+		else
+			SHIFTED = SignExtend(24, (UINT32)SHIFTED);
+
+		if (FRCL)
+			DSP->FRC_REG = (SHIFT == 3) ? (SHIFTED & 0x0FFF) : ((SHIFTED >> 11) & 0x1FFF);
+
+		// Multiply and accumulate (26 bit)
 		{
-			SHIFTED = ACC * 2;
-			if (SHIFTED > 0x007FFFFF)
-				SHIFTED = 0x007FFFFF;
-			if (SHIFTED < (-0x00800000))
-				SHIFTED = -0x00800000;
-		}
-		else if (SHIFT == 2)
-		{
-			SHIFTED = ACC * 2;
-			SHIFTED <<= 8;
-			SHIFTED >>= 8;
-			//SHIFTED&=0x00FFFFFF;
-			//if(SHIFTED&0x00800000)
-			//	SHIFTED|=0xFF000000;
-		}
-		else if (SHIFT == 3)
-		{
-			SHIFTED = ACC;
-			SHIFTED <<= 8;
-			SHIFTED >>= 8;
-			//SHIFTED&=0x00FFFFFF;
-			//if(SHIFTED&0x00800000)
-			//	SHIFTED|=0xFF000000;
+			INT32 TEMP = SignExtend(24, DSP->TEMP[(TRA + DSP->DEC) & 0x7F]);
+			INT32 X = XSEL ? INPUTS : TEMP;
+			INT32 B = BSEL ? DSP->ACC : TEMP;
+			if (NEGB)
+				B = 0 - B;
+			if (ZERO)
+				B = 0;
+			INT64 product = ((INT64)X * (INT64)Y) >> 12;
+			DSP->ACC = SignExtend(26, (UINT32)((INT32)product + B));
 		}
 
-		//ACCUM
-		Y <<= 19;
-		Y >>= 19;
-		//if(Y&0x1000)
-		//	Y|=0xFFFFF000;
-
-		v = (((INT64)X*(INT64)Y) >> 12);
-		ACC = (int)v + B;
+		if (EWT)
+			DSP->EFREG[EWA] = SHIFTED >> 8;
 
 		if (TWT)
 			DSP->TEMP[(TWA + DSP->DEC) & 0x7F] = SHIFTED;
 
-		if (FRCL)
-		{
-			if (SHIFT == 3)
-				FRC_REG = SHIFTED & 0x0FFF;
-			else
-				FRC_REG = (SHIFTED >> 11) & 0x1FFF;
-		}
+		// IWT: the word from an earlier MRD goes to MEMS. This step already read its input, so with IRA == IWA it
+		// saw the old MEMS value. VF3's master DSP program relies on this: forwarding the new value instead turns one
+		// of its feedback loops into an integrator, and the DC from its synth waveforms builds up until the output
+		// sits at the limit.
+		if (IWT)
+			DSP->MEMS[IWA] = DSP->MEMVAL;
 
-		if (MRD || MWT)
-			//if(0)
+		// Finish the memory access started by the previous step, then start this step's
+		DoMemoryAccess(DSP);
+		// The address is calculated on every step: a write left waiting behind a read goes to the next step's address
 		{
-			ADDR = DSP->MADRS[MASA];
-			if (!TABLE)
-				ADDR += DSP->DEC;
-			if (ADREB)
-				ADDR += ADRS_REG & 0x0FFF;
+			UINT32 ADDR = DSP->MADRS[MASA];
 			if (NXADR)
 				ADDR++;
+			if (ADREB)
+				ADDR += SignExtend(12, DSP->ADRS_REG);
 			if (!TABLE)
+			{
+				ADDR += DSP->DEC;
 				ADDR &= DSP->RBL - 1;
+			}
 			else
 				ADDR &= 0xFFFF;
-			//ADDR<<=1;
-			//ADDR+=DSP->RBP<<13;
-			//MEMVAL=DSP->SCSPRAM[ADDR>>1];
-			ADDR += DSP->RBP << 12;
-			if (ADDR > 0x7ffff) ADDR = 0; //!! MAME has ADDR <<= 1 in here, but this seems to be wrong?
-			if (MRD && (step & 1)) //memory only allowed on odd? DoA inserts NOPs on even
-			{
-				if (NOFL)
-					MEMVAL = DSP->SCSPRAM[ADDR] << 8;
-				else
-					MEMVAL = UNPACK(DSP->SCSPRAM[ADDR]);
-			}
-			if (MWT && (step & 1))
-			{
-				if (NOFL)
-					DSP->SCSPRAM[ADDR] = SHIFTED >> 8;
-				else
-					DSP->SCSPRAM[ADDR] = PACK(SHIFTED);
-			}
+			DSP->RWADDR = (ADDR + (DSP->RBP << 12)) & 0x7FFFF;
 		}
-
-		if (ADRL)
+		if (MRD)
+			DSP->READPENDING = NOFL ? 2 : 1;
+		if (MWT)
 		{
-			if (SHIFT == 3)
-				ADRS_REG = (SHIFTED >> 12) & 0xFFF;
-			else
-				ADRS_REG = (INPUTS >> 16);
+			DSP->WRITEPENDING = true;
+			DSP->WRITEVAL = NOFL ? (UINT16)(SHIFTED >> 8) : PACK(SHIFTED);
 		}
+		if (ADRL)
+			DSP->ADRS_REG = (SHIFT == 3) ? ((SHIFTED >> 12) & 0xFFF) : ((INPUTS >> 16) & 0xFFF);
+	}
 
-		if (EWT)
-			DSP->EFREG[EWA] += SHIFTED >> 8;
-
+	// Steps LastStep-127 are empty instructions, which still run on the chip. They finish the pending memory accesses
+	// (a read, then a write left waiting behind it, at MADRS[0] + DEC), select MEMS[0] as input and leave
+	// ACC = TEMP[DEC] * FRC + TEMP[DEC].
+	for (int step = DSP->LastStep; step < 128 && step < DSP->LastStep + 2; ++step)
+	{
+		DoMemoryAccess(DSP);
+		DSP->RWADDR = (((DSP->MADRS[0] + DSP->DEC) & (DSP->RBL - 1)) + (DSP->RBP << 12)) & 0x7FFFF;
+		DSP->INPUTS = SignExtend(24, DSP->MEMS[0]);
+		INT32 TEMP = SignExtend(24, DSP->TEMP[DSP->DEC & 0x7F]);
+		INT64 product = ((INT64)TEMP * SignExtend(13, (UINT32)DSP->FRC_REG)) >> 12;
+		DSP->ACC = SignExtend(26, (UINT32)((INT32)product + TEMP));
 	}
 	--DSP->DEC;
-	memset(DSP->MIXS, 0, 4 * 16);
+	memset(DSP->MIXS, 0, sizeof(DSP->MIXS));
 }
 
-void SCSPDSP_SetSample(_SCSPDSP *DSP, INT32 sample, int SEL, int MXL)
+void SCSPDSP_SetSample(_SCSPDSP *DSP, INT32 sample, int SEL)
 {
-	//DSP->MIXS[SEL]+=sample<<(MXL+1)/*7*/;
 	DSP->MIXS[SEL] += sample;
-	//	if(MXL)
-	//		int a=1;
 }
 
 void SCSPDSP_Start(_SCSPDSP *DSP)
@@ -468,31 +281,4 @@ void SCSPDSP_Start(_SCSPDSP *DSP)
 			break;
 	}
 	DSP->LastStep = i + 1;
-
-/*
-	int test=0;
-	if(test)
-	{
-		//test
-		FILE *f1;
-		f1=fopen("MPRO","wb");
-		fwrite(DSP->MPRO,128*4*2,1,f1);
-		fwrite(DSP->COEF,64*2,1,f1);
-		fwrite(DSP->MADRS,32*2,1,f1);
-		fclose(f1);
-	}
-*/
-
-/*	for(int t=0;t<0x10000;++t)
-	{
-		signed int unp=UNPACK(t);
-		unsigned short t2=PACK(unp);
-		if(t2!=t)
-			int a=1;
-	}
-*/
-
-#ifdef DYNDSP
-	SCSPDSP_Recompile(DSP);
-#endif
-}
+}
