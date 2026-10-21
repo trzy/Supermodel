@@ -471,8 +471,37 @@ void CLegacy3D::MultMatrix(UINT32 matrixOffset)
   m[CMINDEX(3, 0)] = 0.0;
   m[CMINDEX(3, 1)] = 0.0;
   m[CMINDEX(3, 2)] = 0.0;
-  m[CMINDEX(3, 3)] = 1.0; 
+  m[CMINDEX(3, 3)] = 1.0;
   glMultMatrixf(m);
+}
+
+/*
+ * MultInverseMatrix():
+ *
+ * Multiplies the matrix stack by the inverse of a Real3D matrix. The matrix is
+ * a rigid transform, so the inverse is [R^T | -R^T t].
+ */
+void CLegacy3D::MultInverseMatrix(UINT32 matrixOffset)
+{
+  if (matrixBasePtr == NULL)
+    return;
+
+  // t = src[0..2]. The rows of R are src[3..5], src[6..8] and src[9..11].
+  const float *src = &matrixBasePtr[matrixOffset*12];
+  GLfloat inv[4*4];
+
+  for (int r = 0; r < 3; r++)
+    for (int c = 0; c < 3; c++)
+      inv[CMINDEX(r, c)] = src[3 + c*3 + r];
+
+  for (int r = 0; r < 3; r++)
+    inv[CMINDEX(r, 3)] = -(src[3+r]*src[0] + src[6+r]*src[1] + src[9+r]*src[2]);
+
+  inv[CMINDEX(3, 0)] = 0.0;
+  inv[CMINDEX(3, 1)] = 0.0;
+  inv[CMINDEX(3, 2)] = 0.0;
+  inv[CMINDEX(3, 3)] = 1.0;
+  glMultMatrixf(inv);
 }
 
 /*
@@ -504,7 +533,7 @@ void CLegacy3D::MultMatrix(UINT32 matrixOffset)
  * NOTE: This function assumes we are in GL_MODELVIEW matrix mode.
  */
 
-void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
+void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr, UINT32 envIdx)
 {
   GLfloat m[4*4];
 
@@ -515,7 +544,10 @@ void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
   m[CMINDEX(2,0)]=-1.0; m[CMINDEX(2,1)]=0.0;  m[CMINDEX(2,2)]=0.0;  m[CMINDEX(2,3)]=0.0;
   m[CMINDEX(3,0)]=0.0;  m[CMINDEX(3,1)]=0.0;  m[CMINDEX(3,2)]=0.0;  m[CMINDEX(3,3)]=1.0;
   
-  if (step > 0x10)
+  // Pro-1000 programs use the Real3D API, which gives world coordinates at a
+  // normal scale. Do not make them smaller, or the scene goes in front of the
+  // near clip plane and the renderer removes it.
+  if (!step10 || pro1000)
     glLoadMatrixf(m);
   else
   {
@@ -526,9 +558,18 @@ void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
     glMultMatrixf(m);
   }
   
-  // Set matrix base address and apply matrix #0 (coordinate system matrix)
+  // Set matrix base address
   matrixBasePtr = (const float *) TranslateCullingAddress(matrixBaseAddr);
-  MultMatrix(0);
+
+  // The environment-to-channel matrix index comes from viewport word 0x15.
+  // Index 0 holds the coordinate system matrix and is used directly. Model 3
+  // games always use index 0. Any other index holds the camera pose
+  // (eye -> world) and must be inverted. Pro-1000 programs do this, and they
+  // allocate the index downwards from 1023, so they never use index 0.
+  if (envIdx == 0)
+    MultMatrix(0);
+  else
+    MultInverseMatrix(envIdx);
 }
 
 
@@ -538,9 +579,11 @@ void CLegacy3D::InitMatrixStack(UINT32 matrixBaseAddr)
  Complete scene database traversal and rendering.
 ******************************************************************************/
 
-static bool IsVROMModel(UINT32 modelAddr)
+static bool IsVROMModel(UINT32 modelAddr, bool vromIsPolygonRAM)
 {
-  return modelAddr >= 0x100000;
+  // When VROM is polygon RAM (Pro-1000), all addresses are in dynamic polygon
+  // RAM and must not be cached as static VROM models.
+  return !vromIsPolygonRAM && modelAddr >= 0x100000;
 }
 
 static bool IsDynamicModel(const UINT32 *data)
@@ -588,7 +631,7 @@ Result CLegacy3D::DrawModel(UINT32 modelAddr)
   const UINT32 *model = TranslateModelAddress(modelAddr);
   
   // Determine whether model is in polygon RAM or VROM
-  ModelCache *Cache = IsVROMModel(modelAddr) ? &VROMCache : &PolyCache;
+  ModelCache *Cache = IsVROMModel(modelAddr, m_vromIsPolygonRAM) ? &VROMCache : &PolyCache;
     
   // Look up the model in the LUT and cache it if necessary
   int lutIdx = modelAddr&0xFFFFFF;
@@ -659,7 +702,10 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   if ((node[0x00] & 0x04))
   {
     m_colorTableAddr = ((node[0x03-offset] >> 19) << 0) | ((node[0x07-offset] >> 28) << 13) | ((node[0x08-offset] >> 25) << 17);
-    m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
+    if (m_vromIsPolygonRAM)
+      m_colorTableAddr &= 0x00FFFFFF; // all 24 bits: table can be anywhere in polygon RAM (Pro-1000)
+    else
+      m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
   }
 
 #ifdef DEBUG
@@ -675,8 +721,11 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
   //  printf("%X -> %02X %04X\n", addr, node[0x00]&0xFF, node[0x02]&0xFFFF);
     
   // Extract known fields
-  const UINT32 node1Ptr     = node[0x07-offset];
-  const UINT32 node2Ptr     = node[0x08-offset];
+  // The color table address uses the upper bits of these two words. Remove
+  // them, or they change the pointer type and the renderer loses the subtree.
+  const UINT32 node1Ptr     = node[0x07-offset] & 0x7FFFFFF;
+  const UINT32 node2Ptr     = node[0x08-offset] & 0x1FFFFFF;
+
   const UINT32 matrixOffset = node[0x03-offset]&0xFFF;
   const float x             = Util::Uint32AsFloat(node[0x04-offset]);
   const float y             = Util::Uint32AsFloat(node[0x05-offset]);
@@ -703,7 +752,9 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
     const UINT32 *lodTable = TranslateCullingAddress(node1Ptr);
     if (NULL != lodTable)
     {
-      if ((node[0x03-offset]&0x20000000))
+      // Bit 24 of the child pointer tells if the table entry is a model or a
+      // culling node. Do not use node[0x03], which holds other data.
+      if (!(node1Ptr & 0x01000000))
         DescendCullingNode(lodTable[0]&0xFFFFFF);
       else
         DrawModel(lodTable[0]&0xFFFFFF);
@@ -717,8 +768,17 @@ void CLegacy3D::DescendCullingNode(UINT32 addr)
 #ifdef DEBUG
   m_debugHighlightAll = oldDebugHighlightAll;
 #endif
-  if ((node[0x00] & 0x07) != 0x06)  // seems to indicate second link is invalid (fixes circular references)
-    DescendNodePtr(node2Ptr);
+  // A culling node that has a color table (node[0] & 7 == 6) does not use its
+  // sibling word, but a point ref node (bit 28) does. Pro-1000 point light
+  // chains connect through it. The sibling is always a culling node, so do not
+  // send it to DescendNodePtr: bit 24 is a flag there, not a pointer type.
+  const bool colorTableNode = (node[0x00] & 0x07) == 0x06;
+  const bool pointRef       = (node[0x00] & 0x10000000) != 0;
+  if (!colorTableNode || pointRef)
+  {
+    if (node2Ptr && !(node2Ptr & 0x1000000))
+      DescendCullingNode(node2Ptr);
+  }
   --stackDepth;
   
   // Restore old texture offsets
@@ -736,6 +796,24 @@ void CLegacy3D::DescendPointerList(UINT32 addr)
     return;
     
   ++listDepth;
+
+  if (pro1000)
+  {
+    // Pro-1000 list entries can have flag bits in the upper byte. Stop only at
+    // the end bit, as the Pro-1000 SDK does. Do not stop at the first entry
+    // that has a flag bit, or the renderer loses the remainder of the list.
+    for (int index = 0; index < 1024; index++)   // the limit guards against a missing end bit
+    {
+      if (!(list[index] & 0x01000000))
+        DescendCullingNode(list[index] & 0x00FFFFFF);
+      if (list[index] & 0x02000000)
+        break;  // list end
+    }
+
+    --listDepth;
+    return;
+  }
+
   // Traverse the list forward and print it out
   int listEnd = 0;
   while (1)
@@ -776,11 +854,11 @@ void CLegacy3D::DescendPointerList(UINT32 addr)
  * The old scene traversal engine. Recursively descends into a node pointer.
  */
 void CLegacy3D::DescendNodePtr(UINT32 nodeAddr)
-{   
+{
   // Ignore null links
   if ((nodeAddr&0x00FFFFFF) == 0)
     return;
-    
+
   switch ((nodeAddr>>24)&0xFF)  // pointer type encoded in upper 8 bits
   {
   case 0x00:  // culling node
@@ -819,10 +897,12 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
     return;
 
   // Recursively process next viewport
-  UINT32 nextAddr = vpnode[0x01]; // next viewport              
+  UINT32 nextAddr = vpnode[0x01]; // next viewport
   UINT32 nodeAddr = vpnode[0x02]; // scene database node pointer
+
   if (nextAddr == 0)  // memory probably hasn't been set up yet, abort
     return;
+
   if (nextAddr != 0x01000000)
     RenderViewport(nextAddr, pri, wideScreen);
 
@@ -850,23 +930,22 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   // Set up viewport and projection (TO-DO: near and far clipping)
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  if (wideScreen && (vpX==0) && (vpWidth>=495) && (vpY==0) && (vpHeight >= 383))  // only expand viewports that occupy whole screen
+  if (wideScreen && (vpX==0) && (vpWidth>=screenWidth-1) && (vpY==0) && (vpHeight >= screenHeight-1))  // only expand viewports that occupy whole screen
   {
     // Wide screen hack only modifies X axis and not the Y FOV
     viewportX      = 0;
-    viewportY      = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
+    viewportY      = yOffs + (GLint) ((float)(screenHeight-(vpY+vpHeight))*yRatio);
     viewportWidth  = totalXRes;
     viewportHeight = (GLint) ((float)vpHeight*yRatio);
     gluPerspective(fovYDegrees,(GLfloat)viewportWidth/(GLfloat)viewportHeight,0.1f,1e5);  // use actual full screen ratio to get proper X FOV
-    //printf("viewportX=%d, viewportY=%d, viewportWidth=%d, viewportHeight=%d\tvpY=%d vpHeight=%d\n", viewportX, viewportY, viewportWidth, viewportHeight, vpY,vpHeight);
   }
   else
   {
     viewportX      = xOffs + (GLint) ((float)vpX*xRatio);
-    viewportY      = yOffs + (GLint) ((float)(384-(vpY+vpHeight))*yRatio);
+    viewportY      = yOffs + (GLint) ((float)(screenHeight-(vpY+vpHeight))*yRatio);
     viewportWidth  = (GLint) ((float)vpWidth*xRatio);
     viewportHeight = (GLint) ((float)vpHeight*yRatio);
-    gluPerspective(fovYDegrees,(GLdouble)vpWidth/(GLdouble)vpHeight,0.1,1e5);        // use Model 3 viewport ratio
+    gluPerspective(fovYDegrees,(GLdouble)vpWidth/(GLdouble)vpHeight,0.1,1e5);        // use viewport coordinate ratio
   }
   
   // Lighting (note that sun vector points toward sun -- away from vertex)
@@ -891,10 +970,10 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
   //printf("(%g,%g),(%g,%g),(%g,%g) -> \n", spotEllipse[0], spotEllipse[1], spotEllipse[2], spotEllipse[3], spotRange[0], spotRange[1]);
   
   // Spotlight is applied on a per pixel basis, must scale its position and size to screen
-  spotEllipse[1] = 384.0f-spotEllipse[1];
+  spotEllipse[1] = screenHeight - spotEllipse[1];  // convert from top-referenced to bottom-referenced Y
   spotRange[1] += spotRange[0]; // limit
-  spotEllipse[2] = 496.0f/sqrt(spotEllipse[2]); // spotlight appears to be specified in terms of physical resolution (unconfirmed)
-  spotEllipse[3] = 384.0f/sqrt(spotEllipse[3]);
+  spotEllipse[2] = screenWidth  / sqrt(spotEllipse[2]);  // spotlight size is specified in native display coordinates (unconfirmed)
+  spotEllipse[3] = screenHeight / sqrt(spotEllipse[3]);
 
   // Scale the spotlight to the OpenGL viewport
   spotEllipse[0] = spotEllipse[0]*xRatio + xOffs;
@@ -922,29 +1001,43 @@ void CLegacy3D::RenderViewport(UINT32 addr, int pri, bool wideScreen)
 
   // Set up coordinate system and base matrix
   UINT32 matrixBase = vpnode[0x16] & 0xFFFFFF;
+  UINT32 envIdx = vpnode[0x15] & 0xFFF;   // environment-to-channel matrix index
   glMatrixMode(GL_MODELVIEW);
-  InitMatrixStack(matrixBase);
+  InitMatrixStack(matrixBase, envIdx);
 
-  // Safeguard: weird coordinate system matrices usually indicate scenes that will choke the renderer
+  // Safeguard: weird coordinate system matrices usually indicate scenes that
+  // will choke the renderer. Test the matrix that InitMatrixStack used.
   if (nullptr != matrixBasePtr)
   {
-    float m21, m32, m13;
+    if (envIdx == 0)
+    {
+      // Matrix 0 is the permuted coordinate system matrix that Model 3 games
+      // define. These three elements are the ones they set, and each has a
+      // magnitude of 1.
+      float m21 = matrixBasePtr[6];
+      float m32 = matrixBasePtr[10];
+      float m13 = matrixBasePtr[5];
 
-    // Get the three elements that are usually set and see if their magnitudes are 1
-    m21 = matrixBasePtr[6];
-    m32 = matrixBasePtr[10];
-    m13 = matrixBasePtr[5];
+      m21 *= m21;
+      m32 *= m32;
+      m13 *= m13;
 
-    m21 *= m21;
-    m32 *= m32;
-    m13 *= m13;
-
-    if ((m21>1.05f) || (m21<0.95f))
-      return;
-    if ((m32>1.05f) || (m32<0.95f))
-      return;
-    if ((m13>1.05f) || (m13<0.95f))
-      return;
+      if ((m21>1.05f) || (m21<0.95f) || (m32>1.05f) || (m32<0.95f) || (m13>1.05f) || (m13<0.95f))
+        return;
+    }
+    else
+    {
+      // The camera pose can hold any rotation, so only test that each row of
+      // the 3x3 part has a magnitude of 1.
+      const float *src = &matrixBasePtr[envIdx*12];
+      for (int row = 0; row < 3; row++)
+      {
+        const float *r = &src[3 + row*3];
+        float mag = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+        if ((mag > 1.05f) || (mag < 0.95f))
+          return;
+      }
+    }
   }
 
   // Render
@@ -1086,17 +1179,13 @@ void CLegacy3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullin
   DebugLog("Legacy3D attached Real3D memory regions\n");
 }
 
-void CLegacy3D::SetStepping(int stepping)
+void CLegacy3D::SetStepping(Game::Stepping stepping)
 {
-  step = stepping;
-  
-  if ((step!=0x10) && (step!=0x15) && (step!=0x20) && (step!=0x21))
-  {
-    DebugLog("Legacy3D: Unrecognized stepping: %d.%d\n", (step>>4)&0xF, step&0xF);
-    step = 0x10;
-  }
-  
-  if (step > 0x10)
+  // The Pro-1000 uses the Step 1.0 formats
+  pro1000 = Game::IsPro1000Stepping(stepping);
+  step10 = stepping == Game::Stepping::MODEL3_1_0 || pro1000;
+
+  if (!step10)
   {
     offset = 0;           // culling nodes are 10 words
     vertexFactor = (1.0f/2048.0f);  // vertices are in 13.11 format
@@ -1107,7 +1196,7 @@ void CLegacy3D::SetStepping(int stepping)
     vertexFactor = (1.0f/128.0f); // 17.7
   }
   
-  DebugLog("Legacy3D set to Step %d.%d\n", (step>>4)&0xF, step&0xF);
+  DebugLog("Legacy3D set to %s\n", Game::SteppingName(stepping));
 }
 
 Result CLegacy3D::SetupGLObjects()
@@ -1257,6 +1346,12 @@ Result CLegacy3D::SetupGLObjects()
         texSheets[sheetNum].mapNum = mapNum;
         texSheets[sheetNum].xOffset = 2048 * (posInMap % mapExtent);
         texSheets[sheetNum].yOffset = 2048 * (posInMap / mapExtent);
+
+        // new[] does not initialize these. Set them to -1 ("not decoded"), or
+        // DecodeTexture can match a random value and keep a texture it never wrote.
+        memset(texSheets[sheetNum].texWidth, 0xFF, sizeof(texSheets[sheetNum].texWidth));
+        memset(texSheets[sheetNum].texHeight, 0xFF, sizeof(texSheets[sheetNum].texHeight));
+        memset(texSheets[sheetNum].texFormat, 0xFF, sizeof(texSheets[sheetNum].texFormat));
     }
 
     // Assign Model3 texture formats to texture sheets (cannot just use default mapping as may have ended up with fewer
@@ -1311,9 +1406,9 @@ Result CLegacy3D::SetupGLObjects()
   
 Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
-    // Resolution and offset within physical display area
-    xRatio = (GLfloat)xRes / 496.0f;
-    yRatio = (GLfloat)yRes / 384.0f;
+    // Scale from native display coordinates to screen pixels.
+    xRatio = (GLfloat)xRes / screenWidth;
+    yRatio = (GLfloat)yRes / screenHeight;
     xOffs = xOffset;
     yOffs = yOffset;
     totalXRes = totalXResParam;
@@ -1322,6 +1417,24 @@ Result CLegacy3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsign
     m_aaTarget = aaTarget;
 
     return Result::OKAY;
+}
+
+void CLegacy3D::SetScreenSize(float width, float height)
+{
+	// If Init() has run, rescale the existing ratios to the new coordinate range.
+	// new_ratio = old_ratio * old_screen / new_screen  (pixel count is unchanged)
+	if (xRatio != 0.0f)
+	{
+		xRatio = xRatio * screenWidth  / width;
+		yRatio = yRatio * screenHeight / height;
+	}
+	screenWidth  = width;
+	screenHeight = height;
+}
+
+void CLegacy3D::SetVROMIsPolygonRAM(bool enable)
+{
+	m_vromIsPolygonRAM = enable;
 }
 
 void CLegacy3D::SetSunClamp(bool enable)

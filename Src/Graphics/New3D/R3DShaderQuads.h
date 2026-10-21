@@ -101,7 +101,7 @@ out GS_OUT
 	flat vec4	color;
 	flat float	fixedShade[4];
 	flat float	LODBase;
-	vec3 barycentricCoords;
+	vec4 barycentricCoords;			// w = 1: triangle (see main)
 } gs_out;
 
 //a*b - c*d, computed in a stable fashion (Kahan)
@@ -113,29 +113,54 @@ float DifferenceOfProducts(float a, float b, float c, float d)
     return dop + err;
 }
 
+// writes vertex i's attributes, returns its projected position
+vec2 SetVertexAttribs(int i)
+{
+	float oneOverW			= 1.0 / gl_in[i].gl_Position.w;
+	gs_out.oneOverW[i]		= oneOverW;
+
+	// our regular vertex attribs
+	gs_out.viewVertex[i]	= gs_in[i].viewVertex * oneOverW;
+	gs_out.viewNormal[i]	= gs_in[i].viewNormal * oneOverW;
+	gs_out.texCoord[i]		= gs_in[i].texCoord   * oneOverW;
+	gs_out.fixedShade[i]	= gs_in[i].fixedShade * oneOverW;
+
+	return gl_in[i].gl_Position.xy * oneOverW;
+}
+
 void main(void)
 {
 	if(gs_in[0].discardPoly > 0.0) {
 		return;					//emulate back face culling here (all vertices in poly have same value)
 	}
 
-	vec2 v[4];
-
-	for (int i=0; i<4; i++) {
-		float oneOverW		= 1.0 / gl_in[i].gl_Position.w;
-		gs_out.oneOverW[i]	= oneOverW;
-		v[i]				= gl_in[i].gl_Position.xy * oneOverW;
-
-		// our regular vertex attribs
-		gs_out.viewVertex[i]	= gs_in[i].viewVertex * oneOverW;
-		gs_out.viewNormal[i]	= gs_in[i].viewNormal * oneOverW;
-		gs_out.texCoord[i]		= gs_in[i].texCoord   * oneOverW;
-		gs_out.fixedShade[i]	= gs_in[i].fixedShade * oneOverW;
-	}
+	// Triangles: stored as quads with vertex 3 being a copy of vertex 2 (CNew3D::CopyVertexData), and the same transform makes both
+	// positions bit-identical (not spec guaranteed though). The quad code can't handle a duplicate vertex, so emit just 0-2, flagged
+	// (barycentricCoords.w) for the fragment shader's barycentric path, which is exact for it. Slot 3 must still be set
+	// below: the fragment shader reads its oneOverW in the coplanar depth test, and the rest with weight 0.
+	bool triangle = (gl_in[3].gl_Position == gl_in[2].gl_Position);
 
 	// flat attributes
 	gs_out.color = gs_in[0].color;
 	gs_out.LODBase = gs_in[0].LODBase;
+
+	if (triangle) {
+		for (int i=0; i<4; i++) {
+			SetVertexAttribs(i);
+		}
+		for (int i=0; i<3; i++) {
+			gs_out.barycentricCoords = vec4(i==0, i==1, i==2, 1.0);
+			gl_Position = gl_in[i].gl_Position;
+			EmitVertex();
+		}
+		return;
+	}
+
+	vec2 v[4];
+
+	for (int i=0; i<4; i++) {
+		v[i] = SetVertexAttribs(i);
+	}
 
 	// precompute crossproducts for all vertex combinations to be looked up in loop below for area computation
 	// (cross[i*4+j] for vertices i and j; a flat array because arrays of arrays would need GLSL 4.30)
@@ -179,7 +204,7 @@ void main(void)
 			vec3(0.0,-1.0, 0.0)		// make the last coordinate negative so we can tell the difference between the triangles
 		);
 
-		gs_out.barycentricCoords = bary[ii];
+		gs_out.barycentricCoords = vec4(bary[ii], 0.0);
 
 		gl_Position = gl_in[ii].gl_Position;
 
@@ -230,7 +255,7 @@ uniform float	fogAmbient;
 uniform bool	fixedShading;
 uniform bool	smoothShading;
 uniform float	layerDepthBias;		// PRO-1000: >1.0 pulls layered polys towards the viewer (reverse z)
-uniform int		hardwareStep;
+uniform bool	step15Luminous;
 uniform int		colourLayer;
 
 // matrices (shared with vertex shader)
@@ -251,7 +276,7 @@ in GS_OUT
 	flat vec4	color;
 	flat float	fixedShade[4];
 	flat float	LODBase;
-	vec3 barycentricCoords;
+	vec4 barycentricCoords;
 } fs_in;
 
 //our calculated vertex attributes from the above
@@ -289,7 +314,7 @@ void QuadraticInterpolation()
 	float uSum				= 0.0;
 
 	const float hpFMin		= 0.00006103515625;		// half precision FLT_MIN
-	bool extreme_edge		= (fs_in.barycentricCoords.x <= hpFMin || fs_in.barycentricCoords.z <= hpFMin); 
+	bool extreme_edge		= (fs_in.barycentricCoords.w > 0.5 || fs_in.barycentricCoords.x <= hpFMin || fs_in.barycentricCoords.z <= hpFMin); // w: triangle
 
 	// As the coordinates get closer to the poly edge the interpolated areas can approach zero which can blow up the maths leading to bad interpolation.
 	// In this case we fall back to 3 point triangle interpolation (really 2 because 1 coord will be zero).

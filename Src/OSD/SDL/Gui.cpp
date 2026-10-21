@@ -946,7 +946,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
         ImGui::TableSetupColumn("Rom Name");
         ImGui::TableSetupColumn("Version");
         ImGui::TableSetupColumn("Year");
-        ImGui::TableSetupColumn("Stepping");
+        ImGui::TableSetupColumn("Hardware");
 
         ImGui::TableHeadersRow();
 
@@ -984,7 +984,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
             ImGui::TableSetColumnIndex(3);
             ImGui::Text("%d", g.second.year);
             ImGui::TableSetColumnIndex(4);
-            ImGui::Text("%s", g.second.stepping.c_str());
+            ImGui::Text("%s", Game::SteppingName(g.second.stepping));
 
             if (!owned) {
                 ImGui::EndDisabled();

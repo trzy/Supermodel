@@ -60,6 +60,7 @@ jobs:
             mingw64/mingw-w64-x86_64-gcc
             mingw64/mingw-w64-x86_64-SDL2
             mingw64/mingw-w64-x86_64-SDL2_net
+            mingw32/mingw-w64-i686-gcc
 
       - name: Build Supermodel
         run: |
@@ -70,6 +71,8 @@ jobs:
           # Find the executable in bin/ directory (bin64/ on Windows)
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ./bin64/supermodel.exe -print-games
+            # The 32-bit ASPI DLL for Real3D Pro-1000 host programs must also be built
+            test -f ./bin32/wnaspi32.dll
           else
             ./bin/supermodel -print-games
           fi

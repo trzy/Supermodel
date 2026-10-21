@@ -1039,7 +1039,7 @@ UINT8 CModel3::Read8(UINT32 addr)
         break;
       }
     }
-  else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+  else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     return SCSI.ReadRegister(addr&0xFF);
@@ -1333,7 +1333,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     data =  (SCSI.ReadRegister((addr+0)&0xFF) << 24);
@@ -1490,7 +1490,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister(addr&0xFF,data);
@@ -1812,7 +1812,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
@@ -2026,11 +2026,11 @@ static unsigned GetCPUClockFrequencyInHz(const Game &game, Util::Config::Node &c
   unsigned mhz = config["PowerPCFrequency"].ValueAsDefault<unsigned>(0);
   if (!mhz)
   {
-    if (game.stepping == "1.0")
+    if (game.stepping == Game::Stepping::MODEL3_1_0)
     {
       mhz = 66;
     }
-    else if (game.stepping == "1.5")
+    else if (game.stepping == Game::Stepping::MODEL3_1_5)
     {
       mhz = 100;
     }
@@ -2861,10 +2861,126 @@ const Game &CModel3::GetGame() const
   return m_game;
 }
 
-// Stepping-dependent parameters (MPC10x type, etc.) are initialized here
-Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
+void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  m_game = Game();
+  TileGen.AttachRenderer(dynamic_cast<CRender2D *>(Render2DPtr));
+  Render3DPtr->SetStepping(m_stepping);
+  GPU.AttachRenderer(Render3DPtr);
+  m_superAA = superAA;
+}
+
+void CModel3::AttachInputs(CInputs *InputsPtr)
+{
+  Inputs = InputsPtr;
+
+  if (DriveBoard->IsAttached())
+    DriveBoard->AttachInputs(Inputs, m_game.inputs);
+
+  DebugLog("Model 3 attached inputs\n");
+}
+
+void CModel3::AttachOutputs(COutputs *OutputsPtr)
+{
+  Outputs = OutputsPtr;
+  Outputs->SetGame(m_game);
+  Outputs->Attached();
+
+  if (DriveBoard->IsAttached())
+    DriveBoard->AttachOutputs(Outputs);
+
+  DebugLog("Model 3 attached outputs\n");
+}
+
+constexpr static int RAM_SIZE			= 0x800000;		//8MB
+constexpr static int CROM_SIZE			= 0x800000;		//8MB
+constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
+constexpr static int VROM_SIZE			= 0x4000000;	//64MB
+constexpr static int BACKUPRAM_SIZE		= 0x20000;		//128KB
+constexpr static int SECURITYRAM_SIZE	= 0x20000;		//128KB
+constexpr static int SOUNDROM_SIZE		= 0x80000;		//512KB
+constexpr static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
+constexpr static int DSBPROGROM_SIZE	= 0x20000;		//128KB
+constexpr static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
+constexpr static int DRIVEROM_SIZE		= 0x10000;		//64KB
+constexpr static int NETBUFFER_SIZE		= 0x20000;		//128KB
+constexpr static int NETRAM_SIZE		= 0x10000;		//64KB
+
+constexpr static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
+                                        CROMxx_SIZE + VROM_SIZE +
+                                        BACKUPRAM_SIZE + SECURITYRAM_SIZE +
+                                        SOUNDROM_SIZE + SAMPLEROM_SIZE +
+                                        DSBPROGROM_SIZE + DSBMPEGROM_SIZE +
+                                        DRIVEROM_SIZE + NETBUFFER_SIZE +
+                                        NETRAM_SIZE;
+
+constexpr static int RAM_OFFSET			= 0;
+constexpr static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
+constexpr static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
+constexpr static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
+constexpr static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
+constexpr static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
+constexpr static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
+constexpr static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
+constexpr static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
+constexpr static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
+constexpr static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
+constexpr static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
+constexpr static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
+
+// Model 3 initialization: memory, devices, ROMs, and the stepping-dependent
+// parameters (MPC10x type, etc.)
+Result CModel3::Init(const Game &game, const ROMSet &rom_set)
+{
+  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
+
+  // Allocate all memory for ROMs and PPC RAM
+  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
+  if (NULL == memoryPool)
+    return ErrorLog("Insufficient memory for Model 3 object (needs %1.1f MB).", memSizeMB);
+  memset(memoryPool, 0, MEM_POOL_SIZE);
+
+  // Set up pointers
+  ram = &memoryPool[RAM_OFFSET];
+  crom = &memoryPool[CROM_OFFSET];
+  vrom = &memoryPool[VROM_OFFSET];
+  soundROM = &memoryPool[SOUNDROM_OFFSET];
+  sampleROM = &memoryPool[SAMPLEROM_OFFSET];
+  dsbROM = &memoryPool[DSBPROGROM_OFFSET];
+  mpegROM = &memoryPool[DSBMPEGROM_OFFSET];
+  backupRAM = &memoryPool[BACKUPRAM_OFFSET];
+  securityRAM = &memoryPool[SECURITYRAM_OFFSET];
+  driveROM = &memoryPool[DRIVEROM_OFFSET];
+  netRAM = &memoryPool[NETRAM_OFFSET];
+  netBuffer = &memoryPool[NETBUFFER_OFFSET];
+
+  SetCROMBank(0xFF);
+
+  // Initialize devices (the PowerPC, DSB, drive board, and security board are
+  // initialized after the ROMs are loaded)
+  IRQ.Init();
+  PCIBridge.Init();
+  PCIBus.Init();
+  SCSI.Init(this,&IRQ,CIRQ::NMI); // SCSI is actually a non-maskable interrupt
+  RTC.Init();
+  EEPROM.Init();
+  if (Result::OKAY != TileGen.Init(&IRQ))
+    return Result::FAIL;
+  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI,Real3DConfig::Model3(game.stepping))) // same for Real3D DMA interrupt
+    return Result::FAIL;
+  if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
+    return Result::FAIL;
+
+  PCIBridge.AttachPCIBus(&PCIBus);
+  PCIBus.AttachDevice(13,&GPU);
+  PCIBus.AttachDevice(14,&SCSI);
+  PCIBus.AttachDevice(16,this);
+
+  if (m_config["SimulateNet"].ValueAs<bool>())
+      NetBoard = new CSimNetBoard(m_config);
+  else
+      NetBoard = new CNetBoard(m_config);
+
+  DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 
   /*
    * Copy in ROM data with mirroring as necessary for the following cases:
@@ -2912,21 +3028,21 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 
   // Configure CPU and PCI bridge
   PPC_CONFIG  ppc_config;
-  if (game.stepping == "2.0" || game.stepping == "2.1")
+  if (game.stepping == Game::Stepping::MODEL3_2_0 || game.stepping == Game::Stepping::MODEL3_2_1)
   {
     ppc_config.pvr = PPC_MODEL_603R;  // 166 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x25; // 2.5X multiplier
     PCIBridge.SetModel(0x106);        // MPC106
   }
-  else if (game.stepping == "1.5")
+  else if (game.stepping == Game::Stepping::MODEL3_1_5)
   {
     ppc_config.pvr = PPC_MODEL_603E;  // 100 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x15; // 1.5X multiplier
     PCIBridge.SetModel(0x105);        // MPC105
   }
-  else if (game.stepping == "1.0")
+  else if (game.stepping == Game::Stepping::MODEL3_1_0)
   {
     ppc_config.pvr = PPC_MODEL_603R;  // 66 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
@@ -2935,7 +3051,7 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   }
   else
   {
-    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", game.stepping.c_str());
+    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", Game::SteppingName(game.stepping));
     return Result::FAIL;
   }
 
@@ -2953,9 +3069,8 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   PPCFetchRegions[2].ptr = NULL;
   ppc_set_fetch(PPCFetchRegions);
 
-  // Initialize Real3D
-  m_stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  GPU.SetStepping(m_stepping);
+  // JTAG scan chain of the stepping
+  m_stepping = game.stepping;
   m_jtag.SetStepping(m_stepping);
 
   // MPEG board (if present)
@@ -3040,7 +3155,7 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   std::cout << "    ROM Set:        " << game.name << std::endl;
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
-  std::cout << "    Stepping:       " << game.stepping << std::endl;
+  std::cout << "    Hardware:       " << Game::SteppingName(game.stepping) << std::endl;
   if (!extra_hw.empty())
     std::cout << "    Extra Hardware: " << Util::Format(", ").Join(extra_hw) << std::endl;
   std::cout << std::endl;
@@ -3052,128 +3167,7 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
     return Result::FAIL;
   }
 
-  m_runNetBoard = m_game.stepping != "1.0" && NetBoard->IsAttached();
-
-  return Result::OKAY;
-}
-
-void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
-{
-  TileGen.AttachRenderer(Render2DPtr);
-  GPU.AttachRenderer(Render3DPtr);
-  m_superAA = superAA;
-}
-
-void CModel3::AttachInputs(CInputs *InputsPtr)
-{
-  Inputs = InputsPtr;
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachInputs(Inputs, m_game.inputs);
-
-  DebugLog("Model 3 attached inputs\n");
-}
-
-void CModel3::AttachOutputs(COutputs *OutputsPtr)
-{
-  Outputs = OutputsPtr;
-  Outputs->SetGame(m_game);
-  Outputs->Attached();
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachOutputs(Outputs);
-
-  DebugLog("Model 3 attached outputs\n");
-}
-
-constexpr static int RAM_SIZE			= 0x800000;		//8MB
-constexpr static int CROM_SIZE			= 0x800000;		//8MB
-constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
-constexpr static int VROM_SIZE			= 0x4000000;	//64MB
-constexpr static int BACKUPRAM_SIZE		= 0x20000;		//128KB
-constexpr static int SECURITYRAM_SIZE	= 0x20000;		//128KB
-constexpr static int SOUNDROM_SIZE		= 0x80000;		//512KB
-constexpr static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
-constexpr static int DSBPROGROM_SIZE	= 0x20000;		//128KB
-constexpr static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
-constexpr static int DRIVEROM_SIZE		= 0x10000;		//64KB
-constexpr static int NETBUFFER_SIZE		= 0x20000;		//128KB
-constexpr static int NETRAM_SIZE		= 0x10000;		//64KB
-
-constexpr static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
-                                        CROMxx_SIZE + VROM_SIZE +
-                                        BACKUPRAM_SIZE + SECURITYRAM_SIZE +
-                                        SOUNDROM_SIZE + SAMPLEROM_SIZE +
-                                        DSBPROGROM_SIZE + DSBMPEGROM_SIZE +
-                                        DRIVEROM_SIZE + NETBUFFER_SIZE +
-                                        NETRAM_SIZE;
-
-constexpr static int RAM_OFFSET			= 0;
-constexpr static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
-constexpr static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
-constexpr static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
-constexpr static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
-constexpr static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
-constexpr static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
-constexpr static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
-constexpr static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
-constexpr static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
-constexpr static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
-constexpr static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
-constexpr static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
-
-// Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
-Result CModel3::Init(void)
-{
-  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
-
-  // Allocate all memory for ROMs and PPC RAM
-  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
-  if (NULL == memoryPool)
-    return ErrorLog("Insufficient memory for Model 3 object (needs %1.1f MB).", memSizeMB);
-  memset(memoryPool, 0, MEM_POOL_SIZE);
-
-  // Set up pointers
-  ram = &memoryPool[RAM_OFFSET];
-  crom = &memoryPool[CROM_OFFSET];
-  vrom = &memoryPool[VROM_OFFSET];
-  soundROM = &memoryPool[SOUNDROM_OFFSET];
-  sampleROM = &memoryPool[SAMPLEROM_OFFSET];
-  dsbROM = &memoryPool[DSBPROGROM_OFFSET];
-  mpegROM = &memoryPool[DSBMPEGROM_OFFSET];
-  backupRAM = &memoryPool[BACKUPRAM_OFFSET];
-  securityRAM = &memoryPool[SECURITYRAM_OFFSET];
-  driveROM = &memoryPool[DRIVEROM_OFFSET];
-  netRAM = &memoryPool[NETRAM_OFFSET];
-  netBuffer = &memoryPool[NETBUFFER_OFFSET];
-
-  SetCROMBank(0xFF);
-
-  // Initialize other devices (PowerPC, DSB, and security board initialized after ROMs loaded)
-  IRQ.Init();
-  PCIBridge.Init();
-  PCIBus.Init();
-  SCSI.Init(this,&IRQ,CIRQ::NMI); // SCSI is actually a non-maskable interrupt
-  RTC.Init();
-  EEPROM.Init();
-  if (Result::OKAY != TileGen.Init(&IRQ))
-    return Result::FAIL;
-  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI)) // same for Real3D DMA interrupt
-    return Result::FAIL;
-  if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
-    return Result::FAIL;
-
-  PCIBridge.AttachPCIBus(&PCIBus);
-  PCIBus.AttachDevice(13,&GPU);
-  PCIBus.AttachDevice(14,&SCSI);
-  PCIBus.AttachDevice(16,this);
-
-  if (m_config["SimulateNet"].ValueAs<bool>())
-      NetBoard = new CSimNetBoard(m_config);
-  else
-      NetBoard = new CNetBoard(m_config);
-
-  DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
+  m_runNetBoard = m_game.stepping != Game::Stepping::MODEL3_1_0 && NetBoard->IsAttached();
 
   return Result::OKAY;
 }
@@ -3253,7 +3247,7 @@ CModel3::CModel3(Util::Config::Node &config)
   notifyLock = NULL;
   notifySync = NULL;
 
-  m_stepping = 0;
+  m_stepping = Game::Stepping::UNKNOWN;
   inputBank = 0;
   serialFIFO1 = 0;
   serialFIFO2 = 0;

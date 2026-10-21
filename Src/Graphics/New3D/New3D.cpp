@@ -130,15 +130,13 @@ void CNew3D::AttachMemory(const UINT32 *cullingRAMLoPtr, const UINT32 *cullingRA
 	m_textureBank[1].AttachMemory(textureRAMPtr + (2048*1024));
 }
 
-void CNew3D::SetStepping(int stepping)
+void CNew3D::SetStepping(Game::Stepping stepping)
 {
-	m_step = stepping;
+	// The Pro-1000 uses the Step 1.0 formats
+	m_step10 = stepping == Game::Stepping::MODEL3_1_0 || Game::IsPro1000Stepping(stepping);
+	m_step15 = stepping == Game::Stepping::MODEL3_1_5;
 
-	if ((m_step != 0x10) && (m_step != 0x15) && (m_step != 0x20) && (m_step != 0x21)) {
-		m_step = 0x10;
-	}
-
-	if (m_step > 0x10) {
+	if (!m_step10) {
 		m_offset = 0;							// culling nodes are 10 words
 		m_vertexFactor = (1.0f / 2048.0f);		// vertices are in 13.11 format
 		m_textureNPFactor = (1.0f / 16384.0f);	// texture NP values are in 10.14 format
@@ -150,11 +148,30 @@ void CNew3D::SetStepping(int stepping)
 	}
 }
 
+void CNew3D::SetVROMIsPolygonRAM(bool enable)
+{
+	m_vromIsPolygonRAM = enable;
+}
+
+void CNew3D::SetScreenSize(float width, float height)
+{
+	m_screenWidth  = width;
+	m_screenHeight = height;
+	// If Init() has run, recalculate ratios immediately so the next frame uses the new values.
+	if (m_xRes)
+	{
+		m_xRatio = m_xRes / m_screenWidth;
+		m_yRatio = m_yRes / m_screenHeight;
+	}
+}
+
 Result CNew3D::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, unsigned yRes, unsigned totalXResParam, unsigned totalYResParam, unsigned aaTarget)
 {
-	// Resolution and offset within physical display area
-	m_xRatio	= xRes * (float)(1.0 / 496.0);
-	m_yRatio	= yRes * (float)(1.0 / 384.0);
+	// Scale from native display coordinates to screen pixels.
+	// m_screenWidth/Height hold the native coordinate range (496x384 for
+	// Model 3, sync-file dependent for Pro-1000).
+	m_xRatio	= xRes / m_screenWidth;
+	m_yRatio	= yRes / m_screenHeight;
 	m_xOffs		= xOffset;
 	m_yOffs		= yOffset;
 	m_xRes		= xRes;
@@ -782,7 +799,12 @@ void CNew3D::DescendCullingNode(UINT32 addr)
 	
 	if ((node[0x00] & 0x04)) {
 		m_colorTableAddr = ((node[0x03 - m_offset] >> 19) << 0) | ((node[0x07 - m_offset] >> 28) << 13) | ((node[0x08 - m_offset] >> 25) << 17);
-		m_colorTableAddr &= 0x000FFFFF; // clamp to 4MB (in words) range
+		if (m_vromIsPolygonRAM) {
+			m_colorTableAddr &= 0x00FFFFFF;	// all 24 bits: the table can be anywhere in polygon RAM
+		}
+		else {
+			m_colorTableAddr &= 0x000FFFFF;	// clamp to 4MB (in words) range
+		}
 	}
 
 	m_nodeAttribs.Push();	// save current attribs
@@ -1211,8 +1233,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->lightingParams[5] = 0.0f;	// reserved
 
 		vp->sunClamp = m_sunClamp;
-		vp->intensityClamp = (m_step == 0x10);		// just step 1.0 ?
-		vp->hardwareStep = m_step;
+		vp->intensityClamp = m_step10;				// just step 1.0 ?
+		vp->step15Luminous = m_step15;
 
 		// Spotlight
 		int spotColorIdx = (vpnode[0x20] >> 11) & 7;									// spotlight color index
@@ -1233,8 +1255,8 @@ void CNew3D::RenderViewport(UINT32 addr)
 		vp->spotFogColor[1] = color[spotFogColorIdx][1];
 		vp->spotFogColor[2] = color[spotFogColorIdx][2];
 
-		// spotlight is specified in terms of physical resolution
-		vp->spotEllipse[1] = 384.0f - vp->spotEllipse[1];								// flip Y position
+		// Spotlight Y is top-referenced. Convert to bottom-referenced.
+		vp->spotEllipse[1] = m_screenHeight - vp->spotEllipse[1];
 
 		// Avoid division by zero
 		vp->spotEllipse[2] = std::max(1.0f, vp->spotEllipse[2]);
@@ -1306,17 +1328,17 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 			vertexArray.emplace_back(r3dPoly, 2);
 			vertexArray.emplace_back(r3dPoly, 3);
 
-			// check for identical points (ie forced triangle) and replace with average point
-			// if we don't do this our quad code falls apart
+			// check for identical points (i.e. forced triangle), as the quad code can be inprecise for these:
+			// the quad shader detects them and draws just the triangle
 			FVertex* v = (&vertexArray.back()) - 3;
 
 			for (int i = 0; i < 4; i++) {
 
 				int next1 = (i + 1) % 4;
-				int next2 = (i + 2) % 4;
 
 				if (FVertex::Equal(v[i], v[next1])) {
-					FVertex::Average(v[next1], v[next2], v[next1]);
+					v[next1] = v[i];
+					std::rotate(v, v + (next1 + 1) % 4, v + 4);	// copy to slot 3, after its original in slot 2, as the quad shader looks for it there
 					break;
 				}
 			}
@@ -1325,12 +1347,7 @@ void CNew3D::CopyVertexData(const R3DPoly& r3dPoly, std::vector<FVertex>& vertex
 			vertexArray.emplace_back(r3dPoly, 0);
 			vertexArray.emplace_back(r3dPoly, 1);
 			vertexArray.emplace_back(r3dPoly, 2);
-			vertexArray.emplace_back(r3dPoly, 0, 2);	// last point is an average of 0 and 2
-
-			// TODO: the quad shader's second strip triangle (0,2,3) is meant to be empty here, but rounding can turn it into
-			// a sub-pixel sliver along edge 0-2 whose fragments get bad weights and depth (stray wrong pixels, mostly on thin
-			// distant triangles), and fragments right on edge 0-2 can be discarded. The geometry shader could detect this case
-			// (vertex 3 on edge 0-2), emit only the first triangle and use plain barycentric interpolation, which is exact and cheaper
+			vertexArray.emplace_back(r3dPoly, 2);		// last point is a copy of 2 (the quad shader detects this and draws just the triangle)
 		}
 	}
 	else {
@@ -1526,9 +1543,13 @@ void CNew3D::CacheModel(Model *m, const UINT32 *data)
 
 		if (!ph.PolyColor()) {
 			int colorIdx = ph.ColorIndex();
-			p.faceColour[2] = (m_polyRAM[m_colorTableAddr + colorIdx] & 0xFF);
-			p.faceColour[1] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 8) & 0xFF);
-			p.faceColour[0] = ((m_polyRAM[m_colorTableAddr + colorIdx] >> 16) & 0xFF);
+			UINT32 colorAddr = m_colorTableAddr + colorIdx;
+			if (m_vromIsPolygonRAM) {
+				colorAddr &= 0x00FFFFFF;	// stay inside the 64 MB polygon RAM
+			}
+			p.faceColour[2] = (m_polyRAM[colorAddr] & 0xFF);
+			p.faceColour[1] = ((m_polyRAM[colorAddr] >> 8) & 0xFF);
+			p.faceColour[0] = ((m_polyRAM[colorAddr] >> 16) & 0xFF);
 		}
 		else {
 			p.faceColour[0] = ((ph.header[4] >> 24));
@@ -1694,7 +1715,8 @@ bool CNew3D::IsDynamicModel(UINT32 *data) const
 
 bool CNew3D::IsVROMModel(UINT32 modelAddr) const
 {
-	return modelAddr >= 0x100000;
+	// Without VROM, models at these addresses are in polygon RAM and can change
+	return !m_vromIsPolygonRAM && modelAddr >= 0x100000;
 }
 
 void CNew3D::CalcViewport(Viewport* vp)
@@ -1706,7 +1728,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 
 	vp->projectionMatrix.LoadIdentity();	// reset matrix
 
-	if (m_wideScreen && (vp->vpX == 0) && (vp->vpWidth >= 495) && (vp->vpY == 0) && (vp->vpHeight >= 383)) {
+	if (m_wideScreen && (vp->vpX == 0) && (vp->vpWidth >= m_screenWidth - 1) && (vp->vpY == 0) && (vp->vpHeight >= m_screenHeight - 1)) {
 
 		/*
 		 * Compute aspect ratio correction factor. "Window" refers to the full GL
@@ -1737,7 +1759,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 		m_planes.correction = 1.0f / correction;
 
 		vp->x		= 0;
-		vp->y		= m_yOffs + (int)((384.0f - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((m_screenHeight - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= m_totalXRes;
 		vp->height = (int)(vp->vpHeight*m_yRatio);
 
@@ -1746,7 +1768,7 @@ void CNew3D::CalcViewport(Viewport* vp)
 	else {
 
 		vp->x		= m_xOffs + (int)(vp->vpX*m_xRatio);
-		vp->y		= m_yOffs + (int)((384.0f - (vp->vpY + vp->vpHeight))*m_yRatio);
+		vp->y		= m_yOffs + (int)((m_screenHeight - (vp->vpY + vp->vpHeight))*m_yRatio);
 		vp->width	= (int)(vp->vpWidth*m_xRatio);
 		vp->height	= (int)(vp->vpHeight*m_yRatio);
 
@@ -1782,8 +1804,8 @@ float CNew3D::GetLosValue(int layer)
 
 void CNew3D::TranslateLosPosition(int inX, int inY, int& outX, int& outY) const
 {
-	// remap real3d 496x384 to our new viewport
-	inY = 384 - inY;
+	// Convert from top-referenced to bottom-referenced Y.
+	inY = (int)m_screenHeight - inY;
 
 	outX = m_xOffs + int(inX * m_xRatio);
 	outY = m_yOffs + int(inY * m_yRatio);

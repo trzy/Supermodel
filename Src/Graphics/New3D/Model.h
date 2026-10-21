@@ -230,7 +230,7 @@ struct Viewport
 	float	spotFogColor[3];		// spotlight color on fog
 	float	scrollAtt;
 
-	int		hardwareStep;			// not really a viewport param but will do here
+	bool	step15Luminous;			// Step 1.5 luminous polygons (not really a viewport param but will do here)
 };
 
 class NodeAttributes

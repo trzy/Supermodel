@@ -91,10 +91,10 @@ public:
   void RenderFrame(void);
   void Reset(void);
   const Game &GetGame(void) const;
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
+  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
-  Result Init(void);
+  Result Init(const Game &game, const ROMSet &rom_set);
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
 
@@ -111,21 +111,6 @@ public:
   void Write16(UINT32 addr, UINT16 data);
   void Write32(UINT32 addr, UINT32 data);
   void Write64(UINT32 addr, UINT64 data);
-
-  /*
-   * LoadGame(game, rom_set):
-   *
-   * Loads a game, copying in the provided ROMs and setting the hardware
-   * stepping.
-   *
-   * Parameters:
-   *    game      Game information.
-   *    rom_set   ROMs.
-   *
-   * Returns:
-   *    OKAY if successful, FAIL otherwise. Prints errors.
-   */
-  Result LoadGame(const Game &game, const ROMSet &rom_set);
 
   /*
    * GetSoundBoard(void):
@@ -232,7 +217,7 @@ private:
 
   // Game and hardware information
   Game m_game;
-  int m_stepping;
+  Game::Stepping m_stepping;
 
   // Game inputs and outputs
   CInputs   *Inputs;

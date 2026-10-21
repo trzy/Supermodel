@@ -13,13 +13,53 @@ struct Game
   std::string version;
   std::string manufacturer;
   unsigned year = 0;
-  std::string stepping;
+  unsigned polygon_memory = 0;  // Real3D Pro-1000: polygon memory in MB (0 = not given)
   enum Platform
   {
     PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
     PLATFORM_PRO1000      // Real3D Pro-1000 image generator
   };
   Platform platform = Platform::PLATFORM_MODEL3;
+  // Hardware stepping. Games.xml: "1.0", "1.5", "2.0", or "2.1" (Model 3) and
+  // "1100", "1200", or "1400" (Pro-1000 model). GameLoader makes sure that it
+  // is a stepping of the platform. Ordered comparisons are permitted only
+  // between steppings of the same platform.
+  enum class Stepping
+  {
+    UNKNOWN = 0,
+    MODEL3_1_0,     // Sega Model 3 Step 1.0
+    MODEL3_1_5,     // Sega Model 3 Step 1.5
+    MODEL3_2_0,     // Sega Model 3 Step 2.0
+    MODEL3_2_1,     // Sega Model 3 Step 2.1
+    PRO1000_1100,   // Real3D PRO-1100 (1 pixel processor)
+    PRO1000_1200,   // Real3D PRO-1200 (2 pixel processors)
+    PRO1000_1400    // Real3D PRO-1400 (4 pixel processors)
+  };
+  Stepping stepping = Stepping::UNKNOWN;
+
+  // Returns the name of the stepping for display ("Model 3 Step 1.5",
+  // "Pro-1100", ...)
+  static const char *SteppingName(Stepping stepping)
+  {
+    switch (stepping)
+    {
+    case Stepping::MODEL3_1_0:    return "Model 3 Step 1.0";
+    case Stepping::MODEL3_1_5:    return "Model 3 Step 1.5";
+    case Stepping::MODEL3_2_0:    return "Model 3 Step 2.0";
+    case Stepping::MODEL3_2_1:    return "Model 3 Step 2.1";
+    case Stepping::PRO1000_1100:  return "Pro-1100";
+    case Stepping::PRO1000_1200:  return "Pro-1200";
+    case Stepping::PRO1000_1400:  return "Pro-1400";
+    default:                      return "Unknown";
+    }
+  }
+
+  // Returns true if the stepping is a Real3D Pro-1000 model
+  static bool IsPro1000Stepping(Stepping stepping)
+  {
+    return stepping == Stepping::PRO1000_1100 || stepping == Stepping::PRO1000_1200 || stepping == Stepping::PRO1000_1400;
+  }
+
   enum MpegBoardType
   {
     MPEG_BOARD_NONE = 0,
