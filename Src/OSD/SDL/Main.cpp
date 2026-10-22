@@ -1930,6 +1930,10 @@ static void Help(void)
   puts("  -net                    Enable net board");
   puts("  -simulate-netboard      Simulate the net board [Default]");
   puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
+  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and Pro-1000)\n"
+         "                          [Default: %u]\n", defaultConfig["PortIn"].ValueAs<unsigned>());
+  printf("  -port-out=<n>           TCP port of the next machine [Default: %u]\n", defaultConfig["PortOut"].ValueAs<unsigned>());
+  printf("  -address-out=<addr>     Address of the next machine [Default: %s]\n", defaultConfig["AddressOut"].ValueAs<std::string>().c_str());
   puts("");
   puts("Input Options:");
   puts("  -force-feedback         Enable force feedback (DirectInput, XInput)");
@@ -2001,6 +2005,10 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-soundfreq",             "SoundFreq"               },
     { "-input-system",          "InputSystem"             },
     { "-outputs",               "Outputs"                 },
+    { "-port",                  "PortIn"                  },
+    { "-port-in",               "PortIn"                  },
+    { "-port-out",              "PortOut"                 },
+    { "-address-out",           "AddressOut"              },
     { "-log-output",            "LogOutput"               },
     { "-log-level",             "LogLevel"                }
   };
