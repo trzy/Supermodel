@@ -91,7 +91,17 @@ bool CTCPConnection::Send(std::vector<uint8_t> message)
 
 void CTCPConnection::Ping(void)
 {
-  Send(PingMessage(GetMicroseconds()));
+  uint64_t now = GetMicroseconds();
+  m_lastPingTime = now;
+  Send(PingMessage(now));
+}
+
+// Sends Ping if the last one was sent at least the interval ago. Waits for
+// Hello, because the first Ping is sent when Hello is received.
+void CTCPConnection::PingIfDue(uint64_t intervalMicroseconds)
+{
+  if (m_helloReceived && GetMicroseconds() - m_lastPingTime >= intervalMicroseconds)
+    Ping();
 }
 
 // Sends the messages in the queue. After Shutdown() requests a stop, sends
@@ -213,8 +223,8 @@ bool CTCPConnection::ProcessMessage(CNetServer &server, const uint8_t *message, 
     }
     memcpy(&pong, message, sizeof(pong));
     int64_t roundTripTime = int64_t(GetMicroseconds() - pong.pingSendTime);
-    if (m_roundTripTime.exchange(roundTripTime) < 0)
-      CNetServer::LogInfo("Network: Round trip time to %s is %1.3f ms.", m_peerName.c_str(), double(roundTripTime) / 1000.0);
+    m_roundTripTime = roundTripTime;
+    CNetServer::LogInfo("Network: Round trip time to %s is %1.3f ms.", m_peerName.c_str(), double(roundTripTime) / 1000.0);
     return true;
   }
 
@@ -262,7 +272,8 @@ CTCPConnection::CTCPConnection(void *socket, bool outgoing, const std::string &h
     m_outgoing(outgoing),
     m_open(true),
     m_closeRequested(false),
-    m_roundTripTime(-1)
+    m_roundTripTime(-1),
+    m_lastPingTime(0)
 {
   IPaddress *peer = SDLNet_TCP_GetPeerAddress(static_cast<TCPsocket>(socket));
   if (peer)

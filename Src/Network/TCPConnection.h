@@ -81,6 +81,8 @@ public:
    * Ping(void):
    *
    * Sends Ping. When Pong comes back, GetRoundTripTime() gives the new value.
+   * The server also sends Ping every 30 seconds after Hello is received. Thread
+   * safe.
    */
   void Ping(void);
 
@@ -126,6 +128,7 @@ private:
 
   // Server thread only
   bool Receive(CNetServer &server);
+  void PingIfDue(uint64_t intervalMicroseconds);
   bool ProcessMessage(CNetServer &server, const uint8_t *message, size_t size);
   void Shutdown(void);
   void *GetSocket(void) const
@@ -145,6 +148,7 @@ private:
   std::atomic<bool> m_open;
   std::atomic<bool> m_closeRequested;
   std::atomic<int64_t> m_roundTripTime;
+  std::atomic<uint64_t> m_lastPingTime;  // microseconds
 
   // Server thread only
   std::vector<uint8_t> m_receiveBuffer;

@@ -39,6 +39,9 @@ static constexpr int POLL_MILLISECONDS = 10;
 
 static constexpr size_t MAX_CONNECTIONS = 16;
 
+// Time between Pings to each connection, to update the round trip time
+static constexpr uint64_t PING_INTERVAL_MICROSECONDS = 30 * 1000 * 1000;
+
 struct CNetServer::Handlers
 {
   struct Message
@@ -261,6 +264,12 @@ void CNetServer::ThreadFunction(void)
         if (!connection->CloseRequested() && SDLNet_SocketReady(socket) && !connection->Receive(*this))
           connection->Close();
       }
+    }
+
+    for (auto &connection: m_connections)
+    {
+      if (!connection->CloseRequested())
+        connection->PingIfDue(PING_INTERVAL_MICROSECONDS);
     }
 
     for (size_t i = 0; i < m_connections.size(); )
