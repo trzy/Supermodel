@@ -455,8 +455,11 @@
     <ClCompile Include="..\Src\Model3\JTAG.cpp">
       <Filter>Source Files\Model3</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Network\NetBoard.cpp">
-      <Filter>Source Files\Network</Filter>
+    <ClCompile Include="..\Src\Model3\NetBoard.cpp">
+      <Filter>Source Files\Model3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model3\NetBoardLink.cpp">
+      <Filter>Source Files\Model3</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Debugger\DebuggerIO.cpp">
       <Filter>Source Files\Debugger</Filter>
@@ -470,10 +473,10 @@
     <ClCompile Include="..\Src\Sound\MPEG\MpegAudio.cpp">
       <Filter>Source Files\Sound\MPEG</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Network\TCPSend.cpp">
+    <ClCompile Include="..\Src\Network\NetServer.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Network\TCPReceive.cpp">
+    <ClCompile Include="..\Src\Network\TCPConnection.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Model3\DriveBoard\BillBoard.cpp">
@@ -491,8 +494,8 @@
     <ClCompile Include="..\Src\Model3\DriveBoard\WheelBoard.cpp">
       <Filter>Source Files\Model3\DriveBoard</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Network\SimNetBoard.cpp">
-      <Filter>Source Files\Network</Filter>
+    <ClCompile Include="..\Src\Model3\SimNetBoard.cpp">
+      <Filter>Source Files\Model3</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp">
       <Filter>Source Files\OSD\SDL</Filter>
@@ -832,8 +835,11 @@
     <ClInclude Include="..\Src\Model3\JTAG.h">
       <Filter>Header Files\Model3</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Network\NetBoard.h">
-      <Filter>Header Files\Network</Filter>
+    <ClInclude Include="..\Src\Model3\NetBoard.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\NetBoardLink.h">
+      <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Debugger\DebuggerIO.h">
       <Filter>Header Files\Debugger</Filter>
@@ -859,16 +865,19 @@
     <ClInclude Include="..\Src\Model3\DriveBoard\WheelBoard.h">
       <Filter>Header Files\Model3\DriveBoard</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Network\INetBoard.h">
+    <ClInclude Include="..\Src\Model3\INetBoard.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model3\SimNetBoard.h">
+      <Filter>Header Files\Model3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Network\NetProtocol.h">
       <Filter>Header Files\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Network\SimNetBoard.h">
+    <ClInclude Include="..\Src\Network\NetServer.h">
       <Filter>Header Files\Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Network\TCPReceive.h">
-      <Filter>Header Files\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Src\Network\TCPSend.h">
+    <ClInclude Include="..\Src\Network\TCPConnection.h">
       <Filter>Header Files\Network</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Graphics\IRender3D.h">

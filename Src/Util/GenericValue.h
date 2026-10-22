@@ -210,7 +210,7 @@ namespace Util
     const T &Value() const
     {
       if (!Is<T>())
-        throw std::logic_error(Util::Format() << "GenericValue::Value(): cannot get value as " << std::type_index(typeid(T)).name() <<" because it is stored as " << m_type.name());
+        throw std::logic_error(Util::Format() << "GenericValue::Value(): Cannot get value as " << std::type_index(typeid(T)).name() <<" because it is stored as " << m_type.name());
       return *reinterpret_cast<const T *>(GetData());
     }
 
@@ -234,7 +234,7 @@ namespace Util
     void Set(const T &value)
     {
       if (!Is<T>())
-        throw std::logic_error(Util::Format() << "GenericValue::Set(): cannot set value as " << std::type_index(typeid(T)).name() <<" because it is stored as " << m_type.name());
+        throw std::logic_error(Util::Format() << "GenericValue::Set(): Cannot set value as " << std::type_index(typeid(T)).name() <<" because it is stored as " << m_type.name());
       *reinterpret_cast<T *>(GetData()) = value;
     }
 

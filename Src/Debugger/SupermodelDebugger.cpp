@@ -31,7 +31,7 @@
 #include "ConsoleDebugger.h"
 #include "CPUDebug.h"
 #include "Label.h"
-#include "Network/NetBoard.h"
+#include "Model3/NetBoard.h"
 #include "CPU/Musashi68KDebug.h"
 #include "CPU/PPCDebug.h"
 #include "CPU/Z80Debug.h"

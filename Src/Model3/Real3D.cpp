@@ -967,7 +967,7 @@ void CReal3D::WriteConfigurationRegister(unsigned reg, uint32_t data)
     // reg 8 = combined size of the ping pong buffer and the update buffer in 32-bit words
 
     m_configRegisters.regs[reg / 4] = data;
-    DebugLog("Real3D: configuration register %X = %08X\n", reg, data);
+    DebugLog("Real3D: Configuration register %X = %08X\n", reg, data);
 }
 
 /******************************************************************************
@@ -1093,7 +1093,7 @@ void CReal3D::WriteHighCullingRAM(uint32_t addr, uint32_t data)
 
     // The buffer is full: apply it now, so this write stays after the earlier
     // writes
-    DebugLog("Real3D: high culling RAM update buffer is full\n");
+    DebugLog("Real3D: High culling RAM update buffer is full\n");
     SyncBufferedMem(m_highRamUpdateBlock, start, cullingRAMHi, CULLING_RAM_HI_SIZE / 4, cullingRAMHiDirty);
     m_highRamUpdateBlock = nullptr;
   }
@@ -1127,7 +1127,7 @@ void CReal3D::WritePolygonRAM(uint32_t addr, uint32_t data)
 
     // The buffer is full: apply it now, so this write stays after the earlier
     // writes
-    DebugLog("Real3D: polygon RAM update buffer is full\n");
+    DebugLog("Real3D: Polygon RAM update buffer is full\n");
     SyncBufferedMem(m_polyUpdateBlock, start, polyRAM, m_hwConfig.polygonRAMSize / 4, polyRAMDirty);
     m_polyUpdateBlock = nullptr;
   }

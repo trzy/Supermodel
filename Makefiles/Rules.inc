@@ -181,10 +181,11 @@ SRC_FILES = \
 	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
 	Src/OSD/SDL/NetOutputs.cpp \
-	Src/Network/TCPReceive.cpp \
-	Src/Network/TCPSend.cpp \
-	Src/Network/NetBoard.cpp \
-	Src/Network/SimNetBoard.cpp \
+	Src/Network/NetServer.cpp \
+	Src/Network/TCPConnection.cpp \
+	Src/Model3/NetBoard.cpp \
+	Src/Model3/NetBoardLink.cpp \
+	Src/Model3/SimNetBoard.cpp \
 	$(PLATFORM_SRC_FILES)
 
 ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))

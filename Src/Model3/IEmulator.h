@@ -33,10 +33,7 @@ struct Game;
 struct ROMSet;
 class IRender2D;
 class IRender3D;
-class CInputs;
-class COutputs;
 class SuperAA;
-class IConsoleInput;
 
 /*
  * IEmulator:
@@ -70,7 +67,16 @@ public:
    *    SaveState   Block file to load state information from.
    */
   virtual void LoadState(CBlockFile *SaveState) = 0;
-  
+
+  /*
+   * SupportsSaveStates(void):
+   *
+   * Returns:
+   *    True if SaveState() and LoadState() are supported. If false, do not
+   *    call them.
+   */
+  virtual bool SupportsSaveStates(void) const = 0;
+
   /*
    * SaveNVRAM(NVRAM):
    *
@@ -131,7 +137,12 @@ public:
   /*
    * AttachRenderers(Render2DPtr, Render3DPtr):
    *
-   * Attaches the renderers to the appropriate device objects.
+   * Attaches the renderers to the appropriate device objects. Call it after
+   * Init(). Call it again when the renderers are replaced (for example, when
+   * the OpenGL context is created again).
+   *
+   * Other dependencies (inputs, outputs, console input, network server) go to
+   * the constructor of each emulator.
    *
    * Parameters:
    *    Render2DPtr   Pointer to a 2D layer renderer object (the type that
@@ -140,40 +151,6 @@ public:
    *    Render3DPtr   Same as above but for a 3D renderer.
    */
   virtual void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) = 0;
-  
-  /*
-   * AttachInputs(InputsPtr):
-   *
-   * Attaches OSD-managed inputs.
-   *
-   * Parameters:
-   *    InputsPtr Pointer to the object containing input states.
-   */
-  virtual void AttachInputs(CInputs *InputsPtr) = 0;
-  
-  /*
-   * AttachOutputs(InputsPtr):
-   *
-   * Attaches OSD-managed outputs (cabinet lamps, etc.)
-   *
-   * Parameters:
-   *    OutputsPtr  Pointer to the object containing output states.
-   */
-  virtual void AttachOutputs(COutputs *OutputsPtr) = 0;
-
-  /*
-   * AttachConsoleInput(input):
-   *
-   * Attaches console (stdin) input, for systems with a serial console. The
-   * default implementation ignores it.
-   *
-   * Parameters:
-   *    input   Console input endpoint. Remains valid for the lifetime of the
-   *            emulator.
-   */
-  virtual void AttachConsoleInput(IConsoleInput *input)
-  {
-  }
 
   /*
    * Init(game, rom_set):

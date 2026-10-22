@@ -36,7 +36,9 @@ inline bool CSimNetBoard::IsGame(const char* gameName)
 	return (m_gameInfo.name == gameName) || (m_gameInfo.parent == gameName);
 }
 
-CSimNetBoard::CSimNetBoard(const Util::Config::Node& config) : m_config(config)
+CSimNetBoard::CSimNetBoard(const Util::Config::Node& config, std::shared_ptr<CNetServer> server)
+	: m_config(config),
+	  m_server(std::move(server))
 {
 }
 
@@ -86,8 +88,9 @@ Result CSimNetBoard::Init(uint8_t* netRAMPtr, uint8_t* netBufferPtr)
 	port_out = m_config["PortOut"].ValueAs<unsigned>();
 	addr_out = m_config["AddressOut"].ValueAs<std::string>();
 
-	nets = std::make_unique<TCPSend>(addr_out, port_out);
-	netr = std::make_unique<TCPReceive>(port_in);
+	if (!m_server)
+		return ErrorLog("Net board requires the network server.");
+	m_link = std::make_unique<CNetBoardLink>(m_server, addr_out, port_out);
 
 	return Result::OKAY;
 }
@@ -146,14 +149,14 @@ void CSimNetBoard::RunFrame(void)
 			if (RAM16[0x400] == 0)	// master
 			{
 				// flush receive buffer
-				while (netr->CheckDataAvailable())
+				while (m_link->CheckDataAvailable())
 				{
-					netr->Receive();
+					m_link->Receive();
 				}
 
 				// check all linked instances have the same GUID
-				nets->Send(&netGUID, sizeof(netGUID));
-				auto& recv_data = netr->Receive();
+				m_link->Send(&netGUID, sizeof(netGUID));
+				auto& recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
@@ -162,8 +165,8 @@ void CSimNetBoard::RunFrame(void)
 					testGUID = 0;
 
 				// send the GUID for one more loop
-				nets->Send(&testGUID, sizeof(testGUID));
-				netr->Receive();
+				m_link->Send(&testGUID, sizeof(testGUID));
+				m_link->Receive();
 				
 				if (testGUID != netGUID)
 				{
@@ -174,38 +177,38 @@ void CSimNetBoard::RunFrame(void)
 
 				// master has an index of zero
 				machineIndex = 0;
-				nets->Send(&machineIndex, sizeof(machineIndex));
+				m_link->Send(&machineIndex, sizeof(machineIndex));
 
 				// receive back the number of other linked machines
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				numMachines = recv_data[0];
 
 				// send the number of other linked machines
-				nets->Send(&numMachines, sizeof(numMachines));
-				netr->Receive();
+				m_link->Send(&numMachines, sizeof(numMachines));
+				m_link->Receive();
 			}
 			else
 			{
 				// receive GUID from the previous machine and check it matches
-				auto& recv_data = netr->Receive();
+				auto& recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
 				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
-				nets->Send(&testGUID, sizeof(testGUID));
+				m_link->Send(&testGUID, sizeof(testGUID));
 
 				// one more time, in case a later machine has a GUID mismatch
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
-				nets->Send(&testGUID, sizeof(testGUID));
+				m_link->Send(&testGUID, sizeof(testGUID));
 
 				if (testGUID != netGUID)
 				{
@@ -215,18 +218,18 @@ void CSimNetBoard::RunFrame(void)
 				}
 
 				// receive the previous machine's index, increment it, send it to the next machine
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				machineIndex = recv_data[0] + 1;
-				nets->Send(&machineIndex, sizeof(machineIndex));
+				m_link->Send(&machineIndex, sizeof(machineIndex));
 
 				// receive the number of other linked machines and forward it on
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				numMachines = recv_data[0];
-				nets->Send(&numMachines, sizeof(numMachines));
+				m_link->Send(&numMachines, sizeof(numMachines));
 			}
 
 			// if there are no other linked machines, only continue if Supermodel is linked to itself
@@ -275,12 +278,12 @@ void CSimNetBoard::RunFrame(void)
 			if (RAM16[0x200] == 0)	// master
 			{
 				// flush receive buffer
-				while (netr->CheckDataAvailable())
-					netr->Receive();
+				while (m_link->CheckDataAvailable())
+					m_link->Receive();
 
 				// check all linked instances have the same GUID
-				nets->Send(&netGUID, sizeof(netGUID));
-				auto& recv_data = netr->Receive();
+				m_link->Send(&netGUID, sizeof(netGUID));
+				auto& recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 
@@ -290,8 +293,8 @@ void CSimNetBoard::RunFrame(void)
 					testGUID = 0;
 
 				// send the GUID for one more loop
-				nets->Send(&testGUID, sizeof(testGUID));
-				netr->Receive();
+				m_link->Send(&testGUID, sizeof(testGUID));
+				m_link->Receive();
 
 				if (testGUID != netGUID)
 				{
@@ -302,38 +305,38 @@ void CSimNetBoard::RunFrame(void)
 
 				// master has indices set to zero
 				machineIndex.total = 0; machineIndex.playable = 0;
-				nets->Send(&machineIndex, sizeof(machineIndex));
+				m_link->Send(&machineIndex, sizeof(machineIndex));
 
 				// receive back the number of other linked machines
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&numMachines, recv_data.data(), recv_data.size());
 
 				// send the number of other linked machines
-				nets->Send(&numMachines, sizeof(numMachines));
-				netr->Receive();
+				m_link->Send(&numMachines, sizeof(numMachines));
+				m_link->Receive();
 			}
 			else if (RAM16[0x200] < 0x8000)	// slave
 			{
 				// receive GUID from the previous machine and check it matches
-				auto& recv_data = netr->Receive();
+				auto& recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
 				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
-				nets->Send(&testGUID, sizeof(testGUID));
+				m_link->Send(&testGUID, sizeof(testGUID));
 
 				// one more time, in case a later machine has a GUID mismatch
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
-				nets->Send(&testGUID, sizeof(testGUID));
+				m_link->Send(&testGUID, sizeof(testGUID));
 
 				if (testGUID != netGUID)
 				{
@@ -343,46 +346,46 @@ void CSimNetBoard::RunFrame(void)
 				}
 
 				// receive the indices of the previous machine and increment them
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&machineIndex, recv_data.data(), recv_data.size());
 				machineIndex.total++; machineIndex.playable++;
 
 				// send our indices to the next machine
-				nets->Send(&machineIndex, sizeof(machineIndex));
+				m_link->Send(&machineIndex, sizeof(machineIndex));
 
 				// receive the number of machines
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&numMachines, recv_data.data(), recv_data.size());
 
 				// forward the number of machines
-				nets->Send(&numMachines, sizeof(numMachines));
+				m_link->Send(&numMachines, sizeof(numMachines));
 			}
 			else
 			{
 				// relay/satellite
 				
 				// receive GUID from the previous machine and check it matches
-				auto& recv_data = netr->Receive();
+				auto& recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				uint64_t testGUID;
 				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
-				nets->Send(&testGUID, sizeof(testGUID));
+				m_link->Send(&testGUID, sizeof(testGUID));
 
 				// one more time, in case a later machine has a GUID mismatch
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&testGUID, recv_data.data(), recv_data.size());
 				if (testGUID != netGUID)
 					testGUID = 0;
-				nets->Send(&testGUID, sizeof(testGUID));
+				m_link->Send(&testGUID, sizeof(testGUID));
 
 				if (testGUID != netGUID)
 				{
@@ -392,23 +395,23 @@ void CSimNetBoard::RunFrame(void)
 				}
 
 				// receive the indices of the previous machine; don't increment the playable index
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&machineIndex, recv_data.data(), recv_data.size());
 				machineIndex.total++;
 
 				// send our indices to the next machine
-				nets->Send(&machineIndex, sizeof(machineIndex));
+				m_link->Send(&machineIndex, sizeof(machineIndex));
 
 				// receive the number of machines
-				recv_data = netr->Receive();
+				recv_data = m_link->Receive();
 				if (recv_data.empty())
 					break;
 				memcpy(&numMachines, recv_data.data(), recv_data.size());
 
 				// forward the number of machines
-				nets->Send(&numMachines, sizeof(numMachines));
+				m_link->Send(&numMachines, sizeof(numMachines));
 
 				// indicate that this machine is a relay/satellite
 				if (!IsGame("dirtdvls"))
@@ -461,12 +464,12 @@ void CSimNetBoard::RunFrame(void)
 		// each machine has to receive back its own data (TODO: copy this data manually?)
 		for (int i = 0; i < m_numMachines; i++)
 		{
-			nets->Send(CommRAM + 0x100 + i * m_segmentSize, m_segmentSize);
-			auto& recv_data = netr->Receive();
+			m_link->Send(CommRAM + 0x100 + i * m_segmentSize, m_segmentSize);
+			auto& recv_data = m_link->Receive();
 			if (recv_data.empty())
 			{
 				// link broken - send an "empty" packet to alert other machines
-				nets->Send(nullptr, 0);
+				m_link->Send(nullptr, 0);
 				m_state = State::error;
 				if (m_gameType == GameType::one)
 					m_status1 = 0x40;			// send "link broken" message to mainboard
@@ -502,8 +505,8 @@ void CSimNetBoard::Reset(void)
 	// if netboard was active, send an "empty" packet so the other machines don't get stuck waiting for data
 	if (m_state == State::ready)
 	{
-		nets->Send(nullptr, 0);
-		netr->Receive();
+		m_link->Send(nullptr, 0);
+		m_link->Receive();
 	}
 
 	m_running = false;
@@ -532,15 +535,15 @@ void CSimNetBoard::ConnectProc(void)
 
 	printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
 
-	// wait until TCPSend has connected to the next machine
-	while (!nets->Connect())
+	// wait until the output connection to the next machine is open
+	while (!m_link->Connect())
 	{
 		if (m_quit)
 			return;
 	}
 
-	// wait until TCPReceive has accepted a connection from the previous machine
-	while (!netr->Connected())
+	// wait until the previous machine has linked
+	while (!m_link->Connected())
 	{
 		if (m_quit)
 			return;

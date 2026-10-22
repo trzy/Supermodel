@@ -42,9 +42,11 @@
  *   function that needs the connection (GetASPI32SupportInfo() or the first
  *   SCSI command). It shows the "Supermodel Pro-1000 Host" window, in which
  *   the user gives the host and the port of Supermodel (see
- *   ConnectDialog.cpp). The default is 127.0.0.1, port 31000. The window
+ *   ConnectDialog.cpp). The default is 127.0.0.1, port 1970. The window
  *   stays until the connection is made, or until the user presses Exit,
  *   which ends the program.
+ * - On the connection, the DLL and Supermodel each send Hello first (see
+ *   Src/Network/NetProtocol.h). The DLL replies to each Ping with Pong.
  * - The DLL connects only one time. If the connection is lost, the DLL
  *   prints an error, and all SCSI commands after that fail (selection
  *   timeout). The Pro-1000 programs cannot continue after lost commands, so
@@ -69,12 +71,14 @@
 #include "ConnectDialog.h"
 #include "Pro1000/SCSITCPBridgeProtocol.h"
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <string>
 #include <vector>
 
+using namespace NetProtocol;
 using namespace SCSITCPBridgeProtocol;
 
 namespace
@@ -139,6 +143,63 @@ namespace
     return true;
   }
 
+  // Receives one message, including the header
+  bool ReceiveMessage(std::vector<uint8_t> *message)
+  {
+    MessageHeader header;
+    if (!ReceiveAll(&header, sizeof(header)) || header.size < sizeof(header) || header.size > MAX_MESSAGE_SIZE)
+      return false;
+    message->resize(header.size);
+    memcpy(message->data(), &header, sizeof(header));
+    return ReceiveAll(message->data() + sizeof(header), header.size - sizeof(header));
+  }
+
+  // Receives messages until one has the ID, and replies to Ping. Returns
+  // false if the connection fails or a message is not known.
+  bool ReceiveMessageWithID(uint32_t id, std::vector<uint8_t> *message)
+  {
+    while (ReceiveMessage(message))
+    {
+      MessageHeader header;
+      memcpy(&header, message->data(), sizeof(header));
+      if (header.id == id)
+        return true;
+      if (header.id == PingMessage::ID && message->size() == sizeof(PingMessage))
+      {
+        PingMessage ping;
+        memcpy(&ping, message->data(), sizeof(ping));
+        PongMessage pong(ping.sendTime, uint64_t(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()));
+        if (!SendAll(&pong, sizeof(pong)))
+          return false;
+      }
+      else if (header.id != PongMessage::ID)
+        return false;
+    }
+    return false;
+  }
+
+  // Sends Hello and receives Hello from Supermodel
+  bool ExchangeHello(std::string *peerText)
+  {
+    char path[MAX_PATH] = {};
+    GetModuleFileNameA(nullptr, path, sizeof(path));
+    const char *program = strrchr(path, '\\');
+    program = program ? program + 1 : path;
+    std::string text = std::string("wnaspi32.dll (") + program + ")";
+    text.resize(std::min<size_t>(text.size(), MAX_HELLO_TEXT));
+
+    HelloMessage hello(text.size());
+    std::vector<uint8_t> message;
+    if (!SendAll(&hello, sizeof(hello)) || !SendAll(text.data(), text.size()) || !ReceiveMessage(&message))
+      return false;
+    MessageHeader header;
+    memcpy(&header, message.data(), sizeof(header));
+    if (header.id != HelloMessage::ID || message.size() - sizeof(HelloMessage) > MAX_HELLO_TEXT)
+      return false;
+    peerText->assign(reinterpret_cast<const char *>(message.data() + sizeof(HelloMessage)), message.size() - sizeof(HelloMessage));
+    return true;
+  }
+
   void Disconnect(void)
   {
     if (g_socket != INVALID_SOCKET)
@@ -162,7 +223,7 @@ namespace
       WSADATA wsaData;
       if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
       {
-        fprintf(stderr, "wnaspi32: unable to start Winsock\n");
+        fprintf(stderr, "wnaspi32: Unable to start Winsock\n");
         return false;
       }
       g_winsockStarted = true;
@@ -175,7 +236,7 @@ namespace
     g_socket = ShowConnectDialog(&g_host, &g_port, std::string());
     if (g_socket == INVALID_SOCKET)
     {
-      fprintf(stderr, "wnaspi32: unable to show the connection window\n");
+      fprintf(stderr, "wnaspi32: Unable to show the connection window\n");
       return false;
     }
 
@@ -183,7 +244,15 @@ namespace
     // for each result.
     BOOL noDelay = TRUE;
     setsockopt(g_socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char *>(&noDelay), sizeof(noDelay));
-    fprintf(stderr, "wnaspi32: connected to Supermodel at %s (port %u)\n", g_host.c_str(), unsigned(g_port));
+
+    std::string peerText;
+    if (!ExchangeHello(&peerText))
+    {
+      fprintf(stderr, "wnaspi32: %s (port %u) did not reply as Supermodel. SCSI commands will fail.\n", g_host.c_str(), unsigned(g_port));
+      Disconnect();
+      return false;
+    }
+    fprintf(stderr, "wnaspi32: Connected to %s at %s (port %u)\n", peerText.c_str(), g_host.c_str(), unsigned(g_port));
     return true;
   }
 
@@ -194,24 +263,10 @@ namespace
     if (!Connect())
       return false;
 
-    // Frame: FrameHeader, ExecuteCommand, CDB, data out
-    ExecuteCommand command = {};
-    command.header.version = VERSION;
-    command.header.type = uint16_t(MessageType::ExecuteCommand);
-    command.header.sequence = ++g_sequence;
-    command.targetID = target;
-    command.lun = lun;
-    command.cdbLength = cdbLength;
-    command.dataOutLength = dataOutLength;
-    command.dataInLength = dataInLength;
-
-    FrameHeader frame;
-    frame.length = uint32_t(sizeof(command) + cdbLength + dataOutLength);
-
-    std::vector<uint8_t> buffer(sizeof(frame) + frame.length);
+    // ExecuteCommandMessage, CDB, data out
+    ExecuteCommandMessage command(++g_sequence, target, lun, cdbLength, dataOutLength, dataInLength);
+    std::vector<uint8_t> buffer(command.size);
     uint8_t *p = buffer.data();
-    memcpy(p, &frame, sizeof(frame));
-    p += sizeof(frame);
     memcpy(p, &command, sizeof(command));
     p += sizeof(command);
     memcpy(p, cdb, cdbLength);
@@ -219,28 +274,25 @@ namespace
     if (dataOutLength > 0)
       memcpy(p, dataOut, dataOutLength);
 
-    // The result: FrameHeader, CommandResult, data in, error text
-    FrameHeader resultFrame;
-    CommandResult result;
+    // The result: CommandResultMessage, data in, error text
+    CommandResultMessage result;
     std::vector<uint8_t> message;
-    if (!SendAll(buffer.data(), buffer.size()) || !ReceiveAll(&resultFrame, sizeof(resultFrame)) || resultFrame.length < sizeof(result) || resultFrame.length > MAX_MESSAGE_SIZE)
+    if (!SendAll(buffer.data(), buffer.size()) || !ReceiveMessageWithID(CommandResultMessage::ID, &message))
     {
-      fprintf(stderr, "wnaspi32: connection to Supermodel lost. SCSI commands will fail.\n");
+      fprintf(stderr, "wnaspi32: Connection to Supermodel lost. SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
-    message.resize(resultFrame.length);
-    if (!ReceiveAll(message.data(), message.size()))
+    if (message.size() < sizeof(result))
     {
-      fprintf(stderr, "wnaspi32: connection to Supermodel lost. SCSI commands will fail.\n");
+      fprintf(stderr, "wnaspi32: Incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
     memcpy(&result, message.data(), sizeof(result));
-    if (result.header.version != VERSION || result.header.type != uint16_t(MessageType::CommandResult) || result.header.sequence != command.header.sequence ||
-        sizeof(result) + size_t(result.dataInLength) + size_t(result.errorLength) != message.size())
+    if (result.sequence != command.sequence || sizeof(result) + size_t(result.dataInLength) + size_t(result.errorLength) != message.size())
     {
-      fprintf(stderr, "wnaspi32: incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
+      fprintf(stderr, "wnaspi32: Incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
       Disconnect();
       return false;
     }

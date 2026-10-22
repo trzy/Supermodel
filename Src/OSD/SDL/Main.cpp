@@ -96,6 +96,7 @@
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "Pro1000/Pro1000.h"
+#include "Network/NetServer.h"
 #include "Graphics/Pro1000Render2D.h"
 #include "Graphics/IRender2D.h"
 #include "OSD/Audio.h"
@@ -704,11 +705,23 @@ static const int STATE_FILE_VERSION = 6;  // save state file version
 static const int NVRAM_FILE_VERSION = 0;  // NVRAM file version
 static unsigned s_saveSlot = 0;           // save state slot #
 
-static void SaveState(IEmulator *Model3)
+static bool CheckSaveStatesSupported(IEmulator *Emu)
 {
+  if (Emu->SupportsSaveStates())
+    return true;
+  puts("Save states are not supported for this system.");
+  InfoLog("Save states are not supported for this system.");
+  return false;
+}
+
+static void SaveState(IEmulator *Emu)
+{
+  if (!CheckSaveStatesSupported(Emu))
+    return;
+
   CBlockFile  SaveState;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Emu->GetGame().name << ".st" << s_saveSlot;
   if (Result::OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save state to '%s'.", file_path.c_str());
@@ -718,22 +731,25 @@ static void SaveState(IEmulator *Model3)
   // Write file format version and ROM set ID to header block
   int32_t fileVersion = STATE_FILE_VERSION;
   SaveState.Write(&fileVersion, sizeof(fileVersion));
-  SaveState.Write(Model3->GetGame().name);
+  SaveState.Write(Emu->GetGame().name);
 
   // Save state
-  Model3->SaveState(&SaveState);
+  Emu->SaveState(&SaveState);
   SaveState.Close();
   printf("Saved state to '%s'.\n", file_path.c_str());
   InfoLog("Saved state to '%s'.", file_path.c_str());
 }
 
-static void LoadState(IEmulator *Model3, std::string file_path = std::string())
+static void LoadState(IEmulator *Emu, std::string file_path = std::string())
 {
+  if (!CheckSaveStatesSupported(Emu))
+    return;
+
   CBlockFile  SaveState;
 
   // Generate file path
   if (file_path.empty())
-    file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
+    file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Emu->GetGame().name << ".st" << s_saveSlot;
 
   // Open and check to make sure format is correct
   if (Result::OKAY != SaveState.Load(file_path))
@@ -757,17 +773,17 @@ static void LoadState(IEmulator *Model3, std::string file_path = std::string())
   }
 
   // Load
-  Model3->LoadState(&SaveState);
+  Emu->LoadState(&SaveState);
   SaveState.Close();
   printf("Loaded state from '%s'.\n", file_path.c_str());
   InfoLog("Loaded state from '%s'.", file_path.c_str());
 }
 
-static void SaveNVRAM(IEmulator *Model3)
+static void SaveNVRAM(IEmulator *Emu)
 {
   CBlockFile  NVRAM;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Emu->GetGame().name << ".nv";
   if (Result::OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", file_path.c_str());
@@ -777,20 +793,20 @@ static void SaveNVRAM(IEmulator *Model3)
   // Write file format version and ROM set ID to header block
   int32_t fileVersion = NVRAM_FILE_VERSION;
   NVRAM.Write(&fileVersion, sizeof(fileVersion));
-  NVRAM.Write(Model3->GetGame().name);
+  NVRAM.Write(Emu->GetGame().name);
 
   // Save NVRAM
-  Model3->SaveNVRAM(&NVRAM);
+  Emu->SaveNVRAM(&NVRAM);
   NVRAM.Close();
   InfoLog("Saved NVRAM to '%s'.", file_path.c_str());
 }
 
-static void LoadNVRAM(IEmulator *Model3)
+static void LoadNVRAM(IEmulator *Emu)
 {
   CBlockFile  NVRAM;
 
   // Generate file path
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Emu->GetGame().name << ".nv";
 
   // Open and check to make sure format is correct
   if (Result::OKAY != NVRAM.Load(file_path))
@@ -814,7 +830,7 @@ static void LoadNVRAM(IEmulator *Model3)
   }
 
   // Load
-  Model3->LoadNVRAM(&NVRAM);
+  Emu->LoadNVRAM(&NVRAM);
   NVRAM.Close();
   InfoLog("Loaded NVRAM from '%s'.", file_path.c_str());
 }
@@ -990,13 +1006,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
     videoInputs = Inputs;
   else
     videoInputs = nullptr;
-
-  // Attach the inputs to the emulator
-  Emu->AttachInputs(Inputs);
-
-  // Attach the outputs to the emulator
-  if (Outputs != nullptr)
-    Emu->AttachOutputs(Outputs);
 
   // Frame timing
   s_perfCounterFrequency = SDL_GetPerformanceFrequency();
@@ -1595,10 +1604,11 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
-  // NetBoard
+  // Network. PortIn is the port of the network server (net board and Pro-1000
+  // SCSI TCP bridge). PortOut and AddressOut give the next net board machine.
   config.Set("Network", false, "Network");
   config.Set("SimulateNet", true, "Network");
-  config.Set("PortIn", unsigned(1970), "Network");
+  config.Set("PortIn", unsigned(NetProtocol::DEFAULT_PORT), "Network");
   config.Set("PortOut", unsigned(1971), "Network");
   config.Set<std::string>("AddressOut", "127.0.0.1", "Network", "", "");
 
@@ -1922,6 +1932,10 @@ static void Help(void)
   puts("  -net                    Enable net board");
   puts("  -simulate-netboard      Simulate the net board [Default]");
   puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
+  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and Pro-1000)\n"
+         "                          [Default: %u]\n", defaultConfig["PortIn"].ValueAs<unsigned>());
+  printf("  -port-out=<n>           TCP port of the next machine [Default: %u]\n", defaultConfig["PortOut"].ValueAs<unsigned>());
+  printf("  -address-out=<addr>     Address of the next machine [Default: %s]\n", defaultConfig["AddressOut"].ValueAs<std::string>().c_str());
   puts("");
   puts("Input Options:");
   puts("  -force-feedback         Enable force feedback (DirectInput, XInput)");
@@ -1992,6 +2006,10 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-channels", 	            "NbSoundChannels"         },
     { "-input-system",          "InputSystem"             },
     { "-outputs",               "Outputs"                 },
+    { "-port",                  "PortIn"                  },
+    { "-port-in",               "PortIn"                  },
+    { "-port-out",              "PortOut"                 },
+    { "-address-out",           "AddressOut"              },
     { "-log-output",            "LogOutput"               },
     { "-log-level",             "LogLevel"                }
   };
@@ -2371,6 +2389,7 @@ int main(int argc, char **argv)
   // Begin initializing various subsystems...
   int exitCode = 0;
   IEmulator *Emu = nullptr;
+  std::shared_ptr<CNetServer> netServer;
   std::shared_ptr<CInputSystem> InputSystem;
   CInputs *Inputs = nullptr;
   COutputs *Outputs = nullptr;
@@ -2399,31 +2418,6 @@ int main(int argc, char **argv)
       ErrorLog("Unable to load bitmap crosshair texture\n");
       exitCode = 1;
       goto Exit;
-  }
-
-  // Create emulator for the appropriate platform
-#ifdef DEBUG
-  if (!s_gfxStatePath.empty())
-    Emu = new CModel3GraphicsState(s_runtime_config, s_gfxStatePath);
-  else
-#endif
-  if (game.platform == Game::PLATFORM_PRO1000)
-    Emu = new CPro1000(s_runtime_config);
-  else
-    Emu = new CModel3(s_runtime_config);
-
-  // Console input is created only when something reads it: the emulated
-  // machine's serial console (Pro-1000) and/or the debugger
-  {
-    bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
-#ifdef SUPERMODEL_DEBUGGER
-    needConsoleInput |= !cmd_line.disable_debugger;
-#endif // SUPERMODEL_DEBUGGER
-    if (needConsoleInput)
-    {
-      consoleInput = std::make_unique<CConsoleInput>();
-      Emu->AttachConsoleInput(consoleInput->CreateInput());
-    }
   }
 
   // Create input system
@@ -2507,6 +2501,36 @@ int main(int argc, char **argv)
     goto Exit;
   }
 
+  // Network server: for the net board, and for the programs that connect to
+  // the Pro-1000. If it cannot listen, emulation continues.
+  if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
+  {
+    netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
+    netServer->Start();
+  }
+
+  // Console input is created only when something reads it: the emulated
+  // machine's serial console (Pro-1000) and/or the debugger
+  {
+    bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
+#ifdef SUPERMODEL_DEBUGGER
+    needConsoleInput |= !cmd_line.disable_debugger;
+#endif // SUPERMODEL_DEBUGGER
+    if (needConsoleInput)
+      consoleInput = std::make_unique<CConsoleInput>();
+  }
+
+  // Create emulator for the appropriate platform
+#ifdef DEBUG
+  if (!s_gfxStatePath.empty())
+    Emu = new CModel3GraphicsState(s_runtime_config, s_gfxStatePath);
+  else
+#endif
+  if (game.platform == Game::PLATFORM_PRO1000)
+    Emu = new CPro1000(s_runtime_config, consoleInput ? consoleInput->CreateInput() : nullptr, netServer);
+  else
+    Emu = new CModel3(s_runtime_config, Inputs, Outputs, netServer);
+
 #ifdef SUPERMODEL_DEBUGGER
   // Create Supermodel debugger unless debugging is disabled
   if (!cmd_line.disable_debugger)
@@ -2527,6 +2551,7 @@ int main(int argc, char **argv)
   delete Emu;
 
 Exit:
+  netServer.reset();
   delete Inputs;
   delete Outputs;
   delete s_crosshair;
