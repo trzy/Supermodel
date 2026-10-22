@@ -49,6 +49,12 @@
 class CModel3GraphicsState: public IEmulator, public IBus
 {
 public:
+  // Loads only the graphics part of a state file, from the constructor
+  bool SupportsSaveStates(void) const override
+  {
+    return false;
+  }
+
   void SaveState(CBlockFile *SaveState) override
   {
   }

@@ -705,8 +705,20 @@ static const int STATE_FILE_VERSION = 6;  // save state file version
 static const int NVRAM_FILE_VERSION = 0;  // NVRAM file version
 static unsigned s_saveSlot = 0;           // save state slot #
 
+static bool CheckSaveStatesSupported(IEmulator *Emu)
+{
+  if (Emu->SupportsSaveStates())
+    return true;
+  puts("Save states are not supported for this system.");
+  InfoLog("Save states are not supported for this system.");
+  return false;
+}
+
 static void SaveState(IEmulator *Emu)
 {
+  if (!CheckSaveStatesSupported(Emu))
+    return;
+
   CBlockFile  SaveState;
 
   std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Emu->GetGame().name << ".st" << s_saveSlot;
@@ -730,6 +742,9 @@ static void SaveState(IEmulator *Emu)
 
 static void LoadState(IEmulator *Emu, std::string file_path = std::string())
 {
+  if (!CheckSaveStatesSupported(Emu))
+    return;
+
   CBlockFile  SaveState;
 
   // Generate file path

@@ -67,7 +67,16 @@ public:
    *    SaveState   Block file to load state information from.
    */
   virtual void LoadState(CBlockFile *SaveState) = 0;
-  
+
+  /*
+   * SupportsSaveStates(void):
+   *
+   * Returns:
+   *    True if SaveState() and LoadState() are supported. If false, do not
+   *    call them.
+   */
+  virtual bool SupportsSaveStates(void) const = 0;
+
   /*
    * SaveNVRAM(NVRAM):
    *

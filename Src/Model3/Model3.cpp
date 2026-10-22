@@ -1844,6 +1844,11 @@ void CModel3::Write64(UINT32 addr, UINT64 data)
  Emulation and Interface Functions
 ******************************************************************************/
 
+bool CModel3::SupportsSaveStates(void) const
+{
+  return true;
+}
+
 void CModel3::SaveState(CBlockFile *SaveState)
 {
   // Write Model 3 state

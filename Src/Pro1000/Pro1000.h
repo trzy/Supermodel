@@ -70,6 +70,7 @@ public:
   // IEmulator interface
   bool PauseThreads(void) override;
   bool ResumeThreads(void) override;
+  bool SupportsSaveStates(void) const override;
   void SaveState(CBlockFile *SaveState) override;
   void LoadState(CBlockFile *SaveState) override;
   void SaveNVRAM(CBlockFile *NVRAM) override;

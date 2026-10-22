@@ -1524,31 +1524,29 @@ void CPro1000::Write64(UINT32 addr, UINT64 data)
  Emulation and Interface Functions
 ******************************************************************************/
 
+bool CPro1000::SupportsSaveStates(void) const
+{
+  return false;
+}
+
 void CPro1000::SaveState(CBlockFile *SaveState)
 {
-  puts("Warning: Save states are not supported on the Real3D Pro-1000.");
-  InfoLog("Save states are not supported on the Real3D Pro-1000.");
 }
 
 void CPro1000::LoadState(CBlockFile *SaveState)
 {
-  puts("Warning: Save states are not supported on the Real3D Pro-1000.");
-  InfoLog("Save states are not supported on the Real3D Pro-1000.");
 }
 
 void CPro1000::SaveNVRAM(CBlockFile *NVRAM)
 {
-  // No NVRAM
 }
 
 void CPro1000::LoadNVRAM(CBlockFile *NVRAM)
 {
-  // No NVRAM
 }
 
 void CPro1000::ClearNVRAM(void)
 {
-  // No NVRAM
 }
 
 void CPro1000::RunFrame(void)
