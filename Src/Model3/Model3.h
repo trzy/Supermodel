@@ -81,38 +81,38 @@ class CModel3: public IEmulator, public IBus, public IPCIDevice
 {
 public:
   // IEmulator interface
-  bool PauseThreads(void);
-  bool ResumeThreads(void);
-  void SaveState(CBlockFile *SaveState);
-  void LoadState(CBlockFile *SaveState);
-  void SaveNVRAM(CBlockFile *NVRAM);
-  void LoadNVRAM(CBlockFile *NVRAM);
-  void ClearNVRAM(void);
-  void RunFrame(void);
-  void RenderFrame(void);
-  void Reset(void);
-  const Game &GetGame(void) const;
-  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
-  void AttachInputs(CInputs *InputsPtr);
-  void AttachOutputs(COutputs *OutputsPtr);
+  bool PauseThreads(void) override;
+  bool ResumeThreads(void) override;
+  void SaveState(CBlockFile *SaveState) override;
+  void LoadState(CBlockFile *SaveState) override;
+  void SaveNVRAM(CBlockFile *NVRAM) override;
+  void LoadNVRAM(CBlockFile *NVRAM) override;
+  void ClearNVRAM(void) override;
+  void RunFrame(void) override;
+  void RenderFrame(void) override;
+  void Reset(void) override;
+  const Game &GetGame(void) const override;
+  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
+  void AttachInputs(CInputs *InputsPtr) override;
+  void AttachOutputs(COutputs *OutputsPtr) override;
   void AttachNetServer(std::shared_ptr<CNetServer> server) override;
-  Result Init(const Game &game, const ROMSet &rom_set);
+  Result Init(const Game &game, const ROMSet &rom_set) override;
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
 
   // IPCIDevice interface
-  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
-  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
+  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const override;
+  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data) override;
 
   // IBus interface
-  UINT8 Read8(UINT32 addr);
-  UINT16 Read16(UINT32 addr);
-  UINT32 Read32(UINT32 addr);
-  UINT64 Read64(UINT32 addr);
-  void Write8(UINT32 addr, UINT8 data);
-  void Write16(UINT32 addr, UINT16 data);
-  void Write32(UINT32 addr, UINT32 data);
-  void Write64(UINT32 addr, UINT64 data);
+  UINT8 Read8(UINT32 addr) override;
+  UINT16 Read16(UINT32 addr) override;
+  UINT32 Read32(UINT32 addr) override;
+  UINT64 Read64(UINT32 addr) override;
+  void Write8(UINT32 addr, UINT8 data) override;
+  void Write16(UINT32 addr, UINT16 data) override;
+  void Write32(UINT32 addr, UINT32 data) override;
+  void Write64(UINT32 addr, UINT64 data) override;
 
   /*
    * GetSoundBoard(void):
