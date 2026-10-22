@@ -31,10 +31,7 @@
 #include "Game.h"
 #include "Pro1000/8259.h"
 #include "Pro1000/SCANPSC100F.h"
-#ifndef SUPERMODEL_NO_NETWORK
 #include "Pro1000/SCSITCPBridge.h"
-#endif
-#include "Pro1000/SCSITCPBridgeProtocol.h"
 #include "Pro1000/SCSIHostAdapter.h"
 #include "Pro1000/UART.h"
 #include "Model3/53C810.h"
@@ -73,6 +70,7 @@ public:
   // IEmulator interface
   bool PauseThreads(void) override;
   bool ResumeThreads(void) override;
+  bool SupportsSaveStates(void) const override;
   void SaveState(CBlockFile *SaveState) override;
   void LoadState(CBlockFile *SaveState) override;
   void SaveNVRAM(CBlockFile *NVRAM) override;
@@ -83,9 +81,6 @@ public:
   void Reset(void) override;
   const Game &GetGame(void) const override;
   void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
-  void AttachInputs(CInputs *InputsPtr) override;
-  void AttachOutputs(COutputs *OutputsPtr) override;
-  void AttachConsoleInput(IConsoleInput *input) override;
   Result Init(const Game &game, const ROMSet &rom_set) override;
 
   // IBus interface
@@ -106,7 +101,7 @@ public:
   void DumpTimings(void);
 
   /*
-   * CPro1000(config):
+   * CPro1000(config, consoleInput, server):
    * ~CPro1000(void):
    *
    * Constructor and destructor. Constructor performs a bare-bones
@@ -115,10 +110,14 @@ public:
    * resources used by the object (and its child objects).
    *
    * Paramters:
-   *    config  Run-time configuration. The reference should be held because
-   *            this changes at run-time.
+   *    config        Run-time configuration. The reference should be held
+   *                  because this changes at run-time.
+   *    consoleInput  Console (stdin) input for the serial port, or nullptr.
+   *                  Must stay valid for the lifetime of the emulator.
+   *    server        Network server for the SCSI TCP bridge, or nullptr if
+   *                  there is no network.
    */
-  CPro1000(Util::Config::Node &config);
+  CPro1000(Util::Config::Node &config, IConsoleInput *consoleInput, std::shared_ptr<CNetServer> server);
   ~CPro1000(void);
 
 private:
@@ -189,9 +188,8 @@ private:
   CPCIBus     PCIBus;       // PCI bus
   C53C810     SCSI;         // SCSI controller (NCR 53C825 on real hardware, emulated as 53C810)
   CSCSIHostAdapter SCSIHostAdapter; // host computer's SCSI host adapter (initiator on the SCSI bus)
-#ifndef SUPERMODEL_NO_NETWORK
+  std::shared_ptr<CNetServer> m_server;
   std::unique_ptr<CSCSITCPBridge> m_scsiTCPBridge;  // connects host computer programs to the host adapter (destroyed before it)
-#endif
   CReal3D     GPU;          // Real3D graphics hardware
   std::vector<std::unique_ptr<CASIC>> m_asics;  // Real3D ASICs on the JTAG scan chain
   std::vector<std::unique_ptr<C3DRAM>> m_3drams; // 3D-RAMs on the JTAG scan chain

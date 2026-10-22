@@ -52,15 +52,15 @@
  * -flip-stereo               supermodel_flip_stereo            FlipStereo
  * -sound/-no-sound           supermodel_emulate_sound          EmulateSound
  * -dsb/-no-dsb               supermodel_emulate_dsb            EmulateDSB
- * -legacy-scsp/-new-scsp     supermodel_scsp_engine            LegacySoundDSP
  * -force-feedback            supermodel_force_feedback         ForceFeedback
  * (Supermodel.ini)           supermodel_analog_deadzone        InputJoy*DeadZone
  * (Supermodel.ini)           supermodel_analog_saturation      InputJoy*Saturation
  * (Supermodel.ini)           supermodel_digital_sensitivity    InputDigitalSensitivity
  * (Supermodel.ini)           supermodel_digital_decay          InputDigitalDecaySpeed
  * -net/-no-net               supermodel_network                Network          (LIBRETRO_NET builds)
+ * -port, -port-in            supermodel_net_port_in            PortIn           (LIBRETRO_NET builds)
+ * -port-out                  supermodel_net_port_out           PortOut          (LIBRETRO_NET builds)
  * -simulate/-emulate-netboard supermodel_simulate_net          SimulateNet      (LIBRETRO_NET builds)
- * (Supermodel.ini)           supermodel_net_port_in/out        PortIn/PortOut   (LIBRETRO_NET builds)
  * -outputs                   supermodel_outputs                Outputs          (LIBRETRO_NET builds)
  *
  * Window, full screen, vsync, throttle, frame rate display, save states,
@@ -231,10 +231,6 @@ namespace
     o.push_back({ "supermodel_emulate_dsb", "audio", "Digital Sound Board",
       "Emulate the Digital Sound Board (MPEG music).",
       s_onOff, "enabled", "EmulateDSB", Type::Bool, true });
-    o.push_back({ "supermodel_scsp_engine", "audio", "SCSP Engine",
-      "The legacy engine by ElSemi fixes games that do not play correctly with the MAME-based engine. Takes effect when the game is restarted.",
-      { { "new", "New (MAME)" }, { "legacy", "Legacy (ElSemi)" } },
-      "new", "LegacySoundDSP", Type::Special, false });
 
     // Input
     o.push_back({ "supermodel_force_feedback", "input", "Force Feedback",
@@ -267,11 +263,11 @@ namespace
     o.push_back({ "supermodel_simulate_net", "network", "Net Board Mode",
       "Simulate the net board (recommended) or emulate it (requires multi-threading to be disabled). Takes effect when the game is restarted.",
       { { "simulate", "Simulate" }, { "emulate", "Emulate" } }, "simulate", "SimulateNet", Type::Special, false });
-    o.push_back({ "supermodel_net_port_in", "network", "Net Board Input Port",
-      "TCP port on which this cabinet receives from the previous one. Takes effect when the game is restarted.",
+    o.push_back({ "supermodel_net_port_in", "network", "Network Port",
+      "TCP port of this instance's network server: the previous cabinet of the ring connects to it, and so do the Pro-1000 host programs (wnaspi32.dll). Takes effect when the game is restarted.",
       Range(1970, 1979, 1), "1970", "PortIn", Type::Unsigned, false });
     o.push_back({ "supermodel_net_port_out", "network", "Net Board Output Port",
-      "TCP port of the next cabinet (on 127.0.0.1). Takes effect when the game is restarted.",
+      "TCP port of the next cabinet of the ring (on 127.0.0.1); the last cabinet connects back to the first. Takes effect when the game is restarted.",
       Range(1970, 1979, 1), "1971", "PortOut", Type::Unsigned, false });
     o.push_back({ "supermodel_outputs", "network", "Outputs",
       "Send the cabinet outputs (lamps, etc.) over TCP/UDP for external programs. Takes effect when the game is restarted.",
@@ -359,8 +355,6 @@ namespace
       config->Set("XResolution", x);
       config->Set("YResolution", y);
     }
-    else if (key == "supermodel_scsp_engine")
-      config->Set("LegacySoundDSP", value == "legacy");
     else if (key == "supermodel_simulate_net")
       config->Set("SimulateNet", value != "emulate");
     else if (key == "supermodel_analog_deadzone")
@@ -492,7 +486,6 @@ namespace LibretroOptions
     config.Set("BalanceLeftRight", 0.0f);
     config.Set("BalanceFrontRear", 0.0f);
     config.Set("FlipStereo", false);
-    config.Set("LegacySoundDSP", false);
 
     // Drive board
     config.Set("ForceFeedback", false);

@@ -225,16 +225,9 @@
 #include "DriveBoard/WheelBoard.h"
 #include "Game.h"
 #include "ROMSet.h"
-#ifdef SUPERMODEL_NO_NETWORK
-#include "Network/NullNetBoard.h"
-#else
-#include "Network/NetBoard.h"
-#include "Network/SimNetBoard.h"
-#endif
-#if defined(SUPERMODEL_LIBRETRO) || defined(SUPERMODEL_NO_NETWORK)
-// No windowing system is available to show message boxes: log instead
-#define SDL_ShowSimpleMessageBox(flags, title, message, window) ErrorLog("%s: %s", title, message)
-#endif
+#include "Model3/NetBoard.h"
+#include "Model3/SimNetBoard.h"
+#include "SDLIncludes.h"
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
 #include "Util/Format.h"
@@ -1851,6 +1844,11 @@ void CModel3::Write64(UINT32 addr, UINT64 data)
  Emulation and Interface Functions
 ******************************************************************************/
 
+bool CModel3::SupportsSaveStates(void) const
+{
+  return true;
+}
+
 void CModel3::SaveState(CBlockFile *SaveState)
 {
   // Write Model 3 state
@@ -2877,28 +2875,6 @@ void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, Su
   m_superAA = superAA;
 }
 
-void CModel3::AttachInputs(CInputs *InputsPtr)
-{
-  Inputs = InputsPtr;
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachInputs(Inputs, m_game.inputs);
-
-  DebugLog("Model 3 attached inputs\n");
-}
-
-void CModel3::AttachOutputs(COutputs *OutputsPtr)
-{
-  Outputs = OutputsPtr;
-  Outputs->SetGame(m_game);
-  Outputs->Attached();
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachOutputs(Outputs);
-
-  DebugLog("Model 3 attached outputs\n");
-}
-
 constexpr static int RAM_SIZE			= 0x800000;		//8MB
 constexpr static int CROM_SIZE			= 0x800000;		//8MB
 constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
@@ -2983,14 +2959,10 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   PCIBus.AttachDevice(14,&SCSI);
   PCIBus.AttachDevice(16,this);
 
-#ifdef SUPERMODEL_NO_NETWORK
-  NetBoard = new CNullNetBoard();
-#else
   if (m_config["SimulateNet"].ValueAs<bool>())
-      NetBoard = new CSimNetBoard(m_config);
+      NetBoard = new CSimNetBoard(m_config, m_server);
   else
-      NetBoard = new CNetBoard(m_config);
-#endif
+      NetBoard = new CNetBoard(m_config, m_server);
 
   DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 
@@ -3173,6 +3145,20 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   std::cout << std::endl;
 
   m_game = game;
+
+  // Inputs and outputs need the game
+  if (Outputs)
+  {
+    Outputs->SetGame(m_game);
+    Outputs->Attached();
+  }
+  if (DriveBoard->IsAttached())
+  {
+    DriveBoard->AttachInputs(Inputs, m_game.inputs);
+    if (Outputs)
+      DriveBoard->AttachOutputs(Outputs);
+  }
+
   NetBoard->GetGame(m_game);
   if (Result::OKAY != NetBoard->Init(netRAM, netBuffer))
   {
@@ -3199,23 +3185,24 @@ INetBoard *CModel3::GetNetBoard(void)
   return NetBoard;
 }
 
-CModel3::CModel3(Util::Config::Node &config)
+CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    Inputs(inputs),
+    Outputs(outputs),
     sndBrdWakeNotify(false),
     TileGen(config),
     GPU(config),
     SoundBoard(config),
     m_jtag(GPU),
-    m_superAA(nullptr)
+    m_superAA(nullptr),
+    m_server(std::move(server))
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
 
   // Various uninitialized pointers
-  Inputs = NULL;
-  Outputs = NULL;
   ram = NULL;
   crom = NULL;
   vrom = NULL;
@@ -3251,13 +3238,8 @@ CModel3::CModel3(Util::Config::Node &config)
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
 
-#ifdef SUPERMODEL_LIBRETRO
-  // The libretro frontend pulls exactly one frame of audio per emulated frame,
-  // so the sound board thread must run in lockstep with the main board
-  syncSndBrdThread = true;
-#else
-  syncSndBrdThread = false;
-#endif
+  // Without an audio callback, the sound board thread runs once per frame
+  syncSndBrdThread = !AudioCallbackSupported();
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;

@@ -1524,31 +1524,29 @@ void CPro1000::Write64(UINT32 addr, UINT64 data)
  Emulation and Interface Functions
 ******************************************************************************/
 
+bool CPro1000::SupportsSaveStates(void) const
+{
+  return false;
+}
+
 void CPro1000::SaveState(CBlockFile *SaveState)
 {
-  puts("Warning: Save states are not supported on the Real3D Pro-1000.");
-  InfoLog("Save states are not supported on the Real3D Pro-1000.");
 }
 
 void CPro1000::LoadState(CBlockFile *SaveState)
 {
-  puts("Warning: Save states are not supported on the Real3D Pro-1000.");
-  InfoLog("Save states are not supported on the Real3D Pro-1000.");
 }
 
 void CPro1000::SaveNVRAM(CBlockFile *NVRAM)
 {
-  // No NVRAM
 }
 
 void CPro1000::LoadNVRAM(CBlockFile *NVRAM)
 {
-  // No NVRAM
 }
 
 void CPro1000::ClearNVRAM(void)
 {
-  // No NVRAM
 }
 
 void CPro1000::RunFrame(void)
@@ -1996,22 +1994,6 @@ void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, S
   m_superAA = superAA;
 }
 
-void CPro1000::AttachInputs(CInputs *InputsPtr)
-{
-  // No game inputs
-}
-
-void CPro1000::AttachOutputs(COutputs *OutputsPtr)
-{
-  // No outputs
-}
-
-void CPro1000::AttachConsoleInput(IConsoleInput *input)
-{
-  // Console input is received by the serial port
-  UART.AttachInput(input);
-}
-
 /*
  * Builds the JTAG scan chain of the model. The firmware's configuration
  * detection (0x17EB0) reads the chain's ID codes and expects one of three
@@ -2095,11 +2077,9 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   SCSI.AttachInitiator(&SCSIHostAdapter);
 
   // Host computer programs connect to the SCSI host adapter through the
-  // bridge. If the bridge cannot start, emulation continues without it.
-#ifndef SUPERMODEL_NO_NETWORK
-  m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
-  m_scsiTCPBridge->Start();
-#endif
+  // bridge
+  if (m_server)
+    m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, m_server);
   if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000(polygonMemoryMB * 0x100000))) // no VROM; Real3D DMA interrupt line unknown
     return Result::FAIL;
   UART.AttachInterruptOutput([this](bool level)
@@ -2204,7 +2184,7 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   return Result::OKAY;
 }
 
-CPro1000::CPro1000(Util::Config::Node &config)
+CPro1000::CPro1000(Util::Config::Node &config, IConsoleInput *consoleInput, std::shared_ptr<CNetServer> server)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
@@ -2222,9 +2202,12 @@ CPro1000::CPro1000(Util::Config::Node &config)
     ppcBrdThreadSync(NULL),
     notifyLock(NULL),
     notifySync(NULL),
+    m_server(std::move(server)),
     GPU(config),
     m_superAA(nullptr)
 {
+  // Console input is received by the serial port
+  UART.AttachInput(consoleInput);
   memset(PPCFetchRegions, 0, sizeof(PPCFetchRegions));
   memset(&timings, 0, sizeof(timings));
   DebugLog("Built Pro-1000\n");

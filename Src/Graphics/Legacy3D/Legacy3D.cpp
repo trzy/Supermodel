@@ -167,16 +167,6 @@
 #include <cmath>
 #include <cstdint>
 
-#ifdef SUPERMODEL_LIBRETRO
-// GLU is not linked into the libretro core; equivalent of gluPerspective()
-static void LibretroPerspective(GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar)
-{
-  GLdouble ymax = zNear * tan(fovy * 3.14159265358979323846 / 360.0);
-  glFrustum(-ymax * aspect, ymax * aspect, -ymax, ymax, zNear, zFar);
-}
-#define gluPerspective LibretroPerspective
-#endif
-
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433832795
 #endif
@@ -429,7 +419,7 @@ const UINT32 *CLegacy3D::TranslateCullingAddress(UINT32 addr)
     return &cullingRAMLo[addr];
   
 #ifdef DEBUG
-  ErrorLog("TranslateCullingAddress(): invalid address: %06X", addr);
+  ErrorLog("TranslateCullingAddress(): Invalid address: %06X", addr);
 #endif
   return NULL;
 }

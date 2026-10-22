@@ -38,16 +38,13 @@ ifeq ($(strip $(LIBRETRO)),1)
 	else
 		OBJ_DIR = obj$(strip $(BITS))_libretro
 	endif
+	SUPERMODEL_BINARY = supermodel_libretro$(PLATFORM_LIBRETRO_EXTENSION)
 else
 	OBJ_DIR = obj$(strip $(BITS))
+	SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
 endif
 BIN_DIR = bin$(strip $(BITS))
 
-ifeq ($(strip $(LIBRETRO)),1)
-	SUPERMODEL_BINARY = supermodel_libretro$(PLATFORM_LIBRETRO_EXTENSION)
-else
-	SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
-endif
 POWERPC_DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
 SCRIPTS_DISASSEMBLER_BINARY = scriptsd$(PLATFORM_BINARY_EXTENSION)
 
@@ -72,14 +69,17 @@ ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
 endif
 
-# LIBRETRO builds the libretro core. Without LIBRETRO_NET, the net board and
-# all other code that needs SDL2_net is left out (SUPERMODEL_NO_NETWORK).
+# LIBRETRO builds the libretro core (Src/OSD/Libretro). Without LIBRETRO_NET,
+# the core does not use SDL: Src/OSD/Libretro/NoSDL.h gives the few SDL and
+# SDL_net functions that the emulator code calls (the network is then
+# unavailable). It is included before each C++ file and uses the include guard
+# of OSD/SDL/SDLIncludes.h, so that header is then empty.
 ifeq ($(strip $(LIBRETRO)),1)
-	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_LIBRETRO -DGLEW_LIBRETRO -DSUPERMODEL_LIBRETRO_EMBEDDED_GAMES_XML -I$(OBJ_DIR)
+	SUPERMODEL_BUILD_FLAGS += -DGLEW_LIBRETRO -I$(OBJ_DIR)
 	ifeq ($(strip $(LIBRETRO_NET)),1)
 		SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_LIBRETRO_NET
 	else
-		SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_NO_NETWORK
+		PLATFORM_CXXFLAGS += -include Src/OSD/Libretro/NoSDL.h
 	endif
 endif
 
@@ -118,18 +118,8 @@ CXXFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CXXFLAGS))
 ###############################################################################
 
 #
-# Frontend: the SDL executable or the libretro core. Code that uses SDL2_net
-# (net board, SCSI TCP bridge, network outputs) is shared by the executable
-# and the libretro core built with LIBRETRO_NET=1.
+# Frontend: the SDL executable or the libretro core
 #
-NETWORK_SRC_FILES = \
-	Src/Network/TCPReceive.cpp \
-	Src/Network/TCPSend.cpp \
-	Src/Network/NetBoard.cpp \
-	Src/Network/SimNetBoard.cpp \
-	Src/Pro1000/SCSITCPBridge.cpp \
-	Src/OSD/SDL/NetOutputs.cpp
-
 ifeq ($(strip $(LIBRETRO)),1)
 	FRONTEND_SRC_FILES = \
 		Src/OSD/Libretro/LibretroMain.cpp \
@@ -138,9 +128,10 @@ ifeq ($(strip $(LIBRETRO)),1)
 		Src/OSD/Libretro/LibretroInputSystem.cpp \
 		Src/OSD/Libretro/Audio.cpp \
 		Src/OSD/Libretro/Thread.cpp \
-		Src/OSD/Libretro/FileSystemPath.cpp
+		Src/OSD/Libretro/FileSystemPath.cpp \
+		Src/OSD/Libretro/GLU.cpp
 	ifeq ($(strip $(LIBRETRO_NET)),1)
-		FRONTEND_SRC_FILES += $(NETWORK_SRC_FILES)
+		FRONTEND_SRC_FILES += Src/OSD/SDL/NetOutputs.cpp
 	endif
 else
 	FRONTEND_SRC_FILES = \
@@ -149,18 +140,17 @@ else
 		Src/OSD/SDL/Thread.cpp \
 		Src/OSD/SDL/Gui.cpp \
 		Src/OSD/SDL/SDLInputSystem.cpp \
+		Src/OSD/SDL/NetOutputs.cpp \
 		Src/Pkgs/imgui/imgui.cpp \
 		Src/Pkgs/imgui/imgui_draw.cpp \
 		Src/Pkgs/imgui/imgui_impl_sdl2.cpp \
 		Src/Pkgs/imgui/imgui_impl_opengl3.cpp \
 		Src/Pkgs/imgui/imgui_tables.cpp \
 		Src/Pkgs/imgui/imgui_widgets.cpp \
-		$(NETWORK_SRC_FILES) \
 		$(PLATFORM_SRC_FILES)
 endif
 
 SRC_FILES = \
-	$(FRONTEND_SRC_FILES) \
 	Src/CPU/PowerPC/PPCDisasm.cpp \
 	Src/BlockFile.cpp \
 	Src/Pkgs/unzip.cpp \
@@ -192,6 +182,7 @@ SRC_FILES = \
 	Src/Pro1000/UART.cpp \
 	Src/Pro1000/8259.cpp \
 	Src/Pro1000/SCANPSC100F.cpp \
+	Src/Pro1000/SCSITCPBridge.cpp \
 	Src/Pro1000/SCSIHostAdapter.cpp \
 	Src/Pro1000/SyntheticSCSIROM.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
@@ -235,7 +226,13 @@ SRC_FILES = \
 	Src/Util/ConfigBuilders.cpp \
 	Src/GameLoader.cpp \
 	Src/Pkgs/tinyxml2.cpp \
-	Src/ROMSet.cpp
+	Src/ROMSet.cpp \
+	Src/Network/NetServer.cpp \
+	Src/Network/TCPConnection.cpp \
+	Src/Model3/NetBoard.cpp \
+	Src/Model3/NetBoardLink.cpp \
+	Src/Model3/SimNetBoard.cpp \
+	$(FRONTEND_SRC_FILES)
 
 ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))
 	# -DSUPERMODEL_OSX not present: we are not compiling for macOS and can

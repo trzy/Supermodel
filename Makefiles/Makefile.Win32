@@ -108,10 +108,10 @@ ifeq ($(strip $(LIBRETRO)),1)
 	# libretro core (DLL). Runtime libraries and zlib are linked statically so
 	# the DLL has no MinGW dependencies. SDL2 is only needed for LIBRETRO_NET=1.
 	PLATFORM_CXXFLAGS = -DSUPERMODEL_WIN32
-	PLATFORM_LDFLAGS = -shared -static -static-libgcc -static-libstdc++ -Wl,--no-undefined -lopengl32 -lz
+	PLATFORM_LDFLAGS = -shared -static -static-libgcc -static-libstdc++ -Wl,--no-undefined -lopengl32 -lglu32 -lz
 	ifeq ($(strip $(LIBRETRO_NET)),1)
 		PLATFORM_CXXFLAGS += $(SDL2_CFLAGS) $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
-		PLATFORM_LDFLAGS = -shared -static -static-libgcc -static-libstdc++ -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) -lopengl32 -lws2_32 -lz
+		PLATFORM_LDFLAGS = -shared -static -static-libgcc -static-libstdc++ -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) -lopengl32 -lglu32 -lws2_32 -lz
 	endif
 	PLATFORM_LIBRETRO_EXTENSION = .dll
 else
@@ -139,7 +139,7 @@ endif
 WNASPI32_BIN_DIR = bin32
 WNASPI32_DLL = $(WNASPI32_BIN_DIR)/wnaspi32.dll
 WNASPI32_SRC_FILES = Src/OSD/Windows/wnaspi32/wnaspi32.cpp Src/OSD/Windows/wnaspi32/ConnectDialog.cpp Src/OSD/Windows/wnaspi32/wnaspi32.def
-WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/OSD/Windows/wnaspi32/ConnectDialog.h Src/Pro1000/SCSITCPBridgeProtocol.h
+WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/OSD/Windows/wnaspi32/ConnectDialog.h Src/Pro1000/SCSITCPBridgeProtocol.h Src/Network/NetProtocol.h
 ifneq (,$(findstring i686,$(shell $(CXX32) -dumpmachine 2>&1)))
 	PLATFORM_TARGETS += $(WNASPI32_DLL)
 	PLATFORM_PKG_FILES += $(WNASPI32_DLL)

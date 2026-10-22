@@ -87,7 +87,7 @@ void CSCSIHostAdapter::Finish(const char *error)
     RecordError(error);
   m_result.completed = m_commandComplete && !error;
   m_state = State::Idle;
-  DebugLog("SCSI host adapter: request complete (completed=%d, status=%02X, %u bytes in, error=%s)\n", m_result.completed, m_result.status, unsigned(m_result.dataIn.size()), m_result.error.c_str());
+  DebugLog("SCSI host adapter: Request complete (completed=%d, status=%02X, %u bytes in, error=%s)\n", m_result.completed, m_result.status, unsigned(m_result.dataIn.size()), m_result.error.c_str());
 
   // Release the request before the call, because the completion function can
   // submit a new request
@@ -152,7 +152,7 @@ bool CSCSIHostAdapter::Selecting(uint16_t respondIDs, unsigned *targetID, unsign
 
   *targetID = pending.request.targetID;
   *initiatorID = m_hostID;
-  DebugLog("SCSI host adapter: selected target %u (CDB opcode %02X)\n", *targetID, pending.request.cdb.empty() ? 0 : pending.request.cdb[0]);
+  DebugLog("SCSI host adapter: Selected target %u (CDB opcode %02X)\n", *targetID, pending.request.cdb.empty() ? 0 : pending.request.cdb[0]);
   StartRequest(std::move(pending));
   return true;
 }
@@ -291,7 +291,7 @@ void CSCSIHostAdapter::ProcessMessages(void)
       length = 2 + m_messagesIn[pos + 1];
       if (pos + length > m_messagesIn.size())
         break;  // incomplete
-      DebugLog("SCSI host adapter: ignored extended message (code %02X)\n", length > 2 ? m_messagesIn[pos + 2] : 0);
+      DebugLog("SCSI host adapter: Ignored extended message (code %02X)\n", length > 2 ? m_messagesIn[pos + 2] : 0);
     }
     else if (message & MSG_IDENTIFY)
       ; // the target identifies itself after reselection
@@ -339,7 +339,7 @@ void CSCSIHostAdapter::Disconnected(void)
   else if (m_disconnectMessage)
   {
     m_state = State::Disconnected;
-    DebugLog("SCSI host adapter: target disconnected, request stays open\n");
+    DebugLog("SCSI host adapter: Target disconnected, request stays open\n");
   }
   else
     Finish("target disconnected without COMMAND COMPLETE or DISCONNECT");
@@ -355,7 +355,7 @@ bool CSCSIHostAdapter::Reselect(unsigned targetID, unsigned initiatorID)
   m_pointers = m_savedPointers;
   m_disconnectMessage = false;
   m_messagesIn.clear();
-  DebugLog("SCSI host adapter: reselected by target %u\n", targetID);
+  DebugLog("SCSI host adapter: Reselected by target %u\n", targetID);
   return true;
 }
 

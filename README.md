@@ -101,7 +101,7 @@ make -f Makefiles/Makefile.OSX
 
 Supermodel can also be built as a [libretro](https://www.libretro.com) core for RetroArch and other libretro frontends. Add `LIBRETRO=1` to the usual `make` command; everything else (compilers, MSYS2 setup) is the same as for the standalone emulator above.
 
-The core does not use SDL: it only needs OpenGL and zlib, so the SDL2 packages are not required unless you build with `LIBRETRO_NET=1` (see below).
+The core does not use SDL: it only needs OpenGL and zlib, so the SDL2 packages are not required unless you build with `LIBRETRO_NET=1` (see below). Without `LIBRETRO_NET=1` the network (net board, Pro-1000 SCSI TCP bridge, network outputs) is not available.
 
 #### Linux
 
@@ -137,7 +137,7 @@ Output: `bin/supermodel_libretro.dylib`
 | Option | Effect |
 |--------|--------|
 | `LIBRETRO=1` | Build the libretro core instead of the standalone emulator. |
-| `LIBRETRO_NET=1` | Together with `LIBRETRO=1`: also build the net board (linked cabinets), the Pro-1000 SCSI TCP bridge and the network outputs. These use SDL2_net, so SDL2 and SDL2_net must be installed to build and to run the core. |
+| `LIBRETRO_NET=1` | Together with `LIBRETRO=1`: build the core with SDL2 and SDL2_net, so that the network works: the net board (linked cabinets), the Pro-1000 SCSI TCP bridge and the network outputs. SDL2 and SDL2_net must then be installed to build and to run the core. |
 | `DEBUG=1` | Debug build (no optimization, symbols kept). |
 | `-j<n>` | Parallel build, e.g. `-j8`. |
 
@@ -152,7 +152,7 @@ A copy of `Config/Games.xml` is compiled into the core, so the core works withou
 3. Optional, in RetroArch's system directory (`system/supermodel/`):
    - `Games.xml`: replaces the built-in game list (e.g. a newer one).
    - `Music.xml`: custom MPEG music.
-   - `Assets/p1crosshair.bmp` and `Assets/p2crosshair.bmp`: needed for the "Bitmap" crosshair style.
+   - `Assets/p1crosshair.bmp` and `Assets/p2crosshair.bmp`: needed only for the "Bitmap" crosshair style (the default "Vector" crosshairs need no file).
 4. Load a ROM set (`.zip`, the same files as for the standalone emulator) with the core. Use the `glcore` video driver for the new 3D engine (OpenGL 4.1 core profile) or the `gl` driver if you switch to the legacy 3D engine, which needs a compatibility profile context.
 
 See [Docs/LIBRETRO.md](Docs/LIBRETRO.md) for the controls (RetroPad layout per game type), the core options and how they map to the standalone emulator's command line options.

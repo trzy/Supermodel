@@ -61,13 +61,13 @@
 #include <cmath>
 #include <algorithm>
 
-  // Model3 audio output is 44.1KHz 4-channel sound and frame rate is 60fps
+// Model3 audio output is 44.1KHz 4-channel sound. The sound board sends one frame at a time: 1/refresh rate of a
+// second, which is 735 samples at 60 Hz and 766-767 at 57.524 Hz (at most 981, for 45 Hz).
 #define SAMPLE_RATE_M3     (44100)
-#define SUPERMODEL_FPS     (60.0f)
-#define MODEL3_FPS         (57.53f)
+#define MODEL3_FPS         (57.524f)    // nominal frame length used for buffer bookkeeping
 
-#define MAX_SND_FREQ       (75)
-#define MIN_SND_FREQ       (45)
+#define MAX_INPUT_SAMPLES  (SAMPLE_RATE_M3 / 45 + 1)                // longest frame the sound board sends
+#define MAX_OUTPUT_SAMPLES (MAX_INPUT_SAMPLES + MAX_INPUT_SAMPLES / 100 + 2) // after rate control (at most +0.5%)
 #define MAX_LATENCY        (100)
 
 #define NUM_CHANNELS_M3 (4)
@@ -81,7 +81,6 @@ int nbHostAudioChannels = NUM_CHANNELS_M3;   // Number of channels on host
 #define BYTES_PER_FRAME_M3   (SAMPLES_PER_FRAME_M3 * BYTES_PER_SAMPLE_M3)
 
 
-static int samples_per_frame_host = SAMPLES_PER_FRAME_M3;
 static int bytes_per_sample_host = BYTES_PER_SAMPLE_M3;
 static int bytes_per_frame_host = BYTES_PER_FRAME_M3;
 
@@ -95,12 +94,14 @@ float balanceFactorRearLeft   = 1.0f;
 float balanceFactorRearRight  = 1.0f;
 
 static bool enabled = true;         // True if sound output is enabled
-static constexpr unsigned latency = 20;       // Audio latency to use (ie size of audio buffer) as percentage of max buffer size
+static constexpr unsigned latency = 20;       // Size of audio buffer as percentage of max buffer size (headroom only, see targetLatencyMs)
+static constexpr unsigned targetLatencyMs = 50; // Amount of audio kept queued ahead of playback; this is the output latency
 static constexpr bool underRunLoop = true;    // True if should loop back to beginning of buffer on under-run, otherwise sound is just skipped
 
 static constexpr unsigned playSamples = 512;  // Size (in samples) of callback play buffer
 
 static UINT32 audioBufferSize = 0;  // Size (in bytes) of audio buffer
+static UINT32 targetFillBytes = 0;  // Bytes of audio to keep queued (targetLatencyMs)
 static INT8* audioBuffer = NULL;    // Audio buffer
 
 static UINT32 writePos = 0;         // Current position at which writing into buffer
@@ -116,6 +117,16 @@ static void* callbackData = NULL;         // Pointer to data to be passed to aud
 
 static const Util::Config::Node* s_config = 0;
 
+// Rate control, used when the sound board runs once per emulated frame (no audio callback). The emulator's frame
+// timer and the sound card's clock are never exactly the same (and VSync can tie frames to a monitor that isn't
+// exactly the chosen refresh rate), so the queue would slowly drain or fill. Each frame is stretched or squeezed by
+// at most 0.5% (about 8 cents, too small to hear) to hold the queue at targetFillBytes.
+static constexpr double maxRateAdjust = 0.005;
+static double rateErrorFiltered = 0.0;  // queue error (fraction of the target), low-pass filtered
+static double rateErrorIntegral = 0.0;  // sum of the filtered error, removes the steady error a clock offset would leave
+static double resamplePhase = -1.0;     // position of the next output sample, in input samples from the start of the next frame (-1 = last sample of the previous frame)
+static float resamplePrev[4] = {};      // last input sample of the previous frame, per channel
+
 
 void SetAudioCallback(AudioCallbackFPtr newCallback, void* newData)
 {
@@ -126,6 +137,11 @@ void SetAudioCallback(AudioCallbackFPtr newCallback, void* newData)
     callbackData = newData;
 
     SDL_UnlockAudio();
+}
+
+bool AudioCallbackSupported()
+{
+    return true;
 }
 
 void SetAudioEnabled(bool newEnabled)
@@ -171,6 +187,24 @@ static INT16 ClampINT16(float x)
     return (INT16)xi;
 }
 
+// Frame-driven mode only, called with the audio lock held after an under-run: restart with exactly the target amount
+// queued (silence) instead of looping back over old audio, which would leave the queue nearly full and take rate
+// control many seconds to bring back down.
+static void RestartQueue()
+{
+    UINT32 end = playPos + targetFillBytes;
+    if (end <= audioBufferSize)
+        memset(audioBuffer + playPos, 0, targetFillBytes);
+    else
+    {
+        memset(audioBuffer + playPos, 0, audioBufferSize - playPos);
+        memset(audioBuffer, 0, end - audioBufferSize);
+    }
+    writeWrapped = end >= audioBufferSize;
+    writePos = writeWrapped ? end - audioBufferSize : end;
+    rateErrorFiltered = 0.0;	// the integral is kept: it holds the clock offset, which hasn't changed
+}
+
 static void PlayCallback(void* data, Uint8* stream, int len)
 {
     //printf("PlayCallback(%d) [writePos = %u, writeWrapped = %s, playPos = %u, audioBufferSize = %u]\n",
@@ -190,7 +224,17 @@ static void PlayCallback(void* data, Uint8* stream, int len)
         //	underRuns, len, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize);
 
         // See what action to take on under-run
-        if (underRunLoop)
+        if (!callback)
+        {
+            // Frame-driven: play silence, then restart with the target amount queued
+            memset(stream, 0, len);
+            playPos += len;
+            if (playPos >= audioBufferSize)
+                playPos -= audioBufferSize;
+            RestartQueue();
+            return;
+        }
+        else if (underRunLoop)
         {
             // If loop, then move play position back to beginning of data in buffer
             playPos = adjWritePos + bytes_per_frame_host;
@@ -261,7 +305,7 @@ static void PlayCallback(void* data, Uint8* stream, int len)
     // Move play position forward for next time
     playPos += len;
 
-    bool bufferFull = adjWritePos + 2 * bytes_per_frame_host > playPos + audioBufferSize;
+    bool bufferFull = adjWritePos >= playPos + targetFillBytes;
 
     // Check if play position has moved past end of buffer
     if (playPos >= audioBufferSize)
@@ -482,14 +526,8 @@ Result OpenAudio(const Util::Config::Node& config)
         }
     }
 
-    float soundFreq_Hz = (float)s_config->Get("SoundFreq").ValueAs<float>();
-    if (soundFreq_Hz>MAX_SND_FREQ)
-        soundFreq_Hz = MAX_SND_FREQ;
-    if (soundFreq_Hz<MIN_SND_FREQ)
-        soundFreq_Hz = MIN_SND_FREQ;
-    samples_per_frame_host = (INT32)(SAMPLE_RATE_M3 / soundFreq_Hz);
     bytes_per_sample_host = (nbHostAudioChannels * sizeof(INT16));
-    bytes_per_frame_host =  (samples_per_frame_host * bytes_per_sample_host);
+    bytes_per_frame_host =  (SAMPLES_PER_FRAME_M3 * bytes_per_sample_host);
 
 
     // Create audio buffer
@@ -508,29 +546,68 @@ Result OpenAudio(const Util::Config::Node& config)
     }
     memset(audioBuffer, 0, sizeof(INT8) * audioBufferSize);
 
-    // Set initial play position to be beginning of buffer and initial write position to be half-way into buffer
-    playPos = 0;
-    uint32_t endOfBuffer = bufferSize - bytes_per_frame_host;
-    uint32_t midpointAfterFirstFrameUnaligned = bytes_per_frame_host + (bufferSize - bytes_per_frame_host) / 2;
-    uint32_t extraPaddingNeeded = (bytes_per_frame_host - midpointAfterFirstFrameUnaligned % bytes_per_frame_host) % bytes_per_frame_host;
-    uint32_t midpointAfterFirstFrame = midpointAfterFirstFrameUnaligned + extraPaddingNeeded;
-    if (!((endOfBuffer % (nbHostAudioChannels*sizeof(INT16))) == 0)) {
-        return ErrorLog("must be an integer multiple of the sample size\n");
-    }
-    if (!((midpointAfterFirstFrame % nbHostAudioChannels*sizeof(INT16)) == 0)) {
-        return ErrorLog("must be an integer multiple of the sample size\n");
-    }
+    // Amount of audio to keep queued. The rest of the buffer is headroom for slow frames.
+    targetFillBytes = ((SAMPLE_RATE_M3 * targetLatencyMs) / 1000) * bytes_per_sample_host;
+    targetFillBytes = std::min<UINT32>(targetFillBytes, audioBufferSize - 3 * bytes_per_frame_host);
 
-    writePos = std::min<int>(endOfBuffer, midpointAfterFirstFrame);
+    // Set initial play position to be beginning of buffer and initial write position the target amount ahead of it
+    playPos = 0;
+    writePos = targetFillBytes;
     writeWrapped = false;
 
     // Reset counters
     underRuns = 0;
     overRuns = 0;
 
+    // Reset rate control
+    rateErrorFiltered = 0.0;
+    rateErrorIntegral = 0.0;
+    resamplePhase = -1.0;
+    memset(resamplePrev, 0, sizeof(resamplePrev));
+
     // Start audio playing
     SDL_PauseAudio(0);
     return Result::OKAY;
+}
+
+// Playback speed for the next frame (1.0 = as generated), from how far the queue is from its target
+static double UpdateRateControl(UINT32 queuedBytes)
+{
+    double error = ((double)queuedBytes - (double)targetFillBytes) / (double)targetFillBytes;
+    rateErrorFiltered += 0.1 * (error - rateErrorFiltered);
+    rateErrorIntegral = std::max(-500.0, std::min(500.0, rateErrorIntegral + rateErrorFiltered));
+    // Gains give a well damped loop (damping ratio about 0.9, settling in about 10 s). The queue moves 20x the speed
+    // adjustment (in fractions of the 50 ms target per second), so larger gains oscillate.
+    double adjust = 0.01 * rateErrorFiltered + 0.00001 * rateErrorIntegral;
+    adjust = std::max(-maxRateAdjust, std::min(maxRateAdjust, adjust));
+    return 1.0 - adjust;	// more queued than the target: make fewer samples
+}
+
+// Linear interpolation from numSamples input samples to about numSamples * ratio output samples. The phase and the
+// last input sample are carried between frames, so the output is continuous (it lags the input by one sample).
+static unsigned Resample(unsigned numSamples, double ratio, const float* const in[4], float* const out[4])
+{
+    const double step = 1.0 / ratio;	// input samples per output sample
+    const double end = (double)(numSamples - 1);
+    double pos = resamplePhase;
+    unsigned n = 0;
+    while (pos < end && n < MAX_OUTPUT_SAMPLES)
+    {
+        int i = (int)std::floor(pos);
+        float frac = (float)(pos - i);
+        for (int c = 0; c < 4; c++)
+        {
+            float a = (i < 0) ? resamplePrev[c] : in[c][i];
+            float b = in[c][i + 1];
+            out[c][n] = a + (b - a) * frac;
+        }
+        n++;
+        pos += step;
+    }
+    resamplePhase = std::max(-1.0, pos - (double)numSamples);
+    for (int c = 0; c < 4; c++)
+        resamplePrev[c] = in[c][numSamples - 1];
+    return n;
 }
 
 bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float* rightFrontBuffer, const float* leftRearBuffer, const float* rightRearBuffer, bool flipStereo)
@@ -542,12 +619,42 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
     UINT32 bytesToCopy;
     INT16* src;
 
-    // Number of samples should never be more than max number of samples per frame
-    if (numSamples > (unsigned)samples_per_frame_host)
-        numSamples = samples_per_frame_host;
+    // Number of samples should never be more than the longest frame
+    if (numSamples > MAX_INPUT_SAMPLES)
+        numSamples = MAX_INPUT_SAMPLES;
+    if (numSamples == 0)
+        return false;
+
+    // Rate control applies when audio is generated once per emulated frame. With an audio callback, the sound board
+    // thread is already paced by the sound card.
+    SDL_LockAudio();
+    bool frameDriven = (callback == nullptr);
+    UINT32 queuedBytes = ((writePos < playPos) ? writePos + audioBufferSize : writePos) - playPos;
+    SDL_UnlockAudio();
+
+    static float resampled[4][MAX_OUTPUT_SAMPLES];
+    if (frameDriven)
+    {
+        const float* const in[4] = { leftFrontBuffer, rightFrontBuffer, leftRearBuffer, rightRearBuffer };
+        float* const out[4] = { resampled[0], resampled[1], resampled[2], resampled[3] };
+        numSamples = Resample(numSamples, UpdateRateControl(queuedBytes), in, out);
+        leftFrontBuffer = resampled[0];
+        rightFrontBuffer = resampled[1];
+        leftRearBuffer = resampled[2];
+        rightRearBuffer = resampled[3];
+    }
+    else
+    {
+        // Keep the resampler's history current, in case the sound board thread stops
+        resamplePhase = -1.0;
+        resamplePrev[0] = leftFrontBuffer[numSamples - 1];
+        resamplePrev[1] = rightFrontBuffer[numSamples - 1];
+        resamplePrev[2] = leftRearBuffer[numSamples - 1];
+        resamplePrev[3] = rightRearBuffer[numSamples - 1];
+    }
 
     // Mix together left and right channels into single chunk of data
-    INT16 mixBuffer[NUM_CHANNELS_M3 * (SAMPLE_RATE_M3 / MIN_SND_FREQ)];
+    INT16 mixBuffer[NUM_CHANNELS_M3 * MAX_OUTPUT_SAMPLES];
     MixChannels(numSamples, leftFrontBuffer, rightFrontBuffer, leftRearBuffer, rightRearBuffer, mixBuffer, flipStereo);
 
     // Lock SDL audio callback so that it doesn't interfere with following code
@@ -572,7 +679,14 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
         //	underRuns, numSamples, writePos, (writeWrapped ? "true" : "false"), playPos, audioBufferSize, numBytes);
 
         // See what action to take on under-run
-		if (underRunLoop)
+        if (frameDriven)
+        {
+            // Restart with the target amount queued, then write this frame after it
+            RestartQueue();
+            if (writeWrapped)
+                writePos += audioBufferSize;
+        }
+		else if (underRunLoop)
 		{
             // If loop, then move play position back to beginning of data in buffer
             playPos = writePos + numBytes + bytes_per_frame_host;
@@ -602,7 +716,8 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
     // Check if write position has caught up with play region and now overlaps it (ie buffer over-run)
     bool overRun = writePos + numBytes > playPos + audioBufferSize;
 
-    bool bufferFull = writePos + 2 * bytes_per_frame_host > playPos + audioBufferSize;
+    UINT32 queuedEnd = (writePos < playPos) ? writePos + audioBufferSize : writePos;
+    bool bufferFull = queuedEnd + numBytes >= playPos + targetFillBytes;
 
     // Move write position back to within buffer
     if (writePos >= audioBufferSize)

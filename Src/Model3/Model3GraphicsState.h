@@ -49,6 +49,12 @@
 class CModel3GraphicsState: public IEmulator, public IBus
 {
 public:
+  // Loads only the graphics part of a state file, from the constructor
+  bool SupportsSaveStates(void) const override
+  {
+    return false;
+  }
+
   void SaveState(CBlockFile *SaveState) override
   {
   }
@@ -110,14 +116,6 @@ public:
     m_tileGen.AttachRenderer(dynamic_cast<CRender2D *>(render2D));
     render3D->SetStepping(m_game.stepping);
     m_real3D.AttachRenderer(render3D);
-  }
-
-  void AttachInputs(CInputs *InputsPtr) override
-  {
-  }
-
-  void AttachOutputs(COutputs *OutputsPtr) override
-  {
   }
 
   Result Init(const Game &game, const ROMSet &rom_set) override

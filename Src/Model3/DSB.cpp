@@ -113,21 +113,23 @@
  4. Fixed Point Arithmetic
 
  Fixed point arithmetic is used to track fractions. For such numbers, the low
- 8 bits represent a fraction (0x100 would be 1.0, 0x080 would be 0.5, etc.)
- and the upper bits are the integral portion.
+ 16 bits represent a fraction (0x10000 would be 1.0, 0x08000 would be 0.5,
+ etc.) and the upper bits are the integral portion. 16 bits are needed for the
+ step: with 8 bits, 32000/44100 truncated to 185/256 and music played 0.41%
+ slow. The interpolation products are computed in 64 bits.
 ******************************************************************************/
 
 void CDSBResampler::Reset(void)
 {
 	// Initial state of fractions (24.8 fixed point)
-	nFrac = 0<<8;	// fraction of next sample to use (0->1.0 as x moves p->n)
-	pFrac = 1<<8;	// previous sample (1.0->0 as x moves p->n)
+	nFrac = 0<<16;	// fraction of next sample to use (0->1.0 as x moves p->n)
+	pFrac = 1<<16;	// previous sample (1.0->0 as x moves p->n)
 }
 
 // Mixes audio and returns number of samples copied back to start of buffer (ie. offset at which new samples should be written)
 int CDSBResampler::UpSampleAndMix(float *outL, float *outR, INT16 *inL, INT16 *inR, UINT8 volumeL, UINT8 volumeR, int sizeOut, int sizeIn, int outRate, int inRate)
 {
-	int 	delta = (inRate<<8)/outRate;	// (1/fout)/(1/fin)=fin/fout, 24.8 fixed point
+	int 	delta = (int)(((INT64)inRate<<16)/outRate);	// (1/fout)/(1/fin)=fin/fout, 16.16 fixed point
 	int		outIdx = 0;
 	int		inIdx = 0;
 	float	v[2], musicVol;
@@ -136,15 +138,15 @@ int CDSBResampler::UpSampleAndMix(float *outL, float *outR, INT16 *inL, INT16 *i
 	musicVol = (float)std::max(0,std::min(200,m_config["MusicVolume"].ValueAs<int>()));
 	musicVol = musicVol * (float) (1.0 / 100.0);
 
-	v[0] = musicVol * (float) volumeL * (float) (1.0 / (255.0*256.0)); // 256 is there to correct for fixed point interpolation below
-	v[1] = musicVol * (float) volumeR * (float) (1.0 / (255.0*256.0));
+	v[0] = musicVol * (float) volumeL * (float) (1.0 / (255.0*65536.0)); // 65536 is there to correct for fixed point interpolation below
+	v[1] = musicVol * (float) volumeR * (float) (1.0 / (255.0*65536.0));
 
 	// Up-sample and mix!
 	while (outIdx < sizeOut)
 	{
-		// nFrac, pFrac will never exceed 1.0 (0x100) (only true if delta does not exceed 1)
-		INT32 leftSample  = (int)inL[inIdx]*pFrac+(int)inL[inIdx+1]*nFrac;	// left channel
-		INT32 rightSample = (int)inR[inIdx]*pFrac+(int)inR[inIdx+1]*nFrac;	// right channel
+		// nFrac, pFrac will never exceed 1.0 (0x10000) (only true if delta does not exceed 1)
+		INT64 leftSample  = (INT64)inL[inIdx]*pFrac+(INT64)inL[inIdx+1]*nFrac;	// left channel
+		INT64 rightSample = (INT64)inR[inIdx]*pFrac+(INT64)inR[inIdx+1]*nFrac;	// right channel
 
 		// Apply DSB volume+overall music volume setting, and mix into output
 		outL[outIdx] += (float)leftSample  * v[0];
@@ -158,8 +160,8 @@ int CDSBResampler::UpSampleAndMix(float *outL, float *outR, INT16 *inL, INT16 *i
 		// Time to move to next samples?
 		if (pFrac <= 0)	// when pFrac becomes 0, advance samples, reset pFrac to 1
 		{
-			pFrac += (1<<8);
-			nFrac -= (1<<8);
+			pFrac += (1<<16);
+			nFrac -= (1<<16);
 			inIdx++;	// advance samples (for upsampling only; downsampling may advance by more than one -- add delta every loop iteration)
 		}
 	}
@@ -400,20 +402,20 @@ void CDSB1::SendCommand(UINT8 data)
 #endif
 }
 
-void CDSB1::RunFrame(float *audioL, float *audioR)
+void CDSB1::RunFrame(float *audioL, float *audioR, int numSamples)
 {
 	if (!m_config["EmulateDSB"].ValueAs<bool>())
 	{
 		// DSB code applies SCSP volume, too, so we must still mix
-		memset(mpegL, 0, (32000/60+2)*sizeof(INT16));
-		memset(mpegR, 0, (32000/60+2)*sizeof(INT16));
-		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, NUM_SAMPLES_PER_FRAME, 32000/60+2, 44100, 32000);
+		memset(mpegL, 0, MPEG_SAMPLES_FOR(numSamples)*sizeof(INT16));
+		memset(mpegR, 0, MPEG_SAMPLES_FOR(numSamples)*sizeof(INT16));
+		retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, numSamples, MPEG_SAMPLES_FOR(numSamples), 44100, 32000);
 		return;
 	}
 
 	int		cycles;
-	// While FIFO not empty, fire interrupts, run for up to one frame
-	for (cycles = (4000000/60); (cycles > 0) && (fifoIdxR != fifoIdxW);  )
+	// While FIFO not empty, fire interrupts, run for up to one frame (Z80 at 4 MHz)
+	for (cycles = (int)((4000000LL * numSamples) / 44100); (cycles > 0) && (fifoIdxR != fifoIdxW);  )
 	{
 		Z80.SetINT(true);	// fire an IRQ to indicate pending command
 		//printf("Z80 INT fired\n");
@@ -429,8 +431,8 @@ void CDSB1::RunFrame(float *audioL, float *audioR)
 	UINT8 v = (UINT8) ((float) volume * (float)(255.0/127.0));
 
 	// Decode MPEG for this frame
-	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
-	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, NUM_SAMPLES_PER_FRAME, 32000/60+2, 44100, 32000);
+	MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], MPEG_SAMPLES_FOR(numSamples) - retainedSamples);
+	retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, v, v, numSamples, MPEG_SAMPLES_FOR(numSamples), 44100, 32000);
 }
 
 void CDSB1::Reset(void)
@@ -545,6 +547,7 @@ void CDSB1::LoadState(CBlockFile *StateFile)
 #define DSB1_OFFSET_RAM			0		// 32KB Z80 RAM
 #define DSB1_OFFSET_MPEG_LEFT	0x8000	// 1604 bytes (48 KHz max., 1/60th second, 2 extra = 2*(48000/60+2)) left MPEG buffer
 #define DSB1_OFFSET_MPEG_RIGHT	0x8644	// 1604 bytes right MPEG buffer
+static_assert(MPEG_SAMPLES_FOR(MAX_SAMPLES_PER_FRAME) * sizeof(INT16) <= 0x644, "MPEG buffers too small for the longest frame");
 #define DSB1_MEMORY_POOL_SIZE	(0x8000 + 0x644 + 0x644)
 
 Result CDSB1::Init(const UINT8 *progROMPtr, const UINT8 *mpegROMPtr)
@@ -964,14 +967,14 @@ void CDSB2::SendCommand(UINT8 data)
 }
 
 
-void CDSB2::RunFrame(float *audioL, float *audioR)
+void CDSB2::RunFrame(float *audioL, float *audioR, int numSamples)
 {
   if (!m_config["EmulateDSB"].ValueAs<bool>())
   {
     // DSB code applies SCSP volume, too, so we must still mix
-    memset(mpegL, 0, (32000/60+2) * sizeof(INT16));
-    memset(mpegR, 0, (32000/60+2) * sizeof(INT16));
-    retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, NUM_SAMPLES_PER_FRAME, 32000/60+2, 44100, 32000);
+    memset(mpegL, 0, MPEG_SAMPLES_FOR(numSamples) * sizeof(INT16));
+    memset(mpegR, 0, MPEG_SAMPLES_FOR(numSamples) * sizeof(INT16));
+    retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, mpegL, mpegR, 0, 0, numSamples, MPEG_SAMPLES_FOR(numSamples), 44100, 32000);
     return;
   }
 
@@ -996,7 +999,8 @@ void CDSB2::RunFrame(float *audioL, float *audioR)
   // configurable timer and we should be on the look-out for games which appear to use
   // different values. It is equally likely that all games share a similar code base and
   // use 1KHz as the timer rate.
-  while (m_cyclesElapsedThisFrame < k_framePeriod)
+  const int framePeriod = (int)((11000000LL * numSamples) / 44100);	// 68K at 11 MHz, for the length of this frame
+  while (m_cyclesElapsedThisFrame < framePeriod)
   {
     if (m_cyclesElapsedThisFrame >= m_nextTimerInterruptCycles)
     {
@@ -1004,16 +1008,16 @@ void CDSB2::RunFrame(float *audioL, float *audioR)
       M68KSetIRQ(2);
       m_nextTimerInterruptCycles += k_timerPeriod;
     }
-    int cyclesToRun = (std::min)(m_nextTimerInterruptCycles, k_framePeriod) - m_cyclesElapsedThisFrame;
+    int cyclesToRun = (std::min)(m_nextTimerInterruptCycles, framePeriod) - m_cyclesElapsedThisFrame;
     m_cyclesElapsedThisFrame += M68KRun(cyclesToRun);
   }
-  m_cyclesElapsedThisFrame -= k_framePeriod;
-  m_nextTimerInterruptCycles -= k_framePeriod;
+  m_cyclesElapsedThisFrame -= framePeriod;
+  m_nextTimerInterruptCycles -= framePeriod;
 
   M68KGetContext(&M68K);
 
   // Decode MPEG for this frame
-  MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], 32000 / 60 - retainedSamples + 2);
+  MpegDec::DecodeAudio(&mpegL[retainedSamples], &mpegR[retainedSamples], MPEG_SAMPLES_FOR(numSamples) - retainedSamples);
 
   INT16 *leftChannelSource = nullptr;
   INT16 *rightChannelSource = nullptr;
@@ -1042,7 +1046,7 @@ void CDSB2::RunFrame(float *audioL, float *audioR)
       break;
   }
 
-  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, NUM_SAMPLES_PER_FRAME, 32000/60+2, 44100, 32000);
+  retainedSamples = Resampler.UpSampleAndMix(audioL, audioR, leftChannelSource, rightChannelSource, volL, volR, numSamples, MPEG_SAMPLES_FOR(numSamples), 44100, 32000);
 }
 
 void CDSB2::Reset(void)

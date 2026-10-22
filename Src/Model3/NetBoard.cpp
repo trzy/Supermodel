@@ -95,13 +95,9 @@
 
 #include "Supermodel.h"
 #include "NetBoard.h"
+#include "SDLIncludes.h"
 #include "Util/Format.h"
 #include "Util/ByteSwap.h"
-#ifdef SUPERMODEL_LIBRETRO
-// No windowing system is available to show message boxes: log instead
-#undef SDL_ShowSimpleMessageBox
-#define SDL_ShowSimpleMessageBox(flags, title, message, window) ErrorLog("%s: %s", title, message)
-#endif
 #include <algorithm>
 
 // few macros to make debugging a bit less painful
@@ -593,7 +589,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			case 0x80:
 				DebugLog("receive enable off=%x size=%x\n", recv_offset, recv_size);
 				{
-					auto &recv_data = netr->Receive();
+					auto &recv_data = m_link->Receive();
 					memcpy(CommRAM + recv_offset, recv_data.data(), recv_data.size());
 				}
 
@@ -669,7 +665,7 @@ void CNetBoard::Write8(UINT32 a, UINT8 d)
 			switch (d & 0xff)
 			{
 			case 0x80:
-				nets->Send((const char*)CommRAM + send_offset, send_size);
+				m_link->Send((const char*)CommRAM + send_offset, send_size);
 				DebugLog("send enable off=%x size=%x\n", send_offset, send_size);
 
 				#ifdef NET_DEBUG
@@ -1165,11 +1161,11 @@ Result CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	port_out = m_config["PortOut"].ValueAs<unsigned>();
 	addr_out = m_config["AddressOut"].ValueAs<std::string>();
 
-	nets = std::make_unique<TCPSend>(addr_out, port_out);
-	netr = std::make_unique<TCPReceive>(port_in);
-
-	if (m_config["Network"].ValueAs<bool>() && m_attached) {
-		while (!nets->Connect()) {
+	if (m_attached) {
+		if (!m_server)
+			return ErrorLog("Net board requires the network server.");
+		m_link = std::make_unique<CNetBoardLink>(m_server, addr_out, port_out);
+		while (!m_link->Connect()) {
 			printf("Connecting to %s:%i ..\n", addr_out.c_str(), port_out);
 		}
 		printf("Successfully connected.\n");
@@ -1178,7 +1174,9 @@ Result CNetBoard::Init(UINT8 * netRAMPtr, UINT8 *netBufferPtr)
 	return Result::OKAY;
 }
 
-CNetBoard::CNetBoard(const Util::Config::Node &config) : m_config(config)
+CNetBoard::CNetBoard(const Util::Config::Node &config, std::shared_ptr<CNetServer> server)
+	: m_config(config),
+	  m_server(std::move(server))
 {
 	memoryPool	= NULL;
 	bank		= NULL;

@@ -36,6 +36,16 @@ typedef void (*AudioCallbackFPtr)(void *data);
 
 extern void SetAudioCallback(AudioCallbackFPtr callback, void *data);
 
+/*
+ * AudioCallbackSupported()
+ *
+ * Returns true if the audio system calls the callback set with
+ * SetAudioCallback() when it needs more audio. In that case the multi-threaded
+ * emulator may run the sound board ahead of the emulated frame. If false, the
+ * sound board must produce exactly one frame of audio per emulated frame.
+ */
+extern bool AudioCallbackSupported();
+
 extern void SetAudioEnabled(bool enabled);
 extern void SetAudioType(Game::AudioTypes type);
 

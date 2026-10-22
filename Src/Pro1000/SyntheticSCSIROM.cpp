@@ -135,7 +135,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   constexpr size_t MIN_HEADER_SIZE = 0x20;
   if (cmem.size() < MIN_HEADER_SIZE || (cmem.size() % 4) != 0 || (pmem.size() % 4) != 0)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: file sizes of %s and %s are not correct.", cmemPath.c_str(), pmemPath.c_str());
+    ErrorLog("Pro-1000: Logo database not loaded: File sizes of %s and %s are not correct.", cmemPath.c_str(), pmemPath.c_str());
     return false;
   }
   uint32_t version = bigEndian32(&cmem[0x00]);
@@ -153,12 +153,12 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   }
   if (headerSize < MIN_HEADER_SIZE || (headerSize % 4) != 0 || headerSize > cmem.size() || (cmem.size() - headerSize) / 4 != cullingWords)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: the header size or culling data size in %s is not correct.", cmemPath.c_str());
+    ErrorLog("Pro-1000: Logo database not loaded: The header size or culling data size in %s is not correct.", cmemPath.c_str());
     return false;
   }
   if (pmem.size() / 4 != polygonWords)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: the size of %s does not agree with the polygon data size in %s.", pmemPath.c_str(), cmemPath.c_str());
+    ErrorLog("Pro-1000: Logo database not loaded: The size of %s does not agree with the polygon data size in %s.", pmemPath.c_str(), cmemPath.c_str());
     return false;
   }
 
@@ -177,7 +177,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   const uint32_t polygonSize = polygonWords * 4;
   if (uint64_t(polygonOffset) + polygonSize > size)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: it is too large for the SCSI ROM (%u bytes).", cullingSize + polygonSize);
+    ErrorLog("Pro-1000: Logo database not loaded: It is too large for the SCSI ROM (%u bytes).", cullingSize + polygonSize);
     return false;
   }
 

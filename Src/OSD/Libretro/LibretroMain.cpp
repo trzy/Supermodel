@@ -29,9 +29,9 @@
  *   engine). Supermodel's renderers draw to the default framebuffer
  *   (framebuffer 0); glBindFramebuffer() is redirected so that framebuffer 0
  *   is the frontend's framebuffer.
- * - Audio: the sound board runs once per emulated frame (735 samples);
- *   the sample rate reported to the frontend is 735 x refresh rate so audio
- *   and video stay in step at both 60 and 57.524 Hz.
+ * - Audio: the sound board runs once per emulated frame and produces
+ *   44100 / refresh rate samples (735 at 60 Hz, 766-767 at 57.524 Hz), so the
+ *   sample rate reported to the frontend is always 44100 Hz.
  * - Input: see LibretroInputSystem.h and LibretroInputs.cpp.
  * - Options: see LibretroOptions.cpp.
  * - Save states: Supermodel's save state format, kept in memory.
@@ -56,6 +56,7 @@
 #include "OSD/Outputs.h"
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
+#include "Network/NetServer.h"
 #include "Pro1000/Pro1000.h"
 #include "Graphics/IRender2D.h"
 #include "Graphics/Render2D.h"
@@ -81,9 +82,7 @@
 #include <string>
 #include <vector>
 
-#ifdef SUPERMODEL_LIBRETRO_EMBEDDED_GAMES_XML
-#include "GamesXML.inc"   // generated from Config/Games.xml by bin2c
-#endif
+#include "GamesXML.inc"   // generated from Config/Games.xml by bin2c (see Makefiles/Rules.inc)
 
 /******************************************************************************
  Frontend Interface
@@ -156,6 +155,7 @@ static IEmulator *s_emu = nullptr;
 static std::shared_ptr<CLibretroInputSystem> s_inputSystem;
 static CInputs *s_inputs = nullptr;
 static COutputs *s_outputs = nullptr;
+static std::shared_ptr<CNetServer> s_netServer;
 
 static SuperAA *s_superAA = nullptr;
 static IRender2D *s_render2D = nullptr;
@@ -369,7 +369,7 @@ static void ContextReset()
       s_pendingState.clear();
     }
   }
-  else
+  else if (s_emu->SupportsSaveStates())
   {
     // The context was lost: the new renderers do not hold the textures and
     // render state of the old ones. Reloading the current state uploads them.
@@ -547,8 +547,8 @@ static void GetAVInfo(retro_system_av_info *info)
   if (s_refreshRate < 30.0f || s_refreshRate > 120.0f)
     s_refreshRate = 60.0f;
   info->timing.fps = s_refreshRate;
-  // One sound board frame (44100/60 samples) is produced per emulated frame
-  info->timing.sample_rate = double(44100 / 60) * s_refreshRate;
+  // The sound board makes 44100 / refresh rate samples per frame
+  info->timing.sample_rate = 44100.0;
 }
 
 static void UpdateAVInfo()
@@ -573,7 +573,6 @@ static bool LoadGameDefinitions(std::unique_ptr<GameLoader> *loader)
     loader->reset(new GameLoader(xmlFile));
     return true;
   }
-#ifdef SUPERMODEL_LIBRETRO_EMBEDDED_GAMES_XML
   InfoLog("Using built-in game definitions ('%s' not found).", xmlFile.c_str());
   Util::Config::Node xml("xml");
   std::string text((const char *) s_gamesXML, (size_t) s_gamesXML_size);
@@ -584,10 +583,6 @@ static bool LoadGameDefinitions(std::unique_ptr<GameLoader> *loader)
   }
   loader->reset(new GameLoader(xml, "Games.xml (built-in)"));
   return true;
-#else
-  ErrorLog("Game definitions not found: copy Config/Games.xml to '%s'.", xmlFile.c_str());
-  return false;
-#endif
 }
 
 /******************************************************************************
@@ -687,6 +682,7 @@ static void UnloadAll()
 {
   delete s_emu;
   s_emu = nullptr;
+  s_netServer.reset();
   delete s_inputs;
   s_inputs = nullptr;
   s_inputSystem.reset();
@@ -734,37 +730,11 @@ RETRO_API bool retro_load_game(const retro_game_info *info)
   loader.reset();
   InfoLog("Loading '%s' (%s).", s_game.title.c_str(), s_game.name.c_str());
 
-  // Create the emulator
-  if (s_game.platform == Game::PLATFORM_PRO1000)
-    s_emu = new CPro1000(s_config);
-  else
-    s_emu = new CModel3(s_config);
-  if (Result::OKAY != s_emu->Init(s_game, romSet))
-  {
-    UnloadAll();
-    return false;
-  }
-  romSet = ROMSet();  // free memory
-
-  // Custom music for games with MPEG boards (optional)
-  MpegDec::LoadCustomTracks(FileSystemPath::GetPath(FileSystemPath::Config) + "Music.xml", s_game);
-
-  LoadNVRAM();
-  if (LibretroOptions::GetClearNVRAM(s_environ))
-  {
-    s_emu->ClearNVRAM();
-    InfoLog("NVRAM cleared.");
-  }
-
   // Display geometry
   s_aaValue = std::max(1, std::min(8, s_config["Supersampling"].ValueAs<int>()));
   ComputeGeometry();
 
-  // Audio
-  SetAudioType(s_game.audio);
-  OpenAudio(s_config);
-
-  // Inputs
+  // Inputs (before the emulator, which receives them in its constructor)
   bool bitmasks = s_environ(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, nullptr);
   s_inputSystem = std::make_shared<CLibretroInputSystem>();
   s_inputSystem->SetInputStateCallback(s_inputState);
@@ -784,14 +754,13 @@ RETRO_API bool retro_load_game(const retro_game_info *info)
     return false;
   }
   UpdateInputSettings();
-  s_emu->AttachInputs(s_inputs);
   UpdateLightGunState();
 
   std::vector<retro_input_descriptor> descriptors = LibretroInputs::GetDescriptors(s_game.inputs);
   s_environ(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, descriptors.data());
 
-  // Outputs
 #ifdef SUPERMODEL_LIBRETRO_NET
+  // Outputs
   if (s_config["Outputs"].ValueAs<std::string>() == "net")
   {
     CNetOutputs *netOutputs = new CNetOutputs();
@@ -806,10 +775,43 @@ RETRO_API bool retro_load_game(const retro_game_info *info)
       delete s_outputs;
       s_outputs = nullptr;
     }
-    else
-      s_emu->AttachOutputs(s_outputs);
+  }
+
+  // Network server, as in OSD/SDL/Main.cpp: for the net board, and for the
+  // programs that connect to the Pro-1000. If it cannot listen, emulation
+  // continues.
+  if (s_game.platform == Game::PLATFORM_PRO1000 || (s_game.netboard_present && s_config["Network"].ValueAs<bool>()))
+  {
+    s_netServer = std::make_shared<CNetServer>(s_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + s_game.name + ")");
+    s_netServer->Start();
   }
 #endif
+
+  // Create the emulator
+  if (s_game.platform == Game::PLATFORM_PRO1000)
+    s_emu = new CPro1000(s_config, nullptr, s_netServer);   // no serial console
+  else
+    s_emu = new CModel3(s_config, s_inputs, s_outputs, s_netServer);
+  if (Result::OKAY != s_emu->Init(s_game, romSet))
+  {
+    UnloadAll();
+    return false;
+  }
+  romSet = ROMSet();  // free memory
+
+  // Custom music for games with MPEG boards (optional)
+  MpegDec::LoadCustomTracks(FileSystemPath::GetPath(FileSystemPath::Config) + "Music.xml", s_game);
+
+  LoadNVRAM();
+  if (LibretroOptions::GetClearNVRAM(s_environ))
+  {
+    s_emu->ClearNVRAM();
+    InfoLog("NVRAM cleared.");
+  }
+
+  // Audio
+  SetAudioType(s_game.audio);
+  OpenAudio(s_config);
 
   // OpenGL context: core profile 4.1 for the new 3D engine (as the SDL
   // build), compatibility profile with depth/stencil for the legacy engine
@@ -907,7 +909,7 @@ RETRO_API void retro_run(void)
 
 RETRO_API size_t retro_serialize_size(void)
 {
-  if (!s_emu)
+  if (!s_emu || !s_emu->SupportsSaveStates())
     return 0;
   if (s_stateSize == 0)
   {
@@ -925,7 +927,7 @@ RETRO_API size_t retro_serialize_size(void)
 
 RETRO_API bool retro_serialize(void *data, size_t size)
 {
-  if (!s_emu)
+  if (!s_emu || !s_emu->SupportsSaveStates())
     return false;
   s_emu->PauseThreads();
   CBlockFile state;
@@ -947,7 +949,7 @@ RETRO_API bool retro_serialize(void *data, size_t size)
 
 RETRO_API bool retro_unserialize(const void *data, size_t size)
 {
-  if (!s_emu)
+  if (!s_emu || !s_emu->SupportsSaveStates())
     return false;
   if (!s_renderersReady)
   {

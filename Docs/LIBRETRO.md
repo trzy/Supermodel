@@ -16,13 +16,16 @@ make -f Makefiles/Makefile.Win32 LIBRETRO=1     # MSYS2 MinGW-w64 -> bin64/super
 make -f Makefiles/Makefile.OSX   LIBRETRO=1     # macOS (clang) -> bin/supermodel_libretro.dylib
 ```
 
-The core does not use SDL. It needs only OpenGL and zlib. Its objects go to a
-separate directory (`obj*_libretro`), so the standalone emulator and the core
-can be built from the same tree.
+The core does not use SDL. It needs only OpenGL and zlib. The emulator code
+calls a few SDL and SDL_net functions (message boxes, the crosshair bitmaps,
+the network server); `Src/OSD/Libretro/NoSDL.h` gives them, with a network
+that cannot start. Its objects go to a separate directory (`obj*_libretro`),
+so the standalone emulator and the core can be built from the same tree.
 
-`LIBRETRO_NET=1` (together with `LIBRETRO=1`) also builds the net board, the
-Pro-1000 SCSI TCP bridge and the network outputs. These use SDL2_net, so SDL2
-and SDL2_net are then needed to build and run the core.
+`LIBRETRO_NET=1` (together with `LIBRETRO=1`) builds the core with the real
+SDL2 and SDL2_net instead: the net board, the Pro-1000 SCSI TCP bridge and the
+network outputs then work. SDL2 and SDL2_net are then needed to build and run
+the core.
 
 The core follows the same compiler requirements as the rest of Supermodel:
 C++17 and C11, built with GCC, MinGW-w64, Clang and MSVC.
@@ -35,7 +38,7 @@ C++17 and C11, built with GCC, MinGW-w64, Clang and MSVC.
 | `Src/OSD/Libretro/supermodel_libretro.info` | the frontend's core info directory |
 | `Config/Games.xml` (optional, a copy is built into the core) | `<system>/supermodel/Games.xml` |
 | `Config/Music.xml` (optional, custom MPEG music) | `<system>/supermodel/Music.xml` |
-| `Assets/p1crosshair.bmp`, `Assets/p2crosshair.bmp` (bitmap crosshairs) | `<system>/supermodel/Assets/` |
+| `Assets/p1crosshair.bmp`, `Assets/p2crosshair.bmp` (optional, for the "Bitmap" crosshair style; vector crosshairs need no file) | `<system>/supermodel/Assets/` |
 
 `<system>` is the frontend's system (BIOS) directory. A `Games.xml` found
 there takes precedence over the built-in copy.
@@ -60,11 +63,12 @@ contains the black borders that keep the Model 3 aspect ratio (unless
 
 ## Audio
 
-The sound board produces one frame of audio (735 samples at 44.1 kHz) per
-emulated frame; the four Model 3 channels are mixed to stereo with the
-per-game mixing rules of the standalone emulator. The sample rate reported to
-the frontend is 735 x the refresh rate (44100 Hz at 60 Hz, 42280 Hz at
-57.524 Hz), so audio stays in step with video.
+The sound board runs once per emulated frame, in step with the main board,
+and produces one frame of audio at 44.1 kHz: 44100 / refresh rate samples
+(735 at 60 Hz, 766 or 767 at 57.524 Hz). The sample rate reported to the
+frontend is therefore always 44100 Hz, and audio stays in step with video at
+any refresh rate. The four Model 3 channels are mixed to stereo with the
+per-game mixing rules of the standalone emulator.
 
 ## Controls
 
@@ -128,7 +132,6 @@ and vibration the weak motor.
 | Swap Stereo Channels | `-flip-stereo` | immediately |
 | Sound Board | `-sound` / `-no-sound` | immediately |
 | Digital Sound Board | `-dsb` / `-no-dsb` | immediately |
-| SCSP Engine | `-new-scsp` / `-legacy-scsp` | on restart |
 | Force Feedback | `-force-feedback` | on restart |
 | Rumble Strength | `SDLConstForceMax`, `SDLVibrateMax`, ... | immediately |
 | Analog Dead Zone | `InputJoy*DeadZone` | immediately |
@@ -138,7 +141,8 @@ and vibration the weak motor.
 | Light Gun Auto-Reload | `InputAutoTrigger` | immediately |
 | Net Board (`LIBRETRO_NET=1`) | `-net` / `-no-net` | on restart |
 | Net Board Mode (`LIBRETRO_NET=1`) | `-simulate-netboard` / `-emulate-netboard` | on restart |
-| Net Board Input/Output Port (`LIBRETRO_NET=1`) | `PortIn` / `PortOut` | on restart |
+| Network Port (`LIBRETRO_NET=1`) | `-port` / `-port-in` | on restart |
+| Net Board Output Port (`LIBRETRO_NET=1`) | `-port-out` | on restart |
 | Outputs (`LIBRETRO_NET=1`) | `-outputs` | on restart |
 
 Per-game settings are made with the frontend's per-game core option
@@ -148,5 +152,5 @@ Options that do not apply to a libretro core: window, full screen,
 borderless and window position, vsync, frame rate limiting, frame rate
 display, save state loading, input configuration and input system selection,
 logging, the number of host audio channels (the output is always stereo), the
-host audio frequency (derived from the refresh rate), external legacy
+host audio latency, external legacy
 shaders, memory and texture dumps, and the Pro-1000 serial console.

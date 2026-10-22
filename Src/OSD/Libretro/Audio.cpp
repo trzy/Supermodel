@@ -73,6 +73,13 @@ void SetAudioCallback(AudioCallbackFPtr callback, void *data)
   (void) data;
 }
 
+bool AudioCallbackSupported()
+{
+  // The frontend takes the audio of each frame in retro_run(): the sound board
+  // must make one frame of audio per emulated frame
+  return false;
+}
+
 void SetAudioEnabled(bool enabled)
 {
   s_enabled = enabled;

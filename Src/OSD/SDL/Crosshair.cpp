@@ -23,64 +23,11 @@
 #include "Supermodel.h"
 #include "Graphics/New3D/New3D.h"
 #include "OSD/FileSystemPath.h"
-#ifndef SUPERMODEL_LIBRETRO
 #include "SDLIncludes.h"
-#endif
 #include <GL/glew.h>
 #include <vector>
-#include <cstdio>
-#include <cstring>
 #include "Inputs/Inputs.h"
 #include "Util/Format.h"
-
-#ifdef SUPERMODEL_LIBRETRO
-/*
- * Minimal loader for the uncompressed 32-bit BMP files used for the bitmap
- * crosshairs (SDL is not available in the libretro core). Returns the pixels
- * as rows of BGRA, top row first, which is what SDL_LoadBMP() provided.
- */
-static bool LoadBMP32(const std::string &file, std::vector<uint8_t> *pixels, int *width, int *height)
-{
-  FILE *fp = fopen(file.c_str(), "rb");
-  if (!fp)
-    return false;
-  std::vector<uint8_t> data;
-  uint8_t buffer[4096];
-  size_t n;
-  while ((n = fread(buffer, 1, sizeof(buffer), fp)) > 0)
-    data.insert(data.end(), buffer, buffer + n);
-  fclose(fp);
-
-  auto le16 = [&data](size_t offset) -> uint32_t { return data[offset] | (data[offset + 1] << 8); };
-  auto le32 = [&data](size_t offset) -> uint32_t { return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | ((uint32_t)data[offset + 3] << 24); };
-
-  if (data.size() < 54 || data[0] != 'B' || data[1] != 'M')
-    return false;
-  uint32_t pixelOffset = le32(10);
-  int32_t w = (int32_t) le32(18);
-  int32_t h = (int32_t) le32(22);
-  uint32_t bpp = le16(28);
-  uint32_t compression = le32(30);
-  if (bpp != 32 || (compression != 0 && compression != 3) || w <= 0 || h == 0)
-    return false;
-  bool bottomUp = h > 0;
-  if (h < 0)
-    h = -h;
-  size_t rowBytes = (size_t) w * 4;
-  if (pixelOffset + rowBytes * (size_t) h > data.size())
-    return false;
-
-  pixels->resize(rowBytes * (size_t) h);
-  for (int32_t y = 0; y < h; y++)
-  {
-    int32_t srcRow = bottomUp ? (h - 1 - y) : y;
-    memcpy(pixels->data() + rowBytes * (size_t) y, data.data() + pixelOffset + rowBytes * (size_t) srcRow, rowBytes);
-  }
-  *width = w;
-  *height = h;
-  return true;
-}
-#endif
 
 Result CCrosshair::Init()
 {
@@ -98,23 +45,6 @@ Result CCrosshair::Init()
     m_isBitmapCrosshair = false;
   }
 
-#ifdef SUPERMODEL_LIBRETRO
-  std::vector<uint8_t> pixelsP1, pixelsP2;
-  bool bitmapsLoaded = LoadBMP32(p1CrosshairFile, &pixelsP1, &m_p1CrosshairW, &m_p1CrosshairH) &&
-                       LoadBMP32(p2CrosshairFile, &pixelsP2, &m_p2CrosshairW, &m_p2CrosshairH);
-  if (!bitmapsLoaded)
-  {
-    // The bitmaps are optional assets in the frontend's system directory
-    if (m_isBitmapCrosshair)
-      ErrorLog("Unable to load crosshair bitmaps from '%s'. Reverting to 'vector' crosshairs.\n", FileSystemPath::GetPath(FileSystemPath::Assets).c_str());
-    m_isBitmapCrosshair = false;
-    m_p1CrosshairW = m_p1CrosshairH = m_p2CrosshairW = m_p2CrosshairH = 1;
-    pixelsP1.assign(4, 0xFF);
-    pixelsP2.assign(4, 0xFF);
-  }
-  const void *pixelDataP1 = pixelsP1.data();
-  const void *pixelDataP2 = pixelsP2.data();
-#else
   SDL_Surface* surfaceCrosshairP1 = SDL_LoadBMP(p1CrosshairFile.c_str());
   SDL_Surface* surfaceCrosshairP2 = SDL_LoadBMP(p2CrosshairFile.c_str());
   if (surfaceCrosshairP1 == NULL || surfaceCrosshairP2 == NULL)
@@ -124,36 +54,27 @@ Result CCrosshair::Init()
   m_p1CrosshairH = surfaceCrosshairP1->h;
   m_p2CrosshairW = surfaceCrosshairP2->w;
   m_p2CrosshairH = surfaceCrosshairP2->h;
-  const void *pixelDataP1 = surfaceCrosshairP1->pixels;
-  const void *pixelDataP2 = surfaceCrosshairP2->pixels;
-#endif
 
   glGenTextures(2, m_crosshairTexId);
 
   glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixelDataP1);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP1->pixels);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
   glBindTexture(GL_TEXTURE_2D, m_crosshairTexId[1]);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixelDataP2);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_p1CrosshairW, m_p1CrosshairH, 0, GL_BGRA, GL_UNSIGNED_BYTE, surfaceCrosshairP2->pixels);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
   glBindTexture(GL_TEXTURE_2D, 0);
 
-#ifdef SUPERMODEL_LIBRETRO
-  // The frontend scales the output; crosshairs are sized for a standard DPI
-  m_hDpi = m_vDpi = m_diagDpi = m_standardDpi;
-  m_dpiMultiplicator = 1.0f;
-#else
   SDL_FreeSurface(surfaceCrosshairP1);
   SDL_FreeSurface(surfaceCrosshairP2);
 
   // Get DPI
   SDL_GetDisplayDPI(0, &m_diagDpi, &m_hDpi, &m_vDpi);
   m_dpiMultiplicator = m_hDpi / m_standardDpi;  // note : on linux VM diagdpi returns 0
-#endif
 
   // 3d obj
   m_uvCoord.emplace_back(0.0f, 0.0f);

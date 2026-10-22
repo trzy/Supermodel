@@ -31,14 +31,12 @@
 
 #include "Types.h"
 
-//#define DYNDSP
 
 //the DSP Context
 struct _SCSPDSP
 {
 //Config
 	UINT16 *SCSPRAM;
-	UINT32 SCSPRAM_LENGTH;
 	unsigned int RBP;	//Ring buf pointer
 	unsigned int RBL;	//Delay ram (Ring buffer) size in words
 
@@ -60,25 +58,22 @@ struct _SCSPDSP
 	
 	bool Stopped;
 	int LastStep;
-#ifdef DYNDSP
-	INT32 ACC;	//26 bit
-	INT32 SHIFTED;	//24 bit
-	INT32 X;	//24 bit
-	INT32 Y;	//13 bit
-	INT32 B;	//26 bit
-	INT32 INPUTS;	//24 bit
-	INT32 MEMVAL;
-	INT32 FRC_REG;	//13 bit
-	INT32 Y_REG;		//24 bit
-	UINT32 ADDR;
-	UINT32 ADRS_REG;	//13 bit
 
-	void (*DoSteps)();
-#endif
+//registers that keep their value from one step (and sample) to the next
+	INT32 ACC;			//accumulator (SFT_REG), 26 bit signed
+	INT32 INPUTS;		//selected input, 24 bit signed
+	INT32 FRC_REG;		//13 bit
+	INT32 Y_REG;		//24 bit
+	UINT32 ADRS_REG;	//12 bit
+	INT32 MEMVAL;		//last word read from sound memory, waiting for an IWT
+	UINT32 RWADDR;		//sound memory word address of the access started by the previous step
+	UINT16 WRITEVAL;	//word to write there
+	int READPENDING;	//0: none, 1: read (float), 2: read (NOFL)
+	bool WRITEPENDING;
 };
 
 void SCSPDSP_Init(_SCSPDSP *DSP);
-void SCSPDSP_SetSample(_SCSPDSP *DSP,INT32 sample,int SEL,int MXL);
+void SCSPDSP_SetSample(_SCSPDSP *DSP,INT32 sample,int SEL);	// IMXL is applied by the caller
 void SCSPDSP_Step(_SCSPDSP *DSP);
 void SCSPDSP_Start(_SCSPDSP *DSP);
 

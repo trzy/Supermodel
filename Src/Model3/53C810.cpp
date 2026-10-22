@@ -114,6 +114,14 @@ void C53C810::SaveState(CBlockFile *SaveState)
   SaveState->Write(&Ctx.regDSTAT, sizeof(Ctx.regDSTAT));
   SaveState->Write(&Ctx.regDIEN, sizeof(Ctx.regDIEN));
   SaveState->Write(&Ctx.regISTAT, sizeof(Ctx.regISTAT));
+
+  // Separate block so that older save states still load. The base address is set by the game through PCI
+  // configuration space at boot; without it the register window at C0000000 ignores all accesses after a state is
+  // loaded in a new session (VF3 then waits on its DMA chain every frame and runs in slow motion).
+  SaveState->NewBlock("53C810 PCI", __FILE__);
+  UINT8 halted = Ctx.halt ? 1 : 0;
+  SaveState->Write(&baseAddress, sizeof(baseAddress));
+  SaveState->Write(&halted, sizeof(halted));
 }
 
 void C53C810::LoadState(CBlockFile *SaveState)
@@ -135,6 +143,16 @@ void C53C810::LoadState(CBlockFile *SaveState)
   SaveState->Read(&Ctx.regDSTAT, sizeof(Ctx.regDSTAT));
   SaveState->Read(&Ctx.regDIEN, sizeof(Ctx.regDIEN));
   SaveState->Read(&Ctx.regISTAT, sizeof(Ctx.regISTAT));
+
+  if (Result::OKAY == SaveState->FindBlock("53C810 PCI"))
+  {
+    UINT8 halted;
+    SaveState->Read(&baseAddress, sizeof(baseAddress));
+    SaveState->Read(&halted, sizeof(halted));
+    Ctx.halt = halted != 0;
+  }
+  else if (baseAddress == 0)
+    baseAddress = 0xC0;   // older save state: the address every Step 1.x game sets (Step 2.x boards don't use it)
 }
 
 
@@ -231,7 +249,7 @@ static bool TransferConditionMet(const struct NCR53C810Context *Ctx)
       phase = Connected(Ctx) && Ctx->initiator->ATN();  // in target mode, tests ATN
     else
     {
-      DebugLog("53C810: initiator mode phase comparison not emulated (DSP=%08X)\n", Ctx->regDSP);
+      DebugLog("53C810: Initiator mode phase comparison not emulated (DSP=%08X)\n", Ctx->regDSP);
       phase = false;
     }
     compared = true;
@@ -272,7 +290,7 @@ static Result SCRIPTS_TransferControl(struct NCR53C810Context *Ctx)
     Ctx->regDSP = Ctx->regTEMP;
     break;
   default:
-    return ErrorLog("53C810: invalid transfer control instruction (%02X%06X, DSP=%08X)", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
+    return ErrorLog("53C810: Invalid transfer control instruction (%02X%06X, DSP=%08X)", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
   }
   return Result::OKAY;
 }
@@ -384,7 +402,7 @@ static Result SCRIPTS_IO(struct NCR53C810Context *Ctx)
     // before it wins arbitration. That cannot occur here: the initiator does
     // one request at a time. SIGP has no effect.
     if ((Ctx->regDCMD & 2))
-      return ErrorLog("53C810: table indirect RESELECT not emulated (DSP=%08X)", Ctx->regDSP);
+      return ErrorLog("53C810: Table indirect RESELECT not emulated (DSP=%08X)", Ctx->regDSP);
     unsigned targetID = Ctx->regs[0x04] & 0x0F;       // SCID
     unsigned initiatorID = (Ctx->regDBC >> 16) & 0x0F; // encoded destination ID
     if (Ctx->initiator && Ctx->initiator->Reselect(targetID, initiatorID))
@@ -449,7 +467,7 @@ static Result SCRIPTS_IO(struct NCR53C810Context *Ctx)
     return Result::OKAY;
   }
   default:
-    return ErrorLog("53C810: invalid I/O instruction (%02X%06X, DSP=%08X)", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
+    return ErrorLog("53C810: Invalid I/O instruction (%02X%06X, DSP=%08X)", Ctx->regDCMD, Ctx->regDBC, Ctx->regDSP);
   }
 }
 
@@ -467,7 +485,7 @@ static Result SCRIPTS_BlockMove(struct NCR53C810Context *Ctx)
     return Result::OKAY;
   }
   if (!Connected(Ctx))
-    return ErrorLog("53C810: block move while not connected to the SCSI bus (DSP=%08X)", Ctx->regDSP);
+    return ErrorLog("53C810: Block move while not connected to the SCSI bus (DSP=%08X)", Ctx->regDSP);
 
   // Get the byte count and the memory address. Table indirect moves get them
   // from a table entry at DSA + offset. Indirect moves get the address from
@@ -505,7 +523,7 @@ static Result SCRIPTS_BlockMove(struct NCR53C810Context *Ctx)
         }
       }
       if (count == 0)
-        return ErrorLog("53C810: command block move with a byte count of 0 (DSP=%08X)", Ctx->regDSP);
+        return ErrorLog("53C810: Command block move with a byte count of 0 (DSP=%08X)", Ctx->regDSP);
       WriteMemory8(Ctx, addr, buffer[0]);
       firstByte = buffer[0];
       done = 1;
@@ -536,7 +554,7 @@ static Result SCRIPTS_BlockMove(struct NCR53C810Context *Ctx)
   }
 
   // The transfer is complete
-  DebugLog("53C810: block move, phase %u, %X bytes at %08X (DSP=%08X)\n", unsigned(phase), count, addr, Ctx->regDSP);
+  DebugLog("53C810: Block move, phase %u, %X bytes at %08X (DSP=%08X)\n", unsigned(phase), count, addr, Ctx->regDSP);
   Ctx->regDBC = 0;
   SetRegister32(Ctx, 0x28, addr + count);   // DNAD
   Ctx->regDSP += 8;
@@ -827,7 +845,7 @@ void C53C810::WriteRegister(unsigned reg, UINT8 data)
     Ctx.regDCNTL = data;
     if ((Ctx.regDCNTL&0x14) == 0x14)    // single step
     {
-      DebugLog("53C810: single step: %08X, (halt=%d)\n", Ctx.regDSP, Ctx.halt);
+      DebugLog("53C810: Single step: %08X, (halt=%d)\n", Ctx.regDSP, Ctx.halt);
       SingleStep();
     }
     else if ((Ctx.regDCNTL&0x04))     // start DMA bit
