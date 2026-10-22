@@ -2870,33 +2870,6 @@ void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, Su
   m_superAA = superAA;
 }
 
-void CModel3::AttachInputs(CInputs *InputsPtr)
-{
-  Inputs = InputsPtr;
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachInputs(Inputs, m_game.inputs);
-
-  DebugLog("Model 3 attached inputs\n");
-}
-
-void CModel3::AttachOutputs(COutputs *OutputsPtr)
-{
-  Outputs = OutputsPtr;
-  Outputs->SetGame(m_game);
-  Outputs->Attached();
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachOutputs(Outputs);
-
-  DebugLog("Model 3 attached outputs\n");
-}
-
-void CModel3::AttachNetServer(std::shared_ptr<CNetServer> server)
-{
-  m_server = std::move(server);
-}
-
 constexpr static int RAM_SIZE			= 0x800000;		//8MB
 constexpr static int CROM_SIZE			= 0x800000;		//8MB
 constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
@@ -3167,6 +3140,20 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   std::cout << std::endl;
 
   m_game = game;
+
+  // Inputs and outputs need the game
+  if (Outputs)
+  {
+    Outputs->SetGame(m_game);
+    Outputs->Attached();
+  }
+  if (DriveBoard->IsAttached())
+  {
+    DriveBoard->AttachInputs(Inputs, m_game.inputs);
+    if (Outputs)
+      DriveBoard->AttachOutputs(Outputs);
+  }
+
   NetBoard->GetGame(m_game);
   if (Result::OKAY != NetBoard->Init(netRAM, netBuffer))
   {
@@ -3193,23 +3180,24 @@ INetBoard *CModel3::GetNetBoard(void)
   return NetBoard;
 }
 
-CModel3::CModel3(Util::Config::Node &config)
+CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    Inputs(inputs),
+    Outputs(outputs),
     sndBrdWakeNotify(false),
     TileGen(config),
     GPU(config),
     SoundBoard(config),
     m_jtag(GPU),
-    m_superAA(nullptr)
+    m_superAA(nullptr),
+    m_server(std::move(server))
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
 
   // Various uninitialized pointers
-  Inputs = NULL;
-  Outputs = NULL;
   ram = NULL;
   crom = NULL;
   vrom = NULL;

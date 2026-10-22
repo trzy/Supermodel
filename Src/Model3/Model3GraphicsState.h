@@ -112,14 +112,6 @@ public:
     m_real3D.AttachRenderer(render3D);
   }
 
-  void AttachInputs(CInputs *InputsPtr) override
-  {
-  }
-
-  void AttachOutputs(COutputs *OutputsPtr) override
-  {
-  }
-
   Result Init(const Game &game, const ROMSet &rom_set) override
   {
     m_vrom.reset(new uint8_t[64*1024*1024], std::default_delete<uint8_t[]>());

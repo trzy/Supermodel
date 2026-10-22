@@ -992,13 +992,6 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   else
     videoInputs = nullptr;
 
-  // Attach the inputs to the emulator
-  Emu->AttachInputs(Inputs);
-
-  // Attach the outputs to the emulator
-  if (Outputs != nullptr)
-    Emu->AttachOutputs(Outputs);
-
   // Frame timing
   s_perfCounterFrequency = SDL_GetPerformanceFrequency();
   uint64_t perfCountPerFrame = s_perfCounterFrequency * 1000 / GetDesiredRefreshRateMilliHz();
@@ -2421,40 +2414,6 @@ int main(int argc, char **argv)
       goto Exit;
   }
 
-  // Create emulator for the appropriate platform
-#ifdef DEBUG
-  if (!s_gfxStatePath.empty())
-    Emu = new CModel3GraphicsState(s_runtime_config, s_gfxStatePath);
-  else
-#endif
-  if (game.platform == Game::PLATFORM_PRO1000)
-    Emu = new CPro1000(s_runtime_config);
-  else
-    Emu = new CModel3(s_runtime_config);
-
-  // Network server: for the net board, and for the programs that connect to
-  // the Pro-1000. If it cannot listen, emulation continues.
-  if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
-  {
-    netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
-    netServer->Start();
-    Emu->AttachNetServer(netServer);
-  }
-
-  // Console input is created only when something reads it: the emulated
-  // machine's serial console (Pro-1000) and/or the debugger
-  {
-    bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
-#ifdef SUPERMODEL_DEBUGGER
-    needConsoleInput |= !cmd_line.disable_debugger;
-#endif // SUPERMODEL_DEBUGGER
-    if (needConsoleInput)
-    {
-      consoleInput = std::make_unique<CConsoleInput>();
-      Emu->AttachConsoleInput(consoleInput->CreateInput());
-    }
-  }
-
   // Create input system
   if (selectedInputSystem == "sdl")
     InputSystem = std::shared_ptr<CInputSystem>(new CSDLInputSystem(s_runtime_config, false));
@@ -2535,6 +2494,36 @@ int main(int argc, char **argv)
     exitCode = 1;
     goto Exit;
   }
+
+  // Network server: for the net board, and for the programs that connect to
+  // the Pro-1000. If it cannot listen, emulation continues.
+  if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
+  {
+    netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
+    netServer->Start();
+  }
+
+  // Console input is created only when something reads it: the emulated
+  // machine's serial console (Pro-1000) and/or the debugger
+  {
+    bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
+#ifdef SUPERMODEL_DEBUGGER
+    needConsoleInput |= !cmd_line.disable_debugger;
+#endif // SUPERMODEL_DEBUGGER
+    if (needConsoleInput)
+      consoleInput = std::make_unique<CConsoleInput>();
+  }
+
+  // Create emulator for the appropriate platform
+#ifdef DEBUG
+  if (!s_gfxStatePath.empty())
+    Emu = new CModel3GraphicsState(s_runtime_config, s_gfxStatePath);
+  else
+#endif
+  if (game.platform == Game::PLATFORM_PRO1000)
+    Emu = new CPro1000(s_runtime_config, consoleInput ? consoleInput->CreateInput() : nullptr, netServer);
+  else
+    Emu = new CModel3(s_runtime_config, Inputs, Outputs, netServer);
 
 #ifdef SUPERMODEL_DEBUGGER
   // Create Supermodel debugger unless debugging is disabled

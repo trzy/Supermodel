@@ -80,10 +80,6 @@ public:
   void Reset(void) override;
   const Game &GetGame(void) const override;
   void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
-  void AttachInputs(CInputs *InputsPtr) override;
-  void AttachOutputs(COutputs *OutputsPtr) override;
-  void AttachConsoleInput(IConsoleInput *input) override;
-  void AttachNetServer(std::shared_ptr<CNetServer> server) override;
   Result Init(const Game &game, const ROMSet &rom_set) override;
 
   // IBus interface
@@ -104,7 +100,7 @@ public:
   void DumpTimings(void);
 
   /*
-   * CPro1000(config):
+   * CPro1000(config, consoleInput, server):
    * ~CPro1000(void):
    *
    * Constructor and destructor. Constructor performs a bare-bones
@@ -113,10 +109,14 @@ public:
    * resources used by the object (and its child objects).
    *
    * Paramters:
-   *    config  Run-time configuration. The reference should be held because
-   *            this changes at run-time.
+   *    config        Run-time configuration. The reference should be held
+   *                  because this changes at run-time.
+   *    consoleInput  Console (stdin) input for the serial port, or nullptr.
+   *                  Must stay valid for the lifetime of the emulator.
+   *    server        Network server for the SCSI TCP bridge, or nullptr if
+   *                  there is no network.
    */
-  CPro1000(Util::Config::Node &config);
+  CPro1000(Util::Config::Node &config, IConsoleInput *consoleInput, std::shared_ptr<CNetServer> server);
   ~CPro1000(void);
 
 private:

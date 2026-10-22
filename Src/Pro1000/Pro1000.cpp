@@ -1996,27 +1996,6 @@ void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, S
   m_superAA = superAA;
 }
 
-void CPro1000::AttachInputs(CInputs *InputsPtr)
-{
-  // No game inputs
-}
-
-void CPro1000::AttachOutputs(COutputs *OutputsPtr)
-{
-  // No outputs
-}
-
-void CPro1000::AttachConsoleInput(IConsoleInput *input)
-{
-  // Console input is received by the serial port
-  UART.AttachInput(input);
-}
-
-void CPro1000::AttachNetServer(std::shared_ptr<CNetServer> server)
-{
-  m_server = std::move(server);
-}
-
 /*
  * Builds the JTAG scan chain of the model. The firmware's configuration
  * detection (0x17EB0) reads the chain's ID codes and expects one of three
@@ -2207,7 +2186,7 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   return Result::OKAY;
 }
 
-CPro1000::CPro1000(Util::Config::Node &config)
+CPro1000::CPro1000(Util::Config::Node &config, IConsoleInput *consoleInput, std::shared_ptr<CNetServer> server)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
@@ -2225,9 +2204,12 @@ CPro1000::CPro1000(Util::Config::Node &config)
     ppcBrdThreadSync(NULL),
     notifyLock(NULL),
     notifySync(NULL),
+    m_server(std::move(server)),
     GPU(config),
     m_superAA(nullptr)
 {
+  // Console input is received by the serial port
+  UART.AttachInput(consoleInput);
   memset(PPCFetchRegions, 0, sizeof(PPCFetchRegions));
   memset(&timings, 0, sizeof(timings));
   DebugLog("Built Pro-1000\n");

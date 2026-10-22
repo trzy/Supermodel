@@ -93,9 +93,6 @@ public:
   void Reset(void) override;
   const Game &GetGame(void) const override;
   void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
-  void AttachInputs(CInputs *InputsPtr) override;
-  void AttachOutputs(COutputs *OutputsPtr) override;
-  void AttachNetServer(std::shared_ptr<CNetServer> server) override;
   Result Init(const Game &game, const ROMSet &rom_set) override;
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
@@ -159,7 +156,7 @@ public:
   FrameTimings GetTimings(void);
 
   /*
-   * CModel3(config):
+   * CModel3(config, inputs, outputs, server):
    * ~CModel3(void):
    *
    * Constructor and destructor for Model 3 class. Constructor performs a
@@ -170,8 +167,13 @@ public:
    * Paramters:
    *    config  Run-time configuration. The reference should be held because
    *            this changes at run-time.
+   *    inputs  Inputs. Must stay valid for the lifetime of the emulator.
+   *    outputs Outputs (cabinet lamps, etc.), or nullptr if there are none.
+   *            Must stay valid for the lifetime of the emulator.
+   *    server  Network server for the net board, or nullptr if there is no
+   *            network.
    */
-  CModel3(Util::Config::Node &config);
+  CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server);
   ~CModel3(void);
 
   /*
