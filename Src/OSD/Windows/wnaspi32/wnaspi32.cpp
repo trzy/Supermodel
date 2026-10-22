@@ -223,7 +223,7 @@ namespace
       WSADATA wsaData;
       if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
       {
-        fprintf(stderr, "wnaspi32: unable to start Winsock\n");
+        fprintf(stderr, "wnaspi32: Unable to start Winsock\n");
         return false;
       }
       g_winsockStarted = true;
@@ -236,7 +236,7 @@ namespace
     g_socket = ShowConnectDialog(&g_host, &g_port, std::string());
     if (g_socket == INVALID_SOCKET)
     {
-      fprintf(stderr, "wnaspi32: unable to show the connection window\n");
+      fprintf(stderr, "wnaspi32: Unable to show the connection window\n");
       return false;
     }
 
@@ -252,7 +252,7 @@ namespace
       Disconnect();
       return false;
     }
-    fprintf(stderr, "wnaspi32: connected to %s at %s (port %u)\n", peerText.c_str(), g_host.c_str(), unsigned(g_port));
+    fprintf(stderr, "wnaspi32: Connected to %s at %s (port %u)\n", peerText.c_str(), g_host.c_str(), unsigned(g_port));
     return true;
   }
 
@@ -279,20 +279,20 @@ namespace
     std::vector<uint8_t> message;
     if (!SendAll(buffer.data(), buffer.size()) || !ReceiveMessageWithID(CommandResultMessage::ID, &message))
     {
-      fprintf(stderr, "wnaspi32: connection to Supermodel lost. SCSI commands will fail.\n");
+      fprintf(stderr, "wnaspi32: Connection to Supermodel lost. SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
     if (message.size() < sizeof(result))
     {
-      fprintf(stderr, "wnaspi32: incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
+      fprintf(stderr, "wnaspi32: Incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
       Disconnect();
       return false;
     }
     memcpy(&result, message.data(), sizeof(result));
     if (result.sequence != command.sequence || sizeof(result) + size_t(result.dataInLength) + size_t(result.errorLength) != message.size())
     {
-      fprintf(stderr, "wnaspi32: incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
+      fprintf(stderr, "wnaspi32: Incorrect result from Supermodel. Connection closed, SCSI commands will fail.\n");
       Disconnect();
       return false;
     }

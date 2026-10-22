@@ -384,7 +384,7 @@ Result CDriveBoard::Init(const UINT8* romPtr)
     // This constructor must present a valid ROM
     if (!romPtr)
     {
-      return ErrorLog("Internal error: no drive board ROM supplied.");
+      return ErrorLog("Internal error: No drive board ROM supplied.");
     }
 
     // Assign ROM (note that the ROM data has not yet been loaded)

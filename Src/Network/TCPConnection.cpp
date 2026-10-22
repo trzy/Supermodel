@@ -186,7 +186,7 @@ bool CTCPConnection::ProcessMessage(CNetServer &server, const uint8_t *message, 
 
   if (!m_helloReceived)
   {
-    ErrorLog("Network: first message from %s is not Hello. Connection closed.", m_peerName.c_str());
+    ErrorLog("Network: First message from %s is not Hello. Connection closed.", m_peerName.c_str());
     return false;
   }
 
@@ -214,7 +214,7 @@ bool CTCPConnection::ProcessMessage(CNetServer &server, const uint8_t *message, 
     memcpy(&pong, message, sizeof(pong));
     int64_t roundTripTime = int64_t(GetMicroseconds() - pong.pingSendTime);
     if (m_roundTripTime.exchange(roundTripTime) < 0)
-      CNetServer::LogInfo("Network: round trip time to %s is %1.3f ms.", m_peerName.c_str(), double(roundTripTime) / 1000.0);
+      CNetServer::LogInfo("Network: Round trip time to %s is %1.3f ms.", m_peerName.c_str(), double(roundTripTime) / 1000.0);
     return true;
   }
 

@@ -164,11 +164,11 @@ bool CNetServer::AddConnection(const std::shared_ptr<CTCPConnection> &connection
 {
   if (m_connections.size() >= MAX_CONNECTIONS || SDLNet_TCP_AddSocket(static_cast<SDLNet_SocketSet>(m_socketSet), static_cast<TCPsocket>(connection->GetSocket())) < 0)
   {
-    ErrorLog("Network: too many connections. Connection to %s refused.", connection->GetPeerName().c_str());
+    ErrorLog("Network: Too many connections. Connection to %s refused.", connection->GetPeerName().c_str());
     return false;
   }
   m_connections.push_back(connection);
-  LogInfo(connection->IsOutgoing() ? "Network: connected to %s." : "Network: connection from %s.", connection->GetPeerName().c_str());
+  LogInfo(connection->IsOutgoing() ? "Network: Connected to %s." : "Network: Connection from %s.", connection->GetPeerName().c_str());
   return true;
 }
 
@@ -289,7 +289,7 @@ bool CNetServer::Start(void)
 
   if (SDLNet_Init() != 0)
   {
-    ErrorLog("Network: unable to initialize SDL_net: %s", SDLNet_GetError());
+    ErrorLog("Network: Unable to initialize SDL_net: %s", SDLNet_GetError());
     return false;
   }
   m_netInitialized = true;
@@ -303,10 +303,10 @@ bool CNetServer::Start(void)
   {
     m_listenSocket = listenSocket;
     SDLNet_TCP_AddSocket(static_cast<SDLNet_SocketSet>(m_socketSet), listenSocket);
-    LogInfo("Network: listening on TCP port %u.", m_port);
+    LogInfo("Network: Listening on TCP port %u.", m_port);
   }
   else
-    ErrorLog("Network: unable to listen on TCP port %u: %s", m_port, SDLNet_GetError());
+    ErrorLog("Network: Unable to listen on TCP port %u: %s", m_port, SDLNet_GetError());
 
   m_running = true;
   m_thread = std::thread(&CNetServer::ThreadFunction, this);

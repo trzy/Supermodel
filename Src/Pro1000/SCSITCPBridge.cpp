@@ -51,7 +51,7 @@ bool CSCSITCPBridge::ProcessCommand(const std::shared_ptr<CTCPConnection> &conne
   size_t expectedSize = sizeof(command) + size_t(command.cdbLength) + size_t(command.dataOutLength);
   if (command.cdbLength == 0 || command.cdbLength > MAX_CDB_LENGTH || command.dataOutLength > MAX_DATA_LENGTH || command.dataInLength > MAX_DATA_LENGTH || size != expectedSize)
   {
-    ErrorLog("SCSI TCP bridge: incorrect ExecuteCommandMessage.");
+    ErrorLog("SCSI TCP bridge: Incorrect ExecuteCommandMessage.");
     return false;
   }
   const uint8_t *cdb = message + sizeof(command);
@@ -63,7 +63,7 @@ bool CSCSITCPBridge::ProcessCommand(const std::shared_ptr<CTCPConnection> &conne
   request.cdb.assign(cdb, cdb + command.cdbLength);
   request.dataOut.assign(dataOut, dataOut + command.dataOutLength);
   request.dataInLength = command.dataInLength;
-  DebugLog("SCSI TCP bridge: command %u: target %u, LUN %u, CDB opcode %02X, %u bytes out, %u bytes in\n", command.sequence, command.targetID, command.lun, cdb[0], command.dataOutLength, command.dataInLength);
+  DebugLog("SCSI TCP bridge: Command %u: target %u, LUN %u, CDB opcode %02X, %u bytes out, %u bytes in\n", command.sequence, command.targetID, command.lun, cdb[0], command.dataOutLength, command.dataInLength);
 
   // The completion function sends the result if the client is connected
   std::weak_ptr<CTCPConnection> client = connection;

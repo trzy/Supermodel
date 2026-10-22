@@ -168,7 +168,7 @@ UINT32 CMPC10x::ReadPCIConfigData(unsigned bits, unsigned offset) const
 					(regs[pciReg+offset+2]<<8) |
 					regs[pciReg+offset+3];
 		default:
-			ErrorLog("MPC10x internal error: invalid access size (%d-bits)", bits);
+			ErrorLog("MPC10x internal error: Invalid access size (%d-bits)", bits);
 			break;
 		}
 	}
@@ -210,7 +210,7 @@ void CMPC10x::WritePCIConfigData(unsigned bits, unsigned offset, UINT32 data)
 			regs[pciReg+offset+3] = data&0xFF;
 			break;
 		default:
-			ErrorLog("MPC10x internal error: invalid access size (%d-bits)", bits);
+			ErrorLog("MPC10x internal error: Invalid access size (%d-bits)", bits);
 			break;
 		}
 		
