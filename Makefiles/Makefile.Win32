@@ -127,7 +127,7 @@ endif
 WNASPI32_BIN_DIR = bin32
 WNASPI32_DLL = $(WNASPI32_BIN_DIR)/wnaspi32.dll
 WNASPI32_SRC_FILES = Src/OSD/Windows/wnaspi32/wnaspi32.cpp Src/OSD/Windows/wnaspi32/ConnectDialog.cpp Src/OSD/Windows/wnaspi32/wnaspi32.def
-WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/OSD/Windows/wnaspi32/ConnectDialog.h Src/Pro1000/SCSITCPBridgeProtocol.h
+WNASPI32_HEADERS = Src/OSD/Windows/wnaspi32/aspi.h Src/OSD/Windows/wnaspi32/ConnectDialog.h Src/Pro1000/SCSITCPBridgeProtocol.h Src/Network/NetProtocol.h
 ifneq (,$(findstring i686,$(shell $(CXX32) -dumpmachine 2>&1)))
 	PLATFORM_TARGETS += $(WNASPI32_DLL)
 	PLATFORM_PKG_FILES += $(WNASPI32_DLL)

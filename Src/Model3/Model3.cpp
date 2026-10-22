@@ -225,8 +225,9 @@
 #include "DriveBoard/WheelBoard.h"
 #include "Game.h"
 #include "ROMSet.h"
-#include "Network/NetBoard.h"
-#include "Network/SimNetBoard.h"
+#include "Model3/NetBoard.h"
+#include "Model3/SimNetBoard.h"
+#include "SDLIncludes.h"
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
 #include "Util/Format.h"
@@ -2891,6 +2892,11 @@ void CModel3::AttachOutputs(COutputs *OutputsPtr)
   DebugLog("Model 3 attached outputs\n");
 }
 
+void CModel3::AttachNetServer(std::shared_ptr<CNetServer> server)
+{
+  m_server = std::move(server);
+}
+
 constexpr static int RAM_SIZE			= 0x800000;		//8MB
 constexpr static int CROM_SIZE			= 0x800000;		//8MB
 constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
@@ -2976,9 +2982,9 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   PCIBus.AttachDevice(16,this);
 
   if (m_config["SimulateNet"].ValueAs<bool>())
-      NetBoard = new CSimNetBoard(m_config);
+      NetBoard = new CSimNetBoard(m_config, m_server);
   else
-      NetBoard = new CNetBoard(m_config);
+      NetBoard = new CNetBoard(m_config, m_server);
 
   DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 

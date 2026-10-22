@@ -37,6 +37,9 @@ class CInputs;
 class COutputs;
 class SuperAA;
 class IConsoleInput;
+class CNetServer;
+
+#include <memory>
 
 /*
  * IEmulator:
@@ -172,6 +175,19 @@ public:
    *            emulator.
    */
   virtual void AttachConsoleInput(IConsoleInput *input)
+  {
+  }
+
+  /*
+   * AttachNetServer(server):
+   *
+   * Attaches the network server, for systems that use the network. Must be
+   * called before Init(). The default implementation ignores it.
+   *
+   * Parameters:
+   *    server  Network server. It is already started.
+   */
+  virtual void AttachNetServer(std::shared_ptr<CNetServer> server)
   {
   }
 

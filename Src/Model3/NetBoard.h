@@ -29,9 +29,7 @@
 #include "OSD/Thread.h"
 #include <memory>
 #include "INetBoard.h"
-#include "TCPSend.h"
-#include "TCPSendAsync.h"
-#include "TCPReceive.h"
+#include "NetBoardLink.h"
 
 //#define NET_BUF_SIZE 32800 // 16384 not enough
 
@@ -73,7 +71,7 @@ public:
 	UINT16 ReadIORegister(unsigned reg);
 	void WriteIORegister(unsigned reg, UINT16 data);
 
-	CNetBoard(const Util::Config::Node &config);
+	CNetBoard(const Util::Config::Node &config, std::shared_ptr<CNetServer> server);
 	~CNetBoard(void);
 
 private:
@@ -105,8 +103,8 @@ private:
 	UINT16 port_out = 0;
 	std::string addr_out;
 
-	std::unique_ptr<TCPSend> nets;
-	std::unique_ptr<TCPReceive> netr;
+	std::shared_ptr<CNetServer> m_server;
+	std::unique_ptr<CNetBoardLink> m_link;
 
 	//game info
 	Game Gameinfo;

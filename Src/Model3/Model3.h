@@ -42,7 +42,8 @@
 #include "TileGen.h"
 #include "DriveBoard/DriveBoard.h"
 #include "CPU/PowerPC/ppc.h"
-#include "Network/INetBoard.h"
+#include "Model3/INetBoard.h"
+#include "Network/NetServer.h"
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
 #include "OSD/Thread.h"
@@ -94,6 +95,7 @@ public:
   void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
   void AttachInputs(CInputs *InputsPtr);
   void AttachOutputs(COutputs *OutputsPtr);
+  void AttachNetServer(std::shared_ptr<CNetServer> server) override;
   Result Init(const Game &game, const ROMSet &rom_set);
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
@@ -303,6 +305,7 @@ private:
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
   SuperAA     *m_superAA;
+  std::shared_ptr<CNetServer> m_server;
   INetBoard   *NetBoard;      // Net board
   bool		    m_runNetBoard;
 };

@@ -96,6 +96,7 @@
 #include "Model3/IEmulator.h"
 #include "Model3/Model3.h"
 #include "Pro1000/Pro1000.h"
+#include "Network/NetServer.h"
 #include "Graphics/Pro1000Render2D.h"
 #include "Graphics/IRender2D.h"
 #include "OSD/Audio.h"
@@ -1599,10 +1600,11 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
-  // NetBoard
+  // Network. PortIn is the port of the network server (net board and Pro-1000
+  // SCSI TCP bridge). PortOut and AddressOut give the next net board machine.
   config.Set("Network", false, "Network");
   config.Set("SimulateNet", true, "Network");
-  config.Set("PortIn", unsigned(1970), "Network");
+  config.Set("PortIn", unsigned(NetProtocol::DEFAULT_PORT), "Network");
   config.Set("PortOut", unsigned(1971), "Network");
   config.Set<std::string>("AddressOut", "127.0.0.1", "Network", "", "");
 
@@ -2380,6 +2382,7 @@ int main(int argc, char **argv)
   // Begin initializing various subsystems...
   int exitCode = 0;
   IEmulator *Emu = nullptr;
+  std::shared_ptr<CNetServer> netServer;
   std::shared_ptr<CInputSystem> InputSystem;
   CInputs *Inputs = nullptr;
   COutputs *Outputs = nullptr;
@@ -2420,6 +2423,15 @@ int main(int argc, char **argv)
     Emu = new CPro1000(s_runtime_config);
   else
     Emu = new CModel3(s_runtime_config);
+
+  // Network server: for the net board, and for the programs that connect to
+  // the Pro-1000. If it cannot listen, emulation continues.
+  if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
+  {
+    netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
+    netServer->Start();
+    Emu->AttachNetServer(netServer);
+  }
 
   // Console input is created only when something reads it: the emulated
   // machine's serial console (Pro-1000) and/or the debugger
@@ -2536,6 +2548,7 @@ int main(int argc, char **argv)
   delete Emu;
 
 Exit:
+  netServer.reset();
   delete Inputs;
   delete Outputs;
   delete s_crosshair;

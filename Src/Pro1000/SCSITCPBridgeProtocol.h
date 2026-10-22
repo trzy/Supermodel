@@ -24,111 +24,102 @@
  *
  * Messages between the SCSI TCP bridge in Supermodel (CSCSITCPBridge) and
  * its clients. A client is a program on the host computer, for example a
- * replacement wnaspi32.dll. This file does not use other Supermodel files, so
+ * replacement wnaspi32.dll. This file uses only Network/NetProtocol.h, so
  * clients can also use it.
  *
  * Connection
  * ----------
- * The client connects to the bridge with TCP. The bridge accepts connections
- * from any computer, one client at a time. There is no authentication.
+ * The client connects to the network server of Supermodel (CNetServer). The
+ * connection operates as NetProtocol.h gives: each side sends Hello first,
+ * and the client must reply to Ping with Pong. There is no authentication.
  *
  * Format
  * ------
- * The structures below give the format of the data. They are packed (no
- * padding). All numbers are little endian. The code assumes a little endian
- * computer.
+ * The messages start with a NetProtocol::MessageHeader. Some messages have
+ * parts with a variable length after the structure.
  *
- * Each message is sent as a frame: a FrameHeader, then the message. Each
- * message starts with a MessageHeader. Some messages have parts with a
- * variable length after the structure.
- *
- * The client can send more than one ExecuteCommand before it receives the
- * results. The bridge does the commands in the sequence received. A result
- * has the sequence number of its command.
- *
- * To read a message, copy its bytes into the structure with memcpy(). Do not
- * use a pointer to a structure in a buffer, because the buffer can have an
- * incorrect alignment.
+ * The client can send more than one ExecuteCommandMessage before it receives
+ * the results. The bridge does the commands in the sequence received. A
+ * result has the sequence number of its command.
  */
 
 #ifndef INCLUDED_SCSITCPBRIDGEPROTOCOL_H
 #define INCLUDED_SCSITCPBRIDGEPROTOCOL_H
 
+#include "Network/NetProtocol.h"
 #include <cstdint>
-
-#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
-static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__,
-  "The SCSI TCP bridge protocol is little endian and the code assumes a little endian computer");
-#endif
 
 namespace SCSITCPBridgeProtocol
 {
-  static constexpr uint16_t VERSION = 1;
-
-  // TEMPORARY: the TCP port is fixed until the bridge has a configuration
-  // option
-  static constexpr uint16_t DEFAULT_PORT = 31000;
-
-  // Maximum size of a message (not including the FrameHeader). A larger
-  // frame is an error.
-  static constexpr uint32_t MAX_MESSAGE_SIZE = 16 * 1024 * 1024 + 1024;
-
   static constexpr unsigned MAX_CDB_LENGTH = 16;
 
-  enum class MessageType : uint16_t
-  {
-    ExecuteCommand = 1,   // client to bridge
-    CommandResult = 2     // bridge to client
-  };
+  // Maximum number of bytes to send to or receive from the target
+  static constexpr uint32_t MAX_DATA_LENGTH = 16 * 1024 * 1024;
+
+  // Maximum number of bytes of error text in a result
+  static constexpr uint32_t MAX_ERROR_LENGTH = 512;
 
 #pragma pack(push, 1)
-
-  // Starts each frame
-  struct FrameHeader
-  {
-    uint32_t length;          // number of bytes in the message that follows
-  };
-
-  // Starts each message
-  struct MessageHeader
-  {
-    uint16_t version;         // VERSION
-    uint16_t type;            // MessageType
-    uint32_t sequence;        // set by the client; a result has the number of its command
-  };
 
   // Client to bridge: do a SCSI command. Then follow:
   //   cdbLength bytes      command descriptor block (CDB)
   //   dataOutLength bytes  data to send to the target
-  struct ExecuteCommand
+  struct ExecuteCommandMessage: public NetProtocol::MessageHeader
   {
-    MessageHeader header;
+    static constexpr uint32_t ID = NetProtocol::ID("SCX1");
+
+    uint32_t sequence;        // set by the client; the result has the same number
     uint8_t  targetID;
     uint8_t  lun;             // logical unit number
     uint8_t  cdbLength;       // 1 to MAX_CDB_LENGTH
     uint8_t  reserved;        // 0
     uint32_t dataOutLength;   // number of bytes to send to the target
     uint32_t dataInLength;    // maximum number of bytes to receive from the target
+
+    ExecuteCommandMessage(uint32_t sequence = 0, uint8_t targetID = 0, uint8_t lun = 0, uint8_t cdbLength = 0, uint32_t dataOutLength = 0, uint32_t dataInLength = 0)
+      : MessageHeader(ID, sizeof(ExecuteCommandMessage) + size_t(cdbLength) + size_t(dataOutLength)),
+        sequence(sequence),
+        targetID(targetID),
+        lun(lun),
+        cdbLength(cdbLength),
+        reserved(0),
+        dataOutLength(dataOutLength),
+        dataInLength(dataInLength)
+    {
+    }
   };
 
-  // Bridge to client: the result of an ExecuteCommand. Then follow:
+  static_assert(sizeof(ExecuteCommandMessage) == 24, "ExecuteCommandMessage must be 24 bytes");
+  static_assert(sizeof(ExecuteCommandMessage) + MAX_CDB_LENGTH + MAX_DATA_LENGTH <= NetProtocol::MAX_MESSAGE_SIZE, "ExecuteCommandMessage can be too large");
+
+  // Bridge to client: the result of an ExecuteCommandMessage. Then follow:
   //   dataInLength bytes   data received from the target
   //   errorLength bytes    error text (not terminated)
-  struct CommandResult
+  struct CommandResultMessage: public NetProtocol::MessageHeader
   {
-    MessageHeader header;
+    static constexpr uint32_t ID = NetProtocol::ID("SCR1");
+
+    uint32_t sequence;        // sequence number of the command
     uint8_t  completed;       // 1 if the target completed the command, 0 if the command failed (protocol error or reset)
     uint8_t  status;          // SCSI status byte (0x00 = GOOD, 0x02 = CHECK CONDITION)
     uint16_t errorLength;     // number of bytes of error text
     uint32_t dataInLength;    // number of bytes received from the target
+
+    CommandResultMessage(uint32_t sequence = 0, bool completed = false, uint8_t status = 0, uint32_t dataInLength = 0, uint16_t errorLength = 0)
+      : MessageHeader(ID, sizeof(CommandResultMessage) + size_t(dataInLength) + size_t(errorLength)),
+        sequence(sequence),
+        completed(completed ? 1 : 0),
+        status(status),
+        errorLength(errorLength),
+        dataInLength(dataInLength)
+    {
+    }
   };
 
-#pragma pack(pop)
+  static_assert(sizeof(CommandResultMessage) == 20, "CommandResultMessage must be 20 bytes");
+  static_assert(sizeof(CommandResultMessage) + MAX_DATA_LENGTH + MAX_ERROR_LENGTH <= NetProtocol::MAX_MESSAGE_SIZE, "CommandResultMessage can be too large");
 
-  static_assert(sizeof(FrameHeader) == 4, "FrameHeader must be 4 bytes");
-  static_assert(sizeof(MessageHeader) == 8, "MessageHeader must be 8 bytes");
-  static_assert(sizeof(ExecuteCommand) == 20, "ExecuteCommand must be 20 bytes");
-  static_assert(sizeof(CommandResult) == 16, "CommandResult must be 16 bytes");
+#pragma pack(pop)
 }
 
 #endif  // INCLUDED_SCSITCPBRIDGEPROTOCOL_H

@@ -2012,6 +2012,11 @@ void CPro1000::AttachConsoleInput(IConsoleInput *input)
   UART.AttachInput(input);
 }
 
+void CPro1000::AttachNetServer(std::shared_ptr<CNetServer> server)
+{
+  m_server = std::move(server);
+}
+
 /*
  * Builds the JTAG scan chain of the model. The firmware's configuration
  * detection (0x17EB0) reads the chain's ID codes and expects one of three
@@ -2095,9 +2100,9 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   SCSI.AttachInitiator(&SCSIHostAdapter);
 
   // Host computer programs connect to the SCSI host adapter through the
-  // bridge. If the bridge cannot start, emulation continues without it.
-  m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, SCSITCPBridgeProtocol::DEFAULT_PORT);
-  m_scsiTCPBridge->Start();
+  // bridge
+  if (m_server)
+    m_scsiTCPBridge = std::make_unique<CSCSITCPBridge>(SCSIHostAdapter, m_server);
   if (Result::OKAY != GPU.Init(nullptr, this, &PIC, PIC_LINE_NONE, Real3DConfig::Pro1000(polygonMemoryMB * 0x100000))) // no VROM; Real3D DMA interrupt line unknown
     return Result::FAIL;
   UART.AttachInterruptOutput([this](bool level)
