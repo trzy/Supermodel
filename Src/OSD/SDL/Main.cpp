@@ -705,11 +705,11 @@ static const int STATE_FILE_VERSION = 6;  // save state file version
 static const int NVRAM_FILE_VERSION = 0;  // NVRAM file version
 static unsigned s_saveSlot = 0;           // save state slot #
 
-static void SaveState(IEmulator *Model3)
+static void SaveState(IEmulator *Emu)
 {
   CBlockFile  SaveState;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Emu->GetGame().name << ".st" << s_saveSlot;
   if (Result::OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save state to '%s'.", file_path.c_str());
@@ -719,22 +719,22 @@ static void SaveState(IEmulator *Model3)
   // Write file format version and ROM set ID to header block
   int32_t fileVersion = STATE_FILE_VERSION;
   SaveState.Write(&fileVersion, sizeof(fileVersion));
-  SaveState.Write(Model3->GetGame().name);
+  SaveState.Write(Emu->GetGame().name);
 
   // Save state
-  Model3->SaveState(&SaveState);
+  Emu->SaveState(&SaveState);
   SaveState.Close();
   printf("Saved state to '%s'.\n", file_path.c_str());
   InfoLog("Saved state to '%s'.", file_path.c_str());
 }
 
-static void LoadState(IEmulator *Model3, std::string file_path = std::string())
+static void LoadState(IEmulator *Emu, std::string file_path = std::string())
 {
   CBlockFile  SaveState;
 
   // Generate file path
   if (file_path.empty())
-    file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Model3->GetGame().name << ".st" << s_saveSlot;
+    file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Emu->GetGame().name << ".st" << s_saveSlot;
 
   // Open and check to make sure format is correct
   if (Result::OKAY != SaveState.Load(file_path))
@@ -758,17 +758,17 @@ static void LoadState(IEmulator *Model3, std::string file_path = std::string())
   }
 
   // Load
-  Model3->LoadState(&SaveState);
+  Emu->LoadState(&SaveState);
   SaveState.Close();
   printf("Loaded state from '%s'.\n", file_path.c_str());
   InfoLog("Loaded state from '%s'.", file_path.c_str());
 }
 
-static void SaveNVRAM(IEmulator *Model3)
+static void SaveNVRAM(IEmulator *Emu)
 {
   CBlockFile  NVRAM;
 
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Emu->GetGame().name << ".nv";
   if (Result::OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
   {
     ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", file_path.c_str());
@@ -778,20 +778,20 @@ static void SaveNVRAM(IEmulator *Model3)
   // Write file format version and ROM set ID to header block
   int32_t fileVersion = NVRAM_FILE_VERSION;
   NVRAM.Write(&fileVersion, sizeof(fileVersion));
-  NVRAM.Write(Model3->GetGame().name);
+  NVRAM.Write(Emu->GetGame().name);
 
   // Save NVRAM
-  Model3->SaveNVRAM(&NVRAM);
+  Emu->SaveNVRAM(&NVRAM);
   NVRAM.Close();
   InfoLog("Saved NVRAM to '%s'.", file_path.c_str());
 }
 
-static void LoadNVRAM(IEmulator *Model3)
+static void LoadNVRAM(IEmulator *Emu)
 {
   CBlockFile  NVRAM;
 
   // Generate file path
-  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Model3->GetGame().name << ".nv";
+  std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Emu->GetGame().name << ".nv";
 
   // Open and check to make sure format is correct
   if (Result::OKAY != NVRAM.Load(file_path))
@@ -815,7 +815,7 @@ static void LoadNVRAM(IEmulator *Model3)
   }
 
   // Load
-  Model3->LoadNVRAM(&NVRAM);
+  Emu->LoadNVRAM(&NVRAM);
   NVRAM.Close();
   InfoLog("Loaded NVRAM from '%s'.", file_path.c_str());
 }
