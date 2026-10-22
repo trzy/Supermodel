@@ -122,7 +122,7 @@ namespace NetProtocol
   // identifies the sender, for the log of the other side.
   struct HelloMessage: public MessageHeader
   {
-    static constexpr uint32_t ID = ID("HEL1");
+    static constexpr uint32_t ID = NetProtocol::ID("HEL1");
 
     HelloMessage(size_t textLength = 0)
       : MessageHeader(ID, sizeof(HelloMessage) + textLength)
@@ -135,7 +135,7 @@ namespace NetProtocol
   // Request for Pong
   struct PingMessage: public MessageHeader
   {
-    static constexpr uint32_t ID = ID("PIN1");
+    static constexpr uint32_t ID = NetProtocol::ID("PIN1");
 
     uint64_t sendTime;        // time of the sender, in microseconds
 
@@ -151,7 +151,7 @@ namespace NetProtocol
   // Reply to Ping
   struct PongMessage: public MessageHeader
   {
-    static constexpr uint32_t ID = ID("PON1");
+    static constexpr uint32_t ID = NetProtocol::ID("PON1");
 
     uint64_t pingSendTime;    // sendTime from the Ping
     uint64_t receiveTime;     // time of the replier when it received the Ping, in microseconds
