@@ -58,3 +58,23 @@ ENABLE_DEBUGGER =
 ifneq ($(filter $(strip $(ENABLE_DEBUGGER)),0 1),$(strip $(ENABLE_DEBUGGER)))
 	override ENABLE_DEBUGGER =
 endif
+#
+# Build Supermodel as a libretro core instead of the standalone executable
+# ('1' to enable). The core is written to $(BIN_DIR) as supermodel_libretro
+# with the platform's shared library extension and uses its own object
+# directory, so the standalone build and the core can coexist.
+#
+LIBRETRO =
+ifneq ($(filter $(strip $(LIBRETRO)),0 1),$(strip $(LIBRETRO)))
+	override LIBRETRO =
+endif
+
+#
+# Include the net board, the SCSI TCP bridge (Pro-1000) and the network
+# outputs in the libretro core ('1' to enable). These use SDL2_net, so SDL2
+# and SDL2_net are then required to build and run the core.
+#
+LIBRETRO_NET =
+ifneq ($(filter $(strip $(LIBRETRO_NET)),0 1),$(strip $(LIBRETRO_NET)))
+	override LIBRETRO_NET =
+endif

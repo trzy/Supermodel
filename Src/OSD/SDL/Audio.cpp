@@ -139,6 +139,11 @@ void SetAudioCallback(AudioCallbackFPtr newCallback, void* newData)
     SDL_UnlockAudio();
 }
 
+bool AudioCallbackSupported()
+{
+    return true;
+}
+
 void SetAudioEnabled(bool newEnabled)
 {
     enabled = newEnabled;

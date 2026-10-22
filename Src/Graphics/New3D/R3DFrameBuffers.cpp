@@ -180,7 +180,12 @@ void R3DFrameBuffers::SetFBO(Layer layer)
 	case Layer::none:
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDrawBuffer(GL_BACK);
+		{
+			// The default framebuffer can be an FBO when the host owns the window (e.g. a libretro frontend)
+			GLint drawFramebuffer = 0;
+			glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFramebuffer);
+			glDrawBuffer(drawFramebuffer ? GL_COLOR_ATTACHMENT0 : GL_BACK);
+		}
 		break;
 	}
 	default:

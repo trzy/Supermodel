@@ -30,10 +30,21 @@
 # Output Locations
 ###############################################################################
 
-OBJ_DIR = obj$(strip $(BITS))
+ifeq ($(strip $(LIBRETRO)),1)
+	# The libretro core has its own object directory: its objects are compiled
+	# with different flags
+	ifeq ($(strip $(LIBRETRO_NET)),1)
+		OBJ_DIR = obj$(strip $(BITS))_libretro_net
+	else
+		OBJ_DIR = obj$(strip $(BITS))_libretro
+	endif
+	SUPERMODEL_BINARY = supermodel_libretro$(PLATFORM_LIBRETRO_EXTENSION)
+else
+	OBJ_DIR = obj$(strip $(BITS))
+	SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
+endif
 BIN_DIR = bin$(strip $(BITS))
 
-SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
 POWERPC_DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
 SCRIPTS_DISASSEMBLER_BINARY = scriptsd$(PLATFORM_BINARY_EXTENSION)
 
@@ -56,6 +67,20 @@ endif
 # If built-in debugger enabled, need to define SUPERMODEL_DEBUGGER
 ifeq ($(strip $(ENABLE_DEBUGGER)),1)
 	SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_DEBUGGER
+endif
+
+# LIBRETRO builds the libretro core (Src/OSD/Libretro). Without LIBRETRO_NET,
+# the core does not use SDL: Src/OSD/Libretro/NoSDL.h gives the few SDL and
+# SDL_net functions that the emulator code calls (the network is then
+# unavailable). It is included before each C++ file and uses the include guard
+# of OSD/SDL/SDLIncludes.h, so that header is then empty.
+ifeq ($(strip $(LIBRETRO)),1)
+	SUPERMODEL_BUILD_FLAGS += -DGLEW_LIBRETRO -I$(OBJ_DIR)
+	ifeq ($(strip $(LIBRETRO_NET)),1)
+		SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_LIBRETRO_NET
+	else
+		PLATFORM_CXXFLAGS += -include Src/OSD/Libretro/NoSDL.h
+	endif
 endif
 
 # DEBUG will build a debug build but does *not* enable extra debug logging and
@@ -81,7 +106,7 @@ endif
 # Construct the compiler (C and C++) and linker flags
 #
 COMMON_CFLAGS = -c $(ARCH) $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) -DGLEW_STATIC $(SUPERMODEL_BUILD_FLAGS)
-CFLAGS = $(COMMON_CFLAGS) $(CSTD)
+CFLAGS = $(PLATFORM_CFLAGS) $(COMMON_CFLAGS) $(CSTD)
 CXXFLAGS = $(PLATFORM_CXXFLAGS) $(COMMON_CFLAGS) $(CXXSTD)
 LDFLAGS = -o $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_LDFLAGS) $(LDOPT)
 CFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CFLAGS))	# remove -c because clang will warn
@@ -91,6 +116,39 @@ CXXFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CXXFLAGS))
 ###############################################################################
 # Source Files
 ###############################################################################
+
+#
+# Frontend: the SDL executable or the libretro core
+#
+ifeq ($(strip $(LIBRETRO)),1)
+	FRONTEND_SRC_FILES = \
+		Src/OSD/Libretro/LibretroMain.cpp \
+		Src/OSD/Libretro/LibretroOptions.cpp \
+		Src/OSD/Libretro/LibretroInputs.cpp \
+		Src/OSD/Libretro/LibretroInputSystem.cpp \
+		Src/OSD/Libretro/Audio.cpp \
+		Src/OSD/Libretro/Thread.cpp \
+		Src/OSD/Libretro/FileSystemPath.cpp \
+		Src/OSD/Libretro/GLU.cpp
+	ifeq ($(strip $(LIBRETRO_NET)),1)
+		FRONTEND_SRC_FILES += Src/OSD/SDL/NetOutputs.cpp
+	endif
+else
+	FRONTEND_SRC_FILES = \
+		Src/OSD/SDL/Main.cpp \
+		Src/OSD/SDL/Audio.cpp \
+		Src/OSD/SDL/Thread.cpp \
+		Src/OSD/SDL/Gui.cpp \
+		Src/OSD/SDL/SDLInputSystem.cpp \
+		Src/OSD/SDL/NetOutputs.cpp \
+		Src/Pkgs/imgui/imgui.cpp \
+		Src/Pkgs/imgui/imgui_draw.cpp \
+		Src/Pkgs/imgui/imgui_impl_sdl2.cpp \
+		Src/Pkgs/imgui/imgui_impl_opengl3.cpp \
+		Src/Pkgs/imgui/imgui_tables.cpp \
+		Src/Pkgs/imgui/imgui_widgets.cpp \
+		$(PLATFORM_SRC_FILES)
+endif
 
 SRC_FILES = \
 	Src/CPU/PowerPC/PPCDisasm.cpp \
@@ -128,10 +186,6 @@ SRC_FILES = \
 	Src/Pro1000/SCSIHostAdapter.cpp \
 	Src/Pro1000/SyntheticSCSIROM.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
-	Src/OSD/SDL/Main.cpp \
-	Src/OSD/SDL/Audio.cpp \
-	Src/OSD/SDL/Thread.cpp \
-	Src/OSD/SDL/Gui.cpp \
 	Src/Model3/SoundBoard.cpp \
 	Src/Sound/SCSP.cpp \
 	Src/Sound/SCSPDSP.cpp \
@@ -160,7 +214,6 @@ SRC_FILES = \
 	Src/Inputs/InputSystem.cpp \
 	Src/Inputs/InputTypes.cpp \
 	Src/Inputs/MultiInputSource.cpp \
-	Src/OSD/SDL/SDLInputSystem.cpp \
 	Src/OSD/SDL/Crosshair.cpp \
 	Src/OSD/Outputs.cpp \
 	Src/Sound/MPEG/MpegAudio.cpp \
@@ -173,20 +226,13 @@ SRC_FILES = \
 	Src/Util/ConfigBuilders.cpp \
 	Src/GameLoader.cpp \
 	Src/Pkgs/tinyxml2.cpp \
-	Src/Pkgs/imgui/imgui.cpp \
-	Src/Pkgs/imgui/imgui_draw.cpp \
-	Src/Pkgs/imgui/imgui_impl_sdl2.cpp \
-	Src/Pkgs/imgui/imgui_impl_opengl3.cpp \
-	Src/Pkgs/imgui/imgui_tables.cpp \
-	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
-	Src/OSD/SDL/NetOutputs.cpp \
 	Src/Network/NetServer.cpp \
 	Src/Network/TCPConnection.cpp \
 	Src/Model3/NetBoard.cpp \
 	Src/Model3/NetBoardLink.cpp \
 	Src/Model3/SimNetBoard.cpp \
-	$(PLATFORM_SRC_FILES)
+	$(FRONTEND_SRC_FILES)
 
 ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))
 	# -DSUPERMODEL_OSX not present: we are not compiling for macOS and can
@@ -243,7 +289,11 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # PLATFORM_TARGETS are additional platform-specific targets. The platform
 # Makefile must set it before it includes this file.
 #
+ifeq ($(strip $(LIBRETRO)),1)
+all:	$(BIN_DIR)/$(SUPERMODEL_BINARY)
+else
 all:	$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_TARGETS)
+endif
 
 #
 # Supermodel3.com release targets: used only to create official builds stamped
@@ -406,6 +456,23 @@ $(OBJ_DIR)/%.o:	%.c | $(OBJ_DIR)
 	$(SILENT)$(CC) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CFLAGS_GENERATE_DEPENDENCIES) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
 	$(SILENT)$(CC) $(CFLAGS) $< -o $@
+
+#
+# libretro core: built-in copy of Config/Games.xml (used when Games.xml is not
+# in the frontend's system/supermodel directory). bin2c is built with the host
+# compiler, like the Musashi code generator below.
+#
+BIN2C_OUTFILE = $(OBJ_DIR)/bin2c.exe # .exe suffix needed for native Windows builds
+
+$(BIN2C_OUTFILE): Src/OSD/Libretro/bin2c.c | $(OBJ_DIR)
+	$(info Compiling              : $< -> $@)
+	$(SILENT)$(CC) $< $(CSTD) -O2 -o $@
+
+$(OBJ_DIR)/GamesXML.inc: Config/Games.xml $(BIN2C_OUTFILE) | $(OBJ_DIR)
+	$(info Embedding              : $< -> $@)
+	$(SILENT)$(BIN2C_OUTFILE) Config/Games.xml $@ s_gamesXML
+
+$(OBJ_DIR)/LibretroMain.o: $(OBJ_DIR)/GamesXML.inc
 
 #
 # Musashi 68K emulator

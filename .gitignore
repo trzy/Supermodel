@@ -358,6 +358,9 @@ bin32/
 obj/
 obj64/
 obj32/
+obj_libretro*/
+obj64_libretro*/
+obj32_libretro*/
 Frameworks/
 Src/CPU/68K/Musashi/m68kopac.c
 Src/CPU/68K/Musashi/m68kopdm.c

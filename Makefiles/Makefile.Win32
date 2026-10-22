@@ -104,8 +104,20 @@ SDL2_LIBS += -lSDL2_net -liphlpapi
 PLATFORM_INCLUDE_DIR = $(SDL2_INCLUDE_DIR)
 PLATFORM_LIB_DIR = $(SDL2_LIB_DIR)
 PLATFORM_LIBS = -ldxerr8 -ldinput8 -lglu32 -lole32 -loleaut32 -lopengl32 -lwbemuuid -lws2_32 -lz
-PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
-PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM_LIBS)
+ifeq ($(strip $(LIBRETRO)),1)
+	# libretro core (DLL). Runtime libraries and zlib are linked statically so
+	# the DLL has no MinGW dependencies. SDL2 is only needed for LIBRETRO_NET=1.
+	PLATFORM_CXXFLAGS = -DSUPERMODEL_WIN32
+	PLATFORM_LDFLAGS = -shared -static -static-libgcc -static-libstdc++ -Wl,--no-undefined -lopengl32 -lglu32 -lz
+	ifeq ($(strip $(LIBRETRO_NET)),1)
+		PLATFORM_CXXFLAGS += $(SDL2_CFLAGS) $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
+		PLATFORM_LDFLAGS = -shared -static -static-libgcc -static-libstdc++ -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) -lopengl32 -lglu32 -lws2_32 -lz
+	endif
+	PLATFORM_LIBRETRO_EXTENSION = .dll
+else
+	PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -DSUPERMODEL_WIN32 $(addprefix -I,$(sort $(PLATFORM_INCLUDE_DIR)))
+	PLATFORM_LDFLAGS = -static -L$(sort $(PLATFORM_LIB_DIR)) $(SDL2_LIBS) $(PLATFORM_LIBS)
+endif
 PLATFORM_BINARY_EXTENSION = .exe
 
 #

@@ -70,8 +70,20 @@ SDL2_LIBS += -lSDL2_net
 #	UNIX-specific
 #
 
-PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
+ifeq ($(strip $(LIBRETRO)),1)
+	# libretro core (shared library). SDL2 is only needed for LIBRETRO_NET=1.
+	PLATFORM_CXXFLAGS = -O3 -fPIC
+	PLATFORM_CFLAGS = -fPIC
+	PLATFORM_LDFLAGS = -shared -Wl,--no-undefined -Wl,--version-script=Src/OSD/Libretro/link.T -lGL -lz -lm -lstdc++ -lpthread
+	ifeq ($(strip $(LIBRETRO_NET)),1)
+		PLATFORM_CXXFLAGS += $(SDL2_CFLAGS)
+		PLATFORM_LDFLAGS += $(SDL2_LIBS)
+	endif
+	PLATFORM_LIBRETRO_EXTENSION = .so
+else
+	PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
+	PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
+endif
 PLATFORM_BINARY_EXTENSION =
 
 

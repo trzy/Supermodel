@@ -3238,7 +3238,8 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
 
-  syncSndBrdThread = false;
+  // Without an audio callback, the sound board thread runs once per frame
+  syncSndBrdThread = !AudioCallbackSupported();
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;

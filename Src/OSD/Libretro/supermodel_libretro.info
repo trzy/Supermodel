@@ -1,0 +1,36 @@
+# Software Information
+display_name = "Sega - Model 3 (Supermodel)"
+authors = "The Supermodel Team"
+supported_extensions = "zip"
+corename = "Supermodel"
+license = "GPLv3"
+permissions = ""
+display_version = "0.3a-WIP"
+categories = "Emulator"
+
+# Hardware Information
+manufacturer = "Sega"
+systemname = "Model 3"
+systemid = "model3"
+
+# Libretro Features
+database = "MAME"
+supports_no_game = "false"
+savestate = "true"
+savestate_features = "basic"
+cheats = "false"
+input_descriptors = "true"
+memory_descriptors = "false"
+libretro_saves = "false"
+core_options = "true"
+core_options_version = "2.0"
+load_subsystem = "false"
+hw_render = "true"
+required_hw_api = "OpenGL Core >= 4.1"
+needs_fullpath = "true"
+disk_control = "false"
+is_experimental = "true"
+
+firmware_count = 0
+
+description = "Sega Model 3 arcade emulator (Supermodel). Requires OpenGL 4.1 (new 3D engine). Copy Config/Games.xml (optional, built in) and Assets/*.bmp (bitmap crosshairs) to system/supermodel."

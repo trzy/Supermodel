@@ -70,9 +70,24 @@ SDL_LIBS = -framework SDL2 -framework SDL2_net -framework OpenGL -framework GLUT
 # macOS-specific
 #
 
-PLATFORM_CXXFLAGS = -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS) -DSUPERMODEL_OSX
-PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
-PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
+ifeq ($(strip $(LIBRETRO)),1)
+	# libretro core (dylib). The SDL2 frameworks are only needed (and
+	# downloaded) for LIBRETRO_NET=1.
+	PLATFORM_CXXFLAGS = -DSUPERMODEL_OSX -fPIC
+	PLATFORM_CFLAGS = -fPIC
+	PLATFORM_LDFLAGS = -dynamiclib -framework OpenGL -lz -lm -lstdc++
+	PLATFORM_DIRS =
+	ifeq ($(strip $(LIBRETRO_NET)),1)
+		PLATFORM_CXXFLAGS += -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS)
+		PLATFORM_LDFLAGS += -F./Frameworks -framework SDL2 -framework SDL2_net -Wl,-rpath,@loader_path/Frameworks -Wl,-rpath,@loader_path
+		PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
+	endif
+	PLATFORM_LIBRETRO_EXTENSION = .dylib
+else
+	PLATFORM_CXXFLAGS = -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS) -DSUPERMODEL_OSX
+	PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
+	PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
+endif
 PLATFORM_BINARY_EXTENSION =
 
 #

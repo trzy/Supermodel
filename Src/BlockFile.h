@@ -30,6 +30,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 #include "Types.h"
 
 /*
@@ -215,6 +216,23 @@ public:
   Result Load(const std::string &file);
 
   /*
+   * CreateInMemory(headerName, comment):
+   *
+   * Like Create() but the block file is built in a memory buffer, which can
+   * be retrieved with GetMemoryBuffer() (also after Close()).
+   */
+  Result CreateInMemory(const std::string &headerName, const std::string &comment);
+
+  /*
+   * LoadFromMemory(data, size):
+   *
+   * Like Load() but reads a block file from a copy of a memory buffer.
+   */
+  Result LoadFromMemory(const void *data, size_t size);
+
+  const std::vector<uint8_t> &GetMemoryBuffer(void) const;
+
+  /*
    * Close(void):
    *
    * Closes the file.
@@ -241,12 +259,24 @@ private:
   void      WriteBytes(const void *data, uint32_t numBytes);
   void      WriteBlockHeader(const std::string &name, const std::string &comment);
 
+  // Storage backend (file or memory)
+  bool      IsOpen(void) const;
+  size_t    IORead(void *data, size_t numBytes);
+  void      IOWrite(const void *data, size_t numBytes);
+  long int  IOTell(void);
+  void      IOSeek(long int pos);
+
   // File state data
   FILE      *fp;
   int       mode;           // 'r' for read, 'w' for write
   long int  fileSize;       // size of file in bytes
   long int  blockStartPos;  // points to beginning of current block (or file) header
   long int  dataStartPos;   // points to beginning of current block's data section 
+
+  // Memory backend state
+  bool                  m_inMemory;
+  std::vector<uint8_t>  m_memory;
+  size_t                m_pos;
 };
 
 
