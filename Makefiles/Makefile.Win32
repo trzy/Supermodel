@@ -171,10 +171,14 @@ $(OBJ_DIR)/SupermodelResources.o:	Src/OSD/Windows/SupermodelResources.rc Src/OSD
 # ASPI DLL (32-bit). The C and C++ run-time libraries are linked statically,
 # so the DLL needs only Windows system DLLs.
 #
+# The -u option forces the linker to get __mingw_fe_dfl_env from libmingw32.
+# In mingw-w64 CRT 14, fesetenv() in libmingwex refers to this symbol, but the
+# linker reads libmingwex after the last libmingw32, so the reference fails.
+#
 $(WNASPI32_DLL):	$(WNASPI32_SRC_FILES) $(WNASPI32_HEADERS) | $(WNASPI32_BIN_DIR)
 	$(info --------------------------------------------------------------------------------)
 	$(info Building ASPI DLL      : $@)
-	$(SILENT)$(CXX32_ENV) $(CXX32) -shared -o $@ $(WNASPI32_SRC_FILES) -ISrc $(OPT) $(WARN) $(CXXSTD) -static -static-libgcc -static-libstdc++ $(LDOPT) -lws2_32 -luser32
+	$(SILENT)$(CXX32_ENV) $(CXX32) -shared -o $@ $(WNASPI32_SRC_FILES) -ISrc $(OPT) $(WARN) $(CXXSTD) -static -static-libgcc -static-libstdc++ $(LDOPT) -Wl,-u,___mingw_fe_dfl_env -lws2_32 -luser32
 	$(info --------------------------------------------------------------------------------)
 
 ifneq ($(WNASPI32_BIN_DIR),$(BIN_DIR))
