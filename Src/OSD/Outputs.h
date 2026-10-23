@@ -31,6 +31,8 @@
 #include "Game.h"
 #include "Types.h"
 
+#include <mutex>
+
 /*
  * EOutputs enumeration of all available outputs.
  * Currently just contains the outputs for the driving games - more will need to be added for the other games.
@@ -147,6 +149,16 @@ protected:
 	 * To be implemented by the subclass.
 	 */
 	virtual void SendOutput(EOutputs output, UINT8 prevValue, UINT8 value) = 0;
+
+	/*
+	 * m_mutex:
+	 *
+	 * Outputs are set from several emulation threads (main board, billboard, main thread) while clients
+	 * register from other threads (window messages, TCP server). This lock guards the output values, and
+	 * subclasses must also hold it while they use or change their list of clients. SendOutput() is always
+	 * called with it held. It is recursive so that code holding it can call GetValue(), HasValue() etc.
+	 */
+	mutable std::recursive_mutex m_mutex;
 
 private:
 	static const char* s_outputNames[]; // Static array of output names

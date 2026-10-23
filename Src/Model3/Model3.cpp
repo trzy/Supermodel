@@ -219,7 +219,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "Supermodel.h"
-#include "DriveBoard/BillBoard.h"
+#include "BillBoard.h"
 #include "DriveBoard/JoystickBoard.h"
 #include "DriveBoard/SkiBoard.h"
 #include "DriveBoard/WheelBoard.h"
@@ -482,11 +482,8 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     data = 0xFF;
 
-    if (DriveBoard->IsAttached() && DriveBoard->GetType() != Game::DRIVE_BOARD_BILLBOARD)
-    {
-      // If driveboard is set as billboard, don't read BillBoard reg (no inputs)
+    if (DriveBoard->IsAttached())
       data = DriveBoard->Read();
-    }
 
     if ((m_game.inputs & Game::INPUT_JOYSTICK2))
     {
@@ -660,9 +657,11 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
     inputBank = data;
     break;
 
-  case 0x10:  // Drive board
+  case 0x10:  // Drive board or billboard
     if (DriveBoard->IsAttached())
       DriveBoard->Write(data);
+    if (BillBoard->IsAttached())
+      BillBoard->Write(data);
     if (NULL != Outputs) // TODO - check gameInputs
       Outputs->SetValue(OutputRawDrive, data);
     OutputRegister[0] = data;
@@ -1877,6 +1876,7 @@ void CModel3::SaveState(CBlockFile *SaveState)
   GPU.SaveState(SaveState);
   SoundBoard.SaveState(SaveState);  // also saves DSB state
   DriveBoard->SaveState(SaveState);
+  BillBoard->SaveState(SaveState);
   m_cryptoDevice.SaveState(SaveState);
   m_jtag.SaveState(SaveState);
 }
@@ -1916,6 +1916,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
   ppc_load_state(SaveState);
   SoundBoard.LoadState(SaveState);
   DriveBoard->LoadState(SaveState);
+  BillBoard->LoadState(SaveState);
   m_cryptoDevice.LoadState(SaveState);
   m_jtag.LoadState(SaveState);
 }
@@ -1961,10 +1962,11 @@ void CModel3::RunFrame(void)
     if (!StartThreads())
       goto ThreadError;
 
-    // Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd) and drive board (if attached) so they can process a frame
+    // Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd), drive board and billboard (if attached) so they can process a frame
     if ((m_gpuMultiThreaded       && !ppcBrdThreadSync->Post()) ||
         (syncSndBrdThread         && !sndBrdThreadSync->Post()) ||
-        (DriveBoard->IsAttached()  && !drvBrdThreadSync->Post()))
+        (DriveBoard->IsAttached()  && !drvBrdThreadSync->Post()) ||
+        (BillBoard->IsAttached()   && !bilBrdThreadSync->Post()))
       goto ThreadError;
 
     // If not multi-threading GPU, then run PPC main board for a frame and sync GPUs now in this thread
@@ -1981,10 +1983,11 @@ void CModel3::RunFrame(void)
     if (!notifyLock->Lock())
       goto ThreadError;
 
-    // Wait for PPC main board, sound board and drive board threads to finish their work (if they are running and haven't finished already)
+    // Wait for PPC main board, sound board, drive board and billboard threads to finish their work (if they are running and haven't finished already)
     while ((m_gpuMultiThreaded      && !ppcBrdThreadDone) ||
            (syncSndBrdThread        && !sndBrdThreadDone) ||
-           (DriveBoard->IsAttached() && !drvBrdThreadDone))
+           (DriveBoard->IsAttached() && !drvBrdThreadDone) ||
+           (BillBoard->IsAttached()  && !bilBrdThreadDone))
     {
       if (!notifySync->Wait(notifyLock))
         goto ThreadError;
@@ -1992,6 +1995,7 @@ void CModel3::RunFrame(void)
     ppcBrdThreadDone = false;
     sndBrdThreadDone = false;
     drvBrdThreadDone = false;
+    bilBrdThreadDone = false;
 
     // Leave notify wait critical section
     if (!notifyLock->Unlock())
@@ -2013,6 +2017,8 @@ void CModel3::RunFrame(void)
     RunSoundBoardFrame();
     if (DriveBoard->IsAttached())
       RunDriveBoardFrame();
+    if (BillBoard->IsAttached())
+      RunBillBoardFrame();
     if (NetBoard->IsRunning())
       RunNetBoardFrame();
   }
@@ -2202,6 +2208,13 @@ void CModel3::RunDriveBoardFrame(void)
   timings.drvTicks = CThread::GetTicks() - start;
 }
 
+void CModel3::RunBillBoardFrame(void)
+{
+  UINT32 start = CThread::GetTicks();
+  BillBoard->RunFrame();
+  timings.billTicks = CThread::GetTicks() - start;
+}
+
 void CModel3::RunNetBoardFrame(void)
 {
   NetBoard->RunFrame();
@@ -2232,6 +2245,12 @@ bool CModel3::StartThreads(void)
   {
     drvBrdThreadSync = CThread::CreateSemaphore(0);
     if (drvBrdThreadSync == NULL)
+      goto ThreadError;
+  }
+  if (BillBoard->IsAttached())
+  {
+    bilBrdThreadSync = CThread::CreateSemaphore(0);
+    if (bilBrdThreadSync == NULL)
       goto ThreadError;
   }
   notifyLock = CThread::CreateMutex();
@@ -2269,6 +2288,14 @@ bool CModel3::StartThreads(void)
       goto ThreadError;
   }
 
+  // Create billboard thread, if billboard is attached
+  if (BillBoard->IsAttached())
+  {
+    bilBrdThread = CThread::CreateThread("BillBoard", StartBillBoardThread, this);
+    if (bilBrdThread == NULL)
+      goto ThreadError;
+  }
+
   // Set audio callback if sound board thread is unsync'd
   if (!syncSndBrdThread)
   {
@@ -2296,7 +2323,7 @@ bool CModel3::PauseThreads(void)
 
   // Let threads know that they should pause and wait for all of them to do so
   pauseThreads = true;
-  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
+  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning || bilBrdThreadRunning)
   {
     if (!notifySync->Wait(notifyLock))
       goto ThreadError;
@@ -2351,7 +2378,7 @@ bool CModel3::StopThreads(void)
 
   // Let threads know that they should pause and wait for all of them to do so
   pauseThreads = true;
-  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
+  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning || bilBrdThreadRunning)
   {
     if (!notifySync->Wait(notifyLock))
       goto ThreadError;
@@ -2388,6 +2415,11 @@ bool CModel3::StopThreads(void)
     if (drvBrdThreadSync->Post())
       drvBrdThread->Wait();
   }
+  if (bilBrdThread != NULL)
+  {
+    if (bilBrdThreadSync->Post())
+      bilBrdThread->Wait();
+  }
 
   // Delete all thread and synchronization objects
   DeleteThreadObjects();
@@ -2418,6 +2450,11 @@ void CModel3::DeleteThreadObjects(void)
     delete drvBrdThread;
     drvBrdThread = NULL;
   }
+  if (bilBrdThread != NULL)
+  {
+    delete bilBrdThread;
+    bilBrdThread = NULL;
+  }
 
 
   // Delete synchronization objects
@@ -2435,6 +2472,11 @@ void CModel3::DeleteThreadObjects(void)
   {
     delete drvBrdThreadSync;
     drvBrdThreadSync = NULL;
+  }
+  if (bilBrdThreadSync != NULL)
+  {
+    delete bilBrdThreadSync;
+    bilBrdThreadSync = NULL;
   }
 
 
@@ -2462,13 +2504,14 @@ void CModel3::DeleteThreadObjects(void)
 
 void CModel3::DumpTimings(void)
 {
-  printf("PPC:%3ums%c render:%3ums%c sync:%4uK%c%3ums%c snd:%3ums%c drv:%3ums%c frame:%3ums%c\n",
+  printf("PPC:%3ums%c render:%3ums%c sync:%4uK%c%3ums%c snd:%3ums%c drv:%3ums%c bill:%3ums%c frame:%3ums%c\n",
     timings.ppcTicks, (timings.ppcTicks > timings.renderTicks ? '!' : ','),
     timings.renderTicks, (timings.renderTicks > timings.ppcTicks ? '!' : ','),
     timings.syncSize / 1024, (timings.syncSize / 1024 > 128 ? '!' : ','),
     timings.syncTicks, (timings.syncTicks > 1 ? '!' : ','),
     timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
     timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
+    timings.billTicks, (timings.billTicks > 10 ? '!' : ','),
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
 
@@ -2503,6 +2546,13 @@ int CModel3::StartDriveBoardThread(void *data)
   // Call method on CModel3 to run drive board thread
   CModel3 *model3 = (CModel3*)data;
   return model3->RunDriveBoardThread();
+}
+
+int CModel3::StartBillBoardThread(void *data)
+{
+  // Call method on CModel3 to run billboard thread
+  CModel3 *model3 = (CModel3*)data;
+  return model3->RunBillBoardThread();
 }
 
 int CModel3::RunMainBoardThread(void)
@@ -2802,6 +2852,62 @@ ThreadError:
   return 1;
 }
 
+int CModel3::RunBillBoardThread(void)
+{
+  for (;;)
+  {
+    bool wait = true;
+    bool exit = false;
+    while (wait && !exit)
+    {
+      // Wait on billboard thread semaphore
+      if (!bilBrdThreadSync->Wait())
+        goto ThreadError;
+
+      // Enter notify critical section
+      if (!notifyLock->Lock())
+        goto ThreadError;
+
+      // Check threads are not being stopped or paused
+      if (stopThreads)
+        exit = true;
+      else if (!pauseThreads)
+      {
+        wait = false;
+        bilBrdThreadRunning = true;
+      }
+
+      // Leave notify critical section
+      if (!notifyLock->Unlock())
+        goto ThreadError;
+    }
+    if (exit)
+      return 0;
+
+    // Process a single frame for billboard
+    RunBillBoardFrame();
+
+    // Enter notify critical section
+    if (!notifyLock->Lock())
+      goto ThreadError;
+
+    // Let other threads know processing has finished
+    bilBrdThreadRunning = false;
+    bilBrdThreadDone = true;
+    if (!notifySync->SignalAll())
+      goto ThreadError;
+
+    // Leave notify critical section
+    if (!notifyLock->Unlock())
+      goto ThreadError;
+  }
+
+ThreadError:
+  ErrorLog("Threading error in RunBillBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+  m_multiThreaded = false;
+  return 1;
+}
+
 void CModel3::Reset(void)
 {
   // Clear memory (but do not modify backup RAM!)
@@ -2838,6 +2944,8 @@ void CModel3::Reset(void)
 
   if (DriveBoard->IsAttached())
     DriveBoard->Reset();
+  if (BillBoard->IsAttached())
+    BillBoard->Reset();
 
   m_cryptoDevice.Reset();
 
@@ -2849,6 +2957,7 @@ void CModel3::Reset(void)
   timings.renderTicks = 0;
   timings.sndTicks = 0;
   timings.drvTicks = 0;
+  timings.billTicks = 0;
   timings.netTicks = 0;
   NetBoard->Reset();
   timings.frameTicks = 0;
@@ -3093,12 +3202,6 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
     if (DriveBoard->Init(driveROM) != Result::OKAY)
       return Result::FAIL;
   }
-  else if (game.driveboard_type == Game::DRIVE_BOARD_BILLBOARD && rom_set.get_rom("driveboard_program").size)
-  {
-    DriveBoard = new CBillBoard(m_config);
-    if (DriveBoard->Init(driveROM) != Result::OKAY)
-      return Result::FAIL;
-  }
   else if (game.driveboard_type == Game::DRIVE_BOARD_SKI)
   {
     DriveBoard = new CSkiBoard(m_config);
@@ -3113,6 +3216,13 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
       return Result::FAIL;
   }
 
+  // Billboard (if present). Its program ROM is loaded into the drive board ROM region. All it does is drive
+  // the outputs, so it is only emulated when there are outputs to send them to.
+  BillBoard = new CBillBoard();
+  bool hasBillBoard = game.driveboard_type == Game::DRIVE_BOARD_BILLBOARD && rom_set.get_rom("driveboard_program").size;
+  if (BillBoard->Init(hasBillBoard && Outputs ? driveROM : nullptr) != Result::OKAY)
+    return Result::FAIL;
+
   // Security board encryption device
   m_cryptoDevice.Init(game.encryption_key, std::bind(&CModel3::ReadSecurityRAM, this, std::placeholders::_1));
 
@@ -3122,12 +3232,11 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   if (DSB)
     extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << (game.mpeg_board == Game::MPEG_BOARD_DSB1 ? 1 : 2) << ")");
   if (DriveBoard->IsAttached())
-  {
-    if (DriveBoard->GetType() == Game::DRIVE_BOARD_BILLBOARD)
-      extra_hw.insert("Billboard");
-    else
-      extra_hw.insert("Drive Board");
-  }
+    extra_hw.insert("Drive Board");
+  if (BillBoard->IsAttached())
+    extra_hw.insert("Billboard");
+  else if (hasBillBoard)
+    extra_hw.insert("Billboard (not emulated, outputs are off)");
   if (game.encryption_key)
     extra_hw.insert("Security Board");
   if (game.netboard_present)
@@ -3158,6 +3267,8 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
     if (Outputs)
       DriveBoard->AttachOutputs(Outputs);
   }
+  if (BillBoard->IsAttached() && Outputs)
+    BillBoard->AttachOutputs(Outputs);
 
   NetBoard->GetGame(m_game);
   if (Result::OKAY != NetBoard->Init(netRAM, netBuffer))
@@ -3178,6 +3289,11 @@ CSoundBoard *CModel3::GetSoundBoard(void)
 CDriveBoard *CModel3::GetDriveBoard(void)
 {
   return DriveBoard;
+}
+
+CBillBoard *CModel3::GetBillBoard(void)
+{
+  return BillBoard;
 }
 
 INetBoard *CModel3::GetNetBoard(void)
@@ -3218,6 +3334,7 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
 
   DSB = NULL;
   DriveBoard = NULL;
+  BillBoard = NULL;
 
   NetBoard = NULL;
   m_runNetBoard = false;
@@ -3230,6 +3347,7 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
   ppcBrdThread = NULL;
   sndBrdThread = NULL;
   drvBrdThread = NULL;
+  bilBrdThread = NULL;
 
   ppcBrdThreadRunning = false;
   ppcBrdThreadDone = false;
@@ -3237,11 +3355,14 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
   sndBrdThreadDone = false;
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
+  bilBrdThreadRunning = false;
+  bilBrdThreadDone = false;
 
   syncSndBrdThread = false;
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;
+  bilBrdThreadSync = NULL;
 
   notifyLock = NULL;
   notifySync = NULL;
@@ -3317,6 +3438,12 @@ CModel3::~CModel3(void)
   {
       delete DriveBoard;
       DriveBoard = NULL;
+  }
+
+  if (BillBoard != NULL)
+  {
+      delete BillBoard;
+      BillBoard = NULL;
   }
 
   if (NetBoard != NULL)

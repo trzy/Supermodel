@@ -41,6 +41,7 @@
 #include "SoundBoard.h"
 #include "TileGen.h"
 #include "DriveBoard/DriveBoard.h"
+#include "Model3/BillBoard.h"
 #include "CPU/PowerPC/ppc.h"
 #include "Model3/INetBoard.h"
 #include "Network/NetServer.h"
@@ -61,6 +62,7 @@ struct FrameTimings
   UINT32 renderTicks;
   UINT32 sndTicks;
   UINT32 drvTicks;
+  UINT32 billTicks;
   UINT32 netTicks;
   UINT32 frameTicks;
   UINT64 frameId;
@@ -133,6 +135,16 @@ public:
   CDriveBoard *GetDriveBoard(void);
 
   /*
+   * GetBillBoard(void):
+   *
+   * Returns a reference to the billboard.
+
+   * Returns:
+   *    Pointer to CBillBoard object.
+   */
+  CBillBoard *GetBillBoard(void);
+
+  /*
   * GetNetBoard(void):
   *
   * Returns a reference to the net board.
@@ -196,6 +208,7 @@ private:
   void SyncGPUs(void);                                // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
+  void RunBillBoardFrame(void);                       // Runs billboard for a frame
   void RunNetBoardFrame(void);                        // Runs net board for a frame
 
   bool    StartThreads(void);                         // Starts all threads
@@ -206,6 +219,7 @@ private:
   static int StartSoundBoardThread(void *data);       // Callback to start sound board thread (unsync'd)
   static int StartSoundBoardThreadSyncd(void *data);  // Callback to start sound board thread (sync'd)
   static int StartDriveBoardThread(void *data);       // Callback to start drive board thread
+  static int StartBillBoardThread(void *data);        // Callback to start billboard thread
 
   static void AudioCallback(void *data);              // Audio buffer callback
 
@@ -214,6 +228,7 @@ private:
   int     RunSoundBoardThread(void);                  // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
   int     RunSoundBoardThreadSyncd(void);             // Runs sound board thread (sync'd in step with render thread)
   int     RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
+  int     RunBillBoardThread(void);                   // Runs billboard thread (sync'd in step with render thread)
 
   // Runtime configuration
   Util::Config::Node &m_config;
@@ -273,6 +288,7 @@ private:
   CThread     *ppcBrdThread;       // PPC main board thread
   CThread     *sndBrdThread;       // Sound board thread
   CThread     *drvBrdThread;       // Drive board thread
+  CThread     *bilBrdThread;       // Billboard thread
   bool        ppcBrdThreadRunning; // Flag to indicate PPC main board thread is currently processing
   bool        ppcBrdThreadDone;    // Flag to indicate PPC main board thread has finished processing
   bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
@@ -280,6 +296,8 @@ private:
   bool        sndBrdWakeNotify;    // Flag to indicate that sound board thread has been woken by audio callback (when not sync'd with render thread)
   bool        drvBrdThreadRunning; // Flag to indicate drive board thread is currently processing
   bool        drvBrdThreadDone;    // Flag to indicate drive board thread has finished processing
+  bool        bilBrdThreadRunning; // Flag to indicate billboard thread is currently processing
+  bool        bilBrdThreadDone;    // Flag to indicate billboard thread has finished processing
 
   // Thread synchronization objects
   CSemaphore  *ppcBrdThreadSync;
@@ -287,6 +305,7 @@ private:
   CMutex      *sndBrdNotifyLock;
   CCondVar    *sndBrdNotifySync;
   CSemaphore  *drvBrdThreadSync;
+  CSemaphore  *bilBrdThreadSync;
   CMutex      *notifyLock;
   CCondVar    *notifySync;
 
@@ -305,6 +324,7 @@ private:
   CSoundBoard SoundBoard;     // Sound board
   CDSB        *DSB;           // Digital Sound Board (type determined dynamically at load time)
   CDriveBoard *DriveBoard;    // Drive board
+  CBillBoard  *BillBoard;     // Billboard (versus cabinets)
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
   SuperAA     *m_superAA;
@@ -314,4 +334,4 @@ private:
 };
 
 
-#endif  // INCLUDED_MODEL3_H
+#endif  // INCLUDED_MODEL3_H

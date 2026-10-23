@@ -479,8 +479,8 @@
     <ClCompile Include="..\Src\Network\TCPConnection.cpp">
       <Filter>Source Files\Network</Filter>
     </ClCompile>
-    <ClCompile Include="..\Src\Model3\DriveBoard\BillBoard.cpp">
-      <Filter>Source Files\Model3\DriveBoard</Filter>
+    <ClCompile Include="..\Src\Model3\BillBoard.cpp">
+      <Filter>Source Files\Model3</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Model3\DriveBoard\DriveBoard.cpp">
       <Filter>Source Files\Model3\DriveBoard</Filter>
@@ -850,8 +850,8 @@
     <ClInclude Include="..\Src\Pkgs\minimp3.h">
       <Filter>Header Files\Pkgs</Filter>
     </ClInclude>
-    <ClInclude Include="..\Src\Model3\DriveBoard\BillBoard.h">
-      <Filter>Header Files\Model3\DriveBoard</Filter>
+    <ClInclude Include="..\Src\Model3\BillBoard.h">
+      <Filter>Header Files\Model3</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model3\DriveBoard\DriveBoard.h">
       <Filter>Header Files\Model3\DriveBoard</Filter>
@@ -1006,4 +1006,4 @@
       <Filter>Source Files\Debugger</Filter>
     </CustomBuild>
   </ItemGroup>
-</Project>
+</Project>

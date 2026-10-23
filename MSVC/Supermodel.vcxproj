@@ -351,7 +351,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Model3\53C810Disasm.cpp" />
     <ClCompile Include="..\Src\Model3\93C46.cpp" />
     <ClCompile Include="..\Src\Model3\Crypto.cpp" />
-    <ClCompile Include="..\Src\Model3\DriveBoard\BillBoard.cpp" />
+    <ClCompile Include="..\Src\Model3\BillBoard.cpp" />
     <ClCompile Include="..\Src\Model3\DriveBoard\DriveBoard.cpp" />
     <ClCompile Include="..\Src\Model3\DriveBoard\JoystickBoard.cpp" />
     <ClCompile Include="..\Src\Model3\DriveBoard\SkiBoard.cpp" />
@@ -527,7 +527,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Model3\SCSIBus.h" />
     <ClInclude Include="..\Src\Model3\93C46.h" />
     <ClInclude Include="..\Src\Model3\Crypto.h" />
-    <ClInclude Include="..\Src\Model3\DriveBoard\BillBoard.h" />
+    <ClInclude Include="..\Src\Model3\BillBoard.h" />
     <ClInclude Include="..\Src\Model3\DriveBoard\DriveBoard.h" />
     <ClInclude Include="..\Src\Model3\DriveBoard\JoystickBoard.h" />
     <ClInclude Include="..\Src\Model3\DriveBoard\SkiBoard.h" />
@@ -604,4 +604,4 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
-</Project>
+</Project>

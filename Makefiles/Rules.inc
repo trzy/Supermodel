@@ -147,11 +147,11 @@ SRC_FILES = \
 	Src/Model3/53C810.cpp \
 	Src/Model3/PCI.cpp \
 	Src/Model3/RTC72421.cpp \
+	Src/Model3/BillBoard.cpp \
 	Src/Model3/DriveBoard/DriveBoard.cpp \
 	Src/Model3/DriveBoard/WheelBoard.cpp \
 	Src/Model3/DriveBoard/JoystickBoard.cpp \
 	Src/Model3/DriveBoard/SkiBoard.cpp \
-	Src/Model3/DriveBoard/BillBoard.cpp \
 	Src/Model3/DriveBoard/Z80CTC.cpp \
 	Src/Model3/MPC10x.cpp \
 	Src/Inputs/Input.cpp \

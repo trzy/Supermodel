@@ -371,11 +371,6 @@ void CDriveBoard::RunFrame(void)
           // reset timer
           m_nmiTimerVal = freq / m_z80CTC.CalcFrequency(1, freq);
       }
-
-      // billboard needs this
-      if (m_allowInterrupts) {
-          m_z80.SetINT(true);       // once per frame seems enough, not sure what triggers this
-      }
   }
 }
 
