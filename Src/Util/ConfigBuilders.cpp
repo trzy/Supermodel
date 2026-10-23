@@ -316,6 +316,17 @@ namespace Util
       }
     }
 
+    // A section whose settings have all been removed is not written
+    static bool HasSettings(const Node &section)
+    {
+      for (auto it = section.begin(); it != section.end(); ++it)
+      {
+        if (it->IsLeaf() && it->Exists())
+          return true;
+      }
+      return false;
+    }
+
     static void WriteSection(std::ofstream &file, const Node &section)
     {
       file << "[ " << section.Key() << " ]" << std::endl;
@@ -344,7 +355,7 @@ namespace Util
       WriteSection(file, config);
       for (auto it = config.begin(); it != config.end(); ++it)
       {
-        if (it->HasChildren())
+        if (it->HasChildren() && HasSettings(*it))
           WriteSection(file, *it);
       }
       printf("Configuration successfully saved to '%s'.\n", filename.c_str());
