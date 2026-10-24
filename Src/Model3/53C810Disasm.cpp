@@ -1,12 +1,12 @@
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson 
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,17 +18,41 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * 53C810Disasm.cpp
  *
- * NCR 53C810 SCRIPTS disassembler.
+ * NCR 53C8xx SCRIPTS disassembler for the 53C810 (Model 3) and 53C825 (Real3D
+ * Pro-1000). The chip must be specified. Differences, per the references
+ * below:
  *
- * WARNING: Not all instructions are supported. They are being added as they
- * are encountered in Model 3 games. Some of the complicated operand forms may
- * be decoded incorrectly.
+ *	- The 53C825 supports wide SCSI. Its block move opcode bit selects CHMOV
+ *	  (chained move) where it is reserved on the 53C810.
+ *	- The 53C825 has registers the 53C810 lacks: SWIDE (0x45), RESPID1
+ *	  (0x4B), the high bytes of SIDL, SODL, and SBDL (0x51, 0x55, 0x59), and
+ *	  SCRATCHC-SCRATCHJ (0x60-0x7F). The 53C810 has a single RESPID (0x4A).
+ *
+ * The references describe the "A" revisions. Original 53C810 and 53C825 parts
+ * are decoded the same way; notably, load and store instructions are listed
+ * as a new feature of the 53C810A.
+ *
+ * References:
+ *	[810A]	Technical Manual, LSI53C810A PCI to SCSI I/O Processor, Version
+ *			2.1, March 2001.
+ *	[825A]	Technical Manual, LSI53C825A/825AE PCI to SCSI I/O Processor,
+ *			Version 3.1, January 2001 (DB14-000159-00, Fourth Edition).
+ *
+ * All instruction types are decoded: block move, I/O (SELECT, WAIT SELECT,
+ * DISCONNECT, SET, CLEAR, etc.), read/write register, transfer control (JUMP,
+ * CALL, RETURN, INT, INTFLY), memory move, and load/store. The meaning of the
+ * I/O instructions and phase comparisons depends on whether the chip is in
+ * initiator or target mode, which must be specified.
+ *
+ * Syntax loosely follows the NCR assembler (NASM). Relative jump addresses are
+ * printed as offsets followed by the absolute address they resolve to.
  */
 
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #ifdef STANDALONE
@@ -36,7 +60,7 @@
 #endif
 #include "Types.h"
 
-#define DISASM_VERSION  "1.0"
+#define DISASM_VERSION  "1.2"
 
 
 /******************************************************************************
@@ -44,96 +68,336 @@
 ******************************************************************************/
 
 /*
- * DisassembleSCRIPTS(op, addr, mnem):
+ * SCRIPTS processor variants.
+ */
+enum class SCRIPTSChip
+{
+	NCR53C810,
+	NCR53C825
+};
+
+/*
+ * Register names (53C825; see RegName() for the 53C810). Unnamed registers
+ * are printed as hexadecimal addresses.
+ */
+static const char *s_regName[0x80] =
+{
+	"scntl0",   "scntl1",   "scntl2",   "scntl3",   "scid",     "sxfer",    "sdid",     "gpreg",	// 00
+	"sfbr",     "socl",     "ssid",     "sbcl",     "dstat",    "sstat0",   "sstat1",   "sstat2",	// 08
+	"dsa0",     "dsa1",     "dsa2",     "dsa3",     "istat",    NULL,       NULL,       NULL,		// 10
+	"ctest0",   "ctest1",   "ctest2",   "ctest3",   "temp0",    "temp1",    "temp2",    "temp3",	// 18
+	"dfifo",    "ctest4",   "ctest5",   "ctest6",   "dbc0",     "dbc1",     "dbc2",     "dcmd",		// 20
+	"dnad0",    "dnad1",    "dnad2",    "dnad3",    "dsp0",     "dsp1",     "dsp2",     "dsp3",		// 28
+	"dsps0",    "dsps1",    "dsps2",    "dsps3",    "scratcha0","scratcha1","scratcha2","scratcha3",// 30
+	"dmode",    "dien",     "sbr",      "dcntl",    "adder0",   "adder1",   "adder2",   "adder3",	// 38
+	"sien0",    "sien1",    "sist0",    "sist1",    "slpar",    "swide",    "macntl",   "gpcntl",	// 40
+	"stime0",   "stime1",   "respid0",  "respid1",  "stest0",   "stest1",   "stest2",   "stest3",	// 48
+	"sidl0",    "sidl1",    NULL,       NULL,       "sodl0",    "sodl1",    NULL,       NULL,		// 50
+	"sbdl0",    "sbdl1",    NULL,       NULL,       "scratchb0","scratchb1","scratchb2","scratchb3",// 58
+	"scratchc0","scratchc1","scratchc2","scratchc3","scratchd0","scratchd1","scratchd2","scratchd3",// 60
+	"scratche0","scratche1","scratche2","scratche3","scratchf0","scratchf1","scratchf2","scratchf3",// 68
+	"scratchg0","scratchg1","scratchg2","scratchg3","scratchh0","scratchh1","scratchh2","scratchh3",// 70
+	"scratchi0","scratchi1","scratchi2","scratchi3","scratchj0","scratchj1","scratchj2","scratchj3"	// 78
+};
+
+static const char *s_phase[] = { "data_out", "data_in", "command", "status", "res4", "res5", "message_out", "message_in" };
+
+static const char *RegName(unsigned reg, SCRIPTSChip chip, char *buf, size_t bufSize)
+{
+	reg &= 0x7F;
+	if (chip == SCRIPTSChip::NCR53C810)
+	{
+		// Registers that differ from the 53C825
+		switch (reg)
+		{
+		case 0x4A:
+			return "respid";
+		case 0x45:	// SWIDE
+		case 0x4B:	// RESPID1
+		case 0x51:	// SIDL1
+		case 0x55:	// SODL1
+		case 0x59:	// SBDL1
+			reg |= 0x80;	// flag as unnamed
+			break;
+		default:
+			if (reg >= 0x60)
+				reg |= 0x80;
+			break;
+		}
+	}
+	if (reg < 0x80 && s_regName[reg])
+		return s_regName[reg];
+	snprintf(buf, bufSize, "reg%02X", reg & 0x7F);
+	return buf;
+}
+
+// Appends formatted text at p without writing past end, returning the new end
+// of the string (truncated output stops at end - 1)
+static char *Append(char *p, char *end, const char *fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	int n = vsnprintf(p, end - p, fmt, args);
+	va_end(args);
+	if (n < 0)
+		return p;
+	return n < end - p ? p + n : end - 1;
+}
+
+// Sign-extends a 24-bit value
+static INT32 SignExtend24(UINT32 x)
+{
+	return (INT32) ((x & 0x00FFFFFF) ^ 0x00800000) - 0x00800000;
+}
+
+// Formats a jump address, which is either absolute or relative to the next
+// instruction (addr is the address of the next instruction)
+static char *FormatAddress(char *p, char *end, UINT32 operand, bool relative, UINT32 next)
+{
+	if (relative)
+	{
+		INT32 offset = SignExtend24(operand);
+		return Append(p, end, "rel(%c%X) ; -> %08X", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset, next + offset);
+	}
+	return Append(p, end, "%08X", operand);
+}
+
+// Formats the condition of a transfer control instruction
+static char *FormatCondition(char *p, char *end, UINT32 op, bool targetMode)
+{
+	bool carry = (op & 0x00200000) != 0;
+	bool ifTrue = (op & 0x00080000) != 0;
+	bool compData = (op & 0x00040000) != 0;
+	bool compPhase = (op & 0x00020000) != 0;
+	bool wait = (op & 0x00010000) != 0;
+
+	if (!carry && !compData && !compPhase)
+		return Append(p, end, ifTrue ? "" : ", never");
+
+	p = Append(p, end, ", %s%s ", wait ? "when" : "if", ifTrue ? "" : " not");
+	if (carry)
+		return Append(p, end, "carry");
+	if (compPhase)
+	{
+		// In target mode, the phase comparison tests ATN instead
+		p = Append(p, end, "%s", targetMode ? "atn" : s_phase[(op >> 24) & 7]);
+		if (compData)	// both must be true (or both false, for "not")
+			p = Append(p, end, ifTrue ? " and " : " and not ");
+	}
+	if (compData)
+	{
+		unsigned mask = (op >> 8) & 0xFF;
+		p = Append(p, end, "%02X", op & 0xFF);
+		if (mask)
+			p = Append(p, end, " and mask %02X", mask);
+	}
+	return p;
+}
+
+/*
+ * DisassembleSCRIPTS(op, addr, mnem, targetMode, chip):
  *
  * Disassembles one SCRIPTS instruction.
  *
  * Parameters:
- *		op		Three consecutive words.
- *		addr	Current instruction address.
- *		mnem	Buffer to write instruction mnemonic to. If no instruction was
- *				successfully decoded, will be set to '\0'.
+ *		op			Three consecutive words.
+ *		addr		Current instruction address.
+ *		mnem		Buffer to write instruction mnemonic to (at least 128 bytes).
+ *					If no instruction was successfully decoded, will be set to
+ *					'\0'.
+ *		targetMode	If true, decodes instructions as executed in target mode
+ *					(SCNTL0.TRG set), which changes the meaning of the I/O
+ *					instructions, block move opcodes, and phase comparisons.
+ *		chip		SCRIPTS processor (affects chained moves and register
+ *					names).
  *
  * Returns:
  *		Number of 32-bit words decoded (1, 2, or 3) or 0 if the instruction was
  *		not recognized.
  */
-int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem)
+int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem, bool targetMode, SCRIPTSChip chip)
 {
-	static const char	*phase[] = { "data_out", "data_in", "command", "status", "res4", "res5", "message_out", "message_in" };
-	int					carry, bitTrue, compData, compPhase, wait, mask, data;
-    
-    mnem[0] = '\0';
+	static const char	*ioInitiator[] = { "select", "wait disconnect", "wait reselect", "set", "clear" };
+	static const char	*ioTarget[] = { "reselect", "disconnect", "wait select", "set", "clear" };
+	static const char	*transfer[] = { "jump", "call", "return", "int", NULL, NULL, NULL, NULL };
+	char				*p = mnem;
+	char				*end = mnem + 128;
+	char				regBuf[8];
 
-	if ((op[0]&0xC0000000) == 0)
+	mnem[0] = '\0';
+
+	switch (op[0] >> 30)
 	{
-		// Block Move
-		if ((op[0]&0x10000000))	// FROM
-			sprintf(mnem, "move (%d) from %08X, when ", (op[0]>>27)&1, op[1]);
-		else					// count
+	case 0:
+	{
+		// Block Move. The opcode bit selects MOVE in one mode and CHMOV (wide
+		// SCSI chained move) in the other. The 53C810 has no CHMOV.
+		bool indirect = (op[0] & 0x20000000) != 0;
+		bool tableIndirect = (op[0] & 0x10000000) != 0;
+		bool opcode = (op[0] & 0x08000000) != 0;
+		bool chainedMove = opcode == targetMode;
+		const char *name = chainedMove ? (chip == SCRIPTSChip::NCR53C810 ? "reserved (chmov)" : "chmov") : "move";
+		const char *phase = s_phase[(op[0] >> 24) & 7];
+		const char *with = targetMode ? "with" : "when";
+
+		if (tableIndirect)
 		{
-			if ((op[0]&0x20000000))
-				sprintf(mnem, "move (%d) %X, ptr %08X, when ", (op[0]>>27)&1, op[0]&0x00FFFFFF, op[1]);
-			else
-				sprintf(mnem, "move (%d) %X, %08X, when ", (op[0]>>27)&1, op[0]&0x00FFFFFF, op[1]);
+			INT32 offset = SignExtend24(op[1]);
+			Append(p, end, "%s from %c%X, %s %s", name, offset < 0 ? '-' : '+', offset < 0 ? -offset : offset, with, phase);
 		}
-		strcat(mnem, phase[(op[0]>>24)&7]);
+		else
+			Append(p, end, "%s %X, %s%08X, %s %s", name, op[0] & 0x00FFFFFF, indirect ? "ptr " : "", op[1], with, phase);
 		return 2;
 	}
-	else if ((op[0]&0xE0000000) == 0xC0000000)
+
+	case 1:
 	{
-		// Move Memory
-		if ((op[0]&0x01000000))
-			sprintf(mnem, "move memory no flush %X, %08X, %08X", op[0]&0x00FFFFFF, op[1], op[2]);
-		else
-			sprintf(mnem, "move memory %X, %08X, %08X", op[0]&0x00FFFFFF, op[1], op[2]);
-		return 3;
-	}
-	else if ((op[0]&0xF8000000) == 0x98000000)
-	{
-		// INT and INTFLY
-		mnem += sprintf(mnem, "%s %08X, ", (op[0]&0x00100000)?"intfly ":"int ", op[1]);
-		
-		carry = op[0]&0x00200000;
-		bitTrue = op[0]&0x00080000;
-		compData = op[0]&0x00040000;	// data (if set)
-		compPhase = op[0]&0x00020000;	// phase (if set) (or atn if neither phase nor data set)
-		wait = op[0]&0x00010000;
-		data = op[0]&0xFF;
-		mask = (op[0]>>8)&0xFF;
-		
-		if (carry)
-			sprintf(mnem, "%s%s carry", wait?"if":"when", bitTrue?"":" not");
-		else
+		unsigned opcode = (op[0] >> 27) & 7;
+		if (opcode >= 5)
 		{
-			mnem += sprintf(mnem, "%s%s ", wait?"if":"when", bitTrue?"":" not");
-			if (!compPhase && !compData)
-				sprintf(mnem, "atn");
+			// Read/Write Register
+			static const char *operation[] = { "", "shl", "|", "^", "&", "shr", "+", "+ (carry)" };
+			unsigned oper = (op[0] >> 24) & 7;
+			bool useSFBR = opcode == 7 && (op[0] & 0x00800000) != 0;	// SFBR replaces data8 (read-modify-write only)
+			unsigned data = (op[0] >> 8) & 0xFF;
+			const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf, sizeof(regBuf));
+			char operand[32];
+
+			if (useSFBR)
+				snprintf(operand, sizeof(operand), "sfbr");
 			else
+				snprintf(operand, sizeof(operand), "%02X", data);
+
+			if (opcode == 5)		// SFBR (op data) -> register
 			{
-				if (compPhase)
-				{
-					mnem += sprintf(mnem, phase[(op[0]>>24)&7]);
-					if (compData)
-						mnem += sprintf(mnem, " and ");
-				}
-				
-				if (compData)
-					mnem += sprintf(mnem, "%02X mask %02X", data, mask);
+				if (oper == 0)
+					Append(p, end, "move %s to %s", operand, reg);
+				else if (oper == 1 || oper == 5)
+					Append(p, end, "move sfbr %s to %s", operation[oper], reg);
+				else
+					Append(p, end, "move sfbr %s %s to %s", operation[oper], operand, reg);
 			}
-				
+			else if (opcode == 6)	// register (op data) -> SFBR
+			{
+				if (oper == 0)
+					Append(p, end, "move %s to sfbr", operand);
+				else if (oper == 1 || oper == 5)
+					Append(p, end, "move %s %s to sfbr", reg, operation[oper]);
+				else
+					Append(p, end, "move %s %s %s to sfbr", reg, operation[oper], operand);
+			}
+			else					// register (op data) -> register
+			{
+				if (oper == 0)
+					Append(p, end, "move %s to %s", operand, reg);
+				else if (oper == 1 || oper == 5)
+					Append(p, end, "move %s %s to %s", reg, operation[oper], reg);
+				else
+					Append(p, end, "move %s %s %s to %s", reg, operation[oper], operand, reg);
+			}
+			return 2;
 		}
-		
-		
+
+		// I/O
+		const char *name = targetMode ? ioTarget[opcode] : ioInitiator[opcode];
+		p = Append(p, end, "%s", name);
+		if (opcode == 3 || opcode == 4)
+		{
+			// SET/CLEAR: list the affected signals and flags
+			bool first = true;
+			const struct { UINT32 bit; const char *name; } flags[] = { { 0x00000400, "carry" }, { 0x00000200, "target" }, { 0x00000040, "ack" }, { 0x00000008, "atn" } };
+			for (auto &flag: flags)
+			{
+				if (op[0] & flag.bit)
+				{
+					p = Append(p, end, "%s%s", first ? " " : " and ", flag.name);
+					first = false;
+				}
+			}
+			return 2;
+		}
+		if (opcode == 1)
+			return 2;	// (WAIT) DISCONNECT has no operands
+
+		// SELECT, RESELECT, WAIT SELECT, WAIT RESELECT
+		bool relative = (op[0] & 0x04000000) != 0;
+		bool tableIndirect = (op[0] & 0x02000000) != 0;
+		bool atn = (op[0] & 0x01000000) != 0;
+		if (atn && opcode == 0)
+			p = Append(p, end, " atn");
+		if (opcode == 0)	// (RE)SELECT names a SCSI ID
+		{
+			if (tableIndirect)
+			{
+				INT32 offset = SignExtend24(op[0]);
+				p = Append(p, end, " from %c%X,", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset);
+			}
+			else
+				p = Append(p, end, " id %u,", (op[0] >> 16) & 0xF);
+		}
+		p = Append(p, end, " ");
+		FormatAddress(p, end, op[1], relative, addr + 8);
 		return 2;
 	}
-    return 0;	// no match found
+
+	case 2:
+	{
+		// Transfer Control: JUMP, CALL, RETURN, INT, INTFLY
+		unsigned opcode = (op[0] >> 27) & 7;
+		bool relative = (op[0] & 0x00800000) != 0;
+		if (!transfer[opcode])
+			return 0;
+		if (opcode == 3 && (op[0] & 0x00100000))
+			p = Append(p, end, "intfly");
+		else
+			p = Append(p, end, "%s", transfer[opcode]);
+		if (opcode == 3)
+			p = Append(p, end, " %08X", op[1]);
+		else if (opcode != 2)	// RETURN has no address
+		{
+			p = Append(p, end, " ");
+			p = FormatAddress(p, end, op[1], relative, addr + 8);
+		}
+		FormatCondition(p, end, op[0], targetMode);
+		return 2;
+	}
+
+	default:
+	{
+		if ((op[0] & 0xE0000000) == 0xC0000000)
+		{
+			// Memory Move
+			Append(p, end, "move memory%s %X, %08X, %08X", (op[0] & 0x01000000) ? " no flush" : "", op[0] & 0x00FFFFFF, op[1], op[2]);
+			return 3;
+		}
+
+		// Load/Store
+		bool dsaRelative = (op[0] & 0x10000000) != 0;
+		bool load = (op[0] & 0x01000000) != 0;
+		bool noFlush = (op[0] & 0x02000000) != 0;
+		unsigned count = op[0] & 7;
+		const char *reg = RegName((op[0] >> 16) & 0x7F, chip, regBuf, sizeof(regBuf));
+		char where[32];
+		if (dsaRelative)
+		{
+			INT32 offset = SignExtend24(op[1]);
+			snprintf(where, sizeof(where), "dsa%c%X", offset < 0 ? '-' : '+', offset < 0 ? -offset : offset);
+		}
+		else
+			snprintf(where, sizeof(where), "%08X", op[1]);
+		if (load)
+			Append(p, end, "load %s, %u, %s", reg, count, where);
+		else
+			Append(p, end, "store%s %s, %u, %s", noFlush ? " no flush" : "", reg, count, where);
+		return 2;
+	}
+	}
 }
 
 
 /******************************************************************************
  Standalone Disassembler
- 
+
  Define STANDALONE to build a command line-driven SCRIPTS disassembler.
 ******************************************************************************/
 
@@ -141,12 +405,14 @@ int DisassembleSCRIPTS(UINT32 op[3], UINT32 addr, char *mnem)
 
 static void PrintUsage(void)
 {
-    puts("scriptsd Version "DISASM_VERSION" by Bart Trzynadlowski: NCR 53C810 SCRIPTS Disassembler");
+    puts("scriptsd Version " DISASM_VERSION " by Bart Trzynadlowski: NCR 53C8xx SCRIPTS Disassembler");
     puts("Usage:    scriptsd <file> [options]");
     puts("Options:  -?,-h       Show this help text");
     puts("          -s <offset> Start offset (hexadecimal)");
     puts("          -l <num>    Number of instructions (Default=16)");
     puts("          -o <addr>   Set origin (hexadecimal)");
+    puts("          -t          Decode as executed in target mode");
+    puts("          -825        Decode for the 53C825/825A (Default: 53C810/810A)");
     exit(0);
 }
 
@@ -157,19 +423,20 @@ static void PrintUsage(void)
  */
 int main(int argc, char **argv)
 {
-    char    	mnem[64];
+    char    	mnem[128];
     FILE    	*fp;
     UINT8   	*buffer;
-    unsigned	i, num, offset, fsize, start = 0, len, org, file = 0;
+    unsigned	start = 0, len, org, file = 0;
     UINT32  	op[3];
-    bool    	len_specified = 0, org_specified = 0;
+    bool    	len_specified = 0, org_specified = 0, target_mode = 0;
+    SCRIPTSChip	chip = SCRIPTSChip::NCR53C810;
     char    	*c;
 
 
     if (argc <= 1)
         PrintUsage();
 
-    for (i = 1; i < argc; i++)
+    for (int i = 1; i < argc; i++)
     {
         if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-?"))
             PrintUsage();
@@ -203,6 +470,10 @@ int main(int argc, char **argv)
                 org_specified = 1;
             }
         }
+        else if (!strcmp(argv[i], "-t"))
+            target_mode = 1;
+        else if (!strcmp(argv[i], "-825"))
+            chip = SCRIPTSChip::NCR53C825;
         else
             file = i;
     }
@@ -212,7 +483,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "scriptsd: no input file specified\n");
         exit(1);
     }
-            
+
     /*
      * Load file
      */
@@ -223,12 +494,12 @@ int main(int argc, char **argv)
         exit(1);
     }
     fseek(fp, 0, SEEK_END);
-    fsize = ftell(fp);
+    unsigned fsize = ftell(fp);
     rewind(fp);
 
     // Allocate some extra padding for operands
     if ((buffer = (UINT8 *) calloc(fsize+4*3, sizeof(UINT8))) == NULL)
-    {              
+    {
         fprintf(stderr, "scriptsd: not enough memory to load input file: %s, %lu bytes\n", argv[file], (unsigned long) fsize);
         fclose(fp);
         exit(1);
@@ -246,33 +517,33 @@ int main(int argc, char **argv)
      * Disassemble!
      */
 
-	offset = start;
- 	for (i = 0; (i<len) && (offset<fsize); i++)
- 	{
- 		op[0] = (buffer[offset+3]<<24)|(buffer[offset+2]<<16)|(buffer[offset+1]<<8)|buffer[offset+0];
- 		op[1] = (buffer[offset+7]<<24)|(buffer[offset+6]<<16)|(buffer[offset+5]<<8)|buffer[offset+4];
- 		op[2] = (buffer[offset+11]<<24)|(buffer[offset+10]<<16)|(buffer[offset+9]<<8)|buffer[offset+8];
- 		
- 		num = DisassembleSCRIPTS(op, org, mnem);
- 		if (0 == num)
- 		{
- 			printf("%08X: %08X                   ?\n", org, op[0]);
- 			offset += 4;
- 			org += 4;
- 		}
- 		else
- 		{
- 			if (num == 3)
- 				printf("%08X: %08X %08X %08X %s\n", org, op[0], op[1], op[2], mnem);
- 			else if (num == 2)
- 				printf("%08X: %08X %08X          %s\n", org, op[0], op[1], mnem);
- 			else
- 				printf("%08X: %08X                     %s\n", org, op[0], mnem);
- 			offset += num*4;
- 			org += num*4;
- 		}
- 	}
- 		
+    unsigned offset = start;
+    for (unsigned i = 0; (i<len) && (offset<fsize); i++)
+    {
+        op[0] = (buffer[offset+3]<<24)|(buffer[offset+2]<<16)|(buffer[offset+1]<<8)|buffer[offset+0];
+        op[1] = (buffer[offset+7]<<24)|(buffer[offset+6]<<16)|(buffer[offset+5]<<8)|buffer[offset+4];
+        op[2] = (buffer[offset+11]<<24)|(buffer[offset+10]<<16)|(buffer[offset+9]<<8)|buffer[offset+8];
+
+        unsigned num = DisassembleSCRIPTS(op, org, mnem, target_mode, chip);
+        if (0 == num)
+        {
+            printf("%08X: %08X                   ?\n", org, op[0]);
+            offset += 4;
+            org += 4;
+        }
+        else
+        {
+            if (num == 3)
+                printf("%08X: %08X %08X %08X %s\n", org, op[0], op[1], op[2], mnem);
+            else if (num == 2)
+                printf("%08X: %08X %08X          %s\n", org, op[0], op[1], mnem);
+            else
+                printf("%08X: %08X                     %s\n", org, op[0], mnem);
+            offset += num*4;
+            org += num*4;
+        }
+    }
+
     free(buffer);
 
     return 0;

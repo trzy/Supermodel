@@ -83,6 +83,8 @@ namespace Debugger
 
 		static CCPUDebug *CreateDriveBoardCPUDebug(::CModel3 *model3);
 
+		static CCPUDebug *CreateBillBoardCPUDebug(::CModel3 *model3);
+
 		static CCPUDebug *CreateNetBoardCPUDebug(::CModel3 *model3);
 
 		static CCPUDebug *CreatePro1000CPUDebug(::CPro1000 *pro1000);
@@ -106,4 +108,4 @@ namespace Debugger
 }
 
 #endif	// INCLUDED_SUPERMODELDEBUGGER_H
-#endif  // SUPERMODEL_DEBUGGER
+#endif  // SUPERMODEL_DEBUGGER

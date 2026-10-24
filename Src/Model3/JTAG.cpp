@@ -40,6 +40,8 @@
 
 #include "JTAG.h"
 
+#include <algorithm>
+
 #include "Supermodel.h"
 #include "Real3D.h"
 
@@ -87,10 +89,67 @@ void CASIC::LoadStateFromBlock(CBlockFile* SaveState)
     SaveState->Read(&m_modeword, sizeof(m_modeword));
 }
 
+/*
+ * Venus polygon memory test access. The Pro-1000 firmware measures the
+ * polygon memory with it (get_hw_config, 0x1DDF4): it sets the Venus mode
+ * word bits Polygon Mem Test (bit 13) and Texture Update (bit 14), writes the
+ * word address (instruction 0x0C, 28 bits) and the number of words (0x0F, 24
+ * bits, at most 7), and reads the words (0x11, 32 bits for each word, the
+ * first word in the least significant bits). The register lengths are from a
+ * trace of the firmware. Supermodel emulates only the read, and only while
+ * Polygon Mem Test is set. Otherwise these instructions are BYPASS. Model 3
+ * games do not use these instructions.
+ */
+bool CASIC::PolygonMemoryAccess(void) const
+{
+    return m_deviceName == Name::Venus && (m_modeword & 0x2000) != 0;
+}
+
+unsigned CASIC::PolygonMemoryWordCount(void) const
+{
+    return std::max(1u, std::min(7u, unsigned(m_memoryCount)));
+}
+
 void CASIC::CaptureDR()
 {
     switch (m_instructionReg)
     {
+    case 0x0C:                  // polygon memory address (Venus, see above)
+        if (PolygonMemoryAccess())
+        {
+            m_shiftRegSize = 28;
+            m_shiftReg = m_memoryAddress;
+            break;
+        }
+        m_shiftRegSize = 1;     // otherwise BYPASS
+        m_shiftReg = 0;
+        break;
+    case 0x0F:                  // polygon memory word count (Venus)
+        if (PolygonMemoryAccess())
+        {
+            m_shiftRegSize = 24;
+            m_shiftReg = m_memoryCount;
+            break;
+        }
+        m_shiftRegSize = 1;
+        m_shiftReg = 0;
+        break;
+    case 0x11:                  // polygon memory data (Venus)
+        if (PolygonMemoryAccess())
+        {
+            unsigned count = PolygonMemoryWordCount();
+            m_shiftRegSize = 32 * count;
+            m_shiftReg.reset();
+            for (unsigned i = 0; i < count; i++)
+            {
+                uint32_t word = m_real3D.ReadPolygonRAM((m_memoryAddress + i) * 4);
+                m_shiftReg |= std::bitset<MAX_REGISTER_LENGTH>(word) << (32 * i);
+            }
+            break;
+        }
+        m_shiftRegSize = 1;
+        m_shiftReg = 0;
+        break;
     case 3:                     // IDCODE
         m_shiftRegSize = 32;
         m_shiftReg = m_idCode;
@@ -98,6 +157,19 @@ void CASIC::CaptureDR()
     case 8:                     // MODEWORD
         m_shiftRegSize = 32;
         m_shiftReg = m_modeword;
+        break;
+    case 9:                     // update memory configuration (Mercury only)
+        if (m_deviceName == Name::Mercury)
+        {
+            uint64_t word0 = m_real3D.ReadConfigurationRegister(0x0) & 0x7FFFF;
+            uint64_t word1 = m_real3D.ReadConfigurationRegister(0x4) & 0x7FFFF;
+            uint64_t word2 = m_real3D.ReadConfigurationRegister(0x8) & 0x7FFFF;
+            m_shiftRegSize = 57;
+            m_shiftReg = (word0 << 38) | (word1 << 19) | word2;
+            break;
+        }
+        m_shiftRegSize = 1;     // otherwise BYPASS
+        m_shiftReg = 0;
         break;
     default:                    // BYPASS
         m_shiftRegSize = 1;
@@ -116,9 +188,26 @@ void CASIC::UpdateDR()
 {
     switch (m_instructionReg)
     {
+    case 0x0C:                  // polygon memory address (Venus)
+        if (PolygonMemoryAccess())
+            m_memoryAddress = uint32_t(m_shiftReg.to_ulong()) & 0x0FFFFFFF;
+        break;
+    case 0x0F:                  // polygon memory word count (Venus)
+        if (PolygonMemoryAccess())
+            m_memoryCount = uint32_t(m_shiftReg.to_ulong()) & 0x00FFFFFF;
+        break;
     case 8:                     // MODEWORD
         m_modeword = m_shiftReg.to_ulong();
         m_real3D.WriteJTAGModeword(m_deviceName, m_modeword);
+        break;
+    case 9:                     // update memory configuration (Mercury only)
+        if (m_deviceName == Name::Mercury)
+        {
+            uint64_t value = (m_shiftReg & std::bitset<MAX_REGISTER_LENGTH>((1ull << 57) - 1)).to_ullong();
+            m_real3D.WriteConfigurationRegister(0x0, uint32_t(value >> 38) & 0x7FFFF);
+            m_real3D.WriteConfigurationRegister(0x4, uint32_t(value >> 19) & 0x7FFFF);
+            m_real3D.WriteConfigurationRegister(0x8, uint32_t(value) & 0x7FFFF);
+        }
         break;
     default:
         break;
@@ -384,11 +473,11 @@ void CJTAG::BuildScanChain()
     m_scanChain = CJTAGScanChain(std::vector<CJTAGDevice*>(m_device, m_device + m_numDevices));
 }
 
-void CJTAG::SetStepping(int stepping)
+void CJTAG::SetStepping(Game::Stepping stepping)
 {
     switch (stepping)
     {
-    case 0x21:
+    case Game::Stepping::MODEL3_2_1:
         m_mercury.SetIDCode(0x416c3057);
         m_venus.SetIDCode(0x316c4057);
         m_earth0.SetIDCode(0x516c5057);
@@ -400,7 +489,7 @@ void CJTAG::SetStepping(int stepping)
         m_jupiter.SetIDCode(0x516c7057);
         m_numDevices = 17;
         break;
-    case 0x20:
+    case Game::Stepping::MODEL3_2_0:
         m_mercury.SetIDCode(0x416c3057);
         m_venus.SetIDCode(0x316c4057);
         m_earth0.SetIDCode(0x416c5057);
@@ -412,7 +501,7 @@ void CJTAG::SetStepping(int stepping)
         m_jupiter.SetIDCode(0x416c7057);
         m_numDevices = 17;
         break;
-    case 0x15:
+    case Game::Stepping::MODEL3_1_5:
         m_mercury.SetIDCode(0x316c3057);
         m_venus.SetIDCode(0x216c4057);
         m_earth0.SetIDCode(0x316c5057);
@@ -421,7 +510,7 @@ void CJTAG::SetStepping(int stepping)
         m_jupiter.SetIDCode(0x316c7057);
         m_numDevices = 10;
         break;
-    case 0x10:
+    case Game::Stepping::MODEL3_1_0:
     default:
         m_mercury.SetIDCode(0x216c3057);
         m_venus.SetIDCode(0x116c4057);

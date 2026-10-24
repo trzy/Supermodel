@@ -124,7 +124,7 @@ private:
 	GLint m_locModelMat;
 
 	// global uniforms
-	GLint m_locHardwareStep;
+	GLint m_locStep15Luminous;
 	GLint m_locDiscardAlpha;
 
 	// vertex attribute position cache

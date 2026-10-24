@@ -664,7 +664,7 @@ static void (* optable[64])(UINT32);
 
 void ppc_base_init(void)
 {
-	size_t i,j;
+	int i,j;
 
 	memset(&ppc, 0, sizeof(ppc));
 

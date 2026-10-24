@@ -115,6 +115,7 @@ void CWinOutputs::Attached()
 void CWinOutputs::SendOutput(EOutputs output, UINT8 prevValue, UINT8 value)
 {
 	//printf("LAMP OUTPUT %s = %u -> %u\n", GetOutputName(output), prevValue, value);
+	// Called with m_mutex held (COutputs::SetValue)
 
 	// Loop through all registered clients and send them new output value
 	LPARAM param = (LPARAM)output + 1;
@@ -186,6 +187,8 @@ LRESULT CWinOutputs::OutputWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
 LRESULT CWinOutputs::RegisterClient(HWND hwnd, LPARAM id)
 {
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 	// Check that given client is not already registered
 	for (auto& client : m_clients)
 	{
@@ -221,6 +224,8 @@ void CWinOutputs::SendAllToClient(RegisteredClient &client)
 
 LRESULT CWinOutputs::UnregisterClient(HWND hwnd, LPARAM id)
 {
+	std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
 	// Find any matching clients and remove them
 	bool found = false;
 	auto it = m_clients.begin();

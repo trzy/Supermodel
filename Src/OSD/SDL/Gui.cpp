@@ -52,7 +52,8 @@ Quick description on the GUI stuff
  - Some options are just enums which are raw numbers and not user friendly. Probably best replaced with strings.
  - Resolution stuff could be handled better, ie push a list of possible resolutions. Might need to combine into
    a single string or something.
- - Per game options. Need some code to get a diff of possible configs I think.
+ - Per game settings only cover the settings the GUI shows (the ones with a value range). Anything else in a
+   game's section of the INI file is left as it is.
 */
 
 
@@ -87,56 +88,6 @@ static std::set<std::string> ScanRomZips(const std::string& dir)
     }
 
     return found;
-}
-
-static void WriteGameNode(Util::Config::Node& baseNode, const Util::Config::Node& diffNode, Util::Config::Node& writeNode, const std::string& group)
-{
-    for (const auto& n : baseNode) {
-
-        if (n.IsLeaf() && n.Exists()) {
-
-            auto& key = n.Key();
-            auto  val = n.GetValue();
-
-            if (val) {
-
-                auto vRange = val->GetValueRange();
-
-                if (vRange->GetGroup() != group) {
-                    continue;
-                }
-
-                auto s1 = baseNode[key].ValueAs<std::string>();
-                auto s2 = diffNode[key].ValueAs<std::string>();
-
-                if (s1 != s2) {
-                    writeNode[key] = s2;
-                }
-            }
-        }
-    }
-}
-
-static std::string NodeToString(Util::Config::Node& config)
-{
-    std::string s;
-
-    for (const auto& n : config) {
-
-        if (n.IsLeaf() && n.Exists()) {
-
-            auto& key = n.Key();
-
-            auto val = config[key].ValueAs<std::string>();
-
-            s += key;
-            s += " ";
-            s += val;
-            s += "\n";
-        }
-    }
-
-    return s;
 }
 
 static void UpdateTempValues(Util::Config::Node& config, const std::string& group, bool init)
@@ -272,6 +223,227 @@ static int InputTextResizeCallback(ImGuiInputTextCallbackData* data)
         data->Buf = str->data();
     }
     return 0;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Per game settings: with "Per game settings" ticked, the tabs edit the selected game's settings. They start as the
+// global settings with the game's own section of the config file applied, and only the settings that end up
+// different from the global ones are written to that section.
+// ---------------------------------------------------------------------------------------------------------------
+
+struct PerGameState
+{
+    bool enabled = false;                       // "Per game settings" ticked
+    std::string selected;                       // game selected in the list when the checkbox was last set for it
+    std::string game;                           // ROM set whose settings the tabs are editing, empty for the global ones
+    std::string title;
+    Util::Config::Node config{ "Global" };      // that game's settings: the global ones with its own applied
+    std::map<std::string, Util::Config::Node> edited;   // games edited in this session, with the settings that differ
+    const Util::Config::Node* file = nullptr;   // the config file, for the sections of games not edited yet
+};
+
+// Settings that only make sense globally (used before a game is chosen)
+static bool IsPerGameKey(const std::string& key)
+{
+    return key != "ROMDirectory" && key != "GameXMLFile";
+}
+
+// The GUI's own settings: the ones with a value range, which the controls are built from
+static std::shared_ptr<Util::ValueRange> GetRange(const Util::Config::Node& config, const std::string& key)
+{
+    const Util::Config::Node* node = config.TryGet(key);
+    if (node == nullptr || !node->IsLeaf() || !node->Exists()) {
+        return nullptr;
+    }
+    return node->GetValue()->GetValueRange();
+}
+
+// Compares two settings as their actual type, so that e.g. "true" and "1" or 0.5 and 0.500000 match
+static bool SameSetting(const Util::Config::Node& a, const Util::Config::Node& b, Util::ValueRange& range)
+{
+    switch (range.GetIndex()) {
+    case 0:  return a.ValueAs<bool>() == b.ValueAs<bool>();
+    case 1:  return a.ValueAs<unsigned>() == b.ValueAs<unsigned>();
+    case 2:  return a.ValueAs<int>() == b.ValueAs<int>();
+    case 3:  return ValuesMatch(a.ValueAs<float>(), b.ValueAs<float>());
+    default: return a.ValueAs<std::string>() == b.ValueAs<std::string>();
+    }
+}
+
+// Writes the settings of diffNode that differ from baseNode into writeNode. Only the GUI's settings (the ones with a
+// value range) are compared: those of the given group, or of every group when group is empty.
+static void WriteGameNode(const Util::Config::Node& baseNode, const Util::Config::Node& diffNode, Util::Config::Node& writeNode, const std::string& group)
+{
+    for (const auto& n : baseNode) {
+
+        if (n.IsLeaf() && n.Exists() && IsPerGameKey(n.Key())) {
+
+            const auto& key = n.Key();
+            auto vRange = n.GetValue()->GetValueRange();
+
+            if (!vRange || (!group.empty() && vRange->GetGroup() != group)) {
+                continue;
+            }
+
+            const Util::Config::Node* d = diffNode.TryGet(key);
+
+            if (d != nullptr && d->Exists() && !SameSetting(n, *d, *vRange)) {
+                writeNode.Set(key, d->ValueAs<std::string>());
+            }
+        }
+    }
+}
+
+// One "key = value" line per setting
+static std::string NodeToString(const Util::Config::Node& config)
+{
+    std::string s;
+
+    for (const auto& n : config) {
+
+        if (n.IsLeaf() && n.Exists()) {
+            s += n.Key();
+            s += " = ";
+            s += n.ValueAs<std::string>();
+            s += "\n";
+        }
+    }
+
+    return s;
+}
+
+// The settings of a game that differ from the global ones
+static Util::Config::Node GetGameDifferences(const Util::Config::Node& game, const Util::Config::Node& global)
+{
+    Util::Config::Node diffs("Differences");
+    WriteGameNode(global, game, diffs, "");
+    return diffs;
+}
+
+// A game's settings: the global ones with the given settings applied. It is a deep copy, so editing it doesn't
+// touch the global settings (merging INI sections shares the values instead).
+static Util::Config::Node MakeGameConfig(const Util::Config::Node& global, const Util::Config::Node& settings)
+{
+    Util::Config::Node game(global);
+
+    for (const auto& s : settings) {
+        if (s.IsLeaf() && s.Exists()) {
+            game.Set(s.Key(), s.ValueAs<std::string>());
+        }
+    }
+
+    // copies don't carry the value ranges the controls are built from
+    for (const auto& n : global) {
+        if (n.IsLeaf() && n.Exists() && n.GetValue()->GetValueRange()) {
+            game[n.Key()].GetValue()->SetValueRange(n.GetValue()->GetValueRange());
+        }
+    }
+
+    return game;
+}
+
+// The settings in a game's section of the config file that the GUI knows about
+static Util::Config::Node GetFileSettings(const Util::Config::Node* file, const std::string& gameName, const Util::Config::Node& global)
+{
+    Util::Config::Node settings(gameName);
+    const Util::Config::Node* section = file ? file->TryGet(gameName) : nullptr;
+
+    if (section != nullptr) {
+        for (const auto& n : *section) {
+            if (n.IsLeaf() && n.Exists() && IsPerGameKey(n.Key()) && GetRange(global, n.Key())) {
+                settings.Set(n.Key(), n.ValueAs<std::string>());
+            }
+        }
+    }
+
+    return settings;
+}
+
+// True if the game has settings of its own that differ from the global ones: edited in this session, or in its
+// section of the config file
+static bool HasGameSettings(const PerGameState& pg, const Util::Config::Node& global, const std::string& gameName)
+{
+    auto it = pg.edited.find(gameName);
+    const Util::Config::Node settings = it != pg.edited.end() ? it->second : GetFileSettings(pg.file, gameName, global);
+    const Util::Config::Node diffs = GetGameDifferences(MakeGameConfig(global, settings), global);
+    return diffs.begin() != diffs.end();
+}
+
+// Selecting a game ticks "Per game settings" if it has settings of its own and unticks it if not. This is only
+// done when the selection changes, so the checkbox can still be changed by hand.
+static void AutoTickPerGame(PerGameState& pg, const Util::Config::Node& global, const Game& selected)
+{
+    if (selected.name != pg.selected) {
+        pg.selected = selected.name;
+        pg.enabled = !selected.name.empty() && HasGameSettings(pg, global, selected.name);
+    }
+}
+
+// Keeps the settings being edited in step with the checkbox and the selected game. Unticking the box removes the
+// game's own settings (its section is dropped when the settings are saved); selecting another game keeps them.
+// Returns true when the tabs switch to a different set of settings.
+static bool SyncPerGame(PerGameState& pg, const Util::Config::Node& global, const Game& selected)
+{
+    if (selected.name.empty()) {
+        pg.enabled = false;     // nothing to have per game settings for
+    }
+
+    std::string name = pg.enabled ? selected.name : std::string();
+    if (name == pg.game) {
+        return false;
+    }
+
+    // keep what was set for the game being left, or with the box unticked for it, remove its own settings
+    if (!pg.game.empty()) {
+        if (pg.game == selected.name && !pg.enabled) {
+            pg.edited.insert_or_assign(pg.game, Util::Config::Node(pg.game));
+        }
+        else {
+            pg.edited.insert_or_assign(pg.game, GetGameDifferences(pg.config, global));
+        }
+    }
+
+    pg.game = name;
+    pg.title = selected.title;
+
+    if (!name.empty()) {
+        auto it = pg.edited.find(name);
+        pg.config = MakeGameConfig(global, it != pg.edited.end() ? it->second : GetFileSettings(pg.file, name, global));
+    }
+
+    return true;
+}
+
+// Writes the settings of every game edited in this session into its section of the config
+static void StorePerGameSettings(PerGameState& pg, Util::Config::Node& fullConfig, const Util::Config::Node& global)
+{
+    if (!pg.game.empty()) {
+        pg.edited.insert_or_assign(pg.game, GetGameDifferences(pg.config, global));
+    }
+
+    for (const auto& e : pg.edited) {
+
+        // compared again with the final global settings, so ones that now match them are dropped
+        Util::Config::Node game = MakeGameConfig(global, e.second);
+        Util::Config::Node diffs = GetGameDifferences(game, global);
+
+        Util::Config::Node* section = fullConfig.TryGet(e.first);
+        if (section == nullptr) {
+            if (diffs.begin() == diffs.end()) {
+                continue;
+            }
+            section = &fullConfig.Add(e.first);
+        }
+
+        // remove the GUI's settings from the section, keep anything else that was put there by hand
+        for (auto& n : *section) {
+            if (n.IsLeaf() && n.Exists() && IsPerGameKey(n.Key()) && GetRange(global, n.Key())) {
+                n.Clear();
+            }
+        }
+
+        WriteGameNode(global, game, *section, "");
+    }
 }
 
 static void CreateControls(Util::Config::Node& config, const std::string& group)
@@ -547,7 +719,7 @@ static void AddKeys(Util::Config::Node& config, KeyBindState& kb, const std::vec
     BindKeys(config, kb, openPopup);
 }
 
-static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex, bool& exit, bool& saveSettings, std::shared_ptr<CInputs>& inputs, bool closeRequested, bool& exitPromptOpen)
+static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex, bool& exit, bool& saveSettings, std::shared_ptr<CInputs>& inputs, bool closeRequested, bool& exitPromptOpen, PerGameState& perGame, const Game& selectedGame)
 {
     if (ImGui::Button("Load game")) {
 
@@ -579,12 +751,23 @@ static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex
 
     if (ImGui::BeginPopupModal("Confirm Load", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
 
-        ImGui::Text("Are you sure you want to load defaults?");
+        // with per game settings, the game goes back to the global settings
+        if (!perGame.game.empty()) {
+            ImGui::Text("Are you sure you want to set %s back to the global settings?", perGame.title.c_str());
+        }
+        else {
+            ImGui::Text("Are you sure you want to load defaults?");
+        }
         ImGui::Separator();
 
         if (ImGui::Button("Yes", ScaledSize(120, 0))) { 
-            config = DefaultConfig();
-            inputs = nullptr; // rebuilt from the defaults when Key bindings is next shown
+            if (!perGame.game.empty()) {
+                perGame.config = MakeGameConfig(config, Util::Config::Node("None"));
+            }
+            else {
+                config = DefaultConfig();
+            }
+            inputs = nullptr; // rebuilt from the new settings when Key bindings is next shown
             ImGui::CloseCurrentPopup(); 
         }
         ImGui::SameLine();
@@ -626,23 +809,33 @@ static void DrawButtonOptions(Util::Config::Node& config, int& selectedGameIndex
         ImGui::EndPopup();
     }
 
+    // Per game settings, for the game selected in the list
     {
-        const bool disabled = true;
+        AutoTickPerGame(perGame, config, selectedGame);
 
-        if (disabled) {
-            ImGui::BeginDisabled(); // Disables interaction
-            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f); // Fade visuals
+        ImGui::BeginDisabled(selectedGame.name.empty());
+        ImGui::Checkbox("Per game settings", &perGame.enabled);
+        ImGui::EndDisabled();
+
+        if (SyncPerGame(perGame, config, selectedGame)) {
+            inputs = nullptr;   // key bindings are rebuilt from the settings now being edited
         }
 
-        static bool perGameSettings = false;
-        bool perGamesSettingsCopy = perGameSettings;
-        ImGui::Checkbox("Per game settings", &perGamesSettingsCopy);
+        if (!perGame.game.empty()) {
 
+            // read-only list of the settings that differ from the global ones (what gets written to the game's section)
+            std::string text = NodeToString(GetGameDifferences(perGame.config, config));
+            if (!text.empty() && text.back() == '\n') {
+                text.pop_back();    // no empty line to scroll to after the last setting
+            }
+            if (text.empty()) {
+                text = "None: this game uses the global settings.";
+            }
 
-
-        if (disabled) {
-            ImGui::PopStyleVar();
-            ImGui::EndDisabled();
+            ImGui::Text("%s (%s): settings that differ from the global ones", perGame.title.c_str(), perGame.game.c_str());
+            // three lines high, it scrolls when there are more
+            const float boxHeight = ImGui::GetTextLineHeight() * 3 + ImGui::GetStyle().FramePadding.y * 2;
+            ImGui::InputTextMultiline("##PerGameSettings", text.data(), text.size() + 1, ImVec2(-FLT_MIN, boxHeight), ImGuiInputTextFlags_ReadOnly);
         }
     }
 }
@@ -924,7 +1117,7 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return {};
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen)
+static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen, PerGameState& perGame)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
@@ -946,7 +1139,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
         ImGui::TableSetupColumn("Rom Name");
         ImGui::TableSetupColumn("Version");
         ImGui::TableSetupColumn("Year");
-        ImGui::TableSetupColumn("Stepping");
+        ImGui::TableSetupColumn("Hardware");
 
         ImGui::TableHeadersRow();
 
@@ -984,7 +1177,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
             ImGui::TableSetColumnIndex(3);
             ImGui::Text("%d", g.second.year);
             ImGui::TableSetColumnIndex(4);
-            ImGui::Text("%s", g.second.stepping.c_str());
+            ImGui::Text("%s", Game::SteppingName(g.second.stepping));
 
             if (!owned) {
                 ImGui::EndDisabled();
@@ -999,7 +1192,10 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
     ImGui::EndChild();
 
     // draw button options
-    DrawButtonOptions(config, selectedGameIndex, exit, saveSettings, inputs, closeRequested, exitPromptOpen);
+    DrawButtonOptions(globalConfig, selectedGameIndex, exit, saveSettings, inputs, closeRequested, exitPromptOpen, perGame, GetGame(games, selectedGameIndex));
+
+    // the tabs edit the selected game's settings when per game settings are on, otherwise the global ones
+    Util::Config::Node& config = perGame.game.empty() ? globalConfig : perGame.config;
 
     // create a space
     ImGui::Dummy(ScaledSize(0.0f, 20.0f));
@@ -1092,6 +1288,19 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& config, const std::map<st
         }
 
         ImGui::EndTabBar();
+    }
+
+    // settings that only work globally are always the global ones, even when edited with per game settings on
+    if (&config != &globalConfig) {
+        for (const auto& n : config) {
+            if (n.IsLeaf() && n.Exists() && !IsPerGameKey(n.Key()) && GetRange(globalConfig, n.Key())) {
+                auto range = globalConfig[n.Key()].GetValue()->GetValueRange();
+                if (!SameSetting(n, globalConfig[n.Key()], *range)) {
+                    globalConfig.Set(n.Key(), n.ValueAs<std::string>());
+                    globalConfig[n.Key()].GetValue()->SetValueRange(range);
+                }
+            }
+        }
     }
 
     ImGui::End(); // Close the window
@@ -1228,6 +1437,8 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     bool running = true;
     KeyBindState kb{};
     CalibrationState cal{};
+    PerGameState perGame;
+    perGame.file = &fullConfig;
     bool exitPromptOpen = false;
     bool exit = false;
     SDL_Event event{};
@@ -1257,7 +1468,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
             selectedGame = -1;
         }
 
-        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, cal, closeRequested, exitPromptOpen);
+        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, cal, closeRequested, exitPromptOpen, perGame);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
@@ -1277,6 +1488,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         // Fold the edited global settings back into the complete config so that the
         // game-specific sections are preserved by the write
         Util::Config::CopyINISection(&fullConfig, config);
+        StorePerGameSettings(perGame, fullConfig, config);
         Util::Config::WriteINIFile(configPath, fullConfig, TimestampedConfigFileComment("Updated from GUI."));
     }
 

@@ -31,7 +31,7 @@
 #include "ConsoleDebugger.h"
 #include "CPUDebug.h"
 #include "Label.h"
-#include "Network/NetBoard.h"
+#include "Model3/NetBoard.h"
 #include "CPU/Musashi68KDebug.h"
 #include "CPU/PPCDebug.h"
 #include "CPU/Z80Debug.h"
@@ -313,6 +313,22 @@ namespace Debugger
 		return cpu;
 	}
 
+	CCPUDebug *CSupermodelDebugger::CreateBillBoardCPUDebug(::CModel3 *model3)
+	{
+		CBillBoard *bilBrd = model3->GetBillBoard();
+		if (!bilBrd->IsAttached())
+			return NULL;
+		CZ80Debug *cpu = new CZ80Debug("BillZ80", bilBrd->GetZ80());
+
+		// Regions
+		cpu->AddRegion(0x0000, 0x7FFF, true,  true,  "ROM");
+		cpu->AddRegion(0xE000, 0xFFFF, false, false, "RAM");
+
+		// I/O ports 20-2F are the 315-5338A: 20 DIP switches, 21 command from the main board,
+		// 22-25 the four 7-segment digits, 26 the winner lamps
+		return cpu;
+	}
+
 	CCPUDebug *CSupermodelDebugger::CreateNetBoardCPUDebug(::CModel3 * model3)
 	{
 		CNetBoard *netBrd = dynamic_cast<CNetBoard*>(model3->GetNetBoard());
@@ -424,6 +440,10 @@ namespace Debugger
 
 		// Add drive board CPU (if attached)
 		cpu = CreateDriveBoardCPUDebug(m_model3);
+		if (cpu) AddCPU(cpu);
+
+		// Add billboard CPU (if attached)
+		cpu = CreateBillBoardCPUDebug(m_model3);
 		if (cpu) AddCPU(cpu);
 
 		// Add net board CPU (if attached)
@@ -832,4 +852,4 @@ namespace Debugger
 	}
 }
 
-#endif  // SUPERMODEL_DEBUGGER
+#endif  // SUPERMODEL_DEBUGGER

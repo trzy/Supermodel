@@ -1410,6 +1410,10 @@
     </identity>
     <hardware>
       <platform>Real3D Pro-1000</platform>
+      <!-- Model: 1100 (1 pixel processor), 1200 (2), or 1400 (4) -->
+      <stepping>1100</stepping>
+      <!-- Polygon memory in MB: 8 (standard), 16, 24, or 32 (with memory cards) -->
+      <polygon_memory>8</polygon_memory>
     </hardware>
     <roms>
       <!-- Flash parts 1 and 4: boot stub and loop code (software revision 5.4), loaded at 0xFFF00000 -->

@@ -998,7 +998,9 @@ struct VBORef *CLegacy3D::CacheModel(ModelCache *Cache, int lutIdx, UINT16 textu
     return NULL;  // too many models!
   
   // Cache all polygons
-  Vertex    Prev[4];  // previous vertices
+  // Clear the shared vertices. If the first polygon of a model has a shared
+  // vertex bit, it reads this array before a polygon writes it.
+  Vertex    Prev[4] = {};  // previous vertices
   bool      useStencil = true;
   bool      done = false;
   while (!done)

@@ -41,8 +41,10 @@
 #include "SoundBoard.h"
 #include "TileGen.h"
 #include "DriveBoard/DriveBoard.h"
+#include "Model3/BillBoard.h"
 #include "CPU/PowerPC/ppc.h"
-#include "Network/INetBoard.h"
+#include "Model3/INetBoard.h"
+#include "Network/NetServer.h"
 #include "Util/NewConfig.h"
 #include "Graphics/SuperAA.h"
 #include "OSD/Thread.h"
@@ -60,6 +62,7 @@ struct FrameTimings
   UINT32 renderTicks;
   UINT32 sndTicks;
   UINT32 drvTicks;
+  UINT32 billTicks;
   UINT32 netTicks;
   UINT32 frameTicks;
   UINT64 frameId;
@@ -80,52 +83,36 @@ class CModel3: public IEmulator, public IBus, public IPCIDevice
 {
 public:
   // IEmulator interface
-  bool PauseThreads(void);
-  bool ResumeThreads(void);
-  void SaveState(CBlockFile *SaveState);
-  void LoadState(CBlockFile *SaveState);
-  void SaveNVRAM(CBlockFile *NVRAM);
-  void LoadNVRAM(CBlockFile *NVRAM);
-  void ClearNVRAM(void);
-  void RunFrame(void);
-  void RenderFrame(void);
-  void Reset(void);
-  const Game &GetGame(void) const;
-  void AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA);
-  void AttachInputs(CInputs *InputsPtr);
-  void AttachOutputs(COutputs *OutputsPtr);
-  Result Init(void);
+  bool PauseThreads(void) override;
+  bool ResumeThreads(void) override;
+  bool SupportsSaveStates(void) const override;
+  void SaveState(CBlockFile *SaveState) override;
+  void LoadState(CBlockFile *SaveState) override;
+  void SaveNVRAM(CBlockFile *NVRAM) override;
+  void LoadNVRAM(CBlockFile *NVRAM) override;
+  void ClearNVRAM(void) override;
+  void RunFrame(void) override;
+  void RenderFrame(void) override;
+  void Reset(void) override;
+  const Game &GetGame(void) const override;
+  void AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA) override;
+  Result Init(const Game &game, const ROMSet &rom_set) override;
   // For Scripting tweaks
   Util::Config::Node& GetConfig() { return this->m_config; }
 
   // IPCIDevice interface
-  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const;
-  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data);
+  UINT32 ReadPCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset) const override;
+  void WritePCIConfigSpace(unsigned device, unsigned reg, unsigned bits, unsigned offset, UINT32 data) override;
 
   // IBus interface
-  UINT8 Read8(UINT32 addr);
-  UINT16 Read16(UINT32 addr);
-  UINT32 Read32(UINT32 addr);
-  UINT64 Read64(UINT32 addr);
-  void Write8(UINT32 addr, UINT8 data);
-  void Write16(UINT32 addr, UINT16 data);
-  void Write32(UINT32 addr, UINT32 data);
-  void Write64(UINT32 addr, UINT64 data);
-
-  /*
-   * LoadGame(game, rom_set):
-   *
-   * Loads a game, copying in the provided ROMs and setting the hardware
-   * stepping.
-   *
-   * Parameters:
-   *    game      Game information.
-   *    rom_set   ROMs.
-   *
-   * Returns:
-   *    OKAY if successful, FAIL otherwise. Prints errors.
-   */
-  Result LoadGame(const Game &game, const ROMSet &rom_set);
+  UINT8 Read8(UINT32 addr) override;
+  UINT16 Read16(UINT32 addr) override;
+  UINT32 Read32(UINT32 addr) override;
+  UINT64 Read64(UINT32 addr) override;
+  void Write8(UINT32 addr, UINT8 data) override;
+  void Write16(UINT32 addr, UINT16 data) override;
+  void Write32(UINT32 addr, UINT32 data) override;
+  void Write64(UINT32 addr, UINT64 data) override;
 
   /*
    * GetSoundBoard(void):
@@ -146,6 +133,16 @@ public:
    *    Pointer to CDriveBoard object.
    */
   CDriveBoard *GetDriveBoard(void);
+
+  /*
+   * GetBillBoard(void):
+   *
+   * Returns a reference to the billboard.
+
+   * Returns:
+   *    Pointer to CBillBoard object.
+   */
+  CBillBoard *GetBillBoard(void);
 
   /*
   * GetNetBoard(void):
@@ -172,7 +169,7 @@ public:
   FrameTimings GetTimings(void);
 
   /*
-   * CModel3(config):
+   * CModel3(config, inputs, outputs, server):
    * ~CModel3(void):
    *
    * Constructor and destructor for Model 3 class. Constructor performs a
@@ -183,8 +180,13 @@ public:
    * Paramters:
    *    config  Run-time configuration. The reference should be held because
    *            this changes at run-time.
+   *    inputs  Inputs. Must stay valid for the lifetime of the emulator.
+   *    outputs Outputs (cabinet lamps, etc.), or nullptr if there are none.
+   *            Must stay valid for the lifetime of the emulator.
+   *    server  Network server for the net board, or nullptr if there is no
+   *            network.
    */
-  CModel3(Util::Config::Node &config);
+  CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server);
   ~CModel3(void);
 
   /*
@@ -206,6 +208,7 @@ private:
   void SyncGPUs(void);                                // Sync's up GPUs in preparation for rendering - must be called when PPC is not running
   bool RunSoundBoardFrame(void);                      // Runs sound board for a frame
   void RunDriveBoardFrame(void);                      // Runs drive board for a frame
+  void RunBillBoardFrame(void);                       // Runs billboard for a frame
   void RunNetBoardFrame(void);                        // Runs net board for a frame
 
   bool    StartThreads(void);                         // Starts all threads
@@ -216,6 +219,7 @@ private:
   static int StartSoundBoardThread(void *data);       // Callback to start sound board thread (unsync'd)
   static int StartSoundBoardThreadSyncd(void *data);  // Callback to start sound board thread (sync'd)
   static int StartDriveBoardThread(void *data);       // Callback to start drive board thread
+  static int StartBillBoardThread(void *data);        // Callback to start billboard thread
 
   static void AudioCallback(void *data);              // Audio buffer callback
 
@@ -224,6 +228,7 @@ private:
   int     RunSoundBoardThread(void);                  // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
   int     RunSoundBoardThreadSyncd(void);             // Runs sound board thread (sync'd in step with render thread)
   int     RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
+  int     RunBillBoardThread(void);                   // Runs billboard thread (sync'd in step with render thread)
 
   // Runtime configuration
   Util::Config::Node &m_config;
@@ -232,7 +237,7 @@ private:
 
   // Game and hardware information
   Game m_game;
-  int m_stepping;
+  Game::Stepping m_stepping;
 
   // Game inputs and outputs
   CInputs   *Inputs;
@@ -283,6 +288,7 @@ private:
   CThread     *ppcBrdThread;       // PPC main board thread
   CThread     *sndBrdThread;       // Sound board thread
   CThread     *drvBrdThread;       // Drive board thread
+  CThread     *bilBrdThread;       // Billboard thread
   bool        ppcBrdThreadRunning; // Flag to indicate PPC main board thread is currently processing
   bool        ppcBrdThreadDone;    // Flag to indicate PPC main board thread has finished processing
   bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
@@ -290,6 +296,8 @@ private:
   bool        sndBrdWakeNotify;    // Flag to indicate that sound board thread has been woken by audio callback (when not sync'd with render thread)
   bool        drvBrdThreadRunning; // Flag to indicate drive board thread is currently processing
   bool        drvBrdThreadDone;    // Flag to indicate drive board thread has finished processing
+  bool        bilBrdThreadRunning; // Flag to indicate billboard thread is currently processing
+  bool        bilBrdThreadDone;    // Flag to indicate billboard thread has finished processing
 
   // Thread synchronization objects
   CSemaphore  *ppcBrdThreadSync;
@@ -297,6 +305,7 @@ private:
   CMutex      *sndBrdNotifyLock;
   CCondVar    *sndBrdNotifySync;
   CSemaphore  *drvBrdThreadSync;
+  CSemaphore  *bilBrdThreadSync;
   CMutex      *notifyLock;
   CCondVar    *notifySync;
 
@@ -315,12 +324,14 @@ private:
   CSoundBoard SoundBoard;     // Sound board
   CDSB        *DSB;           // Digital Sound Board (type determined dynamically at load time)
   CDriveBoard *DriveBoard;    // Drive board
+  CBillBoard  *BillBoard;     // Billboard (versus cabinets)
   CCrypto     m_cryptoDevice; // Encryption device
   CJTAG       m_jtag;         // JTAG interface
   SuperAA     *m_superAA;
+  std::shared_ptr<CNetServer> m_server;
   INetBoard   *NetBoard;      // Net board
   bool		    m_runNetBoard;
 };
 
 
-#endif  // INCLUDED_MODEL3_H
+#endif  // INCLUDED_MODEL3_H

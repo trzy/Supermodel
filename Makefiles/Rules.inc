@@ -34,7 +34,8 @@ OBJ_DIR = obj$(strip $(BITS))
 BIN_DIR = bin$(strip $(BITS))
 
 SUPERMODEL_BINARY = supermodel$(PLATFORM_BINARY_EXTENSION)
-DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
+POWERPC_DISASSEMBLER_BINARY = ppcd$(PLATFORM_BINARY_EXTENSION)
+SCRIPTS_DISASSEMBLER_BINARY = scriptsd$(PLATFORM_BINARY_EXTENSION)
 
 
 ###############################################################################
@@ -115,6 +116,7 @@ SRC_FILES = \
 	Src/Graphics/New3D/TextureBank.cpp \
 	Src/Graphics/FBO.cpp \
 	Src/Graphics/Render2D.cpp \
+	Src/Graphics/Pro1000Render2D.cpp \
 	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
@@ -122,6 +124,9 @@ SRC_FILES = \
 	Src/Pro1000/UART.cpp \
 	Src/Pro1000/8259.cpp \
 	Src/Pro1000/SCANPSC100F.cpp \
+	Src/Pro1000/SCSITCPBridge.cpp \
+	Src/Pro1000/SCSIHostAdapter.cpp \
+	Src/Pro1000/SyntheticSCSIROM.cpp \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \
@@ -142,11 +147,11 @@ SRC_FILES = \
 	Src/Model3/53C810.cpp \
 	Src/Model3/PCI.cpp \
 	Src/Model3/RTC72421.cpp \
+	Src/Model3/BillBoard.cpp \
 	Src/Model3/DriveBoard/DriveBoard.cpp \
 	Src/Model3/DriveBoard/WheelBoard.cpp \
 	Src/Model3/DriveBoard/JoystickBoard.cpp \
 	Src/Model3/DriveBoard/SkiBoard.cpp \
-	Src/Model3/DriveBoard/BillBoard.cpp \
 	Src/Model3/DriveBoard/Z80CTC.cpp \
 	Src/Model3/MPC10x.cpp \
 	Src/Inputs/Input.cpp \
@@ -176,10 +181,11 @@ SRC_FILES = \
 	Src/Pkgs/imgui/imgui_widgets.cpp \
 	Src/ROMSet.cpp \
 	Src/OSD/SDL/NetOutputs.cpp \
-	Src/Network/TCPReceive.cpp \
-	Src/Network/TCPSend.cpp \
-	Src/Network/NetBoard.cpp \
-	Src/Network/SimNetBoard.cpp \
+	Src/Network/NetServer.cpp \
+	Src/Network/TCPConnection.cpp \
+	Src/Model3/NetBoard.cpp \
+	Src/Model3/NetBoardLink.cpp \
+	Src/Model3/SimNetBoard.cpp \
 	$(PLATFORM_SRC_FILES)
 
 ifeq (,$(findstring -DSUPERMODEL_OSX,$(PLATFORM_CXXFLAGS)))
@@ -234,7 +240,10 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 # generated dependencies because otherwise, make gets confused for some reason
 # and thinks the default target is just one of the object files.
 #
-all:	$(BIN_DIR)/$(DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY)
+# PLATFORM_TARGETS are additional platform-specific targets. The platform
+# Makefile must set it before it includes this file.
+#
+all:	$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_TARGETS)
 
 #
 # Supermodel3.com release targets: used only to create official builds stamped
@@ -254,7 +263,11 @@ release:: all
 #
 # Github release flow (not yet used).
 #
-PKG_FILES += $(BIN_DIR)/$(SUPERMODEL_BINARY) Docs/README.txt Docs/LICENSE.txt Config Assets
+# PLATFORM_PKG_FILES are additional platform-specific files. The package puts
+# them next to the Supermodel binary. The platform Makefile must set it before
+# it includes this file.
+#
+PKG_FILES += $(BIN_DIR)/$(SUPERMODEL_BINARY) Docs/README.txt Docs/LICENSE.txt Config Assets $(PLATFORM_PKG_FILES)
 
 pkg: pkg/$(PKG_TYPE)
 	$(info Cleaning up            : $(PKG_STAGE_PATH))
@@ -280,6 +293,7 @@ pkg/stage:: pkg/path
 	  echo "Save states go here." > Saves/DIR.txt && \
 	  echo "Recommended (but not mandatory) location for ROM sets." > ROMs/DIR.txt && \
 	  mv $(BIN_DIR)/$(SUPERMODEL_BINARY) . && rmdir $(BIN_DIR) && \
+	  $(foreach file,$(PLATFORM_PKG_FILES),mv $(file) . && rmdir $(patsubst %/,%,$(dir $(file))) &&) \
 	  mv Docs//* . && rmdir Docs
 	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
 	$(SILENT)./Scripts/changelog.sh $(PKG_STAGE_PATH)/CHANGES.txt
@@ -319,14 +333,25 @@ $(BIN_DIR)/$(SUPERMODEL_BINARY):	$(BIN_DIR) $(OBJ_FILES)
 	$(info --------------------------------------------------------------------------------)
 
 #
-# Disassembler binary (we assume $(LD) can also compile here, which is sloppy).
-# $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS) pulls in 
-# Frameworks that must be downloaded.
+# PowerPC disassembler binary (we assume $(LD) can also compile here, which is
+# sloppy). $(PLATFORM_DIRS) is required on macOS, whose $(PLATFORM_LDFLAGS)
+# pulls in Frameworks that must be downloaded.
 #
-$(BIN_DIR)/$(DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp $(PLATFORM_DIRS)
+$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY):  $(BIN_DIR) Src/CPU/PowerPC/PPCDisasm.cpp $(PLATFORM_DIRS)
 	$(info --------------------------------------------------------------------------------)
-	$(info Building Disassembler  : $(BIN_DIR)/$(DISASSEMBLER_BINARY))
-	$(SILENT)$(LD) -o $(BIN_DIR)/$(DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
+	$(info Building Disassembler  : $(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY))
+	$(SILENT)$(LD) -o $(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) Src/CPU/PowerPC/PPCDisasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
+	$(info --------------------------------------------------------------------------------)
+
+#
+# 53C810 SCRIPTS disassembler binary (we assume $(LD) can also compile here,
+# which is sloppy). $(PLATFORM_DIRS) is required on macOS, whose
+# $(PLATFORM_LDFLAGS) pulls in Frameworks that must be downloaded.
+#
+$(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY):  $(BIN_DIR) Src/Model3/53C810Disasm.cpp $(PLATFORM_DIRS)
+	$(info --------------------------------------------------------------------------------)
+	$(info Building Disassembler  : $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY))
+	$(SILENT)$(LD) -o $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) Src/Model3/53C810Disasm.cpp -DSTANDALONE $(OPT) $(WARN) $(addprefix -I,$(sort $(INCLUDE_DIRS))) $(CXXSTD) $(PLATFORM_LDFLAGS)
 	$(info --------------------------------------------------------------------------------)
 
 #

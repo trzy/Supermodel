@@ -219,14 +219,15 @@
 #include <cstdlib>
 #include <cstring>
 #include "Supermodel.h"
-#include "DriveBoard/BillBoard.h"
+#include "BillBoard.h"
 #include "DriveBoard/JoystickBoard.h"
 #include "DriveBoard/SkiBoard.h"
 #include "DriveBoard/WheelBoard.h"
 #include "Game.h"
 #include "ROMSet.h"
-#include "Network/NetBoard.h"
-#include "Network/SimNetBoard.h"
+#include "Model3/NetBoard.h"
+#include "Model3/SimNetBoard.h"
+#include "SDLIncludes.h"
 #include "OSD/Audio.h"
 #include "OSD/Video.h"
 #include "Util/Format.h"
@@ -481,11 +482,8 @@ UINT8 CModel3::ReadInputs(unsigned reg)
 
     data = 0xFF;
 
-    if (DriveBoard->IsAttached() && DriveBoard->GetType() != Game::DRIVE_BOARD_BILLBOARD)
-    {
-      // If driveboard is set as billboard, don't read BillBoard reg (no inputs)
+    if (DriveBoard->IsAttached())
       data = DriveBoard->Read();
-    }
 
     if ((m_game.inputs & Game::INPUT_JOYSTICK2))
     {
@@ -659,9 +657,11 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
     inputBank = data;
     break;
 
-  case 0x10:  // Drive board
+  case 0x10:  // Drive board or billboard
     if (DriveBoard->IsAttached())
       DriveBoard->Write(data);
+    if (BillBoard->IsAttached())
+      BillBoard->Write(data);
     if (NULL != Outputs) // TODO - check gameInputs
       Outputs->SetValue(OutputRawDrive, data);
     OutputRegister[0] = data;
@@ -1039,7 +1039,7 @@ UINT8 CModel3::Read8(UINT32 addr)
         break;
       }
     }
-  else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+  else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     return SCSI.ReadRegister(addr&0xFF);
@@ -1333,7 +1333,7 @@ UINT32 CModel3::Read32(UINT32 addr)
       }
 
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     data =  (SCSI.ReadRegister((addr+0)&0xFF) << 24);
@@ -1490,7 +1490,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
 
       break;
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister(addr&0xFF,data);
@@ -1812,7 +1812,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
 
       break;
     }
-    else if (m_stepping > 0x15 || SCSI.GetBaseAddress() != 0xC0) break;
+    else if (m_stepping > Game::Stepping::MODEL3_1_5 || SCSI.GetBaseAddress() != 0xC0) break;
   case 0xF9:
   case 0xC1:
     SCSI.WriteRegister((addr&0xFF)+0,(data>>24)&0xFF);
@@ -1843,6 +1843,11 @@ void CModel3::Write64(UINT32 addr, UINT64 data)
  Emulation and Interface Functions
 ******************************************************************************/
 
+bool CModel3::SupportsSaveStates(void) const
+{
+  return true;
+}
+
 void CModel3::SaveState(CBlockFile *SaveState)
 {
   // Write Model 3 state
@@ -1871,6 +1876,7 @@ void CModel3::SaveState(CBlockFile *SaveState)
   GPU.SaveState(SaveState);
   SoundBoard.SaveState(SaveState);  // also saves DSB state
   DriveBoard->SaveState(SaveState);
+  BillBoard->SaveState(SaveState);
   m_cryptoDevice.SaveState(SaveState);
   m_jtag.SaveState(SaveState);
 }
@@ -1910,6 +1916,7 @@ void CModel3::LoadState(CBlockFile *SaveState)
   ppc_load_state(SaveState);
   SoundBoard.LoadState(SaveState);
   DriveBoard->LoadState(SaveState);
+  BillBoard->LoadState(SaveState);
   m_cryptoDevice.LoadState(SaveState);
   m_jtag.LoadState(SaveState);
 }
@@ -1955,10 +1962,11 @@ void CModel3::RunFrame(void)
     if (!StartThreads())
       goto ThreadError;
 
-    // Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd) and drive board (if attached) so they can process a frame
+    // Wake threads for PPC main board (if multi-threading GPU), sound board (if sync'd), drive board and billboard (if attached) so they can process a frame
     if ((m_gpuMultiThreaded       && !ppcBrdThreadSync->Post()) ||
         (syncSndBrdThread         && !sndBrdThreadSync->Post()) ||
-        (DriveBoard->IsAttached()  && !drvBrdThreadSync->Post()))
+        (DriveBoard->IsAttached()  && !drvBrdThreadSync->Post()) ||
+        (BillBoard->IsAttached()   && !bilBrdThreadSync->Post()))
       goto ThreadError;
 
     // If not multi-threading GPU, then run PPC main board for a frame and sync GPUs now in this thread
@@ -1975,10 +1983,11 @@ void CModel3::RunFrame(void)
     if (!notifyLock->Lock())
       goto ThreadError;
 
-    // Wait for PPC main board, sound board and drive board threads to finish their work (if they are running and haven't finished already)
+    // Wait for PPC main board, sound board, drive board and billboard threads to finish their work (if they are running and haven't finished already)
     while ((m_gpuMultiThreaded      && !ppcBrdThreadDone) ||
            (syncSndBrdThread        && !sndBrdThreadDone) ||
-           (DriveBoard->IsAttached() && !drvBrdThreadDone))
+           (DriveBoard->IsAttached() && !drvBrdThreadDone) ||
+           (BillBoard->IsAttached()  && !bilBrdThreadDone))
     {
       if (!notifySync->Wait(notifyLock))
         goto ThreadError;
@@ -1986,6 +1995,7 @@ void CModel3::RunFrame(void)
     ppcBrdThreadDone = false;
     sndBrdThreadDone = false;
     drvBrdThreadDone = false;
+    bilBrdThreadDone = false;
 
     // Leave notify wait critical section
     if (!notifyLock->Unlock())
@@ -2007,6 +2017,8 @@ void CModel3::RunFrame(void)
     RunSoundBoardFrame();
     if (DriveBoard->IsAttached())
       RunDriveBoardFrame();
+    if (BillBoard->IsAttached())
+      RunBillBoardFrame();
     if (NetBoard->IsRunning())
       RunNetBoardFrame();
   }
@@ -2026,11 +2038,11 @@ static unsigned GetCPUClockFrequencyInHz(const Game &game, Util::Config::Node &c
   unsigned mhz = config["PowerPCFrequency"].ValueAsDefault<unsigned>(0);
   if (!mhz)
   {
-    if (game.stepping == "1.0")
+    if (game.stepping == Game::Stepping::MODEL3_1_0)
     {
       mhz = 66;
     }
-    else if (game.stepping == "1.5")
+    else if (game.stepping == Game::Stepping::MODEL3_1_5)
     {
       mhz = 100;
     }
@@ -2196,6 +2208,13 @@ void CModel3::RunDriveBoardFrame(void)
   timings.drvTicks = CThread::GetTicks() - start;
 }
 
+void CModel3::RunBillBoardFrame(void)
+{
+  UINT32 start = CThread::GetTicks();
+  BillBoard->RunFrame();
+  timings.billTicks = CThread::GetTicks() - start;
+}
+
 void CModel3::RunNetBoardFrame(void)
 {
   NetBoard->RunFrame();
@@ -2226,6 +2245,12 @@ bool CModel3::StartThreads(void)
   {
     drvBrdThreadSync = CThread::CreateSemaphore(0);
     if (drvBrdThreadSync == NULL)
+      goto ThreadError;
+  }
+  if (BillBoard->IsAttached())
+  {
+    bilBrdThreadSync = CThread::CreateSemaphore(0);
+    if (bilBrdThreadSync == NULL)
       goto ThreadError;
   }
   notifyLock = CThread::CreateMutex();
@@ -2263,6 +2288,14 @@ bool CModel3::StartThreads(void)
       goto ThreadError;
   }
 
+  // Create billboard thread, if billboard is attached
+  if (BillBoard->IsAttached())
+  {
+    bilBrdThread = CThread::CreateThread("BillBoard", StartBillBoardThread, this);
+    if (bilBrdThread == NULL)
+      goto ThreadError;
+  }
+
   // Set audio callback if sound board thread is unsync'd
   if (!syncSndBrdThread)
   {
@@ -2290,7 +2323,7 @@ bool CModel3::PauseThreads(void)
 
   // Let threads know that they should pause and wait for all of them to do so
   pauseThreads = true;
-  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
+  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning || bilBrdThreadRunning)
   {
     if (!notifySync->Wait(notifyLock))
       goto ThreadError;
@@ -2345,7 +2378,7 @@ bool CModel3::StopThreads(void)
 
   // Let threads know that they should pause and wait for all of them to do so
   pauseThreads = true;
-  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning)
+  while (ppcBrdThreadRunning || sndBrdThreadRunning || drvBrdThreadRunning || bilBrdThreadRunning)
   {
     if (!notifySync->Wait(notifyLock))
       goto ThreadError;
@@ -2382,6 +2415,11 @@ bool CModel3::StopThreads(void)
     if (drvBrdThreadSync->Post())
       drvBrdThread->Wait();
   }
+  if (bilBrdThread != NULL)
+  {
+    if (bilBrdThreadSync->Post())
+      bilBrdThread->Wait();
+  }
 
   // Delete all thread and synchronization objects
   DeleteThreadObjects();
@@ -2412,6 +2450,11 @@ void CModel3::DeleteThreadObjects(void)
     delete drvBrdThread;
     drvBrdThread = NULL;
   }
+  if (bilBrdThread != NULL)
+  {
+    delete bilBrdThread;
+    bilBrdThread = NULL;
+  }
 
 
   // Delete synchronization objects
@@ -2429,6 +2472,11 @@ void CModel3::DeleteThreadObjects(void)
   {
     delete drvBrdThreadSync;
     drvBrdThreadSync = NULL;
+  }
+  if (bilBrdThreadSync != NULL)
+  {
+    delete bilBrdThreadSync;
+    bilBrdThreadSync = NULL;
   }
 
 
@@ -2456,13 +2504,14 @@ void CModel3::DeleteThreadObjects(void)
 
 void CModel3::DumpTimings(void)
 {
-  printf("PPC:%3ums%c render:%3ums%c sync:%4uK%c%3ums%c snd:%3ums%c drv:%3ums%c frame:%3ums%c\n",
+  printf("PPC:%3ums%c render:%3ums%c sync:%4uK%c%3ums%c snd:%3ums%c drv:%3ums%c bill:%3ums%c frame:%3ums%c\n",
     timings.ppcTicks, (timings.ppcTicks > timings.renderTicks ? '!' : ','),
     timings.renderTicks, (timings.renderTicks > timings.ppcTicks ? '!' : ','),
     timings.syncSize / 1024, (timings.syncSize / 1024 > 128 ? '!' : ','),
     timings.syncTicks, (timings.syncTicks > 1 ? '!' : ','),
     timings.sndTicks, (timings.sndTicks > 10 ? '!' : ','),
     timings.drvTicks, (timings.drvTicks > 10 ? '!' : ','),
+    timings.billTicks, (timings.billTicks > 10 ? '!' : ','),
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
 
@@ -2497,6 +2546,13 @@ int CModel3::StartDriveBoardThread(void *data)
   // Call method on CModel3 to run drive board thread
   CModel3 *model3 = (CModel3*)data;
   return model3->RunDriveBoardThread();
+}
+
+int CModel3::StartBillBoardThread(void *data)
+{
+  // Call method on CModel3 to run billboard thread
+  CModel3 *model3 = (CModel3*)data;
+  return model3->RunBillBoardThread();
 }
 
 int CModel3::RunMainBoardThread(void)
@@ -2796,6 +2852,62 @@ ThreadError:
   return 1;
 }
 
+int CModel3::RunBillBoardThread(void)
+{
+  for (;;)
+  {
+    bool wait = true;
+    bool exit = false;
+    while (wait && !exit)
+    {
+      // Wait on billboard thread semaphore
+      if (!bilBrdThreadSync->Wait())
+        goto ThreadError;
+
+      // Enter notify critical section
+      if (!notifyLock->Lock())
+        goto ThreadError;
+
+      // Check threads are not being stopped or paused
+      if (stopThreads)
+        exit = true;
+      else if (!pauseThreads)
+      {
+        wait = false;
+        bilBrdThreadRunning = true;
+      }
+
+      // Leave notify critical section
+      if (!notifyLock->Unlock())
+        goto ThreadError;
+    }
+    if (exit)
+      return 0;
+
+    // Process a single frame for billboard
+    RunBillBoardFrame();
+
+    // Enter notify critical section
+    if (!notifyLock->Lock())
+      goto ThreadError;
+
+    // Let other threads know processing has finished
+    bilBrdThreadRunning = false;
+    bilBrdThreadDone = true;
+    if (!notifySync->SignalAll())
+      goto ThreadError;
+
+    // Leave notify critical section
+    if (!notifyLock->Unlock())
+      goto ThreadError;
+  }
+
+ThreadError:
+  ErrorLog("Threading error in RunBillBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
+  m_multiThreaded = false;
+  return 1;
+}
+
 void CModel3::Reset(void)
 {
   // Clear memory (but do not modify backup RAM!)
@@ -2832,6 +2944,8 @@ void CModel3::Reset(void)
 
   if (DriveBoard->IsAttached())
     DriveBoard->Reset();
+  if (BillBoard->IsAttached())
+    BillBoard->Reset();
 
   m_cryptoDevice.Reset();
 
@@ -2843,6 +2957,7 @@ void CModel3::Reset(void)
   timings.renderTicks = 0;
   timings.sndTicks = 0;
   timings.drvTicks = 0;
+  timings.billTicks = 0;
   timings.netTicks = 0;
   NetBoard->Reset();
   timings.frameTicks = 0;
@@ -2861,10 +2976,104 @@ const Game &CModel3::GetGame() const
   return m_game;
 }
 
-// Stepping-dependent parameters (MPC10x type, etc.) are initialized here
-Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
+void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  m_game = Game();
+  TileGen.AttachRenderer(dynamic_cast<CRender2D *>(Render2DPtr));
+  Render3DPtr->SetStepping(m_stepping);
+  GPU.AttachRenderer(Render3DPtr);
+  m_superAA = superAA;
+}
+
+constexpr static int RAM_SIZE			= 0x800000;		//8MB
+constexpr static int CROM_SIZE			= 0x800000;		//8MB
+constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
+constexpr static int VROM_SIZE			= 0x4000000;	//64MB
+constexpr static int BACKUPRAM_SIZE		= 0x20000;		//128KB
+constexpr static int SECURITYRAM_SIZE	= 0x20000;		//128KB
+constexpr static int SOUNDROM_SIZE		= 0x80000;		//512KB
+constexpr static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
+constexpr static int DSBPROGROM_SIZE	= 0x20000;		//128KB
+constexpr static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
+constexpr static int DRIVEROM_SIZE		= 0x10000;		//64KB
+constexpr static int NETBUFFER_SIZE		= 0x20000;		//128KB
+constexpr static int NETRAM_SIZE		= 0x10000;		//64KB
+
+constexpr static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
+                                        CROMxx_SIZE + VROM_SIZE +
+                                        BACKUPRAM_SIZE + SECURITYRAM_SIZE +
+                                        SOUNDROM_SIZE + SAMPLEROM_SIZE +
+                                        DSBPROGROM_SIZE + DSBMPEGROM_SIZE +
+                                        DRIVEROM_SIZE + NETBUFFER_SIZE +
+                                        NETRAM_SIZE;
+
+constexpr static int RAM_OFFSET			= 0;
+constexpr static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
+constexpr static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
+constexpr static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
+constexpr static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
+constexpr static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
+constexpr static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
+constexpr static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
+constexpr static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
+constexpr static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
+constexpr static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
+constexpr static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
+constexpr static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
+
+// Model 3 initialization: memory, devices, ROMs, and the stepping-dependent
+// parameters (MPC10x type, etc.)
+Result CModel3::Init(const Game &game, const ROMSet &rom_set)
+{
+  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
+
+  // Allocate all memory for ROMs and PPC RAM
+  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
+  if (NULL == memoryPool)
+    return ErrorLog("Insufficient memory for Model 3 object (needs %1.1f MB).", memSizeMB);
+  memset(memoryPool, 0, MEM_POOL_SIZE);
+
+  // Set up pointers
+  ram = &memoryPool[RAM_OFFSET];
+  crom = &memoryPool[CROM_OFFSET];
+  vrom = &memoryPool[VROM_OFFSET];
+  soundROM = &memoryPool[SOUNDROM_OFFSET];
+  sampleROM = &memoryPool[SAMPLEROM_OFFSET];
+  dsbROM = &memoryPool[DSBPROGROM_OFFSET];
+  mpegROM = &memoryPool[DSBMPEGROM_OFFSET];
+  backupRAM = &memoryPool[BACKUPRAM_OFFSET];
+  securityRAM = &memoryPool[SECURITYRAM_OFFSET];
+  driveROM = &memoryPool[DRIVEROM_OFFSET];
+  netRAM = &memoryPool[NETRAM_OFFSET];
+  netBuffer = &memoryPool[NETBUFFER_OFFSET];
+
+  SetCROMBank(0xFF);
+
+  // Initialize devices (the PowerPC, DSB, drive board, and security board are
+  // initialized after the ROMs are loaded)
+  IRQ.Init();
+  PCIBridge.Init();
+  PCIBus.Init();
+  SCSI.Init(this,&IRQ,CIRQ::NMI); // SCSI is actually a non-maskable interrupt
+  RTC.Init();
+  EEPROM.Init();
+  if (Result::OKAY != TileGen.Init(&IRQ))
+    return Result::FAIL;
+  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI,Real3DConfig::Model3(game.stepping))) // same for Real3D DMA interrupt
+    return Result::FAIL;
+  if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
+    return Result::FAIL;
+
+  PCIBridge.AttachPCIBus(&PCIBus);
+  PCIBus.AttachDevice(13,&GPU);
+  PCIBus.AttachDevice(14,&SCSI);
+  PCIBus.AttachDevice(16,this);
+
+  if (m_config["SimulateNet"].ValueAs<bool>())
+      NetBoard = new CSimNetBoard(m_config, m_server);
+  else
+      NetBoard = new CNetBoard(m_config, m_server);
+
+  DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
 
   /*
    * Copy in ROM data with mirroring as necessary for the following cases:
@@ -2912,21 +3121,21 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
 
   // Configure CPU and PCI bridge
   PPC_CONFIG  ppc_config;
-  if (game.stepping == "2.0" || game.stepping == "2.1")
+  if (game.stepping == Game::Stepping::MODEL3_2_0 || game.stepping == Game::Stepping::MODEL3_2_1)
   {
     ppc_config.pvr = PPC_MODEL_603R;  // 166 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x25; // 2.5X multiplier
     PCIBridge.SetModel(0x106);        // MPC106
   }
-  else if (game.stepping == "1.5")
+  else if (game.stepping == Game::Stepping::MODEL3_1_5)
   {
     ppc_config.pvr = PPC_MODEL_603E;  // 100 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
     ppc_config.bus_frequency_multiplier = 0x15; // 1.5X multiplier
     PCIBridge.SetModel(0x105);        // MPC105
   }
-  else if (game.stepping == "1.0")
+  else if (game.stepping == Game::Stepping::MODEL3_1_0)
   {
     ppc_config.pvr = PPC_MODEL_603R;  // 66 MHz
     ppc_config.bus_frequency = BUS_FREQUENCY_66MHZ;
@@ -2935,7 +3144,7 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   }
   else
   {
-    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", game.stepping.c_str());
+    ErrorLog("Cannot configure Model 3 because game uses unrecognized stepping (%s).", Game::SteppingName(game.stepping));
     return Result::FAIL;
   }
 
@@ -2953,9 +3162,8 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   PPCFetchRegions[2].ptr = NULL;
   ppc_set_fetch(PPCFetchRegions);
 
-  // Initialize Real3D
-  m_stepping = ((game.stepping[0] - '0') << 4) | (game.stepping[2] - '0');
-  GPU.SetStepping(m_stepping);
+  // JTAG scan chain of the stepping
+  m_stepping = game.stepping;
   m_jtag.SetStepping(m_stepping);
 
   // MPEG board (if present)
@@ -2994,12 +3202,6 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
     if (DriveBoard->Init(driveROM) != Result::OKAY)
       return Result::FAIL;
   }
-  else if (game.driveboard_type == Game::DRIVE_BOARD_BILLBOARD && rom_set.get_rom("driveboard_program").size)
-  {
-    DriveBoard = new CBillBoard(m_config);
-    if (DriveBoard->Init(driveROM) != Result::OKAY)
-      return Result::FAIL;
-  }
   else if (game.driveboard_type == Game::DRIVE_BOARD_SKI)
   {
     DriveBoard = new CSkiBoard(m_config);
@@ -3014,6 +3216,13 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
       return Result::FAIL;
   }
 
+  // Billboard (if present). Its program ROM is loaded into the drive board ROM region. All it does is drive
+  // the outputs, so it is only emulated when there are outputs to send them to.
+  BillBoard = new CBillBoard();
+  bool hasBillBoard = game.driveboard_type == Game::DRIVE_BOARD_BILLBOARD && rom_set.get_rom("driveboard_program").size;
+  if (BillBoard->Init(hasBillBoard && Outputs ? driveROM : nullptr) != Result::OKAY)
+    return Result::FAIL;
+
   // Security board encryption device
   m_cryptoDevice.Init(game.encryption_key, std::bind(&CModel3::ReadSecurityRAM, this, std::placeholders::_1));
 
@@ -3023,12 +3232,11 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   if (DSB)
     extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << (game.mpeg_board == Game::MPEG_BOARD_DSB1 ? 1 : 2) << ")");
   if (DriveBoard->IsAttached())
-  {
-    if (DriveBoard->GetType() == Game::DRIVE_BOARD_BILLBOARD)
-      extra_hw.insert("Billboard");
-    else
-      extra_hw.insert("Drive Board");
-  }
+    extra_hw.insert("Drive Board");
+  if (BillBoard->IsAttached())
+    extra_hw.insert("Billboard");
+  else if (hasBillBoard)
+    extra_hw.insert("Billboard (not emulated, outputs are off)");
   if (game.encryption_key)
     extra_hw.insert("Security Board");
   if (game.netboard_present)
@@ -3040,140 +3248,35 @@ Result CModel3::LoadGame(const Game &game, const ROMSet &rom_set)
   std::cout << "    ROM Set:        " << game.name << std::endl;
   std::cout << "    Developer:      " << game.manufacturer << std::endl;
   std::cout << "    Year:           " << game.year << std::endl;
-  std::cout << "    Stepping:       " << game.stepping << std::endl;
+  std::cout << "    Hardware:       " << Game::SteppingName(game.stepping) << std::endl;
   if (!extra_hw.empty())
     std::cout << "    Extra Hardware: " << Util::Format(", ").Join(extra_hw) << std::endl;
   std::cout << std::endl;
 
   m_game = game;
+
+  // Inputs and outputs need the game
+  if (Outputs)
+  {
+    Outputs->SetGame(m_game);
+    Outputs->Attached();
+  }
+  if (DriveBoard->IsAttached())
+  {
+    DriveBoard->AttachInputs(Inputs, m_game.inputs);
+    if (Outputs)
+      DriveBoard->AttachOutputs(Outputs);
+  }
+  if (BillBoard->IsAttached() && Outputs)
+    BillBoard->AttachOutputs(Outputs);
+
   NetBoard->GetGame(m_game);
   if (Result::OKAY != NetBoard->Init(netRAM, netBuffer))
   {
     return Result::FAIL;
   }
 
-  m_runNetBoard = m_game.stepping != "1.0" && NetBoard->IsAttached();
-
-  return Result::OKAY;
-}
-
-void CModel3::AttachRenderers(CRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
-{
-  TileGen.AttachRenderer(Render2DPtr);
-  GPU.AttachRenderer(Render3DPtr);
-  m_superAA = superAA;
-}
-
-void CModel3::AttachInputs(CInputs *InputsPtr)
-{
-  Inputs = InputsPtr;
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachInputs(Inputs, m_game.inputs);
-
-  DebugLog("Model 3 attached inputs\n");
-}
-
-void CModel3::AttachOutputs(COutputs *OutputsPtr)
-{
-  Outputs = OutputsPtr;
-  Outputs->SetGame(m_game);
-  Outputs->Attached();
-
-  if (DriveBoard->IsAttached())
-    DriveBoard->AttachOutputs(Outputs);
-
-  DebugLog("Model 3 attached outputs\n");
-}
-
-constexpr static int RAM_SIZE			= 0x800000;		//8MB
-constexpr static int CROM_SIZE			= 0x800000;		//8MB
-constexpr static int CROMxx_SIZE		= 0x8000000;	//128MB
-constexpr static int VROM_SIZE			= 0x4000000;	//64MB
-constexpr static int BACKUPRAM_SIZE		= 0x20000;		//128KB
-constexpr static int SECURITYRAM_SIZE	= 0x20000;		//128KB
-constexpr static int SOUNDROM_SIZE		= 0x80000;		//512KB
-constexpr static int SAMPLEROM_SIZE		= 0x1000000;	//16MB
-constexpr static int DSBPROGROM_SIZE	= 0x20000;		//128KB
-constexpr static int DSBMPEGROM_SIZE	= 0x1000000;	//16MB
-constexpr static int DRIVEROM_SIZE		= 0x10000;		//64KB
-constexpr static int NETBUFFER_SIZE		= 0x20000;		//128KB
-constexpr static int NETRAM_SIZE		= 0x10000;		//64KB
-
-constexpr static int MEM_POOL_SIZE		= RAM_SIZE + CROM_SIZE +
-                                        CROMxx_SIZE + VROM_SIZE +
-                                        BACKUPRAM_SIZE + SECURITYRAM_SIZE +
-                                        SOUNDROM_SIZE + SAMPLEROM_SIZE +
-                                        DSBPROGROM_SIZE + DSBMPEGROM_SIZE +
-                                        DRIVEROM_SIZE + NETBUFFER_SIZE +
-                                        NETRAM_SIZE;
-
-constexpr static int RAM_OFFSET			= 0;
-constexpr static int CROM_OFFSET		= RAM_OFFSET + RAM_SIZE;
-constexpr static int CROMxx_OFFSET		= CROM_OFFSET + CROM_SIZE;
-constexpr static int VROM_OFFSET		= CROMxx_OFFSET + CROMxx_SIZE;
-constexpr static int BACKUPRAM_OFFSET	= VROM_OFFSET + VROM_SIZE;
-constexpr static int SECURITYRAM_OFFSET	= BACKUPRAM_OFFSET + BACKUPRAM_SIZE;
-constexpr static int SOUNDROM_OFFSET	= SECURITYRAM_OFFSET + SECURITYRAM_SIZE;
-constexpr static int SAMPLEROM_OFFSET	= SOUNDROM_OFFSET + SOUNDROM_SIZE;
-constexpr static int DSBPROGROM_OFFSET	= SAMPLEROM_OFFSET + SAMPLEROM_SIZE;
-constexpr static int DSBMPEGROM_OFFSET	= DSBPROGROM_OFFSET + DSBPROGROM_SIZE;
-constexpr static int DRIVEROM_OFFSET	= DSBMPEGROM_OFFSET + DSBMPEGROM_SIZE;
-constexpr static int NETBUFFER_OFFSET	= DRIVEROM_OFFSET + DRIVEROM_SIZE;
-constexpr static int NETRAM_OFFSET		= NETBUFFER_OFFSET + NETBUFFER_SIZE;
-
-// Model 3 initialization. Some initialization is deferred until ROMs are loaded in LoadROMSet()
-Result CModel3::Init(void)
-{
-  constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
-
-  // Allocate all memory for ROMs and PPC RAM
-  memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
-  if (NULL == memoryPool)
-    return ErrorLog("Insufficient memory for Model 3 object (needs %1.1f MB).", memSizeMB);
-  memset(memoryPool, 0, MEM_POOL_SIZE);
-
-  // Set up pointers
-  ram = &memoryPool[RAM_OFFSET];
-  crom = &memoryPool[CROM_OFFSET];
-  vrom = &memoryPool[VROM_OFFSET];
-  soundROM = &memoryPool[SOUNDROM_OFFSET];
-  sampleROM = &memoryPool[SAMPLEROM_OFFSET];
-  dsbROM = &memoryPool[DSBPROGROM_OFFSET];
-  mpegROM = &memoryPool[DSBMPEGROM_OFFSET];
-  backupRAM = &memoryPool[BACKUPRAM_OFFSET];
-  securityRAM = &memoryPool[SECURITYRAM_OFFSET];
-  driveROM = &memoryPool[DRIVEROM_OFFSET];
-  netRAM = &memoryPool[NETRAM_OFFSET];
-  netBuffer = &memoryPool[NETBUFFER_OFFSET];
-
-  SetCROMBank(0xFF);
-
-  // Initialize other devices (PowerPC, DSB, and security board initialized after ROMs loaded)
-  IRQ.Init();
-  PCIBridge.Init();
-  PCIBus.Init();
-  SCSI.Init(this,&IRQ,CIRQ::NMI); // SCSI is actually a non-maskable interrupt
-  RTC.Init();
-  EEPROM.Init();
-  if (Result::OKAY != TileGen.Init(&IRQ))
-    return Result::FAIL;
-  if (Result::OKAY != GPU.Init(vrom,this,&IRQ,CIRQ::NMI)) // same for Real3D DMA interrupt
-    return Result::FAIL;
-  if (Result::OKAY != SoundBoard.Init(soundROM,sampleROM))
-    return Result::FAIL;
-
-  PCIBridge.AttachPCIBus(&PCIBus);
-  PCIBus.AttachDevice(13,&GPU);
-  PCIBus.AttachDevice(14,&SCSI);
-  PCIBus.AttachDevice(16,this);
-
-  if (m_config["SimulateNet"].ValueAs<bool>())
-      NetBoard = new CSimNetBoard(m_config);
-  else
-      NetBoard = new CNetBoard(m_config);
-
-  DebugLog("Initialized Model 3 (allocated %1.1f MB)\n", memSizeMB);
+  m_runNetBoard = m_game.stepping != Game::Stepping::MODEL3_1_0 && NetBoard->IsAttached();
 
   return Result::OKAY;
 }
@@ -3188,28 +3291,34 @@ CDriveBoard *CModel3::GetDriveBoard(void)
   return DriveBoard;
 }
 
+CBillBoard *CModel3::GetBillBoard(void)
+{
+  return BillBoard;
+}
+
 INetBoard *CModel3::GetNetBoard(void)
 {
   return NetBoard;
 }
 
-CModel3::CModel3(Util::Config::Node &config)
+CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server)
   : m_config(config),
     m_multiThreaded(config["MultiThreaded"].ValueAs<bool>()),
     m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    Inputs(inputs),
+    Outputs(outputs),
     sndBrdWakeNotify(false),
     TileGen(config),
     GPU(config),
     SoundBoard(config),
     m_jtag(GPU),
-    m_superAA(nullptr)
+    m_superAA(nullptr),
+    m_server(std::move(server))
 {
   // Initialize pointers so dtor can know whether to free them
   memoryPool = NULL;
 
   // Various uninitialized pointers
-  Inputs = NULL;
-  Outputs = NULL;
   ram = NULL;
   crom = NULL;
   vrom = NULL;
@@ -3225,6 +3334,7 @@ CModel3::CModel3(Util::Config::Node &config)
 
   DSB = NULL;
   DriveBoard = NULL;
+  BillBoard = NULL;
 
   NetBoard = NULL;
   m_runNetBoard = false;
@@ -3237,6 +3347,7 @@ CModel3::CModel3(Util::Config::Node &config)
   ppcBrdThread = NULL;
   sndBrdThread = NULL;
   drvBrdThread = NULL;
+  bilBrdThread = NULL;
 
   ppcBrdThreadRunning = false;
   ppcBrdThreadDone = false;
@@ -3244,16 +3355,19 @@ CModel3::CModel3(Util::Config::Node &config)
   sndBrdThreadDone = false;
   drvBrdThreadRunning = false;
   drvBrdThreadDone = false;
+  bilBrdThreadRunning = false;
+  bilBrdThreadDone = false;
 
   syncSndBrdThread = false;
   ppcBrdThreadSync = NULL;
   sndBrdThreadSync = NULL;
   drvBrdThreadSync = NULL;
+  bilBrdThreadSync = NULL;
 
   notifyLock = NULL;
   notifySync = NULL;
 
-  m_stepping = 0;
+  m_stepping = Game::Stepping::UNKNOWN;
   inputBank = 0;
   serialFIFO1 = 0;
   serialFIFO2 = 0;
@@ -3324,6 +3438,12 @@ CModel3::~CModel3(void)
   {
       delete DriveBoard;
       DriveBoard = NULL;
+  }
+
+  if (BillBoard != NULL)
+  {
+      delete BillBoard;
+      BillBoard = NULL;
   }
 
   if (NetBoard != NULL)

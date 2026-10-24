@@ -371,11 +371,6 @@ void CDriveBoard::RunFrame(void)
           // reset timer
           m_nmiTimerVal = freq / m_z80CTC.CalcFrequency(1, freq);
       }
-
-      // billboard needs this
-      if (m_allowInterrupts) {
-          m_z80.SetINT(true);       // once per frame seems enough, not sure what triggers this
-      }
   }
 }
 
@@ -384,7 +379,7 @@ Result CDriveBoard::Init(const UINT8* romPtr)
     // This constructor must present a valid ROM
     if (!romPtr)
     {
-      return ErrorLog("Internal error: no drive board ROM supplied.");
+      return ErrorLog("Internal error: No drive board ROM supplied.");
     }
 
     // Assign ROM (note that the ROM data has not yet been loaded)
