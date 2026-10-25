@@ -1299,6 +1299,14 @@ void CNew3D::RenderViewport(UINT32 addr)
 		// Set up coordinate system and base matrix
 		InitMatrixStack(matrixBase, vpnode[0x15] & 0xFFF, m_modelMat);
 
+		// a work around for vf3, when booting it tries to render before the memory is setup correctly and it's matrices are garbage
+		// this causes long start up times. The real h/w probably bails out after a fixed number of polys or some other mechanism
+		if (std::fpclassify(m_modelMat.currentMatrix[0]) == FP_SUBNORMAL && 
+			std::fpclassify(m_modelMat.currentMatrix[1]) == FP_SUBNORMAL && 
+			std::fpclassify(m_modelMat.currentMatrix[2]) == FP_SUBNORMAL) {
+			vpDisabled = true;
+		}
+
 		// Descend down the node link
 		if (!vpDisabled) {
 			UINT32 child = vpnode[0x02];
