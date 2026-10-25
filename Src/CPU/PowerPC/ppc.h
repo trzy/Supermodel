@@ -351,6 +351,7 @@ typedef struct
 extern UINT32 ppc_get_pc(void);
 extern void ppc_set_irq_line(int irqline);
 extern int ppc_execute(int cycles);
+extern void ppc_add_cycles(int cycles);		// extra cycles taken by the current instruction (memory wait states)
 extern void ppc_reset(void);
 extern void ppc_shutdown(void);
 extern void ppc_init(const PPC_CONFIG *config);		// must be called second!

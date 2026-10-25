@@ -1008,6 +1008,7 @@ UINT8 CModel3::Read8(UINT32 addr)
     if (addr < 0xF1120000)
     {
       // Tile generator accesses its RAM as little endian, no adjustment needed here
+      ppc_add_cycles(TileGen.BusAccessCycles(ppc_total_cycles(), false, addr < 0xF1100000));
       return TileGen.ReadRAM8(addr & 0x1FFFFF);
     }
     break;
@@ -1135,6 +1136,7 @@ UINT16 CModel3::Read16(UINT32 addr)
     if (addr < 0xF1120000)
     {
       // Tile generator accesses its RAM as little endian, no adjustment needed here
+      ppc_add_cycles(TileGen.BusAccessCycles(ppc_total_cycles(), false, addr < 0xF1100000));
       data = TileGen.ReadRAM16(addr&0x1FFFFF);
       return FLIPENDIAN16(data);
     }
@@ -1289,6 +1291,7 @@ UINT32 CModel3::Read32(UINT32 addr)
     // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
     if (addr < 0xF1120000)
     {
+      ppc_add_cycles(TileGen.BusAccessCycles(ppc_total_cycles(), false, addr < 0xF1100000));
       data = TileGen.ReadRAM32(addr&0x1FFFFF);
       return FLIPENDIAN32(data);
     }
@@ -1406,6 +1409,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
       {
         SoundBoard.WriteMIDIPort(data);
         IRQ.Deassert(0x40);
+        midiAckCycle = ppc_total_cycles();
       }
       else if ((addr & 0xF) == 4) // MIDI control port
       {
@@ -1446,6 +1450,7 @@ void CModel3::Write8(UINT32 addr, UINT8 data)
     if (addr < 0xF1120000)
     {
       // Tile generator accesses its RAM as little endian, no adjustment needed here
+      ppc_add_cycles(TileGen.BusAccessCycles(ppc_total_cycles(), true, addr < 0xF1100000));
       TileGen.WriteRAM8(addr&0x1FFFFF, data);
       break;
     }
@@ -1561,6 +1566,7 @@ void CModel3::Write16(UINT32 addr, UINT16 data)
     if (addr < 0xF1120000)
     {
       // Tile generator accesses its RAM as little endian, no adjustment needed here
+      ppc_add_cycles(TileGen.BusAccessCycles(ppc_total_cycles(), true, addr < 0xF1100000));
       TileGen.WriteRAM16(addr&0x1FFFFF, FLIPENDIAN16(data));
     }
     goto Unknown16;
@@ -1753,6 +1759,7 @@ void CModel3::Write32(UINT32 addr, UINT32 data)
     {
       // Tile generator accesses its RAM as little endian, must flip for big endian PowerPC
       data = FLIPENDIAN32(data);
+      ppc_add_cycles(TileGen.BusAccessCycles(ppc_total_cycles(), true, addr < 0xF1100000));
       TileGen.WriteRAM32(addr&0x1FFFFF,data);
       break;
     }
@@ -2070,6 +2077,10 @@ void CModel3::RunMainBoardFrame(void)
 	 */ 
 	unsigned ppcCycles		= GetCPUClockFrequencyInHz(m_game, m_config);
 	unsigned frameCycles	= (unsigned)((float)ppcCycles / 57.524160f);
+
+	// Tile and palette RAM bus timing: nothing is fetched during vertical blanking
+	TileGen.SetCPUClock(ppcCycles);
+	TileGen.BeginBusBlanking();
 	unsigned lineCycles     = frameCycles / 424;
     unsigned vBlankCycles   = lineCycles * 40;
 
@@ -2118,6 +2129,21 @@ void CModel3::RunMainBoardFrame(void)
 			if ((IRQ.ReadIRQEnable() & 0x40) == 0)
 				break;
 
+            // PowerPC cycles to allow after a MIDI byte is written before IRQ 0x40 can be asserted again
+            static const UINT64 MIDI_IRQ_MIN_CYCLES = 1000;
+
+			// On the sound board the MIDI interrupt only comes back once the previous byte has been sent, long after
+			// the PowerPC acknowledged it by writing that byte. Games return from the interrupt by polling until IRQ
+			// 0x40 is clear (Scud Race at 1DB0), so asserting it again before the handler has got there leaves the
+			// PowerPC spinning forever. Give it time to finish the handler first.
+			const UINT64 sinceAck = ppc_total_cycles() - midiAckCycle;
+			if (sinceAck < MIDI_IRQ_MIN_CYCLES)
+			{
+				const unsigned wait = (unsigned)(MIDI_IRQ_MIN_CYCLES - sinceAck);
+				ppc_execute(wait);
+				vBlankCycles -= std::min(wait, vBlankCycles);
+			}
+
 			// Process MIDI interrupt
 			IRQ.Assert(0x40);
 			ppc_execute(1000); // give PowerPC time to acknowledge IR
@@ -2153,6 +2179,7 @@ void CModel3::RunMainBoardFrame(void)
         }
 
         TileGen.DrawLine(i);
+        TileGen.BeginBusLine(ppc_total_cycles());
         ppc_execute(lineCycles);
     }
 
@@ -2928,6 +2955,7 @@ void CModel3::Reset(void)
 
   // MIDI
   midiCtrlPort = 0;
+  midiAckCycle = 0;
 
   // Reset all devices
   ppc_reset();
@@ -3375,6 +3403,7 @@ CModel3::CModel3(Util::Config::Node &config, CInputs *inputs, COutputs *outputs,
   adcChannel = 0;
 
   midiCtrlPort = 0;
+  midiAckCycle = 0;
   driveROM = nullptr;
   OutputRegister[0] = OutputRegister[1] = 0;
   cromBankReg = 0;

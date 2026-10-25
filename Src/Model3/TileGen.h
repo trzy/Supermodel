@@ -253,6 +253,29 @@ public:
 	void DrawLine(int line);	// from 0-383
 
 	/*
+	 * Tile and palette RAM bus timing
+	 *
+	 * The tile generator RAM (Samsung KM4132G271A) runs at 32 MHz, twice the 16 MHz pixel clock. An access takes 4
+	 * clocks (row, column, wait, data). The tile generator chip accepts one write to tile RAM or palette RAM every
+	 * ~6.3 pixels. On each active line it generates 512 pixels (496 visible) as 32 tile pairs of 32 clocks: 28
+	 * clocks fetch the next tile pair (16 pixels) of layers A and B, leaving one 4-clock slot for the PowerPC, so
+	 * tile RAM is slowed further to one access per 16 pixels. The remaining 144 pixels of the line (horizontal
+	 * blanking) are free. Some games rely on this: Scud Race queues its palette uploads at the rate it can write
+	 * tile RAM, and the queue overflows if tile RAM writes are too fast.
+	 *
+	 * SetCPUClock(hz):     PowerPC clock frequency, to convert VRAM clocks to PowerPC cycles.
+	 * BeginBusLine(cycle): an active line starts at this PowerPC cycle (ppc_total_cycles()).
+	 * BeginBusBlanking():  vertical blanking starts, nothing is fetched.
+	 * BusAccessCycles(cycle, write, tileRAM):
+	 *    Extra PowerPC cycles for an access to tile RAM (tileRAM = true) or palette RAM at this PowerPC cycle. A
+	 *    write is posted, so the PowerPC only waits until the chip takes it; a read waits for its data.
+	 */
+	void SetCPUClock(unsigned hz);
+	void BeginBusLine(UINT64 cpuCycle);
+	void BeginBusBlanking(void);
+	int  BusAccessCycles(UINT64 cpuCycle, bool write, bool tileRAM);
+
+	/*
 	 * CTileGen(config):
 	 * ~CTileGen(void):
 	 *
@@ -326,6 +349,13 @@ private:
 
 	// Registers
 	UINT32	m_regs[64];
+
+	// Tile and palette RAM bus timing, in 1/16 PowerPC cycles (exact for 66, 100 and 166 MHz)
+	UINT64	m_busClock = 50;		// one VRAM clock
+	UINT64	m_busWriteGap = 630;	// minimum time between writes (~6.3 pixels = 12.6 clocks)
+	UINT64	m_busFree = 0;			// when the next access can start
+	UINT64	m_busLineStart = 0;		// start of the active line
+	bool	m_busFetching = false;	// in the active part of the frame
 
 	// buffers we draw to
 	std::shared_ptr<TileGenBuffer> m_drawSurface[2];	// drawing surfaces 0 = bottom, 1 = top

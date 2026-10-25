@@ -246,24 +246,43 @@ void ppc_reset(void)
 	DEC = 0xffffffff;
 	ppc.total_cycles = 0;
 	ppc.cur_cycles = 0;
+	ppc.overrun = 0;
 	ppc.icount = 0;
+}
+
+/*
+ * Extra cycles taken by the instruction being executed, e.g. the wait states of a slow memory access. The timebase
+ * and decrementer are derived from the cycle count, so they advance by these cycles too. If the time slice runs out,
+ * the cycles past its end are taken from the next one.
+ */
+void ppc_add_cycles(int cycles)
+{
+	ppc.icount -= cycles;
 }
 
 int ppc_execute(int cycles)
 {
 	UINT32 opcode;
 
-	ppc.cur_cycles = cycles;
-	ppc.icount = cycles;
-	ppc.tb_base_icount = cycles + ppc.timer_frac;
-	ppc.dec_base_icount = cycles + ppc.timer_frac;
+	// Nothing to run (a caller's cycle count may have run out). Any overrun is kept for the next slice.
+	if (cycles <= 0)
+		return 0;
+
+	// The previous time slice may have run over (ppc_add_cycles)
+	int start = cycles - ppc.overrun;
+	ppc.overrun = 0;
+
+	ppc.cur_cycles = start;
+	ppc.icount = start;
+	ppc.tb_base_icount = start + ppc.timer_frac;
+	ppc.dec_base_icount = start + ppc.timer_frac;
 
 	// Check if decrementer exception occurs during execution (exception occurs after decrementer
 	// has passed through zero)
 	if ((UINT32)(ppc.dec_base_icount / ppc.timer_ratio) > DEC)
 		ppc.dec_trigger_cycle = ppc.dec_base_icount - ((1 + DEC) * ppc.timer_ratio);
 	else
-		ppc.dec_trigger_cycle = 0x7fffffff;
+		ppc.dec_trigger_cycle = DEC_TRIGGER_NONE;
 
 	ppc_change_pc(ppc.npc);
 
@@ -317,8 +336,10 @@ int ppc_execute(int cycles)
 
 		ppc.icount--;
 		
-		if (ppc.icount == ppc.dec_trigger_cycle)
+		// <= rather than ==, as ppc_add_cycles() can step over the trigger cycle
+		if (ppc.icount <= ppc.dec_trigger_cycle)
 		{
+			ppc.dec_trigger_cycle = DEC_TRIGGER_NONE;
 			ppc.interrupt_pending |= 0x2;
 			ppc603_check_interrupts();
 		}
@@ -346,8 +367,10 @@ int ppc_execute(int cycles)
 	}
 	*/
 
-	int executed = cycles - ppc.icount;
+	int executed = ppc.cur_cycles - ppc.icount;
 	ppc.total_cycles += executed;
+	if (ppc.icount < 0)
+		ppc.overrun = -ppc.icount;
 	ppc.cur_cycles = 0;
 	ppc.icount = 0;
 	ppc.tb_base_icount = 0;

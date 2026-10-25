@@ -31,6 +31,9 @@
 #include "ppc.h"
 
 #include <cstring>	// memset()
+#include <climits>
+
+#define DEC_TRIGGER_NONE	INT_MIN		// the decrementer does not pass zero in this time slice
 #include "Supermodel.h"
 #include "CPU/Bus.h"
 
@@ -257,12 +260,13 @@ typedef struct {
 	UINT32 timer_frac;
 	int tb_base_icount;
 	int dec_base_icount;
-	int dec_trigger_cycle;
+	int dec_trigger_cycle;		// icount at which the decrementer passes zero, DEC_TRIGGER_NONE if not in this time slice
 	
 	// Cycle related
 	UINT64 total_cycles;
 	int icount;
 	int cur_cycles;
+	int overrun;				// cycles the last time slice ran past its end (see ppc_add_cycles), taken from the next one
 	int bus_freq_multiplier;
 	int cycles_per_second;
 
@@ -480,7 +484,7 @@ static inline void write_decrementer(UINT32 value)
 	if ((UINT32)(ppc.dec_base_icount / ppc.timer_ratio) > DEC)
 		ppc.dec_trigger_cycle = ppc.dec_base_icount - ((1 + DEC) * ppc.timer_ratio);
 	else
-		ppc.dec_trigger_cycle = 0x7fffffff;
+		ppc.dec_trigger_cycle = DEC_TRIGGER_NONE;
 }
 
 /*********************************************************************/
@@ -1056,6 +1060,7 @@ void ppc_load_state(CBlockFile *SaveState)
 	
 	SaveState->Read(&ppc.dec, sizeof(ppc.dec));
 	SaveState->Read(&ppc.timer_frac, sizeof(ppc.timer_frac));
+	ppc.overrun = 0;	// not saved: at most a few hundred cycles, and older states stay compatible
 	SaveState->Read(&ppc.fpscr, sizeof(ppc.fpscr));
 	
 	SaveState->Read(ppc.fpr, sizeof(ppc.fpr));

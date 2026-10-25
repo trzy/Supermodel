@@ -251,6 +251,7 @@ private:
 
   // MIDI port
   UINT8   midiCtrlPort; // controls MIDI (SCSP) IRQ behavior
+  UINT64  midiAckCycle; // PowerPC cycle (ppc_total_cycles()) when the last MIDI byte was written, acknowledging IRQ 0x40
 
   // Emulated core Model 3 memory regions
   UINT8   *memoryPool;  // single allocated region for all ROM and system RAM

@@ -91,6 +91,7 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 		WriteRAM32(i, data);
 	}	
 	SaveState->Read(m_regs, sizeof(m_regs));
+	m_busFree = 0;
 
 	m_colourOffsetRegs[0].Update(m_regs[0x40 / 4]);
 	RecomputePalettes(0);	// layer 0 & 1
@@ -177,6 +178,59 @@ void CTileGen::EndFrame(void)
 {
 	Render2D->EndFrame();
 }
+
+/******************************************************************************
+ Tile and Palette RAM Bus Timing
+******************************************************************************/
+
+void CTileGen::SetCPUClock(unsigned hz)
+{
+	m_busClock = (hz + 1000000) / 2000000;	// 16 * hz / 32 MHz
+	if (m_busClock == 0)
+		m_busClock = 1;
+	m_busWriteGap = (63 * m_busClock + 2) / 5;	// 12.6 clocks
+}
+
+void CTileGen::BeginBusLine(UINT64 cpuCycle)
+{
+	m_busLineStart = cpuCycle * 16;
+	m_busFetching = true;
+}
+
+void CTileGen::BeginBusBlanking(void)
+{
+	m_busFetching = false;
+}
+
+int CTileGen::BusAccessCycles(UINT64 cpuCycle, bool write, bool tileRAM)
+{
+	const UINT64 clk = m_busClock;
+	const UINT64 now = cpuCycle * 16;
+	UINT64 start = std::max(now, m_busFree);	// after the previous access
+
+	if (tileRAM && m_busFetching)
+	{
+		// Each active line the tile generator fetches 32 tile pairs (512 pixels, of which 496 are visible) at 32
+		// clocks each, and the PowerPC gets the last 4 clocks of each pair. The rest of the line (144 pixels of
+		// horizontal blanking) is free.
+		const UINT64 pair = 32 * clk;
+		const UINT64 fetchEnd = m_busLineStart + 32 * pair;
+		if (start < fetchEnd)
+		{
+			const UINT64 firstSlot = m_busLineStart + 28 * clk;
+			UINT64 slot = start <= firstSlot ? firstSlot : firstSlot + ((start - firstSlot + pair - 1) / pair) * pair;
+			start = std::min(slot, fetchEnd);
+		}
+	}
+
+	// The chip takes one write every ~6.3 pixels; a read takes 4 clocks
+	const UINT64 end = start + 4 * clk;
+	m_busFree = start + (write ? m_busWriteGap : 4 * clk);
+
+	const UINT64 waitUntil = write ? start : end;
+	return waitUntil > now ? (int)((waitUntil - now + 15) / 16) : 0;
+}
+
 
 /******************************************************************************
  Emulation Functions
@@ -288,6 +342,8 @@ void CTileGen::Reset(void)
 	unsigned memSize = (m_gpuMultiThreaded ? MEMORY_POOL_SIZE : MEM_POOL_SIZE_RW);
 	memset(memoryPool, 0, memSize);
 	memset(m_regs, 0, sizeof(m_regs));
+	m_busFree = 0;
+	m_busFetching = false;
 
 	DebugLog("Tile Generator reset\n");
 }
