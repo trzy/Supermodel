@@ -256,8 +256,14 @@ public:
 	 * Tile and palette RAM bus timing
 	 *
 	 * The tile generator RAM (Samsung KM4132G271A) runs at 32 MHz, twice the 16 MHz pixel clock. An access takes 4
-	 * clocks (row, column, wait, data). The tile generator chip accepts one write to tile RAM or palette RAM every
-	 * ~6.3 pixels. On each active line it generates 512 pixels (496 visible) as 32 tile pairs of 32 clocks: 28
+	 * clocks (row, column, wait, data). Palette RAM (two 8-bit SRAMs, 16 bits wide: the upper 16 bits of a PowerPC
+	 * write go nowhere) also runs at 32 MHz, looked up twice per output pixel (two tilemap layers); the chip takes
+	 * one write to it every ~6.3 pixels (12.6 clocks), measured on real hardware from the snow of a whole palette
+	 * update (Daytona USA 2: dots 6-7 pixels apart). That measurement is of palette RAM: a write to tile RAM takes
+	 * one access (4 clocks). Applied to tile RAM too, the palette rate made Scud Race's test screens, which rewrite
+	 * the four layers' name tables (8192 words, all to tile RAM) in each vertical blanking, run over into the display
+	 * and lose their top lines (GAME ASSIGNMENTS: its title, LINK ID and CAR NUMBER). On each active line the chip
+	 * generates 512 pixels (496 visible) as 32 tile pairs of 32 clocks: 28
 	 * clocks fetch the next tile pair (16 pixels) of layers A and B, leaving one 4-clock slot for the PowerPC, so
 	 * tile RAM is slowed further to one access per 16 pixels. The remaining 144 pixels of the line (horizontal
 	 * blanking) are free. Some games rely on this: Scud Race queues its palette uploads at the rate it can write
@@ -352,7 +358,7 @@ private:
 
 	// Tile and palette RAM bus timing, in 1/16 PowerPC cycles (exact for 66, 100 and 166 MHz)
 	UINT64	m_busClock = 50;		// one VRAM clock
-	UINT64	m_busWriteGap = 630;	// minimum time between writes (~6.3 pixels = 12.6 clocks)
+	UINT64	m_busWriteGap = 630;	// minimum time between palette RAM writes (~6.3 pixels = 12.6 clocks)
 	UINT64	m_busFree = 0;			// when the next access can start
 	UINT64	m_busLineStart = 0;		// start of the active line
 	bool	m_busFetching = false;	// in the active part of the frame
