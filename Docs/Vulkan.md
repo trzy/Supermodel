@@ -38,6 +38,24 @@ OpenGL sessions do not initialize it.
 
 ## Building
 
+### macOS
+
+The Mac build downloads the official MoltenVK 1.4.2 runtime and Vulkan headers
+automatically through `Libraries/Get_MoltenVK.sh`, with a pinned SHA256 check.
+Homebrew is not required. To prepare this dependency separately, run:
+
+```sh
+sh Libraries/Get_MoltenVK.sh
+```
+
+`make -f Makefiles/Makefile.OSX pkg` includes `Frameworks/libMoltenVK.dylib` and
+its license/source notices in the package. Vulkan startup locates this library
+relative to the executable, including when running from the source tree's `bin/`
+directory. No environment variables or system-wide installation are needed.
+An explicit `SDL_VULKAN_LIBRARY` setting remains available for developers.
+
+### Windows and other builds
+
 Windows/MSVC: install the Vulkan SDK and set `VULKAN_SDK` (the SDK installer
 normally sets it). Its `Include` directory supplies the Vulkan headers. The
 runtime is loaded through the bundled MIT-licensed volk loader, so no Vulkan

@@ -88,6 +88,9 @@
 #include "GameLoader.h"
 #include "SDLInputSystem.h"
 #include "SDLIncludes.h"
+#ifdef SUPERMODEL_OSX
+#include <SDL2/SDL_vulkan.h>
+#endif
 #include "Debugger/SupermodelDebugger.h"
 #ifndef SUPERMODEL_OSX
 #include "Graphics/Legacy3D/Legacy3D.h"
@@ -387,10 +390,42 @@ static void SetVulkanGeometry(bool keepAspectRatio)
   yOffset = (totalYRes - yRes) / 2;
 }
 
+#ifdef SUPERMODEL_OSX
+static Result LoadBundledVulkanLibrary()
+{
+  const char* overridePath = SDL_getenv("SDL_VULKAN_LIBRARY");
+  if (overridePath && *overridePath)
+    return Result::OKAY;
+  char* basePath = SDL_GetBasePath();
+  if (!basePath)
+    return Result::OKAY;
+  const std::string directory(basePath);
+  SDL_free(basePath);
+  // Packaged executable, source-tree bin/ executable, then a library beside the executable.
+  for (const char* relative : { "Frameworks/libMoltenVK.dylib", "../Frameworks/libMoltenVK.dylib", "libMoltenVK.dylib" })
+  {
+    const std::string path = directory + relative;
+    FILE* library = fopen(path.c_str(), "rb");
+    if (!library)
+      continue;
+    fclose(library);
+    if (SDL_Vulkan_LoadLibrary(path.c_str()) != 0)
+      return ErrorLog("Unable to load bundled MoltenVK '%s': %s", path.c_str(), SDL_GetError());
+    InfoLog("Vulkan: loaded bundled MoltenVK from '%s'.", path.c_str());
+    return Result::OKAY;
+  }
+  return Result::OKAY;
+}
+#endif
+
 static Result CreateVulkanScreen()
 {
   if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
     return ErrorLog("Unable to initialize SDL video: %s", SDL_GetError());
+#ifdef SUPERMODEL_OSX
+  if (LoadBundledVulkanLibrary() != Result::OKAY)
+    return Result::FAIL;
+#endif
   s_window = SDL_CreateWindow("Supermodel", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
     xRes, yRes, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
   if (!s_window)

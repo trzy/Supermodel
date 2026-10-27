@@ -87,6 +87,11 @@ jobs:
       - name: Create package
         run: |
           make -f Makefiles/${{ matrix.makefile }} pkg GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=
+
+      - name: Verify bundled macOS Vulkan runtime
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          python3 Scripts/Test_MacVulkanPackage.py pkg/supermodel-*.tgz
           
       - name: Find and upload package
         run: |

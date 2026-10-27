@@ -108,16 +108,19 @@ Result CVulkanContext::InitDevice(SDL_Window* window, bool validation, bool vsyn
 	m_vsync = vsync;
 	m_devicePreference = deviceName;
 
+#ifdef __APPLE__
+	// SDL already selected the runtime. Use the same entry point instead of searching for it again.
+	PFN_vkGetInstanceProcAddr getProc = (PFN_vkGetInstanceProcAddr)SDL_Vulkan_GetVkGetInstanceProcAddr();
+	if (!getProc)
+		return ErrorLog("Vulkan: SDL did not provide a Vulkan library entry point: %s", SDL_GetError());
+	volkInitializeCustom(getProc);
+#else
 	if (volkInitialize() != VK_SUCCESS)
 	{
-#ifdef __APPLE__
-		ErrorLog("Vulkan: no Vulkan implementation found. Install MoltenVK with "
-			"'brew install molten-vk' or the Vulkan SDK, or choose the New 3D renderer.");
-#else
 		ErrorLog("Vulkan: volkInitialize failed. Is vulkan-1.dll installed?");
-#endif
 		return Result::FAIL;
 	}
+#endif
 	if (!CreateInstance())
 		return Result::FAIL;
 	volkLoadInstance(m_instance);

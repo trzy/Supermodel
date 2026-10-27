@@ -38,7 +38,7 @@ DELETE = rm -d -r -f
 ###############################################################################
 
 PKG_TYPE = tgz
-PKG_FILES = Frameworks/*.framework
+PKG_FILES = Frameworks/*.framework Frameworks/libMoltenVK.dylib Frameworks/MoltenVK-LICENSE.txt Frameworks/MoltenVK-NOTICE.txt
 
 
 ###############################################################################
@@ -72,7 +72,8 @@ SDL_LIBS = -framework SDL2 -framework SDL2_net -framework OpenGL -framework GLUT
 
 PLATFORM_CXXFLAGS = -F./Frameworks -IFrameworks/SDL2.framework/Headers $(SDL_CFLAGS) -DSUPERMODEL_OSX
 PLATFORM_LDFLAGS = -F./Frameworks $(SDL_LIBS) -lz -lm -lstdc++ -Wl,-rpath,@executable_path/../Frameworks -Wl,-rpath,@executable_path/Frameworks
-PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework
+MOLTENVK_DIR = Libraries/MoltenVK-1.4.2
+PLATFORM_DIRS = Frameworks/SDL2_net.framework Frameworks/SDL2.framework Frameworks/libMoltenVK.dylib Frameworks/MoltenVK-LICENSE.txt Frameworks/MoltenVK-NOTICE.txt
 PLATFORM_BINARY_EXTENSION =
 
 #
@@ -98,6 +99,7 @@ PLATFORM_SRC_FILES = \
 	Src/OSD/OSX/FileSystemPath.cpp
 
 include Makefiles/Rules.inc
+INCLUDE_DIRS += $(MOLTENVK_DIR)/include
 
 # -s (strip) is obsolete and ignored by Apple ld64; remove it to avoid potential warnings
 LDOPT := $(filter-out -s,$(LDOPT))
@@ -120,6 +122,18 @@ clean:
 Frameworks:
 	$(info Creating directory     : $@)
 	$(SILENT)mkdir Frameworks
+
+$(MOLTENVK_DIR)/.complete: Libraries/Get_MoltenVK.sh
+	$(SILENT)sh Libraries/Get_MoltenVK.sh
+
+Frameworks/libMoltenVK.dylib: $(MOLTENVK_DIR)/.complete | Frameworks
+	$(SILENT)cp $(MOLTENVK_DIR)/libMoltenVK.dylib $@
+
+Frameworks/MoltenVK-LICENSE.txt: $(MOLTENVK_DIR)/.complete | Frameworks
+	$(SILENT)cp $(MOLTENVK_DIR)/LICENSE $@
+
+Frameworks/MoltenVK-NOTICE.txt: $(MOLTENVK_DIR)/.complete | Frameworks
+	$(SILENT)cp $(MOLTENVK_DIR)/NOTICE.txt $@
 
 Frameworks/SDL2.dmg.url: | Frameworks
 	$(info Finding Latest Release : $@)
