@@ -30,7 +30,7 @@
 
 #include "BlockFile.h"
 #include "CPU/IRQController.h"
-#include "Graphics/Render2D.h"
+#include "Graphics/IRender2D.h"
 #include "TileGenBuffer.h"
 
   /*
@@ -217,13 +217,13 @@ public:
 	 * AttachRenderer(render2DPtr):
 	 *
 	 * Attaches a 2D renderer for the tile generator to use. This function will
-	 * immediately pass along the information that a CRender2D object needs to
+	 * immediately pass along the information that an IRender2D object needs to
 	 * work with.
 	 *
 	 * Parameters:
 	 *		Render2DPtr		Pointer to a 2D renderer object.
 	 */
-	void AttachRenderer(CRender2D* Render2DPtr);
+	void AttachRenderer(IRender2D* Render2DPtr);
 
 	/*
 	 * Init(IRQObjectPtr):
@@ -315,7 +315,7 @@ private:
 	const bool m_gpuMultiThreaded;
 
 	IIRQController*	IRQ;	// IRQ controller the tile generator is attached to
-	CRender2D*	Render2D;	// 2D renderer the tile generator is attached to
+	IRender2D*	Render2D;	// 2D renderer the tile generator is attached to
 
 	UINT8*		memoryPool;		// all memory allocated here
 	UINT8*		m_vram;			// 1.125MB of VRAM

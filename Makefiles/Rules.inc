@@ -115,6 +115,14 @@ SRC_FILES = \
 	Src/Graphics/New3D/R3DScrollFog.cpp \
 	Src/Graphics/New3D/TextureBank.cpp \
 	Src/Graphics/FBO.cpp \
+	Src/Graphics/Vulkan3D/R3DSceneBuilder.cpp \
+	Src/Graphics/Vulkan3D/Vulkan2D.cpp \
+	Src/Graphics/Vulkan3D/Vulkan3D.cpp \
+	Src/Graphics/Vulkan3D/VulkanContext.cpp \
+	Src/Graphics/Vulkan3D/VulkanMemory.cpp \
+	Src/Graphics/Vulkan3D/VulkanRingBuffer.cpp \
+	Src/Graphics/Vulkan3D/VulkanTextureCache.cpp \
+	Src/Pkgs/volk_impl.cpp \
 	Src/Graphics/Render2D.cpp \
 	Src/Graphics/Pro1000Render2D.cpp \
 	Src/Graphics/SuperAA.cpp \
@@ -229,6 +237,11 @@ OBJ_FILES = $(foreach file,$(SRC_FILES),$(OBJ_DIR)/$(basename $(notdir $(file)))
 # removes duplicates and is used to construct a set.
 #
 INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
+INCLUDE_DIRS += Libraries/Vulkan-Headers/include
+ifneq ($(VULKAN_SDK),)
+INCLUDE_DIRS += $(VULKAN_SDK)/Include
+INCLUDE_DIRS += $(VULKAN_SDK)/include
+endif
 
 
 ###############################################################################

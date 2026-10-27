@@ -31,6 +31,8 @@ We lost our web hosting and have no backup of the recent forum. For now, please 
 
 ## Build Instructions
 
+The optional Vulkan renderer is disabled by default. See [Vulkan setup and build notes](Docs/Vulkan.md).
+
 ### Windows
 
 The preferred method for building Supermodel is to use GCC and MSYS2. After installing [MSYS2](https://msys2.org), open the MSYS2 shell and install the required dependencies using the pacman package manager:

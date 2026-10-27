@@ -297,7 +297,7 @@ void CTileGen::Reset(void)
  Configuration, Initialization, and Shutdown
 ******************************************************************************/
 
-void CTileGen::AttachRenderer(CRender2D *Render2DPtr)
+void CTileGen::AttachRenderer(IRender2D *Render2DPtr)
 {
 	Render2D = Render2DPtr;
 

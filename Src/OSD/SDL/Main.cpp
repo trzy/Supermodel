@@ -99,10 +99,14 @@
 #include "Network/NetServer.h"
 #include "Graphics/Pro1000Render2D.h"
 #include "Graphics/IRender2D.h"
+#include "Graphics/Render2D.h"
 #include "OSD/Audio.h"
 #include "OSD/ConsoleInput.h"
 #include "Graphics/New3D/VBO.h"
 #include "Graphics/SuperAA.h"
+#include "Graphics/Vulkan3D/VulkanContext.h"
+#include "Graphics/Vulkan3D/Vulkan2D.h"
+#include "Graphics/Vulkan3D/Vulkan3D.h"
 #include "Sound/MPEG/MpegAudio.h"
 
 #include <iostream>
@@ -131,6 +135,7 @@ static Util::Config::Node s_runtime_config("Global");
 ******************************************************************************/
 
 SDL_Window *s_window = nullptr;
+static std::unique_ptr<Vulkan3D::CVulkanContext> s_vkContext;
 
 /*
  * Position and size of rectangular region within OpenGL display to render to.
@@ -366,12 +371,58 @@ static Result CreateGLScreen(bool coreContext, const std::string &caption, bool 
   return SetGLGeometry(xOffsetPtr, yOffsetPtr, xResPtr, yResPtr, totalXResPtr, totalYResPtr, keepAspectRatio);
 }
 
+// Vulkan windows have no OpenGL context. Geometry comes from the swapchain extent.
+static void SetVulkanGeometry(bool keepAspectRatio)
+{
+  totalXRes = xRes = s_vkContext->Extent().width;
+  totalYRes = yRes = s_vkContext->Extent().height;
+  if (keepAspectRatio)
+  {
+    if (uint64_t(xRes) * 384 > uint64_t(yRes) * 496)
+      xRes = yRes * 496 / 384;
+    else
+      yRes = xRes * 384 / 496;
+  }
+  xOffset = (totalXRes - xRes) / 2;
+  yOffset = (totalYRes - yRes) / 2;
+}
+
+static Result CreateVulkanScreen()
+{
+  if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0)
+    return ErrorLog("Unable to initialize SDL video: %s", SDL_GetError());
+  s_window = SDL_CreateWindow("Supermodel", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    xRes, yRes, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN);
+  if (!s_window)
+    return ErrorLog("Unable to create Vulkan window: %s", SDL_GetError());
+  s_vkContext = std::make_unique<Vulkan3D::CVulkanContext>();
+  if (s_vkContext->InitDevice(s_window, false, s_runtime_config["VSync"].ValueAs<bool>()) != Result::OKAY)
+    return Result::FAIL;
+  aaValue = 1; // The Vulkan path renders directly, without OpenGL SuperAA or CRT filters.
+  SetVulkanGeometry(false);
+  return Result::OKAY;
+}
+
+static Result ResizeVulkanScreen(bool keepAspectRatio, bool fullScreen)
+{
+  if (SDL_SetWindowFullscreen(s_window, fullScreen ? SDL_WINDOW_FULLSCREEN : 0) < 0)
+    return ErrorLog("Unable to change fullscreen mode: %s", SDL_GetError());
+  if (!s_vkContext->RecreateSwapchain())
+    return Result::FAIL;
+  SetVulkanGeometry(keepAspectRatio);
+  return Result::OKAY;
+}
+
 static void DestroyGLScreen()
 {
   if (s_window != nullptr)
   {
-    SDL_GL_DeleteContext(SDL_GL_GetCurrentContext());
+    if (s_vkContext)
+      s_vkContext.reset();
+    else if (SDL_GL_GetCurrentContext())
+      SDL_GL_DeleteContext(SDL_GL_GetCurrentContext());
     SDL_DestroyWindow(s_window);
+    s_window = nullptr;
   }
 }
 
@@ -553,6 +604,8 @@ static void SaveFrameBuffer(const std::string& file)
 
 void Screenshot()
 {
+    if (s_vkContext)
+      return;
     // Make a screenshot
     time_t now = std::time(nullptr);
     tm* ltm = std::localtime(&now);
@@ -863,11 +916,16 @@ static uint32_t currentInputs = 0;
 
 bool BeginFrameVideo()
 {
-  return true;
+  return s_vkContext ? s_vkContext->BeginFrame() : true;
 }
 
 void EndFrameVideo()
 {
+  if (s_vkContext)
+  {
+    s_vkContext->EndFrame();
+    return;
+  }
   // Show crosshairs for light gun games
   if (videoInputs)
     s_crosshair->Update(currentInputs, videoInputs, xOffset, yOffset, xRes, yRes);
@@ -934,6 +992,8 @@ static IRender2D *CreateRender2D(IEmulator *Emu)
 {
   if (dynamic_cast<CPro1000 *>(Emu))
     return new CPro1000Render2D();
+  if (s_vkContext)
+    return new Vulkan3D::CVulkan2D(s_runtime_config, *s_vkContext);
   return new CRender2D(s_runtime_config);
 }
 
@@ -986,11 +1046,13 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
 
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
   bool fullscreen = s_runtime_config["FullScreen"].ValueAs<bool>();
-  if (Result::OKAY != ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen))
+  if (Result::OKAY != (s_vkContext ? ResizeVulkanScreen(!stretch, fullscreen)
+      : ResizeGLScreen(&xOffset, &yOffset ,&xRes, &yRes, &totalXRes, &totalYRes, !stretch, fullscreen)))
     return 1;
 
   // Info log GL information
-  PrintGLInfo(false, true, false);
+  if (!s_vkContext)
+    PrintGLInfo(false, true, false);
 
   // Initialize audio system
   SetAudioType(game.audio);
@@ -1013,21 +1075,30 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   uint64_t nextTime = 0;
 
   // Initialize the renderers
-  SuperAA* superAA = new SuperAA(aaValue, CRTcolors);
-  superAA->Init(totalXRes, totalYRes);  // pass actual frame sizes here
+  SuperAA* superAA = s_vkContext ? nullptr : new SuperAA(aaValue, CRTcolors);
+  if (superAA)
+    superAA->Init(totalXRes, totalYRes);
   IRender2D *Render2D = CreateRender2D(Emu);
+  IRender3D *Render3D = nullptr;
+  if (s_vkContext)
+    Render3D = new Vulkan3D::CVulkan3D(s_runtime_config, Emu->GetGame().name,
+      *s_vkContext, *static_cast<Vulkan3D::CVulkan2D*>(Render2D));
+  else
+  {
 #ifndef SUPERMODEL_OSX
-  IRender3D *Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>() ? ((IRender3D *) new New3D::CNew3D(s_runtime_config, Emu->GetGame().name)) : ((IRender3D *) new Legacy3D::CLegacy3D(s_runtime_config));
+    Render3D = s_runtime_config["New3DEngine"].ValueAs<bool>()
+      ? static_cast<IRender3D*>(new New3D::CNew3D(s_runtime_config, Emu->GetGame().name))
+      : static_cast<IRender3D*>(new Legacy3D::CLegacy3D(s_runtime_config));
 #else
-  // Legacy renderer is not supported on Mac, always use new engine
-  IRender3D *Render3D = (IRender3D *) new New3D::CNew3D(s_runtime_config, Emu->GetGame().name);
+    Render3D = new New3D::CNew3D(s_runtime_config, Emu->GetGame().name);
 #endif
+  }
 
   UpscaleMode upscaleMode = (UpscaleMode)s_runtime_config["UpscaleMode"].ValueAs<int>();
 
-  if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID(), upscaleMode))
+  if (Result::OKAY != Render2D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, (superAA ? superAA->GetTargetID() : 0), upscaleMode))
     goto QuitError;
-  if (Result::OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, superAA->GetTargetID()))
+  if (Result::OKAY != Render3D->Init(xOffset*aaValue, yOffset*aaValue, xRes*aaValue, yRes*aaValue, totalXRes*aaValue, totalYRes*aaValue, (superAA ? superAA->GetTargetID() : 0)))
     goto QuitError;
 
   Emu->AttachRenderers(Render2D,Render3D, superAA);
@@ -1156,24 +1227,30 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
       s_runtime_config.Get("FullScreen").SetValue(!s_runtime_config["FullScreen"].ValueAs<bool>());
 
       // Delete renderers and recreate them afterwards since GL context will most likely be lost when switching from/to fullscreen
-      delete Render2D;
-      Render2D = nullptr;
+      if (!s_vkContext)
+      {
+        delete Render2D;
+        Render2D = nullptr;
+      }
 
       // Resize screen
       totalXRes = xRes = s_runtime_config["XResolution"].ValueAs<unsigned>();
       totalYRes = yRes = s_runtime_config["YResolution"].ValueAs<unsigned>();
       bool stretchc = s_runtime_config["Stretch"].ValueAs<bool>();
       bool fullscreenc = s_runtime_config["FullScreen"].ValueAs<bool>();
-      if (Result::OKAY != ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretchc,fullscreenc))
+      if (Result::OKAY != (s_vkContext ? ResizeVulkanScreen(!stretchc, fullscreenc)
+          : ResizeGLScreen(&xOffset,&yOffset,&xRes,&yRes,&totalXRes,&totalYRes,!stretchc,fullscreenc)))
         goto QuitError;
 
       // Recreate renderers and attach to the emulator
-      superAA->Init(totalXRes, totalYRes);
-      Render2D = CreateRender2D(Emu);
+      if (superAA)
+        superAA->Init(totalXRes, totalYRes);
+      if (!s_vkContext)
+        Render2D = CreateRender2D(Emu);
 
-      if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
+      if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, (superAA ? superAA->GetTargetID() : 0), upscaleMode))
         goto QuitError;
-      if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
+      if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, (superAA ? superAA->GetTargetID() : 0)))
         goto QuitError;
 
       Emu->AttachRenderers(Render2D, Render3D, superAA);
@@ -1381,16 +1458,16 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   CloseAudio();
 
   // Shut down renderers
-  delete Render2D;
   delete Render3D;
+  delete Render2D;
   delete superAA;
 
   return 0;
 
   // Quit with an error
 QuitError:
-  delete Render2D;
   delete Render3D;
+  delete Render2D;
   delete superAA;
 
   return 1;
@@ -1548,6 +1625,7 @@ Util::Config::Node DefaultConfig()
 
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
+  config.Set("Vulkan3DEngine", false, "Video");
   config.Set("QuadRendering", true, "Video");
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");
@@ -2405,19 +2483,31 @@ int main(int argc, char **argv)
   // Create a window
   xRes = 496;
   yRes = 384;
-  if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
+  // Pro-1000 and input-only sessions retain the existing OpenGL path.
+  if (s_runtime_config["Vulkan3DEngine"].ValueAs<bool>() && rom_specified && game.platform == Game::PLATFORM_MODEL3)
+  {
+    if (CreateVulkanScreen() != Result::OKAY)
+    {
+      exitCode = 1;
+      goto Exit;
+    }
+  }
+  else if (Result::OKAY != CreateGLScreen(s_runtime_config["New3DEngine"].ValueAs<bool>(), "Supermodel", false, &xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, false, false))
   {
     exitCode = 1;
     goto Exit;
   }
 
-  // Create Crosshair
-  s_crosshair = new CCrosshair(s_runtime_config);
-  if (s_crosshair->Init() != Result::OKAY)
+  // The existing bitmap crosshair uses OpenGL.
+  if (!s_vkContext)
   {
+    s_crosshair = new CCrosshair(s_runtime_config);
+    if (s_crosshair->Init() != Result::OKAY)
+    {
       ErrorLog("Unable to load bitmap crosshair texture\n");
       exitCode = 1;
       goto Exit;
+    }
   }
 
   // Create input system

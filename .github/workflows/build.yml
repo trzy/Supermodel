@@ -62,6 +62,11 @@ jobs:
             mingw64/mingw-w64-x86_64-SDL2_net
             mingw32/mingw-w64-i686-gcc
 
+      - name: Install Vulkan headers
+        run: |
+          mkdir -p Libraries/Vulkan-Headers
+          curl --fail --location --retry 3 https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v1.3.296.tar.gz | tar -xz --strip-components=1 -C Libraries/Vulkan-Headers
+
       - name: Build Supermodel
         run: |
           make -f Makefiles/${{ matrix.makefile }} release OPT="${OPT_INPUT:-"-O3"}" GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} SILENT=

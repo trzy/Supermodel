@@ -91,7 +91,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;$(VULKAN_SDK)\Include;..\Libraries\Vulkan-Headers\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -128,7 +128,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;$(VULKAN_SDK)\Include;..\Libraries\Vulkan-Headers\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -163,7 +163,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;$(VULKAN_SDK)\Include;..\Libraries\Vulkan-Headers\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -202,7 +202,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile>
       <Optimization>Full</Optimization>
       <IntrinsicFunctions>false</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Src;..\Src\OSD;..\Src\OSD\SDL;..\Src\OSD\Windows;..\Libraries\zlib-1.3.1;..\Libraries\SDL2-2.30.11\include;..\Libraries\SDL2_net-2.4.0\include;$(DXSDK_DIR)\Include;..\Src\Pkgs;$(VULKAN_SDK)\Include;..\Libraries\Vulkan-Headers\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SUPERMODEL_WIN32;INLINE=static __inline;_MBCS;_CRT_SECURE_NO_WARNINGS;GLEW_STATIC</PreprocessorDefinitions>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -337,6 +337,14 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Graphics\New3D\TextureBank.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\VBO.cpp" />
     <ClCompile Include="..\Src\Graphics\New3D\Vec.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\R3DSceneBuilder.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\Vulkan2D.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\Vulkan3D.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\VulkanContext.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\VulkanMemory.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\VulkanRingBuffer.cpp" />
+    <ClCompile Include="..\Src\Graphics\Vulkan3D\VulkanTextureCache.cpp" />
+    <ClCompile Include="..\Src\Pkgs\volk_impl.cpp" />
     <ClCompile Include="..\Src\Graphics\Render2D.cpp" />
     <ClCompile Include="..\Src\Graphics\Pro1000Render2D.cpp" />
     <ClCompile Include="..\Src\Graphics\Shader.cpp" />

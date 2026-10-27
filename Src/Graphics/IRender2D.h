@@ -30,14 +30,15 @@
  *  - CRender2D: the Model 3 tile generator layers.
  *  - CPro1000Render2D: the Real3D Pro-1000 scroll layer (one solid color).
  *
- * The emulator that uses the renderer knows its type and casts to it for the
- * functions that are not in this interface.
+ * Tile-generator memory hooks are shared by the OpenGL and Vulkan renderers.
  */
 
 #ifndef INCLUDED_IRENDER2D_H
 #define INCLUDED_IRENDER2D_H
 
 #include "Supermodel.h"
+#include "Model3/TileGenBuffer.h"
+#include <memory>
 
 class IRender2D
 {
@@ -79,6 +80,13 @@ public:
 
   // Ends the frame.
   virtual void EndFrame(void) = 0;
+
+  // Tile-generator memory hooks. Other 2D devices need not implement these.
+  virtual void WriteVRAM(unsigned addr, uint32_t data) {}
+  virtual void AttachRegisters(const uint32_t* regPtr) {}
+  virtual void AttachPalette(const uint32_t* palPtr[2]) {}
+  virtual void AttachVRAM(const uint8_t* vramPtr) {}
+  virtual void AttachDrawBuffers(std::shared_ptr<TileGenBuffer> bottom, std::shared_ptr<TileGenBuffer> top) {}
 
   virtual ~IRender2D()
   {

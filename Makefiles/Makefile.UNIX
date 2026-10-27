@@ -71,7 +71,7 @@ SDL2_LIBS += -lSDL2_net
 #
 
 PLATFORM_CXXFLAGS = $(SDL2_CFLAGS) -O3
-PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread
+PLATFORM_LDFLAGS = $(SDL2_LIBS) -lGL -lGLU -lz -lm -lstdc++ -lpthread -ldl
 PLATFORM_BINARY_EXTENSION =
 
 

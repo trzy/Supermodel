@@ -446,6 +446,23 @@ static void StorePerGameSettings(PerGameState& pg, Util::Config::Node& fullConfi
     }
 }
 
+static void CreateRendererControls(Util::Config::Node& config)
+{
+    auto& vulkan = std::get<bool>(config.Get("Vulkan3DEngine").GetValue()->GetValueRange()->tempValue);
+    auto& new3d = std::get<bool>(config.Get("New3DEngine").GetValue()->GetValueRange()->tempValue);
+
+    // These checkboxes select one backend. Clicking the active choice keeps it selected.
+    bool openGLChecked = !vulkan;
+    if (ImGui::Checkbox("OpenGL (4.1)", &openGLChecked) && openGLChecked) {
+        vulkan = false;
+    }
+    bool vulkanChecked = vulkan;
+    if (ImGui::Checkbox("Vulkan", &vulkanChecked) && vulkanChecked) {
+        vulkan = true;
+    }
+    new3d = !vulkan;
+}
+
 static void CreateControls(Util::Config::Node& config, const std::string& group)
 {
     for (auto it = config.begin(); it != config.end(); ++it)
@@ -453,6 +470,9 @@ static void CreateControls(Util::Config::Node& config, const std::string& group)
         if (it->IsLeaf() && it->Exists()) {
 
             const auto& key = it->Key();
+            if (group == "Video" && (key == "New3DEngine" || key == "Vulkan3DEngine")) {
+                continue; // Drawn together by CreateRendererControls().
+            }
             auto val = it->GetValue();
 
             if (val) {
@@ -1211,6 +1231,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
         }
         if (ImGui::BeginTabItem("Video")) {
             UpdateTempValues(config, "Video", true);
+            CreateRendererControls(config);
             CreateControls(config, "Video");
             UpdateTempValues(config, "Video", false);
             ImGui::EndTabItem();

@@ -1,0 +1,100 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0) uniform usampler2D uRaw;
+layout(set = 0, binding = 1, rgba8) uniform writeonly image2D uDest;
+
+layout(push_constant) uniform PushConstants
+{
+	ivec4 src;
+	ivec4 flags;
+} pc;
+
+vec4 ExtractColour(int type, uint value)
+{
+	vec4 c = vec4(0.0);
+	if (type == 0)
+	{
+		c.r = float((value >> 10) & 0x1Fu);
+		c.g = float((value >> 5) & 0x1Fu);
+		c.b = float(value & 0x1Fu);
+		c.rgb *= (1.0 / 31.0);
+		c.a = 1.0 - float((value >> 15) & 0x1u);
+	}
+	else if (type == 1)
+	{
+		c.rgb = vec3(float(value & 0xFu));
+		c.a = float((value >> 4) & 0xFu);
+		c *= (1.0 / 15.0);
+	}
+	else if (type == 2)
+	{
+		c.a = float(value & 0xFu);
+		c.rgb = vec3(float((value >> 4) & 0xFu));
+		c *= (1.0 / 15.0);
+	}
+	else if (type == 3)
+	{
+		c.rgb = vec3(float((value >> 8) & 0xFu));
+		c.a = float((value >> 12) & 0xFu);
+		c *= (1.0 / 15.0);
+	}
+	else if (type == 4)
+	{
+		c.a = float((value >> 8) & 0xFu);
+		c.rgb = vec3(float((value >> 12) & 0xFu));
+		c *= (1.0 / 15.0);
+	}
+	else if (type == 5)
+	{
+		c = vec4(float(value & 0xFFu) / 255.0);
+		c.a = c.a == 1.0 ? 0.0 : 1.0;
+	}
+	else if (type == 6)
+	{
+		c = vec4(float((value >> 8) & 0xFFu) / 255.0);
+		c.a = c.a == 1.0 ? 0.0 : 1.0;
+	}
+	else if (type == 7)
+	{
+		c.r = float((value >> 12) & 0xFu);
+		c.g = float((value >> 8) & 0xFu);
+		c.b = float((value >> 4) & 0xFu);
+		c.a = float(value & 0xFu);
+		c *= (1.0 / 15.0);
+	}
+	else if (type == 8)
+	{
+		c = vec4(float(value & 0xFu) / 15.0);
+		c.a = c.a == 1.0 ? 0.0 : 1.0;
+	}
+	else if (type == 9)
+	{
+		c = vec4(float((value >> 4) & 0xFu) / 15.0);
+		c.a = c.a == 1.0 ? 0.0 : 1.0;
+	}
+	else if (type == 10)
+	{
+		c = vec4(float((value >> 8) & 0xFu) / 15.0);
+		c.a = c.a == 1.0 ? 0.0 : 1.0;
+	}
+	else if (type == 11)
+	{
+		c = vec4(float((value >> 12) & 0xFu) / 15.0);
+		c.a = c.a == 1.0 ? 0.0 : 1.0;
+	}
+	return c;
+}
+
+void main()
+{
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= pc.src.z || p.y >= pc.src.w)
+		return;
+	uint value = texelFetch(uRaw, pc.src.xy + p, 0).r;
+	vec4 colour = ExtractColour(pc.flags.x, value);
+	if (pc.flags.y != 0)
+		colour.rgb = vec3(1.0) - colour.rgb;
+	imageStore(uDest, p, colour);
+}

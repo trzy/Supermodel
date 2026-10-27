@@ -2185,7 +2185,8 @@ void CModel3::RenderFrame(void)
     TileGen.RenderFrameTop();
     GPU.EndFrame();
     TileGen.EndFrame();
-    m_superAA->Draw();
+    if (m_superAA)
+      m_superAA->Draw();
   }
 
   EndFrameVideo();
@@ -2978,7 +2979,7 @@ const Game &CModel3::GetGame() const
 
 void CModel3::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, SuperAA *superAA)
 {
-  TileGen.AttachRenderer(dynamic_cast<CRender2D *>(Render2DPtr));
+  TileGen.AttachRenderer(Render2DPtr);
   Render3DPtr->SetStepping(m_stepping);
   GPU.AttachRenderer(Render3DPtr);
   m_superAA = superAA;
