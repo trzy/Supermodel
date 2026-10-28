@@ -92,6 +92,7 @@ void CTileGen::LoadState(CBlockFile *SaveState)
 	}	
 	SaveState->Read(m_regs, sizeof(m_regs));
 	m_busFree = 0;
+	m_busWritesDone = 0;
 
 	m_colourOffsetRegs[0].Update(m_regs[0x40 / 4]);
 	RecomputePalettes(0);	// layer 0 & 1
@@ -183,12 +184,43 @@ void CTileGen::EndFrame(void)
  Tile and Palette RAM Bus Timing
 ******************************************************************************/
 
+/*
+ * Timing values
+ * -------------
+ *
+ * Everything is measured in VRAM clocks and stored in 1/16 PowerPC cycles, so that it works out exactly (or very
+ * nearly) for any PowerPC clock.
+ *
+ *   1 VRAM clock = 1 / 32 MHz = 31.25 ns
+ *   1 pixel      = 2 VRAM clocks (16 MHz pixel clock) = 62.5 ns
+ *   1 line       = 656 pixels (512 generated, of which 496 are visible, plus 144 with no fetching) = 41 us
+ *
+ * The values, and what they are in PowerPC cycles at 100 MHz (Step 1.5) for reference:
+ *
+ *   Write busy time    2.5 pixels =  5 VRAM clocks = 156 ns  (~16 PowerPC cycles)
+ *     How long a posted write keeps the tile generator busy. Back-to-back stores (e.g. clearing the name tables)
+ *     go at this rate. Measured: Scud Race Plus's Test menu clears 8,311 words at the start of vertical blanking
+ *     and still shows its top lines of text on real hardware, which needs about 3.2 pixels or less per write.
+ *
+ *   Write complete     6.3 pixels = 12.6 VRAM clocks = 394 ns  (~39 PowerPC cycles)
+ *     How long until a write has actually landed in tile RAM or palette RAM. A read over the bus has to wait for
+ *     this, so loops that copy from CROM (every upload in Scud Race) are limited to one write per 6.3 pixels,
+ *     about 104 writes per line during vertical blanking. Measured: the corrupted frames on Scud Race Plus's car
+ *     select and "decided like this" screens match real hardware at this rate.
+ *
+ *   Fetch slot         16 pixels = 32 VRAM clocks = 1 us  (~100 PowerPC cycles)
+ *     During the 512 generated pixels of an active line the tile generator uses tile RAM to fetch tiles and only
+ *     leaves one 4-clock slot per tile pair (16 pixels) for the PowerPC: 32 slots per line. With ~23 more writes
+ *     in the 144 pixels without fetching, copies from CROM average ~55 tile RAM writes per active line. Palette
+ *     RAM is not affected by the fetch.
+ */
 void CTileGen::SetCPUClock(unsigned hz)
 {
-	m_busClock = (hz + 1000000) / 2000000;	// 16 * hz / 32 MHz
+	m_busClock = (hz + 1000000) / 2000000;			// one VRAM clock in 1/16 PowerPC cycles: 16 * hz / 32 MHz
 	if (m_busClock == 0)
 		m_busClock = 1;
-	m_busWriteGap = (63 * m_busClock + 2) / 5;	// 12.6 clocks
+	m_busIssue = 5 * m_busClock;					// write busy time: 2.5 pixels = 5 VRAM clocks
+	m_busComplete = (63 * m_busClock + 2) / 5;		// write complete: 6.3 pixels = 12.6 VRAM clocks
 }
 
 void CTileGen::BeginBusLine(UINT64 cpuCycle)
@@ -208,27 +240,40 @@ int CTileGen::BusAccessCycles(UINT64 cpuCycle, bool write, bool tileRAM)
 	const UINT64 now = cpuCycle * 16;
 	UINT64 start = std::max(now, m_busFree);	// after the previous access
 
+	bool fetchSlot = false;
 	if (tileRAM && m_busFetching)
 	{
 		// Each active line the tile generator fetches 32 tile pairs (512 pixels, of which 496 are visible) at 32
-		// clocks each, and the PowerPC gets the last 4 clocks of each pair. The rest of the line (144 pixels of
-		// horizontal blanking) is free.
-		const UINT64 pair = 32 * clk;
-		const UINT64 fetchEnd = m_busLineStart + 32 * pair;
+		// clocks each, and the PowerPC gets the last 4 clocks of each pair. The rest of the line (144 pixels) is
+		// free.
+		const UINT64 pair = 32 * clk;							// one tile pair: 16 pixels = 32 VRAM clocks
+		const UINT64 fetchEnd = m_busLineStart + 32 * pair;		// 32 tile pairs: 512 pixels
 		if (start < fetchEnd)
 		{
-			const UINT64 firstSlot = m_busLineStart + 28 * clk;
+			const UINT64 firstSlot = m_busLineStart + 28 * clk;	// the PowerPC slot is the last 4 clocks of each pair
 			UINT64 slot = start <= firstSlot ? firstSlot : firstSlot + ((start - firstSlot + pair - 1) / pair) * pair;
 			start = std::min(slot, fetchEnd);
+			fetchSlot = start < fetchEnd;
 		}
 	}
 
-	// The chip takes one write every ~6.3 pixels; a read takes 4 clocks
-	const UINT64 end = start + 4 * clk;
-	m_busFree = start + (write ? m_busWriteGap : 4 * clk);
+	// Writes are posted: the chip is only busy briefly (or for the 4-clock fetch slot), but the write completes
+	// later. Over an active line, copies from CROM average ~55 tile RAM writes: 32 slots during the fetch plus ~23
+	// in the remaining 144 pixels.
+	m_busFree = start + (fetchSlot ? 4 * clk : m_busIssue);
+	const UINT64 complete = start + m_busComplete;
+	m_busWritesDone = std::max(m_busWritesDone, complete);
 
-	const UINT64 waitUntil = write ? start : end;
+	// A write only waits until the chip takes it. A read waits for its data and for earlier writes to complete.
+	const UINT64 waitUntil = write ? start : std::max(complete, m_busWritesDone);
 	return waitUntil > now ? (int)((waitUntil - now + 15) / 16) : 0;
+}
+
+int CTileGen::BusReadCycles(UINT64 cpuCycle)
+{
+	// A read over the bus cannot overtake posted tile generator writes, so it waits for the last one to complete
+	const UINT64 now = cpuCycle * 16;
+	return m_busWritesDone > now ? (int)((m_busWritesDone - now + 15) / 16) : 0;
 }
 
 
@@ -343,6 +388,7 @@ void CTileGen::Reset(void)
 	memset(memoryPool, 0, memSize);
 	memset(m_regs, 0, sizeof(m_regs));
 	m_busFree = 0;
+	m_busWritesDone = 0;
 	m_busFetching = false;
 
 	DebugLog("Tile Generator reset\n");

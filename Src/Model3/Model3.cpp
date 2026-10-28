@@ -946,6 +946,10 @@ UINT8 CModel3::Read8(UINT32 addr)
   if (addr<0x00800000)
     return ram[addr^3];
 
+  // Reads over the bus wait for posted tile generator writes (tile generator reads are timed by TileGen itself)
+  if ((addr - 0xF1000000) >= 0x00200000)
+    ppc_add_cycles(TileGen.BusReadCycles(ppc_total_cycles()));
+
   // Other
   switch ((addr >> 24))
   {
@@ -1070,6 +1074,10 @@ UINT16 CModel3::Read16(UINT32 addr)
   if (addr<0x00800000)
     return *(UINT16 *) &ram[addr^2];
 
+  // Reads over the bus wait for posted tile generator writes (tile generator reads are timed by TileGen itself)
+  if ((addr - 0xF1000000) >= 0x00200000)
+    ppc_add_cycles(TileGen.BusReadCycles(ppc_total_cycles()));
+
   // Other
   switch ((addr>>24))
   {
@@ -1183,6 +1191,10 @@ UINT32 CModel3::Read32(UINT32 addr)
   // RAM (most frequently accessed)
   if (addr < 0x00800000)
     return *(UINT32 *) &ram[addr];
+
+  // Reads over the bus wait for posted tile generator writes (tile generator reads are timed by TileGen itself)
+  if ((addr - 0xF1000000) >= 0x00200000)
+    ppc_add_cycles(TileGen.BusReadCycles(ppc_total_cycles()));
 
   // Other
   switch ((addr>>24))
@@ -3179,6 +3191,7 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
   // Initialize CPU
   ppc_init(&ppc_config);
   ppc_attach_bus(this);
+  ppc_set_idle_skip(0x800000);  // main RAM: nothing else writes it while the PowerPC runs
   PPCFetchRegions[0].start = 0;
   PPCFetchRegions[0].end = 0x007FFFFF;
   PPCFetchRegions[0].ptr = (UINT32 *) ram;

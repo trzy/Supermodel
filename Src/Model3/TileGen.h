@@ -255,25 +255,40 @@ public:
 	/*
 	 * Tile and palette RAM bus timing
 	 *
-	 * The tile generator RAM (Samsung KM4132G271A) runs at 32 MHz, twice the 16 MHz pixel clock. An access takes 4
-	 * clocks (row, column, wait, data). The tile generator chip accepts one write to tile RAM or palette RAM every
-	 * ~6.3 pixels. On each active line it generates 512 pixels (496 visible) as 32 tile pairs of 32 clocks: 28
-	 * clocks fetch the next tile pair (16 pixels) of layers A and B, leaving one 4-clock slot for the PowerPC, so
-	 * tile RAM is slowed further to one access per 16 pixels. The remaining 144 pixels of the line (horizontal
-	 * blanking) are free. Some games rely on this: Scud Race queues its palette uploads at the rate it can write
-	 * tile RAM, and the queue overflows if tile RAM writes are too fast.
+	 * The tile generator RAM (Samsung KM4132G271A) runs at 32 MHz, twice the 16 MHz pixel clock. On each active line
+	 * the tile generator generates 512 pixels (496 visible) as 32 tile pairs of 32 clocks: 28 clocks fetch the next
+	 * tile pair (16 pixels) of layers A and B, leaving one 4-clock slot for the PowerPC, so tile RAM can only be
+	 * written once per 16 pixels during the fetch. The remaining 144 pixels of the line are free.
+	 *
+	 * PowerPC writes to tile RAM and palette RAM are posted: the chip is only busy for ~2.5 pixels, so a loop that
+	 * just stores can write quickly, but each write takes ~6.3 pixels to complete. A read over the bus (CROM, other
+	 * devices, the tile generator itself) cannot overtake a posted write, so it waits for the last write to
+	 * complete. The upload loops in games copy from CROM, which limits them to one write per ~6.3 pixels.
+	 *
+	 * Measured against Scud Race Plus (Step 1.5) on real hardware:
+	 *  - Test menu: clears all name tables with plain stores at the start of vertical blanking and must finish in
+	 *    time to show the top lines of text.
+	 *  - Car select and the "decided like this" screen: the frame that shows partly uploaded cards and palettes,
+	 *    and where the title is cut off, depend on copies from CROM at ~6.3 pixels per write and ~55 tile RAM writes
+	 *    per active line.
+	 * Some games rely on this: Scud Race queues its palette uploads at the rate it can write them.
 	 *
 	 * SetCPUClock(hz):     PowerPC clock frequency, to convert VRAM clocks to PowerPC cycles.
 	 * BeginBusLine(cycle): an active line starts at this PowerPC cycle (ppc_total_cycles()).
 	 * BeginBusBlanking():  vertical blanking starts, nothing is fetched.
 	 * BusAccessCycles(cycle, write, tileRAM):
 	 *    Extra PowerPC cycles for an access to tile RAM (tileRAM = true) or palette RAM at this PowerPC cycle. A
-	 *    write is posted, so the PowerPC only waits until the chip takes it; a read waits for its data.
+	 *    write is posted, so the PowerPC only waits until the chip takes it; a read waits for its data and for
+	 *    earlier writes to complete.
+	 * BusReadCycles(cycle):
+	 *    Extra PowerPC cycles for a read from CROM or another device (not main RAM or the tile generator) at this
+	 *    PowerPC cycle: it waits for the last tile generator write to complete.
 	 */
 	void SetCPUClock(unsigned hz);
 	void BeginBusLine(UINT64 cpuCycle);
 	void BeginBusBlanking(void);
 	int  BusAccessCycles(UINT64 cpuCycle, bool write, bool tileRAM);
+	int  BusReadCycles(UINT64 cpuCycle);
 
 	/*
 	 * CTileGen(config):
@@ -350,10 +365,13 @@ private:
 	// Registers
 	UINT32	m_regs[64];
 
-	// Tile and palette RAM bus timing, in 1/16 PowerPC cycles (exact for 66, 100 and 166 MHz)
-	UINT64	m_busClock = 50;		// one VRAM clock
-	UINT64	m_busWriteGap = 630;	// minimum time between writes (~6.3 pixels = 12.6 clocks)
+	// Tile and palette RAM bus timing, in 1/16 PowerPC cycles. Set by SetCPUClock(); the defaults are for 100 MHz.
+	// See "Timing values" in TileGen.cpp.
+	UINT64	m_busClock = 50;		// one VRAM clock (31.25 ns, 3.125 PowerPC cycles at 100 MHz)
+	UINT64	m_busIssue = 250;		// write busy time: 2.5 pixels (156 ns, ~16 PowerPC cycles at 100 MHz)
+	UINT64	m_busComplete = 630;	// write complete: 6.3 pixels (394 ns, ~39 PowerPC cycles at 100 MHz)
 	UINT64	m_busFree = 0;			// when the next access can start
+	UINT64	m_busWritesDone = 0;	// when the last write completes
 	UINT64	m_busLineStart = 0;		// start of the active line
 	bool	m_busFetching = false;	// in the active part of the frame
 
