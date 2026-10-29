@@ -241,6 +241,225 @@ static void ppc_andis_rc(UINT32 op)
 	SET_CR0(REG(RA));
 }
 
+/*
+ * Idle loop skipping
+ *
+ * Games spend much of each frame polling a RAM flag (or the decrementer) until an interrupt handler changes it.
+ * Nothing outside the PowerPC changes main RAM while ppc_execute() is running (interrupts are only raised between
+ * time slices), so once such a loop is spotted, every further pass gives the same result until the next event
+ * inside the slice, which can only be the decrementer exception. The clock is run forward to that event. The
+ * cycles are still charged (timebase, decrementer and frame timing are unchanged); only the pointless
+ * interpretation of them is skipped.
+ *
+ * A loop qualifies when it is a short backward conditional branch (no CTR decrement, no link) over a straight run
+ * of instructions that only:
+ *   - load from main RAM (lwz/lbz/lhz/lha), with a base register that is either untouched by the loop or set to a
+ *     constant in it (li/lis),
+ *   - read the decrementer (mfspr DEC), which may only be tested with a signed compare against 0,
+ *   - set constants or do simple register arithmetic (li, lis, addi, addis, andi., rlwinm, extsb, extsh),
+ *   - compare (cmp, cmpl, cmpi, cmpli),
+ * and after two passes no register or condition field depends on its value from an earlier pass. That keeps
+ * loops like "lbz r4,flag / cmp r4,r3 / beq" (and the same with the load after the compare) but rejects counters.
+ *
+ * Countdown delay loops ("addic. rN,rN,-1 / bne") are skipped exactly instead: the register is counted down and
+ * the cycles charged in one step. "b ." is treated as idle.
+ */
+
+static const int IDLE_LOOP_MIN_PASSES = 8;	// passes before a loop is examined
+static UINT32	idleRAMSize = 0;			// loads below this address are plain RAM; 0 disables idle skipping
+static UINT32	idleRAMSizeSaved = 0;		// kept while the debugger has it disabled
+static UINT32	idleLoopPC = 0;				// address of the backward branch being watched
+static int		idleLoopPasses = 0;			// consecutive passes through it
+
+static bool IsIdleLoop(const UINT32 *code, UINT32 n)
+{
+	// Registers and CR fields the loop writes start out "tainted": they hold values from the previous pass
+	UINT32 taintGPR = 0, taintCR = 0;
+	for (UINT32 i = 0; i < n; i++)
+	{
+		const UINT32 op = code[i];
+		switch (op >> 26)
+		{
+		case 32: case 34: case 40: case 42:	// lwz, lbz, lhz, lha
+		case 14: case 15:					// addi, addis
+			taintGPR |= 1u << RT;
+			break;
+		case 21: case 28:					// rlwinm, andi.
+			taintGPR |= 1u << RA;
+			taintCR |= ((op >> 26) == 28 || RCBIT) ? 1 : 0;
+			break;
+		case 10: case 11:					// cmpli, cmpi
+			taintCR |= 1u << CRFD;
+			break;
+		case 31:
+			switch ((op >> 1) & 0x3FF)
+			{
+			case 0: case 32:	taintCR |= 1u << CRFD; break;							// cmp, cmpl
+			case 954: case 922:	taintGPR |= 1u << RA; taintCR |= RCBIT ? 1 : 0; break;	// extsb, extsh
+			case 339:			taintGPR |= 1u << RT; break;								// mfspr
+			default:			return false;
+			}
+			break;
+		default:
+			return false;
+		}
+	}
+	const UINT32 written = taintGPR;
+
+	UINT32 known = 0, decGPR = 0, val[32];
+	auto source = [&](UINT32 r, UINT32 &taint) { taint |= (taintGPR >> r) & 1; return (decGPR >> r) & 1; };
+	auto setGPR = [&](UINT32 r, UINT32 taint) { taintGPR = (taintGPR & ~(1u << r)) | (taint << r); known &= ~(1u << r); decGPR &= ~(1u << r); };
+	auto setCR = [&](UINT32 f, UINT32 taint) { taintCR = (taintCR & ~(1u << f)) | (taint << f); };
+
+	for (int pass = 0; pass < 2; pass++)
+	{
+		for (UINT32 i = 0; i < n; i++)
+		{
+			const UINT32 op = code[i];
+			UINT32 t = 0;
+			switch (op >> 26)
+			{
+			case 32: case 34: case 40: case 42:	// loads: from main RAM only
+			{
+				UINT32 base = 0;
+				if (RA != 0)
+				{
+					if (!(written & (1u << RA)))
+						base = REG(RA);
+					else if (known & (1u << RA))
+						base = val[RA];
+					else
+						return false;
+				}
+				const UINT32 addr = base + SIMM16;
+				const UINT32 bytes = (op >> 26) == 32 ? 4 : (op >> 26) == 34 ? 1 : 2;
+				if (addr >= idleRAMSize || idleRAMSize - addr < bytes)
+					return false;
+				setGPR(RT, 0);
+				break;
+			}
+			case 14: case 15:					// addi, addis (li, lis when RA is 0)
+			{
+				const UINT32 imm = (op >> 26) == 15 ? (UINT32) SIMM16 << 16 : (UINT32) SIMM16;
+				if (RA == 0)
+				{
+					setGPR(RT, 0);
+					known |= 1u << RT;
+					val[RT] = imm;
+					break;
+				}
+				if (source(RA, t))
+					return false;
+				const bool isKnown = !(written & (1u << RA)) || (known & (1u << RA));
+				const UINT32 v = ((written & (1u << RA)) ? val[RA] : REG(RA)) + imm;
+				setGPR(RT, t);
+				if (isKnown && !t)
+				{
+					known |= 1u << RT;
+					val[RT] = v;
+				}
+				break;
+			}
+			case 21: case 28:					// rlwinm, andi.
+				if (source(RS, t))
+					return false;
+				setGPR(RA, t);
+				if ((op >> 26) == 28 || RCBIT)
+					setCR(0, t);
+				break;
+			case 10: case 11:					// cmpli, cmpi
+				if (source(RA, t) && !((op >> 26) == 11 && SIMM16 == 0))
+					return false;				// DEC only changes sign at the decrementer exception
+				setCR(CRFD, t);
+				break;
+			case 31:
+				switch ((op >> 1) & 0x3FF)
+				{
+				case 0: case 32:				// cmp, cmpl
+					if (source(RA, t) | source(RB, t))
+						return false;
+					setCR(CRFD, t);
+					break;
+				case 954: case 922:				// extsb, extsh
+					if (source(RS, t))
+						return false;
+					setGPR(RA, t);
+					if (RCBIT)
+						setCR(0, t);
+					break;
+				case 339:						// mfspr DEC
+					if (SPR != SPR603E_DEC)
+						return false;
+					setGPR(RT, 0);
+					decGPR |= 1u << RT;
+					break;
+				}
+				break;
+			}
+		}
+	}
+	return taintGPR == 0 && taintCR == 0;
+}
+
+// Last cycle count (icount value) this time slice can be run forward to: the decrementer exception or the end
+static inline int NextEventCycle(void)
+{
+	return ppc.dec_trigger_cycle > 0 ? ppc.dec_trigger_cycle : 0;	// DEC_TRIGGER_NONE is INT_MIN
+}
+
+static void IdleSkip(void)
+{
+	const int target = NextEventCycle();
+	if (ppc.icount > target + 1)
+		ppc.icount = target + 1;	// ppc_execute()'s icount-- then lands on it, so the exception is taken on time
+}
+
+// "addic. rN,rN,-1 / bne": count down all but the last pass in one go, exactly as executing them would
+static bool SkipCountdown(UINT32 op, UINT32 body)
+{
+	if ((body >> 26) != 13 || ((body >> 21) & 0x1F) != ((body >> 16) & 0x1F) || (body & 0xFFFF) != 0xFFFF)
+		return false;
+	if ((BO & 0x1E) != 0x04 || BI != 2)	// bne (branch if CR0[EQ] clear), no CTR use
+		return false;
+	const UINT32 r = (body >> 21) & 0x1F;
+	const int avail = ppc.icount - (NextEventCycle() + 1);
+	if (REG(r) < 2 || avail < 2)
+		return true;
+	const UINT32 passes = std::min<UINT32>(REG(r) - 1, (UINT32) avail / 2);
+	REG(r) -= passes;
+	ppc.icount -= 2 * passes;
+	XER |= XER_CA;				// every pass decrements a non-zero value
+	SET_CR0(REG(r));			// as left by the last skipped pass
+	return true;
+}
+
+static inline void WatchBackwardBranch(UINT32 op)
+{
+	if (ppc.pc != idleLoopPC)
+	{
+		idleLoopPC = ppc.pc;
+		idleLoopPasses = 0;
+	}
+	if (++idleLoopPasses != IDLE_LOOP_MIN_PASSES || !(BO & 0x04) || LKBIT)
+		return;
+	idleLoopPasses = 0;				// if it is still looping after a skip, it is examined again
+
+	const UINT32 n = (ppc.pc - ppc.npc) / 4;	// instructions before the branch
+	const UINT32 base = ppc.cur_fetch.start, size = ppc.cur_fetch.end - ppc.cur_fetch.start;
+	if (n > 8 || ppc.npc - base >= size || ppc.pc - base >= size)
+	{
+		idleLoopPasses = IDLE_LOOP_MIN_PASSES;	// not examined again until a different loop runs
+		return;
+	}
+	const UINT32 *code = &ppc.cur_fetch.ptr[(ppc.npc - base) / 4];
+	if (n == 1 && SkipCountdown(op, code[0]))
+		return;
+	if (IsIdleLoop(code, n))
+		IdleSkip();
+	else
+		idleLoopPasses = IDLE_LOOP_MIN_PASSES;
+}
+
 static void ppc_bx(UINT32 op)
 {
 	INT32 li = op & 0x3fffffc;
@@ -258,6 +477,9 @@ static void ppc_bx(UINT32 op)
 	}
 
 	ppc_change_pc(ppc.npc);
+
+	if (ppc.npc == ppc.pc && !LKBIT && idleRAMSize)	// "b ."
+		IdleSkip();
 }
 
 static void ppc_bcx(UINT32 op)
@@ -270,6 +492,9 @@ static void ppc_bcx(UINT32 op)
 			ppc.npc += ppc.pc;
 
 		ppc_change_pc(ppc.npc);
+
+		if (ppc.npc <= ppc.pc && idleRAMSize)
+			WatchBackwardBranch(op);
 	}
 
 	if( LKBIT ) {

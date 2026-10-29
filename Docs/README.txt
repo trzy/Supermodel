@@ -1207,6 +1207,16 @@ not.  All options are case sensitive.
 
     ----------------
 
+    Option:         -no-idle-skip
+
+    Description:    Executes PowerPC idle loops (loops that only wait for an
+                    interrupt to change memory) in full.  By default they are
+                    detected and skipped up to the next event, which saves host
+                    CPU time without changing emulated timing.  Use this option
+                    if a game behaves differently with idle skipping enabled.
+
+    ----------------
+
     Option:         -fullscreen
 
     Description:    Runs in full screen mode.  The default is to run in a
@@ -1373,6 +1383,16 @@ All settings are case sensitive.
     Description:    If set to 1, enables multi-threading; if set to 0, runs all
                     emulation in a single thread.  Read the description of the
                     '-no-threads' command line option for more information.
+
+    ----------------
+
+    Name:           IdleSkip
+
+    Argument:       Integer.
+
+    Description:    If set to 1 (the default), PowerPC idle loops are skipped;
+                    if set to 0, they are executed in full.  Equivalent to the
+                    '-idle-skip' and '-no-idle-skip' command line options.
 
     ----------------
 

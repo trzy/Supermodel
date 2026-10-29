@@ -364,6 +364,7 @@ extern void ppc_set_timer_ratio(int ratio);
 
 // These have been added to support the new Supermodel
 extern void ppc_attach_bus(class IBus *BusPtr);		// must be called first!
+extern void ppc_set_idle_skip(UINT32 ramSize);		// skip idle loops polling RAM below ramSize (0 = off)
 extern void ppc_save_state(class CBlockFile *SaveState);
 extern void ppc_load_state(class CBlockFile *SaveState);
 extern UINT32 ppc_get_gpr(unsigned num);

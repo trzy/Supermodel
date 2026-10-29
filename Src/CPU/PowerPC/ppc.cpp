@@ -32,6 +32,7 @@
 
 #include <cstring>	// memset()
 #include <climits>
+#include <algorithm>	// std::min()
 
 #define DEC_TRIGGER_NONE	INT_MIN		// the decrementer does not pass zero in this time slice
 #include "Supermodel.h"
@@ -912,6 +913,13 @@ void ppc_attach_bus(IBus *BusPtr)
 	Bus = BusPtr;
 }
 
+void ppc_set_idle_skip(UINT32 ramSize)
+{
+	idleRAMSize = idleRAMSizeSaved = ramSize;
+	idleLoopPC = 0;
+	idleLoopPasses = 0;
+}
+
 void ppc_save_state(CBlockFile *SaveState)
 {
 	SaveState->NewBlock("PowerPC", __FILE__);
@@ -1103,6 +1111,7 @@ void ppc_attach_debugger(Debugger::CPPCDebug *PPCDebugPtr)
 		ppc_detach_debugger();
 	PPCDebug = PPCDebugPtr;
 	Bus = PPCDebug->AttachBus(Bus);
+	idleRAMSize = 0;	// breakpoints and stepping need every instruction executed
 }
 
 void ppc_detach_debugger()
@@ -1111,6 +1120,7 @@ void ppc_detach_debugger()
 		return;
 	Bus = PPCDebug->DetachBus(); 
 	PPCDebug = NULL;
+	idleRAMSize = idleRAMSizeSaved;
 }
 
 void ppc_break()
