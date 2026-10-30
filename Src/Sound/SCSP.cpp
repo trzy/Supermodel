@@ -84,6 +84,11 @@ Anyways credit to R. Belmont and ElSemi for the code, and for being awesome emul
 static const Util::Config::Node *s_config = 0;
 static bool s_multiThreaded = false;
 
+// Scales each SCSP's output by its MVOL master volume (0-15), like MAME. Not from MAME: the define, off by default, as the
+// volume levels were tuned without it, and games that set MVOL < 15 (or never set it: it starts at 0, which is silent)
+// would get quieter.
+//#define APPLY_MVOL
+
 // These globals control the operation of the SCSP, they are no longer extern and are set through SCSP_SetBuffers(). --Bart
 static float* bufferfl;
 static float* bufferfr;
@@ -116,11 +121,15 @@ static void (*Int68kCB)(int irq);
 #define MIDI_STACK_SIZE			0x1000
 #define MIDI_STACK_SIZE_MASK	(MIDI_STACK_SIZE-1)
 
-static BYTE MidiOutStack[16];
+#define MIDI_OUT_STACK_MASK		15	// not from MAME: 16 entries (MAME has 32), as the size is part of the save state
+
+static BYTE MidiOutStack[MIDI_OUT_STACK_MASK+1];
 static BYTE MidiOutW=0,MidiOutR=0;
 static BYTE MidiStack[MIDI_STACK_SIZE];
 static BYTE MidiOutFill;
+static BYTE MidiInFill;
 static UINT16 MidiW=0,MidiR=0;
+static bool MidiInOverflow=false;	// MIOVF: a byte arrived while the input FIFO was full
 static BYTE HasSlaveSCSP=0;
 static BYTE MidiInOverflow=0;		// MIOVF: a byte arrived while the input FIFO was full
 static int MidiOutDrain=0;			// samples until the next byte leaves the MIDI output FIFO
@@ -413,6 +422,7 @@ Result SCSP_Init(const Util::Config::Node &config, int n)
 	SCSPDSP_Init(&SCSP->DSP);
 	SCSP->Master=1;
 	MidiR=MidiW=0;
+	MidiInOverflow=false;
 	MidiOutR=MidiOutW=0;
 	MidiOutFill=0;
 
@@ -578,6 +588,10 @@ void SCSP_UpdateReg(int reg)
 {
 	switch(reg&0x3f)
 	{
+		case 0x0: // MVOL is applied in SCSP_DoMasterSamples (if APPLY_MVOL is defined)
+			//m_stream->set_output_gain(0, MVOL() / 15.0);
+			//m_stream->set_output_gain(1, MVOL() / 15.0);
+			//break;
 		case 0x2:
 		case 0x3:
 			SCSP->DSP.RBL = (8 * 1024) << RBL(SCSP); // 8 / 16 / 32 / 64 kwords
@@ -623,6 +637,7 @@ void SCSP_UpdateReg(int reg)
 				TimReload[2] = SCSPs->data[0x1C/2] & 0xff;	// loaded on the next prescaler clock (SCSP_TimersAddTicks)
 			}
 			break;
+		// TODO (verified via spec, not from MAME): SCIPD (0x20) is read only, except that writes can set bit 5 (raising that interrupt)
 		case 0x22:	//SCIRE
 		case 0x23:
 			if(SCSP->Master)
@@ -708,6 +723,11 @@ static UINT16 SCSP_ReadCommonReg(int reg, bool popMidi)
 		unsigned int SGC = (slot->EG.state) & 3;
 		unsigned int CA = (slot->cur_addr >> (ADDR_SHIFT + 12)) & 0xf;
 		unsigned int EG = (EG_Level(slot) >> 5) & 0x1f;	// attenuation, 0 = full volume
+    /* note: according to the manual MSLC is write only, CA, SGC and EG read only.  */
+		// not from MAME: keep MSLC in the register (MAME latches it, which would change the save state), so later reads
+		// monitor the same slot (SCSP_r8/r16 mask it out of the value read)
+		// TODO: MAME (458507e06b) updates this only once per sample, so a read right after selecting a slot returns the
+		// old value. Depends on 68K timing, and needs a save state change
 		return (CA << 7) | (SGC << 5) | EG;		// MSLC stays as written
 	}
 
@@ -844,6 +864,13 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 	addr&=0xffff;
 	if(addr<0x400)
 	{
+		if ((addr&0x1f) == 0x1e)	// verified via spec, not from MAME: crosses into the next slot (or the common registers)
+		{
+			SCSP_w16(addr, val >> 16);
+			SCSP_w16(addr + 2, val & 0xffff);
+			return;
+		}
+		// otherwise write both halves before the updates, as a key on (offset 0) uses SA from the second half
 		int slot=addr/0x20;
 		addr&=0x1f;
 		*(unsigned short *) &(SCSP->Slots[slot].datab[addr]) = val;
@@ -851,6 +878,10 @@ void SCSP_w16(unsigned int addr,unsigned short val)
 	}
 	else if(addr<0x600)
 	{
+		// not from MAME: as two 16-bit writes, which keeps them inside the registers (same result as updating after both
+		// halves, as an update that reads the other half is redone by that half's own update)
+		//SCSP_w16(addr, val >> 16);
+		//SCSP_w16(addr + 2, val & 0xffff);
 		if (addr < 0x430)
 		{
 			int reg = addr & 0x3e;
@@ -1261,6 +1292,21 @@ void SCSP_DoMasterSamples(int nsamples)
 			*bufrr++ = (float)smprr;
 		}
 
+#ifdef APPLY_MVOL
+		// as MAME's output gain, so after the clipping above ([-1]: each buffer pointer has just advanced by one)
+		{
+			const float masterVol = (float)MVOL((&SCSPs[0])) / 15.0f;
+			buffl[-1] *= masterVol;
+			buffr[-1] *= masterVol;
+			if (HasSlaveSCSP)
+			{
+				const float slaveVol = (float)MVOL((&SCSPs[1])) / 15.0f;
+				bufrl[-1] *= slaveVol;
+				bufrr[-1] *= slaveVol;
+			}
+		}
+#endif
+
 		SCSP_TimersAddTicks(1);
 
 		// one sample interval interrupt (SCIPD bit 10)
@@ -1290,6 +1336,8 @@ void SCSP_SetCB(int (*Run68k)(int cycles),void (*Int68k)(int irq))
 	Run68kCB=Run68k;
 }
 
+// NOTE (not from/unlike MAME): bytes arrive instantly instead of at the serial MIDI rate, and the FIFO is bigger than the
+// hardware's, on purpose (see MIDI_STACK_SIZE at the top of this file)
 void SCSP_MidiIn(BYTE val)
 {
 	/*
