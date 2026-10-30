@@ -120,6 +120,21 @@ SRC_FILES = \
 	Src/Graphics/SuperAA.cpp \
 	Src/Model3/TileGen.cpp \
 	Src/Model3/Model3.cpp \
+	Src/Model1/Model1.cpp \
+	Src/Model1/Model1Geometry.cpp \
+	Src/Model1/Model1Tilemap.cpp \
+	Src/Model1/Model1SoundBoard.cpp \
+	Src/Model1/I8251.cpp \
+	Src/Model1/YM3438.cpp \
+	Src/CPU/V60/V60.cpp \
+	Src/CPU/V60/V60Disasm.cpp \
+	Src/CPU/MB86233/MB86233.cpp \
+	Src/CPU/MB86233/MB86233Disasm.cpp \
+	Src/Sound/MultiPCM.cpp \
+	Src/Graphics/Model1Render.cpp \
+	Src/Pkgs/ymfm/ymfm_opn.cpp \
+	Src/Pkgs/ymfm/ymfm_adpcm.cpp \
+	Src/Pkgs/ymfm/ymfm_ssg.cpp \
 	Src/Pro1000/Pro1000.cpp \
 	Src/Pro1000/UART.cpp \
 	Src/Pro1000/8259.cpp \

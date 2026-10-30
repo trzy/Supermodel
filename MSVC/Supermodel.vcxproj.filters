@@ -29,6 +29,12 @@
     <Filter Include="Source Files\Model3">
       <UniqueIdentifier>{9113f873-c745-44ac-860a-dcf12d177f5b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Model1">
+      <UniqueIdentifier>{c57b15c0-beee-4ef8-a355-d43c2a619d7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Model1">
+      <UniqueIdentifier>{eb70be3c-038b-4311-98aa-220533f8f7a4}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\Pro1000">
       <UniqueIdentifier>{10297567-7bf1-47c1-89e4-d5856ff09166}</UniqueIdentifier>
     </Filter>
@@ -226,6 +232,51 @@
     </ClCompile>
     <ClCompile Include="..\Src\Pro1000\Pro1000.cpp">
       <Filter>Source Files\Pro1000</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model1\Model1.cpp">
+      <Filter>Source Files\Model1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model1\Model1Geometry.cpp">
+      <Filter>Source Files\Model1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model1\Model1Tilemap.cpp">
+      <Filter>Source Files\Model1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model1\Model1SoundBoard.cpp">
+      <Filter>Source Files\Model1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model1\I8251.cpp">
+      <Filter>Source Files\Model1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Model1\YM3438.cpp">
+      <Filter>Source Files\Model1</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\V60\V60.cpp">
+      <Filter>Source Files\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\V60\V60Disasm.cpp">
+      <Filter>Source Files\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\MB86233\MB86233.cpp">
+      <Filter>Source Files\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\CPU\MB86233\MB86233Disasm.cpp">
+      <Filter>Source Files\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Sound\MultiPCM.cpp">
+      <Filter>Source Files\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Graphics\Model1Render.cpp">
+      <Filter>Source Files\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\ymfm\ymfm_opn.cpp">
+      <Filter>Source Files\Pkgs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\ymfm\ymfm_adpcm.cpp">
+      <Filter>Source Files\Pkgs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Src\Pkgs\ymfm\ymfm_ssg.cpp">
+      <Filter>Source Files\Pkgs</Filter>
     </ClCompile>
     <ClCompile Include="..\Src\Pro1000\UART.cpp">
       <Filter>Source Files\Pro1000</Filter>
@@ -636,6 +687,57 @@
     </ClInclude>
     <ClInclude Include="..\Src\Pro1000\Pro1000.h">
       <Filter>Header Files\Pro1000</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model1\Model1.h">
+      <Filter>Header Files\Model1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model1\Model1Geometry.h">
+      <Filter>Header Files\Model1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model1\Model1Tilemap.h">
+      <Filter>Header Files\Model1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model1\Model1SoundBoard.h">
+      <Filter>Header Files\Model1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model1\I8251.h">
+      <Filter>Header Files\Model1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model1\YM3438.h">
+      <Filter>Header Files\Model1</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\V60\V60.h">
+      <Filter>Header Files\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\V60\V60Disasm.h">
+      <Filter>Header Files\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\MB86233\MB86233.h">
+      <Filter>Header Files\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\CPU\MB86233\MB86233Disasm.h">
+      <Filter>Header Files\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Sound\MultiPCM.h">
+      <Filter>Header Files\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Graphics\Model1Render.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\ymfm\ymfm.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\ymfm\ymfm_fm.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\ymfm\ymfm_opn.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\ymfm\ymfm_adpcm.h">
+      <Filter>Header Files\Pkgs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Pkgs\ymfm\ymfm_ssg.h">
+      <Filter>Header Files\Pkgs</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Pro1000\UART.h">
       <Filter>Header Files\Pro1000</Filter>

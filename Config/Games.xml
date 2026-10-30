@@ -3283,4 +3283,364 @@
       </region>
     </roms>
   </game>
+  <!-- Sega Model 1. ROM regions are placed in the V60 address space as MAME's "maincpu" region:
+       rom_main at 200000, rom_data at 1000000 (banked at 100000), rom_boot at F80000. -->
+  <game name="vf">
+    <identity>
+      <title>Virtua Fighter</title>
+      <version></version>
+      <manufacturer>Sega</manufacturer>
+      <year>1993</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
+        <input type="fighting" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-16082.14" crc32="0xB23F22EE" />
+        <file offset="1" name="epr-16083.15" crc32="0xD12C77F8" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-16080.4" crc32="0x3662E1A5" />
+        <file offset="0x60000" name="epr-16081.5" crc32="0x6DEC06CE" />
+      </region>
+      <region name="rom_data" stride="2" chunk_size="1">
+        <file offset="0x000000" name="mpr-16084.6" crc32="0x483F453B" />
+        <file offset="0x000001" name="mpr-16085.7" crc32="0x5FA01277" />
+        <file offset="0x100000" name="mpr-16086.8" crc32="0xDEAC47A1" />
+        <file offset="0x100001" name="mpr-16087.9" crc32="0x7A64DAAC" />
+        <file offset="0x200000" name="mpr-16088.10" crc32="0xFCDA2D1E" />
+        <file offset="0x200001" name="mpr-16089.11" crc32="0x39BEFBE0" />
+        <file offset="0x300000" name="mpr-16090.12" crc32="0x90C76831" />
+        <file offset="0x300001" name="mpr-16091.13" crc32="0x53115448" />
+      </region>
+      <!-- TGP program (MAME marks this dump as bad) -->
+      <region name="tgp_program" stride="1" chunk_size="1">
+        <file offset="0" name="315-5724.bin" crc32="0x4B4F330E" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
+        <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16120.7" crc32="0x2BFF8378" />
+        <file offset="0x20000" name="epr-16121.8" crc32="0xFF6723F9" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16122.32" crc32="0x568BC64E" />
+        <file offset="0x200000" name="mpr-16123.33" crc32="0x15D78844" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16124.4" crc32="0x45520BA1" />
+        <file offset="0x200000" name="mpr-16125.5" crc32="0x9B4998B6" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16096.26" crc32="0xA92B0BF3" />
+        <file offset="0x000002" name="mpr-16097.27" crc32="0x0232955A" />
+        <file offset="0x400000" name="mpr-16098.28" crc32="0xCF2E1B84" />
+        <file offset="0x400002" name="mpr-16099.29" crc32="0x20E46854" />
+        <file offset="0x800000" name="mpr-16100.30" crc32="0xE13E983D" />
+        <file offset="0x800002" name="mpr-16101.31" crc32="0x0DBED94D" />
+        <file offset="0xC00000" name="mpr-16102.32" crc32="0x4CB41FB6" />
+        <file offset="0xC00002" name="mpr-16103.33" crc32="0x526D1C76" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="vr">
+    <identity>
+      <title>Virtua Racing</title>
+      <version></version>
+      <manufacturer>Sega</manufacturer>
+      <year>1992</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="vr4" />
+        <input type="shiftupdown" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-14882.14" crc32="0x547D75AD" />
+        <file offset="1" name="epr-14883.15" crc32="0x6BFAD8B1" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-14878a.4" crc32="0x6D69E695" />
+        <file offset="0x60000" name="epr-14879a.5" crc32="0xD45AF9DD" />
+      </region>
+      <region name="rom_data" stride="2" chunk_size="1">
+        <file offset="0x000000" name="mpr-14880.6" crc32="0xADC7C208" />
+        <file offset="0x000001" name="mpr-14881.7" crc32="0xE5AB89DF" />
+        <file offset="0x100000" name="mpr-14884.8" crc32="0x6CF9C026" />
+        <file offset="0x100001" name="mpr-14885.9" crc32="0xF65C9262" />
+        <file offset="0x200000" name="mpr-14886.10" crc32="0x92868734" />
+        <file offset="0x200001" name="mpr-14887.11" crc32="0x10C7C636" />
+        <file offset="0x300000" name="mpr-14888.12" crc32="0x04BFDC5B" />
+        <file offset="0x300001" name="mpr-14889.13" crc32="0xC49F0486" />
+      </region>
+      <region name="tgp_program" stride="1" chunk_size="1">
+        <file offset="0" name="315-5573.bin" crc32="0x3335A19B" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
+        <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="1">
+        <file offset="0" name="mpr-14898.39" crc32="0x61DA2BB6" />
+        <file offset="1" name="mpr-14899.40" crc32="0x2CD58BEE" />
+        <file offset="2" name="mpr-14900.41" crc32="0xAA7C017D" />
+        <file offset="3" name="mpr-14901.42" crc32="0x175B7A9A" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-14870a.7" crc32="0x919D9B75" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-14873.32" crc32="0xB1965190" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-14876.4" crc32="0xBA6B2327" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-14890.26" crc32="0xDCBE006B" />
+        <file offset="0x000002" name="mpr-14891.27" crc32="0x25832B38" />
+        <file offset="0x400000" name="mpr-14892.28" crc32="0x5136F3BA" />
+        <file offset="0x400002" name="mpr-14893.29" crc32="0x1C531ADA" />
+        <file offset="0x800000" name="mpr-14894.30" crc32="0x830A71BC" />
+        <file offset="0x800002" name="mpr-14895.31" crc32="0xAF027AC5" />
+        <file offset="0xC00000" name="mpr-14896.32" crc32="0x382091DC" />
+        <file offset="0xC00002" name="mpr-14897.33" crc32="0x74873195" />
+      </region>
+    </roms>
+  </game>
+  <game name="wingwar">
+    <identity>
+      <title>Wing War</title>
+      <version>World</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+        <input type="vr4" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-16729.14" crc32="0x7EDEC2CC" />
+        <file offset="1" name="epr-16730.15" crc32="0xBAB24DEE" />
+      </region>
+      <!-- The boot ROMs also appear at 000000 -->
+      <region name="rom_low" stride="1" chunk_size="1">
+        <file offset="0x00000" name="epr-16953.4" crc32="0xC821A920" />
+        <file offset="0x20000" name="epr-16952.5" crc32="0x03A3ECC5" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-16953.4" crc32="0xC821A920" />
+        <file offset="0x60000" name="epr-16952.5" crc32="0x03A3ECC5" />
+      </region>
+      <region name="rom_data" stride="2" chunk_size="1">
+        <file offset="0x000000" name="mpr-16738.6" crc32="0x51518FFA" />
+        <file offset="0x000001" name="mpr-16737.7" crc32="0x37B1379C" />
+        <file offset="0x100000" name="mpr-16736.8" crc32="0x10B6A025" />
+        <file offset="0x100001" name="mpr-16735.9" crc32="0xC82FD198" />
+        <file offset="0x200000" name="mpr-16734.10" crc32="0xF76371C1" />
+        <file offset="0x200001" name="mpr-16733.11" crc32="0xE105847B" />
+      </region>
+      <!-- TGP program (MAME marks this dump as bad) -->
+      <region name="tgp_program" stride="1" chunk_size="1">
+        <file offset="0" name="315-5711.bin" crc32="0x6A21F304" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
+        <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="1">
+        <file offset="0" name="mpr-16741.39" crc32="0x84B2FFD8" />
+        <file offset="1" name="mpr-16742.40" crc32="0xE9CC12BB" />
+        <file offset="2" name="mpr-16739.41" crc32="0x6C73E98F" />
+        <file offset="3" name="mpr-16740.42" crc32="0x44B31007" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-17126.7" crc32="0x50178E40" />
+        <file offset="0x20000" name="epr-16752.8" crc32="0x6541C48F" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16753.32" crc32="0x324A8333" />
+        <file offset="0x200000" name="mpr-16754.33" crc32="0x144F3CF5" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16755.4" crc32="0x4BAAF878" />
+        <file offset="0x200000" name="mpr-16756.5" crc32="0xD9C40672" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16743.26" crc32="0xA710D33C" />
+        <file offset="0x000002" name="mpr-16744.27" crc32="0xDE796E1F" />
+        <file offset="0x400000" name="mpr-16745.28" crc32="0x905B689C" />
+        <file offset="0x400002" name="mpr-16746.29" crc32="0x163B312E" />
+        <file offset="0x800000" name="mpr-16747.30" crc32="0x7353BB12" />
+        <file offset="0x800002" name="mpr-16748.31" crc32="0x8CE98D3A" />
+        <file offset="0xC00000" name="mpr-16749.32" crc32="0x0E36DC1A" />
+        <file offset="0xC00002" name="mpr-16750.33" crc32="0xE4F0B98D" />
+      </region>
+    </roms>
+  </game>
+  <game name="swa">
+    <identity>
+      <title>Star Wars Arcade</title>
+      <version>US</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <mpeg_board>DSB1</mpeg_board>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+        <input type="vehicle" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-16669.14" crc32="0x52E5E7E4" />
+        <file offset="1" name="epr-16670.15" crc32="0x1E7ECABD" />
+      </region>
+      <!-- The boot ROM also appears at 000000 and 080000 -->
+      <region name="rom_low" stride="1" chunk_size="1">
+        <file offset="0x00000" name="epr-16668.5" crc32="0x9E112425" />
+        <file offset="0x80000" name="epr-16668.5" crc32="0x9E112425" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16668.5" crc32="0x9E112425" />
+      </region>
+      <!-- TGP program (MAME marks this dump as bad) -->
+      <region name="tgp_program" stride="1" chunk_size="1">
+        <file offset="0" name="315-5711.bin" crc32="0x6A21F304" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
+        <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="1">
+        <file offset="0" name="mpr-16472.39" crc32="0x5A0D7553" />
+        <file offset="1" name="mpr-16473.40" crc32="0x876C5399" />
+        <file offset="2" name="mpr-16474.41" crc32="0x5864A26F" />
+        <file offset="3" name="mpr-16475.42" crc32="0xB9266BE9" />
+      </region>
+      <!-- The sound board mirrors 020000-03FFFF at 080000; here that is this ROM again -->
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16470.7" crc32="0x7DA18CF7" />
+        <file offset="0x20000" name="epr-16470.7" crc32="0x7DA18CF7" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16486.32" crc32="0x7DF50533" />
+        <file offset="0x200000" name="mpr-16487.33" crc32="0x31B28DFA" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16484.4" crc32="0x9D4C334D" />
+        <file offset="0x200000" name="mpr-16485.5" crc32="0x95AADCAD" />
+      </region>
+      <region name="mpeg_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16471.2" crc32="0xF4EE84A4" />
+      </region>
+      <region name="mpeg_music" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16514.57" crc32="0x3175B0BE" />
+        <file offset="0x200000" name="mpr-16515.58" crc32="0x3114D748" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16476.26" crc32="0xD48609AE" />
+        <file offset="0x000002" name="mpr-16477.27" crc32="0xB979B082" />
+        <file offset="0x400000" name="mpr-16478.28" crc32="0x80C780F7" />
+        <file offset="0x400002" name="mpr-16479.29" crc32="0xE43183B3" />
+        <file offset="0x800000" name="mpr-16480.30" crc32="0x3185547A" />
+        <file offset="0x800002" name="mpr-16481.31" crc32="0xCE8D76FE" />
+      </region>
+    </roms>
+  </game>
+  <game name="swaj">
+    <identity>
+      <title>Star Wars Arcade</title>
+      <version>Japan</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <mpeg_board>DSB1</mpeg_board>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+        <input type="vehicle" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-16468.14" crc32="0x681D03C0" />
+        <file offset="1" name="epr-16469.15" crc32="0x6F281F7C" />
+      </region>
+      <!-- The boot ROM also appears at 000000 and 080000 -->
+      <region name="rom_low" stride="1" chunk_size="1">
+        <file offset="0x00000" name="epr-16467.5" crc32="0x605068F5" />
+        <file offset="0x80000" name="epr-16467.5" crc32="0x605068F5" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16467.5" crc32="0x605068F5" />
+      </region>
+      <!-- TGP program (MAME marks this dump as bad) -->
+      <region name="tgp_program" stride="1" chunk_size="1">
+        <file offset="0" name="315-5711.bin" crc32="0x6A21F304" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
+        <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="1">
+        <file offset="0" name="mpr-16472.39" crc32="0x5A0D7553" />
+        <file offset="1" name="mpr-16473.40" crc32="0x876C5399" />
+        <file offset="2" name="mpr-16474.41" crc32="0x5864A26F" />
+        <file offset="3" name="mpr-16475.42" crc32="0xB9266BE9" />
+      </region>
+      <!-- The sound board mirrors 020000-03FFFF at 080000; here that is this ROM again -->
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16470.7" crc32="0x7DA18CF7" />
+        <file offset="0x20000" name="epr-16470.7" crc32="0x7DA18CF7" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16486.32" crc32="0x7DF50533" />
+        <file offset="0x200000" name="mpr-16487.33" crc32="0x31B28DFA" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16484.4" crc32="0x9D4C334D" />
+        <file offset="0x200000" name="mpr-16485.5" crc32="0x95AADCAD" />
+      </region>
+      <region name="mpeg_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16471.2" crc32="0xF4EE84A4" />
+      </region>
+      <region name="mpeg_music" stride="1" chunk_size="1">
+        <file offset="0" name="mpr-16514.57" crc32="0x3175B0BE" />
+        <file offset="0x200000" name="mpr-16515.58" crc32="0x3114D748" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16476.26" crc32="0xD48609AE" />
+        <file offset="0x000002" name="mpr-16477.27" crc32="0xB979B082" />
+        <file offset="0x400000" name="mpr-16478.28" crc32="0x80C780F7" />
+        <file offset="0x400002" name="mpr-16479.29" crc32="0xE43183B3" />
+        <file offset="0x800000" name="mpr-16480.30" crc32="0x3185547A" />
+        <file offset="0x800002" name="mpr-16481.31" crc32="0xCE8D76FE" />
+      </region>
+    </roms>
+  </game>
 </games>

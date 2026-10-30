@@ -17,7 +17,8 @@ struct Game
   enum Platform
   {
     PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
-    PLATFORM_PRO1000      // Real3D Pro-1000 image generator
+    PLATFORM_PRO1000,     // Real3D Pro-1000 image generator
+    PLATFORM_MODEL1       // Sega Model 1 arcade hardware
   };
   Platform platform = Platform::PLATFORM_MODEL3;
   // Hardware stepping. Games.xml: "1.0", "1.5", "2.0", or "2.1" (Model 3) and
@@ -33,7 +34,8 @@ struct Game
     MODEL3_2_1,     // Sega Model 3 Step 2.1
     PRO1000_1100,   // Real3D PRO-1100 (1 pixel processor)
     PRO1000_1200,   // Real3D PRO-1200 (2 pixel processors)
-    PRO1000_1400    // Real3D PRO-1400 (4 pixel processors)
+    PRO1000_1400,   // Real3D PRO-1400 (4 pixel processors)
+    MODEL1          // Sega Model 1 (one stepping)
   };
   Stepping stepping = Stepping::UNKNOWN;
 
@@ -50,6 +52,7 @@ struct Game
     case Stepping::PRO1000_1100:  return "Pro-1100";
     case Stepping::PRO1000_1200:  return "Pro-1200";
     case Stepping::PRO1000_1400:  return "Pro-1400";
+    case Stepping::MODEL1:        return "Model 1";
     default:                      return "Unknown";
     }
   }
