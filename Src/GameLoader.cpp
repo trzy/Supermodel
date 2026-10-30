@@ -262,7 +262,8 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   {
     { "",                 Game::PLATFORM_MODEL3 },  // default to Model 3
     { "Sega Model 3",     Game::PLATFORM_MODEL3 },
-    { "Real3D Pro-1000",  Game::PLATFORM_PRO1000 }
+    { "Real3D Pro-1000",  Game::PLATFORM_PRO1000 },
+    { "Sega Model 1",     Game::PLATFORM_MODEL1 }
   };
   std::string platform = game_node["hardware/platform"].ValueAsDefault<std::string>("");
   if (platforms.find(platform) == platforms.end())
@@ -284,14 +285,19 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
     { "1200", Game::Stepping::PRO1000_1200 },
     { "1400", Game::Stepping::PRO1000_1400 }
   };
+  std::map<std::string, Game::Stepping> model1_steppings
+  {
+    { "",     Game::Stepping::MODEL1 }
+  };
   bool pro1000 = game->platform == Game::PLATFORM_PRO1000;
-  const auto &steppings = pro1000 ? pro1000_steppings : model3_steppings;
+  bool model1 = game->platform == Game::PLATFORM_MODEL1;
+  const auto &steppings = model1 ? model1_steppings : pro1000 ? pro1000_steppings : model3_steppings;
   std::string stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
   auto stepping_it = steppings.find(stepping);
   if (stepping_it == steppings.end())
   {
     ErrorLog("Stepping '%s' of '%s' is not a %s stepping (%s). Ignoring this game.", stepping.c_str(), game->name.c_str(),
-             pro1000 ? "Real3D Pro-1000" : "Sega Model 3", pro1000 ? "1100, 1200, or 1400" : "1.0, 1.5, 2.0, or 2.1");
+             model1 ? "Sega Model 1" : pro1000 ? "Real3D Pro-1000" : "Sega Model 3", model1 ? "none" : pro1000 ? "1100, 1200, or 1400" : "1.0, 1.5, 2.0, or 2.1");
     return false;
   }
   game->stepping = stepping_it->second;

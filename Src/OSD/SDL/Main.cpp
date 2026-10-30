@@ -98,6 +98,8 @@
 #include "Pro1000/Pro1000.h"
 #include "Network/NetServer.h"
 #include "Graphics/Pro1000Render2D.h"
+#include "Model1/Model1.h"
+#include "Graphics/Model1Render.h"
 #include "Graphics/IRender2D.h"
 #include "OSD/Audio.h"
 #include "OSD/ConsoleInput.h"
@@ -934,6 +936,8 @@ static IRender2D *CreateRender2D(IEmulator *Emu)
 {
   if (dynamic_cast<CPro1000 *>(Emu))
     return new CPro1000Render2D();
+  if (dynamic_cast<CModel1 *>(Emu))
+    return new CModel1Render();
   return new CRender2D(s_runtime_config);
 }
 
@@ -2533,6 +2537,8 @@ int main(int argc, char **argv)
 #endif
   if (game.platform == Game::PLATFORM_PRO1000)
     Emu = new CPro1000(s_runtime_config, consoleInput ? consoleInput->CreateInput() : nullptr, netServer);
+  else if (game.platform == Game::PLATFORM_MODEL1)
+    Emu = new CModel1(s_runtime_config, Inputs, Outputs);
   else
     Emu = new CModel3(s_runtime_config, Inputs, Outputs, netServer);
 
