@@ -878,6 +878,17 @@ void CModel1::UpdateInputs(void)
       in1 |= sw(m_inputs->analogJoyTrigger2) ? 0x20 : 0;
       in1 |= sw(m_inputs->analogJoyEvent1) ? 0x40 : 0;
     }
+    else if (m_game.name == "netmerc")
+    {
+      // NetMerc (MAME's ports): hand controller stick on channels 0 and 2
+      // (Y reversed), trigger, thumb button, and the headset holder switch
+      an[0] = x;
+      an[1] = 0x80;
+      an[2] = 0xFF - y;
+      in1 |= sw(m_inputs->analogJoyTrigger1) ? 0x01 : 0;
+      in1 |= sw(m_inputs->analogJoyTrigger2) ? 0x02 : 0;
+      in1 |= sw(m_inputs->analogJoyEvent1) ? 0x04 : 0;
+    }
     else
     {
       // Star Wars Arcade (MAME's swa ports): pilot stick 27-227 (X reversed),
@@ -1310,6 +1321,20 @@ void CModel1::Reset(void)
   m_ioBoardBootFrames = IO_BOARD_BOOT_FRAMES;
   m_throttleLever = 0;
 
+  // NetMerc reads the headset's position and orientation (from the Polhemus
+  // tracker board) from the I/O board RAM at 80-8B: x, y, z and three angles
+  // (radians * 8192), 16-bit little endian. As MAME: a fixed pose, looking
+  // forward (12868 = 90 degrees, 25736 = 180 degrees).
+  if (m_game.name == "netmerc")
+  {
+    static const int16_t pose[6] = { 0, 0, 0, 12868, 25736, 12868 };
+    for (int i = 0; i < 6; i++)
+    {
+      m_dpram[0x80 + i * 2] = (uint8_t) (pose[i] & 0xff);
+      m_dpram[0x81 + i * 2] = (uint8_t) ((pose[i] >> 8) & 0xff);
+    }
+  }
+
   m_v60.Reset();
   m_tgp.Reset();
   m_geometry.Reset();
@@ -1498,6 +1523,9 @@ void CModel1::ClearNVRAM(void)
 {
   // vf (at least) depends on default being 1-filled for ranking to initialize properly
   std::fill(m_ramA.begin(), m_ramA.end(), 0xFFFF);
+  // NetMerc ships with default RAM contents (MAME's "nvram" region)
+  if (!m_defaultNVRAM.empty())
+    memcpy(m_ramA.data(), m_defaultNVRAM.data(), std::min(m_defaultNVRAM.size(), m_ramA.size() * sizeof(uint16_t)));
   std::fill(m_dpram.begin() + 0x100, m_dpram.begin() + 0x180, 0xFF);
 }
 
@@ -1586,6 +1614,10 @@ bool CModel1::LoadROMs(const ROMSet &rom_set)
   if (!loadWords("polygons", m_polyROM, 0x400000, true))
     return false;
   loadWords("copro_data", m_coproData, 0, false);
+  ROM nvram = rom_set.get_rom("default_nvram");
+  m_defaultNVRAM.assign(nvram.size, 0);
+  if (nvram.size)
+    nvram.CopyTo(m_defaultNVRAM.data(), nvram.size);
   loadWords("geo_5571", m_geo5571, 0x800, false);
   loadWords("geo_5572", m_geo5572, 0x800, false);
   loadWords("geo_recip", m_geoRecip, 0x10000, false);
@@ -1601,6 +1633,8 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
     return Result::FAIL;
 
   m_ramA.assign(0x10000 / 2, 0xFFFF);
+  if (!m_defaultNVRAM.empty())
+    memcpy(m_ramA.data(), m_defaultNVRAM.data(), std::min(m_defaultNVRAM.size(), m_ramA.size() * sizeof(uint16_t)));
   m_ramB.assign(0x40000 / 2, 0);
   m_displayList0.assign(0x10000 / 2, 0);
   m_displayList1.assign(0x10000 / 2, 0);
