@@ -110,7 +110,10 @@ struct Game
     INPUT_SKI             = 0x00080000, // ski controls
     INPUT_MAGTRUCK        = 0x00100000, // magical truck controls
     INPUT_FISHING         = 0x00200000, // fishing controls
-    INPUT_ALL             = 0x003FFFFF
+    INPUT_THROTTLE        = 0x00400000, // throttle lever (Model 1 flight games)
+    INPUT_ANALOG_JOYSTICK2= 0x00800000, // second analog joystick (Star Wars Arcade gunner)
+    INPUT_FLIGHT_VIEW4    = 0x01000000, // four view buttons (Wing War)
+    INPUT_ALL             = 0x01FFFFFF
   };
   uint32_t inputs = 0;
 
