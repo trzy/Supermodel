@@ -483,8 +483,9 @@ namespace Model1
     return (int) std::lround(v * 255.0f);
   }
 
-  // Specular luminance in counts (0-255 scale, not clamped)
-  int CGeometry::compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const
+  // Specular luminance in counts (0-255 scale), not truncated: the 5572s add
+  // it to the diffuse and ambient terms and truncate the total
+  float CGeometry::compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const
   {
     if (!m_view.spec_enable)
       return 0;
@@ -508,9 +509,9 @@ namespace Model1
       s *= s;
     if (power >= 7)
       s *= s;
-    // clamp before converting: s^8 of a large (unnormalized) normal can
-    // overflow to infinity, and the total is clamped to 255 anyway
-    return (int) std::min(s * (float) scale, 255.0f);
+    // s^8 of a large (unnormalized) normal can overflow to infinity, and the
+    // total is clamped to 255 anyway
+    return std::min(s * (float) scale, 255.0f);
   }
 
   // Color of a polygon from its tile word and luminance (0-0x3f), through the
@@ -688,8 +689,13 @@ namespace Model1
         }
       }
 
-      bool front = link && view_determinant(old_p1, old_p0, p0) <= 0;
-      if (link && ((flags & 0x00004000) || front))
+      // The 5572s decide which side faces the viewer from the normal, the sign
+      // bit of V.n (V the view space vertex), not from the winding on screen
+      bool front = link && !std::signbit(p0->x * vn.x + p0->y * vn.y + p0->z * vn.z);
+      bool drawn = link && ((flags & 0x00004000) || front);
+      int recordLum = -1;
+      float recordZ = 0;
+      if (drawn)
       {
         quad_t cquad;
         cquad.flags = flags;
@@ -721,15 +727,22 @@ namespace Model1
         }
 
         {
-          // Luminance as the 315-5572 geometrizers compute it: integer counts,
-          // trunc(diffuse * N.L) clamped at 0, plus ambient and specular, only
-          // the total clamped to 255. A double-sided polygon seen from behind
-          // is lit with the dot product's sign flipped.
+          // Luminance as the 315-5572 geometrizers compute it, in counts of
+          // the 8-bit light parameters: diffuse * N.L clamped at 0, plus
+          // ambient, plus specular only where the light reaches the face, the
+          // total truncated and clamped to 255. A double-sided polygon seen
+          // from behind is lit with the dot product's sign flipped.
+          // (Checked polygon by polygon against the DSP programs.)
           const lightparam_t &lp = m_view.lightparams[lightmode];
           float dif = vn.x * m_view.light.x + vn.y * m_view.light.y + vn.z * m_view.light.z;
-          float diffuse = (front ? dif : -dif) * (float) lightparam_count(lp.d);
-          int lum = (diffuse > 0.0f ? (int) std::min(diffuse, 255.0f) : 0) + lightparam_count(lp.a) + compute_specular(vn, m_view.light, dif, lightmode);
-          lum = std::min(lum, 255);
+          float dot = front ? dif : -dif;
+          float diffuse = std::max(0.0f, dot * (float) lightparam_count(lp.d));
+          // (the reflection itself is computed from the unflipped N.L)
+          float specular = dot > 0.0f ? compute_specular(vn, m_view.light, dif, lightmode) : 0.0f;
+          float total = std::min(diffuse, 255.0f) + (float) lightparam_count(lp.a) + specular;
+          int lum = total > 0.0f ? (int) std::min(total, 255.0f) : 0;
+          recordLum = lum;
+          recordZ = cquad.z;
           uint16_t tex_data = tgp_ram_r(tex_adr);
 
           // The video board indexes the colour translation RAM with the top 6
@@ -750,6 +763,8 @@ namespace Model1
 
         fclip_push_quad(0, cquad);
       }
+      if (m_recording)
+        record(flags, drawn, !front, recordLum, recordZ, p0, p1);
 
       poly_adr += 10;
       switch (link) {
@@ -839,56 +854,9 @@ namespace Model1
       m_view.project_point_direct(p1);
 
       if (link)
-      {
-        quad_t cquad;
-        cquad.flags = flags;
-        cquad.adr = 0x80000000 | (uint32_t) list_offset;
-        cquad.p[0] = old_p1;
-        cquad.p[1] = old_p0;
-        cquad.p[2] = p0;
-        cquad.p[3] = p1;
-        cquad.z = z;
-        {
-          int lumval = (int) (((float)(lum >> 24)) * 2.0f);
-          lumval >>= 2; //there must be a luma translation table somewhere
-          if (lumval > 0x3f) lumval = 0x3f;
-          else if (lumval < 0) lumval = 0;
-          // as MAME: direct polygons don't use the blink mode
-          uint16_t tex_data = tgp_ram_r(tex_adr) & ~0x0c00;
-          cquad.col = (int) color_from_tex(tex_data, lumval);
-        }
-        bool skip = false;
-        if (flags & 0x00002000)
-        {
-          cquad.col |= MOIRE;
-          // A moiré (stipple-translucent) direct poly whose flat colour resolves
-          // to the transparent texture pen (index 0x1000 -> black) is a "fade
-          // toward backdrop" overlay, not a black fill.  Painting the pen
-          // literally gives a black/scene checkerboard (the Star Wars Arcade
-          // gunner 2nd-viewport overlay); the arcade alternates backdrop/scene.
-          // Paint the backdrop pen (palette[0]) so the stipple reads
-          // backdrop/scene.
-          if ((tgp_ram_r(tex_adr) & 0x3ff) == 0)
-            cquad.col = (int) (MOIRE | PaletteToRGB(m_paletteram16[0]));
-
-          // wingwar's display list carries a constant degenerate moiré record
-          // (all four vertices on one point) that the flat-quad filler would
-          // paint as a stray dot at the viewport centre; not seen on hardware.
-          if (cquad.p[0]->s.x == cquad.p[1]->s.x && cquad.p[1]->s.x == cquad.p[2]->s.x && cquad.p[2]->s.x == cquad.p[3]->s.x &&
-            cquad.p[0]->s.y == cquad.p[1]->s.y && cquad.p[1]->s.y == cquad.p[2]->s.y && cquad.p[2]->s.y == cquad.p[3]->s.y)
-            skip = true;
-        }
-
-        // Direct polys are screen-space - project_point_direct only offsets x/y by
-        // the viewport centre and ignores z.  fclip_push_quad's frustum clip tests
-        // vertices against z-scaled planes (y > z*a_bottom, ...), which for a direct
-        // poly with small/zero z collapses every plane onto the origin and culls the
-        // whole poly (e.g. the SWA FIGHTER CONTROL console moiré rect, all z = 0).
-        // Skip the frustum clip and queue the quad directly; fill_quad still scissors
-        // it to the viewport rectangle.
-        if (!skip)
-          push_quad(cquad);
-      }
+        push_direct_quad(flags, tex_adr, (lum >> 24) * 2, z, old_p1, old_p0, p0, p1, 0x80000000 | (uint32_t) list_offset);
+      if (m_recording)
+        record(flags, link != 0, false, link ? (int) std::min<uint32_t>(255, (lum >> 24) * 2) : -1, link ? z : 0, p0, p1);
 
       switch (link) {
       case 0:
@@ -906,6 +874,57 @@ namespace Model1
     }
     list_offset += 4;
     return list_offset;
+  }
+
+  // A direct (2D) polygon: screen space, not clipped or culled. lum8 is the
+  // 8-bit luminance (the display list's lum >> 24, times 2).
+  void CGeometry::push_direct_quad(uint32_t flags, uint32_t tex_adr, uint32_t lum8, float z, point_t *p0, point_t *p1, point_t *p2, point_t *p3, uint32_t adr)
+  {
+    quad_t cquad;
+    cquad.flags = flags;
+    cquad.adr = adr;
+    cquad.p[0] = p0;
+    cquad.p[1] = p1;
+    cquad.p[2] = p2;
+    cquad.p[3] = p3;
+    cquad.z = z;
+    {
+      int lumval = (int) std::min<uint32_t>(lum8 >> 2, 0x3f);
+      // as MAME: direct polygons don't use the blink mode
+      uint16_t tex_data = tgp_ram_r(tex_adr) & ~0x0c00;
+      cquad.col = (int) color_from_tex(tex_data, lumval);
+    }
+    bool skip = false;
+    if (flags & 0x00002000)
+    {
+      cquad.col |= MOIRE;
+      // A moiré (stipple-translucent) direct poly whose flat colour resolves
+      // to the transparent texture pen (index 0x1000 -> black) is a "fade
+      // toward backdrop" overlay, not a black fill.  Painting the pen
+      // literally gives a black/scene checkerboard (the Star Wars Arcade
+      // gunner 2nd-viewport overlay); the arcade alternates backdrop/scene.
+      // Paint the backdrop pen (palette[0]) so the stipple reads
+      // backdrop/scene.
+      if ((tgp_ram_r(tex_adr) & 0x3ff) == 0)
+        cquad.col = (int) (MOIRE | PaletteToRGB(m_paletteram16[0]));
+
+      // wingwar's display list carries a constant degenerate moiré record
+      // (all four vertices on one point) that the flat-quad filler would
+      // paint as a stray dot at the viewport centre; not seen on hardware.
+      if (cquad.p[0]->s.x == cquad.p[1]->s.x && cquad.p[1]->s.x == cquad.p[2]->s.x && cquad.p[2]->s.x == cquad.p[3]->s.x &&
+        cquad.p[0]->s.y == cquad.p[1]->s.y && cquad.p[1]->s.y == cquad.p[2]->s.y && cquad.p[2]->s.y == cquad.p[3]->s.y)
+        skip = true;
+    }
+
+    // Direct polys are screen-space - project_point_direct only offsets x/y by
+    // the viewport centre and ignores z.  fclip_push_quad's frustum clip tests
+    // vertices against z-scaled planes (y > z*a_bottom, ...), which for a direct
+    // poly with small/zero z collapses every plane onto the origin and culls the
+    // whole poly (e.g. the SWA FIGHTER CONTROL console moiré rect, all z = 0).
+    // Skip the frustum clip and queue the quad directly; fill_quad still scissors
+    // it to the viewport rectangle.
+    if (!skip)
+      push_quad(cquad);
   }
 
   int CGeometry::skip_direct(int list_offset) const
@@ -1083,10 +1102,12 @@ namespace Model1
 
   void CGeometry::tgp_render(Frame *frame, RenderPass pass)
   {
+    m_pass = pass;
     m_render_done = 1;
     if ((m_listctl[1] & 0x1f) == 0x1f)
     {
       set_current_render_list();
+      m_rendered_list = m_display_list_current;
 
       m_view.init_translation_matrix();
       float old_z = 0;
@@ -1324,6 +1345,7 @@ namespace Model1
   void CGeometry::Render(Frame *frame, uint64_t frameNumber)
   {
     m_frameNumber = frameNumber;
+    m_rendered_list = nullptr;
     m_view.ayyc = std::cos(m_view.ayy);
     m_view.ayys = std::sin(m_view.ayy);
     frame->Clear();
@@ -1333,6 +1355,408 @@ namespace Model1
     m_view.spec_enable = spec_enable;
     m_view.computed_normals = computed_normals;
     tgp_render(frame, RENDER_ABOVE_HUD);
+  }
+
+  /******************************************************************************
+   Rendering from the geometrizer DSPs' output
+
+   5572 B's output stream, as the video board receives it:
+
+     7F8000cc                 command marker (cc = display list command)
+     08: 1 word               passed through
+     03: 7 words              viewport, the display list words passed through
+     04: adr, len, len+1 words  texture RAM upload, passed through
+     01/41: tex adr, two start vertices, then per polygon: flags, luminance,
+            one new vertex (triangles) or two (quads), until the next marker
+     0F                       end of frame
+
+   A vertex is four words: an overflow flag (0, or FF when the projection
+   overflowed and X, Y are the unprojected values), then X, Y, Z as floats
+   shifted right by 9 bits (sign, 8-bit exponent, 14-bit mantissa). X and Y
+   are screen offsets from the viewport centre (y up), Z the view depth.
+   The luminance word is lum (0-255) << 14, plus bit 22 set for polygons
+   facing away.
+
+   The DSPs don't clip. Each vertex is turned back into homogeneous
+   coordinates (X*Z, Y*Z, Z), which are linear in view space, so MAME's
+   frustum clipping, projection and z-sort work on them unchanged with a
+   zoom of 1 and no view translation.
+  ******************************************************************************/
+
+  static constexpr uint32_t STREAM_MARKER = 0x7F800000;
+
+  static inline bool IsStreamMarker(uint32_t v)
+  {
+    return (v & 0xFFFF0000) == STREAM_MARKER;
+  }
+
+  static inline float StreamFloat(uint32_t v)
+  {
+    return u2f(v << 9);
+  }
+
+  std::vector<uint16_t> CGeometry::StateUploadList() const
+  {
+    std::vector<uint16_t> list(0x8000, 0);
+    size_t n = 0;
+    auto put = [&](uint32_t v) { list[n++] = (uint16_t) v; list[n++] = (uint16_t) (v >> 16); };
+    put(6);
+    put(0);
+    put(256);
+    for (const lightparam_t &lp : m_view.lightparams)
+    {
+      auto byte = [](float v) { return (uint32_t) std::min(255L, std::max(0L, std::lround(v * 255.0f))); };
+      put(byte(lp.d) | (byte(lp.a) << 8) | (byte(lp.s) << 16) | ((uint32_t) (lp.p & 0xff) << 24));
+    }
+    put(7);
+    put((m_view.spec_enable ? 1 : 0) | (m_view.computed_normals ? 2 : 0));
+    put(0xf);
+    return list;
+  }
+
+  const uint16_t *CGeometry::SelectRenderList()
+  {
+    if ((m_listctl[1] & 0x1f) != 0x1f)
+      return nullptr;
+    set_current_render_list();
+    return m_display_list_current;
+  }
+
+  // Returns the index after the object
+  size_t CGeometry::push_stream_object(const std::vector<uint32_t> &w, size_t i, bool draw, float &old_z)
+  {
+    const size_t n = w.size();
+    uint32_t tex_adr = w[i++];
+
+    auto vertex = [&]() -> point_t *
+    {
+      point_t *p = alloc_point();
+      if (i + 4 > n)
+      {
+        i = n;
+        return p;
+      }
+      bool overflow = w[i] == 0xFF;
+      float x = StreamFloat(w[i + 1]), y = StreamFloat(w[i + 2]), z = StreamFloat(w[i + 3]);
+      i += 4;
+      // An overflowed vertex carries the 5571's unprojected values, which the
+      // 5572 would have turned into 4 * x / z: 4 * x is the homogeneous form
+      p->z = z;
+      p->x = overflow ? 4.0f * x : x * z;
+      p->y = overflow ? 4.0f * y : y * z;
+      if (p->z > 0)
+        m_view.project_point(p);
+      else
+      {
+        p->s.x = p->s.y = 0;
+        p->fx = p->fy = 0;
+      }
+      return p;
+    };
+
+    point_t *old_p0 = vertex();
+    point_t *old_p1 = vertex();
+
+    while (i + 2 <= n && !IsStreamMarker(w[i]))
+    {
+      uint32_t flags = w[i];
+      uint32_t lumw = w[i + 1];
+      i += 2;
+      int type = flags & 3;
+      if (flags & 0x00001000)
+        tex_adr++;
+
+      point_t *p0 = vertex();
+      point_t *p1 = p0;
+      if (type != 2)
+        p1 = vertex();
+
+      int link = (flags >> 8) & 3;
+      bool back = (lumw >> 22) & 1;
+      bool drawn = link && ((flags & 0x00004000) || !back);
+      if (draw && m_recording)
+        record(flags, drawn, back, drawn ? (int) ((lumw >> 14) & 0xff) : -1, 0, p0, p1);
+      if (draw && drawn && !m_overflow)
+      {
+        quad_t cquad;
+        cquad.flags = flags;
+        cquad.adr = (uint32_t) i;
+        cquad.p[0] = old_p1;
+        cquad.p[1] = old_p0;
+        cquad.p[2] = p0;
+        cquad.p[3] = p1;
+
+        switch ((flags >> 10) & 3)
+        {
+          case 0:
+            cquad.z = old_z;
+            break;
+          case 1:
+            cquad.z = old_z = min4f(old_p1->z, old_p0->z, p0->z, p1->z);
+            break;
+          case 2:
+            cquad.z = old_z = max4f(old_p1->z, old_p0->z, p0->z, p1->z);
+            break;
+          case 3:
+          default:
+            cquad.z = 0.0;
+            break;
+        }
+
+        // the video board uses the top 6 bits of the luminance (see push_object)
+        uint16_t tex_data = tgp_ram_r(tex_adr);
+        int lumval = ((lumw >> 14) & 0xff) >> 2;
+        if (tex_data & 0x400)
+          lumval = 0x3f;
+        cquad.col = (int) color_from_tex(tex_data, lumval);
+        if (flags & 0x00002000)
+          cquad.col |= MOIRE;
+
+        if (m_recording && !m_records[m_pass].empty())
+          m_records[m_pass].back().z = cquad.z;
+        fclip_push_quad(0, cquad);
+      }
+
+      switch (link) {
+        case 0:
+        case 2:
+          old_p0 = p0;
+          old_p1 = p1;
+          break;
+        case 1:
+          old_p1 = p0;
+          break;
+        case 3:
+          old_p0 = p1;
+          break;
+      }
+    }
+    return i;
+  }
+
+  void CGeometry::record(uint32_t flags, bool drawn, bool back, int lum, float z, const point_t *p0, const point_t *p1)
+  {
+    PolyRecord r;
+    r.flags = flags;
+    r.drawn = drawn;
+    r.back = back;
+    r.lum = lum;
+    r.z = z;
+    r.x[0] = p0->fx; r.y[0] = p0->fy; r.vz[0] = p0->z;
+    r.x[1] = p1->fx; r.y[1] = p1->fy; r.vz[1] = p1->z;
+    m_records[m_pass].push_back(r);
+  }
+
+  void CGeometry::scan_stream_objects(const uint16_t *list)
+  {
+    m_streamObjects.clear();
+    if (!list)
+      return;
+    auto readi = [list](uint32_t adr) -> uint32_t { return list[adr & 0x7fff] | (uint32_t(list[(adr + 1) & 0x7fff]) << 16); };
+    uint32_t offset = 0;
+    for (int guard = 0; guard < 0x10000 && offset < 0x8000; guard++)
+    {
+      uint32_t type = readi(offset);
+      switch (type)
+      {
+      case 0:    offset += 2; break;
+      case 1:
+      case 0x41: m_streamObjects.push_back({ type, {} }); offset += 8; break;
+      case 2:
+      {
+        StreamObject object = { 2, {} };
+        offset += 18;
+        for (;;)
+        {
+          uint32_t flags = readi(offset + 2);
+          if (!(flags & 3))
+            break;
+          if ((flags & 3) == 2)
+          {
+            object.quadZ.push_back(0);
+            offset += 12;
+          }
+          else
+          {
+            object.quadZ.push_back(u2f(readi(offset + 2 + 12)));
+            offset += 20;
+          }
+        }
+        offset += 4;
+        m_streamObjects.push_back(std::move(object));
+        break;
+      }
+      case 3:    offset += 16; break;
+      case 4:    offset += 6 + (readi(offset + 4) + 1) * 2; break;
+      case 5:
+      case 6:    offset += 6 + readi(offset + 4) * 2; break;
+      case 7:
+      case 8:    offset += 4; break;
+      case 9:    offset += 6; break;
+      case 0xa:  offset += 8; break;
+      case 0xb:  offset += 26; break;
+      case 0xc:  offset += 6; break;
+      default:   return;
+      }
+    }
+  }
+
+  // Returns the index after the object
+  size_t CGeometry::push_stream_direct(const std::vector<uint32_t> &w, size_t i, bool draw, const std::vector<float> &quadZ)
+  {
+    const size_t n = w.size();
+    uint32_t tex_adr = w[i++];
+
+    // X, Y are screen offsets as given in the display list; z doesn't project
+    auto vertex = [&]() -> point_t *
+    {
+      point_t *p = alloc_point();
+      if (i + 4 > n)
+      {
+        i = n;
+        return p;
+      }
+      p->x = StreamFloat(w[i + 1]);
+      p->y = StreamFloat(w[i + 2]);
+      p->z = StreamFloat(w[i + 3]);
+      i += 4;
+      m_view.project_point_direct(p);
+      return p;
+    };
+
+    point_t *old_p0 = vertex();
+    point_t *old_p1 = vertex();
+    size_t record = 0;
+    while (i + 2 <= n && !IsStreamMarker(w[i]))
+    {
+      uint32_t flags = w[i];
+      uint32_t lumw = w[i + 1];
+      i += 2;
+      int type = flags & 3;
+      if (flags & 0x00001000)
+        tex_adr++;
+      point_t *p0 = vertex();
+      point_t *p1 = p0;
+      if (type != 2)
+        p1 = vertex();
+      float z = type == 2 ? p0->z : (record < quadZ.size() ? quadZ[record] : p0->z);
+      record++;
+
+      int link = (flags >> 8) & 3;
+      uint32_t lum8 = (lumw >> 14) & 0xff;
+      if (draw && m_recording)
+        this->record(flags, link != 0, false, link ? (int) lum8 : -1, link ? z : 0, p0, p1);
+      if (draw && link && !m_overflow)
+        push_direct_quad(flags, tex_adr, lum8, z, old_p1, old_p0, p0, p1, (uint32_t) i);
+
+      switch (link) {
+        case 0:
+        case 2:
+          old_p0 = p0;
+          old_p1 = p1;
+          break;
+        case 1:
+          old_p1 = p0;
+          break;
+        case 3:
+          old_p0 = p1;
+          break;
+      }
+    }
+    return i;
+  }
+
+  void CGeometry::render_stream(Frame *frame, RenderPass pass, const std::vector<uint32_t> &w)
+  {
+    m_pass = pass;
+    m_streamObject = 0;
+    m_numQuads = 0;
+    m_numPoints = 0;
+    m_overflow = false;
+    float old_z = 0;
+    const size_t n = w.size();
+    size_t i = 0;
+    while (i < n)
+    {
+      uint32_t v = w[i++];
+      if (!IsStreamMarker(v))
+        continue;   // resynchronize on the next marker
+      uint32_t cmd = v & 0xff;
+      switch (cmd)
+      {
+      case 0x01:
+      case 0x41:
+      {
+        // direct polygons come out of the DSPs as objects (01) too
+        static const std::vector<float> none;
+        const StreamObject *object = m_streamObject < m_streamObjects.size() ? &m_streamObjects[m_streamObject] : nullptr;
+        m_streamObject++;
+        bool draw = pass == (cmd == 0x41 ? RENDER_ABOVE_HUD : RENDER_BELOW_HUD);
+        if (object && object->cmd == 2)
+          i = push_stream_direct(w, i, draw, object->quadZ);
+        else
+          i = push_stream_object(w, i, draw, old_z);
+        break;
+      }
+      case 0x03:
+        if (i + 7 <= n)
+        {
+          draw_objects(frame, pass);
+          auto s16 = [&](size_t k) { return (float) (int16_t) (w[i + k] & 0xffff); };
+          float xc = s16(1);
+          float yc = (float) (383 - (s16(2) - 39));
+          float x1 = s16(3);
+          float y2 = (float) (383 - (s16(4) - 39));
+          float x2 = s16(5);
+          float y1 = (float) (383 - (s16(6) - 39));
+          m_view.set_viewport(xc, yc, x1, x2, y1, y2);
+        }
+        i += 7;
+        break;
+      case 0x04:
+        if (i + 2 <= n)
+        {
+          uint32_t adr = w[i], len = w[i + 1] + 1;
+          i += 2;
+          for (uint32_t k = 0; k < len && i < n; k++)
+            tgp_ram_w(adr + k, (uint16_t) w[i++]);
+        }
+        break;
+      case 0x08:
+        i += 1;
+        break;
+      case 0x00:
+      case 0x0f:
+        // end of frame (the stream ends here anyway)
+        break;
+      default:
+        // not decoded yet (direct polygons, 02): skip to the next marker
+        while (i < n && !IsStreamMarker(w[i]))
+          i++;
+        break;
+      }
+    }
+    draw_objects(frame, pass);
+  }
+
+  void CGeometry::RenderGeometrizer(Frame *frame, uint64_t frameNumber, const std::vector<uint32_t> &stream, const uint16_t *list)
+  {
+    m_frameNumber = frameNumber;
+    frame->Clear();
+    scan_stream_objects(list);
+
+    // The stream is in screen units: no zoom or view translation
+    view_t saved = m_view;
+    m_view.zoomx = m_view.zoomy = 1.0f;
+    m_view.viewx = m_view.viewy = 0.0f;
+    m_view.recompute_frustum();
+    render_stream(frame, RENDER_BELOW_HUD, stream);
+    render_stream(frame, RENDER_ABOVE_HUD, stream);
+    m_view.zoomx = saved.zoomx;
+    m_view.zoomy = saved.zoomy;
+    m_view.viewx = saved.viewx;
+    m_view.viewy = saved.viewy;
+    m_view.recompute_frustum();
   }
 
   void CGeometry::VBlank(uint64_t frameNumber)

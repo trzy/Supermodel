@@ -31,6 +31,7 @@
 #include "CPU/V60/V60.h"
 #include "CPU/MB86233/MB86233.h"
 #include "Model1/Model1Geometry.h"
+#include "Model1/Model1Geometrizer.h"
 #include "Model1/Model1Tilemap.h"
 #include "Model1/I8251.h"
 #include "Graphics/Model1Render.h"
@@ -139,6 +140,7 @@ private:
   void RunTimers(int v60Cycles);
   void UpdateInputs(void);
   void BuildVideoFrame(void);
+  void CompareGeometry(const std::vector<Model1::CGeometry::PolyRecord> (&simulated)[2]);
 
   // ROM regions
   bool LoadROMs(const ROMSet &rom_set);
@@ -153,6 +155,7 @@ private:
   CIOBus                m_ioBus;
   CMB86233              m_tgp;
   Model1::CGeometry     m_geometry;
+  Model1::CGeometrizer  m_geometrizer;    // the video board DSPs run for real (Model1Geometrizer=1)
   CSys24Tilemap         m_tiles;
   CI8251                m_uart;
   std::unique_ptr<CModel1SoundBoard> m_soundBoard;
@@ -165,6 +168,8 @@ private:
   // ROMs
   std::vector<uint8_t>  m_maincpu;        // 32 MB, MAME's "maincpu" region layout
   std::vector<uint32_t> m_tgpProgram;     // 0x800 words
+  std::vector<uint32_t> m_geo5571, m_geo5572;     // geometrizer programs, 0x800 words
+  std::vector<uint32_t> m_geoRecip, m_geoRsqrt;   // their table ROMs, 0x10000 words
   std::vector<uint32_t> m_coproTables;    // 0x10000 words
   std::vector<uint32_t> m_coproData;      // may be empty
   std::vector<uint32_t> m_polyROM;        // 0x400000 words
@@ -223,6 +228,7 @@ private:
   int       m_throttleLever = 0;    // keyboard throttle position (0-255), not saved
 
   bool      m_softwareRender = false;
+  bool      m_useGeometrizer = false;
   bool      m_logIO = false;          // log the dual port RAM accesses (debugging the I/O board simulation)
   int       m_freezeAfterFrames = -1; // debugging: stop emulating after this many frames (-1 = never)
   int       m_framesRun = 0;

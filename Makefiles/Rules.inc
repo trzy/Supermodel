@@ -122,6 +122,7 @@ SRC_FILES = \
 	Src/Model3/Model3.cpp \
 	Src/Model1/Model1.cpp \
 	Src/Model1/Model1Geometry.cpp \
+	Src/Model1/Model1Geometrizer.cpp \
 	Src/Model1/Model1Tilemap.cpp \
 	Src/Model1/Model1SoundBoard.cpp \
 	Src/Model1/I8251.cpp \

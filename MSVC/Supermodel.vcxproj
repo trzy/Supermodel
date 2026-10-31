@@ -370,6 +370,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\Pro1000\Pro1000.cpp" />
     <ClCompile Include="..\Src\Model1\Model1.cpp" />
     <ClCompile Include="..\Src\Model1\Model1Geometry.cpp" />
+    <ClCompile Include="..\Src\Model1\Model1Geometrizer.cpp" />
     <ClCompile Include="..\Src\Model1\Model1Tilemap.cpp" />
     <ClCompile Include="..\Src\Model1\Model1SoundBoard.cpp" />
     <ClCompile Include="..\Src\Model1\I8251.cpp" />
@@ -561,6 +562,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Pro1000\Pro1000.h" />
     <ClInclude Include="..\Src\Model1\Model1.h" />
     <ClInclude Include="..\Src\Model1\Model1Geometry.h" />
+    <ClInclude Include="..\Src\Model1\Model1Geometrizer.h" />
     <ClInclude Include="..\Src\Model1\Model1Tilemap.h" />
     <ClInclude Include="..\Src\Model1\Model1SoundBoard.h" />
     <ClInclude Include="..\Src\Model1\I8251.h" />
