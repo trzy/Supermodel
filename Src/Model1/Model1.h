@@ -168,6 +168,7 @@ private:
   // ROMs
   std::vector<uint8_t>  m_maincpu;        // 32 MB, MAME's "maincpu" region layout
   std::vector<uint32_t> m_tgpProgram;     // 0x800 words
+  std::vector<uint8_t>  m_defaultNVRAM;   // default battery-backed RAM contents (NetMerc), empty if none
   std::vector<uint32_t> m_geo5571, m_geo5572;     // geometrizer programs, 0x800 words
   std::vector<uint32_t> m_geoRecip, m_geoRsqrt;   // their table ROMs, 0x10000 words
   std::vector<uint32_t> m_coproTables;    // 0x10000 words
