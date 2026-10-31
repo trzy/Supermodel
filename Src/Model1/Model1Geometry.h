@@ -87,6 +87,36 @@ namespace Model1
     // tgp_render() for both passes). frameNumber selects the blink phase.
     void Render(Frame *frame, uint64_t frameNumber);
 
+    // The display list walked by the last Render() (null if it drew nothing),
+    // and the poly RAM, for the DSP geometrizer
+    const uint16_t *RenderedList() const { return m_rendered_list; }
+
+    // With the geometrizer DSPs run for real: the display list to feed them
+    // this frame (null if rendering is off), and the frame built from their
+    // output stream (the video board's sorter and rasterizer input)
+    const uint16_t *SelectRenderList();
+    void RenderGeometrizer(Frame *frame, uint64_t frameNumber, const std::vector<uint32_t> &stream, const uint16_t *list);
+
+    // Debugging aid: a record of every object polygon walked (drawn or not),
+    // per pass, in display list order, to compare this simulation with the
+    // DSPs polygon by polygon
+    struct PolyRecord
+    {
+      uint32_t flags;
+      bool     drawn, back;
+      int      lum;           // 0-255, -1 if not drawn
+      float    z;             // sort key, if drawn
+      float    x[2], y[2], vz[2];  // the new vertices: screen position and view depth
+    };
+    void SetRecording(bool on) { m_recording = on; m_records[0].clear(); m_records[1].clear(); }
+    const std::vector<PolyRecord> &Records(RenderPass pass) const { return m_records[pass]; }
+
+    // A display list that uploads the current light parameters (command 6)
+    // and mode (command 7), to bring freshly reset DSPs up to date
+    std::vector<uint16_t> StateUploadList() const;
+    uint32_t *PolyRAM() { return m_poly_ram.data(); }
+    uint32_t PolyRAMWords() const { return (uint32_t) m_poly_ram.size(); }
+
     // Start of vertical blanking (MAME's screen_vblank_model1(): tgp_scan()
     // and end_frame())
     void VBlank(uint64_t frameNumber);
@@ -220,11 +250,27 @@ namespace Model1
 
     static float min4f(float a, float b, float c, float d);
     static float max4f(float a, float b, float c, float d);
-    int compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const;
+    float compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const;
 
     int push_direct(int list_offset);
     int skip_direct(int list_offset) const;
     void push_object(uint32_t tex_adr, uint32_t poly_adr, uint32_t size, float &old_z);
+    void render_stream(Frame *frame, RenderPass pass, const std::vector<uint32_t> &stream);
+    size_t push_stream_object(const std::vector<uint32_t> &stream, size_t i, bool draw, float &old_z);
+    size_t push_stream_direct(const std::vector<uint32_t> &stream, size_t i, bool draw, const std::vector<float> &quadZ);
+    void push_direct_quad(uint32_t flags, uint32_t tex_adr, uint32_t lum8, float z, point_t *p0, point_t *p1, point_t *p2, point_t *p3, uint32_t adr);
+
+    // Objects of the display list fed to the DSPs, in order: the command
+    // (0x01, 0x41, or 0x02 for direct polygons), and for direct polygons the
+    // sort z of each quad (their output carries no such field)
+    struct StreamObject
+    {
+      uint32_t cmd;
+      std::vector<float> quadZ;
+    };
+    std::vector<StreamObject> m_streamObjects;
+    size_t m_streamObject = 0;
+    void scan_stream_objects(const uint16_t *list);
     void draw_objects(Frame *frame, RenderPass pass);
 
     void set_current_render_list();
@@ -252,6 +298,11 @@ namespace Model1
     uint16_t  m_listctl[2] = { 0, 0 };
     bool      m_render_done = false;
     const uint16_t *m_display_list_current = nullptr;
+    const uint16_t *m_rendered_list = nullptr;
+    bool m_recording = false;
+    RenderPass m_pass = RENDER_BELOW_HUD;
+    std::vector<PolyRecord> m_records[2];
+    void record(uint32_t flags, bool drawn, bool back, int lum, float z, const point_t *p0, const point_t *p1);
     uint64_t  m_frameNumber = 0;
 
     std::vector<uint16_t> m_tgp_ram;

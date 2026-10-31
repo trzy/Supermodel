@@ -992,6 +992,81 @@ void CModel1::RunLine(void)
     m_uart.Clock(clocks);
 }
 
+// Debugging aid (SUPERMODEL_MODEL1_GEOCOMPARE): the C++ geometry simulation
+// against the DSPs, polygon by polygon in display list order. Totals and the
+// first examples of each kind of difference go to the debug log.
+void CModel1::CompareGeometry(const std::vector<Model1::CGeometry::PolyRecord> (&simulated)[2])
+{
+  using Record = Model1::CGeometry::PolyRecord;
+  enum { POLYS, MISALIGNED, CULL_EXTRA, CULL_MISSING, LUM, LUM_BIG, LUM_BEHIND, SORTZ, POSITION, NUM_STATS };
+  static const char *names[NUM_STATS] = { "polygons", "misaligned", "drawn only by C++", "drawn only by DSPs", "luminance +-1-3", "luminance off by 4+",
+    "luminance off, behind the camera", "sort z", "position" };
+  static uint64_t totals[NUM_STATS];
+  static int examples[NUM_STATS];
+  static int lumHistogram[9];   // C++ - DSP, clamped to -4..4
+
+  for (int pass = 0; pass < 2; pass++)
+  {
+    const std::vector<Record> &a = simulated[pass];
+    const std::vector<Record> &b = m_geometry.Records((Model1::CGeometry::RenderPass) pass);
+    if (a.size() != b.size() && examples[MISALIGNED]++ < 5)
+      DebugLog("Geometry compare, frame %d pass %d: %u polygons in C++, %u from the DSPs\n", m_framesRun, pass, (unsigned) a.size(), (unsigned) b.size());
+    size_t n = std::min(a.size(), b.size());
+    for (size_t i = 0; i < n; i++)
+    {
+      const Record &p = a[i], &q = b[i];
+      totals[POLYS]++;
+      auto example = [&](int stat, const char *what)
+      {
+        totals[stat]++;
+        if (examples[stat]++ < 8)
+          DebugLog("Geometry compare, frame %d pass %d poly %u flags %08X: %s (C++ drawn %d back %d lum %d z %g, DSP drawn %d back %d lum %d z %g, p0 %.2f,%.2f z %.3f vs %.2f,%.2f z %.3f)\n",
+            m_framesRun, pass, (unsigned) i, p.flags, what, p.drawn, p.back, p.lum, p.z, q.drawn, q.back, q.lum, q.z, p.x[0], p.y[0], p.vz[0], q.x[0], q.y[0], q.vz[0]);
+      };
+      if (p.flags != q.flags)
+      {
+        example(MISALIGNED, "different flags");
+        break;
+      }
+      if (p.drawn != q.drawn)
+      {
+        example(p.drawn ? CULL_EXTRA : CULL_MISSING, "culling");
+        continue;
+      }
+      if (!p.drawn)
+        continue;
+      int d = p.lum - q.lum;
+      bool behind = p.vz[0] <= 0 && p.vz[1] <= 0;
+      if (!behind)
+        lumHistogram[std::max(-4, std::min(4, d)) + 4]++;
+      if (d)
+        example(behind ? LUM_BEHIND : std::abs(d) >= 4 ? LUM_BIG : LUM, "luminance");
+      if (std::fabs(p.z - q.z) > 1e-3f * std::max(1.0f, std::fabs(p.z)))
+        example(SORTZ, "sort z");
+      for (int k = 0; k < 2; k++)
+      {
+        // the DSPs' floats have 14-bit mantissas: allow for that far off screen
+        float tx = std::max(0.5f, std::fabs(p.x[k]) * 2e-3f), ty = std::max(0.5f, std::fabs(p.y[k]) * 2e-3f);
+        if (p.vz[k] > 0 && q.vz[k] > 0 && (std::fabs(p.x[k] - q.x[k]) > tx || std::fabs(p.y[k] - q.y[k]) > ty))
+        {
+          example(POSITION, "position");
+          break;
+        }
+      }
+    }
+  }
+
+  static int frames;
+  if (++frames % 300 == 0)
+  {
+    DebugLog("Geometry compare after %d frames:\n", frames);
+    for (int k = 0; k < NUM_STATS; k++)
+      DebugLog("Geometry compare total: %s %llu\n", names[k], (unsigned long long) totals[k]);
+    DebugLog("Geometry compare total: luminance C++ - DSP in front, -4..4: %d %d %d %d %d %d %d %d %d\n", lumHistogram[0], lumHistogram[1],
+      lumHistogram[2], lumHistogram[3], lumHistogram[4], lumHistogram[5], lumHistogram[6], lumHistogram[7], lumHistogram[8]);
+  }
+}
+
 void CModel1::BuildVideoFrame(void)
 {
   using namespace Model1;
@@ -999,7 +1074,59 @@ void CModel1::BuildVideoFrame(void)
   m_video.valid = true;
   m_video.software = m_softwareRender;
 
-  m_geometry.Render(&m_video.geometry, m_frameNumber);
+  if (m_useGeometrizer)
+  {
+    // The video board's DSPs transform and light the display list; the
+    // sorter and rasterizer work on their output
+    const uint16_t *list = m_geometry.SelectRenderList();
+    if (list)
+    {
+      // Debugging aid: run the C++ simulation too and compare it with the DSPs
+      // polygon by polygon
+      bool compare = getenv("SUPERMODEL_MODEL1_GEOCOMPARE") != nullptr;
+      std::vector<CGeometry::PolyRecord> simulated[2];
+      if (compare)
+      {
+        Frame scratch;
+        m_geometry.SetRecording(true);
+        m_geometry.Render(&scratch, m_frameNumber);
+        for (int pass = 0; pass < 2; pass++)
+          simulated[pass] = m_geometry.Records((CGeometry::RenderPass) pass);
+        m_geometry.SetRecording(true);
+      }
+      m_geometrizer.RunFrame(list);
+      m_geometry.RenderGeometrizer(&m_video.geometry, m_frameNumber, m_geometrizer.Output(), list);
+      if (compare)
+      {
+        CompareGeometry(simulated);
+        m_geometry.SetRecording(false);
+      }
+    }
+    else
+      m_video.geometry.Clear();
+
+    // Debugging aid: write the DSPs' output for the frame to a text file
+    if (const char *file = getenv("SUPERMODEL_MODEL1_GEODUMP"))
+    {
+      if (FILE *fp = fopen(file, "w"))
+      {
+        for (uint32_t v : m_geometrizer.Output())
+          fprintf(fp, "%08X\n", v);
+        fclose(fp);
+      }
+      // and the display list it came from, as 32-bit words
+      std::string in = std::string(file) + ".list";
+      if (FILE *fp = fopen(in.c_str(), "w"))
+      {
+        if (list)
+          for (int i = 0; i < 0x8000; i += 2)
+            fprintf(fp, "%08X\n", list[i] | (uint32_t(list[i + 1]) << 16));
+        fclose(fp);
+      }
+    }
+  }
+  else
+    m_geometry.Render(&m_video.geometry, m_frameNumber);
 
   // Debugging aid: log the quads whose bounding box touches a native rectangle "x1,y1,x2,y2"
   if (const char *rect = getenv("SUPERMODEL_MODEL1_QUADLOG"))
@@ -1186,6 +1313,7 @@ void CModel1::Reset(void)
   m_v60.Reset();
   m_tgp.Reset();
   m_geometry.Reset();
+  m_geometrizer.Reset();
   m_tiles.Reset();
   if (m_soundBoard)
     m_soundBoard->Reset();
@@ -1253,6 +1381,8 @@ void CModel1::SaveState(CBlockFile *SaveState)
   m_v60.SaveState(SaveState, "Model 1 V60");
   m_tgp.SaveState(SaveState, "Model 1 TGP");
   m_geometry.SaveState(SaveState);
+  if (m_useGeometrizer)
+    m_geometrizer.SaveState(SaveState);
   m_tiles.SaveState(SaveState);
   m_uart.SaveState(SaveState, "Model 1 UART");
   if (m_soundBoard)
@@ -1331,6 +1461,13 @@ void CModel1::LoadState(CBlockFile *SaveState)
   m_v60.LoadState(SaveState, "Model 1 V60");
   m_tgp.LoadState(SaveState, "Model 1 TGP");
   m_geometry.LoadState(SaveState);
+  if (m_useGeometrizer && !m_geometrizer.LoadState(SaveState))
+  {
+    // Saved without the geometrizer: give the reset DSPs the light
+    // parameters and mode the game uploaded earlier
+    std::vector<uint16_t> list = m_geometry.StateUploadList();
+    m_geometrizer.RunFrame(list.data());
+  }
   m_tiles.LoadState(SaveState);
   m_uart.LoadState(SaveState, "Model 1 UART");
   if (m_soundBoard)
@@ -1449,6 +1586,10 @@ bool CModel1::LoadROMs(const ROMSet &rom_set)
   if (!loadWords("polygons", m_polyROM, 0x400000, true))
     return false;
   loadWords("copro_data", m_coproData, 0, false);
+  loadWords("geo_5571", m_geo5571, 0x800, false);
+  loadWords("geo_5572", m_geo5572, 0x800, false);
+  loadWords("geo_recip", m_geoRecip, 0x10000, false);
+  loadWords("geo_rsqrt", m_geoRsqrt, 0x10000, false);
   return true;
 }
 
@@ -1542,6 +1683,15 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
   m_uart.OnTxRdy = [this](bool) { SoundReady(); };
 
   m_softwareRender = m_config["Model1SoftwareRender"].ValueAsDefault<bool>(false);
+  m_useGeometrizer = m_config["Model1Geometrizer"].ValueAsDefault<bool>(true);
+  if (const char *geo = getenv("SUPERMODEL_MODEL1_GEOMETRIZER"))
+    m_useGeometrizer = atoi(geo) != 0;
+  if (m_useGeometrizer && !m_geometrizer.Init(m_geo5571, m_geo5572, m_geoRecip, m_geoRsqrt, m_polyROM.data(), (uint32_t) m_polyROM.size(),
+                                              m_geometry.PolyRAM(), m_geometry.PolyRAMWords()))
+  {
+    ErrorLog("Model 1: the geometrizer DSP ROMs (regions geo_5571, geo_5572, geo_recip, geo_rsqrt) are missing.");
+    m_useGeometrizer = false;
+  }
   m_logIO = m_config["Model1LogIO"].ValueAsDefault<bool>(false) || getenv("SUPERMODEL_MODEL1_LOGIO") != nullptr;
   if (getenv("SUPERMODEL_MODEL1_SOFTWARE"))
     m_softwareRender = true;

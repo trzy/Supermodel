@@ -3324,6 +3324,20 @@
       <region name="tgp_program" stride="1" chunk_size="1">
         <file offset="0" name="315-5724.bin" crc32="0x4B4F330E" />
       </region>
+      <region name="geo_5571" stride="1" chunk_size="1">
+        <file offset="0" name="315-5571.bin" crc32="0x1233DB2A" />
+      </region>
+      <region name="geo_5572" stride="1" chunk_size="1">
+        <file offset="0" name="315-5572.bin" crc32="0x66785906" />
+      </region>
+      <region name="geo_recip" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14744.58" crc32="0x730EA9E0" />
+        <file offset="2" name="opr-14745.59" crc32="0x4C934D96" />
+      </region>
+      <region name="geo_rsqrt" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14746.62" crc32="0x2A266CBD" />
+        <file offset="2" name="opr-14747.63" crc32="0xA4AD5E19" />
+      </region>
       <region name="copro_tables" stride="4" chunk_size="2">
         <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
         <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
@@ -3390,6 +3404,20 @@
       </region>
       <region name="tgp_program" stride="1" chunk_size="1">
         <file offset="0" name="315-5573.bin" crc32="0x3335A19B" />
+      </region>
+      <region name="geo_5571" stride="1" chunk_size="1">
+        <file offset="0" name="315-5571.bin" crc32="0x1233DB2A" />
+      </region>
+      <region name="geo_5572" stride="1" chunk_size="1">
+        <file offset="0" name="315-5572.bin" crc32="0x66785906" />
+      </region>
+      <region name="geo_recip" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14744.58" crc32="0x730EA9E0" />
+        <file offset="2" name="opr-14745.59" crc32="0x4C934D96" />
+      </region>
+      <region name="geo_rsqrt" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14746.62" crc32="0x2A266CBD" />
+        <file offset="2" name="opr-14747.63" crc32="0xA4AD5E19" />
       </region>
       <region name="copro_tables" stride="4" chunk_size="2">
         <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
@@ -3464,6 +3492,20 @@
       <region name="tgp_program" stride="1" chunk_size="1">
         <file offset="0" name="315-5711.bin" crc32="0x6A21F304" />
       </region>
+      <region name="geo_5571" stride="1" chunk_size="1">
+        <file offset="0" name="315-5571.bin" crc32="0x1233DB2A" />
+      </region>
+      <region name="geo_5572" stride="1" chunk_size="1">
+        <file offset="0" name="315-5572.bin" crc32="0x66785906" />
+      </region>
+      <region name="geo_recip" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14744.58" crc32="0x730EA9E0" />
+        <file offset="2" name="opr-14745.59" crc32="0x4C934D96" />
+      </region>
+      <region name="geo_rsqrt" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14746.62" crc32="0x2A266CBD" />
+        <file offset="2" name="opr-14747.63" crc32="0xA4AD5E19" />
+      </region>
       <region name="copro_tables" stride="4" chunk_size="2">
         <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
         <file offset="2" name="opr14743.bin" crc32="0xE8953554" />
@@ -3531,6 +3573,20 @@
       <!-- TGP program (MAME marks this dump as bad) -->
       <region name="tgp_program" stride="1" chunk_size="1">
         <file offset="0" name="315-5711.bin" crc32="0x6A21F304" />
+      </region>
+      <region name="geo_5571" stride="1" chunk_size="1">
+        <file offset="0" name="315-5571.bin" crc32="0x1233DB2A" />
+      </region>
+      <region name="geo_5572" stride="1" chunk_size="1">
+        <file offset="0" name="315-5572.bin" crc32="0x66785906" />
+      </region>
+      <region name="geo_recip" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14744.58" crc32="0x730EA9E0" />
+        <file offset="2" name="opr-14745.59" crc32="0x4C934D96" />
+      </region>
+      <region name="geo_rsqrt" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14746.62" crc32="0x2A266CBD" />
+        <file offset="2" name="opr-14747.63" crc32="0xA4AD5E19" />
       </region>
       <region name="copro_tables" stride="4" chunk_size="2">
         <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
@@ -3605,6 +3661,20 @@
       <!-- TGP program (MAME marks this dump as bad) -->
       <region name="tgp_program" stride="1" chunk_size="1">
         <file offset="0" name="315-5711.bin" crc32="0x6A21F304" />
+      </region>
+      <region name="geo_5571" stride="1" chunk_size="1">
+        <file offset="0" name="315-5571.bin" crc32="0x1233DB2A" />
+      </region>
+      <region name="geo_5572" stride="1" chunk_size="1">
+        <file offset="0" name="315-5572.bin" crc32="0x66785906" />
+      </region>
+      <region name="geo_recip" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14744.58" crc32="0x730EA9E0" />
+        <file offset="2" name="opr-14745.59" crc32="0x4C934D96" />
+      </region>
+      <region name="geo_rsqrt" stride="4" chunk_size="2">
+        <file offset="0" name="opr-14746.62" crc32="0x2A266CBD" />
+        <file offset="2" name="opr-14747.63" crc32="0xA4AD5E19" />
       </region>
       <region name="copro_tables" stride="4" chunk_size="2">
         <file offset="0" name="opr14742.bin" crc32="0x446A1085" />
