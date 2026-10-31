@@ -266,7 +266,7 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 
 void SCSPDSP_SetSample(_SCSPDSP *DSP, INT32 sample, int SEL)
 {
-	DSP->MIXS[SEL] += sample;
+	DSP->MIXS[SEL] += sample * 2;
 }
 
 void SCSPDSP_Start(_SCSPDSP *DSP)
