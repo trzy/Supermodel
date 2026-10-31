@@ -1103,7 +1103,12 @@ int CMB86233::Run(int cycles)
 				}
 			}
 
-			if(subtype < 2)
+			// Supermodel fix: the loop counter only counts down when the branch
+			// is taken (MAME also did it for an untaken !zc0/!zc1, which sends
+			// the 315-5571 geometrizer's triangle dispatch into the wrong
+			// handler). The TGP programs only use plain zc0/zc1, where taken
+			// and c != 1 are the same thing.
+			if(subtype < 2 && cond_passed)
 				switch(cond) {
 				case 0x10:
 					if(m_c0 != 1) {
