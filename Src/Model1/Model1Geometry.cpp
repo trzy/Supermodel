@@ -500,7 +500,7 @@ namespace Model1
     // raised to a power of two selected by the power field (315-5572: 1 = s,
     // 2-3 = s^2, 4-6 = s^4, 7 = s^8) and scaled by the specular parameter
     float s = (2.0f * diffuse * normal.z) - light.z;
-    if (s <= 0.0f)
+    if (!(s > 0.0f))  // also rejects NaN from bad normals
       return 0;
     if (power >= 2)
       s *= s;
@@ -508,7 +508,9 @@ namespace Model1
       s *= s;
     if (power >= 7)
       s *= s;
-    return (int) (s * (float) scale);
+    // clamp before converting: s^8 of a large (unnormalized) normal can
+    // overflow to infinity, and the total is clamped to 255 anyway
+    return (int) std::min(s * (float) scale, 255.0f);
   }
 
   // Color of a polygon from its tile word and luminance (0-0x3f), through the
@@ -725,8 +727,8 @@ namespace Model1
           // is lit with the dot product's sign flipped.
           const lightparam_t &lp = m_view.lightparams[lightmode];
           float dif = vn.x * m_view.light.x + vn.y * m_view.light.y + vn.z * m_view.light.z;
-          int diffuse = (int) ((front ? dif : -dif) * (float) lightparam_count(lp.d));
-          int lum = std::max(0, diffuse) + lightparam_count(lp.a) + compute_specular(vn, m_view.light, dif, lightmode);
+          float diffuse = (front ? dif : -dif) * (float) lightparam_count(lp.d);
+          int lum = (diffuse > 0.0f ? (int) std::min(diffuse, 255.0f) : 0) + lightparam_count(lp.a) + compute_specular(vn, m_view.light, dif, lightmode);
           lum = std::min(lum, 255);
           uint16_t tex_data = tgp_ram_r(tex_adr);
 
