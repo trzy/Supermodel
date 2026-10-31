@@ -240,12 +240,13 @@ namespace Model1
     recompute_frustum();
   }
 
+  // The geometrizer DSPs use the light vector as sent, without normalizing it
+  // (VF sends one of length ~0.91, so it is lit ~9% darker than a unit vector)
   void CGeometry::view_t::set_light_direction(float x, float y, float z)
   {
-    float len = std::sqrt(x * x + y * y + z * z);
-    light.x = x / len;
-    light.y = y / len;
-    light.z = z / len;
+    light.x = x;
+    light.y = y;
+    light.z = z;
   }
 
   void CGeometry::view_t::set_translation_matrix(float *mat)
@@ -475,28 +476,39 @@ namespace Model1
     return m;
   }
 
-  float CGeometry::compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const
+  // Light parameters are uploaded as 8-bit integers and kept as fractions of
+  // 255; the geometrizers do their luminance sums in integer counts
+  static int lightparam_count(float v)
+  {
+    return (int) std::lround(v * 255.0f);
+  }
+
+  // Specular luminance in counts (0-255 scale, not clamped)
+  int CGeometry::compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const
   {
     if (!m_view.spec_enable)
-      return 0.0f;
+      return 0;
 
+    // the 315-5571 forwards only 3 bits of the power field
     const lightparam_t &lp = m_view.lightparams[lmode];
-    if (lp.p == 0 || lp.s <= 0.0f)
-      return 0.0f;
+    int power = lp.p & 7;
+    int scale = lightparam_count(lp.s);
+    if (power == 0 || scale <= 0)
+      return 0;
 
-    // z component of the reflected light vector, as computed by the Model 2
-    // GEO program: R.z = 2*(N.L)*N.z - L.z, raised to a power of two selected
-    // by the power field and scaled by the specular scale.
+    // z component of the reflected light vector: R.z = 2*(N.L)*N.z - L.z,
+    // raised to a power of two selected by the power field (315-5572: 1 = s,
+    // 2-3 = s^2, 4-6 = s^4, 7 = s^8) and scaled by the specular parameter
     float s = (2.0f * diffuse * normal.z) - light.z;
     if (s <= 0.0f)
-      return 0.0f;
-    if (lp.p >= 2)
+      return 0;
+    if (power >= 2)
       s *= s;
-    if (lp.p >= 4)
+    if (power >= 4)
       s *= s;
-    if (lp.p >= 7)
+    if (power >= 7)
       s *= s;
-    return std::min(s * lp.s, 1.0f);
+    return (int) (s * (float) scale);
   }
 
   // Color of a polygon from its tile word and luminance (0-0x3f), through the
@@ -642,16 +654,47 @@ namespace Model1
         p1->fx = p1->fy = 0;
       }
 
-      if (link && ((flags & 0x00004000) || view_determinant(old_p1, old_p0, p0) <= 0))
+      // Modes 2/3 (command 7 bit 1): the 315-5571 ignores the stored normal
+      // (VF and Wing War store other data there) and computes the face normal
+      // from the two previous vertices and a new one. Flags bits 23-30 select
+      // it for quads: 1-2 = first new vertex, 3 = second, others give (1,0,0).
+      // Triangles always use their new vertex. The 5572 normalizes it.
+      if (m_view.computed_normals)
+      {
+        int edges = (flags >> 23) & 0xff;
+        if (type != 2 && (edges == 0 || edges > 3))
+        {
+          vn.x = 1.0f;
+          vn.y = 0.0f;
+          vn.z = 0.0f;
+        }
+        else
+        {
+          const point_t *c = (type != 2 && edges == 3) ? p1 : p0;
+          float ax = old_p0->x - c->x, ay = old_p0->y - c->y, az = old_p0->z - c->z;
+          float bx = old_p1->x - c->x, by = old_p1->y - c->y, bz = old_p1->z - c->z;
+          vn.x = ay * bz - az * by;
+          vn.y = az * bx - ax * bz;
+          vn.z = ax * by - ay * bx;
+          float len = std::sqrt(vn.x * vn.x + vn.y * vn.y + vn.z * vn.z);
+          if (len > 0.0f)
+          {
+            vn.x /= len;
+            vn.y /= len;
+            vn.z /= len;
+          }
+        }
+      }
+
+      bool front = link && view_determinant(old_p1, old_p0, p0) <= 0;
+      if (link && ((flags & 0x00004000) || front))
       {
         quad_t cquad;
         cquad.flags = flags;
         cquad.adr = poly_adr | (ram ? 0x800000 : 0);
 
-        float len = std::sqrt(vn.x * vn.x + vn.y * vn.y + vn.z * vn.z);
-        vn.x /= len;
-        vn.y /= len;
-        vn.z /= len;
+        // the normal is used as stored and transformed, not renormalized
+        // (the 5571s only normalize the normals they compute themselves)
 
         cquad.p[0] = old_p1;
         cquad.p[1] = old_p0;
@@ -676,17 +719,21 @@ namespace Model1
         }
 
         {
+          // Luminance as the 315-5572 geometrizers compute it: integer counts,
+          // trunc(diffuse * N.L) clamped at 0, plus ambient and specular, only
+          // the total clamped to 255. A double-sided polygon seen from behind
+          // is lit with the dot product's sign flipped.
+          const lightparam_t &lp = m_view.lightparams[lightmode];
           float dif = vn.x * m_view.light.x + vn.y * m_view.light.y + vn.z * m_view.light.z;
-          float spec = compute_specular(vn, m_view.light, dif, lightmode);
-          float ln = m_view.lightparams[lightmode].a + m_view.lightparams[lightmode].d * std::max(0.0f, dif) + spec;
-          int lumval = (int) (255.0f * std::min(1.0f, ln));
+          int diffuse = (int) ((front ? dif : -dif) * (float) lightparam_count(lp.d));
+          int lum = std::max(0, diffuse) + lightparam_count(lp.a) + compute_specular(vn, m_view.light, dif, lightmode);
+          lum = std::min(lum, 255);
           uint16_t tex_data = tgp_ram_r(tex_adr);
 
-          lumval >>= 2; //there must be a luma translation table somewhere
-          if (lumval > 0x3f)
-            lumval = 0x3f;
-          else if (lumval < 0)
-            lumval = 0;
+          // The video board indexes the colour translation RAM with the top 6
+          // bits: the games load it as a 64-step ramp per colour value (VF:
+          // step 32 = the palette colour, steps 64-255 the unshaded colour)
+          int lumval = lum >> 2;
 
           // bit 10 of the tile word marks a flat UI element (radar blips, HUD
           // text): draw unlit at full intensity instead of shading it
@@ -1129,11 +1176,13 @@ namespace Model1
           break;
         }
         case 7:
-          // Mode word, as in the Model 2 GEO command 7: bit 0 enables the
-          // specular term (netmerc toggles it mid-list, on for the enemy
-          // mechs and off for terrain/cockpit); bit 1 tracks the display
-          // list double buffer parity.
+          // Mode word: bit 0 enables the specular term (netmerc toggles it
+          // mid-list, on for the enemy mechs and off for terrain/cockpit).
+          // Bit 1 selects face normals computed from the polygon's vertices
+          // instead of the stored ones (315-5571 modes 2/3); VF and Wing War
+          // switch it per object. Both persist across frames, as in the DSPs.
           m_view.spec_enable = (readi(list_offset + 2) & 1) != 0;
+          m_view.computed_normals = (readi(list_offset + 2) & 2) != 0;
           list_offset += 4;
           break;
         case 8:
@@ -1276,7 +1325,11 @@ namespace Model1
     m_view.ayyc = std::cos(m_view.ayy);
     m_view.ayys = std::sin(m_view.ayy);
     frame->Clear();
+    // the list is walked once per pass: start both from the same mode
+    bool spec_enable = m_view.spec_enable, computed_normals = m_view.computed_normals;
     tgp_render(frame, RENDER_BELOW_HUD);
+    m_view.spec_enable = spec_enable;
+    m_view.computed_normals = computed_normals;
     tgp_render(frame, RENDER_ABOVE_HUD);
   }
 

@@ -176,6 +176,7 @@ namespace Model1
       vec3 light;
       lightparam_t lightparams[256];
       bool spec_enable = false;
+      bool computed_normals = false;
     };
 
     typedef bool (*isclipped_fn)(view_t *, point_t *);
@@ -219,7 +220,7 @@ namespace Model1
 
     static float min4f(float a, float b, float c, float d);
     static float max4f(float a, float b, float c, float d);
-    float compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const;
+    int compute_specular(const vec3 &normal, const vec3 &light, float diffuse, int lmode) const;
 
     int push_direct(int list_offset);
     int skip_direct(int list_offset) const;
