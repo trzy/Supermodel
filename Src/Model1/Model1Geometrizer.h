@@ -34,10 +34,13 @@
  * io1 = read/write then +1, io4 = read then +4); the 5572s read their
  * reciprocal (A) and reciprocal square root (B) table ROMs on theirs.
  *
- * Timing is not emulated: once a frame the display list is fed in and each
- * chip runs until it is idle with an empty input, in pipeline order. The
- * output of 5572 B (the stream the video board's sorter and rasterizer
- * consume) is kept for the frame.
+ * Timing is not emulated: once a frame the display list is fed in and the
+ * chips run until each is idle with an empty input. Like the real board,
+ * the four run at the same time, each on its own thread, joined by
+ * lock-free FIFOs; data only flows forward through them, so the result is
+ * the same as running them one after another (which is done with fewer than
+ * four CPU cores). The output of 5572 B (the stream the video board's sorter
+ * and rasterizer consume) is kept for the frame.
  */
 
 #ifndef INCLUDED_MODEL1GEOMETRIZER_H
@@ -45,8 +48,11 @@
 
 #include "Types.h"
 #include "CPU/MB86233/MB86233.h"
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
-#include <deque>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 class CBlockFile;
@@ -78,18 +84,47 @@ namespace Model1
     // are reset and need their light parameters and mode sent again)
     bool LoadState(CBlockFile *SaveState);
 
+    ~CGeometrizer();
+
   private:
     enum Chip { C5571A, C5571B, C5572A, C5572B, NUM_CHIPS };
 
-    struct Bus : public IMB86233Bus
+    // Single producer, single consumer FIFO between two chips. Each side
+    // keeps its own index on its own cache line and a cached copy of the
+    // other side's, so the cores only exchange cache lines when the FIFO
+    // looks empty or full.
+    class CFIFO
+    {
+    public:
+      CFIFO();
+      bool Push(uint32_t v);          // producer; false if full
+      bool Pop(uint32_t &v);          // consumer; false if empty
+      bool Empty() const { return m_tail.load(std::memory_order_relaxed) == m_head.load(std::memory_order_acquire); }  // consumer
+      void Clear() { m_head.store(0); m_tail.store(0); m_headCache = m_tailCache = 0; m_done.store(false); }   // only while no chip runs
+      void SetDone() { m_done.store(true, std::memory_order_release); }
+      bool Done() const { return m_done.load(std::memory_order_acquire); }
+    private:
+      std::vector<uint32_t> m_buffer;
+      size_t m_mask;
+      alignas(64) std::atomic<size_t> m_head { 0 };   // next write
+      size_t m_tailCache = 0;                         // producer's copy of m_tail
+      alignas(64) std::atomic<size_t> m_tail { 0 };   // next read
+      size_t m_headCache = 0;                         // consumer's copy of m_head
+      alignas(64) std::atomic<bool> m_done { false }; // the producer has finished the frame
+    };
+
+    // Each chip's bus and CPU on their own cache lines: the chips run on
+    // different cores and write these all the time
+    struct alignas(64) Bus : public IMB86233Bus
     {
       CGeometrizer *owner = nullptr;
       int chip = 0;
       CMB86233 *cpu = nullptr;
-      std::deque<uint32_t> *in = nullptr;
-      std::deque<uint32_t> *out = nullptr;
-      uint32_t ioAddress = 0;   // 5571 poly RAM/ROM address latch
-      uint64_t popped = 0;      // input words consumed
+      CFIFO *in = nullptr;
+      CFIFO *out = nullptr;                    // null for 5572 B
+      std::vector<uint32_t> *final = nullptr;  // 5572 B's output
+      uint32_t ioAddress = 0;                  // 5571 poly RAM/ROM address latch
+      bool stalled = false;                    // a read found the input empty
 
       UINT32 ReadData(UINT16 addr) override;
       void   WriteData(UINT16 addr, UINT32 v) override;
@@ -98,14 +133,20 @@ namespace Model1
     };
 
     bool RunChip(int chip, bool stopAtEndOfFrame = false);
+    static void WaitForInput(const CFIFO &in);
+    bool RunChipFrame(int chip);
     bool IsIdle(int chip) const;
     uint32_t PolyRead(uint32_t adr) const;
     void PolyWrite(uint32_t adr, uint32_t data);
+    void StartThreads();
+    void StopThreads();
+    void Worker(int chip);
 
     bool m_ready = false;
-    CMB86233 m_cpu[NUM_CHIPS];
+    struct alignas(64) CPU : public CMB86233 { };
+    CPU m_cpu[NUM_CHIPS];
     Bus m_bus[NUM_CHIPS];
-    std::deque<uint32_t> m_fifo[NUM_CHIPS + 1];   // m_fifo[i] feeds chip i; the last is the output
+    CFIFO m_fifo[NUM_CHIPS];           // m_fifo[i] feeds chip i
     std::vector<uint32_t> m_rom5571, m_rom5572;
     const uint32_t *m_recip = nullptr, *m_rsqrt = nullptr;
     const uint32_t *m_polyROM = nullptr;
@@ -113,6 +154,15 @@ namespace Model1
     uint32_t *m_polyRAM = nullptr;
     uint32_t m_polyRAMWords = 0;
     std::vector<uint32_t> m_output;
+
+    // Worker threads, one per chip
+    std::vector<std::thread> m_threads;
+    std::mutex m_mutex;
+    std::condition_variable m_start, m_finished;
+    uint64_t m_frame = 0;              // incremented to start a frame
+    int m_running = 0;                 // chips still running the frame
+    bool m_quit = false;
+    bool m_chipOK[NUM_CHIPS] = { };
   };
 }
 

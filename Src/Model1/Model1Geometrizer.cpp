@@ -27,6 +27,10 @@
 #include "Model1Geometrizer.h"
 #include "BlockFile.h"
 #include "OSD/Logger.h"
+#include <thread>
+#if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__)
+#include <immintrin.h>
+#endif
 
 namespace Model1
 {
@@ -50,19 +54,52 @@ namespace Model1
    Buses
   ******************************************************************************/
 
+  CGeometrizer::CFIFO::CFIFO()
+    : m_buffer(1 << 18), m_mask((1 << 18) - 1)
+  {
+  }
+
+  bool CGeometrizer::CFIFO::Push(uint32_t v)
+  {
+    size_t head = m_head.load(std::memory_order_relaxed);
+    if (head - m_tailCache >= m_buffer.size())
+    {
+      m_tailCache = m_tail.load(std::memory_order_acquire);
+      if (head - m_tailCache >= m_buffer.size())
+        return false;
+    }
+    m_buffer[head & m_mask] = v;
+    m_head.store(head + 1, std::memory_order_release);
+    return true;
+  }
+
+  bool CGeometrizer::CFIFO::Pop(uint32_t &v)
+  {
+    size_t tail = m_tail.load(std::memory_order_relaxed);
+    if (tail == m_headCache)
+    {
+      m_headCache = m_head.load(std::memory_order_acquire);
+      if (tail == m_headCache)
+        return false;
+    }
+    v = m_buffer[tail & m_mask];
+    m_tail.store(tail + 1, std::memory_order_release);
+    return true;
+  }
+
   UINT32 CGeometrizer::Bus::ReadData(UINT16 addr)
   {
     if (addr == 0x100)
     {
-      if (in->empty())
+      uint32_t v;
+      if (!in->Pop(v))
       {
+        // Wait for the producer: the read is retried
+        stalled = true;
         cpu->Stall();
         return 0;
       }
-      uint32_t v = in->front();
-      in->pop_front();
-      popped++;
-      cpu->gpio3_w(in->empty() ? 1 : 0);
+      cpu->gpio3_w(in->Empty() ? 1 : 0);
       return v;
     }
     return 0;
@@ -74,9 +111,13 @@ namespace Model1
     // 0x400 + (command & 7), 5572 A 0x400-0x407 and 0x700)
     if (addr >= 0x400)
     {
-      out->push_back(v);
-      if (chip + 1 < NUM_CHIPS)
-        owner->m_cpu[chip + 1].gpio3_w(0);
+      if (out)
+      {
+        while (!out->Push(v))
+          std::this_thread::yield();    // full: wait for the next chip
+      }
+      else if (v != IDLE_WORD)
+        final->push_back(v);
     }
   }
 
@@ -143,22 +184,124 @@ namespace Model1
     }
   }
 
-  // Runs a chip until it is idle with an empty input, or (5571 A, if asked)
-  // waiting for the end of frame signal. Returns false if it doesn't get there.
+  // Waits a little for the producer, spinning briefly before giving up the
+  // time slice (most waits are short)
+  void CGeometrizer::WaitForInput(const CFIFO &in)
+  {
+    for (int i = 0; i < 2000; i++)
+    {
+      if (!in.Empty() || in.Done())
+        return;
+#if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__)
+      _mm_pause();
+#endif
+    }
+    std::this_thread::yield();
+  }
+
+  // Runs a chip until its producer has finished and it is idle with an empty
+  // input, or (5571 A, if asked) waiting for the end of frame signal. Returns
+  // false if it doesn't get there. While the producer is still running, an
+  // empty input means waiting for it.
   bool CGeometrizer::RunChip(int chip, bool stopAtEndOfFrame)
   {
     CMB86233 &cpu = m_cpu[chip];
-    std::deque<uint32_t> &in = m_fifo[chip];
-    cpu.gpio3_w(in.empty() ? 1 : 0);
+    CFIFO &in = m_fifo[chip];
+    Bus &bus = m_bus[chip];
     for (int cycles = 0; cycles < MAX_CYCLES; )
     {
-      if (in.empty() && IsIdle(chip))
-        return true;
+      bool empty = in.Empty();
+      cpu.gpio3_w(empty ? 1 : 0);
+      if (empty && IsIdle(chip))
+      {
+        // (done is checked first: once set, every word pushed is visible)
+        if (in.Done() && in.Empty())
+          return true;
+        WaitForInput(in);
+        continue;
+      }
       if (stopAtEndOfFrame && chip == C5571A && cpu.GetPC() == PC_5571A_WAIT_GPIO0)
         return true;
-      cycles += cpu.Run(256);
+      bus.stalled = false;
+      int done = cpu.Run(256);
+      if (bus.stalled && !in.Done())
+        WaitForInput(in);               // mid-command, waiting for input
+      else
+        cycles += done;
     }
     return false;
+  }
+
+  // One chip's part of a frame. 5571 A, at the end command, waits for gpio0
+  // (end of frame) and an input word to drain before passing the end on.
+  bool CGeometrizer::RunChipFrame(int chip)
+  {
+    bool ok = RunChip(chip, chip == C5571A);
+    if (ok && chip == C5571A && m_cpu[C5571A].GetPC() == PC_5571A_WAIT_GPIO0)
+    {
+      // gpio0 is a level: drop it once it has been seen, or the idle loop
+      // takes it as another end of frame
+      CMB86233 &cpu = m_cpu[C5571A];
+      cpu.gpio0_w(1);
+      m_fifo[C5571A].Push(0);
+      cpu.gpio3_w(0);
+      for (int i = 0; i < 16 && cpu.GetPC() == PC_5571A_WAIT_GPIO0; i++)
+        cpu.Run(1);
+      cpu.gpio0_w(0);
+      ok = RunChip(C5571A);
+    }
+    if (chip + 1 < NUM_CHIPS)
+      m_fifo[chip + 1].SetDone();
+    return ok;
+  }
+
+  void CGeometrizer::Worker(int chip)
+  {
+    uint64_t frame = 0;
+    for (;;)
+    {
+      {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_start.wait(lock, [&] { return m_quit || m_frame != frame; });
+        if (m_quit)
+          return;
+        frame = m_frame;
+      }
+      bool ok = RunChipFrame(chip);
+      {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_chipOK[chip] = ok;
+        if (--m_running == 0)
+          m_finished.notify_one();
+      }
+    }
+  }
+
+  void CGeometrizer::StartThreads()
+  {
+    // Worth it with a core for each chip; otherwise they run in turn
+    if (std::thread::hardware_concurrency() < NUM_CHIPS || !m_threads.empty())
+      return;
+    m_quit = false;
+    for (int chip = 0; chip < NUM_CHIPS; chip++)
+      m_threads.emplace_back(&CGeometrizer::Worker, this, chip);
+  }
+
+  void CGeometrizer::StopThreads()
+  {
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      m_quit = true;
+    }
+    m_start.notify_all();
+    for (auto &thread : m_threads)
+      thread.join();
+    m_threads.clear();
+  }
+
+  CGeometrizer::~CGeometrizer()
+  {
+    StopThreads();
   }
 
   // Display list length in 16-bit words up to and including the end command,
@@ -209,38 +352,31 @@ namespace Model1
     if (!m_ready)
       return false;
 
+    for (auto &fifo : m_fifo)
+      fifo.Clear();
     size_t length = ListLength(displayList) & ~size_t(1);
     for (size_t i = 0; i < length; i += 2)
-      m_fifo[0].push_back(displayList[i] | (uint32_t(displayList[i + 1]) << 16));
+      m_fifo[0].Push(displayList[i] | (uint32_t(displayList[i + 1]) << 16));
+    m_fifo[0].SetDone();
 
-    bool ok = RunChip(C5571A, true);
-    if (ok && m_cpu[C5571A].GetPC() == PC_5571A_WAIT_GPIO0)
+    if (!m_threads.empty())
     {
-      // End of frame: raise gpio0 and give it a word to drain, so it passes
-      // the end command on. gpio0 is a level: drop it once it has been seen,
-      // or the idle loop takes it as another end of frame.
-      CMB86233 &cpu = m_cpu[C5571A];
-      cpu.gpio0_w(1);
-      m_fifo[0].push_back(0);
-      cpu.gpio3_w(0);
-      for (int i = 0; i < 16 && cpu.GetPC() == PC_5571A_WAIT_GPIO0; i++)
-        cpu.Run(1);
-      cpu.gpio0_w(0);
-      ok = RunChip(C5571A);
+      std::unique_lock<std::mutex> lock(m_mutex);
+      m_running = NUM_CHIPS;
+      m_frame++;
+      m_start.notify_all();
+      m_finished.wait(lock, [&] { return m_running == 0; });
     }
-    for (int chip = C5571B; ok && chip < NUM_CHIPS; chip++)
-      ok = RunChip(chip);
+    else
+    {
+      for (int chip = 0; chip < NUM_CHIPS; chip++)
+        m_chipOK[chip] = RunChipFrame(chip);
+    }
+
+    bool ok = m_chipOK[0] && m_chipOK[1] && m_chipOK[2] && m_chipOK[3];
     if (!ok)
       DebugLog("Model 1 geometrizer: a DSP didn't finish the frame (PCs %03X %03X %03X %03X)\n",
                m_cpu[0].GetPC(), m_cpu[1].GetPC(), m_cpu[2].GetPC(), m_cpu[3].GetPC());
-
-    std::deque<uint32_t> &out = m_fifo[NUM_CHIPS];
-    m_output.reserve(out.size());
-    for (uint32_t v : out)
-      if (v != IDLE_WORD)
-        m_output.push_back(v);
-    for (auto &fifo : m_fifo)
-      fifo.clear();
     return ok;
   }
 
@@ -254,7 +390,10 @@ namespace Model1
     if (!m_ready)
       return;
     for (auto &fifo : m_fifo)
-      fifo.clear();
+    {
+      fifo.Clear();
+      fifo.SetDone();
+    }
     for (int chip = 0; chip < NUM_CHIPS; chip++)
     {
       CMB86233 &cpu = m_cpu[chip];
@@ -267,6 +406,7 @@ namespace Model1
       cpu.gpio1_w(1);
       RunChip(chip);
     }
+    m_output.clear();
   }
 
   void CGeometrizer::SaveState(CBlockFile *SaveState)
@@ -317,12 +457,14 @@ namespace Model1
       bus.chip = chip;
       bus.cpu = &m_cpu[chip];
       bus.in = &m_fifo[chip];
-      bus.out = &m_fifo[chip + 1];
+      bus.out = chip + 1 < NUM_CHIPS ? &m_fifo[chip + 1] : nullptr;
+      bus.final = &m_output;
       m_cpu[chip].AttachBus(&bus);
       m_cpu[chip].SetProgramROM(chip < C5572A ? m_rom5571.data() : m_rom5572.data(), 0x800);
     }
     m_ready = true;
     Reset();
+    StartThreads();
     return true;
   }
 }
