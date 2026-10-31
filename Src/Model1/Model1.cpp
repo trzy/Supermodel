@@ -828,13 +828,30 @@ void CModel1::UpdateInputs(void)
     an[2] = m_inputs->brake ? (uint8_t) std::max<unsigned>(1, m_inputs->brake->value) : 0x30;
   }
 
-  // Virtua Racing's VR buttons, Wing War's view buttons
+  // Virtua Racing's VR buttons, Wing War's view buttons (same bits)
   if (inputs & Game::INPUT_VR4)
   {
     in0 |= sw(m_inputs->vr[0]) ? 0x20 : 0;
     in0 |= sw(m_inputs->vr[1]) ? 0x40 : 0;
     in0 |= sw(m_inputs->vr[2]) ? 0x80 : 0;
     in1 |= sw(m_inputs->vr[3]) ? 0x01 : 0;
+  }
+  if (inputs & Game::INPUT_FLIGHT_VIEW4)
+  {
+    in0 |= sw(m_inputs->flightView[0]) ? 0x20 : 0;
+    in0 |= sw(m_inputs->flightView[1]) ? 0x40 : 0;
+    in0 |= sw(m_inputs->flightView[2]) ? 0x80 : 0;
+    in1 |= sw(m_inputs->flightView[3]) ? 0x01 : 0;
+  }
+
+  // Throttle lever: the up/down keys move it (full travel in about a second)
+  // and leave it there; an analog axis, when moved, overrides that
+  if (inputs & Game::INPUT_THROTTLE)
+  {
+    if (sw(m_inputs->throttleUp))
+      m_throttleLever = std::min(255, m_throttleLever + 5);
+    if (sw(m_inputs->throttleDown))
+      m_throttleLever = std::max(0, m_throttleLever - 5);
   }
 
   if (inputs & Game::INPUT_SHIFTUPDOWN)
@@ -850,10 +867,13 @@ void CModel1::UpdateInputs(void)
     uint8_t y = m_inputs->analogJoyY ? (uint8_t) m_inputs->analogJoyY->value : 0x80;
     an[0] = 0xFF - x;
     an[1] = y;
+    unsigned throttle = (unsigned) m_throttleLever;
+    if ((inputs & Game::INPUT_THROTTLE) && m_inputs->throttle && m_inputs->throttle->value)
+      throttle = m_inputs->throttle->value;
     if (m_game.name.compare(0, 7, "wingwar") == 0)
     {
       // throttle (1-0xFF, idle at 1), machine gun, missile, smoke
-      an[2] = m_inputs->accelerator ? (uint8_t) std::max<unsigned>(1, m_inputs->accelerator->value) : 1;
+      an[2] = (uint8_t) std::max<unsigned>(1, throttle);
       in1 |= sw(m_inputs->analogJoyTrigger1) ? 0x10 : 0;
       in1 |= sw(m_inputs->analogJoyTrigger2) ? 0x20 : 0;
       in1 |= sw(m_inputs->analogJoyEvent1) ? 0x40 : 0;
@@ -861,14 +881,21 @@ void CModel1::UpdateInputs(void)
     else
     {
       // Star Wars Arcade (MAME's swa ports): pilot stick 27-227 (X reversed),
-      // throttle 28-200 (reversed), pilot buttons 1-3. The gunner's stick
-      // (channels 4 and 5) has no Supermodel input and stays centered.
+      // throttle 28-200 (reversed), pilot buttons 1-3; the gunner (player 2)
+      // has the second stick (channels 4 and 5, same ranges) and buttons 1-2
       an[0] = (uint8_t) (227 - x * 200 / 255);
       an[1] = (uint8_t) (27 + y * 200 / 255);
-      unsigned throttle = m_inputs->accelerator ? m_inputs->accelerator->value : 0;
       an[2] = (uint8_t) (200 - throttle * 172 / 255);
-      an[4] = 0x7F;
-      an[5] = 0x7F;
+      uint8_t x2 = 0x80, y2 = 0x80;
+      if (inputs & Game::INPUT_ANALOG_JOYSTICK2)
+      {
+        x2 = m_inputs->analogJoy2X ? (uint8_t) m_inputs->analogJoy2X->value : 0x80;
+        y2 = m_inputs->analogJoy2Y ? (uint8_t) m_inputs->analogJoy2Y->value : 0x80;
+        in1 |= sw(m_inputs->analogJoy2Trigger1) ? 0x04 : 0;
+        in1 |= sw(m_inputs->analogJoy2Trigger2) ? 0x08 : 0;
+      }
+      an[4] = (uint8_t) (227 - x2 * 200 / 255);
+      an[5] = (uint8_t) (27 + y2 * 200 / 255);
       in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
       in1 |= sw(m_inputs->analogJoyTrigger1) ? 0x01 : 0;
       in1 |= sw(m_inputs->analogJoyTrigger2) ? 0x02 : 0;
@@ -1154,6 +1181,7 @@ void CModel1::Reset(void)
   m_lineEnd = 0;
   m_uartClockFrac = 0;
   m_ioBoardBootFrames = IO_BOARD_BOOT_FRAMES;
+  m_throttleLever = 0;
 
   m_v60.Reset();
   m_tgp.Reset();

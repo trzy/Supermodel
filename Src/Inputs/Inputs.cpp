@@ -274,6 +274,28 @@ CInputs::CInputs(std::shared_ptr<CInputSystem> system)
 	fishingCast   = AddSwitchInput( "FishingCast",    "Cast",           Game::INPUT_FISHING, "NONE");
 	fishingSelect = AddSwitchInput( "FishingSelect",  "Select",         Game::INPUT_FISHING, "NONE");
 	fishingTension= AddAnalogInput("FishingTension", "Tension",	      Game::INPUT_FISHING, "NONE"); // getbass only
+
+	// Throttle lever
+	throttle      = AddAnalogInput("Throttle",     "Throttle",      Game::INPUT_THROTTLE, "JOY1_ZAXIS_POS");
+	throttleUp    = AddSwitchInput("ThrottleUp",   "Throttle Up",   Game::INPUT_THROTTLE, "KEY_X");
+	throttleDown  = AddSwitchInput("ThrottleDown", "Throttle Down", Game::INPUT_THROTTLE, "KEY_Z");
+
+	// Flight game view buttons
+	flightView[0] = AddSwitchInput("FlightView1", "View 1", Game::INPUT_FLIGHT_VIEW4, "KEY_Q");
+	flightView[1] = AddSwitchInput("FlightView2", "View 2", Game::INPUT_FLIGHT_VIEW4, "KEY_W");
+	flightView[2] = AddSwitchInput("FlightView3", "View 3", Game::INPUT_FLIGHT_VIEW4, "KEY_E");
+	flightView[3] = AddSwitchInput("FlightView4", "View 4", Game::INPUT_FLIGHT_VIEW4, "KEY_R");
+
+	// Second analog joystick
+	auto analogJoy2Left  = AddAnalogInput("AnalogJoy2Left",  "Analog 2 Left",  Game::INPUT_ANALOG_JOYSTICK2, "KEY_J");
+	auto analogJoy2Right = AddAnalogInput("AnalogJoy2Right", "Analog 2 Right", Game::INPUT_ANALOG_JOYSTICK2, "KEY_L");
+	auto analogJoy2Up    = AddAnalogInput("AnalogJoy2Up",    "Analog 2 Up",    Game::INPUT_ANALOG_JOYSTICK2, "KEY_I");
+	auto analogJoy2Down  = AddAnalogInput("AnalogJoy2Down",  "Analog 2 Down",  Game::INPUT_ANALOG_JOYSTICK2, "KEY_K");
+
+	analogJoy2X        = AddAxisInput  ("AnalogJoy2X",        "Analog 2 X-Axis",          Game::INPUT_ANALOG_JOYSTICK2, "JOY2_XAXIS", analogJoy2Left, analogJoy2Right);
+	analogJoy2Y        = AddAxisInput  ("AnalogJoy2Y",        "Analog 2 Y-Axis",          Game::INPUT_ANALOG_JOYSTICK2, "JOY2_YAXIS", analogJoy2Up,   analogJoy2Down);
+	analogJoy2Trigger1 = AddSwitchInput("AnalogJoy2Trigger",  "Analog 2 Trigger Button 1", Game::INPUT_ANALOG_JOYSTICK2, "KEY_U,JOY2_BUTTON1");
+	analogJoy2Trigger2 = AddSwitchInput("AnalogJoy2Trigger2", "Analog 2 Trigger Button 2", Game::INPUT_ANALOG_JOYSTICK2, "KEY_O,JOY2_BUTTON2");
 }
 
 CInputs::~CInputs()

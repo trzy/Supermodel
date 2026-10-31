@@ -1868,6 +1868,49 @@ All settings are case sensitive.
 
     ----------------
 
+    Name:           InputThrottle
+                    InputThrottleUp
+                    InputThrottleDown
+
+    Argument:       String.
+
+    Description:    Mappings for the throttle lever in the Model 1 flight games
+                    'Wing War' and 'Star Wars Arcade'.  InputThrottle is an
+                    analog axis; the up and down buttons move the lever and
+                    leave it where it is (the axis takes over when moved).
+                    Can only be set in the 'Global' section.
+
+    ----------------
+
+    Name:           InputFlightView1
+                    InputFlightView2
+                    InputFlightView3
+                    InputFlightView4
+
+    Argument:       String.
+
+    Description:    Mappings for the four view buttons in 'Wing War'.  Can
+                    only be set in the 'Global' section.
+
+    ----------------
+
+    Name:           InputAnalogJoy2Down
+                    InputAnalogJoy2Left
+                    InputAnalogJoy2Right
+                    InputAnalogJoy2Up
+                    InputAnalogJoy2X
+                    InputAnalogJoy2Y
+                    InputAnalogJoy2Trigger
+                    InputAnalogJoy2Trigger2
+
+    Argument:       String.
+
+    Description:    Mappings for the second (gunner's) analog joystick and its
+                    two buttons in 'Star Wars Arcade'.  Can only be set in the
+                    'Global' section.
+
+    ----------------
+
     Name:           InputGunDown
                     InputGunDown2
                     InputGunLeft

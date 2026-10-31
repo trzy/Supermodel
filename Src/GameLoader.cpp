@@ -351,7 +351,10 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
     { "analog_gun2",      Game::INPUT_ANALOG_GUN2 },
     { "ski",              Game::INPUT_SKI },
     { "magtruck",         Game::INPUT_MAGTRUCK },
-    { "fishing",          Game::INPUT_FISHING }
+    { "fishing",          Game::INPUT_FISHING },
+    { "throttle",         Game::INPUT_THROTTLE },
+    { "analog_joystick2", Game::INPUT_ANALOG_JOYSTICK2 },
+    { "flight_view4",     Game::INPUT_FLIGHT_VIEW4 }
   };
   for (auto &node: game_node["hardware/inputs"])
   {

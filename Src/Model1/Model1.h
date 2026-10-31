@@ -220,6 +220,7 @@ private:
   // I/O board: frames after a reset before it reports ready (its BIOS boot; an estimate)
   static constexpr int IO_BOARD_BOOT_FRAMES = 30;
   int       m_ioBoardBootFrames = 0;
+  int       m_throttleLever = 0;    // keyboard throttle position (0-255), not saved
 
   bool      m_softwareRender = false;
   bool      m_logIO = false;          // log the dual port RAM accesses (debugging the I/O board simulation)

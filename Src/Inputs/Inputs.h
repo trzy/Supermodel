@@ -227,6 +227,21 @@ public:
   std::shared_ptr<CSwitchInput> fishingSelect;
   std::shared_ptr<CAnalogInput> fishingTension;
 
+  // Throttle lever (Wing War, Star Wars Arcade): an analog axis, or up/down
+  // keys that move the lever and leave it there
+  std::shared_ptr<CAnalogInput> throttle;
+  std::shared_ptr<CSwitchInput> throttleUp;
+  std::shared_ptr<CSwitchInput> throttleDown;
+
+  // View buttons (Wing War)
+  std::shared_ptr<CSwitchInput> flightView[4];
+
+  // Second analog joystick (Star Wars Arcade gunner)
+  std::shared_ptr<CAxisInput> analogJoy2X;
+  std::shared_ptr<CAxisInput> analogJoy2Y;
+  std::shared_ptr<CSwitchInput> analogJoy2Trigger1;
+  std::shared_ptr<CSwitchInput> analogJoy2Trigger2;
+
   /*
    * Creates a set of inputs with the given input system.
    */

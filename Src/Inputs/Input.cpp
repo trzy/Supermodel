@@ -114,6 +114,9 @@ const char* CInput::GetInputGroup()
 		case Game::INPUT_SKI:             return "Ski Controls";
 		case Game::INPUT_MAGTRUCK:        return "Magical Truck Controls";
 		case Game::INPUT_FISHING:         return "Fishing Controls";
+		case Game::INPUT_THROTTLE:        return "Throttle";
+		case Game::INPUT_ANALOG_JOYSTICK2:return "Second Analog Joystick";
+		case Game::INPUT_FLIGHT_VIEW4:    return "Flight Game 4 View Buttons";
 		default:                          return "Misc";
 	}
 }

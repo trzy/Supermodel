@@ -3434,7 +3434,8 @@
       <inputs>
         <input type="common" />
         <input type="analog_joystick" />
-        <input type="vr4" />
+        <input type="throttle" />
+        <input type="flight_view4" />
       </inputs>
     </hardware>
     <roms>
@@ -3510,7 +3511,8 @@
       <inputs>
         <input type="common" />
         <input type="analog_joystick" />
-        <input type="vehicle" />
+        <input type="throttle" />
+        <input type="analog_joystick2" />
       </inputs>
     </hardware>
     <roms>
@@ -3583,7 +3585,8 @@
       <inputs>
         <input type="common" />
         <input type="analog_joystick" />
-        <input type="vehicle" />
+        <input type="throttle" />
+        <input type="analog_joystick2" />
       </inputs>
     </hardware>
     <roms>
