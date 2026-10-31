@@ -12,6 +12,16 @@
     Tile RAM: 0x8000 words  (Model 1: 0x700000-0x70FFFF, offset = (addr & 0xFFFF) >> 1)
     Char RAM: 0x40000 words (Model 1: 0x780000-0x7FFFFF, offset = (addr & 0x7FFFF) >> 1)
 
+  Tile RAM layout:
+    0x0000-0x3FFF  four 64x64 tilemaps of 8x8 tiles (0x1000 words each), in
+                   two pairs: 0/1 and 2/3
+    0x4000-0x47FF  line scroll tables, 0x200 words per tilemap
+    0x5000-0x5003  horizontal scroll per tilemap (bit 15: use the line table)
+    0x5004-0x5007  vertical scroll per tilemap (bit 15: disabled); words 0x5004
+                   and 0x5006 also hold the pair's split mode in bits 13-14
+    0x6000, 0x6800 window masks for pairs 0/1 and 2/3: 4 words (64 bits, one per
+                   8 pixels) per line; a set bit shows the pair's second tilemap
+
   Palette index formation (same as MAME's gfx_element / tilemap):
     tile word val: code = val & tileMask (0x3FFF on Model 1),
                    color = (val >> 7) & 0xFF, category = val >> 15
@@ -25,6 +35,7 @@
 #define INCLUDED_MODEL1TILEMAP_H
 
 #include "Types.h"
+#include <vector>
 
 class CBlockFile;
 
@@ -33,7 +44,6 @@ class CSys24Tilemap
 public:
   // MAME: S24TILE(config, m_tiles, 0, 0x3fff) on Model 1
   explicit CSys24Tilemap(UINT16 tileMask = 0x3FFF);
-  ~CSys24Tilemap();
 
   // MAME has no device_reset for this chip; RAM is preserved across Reset()
   // (it is zeroed only at construction, like MAME's device_start).
@@ -52,57 +62,38 @@ public:
    * DrawLayer(layer, dest, pitch, width, height, opaque, paletteRGBA):
    *
    * Equivalent of MAME m_tiles->draw(screen, bitmap, cliprect, layer, 0,
-   * opaque ? TILEMAP_DRAW_OPAQUE : 0) with cliprect = (0,0)-(width-1,height-1).
-   * Model 1 screen is 496x384; pass width=496, height=384 for exact MAME output
-   * (MAME's normal-mode path hard-codes 496x384; here it is additionally clipped
-   * to width/height so a smaller buffer is safe).
+   * opaque ? TILEMAP_DRAW_OPAQUE : 0) on the 496x384 screen. Layer = tilemap
+   * * 2 + category: the tiles of that category are drawn. dest is clipped to
+   * width x height as well.
    *
    * Pixels the layer does not draw are left untouched in dest. Drawn pixels
    * are dest = paletteRGBA[index] (copied verbatim, including alpha).
    *
-   * Note (MAME behaviour, reproduced): in the normal path, opaque writes every
+   * Note (MAME behaviour, reproduced): in the normal mode, opaque writes every
    * pixel not hidden by the window mask, regardless of tile category; in the
-   * special window/scroll modes (ctrl & 0x6000) opaque still only draws tiles
-   * whose category matches layer & 1. A disabled layer (vscroll bit 15) draws
-   * nothing even when opaque.
+   * split modes opaque still only draws tiles of the layer's category. A
+   * disabled layer (vscroll bit 15) draws nothing even when opaque.
    */
   void DrawLayer(int layer, UINT32 *dest, int pitchInPixels, int width, int height, bool opaque, const UINT32 *paletteRGBA) const;
 
   // Direct access (debugging / integrator)
-  const UINT16 *GetTileRAM() const { return tile_ram; }
-  const UINT16 *GetCharRAM() const { return char_ram; }
+  const UINT16 *GetTileRAM() const { return m_tileRAM.data(); }
+  const UINT16 *GetCharRAM() const { return m_charRAM.data(); }
 
   static constexpr UINT32 TILE_RAM_WORDS = 0x10000 / 2;
   static constexpr UINT32 CHAR_RAM_WORDS = 0x80000 / 2;
 
 private:
-  struct DrawCtx
-  {
-    UINT32 *dest;
-    int pitch;
-    int width;
-    int height;
-    bool opaque;
-    const UINT32 *pens;
-  };
+  // Draws screen pixels x0..x1-1 of one line from 'tilemap', tilemap row ty,
+  // tilemap column (x + scrollx) & 511. With a window mask line, pixels whose
+  // mask bit (inverted if 'invert') is set are skipped. Tiles of another
+  // category than 'category' are skipped unless 'anyCategory'.
+  void DrawSpan(UINT32 *line, const UINT32 *pens, int tilemap, int ty, int x0, int x1, int scrollx,
+                const UINT16 *maskLine, bool invert, int category, bool anyCategory, bool opaque) const;
 
-  // Fetch one pixel of 512x512 tilemap 'tmap' (0..3) at (tx,ty):
-  // returns palette index; sets *pen (0..15) and *category (0/1)
-  inline UINT16 TilemapPixel(int tmap, int tx, int ty, int *pen, int *category) const;
-
-  // Replacement for tilemap_t::draw() on a single-scroll 512x512 tilemap:
-  // tilemap x = (x + scrollx) & 511, y = (y + scrolly) & 511 (MAME semantics of
-  // set_scrollx/set_scrolly with dx=dy=0). Clip rect is inclusive.
-  void TilemapDraw(const DrawCtx &ctx, int tmap, int scrollx, int scrolly, int tpri,
-                   int minX, int minY, int maxX, int maxY) const;
-
-  // Replacement for segas24_tile_device::draw_rect() (rgb32 variant)
-  void draw_rect(const DrawCtx &ctx, int tmap, const UINT16 *mask, UINT16 tpri, int win,
-                 int sx, int sy, int xx1, int yy1, int xx2, int yy2) const;
-
-  UINT16 *char_ram;
-  UINT16 *tile_ram;
-  UINT16 tile_mask;
+  std::vector<UINT16> m_charRAM;
+  std::vector<UINT16> m_tileRAM;
+  UINT16 m_tileMask;
 };
 
 #endif // INCLUDED_MODEL1TILEMAP_H
