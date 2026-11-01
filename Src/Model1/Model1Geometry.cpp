@@ -198,10 +198,15 @@ namespace Model1
 
   void CGeometry::view_t::recompute_frustum()
   {
+    // The viewport is inclusive: its last column and row (x2, y2) are pixels
+    // whose far edges are at x2 + 1 and y2 + 1. MAME clips at x2 and y2 and
+    // its integer rasterizer still fills those pixels; a GPU only fills pixels
+    // whose centres are inside the polygon, so clipping there would lose the
+    // last column and row. (Drawing is scissored to the viewport anyway.)
     a_left   = ( x1 - xc - viewx) / zoomx;
-    a_right  = ( x2 - xc - viewx) / zoomx;
+    a_right  = ( x2 + 1 - xc - viewx) / zoomx;
     a_bottom = (-y1 + yc - viewy) / zoomy;
-    a_top    = (-y2 + yc - viewy) / zoomy;
+    a_top    = (-(y2 + 1) + yc - viewy) / zoomy;
   }
 
   void CGeometry::view_t::init_translation_matrix()
