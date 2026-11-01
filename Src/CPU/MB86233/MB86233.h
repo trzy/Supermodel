@@ -207,7 +207,9 @@ private:
   inline void stset_set_sz_fp(UINT32 val);
 
   UINT32 read_reg(UINT32 r);
+  UINT32 read_reg_other(UINT32 r);
   void write_reg(UINT32 r, UINT32 v);
+  void write_reg_other(UINT32 r, UINT32 v);
   void write_mem_internal_1(UINT32 r, UINT32 v, bool bank);
   void write_mem_io_1(UINT32 r, UINT32 v);
 };

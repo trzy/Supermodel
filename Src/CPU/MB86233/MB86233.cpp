@@ -62,6 +62,16 @@ static inline float u2f(UINT32 v) { float f; memcpy(&f, &v, sizeof(f)); return f
 static inline UINT32 f2u(float f) { UINT32 v; memcpy(&v, &f, sizeof(v)); return v; }
 static inline INT32 sext(UINT32 value, int width) { return INT32(value << (32 - width)) >> (32 - width); }
 
+// Supermodel: the small helpers Run() calls for nearly every instruction are
+// forced inline (they otherwise stay calls, which costs a lot here)
+#if defined(_MSC_VER)
+#define MB86233_INLINE __forceinline
+#elif defined(__GNUC__)
+#define MB86233_INLINE inline __attribute__((always_inline))
+#else
+#define MB86233_INLINE inline
+#endif
+
 
 CMB86233::CMB86233()
   : m_bus(&m_nullBus), m_rom(nullptr), m_romWords(0), m_internalRam(true),
@@ -75,14 +85,14 @@ CMB86233::CMB86233()
 
 // Data space: on-chip RAM banks at 0x000-0x0ff and 0x200-0x3ff (in MAME these
 // are .ram() entries of model1_state::copro_data_map), everything else external.
-UINT32 CMB86233::data_r(UINT16 a)
+MB86233_INLINE UINT32 CMB86233::data_r(UINT16 a)
 {
   if (m_internalRam && (a < 0x100 || (a >= 0x200 && a < 0x400)))
     return m_ram[a];
   return m_bus->ReadData(a);
 }
 
-void CMB86233::data_w(UINT16 a, UINT32 v)
+MB86233_INLINE void CMB86233::data_w(UINT16 a, UINT32 v)
 {
   if (m_internalRam && (a < 0x100 || (a >= 0x200 && a < 0x400)))
     m_ram[a] = v;
@@ -169,17 +179,17 @@ void CMB86233::pcs_pop()
 		m_pcs[i] = m_pcs[i+1];
 }
 
-void CMB86233::stset_set_sz_int(UINT32 val)
+MB86233_INLINE void CMB86233::stset_set_sz_int(UINT32 val)
 {
 	m_alu_stset = val ? (val & 0x80000000 ? F_SGD : 0) : F_ZRD;
 }
 
-void CMB86233::stset_set_sz_fp(UINT32 val)
+MB86233_INLINE void CMB86233::stset_set_sz_fp(UINT32 val)
 {
 	m_alu_stset = (val & 0x7fffffff) ? (val & 0x80000000 ? F_SGD : 0) : F_ZRD;
 }
 
-void CMB86233::alu_pre(UINT32 alu)
+MB86233_INLINE void CMB86233::alu_pre(UINT32 alu)
 {
 	switch(alu) {
 	case 0x00: break; // no alu
@@ -398,67 +408,53 @@ void CMB86233::alu_pre(UINT32 alu)
 	}
 }
 
-void CMB86233::alu_update_st()
+MB86233_INLINE void CMB86233::alu_update_st()
 {
 	m_st = (m_st & ~m_alu_stmask) | m_alu_stset;
 }
 
-void CMB86233::alu_post_1(UINT32 alu)
+// Supermodel: the post ops are picked with bit masks of the alu field rather
+// than switches (fewer indirect jumps in the interpreter loop)
+#define ALU_BIT(n) (1u << (n))
+static const UINT32 ALU_INT_D = ALU_BIT(0x01)|ALU_BIT(0x02)|ALU_BIT(0x03)|ALU_BIT(0x04)|ALU_BIT(0x0e)|ALU_BIT(0x0f)|
+                                ALU_BIT(0x16)|ALU_BIT(0x17)|ALU_BIT(0x18)|ALU_BIT(0x19)|ALU_BIT(0x1a)|ALU_BIT(0x1b);
+static const UINT32 ALU_FP_ST = ALU_BIT(0x05);
+static const UINT32 ALU_FP_D  = ALU_BIT(0x06)|ALU_BIT(0x07)|ALU_BIT(0x0b)|ALU_BIT(0x0c)|
+                                ALU_BIT(0x10)|ALU_BIT(0x11)|ALU_BIT(0x13)|ALU_BIT(0x14);
+static const UINT32 ALU_FP_P  = ALU_BIT(0x08);
+static const UINT32 ALU_FP_DP = ALU_BIT(0x09)|ALU_BIT(0x0a)|ALU_BIT(0x0d);
+#undef ALU_BIT
+
+MB86233_INLINE void CMB86233::alu_post_1(UINT32 alu)
 {
-	// integer alu post ops
-	switch(alu) {
-	case 0x01: case 0x02: case 0x03: case 0x04:
-	case 0x0e: case 0x0f: case 0x16: case 0x17:
-	case 0x18: case 0x19: case 0x1a: case 0x1b:
-		// d update
+	// integer alu post ops: d update
+	if(ALU_INT_D & (1u << alu)) {
 		m_d = m_alu_r1;
 		alu_update_st();
-		break;
-
-	default:
-		break;
 	}
 }
 
-void CMB86233::alu_post_2(UINT32 alu)
+MB86233_INLINE void CMB86233::alu_post_2(UINT32 alu)
 {
 	// floating point alu post ops
 	// assume each one takes 2 cycles
-	switch (alu) {
-	case 0x05:
-		// flags only
-		alu_update_st();
-		m_icount--;
-		break;
-
-	case 0x06: case 0x07: case 0x0b: case 0x0c:
-	case 0x10: case 0x11: case 0x13: case 0x14:
-		// d update
-		m_d = m_alu_r1;
-		alu_update_st();
-		m_icount--;
-		break;
-
-	case 0x08:
+	UINT32 bit = 1u << alu;
+	if(!(bit & (ALU_FP_ST|ALU_FP_D|ALU_FP_P|ALU_FP_DP)))
+		return;
+	if(bit & ALU_FP_P) {
 		// p update
 		m_p = m_alu_r1;
-		m_icount--;
-		break;
-
-	case 0x09: case 0x0a: case 0x0d:
-		// d, p update
-		m_d = m_alu_r1;
-		m_p = m_alu_r2;
+	} else {
+		if(bit & (ALU_FP_D|ALU_FP_DP))
+			m_d = m_alu_r1;     // d update
+		if(bit & ALU_FP_DP)
+			m_p = m_alu_r2;     // and p
 		alu_update_st();
-		m_icount--;
-		break;
-
-	default:
-		break;
 	}
+	m_icount--;
 }
 
-UINT16 CMB86233::ea_pre_0(UINT32 r)
+MB86233_INLINE UINT16 CMB86233::ea_pre_0(UINT32 r)
 {
 	switch(r & 0x180) {
 	case 0x000: return r & 0x7f;
@@ -475,7 +471,7 @@ UINT16 CMB86233::ea_pre_0(UINT32 r)
 	return 0;
 }
 
-void CMB86233::ea_post_0(UINT32 r)
+MB86233_INLINE void CMB86233::ea_post_0(UINT32 r)
 {
 	if(!(r & 0x100))
 		return;
@@ -485,7 +481,7 @@ void CMB86233::ea_post_0(UINT32 r)
 		m_x0 += sext(r, 5);
 }
 
-UINT16 CMB86233::ea_pre_1(UINT32 r)
+MB86233_INLINE UINT16 CMB86233::ea_pre_1(UINT32 r)
 {
 	switch(r & 0x180) {
 	case 0x000: return r & 0x7f;
@@ -502,7 +498,7 @@ UINT16 CMB86233::ea_pre_1(UINT32 r)
 	return 0;
 }
 
-void CMB86233::ea_post_1(UINT32 r)
+MB86233_INLINE void CMB86233::ea_post_1(UINT32 r)
 {
 	if(!(r & 0x100))
 		return;
@@ -512,7 +508,20 @@ void CMB86233::ea_post_1(UINT32 r)
 		m_x1 += sext(r, 5);
 }
 
-UINT32 CMB86233::read_reg(UINT32 r)
+// Supermodel: a, b, d and p are nearly all the register moves; they are
+// handled inline and the rest in read_reg_other()/write_reg_other()
+MB86233_INLINE UINT32 CMB86233::read_reg(UINT32 r)
+{
+	switch(r & 0x3f) {
+	case 0x10: return m_a;
+	case 0x13: return m_b;
+	case 0x19: return m_d;
+	case 0x1c: return m_p;
+	default:   return read_reg_other(r);
+	}
+}
+
+UINT32 CMB86233::read_reg_other(UINT32 r)
 {
 	r &= 0x3f;
 	if(r >= 0x20 && r < 0x30)
@@ -549,7 +558,18 @@ UINT32 CMB86233::read_reg(UINT32 r)
 	}
 }
 
-void CMB86233::write_reg(UINT32 r, UINT32 v)
+MB86233_INLINE void CMB86233::write_reg(UINT32 r, UINT32 v)
+{
+	switch(r & 0x3f) {
+	case 0x10: m_a = v; break;
+	case 0x13: m_b = v; break;
+	case 0x19: m_d = v; break;
+	case 0x1c: m_p = v; break;
+	default:   write_reg_other(r, v); break;
+	}
+}
+
+void CMB86233::write_reg_other(UINT32 r, UINT32 v)
 {
 	r &= 0x3f;
 	if(r >= 0x20 && r < 0x30) {
@@ -611,7 +631,7 @@ void CMB86233::write_reg(UINT32 r, UINT32 v)
 	}
 }
 
-void CMB86233::write_mem_internal_1(UINT32 r, UINT32 v, bool bank)
+MB86233_INLINE void CMB86233::write_mem_internal_1(UINT32 r, UINT32 v, bool bank)
 {
 	UINT16 ea = ea_pre_1(r);
 	if(bank)
@@ -620,7 +640,7 @@ void CMB86233::write_mem_internal_1(UINT32 r, UINT32 v, bool bank)
 	ea_post_1(r);
 }
 
-void CMB86233::write_mem_io_1(UINT32 r, UINT32 v)
+MB86233_INLINE void CMB86233::write_mem_io_1(UINT32 r, UINT32 v)
 {
 	UINT16 ea = ea_pre_1(r);
 	io_w(ea, v);
@@ -639,11 +659,16 @@ int CMB86233::Run(int cycles)
 		return cycles;
 	}
 
+	// (the program ROM doesn't change during a slice)
+	const UINT32 *rom = m_rom;
+	const unsigned romWords = m_romWords;
+
 	while(m_icount > 0) {
 		m_ppc = m_pc;
 		if (m_trace)
 			m_trace(m_ppc);   // debugger_instruction_hook
-		UINT32 opcode = prog_r(m_pc++);
+		UINT32 opcode = m_pc < romWords ? rom[m_pc] : m_bus->ReadProgram(m_pc);
+		m_pc++;
 
 		switch((opcode >> 26) & 0x3f) {
 		case 0x00: {
@@ -653,7 +678,8 @@ int CMB86233::Run(int cycles)
 			UINT32 alu = (opcode >> 21) & 0x1f;
 			UINT32 op = (opcode >> 18) & 0x7;
 
-			alu_pre(alu);
+			if(alu)
+				alu_pre(alu);
 
 			switch(op) {
 			case 0: case 1: {
@@ -733,9 +759,12 @@ int CMB86233::Run(int cycles)
 			UINT32 alu = (opcode >> 21) & 0x1f;
 			UINT32 op = (opcode >> 18) & 0x7;
 
-			alu_pre(alu);
+			if(alu)
+				alu_pre(alu);
 
-			switch(op) {
+			// Supermodel: subop 7 is split by r2 >> 6 in the same switch (one
+			// dispatch instead of two for the most common instructions)
+			switch(op == 7 ? 8 + (r2 >> 6) : op) {
 			case 0: {
 				// mov mem, mem (e)
 				UINT32 ea = ea_pre_0(r1);
@@ -802,86 +831,81 @@ int CMB86233::Run(int cycles)
 				break;
 			}
 
-			case 7: {
-				switch(r2 >> 6) {
-				case 0: {
-					// mov reg, mem
-					UINT32 v = read_reg(r2);
-					if(m_stall) goto do_stall;
-					alu_post_1(alu);
-					write_mem_internal_1(r1, v, false);
-					break;
-				}
-
-				case 1: {
-					// mov reg, mem (e)
-					UINT32 v = read_reg(r2);
-					if(m_stall) goto do_stall;
-					alu_post_1(alu);
-					write_mem_io_1(r1, v);
-					break;
-				}
-
-				case 2: {
-					// mov mem + 0x200, reg
-					UINT32 ea = ea_pre_1(r1) + 0x200;
-					UINT32 v = data_r(ea);
-					if(m_stall) goto do_stall;
-					ea_post_1(r1);
-					alu_post_1(alu);
-					write_reg(r2, v);
-					break;
-				}
-
-				case 3: {
-					// mov mem, reg
-					UINT32 ea = ea_pre_1(r1);
-					UINT32 v = data_r(ea);
-					if(m_stall) goto do_stall;
-					ea_post_1(r1);
-					alu_post_1(alu);
-					write_reg(r2, v);
-					break;
-				}
-
-				case 4: {
-					// mov mem (e), reg
-					UINT32 ea = ea_pre_1(r1);
-					UINT32 v = io_r(ea);
-					if(m_stall) goto do_stall;
-					ea_post_1(r1);
-					alu_post_1(alu);
-					write_reg(r2, v);
-					break;
-				}
-
-				case 5: {
-					// mov mem (o), reg
-					UINT32 ea = ea_pre_0(r1);
-					UINT32 v = prog_r(ea);
-					if(m_stall) goto do_stall;
-					ea_post_0(r1);
-					alu_post_1(alu);
-					write_reg(r2, v);
-					break;
-				}
-
-				case 6: {
-					// mov reg, reg
-					UINT32 v = read_reg(r1);
-					if(m_stall) goto do_stall;
-					alu_post_1(alu);
-					write_reg(r2, v);
-					break;
-				}
-
-				default:
-					alu_post_1(alu);
-					DebugLog("unhandled ld/mov subop 7/%x (%x)\n", r2 >> 6, m_ppc);
-					break;
-				}
+			case 8: {
+				// mov reg, mem
+				UINT32 v = read_reg(r2);
+				if(m_stall) goto do_stall;
+				alu_post_1(alu);
+				write_mem_internal_1(r1, v, false);
 				break;
 			}
+
+			case 9: {
+				// mov reg, mem (e)
+				UINT32 v = read_reg(r2);
+				if(m_stall) goto do_stall;
+				alu_post_1(alu);
+				write_mem_io_1(r1, v);
+				break;
+			}
+
+			case 10: {
+				// mov mem + 0x200, reg
+				UINT32 ea = ea_pre_1(r1) + 0x200;
+				UINT32 v = data_r(ea);
+				if(m_stall) goto do_stall;
+				ea_post_1(r1);
+				alu_post_1(alu);
+				write_reg(r2, v);
+				break;
+			}
+
+			case 11: {
+				// mov mem, reg
+				UINT32 ea = ea_pre_1(r1);
+				UINT32 v = data_r(ea);
+				if(m_stall) goto do_stall;
+				ea_post_1(r1);
+				alu_post_1(alu);
+				write_reg(r2, v);
+				break;
+			}
+
+			case 12: {
+				// mov mem (e), reg
+				UINT32 ea = ea_pre_1(r1);
+				UINT32 v = io_r(ea);
+				if(m_stall) goto do_stall;
+				ea_post_1(r1);
+				alu_post_1(alu);
+				write_reg(r2, v);
+				break;
+			}
+
+			case 13: {
+				// mov mem (o), reg
+				UINT32 ea = ea_pre_0(r1);
+				UINT32 v = prog_r(ea);
+				if(m_stall) goto do_stall;
+				ea_post_0(r1);
+				alu_post_1(alu);
+				write_reg(r2, v);
+				break;
+			}
+
+			case 14: {
+				// mov reg, reg
+				UINT32 v = read_reg(r1);
+				if(m_stall) goto do_stall;
+				alu_post_1(alu);
+				write_reg(r2, v);
+				break;
+			}
+
+			case 15:
+				alu_post_1(alu);
+				DebugLog("unhandled ld/mov subop 7/%x (%x)\n", r2 >> 6, m_ppc);
+				break;
 
 			default:
 				alu_post_1(alu);
@@ -939,7 +963,8 @@ int CMB86233::Run(int cycles)
 			UINT32 alu = (opcode >> 20) & 0x1f;
 			UINT32 sub2 = (opcode >> 17) & 7;
 
-			alu_pre(alu);
+			if(alu)
+				alu_pre(alu);
 
 			switch(sub2) {
 			case 0:

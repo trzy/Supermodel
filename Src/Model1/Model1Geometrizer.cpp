@@ -87,6 +87,17 @@ namespace Model1
     return true;
   }
 
+  // Only looks at the producer's index when the cached copy says empty (the
+  // input is read after every word; the index only grows)
+  bool CGeometrizer::CFIFO::Empty()
+  {
+    size_t tail = m_tail.load(std::memory_order_relaxed);
+    if (tail != m_headCache)
+      return false;
+    m_headCache = m_head.load(std::memory_order_acquire);
+    return tail == m_headCache;
+  }
+
   UINT32 CGeometrizer::Bus::ReadData(UINT16 addr)
   {
     if (addr == 0x100)
@@ -186,7 +197,7 @@ namespace Model1
 
   // Waits a little for the producer, spinning briefly before giving up the
   // time slice (most waits are short)
-  void CGeometrizer::WaitForInput(const CFIFO &in)
+  void CGeometrizer::WaitForInput(CFIFO &in)
   {
     for (int i = 0; i < 2000; i++)
     {

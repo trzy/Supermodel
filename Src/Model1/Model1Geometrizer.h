@@ -99,7 +99,7 @@ namespace Model1
       CFIFO();
       bool Push(uint32_t v);          // producer; false if full
       bool Pop(uint32_t &v);          // consumer; false if empty
-      bool Empty() const { return m_tail.load(std::memory_order_relaxed) == m_head.load(std::memory_order_acquire); }  // consumer
+      bool Empty();                   // consumer
       void Clear() { m_head.store(0); m_tail.store(0); m_headCache = m_tailCache = 0; m_done.store(false); }   // only while no chip runs
       void SetDone() { m_done.store(true, std::memory_order_release); }
       bool Done() const { return m_done.load(std::memory_order_acquire); }
@@ -133,7 +133,7 @@ namespace Model1
     };
 
     bool RunChip(int chip, bool stopAtEndOfFrame = false);
-    static void WaitForInput(const CFIFO &in);
+    static void WaitForInput(CFIFO &in);
     bool RunChipFrame(int chip);
     bool IsIdle(int chip) const;
     uint32_t PolyRead(uint32_t adr) const;
