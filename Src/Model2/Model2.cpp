@@ -2273,12 +2273,17 @@ void CModel2::UpdateIOBoard(const uint8_t (&an)[8], uint8_t in0, uint8_t in1, ui
 {
   for (int i = 0; i < 8; i++)
     m_dpram[i] = an[i];
-  // the gear bits are active high
+  // the gear bits (Daytona's 4-speed shifter) are active high; the other
+  // games' IN1 bits 4-6 are buttons, active low (Desert Tank: machine gun,
+  // cannon)
   m_dpram[8] = (uint8_t) ~in0;
-  m_dpram[9] = (uint8_t) ((~in1 & 0x8f) | (in1 & 0x70));
+  m_dpram[9] = (m_game.inputs & Game::INPUT_SHIFT4) ? (uint8_t) ((~in1 & 0x8f) | (in1 & 0x70)) : (uint8_t) ~in1;
   m_dpram[10] = (uint8_t) ~in2;
   // the board's DIP switches (MAME: three banks, all off)
   m_dpram[0x0B] = m_dpram[0x0C] = m_dpram[0x0D] = 0xFF;
+  // a fourth input port (Desert Tank reads it at boot; 0 there keeps it in
+  // test mode): nothing pressed
+  m_dpram[0x0E] = m_dpram[0x0F] = 0xFF;
 
   if (m_ioBoardBootFrames > 0)
   {
