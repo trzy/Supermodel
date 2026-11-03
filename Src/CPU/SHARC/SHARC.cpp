@@ -1070,7 +1070,7 @@ CSHARC::SHARC_REG CSHARC::FADD(int fx, int fy)
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.r = (r.r & FLOAT_SIGN_MASK) | 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.r))
@@ -1107,7 +1107,7 @@ CSHARC::SHARC_REG CSHARC::FSUB(int fx, int fy)
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.r = (r.r & FLOAT_SIGN_MASK) | 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.r))
@@ -1145,7 +1145,7 @@ CSHARC::SHARC_REG CSHARC::FAVG(int fx, int fy)
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.r = (r.r & FLOAT_SIGN_MASK) | 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.r))
@@ -1263,7 +1263,7 @@ std::pair<CSHARC::SHARC_REG, CSHARC::SHARC_REG> CSHARC::FADD_FSUB(int fx, int fy
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.first.r = (r.first.r & FLOAT_SIGN_MASK) | 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.first.r))
@@ -1277,7 +1277,7 @@ std::pair<CSHARC::SHARC_REG, CSHARC::SHARC_REG> CSHARC::FADD_FSUB(int fx, int fy
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.second.r = (r.second.r & FLOAT_SIGN_MASK) | 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.second.r))
@@ -1378,7 +1378,7 @@ CSHARC::SHARC_REG CSHARC::FMUL(int fx, int fy)
 		// Supermodel (review fix): an underflow is a zero, a round-to-zero overflow NORM.MAX
 		if (underflow)
 			r.r &= FLOAT_SIGN_MASK;
-		else if (overflow && (m_core->mode1 & MODE1_TRUNCATE))
+		else if (overflow && (m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 			r.r = (r.r & FLOAT_SIGN_MASK) | 0x7f7fffff;
 	}
 	return r;
@@ -1757,7 +1757,7 @@ void CSHARC::compute_fadd_abs(int fn, int fx, int fy)
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.r = 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.r))
@@ -1796,7 +1796,7 @@ void CSHARC::compute_fsub_abs(int fn, int fx, int fy)
 		{
 			m_core->astat |= AV;
 			m_core->stky |= AVS;
-			if (m_core->mode1 & MODE1_TRUNCATE)
+			if ((m_core->mode1 & MODE1_TRUNCATE) && !IS_FLOAT_INFINITY(x.r) && !IS_FLOAT_INFINITY(y.r))   // an overflow, not an infinite operand
 				r.r = 0x7f7fffff;
 		}
 		else if (IS_FLOAT_DENORMAL_OR_ZERO(r.r))
