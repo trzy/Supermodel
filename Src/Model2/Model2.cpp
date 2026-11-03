@@ -27,6 +27,7 @@
 
 #include "Model2.h"
 #include "Model3/SoundBoard.h"
+#include "Model3/DSB.h"
 #include "Model1/Model1SoundBoard.h"
 #include "ROMSet.h"
 #include "BlockFile.h"
@@ -37,6 +38,25 @@
 #include <algorithm>
 #include <functional>
 #include <cstring>
+
+// A second sound board (Model 1's) mixed into the SCSP board's frame through
+// its DSB hook: the Model 2 board sends it commands, resets it and saves it
+namespace
+{
+  class Model1SoundMixer : public CDSB
+  {
+  public:
+    explicit Model1SoundMixer(CModel1SoundBoard *board) : m_board(board) {}
+    void SendCommand(UINT8) override {}
+    void RunFrame(float *audioL, float *audioR, int numSamples) override { m_board->MixFrameInto(audioL, audioR, numSamples); }
+    void Reset(void) override {}
+    void SaveState(CBlockFile *) override {}
+    void LoadState(CBlockFile *) override {}
+    Result Init(const UINT8 *, const UINT8 *) override { return Result::OKAY; }
+  private:
+    CModel1SoundBoard *m_board;
+  };
+}
 
 namespace
 {
@@ -864,7 +884,7 @@ uint8_t CModel2::IORead(unsigned offset)
       {
       case 1:  return In0Read();    // port B
       case 2:  return m_in[1];      // port C
-      case 3:  return m_in[2];      // port D
+      case 3:  return m_driveBoard.present ? DriveBoardRead() : m_in[2];   // port D (or the drive board)
       case 6:  return 0xFF;         // port G: DIP switches
       default: return 0xFF;
       }
@@ -900,6 +920,8 @@ void CModel2::IOWrite(unsigned offset, uint8_t data)
     m_io.portValue[offset] = data;
     if (offset == 0)
       EEPROMWrite(data);            // port A
+    else if (offset == 4 && m_driveBoard.present)
+      DriveBoardWrite(data);        // port E: drive board command
     // port E: billboard / drive board, port F: lamps and coin counters
     break;
   case 0x08:
@@ -914,6 +936,47 @@ void CModel2::IOWrite(unsigned offset, uint8_t data)
   default:
     break;
   }
+}
+
+
+/******************************************************************************
+ Drive board (Sega Ski Super G's ski board, Manx TT DX's motion slider)
+
+ Commands on port E, replies on port D. Both games' power-on checks wait for
+ CE (the board's power-on sequence, as Model 3's boards: CF, CE, ...), then
+ send a game setting and wait for "ready":
+   Ski Super G (i960 88B10): sends 00, waits CE; sends 511166, waits FF;
+     0x1DF frames, else "DRIVE BOARD TROUBLE".
+   Manx TT (i960 5F530): sends 3D, waits CE; sends 5BBA12, waits CD; 0x34E
+     and 0x234 frames, else "Drive Board ... Not Respond" (Bx: error codes).
+ The setting can be anything, so the board is paced by the commands it gets
+ instead of by time: CF to the first 10, CE to the next 10, then it is ready.
+ The ski board then works like Model 3's Ski Champ board (CSkiBoard): Dx
+ selects what reads return (0 status, 1 DIP switches, 4 foot sensors, all on).
+ The motion slider answers CD. No motion or vibration.
+******************************************************************************/
+
+uint8_t CModel2::DriveBoardRead()
+{
+  if (!m_driveBoard.initialized)
+    return m_driveBoard.initCommands < 10 ? 0xcf : 0xce;
+  if (!m_driveBoard.ski)
+    return 0xcd;
+  switch (m_driveBoard.readMode)
+  {
+  case 0:  return 0xff;             // status: no errors
+  case 1:  return 0xcf;             // DIP switches (Ski Champ's)
+  case 4:  return 0xff;             // foot sensors: left F0, right 0F
+  default: return 0xff;
+  }
+}
+
+void CModel2::DriveBoardWrite(uint8_t cmd)
+{
+  if (!m_driveBoard.initialized && ++m_driveBoard.initCommands >= 20)
+    m_driveBoard.initialized = true;
+  if (m_driveBoard.ski && (cmd >> 4) == 0x0d)
+    m_driveBoard.readMode = cmd & 7;
 }
 
 
@@ -1499,6 +1562,19 @@ void CModel2::UpdateInputs(void)
       m_analog[1] = (uint8_t) (0x20 + accel * 0xC0 / 255);
       m_analog[2] = (uint8_t) (0x20 + brake * 0xC0 / 255);
     }
+    else if (inputs & Game::INPUT_SHIFTUPDOWN)
+    {
+      // The bikes (Manx TT, Motor Raid; MAME's manxtt ports): throttle, brake,
+      // bank (lean, the wheel, reversed) on analog channels 0-2; start is bit
+      // 6, shift up/down IN1 bits 4/5
+      m_analog[0] = accel;
+      m_analog[1] = brake;
+      m_analog[2] = (uint8_t) (0xFF - steer);
+      if (in0 & 0x10)
+        in0 = (in0 & ~0x10) | 0x40;
+      in1 |= sw(m_inputs->gearShiftUp) ? 0x10 : 0;
+      in1 |= sw(m_inputs->gearShiftDown) ? 0x20 : 0;
+    }
     else
     {
       // Sega Rally: wheel, accelerator, brake on analog channels 0-2; start is
@@ -1521,6 +1597,23 @@ void CModel2::UpdateInputs(void)
       in0 |= sw(m_inputs->vr[2]) ? 0x80 : 0;
       in1 |= sw(m_inputs->vr[3]) ? 0x01 : 0;
     }
+  }
+
+  // Ski controls (Sega Ski Super G, MAME's skisuprg ports): swing on analog
+  // channel 0, inclining on 1 (as Model 3's Ski Champ: Y then X); select
+  // 1/2/3 in IN0 bits 6/7/4 (no start button: bit 4 is select 3), zoom in
+  // (pole right) IN0 bit 5, zoom out (pole left) IN1 bit 0. The foot sensors
+  // come from the drive board (DriveBoardRead).
+  if (inputs & Game::INPUT_SKI)
+  {
+    m_analog[0] = m_inputs->skiY ? (uint8_t) m_inputs->skiY->value : 0x80;
+    m_analog[1] = m_inputs->skiX ? (uint8_t) m_inputs->skiX->value : 0x80;
+    in0 &= ~0x10;
+    in0 |= sw(m_inputs->skiSelect1) ? 0x40 : 0;
+    in0 |= sw(m_inputs->skiSelect2) ? 0x80 : 0;
+    in0 |= sw(m_inputs->skiSelect3) ? 0x10 : 0;
+    in0 |= sw(m_inputs->skiPollRight) ? 0x20 : 0;
+    in1 |= sw(m_inputs->skiPollLeft) ? 0x01 : 0;
   }
 
   // Light guns (The House of the Dead): triggers in IN1 bits 0-1, the second
@@ -1777,8 +1870,8 @@ void CModel2::RunFrame(void)
 
   if (m_soundBoard)
     m_soundBoard->RunFrame();
-  if (m_m1SoundBoard)
-    m_m1SoundBoard->RunFrame();
+  if (m_m1SoundBoard && !m_m1SoundMixer)
+    m_m1SoundBoard->RunFrame();     // (mixed in by the SCSP board otherwise)
 
   // Debugging aid: "frame:file" writes that frame to a BMP file
   if (const char *dump = getenv("SUPERMODEL_MODEL2_DUMP"))
@@ -1834,6 +1927,12 @@ void CModel2::Reset(void)
   m_uart.WriteCTS(0);
   m_io = IOChip();
   m_eeprom.Reset();
+  {
+    DriveBoard board;
+    board.present = m_driveBoard.present;
+    board.ski = m_driveBoard.ski;
+    m_driveBoard = board;
+  }
 
   // MAME: "initialize bufferram to a sane default"
   std::fill(m_bufferRAM.begin(), m_bufferRAM.end(), 0x07800f0f);
@@ -1982,6 +2081,13 @@ void CModel2::SaveState(CBlockFile *SaveState)
     m_soundBoard->SaveState(SaveState);
   if (m_m1SoundBoard)
     m_m1SoundBoard->SaveState(SaveState);
+  if (m_driveBoard.present)
+  {
+    SaveState->NewBlock("Model 2 drive board", __FILE__);
+    SaveState->Write(m_driveBoard.initialized);
+    SaveState->Write(m_driveBoard.initCommands);
+    SaveState->Write(m_driveBoard.readMode);
+  }
 }
 
 void CModel2::LoadState(CBlockFile *SaveState)
@@ -2100,6 +2206,12 @@ void CModel2::LoadState(CBlockFile *SaveState)
     m_soundBoard->LoadState(SaveState);
   if (m_m1SoundBoard)
     m_m1SoundBoard->LoadState(SaveState);
+  if (m_driveBoard.present && Result::OKAY == SaveState->FindBlock("Model 2 drive board"))
+  {
+    SaveState->Read(m_driveBoard.initialized);
+    SaveState->Read(m_driveBoard.initCommands);
+    SaveState->Read(m_driveBoard.readMode);
+  }
 
   for (unsigned i = 0; i < m_paletteRAM.size(); i++)
     UpdatePaletteEntry(i);
@@ -2218,6 +2330,13 @@ bool CModel2::LoadROMs(const ROMSet &rom_set)
     return true;
   }
   loadBytes("sound_program", m_soundProgram, 0x80000, false);
+  // Some 2A cabinets (Manx TT DX) also have the Model 1 sound board
+  if (rom_set.get_rom("m1_sound_program").size)
+  {
+    loadBytes("m1_sound_program", m_m1SoundProgram, 0xC0000, false);
+    loadBytes("mpcm1", m_mpcm1, 0x400000, false);
+    loadBytes("mpcm2", m_mpcm2, 0x400000, false);
+  }
   // The sound board maps 16 MB of samples at 800000 with a bank bit choosing
   // the upper 8 MB, which no Model 2 game needs: both halves are the same
   loadBytes("samples", m_samples, 0x1000000, false);
@@ -2231,6 +2350,8 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
   m_original = game.stepping == Game::Stepping::MODEL2;
   m_model2b = game.stepping == Game::Stepping::MODEL2B;
   m_model2c = game.stepping == Game::Stepping::MODEL2C;
+  m_driveBoard.present = game.driveboard_type == Game::DRIVE_BOARD_SKI || game.driveboard_type == Game::DRIVE_BOARD_MOTION;
+  m_driveBoard.ski = game.driveboard_type == Game::DRIVE_BOARD_SKI;
 
   if (!LoadROMs(rom_set))
     return Result::FAIL;
@@ -2356,11 +2477,26 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
     m_soundBoard = std::make_unique<CSoundBoard>(m_config);
     if (Result::OKAY != m_soundBoard->Init(m_soundProgram.data(), m_samples.data()))
       return Result::FAIL;
+    // A second sound board, the Model 1 one (Manx TT DX, MAME's manxttdx):
+    // the UART's output goes to both, its replies come from the Model 1 board.
+    // Its audio is mixed into the SCSP board's frame (one output): attached
+    // like a DSB, it runs when the SCSP board does
+    if (!m_m1SoundProgram.empty())
+    {
+      m_m1SoundBoard = std::make_unique<CModel1SoundBoard>(m_config);
+      if (Result::OKAY != m_m1SoundBoard->Init(m_m1SoundProgram.data(), m_m1SoundProgram.size(), m_mpcm1.data(), m_mpcm1.size(), m_mpcm2.data(), m_mpcm2.size()))
+        return Result::FAIL;
+      m_m1SoundBoard->SetMIDIOutCallback([this](UINT8 data) { m_uart.ReceiveByte(data); });
+      m_m1SoundMixer = std::make_unique<Model1SoundMixer>(m_m1SoundBoard.get());
+      m_soundBoard->AttachDSB(m_m1SoundMixer.get());
+    }
     m_uart.OnTransmit = [this](uint8_t data)
     {
       if (m_logIO)
         DebugLog("Main -> sound: %02X (frame %llu)\n", data, (unsigned long long) m_frameNumber);
       m_soundBoard->WriteMIDIPort(data);
+      if (m_m1SoundBoard)
+        m_m1SoundBoard->WriteMIDI(data, (m_line + 0.5) / TOTAL_LINES);
     };
   }
   else

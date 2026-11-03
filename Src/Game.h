@@ -132,7 +132,8 @@ struct Game
     DRIVE_BOARD_WHEEL,
     DRIVE_BOARD_JOYSTICK,
     DRIVE_BOARD_SKI,
-    DRIVE_BOARD_BILLBOARD
+    DRIVE_BOARD_BILLBOARD,
+    DRIVE_BOARD_MOTION    // Model 2 motion slider (Manx TT DX)
   };
   DriveBoardType driveboard_type = DriveBoardType::DRIVE_BOARD_NONE;
 };

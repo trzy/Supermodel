@@ -544,7 +544,24 @@ void CModel1SoundBoard::Mix(int numSamples)
 bool CModel1SoundBoard::RunFrame()
 {
 	const int numSamples = NextFrameSamples();
+	RunFrameAudio(numSamples);
+	return OutputAudio(numSamples, m_outL.data(), m_outR.data(), m_outRL.data(), m_outRR.data(),
+		m_config["FlipStereo"].ValueAsDefault<bool>(false));
+}
 
+void CModel1SoundBoard::MixFrameInto(float *audioL, float *audioR, int numSamples)
+{
+	numSamples = (std::min)(numSamples, MAX_SAMPLES_PER_FRAME);
+	RunFrameAudio(numSamples);
+	for (int i = 0; i < numSamples; i++)
+	{
+		audioL[i] += m_outL[i];
+		audioR[i] += m_outR[i];
+	}
+}
+
+void CModel1SoundBoard::RunFrameAudio(int numSamples)
+{
 	// Emulated time for this frame is exactly numSamples output periods
 	const uint64_t endTick = ((m_outCount + numSamples) * TICK_HZ) / OUTPUT_RATE;
 
@@ -616,9 +633,6 @@ bool CModel1SoundBoard::RunFrame()
 			frames = 0;
 		}
 	}
-
-	return OutputAudio(numSamples, m_outL.data(), m_outR.data(), m_outRL.data(), m_outRR.data(),
-		m_config["FlipStereo"].ValueAsDefault<bool>(false));
 }
 
 /******************************************************************************

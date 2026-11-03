@@ -77,6 +77,7 @@ class CInputs;
 class COutputs;
 class CSoundBoard;
 class CModel1SoundBoard;
+class CDSB;
 
 class CModel2: public IEmulator, public II960Bus, public IMB86233Bus, public ISHARCBus, public IMB86235Bus
 {
@@ -233,6 +234,7 @@ private:
   C93C46                m_eeprom;
   std::unique_ptr<CSoundBoard> m_soundBoard;           // 2A: 68000 + SCSP
   std::unique_ptr<CModel1SoundBoard> m_m1SoundBoard;   // original: the Model 1 sound board
+  std::unique_ptr<CDSB> m_m1SoundMixer;                 // 2A with both boards: the Model 1 board mixed into the SCSP board's output
   bool                  m_original = false;           // original Model 2 board (Daytona)
   bool                  m_model2b = false;            // 2B-CRX (SHARC coprocessor)
   bool                  m_model2c = false;            // 2C-CRX (TGPx4 coprocessor)
@@ -248,7 +250,8 @@ private:
   std::vector<uint16_t> m_textureROM;
   std::vector<uint8_t>  m_soundProgram;   // 512 KB
   std::vector<uint8_t>  m_samples;        // 16 MB, the upper 8 MB mirror the lower
-  std::vector<uint8_t>  m_mpcm1, m_mpcm2;  // original: MultiPCM samples, 4 MB each
+  std::vector<uint8_t>  m_mpcm1, m_mpcm2;  // Model 1 sound board: MultiPCM samples, 4 MB each
+  std::vector<uint8_t>  m_m1SoundProgram;  // 2A with a second, Model 1 sound board (Manx TT DX): its 68000 program
 
   // RAM
   std::vector<uint8_t>  m_ram;            // 0x200000, 256 KB
@@ -317,6 +320,19 @@ private:
   uint16_t  m_gun[4] = { 0x0e9, 0x180, 0x0e9, 0x17b };   // light guns (MAME's P1_Y, P1_X, P2_Y, P2_X)
   uint8_t   m_gunOffscreen = 0;                          // bit 0: P1, bit 1: P2
   uint8_t   m_lightgunMux = 0;                           // MAME's m_lightgun_mux (serial channel 2)
+
+  // Drive board (Sega Ski Super G's ski board, Manx TT DX's motion slider),
+  // simulated: port E commands, port D replies (see DriveBoardRead)
+  struct DriveBoard
+  {
+    bool     present = false;
+    bool     ski = false;      // Ski Super G (else the motion slider)
+    bool     initialized = false;
+    uint32_t initCommands = 0; // commands received during the power-on sequence
+    uint8_t  readMode = 0;     // Dx command: what reads return
+  } m_driveBoard;
+  uint8_t DriveBoardRead();
+  void DriveBoardWrite(uint8_t cmd);
   uint8_t   m_gearSel = 0;                      // last gear selected (MAME's daytona_gearbox_r)
   int       m_ioBoardBootFrames = 0;            // original: frames until the I/O board reports ready
   static constexpr int IO_BOARD_BOOT_FRAMES = 30;

@@ -1514,6 +1514,85 @@
     </roms>
   </game>
 
+  <game name="manxtt">
+    <identity>
+      <title>Manx TT Superbike DX/Twin</title>
+      <version>Revision D</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1995</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2A</stepping>
+      <drive_board>Motion</drive_board>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shift_updown" />
+      </inputs>
+      <netboard>true</netboard>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x000000" name="epr-18822d.12" crc32="0x4F435990" />
+        <file offset="0x000002" name="epr-18823d.13" crc32="0xB8EDDB5C" />
+        <file offset="0x040000" name="epr-18824d.14" crc32="0xACA9F61F" />
+        <file offset="0x040002" name="epr-18825d.15" crc32="0x5A1D7799" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-18751.10" crc32="0x773AD43D" />
+        <file offset="0x000002" name="mpr-18752.11" crc32="0x4DA3719E" />
+        <file offset="0x400000" name="mpr-18749.8" crc32="0xC3FE0EEA" />
+        <file offset="0x400002" name="mpr-18750.9" crc32="0x40B55494" />
+        <file offset="0x800000" name="mpr-18747.6" crc32="0xA65EC1E8" />
+        <file offset="0x800002" name="mpr-18748.7" crc32="0x375E3748" />
+        <file offset="0xC00000" name="epr-18862.4" crc32="0x9ADC3A30" />
+        <file offset="0xC00002" name="epr-18863.5" crc32="0x603742E9" />
+        <file offset="0xD00000" name="epr-18862.4" crc32="0x9ADC3A30" />
+        <file offset="0xD00002" name="epr-18863.5" crc32="0x603742E9" />
+        <file offset="0xE00000" name="epr-18862.4" crc32="0x9ADC3A30" />
+        <file offset="0xE00002" name="epr-18863.5" crc32="0x603742E9" />
+        <file offset="0xF00000" name="epr-18862.4" crc32="0x9ADC3A30" />
+        <file offset="0xF00002" name="epr-18863.5" crc32="0x603742E9" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-18761.28" crc32="0x4E39EC05" />
+        <file offset="0x000002" name="mpr-18762.29" crc32="0x4AB165D8" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-18753.16" crc32="0x33DDAA0D" />
+        <file offset="0x000002" name="mpr-18756.20" crc32="0x28713617" />
+        <file offset="0x400000" name="mpr-18754.17" crc32="0x09AABDE5" />
+        <file offset="0x400002" name="mpr-18757.21" crc32="0x25FC92E9" />
+        <file offset="0x800000" name="mpr-18755.18" crc32="0xBF094D9E" />
+        <file offset="0x800002" name="mpr-18758.22" crc32="0x1B5473D0" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-18760.25" crc32="0x4E3A4A89" />
+        <file offset="0x000002" name="mpr-18759.24" crc32="0x278D8742" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x000000" name="epr-18924a.30" crc32="0xAD6F40EC" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x000000" name="mpr-18763.31" crc32="0x1BCB2283" />
+        <file offset="0x200000" name="mpr-18764.32" crc32="0x0DC6A860" />
+        <file offset="0x400000" name="mpr-18765.36" crc32="0xCA4A803C" />
+        <file offset="0x600000" name="mpr-18766.37" crc32="0xE41892EA" />
+      </region>
+      <!-- DX cabinet: the Model 1 sound board -->
+      <region name="m1_sound_program" stride="1" chunk_size="1">
+        <file offset="0x000000" name="epr-18742.7" crc32="0x1B78DA74" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0x000000" name="mpr-18743.32" crc32="0x17E84E15" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0x000000" name="opr-14742a.45" crc32="0x90C6B117" />
+        <file offset="0x000002" name="opr-14743a.46" crc32="0xAE7F446B" />
+      </region>
+    </roms>
+  </game>
   <game name="mgtrkbad" parent="magtruck">
     <!--
       Original bad ROM set. EPROMs 18 and 20 are corrupted, causing attract
@@ -2191,6 +2270,57 @@
     </roms>
   </game>
 
+  <game name="skisuprg">
+    <identity>
+      <title>Sega Ski Super G</title>
+      <manufacturer>Sega</manufacturer>
+      <year>1996</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2C</stepping>
+      <drive_board>Ski</drive_board>
+      <inputs>
+        <input type="common" />
+        <input type="ski" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="epr-19489.15" crc32="0x1DF948A7" />
+        <file offset="0x0000002" name="epr-19490.16" crc32="0xE6FC24D3" />
+        <file offset="0x0100000" name="epr-19551.13" crc32="0x3EE8F0D5" />
+        <file offset="0x0100002" name="epr-19552.14" crc32="0xBAA2E49A" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19494.11" crc32="0xF19CDB5C" />
+        <file offset="0x0000002" name="mpr-19495.12" crc32="0xD42E5EF2" />
+        <file offset="0x0800000" name="mpr-19492.9" crc32="0x4805318F" />
+        <file offset="0x0800002" name="mpr-19493.10" crc32="0x39DAA909" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19502.29" crc32="0x2212D8D6" />
+        <file offset="0x0000002" name="mpr-19503.30" crc32="0x3C9CFC73" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19496.17" crc32="0x0E9AEF4E" />
+        <file offset="0x0000002" name="mpr-19497.21" crc32="0x5397EFE9" />
+        <file offset="0x0800000" name="mpr-19498.18" crc32="0x32E5AE60" />
+        <file offset="0x0800002" name="mpr-19499.22" crc32="0x2B9F5B48" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19501.27" crc32="0x66D7B02E" />
+        <file offset="0x0000002" name="mpr-19500.25" crc32="0x905F5798" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="epr-19491.31" crc32="0x1C9B15FD" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="mpr-19504.32" crc32="0x9419EC08" />
+        <file offset="0x0400000" name="mpr-19505.34" crc32="0xEBA7F41D" />
+      </region>
+    </roms>
+  </game>
   <game name="spikeofe">
     <identity>
       <title>Spikeout Final Edition</title>
@@ -2601,7 +2731,7 @@
     </roms>
   </game>
 
-  <!-- Sega Model 2 (daytona, fvipers, hotd, srallyc, vf2, von). Regions: program = i960 ROM at 0, main_data = data ROM at 2000000
+  <!-- Sega Model 2 (daytona, fvipers, hotd, manxtt, skisuprg, srallyc, vf2, von). Regions: program = i960 ROM at 0, main_data = data ROM at 2000000
        (second 16 MB also at 6000000), copro_tables = TGP function tables, copro_data = TGP data ROM. -->
   <game name="srallyc">
     <identity>

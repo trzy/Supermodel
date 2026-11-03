@@ -86,6 +86,15 @@ public:
 	bool RunFrame();
 
 	/*
+	 * MixFrameInto(audioL, audioR, numSamples):
+	 * Runs one frame of the board as RunFrame() does, but numSamples long, and
+	 * adds its audio to audioL/audioR instead of outputting it: for a board
+	 * that is a second sound board (Model 2A's Manx TT DX), mixed into the
+	 * first one's frame.
+	 */
+	void MixFrameInto(float *audioL, float *audioR, int numSamples);
+
+	/*
 	 * Serial link to the main board (main uPD71051 TXD -> sound 8251 RXD,
 	 * sound 8251 TXD -> main RXD and the DSB).
 	 *
@@ -150,6 +159,7 @@ private:
 	void SetBank(int chip, UINT16 data);
 	int NextFrameSamples();
 	void Mix(int numSamples);
+	void RunFrameAudio(int numSamples);	// a frame of numSamples, its audio in m_outL/R
 
 	UINT8 DeviceRead(UINT32 addr);				// odd-byte (umask16 0x00ff) device reads
 	void DeviceWrite(UINT32 addr, UINT8 data);	// odd-byte device writes

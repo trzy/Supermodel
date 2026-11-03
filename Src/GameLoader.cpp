@@ -381,7 +381,8 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
     { "Wheel",      Game::DRIVE_BOARD_WHEEL },
     { "Joystick",   Game::DRIVE_BOARD_JOYSTICK },
     { "Ski",        Game::DRIVE_BOARD_SKI },
-    { "Billboard",  Game::DRIVE_BOARD_BILLBOARD}
+    { "Billboard",  Game::DRIVE_BOARD_BILLBOARD},
+    { "Motion",     Game::DRIVE_BOARD_MOTION}
   };
   std::string drive_board_type = game_node["hardware/drive_board"].ValueAsDefault<std::string>(std::string());
   game->driveboard_type = drive_board_types[drive_board_type];
