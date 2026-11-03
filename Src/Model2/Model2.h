@@ -64,6 +64,8 @@
 #include "Model1/Model1Tilemap.h"
 #include "Model2/Model2Video.h"
 #include "Model2/Model2Comm.h"
+#include "Model2/Sega315_5838.h"
+#include "Model3/Crypto.h"
 #include "Model1/I8251.h"
 #include "Graphics/Model1Render.h"
 #include "Game.h"
@@ -234,6 +236,7 @@ private:
   C93C46                m_eeprom;
   std::unique_ptr<CSoundBoard> m_soundBoard;           // 2A: 68000 + SCSP
   std::unique_ptr<CModel1SoundBoard> m_m1SoundBoard;   // original: the Model 1 sound board
+  std::unique_ptr<CDSB> m_dsb;                          // Digital Sound Board (MPEG music: Touring Car Championship, Top Skater)
   std::unique_ptr<CDSB> m_m1SoundMixer;                 // 2A with both boards: the Model 1 board mixed into the SCSP board's output
   bool                  m_original = false;           // original Model 2 board (Daytona)
   bool                  m_model2b = false;            // 2B-CRX (SHARC coprocessor)
@@ -251,6 +254,7 @@ private:
   std::vector<uint8_t>  m_soundProgram;   // 512 KB
   std::vector<uint8_t>  m_samples;        // 16 MB, the upper 8 MB mirror the lower
   std::vector<uint8_t>  m_mpcm1, m_mpcm2;  // Model 1 sound board: MultiPCM samples, 4 MB each
+  std::vector<uint8_t>  m_dsbProgram, m_dsbMusic;   // Digital Sound Board: its CPU's program, the MPEG data
   std::vector<uint8_t>  m_m1SoundProgram;  // 2A with a second, Model 1 sound board (Manx TT DX): its 68000 program
 
   // RAM
@@ -317,6 +321,25 @@ private:
   uint8_t   m_ctrlMode = 0;
   uint8_t   m_in[3] = { 0xFF, 0xFF, 0xFF };     // IN0-IN2, active low
   uint8_t   m_analog[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  // Protection and other per-game extras (see InitExtras)
+  enum class Extra { None, Crypt5881, Comp0229, DaytonaMaxx, DaytonaGtx };
+  Extra                 m_extra = Extra::None;
+  std::vector<uint8_t>  m_protRAM;               // 5881/0229: the i960 RAM window at 1D80000 the chip reads
+  std::vector<uint8_t>  m_protData;              // Daytona GTX: the protection ROM (2 banks)
+  CCrypto               m_crypt5881;
+  bool                  m_cryptFirstRead = true;
+  Model2::C315_5838     m_comp0229;
+  bool                  m_doaDummy = false, m_doaStatus = false;
+  uint8_t               m_maxxState = 0, m_gtxState = 0;
+  void InitExtras(const Game &game, const ROMSet &rom_set);
+  bool ExtraRead(uint32_t addr, uint32_t mask, uint32_t *data);
+  bool ExtraWrite(uint32_t addr, uint32_t data, uint32_t mask);
+
+  // The game's controls (MAME's input port sets; see UpdateInputs)
+  enum class Layout { Fighting, Soccer, VirtualOn, Daytona, Desert, SegaRally, Bike, Indy500, SkyTarget, AnalogGun,
+                      PowerSled, Ski, WaveRunner, WaterSki, TopSkater, Gun };
+  static Layout LayoutOf(const std::string &game, const std::string &parent);
+  Layout    m_layout = Layout::Fighting;
   uint16_t  m_gun[4] = { 0x0e9, 0x180, 0x0e9, 0x17b };   // light guns (MAME's P1_Y, P1_X, P2_Y, P2_X)
   uint8_t   m_gunOffscreen = 0;                          // bit 0: P1, bit 1: P2
   uint8_t   m_lightgunMux = 0;                           // MAME's m_lightgun_mux (serial channel 2)

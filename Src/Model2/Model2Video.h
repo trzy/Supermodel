@@ -112,6 +112,10 @@ namespace Model2
     // triangle repeats its last vertex), interpolated across all 4 corners as
     // the hardware does; or triangles, 3 vertices each (a fan per polygon)
     void SetGPUQuads(bool quads) { m_gpuQuads = quads; m_render_done = false; }
+
+    // Last Bronx (MAME's m_geo_mesh): the simulated geometrizer's opcodes 1-3
+    // are mesh commands
+    void SetGeoMesh(bool on) { m_geoMeshGame = on; m_geo_mesh = on; }
     bool GPUQuads() const { return m_gpuQuads; }
 
     // Wide screen: viewports at the screen's left and right edges reach this
@@ -184,6 +188,7 @@ namespace Model2
     int16_t  m_crtc_xoffset = 0, m_crtc_yoffset = 0;
     int16_t  m_xoffs = 90, m_yoffs = -8;      // the renderer's copies
     int      m_wideExtension = 0;             // see SetWideExtension()
+    bool     m_geoMeshGame = false;           // see SetGeoMesh()
     void     ComputeClipPlanes();
     int      WideLeft(int x1) const;
     int      WideRight(int x2) const;

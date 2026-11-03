@@ -1030,6 +1030,12 @@ uint32_t CModel2::ReadDword(uint32_t addr, uint32_t mask)
 {
   if (addr < 0x00200000)
     return Get32(m_program, addr);
+  if (m_extra != Extra::None)
+  {
+    uint32_t data;
+    if (ExtraRead(addr, mask, &data))
+      return data;
+  }
   if (addr < 0x00240000)
   {
     // original Model 2: 128 KB of RAM, then the second 128 KB of the program ROM
@@ -1196,6 +1202,8 @@ void CModel2::WriteDword(uint32_t addr, uint32_t data, uint32_t mask)
 {
   if (addr < 0x00200000)
     return;                                           // ROM
+  if (m_extra != Extra::None && ExtraWrite(addr, data, mask))
+    return;
   if (addr < 0x00240000)
   {
     if (!(m_original && addr >= 0x00220000))
@@ -1521,27 +1529,171 @@ void CModel2::Write32(UINT32 addr, UINT32 data)
  Inputs
 ******************************************************************************/
 
+// Each game's controls, as MAME's input port sets (generated from MAME's
+// model2.cpp by games_xml_model2_all.py: game -> its port set's layout)
+static const struct { const char *game; const char *layout; } s_controlLayouts[] =
+{
+  { "daytona", "daytona" },
+  { "daytonase", "daytona" },
+  { "daytona93", "daytona" },
+  { "daytonas", "daytona" },
+  { "daytonat", "daytona" },
+  { "daytonata", "daytona" },
+  { "daytonam", "daytona" },
+  { "daytonagtx", "daytona" },
+  { "desert", "desert" },
+  { "vcop", "gun" },
+  { "vcopa", "gun" },
+  { "vf2", "fighting" },
+  { "vf2b", "fighting" },
+  { "vf2a", "fighting" },
+  { "vf2o", "fighting" },
+  { "manxtt", "bike" },
+  { "manxttc", "bike" },
+  { "manxttdx", "bike" },
+  { "srallyc", "srallyc" },
+  { "srallycb", "srallyc" },
+  { "srallycc", "srallyc" },
+  { "srallycdx", "srallyc" },
+  { "srallycdxa", "srallyc" },
+  { "vcop2", "gun" },
+  { "skytargt", "skytargt" },
+  { "doaa", "fighting" },
+  { "doaab", "fighting" },
+  { "doaae", "fighting" },
+  { "zeroguna", "fighting" },
+  { "zerogunaj", "fighting" },
+  { "motoraid", "bike" },
+  { "motoraiddx", "bike" },
+  { "airwlkrs", "fighting" },
+  { "dynamcop", "fighting" },
+  { "dyndeka2", "fighting" },
+  { "pltkidsa", "fighting" },
+  { "hpyagu98", "fighting" },
+  { "rchase2", "analoggun" },
+  { "rchase2a", "analoggun" },
+  { "vstriker", "soccer" },
+  { "vstrikero", "soccer" },
+  { "fvipers", "fighting" },
+  { "fvipersb", "fighting" },
+  { "fvipersa", "fighting" },
+  { "gunblade", "analoggun" },
+  { "indy500", "indy500" },
+  { "indy500d", "indy500" },
+  { "indy500to", "indy500" },
+  { "von", "von" },
+  { "vonu", "von" },
+  { "vonj", "von" },
+  { "vonr", "von" },
+  { "schamp", "fighting" },
+  { "sfight", "fighting" },
+  { "lastbrnx", "fighting" },
+  { "lastbrnxu", "fighting" },
+  { "lastbrnxj", "fighting" },
+  { "doa", "fighting" },
+  { "doab", "fighting" },
+  { "sgt24h", "indy500" },
+  { "powsled", "powsled" },
+  { "powsledr", "powsled" },
+  { "powsledm", "powsled" },
+  { "dynabb", "fighting" },
+  { "dynabb97", "fighting" },
+  { "overrevb", "indy500" },
+  { "overrevba", "indy500" },
+  { "zerogun", "fighting" },
+  { "zerogunj", "fighting" },
+  { "dynamcopb", "fighting" },
+  { "dyndeka2b", "fighting" },
+  { "pltkids", "fighting" },
+  { "skisuprg", "ski" },
+  { "stcc", "indy500" },
+  { "stccb", "indy500" },
+  { "stcca", "indy500" },
+  { "stcco", "indy500" },
+  { "waverunr", "waverunr" },
+  { "bel", "analoggun" },
+  { "hotd", "gun" },
+  { "hotdo", "gun" },
+  { "hotdp", "gun" },
+  { "overrev", "indy500" },
+  { "rascot2", "fighting" },
+  { "segawski", "segawski" },
+  { "topskatr", "topskatr" },
+  { "topskatru", "topskatr" },
+  { "topskatruo", "topskatr" },
+  { "topskatrj", "topskatr" },
+  { "dynamcopc", "fighting" },
+};
+
+CModel2::Layout CModel2::LayoutOf(const std::string &game, const std::string &parent)
+{
+  static const std::map<std::string, Layout> names =
+  {
+    { "daytona", Layout::Daytona }, { "desert", Layout::Desert }, { "gun", Layout::Gun }, { "fighting", Layout::Fighting },
+    { "soccer", Layout::Soccer }, { "bike", Layout::Bike }, { "srallyc", Layout::SegaRally }, { "indy500", Layout::Indy500 },
+    { "skytargt", Layout::SkyTarget }, { "analoggun", Layout::AnalogGun }, { "von", Layout::VirtualOn }, { "powsled", Layout::PowerSled },
+    { "ski", Layout::Ski }, { "waverunr", Layout::WaveRunner }, { "segawski", Layout::WaterSki }, { "topskatr", Layout::TopSkater },
+  };
+  for (const std::string &name : { game, parent })
+    for (const auto &e : s_controlLayouts)
+      if (name == e.game)
+      {
+        auto it = names.find(e.layout);
+        if (it != names.end())
+          return it->second;
+      }
+  return Layout::Fighting;   // MAME's model2/model2crx: two joysticks with 4 buttons each
+}
+
 void CModel2::UpdateInputs(void)
 {
   if (!m_inputs)
     return;
 
   auto sw = [](const std::shared_ptr<CSwitchInput> &in) -> bool { return in && in->value; };
+  auto axis = [](const std::shared_ptr<CAxisInput> &in, uint8_t center = 0x80) -> uint8_t { return in ? (uint8_t) in->value : center; };
+  // a value 0-255 scaled to [lo, hi] (reversed: hi to lo)
+  auto range = [](uint8_t v, int lo, int hi, bool reverse = false) -> uint8_t
+  {
+    int r = lo + (int(v) * (hi - lo) + 127) / 255;
+    return (uint8_t) (reverse ? hi + lo - r : r);
+  };
   uint8_t in0 = 0, in1 = 0, in2 = 0;
   const uint32_t inputs = m_game.inputs;
+  const std::string &name = m_game.name;
+  const std::string &parent = m_game.parent;
+  auto is = [&](const char *n) { return name == n || parent == n; };
 
-  if (inputs & Game::INPUT_COMMON)
-  {
-    in0 |= sw(m_inputs->coin[0]) ? 0x01 : 0;
-    in0 |= sw(m_inputs->coin[1]) ? 0x02 : 0;
-    in0 |= sw(m_inputs->test[0]) ? 0x04 : 0;
-    in0 |= sw(m_inputs->service[0]) ? 0x08 : 0;
-    in0 |= sw(m_inputs->start[0]) ? 0x10 : 0;
-  }
+  // MAME's model2 port set: coins, test, service, start 1 and 2
+  in0 |= sw(m_inputs->coin[0]) ? 0x01 : 0;
+  in0 |= sw(m_inputs->coin[1]) ? 0x02 : 0;
+  in0 |= sw(m_inputs->test[0]) ? 0x04 : 0;
+  in0 |= sw(m_inputs->service[0]) ? 0x08 : 0;
+  in0 |= sw(m_inputs->start[0]) ? 0x10 : 0;
 
-  if (inputs & Game::INPUT_FIGHTING)
+  // a joystick and buttons per player in IN1 (P1) and IN2 (P2): buttons
+  // 1-4 in bits 0-3, down, up, right, left in bits 4-7
+  auto joystick = [&](int p, uint8_t &v)
   {
-    // Virtua Fighter 2: punch/kick/guard + joystick for each player
+    v |= sw(m_inputs->down[p]) ? 0x10 : 0;
+    v |= sw(m_inputs->up[p]) ? 0x20 : 0;
+    v |= sw(m_inputs->right[p]) ? 0x40 : 0;
+    v |= sw(m_inputs->left[p]) ? 0x80 : 0;
+  };
+
+  uint8_t steer = m_inputs->steering ? (uint8_t) m_inputs->steering->value : 0x80;
+  uint8_t accel = m_inputs->accelerator ? (uint8_t) m_inputs->accelerator->value : 0;
+  uint8_t brake = m_inputs->brake ? (uint8_t) m_inputs->brake->value : 0;
+
+  switch (m_layout)
+  {
+  case Layout::Fighting:
+  default:
+  {
+    // Virtua Fighter 2, Fighting Vipers, Last Bronx (punch, kick, guard),
+    // Dead or Alive (hold, punch, kick), Sonic Championship (punch, kick,
+    // barrier), Dynamite Cop (punch, kick, jump), Zero Gunner, Pilot Kids,
+    // Air Walkers, Dynamite Baseball...: MAME's model2crx port set
     in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
     uint8_t *port[2] = { &in1, &in2 };
     for (int p = 0; p < 2; p++)
@@ -1550,72 +1702,199 @@ void CModel2::UpdateInputs(void)
       v |= sw(m_inputs->punch[p]) ? 0x01 : 0;
       v |= sw(m_inputs->kick[p]) ? 0x02 : 0;
       v |= sw(m_inputs->guard[p]) ? 0x04 : 0;
-      v |= sw(m_inputs->down[p]) ? 0x10 : 0;
-      v |= sw(m_inputs->up[p]) ? 0x20 : 0;
-      v |= sw(m_inputs->right[p]) ? 0x40 : 0;
-      v |= sw(m_inputs->left[p]) ? 0x80 : 0;
+      v |= sw(m_inputs->escape[p]) ? 0x08 : 0;
+      joystick(p, v);
     }
+    // Dynamite Baseball: the bat swing is analog (channels 0 and 1); a
+    // button swings fully
+    if (is("dynabb") || is("dynabb97"))
+    {
+      m_analog[0] = sw(m_inputs->guard[0]) ? 0xFF : 0x00;
+      m_analog[1] = sw(m_inputs->guard[1]) ? 0xFF : 0x00;
+    }
+    break;
   }
 
-  if (inputs & Game::INPUT_VEHICLE)
-  {
-    uint8_t steer = m_inputs->steering ? (uint8_t) m_inputs->steering->value : 0x80;
-    uint8_t accel = m_inputs->accelerator ? (uint8_t) m_inputs->accelerator->value : 0;
-    uint8_t brake = m_inputs->brake ? (uint8_t) m_inputs->brake->value : 0;
-    if (m_original)
+  case Layout::Soccer:
+    // Virtua Striker: long pass, shoot, short pass in bits 0-2
+    in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
+    for (int p = 0; p < 2; p++)
     {
-      // Daytona USA: wheel and pedals 20-E0 (MAME's ports); the unconnected
-      // channels read FF on the I/O board
-      for (int i = 3; i < 8; i++)
-        m_analog[i] = 0xFF;
-      m_analog[0] = (uint8_t) (0x20 + steer * 0xC0 / 255);
-      m_analog[1] = (uint8_t) (0x20 + accel * 0xC0 / 255);
-      m_analog[2] = (uint8_t) (0x20 + brake * 0xC0 / 255);
+      uint8_t &v = p ? in2 : in1;
+      v |= sw(m_inputs->longPass[p]) ? 0x01 : 0;
+      v |= sw(m_inputs->shoot[p]) ? 0x02 : 0;
+      v |= sw(m_inputs->shortPass[p]) ? 0x04 : 0;
+      joystick(p, v);
     }
-    else if (inputs & Game::INPUT_SHIFTUPDOWN)
+    break;
+
+  case Layout::VirtualOn:
+    // Cyber Troopers Virtual-On: the left stick and its shot/dash buttons in
+    // IN1, the right ones in IN2
+    in1 |= sw(m_inputs->twinJoyShot1) ? 0x01 : 0;
+    in1 |= sw(m_inputs->twinJoyTurbo1) ? 0x02 : 0;
+    in1 |= sw(m_inputs->twinJoyDown1) ? 0x10 : 0;
+    in1 |= sw(m_inputs->twinJoyUp1) ? 0x20 : 0;
+    in1 |= sw(m_inputs->twinJoyRight1) ? 0x40 : 0;
+    in1 |= sw(m_inputs->twinJoyLeft1) ? 0x80 : 0;
+    in2 |= sw(m_inputs->twinJoyShot2) ? 0x01 : 0;
+    in2 |= sw(m_inputs->twinJoyTurbo2) ? 0x02 : 0;
+    in2 |= sw(m_inputs->twinJoyDown2) ? 0x10 : 0;
+    in2 |= sw(m_inputs->twinJoyUp2) ? 0x20 : 0;
+    in2 |= sw(m_inputs->twinJoyRight2) ? 0x40 : 0;
+    in2 |= sw(m_inputs->twinJoyLeft2) ? 0x80 : 0;
+    break;
+
+  case Layout::Daytona:
+    // Daytona USA (I/O board): wheel and pedals 20-E0 (MAME's ports); the
+    // unconnected channels read FF. VR buttons (red, blue, yellow, green)
+    for (int i = 3; i < 8; i++)
+      m_analog[i] = 0xFF;
+    m_analog[0] = (uint8_t) (0x20 + steer * 0xC0 / 255);
+    m_analog[1] = (uint8_t) (0x20 + accel * 0xC0 / 255);
+    m_analog[2] = (uint8_t) (0x20 + brake * 0xC0 / 255);
+    in0 |= sw(m_inputs->vr[0]) ? 0x20 : 0;
+    in0 |= sw(m_inputs->vr[1]) ? 0x40 : 0;
+    in0 |= sw(m_inputs->vr[2]) ? 0x80 : 0;
+    in1 |= sw(m_inputs->vr[3]) ? 0x01 : 0;
+    break;
+
+  case Layout::Desert:
+  {
+    // Desert Tank (I/O board): steering, accelerator, brake on channels 0-2;
+    // VR 1-3 in IN0 bits 5-7; shift (toggle) IN1 bit 0, machine gun bit 4,
+    // cannon bit 5
+    for (int i = 3; i < 8; i++)
+      m_analog[i] = 0xFF;
+    m_analog[0] = steer;
+    m_analog[1] = accel;
+    m_analog[2] = brake;
+    in0 |= sw(m_inputs->vr[0]) ? 0x20 : 0;
+    in0 |= sw(m_inputs->vr[1]) ? 0x40 : 0;
+    in0 |= sw(m_inputs->vr[2]) ? 0x80 : 0;
+    if (m_inputs->gearShiftUp && m_inputs->gearShiftUp->Pressed())
+      m_gearSel ^= 1;
+    in1 |= (m_gearSel & 1) ? 0x01 : 0;
+    in1 |= sw(m_inputs->analogJoyTrigger1) ? 0x10 : 0;
+    in1 |= sw(m_inputs->analogJoyTrigger2) ? 0x20 : 0;
+    break;
+  }
+
+  case Layout::SegaRally:
+    // Sega Rally: wheel, accelerator, brake on analog channels 0-2; start is
+    // bit 6 and the VR button bit 5
+    m_analog[0] = steer;
+    m_analog[1] = accel;
+    m_analog[2] = brake;
+    if (in0 & 0x10)
+      in0 = (in0 & ~0x10) | 0x40;
+    in0 |= sw(m_inputs->vr[0]) ? 0x20 : 0;
+    break;
+
+  case Layout::Bike:
+    // The bikes (Manx TT, Motor Raid; MAME's manxtt ports): throttle, brake,
+    // bank (lean, the wheel, reversed) on analog channels 0-2; start is bit
+    // 6, shift up/down IN1 bits 4/5 (Motor Raid: punch, kick)
+    m_analog[0] = accel;
+    m_analog[1] = brake;
+    m_analog[2] = (uint8_t) (0xFF - steer);
+    if (in0 & 0x10)
+      in0 = (in0 & ~0x10) | 0x40;
+    if (is("motoraid"))
     {
-      // The bikes (Manx TT, Motor Raid; MAME's manxtt ports): throttle, brake,
-      // bank (lean, the wheel, reversed) on analog channels 0-2; start is bit
-      // 6, shift up/down IN1 bits 4/5
-      m_analog[0] = accel;
-      m_analog[1] = brake;
-      m_analog[2] = (uint8_t) (0xFF - steer);
-      if (in0 & 0x10)
-        in0 = (in0 & ~0x10) | 0x40;
-      in1 |= sw(m_inputs->gearShiftUp) ? 0x10 : 0;
-      in1 |= sw(m_inputs->gearShiftDown) ? 0x20 : 0;
+      in1 |= sw(m_inputs->punch[0]) ? 0x10 : 0;
+      in1 |= sw(m_inputs->kick[0]) ? 0x20 : 0;
     }
     else
     {
-      // Sega Rally: wheel, accelerator, brake on analog channels 0-2; start is
-      // bit 6 there and the VR button bit 5
-      m_analog[0] = steer;
-      m_analog[1] = accel;
-      m_analog[2] = brake;
-      if (in0 & 0x10)
-        in0 = (in0 & ~0x10) | 0x40;
+      in1 |= sw(m_inputs->gearShiftUp) ? 0x10 : 0;
+      in1 |= sw(m_inputs->gearShiftDown) ? 0x20 : 0;
     }
+    break;
+
+  case Layout::Indy500:
+  {
+    // Indy 500, Super GT 24h, Over Rev: wheel, gas, brake on channels 0-2
+    // (Super GT and Over Rev: the pedals reversed); start is bit 6; view 1/2
+    // IN1 bits 0/1, shift up/down bits 4/5
+    const bool reversed = is("sgt24h") || is("overrev");
+    m_analog[0] = steer;
+    m_analog[1] = reversed ? (uint8_t) (0xFF - accel) : accel;
+    m_analog[2] = reversed ? (uint8_t) (0xFF - brake) : brake;
+    if (in0 & 0x10)
+      in0 = (in0 & ~0x10) | 0x40;
+    in1 |= sw(m_inputs->vr[0]) ? 0x01 : 0;
+    in1 |= sw(m_inputs->vr[1]) ? 0x02 : 0;
+    in1 |= sw(m_inputs->gearShiftUp) ? 0x10 : 0;
+    in1 |= sw(m_inputs->gearShiftDown) ? 0x20 : 0;
+    break;
   }
 
-  // Daytona's VR buttons (red, blue, yellow, green); Sega Rally's one VR button
-  if (inputs & Game::INPUT_VR4)
+  case Layout::SkyTarget:
+    // Sky Target: the stick's Y on channel 0, X (reversed) on 2; start is
+    // bit 6, view IN0 bit 5; machine gun, missile IN1 bits 4/5
+    m_analog[0] = axis(m_inputs->analogJoyY);
+    m_analog[2] = (uint8_t) (0xFF - axis(m_inputs->analogJoyX));
+    if (in0 & 0x10)
+      in0 = (in0 & ~0x10) | 0x40;
+    in0 |= sw(m_inputs->viewChange) ? 0x20 : 0;
+    in1 |= sw(m_inputs->analogJoyTrigger1) ? 0x10 : 0;
+    in1 |= sw(m_inputs->analogJoyTrigger2) ? 0x20 : 0;
+    break;
+
+  case Layout::AnalogGun:
   {
-    in0 |= sw(m_inputs->vr[0]) ? 0x20 : 0;
-    if (m_original)
+    // Rail Chase 2, Gunblade NY, Behind Enemy Lines: a gun on a stick per
+    // player, its position on the analog channels (MAME's ranges); triggers
+    // IN1 bits 0/1, missiles (Behind Enemy Lines) bits 4/5
+    in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
+    uint8_t x[2], y[2];
+    for (int p = 0; p < 2; p++)
     {
-      in0 |= sw(m_inputs->vr[1]) ? 0x40 : 0;
-      in0 |= sw(m_inputs->vr[2]) ? 0x80 : 0;
-      in1 |= sw(m_inputs->vr[3]) ? 0x01 : 0;
+      x[p] = axis(m_inputs->analogGunX[p]);
+      y[p] = axis(m_inputs->analogGunY[p]);
+      in1 |= sw(m_inputs->analogTriggerLeft[p]) ? (1 << p) : 0;
+      in1 |= sw(m_inputs->analogTriggerRight[p]) ? (0x10 << p) : 0;
     }
+    if (is("rchase2a"))
+    {
+      m_analog[0] = x[1]; m_analog[1] = x[0]; m_analog[2] = y[1]; m_analog[3] = y[0];
+    }
+    else if (is("rchase2"))
+    {
+      m_analog[0] = range(x[1], 0x34, 0xC7, true);
+      m_analog[1] = range(x[0], 0x3A, 0xCA, true);
+      m_analog[2] = range(y[1], 0x1C, 0xCB, true);
+      m_analog[3] = range(y[0], 0x1C, 0xCB, true);
+    }
+    else
+    {
+      m_analog[0] = range(x[0], 0x69, 0xFF);
+      m_analog[1] = range(x[1], 0x00, 0x96);
+      m_analog[2] = range(y[0], 0x11, 0xAE);
+      m_analog[3] = range(y[1], 0x11, 0xAE);
+    }
+    break;
   }
 
-  // Ski controls (Sega Ski Super G, MAME's skisuprg ports): swing on analog
-  // channel 0, inclining on 1 (as Model 3's Ski Champ: Y then X); select
-  // 1/2/3 in IN0 bits 6/7/4 (no start button: bit 4 is select 3), zoom in
-  // (pole right) IN0 bit 5, zoom out (pole left) IN1 bit 0. The foot sensors
-  // come from the drive board (DriveBoardRead).
-  if (inputs & Game::INPUT_SKI)
-  {
+  case Layout::PowerSled:
+    // Power Sled: the right and left pedals of each sled on channels 1/3
+    // (P1) and 5/7 (P2); entry and call IN1 bits 0/1 (P1), 2/3 (P2)
+    m_analog[1] = accel;
+    m_analog[3] = brake;
+    in1 |= sw(m_inputs->punch[0]) ? 0x01 : 0;
+    in1 |= sw(m_inputs->kick[0]) ? 0x02 : 0;
+    in1 |= sw(m_inputs->punch[1]) ? 0x04 : 0;
+    in1 |= sw(m_inputs->kick[1]) ? 0x08 : 0;
+    in0 |= sw(m_inputs->escape[0]) ? 0x80 : 0;   // cancel error
+    break;
+
+  case Layout::Ski:
+    // Ski controls (Sega Ski Super G, MAME's skisuprg ports): swing on analog
+    // channel 0, inclining on 1 (as Model 3's Ski Champ: Y then X); select
+    // 1/2/3 in IN0 bits 6/7/4 (no start button: bit 4 is select 3), zoom in
+    // (pole right) IN0 bit 5, zoom out (pole left) IN1 bit 0. The foot sensors
+    // come from the drive board (DriveBoardRead).
     m_analog[0] = m_inputs->skiY ? (uint8_t) m_inputs->skiY->value : 0x80;
     m_analog[1] = m_inputs->skiX ? (uint8_t) m_inputs->skiX->value : 0x80;
     in0 &= ~0x10;
@@ -1624,31 +1903,81 @@ void CModel2::UpdateInputs(void)
     in0 |= sw(m_inputs->skiSelect3) ? 0x10 : 0;
     in0 |= sw(m_inputs->skiPollRight) ? 0x20 : 0;
     in1 |= sw(m_inputs->skiPollLeft) ? 0x01 : 0;
-  }
+    break;
 
-  // Light guns (The House of the Dead): triggers in IN1 bits 0-1, the second
-  // start button in IN0 bit 5; Supermodel's gun range ([150,651] x [80,465])
-  // scaled to MAME's hotd ports (X 173-596, P2 163-596; Y 87-380). Shooting
-  // off screen (the inputs' off-screen trigger) reloads.
-  for (int g = 0; g < 2; g++)
+  case Layout::WaveRunner:
+    // Wave Runner (MAME's waverunr ports): handle bar (the wheel), roll
+    // (joystick X), throttle (accelerator) and pitch (joystick Y) on analog
+    // channels 0-3, throttle and pitch reversed; start is bit 6, view IN1
+    // bit 0. IN2 bit 3 (MAME: active high, a safety sensor) reads 0.
+    m_analog[0] = steer;
+    m_analog[1] = axis(m_inputs->analogJoyX);
+    m_analog[2] = (uint8_t) (0xFF - accel);
+    m_analog[3] = (uint8_t) (0xFF - axis(m_inputs->analogJoyY));
+    if (in0 & 0x10)
+      in0 = (in0 & ~0x10) | 0x40;
+    in1 |= sw(m_inputs->viewChange) ? 0x01 : 0;
+    in2 |= 0x08;
+    break;
+
+  case Layout::WaterSki:
+    // Sega Water Ski: slide on channel 0 (joystick X); no start button: set
+    // IN1 bit 0 (guard), select up IN1 bit 1, select down IN0 bit 6, pitch
+    // left/right IN1 bits 2/3 (punch, kick)
+    m_analog[0] = axis(m_inputs->analogJoyX);
+    in0 &= ~0x10;
+    in0 |= sw(m_inputs->down[0]) ? 0x40 : 0;
+    in1 |= sw(m_inputs->guard[0]) || sw(m_inputs->start[0]) ? 0x01 : 0;
+    in1 |= sw(m_inputs->up[0]) ? 0x02 : 0;
+    in1 |= sw(m_inputs->punch[0]) ? 0x04 : 0;
+    in1 |= sw(m_inputs->kick[0]) ? 0x08 : 0;
+    break;
+
+  case Layout::TopSkater:
+    // Top Skater: curving (joystick X) and slide (joystick Y) on channels
+    // 0/1; select right/left IN0 bits 4/7, jump front IN0 bit 5 (punch), start
+    // bit 6, jump tail IN1 bit 0 (kick)
+    m_analog[0] = axis(m_inputs->analogJoyX);
+    m_analog[1] = axis(m_inputs->analogJoyY);
+    in0 &= ~0x10;
+    in0 |= sw(m_inputs->start[0]) ? 0x40 : 0;
+    in0 |= sw(m_inputs->right[0]) ? 0x10 : 0;
+    in0 |= sw(m_inputs->left[0]) ? 0x80 : 0;
+    in0 |= sw(m_inputs->punch[0]) ? 0x20 : 0;
+    in1 |= sw(m_inputs->kick[0]) ? 0x01 : 0;
+    break;
+
+  case Layout::Gun:
   {
-    if (!(inputs & (g == 0 ? Game::INPUT_GUN1 : Game::INPUT_GUN2)) || !m_inputs->gunX[g] || !m_inputs->gunY[g] || !m_inputs->trigger[g])
-      continue;
-    const int xMin = g == 0 ? 173 : 163, xMax = 596, yMin = 87, yMax = 380;
-    int x = std::clamp(int(m_inputs->gunX[g]->value), 150, 651);
-    int y = std::clamp(int(m_inputs->gunY[g]->value), 80, 465);
-    m_gun[g * 2 + 1] = (uint16_t) (xMin + (x - 150) * (xMax - xMin) / (651 - 150));
-    m_gun[g * 2 + 0] = (uint16_t) (yMin + (y - 80) * (yMax - yMin) / (465 - 80));
-    // the off-screen input alone reloads: it also pulls the trigger
-    in1 |= (m_inputs->trigger[g]->value || m_inputs->trigger[g]->offscreenValue) ? (1 << g) : 0;
-    // off screen: the off-screen input, or (as MAME does) the gun within 5% of
-    // an edge of its range, e.g. a mouse moved out of the window
-    const int borderX = (651 - 150) / 20, borderY = (465 - 80) / 20;
-    bool offscreen = m_inputs->trigger[g]->offscreenValue != 0 ||
-      x <= 150 + borderX || x >= 651 - borderX || y <= 80 + borderY || y >= 465 - borderY;
-    m_gunOffscreen = (uint8_t) ((m_gunOffscreen & ~(1 << g)) | ((offscreen ? 1 : 0) << g));
-    if (g == 1)
-      in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
+    // Light guns (The House of the Dead, Virtua Cop 2): triggers in IN1 bits
+    // 0-1, the second start button in IN0 bit 5; Supermodel's gun range
+    // ([150,651] x [80,465]) scaled to MAME's port ranges. Shooting off
+    // screen (the inputs' off-screen trigger) reloads.
+    const bool vcop2 = is("vcop2");
+    for (int g = 0; g < 2; g++)
+    {
+      if (!(inputs & (g == 0 ? Game::INPUT_GUN1 : Game::INPUT_GUN2)) || !m_inputs->gunX[g] || !m_inputs->gunY[g] || !m_inputs->trigger[g])
+        continue;
+      const int xMin = vcop2 ? (g == 0 ? 137 : 134) : (g == 0 ? 173 : 163);
+      const int xMax = vcop2 ? (g == 0 ? 630 : 627) : 596;
+      const int yMin = vcop2 ? 36 : 87, yMax = vcop2 ? 425 : 380;
+      int x = std::clamp(int(m_inputs->gunX[g]->value), 150, 651);
+      int y = std::clamp(int(m_inputs->gunY[g]->value), 80, 465);
+      m_gun[g * 2 + 1] = (uint16_t) (xMin + (x - 150) * (xMax - xMin) / (651 - 150));
+      m_gun[g * 2 + 0] = (uint16_t) (yMin + (y - 80) * (yMax - yMin) / (465 - 80));
+      // the off-screen input alone reloads: it also pulls the trigger
+      in1 |= (m_inputs->trigger[g]->value || m_inputs->trigger[g]->offscreenValue) ? (1 << g) : 0;
+      // off screen: the off-screen input, or (as MAME does) the gun within 5% of
+      // an edge of its range, e.g. a mouse moved out of the window
+      const int borderX = (651 - 150) / 20, borderY = (465 - 80) / 20;
+      bool offscreen = m_inputs->trigger[g]->offscreenValue != 0 ||
+        x <= 150 + borderX || x >= 651 - borderX || y <= 80 + borderY || y >= 465 - borderY;
+      m_gunOffscreen = (uint8_t) ((m_gunOffscreen & ~(1 << g)) | ((offscreen ? 1 : 0) << g));
+      if (g == 1)
+        in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
+    }
+    break;
+  }
   }
 
   // 4-speed shifter (Daytona, Sega Rally; MAME's daytona_gearbox_r): the gear
@@ -1673,10 +2002,273 @@ void CModel2::UpdateInputs(void)
   m_in[2] = ~in2;
 }
 
+/******************************************************************************
+ Protection and per-game extras (MAME's model2.cpp)
 
-// Original Model 2: the Model 1 I/O board, simulated as for Model 1 (see
-// CModel1::UpdateInputs): inputs in its dual port RAM, the ready/command
-// handshake at 20-21
+ - 315-5881 (Dynamite Cop, Zero Gunner, Pilot Kids; key in Games.xml):
+   MAME's model2_5881_mem. 64 KB of RAM at 1D80000 that the chip decrypts
+   from (byte-swapped words), its registers at 1D90000 (iomap_le): 0 ready,
+   8 address low, A address high, C sub-key, E decrypted data (byte-swapped;
+   the first read after an address write is a dummy 0). Model 3's CCrypto.
+ - 317-0229 (Dead or Alive): MAME's model2_0229_mem. 32 KB of source RAM at
+   1D80000, overlaid at 1D87FF0 (source address), 1D87FF4 (tables), 1D87FF8
+   (data; the first read after a source write is a dummy 0); 1D8400C a
+   status that toggles.
+ - Daytona USA To The MAXX: reads at 240000-24FFFF (maxx_r).
+ - Daytona USA GTX 2004: a banked protection ROM at 2C00000 (gtx_r).
+ - Program patches (MAME's driver inits): Zero Gunner and Pilot Kids
+   destroy their interrupt table, Power Sled (Main) is the relay set
+   switched to main.
+ - Last Bronx: the simulated geometrizer's mesh commands.
+******************************************************************************/
+
+void CModel2::InitExtras(const Game &game, const ROMSet &rom_set)
+{
+  auto is = [&](const char *n) { return game.name == n || game.parent == n; };
+  auto patch32 = [&](uint32_t addr, uint32_t value)
+  {
+    if (addr + 4 <= m_program.size())
+      for (int i = 0; i < 4; i++)
+        m_program[addr + i] = uint8_t(value >> (8 * i));
+  };
+
+  m_extra = Extra::None;
+  if (game.encryption_key)
+  {
+    m_extra = Extra::Crypt5881;
+    m_protRAM.assign(0x10000, 0);
+    m_crypt5881.Init(game.encryption_key, [this](uint32_t a) -> uint16_t
+    {
+      // MAME's crypt_read_callback: the word at 1D80000 + 2a, byte-swapped
+      size_t o = (size_t(a) * 2) & 0xfffe;
+      return uint16_t((m_protRAM[o] << 8) | m_protRAM[o + 1]);
+    });
+  }
+  else if (is("doa"))
+  {
+    m_extra = Extra::Comp0229;
+    m_protRAM.assign(0x8000, 0);
+    m_comp0229.Init(Model2::C315_5838::Variant::SEGA_317_0229, [this](uint32_t a) -> uint16_t
+    {
+      // a 32 KB window of little-endian i960 RAM
+      size_t o = (size_t(a) & 0x3fff) * 2;
+      return uint16_t(m_protRAM[o] | (m_protRAM[o + 1] << 8));
+    });
+  }
+  else if (game.name == "daytonam")
+    m_extra = Extra::DaytonaMaxx;
+  else if (game.name == "daytonagtx")
+  {
+    m_extra = Extra::DaytonaGtx;
+    ROM prot = rom_set.get_rom("prot_data");
+    m_protData.assign(0x200000, 0xFF);
+    if (prot.size)
+      prot.CopyTo(m_protData.data(), std::min<size_t>(prot.size, m_protData.size()));
+  }
+
+  if (is("zerogun"))
+    patch32(0x700, 0x08000004);
+  if (is("pltkids"))
+    patch32(0x730, 0x08000004);
+  if (game.name == "powsledm" && m_program.size() > 0x1585d)
+  {
+    m_program[0x1571c] = 0x01;   // main mode
+    m_program[0x1584c] = 0x89;   // node ID 0x200 = main
+    m_program[0x1585d] = 0xfd;   // inverted node ID
+  }
+  m_video3d.SetGeoMesh(is("lastbrnx"));
+}
+
+bool CModel2::ExtraRead(uint32_t addr, uint32_t mask, uint32_t *data)
+{
+  switch (m_extra)
+  {
+  case Extra::Crypt5881:
+    if (addr >= 0x01d80000 && addr < 0x01d90000)
+    {
+      *data = Get32(m_protRAM, addr - 0x01d80000);
+      return true;
+    }
+    if (addr >= 0x01d90000 && addr < 0x01da0000)
+    {
+      uint32_t d = 0;
+      if ((addr & 0xffff) == 0x000c && (mask & 0xffff0000))
+      {
+        // decrypt_le_r
+        uint16_t v = 0;
+        if (m_cryptFirstRead)
+          m_cryptFirstRead = false;
+        else
+        {
+          uint8_t *base = nullptr;
+          v = m_crypt5881.Decrypt(&base);
+          v = uint16_t((v >> 8) | (v << 8));
+        }
+        d |= uint32_t(v) << 16;
+      }
+      *data = d;   // ready (0: not busy) and the write-only registers read 0
+      return true;
+    }
+    return false;
+
+  case Extra::Comp0229:
+    if (addr >= 0x01d80000 && addr < 0x01d88000)
+    {
+      if (addr == 0x01d87ff8)
+      {
+        // doa_prot_r, in each 16-bit lane read
+        uint32_t d = 0;
+        for (int lane = 0; lane < 2; lane++)
+        {
+          if (!(mask & (0xffffu << (16 * lane))))
+            continue;
+          uint16_t v = 0;
+          if (m_doaDummy)
+            m_doaDummy = false;
+          else
+            v = m_comp0229.DataRead();
+          d |= uint32_t(v) << (16 * lane);
+        }
+        *data = d;
+        return true;
+      }
+      if (addr == 0x01d8400c)
+      {
+        m_doaStatus = !m_doaStatus;   // doa_unk_r
+        *data = m_doaStatus ? 0xffff : 0xfff0;
+        return true;
+      }
+      *data = Get32(m_protRAM, addr - 0x01d80000);
+      return true;
+    }
+    return false;
+
+  case Extra::DaytonaMaxx:
+    if (addr >= 0x00240000 && addr < 0x00250000)
+    {
+      uint32_t offset = (addr - 0x00240000) >> 2;
+      if (offset <= 0x1f / 4)
+      {
+        if (mask == 0xffff0000)
+        {
+          // 16-bit protection reads
+          m_maxxState = (m_maxxState + 1) & 0x0f;
+          *data = !m_maxxState ? 0x00070000 : (m_maxxState & 0x2) ? 0 : 0x00040000;
+          return true;
+        }
+        if (mask == 0xffffffff && offset == 0x22 / 4)
+        {
+          *data = 0x00ff0000;
+          return true;
+        }
+      }
+      *data = Get32(m_program, 0x040000 + (addr - 0x00240000));
+      return true;
+    }
+    return false;
+
+  case Extra::DaytonaGtx:
+    if (addr >= 0x02c00000 && addr < 0x02d00000)
+    {
+      uint32_t d = 0;
+      for (int i = 0; i < 4; i++)
+      {
+        if (!(mask & (0xffu << (8 * i))))
+          continue;
+        uint32_t offset = addr - 0x02c00000 + i;
+        if (offset == 0xffffc)
+          m_gtxState = 2;            // protection ROM overlay off
+        else if (offset == 0xff00c || offset == 0xf0003)
+          m_gtxState = 0;            // bank 0
+        else if (offset == 0xff000)
+          m_gtxState = 1;            // bank 1
+        size_t o = size_t(m_gtxState) * 0x100000 + offset;
+        uint8_t b = o < m_protData.size() ? m_protData[o] : 0xFF;
+        d |= uint32_t(b) << (8 * i);
+      }
+      *data = d;
+      return true;
+    }
+    return false;
+
+  default:
+    return false;
+  }
+}
+
+bool CModel2::ExtraWrite(uint32_t addr, uint32_t data, uint32_t mask)
+{
+  switch (m_extra)
+  {
+  case Extra::Crypt5881:
+    if (addr >= 0x01d80000 && addr < 0x01d90000)
+    {
+      uint32_t o = addr - 0x01d80000;
+      uint32_t v = Get32(m_protRAM, o);
+      v = (v & ~mask) | (data & mask);
+      for (int i = 0; i < 4; i++)
+        m_protRAM[o + i] = uint8_t(v >> (8 * i));
+      return true;
+    }
+    if (addr >= 0x01d90000 && addr < 0x01da0000)
+    {
+      switch (addr & 0xffff)
+      {
+      case 0x0008:
+        if (mask & 0x0000ffff)
+        {
+          m_crypt5881.SetAddressLow(uint16_t(data));   // addrlo_w
+          m_cryptFirstRead = true;
+        }
+        if (mask & 0xffff0000)
+        {
+          m_crypt5881.SetAddressHigh(0);               // addrhi_w
+          m_cryptFirstRead = true;
+        }
+        break;
+      case 0x000c:
+        if (mask & 0x0000ffff)
+          m_crypt5881.SetSubKey(uint16_t(data));       // subkey_le_w
+        break;
+      default:
+        break;
+      }
+      return true;
+    }
+    return false;
+
+  case Extra::Comp0229:
+    if (addr >= 0x01d80000 && addr < 0x01d88000)
+    {
+      if (addr == 0x01d87ff0)
+      {
+        m_comp0229.SourceWrite(data, mask);   // doa_source_w
+        m_doaDummy = true;
+        return true;
+      }
+      if (addr == 0x01d87ff4)
+      {
+        // table_w: a 16-bit handler, offset 0 in the low lane, 1 in the high
+        if (mask & 0x0000ffff)
+          m_comp0229.TableWrite(0, uint16_t(data));
+        if (mask & 0xffff0000)
+          m_comp0229.TableWrite(1, uint16_t(data >> 16));
+        return true;
+      }
+      uint32_t o = addr - 0x01d80000;
+      uint32_t v = Get32(m_protRAM, o);
+      v = (v & ~mask) | (data & mask);
+      for (int i = 0; i < 4; i++)
+        m_protRAM[o + i] = uint8_t(v >> (8 * i));
+      return true;
+    }
+    return false;
+
+  default:
+    return false;
+  }
+}
+
 void CModel2::UpdateIOBoard(const uint8_t (&an)[8], uint8_t in0, uint8_t in1, uint8_t in2)
 {
   for (int i = 0; i < 8; i++)
@@ -1930,6 +2522,13 @@ void CModel2::RenderFrame(void)
 
 void CModel2::Reset(void)
 {
+  if (m_extra == Extra::Crypt5881)
+    m_crypt5881.Reset();
+  if (m_extra == Extra::Comp0229)
+    m_comp0229.Reset();
+  m_cryptFirstRead = true;
+  m_doaDummy = m_doaStatus = false;
+  m_maxxState = m_gtxState = 0;
   m_intReq = 0;
   m_intEna = 0;
   m_coproCtl = 0;
@@ -2097,6 +2696,20 @@ void CModel2::SaveState(CBlockFile *SaveState)
   m_uart.SaveState(SaveState, "Model 2 UART");
   m_comm.SaveState(SaveState);
   m_eeprom.SaveState(SaveState);
+  if (m_extra != Extra::None)
+  {
+    SaveState->NewBlock("Model 2 protection", __FILE__);
+    WriteVector(SaveState, m_protRAM);
+    SaveState->Write(m_cryptFirstRead);
+    SaveState->Write(m_doaDummy);
+    SaveState->Write(m_doaStatus);
+    SaveState->Write(m_maxxState);
+    SaveState->Write(m_gtxState);
+    if (m_extra == Extra::Crypt5881)
+      m_crypt5881.SaveState(SaveState);
+    if (m_extra == Extra::Comp0229)
+      m_comp0229.SaveState(SaveState, "Model 2 317-0229");
+  }
   if (m_soundBoard)
     m_soundBoard->SaveState(SaveState);
   if (m_m1SoundBoard)
@@ -2222,6 +2835,19 @@ void CModel2::LoadState(CBlockFile *SaveState)
   m_uart.LoadState(SaveState, "Model 2 UART");
   m_comm.LoadState(SaveState);
   m_eeprom.LoadState(SaveState);
+  if (m_extra != Extra::None && Result::OKAY == SaveState->FindBlock("Model 2 protection"))
+  {
+    ReadVector(SaveState, m_protRAM);
+    SaveState->Read(m_cryptFirstRead);
+    SaveState->Read(m_doaDummy);
+    SaveState->Read(m_doaStatus);
+    SaveState->Read(m_maxxState);
+    SaveState->Read(m_gtxState);
+    if (m_extra == Extra::Crypt5881)
+      m_crypt5881.LoadState(SaveState);
+    if (m_extra == Extra::Comp0229)
+      m_comp0229.LoadState(SaveState, "Model 2 317-0229");
+  }
   if (m_soundBoard)
     m_soundBoard->LoadState(SaveState);
   if (m_m1SoundBoard)
@@ -2362,6 +2988,12 @@ bool CModel2::LoadROMs(const ROMSet &rom_set)
   // The sound board maps 16 MB of samples at 800000 with a bank bit choosing
   // the upper 8 MB, which no Model 2 game needs: both halves are the same
   loadBytes("samples", m_samples, 0x1000000, false);
+  // Digital Sound Board (Sega Touring Car Championship: Z80, Top Skater: 68000)
+  if (rom_set.get_rom("mpeg_program").size)
+  {
+    loadBytes("mpeg_program", m_dsbProgram, 0x20000, false);
+    loadBytes("mpeg_music", m_dsbMusic, 0x1000000, false);
+  }
   memcpy(&m_samples[0x800000], &m_samples[0], 0x800000);
   return true;
 }
@@ -2372,11 +3004,13 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
   m_original = game.stepping == Game::Stepping::MODEL2;
   m_model2b = game.stepping == Game::Stepping::MODEL2B;
   m_model2c = game.stepping == Game::Stepping::MODEL2C;
+  m_layout = LayoutOf(game.name, game.parent);
   m_driveBoard.present = game.driveboard_type == Game::DRIVE_BOARD_SKI || game.driveboard_type == Game::DRIVE_BOARD_MOTION;
   m_driveBoard.ski = game.driveboard_type == Game::DRIVE_BOARD_SKI;
 
   if (!LoadROMs(rom_set))
     return Result::FAIL;
+  InitExtras(game, rom_set);
 
   m_ram.assign(0x40000, 0);
   m_workRAM.assign(0x100000, 0);
@@ -2518,6 +3152,21 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
       // write_rxd): the sound program's replies, which some games wait for
       // (Model 2B: Cyber Troopers Virtual-On, Fighting Vipers)
       m_soundBoard->SetMIDIOutCallback([this](UINT8 data) { m_uart.ReceiveByte(data); });
+    }
+    // The Digital Sound Board (MPEG music), as on Model 3: the UART's output
+    // goes to it too (MAME: txd_handler().append) and the SCSP board mixes it
+    // in. MAME's dsbz80 (Z80, Sega Touring Car Championship) is Model 3's
+    // DSB1, its dsb2 (68000, Top Skater) the DSB2.
+    if (!m_dsbProgram.empty() && !m_m1SoundMixer)
+    {
+      bool dsb2 = m_game.name.rfind("topskatr", 0) == 0 || m_game.parent == "topskatr";
+      if (dsb2)
+        m_dsb = std::make_unique<CDSB2>(m_config);
+      else
+        m_dsb = std::make_unique<CDSB1>(m_config);
+      if (Result::OKAY != m_dsb->Init(m_dsbProgram.data(), m_dsbMusic.data()))
+        return Result::FAIL;
+      m_soundBoard->AttachDSB(m_dsb.get());
     }
     m_uart.OnTransmit = [this](uint8_t data)
     {

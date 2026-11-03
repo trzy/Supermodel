@@ -3065,7 +3065,7 @@ void CVideo::Init(const Memory &memory)
 void CVideo::Reset()
 {
   m_geo_read_start_address = 0;
-  m_geo_mesh = false;
+  m_geo_mesh = m_geoMeshGame;
   m_crtc_xoffset = m_crtc_yoffset = 0;
   m_xoffs = 90;
   m_yoffs = -8;
