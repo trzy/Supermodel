@@ -1085,6 +1085,10 @@ void CModel1::BuildVideoFrame(void)
   m_video.valid = true;
   m_video.software = m_softwareRender;
 
+  // Wide screen: the renderer draws beyond the 4:3 picture, so viewports at
+  // its left and right edges clip that much further out
+  m_geometry.SetWideExtension((m_render && !m_softwareRender) ? m_render->WideExtension() : 0.0f);
+
   if (m_useGeometrizer)
   {
     // The video board's DSPs transform and light the display list; the
@@ -1549,6 +1553,7 @@ void CModel1::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, Su
     if (const char *c = getenv("SUPERMODEL_MODEL1_CRACK_FILL"))
       crackFill = atoi(c) != 0;
     m_render->SetEdgeExpand(expand, crackFill);
+    m_render->SetWideScreen(m_config["WideScreen"].ValueAsDefault<bool>(false), m_config["WideBackground"].ValueAsDefault<bool>(false));
   }
 }
 

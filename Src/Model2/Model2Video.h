@@ -114,6 +114,11 @@ namespace Model2
     void SetGPUQuads(bool quads) { m_gpuQuads = quads; m_render_done = false; }
     bool GPUQuads() const { return m_gpuQuads; }
 
+    // Wide screen: viewports at the screen's left and right edges reach this
+    // many native pixels further out, for clipping and for BuildGPU() (the
+    // renderer draws there). 0 = the 4:3 picture. Not for Render().
+    void SetWideExtension(int nativePixels);
+
     // Tilemap chip sync registers (MAME horizontal_sync_w / vertical_sync_w)
     void HorizontalSync(uint16_t data);
     void VerticalSync(uint16_t data);
@@ -178,6 +183,10 @@ namespace Model2
     bool     m_render_done = false;
     int16_t  m_crtc_xoffset = 0, m_crtc_yoffset = 0;
     int16_t  m_xoffs = 90, m_yoffs = -8;      // the renderer's copies
+    int      m_wideExtension = 0;             // see SetWideExtension()
+    void     ComputeClipPlanes();
+    int      WideLeft(int x1) const;
+    int      WideRight(int x2) const;
     std::vector<uint32_t> m_destmap;          // 512x512
     std::vector<uint8_t>  m_fillmap;          // 512x512
     std::vector<GPUVertex> m_gpuVertices;

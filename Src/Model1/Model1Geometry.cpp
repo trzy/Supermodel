@@ -203,8 +203,12 @@ namespace Model1
     // its integer rasterizer still fills those pixels; a GPU only fills pixels
     // whose centres are inside the polygon, so clipping there would lose the
     // last column and row. (Drawing is scissored to the viewport anyway.)
-    a_left   = ( x1 - xc - viewx) / zoomx;
-    a_right  = ( x2 + 1 - xc - viewx) / zoomx;
+    // With wide screen, a side at the screen's edge is moved out (see
+    // CGeometry::SetWideExtension())
+    const float left  = (wideExtension > 0.0f && x1 <= 0) ? float(x1) - wideExtension : float(x1);
+    const float right = (wideExtension > 0.0f && x2 >= SCREEN_WIDTH - 1) ? float(x2) + wideExtension : float(x2);
+    a_left   = ( left - xc - viewx) / zoomx;
+    a_right  = ( right + 1 - xc - viewx) / zoomx;
     a_bottom = (-y1 + yc - viewy) / zoomy;
     a_top    = (-(y2 + 1) + yc - viewy) / zoomy;
   }
@@ -991,6 +995,15 @@ namespace Model1
     Batch batch;
     batch.x1 = std::max(m_view.x1, 0);
     batch.x2 = std::min(m_view.x2, SCREEN_WIDTH - 1);
+    if (m_view.wideExtension > 0.0f)
+    {
+      // wide screen: a side at the screen's edge reaches the window's edge
+      const int ext = (int) std::ceil(m_view.wideExtension);
+      if (m_view.x1 <= 0)
+        batch.x1 = -ext;
+      if (m_view.x2 >= SCREEN_WIDTH - 1)
+        batch.x2 = SCREEN_WIDTH - 1 + ext;
+    }
     batch.y1 = std::max(m_view.y1, 0);
     batch.y2 = std::min(m_view.y2, SCREEN_HEIGHT - 1);
     batch.first = (uint32_t) frame->quads.size();

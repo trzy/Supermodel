@@ -76,6 +76,14 @@ public:
   // without, only the grown ones are drawn.
   void SetEdgeExpand(float nativePixels, bool crackFill) { m_edgeExpand = nativePixels; m_crackFill = crackFill; }
 
+  // Wide screen (as Model 3's WideScreen/WideBackground): the 3D is drawn over
+  // the whole width of the window instead of the 4:3 area, the tilemap layers
+  // stay 4:3 (the bottom one stretched with wideBackground). The emulation
+  // widens the viewports at the screen's left and right edges by
+  // WideExtension() native pixels, so polygons there aren't clipped away.
+  void SetWideScreen(bool wideScreen, bool wideBackground) { m_wideScreen = wideScreen; m_wideBackground = wideBackground; }
+  float WideExtension() const { return (m_wideScreen && m_xPixels) ? float(m_xOffset) * float(Model1::SCREEN_WIDTH) / float(m_xPixels) : 0.0f; }
+
   // Debugging aid: writes the viewable area of the next frame drawn to a BMP file
   void RequestDump(const std::string &file) { m_dumpFile = file; }
 
@@ -111,7 +119,7 @@ private:
 
   GLSLShader  m_quadShader;
   GLSLShader  m_imageShader;
-  GLint       m_quadScreenSizeLoc = -1, m_quadViewportLoc = -1;
+  GLint       m_quadScreenSizeLoc = -1, m_quadViewportLoc = -1, m_quadXMapLoc = -1;
   GLint       m_imageModeLoc = -1, m_imageTexLoc = -1, m_imageSnapshotLoc = -1;
   GLuint      m_vao = 0, m_vbo = 0, m_imageVAO = 0;
   GLuint      m_backTexture = 0, m_hudTexture = 0, m_softwareTexture = 0, m_snapshotTexture = 0;
@@ -121,9 +129,9 @@ private:
   // board's texture RAM 0/1, luma RAM, colour tables, palette and gamma table
   enum { M2_TEXRAM0, M2_TEXRAM1, M2_LUMA, M2_XLAT, M2_PALETTE, M2_GAMMA, M2_NUM_BUFFERS };
   GLSLShader  m_m2Shader;
-  GLint       m_m2ScreenSizeLoc = -1, m_m2ViewportLoc = -1;
+  GLint       m_m2ScreenSizeLoc = -1, m_m2ViewportLoc = -1, m_m2XMapLoc = -1;
   GLuint      m_m2QuadProgram = 0;      // quads: vertex + geometry + fragment shaders
-  GLint       m_m2QuadScreenSizeLoc = -1, m_m2QuadViewportLoc = -1;
+  GLint       m_m2QuadScreenSizeLoc = -1, m_m2QuadViewportLoc = -1, m_m2QuadXMapLoc = -1;
   GLuint      m_m2VAO = 0, m_m2VBO = 0;
   GLuint      m_m2Buffers[M2_NUM_BUFFERS] = { };
   GLuint      m_m2Textures[M2_NUM_BUFFERS] = { };
@@ -133,6 +141,8 @@ private:
   float       m_edgeExpand = 0.5f;
   bool        m_crackFill = true;
   std::string m_dumpFile;
+  bool        m_wideScreen = false, m_wideBackground = false;
+  float       m_xMap[2] = { 2.0f / 496.0f, -1.0f };   // native x to clip space x (see DrawFrame())
 };
 
 #endif  // INCLUDED_MODEL1RENDER_H

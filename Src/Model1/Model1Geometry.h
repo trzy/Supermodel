@@ -83,6 +83,18 @@ namespace Model1
     uint16_t ReadListCtl(unsigned offset);
     void WriteListCtl(unsigned offset, uint16_t data, uint16_t mask);
 
+    // Wide screen: viewports at the screen's left and right edges reach this
+    // many native pixels further out, for the frustum clipping and the
+    // batches' clip rectangles (the renderer draws there). 0 = the 4:3
+    // picture. Not for Rasterize() (the software renderer).
+    void SetWideExtension(float nativePixels)
+    {
+      if (nativePixels == m_view.wideExtension)
+        return;
+      m_view.wideExtension = nativePixels;
+      m_view.recompute_frustum();
+    }
+
     // Walks the current display list and produces the quads (MAME's
     // tgp_render() for both passes). frameNumber selects the blink phase.
     void Render(Frame *frame, uint64_t frameNumber);
@@ -199,6 +211,7 @@ namespace Model1
       void recompute_frustum();
 
       int xc = 0, yc = 0, x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+      float wideExtension = 0;   // see CGeometry::SetWideExtension()
       float zoomx = 0, zoomy = 0, viewx = 0, viewy = 0;
       float a_bottom = 0, a_top = 0, a_left = 0, a_right = 0;
       float vxx = 0, vyy = 0, vzz = 0, ayy = 0, ayyc = 0, ayys = 0;

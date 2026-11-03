@@ -1794,6 +1794,10 @@ void CModel2::BuildVideoFrame(void)
     // The GPU draws the 3D between the layers
     if (!m_renderTestMode)
     {
+      // Wide screen: the renderer draws beyond the 4:3 picture, so viewports
+      // at its left and right edges clip that much further out (from the
+      // next frame's polygons on)
+      m_video3d.SetWideExtension(m_render ? (int) std::ceil(m_render->WideExtension()) : 0);
       m_video.model2 = &m_video3d.BuildGPU();
       m_video.model2Quads = m_video3d.GPUQuads();
       m_video.model2Memory = &m_videoMemory;
@@ -2277,6 +2281,8 @@ void CModel2::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, Su
   m_superAA = superAA;
   if (!m_render)
     ErrorLog("Model 2: the 2D renderer is not a Model 1/2 renderer. Nothing will be drawn.");
+  else
+    m_render->SetWideScreen(m_config["WideScreen"].ValueAsDefault<bool>(false), m_config["WideBackground"].ValueAsDefault<bool>(false));
 }
 
 bool CModel2::LoadROMs(const ROMSet &rom_set)

@@ -835,29 +835,10 @@ void CVideo::model2_3d_push(raster_state *raster, u32 input)
 
 					if (raster->center[i][1] & 0x800)
 						raster->center[i][1] = -(0x800 - (raster->center[i][1] & 0x7ff));
-
-					// calculate clipping planes
-					float left_plane = float(raster->center[i][0] - raster->viewport[0]);
-					float right_plane = float(raster->viewport[2] - raster->center[i][0]);
-					float top_plane = float(raster->viewport[3] - raster->center[i][1]);
-					float bottom_plane = float(raster->center[i][1] - raster->viewport[1]);
-
-					raster->clip_plane[i][0].normal.x = 1.0f / std::hypot(1.0f, left_plane);
-					raster->clip_plane[i][0].normal.y = 0.0f;
-					raster->clip_plane[i][0].normal.pz = left_plane / std::hypot(1.0f, left_plane);
-
-					raster->clip_plane[i][1].normal.x = -1.0f / std::hypot(-1.0f, right_plane);
-					raster->clip_plane[i][1].normal.y = 0.0f;
-					raster->clip_plane[i][1].normal.pz = right_plane / std::hypot(-1.0f, right_plane);
-
-					raster->clip_plane[i][2].normal.x = 0.0f;
-					raster->clip_plane[i][2].normal.y = -1.0f / std::hypot(-1.0f, top_plane);
-					raster->clip_plane[i][2].normal.pz = top_plane / std::hypot(-1.0f, top_plane);
-
-					raster->clip_plane[i][3].normal.x = 0.0f;
-					raster->clip_plane[i][3].normal.y = 1.0f / std::hypot(1.0f, bottom_plane);
-					raster->clip_plane[i][3].normal.pz = bottom_plane / std::hypot(1.0f, bottom_plane);
 				}
+
+				// calculate clipping planes
+				ComputeClipPlanes();
 
 				/* done with this command */
 				raster->cur_command = 0;
@@ -2851,6 +2832,59 @@ void CVideo::render_polygons()
 
 // The GPU's version of render_polygons() + model2_3d_render(): the same
 // polygons, projected, with the per-polygon data the fragment shader needs
+// MAME's clipping planes from the window's viewport and centres. With wide
+// screen, a viewport side at the screen's left or right edge is moved out by
+// m_wideExtension native pixels, so polygons beyond the 4:3 picture are kept.
+void CVideo::ComputeClipPlanes()
+{
+  raster_state *raster = m_raster.get();
+  for (int i = 0; i < 4; i++)
+  {
+    float left_plane = float(raster->center[i][0] - WideLeft(raster->viewport[0]));
+    float right_plane = float(WideRight(raster->viewport[2]) - raster->center[i][0]);
+    float top_plane = float(raster->viewport[3] - raster->center[i][1]);
+    float bottom_plane = float(raster->center[i][1] - raster->viewport[1]);
+
+    raster->clip_plane[i][0].normal.x = 1.0f / std::hypot(1.0f, left_plane);
+    raster->clip_plane[i][0].normal.y = 0.0f;
+    raster->clip_plane[i][0].normal.pz = left_plane / std::hypot(1.0f, left_plane);
+
+    raster->clip_plane[i][1].normal.x = -1.0f / std::hypot(-1.0f, right_plane);
+    raster->clip_plane[i][1].normal.y = 0.0f;
+    raster->clip_plane[i][1].normal.pz = right_plane / std::hypot(-1.0f, right_plane);
+
+    raster->clip_plane[i][2].normal.x = 0.0f;
+    raster->clip_plane[i][2].normal.y = -1.0f / std::hypot(-1.0f, top_plane);
+    raster->clip_plane[i][2].normal.pz = top_plane / std::hypot(-1.0f, top_plane);
+
+    raster->clip_plane[i][3].normal.x = 0.0f;
+    raster->clip_plane[i][3].normal.y = 1.0f / std::hypot(1.0f, bottom_plane);
+    raster->clip_plane[i][3].normal.pz = bottom_plane / std::hypot(1.0f, bottom_plane);
+  }
+}
+
+// A viewport's left/right side (raster coordinates), moved out with wide
+// screen when it is at the screen's edge
+int CVideo::WideLeft(int x1) const
+{
+  return (m_wideExtension > 0 && x1 + m_xoffs <= 0) ? x1 - m_wideExtension : x1;
+}
+
+int CVideo::WideRight(int x2) const
+{
+  return (m_wideExtension > 0 && x2 + m_xoffs >= SCREEN_WIDTH - 1) ? x2 + m_wideExtension : x2;
+}
+
+void CVideo::SetWideExtension(int nativePixels)
+{
+  nativePixels = std::max(nativePixels, 0);
+  if (nativePixels == m_wideExtension)
+    return;
+  m_wideExtension = nativePixels;
+  ComputeClipPlanes();
+  m_render_done = false;
+}
+
 const std::vector<GPUVertex> &CVideo::BuildGPU()
 {
   raster_state *raster = m_raster.get();
@@ -2860,7 +2894,7 @@ const std::vector<GPUVertex> &CVideo::BuildGPU()
   if (raster->poly_list_index == 0)
     return m_gpuVertices;
 
-  const rectangle cliprect(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1);
+  const rectangle cliprect(-m_wideExtension, SCREEN_WIDTH - 1 + m_wideExtension, 0, SCREEN_HEIGHT - 1);
   std::vector<GPUVertex> fan;
   for (int window = raster->cur_window; window >= 0; window--)
   {
@@ -2872,7 +2906,7 @@ const std::vector<GPUVertex> &CVideo::BuildGPU()
           continue;
         model2_3d_project(poly);
 
-        rectangle vp(poly->viewport[0] + m_xoffs, poly->viewport[2] + m_xoffs, (384 - poly->viewport[3]) + m_yoffs, (384 - poly->viewport[1]) + m_yoffs);
+        rectangle vp(WideLeft(poly->viewport[0]) + m_xoffs, WideRight(poly->viewport[2]) + m_xoffs, (384 - poly->viewport[3]) + m_yoffs, (384 - poly->viewport[1]) + m_yoffs);
         vp &= cliprect;
         if (vp.min_x > vp.max_x || vp.min_y > vp.max_y || poly->num_vertices < 3)
           continue;
@@ -3179,6 +3213,7 @@ void CVideo::LoadState(CBlockFile *SaveState)
     m_gpuVertices = std::move(converted);
   }
   m_render_done = renderDone;
+  ComputeClipPlanes();   // for this session's wide screen setting (the same planes without it)
 }
 
 CVideo::CVideo()

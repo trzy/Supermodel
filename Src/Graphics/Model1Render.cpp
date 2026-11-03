@@ -58,13 +58,14 @@ layout(location = 1) in vec4  inColor;
 layout(location = 2) in float inMoire;
 
 uniform vec2 screenSize;                  // 496, 384
+uniform vec2 xMap;                        // native x to clip space x: scale, offset (wide screen: the whole width)
 
 out vec4 fsColor;
 flat out float fsMoire;
 
 void main(void)
 {
-  gl_Position = vec4(inPos.x / screenSize.x * 2.0 - 1.0, 1.0 - inPos.y / screenSize.y * 2.0, 0.0, 1.0);
+  gl_Position = vec4(inPos.x * xMap.x + xMap.y, 1.0 - inPos.y / screenSize.y * 2.0, 0.0, 1.0);
   fsColor = inColor;
   fsMoire = inMoire;
 }
@@ -232,6 +233,7 @@ layout(location = 2) in vec4  inClip;     // viewport x1, y1, x2, y2 (native, in
 layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
 
 uniform vec2 screenSize;                  // 496, 384
+uniform vec2 xMap;                        // native x to clip space x: scale, offset (wide screen: the whole width)
 const float nearW = 1.0 / 1024.0;         // the near plane (the board's w is >= 0.5 or so)
 
 out vec2       fsUV;                      // perspective correct
@@ -242,7 +244,7 @@ void main(void)
 {
   // z = w - 2 near: the clipping in z keeps w >= near (in front of the eye;
   // a plane at w = 0 would put the clipped vertices at infinity)
-  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), inPos.z - 2.0 * nearW, inPos.z);
+  gl_Position = vec4(inPos.x * xMap.x + xMap.y * inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), inPos.z - 2.0 * nearW, inPos.z);
   fsUV = inUV;
   fsClip = inClip;
   fsData = inData;
@@ -516,6 +518,7 @@ layout(location = 2) in vec4  inClip;     // viewport x1, y1, x2, y2 (native, in
 layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
 
 uniform vec2 screenSize;                  // 496, 384
+uniform vec2 xMap;                        // native x to clip space x, as the triangles'
 const float nearW = 1.0 / 1024.0;         // the near plane, as the triangles'
 
 out VS_OUT
@@ -527,7 +530,7 @@ out VS_OUT
 
 void main(void)
 {
-  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), inPos.z - 2.0 * nearW, inPos.z);
+  gl_Position = vec4(inPos.x * xMap.x + xMap.y * inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), inPos.z - 2.0 * nearW, inPos.z);
   vs_out.uv = inUV;
   vs_out.clip = inClip;
   vs_out.data = inData;
@@ -541,6 +544,7 @@ layout(lines_adjacency) in;
 layout(triangle_strip, max_vertices = 4) out;
 
 uniform vec2 screenSize;                  // 496, 384
+uniform vec2 xMap;                        // native x to clip space x (the vertex shader's)
 
 in VS_OUT
 {
@@ -571,12 +575,14 @@ float DifferenceOfProducts(float a, float b, float c, float d)
 
 void main(void)
 {
-  // clip space x, y in native pixels (the weights change with a stretch in one direction)
+  // clip space x, y in native pixels from the screen's centre (the weights
+  // change with a stretch in one direction): x back through xMap
   vec2 scale = screenSize * 0.5;
   vec4 h[4];
   for (int i = 0; i < 4; i++)
   {
-    h[i] = vec4(gl_in[i].gl_Position.xy * scale, gl_in[i].gl_Position.zw);
+    vec4 c = gl_in[i].gl_Position;
+    h[i] = vec4((c.x - xMap.y * c.w) / xMap.x - scale.x * c.w, c.y * scale.y, c.zw);
     float oneOverW = 1.0 / h[i].w;
     gs_out.P[i] = vec3(oneOverW, gs_in[i].uv * oneOverW);
   }
@@ -777,6 +783,7 @@ bool CModel1Render::InitModel2()
   }
   m_m2ScreenSizeLoc = m_m2Shader.GetUniformLocation("screenSize");
   m_m2ViewportLoc = m_m2Shader.GetUniformLocation("viewport");
+  m_m2XMapLoc = m_m2Shader.GetUniformLocation("xMap");
 
   glGenVertexArrays(1, &m_m2VAO);
   glGenBuffers(1, &m_m2VBO);
@@ -824,6 +831,7 @@ bool CModel1Render::InitModel2()
       glUniform1i(glGetUniformLocation(m_m2QuadProgram, names[i]), 2 + i);
     m_m2QuadScreenSizeLoc = glGetUniformLocation(m_m2QuadProgram, "screenSize");
     m_m2QuadViewportLoc = glGetUniformLocation(m_m2QuadProgram, "viewport");
+    m_m2QuadXMapLoc = glGetUniformLocation(m_m2QuadProgram, "xMap");
     glUseProgram(0);
   }
   else
@@ -858,6 +866,7 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
     glUseProgram(m_m2QuadProgram);
     glUniform2f(m_m2QuadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
     glUniform4f(m_m2QuadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
+    glUniform2f(m_m2QuadXMapLoc, m_xMap[0], m_xMap[1]);
     glDrawArrays(GL_LINES_ADJACENCY, 0, (GLsizei) vertices.size());
     glUseProgram(0);
   }
@@ -866,6 +875,7 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
     m_m2Shader.EnableShader();
     glUniform2f(m_m2ScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
     glUniform4f(m_m2ViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
+    glUniform2f(m_m2XMapLoc, m_xMap[0], m_xMap[1]);
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei) vertices.size());
     m_m2Shader.DisableShader();
   }
@@ -1044,6 +1054,7 @@ void CModel1Render::DrawBatches(const Model1::Frame &frame, const std::vector<Mo
   m_quadShader.EnableShader();
   glUniform2f(m_quadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
   glUniform4f(m_quadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
+  glUniform2f(m_quadXMapLoc, m_xMap[0], m_xMap[1]);
 
   glEnable(GL_SCISSOR_TEST);
   for (size_t i = 0; i < batches.size(); i++)
@@ -1113,25 +1124,47 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
   glViewport(0, 0, m_totalXPixels, m_totalYPixels);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT);
-  glViewport(m_xOffset, m_yOffset, m_xPixels, m_yPixels);
+
+  // The 4:3 area, and with wide screen the whole width: the 3D is drawn over
+  // it (xMap maps native x there; the fragment shaders' native pixels still
+  // come from the 4:3 area, beyond it x < 0 or > 495). The tilemap layers stay
+  // 4:3, except the bottom one with WideBackground, stretched.
+  const bool wide = m_wideScreen && !frame.software;
+  const int wideX = wide ? 0 : int(m_xOffset);
+  const int wideW = wide ? int(m_totalXPixels) : int(m_xPixels);
+  m_xMap[0] = 2.0f * float(m_xPixels) / (float(SCREEN_WIDTH) * float(wideW));
+  m_xMap[1] = 2.0f * float(int(m_xOffset) - wideX) / float(wideW) - 1.0f;
+  auto viewport43 = [&]() { glViewport(m_xOffset, m_yOffset, m_xPixels, m_yPixels); };
+  auto viewportWide = [&]() { glViewport(wideX, m_yOffset, wideW, m_yPixels); };
 
   if (frame.valid)
   {
     if (frame.software)
+    {
+      viewport43();
       DrawImage(m_softwareTexture, frame.softwareImage.data(), 3);
+    }
     else
     {
+      if (wide && m_wideBackground)
+        viewportWide();
+      else
+        viewport43();
       DrawImage(m_backTexture, frame.back.data(), 0);
+      viewportWide();
       if (frame.model2 && frame.model2Memory)
         DrawModel2(*frame.model2, *frame.model2Memory, frame.model2Quads);
       DrawBatches(frame.geometry, frame.geometry.below);
       glDisable(GL_SCISSOR_TEST);
+      viewport43();
       DrawImage(m_hudTexture, frame.hud.data(), 1);
       if (!frame.geometry.above.empty())
       {
         SnapshotFrameBuffer();
+        viewportWide();
         DrawBatches(frame.geometry, frame.geometry.above);
         glDisable(GL_SCISSOR_TEST);
+        viewport43();
         DrawImage(m_hudTexture, nullptr, 2);
       }
     }
@@ -1139,9 +1172,11 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
 
   if (!m_dumpFile.empty())
   {
-    std::shared_ptr<uint8_t> pixels(new uint8_t[size_t(m_xPixels) * m_yPixels * 4], std::default_delete<uint8_t[]>());
-    glReadPixels(m_xOffset, m_yOffset, m_xPixels, m_yPixels, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
-    Util::WriteSurfaceToBMP<Util::RGBA8>(m_dumpFile, pixels.get(), m_xPixels, m_yPixels, true);
+    // the viewable area (with wide screen, the whole width)
+    const unsigned dumpX = wide ? 0 : m_xOffset, dumpW = wide ? m_totalXPixels : m_xPixels;
+    std::shared_ptr<uint8_t> pixels(new uint8_t[size_t(dumpW) * m_yPixels * 4], std::default_delete<uint8_t[]>());
+    glReadPixels(dumpX, m_yOffset, dumpW, m_yPixels, GL_RGBA, GL_UNSIGNED_BYTE, pixels.get());
+    Util::WriteSurfaceToBMP<Util::RGBA8>(m_dumpFile, pixels.get(), dumpW, m_yPixels, true);
     m_dumpFile.clear();
   }
 
@@ -1219,6 +1254,7 @@ Result CModel1Render::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, un
   }
   m_quadScreenSizeLoc = m_quadShader.GetUniformLocation("screenSize");
   m_quadViewportLoc = m_quadShader.GetUniformLocation("viewport");
+  m_quadXMapLoc = m_quadShader.GetUniformLocation("xMap");
   m_imageModeLoc = m_imageShader.GetUniformLocation("mode");
   m_imageTexLoc = m_imageShader.GetUniformLocation("tex");
   m_imageSnapshotLoc = m_imageShader.GetUniformLocation("snapshot");
