@@ -1217,7 +1217,15 @@ void CModel2::WriteDword(uint32_t addr, uint32_t data, uint32_t mask)
       {
         DebugLog("Model 2: boot geo, %u dwords\n", m_geoCount);
         if (m_geoLLE)
+        {
           m_geoSharc.SetHalt(false);
+          // Debugging aid: "start,end" (hex) of the geometrizer's program disassembled to the log
+          unsigned start = 0, end = 0;
+          if (const char *range = getenv("SUPERMODEL_MODEL2_GEO_DISASM"))
+            if (sscanf(range, "%x,%x", &start, &end) == 2)
+              for (UINT32 pc = start; pc < end; pc++)
+                InfoLog("GEO %05X: %012llX %s\n", pc, (unsigned long long) m_geoSharc.ReadProgramWord(pc), m_geoSharc.Disassemble(pc).c_str());
+        }
         // Debugging aid: the uploaded geometrizer program to a file
         if (const char *file = getenv("SUPERMODEL_MODEL2_GEOPROGRAM"))
           if (FILE *fp = fopen(file, "wb"))
@@ -1960,6 +1968,10 @@ void CModel2::SaveState(CBlockFile *SaveState)
     SaveState->NewBlock("Model 2 geometrizer", __FILE__);
     WriteVector(SaveState, m_geoPolyRAM);
     SaveState->Write(m_geoROMAddress);
+    // Which geometrizer made the state: the program's SHARC state only exists
+    // with the low level one, so the two can't load each other's states
+    SaveState->NewBlock("Model 2 geometrizer mode", __FILE__);
+    SaveState->Write(uint8_t(m_geoLLE ? 1 : 0));
   }
   m_tiles.SaveState(SaveState);
   m_video3d.SaveState(SaveState);
@@ -1974,6 +1986,21 @@ void CModel2::SaveState(CBlockFile *SaveState)
 
 void CModel2::LoadState(CBlockFile *SaveState)
 {
+  // 2B: the state must come from the same geometrizer (low level or
+  // simulation); states without the block were made by the simulation
+  if (m_model2b)
+  {
+    uint8_t lle = 0;
+    if (Result::OKAY == SaveState->FindBlock("Model 2 geometrizer mode"))
+      SaveState->Read(lle);
+    if ((lle != 0) != m_geoLLE)
+    {
+      ErrorLog("Unable to load Model 2 state: it was saved with the %s geometrizer, but the %s geometrizer is running "
+        "(Model2GeometrizerLLE=%d). Set Model2GeometrizerLLE=%d to load it.",
+        lle ? "low level" : "simulated", m_geoLLE ? "low level" : "simulated", m_geoLLE ? 1 : 0, lle ? 1 : 0);
+      return;
+    }
+  }
   if (Result::OKAY != SaveState->FindBlock("Model 2"))
   {
     ErrorLog("Unable to load Model 2 state. Save state file is corrupt.");
