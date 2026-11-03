@@ -136,6 +136,15 @@ SRC_FILES = \
 	Src/Pkgs/ymfm/ymfm_opn.cpp \
 	Src/Pkgs/ymfm/ymfm_adpcm.cpp \
 	Src/Pkgs/ymfm/ymfm_ssg.cpp \
+	Src/Model2/Model2.cpp \
+	Src/CPU/I960/I960.cpp \
+	Src/CPU/I960/I960Disasm.cpp \
+	Src/CPU/SHARC/SHARC.cpp \
+	Src/CPU/SHARC/SHARCDisasm.cpp \
+	Src/CPU/MB86235/MB86235.cpp \
+	Src/CPU/MB86235/MB86235Disasm.cpp \
+	Src/Model2/Model2Comm.cpp \
+	Src/Model2/Model2Video.cpp \
 	Src/Pro1000/Pro1000.cpp \
 	Src/Pro1000/UART.cpp \
 	Src/Pro1000/8259.cpp \

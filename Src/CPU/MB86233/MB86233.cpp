@@ -652,6 +652,7 @@ int CMB86233::Run(int cycles)
 	// Supermodel: replaces MAME's execute_run() plus the scheduler's icount
 	// bookkeeping. Returns cycles requested - cycles left - cycles stolen.
 	m_icount = cycles;
+	m_cyclesRequested = cycles;
 	m_stolen = 0;
 	if (m_halt) {
 		// halted (INPUT_LINE_HALT): no execution, the whole slice elapses

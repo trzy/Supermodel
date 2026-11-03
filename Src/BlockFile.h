@@ -65,7 +65,9 @@ public:
   /*
    * Read(value):
    *
-   * Reads a bool value from the current file position.
+   * Reads a bool value from the current file position. (There is no
+   * Read(bool *): a bool array would go to it, not to Read(T &), and only
+   * its first element would be read.)
    *
    * Parameters:
    *    value   Bool to read to.
@@ -73,19 +75,6 @@ public:
    * Returns:
    *    Number of bytes read. If not 1, an error occurred.
    */
-  unsigned Read(bool *value);
-
-  /*
- * Read(value):
- *
- * Reads a bool value from the current file position.
- *
- * Parameters:
- *    value   Bool to read to.
- *
- * Returns:
- *    Number of bytes read. If not 1, an error occurred.
- */
   unsigned Read(bool& value);
 
   /*

@@ -263,7 +263,8 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
     { "",                 Game::PLATFORM_MODEL3 },  // default to Model 3
     { "Sega Model 3",     Game::PLATFORM_MODEL3 },
     { "Real3D Pro-1000",  Game::PLATFORM_PRO1000 },
-    { "Sega Model 1",     Game::PLATFORM_MODEL1 }
+    { "Sega Model 1",     Game::PLATFORM_MODEL1 },
+    { "Sega Model 2",     Game::PLATFORM_MODEL2 }
   };
   std::string platform = game_node["hardware/platform"].ValueAsDefault<std::string>("");
   if (platforms.find(platform) == platforms.end())
@@ -289,15 +290,25 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   {
     { "",     Game::Stepping::MODEL1 }
   };
+  std::map<std::string, Game::Stepping> model2_steppings
+  {
+    { "",     Game::Stepping::MODEL2A },
+    { "2",    Game::Stepping::MODEL2 },
+    { "2A",   Game::Stepping::MODEL2A },
+    { "2B",   Game::Stepping::MODEL2B },
+    { "2C",   Game::Stepping::MODEL2C }
+  };
   bool pro1000 = game->platform == Game::PLATFORM_PRO1000;
   bool model1 = game->platform == Game::PLATFORM_MODEL1;
-  const auto &steppings = model1 ? model1_steppings : pro1000 ? pro1000_steppings : model3_steppings;
+  bool model2 = game->platform == Game::PLATFORM_MODEL2;
+  const auto &steppings = model2 ? model2_steppings : model1 ? model1_steppings : pro1000 ? pro1000_steppings : model3_steppings;
   std::string stepping = game_node["hardware/stepping"].ValueAsDefault<std::string>("");
   auto stepping_it = steppings.find(stepping);
   if (stepping_it == steppings.end())
   {
     ErrorLog("Stepping '%s' of '%s' is not a %s stepping (%s). Ignoring this game.", stepping.c_str(), game->name.c_str(),
-             model1 ? "Sega Model 1" : pro1000 ? "Real3D Pro-1000" : "Sega Model 3", model1 ? "none" : pro1000 ? "1100, 1200, or 1400" : "1.0, 1.5, 2.0, or 2.1");
+             model2 ? "Sega Model 2" : model1 ? "Sega Model 1" : pro1000 ? "Real3D Pro-1000" : "Sega Model 3",
+             model2 ? "2, 2A, 2B, or 2C" : model1 ? "none" : pro1000 ? "1100, 1200, or 1400" : "1.0, 1.5, 2.0, or 2.1");
     return false;
   }
   game->stepping = stepping_it->second;
@@ -782,9 +793,15 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
     files_missing_by_game.erase(parent);
   }
 
-  // Any remaining incomplete games from the unmerged set are legitimate errors
+  // Any remaining incomplete games from the unmerged set are legitimate errors,
+  // but only worth reporting when nothing complete was found: boards share some
+  // ROMs (Model 1 and Model 2 both have the geometrizer table ROMs), so a
+  // complete set of one game is a partial match for others
+  bool found = !complete_merged_games.empty() || !incomplete_child_games.empty() || !complete_games.empty();
   for (auto &v: files_missing_by_game)
   {
+    if (found)
+      break;
     for (auto &file: v.second)
     {
       ErrorLog("'%s' (CRC32 0x%08x) not found in '%s' for game '%s'.", file->filename.c_str(), file->crc32, zipfilename.c_str(), v.first.c_str());
@@ -806,7 +823,7 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
     chosen_game->assign(*complete_games.begin());
   else
   {
-    ErrorLog("No complete Model 3 games found in '%s'.", zipfilename.c_str());
+    ErrorLog("No complete games found in '%s'.", zipfilename.c_str());
     return;
   }
 

@@ -18,7 +18,8 @@ struct Game
   {
     PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
     PLATFORM_PRO1000,     // Real3D Pro-1000 image generator
-    PLATFORM_MODEL1       // Sega Model 1 arcade hardware
+    PLATFORM_MODEL1,      // Sega Model 1 arcade hardware
+    PLATFORM_MODEL2       // Sega Model 2 arcade hardware
   };
   Platform platform = Platform::PLATFORM_MODEL3;
   // Hardware stepping. Games.xml: "1.0", "1.5", "2.0", or "2.1" (Model 3) and
@@ -35,7 +36,11 @@ struct Game
     PRO1000_1100,   // Real3D PRO-1100 (1 pixel processor)
     PRO1000_1200,   // Real3D PRO-1200 (2 pixel processors)
     PRO1000_1400,   // Real3D PRO-1400 (4 pixel processors)
-    MODEL1          // Sega Model 1 (one stepping)
+    MODEL1,         // Sega Model 1 (one stepping)
+    MODEL2,         // Sega Model 2 (original)
+    MODEL2A,        // Sega Model 2A-CRX
+    MODEL2B,        // Sega Model 2B-CRX
+    MODEL2C         // Sega Model 2C-CRX
   };
   Stepping stepping = Stepping::UNKNOWN;
 
@@ -53,6 +58,10 @@ struct Game
     case Stepping::PRO1000_1200:  return "Pro-1200";
     case Stepping::PRO1000_1400:  return "Pro-1400";
     case Stepping::MODEL1:        return "Model 1";
+    case Stepping::MODEL2:        return "Model 2";
+    case Stepping::MODEL2A:       return "Model 2A";
+    case Stepping::MODEL2B:       return "Model 2B";
+    case Stepping::MODEL2C:       return "Model 2C";
     default:                      return "Unknown";
     }
   }

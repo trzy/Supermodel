@@ -45,6 +45,7 @@
 #include <cmath>
 #include <memory>
 #include <cstddef>
+#include <string>
 
 using Model1::SCREEN_WIDTH;
 using Model1::SCREEN_HEIGHT;
@@ -208,6 +209,652 @@ void main(void)
 }
 )glsl";
 
+
+
+/******************************************************************************
+ Model 2 3D pass
+******************************************************************************/
+
+/*
+ * MAME's Model 2 rasterizer (model2rd.ipp) as a fragment shader: the same
+ * integer texel addressing, mipmap selection, bilinear filtering,
+ * microtextures, translucency, luma lookup and colour tables, per pixel of the
+ * output. Pixel tests (viewport, checkerboard) are on the native 496x384 grid.
+ * The polygons come back to front (see Model2::CVideo::BuildGPU()).
+ */
+
+static const char s_m2VertexShader[] = R"glsl(
+#version 410 core
+
+layout(location = 0) in vec3  inPos;      // homogeneous native screen coordinates (y down), w = z
+layout(location = 1) in vec2  inUV;       // texture coordinates
+layout(location = 2) in vec4  inClip;     // viewport x1, y1, x2, y2 (native, inclusive)
+layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
+
+uniform vec2 screenSize;                  // 496, 384
+
+out vec2       fsUV;                      // perspective correct
+flat out vec4  fsClip;
+flat out uvec3 fsData;
+
+void main(void)
+{
+  // z 0: the clipping in z keeps w >= 0 (in front of the eye)
+  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), 0.0, inPos.z);
+  fsUV = inUV;
+  fsClip = inClip;
+  fsData = inData;
+}
+)glsl";
+
+static const char s_m2FragmentShader[] = R"glsl(
+#version 410 core
+
+uniform vec2 screenSize;                  // 496, 384
+uniform vec4 viewport;                    // x, y, width, height of the viewable area in the frame buffer
+uniform usamplerBuffer texRAM0;           // texture RAM 0, 32-bit words
+uniform usamplerBuffer texRAM1;           // texture RAM 1
+uniform usamplerBuffer lumaRAM;           // 8-bit
+uniform usamplerBuffer colorXlat;         // 16-bit
+uniform usamplerBuffer palRAM;            // 16-bit
+uniform usamplerBuffer gammaTable;        // 8-bit
+
+in vec2       fsUV;
+flat in vec4  fsClip;
+flat in uvec3 fsData;
+vec3 fsP;                                 // 1/z, u/z, v/z
+
+out vec4 fragColor;
+
+// voodoo_render.cpp's fast_log2 (as MAME's rasterizer)
+const uint log2Table[128] = uint[](
+    0u,   2u,   5u,   8u,  11u,  14u,  16u,  19u,  22u,  25u,  27u,  30u,  33u,  35u,  38u,  40u,
+   43u,  46u,  48u,  51u,  53u,  56u,  58u,  61u,  63u,  65u,  68u,  70u,  73u,  75u,  77u,  80u,
+   82u,  84u,  87u,  89u,  91u,  93u,  96u,  98u, 100u, 102u, 104u, 106u, 109u, 111u, 113u, 115u,
+  117u, 119u, 121u, 123u, 125u, 127u, 129u, 132u, 134u, 136u, 138u, 140u, 141u, 143u, 145u, 147u,
+  149u, 151u, 153u, 155u, 157u, 159u, 161u, 162u, 164u, 166u, 168u, 170u, 172u, 173u, 175u, 177u,
+  179u, 181u, 182u, 184u, 186u, 188u, 189u, 191u, 193u, 194u, 196u, 198u, 200u, 201u, 203u, 205u,
+  206u, 208u, 209u, 211u, 213u, 214u, 216u, 218u, 219u, 221u, 222u, 224u, 225u, 227u, 229u, 230u,
+  232u, 233u, 235u, 236u, 238u, 239u, 241u, 242u, 244u, 245u, 247u, 248u, 250u, 251u, 253u, 254u);
+
+int fastLog2(float value)
+{
+  if (value < 0.0)
+    return 0;
+  uint ival = floatBitsToUint(value) >> 16;
+  int e = int(ival >> 7) - 127;
+  return e * 256 + int(log2Table[ival & 127u]);
+}
+
+uint LERP(uint x, uint y, uint a)
+{
+  return (x + (((y - x) * a) >> 8)) & 0x00ff00ffu;
+}
+
+uint sheetWord(uint sheet, uint i)
+{
+  return sheet == 0u ? texelFetch(texRAM0, int(i)).r : texelFetch(texRAM1, int(i)).r;
+}
+
+uint getTexel(uint baseX, uint baseY, int x, int y, uint sheet)
+{
+  int x2 = int(baseX) + x;
+  int y2 = int(baseY) + y;
+  if (x2 >= 1024)
+  {
+    // texture sheets are mapped as 2048x1024 but stored in RAM as 1024x2048
+    x2 -= 1024;
+    y2 ^= 1024;
+  }
+  uint offset = uint((y2 / 2) * 512 + (x2 / 2));
+  uint texel = sheetWord(sheet, offset >> 1);
+  if ((offset & 1u) != 0u)
+    texel >>= 16;
+  if ((y & 1) == 0)
+    texel >>= 8;
+  if ((x & 1) == 0)
+    texel >>= 4;
+  return texel & 0x0fu;
+}
+
+// fetch_bilinear_texel
+uint fetchTexel(bool translucent, uint th0, uint th2, int miplevel, int u, int v)
+{
+  uint mirrX = (th0 >> 8) & 1u;
+  uint mirrY = (th0 >> 9) & 1u;
+  uint wrapX = (th0 >> 6) & 1u & ~mirrX;
+  uint wrapY = (th0 >> 7) & 1u & ~mirrY;
+  uint texSwap = (th2 >> 12) & 1u;        // texsheet[0] is texture RAM 1 if set
+  uint texW, texH, texX, texY, sheet;
+
+  if (miplevel == -1)
+  {
+    // microtexture
+    uint minlod = (th0 >> 10) & 3u;
+    texW = 128u;
+    texH = 128u;
+    texX = ((th2 >> 13) & 1u) * 128u;
+    texY = ((th2 >> 14) & 3u) * 128u;
+    sheet = texSwap ^ 1u;
+    u <<= (1 << minlod);
+    v <<= (1 << minlod);
+  }
+  else
+  {
+    texW = (32u << (th0 & 7u)) >> uint(miplevel);
+    texH = (32u << ((th0 >> 3) & 7u)) >> uint(miplevel);
+    texX = ((32u * (th2 & 0x3fu) - 2048u) >> uint(miplevel)) & 2047u;
+    texY = ((32u * ((th2 >> 6) & 0x1fu) - 1024u) >> uint(miplevel)) & 1023u;
+    sheet = texSwap ^ uint(miplevel & 1);
+    u >>= miplevel;
+    v >>= miplevel;
+  }
+
+  if (mirrX != 0u && (uint(u) & (texW << 8)) != 0u)
+    u = ~u;
+  if (mirrY != 0u && (uint(v) & (texH << 8)) != 0u)
+    v = ~v;
+
+  // subtract 1/2 texel
+  u -= 0x80;
+  v -= 0x80;
+
+  uint ufrac = uint(u) & 0xffu;
+  uint vfrac = uint(v) & 0xffu;
+
+  uint u0 = uint(u >> 8) & (texW - 1u);
+  uint u1 = (u0 + 1u) & (texW - 1u);
+  uint v0 = uint(v >> 8) & (texH - 1u);
+  uint v1 = (v0 + 1u) & (texH - 1u);
+
+  // clamp the texture coordinates if smooth wrapping is not enabled
+  if (wrapX == 0u && u1 == 0u)
+  {
+    if (ufrac >= 0x80u) { u0 = u1; u1++; ufrac = 0u; }
+    else                { u1 = u0; u0--; ufrac = 0x100u; }
+  }
+  if (wrapY == 0u && v1 == 0u)
+  {
+    if (vfrac >= 0x80u) { v0 = 0u; v1++; vfrac = 0u; }
+    else                { v1 = v0; v0--; vfrac = 0x100u; }
+  }
+
+  uint tex00 = getTexel(texX, texY, int(u0), int(v0), sheet) << 4;
+  uint tex01 = getTexel(texX, texY, int(u1), int(v0), sheet) << 4;
+  uint tex10 = getTexel(texX, texY, int(u0), int(v1), sheet) << 4;
+  uint tex11 = getTexel(texX, texY, int(u1), int(v1), sheet) << 4;
+
+  if (translucent)
+  {
+    // pack the alpha components into the upper 16 bits
+    if (tex00 != 0xf0u) tex00 |= 0x00800000u;
+    if (tex01 != 0xf0u) tex01 |= 0x00800000u;
+    if (tex10 != 0xf0u) tex10 |= 0x00800000u;
+    if (tex11 != 0xf0u) tex11 |= 0x00800000u;
+
+    // if a texel is transparent, it takes the luma value of the neighboring texel
+    if (tex00 == 0x000000f0u) tex00 = tex01 & 0xffu;
+    if (tex01 == 0x000000f0u) tex01 = tex00 & 0xffu;
+    if (tex10 == 0x000000f0u) tex10 = tex11 & 0xffu;
+    if (tex11 == 0x000000f0u) tex11 = tex10 & 0xffu;
+  }
+
+  uint tex0x = LERP(tex00, tex01, ufrac);
+  uint tex1x = LERP(tex10, tex11, ufrac);
+
+  if (translucent)
+  {
+    if (tex0x == 0x000000f0u) tex0x = tex1x & 0xffu;
+    if (tex1x == 0x000000f0u) tex1x = tex0x & 0xffu;
+  }
+
+  return LERP(tex0x, tex1x, vfrac);
+}
+
+uint xlat(uint i)   { return texelFetch(colorXlat, int(i)).r & 0xffu; }
+uint gammaOf(uint i) { return texelFetch(gammaTable, int(i)).r; }
+
+vec4 shade(uint color, uint luma)
+{
+  // 6 bits of luma and 5 bits per colour component index the colour tables
+  uint r = gammaOf(xlat(0x0000u + (((color >>  0) & 0x1fu) << 8) + luma));
+  uint g = gammaOf(xlat(0x2000u + (((color >>  5) & 0x1fu) << 8) + luma));
+  uint b = gammaOf(xlat(0x4000u + (((color >> 10) & 0x1fu) << 8) + luma));
+  return vec4(float(r), float(g), float(b), 255.0) / 255.0;
+}
+
+void main(void)
+{
+  fsP = vec3(gl_FragCoord.w, fsUV * gl_FragCoord.w);   // gl_FragCoord.w = 1/w = 1/z
+  ivec2 p = ivec2(floor((gl_FragCoord.xy - viewport.xy) * screenSize / viewport.zw));
+  int x = p.x;
+  int y = int(screenSize.y) - 1 - p.y;
+  if (float(x) < fsClip.x || float(x) > fsClip.z || float(y) < fsClip.y || float(y) > fsClip.w)
+    discard;
+
+  uint th0 = fsData.x & 0xffffu;
+  uint th1 = fsData.x >> 16;
+  uint th2 = fsData.y & 0xffffu;
+  uint th3 = fsData.y >> 16;
+  uint lumaValue = fsData.z & 0xffu;
+  int  texlod = int(fsData.z) >> 16;
+  uint renderer = (th0 >> 13) & 3u;       // bit 1 = textured, bit 0 = translucent
+  bool translucent = (renderer & 1u) != 0u;
+
+  // checkerboard: every other pixel of the native grid is skipped
+  if (((th0 >> 15) & 1u) != 0u && ((x ^ y) & 1) == 0)
+    discard;
+
+  uint colorbase = (th3 >> 6) & 0x3ffu;
+  if ((renderer & 2u) == 0u)
+  {
+    // flat: translucent draws nothing
+    if (translucent)
+      discard;
+    uint color = texelFetch(palRAM, int(colorbase + 0x1000u)).r & 0xffffu;
+    fragColor = shade(color, lumaValue >> 2);
+    return;
+  }
+
+  uint lumabase = (th1 & 0xffu) << 7;
+  uint texW = 32u << (th0 & 7u), texH = 32u << ((th0 >> 3) & 7u);
+  int maxLevel = findMSB(min(texW, texH)) - 1;   // down to 2x2
+  bool utex = ((th0 >> 12) & 1u) != 0u;
+  int utexminlod = int((th0 >> 10) & 3u);
+
+  float z = 1.0 / fsP.x;
+  int mml = -texlod + fastLog2(z);
+  int level = clamp(mml >> 7, 0, maxLevel);
+  int u = int(fsP.y * z * 256.0);
+  int v = int(fsP.z * z * 256.0);
+
+  uint t = fetchTexel(translucent, th0, th2, level, u, v);
+  if (mml > 0 && level < maxLevel)
+    t = LERP(t, fetchTexel(translucent, th0, th2, level + 1, u, v), uint((mml & 127) << 1));
+  else if (utex && mml < 0)
+    t = LERP(t, fetchTexel(translucent, th0, th2, -1, u, v), uint(min(-mml >> utexminlod, 127)));
+
+  if (translucent)
+  {
+    // if alpha is less than 50%, discard
+    if (t < 0x00400000u)
+      discard;
+    t &= 0xffu;
+  }
+
+  uint luma = (texelFetch(lumaRAM, int(lumabase + (t >> 1))).r * lumaValue / 256u) & 0xffu;
+  luma = min(luma, 0x3fu);
+  uint color = texelFetch(palRAM, int(colorbase + 0x1000u)).r & 0x7fffu;
+  fragColor = shade(color, luma);
+}
+)glsl";
+
+
+/*
+ * Quads: the Model 3 renderer's 4 point interpolation (New3D's
+ * R3DShaderQuads.h). The geometry shader takes a quad (GL_LINES_ADJACENCY)
+ * and emits it as a strip of 2 triangles, with what the fragment shader needs
+ * to weigh the 4 corners at each pixel (generalized barycentric coordinates
+ * for quads, with 1/w as R3DShaderQuads.h, so corners behind the eye work);
+ * 1/z, u/z and v/z are interpolated with them instead of across each
+ * triangle, so the 2 triangles of a quad that isn't flat in texture space
+ * don't bend along the diagonal. The quads come whole (BuildGPU() doesn't
+ * clip them), so this holds at the screen edges too. The weights are computed
+ * in native pixels: they are not unchanged by a stretch in one direction. A
+ * triangle (vertex 3 = vertex 2) and pixels on the edges use the triangle
+ * interpolation, which is the same there.
+ */
+
+static const char s_m2QuadVertexShader[] = R"glsl(
+#version 410 core
+
+layout(location = 0) in vec3  inPos;      // homogeneous native screen coordinates (y down), w = z
+layout(location = 1) in vec2  inUV;       // texture coordinates
+layout(location = 2) in vec4  inClip;     // viewport x1, y1, x2, y2 (native, inclusive)
+layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
+
+uniform vec2 screenSize;                  // 496, 384
+
+out VS_OUT
+{
+  vec2       uv;
+  vec4       clip;
+  flat uvec3 data;
+} vs_out;
+
+void main(void)
+{
+  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), 0.0, inPos.z);
+  vs_out.uv = inUV;
+  vs_out.clip = inClip;
+  vs_out.data = inData;
+}
+)glsl";
+
+static const char s_m2QuadGeometryShader[] = R"glsl(
+#version 410 core
+
+layout(lines_adjacency) in;
+layout(triangle_strip, max_vertices = 4) out;
+
+uniform vec2 screenSize;                  // 496, 384
+
+in VS_OUT
+{
+  vec2       uv;
+  vec4       clip;
+  flat uvec3 data;
+} gs_in[4];
+
+out GS_OUT
+{
+  noperspective vec2 v[4];        // the corners, relative to the pixel (native pixels)
+  noperspective vec4 area;
+  flat vec3          P[4];        // the corners' 1/w, u/w, v/w
+  noperspective vec4 bary;        // w = 1: a triangle
+  vec2               triUV;       // interpolated across the emitted triangle (triangles, edges)
+  flat vec4          clip;
+  flat uvec3         data;
+} gs_out;
+
+// a*b - c*d, computed in a stable fashion (Kahan)
+float DifferenceOfProducts(float a, float b, float c, float d)
+{
+  precise float cd = c * d;
+  precise float err = fma(-c, d, cd);
+  precise float dop = fma(a, b, -cd);
+  return dop + err;
+}
+
+void main(void)
+{
+  // clip space x, y in native pixels (the weights change with a stretch in one direction)
+  vec2 scale = screenSize * 0.5;
+  vec4 h[4];
+  for (int i = 0; i < 4; i++)
+  {
+    h[i] = vec4(gl_in[i].gl_Position.xy * scale, gl_in[i].gl_Position.zw);
+    float oneOverW = 1.0 / h[i].w;
+    gs_out.P[i] = vec3(oneOverW, gs_in[i].uv * oneOverW);
+  }
+  gs_out.clip = gs_in[0].clip;
+  gs_out.data = gs_in[0].data;
+
+  if (gl_in[3].gl_Position == gl_in[2].gl_Position)
+  {
+    // a triangle
+    for (int i = 0; i < 3; i++)
+    {
+      for (int j = 0; j < 4; j++)
+        gs_out.v[j] = vec2(0.0);
+      gs_out.area = vec4(0.0);
+      gs_out.bary = vec4(i == 0, i == 1, i == 2, 1.0);
+      gs_out.triUV = gs_in[i].uv;
+      gl_Position = gl_in[i].gl_Position;
+      EmitVertex();
+    }
+    return;
+  }
+
+  vec2 v[4];
+  for (int i = 0; i < 4; i++)
+    v[i] = h[i].xy / h[i].w;
+
+  // the cross products of all the corners, divided by w afterwards (precision)
+  precise float cross[16];
+  for (int i = 0; i < 4; i++)
+  {
+    cross[i * 4 + i] = 0.0;
+    for (int j = i + 1; j < 4; j++)
+      cross[i * 4 + j] = DifferenceOfProducts(h[i].x, h[j].y, h[j].x, h[i].y) / (h[i].w * h[j].w);
+  }
+  for (int i = 1; i < 4; i++)
+    for (int j = 0; j < i; j++)
+      cross[i * 4 + j] = -cross[j * 4 + i];
+
+  // the quad 0-1-2-3 as the strip 1, 0, 2, 3
+  const int reorder[4] = int[4](1, 0, 2, 3);
+  const vec3 baryOf[4] = vec3[4](vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0), vec3(0.0, -1.0, 0.0));
+  for (int i = 0; i < 4; i++)
+  {
+    int ii = reorder[i];
+    for (int j = 0; j < 4; j++)
+    {
+      int jNext = (j + 1) % 4;
+      gs_out.v[j] = v[j] - v[ii];
+      gs_out.area[j] = cross[j * 4 + jNext] + cross[jNext * 4 + ii] + cross[ii * 4 + j];
+    }
+    gs_out.bary = vec4(baryOf[ii], 0.0);
+    gs_out.triUV = gs_in[ii].uv;
+    gl_Position = gl_in[ii].gl_Position;
+    EmitVertex();
+  }
+}
+)glsl";
+
+// The fragment shader's inputs for quads, in place of the triangles' (see
+// QuadFragmentShader())
+static const char s_m2QuadFragmentInputs[] = R"glsl(
+in GS_OUT
+{
+  noperspective vec2 v[4];
+  noperspective vec4 area;
+  flat vec3          P[4];
+  noperspective vec4 bary;
+  vec2               triUV;
+  flat vec4          clip;
+  flat uvec3         data;
+} fs_in;
+
+#define fsClip fs_in.clip
+#define fsData fs_in.data
+vec3 fsP;
+
+// 1/z, u/z, v/z: the 4 corners weighed (R3DShaderQuads.h's QuadraticInterpolation)
+vec3 QuadP()
+{
+  const float hpFMin = 0.00006103515625;    // half precision FLT_MIN
+  if (fs_in.bary.w > 0.5 || fs_in.bary.x <= hpFMin || fs_in.bary.z <= hpFMin)
+    return vec3(gl_FragCoord.w, fs_in.triUV * gl_FragCoord.w);   // a triangle, or the edge: linear there
+
+  float u[4];
+  for (int i = 0; i < 4; i++)
+    u[i] = length(fs_in.v[i]) * sign(fs_in.P[i].x);   // behind the eye (w < 0)?
+
+  precise float t[4];
+  for (int i = 0; i < 4; i++)
+  {
+    int iNext = (i + 1) % 4;
+    t[i] = fs_in.area[i] == 0.0 ? 0.0 : fma(u[i], u[iNext], -dot(fs_in.v[i], fs_in.v[iNext])) / fs_in.area[i];
+  }
+
+  // weights neither all positive nor all negative: outside the quad
+  int signCount = 0;
+  for (int i = 0; i < 4; i++)
+  {
+    int iPrev = (i + 3) % 4;
+    u[i] = (t[iPrev] + t[i]) / u[i];
+    signCount += (t[iPrev] < -t[i]) ? -1 : 1;
+  }
+  if (signCount == 0)
+    discard;
+
+  vec3 p = vec3(0.0);
+  float sum = 0.0;
+  for (int i = 0; i < 4; i++)
+  {
+    p = fma(fs_in.P[i], vec3(u[i]), p);
+    sum += u[i];
+  }
+  return p / sum;
+}
+)glsl";
+
+// The triangles' fragment shader with the quad inputs: fsP from QuadP()
+static std::string QuadFragmentShader()
+{
+  std::string s = s_m2FragmentShader;
+  const std::string inputs = "in vec2       fsUV;\nflat in vec4  fsClip;\nflat in uvec3 fsData;\nvec3 fsP;                                 // 1/z, u/z, v/z\n";
+  const std::string body = "void main(void)\n{\n  fsP = vec3(gl_FragCoord.w, fsUV * gl_FragCoord.w);   // gl_FragCoord.w = 1/w = 1/z\n";
+  size_t i = s.find(inputs);
+  size_t j = s.find(body);
+  if (i == std::string::npos || j == std::string::npos)
+    return std::string();
+  s.replace(j, body.size(), "void main(void)\n{\n  fsP = QuadP();\n");
+  s.replace(i, inputs.size(), s_m2QuadFragmentInputs);
+  return s;
+}
+
+static GLuint CompileShader(GLenum type, const char *source)
+{
+  GLuint shader = glCreateShader(type);
+  glShaderSource(shader, 1, &source, nullptr);
+  glCompileShader(shader);
+  GLint ok = GL_FALSE;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+  if (!ok)
+  {
+    char log[4096] = { 0 };
+    glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+    ErrorLog("Model 2 quad shader: %s", log);
+  }
+  return shader;
+}
+
+// A program of vertex, geometry and fragment shaders (0 if it doesn't build)
+static GLuint BuildQuadProgram()
+{
+  std::string fragment = QuadFragmentShader();
+  if (fragment.empty())
+    return 0;
+  GLuint vs = CompileShader(GL_VERTEX_SHADER, s_m2QuadVertexShader);
+  GLuint gs = CompileShader(GL_GEOMETRY_SHADER, s_m2QuadGeometryShader);
+  GLuint fs = CompileShader(GL_FRAGMENT_SHADER, fragment.c_str());
+  GLuint program = glCreateProgram();
+  glAttachShader(program, vs);
+  glAttachShader(program, gs);
+  glAttachShader(program, fs);
+  glLinkProgram(program);
+  glDeleteShader(vs);
+  glDeleteShader(gs);
+  glDeleteShader(fs);
+  GLint ok = GL_FALSE;
+  glGetProgramiv(program, GL_LINK_STATUS, &ok);
+  if (!ok)
+  {
+    char log[4096] = { 0 };
+    glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+    ErrorLog("Model 2 quad shaders: %s", log);
+    glDeleteProgram(program);
+    return 0;
+  }
+  return program;
+}
+
+bool CModel1Render::InitModel2()
+{
+  if (!m_m2Shader.LoadShaders(s_m2VertexShader, s_m2FragmentShader))
+  {
+    ErrorLog("Model 1/2 renderer: unable to compile the Model 2 shaders.");
+    return false;
+  }
+  m_m2ScreenSizeLoc = m_m2Shader.GetUniformLocation("screenSize");
+  m_m2ViewportLoc = m_m2Shader.GetUniformLocation("viewport");
+
+  glGenVertexArrays(1, &m_m2VAO);
+  glGenBuffers(1, &m_m2VBO);
+  glBindVertexArray(m_m2VAO);
+  glBindBuffer(GL_ARRAY_BUFFER, m_m2VBO);
+  typedef Model2::GPUVertex V;
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(V), (const void *) offsetof(V, x));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(V), (const void *) offsetof(V, u));
+  glEnableVertexAttribArray(2);
+  glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(V), (const void *) offsetof(V, clip));
+  glEnableVertexAttribArray(3);
+  glVertexAttribIPointer(3, 3, GL_UNSIGNED_INT, sizeof(V), (const void *) offsetof(V, header01));
+  glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  // Buffer textures, sized for the board's memory
+  static const GLenum formats[M2_NUM_BUFFERS] = { GL_R32UI, GL_R32UI, GL_R8UI, GL_R16UI, GL_R16UI, GL_R8UI };
+  static const size_t sizes[M2_NUM_BUFFERS] = { 0x80000 * 4, 0x80000 * 4, 0x8000, 0x6000 * 2, 0x2000 * 2, 256 };
+  glGenBuffers(M2_NUM_BUFFERS, m_m2Buffers);
+  glGenTextures(M2_NUM_BUFFERS, m_m2Textures);
+  for (int i = 0; i < M2_NUM_BUFFERS; i++)
+  {
+    glBindBuffer(GL_TEXTURE_BUFFER, m_m2Buffers[i]);
+    glBufferData(GL_TEXTURE_BUFFER, sizes[i], nullptr, GL_DYNAMIC_DRAW);
+    glBindTexture(GL_TEXTURE_BUFFER, m_m2Textures[i]);
+    glTexBuffer(GL_TEXTURE_BUFFER, formats[i], m_m2Buffers[i]);
+  }
+  glBindBuffer(GL_TEXTURE_BUFFER, 0);
+  glBindTexture(GL_TEXTURE_BUFFER, 0);
+
+  m_m2Shader.EnableShader();
+  static const char *names[M2_NUM_BUFFERS] = { "texRAM0", "texRAM1", "lumaRAM", "colorXlat", "palRAM", "gammaTable" };
+  for (int i = 0; i < M2_NUM_BUFFERS; i++)
+    glUniform1i(m_m2Shader.GetUniformLocation(names[i]), 2 + i);   // units 0 and 1 are the image shader's
+  m_m2Shader.DisableShader();
+
+  // Quads (if they don't build, the triangles are drawn instead)
+  m_m2QuadProgram = BuildQuadProgram();
+  if (m_m2QuadProgram)
+  {
+    glUseProgram(m_m2QuadProgram);
+    for (int i = 0; i < M2_NUM_BUFFERS; i++)
+      glUniform1i(glGetUniformLocation(m_m2QuadProgram, names[i]), 2 + i);
+    m_m2QuadScreenSizeLoc = glGetUniformLocation(m_m2QuadProgram, "screenSize");
+    m_m2QuadViewportLoc = glGetUniformLocation(m_m2QuadProgram, "viewport");
+    glUseProgram(0);
+  }
+  else
+    ErrorLog("Model 1/2 renderer: unable to build the Model 2 quad shaders; drawing triangles.");
+  m_m2Ready = true;
+  return true;
+}
+
+void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, const Model2::CVideo::Memory &memory, bool quads)
+{
+  if (!m_m2Ready || vertices.empty())
+    return;
+
+  // The board's memory as it is now
+  const void *data[M2_NUM_BUFFERS] = { memory.textureRAM0, memory.textureRAM1, memory.lumaRAM, memory.colorXlat, memory.paletteRAM, memory.gamma };
+  static const size_t sizes[M2_NUM_BUFFERS] = { 0x80000 * 4, 0x80000 * 4, 0x8000, 0x6000 * 2, 0x2000 * 2, 256 };
+  for (int i = 0; i < M2_NUM_BUFFERS; i++)
+  {
+    glBindBuffer(GL_TEXTURE_BUFFER, m_m2Buffers[i]);
+    glBufferSubData(GL_TEXTURE_BUFFER, 0, sizes[i], data[i]);
+    glActiveTexture(GL_TEXTURE2 + i);
+    glBindTexture(GL_TEXTURE_BUFFER, m_m2Textures[i]);
+  }
+  glBindBuffer(GL_TEXTURE_BUFFER, 0);
+  glActiveTexture(GL_TEXTURE0);
+
+  glBindVertexArray(m_m2VAO);
+  glBindBuffer(GL_ARRAY_BUFFER, m_m2VBO);
+  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Model2::GPUVertex), vertices.data(), GL_STREAM_DRAW);
+  if (quads && m_m2QuadProgram)
+  {
+    glUseProgram(m_m2QuadProgram);
+    glUniform2f(m_m2QuadScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
+    glUniform4f(m_m2QuadViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
+    glDrawArrays(GL_LINES_ADJACENCY, 0, (GLsizei) vertices.size());
+    glUseProgram(0);
+  }
+  else if (!quads)  // (quads without the program: nothing, they aren't triangles)
+  {
+    m_m2Shader.EnableShader();
+    glUniform2f(m_m2ScreenSizeLoc, float(SCREEN_WIDTH), float(SCREEN_HEIGHT));
+    glUniform4f(m_m2ViewportLoc, float(m_xOffset), float(m_yOffset), float(m_xPixels), float(m_yPixels));
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei) vertices.size());
+    m_m2Shader.DisableShader();
+  }
+  glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
 
 /******************************************************************************
  Drawing
@@ -458,6 +1105,8 @@ void CModel1Render::DrawFrame(const VideoFrame &frame)
     else
     {
       DrawImage(m_backTexture, frame.back.data(), 0);
+      if (frame.model2 && frame.model2Memory)
+        DrawModel2(*frame.model2, *frame.model2Memory, frame.model2Quads);
       DrawBatches(frame.geometry, frame.geometry.below);
       glDisable(GL_SCISSOR_TEST);
       DrawImage(m_hudTexture, frame.hud.data(), 1);
@@ -578,6 +1227,8 @@ Result CModel1Render::Init(unsigned xOffset, unsigned yOffset, unsigned xRes, un
   m_softwareTexture = CreateTexture(SCREEN_WIDTH, SCREEN_HEIGHT, GL_NEAREST);
   m_snapshotTexture = CreateTexture(totalXRes, totalYRes, GL_NEAREST);
 
+  InitModel2();   // without it, Model 2 has no 3D (unless its software renderer is used)
+
   m_ready = true;
   return Result::OKAY;
 }
@@ -594,4 +1245,14 @@ CModel1Render::~CModel1Render()
   for (GLuint t : textures)
     if (t)
       glDeleteTextures(1, &t);
+  if (m_m2VBO)
+    glDeleteBuffers(1, &m_m2VBO);
+  if (m_m2VAO)
+    glDeleteVertexArrays(1, &m_m2VAO);
+  if (m_m2Buffers[0])
+    glDeleteBuffers(M2_NUM_BUFFERS, m_m2Buffers);
+    if (m_m2QuadProgram)
+      glDeleteProgram(m_m2QuadProgram);
+  if (m_m2Textures[0])
+    glDeleteTextures(M2_NUM_BUFFERS, m_m2Textures);
 }

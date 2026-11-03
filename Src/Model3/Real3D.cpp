@@ -349,7 +349,7 @@ void CReal3D::LoadState(CBlockFile *SaveState)
   SaveState->Read(&dmaConfig, sizeof(dmaConfig));
 
   SaveState->Read(m_internalRenderConfig, sizeof(m_internalRenderConfig));
-  SaveState->Read(&commandPortWritten);
+  SaveState->Read(commandPortWritten);
   SaveState->Read(&m_pingPong, sizeof(m_pingPong));
   SaveState->Read(&m_modeword, sizeof(m_modeword));
   Render3D->SetSunClamp((m_modeword[static_cast<int>(CASIC::Name::Mars)] & 0x40000) == 0);

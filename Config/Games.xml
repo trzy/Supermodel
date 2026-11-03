@@ -156,6 +156,90 @@
     </roms>
   </game>
 
+  <game name="daytona">
+    <identity>
+      <title>Daytona USA</title>
+      <version>Japan, Revision A</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shift4" />
+        <input type="vr4" />
+      </inputs>
+      <netboard>true</netboard>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x000000" name="epr-16722a.12" crc32="0x48B94318" />
+        <file offset="0x000002" name="epr-16723a.13" crc32="0x8AF8B32D" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16528.10" crc32="0x9CE591F6" />
+        <file offset="0x000002" name="mpr-16529.11" crc32="0xF7095EAF" />
+        <file offset="0x400000" name="mpr-16808.8" crc32="0x44F1F5A0" />
+        <file offset="0x400002" name="mpr-16809.9" crc32="0x37A2DD12" />
+        <file offset="0x800000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0x800002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0x900000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0x900002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0xA00000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0xA00002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0xB00000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0xB00002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0xC00000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0xC00002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0xD00000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0xD00002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0xE00000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0xE00002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+        <file offset="0xF00000" name="epr-16724a.6" crc32="0x469F10FD" />
+        <file offset="0xF00002" name="epr-16725a.7" crc32="0xBA0DF8DB" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16537.28" crc32="0x36B7C35A" />
+        <file offset="0x000002" name="mpr-16536.29" crc32="0x6D6AFED9" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16523.16" crc32="0x2F484D42" />
+        <file offset="0x000002" name="mpr-16518.20" crc32="0xDF683BF7" />
+        <file offset="0x400000" name="mpr-16524.17" crc32="0x34658BD7" />
+        <file offset="0x400002" name="mpr-16519.21" crc32="0xFACD1C81" />
+        <file offset="0x800000" name="mpr-16525.18" crc32="0xFB517521" />
+        <file offset="0x800002" name="mpr-16520.22" crc32="0xD66BD9BD" />
+        <file offset="0xC00000" name="mpr-16772.19" crc32="0x770ED912" />
+        <file offset="0xC00002" name="mpr-16771.23" crc32="0xA2205124" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-16522.25" crc32="0x55D39A57" />
+        <file offset="0x000002" name="mpr-16521.24" crc32="0xAF1934FB" />
+        <file offset="0x800000" name="mpr-16770.27" crc32="0xF9FA7BFB" />
+        <file offset="0x800002" name="mpr-16769.26" crc32="0xE57429E9" />
+      </region>
+      <!-- The Model 1 sound board (as the Model 1 games: no byte swap) -->
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x000000" name="epr-16720.7" crc32="0x8E73CFFD" />
+        <file offset="0x020000" name="epr-16721.8" crc32="0x1BB3B7B7" />
+      </region>
+      <region name="mpcm1" stride="1" chunk_size="1">
+        <file offset="0x000000" name="mpr-16491.32" crc32="0x89920903" />
+        <file offset="0x200000" name="mpr-16492.33" crc32="0x459E701B" />
+      </region>
+      <region name="mpcm2" stride="1" chunk_size="1">
+        <file offset="0x000000" name="mpr-16493.4" crc32="0x9990DB15" />
+        <file offset="0x200000" name="mpr-16494.5" crc32="0x600E1D6C" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0x000000" name="opr-14742a.45" crc32="0x90C6B117" />
+        <file offset="0x000002" name="opr-14743a.46" crc32="0xAE7F446B" />
+      </region>
+    </roms>
+  </game>
   <game name="daytona2">
     <identity>
       <title>Daytona USA 2 - Battle on the Edge</title>
@@ -724,6 +808,95 @@
     </roms>
   </game>
 
+  <game name="fvipers">
+    <identity>
+      <title>Fighting Vipers</title>
+      <version>Revision D</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1995</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2B</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="fighting" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="epr-18606d.15" crc32="0x7334DE7D" />
+        <file offset="0x0000002" name="epr-18607d.16" crc32="0x700D2ADE" />
+        <file offset="0x0040000" name="epr-18604d.13" crc32="0x704FDFCF" />
+        <file offset="0x0040002" name="epr-18605d.14" crc32="0x7DDDF81F" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18614.11" crc32="0x0EBC899F" />
+        <file offset="0x0000002" name="mpr-18615.12" crc32="0x018ABDB7" />
+        <file offset="0x0800000" name="mpr-18612.9" crc32="0x1F174CD1" />
+        <file offset="0x0800002" name="mpr-18613.10" crc32="0xF057CDF2" />
+        <file offset="0x1000000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1000002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1100000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1100002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1200000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1200002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1300000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1300002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1400000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1400002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1500000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1500002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1600000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1600002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1700000" name="epr-18610d.7" crc32="0xA1871703" />
+        <file offset="0x1700002" name="epr-18611d.8" crc32="0x39A75FEE" />
+        <file offset="0x1800000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1800002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1900000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1900002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1A00000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1A00002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1B00000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1B00002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1C00000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1C00002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1D00000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1D00002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1E00000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1E00002" name="epr-18609d.6" crc32="0xCD426035" />
+        <file offset="0x1F00000" name="epr-18608d.5" crc32="0x5BC11881" />
+        <file offset="0x1F00002" name="epr-18609d.6" crc32="0xCD426035" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18622.29" crc32="0xC74D99E3" />
+        <file offset="0x0000002" name="mpr-18623.30" crc32="0x746AE931" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18616.17" crc32="0x15A239BE" />
+        <file offset="0x0000002" name="mpr-18619.21" crc32="0x9D5E8E2B" />
+        <file offset="0x0400000" name="mpr-18617.18" crc32="0xA62CAB7D" />
+        <file offset="0x0400002" name="mpr-18620.22" crc32="0x4D432AFD" />
+        <file offset="0x0800000" name="mpr-18618.19" crc32="0xADAB589F" />
+        <file offset="0x0800002" name="mpr-18621.23" crc32="0xF5EEAA95" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18626.27" crc32="0x9DF0A961" />
+        <file offset="0x0000002" name="mpr-18624.25" crc32="0x1D74433E" />
+        <file offset="0x0800000" name="mpr-18627.28" crc32="0x946175A0" />
+        <file offset="0x0800002" name="mpr-18625.26" crc32="0x182FD572" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="epr-18628.31" crc32="0xAA7DD79F" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="mpr-18629.32" crc32="0x5D0006CC" />
+        <file offset="0x0200000" name="mpr-18630.33" crc32="0x9D405615" />
+        <file offset="0x0400000" name="mpr-18631.34" crc32="0x9DAE5B45" />
+        <file offset="0x0600000" name="mpr-18632.35" crc32="0x39DA6805" />
+      </region>
+    </roms>
+  </game>
   <game name="fvipers2">
     <identity>
       <title>Fighting Vipers 2</title>
@@ -935,6 +1108,82 @@
     </roms>
   </game>
 
+  <game name="hotd">
+    <identity>
+      <title>The House of the Dead</title>
+      <version>Original</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1997</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2C</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="gun1" />
+        <input type="gun2" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="epr-19696.15" crc32="0x03DA5623" />
+        <file offset="0x0000002" name="epr-19697.16" crc32="0xA9722D87" />
+        <file offset="0x0100000" name="epr-19694.13" crc32="0xE85CA1A3" />
+        <file offset="0x0100002" name="epr-19695.14" crc32="0xCD52B461" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19704.11" crc32="0xAA80DBB0" />
+        <file offset="0x0000002" name="mpr-19705.12" crc32="0xF906843B" />
+        <file offset="0x0800000" name="mpr-19702.9" crc32="0xFC8AA3B7" />
+        <file offset="0x0800002" name="mpr-19703.10" crc32="0x208D993D" />
+        <file offset="0x1000000" name="mpr-19700.7" crc32="0x0558CFD3" />
+        <file offset="0x1000002" name="mpr-19701.8" crc32="0x224A8929" />
+        <file offset="0x1800000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1800002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1900000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1900002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1A00000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1A00002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1B00000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1B00002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1C00000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1C00002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1D00000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1D00002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1E00000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1E00002" name="epr-19699.6" crc32="0x8160B3D9" />
+        <file offset="0x1F00000" name="epr-19698.5" crc32="0xE7A7B6EA" />
+        <file offset="0x1F00002" name="epr-19699.6" crc32="0x8160B3D9" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="epr-19707.29" crc32="0x384FD133" />
+        <file offset="0x0000002" name="epr-19706.30" crc32="0x1277531C" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19715.17" crc32="0x3FF7DDA7" />
+        <file offset="0x0000002" name="mpr-19711.21" crc32="0x080D13F1" />
+        <file offset="0x0800000" name="mpr-19714.18" crc32="0x3E55AB49" />
+        <file offset="0x0800002" name="mpr-19710.22" crc32="0x80DF1036" />
+        <file offset="0x1000000" name="mpr-19713.19" crc32="0x4D092CD3" />
+        <file offset="0x1000002" name="mpr-19709.23" crc32="0xD08937BF" />
+        <file offset="0x1800000" name="mpr-19712.20" crc32="0x41577943" />
+        <file offset="0x1800002" name="mpr-19708.24" crc32="0x5CB790F2" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-19718.27" crc32="0xA9DE5924" />
+        <file offset="0x0000002" name="mpr-19716.25" crc32="0x45C7DCCE" />
+        <file offset="0x0800000" name="mpr-19719.28" crc32="0x838F8343" />
+        <file offset="0x0800002" name="mpr-19717.26" crc32="0x393E440B" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="epr-19720.31" crc32="0xB367D21D" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="mpr-19721.32" crc32="0xF5D8FA9A" />
+        <file offset="0x0400000" name="mpr-19722.34" crc32="0xA56FA539" />
+      </region>
+    </roms>
+  </game>
   <game name="lamachin">
     <identity>
       <title>L.A. Machineguns: Rage of the Machines</title>
@@ -2352,6 +2601,68 @@
     </roms>
   </game>
 
+  <!-- Sega Model 2 (daytona, fvipers, hotd, srallyc, vf2, von). Regions: program = i960 ROM at 0, main_data = data ROM at 2000000
+       (second 16 MB also at 6000000), copro_tables = TGP function tables, copro_data = TGP data ROM. -->
+  <game name="srallyc">
+    <identity>
+      <title>Sega Rally Championship</title>
+      <version>Revision C</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1995</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2A</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="shift4" />
+        <input type="vr4" />
+      </inputs>
+      <netboard>true</netboard>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x000000" name="epr-17888c.12" crc32="0x3D6808AA" />
+        <file offset="0x000002" name="epr-17889c.13" crc32="0xF43C7802" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17746.10" crc32="0x8FE311F4" />
+        <file offset="0x000002" name="mpr-17747.11" crc32="0x543593FD" />
+        <file offset="0x400000" name="mpr-17744.8" crc32="0x71FED098" />
+        <file offset="0x400002" name="mpr-17745.9" crc32="0x8ECCA705" />
+        <file offset="0x800000" name="mpr-17884.6" crc32="0x4CFC95E1" />
+        <file offset="0x800002" name="mpr-17885.7" crc32="0xA08D2467" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17754.29" crc32="0x81A84F67" />
+        <file offset="0x000002" name="mpr-17755.28" crc32="0x2A6E7DA4" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17748.16" crc32="0x3148A2B2" />
+        <file offset="0x000002" name="mpr-17750.20" crc32="0x232AEC29" />
+        <file offset="0x400000" name="mpr-17749.17" crc32="0x0838D184" />
+        <file offset="0x400002" name="mpr-17751.21" crc32="0xED87AC62" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17753.25" crc32="0x6DB0EB36" />
+        <file offset="0x000002" name="mpr-17752.24" crc32="0xD6AA86CE" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x000000" name="epr-17890.30" crc32="0x5BAC3FA1" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x000000" name="mpr-17756.31" crc32="0x7725F111" />
+        <file offset="0x200000" name="mpr-17757.32" crc32="0x1616E649" />
+        <file offset="0x400000" name="mpr-17886.36" crc32="0x54A72923" />
+        <file offset="0x600000" name="mpr-17887.37" crc32="0x38C31FDD" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0x000000" name="opr-14742a.45" crc32="0x90C6B117" />
+        <file offset="0x000002" name="opr-14743a.46" crc32="0xAE7F446B" />
+      </region>
+    </roms>
+  </game>
   <game name="swa">
     <identity>
       <title>Star Wars Arcade</title>
@@ -2785,6 +3096,67 @@
       </region>
     </roms>
   </game>
+  <game name="vf2">
+    <identity>
+      <title>Virtua Fighter 2</title>
+      <version>2.1</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2A</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="fighting" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x000000" name="epr-18385.12" crc32="0x78ED2D41" />
+        <file offset="0x000002" name="epr-18386.13" crc32="0x3418F428" />
+        <file offset="0x040000" name="epr-18387.14" crc32="0x124A8453" />
+        <file offset="0x040002" name="epr-18388.15" crc32="0x8D347980" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17560.10" crc32="0xD1389864" />
+        <file offset="0x000002" name="mpr-17561.11" crc32="0xB98D0101" />
+        <file offset="0x400000" name="mpr-17558.8" crc32="0x4B15F5A6" />
+        <file offset="0x400002" name="mpr-17559.9" crc32="0xD3264DE6" />
+        <file offset="0x800000" name="mpr-17566.6" crc32="0xFB41EF98" />
+        <file offset="0x800002" name="mpr-17567.7" crc32="0xC3396922" />
+        <file offset="0xC00000" name="mpr-17564.4" crc32="0xD8062489" />
+        <file offset="0xC00002" name="mpr-17565.5" crc32="0x0517C6E9" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17554.16" crc32="0x27896D82" />
+        <file offset="0x000002" name="mpr-17548.20" crc32="0xC95FACC2" />
+        <file offset="0x400000" name="mpr-17555.17" crc32="0x4DF2810B" />
+        <file offset="0x400002" name="mpr-17549.21" crc32="0xE0BCE0E6" />
+        <file offset="0x800000" name="mpr-17556.18" crc32="0x41A47616" />
+        <file offset="0x800002" name="mpr-17550.22" crc32="0xC36FF3F5" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x000000" name="mpr-17553.25" crc32="0x5DA1C5D3" />
+        <file offset="0x000002" name="mpr-17552.24" crc32="0xE91E7427" />
+        <file offset="0x800000" name="mpr-17547.27" crc32="0xBE940431" />
+        <file offset="0x800002" name="mpr-17546.26" crc32="0x042A194B" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x000000" name="epr-17574.30" crc32="0x4D4C3A55" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x000000" name="mpr-17573.31" crc32="0xE43557FE" />
+        <file offset="0x200000" name="mpr-17572.32" crc32="0x4FEBECC8" />
+        <file offset="0x400000" name="mpr-17571.36" crc32="0x51CAA584" />
+        <file offset="0x600000" name="mpr-17570.37" crc32="0xBCCD324B" />
+      </region>
+      <region name="copro_tables" stride="4" chunk_size="2">
+        <file offset="0x000000" name="opr-14742a.45" crc32="0x90C6B117" />
+        <file offset="0x000002" name="opr-14743a.46" crc32="0xAE7F446B" />
+      </region>
+    </roms>
+  </game>
   <game name="vf3">
     <identity>
       <title>Virtua Fighter 3</title>
@@ -2954,6 +3326,60 @@
     </roms>
   </game>
 
+  <game name="von">
+    <identity>
+      <title>Cyber Troopers Virtual-On</title>
+      <version>US, Revision B</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1995</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 2</platform>
+      <stepping>2B</stepping>
+      <inputs>
+        <input type="common" />
+        <input type="twin_joysticks" />
+      </inputs>
+      <netboard>true</netboard>
+    </hardware>
+    <roms>
+      <region name="program" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="vo-prog0.usa" crc32="0x6499CC59" />
+        <file offset="0x0000002" name="vo-prog1.usa" crc32="0x0053B10F" />
+        <file offset="0x0100000" name="epr-18666.13" crc32="0x66EDB432" />
+        <file offset="0x0100002" name="epr-18667.14" crc32="0xB593D31F" />
+      </region>
+      <region name="main_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18648.11" crc32="0x2EDBE489" />
+        <file offset="0x0000002" name="mpr-18649.12" crc32="0xE68C5AA6" />
+        <file offset="0x0800000" name="mpr-18650.9" crc32="0x89A855B9" />
+        <file offset="0x0800002" name="mpr-18651.10" crc32="0xF4C23107" />
+      </region>
+      <region name="copro_data" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18662.29" crc32="0xA33D3335" />
+        <file offset="0x0000002" name="mpr-18663.30" crc32="0xEA74A641" />
+      </region>
+      <region name="polygons" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18654.17" crc32="0x6A0CAF29" />
+        <file offset="0x0000002" name="mpr-18655.21" crc32="0xA4293E78" />
+        <file offset="0x0800000" name="mpr-18656.18" crc32="0xB4F51E76" />
+        <file offset="0x0800002" name="mpr-18657.22" crc32="0xA9BE4674" />
+      </region>
+      <region name="textures" stride="4" chunk_size="2">
+        <file offset="0x0000000" name="mpr-18660.27" crc32="0xE53663E5" />
+        <file offset="0x0000002" name="mpr-18658.25" crc32="0x3D0FCD01" />
+        <file offset="0x0800000" name="mpr-18661.28" crc32="0x52B50410" />
+        <file offset="0x0800002" name="mpr-18659.26" crc32="0x27AA8AE2" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="epr-18670.31" crc32="0x3E715F76" />
+      </region>
+      <region name="samples" stride="1" chunk_size="1">
+        <file offset="0x0000000" name="mpr-18652.32" crc32="0x037EEE53" />
+        <file offset="0x0400000" name="mpr-18653.34" crc32="0x9EC3E7BF" />
+      </region>
+    </roms>
+  </game>
   <game name="von2">
     <identity>
       <title>Cyber Troopers Virtual-On Oratorio Tangram</title>

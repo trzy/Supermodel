@@ -133,6 +133,7 @@ public:
   int  Run(int cycles);         // returns cycles consumed (may exceed request by 1)
   void Stall() { m_stall = true; }
   void AbortTimeslice();
+  int  CyclesRun() const { return m_cyclesRequested - m_icount - m_stolen; }   // so far, from inside Run()
 
   // HALT input line (Model 1's FIFOs drive it). While halted Run() executes
   // nothing and consumes all requested cycles, like a halted MAME CPU.
@@ -171,6 +172,7 @@ private:
 
   int m_icount;
   int m_stolen;
+  int m_cyclesRequested = 0;
   bool m_halt;
 
   UINT32 m_st, m_a, m_b, m_d, m_p;

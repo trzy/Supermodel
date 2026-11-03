@@ -33,6 +33,9 @@
  *
  * It implements IRender2D so that the OSD layer can create it like the other
  * 2D renderers; CModel1 calls DrawFrame() for the actual drawing.
+ *
+ * Model 2 uses it too: the same tilemap layers, and its own 3D pass, textured
+ * polygons drawn as MAME's rasterizer draws them (see DrawModel2()).
  */
 
 #ifndef INCLUDED_MODEL1RENDER_H
@@ -41,6 +44,7 @@
 #include "IRender2D.h"
 #include "New3D/GLSLShader.h"
 #include "Model1/Model1Geometry.h"
+#include "Model2/Model2Video.h"
 #include <GL/glew.h>
 #include <string>
 #include <vector>
@@ -57,6 +61,11 @@ public:
     std::vector<uint32_t> back;           // tilemap layers below the 3D, opaque
     std::vector<uint32_t> hud;            // tilemap layers above the 3D, alpha 0 where nothing is drawn
     std::vector<uint32_t> softwareImage;  // the complete image, for software mode
+    // Model 2: the 3D (drawn instead of geometry, between back and hud) and
+    // the memory its textures and colours come from
+    const std::vector<Model2::GPUVertex> *model2 = nullptr;
+    const Model2::CVideo::Memory *model2Memory = nullptr;
+    bool model2Quads = false;             // model2 is quads (GL_LINES_ADJACENCY), not triangles
   };
 
   void DrawFrame(const VideoFrame &frame);
@@ -93,6 +102,8 @@ private:
   void AddQuad(const Model1::ScreenQuad &q, float expand);
   void SetScissor(int x1, int y1, int x2, int y2);
   void SnapshotFrameBuffer();
+  bool InitModel2();
+  void DrawModel2(const std::vector<Model2::GPUVertex> &vertices, const Model2::CVideo::Memory &memory, bool quads);
 
   unsigned m_xOffset = 0, m_yOffset = 0, m_xPixels = 0, m_yPixels = 0;
   unsigned m_totalXPixels = 0, m_totalYPixels = 0;
@@ -105,6 +116,18 @@ private:
   GLuint      m_vao = 0, m_vbo = 0, m_imageVAO = 0;
   GLuint      m_backTexture = 0, m_hudTexture = 0, m_softwareTexture = 0, m_snapshotTexture = 0;
   std::vector<Vertex> m_vertices;
+
+  // Model 2 3D pass: shader, vertex buffer, and buffer textures holding the
+  // board's texture RAM 0/1, luma RAM, colour tables, palette and gamma table
+  enum { M2_TEXRAM0, M2_TEXRAM1, M2_LUMA, M2_XLAT, M2_PALETTE, M2_GAMMA, M2_NUM_BUFFERS };
+  GLSLShader  m_m2Shader;
+  GLint       m_m2ScreenSizeLoc = -1, m_m2ViewportLoc = -1;
+  GLuint      m_m2QuadProgram = 0;      // quads: vertex + geometry + fragment shaders
+  GLint       m_m2QuadScreenSizeLoc = -1, m_m2QuadViewportLoc = -1;
+  GLuint      m_m2VAO = 0, m_m2VBO = 0;
+  GLuint      m_m2Buffers[M2_NUM_BUFFERS] = { };
+  GLuint      m_m2Textures[M2_NUM_BUFFERS] = { };
+  bool        m_m2Ready = false;
   bool        m_ready = false;
   UpscaleMode m_upscaleMode = UpscaleMode::Nearest;   // tilemap layer filtering, as CRender2D
   float       m_edgeExpand = 0.5f;
