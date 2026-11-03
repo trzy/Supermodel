@@ -232,6 +232,7 @@ layout(location = 2) in vec4  inClip;     // viewport x1, y1, x2, y2 (native, in
 layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
 
 uniform vec2 screenSize;                  // 496, 384
+const float nearW = 1.0 / 1024.0;         // the near plane (the board's w is >= 0.5 or so)
 
 out vec2       fsUV;                      // perspective correct
 flat out vec4  fsClip;
@@ -239,8 +240,9 @@ flat out uvec3 fsData;
 
 void main(void)
 {
-  // z 0: the clipping in z keeps w >= 0 (in front of the eye)
-  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), 0.0, inPos.z);
+  // z = w - 2 near: the clipping in z keeps w >= near (in front of the eye;
+  // a plane at w = 0 would put the clipped vertices at infinity)
+  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), inPos.z - 2.0 * nearW, inPos.z);
   fsUV = inUV;
   fsClip = inClip;
   fsData = inData;
@@ -514,6 +516,7 @@ layout(location = 2) in vec4  inClip;     // viewport x1, y1, x2, y2 (native, in
 layout(location = 3) in uvec3 inData;     // texture header 0|1, 2|3, luma|lod
 
 uniform vec2 screenSize;                  // 496, 384
+const float nearW = 1.0 / 1024.0;         // the near plane, as the triangles'
 
 out VS_OUT
 {
@@ -524,7 +527,7 @@ out VS_OUT
 
 void main(void)
 {
-  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), 0.0, inPos.z);
+  gl_Position = vec4(inPos.x / (screenSize.x * 0.5) - inPos.z, inPos.z - inPos.y / (screenSize.y * 0.5), inPos.z - 2.0 * nearW, inPos.z);
   vs_out.uv = inUV;
   vs_out.clip = inClip;
   vs_out.data = inData;
@@ -548,10 +551,10 @@ in VS_OUT
 
 out GS_OUT
 {
-  noperspective vec2 v[4];        // the corners, relative to the pixel (native pixels)
-  noperspective vec4 area;
+  flat vec2          corner[4];   // the corners (native pixels from the centre, y up)
+  flat vec4          cornerCross; // cross(corner[i], corner[i + 1])
   flat vec3          P[4];        // the corners' 1/w, u/w, v/w
-  noperspective vec4 bary;        // w = 1: a triangle
+  vec4               bary;        // w = 1: a triangle
   vec2               triUV;       // interpolated across the emitted triangle (triangles, edges)
   flat vec4          clip;
   flat uvec3         data;
@@ -586,8 +589,8 @@ void main(void)
     for (int i = 0; i < 3; i++)
     {
       for (int j = 0; j < 4; j++)
-        gs_out.v[j] = vec2(0.0);
-      gs_out.area = vec4(0.0);
+        gs_out.corner[j] = vec2(0.0);
+      gs_out.cornerCross = vec4(0.0);
       gs_out.bary = vec4(i == 0, i == 1, i == 2, 1.0);
       gs_out.triUV = gs_in[i].uv;
       gl_Position = gl_in[i].gl_Position;
@@ -620,9 +623,8 @@ void main(void)
     int ii = reorder[i];
     for (int j = 0; j < 4; j++)
     {
-      int jNext = (j + 1) % 4;
-      gs_out.v[j] = v[j] - v[ii];
-      gs_out.area[j] = cross[j * 4 + jNext] + cross[jNext * 4 + ii] + cross[ii * 4 + j];
+      gs_out.corner[j] = v[j];
+      gs_out.cornerCross[j] = cross[j * 4 + (j + 1) % 4];
     }
     gs_out.bary = vec4(baryOf[ii], 0.0);
     gs_out.triUV = gs_in[ii].uv;
@@ -637,10 +639,10 @@ void main(void)
 static const char s_m2QuadFragmentInputs[] = R"glsl(
 in GS_OUT
 {
-  noperspective vec2 v[4];
-  noperspective vec4 area;
+  flat vec2          corner[4];
+  flat vec4          cornerCross;
   flat vec3          P[4];
-  noperspective vec4 bary;
+  vec4               bary;
   vec2               triUV;
   flat vec4          clip;
   flat uvec3         data;
@@ -657,15 +659,30 @@ vec3 QuadP()
   if (fs_in.bary.w > 0.5 || fs_in.bary.x <= hpFMin || fs_in.bary.z <= hpFMin)
     return vec3(gl_FragCoord.w, fs_in.triUV * gl_FragCoord.w);   // a triangle, or the edge: linear there
 
+  // The corners relative to the pixel, and the areas of the triangles they
+  // make with it, from the flat corners and the pixel's position: not
+  // interpolated (noperspective values across triangles clipped at the near
+  // plane come out wrong on some GPUs). area[i] = cross(v[i], v[i + 1]).
+  vec2 pixel = (gl_FragCoord.xy - viewport.xy) / viewport.zw * screenSize - screenSize * 0.5;
+  vec2 v[4];
+  for (int i = 0; i < 4; i++)
+    v[i] = fs_in.corner[i] - pixel;
+  float area[4];
+  for (int i = 0; i < 4; i++)
+  {
+    vec2 edge = fs_in.corner[i] - fs_in.corner[(i + 1) % 4];
+    area[i] = fs_in.cornerCross[i] + (pixel.x * edge.y - pixel.y * edge.x);
+  }
+
   float u[4];
   for (int i = 0; i < 4; i++)
-    u[i] = length(fs_in.v[i]) * sign(fs_in.P[i].x);   // behind the eye (w < 0)?
+    u[i] = length(v[i]) * sign(fs_in.P[i].x);   // behind the eye (w < 0)?
 
   precise float t[4];
   for (int i = 0; i < 4; i++)
   {
     int iNext = (i + 1) % 4;
-    t[i] = fs_in.area[i] == 0.0 ? 0.0 : fma(u[i], u[iNext], -dot(fs_in.v[i], fs_in.v[iNext])) / fs_in.area[i];
+    t[i] = area[i] == 0.0 ? 0.0 : fma(u[i], u[iNext], -dot(v[i], v[iNext])) / area[i];
   }
 
   // weights neither all positive nor all negative: outside the quad
