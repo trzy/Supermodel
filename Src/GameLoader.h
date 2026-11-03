@@ -41,6 +41,7 @@ private:
 
   // Game information from XML
   std::map<std::string, Game> m_game_info_by_game;
+  std::map<std::string, size_t> m_game_order;   // position in the XML file (the first listed is preferred)
 
   // ROM patches by game and by region. Cannot place into Region because child
   // sets do not inherit parent patches, which may complicate merging.

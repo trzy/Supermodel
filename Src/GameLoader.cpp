@@ -6,6 +6,7 @@
 #include "Util/Format.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 
@@ -414,6 +415,7 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
         ErrorLog("%s: Ignoring redefinition of game '%s'.", m_xml_filename.c_str(), game_name.c_str());
         continue;
       }
+      m_game_order.emplace(game_name, m_game_order.size());
       if (!PopulateGameInfo(&m_game_info_by_game[game_name], game_node))
       {
         m_game_info_by_game.erase(game_name);
@@ -756,6 +758,26 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
   std::map<std::string, std::set<File::ptr_t>> files_missing_by_merged_game;
   IdentifyGamesInZipArchive(&complete_merged_games, &files_missing_by_merged_game, zip, m_regions_by_merged_game);
 
+  // A complete game named as the zip file is the one wanted: MAME's merged
+  // sets hold a parent and its clones in one zip named after the parent, and
+  // a clone's own zip is named after it
+  {
+    std::string stem = zipfilename;
+    size_t slash = stem.find_last_of("/\\");
+    if (slash != std::string::npos)
+      stem = stem.substr(slash + 1);
+    size_t dot = stem.find_last_of('.');
+    if (dot != std::string::npos)
+      stem = stem.substr(0, dot);
+    std::transform(stem.begin(), stem.end(), stem.begin(), [](unsigned char c) { return (char) std::tolower(c); });
+    bool childOnly = complete_games.count(stem) && IsChildSet(m_game_info_by_game.find(stem)->second);
+    if (complete_merged_games.count(stem) || (complete_games.count(stem) && !childOnly))
+    {
+      chosen_game->assign(stem);
+      return;
+    }
+  }
+
   /*
    * Find incomplete child games by sorting child games out from the unmerged
    * games results and pruning out complete merged games. Don't care about
@@ -811,17 +833,34 @@ void GameLoader::ChooseGameInZipArchive(std::string *chosen_game, bool *missing_
   }
 
   // Choose game: complete merged game > incomplete child game > complete
-  // unmerged game
+  // unmerged game; among several, the one listed first in the XML file (a
+  // family's parent, then its clones in their order)
+  auto first = [this](const std::set<std::string> &games) -> std::string
+  {
+    std::string best;
+    size_t bestOrder = SIZE_MAX;
+    for (const auto &name : games)
+    {
+      auto it = m_game_order.find(name);
+      size_t order = it != m_game_order.end() ? it->second : SIZE_MAX - 1;
+      if (best.empty() || order < bestOrder)
+      {
+        best = name;
+        bestOrder = order;
+      }
+    }
+    return best;
+  };
   if (!complete_merged_games.empty())
-    chosen_game->assign(*complete_merged_games.begin());
+    chosen_game->assign(first(complete_merged_games));
   else if (!incomplete_child_games.empty())
   {
     // TODO: could use scoring to pick game with most files?
-    chosen_game->assign(*incomplete_child_games.begin());
+    chosen_game->assign(first(incomplete_child_games));
     *missing_parent_roms = true;  // try to find missing files in parent ROM zip file
   }
   else if (!complete_games.empty())
-    chosen_game->assign(*complete_games.begin());
+    chosen_game->assign(first(complete_games));
   else
   {
     ErrorLog("No complete games found in '%s'.", zipfilename.c_str());
