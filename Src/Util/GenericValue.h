@@ -167,6 +167,9 @@ namespace Util
       void SetSliderFormat(const std::string& format, const std::string& minLabel = "") { m_sliderFormat = format; m_sliderMinLabel = minLabel; }
       const std::string& GetSliderFormat() { return m_sliderFormat; }
       const std::string& GetSliderMinLabel() { return m_sliderMinLabel; }
+      // GUI note shown beside the control (e.g. which platforms it applies to)
+      void SetNote(const std::string& note) { m_note = note; }
+      const std::string& GetNote() { return m_note; }
       int GetIndex() { return (int)m_min.index(); }      // gets the variant index (basically the type)
 
   private:
@@ -177,6 +180,7 @@ namespace Util
       std::vector<std::string> m_labels;
       std::string m_sliderFormat;
       std::string m_sliderMinLabel;
+      std::string m_note;
   };
 
   class GenericValue

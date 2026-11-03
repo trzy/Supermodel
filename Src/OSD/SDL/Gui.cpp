@@ -538,6 +538,12 @@ static void CreateControls(Util::Config::Node& config, const std::string& group)
                             break;
                         }
                         }
+
+                        // the setting's note, if it has one (e.g. "Model 1/2 only")
+                        if (!vRange->GetNote().empty()) {
+                            ImGui::SameLine();
+                            ImGui::TextDisabled("(%s)", vRange->GetNote().c_str());
+                        }
                     }
                 }
             }
