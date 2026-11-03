@@ -987,6 +987,10 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
     SDL_SetWindowBordered(s_window, SDL_FALSE);
   }
 
+  // The window can be resized and maximized; the renderers follow its size
+  // (see the main loop)
+  SDL_SetWindowResizable(s_window, SDL_TRUE);
+
   SetFullScreenRefreshRate();
 
   bool stretch = s_runtime_config["Stretch"].ValueAs<bool>();
@@ -1078,6 +1082,51 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
       Emu->RenderFrame();
     else
       Emu->RunFrame();
+
+    // Window resized or maximized: when its new size has stayed the same for
+    // a few frames (not every step of a drag), the renderers are created
+    // again for it, as when toggling full screen
+    if (!s_runtime_config["FullScreen"].ValueAs<bool>())
+    {
+      static int s_resizeW = 0, s_resizeH = 0, s_resizeFrames = 0;
+      int w = 0, h = 0;
+      SDL_GetWindowSize(s_window, &w, &h);
+      if (w <= 0 || h <= 0 || (unsigned(w) == totalXRes && unsigned(h) == totalYRes))
+        s_resizeFrames = 0;
+      else if (w != s_resizeW || h != s_resizeH)
+      {
+        s_resizeW = w;
+        s_resizeH = h;
+        s_resizeFrames = 0;
+      }
+      else if (++s_resizeFrames >= 3)
+      {
+        s_resizeFrames = 0;
+        if (!paused)
+          Emu->PauseThreads();
+
+        delete Render2D;
+        Render2D = nullptr;
+
+        totalXRes = xRes = unsigned(w);
+        totalYRes = yRes = unsigned(h);
+        if (Result::OKAY != SetGLGeometry(&xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, !s_runtime_config["Stretch"].ValueAs<bool>()))
+          goto QuitError;
+
+        superAA->Init(totalXRes, totalYRes);
+        Render2D = CreateRender2D(Emu);
+        if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
+          goto QuitError;
+        if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
+          goto QuitError;
+        Emu->AttachRenderers(Render2D, Render3D, superAA);
+
+        if (!paused)
+          Emu->ResumeThreads();
+        else
+          Emu->RenderFrame();   // paused: show the frame at the new size
+      }
+    }
 
 #ifdef SUPERMODEL_DEBUGGER
     bool processUI = true;
