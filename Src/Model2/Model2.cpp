@@ -1629,8 +1629,14 @@ void CModel2::UpdateInputs(void)
     int y = std::clamp(int(m_inputs->gunY[g]->value), 80, 465);
     m_gun[g * 2 + 1] = (uint16_t) (xMin + (x - 150) * (xMax - xMin) / (651 - 150));
     m_gun[g * 2 + 0] = (uint16_t) (yMin + (y - 80) * (yMax - yMin) / (465 - 80));
-    in1 |= m_inputs->trigger[g]->value ? (1 << g) : 0;
-    m_gunOffscreen = (uint8_t) ((m_gunOffscreen & ~(1 << g)) | ((m_inputs->trigger[g]->offscreenValue ? 1 : 0) << g));
+    // the off-screen input alone reloads: it also pulls the trigger
+    in1 |= (m_inputs->trigger[g]->value || m_inputs->trigger[g]->offscreenValue) ? (1 << g) : 0;
+    // off screen: the off-screen input, or (as MAME does) the gun within 5% of
+    // an edge of its range, e.g. a mouse moved out of the window
+    const int borderX = (651 - 150) / 20, borderY = (465 - 80) / 20;
+    bool offscreen = m_inputs->trigger[g]->offscreenValue != 0 ||
+      x <= 150 + borderX || x >= 651 - borderX || y <= 80 + borderY || y >= 465 - borderY;
+    m_gunOffscreen = (uint8_t) ((m_gunOffscreen & ~(1 << g)) | ((offscreen ? 1 : 0) << g));
     if (g == 1)
       in0 |= sw(m_inputs->start[1]) ? 0x20 : 0;
   }
