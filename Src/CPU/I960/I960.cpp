@@ -2411,6 +2411,15 @@ void CI960::execute_run()
 			execute_burst_stall_op(opcode);
 		else
 			execute_op(opcode);
+
+		// Supermodel: an interrupt raised by this instruction (a write to the
+		// interrupt controller or a device) is taken before the next one, as
+		// MAME's resync on set_input_line does, not at the next timeslice.
+		// Daytona USA masks its sound interrupt around its sound queue updates
+		// and relies on this: taken late, the interrupt lands inside the next
+		// update, the queue count goes wrong and the music is lost.
+		if (m_immediate_irq && !m_stall_state.burst_mode)
+			check_immediate_irqs();
 	}
 }
 
