@@ -117,6 +117,8 @@ static void (*Int68kCB)(int irq);
 #define MIDI_STACK_SIZE_MASK	(MIDI_STACK_SIZE-1)
 
 static BYTE MidiOutStack[16];
+static void (*s_midiOutCallback)(void *, UINT8) = nullptr;	// the MIDI output's receiver (Model 2: the main board's UART)
+static void *s_midiOutContext = nullptr;
 static BYTE MidiOutW=0,MidiOutR=0;
 static BYTE MidiStack[MIDI_STACK_SIZE];
 static BYTE MidiOutFill;
@@ -1266,10 +1268,13 @@ void SCSP_DoMasterSamples(int nsamples)
 		// one sample interval interrupt (SCIPD bit 10)
 		SCSPs[0].data[0x20 / 2] |= 0x0400;
 
-		// MIDI output: nothing receives it on Model 3, so the FIFO just drains at the MIDI baud rate
+		// MIDI output: drains at the MIDI baud rate, to the receiver if there is
+		// one (Model 2's UART), else discarded (nothing receives it on Model 3)
 		if (MidiOutFill != 0 && --MidiOutDrain <= 0)
 		{
-			SCSP_MidiOutR();
+			UINT8 out = SCSP_MidiOutR();
+			if (s_midiOutCallback)
+				s_midiOutCallback(s_midiOutContext, out);
 			MidiOutDrain = MIDI_OUT_SAMPLES_PER_BYTE;
 		}
 
@@ -1336,6 +1341,12 @@ void SCSP_MidiOutW(BYTE val)
 
 	if (s_multiThreaded)
 		MIDILock->Unlock();
+}
+
+void SCSP_SetMidiOutCallback(void (*callback)(void *context, UINT8 data), void *context)
+{
+	s_midiOutCallback = callback;
+	s_midiOutContext = context;
 }
 
 unsigned char SCSP_MidiOutR()

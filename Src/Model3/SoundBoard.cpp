@@ -332,6 +332,15 @@ int SCSP68KRunCallback(int numCycles)
  Sound Board Interface
 ******************************************************************************/
 
+void CSoundBoard::SetMIDIOutCallback(std::function<void(UINT8)> callback)
+{
+	m_midiOutCallback = std::move(callback);
+	if (m_midiOutCallback)
+		SCSP_SetMidiOutCallback([](void *context, UINT8 data) { static_cast<CSoundBoard *>(context)->m_midiOutCallback(data); }, this);
+	else
+		SCSP_SetMidiOutCallback(nullptr, nullptr);
+}
+
 void CSoundBoard::WriteMIDIPort(UINT8 data)
 {
 	SCSP_MidiIn(data);
@@ -595,6 +604,8 @@ CSoundBoard::~CSoundBoard(void)
 	fclose(soundFP);
 #endif
 
+	if (m_midiOutCallback)
+		SCSP_SetMidiOutCallback(nullptr, nullptr);
 	SCSP_Deinit();
 
 	DSB = NULL;

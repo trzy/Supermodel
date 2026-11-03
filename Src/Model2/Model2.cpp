@@ -1123,6 +1123,10 @@ uint32_t CModel2::ReadDword(uint32_t addr, uint32_t mask)
       d |= uint32_t(IORead(reg + 1)) << 16;
     return d;
   }
+  // Model 2B's UART: its data and control registers in byte 0 of 2 words
+  // (MAME's model2b_crx_mem, 0x009c0000-7 umask32 0x000000ff)
+  if (m_model2b && (addr == 0x009c0000 || addr == 0x009c0004))
+    return (mask & 0x000000ff) ? m_uart.Read((addr >> 2) & 1) : 0;
   // UART (bytes 0 and 2)
   if (addr == 0x01c80000)
   {
@@ -1381,6 +1385,12 @@ void CModel2::WriteDword(uint32_t addr, uint32_t data, uint32_t mask)
       IOWrite(reg, uint8_t(data));
     if (mask & 0x00ff0000)
       IOWrite(reg + 1, uint8_t(data >> 16));
+    return;
+  }
+  if (m_model2b && (addr == 0x009c0000 || addr == 0x009c0004))
+  {
+    if (mask & 0x000000ff)
+      m_uart.Write((addr >> 2) & 1, uint8_t(data));
     return;
   }
   if (addr == 0x01c80000)
@@ -2495,6 +2505,13 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
       m_m1SoundBoard->SetMIDIOutCallback([this](UINT8 data) { m_uart.ReceiveByte(data); });
       m_m1SoundMixer = std::make_unique<Model1SoundMixer>(m_m1SoundBoard.get());
       m_soundBoard->AttachDSB(m_m1SoundMixer.get());
+    }
+    else
+    {
+      // The SCSP's MIDI output is the UART's input (MAME's midi_out_cb ->
+      // write_rxd): the sound program's replies, which some games wait for
+      // (Model 2B: Cyber Troopers Virtual-On, Fighting Vipers)
+      m_soundBoard->SetMIDIOutCallback([this](UINT8 data) { m_uart.ReceiveByte(data); });
     }
     m_uart.OnTransmit = [this](uint8_t data)
     {

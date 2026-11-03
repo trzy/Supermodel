@@ -44,6 +44,7 @@ void SCSP_Update(int numSamples);	// generates numSamples samples (at most the b
 void SCSP_MidiIn(UINT8);
 void SCSP_MidiOutW(UINT8);
 UINT8 SCSP_MidiOutR();
+void SCSP_SetMidiOutCallback(void (*callback)(void *context, UINT8 data), void *context);	// receives the MIDI output (else it is discarded)
 
 /*
  * SCSP_Init(n):
