@@ -1011,6 +1011,20 @@ float CSHARC::RoundToZero(double value, double error) const
 	return f;
 }
 
+// Supermodel: a double in the normal float range truncated towards zero to a
+// float, exactly: its low 29 mantissa bits cleared. False out of that range.
+static inline bool TruncateToFloat(uint64_t bits, float &out)
+{
+	int const exponent = int((bits >> 52) & 0x7ff) - 1023;
+	if (exponent < -126 || exponent > 126)
+		return false;
+	bits &= ~((uint64_t(1) << 29) - 1);
+	double d;
+	memcpy(&d, &bits, sizeof(d));
+	out = float(d);
+	return true;
+}
+
 float CSHARC::AddF(float a, float b) const
 {
 	if (!(m_core->mode1 & MODE1_TRUNCATE))
@@ -1018,6 +1032,13 @@ float CSHARC::AddF(float a, float b) const
 	double s = double(a) + double(b);
 	double bb = s - double(a);
 	double err = (double(a) - (s - bb)) + (double(b) - bb);
+	// fast path: the exact sum s + err truncates as s does, unless s is
+	// exactly a float and err points towards zero
+	uint64_t bits;
+	memcpy(&bits, &s, sizeof(bits));
+	float r;
+	if (((bits & ((uint64_t(1) << 29) - 1)) != 0 || err == 0.0 || ((err > 0.0) == (s > 0.0))) && TruncateToFloat(bits, r))
+		return r;
 	return RoundToZero(s, err);
 }
 
@@ -1025,7 +1046,13 @@ float CSHARC::MulF(float a, float b) const
 {
 	if (!(m_core->mode1 & MODE1_TRUNCATE))
 		return a * b;
-	return RoundToZero(double(a) * double(b), 0.0);
+	double const p = double(a) * double(b);   // exact
+	uint64_t bits;
+	memcpy(&bits, &p, sizeof(bits));
+	float r;
+	if (TruncateToFloat(bits, r))
+		return r;
+	return RoundToZero(p, 0.0);
 }
 
 // FIX: out of range or infinite gives all 1s, or with ALUSAT the largest
@@ -5768,13 +5795,15 @@ void CSHARC::execute_run()
 				}
 			}
 
-			if (!m_core->write_stalled)
+			// Supermodel: tested inline (the calls do nothing when idle)
+			if ((m_core->dma_status & ((1 << 6) | (1 << 7))) && !m_core->write_stalled)
 			{
 				dma_run_cycle(6);
 				dma_run_cycle(7);
 			}
 
-			advance_iop_timer(1);   // Supermodel
+			if (m_iop_delay_cycles > 0)
+				advance_iop_timer(1);   // Supermodel
 
 			--m_core->icount;
 		};
