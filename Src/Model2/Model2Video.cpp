@@ -325,7 +325,11 @@ inline u16 CVideo::float_to_zval(float floatval, s32 z_adjust)
 		return 0xffff; // above 14 is too large
 }
 
-static int32_t clip_polygon(poly_vertex *v, int32_t num_vertices, poly_vertex *vout, plane clip_plane)
+// Supermodel: at most max_out vertices are written. A convex quad clipped by
+// the 4 planes has at most 8, but a twisted one (two edges crossing, Top
+// Skater) can gain 2 per plane and overran MAME's 8-vertex buffers; its
+// extra vertices are dropped.
+static int32_t clip_polygon(poly_vertex *v, int32_t num_vertices, poly_vertex *vout, plane clip_plane, int32_t max_out)
 {
 	int32_t outcount = 0;
 
@@ -340,14 +344,14 @@ static int32_t clip_polygon(poly_vertex *v, int32_t num_vertices, poly_vertex *v
 		const int32_t nextvert = (i + 1) % num_vertices;
 
 		/* if the current point is inside the plane, add it */
-		if (curin)
+		if (curin && outcount < max_out)
 			out[outcount++] = *cur;
 
 		const float nextdot = dot_product(v[nextvert], clip_plane.normal);
 		const int32_t nextin = (nextdot >= clip_plane.distance) ? 1 : 0;
 
 		/* Add a clipped vertex if one end of the current edge is inside the plane and the other is outside */
-		if ((curin != nextin) && !std::isnan(curdot) && !std::isnan(nextdot))
+		if ((curin != nextin) && !std::isnan(curdot) && !std::isnan(nextdot) && outcount < max_out)
 		{
 			const float scale = (clip_plane.distance - curdot) / (nextdot - curdot);
 
@@ -534,7 +538,7 @@ void CVideo::model2_3d_process_polygon(raster_state *raster, u32 attr)
 		/* do clipping */
 		for (int i = 0; i < 4; i++)
 		{
-			clipped_verts = clip_polygon(verts_in, clipped_verts, verts_out, raster->clip_plane[raster->center_sel][i]);
+			clipped_verts = clip_polygon(verts_in, clipped_verts, verts_out, raster->clip_plane[raster->center_sel][i], 8);
 			for (int j = 0; j < clipped_verts; j++)
 				verts_in[j] = verts_out[j];
 		}
