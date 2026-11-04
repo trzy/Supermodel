@@ -1179,13 +1179,22 @@ void CMB86235::do_alu1_trans2_2(uint64_t op)
 	do_alu1(op);
 
 	// A bus write
+	// Supermodel: a memory to register transfer (SDA 2) names its register
+	// in the AS field, as a register to memory one (SDA 1) does: AD's bits
+	// are the memory address's there. MAME takes AD, a register its tables
+	// don't have (Top Skater's geometrizer program, 3C7: MVD2 into AA2, AB6).
 	switch (sda)
 	{
 	case 0:
-	case 2:
 	{
 		uint8_t ad = (op >> 28) & 0x1f;
 		set_transfer_reg(ad, ares);
+		break;
+	}
+	case 2:
+	{
+		uint8_t as = (op >> 33) & 0x1f;
+		set_transfer_reg(as, ares);
 		break;
 	}
 	case 1:
@@ -1196,14 +1205,19 @@ void CMB86235::do_alu1_trans2_2(uint64_t op)
 	}
 	}
 
-	// B bus write
+	// B bus write (SDB 2: the BS field, as SDA 2 above)
 	switch (sdb)
 	{
 	case 0:
-	case 2:
 	{
 		uint8_t bd = (op >> 8) & 0x1f;
 		set_transfer_reg(bd | 0x20, bres);
+		break;
+	}
+	case 2:
+	{
+		uint8_t bs = (op >> 13) & 0x1f;
+		set_transfer_reg(bs | 0x20, bres);
 		break;
 	}
 	case 1:
