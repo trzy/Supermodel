@@ -349,8 +349,10 @@ UINT8 CDSB1::IORead8(UINT32 addr)
 
 	case 0xF0:	// Latch
 		UINT8 d;
+		int idxW;
+		idxW = __atomic_load_n(&fifoIdxW, __ATOMIC_ACQUIRE);
 		d = fifo[fifoIdxR];	// retrieve next command byte
-		if (fifoIdxR != fifoIdxW)	// if these are equal, nothing has been written yet (don't advance)
+		if (fifoIdxR != idxW)	// if these are equal, nothing has been written yet (don't advance)
 		{
 			fifoIdxR++;
 			fifoIdxR &= FIFO_STACK_SIZE_MASK;
@@ -391,8 +393,9 @@ void CDSB1::SendCommand(UINT8 data)
 	 * up with the other CPUs and must process all commands it has received
 	 * over the course of a frame at once.
 	 */
-	fifo[fifoIdxW++] = data;
-	fifoIdxW &= FIFO_STACK_SIZE_MASK;
+	// Sound thread reads the FIFO: publish the index after the data
+	fifo[fifoIdxW] = data;
+	__atomic_store_n(&fifoIdxW, (fifoIdxW + 1) & FIFO_STACK_SIZE_MASK, __ATOMIC_RELEASE);
 	//printf("Write FIFO: %02X\n", data);
 
 	// Have we caught up to the read pointer?
@@ -415,7 +418,7 @@ void CDSB1::RunFrame(float *audioL, float *audioR, int numSamples)
 
 	int		cycles;
 	// While FIFO not empty, fire interrupts, run for up to one frame (Z80 at 4 MHz)
-	for (cycles = (int)((4000000LL * numSamples) / 44100); (cycles > 0) && (fifoIdxR != fifoIdxW);  )
+	for (cycles = (int)((4000000LL * numSamples) / 44100); (cycles > 0) && (fifoIdxR != __atomic_load_n(&fifoIdxW, __ATOMIC_ACQUIRE));  )
 	{
 		Z80.SetINT(true);	// fire an IRQ to indicate pending command
 		//printf("Z80 INT fired\n");
@@ -955,8 +958,9 @@ void CDSB2::SendCommand(UINT8 data)
 	 * up with the other CPUs and must process all commands it has received
 	 * over the course of a frame at once.
 	 */
-	fifo[fifoIdxW++] = data;
-	fifoIdxW &= FIFO_STACK_SIZE_MASK;
+	// Sound thread reads the FIFO: publish the index after the data
+	fifo[fifoIdxW] = data;
+	__atomic_store_n(&fifoIdxW, (fifoIdxW + 1) & FIFO_STACK_SIZE_MASK, __ATOMIC_RELEASE);
 	//printf("Write FIFO: %02X\n", data);
 
 	// Have we caught up to the read pointer?
@@ -982,7 +986,7 @@ void CDSB2::RunFrame(float *audioL, float *audioR, int numSamples)
   //printf("DSB2 run frame PC=%06X\n", M68KGetPC());
 
   // While FIFO not empty...
-  while (fifoIdxR != fifoIdxW)
+  while (fifoIdxR != __atomic_load_n(&fifoIdxW, __ATOMIC_ACQUIRE))
   {
     cmdLatch = fifo[fifoIdxR];	// retrieve next command byte
     fifoIdxR++;
