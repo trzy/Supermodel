@@ -61,8 +61,8 @@ Quick description on the GUI stuff
 // ROM folder scan: only games whose "<name>.zip" exists in the ROM folder are shown as owned
 // ---------------------------------------------------------------------------------------------------------------
 
-static const bool  s_hideUnownedGames = false;   // true: unowned games are removed from the list
-                                                // false: unowned games are greyed out so the list layout is kept
+static bool s_showAllGames = false;   // the "Show all supported games" checkbox: off, only the games in the
+                                      // ROM folder are listed; on, the others are too, greyed out
 
 static std::string ToLowerStr(std::string s)
 {
@@ -1137,6 +1137,24 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
 
     ImGui::Begin("Custom Window", nullptr, ImGuiWindowFlags_NoTitleBar); // Explicitly set a window name
 
+    // Only the games in the ROM folder, unless all supported games are asked for
+    {
+        size_t ownedCount = 0;
+        for (const auto& g : games) {
+            if (ownedZips.count(ToLowerStr(g.second.name))) {
+                ownedCount++;
+            }
+        }
+        if (ImGui::Checkbox("Show all supported games", &s_showAllGames) && !s_showAllGames && selectedGameIndex >= 0) {
+            // a game that is no longer listed can't stay selected
+            if (!ownedZips.count(ToLowerStr(GetGame(games, selectedGameIndex).name))) {
+                selectedGameIndex = -1;
+            }
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("(%zu of %zu supported games in the ROM folder)", ownedCount, games.size());
+    }
+
     ImGui::BeginChild("TableRegion", ScaledSize(0.0f, 200.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
 
     if (ImGui::BeginTable("Games", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit))
@@ -1155,7 +1173,7 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
             const bool owned = ownedZips.count(ToLowerStr(g.second.name)) > 0;
 
             // row must always advance, GetGame() / GetRomPath() index the full games map
-            if (!owned && s_hideUnownedGames) {
+            if (!owned && !s_showAllGames) {
                 row++;
                 continue;
             }
