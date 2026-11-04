@@ -155,7 +155,7 @@ private:
   CIOBus                m_ioBus;
   CMB86233              m_tgp;
   Model1::CGeometry     m_geometry;
-  Model1::CGeometrizer  m_geometrizer;    // the video board DSPs run for real (LowLevelGeometrizer=1)
+  Model1::CGeometrizer  m_geometrizer;    // the video board DSPs run for real (HighLevelGeometrizer=0)
   CSys24Tilemap         m_tiles;
   CI8251                m_uart;
   std::unique_ptr<CModel1SoundBoard> m_soundBoard;

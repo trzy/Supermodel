@@ -1579,11 +1579,11 @@ Util::Config::Node DefaultConfig()
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
   config.Set("IdleSkip", true, "Core");
-  // CModel1, CModel2: the video board's geometrizer DSPs run their programs
-  // (low level), else simulated (high level). Model 2: 2B only (2A/2C are
-  // always simulated)
-  config.Set("LowLevelGeometrizer", true, "Core");
-  config["LowLevelGeometrizer"].GetValue()->GetValueRange()->SetNote("Model 1/2 only");
+  // CModel1, CModel2: the video board's geometrizer simulated (high level,
+  // fast), else its DSP programs run (low level, more accurate). Model 2:
+  // only 2B has the low level one (2A/2C are always simulated)
+  config.Set("HighLevelGeometrizer", true, "Core");
+  config["HighLevelGeometrizer"].GetValue()->GetValueRange()->SetNote("Model 1/2 only");
   config.Set<std::string>("ROMDirectory", FileSystemPath::GetPath(FileSystemPath::ROMs), "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
 #ifndef SUPERMODEL_OSX
@@ -1953,10 +1953,10 @@ static void Help(void)
   puts("  -no-gpu-thread          Run graphics rendering in main thread");
   puts("  -idle-skip              Skip PowerPC idle loops [Default]");
   puts("  -no-idle-skip           Execute PowerPC idle loops in full");
-  puts("  -low-level-geometrizer  Model 1/2 only: run the geometrizer DSP programs");
-  puts("                          (Model 2: 2B games only) [Default]");
-  puts("  -no-low-level-geometrizer  Model 1/2 only: simulate the geometrizer");
-  puts("                          (faster, less accurate)");
+  puts("  -high-level-geometrizer  Model 1/2 only: simulate the geometrizer (fast)");
+  puts("                          [Default]");
+  puts("  -no-high-level-geometrizer  Model 1/2 only: run the geometrizer DSP programs");
+  puts("                          (more accurate, slower; Model 2: 2B games only)");
   puts("  -load-state=<file>      Load save state after starting");
   puts("");
   puts("Video Options:");
@@ -2103,8 +2103,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-gpu-thread",       { "GPUMultiThreaded", false } },
     { "-idle-skip",           { "IdleSkip",         true } },
     { "-no-idle-skip",        { "IdleSkip",         false } },
-    { "-low-level-geometrizer",    { "LowLevelGeometrizer", true } },
-    { "-no-low-level-geometrizer", { "LowLevelGeometrizer", false } },
+    { "-high-level-geometrizer",    { "HighLevelGeometrizer", true } },
+    { "-no-high-level-geometrizer", { "HighLevelGeometrizer", false } },
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
     { "-borderless",          { "BorderlessWindow", true } },

@@ -2740,8 +2740,8 @@ void CModel2::LoadState(CBlockFile *SaveState)
     if ((lle != 0) != m_geoLLE)
     {
       ErrorLog("Unable to load Model 2 state: it was saved with the %s geometrizer, but the %s geometrizer is running "
-        "(LowLevelGeometrizer=%d). Set LowLevelGeometrizer=%d to load it.",
-        lle ? "low level" : "simulated", m_geoLLE ? "low level" : "simulated", m_geoLLE ? 1 : 0, lle ? 1 : 0);
+        "(HighLevelGeometrizer=%d). Set HighLevelGeometrizer=%d to load it.",
+        lle ? "low level" : "simulated", m_geoLLE ? "low level" : "simulated", m_geoLLE ? 0 : 1, lle ? 0 : 1);
       return;
     }
   }
@@ -3067,7 +3067,7 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
     m_sharc.AttachBus(this);
     m_sharc.SetBootMode(CSHARC::BOOT_MODE_HOST);
     m_geoCompare = getenv("SUPERMODEL_MODEL2_GEO_COMPARE") != nullptr;
-    m_geoLLE = m_config["LowLevelGeometrizer"].ValueAsDefault<bool>(true) || getenv("SUPERMODEL_MODEL2_GEO_LLE") != nullptr || m_geoCompare;
+    m_geoLLE = !m_config["HighLevelGeometrizer"].ValueAsDefault<bool>(true) || getenv("SUPERMODEL_MODEL2_GEO_LLE") != nullptr || m_geoCompare;
     m_geoBus.board = this;
     m_geoSharc.AttachBus(&m_geoBus);
     m_geoSharc.SetBootMode(CSHARC::BOOT_MODE_HOST);

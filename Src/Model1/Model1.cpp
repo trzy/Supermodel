@@ -1722,7 +1722,7 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
   m_uart.OnTxRdy = [this](bool) { SoundReady(); };
 
   m_softwareRender = m_config["Model1SoftwareRender"].ValueAsDefault<bool>(false);
-  m_useGeometrizer = m_config["LowLevelGeometrizer"].ValueAsDefault<bool>(true);
+  m_useGeometrizer = !m_config["HighLevelGeometrizer"].ValueAsDefault<bool>(true);
   if (const char *geo = getenv("SUPERMODEL_MODEL1_GEOMETRIZER"))
     m_useGeometrizer = atoi(geo) != 0;
   if (m_useGeometrizer && !m_geometrizer.Init(m_geo5571, m_geo5572, m_geoRecip, m_geoRsqrt, m_polyROM.data(), (uint32_t) m_polyROM.size(),
