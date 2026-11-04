@@ -1409,7 +1409,9 @@ Result CReal3D::Init(const uint8_t *vromPtr, IBus *BusObjectPtr, IIRQController 
 
 CReal3D::CReal3D(const Util::Config::Node &config)
   : m_config(config),
-    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>())
+    m_gpuMultiThreaded(config["GPUMultiThreaded"].ValueAs<bool>()),
+    m_layout{},
+    m_configRegisters{}
 {
   DebugLog("Built Real3D\n");
 }
