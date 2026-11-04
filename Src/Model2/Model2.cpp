@@ -873,6 +873,24 @@ uint8_t CModel2::In0Read()
   return data;
 }
 
+// Rail Chase 2's drive board (pneumatic seat), as MAME simulates it so
+// that the game passes its boot check: port D acknowledges the command last
+// written to port E
+uint8_t CModel2::RailChase2DriveRead() const
+{
+  uint8_t cmd = m_io.portValue[4];
+  uint8_t data = 0xff;
+  if (cmd == 0xe0 || cmd == 0x0e)
+    data &= ~1;
+  if (cmd == 0xd0 || cmd == 0x0d)
+    data &= ~2;
+  if (cmd == 0xb0 || cmd == 0x0b)
+    data &= ~4;
+  if (cmd == 0x70 || cmd == 0x07)
+    data &= ~8;
+  return data;
+}
+
 uint8_t CModel2::IORead(unsigned offset)
 {
   switch (offset)
@@ -884,7 +902,7 @@ uint8_t CModel2::IORead(unsigned offset)
       {
       case 1:  return In0Read();    // port B
       case 2:  return m_in[1];      // port C
-      case 3:  return m_driveBoard.present ? DriveBoardRead() : m_in[2];   // port D (or the drive board)
+      case 3:  return m_driveBoard.present ? DriveBoardRead() : m_rchase2Drive ? RailChase2DriveRead() : m_in[2];   // port D (or the drive board)
       case 6:  return 0xFF;         // port G: DIP switches
       default: return 0xFF;
       }
@@ -3026,6 +3044,7 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
   m_layout = LayoutOf(game.name, game.parent);
   m_driveBoard.present = game.driveboard_type == Game::DRIVE_BOARD_SKI || game.driveboard_type == Game::DRIVE_BOARD_MOTION;
   m_driveBoard.ski = game.driveboard_type == Game::DRIVE_BOARD_SKI;
+  m_rchase2Drive = game.name == "rchase2" || game.parent == "rchase2";
 
   if (!LoadROMs(rom_set))
     return Result::FAIL;

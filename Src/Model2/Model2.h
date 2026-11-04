@@ -205,6 +205,7 @@ private:
 
   // I/O
   uint8_t IORead(unsigned offset);
+  uint8_t RailChase2DriveRead() const;
   void IOWrite(unsigned offset, uint8_t data);
   void EEPROMWrite(uint8_t data);
   uint8_t In0Read();
@@ -343,6 +344,7 @@ private:
   uint16_t  m_gun[4] = { 0x0e9, 0x180, 0x0e9, 0x17b };   // light guns (MAME's P1_Y, P1_X, P2_Y, P2_X)
   uint8_t   m_gunOffscreen = 0;                          // bit 0: P1, bit 1: P2
   uint8_t   m_lightgunMux = 0;                           // MAME's m_lightgun_mux (serial channel 2)
+  bool      m_rchase2Drive = false;                      // Rail Chase 2's drive board on port D/E (MAME's simulation)
 
   // Drive board (Sega Ski Super G's ski board, Manx TT DX's motion slider),
   // simulated: port E commands, port D replies (see DriveBoardRead)
