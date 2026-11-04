@@ -1575,6 +1575,7 @@ Util::Config::Node DefaultConfig()
   // CModel3
   config.Set("PowerPCFrequency", 0u, "Core", 0u, 200u);
   config["PowerPCFrequency"].GetValue()->GetValueRange()->SetSliderFormat("%u MHz", "Auto"); // 0 = chosen by default game stepping
+  config["PowerPCFrequency"].GetValue()->GetValueRange()->SetNote("Model 3 only");
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
   config.Set("IdleSkip", true, "Core");
@@ -1608,6 +1609,7 @@ Util::Config::Node DefaultConfig()
 
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
+  config["New3DEngine"].GetValue()->GetValueRange()->SetNote("Model 3 only");
   config.Set("QuadRendering", true, "Video");
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");

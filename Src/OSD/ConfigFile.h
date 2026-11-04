@@ -123,6 +123,7 @@ static const char s_defaultConfigFileSettings[] =
    "[ Global ]\n"
    "\n"
    "; Graphics\n"
+   "; Model 3 only: the new 3D engine (false: the legacy one)\n"
    "New3DEngine = true\n"
    "QuadRendering = true\n"
    "WideScreen = false\n"
