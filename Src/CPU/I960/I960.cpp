@@ -614,6 +614,33 @@ void CI960::check_immediate_irqs()
 {
 	int cpu_pri = (m_PC >> 16) & 0x1f;
 
+	// Supermodel: a held line (see execute_set_input) is latched once nothing
+	// else is and the CPU's priority allows it
+	if (!m_immediate_irq)
+	{
+		for (int line = 3; line >= 0; line--)
+		{
+			if (m_irq_line_state[line] != IRQ_HELD)
+				continue;
+			int vector = (m_ICR >> (8 * line)) & 0xff;
+			int priority = vector / 8;
+			if (vector && (!m_immediate_irq || priority > m_immediate_pri) && ((cpu_pri < priority) || (priority == 31)))
+			{
+				m_immediate_irq = 1;
+				m_immediate_vector = vector;
+				m_immediate_pri = priority;
+			}
+		}
+		if (m_immediate_irq)
+		{
+			for (int line = 0; line < 4; line++)
+			{
+				if (m_irq_line_state[line] == IRQ_HELD && ((m_ICR >> (8 * line)) & 0xff) == (uint32_t) m_immediate_vector)
+					m_irq_line_state[line] = ASSERT_LINE;
+			}
+		}
+	}
+
 	if ((m_immediate_irq) && ((cpu_pri < m_immediate_pri) || (m_immediate_pri == 31)))
 	{
 		take_interrupt(m_immediate_vector, m_immediate_pri);
@@ -2418,23 +2445,21 @@ void CI960::execute_run()
 		// Daytona USA masks its sound interrupt around its sound queue updates
 		// and relies on this: taken late, the interrupt lands inside the next
 		// update, the queue count goes wrong and the music is lost.
-		if (m_immediate_irq && !m_stall_state.burst_mode)
+		if ((m_immediate_irq || IRQHeld()) && !m_stall_state.burst_mode)
 			check_immediate_irqs();
 	}
 }
 
 void CI960::execute_set_input(int irqline, int state)
 {
-	if (m_irq_line_state[irqline] == state)
+	if ((m_irq_line_state[irqline] != CLEAR_LINE) == (state != CLEAR_LINE))
 		return;
 
 	m_irq_line_state[irqline] = state;
 
-	int int_tab =  m_program.read_dword(m_PRCB+20);    // interrupt table
 	int cpu_pri = (m_PC>>16)&0x1f;
 	int vector =0;
 	int priority;
-	uint32_t pend, word, wordofs;
 
 	// We support the 4 external IRQ lines in "normal" mode only.
 	// The i960's interrupt support is a bit more complete than that,
@@ -2478,17 +2503,15 @@ void CI960::execute_set_input(int irqline, int state)
 		}
 		else
 		{
-			// store the interrupt in the "pending" table
-			pend = m_program.read_dword(int_tab);
-			pend |= (1u << priority);
-			m_program.write_dword(int_tab, pend);
-
-			// now bitfield-ize the vector
-			word = ((vector / 32) * 4) + 4;
-			wordofs = vector % 32;
-			pend = m_program.read_dword(int_tab + word);
-			pend |= (1u << wordofs);
-			m_program.write_dword(int_tab + word, pend);
+			// Supermodel: MAME stores the interrupt in the interrupt table's
+			// pending bits here. Model 2's lines stay asserted until the game
+			// acknowledges them, and Sky Target's table is in ROM, where the
+			// pending bits are lost: a vblank raised while a timer interrupt
+			// was waiting was never taken, its line never dropped and there
+			// were no more vblank interrupts (no sound: the sound queue is
+			// sent from the vblank handler). The line is held instead, and
+			// taken when the CPU's priority allows (check_immediate_irqs).
+			m_irq_line_state[irqline] = IRQ_HELD;
 		}
 
 		// (MAME acks the line here, standard_irq_callback(); no one listens on Model 2)

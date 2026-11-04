@@ -179,7 +179,12 @@ private:
   int m_immediate_vector;
   int m_immediate_pri;
 
-  int8_t m_irq_line_state[4];
+  int8_t m_irq_line_state[4];   // CLEAR_LINE, ASSERT_LINE or IRQ_HELD (asserted, not taken yet)
+  static constexpr int8_t IRQ_HELD = 2;
+  bool IRQHeld() const
+  {
+    return m_irq_line_state[0] == IRQ_HELD || m_irq_line_state[1] == IRQ_HELD || m_irq_line_state[2] == IRQ_HELD || m_irq_line_state[3] == IRQ_HELD;
+  }
 
   Cache m_cache;
   Program m_program;
