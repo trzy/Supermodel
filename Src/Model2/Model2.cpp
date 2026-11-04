@@ -2097,6 +2097,7 @@ void CModel2::InitExtras(const Game &game, const ROMSet &rom_set)
     m_program[0x1585d] = 0xfd;   // inverted node ID
   }
   m_video3d.SetGeoMesh(is("lastbrnx"));
+  m_video3d.SetGeoTopSkater(is("topskatr"));
 }
 
 bool CModel2::ExtraRead(uint32_t addr, uint32_t mask, uint32_t *data)

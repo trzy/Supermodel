@@ -116,6 +116,10 @@ namespace Model2
     // Last Bronx (MAME's m_geo_mesh): the simulated geometrizer's opcodes 1-3
     // are mesh commands
     void SetGeoMesh(bool on) { m_geoMeshGame = on; m_geo_mesh = on; }
+
+    // Top Skater: a second matrix (commands 1B, 1C) and compact object
+    // records (command 11)
+    void SetGeoTopSkater(bool on) { m_geoTopSkater = on; }
     bool GPUQuads() const { return m_gpuQuads; }
 
     // Wide screen: viewports at the screen's left and right edges reach this
@@ -184,6 +188,7 @@ namespace Model2
     const uint8_t  *m_gamma_table = nullptr;
     uint32_t m_geo_read_start_address = 0;
     bool     m_geo_mesh = false;
+    bool     m_geoTopSkater = false;
     bool     m_render_done = false;
     int16_t  m_crtc_xoffset = 0, m_crtc_yoffset = 0;
     int16_t  m_xoffs = 90, m_yoffs = -8;      // the renderer's copies
@@ -231,8 +236,9 @@ namespace Model2
     WPtr geo_code_jump(geo_state &geo, uint32_t opcode, WPtr input);
     void geo_parse_np_ns(geo_state &geo, WPtr input, uint32_t count);
     void geo_parse_np_s(geo_state &geo, WPtr input, uint32_t count);
-    void geo_parse_nn_ns(geo_state &geo, WPtr input, uint32_t count);
-    void geo_parse_nn_s(geo_state &geo, WPtr input, uint32_t count);
+    void geo_parse_nn_ns(geo_state &geo, WPtr input, uint32_t count, bool compact);
+    void geo_parse_nn_s(geo_state &geo, WPtr input, uint32_t count, bool compact);
+    WPtr geo_matrix2_copy(geo_state &geo, uint32_t opcode, WPtr input);
     void model2_3d_push(raster_state *raster, uint32_t input);
     template <unsigned NumVerts> void model2_3d_process_polygon(raster_state *raster, uint32_t attr);
     void model2_3d_project(polygon *poly);

@@ -201,6 +201,7 @@ struct CVideo::geo_state
 	geo_state() : focus(0, 0), light(0, 0)
 	{
 		std::fill(std::begin(matrix), std::end(matrix), 0.0f);
+		std::fill(std::begin(matrix2), std::end(matrix2), 0.0f);
 		std::fill(std::begin(focus.p), std::end(focus.p), 0.0f);
 		std::fill(std::begin(light.p), std::end(light.p), 0.0f);
 		std::fill(std::begin(coef_table), std::end(coef_table), 0.0f);
@@ -221,6 +222,7 @@ struct CVideo::geo_state
 	u32                 mesh_mode = 0;
 	u32                 mesh_uv[0x8000]{};
 	float               matrix[12];                 // Current Transformation Matrix
+	float               matrix2[12];                // Supermodel: Top Skater's second matrix (command 1B)
 	poly_vertex         focus;                      // Focus (x,y)
 	poly_vertex         light;                      // Light Vector
 	float               lod = 0;                    // LOD
@@ -245,6 +247,14 @@ static inline void transform_point(poly_vertex *point, float *matrix)
 	point->x = tx;
 	point->y = ty;
 	point->pz = tz;
+}
+
+// Supermodel: Top Skater's compact records (command 11): a vertex whose raw x
+// has bit 0 set follows the second matrix (its geometrizer program picks the
+// matrix with that bit; as sm2-emu, dmanlfc)
+static inline float *vertex_matrix(float *matrix, float *matrix2, u32 raw_x, bool compact)
+{
+	return (compact && (raw_x & 1)) ? matrix2 : matrix;
 }
 
 static inline void transform_vector(poly_vertex *vector, float *matrix)
@@ -1225,7 +1235,7 @@ void CVideo::geo_parse_np_s(geo_state &geo, WPtr input, u32 count)
 }
 
 /* Parse Polygons: No Normals, No Specular case */
-void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
+void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count, bool compact)
 {
 	raster_state *raster = geo.raster;
 	poly_vertex point, normal, p0, p1, p2, p3;
@@ -1237,7 +1247,7 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 	point.pz = u2f(*input++);
 
 	/* transform with the current matrix */
-	transform_point(&point, geo.matrix);
+	transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 	/* save for normal calculation */
 	p0.x = point.x; p0.y = point.y; p0.pz = point.pz;
@@ -1256,7 +1266,7 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 	point.pz = u2f(*input++);
 
 	/* transform with the current matrix */
-	transform_point(&point, geo.matrix);
+	transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 	/* save for normal calculation */
 	p1.x = point.x; p1.y = point.y; p1.pz = point.pz;
@@ -1285,8 +1295,9 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 			int32_t             luma;
 			texture_parameter * texparam;
 
-			/* Skip normal */
-			input += 3;
+			/* Skip normal (Top Skater's compact records have none) */
+			if (!compact)
+				input += 3;
 
 			/* read in the next point */
 			point.x = u2f(*input++);
@@ -1294,7 +1305,7 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 			point.pz = u2f(*input++);
 
 			/* transform with the current matrix */
-			transform_point(&point, geo.matrix);
+			transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 			/* save for normal calculation */
 			p2.x = point.x; p2.y = point.y; p2.pz = point.pz;
@@ -1355,7 +1366,7 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 				point.pz = u2f(*input++);
 
 				/* transform with the current matrix */
-				transform_point(&point, geo.matrix);
+				transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 				/* save for normal calculation */
 				p3.x = point.x; p3.y = point.y; p3.pz = point.pz;
@@ -1370,8 +1381,9 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 			}
 			else
 			{
-				/* skip the next 3 points */
-				input += 3;
+				/* skip the next 3 points (none in compact records) */
+				if (!compact)
+					input += 3;
 
 				/* for triangles, the rope of P1(n) is achieved by P0(n-1) (linktype 3) */
 				p3.x = p2.x; p3.y = p2.y; p3.pz = p2.pz;
@@ -1415,7 +1427,7 @@ void CVideo::geo_parse_nn_ns(geo_state &geo, WPtr input, u32 count)
 }
 
 /* Parse Polygons: No Normals, Specular case */
-void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
+void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count, bool compact)
 {
 	raster_state *raster = geo.raster;
 	poly_vertex point, normal, p0, p1, p2, p3;
@@ -1427,7 +1439,7 @@ void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
 	point.pz = u2f(*input++);
 
 	/* transform with the current matrix */
-	transform_point(&point, geo.matrix);
+	transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 	/* save for normal calculation */
 	p0.x = point.x; p0.y = point.y; p0.pz = point.pz;
@@ -1446,7 +1458,7 @@ void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
 	point.pz = u2f(*input++);
 
 	/* transform with the current matrix */
-	transform_point(&point, geo.matrix);
+	transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 	/* save for normal calculation */
 	p1.x = point.x; p1.y = point.y; p1.pz = point.pz;
@@ -1475,8 +1487,9 @@ void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
 			int32_t             luma;
 			texture_parameter * texparam;
 
-			/* Skip normal */
-			input += 3;
+			/* Skip normal (Top Skater's compact records have none) */
+			if (!compact)
+				input += 3;
 
 			/* read in the next point */
 			point.x = u2f(*input++);
@@ -1484,7 +1497,7 @@ void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
 			point.pz = u2f(*input++);
 
 			/* transform with the current matrix */
-			transform_point(&point, geo.matrix);
+			transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 			/* save for normal calculation */
 			p2.x = point.x; p2.y = point.y; p2.pz = point.pz;
@@ -1554,7 +1567,7 @@ void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
 				point.pz = u2f(*input++);
 
 				/* transform with the current matrix */
-				transform_point(&point, geo.matrix);
+				transform_point(&point, vertex_matrix(geo.matrix, geo.matrix2, input[0u - 3u], compact));
 
 				/* save for normal calculation */
 				p3.x = point.x; p3.y = point.y; p3.pz = point.pz;
@@ -1569,8 +1582,9 @@ void CVideo::geo_parse_nn_s(geo_state &geo, WPtr input, u32 count)
 			}
 			else
 			{
-				/* skip the next 3 points */
-				input += 3;
+				/* skip the next 3 points (none in compact records) */
+				if (!compact)
+					input += 3;
 
 				/* for triangles, the rope of P1(n) is achieved by P0(n-1) (linktype 3) */
 				p3.x = p2.x; p3.y = p2.y; p3.pz = p2.pz;
@@ -1668,6 +1682,10 @@ CVideo::WPtr CVideo::geo_object_data(geo_state &geo, u32 opcode, WPtr input)
 	if (obc == 0)
 		obc = 0xfffff;
 
+	// Supermodel: Top Skater's command 11 objects have compact link records
+	// (no reserved normal and quad gap words)
+	const bool compact = m_geoTopSkater && ((opcode >> 23) & 0x1f) == 0x11;
+
 	switch (geo.mode & 3)
 	{
 		/* Normals present, No Specular */
@@ -1677,10 +1695,10 @@ CVideo::WPtr CVideo::geo_object_data(geo_state &geo, u32 opcode, WPtr input)
 		case 1: geo_parse_np_s(geo, obp, obc); break;
 
 		/* No Normals present, No Specular */
-		case 2: geo_parse_nn_ns(geo, obp, obc); break;
+		case 2: geo_parse_nn_ns(geo, obp, obc, compact); break;
 
 		/* No Normals present, Specular */
-		case 3: geo_parse_nn_s(geo, obp, obc); break;
+		case 3: geo_parse_nn_s(geo, obp, obc, compact); break;
 	}
 
 	/* move by 4 parameters */
@@ -1916,9 +1934,20 @@ CVideo::WPtr CVideo::geo_light_source(geo_state &geo, u32 opcode, WPtr input)
 CVideo::WPtr CVideo::geo_matrix_write(geo_state &geo, u32 opcode, WPtr input)
 {
 	/* read in the transformation matrix */
+	// Supermodel: Top Skater's 1B is its second matrix
+	float *matrix = (m_geoTopSkater && ((opcode >> 23) & 0x1f) == 0x1b) ? geo.matrix2 : geo.matrix;
 	for (u32 i = 0; i < 12; i++)
-		geo.matrix[i] = u2f(*input++);
+		matrix[i] = u2f(*input++);
 
+	return input;
+}
+
+// Supermodel: Top Skater's 1C copies the matrix and translation into the
+// second ones (its program's handler reads no data)
+CVideo::WPtr CVideo::geo_matrix2_copy(geo_state &geo, u32 opcode, WPtr input)
+{
+	(void) opcode;
+	std::copy(std::begin(geo.matrix), std::end(geo.matrix), std::begin(geo.matrix2));
 	return input;
 }
 
@@ -2328,7 +2357,7 @@ CVideo::WPtr CVideo::geo_process_command(geo_state &geo, u32 opcode, WPtr input,
 			input = m_geo_mesh ? geo_mesh_draw(geo, opcode, input) : geo_matrix_write(geo, opcode, input);
 			break;
 		case 0x1c:
-			input = m_geo_mesh ? geo_mesh_flush(geo, opcode, input) : geo_translate_write(geo, opcode, input);
+			input = m_geo_mesh ? geo_mesh_flush(geo, opcode, input) : m_geoTopSkater ? geo_matrix2_copy(geo, opcode, input) : geo_translate_write(geo, opcode, input);
 			break;
 		case 0x1d: input = geo_code_upload(geo, opcode, input);           break;
 		case 0x1e: input = geo_code_jump(geo, opcode, input);             break;
@@ -3132,6 +3161,11 @@ void CVideo::SaveState(CBlockFile *SaveState)
     SaveState->Write(m_gpuVertices.data(), n * (uint32_t) sizeof(GPUVertex));
   SaveState->Write(m_destmap.data(), (uint32_t) (m_destmap.size() * sizeof(m_destmap[0])));
   SaveState->Write(m_fillmap.data(), (uint32_t) m_fillmap.size());
+  if (m_geoTopSkater)
+  {
+    SaveState->NewBlock("Model 2 Video Top Skater", __FILE__);
+    SaveState->Write(m_geo->matrix2);
+  }
 }
 
 void CVideo::LoadState(CBlockFile *SaveState)
@@ -3218,6 +3252,8 @@ void CVideo::LoadState(CBlockFile *SaveState)
   }
   m_render_done = renderDone;
   ComputeClipPlanes();   // for this session's wide screen setting (the same planes without it)
+  if (m_geoTopSkater && Result::OKAY == SaveState->FindBlock("Model 2 Video Top Skater"))
+    SaveState->Read(m_geo->matrix2);
 }
 
 CVideo::CVideo()
