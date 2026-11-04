@@ -3197,6 +3197,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -3258,6 +3260,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -3319,6 +3323,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -3379,6 +3385,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4113,6 +4121,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4168,6 +4178,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4227,6 +4239,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4286,6 +4300,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4345,6 +4361,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4400,6 +4418,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x042C0D13</encryption_key>
@@ -4444,6 +4464,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x042C0D13</encryption_key>
@@ -4492,6 +4514,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x042C0D13</encryption_key>
@@ -4540,6 +4564,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x042C0D13</encryption_key>
@@ -4737,6 +4763,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -4800,6 +4828,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x2C2A4A93</encryption_key>
@@ -4864,6 +4894,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x2C2A4A93</encryption_key>
@@ -4928,6 +4960,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x2C2A4A93</encryption_key>
@@ -4988,6 +5022,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x2C2A4A93</encryption_key>
@@ -5048,6 +5084,8 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x2C2A4A93</encryption_key>
@@ -5108,6 +5146,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x042E2DC1</encryption_key>
@@ -5160,6 +5200,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
       <encryption_key>0x042E2DC1</encryption_key>
@@ -5215,6 +5257,8 @@
       <stepping>2A</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -5482,6 +5526,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -5571,6 +5617,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -5660,6 +5708,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6273,6 +6323,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6358,6 +6410,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6443,6 +6497,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6486,6 +6542,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6529,6 +6587,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6743,6 +6803,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -6793,6 +6855,8 @@
       <stepping>2B</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -7862,6 +7926,8 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
+        <input type="joystick2" />
         <input type="fighting" />
       </inputs>
     </hardware>
@@ -7914,6 +7980,7 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
         <input type="analog_joystick" />
         <input type="fighting" />
       </inputs>
@@ -7988,6 +8055,7 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
         <input type="analog_joystick" />
         <input type="fighting" />
       </inputs>
@@ -8045,6 +8113,7 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
         <input type="analog_joystick" />
         <input type="fighting" />
       </inputs>
@@ -8102,6 +8171,7 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
         <input type="analog_joystick" />
         <input type="fighting" />
       </inputs>
@@ -8159,6 +8229,7 @@
       <stepping>2C</stepping>
       <inputs>
         <input type="common" />
+        <input type="joystick1" />
         <input type="analog_joystick" />
         <input type="fighting" />
       </inputs>
