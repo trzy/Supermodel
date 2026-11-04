@@ -1949,18 +1949,20 @@ void CModel2::UpdateInputs(void)
 
   case Layout::Gun:
   {
-    // Light guns (The House of the Dead, Virtua Cop 2): triggers in IN1 bits
-    // 0-1, the second start button in IN0 bit 5; Supermodel's gun range
-    // ([150,651] x [80,465]) scaled to MAME's port ranges. Shooting off
-    // screen (the inputs' off-screen trigger) reloads.
+    // Light guns (The House of the Dead, Virtua Cop, Virtua Cop 2): triggers
+    // in IN1 bits 0-1, the second start button in IN0 bit 5; Supermodel's gun
+    // range ([150,651] x [80,465]) scaled to MAME's port ranges. Shooting off
+    // screen (the inputs' off-screen trigger) reloads. Virtua Cop's I/O board
+    // passes them on in its DPRAM (UpdateIOBoard).
     const bool vcop2 = is("vcop2");
+    const bool vcop = is("vcop");
     for (int g = 0; g < 2; g++)
     {
       if (!(inputs & (g == 0 ? Game::INPUT_GUN1 : Game::INPUT_GUN2)) || !m_inputs->gunX[g] || !m_inputs->gunY[g] || !m_inputs->trigger[g])
         continue;
-      const int xMin = vcop2 ? (g == 0 ? 137 : 134) : (g == 0 ? 173 : 163);
-      const int xMax = vcop2 ? (g == 0 ? 630 : 627) : 596;
-      const int yMin = vcop2 ? 36 : 87, yMax = vcop2 ? 425 : 380;
+      const int xMin = vcop2 ? (g == 0 ? 137 : 134) : vcop ? (g == 0 ? 131 : 128) : (g == 0 ? 173 : 163);
+      const int xMax = vcop2 ? (g == 0 ? 630 : 627) : vcop ? (g == 0 ? 630 : 627) : 596;
+      const int yMin = vcop2 ? 36 : vcop ? (g == 0 ? 36 : 39) : 87, yMax = vcop2 || vcop ? 425 : 380;
       int x = std::clamp(int(m_inputs->gunX[g]->value), 150, 651);
       int y = std::clamp(int(m_inputs->gunY[g]->value), 80, 465);
       m_gun[g * 2 + 1] = (uint16_t) (xMin + (x - 150) * (xMax - xMin) / (651 - 150));
@@ -2284,6 +2286,18 @@ void CModel2::UpdateIOBoard(const uint8_t (&an)[8], uint8_t in0, uint8_t in1, ui
   // a fourth input port (Desert Tank reads it at boot; 0 there keeps it in
   // test mode): nothing pressed
   m_dpram[0x0E] = m_dpram[0x0F] = 0xFF;
+  // Light guns (Virtua Cop's model1io2 board; MAME's fpga_r 0-8, which its
+  // BIOS copies to 80-88): P1 Y, P1 X, P2 Y, P2 X (16 bits, little endian),
+  // then the off-screen bits (0: P1, 1: P2)
+  if (m_game.inputs & (Game::INPUT_GUN1 | Game::INPUT_GUN2))
+  {
+    for (int i = 0; i < 4; i++)
+    {
+      m_dpram[0x80 + i * 2] = uint8_t(m_gun[i]);
+      m_dpram[0x81 + i * 2] = uint8_t(m_gun[i] >> 8);
+    }
+    m_dpram[0x88] = 0xfc | m_gunOffscreen;
+  }
 
   if (m_ioBoardBootFrames > 0)
   {
