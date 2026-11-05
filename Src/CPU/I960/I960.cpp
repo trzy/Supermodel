@@ -85,7 +85,10 @@ uint32_t CI960::Cache::read_dword(uint32_t a)
       return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
     }
   }
-  return cpu->m_program.read_dword(a);
+  cpu->m_fetching = true;
+  uint32_t v = cpu->m_program.read_dword(a);
+  cpu->m_fetching = false;
+  return v;
 }
 
 

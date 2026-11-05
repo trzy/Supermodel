@@ -84,6 +84,10 @@ public:
   // this slice is given up
   void Stall();
 
+  // Called by the bus during a data read or write: the access takes this many
+  // more cycles (the board's wait states). Opcode fetches aren't charged.
+  void AddWaitCycles(int cycles) { if (m_inRun && !m_fetching) m_icount -= cycles; }
+
   // The four external interrupt lines (MAME's execute_set_input, "normal"
   // interrupt mode: the vectors come from the interrupt control register)
   void SetIRQLine(int line, bool asserted);
@@ -239,6 +243,7 @@ private:
   int m_numFetch;
   bool m_fatal;
   bool m_inRun = false;
+  bool m_fetching = false;          // an opcode fetch through the bus (no wait states charged)
   int  m_cyclesRequested = 0;
   std::function<void(UINT32)> m_trace;
 };

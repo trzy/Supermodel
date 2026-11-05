@@ -1525,37 +1525,78 @@ void CModel2::WriteDword(uint32_t addr, uint32_t data, uint32_t mask)
     DebugLog("Model 2: unmapped write %08X = %08X & %08X (PC %08X)\n", addr, data, mask, m_i960.GetPIP());
 }
 
+// The board's wait states: the program writes Sega's area wait table (one word
+// per memory area at 0xE00000: 01/02/04/08/10 = 0-4 waits, 20 = the device
+// signals ready itself, bit 6 = DRAM) and each i960 data access to an area is
+// stretched by its waits. Opcode fetches aren't charged (the i960KB's
+// instruction cache), nor DRAM (page mode hits). The areas as sm2-emu's
+// model2_area_timing.h, from Sega's table.
+int CModel2::AreaWaits(uint32_t addr) const
+{
+  unsigned offset;
+  if (addr < 0x00200000)                                offset = 0x00;   // program ROM
+  else if (addr >= 0x00500000 && addr < 0x00600000)     offset = 0x08;   // work RAM
+  else if (addr >= 0x00900000 && addr < 0x00980000)     offset = 0x04;   // buffer RAM
+  else if (addr >= 0x01800000 && addr < 0x0181c000)     offset = 0x1c;   // palette, colour tables
+  else if (addr >= 0x01a00000 && addr < 0x01a20000)     offset = 0x20;   // comm board
+  else if (addr >= 0x01c00000 && addr < 0x01c80000)     offset = 0x24;   // I/O
+  else if (addr >= 0x01c80000 && addr < 0x01d00000)     offset = 0x28;   // sound
+  else if (addr >= 0x01d00000 && addr < 0x01d80000)     offset = 0x2c;   // backup RAM
+  else if (addr >= 0x01d80000 && addr < 0x01e00000)     offset = 0x30;   // security
+  else if ((addr >= 0x02000000 && addr < 0x04000000) || (addr >= 0x06000000 && addr < 0x07000000))
+    offset = 0x34;                                                        // data ROM
+  else
+    return 0;
+  uint8_t setting = m_waitStateRAM[offset];               // little endian: the word's low byte
+  if (setting & 0x40)
+    return 0;                                             // DRAM
+  switch (setting & 0x3f)
+  {
+  case 0x02: return 1;
+  case 0x04: return 2;
+  case 0x08: return 3;
+  case 0x10: return 4;
+  default:   return 0;
+  }
+}
+
 UINT8 CModel2::Read8(UINT32 addr)
 {
+  ChargeWaits(addr);
   unsigned shift = (addr & 3) * 8;
   return uint8_t(ReadDword(addr & ~3u, 0xffu << shift) >> shift);
 }
 
 UINT16 CModel2::Read16(UINT32 addr)
 {
+  ChargeWaits(addr);
   unsigned shift = (addr & 2) * 8;
   return uint16_t(ReadDword(addr & ~3u, 0xffffu << shift) >> shift);
 }
 
 UINT32 CModel2::Read32(UINT32 addr)
 {
+  ChargeWaits(addr);
   return ReadDword(addr & ~3u, 0xffffffff);
 }
 
 void CModel2::Write8(UINT32 addr, UINT8 data)
 {
+  ChargeWaits(addr);
   unsigned shift = (addr & 3) * 8;
   WriteDword(addr & ~3u, uint32_t(data) << shift, 0xffu << shift);
 }
 
 void CModel2::Write16(UINT32 addr, UINT16 data)
 {
+  ChargeWaits(addr);
   unsigned shift = (addr & 2) * 8;
   WriteDword(addr & ~3u, uint32_t(data) << shift, 0xffffu << shift);
 }
 
 void CModel2::Write32(UINT32 addr, UINT32 data)
 {
+  ChargeWaits(addr);
   WriteDword(addr & ~3u, data, 0xffffffff);
 }
 

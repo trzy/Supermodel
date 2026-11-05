@@ -158,6 +158,11 @@ private:
 
   uint32_t ReadDword(uint32_t addr, uint32_t mask);
   void WriteDword(uint32_t addr, uint32_t data, uint32_t mask);
+  int  AreaWaits(uint32_t addr) const;
+  void ChargeWaits(uint32_t addr) { m_i960.AddWaitCycles(AreaWaits(addr) * CYCLES_PER_WAIT); }
+  // i960 cycles per programmed wait state, as sm2-emu (fitted to hardware
+  // captures). Sega Rally's rival cars start in the wrong places below 3.
+  static constexpr int CYCLES_PER_WAIT = 3;
 
   // Coprocessor
   uint32_t FIFOPop(CFIFO &fifo, CPUID reader, CPUID writer);
