@@ -340,6 +340,12 @@ static Result CreateGLScreen(bool coreContext, const std::string &caption, bool 
 
   // Initialize GLEW, allowing us to use features beyond OpenGL 1.2
   err = glewInit();
+#ifdef GLEW_ERROR_NO_GLX_DISPLAY
+  // Wayland: SDL's context is EGL, so there's no GLX display. GLEW has loaded
+  // the GL functions by then and fails only on its GLX extensions, unused here.
+  if (GLEW_ERROR_NO_GLX_DISPLAY == err)
+    err = GLEW_OK;
+#endif
   if (GLEW_OK != err)
   {
     ErrorLog("OpenGL initialization failed: %s\n", glewGetErrorString(err));
