@@ -98,6 +98,9 @@
 #include "Pro1000/Pro1000.h"
 #include "Network/NetServer.h"
 #include "Graphics/Pro1000Render2D.h"
+#include "Model1/Model1.h"
+#include "Model2/Model2.h"
+#include "Graphics/Model1Render.h"
 #include "Graphics/IRender2D.h"
 #include "OSD/Audio.h"
 #include "OSD/ConsoleInput.h"
@@ -934,6 +937,8 @@ static IRender2D *CreateRender2D(IEmulator *Emu)
 {
   if (dynamic_cast<CPro1000 *>(Emu))
     return new CPro1000Render2D();
+  if (dynamic_cast<CModel1 *>(Emu) || dynamic_cast<CModel2 *>(Emu))
+    return new CModel1Render();
   return new CRender2D(s_runtime_config);
 }
 
@@ -981,6 +986,10 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
   {
     SDL_SetWindowBordered(s_window, SDL_FALSE);
   }
+
+  // The window can be resized and maximized; the renderers follow its size
+  // (see the main loop)
+  SDL_SetWindowResizable(s_window, SDL_TRUE);
 
   SetFullScreenRefreshRate();
 
@@ -1074,6 +1083,51 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
     else
       Emu->RunFrame();
 
+    // Window resized or maximized: when its new size has stayed the same for
+    // a few frames (not every step of a drag), the renderers are created
+    // again for it, as when toggling full screen
+    if (!s_runtime_config["FullScreen"].ValueAs<bool>())
+    {
+      static int s_resizeW = 0, s_resizeH = 0, s_resizeFrames = 0;
+      int w = 0, h = 0;
+      SDL_GetWindowSize(s_window, &w, &h);
+      if (w <= 0 || h <= 0 || (unsigned(w) == totalXRes && unsigned(h) == totalYRes))
+        s_resizeFrames = 0;
+      else if (w != s_resizeW || h != s_resizeH)
+      {
+        s_resizeW = w;
+        s_resizeH = h;
+        s_resizeFrames = 0;
+      }
+      else if (++s_resizeFrames >= 3)
+      {
+        s_resizeFrames = 0;
+        if (!paused)
+          Emu->PauseThreads();
+
+        delete Render2D;
+        Render2D = nullptr;
+
+        totalXRes = xRes = unsigned(w);
+        totalYRes = yRes = unsigned(h);
+        if (Result::OKAY != SetGLGeometry(&xOffset, &yOffset, &xRes, &yRes, &totalXRes, &totalYRes, !s_runtime_config["Stretch"].ValueAs<bool>()))
+          goto QuitError;
+
+        superAA->Init(totalXRes, totalYRes);
+        Render2D = CreateRender2D(Emu);
+        if (Result::OKAY != Render2D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID(), upscaleMode))
+          goto QuitError;
+        if (Result::OKAY != Render3D->Init(xOffset * aaValue, yOffset * aaValue, xRes * aaValue, yRes * aaValue, totalXRes * aaValue, totalYRes * aaValue, superAA->GetTargetID()))
+          goto QuitError;
+        Emu->AttachRenderers(Render2D, Render3D, superAA);
+
+        if (!paused)
+          Emu->ResumeThreads();
+        else
+          Emu->RenderFrame();   // paused: show the frame at the new size
+      }
+    }
+
 #ifdef SUPERMODEL_DEBUGGER
     bool processUI = true;
     if (Debugger != NULL)
@@ -1125,7 +1179,7 @@ int Supermodel(const Game &game, ROMSet *rom_set, IEmulator *Emu, CInputs *Input
         SetAudioEnabled(true);
       }
 
-      puts("Model 3 reset.");
+      puts("Emulator reset.");
     }
     else if (Inputs->uiPause->Pressed())
     {
@@ -1521,9 +1575,15 @@ Util::Config::Node DefaultConfig()
   // CModel3
   config.Set("PowerPCFrequency", 0u, "Core", 0u, 200u);
   config["PowerPCFrequency"].GetValue()->GetValueRange()->SetSliderFormat("%u MHz", "Auto"); // 0 = chosen by default game stepping
+  config["PowerPCFrequency"].GetValue()->GetValueRange()->SetNote("Model 3 only");
   config.Set("MultiThreaded", true,"Core");
   config.Set("GPUMultiThreaded", true, "Core");
   config.Set("IdleSkip", true, "Core");
+  // CModel1, CModel2: the video board's geometrizer simulated (high level,
+  // fast), else its DSP programs run (low level, more accurate). Model 2:
+  // only 2B has the low level one (2A/2C are always simulated)
+  config.Set("HighLevelGeometrizer", true, "Core");
+  config["HighLevelGeometrizer"].GetValue()->GetValueRange()->SetNote("Model 1/2 only");
   config.Set<std::string>("ROMDirectory", FileSystemPath::GetPath(FileSystemPath::ROMs), "Core", "", ""); // where the GUI looks for <romset>.zip
   // 2D and 3D graphics engines
 #ifndef SUPERMODEL_OSX
@@ -1549,6 +1609,7 @@ Util::Config::Node DefaultConfig()
 
   // Platform-specific/UI
   config.Set("New3DEngine", true, "Video");
+  config["New3DEngine"].GetValue()->GetValueRange()->SetNote("Model 3 only");
   config.Set("QuadRendering", true, "Video");
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");
@@ -1852,9 +1913,23 @@ Util::Config::Node DefaultConfig()
   return config;
 }
 
+// The build date as YYYY-MM-DD (ISO 8601: the same read in any country), from
+// the compiler's __DATE__ ("Mmm dd yyyy"). It is the date this file was last
+// compiled.
+static const char *BuildDate(void)
+{
+  static char date[11];
+  static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+  const char *p = strstr(months, std::string(__DATE__, 3).c_str());
+  int month = p ? int(p - months) / 3 + 1 : 0;
+  int day = atoi(__DATE__ + 4);
+  snprintf(date, sizeof(date), "%.4s-%02d-%02d", __DATE__ + 7, month, day);
+  return date;
+}
+
 static void Title(void)
 {
-  puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
+  printf("Supermodel: A Sega Model 3 Arcade Emulator (Built %s)\n", BuildDate());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
@@ -1878,6 +1953,10 @@ static void Help(void)
   puts("  -no-gpu-thread          Run graphics rendering in main thread");
   puts("  -idle-skip              Skip PowerPC idle loops [Default]");
   puts("  -no-idle-skip           Execute PowerPC idle loops in full");
+  puts("  -high-level-geometrizer  Model 1/2 only: simulate the geometrizer (fast)");
+  puts("                          [Default]");
+  puts("  -no-high-level-geometrizer  Model 1/2 only: run the geometrizer DSP programs");
+  puts("                          (more accurate, slower; Model 2: 2B games only)");
   puts("  -load-state=<file>      Load save state after starting");
   puts("");
   puts("Video Options:");
@@ -2024,6 +2103,8 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
     { "-no-gpu-thread",       { "GPUMultiThreaded", false } },
     { "-idle-skip",           { "IdleSkip",         true } },
     { "-no-idle-skip",        { "IdleSkip",         false } },
+    { "-high-level-geometrizer",    { "HighLevelGeometrizer", true } },
+    { "-no-high-level-geometrizer", { "HighLevelGeometrizer", false } },
     { "-window",              { "FullScreen",       false } },
     { "-fullscreen",          { "FullScreen",       true } },
     { "-borderless",          { "BorderlessWindow", true } },
@@ -2533,6 +2614,10 @@ int main(int argc, char **argv)
 #endif
   if (game.platform == Game::PLATFORM_PRO1000)
     Emu = new CPro1000(s_runtime_config, consoleInput ? consoleInput->CreateInput() : nullptr, netServer);
+  else if (game.platform == Game::PLATFORM_MODEL1)
+    Emu = new CModel1(s_runtime_config, Inputs, Outputs);
+  else if (game.platform == Game::PLATFORM_MODEL2)
+    Emu = new CModel2(s_runtime_config, Inputs, Outputs, netServer);
   else
     Emu = new CModel3(s_runtime_config, Inputs, Outputs, netServer);
 

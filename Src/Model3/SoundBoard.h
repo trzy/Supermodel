@@ -31,6 +31,7 @@
 #include "Types.h"
 #include "CPU/Bus.h"
 #include "Model3/DSB.h"
+#include <functional>
 
 /*
  * CSoundBoard:
@@ -83,6 +84,14 @@ public:
 	 *		data	Byte to write to MIDI port.
 	 */
 	void WriteMIDIPort(UINT8 data);
+
+	/*
+	 * SetMIDIOutCallback(callback):
+	 *
+	 * Receives the SCSP's MIDI output (Model 2: the main board's UART). With
+	 * none, the output is discarded (Model 3).
+	 */
+	void SetMIDIOutCallback(std::function<void(UINT8)> callback);
 
 	/*
 	 * SaveState(SaveState):
@@ -206,6 +215,9 @@ private:
 	float* audioFL, * audioFR;	// left and right front audio channels (one frame, 44.1 KHz)
 	float* audioRL, * audioRR;	// left and right rear audio channels (one frame, 44.1 KHz)
 	double	m_sampleRemainder;	// fraction of a sample carried from one frame to the next
+
+	// The SCSP's MIDI output's receiver (none: discarded)
+	std::function<void(UINT8)> m_midiOutCallback;
 };
 
 

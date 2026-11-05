@@ -157,18 +157,13 @@ unsigned CBlockFile::Read(void *data, uint32_t numBytes)
   return 0;
 }
 
-unsigned CBlockFile::Read(bool *value)
+unsigned CBlockFile::Read(bool& value)
 {
   uint8_t byte;
   unsigned numBytes = Read(&byte, sizeof(byte));
-  if (numBytes >  0)
-    *value = byte != 0;
+  if (numBytes > 0)
+    value = byte != 0;
   return numBytes;
-}
-
-unsigned CBlockFile::Read(bool& value)
-{
-    return Read(&value);        // turn reference into pointer for above function
 }
 
 void CBlockFile::Write(const void *data, uint32_t numBytes)

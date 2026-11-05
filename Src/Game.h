@@ -17,7 +17,9 @@ struct Game
   enum Platform
   {
     PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
-    PLATFORM_PRO1000      // Real3D Pro-1000 image generator
+    PLATFORM_PRO1000,     // Real3D Pro-1000 image generator
+    PLATFORM_MODEL1,      // Sega Model 1 arcade hardware
+    PLATFORM_MODEL2       // Sega Model 2 arcade hardware
   };
   Platform platform = Platform::PLATFORM_MODEL3;
   // Hardware stepping. Games.xml: "1.0", "1.5", "2.0", or "2.1" (Model 3) and
@@ -33,7 +35,12 @@ struct Game
     MODEL3_2_1,     // Sega Model 3 Step 2.1
     PRO1000_1100,   // Real3D PRO-1100 (1 pixel processor)
     PRO1000_1200,   // Real3D PRO-1200 (2 pixel processors)
-    PRO1000_1400    // Real3D PRO-1400 (4 pixel processors)
+    PRO1000_1400,   // Real3D PRO-1400 (4 pixel processors)
+    MODEL1,         // Sega Model 1 (one stepping)
+    MODEL2,         // Sega Model 2 (original)
+    MODEL2A,        // Sega Model 2A-CRX
+    MODEL2B,        // Sega Model 2B-CRX
+    MODEL2C         // Sega Model 2C-CRX
   };
   Stepping stepping = Stepping::UNKNOWN;
 
@@ -50,6 +57,11 @@ struct Game
     case Stepping::PRO1000_1100:  return "Pro-1100";
     case Stepping::PRO1000_1200:  return "Pro-1200";
     case Stepping::PRO1000_1400:  return "Pro-1400";
+    case Stepping::MODEL1:        return "Model 1";
+    case Stepping::MODEL2:        return "Model 2";
+    case Stepping::MODEL2A:       return "Model 2A";
+    case Stepping::MODEL2B:       return "Model 2B";
+    case Stepping::MODEL2C:       return "Model 2C";
     default:                      return "Unknown";
     }
   }
@@ -107,7 +119,10 @@ struct Game
     INPUT_SKI             = 0x00080000, // ski controls
     INPUT_MAGTRUCK        = 0x00100000, // magical truck controls
     INPUT_FISHING         = 0x00200000, // fishing controls
-    INPUT_ALL             = 0x003FFFFF
+    INPUT_THROTTLE        = 0x00400000, // throttle lever (Model 1 flight games)
+    INPUT_ANALOG_JOYSTICK2= 0x00800000, // second analog joystick (Star Wars Arcade gunner)
+    INPUT_FLIGHT_VIEW4    = 0x01000000, // four view buttons (Wing War)
+    INPUT_ALL             = 0x01FFFFFF
   };
   uint32_t inputs = 0;
 
@@ -117,7 +132,8 @@ struct Game
     DRIVE_BOARD_WHEEL,
     DRIVE_BOARD_JOYSTICK,
     DRIVE_BOARD_SKI,
-    DRIVE_BOARD_BILLBOARD
+    DRIVE_BOARD_BILLBOARD,
+    DRIVE_BOARD_MOTION    // Model 2 motion slider (Manx TT DX)
   };
   DriveBoardType driveboard_type = DriveBoardType::DRIVE_BOARD_NONE;
 };

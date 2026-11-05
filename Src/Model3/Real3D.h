@@ -565,7 +565,7 @@ private:
   uint32_t  *cullingRAMHi = nullptr;    // 1MB of culling RAM at 8E000000
   uint32_t  *polyRAM = nullptr;         // polygon RAM at 98000000 (Model 3: 4MB, Pro-1000: 64MB)
   uint16_t  *textureRAM = nullptr;      // 8MB of internal texture RAM
-    uint32_t  *textureFIFO = nullptr;   // 1MB texture FIFO at 0x94000000
+  uint32_t  *textureFIFO = nullptr;     // 1MB texture FIFO at 0x94000000
   uint32_t  fifoIdx = 0;                // index into texture FIFO
   uint32_t  m_vromTextureFIFO[2] = { 0,  0 };
   uint32_t  m_vromTextureFIFOIdx = 0;
