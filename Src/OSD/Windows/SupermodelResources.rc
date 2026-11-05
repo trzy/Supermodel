@@ -1,2 +1,3 @@
 #include "winuser.h"
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "Src/OSD/Windows/SupermodelManifest.xml"
+1 ICON "Resources/supermodel.ico"

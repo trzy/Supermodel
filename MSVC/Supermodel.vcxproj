@@ -600,6 +600,12 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClInclude Include="..\Src\Util\GenericValue.h" />
     <ClInclude Include="..\Src\Util\NewConfig.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Supermodel.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Resources\supermodel.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />

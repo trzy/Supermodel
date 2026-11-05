@@ -1,0 +1,5 @@
+// Supermodel.rc: the program icon (Explorer, and the window and taskbar: SDL
+// uses the first icon resource). The MinGW build has its own script,
+// Src/OSD/Windows/SupermodelResources.rc, with the manifest as well.
+
+1 ICON "../Resources/supermodel.ico"
