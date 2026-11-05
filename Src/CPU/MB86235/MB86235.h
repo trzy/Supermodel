@@ -151,7 +151,7 @@ public:
 
   // Program RAM (MAME's AS_PROGRAM, 64-bit words). Model 2C writes it 32 bits
   // at a time (model2c_state::copro_fifo_w).
-  UINT64 *GetProgramRAM() { return m_program; }
+  uint64_t *GetProgramRAM() { return m_program; }
   void    WriteProgram(UINT32 addr, UINT64 data) { m_program[addr & (PROGRAM_WORDS - 1)] = data; }
   UINT64  ReadProgram(UINT32 addr) const         { return m_program[addr & (PROGRAM_WORDS - 1)]; }
 

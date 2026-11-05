@@ -312,7 +312,7 @@ void CModel2::CoproFIFOWrite(uint32_t data)
     else if (m_model2c)
     {
       // 64-bit words, the low half first
-      UINT64 &w = m_tgpx4.GetProgramRAM()[(m_coproCount / 2) & (CMB86235::PROGRAM_WORDS - 1)];
+      uint64_t &w = m_tgpx4.GetProgramRAM()[(m_coproCount / 2) & (CMB86235::PROGRAM_WORDS - 1)];
       if (m_coproCount & 1)
         w = (w & 0xffffffffULL) | (UINT64(data) << 32);
       else
@@ -3262,10 +3262,10 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
 
 CModel2::CModel2(Util::Config::Node &config, CInputs *inputs, COutputs *outputs, std::shared_ptr<CNetServer> server)
   : m_config(config),
-    m_server(std::move(server)),
     m_inputs(inputs),
     m_outputs(outputs),
     m_tiles(0x3FFF),
+    m_server(std::move(server)),
     m_gamma{}
 {
 }
