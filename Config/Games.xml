@@ -2364,6 +2364,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2435,6 +2436,9 @@
         <file offset="0x0000000" name="opr-14742a.45" crc32="0x90C6B117" />
         <file offset="0x0000002" name="opr-14743a.46" crc32="0xAE7F446B" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-16488a.ic12" crc32="0x546C5D1A" />
+      </region>
     </roms>
   </game>
   <game name="daytonase" parent="daytona">
@@ -2447,6 +2451,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2529,6 +2534,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2598,6 +2604,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2681,6 +2688,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2764,6 +2772,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2847,6 +2856,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -2931,6 +2941,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -3673,6 +3684,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2A</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -3721,6 +3733,9 @@
         <file offset="0x0000000" name="opr-14742a.45" crc32="0x90C6B117" />
         <file offset="0x0000002" name="opr-14743a.46" crc32="0xAE7F446B" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-17891.ic12" crc32="0x9A33B437" />
+      </region>
     </roms>
   </game>
   <game name="srallycb" parent="srallyc">
@@ -3733,6 +3748,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2A</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -3793,6 +3809,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2A</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -3853,6 +3870,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2A</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -3900,6 +3918,9 @@
         <file offset="0x0000000" name="opr-14742a.45" crc32="0x90C6B117" />
         <file offset="0x0000002" name="opr-14743a.46" crc32="0xAE7F446B" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-17182.ic12" crc32="0x08D3DB42" />
+      </region>
     </roms>
   </game>
   <game name="srallycdxa" parent="srallyc">
@@ -3911,6 +3932,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2A</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -3957,6 +3979,9 @@
       <region name="copro_tables" stride="4" chunk_size="2">
         <file offset="0x0000000" name="opr-14742a.45" crc32="0x90C6B117" />
         <file offset="0x0000002" name="opr-14743a.46" crc32="0xAE7F446B" />
+      </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-17182.ic12" crc32="0x08D3DB42" />
       </region>
     </roms>
   </game>
@@ -5847,6 +5872,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -5921,6 +5947,9 @@
         <file offset="0x0400000" name="mpr-18243.34" crc32="0xA00A0053" />
         <file offset="0x0600000" name="mpr-18244.35" crc32="0xBFA75BEB" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18261.ic9" crc32="0x0C7FAC58" />
+      </region>
     </roms>
   </game>
   <game name="indy500d" parent="indy500">
@@ -5933,6 +5962,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -6019,6 +6049,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -6629,6 +6660,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -6661,6 +6693,9 @@
       </region>
       <region name="samples" stride="1" chunk_size="1">
         <file offset="0x0000000" name="mpr-19154.32" crc32="0x7CD9E679" />
+      </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18261.ic9" crc32="0x0C7FAC58" />
       </region>
     </roms>
   </game>
@@ -6908,6 +6943,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -6942,6 +6978,9 @@
         <file offset="0x0000000" name="mpr-20003.32" crc32="0x149AC22B" />
         <file offset="0x0400000" name="mpr-20004.34" crc32="0x0B9C5410" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18261.ic9" crc32="0x0C7FAC58" />
+      </region>
     </roms>
   </game>
   <game name="overrevb" parent="overrev">
@@ -6954,6 +6993,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -7000,6 +7040,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -7097,6 +7138,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -7192,6 +7234,9 @@
         <file offset="0x0400000" name="mpr-19264.59s" crc32="0xB6C51D0F" />
         <file offset="0x0600000" name="mpr-19265.60s" crc32="0x7D98700A" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18261.ic9" crc32="0x0C7FAC58" />
+      </region>
     </roms>
   </game>
   <game name="stccb" parent="stcc">
@@ -7204,6 +7249,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -7311,6 +7357,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -7417,6 +7464,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
         <input type="vehicle" />

@@ -144,6 +144,7 @@ SRC_FILES = \
 	Src/CPU/MB86235/MB86235.cpp \
 	Src/CPU/MB86235/MB86235Disasm.cpp \
 	Src/Model2/Model2Comm.cpp \
+	Src/Model2/Model2DriveBoard.cpp \
 	Src/Model2/Model2Video.cpp \
 	Src/Model2/Sega315_5838.cpp \
 	Src/Pro1000/Pro1000.cpp \

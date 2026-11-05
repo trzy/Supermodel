@@ -311,6 +311,9 @@
     <ClCompile Include="..\Src\Model2\Model2Comm.cpp">
       <Filter>Source Files\Model2</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Model2\Model2DriveBoard.cpp">
+      <Filter>Source Files\Model2</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\Model2\Sega315_5838.cpp">
       <Filter>Source Files\Model2</Filter>
     </ClCompile>
@@ -803,6 +806,9 @@
       <Filter>Header Files\CPU</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model2\Model2Comm.h">
+      <Filter>Header Files\Model2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Src\Model2\Model2DriveBoard.h">
       <Filter>Header Files\Model2</Filter>
     </ClInclude>
     <ClInclude Include="..\Src\Model2\Sega315_5838.h">
