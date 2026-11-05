@@ -1338,9 +1338,25 @@ void CModel2::WriteDword(uint32_t addr, uint32_t data, uint32_t mask)
       return;                                         // bank control (all games write 0)
     break;
   case 0x00e80000:
-    m_intReq &= data;                                 // irq_ack_w
+  {
+    // irq_ack_w. The i960's lines are level sensitive: a line shared by
+    // several requests (the timers share line 2) stays asserted when only
+    // some of them are acknowledged, and the CPU takes it again once the
+    // handler returns. The core reacts to edges (as MAME's): the line is
+    // signalled again so it is held and taken. Over Rev acknowledges one of
+    // two pending timers; the other was never taken, its timer never
+    // restarted and the game's sound commands stopped.
+    static const uint32_t lineMask[4] = { 0x001, 0x002, 0x3fc, 0xc00 };
+    uint32_t before = m_intReq;
+    m_intReq &= data;
+    for (int line = 0; line < 4; line++)
+    {
+      if ((before & ~m_intReq & lineMask[line]) && (m_intReq & lineMask[line]))
+        m_i960.SetIRQLine(line, false);
+    }
     IRQUpdate();
     return;
+  }
   case 0x00e80004:
     IRQEnableWrite(data, mask);
     return;
