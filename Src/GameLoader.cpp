@@ -198,6 +198,7 @@ GameLoader::Region::ptr_t GameLoader::Region::Create(const GameLoader &loader, c
   }
 
   region->required = region_node["required"].ValueAsDefault<bool>(true);
+  region->merge = region_node["merge"].ValueAsDefault<bool>(true);
 
   // Byte layout. If byte_swap was specified, construct the byte swapped layout string based on
   // stride size. If byte_swap is set to false, empty layout string is fine.
@@ -465,8 +466,9 @@ bool GameLoader::LoadGamesFromXML(const Util::Config::Node &xml)
             files.push_back(file);
           }
 
-          // Check to ensure that some files were defined in the region
-          if (files.empty())
+          // Check to ensure that some files were defined in the region (a
+          // child's unmerged region may have none: it removes the parent's)
+          if (files.empty() && region->merge)
             ErrorLog("%s: No files defined in region '%s' of '%s'.", m_xml_filename.c_str(), region->region_name.c_str(), game_name.c_str());
           else
             regions_by_name[region->region_name] = region;
@@ -534,9 +536,21 @@ bool GameLoader::MergeChildrenWithParents()
     RegionsByName_t new_regions;
     for (auto &v2: parent_regions)
     {
+      auto &region_name = v2.first;
+
+      // A child region with merge="false" replaces the parent's region
+      // entirely (as in a non-merged ROM set, which has only the child's own
+      // files), or removes it if it has no files
+      auto child_it = child_regions.find(region_name);
+      if (child_it != child_regions.end() && !child_it->second->merge)
+      {
+        if (!child_it->second->files.empty())
+          new_regions[region_name] = child_it->second;
+        continue;
+      }
+
       // Copy over parent region (shallow copy is sufficient, vector of files
       // will be copied over correctly)
-      auto &region_name = v2.first;
       new_regions[region_name] = std::make_shared<Region>(*v2.second);
       auto &new_region = new_regions[region_name];
 
@@ -564,7 +578,7 @@ bool GameLoader::MergeChildrenWithParents()
     // Simply append any region in child that does *not* exist in parent
     for (auto &v2: child_regions)
     {
-      if (new_regions.find(v2.first) == new_regions.end())
+      if (new_regions.find(v2.first) == new_regions.end() && !v2.second->files.empty())
       {
         // Since these are pointers anyway, just insert directly
         new_regions[v2.first] = v2.second;

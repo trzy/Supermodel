@@ -33,6 +33,7 @@ private:
     uint32_t chunk_size = 0;
     std::string byte_layout;
     bool required = false;
+    bool merge = true;    // in a child set: merged with the parent's region (else replaces it; with no files, removes it)
     std::vector<File::ptr_t> files;
     static ptr_t Create(const GameLoader &loader, const Util::Config::Node &region_node);
     bool AttribsMatch(const ptr_t &other) const;
