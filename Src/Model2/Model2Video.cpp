@@ -320,9 +320,12 @@ inline u16 CVideo::float_to_zval(float floatval, s32 z_adjust)
 	}
 	mantissa >>= 11;
 
-	// if negative, clamp to 0
+	// Supermodel: negative sorts as the farthest (MAME: the nearest, 0). A
+	// polygon crossing the eye's plane sorted by its min z has a negative z;
+	// Indy 500's backdrop (a flat polygon around the camera) is one, and drawn
+	// in front it hides the whole track below the horizon.
 	if (fpint < 0)
-		return 0x0000;
+		return 0xffff;
 
 	// the rest depends on the exponent
 	if (exponent < -12)
