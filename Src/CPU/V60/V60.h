@@ -188,10 +188,10 @@ private:
 	void execute_set_input(int irqline, int state);
 	void ApplyPendingInputs();
 
-	static const int INPUT_LINE_IRQ0 = 0;
-	static const int INPUT_LINE_NMI = 1;
-	static const uint8_t CLEAR_LINE = 0;
-	static const uint8_t ASSERT_LINE = 1;
+	static constexpr int INPUT_LINE_IRQ0 = 0;
+	static constexpr int INPUT_LINE_NMI = 1;
+	static constexpr uint8_t CLEAR_LINE = 0;
+	static constexpr uint8_t ASSERT_LINE = 1;
 
 	Space m_programSpace, m_ioSpace;
 	Space *m_program;

@@ -119,7 +119,7 @@ public:
   // Clock conversion (MAME execute_clocks_to_cycles / cycles_to_clocks)
   static UINT64 ClocksToCycles(UINT64 clocks) { return (clocks + 3 - 1) / 3; }
   static UINT64 CyclesToClocks(UINT64 cycles) { return cycles * 3; }
-  static const unsigned MODEL1_CLOCK_HZ = 40000000;
+  static constexpr unsigned MODEL1_CLOCK_HZ = 40000000;
 
   CMB86233();
 
