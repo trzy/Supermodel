@@ -257,8 +257,8 @@ static const char s_m2FragmentShader[] = R"glsl(
 
 uniform vec2 screenSize;                  // 496, 384
 uniform vec4 viewport;                    // x, y, width, height of the viewable area in the frame buffer
-uniform usamplerBuffer texRAM0;           // texture RAM 0, 32-bit words
-uniform usamplerBuffer texRAM1;           // texture RAM 1
+uniform usampler2D     texRAM0;           // texture RAM 0: 2x2 texel blocks, a mip level per hardware level
+uniform usampler2D     texRAM1;           // texture RAM 1
 uniform usamplerBuffer lumaRAM;           // 8-bit
 uniform usamplerBuffer colorXlat;         // 16-bit
 uniform usamplerBuffer palRAM;            // 16-bit
@@ -296,25 +296,39 @@ uint LERP(uint x, uint y, uint a)
   return (x + (((y - x) * a) >> 8)) & 0x00ff00ffu;
 }
 
-uint sheetWord(uint sheet, uint i)
+uint sheetBlock(uint sheet, ivec2 p, int level)
 {
-  return sheet == 0u ? texelFetch(texRAM0, int(i)).r : texelFetch(texRAM1, int(i)).r;
+  return sheet == 0u ? texelFetch(texRAM0, p, level).r : texelFetch(texRAM1, p, level).r;
 }
 
-uint getTexel(uint baseX, uint baseY, int x, int y, uint sheet)
+// A texel of mip level 'level' (0 for microtextures) at x, y of the texture
+// at baseX, baseY (the level's position in the logical 2048x1024 sheet)
+uint getTexel(uint baseX, uint baseY, int x, int y, uint sheet, int level)
 {
   int x2 = int(baseX) + x;
   int y2 = int(baseY) + y;
-  if (x2 >= 1024)
+  uint texel = 0u;
+  // the level's image: the bottom right (2048 >> level) x (1024 >> level)
+  int lx = 2048 - (2048 >> level);
+  int ly = 1024 - (1024 >> level);
+  if (level <= 9 && x2 >= lx && x2 < 2048 && y2 >= ly && y2 < 1024)
+    texel = sheetBlock(sheet, ivec2((x2 - lx) >> 1, (y2 - ly) >> 1), level);
+  else
   {
-    // texture sheets are mapped as 2048x1024 but stored in RAM as 1024x2048
-    x2 -= 1024;
-    y2 ^= 1024;
+    // past the sheet's edges: the RAM address as MAME (the sheet is stored
+    // folded, 1024x2048) in level 0 (the first half of the RAM, as uploaded)
+    if (x2 >= 1024)
+    {
+      x2 -= 1024;
+      y2 ^= 1024;
+    }
+    int offset = (y2 / 2) * 512 + (x2 / 2);
+    if (offset >= 0 && offset < 512 * 1024)
+    {
+      int bx = offset & 511, by = offset >> 9;
+      texel = sheetBlock(sheet, by < 512 ? ivec2(bx, by) : ivec2(bx + 512, by - 512), 0);
+    }
   }
-  uint offset = uint((y2 / 2) * 512 + (x2 / 2));
-  uint texel = sheetWord(sheet, offset >> 1);
-  if ((offset & 1u) != 0u)
-    texel >>= 16;
   if ((y & 1) == 0)
     texel >>= 8;
   if ((x & 1) == 0)
@@ -384,10 +398,10 @@ uint fetchTexel(bool translucent, uint th0, uint th2, int miplevel, int u, int v
     else                { v1 = v0; v0--; vfrac = 0x100u; }
   }
 
-  uint tex00 = getTexel(texX, texY, int(u0), int(v0), sheet) << 4;
-  uint tex01 = getTexel(texX, texY, int(u1), int(v0), sheet) << 4;
-  uint tex10 = getTexel(texX, texY, int(u0), int(v1), sheet) << 4;
-  uint tex11 = getTexel(texX, texY, int(u1), int(v1), sheet) << 4;
+  uint tex00 = getTexel(texX, texY, int(u0), int(v0), sheet, max(miplevel, 0)) << 4;
+  uint tex01 = getTexel(texX, texY, int(u1), int(v0), sheet, max(miplevel, 0)) << 4;
+  uint tex10 = getTexel(texX, texY, int(u0), int(v1), sheet, max(miplevel, 0)) << 4;
+  uint tex11 = getTexel(texX, texY, int(u1), int(v1), sheet, max(miplevel, 0)) << 4;
 
   if (translucent)
   {
@@ -685,11 +699,14 @@ vec3 QuadP()
   for (int i = 0; i < 4; i++)
     u[i] = length(v[i]) * sign(fs_in.P[i].x);   // behind the eye (w < 0)?
 
-  precise float t[4];
+  // precise each, not the array: a precise array made this shader about ten
+  // times slower per pixel on NVIDIA
+  float t[4];
   for (int i = 0; i < 4; i++)
   {
     int iNext = (i + 1) % 4;
-    t[i] = area[i] == 0.0 ? 0.0 : fma(u[i], u[iNext], -dot(v[i], v[iNext])) / area[i];
+    precise float ti = area[i] == 0.0 ? 0.0 : fma(u[i], u[iNext], -dot(v[i], v[iNext])) / area[i];
+    t[i] = ti;
   }
 
   // weights neither all positive nor all negative: outside the quad
@@ -802,12 +819,27 @@ bool CModel1Render::InitModel2()
   glBindVertexArray(0);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-  // Buffer textures, sized for the board's memory
-  static const GLenum formats[M2_NUM_BUFFERS] = { GL_R32UI, GL_R32UI, GL_R8UI, GL_R16UI, GL_R16UI, GL_R8UI };
-  static const size_t sizes[M2_NUM_BUFFERS] = { 0x80000 * 4, 0x80000 * 4, 0x8000, 0x6000 * 2, 0x2000 * 2, 256 };
+  // Texture RAM 0/1: 2D textures of 2x2 texel blocks (16 bits each), the
+  // logical 2048x1024 sheet as 1024x512 blocks, with mip levels 1-9 (see
+  // UploadModel2Sheet())
   glGenBuffers(M2_NUM_BUFFERS, m_m2Buffers);
   glGenTextures(M2_NUM_BUFFERS, m_m2Textures);
-  for (int i = 0; i < M2_NUM_BUFFERS; i++)
+  for (int i = M2_TEXRAM0; i <= M2_TEXRAM1; i++)
+  {
+    glBindTexture(GL_TEXTURE_2D, m_m2Textures[i]);
+    for (int level = 0; level <= M2_SHEET_LEVELS; level++)
+      glTexImage2D(GL_TEXTURE_2D, level, GL_R16UI, 1024 >> level, std::max(1, 512 >> level), 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, M2_SHEET_LEVELS);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  }
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  // The rest: buffer textures, sized for the board's memory
+  static const GLenum formats[M2_NUM_BUFFERS] = { GL_R32UI, GL_R32UI, GL_R8UI, GL_R16UI, GL_R16UI, GL_R8UI };
+  static const size_t sizes[M2_NUM_BUFFERS] = { 0x80000 * 4, 0x80000 * 4, 0x8000, 0x6000 * 2, 0x2000 * 2, 256 };
+  for (int i = M2_LUMA; i < M2_NUM_BUFFERS; i++)
   {
     glBindBuffer(GL_TEXTURE_BUFFER, m_m2Buffers[i]);
     glBufferData(GL_TEXTURE_BUFFER, sizes[i], nullptr, GL_DYNAMIC_DRAW);
@@ -841,15 +873,48 @@ bool CModel1Render::InitModel2()
   return true;
 }
 
+// Texture RAM (0x80000 words; the rasterizer reads the first half): 16-bit
+// words of 2x2 texel blocks, 512 words a row, the logical 2048x1024 sheet
+// folded to 1024x2048 (its right half below the left). Mip level n (n >= 1)
+// is always the bottom right (2048 >> n) x (1024 >> n) of the logical sheet
+// (fetch_bilinear_texel's texture x, y for the level), so each is uploaded as
+// that GL mip level, as the Model 3 renderer's mipmaps (a fetch stays within
+// one level's image instead of reading the levels from the one sheet).
+void CModel1Render::UploadModel2Sheet(GLuint texture, const uint32_t *ram)
+{
+  const uint16_t *ram16 = reinterpret_cast<const uint16_t *>(ram);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 512);
+  // level 0: the left half is block rows 0-511, the right half rows 512-1023
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 512, GL_RED_INTEGER, GL_UNSIGNED_SHORT, ram16);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 512, 0, 512, 512, GL_RED_INTEGER, GL_UNSIGNED_SHORT, ram16 + 512 * 512);
+  // level n: in the right half, its bottom right
+  for (int level = 1; level <= M2_SHEET_LEVELS; level++)
+  {
+    int w = 1024 >> level, h = std::max(1, 512 >> level);
+    glTexSubImage2D(GL_TEXTURE_2D, level, 0, 0, w, h, GL_RED_INTEGER, GL_UNSIGNED_SHORT, ram16 + (1024 - h) * 512 + (512 - w));
+  }
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+}
+
 void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, const Model2::CVideo::Memory &memory, bool quads)
 {
   if (!m_m2Ready || vertices.empty())
     return;
 
   // The board's memory as it is now
-  const void *data[M2_NUM_BUFFERS] = { memory.textureRAM0, memory.textureRAM1, memory.lumaRAM, memory.colorXlat, memory.paletteRAM, memory.gamma };
-  static const size_t sizes[M2_NUM_BUFFERS] = { 0x80000 * 4, 0x80000 * 4, 0x8000, 0x6000 * 2, 0x2000 * 2, 256 };
-  for (int i = 0; i < M2_NUM_BUFFERS; i++)
+  UploadModel2Sheet(m_m2Textures[M2_TEXRAM0], memory.textureRAM0);
+  UploadModel2Sheet(m_m2Textures[M2_TEXRAM1], memory.textureRAM1);
+  for (int i = M2_TEXRAM0; i <= M2_TEXRAM1; i++)
+  {
+    glActiveTexture(GL_TEXTURE2 + i);
+    glBindTexture(GL_TEXTURE_2D, m_m2Textures[i]);
+  }
+  const void *data[M2_NUM_BUFFERS] = { nullptr, nullptr, memory.lumaRAM, memory.colorXlat, memory.paletteRAM, memory.gamma };
+  static const size_t sizes[M2_NUM_BUFFERS] = { 0, 0, 0x8000, 0x6000 * 2, 0x2000 * 2, 256 };
+  for (int i = M2_LUMA; i < M2_NUM_BUFFERS; i++)
   {
     glBindBuffer(GL_TEXTURE_BUFFER, m_m2Buffers[i]);
     glBufferSubData(GL_TEXTURE_BUFFER, 0, sizes[i], data[i]);

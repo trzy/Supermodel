@@ -125,9 +125,13 @@ private:
   GLuint      m_backTexture = 0, m_hudTexture = 0, m_softwareTexture = 0, m_snapshotTexture = 0;
   std::vector<Vertex> m_vertices;
 
-  // Model 2 3D pass: shader, vertex buffer, and buffer textures holding the
-  // board's texture RAM 0/1, luma RAM, colour tables, palette and gamma table
+  // Model 2 3D pass: shader, vertex buffer, and textures holding the board's
+  // texture RAM 0/1 (2D, a mip level per hardware mip level: see
+  // UploadModel2Sheet()), and luma RAM, colour tables, palette and gamma table
+  // (buffer textures)
   enum { M2_TEXRAM0, M2_TEXRAM1, M2_LUMA, M2_XLAT, M2_PALETTE, M2_GAMMA, M2_NUM_BUFFERS };
+  enum { M2_SHEET_LEVELS = 9 };   // mip levels 1-9 (level 9: 4x2 texels)
+  void        UploadModel2Sheet(GLuint texture, const uint32_t *ram);
   GLSLShader  m_m2Shader;
   GLint       m_m2ScreenSizeLoc = -1, m_m2ViewportLoc = -1, m_m2XMapLoc = -1;
   GLuint      m_m2QuadProgram = 0;      // quads: vertex + geometry + fragment shaders
