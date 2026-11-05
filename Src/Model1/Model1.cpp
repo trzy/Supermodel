@@ -48,6 +48,7 @@
 #include "OSD/Video.h"
 #include "Graphics/SuperAA.h"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace

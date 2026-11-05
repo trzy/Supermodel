@@ -42,6 +42,7 @@
 #include "Model1Render.h"
 #include "OSD/Logger.h"
 #include "Util/BMPFile.h"
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <cstddef>
