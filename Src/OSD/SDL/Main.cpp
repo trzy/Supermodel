@@ -1852,9 +1852,23 @@ Util::Config::Node DefaultConfig()
   return config;
 }
 
+// The build date as YYYY-MM-DD (ISO 8601: the same read in any country), from
+// the compiler's __DATE__ ("Mmm dd yyyy"). It is the date this file was last
+// compiled.
+static const char *BuildDate(void)
+{
+  static char date[11];
+  static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+  const char *p = strstr(months, std::string(__DATE__, 3).c_str());
+  int month = p ? int(p - months) / 3 + 1 : 0;
+  int day = atoi(__DATE__ + 4);
+  snprintf(date, sizeof(date), "%.4s-%02d-%02d", __DATE__ + 7, month, day);
+  return date;
+}
+
 static void Title(void)
 {
-  puts("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ")");
+  printf("Supermodel: A Sega Model 3 Arcade Emulator (Built %s)\n", BuildDate());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
