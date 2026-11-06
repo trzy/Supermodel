@@ -320,10 +320,10 @@ inline u16 CVideo::float_to_zval(float floatval, s32 z_adjust)
 	}
 	mantissa >>= 11;
 
-	// Supermodel: negative sorts as the farthest (MAME: the nearest, 0). A
-	// polygon crossing the eye's plane sorted by its min z has a negative z;
-	// Indy 500's backdrop (a flat polygon around the camera) is one, and drawn
-	// in front it hides the whole track below the horizon.
+	// Supermodel: negative sorts as the farthest (MAME: the nearest, 0). Only
+	// a polygon entirely behind the camera (culled), or one taking such a
+	// polygon's z ("old value"), still has one: a min z sort uses the max z
+	// when the min z is negative (see model2_3d_process_polygon)
 	if (fpint < 0)
 		return 0xffff;
 
@@ -525,7 +525,14 @@ void CVideo::model2_3d_process_polygon(raster_state *raster, u32 attr)
 			zvalue = raster->polygon_z;
 			break;
 		case 1: // min z
-			zvalue = min_z;
+			// Supermodel: a polygon crossing the eye's plane (some of it behind
+			// the camera) has a negative min z; it sorts by its max z, the far
+			// end of the part in front of the camera. MAME sorts it nearest (0),
+			// drawing it over everything (Indy 500's backdrop hides the track,
+			// Virtual On's floor the robot's feet); sorted farthest it went
+			// behind the scenery (Indy 500's walls and fence near the camera
+			// vanish: on the hardware they are drawn).
+			zvalue = (min_z < 0) ? max_z : min_z;
 			break;
 		case 2: // max z
 			zvalue = max_z;
