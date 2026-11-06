@@ -1171,6 +1171,13 @@ not.  All options are case sensitive.
 
     ----------------
 
+    Option:         -version
+                    --version
+
+    Description:    Prints the version and quits.
+
+    ----------------
+
     Option:         -print-games
 
     Description:    Lists all supported ROM sets.  Not all supported ROM sets

@@ -412,6 +412,7 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
     <ClCompile Include="..\Src\OSD\SDL\Audio.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Crosshair.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Gui.cpp" />
+    <ClCompile Include="..\Src\Version.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\Main.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\NetOutputs.cpp" />
     <ClCompile Include="..\Src\OSD\SDL\SDLInputSystem.cpp" />
@@ -666,4 +667,8 @@ xcopy /D /Y "$(ProjectDir)..\Assets\*" "$(TargetDir)Assets"</Command>
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
+  <!-- __DATE__ in Version.cpp must be the date of the build -->
+  <Target Name="ForceVersionRebuild" BeforeTargets="ClCompile">
+    <Delete Files="$(IntDir)Version.obj" />
+  </Target>
 </Project>
