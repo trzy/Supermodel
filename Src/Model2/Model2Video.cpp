@@ -1692,8 +1692,16 @@ CVideo::WPtr CVideo::geo_object_data(geo_state &geo, u32 opcode, WPtr input)
 
 	WPtr obp;                /* Object Pointer */
 
+	// Supermodel: Top Skater's command 11 objects repeat the rasterizer
+	// command in their low byte, with the center select (bits 6-7) that the
+	// high one lacks: its speed meter is drawn around center 1, at the bottom
+	// left of its window (opcode 08805151)
+	u32 command = opcode >> 23;
+	if (m_geoTopSkater && (command & 0x1f) == 0x11)
+		command = (command & ~0xc0u) | (opcode & 0xc0);
+
 	/* push the initial set of data to the 3d rasterizer */
-	model2_3d_push(raster, opcode >> 23);
+	model2_3d_push(raster, command);
 	model2_3d_push(raster, tpa);
 	model2_3d_push(raster, tha);
 
