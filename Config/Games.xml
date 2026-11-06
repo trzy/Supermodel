@@ -129,7 +129,7 @@
   <game name="getbass" parent="bassdx">
     <identity>
       <title>Get Bass: Sega Bass Fishing</title>
-	  <version>Japan, Standard</version>
+      <version>Japan, Standard</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -169,7 +169,7 @@
       <mpeg_board>DSB2</mpeg_board>
       <drive_board>Wheel</drive_board>
       <netboard>true</netboard>
-	  <audio>QuadFrontRear</audio>
+      <audio>QuadFrontRear</audio>
       <inputs>
         <input type="common" />
         <input type="vehicle" />
@@ -252,7 +252,7 @@
   <game name="dayto2pe" parent="daytona2">
     <identity>
       <title>Daytona USA 2 - Power Edition</title>
-	  <version>Japan</version>
+      <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -630,7 +630,7 @@
       <encryption_key>0x2923aa91</encryption_key>
     </hardware>
     <roms>
-    	<patches>
+      <patches>
         <!-- Skips over cabinet network error -->
         <patch region="crom" bits="32" offset="0x4a2b7c" value="0x60000000" />
       </patches>
@@ -1105,7 +1105,7 @@
     <hardware>
       <platform>Sega Model 3</platform>
       <stepping>1.5</stepping>
-	  <audio>QuadFrontRear</audio>
+      <audio>QuadFrontRear</audio>
       <inputs>
         <input type="common" />
         <input type="analog_gun1" />
@@ -1219,7 +1219,7 @@
     </hardware>
     <roms>
       <patches>
-	    <!-- Enable Region change (remove the patch to return to Japan region) -->
+        <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
       </patches>
       <region name="crom" stride="8" chunk_size="2" byte_swap="true">
@@ -1289,7 +1289,7 @@
     </hardware>
     <roms>
       <patches>
-	    <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
+        <!-- Fixing bad ROM dump which causes attract mode to stop rendering -->
         <patch region="crom" bits="32" offset="0x091A34" value="0x917F0068" />
         <!-- Enable Region change (remove the patch to return to Japan region) -->
         <patch region="crom" bits="32" offset="0x14B25C" value="0x38600001" />
@@ -1384,10 +1384,11 @@
       </region>
     </roms>
   </game>
+
   <game name="oceanhun">
     <identity>
       <title>The Ocean Hunter</title>
-	  <version>Japan, Revision A</version>
+      <version>Japan, Revision A</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1458,7 +1459,7 @@
   <game name="oceanhuna" parent="oceanhun">
     <identity>
       <title>The Ocean Hunter</title>
-	    <version>Japan</version>
+      <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -1713,7 +1714,7 @@
       <stepping>1.5</stepping>
       <mpeg_board>DSB1</mpeg_board>
       <drive_board>Wheel</drive_board>
-	  <netboard>false</netboard>
+      <netboard>false</netboard>
       <audio>QuadFrontRear</audio>
       <inputs>
         <input type="common" />
@@ -1824,7 +1825,7 @@
   <game name="scudplusa" parent="scud">
     <identity>
       <title>Scud Race Plus</title>
-	  <version>Export, Twin/DX</version>
+      <version>Export, Twin/DX</version>
       <manufacturer>Sega</manufacturer>
       <year>1997</year>
     </identity>
@@ -1945,7 +1946,7 @@
   <game name="spikeofe">
     <identity>
       <title>Spikeout Final Edition</title>
-	  <version>Export</version>
+      <version>Export</version>
       <manufacturer>Sega</manufacturer>
       <year>1999</year>
     </identity>
@@ -2119,7 +2120,7 @@
   <game name="srally2">
     <identity>
       <title>Sega Rally 2</title>
-	  <version>Export</version>
+      <version>Export</version>
       <manufacturer>Sega</manufacturer>
       <year>1998</year>
     </identity>
@@ -2451,6 +2452,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytonase" parent="daytona">
     <identity>
       <title>Daytona USA Special Edition</title>
@@ -2535,6 +2537,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytona93" parent="daytona">
     <identity>
       <title>Daytona USA</title>
@@ -2604,6 +2607,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytonas" parent="daytona">
     <identity>
       <title>Daytona USA</title>
@@ -2688,6 +2692,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytonat" parent="daytona">
     <identity>
       <title>Daytona USA</title>
@@ -2772,6 +2777,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytonata" parent="daytona">
     <identity>
       <title>Daytona USA</title>
@@ -2856,6 +2862,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytonam" parent="daytona">
     <identity>
       <title>Daytona USA</title>
@@ -2941,6 +2948,7 @@
       </region>
     </roms>
   </game>
+
   <game name="daytonagtx" parent="daytona">
     <identity>
       <title>Daytona USA</title>
@@ -3029,6 +3037,7 @@
       </region>
     </roms>
   </game>
+
   <game name="desert">
     <identity>
       <title>Desert Tank</title>
@@ -3092,6 +3101,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vcop">
     <identity>
       <title>Virtua Cop</title>
@@ -3149,6 +3159,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vcopa" parent="vcop">
     <identity>
       <title>Virtua Cop</title>
@@ -3206,6 +3217,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vf2">
     <identity>
       <title>Virtua Fighter 2</title>
@@ -3269,6 +3281,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vf2b" parent="vf2">
     <identity>
       <title>Virtua Fighter 2</title>
@@ -3332,6 +3345,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vf2a" parent="vf2">
     <identity>
       <title>Virtua Fighter 2</title>
@@ -3395,6 +3409,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vf2o" parent="vf2">
     <identity>
       <title>Virtua Fighter 2</title>
@@ -3457,6 +3472,7 @@
       </region>
     </roms>
   </game>
+
   <game name="manxtt">
     <identity>
       <title>Manx TT Superbike - DX/Twin</title>
@@ -3535,6 +3551,7 @@
       </region>
     </roms>
   </game>
+
   <game name="manxttc" parent="manxtt">
     <identity>
       <title>Manx TT Superbike - DX/Twin</title>
@@ -3610,6 +3627,7 @@
       <region name="mpcm1" stride="1" chunk_size="1" merge="false" />
     </roms>
   </game>
+
   <game name="manxttdx" parent="manxtt">
     <identity>
       <title>Manx TT Superbike - DX</title>
@@ -3687,6 +3705,7 @@
       </region>
     </roms>
   </game>
+
   <game name="srallyc">
     <identity>
       <title>Sega Rally Championship - Twin/DX</title>
@@ -3751,6 +3770,7 @@
       </region>
     </roms>
   </game>
+
   <game name="srallycb" parent="srallyc">
     <identity>
       <title>Sega Rally Championship - Twin/DX</title>
@@ -3812,6 +3832,7 @@
       </region>
     </roms>
   </game>
+
   <game name="srallycc" parent="srallyc">
     <identity>
       <title>Sega Rally Championship - Twin/DX</title>
@@ -3873,6 +3894,7 @@
       </region>
     </roms>
   </game>
+
   <game name="srallycdx" parent="srallyc">
     <identity>
       <title>Sega Rally Championship - DX</title>
@@ -3936,6 +3958,7 @@
       </region>
     </roms>
   </game>
+
   <game name="srallycdxa" parent="srallyc">
     <identity>
       <title>Sega Rally Championship - DX</title>
@@ -3998,6 +4021,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vcop2">
     <identity>
       <title>Virtua Cop 2</title>
@@ -4059,6 +4083,7 @@
       </region>
     </roms>
   </game>
+
   <game name="skytargt">
     <identity>
       <title>Sky Target</title>
@@ -4147,6 +4172,7 @@
       </region>
     </roms>
   </game>
+
   <game name="doa">
     <identity>
       <title>Dead or Alive</title>
@@ -4204,6 +4230,7 @@
       </region>
     </roms>
   </game>
+
   <game name="doaa" parent="doa">
     <identity>
       <title>Dead or Alive</title>
@@ -4265,6 +4292,7 @@
       </region>
     </roms>
   </game>
+
   <game name="doaab" parent="doa">
     <identity>
       <title>Dead or Alive</title>
@@ -4326,6 +4354,7 @@
       </region>
     </roms>
   </game>
+
   <game name="doaae" parent="doa">
     <identity>
       <title>Dead or Alive</title>
@@ -4387,6 +4416,7 @@
       </region>
     </roms>
   </game>
+
   <game name="doab" parent="doa">
     <identity>
       <title>Dead or Alive</title>
@@ -4444,6 +4474,7 @@
       </region>
     </roms>
   </game>
+
   <game name="zerogun">
     <identity>
       <title>Zero Gunner</title>
@@ -4490,6 +4521,7 @@
       </region>
     </roms>
   </game>
+
   <game name="zeroguna" parent="zerogun">
     <identity>
       <title>Zero Gunner</title>
@@ -4540,6 +4572,7 @@
       </region>
     </roms>
   </game>
+
   <game name="zerogunaj" parent="zerogun">
     <identity>
       <title>Zero Gunner</title>
@@ -4590,6 +4623,7 @@
       </region>
     </roms>
   </game>
+
   <game name="zerogunj" parent="zerogun">
     <identity>
       <title>Zero Gunner</title>
@@ -4636,6 +4670,7 @@
       </region>
     </roms>
   </game>
+
   <game name="motoraid">
     <identity>
       <title>Motor Raid - Twin</title>
@@ -4713,6 +4748,7 @@
       </region>
     </roms>
   </game>
+
   <game name="motoraiddx" parent="motoraid">
     <identity>
       <title>Motor Raid - Twin/DX</title>
@@ -4790,6 +4826,7 @@
       </region>
     </roms>
   </game>
+
   <game name="airwlkrs">
     <identity>
       <title>Air Walkers</title>
@@ -4854,6 +4891,7 @@
       </region>
     </roms>
   </game>
+
   <game name="dynamcop">
     <identity>
       <title>Dynamite Cop</title>
@@ -4920,6 +4958,7 @@
       </region>
     </roms>
   </game>
+
   <game name="dyndeka2" parent="dynamcop">
     <identity>
       <title>Dynamite Deka 2</title>
@@ -4986,6 +5025,7 @@
       </region>
     </roms>
   </game>
+
   <game name="dynamcopb" parent="dynamcop">
     <identity>
       <title>Dynamite Cop</title>
@@ -5050,6 +5090,7 @@
       <region name="copro_tables" stride="4" chunk_size="2" merge="false" />
     </roms>
   </game>
+
   <game name="dyndeka2b" parent="dynamcop">
     <identity>
       <title>Dynamite Deka 2</title>
@@ -5114,6 +5155,7 @@
       <region name="copro_tables" stride="4" chunk_size="2" merge="false" />
     </roms>
   </game>
+
   <game name="dynamcopc" parent="dynamcop">
     <identity>
       <title>Dynamite Cop</title>
@@ -5178,6 +5220,7 @@
       <region name="copro_tables" stride="4" chunk_size="2" merge="false" />
     </roms>
   </game>
+
   <game name="pltkids">
     <identity>
       <title>Pilot Kids</title>
@@ -5232,6 +5275,7 @@
       </region>
     </roms>
   </game>
+
   <game name="pltkidsa" parent="pltkids">
     <identity>
       <title>Pilot Kids</title>
@@ -5290,6 +5334,7 @@
       </region>
     </roms>
   </game>
+
   <game name="hpyagu98">
     <identity>
       <title>Hanguk Pro Yagu 98</title>
@@ -5348,6 +5393,7 @@
       </region>
     </roms>
   </game>
+
   <game name="rchase2">
     <identity>
       <title>Rail Chase 2</title>
@@ -5402,6 +5448,7 @@
       </region>
     </roms>
   </game>
+
   <game name="rchase2a" parent="rchase2">
     <identity>
       <title>Rail Chase 2</title>
@@ -5455,6 +5502,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vstriker">
     <identity>
       <title>Virtua Striker</title>
@@ -5507,6 +5555,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vstrikero" parent="vstriker">
     <identity>
       <title>Virtua Striker</title>
@@ -5558,6 +5607,7 @@
       </region>
     </roms>
   </game>
+
   <game name="fvipers">
     <identity>
       <title>Fighting Vipers</title>
@@ -5649,6 +5699,7 @@
       </region>
     </roms>
   </game>
+
   <game name="fvipersb" parent="fvipers">
     <identity>
       <title>Fighting Vipers</title>
@@ -5740,6 +5791,7 @@
       </region>
     </roms>
   </game>
+
   <game name="fvipersa" parent="fvipers">
     <identity>
       <title>Fighting Vipers</title>
@@ -5831,6 +5883,7 @@
       </region>
     </roms>
   </game>
+
   <game name="gunblade">
     <identity>
       <title>Gunblade NY</title>
@@ -5881,6 +5934,7 @@
       </region>
     </roms>
   </game>
+
   <game name="indy500">
     <identity>
       <title>INDY 500 Twin</title>
@@ -5971,6 +6025,7 @@
       </region>
     </roms>
   </game>
+
   <game name="indy500d" parent="indy500">
     <identity>
       <title>INDY 500 Deluxe</title>
@@ -6058,6 +6113,7 @@
       </region>
     </roms>
   </game>
+
   <game name="indy500to" parent="indy500">
     <identity>
       <title>INDY 500 Twin</title>
@@ -6145,6 +6201,7 @@
       </region>
     </roms>
   </game>
+
   <game name="von">
     <identity>
       <title>Cyber Troopers Virtual-On - Twin</title>
@@ -6199,6 +6256,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vonu" parent="von">
     <identity>
       <title>Cyber Troopers Virtual-On - Twin</title>
@@ -6253,6 +6311,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vonj" parent="von">
     <identity>
       <title>Cyber Troopers Virtual-On - Twin</title>
@@ -6307,6 +6366,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vonr" parent="von">
     <identity>
       <title>Cyber Troopers Virtual-On - Relay</title>
@@ -6361,6 +6421,7 @@
       </region>
     </roms>
   </game>
+
   <game name="schamp">
     <identity>
       <title>Sonic Championship</title>
@@ -6448,6 +6509,7 @@
       </region>
     </roms>
   </game>
+
   <game name="sfight" parent="schamp">
     <identity>
       <title>Sonic the Fighters</title>
@@ -6535,6 +6597,7 @@
       </region>
     </roms>
   </game>
+
   <game name="lastbrnx">
     <identity>
       <title>Last Bronx</title>
@@ -6580,6 +6643,7 @@
       </region>
     </roms>
   </game>
+
   <game name="lastbrnxu" parent="lastbrnx">
     <identity>
       <title>Last Bronx</title>
@@ -6625,6 +6689,7 @@
       </region>
     </roms>
   </game>
+
   <game name="lastbrnxj" parent="lastbrnx">
     <identity>
       <title>Last Bronx: Tokyo Bangaichi</title>
@@ -6670,6 +6735,7 @@
       </region>
     </roms>
   </game>
+
   <game name="sgt24h">
     <identity>
       <title>Super GT 24h</title>
@@ -6718,6 +6784,7 @@
       </region>
     </roms>
   </game>
+
   <game name="powsled">
     <identity>
       <title>Power Sled</title>
@@ -6760,6 +6827,7 @@
       </region>
     </roms>
   </game>
+
   <game name="powsledr" parent="powsled">
     <identity>
       <title>Power Sled</title>
@@ -6803,6 +6871,7 @@
       </region>
     </roms>
   </game>
+
   <game name="powsledm" parent="powsled">
     <identity>
       <title>Power Sled</title>
@@ -6846,6 +6915,7 @@
       </region>
     </roms>
   </game>
+
   <game name="dynabb">
     <identity>
       <title>Dynamite Baseball</title>
@@ -6897,6 +6967,7 @@
       </region>
     </roms>
   </game>
+
   <game name="dynabb97">
     <identity>
       <title>Dynamite Baseball 97</title>
@@ -6952,6 +7023,7 @@
       </region>
     </roms>
   </game>
+
   <game name="overrev">
     <identity>
       <title>Over Rev</title>
@@ -7002,6 +7074,7 @@
       </region>
     </roms>
   </game>
+
   <game name="overrevb" parent="overrev">
     <identity>
       <title>Over Rev</title>
@@ -7049,6 +7122,7 @@
       </region>
     </roms>
   </game>
+
   <game name="overrevba" parent="overrev">
     <identity>
       <title>Over Rev</title>
@@ -7096,6 +7170,7 @@
       </region>
     </roms>
   </game>
+
   <game name="skisuprg">
     <identity>
       <title>Sega Ski Super G</title>
@@ -7147,6 +7222,7 @@
       </region>
     </roms>
   </game>
+
   <game name="stcc">
     <identity>
       <title>Sega Touring Car Championship</title>
@@ -7258,6 +7334,7 @@
       </region>
     </roms>
   </game>
+
   <game name="stccb" parent="stcc">
     <identity>
       <title>Sega Touring Car Championship</title>
@@ -7366,6 +7443,7 @@
       </region>
     </roms>
   </game>
+
   <game name="stcca" parent="stcc">
     <identity>
       <title>Sega Touring Car Championship</title>
@@ -7474,6 +7552,7 @@
       </region>
     </roms>
   </game>
+
   <game name="stcco" parent="stcc">
     <identity>
       <title>Sega Touring Car Championship</title>
@@ -7581,6 +7660,7 @@
       </region>
     </roms>
   </game>
+
   <game name="waverunr">
     <identity>
       <title>Wave Runner</title>
@@ -7710,6 +7790,7 @@
       </region>
     </roms>
   </game>
+
   <game name="bel">
     <identity>
       <title>Behind Enemy Lines</title>
@@ -7773,6 +7854,7 @@
       </region>
     </roms>
   </game>
+
   <game name="hotd">
     <identity>
       <title>The House of the Dead</title>
@@ -7849,6 +7931,7 @@
       </region>
     </roms>
   </game>
+
   <game name="hotdo" parent="hotd">
     <identity>
       <title>The House of the Dead</title>
@@ -7924,6 +8007,7 @@
       </region>
     </roms>
   </game>
+
   <game name="hotdp" parent="hotd">
     <identity>
       <title>The House of the Dead</title>
@@ -7982,6 +8066,7 @@
       </region>
     </roms>
   </game>
+
   <game name="rascot2">
     <identity>
       <title>Royal Ascot II</title>
@@ -8035,6 +8120,7 @@
       </region>
     </roms>
   </game>
+
   <game name="segawski">
     <identity>
       <title>Sega Water Ski</title>
@@ -8110,6 +8196,7 @@
       </region>
     </roms>
   </game>
+
   <game name="topskatr">
     <identity>
       <title>Top Skater</title>
@@ -8168,6 +8255,7 @@
       </region>
     </roms>
   </game>
+
   <game name="topskatru" parent="topskatr">
     <identity>
       <title>Top Skater</title>
@@ -8226,6 +8314,7 @@
       </region>
     </roms>
   </game>
+
   <game name="topskatruo" parent="topskatr">
     <identity>
       <title>Top Skater</title>
@@ -8284,6 +8373,7 @@
       </region>
     </roms>
   </game>
+
   <game name="topskatrj" parent="topskatr">
     <identity>
       <title>Top Skater</title>
@@ -8342,6 +8432,7 @@
       </region>
     </roms>
   </game>
+
   <game name="swa">
     <identity>
       <title>Star Wars Arcade</title>
@@ -8430,6 +8521,7 @@
       </region>
     </roms>
   </game>
+
   <game name="swaj">
     <identity>
       <title>Star Wars Arcade</title>
@@ -8518,6 +8610,7 @@
       </region>
     </roms>
   </game>
+
   <game name="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
@@ -8604,7 +8697,7 @@
   <game name="swtrilgya" parent="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
-	  <version>Export</version>
+      <version>Export</version>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
     </identity>
@@ -8632,7 +8725,7 @@
   <game name="swtrilgyp" parent="swtrilgy">
     <identity>
       <title>Star Wars Trilogy Arcade</title>
-	  <version>Location Test, 16.09.98</version>
+      <version>Location Test, 16.09.98</version>
       <manufacturer>Sega, LucasArts</manufacturer>
       <year>1998</year>
     </identity>
@@ -8775,6 +8868,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vf3">
     <identity>
       <title>Virtua Fighter 3</title>
@@ -8912,7 +9006,7 @@
   <game name="vf3tb" parent="vf3">
     <identity>
       <title>Virtua Fighter 3 Team Battle</title>
-	  <version>Japan</version>
+      <version>Japan</version>
       <manufacturer>Sega</manufacturer>
       <year>1996</year>
     </identity>
@@ -9191,6 +9285,7 @@
       </region>
     </roms>
   </game>
+
   <game name="vs2">
     <identity>
       <title>Virtua Striker 2</title>
@@ -9346,7 +9441,7 @@
       <encryption_key>0x29234e96</encryption_key>
     </hardware>
     <roms>
-    	<patches>
+      <patches>
         <!--
           Offset of program relative to CROM base: 0x600000 (0x200000 in the
           ROM itself). Inexplicably, at PC=AFC1C, a call is made to FC78, which
@@ -9556,7 +9651,7 @@
   <game name="vs299" parent="vs2v991">
     <identity>
       <title>Virtua Striker 2 '99</title>
-	  <version>Export, USA</version>
+      <version>Export, USA</version>
       <manufacturer>Sega</manufacturer>
       <year>1999</year>
     </identity>
