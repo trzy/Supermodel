@@ -39,8 +39,13 @@
  * the four run at the same time, each on its own thread, joined by
  * lock-free FIFOs; data only flows forward through them, so the result is
  * the same as running them one after another (which is done with fewer than
- * four CPU cores). The output of 5572 B (the stream the video board's sorter
- * and rasterizer consume) is kept for the frame.
+ * four CPU cores, or when multi-threading is disabled). The output of 5572 B
+ * (the stream the video board's sorter and rasterizer consume) is kept for
+ * the frame.
+ *
+ * A write to a full FIFO waits for the next chip. If that chip isn't running
+ * or has failed, the word is lost and the frame fails, which keeps a runaway
+ * DSP program from hanging the emulator.
  */
 
 #ifndef INCLUDED_MODEL1GEOMETRIZER_H
@@ -64,10 +69,12 @@ namespace Model1
   public:
     // Program ROMs are 0x800 words; the tables 0x10000 words each. Poly RAM
     // is shared with the caller (it persists across frames and is saved with
-    // the C++ geometry state).
+    // the C++ geometry state). If multiThreaded, the chips run on their own
+    // threads when there is a CPU core for each.
     bool Init(const std::vector<uint32_t> &rom5571, const std::vector<uint32_t> &rom5572,
               const std::vector<uint32_t> &recipTable, const std::vector<uint32_t> &rsqrtTable,
-              const uint32_t *polyROM, uint32_t polyROMWords, uint32_t *polyRAM, uint32_t polyRAMWords);
+              const uint32_t *polyROM, uint32_t polyROMWords, uint32_t *polyRAM, uint32_t polyRAMWords,
+              bool multiThreaded);
     bool IsReady() const { return m_ready; }
 
     void Reset();
@@ -100,9 +107,11 @@ namespace Model1
       bool Push(uint32_t v);          // producer; false if full
       bool Pop(uint32_t &v);          // consumer; false if empty
       bool Empty();                   // consumer
-      void Clear() { m_head.store(0); m_tail.store(0); m_headCache = m_tailCache = 0; m_done.store(false); }   // only while no chip runs
+      void Clear() { m_head.store(0); m_tail.store(0); m_headCache = m_tailCache = 0; m_done.store(false); m_consumerGone.store(false); }   // only while no chip runs
       void SetDone() { m_done.store(true, std::memory_order_release); }
       bool Done() const { return m_done.load(std::memory_order_acquire); }
+      void SetConsumerGone() { m_consumerGone.store(true, std::memory_order_release); }
+      bool ConsumerGone() const { return m_consumerGone.load(std::memory_order_acquire); }
     private:
       std::vector<uint32_t> m_buffer;
       size_t m_mask;
@@ -111,6 +120,7 @@ namespace Model1
       alignas(64) std::atomic<size_t> m_tail { 0 };   // next read
       size_t m_headCache = 0;                         // consumer's copy of m_head
       alignas(64) std::atomic<bool> m_done { false }; // the producer has finished the frame
+      std::atomic<bool> m_consumerGone { false };     // nobody will make room if the FIFO is full
     };
 
     // Each chip's bus and CPU on their own cache lines: the chips run on
@@ -125,6 +135,7 @@ namespace Model1
       std::vector<uint32_t> *final = nullptr;  // 5572 B's output
       uint32_t ioAddress = 0;                  // 5571 poly RAM/ROM address latch
       bool stalled = false;                    // a read found the input empty
+      bool overflowed = false;                 // a write to the output was lost this frame
 
       UINT32 ReadData(UINT16 addr) override;
       void   WriteData(UINT16 addr, UINT32 v) override;
