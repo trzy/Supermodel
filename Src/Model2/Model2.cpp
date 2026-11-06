@@ -2468,6 +2468,27 @@ void CModel2::RunLine(void)
     m_uart.Clock(clocks);
 }
 
+// MAME's draw_framebuffer(): 15-bit pixels (blue in the low bits), 512 per
+// line, the bank alternating with the frame, through the scroll colour table
+// and gamma like the palette, placed by the tilemap chip's sync registers
+void CModel2::DrawFrameBuffer(uint32_t *dest)
+{
+  const std::vector<uint16_t> &fb = m_fbVRAM[m_frameNumber & 1];
+  const int xoffs = -m_video3d.CRTCXOffset();
+  const int yoffs = (512 - 384) - m_video3d.CRTCYOffset();
+  for (int y = 0; y < SCREEN_HEIGHT; y++)
+  {
+    for (int x = 0; x < SCREEN_WIDTH; x++)
+    {
+      uint16_t c = fb[unsigned((x + xoffs) + (y + yoffs) * 512) & (fb.size() - 1)];
+      uint8_t r = m_gamma[(uint8_t) m_colorXlat[0x0080 / 2 + ((c >> 5) & 0x1f) * 0x100]];
+      uint8_t g = m_gamma[(uint8_t) m_colorXlat[0x4080 / 2 + ((c >> 10) & 0x1f) * 0x100]];
+      uint8_t b = m_gamma[(uint8_t) m_colorXlat[0x8080 / 2 + ((c >> 0) & 0x1f) * 0x100]];
+      dest[size_t(y) * SCREEN_WIDTH + x] = 0xFF000000 | (uint32_t(r) << 16) | (uint32_t(g) << 8) | b;
+    }
+  }
+}
+
 void CModel2::BuildVideoFrame(void)
 {
   const size_t pixels = size_t(SCREEN_WIDTH) * SCREEN_HEIGHT;
@@ -2491,6 +2512,12 @@ void CModel2::BuildVideoFrame(void)
   m_tiles.DrawLayer(4, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, true, m_palette.data());
   m_tiles.DrawLayer(2, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
   m_tiles.DrawLayer(0, m_video.back.data(), SCREEN_WIDTH, SCREEN_WIDTH, SCREEN_HEIGHT, false, m_palette.data());
+
+  // Render test mode: the i960 writes the picture into the frame buffer
+  // itself (Last Bronx's title screen), shown in place of the 3D and covering
+  // the tilemaps below it
+  if (m_renderTestMode)
+    DrawFrameBuffer(m_video.back.data());
 
   // HUD tilemaps, on transparent
   m_video.hud.assign(pixels, 0);

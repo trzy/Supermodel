@@ -135,6 +135,8 @@ namespace Model2
     // Tilemap chip sync registers (MAME horizontal_sync_w / vertical_sync_w)
     void HorizontalSync(uint16_t data);
     void VerticalSync(uint16_t data);
+    int  CRTCXOffset() const { return m_crtc_xoffset; }
+    int  CRTCYOffset() const { return m_crtc_yoffset; }
     void ZClipWrite(uint32_t data);
     uint32_t PolygonCount() const;
 
