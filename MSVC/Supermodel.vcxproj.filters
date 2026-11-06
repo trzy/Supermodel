@@ -539,6 +539,9 @@
     <ClCompile Include="..\Src\Util\ByteSwap.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
+    <ClCompile Include="..\Src\Version.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\Src\GameLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
