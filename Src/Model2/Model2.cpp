@@ -3305,18 +3305,23 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
     }
     // The Digital Sound Board (MPEG music), as on Model 3: the UART's output
     // goes to it too (MAME: txd_handler().append) and the SCSP board mixes it
-    // in. MAME's dsbz80 (Z80, Sega Touring Car Championship) is Model 3's
-    // DSB1, its dsb2 (68000, Top Skater) the DSB2.
+    // in. The type comes from Games.xml's mpeg_board, as Model 3's: MAME's
+    // dsbz80 (Z80, Sega Touring Car Championship) is Model 3's DSB1, its dsb2
+    // (68000, Top Skater) the DSB2.
     if (!m_dsbProgram.empty() && !m_m1SoundMixer)
     {
-      bool dsb2 = m_game.name.rfind("topskatr", 0) == 0 || m_game.parent == "topskatr";
-      if (dsb2)
+      if (game.mpeg_board == Game::MPEG_BOARD_DSB1)
+        m_dsb = std::make_unique<CDSB1>(m_config);
+      else if (game.mpeg_board == Game::MPEG_BOARD_DSB2)
         m_dsb = std::make_unique<CDSB2>(m_config);
       else
-        m_dsb = std::make_unique<CDSB1>(m_config);
-      if (Result::OKAY != m_dsb->Init(m_dsbProgram.data(), m_dsbMusic.data()))
-        return Result::FAIL;
-      m_soundBoard->AttachDSB(m_dsb.get());
+        ErrorLog("No MPEG board type defined in game XML for MPEG ROMs.");
+      if (m_dsb)
+      {
+        if (Result::OKAY != m_dsb->Init(m_dsbProgram.data(), m_dsbMusic.data()))
+          return Result::FAIL;
+        m_soundBoard->AttachDSB(m_dsb.get());
+      }
     }
     m_uart.OnTransmit = [this](uint8_t data)
     {

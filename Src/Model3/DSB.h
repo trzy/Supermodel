@@ -309,7 +309,7 @@ private:
 	};
 
 	// DSB memory
-	const UINT8	*progROM;		// 68K program ROM (passed in from parent object)
+	const UINT8	*progROM;		// 68K program ROM, big endian (passed in from parent object)
 	const UINT8	*mpegROM;		// MPEG music ROM
 	UINT8		*memoryPool;	// all memory allocated here
 	UINT8		*ram;			// 68K RAM

@@ -4864,6 +4864,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB1</mpeg_board>
       <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
@@ -4976,6 +4977,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB1</mpeg_board>
       <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
@@ -5085,6 +5087,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB1</mpeg_board>
       <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
@@ -5193,6 +5196,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB1</mpeg_board>
       <drive_board>Wheel</drive_board>
       <inputs>
         <input type="common" />
@@ -5302,6 +5306,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB2</mpeg_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -5361,6 +5366,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB2</mpeg_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -5420,6 +5426,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB2</mpeg_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -5479,6 +5486,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2C</stepping>
+      <mpeg_board>DSB2</mpeg_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />

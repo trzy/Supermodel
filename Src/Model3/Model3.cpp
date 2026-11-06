@@ -3218,7 +3218,6 @@ Result CModel3::Init(const Game &game, const ROMSet &rom_set)
     }
     else if (game.mpeg_board == Game::MPEG_BOARD_DSB2)
     {
-      Util::FlipEndian16(dsbROM, 128*1024); // 68K program needs to be byte swapped
       DSB = new(std::nothrow) CDSB2(m_config);
       if (NULL == DSB)
         return ErrorLog("Insufficient memory for Digital Sound Board object.");

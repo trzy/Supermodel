@@ -841,10 +841,12 @@ void CDSB2::WriteMPEGFIFO(UINT8 byte)
 	}
 }
 
+// The program ROM is in the 68K's byte order (big endian: Games.xml's
+// byte_swap region), as the CPU reads it
 UINT8 CDSB2::Read8(UINT32 addr)
 {
 	if (addr < (128*1024))
-		return progROM[addr^1];
+		return progROM[addr];
 
 	if (addr == 0xc00001)
 	{
@@ -874,7 +876,7 @@ UINT16 CDSB2::Read16(UINT32 addr)
 {
 	if (addr < (128*1024))
 	{
-		return *(UINT16 *) &progROM[addr];
+		return (UINT16(progROM[addr]) << 8) | progROM[addr+1];
 	}
 	if ((addr >= 0xf00000) && (addr < 0xf20000))
 	{
@@ -892,8 +894,8 @@ UINT32 CDSB2::Read32(UINT32 addr)
 
 	if (addr < (128*1024))
 	{
-		hi = *(UINT16 *) &progROM[addr];
-		lo = *(UINT16 *) &progROM[addr+2];
+		hi = (UINT32(progROM[addr]) << 8) | progROM[addr+1];
+		lo = (UINT32(progROM[addr+2]) << 8) | progROM[addr+3];
 		return (hi<<16)|lo;
 	}
 	if ((addr >= 0xf00000) && (addr < 0xf20000))
