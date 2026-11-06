@@ -44,7 +44,7 @@
 
 class CDSB;
 
-class CModel1SoundBoard : public IBus
+class CModel1SoundBoard final : public IBus
 {
 public:
 	/*
