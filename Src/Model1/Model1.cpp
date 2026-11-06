@@ -69,9 +69,12 @@
 #include "OSD/Logger.h"
 #include "OSD/Video.h"
 #include "Graphics/SuperAA.h"
+#include "Util/Format.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <iostream>
+#include <set>
 
 namespace
 {
@@ -1775,6 +1778,22 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
       }
     }
   }
+
+  // Print game information
+  std::set<std::string> extra_hw;
+  if (m_dsb)
+    extra_hw.insert("Digital Sound Board (Type 1)");
+  if (!game.version.empty())
+    std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
+  else
+    std::cout << "    Title:          " << game.title << std::endl;
+  std::cout << "    ROM Set:        " << game.name << std::endl;
+  std::cout << "    Developer:      " << game.manufacturer << std::endl;
+  std::cout << "    Year:           " << game.year << std::endl;
+  std::cout << "    Hardware:       " << Game::SteppingName(game.stepping) << std::endl;
+  if (!extra_hw.empty())
+    std::cout << "    Extra Hardware: " << Util::Format(", ").Join(extra_hw) << std::endl;
+  std::cout << std::endl;
 
   InfoLog("Model 1: %s initialized.", m_game.title.c_str());
   return Result::OKAY;

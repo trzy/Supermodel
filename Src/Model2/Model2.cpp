@@ -40,10 +40,13 @@
 #include "OSD/Logger.h"
 #include "OSD/Video.h"
 #include "Graphics/SuperAA.h"
+#include "Util/Format.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <cstring>
+#include <iostream>
+#include <set>
 
 // A second sound board (Model 1's) mixed into the SCSP board's frame through
 // its DSB hook: the Model 2 board sends it commands, resets it and saves it
@@ -3346,6 +3349,30 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
       }
     }
   }
+
+  // Print game information
+  std::set<std::string> extra_hw;
+  if (m_dsb)
+    extra_hw.insert(Util::Format() << "Digital Sound Board (Type " << (dynamic_cast<CDSB2 *>(m_dsb.get()) ? 2 : 1) << ")");
+  if (m_soundBoard && m_m1SoundBoard)
+    extra_hw.insert("Model 1 Sound Board");
+  if (m_wheelBoard || m_driveBoard.present)
+    extra_hw.insert("Drive Board");
+  if (m_extra == Extra::Crypt5881 || m_extra == Extra::Comp0229)
+    extra_hw.insert("Security Board");
+  if (game.netboard_present)
+    extra_hw.insert("Communication Board");
+  if (!game.version.empty())
+    std::cout << "    Title:          " << game.title << " (" << game.version << ")" << std::endl;
+  else
+    std::cout << "    Title:          " << game.title << std::endl;
+  std::cout << "    ROM Set:        " << game.name << std::endl;
+  std::cout << "    Developer:      " << game.manufacturer << std::endl;
+  std::cout << "    Year:           " << game.year << std::endl;
+  std::cout << "    Hardware:       " << Game::SteppingName(game.stepping) << std::endl;
+  if (!extra_hw.empty())
+    std::cout << "    Extra Hardware: " << Util::Format(", ").Join(extra_hw) << std::endl;
+  std::cout << std::endl;
 
   InfoLog("Model 2: %s initialized.", m_game.title.c_str());
   return Result::OKAY;
