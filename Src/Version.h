@@ -28,8 +28,11 @@
 #ifndef INCLUDED_VERSION_H
 #define INCLUDED_VERSION_H
 
+// "make release" passes its own SUPERMODEL_VERSION, with the commit's date and
+// hash. Any other build falls back to this, which doesn't change between builds.
 #ifndef SUPERMODEL_VERSION
 #define SUPERMODEL_VERSION	"0.3a-WIP"
+#define SUPERMODEL_VERSION_IS_WIP
 #endif
 
 #endif	// INCLUDED_VERSION_H

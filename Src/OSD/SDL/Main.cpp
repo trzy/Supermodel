@@ -1919,6 +1919,7 @@ Util::Config::Node DefaultConfig()
   return config;
 }
 
+#ifdef SUPERMODEL_VERSION_IS_WIP
 // The build date as YYYY-MM-DD (ISO 8601: the same read in any country), from
 // the compiler's __DATE__ ("Mmm dd yyyy"). It is the date this file was last
 // compiled.
@@ -1932,10 +1933,22 @@ static const char *BuildDate(void)
   snprintf(date, sizeof(date), "%.4s-%02d-%02d", &__DATE__[7], month, day);
   return date;
 }
+#endif
+
+// The version for the banner and log. A WIP version doesn't identify the build
+// so it gets the build date; a release version already has the commit's date.
+static std::string VersionString(void)
+{
+#ifdef SUPERMODEL_VERSION_IS_WIP
+  return std::string(SUPERMODEL_VERSION ", Built ") + BuildDate();
+#else
+  return SUPERMODEL_VERSION;
+#endif
+}
 
 static void Title(void)
 {
-  printf("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ", Built %s)\n", BuildDate());
+  printf("Supermodel: A Sega Model 3 Arcade Emulator (Version %s)\n", VersionString().c_str());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
@@ -2405,7 +2418,7 @@ int main(int argc, char **argv)
     return 1;
   }
   SetLogger(logger);
-  InfoLog("Supermodel Version " SUPERMODEL_VERSION ", Built %s", BuildDate());
+  InfoLog("Supermodel Version %s", VersionString().c_str());
   InfoLog("Started as:");
   for (int i = 0; i < argc; i++)
     InfoLog("  argv[%d] = %s", i, argv[i]);
