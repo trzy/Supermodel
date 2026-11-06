@@ -120,6 +120,11 @@ public:
   UINT32 ReadData(UINT32 addr) override;
   void   WriteData(UINT32 addr, UINT32 data) override;
 
+  // The TGP's external data space is unmapped on this board: it keeps the
+  // MB86233 bus defaults (these take a UINT16 address, unlike those above)
+  using IMB86233Bus::ReadData;
+  using IMB86233Bus::WriteData;
+
   // 2C TGPx4 FIFO ports
   UINT32 FIFOInPop() override;
   bool   FIFOInEmpty() override { return m_fifoIn.values.empty(); }
