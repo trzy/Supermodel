@@ -451,6 +451,15 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     {
       data &= ~(Inputs->analogTriggerLeft[0]->value<<0);
       data &= ~(Inputs->analogTriggerRight[0]->value<<1);
+      if (m_game.name == "lostwsga" || m_game.name == "lostwsgp")
+      {
+        const int border = 255 / 100;
+        const bool nearEdge = Inputs->analogGunX[0]->value <= border || Inputs->analogGunX[0]->value >= 255 - border ||
+          Inputs->analogGunY[0]->value <= border || Inputs->analogGunY[0]->value >= 255 - border;
+        if (nearEdge && !m_lostWorldReloaded[0])
+          data &= ~2;
+        m_lostWorldReloaded[0] = nearEdge;
+      }
     }
 
     if ((m_game.inputs & Game::INPUT_MAGTRUCK))
@@ -545,6 +554,15 @@ UINT8 CModel3::ReadInputs(unsigned reg)
     {
       data &= ~(Inputs->analogTriggerLeft[1]->value<<0);
       data &= ~(Inputs->analogTriggerRight[1]->value<<1);
+      if (m_game.name == "lostwsga" || m_game.name == "lostwsgp")
+      {
+        const int border = 255 / 100;
+        const bool nearEdge = Inputs->analogGunX[1]->value <= border || Inputs->analogGunX[1]->value >= 255 - border ||
+          Inputs->analogGunY[1]->value <= border || Inputs->analogGunY[1]->value >= 255 - border;
+        if (nearEdge && !m_lostWorldReloaded[1])
+          data &= ~2;
+        m_lostWorldReloaded[1] = nearEdge;
+      }
     }
 
     if ((m_game.inputs & Game::INPUT_MAGTRUCK))
@@ -605,7 +623,7 @@ UINT8 CModel3::ReadInputs(unsigned reg)
   	  // probably to allow users to define inverted controls for this game only,
   	  // which means the input system must support loading per-game config (not
   	  // all analog_gun games require axis inversion to be playable).
-	  if (m_game.name == "lostwsga" || m_game.name == "lostwsgo")
+      if (m_game.name == "lostwsga" || m_game.name == "lostwsgp")
 	  { // to do, not a string compare
         adc[0] =       (UINT8)Inputs->analogGunX[0]->value; // order is different for some reason in lost world
         adc[1] = 255 - (UINT8)Inputs->analogGunY[0]->value; // why are values inverted? is this the wrong place to fix this
@@ -720,6 +738,16 @@ void CModel3::WriteInputs(unsigned reg, UINT8 data)
           break;
         case 8: // Off-screen indicator (bit 0 = player 1, bit 1 = player 2, set indicates off screen)
           serialFIFO2 = (Inputs->trigger[1]->offscreenValue<<1)|Inputs->trigger[0]->offscreenValue;
+          if (m_game.name == "lostwsga" || m_game.name == "lostwsgp")
+          {
+            const int border = 255 / 100;
+            const auto nearEdge = [border](const auto &x, const auto &y)
+            {
+              return x <= border || x >= 255 - border || y <= border || y >= 255 - border;
+            };
+            serialFIFO2 |= nearEdge(Inputs->analogGunX[0]->value, Inputs->analogGunY[0]->value) ? 1 : 0;
+            serialFIFO2 |= nearEdge(Inputs->analogGunX[1]->value, Inputs->analogGunY[1]->value) ? 2 : 0;
+          }
           break;
         default:
           DebugLog("Unknown gun register: %X\n", gunReg);

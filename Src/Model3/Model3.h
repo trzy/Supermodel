@@ -248,6 +248,7 @@ private:
   UINT8   serialFIFO1, serialFIFO2;
   UINT8   gunReg;
   int     adcChannel;
+  bool    m_lostWorldReloaded[2] = {};
 
   // MIDI port
   UINT8   midiCtrlPort; // controls MIDI (SCSP) IRQ behavior
