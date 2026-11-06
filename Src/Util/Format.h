@@ -52,8 +52,7 @@ namespace Util
 
     void Write(std::ostream &os) const
     {
-      if (m_stream.rdbuf()->in_avail())
-        os << m_stream.rdbuf();
+      os << m_stream.str();
     }
 
     template <typename T>
