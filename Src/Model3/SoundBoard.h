@@ -38,7 +38,7 @@
  *
  * Model 3 sound board (68K CPU + 2 x SCSP).
  */
-class CSoundBoard: public IBus
+class CSoundBoard final : public IBus
 {
 public:
 	/*

@@ -1,12 +1,33 @@
-// license:BSD-3-Clause
-// copyright-holders:Aaron Giles
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 /*
- * Ported to Supermodel from MAME (src/devices/sound/ymfm_mame.h, src/devices/sound/ymopn.cpp/.h).
- *
  * YM3438.h
  *
  * Yamaha YM3438 (OPN2C) wrapper around the ymfm library (Src/Pkgs/ymfm),
  * equivalent to MAME's ym3438_device = ymfm_device_base<ymfm::ym3438>.
+ *
+ * Based on original work by Aaron Giles in MAME. Portions Copyright (c) Aaron
+ * Giles, used under the BSD 3-Clause License: see Docs/README.txt.
+ *
+ * Ported to Supermodel from MAME (src/devices/sound/ymfm_mame.h, src/devices/sound/ymopn.cpp/.h).
  *
  * Framework replacements:
  *  - MAME time (attotime) -> an abstract 64-bit tick counter supplied by the

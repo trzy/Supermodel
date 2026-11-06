@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -22,7 +22,7 @@
 /*
  * SyntheticSCSIROM.cpp
  *
- * Builds a synthetic SCSI ROM for the Real3D Pro-1000. The format of the SCSI
+ * Builds a synthetic SCSI ROM for the Real3D PRO-1000. The format of the SCSI
  * ROM directory and the way that the firmware loads the ROM are described in
  * the "SCSI ROM" section of Pro1000.cpp.
  *
@@ -122,7 +122,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
     return false;
   if (!haveCMEM || !havePMEM)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: %s is missing.", haveCMEM ? pmemPath.c_str() : cmemPath.c_str());
+    ErrorLog("PRO-1000: Logo database not loaded: %s is missing.", haveCMEM ? pmemPath.c_str() : cmemPath.c_str());
     return false;
   }
 
@@ -135,7 +135,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   constexpr size_t MIN_HEADER_SIZE = 0x20;
   if (cmem.size() < MIN_HEADER_SIZE || (cmem.size() % 4) != 0 || (pmem.size() % 4) != 0)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: File sizes of %s and %s are not correct.", cmemPath.c_str(), pmemPath.c_str());
+    ErrorLog("PRO-1000: Logo database not loaded: File sizes of %s and %s are not correct.", cmemPath.c_str(), pmemPath.c_str());
     return false;
   }
   uint32_t version = bigEndian32(&cmem[0x00]);
@@ -148,17 +148,17 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
 
   if ((version >> 16) != 0x6413 && (version >> 16) != 0x7413)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: %s has an unknown file version (%08X).", cmemPath.c_str(), version);
+    ErrorLog("PRO-1000: Logo database not loaded: %s has an unknown file version (%08X).", cmemPath.c_str(), version);
     return false;
   }
   if (headerSize < MIN_HEADER_SIZE || (headerSize % 4) != 0 || headerSize > cmem.size() || (cmem.size() - headerSize) / 4 != cullingWords)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: The header size or culling data size in %s is not correct.", cmemPath.c_str());
+    ErrorLog("PRO-1000: Logo database not loaded: The header size or culling data size in %s is not correct.", cmemPath.c_str());
     return false;
   }
   if (pmem.size() / 4 != polygonWords)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: The size of %s does not agree with the polygon data size in %s.", pmemPath.c_str(), cmemPath.c_str());
+    ErrorLog("PRO-1000: Logo database not loaded: The size of %s does not agree with the polygon data size in %s.", pmemPath.c_str(), cmemPath.c_str());
     return false;
   }
 
@@ -166,7 +166,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   // the data is not relocated. Thus the data must be made for these addresses.
   if (polygonBase != 0 || polygonRAMBase != 0 || cullingBase != 0)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: %s has base addresses that are not 0.", cmemPath.c_str());
+    ErrorLog("PRO-1000: Logo database not loaded: %s has base addresses that are not 0.", cmemPath.c_str());
     return false;
   }
 
@@ -177,7 +177,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   const uint32_t polygonSize = polygonWords * 4;
   if (uint64_t(polygonOffset) + polygonSize > size)
   {
-    ErrorLog("Pro-1000: Logo database not loaded: It is too large for the SCSI ROM (%u bytes).", cullingSize + polygonSize);
+    ErrorLog("PRO-1000: Logo database not loaded: It is too large for the SCSI ROM (%u bytes).", cullingSize + polygonSize);
     return false;
   }
 
@@ -199,7 +199,7 @@ static bool LoadLogoDatabase(uint8_t *scsiROM, size_t size)
   putLittleEndian32(0x2C, polygonOffset);
   putLittleEndian32(0x30, polygonSize);
 
-  InfoLog("Pro-1000: Logo database: %s (version %08X, %u culling words), %s (%u polygon words).", cmemPath.c_str(), version, cullingWords, pmemPath.c_str(), polygonWords);
+  InfoLog("PRO-1000: Logo database: %s (version %08X, %u culling words), %s (%u polygon words).", cmemPath.c_str(), version, cullingWords, pmemPath.c_str(), polygonWords);
   return true;
 }
 
@@ -230,7 +230,7 @@ void BuildSyntheticSCSIROM(uint8_t *scsiROM, size_t size)
       scsiROM[0x3C + 4 * i + b] = uint8_t(updateConfiguration[i] >> (8 * b));  // little endian
   }
   if (LoadLogoDatabase(scsiROM, size))
-    InfoLog("Pro-1000: Using synthetic SCSI ROM with the logo database from the Assets folder.");
+    InfoLog("PRO-1000: Using synthetic SCSI ROM with the logo database from the Assets folder.");
   else
-    InfoLog("Pro-1000: Using synthetic SCSI ROM (magic and update memory configuration only).");
+    InfoLog("PRO-1000: Using synthetic SCSI ROM (magic and update memory configuration only).");
 }

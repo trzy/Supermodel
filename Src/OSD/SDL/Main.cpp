@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -1672,7 +1672,7 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
-  // Network. PortIn is the port of the network server (net board and Pro-1000
+  // Network. PortIn is the port of the network server (net board and PRO-1000
   // SCSI TCP bridge). PortOut and AddressOut give the next net board machine.
   config.Set("Network", false, "Network");
   config.Set("SimulateNet", true, "Network");
@@ -1919,6 +1919,7 @@ Util::Config::Node DefaultConfig()
   return config;
 }
 
+#ifdef SUPERMODEL_VERSION_IS_WIP
 // The build date as YYYY-MM-DD (ISO 8601: the same read in any country), from
 // the compiler's __DATE__ ("Mmm dd yyyy"). It is the date this file was last
 // compiled.
@@ -1928,14 +1929,26 @@ static const char *BuildDate(void)
   static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
   const char *p = strstr(months, std::string(__DATE__, 3).c_str());
   int month = p ? int(p - months) / 3 + 1 : 0;
-  int day = atoi(__DATE__ + 4);
-  snprintf(date, sizeof(date), "%.4s-%02d-%02d", __DATE__ + 7, month, day);
+  int day = atoi(&__DATE__[4]);
+  snprintf(date, sizeof(date), "%.4s-%02d-%02d", &__DATE__[7], month, day);
   return date;
+}
+#endif
+
+// The version for the banner and log. A WIP version doesn't identify the build
+// so it gets the build date; a release version already has the commit's date.
+static std::string VersionString(void)
+{
+#ifdef SUPERMODEL_VERSION_IS_WIP
+  return std::string(SUPERMODEL_VERSION ", Built ") + BuildDate();
+#else
+  return SUPERMODEL_VERSION;
+#endif
 }
 
 static void Title(void)
 {
-  printf("Supermodel: A Sega Model 3 Arcade Emulator (Built %s)\n", BuildDate());
+  printf("Supermodel: A Sega Model Series Arcade Emulator (Version %s)\n", VersionString().c_str());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
@@ -2020,7 +2033,7 @@ static void Help(void)
   puts("  -net                    Enable net board");
   puts("  -simulate-netboard      Simulate the net board [Default]");
   puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
-  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and Pro-1000)\n"
+  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and PRO-1000)\n"
          "                          [Default: %u]\n", defaultConfig["PortIn"].ValueAs<unsigned>());
   printf("  -port-out=<n>           TCP port of the next machine [Default: %u]\n", defaultConfig["PortOut"].ValueAs<unsigned>());
   printf("  -address-out=<addr>     Address of the next machine [Default: %s]\n", defaultConfig["AddressOut"].ValueAs<std::string>().c_str());
@@ -2405,7 +2418,7 @@ int main(int argc, char **argv)
     return 1;
   }
   SetLogger(logger);
-  InfoLog("Supermodel Version " SUPERMODEL_VERSION);
+  InfoLog("Supermodel Version %s", VersionString().c_str());
   InfoLog("Started as:");
   for (int i = 0; i < argc; i++)
     InfoLog("  argv[%d] = %s", i, argv[i]);
@@ -2594,7 +2607,7 @@ int main(int argc, char **argv)
   }
 
   // Network server: for the net board, and for the programs that connect to
-  // the Pro-1000. If it cannot listen, emulation continues.
+  // the PRO-1000. If it cannot listen, emulation continues.
   if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
   {
     netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
@@ -2602,7 +2615,7 @@ int main(int argc, char **argv)
   }
 
   // Console input is created only when something reads it: the emulated
-  // machine's serial console (Pro-1000) and/or the debugger
+  // machine's serial console (PRO-1000) and/or the debugger
   {
     bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
 #ifdef SUPERMODEL_DEBUGGER

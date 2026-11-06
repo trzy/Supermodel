@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -37,6 +37,9 @@
  * connection (the Network options, as the Model 3 net board). Without the
  * network the board is linked to itself, which is what MAME does with no
  * other machine on its sockets: a master runs the link alone.
+ *
+ * Based on original work by Ariane Fugmann in MAME. Portions Copyright (c)
+ * Ariane Fugmann, used under the BSD 3-Clause License: see Docs/README.txt.
  */
 
 #ifndef INCLUDED_MODEL2COMM_H

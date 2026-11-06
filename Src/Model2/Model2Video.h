@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -35,6 +35,11 @@
  *
  * The code is MAME's with Supermodel glue (the board's memory through
  * pointers, a scanline polygon filler in place of MAME's poly_manager).
+ *
+ * Based on original work by R. Belmont, Olivier Galibert, ElSemi, Angelo
+ * Salese and Matthew Daniels in MAME. Portions Copyright (c) R. Belmont,
+ * Olivier Galibert, ElSemi, Angelo Salese and Matthew Daniels, used under the
+ * BSD 3-Clause License: see Docs/README.txt.
  */
 
 #ifndef INCLUDED_MODEL2VIDEO_H

@@ -1,7 +1,7 @@
 #
 # Supermodel
-# A Sega Model 3 Arcade Emulator.
-# Copyright 2003-2024 The Supermodel Team
+# A Sega Model Series Arcade Emulator.
+# Copyright 2003-2026 The Supermodel Team
 #
 # This file is part of Supermodel.
 #
@@ -143,9 +143,9 @@ def create_change_log(bash, repo_dir, file_path, uploaded_shas, current_sha):
       "  ####    ### ##  ##      ####   ####    ##   ##  ####    ### ##  ####    ####\n" \
       "                 ####\n" \
       "\n" \
-      "                       A Sega Model 3 Arcade Emulator.\n" \
+      "                     A Sega Model Series Arcade Emulator.\n" \
       "\n" \
-      "                   Copyright 2003-2024 The Supermodel Team\n" \
+      "                   Copyright 2003-2026 The Supermodel Team\n" \
       "\n" \
       "                                 CHANGE LOG\n" \
       "\n" \

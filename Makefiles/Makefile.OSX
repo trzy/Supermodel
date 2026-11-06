@@ -1,6 +1,6 @@
 ##
 ## Supermodel
-## A Sega Model 3 Arcade Emulator.
+## A Sega Model Series Arcade Emulator.
 ## Copyright 2003-2026 The Supermodel Team
 ##
 ## This file is part of Supermodel.
@@ -101,6 +101,10 @@ include Makefiles/Rules.inc
 
 # -s (strip) is obsolete and ignored by Apple ld64; remove it to avoid potential warnings
 LDOPT := $(filter-out -s,$(LDOPT))
+
+# m68ki_cycles is a large byte array with no alignment of its own: as a common
+# symbol, ld gives it more alignment than a segment allows and warns about it
+$(OBJ_DIR)/m68kops.o: CFLAGS += -fno-common
 
 clean:
 	$(SILENT)echo Cleaning up \"Frameworks\", \"$(BIN_DIR)\" and \"$(OBJ_DIR)\"...

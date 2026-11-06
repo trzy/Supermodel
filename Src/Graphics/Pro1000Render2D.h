@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -23,7 +23,7 @@
  * Pro1000Render2D.h
  *
  * Header file for the CPro1000Render2D class: the 2D layer of the Real3D
- * Pro-1000 (the scroll layer).
+ * PRO-1000 (the scroll layer).
  */
 
 #ifndef INCLUDED_PRO1000RENDER2D_H
@@ -37,7 +37,7 @@
 /*
  * CPro1000Render2D:
  *
- * The Pro-1000 has no tile generator. Its 2D layer (the scroll layer) is one
+ * The PRO-1000 has no tile generator. Its 2D layer (the scroll layer) is one
  * solid color, set by the SCROLL register (0x62000000, see Pro1000.cpp). The
  * color is behind the 3D image (background) or in front of it (foreground).
  * This class fills the viewable area with the color. It uses the same render

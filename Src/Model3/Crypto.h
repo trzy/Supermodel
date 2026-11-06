@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
@@ -24,10 +24,10 @@
  *
  * Header file for security board encryption device. This code was taken from
  * MAME (http://mamedev.org).
+ *
+ * Based on original work by David Haywood in MAME. Portions Copyright (c)
+ * David Haywood, used under the BSD 3-Clause License: see Docs/README.txt.
  */
-
-// license:BSD-3-Clause
-// copyright-holders:David Haywood
 
 #pragma once
 

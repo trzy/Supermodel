@@ -1,3 +1,23 @@
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 #include "GameLoader.h"
 #include "OSD/Logger.h"
 #include "Util/NewConfig.h"
@@ -264,7 +284,7 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   {
     { "",                 Game::PLATFORM_MODEL3 },  // default to Model 3
     { "Sega Model 3",     Game::PLATFORM_MODEL3 },
-    { "Real3D Pro-1000",  Game::PLATFORM_PRO1000 },
+    { "Real3D PRO-1000",  Game::PLATFORM_PRO1000 },
     { "Sega Model 1",     Game::PLATFORM_MODEL1 },
     { "Sega Model 2",     Game::PLATFORM_MODEL2 }
   };
@@ -272,8 +292,8 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   if (platforms.find(platform) == platforms.end())
     ErrorLog("Unknown platform '%s' for '%s'. Defaulting to Sega Model 3.", platform.c_str(), game->name.c_str());
   game->platform = platforms[platform];
-  // The stepping must be a stepping of the platform. The Pro-1000 default is
-  // the PRO-1100.
+  // The stepping must be a stepping of the platform. The PRO-1000 default is
+  // the PRO-1100 and the Model 2 default is the Model 2A.
   std::map<std::string, Game::Stepping> model3_steppings
   {
     { "1.0",  Game::Stepping::MODEL3_1_0 },
@@ -309,7 +329,7 @@ static bool PopulateGameInfo(Game *game, const Util::Config::Node &game_node)
   if (stepping_it == steppings.end())
   {
     ErrorLog("Stepping '%s' of '%s' is not a %s stepping (%s). Ignoring this game.", stepping.c_str(), game->name.c_str(),
-             model2 ? "Sega Model 2" : model1 ? "Sega Model 1" : pro1000 ? "Real3D Pro-1000" : "Sega Model 3",
+             model2 ? "Sega Model 2" : model1 ? "Sega Model 1" : pro1000 ? "Real3D PRO-1000" : "Sega Model 3",
              model2 ? "2, 2A, 2B, or 2C" : model1 ? "none" : pro1000 ? "1100, 1200, or 1400" : "1.0, 1.5, 2.0, or 2.1");
     return false;
   }

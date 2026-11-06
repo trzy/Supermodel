@@ -1,3 +1,23 @@
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 #ifndef INCLUDED_GAME_H
 #define INCLUDED_GAME_H
 
@@ -13,19 +33,20 @@ struct Game
   std::string version;
   std::string manufacturer;
   unsigned year = 0;
-  unsigned polygon_memory = 0;  // Real3D Pro-1000: polygon memory in MB (0 = not given)
+  unsigned polygon_memory = 0;  // Real3D PRO-1000: polygon memory in MB (0 = not given)
   enum Platform
   {
     PLATFORM_MODEL3 = 0,  // Sega Model 3 arcade hardware
-    PLATFORM_PRO1000,     // Real3D Pro-1000 image generator
+    PLATFORM_PRO1000,     // Real3D PRO-1000 image generator
     PLATFORM_MODEL1,      // Sega Model 1 arcade hardware
     PLATFORM_MODEL2       // Sega Model 2 arcade hardware
   };
   Platform platform = Platform::PLATFORM_MODEL3;
-  // Hardware stepping. Games.xml: "1.0", "1.5", "2.0", or "2.1" (Model 3) and
-  // "1100", "1200", or "1400" (Pro-1000 model). GameLoader makes sure that it
-  // is a stepping of the platform. Ordered comparisons are permitted only
-  // between steppings of the same platform.
+  // Hardware stepping. Games.xml: "1.0", "1.5", "2.0", or "2.1" (Model 3),
+  // "1100", "1200", or "1400" (PRO-1000 model; 1100 if not given), none (Model
+  // 1), and "2" (original), "2A", "2B", or "2C" (Model 2; 2A if not given).
+  // GameLoader makes sure that it is a stepping of the platform. Ordered
+  // comparisons are permitted only between steppings of the same platform.
   enum class Stepping
   {
     UNKNOWN = 0,
@@ -45,7 +66,7 @@ struct Game
   Stepping stepping = Stepping::UNKNOWN;
 
   // Returns the name of the stepping for display ("Model 3 Step 1.5",
-  // "Pro-1100", ...)
+  // "PRO-1100", ...)
   static const char *SteppingName(Stepping stepping)
   {
     switch (stepping)
@@ -54,9 +75,9 @@ struct Game
     case Stepping::MODEL3_1_5:    return "Model 3 Step 1.5";
     case Stepping::MODEL3_2_0:    return "Model 3 Step 2.0";
     case Stepping::MODEL3_2_1:    return "Model 3 Step 2.1";
-    case Stepping::PRO1000_1100:  return "Pro-1100";
-    case Stepping::PRO1000_1200:  return "Pro-1200";
-    case Stepping::PRO1000_1400:  return "Pro-1400";
+    case Stepping::PRO1000_1100:  return "PRO-1100";
+    case Stepping::PRO1000_1200:  return "PRO-1200";
+    case Stepping::PRO1000_1400:  return "PRO-1400";
     case Stepping::MODEL1:        return "Model 1";
     case Stepping::MODEL2:        return "Model 2";
     case Stepping::MODEL2A:       return "Model 2A";
@@ -66,7 +87,7 @@ struct Game
     }
   }
 
-  // Returns true if the stepping is a Real3D Pro-1000 model
+  // Returns true if the stepping is a Real3D PRO-1000 model
   static bool IsPro1000Stepping(Stepping stepping)
   {
     return stepping == Stepping::PRO1000_1100 || stepping == Stepping::PRO1000_1200 || stepping == Stepping::PRO1000_1400;

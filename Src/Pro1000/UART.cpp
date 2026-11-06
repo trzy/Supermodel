@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -54,7 +54,7 @@
  *
  * Interrupts: only received data available (IER bit 0) is implemented. It is
  * pending while the receive FIFO is not empty (trigger level of 1). The INT
- * output is the pending condition gated by MCR OUT1 (bit 2): the Pro-1000
+ * output is the pending condition gated by MCR OUT1 (bit 2): the PRO-1000
  * firmware sets OUT1 on entry to its interrupt handler and clears it on exit,
  * producing a new edge for the edge triggered 8259 if more data remains.
  */

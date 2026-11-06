@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -37,6 +37,13 @@
  * nothing. Moire quads (the hardware's translucency) draw every other pixel
  * of the native 496x384 grid, so the checkerboard looks the same at any
  * resolution. Wireframe quads are drawn as lines one native pixel wide.
+ *
+ * The Model 2 fragment shader is based on original work by R. Belmont, Olivier
+ * Galibert, ElSemi, Angelo Salese and Matthew Daniels in MAME (model2rd.ipp),
+ * and its log2 table on original work by Aaron Giles in MAME
+ * (voodoo_render.cpp). Portions Copyright (c) R. Belmont, Olivier Galibert,
+ * ElSemi, Angelo Salese, Matthew Daniels and Aaron Giles, used under the BSD
+ * 3-Clause License: see Docs/README.txt.
  */
 
 #include "Model1Render.h"

@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -23,7 +23,7 @@
  * Pro1000Render2D.cpp
  *
  * Implementation of the CPro1000Render2D class: the 2D layer (scroll layer)
- * of the Real3D Pro-1000.
+ * of the Real3D PRO-1000.
  *
  * The layer is one solid color. The renderer fills the complete viewable
  * area with glClear() and a scissor rectangle. It does not use textures or

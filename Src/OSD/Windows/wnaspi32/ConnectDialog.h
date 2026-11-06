@@ -23,7 +23,7 @@
  * ConnectDialog.h
  *
  * Connection to Supermodel for the replacement wnaspi32.dll: the "Supermodel
- * Pro-1000 Host" window, in which the user gives the host and the port of
+ * PRO-1000 Host" window, in which the user gives the host and the port of
  * Supermodel's SCSI TCP bridge.
  */
 
@@ -40,7 +40,7 @@
 /*
  * ShowConnectDialog(host, port, message):
  *
- * Shows the "Supermodel Pro-1000 Host" window and connects to Supermodel.
+ * Shows the "Supermodel PRO-1000 Host" window and connects to Supermodel.
  * The window stays until a connection is made. If the user presses Exit,
  * the program ends (ExitProcess()). Do not call this from DllMain().
  *

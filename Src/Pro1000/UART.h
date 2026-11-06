@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -46,7 +46,7 @@ class IConsoleInput;
  * characters come from console input: each line typed is received followed
  * by a carriage return, through a 16-byte receive FIFO. Only the received
  * data available interrupt is generated. MCR OUT1 masks the interrupt output
- * (the Pro-1000 firmware sets it while servicing an interrupt).
+ * (the PRO-1000 firmware sets it while servicing an interrupt).
  */
 class CUART
 {

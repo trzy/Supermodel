@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -27,6 +27,11 @@
  * Supermodel glue around it: a bus interface instead of MAME address spaces
  * and FIFO devices, Run() instead of the scheduler, save states. MAME's
  * recompiler (mb86235drc/mb86235fe) is not ported.
+ *
+ * Based on original work by Angelo Salese, ElSemi, Ville Linde and Matthew
+ * Daniels in MAME. Portions Copyright (c) Angelo Salese, ElSemi, Ville Linde
+ * and Matthew Daniels, used under the BSD 3-Clause License: see
+ * Docs/README.txt.
  *
  * Memory: the program space (4K x 64-bit words, MAME's AS_PROGRAM; on Model
  * 2C a RAM the i960 fills through the copro FIFO port while COPROCTL bit 31

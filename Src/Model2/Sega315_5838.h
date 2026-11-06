@@ -1,5 +1,23 @@
-// license:BSD-3-Clause
-// copyright-holders:David Haywood, Samuel Neves, Peter Wilhelmsen, Morten Shearman Kirkegaard
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 /*
  * Sega315_5838.h
  *
@@ -7,6 +25,11 @@
  * MAME's sega/315-5838_317-0229_comp.cpp. On Model 2, Dead or Alive has the
  * 317-0229: it decompresses a string from i960 RAM that the game checks at
  * start-up.
+ *
+ * Based on original work by David Haywood, Samuel Neves, Peter Wilhelmsen and
+ * Morten Shearman Kirkegaard in MAME. Portions Copyright (c) David Haywood,
+ * Samuel Neves, Peter Wilhelmsen and Morten Shearman Kirkegaard, used under
+ * the BSD 3-Clause License: see Docs/README.txt.
  */
 
 #ifndef INCLUDED_SEGA315_5838_H

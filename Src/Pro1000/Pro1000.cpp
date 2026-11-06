@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -22,9 +22,9 @@
 /*
  * Pro1000.cpp
  *
- * Implementation of the CPro1000 class: a Real3D Pro-1000 image generator.
+ * Implementation of the CPro1000 class: a Real3D PRO-1000 image generator.
  *
- * The Pro-1000 was attached to a Windows NT host via SCSI. Applications ran on
+ * The PRO-1000 was attached to a Windows NT host via SCSI. Applications ran on
  * the host and sent data to the image generator, which had its own display.
  * The Model 3 graphics hardware is derived from it. This file documents what
  * has been learned about the hardware from its firmware. Everything here was
@@ -57,7 +57,7 @@
  *
  * SDK Documentation
  * -----------------
- * The Pro-1000 SDK CD (Owner's Manual v3.0e, Product Description v4.0e,
+ * The PRO-1000 SDK CD (Owner's Manual v3.0e, Product Description v4.0e,
  * Developer's Guide v4.0e, API headers) describes the product from the user's
  * point of view. Hardware facts relevant to emulation:
  *
@@ -364,7 +364,7 @@
  * words 0 to word 0 - 1 and the polygon RAM update buffer in words word 0 to
  * word 2 - 1. High culling RAM (0x8E000000) is a separate memory.
  *
- * The Pro-1000 firmware does not write these values to memory. Its function
+ * The PRO-1000 firmware does not write these values to memory. Its function
  * that writes words to a renderer address (0x10E3C) sends a write to
  * 0x9C000000 to 0x11060. 0x11060 keeps the three words at RAM 0x5F2A0 and
  * sends them to Mercury through JTAG: instruction 0x09, with a 57-bit data
@@ -415,7 +415,7 @@
  * hardware prevents this.
  *
  * Emulation: Mercury has the register (CASIC, instruction 9) on Model 3 and
- * on the Pro-1000, because the two use the same ASICs. An update of the
+ * on the PRO-1000, because the two use the same ASICs. An update of the
  * register writes the three values to the Real3D configuration registers. A
  * capture reads them. Thus the register adds no state. No Model 3 game that
  * was examined loads instruction 9 (they use 0x03, 0x08, 0x0A, 0x0B, 0x18,
@@ -799,7 +799,7 @@
  * a carriage return). Console input is shared with the debugger through
  * CConsoleInput: the UART claims it permanently and the debugger claims it
  * while execution is halted, so commands typed at the debugger prompt go to
- * the debugger and everything else goes to the Pro-1000. The UART's claim is
+ * the debugger and everything else goes to the PRO-1000. The UART's claim is
  * also what starts the console being read.
  *
  *
@@ -807,7 +807,7 @@
  * ---------
  * The Real3D draws continuously, one frame for each field (hypothesis). No
  * command starts the drawing. Real3D.cpp ("Rendering") describes how
- * Supermodel draws and how the Pro-1000 differs from Model 3.
+ * Supermodel draws and how the PRO-1000 differs from Model 3.
  *
  * Firmware sequence for each frame (main loop 0x9B6C, simplified):
  *  1. Wait for host data. A WRITE from the host (LUN 0) puts the update in
@@ -828,11 +828,11 @@
  *    tile generator register), and IR0 (field sync) occurs at line
  *    FIELD_SYNC_LINE (383).
  *  - Then the renderer draws the scene that is in memory (RenderFrame()).
- * The Pro-1000 time of the ping-pong flip is not known. The update buffers
+ * The PRO-1000 time of the ping-pong flip is not known. The update buffers
  * use the update memory configuration, which the SCSI ROM sets at boot (see
  * Update Memory Configuration).
  *
- * 2D layer: the Pro-1000 has no tile generator. Its only 2D layer is the
+ * 2D layer: the PRO-1000 has no tile generator. Its only 2D layer is the
  * solid color of the SCROLL register (0x62000000). CPro1000Render2D draws it
  * as CRender2D draws the Model 3 tile layers: the background before the 3D
  * image, the foreground after it. The register value goes to the renderer in
@@ -894,7 +894,7 @@
  *  - Models. The PRO-1200 and PRO-1400 boot, but rendering is that of the
  *    PRO-1100 (see Models). To revisit once rendering works.
  *  - Where scan chains should be built. Currently CPro1000 builds its chain
- *    while Model 3's CJTAG builds its own. Since the Pro-1000 single and dual
+ *    while Model 3's CJTAG builds its own. Since the PRO-1000 single and dual
  *    chains are the Model 3 Step 1.x and 2.x chains, consider having CReal3D
  *    build the chain (its ASICs are the Real3D chipset) from a board
  *    configuration supplied by the system, preserving the Model 3 JTAG2 save
@@ -1029,7 +1029,7 @@ bool CPro1000::IsSCSIAddress(UINT32 addr) const
  Address Space Access Handlers
 ******************************************************************************/
 
-// REND_ROM_UPDATE is the Model 3 VROM texture port. The Pro-1000 has no VROM
+// REND_ROM_UPDATE is the Model 3 VROM texture port. The PRO-1000 has no VROM
 // that we know of, but the firmware references the port, so all accesses are
 // logged.
 constexpr static uint32_t REND_ROM_UPDATE   = 0x90000000;
@@ -1041,12 +1041,12 @@ static inline bool IsVROMPortAddress(UINT32 addr)
 
 static void LogVROMPortAccess(const char *access, UINT32 addr)
 {
-  InfoLog("Pro-1000: %s REND_ROM_UPDATE (VROM port) @ %08X (PC=%08X, LR=%08X)", access, addr, ppc_get_pc(), ppc_get_lr());
+  InfoLog("PRO-1000: %s REND_ROM_UPDATE (VROM port) @ %08X (PC=%08X, LR=%08X)", access, addr, ppc_get_pc(), ppc_get_lr());
 }
 
 static void LogVROMPortAccess(const char *access, UINT32 addr, UINT32 data)
 {
-  InfoLog("Pro-1000: %s REND_ROM_UPDATE (VROM port) %08X=%08X (PC=%08X, LR=%08X)", access, addr, data, ppc_get_pc(), ppc_get_lr());
+  InfoLog("PRO-1000: %s REND_ROM_UPDATE (VROM port) %08X=%08X (PC=%08X, LR=%08X)", access, addr, data, ppc_get_pc(), ppc_get_lr());
 }
 
 UINT8 CPro1000::Read8(UINT32 addr)
@@ -1442,7 +1442,7 @@ void CPro1000::Write32(UINT32 addr, UINT32 data)
     return;
 
   // Real3D texture port (REND_ROM_UPDATE). The data is the word address of
-  // a texture in polygon RAM (which replaces VROM on the Pro-1000).
+  // a texture in polygon RAM (which replaces VROM on the PRO-1000).
   case 0x90:  // 90000000-90??????
     GPU.WriteTexturePort(addr & 0xFF, FLIPENDIAN32(data));
     return;
@@ -1957,7 +1957,7 @@ void CPro1000::Reset(void)
 
   memset(&timings, 0, sizeof(timings));
 
-  DebugLog("Pro-1000 reset\n");
+  DebugLog("PRO-1000 reset\n");
 }
 
 
@@ -1976,7 +1976,7 @@ void CPro1000::AttachRenderers(IRender2D *Render2DPtr, IRender3D *Render3DPtr, S
   m_render2D = dynamic_cast<CPro1000Render2D *>(Render2DPtr);
   Render3DPtr->SetStepping(m_game.stepping);
 
-  // Set the native display coordinate range for Pro-1000 sync file 1 (VGA
+  // Set the native display coordinate range for PRO-1000 sync file 1 (VGA
   // 640x480). The API sync table gives j_max=636, i_max=480 for this mode.
   // These values are the coordinate range that the host program uses to set
   // viewport positions and sizes.
@@ -2049,7 +2049,7 @@ void CPro1000::BuildScanChain(Game::Stepping stepping)
   JTAG.AttachScanChain(&m_scanChain);
 }
 
-// Pro-1000 initialization: memory, devices, the model, and ROMs
+// PRO-1000 initialization: memory, devices, the model, and ROMs
 Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
 {
   constexpr float memSizeMB = (float)MEM_POOL_SIZE / (float)0x100000;
@@ -2062,7 +2062,7 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   // Allocate all memory for ROMs and PPC RAM
   memoryPool = new(std::nothrow) UINT8[MEM_POOL_SIZE];
   if (NULL == memoryPool)
-    return ErrorLog("Insufficient memory for Pro-1000 object (needs %1.1f MB).", memSizeMB);
+    return ErrorLog("Insufficient memory for PRO-1000 object (needs %1.1f MB).", memSizeMB);
   memset(memoryPool, 0, MEM_POOL_SIZE);
 
   // Set up pointers
@@ -2102,7 +2102,7 @@ Result CPro1000::Init(const Game &game, const ROMSet &rom_set)
   PCIBus.AttachDevice(SCSI_PCI_DEVICE, &SCSI);
   BuildScanChain(game.stepping);
 
-  DebugLog("Initialized Pro-1000 (allocated %1.1f MB)\n", memSizeMB);
+  DebugLog("Initialized PRO-1000 (allocated %1.1f MB)\n", memSizeMB);
 
   // Unprogrammed flash reads back as all 1's
   memset(flash, 0xFF, FLASH_SIZE);
@@ -2210,7 +2210,7 @@ CPro1000::CPro1000(Util::Config::Node &config, IConsoleInput *consoleInput, std:
   UART.AttachInput(consoleInput);
   memset(PPCFetchRegions, 0, sizeof(PPCFetchRegions));
   memset(&timings, 0, sizeof(timings));
-  DebugLog("Built Pro-1000\n");
+  DebugLog("Built PRO-1000\n");
 }
 
 // Dumps a memory region to a file for debugging purposes
@@ -2251,5 +2251,5 @@ CPro1000::~CPro1000(void)
   flash = NULL;
   scsiROM = NULL;
 
-  DebugLog("Destroyed Pro-1000\n");
+  DebugLog("Destroyed PRO-1000\n");
 }

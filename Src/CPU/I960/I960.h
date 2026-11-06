@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -25,6 +25,10 @@
  * src/devices/cpu/i960). The main CPU of Sega Model 2. The instruction code
  * is MAME's, with Supermodel glue around it: a bus interface instead of MAME
  * address spaces, Run() instead of the scheduler, save states.
+ *
+ * Based on original work by Farfetch'd and R. Belmont in MAME. Portions
+ * Copyright (c) Farfetch'd and R. Belmont, used under the BSD 3-Clause
+ * License: see Docs/README.txt.
  */
 
 #ifndef INCLUDED_I960_H

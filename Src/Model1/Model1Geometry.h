@@ -1,6 +1,22 @@
-// license:BSD-3-Clause
-// copyright-holders:Olivier Galibert
-// Ported to Supermodel from MAME (src/mame/sega/model1_v.cpp).
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
 
 /*
  * Model1Geometry.h
@@ -8,6 +24,11 @@
  * The Sega Model 1 video board: the geometrizer (display list walker,
  * transformation, lighting, clipping, projection and z-sorting), as simulated
  * by MAME.
+ *
+ * Based on original work by Olivier Galibert in MAME. Portions Copyright (c)
+ * Olivier Galibert, used under the BSD 3-Clause License: see Docs/README.txt.
+ *
+ * Ported to Supermodel from MAME (src/mame/sega/model1_v.cpp).
  *
  * MAME rasterizes the sorted quads into a 496x384 bitmap. Here the output is
  * the list of screen-space quads instead, kept in drawing order, with their

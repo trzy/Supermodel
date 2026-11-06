@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -23,6 +23,9 @@
  *
  * The Model 2 communication board: MAME's m2comm (M2COMM_SIMULATION), its
  * sockets replaced by CNetBoardLink, or by a loopback when not networked.
+ *
+ * Based on original work by Ariane Fugmann in MAME. Portions Copyright (c)
+ * Ariane Fugmann, used under the BSD 3-Clause License: see Docs/README.txt.
  */
 
 #include "Model2/Model2Comm.h"

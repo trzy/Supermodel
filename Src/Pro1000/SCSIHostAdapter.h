@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -26,7 +26,7 @@
  *
  * Purpose
  * -------
- * The Pro-1000 is a SCSI target. On real hardware, a host computer sends
+ * The PRO-1000 is a SCSI target. On real hardware, a host computer sends
  * commands to it through a SCSI host adapter (a card in the computer). This
  * class does the work of that host adapter. It is the initiator on the
  * emulated SCSI bus. The emulated SCSI controller (C53C810) is the target.

@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -22,6 +22,10 @@
  * Model1Geometrizer.cpp
  *
  * The geometrizer DSPs run as real programs. See Model1Geometrizer.h.
+ *
+ * The display list command lengths are based on original work by Olivier
+ * Galibert in MAME (model1_v.cpp). Portions Copyright (c) Olivier Galibert,
+ * used under the BSD 3-Clause License: see Docs/README.txt.
  */
 
 #include "Model1Geometrizer.h"
