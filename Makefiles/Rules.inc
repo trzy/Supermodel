@@ -350,10 +350,11 @@ print_message: set_git_revision
 	$(info Building Supermodel Git Revision $(GIT_REVISION))
 
 #
-# The version as reported by the built binary, without the program name. tr
-# removes the carriage return that Windows binaries output.
+# The version as reported by the built binary, without the program name. The
+# path is quoted because the Windows Command Prompt would otherwise treat the
+# slash as the start of a command line switch.
 #
-READ_VERSION = $(lastword $(shell $(BIN_DIR)/$(SUPERMODEL_BINARY) -version | tr -d '\r'))
+READ_VERSION = $(lastword $(shell "$(BIN_DIR)/$(SUPERMODEL_BINARY)" -version))
 
 #
 # Print *only* the version directly. Requires Supermodel to have been built.
