@@ -1928,14 +1928,14 @@ static const char *BuildDate(void)
   static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
   const char *p = strstr(months, std::string(__DATE__, 3).c_str());
   int month = p ? int(p - months) / 3 + 1 : 0;
-  int day = atoi(__DATE__ + 4);
-  snprintf(date, sizeof(date), "%.4s-%02d-%02d", __DATE__ + 7, month, day);
+  int day = atoi(&__DATE__[4]);
+  snprintf(date, sizeof(date), "%.4s-%02d-%02d", &__DATE__[7], month, day);
   return date;
 }
 
 static void Title(void)
 {
-  printf("Supermodel: A Sega Model 3 Arcade Emulator (Built %s)\n", BuildDate());
+  printf("Supermodel: A Sega Model 3 Arcade Emulator (Version " SUPERMODEL_VERSION ", Built %s)\n", BuildDate());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
@@ -2405,7 +2405,7 @@ int main(int argc, char **argv)
     return 1;
   }
   SetLogger(logger);
-  InfoLog("Supermodel Version " SUPERMODEL_VERSION);
+  InfoLog("Supermodel Version " SUPERMODEL_VERSION ", Built %s", BuildDate());
   InfoLog("Started as:");
   for (int i = 0; i < argc; i++)
     InfoLog("  argv[%d] = %s", i, argv[i]);
