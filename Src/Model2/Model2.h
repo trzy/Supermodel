@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -23,6 +23,11 @@
  *
  * Sega Model 2A-CRX, ported from MAME's model2 driver (R. Belmont, Olivier
  * Galibert, ElSemi, Angelo Salese, Matthew Daniels; src/mame/sega/model2.cpp).
+ *
+ * Based on original work by R. Belmont, Olivier Galibert, ElSemi, Angelo
+ * Salese and Matthew Daniels in MAME. Portions Copyright (c) R. Belmont,
+ * Olivier Galibert, ElSemi, Angelo Salese and Matthew Daniels, used under the
+ * BSD 3-Clause License: see Docs/README.txt.
  *
  *   i960KB (25 MHz)            main CPU
  *   MB86234 TGP (50 MHz)       coprocessor, program uploaded by the i960,

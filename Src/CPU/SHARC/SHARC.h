@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -26,6 +26,9 @@
  * Model 2B. The instruction code is MAME's, with Supermodel glue around it: a
  * bus interface instead of MAME address spaces, Run() instead of the
  * scheduler, save states. MAME's recompiler is not ported.
+ *
+ * Based on original work by Ville Linde in MAME. Portions Copyright (c) Ville
+ * Linde, used under the BSD 3-Clause License: see Docs/README.txt.
  *
  * Only the ADSP-21062 (2 Mbit) internal memory map is emulated.
  */

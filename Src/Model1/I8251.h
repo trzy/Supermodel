@@ -1,14 +1,35 @@
-// license:BSD-3-Clause
-// copyright-holders:smf, Robbbert
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 /*
- * Ported to Supermodel from MAME (src/devices/machine/i8251.cpp, src/devices/machine/i8251.h,
- * with the parts of src/emu/diserial.cpp it relies on).
- *
  * I8251.h
  *
  * Intel 8251 USART (NEC uPD71051 is a clone). Used on both ends of the Sega
  * Model 1 main board <-> sound board link: the main board's uPD71051 at
  * 0xC40000 and the sound board's T82C51 at 0xC20000.
+ *
+ * Based on original work by smf and Robbbert in MAME. Portions Copyright (c)
+ * smf and Robbbert, used under the BSD 3-Clause License: see Docs/README.txt.
+ *
+ * Ported to Supermodel from MAME (src/devices/machine/i8251.cpp, src/devices/machine/i8251.h,
+ * with the parts of src/emu/diserial.cpp it relies on).
  *
  * Register interface, status bits, mode/command handling and the TxRDY /
  * RxRDY / TxEMPTY logic are a direct port of MAME's i8251_device.

@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  **
  ** This file is part of Supermodel.
  **
@@ -23,6 +23,11 @@
  *
  * Sega Model 2A-CRX board, from MAME's model2.cpp (memory map, coprocessor,
  * geometrizer ports, interrupts, timers, I/O). See Model2.h.
+ *
+ * Based on original work by R. Belmont, Olivier Galibert, ElSemi, Angelo
+ * Salese and Matthew Daniels in MAME. Portions Copyright (c) R. Belmont,
+ * Olivier Galibert, ElSemi, Angelo Salese and Matthew Daniels, used under the
+ * BSD 3-Clause License: see Docs/README.txt.
  */
 
 #include "Model2.h"

@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -1948,7 +1948,7 @@ static std::string VersionString(void)
 
 static void Title(void)
 {
-  printf("Supermodel: A Sega Model 3 Arcade Emulator (Version %s)\n", VersionString().c_str());
+  printf("Supermodel: A Sega Model Series Arcade Emulator (Version %s)\n", VersionString().c_str());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 

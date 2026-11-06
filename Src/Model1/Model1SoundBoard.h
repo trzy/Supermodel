@@ -1,12 +1,33 @@
-// license:BSD-3-Clause
-// copyright-holders:R. Belmont
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 /*
- * Ported to Supermodel from MAME (src/mame/shared/segam1audio.cpp, src/mame/shared/segam1audio.h).
- *
  * Model1SoundBoard.h
  *
  * Sega Model 1 sound board (68000 + YM3438 + 2x 315-5560 "MultiPCM" + T82C51
  * UART), used for Model 1 and early Model 2 games.
+ *
+ * Based on original work by R. Belmont in MAME. Portions Copyright (c) R.
+ * Belmont, used under the BSD 3-Clause License: see Docs/README.txt.
+ *
+ * Ported to Supermodel from MAME (src/mame/shared/segam1audio.cpp, src/mame/shared/segam1audio.h).
  *
  * Timing: everything on the board runs on one 40 MHz tick counter
  * (68000 @ 10 MHz = 4 ticks/cycle, YM3438 @ 8 MHz = 5 ticks/clock,

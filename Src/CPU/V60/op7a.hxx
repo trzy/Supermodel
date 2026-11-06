@@ -1,13 +1,38 @@
-// license:BSD-3-Clause
-// copyright-holders:Farfetch'd, R. Belmont
-// Ported to Supermodel from MAME (src/devices/cpu/v60/op7a.hxx).
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
+
 /*
+ * op7a.hxx
+ *
  * CMPC: What happens to _S flag if the strings are identical?
  *   I suppose that it will be cleared. And is it set or cleared
  *   when the first one is a substring of the second? I suppose
  *   cleared (since _S should be (src > dst))
  * MOVC: Why MOVCS does not exist in downward version?
  * SHCHDB / SHCHDH: R27 is filled with the offset from the start or from the end?
+ *
+ * Based on original work by Farfetch'd and R. Belmont in MAME. Portions
+ * Copyright (c) Farfetch'd and R. Belmont, used under the BSD 3-Clause
+ * License: see Docs/README.txt.
+ *
+ * Ported to Supermodel from MAME (src/devices/cpu/v60/op7a.hxx).
  *
  * Strange stuff:
  *   SCHC opcodes does *not* modify _Z flag as stated in V60 manual:

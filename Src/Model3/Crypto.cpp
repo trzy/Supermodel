@@ -1,6 +1,6 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2011-2016 Bart Trzynadlowski, Nik Henson 
  **
  ** This file is part of Supermodel.
@@ -24,10 +24,12 @@
  *
  * Security board encryption device emulation. This code was taken from MAME
  * (http://mamedev.org).
+ *
+ * Based on original work by Andreas Naive, Olivier Galibert and David Haywood
+ * in MAME. Portions Copyright (c) Andreas Naive, Olivier Galibert and David
+ * Haywood, used under the BSD 3-Clause License: see Docs/README.txt.
  */
  
-// license:BSD-3-Clause
-// copyright-holders:Andreas Naive, Olivier Galibert, David Haywood
 /*
   re: Tecmo World Cup '98 (ST-V) (from ANY)
 

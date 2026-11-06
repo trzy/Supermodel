@@ -1,7 +1,7 @@
 
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
+ ** A Sega Model Series Arcade Emulator.
  ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
@@ -30,6 +30,10 @@
  * donated by ElSemi. Interfaces directly to the 68K processor through
  * callbacks. Some minor interface changes were made (external global variables
  * were removed).
+ *
+ * Based on original work by ElSemi and R. Belmont in MAME. Portions Copyright
+ * (c) ElSemi and R. Belmont, used under the BSD 3-Clause License: see
+ * Docs/README.txt.
  *
  * The MIDI input buffer has been increased from 8 (which I assume is the
  * actual size) in order to accommodate Model 3's PowerPC/68K communication.

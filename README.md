@@ -1,4 +1,4 @@
-# Supermodel: A Sega Model 3 Arcade Emulator
+# Supermodel: A Sega Model Series Arcade Emulator
 *Copyright 2003-2026 The Supermodel Team*
 
 ## Overview
@@ -107,3 +107,9 @@ If you try and run a macOS binary that was downloaded from the internet and/or b
 * Close the terminal window that opens (after clicking open)
 
 Details: https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac
+
+## License
+
+Supermodel is distributed under the terms of the [GNU General Public License](Docs/LICENSE.txt).
+
+Parts of it, mainly the Sega Model 1 and Model 2 support, are based on code from [MAME](https://www.mamedev.org) by Aaron Giles, Andreas Naive, Angelo Salese, Ariane Fugmann, David Haywood, ElSemi, Ernesto Corvi, Farfetch'd, Matthew Daniels, Miguel Angel Horna, Morten Shearman Kirkegaard, Olivier Galibert, Peter Wilhelmsen, R. Belmont, Robbbert, Samuel Neves, smf and Ville Linde. Their code was made available under the BSD 3-Clause License: the full notice is in the Acknowledgments section of [Docs/README.txt](Docs/README.txt).

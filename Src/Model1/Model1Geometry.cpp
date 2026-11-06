@@ -1,6 +1,22 @@
-// license:BSD-3-Clause
-// copyright-holders:Olivier Galibert
-// Ported to Supermodel from MAME (src/mame/sega/model1_v.cpp).
+/**
+ ** Supermodel
+ ** A Sega Model Series Arcade Emulator.
+ **
+ ** This file is part of Supermodel.
+ **
+ ** Supermodel is free software: you can redistribute it and/or modify it under
+ ** the terms of the GNU General Public License as published by the Free
+ ** Software Foundation, either version 3 of the License, or (at your option)
+ ** any later version.
+ **
+ ** Supermodel is distributed in the hope that it will be useful, but WITHOUT
+ ** ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ ** FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ ** more details.
+ **
+ ** You should have received a copy of the GNU General Public License along
+ ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
+ **/
 
 /*
  * Model1Geometry.cpp
@@ -8,6 +24,11 @@
  * Model 1 geometrizer TGP simulation (see Model1Geometry.h). The display list
  * walk, transformation, lighting, clipping, projection and sorting follow
  * MAME's model1_v.cpp. Differences, all at the output end:
+ *
+ * Based on original work by Olivier Galibert in MAME. Portions Copyright (c)
+ * Olivier Galibert, used under the BSD 3-Clause License: see Docs/README.txt.
+ *
+ * Ported to Supermodel from MAME (src/mame/sega/model1_v.cpp).
  *
  *  - draw_objects() appends the sorted quads to a Frame (with the projected
  *    floating point coordinates) instead of filling a bitmap. The software
