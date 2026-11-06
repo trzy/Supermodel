@@ -28,7 +28,7 @@
  *
  * Purpose
  * -------
- * Programs that use the Pro-1000 send SCSI commands through ASPI
+ * Programs that use the PRO-1000 send SCSI commands through ASPI
  * (wnaspi32.dll). A replacement wnaspi32.dll connects to the network server
  * and sends each command as a message. The bridge gives each command to the
  * virtual SCSI host adapter (CSCSIHostAdapter). When the command completes,

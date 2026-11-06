@@ -22,7 +22,7 @@
 /*
  * ConnectDialog.cpp
  *
- * The "Supermodel Pro-1000 Host" window of the replacement wnaspi32.dll.
+ * The "Supermodel PRO-1000 Host" window of the replacement wnaspi32.dll.
  *
  * The window has a Host box, a Port box, a status line, and two buttons:
  *
@@ -398,7 +398,7 @@ SOCKET ConnectToHost(const std::string &hostText, uint16_t port, std::string *er
 
 SOCKET ShowConnectDialog(std::string *host, uint16_t *port, const std::string &message)
 {
-  DialogTemplate dialog(L"Supermodel Pro-1000 Host", 200, 88, 7);
+  DialogTemplate dialog(L"Supermodel PRO-1000 Host", 200, 88, 7);
   dialog.AddItem(0x82, -1, SS_LEFT, 7, 9, 30, 8, L"Host:");
   dialog.AddItem(0x81, ID_HOST, ES_AUTOHSCROLL | WS_BORDER | WS_TABSTOP, 40, 7, 153, 12, L"");
   dialog.AddItem(0x82, -1, SS_LEFT, 7, 27, 30, 8, L"Port:");

@@ -1672,7 +1672,7 @@ Util::Config::Node DefaultConfig()
   config.Set("SDLVibrateMax", 100, "ForceFeedback", 0, 100);
   config.Set("SDLConstForceThreshold", 30, "ForceFeedback", 0, 100);
 #endif
-  // Network. PortIn is the port of the network server (net board and Pro-1000
+  // Network. PortIn is the port of the network server (net board and PRO-1000
   // SCSI TCP bridge). PortOut and AddressOut give the next net board machine.
   config.Set("Network", false, "Network");
   config.Set("SimulateNet", true, "Network");
@@ -2033,7 +2033,7 @@ static void Help(void)
   puts("  -net                    Enable net board");
   puts("  -simulate-netboard      Simulate the net board [Default]");
   puts("  -emulate-netboard       Emulate the net board (requires -no-threads)");
-  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and Pro-1000)\n"
+  printf("  -port=<n>, -port-in=<n> TCP port of this machine (net board and PRO-1000)\n"
          "                          [Default: %u]\n", defaultConfig["PortIn"].ValueAs<unsigned>());
   printf("  -port-out=<n>           TCP port of the next machine [Default: %u]\n", defaultConfig["PortOut"].ValueAs<unsigned>());
   printf("  -address-out=<addr>     Address of the next machine [Default: %s]\n", defaultConfig["AddressOut"].ValueAs<std::string>().c_str());
@@ -2607,7 +2607,7 @@ int main(int argc, char **argv)
   }
 
   // Network server: for the net board, and for the programs that connect to
-  // the Pro-1000. If it cannot listen, emulation continues.
+  // the PRO-1000. If it cannot listen, emulation continues.
   if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
   {
     netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
@@ -2615,7 +2615,7 @@ int main(int argc, char **argv)
   }
 
   // Console input is created only when something reads it: the emulated
-  // machine's serial console (Pro-1000) and/or the debugger
+  // machine's serial console (PRO-1000) and/or the debugger
   {
     bool needConsoleInput = game.platform == Game::PLATFORM_PRO1000;
 #ifdef SUPERMODEL_DEBUGGER

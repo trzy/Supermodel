@@ -53,7 +53,7 @@ class CPro1000Render2D;
 /*
  * CPro1000:
  *
- * A Real3D Pro-1000 image generator. Very little is known about this hardware,
+ * A Real3D PRO-1000 image generator. Very little is known about this hardware,
  * so for now, it is modeled as a stripped-down Step 1.0 Model 3 board: a
  * PowerPC 603 with RAM, flash ROM, an MPC105 PCI bridge, an NCR 53C810 SCSI
  * controller, and the Real3D graphics hardware.

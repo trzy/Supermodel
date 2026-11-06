@@ -23,24 +23,24 @@
  * wnaspi32.cpp
  *
  * Replacement ASPI for Win32 DLL (wnaspi32.dll). It connects programs for the
- * Real3D Pro-1000 to a Pro-1000 that Supermodel emulates.
+ * Real3D PRO-1000 to a PRO-1000 that Supermodel emulates.
  *
  * Purpose
  * -------
- * Pro-1000 programs (for example, the SDK demos) send SCSI commands through
+ * PRO-1000 programs (for example, the SDK demos) send SCSI commands through
  * ASPI. Put this DLL in the folder of the program. The DLL sends each SCSI
  * command to Supermodel through the SCSI TCP bridge (see
- * Src/Pro1000/SCSITCPBridgeProtocol.h). The emulated Pro-1000 firmware does
+ * Src/Pro1000/SCSITCPBridgeProtocol.h). The emulated PRO-1000 firmware does
  * the command. The DLL gives the result to the program.
  *
  * The DLL shows one host adapter (0). Target 0, LUNs 0 and 1, is the
- * Pro-1000. The DLL answers host adapter and device type requests itself.
+ * PRO-1000. The DLL answers host adapter and device type requests itself.
  *
  * Operation
  * ---------
  * - The DLL connects to Supermodel when the program calls the first ASPI
  *   function that needs the connection (GetASPI32SupportInfo() or the first
- *   SCSI command). It shows the "Supermodel Pro-1000 Host" window, in which
+ *   SCSI command). It shows the "Supermodel PRO-1000 Host" window, in which
  *   the user gives the host and the port of Supermodel (see
  *   ConnectDialog.cpp). The default is 127.0.0.1, port 1970. The window
  *   stays until the connection is made, or until the user presses Exit,
@@ -49,12 +49,12 @@
  *   Src/Network/NetProtocol.h). The DLL replies to each Ping with Pong.
  * - The DLL connects only one time. If the connection is lost, the DLL
  *   prints an error, and all SCSI commands after that fail (selection
- *   timeout). The Pro-1000 programs cannot continue after lost commands, so
+ *   timeout). The PRO-1000 programs cannot continue after lost commands, so
  *   the DLL does not connect again.
  * - SendASPI32Command() does each SCSI command completely before it
  *   returns. Then it sets the status, and sets the event or calls the post
  *   routine if the program asked for one.
- * - Requests do not always give a direction for the data. The Pro-1000
+ * - Requests do not always give a direction for the data. The PRO-1000
  *   programs give none. Then the SCSI command (CDB byte 0) gives the
  *   direction.
  * - If the target sends CHECK CONDITION, the DLL gets the sense data with
@@ -210,7 +210,7 @@ namespace
   }
 
   // Connects to Supermodel the first time it is called. Shows the
-  // "Supermodel Pro-1000 Host" window, which stays until there is a
+  // "Supermodel PRO-1000 Host" window, which stays until there is a
   // connection or the user ends the program. Returns false after the
   // connection is lost (the DLL does not connect again).
   bool Connect(void)

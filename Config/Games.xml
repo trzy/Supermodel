@@ -1484,13 +1484,13 @@
 
   <game name="pro1000">
     <identity>
-      <title>Real3D Pro-1000</title>
+      <title>Real3D PRO-1000</title>
       <version>SDK Firmware</version>
       <manufacturer>Real3D</manufacturer>
       <year>1997</year>
     </identity>
     <hardware>
-      <platform>Real3D Pro-1000</platform>
+      <platform>Real3D PRO-1000</platform>
       <!-- Model: 1100 (1 pixel processor), 1200 (2), or 1400 (4) -->
       <stepping>1100</stepping>
       <!-- Polygon memory in MB: 8 (standard), 16, 24, or 32 (with memory cards) -->

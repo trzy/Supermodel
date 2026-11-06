@@ -22,7 +22,7 @@
 /*
  * SyntheticSCSIROM.h
  *
- * Builds a synthetic SCSI ROM for the Real3D Pro-1000 when no ROM image is
+ * Builds a synthetic SCSI ROM for the Real3D PRO-1000 when no ROM image is
  * available. See SyntheticSCSIROM.cpp.
  */
 
