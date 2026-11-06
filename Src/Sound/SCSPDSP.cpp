@@ -261,12 +261,11 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 		DSP->ACC = SignExtend(26, (UINT32)((INT32)product + TEMP));
 	}
 	--DSP->DEC;
-	memset(DSP->MIXS, 0, sizeof(DSP->MIXS));
 }
 
 void SCSPDSP_SetSample(_SCSPDSP *DSP, INT32 sample, int SEL)
 {
-	DSP->MIXS[SEL] += sample;
+\tDSP->MIXS[SEL] = (DSP->MIXS[SEL] + sample) & 0xFFFFF;
 }
 
 void SCSPDSP_Start(_SCSPDSP *DSP)
