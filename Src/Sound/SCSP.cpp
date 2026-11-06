@@ -1,4 +1,3 @@
-
 /**
  ** Supermodel
  ** A Sega Model 3 Arcade Emulator.
@@ -142,7 +141,6 @@ static int TimCnt[3];		// timer A-C counts (8 bit)
 static int TimReload[3];	// TIMx value written, loaded on the next prescaler clock (-1: none)
 static int lastdiff = 0;	// 68K cycles run past the end of the previous sample, taken off the next one
 static UINT32 SampleCounter;	// samples since reset, clocks the envelope generators
-
 #define SHIFT	12
 #define FIX(v)	((UINT32) ((float) (1<<SHIFT)*(v)))
 
@@ -968,9 +966,8 @@ void SCSP_TimersAddTicks(int ticks)
 	}
 }
 
-// One sample of one slot. plfo and alfo are this sample's LFO outputs and noise the noise generator value.
-// Returns the slot output; *stackValue receives the value written to the sound stack.
-signed int inline SCSP_UpdateSlot(_SCSP *chip, _SLOT *slot, int plfo, int alfo, UINT16 noise, signed short *stackValue)
+// One sample of one slot. sc is the sample counter, scxc marks the bits that changed in it.
+signed int SCSP_UpdateSlot(_SCSP *chip, int sl, _SLOT *slot, int plfo, int alfo, UINT16 noise, signed short *stackValue)
 {
 	signed int sample;
 	const DWORD step = SCSP_Step(slot, plfo);
@@ -978,16 +975,23 @@ signed int inline SCSP_UpdateSlot(_SCSP *chip, _SLOT *slot, int plfo, int alfo, 
 	DWORD *addr[2] = { &addr1, &addr2 };
 	DWORD *slot_addr[2] = { &(slot->cur_addr), &(slot->nxt_addr) };
 
-	// FM: the average of the two selected sound stack entries shifts the read address (manual Table 4.17:
-	// the maximum shift is 2^MDL addresses for MDL 5-F, MDL 0-4 is no modulation). Only 10 bits of shift are
-	// valid, so a shift past 1K words wraps around (Fig. 4.41).
+	// FM uses the current slot phase for the first interpolation sample and the next slot's phase for the second.
 	INT32 fmShift = 0;
+	INT32 nextFMShift = 0;
 	if (MDL(slot) >= 5)
 	{
-		INT32 smp = (chip->RINGBUF[(chip->BUFPTR + MDXSL(slot)) & 63] + chip->RINGBUF[(chip->BUFPTR + MDYSL(slot)) & 63]) / 2;
-		smp <<= 0xA;
-		smp >>= 0x19 - MDL(slot);	// full scale input (+/-32768) -> +/-2^MDL
-		fmShift = ((smp & 0x7FF) ^ 0x400) - 0x400;	// wraps as an 11-bit signed value
+		INT32 modalizer = chip->RINGBUF[(chip->BUFPTR + MDXSL(slot)) & 63] + chip->RINGBUF[(chip->BUFPTR + MDYSL(slot)) & 63];
+		modalizer = ((modalizer << 6) >> (0x10 - MDL(slot))) & ~1;
+		const _SLOT *nextSlot = &chip->Slots[(sl + 1) & 31];
+		auto getFMShift = [modalizer](const _SLOT *phaseSlot)
+		{
+			const UINT32 phase = phaseSlot->Back ? ~phaseSlot->cur_addr : phaseSlot->cur_addr;
+			const INT32 sia = modalizer + ((phase >> 8) & 0x3F);
+			const INT32 shift = (sia >> 6) & 0x7FF;
+			return (shift ^ 0x400) - 0x400;
+		};
+		fmShift = getFMShift(slot);
+		nextFMShift = getFMShift(nextSlot);
 	}
 
 	// Sound memory byte addresses of this sample and the next (for interpolation). SA is a byte address in the
@@ -997,11 +1001,11 @@ signed int inline SCSP_UpdateSlot(_SCSP *chip, _SLOT *slot, int plfo, int alfo, 
 	UINT32 pos2 = slot->nxt_addr >> ADDR_SHIFT;
 	if (PCM8B(slot)) {
 		addr1 = (start + pos1 + fmShift) & SOUND_RAM_MASK;
-		addr2 = (start + pos2 + fmShift) & SOUND_RAM_MASK;
+		addr2 = (start + pos2 + nextFMShift) & SOUND_RAM_MASK;
 	}
 	else {
 		addr1 = (start + 2 * (pos1 + fmShift)) & (SOUND_RAM_MASK & ~1);
-		addr2 = (start + 2 * (pos2 + fmShift)) & (SOUND_RAM_MASK & ~1);
+		addr2 = (start + 2 * (pos2 + nextFMShift)) & (SOUND_RAM_MASK & ~1);
 	}
 
 	// SBCTL converts the sample data as it is read: bit 0 inverts bits 14-0, bit 1 inverts the sign bit. For
@@ -1138,7 +1142,7 @@ static void SCSP_StepSlot(_SCSP *chip, int sl, float balance, signed int &outL, 
 
 	if (slot->active)
 	{
-		signed int sample = (int)(balance*(float)SCSP_UpdateSlot(chip, slot, plfo, alfo, noise, &stackValue));
+		signed int sample = (int)(balance*(float)SCSP_UpdateSlot(chip, sl, slot, plfo, alfo, noise, &stackValue));
 		const int tl = SDIR(slot) ? 0 : TL(slot);	// SDIR bypasses TL
 		UINT16 Enc;
 
@@ -1187,6 +1191,13 @@ void SCSP_DoMasterSamples(int nsamples)
 		signed int smpfl = 0, smpfr = 0;
 		signed int smprl = 0, smprr = 0;
 
+		SCSPDSP_Step(&SCSPs[0].DSP);
+		if (HasSlaveSCSP)
+			SCSPDSP_Step(&SCSPs[1].DSP);
+		memset(SCSPs[0].DSP.MIXS, 0, sizeof(SCSPs[0].DSP.MIXS));
+		if (HasSlaveSCSP)
+			memset(SCSPs[1].DSP.MIXS, 0, sizeof(SCSPs[1].DSP.MIXS));
+
 		for (INT32 sl = 0; sl < 32; ++sl)
 		{
 			SCSP_StepSlot(&SCSPs[0], sl, masterBalance, smpfl, smpfr);
@@ -1194,18 +1205,14 @@ void SCSP_DoMasterSamples(int nsamples)
 				SCSP_StepSlot(&SCSPs[1], sl, slaveBalance, smprl, smprr);
 		}
 
-		SCSPDSP_Step(&SCSPs[0].DSP);
-		if (HasSlaveSCSP)
-			SCSPDSP_Step(&SCSPs[1].DSP);
-
 		for (INT32 i = 0; i < 16; ++i)
 		{
 			_SLOT *slot = SCSPs[0].Slots + i;
 			if (EFSDL(slot))
 			{
 				UINT16 Enc = ((EFPAN(slot)) << 0x8) | ((EFSDL(slot)) << 0xd);
-				smpfl += (int)(masterBalance*(float)(((SCSPs[0].DSP.EFREG[i] * LPANTABLE[Enc]) >> SHIFT)));
-				smpfr += (int)(masterBalance*(float)(((SCSPs[0].DSP.EFREG[i] * RPANTABLE[Enc]) >> SHIFT)));
+				smpfl += (int)(masterBalance*(float)(((SCSPs[0].DSP.EFREG[i] * 2 * LPANTABLE[Enc]) >> SHIFT)));
+				smpfr += (int)(masterBalance*(float)(((SCSPs[0].DSP.EFREG[i] * 2 * RPANTABLE[Enc]) >> SHIFT)));
 			}
 			if (HasSlaveSCSP)
 			{
@@ -1213,8 +1220,8 @@ void SCSP_DoMasterSamples(int nsamples)
 				if (EFSDL(slot1))
 				{
 					UINT16 Enc = ((EFPAN(slot1)) << 0x8) | ((EFSDL(slot1)) << 0xd);
-					smprl += (int)(slaveBalance*(float)(((SCSPs[1].DSP.EFREG[i] * LPANTABLE[Enc]) >> SHIFT)));
-					smprr += (int)(slaveBalance*(float)(((SCSPs[1].DSP.EFREG[i] * RPANTABLE[Enc]) >> SHIFT)));
+					smprl += (int)(slaveBalance*(float)(((SCSPs[1].DSP.EFREG[i] * 2 * LPANTABLE[Enc]) >> SHIFT)));
+					smprr += (int)(slaveBalance*(float)(((SCSPs[1].DSP.EFREG[i] * 2 * RPANTABLE[Enc]) >> SHIFT)));
 				}
 			}
 		}
@@ -1310,7 +1317,7 @@ void SCSP_MidiIn(BYTE val)
 		if (!reported)
 		{
 			ErrorLog("SCSP MIDI input FIFO overflow: MIDI commands were lost");
-			reported = true;
+		 reported = true;
 		}
 	}
 	else
@@ -1492,7 +1499,7 @@ void SCSP_SaveState(CBlockFile *StateFile)
 			SaveVar(StateFile, slot.datab);
 			SaveVar(StateFile, slot.active);
 			SaveVar(StateFile, baseOffset);
-			SaveVar(StateFile, slot.cur_addr);
+					SaveVar(StateFile, slot.cur_addr);
 			SaveVar(StateFile, slot.nxt_addr);
 			SaveVar(StateFile, slot.Back);
 
@@ -1645,7 +1652,6 @@ void SCSP_LoadState(CBlockFile *StateFile)
 		}
 	}
 }
-
 void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRearBufferPtr, float* rightRearBufferPtr, int bufferLength)
 {
 	bufferfl = leftBufferPtr;
@@ -1655,7 +1661,6 @@ void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRea
 
 	length = bufferLength;
 }
-
 void SCSP_Deinit(void)
 {
 	delete MIDILock;

@@ -242,10 +242,53 @@ struct PerGameState
     const Util::Config::Node* file = nullptr;   // the config file, for the sections of games not edited yet
 };
 
+static Util::Config::Node MakeGameConfig(const Util::Config::Node& global, const Util::Config::Node& settings);
+static Util::Config::Node GetFileSettings(const Util::Config::Node* file, const std::string& gameName, const Util::Config::Node& global);
+static Util::Config::Node GetGameDifferences(const Util::Config::Node& game, const Util::Config::Node& global);
+
+struct Model2GammaState
+{
+    std::map<std::string, Util::Config::Node> games;
+    const Util::Config::Node* file = nullptr;
+};
+
 // Settings that only make sense globally (used before a game is chosen)
 static bool IsPerGameKey(const std::string& key)
 {
     return key != "ROMDirectory" && key != "GameXMLFile";
+}
+
+static bool IsModel2(const Game& game)
+{
+    return game.stepping == Game::Stepping::MODEL2 || game.stepping == Game::Stepping::MODEL2A ||
+           game.stepping == Game::Stepping::MODEL2B || game.stepping == Game::Stepping::MODEL2C;
+}
+
+static void LoadModel2GammaSettings(Model2GammaState& state, const std::map<std::string, Game>& games, const Util::Config::Node& global)
+{
+    for (const auto& entry : games)
+    {
+        if (!IsModel2(entry.second))
+            continue;
+        state.games.insert_or_assign(entry.first, MakeGameConfig(global, GetFileSettings(state.file, entry.first, global)));
+    }
+}
+
+static void StoreModel2GammaSettings(Model2GammaState& state, Util::Config::Node& fullConfig, const Util::Config::Node& global)
+{
+    for (const auto& entry : state.games)
+    {
+        const auto differences = GetGameDifferences(entry.second, global);
+        Util::Config::Node* section = fullConfig.TryGet(entry.first);
+        if (section == nullptr)
+        {
+            if (differences.begin() == differences.end())
+                continue;
+            section = &fullConfig.Add(entry.first);
+        }
+        const Util::Config::Node* gamma = differences.TryGet("Model2Gamma");
+        section->Set("Model2Gamma", gamma != nullptr ? gamma->ValueAs<std::string>() : global["Model2Gamma"].ValueAs<std::string>());
+    }
 }
 
 // The GUI's own settings: the ones with a value range, which the controls are built from
@@ -1123,7 +1166,7 @@ static Game GetGame(const std::map<std::string, Game>& games, int selectedGameIn
     return {};
 }
 
-static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen, PerGameState& perGame)
+static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::map<std::string, Game>& games, const std::set<std::string>& ownedZips, int& selectedGameIndex, bool& exit, bool& saveSettings, SDL_Window* window, std::shared_ptr<CInputs>& inputs, KeyBindState& kb, CalibrationState& cal, bool closeRequested, bool& exitPromptOpen, PerGameState& perGame, Model2GammaState& gammaState)
 {
     ImVec4 clear_color = ImVec4(0.0f, 0.5f, 192/255.f, 1.00f);
 
@@ -1237,6 +1280,25 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
             UpdateTempValues(config, "Video", true);
             CreateControls(config, "Video");
             UpdateTempValues(config, "Video", false);
+            ImGui::EndTabItem();
+            inputs = nullptr;
+        }
+        if (ImGui::BeginTabItem("Model 2 Gamma")) {
+            ImGui::TextDisabled("Changes do not apply in real time; restart the game to apply them. Lower values are brigher, higher are darker.");
+            if (ImGui::BeginChild("Model2GammaList", ScaledSize(0.0f, 260.0f), true))
+            {
+                for (auto& entry : gammaState.games)
+                {
+                    ImGui::PushID(entry.first.c_str());
+                    ImGui::Text("%s (%s)", games.at(entry.first).title.c_str(), entry.first.c_str());
+                    ImGui::SameLine();
+                    UpdateTempValues(entry.second, "Model2Gamma", true);
+                    CreateControls(entry.second, "Model2Gamma");
+                    UpdateTempValues(entry.second, "Model2Gamma", false);
+                    ImGui::PopID();
+                }
+                ImGui::EndChild();
+            }
             ImGui::EndTabItem();
             inputs = nullptr;
         }
@@ -1463,6 +1525,9 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     CalibrationState cal{};
     PerGameState perGame;
     perGame.file = &fullConfig;
+    Model2GammaState gammaState;
+    gammaState.file = &fullConfig;
+    LoadModel2GammaSettings(gammaState, games, config);
     bool exitPromptOpen = false;
     bool exit = false;
     SDL_Event event{};
@@ -1492,7 +1557,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
             selectedGame = -1;
         }
 
-        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, cal, closeRequested, exitPromptOpen, perGame);
+        GUI(io, config, games, ownedZips, selectedGame, exit, saveSettings, window, inputs, kb, cal, closeRequested, exitPromptOpen, perGame, gammaState);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
@@ -1513,6 +1578,7 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
         // game-specific sections are preserved by the write
         Util::Config::CopyINISection(&fullConfig, config);
         StorePerGameSettings(perGame, fullConfig, config);
+        StoreModel2GammaSettings(gammaState, fullConfig, config);
         Util::Config::WriteINIFile(configPath, fullConfig, TimestampedConfigFileComment("Updated from GUI."));
     }
 

@@ -261,13 +261,11 @@ void SCSPDSP_Step(_SCSPDSP *DSP)
 		DSP->ACC = SignExtend(26, (UINT32)((INT32)product + TEMP));
 	}
 	--DSP->DEC;
-	memset(DSP->MIXS, 0, sizeof(DSP->MIXS));
 }
 
-//Double the input of the DSP here, The Lost World depends on this to get the intended amount of reverb as shown by real hardware. Other games do not see any other effect. 
 void SCSPDSP_SetSample(_SCSPDSP *DSP, INT32 sample, int SEL)
 {
-	DSP->MIXS[SEL] += sample * 2;
+	DSP->MIXS[SEL] = (DSP->MIXS[SEL] + sample) & 0xFFFFF;
 }
 
 void SCSPDSP_Start(_SCSPDSP *DSP)

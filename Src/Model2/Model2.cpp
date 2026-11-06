@@ -2004,9 +2004,9 @@ void CModel2::UpdateInputs(void)
       m_gun[g * 2 + 0] = (uint16_t) (yMin + (y - 80) * (yMax - yMin) / (465 - 80));
       // the off-screen input alone reloads: it also pulls the trigger
       in1 |= (m_inputs->trigger[g]->value || m_inputs->trigger[g]->offscreenValue) ? (1 << g) : 0;
-      // off screen: the off-screen input, or (as MAME does) the gun within 5% of
+      // off screen: the off-screen input, or (as MAME does) the gun within 1% of
       // an edge of its range, e.g. a mouse moved out of the window
-      const int borderX = (651 - 150) / 20, borderY = (465 - 80) / 20;
+      const int borderX = (651 - 150) / 100, borderY = (465 - 80) / 100;
       bool offscreen = m_inputs->trigger[g]->offscreenValue != 0 ||
         x <= 150 + borderX || x >= 651 - borderX || y <= 80 + borderY || y >= 465 - borderY;
       m_gunOffscreen = (uint8_t) ((m_gunOffscreen & ~(1 << g)) | ((offscreen ? 1 : 0) << g));
@@ -2107,6 +2107,9 @@ void CModel2::InitExtras(const Game &game, const ROMSet &rom_set)
     patch32(0x700, 0x08000004);
   if (is("pltkids"))
     patch32(0x730, 0x08000004);
+  if (m_config["Model2NoGunFlash"].ValueAsDefault<bool>(false) &&
+      (is("hotdo")) && m_program.size() > 0x45EA0)
+    m_program[0x45EA0] = 0x90;
   if (game.name == "powsledm" && m_program.size() > 0x1585d)
   {
     m_program[0x1571c] = 0x01;   // main mode
@@ -3094,9 +3097,12 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
                 m_config["Model2CommFrameSync"].ValueAsDefault<bool>(false));
 
   // MAME's colour space conversion ("optimal settings for vf2, fvipers and
-  // schamp are bias 64, gain 51")
+  // schamp are bias 64, gain 51"). The bias is configurable per Model 2 game;
+  // changes take effect when the game is restarted.
+  const double gammaBias = std::clamp(m_config["Model2Gamma"].ValueAsDefault<int>(64), 0, 127);
+  const double gammaGain = 255.0 - gammaBias;
   for (int i = 0; i < 256; i++)
-    m_gamma[i] = (uint8_t) std::max((i - 64.0) * 255.0 / 191.0, 0.0);
+      m_gamma[i] = (uint8_t)std::max((i - gammaBias) * 255.0 / gammaGain, 0.0);
 
   m_i960.AttachBus(this);
   m_i960.SetFetchRegion(0x00000000, PROGRAM_SIZE, m_program.data());
