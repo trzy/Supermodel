@@ -114,6 +114,10 @@ public:
   // (opcode fetches, DMA, External*() calls).
   void Stall();
 
+  // Ends the current Run() after the current instruction (MAME's
+  // abort_timeslice()), e.g. when it wakes another chip. Ignored outside Run().
+  void EndSlice();
+
   // INPUT_LINE_HALT: while halted, Run() executes nothing and returns all the
   // cycles (like a halted MAME CPU)
   void SetHalt(bool halted) { m_halted = halted; }

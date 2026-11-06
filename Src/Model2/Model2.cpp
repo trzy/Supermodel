@@ -156,6 +156,12 @@ void CModel2::Unhalt(CPUID cpu, int64_t time)
 {
   m_halted[cpu] = false;
   m_time[cpu] = std::max(m_time[cpu], time);
+  // 2B: the SHARC's slice was sized while the i960 was halted (to the end of
+  // the line). Ended here, the i960 runs as soon as its result is ready, and
+  // the next command comes back within a quantum, not a line later: Last
+  // Bronx makes one round trip per command and ran at half speed.
+  if (m_model2b && cpu == CPU_I960 && m_running == CPU_COPRO)
+    m_sharc.EndSlice();
 }
 
 uint32_t CModel2::FIFOPop(CFIFO &fifo, CPUID reader, CPUID writer)

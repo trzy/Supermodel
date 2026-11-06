@@ -5915,7 +5915,7 @@ int CSHARC::Run(int cycles)
 		m_core->icount = 0;
 	}
 	m_inRun = false;
-	int used = cycles - m_core->icount;
+	int used = m_cyclesRequested - m_core->icount;   // (EndSlice() lowers m_cyclesRequested)
 	m_core->icount = 0;
 	return used;
 }
@@ -5929,6 +5929,17 @@ void CSHARC::Stall()
 {
 	if (m_inRun)
 		m_stalled = true;
+}
+
+// The run loop counts the current instruction off after it completes: one
+// cycle is left for it, and the cycles given up aren't charged
+void CSHARC::EndSlice()
+{
+	if (m_inRun && m_core->icount > 1)
+	{
+		m_cyclesRequested -= m_core->icount - 1;
+		m_core->icount = 1;
+	}
 }
 
 void CSHARC::SetIRQLine(int line, bool asserted)
