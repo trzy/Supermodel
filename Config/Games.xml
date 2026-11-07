@@ -442,6 +442,40 @@
     </roms>
   </game>
 
+  <!-- The communication board's ROM (epr-15624.17) isn't listed: the board
+       isn't emulated -->
+  <game name="vformula" parent="vr">
+    <identity>
+      <title>Virtua Formula</title>
+      <version></version>
+      <manufacturer>Sega</manufacturer>
+      <year>1993</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="vehicle" />
+        <input type="vr4" />
+        <input type="shiftupdown" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_main" stride="2" chunk_size="1">
+        <file offset="0" name="epr-15638.14" crc32="0xB9DB21A2" />
+        <file offset="1" name="epr-15639.15" crc32="0x4C3796F5" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-15623.4" crc32="0x155FA5BE" />
+        <file offset="0x60000" name="epr-15622.5" crc32="0x18007F6F" />
+      </region>
+      <region name="rom_data" stride="2" chunk_size="1">
+        <file offset="0x000000" name="epr-15641.6" crc32="0xBF01E4D5" />
+        <file offset="0x000001" name="epr-15640.7" crc32="0x3E6D83DC" />
+      </region>
+    </roms>
+  </game>
+
   <game name="wingwar">
     <identity>
       <title>Wing War</title>
@@ -529,6 +563,102 @@
         <file offset="0x800002" name="mpr-16748.31" crc32="0x8CE98D3A" />
         <file offset="0xC00000" name="mpr-16749.32" crc32="0x0E36DC1A" />
         <file offset="0xC00002" name="mpr-16750.33" crc32="0xE4F0B98D" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="wingwaru" parent="wingwar">
+    <identity>
+      <title>Wing War</title>
+      <version>US</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+        <input type="throttle" />
+        <input type="flight_view4" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_low" stride="1" chunk_size="1">
+        <file offset="0x00000" name="epr-16951.4" crc32="0xFBE12D15" />
+        <file offset="0x20000" name="epr-16950.5" crc32="0x841E2195" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-16951.4" crc32="0xFBE12D15" />
+        <file offset="0x60000" name="epr-16950.5" crc32="0x841E2195" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16751.7" crc32="0x23BA5EBC" />
+      </region>
+    </roms>
+  </game>
+
+  <game name="wingwarj" parent="wingwar">
+    <identity>
+      <title>Wing War</title>
+      <version>Japan</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+        <input type="throttle" />
+        <input type="flight_view4" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_low" stride="1" chunk_size="1">
+        <file offset="0x00000" name="epr-16728.4" crc32="0x194D58FF" />
+        <file offset="0x20000" name="epr-16727.5" crc32="0x430380EB" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-16728.4" crc32="0x194D58FF" />
+        <file offset="0x60000" name="epr-16727.5" crc32="0x430380EB" />
+      </region>
+      <region name="sound_program" stride="1" chunk_size="1">
+        <file offset="0" name="epr-16751.7" crc32="0x23BA5EBC" />
+      </region>
+    </roms>
+  </game>
+
+  <!-- The R360 control board's ROMs (epr-18851.ic22, epr-18850.ic67) aren't
+       listed: the board isn't emulated -->
+  <game name="wingwar360" parent="wingwar">
+    <identity>
+      <title>Wing War R360</title>
+      <version>US</version>
+      <manufacturer>Sega</manufacturer>
+      <year>1994</year>
+    </identity>
+    <hardware>
+      <platform>Sega Model 1</platform>
+      <inputs>
+        <input type="common" />
+        <input type="analog_joystick" />
+        <input type="throttle" />
+        <input type="flight_view4" />
+      </inputs>
+    </hardware>
+    <roms>
+      <region name="rom_low" stride="1" chunk_size="1">
+        <file offset="0x00000" name="epr-17052.4" crc32="0x0F4743E7" />
+        <file offset="0x20000" name="epr-17053.5" crc32="0x83AF2415" />
+      </region>
+      <region name="rom_boot" stride="1" chunk_size="1">
+        <file offset="0x40000" name="epr-17052.4" crc32="0x0F4743E7" />
+        <file offset="0x60000" name="epr-17053.5" crc32="0x83AF2415" />
+      </region>
+      <region name="rom_data" stride="2" chunk_size="1">
+        <file offset="0x000000" name="epr-17056.6" crc32="0x5216DE4D" />
+        <file offset="0x000001" name="epr-17057.7" crc32="0xB21AA2DB" />
       </region>
     </roms>
   </game>
