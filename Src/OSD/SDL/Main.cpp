@@ -731,7 +731,7 @@ static void SaveState(IEmulator *Emu)
   CBlockFile  SaveState;
 
   std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::Saves) << Emu->GetGame().name << ".st" << s_saveSlot;
-  if (Result::OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " SUPERMODEL_VERSION))
+  if (Result::OKAY != SaveState.Create(file_path, "Supermodel Save State", "Supermodel Version " + SupermodelVersion()))
   {
     ErrorLog("Unable to save state to '%s'.", file_path.c_str());
     return;
@@ -793,7 +793,7 @@ static void SaveNVRAM(IEmulator *Emu)
   CBlockFile  NVRAM;
 
   std::string file_path = Util::Format() << FileSystemPath::GetPath(FileSystemPath::NVRAM) << Emu->GetGame().name << ".nv";
-  if (Result::OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " SUPERMODEL_VERSION))
+  if (Result::OKAY != NVRAM.Create(file_path, "Supermodel NVRAM State", "Supermodel Version " + SupermodelVersion()))
   {
     ErrorLog("Unable to save NVRAM to '%s'. Make sure directory exists!", file_path.c_str());
     return;
@@ -1919,36 +1919,9 @@ Util::Config::Node DefaultConfig()
   return config;
 }
 
-#ifdef SUPERMODEL_VERSION_IS_WIP
-// The build date as YYYY-MM-DD (ISO 8601: the same read in any country), from
-// the compiler's __DATE__ ("Mmm dd yyyy"). It is the date this file was last
-// compiled.
-static const char *BuildDate(void)
-{
-  static char date[11];
-  static const char months[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
-  const char *p = strstr(months, std::string(__DATE__, 3).c_str());
-  int month = p ? int(p - months) / 3 + 1 : 0;
-  int day = atoi(&__DATE__[4]);
-  snprintf(date, sizeof(date), "%.4s-%02d-%02d", &__DATE__[7], month, day);
-  return date;
-}
-#endif
-
-// The version for the banner and log. A WIP version doesn't identify the build
-// so it gets the build date; a release version already has the commit's date.
-static std::string VersionString(void)
-{
-#ifdef SUPERMODEL_VERSION_IS_WIP
-  return std::string(SUPERMODEL_VERSION ", Built ") + BuildDate();
-#else
-  return SUPERMODEL_VERSION;
-#endif
-}
-
 static void Title(void)
 {
-  printf("Supermodel: A Sega Model Series Arcade Emulator (Version %s)\n", VersionString().c_str());
+  printf("Supermodel: A Sega Model Series Arcade Emulator (Version %s)\n", SupermodelVersion().c_str());
   puts("Copyright 2003-2026 by The Supermodel Team");
 }
 
@@ -1960,6 +1933,7 @@ static void Help(void)
   puts("");
   puts("General Options:");
   puts("  -?, -h, -help, --help   Print this help text");
+  puts("  -version, --version     Print the version and quit");
   puts("  -print-games            List supported games and quit");
   printf("  -game-xml-file=<file>   ROM set definition file [Default: %s]\n", s_gameXMLFilePath.c_str());
   printf("  -log-output=<outputs>   Log output destination(s) [Default: %s]\n", s_logFilePath.c_str());
@@ -2375,6 +2349,17 @@ static ParsedCommandLine ParseCommandLine(int argc, char **argv)
  */
 int main(int argc, char **argv)
 {
+  // Handled before anything else so that only the version is printed and nothing
+  // is written to disk. The packaging scripts rely on this output.
+  for (int i = 1; i < argc; i++)
+  {
+    if (!strcmp(argv[i], "-version") || !strcmp(argv[i], "--version"))
+    {
+      printf("Supermodel %s\n", SupermodelVersion().c_str());
+      return 0;
+    }
+  }
+
   Title();
   WriteDefaultConfigurationFileIfNotPresent();
 
@@ -2418,7 +2403,7 @@ int main(int argc, char **argv)
     return 1;
   }
   SetLogger(logger);
-  InfoLog("Supermodel Version %s", VersionString().c_str());
+  InfoLog("Supermodel Version %s", SupermodelVersion().c_str());
   InfoLog("Started as:");
   for (int i = 0; i < argc; i++)
     InfoLog("  argv[%d] = %s", i, argv[i]);
@@ -2610,7 +2595,7 @@ int main(int argc, char **argv)
   // the PRO-1000. If it cannot listen, emulation continues.
   if (game.platform == Game::PLATFORM_PRO1000 || (game.netboard_present && s_runtime_config["Network"].ValueAs<bool>()))
   {
-    netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " SUPERMODEL_VERSION " (" + game.name + ")");
+    netServer = std::make_shared<CNetServer>(s_runtime_config["PortIn"].ValueAs<unsigned>(), "Supermodel " + SupermodelVersion() + " (" + game.name + ")");
     netServer->Start();
   }
 

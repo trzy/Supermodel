@@ -95,6 +95,7 @@ CXXFLAGS_GENERATE_DEPENDENCIES = $(filter-out -c,$(CXXFLAGS))
 SRC_FILES = \
 	Src/CPU/PowerPC/PPCDisasm.cpp \
 	Src/BlockFile.cpp \
+	Src/Version.cpp \
 	Src/Pkgs/unzip.cpp \
 	Src/Pkgs/ioapi.cpp \
 	Src/Model3/93C46.cpp \
@@ -273,22 +274,20 @@ INCLUDE_DIRS = $(sort $(foreach file,$(SRC_FILES),$(dir	$(file))))
 all:	$(BIN_DIR)/$(POWERPC_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SCRIPTS_DISASSEMBLER_BINARY) $(BIN_DIR)/$(SUPERMODEL_BINARY) $(PLATFORM_TARGETS)
 
 #
-# Supermodel3.com release targets: used only to create official builds stamped
-# with the Git version number. Double-colon rules should force ordered
-# execution. The automated build script relies on these -- don't modify their
-# output!
+# Release target: used only to create official builds stamped with the Git
+# revision. Double-colon rules should force ordered execution.
 #
 .PHONY: clean
-.PHONY: set_version
+.PHONY: set_git_revision
 .PHONY: print_message
 .PHONY: version
-release:: set_version
+release:: set_git_revision
 release:: print_message
 release:: clean
 release:: all
 
 #
-# Github release flow (not yet used).
+# Github release flow.
 #
 # PLATFORM_PKG_FILES are additional platform-specific files. The package puts
 # them next to the Supermodel binary. The platform Makefile must set it before
@@ -308,6 +307,8 @@ pkg/zip: pkg/stage
 	$(info Creating package       : $(PKG_STAGE_PATH).zip)
 	$(SILENT)cd pkg && zip -r $(notdir $(PKG_PATH)) $(notdir $(PKG_STAGE_PATH))
 
+pkg/stage:: set_git_revision
+
 pkg/stage:: all
 
 pkg/stage:: pkg/path
@@ -325,29 +326,42 @@ pkg/stage:: pkg/path
 	$(info Generating             : $(PKG_STAGE_PATH)/CHANGES.txt)
 	$(SILENT)./Scripts/changelog.sh $(PKG_STAGE_PATH)/CHANGES.txt
 
-pkg/path: set_version
+pkg/path: all
+	$(eval VERSION := $(READ_VERSION))
+	$(if $(VERSION),,$(error Unable to get the version from $(BIN_DIR)/$(SUPERMODEL_BINARY)))
 	$(eval PKG_STAGE_PATH = pkg/supermodel-$(VERSION))
 	$(eval PKG_PATH = pkg/supermodel-$(VERSION).$(PKG_TYPE))
 	@echo $(PKG_PATH)
 
 #
-# Sets a VERSION variable based on the git sha.
+# Sets a GIT_REVISION variable based on the git sha and passes it to the build,
+# where SupermodelVersion() prepends the version number. Version.cpp is the only
+# file that uses it.
 #
-set_version:
-	$(eval VERSION = $(strip $(subst ',,0.3a-$(shell git show -s --format=%cd --date=format:%Y%m%d HEAD)-git-$(shell git rev-parse --short HEAD))))
-	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_VERSION=\"$(VERSION)\")
+set_git_revision:
+	$(eval GIT_REVISION = $(strip $(subst ',,$(shell git show -s --format=%cd --date=format:%Y%m%d HEAD)-git-$(shell git rev-parse --short HEAD))))
+	$(eval SUPERMODEL_BUILD_FLAGS += -DSUPERMODEL_GIT_REVISION=\"$(GIT_REVISION)\")
 
 #
-# Prints a message containing the version number to stdout for informational
+# Prints a message containing the Git revision to stdout for informational
 # purposes only.
 #
-print_message: set_version
-	$(info Building Supermodel Version $(VERSION))
+print_message: set_git_revision
+	$(info Building Supermodel Git Revision $(GIT_REVISION))
 
 #
-# Print *only* the version directly.
+# The version as reported by the built binary, without the program name. The
+# path is quoted because the Windows Command Prompt would otherwise treat the
+# slash as the start of a command line switch.
 #
-version: set_version
+READ_VERSION = $(lastword $(shell "$(BIN_DIR)/$(SUPERMODEL_BINARY)" -version))
+
+#
+# Print *only* the version directly. Requires Supermodel to have been built.
+#
+version:
+	$(eval VERSION := $(READ_VERSION))
+	$(if $(VERSION),,$(error Unable to get the version from $(BIN_DIR)/$(SUPERMODEL_BINARY)))
 	@echo $(VERSION)
 
 #
@@ -424,6 +438,11 @@ $(OBJ_DIR)/%.o:	%.cpp | $(OBJ_DIR)
 	$(SILENT)$(CXX) -MM -MP -MT $(OBJ_DIR)/$(*F).o -MT $(OBJ_DIR)/$(*F).d $(CXXFLAGS_GENERATE_DEPENDENCIES) $< > $(OBJ_DIR)/$(*F).d
 	$(info Compiling              : $< -> $@)
 	$(SILENT)$(CXX) $(CXXFLAGS) $< -o $@
+
+# Always recompile so that __DATE__ in Version.cpp is the date of the build
+.PHONY: FORCE
+FORCE:
+$(OBJ_DIR)/Version.o: FORCE
 
 # Suppress all warnings for third-party packages that we cannot modify
 $(OBJ_DIR)/glew.o: CFLAGS += -w

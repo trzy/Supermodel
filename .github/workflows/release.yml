@@ -25,16 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(make -f Makefiles/Makefile.UNIX version)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          # There is no build in this job, so take it from the Linux package's name
+          FILE=$(basename artifacts/Supermodel-Linux/supermodel-*-linux.tar.gz)
+          VERSION=${FILE#supermodel-}
+          echo "version=${VERSION%-linux.tar.gz}" >> $GITHUB_OUTPUT
 
       - name: Debug downloaded artifacts
         run: |
