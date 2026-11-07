@@ -218,6 +218,7 @@ private:
   int64_t Now(CPUID cpu) const;
   uint32_t TimerRead(unsigned n);
   void TimerWrite(unsigned n, uint32_t data, uint32_t mask);
+  void TimerExpire(unsigned n);
   void RunTimers();
 
   // I/O

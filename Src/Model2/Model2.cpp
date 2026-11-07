@@ -850,6 +850,31 @@ void CModel2::TimerWrite(unsigned n, uint32_t data, uint32_t mask)
   m_timerOrig[n] = m_timerVal[n];
   m_timerStart[n] = I960Now();
   m_timerRun[n] = true;
+
+  // A count of 0 runs out at the write, not after this slice. Over Rev stops
+  // a timer in its interrupt handler by writing 0 with that timer's interrupt
+  // disabled, then enables it again: run out later, the timer interrupted
+  // again and again, and each time the handler sent the same byte of its
+  // sound command (timer 1 sends the second byte, timer 2 the third). The
+  // repeated command started a looping sound over and over until all 32 of
+  // the sound driver's voices were taken, and its voice allocation then
+  // returned through a bad stack frame and crashed the sound 68000 (the
+  // sound stuck in a loop at the start of the second race).
+  if (m_timerOrig[n] == 0)
+    TimerExpire(n);
+}
+
+// A timer reaches 0: IRQ 2 if enabled now, and it stops
+void CModel2::TimerExpire(unsigned n)
+{
+  const uint32_t line = 1 << (n + 2);
+  if (m_intEna & line)
+  {
+    m_intReq |= line;
+    IRQUpdate();
+  }
+  m_timerVal[n] = 0xfffff;
+  m_timerRun[n] = false;
 }
 
 void CModel2::RunTimers()
@@ -858,14 +883,7 @@ void CModel2::RunTimers()
   {
     if (!m_timerRun[n] || m_time[CPU_I960] - m_timerStart[n] < int64_t(m_timerOrig[n]) * I960_TIME)
       continue;
-    const uint32_t line = 1 << (n + 2);
-    if (m_intEna & line)
-    {
-      m_intReq |= line;
-      IRQUpdate();
-    }
-    m_timerVal[n] = 0xfffff;
-    m_timerRun[n] = false;
+    TimerExpire(n);
   }
 }
 
