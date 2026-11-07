@@ -140,6 +140,8 @@ private:
   GLuint      m_m2Buffers[M2_NUM_BUFFERS] = { };
   GLuint      m_m2Textures[M2_NUM_BUFFERS] = { };
   bool        m_m2Ready = false;
+  bool        m_m2SheetValid[2] = { false, false };   // texture RAM 0/1 uploaded (to these textures)
+  const uint32_t *m_m2SheetRAM[2] = { nullptr, nullptr }; // (another board's memory: upload again)
   bool        m_ready = false;
   UpscaleMode m_upscaleMode = UpscaleMode::Nearest;   // tilemap layer filtering, as CRender2D
   float       m_edgeExpand = 0.5f;

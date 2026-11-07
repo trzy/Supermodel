@@ -80,6 +80,7 @@ namespace Model2
       const uint8_t  *lumaRAM = nullptr;     // 0x8000 bytes
       const uint32_t *textureRAM0 = nullptr; // 0x80000 words
       const uint32_t *textureRAM1 = nullptr;
+      bool *textureDirty = nullptr;   // 2 flags: texture RAM 0/1 written (the renderer uploads it and clears the flag; null: upload every frame)
       const uint8_t  *gamma = nullptr;       // 256 entries
       const uint32_t *polygonROM = nullptr;  // power of 2 words
       uint32_t        polygonROMWords = 0;

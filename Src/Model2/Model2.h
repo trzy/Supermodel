@@ -284,6 +284,7 @@ private:
   std::vector<uint16_t> m_paletteRAM;     // 0x1800000, 0x2000 words
   std::vector<uint16_t> m_colorXlat;      // 0x1810000, 0x6000 words
   std::vector<uint32_t> m_textureRAM[2];  // 0x12000000 and 0x12400000 (2B: 11000000, 11200000), 0x80000 words each
+  bool      m_textureDirty[2] = { true, true };  // texture RAM 0/1 written since the renderer last uploaded it (it clears them)
   std::vector<uint8_t>  m_lumaRAM;        // 0x12800000 (2B: 11400000), 32 KB
   std::vector<uint16_t> m_fbVRAM[2];      // 0x11600000 and 0x11680000
   std::vector<uint8_t>  m_waitStateRAM;   // 0xE00000, 0x38 bytes

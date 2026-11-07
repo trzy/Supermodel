@@ -278,16 +278,11 @@ vec3 fsP;                                 // 1/z, u/z, v/z
 
 out vec4 fragColor;
 
-// voodoo_render.cpp's fast_log2 (as MAME's rasterizer)
-const uint log2Table[128] = uint[](
-    0u,   2u,   5u,   8u,  11u,  14u,  16u,  19u,  22u,  25u,  27u,  30u,  33u,  35u,  38u,  40u,
-   43u,  46u,  48u,  51u,  53u,  56u,  58u,  61u,  63u,  65u,  68u,  70u,  73u,  75u,  77u,  80u,
-   82u,  84u,  87u,  89u,  91u,  93u,  96u,  98u, 100u, 102u, 104u, 106u, 109u, 111u, 113u, 115u,
-  117u, 119u, 121u, 123u, 125u, 127u, 129u, 132u, 134u, 136u, 138u, 140u, 141u, 143u, 145u, 147u,
-  149u, 151u, 153u, 155u, 157u, 159u, 161u, 162u, 164u, 166u, 168u, 170u, 172u, 173u, 175u, 177u,
-  179u, 181u, 182u, 184u, 186u, 188u, 189u, 191u, 193u, 194u, 196u, 198u, 200u, 201u, 203u, 205u,
-  206u, 208u, 209u, 211u, 213u, 214u, 216u, 218u, 219u, 221u, 222u, 224u, 225u, 227u, 229u, 230u,
-  232u, 233u, 235u, 236u, 238u, 239u, 241u, 242u, 244u, 245u, 247u, 248u, 250u, 251u, 253u, 254u);
+// voodoo_render.cpp's fast_log2 (as MAME's rasterizer). The table is a
+// uniform (s_m2Log2Table, set after linking): a constant array indexed per
+// pixel is copied to scratch memory by some drivers (AMD's), a uniform array
+// is read from the constant buffer
+uniform uint log2Table[128];
 
 int fastLog2(float value)
 {
@@ -303,9 +298,12 @@ uint LERP(uint x, uint y, uint a)
   return (x + (((y - x) * a) >> 8)) & 0x00ff00ffu;
 }
 
+// (a branch, not ?:, so that only one of the fetches is made)
 uint sheetBlock(uint sheet, ivec2 p, int level)
 {
-  return sheet == 0u ? texelFetch(texRAM0, p, level).r : texelFetch(texRAM1, p, level).r;
+  if (sheet == 0u)
+    return texelFetch(texRAM0, p, level).r;
+  return texelFetch(texRAM1, p, level).r;
 }
 
 // A texel of mip level 'level' (0 for microtextures) at x, y of the texture
@@ -494,11 +492,21 @@ void main(void)
   int u = int(fsP.y * z * 256.0);
   int v = int(fsP.z * z * 256.0);
 
+  // The second level (or the microtexture) is only read when it is blended
+  // in: LERP(t, x, 0) = t
   uint t = fetchTexel(translucent, th0, th2, level, u, v);
   if (mml > 0 && level < maxLevel)
-    t = LERP(t, fetchTexel(translucent, th0, th2, level + 1, u, v), uint((mml & 127) << 1));
+  {
+    uint w = uint((mml & 127) << 1);
+    if (w != 0u)
+      t = LERP(t, fetchTexel(translucent, th0, th2, level + 1, u, v), w);
+  }
   else if (utex && mml < 0)
-    t = LERP(t, fetchTexel(translucent, th0, th2, -1, u, v), uint(min(-mml >> utexminlod, 127)));
+  {
+    uint w = uint(min(-mml >> utexminlod, 127));
+    if (w != 0u)
+      t = LERP(t, fetchTexel(translucent, th0, th2, -1, u, v), w);
+  }
 
   if (translucent)
   {
@@ -738,6 +746,19 @@ vec3 QuadP()
 }
 )glsl";
 
+// The fragment shader's log2Table (voodoo_render.cpp's fast_log2 table)
+static const GLuint s_m2Log2Table[128] =
+{
+    0,   2,   5,   8,  11,  14,  16,  19,  22,  25,  27,  30,  33,  35,  38,  40,
+   43,  46,  48,  51,  53,  56,  58,  61,  63,  65,  68,  70,  73,  75,  77,  80,
+   82,  84,  87,  89,  91,  93,  96,  98, 100, 102, 104, 106, 109, 111, 113, 115,
+  117, 119, 121, 123, 125, 127, 129, 132, 134, 136, 138, 140, 141, 143, 145, 147,
+  149, 151, 153, 155, 157, 159, 161, 162, 164, 166, 168, 170, 172, 173, 175, 177,
+  179, 181, 182, 184, 186, 188, 189, 191, 193, 194, 196, 198, 200, 201, 203, 205,
+  206, 208, 209, 211, 213, 214, 216, 218, 219, 221, 222, 224, 225, 227, 229, 230,
+  232, 233, 235, 236, 238, 239, 241, 242, 244, 245, 247, 248, 250, 251, 253, 254
+};
+
 // The triangles' fragment shader with the quad inputs: fsP from QuadP()
 static std::string QuadFragmentShader()
 {
@@ -842,6 +863,8 @@ bool CModel1Render::InitModel2()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   }
   glBindTexture(GL_TEXTURE_2D, 0);
+  m_m2SheetValid[0] = false;
+  m_m2SheetValid[1] = false;
 
   // The rest: buffer textures, sized for the board's memory
   static const GLenum formats[M2_NUM_BUFFERS] = { GL_R32UI, GL_R32UI, GL_R8UI, GL_R16UI, GL_R16UI, GL_R8UI };
@@ -860,6 +883,7 @@ bool CModel1Render::InitModel2()
   static const char *names[M2_NUM_BUFFERS] = { "texRAM0", "texRAM1", "lumaRAM", "colorXlat", "palRAM", "gammaTable" };
   for (int i = 0; i < M2_NUM_BUFFERS; i++)
     glUniform1i(m_m2Shader.GetUniformLocation(names[i]), 2 + i);   // units 0 and 1 are the image shader's
+  glUniform1uiv(m_m2Shader.GetUniformLocation("log2Table"), 128, s_m2Log2Table);
   m_m2Shader.DisableShader();
 
   // Quads (if they don't build, the triangles are drawn instead)
@@ -869,6 +893,7 @@ bool CModel1Render::InitModel2()
     glUseProgram(m_m2QuadProgram);
     for (int i = 0; i < M2_NUM_BUFFERS; i++)
       glUniform1i(glGetUniformLocation(m_m2QuadProgram, names[i]), 2 + i);
+    glUniform1uiv(glGetUniformLocation(m_m2QuadProgram, "log2Table"), 128, s_m2Log2Table);
     m_m2QuadScreenSizeLoc = glGetUniformLocation(m_m2QuadProgram, "screenSize");
     m_m2QuadViewportLoc = glGetUniformLocation(m_m2QuadProgram, "viewport");
     m_m2QuadXMapLoc = glGetUniformLocation(m_m2QuadProgram, "xMap");
@@ -911,9 +936,24 @@ void CModel1Render::DrawModel2(const std::vector<Model2::GPUVertex> &vertices, c
   if (!m_m2Ready || vertices.empty())
     return;
 
-  // The board's memory as it is now
-  UploadModel2Sheet(m_m2Textures[M2_TEXRAM0], memory.textureRAM0);
-  UploadModel2Sheet(m_m2Textures[M2_TEXRAM1], memory.textureRAM1);
+  // The board's memory as it is now. Texture RAM (2 MB a sheet with its mip
+  // levels) only when the board wrote to it since the last upload: most
+  // frames don't, and the integer-format uploads are slow on some drivers
+  // (AMD's). The board sets textureDirty[i] when it writes sheet i, and we
+  // clear it once it's uploaded.
+  const uint32_t *sheets[2] = { memory.textureRAM0, memory.textureRAM1 };
+  for (int i = 0; i < 2; i++)
+  {
+    bool dirty = !memory.textureDirty || memory.textureDirty[i];
+    if (dirty || !m_m2SheetValid[i] || sheets[i] != m_m2SheetRAM[i])
+    {
+      UploadModel2Sheet(m_m2Textures[M2_TEXRAM0 + i], sheets[i]);
+      m_m2SheetValid[i] = true;
+      m_m2SheetRAM[i] = sheets[i];
+      if (memory.textureDirty)
+        memory.textureDirty[i] = false;
+    }
+  }
   for (int i = M2_TEXRAM0; i <= M2_TEXRAM1; i++)
   {
     glActiveTexture(GL_TEXTURE2 + i);
