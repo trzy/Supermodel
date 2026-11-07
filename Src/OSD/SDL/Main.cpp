@@ -1617,8 +1617,11 @@ Util::Config::Node DefaultConfig()
   config.Set("New3DEngine", true, "Video");
   config["New3DEngine"].GetValue()->GetValueRange()->SetNote("Model 3 only");
   config.Set("QuadRendering", true, "Video");
+  config.Set("Model2Gamma", 64, "Model2Gamma", 0, 127);
   config.Set("XResolution", 496, "Video");
   config.Set("YResolution", 384, "Video");
+  config.Set("Model2NoGunFlash", false, "Video");
+  config["Model2NoGunFlash"].GetValue()->GetValueRange()->SetNote("HOTDO only");
   config.SetEmpty("WindowXPosition");
   config.SetEmpty("WindowYPosition");
   config.Set("FullScreen", false, "Video");

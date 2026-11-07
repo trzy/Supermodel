@@ -262,10 +262,20 @@ struct PerGameState
     const Util::Config::Node* file = nullptr;   // the config file, for the sections of games not edited yet
 };
 
+static Util::Config::Node MakeGameConfig(const Util::Config::Node& global, const Util::Config::Node& settings);
+static Util::Config::Node GetFileSettings(const Util::Config::Node* file, const std::string& gameName, const Util::Config::Node& global);
+static Util::Config::Node GetGameDifferences(const Util::Config::Node& game, const Util::Config::Node& global);
+
 // Settings that only make sense globally (used before a game is chosen)
 static bool IsPerGameKey(const std::string& key)
 {
     return key != "ROMDirectory" && key != "GameXMLFile";
+}
+
+static bool IsModel2(const Game& game)
+{
+    return game.stepping == Game::Stepping::MODEL2 || game.stepping == Game::Stepping::MODEL2A ||
+           game.stepping == Game::Stepping::MODEL2B || game.stepping == Game::Stepping::MODEL2C;
 }
 
 // The GUI's own settings: the ones with a value range, which the controls are built from
@@ -1260,6 +1270,27 @@ static void GUI(const ImGuiIO& io, Util::Config::Node& globalConfig, const std::
             ImGui::EndTabItem();
             inputs = nullptr;
         }
+        if (ImGui::BeginTabItem("Model 2 Gamma")) {
+            ImGui::TextDisabled("Changes do not apply in real time; restart the game to apply them. Lower values are brigher, higher are darker.");
+            if (ImGui::BeginChild("Model2GammaList", ScaledSize(0.0f, 260.0f), true))
+            {
+                for (auto& entry : perGame.edited)
+                {
+                    if (!IsModel2(games.at(entry.first)))
+                        continue;
+                    ImGui::PushID(entry.first.c_str());
+                    ImGui::Text("%s (%s)", games.at(entry.first).title.c_str(), entry.first.c_str());
+                    ImGui::SameLine();
+                    UpdateTempValues(entry.second, "Model2Gamma", true);
+                    CreateControls(entry.second, "Model2Gamma");
+                    UpdateTempValues(entry.second, "Model2Gamma", false);
+                    ImGui::PopID();
+                }
+                ImGui::EndChild();
+            }
+            ImGui::EndTabItem();
+            inputs = nullptr;
+        }
         if (ImGui::BeginTabItem("Audio")) {
             UpdateTempValues(config, "Sound", true);
             CreateControls(config, "Sound");
@@ -1483,6 +1514,11 @@ std::vector<std::string> RunGUI(const std::string& configPath, const Util::Confi
     CalibrationState cal{};
     PerGameState perGame;
     perGame.file = &fullConfig;
+    for (const auto& entry : games)
+    {
+        if (IsModel2(entry.second))
+            perGame.edited.insert_or_assign(entry.first, MakeGameConfig(config, GetFileSettings(&fullConfig, entry.first, config)));
+    }
     bool exitPromptOpen = false;
     bool exit = false;
     SDL_Event event{};
