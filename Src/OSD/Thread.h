@@ -73,6 +73,14 @@ public:
 	 */
 	static CThread *CreateThread(const std::string &name, ThreadStart start, void *startParam);
 
+	/*
+	 * SetCurrentThreadName
+	 *
+	 * Names the calling thread, for debuggers and system tools. Threads created with CreateThread are named already.
+	 * Other threads should call this first. Linux keeps only the first 15 characters.
+	 */
+	static void SetCurrentThreadName(const std::string &name);
+
 	/* 
 	 * CreateSemaphore
 	 * 

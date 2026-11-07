@@ -20,6 +20,7 @@
  **/
 
 #include "NetOutputs.h"
+#include "OSD/Thread.h"
 
 
 CNetOutputs::CNetOutputs()
@@ -97,6 +98,7 @@ bool CNetOutputs::CreateServerThread()
 {
     m_running.store(true);
     m_tcpServerThread = std::thread([this] {
+        CThread::SetCurrentThreadName("NetOutputsTCP");
         while (m_running.load()) {
             TCPsocket clientSocket = SDLNet_TCP_Accept(m_serverSocket);
             if (clientSocket) {

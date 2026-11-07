@@ -31,6 +31,7 @@
 #include "Model1Geometrizer.h"
 #include "BlockFile.h"
 #include "OSD/Logger.h"
+#include "OSD/Thread.h"
 #include <thread>
 #if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
@@ -288,6 +289,8 @@ namespace Model1
 
   void CGeometrizer::Worker(int chip)
   {
+    static const char *names[NUM_CHIPS] = { "Model1Geo5571A", "Model1Geo5571B", "Model1Geo5572A", "Model1Geo5572B" };
+    CThread::SetCurrentThreadName(names[chip]);
     uint64_t frame = 0;
     for (;;)
     {

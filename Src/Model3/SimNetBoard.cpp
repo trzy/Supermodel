@@ -104,7 +104,11 @@ void CSimNetBoard::RunFrame(void)
 	{
 	case State::start:
 		if (!m_connected && !m_connectThread.joinable())
-			m_connectThread = std::thread(&CSimNetBoard::ConnectProc, this);
+			m_connectThread = std::thread([this]
+			{
+				CThread::SetCurrentThreadName("SimNetBoardConnect");
+				ConnectProc();
+			});
 		m_status0 = 0;
 		m_status1 = IsGame("dirtdvls") ? 0x4004 : 0xe000;
 		m_state = State::init;

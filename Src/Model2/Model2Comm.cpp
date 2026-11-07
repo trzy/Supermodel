@@ -62,6 +62,7 @@ void CModel2Comm::Init(std::shared_ptr<CNetServer> server, const std::string &ad
 // As CSimNetBoard: the output connection, then the previous machine's
 void CModel2Comm::ConnectProc()
 {
+  CThread::SetCurrentThreadName("Model2CommConnect");
   while (!m_link->Connect())
   {
     if (m_quit)

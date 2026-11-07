@@ -158,7 +158,6 @@ SRC_FILES = \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \
-	Src/OSD/SDL/Thread.cpp \
 	Src/OSD/SDL/Gui.cpp \
 	Src/Model3/SoundBoard.cpp \
 	Src/Sound/SCSP.cpp \
@@ -194,6 +193,7 @@ SRC_FILES = \
 	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \
 	Src/OSD/Logger.cpp \
+	Src/OSD/Thread.cpp \
 	Src/OSD/ConsoleInput.cpp \
 	Src/Util/Format.cpp \
 	Src/Util/NewConfig.cpp \
