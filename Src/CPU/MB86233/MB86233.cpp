@@ -83,8 +83,27 @@
 */
 
 // Replacements for MAME's corefloat.h f2u/u2f and util::sext
-static inline float u2f(UINT32 v) { float f; memcpy(&f, &v, sizeof(f)); return f; }
-static inline UINT32 f2u(float f) { UINT32 v; memcpy(&v, &f, sizeof(v)); return v; }
+// Supermodel: the TGP's floating point has no NaN or infinity. An exponent of
+// 255 is an ordinary (huge) number, taken here as the largest finite value,
+// and a result that overflows saturates. With IEEE floats, 0xFFFFFFFF (NaN)
+// gives NaN results: Desert Tank's attract mode checks the cannon shell
+// against an object read through a null pointer (the program ROM's FFFFFFFF
+// words), and the NaN distance (FFFFFFFF, negative) made the shell hit at the
+// muzzle. On the board the distance is huge and the shell flies on to the
+// bunker. (A NaN result, as 0/0, is taken as 0.)
+static inline float u2f(UINT32 v)
+{
+	if (((v >> 23) & 0xff) == 0xff)
+		v = (v & 0x80000000) | 0x7f7fffff;
+	float f; memcpy(&f, &v, sizeof(f)); return f;
+}
+static inline UINT32 f2u(float f)
+{
+	UINT32 v; memcpy(&v, &f, sizeof(v));
+	if (((v >> 23) & 0xff) == 0xff)
+		v = (v & 0x007fffff) ? 0 : ((v & 0x80000000) | 0x7f7fffff);
+	return v;
+}
 static inline INT32 sext(UINT32 value, int width) { return INT32(value << (32 - width)) >> (32 - width); }
 
 // Supermodel: the small helpers Run() calls for nearly every instruction are
