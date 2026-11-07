@@ -29,6 +29,7 @@
 
 #include "Network/NetServer.h"
 #include "OSD/Logger.h"
+#include "OSD/Thread.h"
 #include "SDLIncludes.h"
 #include <algorithm>
 #include <chrono>
@@ -108,6 +109,7 @@ void CTCPConnection::PingIfDue(uint64_t intervalMicroseconds)
 // the remaining messages, then stops.
 void CTCPConnection::SendThreadFunction(void)
 {
+  Thread::SetCurrentName("TCPConnectionSend");
   TCPsocket socket = static_cast<TCPsocket>(m_socket);
   while (true)
   {

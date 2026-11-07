@@ -51,7 +51,7 @@
 #endif // DEBUGGER_HASLOGGER
 
 #ifdef DEBUGGER_HASTHREAD
-#include "OSD/Thread.h"
+#include <mutex>
 #endif // DEBUGGER_HASTHREAD
 
 #ifndef stricmp
@@ -116,7 +116,7 @@ namespace Debugger
 		bool m_breakUser;
 
 #ifdef DEBUGGER_HASTHREAD
-		CMutex *m_mutex;
+		std::recursive_mutex m_mutex;
 		CCPUDebug *m_primaryCPU;
 #endif
 

@@ -47,7 +47,8 @@
 #endif // DEBUGGER_HASBLOCKFILE
 
 #ifdef DEBUGGER_HASTHREAD
-#include "OSD/Thread.h"
+#include <condition_variable>
+#include <mutex>
 #endif // DEBUGGER_HASTHREAD
 
 #define MAX_EXCEPTIONS 255
@@ -121,8 +122,8 @@ namespace Debugger
 		UINT32 m_mem64OrMask;
 
 #ifdef DEBUGGER_HASTHREAD
-		CMutex *m_mutex;
-		CCondVar *m_condVar;
+		std::recursive_mutex m_mutex;  // WaitCommand() holds this through ReleasePrimary(), which calls ClearWait()
+		std::condition_variable_any m_condVar;
 #endif // DEBUGGER_HASTHREAD
 
 		CException *m_exArray[MAX_EXCEPTIONS];

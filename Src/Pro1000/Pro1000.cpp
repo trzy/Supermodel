@@ -928,10 +928,12 @@
 #include "Pro1000.h"
 #include "SyntheticSCSIROM.h"
 
+#include <chrono>
 #include <new>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <system_error>
 #include "Supermodel.h"
 #include "ROMSet.h"
 #include "OSD/Video.h"
@@ -1549,20 +1551,26 @@ void CPro1000::ClearNVRAM(void)
 {
 }
 
+// Milliseconds on a clock that only ever goes forward. For measuring intervals.
+static UINT32 GetTicks(void)
+{
+  return UINT32(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
 void CPro1000::RunFrame(void)
 {
-  UINT32 start = CThread::GetTicks();
+  UINT32 start = GetTicks();
 
   // See if currently running multi-threaded
   if (m_multiThreaded)
   {
     // If so, check all threads are up and running
     if (!StartThreads())
-      goto ThreadError;
+      return;
 
     // Wake PPC main board thread (if multi-threading GPU) so it can process a frame
-    if (m_gpuMultiThreaded && !ppcBrdThreadSync->Post())
-      goto ThreadError;
+    if (m_gpuMultiThreaded)
+      ppcBrdThreadSync.Post();
 
     // If not multi-threading GPU, then run PPC main board for a frame and sync GPUs now in this thread
     if (!m_gpuMultiThreaded)
@@ -1574,21 +1582,13 @@ void CPro1000::RunFrame(void)
     // Render frame
     RenderFrame();
 
-    // Enter notify wait critical section
-    if (!notifyLock->Lock())
-      goto ThreadError;
-
     // Wait for PPC main board thread to finish its work (if it is running and hasn't finished already)
-    while (m_gpuMultiThreaded && !ppcBrdThreadDone)
     {
-      if (!notifySync->Wait(notifyLock))
-        goto ThreadError;
+      std::unique_lock<std::mutex> lock(notifyLock);
+      while (m_gpuMultiThreaded && !ppcBrdThreadDone)
+        notifySync.wait(lock);
+      ppcBrdThreadDone = false;
     }
-    ppcBrdThreadDone = false;
-
-    // Leave notify wait critical section
-    if (!notifyLock->Unlock())
-      goto ThreadError;
 
     // If multi-threading GPU, then sync GPUs last while PPC main board thread is waiting
     if (m_gpuMultiThreaded)
@@ -1602,18 +1602,13 @@ void CPro1000::RunFrame(void)
     RenderFrame();
   }
 
-  timings.frameTicks = CThread::GetTicks() - start;
+  timings.frameTicks = GetTicks() - start;
   timings.frameId++;
-  return;
-
-ThreadError:
-  ErrorLog("Threading error in CPro1000::RunFrame: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  m_multiThreaded = false;
 }
 
 void CPro1000::RunMainBoardFrame(void)
 {
-  UINT32 start = CThread::GetTicks();
+  UINT32 start = GetTicks();
 
   /*
    * Display timings are assumed to be the same as Model 3: 57.524160 Hz with
@@ -1666,24 +1661,24 @@ void CPro1000::RunMainBoardFrame(void)
       PIC.Deassert(PIC_LINE_FIELD_SYNC);  // one line long pulse
   }
 
-  timings.ppcTicks = CThread::GetTicks() - start;
+  timings.ppcTicks = GetTicks() - start;
 }
 
 void CPro1000::SyncGPUs(void)
 {
-  UINT32 start = CThread::GetTicks();
+  UINT32 start = GetTicks();
 
   timings.syncSize = GPU.SyncSnapshots();
   if (m_render2D)
     m_render2D->SetScrollRegister(m_scrollRegister);
   gpusReady = true;
 
-  timings.syncTicks = CThread::GetTicks() - start;
+  timings.syncTicks = GetTicks() - start;
 }
 
 void CPro1000::RenderFrame(void)
 {
-  UINT32 start = CThread::GetTicks();
+  UINT32 start = GetTicks();
 
   // Call OSD video callbacks
   if (BeginFrameVideo() && gpusReady)
@@ -1701,27 +1696,13 @@ void CPro1000::RenderFrame(void)
 
   EndFrameVideo();
 
-  timings.renderTicks = CThread::GetTicks() - start;
+  timings.renderTicks = GetTicks() - start;
 }
 
 bool CPro1000::StartThreads(void)
 {
   if (startedThreads)
     return true;
-
-  // Create synchronization objects
-  if (m_gpuMultiThreaded)
-  {
-    ppcBrdThreadSync = CThread::CreateSemaphore(0);
-    if (ppcBrdThreadSync == NULL)
-      goto ThreadError;
-  }
-  notifyLock = CThread::CreateMutex();
-  if (notifyLock == NULL)
-    goto ThreadError;
-  notifySync = CThread::CreateCondVar();
-  if (notifySync == NULL)
-    goto ThreadError;
 
   // Reset thread flags
   pauseThreads = false;
@@ -1730,19 +1711,20 @@ bool CPro1000::StartThreads(void)
   // Create PPC main board thread, if multi-threading GPU
   if (m_gpuMultiThreaded)
   {
-    ppcBrdThread = CThread::CreateThread("MainBoard", StartMainBoardThread, this);
-    if (ppcBrdThread == NULL)
-      goto ThreadError;
+    try
+    {
+      ppcBrdThread = Thread::Start("MainBoard", [this] { RunMainBoardThread(); });
+    }
+    catch (const std::system_error &e)
+    {
+      ErrorLog("Unable to create threads: %s\nSwitching back to single-threaded mode.\n", e.what());
+      m_multiThreaded = false;
+      return false;
+    }
   }
 
   startedThreads = true;
   return true;
-
-ThreadError:
-  ErrorLog("Unable to create threads and/or synchronization objects: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  DeleteThreadObjects();
-  m_multiThreaded = false;
-  return false;
 }
 
 bool CPro1000::PauseThreads(void)
@@ -1750,27 +1732,12 @@ bool CPro1000::PauseThreads(void)
   if (!startedThreads)
     return true;
 
-  // Enter notify critical section
-  if (!notifyLock->Lock())
-    goto ThreadError;
-
   // Let threads know that they should pause and wait for all of them to do so
+  std::unique_lock<std::mutex> lock(notifyLock);
   pauseThreads = true;
   while (ppcBrdThreadRunning)
-  {
-    if (!notifySync->Wait(notifyLock))
-      goto ThreadError;
-  }
-
-  // Leave notify critical section
-  if (!notifyLock->Unlock())
-    goto ThreadError;
+    notifySync.wait(lock);
   return true;
-
-ThreadError:
-  ErrorLog("Threading error in CPro1000::PauseThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  m_multiThreaded = false;
-  return false;
 }
 
 bool CPro1000::ResumeThreads(void)
@@ -1778,88 +1745,37 @@ bool CPro1000::ResumeThreads(void)
   if (!startedThreads)
     return true;
 
-  // Enter notify critical section
-  if (!notifyLock->Lock())
-    goto ThreadError;
-
   // Let all threads know that they can continue running
+  std::lock_guard<std::mutex> lock(notifyLock);
   pauseThreads = false;
-
-  // Leave notify critical section
-  if (!notifyLock->Unlock())
-    goto ThreadError;
   return true;
-
-ThreadError:
-  ErrorLog("Threading error in CPro1000::ResumeThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  m_multiThreaded = false;
-  return false;
 }
 
-bool CPro1000::StopThreads(void)
+void CPro1000::StopThreads(void)
 {
   if (!startedThreads)
-    return true;
+    return;
 
-  // Enter notify critical section
-  if (!notifyLock->Lock())
-    goto ThreadError;
-
-  // Let threads know that they should pause and wait for all of them to do so
-  pauseThreads = true;
-  while (ppcBrdThreadRunning)
   {
-    if (!notifySync->Wait(notifyLock))
-      goto ThreadError;
+    std::unique_lock<std::mutex> lock(notifyLock);
+
+    // Let threads know that they should pause and wait for all of them to do so
+    pauseThreads = true;
+    while (ppcBrdThreadRunning)
+      notifySync.wait(lock);
+
+    // Now let threads know that they should exit
+    stopThreads = true;
   }
-
-  // Now let threads know that they should exit
-  stopThreads = true;
-
-  // Leave notify critical section
-  if (!notifyLock->Unlock())
-    goto ThreadError;
 
   // Resume thread and wait for it to exit
-  if (ppcBrdThread != NULL)
+  if (ppcBrdThread.joinable())
   {
-    if (ppcBrdThreadSync->Post())
-      ppcBrdThread->Wait();
+    ppcBrdThreadSync.Post();
+    ppcBrdThread.join();
   }
 
-  // Delete all thread and synchronization objects
-  DeleteThreadObjects();
   startedThreads = false;
-  return true;
-
-ThreadError:
-  ErrorLog("Threading error in CPro1000::StopThreads: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  m_multiThreaded = false;
-  return false;
-}
-
-void CPro1000::DeleteThreadObjects(void)
-{
-  if (ppcBrdThread != NULL)
-  {
-    delete ppcBrdThread;
-    ppcBrdThread = NULL;
-  }
-  if (ppcBrdThreadSync != NULL)
-  {
-    delete ppcBrdThreadSync;
-    ppcBrdThreadSync = NULL;
-  }
-  if (notifyLock != NULL)
-  {
-    delete notifyLock;
-    notifyLock = NULL;
-  }
-  if (notifySync != NULL)
-  {
-    delete notifySync;
-    notifySync = NULL;
-  }
 }
 
 void CPro1000::DumpTimings(void)
@@ -1872,14 +1788,7 @@ void CPro1000::DumpTimings(void)
     timings.frameTicks, (timings.frameTicks > 16 ? '!' : ' '));
 }
 
-int CPro1000::StartMainBoardThread(void *data)
-{
-  // Call method on CPro1000 to run PPC main board thread
-  CPro1000 *pro1000 = (CPro1000 *) data;
-  return pro1000->RunMainBoardThread();
-}
-
-int CPro1000::RunMainBoardThread(void)
+void CPro1000::RunMainBoardThread(void)
 {
   for (;;)
   {
@@ -1887,15 +1796,11 @@ int CPro1000::RunMainBoardThread(void)
     bool exit = false;
     while (wait && !exit)
     {
-      // Wait on PPC main board thread semaphore
-      if (!ppcBrdThreadSync->Wait())
-        goto ThreadError;
-
-      // Enter notify critical section
-      if (!notifyLock->Lock())
-        goto ThreadError;
+      // Wait on this thread's semaphore
+      ppcBrdThreadSync.Wait();
 
       // Check threads are not being stopped or paused
+      std::lock_guard<std::mutex> lock(notifyLock);
       if (stopThreads)
         exit = true;
       else if (!pauseThreads)
@@ -1903,36 +1808,19 @@ int CPro1000::RunMainBoardThread(void)
         wait = false;
         ppcBrdThreadRunning = true;
       }
-
-      // Leave notify critical section
-      if (!notifyLock->Unlock())
-        goto ThreadError;
     }
     if (exit)
-      return 0;
+      return;
 
     // Process a single frame for PPC main board
     RunMainBoardFrame();
 
-    // Enter notify critical section
-    if (!notifyLock->Lock())
-      goto ThreadError;
-
     // Let other threads know processing has finished
+    std::lock_guard<std::mutex> lock(notifyLock);
     ppcBrdThreadRunning = false;
     ppcBrdThreadDone = true;
-    if (!notifySync->SignalAll())
-      goto ThreadError;
-
-    // Leave notify critical section
-    if (!notifyLock->Unlock())
-      goto ThreadError;
+    notifySync.notify_all();
   }
-
-ThreadError:
-  ErrorLog("Threading error in RunMainBoardThread: %s\nSwitching back to single-threaded mode.\n", CThread::GetLastError());
-  m_multiThreaded = false;
-  return 1;
 }
 
 void CPro1000::Reset(void)
@@ -2196,12 +2084,8 @@ CPro1000::CPro1000(Util::Config::Node &config, IConsoleInput *consoleInput, std:
     startedThreads(false),
     pauseThreads(false),
     stopThreads(false),
-    ppcBrdThread(NULL),
     ppcBrdThreadRunning(false),
     ppcBrdThreadDone(false),
-    ppcBrdThreadSync(NULL),
-    notifyLock(NULL),
-    notifySync(NULL),
     m_server(std::move(server)),
     GPU(config),
     m_superAA(nullptr)

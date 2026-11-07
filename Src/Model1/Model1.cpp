@@ -1752,7 +1752,7 @@ Result CModel1::Init(const Game &game, const ROMSet &rom_set)
   if (const char *geo = getenv("SUPERMODEL_MODEL1_GEOMETRIZER"))
     m_useGeometrizer = atoi(geo) != 0;
   if (m_useGeometrizer && !m_geometrizer.Init(m_geo5571, m_geo5572, m_geoRecip, m_geoRsqrt, m_polyROM.data(), (uint32_t) m_polyROM.size(),
-                                              m_geometry.PolyRAM(), m_geometry.PolyRAMWords()))
+                                              m_geometry.PolyRAM(), m_geometry.PolyRAMWords(), m_config["MultiThreaded"].ValueAsDefault<bool>(true)))
   {
     ErrorLog("Model 1: the geometrizer DSP ROMs (regions geo_5571, geo_5572, geo_recip, geo_rsqrt) are missing.");
     m_useGeometrizer = false;

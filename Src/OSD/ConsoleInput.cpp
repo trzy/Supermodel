@@ -36,6 +36,7 @@
 #include "ConsoleInput.h"
 
 #include "OSD/Logger.h"
+#include "OSD/Thread.h"
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
@@ -248,6 +249,7 @@ static bool StopRequested(CConsoleInput::State *state)
 
 static void ReaderThread(std::shared_ptr<CConsoleInput::State> state)
 {
+  Thread::SetCurrentName("ConsoleInput");
   std::string line;
   char buffer[256];
   while (!StopRequested(state.get()))
