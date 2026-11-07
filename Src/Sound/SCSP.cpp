@@ -266,14 +266,23 @@ void CheckPendingIRQ()
 {
 	_SCSP *chip = SCSPs;	// only the master SCSP drives the 68K interrupt lines
 
+	// The main thread pushes MIDI input (SCSP_MidiIn), so sample the FIFO state under the lock.
+	// No caller holds MIDILock here.
+	if (s_multiThreaded)
+		MIDILock.lock();
+	bool midiInPending = MidiW != MidiR;
+	bool midiOutEmpty = MidiOutFill == 0;
+	if (s_multiThreaded)
+		MIDILock.unlock();
+
 	// MIDI input interrupt (bit 3) is level triggered: pending while the input FIFO holds data
-	if (MidiW != MidiR)
+	if (midiInPending)
 		chip->data[0x20 / 2] |= 0x0008;
 	else
 		chip->data[0x20 / 2] &= ~0x0008;
 
 	// MIDI output interrupt (bit 9): pending while the output FIFO is empty
-	if (MidiOutFill == 0)
+	if (midiOutEmpty)
 		chip->data[0x20 / 2] |= 0x0200;
 	else
 		chip->data[0x20 / 2] &= ~0x0200;
