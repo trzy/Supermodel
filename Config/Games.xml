@@ -3024,6 +3024,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -3057,6 +3058,9 @@
         <file offset="0x0000000" name="mpr-19057.32" crc32="0x64809438" />
         <file offset="0x0400000" name="mpr-19058.34" crc32="0xE237C11C" />
       </region>
+      <region name="driveboard_program" stride="1" chunk_size="1" required="false">
+        <file offset="0" name="epr-18022.ic2" crc32="0x0CA70F80" />
+      </region>
     </roms>
   </game>
 
@@ -3070,6 +3074,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />
@@ -3116,6 +3121,7 @@
     <hardware>
       <platform>Sega Model 2</platform>
       <stepping>2B</stepping>
+      <drive_board>Billboard</drive_board>
       <inputs>
         <input type="common" />
         <input type="joystick1" />

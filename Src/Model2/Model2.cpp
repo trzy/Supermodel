@@ -960,7 +960,22 @@ void CModel2::IOWrite(unsigned offset, uint8_t data)
       DriveBoardWrite(data);        // port E: drive board command
     else if (offset == 4 && m_wheelBoard)
       m_wheelBoard->Write(data);    // port E: wheel drive board command
-    // port E: billboard / drive board, port F: lamps and coin counters
+    else if (offset == 4 && m_billBoard)
+      m_billBoard->Write(data);     // port E: billboard command
+    // Port F: lamps (bits 2-7) and coin counters (MAME's lamp_output_w), as
+    // Model 3's outputs
+    if (m_outputs && offset == 4)
+      m_outputs->SetValue(OutputRawDrive, data);
+    else if (m_outputs && offset == 5)
+    {
+      m_outputs->SetValue(OutputLampStart, !!(data & 0x04));
+      m_outputs->SetValue(OutputLampView1, !!(data & 0x08));
+      m_outputs->SetValue(OutputLampView2, !!(data & 0x10));
+      m_outputs->SetValue(OutputLampView3, !!(data & 0x20));
+      m_outputs->SetValue(OutputLampView4, !!(data & 0x40));
+      m_outputs->SetValue(OutputLampLeader, !!(data & 0x80));
+      m_outputs->SetValue(OutputRawLamps, data);
+    }
     break;
   case 0x08:
     m_io.portConfig = data;
@@ -2618,6 +2633,8 @@ void CModel2::RunFrame(void)
 
   if (m_wheelBoard)
     m_wheelBoard->RunFrame();
+  if (m_billBoard)
+    m_billBoard->RunFrame();
 
   BuildVideoFrame();
   m_frameNumber++;
@@ -2750,6 +2767,8 @@ void CModel2::Reset(void)
   m_comm.Reset();
   if (m_wheelBoard)
     m_wheelBoard->Reset();
+  if (m_billBoard)
+    m_billBoard->Reset();
   IRQUpdate();
 
   DebugLog("Model 2 reset\n");
@@ -2873,6 +2892,8 @@ void CModel2::SaveState(CBlockFile *SaveState)
   }
   if (m_wheelBoard)
     m_wheelBoard->SaveState(SaveState);
+  if (m_billBoard)
+    m_billBoard->SaveState(SaveState);
 }
 
 void CModel2::LoadState(CBlockFile *SaveState)
@@ -3013,6 +3034,8 @@ void CModel2::LoadState(CBlockFile *SaveState)
   // (a state made without the board leaves it running as it is)
   if (m_wheelBoard && Result::OKAY == SaveState->FindBlock("DriveBoard.2"))
     m_wheelBoard->LoadState(SaveState);
+  if (m_billBoard)
+    m_billBoard->LoadState(SaveState);   // (restarts if the state has no billboard)
 
   for (unsigned i = 0; i < m_paletteRAM.size(); i++)
     UpdatePaletteEntry(i);
@@ -3188,6 +3211,23 @@ Result CModel2::Init(const Game &game, const ROMSet &rom_set)
         if (m_outputs)
           m_wheelBoard->AttachOutputs(m_outputs);
       }
+    }
+  }
+  // The billboard, if its ROM is there: it only drives outputs, so (as on
+  // Model 3) it's only emulated when there are outputs to send them to
+  m_billBoard.reset();
+  if (game.driveboard_type == Game::DRIVE_BOARD_BILLBOARD && m_outputs)
+  {
+    ROM rom = rom_set.get_rom("driveboard_program");
+    if (rom.size)
+    {
+      m_billBoardROM.assign(0x10000, 0xFF);
+      rom.CopyTo(m_billBoardROM.data(), m_billBoardROM.size());
+      m_billBoard = std::make_unique<CBillBoard>();
+      if (m_billBoard->Init(m_billBoardROM.data()) != Result::OKAY)
+        m_billBoard.reset();
+      else
+        m_billBoard->AttachOutputs(m_outputs);
     }
   }
 
