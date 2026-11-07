@@ -1662,3 +1662,7 @@ void SCSP_SetBuffers(float *leftBufferPtr, float *rightBufferPtr, float* leftRea
 	length = bufferLength;
 }
 
+void SCSP_Deinit(void)
+{
+}
+

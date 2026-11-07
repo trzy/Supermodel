@@ -606,6 +606,7 @@ CSoundBoard::~CSoundBoard(void)
 
 	if (m_midiOutCallback)
 		SCSP_SetMidiOutCallback(nullptr, nullptr);
+	SCSP_Deinit();
 
 	DSB = NULL;
 
