@@ -4041,9 +4041,9 @@
       </region>
       <region name="samples" stride="1" chunk_size="1">
         <file offset="0x0000000" name="mpr-18029.32" crc32="0xF6804150" />
-        <file offset="0x0200000" name="mpr-18029.32" crc32="0xF6804150" />
-        <file offset="0x0400000" name="mpr-18030.34" crc32="0x1167615D" />
-        <file offset="0x0600000" name="mpr-18030.34" crc32="0x1167615D" />
+        <file offset="0x0400000" name="mpr-18029.32" crc32="0xF6804150" />
+        <file offset="0x0200000" name="mpr-18030.33" crc32="0x1167615D" />
+        <file offset="0x0600000" name="mpr-18030.33" crc32="0x1167615D" />
       </region>
     </roms>
   </game>
@@ -4095,9 +4095,9 @@
       </region>
       <region name="samples" stride="1" chunk_size="1">
         <file offset="0x0000000" name="mpr-18029.32" crc32="0xF6804150" />
-        <file offset="0x0200000" name="mpr-18029.32" crc32="0xF6804150" />
-        <file offset="0x0400000" name="mpr-18030.34" crc32="0x1167615D" />
-        <file offset="0x0600000" name="mpr-18030.34" crc32="0x1167615D" />
+        <file offset="0x0400000" name="mpr-18029.32" crc32="0xF6804150" />
+        <file offset="0x0200000" name="mpr-18030.33" crc32="0x1167615D" />
+        <file offset="0x0600000" name="mpr-18030.33" crc32="0x1167615D" />
       </region>
     </roms>
   </game>
