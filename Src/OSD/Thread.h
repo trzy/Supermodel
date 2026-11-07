@@ -1,12 +1,12 @@
 /**
  ** Supermodel
- ** A Sega Model 3 Arcade Emulator.
- ** Copyright 2011 Bart Trzynadlowski, Nik Henson
+ ** A Sega Model Series Arcade Emulator.
+ ** Copyright 2003-2026 The Supermodel Team
  **
  ** This file is part of Supermodel.
  **
  ** Supermodel is free software: you can redistribute it and/or modify it under
- ** the terms of the GNU General Public License as published by the Free 
+ ** the terms of the GNU General Public License as published by the Free
  ** Software Foundation, either version 3 of the License, or (at your option)
  ** any later version.
  **
@@ -18,225 +18,69 @@
  ** You should have received a copy of the GNU General Public License along
  ** with Supermodel.  If not, see <http://www.gnu.org/licenses/>.
  **/
- 
+
 /*
  * Thread.h
- * 
- * Header file for threading primitives.
+ *
+ * What the standard library does not provide for threads: naming them, leaving
+ * signals to the main thread and, before C++20, semaphores.
  */
- 
+
 #ifndef INCLUDED_THREADS_H
 #define INCLUDED_THREADS_H
 
-#include "Types.h"
-
+#include <condition_variable>
+#include <functional>
+#include <mutex>
 #include <string>
+#include <thread>
 
-class CSemaphore;
-class CMutex;
-class CCondVar;
-
-typedef int (*ThreadStart)(void *startParam);
-
-/*
- * CThread
- * 
- * Class that represents an O/S thread.
- */
-class CThread
+namespace Thread
 {
-private:
-  const std::string m_name;
-	void *m_impl;
+  /*
+   * SetCurrentName
+   *
+   * Names the calling thread, for debuggers and system tools. Every thread
+   * should call this first, unless created by Start(). Linux keeps only the
+   * first 15 characters.
+   */
+  void SetCurrentName(const std::string &name);
 
-	CThread(const std::string &name, void *impl);
+  /*
+   * Start
+   *
+   * Starts a named thread for emulation work, which leaves asynchronous signals
+   * to the main thread. Throws std::system_error if the thread can't be created.
+   */
+  std::thread Start(const std::string &name, std::function<void()> body);
 
-public:
-	/*
-	 * Sleep
-	 *
-	 * Sleeps for specified number of milliseconds.
-	 */
-	static void Sleep(UINT32 ms);
-	
-	/*
-	 * GetTicks
-	 *
-	 * Gets number of millseconds since beginning of program.
-	 */
-	static UINT32 GetTicks();
-	
-	/*
-   * CreateThread
-	 *
-	 * Creates a new thread with the given ThreadStart callback and start parameter.  The thread starts running immediately.
-	 */
-	static CThread *CreateThread(const std::string &name, ThreadStart start, void *startParam);
+  /*
+   * Semaphore
+   *
+   * Counts wake-ups so that one posted before the other thread waits isn't lost.
+   */
+  class Semaphore
+  {
+  public:
+    void Wait()
+    {
+      std::unique_lock<std::mutex> lock(m_mutex);
+      m_available.wait(lock, [this] { return m_value > 0; });
+      m_value--;
+    }
 
-	/* 
-	 * CreateSemaphore
-	 * 
-	 * Creates a new semaphore with the given initial starting value.
-	 */
-	static CSemaphore *CreateSemaphore(UINT32 initVal);
+    void Post()
+    {
+      std::lock_guard<std::mutex> lock(m_mutex);
+      m_value++;
+      m_available.notify_one();
+    }
 
-	/* 
-	 * CreateCondVar
-	 *
-	 * Creates a new condition variable.
-	 */
-	static CCondVar *CreateCondVar();
+  private:
+    std::mutex m_mutex;
+    std::condition_variable m_available;
+    unsigned m_value = 0;
+  };
+}
 
-	/*
-	 * CreateMutex
-	 *
-	 * Creates a new mutex.
-	 */
-	static CMutex *CreateMutex();
-	
-	/*
-	 * GetLastError
-	 *
-	 * Returns the error message for the last error.
-	 */
-	static const char *GetLastError();
-
-	/*
-	 * Thread destructor.
-	 */
-	~CThread();
-
-	/*
-	 * GetName
-	 *
-	 * Returns the name of this thread.
-	 */
-  const std::string &GetName() const;
-
-	/*
-	 * GetId
-	 *
-	 * Returns the id of this thread.
-	 */
-	UINT32 GetId();
-
-	/*
-	 * Wait
-	 *
-	 * Waits until this thread has exited.
-	 */
-	int Wait();
-};
-
-/*
- * CSemaphore
- *
- * Class that represents a semaphore.
- */
-class CSemaphore
-{
-friend class CThread;
-
-private:
-	void *m_impl;
-	
-	CSemaphore(void *impl);
-
-public:
-	~CSemaphore();
-
-	/*
-	 * GetValue
-	 *
-	 * Returns the current value of this semaphore.
-	 */
-	UINT32 GetValue();
-
-	/*
-	 * Wait
-	 *
-	 * Locks this semaphore and suspends the calling thread if its value is zero.
-	 */
-	bool Wait();
-
-	/*
-	 * Post
-	 *
-	 * Unlocks this semaphore and resumes any threads that were blocked on it.
-	 */
-	bool Post();
-};
-
-/*
- * CCondVar
- *
- * Class that represents a condition variable.
- */
-class CCondVar
-{
-friend class CThread;
-
-private:
-	void *m_impl;
-
-	CCondVar(void *impl);
-
-public:
-	~CCondVar();
-
-	/*
-	 * Wait
-	 *
-	 * Waits on this condition variable and unlocks the provided mutex (which must be locked before calling this method).
-	 */
-	bool Wait(CMutex *mutex);
-
-	/*
-	 * Signal
-	 *
-	 * Restarts a single thread that is waiting on this condition variable.
-	 */
-	bool Signal();
-
-	/*
-	 * SignalAll
-	 *
-	 * Restarts all threads that are waiting on this condition variable.
-	 */
-	bool SignalAll();
-};
-
-/*
- * CSemaphore
- *
- * Class that represents a mutex.
- */
-class CMutex
-{
-friend class CThread;
-friend class CCondVar;
-
-private:
-	void *m_impl;
-
-	CMutex(void *impl);
-
-public:
-	~CMutex();
-
-	/*
-	 * Lock
-	 *
-	 * Locks this mutex.  If it is already locked then the calling thread will suspend until it is unlocked.
-	 */
-	bool Lock();
-
-	/*
-	 * Unlock
-	 *
-     * Unlocks this mutex.  
-	 */
-	bool Unlock();
-};
-
-#endif	// INCLUDED_THREADS_H
+#endif  // INCLUDED_THREADS_H

@@ -28,6 +28,7 @@
 #include "NetServer.h"
 
 #include "OSD/Logger.h"
+#include "OSD/Thread.h"
 #include "SDLIncludes.h"
 #include <algorithm>
 #include <chrono>
@@ -225,6 +226,7 @@ std::shared_ptr<CTCPConnection> CNetServer::Connect(const std::string &host, uin
 
 void CNetServer::ThreadFunction(void)
 {
+  Thread::SetCurrentName("NetServer");
   SDLNet_SocketSet set = static_cast<SDLNet_SocketSet>(m_socketSet);
   TCPsocket listenSocket = static_cast<TCPsocket>(m_listenSocket);
 

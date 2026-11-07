@@ -31,6 +31,7 @@
 #include "Model1Geometrizer.h"
 #include "BlockFile.h"
 #include "OSD/Logger.h"
+#include "OSD/Thread.h"
 #include <thread>
 #if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h>
@@ -129,7 +130,16 @@ namespace Model1
       if (out)
       {
         while (!out->Push(v))
+        {
+          // Nobody will make room (the next chip isn't running or has given
+          // up on the frame): the word is lost and the frame has failed
+          if (out->ConsumerGone())
+          {
+            overflowed = true;
+            break;
+          }
           std::this_thread::yield();    // full: wait for the next chip
+        }
       }
       else if (v != IDLE_WORD)
         final->push_back(v);
@@ -251,6 +261,7 @@ namespace Model1
   // (end of frame) and an input word to drain before passing the end on.
   bool CGeometrizer::RunChipFrame(int chip)
   {
+    m_bus[chip].overflowed = false;
     bool ok = RunChip(chip, chip == C5571A);
     if (ok && chip == C5571A && m_cpu[C5571A].GetPC() == PC_5571A_WAIT_GPIO0)
     {
@@ -265,6 +276,12 @@ namespace Model1
       cpu.gpio0_w(0);
       ok = RunChip(C5571A);
     }
+    if (m_bus[chip].overflowed)
+      ok = false;
+    // A chip that failed won't read the rest of its input, so its producer
+    // must not wait for it
+    if (!ok)
+      m_fifo[chip].SetConsumerGone();
     if (chip + 1 < NUM_CHIPS)
       m_fifo[chip + 1].SetDone();
     return ok;
@@ -272,6 +289,8 @@ namespace Model1
 
   void CGeometrizer::Worker(int chip)
   {
+    static const char *names[NUM_CHIPS] = { "Model1Geo5571A", "Model1Geo5571B", "Model1Geo5572A", "Model1Geo5572B" };
+    Thread::SetCurrentName(names[chip]);
     uint64_t frame = 0;
     for (;;)
     {
@@ -384,6 +403,9 @@ namespace Model1
     }
     else
     {
+      // In turn: each chip's consumer doesn't run until the chip has finished
+      for (auto &fifo : m_fifo)
+        fifo.SetConsumerGone();
       for (int chip = 0; chip < NUM_CHIPS; chip++)
         m_chipOK[chip] = RunChipFrame(chip);
     }
@@ -408,6 +430,7 @@ namespace Model1
     {
       fifo.Clear();
       fifo.SetDone();
+      fifo.SetConsumerGone();   // the chips are run in turn here
     }
     for (int chip = 0; chip < NUM_CHIPS; chip++)
     {
@@ -451,7 +474,8 @@ namespace Model1
 
   bool CGeometrizer::Init(const std::vector<uint32_t> &rom5571, const std::vector<uint32_t> &rom5572,
                           const std::vector<uint32_t> &recipTable, const std::vector<uint32_t> &rsqrtTable,
-                          const uint32_t *polyROM, uint32_t polyROMWords, uint32_t *polyRAM, uint32_t polyRAMWords)
+                          const uint32_t *polyROM, uint32_t polyROMWords, uint32_t *polyRAM, uint32_t polyRAMWords,
+                          bool multiThreaded)
   {
     m_ready = false;
     if (rom5571.size() < 0x800 || rom5572.size() < 0x800 || recipTable.size() < 0x10000 || rsqrtTable.size() < 0x10000 || !polyRAM)
@@ -479,7 +503,8 @@ namespace Model1
     }
     m_ready = true;
     Reset();
-    StartThreads();
+    if (multiThreaded)
+      StartThreads();
     return true;
   }
 }

@@ -55,8 +55,6 @@ namespace Debugger
 
 #ifdef DEBUGGER_HASTHREAD
 		m_breakWait = false;
-		m_mutex = CThread::CreateMutex();
-		m_condVar = CThread::CreateCondVar();
 #endif // DEBUGGER_HASTHREAD
 	}
 
@@ -1458,12 +1456,12 @@ namespace Debugger
 	void CCPUDebug::CPUActive()
 	{
 #ifdef DEBUGGER_HASTHREAD
-		m_mutex->Lock();
+		m_mutex.lock();
 
 		active = true;
-		m_condVar->Signal();
+		m_condVar.notify_one();
 
-		m_mutex->Unlock();
+		m_mutex.unlock();
 #else
 		active = true;
 #endif // DEBUGGER_HASTHREAD
@@ -1472,12 +1470,12 @@ namespace Debugger
 	void CCPUDebug::CPUInactive()
 	{
 #ifdef DEBUGGER_HASTHREAD
-		m_mutex->Lock();
+		m_mutex.lock();
 
 		active = false;
-		m_condVar->Signal();
+		m_condVar.notify_one();
 
-		m_mutex->Unlock();
+		m_mutex.unlock();
 #else
 		active = false;
 #endif // DEBUGGER_HASTHREAD
@@ -1486,10 +1484,10 @@ namespace Debugger
 	void CCPUDebug::WaitCommand(EHaltReason reason)
 	{
 #ifdef DEBUGGER_HASTHREAD
-		m_mutex->Lock();
+		m_mutex.lock();
 
 		m_halted = true;
-		m_condVar->Signal();
+		m_condVar.notify_one();
 
 		if (debugger->MakePrimary(this))
 		{
@@ -1505,13 +1503,13 @@ namespace Debugger
 			if (reason != HaltNone)
 				debugger->ExecutionHalted(this, reason);
 			while (m_breakWait)
-				m_condVar->Wait(m_mutex);
+				m_condVar.wait(m_mutex);
 		}
 
 		m_halted = false;
-		m_condVar->Signal();
+		m_condVar.notify_one();
 
-		m_mutex->Unlock();
+		m_mutex.unlock();
 #else
 		if (reason != HaltNone)
 			debugger->ExecutionHalted(this, reason);
@@ -1524,35 +1522,35 @@ namespace Debugger
 #ifdef DEBUGGER_HASTHREAD
 	void CCPUDebug::ForceWait()
 	{
-		m_mutex->Lock();
+		m_mutex.lock();
 
 		m_breakWait = true;
 		m_break = true;
 		UpdateExecMasks();
-		m_condVar->Signal();
+		m_condVar.notify_one();
 
-		m_mutex->Unlock();
+		m_mutex.unlock();
 	}
 
 	void CCPUDebug::WaitForHalt()
 	{
-		m_mutex->Lock();
+		m_mutex.lock();
 			
 		// Wait for CPU to become inactive or halt
 		while (active && !m_halted)
-			m_condVar->Wait(m_mutex);
+			m_condVar.wait(m_mutex);
 		
-		m_mutex->Unlock();
+		m_mutex.unlock();
 	}
 
 	void CCPUDebug::ClearWait()
 	{
-		m_mutex->Lock();
+		m_mutex.lock();
 		
 		ClearBreak();
-		m_condVar->Signal();
+		m_condVar.notify_one();
 
-		m_mutex->Unlock();
+		m_mutex.unlock();
 	}
 #endif // DEBUGGER_HASTHREAD
 

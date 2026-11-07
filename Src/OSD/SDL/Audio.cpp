@@ -58,6 +58,7 @@
 #include "Supermodel.h"
 #include "SDLIncludes.h"
 
+#include <atomic>
 #include <cmath>
 #include <algorithm>
 
@@ -93,7 +94,7 @@ float balanceFactorFrontRight = 1.0f;
 float balanceFactorRearLeft   = 1.0f;
 float balanceFactorRearRight  = 1.0f;
 
-static bool enabled = true;         // True if sound output is enabled
+static std::atomic<bool> enabled = true; // True if sound output is enabled (written by the main thread, read by the audio callback)
 static constexpr unsigned latency = 20;       // Size of audio buffer as percentage of max buffer size (headroom only, see targetLatencyMs)
 static constexpr unsigned targetLatencyMs = 50; // Amount of audio kept queued ahead of playback; this is the output latency
 static constexpr bool underRunLoop = true;    // True if should loop back to beginning of buffer on under-run, otherwise sound is just skipped
@@ -621,10 +622,12 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
         return false;
 
     // Rate control applies when audio is generated once per emulated frame. With an audio callback, the sound board
-    // thread is already paced by the sound card.
+    // thread is already paced by the sound card. The rate control state is updated with the lock held because the
+    // callback resets it after an under-run (RestartQueue()).
     SDL_LockAudio();
     bool frameDriven = (callback == nullptr);
     UINT32 queuedBytes = ((writePos < playPos) ? writePos + audioBufferSize : writePos) - playPos;
+    double rate = frameDriven ? UpdateRateControl(queuedBytes) : 1.0;
     SDL_UnlockAudio();
 
     static float resampled[4][MAX_OUTPUT_SAMPLES];
@@ -632,7 +635,7 @@ bool OutputAudio(unsigned numSamples, const float* leftFrontBuffer, const float*
     {
         const float* const in[4] = { leftFrontBuffer, rightFrontBuffer, leftRearBuffer, rightRearBuffer };
         float* const out[4] = { resampled[0], resampled[1], resampled[2], resampled[3] };
-        numSamples = Resample(numSamples, UpdateRateControl(queuedBytes), in, out);
+        numSamples = Resample(numSamples, rate, in, out);
         leftFrontBuffer = resampled[0];
         rightFrontBuffer = resampled[1];
         leftRearBuffer = resampled[2];

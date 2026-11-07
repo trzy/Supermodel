@@ -26,8 +26,8 @@
 #include "Types.h"
 #include "CPU/Bus.h"
 #include "CPU/68K/68K.h"
-#include "OSD/Thread.h"
 #include <memory>
+#include <thread>
 #include "INetBoard.h"
 #include "NetBoardLink.h"
 

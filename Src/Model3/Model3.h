@@ -212,23 +212,17 @@ private:
   void RunNetBoardFrame(void);                        // Runs net board for a frame
 
   bool    StartThreads(void);                         // Starts all threads
-  bool    StopThreads(void);                          // Stops all threads
-  void    DeleteThreadObjects(void);                  // Deletes all threads and synchronization objects
-
-  static int StartMainBoardThread(void *data);        // Callback to start PPC main board thread
-  static int StartSoundBoardThread(void *data);       // Callback to start sound board thread (unsync'd)
-  static int StartSoundBoardThreadSyncd(void *data);  // Callback to start sound board thread (sync'd)
-  static int StartDriveBoardThread(void *data);       // Callback to start drive board thread
-  static int StartBillBoardThread(void *data);        // Callback to start billboard thread
+  void    StopThreads(void);                          // Stops all threads
+  void    JoinThreads(void);                          // Tells paused or idle threads to exit and waits for them
 
   static void AudioCallback(void *data);              // Audio buffer callback
 
-  bool    WakeSoundBoardThread(void);                 // Used by audio callback to wake sound board thread (when not sync'd with render thread)
-  int     RunMainBoardThread(void);                   // Runs PPC main board thread (sync'd in step with render thread)
-  int     RunSoundBoardThread(void);                  // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
-  int     RunSoundBoardThreadSyncd(void);             // Runs sound board thread (sync'd in step with render thread)
-  int     RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
-  int     RunBillBoardThread(void);                   // Runs billboard thread (sync'd in step with render thread)
+  void    WakeSoundBoardThread(void);                 // Used by audio callback to wake sound board thread (when not sync'd with render thread)
+  void    RunMainBoardThread(void);                   // Runs PPC main board thread (sync'd in step with render thread)
+  void    RunSoundBoardThread(void);                  // Runs sound board thread (not sync'd in step with render thread, ie running at full speed)
+  void    RunSoundBoardThreadSyncd(void);             // Runs sound board thread (sync'd in step with render thread)
+  void    RunDriveBoardThread(void);                  // Runs drive board thread (sync'd in step with render thread)
+  void    RunBillBoardThread(void);                   // Runs billboard thread (sync'd in step with render thread)
 
   // Runtime configuration
   Util::Config::Node &m_config;
@@ -287,10 +281,10 @@ private:
   bool        pauseThreads;        // True if threads should pause
   bool        stopThreads;         // True if threads should stop
   bool        syncSndBrdThread;    // True if sound board thread should be sync'd in step with render thread
-  CThread     *ppcBrdThread;       // PPC main board thread
-  CThread     *sndBrdThread;       // Sound board thread
-  CThread     *drvBrdThread;       // Drive board thread
-  CThread     *bilBrdThread;       // Billboard thread
+  std::thread ppcBrdThread;        // PPC main board thread
+  std::thread sndBrdThread;        // Sound board thread
+  std::thread drvBrdThread;        // Drive board thread
+  std::thread bilBrdThread;        // Billboard thread
   bool        ppcBrdThreadRunning; // Flag to indicate PPC main board thread is currently processing
   bool        ppcBrdThreadDone;    // Flag to indicate PPC main board thread has finished processing
   bool        sndBrdThreadRunning; // Flag to indicate sound board thread is currently processing
@@ -302,14 +296,14 @@ private:
   bool        bilBrdThreadDone;    // Flag to indicate billboard thread has finished processing
 
   // Thread synchronization objects
-  CSemaphore  *ppcBrdThreadSync;
-  CSemaphore  *sndBrdThreadSync;
-  CMutex      *sndBrdNotifyLock;
-  CCondVar    *sndBrdNotifySync;
-  CSemaphore  *drvBrdThreadSync;
-  CSemaphore  *bilBrdThreadSync;
-  CMutex      *notifyLock;
-  CCondVar    *notifySync;
+  Thread::Semaphore ppcBrdThreadSync;
+  Thread::Semaphore sndBrdThreadSync;
+  std::mutex        sndBrdNotifyLock;   // when taken with notifyLock, this one first
+  std::condition_variable sndBrdNotifySync;
+  Thread::Semaphore drvBrdThreadSync;
+  Thread::Semaphore bilBrdThreadSync;
+  std::mutex        notifyLock;
+  std::condition_variable notifySync;
 
   // Frame timings
   FrameTimings timings;

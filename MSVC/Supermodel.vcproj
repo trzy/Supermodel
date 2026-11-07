@@ -1030,7 +1030,7 @@
 						>
 					</File>
 					<File
-						RelativePath="..\Src\OSD\SDL\Thread.cpp"
+						RelativePath="..\Src\OSD\Thread.cpp"
 						>
 					</File>
 				</Filter>

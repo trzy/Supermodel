@@ -158,7 +158,6 @@ SRC_FILES = \
 	Src/CPU/PowerPC/ppc.cpp \
 	Src/OSD/SDL/Main.cpp \
 	Src/OSD/SDL/Audio.cpp \
-	Src/OSD/SDL/Thread.cpp \
 	Src/OSD/SDL/Gui.cpp \
 	Src/Model3/SoundBoard.cpp \
 	Src/Sound/SCSP.cpp \
@@ -194,6 +193,7 @@ SRC_FILES = \
 	Src/Sound/MPEG/MpegAudio.cpp \
 	Src/Model3/Crypto.cpp \
 	Src/OSD/Logger.cpp \
+	Src/OSD/Thread.cpp \
 	Src/OSD/ConsoleInput.cpp \
 	Src/Util/Format.cpp \
 	Src/Util/NewConfig.cpp \
@@ -473,7 +473,9 @@ $(MUSASHI_OUTFILE): Src/CPU/68K/Musashi/m68kmake.c Src/CPU/68K/Musashi/m68k_in.c
 	$(info Linking                : $(MUSASHI_OUTFILE))
 	$(SILENT)$(LD) $(MUSASHI_LDFLAGS)
 
-$(OBJ_DIR)/m68kops.h $(OBJ_DIR)/m68kops.c $(OBJ_DIR)/m68kopac.c $(OBJ_DIR)/m68kopdm.c $(OBJ_DIR)/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h | $(OBJ_DIR)
+# A pattern rule, unlike several explicit targets, tells make that one run of the generator makes all of these
+# files. Otherwise a parallel build runs it once per file and the runs overwrite files that are being compiled.
+%/m68kops.h %/m68kops.c %/m68kopac.c %/m68kopdm.c %/m68kopnz.c:	$(MUSASHI_OUTFILE) Src/CPU/68K/Musashi/m68k_in.c Src/CPU/68K/Musashi/m68k.h Src/CPU/68K/Musashi/m68kconf.h | $(OBJ_DIR)
 	$(info Generating 68K emulator: $@)
 	@$(MUSASHI_OUTFILE) $(OBJ_DIR) Src/CPU/68K/Musashi/m68k_in.c
 
